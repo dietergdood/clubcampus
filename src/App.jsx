@@ -4620,27 +4620,31 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           </div>
         )}
         {/* Filter */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <div style={{display:"flex",background:GR,borderRadius:8,padding:3,gap:2}}>
-            {[{k:"kommend",l:"Kommende Termine"},{k:"vergangen",l:"Vergangene Termine"}].map(t=>(
-              <button key={t.k} onClick={()=>setTimeFilter(t.k)}
-                style={{padding:"5px 14px",borderRadius:6,border:"none",background:timeFilter===t.k?"#fff":"transparent",color:timeFilter===t.k?BK:"#999",fontWeight:timeFilter===t.k?700:400,fontSize:12,cursor:"pointer",boxShadow:timeFilter===t.k?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>
-                {t.l}
-              </button>
-            ))}
+        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:6,marginBottom:14}}>
+          {/* Typ-Pills scrollbar */}
+          <div style={{display:"flex",alignItems:"center",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",flex:1,minWidth:0}}>
+            {[
+              {k:"alle",l:"Alle"},
+              {k:"training",l:"Trainings"},
+              {k:"spiele",l:"Spiele"},
+              {k:"team-event",l:"Teamevents"},
+              {k:"vereinsanlass",l:"Vereinsanlass"},
+            ].map(f=>{
+              const active=isFilterActive(f.k);
+              return(
+                <button key={f.k} onClick={()=>toggleFilter(f.k)}
+                  style={{padding:"7px 16px",borderRadius:20,border:`1.5px solid ${active?"#1A1A1A":GB}`,background:active?"#1A1A1A":"transparent",color:active?"#fff":"#666",fontSize:13,fontWeight:active?600:400,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s"}}>
+                  {f.l}
+                </button>
+              );
+            })}
           </div>
-        </div>
-        <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-          {["alle","training","spiele","team-event","vereinsanlass"].map(f=>{
-            const active=isFilterActive(f);
-            return(
-              <button key={f} onClick={()=>toggleFilter(f)}
-                style={{padding:"5px 14px",borderRadius:20,border:`0.5px solid ${active?"#f8de09":GB}`,background:active?"#f8de0930":"#fff",color:active?BK:"#888",fontSize:12,fontWeight:active?700:400,cursor:"pointer",transition:"all 0.1s"}}>
-                {f==="alle"?"Alle":f==="training"?"Training":f==="spiele"?"Spiele":f==="team-event"?"Team-Event":"Vereinsanlass"}
-                {active&&f!=="alle"&&<span style={{marginLeft:4,fontSize:10}}>✓</span>}
-              </button>
-            );
-          })}
+          {/* Zeit-Toggle — eigene Zeile auf Mobile durch flex-basis 100% */}
+          <button onClick={()=>setTimeFilter(p=>p==="kommend"?"vergangen":"kommend")}
+            style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:`1px solid ${GB}`,background:"#F5F5F3",color:"#555",fontSize:12,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
+            <span style={{fontSize:10,opacity:0.6}}>{"▾"}</span>
+            <span>{timeFilter==="kommend"?"Vergangene Termine":"Kommende Termine"}</span>
+          </button>
         </div>
 
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -4659,98 +4663,87 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             const isAb=resp.status==="ab";
             const isCancelled=!!cancelledEvents[ev.id];
             const canCancel=isTrainer&&!past&&(ev.type==="Training"||ev.subtype==="Team-Event");
+            const showRsvp=!past&&!canCancel&&!(ev.subtype==="Vereinsanlass"&&ev.rsvp===false);
+            const inAufgebot=!past&&isInAufgebot(ev.id,myId);
+
             return(
-              <div key={ev.id} style={{background:isCancelled?"#FFF5F5":"#fff",border:`0.5px solid ${isCancelled?R+"60":GB}`,borderRadius:14,overflow:"hidden",display:"flex",opacity:past?0.75:1}}>
-                {/* Date */}
-                <div onClick={()=>openEvent(ev.id)} style={{width:80,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"16px 8px",background:accentColor+"15",borderRight:`0.5px solid ${accentColor}30`,cursor:"pointer"}}>
-                  {ev.endDate?(
-                    <div style={{display:"flex",alignItems:"center",gap:4,width:"100%",justifyContent:"center"}}>
-                      <div style={{textAlign:"center"}}>
-                        <div style={{fontSize:9,fontWeight:600,color:accentColor,textTransform:"uppercase",letterSpacing:0.5}}>{weekday}</div>
-                        <div style={{fontSize:18,fontWeight:700,color:accentColor,lineHeight:1}}>{dayNum}</div>
-                        <div style={{fontSize:9,fontWeight:500,color:accentColor,opacity:0.7}}>{monName}</div>
+              <div key={ev.id}
+                onMouseEnter={e=>e.currentTarget.style.background=isCancelled?"#FFF5F5":"#FAFAF8"}
+                onMouseLeave={e=>e.currentTarget.style.background=isCancelled?"#FFF5F5":"#fff"}
+                style={{
+                background:isCancelled?"#FFF5F5":"#fff",
+                border:`0.5px solid ${GB}`,
+                borderRadius:14,
+                overflow:"hidden",
+                display:"flex",
+                flexDirection:"column",
+                opacity:past?0.65:1,
+              }}>
+                {/* Haupt-Inhalt */}
+                <div onClick={()=>openEvent(ev.id)} style={{flex:1,padding:"12px 14px",minWidth:0,display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
+                  {/* Datum-Block */}
+                  <div style={{width:62,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#F3F3F1",borderRadius:10,padding:"8px 6px"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
+                    <div style={{fontSize:19,fontWeight:700,color:"#1A1A1A",lineHeight:1}}>{dayNum}</div>
+                    <div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
+                  </div>
+                  {/* Text */}
+                  <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:3}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
+                        {ev.opponent?"vs. "+ev.opponent:ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
                       </div>
-                      <div style={{color:accentColor,opacity:0.4,fontSize:10,fontWeight:700}}>{"–"}</div>
-                      <div style={{textAlign:"center"}}>
-                        {(()=>{
-                          const MONTHS=["","Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-                          const ep=ev.endDate.split(" ");
-                          const ew=ep[0]||"";const edm=ep[1]||"";
-                          const eday=edm.split(".")[0];
-                          const emon=MONTHS[parseInt(edm.split(".")[1])||0]||"";
-                          return(<>
-                            <div style={{fontSize:9,fontWeight:600,color:accentColor,textTransform:"uppercase",letterSpacing:0.5}}>{ew}</div>
-                            <div style={{fontSize:18,fontWeight:700,color:accentColor,lineHeight:1,opacity:0.85}}>{eday}</div>
-                            <div style={{fontSize:9,fontWeight:500,color:accentColor,opacity:0.6}}>{emon}</div>
-                          </>);
-                        })()}
-                      </div>
+                      <span style={{background:accentColor+"18",color:accentColor,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
+                        {ev.subtype||ev.type}
+                      </span>
+                      {isCancelled&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R,flexShrink:0}}>⚠ Abgesagt</span>}
+                      {inAufgebot&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"#EEF2FF",color:"#4F46E5",flexShrink:0}}>⚽ Aufgebot</span>}
+                      {past&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:isZu?"#ECFDF5":isAb?RL:"#F3F4F6",color:isZu?GN:isAb?R:"#aaa",flexShrink:0}}>{isZu?"✓ Anwesend":isAb?"✕ Abwesend":"–"}</span>}
                     </div>
-                  ):(
-                    <>
-                      <div style={{fontSize:10,fontWeight:600,color:accentColor,textTransform:"uppercase",letterSpacing:0.8,marginBottom:1}}>{weekday}</div>
-                      <div style={{fontSize:22,fontWeight:700,color:accentColor,lineHeight:1}}>{dayNum}</div>
-                      <div style={{fontSize:10,fontWeight:500,color:accentColor,opacity:0.7,marginTop:2}}>{monName}</div>
-                    </>
-                  )}
+                    <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"2px 6px",fontSize:11,color:"#888"}}>
+                      <span>🕐 {ev.time} Uhr</span>
+                      {ev.type==="Spiel"&&ev.treffpunkt&&(<>
+                        <span style={{color:"#ddd"}}>·</span>
+                        <span>🎯 <span style={{fontWeight:600,color:"#666"}}>Treffpunkt: </span>{ev.treffpunkt}</span>
+                      </>)}
+                    </div>
+                  </div>
                 </div>
-                {/* Content */}
-                <div onClick={()=>openEvent(ev.id)} style={{flex:1,padding:"13px 16px",minWidth:0,display:"flex",flexDirection:"column",justifyContent:"center",gap:5,cursor:"pointer"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <span style={{background:accentColor+"15",color:accentColor,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,border:`0.5px solid ${accentColor}30`}}>
-                      {ev.subtype||ev.type}
-                    </span>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {isCancelled&&<span style={{fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,background:RL,color:R,border:`0.5px solid ${R}40`}}>⚠ Abgesagt</span>}
-                      {!past&&isInAufgebot(ev.id,myId)&&<span style={{fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,background:"#EEF2FF",color:"#4F46E5",border:"0.5px solid #818CF840"}}>⚽ Im Aufgebot</span>}
-                      {past&&<span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:isZu?"#ECFDF5":isAb?RL:"#F3F4F6",color:isZu?GN:isAb?R:"#aaa"}}>{isZu?"✓ Anwesend":isAb?"✕ Abwesend":"– Keine Angabe"}</span>}
-                    </div>
+
+                {/* RSVP-Buttons unten */}
+                {showRsvp&&(
+                  <div style={{borderTop:`0.5px solid ${GB}`,display:"flex",gap:0}} onClick={e=>e.stopPropagation()}>
+                    <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
+                      style={{flex:1,padding:"13px",border:"none",borderRight:`0.5px solid ${GB}`,background:isZu?"#16A34A":"#fff",color:isZu?"#fff":"#aaa",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:"0 0 0 14px",letterSpacing:0.1}}>
+                      {isZu?"✓ Zugesagt":"✓ Zusagen"}
+                    </button>
+                    <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
+                      style={{flex:1,padding:"13px",border:"none",background:isAb?"#DC2626":"#fff",color:isAb?"#fff":"#aaa",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:"0 0 14px 0",letterSpacing:0.1}}>
+                      {isAb?"✕ Abgesagt":"✕ Absagen"}
+                    </button>
                   </div>
-                  <div style={{fontWeight:700,fontSize:14,color:BK}}>
-                    {ev.opponent?"vs. "+ev.opponent:ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:0,fontSize:11,color:"#888"}}>
-                    <span style={{display:"flex",alignItems:"center",gap:3}}><span>{"🕐"}</span>{ev.time+" Uhr"}</span>
-                    <span style={{color:"#e0ded8",margin:"0 8px"}}>{"│"}</span>
-                    <span style={{display:"flex",alignItems:"center",gap:3}}><span>{"📍"}</span>{ev.ort}</span>
-                    {ev.type==="Spiel"&&ev.treffpunkt&&(
-                      <><span style={{color:"#e0ded8",margin:"0 8px"}}>{"│"}</span>
-                      <span style={{display:"flex",alignItems:"center",gap:3}}><span>{"🎯"}</span><span style={{fontWeight:600,color:"#666"}}>{"Treffpunkt: "}</span><span>{ev.treffpunkt}</span></span></>
-                    )}
-                  </div>
-                  {!past&&resp.status==="ab"&&(
+                )}
+                {showRsvp&&isAb&&(
+                  <div style={{borderTop:`0.5px solid ${GB}`,padding:"8px 12px"}} onClick={e=>e.stopPropagation()}>
                     <textarea value={resp.note} onChange={e=>setResp(ev.id,myId,"ab",e.target.value)}
                       placeholder="Begründung (optional)…" rows={2}
-                      style={{marginTop:4,padding:"6px 9px",border:`0.5px solid ${GB}`,borderRadius:7,fontSize:11,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",width:"100%"}}/>
-                  )}
-
-                </div>
-                {/* Cancel button for trainer (Training + Team-Event) */}
+                      style={{width:"100%",padding:"6px 9px",border:`0.5px solid ${GB}`,borderRadius:7,fontSize:11,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                  </div>
+                )}
                 {canCancel&&(
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 10px",gap:3,flexShrink:0,borderLeft:`0.5px solid ${GB}`}} onClick={e=>e.stopPropagation()}>
-                    <button onClick={()=>toggleCancel(ev.id)} title={isCancelled?"Absage rückgängig":"Training/Event absagen"}
-                      style={{padding:"5px 10px",borderRadius:8,border:`1.5px solid ${isCancelled?R:GB}`,background:isCancelled?RL:"transparent",color:isCancelled?R:"#aaa",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                  <div style={{borderTop:`0.5px solid ${GB}`,display:"flex",justifyContent:"flex-end",padding:"8px 12px"}} onClick={e=>e.stopPropagation()}>
+                    <button onClick={()=>toggleCancel(ev.id)}
+                      style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${isCancelled?R:GB}`,background:isCancelled?RL:"transparent",color:isCancelled?R:"#bbb",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                       {isCancelled?"↩ Rückgängig":"✕ Absagen"}
                     </button>
                   </div>
                 )}
-                {/* RSVP */}
-                {!past&&!canCancel&&!(ev.subtype==="Vereinsanlass"&&ev.rsvp===false)&&(
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 10px",gap:3,flexShrink:0,borderLeft:`0.5px solid ${GB}`}} onClick={e=>e.stopPropagation()}>
-                    <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")} title="Zusagen"
-                      style={{width:32,height:32,borderRadius:"50%",border:`1.5px solid ${isZu?GN:GB}`,background:isZu?GN:"transparent",color:isZu?"#fff":"#ccc",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{"✓"}</button>
-                    <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")} title="Absagen"
-                      style={{width:32,height:32,borderRadius:"50%",border:`1.5px solid ${isAb?R:GB}`,background:isAb?R:"transparent",color:isAb?"#fff":"#ccc",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{"✕"}</button>
-                  </div>
-                )}
-                {/* Arrow */}
-                <div onClick={()=>openEvent(ev.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",width:28,color:"#D1D5DB",fontSize:14,cursor:"pointer",flexShrink:0,borderLeft:`0.5px solid ${GB}`}}>{"›"}</div>
               </div>
             );
           })}
           {filteredEvents.length>5&&(
             <button onClick={()=>setShowMoreEvents(p=>!p)}
-              style={{padding:"8px 0",borderRadius:10,border:`0.5px solid ${GB}`,background:"#fff",color:"#888",fontSize:12,fontWeight:600,cursor:"pointer",width:"100%"}}>
+              style={{padding:'12px 0',borderRadius:12,border:`0.5px solid ${GB}`,background:'#fff',color:'#555',fontSize:13,fontWeight:600,cursor:'pointer',width:'100%'}}>
               {showMoreEvents?`↑ Weniger anzeigen`:`+ ${filteredEvents.length-5} weitere anzeigen`}
             </button>
           )}
@@ -5023,27 +5016,24 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
       )}
 
       {/* Ereignisliste */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <div style={{display:"flex",background:GR,borderRadius:8,padding:3,gap:2}}>
-          {[{k:"kommend",l:"Kommende Termine"},{k:"vergangen",l:"Vergangene Termine"}].map(t=>(
-            <button key={t.k} onClick={()=>setTimeFilter(t.k)}
-              style={{padding:"5px 14px",borderRadius:6,border:"none",background:timeFilter===t.k?"#fff":"transparent",color:timeFilter===t.k?BK:"#999",fontWeight:timeFilter===t.k?700:400,fontSize:12,cursor:"pointer",boxShadow:timeFilter===t.k?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>
-              {t.l}
-            </button>
-          ))}
+
+      <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:6,marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",flex:1,minWidth:0}}>
+          {["alle","training","spiele","team-event","vereinsanlass"].map(f=>{
+            const active=isFilterActive(f);
+            return(
+              <button key={f} onClick={()=>toggleFilter(f)}
+                style={{padding:"7px 16px",borderRadius:20,border:`1.5px solid ${active?"#1A1A1A":GB}`,background:active?"#1A1A1A":"transparent",color:active?"#fff":"#666",fontSize:13,fontWeight:active?600:400,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s"}}>
+                {f==="alle"?"Alle":f==="training"?"Trainings":f==="spiele"?"Spiele":f==="team-event"?"Teamevents":"Vereinsanlass"}
+              </button>
+            );
+          })}
         </div>
-      </div>
-      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-        {["alle","training","spiele","team-event","vereinsanlass"].map(f=>{
-          const active=isFilterActive(f);
-          return(
-            <button key={f} onClick={()=>toggleFilter(f)}
-              style={{padding:"5px 14px",borderRadius:20,border:`0.5px solid ${active?"#f8de09":GB}`,background:active?"#f8de0930":"#fff",color:active?BK:"#888",fontSize:12,fontWeight:active?700:400,cursor:"pointer",transition:"all 0.1s"}}>
-              {f==="alle"?"Alle":f==="training"?"Training":f==="spiele"?"Spiele":f==="team-event"?"Team-Event":"Vereinsanlass"}
-              {active&&f!=="alle"&&<span style={{marginLeft:4,fontSize:10}}>✓</span>}
-            </button>
-          );
-        })}
+        <button onClick={()=>setTimeFilter(p=>p==="kommend"?"vergangen":"kommend")}
+          style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:`1px solid ${GB}`,background:"#F5F5F3",color:"#555",fontSize:12,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
+          <span style={{fontSize:10,opacity:0.6}}>{"▾"}</span>
+          <span>{timeFilter==="kommend"?"Vergangene Termine":"Kommende Termine"}</span>
+        </button>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {(showMoreEvents?filteredEvents:filteredEvents.slice(0,5)).map(ev=>{
@@ -5061,123 +5051,78 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           const monName=MONTHS[monNum]||dayMonth.split(".")[1];
           return(
             <div key={ev.id} onClick={()=>openEvent(ev.id)}
-              style={{background:isCancelled?"#FFF5F5":"#fff",border:`0.5px solid ${isCancelled?R+"60":GB}`,borderRadius:14,overflow:"hidden",cursor:"pointer",display:"flex"}}
-              onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 20px rgba(0,0,0,0.09)"}
-              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-              {/* Date column */}
-              <div style={{width:80,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"16px 8px",background:accentColor+"15",borderRight:`0.5px solid ${accentColor}30`}}>
-                {ev.endDate?(
-                  <div style={{display:"flex",alignItems:"center",gap:4,width:"100%",justifyContent:"center"}}>
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:9,fontWeight:600,color:accentColor,textTransform:"uppercase",letterSpacing:0.5}}>{weekday}</div>
-                      <div style={{fontSize:18,fontWeight:700,color:accentColor,lineHeight:1}}>{dayNum}</div>
-                      <div style={{fontSize:9,fontWeight:500,color:accentColor,opacity:0.7}}>{monName}</div>
-                    </div>
-                    <div style={{color:accentColor,opacity:0.4,fontSize:10,fontWeight:700,marginTop:2}}>{"–"}</div>
-                    <div style={{textAlign:"center"}}>
-                      {(()=>{
-                        const ep=ev.endDate.split(" ");
-                        const ew=ep[0]||"";
-                        const edm=ep[1]||"";
-                        const eday=edm.split(".")[0];
-                        const emon=MONTHS[parseInt(edm.split(".")[1])||0]||"";
-                        return(
-                          <>
-                            <div style={{fontSize:9,fontWeight:600,color:accentColor,textTransform:"uppercase",letterSpacing:0.5}}>{ew}</div>
-                            <div style={{fontSize:18,fontWeight:700,color:accentColor,lineHeight:1,opacity:0.85}}>{eday}</div>
-                            <div style={{fontSize:9,fontWeight:500,color:accentColor,opacity:0.6}}>{emon}</div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                ):(
-                  <>
-                    <div style={{fontSize:10,fontWeight:600,color:accentColor,textTransform:"uppercase",letterSpacing:0.8,marginBottom:1}}>{weekday}</div>
-                    <div style={{fontSize:22,fontWeight:700,color:accentColor,lineHeight:1}}>{dayNum}</div>
-                    <div style={{fontSize:10,fontWeight:500,color:accentColor,opacity:0.7,marginTop:2}}>{monName}</div>
-                  </>
-                )}
-              </div>
+              style={{background:isCancelled?"#FFF5F5":"#fff",border:`0.5px solid ${GB}`,borderRadius:14,overflow:"hidden",cursor:"pointer",display:"flex",flexDirection:"column"}}
+              onMouseEnter={e=>e.currentTarget.style.background="#FAFAF8"}
+              onMouseLeave={e=>e.currentTarget.style.background=isCancelled?"#FFF5F5":"#fff"}>
               {/* Content */}
-              <div style={{flex:1,padding:"13px 16px",minWidth:0,display:"flex",flexDirection:"column",justifyContent:"center",gap:5}}>
-                {/* Row 1: type chip | status pills */}
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{background:accentColor+"15",color:accentColor,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,border:`0.5px solid ${accentColor}30`,letterSpacing:0.3}}>
+              <div style={{flex:1,padding:"12px 14px",minWidth:0,display:"flex",alignItems:"center",gap:14}}>
+                {/* Datum-Block */}
+                <div style={{width:62,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#F3F3F1",borderRadius:10,padding:"8px 6px"}}>
+                  <div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
+                  <div style={{fontSize:19,fontWeight:700,color:"#1A1A1A",lineHeight:1}}>{dayNum}</div>
+                  <div style={{fontSize:10,fontWeight:600,color:"#999",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
+                </div>
+                {/* Text */}
+                <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:3}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
+                      {ev.opponent?"vs. "+ev.opponent:ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
+                    </div>
+                    <span style={{background:accentColor+"18",color:accentColor,fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
                       {ev.subtype||ev.type}
                     </span>
-                    {isCancelled&&<span style={{fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,background:RL,color:R,border:`0.5px solid ${R}40`}}>⚠ Abgesagt</span>}
+                    {isCancelled&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R,flexShrink:0}}>⚠ Abgesagt</span>}
                   </div>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    {!(ev.subtype==="Vereinsanlass"&&ev.rsvp===false)&&(
-                      <>
-                        {[{v:c.zu,ic:"✓",color:GN,bg:"#ECFDF5"},{v:c.ab,ic:"✕",color:R,bg:RL}].map((s,si)=>(
-                          <span key={si} style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:s.color,fontWeight:600,background:s.bg,padding:"2px 8px",borderRadius:20}}>
-                            <span style={{fontSize:12}}>{s.ic}</span>
-                            {s.v}
-                          </span>
-                        ))}
-                        {c.offen>0&&<span style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:AM,fontWeight:600,background:"#F9FAFB",padding:"2px 8px",borderRadius:20}}>
-                          <span style={{fontSize:12}}>{"?"}</span>
-                          {c.offen}
-                        </span>}
-                        {c.aufgebot>0&&<span style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#6366F1",fontWeight:600,background:"#EEF2FF",padding:"2px 8px",borderRadius:20}}>
-                          <span>{"⚽"}</span>
-                          {c.aufgebot}
-                        </span>}
-                        {c.unent>0&&<span style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:AM,fontWeight:600,background:"#FFF7ED",padding:"2px 8px",borderRadius:20}}>
-                          <span>{"!"}</span>
-                          {c.unent}
-                        </span>}
-                      </>
-                    )}
+                  {/* Meta */}
+                  <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:"2px 6px",fontSize:11,color:"#888"}}>
+                    <span>🕐 {ev.time} Uhr</span>
+                    {ev.type==="Spiel"&&ev.treffpunkt&&(<>
+                      <span style={{color:"#ddd"}}>·</span>
+                      <span>🎯 <span style={{fontWeight:600,color:"#666"}}>Treffpunkt: </span>{ev.treffpunkt}</span>
+                    </>)}
                   </div>
                 </div>
-                {/* Row 2: title */}
-                <div style={{fontWeight:700,fontSize:14,color:BK,lineHeight:1.2}}>
-                  {ev.opponent?"vs. "+ev.opponent:ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
-                </div>
-                {/* Row 3: meta */}
-                <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:0,fontSize:11,color:"#888"}}>
-                  <span style={{display:"flex",alignItems:"center",gap:3}}><span>{"🕐"}</span>{ev.time+" Uhr"}</span>
-                  <span style={{color:"#e0ded8",margin:"0 8px"}}>{"│"}</span>
-                  <span style={{display:"flex",alignItems:"center",gap:3}}><span>{"📍"}</span>{ev.ort}</span>
-                  {ev.type==="Spiel"&&ev.treffpunkt&&(
-                    <><span style={{color:"#e0ded8",margin:"0 8px"}}>{"│"}</span>
-                    <span style={{display:"flex",alignItems:"center",gap:3}}>
-                      <span>{"🎯"}</span>
-                      <span style={{fontWeight:600,color:"#666"}}>{"Treffpunkt: "}</span>
-                      <span style={{color:"#555"}}>{ev.treffpunkt}</span>
-                    </span></>
-                  )}
-                </div>
-
               </div>
-              {/* Quick RSVP — nur für Trainer, nicht für Admin */}
-              {!isAdmin&&!(ev.subtype==="Vereinsanlass"&&ev.rsvp===false)&&(
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 10px",gap:4,flexShrink:0,borderLeft:`0.5px solid ${GB}`}} onClick={e=>e.stopPropagation()}>
-                  {myId&&(()=>{
-                    const resp=getResp(ev.id,myId);
-                    const isZu=resp.status==="zu";
-                    const isAb=resp.status==="ab";
-                    return(
-                      <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"center"}}>
-                        <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")} title="Zusagen"
-                          style={{width:30,height:30,borderRadius:"50%",border:`1.5px solid ${isZu?GN:"#F3F4F6"}`,background:isZu?GN:"transparent",color:isZu?"#fff":"#D1D5DB",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                          {"✓"}
-                        </button>
-                        <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")} title="Absagen"
-                          style={{width:30,height:30,borderRadius:"50%",border:`1.5px solid ${isAb?R:"#F3F4F6"}`,background:isAb?R:"transparent",color:isAb?"#fff":"#D1D5DB",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                          {"✕"}
-                        </button>
-                      </div>
-                    );
-                  })()}
+              {/* RSVP-Statistik-Blöcke */}
+              {!noRsvp&&(
+                <div style={{borderTop:`0.5px solid ${GB}`,display:"flex",background:"#FAFAF8"}} onClick={e=>e.stopPropagation()}>
+                  {[
+                    {label:"Zugesagt",  value:c.zu,       color:GN,        bg:"#ECFDF5"},
+                    {label:"Abgesagt",  value:c.ab,       color:R,         bg:RL},
+                    {label:"Unentsch.", value:c.unent,    color:"#D97706", bg:"#FFF7ED"},
+                    {label:"Offen",     value:c.offen,    color:"#888",    bg:"#F3F4F6"},
+                    {label:"Aufgebot",  value:c.aufgebot, color:"#4F46E5", bg:"#EEF2FF"},
+                  ].map((s,i,arr)=>(
+                    <div key={i} style={{
+                      flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                      padding:"10px 2px",
+                      borderRight:i<arr.length-1?`0.5px solid ${GB}`:"none",
+                      background:s.value>0?s.bg:"transparent",
+                    }}>
+                      <div style={{fontSize:18,fontWeight:700,color:s.value>0?s.color:"#D1D5DB",lineHeight:1}}>{s.value}</div>
+                      <div style={{fontSize:9,color:s.value>0?s.color:"#C0BDB8",fontWeight:600,marginTop:4,textAlign:"center",letterSpacing:0.2,textTransform:"uppercase"}}>{s.label}</div>
+                    </div>
+                  ))}
                 </div>
               )}
-              {/* Arrow */}
-              <div onClick={()=>openEvent(ev.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",width:28,color:"#D1D5DB",fontSize:14,cursor:"pointer",flexShrink:0,borderLeft:`0.5px solid ${GB}`}}>{"›"}</div>
+              {/* RSVP-Buttons unten für Trainer */}
+              {!isAdmin&&!noRsvp&&myId&&(()=>{
+                const resp=getResp(ev.id,myId);
+                const isZu=resp.status==="zu";
+                const isAb=resp.status==="ab";
+                return(
+                  <div style={{borderTop:`0.5px solid ${GB}`,display:"flex",gap:0}} onClick={e=>e.stopPropagation()}>
+                    <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
+                      style={{flex:1,padding:"13px",border:"none",borderRight:`0.5px solid ${GB}`,background:isZu?"#16A34A":"#fff",color:isZu?"#fff":"#aaa",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:"0 0 0 14px",letterSpacing:0.1}}>
+                      {isZu?"✓ Zugesagt":"✓ Zusagen"}
+                    </button>
+                    <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
+                      style={{flex:1,padding:"13px",border:"none",background:isAb?"#DC2626":"#fff",color:isAb?"#fff":"#aaa",fontSize:13,fontWeight:600,cursor:"pointer",borderRadius:"0 0 14px 0",letterSpacing:0.1}}>
+                      {isAb?"✕ Abgesagt":"✕ Absagen"}
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
