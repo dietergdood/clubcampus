@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "./supabase.js";
 
 /* -- FARBEN -- */
 const R="#C8102E",RL="#FEF2F2",BK="#1A1A1A",GR="#F5F5F3",GB="#E0DED8",BL="#2563EB",GN="#059669",AM="#D97706";
@@ -2018,7 +2019,7 @@ function SideNav({role,active,setActive,account}){
   );
 }
 
-function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setActiveSubRole}){
+function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setActiveSubRole,onLogout}){
   const nav=NAV_BY_ROLE[role]||[];
   const label=nav.find(n=>n.key===active)?.label||active;
   const rc=ROLES[role].color;
@@ -2027,8 +2028,10 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
     <div style={{height:54,background:"#fff",borderBottom:`0.5px solid ${GB}`,display:"flex",alignItems:"center",padding:"0 20px",justifyContent:"space-between",flexShrink:0,gap:12,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
       <span style={{fontSize:13,color:"#bbb",fontWeight:500,letterSpacing:0.2}}><span style={{color:rc,fontWeight:800,fontSize:13}}>FCH</span><span style={{margin:"0 6px",color:"#ddd"}}>/</span>{label}</span>
       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-        <RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>
-        <Chip text="DEMO" color="#888" bg="#f0f0ee"/>
+        {!onLogout && <RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
+        {!onLogout && <Chip text="DEMO" color="#888" bg="#f0f0ee"/>}
+        {onLogout && <span style={{fontSize:12,color:"#888"}}>{acc.name||acc.email}</span>}
+        {onLogout && <button onClick={onLogout} style={{padding:"4px 12px",borderRadius:20,border:"0.5px solid "+GB,background:"#fff",color:"#555",fontSize:11,cursor:"pointer"}}>Abmelden</button>}
       </div>
     </div>
   );
@@ -8832,22 +8835,188 @@ function MobileNav({role,active,setActive}){
   );
 }
 
+/* ── LOGIN SCREEN ─────────────────────────────────────── */
+function LoginScreen({onLogin}){
+  const [email,setEmail]=useState("");
+  const [pw,setPw]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const [resetSent,setResetSent]=useState(false);
+  const [showReset,setShowReset]=useState(false);
+
+  async function handleLogin(e){
+    e.preventDefault();
+    setLoading(true); setError("");
+    try{
+      const {data,error:err}=await supabase.auth.signInWithPassword({email,password:pw});
+      if(err) throw err;
+      onLogin(data.session);
+    }catch(err){
+      setError(err.message==="Invalid login credentials"
+        ?"E-Mail oder Passwort falsch."
+        :err.message||"Fehler beim Einloggen.");
+    }
+    setLoading(false);
+  }
+
+  async function handleReset(e){
+    e.preventDefault();
+    setLoading(true); setError("");
+    try{
+      const {error:err}=await supabase.auth.resetPasswordForEmail(email,{
+        redirectTo: window.location.origin
+      });
+      if(err) throw err;
+      setResetSent(true);
+    }catch(err){
+      setError(err.message||"Fehler beim Senden.");
+    }
+    setLoading(false);
+  }
+
+  return(
+    <div style={{minHeight:"100vh",background:GR,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui,-apple-system,sans-serif"}}>
+      <div style={{width:"100%",maxWidth:400,padding:"0 20px"}}>
+        {/* Logo */}
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{width:64,height:64,background:"#f8de09",borderRadius:16,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:32,marginBottom:12}}>⚽</div>
+          <div style={{fontWeight:800,fontSize:22,color:BK}}>FC Herrliberg</div>
+          <div style={{fontSize:13,color:"#888",marginTop:2}}>Vereinsportal</div>
+        </div>
+
+        <div style={{background:"#fff",borderRadius:16,padding:28,boxShadow:"0 2px 16px rgba(0,0,0,0.08)"}}>
+          {!showReset ? (
+            <>
+              <div style={{fontWeight:700,fontSize:16,color:BK,marginBottom:20}}>Anmelden</div>
+              <form onSubmit={handleLogin}>
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:12,fontWeight:600,color:"#555",display:"block",marginBottom:5}}>E-Mail</label>
+                  <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
+                    style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box"}}
+                    placeholder="name@fcherrliberg.ch" autoComplete="email"/>
+                </div>
+                <div style={{marginBottom:20}}>
+                  <label style={{fontSize:12,fontWeight:600,color:"#555",display:"block",marginBottom:5}}>Passwort</label>
+                  <input type="password" value={pw} onChange={e=>setPw(e.target.value)} required
+                    style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box"}}
+                    placeholder="••••••••" autoComplete="current-password"/>
+                </div>
+                {error&&<div style={{fontSize:12,color:"#DC2626",background:"#FEF2F2",padding:"8px 12px",borderRadius:8,marginBottom:14}}>{error}</div>}
+                <button type="submit" disabled={loading}
+                  style={{width:"100%",padding:"11px",borderRadius:8,border:"none",background:"#f8de09",color:BK,fontWeight:700,fontSize:14,cursor:loading?"not-allowed":"pointer",opacity:loading?0.7:1}}>
+                  {loading?"Wird angemeldet…":"Anmelden"}
+                </button>
+              </form>
+              <button onClick={()=>{setShowReset(true);setError("");}}
+                style={{marginTop:14,width:"100%",background:"none",border:"none",color:"#888",fontSize:12,cursor:"pointer",textAlign:"center"}}>
+                Passwort vergessen?
+              </button>
+            </>
+          ) : (
+            <>
+              <div style={{fontWeight:700,fontSize:16,color:BK,marginBottom:6}}>Passwort zurücksetzen</div>
+              <div style={{fontSize:12,color:"#888",marginBottom:20}}>Wir senden dir einen Link per E-Mail.</div>
+              {resetSent ? (
+                <div style={{fontSize:13,color:GN,background:"#ECFDF5",padding:"12px",borderRadius:8,textAlign:"center"}}>
+                  E-Mail gesendet! Bitte prüfe dein Postfach.
+                </div>
+              ) : (
+                <form onSubmit={handleReset}>
+                  <div style={{marginBottom:14}}>
+                    <label style={{fontSize:12,fontWeight:600,color:"#555",display:"block",marginBottom:5}}>E-Mail</label>
+                    <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
+                      style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box"}}
+                      placeholder="name@fcherrliberg.ch"/>
+                  </div>
+                  {error&&<div style={{fontSize:12,color:"#DC2626",background:"#FEF2F2",padding:"8px 12px",borderRadius:8,marginBottom:14}}>{error}</div>}
+                  <button type="submit" disabled={loading}
+                    style={{width:"100%",padding:"11px",borderRadius:8,border:"none",background:"#f8de09",color:BK,fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                    {loading?"Wird gesendet…":"Link senden"}
+                  </button>
+                </form>
+              )}
+              <button onClick={()=>{setShowReset(false);setResetSent(false);setError("");}}
+                style={{marginTop:14,width:"100%",background:"none",border:"none",color:"#888",fontSize:12,cursor:"pointer",textAlign:"center"}}>
+                ← Zurück zum Login
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
+  const [session,setSession]=useState(undefined); // undefined=loading, null=nicht eingeloggt
+  const [dbUser,setDbUser]=useState(null);
   const [accountKey,setAccountKey]=useState("trainer");
-  const [activeSubRole,setActiveSubRole]=useState(null); /* null = primaryRole */
+  const [activeSubRole,setActiveSubRole]=useState(null);
   const [active,setActive]=useState("dashboard");
 
-  const account=USER_ACCOUNTS[accountKey]||USER_ACCOUNTS.trainer;
-  const role=activeSubRole||account.primaryRole;
-  const kinder=account.kinder||[];
-  const spielerTeam=account.team?[account.team]:[];
-  const trainerTeams=account.trainerTeams||["Cc-Junioren"];
-  /* meineTeams: for spieler/eltern use their team, for trainer use trainerTeams */
-  const meineTeams=account.primaryRole==="trainer"
-    ?trainerTeams
-    :kinder.length>0?[...new Set(kinder.map(k=>k.team))]:spielerTeam.length>0?spielerTeam:["Cc-Junioren"];
-  /* Eigene Roster-ID für RSVP-Ansicht */
-  const myRosterId=account.rosterId||(role==="spieler"?1:role==="eltern"?1:role==="trainer"?200:null);
+  // Auth-Session beim Start prüfen
+  useEffect(()=>{
+    if(!supabase){ setSession(null); return; }
+    supabase.auth.getSession().then(({data:{session}})=>{
+      setSession(session||null);
+      if(session) loadDbUser(session.user.id);
+    });
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+      setSession(session||null);
+      if(session) loadDbUser(session.user.id);
+      else setDbUser(null);
+    });
+    return ()=>subscription.unsubscribe();
+  },[]);
+
+  async function loadDbUser(uid){
+    const {data}=await supabase.from("benutzer").select("*").eq("id",uid).single();
+    if(data) setDbUser(data);
+  }
+
+  async function handleLogout(){
+    await supabase.auth.signOut();
+    setSession(null); setDbUser(null); setActive("dashboard");
+  }
+
+  // Lade-Screen
+  if(session===undefined){
+    return(
+      <div style={{minHeight:"100vh",background:GR,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{textAlign:"center"}}>
+          <div style={{width:48,height:48,background:"#f8de09",borderRadius:12,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>⚽</div>
+          <div style={{fontSize:13,color:"#888"}}>Wird geladen…</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Login-Screen wenn nicht eingeloggt (oder kein Supabase)
+  if(supabase && !session){
+    return <LoginScreen onLogin={s=>setSession(s)}/>;
+  }
+
+  // Rolle aus DB-User oder Demo-Fallback
+  const effectiveAccountKey = dbUser ? "db_user" : accountKey;
+  const dbAccount = dbUser ? {
+    name: dbUser.name||dbUser.email,
+    rollen: [dbUser.role],
+    primaryRole: dbUser.role,
+    kinder: [],
+    teams: dbUser.teams||[],
+    email: dbUser.email,
+  } : null;
+
+  const account = dbAccount || USER_ACCOUNTS[accountKey] || USER_ACCOUNTS.trainer;
+  const role = activeSubRole || account.primaryRole;
+  const kinder = account.kinder||[];
+  const spielerTeam = account.teams?.length>0 ? account.teams : [];
+  const trainerTeams = account.teams||["Cc-Junioren"];
+  const meineTeams = role==="trainer"
+    ? trainerTeams
+    : kinder.length>0 ? [...new Set(kinder.map(k=>k.team))]
+    : spielerTeam.length>0 ? spielerTeam : ["Cc-Junioren"];
+  const myRosterId = account.rosterId||(role==="spieler"?1:role==="eltern"?1:role==="trainer"?200:null);
 
   const handleAccountChange=(key)=>{
     setAccountKey(key);
@@ -8880,7 +9049,6 @@ export default function App(){
       case "sync":              return <SyncView/>;
       case "audit":             return <AuditView/>;
       case "datacheck":         return <DataCheckView/>;
-
       case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account}/>;
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
@@ -8894,7 +9062,8 @@ export default function App(){
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
         <TopBar role={role} active={active} setActive={setActive}
           account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
-          onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}/>
+          onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
+          onLogout={supabase&&session ? handleLogout : undefined}/>
         <main style={{flex:1,padding:isMobile?"16px 14px 90px":"28px 32px 28px",overflowY:"auto",maxWidth:isMobile?"100%":1300,overflowX:"hidden",margin:"0 auto",width:"100%"}}>{getView()}</main>
         {isMobile&&<MobileNav role={role} active={active} setActive={setActive}/>}
       </div>
