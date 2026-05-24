@@ -2207,7 +2207,7 @@ function DashboardFunktionaer(){
             <div key={i} style={{padding:"8px 0",borderBottom:i<EVENTS.length-1?`0.5px solid ${GB}`:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between"}}>
                 <span style={{fontWeight:600,fontSize:13}}>{e.title}</span>
-                <Chip text={e.typee==="Vereinsanlass"?"Verein":"Team"} color={e.typee==="Vereinsanlass"?R:BL}/>
+                <Chip text={e.type==="Vereinsanlass"?"Verein":"Team"} color={e.type==="Vereinsanlass"?R:BL}/>
               </div>
               <div style={{fontSize:11,color:"#888"}}>{e.date} · {e.time+" Uhr"}</div>
             </div>
@@ -2269,8 +2269,8 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
 
   /* Nächstes Training und Spiel */
   const upcoming=ATT_EVENTS.filter(e=>e.team===team&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)));
-  const nextTrain=upcoming.find(e=>e.typee==="Training");
-  const nextSpiel=upcoming.find(e=>e.typee==="Spiel");
+  const nextTrain=upcoming.find(e=>e.type==="Training");
+  const nextSpiel=upcoming.find(e=>e.type==="Spiel");
 
   /* Tabellenrang */
   const tableData=TABLES[team]||[];
@@ -2294,7 +2294,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
             const missing=teamPids.filter(pid=>!ATT_INITIAL[x.id]?.[pid]?.status).length;
             return(
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<arr.length-1?`0.5px solid ${GB}`:"none"}}>
-                <span style={{fontSize:13}}>{x.opponent?"Spiel vs. "+x.opponent:x.title||x.typee} · {x.date}</span>
+                <span style={{fontSize:13}}>{x.opponent?"Spiel vs. "+x.opponent:x.title||x.type} · {x.date}</span>
                 {missing>0&&<Chip text={`${missing} fehlen`} color={AM} bg="#FEF3C7"/>}
                 {missing===0&&<Chip text="✓ Vollständig" color={GN} bg="#ECFDF5"/>}
               </div>
@@ -2306,7 +2306,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
           {ATT_LOG.slice(0,3).map((a,i)=>(
             <div key={i} style={{padding:"7px 0",borderBottom:i<2?`0.5px solid ${GB}`:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{fontSize:12,fontWeight:600}}>{a.date} <Chip text={a.typee} color={a.typee==="Spiel"?BL:GN}/></span>
+                <span style={{fontSize:12,fontWeight:600}}>{a.date} <Chip text={a.type} color={a.type==="Spiel"?BL:GN}/></span>
                 <span style={{fontSize:13,fontWeight:800,color:R}}>{Math.round(a.present.length/(a.present.length+a.absent.length)*100)}%</span>
               </div>
               <div style={{height:4,background:GB,borderRadius:2}}>
@@ -2370,7 +2370,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
 
   /* Anwesenheitsquote */
   const myId=myRosterId||1;
-  const rsvpEvs=ATT_EVENTS.filter(e=>(e.team===team||e.team==="Alle")&&e.rsvp!==false&&e.typee==="Training");
+  const rsvpEvs=ATT_EVENTS.filter(e=>(e.team===team||e.team==="Alle")&&e.rsvp!==false&&e.type==="Training");
   const pastEvs=rsvpEvs.filter(e=>parseD(e.date)<today);
   const zuCount=pastEvs.filter(e=>ATT_INITIAL[e.id]?.[myId]?.status==="zu").length;
   const attPct=pastEvs.length?Math.round(zuCount/pastEvs.length*100):null;
@@ -2379,7 +2379,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
   /* Nächster Termin */
   const nextEv=ATT_EVENTS.filter(e=>(e.team===team||e.subtype==="Vereinsanlass")&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
   const nextVal=nextEv?nextEv.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim()+" "+nextEv.time.split(":")[0]+":"+nextEv.time.split(":")[1]:"-";
-  const nextSub=nextEv?(nextEv.opponent?"vs. "+nextEv.opponent:nextEv.title||nextEv.typee):"Keine Termine";
+  const nextSub=nextEv?(nextEv.opponent?"vs. "+nextEv.opponent:nextEv.title||nextEv.type):"Keine Termine";
 
   /* Helfereinsätze - kombiniert statische + dynamische Daten */
   const meinName=player?`${player.firstName} ${player.lastName}`:(account?.name||"");
@@ -2398,12 +2398,12 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
 
   /* Nächstes Aufgebot */
   const nextAufgebot=ATT_EVENTS
-    .filter(e=>e.team===team&&e.typee==="Spiel"&&parseD(e.date)>=today&&(aufgebotState[e.id]||[]).includes(myId))
+    .filter(e=>e.team===team&&e.type==="Spiel"&&parseD(e.date)>=today&&(aufgebotState[e.id]||[]).includes(myId))
     .sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
 
   /* Nächstes Spiel */
   const nextSpiel=ATT_EVENTS
-    .filter(e=>e.team===team&&e.typee==="Spiel"&&parseD(e.date)>=today)
+    .filter(e=>e.team===team&&e.type==="Spiel"&&parseD(e.date)>=today)
     .sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
   const nextSpielImAufgebot=nextSpiel&&(aufgebotState[nextSpiel?.id]||[]).includes(myId);
   const nextSpielAufgebotStatus=nextSpiel
@@ -2412,7 +2412,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
 
   /* Nächstes Training */
   const nextTraining=ATT_EVENTS
-    .filter(e=>e.team===team&&e.typee==="Training"&&parseD(e.date)>=today)
+    .filter(e=>e.team===team&&e.type==="Training"&&parseD(e.date)>=today)
     .sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
 
   return(
@@ -2449,10 +2449,10 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
             return upcoming.map((t,i)=>(
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<upcoming.length-1?`0.5px solid ${GB}`:"none"}}>
                 <div>
-                  <div style={{fontWeight:600,fontSize:13}}>{t.opponent?"vs. "+t.opponent:t.typee==="Training"?"Training · "+t.team:t.title||t.typee}</div>
+                  <div style={{fontWeight:600,fontSize:13}}>{t.opponent?"vs. "+t.opponent:t.type==="Training"?"Training · "+t.team:t.title||t.type}</div>
                   <div style={{fontSize:11,color:"#888"}}>{t.date} · {t.time+" Uhr"}</div>
                 </div>
-                <Chip text={t.subtype||t.typee} color={t.typee==="Spiel"?BL:t.subtype==="Team-Event"?AM:GN}/>
+                <Chip text={t.subtype||t.type} color={t.type==="Spiel"?BL:t.subtype==="Team-Event"?AM:GN}/>
               </div>
             ));
           })()}
@@ -2464,7 +2464,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
             if(open.length===0) return <div style={{fontSize:12,color:GN,fontWeight:600}}>✓ Alle Termine beantwortet</div>;
             return open.map((x,i)=>(
               <div key={i} style={{padding:"8px 0",borderBottom:i<open.length-1?`0.5px solid ${GB}`:"none"}}>
-                <div style={{fontWeight:600,fontSize:13}}>{x.opponent?"Spiel vs. "+x.opponent:x.title||x.typee} · {x.date}</div>
+                <div style={{fontWeight:600,fontSize:13}}>{x.opponent?"Spiel vs. "+x.opponent:x.title||x.type} · {x.date}</div>
                 <div style={{fontSize:11,color:"#888",marginBottom:4}}>Rückmeldung ausstehend</div>
               </div>
             ));
@@ -2540,7 +2540,7 @@ function DashboardEltern({account,meineTeams,setActive}){
         const vorname=kind.name.split(" ")[0];
 
         /* Anwesenheit - nur Trainings */
-        const pastEvs=ATT_EVENTS.filter(e=>e.team===team&&e.typee==="Training"&&parseD(e.date)<today);
+        const pastEvs=ATT_EVENTS.filter(e=>e.team===team&&e.type==="Training"&&parseD(e.date)<today);
         const zuCount=pastEvs.filter(e=>ATT_INITIAL[e.id]?.[rosterId]?.status==="zu").length;
         const abCount=pastEvs.filter(e=>ATT_INITIAL[e.id]?.[rosterId]?.status==="ab").length;
         const attTotal=zuCount+abCount;
@@ -2549,21 +2549,21 @@ function DashboardEltern({account,meineTeams,setActive}){
 
         /* Nächste 4 Trainings & Spiele */
         const upcoming=ATT_EVENTS
-          .filter(e=>e.team===team&&(e.typee==="Training"||e.typee==="Spiel")&&parseD(e.date)>=today)
+          .filter(e=>e.team===team&&(e.type==="Training"||e.type==="Spiel")&&parseD(e.date)>=today)
           .sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))
           .slice(0,4);
 
         /* Team-Events & Vereinsanlässe */
         const anlaesse=ATT_EVENTS
-          .filter(e=>(e.team===team||e.team==="Alle")&&e.typee==="Veranstaltung"&&parseD(e.date)>=today)
+          .filter(e=>(e.team===team||e.team==="Alle")&&e.type==="Veranstaltung"&&parseD(e.date)>=today)
           .sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))
           .slice(0,4);
 
         const nextAufgebotSpiel=ATT_EVENTS
-          .filter(e=>e.team===team&&e.typee==="Spiel"&&parseD(e.date)>=today&&(aufgebotState[e.id]||[]).includes(rosterId))
+          .filter(e=>e.team===team&&e.type==="Spiel"&&parseD(e.date)>=today&&(aufgebotState[e.id]||[]).includes(rosterId))
           .sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
 
-        const accentFor=(e)=>e.typee==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.typee==="Veranstaltung"?AM:GN;
+        const accentFor=(e)=>e.type==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.type==="Veranstaltung"?AM:GN;
 
         return(
           <div key={ki} style={{marginBottom:24}}>
@@ -2575,8 +2575,8 @@ function DashboardEltern({account,meineTeams,setActive}){
 
             {/* Stat-Kacheln */}
             {(()=>{
-              const nextSpiel=ATT_EVENTS.filter(e=>e.team===team&&e.typee==="Spiel"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
-              const nextTraining=ATT_EVENTS.filter(e=>e.team===team&&e.typee==="Training"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
+              const nextSpiel=ATT_EVENTS.filter(e=>e.team===team&&e.type==="Spiel"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
+              const nextTraining=ATT_EVENTS.filter(e=>e.team===team&&e.type==="Training"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
               return(
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,marginBottom:14}}>
                   <Stat label="Ø Anwesenheit Trainings" value={attPct!==null?attPct+"%":"-"} sub={attTotal?zuCount+"/"+attTotal+" Trainings":"Noch keine"} color={attColor}/>
@@ -2622,11 +2622,11 @@ function DashboardEltern({account,meineTeams,setActive}){
                     <div style={{width:3,height:30,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis"}}>
-                        {e.typee==="Training"?`Training · ${team}`:e.opponent?"vs. "+e.opponent:e.title||e.typee}
+                        {e.type==="Training"?`Training · ${team}`:e.opponent?"vs. "+e.opponent:e.title||e.type}
                       </div>
                       <div style={{fontSize:11,color:"#888"}}>{e.date} · {e.time} Uhr · {e.location}</div>
                     </div>
-                    <Chip text={e.typee} color={accentFor(e)}/>
+                    <Chip text={e.type} color={accentFor(e)}/>
                   </div>
                 ))}
               </Card>
@@ -2639,10 +2639,10 @@ function DashboardEltern({account,meineTeams,setActive}){
                   <div key={e.id} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:i<anlaesse.length-1?`0.5px solid ${GB}`:"none",alignItems:"center"}}>
                     <div style={{width:3,height:30,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis"}}>{e.title||e.typee}</div>
+                      <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis"}}>{e.title||e.type}</div>
                       <div style={{fontSize:11,color:"#888"}}>{e.date} · {e.time} Uhr · {e.location}</div>
                     </div>
-                    <Chip text={e.subtype||e.typee} color={accentFor(e)}/>
+                    <Chip text={e.subtype||e.type} color={accentFor(e)}/>
                   </div>
                 ))}
               </Card>
@@ -2877,14 +2877,14 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
     .slice(0,8);
 
   const spielplan=ATT_EVENTS
-    .filter(e=>e.team===myTeam&&(e.typee==="Training"||e.typee==="Spiel")&&parseEvDate(e.date)>=today)
+    .filter(e=>e.team===myTeam&&(e.type==="Training"||e.type==="Spiel")&&parseEvDate(e.date)>=today)
     .sort((a,b)=>parseEvDate(a.date).localeCompare(parseEvDate(b.date)));
   const allTermine=ATT_EVENTS
-    .filter(e=>e.typee==="Veranstaltung"&&(e.team===myTeam||e.team==="Alle"))
+    .filter(e=>e.type==="Veranstaltung"&&(e.team===myTeam||e.team==="Alle"))
     .filter(e=>parseEvDate(e.date)>=today)
     .sort((a,b)=>parseEvDate(a.date).localeCompare(parseEvDate(b.date)))
     .slice(0,4);
-  const accentFor=(e)=>e.typee==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.typee==="Veranstaltung"?AM:GN;
+  const accentFor=(e)=>e.type==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.type==="Veranstaltung"?AM:GN;
 
   const termine=allTermine;
 
@@ -2950,10 +2950,10 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
         {(()=>{
           /* Only team-specific past Training + Spiel events */
           const pastEvs=ATT_EVENTS
-            .filter(e=>e.team===myTeam&&(e.typee==="Training"||e.typee==="Spiel"))
+            .filter(e=>e.team===myTeam&&(e.type==="Training"||e.type==="Spiel"))
             .filter(e=>parseEvDate(e.date)<today);
-          const trainEvs=pastEvs.filter(e=>e.typee==="Training");
-          const spielEvs=pastEvs.filter(e=>e.typee==="Spiel");
+          const trainEvs=pastEvs.filter(e=>e.type==="Training");
+          const spielEvs=pastEvs.filter(e=>e.type==="Spiel");
           /* Use same player slice as ATT_INITIAL */
           const pids=ROSTER.filter(p=>(p.teams||[]).includes(myTeam)&&!p.role).map(p=>p.id).slice(0,12);
           /* Only count "zu", "ab", "unentschuldigt" - null/fraglich excluded */
@@ -3007,7 +3007,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                 <div style={{width:3,height:32,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:13,color:BK,overflow:"hidden",textOverflow:"ellipsis"}}>
-                    {e.opponent?"vs. "+e.opponent:e.typee==="Training"?"Training · "+e.team:e.title||e.typee}
+                    {e.opponent?"vs. "+e.opponent:e.type==="Training"?"Training · "+e.team:e.title||e.type}
                   </div>
                   <div style={{fontSize:11,color:"#888",display:"flex",alignItems:"center",gap:6}}>
                     <span>{e.date}{e.endDate?" - "+e.endDate:""}</span>
@@ -3017,7 +3017,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                     <span>{e.location}</span>
                   </div>
                 </div>
-                <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0}}>{e.typee}</span>
+                <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0}}>{e.type}</span>
               </div>
             ))}
           </>);
@@ -3030,7 +3030,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<termine.length-1?`0.5px solid ${GB}`:"none"}}>
             <div style={{width:3,height:32,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:600,fontSize:13,color:BK,overflow:"hidden",textOverflow:"ellipsis"}}>{e.title||e.typee}</div>
+              <div style={{fontWeight:600,fontSize:13,color:BK,overflow:"hidden",textOverflow:"ellipsis"}}>{e.title||e.type}</div>
               <div style={{fontSize:11,color:"#888",display:"flex",alignItems:"center",gap:6}}>
                 <span>{e.date}{e.endDate?" - "+e.endDate:""}</span>
                 <span style={{color:"#ddd"}}>·</span>
@@ -3039,7 +3039,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                 <span>{e.location}</span>
               </div>
             </div>
-            <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0,whiteSpace:"nowrap"}}>{e.subtype||e.typee}</span>
+            <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0,whiteSpace:"nowrap"}}>{e.subtype||e.type}</span>
           </div>
         ))}
       </Card>
@@ -3974,16 +3974,16 @@ function TrainingGantt({team: teamProp, role}){
         const [gy,gk] = s.valid_from_week.split("_").map(Number);
         return cy>gy || (cy===gy && ck>=gk);
       })
-      .filter(function(s){ return !kwAusnahmen.some(function(a){ return a.typee==="absage"&&a.slot_id===s.id; }); })
+      .filter(function(s){ return !kwAusnahmen.some(function(a){ return a.type==="absage"&&a.slot_id===s.id; }); })
       .map(function(s){
-        const va = kwAusnahmen.find(function(a){ return a.typee==="verschiebung"&&a.slot_id===s.id; });
-        const oa = kwAusnahmen.find(function(a){ return a.typee==="location"&&a.slot_id===s.id; });
+        const va = kwAusnahmen.find(function(a){ return a.type==="verschiebung"&&a.slot_id===s.id; });
+        const oa = kwAusnahmen.find(function(a){ return a.type==="location"&&a.slot_id===s.id; });
         if(va) return Object.assign({},s,{start:va.neue_start,end:va.neue_end,isVerschoben:true});
         if(oa) return Object.assign({},s,{ort:oa.neuer_ort,isOrtGeaendert:true});
         return s;
       });
     const zusatz = kwAusnahmen
-      .filter(function(a){ return a.typee==="zusatz"&&a.weekday===day; })
+      .filter(function(a){ return a.type==="zusatz"&&a.weekday===day; })
       .map(function(a){ return Object.assign({},a,{isZusatz:true}); });
     return basis.concat(zusatz);
   });
@@ -3998,7 +3998,7 @@ function TrainingGantt({team: teamProp, role}){
   const displayStart = minStart < DEFAULT_START ? Math.max(7, Math.floor(minStart)) : DEFAULT_START;
   // Mindestens bis DEFAULT_END, sonst bis zum Ende des letzten Slots (aufgerundet)
   const displayEnd = Math.max(DEFAULT_END, Math.ceil(maxEnd));
-  const trainerAbsagen = kwAusnahmen.filter(function(a){ return a.typee==="absage"&&a.von_termin; });
+  const trainerAbsagen = kwAusnahmen.filter(function(a){ return a.type==="absage"&&a.von_termin; });
 
   function handleSlotSave(slot){
     const cleanSlot = Object.assign({},slot);
@@ -4019,7 +4019,7 @@ function TrainingGantt({team: teamProp, role}){
         };
         const next = Object.assign({},ausnahmen);
         next[kwKey] = (ausnahmen[kwKey]||[])
-          .filter(function(a){ return !(a.slot_id===editSlot.id&&a.typee==="verschiebung"); })
+          .filter(function(a){ return !(a.slot_id===editSlot.id&&a.type==="verschiebung"); })
           .concat([ausnahme]);
         saveAusnahmen(next);
       } else {
@@ -4057,7 +4057,7 @@ function TrainingGantt({team: teamProp, role}){
     if(!slot) return;
     const td = new Date(2026,4,24);
     const zukunftigeEvents = ATT_EVENTS.filter(function(e){
-      if(e.typee!=="Training"||e.team!==slot.team) return false;
+      if(e.type!=="Training"||e.team!==slot.team) return false;
       const parts = e.date.split(" ");
       const dm = parts.length>1?parts[1]:parts[0];
       const dparts = dm.split(".");
@@ -4096,14 +4096,14 @@ function TrainingGantt({team: teamProp, role}){
 
   function handleAusnahmeSave(ausnahme, fuerAlleWochen){
     if(fuerAlleWochen){
-      if(ausnahme.typee==="absage"){ handleSlotDeleteInit(ausnahme.slot_id); }
-      else if(ausnahme.typee==="verschiebung"){
+      if(ausnahme.type==="absage"){ handleSlotDeleteInit(ausnahme.slot_id); }
+      else if(ausnahme.type==="verschiebung"){
         const updated = plaene.map(function(p){
           if(p.id!==angezeigterPlanId) return p;
           return Object.assign({},p,{slots:p.slots.map(function(s){ return s.id===ausnahme.slot_id?Object.assign({},s,{start:ausnahme.neue_start,end:ausnahme.neue_end}):s; })});
         });
         savePlaene(updated);
-      } else if(ausnahme.typee==="location"){
+      } else if(ausnahme.type==="location"){
         const updated = plaene.map(function(p){
           if(p.id!==angezeigterPlanId) return p;
           return Object.assign({},p,{slots:p.slots.map(function(s){ return s.id===ausnahme.slot_id?Object.assign({},s,{ort:ausnahme.neuer_ort}):s; })});
@@ -4112,7 +4112,7 @@ function TrainingGantt({team: teamProp, role}){
       }
     } else {
       const next = Object.assign({},ausnahmen);
-      next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a){ return !(a.slot_id===ausnahme.slot_id&&a.typee===ausnahme.typee); }).concat([ausnahme]);
+      next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a){ return !(a.slot_id===ausnahme.slot_id&&a.type===ausnahme.type); }).concat([ausnahme]);
       saveAusnahmen(next);
     }
     setShowAusnahmeModal(false);
@@ -5085,7 +5085,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
         const r=await window.storage.get("aufgebot_state");
         if(r){
           const aufgebotState=JSON.parse(r.value);
-          const attEv=ATT_EVENTS.find(e=>e.date===spiel.date&&e.typee==="Spiel"&&
+          const attEv=ATT_EVENTS.find(e=>e.date===spiel.date&&e.type==="Spiel"&&
             (e.opponent===spiel.opponent||e.team===spiel.team));
           if(attEv){
             const aufgebotIds=(aufgebotState[attEv.id]||[]).filter(id=>
@@ -5317,11 +5317,11 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               <ST>Karten ({stats.karten.length})</ST>
               {stats.karten.length===0&&!editMode&&<div style={{fontSize:12,color:"#aaa",marginBottom:4}}>Keine Karten erfasst.</div>}
               {stats.karten.map((k,i)=>{
-                const ks=KARTEN_STYLE[k.typee]||KARTEN_STYLE["gelb"];
+                const ks=KARTEN_STYLE[k.type]||KARTEN_STYLE["gelb"];
                 const karteBadge=<span style={{background:ks.bg,color:ks.color,fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>{ks.label}</span>;
                 return <EZ key={i} icon={karteBadge} text={k.spieler} min={k.min} onDelete={()=>setStats(s=>({...s,karten:s.karten.filter((_,j)=>j!==i)}))}/>;
               })}
-              {editMode&&<AR onAdd={()=>{if(!newKarte.spieler)return;setStats(s=>({...s,karten:[...s.karten,{spieler:newKarte.spieler,min:newKarte.min||"",type:newKarte.typee}]}));setNewKarte({spieler:"",min:"",type:"gelb"});}}><SS value={newKarte.spieler} onChange={v=>setNewKarte(k=>({...k,spieler:v}))} options={spielerNamen} placeholder="Spieler"/><SS value={newKarte.typee} onChange={v=>setNewKarte(k=>({...k,type:v}))} options={[{value:"gelb",label:"Gelb"},{value:"gelb-rot",label:"Gelb-Rot"},{value:"rot",label:"Rot"}]}/><MI value={newKarte.min} onChange={v=>setNewKarte(k=>({...k,min:v}))}/></AR>}
+              {editMode&&<AR onAdd={()=>{if(!newKarte.spieler)return;setStats(s=>({...s,karten:[...s.karten,{spieler:newKarte.spieler,min:newKarte.min||"",type:newKarte.type}]}));setNewKarte({spieler:"",min:"",type:"gelb"});}}><SS value={newKarte.spieler} onChange={v=>setNewKarte(k=>({...k,spieler:v}))} options={spielerNamen} placeholder="Spieler"/><SS value={newKarte.type} onChange={v=>setNewKarte(k=>({...k,type:v}))} options={[{value:"gelb",label:"Gelb"},{value:"gelb-rot",label:"Gelb-Rot"},{value:"rot",label:"Rot"}]}/><MI value={newKarte.min} onChange={v=>setNewKarte(k=>({...k,min:v}))}/></AR>}
 
               <ST>Ein-/Auswechslungen ({stats.wechsel.length})</ST>
               {stats.wechsel.length===0&&!editMode&&<div style={{fontSize:12,color:"#aaa",marginBottom:4}}>Keine Wechsel erfasst.</div>}
@@ -5611,7 +5611,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
       window.storage.set("cancelled_events",JSON.stringify(next)).catch(()=>{});
 
       // Sync mit GANTT: Training-Event → Ausnahme in trainingsAusnahmen schreiben
-      const ev=ATT_EVENTS.find(e=>e.id===evId&&e.typee==="Training");
+      const ev=ATT_EVENTS.find(e=>e.id===evId&&e.type==="Training");
       if(ev){
         (async()=>{
           try{
@@ -5642,12 +5642,12 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 if(isCancelling){
                   // Absage hinzufügen
                   newKwAusnahmen=[
-                    ...week_nrAusnahmen.filter(a=>!(a.slot_id===matchSlot.id&&a.typee==="absage")),
+                    ...week_nrAusnahmen.filter(a=>!(a.slot_id===matchSlot.id&&a.type==="absage")),
                     {type:"absage",slot_id:matchSlot.id,weekday,team:ev.team,evId,von_termin:true}
                   ];
                 } else {
                   // Absage rückgängig
-                  newKwAusnahmen=kwAusnahmen.filter(a=>!(a.slot_id===matchSlot.id&&a.typee==="absage"&&a.von_termin));
+                  newKwAusnahmen=kwAusnahmen.filter(a=>!(a.slot_id===matchSlot.id&&a.type==="absage"&&a.von_termin));
                 }
                 await window.storage.set("trainingsAusnahmen",JSON.stringify({...ausnahmen,[kwKey]:newKwAusnahmen}));
 
@@ -5724,7 +5724,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
     const stored=responses[evId]?.[pid];
     if(stored?.status) return stored;
     const ev=ATT_EVENTS.find(e=>e.id===evId);
-    if(ev?.typee==="Training") return {status:"zu",note:""};
+    if(ev?.type==="Training") return {status:"zu",note:""};
     return {status:null,note:""};
   };
 
@@ -5769,10 +5769,10 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
     .filter(e=>timeFilter==="alle"||(timeFilter==="kommend"&&!isPast(e))||(timeFilter==="vergangen"&&isPast(e)))
     .filter(e=>{
       if(activeFilters.size===0) return true;
-      if(activeFilters.has("training")&&e.typee==="Training") return true;
-      if(activeFilters.has("spiele")&&e.typee==="Spiel") return true;
-      if(activeFilters.has("team-event")&&e.typee==="Veranstaltung"&&e.subtype==="Team-Event") return true;
-      if(activeFilters.has("vereinsanlass")&&e.typee==="Veranstaltung"&&e.subtype==="Vereinsanlass") return true;
+      if(activeFilters.has("training")&&e.type==="Training") return true;
+      if(activeFilters.has("spiele")&&e.type==="Spiel") return true;
+      if(activeFilters.has("team-event")&&e.type==="Veranstaltung"&&e.subtype==="Team-Event") return true;
+      if(activeFilters.has("vereinsanlass")&&e.type==="Veranstaltung"&&e.subtype==="Vereinsanlass") return true;
       return false;
     })
     .sort((a,b)=>{
@@ -5856,19 +5856,19 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"#fff",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"#fff",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
               {/* Header */}
               {(()=>{
-                const hBg=selEv.typee==="Spiel"?"#EFF6FF":selEv.subtype==="Vereinsanlass"?"linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%)":selEv.typee==="Veranstaltung"?`linear-gradient(135deg,${AM} 0%,#b45309 100%)`:"#F0FDF4";
-                const hLight=selEv.typee==="Spiel"||selEv.typee==="Training";
+                const hBg=selEv.type==="Spiel"?"#EFF6FF":selEv.subtype==="Vereinsanlass"?"linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%)":selEv.type==="Veranstaltung"?`linear-gradient(135deg,${AM} 0%,#b45309 100%)`:"#F0FDF4";
+                const hLight=selEv.type==="Spiel"||selEv.type==="Training";
                 const hTxt=hLight?"#1a1a1a":"#fff";
                 const hTxtSub=hLight?"rgba(0,0,0,0.5)":"rgba(255,255,255,0.75)";
                 const hBtn=hLight?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.18)";
                 return(
                   <div style={{background:hBg,borderRadius:"20px 20px 0 0",padding:"20px 22px",color:"#fff"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                      <span style={{background:hBtn,color:hTxt,fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:0.6}}>{selEv.subtype||selEv.typee}</span>
+                      <span style={{background:hBtn,color:hTxt,fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:0.6}}>{selEv.subtype||selEv.type}</span>
                       <button onClick={()=>setModalOpen(false)} style={{background:hBtn,border:"none",borderRadius:"50%",width:30,height:30,color:hTxt,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
                     <div style={{fontWeight:900,fontSize:22,lineHeight:1.2,marginBottom:12,color:hTxt}}>
-                      {selEv.opponent?"vs. "+selEv.opponent:selEv.typee==="Training"?"Training":selEv.title||selEv.typee}
+                      {selEv.opponent?"vs. "+selEv.opponent:selEv.type==="Training"?"Training":selEv.title||selEv.type}
                     </div>
                     {/* Info Pills */}
                     <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
@@ -5910,7 +5910,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 </div>
               )}
               {/* Zum Spielplan Link bei Spielen */}
-              {selEv.typee==="Spiel"&&onNavigateToSpiel&&(
+              {selEv.type==="Spiel"&&onNavigateToSpiel&&(
                 <div style={{padding:"10px 20px",background:"#EFF6FF",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{fontSize:12,color:BL,fontWeight:500}}><i className="ti-ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                   <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
@@ -5935,7 +5935,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     </div>
                   )}
                   {/* Aufgebotene Mitspieler */}
-                  {!isTrainer&&!isAdmin&&selEv.typee==="Spiel"&&(()=>{
+                  {!isTrainer&&!isAdmin&&selEv.type==="Spiel"&&(()=>{
                     const ichSelbst=teamRoster.find(p=>p.id===myId);
                     const mitspieler=teamRoster.filter(p=>p.id!==myId&&isInAufgebot(selEv.id,p.id));
                     const alleAufgebotene=[...(isInAufgebot(selEv.id,myId)&&ichSelbst?[{...ichSelbst,ich:true}]:[]),...mitspieler];
@@ -5984,7 +5984,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,marginBottom:14}}>
           {(()=>{
             const rsvpEvs=teamEvents.filter(e=>!(e.subtype==="Vereinsanlass"&&e.rsvp===false));
-            const spielTrainEvs=rsvpEvs.filter(e=>e.typee==="Training"||e.typee==="Spiel");
+            const spielTrainEvs=rsvpEvs.filter(e=>e.type==="Training"||e.type==="Spiel");
 
             /* Vergangene Events → Anwesenheitsquote */
             const pastST=spielTrainEvs.filter(e=>isPast(e));
@@ -5992,12 +5992,12 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             const pastPct=pastST.length?Math.round(pastZu/pastST.length*100):null;
 
             /* Trainings */
-            const pastTrain=spielTrainEvs.filter(e=>e.typee==="Training"&&isPast(e));
+            const pastTrain=spielTrainEvs.filter(e=>e.type==="Training"&&isPast(e));
             const pastTrainZu=pastTrain.filter(e=>getResp(e.id,myId).status==="zu").length;
             const trainPct=pastTrain.length?Math.round(pastTrainZu/pastTrain.length*100):null;
 
             /* Spiele */
-            const pastSpiele=spielTrainEvs.filter(e=>e.typee==="Spiel"&&isPast(e));
+            const pastSpiele=spielTrainEvs.filter(e=>e.type==="Spiel"&&isPast(e));
             const pastSpieleZu=pastSpiele.filter(e=>getResp(e.id,myId).status==="zu").length;
             const spielPct=pastSpiele.length?Math.round(pastSpieleZu/pastSpiele.length*100):null;
 
@@ -6064,7 +6064,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           {(showMoreEvents?filteredEvents:filteredEvents.slice(0,5)).map(ev=>{
             const resp=getResp(ev.id,myId);
             const past=isPast(ev);
-            const accentColor=ev.typee==="Spiel"?BL:ev.subtype==="Vereinsanlass"?"#7C3AED":ev.typee==="Veranstaltung"?AM:GN;
+            const accentColor=ev.type==="Spiel"?BL:ev.subtype==="Vereinsanlass"?"#7C3AED":ev.type==="Veranstaltung"?AM:GN;
             const dateParts=ev.date.split(" ");
             const weekday=dateParts[0]||"";
             const dayMonth=dateParts[1]||ev.date;
@@ -6075,7 +6075,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             const isZu=resp.status==="zu";
             const isAb=resp.status==="ab";
             const isCancelled=!!cancelledEvents[ev.id];
-            const canCancel=isTrainer&&!past&&(ev.typee==="Training"||ev.subtype==="Team-Event");
+            const canCancel=isTrainer&&!past&&(ev.type==="Training"||ev.subtype==="Team-Event");
             const showRsvp=!past&&!canCancel&&!(ev.subtype==="Vereinsanlass"&&ev.rsvp===false);
             const inAufgebot=!past&&isInAufgebot(ev.id,myId);
 
@@ -6104,10 +6104,10 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:3}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
-                        {ev.opponent?"vs. "+ev.opponent:ev.typee==="Training"?"Training · "+ev.team:ev.title||ev.typee}
+                        {ev.opponent?"vs. "+ev.opponent:ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
                       </div>
                       <span style={{background:accentColor+"18",color:accentColor,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
-                        {ev.subtype||ev.typee}
+                        {ev.subtype||ev.type}
                       </span>
                       {isCancelled&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R,flexShrink:0}}>⚠ Abgesagt</span>}
                       {inAufgebot&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"#EEF2FF",color:"#4F46E5",flexShrink:0}}><i className="ti-ball-football" style={{marginRight:3}}/> Aufgebot</span>}
@@ -6115,7 +6115,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"2px 6px",fontSize:11,color:"#888"}}>
                       <span><i className="ti-clock" style={{marginRight:3}}/> {ev.time} Uhr</span>
-                      {ev.typee==="Spiel"&&ev.treffpunkt&&(<>
+                      {ev.type==="Spiel"&&ev.treffpunkt&&(<>
                         <span style={{color:"#ddd"}}>·</span>
                         <span><i className="ti-target" style={{marginRight:3}}/> <span style={{fontWeight:600,color:"#666"}}>Treffpunkt: </span>{ev.treffpunkt}</span>
                       </>)}
@@ -6178,8 +6178,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"#fff",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"#fff",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
             {/* Modal Header */}
             {(()=>{
-              const hBg=selEv.typee==="Spiel"?"#EFF6FF":selEv.subtype==="Vereinsanlass"?"linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%)":selEv.typee==="Veranstaltung"?`linear-gradient(135deg,${AM} 0%,#b45309 100%)`:"#F0FDF4";
-                const hLight=selEv.typee==="Spiel"||selEv.typee==="Training";
+              const hBg=selEv.type==="Spiel"?"#EFF6FF":selEv.subtype==="Vereinsanlass"?"linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%)":selEv.type==="Veranstaltung"?`linear-gradient(135deg,${AM} 0%,#b45309 100%)`:"#F0FDF4";
+                const hLight=selEv.type==="Spiel"||selEv.type==="Training";
                 const hTxt=hLight?"#1a1a1a":"#fff";
                 const hTxtSub=hLight?"rgba(0,0,0,0.5)":"rgba(255,255,255,0.75)";
                 const hBtn=hLight?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.18)";
@@ -6194,10 +6194,10 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   )}
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
                     <span style={{background:hBtn,color:hTxt,fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,letterSpacing:0.8,textTransform:"uppercase"}}>
-                      {selEv.subtype||selEv.typee}
+                      {selEv.subtype||selEv.type}
                     </span>
                     <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
-                      {isTrainer&&!isPast(selEv)&&(selEv.typee==="Training"||selEv.subtype==="Team-Event")&&(
+                      {isTrainer&&!isPast(selEv)&&(selEv.type==="Training"||selEv.subtype==="Team-Event")&&(
                         <button onClick={()=>toggleCancel(selEv.id)}
                           style={{display:"flex",alignItems:"center",gap:5,background:cancelledEvents[selEv.id]?hBtn:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"4px 12px",cursor:"pointer",color:hTxt,fontSize:11,fontWeight:700}}>
                           {cancelledEvents[selEv.id]?"↩ Reaktivieren":"✕ Training absagen"}
@@ -6208,7 +6208,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     </div>
                   </div>
                   <div style={{color:hTxt,fontWeight:900,fontSize:22,lineHeight:1.15,marginBottom:12,letterSpacing:-0.3}}>
-                    {selEv.opponent?"vs. "+selEv.opponent:selEv.typee==="Training"?"Training":selEv.title||selEv.typee}
+                    {selEv.opponent?"vs. "+selEv.opponent:selEv.type==="Training"?"Training":selEv.title||selEv.type}
                   </div>
                   {/* Info Pills */}
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
@@ -6332,7 +6332,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               </div>
             </div>
             {/* Zum Spielplan Link bei Spielen */}
-            {selEv.typee==="Spiel"&&onNavigateToSpiel&&(
+            {selEv.type==="Spiel"&&onNavigateToSpiel&&(
               <div style={{padding:"10px 20px",background:"#EFF6FF",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <span style={{fontSize:12,color:BL,fontWeight:500}}><i className="ti-ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                 <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
@@ -6375,8 +6375,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             {/* Spieler-Liste */}
             <div style={{padding:"0 0 4px"}}>
               <div style={{padding:"8px 20px 4px",background:GR,borderBottom:`0.5px solid ${GB}`}}>
-                <div style={{display:"grid",gridTemplateColumns:`1fr auto auto${selEv.typee==="Spiel"?" auto":""}`,fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:0.5,gap:"0 16px"}}>
-                  <span>Spieler</span><span style={{textAlign:"center"}}>Status</span><span style={{minWidth:80,textAlign:"left"}}>Begründung</span>{selEv.typee==="Spiel"&&<span style={{textAlign:"center",color:"#4F46E5"}}><i className="ti-ball-football"/></span>}
+                <div style={{display:"grid",gridTemplateColumns:`1fr auto auto${selEv.type==="Spiel"?" auto":""}`,fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:0.5,gap:"0 16px"}}>
+                  <span>Spieler</span><span style={{textAlign:"center"}}>Status</span><span style={{minWidth:80,textAlign:"left"}}>Begründung</span>{selEv.type==="Spiel"&&<span style={{textAlign:"center",color:"#4F46E5"}}><i className="ti-ball-football"/></span>}
                 </div>
               </div>
               {teamRoster.map((p,i)=>{
@@ -6384,7 +6384,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 const editingNote=showNoteFor===p.id;
                 const statusColor=resp.status==="zu"?GN:resp.status==="ab"?R:resp.status==="unentschuldigt"?AM:resp.status==="fraglich"?AM:"#F3F4F6";
                 return(
-                  <div key={p.id} style={{display:"grid",gridTemplateColumns:`1fr auto auto${selEv.typee==="Spiel"?" auto":""}`,alignItems:"center",gap:"0 16px",padding:"8px 20px",borderBottom:`0.5px solid ${GB}`,background:resp.status==="zu"?"#F9FFFB":resp.status==="ab"?"#FFF9F9":resp.status==="unentschuldigt"?"#FFF7ED":"#fff"}}>
+                  <div key={p.id} style={{display:"grid",gridTemplateColumns:`1fr auto auto${selEv.type==="Spiel"?" auto":""}`,alignItems:"center",gap:"0 16px",padding:"8px 20px",borderBottom:`0.5px solid ${GB}`,background:resp.status==="zu"?"#F9FFFB":resp.status==="ab"?"#FFF9F9":resp.status==="unentschuldigt"?"#FFF7ED":"#fff"}}>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:4,height:28,borderRadius:2,background:statusColor,flexShrink:0}}/>
                       <Av name={p.name} size={28} bg={resp.status==="zu"?GN:resp.status==="ab"?R:resp.status==="unentschuldigt"?AM:resp.status==="fraglich"?AM:"#D1D5DB"}/>
@@ -6394,7 +6394,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                       </div>
                     </div>
                     <div style={{display:"flex",gap:3,justifyContent:"center"}}>
-                      {(canEditEvent(selEv)?(selEv.typee==="Spiel"?["zu","ab","unentschuldigt"]:selEv.typee==="Veranstaltung"?["zu","ab"]:["zu","ab","unentschuldigt"]):[]).map(s=>{
+                      {(canEditEvent(selEv)?(selEv.type==="Spiel"?["zu","ab","unentschuldigt"]:selEv.type==="Veranstaltung"?["zu","ab"]:["zu","ab","unentschuldigt"]):[]).map(s=>{
                         const cfg=STATUS_CFG[s];
                         const active=resp.status===s;
                         return(
@@ -6417,7 +6417,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                         <span style={{fontSize:11,color:resp.note?"#555":"#ccc",fontStyle:resp.note?"normal":"italic"}}>{resp.note||"-"}</span>
                       )}
                     </div>
-                    {selEv.typee==="Spiel"&&(
+                    {selEv.type==="Spiel"&&(
                       <button onClick={()=>toggleAufgebot(selEv.id,p.id)} title="Im Aufgebot"
                         style={{width:30,height:30,borderRadius:"50%",border:`1.5px solid ${isInAufgebot(selEv.id,p.id)?"#4F46E5":"#F3F4F6"}`,background:isInAufgebot(selEv.id,p.id)?"#4F46E5":"#fff",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                         <i className="ti-ball-football"/>
@@ -6458,8 +6458,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           const c=evCounts(ev);
           const noRsvp=ev.subtype==="Vereinsanlass"&&ev.rsvp===false;
           const isCancelled=!!cancelledEvents[ev.id];
-          const canCancel=isTrainer&&!isPast(ev)&&(ev.typee==="Training"||ev.subtype==="Team-Event");
-          const accentColor=ev.typee==="Spiel"?BL:ev.subtype==="Vereinsanlass"?"#7C3AED":ev.typee==="Veranstaltung"?AM:GN;
+          const canCancel=isTrainer&&!isPast(ev)&&(ev.type==="Training"||ev.subtype==="Team-Event");
+          const accentColor=ev.type==="Spiel"?BL:ev.subtype==="Vereinsanlass"?"#7C3AED":ev.type==="Veranstaltung"?AM:GN;
           const dateParts=ev.date.split(" ");
           const weekday=dateParts[0]||"";
           const dayMonth=dateParts[1]||ev.date;
@@ -6467,9 +6467,9 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           const dayNum=dayMonth.split(".")[0];
           const monNum=parseInt(dayMonth.split(".")[1])||0;
           const monName=MONTHS[monNum]||dayMonth.split(".")[1];
-          const isSpiel=ev.typee==="Spiel";
+          const isSpiel=ev.type==="Spiel";
           const isVerein=ev.subtype==="Vereinsanlass";
-          const isVeranst=ev.typee==="Veranstaltung"&&!isVerein;
+          const isVeranst=ev.type==="Veranstaltung"&&!isVerein;
           const needsRichCard=isSpiel||isVerein||isVeranst;
           const headerBg=isSpiel?"#1a3a2a":isVerein?"#4C1D95":"#78350F";
           return(
@@ -6490,10 +6490,10 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     <div style={{width:1,alignSelf:"stretch",background:"rgba(255,255,255,0.15)",marginRight:14,flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:15,color:"#fff",lineHeight:1.25,textDecoration:isCancelled?"line-through":"none"}}>
-                        {ev.opponent?"vs. "+ev.opponent:ev.title||ev.typee}
+                        {ev.opponent?"vs. "+ev.opponent:ev.title||ev.type}
                       </div>
                       <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>
-                        {isSpiel?(ev.home?"Heimspiel":"Auswärtsspiel"):ev.subtype||ev.typee}
+                        {isSpiel?(ev.home?"Heimspiel":"Auswärtsspiel"):ev.subtype||ev.type}
                         {isCancelled&&" · ⚠ Abgesagt"}
                       </div>
                     </div>
@@ -6522,10 +6522,10 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:3}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                       <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
-                        {ev.typee==="Training"?"Training · "+ev.team:ev.title||ev.typee}
+                        {ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
                       </div>
                       <span style={{background:accentColor+"18",color:accentColor,fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
-                        {ev.subtype||ev.typee}
+                        {ev.subtype||ev.type}
                       </span>
                       {isCancelled&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R}}>⚠ Abgesagt</span>}
                     </div>
@@ -6715,7 +6715,7 @@ function MembersView({role}){
                 </td>
                 <td style={{padding:"9px 13px"}}><Chip text={m.role} color={R}/></td>
                 <td style={{padding:"9px 13px",color:"#555"}}>{m.team}</td>
-                <td style={{padding:"9px 13px"}}><Chip text={m.typee} color={BL} bg="#EFF6FF"/></td>
+                <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL} bg="#EFF6FF"/></td>
                 <td style={{padding:"9px 13px",color:"#555"}}>{m.location}</td>
                 <td style={{padding:"9px 13px"}}>
                   <Chip text={m.status} color={m.status==="Vollständig"?GN:m.status==="Prüfung fällig"?AM:R} bg={m.status==="Vollständig"?"#ECFDF5":m.status==="Prüfung fällig"?"#FFFBEB":RL}/>
@@ -7264,7 +7264,7 @@ function EventsList({teamOnly,role}){
   const [newEvent,setNewEvent]=useState({title:"",type:isTrainer?"Team-Event":"Team-Event",date:"",time:"",loc:"",rsvp:true});
 
   /* Trainer sieht nur Team-Events bei teamOnly */
-  const list=teamOnly?EVENTS.filter(e=>e.typee==="Team-Event"):isTrainer?EVENTS:EVENTS;
+  const list=teamOnly?EVENTS.filter(e=>e.type==="Team-Event"):isTrainer?EVENTS:EVENTS;
 
   const typeOptions=isTrainer?["Team-Event"]:["Team-Event","Vereinsanlass"];
 
@@ -7292,7 +7292,7 @@ function EventsList({teamOnly,role}){
             </div>
             <div>
               <div style={{fontSize:11,color:"#888",marginBottom:4}}>Typ</div>
-              <select value={newEvent.typee} onChange={e=>setNewEvent(p=>({...p,type:e.target.value}))}
+              <select value={newEvent.type} onChange={e=>setNewEvent(p=>({...p,type:e.target.value}))}
                 style={{width:"100%",padding:"6px 10px",border:`0.5px solid ${GB}`,borderRadius:7,fontSize:13}}>
                 {typeOptions.map(t=><option key={t} value={t}>{t}</option>)}
               </select>
@@ -7325,7 +7325,7 @@ function EventsList({teamOnly,role}){
       )}
       <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:teamOnly?0:14}}>
         {list.map((e,i)=>{
-          const accentColor=e.typee==="Team-Event"?BL:e.typee==="Vereinsanlass"?"#7C3AED":R;
+          const accentColor=e.type==="Team-Event"?BL:e.type==="Vereinsanlass"?"#7C3AED":R;
           return(
             <div key={i} style={{background:"#fff",border:`0.5px solid ${GB}`,borderRadius:12,overflow:"hidden",display:"flex",marginBottom:10}}>
               {/* Left accent bar */}
@@ -7335,7 +7335,7 @@ function EventsList({teamOnly,role}){
                 {/* Type + RSVP badge row */}
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
                   <span style={{background:accentColor+"18",color:accentColor,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,border:`0.5px solid ${accentColor}30`}}>
-                    {e.typee}
+                    {e.type}
                   </span>
                   {e.rsvp&&(
                     <span style={{fontSize:10,fontWeight:600,color:AM,background:"#F9FAFB",border:"0.5px solid #FDE68A",padding:"2px 8px",borderRadius:20}}>
@@ -8644,7 +8644,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
             ].map((f,i)=>(
               <div key={i}>
                 <label style={{fontSize:11,color:"#888",display:"block",marginBottom:4}}>{f.l}</label>
-                {f.typee==="gruppen"?(
+                {f.type==="gruppen"?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"8px 10px",border:`0.5px solid ${GB}`,borderRadius:8,background:"#fff"}}>
                     {HELPER_GRUPPEN.map(g=>{
                       const checked=newEinsatzGruppen.includes(g);
@@ -8656,12 +8656,12 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
                       );
                     })}
                   </div>
-                ):f.typee==="select"?(
+                ):f.type==="select"?(
                   <select style={{width:"100%",padding:"7px 9px",border:`0.5px solid ${GB}`,borderRadius:8,fontSize:13}}>
                     {f.opts?.map(o=><option key={o}>{o}</option>)}
                   </select>
                 ):(
-                  <input type={f.typee||"text"} placeholder={f.ph} style={{width:"100%",padding:"7px 9px",border:`0.5px solid ${GB}`,borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
+                  <input type={f.type||"text"} placeholder={f.ph} style={{width:"100%",padding:"7px 9px",border:`0.5px solid ${GB}`,borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
                 )}
               </div>
             ))}
@@ -8762,7 +8762,7 @@ function MaterialView(){
             {MATERIAL.map((m,i)=>(
               <tr key={m.id} style={{borderTop:`0.5px solid ${GB}`}}>
                 <td style={{padding:"9px 13px"}}><Chip text={m.team} color={R}/></td>
-                <td style={{padding:"9px 13px"}}><Chip text={m.typee} color={TC[m.typee]||"#888"} bg={(TC[m.typee]||"#888")+"18"}/></td>
+                <td style={{padding:"9px 13px"}}><Chip text={m.type} color={TC[m.type]||"#888"} bg={(TC[m.type]||"#888")+"18"}/></td>
                 <td style={{padding:"9px 13px",fontWeight:600}}>{m.item}</td>
                 <td style={{padding:"9px 13px",color:"#555"}}>{m.by}</td>
                 <td style={{padding:"9px 13px",color:"#888"}}>{m.date}</td>
@@ -8801,7 +8801,7 @@ function LockersView(){
                   const left=(a.start-START)/(END-START)*100, width=(a.end-a.start)/(END-START)*100;
                   return(
                     <div key={j} title={`${a.team} · ${fmt(a.start)}-${fmt(a.end)}`} style={{position:"absolute",left:`${left}%`,width:`${width}%`,top:j*(H+4)+4,height:H,background:a.color,borderRadius:5,padding:"3px 7px",overflow:"hidden",cursor:"help"}}>
-                      <div style={{color:"#fff",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{a.team} ({a.typee})</div>
+                      <div style={{color:"#fff",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{a.team} ({a.type})</div>
                       <div style={{color:"rgba(255,255,255,0.8)",fontSize:9}}>{fmt(a.start)}-{fmt(a.end)}</div>
                     </div>
                   );
@@ -8917,8 +8917,8 @@ function DocsView(){
       <Card style={{padding:0}}>
         {docs.map((d,i)=>(
           <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<docs.length-1?`0.5px solid ${GB}`:"none"}}>
-            <div style={{width:34,height:34,borderRadius:8,background:(TC[d.typee]||"#888")+"20",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontSize:9,fontWeight:800,color:TC[d.typee]||"#888"}}>{d.typee}</span>
+            <div style={{width:34,height:34,borderRadius:8,background:(TC[d.type]||"#888")+"20",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{fontSize:9,fontWeight:800,color:TC[d.type]||"#888"}}>{d.type}</span>
             </div>
             <div style={{flex:1}}>
               <div style={{fontWeight:600,fontSize:13}}>{d.name}</div>
