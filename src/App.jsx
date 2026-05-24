@@ -4100,7 +4100,7 @@ function ScheduleTab({role,team,initialSelected}){
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
           <thead>
             <tr style={{background:GR}}>
-              {["Datum","Zeit","Gegner","H/A","Ort","Wettbewerb","Resultat",""].map((h,i)=>
+              {["Datum","Zeit","Gegner","H/A","Ort","Wettbewerb","Resultat",""].map((h,i)=>(
                 <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"#777",fontSize:10,textTransform:"uppercase",letterSpacing:0.4,whiteSpace:"nowrap"}}>{h}</th>
               ))}
             </tr>
