@@ -55,6 +55,14 @@ const ROLES = {
   spieler:       { label:"Spieler",          color:BL,       icon:"🏃", desc:"Eigenes Team, Spielplan, Tabelle, Anwesenheit, Helfereinsätze" },
   eltern:        { label:"Eltern",           color:GN,       icon:"👤", desc:"Daten der Kinder, Termine, Abstimmungen, Helfereinsätze" },
 };
+/* -- SAFE ROLES LOOKUP -- */
+function getRole(role){
+  // Normalize: funktionär -> funktionaer etc.
+  const norm = (role||"spieler").toLowerCase()
+    .replace("ä","ae").replace("ö","oe").replace("ü","ue");
+  return ROLES[norm] || getRole(role) || ROLES.spieler;
+}
+
 
 /* -- NAV PRO ROLLE (gemäss Kap. 27) -- */
 const NAV_BY_ROLE = {
@@ -1987,7 +1995,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
 ========================================== */
 function SideNav({role,active,setActive,account}){
   const nav=NAV_BY_ROLE[role]||[];
-  const rc=ROLES[role].color;
+  const rc=getRole(role).color;
   return(
     <nav style={{width:200,background:BK,minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0}}>
       <div style={{padding:"20px 14px 16px",borderBottom:"1px solid #252525",marginBottom:8}}>
@@ -2008,12 +2016,12 @@ function SideNav({role,active,setActive,account}){
       </div>
       <div style={{padding:"8px"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",borderRadius:8,background:"#222"}}>
-          <Av size={28} bg={ROLES[role].color} name={ROLES[role].label} init={ROLES[role].icon}/>
+          <Av size={28} bg={getRole(role).color} name={getRole(role).label} init={getRole(role).icon}/>
           <div>
             <div style={{color:"#fff",fontSize:12,fontWeight:600}}>{
-              account?.name||USER_ACCOUNTS[role]?.name||ROLES[role]?.label||"Benutzer"
+              account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer"
             }</div>
-            <div style={{color:"#666",fontSize:10}}>{ROLES[role].label}</div>
+            <div style={{color:"#666",fontSize:10}}>{getRole(role).label}</div>
           </div>
         </div>
       </div>
@@ -2024,8 +2032,8 @@ function SideNav({role,active,setActive,account}){
 function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setActiveSubRole,onLogout}){
   const nav=NAV_BY_ROLE[role]||[];
   const label=nav.find(n=>n.key===active)?.label||active;
-  const rc=ROLES[role].color;
-  const acc=account||USER_ACCOUNTS[role]||{name:ROLES[role].label,rollen:[role],primaryRole:role,kinder:[]};
+  const rc=getRole(role).color;
+  const acc=account||USER_ACCOUNTS[role]||{name:getRole(role).label,rollen:[role],primaryRole:role,kinder:[]};
   return(
     <div style={{height:54,background:"#fff",borderBottom:`0.5px solid ${GB}`,display:"flex",alignItems:"center",padding:"0 20px",justifyContent:"space-between",flexShrink:0,gap:12,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
       <span style={{fontSize:13,color:"#bbb",fontWeight:500,letterSpacing:0.2}}><span style={{color:rc,fontWeight:800,fontSize:13}}>FCH</span><span style={{margin:"0 6px",color:"#ddd"}}>/</span>{label}</span>
@@ -3201,7 +3209,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           {/* Rollenhinweis */}
           <div style={{padding:"8px 12px",background:"#EFF6FF",borderRadius:8,fontSize:11,color:"#666",display:"flex",alignItems:"center",gap:6}}>
             <span>👁️</span>
-            <span>Feldsichtbarkeit gemäss Rolle: <strong>{ROLES[role].label}</strong></span>
+            <span>Feldsichtbarkeit gemäss Rolle: <strong>{getRole(role).label}</strong></span>
           </div>
         </div>
       </div>
@@ -3305,7 +3313,7 @@ function RosterTab({role,team,initialSelected=null}){
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Spieler suchen…" style={{padding:"7px 12px",border:`0.5px solid ${GB}`,borderRadius:8,fontSize:13,outline:"none",width:220}}/>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <InfoBox text={`Sichtbar: ${cols.length} von ${COL_DEF.length} Feldern (Rolle: ${ROLES[role].label})`} color={ROLES[role].color}/>
+          <InfoBox text={`Sichtbar: ${cols.length} von ${COL_DEF.length} Feldern (Rolle: ${getRole(role).label})`} color={getRole(role).color}/>
         </div>
       </div>
       {isMobile?(
@@ -8909,6 +8917,7 @@ export default function App({supabaseClient}){
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
   const [active,setActive]=useState("dashboard");
+  const isMobile=useIsMobile(); // MUSS vor allen Early Returns stehen
   // Auth-Session beim Start prüfen
   useEffect(()=>{
     if(!sb){ setSession(null); return; }
@@ -8925,11 +8934,18 @@ export default function App({supabaseClient}){
   },[]);
 
   async function loadDbUser(uid, email){
-    const {data} = await sb.from("benutzer").select("*").eq("id",uid).single();
-    if(data){
-      setDbUser(data);
-    } else {
-      setDbUser({id:uid, email:email||"", role:"spieler", teams:[], name:email||"Benutzer"});
+    try {
+      const {data, error} = await sb.from("benutzer").select("*").eq("id",uid).single();
+      if(data){
+        setDbUser(data);
+      } else {
+        // Kein Eintrag oder RLS-Fehler → Fallback
+        console.warn("[FCH] benutzer nicht gefunden:", error?.message);
+        setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
+      }
+    } catch(e) {
+      console.warn("[FCH] loadDbUser error:", e.message);
+      setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
     }
   }
 
@@ -8967,7 +8983,10 @@ export default function App({supabaseClient}){
   } : null;
 
   const account = dbAccount || USER_ACCOUNTS[accountKey] || USER_ACCOUNTS.trainer;
-  const role = activeSubRole || account.primaryRole || "spieler";
+  const rawRole = activeSubRole || account.primaryRole || "spieler";
+  // Normalisiere Rolle (DB hat evtl. "funktionär" mit Umlaut)
+  const role = rawRole.toLowerCase()
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue");
   const kinder = account.kinder||[];
   const spielerTeam = account.teams?.length>0 ? account.teams : [];
   const trainerTeams = account.teams||["Cc-Junioren"];
@@ -9012,8 +9031,6 @@ export default function App({supabaseClient}){
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
   };
-
-  const isMobile=useIsMobile();
 
   return(
     <div style={{display:"flex",minHeight:"100vh",background:GR,fontFamily:"system-ui,-apple-system,sans-serif"}}>
