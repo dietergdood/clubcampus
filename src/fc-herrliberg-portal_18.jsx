@@ -3796,7 +3796,7 @@ function TrainingGantt({team: teamProp, role}){
         // Supabase laden
         if(supabase){
           // Pläne laden
-          const {data: plaeneData} = await supabase.from("trainingsplaene").select("*").order("gueltig_ab");
+          const {data: plaeneData} = await supabase.from("trainingsplan_vorlagen").select("*").order("gueltig_ab");
           if(plaeneData && plaeneData.length > 0){
             // Slots pro Plan laden
             const {data: slotsData} = await supabase.from("trainingsplan_slots").select("*");
@@ -3804,7 +3804,7 @@ function TrainingGantt({team: teamProp, role}){
             const plaeneMitSlots = plaeneData.map(function(p){
               return {
                 ...p,
-                slots: slots.filter(function(s){ return s.plan_id === p.id; }).map(function(s){
+                slots: slots.filter(function(s){ return s.vorlage_id === p.id; }).map(function(s){
                   return {
                     id: s.id,
                     wochentag: s.wochentag,
@@ -3870,7 +3870,7 @@ function TrainingGantt({team: teamProp, role}){
     if(supabase){
       try{
         for(const plan of p){
-          await supabase.from("trainingsplaene").upsert({
+          await supabase.from("trainingsplan_vorlagen").upsert({
             id: plan.id,
             name: plan.name,
             gueltig_ab: plan.gueltig_ab,
@@ -3881,7 +3881,7 @@ function TrainingGantt({team: teamProp, role}){
             for(const s of plan.slots){
               await supabase.from("trainingsplan_slots").upsert({
                 id: s.id,
-                plan_id: plan.id,
+                vorlage_id: plan.id,
                 wochentag: s.wochentag,
                 team: s.team,
                 start_zeit: s.start,
