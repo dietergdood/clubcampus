@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-/* -- SUPABASE (optional, nur wenn supabase.js vorhanden) -- */
-let supabase = null;
-try {
-  const mod = await import("./supabase.js");
-  supabase = mod.supabase || null;
-} catch(e) { /* läuft ohne Supabase im Demo-Modus */ }
+/* -- SUPABASE -- */
+const SUPA_URL = typeof import.meta !== "undefined" ? (import.meta.env?.VITE_SUPABASE_URL||"") : "";
+const SUPA_KEY = typeof import.meta !== "undefined" ? (import.meta.env?.VITE_SUPABASE_ANON_KEY||"") : "";
+const supabase = (SUPA_URL && SUPA_KEY) ? createClient(SUPA_URL, SUPA_KEY) : null;
 
 /* -- FARBEN -- */
 const R="#C8102E",RL="#FEF2F2",BK="#1A1A1A",GR="#F5F5F3",GB="#E0DED8",BL="#2563EB",GN="#059669",AM="#D97706";
@@ -8911,7 +8910,6 @@ export default function App(){
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
   const [active,setActive]=useState("dashboard");
-
   // Auth-Session beim Start prüfen
   useEffect(()=>{
     if(!supabase){ setSession(null); return; }
@@ -8919,12 +8917,12 @@ export default function App(){
       setSession(session||null);
       if(session) loadDbUser(session.user.id, session.user.email);
     });
-    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+    const {data:{subscription}}=supabase.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
       if(session) loadDbUser(session.user.id, session.user.email);
       else setDbUser(null);
     });
-    return ()=>subscription.unsubscribe();
+    return function(){ subscription.unsubscribe(); };
   },[]);
 
   async function loadDbUser(uid, email){
@@ -8932,13 +8930,12 @@ export default function App(){
     if(data){
       setDbUser(data);
     } else {
-      // Kein Eintrag in benutzer-Tabelle → Fallback mit email
       setDbUser({id:uid, email:email||"", role:"spieler", teams:[], name:email||"Benutzer"});
     }
   }
 
   async function handleLogout(){
-    await supabase.auth.signOut();
+    if(supabase) await supabase.auth.signOut();
     setSession(null); setDbUser(null); setActive("dashboard");
   }
 
