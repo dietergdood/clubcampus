@@ -3805,7 +3805,7 @@ function TrainingGantt({team: teamProp, role}){
                     team: s.team,
                     start: s.start_zeit,
                     end: s.end_zeit,
-                    ort: s.location,
+                    location: s.location,
                     end_ort: s.end_ort||"",
                     half: s.half||"",
                     end_half: s.end_half||"",
@@ -3875,17 +3875,17 @@ function TrainingGantt({team: teamProp, role}){
             for(const s of plan.slots){
               await supabase.from("trainingsplan_slots").upsert({
                 id: s.id,
-                template_id: plan.id,
+                template_id: s.template_id||plan.id,
                 weekday: s.weekday,
                 team: s.team,
                 start_zeit: s.start,
                 end_zeit: s.end,
-                ort: s.location,
+                location: s.location,
                 end_ort: s.end_ort||null,
                 half: s.half||null,
-                end_half: s.end_half||null,
+                end_haelfte: s.end_half||null,
                 wechsel_zeit: s.wechsel_zeit||null,
-                farbe: s.color||null,
+                color: s.color||null,
               });
             }
           }
@@ -3907,12 +3907,12 @@ function TrainingGantt({team: teamProp, role}){
             id: ausnahme.id,
             slot_id: ausnahme.slot_id||null,
             type: ausnahme.type,
-            datum: ausnahme.date||null,
-            kw_key: ausnahme.week_nr_key,
+            week_nr: ausnahme.week_nr,
+            year: ausnahme.year,
             neue_start_zeit: ausnahme.neue_start_zeit||null,
             neue_end_zeit: ausnahme.neue_end_zeit||null,
-            neues_ort: ausnahme.neues_ort||null,
-            neue_half: ausnahme.neue_half||null,
+            neuer_ort: ausnahme.neues_ort||null,
+            neue_haelfte: ausnahme.neue_half||null,
             grund: ausnahme.grund||null,
           });
         }
@@ -7847,16 +7847,16 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
   });
   const [collapsedEinsaetze,setCollapsedEinsaetze]=useState({});
   const toggleEinsatz=(id)=>setCollapsedEinsaetze(prev=>({...prev,[id]:!prev[id]}));
-  const [notesState,setBemerkungState]=useState({}); /* einsatzId/schichtId → text */
+  const [bemerkungState,setBemerkungState]=useState({}); /* einsatzId/schichtId → text */
   const [editingBemerkung,setEditingBemerkung]=useState(null);
-  const [notesDraft,setBemerkungDraft]=useState("");
+  const [bemerkungDraft,setBemerkungDraft]=useState("");
   useEffect(()=>{
-    (async()=>{try{const r=await window.storage.get("helfer_notesen");if(r)setBemerkungState(JSON.parse(r.value));}catch(e){}})();
+    (async()=>{try{const r=await window.storage.get("helfer_notes");if(r)setBemerkungState(JSON.parse(r.value));}catch(e){}})();
   },[]);
   const saveBemerkung=(id,text)=>{
-    const next={...notesState,[id]:text};
+    const next={...bemerkungState,[id]:text};
     setBemerkungState(next);
-    window.storage.set("helfer_notesen",JSON.stringify(next));
+    window.storage.set("helfer_notes",JSON.stringify(next));
     setEditingBemerkung(null);
   };
   const schichtenRef=useRef({});
@@ -8184,9 +8184,9 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
                                   <span style={{color:"#ddd"}}>{"|"}</span>
                                   <span>{""+einsatz.location}</span>
                                 </div>
-                                {notesState[`e${einsatz.id}`]&&(
+                                {bemerkungState[`e${einsatz.id}`]&&(
                                   <div style={{fontSize:10,color:AM,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
-                                    <span><i className="ti-edit"/></span><span style={{fontStyle:"italic"}}>{notesState[`e${einsatz.id}`]}</span>
+                                    <span><i className="ti-edit"/></span><span style={{fontStyle:"italic"}}>{bemerkungState[`e${einsatz.id}`]}</span>
                                   </div>
                                 )}
                               </div>
@@ -8216,14 +8216,14 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
                               {/* Bemerkung Edit */}
                               {canEdit&&(editingBemerkung===`e${einsatz.id}`?(
                                 <div onClick={e=>e.stopPropagation()} style={{display:"flex",gap:5,alignItems:"center"}}>
-                                  <input autoFocus value={notesDraft} onChange={e=>setBemerkungDraft(e.target.value)}
+                                  <input autoFocus value={bemerkungDraft} onChange={e=>setBemerkungDraft(e.target.value)}
                                     placeholder="Bemerkung…"
                                     style={{padding:"3px 8px",border:`0.5px solid ${GB}`,borderRadius:6,fontSize:11,outline:"none",width:160}}/>
-                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,notesDraft)} style={{padding:"2px 8px",borderRadius:6,fontSize:11,fontWeight:600,border:`0.5px solid ${GN}`,background:"#F0FDF4",color:GN,cursor:"pointer"}}>✓</button>
+                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"2px 8px",borderRadius:6,fontSize:11,fontWeight:600,border:`0.5px solid ${GN}`,background:"#F0FDF4",color:GN,cursor:"pointer"}}>✓</button>
                                   <button onClick={()=>setEditingBemerkung(null)} style={{padding:"2px 8px",borderRadius:6,fontSize:11,border:`0.5px solid ${GB}`,background:"#fff",color:"#888",cursor:"pointer"}}>✕</button>
                                 </div>
                               ):(
-                                <button onClick={e=>{e.stopPropagation();setEditingBemerkung(`e${einsatz.id}`);setBemerkungDraft(notesState[`e${einsatz.id}`]||"");}}
+                                <button onClick={e=>{e.stopPropagation();setEditingBemerkung(`e${einsatz.id}`);setBemerkungDraft(bemerkungState[`e${einsatz.id}`]||"");}}
                                   style={{padding:"2px 8px",borderRadius:20,fontSize:10,border:`0.5px solid ${GB}`,background:"#fff",color:"#888",cursor:"pointer"}}><i className="ti-edit"/></button>
                               ))}
                               {(()=>{
@@ -8241,7 +8241,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
                           {/* Schichten-Grid */}
                           {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:14,padding:"16px",background:"#fff"}}>
                             {einsatz.schichtenVisible.map(s=>(
-                              <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={notesState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
+                              <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                             ))}
                           </div>}
                         </div>
@@ -8462,7 +8462,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
                             </div>
                             {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:14,padding:"16px",background:"#fff"}}>
                               {einsatz.schichten.map(s=>(
-                                <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={notesState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
+                                <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                               ))}
                             </div>}
                           </div>
