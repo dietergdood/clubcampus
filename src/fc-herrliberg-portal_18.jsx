@@ -48,12 +48,12 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
 
 /* -- ROLLEN-DEFINITIONEN -- */
 const ROLES = {
-  administrator: { label:"Administrator",    color:"#7C3AED", icon:"⚙️", desc:"Vollzugriff auf alle Module, Einstellungen und Systemfunktionen" },
-  administration:{ label:"Administration",   color:"#0891B2", icon:"🗂️", desc:"Stammdaten, Datenqualität, Garderoben, Auswertungen, Exporte" },
-  funktionaer:   { label:"Funktionär/Vorstand", color:AM,    icon:"📋", desc:"Teams, Auswertungen, Vereinsbusse, Material gemäss Aufschaltung" },
-  trainer:       { label:"Trainer",          color:R,        icon:"⚽", desc:"Eigene Teams, Trainings, Anwesenheiten, Material, Vereinsbus" },
-  spieler:       { label:"Spieler",          color:BL,       icon:"🏃", desc:"Eigenes Team, Spielplan, Tabelle, Anwesenheit, Helfereinsätze" },
-  eltern:        { label:"Eltern",           color:GN,       icon:"👤", desc:"Daten der Kinder, Termine, Abstimmungen, Helfereinsätze" },
+  administrator: { label:"Administrator",    color:"#f8de09", icon:"⚙️", desc:"Vollzugriff auf alle Module, Einstellungen und Systemfunktionen" },
+  administration:{ label:"Administration",   color:"#f8de09", icon:"🗂️", desc:"Stammdaten, Datenqualität, Garderoben, Auswertungen, Exporte" },
+  funktionaer:   { label:"Funktionär/Vorstand", color:"#f8de09", icon:"📋", desc:"Teams, Auswertungen, Vereinsbusse, Material gemäss Aufschaltung" },
+  trainer:       { label:"Trainer",          color:"#f8de09", icon:"⚽", desc:"Eigene Teams, Trainings, Anwesenheiten, Material, Vereinsbus" },
+  spieler:       { label:"Spieler",          color:"#f8de09", icon:"🏃", desc:"Eigenes Team, Spielplan, Tabelle, Anwesenheit, Helfereinsätze" },
+  eltern:        { label:"Eltern",           color:"#f8de09", icon:"👤", desc:"Daten der Kinder, Termine, Abstimmungen, Helfereinsätze" },
 };
 /* -- SAFE ROLES LOOKUP -- */
 function getRole(role){
@@ -4310,7 +4310,6 @@ function TrainingGantt({team: teamProp, role}){
       {/* Gantt Grid */}
       <div style={{background:"#fff",border:"0.5px solid "+GB,borderRadius:12,overflow:"hidden"}}>
           <PlatzGantt
-            plan={plan}
             wochenSlots={ansicht==="tag" ? wochenSlots.map(function(ss,i){ return i===selectedDay?ss:[]; }) : wochenSlots}
             dayDates={dayDates}
             DAYS={ansicht==="tag" ? [DAYS[selectedDay]] : DAYS}
@@ -9040,7 +9039,7 @@ export default function App({supabaseClient}){
           account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
           onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
           onLogout={sb&&session ? handleLogout : undefined}/>
-        <main style={{flex:1,padding:isMobile?"16px 14px 90px":"28px 32px 28px",overflowY:"auto",maxWidth:isMobile?"100%":1300,overflowX:"hidden",margin:"0 auto",width:"100%"}}>{getView()}</main>
+        <main style={{flex:1,padding:isMobile?"16px 14px 90px":"28px 32px 28px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1300,margin:"0 auto",width:"100%"}}>{getView()}</main>
         {isMobile&&<MobileNav role={role} active={active} setActive={setActive}/>}
       </div>
     </div>
