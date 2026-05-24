@@ -3102,7 +3102,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
         <div onClick={canEdit?()=>setEditingNr(true):undefined}
           style={{display:"flex",alignItems:"center",gap:5,cursor:canEdit?"pointer":"default"}}>
           <span style={{fontSize:13,fontWeight:500,color:BK}}>{nrVal||"-"}</span>
-          {canEdit&&<span style={{fontSize:10,color:"#ccc"}}>{"<i className=\"ti-edit\"/>"}</span>}
+          {canEdit&&<span style={{fontSize:10,color:"#ccc"}}><i className="ti-edit"/></span>}
         </div>
       )}
     </div>
@@ -3284,7 +3284,7 @@ function RosterTab({role,team,initialSelected=null}){
 
   const SortIcon=({col})=>{
     if(sortKey!==col) return <span style={{color:"#ccc",fontSize:9,marginLeft:3}}>{"↕"}</span>;
-    return <span style={{color:R,fontSize:9,marginLeft:3}}>{sortDir===1?"<i className=\"ti-upload\"/>":"↓"}</span>;
+    return <span style={{color:R,fontSize:9,marginLeft:3}}>{sortDir===1?<i className="ti-upload"/>:"↓"}</span>;
   };
 
   const COL_DEF=[
@@ -7364,15 +7364,15 @@ function EventsList({teamOnly,role}){
                 {/* Meta */}
                 <div style={{display:"flex",alignItems:"center",gap:0,flexWrap:"wrap",fontSize:12,color:"#666"}}>
                   <span style={{display:"flex",alignItems:"center",gap:4}}>
-                    <span>{"<i className=\"ti-calendar\"/>"}</span>{e.date}{e.endDate?" - "+e.endDate:""}
+                    <span><i className="ti-calendar"/></span>{e.date}{e.endDate?" - "+e.endDate:""}
                   </span>
                   <span style={{color:"#ddd",margin:"0 8px"}}>{"|"}</span>
                   <span style={{display:"flex",alignItems:"center",gap:4}}>
-                    <span>{"<i className=\"ti-clock\"/>"}</span>{e.time+" Uhr"}
+                    <span><i className="ti-clock"/></span>{e.time+" Uhr"}
                   </span>
                   <span style={{color:"#ddd",margin:"0 8px"}}>{"|"}</span>
                   <span style={{display:"flex",alignItems:"center",gap:4}}>
-                    <span>{"<i className=\"ti-map-pin\"/>"}</span>{e.loc}
+                    <span><i className="ti-map-pin"/></span>{e.loc}
                   </span>
                 </div>
               </div>
@@ -7476,7 +7476,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
           <div style={{minWidth:0}}>
             <div style={{fontWeight:700,fontSize:13,color:BK,lineHeight:1.2}}>{schicht.label}</div>
             <div style={{fontSize:10,color:"#888",marginTop:3,display:"flex",alignItems:"center",gap:3}}>
-              <span>{"<i className=\"ti-map-pin\"/>"}</span><span>{einsatz.location}</span>
+              <span><i className="ti-map-pin"/></span><span>{einsatz.location}</span>
             </div>
             {notes&&<div style={{fontSize:10,color:AM,marginTop:3,fontStyle:"italic"}}><i className="ti-edit" style={{marginRight:3}}/> {notes}</div>}
             {canEdit&&onSaveBemerkung&&<BemerkungEdit notes={notes} onSave={onSaveBemerkung}/>}
