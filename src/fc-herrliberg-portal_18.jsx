@@ -3793,18 +3793,140 @@ function TrainingGantt({team: teamProp, role}){
   useEffect(function(){
     (async function(){
       try{
-        const r = await window.storage.get("trainingsPlaene");
-        if(r) setPlaene(JSON.parse(r.value));
-        const a = await window.storage.get("trainingsAusnahmen");
-        if(a) setAusnahmen(JSON.parse(a.value));
+        // Supabase laden
+        if(supabase){
+          // Pläne laden
+          const {data: plaeneData} = await supabase.from("trainingsplaene").select("*").order("gueltig_ab");
+          if(plaeneData && plaeneData.length > 0){
+            // Slots pro Plan laden
+            const {data: slotsData} = await supabase.from("trainingsplan_slots").select("*");
+            const slots = slotsData || [];
+            const plaeneMitSlots = plaeneData.map(function(p){
+              return {
+                ...p,
+                slots: slots.filter(function(s){ return s.plan_id === p.id; }).map(function(s){
+                  return {
+                    id: s.id,
+                    wochentag: s.wochentag,
+                    team: s.team,
+                    start: s.start_zeit,
+                    end: s.end_zeit,
+                    ort: s.ort,
+                    end_ort: s.end_ort||"",
+                    haelfte: s.haelfte||"",
+                    end_haelfte: s.end_haelfte||"",
+                    wechsel_zeit: s.wechsel_zeit||"",
+                    color: s.farbe||"",
+                  };
+                }),
+              };
+            });
+            setPlaene(plaeneMitSlots);
+            // Aktiven Plan setzen
+            const aktiver = plaeneMitSlots.find(function(p){ return p.aktiv; });
+            if(aktiver) setAktiverPlan(aktiver.id);
+          } else {
+            // Fallback: localStorage
+            const r = await window.storage.get("trainingsPlaene");
+            if(r) setPlaene(JSON.parse(r.value));
+          }
+          // Ausnahmen laden
+          const {data: ausnahmenData} = await supabase.from("trainingsplan_ausnahmen").select("*");
+          if(ausnahmenData){
+            const ausnahmenMap = {};
+            ausnahmenData.forEach(function(a){
+              const key = a.kw_key;
+              if(!ausnahmenMap[key]) ausnahmenMap[key] = [];
+              ausnahmenMap[key].push({
+                id: a.id,
+                slot_id: a.slot_id,
+                typ: a.typ,
+                datum: a.datum,
+                kw_key: a.kw_key,
+                neue_start_zeit: a.neue_start_zeit,
+                neue_end_zeit: a.neue_end_zeit,
+                neues_ort: a.neues_ort,
+                neue_haelfte: a.neue_haelfte,
+                grund: a.grund||"",
+              });
+            });
+            setAusnahmen(ausnahmenMap);
+          }
+        } else {
+          // Kein Supabase — localStorage
+          const r = await window.storage.get("trainingsPlaene");
+          if(r) setPlaene(JSON.parse(r.value));
+          const a = await window.storage.get("trainingsAusnahmen");
+          if(a) setAusnahmen(JSON.parse(a.value));
+        }
         const tn = await window.storage.get("trainer_benachrichtigungen");
         if(tn){ const alle=JSON.parse(tn.value); setTrainerNachrichten(alle.filter(function(n){return !n.gelesen;})); }
-      }catch(e){}
+      }catch(e){ console.warn("[FCH] Trainingsplan laden Fehler:", e.message); }
     })();
   },[]);
 
-  function savePlaene(p){ setPlaene(p); window.storage.set("trainingsPlaene", JSON.stringify(p)); }
-  function saveAusnahmen(a){ setAusnahmen(a); window.storage.set("trainingsAusnahmen", JSON.stringify(a)); }
+  async function savePlaene(p){
+    setPlaene(p);
+    if(supabase){
+      try{
+        for(const plan of p){
+          await supabase.from("trainingsplaene").upsert({
+            id: plan.id,
+            name: plan.name,
+            gueltig_ab: plan.gueltig_ab,
+            gueltig_bis: plan.gueltig_bis,
+            aktiv: plan.aktiv,
+          });
+          if(plan.slots){
+            for(const s of plan.slots){
+              await supabase.from("trainingsplan_slots").upsert({
+                id: s.id,
+                plan_id: plan.id,
+                wochentag: s.wochentag,
+                team: s.team,
+                start_zeit: s.start,
+                end_zeit: s.end,
+                ort: s.ort,
+                end_ort: s.end_ort||null,
+                haelfte: s.haelfte||null,
+                end_haelfte: s.end_haelfte||null,
+                wechsel_zeit: s.wechsel_zeit||null,
+                farbe: s.color||null,
+              });
+            }
+          }
+        }
+      }catch(e){ console.warn("[FCH] savePlaene Fehler:", e.message); }
+    } else {
+      window.storage.set("trainingsPlaene", JSON.stringify(p));
+    }
+  }
+
+  async function saveAusnahmen(a){
+    setAusnahmen(a);
+    if(supabase){
+      try{
+        // Alle Ausnahmen als flache Liste
+        const alle = Object.values(a).flat();
+        for(const ausnahme of alle){
+          await supabase.from("trainingsplan_ausnahmen").upsert({
+            id: ausnahme.id,
+            slot_id: ausnahme.slot_id||null,
+            typ: ausnahme.typ,
+            datum: ausnahme.datum||null,
+            kw_key: ausnahme.kw_key,
+            neue_start_zeit: ausnahme.neue_start_zeit||null,
+            neue_end_zeit: ausnahme.neue_end_zeit||null,
+            neues_ort: ausnahme.neues_ort||null,
+            neue_haelfte: ausnahme.neue_haelfte||null,
+            grund: ausnahme.grund||null,
+          });
+        }
+      }catch(e){ console.warn("[FCH] saveAusnahmen Fehler:", e.message); }
+    } else {
+      window.storage.set("trainingsAusnahmen", JSON.stringify(a));
+    }
+  }
 
   const today = new Date(2026,4,24);
   function getMonday(d){ const day=d.getDay(); const diff=d.getDate()-day+(day===0?-6:1); return new Date(new Date(d).setDate(diff)); }
@@ -3949,6 +4071,12 @@ function TrainingGantt({team: teamProp, role}){
       return Object.assign({},p,{slots:p.slots.filter(function(s){ return s.id!==slot.id; })});
     });
     savePlaene(updated);
+    // Slot aus Supabase löschen
+    if(supabase && slot.id){
+      try{
+        await supabase.from("trainingsplan_slots").delete().eq("id", slot.id);
+      }catch(e){ console.warn("[FCH] Slot löschen Fehler:", e.message); }
+    }
     if(selectedEvIds.size>0){
       try{
         const cr = await window.storage.get("cancelled_events");
