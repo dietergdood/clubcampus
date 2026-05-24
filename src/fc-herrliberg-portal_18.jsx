@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
 
-/* -- SUPABASE -- */
-const SUPA_URL = typeof import.meta !== "undefined" ? (import.meta.env?.VITE_SUPABASE_URL||"") : "";
-const SUPA_KEY = typeof import.meta !== "undefined" ? (import.meta.env?.VITE_SUPABASE_ANON_KEY||"") : "";
-const supabase = (SUPA_URL && SUPA_KEY) ? createClient(SUPA_URL, SUPA_KEY) : null;
+/* -- SUPABASE wird als Prop von App.jsx übergeben (kein Import hier) -- */
+let supabase = null; // wird via setSupabaseClient() gesetzt
 
 /* -- FARBEN -- */
 const R="#C8102E",RL="#FEF2F2",BK="#1A1A1A",GR="#F5F5F3",GB="#E0DED8",BL="#2563EB",GN="#059669",AM="#D97706";
@@ -8793,7 +8790,7 @@ function MobileNav({role,active,setActive}){
 }
 
 /* ── LOGIN SCREEN ─────────────────────────────────────── */
-function LoginScreen({onLogin}){
+function LoginScreen({onLogin, sb}){
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");
   const [loading,setLoading]=useState(false);
@@ -8805,7 +8802,7 @@ function LoginScreen({onLogin}){
     e.preventDefault();
     setLoading(true); setError("");
     try{
-      const {data,error:err}=await supabase.auth.signInWithPassword({email,password:pw});
+      const {data,error:err}=await sb.auth.signInWithPassword({email,password:pw});
       if(err) throw err;
       onLogin(data.session);
     }catch(err){
@@ -8820,7 +8817,7 @@ function LoginScreen({onLogin}){
     e.preventDefault();
     setLoading(true); setError("");
     try{
-      const {error:err}=await supabase.auth.resetPasswordForEmail(email,{
+      const {error:err}=await sb.auth.resetPasswordForEmail(email,{
         redirectTo: window.location.origin
       });
       if(err) throw err;
@@ -8904,20 +8901,22 @@ function LoginScreen({onLogin}){
   );
 }
 
-export default function App(){
-  const [session,setSession]=useState(undefined); // undefined=loading, null=nicht eingeloggt
+export default function App({supabaseClient}){
+  const sbRef = useRef(supabaseClient||supabase||null);
+  const sb = sbRef.current;
+  const [session,setSession]=useState(sb ? undefined : null); // null wenn kein Supabase
   const [dbUser,setDbUser]=useState(null);
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
   const [active,setActive]=useState("dashboard");
   // Auth-Session beim Start prüfen
   useEffect(()=>{
-    if(!supabase){ setSession(null); return; }
-    supabase.auth.getSession().then(({data:{session}})=>{
+    if(!sb){ setSession(null); return; }
+    sb.auth.getSession().then(({data:{session}})=>{
       setSession(session||null);
       if(session) loadDbUser(session.user.id, session.user.email);
     });
-    const {data:{subscription}}=supabase.auth.onAuthStateChange(function(_,session){
+    const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
       if(session) loadDbUser(session.user.id, session.user.email);
       else setDbUser(null);
@@ -8926,7 +8925,7 @@ export default function App(){
   },[]);
 
   async function loadDbUser(uid, email){
-    const {data} = await supabase.from("benutzer").select("*").eq("id",uid).single();
+    const {data} = await sb.from("benutzer").select("*").eq("id",uid).single();
     if(data){
       setDbUser(data);
     } else {
@@ -8935,7 +8934,7 @@ export default function App(){
   }
 
   async function handleLogout(){
-    if(supabase) await supabase.auth.signOut();
+    if(supabase) await sb.auth.signOut();
     setSession(null); setDbUser(null); setActive("dashboard");
   }
 
@@ -8952,8 +8951,8 @@ export default function App(){
   }
 
   // Login-Screen wenn nicht eingeloggt (oder kein Supabase)
-  if(supabase && !session){
-    return <LoginScreen onLogin={s=>setSession(s)}/>;
+  if(sb && !session){
+    return <LoginScreen sb={sb} onLogin={s=>setSession(s)}/>;
   }
 
   // Rolle aus DB-User oder Demo-Fallback
@@ -9023,7 +9022,7 @@ export default function App(){
         <TopBar role={role} active={active} setActive={setActive}
           account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
           onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
-          onLogout={supabase&&session ? handleLogout : undefined}/>
+          onLogout={sb&&session ? handleLogout : undefined}/>
         <main style={{flex:1,padding:isMobile?"16px 14px 90px":"28px 32px 28px",overflowY:"auto",maxWidth:isMobile?"100%":1300,overflowX:"hidden",margin:"0 auto",width:"100%"}}>{getView()}</main>
         {isMobile&&<MobileNav role={role} active={active} setActive={setActive}/>}
       </div>
