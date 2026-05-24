@@ -9352,7 +9352,7 @@ function LoginScreen({onLogin, sb}){
   );
 }
 
-export default function App({supabaseClient}){
+export default function Portal({supabaseClient}){
   const sbRef = useRef(supabaseClient||supabase||null);
   const sb = sbRef.current;
   const [session,setSession]=useState(sb ? undefined : null); // null wenn kein Supabase
