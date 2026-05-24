@@ -2016,6 +2016,7 @@ function InfoBox({text,color=BL}){
    ROLLEN-SWITCHER MODAL
 ══════════════════════════════════════════ */
 function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
+  const isMobile=useIsMobile();
   const [open,setOpen]=useState(false);
   const currentRole=activeSubRole||account.primaryRole;
   const cur=ROLES[currentRole];
@@ -2029,8 +2030,8 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
         <span style={{fontSize:11,color:cur.color,opacity:0.7}}>▾</span>
       </button>
       {open&&(
-        <ModalOrSheet open={true} onClose={()=>setOpen(false)} maxWidth={420}>
-          <div style={{padding:24}}>
+        <div onClick={()=>setOpen(false)} style={isMobile?{position:"fixed",inset:0,zIndex:1000,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.5)"}:{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"#fff",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)",overflowY:"auto"}:{padding:24}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
               <div>
                 <h2 style={{margin:0,fontSize:18,fontWeight:800}}>Konto & Rolle wechseln</h2>
@@ -2131,7 +2132,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
               </div>
             </div>
           </div>
-        </ModalOrSheet>
+        </div>
 
       )}
     </>
@@ -2338,6 +2339,7 @@ function DashboardAdministration({setActive}){
         </Card>
       </div>
     </div>
+  </div>
   );
 }
 
@@ -2408,6 +2410,7 @@ function DashboardFunktionaer(){
         </Card>
       </div>
     </div>
+  </div>
   );
 }
 
@@ -3226,6 +3229,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
 
 /* ── Mitglied-Detailansicht (Modal) ── */
 function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
+  const isMobile=useIsMobile();
   const vis=FIELD_VIS[role]||[];
   const can=(field)=>vis.includes(field);
   const canEdit=["trainer","administrator","administration"].includes(role);
@@ -3260,8 +3264,8 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
   );
 
   return(
-    <ModalOrSheet open={true} onClose={onClose} maxWidth={560}>
-      <div style={{display:"flex",flexDirection:"column",overflowY:"auto"}}>
+    <div onClick={onClose} style={isMobile?{position:"fixed",inset:0,zIndex:2000,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.5)"}:{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"#fff",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"#fff",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
 
         {/* Header */}
         <div style={{background:R,borderRadius:"16px 16px 0 0",padding:"20px 22px",display:"flex",alignItems:"center",gap:14,position:"sticky",top:0,zIndex:1}}>
@@ -3358,7 +3362,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           </div>
         </div>
       </div>
-      </ModalOrSheet>
+      </div>
   );
 }
 
@@ -3689,6 +3693,7 @@ function TrainingGantt({team}){
 /* ── Spiel-Detailansicht Modal (FVRZ-Stil) ── */
 /* ── Spiel-Detailansicht Modal (FVRZ-Stil) ── */
 function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMotmAllProp}){
+  const isMobile=useIsMobile();
   const played=!!spiel.result;
   const [activeTab,setActiveTab]=useState("info");
 
@@ -3775,8 +3780,8 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
   const MI=({value,onChange})=>(<input type="number" min="1" max="90" placeholder="Min" value={value} onChange={e=>onChange(e.target.value)} style={{width:46,padding:"3px 6px",border:`0.5px solid ${GB}`,borderRadius:6,fontSize:11,outline:"none"}}/>);
 
   return(
-    <ModalOrSheet open={true} onClose={onClose} maxWidth={660}>
-      <div style={{display:"flex",flexDirection:"column",overflowY:"auto"}}>
+    <div onClick={onClose} style={isMobile?{position:"fixed",inset:0,zIndex:2000,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.5)"}:{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"#fff",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"#fff",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
 
         {/* Header */}
         <div style={{background:"#EFF6FF",borderRadius:"20px 20px 0 0",padding:"20px 22px 0",position:"sticky",top:0,zIndex:1}}>
@@ -4068,7 +4073,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
   </div>
     </div>
       </div>
-    </ModalOrSheet>
+    </div>
   );
 }
 
@@ -4441,8 +4446,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
       <div>
         {/* Modal auch für Spieler/Eltern */}
         {modalOpen&&selEv&&(
-          <ModalOrSheet open={true} onClose={()=>setModalOpen(false)} maxWidth={560}>
-            <div style={{display:"flex",flexDirection:"column",overflowY:"auto"}}>
+          <div onClick={()=>setModalOpen(false)} style={isMobile?{position:"fixed",inset:0,zIndex:2000,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.5)"}:{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+            <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"#fff",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"#fff",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
               {/* Header */}
               {(()=>{
                 const hBg=selEv.type==="Spiel"?"#EFF6FF":selEv.subtype==="Vereinsanlass"?"linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%)":selEv.type==="Veranstaltung"?`linear-gradient(135deg,${AM} 0%,#b45309 100%)`:"#F0FDF4";
@@ -4567,7 +4572,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 </div>
               )}
             </div>
-          </ModalOrSheet>
+          </div>
         )}
         {/* Statistik-Header */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,marginBottom:14}}>
@@ -4765,8 +4770,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
     <div>
       {/* Modal */}
       {modalOpen&&selEv&&(
-        <ModalOrSheet open={true} onClose={()=>setModalOpen(false)} maxWidth={680}>
-          <div style={{display:"flex",flexDirection:"column",overflowY:"auto"}}>
+        <div onClick={()=>setModalOpen(false)} style={isMobile?{position:"fixed",inset:0,zIndex:2000,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.5)"}:{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"#fff",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"#fff",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
             {/* Modal Header */}
             {(()=>{
               const hBg=selEv.type==="Spiel"?"#EFF6FF":selEv.subtype==="Vereinsanlass"?"linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%)":selEv.type==="Veranstaltung"?`linear-gradient(135deg,${AM} 0%,#b45309 100%)`:"#F0FDF4";
@@ -5022,7 +5027,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             )}
           </div>
           </div>
-        </ModalOrSheet>
+        </div>
       )}
 
       {/* Ereignisliste */}
@@ -6003,6 +6008,9 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
       )}
       </div>
     </div>
+  </div>
+  </div>
+  </div>
   );
 }
 
