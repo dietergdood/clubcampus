@@ -1,0 +1,18 @@
+{
+  "name": "FC Herrliberg",
+  "short_name": "FCH Portal",
+  "description": "Vereinsportal FC Herrliberg",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0c",
+  "theme_color": "#141414",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo_fch_mit_rand.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
