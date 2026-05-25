@@ -109,13 +109,15 @@ function useIsMobile(){return useBreakpoint().isMobile;}
 
 /* ── SPLASH SCREEN ── */
 function SplashScreen({onDone}){
-  useEffect(()=>{const t=setTimeout(onDone,1600);return()=>clearTimeout(t);},[]);
+  useEffect(()=>{const t=setTimeout(onDone,2600);return()=>clearTimeout(t);},[]);
   return(
-    <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"fch-splash-out 0.35s 1.25s ease-out forwards"}}>
-      <img src="/logo_fch_mit_rand.svg" style={{width:76,height:76,objectFit:"contain",animation:"fch-pop 0.5s 0.1s cubic-bezier(0.34,1.56,0.64,1) both"}} alt="FC Herrliberg"/>
-      <div style={{color:"var(--text)",fontWeight:800,fontSize:22,marginTop:18,letterSpacing:-0.3,fontFamily:FONT,animation:"fch-in 0.4s 0.4s ease-out both"}}>FC Herrliberg</div>
-      <div style={{color:"var(--text)",fontSize:13,marginTop:4,letterSpacing:1.5,textTransform:"uppercase",fontFamily:FONT,animation:"fch-in 0.4s 0.55s ease-out both"}}>Vereinsportal</div>
-      <div style={{display:"flex",gap:6,marginTop:32,animation:"fch-in 0.4s 0.7s ease-out both"}}>
+    <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"fch-splash-out 0.4s 2.2s ease-out forwards"}}>
+      <div style={{width:110,height:110,borderRadius:28,background:"#f8de09",display:"flex",alignItems:"center",justifyContent:"center",animation:"fch-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both",boxShadow:"0 8px 40px rgba(248,222,9,0.35)"}}>
+        <img src="/logo_fch_mit_rand.svg" style={{width:88,height:88,objectFit:"contain",display:"block"}} alt="FC Herrliberg"/>
+      </div>
+      <div style={{color:"#f0f0f0",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"fch-in 0.4s 0.45s ease-out both"}}>FC Herrliberg</div>
+      <div style={{color:"#555",fontSize:12,marginTop:5,letterSpacing:2,textTransform:"uppercase",fontFamily:FONT,animation:"fch-in 0.4s 0.6s ease-out both"}}>Vereinsportal</div>
+      <div style={{display:"flex",gap:7,marginTop:40,animation:"fch-in 0.4s 0.75s ease-out both"}}>
         {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:"#f8de09",animation:`fch-dot 1.2s ${i*0.18}s ease-in-out infinite`}}/>)}
       </div>
     </div>
@@ -823,9 +825,9 @@ function SideNav({role,active,setActive,account}){
   return(
     <nav style={{width:216,background:"var(--nav)",minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0,borderRight:"1px solid var(--nav-b)"}}>
       {/* Logo Header */}
-      <div style={{padding:"18px 16px 15px",borderBottom:"1px solid var(--nav-b)",display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:36,height:36,borderRadius:10,background:"#f8de09",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
-          <img src="/logo_fch_mit_rand.svg" style={{width:30,height:30,objectFit:"contain",display:"block"}} alt="FCH"/>
+      <div style={{padding:"18px 16px 15px",borderBottom:"1px solid var(--nav-b)",display:"flex",alignItems:"center",gap:11}}>
+        <div style={{width:44,height:44,borderRadius:12,background:"#f8de09",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",boxShadow:"0 2px 8px rgba(248,222,9,0.3)"}}>
+          <img src="/logo_fch_mit_rand.svg" style={{width:38,height:38,objectFit:"contain",display:"block"}} alt="FCH"/>
         </div>
         <div style={{minWidth:0}}>
           <div style={{color:"var(--nav-a)",fontWeight:800,fontSize:14,lineHeight:1.2,letterSpacing:-0.2,whiteSpace:"nowrap"}}>FC Herrliberg</div>
@@ -851,12 +853,12 @@ function SideNav({role,active,setActive,account}){
       </div>
       {/* User footer */}
       <div style={{padding:"14px 12px",borderTop:"1px solid var(--nav-b)"}}>
-        <div style={{fontSize:13,color:"var(--nav-t)",fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:8,paddingLeft:2,opacity:0.6}}>Angemeldet als</div>
+        <div style={{fontSize:10,color:"var(--nav-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,marginBottom:9,paddingLeft:2}}>Angemeldet als</div>
         <div style={{display:"flex",alignItems:"center",gap:9}}>
           <Av size={32} bg={rc} name={userName}/>
           <div style={{minWidth:0}}>
             <div style={{color:"var(--nav-a)",fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:0.1}}>{userName}</div>
-            <span style={{display:"inline-block",marginTop:3,background:rc,color:rc==="#f8de09"?"#111":"#fff",fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,letterSpacing:0.2}}>{getRole(role).label}</span>
+            <div style={{marginTop:3,fontSize:10,color:rc,fontWeight:600,letterSpacing:0.2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{getRole(role).label}</div>
           </div>
         </div>
       </div>
@@ -877,8 +879,18 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
         <span style={{color:"var(--text)"}}>{label}</span>
       </span>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <button onClick={toggle} title={dark?"Hell":"Dunkel"} style={{width:36,height:36,borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.2s"}}>
-          <TI n={dark?"sun":"moon"} size={15} style={{color:"var(--sub)"}}/>
+        {/* Dark Mode Toggle – Pill Switch */}
+        <button onClick={toggle} title={dark?"Hell-Modus":"Dunkel-Modus"} style={{
+          display:"flex",alignItems:"center",gap:6,
+          padding:"5px 10px 5px 7px",borderRadius:20,
+          border:"1px solid var(--border)",background:dark?"#f8de09":"var(--surface2)",
+          cursor:"pointer",transition:"background 0.25s,border-color 0.25s",
+          flexShrink:0,minHeight:34
+        }}>
+          <div style={{width:22,height:22,borderRadius:"50%",background:dark?"#111":"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.25s",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>
+            <TI n={dark?"sun":"moon"} size={12} style={{color:dark?"#f8de09":"var(--sub)"}}/>
+          </div>
+          <span style={{fontSize:12,fontWeight:600,color:dark?"#111":"var(--sub)",whiteSpace:"nowrap",fontFamily:FONT}}>{dark?"Hell":"Dunkel"}</span>
         </button>
         {!onLogout&&<RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
         {!onLogout&&<Chip text="DEMO" color="#999" bg="var(--surface2)"/>}
@@ -8080,16 +8092,15 @@ function MobileNav({role,active,setActive}){
       <div style={{display:"flex",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none"}}>
         {nav.map(n=>(
           <button key={n.key} onClick={()=>setActive(n.key)} style={{
-            flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",
-            justifyContent:"center",padding:"8px 10px",background:"none",border:"none",
-            cursor:"pointer",gap:4,minWidth:68,minHeight:58,
-            WebkitTapHighlightColor:"transparent",fontFamily:FONT,position:"relative"
+            flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
+            padding:"0",background:"none",border:"none",cursor:"pointer",
+            minWidth:60,height:56,WebkitTapHighlightColor:"transparent",
+            position:"relative"
           }}>
-            {active===n.key&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:28,height:3,borderRadius:"0 0 4px 4px",background:"#f8de09"}}/>}
-            <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",background:active===n.key?"#f8de09":"transparent",transition:"background 0.15s"}}>
-              <TI n={n.icon||"circle"} size={17} style={{color:active===n.key?"#111":"var(--nav-t)"}}/>
+            {active===n.key&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:"#f8de09"}}/>}
+            <div style={{width:40,height:40,borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center",background:active===n.key?"#f8de09":"transparent",transition:"background 0.15s,transform 0.1s",transform:active===n.key?"scale(1.08)":"scale(1)"}}>
+              <TI n={n.icon||"circle"} size={19} style={{color:active===n.key?"#111":"var(--nav-t)"}}/>
             </div>
-            <span style={{fontSize:13,color:active===n.key?"#f8de09":"var(--nav-t)",fontWeight:active===n.key?700:400,whiteSpace:"nowrap",lineHeight:1}}>{n.label}</span>
           </button>
         ))}
       </div>
