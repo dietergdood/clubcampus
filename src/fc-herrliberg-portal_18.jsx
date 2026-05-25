@@ -835,7 +835,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout}){
       {/* Logo Header */}
       <div style={{padding:"18px 10px 15px",borderBottom:"1px solid var(--nav-b)",display:"flex",alignItems:"center",gap:collapsed?0:11,justifyContent:collapsed?"center":"flex-start",overflow:"hidden"}}>
         <div style={{width:44,height:44,minWidth:44,borderRadius:12,background:"#f8de09",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",boxShadow:"0 2px 8px rgba(248,222,9,0.3)"}}>
-          <img src="/logo_fch_mit_rand.svg" style={{width:38,height:38,objectFit:"contain",display:"block"}} alt="FCH"/>
+          <img src="/logo_fch_mit_rand.svg" style={{width:42,height:42,objectFit:"contain",display:"block"}} alt="FCH"/>
         </div>
         {!collapsed&&(
           <div style={{minWidth:0,overflow:"hidden"}}>
