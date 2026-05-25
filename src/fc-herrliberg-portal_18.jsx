@@ -5554,6 +5554,7 @@ function MembersView({role}){
  </tbody>
  </table>
  </Card>
+  </div>
  );
 }
 
@@ -7084,7 +7085,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
  );
  })&&(
  <div style={{textAlign:"center",padding:"40px 20px",color:"#9CA3AF",fontSize:14,background:"#fff",borderRadius:12,border:"1px solid #E5E7EB"}}>
- Keine Einsätze oder Schichten gefunden für <strong style={{color:BK}}>„{browseSearch}"</strong>
+ Keine Einsätze oder Schichten gefunden für <strong style={{color:BK}}>"{browseSearch}"</strong>
  <br/><button onClick={()=>setBrowseSearch("")} style={{marginTop:10,padding:"5px 14px",borderRadius:9999,border:"1px solid #E5E7EB",background:"#fff",color:"#4B5563",fontSize:12,cursor:"pointer"}}>Suche zurücksetzen</button>
  </div>
  )}
@@ -7995,8 +7996,6 @@ function PlaetzeView(){
  Inaktive Plätze erscheinen nicht in Dropdowns. Hälften mit Komma trennen.
  </div>
  </div>
-  </div>
-  </div>
  );
 }
 
