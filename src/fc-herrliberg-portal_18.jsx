@@ -557,12 +557,15 @@ function Av({name="",init,size=34,bg="#f8de09"}){
 function Chip({text,color=R,bg}){
   return <span style={{background:bg||color+"15",color,fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,whiteSpace:"nowrap",letterSpacing:0.2,border:`0.5px solid ${color}25`}}>{text}</span>;
 }
-function Stat({label,value,sub,color=BK}){
+function Stat({label,value,sub,color=BK,icon}){
   return(
-    <div style={{background:"#fff",border:`0.5px solid ${GB}`,borderRadius:14,padding:"18px 20px",flex:1,minWidth:0,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
-      <div style={{fontSize:10,color:"#999",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,marginBottom:6}}>{label}</div>
-      <div style={{fontSize:26,fontWeight:800,color,lineHeight:1,marginBottom:6}}>{value}</div>
-      {sub&&<div style={{fontSize:11,color:"#aaa",fontWeight:500}}>{sub}</div>}
+    <div style={{background:"#fff",border:`1px solid ${GB}`,borderRadius:12,padding:"18px 20px",flex:1,minWidth:0,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+        <div style={{fontSize:10,color:"#999",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
+        {icon&&<div style={{width:28,height:28,borderRadius:7,background:color+"15",display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color}}/></div>}
+      </div>
+      <div style={{fontSize:28,fontWeight:800,color,lineHeight:1,marginBottom:5}}>{value}</div>
+      {sub&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>{sub}</div>}
     </div>
   );
 }
@@ -728,32 +731,43 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
 function SideNav({role,active,setActive,account}){
   const nav=NAV_BY_ROLE[role]||[];
   const rc=getRole(role).color;
+  const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
   return(
-    <nav style={{width:200,background:BK,minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0}}>
-      <div style={{padding:"20px 14px 16px",borderBottom:"1px solid #252525",marginBottom:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <img src="/logo_fch_mit_rand.svg" style={{width:52,height:52,objectFit:"contain",flexShrink:0}} alt="FC Herrliberg"/>
+    <nav style={{width:216,background:"#141414",minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0}}>
+      {/* Logo */}
+      <div style={{padding:"20px 18px 16px",borderBottom:"1px solid #222"}}>
+        <div style={{display:"flex",alignItems:"center",gap:11}}>
+          <img src="/logo_fch_mit_rand.svg" style={{width:46,height:46,objectFit:"contain",flexShrink:0}} alt="FC Herrliberg"/>
           <div>
-            <div style={{color:"#fff",fontWeight:700,fontSize:13,lineHeight:1.2}}>FC Herrliberg</div>
-            <div style={{color:"#555",fontSize:10}}>Vereinsportal</div>
+            <div style={{color:"#f0f0f0",fontWeight:700,fontSize:14,lineHeight:1.25,letterSpacing:0.1}}>FC Herrliberg</div>
+            <div style={{color:"#555",fontSize:10.5,letterSpacing:0.4,marginTop:1}}>Vereinsportal</div>
           </div>
         </div>
       </div>
-      <div style={{flex:1,padding:"4px 8px",overflowY:"auto"}}>
+      {/* Nav items */}
+      <div style={{flex:1,padding:"10px 10px",overflowY:"auto"}}>
         {nav.map(n=>(
-          <button key={n.key} onClick={()=>setActive(n.key)} style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:"9px 12px",borderRadius:8,border:"none",background:active===n.key?"#f8de09":"transparent",color:active===n.key?"#1A1A1A":"#888",cursor:"pointer",fontSize:12.5,fontWeight:active===n.key?700:400,textAlign:"left",marginBottom:1}}>
-            <TI n={n.icon||"circle"} size={16} />{n.label}
+          <button key={n.key} onClick={()=>setActive(n.key)} style={{
+            width:"100%",display:"flex",alignItems:"center",gap:11,
+            padding:"9px 12px",borderRadius:8,border:"none",
+            background:active===n.key?"#f8de09":"transparent",
+            color:active===n.key?"#111":"#9a9a9a",
+            cursor:"pointer",fontSize:13.5,fontWeight:active===n.key?600:400,
+            textAlign:"left",marginBottom:1,letterSpacing:0.1,
+            transition:"background 0.12s,color 0.12s"
+          }}>
+            <TI n={n.icon||"circle"} size={15} style={{flexShrink:0,opacity:active===n.key?1:0.7}}/>{n.label}
           </button>
         ))}
       </div>
-      <div style={{padding:"8px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",borderRadius:8,background:"#222"}}>
-          <Av size={28} bg={getRole(role).color} name={account?.name||getRole(role).label}/>
-          <div>
-            <div style={{color:"#fff",fontSize:12,fontWeight:600}}>{
-              account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer"
-            }</div>
-            <div style={{color:"#666",fontSize:10}}>{getRole(role).label}</div>
+      {/* User footer */}
+      <div style={{padding:"14px 12px",borderTop:"1px solid #222"}}>
+        <div style={{fontSize:9.5,color:"#404040",fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:8,paddingLeft:2}}>Angemeldet als</div>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <Av size={32} bg={rc} name={userName}/>
+          <div style={{minWidth:0}}>
+            <div style={{color:"#e8e8e8",fontSize:12.5,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:0.1}}>{userName}</div>
+            <span style={{display:"inline-block",marginTop:3,background:rc,color:rc==="#f8de09"?"#111":"#fff",fontSize:9.5,fontWeight:700,padding:"2px 8px",borderRadius:20,letterSpacing:0.2}}>{getRole(role).label}</span>
           </div>
         </div>
       </div>
@@ -767,13 +781,13 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
   const rc=getRole(role).color;
   const acc=account||USER_ACCOUNTS[role]||{name:getRole(role).label,rollen:[role],primaryRole:role,kinder:[]};
   return(
-    <div style={{height:54,background:"#fff",borderBottom:`0.5px solid ${GB}`,display:"flex",alignItems:"center",padding:"0 20px",justifyContent:"space-between",flexShrink:0,gap:12,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
-      <span style={{fontSize:13,color:"#bbb",fontWeight:500,letterSpacing:0.2}}><span style={{color:rc,fontWeight:800,fontSize:13}}>FCH</span><span style={{margin:"0 6px",color:"#ddd"}}>/</span>{label}</span>
-      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+    <div style={{height:52,background:"#fff",borderBottom:`1px solid ${GB}`,display:"flex",alignItems:"center",padding:"0 28px",justifyContent:"space-between",flexShrink:0,gap:12}}>
+      <span style={{fontSize:13,color:"#bbb",fontWeight:400}}><span style={{color:"#f8de09",fontWeight:800}}>FCH</span><span style={{margin:"0 7px",color:"#ddd"}}>/</span><span style={{color:"#555"}}>{label}</span></span>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
         {!onLogout && <RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
-        {!onLogout && <Chip text="DEMO" color="#888" bg="#f0f0ee"/>}
-        {onLogout && <span style={{fontSize:12,color:"#888"}}>{acc.name||acc.email}</span>}
-        {onLogout && <button onClick={onLogout} style={{padding:"4px 12px",borderRadius:20,border:"0.5px solid "+GB,background:"#fff",color:"#555",fontSize:11,cursor:"pointer"}}>Abmelden</button>}
+        {!onLogout && <Chip text="DEMO" color="#999" bg="#f5f5f3"/>}
+        {onLogout && <span style={{fontSize:12,color:"#888",fontWeight:500}}>{acc.name||acc.email}</span>}
+        {onLogout && <button onClick={onLogout} style={{padding:"5px 14px",borderRadius:6,border:"1px solid "+GB,background:"#fff",color:"#555",fontSize:12,cursor:"pointer",fontWeight:500}}>Abmelden</button>}
       </div>
     </div>
   );
@@ -783,25 +797,26 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
    DASHBOARDS (je nach Rolle)
 ========================================== */
 function Dashboard({role,setActive,account,meineTeams,myRosterId}){
-  if(role==="administrator")  return <DashboardAdmin setActive={setActive}/>;
-  if(role==="administration") return <DashboardAdministration setActive={setActive}/>;
-  if(role==="funktionaer")    return <DashboardFunktionaer setActive={setActive}/>;
+  if(role==="administrator")  return <DashboardAdmin setActive={setActive} account={account}/>;
+  if(role==="administration") return <DashboardAdministration setActive={setActive} account={account}/>;
+  if(role==="funktionaer")    return <DashboardFunktionaer setActive={setActive} account={account}/>;
   if(role==="trainer")        return <DashboardTrainer setActive={setActive} account={account} trainerTeams={meineTeams} myRosterId={myRosterId}/>;
   if(role==="spieler")        return <DashboardSpieler account={account} meineTeams={meineTeams} myRosterId={myRosterId} setActive={setActive}/>;
   if(role==="eltern")         return <DashboardEltern account={account} meineTeams={meineTeams} setActive={setActive}/>;
   return null;
 }
 
-function DashboardAdmin({setActive}){
+function DashboardAdmin({setActive,account}){
+  const vorname=(account?.name||"Administrator").split(" ")[0];
   return(
     <div>
-      <h1 style={{fontSize:22,fontWeight:800,margin:"0 0 6px"}}>System-Dashboard</h1>
-      <p style={{color:"#888",fontSize:13,margin:"0 0 18px"}}>Administrator · Vollzugriff</p>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
-        <Stat label="Mitglieder total" value="187" sub="Fairgate synchronisiert" color="#7C3AED"/>
-        <Stat label="Aktive Benutzer" value="134" sub="in den letzten 30 Tagen" color={BL}/>
-        <Stat label="Sync-Fehler" value="2" sub="Fairgate / FVRZ" color={R}/>
-        <Stat label="Offene Datenprüfungen" value="12" sub="Mitglieder fällig" color={AM}/>
+      <h1 style={{fontSize:24,fontWeight:800,margin:"0 0 4px",color:"#111"}}>Hallo, {vorname}</h1>
+      <p style={{color:"#999",fontSize:13,margin:"0 0 24px",fontWeight:400}}>FC Herrliberg &ndash; Systemübersicht</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,180px),1fr))",gap:12,marginBottom:24}}>
+        <Stat label="Mitglieder total" value="187" sub="Fairgate synchronisiert" color="#7C3AED" icon="users"/>
+        <Stat label="Aktive Benutzer" value="134" sub="in den letzten 30 Tagen" color={BL} icon="user"/>
+        <Stat label="Sync-Fehler" value="2" sub="Fairgate / FVRZ" color={R} icon="refresh"/>
+        <Stat label="Offene Datenprüfungen" value="12" sub="Mitglieder fällig" color={AM} icon="clipboard-list"/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         <Card>
@@ -864,10 +879,11 @@ function DashboardAdmin({setActive}){
   );
 }
 
-function DashboardAdministration({setActive}){
+function DashboardAdministration({setActive,account}){
   return(
     <div>
-      <h1 style={{fontSize:22,fontWeight:800,margin:"0 0 6px"}}>Guten Tag, Sandra</h1>
+      <h1 style={{fontSize:24,fontWeight:800,margin:"0 0 4px",color:"#111"}}>Hallo, {(account?.name||"Nutzer").split(" ")[0]}</h1>
+      <p style={{color:"#999",fontSize:13,margin:"0 0 24px"}}>FC Herrliberg &ndash; Übersicht</p>
       <p style={{color:"#888",fontSize:13,margin:"0 0 18px"}}>Administration · Freitag, 23. Mai 2026</p>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
         <Stat label="Mitglieder total" value="187" color={BL}/>
@@ -927,10 +943,11 @@ function DashboardAdministration({setActive}){
   );
 }
 
-function DashboardFunktionaer(){
+function DashboardFunktionaer({setActive,account}){
   return(
     <div>
-      <h1 style={{fontSize:22,fontWeight:800,margin:"0 0 6px"}}>Guten Tag, Bruno</h1>
+      <h1 style={{fontSize:24,fontWeight:800,margin:"0 0 4px",color:"#111"}}>Hallo, {(account?.name||"Nutzer").split(" ")[0]}</h1>
+      <p style={{color:"#999",fontSize:13,margin:"0 0 24px"}}>FC Herrliberg &ndash; Übersicht</p>
       <p style={{color:"#888",fontSize:13,margin:"0 0 18px"}}>Funktionär / Vorstand · Freitag, 23. Mai 2026</p>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
         <Stat label="Offene Rückmeldungen" value="22" color={R}/>
@@ -8222,7 +8239,7 @@ export default function Portal({supabaseClient}){
           account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
           onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
           onLogout={sb&&session ? handleLogout : undefined}/>
-        <main style={{flex:1,padding:isMobile?"16px 14px 90px":"28px 32px 28px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1300,margin:"0 auto",width:"100%"}}>{getView()}</main>
+        <main style={{flex:1,padding:isMobile?"16px 14px 90px":"32px 36px 32px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1200,margin:"0 auto",width:"100%"}}>{getView()}</main>
         {isMobile&&<MobileNav role={role} active={active} setActive={setActive}/>}
       </div>
     </div>
