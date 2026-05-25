@@ -991,12 +991,12 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
    DASHBOARDS (je nach Rolle)
 ========================================== */
 function Dashboard({role,setActive,account,meineTeams,myRosterId}){
-  if(role==="administrator")  return <DashboardAdmin setActive={setActive} account={account}/>;
-  if(role==="administration") return <DashboardAdministration setActive={setActive} account={account}/>;
-  if(role==="funktionaer")    return <DashboardFunktionaer setActive={setActive} account={account}/>;
-  if(role==="trainer")        return <DashboardTrainer setActive={setActive} account={account} trainerTeams={meineTeams} myRosterId={myRosterId}/>;
-  if(role==="spieler")        return <DashboardSpieler account={account} meineTeams={meineTeams} myRosterId={myRosterId} setActive={setActive}/>;
-  if(role==="eltern")         return <DashboardEltern account={account} meineTeams={meineTeams} setActive={setActive}/>;
+  if(role==="administrator")  return <DashboardAdmin setActive={setActivePersist} account={account}/>;
+  if(role==="administration") return <DashboardAdministration setActive={setActivePersist} account={account}/>;
+  if(role==="funktionaer")    return <DashboardFunktionaer setActive={setActivePersist} account={account}/>;
+  if(role==="trainer")        return <DashboardTrainer setActive={setActivePersist} account={account} trainerTeams={meineTeams} myRosterId={myRosterId}/>;
+  if(role==="spieler")        return <DashboardSpieler account={account} meineTeams={meineTeams} myRosterId={myRosterId} setActive={setActivePersist}/>;
+  if(role==="eltern")         return <DashboardEltern account={account} meineTeams={meineTeams} setActive={setActivePersist}/>;
   return null;
 }
 
@@ -1785,7 +1785,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
           </div>
         </div>
       )}
-      {tab==="attendance"&&<AttendanceTab role={role} team={activeTeam} setActive={setActive} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r)=>{
+      {tab==="attendance"&&<AttendanceTab role={role} team={activeTeam} setActive={setActivePersist} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r)=>{
         const merged={...responses};
         Object.keys(r).forEach(evId=>{merged[evId]={...responses[evId],...r[evId]};});
         setResponses(merged);
@@ -8584,8 +8584,9 @@ export default function Portal({supabaseClient}){
   const [dbUser,setDbUser]=useState(null);
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
-  const [active,setActive]=useState("dashboard");
   const {isMobile,isTablet}=useBreakpoint();
+  const [active,setActive]=useState(()=>{try{return sessionStorage.getItem("fch-active")||"dashboard";}catch{return "dashboard";}});
+  const setActivePersist=(key)=>{try{sessionStorage.setItem("fch-active",key);}catch{}setActive(key);};
   const [mobileProfileOpen,setMobileProfileOpen]=useState(false);
   /* ── Dark Mode ── */
   const [dark,setDark]=useState(()=>{
@@ -8657,7 +8658,7 @@ export default function Portal({supabaseClient}){
 
   async function handleLogout(){
     if(supabase) await sb.auth.signOut();
-    setSession(null); setDbUser(null); setActive("dashboard");
+    setSession(null); setDbUser(null); setActivePersist("dashboard");
   }
 
   // Lade-Screen (initial oder während dbUser lädt nach Login)
@@ -8705,15 +8706,15 @@ export default function Portal({supabaseClient}){
   const handleAccountChange=(key)=>{
     setAccountKey(key);
     setActiveSubRole(null);
-    setActive("dashboard");
+    setActivePersist("dashboard");
   };
 
   const getView=()=>{
     const na=NAV_BY_ROLE[role]||[];
-    if(!na.find(n=>n.key===active)) return <Dashboard role={role} setActive={setActive}/>;
+    if(!na.find(n=>n.key===active)) return <Dashboard role={role} setActive={setActivePersist}/>;
     switch(active){
-      case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
-      case "team":              return <TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account}/>;
+      case "dashboard":         return <Dashboard role={role} setActive={setActivePersist} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
+      case "team":              return <TeamView role={role} trainerTeams={trainerTeams} setActive={setActivePersist} myRosterId={myRosterId} account={account}/>;
       case "members":           return <MembersView role={role}/>;
       case "users":             return <PortalverwaltungView initialTab="users"/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis"/>;
@@ -8721,7 +8722,7 @@ export default function Portal({supabaseClient}){
       case "training":          return <TrainingGantt role={role} team={role==="trainer"?meineTeams?.[0]:undefined}/>;
       case "schedule":          return <ScheduleTab role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
-      case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:22,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:13,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><AttendanceTab role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActive} onNavigateToSpiel={(spiel)=>{NAV_TARGET.tab="spielplan";NAV_TARGET.selectedSpiel=spiel;setActive("team");}}/></div>;
+      case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:22,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:13,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><AttendanceTab role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActivePersist} onNavigateToSpiel={(spiel)=>{NAV_TARGET.tab="spielplan";NAV_TARGET.selectedSpiel=spiel;setActive("team");}}/></div>;
       case "helpers":           return <HelpersList role={role} meineTeams={meineTeams} account={account}/>;
       case "buses":             return <BusesView/>;
       case "material":          return <MaterialView/>;
@@ -8735,7 +8736,7 @@ export default function Portal({supabaseClient}){
       case "audit":             return <PortalverwaltungView initialTab="audit"/>;
       case "datacheck":         return <PortalverwaltungView initialTab="module"/>;
       case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account}/>;
-      default:                  return <Dashboard role={role} setActive={setActive}/>;
+      default:                  return <Dashboard role={role} setActive={setActivePersist}/>;
     }
   };
 
@@ -8743,15 +8744,15 @@ export default function Portal({supabaseClient}){
     <ThemeCtx.Provider value={{dark,toggle:toggleDark}}>
       {splash&&<SplashScreen onDone={doneSplash}/>}
       <div data-theme={dark?"dark":"light"} style={{display:"flex",minHeight:"100vh",background:"var(--bg)",fontFamily:FONT,WebkitFontSmoothing:"antialiased",MozOsxFontSmoothing:"grayscale",color:"var(--text)",transition:"background 0.25s,color 0.25s"}}>
-        {!isMobile&&<SideNav role={role} active={active} setActive={setActive} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
+        {!isMobile&&<SideNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
         <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-          {isMobile&&<TopBar role={role} active={active} setActive={setActive}
+          {isMobile&&<TopBar role={role} active={active} setActive={setActivePersist}
             account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
             onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
             onLogout={sb&&session ? handleLogout : undefined}
             onOpenProfile={()=>setMobileProfileOpen(true)}/>}
           <main key={active} className="fch-page" style={{flex:1,padding:isMobile?"16px 14px 90px":isTablet?"20px 24px 28px":"32px 36px 32px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1200,margin:"0 auto",width:"100%"}}>{getView()}</main>
-          {isMobile&&<MobileNav role={role} active={active} setActive={setActive} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
+          {isMobile&&<MobileNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
         </div>
       </div>
       {isMobile&&<ProfileModal open={mobileProfileOpen} onClose={()=>setMobileProfileOpen(false)} account={account} role={role} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
