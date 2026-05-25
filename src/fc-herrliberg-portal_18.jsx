@@ -818,10 +818,11 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
 /* ==========================================
    LAYOUT
 ========================================== */
-function SideNav({role,active,setActive,account}){
+function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout}){
   const nav=NAV_BY_ROLE[role]||[];
   const rc=getRole(role).color;
   const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
+  const [showProfile,setShowProfile]=useState(false);
   return(
     <nav style={{width:216,background:"var(--nav)",minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0,borderRight:"1px solid var(--nav-b)"}}>
       {/* Logo Header */}
@@ -851,17 +852,26 @@ function SideNav({role,active,setActive,account}){
           </button>
         ))}
       </div>
-      {/* User footer */}
-      <div style={{padding:"14px 12px",borderTop:"1px solid var(--nav-b)"}}>
+      {/* User footer – klickbar → Profil */}
+      <button onClick={()=>setShowProfile(true)} style={{
+        padding:"14px 12px",borderTop:"1px solid var(--nav-b)",
+        background:"none",border:"none",cursor:"pointer",textAlign:"left",
+        width:"100%",transition:"background 0.15s",borderRadius:"0 0 0 0",
+        WebkitTapHighlightColor:"transparent"
+      }}
+        onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}
+        onMouseLeave={e=>e.currentTarget.style.background="none"}>
         <div style={{fontSize:10,color:"var(--nav-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,marginBottom:9,paddingLeft:2}}>Angemeldet als</div>
         <div style={{display:"flex",alignItems:"center",gap:9}}>
           <Av size={32} bg={rc} name={userName}/>
-          <div style={{minWidth:0}}>
+          <div style={{minWidth:0,flex:1}}>
             <div style={{color:"var(--nav-a)",fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:0.1}}>{userName}</div>
             <div style={{marginTop:3,fontSize:10,color:rc,fontWeight:600,letterSpacing:0.2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{getRole(role).label}</div>
           </div>
+          <TI n="chevron-right" size={13} style={{color:"var(--nav-t)",opacity:0.5,flexShrink:0}}/>
         </div>
-      </div>
+      </button>
+      <ProfileModal open={showProfile} onClose={()=>setShowProfile(false)} account={account} role={role} sb={sb} onNameUpdated={onNameUpdated} onLogout={onLogout}/>
     </nav>
   );
 }
@@ -8082,11 +8092,234 @@ function DataCheckView(){
   );
 }
 
+
+/* ==========================================
+   PROFIL MODAL
+========================================== */
+function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
+  const rc=getRole(role).color;
+  const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
+  const userEmail=account?.email||"demo@fcherrliberg.ch";
+  const userId=account?.id||null;
+  const initials=userName.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
+  const [tab,setTab]=useState("konto");
+  // Konto-Bearbeitung
+  const [editName,setEditName]=useState(false);
+  const [nameDraft,setNameDraft]=useState(userName);
+  const [nameStatus,setNameStatus]=useState(null); // null | "loading" | "ok" | "error"
+  const [nameMsg,setNameMsg]=useState("");
+  // Passwort
+  const [pwForm,setPwForm]=useState({current:"",next:"",repeat:""});
+  const [pwStatus,setPwStatus]=useState(null);
+  const [pwMsg,setPwMsg]=useState("");
+
+  if(!open) return null;
+
+  /* ── Name in DB speichern ─────────────────────── */
+  async function handleSaveName(){
+    const n=nameDraft.trim();
+    if(!n){setNameStatus("error");setNameMsg("Name darf nicht leer sein.");return;}
+    setNameStatus("loading");
+    try{
+      if(sb && userId){
+        const {error}=await sb.from("benutzer").update({name:n}).eq("id",userId);
+        if(error) throw error;
+        /* Auch in Supabase Auth Metadaten */
+        await sb.auth.updateUser({data:{full_name:n}});
+      }
+      setNameStatus("ok");setNameMsg("Name gespeichert.");
+      setEditName(false);
+      if(onNameUpdated) onNameUpdated(n);
+      setTimeout(()=>setNameStatus(null),2500);
+    }catch(err){
+      setNameStatus("error");setNameMsg(err.message||"Fehler beim Speichern.");
+    }
+  }
+
+  /* ── Passwort ändern ──────────────────────────── */
+  async function handlePwChange(e){
+    e.preventDefault();
+    if(pwForm.next.length<8){setPwStatus("error");setPwMsg("Mindestens 8 Zeichen.");return;}
+    if(pwForm.next!==pwForm.repeat){setPwStatus("error");setPwMsg("Passwörter stimmen nicht überein.");return;}
+    setPwStatus("loading");
+    try{
+      if(sb){
+        const{error}=await sb.auth.updateUser({password:pwForm.next});
+        if(error) throw error;
+      }
+      setPwStatus("ok");setPwMsg("Passwort erfolgreich geändert.");
+      setPwForm({current:"",next:"",repeat:""});
+    }catch(err){
+      setPwStatus("error");setPwMsg(err.message||"Fehler beim Ändern.");
+    }
+  }
+
+  const inputStyle={width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:9,
+    fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",
+    boxSizing:"border-box",outline:"none"};
+
+  const StatusBox=({status,msg})=>status==="ok"?(
+    <div style={{padding:"10px 14px",background:"#ECFDF5",border:"1px solid "+GN,borderRadius:9,fontSize:13,color:GN,fontWeight:600,marginTop:4}}>{msg}</div>
+  ):status==="error"?(
+    <div style={{padding:"10px 14px",background:RL,border:"1px solid "+R,borderRadius:9,fontSize:13,color:R,fontWeight:600,marginTop:4}}>{msg}</div>
+  ):null;
+
+  return(
+    <ModalOrSheet open={open} onClose={onClose} maxWidth={500}>
+      {/* Header */}
+      <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:13}}>
+          <div style={{width:46,height:46,borderRadius:"50%",background:rc,display:"flex",alignItems:"center",
+            justifyContent:"center",color:rc==="#f8de09"?"#111":"#fff",fontWeight:800,fontSize:17,flexShrink:0}}>
+            {initials}
+          </div>
+          <div>
+            <div style={{fontWeight:700,fontSize:15,color:"var(--text)",letterSpacing:-0.2}}>{userName}</div>
+            <div style={{fontSize:12,color:"var(--sub)",marginTop:2}}>{userEmail}</div>
+          </div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",
+          color:"var(--sub)",lineHeight:1,padding:4,borderRadius:6}}>×</button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{padding:"14px 20px 0"}}>
+        <Tabs tabs={[{key:"konto",label:"Konto"},{key:"passwort",label:"Passwort"}]} active={tab} setActive={setTab}/>
+      </div>
+
+      {/* Content */}
+      <div style={{overflowY:"auto",flex:1,padding:"4px 20px 20px"}}>
+        {tab==="konto"&&(
+          <div style={{display:"flex",flexDirection:"column",gap:0}}>
+
+            {/* Name – editierbar */}
+            <div style={{padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:editName?8:0}}>
+                <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Name</span>
+                {!editName&&(
+                  <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{userName}</span>
+                )}
+              </div>
+              {editName&&(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <input value={nameDraft} onChange={e=>setNameDraft(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter")handleSaveName();if(e.key==="Escape")setEditName(false);}}
+                    style={{...inputStyle}} autoFocus placeholder="Vor- und Nachname"/>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={handleSaveName} disabled={nameStatus==="loading"}
+                      style={{flex:1,padding:"9px",borderRadius:9,background:BK,color:"#fff",border:"none",
+                        fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT,
+                        opacity:nameStatus==="loading"?0.6:1}}>
+                      {nameStatus==="loading"?"Speichern…":"Speichern"}
+                    </button>
+                    <button onClick={()=>{setEditName(false);setNameStatus(null);}}
+                      style={{padding:"9px 16px",borderRadius:9,background:"var(--surface2)",
+                        color:"var(--sub)",border:"1px solid var(--border)",fontSize:13,cursor:"pointer",fontFamily:FONT}}>
+                      Abbrechen
+                    </button>
+                  </div>
+                  <StatusBox status={nameStatus} msg={nameMsg}/>
+                </div>
+              )}
+            </div>
+
+            {/* E-Mail – read only */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
+              <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>E-Mail</span>
+              <span style={{fontSize:13,fontWeight:500,color:"var(--text)",textAlign:"right"}}>{userEmail}</span>
+            </div>
+
+            {/* Rolle */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
+              <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Rolle</span>
+              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{getRole(role).label}</span>
+            </div>
+
+            {/* Mitglied */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0"}}>
+              <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Verein</span>
+              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>FC Herrliberg</span>
+            </div>
+
+            {/* Rollen-Badge */}
+            <div style={{marginTop:8,padding:12,background:"var(--surface2)",borderRadius:10,border:"1px solid var(--border)"}}>
+              <div style={{fontSize:11,color:"var(--sub)",marginBottom:6,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>Zugriffsrechte</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:rc,flexShrink:0}}/>
+                <span style={{fontSize:13,color:"var(--text)",fontWeight:600}}>{getRole(role).label}</span>
+              </div>
+              <div style={{fontSize:12,color:"var(--sub)",marginTop:4,lineHeight:1.5}}>{getRole(role).desc||""}</div>
+            </div>
+
+            {nameStatus==="ok"&&!editName&&<StatusBox status="ok" msg={nameMsg}/>}
+
+            {/* Abmelden */}
+            {onLogout&&(
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)"}}>
+                <button onClick={onLogout} style={{
+                  width:"100%",padding:"11px",borderRadius:10,
+                  background:"transparent",color:R,border:"1px solid "+R,
+                  fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,
+                  display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                  transition:"background 0.15s"
+                }}
+                  onMouseEnter={e=>e.currentTarget.style.background=RL}
+                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <TI n="logout" size={15}/> Abmelden
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab==="passwort"&&(
+          <form onSubmit={handlePwChange} style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Aktuelles Passwort</div>
+              <input type="password" placeholder="••••••••" value={pwForm.current}
+                onChange={e=>setPwForm(p=>({...p,current:e.target.value}))}
+                style={inputStyle} autoComplete="current-password"/>
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Neues Passwort</div>
+              <input type="password" placeholder="Mindestens 8 Zeichen" value={pwForm.next}
+                onChange={e=>setPwForm(p=>({...p,next:e.target.value}))}
+                style={inputStyle} autoComplete="new-password"/>
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Passwort bestätigen</div>
+              <input type="password" placeholder="Wiederholen" value={pwForm.repeat}
+                onChange={e=>setPwForm(p=>({...p,repeat:e.target.value}))}
+                style={inputStyle} autoComplete="new-password"/>
+            </div>
+            <StatusBox status={pwStatus} msg={pwMsg}/>
+            <button type="submit" disabled={pwStatus==="loading"}
+              style={{padding:"11px",borderRadius:10,background:BK,color:"#fff",border:"none",
+                fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT,
+                opacity:pwStatus==="loading"?0.6:1,transition:"opacity 0.2s"}}>
+              {pwStatus==="loading"?"Wird gespeichert…":"Passwort ändern"}
+            </button>
+            {!sb&&<div style={{fontSize:12,color:"var(--sub)",textAlign:"center",marginTop:4}}>Demo-Modus: Änderungen werden nicht gespeichert.</div>}
+          </form>
+        )}
+      </div>
+    </ModalOrSheet>
+  );
+}
+
 /* ==========================================
    APP ROOT
 ========================================== */
-function MobileNav({role,active,setActive}){
+function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout}){
   const nav=NAV_BY_ROLE[role]||[];
+  const rc=getRole(role).color;
+  const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"U";
+  const initials=userName.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+  const [showProfile,setShowProfile]=useState(false);
+  const isProfileActive=active==="profile";
   return(
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"var(--nav)",borderTop:"1px solid var(--nav-b)",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)",boxShadow:"0 -2px 16px rgba(0,0,0,0.25)"}}>
       <div style={{display:"flex",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none"}}>
@@ -8103,7 +8336,23 @@ function MobileNav({role,active,setActive}){
             </div>
           </button>
         ))}
+        {/* Profil-Button mit Initialen */}
+        <button onClick={()=>setShowProfile(true)} style={{
+          flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
+          padding:"0",background:"none",border:"none",cursor:"pointer",
+          minWidth:60,height:56,WebkitTapHighlightColor:"transparent",
+          position:"relative",marginLeft:"auto"
+        }}>
+          {showProfile&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:"#f8de09"}}/>}
+          <div style={{width:36,height:36,borderRadius:"50%",background:rc,display:"flex",alignItems:"center",
+            justifyContent:"center",color:rc==="#f8de09"?"#111":"#fff",fontWeight:700,fontSize:13,
+            flexShrink:0,border:showProfile?"2px solid #f8de09":"2px solid transparent",
+            transition:"border-color 0.15s",boxSizing:"border-box"}}>
+            {initials}
+          </div>
+        </button>
       </div>
+      <ProfileModal open={showProfile} onClose={()=>setShowProfile(false)} account={account} role={role} sb={sb} onNameUpdated={onNameUpdated} onLogout={onLogout}/>
     </nav>
   );
 }
@@ -8385,14 +8634,14 @@ export default function Portal({supabaseClient}){
     <ThemeCtx.Provider value={{dark,toggle:toggleDark}}>
       {splash&&<SplashScreen onDone={doneSplash}/>}
       <div data-theme={dark?"dark":"light"} style={{display:"flex",minHeight:"100vh",background:"var(--bg)",fontFamily:FONT,WebkitFontSmoothing:"antialiased",MozOsxFontSmoothing:"grayscale",color:"var(--text)",transition:"background 0.25s,color 0.25s"}}>
-        {!isMobile&&<SideNav role={role} active={active} setActive={setActive} account={account}/>}
+        {!isMobile&&<SideNav role={role} active={active} setActive={setActive} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
         <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
           <TopBar role={role} active={active} setActive={setActive}
             account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
             onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
             onLogout={sb&&session ? handleLogout : undefined}/>
           <main key={active} className="fch-page" style={{flex:1,padding:isMobile?"16px 14px 90px":isTablet?"20px 24px 28px":"32px 36px 32px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1200,margin:"0 auto",width:"100%"}}>{getView()}</main>
-          {isMobile&&<MobileNav role={role} active={active} setActive={setActive}/>}
+          {isMobile&&<MobileNav role={role} active={active} setActive={setActive} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
         </div>
       </div>
     </ThemeCtx.Provider>
