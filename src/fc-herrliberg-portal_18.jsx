@@ -5778,7 +5778,6 @@ function PortalverwaltungView({initialTab="module"}){
  {expanded&&(
  <div style={{background:"#fafaf8",borderTop:"1px solid #E5E7EB",padding:"12px 16px"}}>
  <div style={{fontSize:12,fontWeight:700,color:"#9CA3AF",textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Berechtigungen pro Rolle</div>
- <div style={{overflowX:"auto"}}>
  <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
  <thead>
  <tr>
@@ -5811,7 +5810,6 @@ function PortalverwaltungView({initialTab="module"}){
  })}
  </tbody>
  </table>
- </div>
  </div>
  )}
  </div>
