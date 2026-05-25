@@ -4346,7 +4346,6 @@ function TableTab({team}){
  </tbody>
  </table>
  </Card>
- </div>
  );
 }
 
@@ -5475,7 +5474,7 @@ function StatsTab({team="Cc-Junioren"}){
  }).sort((a,b)=>b.tore-a.tore);
  if(stats.length===0) return <Card><div style={{textAlign:"center",color:"#9CA3AF",padding:20}}>Keine Spielerstatistiken verfügbar.</div></Card>;
  return(
- <Card style={{padding:0,overflowX:"auto"}}> <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <Card style={{padding:0,overflowX:"auto"}}> <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Spieler","Spiele","Tore","Assists","Gelb","Rot"].map((h,i)=>(
@@ -5497,7 +5496,7 @@ function StatsTab({team="Cc-Junioren"}){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  );
 }
@@ -5554,7 +5553,6 @@ function MembersView({role}){
  </tbody>
  </table>
  </Card>
- </div>
  );
 }
 
@@ -5604,7 +5602,6 @@ function FieldVisView(){
  </tbody>
  </table>
  </Card>
- </div>
  );
 }
 
@@ -5792,7 +5789,7 @@ function PortalverwaltungView({initialTab="module"}){
  {expanded&&(
  <div style={{background:"#fafaf8",borderTop:"1px solid #E5E7EB",padding:"12px 16px"}}>
  <div style={{fontSize:12,fontWeight:700,color:"#9CA3AF",textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Berechtigungen pro Rolle</div>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
  <thead>
  <tr>
  <th style={{textAlign:"left",padding:"4px 8px",color:"#9CA3AF",fontWeight:600,fontSize:12}}>Rolle</th>
@@ -5826,7 +5823,6 @@ function PortalverwaltungView({initialTab="module"}){
  </table>
  </div>
  )}
- </div>
  );
  })}
  </Card>
@@ -5878,7 +5874,6 @@ function PortalverwaltungView({initialTab="module"}){
  </tbody>
  </table>
  </Card>
- </div>
  )}
 
  {/* ── TAB: FELDSICHTBARKEIT ── */}
@@ -5922,7 +5917,6 @@ function PortalverwaltungView({initialTab="module"}){
  </tbody>
  </table>
  </Card>
- </div>
  )}
 
  {/* ── TAB: API-VERBINDUNGEN ── */}
@@ -6003,7 +5997,6 @@ function PortalverwaltungView({initialTab="module"}){
  </tbody>
  </table>
  </Card>
- </div>
  )}
  </div>
  );
@@ -7451,7 +7444,6 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
  </tbody>
  </table>
  </Card>
- </div>
  )}
 
  {/* -- TAB: ERSTELLEN -- */}
@@ -7597,7 +7589,6 @@ function MaterialView(){
  </tbody>
  </table>
  </Card>
- </div>
  );
 }
 
@@ -7796,7 +7787,6 @@ function AttendanceCentral(){
  </tbody>
  </table>
  </Card>
- </div>
  );
 }
 
@@ -8040,7 +8030,6 @@ function DataCheckView(){
  </tbody>
  </table>
  </Card>
- </div>
  );
 }
 
