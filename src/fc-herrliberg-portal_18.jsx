@@ -1780,8 +1780,8 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
  ))}
  </div>
  </div>
- </div>
  )}
+  </div>
  );
  })()}
  </Card>
