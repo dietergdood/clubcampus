@@ -731,11 +731,11 @@ function SideNav({role,active,setActive,account}){
   return(
     <nav style={{width:200,background:BK,minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0}}>
       <div style={{padding:"20px 14px 16px",borderBottom:"1px solid #252525",marginBottom:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:9}}>
-          <img src="/logo_fch_mit_rand.svg" style={{width:40,height:40,objectFit:"contain",flexShrink:0}} alt="FC Herrliberg"/>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <img src="/logo_fch_mit_rand.svg" style={{width:52,height:52,objectFit:"contain",flexShrink:0}} alt="FC Herrliberg"/>
           <div>
-            <div style={{color:"#fff",fontWeight:700,fontSize:13}}>FC Herrliberg</div>
-            <div style={{color:"#666",fontSize:10}}>Vereinsportal</div>
+            <div style={{color:"#fff",fontWeight:700,fontSize:13,lineHeight:1.2}}>FC Herrliberg</div>
+            <div style={{color:"#555",fontSize:10}}>Vereinsportal</div>
           </div>
         </div>
       </div>
@@ -748,7 +748,7 @@ function SideNav({role,active,setActive,account}){
       </div>
       <div style={{padding:"8px"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",borderRadius:8,background:"#222"}}>
-          <Av size={28} bg={getRole(role).color} name={getRole(role).label} init={getRole(role).icon}/>
+          <Av size={28} bg={getRole(role).color} name={account?.name||getRole(role).label}/>
           <div>
             <div style={{color:"#fff",fontSize:12,fontWeight:600}}>{
               account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer"
