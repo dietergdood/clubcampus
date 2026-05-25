@@ -64,6 +64,20 @@ const TI_PATHS={
  "user":"<circle cx=\"12\" cy=\"7\" r=\"4\"/><path d=\"M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2\"/>",
  "users":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/><path d=\"M21 21v-2a4 4 0 0 0-3-3.85\"/>",
  "circle":"<circle cx=\"12\" cy=\"12\" r=\"9\"/>",
+    "chevron-up":"<polyline points=\"18 15 12 9 6 15\"/>",
+    "chevron-down":"<polyline points=\"6 9 12 15 18 9\"/>",
+    "chevron-right":"<polyline points=\"9 18 15 12 9 6\"/>",
+    "chevron-left":"<polyline points=\"15 18 9 12 15 6\"/>",
+    "x":"<line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"/><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"/>",
+    "plus":"<line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>",
+    "minus":"<line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/>",
+    "info":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"16\" x2=\"12.01\" y2=\"16\"/>",
+    "alert":"<path d=\"M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z\"/><line x1=\"12\" y1=\"9\" x2=\"12\" y2=\"13\"/><line x1=\"12\" y1=\"17\" x2=\"12.01\" y2=\"17\"/>",
+    "mail":"<path d=\"M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z\"/><polyline points=\"22,6 12,13 2,6\"/>",
+    "lock":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\" ry=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/>",
+    "download":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"7 10 12 15 17 10\"/><line x1=\"12\" y1=\"15\" x2=\"12\" y2=\"3\"/>",
+    "filter":"<polygon points=\"22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3\"/>",
+    "sort":"<line x1=\"8\" y1=\"6\" x2=\"21\" y2=\"6\"/><line x1=\"8\" y1=\"12\" x2=\"21\" y2=\"12\"/><line x1=\"8\" y1=\"18\" x2=\"21\" y2=\"18\"/><line x1=\"3\" y1=\"6\" x2=\"3.01\" y2=\"6\"/><line x1=\"3\" y1=\"12\" x2=\"3.01\" y2=\"12\"/><line x1=\"3\" y1=\"18\" x2=\"3.01\" y2=\"18\"/>",
 };
 function TI({n,size=16,style}){
  const p=TI_PATHS[n];
@@ -2156,7 +2170,7 @@ function RosterTab({role,team,initialSelected=null}){
  </Card>
  ):(
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {cols.map((c,i)=>{
@@ -2290,7 +2304,7 @@ function RosterTab({role,team,initialSelected=null}){
  ];
  })()}
  </tbody>
- </table></div>
+ </table>
  </Card>
  )}
  </div>
@@ -4269,7 +4283,7 @@ function ScheduleTab({role,team,initialSelected}){
  <>
  {selected&&<SpielDetail spiel={selected} onClose={()=>setSelected(null)} canEdit={canEdit} motmAll={motmAll} setMotmAll={setMotmAll}/>}
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Datum","Zeit","Gegner","H/A","Ort","Wettbewerb","Resultat",""].map((h,i)=>(
@@ -4294,7 +4308,7 @@ function ScheduleTab({role,team,initialSelected}){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </>
  );
@@ -4307,7 +4321,7 @@ function TableTab({team}){
  <div>
 
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["#","Mannschaft","Sp","S","U","N","Tore","+/-","Pts"].map((h,i)=>(
@@ -4330,7 +4344,7 @@ function TableTab({team}){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  );
@@ -5511,7 +5525,7 @@ function MembersView({role}){
  <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglied suchen…" style={{flex:1,padding:"7px 12px",border:"1px solid #E5E7EB",borderRadius:8,fontSize:13,outline:"none"}}/>
  </div>
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Mitglied","Rolle","Team","Mitgliedtyp","Wohnort","Datenstatus"].map((h,i)=>(
@@ -5538,7 +5552,7 @@ function MembersView({role}){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  );
@@ -5568,7 +5582,7 @@ function FieldVisView(){
  <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 8px"}}>Feldsichtbarkeit</h1>
  <p style={{color:"#9CA3AF",fontSize:14,margin:"0 0 20px",fontWeight:400,lineHeight:1.5}}>Konfigurierbar pro Rolle (Kap. 6.1)</p>
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  <th style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"#4B5563",fontSize:12,textTransform:"uppercase",letterSpacing:0.4}}>Feld</th>
@@ -5588,7 +5602,7 @@ function FieldVisView(){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  );
@@ -5829,7 +5843,7 @@ function PortalverwaltungView({initialTab="module"}){
  <Btn variant="primary" color={BK} onClick={()=>{}}>+ Benutzer einladen</Btn>
  </div>
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Name","E-Mail","Rolle","Status","Aktion"].map((h,i)=>(
@@ -5862,7 +5876,7 @@ function PortalverwaltungView({initialTab="module"}){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  )}
@@ -5873,7 +5887,7 @@ function PortalverwaltungView({initialTab="module"}){
  <InfoBox text="Steuert welche Mitglieder-Felder pro Rolle sichtbar sind. Änderungen wirken sofort." color={BL}/>
  <div style={{height:12}}/>
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  <th style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"#4B5563",fontSize:12,textTransform:"uppercase",letterSpacing:0.4}}>Feld</th>
@@ -5906,7 +5920,7 @@ function PortalverwaltungView({initialTab="module"}){
  </td></tr>
  )}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  )}
@@ -5961,7 +5975,7 @@ function PortalverwaltungView({initialTab="module"}){
  {!loading&&tab==="audit"&&(
  <div>
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Zeit","API / System","Status","Neu","Aktualisiert","Fehler","Details"].map((h,i)=>(
@@ -5987,7 +6001,7 @@ function PortalverwaltungView({initialTab="module"}){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  )}
@@ -7342,7 +7356,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
  </div>
 
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h,i)=>(
@@ -7435,7 +7449,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account}){
  </>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  )}
@@ -7561,7 +7575,7 @@ function MaterialView(){
  </Card>
  )}
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Team","Art","Material","von","Datum","Status"].map((h,i)=>(
@@ -7581,7 +7595,7 @@ function MaterialView(){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  );
@@ -7755,7 +7769,7 @@ function AttendanceCentral(){
  <Stat label="Teams total" value="8" color={BK}/>
  </div>
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Team","Ø Total","Ø Training","Ø Spiele","Spieler"].map((h,i)=>(
@@ -7780,7 +7794,7 @@ function AttendanceCentral(){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  );
@@ -8001,7 +8015,7 @@ function DataCheckView(){
  <Stat label="Sync-Fehler" value="5" color={"#9CA3AF"}/>
  </div>
  <Card style={{padding:0,overflowX:"auto"}}>
- <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",width:"100%"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+ <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
  <thead>
  <tr style={{background:"#F5F5F3"}}>
  {["Mitglied","Problem","Zuletzt geprüft","Aktion"].map((h,i)=>(
@@ -8024,7 +8038,7 @@ function DataCheckView(){
  </tr>
  ))}
  </tbody>
- </table></div>
+ </table>
  </Card>
  </div>
  );
