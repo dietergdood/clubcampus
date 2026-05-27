@@ -6200,6 +6200,10 @@ function PortalverwaltungView({initialTab="module"}){
   const [editFunktion,setEditFunktion]=useState(null);
   const [gruppeForm,setGruppeForm]=useState({name:"",beschreibung:"",module:[],farbe:"#8B5CF6"});
   const [funktionForm,setFunktionForm]=useState({name:"",beschreibung:"",gruppe_id:"",module_override:[],teams:[],filter:{}});
+  /* Module global aktiv/inaktiv */
+  const [moduleAktiv,setModuleAktiv]=useState(()=>{
+    try{const s=sessionStorage.getItem("fch-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
+  });
 
   const TABS=[
     {key:"module",    label:"Module & Rechte",      icon:"layout-grid"},
@@ -6309,6 +6313,15 @@ function PortalverwaltungView({initialTab="module"}){
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
 
+  function toggleModulGlobal(key){
+    setModuleAktiv(prev=>{
+      const neu={...prev,[key]:prev[key]===false?true:false};
+      try{sessionStorage.setItem("fch-module-aktiv",JSON.stringify(neu));}catch{}
+      return neu;
+    });
+    setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
+  }
+
   const moduleNachKat=KATEGORIEN.reduce(function(acc,k){
     acc[k]=module.filter(m=>m.category===k);
     return acc;
@@ -6372,20 +6385,30 @@ function PortalverwaltungView({initialTab="module"}){
                       </tr>
                     </thead>
                     <tbody>
-                      {mods.map((m,i)=>(
-                        <tr key={m.key} style={{borderTop:"0.5px solid var(--border)"}}>
+                      {mods.map((m,i)=>{
+                        const isAktiv=moduleAktiv[m.key]!==false;
+                        return(
+                        <tr key={m.key} style={{borderTop:"0.5px solid var(--border)",opacity:isAktiv?1:0.4}}>
                           <td style={{padding:"9px 12px"}}>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <TI n={m.icon} size={14} style={{color:"var(--sub)"}}/>
-                              <span style={{fontWeight:500,color:"var(--text)"}}>{m.label}</span>
+                              <div onClick={()=>toggleModulGlobal(m.key)} style={{
+                                width:30,height:17,borderRadius:9,flexShrink:0,
+                                background:isAktiv?GN:"var(--border)",
+                                cursor:"pointer",position:"relative",transition:"background 0.2s"
+                              }}>
+                                <div style={{position:"absolute",top:2,width:13,height:13,borderRadius:"50%",
+                                  background:"#fff",transition:"left 0.2s",left:isAktiv?15:2}}/>
+                              </div>
+                              <TI n={m.icon} size={14} style={{color:isAktiv?"var(--sub)":"var(--border)"}}/>
+                              <span style={{fontWeight:500,color:isAktiv?"var(--text)":"var(--sub)"}}>{m.label}</span>
                             </div>
                           </td>
                           {ROLLEN.map(r=>{
-                            const hasAccess=ROLLEN_MODULE_DEFAULT[r]?.includes(m.key);
+                            const hasAccess=isAktiv&&ROLLEN_MODULE_DEFAULT[r]?.includes(m.key);
                             return(
                               <td key={r} style={{textAlign:"center",padding:"9px 8px"}}>
                                 {r==="funktionaer"
-                                  ?<span style={{fontSize:10,color:"var(--sub)"}}>via Gruppe</span>
+                                  ?<span style={{fontSize:10,color:isAktiv?"var(--sub)":"var(--border)"}}>via Gruppe</span>
                                   :<div style={{
                                     width:20,height:20,borderRadius:4,
                                     background:hasAccess?(ROLES[r]?.color||GN)+"30":"var(--surface2)",
@@ -6399,7 +6422,8 @@ function PortalverwaltungView({initialTab="module"}){
                             );
                           })}
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </Card>
