@@ -6262,7 +6262,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR]=await Promise.all([
             supabase.from("api_verbindungen").select("*").order("sort_order"),
             supabase.from("api_sync_log").select("*,api_verbindungen(label)").order("gestartet_am",{ascending:false}).limit(50),
-            supabase.from("benutzer").select("id,name,email,role,aktiv").order("name"),
+            supabase.from("benutzer").select("id,name,email,role,aktiv, benutzer_funktionen(funktion_id, portal_funktionen(id,name,portal_gruppen(name,farbe)))").order("name"),
             supabase.from("portal_gruppen").select("*").order("name"),
             supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe)").order("name"),
             supabase.from("module_config").select("*"),
@@ -6270,7 +6270,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           ]);
           if(apiR.data) setApiVerbindungen(apiR.data);
           if(audR.data) setAuditLogs(audR.data);
-          if(benuR.data) setBenutzerListe(benuR.data);
+          if(benuR.data) setBenutzerListe(benuR.data.map(b=>({
+            ...b,
+            funktionen:(b.benutzer_funktionen||[]).map(bf=>bf.portal_funktionen).filter(Boolean)
+          })));
           if(gruppenR.data) setGruppen(gruppenR.data);
           if(funktionenR.data) setFunktionen(funktionenR.data);
           /* module_config → moduleAktiv State */
@@ -6662,7 +6665,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 </div>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Farbe</label>
-                  <div style={{display:"flex",gap:5"}}>
+                  <div style={{display:"flex",gap:5}}>
                     {["#8B5CF6","#3B82F6","#22C55E","#F97316","#06B6D4","#EF4444","#F59E0B","#EC4899"].map(c=>(
                       <div key={c} onClick={()=>setGruppeForm(p=>({...p,farbe:c}))}
                         style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",
@@ -6855,9 +6858,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
               <thead>
                 <tr style={{background:"var(--surface2)"}}>
-                  {["Name","E-Mail","Rolle","Status","Aktion"].map((h,i)=>(
-                    <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
-                  ))}
+                  <th style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Name</th>
+                  <th style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>E-Mail</th>
+                  <th style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Portal-Rolle</th>
+                  <th style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Funktionen</th>
+                  <th style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.4}}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -6865,22 +6870,56 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <tr><td colSpan={5} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13}}>Keine Benutzer gefunden</td></tr>
                 )}
                 {benutzerListe.map((b,i)=>(
-                  <tr key={b.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"#fff":"#fafaf8"}}>
-                    <td style={{padding:"9px 13px",fontWeight:600}}>{b.name||"—"}</td>
-                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>{b.email}</td>
+                  <tr key={b.id} style={{borderTop:"0.5px solid var(--border)"}}>
+                    <td style={{padding:"9px 13px",fontWeight:600,color:"var(--text)"}}>{b.name||"—"}</td>
+                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:12}}>{b.email}</td>
                     <td style={{padding:"9px 13px"}}>
                       <select value={b.role||"spieler"} onChange={e=>updateBenutzerRolle(b.id,e.target.value)}
-                        style={{padding:"4px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,background:"var(--surface)"}}>
+                        style={{padding:"5px 8px",border:"1px solid var(--border)",borderRadius:7,fontSize:12,background:"var(--surface)",color:ROLES[b.role]?.color||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
                         {ROLLEN.map(r=><option key={r} value={r}>{ROLLEN_LABELS[r]}</option>)}
                       </select>
                     </td>
                     <td style={{padding:"9px 13px"}}>
-                      <Chip text={b.active?"Aktiv":"Inaktiv"} color={b.active?GN:R} bg={b.active?"#ECFDF5":RL}/>
+                      {/* Funktionen anzeigen + zuweisen */}
+                      <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
+                        {(b.funktionen||[]).map(f=>(
+                          <span key={f.id} style={{
+                            fontSize:11,padding:"2px 8px",borderRadius:8,
+                            background:"#8B5CF615",color:"#7C3AED",
+                            display:"flex",alignItems:"center",gap:4
+                          }}>
+                            {f.name}
+                            <button onClick={async()=>{
+                              if(supabase) await supabase.from("benutzer_funktionen").delete().match({benutzer_id:b.id,funktion_id:f.id});
+                              setBenutzerListe(prev=>prev.map(u=>u.id===b.id?{...u,funktionen:(u.funktionen||[]).filter(x=>x.id!==f.id)}:u));
+                            }} style={{background:"none",border:"none",cursor:"pointer",color:"#7C3AED",padding:0,lineHeight:1,fontSize:12}}>×</button>
+                          </span>
+                        ))}
+                        {/* Funktion hinzufügen */}
+                        <select
+                          value=""
+                          onChange={async e=>{
+                            const fid=Number(e.target.value);
+                            if(!fid) return;
+                            const fn=funktionen.find(f=>f.id===fid);
+                            if(!fn) return;
+                            if(supabase){
+                              const{error}=await supabase.from("benutzer_funktionen").upsert({benutzer_id:b.id,funktion_id:fid},{onConflict:"benutzer_id,funktion_id"});
+                              if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
+                            }
+                            setBenutzerListe(prev=>prev.map(u=>u.id===b.id?{...u,funktionen:[...(u.funktionen||[]),fn]}:u));
+                            setSaveMsg("Funktion zugewiesen");setTimeout(()=>setSaveMsg(""),2000);
+                          }}
+                          style={{padding:"3px 6px",border:"1px dashed var(--border)",borderRadius:7,fontSize:11,background:"transparent",color:"var(--sub)",cursor:"pointer",fontFamily:FONT}}>
+                          <option value="">+ Funktion</option>
+                          {funktionen.filter(f=>!(b.funktionen||[]).find(x=>x.id===f.id)).map(f=>(
+                            <option key={f.id} value={f.id}>{f.portal_gruppen?.name?`${f.portal_gruppen.name} · `:""}{f.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </td>
                     <td style={{padding:"9px 13px"}}>
-                      <button style={{background:"none",border:"none",cursor:"pointer",color:"var(--sub)",fontSize:13,padding:"2px 6px"}}>
-                        <TI n="edit" style={{fontSize:14}}/>
-                      </button>
+                      <Chip text={b.aktiv!==false?"Aktiv":"Inaktiv"} color={b.aktiv!==false?GN:R} bg={b.aktiv!==false?"#ECFDF5":RL}/>
                     </td>
                   </tr>
                 ))}
@@ -8749,13 +8788,24 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           const saveData={...form};if(form.stufe_id) saveData.stufe_id=form.stufe_id;const{error}=await sb.from("teams").update({...saveData,updated_at:new Date().toISOString()}).eq("id",editTeam.id);
           if(error) throw error;
           setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
+          /* team_module speichern falls geändert */
+          if(form.module_aktiv&&editTeam.id){
+            const ALL_MODS=["team","training","events","spielplan","attendance_central","helpers","roster","polls","stats","media","news","wiki","docs"];
+            const rows=ALL_MODS.map(m=>({team_id:editTeam.id,modul:m,aktiv:(form.module_aktiv||[]).includes(m)}));
+            await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
+          }
         }else{
           const saveData={...form};if(form.stufe_id) saveData.stufe_id=form.stufe_id;const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString()}).select().single();
           if(error) throw error;
           setTeams(ts=>[...ts,data]);
+          /* team_module für neues Team */
+          if(data?.id){
+            const ALL_MODS=["team","training","events","spielplan","attendance_central","helpers","roster","polls","stats","media","news","wiki","docs"];
+            const rows=ALL_MODS.map(m=>({team_id:data.id,modul:m,aktiv:(form.module_aktiv||ALL_MODS).includes(m)}));
+            await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
+          }
         }
       }else{
-        // Demo-Modus
         if(editTeam){
           setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
         }else{
