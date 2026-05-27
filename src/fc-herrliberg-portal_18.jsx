@@ -6254,6 +6254,50 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     eltern:          ["dashboard","team","events","helpers","docs","news"],
   };
 
+  /* Zugriffstufen: "lesen" | "schreiben" | "verwalten"
+     Standard-Stufen pro Rolle (nur für Module mit Zugriff) */
+  const ZUGRIFF_DEFAULT={
+    administrator:  {_all:"verwalten"},
+    vorstand:       {_all:"lesen", members:"lesen", team:"lesen", attendance_central:"lesen"},
+    administration: {_all:"schreiben", portal:"verwalten", members:"verwalten"},
+    trainer:        {_all:"schreiben", team:"verwalten", training:"verwalten"},
+    spieler:        {_all:"lesen"},
+    eltern:         {_all:"lesen"},
+  };
+
+  const ZUGRIFF_LABELS={"lesen":"Lesen","schreiben":"Schreiben","verwalten":"Verwalten"};
+  const ZUGRIFF_COLORS={"lesen":"#3B82F6","schreiben":"#F97316","verwalten":"#22C55E"};
+  const ZUGRIFF_ICONS= {"lesen":"eye","schreiben":"edit","verwalten":"settings"};
+  const ZUGRIFF_ORDER=["lesen","schreiben","verwalten"];
+
+  /* Effektive Zugriffsstufe: custom oder Default */
+  const [zugriffStufen,setZugriffStufen]=useState(()=>{
+    try{const s=localStorage.getItem("fch-zugriff-stufen");return s?JSON.parse(s):null;}catch{return null;}
+  });
+  const effZugriff=zugriffStufen||ZUGRIFF_DEFAULT;
+
+  function getZugriff(rolle,modulKey){
+    if(!effRechte[rolle]?.includes(modulKey)) return null;
+    return effZugriff[rolle]?.[modulKey]||effZugriff[rolle]?._all||"lesen";
+  }
+
+  function setZugriffStufe(rolle,modulKey,stufe){
+    setZugriffStufen(prev=>{
+      const base=prev||ZUGRIFF_DEFAULT;
+      const neu={...base,[rolle]:{...(base[rolle]||{}),[modulKey]:stufe}};
+      try{localStorage.setItem("fch-zugriff-stufen",JSON.stringify(neu));}catch{}
+      return neu;
+    });
+  }
+
+  function cycleZugriff(rolle,modulKey){
+    const cur=getZugriff(rolle,modulKey)||"lesen";
+    const idx=ZUGRIFF_ORDER.indexOf(cur);
+    const next=ZUGRIFF_ORDER[(idx+1)%ZUGRIFF_ORDER.length];
+    setZugriffStufe(rolle,modulKey,next);
+    setSaveMsg("Ungespeichert");
+  }
+
   useEffect(function(){
     (async function(){
       setLoading(true);
@@ -6286,12 +6330,23 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           /* modul_rechte → moduleRechte State */
           if(mrR.data&&mrR.data.length>0&&setModuleRechte){
             const mr={};
+            const zs={};
             mrR.data.forEach(r=>{
               if(!mr[r.rolle]) mr[r.rolle]=[];
-              if(r.hat_zugriff) mr[r.rolle].push(r.modul);
+              if(r.hat_zugriff){
+                mr[r.rolle].push(r.modul);
+                if(r.stufe&&r.stufe!=="lesen"){
+                  if(!zs[r.rolle]) zs[r.rolle]={};
+                  zs[r.rolle][r.modul]=r.stufe;
+                }
+              }
             });
             setModuleRechte(mr);
             try{localStorage.setItem("fch-module-rechte",JSON.stringify(mr));}catch{}
+            if(Object.keys(zs).length>0){
+              setZugriffStufen(zs);
+              try{localStorage.setItem("fch-zugriff-stufen",JSON.stringify(zs));}catch{}
+            }
           }
         }
       }catch(e){console.warn("[FCH] Portalverwaltung laden:",e.message);}
@@ -6404,33 +6459,44 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       {!loading&&tab==="module"&&(
         <div>
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
-            <InfoBox text="Klicke auf eine Checkbox um die Rechte anzupassen. Toggle links schaltet das Modul global ein/aus." color={BL}/>
-            {moduleRechte&&(
-              <div style={{display:"flex",gap:8,flexShrink:0}}>
-                <button onClick={async()=>{
-                  if(supabase&&moduleRechte){
-                    const rows=[];
-                    Object.entries(moduleRechte).forEach(([rolle,module])=>{
-                      ALLE_MODULE.forEach(m=>{
-                        rows.push({modul:m.key,rolle,hat_zugriff:(module||[]).includes(m.key)});
-                      });
-                    });
-                    const{error}=await supabase.from("modul_rechte").upsert(rows,{onConflict:"modul,rolle"});
-                    if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
-                  }
-                  try{localStorage.setItem("fch-module-rechte",JSON.stringify(moduleRechte));}catch{}
-                  setSaveMsg("Gespeichert");setTimeout(()=>setSaveMsg(""),2000);
-                }}
-                  style={{padding:"7px 14px",borderRadius:9,border:"none",background:BK,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,whiteSpace:"nowrap"}}>
-                  Speichern
-                </button>
-                <button onClick={()=>{setModuleRechte(null);try{localStorage.removeItem("fch-module-rechte");}catch{}setSaveMsg("Verworfen");setTimeout(()=>setSaveMsg(""),2000);}}
-                  style={{padding:"7px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,whiteSpace:"nowrap"}}>
-                  Verwerfen
-                </button>
-              </div>
-            )}
+            <InfoBox text="Klicke auf eine Zelle um den Zugriff zu aktivieren. Bei aktivem Zugriff klicken wechselt zwischen Lesen → Schreiben → Verwalten." color={BL}/>
+            <div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+              {/* Legende */}
+              {["lesen","schreiben","verwalten"].map(s=>(
+                <span key={s} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:7,background:ZUGRIFF_COLORS[s]+"15",border:`1px solid ${ZUGRIFF_COLORS[s]}40`}}>
+                  <TI n={ZUGRIFF_ICONS[s]} size={11} style={{color:ZUGRIFF_COLORS[s]}}/>
+                  <span style={{fontSize:11,fontWeight:600,color:ZUGRIFF_COLORS[s]}}>{ZUGRIFF_LABELS[s]}</span>
+                </span>
+              ))}
+            </div>
           </div>
+          {moduleRechte&&(
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              <button onClick={async()=>{
+                if(supabase&&moduleRechte){
+                  const rows=[];
+                  Object.entries(moduleRechte).forEach(([rolle,module])=>{
+                    ALLE_MODULE.forEach(m=>{
+                      const hatZugriff=(module||[]).includes(m.key);
+                      const stufe=hatZugriff?(zugriffStufen?.[rolle]?.[m.key]||effZugriff[rolle]?.[m.key]||effZugriff[rolle]?._all||"lesen"):"lesen";
+                      rows.push({modul:m.key,rolle,hat_zugriff:hatZugriff,stufe});
+                    });
+                  });
+                  const{error}=await supabase.from("modul_rechte").upsert(rows,{onConflict:"modul,rolle"});
+                  if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
+                }
+                try{localStorage.setItem("fch-module-rechte",JSON.stringify(moduleRechte));
+                    if(zugriffStufen) localStorage.setItem("fch-zugriff-stufen",JSON.stringify(zugriffStufen));}catch{}
+                setSaveMsg("Gespeichert");setTimeout(()=>setSaveMsg(""),2000);
+              }} style={{padding:"7px 14px",borderRadius:9,border:"none",background:BK,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,whiteSpace:"nowrap"}}>
+                Speichern
+              </button>
+              <button onClick={()=>{setModuleRechte(null);setZugriffStufen(null);try{localStorage.removeItem("fch-module-rechte");localStorage.removeItem("fch-zugriff-stufen");}catch{}setSaveMsg("Verworfen");setTimeout(()=>setSaveMsg(""),2000);}}
+                style={{padding:"7px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,whiteSpace:"nowrap"}}>
+                Verwerfen
+              </button>
+            </div>
+          )}
           <Card style={{padding:0,overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
               <thead>
@@ -6497,22 +6563,40 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                               }}>
                                 {r==="funktionaer"
                                   ?<span style={{fontSize:10,color:"var(--sub)",fontStyle:"italic"}}>via Gruppe</span>
-                                  :<div onClick={isAdmin?undefined:()=>isAktiv&&toggleModulRolle(m.key,r)}
-                                    title={isAdmin?"Administrator hat immer Zugriff":isAktiv?`${ROLLEN_LABELS[r]} ${hasAccess?"entfernen":"hinzufügen"}`:"Modul ist inaktiv"}
-                                    style={{
-                                      width:20,height:20,borderRadius:5,margin:"0 auto",
-                                      background:isAdmin?"var(--border)":hasAccess?(ROLES[r]?.color||GN)+"25":"transparent",
-                                      border:`${isEdited&&!isAdmin?"2px":"1px"} solid ${isAdmin?"var(--border)":hasAccess?(ROLES[r]?.color||GN)+(isEdited?"":"70"):"var(--border)"}`,
-                                      display:"flex",alignItems:"center",justifyContent:"center",
-                                      cursor:isAdmin||!isAktiv?"not-allowed":"pointer",
-                                      transition:"all 0.15s",
-                                      opacity:!isAktiv?0.3:1
-                                    }}
-                                    onMouseEnter={e=>{if(!isAdmin&&isAktiv)e.currentTarget.style.transform="scale(1.15)";}}
-                                    onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";}}
-                                  >
-                                    {hasAccess&&<TI n="check" size={11} style={{color:isAdmin?"var(--sub)":ROLES[r]?.color||GN}}/>}
-                                  </div>
+                                  :(()=>{
+                                    const stufe=getZugriff(r,m.key);
+                                    const sc=stufe?ZUGRIFF_COLORS[stufe]:"var(--border)";
+                                    return(
+                                      <div onClick={isAdmin?undefined:()=>{
+                                        if(!isAktiv) return;
+                                        if(hasAccess) cycleZugriff(r,m.key);
+                                        else toggleModulRolle(m.key,r);
+                                      }}
+                                        title={isAdmin?"Administrator – immer vollen Zugriff":
+                                          !isAktiv?"Modul inaktiv":
+                                          hasAccess?`${ROLLEN_LABELS[r]}: ${ZUGRIFF_LABELS[stufe||"lesen"]} → klicken zum Wechseln`:
+                                          `${ROLLEN_LABELS[r]}: kein Zugriff → klicken zum Aktivieren`}
+                                        style={{
+                                          width:hasAccess?72:20,height:22,borderRadius:6,margin:"0 auto",
+                                          background:isAdmin?"var(--surface2)":hasAccess?sc+"20":"transparent",
+                                          border:`1px solid ${isAdmin?"var(--border)":hasAccess?sc:"var(--border)"}`,
+                                          display:"flex",alignItems:"center",justifyContent:"center",gap:4,
+                                          cursor:isAdmin||!isAktiv?"not-allowed":"pointer",
+                                          transition:"all 0.15s",opacity:!isAktiv?0.3:1,
+                                          padding:hasAccess?"0 6px":"0"
+                                        }}
+                                        onMouseEnter={e=>{if(!isAdmin&&isAktiv&&!hasAccess)e.currentTarget.style.transform="scale(1.15)";}}
+                                        onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";}}
+                                      >
+                                        {hasAccess?(
+                                          <>
+                                            <TI n={ZUGRIFF_ICONS[stufe||"lesen"]} size={11} style={{color:isAdmin?"var(--sub)":sc}}/>
+                                            <span style={{fontSize:10,fontWeight:600,color:isAdmin?"var(--sub)":sc}}>{ZUGRIFF_LABELS[stufe||"lesen"]}</span>
+                                          </>
+                                        ):null}
+                                      </div>
+                                    );
+                                  })()
                                 }
                               </td>
                             );
