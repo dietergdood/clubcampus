@@ -8080,7 +8080,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   const [sortCol,setSortCol]=useState("hauptbereich");
   const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("hauptbereich");
-  const [viewMode,setViewMode]=useState("list"); // "list"|"grid"
+  const [viewMode,setViewMode]=useState("grid"); // "list"|"grid"
   const [openMenuId,setOpenMenuId]=useState(null); // mobile 3-dot menu
   const isMobile=useIsMobile();
   const [showForm,setShowForm]=useState(false);
