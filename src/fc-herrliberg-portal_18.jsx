@@ -8416,7 +8416,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             const openMenu=()=>setOpenMenuId(menuOpen?null:team.id);
             const closeMenu=()=>setOpenMenuId(null);
             return(
-              <div key={team.id} className="fch-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px",opacity:isInaktiv?0.55:1,transition:"opacity 0.2s",position:"relative"}}>
+              <div key={team.id} className="fch-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px",opacity:isInaktiv?0.55:1,transition:"opacity 0.2s",position:"relative",cursor:viewMode==="grid"?"pointer":"default"}} onClick={viewMode==="grid"?()=>{setSelectedTeam(team);setCustomBack&&setCustomBack(()=>()=>{setSelectedTeam(null);setCustomBack&&setCustomBack(null);});}:undefined}>
                 {viewMode==="grid"?(
                   /* ── KACHEL-LAYOUT ── */
                   <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -8438,7 +8438,6 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         {menuOpen&&(
                           <div style={{position:"absolute",right:0,top:32,zIndex:100,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,boxShadow:"0 4px 16px rgba(0,0,0,0.12)",minWidth:140,overflow:"hidden"}}>
                             {[
-                              {icon:"eye",  label:"Öffnen",    color:BL, fn:()=>{setSelectedTeam(team);setCustomBack&&setCustomBack(()=>()=>{setSelectedTeam(null);setCustomBack&&setCustomBack(null);});closeMenu();}},
                               {icon:"edit", label:"Bearbeiten",color:"var(--text)", fn:()=>{openEdit(team);closeMenu();}},
                               {icon:"trash",label:"Löschen",   color:R,  fn:()=>{setDeleteConfirm(team);closeMenu();}},
                             ].map(a=>(
@@ -8492,7 +8491,6 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         {menuOpen&&(
                           <div style={{position:"absolute",right:0,top:38,zIndex:100,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,boxShadow:"0 4px 16px rgba(0,0,0,0.15)",minWidth:150,overflow:"hidden"}}>
                             {[
-                              {icon:"eye",  label:"Öffnen",    color:BL, fn:()=>{setSelectedTeam(team);setCustomBack&&setCustomBack(()=>()=>{setSelectedTeam(null);setCustomBack&&setCustomBack(null);});closeMenu();}},
                               {icon:"edit", label:"Bearbeiten",color:"var(--text)", fn:()=>{openEdit(team);closeMenu();}},
                               {icon:"trash",label:"Löschen",   color:R,  fn:()=>{setDeleteConfirm(team);closeMenu();}},
                             ].map(a=>(
@@ -8507,10 +8505,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                       </div>
                     ):(
                       <div style={{display:"flex",gap:6,flexShrink:0}}>
-                        <button onClick={()=>{setSelectedTeam(team);setCustomBack&&setCustomBack(()=>()=>{setSelectedTeam(null);setCustomBack&&setCustomBack(null);});}} title="Team öffnen"
-                          style={{width:32,height:32,borderRadius:8,border:"1px solid "+BL+"40",background:"#EFF6FF",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:BL}}>
-                          <TI n="eye" size={14}/>
-                        </button>
+
                         <button onClick={()=>openEdit(team)} title="Bearbeiten"
                           style={{width:32,height:32,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
                           <TI n="edit" size={14}/>
