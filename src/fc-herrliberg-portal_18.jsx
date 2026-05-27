@@ -6293,9 +6293,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   function cycleZugriff(rolle,modulKey){
     const cur=getZugriff(rolle,modulKey)||"lesen";
     const idx=ZUGRIFF_ORDER.indexOf(cur);
-    const next=ZUGRIFF_ORDER[(idx+1)%ZUGRIFF_ORDER.length];
-    setZugriffStufe(rolle,modulKey,next);
-    setSaveMsg("Ungespeichert");
+    if(idx===ZUGRIFF_ORDER.length-1){
+      /* Letzter Schritt: Zugriff entfernen */
+      toggleModulRolle(modulKey,rolle);
+    } else {
+      const next=ZUGRIFF_ORDER[idx+1];
+      setZugriffStufe(rolle,modulKey,next);
+      setSaveMsg("Ungespeichert");
+    }
   }
 
   useEffect(function(){
@@ -6574,8 +6579,8 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                       }}
                                         title={isAdmin?"Administrator – immer vollen Zugriff":
                                           !isAktiv?"Modul inaktiv":
-                                          hasAccess?`${ROLLEN_LABELS[r]}: ${ZUGRIFF_LABELS[stufe||"lesen"]} → klicken zum Wechseln`:
-                                          `${ROLLEN_LABELS[r]}: kein Zugriff → klicken zum Aktivieren`}
+                                          hasAccess?(stufe==="verwalten"?`${ROLLEN_LABELS[r]}: Verwalten → klicken zum Entfernen`:`${ROLLEN_LABELS[r]}: ${ZUGRIFF_LABELS[stufe||"lesen"]} → klicken für ${ZUGRIFF_LABELS[ZUGRIFF_ORDER[ZUGRIFF_ORDER.indexOf(stufe||"lesen")+1]]||"Verwalten"}`):
+                                          `${ROLLEN_LABELS[r]}: kein Zugriff → klicken für Lesen`}
                                         style={{
                                           width:hasAccess?72:20,height:22,borderRadius:6,margin:"0 auto",
                                           background:isAdmin?"var(--surface2)":hasAccess?sc+"20":"transparent",
