@@ -7958,7 +7958,6 @@ function MaterialView(){
    TEAMS VERWALTUNG (Admin)
 ══════════════════════════════════════════ */
 function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack}){
-  const KATEGORIEN=["Herren","Frauen","Junioren A","Junioren B","Junioren C","Junioren D","Junioren E","Junioren F","Juniorinnen","Senioren"];
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
