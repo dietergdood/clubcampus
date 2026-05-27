@@ -1607,7 +1607,7 @@ function DashboardEltern({account,meineTeams,setActive}){
 /* ==========================================
    MEIN TEAM (rollenabhängig)
 ========================================== */
-function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account}){
+function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[]}){
   const [responses,setResponses]=useState(ATT_INITIAL);
   useEffect(()=>{
     (async()=>{
@@ -1615,7 +1615,6 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
         const r=await window.storage.get("att_responses");
         if(r){
           const stored=JSON.parse(r.value);
-          /* Deep merge: keep ATT_INITIAL as base, overlay stored values per event per player */
           const merged={...ATT_INITIAL};
           Object.keys(stored).forEach(evId=>{
             merged[evId]={...ATT_INITIAL[evId],...stored[evId]};
@@ -1631,7 +1630,8 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   const limited=isSpieler||isEltern;
   const hasMultiTeams=trainerTeams.length>1;
 
-  const TEAMS_DATA={
+  /* Teams-Daten: aus Supabase wenn vorhanden, sonst hardcoded Fallback */
+  const TEAMS_DATA_FALLBACK={
     "Cc-Junioren":           {count:18,liga:"U12 Liga A",   season:"2024/25"},
     "Ca-Junioren":           {count:16,liga:"U13 Liga A",   season:"2024/25"},
     "A-Junioren":            {count:16,liga:"U16 Liga A",   season:"2024/25"},
@@ -1647,6 +1647,10 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
     "F-Juniorinnen":         {count:12,liga:"U9 Mädchen",   season:"2024/25"},
     "C-Juniorinnen":         {count:14,liga:"U13 Mädchen",  season:"2024/25"},
   };
+  /* dbTeams Array → Lookup-Objekt {name: {liga, saison, count}} */
+  const TEAMS_DATA=dbTeams.length>0
+    ? Object.fromEntries(dbTeams.map(t=>([t.name,{liga:t.liga||"",season:t.saison||"2024/25",count:ROSTER.filter(p=>(p.teams||[]).includes(t.name)).length||16}])))
+    : TEAMS_DATA_FALLBACK;
 
   const kinder=account?.kinder||[];
   const hasMultiKinder=isEltern&&kinder.length>1;
@@ -7728,17 +7732,15 @@ function MaterialView(){
 /* ══════════════════════════════════════════
    TEAMS VERWALTUNG (Admin)
 ══════════════════════════════════════════ */
-function TeamsAdminView({sb}){
+function TeamsAdminView({sb,dbTeams=[],setDbTeams}){
   const KATEGORIEN=["Herren","Frauen","Junioren A","Junioren B","Junioren C","Junioren D","Junioren E","Junioren F","Juniorinnen","Senioren"];
   const EMPTY={name:"",kategorie:"Junioren C",liga:"",saison:"2024/25",trainer:"",trainer2:"",aktiv:true,beschreibung:""};
 
-  const [selectedTeam,setSelectedTeam]=useState(null); // Detail-Ansicht
+  const [selectedTeam,setSelectedTeam]=useState(null);
 
-  /* Wenn ein Team ausgewählt: TeamView als Admin anzeigen */
   if(selectedTeam){
     return(
       <div>
-        {/* Zurück-Header */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
           <button onClick={()=>setSelectedTeam(null)} style={{
             display:"flex",alignItems:"center",gap:6,padding:"7px 14px",
@@ -7750,27 +7752,34 @@ function TeamsAdminView({sb}){
           <span style={{color:"var(--sub)",fontSize:13}}>→</span>
           <span style={{fontWeight:700,fontSize:15,color:"var(--text)"}}>{selectedTeam.name}</span>
         </div>
-        <TeamView role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null}/>
+        <TeamView role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams}/>
       </div>
     );
   }
 
-  const [teams,setTeams]=useState([
-    {id:1, name:"1. Mannschaft Herren",  kategorie:"Herren",      liga:"1. Liga",          saison:"2024/25", trainer:"Hans Muster",  trainer2:"",            aktiv:true},
-    {id:2, name:"2. Mannschaft Herren",  kategorie:"Herren",      liga:"3. Liga",          saison:"2024/25", trainer:"Peter Meier",  trainer2:"",            aktiv:true},
-    {id:3, name:"1. Mannschaft Frauen",  kategorie:"Frauen",      liga:"Frauen 2. Liga",   saison:"2024/25", trainer:"Anna Koch",    trainer2:"",            aktiv:true},
-    {id:4, name:"A-Junioren",            kategorie:"Junioren A",  liga:"U16 Liga A",       saison:"2024/25", trainer:"Beat Huber",   trainer2:"",            aktiv:true},
-    {id:5, name:"Ba-Junioren",           kategorie:"Junioren B",  liga:"U15 Liga A",       saison:"2024/25", trainer:"Marc Rüegg",   trainer2:"",            aktiv:true},
-    {id:6, name:"Bb-Junioren",           kategorie:"Junioren B",  liga:"U15 Liga B",       saison:"2024/25", trainer:"Simon Baur",   trainer2:"",            aktiv:true},
-    {id:7, name:"Ca-Junioren",           kategorie:"Junioren C",  liga:"U13 Liga A",       saison:"2024/25", trainer:"Leo Frei",     trainer2:"",            aktiv:true},
-    {id:8, name:"Cc-Junioren",           kategorie:"Junioren C",  liga:"U12 Liga A",       saison:"2024/25", trainer:"Daniel Vogel", trainer2:"Urs Berger",  aktiv:true},
-    {id:9, name:"Da-Junioren",           kategorie:"Junioren D",  liga:"U11 Liga A",       saison:"2024/25", trainer:"Reto Müller",  trainer2:"",            aktiv:true},
-    {id:10,name:"Db-Junioren",           kategorie:"Junioren D",  liga:"U11 Liga B",       saison:"2024/25", trainer:"Sandro Kalt",  trainer2:"",            aktiv:true},
-    {id:11,name:"C-Juniorinnen",         kategorie:"Juniorinnen", liga:"U13 Mädchen",      saison:"2024/25", trainer:"Eva Steiner",  trainer2:"",            aktiv:true},
-    {id:12,name:"D-Juniorinnen",         kategorie:"Juniorinnen", liga:"U11 Mädchen",      saison:"2024/25", trainer:"Nina Wirth",   trainer2:"",            aktiv:true},
-    {id:13,name:"E-Juniorinnen",         kategorie:"Juniorinnen", liga:"U10 Mädchen",      saison:"2024/25", trainer:"Lea Bucher",   trainer2:"",            aktiv:true},
-    {id:14,name:"F-Juniorinnen",         kategorie:"Juniorinnen", liga:"U9 Mädchen",       saison:"2024/25", trainer:"Sara Lüscher", trainer2:"",            aktiv:true},
-  ]);
+  /* Teams: aus Supabase (dbTeams) wenn vorhanden, sonst lokaler State als Fallback */
+  const FALLBACK=[
+    {id:1, name:"1. Mannschaft Herren",  kategorie:"Herren",      liga:"1. Liga",          saison:"2024/25", trainer:"Hans Muster",  trainer2:"",           aktiv:true},
+    {id:2, name:"2. Mannschaft Herren",  kategorie:"Herren",      liga:"3. Liga",          saison:"2024/25", trainer:"Peter Meier",  trainer2:"",           aktiv:true},
+    {id:3, name:"1. Mannschaft Frauen",  kategorie:"Frauen",      liga:"Frauen 2. Liga",   saison:"2024/25", trainer:"Anna Koch",    trainer2:"",           aktiv:true},
+    {id:4, name:"A-Junioren",            kategorie:"Junioren A",  liga:"U16 Liga A",       saison:"2024/25", trainer:"Beat Huber",   trainer2:"",           aktiv:true},
+    {id:5, name:"Ba-Junioren",           kategorie:"Junioren B",  liga:"U15 Liga A",       saison:"2024/25", trainer:"Marc Rüegg",   trainer2:"",           aktiv:true},
+    {id:6, name:"Bb-Junioren",           kategorie:"Junioren B",  liga:"U15 Liga B",       saison:"2024/25", trainer:"Simon Baur",   trainer2:"",           aktiv:true},
+    {id:7, name:"Ca-Junioren",           kategorie:"Junioren C",  liga:"U13 Liga A",       saison:"2024/25", trainer:"Leo Frei",     trainer2:"",           aktiv:true},
+    {id:8, name:"Cc-Junioren",           kategorie:"Junioren C",  liga:"U12 Liga A",       saison:"2024/25", trainer:"Daniel Vogel", trainer2:"Urs Berger", aktiv:true},
+    {id:9, name:"Da-Junioren",           kategorie:"Junioren D",  liga:"U11 Liga A",       saison:"2024/25", trainer:"Reto Müller",  trainer2:"",           aktiv:true},
+    {id:10,name:"Db-Junioren",           kategorie:"Junioren D",  liga:"U11 Liga B",       saison:"2024/25", trainer:"Sandro Kalt",  trainer2:"",           aktiv:true},
+    {id:11,name:"C-Juniorinnen",         kategorie:"Juniorinnen", liga:"U13 Mädchen",      saison:"2024/25", trainer:"Eva Steiner",  trainer2:"",           aktiv:true},
+    {id:12,name:"D-Juniorinnen",         kategorie:"Juniorinnen", liga:"U11 Mädchen",      saison:"2024/25", trainer:"Nina Wirth",   trainer2:"",           aktiv:true},
+    {id:13,name:"E-Juniorinnen",         kategorie:"Juniorinnen", liga:"U10 Mädchen",      saison:"2024/25", trainer:"Lea Bucher",   trainer2:"",           aktiv:true},
+    {id:14,name:"F-Juniorinnen",         kategorie:"Juniorinnen", liga:"U9 Mädchen",       saison:"2024/25", trainer:"Sara Lüscher", trainer2:"",           aktiv:true},
+  ];
+  const [localTeams,setLocalTeams]=useState(FALLBACK);
+  /* Nutze dbTeams wenn geladen, sonst localTeams */
+  const teams = dbTeams.length>0 ? dbTeams : localTeams;
+  const setTeams = dbTeams.length>0
+    ? (fn)=>{ const next=typeof fn==="function"?fn(dbTeams):fn; if(setDbTeams) setDbTeams(next); }
+    : setLocalTeams;
   const [loading,setLoading]=useState(false);
   const [search,setSearch]=useState("");
   const [filterKat,setFilterKat]=useState("alle");
@@ -7783,17 +7792,7 @@ function TeamsAdminView({sb}){
   const [showSaison,setShowSaison]=useState(false);
   const [saisonDraft,setSaisonDraft]=useState("2025/26");
 
-  /* Supabase: Teams laden */
-  useEffect(()=>{
-    if(!sb) return;
-    setLoading(true);
-    sb.from("teams").select("*").order("kategorie").order("name")
-      .then(({data,error})=>{
-        setLoading(false);
-        if(data&&data.length>0) setTeams(data);
-        if(error) console.warn("[Teams]",error.message);
-      });
-  },[sb]);
+  /* Teams kommen via dbTeams Prop aus App (dort geladen) */
 
   /* Supabase: Speichern */
   async function handleSave(){
@@ -8962,8 +8961,9 @@ function LoginScreen({onLogin, sb}){
 export default function Portal({supabaseClient}){
   const sbRef = useRef(supabaseClient||supabase||null);
   const sb = sbRef.current;
-  const [session,setSession]=useState(sb ? undefined : null); // null wenn kein Supabase
+  const [session,setSession]=useState(sb ? undefined : null);
   const [dbUser,setDbUser]=useState(null);
+  const [dbTeams,setDbTeams]=useState([]);
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
   const [active,setActive]=useState("dashboard");
@@ -9014,11 +9014,11 @@ export default function Portal({supabaseClient}){
     if(!sb){ setSession(null); return; }
     sb.auth.getSession().then(({data:{session}})=>{
       setSession(session||null);
-      if(session) loadDbUser(session.user.id, session.user.email);
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); }
     });
     const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
-      if(session) loadDbUser(session.user.id, session.user.email);
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); }
       else setDbUser(null);
     });
     return function(){ subscription.unsubscribe(); };
@@ -9030,7 +9030,6 @@ export default function Portal({supabaseClient}){
       if(data){
         setDbUser(data);
       } else {
-        // Kein Eintrag oder RLS-Fehler → Fallback
         console.warn("[FCH] benutzer nicht gefunden:", error?.message);
         setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
       }
@@ -9038,6 +9037,14 @@ export default function Portal({supabaseClient}){
       console.warn("[FCH] loadDbUser error:", e.message);
       setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
     }
+  }
+
+  async function loadDbTeams(){
+    if(!sb) return;
+    try{
+      const{data}=await sb.from("teams").select("*").eq("aktiv",true).order("kategorie").order("name");
+      if(data&&data.length>0) setDbTeams(data);
+    }catch(e){ console.warn("[FCH] loadDbTeams:", e.message); }
   }
 
   async function handleLogout(){
@@ -9098,7 +9105,7 @@ export default function Portal({supabaseClient}){
     if(!na.find(n=>n.key===active)) return <Dashboard role={role} setActive={setActive}/>;
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
-      case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account}/>;
+      case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams}/>;
       case "members":           return <MembersView role={role}/>;
       case "users":             return <PortalverwaltungView initialTab="users"/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis"/>;
