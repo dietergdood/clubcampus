@@ -5751,6 +5751,7 @@ function MembersView({role,dbMitglieder=[]}){
   const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("none");
   const [filterVals,setFilterVals]=useState([]);
+  const [selectedMember,setSelectedMember]=useState(null);
   const canExport=role==="administrator"||role==="administration";
 
   /* Mitglieder: aus Supabase wenn geladen, sonst MEMBERS Fallback */
@@ -5826,8 +5827,79 @@ function MembersView({role,dbMitglieder=[]}){
 
   const inputStyle={padding:"7px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:FONT};
 
+  /* ── Detail-Modal ── */
+  const MemberDetail=({m,onClose})=>{
+    const raw=dbMitglieder.find(d=>d.id===m.id)||{};
+    const eltern=raw.eltern||[];
+    const rows=[
+      {l:"Vorname",    v:raw.vorname||m.name.split(" ")[0]},
+      {l:"Nachname",   v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
+      {l:"Geburtsdatum",v:raw.geburtsdatum||"-"},
+      {l:"Nationalität",v:raw.nationalitaet||"-"},
+      {l:"Adresse",    v:raw.strasse?`${raw.strasse}, ${raw.plz} ${raw.ort}`:m.location||"-"},
+      {l:"E-Mail",     v:raw.email||"-"},
+      {l:"Telefon",    v:raw.telefon||"-"},
+      {l:"Rolle",      v:m.role},
+      {l:"Team(s)",    v:m.team},
+      {l:"Mitgliedtyp",v:m.type},
+      {l:"Position",   v:raw.position||"-"},
+      {l:"Spielerpass",v:raw.spielerpass||"-"},
+      {l:"J+S Nr.",    v:raw.js_nr||"-"},
+      {l:"Fairgate-ID",v:raw.fairgate_id||"-"},
+    ];
+    return(
+      <ModalOrSheet open={true} onClose={onClose} maxWidth={540}>
+        <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <Av name={m.name} size={44} bg={R}/>
+            <div>
+              <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{m.name}</div>
+              <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+                <Chip text={m.role} color={R}/>
+                <Chip text={m.type} color={BL} bg="#EFF6FF"/>
+                <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)"}}>×</button>
+        </div>
+        <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px"}}>
+          <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
+          {(selectedMember?._tab||"info")==="info"&&(
+            <div>
+              {rows.filter(r=>r.v&&r.v!=="-").map((r,i,arr)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<arr.length-1?"1px solid var(--border)":"none",gap:12}}>
+                  <span style={{fontSize:13,color:"var(--sub)",minWidth:110,flexShrink:0}}>{r.l}</span>
+                  <span style={{fontSize:13,color:"var(--text)",fontWeight:500,textAlign:"right"}}>{r.v}</span>
+                </div>
+              ))}
+              {m.hat_portal_zugang&&(
+                <div style={{marginTop:14,padding:"10px 14px",background:"#ECFDF5",borderRadius:9,border:"1px solid "+GN,fontSize:13,color:GN,fontWeight:600}}>
+                  ✓ Hat Portal-Zugang
+                </div>
+              )}
+            </div>
+          )}
+          {(selectedMember?._tab||"info")==="eltern"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {eltern.length===0&&<div style={{color:"var(--sub)",fontSize:13,textAlign:"center",padding:24}}>Keine Elternkontakte erfasst.</div>}
+              {eltern.map((e,i)=>(
+                <div key={i} className="fch-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px"}}>
+                  <div style={{fontWeight:600,fontSize:14,color:"var(--text)",marginBottom:8}}>{e.vorname} {e.nachname}</div>
+                  {e.email&&<div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>✉ {e.email}</div>}
+                  {e.telefon&&<div style={{fontSize:13,color:"var(--sub)"}}>📞 {e.telefon}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </ModalOrSheet>
+    );
+  };
+
   return(
     <div>
+      {selectedMember&&<MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)}/>}
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:12}}>
         <h1 style={{fontSize:21,fontWeight:800,margin:0,color:"var(--text)"}}>Mitglieder</h1>
@@ -5920,7 +5992,8 @@ function MembersView({role,dbMitglieder=[]}){
                   </tr>
                 )}
                 {members.map((m,i)=>(
-                  <tr key={m.id} style={{borderTop:"0.5px solid var(--border)"}}
+                  <tr key={m.id} onClick={()=>setSelectedMember({...m,_tab:"info"})}
+                    style={{borderTop:"0.5px solid var(--border)",cursor:"pointer"}}
                     onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                     <td style={{padding:"9px 13px"}}>
