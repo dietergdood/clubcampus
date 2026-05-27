@@ -6638,21 +6638,53 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           </div>
 
           {/* Gruppe bearbeiten Modal */}
-          <ModalOrSheet open={showGruppeForm} onClose={()=>setShowGruppeForm(false)} maxWidth={480}>
-            <div style={{padding:"20px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <h2 style={{margin:0,fontSize:15,fontWeight:700,color:"var(--text)"}}>{editGruppe?"Gruppe bearbeiten":"Neue Gruppe"}</h2>
-              <button onClick={()=>setShowGruppeForm(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)"}}>×</button>
-            </div>
-            <div style={{padding:"16px 20px 20px",display:"flex",flexDirection:"column",gap:12}}>
-              <div>
-                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4,display:"block"}}>Name *</label>
-                <input value={gruppeForm.name} onChange={e=>setGruppeForm(p=>({...p,name:e.target.value}))}
-                  placeholder="z.B. Vereinsleben & Events"
-                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box"}}/>
+          <ModalOrSheet open={showGruppeForm} onClose={()=>{setShowGruppeForm(false);setEditGruppe(null);}} maxWidth={500}>
+            <div style={{padding:"20px 20px 0",flexShrink:0}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:12,height:12,borderRadius:"50%",background:gruppeForm.farbe}}/>
+                  <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>{editGruppe?"Gruppe bearbeiten":"Neue Gruppe"}</h2>
+                </div>
+                <button onClick={()=>{setShowGruppeForm(false);setEditGruppe(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
               </div>
+              <div style={{fontSize:12,color:"var(--sub)",marginBottom:16}}>
+                {editGruppe?"Module und Name anpassen.":"Neue Gruppe mit Modulzugang erstellen."}
+              </div>
+            </div>
+            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:14,overflowY:"auto"}}>
+              {/* Name + Farbe */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,alignItems:"end"}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Gruppenname *</label>
+                  <input value={gruppeForm.name} onChange={e=>setGruppeForm(p=>({...p,name:e.target.value}))}
+                    placeholder="z.B. Vereinsleben & Events" autoFocus
+                    style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Farbe</label>
+                  <div style={{display:"flex",gap:5"}}>
+                    {["#8B5CF6","#3B82F6","#22C55E","#F97316","#06B6D4","#EF4444","#F59E0B","#EC4899"].map(c=>(
+                      <div key={c} onClick={()=>setGruppeForm(p=>({...p,farbe:c}))}
+                        style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",
+                          border:`3px solid ${gruppeForm.farbe===c?"var(--text)":"transparent"}`,
+                          transition:"border 0.1s"}}/>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Beschreibung */}
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4,display:"block"}}>Module (klicken zum Auswählen)</label>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Beschreibung</label>
+                <input value={gruppeForm.beschreibung||""} onChange={e=>setGruppeForm(p=>({...p,beschreibung:e.target.value}))}
+                  placeholder="Wofür ist diese Gruppe?"
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
+              </div>
+              {/* Module */}
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,display:"block"}}>
+                  Module <span style={{fontWeight:400,fontSize:11}}>— {(gruppeForm.module||[]).length} ausgewählt</span>
+                </label>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   {ALLE_MODULE.filter(m=>m.key!=="dashboard"&&m.key!=="portal").map(m=>{
                     const sel=(gruppeForm.module||[]).includes(m.key);
                     return(
@@ -6660,90 +6692,152 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                         const cur=p.module||[];
                         return{...p,module:sel?cur.filter(x=>x!==m.key):[...cur,m.key]};
                       })} style={{
-                        padding:"4px 10px",borderRadius:8,border:`1px solid ${sel?gruppeForm.farbe:"var(--border)"}`,
-                        background:sel?gruppeForm.farbe+"20":"transparent",
-                        color:sel?gruppeForm.farbe:"var(--sub)",fontSize:12,cursor:"pointer",fontFamily:FONT
-                      }}>{m.label}</button>
+                        display:"flex",alignItems:"center",gap:7,
+                        padding:"7px 10px",borderRadius:8,textAlign:"left",
+                        border:`1px solid ${sel?gruppeForm.farbe:"var(--border)"}`,
+                        background:sel?gruppeForm.farbe+"15":"transparent",
+                        cursor:"pointer",fontFamily:FONT,transition:"all 0.12s"
+                      }}>
+                        <TI n={m.icon} size={13} style={{color:sel?gruppeForm.farbe:"var(--sub)",flexShrink:0}}/>
+                        <span style={{fontSize:12,color:sel?gruppeForm.farbe:"var(--sub)",fontWeight:sel?600:400}}>{m.label}</span>
+                      </button>
                     );
                   })}
                 </div>
               </div>
-              <div style={{display:"flex",gap:10,marginTop:8}}>
+              {/* Buttons */}
+              <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"1px solid var(--border)"}}>
                 <button onClick={async()=>{
                   if(!gruppeForm.name.trim()) return;
-                  const payload={name:gruppeForm.name,beschreibung:gruppeForm.beschreibung||"",module:gruppeForm.module,farbe:gruppeForm.farbe||"#8B5CF6",aktiv:true};
+                  const payload={name:gruppeForm.name.trim(),beschreibung:gruppeForm.beschreibung||"",module:gruppeForm.module||[],farbe:gruppeForm.farbe||"#8B5CF6",aktiv:true};
                   if(supabase){
                     if(editGruppe?.id){
                       const{error}=await supabase.from("portal_gruppen").update(payload).eq("id",editGruppe.id);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
+                      setGruppen(prev=>prev.map(g=>g.id===editGruppe.id?{...g,...payload}:g));
+                      if(selectedGruppe?.id===editGruppe.id) setSelectedGruppe(g=>({...g,...payload}));
                     } else {
                       const{data,error}=await supabase.from("portal_gruppen").insert(payload).select().single();
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
-                      if(data){setGruppen(prev=>[...prev,data]);setShowGruppeForm(false);setSaveMsg("Gruppe erstellt");setTimeout(()=>setSaveMsg(""),2000);return;}
+                      if(data) setGruppen(prev=>[...prev,data]);
+                      else setGruppen(prev=>[...prev,{id:Date.now(),...payload}]);
+                    }
+                  } else {
+                    if(editGruppe){
+                      setGruppen(prev=>prev.map(g=>g.id===editGruppe.id?{...g,...payload}:g));
+                      if(selectedGruppe?.id===editGruppe.id) setSelectedGruppe(g=>({...g,...payload}));
+                    } else {
+                      setGruppen(prev=>[...prev,{id:Date.now(),...payload}]);
                     }
                   }
-                  if(editGruppe){
-                    setGruppen(prev=>prev.map(g=>g.id===editGruppe.id?{...g,...payload}:g));
-                    if(selectedGruppe?.id===editGruppe.id) setSelectedGruppe(g=>({...g,...payload}));
-                  } else {
-                    setGruppen(prev=>[...prev,{id:Date.now(),...payload}]);
-                  }
-                  setShowGruppeForm(false);
+                  setShowGruppeForm(false); setEditGruppe(null);
                   setSaveMsg(editGruppe?"Gruppe gespeichert":"Gruppe erstellt");
                   setTimeout(()=>setSaveMsg(""),2000);
                 }} style={{flex:1,padding:"10px",borderRadius:10,background:BK,color:"#fff",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
-                  {editGruppe?"Speichern":"Gruppe erstellen"}
+                  {editGruppe?"Änderungen speichern":"Gruppe erstellen"}
                 </button>
-                <Btn onClick={()=>setShowGruppeForm(false)}>Abbrechen</Btn>
+                <Btn onClick={()=>{setShowGruppeForm(false);setEditGruppe(null);}}>Abbrechen</Btn>
               </div>
             </div>
           </ModalOrSheet>
 
           {/* Funktion bearbeiten Modal */}
-          <ModalOrSheet open={showFunktionForm} onClose={()=>setShowFunktionForm(false)} maxWidth={520}>
-            <div style={{padding:"20px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <h2 style={{margin:0,fontSize:15,fontWeight:700,color:"var(--text)"}}>{editFunktion?"Funktion bearbeiten":"Neue Funktion"}</h2>
-              <button onClick={()=>setShowFunktionForm(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)"}}>×</button>
+          <ModalOrSheet open={showFunktionForm} onClose={()=>{setShowFunktionForm(false);setEditFunktion(null);}} maxWidth={520}>
+            <div style={{padding:"20px 20px 0",flexShrink:0}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <div>
+                  <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>{editFunktion?"Funktion bearbeiten":"Neue Funktion"}</h2>
+                  {selectedGruppe&&<div style={{fontSize:12,color:selectedGruppe.farbe,fontWeight:600,marginTop:2}}>in {selectedGruppe.name}</div>}
+                </div>
+                <button onClick={()=>{setShowFunktionForm(false);setEditFunktion(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+              </div>
+              <div style={{fontSize:12,color:"var(--sub)",marginBottom:16}}>
+                Einschränkungen innerhalb der Gruppe — leer = alles der Gruppe sichtbar.
+              </div>
             </div>
-            <div style={{padding:"16px 20px 20px",display:"flex",flexDirection:"column",gap:12,overflowY:"auto"}}>
+            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:14,overflowY:"auto"}}>
+              {/* Name */}
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4,display:"block"}}>Name *</label>
+                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Name *</label>
                 <input value={funktionForm.name} onChange={e=>setFunktionForm(p=>({...p,name:e.target.value}))}
-                  placeholder="z.B. Chef Anlässe"
-                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box"}}/>
+                  placeholder="z.B. Chef Anlässe" autoFocus
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
               </div>
+              {/* Beschreibung */}
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4,display:"block"}}>Beschreibung</label>
-                <input value={funktionForm.beschreibung} onChange={e=>setFunktionForm(p=>({...p,beschreibung:e.target.value}))}
+                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Beschreibung</label>
+                <input value={funktionForm.beschreibung||""} onChange={e=>setFunktionForm(p=>({...p,beschreibung:e.target.value}))}
                   placeholder="Was macht diese Funktion?"
-                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box"}}/>
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
               </div>
+              {/* Module einschränken */}
               <div>
-                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6,display:"block"}}>
-                  Module einschränken <span style={{fontWeight:400,fontSize:11}}>(leer = alles der Gruppe)</span>
+                <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>
+                  Module einschränken
+                  <span style={{fontWeight:400,marginLeft:6,fontSize:11}}>
+                    {(funktionForm.module_override||[]).length===0?"alle Module der Gruppe":` ${(funktionForm.module_override||[]).length} ausgewählt`}
+                  </span>
                 </label>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   {(selectedGruppe?.module||ALLE_MODULE.filter(m=>m.key!=="dashboard").map(m=>m.key)).map(mk=>{
-                    const m=ALLE_MODULE.find(x=>x.key===mk)||{key:mk,label:mk};
+                    const m=ALLE_MODULE.find(x=>x.key===mk)||{key:mk,label:mk,icon:"circle"};
                     const sel=(funktionForm.module_override||[]).includes(mk);
                     return(
                       <button key={mk} onClick={()=>setFunktionForm(p=>{
                         const cur=p.module_override||[];
                         return{...p,module_override:sel?cur.filter(x=>x!==mk):[...cur,mk]};
                       })} style={{
-                        padding:"4px 10px",borderRadius:8,border:`1px solid ${sel?"#3B82F6":"var(--border)"}`,
-                        background:sel?"#3B82F615":"transparent",
-                        color:sel?"#3B82F6":"var(--sub)",fontSize:12,cursor:"pointer",fontFamily:FONT
-                      }}>{m.label}</button>
+                        display:"flex",alignItems:"center",gap:7,padding:"7px 10px",
+                        borderRadius:8,textAlign:"left",
+                        border:`1px solid ${sel?"#3B82F6":"var(--border)"}`,
+                        background:sel?"#3B82F610":"transparent",
+                        cursor:"pointer",fontFamily:FONT,transition:"all 0.12s"
+                      }}>
+                        <TI n={m.icon||"circle"} size={13} style={{color:sel?"#3B82F6":"var(--sub)",flexShrink:0}}/>
+                        <span style={{fontSize:12,color:sel?"#3B82F6":"var(--sub)",fontWeight:sel?600:400}}>{m.label}</span>
+                      </button>
                     );
                   })}
                 </div>
               </div>
-              <div style={{display:"flex",gap:10,marginTop:8}}>
-                <button style={{flex:1,padding:"10px",borderRadius:10,background:BK,color:"#fff",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
-                  {editFunktion?"Speichern":"Funktion erstellen"}
+              {/* Buttons */}
+              <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+                <button onClick={async()=>{
+                  if(!funktionForm.name.trim()) return;
+                  const payload={
+                    name:funktionForm.name.trim(),
+                    beschreibung:funktionForm.beschreibung||"",
+                    gruppe_id:funktionForm.gruppe_id||selectedGruppe?.id,
+                    module_override:funktionForm.module_override||[],
+                    teams:funktionForm.teams||[],
+                    filter:funktionForm.filter||{},
+                    aktiv:true
+                  };
+                  if(supabase){
+                    if(editFunktion?.id){
+                      const{error}=await supabase.from("portal_funktionen").update(payload).eq("id",editFunktion.id);
+                      if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
+                      setFunktionen(prev=>prev.map(f=>f.id===editFunktion.id?{...f,...payload}:f));
+                    } else {
+                      const{data,error}=await supabase.from("portal_funktionen").insert(payload).select().single();
+                      if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
+                      if(data) setFunktionen(prev=>[...prev,data]);
+                      else setFunktionen(prev=>[...prev,{id:Date.now(),...payload}]);
+                    }
+                  } else {
+                    if(editFunktion){
+                      setFunktionen(prev=>prev.map(f=>f.id===editFunktion.id?{...f,...payload}:f));
+                    } else {
+                      setFunktionen(prev=>[...prev,{id:Date.now(),...payload}]);
+                    }
+                  }
+                  setShowFunktionForm(false); setEditFunktion(null);
+                  setSaveMsg(editFunktion?"Funktion gespeichert":"Funktion erstellt");
+                  setTimeout(()=>setSaveMsg(""),2000);
+                }} style={{flex:1,padding:"10px",borderRadius:10,background:BK,color:"#fff",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                  {editFunktion?"Änderungen speichern":"Funktion erstellen"}
                 </button>
-                <Btn onClick={()=>setShowFunktionForm(false)}>Abbrechen</Btn>
+                <Btn onClick={()=>{setShowFunktionForm(false);setEditFunktion(null);}}>Abbrechen</Btn>
               </div>
             </div>
           </ModalOrSheet>
