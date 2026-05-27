@@ -155,6 +155,61 @@ function SkelList({rows=4}){
 }
 
 /* Reusable Modal/BottomSheet - desktop: centered modal, mobile: slides up from bottom */
+/* ── PERSON PICKER ── */
+function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
+  const [q,setQ]=useState(value||"");
+  const [open,setOpen]=useState(false);
+  const ref=useRef(null);
+
+  useEffect(()=>{ setQ(value||""); },[value]);
+  useEffect(()=>{
+    const fn=(e)=>{ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown",fn);
+    return()=>document.removeEventListener("mousedown",fn);
+  },[]);
+
+  const suggestions=q.length>0
+    ? MEMBERS.filter(m=>m.name.toLowerCase().includes(q.toLowerCase())).slice(0,8)
+    : MEMBERS.filter(m=>m.role==="Trainer"||m.role==="Vorstand").slice(0,8);
+
+  function select(name){ setQ(name); onChange(name); setOpen(false); }
+
+  return(
+    <div ref={ref} style={{position:"relative",...style}}>
+      <input
+        value={q}
+        onChange={e=>{ setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
+        onFocus={()=>setOpen(true)}
+        placeholder={placeholder}
+        style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,
+          fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",
+          boxSizing:"border-box",outline:"none"}}
+      />
+      {open&&suggestions.length>0&&(
+        <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,zIndex:200,
+          background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,
+          boxShadow:"0 4px 16px rgba(0,0,0,0.12)",overflow:"hidden"}}>
+          {suggestions.map(m=>(
+            <button key={m.id} onMouseDown={()=>select(m.name)} style={{
+              width:"100%",padding:"9px 14px",border:"none",background:"none",
+              cursor:"pointer",display:"flex",alignItems:"center",gap:10,
+              textAlign:"left",fontFamily:FONT
+            }}
+              onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <Av name={m.name} size={26} bg={m.role==="Trainer"?"#f8de09":"var(--border)"}/>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{m.name}</div>
+                <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModalOrSheet({open,onClose,children,maxWidth=660}){
   const isMobile=useIsMobile();
   if(!open) return null;
@@ -5628,52 +5683,146 @@ function StatsTab({team="Cc-Junioren"}){
 ========================================== */
 function MembersView({role}){
   const [search,setSearch]=useState("");
-  const f=MEMBERS.filter(m=>m.name.toLowerCase().includes(search.toLowerCase()));
+  const [sortCol,setSortCol]=useState("name");
+  const [sortDir,setSortDir]=useState("asc"); // "asc"|"desc"
+  const [groupBy,setGroupBy]=useState("none"); // "none"|"role"|"team"|"type"|"status"
   const canExport=role==="administrator"||role==="administration";
+
+  const COLS=[
+    {key:"name",   label:"Mitglied"},
+    {key:"role",   label:"Rolle"},
+    {key:"team",   label:"Team"},
+    {key:"type",   label:"Mitgliedtyp"},
+    {key:"location",label:"Wohnort"},
+    {key:"status", label:"Datenstatus"},
+  ];
+  const GROUP_OPTIONS=[
+    {val:"none",  label:"Keine Gruppierung"},
+    {val:"role",  label:"Nach Rolle"},
+    {val:"team",  label:"Nach Team"},
+    {val:"type",  label:"Nach Mitgliedtyp"},
+    {val:"status",label:"Nach Datenstatus"},
+  ];
+
+  function handleSort(key){
+    if(sortCol===key) setSortDir(d=>d==="asc"?"desc":"asc");
+    else{ setSortCol(key); setSortDir("asc"); }
+  }
+
+  const filtered=MEMBERS.filter(m=>
+    !search||m.name.toLowerCase().includes(search.toLowerCase())||
+    m.role.toLowerCase().includes(search.toLowerCase())||
+    m.team.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const sorted=[...filtered].sort((a,b)=>{
+    const av=a[sortCol]||""; const bv=b[sortCol]||"";
+    return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
+  });
+
+  /* Gruppierung */
+  let groups=[];
+  if(groupBy==="none"){
+    groups=[{key:"",members:sorted}];
+  }else{
+    const map={};
+    sorted.forEach(m=>{
+      const k=m[groupBy]||"-";
+      if(!map[k]) map[k]=[];
+      map[k].push(m);
+    });
+    groups=Object.entries(map).sort(([a],[b])=>a.localeCompare(b)).map(([k,members])=>({key:k,members}));
+  }
+
+  const statusColor=s=>s==="Vollständig"?GN:s==="Prüfung fällig"?AM:R;
+  const statusBg=s=>s==="Vollständig"?"#ECFDF5":s==="Prüfung fällig"?"#FFFBEB":RL;
+  const SortIcon=({col})=>sortCol===col
+    ?<span style={{marginLeft:4,fontSize:10}}>{sortDir==="asc"?"▲":"▼"}</span>
+    :<span style={{marginLeft:4,fontSize:10,opacity:0.25}}>↕</span>;
+
+  const inputStyle={padding:"7px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:FONT};
+
   return(
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-        <h1 style={{fontSize:21,fontWeight:800,margin:0}}>Mitglieder</h1>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:12}}>
+        <h1 style={{fontSize:21,fontWeight:800,margin:0,color:"var(--text)"}}>Mitglieder</h1>
         {canExport&&<div style={{display:"flex",gap:8}}><Btn>Export CSV</Btn><Btn>Export Excel</Btn></div>}
       </div>
+      {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
-        <Stat label="Total" value="187" color={BL}/>
-        <Stat label="Trainer" value="8" color={R}/>
-        <Stat label="Junioren" value="112" color={GN}/>
-        <Stat label="Datenprüfung fällig" value="12" color={AM}/>
+        <Stat label="Total" value={MEMBERS.length} color={BL}/>
+        <Stat label="Trainer" value={MEMBERS.filter(m=>m.role==="Trainer").length} color={R}/>
+        <Stat label="Aktivmitglieder" value={MEMBERS.filter(m=>m.type==="Aktivmitglied").length} color={GN}/>
+        <Stat label="Datenprüfung fällig" value={MEMBERS.filter(m=>m.status!=="Vollständig").length} color={AM}/>
       </div>
-      <div style={{display:"flex",gap:10,marginBottom:14}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglied suchen…" style={{flex:1,padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,outline:"none"}}/>
+      {/* Filter-Zeile */}
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Suchen nach Name, Rolle, Team…"
+          style={{...inputStyle,flex:1,minWidth:180}}/>
+        <select value={groupBy} onChange={e=>setGroupBy(e.target.value)}
+          style={{...inputStyle,minWidth:170}}>
+          {GROUP_OPTIONS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
+        </select>
       </div>
+      {/* Tabelle */}
       <Card style={{padding:0,overflowX:"auto"}}>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
           <thead>
             <tr style={{background:"var(--surface2)"}}>
-              {["Mitglied","Rolle","Team","Mitgliedtyp","Wohnort","Datenstatus"].map((h,i)=>(
-                <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
+              {COLS.map(c=>(
+                <th key={c.key} onClick={()=>handleSort(c.key)}
+                  style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",
+                    fontSize:12,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",
+                    userSelect:"none",whiteSpace:"nowrap"}}
+                  onMouseEnter={e=>e.currentTarget.style.color="var(--text)"}
+                  onMouseLeave={e=>e.currentTarget.style.color="var(--sub)"}>
+                  {c.label}<SortIcon col={c.key}/>
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {f.map((m,i)=>(
-              <tr key={m.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"#fff":"#fafaf8"}}>
-                <td style={{padding:"9px 13px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <Av name={m.name} size={28} bg={R}/>
-                    <span style={{fontWeight:600}}>{m.name}</span>
-                  </div>
-                </td>
-                <td style={{padding:"9px 13px"}}><Chip text={m.role} color={R}/></td>
-                <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
-                <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL} bg="#EFF6FF"/></td>
-                <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
-                <td style={{padding:"9px 13px"}}>
-                  <Chip text={m.status} color={m.status==="Vollständig"?GN:m.status==="Prüfung fällig"?AM:R} bg={m.status==="Vollständig"?"#ECFDF5":m.status==="Prüfung fällig"?"#FFFBEB":RL}/>
-                </td>
-              </tr>
+            {groups.map(({key,members})=>(
+              <>
+                {groupBy!=="none"&&(
+                  <tr key={"g-"+key}>
+                    <td colSpan={6} style={{padding:"10px 13px 6px",background:"var(--surface2)",
+                      fontWeight:700,fontSize:12,color:"var(--sub)",textTransform:"uppercase",
+                      letterSpacing:0.6,borderTop:"1px solid var(--border)"}}>
+                      {key} <span style={{fontWeight:400,opacity:0.6}}>({members.length})</span>
+                    </td>
+                  </tr>
+                )}
+                {members.map((m,i)=>(
+                  <tr key={m.id} style={{borderTop:"0.5px solid var(--border)"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{padding:"9px 13px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <Av name={m.name} size={28} bg={R}/>
+                        <span style={{fontWeight:600,color:"var(--text)"}}>{m.name}</span>
+                      </div>
+                    </td>
+                    <td style={{padding:"9px 13px"}}><Chip text={m.role} color={R}/></td>
+                    <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
+                    <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL} bg="#EFF6FF"/></td>
+                    <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
+                    <td style={{padding:"9px 13px"}}>
+                      <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
+                    </td>
+                  </tr>
+                ))}
+              </>
             ))}
           </tbody>
         </table>
+        {filtered.length===0&&(
+          <div style={{padding:"32px",textAlign:"center",color:"var(--sub)",fontSize:13}}>
+            Keine Mitglieder gefunden.
+          </div>
+        )}
       </Card>
     </div>
   );
@@ -8035,23 +8184,25 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,setCustomBack}){
           </div>
           {/* Staff Arrays */}
           {[
-            {key:"haupttrainer",label:"Trainer/in",  placeholder:"Vorname Nachname"},
-            {key:"co_trainers", label:"Assistent/in",placeholder:"Vorname Nachname"},
-            {key:"staff",       label:"Weiterer Staff",placeholder:"Name / Funktion"},
+            {key:"haupttrainer",label:"Trainer/in",  placeholder:"Person suchen…"},
+            {key:"co_trainers", label:"Assistent/in",placeholder:"Person suchen…"},
+            {key:"staff",       label:"Weiterer Staff",placeholder:"Name / Funktion suchen…"},
           ].map(({key,label,placeholder})=>(
             <div key={key}>
               <label style={labelStyle}>{label}</label>
               <div style={{display:"flex",flexDirection:"column",gap:7}}>
                 {(form[key]||[]).map((val,i)=>(
                   <div key={i} style={{display:"flex",gap:8}}>
-                    <input value={val}
-                      onChange={e=>setForm(p=>({...p,[key]:p[key].map((v,j)=>j===i?e.target.value:v)}))}
-                      placeholder={placeholder} style={{...inputStyle,flex:1}}/>
+                    <PersonPicker
+                      value={val}
+                      onChange={v=>setForm(p=>({...p,[key]:p[key].map((x,j)=>j===i?v:x)}))}
+                      placeholder={placeholder}
+                      style={{flex:1}}/>
                     <button onClick={()=>setForm(p=>({...p,[key]:p[key].filter((_,j)=>j!==i)}))}
                       style={{width:36,height:38,borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",color:R,flexShrink:0,fontSize:16}}>×</button>
                   </div>
                 ))}
-                <button onClick={()=>setForm(p=>({...p,[key]:[...(p[key]||[]),""]}))  }
+                <button onClick={()=>setForm(p=>({...p,[key]:[...(p[key]||[]),""]}))}
                   style={{padding:"7px 14px",borderRadius:9,border:"1px dashed var(--border)",background:"none",cursor:"pointer",fontSize:13,color:"var(--sub)",fontFamily:FONT,textAlign:"left"}}>
                   + {label} hinzufügen
                 </button>
