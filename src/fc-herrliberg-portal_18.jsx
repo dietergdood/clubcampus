@@ -920,7 +920,6 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
       {/* Links */}
       {isMobile?(
         isHome?(
-          /* Dashboard: Logo + Vereinsname */
           <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
             <div style={{width:30,height:30,borderRadius:8,background:"#f8de09",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <img src="/logo_fch_mit_rand.svg" style={{width:26,height:26,objectFit:"contain",display:"block"}} alt="FCH"/>
@@ -928,7 +927,6 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
             <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>FC Herrliberg</span>
           </div>
         ):(
-          /* Andere Seiten: Zurück-Button + Seitentitel */
           <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:0}}>
             <button onClick={()=>onBack?onBack():setActive("dashboard")} style={{
               width:36,height:36,borderRadius:9,background:"none",border:"none",
@@ -942,7 +940,6 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
           </div>
         )
       ):(
-        /* Desktop: Logo + Name */
         <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
           <div style={{width:30,height:30,borderRadius:8,background:"#f8de09",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <img src="/logo_fch_mit_rand.svg" style={{width:26,height:26,objectFit:"contain",display:"block"}} alt="FCH"/>
@@ -7775,16 +7772,9 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,setCustomBack}){
   if(selectedTeam){
     return(
       <div>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-          <button onClick={()=>{setSelectedTeam(null);if(setCustomBack)setCustomBack(null);}} style={{
-            display:"flex",alignItems:"center",gap:6,padding:"7px 14px",
-            borderRadius:9,border:"1px solid var(--border)",background:"var(--surface)",
-            cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--text)",fontFamily:FONT
-          }}>
-            <TI n="chevron-left" size={16}/> Alle Teams
-          </button>
-          <span style={{color:"var(--sub)",fontSize:13}}>→</span>
-          <span style={{fontWeight:700,fontSize:15,color:"var(--text)"}}>{selectedTeam.name}</span>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+          <span style={{fontWeight:800,fontSize:18,color:"var(--text)",letterSpacing:-0.3}}>{selectedTeam.name}</span>
+          {selectedTeam.kategorie&&<Chip text={selectedTeam.kategorie} color={BL}/>}
         </div>
         <TeamView role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams}/>
       </div>
@@ -8963,13 +8953,43 @@ export default function Portal({supabaseClient}){
   const [dbTeams,setDbTeams]=useState([]);
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
-  const [active,setActive]=useState("dashboard");
-  const setActivePersist=(key)=>{try{sessionStorage.setItem("fch-active",key);}catch{}setActive(key);setCustomBack(null);};
+  const [active,setActive]=useState(()=>{
+    try{
+      const hash=window.location.hash.replace("#","");
+      if(hash) return hash;
+      return sessionStorage.getItem("fch-active")||"dashboard";
+    }catch{return "dashboard";}
+  });
+  const setActivePersist=(key)=>{
+    try{
+      sessionStorage.setItem("fch-active",key);
+      window.history.pushState({page:key},"","#"+key);
+    }catch{}
+    setActive(key);
+    setCustomBack(null);
+  };
   const {isMobile,isTablet}=useBreakpoint();
   const [mobileProfileOpen,setMobileProfileOpen]=useState(false);
   const [customBack,setCustomBack]=useState(null);
-  /* Aktive Seite aus Session wiederherstellen (einmalig beim Mount) */
-  useEffect(()=>{try{const s=sessionStorage.getItem("fch-active");if(s&&s!=="dashboard")setActive(s);}catch{}},[]);
+
+  /* Browser Zurück/Vor via popstate */
+  useEffect(()=>{
+    const onPop=(e)=>{
+      const key=e.state?.page||(window.location.hash.replace("#","")||"dashboard");
+      setActive(key);
+      setCustomBack(null);
+      try{sessionStorage.setItem("fch-active",key);}catch{}
+    };
+    window.addEventListener("popstate",onPop);
+    /* Initialen Hash-State setzen damit der erste Zurück-Schritt funktioniert */
+    try{
+      const cur=window.location.hash.replace("#","")||"dashboard";
+      if(!window.history.state?.page){
+        window.history.replaceState({page:cur},"","#"+cur);
+      }
+    }catch{}
+    return()=>window.removeEventListener("popstate",onPop);
+  },[]);
   /* ── Dark Mode ── */
   const [dark,setDark]=useState(()=>{
     try{const s=localStorage.getItem("fch-dark");return s?JSON.parse(s):window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}
