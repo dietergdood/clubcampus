@@ -8334,15 +8334,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 </div>
               )}
               <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:groupBy!=="none"?16:8}}>
-              </div>
-            </div>
-          ))}
-          {filtered.length===0&&(
-            <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:13}}>
-              Keine Teams gefunden.
-            </div>
-          )}
-              {items.map(team=>{
+                {items.map(team=>{
             const katColor=KAT_COLORS[team.hauptbereich]||KAT_COLORS[team.kategorie]||BL;
             const isInaktiv=team.aktiv===false;
             const sp=getStufePath(team);
@@ -8394,6 +8386,14 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
               </div>
             );
           })}
+              </div>
+            </div>
+          ))}
+          {sorted.length===0&&(
+            <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:13}}>
+              Keine Teams gefunden.
+            </div>
+          )}
         </div>
       )}
 
