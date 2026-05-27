@@ -6178,7 +6178,7 @@ function AuditView(){ return <PortalverwaltungView initialTab="audit"/>; }
    Tabs: Module & Rechte | Benutzer & Rollen | Feldsichtbarkeit |
          API-Verbindungen | Audit-Logs
    ══════════════════════════════════════════════════════════════════ */
-function PortalverwaltungView({initialTab="module"}){
+function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte}){
   const [tab,setTab]=useState(initialTab);
   const [module,setModule]=useState([]);
   const [moduleConfig,setModuleConfig]=useState({});
@@ -6200,14 +6200,7 @@ function PortalverwaltungView({initialTab="module"}){
   const [editFunktion,setEditFunktion]=useState(null);
   const [gruppeForm,setGruppeForm]=useState({name:"",beschreibung:"",module:[],farbe:"#8B5CF6"});
   const [funktionForm,setFunktionForm]=useState({name:"",beschreibung:"",gruppe_id:"",module_override:[],teams:[],filter:{}});
-  /* Module global aktiv/inaktiv */
-  const [moduleAktiv,setModuleAktiv]=useState(()=>{
-    try{const s=sessionStorage.getItem("fch-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
-  });
-  /* Modulrechte pro Rolle (editierbar, Fallback auf Default) */
-  const [moduleRechte,setModuleRechte]=useState(()=>{
-    try{const s=sessionStorage.getItem("fch-module-rechte");return s?JSON.parse(s):null;}catch{return null;}
-  });
+  /* moduleAktiv + moduleRechte kommen als Props von App */
 
   const TABS=[
     {key:"module",    label:"Module & Rechte",      icon:"layout-grid"},
@@ -6233,7 +6226,7 @@ function PortalverwaltungView({initialTab="module"}){
 
   /* ── Alle Module als Fallback ── */
   const ALLE_MODULE=[
-    {key:"dashboard",  label:"Dashboard",         icon:"layout-dashboard", kat:"kern"},
+    {key:"dashboard",  label:"Dashboard",         icon:"layout-dashboard", kat:"kern",          pflicht:true},
     {key:"members",    label:"Mitglieder",         icon:"users",            kat:"verwaltung"},
     {key:"team",       label:"Teams",              icon:"ball-football",    kat:"sport"},
     {key:"training",   label:"Trainingsplan",      icon:"calendar",         kat:"sport"},
@@ -6248,7 +6241,7 @@ function PortalverwaltungView({initialTab="module"}){
     {key:"news",       label:"News",               icon:"news",             kat:"kommunikation"},
     {key:"wiki",       label:"Wiki",               icon:"book",             kat:"kommunikation"},
     {key:"docs",       label:"Dokumente",          icon:"file-text",        kat:"kommunikation"},
-    {key:"portal",     label:"Portalverwaltung",   icon:"settings",         kat:"admin"},
+    {key:"portal",     label:"Portalverwaltung",   icon:"settings",         kat:"admin",         pflicht:true},
   ];
 
   const ROLLEN_MODULE_DEFAULT={
@@ -6318,21 +6311,23 @@ function PortalverwaltungView({initialTab="module"}){
   }
 
   function toggleModulGlobal(key){
+    if(!setModuleAktiv) return;
     setModuleAktiv(prev=>{
       const neu={...prev,[key]:prev[key]===false?true:false};
-      try{sessionStorage.setItem("fch-module-aktiv",JSON.stringify(neu));}catch{}
+      try{localStorage.setItem("fch-module-aktiv",JSON.stringify(neu));}catch{}
       return neu;
     });
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
 
   function toggleModulRolle(modulKey, rolle){
+    if(!setModuleRechte) return;
     setModuleRechte(prev=>{
       const base=prev||ROLLEN_MODULE_DEFAULT;
       const cur=base[rolle]||[];
       const hasIt=cur.includes(modulKey);
       const neu={...base,[rolle]:hasIt?cur.filter(m=>m!==modulKey):[...cur,modulKey]};
-      try{sessionStorage.setItem("fch-module-rechte",JSON.stringify(neu));}catch{}
+      try{localStorage.setItem("fch-module-rechte",JSON.stringify(neu));}catch{}
       return neu;
     });
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
@@ -6385,7 +6380,7 @@ function PortalverwaltungView({initialTab="module"}){
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
             <InfoBox text="Klicke auf eine Checkbox um die Rechte anzupassen. Toggle links schaltet das Modul global ein/aus." color={BL}/>
             {moduleRechte&&(
-              <button onClick={()=>{setModuleRechte(null);try{sessionStorage.removeItem("fch-module-rechte");}catch{}setSaveMsg("Zurückgesetzt");setTimeout(()=>setSaveMsg(""),2000);}}
+              <button onClick={()=>{setModuleRechte(null);try{localStorage.removeItem("fch-module-rechte");}catch{}setSaveMsg("Zurückgesetzt");setTimeout(()=>setSaveMsg(""),2000);}}
                 style={{padding:"7px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0,whiteSpace:"nowrap"}}>
                 ↺ Auf Standard zurücksetzen
               </button>
@@ -6420,20 +6415,25 @@ function PortalverwaltungView({initialTab="module"}){
                     </tr>,
                     ...mods.map(m=>{
                       const isAktiv=moduleAktiv[m.key]!==false;
+                      const isPflicht=!!m.pflicht;
                       return(
-                        <tr key={m.key} style={{borderTop:"0.5px solid var(--border)",opacity:isAktiv?1:0.35,transition:"opacity 0.2s"}}>
+                        <tr key={m.key} style={{borderTop:"0.5px solid var(--border)",opacity:isAktiv?1:0.35,transition:"opacity 0.2s",background:isPflicht?"#FFFBEB":"transparent"}}>
                           <td style={{padding:"8px 14px"}}>
                             <div style={{display:"flex",alignItems:"center",gap:9}}>
-                              <div onClick={()=>toggleModulGlobal(m.key)} style={{
-                                width:28,height:16,borderRadius:8,flexShrink:0,
-                                background:isAktiv?GN:"var(--border)",
-                                cursor:"pointer",position:"relative",transition:"background 0.2s"
-                              }}>
+                              <div onClick={isPflicht?undefined:()=>toggleModulGlobal(m.key)}
+                                title={isPflicht?"Pflichtmodul – kann nicht deaktiviert werden":isAktiv?"Deaktivieren":"Aktivieren"}
+                                style={{
+                                  width:28,height:16,borderRadius:8,flexShrink:0,
+                                  background:isPflicht?"#F59E0B":isAktiv?GN:"var(--border)",
+                                  cursor:isPflicht?"not-allowed":"pointer",
+                                  position:"relative",transition:"background 0.2s",
+                                }}>
                                 <div style={{position:"absolute",top:2,width:12,height:12,borderRadius:"50%",
-                                  background:"#fff",transition:"left 0.15s",left:isAktiv?14:2}}/>
+                                  background:"#fff",transition:"left 0.15s",left:isAktiv||isPflicht?14:2}}/>
                               </div>
-                              <TI n={m.icon} size={13} style={{color:"var(--sub)",flexShrink:0}}/>
-                              <span style={{fontWeight:500,color:"var(--text)",fontSize:13}}>{m.label}</span>
+                              <TI n={m.icon} size={13} style={{color:isPflicht?"#B45309":"var(--sub)",flexShrink:0}}/>
+                              <span style={{fontWeight:500,color:isPflicht?"#B45309":"var(--text)",fontSize:13}}>{m.label}</span>
+                              {isPflicht&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:6,background:"#FEF3C7",color:"#B45309",fontWeight:600,marginLeft:2}}>Pflicht</span>}
                             </div>
                           </td>
                           {ROLLEN.map(r=>{
@@ -10149,6 +10149,13 @@ export default function Portal({supabaseClient}){
   const [dbStufen,setDbStufen]=useState([]);
   const [dbMitglieder,setDbMitglieder]=useState([]);
   const [dbFunktionen,setDbFunktionen]=useState([]); // portal_funktionen des eingeloggten Benutzers
+  /* Globale Modul-Konfiguration (aus Portalverwaltung) */
+  const [moduleAktiv,setModuleAktiv]=useState(()=>{
+    try{const s=localStorage.getItem("fch-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
+  });
+  const [moduleRechte,setModuleRechte]=useState(()=>{
+    try{const s=localStorage.getItem("fch-module-rechte");return s?JSON.parse(s):null;}catch{return null;}
+  });
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
   const [active,setActive]=useState(()=>{
@@ -10346,7 +10353,8 @@ export default function Portal({supabaseClient}){
     : spielerTeam.length>0 ? spielerTeam : ["Cc-Junioren"];
   const myRosterId = account.rosterId||(role==="spieler"?1:role==="eltern"?1:role==="trainer"?200:null);
   /* Dynamische Navigation (funktionaer/stufenleitung aus Gruppen) */
-  const effectiveNav = getNavForRole(role, dbFunktionen);
+  const effectiveNav = getNavForRole(role, dbFunktionen)
+    .filter(n=>n.key==="dashboard"||moduleAktiv[n.key]!==false);
 
   const handleAccountChange=(key)=>{
     setAccountKey(key);
@@ -10361,9 +10369,9 @@ export default function Portal({supabaseClient}){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
       case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams}/>;
       case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder}/>;
-      case "users":             return <PortalverwaltungView initialTab="users"/>;
-      case "fieldvis":          return <PortalverwaltungView initialTab="feldvis"/>;
-      case "portal":            return <PortalverwaltungView initialTab="module"/>;
+      case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
+      case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
+      case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
       case "training":          return <TrainingGantt role={role} team={role==="trainer"?meineTeams?.[0]:undefined}/>;
       case "schedule":          return <ScheduleTab role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
@@ -10376,9 +10384,9 @@ export default function Portal({supabaseClient}){
       case "news":              return <NewsView role={role} meineTeams={meineTeams}/>;
       case "wiki":              return <WikiView/>;
       case "docs":              return <DocsView/>;
-      case "exports":           return <PortalverwaltungView initialTab="api"/>;
-      case "sync":              return <PortalverwaltungView initialTab="api"/>;
-      case "audit":             return <PortalverwaltungView initialTab="audit"/>;
+      case "exports":           return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
+      case "sync":              return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
+      case "audit":             return <PortalverwaltungView initialTab="audit" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
       case "datacheck":         return <PortalverwaltungView initialTab="module"/>;
       case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account}/>;
       default:                  return <Dashboard role={role} setActive={setActive}/>;
