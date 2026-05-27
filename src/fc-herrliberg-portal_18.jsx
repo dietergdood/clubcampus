@@ -6399,7 +6399,6 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       background:r==="administrator"?"var(--surface2)":"transparent"
                     }}>
                       {ROLLEN_LABELS[r]}
-                      {r==="administrator"&&<div style={{fontSize:9,fontWeight:400,color:"var(--sub)",marginTop:1}}>gesperrt</div>}
                     </th>
                   ))}
                 </tr>
