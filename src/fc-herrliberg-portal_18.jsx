@@ -5685,7 +5685,8 @@ function MembersView({role}){
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
   const [sortDir,setSortDir]=useState("asc"); // "asc"|"desc"
-  const [groupBy,setGroupBy]=useState("none"); // "none"|"role"|"team"|"type"|"status"
+  const [groupBy,setGroupBy]=useState("none");
+  const [filterVal,setFilterVal]=useState(""); // aktiver Gruppen-Filter
   const canExport=role==="administrator"||role==="administration";
 
   const COLS=[
@@ -5710,9 +5711,10 @@ function MembersView({role}){
   }
 
   const filtered=MEMBERS.filter(m=>
-    !search||m.name.toLowerCase().includes(search.toLowerCase())||
+    (!search||m.name.toLowerCase().includes(search.toLowerCase())||
     m.role.toLowerCase().includes(search.toLowerCase())||
-    m.team.toLowerCase().includes(search.toLowerCase())
+    m.team.toLowerCase().includes(search.toLowerCase()))
+    &&(!filterVal||m[groupBy]===filterVal)
   );
 
   const sorted=[...filtered].sort((a,b)=>{
@@ -5757,15 +5759,40 @@ function MembersView({role}){
         <Stat label="Datenprüfung fällig" value={MEMBERS.filter(m=>m.status!=="Vollständig").length} color={AM}/>
       </div>
       {/* Filter-Zeile */}
-      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:10,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Suchen nach Name, Rolle, Team…"
           style={{...inputStyle,flex:1,minWidth:180}}/>
-        <select value={groupBy} onChange={e=>setGroupBy(e.target.value)}
+        <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVal("");}}
           style={{...inputStyle,minWidth:170}}>
           {GROUP_OPTIONS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
         </select>
       </div>
+      {/* Gruppen-Filter Chips */}
+      {groupBy!=="none"&&(()=>{
+        const vals=[...new Set(MEMBERS.map(m=>m[groupBy]||"-"))].sort();
+        return(
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            <button onClick={()=>setFilterVal("")}
+              style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
+                background:filterVal===""?BK:"var(--surface)",color:filterVal===""?"#fff":"var(--sub)",
+                fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
+              Alle
+            </button>
+            {vals.map(v=>(
+              <button key={v} onClick={()=>setFilterVal(filterVal===v?"":v)}
+                style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
+                  background:filterVal===v?BK:"var(--surface)",color:filterVal===v?"#fff":"var(--sub)",
+                  fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
+                {v}
+                <span style={{marginLeft:5,opacity:0.6,fontWeight:400}}>
+                  {MEMBERS.filter(m=>(m[groupBy]||"-")===v).length}
+                </span>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
       {/* Tabelle */}
       <Card style={{padding:0,overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:600}}>
