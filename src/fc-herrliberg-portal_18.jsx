@@ -9576,7 +9576,7 @@ export default function Portal({supabaseClient}){
     }
     let m=document.querySelector("meta[name=viewport]");
     if(!m){m=document.createElement("meta");m.name="viewport";document.head.appendChild(m);}
-    m.content="width=device-width,initial-scale=1,viewport-fit=cover";
+    m.content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=yes";
     /* PWA Standalone – Adressleiste ausblenden */
     const setMeta=(n,v)=>{let t=document.querySelector(`meta[name="${n}"]`);if(!t){t=document.createElement("meta");t.name=n;document.head.appendChild(t);}t.content=v;};
     setMeta("apple-mobile-web-app-capable","yes");
