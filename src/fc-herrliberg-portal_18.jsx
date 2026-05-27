@@ -6723,17 +6723,19 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     if(editGruppe?.id){
                       const{error}=await supabase.from("portal_gruppen").update(payload).eq("id",editGruppe.id);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
-                      setGruppen(prev=>prev.map(g=>g.id===editGruppe.id?{...g,...payload}:g));
-                      if(selectedGruppe?.id===editGruppe.id) setSelectedGruppe(g=>({...g,...payload}));
                     } else {
-                      const{data,error}=await supabase.from("portal_gruppen").insert(payload).select().single();
+                      const{error}=await supabase.from("portal_gruppen").insert(payload);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
-                      if(data) setGruppen(prev=>[...prev,data]);
-                      else setGruppen(prev=>[...prev,{id:Date.now(),...payload}]);
                     }
+                    /* Immer neu laden nach Speichern */
+                    const{data:fresh}=await supabase.from("portal_gruppen").select("*").order("name");
+                    if(fresh) setGruppen(fresh);
                   } else {
                     if(editGruppe){
-                      setGruppen(prev=>prev.map(g=>g.id===editGruppe.id?{...g,...payload}:g));
+                      setGruppen(prev=>{
+                        const updated=prev.map(g=>g.id===editGruppe.id?{...g,...payload}:g);
+                        return updated.length>0?updated:[{id:editGruppe.id,...payload}];
+                      });
                       if(selectedGruppe?.id===editGruppe.id) setSelectedGruppe(g=>({...g,...payload}));
                     } else {
                       setGruppen(prev=>[...prev,{id:Date.now(),...payload}]);
@@ -6826,13 +6828,13 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     if(editFunktion?.id){
                       const{error}=await supabase.from("portal_funktionen").update(payload).eq("id",editFunktion.id);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
-                      setFunktionen(prev=>prev.map(f=>f.id===editFunktion.id?{...f,...payload}:f));
                     } else {
-                      const{data,error}=await supabase.from("portal_funktionen").insert(payload).select().single();
+                      const{error}=await supabase.from("portal_funktionen").insert(payload);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
-                      if(data) setFunktionen(prev=>[...prev,data]);
-                      else setFunktionen(prev=>[...prev,{id:Date.now(),...payload}]);
                     }
+                    /* Immer neu laden nach Speichern */
+                    const{data:fresh}=await supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe)").order("name");
+                    if(fresh) setFunktionen(fresh);
                   } else {
                     if(editFunktion){
                       setFunktionen(prev=>prev.map(f=>f.id===editFunktion.id?{...f,...payload}:f));
