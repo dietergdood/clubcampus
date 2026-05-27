@@ -6204,6 +6204,10 @@ function PortalverwaltungView({initialTab="module"}){
   const [moduleAktiv,setModuleAktiv]=useState(()=>{
     try{const s=sessionStorage.getItem("fch-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
   });
+  /* Modulrechte pro Rolle (editierbar, Fallback auf Default) */
+  const [moduleRechte,setModuleRechte]=useState(()=>{
+    try{const s=sessionStorage.getItem("fch-module-rechte");return s?JSON.parse(s):null;}catch{return null;}
+  });
 
   const TABS=[
     {key:"module",    label:"Module & Rechte",      icon:"layout-grid"},
@@ -6322,6 +6326,21 @@ function PortalverwaltungView({initialTab="module"}){
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
 
+  function toggleModulRolle(modulKey, rolle){
+    setModuleRechte(prev=>{
+      const base=prev||ROLLEN_MODULE_DEFAULT;
+      const cur=base[rolle]||[];
+      const hasIt=cur.includes(modulKey);
+      const neu={...base,[rolle]:hasIt?cur.filter(m=>m!==modulKey):[...cur,modulKey]};
+      try{sessionStorage.setItem("fch-module-rechte",JSON.stringify(neu));}catch{}
+      return neu;
+    });
+    setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
+  }
+
+  /* Effektive Rechte: editierte oder Default */
+  const effRechte=moduleRechte||ROLLEN_MODULE_DEFAULT;
+
   const moduleNachKat=KATEGORIEN.reduce(function(acc,k){
     acc[k]=module.filter(m=>m.category===k);
     return acc;
@@ -6363,8 +6382,15 @@ function PortalverwaltungView({initialTab="module"}){
       {/* ── TAB: MODULE & RECHTE ── */}
       {!loading&&tab==="module"&&(
         <div>
-          <InfoBox text="Übersicht welche Rollen welche Module sehen. Für Funktionäre werden Module über Gruppen & Funktionen gesteuert." color={BL}/>
-          <div style={{height:16}}/>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
+            <InfoBox text="Klicke auf eine Checkbox um die Rechte anzupassen. Toggle links schaltet das Modul global ein/aus." color={BL}/>
+            {moduleRechte&&(
+              <button onClick={()=>{setModuleRechte(null);try{sessionStorage.removeItem("fch-module-rechte");}catch{}setSaveMsg("Zurückgesetzt");setTimeout(()=>setSaveMsg(""),2000);}}
+                style={{padding:"7px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0,whiteSpace:"nowrap"}}>
+                ↺ Auf Standard zurücksetzen
+              </button>
+            )}
+          </div>
           <Card style={{padding:0,overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
               <thead>
@@ -6411,17 +6437,27 @@ function PortalverwaltungView({initialTab="module"}){
                             </div>
                           </td>
                           {ROLLEN.map(r=>{
-                            const hasAccess=isAktiv&&ROLLEN_MODULE_DEFAULT[r]?.includes(m.key);
+                            const isAdmin=r==="administrator";
+                            const hasAccess=isAktiv&&effRechte[r]?.includes(m.key);
+                            const isEdited=moduleRechte&&(moduleRechte[r]?.includes(m.key))!==(ROLLEN_MODULE_DEFAULT[r]?.includes(m.key));
                             return(
                               <td key={r} style={{textAlign:"center",padding:"8px 8px"}}>
                                 {r==="funktionaer"
                                   ?<span style={{fontSize:10,color:"var(--sub)",fontStyle:"italic"}}>via Gruppe</span>
-                                  :<div style={{
-                                    width:20,height:20,borderRadius:5,margin:"0 auto",
-                                    background:hasAccess?(ROLES[r]?.color||GN)+"25":"transparent",
-                                    border:`1px solid ${hasAccess?(ROLES[r]?.color||GN)+"70":"var(--border)"}`,
-                                    display:"flex",alignItems:"center",justifyContent:"center"
-                                  }}>
+                                  :<div onClick={isAdmin?undefined:()=>isAktiv&&toggleModulRolle(m.key,r)}
+                                    title={isAdmin?"Administrator hat immer Zugriff":isAktiv?`${ROLLEN_LABELS[r]} ${hasAccess?"entfernen":"hinzufügen"}`:"Modul ist inaktiv"}
+                                    style={{
+                                      width:20,height:20,borderRadius:5,margin:"0 auto",
+                                      background:hasAccess?(ROLES[r]?.color||GN)+"25":"transparent",
+                                      border:`${isEdited?"2px":"1px"} solid ${hasAccess?(ROLES[r]?.color||GN)+(isEdited?"":"70"):"var(--border)"}`,
+                                      display:"flex",alignItems:"center",justifyContent:"center",
+                                      cursor:isAdmin||!isAktiv?"default":"pointer",
+                                      transition:"all 0.15s",
+                                      opacity:!isAktiv?0.3:1
+                                    }}
+                                    onMouseEnter={e=>{if(!isAdmin&&isAktiv)e.currentTarget.style.transform="scale(1.15)";}}
+                                    onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";}}
+                                  >
                                     {hasAccess&&<TI n="check" size={11} style={{color:ROLES[r]?.color||GN}}/>}
                                   </div>
                                 }
