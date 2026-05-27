@@ -5745,13 +5745,31 @@ function StatsTab({team="Cc-Junioren"}){
 /* ==========================================
    ADMIN-EXKLUSIVE VIEWS
 ========================================== */
-function MembersView({role}){
+function MembersView({role,dbMitglieder=[]}){
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
-  const [sortDir,setSortDir]=useState("asc"); // "asc"|"desc"
+  const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("none");
-  const [filterVals,setFilterVals]=useState([]); // aktive Gruppen-Filter (Mehrfach)
+  const [filterVals,setFilterVals]=useState([]);
   const canExport=role==="administrator"||role==="administration";
+
+  /* Mitglieder: aus Supabase wenn geladen, sonst MEMBERS Fallback */
+  const allMembers=dbMitglieder.length>0
+    ?dbMitglieder.map(m=>({
+        id:m.id,
+        name:`${m.vorname} ${m.nachname}`,
+        vorname:m.vorname, nachname:m.nachname,
+        role:m.rolle||"-",
+        team:(m.teams||[]).join(", ")||"-",
+        type:m.mitgliedtyp||"-",
+        location:m.ort||"-",
+        status:m.datenstatus||"Vollständig",
+        email:m.email, telefon:m.telefon,
+        geburtsdatum:m.geburtsdatum, position:m.position,
+        fairgate_id:m.fairgate_id,
+        hat_portal_zugang:m.hat_portal_zugang,
+      }))
+    :MEMBERS;
 
   const COLS=[
     {key:"name",   label:"Mitglied"},
@@ -5774,7 +5792,7 @@ function MembersView({role}){
     else{ setSortCol(key); setSortDir("asc"); }
   }
 
-  const filtered=MEMBERS.filter(m=>
+  const filtered=allMembers.filter(m=>
     (!search||m.name.toLowerCase().includes(search.toLowerCase())||
     m.role.toLowerCase().includes(search.toLowerCase())||
     m.team.toLowerCase().includes(search.toLowerCase()))
@@ -5817,10 +5835,10 @@ function MembersView({role}){
       </div>
       {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
-        <Stat label="Total" value={MEMBERS.length} color={BL}/>
-        <Stat label="Trainer" value={MEMBERS.filter(m=>m.role==="Trainer").length} color={R}/>
-        <Stat label="Aktivmitglieder" value={MEMBERS.filter(m=>m.type==="Aktivmitglied").length} color={GN}/>
-        <Stat label="Datenprüfung fällig" value={MEMBERS.filter(m=>m.status!=="Vollständig").length} color={AM}/>
+        <Stat label="Total" value={allMembers.length} color={BL}/>
+        <Stat label="Trainer" value={allMembers.filter(m=>m.role==="Trainer").length} color={R}/>
+        <Stat label="Aktivmitglieder" value={allMembers.filter(m=>m.type==="Aktivmitglied").length} color={GN}/>
+        <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
       </div>
       {/* Filter-Zeile */}
       <div style={{display:"flex",gap:10,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
@@ -5857,7 +5875,7 @@ function MembersView({role}){
                   {active&&<span style={{fontSize:9}}>✓</span>}
                   {v}
                   <span style={{opacity:0.55,fontWeight:400}}>
-                    {MEMBERS.filter(m=>(m[groupBy]||"-")===v).length}
+                    {allMembers.filter(m=>(m[groupBy]||"-")===v).length}
                   </span>
                 </button>
               );
@@ -9566,7 +9584,8 @@ export default function Portal({supabaseClient}){
   const [session,setSession]=useState(sb ? undefined : null);
   const [dbUser,setDbUser]=useState(null);
   const [dbTeams,setDbTeams]=useState([]);
-  const [dbStufen,setDbStufen]=useState([]); // team_stufen Baum
+  const [dbStufen,setDbStufen]=useState([]);
+  const [dbMitglieder,setDbMitglieder]=useState([]);
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
   const [active,setActive]=useState(()=>{
@@ -9656,11 +9675,11 @@ export default function Portal({supabaseClient}){
     if(!sb){ setSession(null); return; }
     sb.auth.getSession().then(({data:{session}})=>{
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); }
     });
     const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); }
       else setDbUser(null);
     });
     return function(){ subscription.unsubscribe(); };
@@ -9695,6 +9714,14 @@ export default function Portal({supabaseClient}){
       const{data}=await sb.from("team_stufen").select("*").order("ebene").order("sortorder");
       if(data&&data.length>0) setDbStufen(data);
     }catch(e){ console.warn("[FCH] loadDbStufen:", e.message); }
+  }
+
+  async function loadDbMitglieder(){
+    if(!sb) return;
+    try{
+      const{data}=await sb.from("mitglieder").select("*").eq("aktiv",true).order("nachname").order("vorname");
+      if(data&&data.length>0) setDbMitglieder(data);
+    }catch(e){ console.warn("[FCH] loadDbMitglieder:", e.message); }
   }
 
   async function handleLogout(){
@@ -9756,7 +9783,7 @@ export default function Portal({supabaseClient}){
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
       case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams}/>;
-      case "members":           return <MembersView role={role}/>;
+      case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder}/>;
       case "users":             return <PortalverwaltungView initialTab="users"/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis"/>;
       case "portal":            return <PortalverwaltungView initialTab="module"/>;
