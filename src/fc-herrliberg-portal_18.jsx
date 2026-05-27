@@ -6365,55 +6365,62 @@ function PortalverwaltungView({initialTab="module"}){
         <div>
           <InfoBox text="Übersicht welche Rollen welche Module sehen. Für Funktionäre werden Module über Gruppen & Funktionen gesteuert." color={BL}/>
           <div style={{height:16}}/>
-          {["kern","sport","betrieb","kommunikation","verwaltung","admin"].map(kat=>{
-            const mods=ALLE_MODULE.filter(m=>m.kat===kat);
-            if(!mods.length) return null;
-            const KAT_LABELS={kern:"Kern",sport:"Sport",betrieb:"Betrieb",kommunikation:"Kommunikation",verwaltung:"Verwaltung",admin:"Systemverwaltung"};
-            return(
-              <div key={kat} style={{marginBottom:24}}>
-                <div style={{fontSize:12,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8}}>{KAT_LABELS[kat]}</div>
-                <Card style={{padding:0,overflowX:"auto"}}>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
-                    <thead>
-                      <tr style={{background:"var(--surface2)"}}>
-                        <th style={{textAlign:"left",padding:"8px 12px",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.5}}>Modul</th>
-                        {ROLLEN.map(r=>(
-                          <th key={r} style={{textAlign:"center",padding:"8px 8px",fontWeight:600,color:ROLES[r]?.color||"var(--sub)",fontSize:11,minWidth:72}}>
-                            {ROLLEN_LABELS[r]}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mods.map((m,i)=>{
-                        const isAktiv=moduleAktiv[m.key]!==false;
-                        return(
-                        <tr key={m.key} style={{borderTop:"0.5px solid var(--border)",opacity:isAktiv?1:0.4}}>
-                          <td style={{padding:"9px 12px"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <Card style={{padding:0,overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
+              <thead>
+                <tr style={{background:"var(--surface2)",position:"sticky",top:0}}>
+                  <th style={{textAlign:"left",padding:"9px 14px",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.5,minWidth:200}}>Modul</th>
+                  {ROLLEN.map(r=>(
+                    <th key={r} style={{textAlign:"center",padding:"9px 8px",fontWeight:700,color:ROLES[r]?.color||"var(--sub)",fontSize:11,minWidth:80}}>
+                      {ROLLEN_LABELS[r]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {["kern","sport","betrieb","kommunikation","verwaltung","admin"].map(kat=>{
+                  const mods=ALLE_MODULE.filter(m=>m.kat===kat);
+                  if(!mods.length) return null;
+                  const KAT_LABELS={kern:"Kern",sport:"Sport",betrieb:"Betrieb",kommunikation:"Kommunikation",verwaltung:"Verwaltung",admin:"Systemverwaltung"};
+                  return([
+                    <tr key={"kat-"+kat}>
+                      <td colSpan={ROLLEN.length+1} style={{
+                        padding:"8px 14px 5px",
+                        fontSize:11,fontWeight:700,color:"var(--sub)",
+                        textTransform:"uppercase",letterSpacing:0.8,
+                        background:"var(--surface2)",
+                        borderTop:"1px solid var(--border)"
+                      }}>{KAT_LABELS[kat]}</td>
+                    </tr>,
+                    ...mods.map(m=>{
+                      const isAktiv=moduleAktiv[m.key]!==false;
+                      return(
+                        <tr key={m.key} style={{borderTop:"0.5px solid var(--border)",opacity:isAktiv?1:0.35,transition:"opacity 0.2s"}}>
+                          <td style={{padding:"8px 14px"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:9}}>
                               <div onClick={()=>toggleModulGlobal(m.key)} style={{
-                                width:30,height:17,borderRadius:9,flexShrink:0,
+                                width:28,height:16,borderRadius:8,flexShrink:0,
                                 background:isAktiv?GN:"var(--border)",
                                 cursor:"pointer",position:"relative",transition:"background 0.2s"
                               }}>
-                                <div style={{position:"absolute",top:2,width:13,height:13,borderRadius:"50%",
-                                  background:"#fff",transition:"left 0.2s",left:isAktiv?15:2}}/>
+                                <div style={{position:"absolute",top:2,width:12,height:12,borderRadius:"50%",
+                                  background:"#fff",transition:"left 0.15s",left:isAktiv?14:2}}/>
                               </div>
-                              <TI n={m.icon} size={14} style={{color:isAktiv?"var(--sub)":"var(--border)"}}/>
-                              <span style={{fontWeight:500,color:isAktiv?"var(--text)":"var(--sub)"}}>{m.label}</span>
+                              <TI n={m.icon} size={13} style={{color:"var(--sub)",flexShrink:0}}/>
+                              <span style={{fontWeight:500,color:"var(--text)",fontSize:13}}>{m.label}</span>
                             </div>
                           </td>
                           {ROLLEN.map(r=>{
                             const hasAccess=isAktiv&&ROLLEN_MODULE_DEFAULT[r]?.includes(m.key);
                             return(
-                              <td key={r} style={{textAlign:"center",padding:"9px 8px"}}>
+                              <td key={r} style={{textAlign:"center",padding:"8px 8px"}}>
                                 {r==="funktionaer"
-                                  ?<span style={{fontSize:10,color:isAktiv?"var(--sub)":"var(--border)"}}>via Gruppe</span>
+                                  ?<span style={{fontSize:10,color:"var(--sub)",fontStyle:"italic"}}>via Gruppe</span>
                                   :<div style={{
-                                    width:20,height:20,borderRadius:4,
-                                    background:hasAccess?(ROLES[r]?.color||GN)+"30":"var(--surface2)",
-                                    border:`1px solid ${hasAccess?(ROLES[r]?.color||GN)+"60":"var(--border)"}`,
-                                    display:"inline-flex",alignItems:"center",justifyContent:"center"
+                                    width:20,height:20,borderRadius:5,margin:"0 auto",
+                                    background:hasAccess?(ROLES[r]?.color||GN)+"25":"transparent",
+                                    border:`1px solid ${hasAccess?(ROLES[r]?.color||GN)+"70":"var(--border)"}`,
+                                    display:"flex",alignItems:"center",justifyContent:"center"
                                   }}>
                                     {hasAccess&&<TI n="check" size={11} style={{color:ROLES[r]?.color||GN}}/>}
                                   </div>
@@ -6422,14 +6429,13 @@ function PortalverwaltungView({initialTab="module"}){
                             );
                           })}
                         </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </Card>
-              </div>
-            );
-          })}
+                      );
+                    })
+                  ]);
+                })}
+              </tbody>
+            </table>
+          </Card>
         </div>
       )}
 
