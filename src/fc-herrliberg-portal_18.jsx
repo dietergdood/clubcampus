@@ -6531,114 +6531,120 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       {/* ── TAB: GRUPPEN & FUNKTIONEN ── */}
       {!loading&&tab==="gruppen"&&(
         <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:20}}>
             <InfoBox text="Gruppen bündeln Module für Funktionäre. Funktionen schränken innerhalb einer Gruppe ein (Teams, Filter)." color={BL}/>
+            <button onClick={()=>{setEditGruppe(null);setGruppeForm({name:"",beschreibung:"",module:[],farbe:"#8B5CF6"});setShowGruppeForm(true);}}
+              style={{padding:"7px 16px",borderRadius:9,border:"none",background:BK,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0}}>
+              + Neue Gruppe
+            </button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"280px 1fr",gap:16,alignItems:"start"}}>
-            {/* Gruppen-Liste */}
-            <div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div style={{fontSize:12,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Gruppen</div>
-                <button onClick={()=>{setEditGruppe(null);setGruppeForm({name:"",beschreibung:"",module:[],farbe:"#8B5CF6"});setShowGruppeForm(true);}}
-                  style={{padding:"4px 10px",borderRadius:7,border:"none",background:BK,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
-                  + Gruppe
-                </button>
-              </div>
-              {(gruppen.length>0?gruppen:[
-                {id:1,name:"Vereinsleben & Events",farbe:"#8B5CF6",module:["events","helpers","members","news","docs"]},
-                {id:2,name:"Betrieb & Infrastruktur",farbe:"#3B82F6",module:["material","buses","lockers","docs"]},
-                {id:3,name:"Kommunikation & Medien",farbe:"#22C55E",module:["media","wiki","news","docs"]},
-                {id:4,name:"Stufenleitende",farbe:"#F97316",module:["team","training","events","attendance_central","members","helpers"]},
-                {id:5,name:"Schiedsrichterwesen",farbe:"#06B6D4",module:["schedule","training","docs"]},
-              ]).map(g=>(
-                <div key={g.id}
-                  style={{
-                    padding:"10px 13px",borderRadius:10,marginBottom:6,
-                    border:`1.5px solid ${selectedGruppe?.id===g.id?g.farbe:"var(--border)"}`,
-                    background:selectedGruppe?.id===g.id?g.farbe+"10":"var(--surface)"
-                  }}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                    <div onClick={()=>setSelectedGruppe(selectedGruppe?.id===g.id?null:g)}
-                      style={{display:"flex",alignItems:"center",gap:8,flex:1,cursor:"pointer",minWidth:0}}>
-                      <div style={{width:10,height:10,borderRadius:"50%",background:g.farbe,flexShrink:0}}/>
-                      <span style={{fontWeight:600,fontSize:13,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+
+          {/* Gruppen als Cards + expandierbare Funktionen */}
+          {(gruppen.length>0?gruppen:[
+            {id:1,name:"Vereinsleben & Events",farbe:"#8B5CF6",beschreibung:"Anlässe, Helfereinsätze, Mitgliederliste",module:["events","helpers","members","news","docs"]},
+            {id:2,name:"Betrieb & Infrastruktur",farbe:"#3B82F6",beschreibung:"Material, Busse, Garderoben",module:["material","buses","lockers","docs"]},
+            {id:3,name:"Kommunikation & Medien",farbe:"#22C55E",beschreibung:"Website, Social Media, Wiki, News",module:["media","wiki","news","docs"]},
+            {id:4,name:"Stufenleitende",farbe:"#F97316",beschreibung:"Teams und Kader der zugewiesenen Stufe",module:["team","training","events","attendance_central","members","helpers"]},
+            {id:5,name:"Schiedsrichterwesen",farbe:"#06B6D4",beschreibung:"Spielplan, Koordination",module:["schedule","training","docs"]},
+          ]).map(g=>{
+            const gFunktionen=funktionen.filter(f=>f.gruppe_id===g.id||f.portal_gruppen?.id===g.id);
+            const isOpen=selectedGruppe?.id===g.id;
+            const moduleLabels=(g.module||[]).map(k=>ALLE_MODULE.find(m=>m.key===k)?.label||k);
+            return(
+              <div key={g.id} style={{
+                borderRadius:14,border:`1.5px solid ${isOpen?g.farbe:"var(--border)"}`,
+                marginBottom:10,overflow:"hidden",
+                background:isOpen?g.farbe+"08":"var(--surface)",
+                transition:"all 0.15s"
+              }}>
+                {/* Gruppen-Header */}
+                <div style={{display:"flex",alignItems:"center",gap:0}}>
+                  {/* Farbstreifen */}
+                  <div style={{width:4,alignSelf:"stretch",background:g.farbe,flexShrink:0}}/>
+                  <div onClick={()=>setSelectedGruppe(isOpen?null:g)}
+                    style={{flex:1,padding:"14px 16px",cursor:"pointer",minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                      <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{g.name}</span>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:g.farbe+"20",color:g.farbe,fontWeight:600}}>
+                        {gFunktionen.length} Funktion{gFunktionen.length!==1?"en":""}
+                      </span>
                     </div>
-                    <button onClick={e=>{e.stopPropagation();setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6"});setShowGruppeForm(true);}}
-                      style={{width:26,height:26,borderRadius:7,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)",flexShrink:0}}>
-                      <TI n="edit" size={12}/>
-                    </button>
+                    {g.beschreibung&&<div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{g.beschreibung}</div>}
+                    <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                      {moduleLabels.map(ml=>(
+                        <span key={ml} style={{fontSize:11,padding:"2px 9px",borderRadius:8,background:g.farbe+"15",color:g.farbe}}>{ml}</span>
+                      ))}
+                    </div>
                   </div>
-                  <div onClick={()=>setSelectedGruppe(selectedGruppe?.id===g.id?null:g)}
-                    style={{display:"flex",flexWrap:"wrap",gap:4,cursor:"pointer"}}>
-                    {(g.module||[]).slice(0,4).map(m=>(
-                      <span key={m} style={{fontSize:10,padding:"1px 7px",borderRadius:8,background:g.farbe+"15",color:g.farbe}}>{m}</span>
-                    ))}
-                    {(g.module||[]).length>4&&<span style={{fontSize:10,color:"var(--sub)"}}>+{(g.module||[]).length-4}</span>}
+                  {/* Aktionen */}
+                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 14px",flexShrink:0}}>
+                    <button onClick={e=>{e.stopPropagation();setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6"});setShowGruppeForm(true);}}
+                      style={{width:30,height:30,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
+                      <TI n="edit" size={13}/>
+                    </button>
+                    <div onClick={()=>setSelectedGruppe(isOpen?null:g)} style={{cursor:"pointer",color:"var(--sub)",padding:4}}>
+                      <TI n={isOpen?"chevron-up":"chevron-down"} size={16}/>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Funktionen für gewählte Gruppe */}
-            <div>
-              {selectedGruppe?(
-                <div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div>
-                      <div style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>{selectedGruppe.name}</div>
-                      <div style={{fontSize:12,color:"var(--sub)",marginTop:2}}>
-                        Module: {(selectedGruppe.module||[]).join(", ")}
+                {/* Expandierte Funktionen */}
+                {isOpen&&(
+                  <div style={{borderTop:`1px solid ${g.farbe}30`,background:"var(--surface2)"}}>
+                    {/* Funktionen-Header */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px 6px"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.6}}>
+                        Funktionen
                       </div>
+                      <button onClick={()=>{setEditFunktion(null);setFunktionForm({name:"",beschreibung:"",gruppe_id:g.id,module_override:[],teams:[],filter:{}});setShowFunktionForm(true);}}
+                        style={{padding:"4px 12px",borderRadius:7,border:`1px solid ${g.farbe}`,background:g.farbe+"15",color:g.farbe,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                        + Funktion hinzufügen
+                      </button>
                     </div>
-                    <button onClick={()=>{setEditFunktion(null);setFunktionForm({name:"",beschreibung:"",gruppe_id:selectedGruppe.id,module_override:[],teams:[],filter:{}});setShowFunktionForm(true);}}
-                      style={{padding:"6px 14px",borderRadius:8,border:"none",background:selectedGruppe.farbe,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
-                      + Funktion
-                    </button>
-                  </div>
-                  {funktionen.filter(f=>f.gruppe_id===selectedGruppe.id||f.portal_gruppen?.id===selectedGruppe.id).length===0&&(
-                    <div style={{padding:"24px",textAlign:"center",color:"var(--sub)",fontSize:13,border:"1px dashed var(--border)",borderRadius:10}}>
-                      Noch keine Funktionen in dieser Gruppe.<br/>
-                      <span style={{fontSize:12}}>Klicke «+ Funktion» um eine zu erstellen.</span>
-                    </div>
-                  )}
-                  {funktionen.filter(f=>f.gruppe_id===selectedGruppe.id||f.portal_gruppen?.id===selectedGruppe.id).map(f=>(
-                    <div key={f.id} className="fch-card" style={{borderRadius:10,border:"0.5px solid",padding:"12px 14px",marginBottom:8}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                        <div style={{flex:1}}>
-                          <div style={{fontWeight:600,fontSize:13,color:"var(--text)",marginBottom:3}}>{f.name}</div>
-                          {f.beschreibung&&<div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{f.beschreibung}</div>}
-                          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                            {f.module_override?.length>0&&f.module_override.map(m=>(
-                              <span key={m} style={{fontSize:10,padding:"1px 7px",borderRadius:8,background:"#3B82F615",color:"#3B82F6"}}>↳ {m}</span>
-                            ))}
-                            {f.teams?.length>0&&f.teams.slice(0,3).map(t=>(
-                              <span key={t} style={{fontSize:10,padding:"1px 7px",borderRadius:8,background:"#F9731615",color:"#F97316"}}>{t}</span>
-                            ))}
-                            {f.teams?.length>3&&<span style={{fontSize:10,color:"var(--sub)"}}>+{f.teams.length-3} Teams</span>}
-                            {Object.keys(f.filter||{}).length>0&&(
-                              <span style={{fontSize:10,padding:"1px 7px",borderRadius:8,background:"#8B5CF615",color:"#8B5CF6"}}>
-                                Filter: {JSON.stringify(f.filter)}
+
+                    {/* Funktionen-Grid */}
+                    <div style={{padding:"6px 12px 14px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:8}}>
+                      {gFunktionen.length===0&&(
+                        <div style={{gridColumn:"1/-1",padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13,border:"1px dashed var(--border)",borderRadius:10}}>
+                          Noch keine Funktionen — klicke «+ Funktion hinzufügen»
+                        </div>
+                      )}
+                      {gFunktionen.map(f=>(
+                        <div key={f.id} style={{
+                          background:"var(--surface)",borderRadius:10,
+                          border:"1px solid var(--border)",padding:"11px 13px"
+                        }}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+                            <span style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{f.name}</span>
+                            <button onClick={()=>{setEditFunktion(f);setFunktionForm({name:f.name,beschreibung:f.beschreibung||"",gruppe_id:f.gruppe_id||g.id,module_override:f.module_override||[],teams:f.teams||[],filter:f.filter||{}});setShowFunktionForm(true);}}
+                              style={{width:26,height:26,borderRadius:7,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)",flexShrink:0}}>
+                              <TI n="edit" size={12}/>
+                            </button>
+                          </div>
+                          {f.beschreibung&&<div style={{fontSize:11,color:"var(--sub)",marginBottom:6}}>{f.beschreibung}</div>}
+                          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                            {f.module_override?.length>0
+                              ?f.module_override.map(m=>{const ml=ALLE_MODULE.find(x=>x.key===m);return(
+                                <span key={m} style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"#3B82F615",color:"#3B82F6"}}>
+                                  <TI n="arrow-narrow-right" size={9}/> {ml?.label||m}
+                                </span>
+                              );})
+                              :<span style={{fontSize:10,color:"var(--sub)",fontStyle:"italic"}}>alle Gruppen-Module</span>
+                            }
+                            {f.teams?.length>0&&(
+                              <span style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"#F9731615",color:"#F97316"}}>
+                                {f.teams.length} Team{f.teams.length!==1?"s":""}
                               </span>
                             )}
                           </div>
                         </div>
-                        <div style={{display:"flex",gap:6}}>
-                          <button onClick={()=>{setEditFunktion(f);setFunktionForm({name:f.name,beschreibung:f.beschreibung||"",gruppe_id:f.gruppe_id||selectedGruppe.id,module_override:f.module_override||[],teams:f.teams||[],filter:f.filter||{}});setShowFunktionForm(true);}}
-                            style={{width:28,height:28,borderRadius:7,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
-                            <TI n="edit" size={13}/>
-                          </button>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ):(
-                <div style={{padding:"40px",textAlign:"center",color:"var(--sub)",fontSize:13,border:"1px dashed var(--border)",borderRadius:10}}>
-                  Wähle eine Gruppe um die Funktionen zu sehen.
-                </div>
-              )}
-            </div>
-          </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Gruppe bearbeiten Modal */}
           <ModalOrSheet open={showGruppeForm} onClose={()=>{setShowGruppeForm(false);setEditGruppe(null);}} maxWidth={500}>
