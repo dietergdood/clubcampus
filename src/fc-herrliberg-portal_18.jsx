@@ -6322,7 +6322,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR]=await Promise.all([
             supabase.from("api_verbindungen").select("*").order("sort_order"),
             supabase.from("api_sync_log").select("*,api_verbindungen(label)").order("gestartet_am",{ascending:false}).limit(50),
-            supabase.from("benutzer").select("id,name,email,role,aktiv, benutzer_funktionen(funktion_id, portal_funktionen(id,name,portal_gruppen(name,farbe)))").order("name"),
+            supabase.from("benutzer").select("id,name,email,role").order("name"),
             supabase.from("portal_gruppen").select("*").order("name"),
             supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe)").order("name"),
             supabase.from("module_config").select("*"),
@@ -6330,10 +6330,19 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           ]);
           if(apiR.data) setApiVerbindungen(apiR.data);
           if(audR.data) setAuditLogs(audR.data);
-          if(benuR.data) setBenutzerListe(benuR.data.map(b=>({
-            ...b,
-            funktionen:(b.benutzer_funktionen||[]).map(bf=>bf.portal_funktionen).filter(Boolean)
-          })));
+          if(benuR.data&&benuR.data.length>0){
+            /* Funktionen separat laden */
+            const{data:bfData}=await supabase.from("benutzer_funktionen")
+              .select("benutzer_id, portal_funktionen(id,name,portal_gruppen(name,farbe))");
+            const bfMap={};
+            (bfData||[]).forEach(bf=>{
+              if(!bfMap[bf.benutzer_id]) bfMap[bf.benutzer_id]=[];
+              if(bf.portal_funktionen) bfMap[bf.benutzer_id].push(bf.portal_funktionen);
+            });
+            setBenutzerListe(benuR.data.map(b=>({...b,funktionen:bfMap[b.id]||[]})));
+          } else if(benuR.error){
+            console.warn("[FCH] benutzer laden:", benuR.error.message);
+          }
           if(gruppenR.data) setGruppen(gruppenR.data);
           if(funktionenR.data) setFunktionen(funktionenR.data);
           /* module_config → moduleAktiv State */
@@ -10577,7 +10586,7 @@ export default function Portal({supabaseClient}){
     if(!sb){ setSession(null); return; }
     sb.auth.getSession().then(({data:{session}})=>{
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbFunktionen(session?.user?.id); loadDbGruppen(session?.user?.id); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbFunktionen(session?.user?.id); }
     });
     const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
