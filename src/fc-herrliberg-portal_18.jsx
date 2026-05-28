@@ -10602,7 +10602,7 @@ export default function Portal({supabaseClient}){
     if(!sb){ setSession(null); return; }
     sb.auth.getSession().then(({data:{session}})=>{
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbFunktionen(session?.user?.id); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbFunktionen(session?.user?.id); loadModuleConfig(); loadModuleConfig(); }
     });
     const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
@@ -10636,6 +10636,31 @@ export default function Portal({supabaseClient}){
         module_aktiv:(t.team_module||[]).filter(m=>m.aktiv).map(m=>m.modul)
       })));
     }catch(e){ console.warn("[FCH] loadDbTeams:", e.message); }
+  }
+
+  async function loadModuleConfig(){
+    if(!sb) return;
+    try{
+      const[mcR,mrR]=await Promise.all([
+        sb.from("module_config").select("modul,aktiv"),
+        sb.from("modul_rechte").select("modul,rolle,hat_zugriff,stufe"),
+      ]);
+      if(mcR.data&&mcR.data.length>0){
+        const ma={};
+        mcR.data.forEach(r=>{ma[r.modul]=r.aktiv!==false;});
+        setModuleAktiv(ma);
+        try{localStorage.setItem("fch-module-aktiv",JSON.stringify(ma));}catch{}
+      }
+      if(mrR.data&&mrR.data.length>0){
+        const mr={};
+        mrR.data.forEach(r=>{
+          if(!mr[r.rolle]) mr[r.rolle]=[];
+          if(r.hat_zugriff) mr[r.rolle].push(r.modul);
+        });
+        setModuleRechte(mr);
+        try{localStorage.setItem("fch-module-rechte",JSON.stringify(mr));}catch{}
+      }
+    }catch(e){ console.warn("[FCH] loadModuleConfig:", e.message); }
   }
 
   async function loadDbStufen(){
