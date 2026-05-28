@@ -1876,20 +1876,20 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
 
   const TABS_ALL=[
     {key:"overview",  label:"Übersicht",    short:"Übersicht", icon:"layout-dashboard"},
-    {key:"roster",    label:"Kader",        short:"Kader",     icon:"users",            modul:"roster"},
+    {key:"roster",    label:"Kader",        short:"Kader",     icon:"users",            modul:"roster",   teamOnly:true},
     {key:"attendance",label:"Termine",      short:"Termine",   icon:"calendar",         modul:"events"},
     {key:"training",  label:"Trainingsplan",short:"Training",  icon:"clock",            modul:"training"},
-    {key:"spielplan", label:"Spielplan & Tabelle",short:"Spiele",icon:"flag",           modul:"spielplan"},
-    {key:"polls",     label:"Abstimmungen", short:"Polls",     icon:"speakerphone",     modul:"polls"},
+    {key:"spielplan", label:"Spielplan & Tabelle",short:"Spiele",icon:"flag",           modul:"spielplan",teamOnly:true},
+    {key:"polls",     label:"Abstimmungen", short:"Polls",     icon:"speakerphone",     modul:"polls",    teamOnly:true},
     {key:"helpers",   label:"Helfereinsätze",short:"Helfer",   icon:"heart-handshake",  modul:"helpers"},
-    {key:"stats",     label:"Statistik",    short:"Stats",     icon:"chart-bar",        modul:"stats"},
+    {key:"stats",     label:"Statistik",    short:"Stats",     icon:"chart-bar",        modul:"stats",    teamOnly:true},
   ];
   const TABS_LIMITED=[
     {key:"overview",  label:"Übersicht",    short:"Übersicht", icon:"layout-dashboard"},
-    {key:"roster",    label:"Kader",        short:"Kader",     icon:"users",            modul:"roster"},
+    {key:"roster",    label:"Kader",        short:"Kader",     icon:"users",            modul:"roster",   teamOnly:true},
     {key:"attendance",label:"Termine",      short:"Termine",   icon:"calendar",         modul:"events"},
-    {key:"spielplan", label:"Spielplan & Tabelle",short:"Spiele",icon:"flag",           modul:"spielplan"},
-    {key:"polls",     label:"Abstimmungen", short:"Polls",     icon:"speakerphone",     modul:"polls"},
+    {key:"spielplan", label:"Spielplan & Tabelle",short:"Spiele",icon:"flag",           modul:"spielplan",teamOnly:true},
+    {key:"polls",     label:"Abstimmungen", short:"Polls",     icon:"speakerphone",     modul:"polls",    teamOnly:true},
     {key:"helpers",   label:"Helfereinsätze",short:"Helfer",   icon:"heart-handshake",  modul:"helpers"},
   ];
 
@@ -1897,11 +1897,15 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   const activeTeamObj=dbTeams.find(t=>t.name===activeTeam)||null;
   const teamModuleAktiv=activeTeamObj?.module_aktiv||null; // null = alle aktiv
 
-  /* Tabs filtern: team_module (pro Team) UND modul_rechte (pro Rolle) */
-  const filterTabs=(tabList)=>tabList.filter(t=>
-    !t.modul ||
-    (moduleOk(t.modul) && (!teamModuleAktiv||teamModuleAktiv.includes(t.modul)))
-  );
+  /* Tabs filtern:
+     - teamOnly=true → nur team_module prüfen (nicht modul_rechte)
+     - teamOnly=false/undefined → portal-Modul: moduleOk + team_module */
+  const filterTabs=(tabList)=>tabList.filter(t=>{
+    if(!t.modul) return true;
+    const inTeamModule=!teamModuleAktiv||teamModuleAktiv.includes(t.modul);
+    if(t.teamOnly) return inTeamModule;
+    return moduleOk(t.modul)&&inTeamModule;
+  });
   const tabs=filterTabs(limited?TABS_LIMITED:TABS_ALL);
   const [tab,setTab]=useState(()=>{const t=NAV_TARGET.tab||"overview";NAV_TARGET.tab=null;return t;});
   const [attFilter,setAttFilter]=useState(()=>{const f=NAV_TARGET.filter||[];NAV_TARGET.filter=null;return f;});
