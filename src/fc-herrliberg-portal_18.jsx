@@ -5943,7 +5943,7 @@ function MembersView({role,dbMitglieder=[]}){
   );
 
   const sorted=[...filtered].sort((a,b)=>{
-    const av=String(a[sortCol]??""||""); const bv=String(b[sortCol]??""||"");
+    const av=String(a[sortCol]??""); const bv=String(b[sortCol]??"");
     return sortDir==="asc"?String(av||'').localeCompare(String(bv||'')):String(bv||'').localeCompare(String(av||''));
   });
 
@@ -9246,7 +9246,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   });
 
   const sorted=[...filtered].sort((a,b)=>{
-    const av=String(a[sortCol]??""||""); const bv=String(b[sortCol]??""||"");
+    const av=String(a[sortCol]??""); const bv=String(b[sortCol]??"");
     return sortDir==="asc"?String(av||"").localeCompare(String(bv||"")):String(bv||"").localeCompare(String(av||""));
   });
 
