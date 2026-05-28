@@ -1780,10 +1780,35 @@ function DashboardEltern({account,meineTeams,setActive}){
 /* ==========================================
    MEIN TEAM (rollenabhängig)
 ========================================== */
-function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[],isModuleVisible}){
+function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[]}){
   const isMobile=useIsMobile();
   /* Modul-Sichtbarkeit: Props oder Fallback alles sichtbar */
   const moduleOk=(modul)=>!isModuleVisible||isModuleVisible(modul)||!modul;
+
+  /* Mitglieder für ein Team: aus DB wenn vorhanden, sonst ROSTER Fallback */
+  const getMitgliederForTeam=(teamName)=>{
+    if(dbMitglieder.length>0){
+      return dbMitglieder
+        .filter(m=>(m.teams||[]).includes(teamName)&&m.aktiv!==false)
+        .map(m=>({
+          id:       m.id,
+          name:     `${m.vorname} ${m.nachname}`,
+          pos:      m.position||"-",
+          dob:      m.geburtsdatum||"",
+          nat:      m.nationalitaet||"CH",
+          pass:     m.spielerpass||"",
+          js:       m.js_nr||"",
+          teams:    m.teams||[],
+          role:     m.funktion||"",
+          email:    m.email||"",
+          telefon:  m.telefon||"",
+          eltern:   m.eltern||[],
+          fairgate: m.fairgate_id||"",
+          ahv:      m.ahv_nr||"",
+        }));
+    }
+    return ROSTER.filter(p=>(p.teams||[]).includes(teamName));
+  };
   const [responses,setResponses]=useState(ATT_INITIAL);
   useEffect(()=>{
     (async()=>{
@@ -1974,7 +1999,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
 
       <Tabs tabs={tabs} active={tab} setActive={setTab}/>
       {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial}/>}
-      {tab==="roster"&&<RosterTab role={role} team={activeTeam} initialSelected={rosterInitial}/>}
+      {tab==="roster"&&<RosterTab role={role} team={activeTeam} initialSelected={rosterInitial} teamRosterData={getMitgliederForTeam(activeTeam)}/>}
       {tab==="training"&&!limited&&<TrainingGantt team={activeTeam}/>}
       {tab==="spielplan"&&(
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
@@ -2364,14 +2389,16 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
 }
 
 /* -- Kaderliste mit Feldsichtbarkeit -- */
-function RosterTab({role,team,initialSelected=null}){
+function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
   const isMobile=useIsMobile();
   const vis=FIELD_VIS[role]||[];
   const [search,setSearch]=useState("");
-  const initPlayer=typeof initialSelected==="number"?ROSTER.find(p=>p.id===initialSelected)||null:initialSelected;
+  /* teamRosterData aus DB wenn vorhanden, sonst ROSTER Fallback */
+  const baseRoster=teamRosterData||(team?ROSTER.filter(p=>(p.teams||[]).includes(team)):ROSTER);
+  const initPlayer=typeof initialSelected==="number"?baseRoster.find(p=>p.id===initialSelected)||null:initialSelected;
   const [selected,setSelected]=useState(initPlayer);
-  const [positions,setPositions]=useState(()=>Object.fromEntries(ROSTER.map(p=>[p.id,p.pos])));
-  const [rueckennrn,setRueckennrn]=useState(()=>Object.fromEntries(ROSTER.map(p=>[p.id,p.rueckennr||""])));
+  const [positions,setPositions]=useState(()=>Object.fromEntries(baseRoster.map(p=>[p.id,p.pos])));
+  const [rueckennrn,setRueckennrn]=useState(()=>Object.fromEntries(baseRoster.map(p=>[p.id,p.rueckennr||""])));
   const [editingPos,setEditingPos]=useState(null);
   const [editingNr,setEditingNr]=useState(null);
 
@@ -2403,8 +2430,8 @@ function RosterTab({role,team,initialSelected=null}){
     {label:"Mittelfeld",  options:["MF","DM","ZM","LM","RM"]},
     {label:"Sturm",       options:["ST"]},
   ];
-  /* Filter by team if provided, then by search */
-  const teamRoster=team ? ROSTER.filter(p=>(p.teams||[]).includes(team)) : ROSTER;
+  /* Filter by search */
+  const teamRoster=baseRoster;
   const filtered=teamRoster.filter(p=>p.name.toLowerCase().includes(search.toLowerCase()));
 
   /* Sorting */
@@ -10759,7 +10786,7 @@ export default function Portal({supabaseClient}){
     if(!isModuleVisible(active)) return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
-      case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible}/>;
+      case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder}/>;
       case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder}/>;
       case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
