@@ -1791,20 +1791,26 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       return dbMitglieder
         .filter(m=>(m.teams||[]).includes(teamName)&&m.aktiv!==false)
         .map(m=>({
-          id:       m.id,
-          name:     `${m.vorname} ${m.nachname}`,
-          pos:      m.position||"-",
-          dob:      m.geburtsdatum||"",
-          nat:      m.nationalitaet||"CH",
-          pass:     m.spielerpass||"",
-          js:       m.js_nr||"",
-          teams:    m.teams||[],
-          role:     m.funktion||"",
-          email:    m.email||"",
-          telefon:  m.telefon||"",
-          eltern:   m.eltern||[],
-          fairgate: m.fairgate_id||"",
-          ahv:      m.ahv_nr||"",
+          id:        m.id,
+          name:      `${m.vorname} ${m.nachname}`,
+          firstName: m.vorname||"",
+          lastName:  m.nachname||"",
+          pos:       m.position||"-",
+          rueckennr: "",
+          dob:       m.geburtsdatum||"",
+          nat:       m.nationalitaet||"CH",
+          pass:      m.spielerpass||"",
+          js:        m.js_nr||"",
+          teams:     m.teams||[],
+          role:      m.funktion||"",
+          email:     m.email||"",
+          tel:       m.telefon||"",
+          eltern:    m.eltern||[],
+          fairgate:  m.fairgate_id||"",
+          ahv:       m.ahv_nr||"",
+          street:    m.strasse||"",
+          plz:       m.plz||"",
+          city:      m.ort||"",
         }));
     }
     return ROSTER.filter(p=>(p.teams||[]).includes(teamName));
@@ -2450,12 +2456,13 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
   const f=[...filtered].sort((a,b)=>{
     let va,vb;
     if(sortKey==="name"){
-      va=a.lastName+a.firstName; vb=b.lastName+b.firstName;
-      return va.localeCompare(vb)*sortDir;
+      va=String((a.lastName||"")+(a.firstName||"")||a.name||"");
+      vb=String((b.lastName||"")+(b.firstName||"")||b.name||"");
+      return String(va||'').localeCompare(String(vb||''))*sortDir;
     }
     if(sortKey==="pos"){
       va=positions[a.id]||""; vb=positions[b.id]||"";
-      return va.localeCompare(vb)*sortDir;
+      return String(va||'').localeCompare(String(vb||''))*sortDir;
     }
     if(sortKey==="nr"){
       va=rueckennrn[a.id]?parseInt(rueckennrn[a.id]):9999;
@@ -2629,7 +2636,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                 const ib=ROLLE_ORDER.indexOf(b.role||"");
                 const ra=ia===-1?99:ia;
                 const rb=ib===-1?99:ib;
-                return ra!==rb?ra-rb:a.lastName.localeCompare(b.lastName);
+                return ra!==rb?ra-rb:String(a.lastName||'').localeCompare(String(b.lastName||''));
               });
               return[
                 trainer.length>0&&(
@@ -4450,7 +4457,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                     if(na!==null&&nb!==null) return na-nb;
                     if(na!==null) return -1;
                     if(nb!==null) return 1;
-                    return a.lastName.localeCompare(b.lastName);
+                    return String(a.lastName||'').localeCompare(String(b.lastName||''));
                   })
                   .map(p=>(
                     <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,background:"var(--surface2)",borderRadius:7,padding:"5px 10px"}}>
@@ -5937,7 +5944,7 @@ function MembersView({role,dbMitglieder=[]}){
 
   const sorted=[...filtered].sort((a,b)=>{
     const av=String(a[sortCol]??""||""); const bv=String(b[sortCol]??""||"");
-    return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
+    return sortDir==="asc"?String(av||'').localeCompare(String(bv||'')):String(bv||'').localeCompare(String(av||''));
   });
 
   /* Gruppierung */
@@ -9240,7 +9247,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
 
   const sorted=[...filtered].sort((a,b)=>{
     const av=String(a[sortCol]??""||""); const bv=String(b[sortCol]??""||"");
-    return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
+    return sortDir==="asc"?String(av||"").localeCompare(String(bv||"")):String(bv||"").localeCompare(String(av||""));
   });
 
   /* Gruppierung anwenden */
