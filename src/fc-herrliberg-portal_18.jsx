@@ -2447,6 +2447,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
   /* Sorting */
   const [sortKey,setSortKey]=useState("name");
   const [sortDir,setSortDir]=useState(1); /* 1=asc, -1=desc */
+  const [groupByFunktion,setGroupByFunktion]=useState(true);
 
   const handleSort=(key)=>{
     if(sortKey===key) setSortDir(d=>d*-1);
@@ -2472,6 +2473,24 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
     return 0;
   });
 
+  /* Gruppierung nach Funktion */
+  const FUNKTION_ORDER=["Trainer/in","Goalietrainer/in","Assistent/in","TW","V","IV","RV","LV","DM","ZM","MF","LM","RM","ST"];
+  const getFunktionLabel=(p)=>p.role||positions[p.id]||"-";
+  const grouped=groupByFunktion
+    ?Object.entries(f.reduce((acc,p)=>{
+        const key=getFunktionLabel(p)||"Spieler";
+        if(!acc[key]) acc[key]=[];
+        acc[key].push(p);
+        return acc;
+      },{}))
+      .sort(([a],[b])=>{
+        const ia=FUNKTION_ORDER.indexOf(a); const ib=FUNKTION_ORDER.indexOf(b);
+        if(ia>=0&&ib>=0) return ia-ib;
+        if(ia>=0) return -1; if(ib>=0) return 1;
+        return String(a||"").localeCompare(String(b||""));
+      })
+    :[{key:null,items:f}];
+
   const SortIcon=({col})=>{
     if(sortKey!==col) return <span style={{color:"var(--sub)",fontSize:13,marginLeft:3}}>{"↕"}</span>;
     return <span style={{color:R,fontSize:13,marginLeft:3}}>{sortDir===1?<TI n="upload"/>:"↓"}</span>;
@@ -2494,10 +2513,19 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
   return(
     <div>
       {selected&&<MitgliedDetail person={selected} role={role} onClose={()=>setSelected(null)} nr={rueckennrn[selected.id]} onUpdateNr={v=>saveNr({...rueckennrn,[selected.id]:v})}/>}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Spieler suchen…" style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,outline:"none",width:220}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Spieler suchen…" style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,outline:"none",width:200}}/>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <InfoBox text={`Sichtbar: ${cols.length} von ${COL_DEF.length} Feldern (Rolle: ${getRole(role).label})`} color={getRole(role).color}/>
+          <button onClick={()=>setGroupByFunktion(g=>!g)} style={{
+            display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,
+            border:`1px solid ${groupByFunktion?BK:"var(--border)"}`,
+            background:groupByFunktion?BK+"15":"transparent",
+            color:groupByFunktion?BK:"var(--sub)",fontSize:12,fontWeight:600,
+            cursor:"pointer",fontFamily:FONT
+          }}>
+            <TI n="layout-list" size={13}/>Gruppieren
+          </button>
+          <InfoBox text={`${f.length} Mitglieder`} color={BL}/>
         </div>
       </div>
       {isMobile?(
@@ -2638,24 +2666,35 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                 const rb=ib===-1?99:ib;
                 return ra!==rb?ra-rb:String(a.lastName||'').localeCompare(String(b.lastName||''));
               });
-              return[
-                trainer.length>0&&(
-                  <tr key="trainer-divider">
-                    <td colSpan={cols.length+1} style={{padding:"6px 13px",background:"var(--surface2)",borderTop:"0.5px solid var(--border)"}}>
-                      <span style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Trainer &amp; Staff</span>
-                    </td>
-                  </tr>
-                ),
-                ...trainerSorted.map((p,i)=>renderRow(p,i,"#fafaf8")),
-                spieler.length>0&&(
-                  <tr key="spieler-divider">
-                    <td colSpan={cols.length+1} style={{padding:"6px 13px",background:"var(--surface2)",borderTop:"0.5px solid var(--border)"}}>
-                      <span style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Spieler</span>
-                    </td>
-                  </tr>
-                ),
-                ...spieler.map((p,i)=>renderRow(p,i,i%2===0?"#fff":"#fafaf8")),
-              ];
+              return groupByFunktion
+                ? grouped.flatMap(({key,items})=>[
+                    key&&<tr key={`grp-${key}`}>
+                      <td colSpan={cols.length+1} style={{padding:"6px 13px",background:"var(--surface2)",borderTop:"0.5px solid var(--border)"}}>
+                        <span style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.6}}>
+                          {key} <span style={{fontWeight:400,opacity:0.6}}>({items.length})</span>
+                        </span>
+                      </td>
+                    </tr>,
+                    ...items.map((p,i)=>renderRow(p,i,i%2===0?"var(--surface)":"var(--surface2)")),
+                  ]).filter(Boolean)
+                : [
+                    trainer.length>0&&(
+                      <tr key="trainer-divider">
+                        <td colSpan={cols.length+1} style={{padding:"6px 13px",background:"var(--surface2)",borderTop:"0.5px solid var(--border)"}}>
+                          <span style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Trainer &amp; Staff</span>
+                        </td>
+                      </tr>
+                    ),
+                    ...trainerSorted.map((p,i)=>renderRow(p,i,"#fafaf8")),
+                    spieler.length>0&&(
+                      <tr key="spieler-divider">
+                        <td colSpan={cols.length+1} style={{padding:"6px 13px",background:"var(--surface2)",borderTop:"0.5px solid var(--border)"}}>
+                          <span style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Spieler</span>
+                        </td>
+                      </tr>
+                    ),
+                    ...spieler.map((p,i)=>renderRow(p,i,i%2===0?"#fff":"#fafaf8")),
+                  ];
             })()}
           </tbody>
         </table>
