@@ -1780,8 +1780,10 @@ function DashboardEltern({account,meineTeams,setActive}){
 /* ==========================================
    MEIN TEAM (rollenabhängig)
 ========================================== */
-function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[]}){
+function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[],isModuleVisible}){
   const isMobile=useIsMobile();
+  /* Modul-Sichtbarkeit: Props oder Fallback alles sichtbar */
+  const moduleOk=(modul)=>!isModuleVisible||isModuleVisible(modul)||!modul;
   const [responses,setResponses]=useState(ATT_INITIAL);
   useEffect(()=>{
     (async()=>{
@@ -1870,9 +1872,10 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   const activeTeamObj=dbTeams.find(t=>t.name===activeTeam)||null;
   const teamModuleAktiv=activeTeamObj?.module_aktiv||null; // null = alle aktiv
 
-  /* Tabs filtern: nur anzeigen wenn in team_module aktiv (oder keine Konfiguration) */
+  /* Tabs filtern: team_module (pro Team) UND modul_rechte (pro Rolle) */
   const filterTabs=(tabList)=>tabList.filter(t=>
-    !t.modul || !teamModuleAktiv || teamModuleAktiv.includes(t.modul)
+    !t.modul ||
+    (moduleOk(t.modul) && (!teamModuleAktiv||teamModuleAktiv.includes(t.modul)))
   );
   const tabs=filterTabs(limited?TABS_LIMITED:TABS_ALL);
   const [tab,setTab]=useState(()=>{const t=NAV_TARGET.tab||"overview";NAV_TARGET.tab=null;return t;});
@@ -10735,18 +10738,16 @@ export default function Portal({supabaseClient}){
     : spielerTeam.length>0 ? spielerTeam : ["Cc-Junioren"];
   const myRosterId = account.rosterId||(role==="spieler"?1:role==="eltern"?1:role==="trainer"?200:null);
   /* Dynamische Navigation (funktionaer/stufenleitung aus Gruppen) */
-  /* Effektive Modul-Rechte für aktuelle Rolle */
-  const effModuleForRole = moduleRechte?.[role] ?? (()=>{
-    // Fallback: NAV_BY_ROLE Keys für diese Rolle
-    const nav = getNavForRole(role, dbFunktionen);
-    return nav.map(n=>n.key);
-  })();
+  /* Modul-Sichtbarkeit prüfen: global + pro Rolle */
+  const isModuleVisible=(key)=>{
+    if(key==="dashboard") return true;
+    if(moduleAktiv[key]===false) return false; // global deaktiviert
+    if(moduleRechte&&moduleRechte[role]!==undefined&&!moduleRechte[role].includes(key)) return false; // für diese Rolle deaktiviert
+    return true;
+  };
 
   const effectiveNav = getNavForRole(role, dbFunktionen)
-    .filter(n=>
-      n.key==="dashboard" ||
-      (moduleAktiv[n.key]!==false && effModuleForRole.includes(n.key))
-    );
+    .filter(n=>isModuleVisible(n.key));
 
   const handleAccountChange=(key)=>{
     setAccountKey(key);
@@ -10755,14 +10756,10 @@ export default function Portal({supabaseClient}){
   };
 
   const getView=()=>{
-    /* Zugriffsprüfung: Modul global aktiv + Rolle hat Zugriff */
-    const isAllowed=(key)=>
-      key==="dashboard" ||
-      (moduleAktiv[key]!==false && effModuleForRole.includes(key));
-    if(!isAllowed(active)) return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
+    if(!isModuleVisible(active)) return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
-      case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams}/>;
+      case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible}/>;
       case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder}/>;
       case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
