@@ -8251,11 +8251,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
           {/* Speichern */}
           <div style={{display:"flex",gap:10,marginTop:16}}>
-            <button onClick={saveTheme} disabled={!themeDirty} style={{
+            <button onClick={saveTheme} style={{
               padding:"9px 24px",borderRadius:10,border:"none",
-              background:themeDirty?BK:"var(--surface2)",
-              color:themeDirty?"#fff":"var(--sub)",
-              fontSize:13,fontWeight:700,cursor:themeDirty?"pointer":"not-allowed",fontFamily:FONT
+              background:BTN,color:BTN_TXT,
+              fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT
             }}>Speichern & anwenden</button>
             <button onClick={()=>{setTheme(THEME_DEFAULT);setThemeDirty(true);}} style={{
               padding:"9px 16px",borderRadius:10,border:"1px solid var(--border)",
