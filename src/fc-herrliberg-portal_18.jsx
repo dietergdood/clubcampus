@@ -6591,8 +6591,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     portal:     [{label:"Benutzer, Module, Berechtigungen",wer:["administrator","administration"],min:"verwalten"}],
   };
 
-
-     Standard-Stufen pro Rolle (nur für Module mit Zugriff) */
+  /* Standard-Stufen pro Rolle (nur für Module mit Zugriff) */
   const ZUGRIFF_DEFAULT={
     administrator:  {_all:"verwalten"},
     vorstand:       {_all:"lesen"},
