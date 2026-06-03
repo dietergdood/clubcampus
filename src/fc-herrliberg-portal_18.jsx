@@ -175,9 +175,9 @@ function SplashScreen({onDone}){
   return(
     <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"fch-splash-out 0.4s 2.2s ease-out forwards"}}>
       <div style={{width:110,height:110,borderRadius:28,background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",animation:"fch-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both",boxShadow:"0 8px 40px rgba(248,222,9,0.35)"}}>
-        <img src="/logo_fch_mit_rand.svg" style={{width:88,height:88,objectFit:"contain",display:"block"}} alt="FC Herrliberg"/>
+        <img src="/logo_fch_mit_rand.svg"  style={{width:88,height:88,objectFit:"contain",display:"block"}} alt="Logo"/>
       </div>
-      <div style={{color:"#f0f0f0",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"fch-in 0.4s 0.45s ease-out both"}}>FC Herrliberg</div>
+      <div style={{color:"#f0f0f0",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"fch-in 0.4s 0.45s ease-out both"}}>{(()=>{try{const s=localStorage.getItem("cc-theme");return s?JSON.parse(s).vereinsname||"ClubCampus":"ClubCampus";}catch{return "ClubCampus";}})()}</div>
       <div style={{color:"#555",fontSize:12,marginTop:5,letterSpacing:2,textTransform:"uppercase",fontFamily:FONT,animation:"fch-in 0.4s 0.6s ease-out both"}}>ClubCampus</div>
       <div style={{display:"flex",gap:7,marginTop:40,animation:"fch-in 0.4s 0.75s ease-out both"}}>
         {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:ACCENT,animation:`fch-dot 1.2s ${i*0.18}s ease-in-out infinite`}}/>)}
@@ -302,6 +302,10 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
    Unabhängig von der Vereinsfunktion (FUNKTIONEN).
 ───────────────────────────────────────────────────────────── */
 /* ── ClubCampus Theme Default (global) ── */
+/* Vereinsname global lesbar (aus localStorage wenn kein appTheme prop) */
+function getVereinsnameStatic(){
+  try{const t=localStorage.getItem("cc-theme");return t?(JSON.parse(t).vereinsname||"ClubCampus"):"ClubCampus";}catch{return "ClubCampus";}
+}
 /* Hex → rgba() für Hover-Farben */
 function hexToRgba(hex,alpha){
   const h=(hex||"#F8DE09").replace("#","");
@@ -832,7 +836,7 @@ function getNr(id){return NR_CACHE.data[id]||"";}
 const TABLES={
   "Cc-Junioren":[
   {rank:1,team:"FC Küsnacht",   sp:12,s:9,u:2,n:1,tore:"34:12",diff:22, pts:29,me:false},
-  {rank:2,team:"FC Herrliberg", sp:12,s:8,u:2,n:2,tore:"28:14",diff:14, pts:26,me:true},
+  {rank:2,team:getVereinsnameStatic(), sp:12,s:8,u:2,n:2,tore:"28:14",diff:14, pts:26,me:true},
   {rank:3,team:"SC Männedorf",  sp:12,s:6,u:3,n:3,tore:"24:18",diff:6,  pts:21,me:false}
 ]};
 /* Fallback for routes without team context */
@@ -985,7 +989,7 @@ const LOCKERS=[
 const MEDIA=[
   {id:1,title:"Matchbericht - Sieg vs. FC Thalwil 2:1",cat:"Matchbericht",  team:"Cc-Junioren",date:"18.05.2026",area:["Webseite","Instagram"],status:"Eingereicht",  author:"Thomas Müller"},
   {id:2,title:"Fotos Trainingscamp",                    cat:"Foto",          team:"A-Junioren",date:"05.05.2026",area:["Webseite"],            status:"Freigegeben",  author:"Laura Imhof"},
-  {id:3,title:"Vereinsfest Erfolgsmeldung",             cat:"Vereinsanlass", team:"Verein",    date:"01.05.2026",area:["Webseite","Newsletter"],status:"Veröffentlicht",author:"FC Herrliberg"},
+  {id:3,title:"Vereinsfest Erfolgsmeldung",             cat:"Vereinsanlass", team:"Verein",    date:"01.05.2026",area:["Webseite","Newsletter"],status:"Veröffentlicht",author:getVereinsnameStatic()},
 ];
 
 const MEMBERS=[
@@ -1009,15 +1013,15 @@ const WIKI=[
 
 const NEWS=[
   {id:1,title:"Einladung Elternabend Cc-Junioren",date:"20.05.2026",author:"Thomas Müller",target:"Cc-Junioren",channel:"Portal-Nachricht",content:"Wir laden alle Eltern herzlich zum Elternabend am 10. Juni 2026 ein. Rückmeldung bis 05. Juni."},
-  {id:2,title:"Grümpelturnier - Helfer gesucht!", date:"18.05.2026",author:"FC Herrliberg", target:"Alle",      channel:"E-Mail + Portal", content:"Am 14./15. Juni findet unser Grümpelturnier statt. Bitte über das Helfermodul anmelden."},
+  {id:2,title:"Grümpelturnier - Helfer gesucht!", date:"18.05.2026",author:getVereinsnameStatic(), target:"Alle",      channel:"E-Mail + Portal", content:"Am 14./15. Juni findet unser Grümpelturnier statt. Bitte über das Helfermodul anmelden."},
   {id:3,title:"Neue Tenüs für Juniorenteams",    date:"15.05.2026",author:"Administration",target:"Junioren",  channel:"Portal-Nachricht",content:"Die neuen Tenüs sind eingetroffen. Abholen ab Dienstag, alte Tenüs mitbringen."},
 
   {id:5,title:"Vorbereitung Derby vs. FC Küsnacht",date:"02.05.2026",author:"Marco Weber",target:"1. Mannschaft Herren",channel:"Portal-Nachricht",content:"Dieses Wochenende empfangen wir den FC Küsnacht zum Saisonderby. Aufstellung und Treffpunkt wie gewohnt, bitte pünktlich erscheinen."},
   {id:6,title:"Saisonauftakt gelingt: 3:0 gegen FC Uster",date:"05.05.2026",author:"Marco Weber",target:"1. Mannschaft Herren",channel:"Portal-Nachricht",content:"Ein starker Start in die neue Saison! Mit einem überzeugenden 3:0 gegen FC Uster zeigten wir von Beginn weg gute Leistungen. Weiter so!"},
-  {id:7,title:"Neuer Trainer ab Sommer 2026",date:"10.05.2026",author:"FC Herrliberg",target:"Alle",channel:"Portal-Nachricht",content:"Wir freuen uns, bekannt zu geben, dass Marco Weber ab Sommer 2026 die 2. Mannschaft übernimmt. Herzlich willkommen!"},
+  {id:7,title:"Neuer Trainer ab Sommer 2026",date:"10.05.2026",author:getVereinsnameStatic(),target:"Alle",channel:"Portal-Nachricht",content:"Wir freuen uns, bekannt zu geben, dass Marco Weber ab Sommer 2026 die 2. Mannschaft übernimmt. Herzlich willkommen!"},
   {id:8,title:"Trainingsabend mit Videoanalyse",date:"14.05.2026",author:"Daniel Huber",target:"2. Mannschaft Herren",channel:"Portal-Nachricht",content:"Am kommenden Mittwoch analysieren wir die letzten beiden Spiele per Video. Bitte alle pünktlich um 18:45 in der Kabine."},
   {id:9,title:"Einladung Saisonabschlussessen",date:"16.05.2026",author:"Sabine Koch",target:"1. Mannschaft Frauen",channel:"Portal-Nachricht",content:"Das Saisonabschlussessen findet am 28. Juni im Vereinslokal statt. Bitte bis 15. Juni anmelden."},
-  {id:10,title:"Zwei Neuzugänge bei den Frauen",date:"08.05.2026",author:"FC Herrliberg",target:"Alle",channel:"Portal-Nachricht",content:"Wir heissen Lara Zimmermann und Mia Brunner herzlich willkommen im Team der 1. Mannschaft Frauen!"},
+  {id:10,title:"Zwei Neuzugänge bei den Frauen",date:"08.05.2026",author:getVereinsnameStatic(),target:"Alle",channel:"Portal-Nachricht",content:"Wir heissen Lara Zimmermann und Mia Brunner herzlich willkommen im Team der 1. Mannschaft Frauen!"},
   {id:11,title:"Talentförderung: Auswahl Kantonalverband",date:"19.05.2026",author:"Lukas Frei",target:"Ba-Junioren",channel:"Portal-Nachricht",content:"Herzliche Gratulation an Nico Moser und Tim Gerber, die in das Kantonalverbands-Sichtungstraining eingeladen wurden!"},
   {id:12,title:"Trainingslager Juni - Anmeldung offen",date:"12.05.2026",author:"Lukas Frei",target:"Ba-Junioren",channel:"Portal-Nachricht",content:"Das Trainingslager findet vom 20.-22. Juni statt. Anmeldung bis 01. Juni über das Portal. Kosten: CHF 80.-"},
   {id:13,title:"Sieg im Lokalderby gegen SC Männedorf",date:"11.05.2026",author:"Patrick Schmid",target:"Bb-Junioren",channel:"Portal-Nachricht",content:"Mit einem knappen aber verdienten 2:1 im Derby konnten wir drei wichtige Punkte holen. Grosses Lob ans gesamte Team!"},
@@ -1252,8 +1256,8 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
         </div>
         {!collapsed&&(
           <div style={{minWidth:0,overflow:"hidden"}}>
-            <div style={{color:"var(--nav-a)",fontWeight:800,fontSize:14,lineHeight:1.2,letterSpacing:-0.2,whiteSpace:"nowrap"}}>FC Herrliberg</div>
-            <div style={{color:"var(--nav-t)",fontSize:11,letterSpacing:0.6,marginTop:2,textTransform:"uppercase",fontWeight:500}}>ClubCampus</div>
+            <div style={{color:"var(--nav-a)",fontWeight:800,fontSize:14,lineHeight:1.2,letterSpacing:-0.2,whiteSpace:"nowrap"}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
+            <div style={{color:"var(--nav-t)",fontSize:11,letterSpacing:0.6,marginTop:2,textTransform:"uppercase",fontWeight:500}}>{appTheme?.portalname||"ClubCampus"}</div>
           </div>
         )}
       </div>
@@ -1340,7 +1344,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
             <div style={{width:30,height:30,borderRadius:8,background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <img src={appTheme?.logo||"/logo_fch_mit_rand.svg"} style={{width:26,height:26,objectFit:"contain",display:"block"}} alt="Logo"/>
             </div>
-            <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>FC Herrliberg</span>
+            <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>{appTheme?.vereinsname||getVereinsnameStatic()}</span>
           </div>
         ):(
           <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:0}}>
@@ -4789,7 +4793,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
             <div>
               <div style={{color:"rgba(0,0,0,0.45)",fontSize:13,fontWeight:600,letterSpacing:0.6,textTransform:"uppercase",marginBottom:4}}>{spiel.comp}</div>
-              <div style={{color:"#1a1a1a",fontWeight:900,fontSize:18,lineHeight:1.15}}>FC Herrliberg</div>
+              <div style={{color:BK,fontWeight:900,fontSize:18,lineHeight:1.15}}>{getVereinsnameStatic()}</div>
               <div style={{color:"rgba(0,0,0,0.55)",fontSize:13,marginTop:1}}>vs. {spiel.opponent}</div>
             </div>
             {played?(
@@ -4875,7 +4879,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
                 <div style={{padding:"10px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={{fontSize:13,color:"var(--sub)"}}>Heim / Gast</span>
-                  <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{spiel.home?"FC Herrliberg":"FC Herrliberg"} <span style={{color:"var(--sub)",fontWeight:400}}>vs.</span> {spiel.opponent}</span>
+                  <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{spiel.home?getVereinsnameStatic():getVereinsnameStatic()} <span style={{color:"var(--sub)",fontWeight:400}}>vs.</span> {spiel.opponent}</span>
                 </div>
                 <div style={{padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={{fontSize:13,color:"var(--sub)"}}>Status</span>
@@ -11365,7 +11369,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
             {/* Mitglied */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0"}}>
               <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Verein</span>
-              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>FC Herrliberg</span>
+              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{getVereinsnameStatic()}</span>
             </div>
 
             {/* Rollen-Badge */}
@@ -11648,8 +11652,8 @@ function LoginScreen({onLogin, sb}){
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{width:64,height:64,background:ACCENT,borderRadius:16,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:32,marginBottom:12}}><TI n="ball-football"/></div>
-          <div style={{fontWeight:800,fontSize:22,color:"var(--text)"}}>ClubCampus</div>
-          <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>FC Herrliberg</div>
+          <div style={{fontWeight:800,fontSize:22,color:"var(--text)"}}>{appTheme?.portalname||"ClubCampus"}</div>
+          <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{getVereinsnameStatic()}</div>
         </div>
 
         <div style={{background:"var(--surface)",borderRadius:16,padding:28,boxShadow:"var(--card-shadow)",border:"1px solid var(--border)"}}>
@@ -11845,7 +11849,7 @@ export default function Portal({supabaseClient}){
     setMeta("apple-mobile-web-app-capable","yes");
     setMeta("apple-mobile-web-app-status-bar-style","black-translucent");
     setMeta("mobile-web-app-capable","yes");
-    setMeta("apple-mobile-web-app-title","FC Herrliberg");
+    setMeta("apple-mobile-web-app-title",appTheme?.vereinsname||getVereinsnameStatic());
     /* manifest.json link – falls noch nicht vorhanden */
     if(!document.querySelector("link[rel=manifest]")){
       const lm=document.createElement("link");lm.rel="manifest";lm.href="/manifest.json";
