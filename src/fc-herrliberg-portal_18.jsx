@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 
 /* -- SUPABASE wird als Prop von App.jsx übergeben (kein Import hier) -- */
-let supabase = null; // wird via setSupabaseClient() gesetzt
 
 /* -- FARBEN -- */
 const R="#C8102E",RL="#FEF2F2",BK="#1A1A1A",GR="#F5F5F3",GB="#E0DED8",BL="#2563EB",GN="#059669",AM="#D97706";
@@ -322,8 +321,6 @@ const THEME_DEFAULT_STATIC={
   btnPrimary:"#FFBF00", btnPrimaryText:"#000000", btnHover:BTN_HOV,
   vereinsname:"Mein Verein", portalname:"ClubCampus", logo:null,
 };
-const THEME_SCHEMA_V=3;
-const THEME_COLOR_KEYS=["navBg","navText","navAccent","navHover","vereinsfarbe1","vereinsfarbe2","btnPrimary","btnPrimaryText","btnHover"];
 
 const ROLES = {
   administrator: {
@@ -6920,7 +6917,6 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   const [moduleDirty,setModuleDirty]=useState(false);
 
   /* ── Aussehen / Theme ── */
-  const THEME_DEFAULT=THEME_DEFAULT_STATIC;
   const theme=appTheme||THEME_DEFAULT_STATIC;
   const setTheme=(updater)=>{
     const newTheme=typeof updater==="function"?updater(theme):updater;
@@ -6960,22 +6956,19 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       r.setProperty("--btn-primary-text",td.btnPrimaryText||"#000000");
       r.setProperty("--btn-hover",    td.btnHover||"#E6AC00");
       /* React State + localStorage */
-      const themeToSave={...td,_v:THEME_SCHEMA_V};
+      const themeToSave={...td};
       setAppTheme(themeToSave);
       try{localStorage.setItem("cc-theme",JSON.stringify(themeToSave));}catch{}
       /* Supabase */
-      console.log("[saveTheme] supabase:", !!supabase, "themeToSave:", themeToSave);
       if(supabase){
         supabase.from("portal_einstellungen")
           .upsert({schluessel:"theme",wert:themeToSave},{onConflict:"schluessel"})
           .then(({error:e})=>{
-            console.log("[saveTheme] upsert result:", e);
             if(e) setSaveMsg("Fehler: "+e.message);
             else setSaveMsg("Theme gespeichert ✓");
             setTimeout(()=>setSaveMsg(""),2500);
           });
       } else {
-        console.log("[saveTheme] kein Supabase - lokal gespeichert");
         setSaveMsg("Lokal gespeichert");
         setTimeout(()=>setSaveMsg(""),2000);
       }
@@ -8205,7 +8198,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{item.hint}</div>
                 </div>
                 <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]}</code>
-                <button onClick={()=>updateTheme(item.key,THEME_DEFAULT[item.key])} title="Zurücksetzen"
+                <button onClick={()=>updateTheme(item.key,THEME_DEFAULT_STATIC[item.key])} title="Zurücksetzen"
                   style={{background:"none",border:"none",cursor:"pointer",color:"var(--sub)",padding:4}}>
                   <TI n="refresh" size={14}/>
                 </button>
@@ -8280,7 +8273,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               background:BTN,color:BTN_TXT,
               fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT
             }}>Speichern & anwenden</button>
-            <button onClick={()=>{setTheme(THEME_DEFAULT);setThemeDirty(true);}} style={{
+            <button onClick={()=>{setTheme(THEME_DEFAULT_STATIC);setThemeDirty(true);}} style={{
               padding:"9px 16px",borderRadius:10,border:"1px solid var(--border)",
               background:"transparent",color:"var(--sub)",fontSize:13,cursor:"pointer",fontFamily:FONT
             }}>Standard wiederherstellen</button>
@@ -11876,21 +11869,7 @@ export default function Portal({supabaseClient}){
   useEffect(()=>{
     try{
       const s=localStorage.getItem("cc-theme");
-      if(s){
-        const saved=JSON.parse(s);
-        const CURRENT_V=3;
-        if(!saved._v||saved._v<CURRENT_V){
-          const reset={...THEME_DEFAULT_STATIC,...saved,
-            navAccent:THEME_DEFAULT_STATIC.navAccent,
-            navText:THEME_DEFAULT_STATIC.navText,
-            navBg:THEME_DEFAULT_STATIC.navBg,
-            _v:CURRENT_V};
-          localStorage.setItem("cc-theme",JSON.stringify(reset));
-          applyThemeCss(reset);
-        } else {
-          applyThemeCss({...THEME_DEFAULT_STATIC,...saved});
-        }
-      }
+      if(s) applyThemeCss({...THEME_DEFAULT_STATIC,...JSON.parse(s)});
     }catch{}
     /* Tenant laden (unabhängig vom Login) */
     loadTenant();
@@ -11959,14 +11938,7 @@ export default function Portal({supabaseClient}){
       const{data,error}=await sb.from("portal_einstellungen").select("wert").eq("schluessel","theme").single();
       if(error||!data) return;
       const saved=data.wert||{};
-      let t;
-      if(!saved._v||saved._v<THEME_SCHEMA_V){
-        const colorDefaults=Object.fromEntries(THEME_COLOR_KEYS.map(k=>[k,THEME_DEFAULT_STATIC[k]]));
-        t={...THEME_DEFAULT_STATIC,...saved,...colorDefaults,_v:THEME_SCHEMA_V};
-        try{await sb.from("portal_einstellungen").upsert({schluessel:"theme",wert:t});}catch{}
-      } else {
-        t={...THEME_DEFAULT_STATIC,...saved};
-      }
+      const t={...THEME_DEFAULT_STATIC,...saved};
       setAppTheme(t);
       applyThemeCss(t);
       try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
