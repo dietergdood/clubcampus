@@ -6627,51 +6627,86 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   /* Modul-Aktionen für Detail-Ansicht */
   const MODUL_AKTIONEN={
     dashboard:  [{label:"Übersicht ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"}],
-    team:       [{label:"Team + Kader ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},{label:"Position / Nummer ändern",wer:["administrator","administration","trainer"],min:"schreiben"},{label:"Spieler hinzufügen / entfernen",wer:["administrator","administration"],min:"verwalten"},{label:"Team erstellen / bearbeiten",wer:["administrator","administration"],min:"verwalten"},{label:"Trainer zuweisen",wer:["administrator","administration"],min:"verwalten"}],
-    members:    [{label:"Name, Tel, E-Mail sehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},{label:"Basis-Felder bearbeiten",wer:["administrator","administration","trainer"],min:"schreiben"},{label:"AHV, Bankdaten sehen",wer:["administrator","administration"],min:"verwalten"},{label:"Neue Mitglieder, Export, löschen",wer:["administrator","administration"],min:"verwalten"}],
-    training:   [{label:"Trainings ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},{label:"Training absagen",wer:["administrator","administration","trainer"],min:"schreiben"},{label:"Training erstellen / bearbeiten",wer:["administrator","administration","trainer"],min:"verwalten"},{label:"Vorlagen verwalten",wer:["administrator","administration","trainer"],min:"verwalten"}],
-    schedule:   [{label:"Spielplan + Tabelle ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},{label:"Daten ändern",wer:[],min:"verwalten",note:"Nur via FVRZ-Sync"}],
-    attendance_central:[{label:"Eigene Statistik sehen",wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},{label:"Anwesenheiten eintragen / ändern",wer:["administrator","administration","trainer"],min:"schreiben"},{label:"Alle Teams auswerten, exportieren",wer:["administrator","administration"],min:"verwalten"}],
+    team:       [
+      {label:"Team + Kader ansehen",          wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Position / Nummer ändern",      wer:["administrator","administration","trainer"],min:"schreiben",   spez:"Trainer: nur eigene Spieler"},
+      {label:"Spieler hinzufügen / entfernen",wer:["administrator","administration"],         min:"verwalten"},
+      {label:"Team erstellen / bearbeiten",   wer:["administrator","administration"],         min:"verwalten"},
+      {label:"Trainer zuweisen",              wer:["administrator","administration"],         min:"verwalten"},
+    ],
+    members:    [
+      {label:"Name, Tel, E-Mail sehen",           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Basis-Felder bearbeiten",           wer:["administrator","administration","trainer"],min:"schreiben",spez:"Trainer: nur eigene Spieler"},
+      {label:"AHV, Bankdaten sehen",              wer:["administrator","administration"],         min:"verwalten"},
+      {label:"Neue Mitglieder, Export, löschen",  wer:["administrator","administration"],         min:"verwalten"},
+    ],
+    training:   [
+      {label:"Trainings ansehen",              wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Training absagen",               wer:["administrator","administration","trainer"],min:"schreiben",  spez:"Trainer: nur eigene Teams"},
+      {label:"Training erstellen / bearbeiten",wer:["administrator","administration","trainer"],min:"verwalten",  spez:"Trainer: nur eigene Teams"},
+      {label:"Vorlagen verwalten",             wer:["administrator","administration","trainer"],min:"verwalten",  spez:"Trainer: nur eigene Teams"},
+    ],
+    schedule:   [
+      {label:"Spielplan + Tabelle ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Daten ändern",               wer:[],                                              min:"verwalten",  note:"Nur via FVRZ-Sync"},
+    ],
+    attendance_central:[
+      {label:"Eigene Statistik sehen",           wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Anwesenheiten eintragen / ändern", wer:["administrator","administration","trainer"],min:"schreiben", spez:"Trainer: nur eigene Spieler"},
+      {label:"Alle Teams auswerten, exportieren",wer:["administrator","administration"],         min:"verwalten"},
+    ],
     events:     [
-      {label:"Termine ansehen",                          wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
-      {label:"An- / Abmelden",                          wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
-      {label:"Vereinsanlass erstellen / bearbeiten",     wer:["administrator","administration","funktionaer"],min:"verwalten"},
-      {label:"Vereinsanlass absagen / löschen",          wer:["administrator","administration","funktionaer"],min:"verwalten"},
-      {label:"Team-Event erstellen / bearbeiten",        wer:["administrator","trainer"],min:"verwalten"},
-      {label:"Team-Event absagen / löschen",             wer:["administrator","trainer"],min:"verwalten"},
-      {label:"Spiel-Termin bearbeiten (Treffpunkt etc.)",wer:["administrator","trainer"],min:"verwalten",note:"Auto-generiert via Spielplan"},
+      {label:"Termine ansehen",                           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"An- / Abmelden",                           wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
+      {label:"Vereinsanlass erstellen / bearbeiten",      wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Vereinsanlass absagen / löschen",           wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Team-Event erstellen / bearbeiten",         wer:["administrator","trainer"],        min:"verwalten", spez:"Trainer: nur eigene Teams"},
+      {label:"Team-Event absagen / löschen",              wer:["administrator","trainer"],        min:"verwalten", spez:"Trainer: nur eigene Teams"},
+      {label:"Spiel-Termin bearbeiten (Treffpunkt etc.)", wer:["administrator","trainer"],        min:"verwalten", spez:"Trainer: nur eigene Teams", note:"Auto-generiert via Spielplan"},
     ],
     helpers:    [
-      {label:"Einsätze ansehen",                         wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
-      {label:"An- / Abmelden",                          wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
-      {label:"Vereinseinsatz erstellen / verwalten",     wer:["administrator","administration","funktionaer"],min:"verwalten"},
-      {label:"Team-Einsatz erstellen / verwalten",       wer:["administrator","trainer"],min:"verwalten"},
-      {label:"Zuteilungen verwalten",                    wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Einsätze ansehen",                  wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"An- / Abmelden",                   wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
+      {label:"Vereinseinsatz erstellen / verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Team-Einsatz erstellen / verwalten", wer:["administrator","trainer"],               min:"verwalten", spez:"Trainer: nur eigene Teams"},
+      {label:"Zuteilungen verwalten",              wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
-    buses:      [{label:"Fahrten + Belegung ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},{label:"Platz reservieren / abmelden",wer:["administrator","administration","trainer","spieler"],min:"schreiben"},{label:"Fahrten erstellen / verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"}],
-    material:   [{label:"Inventar ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},{label:"Ausleihe beantragen",wer:["administrator","administration","trainer"],min:"schreiben"},{label:"Ausleihen genehmigen",wer:["administrator","administration","funktionaer"],min:"verwalten"},{label:"Inventar + Bestände verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"}],
-    lockers:    [{label:"Eigene Zuteilung ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},{label:"Zuteilungen verwalten",wer:["administrator","administration"],min:"verwalten"}],
+    buses:      [
+      {label:"Fahrten + Belegung ansehen",   wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Platz reservieren / abmelden", wer:["administrator","administration","trainer","spieler"],min:"schreiben"},
+      {label:"Fahrten erstellen / verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
+    ],
+    material:   [
+      {label:"Inventar ansehen",              wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},
+      {label:"Ausleihe beantragen",           wer:["administrator","administration","trainer"], min:"schreiben"},
+      {label:"Ausleihen genehmigen",          wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Inventar + Bestände verwalten", wer:["administrator","administration","funktionaer"],min:"verwalten"},
+    ],
+    lockers:    [
+      {label:"Eigene Zuteilung ansehen", wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Zuteilungen verwalten",    wer:["administrator","administration"],min:"verwalten"},
+    ],
     news:       [
-      {label:"Artikel lesen",                            wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
-      {label:"Vereinsnews erstellen / bearbeiten",       wer:["administrator","administration","funktionaer"],min:"verwalten"},
-      {label:"Vereinsnews publizieren / löschen",        wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Artikel lesen",                    wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Vereinsnews erstellen / bearbeiten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Vereinsnews publizieren / löschen", wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     wiki:       [
-      {label:"Artikel lesen",                            wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
-      {label:"Artikel bearbeiten",                       wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
-      {label:"Artikel erstellen, löschen, Kategorien",  wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Artikel lesen",                      wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Artikel bearbeiten",                 wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
+      {label:"Artikel erstellen, löschen, Kategorien",wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     docs:       [
-      {label:"Herunterladen",                            wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
-      {label:"Hochladen, löschen",                       wer:["administrator","administration","funktionaer"],min:"verwalten"},
-      {label:"Ordner / Kategorien verwalten",            wer:["administrator","administration"],min:"verwalten"},
+      {label:"Herunterladen",                  wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Hochladen, löschen",             wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Ordner / Kategorien verwalten",  wer:["administrator","administration"],             min:"verwalten"},
     ],
     media:      [
-      {label:"Anschauen",                                wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},
-      {label:"Fotos hochladen",                          wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
-      {label:"Team-Matchbericht schreiben",              wer:["administrator","trainer"],min:"schreiben"},
-      {label:"Vereinsbericht schreiben",                 wer:["administrator","administration","funktionaer"],min:"schreiben"},
-      {label:"Publizieren, Alben verwalten",             wer:["administrator","administration","funktionaer"],min:"verwalten"},
+      {label:"Anschauen",                           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},
+      {label:"Fotos hochladen",                     wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
+      {label:"Team-Matchbericht schreiben",         wer:["administrator","trainer"],               min:"schreiben",  spez:"Trainer: nur eigene Teams"},
+      {label:"Vereinsbericht schreiben",            wer:["administrator","administration","funktionaer"],min:"schreiben"},
+      {label:"Publizieren, Alben verwalten",        wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     portal:     [{label:"Benutzer, Module, Berechtigungen",wer:["administrator","administration"],min:"verwalten"}],
   };
@@ -7084,9 +7119,13 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                     <span style={{minWidth:80,textAlign:"right"}}>Minimalstufe</span>
                                   </div>
                                   {(MODUL_AKTIONEN[m.key]||[]).map((a,ai)=>(
-                                    <div key={ai} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
-                                      <span style={{flex:1,fontSize:12,color:"var(--text)"}}>{a.label}{a.note&&<span style={{fontSize:10,color:"var(--sub)",marginLeft:4}}>({a.note})</span>}</span>
-                                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:5,background:ZUGRIFF_COLORS[a.min]+"20",color:ZUGRIFF_COLORS[a.min],fontWeight:600}}>{ZUGRIFF_LABELS[a.min]}</span>
+                                    <div key={ai} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"6px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
+                                      <div style={{flex:1}}>
+                                        <span style={{fontSize:12,color:"var(--text)"}}>{a.label}</span>
+                                        {a.spez&&<div style={{fontSize:10,color:"var(--sub)",marginTop:2,fontStyle:"italic"}}>{a.spez}</div>}
+                                        {a.note&&<div style={{fontSize:10,color:"var(--sub)",marginTop:2}}>ℹ {a.note}</div>}
+                                      </div>
+                                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:5,background:ZUGRIFF_COLORS[a.min]+"20",color:ZUGRIFF_COLORS[a.min],fontWeight:600,flexShrink:0}}>{ZUGRIFF_LABELS[a.min]}</span>
                                     </div>
                                   ))}
                                   {!MODUL_AKTIONEN[m.key]&&<span style={{fontSize:12,color:"var(--sub)"}}>Keine Detail-Aktionen definiert.</span>}
