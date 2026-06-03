@@ -283,6 +283,14 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
    Steuern Navigation + Sichtbarkeit im Portal.
    Unabhängig von der Vereinsfunktion (FUNKTIONEN).
 ───────────────────────────────────────────────────────────── */
+/* ── ClubCampus Theme Default (global) ── */
+const THEME_DEFAULT_STATIC={
+  vereinsfarbe1:"#F8DE09", vereinsfarbe2:"#1A1A1A",
+  navBg:"#1A1A1A", navText:"#FFFFFF", navAccent:"#F8DE09", navHover:"#2A2A2A",
+  btnPrimary:"#1A1A1A", btnPrimaryText:"#FFFFFF", btnHover:"#333333",
+  vereinsname:"FC Herrliberg", portalname:"ClubCampus", logo:null,
+};
+
 const ROLES = {
   administrator: {
     label:"Administrator", color:"#1A1A1A", bg:"#F5F5F5", icon:"settings",
@@ -6906,18 +6914,44 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     setThemeDirty(true);
   }
   function saveTheme(){
-    try{localStorage.setItem("cc-theme",JSON.stringify(theme));}catch{}
-    /* CSS-Variablen live anwenden */
+    const applyFn=applyThemeCss||((t)=>{
+      const r=document.documentElement.style;
+      r.setProperty("--cc-accent",   t.vereinsfarbe1||"#F8DE09");
+      r.setProperty("--cc-accent2",  t.vereinsfarbe2||"#1A1A1A");
+      r.setProperty("--cc-hover",    (t.vereinsfarbe1||"#F8DE09")+"30");
+      r.setProperty("--nav",         t.navBg||"#1A1A1A");
+      r.setProperty("--nav-t",       t.navText||"#FFFFFF");
+      r.setProperty("--nav-a",       t.navAccent||"#F8DE09");
+      r.setProperty("--nav-hover",   t.navHover||"#2A2A2A");
+      r.setProperty("--btn-primary", t.btnPrimary||"#1A1A1A");
+      r.setProperty("--btn-hover",   t.btnHover||"#333333");
+    });
+    /* CSS sofort anwenden */
     const r=document.documentElement.style;
-    r.setProperty("--cc-accent",  theme.vereinsfarbe1);
-    r.setProperty("--cc-accent2", theme.vereinsfarbe2);
-    r.setProperty("--cc-hover",   theme.vereinsfarbe1+"30");
-    r.setProperty("--nav-bg",     theme.navBg);
-    r.setProperty("--nav-t",      theme.navText);
-    r.setProperty("--nav-a",      theme.navAccent);
-    r.setProperty("--nav-hover",  theme.navHover||"#2A2A2A");
-    r.setProperty("--btn-primary",theme.btnPrimary);
-    r.setProperty("--btn-hover",  theme.btnHover||"#333333");
+    r.setProperty("--cc-accent",   theme.vereinsfarbe1);
+    r.setProperty("--cc-accent2",  theme.vereinsfarbe2);
+    r.setProperty("--cc-hover",    theme.vereinsfarbe1+"30");
+    r.setProperty("--nav",         theme.navBg);
+    r.setProperty("--nav-t",       theme.navText);
+    r.setProperty("--nav-a",       theme.navAccent);
+    r.setProperty("--nav-hover",   theme.navHover||"#2A2A2A");
+    r.setProperty("--btn-primary", theme.btnPrimary);
+    r.setProperty("--btn-hover",   theme.btnHover||"#333333");
+    /* localStorage */
+    try{localStorage.setItem("cc-theme",JSON.stringify(theme));}catch{}
+    /* Supabase */
+    if(supabase){
+      supabase.from("portal_einstellungen")
+        .upsert({schluessel:"theme",wert:theme},{onConflict:"schluessel"})
+        .then(({error})=>{
+          if(error) setSaveMsg("Fehler: "+error.message);
+          else setSaveMsg("Theme gespeichert");
+          setTimeout(()=>setSaveMsg(""),2000);
+        });
+    } else {
+      setSaveMsg("Lokal gespeichert");
+      setTimeout(()=>setSaveMsg(""),2000);
+    }
     setThemeDirty(false);
   }
   /* moduleAktiv + moduleRechte kommen als Props von App */
@@ -11778,7 +11812,7 @@ export default function Portal({supabaseClient}){
     if(!sb){ setSession(null); return; }
     sb.auth.getSession().then(({data:{session}})=>{
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbFunktionen(session?.user?.id); loadModuleConfig(); loadModuleConfig(); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbFunktionen(session?.user?.id); loadModuleConfig(); loadTheme(); }
     });
     const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
@@ -11812,6 +11846,32 @@ export default function Portal({supabaseClient}){
         module_aktiv:(t.team_module||[]).filter(m=>m.aktiv).map(m=>m.modul)
       })));
     }catch(e){ console.warn("[FCH] loadDbTeams:", e.message); }
+  }
+
+  /* ── Theme aus Supabase laden ── */
+  async function loadTheme(){
+    if(!sb) return;
+    try{
+      const{data,error}=await sb.from("portal_einstellungen").select("wert").eq("schluessel","theme").single();
+      if(error||!data) return;
+      const t={...THEME_DEFAULT_STATIC,...(data.wert||{})};
+      setTheme(t);
+      applyThemeCss(t);
+      try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
+    }catch(e){console.warn("[CC] loadTheme:",e.message);}
+  }
+
+  function applyThemeCss(t){
+    const r=document.documentElement.style;
+    r.setProperty("--cc-accent",   t.vereinsfarbe1||"#F8DE09");
+    r.setProperty("--cc-accent2",  t.vereinsfarbe2||"#1A1A1A");
+    r.setProperty("--cc-hover",    (t.vereinsfarbe1||"#F8DE09")+"30");
+    r.setProperty("--nav",         t.navBg||"#1A1A1A");
+    r.setProperty("--nav-t",       t.navText||"#FFFFFF");
+    r.setProperty("--nav-a",       t.navAccent||"#F8DE09");
+    r.setProperty("--nav-hover",   t.navHover||"#2A2A2A");
+    r.setProperty("--btn-primary", t.btnPrimary||"#1A1A1A");
+    r.setProperty("--btn-hover",   t.btnHover||"#333333");
   }
 
   async function loadModuleConfig(){
