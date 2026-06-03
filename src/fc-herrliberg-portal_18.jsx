@@ -1235,7 +1235,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
 /* ==========================================
    LAYOUT
 ========================================== */
-function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout}){
+function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appTheme}){
   const nav=NAV_BY_ROLE[role]||[];
   const rc=getRole(role).color;
   const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
@@ -1248,7 +1248,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout}){
       {/* Logo Header */}
       <div style={{padding:"18px 10px 15px",borderBottom:"1px solid var(--nav-b)",display:"flex",alignItems:"center",gap:collapsed?0:11,justifyContent:collapsed?"center":"flex-start",overflow:"hidden"}}>
         <div style={{width:44,height:44,minWidth:44,borderRadius:12,background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",boxShadow:"0 2px 8px rgba(248,222,9,0.3)"}}>
-          <img src="/logo_fch_mit_rand.svg" style={{width:42,height:42,objectFit:"contain",display:"block"}} alt="FCH"/>
+          <img src={appTheme?.logo||"/logo_fch_mit_rand.svg"} style={{width:42,height:42,objectFit:"contain",display:"block"}} alt="Logo"/>
         </div>
         {!collapsed&&(
           <div style={{minWidth:0,overflow:"hidden"}}>
@@ -1324,7 +1324,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout}){
   );
 }
 
-function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setActiveSubRole,onLogout,isMobile,onOpenProfile,onBack}){
+function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setActiveSubRole,onLogout,isMobile,onOpenProfile,onBack,appTheme}){
   const acc=account||USER_ACCOUNTS[role]||{name:getRole(role).label,rollen:[role],primaryRole:role,kinder:[]};
   const {dark,toggle}=useTheme();
   const initials=(acc.name||"U").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
@@ -1338,7 +1338,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
         isHome?(
           <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
             <div style={{width:30,height:30,borderRadius:8,background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <img src="/logo_fch_mit_rand.svg" style={{width:26,height:26,objectFit:"contain",display:"block"}} alt="FCH"/>
+              <img src={appTheme?.logo||"/logo_fch_mit_rand.svg"} style={{width:26,height:26,objectFit:"contain",display:"block"}} alt="Logo"/>
             </div>
             <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>FC Herrliberg</span>
           </div>
@@ -1358,7 +1358,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
       ):(
         <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
           <div style={{width:30,height:30,borderRadius:8,background:ACCENT,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <img src="/logo_fch_mit_rand.svg" style={{width:26,height:26,objectFit:"contain",display:"block"}} alt="FCH"/>
+            <img src={appTheme?.logo||"/logo_fch_mit_rand.svg"} style={{width:26,height:26,objectFit:"contain",display:"block"}} alt="Logo"/>
           </div>
           <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>FC Herrliberg</span>
         </div>
@@ -6943,14 +6943,26 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     r.setProperty("--btn-hover",    theme.btnHover||"#333333");
     /* localStorage */
     try{localStorage.setItem("cc-theme",JSON.stringify(theme));}catch{}
-    /* Supabase */
+    /* Supabase: in vereine.theme speichern (Tenant-Architektur) */
     if(supabase){
-      supabase.from("portal_einstellungen")
-        .upsert({schluessel:"theme",wert:theme},{onConflict:"schluessel"})
-        .then(({error})=>{
-          if(error) setSaveMsg("Fehler: "+error.message);
-          else setSaveMsg("Theme gespeichert");
-          setTimeout(()=>setSaveMsg(""),2000);
+      const slug=window.location.hostname.split(".")[0]==="localhost"?"fch":window.location.hostname.split(".")[0];
+      supabase.from("vereine")
+        .update({theme})
+        .eq("slug",slug)
+        .then(({error:e1})=>{
+          if(e1){
+            /* Fallback: portal_einstellungen */
+            supabase.from("portal_einstellungen")
+              .upsert({schluessel:"theme",wert:theme},{onConflict:"schluessel"})
+              .then(({error:e2})=>{
+                if(e2) setSaveMsg("Fehler: "+e2.message);
+                else setSaveMsg("Theme gespeichert");
+                setTimeout(()=>setSaveMsg(""),2000);
+              });
+          } else {
+            setSaveMsg("Theme gespeichert");
+            setTimeout(()=>setSaveMsg(""),2000);
+          }
         });
     } else {
       setSaveMsg("Lokal gespeichert");
@@ -11782,6 +11794,35 @@ export default function Portal({supabaseClient}){
   const [appTheme,setAppTheme]=useState(()=>{
     try{const s=localStorage.getItem("cc-theme");return s?{...THEME_DEFAULT_STATIC,...JSON.parse(s)}:THEME_DEFAULT_STATIC;}catch{return THEME_DEFAULT_STATIC;}
   });
+
+  /* ── Tenant State ── */
+  const [tenant,setTenant]=useState(null); // {slug, name, theme}
+
+  /* Slug aus Hostname lesen: fch.clubcampus.app → "fch" */
+  function getSlug(){
+    try{
+      const h=window.location.hostname;
+      if(h==="localhost"||h==="127.0.0.1") return "fch"; // Dev-Fallback
+      const parts=h.split(".");
+      if(parts.length>=3) return parts[0]; // subdomain
+      return null;
+    }catch{return null;}
+  }
+
+  /* Tenant aus Supabase laden */
+  async function loadTenant(){
+    const slug=getSlug();
+    if(!slug||!sb) return;
+    try{
+      const{data,error}=await sb.from("vereine").select("*").eq("slug",slug).eq("aktiv",true).single();
+      if(error||!data) return;
+      setTenant(data);
+      const t={...THEME_DEFAULT_STATIC,...(data.theme||{})};
+      setAppTheme(t);
+      applyThemeCss(t);
+      try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
+    }catch(e){console.warn("[CC] loadTenant:",e.message);}
+  }
   /* ── Splash Screen ── */
   const [splash,setSplash]=useState(()=>{try{return !sessionStorage.getItem("fch-splash");}catch{return true;}});
   const doneSplash=()=>{try{sessionStorage.setItem("fch-splash","1");}catch{}setSplash(false);};
@@ -11821,6 +11862,8 @@ export default function Portal({supabaseClient}){
       const s=localStorage.getItem("cc-theme");
       if(s) applyThemeCss({...THEME_DEFAULT_STATIC,...JSON.parse(s)});
     }catch{}
+    /* Tenant laden (unabhängig vom Login) */
+    loadTenant();
   },[]);
 
   // Auth-Session beim Start prüfen
@@ -11843,7 +11886,7 @@ export default function Portal({supabaseClient}){
         .on("postgres_changes",{event:"UPDATE",schema:"public",table:"portal_einstellungen",filter:"schluessel=eq.theme"},
           payload=>{
             const t={...THEME_DEFAULT_STATIC,...(payload.new?.wert||{})};
-            setTheme(t);
+            setAppTheme(t);
             applyThemeCss(t);
             try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
           })
@@ -11886,7 +11929,7 @@ export default function Portal({supabaseClient}){
       const{data,error}=await sb.from("portal_einstellungen").select("wert").eq("schluessel","theme").single();
       if(error||!data) return;
       const t={...THEME_DEFAULT_STATIC,...(data.wert||{})};
-      setTheme(t);
+      setAppTheme(t);
       applyThemeCss(t);
       try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
     }catch(e){console.warn("[CC] loadTheme:",e.message);}
@@ -11894,15 +11937,19 @@ export default function Portal({supabaseClient}){
 
   function applyThemeCss(t){
     const r=document.documentElement.style;
-    r.setProperty("--cc-accent",   t.vereinsfarbe1||"#F8DE09");
-    r.setProperty("--cc-accent2",  t.vereinsfarbe2||"#1A1A1A");
-    r.setProperty("--cc-hover",    hexToRgba(t.vereinsfarbe1||"#F8DE09",0.19));
-    r.setProperty("--nav",         t.navBg||"#1A1A1A");
-    r.setProperty("--nav-t",       t.navText||"#FFFFFF");
-    r.setProperty("--nav-a",       t.navAccent||"#F8DE09");
-    r.setProperty("--nav-hover",   t.navHover||"#2A2A2A");
-    r.setProperty("--btn-primary", t.btnPrimary||"#1A1A1A");
-    r.setProperty("--btn-hover",   t.btnHover||"#333333");
+    r.setProperty("--cc-accent",    t.vereinsfarbe1||"#FFBF00");
+    r.setProperty("--cc-accent2",   t.vereinsfarbe2||"#000000");
+    r.setProperty("--cc-hover",     hexToRgba(t.vereinsfarbe1||"#FFBF00",0.19));
+    r.setProperty("--cc-accent-20", hexToRgba(t.vereinsfarbe1||"#FFBF00",0.12));
+    r.setProperty("--cc-accent-15", hexToRgba(t.vereinsfarbe1||"#FFBF00",0.09));
+    r.setProperty("--cc-accent-12", hexToRgba(t.vereinsfarbe1||"#FFBF00",0.07));
+    r.setProperty("--nav",          t.navBg||"#000000");
+    r.setProperty("--nav-t",        t.navText||"#FFFFFF");
+    r.setProperty("--nav-a",        t.navAccent||"#FFBF00");
+    r.setProperty("--nav-hover",    t.navHover||"#1A1A1A");
+    r.setProperty("--btn-primary",  t.btnPrimary||"#FFBF00");
+    r.setProperty("--btn-primary-text",t.btnPrimaryText||"#000000");
+    r.setProperty("--btn-hover",    t.btnHover||"#E6AC00");
   }
 
   async function loadModuleConfig(){
