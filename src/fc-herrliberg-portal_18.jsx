@@ -6905,7 +6905,6 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
           {/* ── ANSICHT: NACH MODUL ── */}
           {moduleViewMode==="modul"&&(()=>{
-            const [expandedModul,setExpandedModulState]=React.useState(null);
             return(
               <Card style={{padding:0,overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
@@ -6937,7 +6936,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           return([
                             <tr key={m.key} style={{borderTop:"0.5px solid var(--border)",opacity:isAktiv?1:0.35,background:isPflicht?"#FFFBEB":"transparent"}}>
                               <td style={{padding:"0",position:"sticky",left:0,background:isPflicht?"#FFFBEB":isExpanded?"var(--surface2)":"var(--surface)",zIndex:1}}>
-                                <div onClick={()=>setExpandedModulState(isExpanded?null:m.key)}
+                                <div onClick={()=>setExpandedModul(isExpanded?null:m.key)}
                                   style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",cursor:"pointer"}}>
                                   <div onClick={e=>{e.stopPropagation();if(!isPflicht)toggleModulGlobal(m.key);}}
                                     title={isPflicht?"Pflichtmodul":isAktiv?"Deaktivieren":"Aktivieren"}
@@ -7079,7 +7078,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             </div>
           )}
         </div>
-      )}}
+      )}
 
       {/* ── TAB: GRUPPEN & FUNKTIONEN ── */}
       {!loading&&tab==="gruppen"&&(
