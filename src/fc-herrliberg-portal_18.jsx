@@ -6890,7 +6890,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
   );
 }
 
-function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme}){
+function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme}){
   const [tab,setTab]=useState(initialTab);
   const [module,setModule]=useState([]);
   const [moduleConfig,setModuleConfig]=useState({});
@@ -6918,6 +6918,8 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
   /* ── Aussehen / Theme ── */
   const theme=appTheme||THEME_DEFAULT_STATIC;
+  const themeRef=useRef(theme);
+  themeRef.current=theme;
   const setTheme=(updater)=>{
     const newTheme=typeof updater==="function"?updater(theme):updater;
     setAppTheme(newTheme);
@@ -6925,23 +6927,18 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   const [themeDirty,setThemeDirty]=useState(false);
 
   function updateTheme(key,val){
-    setAppTheme(t=>({...t,[key]:val}));
-    /* CSS Vorschau sofort anwenden */
-    const r=document.documentElement.style;
-    if(key==="vereinsfarbe1"){r.setProperty("--cc-accent",val);}
-    else if(key==="navBg"){r.setProperty("--nav",val);}
-    else if(key==="navText"){r.setProperty("--nav-t",val);}
-    else if(key==="navAccent"){r.setProperty("--nav-a",val);}
-    else if(key==="btnPrimary"){r.setProperty("--btn-primary",val);}
-    else if(key==="btnHover"){r.setProperty("--btn-hover",val);}
-    else if(key==="navHover"){r.setProperty("--nav-hover",val);}
+    const updated={...themeRef.current,[key]:val};
+    themeRef.current=updated;
+    setAppTheme(updated);
+    /* CSS sofort anwenden via applyThemeCss */
+    if(applyTheme) applyTheme(updated);
     setThemeDirty(true);
   }
   function saveTheme(){
     try{
       /* CSS sofort anwenden */
       const r=document.documentElement.style;
-      const td={...THEME_DEFAULT_STATIC,...theme};
+      const td={...THEME_DEFAULT_STATIC,...themeRef.current};
       r.setProperty("--cc-accent",    td.vereinsfarbe1||"#FFBF00");
       r.setProperty("--cc-accent2",   td.vereinsfarbe2||"#000000");
       r.setProperty("--cc-hover",     hexToRgba(td.vereinsfarbe1||"#FFBF00",0.19));
@@ -6958,6 +6955,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       /* React State + localStorage */
       const themeToSave={...td};
       setAppTheme(themeToSave);
+      if(applyTheme) applyTheme(themeToSave);
       try{localStorage.setItem("cc-theme",JSON.stringify(themeToSave));}catch{}
       /* Supabase */
       if(supabase){
@@ -8273,7 +8271,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               background:BTN,color:BTN_TXT,
               fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT
             }}>Speichern & anwenden</button>
-            <button onClick={()=>{setTheme(THEME_DEFAULT_STATIC);setThemeDirty(true);}} style={{
+            <button onClick={()=>{setAppTheme(THEME_DEFAULT_STATIC);setThemeDirty(false);if(supabase){supabase.from("portal_einstellungen").upsert({schluessel:"theme",wert:THEME_DEFAULT_STATIC},{onConflict:"schluessel"}).then(({error:e})=>{setSaveMsg(e?"Fehler: "+e.message:"Standard gespeichert ✓");setTimeout(()=>setSaveMsg(""),2500);});}}} style={{
               padding:"9px 16px",borderRadius:10,border:"1px solid var(--border)",
               background:"transparent",color:"var(--sub)",fontSize:13,cursor:"pointer",fontFamily:FONT
             }}>Standard wiederherstellen</button>
@@ -12109,9 +12107,9 @@ export default function Portal({supabaseClient}){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
       case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder}/>;
       case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
-      case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme}/>;
-      case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme}/>;
-      case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme}/>;
+      case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss}/>;
+      case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss}/>;
+      case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss}/>;
       case "training":          return <TrainingGantt role={role} team={role==="trainer"?meineTeams?.[0]:undefined} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
       case "schedule":          return <ScheduleTab role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
