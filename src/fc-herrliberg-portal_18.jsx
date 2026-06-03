@@ -3109,7 +3109,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                         </td>
                       </tr>
                     ),
-                    ...spieler.map((p,i)=>renderRow(p,i,i%2===0?"#fff":"#fafaf8")),
+                    ...spieler.map((p,i)=>renderRow(p,i,i%2===0?"var(--surface)":"var(--surface2)")),
                   ];
             })()}
           </tbody>
@@ -5105,9 +5105,9 @@ function ScheduleTab({role,team,initialSelected}){
               <tr
                 key={g.id}
                 onClick={()=>setSelected(g)}
-                style={{borderTop:"0.5px solid var(--border)",background:g.result?"#fafaf8":"#fff",cursor:"pointer",transition:"background 0.1s",height:isMobile?52:40}}
+                style={{borderTop:"0.5px solid var(--border)",background:g.result?"var(--surface2)":"var(--surface)",cursor:"pointer",transition:"background 0.1s",height:isMobile?52:40}}
                 onMouseEnter={e=>e.currentTarget.style.background="var(--cc-hover)"}
-                onMouseLeave={e=>e.currentTarget.style.background=g.result?"#fafaf8":"#fff"}>
+                onMouseLeave={e=>e.currentTarget.style.background=g.result?"var(--surface2)":"var(--surface)"}>
                 <td style={{padding:"11px 13px",fontWeight:600,whiteSpace:"nowrap"}}>{g.date}</td>
                 {!isMobile&&<td style={{padding:"9px 13px"}}>{g.time+" Uhr"}</td>}
                 <td style={{padding:"9px 13px",fontWeight:600}}>{g.opponent}</td>
@@ -5142,7 +5142,7 @@ function TableTab({team}){
           </thead>
           <tbody>
             {rows.map((r,i)=>(
-              <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:r.me?ACCENT20:i%2===0?"#fff":"#fafaf8"}}>
+              <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:r.me?ACCENT20:i%2===0?"var(--surface)":"var(--surface2)"}}>
                 <td style={{padding:"9px 13px",fontWeight:700,color:"var(--sub)"}}>{r.rank}</td>
                 <td style={{padding:"9px 13px",fontWeight:r.me?700:400,color:r.me?BK:BK}}>
                   {r.team}
@@ -5738,7 +5738,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             return(
               <div key={ev.id}
                 onMouseEnter={e=>e.currentTarget.style.background=isCancelled?"#FFF5F5":"#FAFAF8"}
-                onMouseLeave={e=>e.currentTarget.style.background=isCancelled?"#FFF5F5":"#fff"}
+                onMouseLeave={e=>e.currentTarget.style.background=isCancelled?"#FFF5F5":"var(--surface)"}
                 style={{
                 background:isCancelled?"#FFF5F5":"#fff",
                 border:"0.5px solid var(--border)",
@@ -6132,7 +6132,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             <div key={ev.id}
               style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:14,overflow:"hidden",cursor:"pointer",display:"flex",flexDirection:"column",opacity:isCancelled?0.7:1}}
               onMouseEnter={e=>e.currentTarget.style.background="#FAFAF8"}
-              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              onMouseLeave={e=>e.currentTarget.style.background="var(--surface)"}>
 
               {needsRichCard?(
                 /* -- SPIEL / ANLASS: dunkler Header -- */
@@ -6671,7 +6671,7 @@ function FieldVisView(){
           </thead>
           <tbody>
             {fields.map((f,i)=>(
-              <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"#fff":"#fafaf8"}}>
+              <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
                 <td style={{padding:"9px 13px",fontWeight:600}}>{f.name}</td>
                 {["spieler","eltern","trainer","funktionaer","administration","administrator"].map((r,j)=>{
                   const v=f[r];const s=rc(v);
@@ -8114,7 +8114,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               </thead>
               <tbody>
                 {Object.entries(felderNachKey).map(([key,data],i)=>(
-                  <tr key={key} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"#fff":"#fafaf8"}}>
+                  <tr key={key} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
                     <td style={{padding:"9px 13px",fontWeight:600}}>{data.label}</td>
                     {ROLLEN.map(rolle=>{
                       const sichtbar=data.rollen[rolle]||false;
@@ -8342,7 +8342,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <tr><td colSpan={7} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13}}>Noch keine Sync-Logs vorhanden</td></tr>
                 )}
                 {auditLogs.map((log,i)=>(
-                  <tr key={log.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"#fff":"#fafaf8"}}>
+                  <tr key={log.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
                     <td style={{padding:"9px 13px",color:"var(--sub)",whiteSpace:"nowrap",fontSize:13}}>
                       {log.gestartet_am?new Date(log.gestartet_am).toLocaleString("de-CH",{dateStyle:"short",timeStyle:"short"}):"—"}
                     </td>
@@ -9728,7 +9728,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                     <tr key={m.id} onClick={()=>setExpandedMember(expandedMember===m.id?null:m.id)}
                       style={{borderTop:"0.5px solid var(--border)",background:expandedMember===m.id?"var(--cc-hover)":"#fff",cursor:"pointer"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--cc-hover)"}
-                      onMouseLeave={e=>e.currentTarget.style.background=expandedMember===m.id?"var(--cc-hover)":"#fff"}>
+                      onMouseLeave={e=>e.currentTarget.style.background=expandedMember===m.id?"var(--cc-hover)":"var(--surface)"}>
                       <td style={{padding:"9px 12px"}}>
                         <div style={{display:"flex",alignItems:"center",gap:7}}>
                           <Av name={m.name} size={22} bg={SC[m.status]?.c||"#6B7280"}/>
@@ -10940,7 +10940,7 @@ function AttendanceCentral(){
               {t:"A-Junioren",tot:68,tr:65,sp:85,n:15},
               {t:"Aktive 1",  tot:75,tr:72,sp:90,n:22},
             ].map((r,i)=>(
-              <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"#fff":"#fafaf8"}}>
+              <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
                 <td style={{padding:"9px 13px",fontWeight:600}}>{r.t}</td>
                 <td style={{padding:"9px 13px",textAlign:"center",fontWeight:700,color:r.tot>=75?GN:r.tot>=65?AM:R}}>{r.tot}%</td>
                 <td style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.tr}%</td>
