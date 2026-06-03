@@ -6880,7 +6880,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
   );
 }
 
-function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte}){
+function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase}){
   const [tab,setTab]=useState(initialTab);
   const [module,setModule]=useState([]);
   const [moduleConfig,setModuleConfig]=useState({});
@@ -6931,35 +6931,20 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     setThemeDirty(true);
   }
   function saveTheme(){
-    const applyFn=applyThemeCss||((t)=>{
-      const r=document.documentElement.style;
-      r.setProperty("--cc-accent",   t.vereinsfarbe1||"#F8DE09");
-      r.setProperty("--cc-accent2",  t.vereinsfarbe2||"#1A1A1A");
-      r.setProperty("--cc-hover",    hexToRgba(t.vereinsfarbe1||"#F8DE09",0.19));
-    r.setProperty("--cc-accent-20", hexToRgba(t.vereinsfarbe1||"#F8DE09",0.12));
-    r.setProperty("--cc-accent-15", hexToRgba(t.vereinsfarbe1||"#F8DE09",0.09));
-    r.setProperty("--cc-accent-12", hexToRgba(t.vereinsfarbe1||"#F8DE09",0.07));
-      r.setProperty("--nav",         t.navBg||"#1A1A1A");
-      r.setProperty("--nav-t",       t.navText||"#FFFFFF");
-      r.setProperty("--nav-a",       t.navAccent||"#F8DE09");
-      r.setProperty("--nav-hover",   t.navHover||"#2A2A2A");
-      r.setProperty("--btn-primary", t.btnPrimary||"#1A1A1A");
-      r.setProperty("--btn-hover",   t.btnHover||"#333333");
-    });
     /* CSS sofort anwenden */
     const r=document.documentElement.style;
-    r.setProperty("--cc-accent",   theme.vereinsfarbe1);
-    r.setProperty("--cc-accent2",  theme.vereinsfarbe2);
-    r.setProperty("--cc-hover",    hexToRgba(theme.vereinsfarbe1,0.19));
+    r.setProperty("--cc-accent",    theme.vereinsfarbe1);
+    r.setProperty("--cc-accent2",   theme.vereinsfarbe2);
+    r.setProperty("--cc-hover",     hexToRgba(theme.vereinsfarbe1,0.19));
     r.setProperty("--cc-accent-20", hexToRgba(theme.vereinsfarbe1,0.12));
     r.setProperty("--cc-accent-15", hexToRgba(theme.vereinsfarbe1,0.09));
     r.setProperty("--cc-accent-12", hexToRgba(theme.vereinsfarbe1,0.07));
-    r.setProperty("--nav",         theme.navBg);
-    r.setProperty("--nav-t",       theme.navText);
-    r.setProperty("--nav-a",       theme.navAccent);
-    r.setProperty("--nav-hover",   theme.navHover||"#2A2A2A");
-    r.setProperty("--btn-primary", theme.btnPrimary);
-    r.setProperty("--btn-hover",   theme.btnHover||"#333333");
+    r.setProperty("--nav",          theme.navBg);
+    r.setProperty("--nav-t",        theme.navText);
+    r.setProperty("--nav-a",        theme.navAccent);
+    r.setProperty("--nav-hover",    theme.navHover||"#2A2A2A");
+    r.setProperty("--btn-primary",  theme.btnPrimary);
+    r.setProperty("--btn-hover",    theme.btnHover||"#333333");
     /* localStorage */
     try{localStorage.setItem("cc-theme",JSON.stringify(theme));}catch{}
     /* Supabase */
@@ -11830,6 +11815,15 @@ export default function Portal({supabaseClient}){
     if(!th){th=document.createElement("meta");th.name="theme-color";document.head.appendChild(th);}
     th.content=dark?"#0a0a0c":"#141414";
   },[dark]);
+
+  /* Theme sofort aus localStorage anwenden (bevor Login) */
+  useEffect(()=>{
+    try{
+      const s=localStorage.getItem("cc-theme");
+      if(s) applyThemeCss({...THEME_DEFAULT_STATIC,...JSON.parse(s)});
+    }catch{}
+  },[]);
+
   // Auth-Session beim Start prüfen
   useEffect(()=>{
     if(!sb){ setSession(null); return; }
@@ -11839,10 +11833,25 @@ export default function Portal({supabaseClient}){
     });
     const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadTheme(); }
       else setDbUser(null);
     });
-    return function(){ subscription.unsubscribe(); };
+
+    /* Realtime: Theme-Änderungen sofort übernehmen */
+    let themeSub=null;
+    try{
+      themeSub=sb.channel("theme-changes")
+        .on("postgres_changes",{event:"UPDATE",schema:"public",table:"portal_einstellungen",filter:"schluessel=eq.theme"},
+          payload=>{
+            const t={...THEME_DEFAULT_STATIC,...(payload.new?.wert||{})};
+            setTheme(t);
+            applyThemeCss(t);
+            try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
+          })
+        .subscribe();
+    }catch{}
+
+    return function(){ subscription.unsubscribe(); if(themeSub) sb.removeChannel(themeSub); };
   },[]);
 
   async function loadDbUser(uid, email){
