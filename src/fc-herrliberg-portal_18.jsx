@@ -6998,16 +6998,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                   {(MODUL_AKTIONEN[m.key]||[]).map((a,ai)=>(
                                     <div key={ai} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
                                       <span style={{flex:1,fontSize:12,color:"var(--text)"}}>{a.label}{a.note&&<span style={{fontSize:10,color:"var(--sub)",marginLeft:4}}>({a.note})</span>}</span>
-                                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                                        {a.wer.length===0
-                                          ?<span style={{fontSize:11,color:"var(--sub)",fontStyle:"italic"}}>niemand manuell</span>
-                                          :a.wer.map(w=>{
-                                            const role=ROLES[w];
-                                            return role?<span key={w} style={{padding:"2px 7px",borderRadius:5,fontSize:10,fontWeight:500,background:(role.color||"#888")+"20",color:role.color||"#888"}}>{ROLLEN_LABELS[w]}</span>:null;
-                                          })
-                                        }
-                                      </div>
-                                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:5,background:ZUGRIFF_COLORS[a.min]+"20",color:ZUGRIFF_COLORS[a.min],fontWeight:600,minWidth:70,textAlign:"center"}}>{ZUGRIFF_LABELS[a.min]}</span>
+                                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:5,background:ZUGRIFF_COLORS[a.min]+"20",color:ZUGRIFF_COLORS[a.min],fontWeight:600}}>{ZUGRIFF_LABELS[a.min]}</span>
                                     </div>
                                   ))}
                                   {!MODUL_AKTIONEN[m.key]&&<span style={{fontSize:12,color:"var(--sub)"}}>Keine Detail-Aktionen definiert.</span>}
