@@ -1041,7 +1041,7 @@ const PSTATS=[
    KLEINE HILFKOMPONENTEN
 ========================================== */
 function Av({name="",init,size=34,bg="var(--surface2)"}){
-  const textColor=bg===ACCENT||bg==="rgba(255,255,255,0.3)"?"#000":bg==="var(--surface2)"||bg==="var(--border)"||bg==="#e5e5e5"?"var(--sub)":"#fff";
+  const textColor=bg===ACCENT||bg==="rgba(255,255,255,0.3)"?"#000":bg===ACCENT20||bg==="var(--surface2)"||bg==="var(--border)"||bg==="#e5e5e5"?"var(--sub)":"#fff";
   // init kann ein Icon-Name sein (z.B. "settings") oder Initialen
   const isIcon = init && TI_PATHS[init];
   const l = isIcon ? null : (init||name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase());
@@ -2934,7 +2934,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                   <div key={p.id} onClick={()=>setSelected(p)}
                     style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderTop:`0.5px solid ${GB}`,cursor:"pointer",background:"var(--surface)"}}
                     className="hov-row">
-                    <Av name={p.name} size={40} bg={p.role?"#7C3AED":"#9CA3AF"}/>
+                    <Av name={p.name} size={32} bg={ACCENT20}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--text)"}}>{p.lastName} {p.firstName}</div>
                       <div style={{fontSize:12,color:"var(--sub)",marginTop:3,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
@@ -2950,7 +2950,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                 <div key={p.id} onClick={()=>setSelected(p)}
                   style={{display:"flex",alignItems:"center",gap:14,padding:"16px",borderTop:i>0?`0.5px solid ${GB}`:"none",cursor:"pointer",background:"var(--surface)"}}
                   className="hov-row">
-                  <Av name={p.name} size={44} bg={p.role?"#7C3AED":"#9CA3AF"}/>
+                  <Av name={p.name} size={32} bg={ACCENT20}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{p.lastName} {p.firstName}</div>
                     <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
@@ -3030,7 +3030,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                   if(c.key==="name") return(
                     <td key={j} style={{padding:"9px 13px"}}>
                       <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <Av name={p.name} size={26} bg={p.role?"#7C3AED":R}/>
+                        <Av name={p.name} size={26} bg={ACCENT20}/>
                         <div>
                           <div style={{fontWeight:600,whiteSpace:"nowrap",color:"var(--sub)"}}>{p.lastName} {p.firstName}</div>
                           {p.role&&<span style={{fontSize:13,background:"#7C3AED18",color:"#7C3AED",fontWeight:700,padding:"1px 5px",borderRadius:8}}>{p.role}</span>}
