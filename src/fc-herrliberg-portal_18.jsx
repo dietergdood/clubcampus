@@ -2090,7 +2090,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
     {key:"overview",  label:"Übersicht",    short:"Übersicht", icon:"layout-dashboard"},
     {key:"roster",    label:"Kader",        short:"Kader",     icon:"users",            modul:"roster",   teamOnly:true},
     {key:"attendance",label:"Termine",      short:"Termine",   icon:"calendar",         modul:"events"},
-    {key:"training",  label:"Trainingsplan",short:"Training",  icon:"clock",            modul:"training"},
+    {key:"training",  label:"Trainingsplan",short:"Trainingsplan",  icon:"clock",            modul:"training"},
     {key:"spielplan", label:"Spielplan & Tabelle",short:"Spiele",icon:"flag",           modul:"spielplan",teamOnly:true},
     {key:"polls",     label:"Abstimmungen", short:"Polls",     icon:"speakerphone",     modul:"polls",    teamOnly:true},
     {key:"helpers",   label:"Helfereinsätze",short:"Helfer",   icon:"heart-handshake",  modul:"helpers"},
@@ -2120,6 +2120,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   });
   const tabs=filterTabs(limited?TABS_LIMITED:TABS_ALL);
   const [tab,setTab]=useState(()=>{const t=NAV_TARGET.tab||"overview";NAV_TARGET.tab=null;return t;});
+  const [showMehrTab,setShowMehrTab]=useState(false);
   const [attFilter,setAttFilter]=useState(()=>{const f=NAV_TARGET.filter||[];NAV_TARGET.filter=null;return f;});
   const [rosterInitial,setRosterInitial]=useState(null);
   /* If NAV_TARGET specified a kindTeam, set activeKind accordingly */
@@ -2213,7 +2214,78 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
         </div>
       )}
 
-      <Tabs tabs={tabs} active={tab} setActive={setTab}/>
+      {/* ── TAB-BAR: Desktop = scroll, Mobile = 4 Icons + Mehr ── */}
+      {isMobile?(()=>{
+        /* Primär-Tabs pro Rolle */
+        const PRIMARY_KEYS={
+          spieler:       ["overview","roster","attendance","spielplan"],
+          eltern:        ["overview","roster","attendance","spielplan"],
+          trainer:       ["overview","roster","attendance","spielplan"],
+          administrator: ["overview","roster","attendance","spielplan"],
+          administration:["overview","roster","attendance","spielplan"],
+          vorstand:      ["overview","roster","attendance","spielplan"],
+          funktionaer:   ["overview","roster","attendance","spielplan"],
+        };
+        const primKeys=new Set(PRIMARY_KEYS[role]||["overview","roster","attendance","spielplan"]);
+        const primTabs=tabs.filter(t=>primKeys.has(t.key));
+        const mehrTabs=tabs.filter(t=>!primKeys.has(t.key));
+        const mehrActive=mehrTabs.some(t=>t.key===tab);
+        return(
+          <>
+            {/* Bottom-Sheet Mehr */}
+            {showMehrTab&&(
+              <div onClick={()=>setShowMehrTab(false)}
+                style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:300,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+                <div onClick={e=>e.stopPropagation()}
+                  style={{background:"var(--surface)",borderRadius:"20px 20px 0 0",padding:"8px 0 calc(env(safe-area-inset-bottom) + 80px)"}}>
+                  <div style={{width:36,height:4,borderRadius:2,background:"var(--border)",margin:"4px auto 12px"}}/>
+                  <div style={{padding:"0 8px 6px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Weitere Tabs</div>
+                  {mehrTabs.map(t=>(
+                    <button key={t.key} onClick={()=>{setTab(t.key);setShowMehrTab(false);}}
+                      style={{display:"flex",alignItems:"center",gap:14,width:"100%",padding:"12px 16px",
+                        background:tab===t.key?"#f8de0912":"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
+                      <div style={{width:40,height:40,borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center",
+                        background:tab===t.key?"#f8de09":"var(--surface2)",flexShrink:0}}>
+                        <TI n={t.icon||"circle"} size={19} style={{color:tab===t.key?"#111":"var(--sub)"}}/>
+                      </div>
+                      <span style={{fontSize:15,fontWeight:tab===t.key?600:400,color:tab===t.key?"var(--text)":"var(--sub)"}}>{t.label}</span>
+                      {tab===t.key&&<TI n="check" size={16} style={{color:"#f8de09",marginLeft:"auto"}}/>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Tab-Leiste */}
+            <div style={{display:"flex",background:"var(--surface)",borderRadius:14,marginBottom:12,border:"0.5px solid var(--border)",overflow:"hidden"}}>
+              {primTabs.map(t=>{
+                const isActive=tab===t.key;
+                return(
+                  <button key={t.key} onClick={()=>{setTab(t.key);setShowMehrTab(false);}}
+                    style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 4px 6px",
+                      gap:3,background:"none",border:"none",cursor:"pointer",
+                      borderBottom:isActive?"2.5px solid #f8de09":"2.5px solid transparent",
+                      fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                    <TI n={t.icon||"circle"} size={20} style={{color:isActive?"#f8de09":"var(--sub)"}}/>
+                    <span style={{fontSize:10,color:isActive?"#f8de09":"var(--sub)",fontWeight:isActive?700:400}}>{t.short||t.label}</span>
+                  </button>
+                );
+              })}
+              {mehrTabs.length>0&&(
+                <button onClick={()=>setShowMehrTab(v=>!v)}
+                  style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 4px 6px",
+                    gap:3,background:"none",border:"none",cursor:"pointer",
+                    borderBottom:mehrActive||showMehrTab?"2.5px solid #f8de09":"2.5px solid transparent",
+                    fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                  <TI n="dots" size={20} style={{color:mehrActive||showMehrTab?"#f8de09":"var(--sub)"}}/>
+                  <span style={{fontSize:10,color:mehrActive||showMehrTab?"#f8de09":"var(--sub)",fontWeight:mehrActive||showMehrTab?700:400}}>Mehr</span>
+                </button>
+              )}
+            </div>
+          </>
+        );
+      })():(
+        <Tabs tabs={tabs} active={tab} setActive={setTab}/>
+      )}
       {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial}/>}
       {tab==="roster"&&<RosterTab role={role} team={activeTeam} initialSelected={rosterInitial} teamRosterData={getMitgliederForTeam(activeTeam)}/>}
       {tab==="training"&&!limited&&<TrainingGantt team={activeTeam}/>}
