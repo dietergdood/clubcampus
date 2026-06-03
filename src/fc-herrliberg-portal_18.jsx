@@ -7079,7 +7079,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                             isExpanded&&(
                               <tr key={m.key+"-detail"} style={{borderTop:"0.5px solid var(--border)"}}>
                                 <td colSpan={ROLLEN.length+1} style={{padding:"10px 14px",background:"var(--surface2)"}}>
-                                  <div style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Aktionen — wer darf was?</div>
+                                  <div style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
+                                    <span style={{flex:1}}>Aktionen</span>
+                                    <span style={{minWidth:80,textAlign:"right"}}>Minimalstufe</span>
+                                  </div>
                                   {(MODUL_AKTIONEN[m.key]||[]).map((a,ai)=>(
                                     <div key={ai} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
                                       <span style={{flex:1,fontSize:12,color:"var(--text)"}}>{a.label}{a.note&&<span style={{fontSize:10,color:"var(--sub)",marginLeft:4}}>({a.note})</span>}</span>
