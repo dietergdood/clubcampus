@@ -65,24 +65,12 @@ const PWA_CSS=`
 :root,[data-theme=light]{
   --bg:#F5F5F3;--surface:#fff;--surface2:#f8f8f6;
   --border:#E0DED8;--text:#1A1A1A;--sub:#666;
-  --nav:#141414;--nav-b:#222;--nav-t:#ffffff;--nav-a:#FFBF00;
   --card-shadow:0 1px 4px rgba(0,0,0,0.06);
-  --cc-hover:rgba(255,191,0,0.19);
-  --cc-accent:#FFBF00;
-  --cc-accent2:#000000;
-  --cc-accent-20:rgba(255,191,0,0.12);
-  --cc-accent-15:rgba(255,191,0,0.09);
-  --cc-accent-12:rgba(255,191,0,0.07);
-  --btn-primary:#FFBF00;
-  --btn-primary-text:#000000;
-  --btn-hover:#E6AC00;
 }
 [data-theme=dark]{
   --bg:#0f0f11;--surface:#18181c;--surface2:#222228;
   --border:#2c2c36;--text:#f0f0f0;--sub:#8a8a9a;
-  --nav:#0a0a0c;--nav-b:#1a1a22;--nav-t:#ffffff;--nav-a:#FFBF00;
   --card-shadow:0 1px 4px rgba(0,0,0,0.3);
-  --cc-hover:rgba(255,191,0,0.12);
 }
 @keyframes fch-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes fch-pop{from{opacity:0;transform:scale(0.72)}to{opacity:1;transform:scale(1)}}
@@ -6931,9 +6919,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     themeRef.current=updated;
     setAppTheme(updated);
     /* CSS sofort anwenden via applyThemeCss */
-    console.log("[updateTheme]", key, val, "navBg in updated:", updated.navBg);
-    if(applyTheme){ applyTheme(updated); console.log("[updateTheme] --nav jetzt:", document.documentElement.style.getPropertyValue("--nav")); }
-    else console.warn("[updateTheme] applyTheme ist NICHT verfügbar!");
+    if(applyTheme) applyTheme(updated);
     setThemeDirty(true);
   }
   function saveTheme(){
@@ -11869,8 +11855,11 @@ export default function Portal({supabaseClient}){
   useEffect(()=>{
     try{
       const s=localStorage.getItem("cc-theme");
-      if(s) applyThemeCss({...THEME_DEFAULT_STATIC,...JSON.parse(s)});
-    }catch{}
+      /* Immer Defaults anwenden, dann mit gespeicherten Werten überschreiben */
+      applyThemeCss(s?{...THEME_DEFAULT_STATIC,...JSON.parse(s)}:THEME_DEFAULT_STATIC);
+    }catch{
+      applyThemeCss(THEME_DEFAULT_STATIC);
+    }
     /* Tenant laden (unabhängig vom Login) */
     loadTenant();
   },[]);
@@ -11936,30 +11925,46 @@ export default function Portal({supabaseClient}){
     if(!sb) return;
     try{
       const{data,error}=await sb.from("portal_einstellungen").select("wert").eq("schluessel","theme").single();
-      if(error||!data) return;
-      const saved=data.wert||{};
+      const saved=(error||!data)?{}:(data.wert||{});
       const t={...THEME_DEFAULT_STATIC,...saved};
       setAppTheme(t);
       applyThemeCss(t);
       try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
-    }catch(e){console.warn("[CC] loadTheme:",e.message);}
+    }catch(e){
+      console.warn("[CC] loadTheme:",e.message);
+      applyThemeCss(THEME_DEFAULT_STATIC);
+    }
   }
 
   function applyThemeCss(t){
-    const r=document.documentElement.style;
-    r.setProperty("--cc-accent",    t.vereinsfarbe1||"#FFBF00");
-    r.setProperty("--cc-accent2",   t.vereinsfarbe2||"#000000");
-    r.setProperty("--cc-hover",     hexToRgba(t.vereinsfarbe1||"#FFBF00",0.19));
-    r.setProperty("--cc-accent-20", hexToRgba(t.vereinsfarbe1||"#FFBF00",0.12));
-    r.setProperty("--cc-accent-15", hexToRgba(t.vereinsfarbe1||"#FFBF00",0.09));
-    r.setProperty("--cc-accent-12", hexToRgba(t.vereinsfarbe1||"#FFBF00",0.07));
-    r.setProperty("--nav",          t.navBg||"#000000");
-    r.setProperty("--nav-t",        t.navText||"#FFFFFF");
-    r.setProperty("--nav-a",        t.navAccent||"#FFBF00");
-    r.setProperty("--nav-hover",    t.navHover||"#1A1A1A");
-    r.setProperty("--btn-primary",  t.btnPrimary||"#FFBF00");
-    r.setProperty("--btn-primary-text",t.btnPrimaryText||"#000000");
-    r.setProperty("--btn-hover",    t.btnHover||"#E6AC00");
+    /* Inject style tag to override [data-theme] CSS rules */
+    let s=document.getElementById("cc-theme-vars");
+    if(!s){s=document.createElement("style");s.id="cc-theme-vars";document.head.appendChild(s);}
+    const nav=t.navBg||"#000000";
+    const navT=t.navText||"#FFFFFF";
+    const navA=t.navAccent||"#FFBF00";
+    const navH=t.navHover||"#1A1A1A";
+    const acc=t.vereinsfarbe1||"#FFBF00";
+    const acc2=t.vereinsfarbe2||"#000000";
+    const btn=t.btnPrimary||"#FFBF00";
+    const btnT=t.btnPrimaryText||"#000000";
+    const btnHov=t.btnHover||"#E6AC00";
+    s.textContent=`:root,[data-theme],[data-theme=dark],[data-theme=light]{
+      --cc-accent:${acc}!important;
+      --cc-accent2:${acc2}!important;
+      --cc-hover:${hexToRgba(acc,0.19)}!important;
+      --cc-accent-20:${hexToRgba(acc,0.12)}!important;
+      --cc-accent-15:${hexToRgba(acc,0.09)}!important;
+      --cc-accent-12:${hexToRgba(acc,0.07)}!important;
+      --nav:${nav}!important;
+      --nav-t:${navT}!important;
+      --nav-a:${navA}!important;
+      --nav-b:color-mix(in srgb,${nav} 80%,white 20%)!important;
+      --nav-hover:${navH}!important;
+      --btn-primary:${btn}!important;
+      --btn-primary-text:${btnT}!important;
+      --btn-hover:${btnHov}!important;
+    }`;
   }
 
   async function loadModuleConfig(){
