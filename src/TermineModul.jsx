@@ -9,6 +9,44 @@ import { useIsMobile, ModalOrSheet, Card, Chip } from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, GANTT, ROSTER, SCHEDULE, TABLES, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
 
 /* ── Hilfsfunktionen ── */
+const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
+
+const TRAININGSPLAETZE = TRAININGSPLAETZE_DEFAULT.slice();
+
+function Av({name="",init,size=34,bg="var(--surface2)",useTheme=false}){
+  const themeAvatarBg=bg===ACCENT?"var(--avatar-bg)":bg;
+  const textColor=bg===ACCENT?"var(--avatar-text)":bg==="rgba(255,255,255,0.3)"?ACCENT2:bg===ACCENT20||bg==="var(--surface2)"||bg==="var(--border)"||bg==="#e5e5e5"?"var(--sub)":"#fff";
+  // init kann ein Icon-Name sein (z.B. "settings") oder Initialen
+  const isIcon = init && TI_PATHS[init];
+  const l = isIcon ? null : (init||name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase());
+  return <div style={{width:size,height:size,borderRadius:"50%",background:themeAvatarBg,display:"flex",alignItems:"center",justifyContent:"center",color:textColor,fontWeight:700,fontSize:size*0.35,flexShrink:0}}>
+    {isIcon ? <TI n={init} size={size*0.55} style={{color:textColor}}/> : l}
+  </div>;
+}
+/* Chip via ./hooks.jsx */
+
+function Stat({label,value,sub,color=BK,icon}){
+  return(
+    <div className="cc-card" style={{borderRadius:12,padding:"18px 20px",flex:1,minWidth:0,border:"0.5px solid"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+        <div style={{fontSize:13,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
+        {icon&&<div style={{width:28,height:28,borderRadius:6,background:color+"15",display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color}}/></div>}
+      </div>
+      <div style={{fontSize:24,fontWeight:800,color,lineHeight:1,marginBottom:5}}>{value}</div>
+      {sub&&<div style={{fontSize:13,color:"var(--sub)",fontWeight:400}}>{sub}</div>}
+    </div>
+  );
+}
+/* Card via ./hooks.jsx */
+
+const NR_CACHE={data:Object.fromEntries(ROSTER.map(p=>[p.id,p.rueckennr||""]))};
+(async()=>{
+  try{
+    const res=await window.storage.get("rueckennrn");
+    if(res){const d=JSON.parse(res.value);Object.assign(NR_CACHE.data,d);}
+  }catch(e){}
+})();
+
 function getNr(id){return NR_CACHE.data[id]||"";}
 
 function getVereinsnameStatic(){
