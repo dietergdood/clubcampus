@@ -7,6 +7,50 @@ import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, 
 import { TI } from "./icons.jsx";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, LOGO_B64, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip } from "./theme.jsx";
 
+/* ── Geteilte Konstanten ── */
+const ROLES = {
+  administrator: {
+    label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
+    desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",
+    level:7
+  },
+  vorstand: {
+    label:"Vorstand", color:"var(--text)", bg:"#F5F5F5", icon:"scale",
+    desc:"Strategische Übersicht: alle Teams, Mitglieder lesen, Auswertungen — kein System, kein AHV",
+    level:6
+  },
+  administration: {
+    label:"Administration", color:"var(--text)", bg:"#F5F5F5", icon:"briefcase",
+    desc:"Vereinsbüro: Stammdaten, Mitglieder, alle Teams, Exporte — kein System",
+    level:5
+  },
+  funktionaer: {
+    label:"Funktionär", color:"var(--text)", bg:"#F5F5F5", icon:"heart-handshake",
+    desc:"Module + Teams gemäss zugewiesener Gruppe/Funktion",
+    level:4
+  },
+  trainer: {
+    label:"Trainer", color:"var(--text)", bg:"#F5F5F5", icon:"ball-football",
+    desc:"Eigene Teams: Kader, Trainings, Anwesenheiten",
+    level:3
+  },
+  spieler: {
+    label:"Spieler", color:"var(--text)", bg:"#F5F5F5", icon:"target",
+    desc:"Eigenes Team lesen: Spielplan, Termine, Helfereinsätze",
+    level:2
+  },
+  eltern: {
+    label:"Eltern", color:"var(--text)", bg:"#F5F5F5", icon:"user",
+    desc:"Nur eigene Kinder: Termine, Anwesenheit, Abstimmungen",
+    level:1
+  },
+};
+const STUFE_RANG={lesen:1,schreiben:2,verwalten:3};
+function maxStufe(a, b){
+  if(!a) return b; if(!b) return a;
+  return STUFE_RANG[a]>STUFE_RANG[b]?a:b;
+}
+
 function TeamModuleMatrix({supabase,setSaveMsg}){
   const sb=supabase;
   const isMobile=useIsMobile();
