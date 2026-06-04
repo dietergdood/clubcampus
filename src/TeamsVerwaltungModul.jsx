@@ -107,7 +107,7 @@ const TEAM_HIERARCHY={
   },
 };
 
-function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack}){
+function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,TeamViewComponent=null}){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -226,7 +226,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           <span style={{fontWeight:800,fontSize:18,color:"var(--text)",letterSpacing:-0.3}}>{selectedTeam.name}</span>
           {selectedTeam.kategorie&&<Chip text={selectedTeam.kategorie} color={BL}/>}
         </div>
-        <TeamView role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams}/>
+        <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams}/>
       </div>
     );
   }
