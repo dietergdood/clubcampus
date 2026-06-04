@@ -3,7 +3,7 @@
    Trainingsplan mit Gantt-Ansicht und Platzverwaltung
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, BK, GR, GB } from "./constants";
+import { ACCENT, ACCENT2, ACCENT20, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "./constants";
 import { TI } from "./icons.jsx";
 import { useIsMobile, ModalOrSheet , Col, Row} from "./theme.jsx";
 import { ATT_EVENTS, GANTT, INITIAL_PLAENE, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
@@ -1037,7 +1037,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
                 {isAktiv&&<button onClick={function(){setTrainungsTab("gantt");}} style={{marginTop:10,width:"100%",padding:"7px",borderRadius:8,border:"1px solid "+BL+"40",background:"transparent",color:BL,fontSize:13,cursor:"pointer"}}>Zum GANTT →</button>}
                 {!isAktiv&&canEdit&&(
                   <button onClick={function(){setVorschauPlan(p.id);setTrainungsTab("gantt");}}
-                    style={{marginTop:10,width:"100%",padding:"7px",borderRadius:8,border:"1px solid #FDE68A",background:"var(--surface)",color:"#92400E",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                    style={{marginTop:10,width:"100%",padding:"7px",borderRadius:8,border:"1px solid #FDE68A",background:"var(--surface)",color:STATUS_CLR.warn,fontSize:13,fontWeight:600,cursor:"pointer"}}>
                     Vorschau im GANTT →
                   </button>
                 )}
@@ -1068,8 +1068,8 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       {isVorschau&&(
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"10px 14px",background:"var(--surface)",border:"1.5px solid #FDE68A",borderRadius:10,marginBottom:12}}>
           <div>
-            <span style={{fontSize:13,fontWeight:700,color:"#92400E"}}>Vorschau: </span>
-            <span style={{fontSize:13,color:"#92400E"}}>{plan.name}</span>
+            <span style={{fontSize:13,fontWeight:700,color:STATUS_CLR.warn}}>Vorschau: </span>
+            <span style={{fontSize:13,color:STATUS_CLR.warn}}>{plan.name}</span>
             <span style={{fontSize:13,color:"#B45309",marginLeft:8}}>Nicht der aktive Plan</span>
           </div>
           <div style={S_FLEX8}>
@@ -1078,7 +1078,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
               Jetzt aktivieren
             </button>
             <button onClick={function(){setVorschauPlan(null);}}
-              style={{padding:"8px 14px",borderRadius:8,border:"0.5px solid #FDE68A",background:"var(--surface)",color:"#92400E",fontSize:13,cursor:"pointer"}}>
+              style={{padding:"8px 14px",borderRadius:8,border:"0.5px solid #FDE68A",background:"var(--surface)",color:STATUS_CLR.warn,fontSize:13,cursor:"pointer"}}>
               Schliessen
             </button>
           </div>
@@ -1090,7 +1090,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:14,color:isVorschau?"#92400E":BK}}>
-              {isVorschau&&<span style={{fontSize:13,background:"#FDE68A",color:"#92400E",padding:"2px 7px",borderRadius:20,marginRight:7,fontWeight:600}}>Vorschau</span>}
+              {isVorschau&&<span style={{fontSize:13,background:"#FDE68A",color:STATUS_CLR.warn,padding:"2px 7px",borderRadius:20,marginRight:7,fontWeight:600}}>Vorschau</span>}
               {plan?plan.name:"Trainingsplan"}
             </div>
             <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>
