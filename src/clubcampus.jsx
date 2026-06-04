@@ -108,6 +108,8 @@ if(typeof window!=="undefined"&&!window.storage){
 /* ── Tabler Icons als SVG-Komponente ── */
 const TI_PATHS={
     "ball-football":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 3c0 0 2 4 2 9s-2 9-2 9\"/><path d=\"M3 12c0 0 4-2 9-2s9 2 9 2\"/><path d=\"M5.6 5.6c0 0 3.4 1.4 6.4 6.4s1.4 6.4 1.4 6.4\"/>",
+    "jersey":"<path d=\"M15 3l3 3l-2 2l4 4l-4 1v8H8v-8l-4-1l4-4l-2-2l3-3c0 0 1 2 4 2s4-2 4-2z\"/>",
+    "dots":"<circle cx=\"5\" cy=\"12\" r=\"1.5\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\"/><circle cx=\"19\" cy=\"12\" r=\"1.5\"/>",
     "bolt":"<path d=\"M13 3l-6 9h5l-1 9l6-9h-5l1-9z\"/>",
     "book":"<path d=\"M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0\"/><path d=\"M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0\"/><line x1=\"3\" y1=\"6\" x2=\"3\" y2=\"19\"/><line x1=\"12\" y1=\"6\" x2=\"12\" y2=\"19\"/><line x1=\"21\" y1=\"6\" x2=\"21\" y2=\"19\"/>",
     "briefcase":"<rect x=\"2\" y=\"7\" width=\"20\" height=\"14\" rx=\"2\"/><path d=\"M16 7v-2a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2\"/><line x1=\"12\" y1=\"12\" x2=\"12\" y2=\"12.01\"/>",
@@ -514,7 +516,7 @@ const NAV_BY_ROLE = {
   ],
   trainer: [
     {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
-    {key:"team",               icon:"ball-football",    label:"Mein Team"},
+    {key:"team",               icon:"jersey",           label:"Mein Team"},
     {key:"training",           icon:"calendar",         label:"Trainingsplan"},
     {key:"events",             icon:"calendar-event",   label:"Termine"},
     {key:"helpers",            icon:"heart-handshake",  label:"Helfereinsätze"},
@@ -529,7 +531,7 @@ const NAV_BY_ROLE = {
   spieler: [
     {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
     {key:"news",               icon:"news",             label:"News"},
-    {key:"team",               icon:"ball-football",    label:"Mein Team"},
+    {key:"team",               icon:"jersey",           label:"Mein Team"},
     {key:"events",             icon:"calendar-event",   label:"Termine"},
     {key:"helpers",            icon:"heart-handshake",  label:"Helfereinsätze"},
     {key:"docs",               icon:"file-text",        label:"Dokumente"},
@@ -538,7 +540,7 @@ const NAV_BY_ROLE = {
   eltern: [
     {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
     {key:"news",               icon:"news",             label:"News"},
-    {key:"team",               icon:"ball-football",    label:"Mein Kind"},
+    {key:"team",               icon:"jersey",           label:"Mein Kind"},
     {key:"events",             icon:"calendar-event",   label:"Termine"},
     {key:"helpers",            icon:"heart-handshake",  label:"Helfereinsätze"},
     {key:"docs",               icon:"file-text",        label:"Dokumente"},
@@ -633,7 +635,7 @@ const MOBILE_NAV_BY_ROLE = {
   trainer: {
     tabs: [
       {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
-      {key:"team",               icon:"ball-football",    label:"Mein Team"},
+      {key:"team",               icon:"jersey",           label:"Mein Team"},
       {key:"events",             icon:"calendar-event",   label:"Termine"},
       {key:"attendance_central", icon:"chart-bar",        label:"Stats"},
     ],
@@ -649,7 +651,7 @@ const MOBILE_NAV_BY_ROLE = {
   spieler: {
     tabs: [
       {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
-      {key:"team",               icon:"ball-football",    label:"Mein Team"},
+      {key:"team",               icon:"jersey",           label:"Mein Team"},
       {key:"events",             icon:"calendar-event",   label:"Termine"},
       {key:"helpers",            icon:"heart-handshake",  label:"Helfer"},
     ],
@@ -663,7 +665,7 @@ const MOBILE_NAV_BY_ROLE = {
   eltern: {
     tabs: [
       {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
-      {key:"team",               icon:"ball-football",    label:"Mein Kind"},
+      {key:"team",               icon:"jersey",           label:"Mein Kind"},
       {key:"events",             icon:"calendar-event",   label:"Termine"},
       {key:"helpers",            icon:"heart-handshake",  label:"Helfer"},
     ],
