@@ -1415,7 +1415,7 @@ function DashboardAdmin({setActive,account}){
         <Stat label="Sync-Fehler" value="2" sub="Fairgate / FVRZ" color={R} icon="refresh"/>
         <Stat label="Offene Datenprüfungen" value="12" sub="Mitglieder fällig" color={AM} icon="clipboard-list"/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         <Card>
           <STitle>Systemstatus</STitle>
           {[
@@ -1488,7 +1488,7 @@ function DashboardAdministration({setActive,account}){
         <Stat label="Sync-Fehler" value="2" color={AM}/>
         <Stat label="Offene Materialanfragen" value="3" color={BK}/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         <Card>
           <STitle action={<button onClick={()=>setActive("members")} style={{fontSize:13,color:BL,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Alle →</button>}>Datenprüfstatus</STitle>
           {[{label:"Vollständig",n:162,c:GN},{label:"Prüfung fällig",n:12,c:AM},{label:"Unvollständig",n:8,c:R},{label:"Sync-Fehler",n:5,c:"#888"}].map((x,i)=>(
@@ -1552,7 +1552,7 @@ function DashboardFunktionaer({setActive,account}){
         <Stat label="Vereinsbusse heute" value="1" color={BL} sub="Bus A reserviert"/>
         <Stat label="Offene Materialanfragen" value="3" color={BK}/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         <Card>
           <STitle>Kommende Vereinsanlässe</STitle>
           {EVENTS.map((e,i)=>(
@@ -1638,7 +1638,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
         <Stat label="Ø Anwesenheit"     value="77%"      sub="letzte 5 Trainings"   color={GN}/>
         <Stat label="Tabellenrang"      value={myRow?myRow.rank+".":"-"} sub={myRow?TABLES[team]?.length+" Teams · "+myRow.pts+" Punkte":"Keine Tabelle"} color={BL}/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         <Card>
           <STitle action={<Chip text={upcoming.filter(e=>e.rsvp!==false).length+" offen"} color={R}/>}>Fehlende Rückmeldungen</STitle>
           {upcoming.filter(e=>e.rsvp!==false).slice(0,3).map((x,i,arr)=>{
@@ -1792,7 +1792,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
           <Chip text="Aufgebot" color="#4F46E5" bg="#EEF2FF"/>
         </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         <Card>
           <STitle>Meine nächsten Termine</STitle>
           {(()=>{
@@ -1967,7 +1967,7 @@ function DashboardEltern({account,meineTeams,setActive}){
               </div>
             )}
 
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
               {/* Nächste 4 Trainings & Spiele */}
               <Card style={{cursor:setActive?"pointer":"default"}} onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.kindTeam=team;setActive("team");}:undefined}>
                 <STitle action={setActive&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle →</span>}>{vorname} · Trainings & Spiele</STitle>
@@ -2381,7 +2381,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
   const termine=allTermine;
 
   return(
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
       {/* Team Übersicht */}
       <Card>
         <STitle>Info</STitle>
@@ -7716,7 +7716,8 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             </button>
           </div>
 
-          {/* Gruppen als Cards + expandierbare Funktionen */}
+          {/* Gruppen als Grid-Cards + expandierbare Funktionen */}
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(320px,1fr))",gap:12,marginBottom:selectedGruppe?16:0}}>
           {(gruppen.length>0?gruppen:[
             {id:1,name:"Vereinsleben & Events",farbe:"#8B5CF6",beschreibung:"Anlässe, Helfereinsätze, Mitgliederliste",module:["events","helpers","members","news","docs"]},
             {id:2,name:"Betrieb & Infrastruktur",farbe:"#3B82F6",beschreibung:"Material, Busse, Garderoben",module:["material","buses","lockers","docs"]},
@@ -7730,7 +7731,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             return(
               <div key={g.id} style={{
                 borderRadius:14,border:`1.5px solid ${isOpen?g.farbe:"var(--border)"}`,
-                marginBottom:10,overflow:"hidden",
+                overflow:"hidden",
                 background:isOpen?g.farbe+"08":"var(--surface)",
                 transition:"all 0.15s"
               }}>
@@ -7822,6 +7823,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               </div>
             );
           })}
+          </div>
 
           {/* Gruppe bearbeiten Modal */}
           <ModalOrSheet open={showGruppeForm} onClose={()=>{setShowGruppeForm(false);setEditGruppe(null);}} maxWidth={500}>
@@ -8081,7 +8083,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       {/* ── TAB: BENUTZER & ROLLEN ── */}
       {!loading&&tab==="users"&&(
         <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:14}}>
             <div style={{fontSize:13,color:"var(--sub)"}}>{benutzerListe.length} Benutzer</div>
             <Btn variant="primary" color={BK} onClick={()=>{}}>+ Benutzer einladen</Btn>
           </div>
@@ -9962,7 +9964,7 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
           <div style={{marginTop:10,display:"flex",gap:8}}><Btn variant="primary" color="#F3F4F6" onClick={()=>setShowForm(false)}>Reservieren</Btn><Btn onClick={()=>setShowForm(false)}>Abbrechen</Btn></div>
         </Card>
       )}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14,marginTop:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14,marginTop:14}}>
         {BUSES.map((bus,i)=>(
           <Card key={i}>
             <div style={{fontWeight:700,fontSize:15,marginBottom:12,display:"flex",justifyContent:"space-between"}}>{bus.name}<Chip text={`${bus.reservations.length} Res.`} color={BL}/></div>
