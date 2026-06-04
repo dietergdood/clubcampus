@@ -264,8 +264,8 @@ const MATERIAL=[
 
 const LOCKERS=[
   {name:"Garderobe 1",assignments:[
-    {team:"Cc-Junioren",start:16,end:18,day:"Sa",type:"Heim",color:R},
-    {team:"A-Junioren",start:17,end:19.5,day:"Mi",type:"Heim",color:GN},
+    {team:"Cc-Junioren",start:16,end:18,day:"Sa",type:"Heim",color:"#C8102E"},
+    {team:"A-Junioren",start:17,end:19.5,day:"Mi",type:"Heim",color:"#059669"},
   ]},
   {name:"Garderobe 2",assignments:[
     {team:"FC Küsnacht",start:16,end:18,day:"Sa",type:"Gast",color:"var(--sub)"},
