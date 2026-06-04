@@ -2065,4 +2065,4 @@ function getTerminTypLabel(typ){
   return map[typ]||typ||"Termin";
 }
 
-export { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab , kannTerminLesen, kannTerminAnmelden, getTerminTypLabel};
+export { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab , kannTerminLesen, kannTerminAnmelden, getTerminTypLabel, PlanEditorModal};

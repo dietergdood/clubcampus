@@ -9,6 +9,11 @@ import { useIsMobile, ModalOrSheet, Btn, Chip , Av, Stat, Col, Row, ModalTitle} 
 import { MEMBERS, ROSTER } from "./demoData.js";
 
 /* ── Hilfsfunktionen & Konstanten ── */
+const Skel=({h=12,w="100%",br=6,mb=0})=>(
+  <div style={{height:h,width:w,borderRadius:br,marginBottom:mb,
+    background:"var(--surface2)",animation:"cc-shimmer 1.2s ease-in-out infinite"}}/>
+);
+
 function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
   const [q,setQ]=useState(value||"");
   const [open,setOpen]=useState(false);

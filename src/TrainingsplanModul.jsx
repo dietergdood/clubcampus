@@ -7,7 +7,7 @@ import { ACCENT, ACCENT2, ACCENT20, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB,
 import { TI } from "./icons.jsx";
 import { useIsMobile, ModalOrSheet , Col, Row} from "./theme.jsx";
 import { ATT_EVENTS, GANTT, INITIAL_PLAENE, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
-import { SlotModal } from "./TermineModul.jsx";
+import { SlotModal, PlanEditorModal } from "./TermineModul.jsx";
 
 /* Mutable reference — wird von PlaetzeView befüllt */
 const TRAININGSPLAETZE = TRAININGSPLAETZE_DEFAULT.map(p=>({...p}));

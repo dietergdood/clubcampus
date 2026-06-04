@@ -666,8 +666,6 @@ function FieldVisView(){
   );
 }
 
-function SyncView(){ return <PortalverwaltungView initialTab="api"/>; }
-function AuditView(){ return <PortalverwaltungView initialTab="audit"/>; }
 
 /* ══════════════════════════════════════════════════════════════════
    PORTALVERWALTUNG — Zentrales Admin-Cockpit
