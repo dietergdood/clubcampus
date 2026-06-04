@@ -1,4 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="50" fill="#f8de09"/>
-  <text y=".9em" font-size="80" x="10">⚽</text>
-</svg>
