@@ -166,9 +166,9 @@ function SkelCard(){
 }
 function SkelList({rows=4}){
   return(
-    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
       {Array.from({length:rows},(_,i)=>(
-        <div key={i} className="cc-card" style={{borderRadius:12,padding:"14px 18px",border:"0.5px solid",display:"flex",alignItems:"center",gap:14}}>
+        <div key={i} className="cc-card" style={{borderRadius:12,padding:"14px 18px",border:"0.5px solid",display:"flex",alignItems:"center",gap:16}}>
           <div style={{width:38,height:38,borderRadius:"50%",background:"var(--border)",animation:"cc-shimmer 1.5s infinite",flexShrink:0}}/>
           <div style={{flex:1}}><Skel h={11} w="60%" br={4} mb={7}/><Skel h={9} w="40%" br={4}/></div>
         </div>
@@ -215,7 +215,7 @@ function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
           {suggestions.map(m=>(
             <button key={m.id} onMouseDown={()=>select(m.name)} style={{
               width:"100%",padding:"9px 14px",border:"none",background:"none",
-              cursor:"pointer",display:"flex",alignItems:"center",gap:10,
+              cursor:"pointer",display:"flex",alignItems:"center",gap:12,
               textAlign:"left",fontFamily:FONT
             }}
               onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
@@ -1068,7 +1068,7 @@ function Btn({children,onClick,variant="outline",color=BK,small,style={}}){
 function Tabs({tabs,active,setActive}){
   const isMobile=useIsMobile();
   return(
-    <div style={{display:"flex",gap:1,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,overflowX:"auto",flexWrap:"nowrap",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+    <div style={{display:"flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,overflowX:"auto",flexWrap:"nowrap",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
       {tabs.map(t=>(
         <button key={t.key} onClick={()=>setActive(t.key)} style={{
           padding:isMobile?"7px 10px":"7px 12px",border:"none",borderRadius:6,
@@ -1077,7 +1077,7 @@ function Tabs({tabs,active,setActive}){
           fontWeight:active===t.key?700:400,cursor:"pointer",fontSize:13,
           boxShadow:active===t.key?"0 1px 4px rgba(0,0,0,0.1)":"none",
           whiteSpace:"nowrap",fontFamily:FONT,minHeight:36,transition:"all 0.15s",
-          display:"flex",alignItems:"center",gap:5,WebkitTapHighlightColor:"transparent"
+          display:"flex",alignItems:"center",gap:8,WebkitTapHighlightColor:"transparent"
         }}>
           {isMobile&&t.icon&&<TI n={t.icon} size={13} style={{flexShrink:0}}/>}
           {isMobile&&t.short?t.short:t.label}
@@ -1122,7 +1122,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
             {Object.entries(USER_ACCOUNTS).filter(([,a])=>a.rollen.length>1).length>0&&(
               <div style={{marginBottom:16}}>
                 <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Konten mit Mehrfach-Rollen</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {Object.entries(USER_ACCOUNTS).filter(([,a])=>a.rollen.length>1).map(([key,a])=>{
                     const isActive=account===a;
                     return(
@@ -1137,13 +1137,13 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
                           </div>
                           {isActive&&<span style={{marginLeft:"auto",fontSize:13,color:R,fontWeight:700}}>AKTIVES KONTO</span>}
                         </div>
-                        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                           {a.rollen.map(r=>{
                             const rd=ROLES[r];
                             const isActiveSub=(isActive&&(activeSubRole||a.primaryRole)===r);
                             return(
                               <button key={r} onClick={()=>{onRoleChange(key);setActiveSubRole(r);setOpen(false);}}
-                                style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",borderRadius:20,border:`1.5px solid ${isActiveSub?rd.color:GB}`,background:isActiveSub?rd.color+"15":"#fff",cursor:"pointer",fontSize:13,fontWeight:isActiveSub?700:400,color:isActiveSub?rd.color:"var(--text)"}}>
+                                style={{display:"flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:20,border:`1.5px solid ${isActiveSub?rd.color:GB}`,background:isActiveSub?rd.color+"15":"#fff",cursor:"pointer",fontSize:13,fontWeight:isActiveSub?700:400,color:isActiveSub?rd.color:"var(--text)"}}>
                                 <span>{rd.icon}</span>{rd.label}
                                 {isActiveSub&&<span style={{fontSize:13,color:rd.color}}>✓</span>}
                               </button>
@@ -1168,7 +1168,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
                     return(
                       <button key={key} onClick={()=>{onRoleChange(key);setActiveSubRole(null);setOpen(false);}}
                         style={{padding:"10px 14px",borderRadius:10,border:`1.5px solid ${isActive?rd.color:GB}`,background:isActive?rd.color+"12":"#fafaf8",cursor:"pointer",textAlign:"left",minWidth:200}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
                           <span style={{fontSize:16}}>{rd.icon}</span>
                           <span style={{fontWeight:700,fontSize:13,color:isActive?rd.color:"var(--text)"}}>{a.name}</span>
                         </div>
@@ -1238,7 +1238,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
         {!collapsed&&(
           <div style={{minWidth:0,overflow:"hidden"}}>
             <div style={{color:"var(--nav-t)",fontWeight:800,fontSize:13,lineHeight:1.25,letterSpacing:-0.2,wordBreak:"break-word",overflowWrap:"break-word"}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
-            <div style={{color:"var(--nav-a)",fontSize:11,letterSpacing:0.6,marginTop:2,textTransform:"uppercase",fontWeight:500}}>{"ClubCampus"}</div>
+            <div style={{color:"var(--nav-a)",fontSize:11,letterSpacing:0.6,marginTop:2,textTransform:"uppercase",fontWeight:600}}>{"ClubCampus"}</div>
           </div>
         )}
       </div>
@@ -1278,7 +1278,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
         onMouseEnter={e=>{if(e.currentTarget.dataset.active!=="1")e.currentTarget.style.background="var(--nav-hover)"}}
         onMouseLeave={e=>{if(e.currentTarget.dataset.active!=="1")e.currentTarget.style.background="none"}}>
         {!collapsed&&<div style={{fontSize:11,color:"var(--nav-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,marginBottom:9,paddingLeft:2}}>Angemeldet als</div>}
-        <div style={{display:"flex",alignItems:"center",gap:9,justifyContent:collapsed?"center":"flex-start"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:collapsed?"center":"flex-start"}}>
           <Av size={32} bg={ACCENT} name={userName}/>
           {!collapsed&&(
             <div style={{minWidth:0,flex:1}}>
@@ -1323,7 +1323,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
       {/* Links */}
       {isMobile?(
         isHome?(
-          <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             <div style={{width:30,height:30,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <img src={appTheme?.logo||LOGO_B64} style={{width:30,height:30,objectFit:"cover",display:"block"}} alt="Logo"/>
             </div>
@@ -1343,7 +1343,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
           </div>
         )
       ):(
-        <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
           <div style={{width:30,height:30,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <img src={appTheme?.logo||LOGO_B64} style={{width:30,height:30,objectFit:"cover",display:"block"}} alt="Logo"/>
           </div>
@@ -1355,7 +1355,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
         {/* Dark Toggle – nur Desktop */}
         {!isMobile&&(
           <button onClick={toggle} title={dark?"Hell-Modus":"Dunkel-Modus"} style={{
-            display:"flex",alignItems:"center",gap:6,
+            display:"flex",alignItems:"center",gap:8,
             padding:"5px 10px 5px 7px",borderRadius:20,
             border:"1px solid var(--border)",background:dark?ACCENT:"var(--surface2)",
             cursor:"pointer",transition:"background 0.25s,border-color 0.25s",
@@ -1369,7 +1369,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
         )}
         {!isMobile&&!onLogout&&<RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
         {!isMobile&&!onLogout&&<Chip text="DEMO" color="#999" bg="var(--surface2)"/>}
-        {!isMobile&&onLogout&&<button onClick={onLogout} style={{padding:"8px 14px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer",fontWeight:500,minHeight:36}}>Abmelden</button>}
+        {!isMobile&&onLogout&&<button onClick={onLogout} style={{padding:"8px 14px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer",fontWeight:600,minHeight:36}}>Abmelden</button>}
         {/* Profil-Avatar – nur Mobile */}
         {isMobile&&(
           <button onClick={onOpenProfile} style={{
@@ -1413,7 +1413,7 @@ function DashboardAdmin({setActive,account}){
         <Stat label="Sync-Fehler" value="2" sub="Fairgate / FVRZ" color={R} icon="refresh"/>
         <Stat label="Offene Datenprüfungen" value="12" sub="Mitglieder fällig" color={AM} icon="clipboard-list"/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
         <Card>
           <STitle>Systemstatus</STitle>
           {[
@@ -1423,7 +1423,7 @@ function DashboardAdmin({setActive,account}){
             {label:"Push-Benachricht.", status:"OK",     last:"active",        ok:true},
           ].map((s,i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<3?`0.5px solid ${GB}`:"none"}}>
-              <span style={{fontSize:13,fontWeight:500}}>{s.label}</span>
+              <span style={{fontSize:13,fontWeight:600}}>{s.label}</span>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:13,color:"var(--sub)"}}>{s.last}</span>
                 <Chip text={s.status} color={s.ok?GN:R} bg={s.ok?"#ECFDF5":RL}/>
@@ -1464,7 +1464,7 @@ function DashboardAdmin({setActive,account}){
             {action:"Rolle geändert",         user:"Admin User",  time:"10:45"},
           ].map((a,i)=>(
             <div key={i} style={{padding:"7px 0",borderBottom:i<2?`0.5px solid ${GB}`:"none"}}>
-              <div style={{fontSize:13,fontWeight:500}}>{a.action}</div>
+              <div style={{fontSize:13,fontWeight:600}}>{a.action}</div>
               <div style={{fontSize:13,color:"var(--sub)"}}>{a.user} · {a.time+" Uhr"}</div>
             </div>
           ))}
@@ -1487,7 +1487,7 @@ function DashboardAdministration({setActive,account}){
         <Stat label="Sync-Fehler" value="2" color={AM}/>
         <Stat label="Offene Materialanfragen" value="3" color={BK}/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
         <Card>
           <STitle action={<button onClick={()=>setActive("members")} style={{fontSize:13,color:BL,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Alle →</button>}>Datenprüfstatus</STitle>
           {[{label:"Vollständig",n:162,c:GN},{label:"Prüfung fällig",n:12,c:AM},{label:"Unvollständig",n:8,c:R},{label:"Sync-Fehler",n:5,c:"#888"}].map((x,i)=>(
@@ -1512,7 +1512,7 @@ function DashboardAdministration({setActive,account}){
           {[{t:"Cc-Junioren",pct:77},{t:"D-Junioren",pct:82},{t:"A-Junioren",pct:71},{t:"Aktive 1",pct:68}].map((x,i)=>(
             <div key={i} style={{padding:"7px 0",borderBottom:i<3?`0.5px solid ${GB}`:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{fontSize:13,fontWeight:500}}>{x.t}</span>
+                <span style={{fontSize:13,fontWeight:600}}>{x.t}</span>
                 <span style={{fontSize:13,fontWeight:700,color:x.pct>=75?GN:x.pct>=65?AM:R}}>{x.pct}%</span>
               </div>
               <div style={{height:4,background:GB,borderRadius:2}}>
@@ -1526,7 +1526,7 @@ function DashboardAdministration({setActive,account}){
           {EVENTS.filter(e=>e.rsvp).map((e,i)=>(
             <div key={i} style={{padding:"8px 0",borderBottom:i<EVENTS.filter(x=>x.rsvp).length-1?`0.5px solid ${GB}`:"none"}}>
               <div style={{fontWeight:600,fontSize:13}}>{e.title}</div>
-              <div style={{display:"flex",gap:6,marginTop:4}}>
+              <div style={{display:"flex",gap:8,marginTop:4}}>
                 <Chip text={`✓ ${e.res?.y}`} color={GN} bg="#ECFDF5"/>
                 <Chip text={`✕ ${e.res?.n}`} color={R} bg={RL}/>
                 <Chip text={`? ${e.res?.o}`} color={AM} bg="#FFFBEB"/>
@@ -1552,7 +1552,7 @@ function DashboardFunktionaer({setActive,account}){
         <Stat label="Vereinsbusse heute" value="1" color={BL} sub="Bus A reserviert"/>
         <Stat label="Offene Materialanfragen" value="3" color={BK}/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
         <Card>
           <STitle>Kommende Vereinsanlässe</STitle>
           {EVENTS.map((e,i)=>(
@@ -1570,7 +1570,7 @@ function DashboardFunktionaer({setActive,account}){
           {[{t:"Cc-Junioren",pct:77},{t:"D-Junioren",pct:82},{t:"A-Junioren",pct:71}].map((x,i)=>(
             <div key={i} style={{padding:"7px 0",borderBottom:i<2?`0.5px solid ${GB}`:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{fontSize:13,fontWeight:500}}>{x.t}</span>
+                <span style={{fontSize:13,fontWeight:600}}>{x.t}</span>
                 <span style={{fontSize:13,fontWeight:700,color:x.pct>=75?GN:AM}}>{x.pct}%</span>
               </div>
               <div style={{height:4,background:GB,borderRadius:2}}>
@@ -1638,7 +1638,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
         <Stat label="Ø Anwesenheit"     value="77%"      sub="letzte 5 Trainings"   color={GN}/>
         <Stat label="Tabellenrang"      value={myRow?myRow.rank+".":"-"} sub={myRow?TABLES[team]?.length+" Teams · "+myRow.pts+" Punkte":"Keine Tabelle"} color={BL}/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
         <Card>
           <STitle action={<Chip text={upcoming.filter(e=>e.rsvp!==false).length+" offen"} color={R}/>}>Fehlende Rückmeldungen</STitle>
           {upcoming.filter(e=>e.rsvp!==false).slice(0,3).map((x,i,arr)=>{
@@ -1674,7 +1674,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
             return(
               <div key={i} style={{marginBottom:i<2?10:0}}>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}>
-                  <span style={{fontWeight:500}}>{e.name} <span style={{color:"var(--sub)"}}>{e.time+" Uhr"}</span></span>
+                  <span style={{fontWeight:600}}>{e.name} <span style={{color:"var(--sub)"}}>{e.time+" Uhr"}</span></span>
                   <span style={{color:filled<max?R:GN,fontWeight:700}}>{filled}/{max}</span>
                 </div>
                 <div style={{height:5,background:GB,borderRadius:4}}>
@@ -1793,7 +1793,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
           <Chip text="Aufgebot" color="#4F46E5" bg="#EEF2FF"/>
         </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
         <Card>
           <STitle>Meine nächsten Termine</STitle>
           {(()=>{
@@ -1828,7 +1828,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
           {POLLS.filter(p=>!p.closed).map((p,i)=>(
             <div key={i} style={{padding:"8px 0"}}>
               <div style={{fontWeight:600,fontSize:13,marginBottom:5}}>{p.title}</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {p.options.map((opt,j)=>(
                   <button key={j} style={{padding:"4px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,cursor:"pointer",background:"var(--surface2)"}}>{opt}</button>
                 ))}
@@ -1927,7 +1927,7 @@ function DashboardEltern({account,meineTeams,setActive}){
             {/* Kind-Header */}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
               <div style={{width:6,height:28,borderRadius:4,background:ACCENT,flexShrink:0}}/>
-              <h2 style={{margin:0,fontSize:16,fontWeight:800}}>{vorname} <span style={{fontSize:13,color:"var(--sub)",fontWeight:500}}>· {team}</span></h2>
+              <h2 style={{margin:0,fontSize:16,fontWeight:800}}>{vorname} <span style={{fontSize:13,color:"var(--sub)",fontWeight:600}}>· {team}</span></h2>
             </div>
 
             {/* Stat-Kacheln */}
@@ -1935,7 +1935,7 @@ function DashboardEltern({account,meineTeams,setActive}){
               const nextSpiel=ATT_EVENTS.filter(e=>e.team===team&&e.type==="Spiel"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
               const nextTraining=ATT_EVENTS.filter(e=>e.team===team&&e.type==="Training"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
               return(
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,marginBottom:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:14}}>
                   <Stat label="Ø Anwesenheit Trainings" value={attPct!==null?attPct+"%":"-"} sub={attTotal?zuCount+"/"+attTotal+" Trainings":"Noch keine"} color={attColor}/>
                   <Stat label="Nächstes Training" value={nextTraining?nextTraining.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"} sub={nextTraining?`${nextTraining.time.slice(0,5)} Uhr · ${nextTraining.location}`:"Kein Training geplant"} color={GN}/>
                   {(()=>{
@@ -1944,7 +1944,7 @@ function DashboardEltern({account,meineTeams,setActive}){
                       <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:14,padding:"16px 18px",flex:1,minWidth:0,boxShadow:"0 1px 4px rgba(0,0,0,0.04)",display:"flex",flexDirection:"column",alignItems:"flex-start",justifyContent:"center",gap:4,position:"relative"}}>
                         <div style={{fontSize:13,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>Nächstes Spiel</div>
                         <div style={{fontSize:24,fontWeight:800,color:BL,lineHeight:1}}>{nextSpiel?nextSpiel.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"}</div>
-                        <div style={{fontSize:13,color:"var(--sub)",fontWeight:500}}>{nextSpiel?`${nextSpiel.time.slice(0,5)} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel geplant"}</div>
+                        <div style={{fontSize:13,color:"var(--sub)",fontWeight:600}}>{nextSpiel?`${nextSpiel.time.slice(0,5)} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel geplant"}</div>
                         {imAufgebot&&<span style={{position:"absolute",bottom:10,right:12,fontSize:13,fontWeight:700,padding:"3px 9px",borderRadius:20,background:"var(--surface)",color:"var(--cc-accent)",border:"0.5px solid #818CF840"}}><TI n="ball-football" style={{marginRight:4}}/> Im Aufgebot</span>}
                       </div>
                     );
@@ -1969,7 +1969,7 @@ function DashboardEltern({account,meineTeams,setActive}){
               </div>
             )}
 
-            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
               {/* Nächste 4 Trainings & Spiele */}
               <Card style={{cursor:setActive?"pointer":"default"}} onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.kindTeam=team;setActive("team");}:undefined}>
                 <STitle action={setActive&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle →</span>}>{vorname} · Trainings & Spiele</STitle>
@@ -2174,7 +2174,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   return(
     <div>
       {/* Team-Header */}
-      <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:hasMultiTeams?10:isMobile?14:18}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:hasMultiTeams?10:isMobile?14:18}}>
         <div style={{width:6,height:isMobile?36:44,borderRadius:4,background:ACCENT,flexShrink:0,marginTop:2}}/>
         <div style={{flex:1,minWidth:0}}>
           <h1 style={{fontSize:isMobile?17:21,fontWeight:800,margin:0,letterSpacing:-0.3,whiteSpace:isMobile?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis"}}>
@@ -2199,7 +2199,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
             const info=TEAMS_DATA[k.team]||{liga:"",season:""};
             return(
               <button key={i} onClick={()=>handleKindSwitch(k)}
-                style={{display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:10,
+                style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",borderRadius:10,
                   border:`1.5px solid ${active?ACCENT:GB}`,
                   background:active?"var(--cc-hover)":"#fff",cursor:"pointer",transition:"all 0.12s"}}>
                 <div style={{width:22,height:22,borderRadius:"50%",background:active?"rgba(0,0,0,0.1)":GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"var(--text)",flexShrink:0}}>
@@ -2219,7 +2219,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       {hasMultiTeams&&(
         <div style={{marginBottom:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)",overflow:"hidden"}}>
           <div style={{padding:"8px 10px",fontSize:11,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,borderBottom:"0.5px solid var(--border)"}}>Team wechseln</div>
-          <div style={{display:"flex",gap:6,padding:"10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+          <div style={{display:"flex",gap:8,padding:"10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
             {trainerTeams.map(team=>{
               const info=TEAMS_DATA[team]||{count:18,liga:"Liga A"};
               const isActive=activeTeam===team;
@@ -2273,7 +2273,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
                   <div style={{padding:"0 8px 6px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Weitere Tabs</div>
                   {mehrTabs.map(t=>(
                     <button key={t.key} onClick={()=>{setTab(t.key);setShowMehrTab(false);}}
-                      style={{display:"flex",alignItems:"center",gap:14,width:"100%",padding:"12px 16px",
+                      style={{display:"flex",alignItems:"center",gap:16,width:"100%",padding:"12px 16px",
                         background:tab===t.key?ACCENT12:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
                       <div style={{width:40,height:40,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
                         background:tab===t.key?ACCENT:"var(--surface2)",flexShrink:0}}>
@@ -2293,7 +2293,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
                 return(
                   <button key={t.key} onClick={()=>{setTab(t.key);setShowMehrTab(false);}}
                     style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 4px 6px",
-                      gap:3,background:"none",border:"none",cursor:"pointer",
+                      gap:4,background:"none",border:"none",cursor:"pointer",
                       borderBottom:isActive?`2.5px solid ${ACCENT}`:"2.5px solid transparent",
                       fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
                     <TI n={t.icon||"circle"} size={20} style={{color:isActive?ACCENT:"var(--sub)"}}/>
@@ -2304,7 +2304,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
               {mehrTabs.length>0&&(
                 <button onClick={()=>setShowMehrTab(v=>!v)}
                   style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 4px 6px",
-                    gap:3,background:"none",border:"none",cursor:"pointer",
+                    gap:4,background:"none",border:"none",cursor:"pointer",
                     borderBottom:mehrActive||showMehrTab?`2.5px solid ${ACCENT}`:"2.5px solid transparent",
                     fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
                   <TI n="dots" size={20} style={{color:mehrActive||showMehrTab?ACCENT:"var(--sub)"}}/>
@@ -2387,7 +2387,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
   const termine=allTermine;
 
   return(
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
       {/* Team Übersicht */}
       <Card>
         <STitle>Info</STitle>
@@ -2399,7 +2399,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const myRow=tableData.find(r=>r.me);
           return(
             <div>
-              <div style={{display:"flex",gap:10,marginBottom:14}}>
+              <div style={{display:"flex",gap:12,marginBottom:14}}>
                 {[
                   {l:"Spieler im Kader", v:spieler.length, c:BK},
                   {l:"Trainer & Staff",  v:trainer.length, c:BK},
@@ -2426,7 +2426,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                     {trainer.map((t,i)=>(
                     <div key={i} onClick={setTab&&setRosterInitial?()=>{setRosterInitial(t.id);setTab("roster");}:undefined}
-                      style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px",background:"var(--surface2)",borderRadius:8,cursor:setTab?"pointer":"default",transition:"background 0.1s"}}
+                      style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"var(--surface2)",borderRadius:8,cursor:setTab?"pointer":"default",transition:"background 0.1s"}}
                       onMouseEnter={e=>setTab&&(e.currentTarget.style.background=GB)}
                       onMouseLeave={e=>setTab&&(e.currentTarget.style.background=GR)}>
                       <Av name={`${t.firstName} ${t.lastName}`} size={26} bg={R}/>
@@ -2501,13 +2501,13 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           return(<>
             {shown.length===0&&<div style={{fontSize:13,color:"var(--sub)",padding:"8px 0"}}>Keine anstehenden Spiele oder Trainings.</div>}
             {shown.map((e,i)=>(
-              <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<shown.length-1?`0.5px solid ${GB}`:"none"}}>
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:i<shown.length-1?`0.5px solid ${GB}`:"none"}}>
                 <div style={{width:3,height:32,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:13,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis"}}>
                     {e.opponent?"vs. "+e.opponent:e.type==="Training"?"Training · "+e.team:e.title||e.type}
                   </div>
-                  <div style={{fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
                     <span>{e.date}{e.endDate?" - "+e.endDate:""}</span>
                     <span style={{color:"var(--border)"}}>·</span>
                     <span>{e.time+" Uhr"}</span>
@@ -2525,11 +2525,11 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
         <STitle action={setTab&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle anzeigen →</span>}>Vereinsanlässe &amp; Team-Events</STitle>
         {termine.length===0&&<div style={{fontSize:13,color:"var(--sub)",padding:"8px 0"}}>Keine anstehenden Anlässe.</div>}
         {termine.map((e,i)=>(
-          <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<termine.length-1?`0.5px solid ${GB}`:"none"}}>
+          <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:i<termine.length-1?`0.5px solid ${GB}`:"none"}}>
             <div style={{width:3,height:32,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:600,fontSize:13,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis"}}>{e.title||e.type}</div>
-              <div style={{fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:6}}>
+              <div style={{fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
                 <span>{e.date}{e.endDate?" - "+e.endDate:""}</span>
                 <span style={{color:"var(--border)"}}>·</span>
                 <span>{e.time+" Uhr"}</span>
@@ -2582,7 +2582,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
   const Row=({label,value,mono,blue})=>(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"9px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}>
       <span style={{fontSize:13,color:"var(--sub)",flexShrink:0,minWidth:120}}>{label}</span>
-      <span style={{fontSize:13,fontWeight:500,color:blue?BL:mono?"#666":BK,textAlign:"right",wordBreak:"break-word",fontFamily:mono?"monospace":"inherit"}}>{value||"-"}</span>
+      <span style={{fontSize:13,fontWeight:600,color:blue?BL:mono?"#666":BK,textAlign:"right",wordBreak:"break-word",fontFamily:mono?"monospace":"inherit"}}>{value||"-"}</span>
     </div>
   );
 
@@ -2598,8 +2598,8 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
         />
       ):(
         <div onClick={canEdit?()=>setEditingNr(true):undefined}
-          style={{display:"flex",alignItems:"center",gap:5,cursor:canEdit?"pointer":"default"}}>
-          <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{nrVal||"-"}</span>
+          style={{display:"flex",alignItems:"center",gap:8,cursor:canEdit?"pointer":"default"}}>
+          <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{nrVal||"-"}</span>
           {canEdit&&<span style={{fontSize:13,color:"var(--sub)"}}><TI n="edit"/></span>}
         </div>
       )}
@@ -2611,7 +2611,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
       <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"var(--surface)",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"var(--surface)",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
 
         {/* Header */}
-        <div style={{background:R,borderRadius:"16px 16px 0 0",padding:"20px 22px",display:"flex",alignItems:"center",gap:14,position:"sticky",top:0,zIndex:1}}>
+        <div style={{background:R,borderRadius:"16px 16px 0 0",padding:"20px 22px",display:"flex",alignItems:"center",gap:16,position:"sticky",top:0,zIndex:1}}>
           <div style={{width:52,height:52,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:18,flexShrink:0}}>
             {(person.firstName[0]||"")+(person.lastName[0]||"")}
           </div>
@@ -2628,7 +2628,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           <button onClick={onClose} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",color:"#fff",fontSize:21,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>×</button>
         </div>
 
-        <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:18}}>
+        <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:16}}>
 
           {/* PERSONALIEN */}
           <div>
@@ -2699,7 +2699,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           )}
 
           {/* Rollenhinweis */}
-          <div style={{padding:"8px 12px",background:"var(--surface)",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:6}}>
+          <div style={{padding:"8px 12px",background:"var(--surface)",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
             <span><TI n="eye"/></span>
             <span>Feldsichtbarkeit gemäss Rolle: <strong>{getRole(role).label}</strong></span>
           </div>
@@ -2852,9 +2852,9 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
           <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:16,padding:24,width:340,maxWidth:"90vw",boxShadow:"0 8px 40px rgba(0,0,0,0.2)"}}>
             <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Kaderliste exportieren</div>
             <div style={{fontSize:13,color:"var(--sub)",marginBottom:16}}>Felder auswählen die exportiert werden sollen</div>
-            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:20}}>
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
               {COL_DEF_ALL.map(c=>(
-                <label key={c.key} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",borderRadius:8,background:"var(--surface2)",cursor:"pointer"}}>
+                <label key={c.key} style={{display:"flex",alignItems:"center",gap:12,padding:"6px 10px",borderRadius:8,background:"var(--surface2)",cursor:"pointer"}}>
                   <input type="checkbox" checked={exportFields.includes(c.key)}
                     onChange={e=>setExportFields(prev=>e.target.checked?[...prev,c.key]:prev.filter(k=>k!==c.key))}
                     style={{width:16,height:16,accentColor:BK,cursor:"pointer"}}/>
@@ -2896,7 +2896,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {canExport&&(
               <button onClick={()=>setShowExport(true)} style={{
-                display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,
+                display:"flex",alignItems:"center",gap:8,padding:"6px 12px",borderRadius:8,
                 border:"1px solid var(--border)",background:"transparent",
                 color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT
               }}>
@@ -2904,7 +2904,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
               </button>
             )}
           <button onClick={()=>setGroupByFunktion(g=>!g)} style={{
-            display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,
+            display:"flex",alignItems:"center",gap:8,padding:"6px 12px",borderRadius:8,
             border:`1px solid ${groupByFunktion?BK:"var(--border)"}`,
             background:groupByFunktion?BK+"15":"transparent",
             color:groupByFunktion?BK:"var(--sub)",fontSize:13,fontWeight:600,
@@ -2928,12 +2928,12 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                 }}>{key} <span style={{fontWeight:400,opacity:0.6}}>({items.length})</span></div>,
                 ...items.map((p,i)=>(
                   <div key={p.id} onClick={()=>setSelected(p)}
-                    style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderTop:`0.5px solid ${GB}`,cursor:"pointer",background:"var(--surface)"}}
+                    style={{display:"flex",alignItems:"center",gap:16,padding:"14px 16px",borderTop:`0.5px solid ${GB}`,cursor:"pointer",background:"var(--surface)"}}
                     className="hov-row">
                     <Av name={p.name} size={32} bg={ACCENT20}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{p.lastName} {p.firstName}</div>
-                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
                         {positions[p.id]&&<span style={{background:"var(--surface2)",color:"var(--sub)",padding:"2px 8px",borderRadius:20}}>{positions[p.id]}</span>}
                         {rueckennrn[p.id]&&<span style={{color:"var(--sub)"}}>Nr. {rueckennrn[p.id]}</span>}
                       </div>
@@ -2944,7 +2944,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
               ]).filter(Boolean)
             : filtered.map((p,i)=>(
                 <div key={p.id} onClick={()=>setSelected(p)}
-                  style={{display:"flex",alignItems:"center",gap:14,padding:"16px",borderTop:i>0?`0.5px solid ${GB}`:"none",cursor:"pointer",background:"var(--surface)"}}
+                  style={{display:"flex",alignItems:"center",gap:16,padding:"16px",borderTop:i>0?`0.5px solid ${GB}`:"none",cursor:"pointer",background:"var(--surface)"}}
                   className="hov-row">
                   <Av name={p.name} size={32} bg={ACCENT20}/>
                   <div style={{flex:1,minWidth:0}}>
@@ -3013,7 +3013,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                       ):(
                         <div onClick={canEditPos?()=>setEditingNr(p.id):undefined}
                           title={canEditPos?"Rückennr. bearbeiten":undefined}
-                          style={{cursor:canEditPos?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
+                          style={{cursor:canEditPos?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                           {rueckennrn[p.id]
                             ?<span style={{fontSize:13,fontWeight:600,color:"var(--sub)"}}>{rueckennrn[p.id]}</span>
                             :<span style={{fontSize:13,color:"var(--sub)"}}>-</span>
@@ -3025,13 +3025,13 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                   );
                   if(c.key==="name") return(
                     <td key={j} style={{padding:"9px 13px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <Av name={p.name} size={26} bg={ACCENT20}/>
                         <div>
                           <div style={{fontWeight:600,whiteSpace:"nowrap",color:"var(--sub)"}}>{p.lastName} {p.firstName}</div>
                           {p.role&&<span style={{fontSize:13,background:"#7C3AED18",color:"#7C3AED",fontWeight:700,padding:"1px 5px",borderRadius:8}}>{p.role}</span>}
                           {!p.role&&p.teams&&p.teams.length>1&&(
-                            <div style={{display:"flex",gap:3,marginTop:2,flexWrap:"wrap"}}>
+                            <div style={{display:"flex",gap:4,marginTop:2,flexWrap:"wrap"}}>
                               {p.teams.map((t,i)=><span key={i} style={{fontSize:13,background:i===0?R+"15":"#EFF6FF",color:i===0?R:BL,fontWeight:600,padding:"1px 5px",borderRadius:8}}>{t}</span>)}
                             </div>
                           )}
@@ -3247,7 +3247,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
               const isLast = ci===alleCols.length-1;
               return (
                 <div key={di+"_"+col.key} style={{width:colW, flexShrink:0, borderRight:isLast?"1.5px solid #C8C5BC":"0.5px solid #DDD9CF", background:isToday?"#DDE1F8":"transparent", textAlign:"center", padding:"1px 2px", height:"100%", boxSizing:"border-box", display:"flex", alignItems:"center", justifyContent:"center"}}>
-                  <div style={{fontSize:13, fontWeight:500, color:"var(--sub)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", letterSpacing:0.3}}>{col.half||""}</div>
+                  <div style={{fontSize:13, fontWeight:600, color:"var(--sub)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", letterSpacing:0.3}}>{col.half||""}</div>
                 </div>
               );
             });
@@ -3849,14 +3849,14 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
               <div style={{fontWeight:700,fontSize:16}}>Trainingsplan-Versionen</div>
               <button onClick={function(){setShowPlanVerwaltung(false);}} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>x</button>
             </div>
-            <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:12}}>
               <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Aktiviere einen Plan um ihn im GANTT anzuzeigen. Dupliziere einen Plan als Vorlage fur eine neue Version.</div>
               {plaene.map(function(p){
                 const isAktiv = p.id===aktiverPlan;
                 const slotCount = (p.slots||[]).length;
                 return(
                   <div key={p.id} style={{border:"1.5px solid "+(isAktiv?BL:GB),borderRadius:12,padding:"12px 14px",background:isAktiv?"#EFF6FF":"#fff"}}>
-                    <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
                           <div style={{fontWeight:700,fontSize:14,color:isAktiv?BL:BK}}>{p.name}</div>
@@ -3870,7 +3870,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                           {" · "+slotCount+" Training"+(slotCount===1?"":"s")}
                         </div>
                       </div>
-                      <div style={{display:"flex",gap:5,flexShrink:0}}>
+                      <div style={{display:"flex",gap:8,flexShrink:0}}>
                         {!isAktiv&&(
                           <button onClick={function(){handlePlanAktivieren(p.id);}}
                             style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
@@ -3901,7 +3901,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
 
       {/* === Tab-Navigation === */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:8}}>
-        <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:2}}>
+        <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:4}}>
           {[{v:"gantt",l:"GANTT"},{v:"plaetze",l:"Plätze",adminOnly:true},{v:"plaene",l:"Pläne",adminOnly:true}].map(function(t){
             if(t.adminOnly&&!canEdit) return null;
             var isActive = trainingsTab===t.v;
@@ -3923,14 +3923,14 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
 
       {/* === Tab: Plane === */}
       {trainingsTab==="plaene"&&(
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Aktiviere einen Plan um ihn im GANTT anzuzeigen. Dupliziere ihn als Vorlage fur eine neue Version.</div>
           {plaene.map(function(p){
             const isAktiv = p.id===aktiverPlan;
             const slotCount = (p.slots||[]).length;
             return(
               <div key={p.id} style={{border:"1.5px solid "+(isAktiv?BL:GB),borderRadius:12,padding:"14px 16px",background:isAktiv?"#EFF6FF":"#fff"}}>
-                <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
                       <div style={{fontWeight:700,fontSize:14,color:isAktiv?BL:BK}}>{p.name}</div>
@@ -3944,7 +3944,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                     </div>
                   </div>
                   {canEdit&&(
-                    <div style={{display:"flex",gap:6,flexShrink:0}}>
+                    <div style={{display:"flex",gap:8,flexShrink:0}}>
                       {!isAktiv&&<button onClick={function(){handlePlanAktivieren(p.id);}} style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>Aktivieren</button>}
                       <button onClick={function(){setEditPlan(p);setShowPlanEditor(true);}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n="edit"/></button>
                       <button onClick={function(){handlePlanDuplizieren(p);}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>≡</button>
@@ -3984,13 +3984,13 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
         </div>
       )}
       {isVorschau&&(
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",background:"var(--surface)",border:"1.5px solid #FDE68A",borderRadius:10,marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"10px 14px",background:"var(--surface)",border:"1.5px solid #FDE68A",borderRadius:10,marginBottom:12}}>
           <div>
             <span style={{fontSize:13,fontWeight:700,color:"#92400E"}}>Vorschau: </span>
             <span style={{fontSize:13,color:"#92400E"}}>{plan.name}</span>
             <span style={{fontSize:13,color:"#B45309",marginLeft:8}}>Nicht der aktive Plan</span>
           </div>
-          <div style={{display:"flex",gap:6}}>
+          <div style={{display:"flex",gap:8}}>
             <button onClick={function(){handlePlanAktivieren(vorschauPlan);setVorschauPlan(null);}}
               style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
               Jetzt aktivieren
@@ -4004,7 +4004,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
       )}
 
       {/* Header */}
-      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
+      <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:14,color:isVorschau?"#92400E":BK}}>
@@ -4021,7 +4021,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
         </div>
 
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
             <button onClick={function(){
               if(ansicht==="tag"){ setSelectedDay(function(d){return d===0?6:d-1;}); }
               else { setKwOffset(function(o){return o-1;}); }
@@ -4074,7 +4074,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
           </select>
           <div style={{flex:1}}/>
           {/* Ansicht-Toggle */}
-          <div style={{display:"flex",background:"var(--surface2)",borderRadius:20,padding:3,gap:2}}>
+          <div style={{display:"flex",background:"var(--surface2)",borderRadius:20,padding:3,gap:4}}>
             {[{v:"woche",l:"Woche"},{v:"tag",l:"Tag"}].map(function(a){
               return(
                 <button key={a.v} onClick={function(){setAnsicht(a.v);}}
@@ -4169,7 +4169,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
               <div style={{fontWeight:700,fontSize:14}}>Training loeschen</div>
               <button onClick={function(){setShowDeleteDialog(false);setDeleteSlot(null);}} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)"}}>x</button>
             </div>
-            <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
               <div style={{padding:"12px",background:RL,borderRadius:8,border:"1px solid "+R+"30"}}>
                 <div style={{fontSize:13,fontWeight:700,color:R,marginBottom:2}}>Training wird dauerhaft aus dem Plan entfernt</div>
                 <div style={{fontSize:13,color:"var(--sub)"}}>{deleteSlot.team} - {deleteSlot.weekday} {fmtTime(deleteSlot.start)}-{fmtTime(deleteSlot.end)} Uhr</div>
@@ -4185,12 +4185,12 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                     {deleteSlot.zukunftigeEvents.map(function(e){
                       const selected = deleteSlot.selectedEvIds.has(e.id);
                       return (
-                        <div key={e.id} onClick={function(){setDeleteSlot(function(s){const next=new Set(s.selectedEvIds);selected?next.delete(e.id):next.add(e.id);return Object.assign({},s,{selectedEvIds:next});});}} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:8,border:"1px solid "+(selected?R:GB),background:selected?RL:"#fff",cursor:"pointer"}}>
+                        <div key={e.id} onClick={function(){setDeleteSlot(function(s){const next=new Set(s.selectedEvIds);selected?next.delete(e.id):next.add(e.id);return Object.assign({},s,{selectedEvIds:next});});}} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",borderRadius:8,border:"1px solid "+(selected?R:GB),background:selected?RL:"#fff",cursor:"pointer"}}>
                           <div style={{width:16,height:16,borderRadius:4,border:"1.5px solid "+(selected?R:"#ccc"),background:selected?R:"#fff",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                             {selected && <span style={{color:"#fff",fontSize:13,fontWeight:700}}>v</span>}
                           </div>
                           <div style={{flex:1}}>
-                            <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{e.date}</div>
+                            <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{e.date}</div>
                             <div style={{fontSize:13,color:"var(--sub)"}}>{e.time} Uhr</div>
                           </div>
                         </div>
@@ -4306,7 +4306,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
           <button onClick={onClose} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
         </div>
 
-        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
           {!ausnahmeMode?(
             <>
               {/* Kalenderwoche - nur bei neuen Trainings */}
@@ -4325,7 +4325,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
               {/* Wochentag */}
               <div>
                 <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>Wochentag</div>
-                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {DAYS.map(d=>(
                     <button key={d} onClick={()=>setForm(f=>({...f,weekday:d}))}
                       style={{padding:"5px 11px",borderRadius:20,border:`1.5px solid ${form.weekday===d?BK:GB}`,background:form.weekday===d?BK:"#fff",color:form.weekday===d?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
@@ -4392,7 +4392,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                       {form.location&&(TRAININGSPLAETZE.find(p=>p.name===form.location)?.halfn||[]).length>0&&(
                         <div>
                           <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Seite</div>
-                          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                             <button onClick={()=>setForm(f=>({...f,half:""}))}
                               style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${!form.half?BK:GB}`,background:!form.half?BK:"#fff",color:!form.half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
                               Ganzer Platz
@@ -4410,7 +4410,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
 
                     {/* Wechsel-Zeitpunkt */}
                     {form.location&&(
-                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
                         <div style={{fontSize:13,color:"var(--sub)",flexShrink:0}}>Wechsel um:</div>
                         <select value={form.wechsel_zeit} onChange={e=>setForm(f=>({...f,wechsel_zeit:e.target.value?parseFloat(e.target.value):"",end_ort:"",end_half:""}))}
                           style={{flex:1,padding:"7px 10px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,outline:"none"}}>
@@ -4448,7 +4448,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                         {(TRAININGSPLAETZE.find(p=>p.name===(form.end_ort||form.location))?.halfn||[]).length>0&&(
                           <div>
                             <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Seite</div>
-                            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                               <button onClick={()=>setForm(f=>({...f,end_half:""}))}
                                 style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${!form.end_half?BK:GB}`,background:!form.end_half?BK:"#fff",color:!form.end_half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
                                 Ganzer Platz
@@ -4495,7 +4495,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
 
               {/* Aktionen */}
               {showSaveDialog ? (
-                <div style={{background:"#F8F8F6",borderRadius:10,padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{background:"#F8F8F6",borderRadius:10,padding:"14px",display:"flex",flexDirection:"column",gap:12}}>
                   <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{isEdit?"Änderung übernehmen für:":"Training gilt:"}</div>
                   <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:true, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
                     style={{padding:"8px 14px",borderRadius:10,border:`1.5px solid ${BL}`,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
@@ -4653,7 +4653,7 @@ function PlanEditorModal({plan, plaene, onSave, onClose}){
           <div style={{fontWeight:700,fontSize:14}}>{plan?.id?"Plan bearbeiten":"Neuer Plan"}</div>
           <button onClick={onClose} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)"}}>×</button>
         </div>
-        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
           <div>
             <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>Name</div>
             <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}
@@ -4762,7 +4762,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
   };
 
   const ST=({children})=>(<div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.6,margin:"12px 0 6px"}}>{children}</div>);
-  const IR=({label,value})=>(<div style={{display:"flex",justifyContent:"space-between",padding:"8px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}><span style={{fontSize:13,color:"var(--sub)",flexShrink:0,minWidth:130}}>{label}</span><span style={{fontSize:13,fontWeight:500,textAlign:"right"}}>{value||"-"}</span></div>);
+  const IR=({label,value})=>(<div style={{display:"flex",justifyContent:"space-between",padding:"8px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}><span style={{fontSize:13,color:"var(--sub)",flexShrink:0,minWidth:130}}>{label}</span><span style={{fontSize:13,fontWeight:600,textAlign:"right"}}>{value||"-"}</span></div>);
   const EZ=({icon,text,min,onDelete})=>(
     <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"0.5px solid var(--border)"}}>
       <span style={{fontSize:13,color:"var(--sub)",minWidth:28,fontWeight:600,flexShrink:0}}>{icon}</span>
@@ -4771,7 +4771,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
       {editMode&&onDelete&&<button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:"var(--sub)",fontSize:14,padding:"0 2px"}}>{"x"}</button>}
     </div>
   );
-  const AR=({children,onAdd})=>(<div style={{display:"flex",gap:5,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
+  const AR=({children,onAdd})=>(<div style={{display:"flex",gap:8,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
   const SS=({value,onChange,options,placeholder,style={}})=>(<select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",...style}}><option value="">{placeholder||"-"}</option>{options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>);
   const MI=({value,onChange})=>(<input type="number" min="1" max="90" placeholder="Min" value={value} onChange={e=>onChange(e.target.value)} style={{width:46,padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none"}}/>);
 
@@ -4785,7 +4785,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
             <div>
               <div style={{color:"rgba(0,0,0,0.45)",fontSize:13,fontWeight:600,letterSpacing:0.6,textTransform:"uppercase",marginBottom:4}}>{spiel.comp}</div>
-              <div style={{color:BK,fontWeight:900,fontSize:18,lineHeight:1.15}}>{getVereinsnameStatic()}</div>
+              <div style={{color:BK,fontWeight:800,fontSize:18,lineHeight:1.15}}>{getVereinsnameStatic()}</div>
               <div style={{color:"rgba(0,0,0,0.55)",fontSize:13,marginTop:1}}>vs. {spiel.opponent}</div>
             </div>
             {played?(
@@ -4796,7 +4796,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
             <button onClick={onClose} style={{background:"rgba(0,0,0,0.1)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:"var(--surface2)",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           {/* Meta strip */}
-          <div style={{display:"flex",gap:14,paddingBottom:14,fontSize:13,color:"rgba(0,0,0,0.55)"}}>
+          <div style={{display:"flex",gap:16,paddingBottom:14,fontSize:13,color:"rgba(0,0,0,0.55)"}}>
             <span><TI n="calendar" style={{marginRight:3}}/> {spiel.date}</span>
             <span><TI n="clock" style={{marginRight:3}}/> {spiel.time} Uhr</span>
             <span>{spiel.home?"Heim":"Auswärts"}</span>
@@ -4823,7 +4823,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 <div style={{background:"linear-gradient(135deg,#3B82F6 0%,#60A5FA 100%)",borderRadius:14,padding:"16px 20px",display:"flex",alignItems:"center",gap:16}}>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:4}}>Endergebnis</div>
-                    <div style={{fontSize:24,fontWeight:900,color:"#fff",letterSpacing:3,lineHeight:1}}>{spiel.result}</div>
+                    <div style={{fontSize:24,fontWeight:800,color:"#fff",letterSpacing:3,lineHeight:1}}>{spiel.result}</div>
                     {spiel.htResult&&<div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginTop:4}}>Halbzeit: {spiel.htResult}</div>}
                   </div>
                   <div style={{textAlign:"right"}}>
@@ -4835,8 +4835,8 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               )}
 
               {/* Ort & Treffpunkt */}
-              <div style={{display:"grid",gridTemplateColumns:spiel.treffpunkt?"1fr 1fr":"1fr",gap:10}}>
-                <div style={{background:"var(--surface2)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+              <div style={{display:"grid",gridTemplateColumns:spiel.treffpunkt?"1fr 1fr":"1fr",gap:12}}>
+                <div style={{background:"var(--surface2)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:21}}><TI n="map-pin"/></span>
                   <div>
                     <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Spielort</div>
@@ -4845,7 +4845,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                   </div>
                 </div>
                 {spiel.treffpunkt&&(
-                  <div style={{background:"var(--surface)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:10,border:"0.5px solid #DBEAFE"}}>
+                  <div style={{background:"var(--surface)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,border:"0.5px solid #DBEAFE"}}>
                     <span style={{fontSize:21}}><TI n="target"/></span>
                     <div>
                       <div style={{fontSize:13,color:BL,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Treffpunkt</div>
@@ -4892,7 +4892,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               </div>
 
               {spiel.notes&&<div style={{background:"var(--surface)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#92400E",border:"0.5px solid #FDE68A",display:"flex",gap:8,alignItems:"flex-start"}}><span>⚠</span><span>{spiel.notes}</span></div>}
-              <div style={{padding:"8px 12px",background:"#F0F9FF",borderRadius:8,fontSize:13,color:BL,display:"flex",gap:6,alignItems:"center"}}><span><TI n="refresh"/></span><span>Synchronisiert mit <strong>fvrz.ch</strong> · {spiel.spielNr}</span></div>
+              <div style={{padding:"8px 12px",background:"#F0F9FF",borderRadius:8,fontSize:13,color:BL,display:"flex",gap:8,alignItems:"center"}}><span><TI n="refresh"/></span><span>Synchronisiert mit <strong>fvrz.ch</strong> · {spiel.spielNr}</span></div>
             </div>
           )}
 
@@ -4921,7 +4921,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                     <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,background:"var(--surface2)",borderRadius:6,padding:"5px 10px"}}>
                       <span style={{fontSize:13,fontWeight:700,color:getNr(p.id)?R:"#ccc",minWidth:22,textAlign:"right"}}>{getNr(p.id)||"-"}</span>
                       <Av name={p.name} size={20} bg={(stats.ersatz||[]).includes(p.id)?"#9CA3AF":"#16A34A"}/>
-                      <span style={{fontSize:13,fontWeight:500,flex:1}}>{p.firstName} {p.lastName}</span>
+                      <span style={{fontSize:13,fontWeight:600,flex:1}}>{p.firstName} {p.lastName}</span>
                       {/* Start / Ersatz toggle */}
                       {canEdit?(
                         <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:"0.5px solid var(--border)",flexShrink:0}}>
@@ -4975,7 +4975,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               {stats.wechsel.length===0&&!editMode&&<div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Keine Wechsel erfasst.</div>}
               {stats.wechsel.map((w,i)=>{
                 const wText=(
-                  <span style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{display:"flex",gap:8,alignItems:"center"}}>
                     <span style={{color:R}}>{"Raus: "+w.raus}</span>
                     <span style={{color:"var(--sub)"}}>{"/"}</span>
                     <span style={{color:GN}}>{"Rein: "+w.rein}</span>
@@ -5023,7 +5023,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
                         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                           {grp.players.map(pl=>(
-                            <div key={pl.id} style={{display:"flex",alignItems:"center",gap:6}}>
+                            <div key={pl.id} style={{display:"flex",alignItems:"center",gap:8}}>
                               <Av name={pl.name} size={24} bg={gi===0?AM:"#9CA3AF"}/>
                               <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{pl.firstName} {pl.lastName}</span>
                             </div>
@@ -5037,14 +5037,14 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
 
                 {/* Voting list */}
                 <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Abstimmen</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {roster.map(pl=>{
                     const vv=counts[pl.id]||0;
                     const isVoted=isVotedFor(pl.id);
                     const barPct=maxV>0?Math.round(vv/maxV*100):0;
                     return(
                       <div key={pl.id} onClick={()=>castVote(pl.id)}
-                        style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${isVoted?AM:GB}`,background:isVoted?"#FFFBEB":"#fff",cursor:"pointer"}}>
+                        style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${isVoted?AM:GB}`,background:isVoted?"#FFFBEB":"#fff",cursor:"pointer"}}>
                         <Av name={pl.name} size={28} bg={isVoted?AM:R}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
@@ -5525,11 +5525,11 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                       <span style={{background:hBtn,color:hTxt,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:0.6}}>{selEv.subtype||selEv.type}</span>
                       <button onClick={()=>setModalOpen(false)} style={{background:hBtn,border:"none",borderRadius:"50%",width:30,height:30,color:hTxt,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
-                    <div style={{fontWeight:900,fontSize:21,lineHeight:1.2,marginBottom:12,color:hTxt}}>
+                    <div style={{fontWeight:800,fontSize:21,lineHeight:1.2,marginBottom:12,color:hTxt}}>
                       {selEv.opponent?"vs. "+selEv.opponent:selEv.type==="Training"?"Training":selEv.title||selEv.type}
                     </div>
                     {/* Info Pills */}
-                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                       <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="calendar" style={{marginRight:3}}/> {selEv.date}{selEv.endDate?" - "+selEv.endDate:""}</span>
                       <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="clock" style={{marginRight:3}}/> {selEv.time} Uhr</span>
                       <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="map-pin" style={{marginRight:3}}/> {selEv.location}</span>
@@ -5540,7 +5540,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               })()}
               {/* Beschreibung */}
               {selEv.description&&(
-                <div style={{padding:"14px 20px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:10,background:"var(--surface)"}}>
+                <div style={{padding:"14px 20px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:12,background:"var(--surface)"}}>
                   <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
                   <p style={{margin:0,fontSize:13,color:"var(--text)",lineHeight:1.65}}>{selEv.description}</p>
                 </div>
@@ -5552,7 +5552,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   {besammlungen[selEv.id]&&(besammlungen[selEv.id].time||besammlungen[selEv.id].location)&&(
                     <div style={{marginBottom:trainerNotes[selEv.id]?8:0}}>
                       <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:2}}><TI n="target" style={{marginRight:3}}/> Treffpunkt</div>
-                      <div style={{fontSize:13,color:"var(--text)",fontWeight:500}}>
+                      <div style={{fontSize:13,color:"var(--text)",fontWeight:600}}>
                         {besammlungen[selEv.id].date&&<span style={{marginRight:8}}><TI n="calendar" style={{marginRight:3}}/> {besammlungen[selEv.id].date}</span>}
                         {besammlungen[selEv.id].time&&<span style={{marginRight:8}}><TI n="clock" style={{marginRight:3}}/> {besammlungen[selEv.id].time} Uhr</span>}
                         {besammlungen[selEv.id].location&&<span><TI n="target" style={{marginRight:3}}/> {besammlungen[selEv.id].location}</span>}
@@ -5570,7 +5570,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               {/* Zum Spielplan Link bei Spielen */}
               {selEv.type==="Spiel"&&onNavigateToSpiel&&(
                 <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <span style={{fontSize:13,color:BL,fontWeight:500}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
+                  <span style={{fontSize:13,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                   <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
                     style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                     Zum Spielplan →
@@ -5582,7 +5582,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 <div style={{padding:"14px 20px"}}>
                   {/* Aufgebot-Banner für Spieler/Eltern */}
                   {!isTrainer&&!isAdmin&&isInAufgebot(selEv.id,myId)&&(
-                    <div style={{background:"var(--surface)",border:"1.5px solid #818CF8",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <div style={{background:"var(--surface)",border:"1.5px solid #818CF8",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <span style={{fontSize:18}}><TI n="ball-football"/></span>
                       <div>
                         <div style={{fontWeight:700,fontSize:13,color:"var(--cc-accent)"}}>Du bist im Aufgebot!</div>
@@ -5601,7 +5601,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     return(
                       <div style={{marginBottom:12}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Aufgebot ({alleAufgebotene.length})</div>
-                        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
                           {alleAufgebotene.map(p=>(
                             <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:p.ich?"#4F46E5":"#EEF2FF",borderRadius:8}}>
                               <Av name={p.name} size={26} bg={p.ich?"rgba(255,255,255,0.3)":"#6366F1"}/>
@@ -5616,7 +5616,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     );
                   })()}
                   <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Meine Rückmeldung</div>
-                  <div style={{display:"flex",gap:10}}>
+                  <div style={{display:"flex",gap:12}}>
                     {["zu","ab"].map(s=>{
                       const resp=getResp(selEv.id,myId);
                       const active=resp.status===s;
@@ -5639,7 +5639,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           </div>
         )}
         {/* Statistik-Header */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:14}}>
           {(()=>{
             const rsvpEvs=teamEvents.filter(e=>!(e.subtype==="Vereinsanlass"&&e.rsvp===false));
             const spielTrainEvs=rsvpEvs.filter(e=>e.type==="Training"||e.type==="Spiel");
@@ -5675,7 +5675,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
 
         {/* Team-Filter (nur wenn mehrere Teams) */}
         {hasMultiTeams&&(
-          <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             <span style={{fontSize:13,color:"var(--sub)",fontWeight:600,alignSelf:"center",marginRight:2}}>{isEltern?"Kind:":"Team:"}</span>
             {["alle",...allTeams].map(t=>{
               const active=selectedTeam===t;
@@ -5691,9 +5691,9 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           </div>
         )}
         {/* Filter */}
-        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:6,marginBottom:14}}>
+        <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,marginBottom:14}}>
           {/* Typ-Pills scrollbar */}
-          <div style={{display:"flex",alignItems:"center",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",flex:1,minWidth:0}}>
             {[
               {k:"alle",l:"Alle"},
               {k:"training",l:"Trainings"},
@@ -5712,13 +5712,13 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           </div>
           {/* Zeit-Toggle - eigene Zeile auf Mobile durch flex-basis 100% */}
           <button onClick={()=>setTimeFilter(p=>p==="kommend"?"vergangen":"kommend")}
-            style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
+            style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
             <span style={{fontSize:13,opacity:0.6}}>{"▾"}</span>
             <span>{timeFilter==="kommend"?"Vergangene Termine":"Kommende Termine"}</span>
           </button>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
           {(showMoreEvents?filteredEvents:filteredEvents.slice(0,5)).map(ev=>{
             const resp=getResp(ev.id,myId);
             const past=isPast(ev);
@@ -5751,7 +5751,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 opacity:past?0.65:1,
               }}>
                 {/* Haupt-Inhalt */}
-                <div onClick={()=>openEvent(ev.id)} style={{flex:1,padding:"12px 14px",minWidth:0,display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
+                <div onClick={()=>openEvent(ev.id)} style={{flex:1,padding:"12px 14px",minWidth:0,display:"flex",alignItems:"center",gap:16,cursor:"pointer"}}>
                   {/* Datum-Block */}
                   <div style={{width:62,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
@@ -5759,8 +5759,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
                   </div>
                   {/* Text */}
-                  <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:3}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:4}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
                         {ev.opponent?"vs. "+ev.opponent:ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
                       </div>
@@ -5784,15 +5784,15 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 {/* RSVP-Buttons - segmentierter Toggle */}
                 {showRsvp&&(
                   <div style={{padding:"10px 12px",borderTop:"0.5px solid var(--border)"}} onClick={e=>e.stopPropagation()}>
-                    <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:2}}>
+                    <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:4}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▲</span>
                         <span>{isZu?"Zugesagt":"Zusagen"}</span>
                       </button>
                       <div style={{width:1,background:GB,flexShrink:0,margin:"4px 0"}}/>
                       <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▽</span>
                         <span>{isAb?"Abgesagt":"Absagen"}</span>
                       </button>
@@ -5854,10 +5854,10 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     <span style={{background:hBtn,color:hTxt,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,letterSpacing:0.8,textTransform:"uppercase"}}>
                       {selEv.subtype||selEv.type}
                     </span>
-                    <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                       {isTrainer&&!isPast(selEv)&&(selEv.type==="Training"||selEv.subtype==="Team-Event")&&(
                         <button onClick={()=>toggleCancel(selEv.id)}
-                          style={{display:"flex",alignItems:"center",gap:5,background:cancelledEvents[selEv.id]?hBtn:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13,fontWeight:700}}>
+                          style={{display:"flex",alignItems:"center",gap:8,background:cancelledEvents[selEv.id]?hBtn:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13,fontWeight:700}}>
                           {cancelledEvents[selEv.id]?"↩ Reaktivieren":"✕ Training absagen"}
                         </button>
                       )}
@@ -5865,11 +5865,11 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                         style={{background:hBtn,border:"none",borderRadius:"50%",width:30,height:30,color:hTxt,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
                   </div>
-                  <div style={{color:hTxt,fontWeight:900,fontSize:21,lineHeight:1.15,marginBottom:12,letterSpacing:-0.3}}>
+                  <div style={{color:hTxt,fontWeight:800,fontSize:21,lineHeight:1.15,marginBottom:12,letterSpacing:-0.3}}>
                     {selEv.opponent?"vs. "+selEv.opponent:selEv.type==="Training"?"Training":selEv.title||selEv.type}
                   </div>
                   {/* Info Pills */}
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
                     <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20}}><TI n="calendar" style={{marginRight:3}}/> {selEv.date}{selEv.endDate?" - "+selEv.endDate:""}</span>
                     <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20}}><TI n="clock" style={{marginRight:3}}/> {selEv.time} Uhr</span>
                     <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20}}><TI n="map-pin" style={{marginRight:3}}/> {selEv.location}</span>
@@ -5880,7 +5880,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",paddingTop:10,borderTop:"0.5px solid rgba(0,0,0,0.1)"}}>
                       <span style={{color:hTxtSub,fontSize:13,fontWeight:700,letterSpacing:0.5}}>⏰ DEADLINE</span>
                       {editingDeadline?(
-                        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
                           <input type="date"
                             defaultValue={(()=>{const d=deadlines[selEv.id];if(!d)return"";try{const p=d.split(",")[0].trim().replace(/^\S+\s+/,"").split(".");return `2026-${p[1]?.padStart(2,"0")}-${p[0]?.padStart(2,"0")}`;}catch(e){return "";}})()}
                             onBlur={e=>{const d=e.target.value;if(d){const[y,m,day]=d.split("-");const days=["So","Mo","Di","Mi","Do","Fr","Sa"];const wd=days[new Date(d).getDay()];const time=(deadlines[selEv.id]||"").split(",")[1]?.trim()||"18:00";setDeadlines(prev=>({...prev,[selEv.id]:`${wd} ${day}.${m}.${y}, ${time}`}));}setEditingDeadline(false);}}
@@ -5899,7 +5899,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                         </span>
                       )}
                       <button onClick={()=>setAutoReminder(prev=>({...prev,[selEv.id]:!prev[selEv.id]}))}
-                        style={{display:"flex",alignItems:"center",gap:5,background:hBtn,border:"0.5px solid rgba(0,0,0,0.1)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13}}>
+                        style={{display:"flex",alignItems:"center",gap:8,background:hBtn,border:"0.5px solid rgba(0,0,0,0.1)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13}}>
                         <span style={{width:22,height:12,borderRadius:6,background:autoReminder[selEv.id]?(hLight?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.85)"):"rgba(0,0,0,0.15)",position:"relative",display:"inline-block",flexShrink:0}}>
                           <span style={{position:"absolute",top:2,left:autoReminder[selEv.id]?11:2,width:8,height:8,borderRadius:"50%",background:autoReminder[selEv.id]?GN:(hLight?"rgba(0,0,0,0.2)":"rgba(255,255,255,0.4)")}}/>
                         </span>
@@ -5941,8 +5941,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               <div style={{marginBottom:10}}>
                 <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:6}}><TI n="target" style={{marginRight:3}}/> Treffpunkt</div>
                 {editingNote&&canEditEvent(selEv)?(
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                       <div>
                         <div style={{fontSize:13,color:"var(--sub)",marginBottom:2}}>Datum</div>
                         <input type="date" value={(()=>{const d=besammlungen[selEv.id]?.date||selEv.date||"";const c=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1]?.padStart(2,"0")}-${p[0]?.padStart(2,"0")}`:"";})()}
@@ -5992,7 +5992,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             {/* Zum Spielplan Link bei Spielen */}
             {selEv.type==="Spiel"&&onNavigateToSpiel&&(
               <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <span style={{fontSize:13,color:BL,fontWeight:500}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
+                <span style={{fontSize:13,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                 <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
                   style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                   Zum Spielplan →
@@ -6001,7 +6001,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             )}
             {/* Readonly banner for trainer on Vereinsanlass with RSVP */}
             {(isTrainer||isAdmin)&&!canEditEvent(selEv)&&selEv.rsvp!==false&&(
-              <div style={{padding:"8px 16px",background:"var(--surface)",borderBottom:`0.5px solid #FED7AA`,fontSize:13,color:"#92400E",display:"flex",alignItems:"center",gap:6}}>
+              <div style={{padding:"8px 16px",background:"var(--surface)",borderBottom:`0.5px solid #FED7AA`,fontSize:13,color:"#92400E",display:"flex",alignItems:"center",gap:8}}>
                 <span>{"ℹ️"}</span>
                 <span>Vereinsanlass - nur Administratoren können Anwesenheiten bearbeiten. Du siehst die Übersicht als Lesezugriff.</span>
               </div>
@@ -6051,7 +6051,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                         {getNr(p.id)&&<div style={{fontSize:13,color:"var(--sub)"}}>{"#"+getNr(p.id)}</div>}
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:3,justifyContent:"center"}}>
+                    <div style={{display:"flex",gap:4,justifyContent:"center"}}>
                       {(canEditEvent(selEv)?(selEv.type==="Spiel"?["zu","ab","unentschuldigt"]:selEv.type==="Veranstaltung"?["zu","ab"]:["zu","ab","unentschuldigt"]):[]).map(s=>{
                         const cfg=STATUS_CFG[s];
                         const active=resp.status===s;
@@ -6093,8 +6093,8 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
 
       {/* Ereignisliste */}
 
-      <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:6,marginBottom:14}}>
-        <div style={{display:"flex",alignItems:"center",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",flex:1,minWidth:0}}>
+      <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",flex:1,minWidth:0}}>
           {["alle","training","spiele","team-event","vereinsanlass"].map(f=>{
             const active=isFilterActive(f);
             return(
@@ -6106,7 +6106,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
           })}
         </div>
         <button onClick={()=>setTimeFilter(p=>p==="kommend"?"vergangen":"kommend")}
-          style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
+          style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
           <span style={{fontSize:13,opacity:0.6}}>{"▾"}</span>
           <span>{timeFilter==="kommend"?"Vergangene Termine":"Kommende Termine"}</span>
         </button>
@@ -6162,7 +6162,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                       {label:"Beginn", time:ev.time||"-"},
                       {label:"Ende",   time:ev.endTime||"-"},
                     ].map((t,i,arr)=>(
-                      <div key={i} style={{flex:1,padding:"12px 8px",borderRight:i<arr.length-1?`0.5px solid ${GB}`:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                      <div key={i} style={{flex:1,padding:"12px 8px",borderRight:i<arr.length-1?`0.5px solid ${GB}`:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.8}}>{t.label}</div>
                         <div style={{fontSize:18,fontWeight:700,color:"var(--text)",lineHeight:1}}>{t.time}</div>
                       </div>
@@ -6171,14 +6171,14 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 </>
               ):(
                 /* -- TRAINING / STANDARD: schlank wie Bild 2 -- */
-                <div onClick={()=>openEvent(ev.id)} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:14}}>
+                <div onClick={()=>openEvent(ev.id)} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:16}}>
                   <div style={{width:58,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
                     <div style={{fontSize:18,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
                   </div>
-                  <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:3}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:4}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
                         {ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
                       </div>
@@ -6218,15 +6218,15 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 const none=!isZu&&!isAb;
                 return(
                   <div style={{padding:"10px 12px",background:"var(--surface)"}} onClick={e=>e.stopPropagation()}>
-                    <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:2}}>
+                    <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:4}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▲</span>
                         <span>{isZu?"Zugesagt":"Zusagen"}</span>
                       </button>
                       <div style={{width:1,background:GB,flexShrink:0,margin:"4px 0"}}/>
                       <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▽</span>
                         <span>{isAb?"Abgesagt":"Absagen"}</span>
                       </button>
@@ -6467,7 +6467,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             <Av name={m.name} size={44} bg={R}/>
             <div>
               <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{m.name}</div>
-              <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:8,marginTop:4,flexWrap:"wrap"}}>
                 <Chip text={m.role} color={R}/>
                 <Chip text={m.type} color={BL} bg="#EFF6FF"/>
                 <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
@@ -6483,7 +6483,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               {rows.filter(r=>r.v&&r.v!=="-").map((r,i,arr)=>(
                 <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<arr.length-1?"1px solid var(--border)":"none",gap:12}}>
                   <span style={{fontSize:13,color:"var(--sub)",minWidth:110,flexShrink:0}}>{r.l}</span>
-                  <span style={{fontSize:13,color:"var(--text)",fontWeight:500,textAlign:"right"}}>{r.v}</span>
+                  <span style={{fontSize:13,color:"var(--text)",fontWeight:600,textAlign:"right"}}>{r.v}</span>
                 </div>
               ))}
               {m.hat_portal_zugang&&(
@@ -6526,7 +6526,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
         <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
       </div>
       {/* Filter-Zeile */}
-      <div style={{display:"flex",gap:10,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:12,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Suchen nach Name, Rolle, Team…"
           style={{...inputStyle,flex:1,minWidth:180}}/>
@@ -6539,7 +6539,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       {groupBy!=="none"&&(()=>{
         const vals=[...new Set(MEMBERS.map(m=>m[groupBy]||"-"))].sort();
         return(
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
             <button onClick={()=>setFilterVals([])}
               style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
                 background:filterVals.length===0?BK:"var(--surface)",
@@ -6556,7 +6556,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                     background:active?BK:"var(--surface)",
                     color:active?"#fff":"var(--sub)",
                     fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s",
-                    display:"flex",alignItems:"center",gap:5}}>
+                    display:"flex",alignItems:"center",gap:8}}>
                   {active&&<span style={{fontSize:11}}>✓</span>}
                   {v}
                   <span style={{opacity:0.55,fontWeight:400}}>
@@ -6786,7 +6786,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
         <InfoBox text="Klick auf ein Icon aktiviert/deaktiviert das Modul pro Team. Spalten-Buttons setzen ein Modul für alle gefilterten Teams." color={BL}/>
         {saving&&<span style={{fontSize:13,color:"var(--sub)"}}>Speichert…</span>}
       </div>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
         {hauptbereiche.map(h=>{
           const col=HB_COLORS[h]||BK;
           const isActive=filterHaupt===h;
@@ -6811,7 +6811,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
               <div key={t.id} style={{borderRadius:12,border:"1px solid var(--border)",background:"var(--surface)",overflow:"hidden"}}>
                 {/* Team Header */}
                 <div onClick={()=>setExpandedTeam(isOpen?null:t.id)}
-                  style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}}>
+                  style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",cursor:"pointer"}}>
                   <div style={{width:4,height:36,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:600,fontSize:14,color:"var(--text)"}}>{t.name}</div>
@@ -6852,12 +6852,12 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
               </th>
               {TEAM_MODS.map(m=>(
                 <th key={m.key} style={{padding:"10px 4px",textAlign:"center",minWidth:56}}>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
                     <div style={{width:32,height:32,borderRadius:8,background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                       <TI n={m.icon||"circle"} size={16} style={{color:"var(--sub)"}}/>
                     </div>
-                    <span style={{fontSize:11,color:"var(--sub)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.4,maxWidth:50,textAlign:"center",lineHeight:1.2}}>{m.label}</span>
-                    <div style={{display:"flex",gap:3}}>
+                    <span style={{fontSize:11,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,maxWidth:50,textAlign:"center",lineHeight:1.2}}>{m.label}</span>
+                    <div style={{display:"flex",gap:4}}>
                       <button onClick={()=>applyToAll(m.key,true)} title={`Alle: ${m.label} ein`}
                         style={{width:18,height:18,borderRadius:4,border:"none",background:GN,color:"#fff",cursor:"pointer",fontFamily:FONT,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✓</button>
                       <button onClick={()=>applyToAll(m.key,false)} title={`Alle: ${m.label} aus`}
@@ -6890,7 +6890,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                   <tr key={t.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"transparent":"var(--surface2)"}}
                     onMouseEnter={e=>e.currentTarget.style.background="var(--hover,rgba(0,0,0,0.04))"}
                     onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"transparent":"var(--surface2)"}>
-                    <td style={{padding:"8px 16px",fontWeight:500,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:13,zIndex:1}}>
+                    <td style={{padding:"8px 16px",fontWeight:600,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:13,zIndex:1}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <div style={{width:3,height:20,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
                         <div style={{flex:1,minWidth:0}}>
@@ -7420,7 +7420,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               <button key={k.key} onClick={()=>setTab(k.tabs[0])} style={{
                 padding:"20px 16px",borderRadius:14,border:"1px solid var(--border)",
                 background:"var(--surface)",cursor:"pointer",textAlign:"left",
-                display:"flex",flexDirection:"column",gap:10,fontFamily:FONT
+                display:"flex",flexDirection:"column",gap:12,fontFamily:FONT
               }}>
                 <div style={{width:40,height:40,borderRadius:10,background:k.color+"22",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <TI n={k.icon} size={20} style={{color:k.color}}/>
@@ -7432,13 +7432,13 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           </div>
         ):(
           <div style={{marginBottom:16}}>
-            <button onClick={()=>setTab("overview")} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 0",background:"none",border:"none",cursor:"pointer",color:"var(--sub)",fontSize:13,fontFamily:FONT}}>
+            <button onClick={()=>setTab("overview")} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",background:"none",border:"none",cursor:"pointer",color:"var(--sub)",fontSize:13,fontFamily:FONT}}>
               <TI n="arrow-left" size={14}/> Übersicht
             </button>
             <div style={{display:"flex",gap:4,marginTop:8,overflowX:"auto",borderBottom:"1px solid var(--border)",paddingBottom:0,scrollbarWidth:"none"}}>
               {TABS.filter(t=>MOBILE_KACHELN.find(k=>k.tabs.includes(t.key)&&k.tabs.includes(tab))).map(t=>(
                 <button key={t.key} onClick={()=>setTab(t.key)} style={{
-                  display:"flex",alignItems:"center",gap:5,padding:"7px 12px",whiteSpace:"nowrap",
+                  display:"flex",alignItems:"center",gap:8,padding:"7px 12px",whiteSpace:"nowrap",
                   background:"none",border:"none",borderBottom:tab===t.key?`2px solid ${BK}`:"2px solid transparent",
                   cursor:"pointer",fontSize:13,fontWeight:tab===t.key?700:400,
                   color:tab===t.key?BK:"var(--sub)",borderRadius:0,marginBottom:-1,fontFamily:FONT
@@ -7454,12 +7454,12 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         /* Desktop: zweistufige Navigation */
         <div style={{marginBottom:20}}>
           {/* Ebene 1: Hauptkategorien */}
-          <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:0}}>
+          <div style={{display:"flex",gap:4,borderBottom:"1px solid var(--border)",marginBottom:0}}>
             {MOBILE_KACHELN.map(k=>{
               const isActive=k.tabs.includes(tab);
               return(
                 <button key={k.key} onClick={()=>setTab(k.tabs[0])} style={{
-                  display:"flex",alignItems:"center",gap:6,padding:"10px 16px",whiteSpace:"nowrap",
+                  display:"flex",alignItems:"center",gap:8,padding:"10px 16px",whiteSpace:"nowrap",
                   background:"none",border:"none",borderBottom:isActive?`2px solid ${BK}`:"2px solid transparent",
                   cursor:"pointer",fontSize:13,fontWeight:isActive?700:400,
                   color:isActive?BK:"var(--sub)",borderRadius:0,marginBottom:-1,fontFamily:FONT
@@ -7473,10 +7473,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           {/* Ebene 2: Unterkategorien */}
           {MOBILE_KACHELN.filter(k=>k.tabs.includes(tab)).map(k=>(
             k.tabs.length>1&&(
-              <div key={k.key} style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",paddingTop:4,overflowX:"auto",scrollbarWidth:"none"}}>
+              <div key={k.key} style={{display:"flex",gap:4,borderBottom:"1px solid var(--border)",paddingTop:4,overflowX:"auto",scrollbarWidth:"none"}}>
                 {TABS.filter(t=>k.tabs.includes(t.key)).map(t=>(
                   <button key={t.key} onClick={()=>setTab(t.key)} style={{
-                    display:"flex",alignItems:"center",gap:5,padding:"6px 12px",whiteSpace:"nowrap",
+                    display:"flex",alignItems:"center",gap:8,padding:"6px 12px",whiteSpace:"nowrap",
                     background:tab===t.key?"var(--surface2)":"none",border:"none",
                     borderBottom:tab===t.key?`2px solid ${k.color}`:"2px solid transparent",
                     cursor:"pointer",fontSize:13,fontWeight:tab===t.key?600:400,
@@ -7517,7 +7517,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             <div style={{display:"flex",border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden"}}>
               {["modul","rolle"].map(v=>(
                 <button key={v} onClick={()=>setModuleViewMode(v)} style={{
-                  padding:"5px 12px",fontSize:11,fontWeight:500,cursor:"pointer",
+                  padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",
                   border:"none",fontFamily:FONT,transition:"all .15s",
                   background:moduleViewMode===v?BK:"transparent",
                   color:moduleViewMode===v?"#fff":"var(--sub)"
@@ -7594,7 +7594,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                     <div style={{position:"absolute",top:2,width:11,height:11,borderRadius:"50%",background:"var(--surface)",transition:"left 0.15s",left:isAktiv||isPflicht?13:2}}/>
                                   </div>
                                   <TI n={m.icon} size={13} style={{color:isPflicht?"#B45309":"var(--sub)",flexShrink:0}}/>
-                                  <span style={{fontWeight:500,color:isPflicht?"#B45309":isExpanded?"var(--text)":"var(--text)",fontSize:13}}>{m.name||m.label}</span>
+                                  <span style={{fontWeight:600,color:isPflicht?"#B45309":isExpanded?"var(--text)":"var(--text)",fontSize:13}}>{m.name||m.label}</span>
                                   {isPflicht&&<span style={{fontSize:11,padding:"1px 5px",borderRadius:4,background:"#FEF3C7",color:"#B45309",fontWeight:600}}>Pflicht</span>}
                                   <TI n={isExpanded?"chevron-up":"chevron-down"} size={11} style={{color:"var(--sub)",marginLeft:"auto"}}/>
                                 </div>
@@ -7649,7 +7649,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                     <span style={{minWidth:80,textAlign:"right"}}>Minimalstufe</span>
                                   </div>
                                   {(MODUL_AKTIONEN[m.key]||[]).map((a,ai)=>(
-                                    <div key={ai} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"6px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
+                                    <div key={ai} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"6px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
                                       <div style={{flex:1}}>
                                         <span style={{fontSize:13,color:"var(--text)"}}>{a.label}</span>
                                         {a.spez&&<div style={{fontSize:11,color:"var(--sub)",marginTop:2,fontStyle:"italic"}}>{a.spez}</div>}
@@ -7674,14 +7674,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
           {/* ── ANSICHT: NACH ROLLE ── */}
           {moduleViewMode==="rolle"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {ROLLEN.filter(r=>r!=="funktionaer").map(role=>{
                 const zugMods=ALLE_MODULE.filter(m=>effRechte[role]?.includes(m.key)&&moduleAktiv[m.key]!==false);
                 if(!zugMods.length) return null;
                 const roleInfo=ROLES[role]||{};
                 return(
                   <Card key={role} style={{padding:0,overflow:"hidden"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)"}}>
                       <div style={{width:10,height:10,borderRadius:"50%",background:roleInfo.color||"#888",flexShrink:0}}/>
                       <span style={{fontWeight:600,fontSize:14,color:roleInfo.color||"var(--text)"}}>{ROLLEN_LABELS[role]}</span>
                       <span style={{fontSize:11,color:"var(--sub)",marginLeft:4}}>{zugMods.length} Module</span>
@@ -7702,9 +7702,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           return(
                             <tr key={m.key} style={{borderTop:"0.5px solid var(--border)"}}>
                               <td style={{padding:"8px 14px"}}>
-                                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                                <div style={{display:"flex",alignItems:"center",gap:8}}>
                                   <TI n={m.icon} size={13} style={{color:"var(--sub)"}}/>
-                                  <span style={{fontWeight:500,fontSize:13}}>{m.name||m.label}</span>
+                                  <span style={{fontWeight:600,fontSize:13}}>{m.name||m.label}</span>
                                 </div>
                               </td>
                               <td style={{padding:"8px 10px"}}>
@@ -7726,14 +7726,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
               {/* Funktionär: via Gruppen */}
               <Card style={{padding:0,overflow:"hidden"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)"}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:ROLES["funktionaer"]?.color||"#8B5CF6",flexShrink:0}}/>
                   <span style={{fontWeight:600,fontSize:14,color:ROLES["funktionaer"]?.color||"#8B5CF6"}}>Funktionär</span>
                   <span style={{fontSize:11,color:"var(--sub)",marginLeft:4}}>Module via Gruppen & Funktionen</span>
                 </div>
                 <div style={{padding:"12px 16px"}}>
                   <InfoBox text="Funktionäre erhalten keinen fixen Modulzugang. Stattdessen werden ihnen Gruppen zugewiesen, welche die erlaubten Module definieren. Die Einschränkung auf bestimmte Teams oder Filter erfolgt über Funktionen innerhalb der Gruppe." color={BL}/>
-                  <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
                     {(gruppen.length>0?gruppen:[
                       {name:"Vereinsleben & Events",farbe:"#8B5CF6",module:["events","helpers","members","news","docs"]},
                       {name:"Betrieb & Infrastruktur",farbe:"#3B82F6",module:["material","buses","lockers","docs"]},
@@ -7741,9 +7741,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       {name:"Stufenleitende",          farbe:"#F97316",module:["team","training","events","attendance_central","members","helpers"]},
                       {name:"Schiedsrichterwesen",     farbe:"#06B6D4",module:["schedule","training","docs"]},
                     ]).map(g=>(
-                      <div key={g.name} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",borderRadius:8,border:"0.5px solid var(--border)"}}>
+                      <div key={g.name} style={{display:"flex",alignItems:"center",gap:12,padding:"7px 10px",borderRadius:8,border:"0.5px solid var(--border)"}}>
                         <div style={{width:8,height:8,borderRadius:"50%",background:g.farbe,flexShrink:0}}/>
-                        <span style={{fontWeight:500,fontSize:13,flex:1}}>{g.name}</span>
+                        <span style={{fontWeight:600,fontSize:13,flex:1}}>{g.name}</span>
                         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                           {(g.module||[]).map(mk=>{
                             const mod=ALLE_MODULE.find(m=>m.key===mk);
@@ -7799,7 +7799,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <div style={{width:4,alignSelf:"stretch",background:g.farbe,flexShrink:0}}/>
                   <div onClick={()=>setSelectedGruppe(isOpen?null:g)}
                     style={{flex:1,padding:"14px 16px",cursor:"pointer",minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
                       <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{g.name}</span>
                       <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:g.farbe+"20",color:g.farbe,fontWeight:600}}>
                         {gFunktionen.length} Funktion{gFunktionen.length!==1?"en":""}
@@ -7813,7 +7813,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     </div>
                   </div>
                   {/* Aktionen */}
-                  <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 14px",flexShrink:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 14px",flexShrink:0}}>
                     <button onClick={e=>{e.stopPropagation();setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6",modul_stufen:g.modul_stufen||{}});setShowGruppeForm(true);}}
                       style={{width:30,height:30,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
                       <TI n="edit" size={13}/>
@@ -7887,7 +7887,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           <ModalOrSheet open={showGruppeForm} onClose={()=>{setShowGruppeForm(false);setEditGruppe(null);}} maxWidth={500}>
             <div style={{padding:"20px 20px 0",flexShrink:0}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
                   <div style={{width:12,height:12,borderRadius:"50%",background:gruppeForm.farbe}}/>
                   <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>{editGruppe?"Gruppe bearbeiten":"Neue Gruppe"}</h2>
                 </div>
@@ -7897,9 +7897,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 {editGruppe?"Module und Name anpassen.":"Neue Gruppe mit Modulzugang erstellen."}
               </div>
             </div>
-            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:14,overflowY:"auto"}}>
+            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:16,overflowY:"auto"}}>
               {/* Name + Farbe */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,alignItems:"end"}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:12,alignItems:"end"}}>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Gruppenname *</label>
                   <input value={gruppeForm.name} onChange={e=>setGruppeForm(p=>({...p,name:e.target.value}))}
@@ -7908,7 +7908,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 </div>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Farbe</label>
-                  <div style={{display:"flex",gap:5}}>
+                  <div style={{display:"flex",gap:8}}>
                     {["#8B5CF6","#3B82F6","#22C55E","#F97316","#06B6D4","#EF4444","#F59E0B","#EC4899"].map(c=>(
                       <div key={c} onClick={()=>setGruppeForm(p=>({...p,farbe:c}))}
                         style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",
@@ -7944,13 +7944,13 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           const newStufen={...p.modul_stufen};
                           if(!sel) newStufen[m.key]="lesen";
                           return{...p,module:newMods,modul_stufen:newStufen};
-                        })} style={{display:"flex",alignItems:"center",gap:6,flex:1,background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left",fontFamily:FONT}}>
+                        })} style={{display:"flex",alignItems:"center",gap:8,flex:1,background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left",fontFamily:FONT}}>
                           <TI n={m.icon} size={13} style={{color:sel?gruppeForm.farbe:"var(--sub)",flexShrink:0}}/>
                           <span style={{fontSize:13,color:sel?gruppeForm.farbe:"var(--sub)",fontWeight:sel?600:400}}>{m.label}</span>
                         </button>
                         {/* Stufen-Toggle (nur wenn aktiv) */}
                         {sel&&(
-                          <div style={{display:"flex",gap:2,flexShrink:0}}>
+                          <div style={{display:"flex",gap:4,flexShrink:0}}>
                             {STUFEN.map(s=>(
                               <button key={s} onClick={()=>setGruppeForm(p=>({...p,modul_stufen:{...p.modul_stufen,[m.key]:s}}))}
                                 style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${stufe===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:stufe===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:stufe===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:11,fontWeight:stufe===s?700:400,cursor:"pointer",fontFamily:FONT}}>
@@ -7965,7 +7965,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 </div>
               </div>
               {/* Buttons */}
-              <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+              <div style={{display:"flex",gap:12,paddingTop:4,borderTop:"1px solid var(--border)"}}>
                 <button onClick={async()=>{
                   if(!gruppeForm.name.trim()) return;
                   const payload={name:gruppeForm.name.trim(),beschreibung:gruppeForm.beschreibung||"",module:gruppeForm.module||[],farbe:gruppeForm.farbe||"#8B5CF6",modul_stufen:gruppeForm.modul_stufen||{},aktiv:true};
@@ -8016,7 +8016,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 Einschränkungen innerhalb der Gruppe — leer = alles der Gruppe sichtbar.
               </div>
             </div>
-            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:14,overflowY:"auto"}}>
+            <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:16,overflowY:"auto"}}>
               {/* Name */}
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Name *</label>
@@ -8054,7 +8054,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                         {/* Gruppen-Default als Referenz */}
                         <span style={{fontSize:11,color:"var(--sub)",padding:"2px 6px",borderRadius:4,background:"var(--surface2)"}}>Gruppe: {gruppeStufe}</span>
                         {/* Override Buttons (nur höhere Stufen) */}
-                        <div style={{display:"flex",gap:2}}>
+                        <div style={{display:"flex",gap:4}}>
                           <button onClick={()=>setFunktionForm(p=>{const ns={...p.stufe_override};delete ns[mk];return{...p,stufe_override:ns};})}
                             style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${!override?"#000":"var(--border)"}`,background:!override?"#00000010":"transparent",color:!override?"var(--text)":"var(--sub)",fontSize:11,cursor:"pointer",fontFamily:FONT}}>
                             Standard
@@ -8072,7 +8072,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 </div>
               </div>
               {/* Buttons */}
-              <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+              <div style={{display:"flex",gap:12,paddingTop:4,borderTop:"1px solid var(--border)"}}>
                 <button onClick={async()=>{
                   if(!funktionForm.name.trim()) return;
                   const payload={
@@ -8275,7 +8275,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             <div style={{padding:"10px 16px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,borderBottom:"0.5px solid var(--border)"}}>Vorschau</div>
             <div style={{padding:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-start"}}>
               {/* Mini-Navbar */}
-              <div style={{background:theme.navBg,borderRadius:10,padding:"8px 12px",display:"flex",alignItems:"center",gap:10,minWidth:180}}>
+              <div style={{background:theme.navBg,borderRadius:10,padding:"8px 12px",display:"flex",alignItems:"center",gap:12,minWidth:180}}>
                 <div style={{width:32,height:32,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
                   <img src={theme.logo||LOGO_B64} style={{width:32,height:32,objectFit:"cover",display:"block"}} alt="Logo"/>
                 </div>
@@ -8297,10 +8297,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
           {/* Vereinsname */}
           <Card style={{marginTop:12,padding:16}}>
-            <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:16}}>
               <TI n="building-community" size={18} style={{color:"var(--sub)",flexShrink:0}}/>
               <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>Vereinsname</div>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>Vereinsname</div>
                 <input value={theme.vereinsname||""} onChange={e=>updateTheme("vereinsname",e.target.value)}
                   style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,background:"var(--surface)",color:"var(--text)",outline:"none",fontFamily:FONT}}/>
                 <div style={{fontSize:11,color:"var(--sub)",marginTop:3}}>Wird unter dem Portal-Logo angezeigt</div>
@@ -8320,11 +8320,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 }
               </div>
               <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:6}}>Logo hochladen</div>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Logo hochladen</div>
                 <div style={{fontSize:11,color:"var(--sub)",marginBottom:10}}>SVG oder PNG, empfohlen mind. 200×200px</div>
                 <div style={{display:"flex",gap:8}}>
                   <label style={{
-                    display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",
+                    display:"inline-flex",alignItems:"center",gap:8,padding:"7px 14px",
                     borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",
                     color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer"
                   }}>
@@ -8381,11 +8381,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               {key:"btnPrimary",     label:"Button Hintergrund",        hint:"Hintergrundfarbe für Haupt-Buttons"},
               {key:"btnPrimaryText", label:"Button Text",               hint:"Textfarbe für Haupt-Buttons"},
             ].map((item,i)=>(
-              <div key={item.key} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",borderTop:i>0?"0.5px solid var(--border)":"none"}}>
+              <div key={item.key} style={{display:"flex",alignItems:"center",gap:16,padding:"12px 16px",borderTop:i>0?"0.5px solid var(--border)":"none"}}>
                 <input type="color" value={theme[item.key]||(item.key==="navAccent"||item.key==="avatarBg"?theme.vereinsfarbe1:item.key==="navAccentText"||item.key==="avatarText"?theme.vereinsfarbe2||"#000000":"#000000")||"#000000"} onChange={e=>updateTheme(item.key,e.target.value)}
                   style={{width:36,height:36,borderRadius:8,border:"0.5px solid var(--border)",padding:2,cursor:"pointer",background:"none"}}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{item.label}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{item.label}</div>
                   <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{item.hint}</div>
                 </div>
                 <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:4}}>{theme[item.key]||(["navAccent","navAccentText","avatarBg","avatarText"].includes(item.key)?"auto":"")}</code>
@@ -8398,7 +8398,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           </Card>
 
           {/* Speichern */}
-          <div style={{display:"flex",gap:10,marginTop:16}}>
+          <div style={{display:"flex",gap:12,marginTop:16}}>
             <button onClick={saveTheme}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN} style={{
@@ -8418,7 +8418,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         <div>
           <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
           <div style={{height:16}}/>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
             {(apiVerbindungen.length>0?apiVerbindungen:Object.entries(API_INFOS).map(([key,info])=>({key,label:key,active:false,konfiguriert:false,sync_status:"deaktiviert",...info}))).map(api=>{
               const info=API_INFOS[api.key]||{};
               const statusColor=api.sync_status==="ok"?GN:api.sync_status==="fehler"?R:api.sync_status==="ausstehend"?AM:"#aaa";
@@ -8437,7 +8437,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     <div style={{marginBottom:12}}>
                       <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:4}}>Synchronisierte Daten:</div>
                       {info.felder.map((f,i)=>(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:"var(--sub)",padding:"2px 0"}}>
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"var(--sub)",padding:"2px 0"}}>
                           <TI n="check" style={{fontSize:13,color:api.active?GN:"#ccc"}}/>{f}
                         </div>
                       ))}
@@ -8505,7 +8505,7 @@ function ProfileView({role,myRosterId,account}){
   return(
     <div>
       <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 18px"}}>{isEltern?"Profil / Daten prüfen":"Mein Profil"}</h1>
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
         <Card>
           <STitle>Persönliche Daten</STitle>
           {[
@@ -8517,7 +8517,7 @@ function ProfileView({role,myRosterId,account}){
           ].map((x,i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<4?`0.5px solid ${GB}`:"none"}}>
               <span style={{fontSize:13,color:"var(--sub)"}}>{x.l}</span>
-              <span style={{fontSize:13,fontWeight:500}}>{x.v}</span>
+              <span style={{fontSize:13,fontWeight:600}}>{x.v}</span>
             </div>
           ))}
           <div style={{marginTop:12}}><Btn variant="primary" color="#F3F4F6">Daten aktualisieren</Btn></div>
@@ -8555,7 +8555,7 @@ function ProfileView({role,myRosterId,account}){
                   <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:i<rows.length-1?`0.5px solid ${GB}`:"none"}}>
                     <div style={{minWidth:140}}>
                       <div style={{fontSize:13,color:"var(--sub)"}}>{x.l}</div>
-                      <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginTop:1,wordBreak:"break-all"}}>{x.v}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginTop:1,wordBreak:"break-all"}}>{x.v}</div>
                     </div>
                     <Chip text={x.ok?"✓ OK":"Prüfen"} color={x.ok?GN:R} bg={x.ok?"#ECFDF5":RL}/>
                   </div>
@@ -8599,7 +8599,7 @@ function EventsList({teamOnly,role}){
       {showForm&&canCreate&&(
         <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:12,padding:"16px 18px",marginBottom:16,marginTop:10}}>
           <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>{"Neuer "+(isTrainer?"Team-Event":"Anlass")}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10}}>
             <div>
               <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Titel</div>
               <input value={newEvent.title} onChange={e=>setNewEvent(p=>({...p,title:e.target.value}))}
@@ -8648,7 +8648,7 @@ function EventsList({teamOnly,role}){
               {/* Content */}
               <div style={{flex:1,padding:"14px 16px",minWidth:0}}>
                 {/* Type + RSVP badge row */}
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
                   <span style={{background:accentColor+"18",color:accentColor,fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,border:`0.5px solid ${accentColor}30`}}>
                     {e.type}
                   </span>
@@ -8787,10 +8787,10 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
       <div style={{height:3,background:voll?GN:filled>0?AM:R}}/>
       <div style={{padding:"14px 16px"}}>
         {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:6,marginBottom:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:10}}>
           <div style={{minWidth:0}}>
             <div style={{fontWeight:700,fontSize:13,color:"var(--text)",lineHeight:1.2}}>{schicht.label}</div>
-            <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:3}}>
+            <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:4}}>
               <span><TI n="map-pin"/></span><span>{einsatz.location}</span>
             </div>
             {notes&&<div style={{fontSize:13,color:AM,marginTop:3,fontStyle:"italic"}}><TI n="edit" style={{marginRight:3}}/> {notes}</div>}
@@ -8817,16 +8817,16 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
         </div>
 
         {showHelfer&&(
-          <div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:3}}>
+          <div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:4}}>
             {helfer.map((h,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:h===meinName?"#DCFCE7":"#F3F4F6",borderRadius:6,padding:"4px 8px"}}>
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:h===meinName?"#DCFCE7":"#F3F4F6",borderRadius:6,padding:"4px 8px"}}>
                 <Av name={h} size={16} bg={h===meinName?GN:"#9CA3AF"}/>
                 <span style={{fontSize:13,fontWeight:h===meinName?700:500,color:h===meinName?GN:"#374151",flex:1}}>{h}</span>
                 {h===meinName&&<span style={{fontSize:13,color:GN}}>Du</span>}
               </div>
             ))}
             {Array.from({length:max-filled},(_,i)=>(
-              <div key={`f${i}`} style={{display:"flex",alignItems:"center",gap:6,background:"var(--surface)",border:"1px dashed #D1D5DB",borderRadius:6,padding:"4px 8px"}}>
+              <div key={`f${i}`} style={{display:"flex",alignItems:"center",gap:8,background:"var(--surface)",border:"1px dashed #D1D5DB",borderRadius:6,padding:"4px 8px"}}>
                 <div style={{width:16,height:16,borderRadius:"50%",background:"#E5E7EB",flexShrink:0}}/>
                 <span style={{fontSize:13,color:"var(--sub)"}}>Freier Platz</span>
               </div>
@@ -8839,7 +8839,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
         <div>
           {/* Haupt-Buttons (solange kein Formular offen und keine Anfrage pending) */}
           {!showTransfer&&!showAnfrageForm&&!anfragePending&&(
-            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button onClick={()=>setShowTransfer(true)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"var(--surface)",color:"#0891B2"}}>
                 ⇄ Übertragen
               </button>
@@ -8873,7 +8873,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
                 rows={3}
                 style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,resize:"vertical",boxSizing:"border-box",marginBottom:7,fontFamily:FONT}}
               />
-              <div style={{display:"flex",gap:5}}>
+              <div style={{display:"flex",gap:8}}>
                 <button
                   onClick={handleAnfrageSenden}
                   disabled={!anfrageBegruendung.trim()}
@@ -8906,14 +8906,14 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
                 const gefiltert=kandidaten.filter(n=>!zuteilSearch||n.toLowerCase().includes(zuteilSearch.toLowerCase()));
                 if(gefiltert.length===0) return <div style={{fontSize:13,color:"var(--sub)",padding:"4px 0",marginBottom:7}}>Keine Treffer.</div>;
                 return(
-                  <div style={{maxHeight:140,overflowY:"auto",display:"flex",flexDirection:"column",gap:3,marginBottom:7}}>
+                  <div style={{maxHeight:140,overflowY:"auto",display:"flex",flexDirection:"column",gap:4,marginBottom:7}}>
                     {gefiltert.map(n=>{
                       const h=HELPERS.find(m=>m.name===n);
                       const info=h?.gruppe||h?.role||"";
                       const selected=transferTarget===n;
                       return(
                         <button key={n} onClick={()=>setTransferTarget(selected?"":n)}
-                          style={{display:"flex",alignItems:"center",gap:7,padding:"5px 8px",borderRadius:6,border:`0.5px solid ${selected?"#0891B2":GB}`,background:selected?"#ECFEFF":"#fff",cursor:"pointer",textAlign:"left"}}>
+                          style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:6,border:`0.5px solid ${selected?"#0891B2":GB}`,background:selected?"#ECFEFF":"#fff",cursor:"pointer",textAlign:"left"}}>
                           <Av name={n} size={20} bg={selected?"#0891B2":"#9CA3AF"}/>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:13,fontWeight:selected?700:400,color:selected?"#0891B2":"#374151"}}>{n}</div>
@@ -8926,7 +8926,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
                   </div>
                 );
               })()}
-              <div style={{display:"flex",gap:5}}>
+              <div style={{display:"flex",gap:8}}>
                 <button onClick={handleÜbertragen} disabled={!transferTarget} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:transferTarget?"pointer":"default",border:"none",background:transferTarget?"#0891B2":"#ccc",color:"#fff"}}>Übertragen</button>
                 <button onClick={()=>{setShowTransfer(false);setTransferTarget("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
@@ -8967,12 +8967,12 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
                 const gefiltert=zuteilKandidaten.filter(n=>n.toLowerCase().includes(zuteilSearch.toLowerCase()));
                 if(gefiltert.length===0) return <div style={{fontSize:13,color:"var(--sub)",padding:"4px 0"}}>Keine Treffer.</div>;
                 return(
-                  <div style={{maxHeight:140,overflowY:"auto",display:"flex",flexDirection:"column",gap:3,marginBottom:7}}>
+                  <div style={{maxHeight:140,overflowY:"auto",display:"flex",flexDirection:"column",gap:4,marginBottom:7}}>
                     {gefiltert.map(n=>{
                       const gruppe=HELPERS.find(m=>m.name===n)?.gruppe||"";
                       const selected=zuteilTarget===n;
                       return(
-                        <button key={n} onClick={()=>setZuteilTarget(selected?"":n)} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 8px",borderRadius:6,border:`0.5px solid ${selected?GN:GB}`,background:selected?GN+"18":"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}>
+                        <button key={n} onClick={()=>setZuteilTarget(selected?"":n)} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:6,border:`0.5px solid ${selected?GN:GB}`,background:selected?GN+"18":"#fff",cursor:"pointer",textAlign:"left",width:"100%"}}>
                           <Av name={n} size={20} bg={selected?GN:"#bbb"}/>
                           <div style={{flex:1}}>
                             <div style={{fontSize:13,fontWeight:selected?700:400,color:selected?GN:BK}}>
@@ -8987,7 +8987,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
                   </div>
                 );
               })()}
-              <div style={{display:"flex",gap:5}}>
+              <div style={{display:"flex",gap:8}}>
                 <button onClick={handleZuteilen} disabled={!zuteilTarget} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:zuteilTarget?"pointer":"default",border:"none",background:zuteilTarget?GN:"#ccc",color:"#fff"}}>Zuteilen</button>
                 <button onClick={()=>{setShowZuteilen(false);setZuteilTarget("");setZuteilSearch("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
@@ -9057,7 +9057,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
       <div style={{padding:"14px 18px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16}}>
         <div>
           <div style={{fontSize:16,fontWeight:700,color:"var(--text)",letterSpacing:-0.2}}>{schicht.eventName}</div>
-          <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+          <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <span>{schicht.einsatzName}</span>
             {schicht.einsatzDate&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+schicht.einsatzDate}</span></>}
             {schicht.einsatzOrt&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+schicht.einsatzOrt}</span></>}
@@ -9072,7 +9072,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
       </div>
       <div style={{padding:"10px 14px"}}>
       {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:8}}>
         <div>
           <div style={{fontWeight:700,fontSize:13}}>{schicht.label}</div>
         </div>
@@ -9093,7 +9093,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
       {!anfragePending&&!sent&&(
         <div>
           {!showAnfrageForm&&!showTransfer&&(
-            <div style={{display:"flex",gap:6}}>
+            <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setShowTransfer(true)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"var(--surface)",color:"#0891B2"}}>
                 ⇄ Übertragen
               </button>
@@ -9114,7 +9114,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
                 rows={3}
                 style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,resize:"vertical",boxSizing:"border-box",marginBottom:7,fontFamily:FONT}}
               />
-              <div style={{display:"flex",gap:5}}>
+              <div style={{display:"flex",gap:8}}>
                 <button onClick={handleSenden} disabled={!begruendung.trim()} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:begruendung.trim()?"pointer":"default",border:"none",background:begruendung.trim()?AM:"#ccc",color:"#fff"}}>
                   Anfrage senden
                 </button>
@@ -9133,7 +9133,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
-              <div style={{display:"flex",gap:5}}>
+              <div style={{display:"flex",gap:8}}>
                 <button onClick={handleÜbertragen} disabled={!transferTarget} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:transferTarget?"pointer":"default",border:"none",background:transferTarget?"#0891B2":"#ccc",color:"#fff"}}>Übertragen</button>
                 <button onClick={()=>{setShowTransfer(false);setTransferTarget("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
@@ -9348,7 +9348,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
       {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
       {canFreigeben&&(
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:10,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12,marginBottom:16}}>
         <Stat label="Mitglieder" value={HELPERS.length}/>
         <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
         <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
@@ -9357,7 +9357,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       )}
 
       {/* Sub-Tabs */}
-      <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,width:"fit-content"}}>
+      <div style={{display:"flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,width:"fit-content"}}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setHelperTab(t.key)} style={{padding:"8px 14px",border:"none",borderRadius:8,background:helperTab===t.key?"#fff":"transparent",color:helperTab===t.key?BK:"#999",fontWeight:helperTab===t.key?700:400,cursor:"pointer",fontSize:13,boxShadow:helperTab===t.key?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>{t.label}</button>
         ))}
@@ -9366,7 +9366,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* -- TAB: BROWSE - alle Events auf einer Seite -- */}
       {/* Eltern: Anmelden als Switcher */}
       {elternPersonen&&(
-        <div style={{display:"flex",gap:6,marginBottom:14,padding:"10px 12px",background:"var(--surface2)",borderRadius:10,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:8,marginBottom:14,padding:"10px 12px",background:"var(--surface2)",borderRadius:10,alignItems:"center",flexWrap:"wrap"}}>
           <span style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginRight:2}}>Anmelden als:</span>
           {elternPersonen.map((p,i)=>{
             const active=aktivePerson===p;
@@ -9382,7 +9382,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="browse"&&(
         <div>
           {/* Filterleiste */}
-          <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
             {/* Suchfeld */}
             <div style={{position:"relative",flexShrink:0}}>
               <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
@@ -9412,7 +9412,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           </div>
 
           {/* Alle Events nacheinander */}
-          <div style={{display:"flex",flexDirection:"column",gap:22}}>
+          <div style={{display:"flex",flexDirection:"column",gap:24}}>
             {HELPER_EVENTS.filter(ev=>!selectedEvent||ev.id===selectedEvent).map(ev=>{
               const q=browseSearch.toLowerCase();
 
@@ -9444,13 +9444,13 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               return(
                 <div key={ev.id} style={{borderRadius:14,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,0.06)",border:"0.5px solid var(--border)"}}>
                   {/* Event-Header-Banner */}
-                <div onClick={()=>toggleCollapse(ev.id)} style={{background:isCollapsed?"#fff":GR,padding:"18px 20px",color:"var(--text)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,cursor:"pointer",userSelect:"none",borderBottom:"0.5px solid var(--border)",borderLeft:`5px solid ${ev.color||BK}`}}>
+                <div onClick={()=>toggleCollapse(ev.id)} style={{background:isCollapsed?"#fff":GR,padding:"18px 20px",color:"var(--text)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,cursor:"pointer",userSelect:"none",borderBottom:"0.5px solid var(--border)",borderLeft:`5px solid ${ev.color||BK}`}}>
                     <div>
                       <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.2,display:"flex",alignItems:"center",gap:8,color:"var(--text)"}}>
                         {ev.name}
                         <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
                       </div>
-                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                         <span>{""+ev.date}</span>
                         <span style={{opacity:0.4}}>{"|"}</span>
                         <span>{""+ev.loc}</span>
@@ -9490,11 +9490,11 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                             <div style={{display:"flex",alignItems:"center",gap:12}}>
                               <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                               <div>
-                                <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:6}}>
+                                <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
                                   <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
                                   {einsatz.name}
                                 </div>
-                                <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:6}}>
+                                <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
                                   <span>{""+einsatz.time+" Uhr"}</span>
                                   <span style={{color:"var(--border)"}}>{"|"}</span>
                                   <span>{""+einsatz.location}</span>
@@ -9506,7 +9506,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 )}
                               </div>
                             </div>
-                            <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+                            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
                               {/* Gruppen - editierbar für Admin/Funktionär */}
                               {editingGruppen===einsatz.id?(
                                 <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
@@ -9530,7 +9530,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                               )}
                               {/* Bemerkung Edit */}
                               {canEdit&&(editingBemerkung===`e${einsatz.id}`?(
-                                <div onClick={e=>e.stopPropagation()} style={{display:"flex",gap:5,alignItems:"center"}}>
+                                <div onClick={e=>e.stopPropagation()} style={{display:"flex",gap:8,alignItems:"center"}}>
                                   <input autoFocus value={bemerkungDraft} onChange={e=>setBemerkungDraft(e.target.value)}
                                     placeholder="Bemerkung…"
                                     style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:160}}/>
@@ -9554,7 +9554,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                             </div>
                           </div>
                           {/* Schichten-Grid */}
-                          {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:14,padding:"16px",background:"var(--surface)"}}>
+                          {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
                             {einsatz.schichtenVisible.map(s=>(
                               <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                             ))}
@@ -9646,7 +9646,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           <div style={{padding:"14px 18px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                             <div>
                               <div style={{fontSize:16,fontWeight:700,color:"var(--text)",letterSpacing:-0.2}}>{s.eventName}</div>
-                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                                 <span>{s.einsatzName}</span>
                                 {s.einsatzDate&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzDate}</span></>}
                                 {s.einsatzOrt&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzOrt}</span></>}
@@ -9679,7 +9679,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             <span>Einsätze für deine Teams: {meineGruppen.map((g,i)=><strong key={i}>{i>0?" · ":""}{g}</strong>)}</span>
           </div>
 
-          <div style={{display:"flex",flexDirection:"column",gap:22}}>
+          <div style={{display:"flex",flexDirection:"column",gap:24}}>
             {(()=>{
               /* Alle Einsätze sammeln die für meinGruppe oder "Alle" freigegeben sind */
               const teamEinsaetze=[];
@@ -9705,13 +9705,13 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                 return(
                   <div key={ev.id} style={{borderRadius:14,overflow:"hidden",border:"0.5px solid var(--border)",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
                     {/* Event-Banner */}
-                    <div onClick={()=>toggleTeamCollapse(ev.id)} style={{background:isTeamCollapsed?"#fff":GR,borderTop:`4px solid ${ev.color}`,padding:"18px 20px",color:"var(--text)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,cursor:"pointer",userSelect:"none",borderBottom:"0.5px solid var(--border)"}}>
+                    <div onClick={()=>toggleTeamCollapse(ev.id)} style={{background:isTeamCollapsed?"#fff":GR,borderTop:`4px solid ${ev.color}`,padding:"18px 20px",color:"var(--text)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,cursor:"pointer",userSelect:"none",borderBottom:"0.5px solid var(--border)"}}>
                       <div>
                         <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.2,display:"flex",alignItems:"center",gap:8,color:"var(--text)"}}>
                           {ev.name}
                           <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isTeamCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
                         </div>
-                        <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                        <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                           <span>{""+ev.date}</span>
                           <span style={{opacity:0.4}}>{"|"}</span>
                           <span>{""+ev.loc}</span>
@@ -9748,18 +9748,18 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                               <div style={{display:"flex",alignItems:"center",gap:12}}>
                                 <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                                 <div>
-                                  <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:6}}>
+                                  <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
                                     <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
                                     {einsatz.name}
                                   </div>
-                                  <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:6}}>
+                                  <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
                                     <span>{""+einsatz.time+" Uhr"}</span>
                                     <span style={{color:"var(--border)"}}>{"|"}</span>
                                     <span>{""+einsatz.location}</span>
                                   </div>
                                 </div>
                               </div>
-                              <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+                              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
                                 {einsatz.gruppen.map((g,gi)=>(
                                   <Chip key={gi} text={g} color={g===meinGruppe?ev.color:"var(--sub)"} bg={g===meinGruppe?ev.color+"18":"#F3F4F6"}/>
                                 ))}
@@ -9775,7 +9775,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 })()}
                               </div>
                             </div>
-                            {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:14,padding:"16px",background:"var(--surface)"}}>
+                            {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
                               {einsatz.schichten.map(s=>(
                                 <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                               ))}
@@ -9830,13 +9830,13 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:13,color:"var(--sub)",lineHeight:1}}>×</button>}
             </div>
             <div style={{width:"1px",height:22,background:GB}}/>
-            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {["alle","Offen","Geplant erfüllt","Erfüllt","Befreit"].map(f=>(
                 <button key={f} onClick={()=>setFilterStatus(f)} style={{padding:"5px 12px",border:`0.5px solid ${filterStatus===f?ACCENT:GB}`,borderRadius:20,background:filterStatus===f?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,cursor:"pointer",fontWeight:filterStatus===f?700:400}}>{f==="alle"?"Alle":f}</button>
               ))}
             </div>
             {!isTrainer&&(
-              <div style={{marginLeft:"auto",display:"flex",gap:7}}>
+              <div style={{marginLeft:"auto",display:"flex",gap:8}}>
                 <Btn small>Export CSV</Btn>
                 <Btn small>Export Excel</Btn>
               </div>
@@ -9863,7 +9863,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                       style={{borderTop:"0.5px solid var(--border)",background:expandedMember===m.id?"var(--cc-hover)":"#fff",cursor:"pointer"}}
                       className="hov-row">
                       <td style={{padding:"9px 12px"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <Av name={m.name} size={22} bg={SC[m.status]?.c||"#6B7280"}/>
                           <span style={{fontWeight:600}}>{m.name}</span>
                         </div>
@@ -9926,7 +9926,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           )}
                           {/* Trainer: nur Schichten ansehen, keine Admin-Aktionen */}
                           {!isTrainer&&(
-                            <div style={{display:"flex",gap:7}}>
+                            <div style={{display:"flex",gap:8}}>
                               <Btn small variant="primary" color="#F3F4F6">Erinnerung senden</Btn>
                               <Btn small>Sollwert anpassen</Btn>
                               <Btn small>Als befreit markieren</Btn>
@@ -9959,11 +9959,11 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               <div key={i}>
                 <label style={{fontSize:13,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
                 {f.type==="gruppen"?(
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>
                     {HELPER_GRUPPEN.map(g=>{
                       const checked=newEinsatzGruppen.includes(g);
                       return(
-                        <label key={g} style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer",fontSize:13,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                        <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
                           <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen(prev=>checked?prev.filter(x=>x!==g):[...prev,g])} style={{display:"none"}}/>
                           {g}
                         </label>
@@ -10014,7 +10014,7 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
       {showForm&&(
         <Card style={{marginTop:14,background:"var(--surface)",border:`0.5px solid ${AM}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Reservation</h3>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Bus</label><br/><select style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}><option>Bus A (9-Plätzer)</option><option>Bus B (15-Plätzer)</option></select></div>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Datum</label><br/><input type="date" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/></div>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Zeit</label><br/><input type="text" placeholder="09:00-14:00" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/></div>
@@ -10023,7 +10023,7 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
           <div style={{marginTop:10,display:"flex",gap:8}}><Btn variant="primary" color="#F3F4F6" onClick={()=>setShowForm(false)}>Reservieren</Btn><Btn onClick={()=>setShowForm(false)}>Abbrechen</Btn></div>
         </Card>
       )}
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14,marginTop:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16,marginTop:14}}>
         {BUSES.map((bus,i)=>(
           <Card key={i}>
             <div style={{fontWeight:700,fontSize:14,marginBottom:12,display:"flex",justifyContent:"space-between"}}>{bus.name}<Chip text={`${bus.reservations.length} Res.`} color={BL}/></div>
@@ -10056,7 +10056,7 @@ function MaterialView(){
       {showForm&&(
         <Card style={{marginBottom:16,background:"var(--surface)",border:`0.5px solid ${BL}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Materialanfrage</h3>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Art</label><br/><select style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}>{["Bestellung","Ersatzmaterial","Tenüs","Mangel","Defekt","Verlust","Neue Anforderung"].map(t=><option key={t}>{t}</option>)}</select></div>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Team</label><br/><select style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}><option>Cc-Junioren</option><option>D-Junioren</option></select></div>
           </div>
@@ -10409,7 +10409,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 minWidth:180,overflow:"hidden"}}>
                 <button onClick={()=>{setSaisonDraft(teams[0]?.saison||"2025/26");setShowSaison(true);setOpenMenuId(null);}}
                   style={{width:"100%",padding:"11px 16px",border:"none",background:"none",cursor:"pointer",
-                    display:"flex",alignItems:"center",gap:10,fontFamily:FONT,fontSize:13,color:"var(--text)",textAlign:"left"}}
+                    display:"flex",alignItems:"center",gap:12,fontFamily:FONT,fontSize:13,color:"var(--text)",textAlign:"left"}}
                   onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                   onMouseLeave={e=>e.currentTarget.style.background="none"}>
                   <TI n="calendar" size={14} style={{color:"var(--sub)",flexShrink:0}}/>Saison wechseln
@@ -10417,7 +10417,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 <div style={{height:1,background:"var(--border)",margin:"0 12px"}}/>
                 <button onClick={()=>{openNeu();setOpenMenuId(null);}}
                   style={{width:"100%",padding:"11px 16px",border:"none",background:"none",cursor:"pointer",
-                    display:"flex",alignItems:"center",gap:10,fontFamily:FONT,fontSize:13,color:"var(--text)",textAlign:"left",fontWeight:600}}
+                    display:"flex",alignItems:"center",gap:12,fontFamily:FONT,fontSize:13,color:"var(--text)",textAlign:"left",fontWeight:600}}
                   onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                   onMouseLeave={e=>e.currentTarget.style.background="none"}>
                   <TI n="edit" size={14} style={{color:"var(--sub)",flexShrink:0}}/>+ Neues Team
@@ -10439,7 +10439,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
               placeholder="z.B. 2025/26" autoFocus
               style={{width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
           </div>
-          <div style={{display:"flex",gap:10}}>
+          <div style={{display:"flex",gap:12}}>
             <button onClick={handleSaisonAlle} disabled={saving||!saisonDraft.trim()}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN} style={{
@@ -10478,7 +10478,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
       </div>
       {/* Filter-Chips */}
       {filterOptions.length>0&&(
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
           <button onClick={()=>setFilterVals([])}
             style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
               background:filterVals.length===0?BK:"var(--surface)",
@@ -10513,7 +10513,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
 
       {/* Teams Liste */}
       {loading?(
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
           {[1,2,3].map(i=><SkelCard key={i}/>)}
         </div>
       ):(
@@ -10545,9 +10545,9 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           setCustomBack&&setCustomBack(()=>()=>{setSelectedTeam(null);setCustomBack&&setCustomBack(null);try{window.history.back();}catch{}});}:undefined}>
                 {viewMode==="grid"?(
                   /* ── KACHEL-LAYOUT ── */
-                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
                         <div style={{width:40,height:40,borderRadius:10,background:katColor+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                           <TI n="ball-football" size={18} style={{color:katColor}}/>
                         </div>
@@ -10567,7 +10567,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                               {icon:"edit", label:"Bearbeiten",color:"var(--text)", fn:()=>{openEdit(team);closeMenu();}},
                               {icon:"trash",label:"Löschen",   color:R,  fn:()=>{setDeleteConfirm(team);closeMenu();}},
                             ].map(a=>(
-                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:9,fontFamily:FONT,fontSize:13,color:a.color,textAlign:"left"}}
+                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontFamily:FONT,fontSize:13,color:a.color,textAlign:"left"}}
                                 onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                                 onMouseLeave={e=>e.currentTarget.style.background="none"}>
                                 <TI n={a.icon} size={13}/>{a.label}
@@ -10577,10 +10577,10 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         )}
                       </div>
                     </div>
-                    <div style={{fontSize:13,color:"var(--sub)",display:"flex",flexDirection:"column",gap:3}}>
+                    <div style={{fontSize:13,color:"var(--sub)",display:"flex",flexDirection:"column",gap:4}}>
                       <span>{sp.e1}{sp.e2?" · "+sp.e2:""}</span>
                       {team.liga&&<span>{team.liga}</span>}
-                      <div style={{display:"flex",gap:10,marginTop:4}}>
+                      <div style={{display:"flex",gap:12,marginTop:4}}>
                         <span><TI n="users" size={11}/> {spielerCount}</span>
                         <span><TI n="user" size={11}/> {trainerCount}</span>
                         {isInaktiv&&<Chip text="Inaktiv" color="#9ca3af"/>}
@@ -10600,12 +10600,12 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         {isInaktiv&&<Chip text="Inaktiv" color="#9ca3af"/>}
                       </div>
                       <div style={{fontSize:13,color:"var(--sub)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-                        {sp.e1&&<span style={{fontWeight:500}}>{sp.e1}</span>}
+                        {sp.e1&&<span style={{fontWeight:600}}>{sp.e1}</span>}
                         {sp.e2&&<span>· {sp.e2}</span>}
                         {team.liga&&<span>· {team.liga}</span>}
                         {team.saison&&<span>{team.saison}</span>}
-                        <span style={{display:"flex",alignItems:"center",gap:3}}><TI n="users" size={11}/> {spielerCount} Spieler</span>
-                        <span style={{display:"flex",alignItems:"center",gap:3}}><TI n="user" size={11}/> {trainerCount} Trainer</span>
+                        <span style={{display:"flex",alignItems:"center",gap:4}}><TI n="users" size={11}/> {spielerCount} Spieler</span>
+                        <span style={{display:"flex",alignItems:"center",gap:4}}><TI n="user" size={11}/> {trainerCount} Trainer</span>
                       </div>
                     </div>
                     {/* Aktionen: 3-Dot auf Mobile, Buttons auf Desktop */}
@@ -10620,7 +10620,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                               {icon:"edit", label:"Bearbeiten",color:"var(--text)", fn:()=>{openEdit(team);closeMenu();}},
                               {icon:"trash",label:"Löschen",   color:R,  fn:()=>{setDeleteConfirm(team);closeMenu();}},
                             ].map(a=>(
-                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:9,fontFamily:FONT,fontSize:13,color:a.color,textAlign:"left"}}
+                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontFamily:FONT,fontSize:13,color:a.color,textAlign:"left"}}
                                 onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                                 onMouseLeave={e=>e.currentTarget.style.background="none"}>
                                 <TI n={a.icon} size={14}/>{a.label}
@@ -10630,7 +10630,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         )}
                       </div>
                     ):(
-                      <div style={{display:"flex",gap:6,flexShrink:0}}>
+                      <div style={{display:"flex",gap:8,flexShrink:0}}>
 
                         <button onClick={()=>openEdit(team)} title="Bearbeiten"
                           style={{width:32,height:32,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
@@ -10664,7 +10664,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>{editTeam?"Team bearbeiten":"Neues Team"}</h2>
           <button onClick={()=>setShowForm(false)} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
         </div>
-        <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px",display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px",display:"flex",flexDirection:"column",gap:16}}>
           {editTeam&&(
             <div style={{display:"flex",gap:4,marginBottom:4}}>
               {["info","module"].map(t=>(
@@ -10751,7 +10751,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </div>
             <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
               <label style={labelStyle}>Status</label>
-              <div style={{display:"flex",alignItems:"center",gap:10,height:38}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,height:38}}>
                 <button onClick={()=>setForm(p=>({...p,aktiv:!p.aktiv}))} style={{
                   position:"relative",width:44,height:24,borderRadius:12,border:"none",
                   background:form.aktiv?ACCENT:"var(--border)",cursor:"pointer",padding:0,flexShrink:0,
@@ -10759,7 +10759,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 }}>
                   <div style={{position:"absolute",top:3,left:form.aktiv?21:3,width:18,height:18,borderRadius:"50%",background:form.aktiv?"#111":"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.2)",transition:"left 0.2s"}}/>
                 </button>
-                <span style={{fontSize:13,color:"var(--text)",fontWeight:500}}>{form.aktiv?"Aktiv":"Inaktiv"}</span>
+                <span style={{fontSize:13,color:"var(--text)",fontWeight:600}}>{form.aktiv?"Aktiv":"Inaktiv"}</span>
               </div>
             </div>
           </div>
@@ -10771,7 +10771,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           ].map(({key,label,placeholder})=>(
             <div key={key}>
               <label style={labelStyle}>{label}</label>
-              <div style={{display:"flex",flexDirection:"column",gap:7}}>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {(form[key]||[]).map((val,i)=>(
                   <div key={i} style={{display:"flex",gap:8}}>
                     <PersonPicker
@@ -10855,7 +10855,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </div>
           )}
           {/* Buttons */}
-          <div style={{display:"flex",gap:10}}>
+          <div style={{display:"flex",gap:12}}>
             <button onClick={handleSave} disabled={saving}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN} style={{
@@ -10881,7 +10881,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           <div style={{fontSize:13,color:"var(--sub)",marginBottom:20}}>
             <strong style={{color:"var(--text)"}}>{deleteConfirm?.name}</strong> wird dauerhaft entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
           </div>
-          <div style={{display:"flex",gap:10}}>
+          <div style={{display:"flex",gap:12}}>
             <button onClick={()=>handleDelete(deleteConfirm)} disabled={saving}
               style={{flex:1,padding:"8px 14px",borderRadius:10,background:R,color:"#fff",border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT,opacity:saving?0.6:1}}>
               {saving?"Löschen…":"Ja, löschen"}
@@ -10945,7 +10945,7 @@ function MediaView(){
         <Card key={i} style={{marginBottom:12}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div>
-              <div style={{display:"flex",gap:6,marginBottom:5,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:8,marginBottom:5,flexWrap:"wrap"}}>
                 <Chip text={m.cat} color={R}/>
                 {m.area.map((a,j)=><Chip key={j} text={a} color={BL} bg="#EFF6FF"/>)}
               </div>
@@ -10989,7 +10989,7 @@ function NewsView({role,meineTeams,kannVerwalten}){
       </div>
       {visible.map((n,i)=>(
         <Card key={i} style={{marginBottom:12}}>
-          <div style={{display:"flex",gap:7,marginBottom:6,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap",alignItems:"center"}}>
             <Chip text={n.target} color={R}/>
             <Chip text={n.channel} color={BL} bg="#EFF6FF"/>
             <span style={{fontSize:13,color:"var(--sub)"}}>{n.date} · {n.author}</span>
@@ -11196,7 +11196,7 @@ function PlaetzeView(){
                       placeholder="leer = keine Hälften"
                       style={{width:"100%",padding:"7px 10px",border:"1px solid "+GB,borderRadius:8,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
                   </div>
-                  <div style={{display:"flex",gap:6}}>
+                  <div style={{display:"flex",gap:8}}>
                     <button onClick={function(){handleRename(p.id);}}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN}
@@ -11206,8 +11206,8 @@ function PlaetzeView(){
                   </div>
                 </div>
               ) : (
-                <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px"}}>
-                  <div style={{display:"flex",flexDirection:"column",gap:2,flexShrink:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px"}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
                     <button onClick={function(){moveUp(i);}} disabled={plaetze.filter(function(x){return x.active;}).indexOf(p)===0}
                       style={{width:18,height:18,border:"0.5px solid "+GB,borderRadius:4,background:"var(--surface)",cursor:"pointer",fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>▲</button>
                     <button onClick={function(){moveDown(i);}} disabled={plaetze.filter(function(x){return x.active;}).indexOf(p)===plaetze.filter(function(x){return x.active;}).length-1}
@@ -11215,12 +11215,12 @@ function PlaetzeView(){
                   </div>
                   <div style={{width:10,height:10,borderRadius:"50%",background:GN,flexShrink:0}}/>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{p.name}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{p.name}</div>
                     {p.halfn&&p.halfn.length>0&&(
                       <div style={{fontSize:13,color:"var(--sub)",marginTop:1}}>{p.halfn.join("  ·  ")}</div>
                     )}
                   </div>
-                  <div style={{display:"flex",gap:5,flexShrink:0}}>
+                  <div style={{display:"flex",gap:8,flexShrink:0}}>
                     <button onClick={function(){setEditId(p.id);setEditName(p.name);setEditHaelften((p.halfn||[]).join(", "));}} title="Bearbeiten"
                       style={{width:28,height:28,borderRadius:6,border:"0.5px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n="edit"/></button>
                     <button onClick={function(){handleToggle(p.id);}} title="Deaktivieren"
@@ -11247,7 +11247,7 @@ function PlaetzeView(){
             {plaetze.map(function(p,i){
               if(p.active) return null;
               return(
-                <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:i<plaetze.length-1?"0.5px solid "+GB:"none"}}>
+                <div key={p.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderBottom:i<plaetze.length-1?"0.5px solid "+GB:"none"}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:"#ccc",flexShrink:0}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,color:"var(--sub)"}}>{p.name}</div>
@@ -11270,7 +11270,7 @@ function PlaetzeView(){
 
       {/* Neuer Platz */}
       {showAdd&&(
-        <div style={{background:"var(--surface)",border:"1.5px solid "+BL,borderRadius:12,padding:"16px",display:"flex",flexDirection:"column",gap:10,marginBottom:12}}>
+        <div style={{background:"var(--surface)",border:"1.5px solid "+BL,borderRadius:12,padding:"16px",display:"flex",flexDirection:"column",gap:12,marginBottom:12}}>
           <div style={{fontWeight:600,fontSize:14}}>Neuer Platz</div>
           <input value={newName} onChange={function(e){setNewName(e.target.value);}} autoFocus
             placeholder="z.B. Platz Erlenbach"
@@ -11308,7 +11308,7 @@ function DataCheckView(){
     <div>
       <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 18px"}}>Datenprüfung</h1>
       <InfoBox text="12 Mitglieder haben ihre Stammdaten seit über 6 Monaten nicht geprüft. Erinnerungen wurden versendet." color={AM}/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,margin:"16px 0"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,margin:"16px 0"}}>
         <Stat label="Prüfung fällig" value="12" color={AM}/>
         <Stat label="Unvollständig"  value="8"  color={R}/>
         <Stat label="Sync-Fehler"    value="5"  color="#888"/>
@@ -11353,7 +11353,7 @@ function DarkModeRow(){
   return(
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       <div>
-        <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{dark?"Dunkel":"Hell"}</div>
+        <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{dark?"Dunkel":"Hell"}</div>
         <div style={{fontSize:13,color:"var(--sub)",marginTop:1}}>Farbschema des Portals</div>
       </div>
       <button onClick={toggle} style={{
@@ -11446,7 +11446,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
     <ModalOrSheet open={open} onClose={onClose} maxWidth={500}>
       {/* Header */}
       <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:13}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{width:46,height:46,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",
             justifyContent:"center",color:"var(--text)",fontWeight:800,fontSize:16,flexShrink:0}}>
             {initials}
@@ -11475,7 +11475,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:editName?8:0}}>
                 <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Name</span>
                 {!editName&&(
-                  <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{userName}</span>
+                  <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{userName}</span>
                 )}
               </div>
               {editName&&(
@@ -11507,20 +11507,20 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
               <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>E-Mail</span>
-              <span style={{fontSize:13,fontWeight:500,color:"var(--text)",textAlign:"right"}}>{userEmail}</span>
+              <span style={{fontSize:13,fontWeight:600,color:"var(--text)",textAlign:"right"}}>{userEmail}</span>
             </div>
 
             {/* Rolle */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
               <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Rolle</span>
-              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{getRole(role).label}</span>
+              <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{getRole(role).label}</span>
             </div>
 
             {/* Mitglied */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0"}}>
               <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Verein</span>
-              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{getVereinsnameStatic()}</span>
+              <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{getVereinsnameStatic()}</span>
             </div>
 
             {/* Rollen-Badge */}
@@ -11561,7 +11561,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
         )}
 
         {tab==="passwort"&&(
-          <form onSubmit={handlePwChange} style={{display:"flex",flexDirection:"column",gap:14}}>
+          <form onSubmit={handlePwChange} style={{display:"flex",flexDirection:"column",gap:16}}>
             <div>
               <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Aktuelles Passwort</div>
               <input type="password" placeholder="••••••••" value={pwForm.current}
@@ -11691,7 +11691,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
             <div style={{padding:"0 8px 4px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Weitere Module</div>
             {mehr.map(m=>(
               <button key={m.key} onClick={()=>{setActive(m.key);setShowMehr(false);}}
-                style={{display:"flex",alignItems:"center",gap:14,width:"100%",padding:"12px 16px",
+                style={{display:"flex",alignItems:"center",gap:16,width:"100%",padding:"12px 16px",
                   background:active===m.key?ACCENT20:"none",border:"none",cursor:"pointer",
                   fontFamily:"inherit",textAlign:"left"}}>
                 <div style={{width:40,height:40,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
@@ -11705,7 +11705,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
             {/* Profil */}
             <div style={{margin:"8px 16px 0",paddingTop:12,borderTop:"0.5px solid var(--border)"}}>
               <button onClick={()=>{setShowProfile(true);setShowMehr(false);}}
-                style={{display:"flex",alignItems:"center",gap:14,width:"100%",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
+                style={{display:"flex",alignItems:"center",gap:16,width:"100%",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>
                 <div style={{width:40,height:40,borderRadius:"50%",background:rc,display:"flex",alignItems:"center",
                   justifyContent:"center",color:rc===ACCENT?"#111":"#fff",fontWeight:700,fontSize:14,flexShrink:0}}>
                   {initials}
@@ -11802,7 +11802,7 @@ function LoginScreen({onLogin, sb, appTheme}){
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{width:64,height:64,background:"transparent",borderRadius:16,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:12,overflow:"hidden"}}><img src={appTheme?.logo||LOGO_B64} style={{width:64,height:64,objectFit:"cover",display:"block"}} alt="Logo"/></div>
           <div style={{fontWeight:800,fontSize:21,color:"var(--text)",marginTop:4}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
-          <div style={{fontSize:14,color:"var(--sub)",marginTop:3,fontWeight:500}}>{"ClubCampus"}</div>
+          <div style={{fontSize:14,color:"var(--sub)",marginTop:3,fontWeight:600}}>{"ClubCampus"}</div>
         </div>
 
         <div style={{background:"var(--surface)",borderRadius:16,padding:28,boxShadow:"var(--card-shadow)",border:"1px solid var(--border)"}}>
@@ -12033,7 +12033,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
           )}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:6}}>
             <h2 style={{margin:0,fontSize:14,fontWeight:700,color:"var(--text)"}}>{selected.titel}</h2>
-            <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:selected.typ==="broadcast"?"#E6F1FB":"#E1F5EE",color:selected.typ==="broadcast"?"#0C447C":"#085041",fontWeight:500,flexShrink:0}}>{selected.typ==="broadcast"?"Broadcast":"Diskussion"}</span>
+            <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:selected.typ==="broadcast"?"#E6F1FB":"#E1F5EE",color:selected.typ==="broadcast"?"#0C447C":"#085041",fontWeight:600,flexShrink:0}}>{selected.typ==="broadcast"?"Broadcast":"Diskussion"}</span>
                   {kannVerwalten&&(
                     <button onClick={async()=>{
                       if(!window.confirm("Nachricht löschen?")) return;
@@ -12056,7 +12056,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>
               {dateien.map(d=>(
                 <a key={d.id} href={d.datei_url} target="_blank" rel="noreferrer"
-                  style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:6,textDecoration:"none"}}>
+                  style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8,textDecoration:"none"}}>
                   <TI n="paperclip" size={13}/>{d.datei_name}
                 </a>
               ))}
@@ -12081,7 +12081,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
                       <button onClick={async()=>{
                         await sb.from("nachrichten_antworten").delete().eq("id",a.id);
                         loadAntworten(selected.id);
-                      }} style={{background:"none",border:"none",cursor:"pointer",color:"#E24B4A",padding:"2px 0",fontSize:11,fontFamily:FONT,display:"flex",alignItems:"center",gap:3}}>
+                      }} style={{background:"none",border:"none",cursor:"pointer",color:"#E24B4A",padding:"2px 0",fontSize:11,fontFamily:FONT,display:"flex",alignItems:"center",gap:4}}>
                         <TI n="trash" size={11}/>Löschen
                       </button>
                     )}
@@ -12132,7 +12132,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             </button>
           ))}
         </div>
-        <div style={{padding:"8px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:5,overflowX:"auto",scrollbarWidth:"none",flexShrink:0}}>
+        <div style={{padding:"8px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:8,overflowX:"auto",scrollbarWidth:"none",flexShrink:0}}>
           {[null,"broadcast","diskussion","trainer","eltern"].map(f=>(
             <button key={f||"alle"} onClick={()=>setFilter(filter===f?null:f)}
               style={{padding:"5px 12px",fontSize:11,borderRadius:20,border:`0.5px solid ${filter===f?"transparent":"var(--border)"}`,background:filter===f?ACCENT:"transparent",color:filter===f?ACCENT2:"var(--sub)",cursor:"pointer",fontFamily:FONT,whiteSpace:"nowrap"}}>
@@ -12158,13 +12158,13 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
               <div key={n.id} onClick={()=>{setSelected(n);loadAntworten(n.id);if(isMobile)setShowThread(true);}}
                 style={{padding:"10px 14px",borderBottom:"0.5px solid var(--border)",cursor:"pointer",background:isSelected?"var(--surface2)":"transparent",borderLeft:isSelected?"2px solid "+ACCENT:"2px solid transparent",transition:"background 0.1s"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
                     {isUngelesen&&<div style={{width:7,height:7,borderRadius:"50%",background:ACCENT,flexShrink:0}}/>}
                     <span style={{fontSize:13,fontWeight:isUngelesen?700:500,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.titel}</span>
                   </div>
                   <span style={{fontSize:11,color:"var(--sub)",flexShrink:0,marginLeft:6}}>{fmtTime(n.erstellt_am)}</span>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,border:"0.5px solid var(--border)",color:"var(--sub)"}}>{getEmpfLabel(n)}</span>
                   <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:n.typ==="broadcast"?"#E6F1FB":"#E1F5EE",color:n.typ==="broadcast"?"#0C447C":"#085041"}}>{n.typ==="broadcast"?"Broadcast":"Diskussion"}</span>
                 </div>
@@ -12200,7 +12200,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
           </div>
           <div style={{marginBottom:14}}>
             <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Empfänger</label>
-            <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
               {["rolle","gruppe","team"].map(t=>(
                 <button key={t} onClick={()=>setNeuForm(f=>({...f,empfaenger_typ:t}))}
                   style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${neuForm.empfaenger_typ===t?BTN:"var(--border)"}`,background:neuForm.empfaenger_typ===t?BTN+"15":"transparent",color:"var(--text)",cursor:"pointer",fontSize:13,fontFamily:FONT}}>
