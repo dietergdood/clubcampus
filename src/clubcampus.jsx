@@ -6877,6 +6877,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
 }
 
 function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId}){
+  const isMobile=useIsMobile();
   const [tab,setTab]=useState(isMobile?"overview":(initialTab||"module"));
   const [module,setModule]=useState([]);
   const [moduleConfig,setModuleConfig]=useState({});
