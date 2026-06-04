@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK } from "./constants";
 import { TI } from "./icons.jsx";
-import { useIsMobile, ModalOrSheet, Btn, Chip } from "./theme.jsx";
+import { useIsMobile, ModalOrSheet, Btn, Chip , Av} from "./theme.jsx";
 import { ROSTER } from "./demoData.js";
 
 /* ── Hilfsfunktionen & Konstanten ── */

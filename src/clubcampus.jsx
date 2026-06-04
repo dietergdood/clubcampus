@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR, GB } from "./constants";
 import { TI, TI_PATHS } from "./icons.jsx";
 import { ROSTER, USER_ACCOUNTS, SCHEDULE, TABLES, ATT_EVENTS, ATT_INITIAL, ATT_LOG, GANTT, TRAININGSPLAETZE_DEFAULT, EVENTS, POLLS, HELPER_GRUPPEN, HELPER_EVENTS, HELPERS, BUSES, MATERIAL, LOCKERS, MEDIA, MEMBERS, WIKI, NEWS, PSTATS, INITIAL_PLAENE, FUNKTIONEN, MITGLIEDTYPEN } from "./demoData.js";
-import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip } from "./theme.jsx";
+import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av } from "./theme.jsx";
 import NachrichtenModul from "./NachrichtenModul.jsx";
 import { TeamModuleMatrix, PortalverwaltungView } from "./PortalverwaltungModul.jsx";
 import { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab } from "./TermineModul.jsx";
@@ -462,31 +462,7 @@ const TRAININGSPLAETZE = TRAININGSPLAETZE_DEFAULT.slice();
 
 
 
-function Av({name="",init,size=34,bg="var(--surface2)",useTheme=false}){
-  const themeAvatarBg=bg===ACCENT?"var(--avatar-bg)":bg;
-  const textColor=bg===ACCENT?"var(--avatar-text)":bg==="rgba(255,255,255,0.3)"?ACCENT2:bg===ACCENT20||bg==="var(--surface2)"||bg==="var(--border)"||bg==="#e5e5e5"?"var(--sub)":"#fff";
-  // init kann ein Icon-Name sein (z.B. "settings") oder Initialen
-  const isIcon = init && TI_PATHS[init];
-  const l = isIcon ? null : (init||name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase());
-  return <div style={{width:size,height:size,borderRadius:"50%",background:themeAvatarBg,display:"flex",alignItems:"center",justifyContent:"center",color:textColor,fontWeight:700,fontSize:size*0.35,flexShrink:0}}>
-    {isIcon ? <TI n={init} size={size*0.55} style={{color:textColor}}/> : l}
-  </div>;
-}
-/* Chip via ./hooks.jsx */
-
-function Stat({label,value,sub,color=BK,icon}){
-  return(
-    <div className="cc-card" style={{borderRadius:12,padding:"18px 20px",flex:1,minWidth:0,border:"0.5px solid"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-        <div style={{fontSize:13,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
-        {icon&&<div style={{width:28,height:28,borderRadius:6,background:color+"15",display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color}}/></div>}
-      </div>
-      <div style={{fontSize:24,fontWeight:800,color,lineHeight:1,marginBottom:5}}>{value}</div>
-      {sub&&<div style={{fontSize:13,color:"var(--sub)",fontWeight:400}}>{sub}</div>}
-    </div>
-  );
-}
-/* Card via ./hooks.jsx */
+/* Av via ./theme.jsx */
 
 function STitle({children,action}){
   return(
