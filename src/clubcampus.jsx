@@ -6705,7 +6705,7 @@ function AuditView(){ return <PortalverwaltungView initialTab="audit"/>; }
          API-Verbindungen | Audit-Logs
    ══════════════════════════════════════════════════════════════════ */
 function TeamModuleMatrix({supabase,setSaveMsg}){
-  const sb=supabase||window.__sb;
+  const sb=supabase;
   const [teams,setTeams]=useState([]);
   const [moduleMap,setModuleMap]=useState({}); // {team_id: [modul,...]}
   const [loading,setLoading]=useState(true);
@@ -12168,10 +12168,10 @@ export default function Portal({supabaseClient}){
       case "news":              return <NewsView role={role} meineTeams={meineTeams}/>;
       case "wiki":              return <WikiView/>;
       case "docs":              return <DocsView/>;
-      case "exports":           return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
-      case "sync":              return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
-      case "audit":             return <PortalverwaltungView initialTab="audit" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}/>;
-      case "datacheck":         return <PortalverwaltungView initialTab="module"/>;
+      case "exports":           return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
+      case "sync":              return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
+      case "audit":             return <PortalverwaltungView initialTab="audit" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
+      case "datacheck":         return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account}/>;
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
@@ -12181,14 +12181,14 @@ export default function Portal({supabaseClient}){
     <ThemeCtx.Provider value={{dark,toggle:toggleDark}}>
       {splash&&<SplashScreen onDone={doneSplash}/>}
       <div data-theme={dark?"dark":"light"} style={{display:"flex",minHeight:"100vh",background:"var(--bg)",fontFamily:FONT,WebkitFontSmoothing:"antialiased",MozOsxFontSmoothing:"grayscale",color:"var(--text)",transition:"background 0.25s,color 0.25s"}}>
-        {!isMobile&&<SideNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
+        {!isMobile&&<SideNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} appTheme={appTheme}/>}
         <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
           {isMobile&&<TopBar role={role} active={active} setActive={setActivePersist}
             account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
             onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
             onLogout={sb&&session ? handleLogout : undefined}
             onOpenProfile={()=>setMobileProfileOpen(true)}
-            onBack={customBack}/>}
+            onBack={customBack} appTheme={appTheme}/>}
           <main key={active} className="cc-page" style={{flex:1,padding:isMobile?"16px 14px 90px":isTablet?"20px 24px 28px":"32px 36px 32px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1200,margin:"0 auto",width:"100%"}}>{getView()}</main>
           {isMobile&&<MobileNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} effectiveNav={effectiveNav}/>}
         </div>
