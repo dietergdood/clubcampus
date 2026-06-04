@@ -1168,12 +1168,10 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
             <button key={n.key} onClick={()=>{setActive(n.key);setShowMehr(false);}} style={{
               flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
               padding:"6px 0 4px",background:"none",border:"none",cursor:"pointer",
-              minHeight:56,WebkitTapHighlightColor:"transparent",position:"relative",gap:3
+              minHeight:56,WebkitTapHighlightColor:"transparent",position:"relative",gap:0
             }}>
               {active===n.key&&!mehrActive&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:"var(--nav-a)"}}/>}
-              <div style={{width:38,height:38,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}>
-                <TI n={n.icon||"circle"} size={19} style={{color:active===n.key&&!mehrActive?"var(--nav-a)":"var(--nav-t)"}}/>
-              </div>
+              <TI n={n.icon||"circle"} size={22} style={{color:active===n.key&&!mehrActive?"var(--nav-a)":"var(--nav-t)",marginBottom:2}}/>
               <span style={{fontSize:10,color:active===n.key&&!mehrActive?"var(--nav-a)":"var(--nav-t)",fontWeight:active===n.key&&!mehrActive?600:400}}>{n.label}</span>
             </button>
           ))}
@@ -1182,16 +1180,14 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
             <button onClick={()=>setShowMehr(v=>!v)} style={{
               flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
               padding:"6px 0 4px",background:"none",border:"none",cursor:"pointer",
-              minHeight:56,WebkitTapHighlightColor:"transparent",position:"relative",gap:3
+              minHeight:56,WebkitTapHighlightColor:"transparent",position:"relative",gap:0
             }}>
               {(mehrActive||showMehr)&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:"var(--nav-a)"}}/>}
-              <div style={{width:38,height:38,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}>
-                <svg width="19" height="19" viewBox="0 0 19 19" fill="none">
-                  <circle cx="4" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
-                  <circle cx="9.5" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
-                  <circle cx="15" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
-                </svg>
-              </div>
+              <svg width="22" height="22" viewBox="0 0 19 19" fill="none" style={{marginBottom:2}}>
+                <circle cx="4" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
+                <circle cx="9.5" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
+                <circle cx="15" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
+              </svg>
               <span style={{fontSize:10,color:mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)",fontWeight:mehrActive||showMehr?600:400}}>Mehr</span>
             </button>
           )}
