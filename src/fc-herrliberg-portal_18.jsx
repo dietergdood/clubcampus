@@ -313,7 +313,7 @@ function darkenHex(hex,pct=0.12){
 
 const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FFBF00", vereinsfarbe2:"#000000",
-  navBg:"#000000", navText:"#FFFFFF", navAccent:null, navHover:"#1A1A1A",
+  navBg:"#000000", navText:"#FFFFFF", navAccent:null, navAccentText:null, navHover:"#1A1A1A", avatarBg:null, avatarText:null,
   btnPrimary:"#FFBF00", btnPrimaryText:"#000000",
   vereinsname:"Mein Verein", portalname:"ClubCampus", logo:null,
 };
@@ -1040,12 +1040,13 @@ const PSTATS=[
 /* ==========================================
    KLEINE HILFKOMPONENTEN
 ========================================== */
-function Av({name="",init,size=34,bg="var(--surface2)"}){
-  const textColor=bg===ACCENT||bg==="rgba(255,255,255,0.3)"?ACCENT2:bg===ACCENT20||bg==="var(--surface2)"||bg==="var(--border)"||bg==="#e5e5e5"?"var(--sub)":"#fff";
+function Av({name="",init,size=34,bg="var(--surface2)",useTheme=false}){
+  const themeAvatarBg=bg===ACCENT?"var(--avatar-bg)":bg;
+  const textColor=bg===ACCENT?"var(--avatar-text)":bg==="rgba(255,255,255,0.3)"?ACCENT2:bg===ACCENT20||bg==="var(--surface2)"||bg==="var(--border)"||bg==="#e5e5e5"?"var(--sub)":"#fff";
   // init kann ein Icon-Name sein (z.B. "settings") oder Initialen
   const isIcon = init && TI_PATHS[init];
   const l = isIcon ? null : (init||name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase());
-  return <div style={{width:size,height:size,borderRadius:"50%",background:bg,display:"flex",alignItems:"center",justifyContent:"center",color:textColor,fontWeight:700,fontSize:size*0.35,flexShrink:0}}>
+  return <div style={{width:size,height:size,borderRadius:"50%",background:themeAvatarBg,display:"flex",alignItems:"center",justifyContent:"center",color:textColor,fontWeight:700,fontSize:size*0.35,flexShrink:0}}>
     {isIcon ? <TI n={init} size={size*0.55} style={{color:textColor}}/> : l}
   </div>;
 }
@@ -1264,7 +1265,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
             width:"100%",display:"flex",alignItems:"center",gap:collapsed?0:11,
             padding:collapsed?"10px 0":"10px 12px",borderRadius:9,border:"none",
             background:active===n.key?"var(--nav-a)":"transparent",
-            color:active===n.key?ACCENT2:"var(--nav-t)",
+            color:active===n.key?"var(--nav-accent-text)":"var(--nav-t)",
             cursor:"pointer",fontSize:13.5,fontWeight:active===n.key?600:400,
             textAlign:"left",marginBottom:2,letterSpacing:0.1,
             transition:"background 0.15s,color 0.15s",
@@ -8178,6 +8179,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               {key:"navBg",         label:"Menü-Hintergrund",          hint:"Hintergrundfarbe der Navigationsleiste"},
               {key:"navText",       label:"Menü-Text",                 hint:"Farbe der inaktiven Menüpunkte"},
               {key:"navAccent",     label:"Aktiver Menüpunkt",         hint:"Standard: Vereinsfarbe — bei Bedarf anpassen"},
+              {key:"navAccentText",  label:"Aktiver Menüpunkt Text",    hint:"Standard: Text auf Vereinsfarbe — bei Bedarf anpassen"},
+              {key:"avatarBg",       label:"Avatar Hintergrund",         hint:"Standard: Vereinsfarbe"},
+              {key:"avatarText",     label:"Avatar Text",                hint:"Standard: Text auf Vereinsfarbe"},
 
               {key:"btnPrimary",    label:"Primary Button",            hint:"Hintergrundfarbe für Haupt-Buttons"},
               {key:"btnPrimaryText",label:"Primary Button Text",       hint:"Textfarbe für Haupt-Buttons"},
@@ -8185,14 +8189,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               {key:"navHover",      label:"Menü Hover",                hint:"Farbe beim Überfahren eines Menüpunkts"},
             ].map((item,i)=>(
               <div key={item.key} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",borderTop:i>0?"0.5px solid var(--border)":"none"}}>
-                <input type="color" value={theme[item.key]||(item.key==="navAccent"?theme.vereinsfarbe1:"#000000")||"#000000"} onChange={e=>updateTheme(item.key,e.target.value)}
+                <input type="color" value={theme[item.key]||(item.key==="navAccent"||item.key==="avatarBg"?theme.vereinsfarbe1:item.key==="navAccentText"||item.key==="avatarText"?theme.vereinsfarbe2||"#000000":"#000000")||"#000000"} onChange={e=>updateTheme(item.key,e.target.value)}
                   style={{width:36,height:36,borderRadius:8,border:"0.5px solid var(--border)",padding:2,cursor:"pointer",background:"none"}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{item.label}</div>
                   <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{item.hint}</div>
                 </div>
-                <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]||(item.key==="navAccent"?"auto":"")}</code>
-                <button onClick={()=>updateTheme(item.key,item.key==="navAccent"?null:THEME_DEFAULT_STATIC[item.key])} title="Zurücksetzen"
+                <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]||(["navAccent","navAccentText","avatarBg","avatarText"].includes(item.key)?"auto":"")}</code>
+                <button onClick={()=>updateTheme(item.key,["navAccent","navAccentText","avatarBg","avatarText"].includes(item.key)?null:THEME_DEFAULT_STATIC[item.key])} title="Zurücksetzen"
                   style={{background:"none",border:"none",cursor:"pointer",color:"var(--sub)",padding:4}}>
                   <TI n="refresh" size={14}/>
                 </button>
@@ -11596,7 +11600,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
                 background:active===n.key&&!mehrActive?"var(--nav-a)":"transparent",transition:"background 0.15s"}}>
                 <TI n={n.icon||"circle"} size={19} style={{color:active===n.key&&!mehrActive?ACCENT2:"var(--nav-t)"}}/>
               </div>
-              <span style={{fontSize:10,color:active===n.key&&!mehrActive?"var(--nav-a)":"var(--nav-t)",fontWeight:active===n.key&&!mehrActive?600:400}}>{n.label}</span>
+              <span style={{fontSize:10,color:active===n.key&&!mehrActive?"var(--nav-accent-text)":"var(--nav-t)",fontWeight:active===n.key&&!mehrActive?600:400}}>{n.label}</span>
             </button>
           ))}
           {/* Mehr-Button (nur wenn mehr-Einträge vorhanden) */}
@@ -11967,6 +11971,9 @@ export default function Portal({supabaseClient}){
     const nav=t.navBg||"#000000";
     const navT=t.navText||"#FFFFFF";
     const navA=t.navAccent||t.vereinsfarbe1||"#FFBF00";
+    const navAT=t.navAccentText||t.vereinsfarbe2||"#000000";
+    const avBg=t.avatarBg||t.vereinsfarbe1||"#FFBF00";
+    const avTxt=t.avatarText||t.vereinsfarbe2||"#000000";
     const navH=t.navHover||"#1A1A1A";
     const acc=t.vereinsfarbe1||"#FFBF00";
     const acc2=t.vereinsfarbe2||"#000000";
@@ -11983,6 +11990,9 @@ export default function Portal({supabaseClient}){
       --nav:${nav}!important;
       --nav-t:${navT}!important;
       --nav-a:${navA}!important;
+      --nav-accent-text:${navAT}!important;
+      --avatar-bg:${avBg}!important;
+      --avatar-text:${avTxt}!important;
       --nav-b:color-mix(in srgb,${nav} 80%,white 20%)!important;
       --nav-hover:${navH}!important;
       --btn-primary:${btn}!important;
