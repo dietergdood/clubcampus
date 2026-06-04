@@ -650,4 +650,203 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
 }
 
 
-export { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE };
+function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
+  const rc=getRole(role).color;
+  const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
+  const userEmail=account?.email||"demo@fcherrliberg.ch";
+  const userId=account?.id||null;
+  const initials=userName.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
+  const [tab,setTab]=useState("konto");
+  // Konto-Bearbeitung
+  const [editName,setEditName]=useState(false);
+  const [nameDraft,setNameDraft]=useState(userName);
+  const [nameStatus,setNameStatus]=useState(null); // null | "loading" | "ok" | "error"
+  const [nameMsg,setNameMsg]=useState("");
+  // Passwort
+  const [pwForm,setPwForm]=useState({current:"",next:"",repeat:""});
+  const [pwStatus,setPwStatus]=useState(null);
+  const [pwMsg,setPwMsg]=useState("");
+
+  if(!open) return null;
+
+  /* ── Name in DB speichern ─────────────────────── */
+  async function handleSaveName(){
+    const n=nameDraft.trim();
+    if(!n){setNameStatus("error");setNameMsg("Name darf nicht leer sein.");return;}
+    setNameStatus("loading");
+    try{
+      if(sb && userId){
+        const {error}=await sb.from("benutzer").update({name:n}).eq("id",userId);
+        if(error) throw error;
+        /* Auch in Supabase Auth Metadaten */
+        await sb.auth.updateUser({data:{full_name:n}});
+      }
+      setNameStatus("ok");setNameMsg("Name gespeichert.");
+      setEditName(false);
+      if(onNameUpdated) onNameUpdated(n);
+      setTimeout(()=>setNameStatus(null),2500);
+    }catch(err){
+      setNameStatus("error");setNameMsg(err.message||"Fehler beim Speichern.");
+    }
+  }
+
+  /* ── Passwort ändern ──────────────────────────── */
+  async function handlePwChange(e){
+    e.preventDefault();
+    if(pwForm.next.length<8){setPwStatus("error");setPwMsg("Mindestens 8 Zeichen.");return;}
+    if(pwForm.next!==pwForm.repeat){setPwStatus("error");setPwMsg("Passwörter stimmen nicht überein.");return;}
+    setPwStatus("loading");
+    try{
+      if(sb){
+        const{error}=await sb.auth.updateUser({password:pwForm.next});
+        if(error) throw error;
+      }
+      setPwStatus("ok");setPwMsg("Passwort erfolgreich geändert.");
+      setPwForm({current:"",next:"",repeat:""});
+    }catch(err){
+      setPwStatus("error");setPwMsg(err.message||"Fehler beim Ändern.");
+    }
+  }
+
+  const inputStyle={width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:9,
+    fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",
+    boxSizing:"border-box",outline:"none"};
+
+  const StatusBox=({status,msg})=>status==="ok"?(
+    <div style={{padding:"10px 14px",background:"var(--surface)",border:"1px solid "+GN,borderRadius:9,fontSize:13,color:GN,fontWeight:600,marginTop:4}}>{msg}</div>
+  ):status==="error"?(
+    <div style={{padding:"10px 14px",background:RL,border:"1px solid "+R,borderRadius:9,fontSize:13,color:R,fontWeight:600,marginTop:4}}>{msg}</div>
+  ):null;
+
+  return(
+    <ModalOrSheet open={open} onClose={onClose} maxWidth={500}>
+      {/* Header */}
+      <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:13}}>
+          <div style={{width:46,height:46,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",
+            justifyContent:"center",color:"var(--text)",fontWeight:800,fontSize:17,flexShrink:0}}>
+            {initials}
+          </div>
+          <div>
+            <div style={{fontWeight:700,fontSize:15,color:"var(--text)",letterSpacing:-0.2}}>{userName}</div>
+            <div style={{fontSize:12,color:"var(--sub)",marginTop:2}}>{userEmail}</div>
+          </div>
+        </div>
+        <Btn variant="ghost" onClick={onClose}>×</Btn>
+      </div>
+
+      {/* Tabs */}
+      <div style={{padding:"14px 20px 0"}}>
+        <Tabs tabs={[{key:"konto",label:"Konto"},{key:"passwort",label:"Passwort"}]} active={tab} setActive={setTab}/>
+      </div>
+
+      {/* Content */}
+      <div style={{overflowY:"auto",flex:1,padding:"4px 20px 20px"}}>
+        {tab==="konto"&&(
+          <div style={{display:"flex",flexDirection:"column",gap:0}}>
+
+            {/* Name – editierbar */}
+            <div style={{padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:editName?8:0}}>
+                <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Name</span>
+                {!editName&&(
+                  <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{userName}</span>
+                )}
+              </div>
+              {editName&&(
+                <Col>
+                  <input value={nameDraft} onChange={e=>setNameDraft(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter")handleSaveName();if(e.key==="Escape")setEditName(false);}}
+                    style={{...inputStyle}} autoFocus placeholder="Vor- und Nachname"/>
+                  <Row align="flex-start">
+                    <Btn variant="primary" color={BTN} onClick={handleSaveName} disabled={nameStatus==="loading"}>{nameStatus==="loading"?"Speichern…":"Speichern"}</Btn>
+                    <Btn onClick={()=>{setEditName(false);setNameStatus(null);}}>Abbrechen</Btn>
+                  </Row>
+                  <StatusBox status={nameStatus} msg={nameMsg}/>
+                </Col>
+              )}
+            </div>
+
+            {/* E-Mail – read only */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
+              <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>E-Mail</span>
+              <span style={{fontSize:13,fontWeight:500,color:"var(--text)",textAlign:"right"}}>{userEmail}</span>
+            </div>
+
+            {/* Rolle */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
+              <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Rolle</span>
+              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{getRole(role).label}</span>
+            </div>
+
+            {/* Mitglied */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0"}}>
+              <span style={{fontSize:13,color:"var(--sub)",minWidth:90}}>Verein</span>
+              <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{getVereinsnameStatic()}</span>
+            </div>
+
+            {/* Rollen-Badge */}
+            <div style={{marginTop:8,padding:14,background:getRole(role).bg||"var(--surface2)",borderRadius:10,border:`1px solid ${rc}30`}}>
+              <div style={{fontSize:11,color:"var(--sub)",marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>Portal-Zugriffsrolle</div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:rc,flexShrink:0}}/>
+                <span style={{fontSize:14,color:rc,fontWeight:700}}>{getRole(role).label}</span>
+              </div>
+              <div style={{fontSize:12,color:"var(--sub)",lineHeight:1.5}}>{getRole(role).desc||""}</div>
+            </div>
+
+            {nameStatus==="ok"&&!editName&&<StatusBox status="ok" msg={nameMsg}/>}
+
+            {/* Erscheinungsbild / Dark Mode */}
+            <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)"}}>
+              <div style={{fontSize:11,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,marginBottom:10}}>Erscheinungsbild</div>
+              <DarkModeRow/>
+            </div>
+
+            {/* Abmelden */}
+            {onLogout&&(
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)"}}>
+                <Btn variant="ghost" onClick={onLogout}><TI n="logout" size={15}/> Abmelden</Btn>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab==="passwort"&&(
+          <form onSubmit={handlePwChange} style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Aktuelles Passwort</div>
+              <input type="password" placeholder="••••••••" value={pwForm.current}
+                onChange={e=>setPwForm(p=>({...p,current:e.target.value}))}
+                style={inputStyle} autoComplete="current-password"/>
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Neues Passwort</div>
+              <input type="password" placeholder="Mindestens 8 Zeichen" value={pwForm.next}
+                onChange={e=>setPwForm(p=>({...p,next:e.target.value}))}
+                style={inputStyle} autoComplete="new-password"/>
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>Passwort bestätigen</div>
+              <input type="password" placeholder="Wiederholen" value={pwForm.repeat}
+                onChange={e=>setPwForm(p=>({...p,repeat:e.target.value}))}
+                style={inputStyle} autoComplete="new-password"/>
+            </div>
+            <StatusBox status={pwStatus} msg={pwMsg}/>
+            <Btn variant="primary" color={BTN} disabled={pwStatus==="loading"} type="submit">{pwStatus==="loading"?"Wird gespeichert…":"Passwort ändern"}</Btn>
+            {!sb&&<div style={{fontSize:12,color:"var(--sub)",textAlign:"center",marginTop:4}}>Demo-Modus: Änderungen werden nicht gespeichert.</div>}
+          </form>
+        )}
+      </div>
+    </ModalOrSheet>
+  );
+}
+
+/* ── Feld-Sichtbarkeit gemäss Rolle (revDSG) ──────────────────
+   Bestimmt welche Felder in der Mitgliederliste sichtbar sind.
+──────────────────────────────────────────────────────────── */
+
+export { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal };
