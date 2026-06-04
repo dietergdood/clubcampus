@@ -11680,7 +11680,7 @@ function LoginScreen({onLogin, sb, appTheme}){
                   <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5}}>E-Mail</label>
                   <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
                     style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box"}}
-                    placeholder={`name@${(appTheme?.vereinsname||"meinverein").toLowerCase().replace(/\s+/g,"")}.ch`} autoComplete="email"/>
+                    placeholder="name@mail.ch" autoComplete="email"/>
                 </div>
                 <div style={{marginBottom:20}}>
                   <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5}}>Passwort</label>
@@ -11719,7 +11719,7 @@ function LoginScreen({onLogin, sb, appTheme}){
                     <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5}}>E-Mail</label>
                     <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
                       style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box"}}
-                      placeholder={`name@${(appTheme?.vereinsname||"meinverein").toLowerCase().replace(/\s+/g,"")}.ch`}/>
+                      placeholder="name@mail.ch"/>
                   </div>
                   {error&&<div style={{fontSize:13,color:"#DC2626",background:"#FEF2F2",padding:"8px 12px",borderRadius:8,marginBottom:14}}>{error}</div>}
                   <button type="submit" disabled={loading}
@@ -12046,9 +12046,11 @@ export default function Portal({supabaseClient}){
   // Lade-Screen (initial oder während dbUser lädt nach Login)
   if(session===undefined){
     return(
-      <div style={{minHeight:"100dvh",background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{minHeight:"100dvh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{textAlign:"center"}}>
-          <div style={{width:48,height:48,background:ACCENT,borderRadius:12,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}><TI n="ball-football"/></div>
+          <div style={{width:64,height:64,borderRadius:16,overflow:"hidden",display:"inline-flex",marginBottom:12}}>
+            <img src={appTheme?.logo||LOGO_B64} style={{width:64,height:64,objectFit:"cover"}} alt="Logo"/>
+          </div>
           <div style={{fontSize:13,color:"var(--sub)"}}>Wird geladen…</div>
         </div>
       </div>
