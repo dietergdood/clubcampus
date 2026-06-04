@@ -1035,7 +1035,7 @@ function Av({name="",init,size=34,bg="var(--surface2)",useTheme=false}){
   </div>;
 }
 function Chip({text,color=R,bg}){
-  return <span style={{background:bg||color+"15",color,fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap",letterSpacing:0.2,border:`0.5px solid ${color}25`}}>{text}</span>;
+  return <span style={{background:bg||color+"15",color,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap",letterSpacing:0.2,border:`0.5px solid ${color}25`}}>{text}</span>;
 }
 function Stat({label,value,sub,color=BK,icon}){
   return(
@@ -1044,7 +1044,7 @@ function Stat({label,value,sub,color=BK,icon}){
         <div style={{fontSize:13,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
         {icon&&<div style={{width:28,height:28,borderRadius:6,background:color+"15",display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color}}/></div>}
       </div>
-      <div style={{fontSize:28,fontWeight:800,color,lineHeight:1,marginBottom:5}}>{value}</div>
+      <div style={{fontSize:24,fontWeight:800,color,lineHeight:1,marginBottom:5}}>{value}</div>
       {sub&&<div style={{fontSize:13,color:"var(--sub)",fontWeight:400}}>{sub}</div>}
     </div>
   );
@@ -1055,7 +1055,7 @@ function Card({children,style={},onClick}){
 function STitle({children,action}){
   return(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-      <h2 style={{margin:0,fontSize:15,fontWeight:700,letterSpacing:-0.2,color:"var(--text)"}}>{children}</h2>
+      <h2 style={{margin:0,fontSize:14,fontWeight:700,letterSpacing:-0.2,color:"var(--text)"}}>{children}</h2>
       {action}
     </div>
   );
@@ -1074,7 +1074,7 @@ function Tabs({tabs,active,setActive}){
           padding:isMobile?"7px 10px":"7px 12px",border:"none",borderRadius:6,
           background:active===t.key?"var(--surface)":"transparent",
           color:active===t.key?"var(--text)":"var(--sub)",
-          fontWeight:active===t.key?700:400,cursor:"pointer",fontSize:12,
+          fontWeight:active===t.key?700:400,cursor:"pointer",fontSize:13,
           boxShadow:active===t.key?"0 1px 4px rgba(0,0,0,0.1)":"none",
           whiteSpace:"nowrap",fontFamily:FONT,minHeight:36,transition:"all 0.15s",
           display:"flex",alignItems:"center",gap:5,WebkitTapHighlightColor:"transparent"
@@ -1102,7 +1102,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
   return(
     <>
       <button onClick={()=>setOpen(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",borderRadius:10,border:`1.5px solid ${cur.color}`,background:cur.color+"12",cursor:"pointer"}}>
-        <span style={{fontSize:15}}>{cur.icon}</span>
+        <span style={{fontSize:14}}>{cur.icon}</span>
         <span style={{fontSize:13,fontWeight:700,color:cur.color}}>{cur.label}</span>
         {hasMultiRoles&&<span style={{fontSize:13,background:cur.color,color:"#fff",padding:"1px 5px",borderRadius:10,marginLeft:2}}>{account.rollen.length}</span>}
         <span style={{fontSize:13,color:cur.color,opacity:0.7}}>▾</span>
@@ -1115,7 +1115,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
                 <h2 style={{margin:0,fontSize:18,fontWeight:800}}>Konto &amp; Rolle wechseln</h2>
                 <p style={{margin:"3px 0 0",fontSize:13,color:"var(--sub)"}}>Teste die App aus verschiedenen Perspektiven</p>
               </div>
-              <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+              <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
             </div>
 
             {/* Konten mit Mehrfach-Rollen */}
@@ -1277,13 +1277,13 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
       }}
         onMouseEnter={e=>{if(e.currentTarget.dataset.active!=="1")e.currentTarget.style.background="var(--nav-hover)"}}
         onMouseLeave={e=>{if(e.currentTarget.dataset.active!=="1")e.currentTarget.style.background="none"}}>
-        {!collapsed&&<div style={{fontSize:10,color:"var(--nav-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,marginBottom:9,paddingLeft:2}}>Angemeldet als</div>}
+        {!collapsed&&<div style={{fontSize:11,color:"var(--nav-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,marginBottom:9,paddingLeft:2}}>Angemeldet als</div>}
         <div style={{display:"flex",alignItems:"center",gap:9,justifyContent:collapsed?"center":"flex-start"}}>
           <Av size={32} bg={ACCENT} name={userName}/>
           {!collapsed&&(
             <div style={{minWidth:0,flex:1}}>
               <div style={{color:"var(--nav-a)",fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:0.1}}>{userName}</div>
-              <div style={{marginTop:3,fontSize:10,color:"var(--sub)",fontWeight:600,letterSpacing:0.2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+              <div style={{marginTop:3,fontSize:11,color:"var(--sub)",fontWeight:600,letterSpacing:0.2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
               <span style={{display:"inline-block",width:7,height:7,borderRadius:"50%",background:rc,flexShrink:0}}/>
               {getRole(role).label}
             </div>
@@ -1327,7 +1327,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
             <div style={{width:30,height:30,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <img src={appTheme?.logo||LOGO_B64} style={{width:30,height:30,objectFit:"cover",display:"block"}} alt="Logo"/>
             </div>
-            <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>{appTheme?.vereinsname||getVereinsnameStatic()}</span>
+            <span style={{fontWeight:800,fontSize:14,color:"var(--text)",letterSpacing:-0.3}}>{appTheme?.vereinsname||getVereinsnameStatic()}</span>
           </div>
         ):(
           <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,minWidth:0}}>
@@ -1347,7 +1347,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
           <div style={{width:30,height:30,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <img src={appTheme?.logo||LOGO_B64} style={{width:30,height:30,objectFit:"cover",display:"block"}} alt="Logo"/>
           </div>
-          <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>{appTheme?.vereinsname||"ClubCampus"}</span>
+          <span style={{fontWeight:800,fontSize:14,color:"var(--text)",letterSpacing:-0.3}}>{appTheme?.vereinsname||"ClubCampus"}</span>
         </div>
       )}
       {/* Rechts */}
@@ -1364,7 +1364,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
             <div style={{width:22,height:22,borderRadius:"50%",background:dark?"#111":"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.25s",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>
               <TI n={dark?"sun":"moon"} size={12} style={{color:dark?ACCENT:"var(--sub)"}}/>
             </div>
-            <span style={{fontSize:12,fontWeight:600,color:dark?"#111":"var(--sub)",whiteSpace:"nowrap",fontFamily:FONT}}>{dark?"Hell":"Dunkel"}</span>
+            <span style={{fontSize:13,fontWeight:600,color:dark?"#111":"var(--sub)",whiteSpace:"nowrap",fontFamily:FONT}}>{dark?"Hell":"Dunkel"}</span>
           </button>
         )}
         {!isMobile&&!onLogout&&<RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
@@ -1842,7 +1842,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
             const geplant=meineSchichtenMitDatum.filter(s=>parseDate2(s.einsatzDate)>=today).length;
             return(
               <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:"var(--surface2)",borderRadius:10,marginBottom:14}}>
-                <div style={{fontSize:26,fontWeight:800,color:helferOffen===0&&helferSoll>0?GN:helferSoll>0?AM:"#aaa",lineHeight:1}}>
+                <div style={{fontSize:24,fontWeight:800,color:helferOffen===0&&helferSoll>0?GN:helferSoll>0?AM:"#aaa",lineHeight:1}}>
                   {helferSoll>0?helferGeleistet+"/"+helferSoll:"-"}
                 </div>
                 <div>
@@ -1943,7 +1943,7 @@ function DashboardEltern({account,meineTeams,setActive}){
                     return(
                       <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:14,padding:"16px 18px",flex:1,minWidth:0,boxShadow:"0 1px 4px rgba(0,0,0,0.04)",display:"flex",flexDirection:"column",alignItems:"flex-start",justifyContent:"center",gap:4,position:"relative"}}>
                         <div style={{fontSize:13,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>Nächstes Spiel</div>
-                        <div style={{fontSize:26,fontWeight:800,color:BL,lineHeight:1}}>{nextSpiel?nextSpiel.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"}</div>
+                        <div style={{fontSize:24,fontWeight:800,color:BL,lineHeight:1}}>{nextSpiel?nextSpiel.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"}</div>
                         <div style={{fontSize:13,color:"var(--sub)",fontWeight:500}}>{nextSpiel?`${nextSpiel.time.slice(0,5)} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel geplant"}</div>
                         {imAufgebot&&<span style={{position:"absolute",bottom:10,right:12,fontSize:13,fontWeight:700,padding:"3px 9px",borderRadius:20,background:"var(--surface)",color:"var(--cc-accent)",border:"0.5px solid #818CF840"}}><TI n="ball-football" style={{marginRight:4}}/> Im Aufgebot</span>}
                       </div>
@@ -2180,7 +2180,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
           <h1 style={{fontSize:isMobile?17:21,fontWeight:800,margin:0,letterSpacing:-0.3,whiteSpace:isMobile?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis"}}>
             {isEltern?`${kinderNames}${activeKind?.team?" · "+activeKind.team:""}`:`${activeTeam}`}
           </h1>
-          <p style={{color:"var(--sub)",margin:"2px 0 0",fontSize:12,display:"flex",flexWrap:"wrap",gap:"0 8px"}}>
+          <p style={{color:"var(--sub)",margin:"2px 0 0",fontSize:13,display:"flex",flexWrap:"wrap",gap:"0 8px"}}>
             {isEltern&&<span>Elternzugang</span>}
             <span>{actualCount} Spieler</span>
             <span>Saison {teamInfo.season}</span>
@@ -2279,7 +2279,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
                         background:tab===t.key?ACCENT:"var(--surface2)",flexShrink:0}}>
                         <TI n={t.icon||"circle"} size={19} style={{color:tab===t.key?"#111":"var(--sub)"}}/>
                       </div>
-                      <span style={{fontSize:15,fontWeight:tab===t.key?600:400,color:tab===t.key?"var(--text)":"var(--sub)"}}>{t.label}</span>
+                      <span style={{fontSize:14,fontWeight:tab===t.key?600:400,color:tab===t.key?"var(--text)":"var(--sub)"}}>{t.label}</span>
                       {tab===t.key&&<TI n="check" size={16} style={{color:ACCENT,marginLeft:"auto"}}/>}
                     </button>
                   ))}
@@ -2297,7 +2297,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
                       borderBottom:isActive?`2.5px solid ${ACCENT}`:"2.5px solid transparent",
                       fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
                     <TI n={t.icon||"circle"} size={20} style={{color:isActive?ACCENT:"var(--sub)"}}/>
-                    <span style={{fontSize:10,color:isActive?ACCENT:"var(--sub)",fontWeight:isActive?700:400}}>{t.short||t.label}</span>
+                    <span style={{fontSize:11,color:isActive?ACCENT:"var(--sub)",fontWeight:isActive?700:400}}>{t.short||t.label}</span>
                   </button>
                 );
               })}
@@ -2308,7 +2308,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
                     borderBottom:mehrActive||showMehrTab?`2.5px solid ${ACCENT}`:"2.5px solid transparent",
                     fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
                   <TI n="dots" size={20} style={{color:mehrActive||showMehrTab?ACCENT:"var(--sub)"}}/>
-                  <span style={{fontSize:10,color:mehrActive||showMehrTab?ACCENT:"var(--sub)",fontWeight:mehrActive||showMehrTab?700:400}}>Mehr</span>
+                  <span style={{fontSize:11,color:mehrActive||showMehrTab?ACCENT:"var(--sub)",fontWeight:mehrActive||showMehrTab?700:400}}>Mehr</span>
                 </button>
               )}
             </div>
@@ -2405,7 +2405,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                   {l:"Trainer & Staff",  v:trainer.length, c:BK},
                 ].map((s,i)=>(
                   <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:8,padding:"12px 4px"}}>
-                    <div style={{fontSize:26,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
+                    <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
                     <div style={{fontSize:13,color:"var(--sub)",marginTop:4,lineHeight:1.3,textAlign:"center"}}>{s.l}</div>
                   </div>
                 ))}
@@ -2415,7 +2415,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                     onMouseEnter={e=>setTab&&(e.currentTarget.style.background=GB)}
                     onMouseLeave={e=>setTab&&(e.currentTarget.style.background=GR)}>
                     <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:4,textAlign:"center"}}>Tabellenrang</div>
-                    <div style={{fontSize:26,fontWeight:800,color:BL,lineHeight:1}}>{myRow.rank}.</div>
+                    <div style={{fontSize:24,fontWeight:800,color:BL,lineHeight:1}}>{myRow.rank}.</div>
                     <div style={{fontSize:13,color:"var(--sub)",marginTop:4,textAlign:"center"}}>{tableData.length} Teams · {myRow.pts} Punkte</div>
                   </div>
                 )}
@@ -2625,7 +2625,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
               <span style={{color:"rgba(255,255,255,0.6)",fontSize:13}}>Saison 2024/25</span>
             </div>
           </div>
-          <button onClick={onClose} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>×</button>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",color:"#fff",fontSize:21,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>×</button>
         </div>
 
         <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:18}}>
@@ -2851,7 +2851,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
         <div onClick={()=>setShowExport(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:16,padding:24,width:340,maxWidth:"90vw",boxShadow:"0 8px 40px rgba(0,0,0,0.2)"}}>
             <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Kaderliste exportieren</div>
-            <div style={{fontSize:12,color:"var(--sub)",marginBottom:16}}>Felder auswählen die exportiert werden sollen</div>
+            <div style={{fontSize:13,color:"var(--sub)",marginBottom:16}}>Felder auswählen die exportiert werden sollen</div>
             <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:20}}>
               {COL_DEF_ALL.map(c=>(
                 <label key={c.key} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",borderRadius:8,background:"var(--surface2)",cursor:"pointer"}}>
@@ -2898,7 +2898,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
               <button onClick={()=>setShowExport(true)} style={{
                 display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,
                 border:"1px solid var(--border)",background:"transparent",
-                color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT
+                color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT
               }}>
                 <TI n="file-download" size={15} style={{color:GN}}/>Export
               </button>
@@ -2907,7 +2907,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
             display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:8,
             border:`1px solid ${groupByFunktion?BK:"var(--border)"}`,
             background:groupByFunktion?BK+"15":"transparent",
-            color:groupByFunktion?BK:"var(--sub)",fontSize:12,fontWeight:600,
+            color:groupByFunktion?BK:"var(--sub)",fontSize:13,fontWeight:600,
             cursor:"pointer",fontFamily:FONT
           }}>
             <TI n="layout-list" size={13}/>Gruppieren
@@ -2932,8 +2932,8 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                     className="hov-row">
                     <Av name={p.name} size={32} bg={ACCENT20}/>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:700,fontSize:15,color:"var(--text)"}}>{p.lastName} {p.firstName}</div>
-                      <div style={{fontSize:12,color:"var(--sub)",marginTop:3,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                      <div style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{p.lastName} {p.firstName}</div>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         {positions[p.id]&&<span style={{background:"var(--surface2)",color:"var(--sub)",padding:"2px 8px",borderRadius:20}}>{positions[p.id]}</span>}
                         {rueckennrn[p.id]&&<span style={{color:"var(--sub)"}}>Nr. {rueckennrn[p.id]}</span>}
                       </div>
@@ -2993,7 +2993,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                     <td key={j} style={{padding:"9px 13px"}}>
                       {p.role
                         ?<span style={{fontSize:11,background:"#7C3AED18",color:"#7C3AED",fontWeight:700,padding:"2px 7px",borderRadius:8,whiteSpace:"nowrap"}}>{p.role}</span>
-                        :<span style={{fontSize:12,color:"var(--sub)"}}>Spieler/in</span>
+                        :<span style={{fontSize:13,color:"var(--sub)"}}>Spieler/in</span>
                       }
                     </td>
                   );
@@ -3847,7 +3847,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
           <div style={{background:"var(--surface)",borderRadius:16,padding:"0 0 16px",maxWidth:540,width:"100%",margin:"0 16px",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid "+GB}}>
               <div style={{fontWeight:700,fontSize:16}}>Trainingsplan-Versionen</div>
-              <button onClick={function(){setShowPlanVerwaltung(false);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>x</button>
+              <button onClick={function(){setShowPlanVerwaltung(false);}} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>x</button>
             </div>
             <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:10}}>
               <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Aktiviere einen Plan um ihn im GANTT anzuzeigen. Dupliziere einen Plan als Vorlage fur eine neue Version.</div>
@@ -3933,7 +3933,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                 <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                      <div style={{fontWeight:700,fontSize:15,color:isAktiv?BL:BK}}>{p.name}</div>
+                      <div style={{fontWeight:700,fontSize:14,color:isAktiv?BL:BK}}>{p.name}</div>
                       {isAktiv&&<span style={{fontSize:13,padding:"2px 8px",borderRadius:20,background:BL,color:"#fff",fontWeight:600}}>Aktiv</span>}
                     </div>
                     <div style={{fontSize:13,color:"var(--sub)"}}>
@@ -4007,7 +4007,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
       <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div>
-            <div style={{fontWeight:700,fontSize:15,color:isVorschau?"#92400E":BK}}>
+            <div style={{fontWeight:700,fontSize:14,color:isVorschau?"#92400E":BK}}>
               {isVorschau&&<span style={{fontSize:13,background:"#FDE68A",color:"#92400E",padding:"2px 7px",borderRadius:20,marginRight:7,fontWeight:600}}>Vorschau</span>}
               {plan?plan.name:"Trainingsplan"}
             </div>
@@ -4166,8 +4166,8 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
         <ModalOrSheet open onClose={function(){setShowDeleteDialog(false);setDeleteSlot(null);}} maxWidth={480}>
           <div style={{padding:"0 0 8px"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid "+GB}}>
-              <div style={{fontWeight:700,fontSize:15}}>Training loeschen</div>
-              <button onClick={function(){setShowDeleteDialog(false);setDeleteSlot(null);}} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)"}}>x</button>
+              <div style={{fontWeight:700,fontSize:14}}>Training loeschen</div>
+              <button onClick={function(){setShowDeleteDialog(false);setDeleteSlot(null);}} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)"}}>x</button>
             </div>
             <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
               <div style={{padding:"12px",background:RL,borderRadius:8,border:"1px solid "+R+"30"}}>
@@ -4302,8 +4302,8 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
       <div style={{padding:"0 0 8px"}}>
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid var(--border)"}}>
-          <div style={{fontWeight:700,fontSize:15}}>{isEdit?(isZusatz?"Zusatztraining":"Training bearbeiten"):"Training hinzufügen"}</div>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+          <div style={{fontWeight:700,fontSize:14}}>{isEdit?(isZusatz?"Zusatztraining":"Training bearbeiten"):"Training hinzufügen"}</div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
         </div>
 
         <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
@@ -4650,8 +4650,8 @@ function PlanEditorModal({plan, plaene, onSave, onClose}){
     <ModalOrSheet open onClose={onClose} maxWidth={480}>
       <div style={{padding:"0 0 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid var(--border)"}}>
-          <div style={{fontWeight:700,fontSize:15}}>{plan?.id?"Plan bearbeiten":"Neuer Plan"}</div>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)"}}>×</button>
+          <div style={{fontWeight:700,fontSize:14}}>{plan?.id?"Plan bearbeiten":"Neuer Plan"}</div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)"}}>×</button>
         </div>
         <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
           <div>
@@ -4823,7 +4823,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 <div style={{background:"linear-gradient(135deg,#3B82F6 0%,#60A5FA 100%)",borderRadius:14,padding:"16px 20px",display:"flex",alignItems:"center",gap:16}}>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:4}}>Endergebnis</div>
-                    <div style={{fontSize:34,fontWeight:900,color:"#fff",letterSpacing:3,lineHeight:1}}>{spiel.result}</div>
+                    <div style={{fontSize:24,fontWeight:900,color:"#fff",letterSpacing:3,lineHeight:1}}>{spiel.result}</div>
                     {spiel.htResult&&<div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginTop:4}}>Halbzeit: {spiel.htResult}</div>}
                   </div>
                   <div style={{textAlign:"right"}}>
@@ -4837,7 +4837,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               {/* Ort & Treffpunkt */}
               <div style={{display:"grid",gridTemplateColumns:spiel.treffpunkt?"1fr 1fr":"1fr",gap:10}}>
                 <div style={{background:"var(--surface2)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                  <span style={{fontSize:20}}><TI n="map-pin"/></span>
+                  <span style={{fontSize:21}}><TI n="map-pin"/></span>
                   <div>
                     <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Spielort</div>
                     <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{spiel.venue}</div>
@@ -4846,7 +4846,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
                 {spiel.treffpunkt&&(
                   <div style={{background:"var(--surface)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:10,border:"0.5px solid #DBEAFE"}}>
-                    <span style={{fontSize:20}}><TI n="target"/></span>
+                    <span style={{fontSize:21}}><TI n="target"/></span>
                     <div>
                       <div style={{fontSize:13,color:BL,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Treffpunkt</div>
                       <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{spiel.treffpunkt}</div>
@@ -5525,7 +5525,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                       <span style={{background:hBtn,color:hTxt,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:0.6}}>{selEv.subtype||selEv.type}</span>
                       <button onClick={()=>setModalOpen(false)} style={{background:hBtn,border:"none",borderRadius:"50%",width:30,height:30,color:hTxt,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
-                    <div style={{fontWeight:900,fontSize:22,lineHeight:1.2,marginBottom:12,color:hTxt}}>
+                    <div style={{fontWeight:900,fontSize:21,lineHeight:1.2,marginBottom:12,color:hTxt}}>
                       {selEv.opponent?"vs. "+selEv.opponent:selEv.type==="Training"?"Training":selEv.title||selEv.type}
                     </div>
                     {/* Info Pills */}
@@ -5755,7 +5755,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   {/* Datum-Block */}
                   <div style={{width:62,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
-                    <div style={{fontSize:19,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
+                    <div style={{fontSize:18,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
                   </div>
                   {/* Text */}
@@ -5865,7 +5865,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                         style={{background:hBtn,border:"none",borderRadius:"50%",width:30,height:30,color:hTxt,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
                   </div>
-                  <div style={{color:hTxt,fontWeight:900,fontSize:22,lineHeight:1.15,marginBottom:12,letterSpacing:-0.3}}>
+                  <div style={{color:hTxt,fontWeight:900,fontSize:21,lineHeight:1.15,marginBottom:12,letterSpacing:-0.3}}>
                     {selEv.opponent?"vs. "+selEv.opponent:selEv.type==="Training"?"Training":selEv.title||selEv.type}
                   </div>
                   {/* Info Pills */}
@@ -6017,13 +6017,13 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 <div style={{display:"flex",gap:8,padding:"14px 20px",borderBottom:"0.5px solid var(--border)",background:"var(--surface)"}}>
                   {items.map(s=>(
                     <div key={s.l} style={{flex:1,background:s.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:`0.5px solid ${s.c}20`}}>
-                      <div style={{fontSize:26,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
+                      <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
                       <div style={{fontSize:13,color:s.c,fontWeight:600,marginTop:3,opacity:0.8}}>{s.l}</div>
                     </div>
                   ))}
                   {c.aufgebot>0&&(
                     <div style={{flex:1,background:"var(--surface)",borderRadius:10,padding:"10px 8px",textAlign:"center",border:"0.5px solid #818CF820"}}>
-                      <div style={{fontSize:26,fontWeight:800,color:"var(--sub)",lineHeight:1}}>{c.aufgebot}</div>
+                      <div style={{fontSize:24,fontWeight:800,color:"var(--sub)",lineHeight:1}}>{c.aufgebot}</div>
                       <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginTop:3,opacity:0.8}}>Aufgebot</div>
                     </div>
                   )}
@@ -6142,12 +6142,12 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   <div onClick={()=>openEvent(ev.id)} style={{background:headerBg,padding:"12px 14px",display:"flex",alignItems:"center",gap:0}}>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:56,paddingRight:14}}>
                       <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:0.6}}>{weekday}</div>
-                      <div style={{fontSize:22,fontWeight:700,color:"#fff",lineHeight:1.1}}>{dayNum}.</div>
+                      <div style={{fontSize:21,fontWeight:700,color:"#fff",lineHeight:1.1}}>{dayNum}.</div>
                       <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:0.4}}>{monName}</div>
                     </div>
                     <div style={{width:1,alignSelf:"stretch",background:"rgba(255,255,255,0.15)",marginRight:14,flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:700,fontSize:15,color:"#fff",lineHeight:1.25,textDecoration:isCancelled?"line-through":"none"}}>
+                      <div style={{fontWeight:700,fontSize:14,color:"#fff",lineHeight:1.25,textDecoration:isCancelled?"line-through":"none"}}>
                         {ev.opponent?"vs. "+ev.opponent:ev.title||ev.type}
                       </div>
                       <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:2}}>
@@ -6164,7 +6164,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     ].map((t,i,arr)=>(
                       <div key={i} style={{flex:1,padding:"12px 8px",borderRight:i<arr.length-1?`0.5px solid ${GB}`:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.8}}>{t.label}</div>
-                        <div style={{fontSize:19,fontWeight:700,color:"var(--text)",lineHeight:1}}>{t.time}</div>
+                        <div style={{fontSize:18,fontWeight:700,color:"var(--text)",lineHeight:1}}>{t.time}</div>
                       </div>
                     ))}
                   </div>
@@ -6174,7 +6174,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 <div onClick={()=>openEvent(ev.id)} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:14}}>
                   <div style={{width:58,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
-                    <div style={{fontSize:19,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
+                    <div style={{fontSize:18,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
                   </div>
                   <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:3}}>
@@ -6203,7 +6203,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     ...(isSpiel?[{label:"Aufgebot",value:c.aufgebot,color:"var(--cc-accent)"}]:[]),
                   ].map((s,i,arr)=>(
                     <div key={i} style={{flex:1,padding:"9px 2px",borderRight:i<arr.length-1?`0.5px solid ${GB}`:"none",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                      <div style={{fontSize:15,fontWeight:700,color:s.value>0?s.color:"var(--border)",lineHeight:1}}>{s.value}</div>
+                      <div style={{fontSize:14,fontWeight:700,color:s.value>0?s.color:"var(--border)",lineHeight:1}}>{s.value}</div>
                       <div style={{fontSize:13,color:s.value>0?s.color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.3,fontWeight:600,opacity:0.8}}>{s.label}</div>
                     </div>
                   ))}
@@ -6264,7 +6264,7 @@ function PollsTab({role}){
           <Card key={i} style={{marginBottom:12}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
               <div>
-                <h3 style={{margin:"0 0 4px",fontSize:15,fontWeight:700}}>{p.title}</h3>
+                <h3 style={{margin:"0 0 4px",fontSize:14,fontWeight:700}}>{p.title}</h3>
                 <Chip text={p.target} color={BL}/>
                 {" "}<Chip text={p.closed?"Geschlossen":"Offen"} color={p.closed?"#888":GN} bg={p.closed?"#f5f5f5":"#ECFDF5"}/>
               </div>
@@ -6432,8 +6432,8 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
   const statusColor=s=>s==="Vollständig"?GN:s==="Prüfung fällig"?AM:R;
   const statusBg=s=>s==="Vollständig"?"#ECFDF5":s==="Prüfung fällig"?"#FFFBEB":RL;
   const SortIcon=({col})=>sortCol===col
-    ?<span style={{marginLeft:4,fontSize:10}}>{sortDir==="asc"?"▲":"▼"}</span>
-    :<span style={{marginLeft:4,fontSize:10,opacity:0.25}}>↕</span>;
+    ?<span style={{marginLeft:4,fontSize:11}}>{sortDir==="asc"?"▲":"▼"}</span>
+    :<span style={{marginLeft:4,fontSize:11,opacity:0.25}}>↕</span>;
 
   const inputStyle={padding:"7px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:FONT};
 
@@ -6474,7 +6474,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               </div>
             </div>
           </div>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)"}}>×</button>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)"}}>×</button>
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px"}}>
           <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
@@ -6544,7 +6544,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
                 background:filterVals.length===0?BK:"var(--surface)",
                 color:filterVals.length===0?"#fff":"var(--sub)",
-                fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
+                fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
               Alle
             </button>
             {vals.map(v=>{
@@ -6555,9 +6555,9 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                     border:"1px solid "+(active?BK:"var(--border)"),
                     background:active?BK:"var(--surface)",
                     color:active?"#fff":"var(--sub)",
-                    fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s",
+                    fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s",
                     display:"flex",alignItems:"center",gap:5}}>
-                  {active&&<span style={{fontSize:9}}>✓</span>}
+                  {active&&<span style={{fontSize:11}}>✓</span>}
                   {v}
                   <span style={{opacity:0.55,fontWeight:400}}>
                     {allMembers.filter(m=>(m[groupBy]||"-")===v).length}
@@ -6583,7 +6583,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               {COLS.map(c=>(
                 <th key={c.key} onClick={()=>handleSort(c.key)}
                   style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",
-                    fontSize:12,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",
+                    fontSize:13,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",
                     userSelect:"none",whiteSpace:"nowrap"}}
                   onMouseEnter={e=>e.currentTarget.style.color="var(--text)"}
                   onMouseLeave={e=>e.currentTarget.style.color="var(--sub)"}>
@@ -6598,7 +6598,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 {groupBy!=="none"&&(
                   <tr key={"g-"+key}>
                     <td colSpan={6} style={{padding:"10px 13px 6px",background:"var(--surface2)",
-                      fontWeight:700,fontSize:12,color:"var(--sub)",textTransform:"uppercase",
+                      fontWeight:700,fontSize:13,color:"var(--sub)",textTransform:"uppercase",
                       letterSpacing:0.6,borderTop:"1px solid var(--border)"}}>
                       {key} <span style={{fontWeight:400,opacity:0.6}}>({members.length})</span>
                     </td>
@@ -6784,7 +6784,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:16}}>
         <InfoBox text="Klick auf ein Icon aktiviert/deaktiviert das Modul pro Team. Spalten-Buttons setzen ein Modul für alle gefilterten Teams." color={BL}/>
-        {saving&&<span style={{fontSize:12,color:"var(--sub)"}}>Speichert…</span>}
+        {saving&&<span style={{fontSize:13,color:"var(--sub)"}}>Speichert…</span>}
       </div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
         {hauptbereiche.map(h=>{
@@ -6792,7 +6792,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
           const isActive=filterHaupt===h;
           return(
             <button key={h} onClick={()=>setFilterHaupt(h)} style={{
-              padding:"5px 14px",borderRadius:20,fontFamily:FONT,fontSize:12,cursor:"pointer",
+              padding:"5px 14px",borderRadius:20,fontFamily:FONT,fontSize:13,cursor:"pointer",
               fontWeight:isActive?700:400,transition:"all 0.12s",
               border:`1.5px solid ${isActive?col:"var(--border)"}`,
               background:isActive?col+"15":"transparent",color:isActive?col:"var(--sub)"
@@ -6831,7 +6831,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                           <div style={{width:18,height:18,borderRadius:4,background:isOn?GN:"transparent",border:`1.5px solid ${isOn?GN:"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                             {isOn&&<TI n="check" size={11} style={{color:"#fff"}}/>}
                           </div>
-                          <span style={{fontSize:12,fontWeight:isOn?600:400,color:isOn?"var(--text)":"var(--sub)"}}>{m.label}</span>
+                          <span style={{fontSize:13,fontWeight:isOn?600:400,color:isOn?"var(--text)":"var(--sub)"}}>{m.label}</span>
                         </div>
                       );
                     })}
@@ -6844,7 +6844,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
       ):(
         /* Desktop: Tabelle */
         <Card style={{padding:0,overflowX:"auto"}}>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
           <thead>
             <tr style={{background:"var(--surface2)",borderBottom:"1px solid var(--border)"}}>
               <th style={{padding:"10px 16px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.4,minWidth:180,position:"sticky",left:0,background:"var(--surface2)",zIndex:2}}>
@@ -6856,12 +6856,12 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                     <div style={{width:32,height:32,borderRadius:8,background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                       <TI n={m.icon||"circle"} size={16} style={{color:"var(--sub)"}}/>
                     </div>
-                    <span style={{fontSize:9,color:"var(--sub)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.4,maxWidth:50,textAlign:"center",lineHeight:1.2}}>{m.label}</span>
+                    <span style={{fontSize:11,color:"var(--sub)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.4,maxWidth:50,textAlign:"center",lineHeight:1.2}}>{m.label}</span>
                     <div style={{display:"flex",gap:3}}>
                       <button onClick={()=>applyToAll(m.key,true)} title={`Alle: ${m.label} ein`}
-                        style={{width:18,height:18,borderRadius:4,border:"none",background:GN,color:"#fff",cursor:"pointer",fontFamily:FONT,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>✓</button>
+                        style={{width:18,height:18,borderRadius:4,border:"none",background:GN,color:"#fff",cursor:"pointer",fontFamily:FONT,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✓</button>
                       <button onClick={()=>applyToAll(m.key,false)} title={`Alle: ${m.label} aus`}
-                        style={{width:18,height:18,borderRadius:4,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer",fontFamily:FONT,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>✗</button>
+                        style={{width:18,height:18,borderRadius:4,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer",fontFamily:FONT,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✗</button>
                     </div>
                   </div>
                 </th>
@@ -6878,7 +6878,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                   const col=HB_COLORS[t.hauptbereich]||"var(--sub)";
                   rows.push(
                     <tr key={`hb-${t.hauptbereich}`}>
-                      <td colSpan={TEAM_MODS.length+1} style={{padding:"6px 16px 4px",fontSize:10,fontWeight:700,color:col,textTransform:"uppercase",letterSpacing:0.8,background:"var(--surface2)",borderTop:i>0?"1px solid var(--border)":"none"}}>
+                      <td colSpan={TEAM_MODS.length+1} style={{padding:"6px 16px 4px",fontSize:11,fontWeight:700,color:col,textTransform:"uppercase",letterSpacing:0.8,background:"var(--surface2)",borderTop:i>0?"1px solid var(--border)":"none"}}>
                         {t.hauptbereich||"Weitere"}
                       </td>
                     </tr>
@@ -6895,7 +6895,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                         <div style={{width:3,height:20,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
-                          {t.kurzname&&t.kurzname!==t.name&&<div style={{fontSize:10,color:"var(--sub)"}}>{t.kurzname}</div>}
+                          {t.kurzname&&t.kurzname!==t.name&&<div style={{fontSize:11,color:"var(--sub)"}}>{t.kurzname}</div>}
                         </div>
                         <div onClick={()=>TEAM_MODS.forEach(m=>toggleTeamModul(t.id,m.key,!allAktiv))}
                           title={allAktiv?"Alle deaktivieren":"Alle aktivieren"}
@@ -7440,7 +7440,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <button key={t.key} onClick={()=>setTab(t.key)} style={{
                   display:"flex",alignItems:"center",gap:5,padding:"7px 12px",whiteSpace:"nowrap",
                   background:"none",border:"none",borderBottom:tab===t.key?`2px solid ${BK}`:"2px solid transparent",
-                  cursor:"pointer",fontSize:12,fontWeight:tab===t.key?700:400,
+                  cursor:"pointer",fontSize:13,fontWeight:tab===t.key?700:400,
                   color:tab===t.key?BK:"var(--sub)",borderRadius:0,marginBottom:-1,fontFamily:FONT
                 }}>
                   <TI n={t.icon} size={13}/>
@@ -7479,7 +7479,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     display:"flex",alignItems:"center",gap:5,padding:"6px 12px",whiteSpace:"nowrap",
                     background:tab===t.key?"var(--surface2)":"none",border:"none",
                     borderBottom:tab===t.key?`2px solid ${k.color}`:"2px solid transparent",
-                    cursor:"pointer",fontSize:12,fontWeight:tab===t.key?600:400,
+                    cursor:"pointer",fontSize:13,fontWeight:tab===t.key?600:400,
                     color:tab===t.key?"var(--text)":"var(--sub)",borderRadius:0,marginBottom:-1,fontFamily:FONT
                   }}>
                     <TI n={t.icon} size={12}/>
@@ -7542,11 +7542,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   try{localStorage.setItem("cc-module-rechte",JSON.stringify(moduleRechte));
                       if(zugriffStufen) localStorage.setItem("cc-zugriff-stufen",JSON.stringify(zugriffStufen));}catch{}
                   setModuleDirty(false); setSaveMsg("Gespeichert");setTimeout(()=>setSaveMsg(""),2000);
-                }} style={{padding:"7px 14px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                }} style={{padding:"7px 14px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                   Speichern
                 </button>
                 <button onClick={()=>{setModuleRechte(null);setZugriffStufen(null);setModuleDirty(false);try{localStorage.removeItem("cc-module-rechte");localStorage.removeItem("cc-zugriff-stufen");}catch{}setSaveMsg("Verworfen");setTimeout(()=>setSaveMsg(""),2000);}}
-                  style={{padding:"8px 14px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                  style={{padding:"8px 14px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                   Verwerfen
                 </button>
               </>
@@ -7557,7 +7557,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           {moduleViewMode==="modul"&&(()=>{
             return(
               <Card style={{padding:0,overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:700}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,minWidth:700}}>
                   <thead>
                     <tr style={{background:"var(--surface2)",borderBottom:"1px solid var(--border)"}}>
                       <th style={{padding:"9px 14px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.5,minWidth:180,position:"sticky",left:0,background:"var(--surface2)",zIndex:2}}>Modul</th>
@@ -7577,7 +7577,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       const KAT_LABELS={kern:"Kern",sport:"Sport",betrieb:"Betrieb",kommunikation:"Kommunikation",verwaltung:"Verwaltung",admin:"Systemverwaltung"};
                       return([
                         <tr key={"kat-"+kat}>
-                          <td colSpan={ROLLEN.length+1} style={{padding:"6px 14px 4px",fontSize:10,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.8,background:"var(--surface2)",borderTop:"1px solid var(--border)"}}>{KAT_LABELS[kat]}</td>
+                          <td colSpan={ROLLEN.length+1} style={{padding:"6px 14px 4px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.8,background:"var(--surface2)",borderTop:"1px solid var(--border)"}}>{KAT_LABELS[kat]}</td>
                         </tr>,
                         ...mods.map(m=>{
                           const isAktiv=moduleAktiv[m.key]!==false;
@@ -7595,7 +7595,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                   </div>
                                   <TI n={m.icon} size={13} style={{color:isPflicht?"#B45309":"var(--sub)",flexShrink:0}}/>
                                   <span style={{fontWeight:500,color:isPflicht?"#B45309":isExpanded?"var(--text)":"var(--text)",fontSize:13}}>{m.name||m.label}</span>
-                                  {isPflicht&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:4,background:"#FEF3C7",color:"#B45309",fontWeight:600}}>Pflicht</span>}
+                                  {isPflicht&&<span style={{fontSize:11,padding:"1px 5px",borderRadius:4,background:"#FEF3C7",color:"#B45309",fontWeight:600}}>Pflicht</span>}
                                   <TI n={isExpanded?"chevron-up":"chevron-down"} size={11} style={{color:"var(--sub)",marginLeft:"auto"}}/>
                                 </div>
                               </td>
@@ -7607,7 +7607,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                 return(
                                   <td key={r} style={{textAlign:"center",padding:"7px 6px",background:isAdmin?"var(--surface2)":"transparent"}}>
                                     {r==="funktionaer"
-                                      ?<span style={{fontSize:10,color:"var(--sub)",fontStyle:"italic"}}>via Gruppe</span>
+                                      ?<span style={{fontSize:11,color:"var(--sub)",fontStyle:"italic"}}>via Gruppe</span>
                                       :(()=>{
                                         const sc=stufe?ZUGRIFF_COLORS[stufe]:"var(--border)";
                                         return(
@@ -7632,7 +7632,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                             onMouseEnter={e=>{if(!isAdmin&&isAktiv&&!hasAccess)e.currentTarget.style.transform="scale(1.1)";}}
                                             onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";}}
                                           >
-                                            {hasAccess&&<><TI n={ZUGRIFF_ICONS[stufe||"lesen"]} size={11} style={{color:isAdmin?"var(--sub)":sc}}/><span style={{fontSize:10,fontWeight:600,color:isAdmin?"var(--sub)":sc}}>{ZUGRIFF_LABELS[stufe||"lesen"]}</span></>}
+                                            {hasAccess&&<><TI n={ZUGRIFF_ICONS[stufe||"lesen"]} size={11} style={{color:isAdmin?"var(--sub)":sc}}/><span style={{fontSize:11,fontWeight:600,color:isAdmin?"var(--sub)":sc}}>{ZUGRIFF_LABELS[stufe||"lesen"]}</span></>}
                                           </div>
                                         );
                                       })()
@@ -7651,14 +7651,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                   {(MODUL_AKTIONEN[m.key]||[]).map((a,ai)=>(
                                     <div key={ai} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"6px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
                                       <div style={{flex:1}}>
-                                        <span style={{fontSize:12,color:"var(--text)"}}>{a.label}</span>
-                                        {a.spez&&<div style={{fontSize:10,color:"var(--sub)",marginTop:2,fontStyle:"italic"}}>{a.spez}</div>}
-                                        {a.note&&<div style={{fontSize:10,color:"var(--sub)",marginTop:2}}>ℹ {a.note}</div>}
+                                        <span style={{fontSize:13,color:"var(--text)"}}>{a.label}</span>
+                                        {a.spez&&<div style={{fontSize:11,color:"var(--sub)",marginTop:2,fontStyle:"italic"}}>{a.spez}</div>}
+                                        {a.note&&<div style={{fontSize:11,color:"var(--sub)",marginTop:2}}>ℹ {a.note}</div>}
                                       </div>
-                                      <span style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:ZUGRIFF_COLORS[a.min]+"20",color:ZUGRIFF_COLORS[a.min],fontWeight:600,flexShrink:0}}>{ZUGRIFF_LABELS[a.min]}</span>
+                                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:4,background:ZUGRIFF_COLORS[a.min]+"20",color:ZUGRIFF_COLORS[a.min],fontWeight:600,flexShrink:0}}>{ZUGRIFF_LABELS[a.min]}</span>
                                     </div>
                                   ))}
-                                  {!MODUL_AKTIONEN[m.key]&&<span style={{fontSize:12,color:"var(--sub)"}}>Keine Detail-Aktionen definiert.</span>}
+                                  {!MODUL_AKTIONEN[m.key]&&<span style={{fontSize:13,color:"var(--sub)"}}>Keine Detail-Aktionen definiert.</span>}
                                 </td>
                               </tr>
                             )
@@ -7686,12 +7686,12 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       <span style={{fontWeight:600,fontSize:14,color:roleInfo.color||"var(--text)"}}>{ROLLEN_LABELS[role]}</span>
                       <span style={{fontSize:11,color:"var(--sub)",marginLeft:4}}>{zugMods.length} Module</span>
                     </div>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                       <thead>
                         <tr style={{background:"var(--surface2)"}}>
-                          <th style={{padding:"7px 14px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:10,textTransform:"uppercase",letterSpacing:0.5}}>Modul</th>
-                          <th style={{padding:"7px 10px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:10,textTransform:"uppercase",letterSpacing:0.5,width:90}}>Stufe</th>
-                          <th style={{padding:"7px 10px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:10,textTransform:"uppercase",letterSpacing:0.5}}>Kann</th>
+                          <th style={{padding:"7px 14px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.5}}>Modul</th>
+                          <th style={{padding:"7px 10px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.5,width:90}}>Stufe</th>
+                          <th style={{padding:"7px 10px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:11,textTransform:"uppercase",letterSpacing:0.5}}>Kann</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -7711,7 +7711,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                 <div onClick={()=>{const aktiv=moduleAktiv[m.key]!==false;if(aktiv&&role!=="administrator")cycleZugriff(role,m.key);}}
                                   style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 9px",borderRadius:6,background:sc+"20",border:`1px solid ${sc}50`,cursor:"pointer"}}>
                                   <TI n={ZUGRIFF_ICONS[stufe]} size={11} style={{color:sc}}/>
-                                  <span style={{fontSize:10,fontWeight:600,color:sc}}>{ZUGRIFF_LABELS[stufe]}</span>
+                                  <span style={{fontSize:11,fontWeight:600,color:sc}}>{ZUGRIFF_LABELS[stufe]}</span>
                                 </div>
                               </td>
                               <td style={{padding:"8px 10px",fontSize:11,color:"var(--sub)"}}>{kann.length?kann.join(" · "):"Nur ansehen"}</td>
@@ -7747,7 +7747,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                           {(g.module||[]).map(mk=>{
                             const mod=ALLE_MODULE.find(m=>m.key===mk);
-                            return mod?<span key={mk} style={{fontSize:10,padding:"2px 7px",borderRadius:4,background:g.farbe+"15",color:g.farbe}}>{mod.name||mod.label}</span>:null;
+                            return mod?<span key={mk} style={{fontSize:11,padding:"2px 7px",borderRadius:4,background:g.farbe+"15",color:g.farbe}}>{mod.name||mod.label}</span>:null;
                           })}
                         </div>
                       </div>
@@ -7805,7 +7805,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                         {gFunktionen.length} Funktion{gFunktionen.length!==1?"en":""}
                       </span>
                     </div>
-                    {g.beschreibung&&<div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{g.beschreibung}</div>}
+                    {g.beschreibung&&<div style={{fontSize:13,color:"var(--sub)",marginBottom:6}}>{g.beschreibung}</div>}
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                       {moduleLabels.map(ml=>(
                         <span key={ml} style={{fontSize:11,padding:"2px 9px",borderRadius:8,background:g.farbe+"15",color:g.farbe}}>{ml}</span>
@@ -7861,14 +7861,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                             {f.module_override?.length>0
                               ?f.module_override.map(m=>{const ml=ALLE_MODULE.find(x=>x.key===m);return(
-                                <span key={m} style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"#3B82F615",color:"#3B82F6"}}>
+                                <span key={m} style={{fontSize:11,padding:"1px 7px",borderRadius:6,background:"#3B82F615",color:"#3B82F6"}}>
                                   <TI n="arrow-narrow-right" size={9}/> {ml?.label||m}
                                 </span>
                               );})
-                              :<span style={{fontSize:10,color:"var(--sub)",fontStyle:"italic"}}>alle Gruppen-Module</span>
+                              :<span style={{fontSize:11,color:"var(--sub)",fontStyle:"italic"}}>alle Gruppen-Module</span>
                             }
                             {f.teams?.length>0&&(
-                              <span style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"#F9731615",color:"#F97316"}}>
+                              <span style={{fontSize:11,padding:"1px 7px",borderRadius:6,background:"#F9731615",color:"#F97316"}}>
                                 {f.teams.length} Team{f.teams.length!==1?"s":""}
                               </span>
                             )}
@@ -7891,9 +7891,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <div style={{width:12,height:12,borderRadius:"50%",background:gruppeForm.farbe}}/>
                   <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>{editGruppe?"Gruppe bearbeiten":"Neue Gruppe"}</h2>
                 </div>
-                <button onClick={()=>{setShowGruppeForm(false);setEditGruppe(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+                <button onClick={()=>{setShowGruppeForm(false);setEditGruppe(null);}} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
               </div>
-              <div style={{fontSize:12,color:"var(--sub)",marginBottom:16}}>
+              <div style={{fontSize:13,color:"var(--sub)",marginBottom:16}}>
                 {editGruppe?"Module und Name anpassen.":"Neue Gruppe mit Modulzugang erstellen."}
               </div>
             </div>
@@ -7946,14 +7946,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           return{...p,module:newMods,modul_stufen:newStufen};
                         })} style={{display:"flex",alignItems:"center",gap:6,flex:1,background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left",fontFamily:FONT}}>
                           <TI n={m.icon} size={13} style={{color:sel?gruppeForm.farbe:"var(--sub)",flexShrink:0}}/>
-                          <span style={{fontSize:12,color:sel?gruppeForm.farbe:"var(--sub)",fontWeight:sel?600:400}}>{m.label}</span>
+                          <span style={{fontSize:13,color:sel?gruppeForm.farbe:"var(--sub)",fontWeight:sel?600:400}}>{m.label}</span>
                         </button>
                         {/* Stufen-Toggle (nur wenn aktiv) */}
                         {sel&&(
                           <div style={{display:"flex",gap:2,flexShrink:0}}>
                             {STUFEN.map(s=>(
                               <button key={s} onClick={()=>setGruppeForm(p=>({...p,modul_stufen:{...p.modul_stufen,[m.key]:s}}))}
-                                style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${stufe===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:stufe===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:stufe===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:10,fontWeight:stufe===s?700:400,cursor:"pointer",fontFamily:FONT}}>
+                                style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${stufe===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:stufe===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:stufe===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:11,fontWeight:stufe===s?700:400,cursor:"pointer",fontFamily:FONT}}>
                                 {ZUGRIFF_LABELS[s]}
                               </button>
                             ))}
@@ -8008,11 +8008,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                 <div>
                   <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>{editFunktion?"Funktion bearbeiten":"Neue Funktion"}</h2>
-                  {selectedGruppe&&<div style={{fontSize:12,color:selectedGruppe.farbe,fontWeight:600,marginTop:2}}>in {selectedGruppe.name}</div>}
+                  {selectedGruppe&&<div style={{fontSize:13,color:selectedGruppe.farbe,fontWeight:600,marginTop:2}}>in {selectedGruppe.name}</div>}
                 </div>
-                <button onClick={()=>{setShowFunktionForm(false);setEditFunktion(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+                <button onClick={()=>{setShowFunktionForm(false);setEditFunktion(null);}} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
               </div>
-              <div style={{fontSize:12,color:"var(--sub)",marginBottom:16}}>
+              <div style={{fontSize:13,color:"var(--sub)",marginBottom:16}}>
                 Einschränkungen innerhalb der Gruppe — leer = alles der Gruppe sichtbar.
               </div>
             </div>
@@ -8050,18 +8050,18 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     return(
                       <div key={mk} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,border:"0.5px solid var(--border)"}}>
                         <TI n={m.icon||"circle"} size={13} style={{color:"var(--sub)",flexShrink:0}}/>
-                        <span style={{flex:1,fontSize:12,color:"var(--text)"}}>{m.label}</span>
+                        <span style={{flex:1,fontSize:13,color:"var(--text)"}}>{m.label}</span>
                         {/* Gruppen-Default als Referenz */}
-                        <span style={{fontSize:10,color:"var(--sub)",padding:"2px 6px",borderRadius:4,background:"var(--surface2)"}}>Gruppe: {gruppeStufe}</span>
+                        <span style={{fontSize:11,color:"var(--sub)",padding:"2px 6px",borderRadius:4,background:"var(--surface2)"}}>Gruppe: {gruppeStufe}</span>
                         {/* Override Buttons (nur höhere Stufen) */}
                         <div style={{display:"flex",gap:2}}>
                           <button onClick={()=>setFunktionForm(p=>{const ns={...p.stufe_override};delete ns[mk];return{...p,stufe_override:ns};})}
-                            style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${!override?"#000":"var(--border)"}`,background:!override?"#00000010":"transparent",color:!override?"var(--text)":"var(--sub)",fontSize:9,cursor:"pointer",fontFamily:FONT}}>
+                            style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${!override?"#000":"var(--border)"}`,background:!override?"#00000010":"transparent",color:!override?"var(--text)":"var(--sub)",fontSize:11,cursor:"pointer",fontFamily:FONT}}>
                             Standard
                           </button>
                           {STUFEN.filter(s=>STUFE_RANG[s]>STUFE_RANG[gruppeStufe]).map(s=>(
                             <button key={s} onClick={()=>setFunktionForm(p=>({...p,stufe_override:{...p.stufe_override,[mk]:s}}))}
-                              style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${override===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:override===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:override===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:10,fontWeight:override===s?700:400,cursor:"pointer",fontFamily:FONT}}>
+                              style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${override===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:override===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:override===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:11,fontWeight:override===s?700:400,cursor:"pointer",fontFamily:FONT}}>
                               {ZUGRIFF_LABELS[s]}
                             </button>
                           ))}
@@ -8163,10 +8163,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 {benutzerListe.map((b,i)=>(
                   <tr key={b.id} style={{borderTop:"0.5px solid var(--border)"}}>
                     <td style={{padding:"9px 13px",fontWeight:600,color:"var(--text)"}}>{b.name||"—"}</td>
-                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:12}}>{b.email}</td>
+                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>{b.email}</td>
                     <td style={{padding:"9px 13px"}}>
                       <select value={b.role||"spieler"} onChange={e=>updateBenutzerRolle(b.id,e.target.value)}
-                        style={{padding:"8px 14px",border:"1px solid var(--border)",borderRadius:8,fontSize:12,background:"var(--surface)",color:ROLES[b.role]?.color||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
+                        style={{padding:"8px 14px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,background:"var(--surface)",color:ROLES[b.role]?.color||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
                         {ROLLEN.map(r=><option key={r} value={r}>{ROLLEN_LABELS[r]}</option>)}
                       </select>
                     </td>
@@ -8183,7 +8183,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                             <button onClick={async()=>{
                               if(supabase) await supabase.from("benutzer_funktionen").delete().match({benutzer_id:b.id,funktion_id:f.id});
                               setBenutzerListe(prev=>prev.map(u=>u.id===b.id?{...u,funktionen:(u.funktionen||[]).filter(x=>x.id!==f.id)}:u));
-                            }} style={{background:"none",border:"none",cursor:"pointer",color:"#7C3AED",padding:0,lineHeight:1,fontSize:12}}>×</button>
+                            }} style={{background:"none",border:"none",cursor:"pointer",color:"#7C3AED",padding:0,lineHeight:1,fontSize:13}}>×</button>
                           </span>
                         ))}
                         {/* Funktion hinzufügen */}
@@ -8280,16 +8280,16 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <img src={theme.logo||LOGO_B64} style={{width:32,height:32,objectFit:"cover",display:"block"}} alt="Logo"/>
                 </div>
                 <div style={{minWidth:0}}>
-                  <div style={{fontSize:12,fontWeight:800,color:theme.navText,lineHeight:1.2,letterSpacing:-0.2}}>{theme.vereinsname||"Mein Verein"}</div>
-                  <div style={{fontSize:9,color:theme.navAccent||theme.vereinsfarbe1,letterSpacing:0.5,textTransform:"uppercase",fontWeight:600,marginTop:1}}>{"ClubCampus"}</div>
+                  <div style={{fontSize:13,fontWeight:800,color:theme.navText,lineHeight:1.2,letterSpacing:-0.2}}>{theme.vereinsname||"Mein Verein"}</div>
+                  <div style={{fontSize:11,color:theme.navAccent||theme.vereinsfarbe1,letterSpacing:0.5,textTransform:"uppercase",fontWeight:600,marginTop:1}}>{"ClubCampus"}</div>
                 </div>
               </div>
               {/* Buttons */}
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                <button style={{padding:"7px 16px",borderRadius:8,border:"none",background:theme.btnPrimary,color:theme.btnPrimaryText,fontSize:12,fontWeight:600,cursor:"default"}}>Speichern</button>
+                <button style={{padding:"7px 16px",borderRadius:8,border:"none",background:theme.btnPrimary,color:theme.btnPrimaryText,fontSize:13,fontWeight:600,cursor:"default"}}>Speichern</button>
                 <span style={{padding:"4px 10px",borderRadius:20,background:theme.vereinsfarbe1,color:theme.vereinsfarbe2,fontSize:11,fontWeight:700}}>Aktiv</span>
                 <div style={{width:32,height:32,borderRadius:"50%",background:theme.vereinsfarbe1,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <span style={{fontSize:12,fontWeight:700,color:theme.vereinsfarbe2}}>DG</span>
+                  <span style={{fontSize:13,fontWeight:700,color:theme.vereinsfarbe2}}>DG</span>
                 </div>
               </div>
             </div>
@@ -8326,7 +8326,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <label style={{
                     display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",
                     borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",
-                    color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer"
+                    color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer"
                   }}>
                     <TI n="upload" size={13}/>Datei wählen
                     <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
@@ -8353,7 +8353,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   {theme.logo&&(
                     <button onClick={()=>updateTheme("logo",null)} style={{
                       padding:"7px 14px",borderRadius:8,border:"1px solid var(--border)",
-                      background:"transparent",color:"var(--sub)",fontSize:12,cursor:"pointer",fontFamily:FONT
+                      background:"transparent",color:"var(--sub)",fontSize:13,cursor:"pointer",fontFamily:FONT
                     }}>
                       <TI n="trash" size={13}/> Entfernen
                     </button>
@@ -8675,7 +8675,7 @@ function EventsList({teamOnly,role}){
                   )}
                 </div>
                 {/* Title */}
-                <div style={{fontWeight:700,fontSize:15,color:"var(--text)",marginBottom:7}}>{e.title}</div>
+                <div style={{fontWeight:700,fontSize:14,color:"var(--text)",marginBottom:7}}>{e.title}</div>
                 {/* Meta */}
                 <div style={{display:"flex",alignItems:"center",gap:0,flexWrap:"wrap",fontSize:13,color:"var(--sub)"}}>
                   <span style={{display:"flex",alignItems:"center",gap:4}}>
@@ -9466,7 +9466,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           {l:"Schichten offen",v:offenPlätze,bg:offenPlätze>0?"#FFFBEB":"rgba(255,255,255,0.6)",border:offenPlätze>0?"#FDE68A":"rgba(0,0,0,0.08)",tc:offenPlätze>0?AM:GN},
                         ].map((s,i)=>(
                           <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
-                            <div style={{fontSize:22,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
+                            <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
                             <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
                           </div>
                         ));
@@ -9592,7 +9592,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
             {[{l:"Soll",v:mich.soll,c:BK,bg:"#fff"},{l:"Geleistet",v:mich.geleistet,c:GN,bg:"#F0FDF4"},{l:"Geplant",v:mich.geplant,c:AM,bg:"#FFFBEB"},{l:"Offen",v:mich.offen,c:mich.offen>0?R:"#aaa",bg:mich.offen>0?"#FEF2F2":"#fff"}].map((s,i)=>(
               <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
-                <div style={{fontSize:26,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
+                <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
                 <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
               </div>
             ))}
@@ -9675,7 +9675,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="team"&&meinGruppe&&(
         <div>
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:16,fontSize:13}}>
-            <span style={{fontSize:15}}><TI n="users"/></span>
+            <span style={{fontSize:14}}><TI n="users"/></span>
             <span>Einsätze für deine Teams: {meineGruppen.map((g,i)=><strong key={i}>{i>0?" · ":""}{g}</strong>)}</span>
           </div>
 
@@ -9727,7 +9727,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                             {l:"Schichten offen",v:offenPlätze,bg:offenPlätze>0?"#FFFBEB":"rgba(255,255,255,0.6)",border:offenPlätze>0?"#FDE68A":"rgba(0,0,0,0.08)",tc:offenPlätze>0?AM:GN},
                           ].map((s,i)=>(
                             <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
-                              <div style={{fontSize:22,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
+                              <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
                               <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
                             </div>
                           ));
@@ -9798,7 +9798,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           {/* Team-Filter Hinweis für Trainer */}
           {isTrainer&&(
             <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:13}}>
-              <span style={{fontSize:15}}><TI n="eye"/></span>
+              <span style={{fontSize:14}}><TI n="eye"/></span>
               <span>Du siehst nur Mitglieder deines Teams: <strong>Cc-Junioren</strong></span>
             </div>
           )}
@@ -9813,7 +9813,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
                 {[{l:"Erfüllt",v:erfuellt,c:GN,bg:"#F0FDF4"},{l:"Offen",v:offen,c:AM,bg:"#FFFBEB"},{l:"Befreit",v:befreit,c:BK,bg:"#fff"}].map((s,i)=>(
                   <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
-                    <div style={{fontSize:26,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
+                    <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
                     <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
                   </div>
                 ))}
@@ -9946,7 +9946,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* -- TAB: ERSTELLEN -- */}
       {helperTab==="erstellen"&&canErstellen&&(
         <Card>
-          <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>Neuen Einsatz erfassen</div>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Neuen Einsatz erfassen</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
             {[
               {l:"Event",            type:"select",opts:["Grümpelturnier 2026","Generalversammlung 2026","+ Neuer Event…"]},
@@ -10026,7 +10026,7 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:14,marginTop:14}}>
         {BUSES.map((bus,i)=>(
           <Card key={i}>
-            <div style={{fontWeight:700,fontSize:15,marginBottom:12,display:"flex",justifyContent:"space-between"}}>{bus.name}<Chip text={`${bus.reservations.length} Res.`} color={BL}/></div>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:12,display:"flex",justifyContent:"space-between"}}>{bus.name}<Chip text={`${bus.reservations.length} Res.`} color={BL}/></div>
             {bus.reservations.map((r,j)=>(
               <div key={j} style={{padding:"9px 0",borderBottom:j<bus.reservations.length-1?`0.5px solid ${GB}`:"none"}}>
                 <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -10368,7 +10368,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
       ).sort(([a],[b])=>String(a||'').localeCompare(String(b||''))).map(([key,items])=>({key,items}));
 
   const inputStyle={width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"};
-  const labelStyle={fontSize:12,fontWeight:600,color:"var(--sub)",marginBottom:5,display:"block",textTransform:"uppercase",letterSpacing:0.5};
+  const labelStyle={fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:5,display:"block",textTransform:"uppercase",letterSpacing:0.5};
 
   const KAT_COLORS={"Aktivfussball":BL,"Juniorenfussball":R,"Kinderfussball Junioren":"#F97316","Juniorinnenfussball":"#EC4899","Kinderfussball Juniorinnen":"#DB2777","Seniorenfussball":AM};
 
@@ -10434,7 +10434,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           <h2 style={{margin:"0 0 6px",fontSize:16,fontWeight:700,color:"var(--text)"}}>Saison wechseln</h2>
           <p style={{margin:"0 0 18px",fontSize:13,color:"var(--sub)"}}>Die neue Saison wird für <strong>alle {teams.length} Teams</strong> gleichzeitig gesetzt.</p>
           <div style={{marginBottom:16}}>
-            <label style={{fontSize:12,fontWeight:600,color:"var(--sub)",marginBottom:6,display:"block",textTransform:"uppercase",letterSpacing:0.5}}>Neue Saison</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:6,display:"block",textTransform:"uppercase",letterSpacing:0.5}}>Neue Saison</label>
             <input value={saisonDraft} onChange={e=>setSaisonDraft(e.target.value)}
               placeholder="z.B. 2025/26" autoFocus
               style={{width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
@@ -10451,7 +10451,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </button>
             <Btn onClick={()=>setShowSaison(false)}>Abbrechen</Btn>
           </div>
-          {!sb&&<div style={{fontSize:12,color:"var(--sub)",textAlign:"center",marginTop:10}}>Demo: nur lokal.</div>}
+          {!sb&&<div style={{fontSize:13,color:"var(--sub)",textAlign:"center",marginTop:10}}>Demo: nur lokal.</div>}
         </div>
       </ModalOrSheet>
 
@@ -10483,7 +10483,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
               background:filterVals.length===0?BK:"var(--surface)",
               color:filterVals.length===0?"#fff":"var(--sub)",
-              fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
+              fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
             Alle
           </button>
           {filterOptions.map(v=>{
@@ -10491,12 +10491,12 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             const c=KAT_COLORS[v]||(active?BK:"var(--sub)");
             return(
               <button key={v} onClick={()=>setFilterVals(prev=>active?prev.filter(x=>x!==v):[...prev,v])}
-                style={{padding:"4px 12px",borderRadius:20,fontFamily:FONT,fontSize:12,fontWeight:600,cursor:"pointer",
+                style={{padding:"4px 12px",borderRadius:20,fontFamily:FONT,fontSize:13,fontWeight:600,cursor:"pointer",
                   transition:"all 0.15s",display:"flex",alignItems:"center",gap:4,
                   border:"1px solid "+(active?c:"var(--border)"),
                   background:active?c+"18":"var(--surface)",
                   color:active?c:"var(--sub)"}}>
-                {active&&<span style={{fontSize:9}}>✓</span>}{v}
+                {active&&<span style={{fontSize:11}}>✓</span>}{v}
                 <span style={{opacity:0.55,fontWeight:400}}>{teams.filter(t=>(t[groupBy]||"-")===v).length}</span>
               </button>
             );
@@ -10521,7 +10521,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           {groupedTeams.map(({key,items})=>(
             <div key={key||"all"}>
               {groupBy!=="none"&&key&&(
-                <div style={{padding:"10px 4px 6px",fontWeight:700,fontSize:12,color:"var(--sub)",
+                <div style={{padding:"10px 4px 6px",fontWeight:700,fontSize:13,color:"var(--sub)",
                   textTransform:"uppercase",letterSpacing:0.7,marginTop:8,
                   borderBottom:"1px solid var(--border)",marginBottom:8}}>
                   {key} <span style={{fontWeight:400,opacity:0.6}}>({items.length})</span>
@@ -10577,7 +10577,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         )}
                       </div>
                     </div>
-                    <div style={{fontSize:12,color:"var(--sub)",display:"flex",flexDirection:"column",gap:3}}>
+                    <div style={{fontSize:13,color:"var(--sub)",display:"flex",flexDirection:"column",gap:3}}>
                       <span>{sp.e1}{sp.e2?" · "+sp.e2:""}</span>
                       {team.liga&&<span>{team.liga}</span>}
                       <div style={{display:"flex",gap:10,marginTop:4}}>
@@ -10599,7 +10599,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         {team.kurzname&&<span style={{fontSize:11,fontWeight:700,color:katColor,background:katColor+"15",padding:"2px 7px",borderRadius:6}}>{team.kurzname}</span>}
                         {isInaktiv&&<Chip text="Inaktiv" color="#9ca3af"/>}
                       </div>
-                      <div style={{fontSize:12,color:"var(--sub)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
                         {sp.e1&&<span style={{fontWeight:500}}>{sp.e1}</span>}
                         {sp.e2&&<span>· {sp.e2}</span>}
                         {team.liga&&<span>· {team.liga}</span>}
@@ -10662,7 +10662,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
       <ModalOrSheet open={showForm} onClose={()=>setShowForm(false)} maxWidth={520}>
         <div style={{padding:"20px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>{editTeam?"Team bearbeiten":"Neues Team"}</h2>
-          <button onClick={()=>setShowForm(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+          <button onClick={()=>setShowForm(false)} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px",display:"flex",flexDirection:"column",gap:14}}>
           {editTeam&&(
@@ -10670,7 +10670,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
               {["info","module"].map(t=>(
                 <button key={t} onClick={()=>setFormTab(t)} style={{
                   padding:"8px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:FONT,
-                  fontSize:12,fontWeight:600,
+                  fontSize:13,fontWeight:600,
                   background:formTab===t?"var(--text)":"var(--surface2)",
                   color:formTab===t?"var(--surface)":"var(--sub)"
                 }}>{t==="info"?"Team-Info":"Module"}</button>
@@ -10809,7 +10809,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           {/* Modul-Tab: nur bei bestehenden Teams */}
           {editTeam&&formTab==="module"&&(
             <div>
-              <div style={{fontSize:12,color:"var(--sub)",marginBottom:12}}>
+              <div style={{fontSize:13,color:"var(--sub)",marginBottom:12}}>
                 Module ein/ausschalten für dieses Team. Trainer sehen nur aktive Module.
               </div>
               {[
@@ -10867,7 +10867,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </button>
             <Btn onClick={()=>setShowForm(false)}>Abbrechen</Btn>
           </div>
-          {!sb&&<div style={{fontSize:12,color:"var(--sub)",textAlign:"center"}}>Demo-Modus: Änderungen nicht persistent.</div>}
+          {!sb&&<div style={{fontSize:13,color:"var(--sub)",textAlign:"center"}}>Demo-Modus: Änderungen nicht persistent.</div>}
         </div>
       </ModalOrSheet>
 
@@ -10994,7 +10994,7 @@ function NewsView({role,meineTeams,kannVerwalten}){
             <Chip text={n.channel} color={BL} bg="#EFF6FF"/>
             <span style={{fontSize:13,color:"var(--sub)"}}>{n.date} · {n.author}</span>
           </div>
-          <h3 style={{margin:"0 0 6px",fontSize:15,fontWeight:700}}>{n.title}</h3>
+          <h3 style={{margin:"0 0 6px",fontSize:14,fontWeight:700}}>{n.title}</h3>
           <p style={{margin:0,fontSize:13,color:"var(--sub)",lineHeight:1.65}}>{n.content}</p>
         </Card>
       ))}
@@ -11164,7 +11164,7 @@ function PlaetzeView(){
     <div style={{maxWidth:560}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
         <div>
-          <h1 style={{fontSize:22,fontWeight:800,margin:"0 0 4px"}}>Trainingsplätze</h1>
+          <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 4px"}}>Trainingsplätze</h1>
           <p style={{fontSize:13,color:"var(--sub)",margin:0}}>Plätze verwalten, Hälften konfigurieren, aktivieren/deaktivieren</p>
         </div>
         <button onClick={function(){setShowAdd(true);}}
@@ -11354,7 +11354,7 @@ function DarkModeRow(){
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       <div>
         <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{dark?"Dunkel":"Hell"}</div>
-        <div style={{fontSize:12,color:"var(--sub)",marginTop:1}}>Farbschema des Portals</div>
+        <div style={{fontSize:13,color:"var(--sub)",marginTop:1}}>Farbschema des Portals</div>
       </div>
       <button onClick={toggle} style={{
         position:"relative",width:48,height:26,borderRadius:12,border:"none",
@@ -11448,15 +11448,15 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
       <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:13}}>
           <div style={{width:46,height:46,borderRadius:"50%",background:ACCENT,display:"flex",alignItems:"center",
-            justifyContent:"center",color:"var(--text)",fontWeight:800,fontSize:17,flexShrink:0}}>
+            justifyContent:"center",color:"var(--text)",fontWeight:800,fontSize:16,flexShrink:0}}>
             {initials}
           </div>
           <div>
-            <div style={{fontWeight:700,fontSize:15,color:"var(--text)",letterSpacing:-0.2}}>{userName}</div>
-            <div style={{fontSize:12,color:"var(--sub)",marginTop:2}}>{userEmail}</div>
+            <div style={{fontWeight:700,fontSize:14,color:"var(--text)",letterSpacing:-0.2}}>{userName}</div>
+            <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{userEmail}</div>
           </div>
         </div>
-        <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",
           color:"var(--sub)",lineHeight:1,padding:4,borderRadius:6}}>×</button>
       </div>
 
@@ -11530,7 +11530,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
                 <div style={{width:10,height:10,borderRadius:"50%",background:rc,flexShrink:0}}/>
                 <span style={{fontSize:14,color:rc,fontWeight:700}}>{getRole(role).label}</span>
               </div>
-              <div style={{fontSize:12,color:"var(--sub)",lineHeight:1.5}}>{getRole(role).desc||""}</div>
+              <div style={{fontSize:13,color:"var(--sub)",lineHeight:1.5}}>{getRole(role).desc||""}</div>
             </div>
 
             {nameStatus==="ok"&&!editName&&<StatusBox status="ok" msg={nameMsg}/>}
@@ -11589,7 +11589,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
                 opacity:pwStatus==="loading"?0.6:1,transition:"opacity 0.2s"}}>
               {pwStatus==="loading"?"Wird gespeichert…":"Passwort ändern"}
             </button>
-            {!sb&&<div style={{fontSize:12,color:"var(--sub)",textAlign:"center",marginTop:4}}>Demo-Modus: Änderungen werden nicht gespeichert.</div>}
+            {!sb&&<div style={{fontSize:13,color:"var(--sub)",textAlign:"center",marginTop:4}}>Demo-Modus: Änderungen werden nicht gespeichert.</div>}
           </form>
         )}
       </div>
@@ -11698,7 +11698,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
                   background:active===m.key?ACCENT:"var(--surface2)",flexShrink:0}}>
                   <TI n={m.icon||"circle"} size={19} style={{color:active===m.key?"#111":"var(--sub)"}}/>
                 </div>
-                <span style={{fontSize:15,fontWeight:active===m.key?600:400,color:active===m.key?"var(--text)":"var(--sub)"}}>{m.label}</span>
+                <span style={{fontSize:14,fontWeight:active===m.key?600:400,color:active===m.key?"var(--text)":"var(--sub)"}}>{m.label}</span>
                 {active===m.key&&<TI n="check" size={16} style={{color:ACCENT,marginLeft:"auto"}}/>}
               </button>
             ))}
@@ -11712,7 +11712,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
                 </div>
                 <div style={{textAlign:"left"}}>
                   <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{userName}</div>
-                  <div style={{fontSize:12,color:"var(--sub)"}}>{getRole(role)?.label||role}</div>
+                  <div style={{fontSize:13,color:"var(--sub)"}}>{getRole(role)?.label||role}</div>
                 </div>
               </button>
             </div>
@@ -11732,7 +11732,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
                 minHeight:56,WebkitTapHighlightColor:"transparent",gap:4
               }}>
                 <TI n={n.icon||"circle"} size={22} style={{color:isActive?"var(--nav-a)":"var(--nav-t)",transition:"color 0.15s"}}/>
-                <span style={{fontSize:10,color:isActive?"var(--nav-a)":"var(--nav-t)",fontWeight:isActive?600:400,transition:"color 0.15s"}}>{n.label}</span>
+                <span style={{fontSize:11,color:isActive?"var(--nav-a)":"var(--nav-t)",fontWeight:isActive?600:400,transition:"color 0.15s"}}>{n.label}</span>
               </button>
             );
           })}
@@ -11744,7 +11744,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
               minHeight:56,WebkitTapHighlightColor:"transparent",gap:4
             }}>
               <TI n="dots" size={22} style={{color:mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)",transition:"color 0.15s"}}/>
-              <span style={{fontSize:10,color:mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)",fontWeight:mehrActive||showMehr?600:400,transition:"color 0.15s"}}>Mehr</span>
+              <span style={{fontSize:11,color:mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)",fontWeight:mehrActive||showMehr?600:400,transition:"color 0.15s"}}>Mehr</span>
             </button>
           )}
         </div>
@@ -11801,8 +11801,8 @@ function LoginScreen({onLogin, sb, appTheme}){
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{width:64,height:64,background:"transparent",borderRadius:16,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:12,overflow:"hidden"}}><img src={appTheme?.logo||LOGO_B64} style={{width:64,height:64,objectFit:"cover",display:"block"}} alt="Logo"/></div>
-          <div style={{fontWeight:800,fontSize:22,color:"var(--text)",marginTop:4}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
-          <div style={{fontSize:15,color:"var(--sub)",marginTop:3,fontWeight:500}}>{"ClubCampus"}</div>
+          <div style={{fontWeight:800,fontSize:21,color:"var(--text)",marginTop:4}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
+          <div style={{fontSize:14,color:"var(--sub)",marginTop:3,fontWeight:500}}>{"ClubCampus"}</div>
         </div>
 
         <div style={{background:"var(--surface)",borderRadius:16,padding:28,boxShadow:"var(--card-shadow)",border:"1px solid var(--border)"}}>
@@ -12032,7 +12032,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             </button>
           )}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:6}}>
-            <h2 style={{margin:0,fontSize:15,fontWeight:700,color:"var(--text)"}}>{selected.titel}</h2>
+            <h2 style={{margin:0,fontSize:14,fontWeight:700,color:"var(--text)"}}>{selected.titel}</h2>
             <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:selected.typ==="broadcast"?"#E6F1FB":"#E1F5EE",color:selected.typ==="broadcast"?"#0C447C":"#085041",fontWeight:500,flexShrink:0}}>{selected.typ==="broadcast"?"Broadcast":"Diskussion"}</span>
                   {kannVerwalten&&(
                     <button onClick={async()=>{
@@ -12045,9 +12045,9 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
                   )}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <span style={{fontSize:12,color:"var(--sub)"}}>{selected.autor_name}</span>
+            <span style={{fontSize:13,color:"var(--sub)"}}>{selected.autor_name}</span>
             <span style={{fontSize:11,padding:"2px 8px",borderRadius:10,border:"0.5px solid var(--border)",color:"var(--sub)"}}>{getEmpfLabel(selected)}</span>
-            <span style={{fontSize:12,color:"var(--sub)"}}>{fmtTime(selected.erstellt_am)}</span>
+            <span style={{fontSize:13,color:"var(--sub)"}}>{fmtTime(selected.erstellt_am)}</span>
           </div>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"16px 18px"}}>
@@ -12056,7 +12056,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>
               {dateien.map(d=>(
                 <a key={d.id} href={d.datei_url} target="_blank" rel="noreferrer"
-                  style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:12,color:"var(--sub)",display:"flex",alignItems:"center",gap:6,textDecoration:"none"}}>
+                  style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:6,textDecoration:"none"}}>
                   <TI n="paperclip" size={13}/>{d.datei_name}
                 </a>
               ))}
@@ -12072,7 +12072,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
                 return(
                   <div key={a.id} style={{background:"var(--surface2)",borderRadius:10,padding:"10px 12px",marginBottom:8}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                      <div style={{width:26,height:26,borderRadius:"50%",background:av.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:600,color:av.txt,flexShrink:0}}>{initials(a.autor_name)}</div>
+                      <div style={{width:26,height:26,borderRadius:"50%",background:av.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:av.txt,flexShrink:0}}>{initials(a.autor_name)}</div>
                       <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{a.autor_name}</span>
                       <span style={{fontSize:11,color:"var(--sub)"}}>{fmtTime(a.erstellt_am)}</span>
                     </div>
@@ -12109,7 +12109,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
     return(
       <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
         <div style={{padding:"12px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <span style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>Nachrichten</span>
+          <span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Nachrichten</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {nachrichten.filter(n=>!ungelesen[n.id]).length>0&&(
               <span style={{background:"#E24B4A",color:"#fff",fontSize:11,fontWeight:600,padding:"2px 7px",borderRadius:10}}>
@@ -12127,7 +12127,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
         <div style={{display:"flex",padding:"0 14px",borderBottom:"0.5px solid var(--border)",overflowX:"auto",scrollbarWidth:"none",flexShrink:0}}>
           {["alle","gesendet","ungelesen"].map(t=>(
             <button key={t} onClick={()=>setTab(t)}
-              style={{padding:"8px 12px",fontSize:12,border:"none",background:"none",cursor:"pointer",color:tab===t?"var(--text)":"var(--sub)",borderBottom:tab===t?"2px solid var(--text)":"2px solid transparent",fontFamily:FONT,fontWeight:tab===t?600:400,whiteSpace:"nowrap"}}>
+              style={{padding:"8px 12px",fontSize:13,border:"none",background:"none",cursor:"pointer",color:tab===t?"var(--text)":"var(--sub)",borderBottom:tab===t?"2px solid var(--text)":"2px solid transparent",fontFamily:FONT,fontWeight:tab===t?600:400,whiteSpace:"nowrap"}}>
               {t==="alle"?"Alle":t==="gesendet"?"Gesendet":"Ungelesen"}
             </button>
           ))}
@@ -12182,12 +12182,12 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
         <div style={{padding:"20px 20px 0",flexShrink:0}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)"}}>Neue Nachricht</h2>
-            <button onClick={()=>setShowNeu(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+            <button onClick={()=>setShowNeu(false)} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
           </div>
         </div>
         <div style={{padding:"0 20px 20px",overflowY:"auto"}}>
           <div style={{marginBottom:14}}>
-            <label style={{fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Typ</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Typ</label>
             <div style={{display:"flex",gap:8}}>
               {["broadcast","diskussion"].map(t=>(
                 <button key={t} onClick={()=>setNeuForm(f=>({...f,typ:t}))}
@@ -12199,11 +12199,11 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             <div style={{fontSize:11,color:"var(--sub)",marginTop:5}}>{neuForm.typ==="broadcast"?"Nur Absender sieht Antworten der anderen":"Alle sehen alle Antworten"}</div>
           </div>
           <div style={{marginBottom:14}}>
-            <label style={{fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Empfänger</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Empfänger</label>
             <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
               {["rolle","gruppe","team"].map(t=>(
                 <button key={t} onClick={()=>setNeuForm(f=>({...f,empfaenger_typ:t}))}
-                  style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${neuForm.empfaenger_typ===t?BTN:"var(--border)"}`,background:neuForm.empfaenger_typ===t?BTN+"15":"transparent",color:"var(--text)",cursor:"pointer",fontSize:12,fontFamily:FONT}}>
+                  style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${neuForm.empfaenger_typ===t?BTN:"var(--border)"}`,background:neuForm.empfaenger_typ===t?BTN+"15":"transparent",color:"var(--text)",cursor:"pointer",fontSize:13,fontFamily:FONT}}>
                   {t==="rolle"?"Nach Rolle":t==="gruppe"?"Nach Gruppe":"Team"}
                 </button>
               ))}
@@ -12231,12 +12231,12 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             )}
           </div>
           <div style={{marginBottom:14}}>
-            <label style={{fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Betreff</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Betreff</label>
             <input value={neuForm.titel} onChange={e=>setNeuForm(f=>({...f,titel:e.target.value}))}
               placeholder="z.B. Neuer Trainingsplan" style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",fontSize:13,fontFamily:FONT,boxSizing:"border-box",outline:"none"}}/>
           </div>
           <div style={{marginBottom:18}}>
-            <label style={{fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Nachricht</label>
+            <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6}}>Nachricht</label>
             <textarea value={neuForm.inhalt} onChange={e=>setNeuForm(f=>({...f,inhalt:e.target.value}))}
               placeholder="Deine Nachricht..." rows={5}
               style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",fontSize:13,fontFamily:FONT,boxSizing:"border-box",outline:"none",resize:"vertical"}}/>
@@ -12665,7 +12665,7 @@ function Portal({supabaseClient}){
       case "training":          return <TrainingGantt role={role} team={role==="trainer"?meineTeams?.[0]:undefined} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb}/>;
       case "schedule":          return <ScheduleTab role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
-      case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:22,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:13,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><AttendanceTab role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActive} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} onNavigateToSpiel={(spiel)=>{NAV_TARGET.tab="spielplan";NAV_TARGET.selectedSpiel=spiel;setActive("team");}}/></div>;
+      case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:13,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><AttendanceTab role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActive} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} onNavigateToSpiel={(spiel)=>{NAV_TARGET.tab="spielplan";NAV_TARGET.selectedSpiel=spiel;setActive("team");}}/></div>;
       case "helpers":           return <HelpersList role={role} meineTeams={meineTeams} account={account} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
       case "buses":             return <BusesView role={role} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
       case "material":          return <MaterialView/>;
