@@ -72,16 +72,16 @@ const PWA_CSS=`
   --border:#2c2c36;--text:#f0f0f0;--sub:#8a8a9a;
   --card-shadow:0 1px 4px rgba(0,0,0,0.3);
 }
-@keyframes fch-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes cc-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .cc-btn-primary:hover{background:var(--btn-hover)!important;}
-@keyframes fch-pop{from{opacity:0;transform:scale(0.72)}to{opacity:1;transform:scale(1)}}
-@keyframes fch-splash-out{to{opacity:0;visibility:hidden}}
-@keyframes fch-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-@keyframes fch-dot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
-.fch-page{animation:fch-in 0.2s ease-out}
-.fch-card{background:var(--surface)!important;border-color:var(--border)!important;box-shadow:var(--card-shadow)!important}
-.fch-topbar{background:var(--bg)!important;border-color:var(--border)!important}
-.fch-main{background:var(--bg)!important}
+@keyframes cc-pop{from{opacity:0;transform:scale(0.72)}to{opacity:1;transform:scale(1)}}
+@keyframes cc-splash-out{to{opacity:0;visibility:hidden}}
+@keyframes cc-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes cc-dot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+.cc-page{animation:cc-in 0.2s ease-out}
+.cc-card{background:var(--surface)!important;border-color:var(--border)!important;box-shadow:var(--card-shadow)!important}
+.cc-topbar{background:var(--bg)!important;border-color:var(--border)!important}
+.cc-main{background:var(--bg)!important}
 .hov-row:hover{background:var(--cc-hover)!important;cursor:pointer}
 *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -162,14 +162,14 @@ function useIsMobile(){return useBreakpoint().isMobile;}
 function SplashScreen({onDone}){
   useEffect(()=>{const t=setTimeout(onDone,2600);return()=>clearTimeout(t);},[]);
   return(
-    <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"fch-splash-out 0.4s 2.2s ease-out forwards"}}>
-      <div style={{width:110,height:110,borderRadius:28,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",animation:"fch-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both"}}>
+    <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"cc-splash-out 0.4s 2.2s ease-out forwards"}}>
+      <div style={{width:110,height:110,borderRadius:28,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",animation:"cc-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both"}}>
         <img src={LOGO_B64} style={{width:110,height:110,objectFit:"cover",display:"block"}} alt="Logo"/>
       </div>
-      <div style={{color:"var(--text)",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"fch-in 0.4s 0.45s ease-out both"}}>{(()=>{try{const s=localStorage.getItem("cc-theme");return s?JSON.parse(s).vereinsname||"ClubCampus":"ClubCampus";}catch{return "ClubCampus";}})()}</div>
-      <div style={{color:"var(--sub)",fontSize:12,marginTop:5,letterSpacing:2,textTransform:"uppercase",fontFamily:FONT,animation:"fch-in 0.4s 0.6s ease-out both"}}>ClubCampus</div>
-      <div style={{display:"flex",gap:7,marginTop:40,animation:"fch-in 0.4s 0.75s ease-out both"}}>
-        {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:ACCENT,animation:`fch-dot 1.2s ${i*0.18}s ease-in-out infinite`}}/>)}
+      <div style={{color:"var(--text)",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"cc-in 0.4s 0.45s ease-out both"}}>{(()=>{try{const s=localStorage.getItem("cc-theme");return s?JSON.parse(s).vereinsname||"ClubCampus":"ClubCampus";}catch{return "ClubCampus";}})()}</div>
+      <div style={{color:"var(--sub)",fontSize:12,marginTop:5,letterSpacing:2,textTransform:"uppercase",fontFamily:FONT,animation:"cc-in 0.4s 0.6s ease-out both"}}>ClubCampus</div>
+      <div style={{display:"flex",gap:7,marginTop:40,animation:"cc-in 0.4s 0.75s ease-out both"}}>
+        {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:ACCENT,animation:`cc-dot 1.2s ${i*0.18}s ease-in-out infinite`}}/>)}
       </div>
     </div>
   );
@@ -177,11 +177,11 @@ function SplashScreen({onDone}){
 
 /* ── SKELETON LOADER ── */
 function Skel({h=14,w="100%",br=6,mb=0,style={}}){
-  return <div style={{height:h,width:w,borderRadius:br,marginBottom:mb,background:"linear-gradient(90deg,var(--border) 25%,var(--surface2) 50%,var(--border) 75%)",backgroundSize:"200% 100%",animation:"fch-shimmer 1.5s infinite",...style}}/>;
+  return <div style={{height:h,width:w,borderRadius:br,marginBottom:mb,background:"linear-gradient(90deg,var(--border) 25%,var(--surface2) 50%,var(--border) 75%)",backgroundSize:"200% 100%",animation:"cc-shimmer 1.5s infinite",...style}}/>;
 }
 function SkelCard(){
   return(
-    <div className="fch-card" style={{borderRadius:14,padding:"20px 22px",border:"0.5px solid"}}>
+    <div className="cc-card" style={{borderRadius:14,padding:"20px 22px",border:"0.5px solid"}}>
       <Skel h={10} w="38%" br={4} mb={14}/>
       <Skel h={30} w="55%" br={6} mb={8}/>
       <Skel h={10} w="72%" br={4}/>
@@ -192,8 +192,8 @@ function SkelList({rows=4}){
   return(
     <div style={{display:"flex",flexDirection:"column",gap:10}}>
       {Array.from({length:rows},(_,i)=>(
-        <div key={i} className="fch-card" style={{borderRadius:12,padding:"14px 18px",border:"0.5px solid",display:"flex",alignItems:"center",gap:14}}>
-          <div style={{width:38,height:38,borderRadius:"50%",background:"var(--border)",animation:"fch-shimmer 1.5s infinite",flexShrink:0}}/>
+        <div key={i} className="cc-card" style={{borderRadius:12,padding:"14px 18px",border:"0.5px solid",display:"flex",alignItems:"center",gap:14}}>
+          <div style={{width:38,height:38,borderRadius:"50%",background:"var(--border)",animation:"cc-shimmer 1.5s infinite",flexShrink:0}}/>
           <div style={{flex:1}}><Skel h={11} w="60%" br={4} mb={7}/><Skel h={9} w="40%" br={4}/></div>
         </div>
       ))}
@@ -290,7 +290,7 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
    Steuern Navigation + Sichtbarkeit im Portal.
    Unabhängig von der Vereinsfunktion (FUNKTIONEN).
 ───────────────────────────────────────────────────────────── */
-/* ── ClubCampus Theme Default (global) ── */
+/* ── ClubCampus-Farben (Standard-Branding) ── */
 /* Vereinsname global lesbar (aus localStorage wenn kein appTheme prop) */
 function getVereinsnameStatic(){
   try{const t=localStorage.getItem("cc-theme");return t?(JSON.parse(t).vereinsname||"ClubCampus"):"ClubCampus";}catch{return "ClubCampus";}
@@ -311,6 +311,7 @@ function darkenHex(hex,pct=0.12){
   return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join("");
 }
 
+/* ClubCampus-Farben: Standard-Branding für neue Vereine */
 const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FFBF00", vereinsfarbe2:"#000000",
   navBg:"#000000", navText:"#FFFFFF", navAccent:null, navAccentText:null, navHover:"#1A1A1A", avatarBg:null, avatarText:null,
@@ -1055,7 +1056,7 @@ function Chip({text,color=R,bg}){
 }
 function Stat({label,value,sub,color=BK,icon}){
   return(
-    <div className="fch-card" style={{borderRadius:12,padding:"18px 20px",flex:1,minWidth:0,border:"0.5px solid"}}>
+    <div className="cc-card" style={{borderRadius:12,padding:"18px 20px",flex:1,minWidth:0,border:"0.5px solid"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
         <div style={{fontSize:13,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
         {icon&&<div style={{width:28,height:28,borderRadius:7,background:color+"15",display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color}}/></div>}
@@ -1066,7 +1067,7 @@ function Stat({label,value,sub,color=BK,icon}){
   );
 }
 function Card({children,style={},onClick}){
-  return <div onClick={onClick} className="fch-card" style={{borderRadius:14,padding:"20px 22px",border:"0.5px solid",...style}}>{children}</div>;
+  return <div onClick={onClick} className="cc-card" style={{borderRadius:14,padding:"20px 22px",border:"0.5px solid",...style}}>{children}</div>;
 }
 function STitle({children,action}){
   return(
@@ -1241,8 +1242,8 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
   const rc=getRole(role).color;
   const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
   const [showProfile,setShowProfile]=useState(false);
-  const [collapsed,setCollapsed]=useState(()=>{try{return localStorage.getItem("fch-nav-collapsed")==="1";}catch{return false;}});
-  const toggleCollapse=()=>setCollapsed(c=>{const n=!c;try{localStorage.setItem("fch-nav-collapsed",n?"1":"0");}catch{}return n;});
+  const [collapsed,setCollapsed]=useState(()=>{try{return localStorage.getItem("cc-nav-collapsed")==="1";}catch{return false;}});
+  const toggleCollapse=()=>setCollapsed(c=>{const n=!c;try{localStorage.setItem("cc-nav-collapsed",n?"1":"0");}catch{}return n;});
   const W=collapsed?64:216;
   return(
     <nav style={{width:W,minWidth:W,background:"var(--nav)",minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0,borderRight:"1px solid var(--nav-b)",transition:"width 0.22s cubic-bezier(0.4,0,0.2,1),min-width 0.22s cubic-bezier(0.4,0,0.2,1)",overflow:"hidden"}}>
@@ -1335,7 +1336,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
   const pageLabel=nav.find(n=>n.key===active)?.label||active;
   const isHome=active==="dashboard";
   return(
-    <div className="fch-topbar" style={{height:52,borderBottom:"1px solid",display:"flex",alignItems:"center",padding:"0 14px 0 12px",justifyContent:"space-between",flexShrink:0,gap:8,fontFamily:FONT,position:isMobile?"sticky":"relative",top:isMobile?0:"auto",zIndex:isMobile?50:"auto"}}>
+    <div className="cc-topbar" style={{height:52,borderBottom:"1px solid",display:"flex",alignItems:"center",padding:"0 14px 0 12px",justifyContent:"space-between",flexShrink:0,gap:8,fontFamily:FONT,position:isMobile?"sticky":"relative",top:isMobile?0:"auto",zIndex:isMobile?50:"auto"}}>
       {/* Links */}
       {isMobile?(
         isHome?(
@@ -1363,7 +1364,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
           <div style={{width:30,height:30,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <img src={appTheme?.logo||LOGO_B64} style={{width:30,height:30,objectFit:"cover",display:"block"}} alt="Logo"/>
           </div>
-          <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>FC Herrliberg</span>
+          <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>{appTheme?.vereinsname||"ClubCampus"}</span>
         </div>
       )}
       {/* Rechts */}
@@ -6504,7 +6505,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {eltern.length===0&&<div style={{color:"var(--sub)",fontSize:13,textAlign:"center",padding:24}}>Keine Elternkontakte erfasst.</div>}
               {eltern.map((e,i)=>(
-                <div key={i} className="fch-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px"}}>
+                <div key={i} className="cc-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px"}}>
                   <div style={{fontWeight:600,fontSize:14,color:"var(--text)",marginBottom:8}}>{e.vorname} {e.nachname}</div>
                   {e.email&&<div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>✉ {e.email}</div>}
                   {e.telefon&&<div style={{fontSize:13,color:"var(--sub)"}}>📞 {e.telefon}</div>}
@@ -6889,7 +6890,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
   );
 }
 
-function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme}){
+function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId}){
   const [tab,setTab]=useState(initialTab);
   const [module,setModule]=useState([]);
   const [moduleConfig,setModuleConfig]=useState({});
@@ -6958,8 +6959,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       try{localStorage.setItem("cc-theme",JSON.stringify(themeToSave));}catch{}
       /* Supabase → vereine.theme */
       if(supabase){
+        const vId=vereinId;
+        if(!vId) return setSaveMsg("Fehler: Verein nicht geladen");
         supabase.from("vereine")
           .update({theme:themeToSave})
+          .eq("id",vId)
           .then(({error:e})=>{
             if(e) setSaveMsg("Fehler: "+e.message);
             else setSaveMsg("Theme gespeichert ✓");
@@ -7164,7 +7168,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
   /* Effektive Zugriffsstufe: custom oder Default */
   const [zugriffStufen,setZugriffStufen]=useState(()=>{
-    try{const s=localStorage.getItem("fch-zugriff-stufen");return s?JSON.parse(s):null;}catch{return null;}
+    try{const s=localStorage.getItem("cc-zugriff-stufen");return s?JSON.parse(s):null;}catch{return null;}
   });
   const effZugriff=zugriffStufen||ZUGRIFF_DEFAULT;
 
@@ -7177,7 +7181,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     setZugriffStufen(prev=>{
       const base=prev||ZUGRIFF_DEFAULT;
       const neu={...base,[rolle]:{...(base[rolle]||{}),[modulKey]:stufe}};
-      try{localStorage.setItem("fch-zugriff-stufen",JSON.stringify(neu));}catch{}
+      try{localStorage.setItem("cc-zugriff-stufen",JSON.stringify(neu));}catch{}
       return neu;
     });
   }
@@ -7196,7 +7200,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           delete r[modulKey];
           neu[rolle]=r;
         }
-        try{localStorage.setItem("fch-zugriff-stufen",JSON.stringify(neu));}catch{}
+        try{localStorage.setItem("cc-zugriff-stufen",JSON.stringify(neu));}catch{}
         return neu;
       });
     } else {
@@ -7242,7 +7246,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             const ma={};
             mcR.data.forEach(r=>{ma[r.modul]=r.aktiv!==false;});
             setModuleAktiv(ma);
-            try{localStorage.setItem("fch-module-aktiv",JSON.stringify(ma));}catch{}
+            try{localStorage.setItem("cc-module-aktiv",JSON.stringify(ma));}catch{}
           }
           /* modul_rechte → moduleRechte State */
           if(mrR.data&&mrR.data.length>0&&setModuleRechte){
@@ -7259,10 +7263,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               }
             });
             setModuleRechte(mr);
-            try{localStorage.setItem("fch-module-rechte",JSON.stringify(mr));}catch{}
+            try{localStorage.setItem("cc-module-rechte",JSON.stringify(mr));}catch{}
             if(Object.keys(zs).length>0){
               setZugriffStufen(zs);
-              try{localStorage.setItem("fch-zugriff-stufen",JSON.stringify(zs));}catch{}
+              try{localStorage.setItem("cc-zugriff-stufen",JSON.stringify(zs));}catch{}
             }
           }
         }
@@ -7308,7 +7312,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     if(!setModuleAktiv) return;
     setModuleAktiv(prev=>{
       const neu={...prev,[key]:prev[key]===false?true:false};
-      try{localStorage.setItem("fch-module-aktiv",JSON.stringify(neu));}catch{}
+      try{localStorage.setItem("cc-module-aktiv",JSON.stringify(neu));}catch{}
       /* In Supabase speichern */
       if(supabase) supabase.from("module_config")
         .upsert({modul:key,aktiv:neu[key]!==false},{onConflict:"modul"})
@@ -7325,7 +7329,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       const cur=base[rolle]||[];
       const hasIt=cur.includes(modulKey);
       const neu={...base,[rolle]:hasIt?cur.filter(m=>m!==modulKey):[...cur,modulKey]};
-      try{localStorage.setItem("fch-module-rechte",JSON.stringify(neu));}catch{}
+      try{localStorage.setItem("cc-module-rechte",JSON.stringify(neu));}catch{}
       return neu;
     });
     setModuleDirty(true); setSaveMsg("Ungespeichert");
@@ -7417,13 +7421,13 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     const{error}=await supabase.from("modul_rechte").upsert(rows,{onConflict:"modul,rolle"});
                     if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                   }
-                  try{localStorage.setItem("fch-module-rechte",JSON.stringify(moduleRechte));
-                      if(zugriffStufen) localStorage.setItem("fch-zugriff-stufen",JSON.stringify(zugriffStufen));}catch{}
+                  try{localStorage.setItem("cc-module-rechte",JSON.stringify(moduleRechte));
+                      if(zugriffStufen) localStorage.setItem("cc-zugriff-stufen",JSON.stringify(zugriffStufen));}catch{}
                   setModuleDirty(false); setSaveMsg("Gespeichert");setTimeout(()=>setSaveMsg(""),2000);
                 }} style={{padding:"5px 14px",borderRadius:9,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                   Speichern
                 </button>
-                <button onClick={()=>{setModuleRechte(null);setZugriffStufen(null);setModuleDirty(false);try{localStorage.removeItem("fch-module-rechte");localStorage.removeItem("fch-zugriff-stufen");}catch{}setSaveMsg("Verworfen");setTimeout(()=>setSaveMsg(""),2000);}}
+                <button onClick={()=>{setModuleRechte(null);setZugriffStufen(null);setModuleDirty(false);try{localStorage.removeItem("cc-module-rechte");localStorage.removeItem("cc-zugriff-stufen");}catch{}setSaveMsg("Verworfen");setTimeout(()=>setSaveMsg(""),2000);}}
                   style={{padding:"5px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                   Verwerfen
                 </button>
@@ -8209,7 +8213,20 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       const file=e.target.files?.[0];
                       if(!file) return;
                       const reader=new FileReader();
-                      reader.onload=ev=>{updateTheme("logo",ev.target.result);};
+                      reader.onload=ev=>{
+                        /* Logo auf max 256x256px komprimieren */
+                        const img=new Image();
+                        img.onload=()=>{
+                          const MAX=256;
+                          const canvas=document.createElement("canvas");
+                          const ratio=Math.min(MAX/img.width,MAX/img.height,1);
+                          canvas.width=Math.round(img.width*ratio);
+                          canvas.height=Math.round(img.height*ratio);
+                          canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+                          updateTheme("logo",canvas.toDataURL("image/png",0.85));
+                        };
+                        img.src=ev.target.result;
+                      };
                       reader.readAsDataURL(file);
                     }}/>
                   </label>
@@ -8269,10 +8286,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               background:BTN,color:BTN_TXT,transition:"background 0.15s",
               fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT
             }}>Speichern & anwenden</button>
-            <button onClick={()=>{setAppTheme(THEME_DEFAULT_STATIC);setThemeDirty(false);if(supabase){supabase.from("vereine").update({theme:THEME_DEFAULT_STATIC}).then(({error:e})=>{setSaveMsg(e?"Fehler: "+e.message:"Standard gespeichert ✓");setTimeout(()=>setSaveMsg(""),2500);});}}} style={{
+            <button onClick={()=>{const t=THEME_DEFAULT_STATIC;setAppTheme(t);setThemeDirty(false);if(applyTheme)applyTheme(t);if(supabase){if(vereinId)supabase.from("vereine").update({theme:t}).eq("id",vereinId).then(({error:e})=>{setSaveMsg(e?"Fehler: "+e.message:"Standard gespeichert ✓");setTimeout(()=>setSaveMsg(""),2500);});}}} style={{
               padding:"9px 16px",borderRadius:10,border:"1px solid var(--border)",
               background:"transparent",color:"var(--sub)",fontSize:13,cursor:"pointer",fontFamily:FONT
-            }}>Standard wiederherstellen</button>
+            }}>ClubCampus-Farben</button>
           </div>
         </div>
       )}
@@ -10402,7 +10419,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             const openMenu=()=>setOpenMenuId(menuOpen?null:team.id);
             const closeMenu=()=>setOpenMenuId(null);
             return(
-              <div key={team.id} className="fch-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px",opacity:isInaktiv?0.55:1,transition:"opacity 0.2s",position:"relative",cursor:viewMode==="grid"?"pointer":"default"}} onClick={viewMode==="grid"?()=>{setSelectedTeam(team);
+              <div key={team.id} className="cc-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px",opacity:isInaktiv?0.55:1,transition:"opacity 0.2s",position:"relative",cursor:viewMode==="grid"?"pointer":"default"}} onClick={viewMode==="grid"?()=>{setSelectedTeam(team);
           try{window.history.pushState({page:"team",teamDetail:true},"","#team-detail");}catch{}
           setCustomBack&&setCustomBack(()=>()=>{setSelectedTeam(null);setCustomBack&&setCustomBack(null);try{window.history.back();}catch{}});}:undefined}>
                 {viewMode==="grid"?(
@@ -11751,10 +11768,10 @@ export default function Portal({supabaseClient}){
   const [dbFunktionen,setDbFunktionen]=useState([]); // portal_funktionen des eingeloggten Benutzers
   /* Globale Modul-Konfiguration (aus Portalverwaltung) */
   const [moduleAktiv,setModuleAktiv]=useState(()=>{
-    try{const s=localStorage.getItem("fch-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
+    try{const s=localStorage.getItem("cc-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
   });
   const [moduleRechte,setModuleRechte]=useState(()=>{
-    try{const s=localStorage.getItem("fch-module-rechte");return s?JSON.parse(s):null;}catch{return null;}
+    try{const s=localStorage.getItem("cc-module-rechte");return s?JSON.parse(s):null;}catch{return null;}
   });
   const [accountKey,setAccountKey]=useState("trainer");
   const [activeSubRole,setActiveSubRole]=useState(null);
@@ -11762,12 +11779,12 @@ export default function Portal({supabaseClient}){
     try{
       const hash=window.location.hash.replace("#","");
       if(hash) return hash;
-      return sessionStorage.getItem("fch-active")||"dashboard";
+      return sessionStorage.getItem("cc-active")||"dashboard";
     }catch{return "dashboard";}
   });
   const setActivePersist=(key)=>{
     try{
-      sessionStorage.setItem("fch-active",key);
+      sessionStorage.setItem("cc-active",key);
       window.history.pushState({page:key},"","#"+key);
     }catch{}
     setActive(key);
@@ -11791,7 +11808,7 @@ export default function Portal({supabaseClient}){
       }
       const key=e.state?.page||(window.location.hash.replace("#","")||"dashboard");
       setActive(key);
-      try{sessionStorage.setItem("fch-active",key);}catch{}
+      try{sessionStorage.setItem("cc-active",key);}catch{}
     };
     window.addEventListener("popstate",onPop);
     /* Initialen Hash-State setzen damit der erste Zurück-Schritt funktioniert */
@@ -11805,9 +11822,9 @@ export default function Portal({supabaseClient}){
   },[]);
   /* ── Dark Mode ── */
   const [dark,setDark]=useState(()=>{
-    try{const s=localStorage.getItem("fch-dark");return s?JSON.parse(s):window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}
+    try{const s=localStorage.getItem("cc-dark");return s?JSON.parse(s):window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}
   });
-  const toggleDark=()=>setDark(d=>{const n=!d;try{localStorage.setItem("fch-dark",n);}catch{}return n;});
+  const toggleDark=()=>setDark(d=>{const n=!d;try{localStorage.setItem("cc-dark",n);}catch{}return n;});
 
   /* ── App-Level Theme State ── */
   const [appTheme,setAppTheme]=useState(()=>{
@@ -11833,8 +11850,8 @@ export default function Portal({supabaseClient}){
     }catch(e){console.warn("[CC] loadTenant:",e.message);}
   }
   /* ── Splash Screen ── */
-  const [splash,setSplash]=useState(()=>{try{return !sessionStorage.getItem("fch-splash");}catch{return true;}});
-  const doneSplash=()=>{try{sessionStorage.setItem("fch-splash","1");}catch{}setSplash(false);};
+  const [splash,setSplash]=useState(()=>{try{return !sessionStorage.getItem("cc-splash");}catch{return true;}});
+  const doneSplash=()=>{try{sessionStorage.setItem("cc-splash","1");}catch{}setSplash(false);};
   /* ── Inter Font + PWA Globals ── */
   useEffect(()=>{
     if(!document.getElementById("inter-font")){
@@ -11842,8 +11859,8 @@ export default function Portal({supabaseClient}){
       l.href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap";
       document.head.appendChild(l);
     }
-    if(!document.getElementById("fch-pwa-css")){
-      const s=document.createElement("style");s.id="fch-pwa-css";s.textContent=PWA_CSS;
+    if(!document.getElementById("cc-pwa-css")){
+      const s=document.createElement("style");s.id="cc-pwa-css";s.textContent=PWA_CSS;
       document.head.appendChild(s);
     }
     let m=document.querySelector("meta[name=viewport]");
@@ -12000,7 +12017,7 @@ export default function Portal({supabaseClient}){
         const ma={};
         mcR.data.forEach(r=>{ma[r.modul]=r.aktiv!==false;});
         setModuleAktiv(ma);
-        try{localStorage.setItem("fch-module-aktiv",JSON.stringify(ma));}catch{}
+        try{localStorage.setItem("cc-module-aktiv",JSON.stringify(ma));}catch{}
       }
       if(mrR.data&&mrR.data.length>0){
         const mr={};
@@ -12009,7 +12026,7 @@ export default function Portal({supabaseClient}){
           if(r.hat_zugriff) mr[r.rolle].push(r.modul);
         });
         setModuleRechte(mr);
-        try{localStorage.setItem("fch-module-rechte",JSON.stringify(mr));}catch{}
+        try{localStorage.setItem("cc-module-rechte",JSON.stringify(mr));}catch{}
       }
     }catch(e){ console.warn("[FCH] loadModuleConfig:", e.message); }
   }
@@ -12136,9 +12153,9 @@ export default function Portal({supabaseClient}){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
       case "team":              return role==="administrator"||role==="administration"?<TeamsAdminView sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder}/>;
       case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
-      case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss}/>;
-      case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss}/>;
-      case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss}/>;
+      case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
+      case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
+      case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "training":          return <TrainingGantt role={role} team={role==="trainer"?meineTeams?.[0]:undefined} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb}/>;
       case "schedule":          return <ScheduleTab role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
@@ -12172,7 +12189,7 @@ export default function Portal({supabaseClient}){
             onLogout={sb&&session ? handleLogout : undefined}
             onOpenProfile={()=>setMobileProfileOpen(true)}
             onBack={customBack}/>}
-          <main key={active} className="fch-page" style={{flex:1,padding:isMobile?"16px 14px 90px":isTablet?"20px 24px 28px":"32px 36px 32px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1200,margin:"0 auto",width:"100%"}}>{getView()}</main>
+          <main key={active} className="cc-page" style={{flex:1,padding:isMobile?"16px 14px 90px":isTablet?"20px 24px 28px":"32px 36px 32px",overflowY:"auto",overflowX:"hidden",maxWidth:isMobile?"100%":1200,margin:"0 auto",width:"100%"}}>{getView()}</main>
           {isMobile&&<MobileNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} effectiveNav={effectiveNav}/>}
         </div>
       </div>
