@@ -8,6 +8,35 @@ import { TI } from "./icons.jsx";
 import { useIsMobile, ModalOrSheet, Card, Chip } from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, GANTT, ROSTER, SCHEDULE, TABLES, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
 
+/* ── Hilfsfunktionen ── */
+function getNr(id){return NR_CACHE.data[id]||"";}
+
+function getVereinsnameStatic(){
+  try{const t=localStorage.getItem("cc-theme");return t?(JSON.parse(t).vereinsname||"ClubCampus"):"ClubCampus";}catch{return "ClubCampus";}
+}
+/* Hex → rgba() für Hover-Farben */
+
+function kannTerminAbsagen(role, typ, team, meineTeams=[]){
+  return kannTerminErstellen(role, typ, team, meineTeams);
+}
+
+function kannTerminBearbeiten(role, typ, team, meineTeams=[]){
+  return kannTerminErstellen(role, typ, team, meineTeams);
+}
+
+function kannTerminErstellen(role, typ, team, meineTeams=[]){
+  if(role==="administrator"||role==="administration") return true;
+  if(role==="funktionaer") return typ==="vereinsanlass";
+  if(role==="trainer"){
+    if(typ==="team_event") return !team||(meineTeams||[]).includes(team);
+    if(typ==="spiel")      return (meineTeams||[]).includes(team); // Treffpunkt etc.
+    return false; // Trainer kann keine Vereinsanlässe erstellen
+  }
+  return false;
+}
+
+
+
 /* ── Demo-Daten (werden durch Supabase ersetzt) ── */
 
 function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, onSave, onDelete, onAusnahme, onClose}){
