@@ -8151,15 +8151,12 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             <div style={{padding:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-start"}}>
               {/* Mini-Navbar */}
               <div style={{background:theme.navBg,borderRadius:10,padding:"8px 12px",display:"flex",alignItems:"center",gap:10,minWidth:180}}>
-                <div style={{width:24,height:24,borderRadius:6,background:theme.vereinsfarbe1,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
-                  {theme.logo
-                    ?<img src={theme.logo} style={{width:"100%",height:"100%",objectFit:"contain"}} alt="Logo"/>
-                    :<TI n="ball-football" size={13} style={{color:theme.vereinsfarbe2}}/>
-                  }
+                <div style={{width:32,height:32,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+                  <img src={theme.logo||LOGO_B64} style={{width:32,height:32,objectFit:"cover",display:"block"}} alt="Logo"/>
                 </div>
-                <div>
-                  <div style={{fontSize:11,fontWeight:700,color:theme.navAccent||theme.vereinsfarbe1}}>{theme.portalname}</div>
-                  <div style={{fontSize:9,color:theme.navText,opacity:0.6}}>{theme.vereinsname}</div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:800,color:theme.navText,lineHeight:1.2,letterSpacing:-0.2}}>{theme.vereinsname||"Mein Verein"}</div>
+                  <div style={{fontSize:9,color:theme.navAccent||theme.vereinsfarbe1,letterSpacing:0.5,textTransform:"uppercase",fontWeight:600,marginTop:1}}>{theme.portalname||"ClubCampus"}</div>
                 </div>
               </div>
               {/* Buttons */}
