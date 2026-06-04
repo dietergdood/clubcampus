@@ -1241,8 +1241,8 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
   const rc=getRole(role).color;
   const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
   const [showProfile,setShowProfile]=useState(false);
-  const [collapsed,setCollapsed]=useState(()=>{try{return localStorage.getItem("fch-nav-collapsed")==="1";}catch{return false;}});
-  const toggleCollapse=()=>setCollapsed(c=>{const n=!c;try{localStorage.setItem("fch-nav-collapsed",n?"1":"0");}catch{}return n;});
+  const [collapsed,setCollapsed]=useState(()=>{try{return localStorage.getItem("cc-nav-collapsed")==="1";}catch{return false;}});
+  const toggleCollapse=()=>setCollapsed(c=>{const n=!c;try{localStorage.setItem("cc-nav-collapsed",n?"1":"0");}catch{}return n;});
   const W=collapsed?64:216;
   return(
     <nav style={{width:W,minWidth:W,background:"var(--nav)",minHeight:"100vh",display:"flex",flexDirection:"column",flexShrink:0,borderRight:"1px solid var(--nav-b)",transition:"width 0.22s cubic-bezier(0.4,0,0.2,1),min-width 0.22s cubic-bezier(0.4,0,0.2,1)",overflow:"hidden"}}>
@@ -1363,7 +1363,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
           <div style={{width:30,height:30,borderRadius:8,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
             <img src={appTheme?.logo||LOGO_B64} style={{width:30,height:30,objectFit:"cover",display:"block"}} alt="Logo"/>
           </div>
-          <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>FC Herrliberg</span>
+          <span style={{fontWeight:800,fontSize:15,color:"var(--text)",letterSpacing:-0.3}}>{appTheme?.vereinsname||"ClubCampus"}</span>
         </div>
       )}
       {/* Rechts */}
