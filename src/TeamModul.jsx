@@ -7,10 +7,6 @@ import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT,
 import { TI } from "./icons.jsx";
 import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row} from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, EVENTS, NEWS, POLLS, ROSTER, TABLES } from "./demoData.js";
-import KaderModul from "./KaderModul.jsx";
-import { TermineModul, SpielplanModul, TableTab } from "./TermineModul.jsx";
-import { TrainingsplanModul } from "./TrainingsplanModul.jsx";
-import { HelferModul } from "./HelferModul.jsx";
 
 /* ── Hilfsfunktionen ── */
 /* STitle via ./theme.jsx */
@@ -23,7 +19,7 @@ function kannHelferEinsatzErstellen(role, typ, team, meineTeams=[]){
 
 const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
 
-function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null}){
+function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp}){
   const isMobile=useIsMobile();
   /* Modul-Sichtbarkeit: Props oder Fallback alles sichtbar */
   const moduleOk=(modul)=>!isModuleVisible||isModuleVisible(modul)||!modul;
@@ -277,21 +273,21 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
         <Tabs tabs={tabs} active={tab} setActive={setTab}/>
       )}
       {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial}/>}
-      {tab==="roster"&&<KaderModul role={role} team={activeTeam} initialSelected={rosterInitial} teamRosterData={getMitgliederForTeam(activeTeam)}/>}
-      {tab==="training"&&!limited&&<TrainingsplanModul team={activeTeam} sb={sb}/>}
+      {tab==="roster"&&<KaderModulProp role={role} team={activeTeam} initialSelected={rosterInitial} teamRosterData={getMitgliederForTeam(activeTeam)}/>}
+      {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb}/>}
       {tab==="spielplan"&&(
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           <div>
             <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Spielplan</div>
-            <SpielplanModul role={role} team={activeTeam} initialSelected={selectedSpiel}/>
+            <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel}/>
           </div>
           <div>
             <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Tabelle</div>
-            <TableTab team={activeTeam}/>
+            <TableTabProp team={activeTeam}/>
           </div>
         </div>
       )}
-      {tab==="attendance"&&<TermineModul role={role} team={activeTeam} setActive={setActive} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r)=>{
+      {tab==="attendance"&&<TermineModulProp role={role} team={activeTeam} setActive={setActive} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r)=>{
         const merged={...responses};
         Object.keys(r).forEach(evId=>{merged[evId]={...responses[evId],...r[evId]};});
         setResponses(merged);
@@ -308,7 +304,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       }}/>}
       {tab==="events"&&<EventsList teamOnly role={role}/>}
       {tab==="polls"&&<PollsTab role={role}/>}
-      {tab==="helpers"&&<HelferModul teamOnly role={role} account={account} meineTeams={[activeTeam]}/>}
+      {tab==="helpers"&&<HelferModulProp teamOnly role={role} account={account} meineTeams={[activeTeam]}/>}
       {tab==="stats"&&!limited&&<StatsTab team={activeTeam}/>}
     </div>
   );
