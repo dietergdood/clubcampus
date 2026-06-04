@@ -1274,4 +1274,859 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   );
 }
 
-export default HelferModul;
+function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerwalten}){
+  const isMobile=useIsMobile();
+  const [helperTab,setHelperTab]=useState(teamOnly?"team":"browse");
+  const [selectedEvent,setSelectedEvent]=useState(null);
+  const [filterOffen,setFilterOffen]=useState(false);
+  const [browseSearch,setBrowseSearch]=useState("");
+  const [schichtenState,setSchichtenState]=useState({});
+  const [collapsedTeamEvents,setCollapsedTeamEvents]=useState({});
+  const toggleTeamCollapse=(id)=>setCollapsedTeamEvents(prev=>({...prev,[id]:!prev[id]}));
+  const [collapsedEvents,setCollapsedEvents]=useState(()=>Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true])));
+  const toggleCollapse=(id)=>setCollapsedEvents(prev=>{
+    const allCollapsed=Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true]));
+    return prev[id]?{...allCollapsed,[id]:false}:{...allCollapsed};
+  });
+  const [collapsedEinsaetze,setCollapsedEinsaetze]=useState({});
+  const toggleEinsatz=(id)=>setCollapsedEinsaetze(prev=>({...prev,[id]:!prev[id]}));
+  const [bemerkungState,setBemerkungState]=useState({}); /* einsatzId/schichtId → text */
+  const [editingBemerkung,setEditingBemerkung]=useState(null);
+  const [bemerkungDraft,setBemerkungDraft]=useState("");
+  useEffect(()=>{
+    (async()=>{try{const r=await window.storage.get("helfer_notes");if(r)setBemerkungState(JSON.parse(r.value));}catch(e){}})();
+  },[]);
+  const saveBemerkung=(id,text)=>{
+    const next={...bemerkungState,[id]:text};
+    setBemerkungState(next);
+    window.storage.set("helfer_notes",JSON.stringify(next));
+    setEditingBemerkung(null);
+  };
+  const schichtenRef=useRef({});
+
+
+  /* Load from storage on mount */
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const res=await window.storage.get("helfer_schichten");
+        if(res){const d=JSON.parse(res.value);setSchichtenState(d);schichtenRef.current=d;}
+      }catch(e){}
+      try{
+        const res=await window.storage.get("helfer_freigabe");
+        if(res) setFreigabeAnfragen(JSON.parse(res.value));
+      }catch(e){}
+    })();
+  },[]);
+
+  const saveSchichten=(updater)=>{
+    setSchichtenState(prev=>{
+      const next=typeof updater==="function"?updater(prev):updater;
+      schichtenRef.current=next;
+      window.storage.set("helfer_schichten",JSON.stringify(next)).catch(()=>{});
+      return next;
+    });
+  };
+  const [expandedMember,setExpandedMember]=useState(null);
+  const [filterStatus,setFilterStatus]=useState("alle");
+  const [search,setSearch]=useState("");
+  const [showNewForm,setShowNewForm]=useState(false);
+  const [gruppenState,setGruppenState]=useState({}); /* einsatzId → gruppen[] override */
+  const [editingGruppen,setEditingGruppen]=useState(null); /* einsatzId being edited */
+  const [newEinsatzGruppen,setNewEinsatzGruppen]=useState(["Alle"]);
+
+  const canEdit=["administrator","administration","funktionaer","trainer"].includes(role);
+  const canFreigeben=["administrator","administration","funktionaer"].includes(role);
+  const canErstellen=["administrator","administration","funktionaer"].includes(role);
+  const canZuteilen=role==="trainer";
+  const isTrainer=role==="trainer";
+  /* Trainer sieht im Controlling nur sein Team */
+  const meinTeam=meineTeams?.[0]||"Cc-Junioren";
+  /* Team-Mitglieder die der Trainer zuteilen kann: er selbst + seine Spieler */
+  const meinName=getHelperName(role,account);
+  /* Eltern können sich selbst oder ihre Kinder eintragen */
+  const elternPersonen=role==="eltern"&&account?.kinder?.length>0
+    ? [meinName,...(account.kinder.map(k=>k.name))]
+    : null;
+  const [aktivePerson,setAktivePerson]=useState(meinName);
+  const aktiverName=elternPersonen?aktivePerson:meinName;
+
+  const teamMitglieder=[meinName,...HELPERS.filter(h=>h.gruppe===meinTeam||h.gruppe.includes(meinTeam)).map(h=>h.name)];
+
+  const [freigabeAnfragen,setFreigabeAnfragen]=useState({});
+
+  const saveFreigabe=(fn)=>{
+    setFreigabeAnfragen(prev=>{
+      const next=typeof fn==="function"?fn(prev):fn;
+      window.storage.set("helfer_freigabe",JSON.stringify(next)).catch(()=>{});
+      return next;
+    });
+  };
+
+  const getBase=(prev,sid)=>{
+    for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
+      const s=e.schichten.find(s=>s.id===sid);
+      if(s) return prev[sid]??[...s.helfer];
+    }
+    return [];
+  };
+
+  const onEintragen=(sid,person)=>{
+    const target=person||meinName;
+    saveSchichten(prev=>{
+      const base=getBase(prev,sid);
+      if(base.includes(target)) return prev;
+      return{...prev,[sid]:[...base,target]};
+    });
+  };
+
+  /* Freigabe: canFreigeben=direkt austragen, sonst Anfrage mit Begründung stellen */
+  const onFreigeben=(sid,person,begruendung)=>{
+    if(canFreigeben){
+      /* Funktionär/Admin trägt direkt aus */
+      const target=person||meinName;
+      saveSchichten(prev=>({...prev,[sid]:getBase(prev,sid).filter(h=>h!==target)}));
+      saveFreigabe(prev=>{const n={...prev};delete n[sid];return n;});
+    } else {
+      /* Andere Rollen: Anfrage mit Begründung speichern */
+      saveFreigabe(prev=>({...prev,[sid]:{name:meinName,begruendung:begruendung||""}}));
+    }
+  };
+
+  /* Übertragen: alten Helfer raus, neuen rein */
+  const onÜbertragen=(sid,von,an)=>{
+    saveSchichten(prev=>{
+      const base=getBase(prev,sid);
+      return{...prev,[sid]:[...base.filter(h=>h!==von),an]};
+    });
+    saveFreigabe(prev=>{const n={...prev};delete n[sid];return n;});
+  };
+
+  /* Controlling-Berechnungen */
+  const mitgliederCalc=HELPERS.map(m=>{
+    const geplant=m.schichten.filter(sid=>{
+      const h=schichtenState[sid];
+      if(h) return h.includes(m.name);
+      for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
+        const s=e.schichten.find(s=>s.id===sid);
+        if(s) return s.helfer.includes(m.name);
+      }
+      return false;
+    }).length;
+    const offen=Math.max(0,m.soll-m.geleistet-geplant);
+    let status="Erfüllt";
+    if(m.soll===0) status="Befreit";
+    else if(m.geleistet>=m.soll) status="Erfüllt";
+    else if(m.geleistet+geplant>=m.soll) status="Geplant erfüllt";
+    else status="Offen";
+    return{...m,geplant,offen,status};
+  });
+
+  /* Statistiken über alle Events */
+  const allSchichten=HELPER_EVENTS.flatMap(ev=>ev.einsaetze.flatMap(e=>e.schichten));
+  const totalBelegt=allSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+  const totalOffen=allSchichten.length-totalBelegt;
+
+  /* Gruppen/Teams der aktuellen Rolle - unterstützt mehrere Teams (Eltern mit 2 Kindern) */
+  const meineGruppen=[...new Set([
+    ...meineTeams,
+    ...meineTeams.map(t=>t+" Eltern"),
+    ...(meineTeams.length===0&&role==="trainer"?["Cc-Junioren"]:[]),
+    ...(meineTeams.length===0&&role==="spieler"?["Cc-Junioren"]:[]),
+    ...(meineTeams.length===0&&role==="eltern"?["Cc-Junioren Eltern"]:[]),
+  ].filter(Boolean))];
+  const meinGruppe=meineGruppen[0]||null;
+
+  const TABS= teamOnly ? [
+    ...(meinGruppe?[{key:"team",label:"Meinem Team zugewiesen"}]:[]),
+    ...(canEdit?[{key:"controlling",label:"Controlling"}]:[]),
+  ] : [
+    {key:"browse",  label:"≡ Offene Einsätze"},
+    {key:"mein",    label:"Meine Einsätze"},
+    ...(meinGruppe?[{key:"team",label:"Meinem Team zugewiesen"}]:[]),
+    ...(canEdit?[{key:"controlling",label:"Controlling"}]:[]),
+    ...(canErstellen?[{key:"erstellen",label:"+ Einsatz erfassen"}]:[]),
+  ];
+
+  /* Meine Schichten */
+  const meineSchichten=[];
+  for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze) for(const s of e.schichten){
+    const h=schichtenState[s.id]??s.helfer;
+    if(h.includes(aktiverName)) meineSchichten.push({...s,helfer:h,einsatzName:e.name,einsatzDate:e.date,einsatzOrt:e.location,eventName:ev.name,eventColor:ev.color});
+  }
+  const mich=mitgliederCalc.find(m=>m.name===aktiverName)||{soll:2,geleistet:1,geplant:meineSchichten.length,offen:0,status:"Geplant erfüllt"};
+
+  /* Status-Farben */
+  const SC={
+    "Erfüllt":        {c:GN, bg:"#ECFDF5"},
+    "Geplant erfüllt":{c:AM, bg:"#FFFBEB"},
+    "Offen":          {c:R,  bg:RL},
+    "Befreit":        {c:"#888",bg:"#f5f5f5"},
+  };
+
+  return(
+    <div>
+      {/* Seitentitel */}
+      {!teamOnly&&(
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <h1 style={{fontSize:21,fontWeight:800,margin:0}}>Helfereinsätze</h1>
+          {canErstellen&&<Btn variant="primary" color="#F3F4F6" onClick={()=>{setHelperTab("erstellen");setShowNewForm(true);}}>+ Event erstellen</Btn>}
+        </div>
+      )}
+
+      {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
+      {canFreigeben&&(
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12,marginBottom:16}}>
+        <Stat label="Mitglieder" value={HELPERS.length}/>
+        <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
+        <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
+        <Stat label="Offene Schichten" value={totalOffen} color={AM} sub={`von ${allSchichten.length} total`}/>
+      </div>
+      )}
+
+      {/* Sub-Tabs */}
+      <div style={{display:"flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,width:"fit-content"}}>
+        {TABS.map(t=>(
+          <button key={t.key} onClick={()=>setHelperTab(t.key)} style={{padding:"8px 14px",border:"none",borderRadius:8,background:helperTab===t.key?"#fff":"transparent",color:helperTab===t.key?BK:"#999",fontWeight:helperTab===t.key?700:400,cursor:"pointer",fontSize:13,boxShadow:helperTab===t.key?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* -- TAB: BROWSE - alle Events auf einer Seite -- */}
+      {/* Eltern: Anmelden als Switcher */}
+      {elternPersonen&&(
+        <div style={{display:"flex",gap:8,marginBottom:14,padding:"10px 12px",background:"var(--surface2)",borderRadius:10,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginRight:2}}>Anmelden als:</span>
+          {elternPersonen.map((p,i)=>{
+            const active=aktivePerson===p;
+            return(
+              <button key={i} onClick={()=>setAktivePerson(p)}
+                style={{padding:"6px 14px",borderRadius:20,border:`0.5px solid ${active?ACCENT:GB}`,background:active?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,fontWeight:active?700:400,cursor:"pointer"}}>
+                {i===0?`${p} (Elternteil)`:p}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {helperTab==="browse"&&(
+        <div>
+          {/* Filterleiste */}
+          <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+            {/* Suchfeld */}
+            <div style={{position:"relative",flexShrink:0}}>
+              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+              <input
+                value={browseSearch}
+                onChange={e=>setBrowseSearch(e.target.value)}
+                placeholder="Einsatz oder Schicht suchen…"
+                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${browseSearch?ACCENT:GB}`,borderRadius:20,fontSize:13,outline:"none",width:"100%",maxWidth:210,background:"var(--surface)"}}
+              />
+              {browseSearch&&(
+                <button onClick={()=>setBrowseSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:13,color:"var(--sub)",lineHeight:1}}>×</button>
+              )}
+            </div>
+            <div style={{width:"1px",height:22,background:GB}}/>
+            {/* Event-Filter als Dropdown */}
+            <select value={selectedEvent||""} onChange={e=>setSelectedEvent(e.target.value?Number(e.target.value):null)}
+              style={{padding:"5px 12px",border:`0.5px solid ${selectedEvent?ACCENT:GB}`,borderRadius:20,fontSize:13,color:"var(--text)",background:selectedEvent?"var(--cc-hover)":"#fff",cursor:"pointer",outline:"none",fontWeight:selectedEvent?700:400}}>
+              <option value="">Alle Events</option>
+              {HELPER_EVENTS.map(ev=>(
+                <option key={ev.id} value={ev.id}>{ev.name}</option>
+              ))}
+            </select>
+            <div style={{width:"1px",height:22,background:GB,margin:"0 2px"}}/>
+            {/* Schichten-Filter */}
+            <button onClick={()=>setFilterOffen(false)} style={{padding:"8px 16px",borderRadius:20,border:`0.5px solid ${!filterOffen?ACCENT:GB}`,background:!filterOffen?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,cursor:"pointer",fontWeight:!filterOffen?700:400}}>Alle Schichten</button>
+            <button onClick={()=>setFilterOffen(true)} style={{padding:"8px 16px",borderRadius:20,border:`0.5px solid ${filterOffen?ACCENT:GB}`,background:filterOffen?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,cursor:"pointer",fontWeight:filterOffen?700:400}}>Nur offen</button>
+          </div>
+
+          {/* Alle Events nacheinander */}
+          <div style={{display:"flex",flexDirection:"column",gap:24}}>
+            {HELPER_EVENTS.filter(ev=>!selectedEvent||ev.id===selectedEvent).map(ev=>{
+              const q=browseSearch.toLowerCase();
+
+              /* Einsätze filtern: Suche in Event-Name, Einsatz-Name, Ort, Schicht-Label */
+              const einsaetzeVisible=ev.einsaetze.map(e=>({
+                ...e,
+                schichtenVisible: e.schichten.filter(s=>{
+                  const matchSearch=!q
+                    ||ev.name.toLowerCase().includes(q)
+                    ||e.name.toLowerCase().includes(q)
+                    ||e.location.toLowerCase().includes(q)
+                    ||s.label.toLowerCase().includes(q)
+                    ||s.helfer.some(h=>h.toLowerCase().includes(q));
+                  const matchOffen=!filterOffen||(schichtenState[s.id]??s.helfer).length<s.max;
+                  return matchSearch&&matchOffen;
+                }),
+              })).filter(e=>e.schichtenVisible.length>0);
+
+              /* Event ausblenden wenn Suche nichts trifft */
+              if(q&&!ev.name.toLowerCase().includes(q)&&einsaetzeVisible.length===0) return null;
+
+              /* Statistik für dieses Event */
+              const evSchichten=ev.einsaetze.flatMap(e=>e.schichten);
+              const evBelegt=evSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+              const evOffen=evSchichten.length-evBelegt;
+              const evHelfer=[...new Set(evSchichten.flatMap(s=>schichtenState[s.id]??s.helfer))].length;
+
+              const isCollapsed=!!collapsedEvents[ev.id];
+              return(
+                <div key={ev.id} style={{borderRadius:14,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,0.06)",border:"0.5px solid var(--border)"}}>
+                  {/* Event-Header-Banner */}
+                <div onClick={()=>toggleCollapse(ev.id)} style={{background:isCollapsed?"#fff":GR,padding:"18px 20px",color:"var(--text)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,cursor:"pointer",userSelect:"none",borderBottom:"0.5px solid var(--border)",borderLeft:`5px solid ${ev.color||BK}`}}>
+                    <div>
+                      <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.2,display:"flex",alignItems:"center",gap:8,color:"var(--text)"}}>
+                        {ev.name}
+                        <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
+                      </div>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span>{""+ev.date}</span>
+                        <span style={{opacity:0.4}}>{"|"}</span>
+                        <span>{""+ev.loc}</span>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      {(()=>{
+                        const totalPlätze=evSchichten.reduce((s,sc)=>s+sc.max,0);
+                        const belegtPlätze=evSchichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                        const offenPlätze=totalPlätze-belegtPlätze;
+                        return[
+                          {l:"Schichten total",v:totalPlätze,bg:"rgba(255,255,255,0.6)",border:"rgba(0,0,0,0.08)",tc:BK},
+                          {l:"Schichten offen",v:offenPlätze,bg:offenPlätze>0?"#FFFBEB":"rgba(255,255,255,0.6)",border:offenPlätze>0?"#FDE68A":"rgba(0,0,0,0.08)",tc:offenPlätze>0?AM:GN},
+                        ].map((s,i)=>(
+                          <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
+                            <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
+                            <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Einsätze */}
+                  {!isCollapsed&&<div style={{background:"var(--surface)"}}>
+                    {einsaetzeVisible.length===0?(
+                      <div style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13,background:"var(--surface2)"}}>Keine offenen Schichten in diesem Event.</div>
+                    ):einsaetzeVisible.map((einsatz,ei)=>{
+                      const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                      const eOffen=einsatz.schichten.length-eBelegt;
+                      const eTotalHelfer=einsatz.schichten.reduce((sum,s)=>(schichtenState[s.id]??s.helfer).length+sum,0);
+                      const eBarColor=eOffen===0?GN:eTotalHelfer===0?R:AM;
+                      return(
+                        <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
+                          {/* Einsatz-Zeile */}
+                          <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:12}}>
+                              <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
+                              <div>
+                                <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
+                                  <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
+                                  {einsatz.name}
+                                </div>
+                                <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
+                                  <span>{""+einsatz.time+" Uhr"}</span>
+                                  <span style={{color:"var(--border)"}}>{"|"}</span>
+                                  <span>{""+einsatz.location}</span>
+                                </div>
+                                {bemerkungState[`e${einsatz.id}`]&&(
+                                  <div style={{fontSize:13,color:AM,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
+                                    <span><TI n="edit"/></span><span style={{fontStyle:"italic"}}>{bemerkungState[`e${einsatz.id}`]}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+                              {/* Gruppen - editierbar für Admin/Funktionär */}
+                              {editingGruppen===einsatz.id?(
+                                <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
+                                  {HELPER_GRUPPEN.map(g=>{
+                                    const cur=gruppenState[einsatz.id]||einsatz.gruppen;
+                                    const checked=cur.includes(g);
+                                    return(
+                                      <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:13,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                                        <input type="checkbox" checked={checked} onChange={()=>setGruppenState(prev=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter(x=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
+                                        {g}
+                                      </label>
+                                    );
+                                  })}
+                                  <button onClick={e=>{e.stopPropagation();setEditingGruppen(null);}} style={{padding:"5px 12px",borderRadius:20,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓ Fertig</button>
+                                </div>
+                              ):(
+                                <>
+                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280" bg="#F3F4F6"/>)}
+                                  {canEdit&&<button onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}} style={{padding:"5px 12px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>}
+                                </>
+                              )}
+                              {/* Bemerkung Edit */}
+                              {canEdit&&(editingBemerkung===`e${einsatz.id}`?(
+                                <div onClick={e=>e.stopPropagation()} style={{display:"flex",gap:8,alignItems:"center"}}>
+                                  <input autoFocus value={bemerkungDraft} onChange={e=>setBemerkungDraft(e.target.value)}
+                                    placeholder="Bemerkung…"
+                                    style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:160}}/>
+                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓</button>
+                                  <button onClick={()=>setEditingBemerkung(null)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}>✕</button>
+                                </div>
+                              ):(
+                                <button onClick={e=>{e.stopPropagation();setEditingBemerkung(`e${einsatz.id}`);setBemerkungDraft(bemerkungState[`e${einsatz.id}`]||"");}}
+                                  style={{padding:"5px 12px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>
+                              ))}
+                              {(()=>{
+                                const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
+                                const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                                const offenPlätze=totalPlätze-belegtPlätze;
+                                return(
+                                  <span style={{fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
+                                    {offenPlätze===0?"✓ Alle besetzt":`${offenPlätze} / ${totalPlätze} offen`}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          {/* Schichten-Grid */}
+                          {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
+                            {einsatz.schichtenVisible.map(s=>(
+                              <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
+                            ))}
+                          </div>}
+                        </div>
+                      );
+                    })}
+                  </div>}
+                </div>
+              );
+            })}
+            {/* Keine Treffer */}
+            {browseSearch&&HELPER_EVENTS.filter(ev=>!selectedEvent||ev.id===selectedEvent).every(ev=>{
+              const q=browseSearch.toLowerCase();
+              if(ev.name.toLowerCase().includes(q)) return false;
+              return ev.einsaetze.every(e=>
+                !e.name.toLowerCase().includes(q)&&
+                !e.location.toLowerCase().includes(q)&&
+                e.schichten.every(s=>!s.label.toLowerCase().includes(q)&&!s.helfer.some(h=>h.toLowerCase().includes(q)))
+              );
+            })&&(
+              <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)"}}>
+                Keine Einsätze oder Schichten gefunden für <strong style={{color:"var(--text)"}}>„{browseSearch}"</strong>
+                <br/><button onClick={()=>setBrowseSearch("")} style={{marginTop:10,padding:"5px 12px",borderRadius:20,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>Suche zurücksetzen</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* -- TAB: MEIN EINSATZ -- */}
+      {helperTab==="mein"&&(
+        <div>
+          {/* Status-Kacheln */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
+            {[{l:"Soll",v:mich.soll,c:BK,bg:"#fff"},{l:"Geleistet",v:mich.geleistet,c:GN,bg:"#F0FDF4"},{l:"Geplant",v:mich.geplant,c:AM,bg:"#FFFBEB"},{l:"Offen",v:mich.offen,c:mich.offen>0?R:"#aaa",bg:mich.offen>0?"#FEF2F2":"#fff"}].map((s,i)=>(
+              <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+                <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
+                <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+          {/* Status-Banner */}
+          <div style={{padding:"10px 16px",borderRadius:10,marginBottom:18,background:mich.status==="Erfüllt"?"#F0FDF4":mich.status==="Geplant erfüllt"?"#FFFBEB":mich.status==="Befreit"?"#F3F4F6":"#FEF2F2",border:`0.5px solid ${mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#ccc":R}`}}>
+            <div style={{fontWeight:700,fontSize:13,color:mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#888":R}}>
+              {mich.status==="Erfüllt"&&"✓ Soll erfüllt - Danke für deinen Einsatz!"}
+              {mich.status==="Geplant erfüllt"&&"⏳ Geplant erfüllt - Schichten noch ausstehend"}
+              {mich.status==="Offen"&&`${mich.offen} Einsatz${mich.offen>1?"ätze":""} noch offen`}
+              {mich.status==="Befreit"&&"Du bist von Helfereinsätzen befreit"}
+            </div>
+          </div>
+          {(()=>{
+            const today="2026-05-23";
+            const parseDate=(d)=>{
+              if(!d) return "";
+              const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
+              const parts=clean.split(".");
+              if(parts.length===3) return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+              return "";
+            };
+            const geleistet=meineSchichten.filter(s=>parseDate(s.einsatzDate)<today&&parseDate(s.einsatzDate)!=="");
+            const geplant=meineSchichten.filter(s=>parseDate(s.einsatzDate)>=today||parseDate(s.einsatzDate)==="");
+            return(
+              <>
+                {geplant.length>0&&(
+                  <div style={{marginBottom:18}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <span style={{background:"var(--surface)",color:AM,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #FDE68A`}}>⏳ Geplant</span>
+                      <span style={{color:"var(--sub)",fontSize:13}}>{geplant.length+" Schicht"+(geplant.length!==1?"en":"")}</span>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {geplant.map((s,i)=>{
+                        const anfrageData=(freigabeAnfragen||{})[s.id];
+                        const anfragePending=anfrageData?.name===meinName;
+                        return <MeinSchichtEintrag key={i} schicht={s} anfragePending={anfragePending} anfrageData={anfrageData} meinName={aktiverName} onÜbertragen={onÜbertragen} onFreigeben={onFreigeben}/>;
+                      })}
+                    </div>
+                  </div>
+                )}
+                {geleistet.length>0&&(
+                  <div style={{marginBottom:16}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <span style={{background:"var(--surface)",color:GN,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #BBF7D0`}}>✓ Geleistet</span>
+                      <span style={{color:"var(--sub)",fontSize:13}}>{geleistet.length+" Schicht"+(geleistet.length!==1?"en":"")}</span>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {geleistet.map((s,i)=>(
+                        <div key={i} style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,overflow:"hidden",borderTop:`4px solid ${s.eventColor||"#64748B"}`,opacity:0.85}}>
+                          <div style={{padding:"14px 18px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <div>
+                              <div style={{fontSize:16,fontWeight:700,color:"var(--text)",letterSpacing:-0.2}}>{s.eventName}</div>
+                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                                <span>{s.einsatzName}</span>
+                                {s.einsatzDate&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzDate}</span></>}
+                                {s.einsatzOrt&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzOrt}</span></>}
+                              </div>
+                            </div>
+                            <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN,flexShrink:0}}>✓ Geleistet</span>
+                          </div>
+                          <div style={{padding:"8px 14px"}}>
+                            <div style={{fontWeight:600,fontSize:13}}>{s.label}</div>
+                            <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{""+s.einsatzDate+(s.einsatzOrt?" · "+s.einsatzOrt:"")}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {meineSchichten.length===0&&<InfoBox text="Noch keine Schichten eingetragen." color="#aaa"/>}
+              </>
+            );
+          })()}
+          {mich.status==="Offen"&&meineSchichten.length===0&&<InfoBox text={`Noch ${mich.offen} Einsatz${mich.offen>1?"ätze":""} offen. Unter "Offene Einsätze" eine Schicht übernehmen.`} color={R}/>}
+        </div>
+      )}
+
+      {/* -- TAB: MEINEM TEAM ZUGEWIESEN -- */}
+      {helperTab==="team"&&meinGruppe&&(
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:16,fontSize:13}}>
+            <span style={{fontSize:14}}><TI n="users"/></span>
+            <span>Einsätze für deine Teams: {meineGruppen.map((g,i)=><strong key={i}>{i>0?" · ":""}{g}</strong>)}</span>
+          </div>
+
+          <div style={{display:"flex",flexDirection:"column",gap:24}}>
+            {(()=>{
+              /* Alle Einsätze sammeln die für meinGruppe oder "Alle" freigegeben sind */
+              const teamEinsaetze=[];
+              for(const ev of HELPER_EVENTS){
+                const passende=ev.einsaetze.filter(e=>
+                  meineGruppen.some(g=>e.gruppen.includes(g))&&!e.gruppen.includes("Alle")
+                );
+                if(passende.length>0) teamEinsaetze.push({...ev,einsaetze:passende});
+              }
+
+              if(teamEinsaetze.length===0) return(
+                <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)"}}>
+                  Keine Einsätze für dein Team ({meinGruppe}) zugewiesen.
+                </div>
+              );
+
+              return teamEinsaetze.map(ev=>{
+                const evSchichten=ev.einsaetze.flatMap(e=>e.schichten);
+                const evBelegt=evSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                const evOffen=evSchichten.length-evBelegt;
+                const evHelfer=[...new Set(evSchichten.flatMap(s=>schichtenState[s.id]??s.helfer))].length;
+                const isTeamCollapsed=!!collapsedTeamEvents[ev.id];
+                return(
+                  <div key={ev.id} style={{borderRadius:14,overflow:"hidden",border:"0.5px solid var(--border)",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+                    {/* Event-Banner */}
+                    <div onClick={()=>toggleTeamCollapse(ev.id)} style={{background:isTeamCollapsed?"#fff":GR,borderTop:`4px solid ${ev.color}`,padding:"18px 20px",color:"var(--text)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,cursor:"pointer",userSelect:"none",borderBottom:"0.5px solid var(--border)"}}>
+                      <div>
+                        <div style={{fontSize:16,fontWeight:700,letterSpacing:-0.2,display:"flex",alignItems:"center",gap:8,color:"var(--text)"}}>
+                          {ev.name}
+                          <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isTeamCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
+                        </div>
+                        <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                          <span>{""+ev.date}</span>
+                          <span style={{opacity:0.4}}>{"|"}</span>
+                          <span>{""+ev.loc}</span>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        {(()=>{
+                          const totalPlätze=evSchichten.reduce((s,sc)=>s+sc.max,0);
+                          const belegtPlätze=evSchichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                          const offenPlätze=totalPlätze-belegtPlätze;
+                          return[
+                            {l:"Schichten total",v:totalPlätze,bg:"rgba(255,255,255,0.6)",border:"rgba(0,0,0,0.08)",tc:BK},
+                            {l:"Schichten offen",v:offenPlätze,bg:offenPlätze>0?"#FFFBEB":"rgba(255,255,255,0.6)",border:offenPlätze>0?"#FDE68A":"rgba(0,0,0,0.08)",tc:offenPlätze>0?AM:GN},
+                          ].map((s,i)=>(
+                            <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
+                              <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
+                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Einsätze */}
+                    {!isTeamCollapsed&&<div style={{borderTop:"0.5px solid var(--border)",overflow:"hidden"}}>
+                      {ev.einsaetze.map((einsatz,ei)=>{
+                        const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                        const eOffen=einsatz.schichten.length-eBelegt;
+                        const eTotalHelfer=einsatz.schichten.reduce((sum,s)=>(schichtenState[s.id]??s.helfer).length+sum,0);
+                        const eBarColor=eOffen===0?GN:eTotalHelfer===0?R:AM;
+                        return(
+                          <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
+                            <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
+                              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                                <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
+                                <div>
+                                  <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
+                                    <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
+                                    {einsatz.name}
+                                  </div>
+                                  <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
+                                    <span>{""+einsatz.time+" Uhr"}</span>
+                                    <span style={{color:"var(--border)"}}>{"|"}</span>
+                                    <span>{""+einsatz.location}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
+                                {einsatz.gruppen.map((g,gi)=>(
+                                  <Chip key={gi} text={g} color={g===meinGruppe?ev.color:"var(--sub)"} bg={g===meinGruppe?ev.color+"18":"#F3F4F6"}/>
+                                ))}
+                                {(()=>{
+                                  const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
+                                  const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                                  const offenPlätze=totalPlätze-belegtPlätze;
+                                  return(
+                                    <span style={{fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
+                                      {offenPlätze===0?"✓ Alle besetzt":`${offenPlätze} / ${totalPlätze} offen`}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                            {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
+                              {einsatz.schichten.map(s=>(
+                                <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
+                              ))}
+                            </div>}
+                          </div>
+                        );
+                      })}
+                    </div>}
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* -- TAB: CONTROLLING -- */}
+      {helperTab==="controlling"&&canEdit&&(
+        <div>
+          {/* Team-Filter Hinweis für Trainer */}
+          {isTrainer&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:13}}>
+              <span style={{fontSize:14}}><TI n="eye"/></span>
+              <span>Du siehst nur Mitglieder deines Teams: <strong>Cc-Junioren</strong></span>
+            </div>
+          )}
+
+          {/* Stat-Kacheln */}
+          {(()=>{
+            const relevant=isTrainer?mitgliederCalc.filter(m=>m.gruppe===meinTeam||m.gruppe.includes(meinTeam)):mitgliederCalc;
+            const erfuellt=relevant.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length;
+            const offen=relevant.filter(m=>m.status==="Offen").length;
+            const befreit=relevant.filter(m=>m.status==="Befreit").length;
+            return(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
+                {[{l:"Erfüllt",v:erfuellt,c:GN,bg:"#F0FDF4"},{l:"Offen",v:offen,c:AM,bg:"#FFFBEB"},{l:"Befreit",v:befreit,c:BK,bg:"#fff"}].map((s,i)=>(
+                  <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+                    <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
+                    <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Suche + Filter */}
+          <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center",width:"100%",rowGap:6}}>
+            <div style={{position:"relative",flexShrink:0}}>
+              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglied suchen…"
+                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${search?ACCENT:GB}`,borderRadius:20,fontSize:13,outline:"none",width:"100%",maxWidth:190,background:"var(--surface)"}}/>
+              {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:13,color:"var(--sub)",lineHeight:1}}>×</button>}
+            </div>
+            <div style={{width:"1px",height:22,background:GB}}/>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {["alle","Offen","Geplant erfüllt","Erfüllt","Befreit"].map(f=>(
+                <button key={f} onClick={()=>setFilterStatus(f)} style={{padding:"5px 12px",border:`0.5px solid ${filterStatus===f?ACCENT:GB}`,borderRadius:20,background:filterStatus===f?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,cursor:"pointer",fontWeight:filterStatus===f?700:400}}>{f==="alle"?"Alle":f}</button>
+              ))}
+            </div>
+            {!isTrainer&&(
+              <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+                <Btn small>Export CSV</Btn>
+                <Btn small>Export Excel</Btn>
+              </div>
+            )}
+          </div>
+
+          <Card style={{padding:0,overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead>
+                <tr style={{background:"var(--surface2)"}}>
+                  {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h,i)=>(
+                    <th key={i} style={{padding:"9px 12px",textAlign:i>1?"center":"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {mitgliederCalc
+                  .filter(m=>!isTrainer||(m.gruppe===meinTeam||m.gruppe.includes(meinTeam)))
+                  .filter(m=>filterStatus==="alle"||m.status===filterStatus)
+                  .filter(m=>m.name.toLowerCase().includes(search.toLowerCase()))
+                  .map((m,i)=>(
+                  <>
+                    <tr key={m.id} onClick={()=>setExpandedMember(expandedMember===m.id?null:m.id)}
+                      style={{borderTop:"0.5px solid var(--border)",background:expandedMember===m.id?"var(--cc-hover)":"#fff",cursor:"pointer"}}
+                      className="hov-row">
+                      <td style={{padding:"9px 12px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <Av name={m.name} size={22} bg={SC[m.status]?.c||"#6B7280"}/>
+                          <span style={{fontWeight:600}}>{m.name}</span>
+                        </div>
+                      </td>
+                      <td style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280" bg="#F3F4F6"/></td>
+                      <td style={{padding:"9px 12px",textAlign:"center",fontWeight:700}}>{m.soll}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:GN,fontWeight:600}}>{m.geleistet}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:AM,fontWeight:600}}>{m.geplant}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:m.offen>0?R:"#aaa",fontWeight:m.offen>0?700:400}}>{m.offen}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center"}}><Chip text={m.status} color={SC[m.status]?.c||"#888"} bg={SC[m.status]?.bg}/></td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:"var(--sub)",fontSize:13}}>{expandedMember===m.id?"▲":"▼"}</td>
+                    </tr>
+                    {expandedMember===m.id&&(
+                      <tr key={`d${m.id}`} style={{borderTop:"0.5px solid var(--border)"}}>
+                        <td colSpan={8} style={{padding:"10px 20px 14px",background:"var(--surface2)"}}>
+                          {m.schichten.length===0?(
+                            <span style={{fontSize:13,color:"var(--sub)"}}>Keine Schichten übernommen.</span>
+                          ):(
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8,marginBottom:10}}>
+                              {m.schichten.map((sid,si)=>{
+                                const anfrage=freigabeAnfragen[sid];
+                                for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
+                                  const s=e.schichten.find(s=>s.id===sid);
+                                  if(s){
+                                    const d=e.date||"";
+                                    const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
+                                    const parts=clean.split(".");
+                                    const iso=parts.length===3?`${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`:"";
+                                    const past=iso<"2026-05-23"&&iso!=="";
+                                    const statusBadge=anfrage
+                                      ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:AM,border:`0.5px solid #FDE68A`}}>⏳ Freigabe ausstehend</span>
+                                      :past
+                                        ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN}}>✓ Geleistet</span>
+                                        :<span style={{fontSize:13,padding:"2px 4px",color:AM}}>⏳</span>;
+                                    return(
+                                      <div key={sid} style={{borderRadius:10,overflow:"hidden",border:`0.5px solid ${anfrage?AM:GB}`,background:anfrage?"#FFFBEB":"#fff",borderTop:`3px solid ${ev.color||"#64748B"}`}}>
+                                        {/* Header */}
+                                        <div style={{padding:"8px 12px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                                          <div>
+                                            <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{ev.name}</div>
+                                            <div style={{fontSize:13,color:"var(--sub)",marginTop:1}}>{e.name}</div>
+                                          </div>
+                                          {statusBadge}
+                                        </div>
+                                        {/* Body */}
+                                        <div style={{padding:"7px 12px"}}>
+                                          <div style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{s.label}</div>
+                                          <div style={{fontSize:13,color:"var(--sub)",marginTop:2,display:"flex",gap:8}}>
+                                            <span>{""+e.date}</span>
+                                            {e.location&&<><span style={{opacity:0.3}}>|</span><span>{""+e.location}</span></>}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                }
+                                return null;
+                              })}
+                            </div>
+                          )}
+                          {/* Trainer: nur Schichten ansehen, keine Admin-Aktionen */}
+                          {!isTrainer&&(
+                            <div style={{display:"flex",gap:8}}>
+                              <Btn small variant="primary" color="#F3F4F6">Erinnerung senden</Btn>
+                              <Btn small>Sollwert anpassen</Btn>
+                              <Btn small>Als befreit markieren</Btn>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      )}
+
+      {/* -- TAB: ERSTELLEN -- */}
+      {helperTab==="erstellen"&&canErstellen&&(
+        <Card>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Neuen Einsatz erfassen</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
+            {[
+              {l:"Event",            type:"select",opts:["Grümpelturnier 2026","Generalversammlung 2026","+ Neuer Event…"]},
+              {l:"Einsatzname",      type:"text",  ph:"z.B. Grill"},
+              {l:"Datum",            type:"date"},
+              {l:"Zeit",             type:"text",  ph:"10:00-14:00"},
+              {l:"Ort",              type:"text",  ph:"z.B. Grillstand"},
+              {l:"Freigabe Gruppen", type:"gruppen"},
+            ].map((f,i)=>(
+              <div key={i}>
+                <label style={{fontSize:13,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
+                {f.type==="gruppen"?(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>
+                    {HELPER_GRUPPEN.map(g=>{
+                      const checked=newEinsatzGruppen.includes(g);
+                      return(
+                        <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                          <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen(prev=>checked?prev.filter(x=>x!==g):[...prev,g])} style={{display:"none"}}/>
+                          {g}
+                        </label>
+                      );
+                    })}
+                  </div>
+                ):f.type==="select"?(
+                  <select style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13}}>
+                    {f.opts?.map(o=><option key={o}>{o}</option>)}
+                  </select>
+                ):(
+                  <input type={f.type||"text"} placeholder={f.ph} style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:16}}>
+            <div style={{fontWeight:600,fontSize:13,marginBottom:8}}>Schichten</div>
+            {[1,2,3].map(n=>(
+              <div key={n} style={{display:"flex",gap:8,marginBottom:7,alignItems:"center"}}>
+                <input placeholder={`Schicht ${n}: z.B. Grill 10:00-14:00`} style={{flex:1,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                <input type="number" placeholder="Max" style={{width:55,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                <span style={{fontSize:13,color:"var(--sub)"}}>Plätze</span>
+              </div>
+            ))}
+            <button style={{fontSize:13,color:BL,background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>+ Schicht hinzufügen</button>
+          </div>
+          <div style={{marginTop:16,display:"flex",gap:8}}>
+            <Btn variant="primary" color="#F3F4F6">Einsatz erstellen</Btn>
+            <Btn onClick={()=>setHelperTab("browse")}>Abbrechen</Btn>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+export { HelferModul, HelpersList };
