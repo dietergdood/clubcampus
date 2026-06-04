@@ -4,7 +4,7 @@ import { TI, TI_PATHS } from "./icons.jsx";
 import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip } from "./theme.jsx";
 import NachrichtenModul from "./NachrichtenModul.jsx";
 import { TeamModuleMatrix, PortalverwaltungView } from "./PortalverwaltungModul.jsx";
-import { SlotModal, SpielDetail, TermineModul } from "./TermineModul.jsx";
+import { SlotModal, SpielDetail, TermineModul, SpielplanModul } from "./TermineModul.jsx";
 
 /* -- SUPABASE wird als Prop von App.jsx übergeben (kein Import hier) -- */
 
@@ -2173,7 +2173,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           <div>
             <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Spielplan</div>
-            <ScheduleTab role={role} team={activeTeam} initialSelected={selectedSpiel}/>
+            <SpielplanModul role={role} team={activeTeam} initialSelected={selectedSpiel}/>
           </div>
           <div>
             <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Tabelle</div>
@@ -8334,7 +8334,7 @@ function Portal({supabaseClient}){
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "training":          return <TrainingGantt role={role} team={role==="trainer"?meineTeams?.[0]:undefined} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb}/>;
-      case "schedule":          return <ScheduleTab role={role}/>;
+      case "schedule":          return <SpielplanModul role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
       case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:13,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><TermineModul role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActive} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} onNavigateToSpiel={(spiel)=>{NAV_TARGET.tab="spielplan";NAV_TARGET.selectedSpiel=spiel;setActive("team");}}/></div>;
       case "helpers":           return <HelpersList role={role} meineTeams={meineTeams} account={account} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;

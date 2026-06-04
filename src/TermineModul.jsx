@@ -831,7 +831,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
 
 
 
-function ScheduleTab({role,team,initialSelected}){
+function SpielplanModul({role,team,initialSelected}){
   const isMobile=useIsMobile();
   const [selected,setSelected]=useState(initialSelected||null);
   const canEdit=["trainer","administrator","administration"].includes(role);
@@ -2007,4 +2007,4 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
   );
 }
 
-export { SlotModal, SpielDetail, TermineModul };
+export { SlotModal, SpielDetail, TermineModul, SpielplanModul };
