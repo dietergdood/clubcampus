@@ -1252,7 +1252,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
         </div>
         {!collapsed&&(
           <div style={{minWidth:0,overflow:"hidden"}}>
-            <div style={{color:"var(--nav-t)",fontWeight:800,fontSize:14,lineHeight:1.2,letterSpacing:-0.2,whiteSpace:"nowrap"}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
+            <div style={{color:"var(--nav-t)",fontWeight:800,fontSize:13,lineHeight:1.25,letterSpacing:-0.2,wordBreak:"break-word",overflowWrap:"break-word"}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
             <div style={{color:"var(--nav-a)",fontSize:11,letterSpacing:0.6,marginTop:2,textTransform:"uppercase",fontWeight:500}}>{appTheme?.portalname||"ClubCampus"}</div>
           </div>
         )}
