@@ -6,6 +6,9 @@ import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GR, GB } from "./constants";
 import { TI } from "./icons.jsx";
 import { useIsMobile, ModalOrSheet, Card, Chip } from "./theme.jsx";
+import { ATT_EVENTS, ATT_INITIAL, GANTT, ROSTER, SCHEDULE, TABLES, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
+
+/* ── Demo-Daten (werden durch Supabase ersetzt) ── */
 
 function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, onSave, onDelete, onAusnahme, onClose}){
   const DAYS=["Mo","Di","Mi","Do","Fr","Sa","So"];
