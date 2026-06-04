@@ -1101,7 +1101,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
   const hasMultiRoles=account.rollen.length>1;
   return(
     <>
-      <button onClick={()=>setOpen(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",borderRadius:10,border:`1.5px solid ${cur.color}`,background:cur.color+"12",cursor:"pointer"}}>
+      <button onClick={()=>setOpen(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",borderRadius:10,border:`1.5px solid ${cur.color}`,background:cur.color+"12",cursor:"pointer"}}>
         <span style={{fontSize:15}}>{cur.icon}</span>
         <span style={{fontSize:13,fontWeight:700,color:cur.color}}>{cur.label}</span>
         {hasMultiRoles&&<span style={{fontSize:13,background:cur.color,color:"#fff",padding:"1px 5px",borderRadius:10,marginLeft:2}}>{account.rollen.length}</span>}
@@ -1143,7 +1143,7 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
                             const isActiveSub=(isActive&&(activeSubRole||a.primaryRole)===r);
                             return(
                               <button key={r} onClick={()=>{onRoleChange(key);setActiveSubRole(r);setOpen(false);}}
-                                style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1.5px solid ${isActiveSub?rd.color:GB}`,background:isActiveSub?rd.color+"15":"#fff",cursor:"pointer",fontSize:13,fontWeight:isActiveSub?700:400,color:isActiveSub?rd.color:"var(--text)"}}>
+                                style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",borderRadius:20,border:`1.5px solid ${isActiveSub?rd.color:GB}`,background:isActiveSub?rd.color+"15":"#fff",cursor:"pointer",fontSize:13,fontWeight:isActiveSub?700:400,color:isActiveSub?rd.color:"var(--text)"}}>
                                 <span>{rd.icon}</span>{rd.label}
                                 {isActiveSub&&<span style={{fontSize:13,color:rd.color}}>✓</span>}
                               </button>
@@ -1369,7 +1369,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
         )}
         {!isMobile&&!onLogout&&<RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
         {!isMobile&&!onLogout&&<Chip text="DEMO" color="#999" bg="var(--surface2)"/>}
-        {!isMobile&&onLogout&&<button onClick={onLogout} style={{padding:"6px 14px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer",fontWeight:500,minHeight:36}}>Abmelden</button>}
+        {!isMobile&&onLogout&&<button onClick={onLogout} style={{padding:"8px 14px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer",fontWeight:500,minHeight:36}}>Abmelden</button>}
         {/* Profil-Avatar – nur Mobile */}
         {isMobile&&(
           <button onClick={onOpenProfile} style={{
@@ -3047,7 +3047,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                           value={positions[p.id]||""}
                           onChange={e=>{setPositions(prev=>({...prev,[p.id]:e.target.value}));setEditingPos(null);}}
                           onBlur={()=>setEditingPos(null)}
-                          style={{padding:"3px 6px",border:`1.5px solid ${R}`,borderRadius:6,fontSize:13,fontWeight:600,color:R,background:"var(--surface)",cursor:"pointer",outline:"none"}}>
+                          style={{padding:"4px 10px",border:`1.5px solid ${R}`,borderRadius:6,fontSize:13,fontWeight:600,color:R,background:"var(--surface)",cursor:"pointer",outline:"none"}}>
                           <option value="">- keine -</option>
                           {POSITION_GROUPS.map(g=>(
                             <optgroup key={g.label} label={g.label}>
@@ -3873,7 +3873,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                       <div style={{display:"flex",gap:5,flexShrink:0}}>
                         {!isAktiv&&(
                           <button onClick={function(){handlePlanAktivieren(p.id);}}
-                            style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                            style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
                             Aktivieren
                           </button>
                         )}
@@ -3907,7 +3907,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
             var isActive = trainingsTab===t.v;
             return(
               <button key={t.v} onClick={function(){setTrainungsTab(t.v);}}
-                style={{padding:"6px 14px",borderRadius:8,border:"none",background:isActive?"#fff":"transparent",color:isActive?BK:"#888",fontWeight:isActive?700:400,fontSize:13,cursor:"pointer",boxShadow:isActive?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>
+                style={{padding:"8px 14px",borderRadius:8,border:"none",background:isActive?"#fff":"transparent",color:isActive?BK:"#888",fontWeight:isActive?700:400,fontSize:13,cursor:"pointer",boxShadow:isActive?"0 1px 4px rgba(0,0,0,0.1)":"none"}}>
                 {t.l}
               </button>
             );
@@ -3945,7 +3945,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                   </div>
                   {canEdit&&(
                     <div style={{display:"flex",gap:6,flexShrink:0}}>
-                      {!isAktiv&&<button onClick={function(){handlePlanAktivieren(p.id);}} style={{padding:"6px 12px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>Aktivieren</button>}
+                      {!isAktiv&&<button onClick={function(){handlePlanAktivieren(p.id);}} style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>Aktivieren</button>}
                       <button onClick={function(){setEditPlan(p);setShowPlanEditor(true);}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n="edit"/></button>
                       <button onClick={function(){handlePlanDuplizieren(p);}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>≡</button>
                       {plaene.length>1&&!isAktiv&&<button onClick={function(){if(window.confirm("Plan loeschen?")){handlePlanLoeschen(p.id);}}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+R+"30",background:RL,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n="trash"/></button>}
@@ -3996,7 +3996,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
               Jetzt aktivieren
             </button>
             <button onClick={function(){setVorschauPlan(null);}}
-              style={{padding:"5px 10px",borderRadius:8,border:"0.5px solid #FDE68A",background:"var(--surface)",color:"#92400E",fontSize:13,cursor:"pointer"}}>
+              style={{padding:"8px 14px",borderRadius:8,border:"0.5px solid #FDE68A",background:"var(--surface)",color:"#92400E",fontSize:13,cursor:"pointer"}}>
               Schliessen
             </button>
           </div>
@@ -4043,7 +4043,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
               if(ansicht==="tag"){ setSelectedDay(function(d){return d===6?0:d+1;}); }
               else { setKwOffset(function(o){return o+1;}); }
             }} style={{width:28,height:28,borderRadius:"50%",border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14}}>&#8250;</button>
-            {kwOffset!==0 && <button onClick={function(){setKwOffset(0);setSelectedDay(0);}} style={{padding:"4px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>Heute</button>}
+            {kwOffset!==0 && <button onClick={function(){setKwOffset(0);setSelectedDay(0);}} style={{padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>Heute</button>}
           </div>
           {ansicht==="tag" && (
             <div style={{display:"flex",gap:4,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
@@ -4052,7 +4052,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                 const isSelected = selectedDay===i;
                 return(
                   <button key={i} onClick={function(){setSelectedDay(i);}}
-                    style={{padding:"3px 10px",borderRadius:20,border:"1.5px solid "+(isSelected?BK:isToday?"#6366F1":GB),background:isSelected?BK:isToday?"#EEF2FF":"#fff",color:isSelected?"#fff":isToday?"#4F46E5":"#555",fontSize:13,fontWeight:isSelected?700:400,cursor:"pointer",flexShrink:0}}>
+                    style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(isSelected?BK:isToday?"#6366F1":GB),background:isSelected?BK:isToday?"#EEF2FF":"#fff",color:isSelected?"#fff":isToday?"#4F46E5":"#555",fontSize:13,fontWeight:isSelected?700:400,cursor:"pointer",flexShrink:0}}>
                     {d}
                   </button>
                 );
@@ -4066,7 +4066,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
           )}
           {/* Team-Filter Dropdown */}
           <select value={teamFilter} onChange={function(e){setTeamFilter(e.target.value);}}
-            style={{padding:"5px 10px",borderRadius:8,border:"1px solid "+GB,background:"var(--surface)",fontSize:13,outline:"none",cursor:"pointer",maxWidth:180}}>
+            style={{padding:"8px 14px",borderRadius:8,border:"1px solid "+GB,background:"var(--surface)",fontSize:13,outline:"none",cursor:"pointer",maxWidth:180}}>
             <option value="alle">Alle Mannschaften</option>
             {alleTeams.map(function(t){
               return <option key={t} value={t}>{t}</option>;
@@ -4078,7 +4078,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
             {[{v:"woche",l:"Woche"},{v:"tag",l:"Tag"}].map(function(a){
               return(
                 <button key={a.v} onClick={function(){setAnsicht(a.v);}}
-                  style={{padding:"3px 12px",borderRadius:20,border:"none",background:ansicht===a.v?"#fff":"transparent",color:ansicht===a.v?BK:"#999",fontWeight:ansicht===a.v?600:400,fontSize:13,cursor:"pointer",boxShadow:ansicht===a.v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>
+                  style={{padding:"5px 12px",borderRadius:20,border:"none",background:ansicht===a.v?"#fff":"transparent",color:ansicht===a.v?BK:"#999",fontWeight:ansicht===a.v?600:400,fontSize:13,cursor:"pointer",boxShadow:ansicht===a.v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>
                   {a.l}
                 </button>
               );
@@ -4132,7 +4132,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                 const nr = await window.storage.get("trainer_benachrichtigungen");
                 if(nr){ const alle=JSON.parse(nr.value).map(function(n){return Object.assign({},n,{gelesen:true});}); await window.storage.set("trainer_benachrichtigungen",JSON.stringify(alle)); setTrainerNachrichten([]); }
               }catch(e){}
-            }} style={{fontSize:13,padding:"3px 10px",borderRadius:20,border:"1px solid #2563EB40",background:"var(--surface)",color:BL,cursor:"pointer"}}>Gelesen</button>
+            }} style={{fontSize:13,padding:"5px 12px",borderRadius:20,border:"1px solid #2563EB40",background:"var(--surface)",color:BL,cursor:"pointer"}}>Gelesen</button>
           </div>
         </div>
       )}
@@ -4178,8 +4178,8 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                 <div>
                   <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Welche Termine absagen?</div>
                   <div style={{display:"flex",gap:8,marginBottom:10}}>
-                    <button onClick={function(){setDeleteSlot(function(s){return Object.assign({},s,{selectedEvIds:new Set(s.zukunftigeEvents.map(function(e){return e.id;}))});});}} style={{fontSize:13,padding:"4px 10px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Alle</button>
-                    <button onClick={function(){setDeleteSlot(function(s){return Object.assign({},s,{selectedEvIds:new Set()});});}} style={{fontSize:13,padding:"4px 10px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Keine</button>
+                    <button onClick={function(){setDeleteSlot(function(s){return Object.assign({},s,{selectedEvIds:new Set(s.zukunftigeEvents.map(function(e){return e.id;}))});});}} style={{fontSize:13,padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Alle</button>
+                    <button onClick={function(){setDeleteSlot(function(s){return Object.assign({},s,{selectedEvIds:new Set()});});}} style={{fontSize:13,padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Keine</button>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:200,overflowY:"auto"}}>
                     {deleteSlot.zukunftigeEvents.map(function(e){
@@ -4202,10 +4202,10 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                 <div style={{padding:"12px",background:"var(--surface2)",borderRadius:8,fontSize:13,color:"var(--sub)"}}>Keine zukuenftigen Termine vorhanden.</div>
               )}
               <div style={{display:"flex",gap:8}}>
-                <button onClick={function(){handleSlotDeleteConfirm(deleteSlot,deleteSlot.selectedEvIds);}} style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:R,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                <button onClick={function(){handleSlotDeleteConfirm(deleteSlot,deleteSlot.selectedEvIds);}} style={{flex:1,padding:"8px 14px",borderRadius:10,border:"none",background:R,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
                   Training loeschen{deleteSlot.selectedEvIds.size>0?" & "+deleteSlot.selectedEvIds.size+" Termin"+(deleteSlot.selectedEvIds.size>1?"e":"")+" absagen":""}
                 </button>
-                <button onClick={function(){setShowDeleteDialog(false);setDeleteSlot(null);}} style={{padding:"11px 16px",borderRadius:10,border:"1px solid "+GB,background:"var(--surface)",fontSize:13,cursor:"pointer"}}>Abbrechen</button>
+                <button onClick={function(){setShowDeleteDialog(false);setDeleteSlot(null);}} style={{padding:"10px 18px",borderRadius:10,border:"1px solid "+GB,background:"var(--surface)",fontSize:13,cursor:"pointer"}}>Abbrechen</button>
               </div>
             </div>
           </div>
@@ -4394,12 +4394,12 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                           <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Seite</div>
                           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                             <button onClick={()=>setForm(f=>({...f,half:""}))}
-                              style={{padding:"4px 12px",borderRadius:20,border:`1.5px solid ${!form.half?BK:GB}`,background:!form.half?BK:"#fff",color:!form.half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                              style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${!form.half?BK:GB}`,background:!form.half?BK:"#fff",color:!form.half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
                               Ganzer Platz
                             </button>
                             {(TRAININGSPLAETZE.find(p=>p.name===form.location)?.halfn||[]).map(h=>(
                               <button key={h} onClick={()=>setForm(f=>({...f,half:h}))}
-                                style={{padding:"4px 12px",borderRadius:20,border:`1.5px solid ${form.half===h?BL:GB}`,background:form.half===h?BL:"#fff",color:form.half===h?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                                style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${form.half===h?BL:GB}`,background:form.half===h?BL:"#fff",color:form.half===h?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
                                 {h}
                               </button>
                             ))}
@@ -4450,12 +4450,12 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                             <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Seite</div>
                             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                               <button onClick={()=>setForm(f=>({...f,end_half:""}))}
-                                style={{padding:"4px 12px",borderRadius:20,border:`1.5px solid ${!form.end_half?BK:GB}`,background:!form.end_half?BK:"#fff",color:!form.end_half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                                style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${!form.end_half?BK:GB}`,background:!form.end_half?BK:"#fff",color:!form.end_half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
                                 Ganzer Platz
                               </button>
                               {(TRAININGSPLAETZE.find(p=>p.name===(form.end_ort||form.location))?.halfn||[]).map(h=>(
                                 <button key={h} onClick={()=>setForm(f=>({...f,end_half:h}))}
-                                  style={{padding:"4px 12px",borderRadius:20,border:`1.5px solid ${form.end_half===h?BL:GB}`,background:form.end_half===h?BL:"#fff",color:form.end_half===h?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                                  style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${form.end_half===h?BL:GB}`,background:form.end_half===h?BL:"#fff",color:form.end_half===h?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
                                   {h}
                                 </button>
                               ))}
@@ -4498,7 +4498,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                 <div style={{background:"#F8F8F6",borderRadius:10,padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
                   <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{isEdit?"Änderung übernehmen für:":"Training gilt:"}</div>
                   <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:true, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
-                    style={{padding:"10px",borderRadius:10,border:`1.5px solid ${BL}`,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
+                    style={{padding:"8px 14px",borderRadius:10,border:`1.5px solid ${BL}`,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
                     <div style={{fontWeight:700}}>Nur diese Woche</div>
                     <div style={{fontSize:13,fontWeight:400,color:"var(--sub)",marginTop:2}}>{isEdit?"Wird als Ausnahme gespeichert":"Einmaliger Zusatztermin"}</div>
                   </button>
@@ -4510,7 +4510,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                     </div>
                   </button>
                   <button onClick={()=>setShowSaveDialog(false)}
-                    style={{padding:"8px",borderRadius:10,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
+                    style={{padding:"8px 14px",borderRadius:10,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
                     Abbrechen
                   </button>
                 </div>
@@ -4530,7 +4530,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                     <TI n="bolt"/> Ausnahme diese Woche
                   </button>
                   <button onClick={onDelete}
-                    style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${R}`,background:RL,color:R,fontSize:13,cursor:"pointer"}}>
+                    style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${R}`,background:RL,color:R,fontSize:13,cursor:"pointer"}}>
                     Löschen
                   </button>
                 </div>
@@ -4549,7 +4549,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {[{v:"absage",l:"Absagen",icon:"✕"},{v:"verschiebung",l:"Verschieben",icon:"⏰"},{v:"location",l:"Ort ändern",icon:"map-pin"}].map(t=>(
                     <button key={t.v} onClick={()=>setAusnahmeTyp(t.v)}
-                      style={{flex:1,padding:"8px",borderRadius:8,border:`1.5px solid ${ausnahmeTyp===t.v?(t.v==="absage"?R:BL):GB}`,background:ausnahmeTyp===t.v?(t.v==="absage"?RL:"#EFF6FF"):"#fff",color:ausnahmeTyp===t.v?(t.v==="absage"?R:BL):"#555",fontSize:13,cursor:"pointer",minWidth:80}}>
+                      style={{flex:1,padding:"8px 14px",borderRadius:8,border:`1.5px solid ${ausnahmeTyp===t.v?(t.v==="absage"?R:BL):GB}`,background:ausnahmeTyp===t.v?(t.v==="absage"?RL:"#EFF6FF"):"#fff",color:ausnahmeTyp===t.v?(t.v==="absage"?R:BL):"#555",fontSize:13,cursor:"pointer",minWidth:80}}>
                       {t.icon} {t.l}
                     </button>
                   ))}
@@ -4621,11 +4621,11 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                   ...(ausnahmeTyp==="location"?{neuer_ort:verschiebungOrt}:{}),
                   begruendung:verschiebungGrund,
                 },fuerAlleWochen)}
-                  style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:ausnahmeTyp==="absage"?R:BK,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                  style={{flex:1,padding:"8px 14px",borderRadius:10,border:"none",background:ausnahmeTyp==="absage"?R:BK,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
                   {ausnahmeTyp==="absage"?"Absagen":ausnahmeTyp==="verschiebung"?"Verschieben":"Ort ändern"}
                 </button>
                 <button onClick={()=>setAusnahmeMode(false)}
-                  style={{padding:"11px 16px",borderRadius:10,border:"1px solid var(--border)",background:"var(--surface)",fontSize:13,cursor:"pointer"}}>
+                  style={{padding:"10px 18px",borderRadius:10,border:"1px solid var(--border)",background:"var(--surface)",fontSize:13,cursor:"pointer"}}>
                   Zurück
                 </button>
               </div>
@@ -4771,7 +4771,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
       {editMode&&onDelete&&<button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:"var(--sub)",fontSize:14,padding:"0 2px"}}>{"x"}</button>}
     </div>
   );
-  const AR=({children,onAdd})=>(<div style={{display:"flex",gap:5,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"3px 10px",borderRadius:6,fontSize:13,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
+  const AR=({children,onAdd})=>(<div style={{display:"flex",gap:5,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
   const SS=({value,onChange,options,placeholder,style={}})=>(<select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",...style}}><option value="">{placeholder||"-"}</option>{options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>);
   const MI=({value,onChange})=>(<input type="number" min="1" max="90" placeholder="Min" value={value} onChange={e=>onChange(e.target.value)} style={{width:46,padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none"}}/>);
 
@@ -5572,7 +5572,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{fontSize:13,color:BL,fontWeight:500}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                   <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
-                    style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"3px 12px",cursor:"pointer"}}>
+                    style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                     Zum Spielplan →
                   </button>
                 </div>
@@ -5622,7 +5622,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                       const active=resp.status===s;
                       return(
                         <button key={s} onClick={()=>setResp(selEv.id,myId,active?null:s)}
-                          style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${active?(s==="zu"?GN:R):GB}`,background:active?(s==="zu"?"#ECFDF5":RL):"#fff",color:active?(s==="zu"?GN:R):"#888",fontWeight:active?700:400,fontSize:13,cursor:"pointer"}}>
+                          style={{flex:1,padding:"8px 14px",borderRadius:10,border:`1.5px solid ${active?(s==="zu"?GN:R):GB}`,background:active?(s==="zu"?"#ECFDF5":RL):"#fff",color:active?(s==="zu"?GN:R):"#888",fontWeight:active?700:400,fontSize:13,cursor:"pointer"}}>
                           {s==="zu"?"✓ Zusagen":"✕ Absagen"}
                         </button>
                       );
@@ -5683,7 +5683,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               const label=t==="alle"?(isEltern?"Alle Kinder":"Alle Teams"):kind?`${kind.name.split(" ")[0]} · ${t}`:t;
               return(
                 <button key={t} onClick={()=>setSelectedTeam(t)}
-                  style={{padding:"4px 12px",borderRadius:20,border:`0.5px solid ${active?ACCENT:GB}`,background:active?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,fontWeight:active?700:400,cursor:"pointer"}}>
+                  style={{padding:"5px 12px",borderRadius:20,border:`0.5px solid ${active?ACCENT:GB}`,background:active?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,fontWeight:active?700:400,cursor:"pointer"}}>
                   {label}
                 </button>
               );
@@ -5786,13 +5786,13 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   <div style={{padding:"10px 12px",borderTop:"0.5px solid var(--border)"}} onClick={e=>e.stopPropagation()}>
                     <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:2}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
-                        style={{flex:1,padding:"9px 8px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                         <span style={{fontSize:14}}>▲</span>
                         <span>{isZu?"Zugesagt":"Zusagen"}</span>
                       </button>
                       <div style={{width:1,background:GB,flexShrink:0,margin:"4px 0"}}/>
                       <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
-                        style={{flex:1,padding:"9px 8px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                         <span style={{fontSize:14}}>▽</span>
                         <span>{isAb?"Abgesagt":"Absagen"}</span>
                       </button>
@@ -5809,7 +5809,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 {canCancel&&(
                   <div style={{borderTop:"0.5px solid var(--border)",display:"flex",justifyContent:"flex-end",padding:"8px 12px"}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>toggleCancel(ev.id)}
-                      style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${isCancelled?R:GB}`,background:isCancelled?RL:"transparent",color:isCancelled?R:"#bbb",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                      style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${isCancelled?R:GB}`,background:isCancelled?RL:"transparent",color:isCancelled?R:"#bbb",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                       {isCancelled?"↩ Rückgängig":"✕ Absagen"}
                     </button>
                   </div>
@@ -5857,7 +5857,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                     <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
                       {isTrainer&&!isPast(selEv)&&(selEv.type==="Training"||selEv.subtype==="Team-Event")&&(
                         <button onClick={()=>toggleCancel(selEv.id)}
-                          style={{display:"flex",alignItems:"center",gap:5,background:cancelledEvents[selEv.id]?hBtn:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"4px 12px",cursor:"pointer",color:hTxt,fontSize:13,fontWeight:700}}>
+                          style={{display:"flex",alignItems:"center",gap:5,background:cancelledEvents[selEv.id]?hBtn:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13,fontWeight:700}}>
                           {cancelledEvents[selEv.id]?"↩ Reaktivieren":"✕ Training absagen"}
                         </button>
                       )}
@@ -5890,7 +5890,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                             onBlur={e=>{const t=e.target.value;if(t){const curDate=(deadlines[selEv.id]||"").split(",")[0].trim();setDeadlines(prev=>({...prev,[selEv.id]:`${curDate}, ${t}`}));}}}
                             style={{background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.2)",borderRadius:6,padding:"3px 8px",color:hTxt,fontSize:13,outline:"none",colorScheme:"dark",width:80}}/>
                           <button onClick={()=>setEditingDeadline(false)}
-                            style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:20,padding:"3px 10px",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:600}}>✓</button>
+                            style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:20,padding:"5px 12px",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:600}}>✓</button>
                         </div>
                       ):(
                         <span onClick={()=>setEditingDeadline(true)}
@@ -5899,7 +5899,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                         </span>
                       )}
                       <button onClick={()=>setAutoReminder(prev=>({...prev,[selEv.id]:!prev[selEv.id]}))}
-                        style={{display:"flex",alignItems:"center",gap:5,background:hBtn,border:"0.5px solid rgba(0,0,0,0.1)",borderRadius:20,padding:"4px 10px",cursor:"pointer",color:hTxt,fontSize:13}}>
+                        style={{display:"flex",alignItems:"center",gap:5,background:hBtn,border:"0.5px solid rgba(0,0,0,0.1)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13}}>
                         <span style={{width:22,height:12,borderRadius:6,background:autoReminder[selEv.id]?(hLight?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.85)"):"rgba(0,0,0,0.15)",position:"relative",display:"inline-block",flexShrink:0}}>
                           <span style={{position:"absolute",top:2,left:autoReminder[selEv.id]?11:2,width:8,height:8,borderRadius:"50%",background:autoReminder[selEv.id]?GN:(hLight?"rgba(0,0,0,0.2)":"rgba(255,255,255,0.4)")}}/>
                         </span>
@@ -5910,7 +5910,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                       {autoReminder[selEv.id]&&(
                         <select value={reminderTimes[selEv.id]||"3h"}
                           onChange={e=>setReminderTimes(prev=>({...prev,[selEv.id]:e.target.value}))}
-                          style={{background:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"4px 10px",color:hTxt,fontSize:13,cursor:"pointer",outline:"none"}}>
+                          style={{background:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",color:hTxt,fontSize:13,cursor:"pointer",outline:"none"}}>
                           {REMINDER_OPTIONS.map(o=><option key={o.v} value={o.v} style={{color:"var(--text)",background:"var(--surface)"}}>{o.l}</option>)}
                         </select>
                       )}
@@ -5994,7 +5994,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <span style={{fontSize:13,color:BL,fontWeight:500}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                 <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
-                  style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"3px 12px",cursor:"pointer"}}>
+                  style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                   Zum Spielplan →
                 </button>
               </div>
@@ -6220,13 +6220,13 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                   <div style={{padding:"10px 12px",background:"var(--surface)"}} onClick={e=>e.stopPropagation()}>
                     <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:2}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
-                        style={{flex:1,padding:"9px 8px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                         <span style={{fontSize:14}}>▲</span>
                         <span>{isZu?"Zugesagt":"Zusagen"}</span>
                       </button>
                       <div style={{width:1,background:GB,flexShrink:0,margin:"4px 0"}}/>
                       <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
-                        style={{flex:1,padding:"9px 8px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                         <span style={{fontSize:14}}>▽</span>
                         <span>{isAb?"Abgesagt":"Absagen"}</span>
                       </button>
@@ -7546,7 +7546,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   Speichern
                 </button>
                 <button onClick={()=>{setModuleRechte(null);setZugriffStufen(null);setModuleDirty(false);try{localStorage.removeItem("cc-module-rechte");localStorage.removeItem("cc-zugriff-stufen");}catch{}setSaveMsg("Verworfen");setTimeout(()=>setSaveMsg(""),2000);}}
-                  style={{padding:"5px 14px",borderRadius:9,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                  style={{padding:"8px 14px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",color:"var(--sub)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                   Verwerfen
                 </button>
               </>
@@ -7953,7 +7953,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           <div style={{display:"flex",gap:2,flexShrink:0}}>
                             {STUFEN.map(s=>(
                               <button key={s} onClick={()=>setGruppeForm(p=>({...p,modul_stufen:{...p.modul_stufen,[m.key]:s}}))}
-                                style={{padding:"2px 7px",borderRadius:5,border:`1px solid ${stufe===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:stufe===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:stufe===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:10,fontWeight:stufe===s?700:400,cursor:"pointer",fontFamily:FONT}}>
+                                style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${stufe===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:stufe===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:stufe===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:10,fontWeight:stufe===s?700:400,cursor:"pointer",fontFamily:FONT}}>
                                 {ZUGRIFF_LABELS[s]}
                               </button>
                             ))}
@@ -8056,12 +8056,12 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                         {/* Override Buttons (nur höhere Stufen) */}
                         <div style={{display:"flex",gap:2}}>
                           <button onClick={()=>setFunktionForm(p=>{const ns={...p.stufe_override};delete ns[mk];return{...p,stufe_override:ns};})}
-                            style={{padding:"2px 6px",borderRadius:4,border:`1px solid ${!override?"#000":"var(--border)"}`,background:!override?"#00000010":"transparent",color:!override?"var(--text)":"var(--sub)",fontSize:9,cursor:"pointer",fontFamily:FONT}}>
+                            style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${!override?"#000":"var(--border)"}`,background:!override?"#00000010":"transparent",color:!override?"var(--text)":"var(--sub)",fontSize:9,cursor:"pointer",fontFamily:FONT}}>
                             Standard
                           </button>
                           {STUFEN.filter(s=>STUFE_RANG[s]>STUFE_RANG[gruppeStufe]).map(s=>(
                             <button key={s} onClick={()=>setFunktionForm(p=>({...p,stufe_override:{...p.stufe_override,[mk]:s}}))}
-                              style={{padding:"2px 7px",borderRadius:4,border:`1px solid ${override===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:override===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:override===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:10,fontWeight:override===s?700:400,cursor:"pointer",fontFamily:FONT}}>
+                              style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${override===s?ZUGRIFF_COLORS[s]:"var(--border)"}`,background:override===s?ZUGRIFF_COLORS[s]+"20":"transparent",color:override===s?ZUGRIFF_COLORS[s]:"var(--sub)",fontSize:10,fontWeight:override===s?700:400,cursor:"pointer",fontFamily:FONT}}>
                               {ZUGRIFF_LABELS[s]}
                             </button>
                           ))}
@@ -8166,7 +8166,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:12}}>{b.email}</td>
                     <td style={{padding:"9px 13px"}}>
                       <select value={b.role||"spieler"} onChange={e=>updateBenutzerRolle(b.id,e.target.value)}
-                        style={{padding:"5px 8px",border:"1px solid var(--border)",borderRadius:7,fontSize:12,background:"var(--surface)",color:ROLES[b.role]?.color||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
+                        style={{padding:"8px 14px",border:"1px solid var(--border)",borderRadius:8,fontSize:12,background:"var(--surface)",color:ROLES[b.role]?.color||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
                         {ROLLEN.map(r=><option key={r} value={r}>{ROLLEN_LABELS[r]}</option>)}
                       </select>
                     </td>
@@ -8880,7 +8880,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
                   style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:anfrageBegruendung.trim()?"pointer":"default",border:"none",background:anfrageBegruendung.trim()?AM:"#ccc",color:"#fff"}}>
                   Anfrage senden
                 </button>
-                <button onClick={()=>{setShowAnfrageForm(false);setAnfrageBegruendung("");}} style={{padding:"4px 11px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
+                <button onClick={()=>{setShowAnfrageForm(false);setAnfrageBegruendung("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
             </div>
           )}
@@ -8928,7 +8928,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
               })()}
               <div style={{display:"flex",gap:5}}>
                 <button onClick={handleÜbertragen} disabled={!transferTarget} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:transferTarget?"pointer":"default",border:"none",background:transferTarget?"#0891B2":"#ccc",color:"#fff"}}>Übertragen</button>
-                <button onClick={()=>{setShowTransfer(false);setTransferTarget("");}} style={{padding:"4px 11px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
+                <button onClick={()=>{setShowTransfer(false);setTransferTarget("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
             </div>
           )}
@@ -8989,7 +8989,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
               })()}
               <div style={{display:"flex",gap:5}}>
                 <button onClick={handleZuteilen} disabled={!zuteilTarget} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:zuteilTarget?"pointer":"default",border:"none",background:zuteilTarget?GN:"#ccc",color:"#fff"}}>Zuteilen</button>
-                <button onClick={()=>{setShowZuteilen(false);setZuteilTarget("");setZuteilSearch("");}} style={{padding:"4px 11px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
+                <button onClick={()=>{setShowZuteilen(false);setZuteilTarget("");setZuteilSearch("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
             </div>
           )}
@@ -9008,7 +9008,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
               <div style={{fontSize:13,color:AM,fontWeight:700,marginBottom:2}}>Freigabe-Anfrage von {anfrageData?.name}</div>
               <div style={{fontSize:13,color:"var(--sub)"}}>Begründung: <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em></div>
             </div>
-            <button onClick={()=>onFreigeben(schicht.id,null)} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:700,cursor:"pointer",border:"none",background:AM,color:"#fff",flexShrink:0}}>Freigeben ✓</button>
+            <button onClick={()=>onFreigeben(schicht.id,null)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:700,cursor:"pointer",border:"none",background:AM,color:"#fff",flexShrink:0}}>Freigeben ✓</button>
           </div>
         </div>
       )}
@@ -9016,7 +9016,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
       {canFreigeben&&!ichDrin&&helfer.length>0&&(
         <div style={{marginTop:6,display:"flex",gap:4,flexWrap:"wrap"}}>
           {helfer.map((h,i)=>(
-            <button key={i} onClick={()=>onFreigeben(schicht.id,h)} style={{padding:"2px 8px",borderRadius:6,fontSize:13,cursor:"pointer",border:`0.5px solid ${R}`,background:"var(--surface)",color:R}}>
+            <button key={i} onClick={()=>onFreigeben(schicht.id,h)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:`0.5px solid ${R}`,background:"var(--surface)",color:R}}>
               {h} ✕
             </button>
           ))}
@@ -9094,10 +9094,10 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
         <div>
           {!showAnfrageForm&&!showTransfer&&(
             <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setShowTransfer(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"var(--surface)",color:"#0891B2"}}>
+              <button onClick={()=>setShowTransfer(true)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"var(--surface)",color:"#0891B2"}}>
                 ⇄ Übertragen
               </button>
-              <button onClick={()=>setShowAnfrageForm(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid ${AM}`,background:"var(--surface)",color:AM}}>
+              <button onClick={()=>setShowAnfrageForm(true)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid ${AM}`,background:"var(--surface)",color:AM}}>
                 ↩ Freigabe anfragen
               </button>
             </div>
@@ -9118,7 +9118,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
                 <button onClick={handleSenden} disabled={!begruendung.trim()} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:begruendung.trim()?"pointer":"default",border:"none",background:begruendung.trim()?AM:"#ccc",color:"#fff"}}>
                   Anfrage senden
                 </button>
-                <button onClick={()=>{setShowAnfrageForm(false);setBegruendung("");}} style={{padding:"4px 11px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
+                <button onClick={()=>{setShowAnfrageForm(false);setBegruendung("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
             </div>
           )}
@@ -9135,7 +9135,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
               </select>
               <div style={{display:"flex",gap:5}}>
                 <button onClick={handleÜbertragen} disabled={!transferTarget} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:transferTarget?"pointer":"default",border:"none",background:transferTarget?"#0891B2":"#ccc",color:"#fff"}}>Übertragen</button>
-                <button onClick={()=>{setShowTransfer(false);setTransferTarget("");}} style={{padding:"4px 11px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
+                <button onClick={()=>{setShowTransfer(false);setTransferTarget("");}} style={{padding:"4px 10px",borderRadius:6,fontSize:13,cursor:"pointer",border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)"}}>Abbrechen</button>
               </div>
             </div>
           )}
@@ -9359,7 +9359,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* Sub-Tabs */}
       <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,width:"fit-content"}}>
         {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setHelperTab(t.key)} style={{padding:"7px 14px",border:"none",borderRadius:8,background:helperTab===t.key?"#fff":"transparent",color:helperTab===t.key?BK:"#999",fontWeight:helperTab===t.key?700:400,cursor:"pointer",fontSize:13,boxShadow:helperTab===t.key?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>{t.label}</button>
+          <button key={t.key} onClick={()=>setHelperTab(t.key)} style={{padding:"8px 14px",border:"none",borderRadius:8,background:helperTab===t.key?"#fff":"transparent",color:helperTab===t.key?BK:"#999",fontWeight:helperTab===t.key?700:400,cursor:"pointer",fontSize:13,boxShadow:helperTab===t.key?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>{t.label}</button>
         ))}
       </div>
 
@@ -9399,7 +9399,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             <div style={{width:"1px",height:22,background:GB}}/>
             {/* Event-Filter als Dropdown */}
             <select value={selectedEvent||""} onChange={e=>setSelectedEvent(e.target.value?Number(e.target.value):null)}
-              style={{padding:"5px 10px",border:`0.5px solid ${selectedEvent?ACCENT:GB}`,borderRadius:20,fontSize:13,color:"var(--text)",background:selectedEvent?"var(--cc-hover)":"#fff",cursor:"pointer",outline:"none",fontWeight:selectedEvent?700:400}}>
+              style={{padding:"5px 12px",border:`0.5px solid ${selectedEvent?ACCENT:GB}`,borderRadius:20,fontSize:13,color:"var(--text)",background:selectedEvent?"var(--cc-hover)":"#fff",cursor:"pointer",outline:"none",fontWeight:selectedEvent?700:400}}>
               <option value="">Alle Events</option>
               {HELPER_EVENTS.map(ev=>(
                 <option key={ev.id} value={ev.id}>{ev.name}</option>
@@ -9514,18 +9514,18 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                     const cur=gruppenState[einsatz.id]||einsatz.gruppen;
                                     const checked=cur.includes(g);
                                     return(
-                                      <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:13,padding:"2px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                                      <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:13,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
                                         <input type="checkbox" checked={checked} onChange={()=>setGruppenState(prev=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter(x=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
                                         {g}
                                       </label>
                                     );
                                   })}
-                                  <button onClick={e=>{e.stopPropagation();setEditingGruppen(null);}} style={{padding:"2px 8px",borderRadius:20,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓ Fertig</button>
+                                  <button onClick={e=>{e.stopPropagation();setEditingGruppen(null);}} style={{padding:"5px 12px",borderRadius:20,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓ Fertig</button>
                                 </div>
                               ):(
                                 <>
                                   {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280" bg="#F3F4F6"/>)}
-                                  {canEdit&&<button onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}} style={{padding:"2px 8px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>}
+                                  {canEdit&&<button onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}} style={{padding:"5px 12px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>}
                                 </>
                               )}
                               {/* Bemerkung Edit */}
@@ -9534,12 +9534,12 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                   <input autoFocus value={bemerkungDraft} onChange={e=>setBemerkungDraft(e.target.value)}
                                     placeholder="Bemerkung…"
                                     style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:160}}/>
-                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"2px 8px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓</button>
-                                  <button onClick={()=>setEditingBemerkung(null)} style={{padding:"2px 8px",borderRadius:6,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}>✕</button>
+                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓</button>
+                                  <button onClick={()=>setEditingBemerkung(null)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}>✕</button>
                                 </div>
                               ):(
                                 <button onClick={e=>{e.stopPropagation();setEditingBemerkung(`e${einsatz.id}`);setBemerkungDraft(bemerkungState[`e${einsatz.id}`]||"");}}
-                                  style={{padding:"2px 8px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>
+                                  style={{padding:"5px 12px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>
                               ))}
                               {(()=>{
                                 const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
@@ -9578,7 +9578,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             })&&(
               <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)"}}>
                 Keine Einsätze oder Schichten gefunden für <strong style={{color:"var(--text)"}}>„{browseSearch}"</strong>
-                <br/><button onClick={()=>setBrowseSearch("")} style={{marginTop:10,padding:"5px 14px",borderRadius:20,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>Suche zurücksetzen</button>
+                <br/><button onClick={()=>setBrowseSearch("")} style={{marginTop:10,padding:"5px 12px",borderRadius:20,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>Suche zurücksetzen</button>
               </div>
             )}
           </div>
@@ -10669,7 +10669,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             <div style={{display:"flex",gap:4,marginBottom:4}}>
               {["info","module"].map(t=>(
                 <button key={t} onClick={()=>setFormTab(t)} style={{
-                  padding:"5px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:FONT,
+                  padding:"8px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:FONT,
                   fontSize:12,fontWeight:600,
                   background:formTab===t?"var(--text)":"var(--surface2)",
                   color:formTab===t?"var(--surface)":"var(--sub)"
@@ -10883,7 +10883,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           </div>
           <div style={{display:"flex",gap:10}}>
             <button onClick={()=>handleDelete(deleteConfirm)} disabled={saving}
-              style={{flex:1,padding:"11px",borderRadius:10,background:R,color:"#fff",border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT,opacity:saving?0.6:1}}>
+              style={{flex:1,padding:"8px 14px",borderRadius:10,background:R,color:"#fff",border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT,opacity:saving?0.6:1}}>
               {saving?"Löschen…":"Ja, löschen"}
             </button>
             <Btn onClick={()=>setDeleteConfirm(null)}>Abbrechen</Btn>
@@ -11202,7 +11202,7 @@ function PlaetzeView(){
               onMouseLeave={e=>e.currentTarget.style.background=BTN}
                       style={{flex:1,padding:"10px 18px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>Speichern</button>
                     <button onClick={function(){setEditId(null);setEditName("");setEditHaelften("");}}
-                      style={{padding:"7px 12px",borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",fontSize:13,cursor:"pointer"}}>Abbrechen</button>
+                      style={{padding:"8px 14px",borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",fontSize:13,cursor:"pointer"}}>Abbrechen</button>
                   </div>
                 </div>
               ) : (
@@ -11256,7 +11256,7 @@ function PlaetzeView(){
                     )}
                   </div>
                   <button onClick={function(){handleToggle(p.id);}} title="Aktivieren"
-                    style={{padding:"4px 10px",borderRadius:20,border:"0.5px solid "+GN,background:"var(--surface)",color:GN,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                    style={{padding:"5px 12px",borderRadius:20,border:"0.5px solid "+GN,background:"var(--surface)",color:GN,fontSize:13,fontWeight:600,cursor:"pointer"}}>
                     Aktivieren
                   </button>
                   <button onClick={function(){handleDelete(p.id);}} title="Löschen"
@@ -11289,7 +11289,7 @@ function PlaetzeView(){
               Hinzufügen
             </button>
             <button onClick={function(){setShowAdd(false);setNewName("");setNewHaelften("");}}
-              style={{padding:"9px 14px",borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",fontSize:13,cursor:"pointer"}}>
+              style={{padding:"8px 14px",borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",fontSize:13,cursor:"pointer"}}>
               Abbrechen
             </button>
           </div>
@@ -11857,7 +11857,7 @@ function LoginScreen({onLogin, sb, appTheme}){
                   </div>
                   {error&&<div style={{fontSize:13,color:"#DC2626",background:"#FEF2F2",padding:"8px 12px",borderRadius:8,marginBottom:14}}>{error}</div>}
                   <button type="submit" disabled={loading}
-                    style={{width:"100%",padding:"11px",borderRadius:8,border:"none",background:ACCENT,color:"var(--text)",fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                    style={{width:"100%",padding:"8px 14px",borderRadius:8,border:"none",background:ACCENT,color:"var(--text)",fontWeight:700,fontSize:14,cursor:"pointer"}}>
                     {loading?"Wird gesendet…":"Link senden"}
                   </button>
                 </form>
@@ -12135,7 +12135,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
         <div style={{padding:"8px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:5,overflowX:"auto",scrollbarWidth:"none",flexShrink:0}}>
           {[null,"broadcast","diskussion","trainer","eltern"].map(f=>(
             <button key={f||"alle"} onClick={()=>setFilter(filter===f?null:f)}
-              style={{padding:"4px 10px",fontSize:11,borderRadius:20,border:`0.5px solid ${filter===f?"transparent":"var(--border)"}`,background:filter===f?ACCENT:"transparent",color:filter===f?ACCENT2:"var(--sub)",cursor:"pointer",fontFamily:FONT,whiteSpace:"nowrap"}}>
+              style={{padding:"5px 12px",fontSize:11,borderRadius:20,border:`0.5px solid ${filter===f?"transparent":"var(--border)"}`,background:filter===f?ACCENT:"transparent",color:filter===f?ACCENT2:"var(--sub)",cursor:"pointer",fontFamily:FONT,whiteSpace:"nowrap"}}>
               {f===null?"Alle":f==="broadcast"?"Broadcast":f==="diskussion"?"Diskussion":f==="trainer"?"Trainer":"Eltern"}
             </button>
           ))}
@@ -12191,7 +12191,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             <div style={{display:"flex",gap:8}}>
               {["broadcast","diskussion"].map(t=>(
                 <button key={t} onClick={()=>setNeuForm(f=>({...f,typ:t}))}
-                  style={{flex:1,padding:"8px",borderRadius:9,border:`1.5px solid ${neuForm.typ===t?BTN:"var(--border)"}`,background:neuForm.typ===t?BTN+"15":"transparent",color:"var(--text)",cursor:"pointer",fontSize:13,fontFamily:FONT,fontWeight:neuForm.typ===t?600:400}}>
+                  style={{flex:1,padding:"8px 14px",borderRadius:8,border:`1.5px solid ${neuForm.typ===t?BTN:"var(--border)"}`,background:neuForm.typ===t?BTN+"15":"transparent",color:"var(--text)",cursor:"pointer",fontSize:13,fontFamily:FONT,fontWeight:neuForm.typ===t?600:400}}>
                   {t==="broadcast"?"📢 Broadcast":"💬 Diskussion"}
                 </button>
               ))}
@@ -12203,7 +12203,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
               {["rolle","gruppe","team"].map(t=>(
                 <button key={t} onClick={()=>setNeuForm(f=>({...f,empfaenger_typ:t}))}
-                  style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${neuForm.empfaenger_typ===t?BTN:"var(--border)"}`,background:neuForm.empfaenger_typ===t?BTN+"15":"transparent",color:"var(--text)",cursor:"pointer",fontSize:12,fontFamily:FONT}}>
+                  style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${neuForm.empfaenger_typ===t?BTN:"var(--border)"}`,background:neuForm.empfaenger_typ===t?BTN+"15":"transparent",color:"var(--text)",cursor:"pointer",fontSize:12,fontFamily:FONT}}>
                   {t==="rolle"?"Nach Rolle":t==="gruppe"?"Nach Gruppe":"Team"}
                 </button>
               ))}
