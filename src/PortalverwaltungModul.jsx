@@ -237,7 +237,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
   );
 }
 
-function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme}){
+function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId}){
   const [tab,setTab]=useState(initialTab);
   const [module,setModule]=useState([]);
   const [moduleConfig,setModuleConfig]=useState({});
@@ -306,9 +306,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       try{localStorage.setItem("cc-theme",JSON.stringify(themeToSave));}catch{}
       /* Supabase → vereine.theme */
       if(supabase){
-        supabase.from("vereine")
-          .update({theme:themeToSave})
-          .then(({error:e})=>{
+        const q = vereinId
+          ? supabase.from("vereine").update({theme:themeToSave}).eq("id",vereinId)
+          : supabase.from("vereine").update({theme:themeToSave});
+        q.then(({error:e})=>{
             if(e) setSaveMsg("Fehler: "+e.message);
             else setSaveMsg("Theme gespeichert ✓");
             setTimeout(()=>setSaveMsg(""),2500);
@@ -1612,7 +1613,18 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             <Btn variant="primary" onClick={saveTheme} style={{padding:"9px 24px",fontSize:13,fontWeight:700}}>
               Speichern & anwenden
             </Btn>
-            <Btn onClick={()=>{setAppTheme(THEME_DEFAULT_STATIC);setThemeDirty(false);if(supabase){supabase.from("vereine").update({theme:THEME_DEFAULT_STATIC}).then(({error:e})=>{setSaveMsg(e?"Fehler: "+e.message:"Standard gespeichert ✓");setTimeout(()=>setSaveMsg(""),2500);});}}}>
+            <Btn onClick={()=>{
+              setAppTheme(THEME_DEFAULT_STATIC);
+              setThemeDirty(false);
+              if(applyTheme) applyTheme(THEME_DEFAULT_STATIC);
+              try{localStorage.setItem("cc-theme",JSON.stringify(THEME_DEFAULT_STATIC));}catch{}
+              if(supabase){
+                const q=vereinId
+                  ?supabase.from("vereine").update({theme:THEME_DEFAULT_STATIC}).eq("id",vereinId)
+                  :supabase.from("vereine").update({theme:THEME_DEFAULT_STATIC});
+                q.then(({error:e})=>{setSaveMsg(e?"Fehler: "+e.message:"Standard gespeichert ✓");setTimeout(()=>setSaveMsg(""),2500);});
+              }
+            }}>
               Standard wiederherstellen
             </Btn>
           </div>
