@@ -1186,7 +1186,11 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
             }}>
               {(mehrActive||showMehr)&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:"var(--nav-a)"}}/>}
               <div style={{width:38,height:38,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}>
-                <TI n="menu-2" size={19} style={{color:mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}}/>
+                <svg width="19" height="19" viewBox="0 0 19 19" fill="none">
+                  <circle cx="4" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
+                  <circle cx="9.5" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
+                  <circle cx="15" cy="9.5" r="1.8" fill={mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)"}/>
+                </svg>
               </div>
               <span style={{fontSize:10,color:mehrActive||showMehr?"var(--nav-a)":"var(--nav-t)",fontWeight:mehrActive||showMehr?600:400}}>Mehr</span>
             </button>
