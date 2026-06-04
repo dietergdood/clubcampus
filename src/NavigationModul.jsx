@@ -401,7 +401,19 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
       {/* Nav items */}
       <div style={{flex:1,padding:"10px 8px",overflowY:"auto",overflowX:"hidden"}}>
         {nav.map(n=>(
-          <Btn onClick={()=>setActive(n.key)}><TI n={n.icon||"circle"} size={collapsed?18:15} style={{flexShrink:0,opacity:active===n.key?1:0.65}}/> {!collapsed&&n.label}</Btn>
+          <button key={n.key} onClick={()=>setActive(n.key)} title={collapsed?n.label:undefined} style={{
+            width:"100%",display:"flex",alignItems:"center",gap:collapsed?0:11,
+            padding:collapsed?"10px 0":"10px 12px",borderRadius:9,border:"none",
+            background:active===n.key?"var(--nav-a)":"transparent",
+            color:active===n.key?"var(--nav-accent-text)":"var(--nav-t)",
+            cursor:"pointer",fontSize:13.5,fontWeight:active===n.key?600:400,
+            textAlign:"left",marginBottom:2,letterSpacing:0.1,
+            transition:"background 0.15s",fontFamily:"inherit",
+            justifyContent:collapsed?"center":"flex-start",
+          }}>
+            <TI n={n.icon||"circle"} size={collapsed?18:15} style={{flexShrink:0,opacity:active===n.key?1:0.65}}/>
+            {!collapsed&&<span>{n.label}</span>}
+          </button>
         ))}
       </div>
 
