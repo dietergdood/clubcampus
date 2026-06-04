@@ -302,6 +302,13 @@ function hexToRgba(hex,alpha){
   const b=parseInt(h.slice(4,6),16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
+function darkenHex(hex,pct=0.12){
+  const h=(hex||"#FFBF00").replace("#","");
+  const r=Math.max(0,Math.round(parseInt(h.slice(0,2),16)*(1-pct)));
+  const g=Math.max(0,Math.round(parseInt(h.slice(2,4),16)*(1-pct)));
+  const b=Math.max(0,Math.round(parseInt(h.slice(4,6),16)*(1-pct)));
+  return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
 
 const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FFBF00", vereinsfarbe2:"#000000",
@@ -6939,7 +6946,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       r.setProperty("--nav-hover",    td.navHover||"#1A1A1A");
       r.setProperty("--btn-primary",  td.btnPrimary||"#FFBF00");
       r.setProperty("--btn-primary-text",td.btnPrimaryText||"#000000");
-      r.setProperty("--btn-hover",    td.btnHover||"#E6AC00");
+      r.setProperty("--btn-hover",    td.btnHover||darkenHex(td.btnPrimary||"#FFBF00"));
       /* React State + localStorage */
       const themeToSave={...td};
       setAppTheme(themeToSave);
@@ -8173,7 +8180,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               {key:"navAccent",     label:"Menü Aktiv-Farbe",          hint:"Farbe des aktiven Menüpunkts"},
               {key:"btnPrimary",    label:"Primary Button",            hint:"Hintergrundfarbe für Haupt-Buttons"},
               {key:"btnPrimaryText",label:"Primary Button Text",       hint:"Textfarbe für Haupt-Buttons"},
-              {key:"btnHover",      label:"Button Hover",              hint:"Hintergrundfarbe beim Überfahren mit der Maus"},
+
               {key:"navHover",      label:"Menü Hover",                hint:"Farbe beim Überfahren eines Menüpunkts"},
             ].map((item,i)=>(
               <div key={item.key} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",borderTop:i>0?"0.5px solid var(--border)":"none"}}>
@@ -11948,7 +11955,7 @@ export default function Portal({supabaseClient}){
     const acc2=t.vereinsfarbe2||"#000000";
     const btn=t.btnPrimary||"#FFBF00";
     const btnT=t.btnPrimaryText||"#000000";
-    const btnHov=t.btnHover||"#E6AC00";
+    const btnHov=t.btnHover||darkenHex(t.btnPrimary||"#FFBF00");
     s.textContent=`:root,[data-theme],[data-theme=dark],[data-theme=light]{
       --cc-accent:${acc}!important;
       --cc-accent2:${acc2}!important;
