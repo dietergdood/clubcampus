@@ -2088,4 +2088,4 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
   );
 }
 
-export { SlotModal, SpielDetail, TermineModul, SpielplanModul };
+export { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab };

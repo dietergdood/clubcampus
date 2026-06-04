@@ -5,7 +5,7 @@ import { ROSTER, USER_ACCOUNTS, SCHEDULE, TABLES, ATT_EVENTS, ATT_INITIAL, ATT_L
 import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip } from "./theme.jsx";
 import NachrichtenModul from "./NachrichtenModul.jsx";
 import { TeamModuleMatrix, PortalverwaltungView } from "./PortalverwaltungModul.jsx";
-import { SlotModal, SpielDetail, TermineModul, SpielplanModul } from "./TermineModul.jsx";
+import { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab } from "./TermineModul.jsx";
 import HelferModul from "./HelferModul.jsx";
 import { TrainingsplanModul, PlaetzeView } from "./TrainingsplanModul.jsx";
 
