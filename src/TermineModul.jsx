@@ -34,9 +34,6 @@ const NR_CACHE={data:Object.fromEntries(ROSTER.map(p=>[p.id,p.rueckennr||""]))};
 
 function getNr(id){return NR_CACHE.data[id]||"";}
 
-function getVereinsnameStatic(){
-  try{const t=localStorage.getItem("cc-theme");return t?(JSON.parse(t).vereinsname||"ClubCampus"):"ClubCampus";}catch{return "ClubCampus";}
-}
 /* Hex → rgba() für Hover-Farben */
 
 function kannTerminAbsagen(role, typ, team, meineTeams=[]){
