@@ -12038,7 +12038,7 @@ export default function Portal({supabaseClient}){
   }
 
   async function handleLogout(){
-    if(supabase) await sb.auth.signOut();
+    if(sb) await sb.auth.signOut();
     setSession(null); setDbUser(null); setActive("dashboard");
   }
 
