@@ -1891,13 +1891,21 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 </Card>
               </div>
             );
-            const Row2=({label,children,code})=>(
-              <div style={{display:"flex",alignItems:"center",gap:16,padding:"10px 0",borderBottom:"0.5px solid var(--border)"}}>
-                <div style={{width:200,flexShrink:0}}>
-                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{label}</div>
-                  {code&&<code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 6px",borderRadius:4}}>{code}</code>}
+            const Row2=({label,children,code,usage})=>(
+              <div style={{display:"flex",alignItems:"flex-start",gap:16,padding:"12px 0",borderBottom:"0.5px solid var(--border)"}}>
+                <div style={{width:220,flexShrink:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:3}}>{label}</div>
+                  {code&&<code style={{fontSize:11,color:"#7C3AED",background:"#F5F3FF",padding:"2px 6px",borderRadius:4,display:"block",marginBottom:4}}>{code}</code>}
+                  {usage&&usage.length>0&&usage[0]!=="—"&&(
+                    <div style={{display:"flex",flexWrap:"wrap",gap:3,marginTop:2}}>
+                      {usage.map(u=>(
+                        <span key={u} style={{fontSize:10,padding:"1px 6px",borderRadius:4,background:"var(--surface2)",color:"var(--sub)",border:"0.5px solid var(--border)"}}>{u}</span>
+                      ))}
+                    </div>
+                  )}
+                  {usage&&usage[0]==="—"&&<span style={{fontSize:11,color:"var(--border)"}}>noch nicht verwendet</span>}
                 </div>
-                <div style={{flex:1}}>{children}</div>
+                <div style={{flex:1,paddingTop:2}}>{children}</div>
               </div>
             );
             return(
@@ -1913,31 +1921,31 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <Row2 label="Standard-Button" code="<Btn>">
                     <Btn>Standard</Btn>
                   </Row2>
-                  <Row2 label="Icon-Button" code=".cc-icon-btn">
+                  <Row2 label="Icon-Button" code=".cc-icon-btn" usage={["Nachrichten","TeamsVerwaltung","Portalverwaltung"]}>
                     <div style={{display:"flex",gap:8}}>
                       <button className="cc-icon-btn"><TI n="edit" size={14}/></button>
                       <button className="cc-icon-btn"><TI n="trash" size={14}/></button>
                       <button className="cc-icon-btn"><TI n="dots-vertical" size={14}/></button>
                     </div>
                   </Row2>
-                  <Row2 label="Flex Center" code=".cc-flex-center">
+                  <Row2 label="Flex Center" code=".cc-flex-center" usage={["—"]}>
                     <div className="cc-flex-center" style={{width:80,height:40,border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface2)"}}>
                       <TI n="check" size={16} style={{color:GN}}/>
                     </div>
                   </Row2>
-                  <Row2 label="Truncate" code=".cc-truncate">
+                  <Row2 label="Truncate" code=".cc-truncate" usage={["—"]}>
                     <div className="cc-truncate" style={{maxWidth:200,fontSize:13,color:"var(--text)"}}>Sehr langer Text der abgeschnitten wird wenn er zu lang ist</div>
                   </Row2>
-                  <Row2 label="Divider" code=".cc-divider">
+                  <Row2 label="Divider" code=".cc-divider" usage={["Nachrichten","Portalverwaltung"]}>
                     <div style={{width:200}}><div className="cc-divider"/></div>
                   </Row2>
-                  <Row2 label="Shimmer / Skeleton" code=".cc-shimmer">
+                  <Row2 label="Shimmer / Skeleton" code=".cc-shimmer" usage={["TeamsVerwaltung","clubcampus"]}>
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                       <div className="cc-shimmer" style={{height:12,width:140,borderRadius:6}}/>
                       <div className="cc-shimmer" style={{height:12,width:100,borderRadius:6}}/>
                     </div>
                   </Row2>
-                  <Row2 label="Button-Group" code=".cc-btn-group">
+                  <Row2 label="Button-Group" code=".cc-btn-group" usage={["TeamsVerwaltung","Portalverwaltung"]}>
                     <div className="cc-btn-group">
                       <button className="cc-btn-group-item cc-btn-group-active"><TI n="layout-grid" size={14}/></button>
                       <button className="cc-btn-group-item"><TI n="layout-list" size={14}/></button>
@@ -1949,14 +1957,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
                 {/* Navigation */}
                 <Section title="Navigation & Tabs" desc="Segment-Controls und Filter">
-                  <Row2 label="Segment-Tabs" code=".cc-seg / .cc-seg-item">
+                  <Row2 label="Segment-Tabs" code=".cc-seg / .cc-seg-item" usage={["Nachrichten","Portalverwaltung"]}>
                     <div className="cc-seg" style={{maxWidth:300}}>
                       <button className="cc-seg-item cc-seg-active">Alle</button>
                       <button className="cc-seg-item">Ungelesen</button>
                       <button className="cc-seg-item">Gesendet</button>
                     </div>
                   </Row2>
-                  <Row2 label="Filter-Chips" code=".cc-chip-toggle / .cc-chip-active">
+                  <Row2 label="Filter-Chips" code=".cc-chip-toggle / .cc-chip-active" usage={["Nachrichten","Portalverwaltung"]}>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                       <button className="cc-chip-toggle cc-chip-active">Alle</button>
                       <button className="cc-chip-toggle">Broadcast</button>
@@ -1978,7 +1986,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       <Chip text="Fehler" color={R} bg={RL}/>
                     </div>
                   </Row2>
-                  <Row2 label="Ungelesen-Dot" code=".cc-unread-dot">
+                  <Row2 label="Ungelesen-Dot" code=".cc-unread-dot" usage={["Nachrichten"]}>
                     <div style={{position:"relative",display:"inline-block"}}>
                       <div style={{width:34,height:34,borderRadius:10,background:"#E1F5EE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#085041"}}>DG</div>
                       <div className="cc-unread-dot" style={{background:BL}}/>
@@ -1988,7 +1996,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
                 {/* Karten */}
                 <Section title="Karten & Layout" desc="Container-Komponenten">
-                  <Row2 label="Card" code="<Card>">
+                  <Row2 label="Card" code="<Card>" usage={["Mitglieder","TeamsVerwaltung","clubcampus"]}>
                     <Card style={{padding:"12px 16px",maxWidth:200}}>
                       <div style={{fontSize:13,fontWeight:600}}>Karten-Inhalt</div>
                       <div style={{fontSize:12,color:"var(--sub)"}}>Beschreibung</div>
@@ -2007,7 +2015,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
                 {/* Formulare */}
                 <Section title="Formulare & Eingaben" desc="Input-Felder und Selects">
-                  <Row2 label="Input" code=".cc-input">
+                  <Row2 label="Input" code=".cc-input" usage={["Nachrichten","Portalverwaltung"]}>
                     <input className="cc-input" placeholder="Beispiel-Eingabe…" style={{maxWidth:280}}/>
                   </Row2>
                   <Row2 label="Textarea" code=".cc-input">
