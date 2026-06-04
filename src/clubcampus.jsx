@@ -6698,6 +6698,8 @@ function AuditView(){ return <PortalverwaltungView initialTab="audit"/>; }
    ══════════════════════════════════════════════════════════════════ */
 function TeamModuleMatrix({supabase,setSaveMsg}){
   const sb=supabase;
+  const isMobile=useIsMobile();
+  const [expandedTeam,setExpandedTeam]=useState(null);
   const [teams,setTeams]=useState([]);
   const [moduleMap,setModuleMap]=useState({}); // {team_id: [modul,...]}
   const [loading,setLoading]=useState(true);
@@ -6797,7 +6799,50 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
           );
         })}
       </div>
-      <Card style={{padding:0,overflowX:"auto"}}>
+      {isMobile?(
+        /* Mobile: ausklappbare Team-Liste */
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {filtered.map(t=>{
+            const aktive=moduleMap[t.id]||TEAM_MODS.map(m=>m.key);
+            const isOpen=expandedTeam===t.id;
+            const aktiveCount=TEAM_MODS.filter(m=>aktive.includes(m.key)).length;
+            return(
+              <div key={t.id} style={{borderRadius:12,border:"1px solid var(--border)",background:"var(--surface)",overflow:"hidden"}}>
+                {/* Team Header */}
+                <div onClick={()=>setExpandedTeam(isOpen?null:t.id)}
+                  style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}}>
+                  <div style={{width:4,height:36,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:14,color:"var(--text)"}}>{t.name}</div>
+                    <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{aktiveCount}/{TEAM_MODS.length} Module aktiv</div>
+                  </div>
+                  <TI n={isOpen?"chevron-up":"chevron-down"} size={16} style={{color:"var(--sub)",flexShrink:0}}/>
+                </div>
+                {/* Expandierte Module */}
+                {isOpen&&(
+                  <div style={{borderTop:"1px solid var(--border)",padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {TEAM_MODS.map(m=>{
+                      const isOn=aktive.includes(m.key);
+                      return(
+                        <div key={m.key} onClick={()=>toggleTeamModul(t.id,m.key)}
+                          style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,cursor:"pointer",
+                            background:isOn?GN+"12":"var(--surface2)",border:`1px solid ${isOn?GN:"var(--border)"}`}}>
+                          <div style={{width:18,height:18,borderRadius:4,background:isOn?GN:"transparent",border:`1.5px solid ${isOn?GN:"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            {isOn&&<TI n="check" size={11} style={{color:"#fff"}}/>}
+                          </div>
+                          <span style={{fontSize:12,fontWeight:isOn?600:400,color:isOn?"var(--text)":"var(--sub)"}}>{m.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ):(
+        /* Desktop: Tabelle */
+        <Card style={{padding:0,overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
           <thead>
             <tr style={{background:"var(--surface2)",borderBottom:"1px solid var(--border)"}}>
@@ -6805,15 +6850,17 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                 Team <span style={{fontWeight:400,opacity:0.6}}>({filtered.length})</span>
               </th>
               {TEAM_MODS.map(m=>(
-                <th key={m.key} style={{padding:"8px 4px",textAlign:"center",minWidth:54}}>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                    <TI n={m.icon||"circle"} size={15} style={{color:"var(--sub)"}}/>
-                    <span style={{fontSize:9,color:"var(--sub)",fontWeight:400,textTransform:"uppercase",letterSpacing:0.3}}>{m.label}</span>
-                    <div style={{display:"flex",gap:2}}>
+                <th key={m.key} style={{padding:"10px 4px",textAlign:"center",minWidth:56}}>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+                    <div style={{width:32,height:32,borderRadius:8,background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <TI n={m.icon||"circle"} size={16} style={{color:"var(--sub)"}}/>
+                    </div>
+                    <span style={{fontSize:9,color:"var(--sub)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.4,maxWidth:50,textAlign:"center",lineHeight:1.2}}>{m.label}</span>
+                    <div style={{display:"flex",gap:3}}>
                       <button onClick={()=>applyToAll(m.key,true)} title={`Alle: ${m.label} ein`}
-                        style={{width:16,height:16,borderRadius:3,border:"1px solid "+GN,background:GN+"20",color:GN,cursor:"pointer",fontFamily:FONT,fontSize:9,display:"flex",alignItems:"center",justifyContent:"center"}}>✓</button>
+                        style={{width:18,height:18,borderRadius:4,border:"none",background:GN,color:"#fff",cursor:"pointer",fontFamily:FONT,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>✓</button>
                       <button onClick={()=>applyToAll(m.key,false)} title={`Alle: ${m.label} aus`}
-                        style={{width:16,height:16,borderRadius:3,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer",fontFamily:FONT,fontSize:9,display:"flex",alignItems:"center",justifyContent:"center"}}>✗</button>
+                        style={{width:18,height:18,borderRadius:4,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer",fontFamily:FONT,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>✗</button>
                     </div>
                   </div>
                 </th>
@@ -6839,9 +6886,9 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                 const aktive=moduleMap[t.id]||TEAM_MODS.map(m=>m.key);
                 const allAktiv=TEAM_MODS.every(m=>aktive.includes(m.key));
                 rows.push(
-                  <tr key={t.id} style={{borderTop:"0.5px solid var(--border)"}}
-                    onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <tr key={t.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"transparent":"var(--surface2)"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="var(--hover,rgba(0,0,0,0.04))"}
+                    onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"transparent":"var(--surface2)"}>
                     <td style={{padding:"8px 16px",fontWeight:500,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:13,zIndex:1}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <div style={{width:3,height:20,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
@@ -6851,8 +6898,10 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                         </div>
                         <div onClick={()=>TEAM_MODS.forEach(m=>toggleTeamModul(t.id,m.key,!allAktiv))}
                           title={allAktiv?"Alle deaktivieren":"Alle aktivieren"}
-                          style={{width:20,height:20,borderRadius:5,border:`1.5px solid ${allAktiv?GN:"var(--border)"}`,background:allAktiv?GN+"20":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                          {allAktiv&&<TI n="check" size={11} style={{color:GN}}/>}
+                          style={{width:30,height:18,borderRadius:9,cursor:"pointer",
+                            background:allAktiv?GN:"var(--border)",
+                            position:"relative",transition:"background 0.15s",flexShrink:0}}>
+                          <div style={{position:"absolute",top:2,left:allAktiv?14:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
                         </div>
                       </div>
                     </td>
@@ -6862,10 +6911,10 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                         <td key={m.key} style={{textAlign:"center",padding:"6px 4px"}}>
                           <div onClick={()=>toggleTeamModul(t.id,m.key)}
                             title={`${t.name}: ${m.label} ${isOn?"deaktivieren":"aktivieren"}`}
-                            onMouseEnter={e=>e.currentTarget.style.transform="scale(1.15)"}
-                            onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
-                            style={{width:28,height:28,borderRadius:7,margin:"0 auto",cursor:"pointer",background:isOn?GN+"20":"transparent",border:`1.5px solid ${isOn?GN:"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.12s"}}>
-                            {isOn?<TI n="check" size={13} style={{color:GN}}/>:<span style={{color:"var(--border)",fontSize:12}}>–</span>}
+                            style={{width:30,height:18,borderRadius:9,margin:"0 auto",cursor:"pointer",
+                              background:isOn?GN:"var(--border)",
+                              position:"relative",transition:"background 0.15s",flexShrink:0}}>
+                            <div style={{position:"absolute",top:2,left:isOn?14:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
                           </div>
                         </td>
                       );
@@ -6878,6 +6927,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }
