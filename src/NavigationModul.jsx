@@ -1200,3 +1200,5 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
   );
 }
 
+
+export { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole };
