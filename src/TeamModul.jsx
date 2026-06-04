@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GR, GB } from "./constants";
 import { TI } from "./icons.jsx";
 import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs } from "./theme.jsx";
-import { ROSTER, EVENTS, ATT_INITIAL, POLLS } from "./demoData.js";
+import { ROSTER, EVENTS, ATT_INITIAL, POLLS, ATT_EVENTS, TABLES } from "./demoData.js";
 import KaderModul from "./KaderModul.jsx";
 import { TermineModul, SpielplanModul, TableTab } from "./TermineModul.jsx";
 import { TrainingsplanModul } from "./TrainingsplanModul.jsx";
