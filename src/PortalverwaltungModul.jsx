@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Btn, Card, Chip, Col, H1, InfoBox, LOGO_B64, ModalOrSheet, ModalTitle, Row, SectionLabel, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile } from "./theme.jsx";
+import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile } from "./theme.jsx";
 import { FUNKTIONEN } from "./demoData.js";
 
 /* ── Geteilte Konstanten ── */
@@ -408,6 +408,12 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       tabs:[
         {key:"api",   label:"API-Verbindungen", icon:"plug"},
         {key:"audit", label:"Audit-Logs",       icon:"clipboard-list"},
+      ]
+    },
+    {
+      key:"design", label:"Design-System", icon:"palette", color:"#EC4899", bg:"#FDF2F8",
+      tabs:[
+        {key:"designsystem", label:"CSS-Klassen", icon:"code"},
       ]
     },
   ];
@@ -1865,6 +1871,187 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               </tbody>
             </table>
           </Card>
+        </div>
+      )}
+
+      {/* ── TAB: DESIGN-SYSTEM ── */}
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="designsystem"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:32}}>
+
+          {/* Section Helper */}
+          {(()=>{
+            const Section=({title,desc,children})=>(
+              <div>
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:16,fontWeight:800,color:"var(--text)",letterSpacing:-0.3,marginBottom:4}}>{title}</div>
+                  {desc&&<div style={{fontSize:13,color:"var(--sub)"}}>{desc}</div>}
+                </div>
+                <Card style={{padding:20}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:16}}>{children}</div>
+                </Card>
+              </div>
+            );
+            const Row2=({label,children,code})=>(
+              <div style={{display:"flex",alignItems:"center",gap:16,padding:"10px 0",borderBottom:"0.5px solid var(--border)"}}>
+                <div style={{width:200,flexShrink:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{label}</div>
+                  {code&&<code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 6px",borderRadius:4}}>{code}</code>}
+                </div>
+                <div style={{flex:1}}>{children}</div>
+              </div>
+            );
+            return(
+              <>
+                {/* Buttons */}
+                <Section title="Buttons & Icons" desc="Interaktive Elemente">
+                  <Row2 label="Primär-Button" code="<Btn variant='primary'>">
+                    <Btn variant="primary">Speichern</Btn>
+                  </Row2>
+                  <Row2 label="Ghost-Button" code="<Btn variant='ghost'>">
+                    <Btn variant="ghost">Abbrechen</Btn>
+                  </Row2>
+                  <Row2 label="Standard-Button" code="<Btn>">
+                    <Btn>Standard</Btn>
+                  </Row2>
+                  <Row2 label="Icon-Button" code=".cc-icon-btn">
+                    <div style={{display:"flex",gap:8}}>
+                      <button className="cc-icon-btn"><TI n="edit" size={14}/></button>
+                      <button className="cc-icon-btn"><TI n="trash" size={14}/></button>
+                      <button className="cc-icon-btn"><TI n="dots-vertical" size={14}/></button>
+                    </div>
+                  </Row2>
+                  <Row2 label="Button-Group" code=".cc-btn-group">
+                    <div className="cc-btn-group">
+                      <button className="cc-btn-group-item cc-btn-group-active"><TI n="layout-grid" size={14}/></button>
+                      <button className="cc-btn-group-item"><TI n="layout-list" size={14}/></button>
+                      <div className="cc-btn-group-sep"/>
+                      <button className="cc-btn-group-item"><TI n="dots-vertical" size={14}/></button>
+                    </div>
+                  </Row2>
+                </Section>
+
+                {/* Navigation */}
+                <Section title="Navigation & Tabs" desc="Segment-Controls und Filter">
+                  <Row2 label="Segment-Tabs" code=".cc-seg / .cc-seg-item">
+                    <div className="cc-seg" style={{maxWidth:300}}>
+                      <button className="cc-seg-item cc-seg-active">Alle</button>
+                      <button className="cc-seg-item">Ungelesen</button>
+                      <button className="cc-seg-item">Gesendet</button>
+                    </div>
+                  </Row2>
+                  <Row2 label="Filter-Chips" code=".cc-chip-toggle / .cc-chip-active">
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <button className="cc-chip-toggle cc-chip-active">Alle</button>
+                      <button className="cc-chip-toggle">Broadcast</button>
+                      <button className="cc-chip-toggle">Diskussion</button>
+                    </div>
+                  </Row2>
+                  <Row2 label="Tabs (Theme-Komponente)" code="<Tabs>">
+                    <Tabs tabs={[{key:"a",label:"Tab 1"},{key:"b",label:"Tab 2"},{key:"c",label:"Tab 3"}]} active="a" setActive={()=>{}}/>
+                  </Row2>
+                </Section>
+
+                {/* Chips & Badges */}
+                <Section title="Chips & Badges" desc="Status-Anzeigen und Labels">
+                  <Row2 label="Chip" code="<Chip>">
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      <Chip text="Aktiv" color={GN} bg="#ECFDF5"/>
+                      <Chip text="Inaktiv" color="#9ca3af" bg="var(--surface2)"/>
+                      <Chip text="Admin" color={BL} bg="#EFF6FF"/>
+                      <Chip text="Fehler" color={R} bg={RL}/>
+                    </div>
+                  </Row2>
+                  <Row2 label="Ungelesen-Dot" code=".cc-unread-dot">
+                    <div style={{position:"relative",display:"inline-block"}}>
+                      <div style={{width:34,height:34,borderRadius:10,background:"#E1F5EE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#085041"}}>DG</div>
+                      <div className="cc-unread-dot" style={{background:BL}}/>
+                    </div>
+                  </Row2>
+                </Section>
+
+                {/* Karten */}
+                <Section title="Karten & Layout" desc="Container-Komponenten">
+                  <Row2 label="Card" code="<Card>">
+                    <Card style={{padding:"12px 16px",maxWidth:200}}>
+                      <div style={{fontSize:13,fontWeight:600}}>Karten-Inhalt</div>
+                      <div style={{fontSize:12,color:"var(--sub)"}}>Beschreibung</div>
+                    </Card>
+                  </Row2>
+                  <Row2 label="Stat" code="<Stat>">
+                    <div style={{display:"flex",gap:8}}>
+                      <Stat label="Teams" value="42" color={BL}/>
+                      <Stat label="Mitglieder" value="380" color={GN}/>
+                    </div>
+                  </Row2>
+                  <Row2 label="InfoBox" code="<InfoBox>">
+                    <InfoBox text="Dies ist eine Informationsbox für Hinweise." color={BL}/>
+                  </Row2>
+                </Section>
+
+                {/* Formulare */}
+                <Section title="Formulare & Eingaben" desc="Input-Felder und Selects">
+                  <Row2 label="Input" code=".cc-input">
+                    <input className="cc-input" placeholder="Beispiel-Eingabe…" style={{maxWidth:280}}/>
+                  </Row2>
+                  <Row2 label="Textarea" code=".cc-input">
+                    <textarea className="cc-input" placeholder="Mehrzeiliger Text…" rows={3} style={{maxWidth:280,resize:"vertical"}}/>
+                  </Row2>
+                  <Row2 label="Input (Theme)" code="<Input>">
+                    <Input placeholder="Theme-Input…" style={{maxWidth:280}}/>
+                  </Row2>
+                  <Row2 label="Select (Theme)" code="<Select>">
+                    <Select style={{maxWidth:280}}>
+                      <option>Option 1</option>
+                      <option>Option 2</option>
+                    </Select>
+                  </Row2>
+                </Section>
+
+                {/* Typografie */}
+                <Section title="Typografie" desc="Überschriften und Text-Komponenten">
+                  <Row2 label="H1" code="<H1>"><H1>Grosse Überschrift</H1></Row2>
+                  <Row2 label="H2" code="<H2>"><H2>Mittlere Überschrift</H2></Row2>
+                  <Row2 label="STitle" code="<STitle>"><STitle>Section Title</STitle></Row2>
+                  <Row2 label="Sub" code="<Sub>"><Sub>Sekundärer Text / Beschreibung</Sub></Row2>
+                  <Row2 label="Label" code="<Label>"><Label>Formular-Label</Label></Row2>
+                  <Row2 label="SectionLabel" code="<SectionLabel>"><SectionLabel>Section Label</SectionLabel></Row2>
+                </Section>
+
+                {/* Avatar */}
+                <Section title="Avatare" desc="Benutzer-Darstellungen">
+                  <Row2 label="Av" code="<Av>">
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <Av name="Dieter Good" size={36}/>
+                      <Av name="Thomas Müller" size={36}/>
+                      <Av name="Anna Keller" size={28}/>
+                      <Av name="Hans Berger" size={44}/>
+                    </div>
+                  </Row2>
+                </Section>
+
+                {/* CSS-Variablen */}
+                <Section title="CSS-Variablen (Design-Tokens)" desc="Zentrale Farbwerte — automatisch für Dark/Light Mode">
+                  {[
+                    {name:"--bg",desc:"Seitenhintergrund"},
+                    {name:"--surface",desc:"Karten & Panels"},
+                    {name:"--surface2",desc:"Sekundäre Flächen"},
+                    {name:"--border",desc:"Rahmen & Trennlinien"},
+                    {name:"--text",desc:"Primärer Text"},
+                    {name:"--sub",desc:"Sekundärer Text"},
+                    {name:"--btn-primary",desc:"Primär-Button Farbe"},
+                    {name:"--cc-accent",desc:"Vereinsfarbe 1"},
+                    {name:"--cc-accent2",desc:"Vereinsfarbe 2"},
+                  ].map(v=>(
+                    <div key={v.name} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"0.5px solid var(--border)"}}>
+                      <div style={{width:32,height:32,borderRadius:8,background:`var(${v.name})`,border:"0.5px solid var(--border)",flexShrink:0}}/>
+                      <code style={{fontSize:12,color:"var(--text)",background:"var(--surface2)",padding:"3px 8px",borderRadius:6,width:160,flexShrink:0}}>{v.name}</code>
+                      <span style={{fontSize:13,color:"var(--sub)"}}>{v.desc}</span>
+                    </div>
+                  ))}
+                </Section>
+              </>
+            );
+          })()}
         </div>
       )}
     </div>
