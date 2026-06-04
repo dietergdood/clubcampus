@@ -7614,8 +7614,8 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                               </td>
                               {ROLLEN.map(r=>{
                                 const isAdmin=r==="administrator";
-                                const stufe=getZugriff(r,m.key);
-                                const hasAccess=isAktiv&&effRechte[r]?.includes(m.key);
+                                const stufe=isAdmin?"verwalten":getZugriff(r,m.key);
+                                const hasAccess=isAktiv&&(isAdmin||effRechte[r]?.includes(m.key));
                                 const isEdited=moduleRechte&&(moduleRechte[r]?.includes(m.key))!==(ROLLEN_MODULE_DEFAULT[r]?.includes(m.key));
                                 return(
                                   <td key={r} style={{textAlign:"center",padding:"7px 6px",background:isAdmin?"var(--surface2)":"transparent"}}>
