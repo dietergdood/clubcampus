@@ -1263,7 +1263,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
           <button key={n.key} onClick={()=>setActive(n.key)} title={collapsed?n.label:undefined} style={{
             width:"100%",display:"flex",alignItems:"center",gap:collapsed?0:11,
             padding:collapsed?"10px 0":"10px 12px",borderRadius:9,border:"none",
-            background:active===n.key?ACCENT:"transparent",
+            background:active===n.key?"var(--nav-a)":"transparent",
             color:active===n.key?ACCENT2:"var(--nav-t)",
             cursor:"pointer",fontSize:13.5,fontWeight:active===n.key?600:400,
             textAlign:"left",marginBottom:2,letterSpacing:0.1,
@@ -8176,11 +8176,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           {/* Farb-Einstellungen */}
           <Card style={{marginTop:12,padding:0,overflow:"hidden"}}>
             {[
-              {key:"vereinsfarbe1", label:"Vereinsfarbe (Akzent)",    hint:"Gelb bei FCH — für Badges, Highlights, aktive Elemente"},
-              {key:"vereinsfarbe2", label:"Text auf Vereinsfarbe",    hint:"Schwarz bei FCH — muss auf Vereinsfarbe lesbar sein"},
+              {key:"vereinsfarbe1", label:"Vereinsfarbe (Akzent)",    hint:"Hauptfarbe des Vereins — für Badges, Highlights, aktive Elemente"},
+              {key:"vereinsfarbe2", label:"Text auf Vereinsfarbe",    hint:"Muss auf der Vereinsfarbe gut lesbar sein"},
               {key:"navBg",         label:"Menü-Hintergrund",          hint:"Hintergrundfarbe der Navigationsleiste"},
               {key:"navText",       label:"Menü-Text",                 hint:"Farbe der inaktiven Menüpunkte"},
-              {key:"navAccent",     label:"Aktiver Menüpunkt",         hint:"Standard: Vereinsfarbe — anpassen wenn Vereinsfarbe zu hell/dunkel"},
+              {key:"navAccent",     label:"Aktiver Menüpunkt",         hint:"Standard: Vereinsfarbe — bei Bedarf anpassen"},
 
               {key:"btnPrimary",    label:"Primary Button",            hint:"Hintergrundfarbe für Haupt-Buttons"},
               {key:"btnPrimaryText",label:"Primary Button Text",       hint:"Textfarbe für Haupt-Buttons"},
@@ -11594,12 +11594,12 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
               padding:"6px 0 4px",background:"none",border:"none",cursor:"pointer",
               minHeight:56,WebkitTapHighlightColor:"transparent",position:"relative",gap:3
             }}>
-              {active===n.key&&!mehrActive&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:ACCENT}}/>}
+              {active===n.key&&!mehrActive&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:"var(--nav-a)"}}/>}
               <div style={{width:38,height:38,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
-                background:active===n.key&&!mehrActive?ACCENT:"transparent",transition:"background 0.15s"}}>
-                <TI n={n.icon||"circle"} size={19} style={{color:active===n.key&&!mehrActive?"#111":"var(--nav-t)"}}/>
+                background:active===n.key&&!mehrActive?"var(--nav-a)":"transparent",transition:"background 0.15s"}}>
+                <TI n={n.icon||"circle"} size={19} style={{color:active===n.key&&!mehrActive?ACCENT2:"var(--nav-t)"}}/>
               </div>
-              <span style={{fontSize:10,color:active===n.key&&!mehrActive?ACCENT:"var(--nav-t)",fontWeight:active===n.key&&!mehrActive?600:400}}>{n.label}</span>
+              <span style={{fontSize:10,color:active===n.key&&!mehrActive?"var(--nav-a)":"var(--nav-t)",fontWeight:active===n.key&&!mehrActive?600:400}}>{n.label}</span>
             </button>
           ))}
           {/* Mehr-Button (nur wenn mehr-Einträge vorhanden) */}
@@ -11609,7 +11609,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
               padding:"6px 0 4px",background:"none",border:"none",cursor:"pointer",
               minHeight:56,WebkitTapHighlightColor:"transparent",position:"relative",gap:3
             }}>
-              {(mehrActive||showMehr)&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:ACCENT}}/>}
+              {(mehrActive||showMehr)&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:24,height:3,borderRadius:"0 0 3px 3px",background:"var(--nav-a)"}}/>}
               <div style={{width:38,height:38,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",
                 background:mehrActive||showMehr?ACCENT:"transparent",transition:"background 0.15s"}}>
                 <TI n="menu-2" size={19} style={{color:mehrActive||showMehr?"#111":"var(--nav-t)"}}/>
