@@ -968,7 +968,7 @@ function SpielplanModul({role,team,initialSelected}){
 }
 
 function TableTab({team}){
-  const rows=TABLES[team]||TABLE;
+  const rows=TABLES[team]||[];
 
   return(
     <div>
