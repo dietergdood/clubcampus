@@ -1471,7 +1471,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={{fontSize:13,color:"var(--sub)"}}>{benutzerListe.length} Benutzer</div>
-            <Btn variant="primary" color={BK} onClick={()=>{}}>+ Benutzer einladen</Btn>
+            <Btn variant="primary" onClick={()=>{}}>+ Benutzer einladen</Btn>
           </div>
           <Card style={{padding:0,overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
