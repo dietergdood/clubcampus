@@ -163,7 +163,7 @@ function SplashScreen({onDone}){
   useEffect(()=>{const t=setTimeout(onDone,1800);return()=>clearTimeout(t);},[]);
   return(
     <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"cc-splash-out 0.4s 1.4s ease-out forwards"}}>
-      <div style={{width:110,height:110,borderRadius:28,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",animation:"cc-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both"}}>
+      <div style={{width:110,height:110,borderRadius:28,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",animation:"cc-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both"}}>
         <img src={LOGO_B64} style={{width:110,height:110,objectFit:"cover",display:"block",borderRadius:28}} alt="Logo"/>
       </div>
       <div style={{color:"var(--text)",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"cc-in 0.4s 0.45s ease-out both"}}>{(()=>{try{const s=localStorage.getItem("cc-theme");return s?JSON.parse(s).vereinsname||"ClubCampus":"ClubCampus";}catch{return "ClubCampus";}})()}</div>
