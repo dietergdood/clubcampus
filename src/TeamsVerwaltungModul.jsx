@@ -388,14 +388,15 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           {/* View Toggle */}
-          <div style={{display:"flex",border:"1px solid var(--border)",borderRadius:8,overflow:"hidden"}}>
+          <div className="cc-btn-group">
             {["list","grid"].map(m=>(
-              <Btn onClick={()=>setViewMode(m)}><TI n={m==="list"?"layout-dashboard":"layout-grid"} size={14}/></Btn>
+              <button key={m} onClick={()=>setViewMode(m)} className={"cc-btn-group-item"+(viewMode===m?" cc-btn-group-active":"")}>
+                <TI n={m==="list"?"layout-dashboard":"layout-grid"} size={14}/>
+              </button>
             ))}
-          </div>
-          {/* Dreipunkt-Menü */}
-          <div style={{position:"relative"}}>
-            <button onClick={()=>setOpenMenuId(openMenuId==="header"?null:"header")} className="cc-icon-btn"><TI n="dots-vertical" size={15}/></button>
+            <div className="cc-btn-group-sep"/>
+            <div style={{position:"relative"}}>
+              <button onClick={()=>setOpenMenuId(openMenuId==="header"?null:"header")} className="cc-btn-group-item"><TI n="dots-vertical" size={14}/></button>
             {openMenuId==="header"&&(
               <div style={{position:"absolute",right:0,top:40,zIndex:200,
                 background:"var(--surface)",border:"1px solid var(--border)",
@@ -406,6 +407,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                 <Btn variant="ghost" onClick={()=>{openNeu();setOpenMenuId(null);}}><TI n="edit" size={14} style={{color:"var(--sub)",flexShrink:0}}/>+ Neues Team</Btn>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

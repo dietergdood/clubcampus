@@ -35,6 +35,11 @@ const PWA_CSS=`
 .cc-nav-item:not(.cc-nav-active):hover{background:var(--nav-hover,#1A1A1A)!important}
 .cc-icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background 0.15s,border-color 0.15s,color 0.15s;color:var(--sub);padding:0}
 .cc-icon-btn:hover{background:var(--surface)!important;border-color:var(--text)!important;color:var(--text)!important}
+.cc-btn-group{display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface2)}
+.cc-btn-group-item{height:32px;min-width:32px;padding:0 8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);transition:background 0.15s,color 0.15s;flex-shrink:0}
+.cc-btn-group-item:hover{background:var(--surface);color:var(--text)}
+.cc-btn-group-active{background:var(--text)!important;color:var(--bg)!important}
+.cc-btn-group-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
 *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 html{scroll-behavior:smooth}
 button:active:not([disabled]){transform:scale(0.96)}
