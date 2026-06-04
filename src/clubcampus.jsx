@@ -160,11 +160,11 @@ function useIsMobile(){return useBreakpoint().isMobile;}
 
 /* ── SPLASH SCREEN ── */
 function SplashScreen({onDone}){
-  useEffect(()=>{const t=setTimeout(onDone,2600);return()=>clearTimeout(t);},[]);
+  useEffect(()=>{const t=setTimeout(onDone,1800);return()=>clearTimeout(t);},[]);
   return(
-    <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"cc-splash-out 0.4s 2.2s ease-out forwards"}}>
+    <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"cc-splash-out 0.4s 1.4s ease-out forwards"}}>
       <div style={{width:110,height:110,borderRadius:28,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",animation:"cc-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-        <img src={LOGO_B64} style={{width:110,height:110,objectFit:"cover",display:"block"}} alt="Logo"/>
+        <img src={LOGO_B64} style={{width:110,height:110,objectFit:"cover",display:"block",borderRadius:28}} alt="Logo"/>
       </div>
       <div style={{color:"var(--text)",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"cc-in 0.4s 0.45s ease-out both"}}>{(()=>{try{const s=localStorage.getItem("cc-theme");return s?JSON.parse(s).vereinsname||"ClubCampus":"ClubCampus";}catch{return "ClubCampus";}})()}</div>
       <div style={{color:"var(--sub)",fontSize:12,marginTop:5,letterSpacing:2,textTransform:"uppercase",fontFamily:FONT,animation:"cc-in 0.4s 0.6s ease-out both"}}>ClubCampus</div>
@@ -11683,9 +11683,9 @@ function LoginScreen({onLogin, sb, appTheme}){
       <div style={{width:"100%",maxWidth:400,padding:"0 20px"}}>
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{width:64,height:64,background:"transparent",borderRadius:16,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:12,overflow:"hidden"}}><img src={LOGO_B64} style={{width:64,height:64,objectFit:"cover",display:"block"}} alt="Logo"/></div>
+          <div style={{width:64,height:64,background:"transparent",borderRadius:16,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:12,overflow:"hidden"}}><img src={appTheme?.logo||LOGO_B64} style={{width:64,height:64,objectFit:"cover",display:"block"}} alt="Logo"/></div>
           <div style={{fontWeight:800,fontSize:22,color:"var(--text)"}}>{"ClubCampus"}</div>
-          <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{getVereinsnameStatic()}</div>
+          <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
         </div>
 
         <div style={{background:"var(--surface)",borderRadius:16,padding:28,boxShadow:"var(--card-shadow)",border:"1px solid var(--border)"}}>
@@ -11697,7 +11697,7 @@ function LoginScreen({onLogin, sb, appTheme}){
                   <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5}}>E-Mail</label>
                   <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
                     style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box"}}
-                    placeholder="name@fcherrliberg.ch" autoComplete="email"/>
+                    placeholder={`name@${(appTheme?.vereinsname||"meinverein").toLowerCase().replace(/\s+/g,"")}.ch`} autoComplete="email"/>
                 </div>
                 <div style={{marginBottom:20}}>
                   <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5}}>Passwort</label>
@@ -11736,7 +11736,7 @@ function LoginScreen({onLogin, sb, appTheme}){
                     <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5}}>E-Mail</label>
                     <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
                       style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box"}}
-                      placeholder="name@fcherrliberg.ch"/>
+                      placeholder={`name@${(appTheme?.vereinsname||"meinverein").toLowerCase().replace(/\s+/g,"")}.ch`}/>
                   </div>
                   {error&&<div style={{fontSize:13,color:"#DC2626",background:"#FEF2F2",padding:"8px 12px",borderRadius:8,marginBottom:14}}>{error}</div>}
                   <button type="submit" disabled={loading}
@@ -11850,8 +11850,8 @@ export default function Portal({supabaseClient}){
     }catch(e){console.warn("[CC] loadTenant:",e.message);}
   }
   /* ── Splash Screen ── */
-  const [splash,setSplash]=useState(()=>{try{return !sessionStorage.getItem("cc-splash");}catch{return true;}});
-  const doneSplash=()=>{try{sessionStorage.setItem("cc-splash","1");}catch{}setSplash(false);};
+  const [splash,setSplash]=useState(()=>{try{return !localStorage.getItem("cc-splash-done");}catch{return true;}});
+  const doneSplash=()=>{try{localStorage.setItem("cc-splash-done","1");}catch{}setSplash(false);};
   /* ── Inter Font + PWA Globals ── */
   useEffect(()=>{
     if(!document.getElementById("inter-font")){
