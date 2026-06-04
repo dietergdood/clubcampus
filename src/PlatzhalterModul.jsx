@@ -513,7 +513,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
             <button type="submit" disabled={pwStatus==="loading"}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN}
-              style={{padding:"11px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",
+              style={{padding:"11px",borderRadius:10,background:BTN,color:BTN_TXT,border:"none",
                 fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT,
                 opacity:pwStatus==="loading"?0.6:1,transition:"opacity 0.2s"}}>
               {pwStatus==="loading"?"Wird gespeichert…":"Passwort ändern"}
