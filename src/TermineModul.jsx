@@ -7,6 +7,7 @@ import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT,
 import { TI } from "./icons.jsx";
 import { useIsMobile, ModalOrSheet, Card, Chip , Stat, Av, Col, Row, SectionLabel, Btn} from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, GANTT, ROSTER, SCHEDULE, TABLES, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
+import { getVereinsnameStatic } from "./NavigationModul.jsx";
 
 
 /* ── Style-Konstanten ── */
