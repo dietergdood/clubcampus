@@ -2881,7 +2881,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                 a.download=`Kader_${team||"Export"}_${new Date().toISOString().slice(0,10)}.csv`;
                 a.click();
                 setShowExport(false);
-              }} style={{flex:1,padding:"9px 0",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+              }} style={{flex:1,padding:"12px 20px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
                 CSV herunterladen
               </button>
               <button onClick={()=>setShowExport(false)} style={{padding:"9px 16px",borderRadius:10,border:"1px solid var(--border)",background:"transparent",fontSize:13,cursor:"pointer",fontFamily:FONT,color:"var(--sub)"}}>
@@ -4503,7 +4503,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                     <div style={{fontSize:13,fontWeight:400,color:"var(--sub)",marginTop:2}}>{isEdit?"Wird als Ausnahme gespeichert":"Einmaliger Zusatztermin"}</div>
                   </button>
                   <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:false, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
-                    style={{padding:"10px",borderRadius:10,border:`1.5px solid ${BK}`,background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
+                    style={{padding:"10px 18px",borderRadius:10,border:`1.5px solid ${BK}`,background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
                     <div style={{fontWeight:700}}>Dauerhaft (neuer Standard)</div>
                     <div style={{fontSize:13,fontWeight:400,color:"rgba(255,255,255,0.7)",marginTop:2}}>
                       {isEdit?"Gilt fur alle zukunftigen Wochen":"Ab "+selectedKw.label+" bis Ende des Trainingsplans"}
@@ -4677,7 +4677,7 @@ function PlanEditorModal({plan, plaene, onSave, onClose}){
             <label htmlFor="planAktiv" style={{fontSize:13,cursor:"pointer"}}>Plan aktiv (erscheint bei Teams als Termine)</label>
           </div>
           <button onClick={()=>onSave(form)}
-            style={{width:"100%",padding:"11px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+            style={{width:"100%",padding:"12px 20px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>
             Speichern
           </button>
         </div>
@@ -7542,7 +7542,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   try{localStorage.setItem("cc-module-rechte",JSON.stringify(moduleRechte));
                       if(zugriffStufen) localStorage.setItem("cc-zugriff-stufen",JSON.stringify(zugriffStufen));}catch{}
                   setModuleDirty(false); setSaveMsg("Gespeichert");setTimeout(()=>setSaveMsg(""),2000);
-                }} style={{padding:"5px 14px",borderRadius:9,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                }} style={{padding:"7px 14px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                   Speichern
                 </button>
                 <button onClick={()=>{setModuleRechte(null);setZugriffStufen(null);setModuleDirty(false);try{localStorage.removeItem("cc-module-rechte");localStorage.removeItem("cc-zugriff-stufen");}catch{}setSaveMsg("Verworfen");setTimeout(()=>setSaveMsg(""),2000);}}
@@ -7769,7 +7769,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:20}}>
             <InfoBox text="Gruppen bündeln Module für Funktionäre. Funktionen schränken innerhalb einer Gruppe ein (Teams, Filter)." color={BL}/>
             <button onClick={()=>{setEditGruppe(null);setGruppeForm({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{}});setShowGruppeForm(true);}}
-              style={{padding:"7px 16px",borderRadius:9,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0}}>
+              style={{padding:"7px 14px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0}}>
               + Neue Gruppe
             </button>
           </div>
@@ -7994,7 +7994,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   setShowGruppeForm(false); setEditGruppe(null);
                   setSaveMsg(editGruppe?"Gruppe gespeichert":"Gruppe erstellt");
                   setTimeout(()=>setSaveMsg(""),2000);
-                }} style={{flex:1,padding:"10px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                }} style={{flex:1,padding:"12px 20px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
                   {editGruppe?"Änderungen speichern":"Gruppe erstellen"}
                 </button>
                 <Btn onClick={()=>{setShowGruppeForm(false);setEditGruppe(null);}}>Abbrechen</Btn>
@@ -8106,7 +8106,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   setShowFunktionForm(false); setEditFunktion(null);
                   setSaveMsg(editFunktion?"Funktion gespeichert":"Funktion erstellt");
                   setTimeout(()=>setSaveMsg(""),2000);
-                }} style={{flex:1,padding:"10px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                }} style={{flex:1,padding:"12px 20px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
                   {editFunktion?"Änderungen speichern":"Funktion erstellen"}
                 </button>
                 <Btn onClick={()=>{setShowFunktionForm(false);setEditFunktion(null);}}>Abbrechen</Btn>
@@ -11170,7 +11170,7 @@ function PlaetzeView(){
         <button onClick={function(){setShowAdd(true);}}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN}
-          style={{padding:"8px 16px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+          style={{padding:"10px 18px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>
           + Platz
         </button>
       </div>
@@ -11200,7 +11200,7 @@ function PlaetzeView(){
                     <button onClick={function(){handleRename(p.id);}}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN}
-                      style={{flex:1,padding:"7px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>Speichern</button>
+                      style={{flex:1,padding:"10px 18px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>Speichern</button>
                     <button onClick={function(){setEditId(null);setEditName("");setEditHaelften("");}}
                       style={{padding:"7px 12px",borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",fontSize:13,cursor:"pointer"}}>Abbrechen</button>
                   </div>
@@ -11285,7 +11285,7 @@ function PlaetzeView(){
             <button onClick={handleAdd}
               onMouseEnter={e=>e.currentTarget.style.background="var(--btn-hover)"}
               onMouseLeave={e=>e.currentTarget.style.background=BTN}
-              style={{flex:1,padding:"9px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+              style={{flex:1,padding:"10px 18px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>
               Hinzufügen
             </button>
             <button onClick={function(){setShowAdd(false);setNewName("");setNewHaelften("");}}
@@ -12096,7 +12096,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendAntwort();}}}
             placeholder="Antworten..." style={{flex:1,padding:"8px 12px",borderRadius:9,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",fontSize:13,fontFamily:FONT,outline:"none"}}/>
           <button onClick={sendAntwort} disabled={!antwortText.trim()||sending}
-            style={{padding:"8px 14px",borderRadius:9,border:"none",background:BTN,color:BTN_TXT,cursor:"pointer",fontFamily:FONT,fontSize:13,fontWeight:600,opacity:antwortText.trim()?1:0.5}}>
+            style={{padding:"10px 18px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,cursor:"pointer",fontFamily:FONT,fontSize:13,fontWeight:600,opacity:antwortText.trim()?1:0.5}}>
             <TI n="send" size={14}/>
           </button>
         </div>
@@ -12118,7 +12118,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
             )}
             {kannSenden&&(
               <button onClick={()=>setShowNeu(true)}
-                style={{padding:"5px 12px",fontSize:12,background:BTN,color:BTN_TXT,border:"none",borderRadius:8,cursor:"pointer",fontFamily:FONT,fontWeight:600}}>
+                style={{padding:"7px 14px",fontSize:13,background:BTN,color:BTN_TXT,border:"none",borderRadius:8,cursor:"pointer",fontFamily:FONT,fontWeight:600}}>
                 + Neu
               </button>
             )}
@@ -12242,7 +12242,7 @@ function NachrichtenView({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,
               style={{width:"100%",padding:"8px 10px",borderRadius:9,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",fontSize:13,fontFamily:FONT,boxSizing:"border-box",outline:"none",resize:"vertical"}}/>
           </div>
           <button onClick={sendNachricht} disabled={!neuForm.titel.trim()||!neuForm.inhalt.trim()||sending}
-            style={{width:"100%",padding:"10px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:FONT,opacity:neuForm.titel.trim()&&neuForm.inhalt.trim()?1:0.5}}>
+            style={{width:"100%",padding:"12px 20px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,cursor:"pointer",fontSize:14,fontWeight:700,fontFamily:FONT,opacity:neuForm.titel.trim()&&neuForm.inhalt.trim()?1:0.5}}>
             {sending?"Wird gesendet…":"Senden"}
           </button>
         </div>
