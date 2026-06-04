@@ -3,7 +3,6 @@
    Theme-System, Logo, CSS-Variablen, Default-Farben
    ═══════════════════════════════════════════════════════════════ */
 import { createContext, useContext, useState, useEffect } from "react";
-import { MEMBERS, FUNKTIONEN } from "./demoData.js";
 import { TI } from "./icons.jsx";
 import { ACCENT, ACCENT2, ACCENT20, BK, BL, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, FONT, R } from "./constants";
 
@@ -311,89 +310,8 @@ function Truncate({children, lines=1, style={}}){
 }
 
 
-function Skel({h=14,w="100%",br=6,mb=0,style={}}){
-  return <div style={{height:h,width:w,borderRadius:br,marginBottom:mb,background:"linear-gradient(90deg,var(--border) 25%,var(--surface2) 50%,var(--border) 75%)",backgroundSize:"200% 100%",animation:"cc-shimmer 1.5s infinite",...style}}/>;
-}
-
-function SkelCard(){
-  return(
-    <div className="cc-card" style={{borderRadius:14,padding:"20px 22px",border:"0.5px solid"}}>
-      <Skel h={10} w="38%" br={4} mb={14}/>
-      <Skel h={30} w="55%" br={6} mb={8}/>
-      <Skel h={10} w="72%" br={4}/>
-    </div>
-  );
-}
-
-function SkelList({rows=4}){
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:12}}>
-      {Array.from({length:rows},(_,i)=>(
-        <div key={i} className="cc-card" style={{borderRadius:12,padding:"14px 18px",border:"0.5px solid",display:"flex",alignItems:"center",gap:16}}>
-          <div style={{width:38,height:38,borderRadius:"50%",background:"var(--border)",animation:"cc-shimmer 1.5s infinite",flexShrink:0}}/>
-          <div style={{flex:1}}><Skel h={11} w="60%" br={4} mb={7}/><Skel h={9} w="40%" br={4}/></div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* Reusable Modal/BottomSheet - desktop: centered modal, mobile: slides up from bottom */
-/* ── PERSON PICKER ── */
-
-function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
-  const [q,setQ]=useState(value||"");
-  const [open,setOpen]=useState(false);
-  const ref=useRef(null);
-
-  useEffect(()=>{ setQ(value||""); },[value]);
-  useEffect(()=>{
-    const fn=(e)=>{ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown",fn);
-    return()=>document.removeEventListener("mousedown",fn);
-  },[]);
-
-  const suggestions=q.length>0
-    ? MEMBERS.filter(m=>m.name.toLowerCase().includes(q.toLowerCase())).slice(0,8)
-    : MEMBERS.filter(m=>m.role==="Trainer"||m.role==="Vorstand").slice(0,8);
-
-  function select(name){ setQ(name); onChange(name); setOpen(false); }
-
-  return(
-    <div ref={ref} style={{position:"relative",...style}}>
-      <input
-        value={q}
-        onChange={e=>{ setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
-        onFocus={()=>setOpen(true)}
-        placeholder={placeholder}
-        style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:8,
-          fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",
-          boxSizing:"border-box",outline:"none"}}
-      />
-      {open&&suggestions.length>0&&(
-        <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,zIndex:200,
-          background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,
-          boxShadow:"0 4px 16px rgba(0,0,0,0.12)",overflow:"hidden"}}>
-          {suggestions.map(m=>(
-            <button key={m.id} onMouseDown={()=>select(m.name)} style={{
-              width:"100%",padding:"9px 14px",border:"none",background:"none",
-              cursor:"pointer",display:"flex",alignItems:"center",gap:12,
-              textAlign:"left",fontFamily:FONT
-            }}
-              onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
-              onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <Av name={m.name} size={26} bg="var(--surface2)"/>
-              <div>
-                <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{m.name}</div>
-                <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate , Skel, SkelCard, SkelList, PersonPicker};
+
+
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate };
