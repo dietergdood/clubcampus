@@ -12,7 +12,6 @@ import { GANTT, INITIAL_PLAENE, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
 const S_SUB={fontSize:13,color:"var(--sub)"};
 const S_FLEX8={display:"flex",gap:8};
 const S_BOLD={fontSize:13,fontWeight:600,color:"var(--text)"};
-const ST_04={width:timeW, flexShrink:0, borderRight:"1px solid var(--border)", height:"100%"};
 
 
 
@@ -286,7 +285,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
 
         {/* Headers */}
         <div style={{display:"flex", background:"var(--surface)", borderBottom:"1.5px solid #D1CFC8", height:44, boxSizing:"border-box", alignItems:"center"}}>
-          <div style={ST_04}/>
+          <div style={{width:timeW, flexShrink:0, borderRight:"1px solid var(--border)", height:"100%"}}/>
           {DAYS.map(function(day,di){
             const d = dayDates[idxMap[di]];
             const isToday = d.toDateString()===today.toDateString();
@@ -302,7 +301,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
 
         {/* Platz-Namen */}
         <div style={{display:"flex", background:"var(--surface2)", borderBottom:"0.5px solid var(--border)", height:22, boxSizing:"border-box", alignItems:"center"}}>
-          <div style={ST_04}/>
+          <div style={{width:timeW, flexShrink:0, borderRight:"1px solid var(--border)", height:"100%"}}/>
           {DAYS.map(function(_,di){
             const isToday = dayDates[idxMap[di]].toDateString()===today.toDateString();
             return aktivePlaetze.map(function(p,pi){
@@ -319,7 +318,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
 
         {/* Hälften */}
         <div style={{display:"flex", background:"var(--surface2)", borderBottom:"1.5px solid var(--border)", height:18, boxSizing:"border-box", alignItems:"center"}}>
-          <div style={ST_04}/>
+          <div style={{width:timeW, flexShrink:0, borderRight:"1px solid var(--border)", height:"100%"}}/>
           {DAYS.map(function(_,di){
             const isToday = dayDates[idxMap[di]].toDateString()===today.toDateString();
             return alleCols.map(function(col,ci){
