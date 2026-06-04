@@ -874,7 +874,7 @@ const POLLS=[
 const HELPER_GRUPPEN=["Alle","Trainer","Spieler","Eltern","Cc-Junioren Eltern","D-Junioren Eltern","Vorstand","Funktionäre","Administration"];
 const HELPER_EVENTS=[
   {
-    id:1,name:"Grümpelturnier 2026",date:"Sa 14.06.2026 - So 15.06.2026",loc:"Sportanlage Aabach",color:"#64748B",
+    id:1,name:"Grümpelturnier 2026",date:"Sa 14.06.2026 - So 15.06.2026",loc:"Sportanlage Aabach",color:"var(--sub)",
     einsaetze:[
       {id:101,name:"Aufbau",    date:"Fr 13.06.2026",time:"14:00-18:00",ort:"Sportanlage",gruppen:["Alle"],
        schichten:[{id:1001,label:"Aufbau 14:00-18:00 Uhr",max:5,helfer:["Thomas Müller","Daniel Huber","Laura Imhof","Luca Meier","Tim Keller"]}]},
@@ -907,7 +907,7 @@ const HELPER_EVENTS=[
     ]
   },
   {
-    id:2,name:"Generalversammlung 2026",date:"Mi 25.06.2026",loc:"Mehrzweckhalle Herrliberg",color:"#64748B",
+    id:2,name:"Generalversammlung 2026",date:"Mi 25.06.2026",loc:"Mehrzweckhalle Herrliberg",color:"var(--sub)",
     einsaetze:[
       {id:201,name:"Empfang",date:"Mi 25.06.2026",time:"18:00-19:00",ort:"Eingang",gruppen:["Vorstand"],
        schichten:[{id:2001,label:"Empfang 18:00-19:00 Uhr",max:2,helfer:["Laura Imhof","Luca Meier"]}]},
@@ -916,7 +916,7 @@ const HELPER_EVENTS=[
     ]
   },
   {
-    id:3,name:"Saisonstart-Apéro 2026",date:"Sa 05.04.2026",loc:"Vereinslokal Herrliberg",color:"#64748B",
+    id:3,name:"Saisonstart-Apéro 2026",date:"Sa 05.04.2026",loc:"Vereinslokal Herrliberg",color:"var(--sub)",
     einsaetze:[
       {id:301,name:"Apéro-Service",date:"05.04.2026",time:"17:00-19:00",ort:"Vereinslokal",gruppen:["Alle"],
        schichten:[
@@ -1873,7 +1873,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
                   <div style={{fontSize:13,color:"var(--sub)"}}>{s.einsatzName||""}</div>
                   <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{""+s.einsatzDate+" · "+(s.location||"")}</div>
                 </div>
-                <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"#FFF7ED",color:AM,border:`0.5px solid ${AM}`,flexShrink:0}}>Ausstehend</span>
+                <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:AM,border:`0.5px solid ${AM}`,flexShrink:0}}>Ausstehend</span>
               </div>
             </div>
           ))}
@@ -2706,7 +2706,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           )}
 
           {/* Rollenhinweis */}
-          <div style={{padding:"8px 12px",background:"#EFF6FF",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:6}}>
+          <div style={{padding:"8px 12px",background:"var(--surface)",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:6}}>
             <span><TI n="eye"/></span>
             <span>Feldsichtbarkeit gemäss Rolle: <strong>{getRole(role).label}</strong></span>
           </div>
@@ -2941,7 +2941,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--text)"}}>{p.lastName} {p.firstName}</div>
                       <div style={{fontSize:12,color:"var(--sub)",marginTop:3,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                        {positions[p.id]&&<span style={{background:"#F3F4F6",color:"var(--sub)",padding:"2px 8px",borderRadius:20}}>{positions[p.id]}</span>}
+                        {positions[p.id]&&<span style={{background:"var(--surface2)",color:"var(--sub)",padding:"2px 8px",borderRadius:20}}>{positions[p.id]}</span>}
                         {rueckennrn[p.id]&&<span style={{color:"var(--sub)"}}>Nr. {rueckennrn[p.id]}</span>}
                       </div>
                     </div>
@@ -2957,7 +2957,7 @@ function RosterTab({role,team,initialSelected=null,teamRosterData=null}){
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{p.lastName} {p.firstName}</div>
                     <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                      {positions[p.id]&&<span style={{background:"#F3F4F6",color:"var(--sub)",padding:"2px 9px",borderRadius:20}}>{positions[p.id]}</span>}
+                      {positions[p.id]&&<span style={{background:"var(--surface2)",color:"var(--sub)",padding:"2px 9px",borderRadius:20}}>{positions[p.id]}</span>}
                       {rueckennrn[p.id]&&<span style={{color:"var(--sub)"}}>Nr. {rueckennrn[p.id]}</span>}
                       {p.role&&<span style={{background:"#7C3AED18",color:"#7C3AED",padding:"2px 9px",borderRadius:20}}>{p.role}</span>}
                     </div>
@@ -3277,7 +3277,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
                   display:"flex", alignItems:"flex-start", justifyContent:"flex-end",
                   paddingRight:5, paddingTop:1
                 }}>
-                  {isHour && <span style={{fontSize:13, color:"#9CA3AF", fontWeight:600, letterSpacing:-0.3}}>{fmtT15(t)}</span>}
+                  {isHour && <span style={{fontSize:13, color:"var(--sub)", fontWeight:600, letterSpacing:-0.3}}>{fmtT15(t)}</span>}
                   {!isHour && <span style={{fontSize:13, color:"#D1D5DB", fontWeight:400}}>{fmtT15(t)}</span>}
                 </div>
               );
@@ -3868,7 +3868,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
                           <div style={{fontWeight:700,fontSize:14,color:isAktiv?BL:BK}}>{p.name}</div>
                           {isAktiv&&<span style={{fontSize:13,padding:"2px 8px",borderRadius:20,background:BL,color:"#fff",fontWeight:600}}>Aktiv</span>}
-                          {p.active&&!isAktiv&&<span style={{fontSize:13,padding:"2px 8px",borderRadius:20,background:"#ECFDF5",color:GN,fontWeight:600}}>Aktiviert</span>}
+                          {p.active&&!isAktiv&&<span style={{fontSize:13,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN,fontWeight:600}}>Aktiviert</span>}
                         </div>
                         <div style={{fontSize:13,color:"var(--sub)"}}>
                           {p.valid_from?p.valid_from.split("-").reverse().join("."):"–"}
@@ -3880,7 +3880,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                       <div style={{display:"flex",gap:5,flexShrink:0}}>
                         {!isAktiv&&(
                           <button onClick={function(){handlePlanAktivieren(p.id);}}
-                            style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid "+BL,background:"#EFF6FF",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                            style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
                             Aktivieren
                           </button>
                         )}
@@ -3952,7 +3952,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                   </div>
                   {canEdit&&(
                     <div style={{display:"flex",gap:6,flexShrink:0}}>
-                      {!isAktiv&&<button onClick={function(){handlePlanAktivieren(p.id);}} style={{padding:"6px 12px",borderRadius:8,border:"1.5px solid "+BL,background:"#EFF6FF",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>Aktivieren</button>}
+                      {!isAktiv&&<button onClick={function(){handlePlanAktivieren(p.id);}} style={{padding:"6px 12px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>Aktivieren</button>}
                       <button onClick={function(){setEditPlan(p);setShowPlanEditor(true);}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n="edit"/></button>
                       <button onClick={function(){handlePlanDuplizieren(p);}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>≡</button>
                       {plaene.length>1&&!isAktiv&&<button onClick={function(){if(window.confirm("Plan loeschen?")){handlePlanLoeschen(p.id);}}} style={{width:30,height:30,borderRadius:8,border:"0.5px solid "+R+"30",background:RL,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n="trash"/></button>}
@@ -3962,7 +3962,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
                 {isAktiv&&<button onClick={function(){setTrainungsTab("gantt");}} style={{marginTop:10,width:"100%",padding:"7px",borderRadius:8,border:"1px solid "+BL+"40",background:"transparent",color:BL,fontSize:13,cursor:"pointer"}}>Zum GANTT →</button>}
                 {!isAktiv&&canEdit&&(
                   <button onClick={function(){setVorschauPlan(p.id);setTrainungsTab("gantt");}}
-                    style={{marginTop:10,width:"100%",padding:"7px",borderRadius:8,border:"1px solid #FDE68A",background:"#FFFBEB",color:"#92400E",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                    style={{marginTop:10,width:"100%",padding:"7px",borderRadius:8,border:"1px solid #FDE68A",background:"var(--surface)",color:"#92400E",fontSize:13,fontWeight:600,cursor:"pointer"}}>
                     Vorschau im GANTT →
                   </button>
                 )}
@@ -3981,7 +3981,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
 
       {/* Ausserhalb Gültigkeitsspanne */}
       {!planGueltigDieseWoche&&(
-        <div style={{padding:"10px 14px",background:"#F3F4F6",border:"1px solid #D1D5DB",borderRadius:10,marginBottom:12,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
+        <div style={{padding:"10px 14px",background:"var(--surface2)",border:"1px solid #D1D5DB",borderRadius:10,marginBottom:12,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:14}}>&#128197;</span>
           <span>
             Diese Woche liegt ausserhalb der Gültigkeitsspanne des Plans
@@ -3991,7 +3991,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
         </div>
       )}
       {isVorschau&&(
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",background:"#FFFBEB",border:"1.5px solid #FDE68A",borderRadius:10,marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",background:"var(--surface)",border:"1.5px solid #FDE68A",borderRadius:10,marginBottom:12}}>
           <div>
             <span style={{fontSize:13,fontWeight:700,color:"#92400E"}}>Vorschau: </span>
             <span style={{fontSize:13,color:"#92400E"}}>{plan.name}</span>
@@ -3999,7 +3999,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
           </div>
           <div style={{display:"flex",gap:6}}>
             <button onClick={function(){handlePlanAktivieren(vorschauPlan);setVorschauPlan(null);}}
-              style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid "+BL,background:"#EFF6FF",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+              style={{padding:"5px 12px",borderRadius:8,border:"1.5px solid "+BL,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer"}}>
               Jetzt aktivieren
             </button>
             <button onClick={function(){setVorschauPlan(null);}}
@@ -4067,7 +4067,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
             </div>
           )}
           {kwAusnahmen.length>0 && (
-            <span style={{fontSize:13,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"#FFF7ED",color:"#D97706",border:"1px solid #FED7AA"}}>
+            <span style={{fontSize:13,fontWeight:600,padding:"3px 8px",borderRadius:20,background:"var(--surface)",color:"#D97706",border:"1px solid #FED7AA"}}>
               {kwAusnahmen.length} Ausnahme{kwAusnahmen.length>1?"n":""}
             </span>
           )}
@@ -4132,7 +4132,7 @@ function TrainingGantt({team: teamProp, role, kannSchreiben, kannVerwalten, sb:s
       {/* Trainer-Benachrichtigungen */}
       {trainerNachrichten.filter(function(n){return n.type==="training_geloescht";}).length>0 && (
         <div style={{marginTop:12,border:"1px solid #2563EB40",borderRadius:12,overflow:"hidden"}}>
-          <div style={{background:"#EFF6FF",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+          <div style={{background:"var(--surface)",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
             <span style={{fontSize:13,fontWeight:700,color:BL}}>Training dauerhaft aus dem Plan entfernt</span>
             <button onClick={async function(){
               try{
@@ -4505,7 +4505,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                 <div style={{background:"#F8F8F6",borderRadius:10,padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
                   <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{isEdit?"Änderung übernehmen für:":"Training gilt:"}</div>
                   <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:true, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
-                    style={{padding:"10px",borderRadius:10,border:`1.5px solid ${BL}`,background:"#EFF6FF",color:BL,fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
+                    style={{padding:"10px",borderRadius:10,border:`1.5px solid ${BL}`,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
                     <div style={{fontWeight:700}}>Nur diese Woche</div>
                     <div style={{fontSize:13,fontWeight:400,color:"var(--sub)",marginTop:2}}>{isEdit?"Wird als Ausnahme gespeichert":"Einmaliger Zusatztermin"}</div>
                   </button>
@@ -4546,7 +4546,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
           ):(
             /* Ausnahme-Modus */
             <>
-              <div style={{padding:"10px 12px",background:"#FFF7ED",borderRadius:8,border:"1px solid #FED7AA",fontSize:13,color:"#92400E"}}>
+              <div style={{padding:"10px 12px",background:"var(--surface)",borderRadius:8,border:"1px solid #FED7AA",fontSize:13,color:"#92400E"}}>
                 <strong>{slot?.team} · {slot?.weekday}</strong> - Ausnahme für diese Woche (oder als neuer Standard).
               </div>
 
@@ -4787,7 +4787,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
       <div onClick={e=>e.stopPropagation()} style={isMobile?{position:"relative",background:"var(--surface)",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}:{background:"var(--surface)",borderRadius:20,width:"100%",maxWidth:660,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
 
         {/* Header */}
-        <div style={{background:"#EFF6FF",borderRadius:"20px 20px 0 0",padding:"20px 22px 0",position:"sticky",top:0,zIndex:1}}>
+        <div style={{background:"var(--surface)",borderRadius:"20px 20px 0 0",padding:"20px 22px 0",position:"sticky",top:0,zIndex:1}}>
           {/* Top row */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
             <div>
@@ -4800,7 +4800,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
             ):(
               <div style={{display:"none"}}/>
             )}
-            <button onClick={onClose} style={{background:"rgba(0,0,0,0.1)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:"#F3F4F6",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
+            <button onClick={onClose} style={{background:"rgba(0,0,0,0.1)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:"var(--surface2)",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           {/* Meta strip */}
           <div style={{display:"flex",gap:14,paddingBottom:14,fontSize:13,color:"rgba(0,0,0,0.55)"}}>
@@ -4852,7 +4852,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                   </div>
                 </div>
                 {spiel.treffpunkt&&(
-                  <div style={{background:"#EFF6FF",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:10,border:"0.5px solid #DBEAFE"}}>
+                  <div style={{background:"var(--surface)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:10,border:"0.5px solid #DBEAFE"}}>
                     <span style={{fontSize:20}}><TI n="target"/></span>
                     <div>
                       <div style={{fontSize:13,color:BL,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Treffpunkt</div>
@@ -4882,7 +4882,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
                 <div style={{padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={{fontSize:13,color:"var(--sub)"}}>Status</span>
-                  <span style={{background:"#ECFDF5",color:"#065F46",fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20}}>{spiel.status}</span>
+                  <span style={{background:"var(--surface)",color:"#065F46",fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20}}>{spiel.status}</span>
                 </div>
               </div>
 
@@ -4898,7 +4898,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
               </div>
 
-              {spiel.notes&&<div style={{background:"#FFFBEB",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#92400E",border:"0.5px solid #FDE68A",display:"flex",gap:8,alignItems:"flex-start"}}><span>⚠</span><span>{spiel.notes}</span></div>}
+              {spiel.notes&&<div style={{background:"var(--surface)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#92400E",border:"0.5px solid #FDE68A",display:"flex",gap:8,alignItems:"flex-start"}}><span>⚠</span><span>{spiel.notes}</span></div>}
               <div style={{padding:"8px 12px",background:"#F0F9FF",borderRadius:8,fontSize:13,color:BL,display:"flex",gap:6,alignItems:"center"}}><span><TI n="refresh"/></span><span>Synchronisiert mit <strong>fvrz.ch</strong> · {spiel.spielNr}</span></div>
             </div>
           )}
@@ -4953,7 +4953,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               </div>
               {editMode&&<AR onAdd={()=>{const p=ROSTER.find(r=>r.name===newTor.kaderName);if(p&&!stats.kader.includes(p.id))setStats(s=>({...s,kader:[...s.kader,p.id]}));setNewTor(t=>({...t,kaderName:""}));}}><SS value={newTor.kaderName||""} onChange={v=>setNewTor(t=>({...t,kaderName:v}))} options={spielerNamen.filter(n=>!kaderNamen.includes(n))} placeholder="Spieler auswählen"/></AR>}
 
-              {!played&&<div style={{padding:"10px 12px",background:"#EFF6FF",borderRadius:8,fontSize:13,color:BL,marginTop:8}}>≡ Startaufstellung - Tore, Assists und Karten können nach dem Spiel erfasst werden.</div>}
+              {!played&&<div style={{padding:"10px 12px",background:"var(--surface)",borderRadius:8,fontSize:13,color:BL,marginTop:8}}>≡ Startaufstellung - Tore, Assists und Karten können nach dem Spiel erfasst werden.</div>}
 
               {played&&<><ST>Tore ({stats.tore.length})</ST>
               {stats.tore.length===0&&!editMode&&<div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Keine Tore erfasst.</div>}
@@ -5058,7 +5058,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                             <span style={{fontWeight:isVoted?700:500,fontSize:13}}>{pl.firstName} {pl.lastName}</span>
                             <span style={{fontSize:13,fontWeight:700,color:isVoted?AM:"#aaa"}}>{vv>0?vv+(vv===1?" Stimme":" Stimmen"):""}</span>
                           </div>
-                          <div style={{height:4,background:"#F3F4F6",borderRadius:2}}>
+                          <div style={{height:4,background:"var(--surface2)",borderRadius:2}}>
                             <div style={{height:"100%",width:barPct+"%",background:isVoted?AM:"#F3F4F6",borderRadius:2}}/>
                           </div>
                         </div>
@@ -5547,7 +5547,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               })()}
               {/* Beschreibung */}
               {selEv.description&&(
-                <div style={{padding:"14px 20px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:10,background:"#F9FAFB"}}>
+                <div style={{padding:"14px 20px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:10,background:"var(--surface)"}}>
                   <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
                   <p style={{margin:0,fontSize:13,color:"var(--text)",lineHeight:1.65}}>{selEv.description}</p>
                 </div>
@@ -5576,7 +5576,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               )}
               {/* Zum Spielplan Link bei Spielen */}
               {selEv.type==="Spiel"&&onNavigateToSpiel&&(
-                <div style={{padding:"10px 20px",background:"#EFF6FF",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{fontSize:13,color:BL,fontWeight:500}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                   <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
                     style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"3px 12px",cursor:"pointer"}}>
@@ -5760,7 +5760,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 {/* Haupt-Inhalt */}
                 <div onClick={()=>openEvent(ev.id)} style={{flex:1,padding:"12px 14px",minWidth:0,display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
                   {/* Datum-Block */}
-                  <div style={{width:62,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#F3F3F1",borderRadius:10,padding:"8px 6px"}}>
+                  <div style={{width:62,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
                     <div style={{fontSize:19,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
@@ -5791,7 +5791,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 {/* RSVP-Buttons - segmentierter Toggle */}
                 {showRsvp&&(
                   <div style={{padding:"10px 12px",borderTop:"0.5px solid var(--border)"}} onClick={e=>e.stopPropagation()}>
-                    <div style={{display:"flex",background:"#F3F3F1",borderRadius:10,padding:3,gap:2}}>
+                    <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:2}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
                         style={{flex:1,padding:"9px 8px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                         <span style={{fontSize:14}}>▲</span>
@@ -5928,7 +5928,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             })()}
             {/* Beschreibung für Vereinsanlass/Team-Event */}
             {selEv.description&&(
-              <div style={{padding:"14px 20px",background:"#F9FAFB",borderBottom:"0.5px solid var(--border)",display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{padding:"14px 20px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",gap:12,alignItems:"flex-start"}}>
                 <span style={{fontSize:18,flexShrink:0,marginTop:1}}>ℹ️</span>
                 <p style={{margin:0,fontSize:13,color:"var(--text)",lineHeight:1.7}}>{selEv.description}</p>
               </div>
@@ -5998,7 +5998,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             </div>
             {/* Zum Spielplan Link bei Spielen */}
             {selEv.type==="Spiel"&&onNavigateToSpiel&&(
-              <div style={{padding:"10px 20px",background:"#EFF6FF",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <span style={{fontSize:13,color:BL,fontWeight:500}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                 <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
                   style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"3px 12px",cursor:"pointer"}}>
@@ -6008,7 +6008,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
             )}
             {/* Readonly banner for trainer on Vereinsanlass with RSVP */}
             {(isTrainer||isAdmin)&&!canEditEvent(selEv)&&selEv.rsvp!==false&&(
-              <div style={{padding:"8px 16px",background:"#FFF7ED",borderBottom:`0.5px solid #FED7AA`,fontSize:13,color:"#92400E",display:"flex",alignItems:"center",gap:6}}>
+              <div style={{padding:"8px 16px",background:"var(--surface)",borderBottom:`0.5px solid #FED7AA`,fontSize:13,color:"#92400E",display:"flex",alignItems:"center",gap:6}}>
                 <span>{"ℹ️"}</span>
                 <span>Vereinsanlass - nur Administratoren können Anwesenheiten bearbeiten. Du siehst die Übersicht als Lesezugriff.</span>
               </div>
@@ -6065,7 +6065,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                         return(
                           <button key={s} onClick={()=>{setResp(selEv.id,p.id,s);if(s==="ab")setShowNoteFor(p.id);else setShowNoteFor(null);}}
                             title={cfg.label}
-                            style={{width:s==="aufgebot"?32:26,height:s==="aufgebot"?32:26,borderRadius:"50%",border:`1.5px solid ${active?cfg.color:"#F3F4F6"}`,background:active?cfg.color:"#fff",color:active?"#fff":"#ccc",fontSize:s==="aufgebot"?13:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            style={{width:s==="aufgebot"?32:26,height:s==="aufgebot"?32:26,borderRadius:"50%",border:`1.5px solid ${active?cfg.color:"var(--surface2)"}`,background:active?cfg.color:"#fff",color:active?"#fff":"#ccc",fontSize:s==="aufgebot"?13:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                             {cfg.icon}
                           </button>
                         );
@@ -6179,7 +6179,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
               ):(
                 /* -- TRAINING / STANDARD: schlank wie Bild 2 -- */
                 <div onClick={()=>openEvent(ev.id)} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:14}}>
-                  <div style={{width:58,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#F3F3F1",borderRadius:10,padding:"8px 6px"}}>
+                  <div style={{width:58,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
                     <div style={{fontSize:19,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
                     <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
@@ -6225,7 +6225,7 @@ function AttendanceTab({role,team,setActive,onNavigateToSpiel,myRosterId:myRoste
                 const none=!isZu&&!isAb;
                 return(
                   <div style={{padding:"10px 12px",background:"var(--surface)"}} onClick={e=>e.stopPropagation()}>
-                    <div style={{display:"flex",background:"#F3F3F1",borderRadius:10,padding:3,gap:2}}>
+                    <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:2}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
                         style={{flex:1,padding:"9px 8px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                         <span style={{fontSize:14}}>▲</span>
@@ -6494,7 +6494,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 </div>
               ))}
               {m.hat_portal_zugang&&(
-                <div style={{marginTop:14,padding:"10px 14px",background:"#ECFDF5",borderRadius:9,border:"1px solid "+GN,fontSize:13,color:GN,fontWeight:600}}>
+                <div style={{marginTop:14,padding:"10px 14px",background:"var(--surface)",borderRadius:9,border:"1px solid "+GN,fontSize:13,color:GN,fontWeight:600}}>
                   ✓ Hat Portal-Zugang
                 </div>
               )}
@@ -7469,7 +7469,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                   <div onClick={e=>{e.stopPropagation();if(!isPflicht)toggleModulGlobal(m.key);}}
                                     title={isPflicht?"Pflichtmodul":isAktiv?"Deaktivieren":"Aktivieren"}
                                     style={{width:26,height:15,borderRadius:8,flexShrink:0,background:isPflicht?"#F59E0B":isAktiv?GN:"var(--border)",cursor:isPflicht?"not-allowed":"pointer",position:"relative",transition:"background 0.2s"}}>
-                                    <div style={{position:"absolute",top:2,width:11,height:11,borderRadius:"50%",background:"#fff",transition:"left 0.15s",left:isAktiv||isPflicht?13:2}}/>
+                                    <div style={{position:"absolute",top:2,width:11,height:11,borderRadius:"50%",background:"var(--surface)",transition:"left 0.15s",left:isAktiv||isPflicht?13:2}}/>
                                   </div>
                                   <TI n={m.icon} size={13} style={{color:isPflicht?"#B45309":"var(--sub)",flexShrink:0}}/>
                                   <span style={{fontWeight:500,color:isPflicht?"#B45309":isExpanded?"var(--text)":"var(--text)",fontSize:13}}>{m.name||m.label}</span>
@@ -8516,7 +8516,7 @@ function EventsList({teamOnly,role}){
                     {e.type}
                   </span>
                   {e.rsvp&&(
-                    <span style={{fontSize:13,fontWeight:600,color:AM,background:"#F9FAFB",border:"0.5px solid #FDE68A",padding:"2px 8px",borderRadius:20}}>
+                    <span style={{fontSize:13,fontWeight:600,color:AM,background:"var(--surface)",border:"0.5px solid #FDE68A",padding:"2px 8px",borderRadius:20}}>
                       {"Rückmeldung erforderlich"}
                     </span>
                   )}
@@ -8583,7 +8583,7 @@ function BemerkungEdit({notes,onSave}){
       <input autoFocus value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Bemerkung…"
         style={{padding:"2px 7px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:130}}
         onKeyDown={e=>{if(e.key==="Enter"){onSave(draft);setEditing(false);}if(e.key==="Escape")setEditing(false);}}/>
-      <button onClick={()=>{onSave(draft);setEditing(false);}} style={{padding:"1px 6px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"#F0FDF4",color:GN,cursor:"pointer"}}>✓</button>
+      <button onClick={()=>{onSave(draft);setEditing(false);}} style={{padding:"1px 6px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓</button>
       <button onClick={()=>setEditing(false)} style={{padding:"1px 6px",borderRadius:6,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}>✕</button>
     </div>
   );
@@ -8665,7 +8665,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
         </div>
 
         {/* Fortschrittsbalken */}
-        <div style={{height:6,background:"#F3F4F6",borderRadius:3,marginBottom:10}}>
+        <div style={{height:6,background:"var(--surface2)",borderRadius:3,marginBottom:10}}>
           <div style={{height:"100%",width:`${pct}%`,background:voll?GN:filled>0?AM:R,borderRadius:3}}/>
         </div>
 
@@ -8689,9 +8689,9 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
               </div>
             ))}
             {Array.from({length:max-filled},(_,i)=>(
-              <div key={`f${i}`} style={{display:"flex",alignItems:"center",gap:6,background:"#FAFAFA",border:"1px dashed #D1D5DB",borderRadius:7,padding:"4px 8px"}}>
+              <div key={`f${i}`} style={{display:"flex",alignItems:"center",gap:6,background:"var(--surface)",border:"1px dashed #D1D5DB",borderRadius:7,padding:"4px 8px"}}>
                 <div style={{width:16,height:16,borderRadius:"50%",background:"#E5E7EB",flexShrink:0}}/>
-                <span style={{fontSize:13,color:"#9CA3AF"}}>Freier Platz</span>
+                <span style={{fontSize:13,color:"var(--sub)"}}>Freier Platz</span>
               </div>
             ))}
           </div>
@@ -8703,10 +8703,10 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
           {/* Haupt-Buttons (solange kein Formular offen und keine Anfrage pending) */}
           {!showTransfer&&!showAnfrageForm&&!anfragePending&&(
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-              <button onClick={()=>setShowTransfer(true)} style={{padding:"4px 10px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"#ECFEFF",color:"#0891B2"}}>
+              <button onClick={()=>setShowTransfer(true)} style={{padding:"4px 10px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"var(--surface)",color:"#0891B2"}}>
                 ⇄ Übertragen
               </button>
-              <button onClick={()=>setShowAnfrageForm(true)} style={{padding:"4px 10px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid ${AM}`,background:"#FFFBEB",color:AM}}>
+              <button onClick={()=>setShowAnfrageForm(true)} style={{padding:"4px 10px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid ${AM}`,background:"var(--surface)",color:AM}}>
                 ↩ Freigabe anfragen
               </button>
             </div>
@@ -8727,7 +8727,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 
           {/* Freigabe-Anfrage Formular */}
           {showAnfrageForm&&(
-            <div style={{padding:"10px 12px",background:"#F9FAFB",border:`0.5px solid ${AM}`,borderRadius:8}}>
+            <div style={{padding:"10px 12px",background:"var(--surface)",border:`0.5px solid ${AM}`,borderRadius:8}}>
               <div style={{fontSize:13,fontWeight:700,color:AM,marginBottom:6}}>Grund für die Freigabe-Anfrage</div>
               <textarea
                 value={anfrageBegruendung}
@@ -8750,7 +8750,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 
           {/* Übertragung-Formular */}
           {showTransfer&&(
-            <div style={{padding:"9px 11px",background:"#ECFEFF",border:`0.5px solid #0891B2`,borderRadius:8}}>
+            <div style={{padding:"9px 11px",background:"var(--surface)",border:`0.5px solid #0891B2`,borderRadius:8}}>
               <div style={{fontSize:13,fontWeight:600,color:"#0891B2",marginBottom:6}}>Schicht an wen übertragen?</div>
               {/* Suchfeld */}
               <div style={{position:"relative",marginBottom:6}}>
@@ -8800,13 +8800,13 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
         <div>
           {/* Trainer: Zuteilungs-Dropdown */}
           {canZuteilen&&!showZuteilen&&(
-            <button onClick={()=>setShowZuteilen(true)} style={{padding:"4px 11px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:"none",background:"#F3F4F6",color:"var(--text)"}}>
+            <button onClick={()=>setShowZuteilen(true)} style={{padding:"4px 11px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:"none",background:"var(--surface2)",color:"var(--text)"}}>
               + Zuteilen
             </button>
           )}
           {/* Standard Eintragen für alle anderen */}
           {!canZuteilen&&(
-            <button onClick={()=>onEintragen(schicht.id,meinName)} style={{padding:"4px 11px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:"none",background:"#F3F4F6",color:"var(--text)"}}>
+            <button onClick={()=>onEintragen(schicht.id,meinName)} style={{padding:"4px 11px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"pointer",border:"none",background:"var(--surface2)",color:"var(--text)"}}>
               ✓ Eintragen
             </button>
           )}
@@ -8859,7 +8859,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
         </div>
       ):(
         <div style={{marginTop:10}}>
-          <button disabled style={{padding:"4px 11px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"default",border:"0.5px solid var(--border)",background:"#F3F4F6",color:"#9CA3AF"}}>Besetzt</button>
+          <button disabled style={{padding:"4px 11px",borderRadius:7,fontSize:13,fontWeight:600,cursor:"default",border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--sub)"}}>Besetzt</button>
         </div>
       )}
 
@@ -8946,7 +8946,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
 
       {/* Ausstehende Anfrage: Begründung anzeigen */}
       {anfragePending&&(
-        <div style={{fontSize:13,color:AM,background:"#FFFBEB",borderRadius:6,padding:"6px 9px",border:`0.5px solid ${AM}40`}}>
+        <div style={{fontSize:13,color:AM,background:"var(--surface)",borderRadius:6,padding:"6px 9px",border:`0.5px solid ${AM}40`}}>
           <span style={{fontWeight:700}}>Begründung:</span> <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em><br/>
           <span style={{color:"var(--sub)",marginTop:3,display:"block"}}>Wartet auf Freigabe durch Funktionär/Admin.</span>
         </div>
@@ -8957,10 +8957,10 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
         <div>
           {!showAnfrageForm&&!showTransfer&&(
             <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setShowTransfer(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"#ECFEFF",color:"#0891B2"}}>
+              <button onClick={()=>setShowTransfer(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid #0891B2`,background:"var(--surface)",color:"#0891B2"}}>
                 ⇄ Übertragen
               </button>
-              <button onClick={()=>setShowAnfrageForm(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid ${AM}`,background:"#FFFBEB",color:AM}}>
+              <button onClick={()=>setShowAnfrageForm(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid ${AM}`,background:"var(--surface)",color:AM}}>
                 ↩ Freigabe anfragen
               </button>
             </div>
@@ -8968,7 +8968,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
 
           {/* Freigabe-Formular */}
           {showAnfrageForm&&(
-            <div style={{padding:"9px 11px",background:"#FFFBEB",border:`0.5px solid ${AM}`,borderRadius:8}}>
+            <div style={{padding:"9px 11px",background:"var(--surface)",border:`0.5px solid ${AM}`,borderRadius:8}}>
               <div style={{fontSize:13,fontWeight:700,color:AM,marginBottom:6}}>Grund für die Freigabe-Anfrage</div>
               <textarea
                 value={begruendung}
@@ -8988,7 +8988,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
 
           {/* Übertragung-Formular */}
           {showTransfer&&(
-            <div style={{padding:"9px 11px",background:"#EFF6FF",border:`0.5px solid ${BL}`,borderRadius:8}}>
+            <div style={{padding:"9px 11px",background:"var(--surface)",border:`0.5px solid ${BL}`,borderRadius:8}}>
               <div style={{fontSize:13,fontWeight:600,color:BL,marginBottom:6}}>Schicht übertragen an:</div>
               <select value={transferTarget} onChange={e=>setTransferTarget(e.target.value)} style={{width:"100%",padding:"5px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,marginBottom:7}}>
                 <option value="">- Person auswählen -</option>
@@ -9349,7 +9349,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                       return(
                         <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
                           {/* Einsatz-Zeile */}
-                          <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"#FAFAFA",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
+                          <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
                             <div style={{display:"flex",alignItems:"center",gap:12}}>
                               <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                               <div>
@@ -9383,7 +9383,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                       </label>
                                     );
                                   })}
-                                  <button onClick={e=>{e.stopPropagation();setEditingGruppen(null);}} style={{padding:"2px 8px",borderRadius:20,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"#F0FDF4",color:GN,cursor:"pointer"}}>✓ Fertig</button>
+                                  <button onClick={e=>{e.stopPropagation();setEditingGruppen(null);}} style={{padding:"2px 8px",borderRadius:20,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓ Fertig</button>
                                 </div>
                               ):(
                                 <>
@@ -9397,7 +9397,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                   <input autoFocus value={bemerkungDraft} onChange={e=>setBemerkungDraft(e.target.value)}
                                     placeholder="Bemerkung…"
                                     style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:160}}/>
-                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"2px 8px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"#F0FDF4",color:GN,cursor:"pointer"}}>✓</button>
+                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"2px 8px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓</button>
                                   <button onClick={()=>setEditingBemerkung(null)} style={{padding:"2px 8px",borderRadius:6,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}>✕</button>
                                 </div>
                               ):(
@@ -9485,7 +9485,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                 {geplant.length>0&&(
                   <div style={{marginBottom:18}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                      <span style={{background:"#FFFBEB",color:AM,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #FDE68A`}}>⏳ Geplant</span>
+                      <span style={{background:"var(--surface)",color:AM,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #FDE68A`}}>⏳ Geplant</span>
                       <span style={{color:"var(--sub)",fontSize:13}}>{geplant.length+" Schicht"+(geplant.length!==1?"en":"")}</span>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -9500,7 +9500,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                 {geleistet.length>0&&(
                   <div style={{marginBottom:16}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                      <span style={{background:"#ECFDF5",color:GN,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #BBF7D0`}}>✓ Geleistet</span>
+                      <span style={{background:"var(--surface)",color:GN,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #BBF7D0`}}>✓ Geleistet</span>
                       <span style={{color:"var(--sub)",fontSize:13}}>{geleistet.length+" Schicht"+(geleistet.length!==1?"en":"")}</span>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -9515,7 +9515,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 {s.einsatzOrt&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzOrt}</span></>}
                               </div>
                             </div>
-                            <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"#ECFDF5",color:GN,flexShrink:0}}>✓ Geleistet</span>
+                            <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN,flexShrink:0}}>✓ Geleistet</span>
                           </div>
                           <div style={{padding:"8px 14px"}}>
                             <div style={{fontWeight:600,fontSize:13}}>{s.label}</div>
@@ -9537,7 +9537,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* -- TAB: MEINEM TEAM ZUGEWIESEN -- */}
       {helperTab==="team"&&meinGruppe&&(
         <div>
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"#F3F4F6",border:"0.5px solid var(--border)",borderRadius:9,marginBottom:16,fontSize:13}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:9,marginBottom:16,fontSize:13}}>
             <span style={{fontSize:15}}><TI n="users"/></span>
             <span>Einsätze für deine Teams: {meineGruppen.map((g,i)=><strong key={i}>{i>0?" · ":""}{g}</strong>)}</span>
           </div>
@@ -9607,7 +9607,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                         const eBarColor=eOffen===0?GN:eTotalHelfer===0?R:AM;
                         return(
                           <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
-                            <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"#FAFAFA",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
+                            <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
                               <div style={{display:"flex",alignItems:"center",gap:12}}>
                                 <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                                 <div>
@@ -9660,7 +9660,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
         <div>
           {/* Team-Filter Hinweis für Trainer */}
           {isTrainer&&(
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"#F3F4F6",border:"0.5px solid var(--border)",borderRadius:9,marginBottom:14,fontSize:13}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:9,marginBottom:14,fontSize:13}}>
               <span style={{fontSize:15}}><TI n="eye"/></span>
               <span>Du siehst nur Mitglieder deines Teams: <strong>Cc-Junioren</strong></span>
             </div>
@@ -9757,9 +9757,9 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                     const iso=parts.length===3?`${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`:"";
                                     const past=iso<"2026-05-23"&&iso!=="";
                                     const statusBadge=anfrage
-                                      ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"#FFFBEB",color:AM,border:`0.5px solid #FDE68A`}}>⏳ Freigabe ausstehend</span>
+                                      ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:AM,border:`0.5px solid #FDE68A`}}>⏳ Freigabe ausstehend</span>
                                       :past
-                                        ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"#ECFDF5",color:GN}}>✓ Geleistet</span>
+                                        ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN}}>✓ Geleistet</span>
                                         :<span style={{fontSize:13,padding:"2px 4px",color:AM}}>⏳</span>;
                                     return(
                                       <div key={sid} style={{borderRadius:10,overflow:"hidden",border:`0.5px solid ${anfrage?AM:GB}`,background:anfrage?"#FFFBEB":"#fff",borderTop:`3px solid ${ev.color||"#64748B"}`}}>
@@ -9874,7 +9874,7 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
       </div>
       <InfoBox text="First-come-First-served · Keine Freigabe nötig · Alle Reservationen sichtbar · Nur eigene bearbeitbar" color={BL}/>
       {showForm&&(
-        <Card style={{marginTop:14,background:"#F9FAFB",border:`0.5px solid ${AM}`}}>
+        <Card style={{marginTop:14,background:"var(--surface)",border:`0.5px solid ${AM}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Reservation</h3>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Bus</label><br/><select style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13}}><option>Bus A (9-Plätzer)</option><option>Bus B (15-Plätzer)</option></select></div>
@@ -9916,7 +9916,7 @@ function MaterialView(){
         <Btn variant="primary" color="#F3F4F6" onClick={()=>setShowForm(!showForm)}>+ Anfrage stellen</Btn>
       </div>
       {showForm&&(
-        <Card style={{marginBottom:16,background:"#EFF6FF",border:`0.5px solid ${BL}`}}>
+        <Card style={{marginBottom:16,background:"var(--surface)",border:`0.5px solid ${BL}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Materialanfrage</h3>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Art</label><br/><select style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13}}>{["Bestellung","Ersatzmaterial","Tenüs","Mangel","Defekt","Verlust","Neue Anforderung"].map(t=><option key={t}>{t}</option>)}</select></div>
@@ -10707,7 +10707,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                     }}>
                       <div style={{
                         position:"absolute",top:3,width:14,height:14,borderRadius:"50%",
-                        background:"#fff",transition:"left 0.2s",
+                        background:"var(--surface)",transition:"left 0.2s",
                         left:isActive?19:3
                       }}/>
                     </div>
@@ -11118,7 +11118,7 @@ function PlaetzeView(){
                     )}
                   </div>
                   <button onClick={function(){handleToggle(p.id);}} title="Aktivieren"
-                    style={{padding:"4px 10px",borderRadius:20,border:"0.5px solid "+GN,background:"#ECFDF5",color:GN,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                    style={{padding:"4px 10px",borderRadius:20,border:"0.5px solid "+GN,background:"var(--surface)",color:GN,fontSize:13,fontWeight:600,cursor:"pointer"}}>
                     Aktivieren
                   </button>
                   <button onClick={function(){handleDelete(p.id);}} title="Löschen"
@@ -11299,7 +11299,7 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
     boxSizing:"border-box",outline:"none"};
 
   const StatusBox=({status,msg})=>status==="ok"?(
-    <div style={{padding:"10px 14px",background:"#ECFDF5",border:"1px solid "+GN,borderRadius:9,fontSize:13,color:GN,fontWeight:600,marginTop:4}}>{msg}</div>
+    <div style={{padding:"10px 14px",background:"var(--surface)",border:"1px solid "+GN,borderRadius:9,fontSize:13,color:GN,fontWeight:600,marginTop:4}}>{msg}</div>
   ):status==="error"?(
     <div style={{padding:"10px 14px",background:RL,border:"1px solid "+R,borderRadius:9,fontSize:13,color:R,fontWeight:600,marginTop:4}}>{msg}</div>
   ):null;
@@ -11710,7 +11710,7 @@ function LoginScreen({onLogin, sb, appTheme}){
               <div style={{fontWeight:700,fontSize:16,color:"var(--text)",marginBottom:6}}>Passwort zurücksetzen</div>
               <div style={{fontSize:13,color:"var(--sub)",marginBottom:20}}>Wir senden dir einen Link per E-Mail.</div>
               {resetSent ? (
-                <div style={{fontSize:13,color:GN,background:"#ECFDF5",padding:"12px",borderRadius:8,textAlign:"center"}}>
+                <div style={{fontSize:13,color:GN,background:"var(--surface)",padding:"12px",borderRadius:8,textAlign:"center"}}>
                   E-Mail gesendet! Bitte prüfe dein Postfach.
                 </div>
               ) : (
