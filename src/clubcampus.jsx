@@ -74,8 +74,6 @@ const PWA_CSS=`
 }
 @keyframes cc-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .cc-btn-primary:hover{background:var(--btn-hover)!important;}
-@keyframes cc-pop{from{opacity:0;transform:scale(0.72)}to{opacity:1;transform:scale(1)}}
-@keyframes cc-splash-out{to{opacity:0;visibility:hidden}}
 @keyframes cc-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes cc-dot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
 .cc-page{animation:cc-in 0.2s ease-out}
@@ -159,21 +157,6 @@ function useBreakpoint(){const [w,setW]=useState(typeof window!=="undefined"?win
 function useIsMobile(){return useBreakpoint().isMobile;}
 
 /* ── SPLASH SCREEN ── */
-function SplashScreen({onDone}){
-  useEffect(()=>{const t=setTimeout(onDone,1800);return()=>clearTimeout(t);},[]);
-  return(
-    <div style={{position:"fixed",inset:0,background:"#0a0a0c",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,animation:"cc-splash-out 0.4s 1.4s ease-out forwards"}}>
-      <div style={{width:110,height:110,borderRadius:28,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",animation:"cc-pop 0.55s 0.1s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-        <img src={LOGO_B64} style={{width:110,height:110,objectFit:"cover",display:"block",borderRadius:28}} alt="Logo"/>
-      </div>
-      <div style={{color:"var(--text)",fontWeight:800,fontSize:24,marginTop:24,letterSpacing:-0.4,fontFamily:FONT,animation:"cc-in 0.4s 0.45s ease-out both"}}>{(()=>{try{const s=localStorage.getItem("cc-theme");return s?JSON.parse(s).vereinsname||"ClubCampus":"ClubCampus";}catch{return "ClubCampus";}})()}</div>
-      <div style={{color:"var(--sub)",fontSize:12,marginTop:5,letterSpacing:2,textTransform:"uppercase",fontFamily:FONT,animation:"cc-in 0.4s 0.6s ease-out both"}}>ClubCampus</div>
-      <div style={{display:"flex",gap:7,marginTop:40,animation:"cc-in 0.4s 0.75s ease-out both"}}>
-        {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:ACCENT,animation:`cc-dot 1.2s ${i*0.18}s ease-in-out infinite`}}/>)}
-      </div>
-    </div>
-  );
-}
 
 /* ── SKELETON LOADER ── */
 function Skel({h=14,w="100%",br=6,mb=0,style={}}){
@@ -11849,9 +11832,7 @@ export default function Portal({supabaseClient}){
       try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
     }catch(e){console.warn("[CC] loadTenant:",e.message);}
   }
-  /* ── Splash Screen ── */
-  const [splash,setSplash]=useState(()=>{try{return !localStorage.getItem("cc-splash-done");}catch{return true;}});
-  const doneSplash=()=>{try{localStorage.setItem("cc-splash-done","1");}catch{}setSplash(false);};
+
   /* ── Inter Font + PWA Globals ── */
   useEffect(()=>{
     if(!document.getElementById("inter-font")){
@@ -12179,7 +12160,6 @@ export default function Portal({supabaseClient}){
 
   return(
     <ThemeCtx.Provider value={{dark,toggle:toggleDark}}>
-      {splash&&<SplashScreen onDone={doneSplash}/>}
       <div data-theme={dark?"dark":"light"} style={{display:"flex",minHeight:"100dvh",background:"var(--bg)",fontFamily:FONT,WebkitFontSmoothing:"antialiased",MozOsxFontSmoothing:"grayscale",color:"var(--text)",transition:"background 0.25s,color 0.25s"}}>
         {!isMobile&&<SideNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} appTheme={appTheme}/>}
         <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
