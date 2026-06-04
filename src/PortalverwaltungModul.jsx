@@ -327,16 +327,41 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   }
   /* moduleAktiv + moduleRechte kommen als Props von App */
 
-  const TABS=[
-    {key:"module",      label:"Module & Rechte",      icon:"layout-grid"},
-    {key:"gruppen",     label:"Gruppen & Funktionen",  icon:"sitemap"},
-    {key:"teammodule",  label:"Team-Module",           icon:"ball-football"},
-    {key:"users",       label:"Benutzer & Rollen",     icon:"users"},
-    {key:"aussehen",    label:"Aussehen",               icon:"palette"},
-    {key:"feldvis",     label:"Feldsichtbarkeit",       icon:"eye"},
-    {key:"api",         label:"API-Verbindungen",       icon:"plug"},
-    {key:"audit",       label:"Audit-Logs",             icon:"clipboard-list"},
+  const KATEGORIEN_NAV=[
+    {
+      key:"berechtigungen", label:"Berechtigungen", icon:"shield-lock", color:"#3B82F6", bg:"#EFF6FF",
+      tabs:[
+        {key:"module",     label:"Module & Rechte",     icon:"layout-grid"},
+        {key:"gruppen",    label:"Gruppen & Funktionen", icon:"sitemap"},
+        {key:"teammodule", label:"Team-Module",          icon:"ball-football"},
+        {key:"feldvis",    label:"Feldsichtbarkeit",     icon:"eye"},
+      ]
+    },
+    {
+      key:"benutzer", label:"Benutzer & Rollen", icon:"users", color:"#16A34A", bg:"#ECFDF5",
+      tabs:[
+        {key:"users", label:"Benutzer & Rollen", icon:"users"},
+      ]
+    },
+    {
+      key:"erscheinungsbild", label:"Erscheinungsbild", icon:"palette", color:"#F59E0B", bg:"#FFFBEB",
+      tabs:[
+        {key:"aussehen", label:"Aussehen", icon:"palette"},
+      ]
+    },
+    {
+      key:"system", label:"System", icon:"settings", color:"#7C3AED", bg:"#F5F3FF",
+      tabs:[
+        {key:"api",   label:"API-Verbindungen", icon:"plug"},
+        {key:"audit", label:"Audit-Logs",       icon:"clipboard-list"},
+      ]
+    },
   ];
+  /* Aktive Kategorie aus Tab ableiten */
+  const getKatForTab=(t)=>KATEGORIEN_NAV.find(k=>k.tabs.some(x=>x.key===t))||KATEGORIEN_NAV[0];
+  const [aktiveKat, setAktiveKat]=useState(()=>getKatForTab(initialTab).key);
+  const [mobileKachel, setMobileKachel]=useState(null); // null = Landingseite
+  const isMobile=useIsMobile();
 
   const ROLLEN=["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"];
   const ROLLEN_LABELS={administrator:"Admin",vorstand:"Vorstand",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"};
@@ -704,25 +729,101 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         {saveMsg&&<Chip text={saveMsg} color={saveMsg==="Ungespeichert"?R:GN} bg={saveMsg==="Ungespeichert"?RL:"#ECFDF5"}/>}
       </div>
 
-      {/* Tabs */}
-      <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
-        {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)} style={{
-            display:"flex",alignItems:"center",gap:6,padding:"8px 14px",
-            background:"none",border:"none",borderBottom:tab===t.key?`2px solid #1A1A1A`:"2px solid transparent",
-            cursor:"pointer",fontSize:13,fontWeight:tab===t.key?700:400,
-            color:tab===t.key?BK:"#888",borderRadius:0,marginBottom:-1,
-          }}>
-            <TI n={t.icon}/>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* ── MOBILE: Kacheln oder Unternavigation ── */}
+      {isMobile&&mobileKachel===null&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+          {KATEGORIEN_NAV.map(k=>(
+            <button key={k.key} onClick={()=>{setMobileKachel(k.key);setTab(k.tabs[0].key);setAktiveKat(k.key);}}
+              style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:10,
+                padding:"16px",borderRadius:12,border:"0.5px solid var(--border)",
+                background:"var(--surface)",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>
+              <div style={{width:40,height:40,borderRadius:10,background:k.bg,
+                display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <TI n={k.icon} size={20} style={{color:k.color}}/>
+              </div>
+              <div>
+                <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{k.label}</div>
+                <div style={{fontSize:11,color:"var(--sub)",marginTop:2}}>{k.tabs.length} Bereiche</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {isMobile&&mobileKachel!==null&&(()=>{
+        const kat=KATEGORIEN_NAV.find(k=>k.key===mobileKachel)||KATEGORIEN_NAV[0];
+        return(
+          <div style={{marginBottom:16}}>
+            <button onClick={()=>setMobileKachel(null)}
+              style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",
+                cursor:"pointer",color:"var(--sub)",fontSize:13,padding:"0 0 12px",fontFamily:"inherit"}}>
+              <TI n="arrow-left" size={14}/>Übersicht
+            </button>
+            {kat.tabs.length>1&&(
+              <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:16}}>
+                {kat.tabs.map(t=>(
+                  <button key={t.key} onClick={()=>setTab(t.key)}
+                    style={{padding:"7px 12px",background:"none",border:"none",
+                      borderBottom:tab===t.key?"2px solid "+BK:"2px solid transparent",
+                      cursor:"pointer",fontSize:12,fontWeight:tab===t.key?700:400,
+                      color:tab===t.key?BK:"var(--sub)",marginBottom:-1,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
-      {loading&&<div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:13}}>Wird geladen…</div>}
+      {/* ── DESKTOP: Zweistufige Navigation ── */}
+      {!isMobile&&(
+        <div style={{marginBottom:20}}>
+          {/* Ebene 1: Hauptkategorien */}
+          <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:0}}>
+            {KATEGORIEN_NAV.map(k=>{
+              const isAktiv=k.key===aktiveKat;
+              return(
+                <button key={k.key} onClick={()=>{setAktiveKat(k.key);setTab(k.tabs[0].key);}}
+                  style={{display:"flex",alignItems:"center",gap:6,padding:"9px 16px",
+                    background:isAktiv?k.bg:"none",border:"none",
+                    borderBottom:isAktiv?"2px solid "+k.color:"2px solid transparent",
+                    cursor:"pointer",fontSize:13,fontWeight:isAktiv?700:400,
+                    color:isAktiv?k.color:"var(--sub)",marginBottom:-1,fontFamily:"inherit",
+                    borderRadius:"6px 6px 0 0",whiteSpace:"nowrap"}}>
+                  <TI n={k.icon} size={15} style={{color:isAktiv?k.color:"var(--sub)"}}/>
+                  {k.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Ebene 2: Unterkategorien (nur wenn >1 Tab in Kategorie) */}
+          {(()=>{
+            const kat=KATEGORIEN_NAV.find(k=>k.key===aktiveKat)||KATEGORIEN_NAV[0];
+            if(kat.tabs.length<=1) return null;
+            return(
+              <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",
+                paddingLeft:8,background:"var(--surface2)"}}>
+                {kat.tabs.map(t=>(
+                  <button key={t.key} onClick={()=>setTab(t.key)}
+                    style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",
+                      background:"none",border:"none",
+                      borderBottom:tab===t.key?"2px solid "+BK:"2px solid transparent",
+                      cursor:"pointer",fontSize:12,fontWeight:tab===t.key?600:400,
+                      color:tab===t.key?BK:"var(--sub)",marginBottom:-1,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    <TI n={t.icon} size={13}/>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {loading&&(!isMobile||mobileKachel!==null)&&<div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:13}}>Wird geladen…</div>}
 
       {/* ── TAB: MODULE & RECHTE ── */}
-      {!loading&&tab==="module"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="module"&&(
         <div>
           {/* Header: InfoBox + Legende + Toggle + Speichern */}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:14,flexWrap:"wrap"}}>
@@ -991,7 +1092,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       )}
 
       {/* ── TAB: GRUPPEN & FUNKTIONEN ── */}
-      {!loading&&tab==="gruppen"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="gruppen"&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:20}}>
             <InfoBox text="Gruppen bündeln Module für Funktionäre. Funktionen schränken innerhalb einer Gruppe ein (Teams, Filter)." color={BL}/>
@@ -1342,7 +1443,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       )}
 
       {/* ── TAB: TEAM-MODULE ── */}
-      {!loading&&tab==="teammodule"&&(()=>{
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="teammodule"&&(()=>{
         const TEAM_MODS=[
           {key:"roster",    label:"Kader"},
           {key:"training",  label:"Training"},
@@ -1364,7 +1465,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       })()}
 
       {/* ── TAB: BENUTZER & ROLLEN ── */}
-      {!loading&&tab==="users"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="users"&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={{fontSize:13,color:"var(--sub)"}}>{benutzerListe.length} Benutzer</div>
@@ -1446,7 +1547,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       )}
 
       {/* ── TAB: FELDSICHTBARKEIT ── */}
-      {!loading&&tab==="feldvis"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="feldvis"&&(
         <div>
           <InfoBox text="Steuert welche Mitglieder-Felder pro Rolle sichtbar sind. Änderungen wirken sofort." color={BL}/>
           <div style={{height:12}}/>
@@ -1491,7 +1592,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
       {/* ── TAB: API-VERBINDUNGEN ── */}
       {/* ── TAB: AUSSEHEN ── */}
-      {!loading&&tab==="aussehen"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="aussehen"&&(
         <div style={{maxWidth:600}}>
           <InfoBox text="Farben und Branding des Portals anpassen. Änderungen werden sofort in der Vorschau angezeigt und nach dem Speichern live übernommen." color={BL}/>
 
@@ -1631,7 +1732,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         </div>
       )}
 
-      {!loading&&tab==="api"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&(
         <div>
           <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
           <div style={{height:16}}/>
@@ -1677,7 +1778,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       )}
 
       {/* ── TAB: AUDIT-LOGS ── */}
-      {!loading&&tab==="audit"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="audit"&&(
         <div>
           <Card style={{padding:0,overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
