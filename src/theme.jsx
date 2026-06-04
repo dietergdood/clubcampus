@@ -121,15 +121,16 @@ function InfoBox({text,color=BL}){
    ROLLEN-SWITCHER MODAL
 ========================================== */
 
-function Btn({children,onClick,variant="outline",color=BK,small,disabled=false,type="button",style={}}){
+function Btn({children,onClick,variant="outline",color=null,small,disabled=false,type="button",style={}}){
   const p=small?"4px 11px":"7px 15px";
   const base={padding:p,borderRadius:8,fontSize:small?12:13,fontWeight:600,cursor:disabled?"not-allowed":"pointer",
     fontFamily:FONT,minHeight:small?32:38,opacity:disabled?0.5:1,border:"none",...style};
   if(variant==="primary"){
-    const lightBg=color==="#F3F4F6"||color===ACCENT||color==="#E5E7EB"||color==="#F9FAFB";
+    /* color prop überschreibt Theme-Farben, sonst CSS-Variablen aus Appearance */
+    const bg = color || "var(--btn-primary,#FFBF00)";
+    const fg = color ? (color==="#F3F4F6"||color==="#E5E7EB"||color==="#F9FAFB"?"#374151":"var(--btn-primary-text,#000)") : "var(--btn-primary-text,#000)";
     return <button type={type} onClick={onClick} disabled={disabled}
-      style={{...base,border:lightBg?"1px solid var(--border)":"none",background:color,
-        color:lightBg?"#374151":"#fff",transition:"opacity 0.15s"}}
+      style={{...base,background:bg,color:fg,transition:"opacity 0.15s"}}
       onMouseEnter={e=>{if(!disabled)e.currentTarget.style.opacity="0.85";}}
       onMouseLeave={e=>{e.currentTarget.style.opacity=disabled?"0.5":"1";}}
     >{children}</button>;
