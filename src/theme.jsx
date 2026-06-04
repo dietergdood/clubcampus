@@ -50,6 +50,10 @@ const PWA_CSS=`
 .cc-input{width:100%;padding:9px 12px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.15s}
 .cc-input:focus{border-color:var(--text)}
 .cc-unread-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;border:2px solid var(--surface)}
+.cc-flex-center{display:flex;align-items:center;justify-content:center}
+.cc-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-divider{height:1px;background:var(--border);flex-shrink:0}
+.cc-shimmer{background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%);background-size:200% 100%;animation:cc-shimmer 1.4s ease-in-out infinite}
 *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 html{scroll-behavior:smooth}
 button:active:not([disabled]){transform:scale(0.96)}

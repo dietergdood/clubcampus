@@ -1920,6 +1920,23 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       <button className="cc-icon-btn"><TI n="dots-vertical" size={14}/></button>
                     </div>
                   </Row2>
+                  <Row2 label="Flex Center" code=".cc-flex-center">
+                    <div className="cc-flex-center" style={{width:80,height:40,border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface2)"}}>
+                      <TI n="check" size={16} style={{color:GN}}/>
+                    </div>
+                  </Row2>
+                  <Row2 label="Truncate" code=".cc-truncate">
+                    <div className="cc-truncate" style={{maxWidth:200,fontSize:13,color:"var(--text)"}}>Sehr langer Text der abgeschnitten wird wenn er zu lang ist</div>
+                  </Row2>
+                  <Row2 label="Divider" code=".cc-divider">
+                    <div style={{width:200}}><div className="cc-divider"/></div>
+                  </Row2>
+                  <Row2 label="Shimmer / Skeleton" code=".cc-shimmer">
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      <div className="cc-shimmer" style={{height:12,width:140,borderRadius:6}}/>
+                      <div className="cc-shimmer" style={{height:12,width:100,borderRadius:6}}/>
+                    </div>
+                  </Row2>
                   <Row2 label="Button-Group" code=".cc-btn-group">
                     <div className="cc-btn-group">
                       <button className="cc-btn-group-item cc-btn-group-active"><TI n="layout-grid" size={14}/></button>
