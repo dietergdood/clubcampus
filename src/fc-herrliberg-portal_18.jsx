@@ -313,7 +313,7 @@ function darkenHex(hex,pct=0.12){
 
 const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FFBF00", vereinsfarbe2:"#000000",
-  navBg:"#000000", navText:"#FFFFFF", navAccent:"#FFBF00", navHover:"#1A1A1A",
+  navBg:"#000000", navText:"#FFFFFF", navAccent:null, navHover:"#1A1A1A",
   btnPrimary:"#FFBF00", btnPrimaryText:"#000000",
   vereinsname:"Mein Verein", portalname:"ClubCampus", logo:null,
 };
@@ -8158,7 +8158,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   }
                 </div>
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,color:theme.navAccent}}>{theme.portalname}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:theme.navAccent||theme.vereinsfarbe1}}>{theme.portalname}</div>
                   <div style={{fontSize:9,color:theme.navText,opacity:0.6}}>{theme.vereinsname}</div>
                 </div>
               </div>
@@ -8180,21 +8180,22 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               {key:"vereinsfarbe2", label:"Text auf Vereinsfarbe",    hint:"Schwarz bei FCH — muss auf Vereinsfarbe lesbar sein"},
               {key:"navBg",         label:"Menü-Hintergrund",          hint:"Hintergrundfarbe der Navigationsleiste"},
               {key:"navText",       label:"Menü-Text",                 hint:"Farbe der inaktiven Menüpunkte"},
-              {key:"navAccent",     label:"Menü Aktiv-Farbe",          hint:"Farbe des aktiven Menüpunkts"},
+              {key:"navAccent",     label:"Aktiver Menüpunkt",         hint:"Standard: Vereinsfarbe — anpassen wenn Vereinsfarbe zu hell/dunkel"},
+
               {key:"btnPrimary",    label:"Primary Button",            hint:"Hintergrundfarbe für Haupt-Buttons"},
               {key:"btnPrimaryText",label:"Primary Button Text",       hint:"Textfarbe für Haupt-Buttons"},
 
               {key:"navHover",      label:"Menü Hover",                hint:"Farbe beim Überfahren eines Menüpunkts"},
             ].map((item,i)=>(
               <div key={item.key} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",borderTop:i>0?"0.5px solid var(--border)":"none"}}>
-                <input type="color" value={theme[item.key]} onChange={e=>updateTheme(item.key,e.target.value)}
+                <input type="color" value={theme[item.key]||(item.key==="navAccent"?theme.vereinsfarbe1:"#000000")||"#000000"} onChange={e=>updateTheme(item.key,e.target.value)}
                   style={{width:36,height:36,borderRadius:8,border:"0.5px solid var(--border)",padding:2,cursor:"pointer",background:"none"}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{item.label}</div>
                   <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{item.hint}</div>
                 </div>
-                <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]}</code>
-                <button onClick={()=>updateTheme(item.key,THEME_DEFAULT_STATIC[item.key])} title="Zurücksetzen"
+                <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]||(item.key==="navAccent"?"auto":"")}</code>
+                <button onClick={()=>updateTheme(item.key,item.key==="navAccent"?null:THEME_DEFAULT_STATIC[item.key])} title="Zurücksetzen"
                   style={{background:"none",border:"none",cursor:"pointer",color:"var(--sub)",padding:4}}>
                   <TI n="refresh" size={14}/>
                 </button>
@@ -11968,7 +11969,7 @@ export default function Portal({supabaseClient}){
     if(!s){s=document.createElement("style");s.id="cc-theme-vars";document.head.appendChild(s);}
     const nav=t.navBg||"#000000";
     const navT=t.navText||"#FFFFFF";
-    const navA=t.navAccent||"#FFBF00";
+    const navA=t.navAccent||t.vereinsfarbe1||"#FFBF00";
     const navH=t.navHover||"#1A1A1A";
     const acc=t.vereinsfarbe1||"#FFBF00";
     const acc2=t.vereinsfarbe2||"#000000";
