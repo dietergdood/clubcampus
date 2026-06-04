@@ -11821,12 +11821,14 @@ export default function Portal({supabaseClient}){
   async function loadTenant(){
     if(!sb) return;
     try{
-      const{data,error}=await sb.from("vereine").select("*").single();
+      /* Theme aus vereine laden - kein Login nötig (public read) */
+      const{data,error}=await sb.from("vereine").select("name,theme").single();
       if(error||!data) return;
       setTenant(data);
       const t={...THEME_DEFAULT_STATIC,...(data.theme||{})};
       setAppTheme(t);
       applyThemeCss(t);
+      /* localStorage aktualisieren */
       try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
     }catch(e){console.warn("[CC] loadTenant:",e.message);}
   }
@@ -11863,16 +11865,17 @@ export default function Portal({supabaseClient}){
     th.content=dark?"#0a0a0c":"#141414";
   },[dark]);
 
-  /* Theme sofort aus localStorage anwenden (bevor Login) */
+  /* Theme beim Start laden - erst localStorage, dann Supabase */
   useEffect(()=>{
+    /* 1. Sofort localStorage anwenden (schnell, kein Flicker) */
     try{
       const s=localStorage.getItem("cc-theme");
-      /* Immer Defaults anwenden, dann mit gespeicherten Werten überschreiben */
-      applyThemeCss(s?{...THEME_DEFAULT_STATIC,...JSON.parse(s)}:THEME_DEFAULT_STATIC);
+      if(s) applyThemeCss({...THEME_DEFAULT_STATIC,...JSON.parse(s)});
+      else applyThemeCss(THEME_DEFAULT_STATIC);
     }catch{
       applyThemeCss(THEME_DEFAULT_STATIC);
     }
-    /* Tenant laden (unabhängig vom Login) */
+    /* 2. Supabase laden (überschreibt localStorage mit aktuellen Werten) */
     loadTenant();
   },[]);
 
