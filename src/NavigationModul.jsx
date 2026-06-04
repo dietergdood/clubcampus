@@ -499,10 +499,6 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
         {!isMobile&&!onLogout&&<RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
         {!isMobile&&!onLogout&&<Chip text="DEMO" color="#999" bg="var(--surface2)"/>}
         {!isMobile&&onLogout&&<Btn onClick={onLogout}>Abmelden</Btn>}
-        {/* Profil-Avatar – nur Mobile */}
-        {isMobile&&(
-          <Btn onClick={onOpenProfile} style={{ width:34,height:34 }}>{initials}</Btn>
-        )}
       </div>
     </div>
   );
