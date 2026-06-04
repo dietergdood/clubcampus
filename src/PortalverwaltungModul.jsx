@@ -58,6 +58,8 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
   const [filterHaupt,setFilterHaupt]=useState("alle");
+  const [expandedTeam,setExpandedTeam]=useState(null);
+  const isMob=useIsMobile();
 
   const TEAM_MODS=[
     {key:"roster",            label:"Kader",       icon:"users"},
@@ -130,8 +132,6 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
   const hauptbereiche=["alle",...[...new Set(teams.map(t=>t.hauptbereich).filter(Boolean))]];
   const filtered=filterHaupt==="alle"?teams:teams.filter(t=>t.hauptbereich===filterHaupt);
   const HB_COLORS={"Aktivfussball":"#3B82F6","Juniorenfussball":"#22C55E","Mädchenfussball":"#EC4899","Senioren":"#F97316","Freizeitfussball":"#8B5CF6"};
-  const [expandedTeam,setExpandedTeam]=useState(null);
-  const isMob=useIsMobile();
 
   /* ── Filter-Chips (beide Views) ── */
   const FilterChips=()=>(
