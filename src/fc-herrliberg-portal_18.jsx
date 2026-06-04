@@ -313,7 +313,7 @@ function darkenHex(hex,pct=0.12){
 const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FFBF00", vereinsfarbe2:"#000000",
   navBg:"#000000", navText:"#FFFFFF", navAccent:"#FFBF00", navHover:"#1A1A1A",
-  btnPrimary:"#FFBF00", btnPrimaryText:"#000000", btnHover:BTN_HOV,
+  btnPrimary:"#FFBF00", btnPrimaryText:"#000000",
   vereinsname:"Mein Verein", portalname:"ClubCampus", logo:null,
 };
 
@@ -6946,7 +6946,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       r.setProperty("--nav-hover",    td.navHover||"#1A1A1A");
       r.setProperty("--btn-primary",  td.btnPrimary||"#FFBF00");
       r.setProperty("--btn-primary-text",td.btnPrimaryText||"#000000");
-      r.setProperty("--btn-hover",    td.btnHover||darkenHex(td.btnPrimary||"#FFBF00"));
+      r.setProperty("--btn-hover",    darkenHex(td.btnPrimary||"#FFBF00"));
       /* React State + localStorage */
       const themeToSave={...td};
       setAppTheme(themeToSave);
@@ -11955,7 +11955,7 @@ export default function Portal({supabaseClient}){
     const acc2=t.vereinsfarbe2||"#000000";
     const btn=t.btnPrimary||"#FFBF00";
     const btnT=t.btnPrimaryText||"#000000";
-    const btnHov=t.btnHover||darkenHex(t.btnPrimary||"#FFBF00");
+    const btnHov=darkenHex(t.btnPrimary||"#FFBF00");
     s.textContent=`:root,[data-theme],[data-theme=dark],[data-theme=light]{
       --cc-accent:${acc}!important;
       --cc-accent2:${acc2}!important;
