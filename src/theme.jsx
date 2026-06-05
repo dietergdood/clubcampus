@@ -52,9 +52,11 @@ const PWA_CSS=`
 .cc-input:focus{border-color:var(--text)}
 .cc-unread-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;border:2px solid var(--surface)}
 .cc-toggle{width:46px;height:26px;border-radius:13px;border:none;cursor:pointer;background:var(--border);position:relative;flex-shrink:0;transition:background 0.2s;padding:0;outline:none}
-.cc-toggle-on{background:#333}
+.cc-toggle-on{background:#16A34A}
 .cc-toggle-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);transition:left 0.2s cubic-bezier(0.34,1.2,0.64,1);display:flex;align-items:center;justify-content:center}
-.cc-toggle-knob-on{left:23px;background:var(--cc-accent,#FFBF00)}
+.cc-toggle-knob-on{left:23px;background:#fff}
+.cc-toggle-dark.cc-toggle-on{background:#1A1A1A}
+.cc-toggle-dark .cc-toggle-knob-on{background:var(--cc-accent,#FFBF00)}
 .cc-flex-center{display:flex;align-items:center;justify-content:center}
 .cc-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-divider{height:1px;background:var(--border);flex-shrink:0}

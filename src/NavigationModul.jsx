@@ -888,7 +888,7 @@ function DarkModeRow(){
         <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{dark?"Dunkel":"Hell"}</div>
         <div style={{fontSize:12,color:"var(--sub)",marginTop:1}}>Farbschema des Portals</div>
       </div>
-      <button onClick={toggle} className={"cc-toggle"+(dark?" cc-toggle-on":"")}>
+      <button onClick={toggle} className={"cc-toggle cc-toggle-dark"+(dark?" cc-toggle-on":"")}>
         <div className={"cc-toggle-knob"+(dark?" cc-toggle-knob-on":"")}>
           <TI n={dark?"sun":"moon"} size={11} style={{color:dark?"#111":"var(--sub)"}}/>
         </div>
