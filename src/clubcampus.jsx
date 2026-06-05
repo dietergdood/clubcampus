@@ -9,7 +9,7 @@ import { TeamView, TeamOverview, EventsList } from "./TeamModul.jsx";
 import { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab } from "./TermineModul.jsx";
 import { TrainingsplanModul, PlaetzeView } from "./TrainingsplanModul.jsx";
 import { TeamsVerwaltungModul } from "./TeamsVerwaltungModul.jsx";
-import MitgliederModul, { MembersView } from "./MitgliederModul.jsx";
+import MitgliederModul, { MembersView, ProfilView } from "./MitgliederModul.jsx";
 import KaderModul from "./KaderModul.jsx";
 import { HelferModul, HelpersList } from "./HelferModul.jsx";
 import NachrichtenModul from "./NachrichtenModul.jsx";
@@ -260,7 +260,7 @@ function LoginScreen({onLogin, sb, appTheme}){
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");
   const [pw2,setPw2]=useState("");
-  const [name,setName]=useState("");
+  const [name2,setName2]=useState(""); // unused, kept for compat
   const [showPw,setShowPw]=useState(false);
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
@@ -289,10 +289,10 @@ function LoginScreen({onLogin, sb, appTheme}){
     if(pw.length<6){ setError("Passwort muss mindestens 6 Zeichen haben."); return; }
     setLoading(true); setError("");
     try{
-      // Prüfen ob E-Mail im System hinterlegt ist
+      // E-Mail prüfen + Name aus DB holen
       const [{data:m},{data:ek}] = await Promise.all([
-        sb.from("mitglieder").select("id").eq("email",email).eq("aktiv",true).limit(1),
-        sb.from("elternkontakte").select("id").eq("email",email).limit(1),
+        sb.from("mitglieder").select("id,vorname,nachname").eq("email",email).eq("aktiv",true).limit(1),
+        sb.from("elternkontakte").select("id,vorname,nachname").eq("email",email).limit(1),
       ]);
       const istBekannt = (m&&m.length>0) || (ek&&ek.length>0);
       if(!istBekannt){
@@ -300,10 +300,15 @@ function LoginScreen({onLogin, sb, appTheme}){
         setLoading(false);
         return;
       }
+      // Name aus DB — Mitglied zuerst, dann Elternteil
+      const dbName = m?.[0] ? `${m[0].vorname} ${m[0].nachname}`.trim()
+        : ek?.[0] ? `${ek[0].vorname} ${ek[0].nachname}`.trim()
+        : email.split("@")[0];
+
       const {data,error:err}=await sb.auth.signUp({
         email,
         password:pw,
-        options:{ data:{ name:name||email.split("@")[0] } }
+        options:{ data:{ name:dbName } }
       });
       if(err) throw err;
       if(data.session){
@@ -397,10 +402,6 @@ function LoginScreen({onLogin, sb, appTheme}){
               </div>
               <form onSubmit={handleRegister}>
                 <div style={{marginBottom:14}}>
-                  <label style={S_LABEL}>Name</label>
-                  <input type="text" value={name} onChange={e=>setName(e.target.value)} style={S_INPUT} placeholder="Vor- und Nachname" autoComplete="name"/>
-                </div>
-                <div style={{marginBottom:14}}>
                   <label style={S_LABEL}>E-Mail</label>
                   <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={S_INPUT} placeholder="name@mail.ch" autoComplete="email"/>
                 </div>
@@ -489,6 +490,7 @@ function Portal({supabaseClient}){
   const [dbTeams,setDbTeams]=useState([]);
   const [dbStufen,setDbStufen]=useState([]);
   const [dbMitglieder,setDbMitglieder]=useState([]);
+  const [profilBannerDismissed,setProfilBannerDismissed]=useState(false);
   const [dbFunktionen,setDbFunktionen]=useState([]); // portal_funktionen des eingeloggten Benutzers
   /* Globale Modul-Konfiguration (aus Portalverwaltung) */
   const [moduleAktiv,setModuleAktiv]=useState(()=>{
@@ -852,6 +854,30 @@ function Portal({supabaseClient}){
   const effectiveAccountKey = dbUser ? "db_user" : accountKey;
   // Rollen-Hierarchie: stärkste Rolle = primaryRole
   const ROLLE_PRIO = ["administrator","administration","vorstand","funktionaer","trainer","spieler","eltern"];
+
+  // Pflichtfelder je nach Mitgliedtyp/Rolle
+  function getPflichtfelder(mitgliedtyp, rolle){
+    const PASSIV = ["Passivmitglied","Ehrenmitglied","Gönner"];
+    if(rolle==="eltern") return ["vorname","nachname","telefon"];
+    if(PASSIV.includes(mitgliedtyp)) return ["vorname","nachname","geburtsdatum","geschlecht","strasse","plz","ort","telefon"];
+    // Aktive Mitglieder (Spieler, Trainer, Vorstand, Funktionär etc.)
+    return ["vorname","nachname","geburtsdatum","geschlecht","nationalitaet","strasse","plz","ort","kanton","land","email","telefon"];
+  }
+
+  function getProfilFehlend(dbUser, dbMitglieder){
+    if(!dbUser) return [];
+    const rolle = dbUser.role||"spieler";
+    // Elternteil: aus benutzer direkt prüfen
+    if(rolle==="eltern"){
+      const felder = getPflichtfelder(null,"eltern");
+      return felder.filter(f=>!dbUser[f]||String(dbUser[f]).trim()==="");
+    }
+    // Mitglied: aus mitglieder Tabelle prüfen
+    const mitglied = dbMitglieder.find(m=>m.email===dbUser.email);
+    if(!mitglied) return [];
+    const felder = getPflichtfelder(mitglied.mitgliedtyp, rolle);
+    return felder.filter(f=>!mitglied[f]||String(mitglied[f]).trim()==="");
+  }
   const getPrimaryRole = (rollen) => {
     if(!rollen||rollen.length===0) return "spieler";
     return ROLLE_PRIO.find(r => rollen.includes(r)) || rollen[0];
@@ -952,7 +978,7 @@ function Portal({supabaseClient}){
       case "sync":              return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "audit":             return <PortalverwaltungView initialTab="audit" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "datacheck":         return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
-      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account}/>;
+      case "profile":           return <ProfilView role={role} dbUser={dbUser} dbMitglieder={dbMitglieder} sb={sb} onReload={loadDbMitglieder}/>;
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
   };
@@ -968,7 +994,30 @@ function Portal({supabaseClient}){
             onLogout={sb&&session ? handleLogout : undefined}
             onOpenProfile={()=>setMobileProfileOpen(true)}
             onBack={customBack} appTheme={appTheme}/>}
-          <main key={active} className="cc-page" style={{flex:1,overflowY:"auto",overflowX:"hidden"}}><div style={{maxWidth:1600,margin:"0 auto",padding:isMobile?"16px 12px calc(90px + env(safe-area-inset-bottom, 0px))":isTablet?"20px 24px 28px":"32px 48px",minHeight:"100%"}}>{getView()}</div></main>
+          <main key={active} className="cc-page" style={{flex:1,overflowY:"auto",overflowX:"hidden"}}>
+            {/* Profil-Banner */}
+            {(()=>{
+              const fehlend = getProfilFehlend(dbUser, dbMitglieder);
+              if(fehlend.length===0||profilBannerDismissed||role==="administrator"||role==="administration") return null;
+              const FELD_LABELS={"vorname":"Vorname","nachname":"Nachname","geburtsdatum":"Geburtsdatum","geschlecht":"Geschlecht","nationalitaet":"Nationalität","strasse":"Strasse","plz":"PLZ","ort":"Ort","kanton":"Kanton","land":"Land","email":"E-Mail","telefon":"Handynummer"};
+              return(
+                <div style={{background:"#FFFBEB",borderBottom:"1px solid #FCD34D",padding:"10px 24px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <span style={{fontSize:18}}>⚠️</span>
+                  <div style={{flex:1,minWidth:200}}>
+                    <span style={{fontWeight:600,fontSize:14,color:"#92400E"}}>Profil unvollständig — </span>
+                    <span style={{fontSize:13,color:"#92400E"}}>Fehlende Angaben: {fehlend.map(f=>FELD_LABELS[f]||f).join(", ")}</span>
+                  </div>
+                  <button onClick={()=>{setActivePersist("profile");setProfilBannerDismissed(false);}}
+                    style={{padding:"6px 14px",borderRadius:8,border:"none",background:"#F59E0B",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+                    Jetzt ausfüllen
+                  </button>
+                  <button onClick={()=>setProfilBannerDismissed(true)}
+                    style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#92400E",padding:"2px 4px"}}>×</button>
+                </div>
+              );
+            })()}
+            <div style={{maxWidth:1600,margin:"0 auto",padding:isMobile?"16px 12px calc(90px + env(safe-area-inset-bottom, 0px))":isTablet?"20px 24px 28px":"32px 48px",minHeight:"100%"}}>{getView()}</div>
+          </main>
           {isMobile&&<MobileNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} effectiveNav={effectiveNav}/>}
         </div>
       </div>

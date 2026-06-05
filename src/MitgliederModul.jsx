@@ -1303,5 +1303,179 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
   );
 }
 
-export { MembersView };
+
+export default MitgliederModul;
+/* ── ProfilView — eigenes Profil bearbeiten ── */
+function ProfilView({role, dbUser, dbMitglieder=[], sb, onReload}){
+  const PASSIV=["Passivmitglied","Ehrenmitglied","Gönner"];
+  const istEltern = role==="eltern";
+  const mitglied = dbMitglieder.find(m=>m.email===dbUser?.email)||null;
+
+  // Pflichtfelder je nach Typ
+  const PFLICHT_AKTIV=["vorname","nachname","geburtsdatum","geschlecht","nationalitaet","strasse","plz","ort","kanton","land","email","telefon"];
+  const PFLICHT_PASSIV=["vorname","nachname","geburtsdatum","geschlecht","strasse","plz","ort","telefon"];
+  const PFLICHT_ELTERN=["vorname","nachname","telefon"];
+
+  const pflichtFelder = istEltern ? PFLICHT_ELTERN
+    : PASSIV.includes(mitglied?.mitgliedtyp) ? PFLICHT_PASSIV
+    : PFLICHT_AKTIV;
+
+  const FELD_LABELS={
+    vorname:"Vorname",nachname:"Nachname",geburtsdatum:"Geburtsdatum",
+    geschlecht:"Geschlecht",nationalitaet:"Nationalität",heimatort:"Heimatort",
+    strasse:"Strasse",plz:"PLZ",ort:"Ort",kanton:"Kanton",land:"Land",
+    email:"E-Mail",telefon:"Handynummer",
+  };
+
+  const initialForm = istEltern
+    ? {vorname:dbUser?.vorname||"",nachname:dbUser?.nachname||"",telefon:dbUser?.telefon||""}
+    : {
+        vorname:mitglied?.vorname||"",nachname:mitglied?.nachname||"",
+        geburtsdatum:mitglied?.geburtsdatum||"",geschlecht:mitglied?.geschlecht||"",
+        nationalitaet:mitglied?.nationalitaet||"",heimatort:mitglied?.heimatort||"",
+        strasse:mitglied?.strasse||"",plz:mitglied?.plz||"",ort:mitglied?.ort||"",
+        kanton:mitglied?.kanton||"",land:mitglied?.land||"CH",
+        email:mitglied?.email||"",telefon:mitglied?.telefon||"",
+      };
+
+  const [form,setForm]=useState(initialForm);
+  const [saving,setSaving]=useState(false);
+  const [msg,setMsg]=useState(null);
+
+  // Felder neu laden wenn dbMitglieder nachgeladen wird
+  useEffect(()=>{
+    const m=dbMitglieder.find(x=>x.email===dbUser?.email)||null;
+    if(!m&&!istEltern) return;
+    setForm(istEltern
+      ?{vorname:dbUser?.vorname||"",nachname:dbUser?.nachname||"",telefon:dbUser?.telefon||""}
+      :{
+        vorname:m?.vorname||"",nachname:m?.nachname||"",
+        geburtsdatum:m?.geburtsdatum||"",geschlecht:m?.geschlecht||"",
+        nationalitaet:m?.nationalitaet||"",heimatort:m?.heimatort||"",
+        strasse:m?.strasse||"",plz:m?.plz||"",ort:m?.ort||"",
+        kanton:m?.kanton||"",land:m?.land||"CH",
+        email:m?.email||"",telefon:m?.telefon||"",
+      }
+    );
+  },[dbMitglieder, dbUser]);
+
+  const fehlend = pflichtFelder.filter(f=>!form[f]||String(form[f]).trim()==="");
+  const istVollstaendig = fehlend.length===0;
+
+  async function handleSave(){
+    if(!sb) return;
+    setSaving(true); setMsg(null);
+    try{
+      if(istEltern){
+        // Elternteil → benutzer Tabelle updaten
+        const {error}=await sb.from("benutzer").update({
+          vorname:form.vorname,nachname:form.nachname,telefon:form.telefon,
+          name:`${form.vorname} ${form.nachname}`.trim(),
+        }).eq("id",dbUser.id);
+        if(error) throw error;
+      } else {
+        // Mitglied → mitglieder Tabelle updaten
+        if(!mitglied) throw new Error("Mitglied nicht gefunden");
+        const {error}=await sb.from("mitglieder").update({
+          ...form, updated_at:new Date().toISOString(),
+        }).eq("id",mitglied.id);
+        if(error) throw error;
+      }
+      setMsg({ok:true,text:"Profil gespeichert ✓"});
+      if(onReload) onReload();
+    }catch(e){ setMsg({ok:false,text:e.message}); }
+    setSaving(false);
+  }
+
+  const S_INPUT={width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:"inherit",boxSizing:"border-box"};
+  const F=({fkey,type="text",opts})=>{
+    const isPflicht=pflichtFelder.includes(fkey);
+    const isEmpty=!form[fkey]||String(form[fkey]).trim()==="";
+    return(
+      <div>
+        <label className="cc-label" style={{color:isPflicht&&isEmpty?"#DC2626":undefined}}>
+          {FELD_LABELS[fkey]||fkey}{isPflicht&&<span style={{color:"#DC2626"}}> *</span>}
+        </label>
+        {opts
+          ?<select value={form[fkey]||""} onChange={e=>setForm(f=>({...f,[fkey]:e.target.value}))}
+              style={{...S_INPUT,borderColor:isPflicht&&isEmpty?"#DC2626":undefined}}>
+              <option value="">– bitte wählen –</option>
+              {opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}
+            </select>
+          :<input type={type} value={form[fkey]||""} onChange={e=>setForm(f=>({...f,[fkey]:e.target.value}))}
+              style={{...S_INPUT,borderColor:isPflicht&&isEmpty?"#DC2626":undefined}}/>
+        }
+      </div>
+    );
+  };
+
+  return(
+    <div>
+      <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Mein Profil</h1>
+      <p className="cc-detail-label" style={{marginBottom:20}}>
+        {istVollstaendig
+          ? "✓ Alle Pflichtfelder ausgefüllt"
+          : `${fehlend.length} Pflichtfeld${fehlend.length>1?"er":""} fehlen: ${fehlend.map(f=>FELD_LABELS[f]||f).join(", ")}`}
+      </p>
+
+      {!istVollstaendig&&(
+        <div style={{background:"#FFFBEB",border:"1px solid #FCD34D",borderRadius:10,padding:"12px 16px",marginBottom:20,fontSize:14,color:"#92400E"}}>
+          ⚠️ Bitte fülle alle Pflichtfelder aus damit dein Profil vollständig ist.
+        </div>
+      )}
+
+      <Card>
+        {istEltern?(
+          <div className="cc-grid-form" style={{gap:12}}>
+            <F fkey="vorname"/>
+            <F fkey="nachname"/>
+            <div style={{gridColumn:"1/-1"}}><F fkey="telefon" type="tel"/></div>
+          </div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div>
+              <div className="cc-section-hdr" style={{marginBottom:10}}>Personalien</div>
+              <div className="cc-grid-form" style={{gap:10}}>
+                <F fkey="vorname"/>
+                <F fkey="nachname"/>
+                <F fkey="geburtsdatum" type="date"/>
+                <F fkey="geschlecht" opts={[{v:"m",l:"Männlich"},{v:"w",l:"Weiblich"}]}/>
+                <F fkey="nationalitaet"/>
+                <F fkey="heimatort"/>
+              </div>
+            </div>
+            <div>
+              <div className="cc-section-hdr" style={{marginBottom:10}}>Adresse</div>
+              <div className="cc-grid-form" style={{gap:10}}>
+                <div style={{gridColumn:"1/-1"}}><F fkey="strasse"/></div>
+                <F fkey="plz"/>
+                <F fkey="ort"/>
+                <F fkey="kanton"/>
+                <F fkey="land"/>
+              </div>
+            </div>
+            <div>
+              <div className="cc-section-hdr" style={{marginBottom:10}}>Kontakt</div>
+              <div className="cc-grid-form" style={{gap:10}}>
+                <F fkey="email" type="email"/>
+                <F fkey="telefon" type="tel"/>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {msg&&<div style={{marginTop:14,padding:"8px 12px",borderRadius:8,background:msg.ok?"#ECFDF5":"#FEF2F2",color:msg.ok?"#16A34A":"#DC2626",fontSize:13}}>{msg.text}</div>}
+
+        <div style={{marginTop:16,display:"flex",gap:8}}>
+          <button onClick={handleSave} disabled={saving||fehlend.length===0&&!msg}
+            style={{flex:1,padding:"10px",borderRadius:8,border:"none",background:"var(--cc-accent,#FFBF00)",color:"var(--text)",fontWeight:700,fontSize:14,cursor:"pointer",opacity:saving?0.7:1}}>
+            {saving?"Speichert…":"Speichern"}
+          </button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export { MembersView, ProfilView };
 export default MitgliederModul;
