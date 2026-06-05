@@ -19,6 +19,10 @@ function getGreeting(){
   return "Hallo";
 }
 
+function getDate(){
+  return new Date().toLocaleDateString("de-CH",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+}
+
 function Dashboard({role,setActive,account,meineTeams,myRosterId}){
   if(role==="administrator")  return <DashboardAdmin setActive={setActive} account={account}/>;
   if(role==="administration") return <DashboardAdministration setActive={setActive} account={account}/>;
@@ -109,7 +113,7 @@ function DashboardAdministration({setActive,account}){
     <div>
       <H1 mb={4}>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
-      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Administration · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Administration · {getDate()}</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Mitglieder total" value="187" semantic="info"/>
         <Stat label="Datenprüfung fällig" value="12" semantic="danger" sub="halbjährliche Prüfung"/>
@@ -174,7 +178,7 @@ function DashboardFunktionaer({setActive,account}){
     <div>
       <H1 mb={4}>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
-      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Funktionär / Vorstand · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Funktionär / Vorstand · {getDate()}</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Offene Rückmeldungen" value="22" semantic="danger"/>
         <Stat label="Helfer-Soll erfüllt" value="61%" semantic="warning"/>
@@ -260,7 +264,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
   return(
     <div>
       <H1 mb={6}>{getGreeting()}, {firstName}</H1>
-      <p className="cc-detail-label" style={{marginBottom:18}}>Trainer · {trainerTeams.join(" & ")} · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{marginBottom:18}}>Trainer · {trainerTeams.join(" & ")} · {getDate()}</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Nächstes Training" value={nextTrain?nextTrain.date.replace(/^\w+\s/,""):"-"} sub={nextTrain?`${nextTrain.time} Uhr · ${nextTrain.location}`:"Kein Training"} semantic="success"/>
         <Stat label="Nächstes Spiel"    value={nextSpiel?nextSpiel.date.replace(/^\w+\s/,""):"-"} sub={nextSpiel?`${nextSpiel.time} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel"} semantic="info"/>
@@ -375,7 +379,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
   return(
     <div>
       <H1 mb={6}>{getGreeting()}, {firstName}</H1>
-      <p className="cc-detail-label" style={{marginBottom:18}}>Spieler · {team} · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{marginBottom:18}}>Spieler · {team} · {getDate()}</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Ø Anwesenheit Trainings" value={attPct!==null?attPct+"%":"-"} sub={pastEvs.length?zuCount+"/"+pastEvs.length+" Trainings":"Noch keine vergangenen"} color={attColor}/>
         <Stat label="Nächstes Training" value={nextTraining?nextTraining.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"} sub={nextTraining?`${nextTraining.time.slice(0,5)} Uhr · ${nextTraining.location}`:"Kein Training geplant"} semantic="success"/>
@@ -439,7 +443,7 @@ function DashboardEltern({account,meineTeams,setActive}){
   return(
     <div>
       <H1 mb={6}>{getGreeting()}, {parentName}</H1>
-      <p className="cc-detail-label" style={{marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · {getDate()}</p>
 
       {kinder.map((kind,ki)=>{
         const team=kind.team||"Cc-Junioren";
