@@ -11,6 +11,14 @@ import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS
 /* ── Shared navigation target ── */
 const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
 
+function getGreeting(){
+  const h=new Date().getHours();
+  if(h>=5&&h<12) return "Guten Morgen";
+  if(h>=12&&h<18) return "Guten Tag";
+  if(h>=18&&h<22) return "Guten Abend";
+  return "Hallo";
+}
+
 function Dashboard({role,setActive,account,meineTeams,myRosterId}){
   if(role==="administrator")  return <DashboardAdmin setActive={setActive} account={account}/>;
   if(role==="administration") return <DashboardAdministration setActive={setActive} account={account}/>;
@@ -26,7 +34,7 @@ function DashboardAdmin({setActive,account}){
   const vorname=(account?.name||"Administrator").split(" ")[0];
   return(
     <div>
-      <H1 mb={4}>Hallo, {vorname}</H1>
+      <H1 mb={4}>{getGreeting()}, {vorname}</H1>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Systemübersicht</p>
       <div className="cc-grid-stats" style={{marginBottom:24}}>
         <Stat label="Mitglieder total" value="187" sub="Fairgate synchronisiert" semantic="primary" icon="users"/>
@@ -99,7 +107,7 @@ function DashboardAdministration({setActive,account}){
   const isMobile=useIsMobile();
   return(
     <div>
-      <H1 mb={4}>Hallo, {(account?.name||"Nutzer").split(" ")[0]}</H1>
+      <H1 mb={4}>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Administration · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
@@ -164,7 +172,7 @@ function DashboardFunktionaer({setActive,account}){
   const isMobile=useIsMobile();
   return(
     <div>
-      <H1 mb={4}>Hallo, {(account?.name||"Nutzer").split(" ")[0]}</H1>
+      <H1 mb={4}>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Funktionär / Vorstand · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
@@ -251,7 +259,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
 
   return(
     <div>
-      <H1 mb={6}>Guten Morgen, {firstName}</H1>
+      <H1 mb={6}>{getGreeting()}, {firstName}</H1>
       <p className="cc-detail-label" style={{marginBottom:18}}>Trainer · {trainerTeams.join(" & ")} · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Nächstes Training" value={nextTrain?nextTrain.date.replace(/^\w+\s/,""):"-"} sub={nextTrain?`${nextTrain.time} Uhr · ${nextTrain.location}`:"Kein Training"} semantic="success"/>
@@ -366,7 +374,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
 
   return(
     <div>
-      <H1 mb={6}>Hallo, {firstName}</H1>
+      <H1 mb={6}>{getGreeting()}, {firstName}</H1>
       <p className="cc-detail-label" style={{marginBottom:18}}>Spieler · {team} · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Ø Anwesenheit Trainings" value={attPct!==null?attPct+"%":"-"} sub={pastEvs.length?zuCount+"/"+pastEvs.length+" Trainings":"Noch keine vergangenen"} color={attColor}/>
@@ -430,7 +438,7 @@ function DashboardEltern({account,meineTeams,setActive}){
 
   return(
     <div>
-      <H1 mb={6}>Hallo, {parentName}</H1>
+      <H1 mb={6}>{getGreeting()}, {parentName}</H1>
       <p className="cc-detail-label" style={{marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · Freitag, 23. Mai 2026</p>
 
       {kinder.map((kind,ki)=>{
