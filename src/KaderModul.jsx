@@ -2,9 +2,9 @@
    ClubCampus KaderModul — KaderModul.jsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { FONT, GN, R, BL, BK } from "./constants.js";
+import { GN, R, BL, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { useIsMobile, Card, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle } from "./theme.jsx";
+import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle } from "./theme.jsx";
 import { ROSTER } from "./demoData.js";
 
 const FIELD_VIS = {
@@ -53,33 +53,11 @@ function normFunktion(s){
   return s;
 }
 
-function GruppenHeader({label, count, colSpan}){
-  return(
-    <tr>
-      <td colSpan={colSpan} className="cc-section-hdr" style={{padding:"6px 14px"}}>
-        {label}
-        <span className="cc-count">({count})</span>
-      </td>
-    </tr>
-  );
-}
-
-function PosBadge({pos}){
-  if(!pos) return <span style={{color:"var(--sub)",fontSize:13}}>-</span>;
-  return <span className="cc-chip-toggle" style={{fontSize:11,padding:"2px 8px",borderRadius:6,cursor:"default"}}>{pos}</span>;
-}
-
-function FunktionBadge({role}){
-  const label = role||"Spieler/in";
-  return <span className="cc-chip-toggle" style={{cursor:"default"}}>{label}</span>;
-}
-
 function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
   const isMobile = useIsMobile();
   const vis = FIELD_VIS[role]||[];
   const canEdit = ["trainer","administrator","administration"].includes(role);
   const canExport = ["trainer","funktionaer","vorstand","administration","administrator"].includes(role);
-  const isSimple = ["trainer","spieler","eltern"].includes(role);
 
   const baseRoster = teamRosterData||(team ? ROSTER.filter(p=>(p.teams||[]).includes(team)) : ROSTER);
   const initPlayer = typeof initialSelected==="number" ? baseRoster.find(p=>p.id===initialSelected)||null : initialSelected;
@@ -113,14 +91,6 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
     window.storage.set("rueckennrn", JSON.stringify(newNrn)).catch(()=>{});
   };
 
-  const handleSort = (key) => {
-    if(sortKey===key) setSortDir(d=>d*-1);
-    else { setSortKey(key); setSortDir(1); }
-  };
-
-  const cols = (isSimple ? COL_DEF_ALL.filter(c=>["name","role","pos","nr"].includes(c.key)) : COL_DEF_ALL)
-    .filter(c=>c.always||vis.includes(c.field));
-
   const filtered = [...baseRoster]
     .filter(p=>p.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b)=>{
@@ -153,10 +123,6 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
       .map(([key,items])=>({key,items}))
     : [{key:null, items:filtered}];
 
-  const SortIcon = ({col}) => sortKey===col
-    ? <TI n={sortDir===1?"arrow-up":"arrow-down"} size={13} style={{marginLeft:3,color:"var(--cc-accent)"}}/>
-    : <TI n="arrows-sort" size={13} style={{marginLeft:3,color:"var(--sub)",opacity:0.5}}/>;
-
   const handleExport = () => {
     const fields = COL_DEF_ALL.filter(c=>exportFields.includes(c.key));
     const header = fields.map(c=>c.label).join(";");
@@ -175,90 +141,60 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
     setShowExport(false);
   };
 
-  /* ── Mobile Row ── */
-  const MobileRow = ({p}) => (
-    <div onClick={()=>setSelected(p)} className="cc-list-row">
-      <Av name={p.name} size="md"/>
-      <div style={{flex:1,minWidth:0}}>
-        <div className="cc-list-name" style={{marginBottom:3}}>
-          {p.lastName} {p.firstName}
+  /* ── Kader Row — einheitlich Desktop + Mobile ── */
+  const KaderRow = ({p}) => {
+    const pos = positions[p.id];
+    const nr  = rueckennrn[p.id];
+    const funktion = p.role ? normFunktion(p.role) : "Spieler/in";
+    return(
+      <div onClick={()=>setSelected(p)} className="cc-list-row">
+        <Av name={p.name} size="md"/>
+        <div style={{flex:1,minWidth:0}}>
+          <div className="cc-list-name">{p.lastName} {p.firstName}</div>
+          <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{funktion}</div>
         </div>
-        <Row gap={6} wrap>
-          {positions[p.id]&&<PosBadge pos={positions[p.id]}/>}
-          {rueckennrn[p.id]&&<span style={{fontSize:12,color:"var(--sub)"}}>Nr. {rueckennrn[p.id]}</span>}
-          {p.role&&<FunktionBadge role={p.role}/>}
-        </Row>
+        {/* Position */}
+        <div onClick={e=>e.stopPropagation()} style={{minWidth:48,textAlign:"center"}}>
+          {canEdit&&editingPos===p.id?(
+            <select autoFocus value={pos||""}
+              onChange={e=>{setPositions(prev=>({...prev,[p.id]:e.target.value}));setEditingPos(null);}}
+              onBlur={()=>setEditingPos(null)}
+              className="cc-input" style={{width:64,padding:"3px 6px",fontSize:12}}>
+              <option value="">-</option>
+              {POSITION_GROUPS.map(g=>(
+                <optgroup key={g.label} label={g.label}>
+                  {g.options.map(o=><option key={o} value={o}>{o}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          ):(
+            <span onClick={canEdit?()=>setEditingPos(p.id):undefined}
+              className="cc-chip-toggle" style={{cursor:canEdit?"pointer":"default",fontSize:11,padding:"2px 8px"}}>
+              {pos||"-"}
+            </span>
+          )}
+        </div>
+        {/* Nr */}
+        <div onClick={e=>e.stopPropagation()} style={{minWidth:40,textAlign:"right"}}>
+          {canEdit&&editingNr===p.id?(
+            <input autoFocus type="number" min="1" max="99"
+              value={nr}
+              onChange={e=>saveNr({...rueckennrn,[p.id]:e.target.value})}
+              onBlur={()=>setEditingNr(null)}
+              onKeyDown={e=>{if(e.key==="Enter")setEditingNr(null);}}
+              className="cc-input" style={{width:52,textAlign:"center",padding:"3px 6px",fontSize:12}}/>
+          ):(
+            <span onClick={canEdit?()=>setEditingNr(p.id):undefined}
+              style={{fontSize:12,fontWeight:600,color:"var(--sub)",cursor:canEdit?"pointer":"default",
+                padding:"2px 6px",borderRadius:6,background:"var(--surface2)"}}>
+              {nr||"-"}
+            </span>
+          )}
+        </div>
+        <TI n="chevron-right" size={14} style={{color:"var(--sub)",flexShrink:0}}/>
       </div>
-      <TI n="chevron-right" size={16} style={{color:"var(--sub)",flexShrink:0}}/>
-    </div>
-  );
-
-  /* ── Desktop Row ── */
-  const DesktopRow = ({p}) => (
-    <tr onClick={()=>setSelected(p)} className="cc-tr" style={{cursor:"pointer"}}>
-      {cols.map((c,j)=>{
-        if(c.key==="name") return(
-          <td key={j} className="cc-td">
-            <Row gap={10}>
-              <Av name={p.name} size="sm"/>
-              <span className="cc-list-name">
-                {p.lastName} {p.firstName}
-              </span>
-            </Row>
-          </td>
-        );
-        if(c.key==="role") return(
-          <td key={j} className="cc-td"><FunktionBadge role={p.role}/></td>
-        );
-        if(c.key==="pos") return(
-          <td key={j} className="cc-td" onClick={e=>e.stopPropagation()}>
-            {canEdit&&editingPos===p.id?(
-              <select autoFocus value={positions[p.id]||""}
-                onChange={e=>{setPositions(prev=>({...prev,[p.id]:e.target.value}));setEditingPos(null);}}
-                onBlur={()=>setEditingPos(null)}
-                className="cc-input" style={{width:"auto"}}>
-                <option value="">- keine -</option>
-                {POSITION_GROUPS.map(g=>(
-                  <optgroup key={g.label} label={g.label}>
-                    {g.options.map(pos=><option key={pos} value={pos}>{pos}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-            ):(
-              <Row gap={6} style={{cursor:canEdit?"pointer":"default"}}
-                onClick={canEdit?()=>setEditingPos(p.id):undefined}>
-                <PosBadge pos={positions[p.id]}/>
-                {canEdit&&<TI n="edit" size={13} style={{color:"var(--sub)",opacity:0.5}}/>}
-              </Row>
-            )}
-          </td>
-        );
-        if(c.key==="nr") return(
-          <td key={j} className="cc-td" onClick={e=>e.stopPropagation()}>
-            {canEdit&&editingNr===p.id?(
-              <input autoFocus type="number" min="1" max="99"
-                value={rueckennrn[p.id]}
-                onChange={e=>saveNr({...rueckennrn,[p.id]:e.target.value})}
-                onBlur={()=>setEditingNr(null)}
-                onKeyDown={e=>{if(e.key==="Enter")setEditingNr(null);}}
-                className="cc-input" style={{width:56,textAlign:"center"}}/>
-            ):(
-              <Row gap={4} style={{cursor:canEdit?"pointer":"default"}}
-                onClick={canEdit?()=>setEditingNr(p.id):undefined}>
-                <span style={{fontSize:13,color:"var(--sub)"}}>{rueckennrn[p.id]||"-"}</span>
-                {canEdit&&<TI n="edit" size={13} style={{color:"var(--sub)",opacity:0.5}}/>}
-              </Row>
-            )}
-          </td>
-        );
-        if(c.key==="ahv") return <td key={j} className="cc-td" style={{color:"var(--sub)"}}>••••••••</td>;
-        return <td key={j} className="cc-td" style={{color:c.field==="email"?BL:"var(--sub)",whiteSpace:"nowrap"}}>{p[c.field]||"-"}</td>;
-      })}
-      <td className="cc-td" style={{textAlign:"right"}}>
-        <TI n="chevron-right" size={16} style={{color:"var(--sub)"}}/>
-      </td>
-    </tr>
-  );
+    );
+  };
 
   return(
     <div>
@@ -273,7 +209,9 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
                   <span style={{fontWeight:600,fontSize:16,color:"var(--text)"}}>
                     {selected.lastName} {selected.firstName}
                   </span>
-                  <FunktionBadge role={selected.role}/>
+                  <span style={{fontSize:12,color:"var(--sub)"}}>
+                    {selected.role?normFunktion(selected.role):"Spieler/in"}
+                  </span>
                 </Col>
               </Row>
               <button className="cc-icon-btn" onClick={()=>setSelected(null)}>
@@ -281,24 +219,19 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
               </button>
             </div>
             <div className="cc-modal-body">
-              {selected.dob&&vis.includes("dob")&&(
-                <Row gap={8}>
-                  <span className="cc-detail-label">Geburtsdatum</span>
-                  <span style={{fontSize:13,color:"var(--text)"}}>{selected.dob}</span>
+              {[
+                {label:"Geburtsdatum", value:selected.dob,      field:"dob",      color:"var(--text)"},
+                {label:"E-Mail",       value:selected.email,    field:"email",    color:BL},
+                {label:"Telefon",      value:selected.tel,      field:"tel",      color:"var(--text)"},
+                {label:"Spielerpass",  value:selected.pass,     field:"pass",     color:"var(--text)"},
+                {label:"J+S Nr.",      value:selected.js,       field:"js",       color:"var(--text)"},
+                {label:"Fairgate-ID",  value:selected.fairgate, field:"fairgate", color:"var(--text)"},
+              ].filter(r=>r.value&&vis.includes(r.field)).map(r=>(
+                <Row key={r.field} gap={8}>
+                  <span className="cc-detail-label">{r.label}</span>
+                  <span style={{fontSize:13,color:r.color}}>{r.value}</span>
                 </Row>
-              )}
-              {selected.email&&vis.includes("email")&&(
-                <Row gap={8}>
-                  <span className="cc-detail-label">E-Mail</span>
-                  <span style={{fontSize:13,color:BL}}>{selected.email}</span>
-                </Row>
-              )}
-              {selected.tel&&vis.includes("tel")&&(
-                <Row gap={8}>
-                  <span className="cc-detail-label">Telefon</span>
-                  <span style={{fontSize:13,color:"var(--text)"}}>{selected.tel}</span>
-                </Row>
-              )}
+              ))}
             </div>
           </>
         )}
@@ -331,14 +264,16 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
 
       {/* Toolbar */}
       <Between style={{marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Spieler suchen…" style={{width:200}}/>
+        <Input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Spieler suchen…" style={{width:200}}/>
         <Row gap={8}>
           {canExport&&(
             <Btn onClick={()=>setShowExport(true)}>
               <TI n="file-download" size={14}/>Export
             </Btn>
           )}
-          <Btn onClick={()=>setGroupBy(g=>!g)} style={groupBy?{background:"var(--text)",color:"var(--bg)"}:{}}>
+          <Btn onClick={()=>setGroupBy(g=>!g)}
+            style={groupBy?{background:"var(--text)",color:"var(--bg)"}:{}}>
             <TI n="layout-list" size={14}/>Gruppieren
           </Btn>
           <span className="cc-chip-toggle" style={{cursor:"default",fontWeight:600}}>
@@ -347,52 +282,30 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
         </Row>
       </Between>
 
-      {/* Mobile */}
-      {isMobile?(
-        <div className="cc-list">
-          {grouped.flatMap(({key,items})=>[
-            key&&(
-              <div key={`h-${key}`} className="cc-section-hdr" style={{padding:"6px 14px",margin:0}}>
-                {key}
-                <span className="cc-count">({items.length})</span>
-              </div>
-            ),
-            ...items.map(p=><MobileRow key={p.id} p={p}/>),
-          ]).filter(Boolean)}
-          {filtered.length===0&&(
-            <div className="cc-empty">Keine Spieler gefunden</div>
-          )}
+      {/* Liste — einheitlich für alle Screens */}
+      <div className="cc-table-wrap">
+        {/* Header */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 60px 52px 24px",
+          padding:"8px 14px",background:"var(--bg)",borderBottom:"1px solid var(--border)"}}>
+          <span className="cc-label" style={{marginBottom:0}}>Spieler</span>
+          <span className="cc-label" style={{marginBottom:0,textAlign:"center"}}>Pos</span>
+          <span className="cc-label" style={{marginBottom:0,textAlign:"right"}}>Nr.</span>
+          <span/>
         </div>
-      ):(
-        <div className="cc-table-wrap">
-          <table className="cc-table">
-            <thead>
-              <tr>
-                {cols.map((c,i)=>{
-                  const sortable = ["name","pos","nr"].includes(c.key);
-                  return(
-                    <th key={i} className="cc-th"
-                      onClick={sortable?()=>handleSort(c.key):undefined}
-                      style={{cursor:sortable?"pointer":"default",userSelect:"none"}}>
-                      <Row gap={4}>{c.label}{sortable&&<SortIcon col={c.key}/>}</Row>
-                    </th>
-                  );
-                })}
-                <th className="cc-th" style={{width:32}}/>
-              </tr>
-            </thead>
-            <tbody>
-              {grouped.flatMap(({key,items})=>[
-                key&&<GruppenHeader key={`h-${key}`} label={key} count={items.length} colSpan={cols.length+1}/>,
-                ...items.map(p=><DesktopRow key={p.id} p={p}/>),
-              ]).filter(Boolean)}
-              {filtered.length===0&&(
-                <tr><td colSpan={cols.length+1} className="cc-empty">Keine Spieler gefunden</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+
+        {grouped.flatMap(({key,items})=>[
+          key&&(
+            <div key={`h-${key}`} className="cc-section-hdr" style={{padding:"6px 14px",margin:0}}>
+              {key}<span className="cc-count">({items.length})</span>
+            </div>
+          ),
+          ...items.map(p=><KaderRow key={p.id} p={p}/>),
+        ]).filter(Boolean)}
+
+        {filtered.length===0&&(
+          <div className="cc-empty">Keine Spieler gefunden</div>
+        )}
+      </div>
     </div>
   );
 }
