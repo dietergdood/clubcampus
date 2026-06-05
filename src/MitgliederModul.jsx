@@ -240,7 +240,14 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
   const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("none");
   const [filterVals,setFilterVals]=useState([]);
+  const [filters,setFilters]=useState({rolle:"",team:"",mitgliedtyp:"",ort:"",datenstatus:""});
+  const [showFilters,setShowFilters]=useState(false);
+
+  const activeFilterCount=Object.values(filters).filter(Boolean).length;
+  function setFilter(key,val){ setFilters(f=>({...f,[key]:val})); }
+  function resetFilters(){ setFilters({rolle:"",team:"",mitgliedtyp:"",ort:"",datenstatus:""}); }
   const [selectedMember,setSelectedMember]=useState(null);
+  const [viewMode,setViewMode]=useState("mitglieder"); // "mitglieder" | "eltern"
   const canExport=role==="administrator"||role==="administration";
   const canEdit=role==="administrator"||role==="administration";
   const [showNewForm,setShowNewForm]=useState(false);
@@ -311,12 +318,19 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     else{ setSortCol(key); setSortDir("asc"); }
   }
 
-  const filtered=allMembers.filter(m=>
-    (!search||m.name.toLowerCase().includes(search.toLowerCase())||
-    m.role.toLowerCase().includes(search.toLowerCase())||
-    m.team.toLowerCase().includes(search.toLowerCase()))
-    &&(filterVals.length===0||filterVals.includes(m[groupBy]||"-"))
-  );
+  const filtered=allMembers.filter(m=>{
+    if(search&&!m.name.toLowerCase().includes(search.toLowerCase())
+      &&!m.role.toLowerCase().includes(search.toLowerCase())
+      &&!m.team.toLowerCase().includes(search.toLowerCase())
+      &&!(m.email||"").toLowerCase().includes(search.toLowerCase())) return false;
+    if(filterVals.length>0&&!filterVals.includes(m[groupBy]||"-")) return false;
+    if(filters.rolle&&m.role!==filters.rolle) return false;
+    if(filters.team&&!m.team.includes(filters.team)) return false;
+    if(filters.mitgliedtyp&&m.type!==filters.mitgliedtyp) return false;
+    if(filters.ort&&m.location!==filters.ort) return false;
+    if(filters.datenstatus&&m.status!==filters.datenstatus) return false;
+    return true;
+  });
 
   const sorted=[...filtered].sort((a,b)=>{
     const av=String(a[sortCol]??""); const bv=String(b[sortCol]??"");
@@ -435,12 +449,21 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
         {canExport&&<Row align="flex-start"><Btn>Export CSV</Btn><Btn>Export Excel</Btn></Row>}
       </div>
       {/* Stats */}
-      <div className="cc-grid-stats" style={{marginBottom:20}}>
-        <Stat label="Total" value={allMembers.length} color={BL}/>
-        <Stat label="Trainer" value={allMembers.filter(m=>m.role==="Trainer").length} color={R}/>
-        <Stat label="Aktivmitglieder" value={allMembers.filter(m=>m.type==="Aktivmitglied").length} color={GN}/>
-        <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
-      </div>
+      {viewMode==="mitglieder"&&(
+        <div className="cc-grid-stats" style={{marginBottom:20}}>
+          <Stat label="Total" value={allMembers.length} color={BL}/>
+          <Stat label="Trainer" value={allMembers.filter(m=>m.role==="Trainer").length} color={R}/>
+          <Stat label="Aktivmitglieder" value={allMembers.filter(m=>m.type==="Aktivmitglied").length} color={GN}/>
+          <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
+        </div>
+      )}
+      {viewMode==="eltern"&&(
+        <div className="cc-grid-stats" style={{marginBottom:20}}>
+          <Stat label="Total Eltern" value={alleEltern.length} color={BL}/>
+          <Stat label="Verknüpft" value={alleEltern.filter(e=>e.benutzer_id).length} color={GN}/>
+          <Stat label="Nicht verknüpft" value={alleEltern.filter(e=>!e.benutzer_id).length} color={AM}/>
+        </div>
+      )}
       {/* Filter-Zeile */}
       <div style={{display:"flex",gap:12,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
@@ -1259,14 +1282,41 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
 
   if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)}/>;
 
+  // Alle Eltern aus dbMitglieder zusammenstellen
+  const alleEltern = dbMitglieder.flatMap(m=>
+    (m.eltern||[]).map(e=>({
+      ...e,
+      kind_name:`${m.vorname} ${m.nachname}`,
+      kind_id: m.id,
+      kind_team: (m.teams||[])[0]||"-",
+    }))
+  );
+
+  const filteredEltern = alleEltern.filter(e=>
+    !search ||
+    (e.name||"").toLowerCase().includes(search.toLowerCase()) ||
+    (e.email||"").toLowerCase().includes(search.toLowerCase()) ||
+    (e.kind_name||"").toLowerCase().includes(search.toLowerCase())
+  );
+
   return(
     <div>
       {/* Header */}
-      <div className="cc-flex-center" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:12}}>
-        <h1>Mitglieder</h1>
+      <div className="cc-flex-center" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <h1 style={{margin:0}}>{viewMode==="mitglieder"?"Mitglieder":"Eltern"}</h1>
+          <div className="cc-seg" style={{fontSize:13}}>
+            <button className={`cc-seg-item${viewMode==="mitglieder"?" cc-seg-active":""}`} onClick={()=>setViewMode("mitglieder")}>
+              <TI n="users"/> Mitglieder <span style={{opacity:0.6}}>({allMembers.length})</span>
+            </button>
+            <button className={`cc-seg-item${viewMode==="eltern"?" cc-seg-active":""}`} onClick={()=>setViewMode("eltern")}>
+              <TI n="heart"/> Eltern <span style={{opacity:0.6}}>({alleEltern.length})</span>
+            </button>
+          </div>
+        </div>
         <div style={{display:"flex",gap:8}}>
-          {canEdit&&<Btn variant="primary" onClick={()=>{setShowNewForm(true);setNewForm({});setNewMsg(null);}}><TI n="user-plus"/> Mitglied hinzufügen</Btn>}
-          {canExport&&<><Btn><TI n="file-type-csv"/> Export CSV</Btn><Btn><TI n="file-spreadsheet"/> Export Excel</Btn></>}
+          {viewMode==="mitglieder"&&canEdit&&<Btn variant="primary" onClick={()=>{setShowNewForm(true);setNewForm({});setNewMsg(null);}}><TI n="user-plus"/> Mitglied hinzufügen</Btn>}
+          {viewMode==="mitglieder"&&canExport&&<><Btn><TI n="file-type-csv"/> Export CSV</Btn><Btn><TI n="file-spreadsheet"/> Export Excel</Btn></>}
         </div>
       </div>
 
@@ -1341,53 +1391,76 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
         <Stat label="Aktivmitglieder" value={allMembers.filter(m=>m.type==="Aktivmitglied").length} color={GN}/>
         <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
       </div>
-      {/* Filter-Zeile */}
-      <div style={{display:"flex",gap:12,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
+      {/* ── MITGLIEDER ANSICHT ── */}
+      {viewMode==="mitglieder"&&(<>
+      {/* Suche + Filter-Zeile */}
+      <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Suchen nach Name, Rolle, Team…"
-          style={{...inputStyle,flex:1,minWidth:180}}/>
+          className="cc-input" placeholder="Suchen nach Name, E-Mail, Team…"
+          style={{flex:1,minWidth:180}}/>
+        <Btn onClick={()=>setShowFilters(f=>!f)}>
+          <TI n="filter"/> Filter {activeFilterCount>0&&<span style={{background:R,color:"#fff",borderRadius:20,padding:"1px 6px",fontSize:11,marginLeft:4}}>{activeFilterCount}</span>}
+        </Btn>
         <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVals([]);}}
-          style={{...inputStyle,minWidth:170}}>
+          className="cc-input" style={{minWidth:160}}>
           {GROUP_OPTIONS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
         </select>
       </div>
+
+      {/* Erweiterte Filter */}
+      {showFilters&&(
+        <Card style={{marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <span style={{fontWeight:600,fontSize:14}}>Filter</span>
+            {activeFilterCount>0&&<Btn small onClick={resetFilters} style={{color:R,fontSize:12}}>× Alle zurücksetzen</Btn>}
+          </div>
+          <div className="cc-grid-form" style={{gap:8}}>
+            {[
+              {key:"rolle",      label:"Funktion",    vals:[...new Set(allMembers.map(m=>m.role).filter(Boolean))].sort()},
+              {key:"team",       label:"Team",        vals:[...new Set(allMembers.flatMap(m=>m.team?m.team.split(", "):[]).filter(Boolean))].sort()},
+              {key:"mitgliedtyp",label:"Mitgliedtyp", vals:[...new Set(allMembers.map(m=>m.type).filter(Boolean))].sort()},
+              {key:"ort",        label:"Wohnort",     vals:[...new Set(allMembers.map(m=>m.location).filter(Boolean))].sort()},
+              {key:"datenstatus",label:"Datenstatus", vals:["Vollständig","Prüfung fällig","Unvollständig"]},
+            ].map(({key,label,vals})=>(
+              <div key={key}>
+                <label className="cc-label">{label}</label>
+                <select className="cc-input" value={filters[key]} onChange={e=>setFilter(key,e.target.value)}>
+                  <option value="">Alle</option>
+                  {vals.map(v=><option key={v} value={v}>{v} ({allMembers.filter(m=>key==="team"?m.team.includes(v):m[key==="rolle"?"role":key==="mitgliedtyp"?"type":key==="ort"?"location":"status"]===v).length})</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Aktive Filter-Chips */}
+      {activeFilterCount>0&&(
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          {Object.entries(filters).filter(([,v])=>v).map(([k,v])=>(
+            <button key={k} onClick={()=>setFilter(k,"")}
+              className="cc-chip-toggle cc-chip-active" style={{fontSize:12}}>
+              {v} ×
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Gruppen-Filter Chips */}
       {groupBy!=="none"&&(()=>{
-        const vals=[...new Set(MEMBERS.map(m=>m[groupBy]||"-"))].sort();
+        const vals=[...new Set(allMembers.map(m=>m[groupBy]||"-"))].sort();
         return(
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
-            <button onClick={()=>setFilterVals([])}
-              className="cc-chip-toggle" style={{
-                background:filterVals.length===0?BK:"var(--surface)",
-                color:filterVals.length===0?"#fff":"var(--sub)",
-                fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
-              Alle
-            </button>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10,alignItems:"center"}}>
+            <button onClick={()=>setFilterVals([])} className={`cc-chip-toggle${filterVals.length===0?" cc-chip-active":""}`}>Alle</button>
             {vals.map(v=>{
               const active=filterVals.includes(v);
               return(
                 <button key={v} onClick={()=>setFilterVals(prev=>active?prev.filter(x=>x!==v):[...prev,v])}
-                  style={{padding:"4px 12px",borderRadius:20,
-                    border:"1px solid "+(active?BK:"var(--border)"),
-                    background:active?BK:"var(--surface)",
-                    color:active?"#fff":"var(--sub)",
-                    fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s",
-                    display:"flex",alignItems:"center",gap:8}}>
-                  {active&&<span style={{fontSize:11}}>✓</span>}
-                  {v}
-                  <span style={{opacity:0.55,fontWeight:400}}>
-                    {allMembers.filter(m=>(m[groupBy]||"-")===v).length}
-                  </span>
+                  className={`cc-chip-toggle${active?" cc-chip-active":""}`}>
+                  {v} <span style={{opacity:0.6,fontWeight:400,fontSize:11}}>{allMembers.filter(m=>(m[groupBy]||"-")===v).length}</span>
                 </button>
               );
             })}
-            {filterVals.length>0&&(
-              <button onClick={()=>setFilterVals([])}
-                className="cc-chip-toggle" style={{
-                  background:"none",color:R,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
-                × zurücksetzen
-              </button>
-            )}
           </div>
         );
       })()}
@@ -1450,6 +1523,68 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
           </div>
         )}
       </Card>
+      )}
+
+      {/* ── ELTERN ANSICHT ── */}
+      {viewMode==="eltern"&&(
+        <>
+          {/* Suche */}
+          <div style={{marginBottom:12}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)}
+              className="cc-input" placeholder="Suchen nach Name, E-Mail, Kind…"/>
+          </div>
+          <Card style={{padding:0,overflowX:"auto"}}>
+            <table className="cc-table">
+              <thead>
+                <tr>
+                  <th className="cc-th">Name</th>
+                  <th className="cc-th">Beziehung</th>
+                  <th className="cc-th">E-Mail</th>
+                  <th className="cc-th">Telefon</th>
+                  <th className="cc-th">Kind</th>
+                  <th className="cc-th">Team</th>
+                  <th className="cc-th">Portal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEltern.map((e,i)=>(
+                  <tr key={i} className="cc-tr">
+                    <td className="cc-td">
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <Av name={e.name||"?"} size={28}/>
+                        <span className="cc-list-name">{e.name||"-"}</span>
+                      </div>
+                    </td>
+                    <td className="cc-td"><span className="cc-detail-label">{e.beziehung||"-"}</span></td>
+                    <td className="cc-td"><span className="cc-detail-label">{e.email||"-"}</span></td>
+                    <td className="cc-td"><span className="cc-detail-label">{e.telefon||e.tel||"-"}</span></td>
+                    <td className="cc-td">
+                      <span className="cc-list-name" style={{cursor:"pointer",color:"var(--cc-accent)"}}
+                        onClick={()=>{
+                          const m=dbMitglieder.find(x=>x.id===e.kind_id);
+                          if(m) setSelectedMember({id:m.id,name:`${m.vorname} ${m.nachname}`,role:m.funktion||"-",type:m.mitgliedtyp||"-",status:m.datenstatus||"-",team:(m.teams||[]).join(", ")||"-",location:m.ort||"-",email:m.email||"-"});
+                        }}>
+                        {e.kind_name}
+                      </span>
+                    </td>
+                    <td className="cc-td"><span className="cc-detail-label">{e.kind_team}</span></td>
+                    <td className="cc-td">
+                      <Chip
+                        text={e.benutzer_id?"Verknüpft":"Nicht verknüpft"}
+                        color={e.benutzer_id?GN:"#9CA3AF"}
+                        bg={e.benutzer_id?"#ECFDF5":"var(--surface2)"}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredEltern.length===0&&(
+              <div className="cc-empty">Keine Eltern gefunden.</div>
+            )}
+          </Card>
+        </>
+      )}
     </div>
   );
 }
