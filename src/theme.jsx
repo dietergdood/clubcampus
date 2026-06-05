@@ -19,7 +19,7 @@ const PWA_CSS=`
 
 /* ── Base ── */
 .cc-page{animation:cc-in 0.15s ease-out}
-.cc-card{background:var(--surface)!important;border-color:var(--border)!important;box-shadow:none!important}
+.cc-card{background:var(--surface)!important;border:none!important;box-shadow:0 1px 4px rgba(0,0,0,0.06)!important}
 .cc-topbar{background:var(--bg)!important;border-color:var(--border)!important}
 .cc-main{background:var(--bg)!important}
 
@@ -269,7 +269,7 @@ function Btn({children,onClick,variant="outline",color=null,small,disabled=false
 }
 
 function Card({children,style={},onClick}){
-  return <div onClick={onClick} className="cc-card" style={{borderRadius:14,padding:"20px 22px",border:"0.5px solid",...style}}>{children}</div>;
+  return <div onClick={onClick} className="cc-card" style={{borderRadius:12,padding:"16px 20px",...style}}>{children}</div>;
 }
 
 function Chip({text,color,bg,semantic,size="sm"}){
@@ -290,7 +290,7 @@ function Stat({label,value,sub,color,semantic,icon}){
      <Stat label="Custom" value={8} color="#7C3AED"/>  */
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div className="cc-card" style={{borderRadius:12,padding:"18px 20px",flex:1,minWidth:0,border:"0.5px solid"}}>
+    <div className="cc-card" style={{borderRadius:12,padding:"16px 18px",flex:1,minWidth:0}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
         <div style={{fontSize:11,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
         {icon&&<div style={{width:28,height:28,borderRadius:6,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color:c.text}}/></div>}
