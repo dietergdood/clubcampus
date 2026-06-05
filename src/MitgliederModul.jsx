@@ -348,58 +348,58 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       ...(fv.showNotizen?[{l:"Notizen",      v:raw.notizen||"-"}]:[]),
     ];
     return(
-      <ModalOrSheet open={true} onClose={onClose} maxWidth={540}>
-        <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <Row gap={12}>
+      <div>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+          <Btn onClick={onClose} style={{fontSize:13}}><TI n="arrow-left"/> Zurück</Btn>
+          <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
             <Av name={m.name} size={44}/>
             <div>
-              <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{m.name}</div>
+              <div style={{fontWeight:700,fontSize:18,color:"var(--text)"}}>{m.name}</div>
               <div style={{display:"flex",gap:8,marginTop:4,flexWrap:"wrap"}}>
                 <Chip text={m.role} color={R}/>
                 <Chip text={m.type} color={BL}/>
                 <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
               </div>
             </div>
-          </Row>
-          <Btn variant="ghost" onClick={onClose} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
+          </div>
         </div>
-        <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px"}}>
-          <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
-          {(selectedMember?._tab||"info")==="info"&&(
-            <div>
-              {rows.filter(r=>role==="administrator"||role==="administration"?true:(r.v&&r.v!=="-")).map((r,i,arr)=>(
-                <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<arr.length-1?"1px solid var(--border)":"none",gap:12}}>
-                  <span style={{fontSize:14,color:"var(--sub)",minWidth:110,flexShrink:0}}>{r.l}</span>
-                  <span style={{fontSize:14,color:"var(--text)",fontWeight:600,textAlign:"right"}}>{r.v}</span>
-                </div>
-              ))}
-              {m.hat_portal_zugang&&(
-                <div style={{marginTop:14,padding:"10px 14px",background:"var(--surface)",borderRadius:8,border:"1px solid "+GN,fontSize:14,color:GN,fontWeight:600}}>
-                  ✓ Hat Portal-Zugang
-                </div>
-              )}
-            </div>
-          )}
-          {(selectedMember?._tab||"info")==="eltern"&&(
-            <Col gap={12}>
-              {eltern.length===0&&<div style={{color:"var(--sub)",fontSize:14,textAlign:"center",padding:24}}>Keine Elternkontakte erfasst.</div>}
-              {eltern.map((e,i)=>(
-                <div key={i} className="cc-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px"}}>
-                  <div style={{fontWeight:600,fontSize:14,color:"var(--text)",marginBottom:8}}>{e.vorname} {e.nachname}</div>
-                  {e.email&&<div style={{fontSize:14,color:"var(--sub)",marginBottom:4}}>✉ {e.email}</div>}
-                  {e.telefon&&<div style={{fontSize:14,color:"var(--sub)"}}>📞 {e.telefon}</div>}
-                </div>
-              ))}
-            </Col>
-          )}
-        </div>
-      </ModalOrSheet>
+        <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
+        {(selectedMember?._tab||"info")==="info"&&(
+          <Card style={{marginTop:12}}>
+            {rows.filter(r=>role==="administrator"||role==="administration"?true:(r.v&&r.v!=="-")).map((r,i,arr)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<arr.length-1?"0.5px solid var(--border)":"none",gap:12}}>
+                <span style={{fontSize:14,color:"var(--sub)",minWidth:130,flexShrink:0}}>{r.l}</span>
+                <span style={{fontSize:14,color:r.v==="-"?"var(--sub)":"var(--text)",fontWeight:r.v==="-"?400:600,textAlign:"right"}}>{r.v}</span>
+              </div>
+            ))}
+            {m.hat_portal_zugang&&(
+              <div style={{marginTop:12,padding:"10px 14px",background:"var(--surface2)",borderRadius:8,border:"1px solid "+GN,fontSize:14,color:GN,fontWeight:600}}>
+                ✓ Hat Portal-Zugang
+              </div>
+            )}
+          </Card>
+        )}
+        {(selectedMember?._tab||"info")==="eltern"&&(
+          <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:12}}>
+            {eltern.length===0&&<div style={{color:"var(--sub)",fontSize:14,textAlign:"center",padding:24}}>Keine Elternkontakte erfasst.</div>}
+            {eltern.map((e,i)=>(
+              <Card key={i}>
+                <div style={{fontWeight:600,fontSize:14,marginBottom:6}}>{e.vorname} {e.nachname}{e.beziehung?` (${e.beziehung})`:""}</div>
+                {e.email&&<div style={{fontSize:13,color:"var(--sub)",marginBottom:3}}>✉ {e.email}</div>}
+                {e.telefon&&<div style={{fontSize:13,color:"var(--sub)"}}>📞 {e.telefon}</div>}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     );
   };
 
+  if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)}/>;
+
   return(
     <div>
-      {selectedMember&&<MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)}/>}
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:12}}>
         <h1 style={{fontSize:21,fontWeight:800,margin:0,color:"var(--text)"}}>Mitglieder</h1>
@@ -501,7 +501,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
   );
 }
 
-function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
+function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,onReload}){
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
   const [sortDir,setSortDir]=useState("asc");
@@ -588,6 +588,44 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const raw=dbMitglieder.find(d=>d.id===m.id)||{};
     const eltern=raw.eltern||[];
     const fv=getFieldVisibility(role);
+    const canEdit=role==="administrator"||role==="administration";
+    const [editMode,setEditMode]=useState(false);
+    const [form,setForm]=useState({...raw});
+    const [saving,setSaving]=useState(false);
+    const [saveMsg,setSaveMsg]=useState(null);
+    const S_LABEL={fontSize:11,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",display:"block",marginBottom:4};
+    const S_INPUT={width:"100%",padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14,background:"var(--surface)",color:"var(--text)",outline:"none",boxSizing:"border-box"};
+
+    async function handleSave(){
+      if(!kannSchreiben("members")) return;
+      setSaving(true); setSaveMsg(null);
+      try{
+        const update={
+          vorname:form.vorname, nachname:form.nachname,
+          geburtsdatum:form.geburtsdatum||null,
+          geschlecht:form.geschlecht||null,
+          nationalitaet:form.nationalitaet||null,
+          heimatort:form.heimatort||null,
+          strasse:form.strasse||null, plz:form.plz||null,
+          ort:form.ort||null, kanton:form.kanton||null, land:form.land||null,
+          email:form.email||null, telefon:form.telefon||null,
+          mitgliedtyp:form.mitgliedtyp||null, funktion:form.funktion||null,
+          position:form.position||null, spielerpass:form.spielerpass||null,
+          ahv_nr:form.ahv_nr||null, js_nr:form.js_nr||null,
+          datenstatus:form.datenstatus||null, notizen:form.notizen||null,
+          updated_at:new Date().toISOString(),
+        };
+        if(sb){
+          const {error}=await sb.from("mitglieder").update(update).eq("id",raw.id);
+          if(error) throw error;
+          if(onReload) onReload();
+        }
+        setSaveMsg({ok:true, text:"Gespeichert ✓"});
+        setEditMode(false);
+      }catch(e){ setSaveMsg({ok:false, text:e.message}); }
+      setSaving(false);
+    }
+
     const rows=[
       {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
       {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
@@ -614,13 +652,27 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       {l:"Datenstatus",  v:raw.datenstatus||"-"},
       ...(fv.showNotizen?[{l:"Notizen",      v:raw.notizen||"-"}]:[]),
     ];
+    const F=({lbl,fkey,type="text",opts})=>(
+      <div>
+        <span style={S_LABEL}>{lbl}</span>
+        {opts
+          ?<select value={form[fkey]||""} onChange={e=>setForm(f=>({...f,[fkey]:e.target.value}))} style={S_INPUT}>
+            <option value="">–</option>
+            {opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}
+          </select>
+          :<input type={type} value={form[fkey]||""} onChange={e=>setForm(f=>({...f,[fkey]:e.target.value}))} style={S_INPUT}/>
+        }
+      </div>
+    );
     return(
-      <ModalOrSheet open={true} onClose={onClose} maxWidth={540}>
-        <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
+      <div>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+          <Btn onClick={onClose} style={{fontSize:13}}><TI n="arrow-left"/> Zurück</Btn>
+          <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
             <Av name={m.name} size={44}/>
             <div>
-              <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{m.name}</div>
+              <div style={{fontWeight:700,fontSize:18,color:"var(--text)"}}>{m.name}</div>
               <div style={{display:"flex",gap:8,marginTop:4,flexWrap:"wrap"}}>
                 <Chip text={m.role} color={R}/>
                 <Chip text={m.type} color={BL}/>
@@ -628,35 +680,76 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               </div>
             </div>
           </div>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:21,cursor:"pointer",color:"var(--sub)"}}>×</button>
+          {canEdit&&!editMode&&<Btn onClick={()=>setEditMode(true)} style={{fontSize:13}}><TI n="edit"/> Bearbeiten</Btn>}
         </div>
-        <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px"}}>
-          <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
-          {(selectedMember?._tab||"info")==="info"&&(
-            <div>
-              {rows.filter(r=>role==="administrator"||role==="administration"?true:(r.v&&r.v!=="-")).map((r,i,arr)=>(
-                <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<arr.length-1?"1px solid var(--border)":"none",gap:12}}>
-                  <span style={{fontSize:14,color:"var(--sub)",minWidth:110,flexShrink:0}}>{r.l}</span>
-                  <span style={{fontSize:14,color:"var(--text)",fontWeight:600,textAlign:"right"}}>{r.v}</span>
-                </div>
-              ))}
-              {m.hat_portal_zugang&&(
-                <div style={{marginTop:14,padding:"10px 14px",background:"var(--surface)",borderRadius:8,border:"1px solid "+GN,fontSize:14,color:GN,fontWeight:600}}>
-                  ✓ Hat Portal-Zugang
+        <div>
+          {!editMode?(
+            <>
+              <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
+              {(selectedMember?._tab||"info")==="info"&&(
+                <div>
+                  {rows.filter(r=>canEdit?true:(r.v&&r.v!=="-")).map((r,i,arr)=>(
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<arr.length-1?"0.5px solid var(--border)":"none",gap:12}}>
+                      <span style={{fontSize:14,color:"var(--sub)",minWidth:120,flexShrink:0}}>{r.l}</span>
+                      <span style={{fontSize:14,color:r.v==="-"?"var(--sub)":"var(--text)",fontWeight:r.v==="-"?400:600,textAlign:"right"}}>{r.v}</span>
+                    </div>
+                  ))}
+                  {saveMsg&&<div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:saveMsg.ok?"#ECFDF5":RL,color:saveMsg.ok?GN:R,fontSize:13}}>{saveMsg.text}</div>}
                 </div>
               )}
-            </div>
-          )}
-          {(selectedMember?._tab||"info")==="eltern"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {eltern.length===0&&<div style={{color:"var(--sub)",fontSize:14,textAlign:"center",padding:24}}>Keine Elternkontakte erfasst.</div>}
-              {eltern.map((e,i)=>(
-                <div key={i} className="cc-card" style={{borderRadius:12,border:"0.5px solid",padding:"14px 16px"}}>
-                  <div style={{fontWeight:600,fontSize:14,color:"var(--text)",marginBottom:8}}>{e.vorname} {e.nachname}</div>
-                  {e.email&&<div style={{fontSize:14,color:"var(--sub)",marginBottom:4}}>✉ {e.email}</div>}
-                  {e.telefon&&<div style={{fontSize:14,color:"var(--sub)"}}>📞 {e.telefon}</div>}
+              {(selectedMember?._tab||"info")==="eltern"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {eltern.length===0&&<div style={{color:"var(--sub)",fontSize:14,textAlign:"center",padding:24}}>Keine Elternkontakte erfasst.</div>}
+                  {eltern.map((e,i)=>(
+                    <div key={i} style={{borderRadius:10,border:"0.5px solid var(--border)",padding:"12px 14px"}}>
+                      <div style={{fontWeight:600,fontSize:14,marginBottom:6}}>{e.vorname} {e.nachname}{e.beziehung?` (${e.beziehung})`:""}</div>
+                      {e.email&&<div style={{fontSize:13,color:"var(--sub)",marginBottom:3}}>✉ {e.email}</div>}
+                      {e.telefon&&<div style={{fontSize:13,color:"var(--sub)"}}>📞 {e.telefon}</div>}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+            </>
+          ):(
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <F lbl="Vorname" fkey="vorname"/>
+                <F lbl="Nachname" fkey="nachname"/>
+                <F lbl="Geburtsdatum" fkey="geburtsdatum" type="date"/>
+                <F lbl="Geschlecht" fkey="geschlecht" opts={[{v:"m",l:"Männlich"},{v:"w",l:"Weiblich"}]}/>
+                <F lbl="Nationalität" fkey="nationalitaet"/>
+                <F lbl="Heimatort" fkey="heimatort"/>
+                <F lbl="Strasse" fkey="strasse"/>
+                <F lbl="PLZ" fkey="plz"/>
+                <F lbl="Ort" fkey="ort"/>
+                <F lbl="Kanton" fkey="kanton"/>
+                <F lbl="Land" fkey="land"/>
+                <F lbl="E-Mail" fkey="email" type="email"/>
+                <F lbl="Telefon" fkey="telefon"/>
+                <F lbl="Mitgliedtyp" fkey="mitgliedtyp" opts={["Spieler","Trainer","Funktionär","Passivmitglied","Ehrenmitglied","Gönner"]}/>
+                <F lbl="Funktion" fkey="funktion"/>
+                <F lbl="Position" fkey="position"/>
+                <F lbl="Spielerpass" fkey="spielerpass"/>
+                <F lbl="AHV-Nr." fkey="ahv_nr"/>
+                <F lbl="J+S Nr." fkey="js_nr"/>
+                <F lbl="Datenstatus" fkey="datenstatus" opts={["Vollständig","Prüfung fällig","Unvollständig"]}/>
+              </div>
+              <div style={{gridColumn:"1/-1"}}>
+                <span style={S_LABEL}>Notizen</span>
+                <textarea value={form.notizen||""} onChange={e=>setForm(f=>({...f,notizen:e.target.value}))}
+                  style={{...S_INPUT,minHeight:70,resize:"vertical"}}/>
+              </div>
+              {saveMsg&&<div style={{padding:"8px 12px",borderRadius:8,background:saveMsg.ok?"#ECFDF5":RL,color:saveMsg.ok?GN:R,fontSize:13}}>{saveMsg.text}</div>}
+              <div style={{display:"flex",gap:8,paddingTop:4}}>
+                <button onClick={()=>{setEditMode(false);setForm({...raw});setSaveMsg(null);}}
+                  style={{padding:"9px 18px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:14,cursor:"pointer"}}>
+                  Abbrechen
+                </button>
+                <button onClick={handleSave} disabled={saving}
+                  style={{flex:1,padding:"9px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,fontSize:14,fontWeight:600,cursor:"pointer"}}>
+                  {saving?"Speichert…":"Speichern"}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -666,7 +759,6 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
 
   return(
     <div>
-      {selectedMember&&<MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)}/>}
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:12}}>
         <h1 style={{fontSize:21,fontWeight:800,margin:0,color:"var(--text)"}}>Mitglieder</h1>
