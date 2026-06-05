@@ -350,7 +350,7 @@ function Av({name="",init,size="md",bg,useTheme=false}){
 function Tabs({tabs,active,setActive}){
   const isMobile=useIsMobile();
   return(
-    <div style={{display:"flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,overflowX:"auto",flexWrap:"nowrap",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+    <div style={{display:"inline-flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,overflowX:"auto",flexWrap:"nowrap",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",maxWidth:"100%"}}>
       {tabs.map(t=>(
         <button key={t.key} onClick={()=>setActive(t.key)} style={{
           padding:isMobile?"7px 10px":"7px 12px",border:"none",borderRadius:6,
