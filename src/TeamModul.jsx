@@ -274,7 +274,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       })():(
         <Tabs tabs={tabs} active={tab} setActive={setTab}/>
       )}
-      {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial}/>}
+      {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial} dbMitglieder={dbMitglieder}/>}
       {tab==="roster"&&<KaderModulProp role={role} team={activeTeam} initialSelected={rosterInitial} teamRosterData={getMitgliederForTeam(activeTeam)}/>}
       {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb} dbTeams={dbTeams}/>}
       {tab==="spielplan"&&(
@@ -312,10 +312,21 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   );
 }
 
-function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial}){
+function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial,dbMitglieder=[]}){
   const isMobile=useIsMobile();
   const isEltern=role==="eltern";
   const today="2026-05-23";
+  const getMitgliederForTeam=(teamName)=>{
+    if(dbMitglieder.length>0){
+      return dbMitglieder.filter(m=>(m.teams||[]).includes(teamName)&&m.aktiv!==false).map(m=>({
+        id:m.id, name:`${m.vorname} ${m.nachname}`,
+        firstName:m.vorname||"", lastName:m.nachname||"",
+        pos:m.position||"-", role:m.funktion||"",
+        email:m.email||"", tel:m.telefon||"",
+      }));
+    }
+    return ROSTER.filter(p=>(p.teams||[]).includes(teamName));
+  };
   const parseEvDate=(d)=>{
     if(!d) return "";
     const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
