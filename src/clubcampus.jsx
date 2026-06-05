@@ -564,11 +564,13 @@ function Portal({supabaseClient}){
   async function loadDbTeams(){
     if(!sb) return;
     try{
-      const{data}=await sb.from("teams").select("*, team_module(modul,aktiv)").eq("aktiv",true).order("hauptbereich").order("name");
+      const{data,error}=await sb.from("teams").select("*, module_teams(modul,aktiv)").eq("aktiv",true).order("hauptbereich").order("name");
+      if(error) console.warn("[FCH] loadDbTeams error:", error.message);
       if(data&&data.length>0) setDbTeams(data.map(t=>({
         ...t,
-        module_aktiv:(t.team_module||[]).filter(m=>m.aktiv).map(m=>m.modul)
+        module_aktiv:(t.module_teams||[]).filter(m=>m.aktiv).map(m=>m.modul)
       })));
+      else console.warn("[FCH] loadDbTeams: keine Teams gefunden", data);
     }catch(e){ console.warn("[FCH] loadDbTeams:", e.message); }
   }
 
