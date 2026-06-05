@@ -28,7 +28,7 @@ function DashboardAdmin({setActive,account}){
     <div>
       <H1 style={{fontSize:24}} mb={4}>Hallo, {vorname}</H1>
       <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 24px",fontWeight:400}}>ClubCampus – Systemübersicht</p>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:24}}>
         <Stat label="Mitglieder total" value="187" sub="Fairgate synchronisiert" semantic="primary" icon="users"/>
         <Stat label="Aktive Benutzer" value="134" sub="in den letzten 30 Tagen" semantic="info" icon="user"/>
         <Stat label="Sync-Fehler" value="2" sub="Fairgate / FVRZ" semantic="danger" icon="refresh"/>
@@ -556,7 +556,7 @@ function DashboardEltern({account,meineTeams,setActive}){
               const nextSpiel=ATT_EVENTS.filter(e=>e.team===team&&e.type==="Spiel"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
               const nextTraining=ATT_EVENTS.filter(e=>e.team===team&&e.type==="Training"&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
               return(
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:14}}>
                   <Stat label="Ø Anwesenheit Trainings" value={attPct!==null?attPct+"%":"-"} sub={attTotal?zuCount+"/"+attTotal+" Trainings":"Noch keine"} color={attColor}/>
                   <Stat label="Nächstes Training" value={nextTraining?nextTraining.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"} sub={nextTraining?`${nextTraining.time.slice(0,5)} Uhr · ${nextTraining.location}`:"Kein Training geplant"} semantic="success"/>
                   {(()=>{

@@ -309,9 +309,9 @@ function Stat({label,value,sub,color,semantic,icon}){
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
     <div className="cc-card" style={{borderRadius:12,padding:"20px 22px",flex:1,minWidth:0}}>
-      <div style={{fontSize:11,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{label}</div>
-      <div style={{fontSize:28,fontWeight:600,color:c.text,lineHeight:1,marginBottom:sub?5:0}}>{value}</div>
-      {sub&&<div style={{fontSize:12,color:"var(--sub)",marginTop:2}}>{sub}</div>}
+      <div style={{fontSize:11,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</div>
+      <div style={{fontSize:28,fontWeight:600,color:c.text,lineHeight:1,marginBottom:sub?6:0}}>{value}</div>
+      {sub&&<div style={{fontSize:12,color:"var(--sub)",lineHeight:1.4}}>{sub}</div>}
     </div>
   );
 }
