@@ -120,7 +120,7 @@ const PWA_CSS=`
 .cc-empty{padding:32px;text-align:center;color:var(--sub);font-size:13px}
 .cc-table-wrap{background:var(--surface);border-radius:12px;overflow:hidden;overflow-x:auto}
 .cc-grid-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.cc-grid-stats-sm{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.cc-grid-stats-sm{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .cc-grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .cc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cc-grid-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -150,7 +150,11 @@ const PWA_CSS=`
 .cc-av-sm{width:24px;height:24px;border-radius:6px;font-size:9px}
 .cc-av-md{width:32px;height:32px;border-radius:8px;font-size:11px}
 .cc-av-lg{width:40px;height:40px;border-radius:10px;font-size:13px}
-`;
+
+@media(max-width:680px){
+  .cc-grid-stats{grid-template-columns:repeat(2,1fr)!important}
+  .cc-grid-cards{grid-template-columns:1fr!important}
+}`;
 /* localStorage polyfill voor window.storage */
 
 /* ── Semantische Farben ────────────────────────────────────────
