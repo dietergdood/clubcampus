@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Card, Chip, H1, InfoBox, Row, STitle, Stat, useIsMobile , Btn} from "./theme.jsx";
+import { Card, Chip, H1, InfoBox, Row, STitle, Stat, useIsMobile , Btn, H2} from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS, POLLS, ROSTER, TABLES } from "./demoData.js";
 
 /* ── Shared navigation target ── */
@@ -27,14 +27,14 @@ function DashboardAdmin({setActive,account}){
   return(
     <div>
       <H1 mb={4}>Hallo, {vorname}</H1>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 24px",fontWeight:400}}>ClubCampus – Systemübersicht</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Systemübersicht</p>
       <div className="cc-grid-stats" style={{marginBottom:24}}>
         <Stat label="Mitglieder total" value="187" sub="Fairgate synchronisiert" semantic="primary" icon="users"/>
         <Stat label="Aktive Benutzer" value="134" sub="in den letzten 30 Tagen" semantic="info" icon="user"/>
         <Stat label="Sync-Fehler" value="2" sub="Fairgate / FVRZ" semantic="danger" icon="refresh"/>
         <Stat label="Offene Datenprüfungen" value="12" sub="Mitglieder fällig" semantic="warning" icon="clipboard-list"/>
       </div>
-      <div className="cc-grid-cards" style={{gridTemplateColumns:isMobile?"1fr":undefined}}>
+      <div className="cc-grid-cards" >
         <Card>
           <STitle>Systemstatus</STitle>
           {[
@@ -100,15 +100,15 @@ function DashboardAdministration({setActive,account}){
   return(
     <div>
       <H1 mb={4}>Hallo, {(account?.name||"Nutzer").split(" ")[0]}</H1>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 24px"}}>ClubCampus – Übersicht</p>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 18px"}}>Administration · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Administration · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Mitglieder total" value="187" semantic="info"/>
         <Stat label="Datenprüfung fällig" value="12" semantic="danger" sub="halbjährliche Prüfung"/>
         <Stat label="Sync-Fehler" value="2" semantic="warning"/>
         <Stat label="Offene Materialanfragen" value="3" semantic="neutral"/>
       </div>
-      <div className="cc-grid-cards" style={{gridTemplateColumns:isMobile?"1fr":undefined}}>
+      <div className="cc-grid-cards" >
         <Card>
           <STitle action={<Btn variant="ghost" onClick={()=>setActive("members")}>Alle →</Btn>}>Datenprüfstatus</STitle>
           {[{label:"Vollständig",n:162,c:GN},{label:"Prüfung fällig",n:12,c:AM},{label:"Unvollständig",n:8,c:R},{label:"Sync-Fehler",n:5,c:"#888"}].map((x,i)=>(
@@ -165,21 +165,21 @@ function DashboardFunktionaer({setActive,account}){
   return(
     <div>
       <H1 mb={4}>Hallo, {(account?.name||"Nutzer").split(" ")[0]}</H1>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 24px"}}>ClubCampus – Übersicht</p>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 18px"}}>Funktionär / Vorstand · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Funktionär / Vorstand · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Offene Rückmeldungen" value="22" semantic="danger"/>
         <Stat label="Helfer-Soll erfüllt" value="61%" semantic="warning"/>
         <Stat label="Vereinsbusse heute" value="1" semantic="info" sub="Bus A reserviert"/>
         <Stat label="Offene Materialanfragen" value="3" semantic="neutral"/>
       </div>
-      <div className="cc-grid-cards" style={{gridTemplateColumns:isMobile?"1fr":undefined}}>
+      <div className="cc-grid-cards" >
         <Card>
           <STitle>Kommende Vereinsanlässe</STitle>
           {EVENTS.map((e,i)=>(
             <div key={i} style={{padding:"8px 0",borderBottom:i<EVENTS.length-1?`0.5px solid ${GB}`:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{fontWeight:600,fontSize:13}}>{e.title}</span>
+                <span className="cc-list-name">{e.title}</span>
                 <Chip text={e.type==="Vereinsanlass"?"Verein":"Team"} color={e.type==="Vereinsanlass"?R:BL}/>
               </div>
               <div style={{fontSize:13,color:"var(--sub)"}}>{e.date} · {e.time+" Uhr"}</div>
@@ -252,14 +252,14 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
   return(
     <div>
       <H1 mb={6}>Guten Morgen, {firstName}</H1>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 18px"}}>Trainer · {trainerTeams.join(" & ")} · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Trainer · {trainerTeams.join(" & ")} · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Nächstes Training" value={nextTrain?nextTrain.date.replace(/^\w+\s/,""):"-"} sub={nextTrain?`${nextTrain.time} Uhr · ${nextTrain.location}`:"Kein Training"} semantic="success"/>
         <Stat label="Nächstes Spiel"    value={nextSpiel?nextSpiel.date.replace(/^\w+\s/,""):"-"} sub={nextSpiel?`${nextSpiel.time} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel"} semantic="info"/>
         <Stat label="Ø Anwesenheit"     value="77%"      sub="letzte 5 Trainings"   semantic="success"/>
         <Stat label="Tabellenrang"      value={myRow?myRow.rank+".":"-"} sub={myRow?TABLES[team]?.length+" Teams · "+myRow.pts+" Punkte":"Keine Tabelle"} semantic="info"/>
       </div>
-      <div className="cc-grid-cards" style={{gridTemplateColumns:isMobile?"1fr":undefined}}>
+      <div className="cc-grid-cards" >
         <Card>
           <STitle action={<Chip text={upcoming.filter(e=>e.rsvp!==false).length+" offen"} semantic="danger"/>}>Fehlende Rückmeldungen</STitle>
           {upcoming.filter(e=>e.rsvp!==false).slice(0,3).map((x,i,arr)=>{
@@ -314,8 +314,8 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
             </div>
           ))}
           <div style={{padding:"8px 0",borderTop:"0.5px solid var(--border)",marginTop:6}}>
-            <div style={{fontWeight:600,fontSize:13}}>Vereinsbus reserviert ✓</div>
-            <div style={{fontSize:13,color:"var(--sub)"}}>Bus A · Sa 24.05. · 09:00-14:00</div>
+            <div className="cc-list-name">Vereinsbus reserviert ✓</div>
+            <div className="cc-detail-label" style={{minWidth:"auto"}}>Bus A · Sa 24.05. · 09:00-14:00</div>
           </div>
         </Card>
       </div>
@@ -414,7 +414,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
           <Chip text="Aufgebot" color="#4F46E5"/>
         </div>
       )}
-      <div className="cc-grid-cards" style={{gridTemplateColumns:isMobile?"1fr":undefined}}>
+      <div className="cc-grid-cards" >
         <Card>
           <STitle>Meine nächsten Termine</STitle>
           {(()=>{
@@ -456,7 +456,7 @@ function DashboardEltern({account,meineTeams,setActive}){
   return(
     <div>
       <H1 mb={6}>Hallo, {parentName}</H1>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 18px"}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · Freitag, 23. Mai 2026</p>
 
       {kinder.map((kind,ki)=>{
         const team=kind.team||"Cc-Junioren";
@@ -494,7 +494,7 @@ function DashboardEltern({account,meineTeams,setActive}){
             {/* Kind-Header */}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
               <div style={{width:6,height:28,borderRadius:4,background:ACCENT,flexShrink:0}}/>
-              <h2 style={{margin:0,fontSize:16,fontWeight:800}}>{vorname} <span style={{fontSize:13,color:"var(--sub)",fontWeight:600}}>· {team}</span></h2>
+              <H2 style={{marginBottom:0}}>{vorname} <span style={{fontSize:13,color:"var(--sub)",fontWeight:600}}>· {team}</span></H2>
             </div>
 
             {/* Stat-Kacheln */}
@@ -529,22 +529,22 @@ function DashboardEltern({account,meineTeams,setActive}){
                   <div className="cc-detail-label" style={{minWidth:"auto",marginTop:2}}>
                     {`vs. ${nextAufgebotSpiel.opponent} · ${nextAufgebotSpiel.date} · ${nextAufgebotSpiel.time} Uhr`}
                   </div>
-                  {nextAufgebotSpiel.treffpunkt&&<div style={{fontSize:13,color:"var(--sub)",marginTop:3}}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebotSpiel.treffpunkt}</div>}
+                  {nextAufgebotSpiel.treffpunkt&&<div className="cc-detail-label" style={{minWidth:"auto",marginTop:3,display:"flex",alignItems:"center"}}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebotSpiel.treffpunkt}</div>}
                 </div>
                 <div style={{background:"#4F46E5",color:"#fff",fontSize:13,fontWeight:700,padding:"3px 9px",borderRadius:20}}>Aufgebot</div>
               </div>
             )}
 
-            <div className="cc-grid-cards" style={{gridTemplateColumns:isMobile?"1fr":undefined}}>
+            <div className="cc-grid-cards" >
               {/* Nächste 4 Trainings & Spiele */}
               <Card style={{cursor:setActive?"pointer":"default"}} onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.kindTeam=team;setActive("team");}:undefined}>
                 <STitle action={setActive&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle →</span>}>{vorname} · Trainings & Spiele</STitle>
-                {upcoming.length===0&&<div style={{fontSize:13,color:"var(--sub)"}}>Keine anstehenden Trainings oder Spiele.</div>}
+                {upcoming.length===0&&<div className="cc-detail-label" style={{minWidth:"auto"}}>Keine anstehenden Trainings oder Spiele.</div>}
                 {upcoming.map((e,i)=>(
                   <div key={e.id} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:i<upcoming.length-1?`0.5px solid ${GB}`:"none",alignItems:"center"}}>
                     <div style={{width:3,height:30,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis"}}>
+                      <div className="cc-list-name cc-truncate">
                         {e.type==="Training"?`Training · ${team}`:e.opponent?"vs. "+e.opponent:e.title||e.type}
                       </div>
                       <div style={{fontSize:13,color:"var(--sub)"}}>{e.date} · {e.time} Uhr · {e.location}</div>
@@ -557,12 +557,12 @@ function DashboardEltern({account,meineTeams,setActive}){
               {/* Team-Events & Vereinsanlässe */}
               <Card style={{cursor:setActive?"pointer":"default"}} onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["team-event","vereinsanlass"];NAV_TARGET.kindTeam=team;setActive("team");}:undefined}>
                 <STitle action={setActive&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle →</span>}>{vorname} · Team-Events & Anlässe</STitle>
-                {anlaesse.length===0&&<div style={{fontSize:13,color:"var(--sub)"}}>Keine anstehenden Anlässe.</div>}
+                {anlaesse.length===0&&<div className="cc-detail-label" style={{minWidth:"auto"}}>Keine anstehenden Anlässe.</div>}
                 {anlaesse.map((e,i)=>(
                   <div key={e.id} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:i<anlaesse.length-1?`0.5px solid ${GB}`:"none",alignItems:"center"}}>
                     <div style={{width:3,height:30,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis"}}>{e.title||e.type}</div>
+                      <div className="cc-list-name cc-truncate">{e.title||e.type}</div>
                       <div style={{fontSize:13,color:"var(--sub)"}}>{e.date} · {e.time} Uhr · {e.location}</div>
                     </div>
                     <Chip text={e.subtype||e.type} color={accentFor(e)}/>
