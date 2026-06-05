@@ -234,8 +234,10 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
   );
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:20,width:"100%",maxWidth,maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
-        {children}
+      <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:20,width:"100%",maxWidth,maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
+        <div style={{overflowY:"auto",flex:1,WebkitOverflowScrolling:"touch"}}>
+          {children}
+        </div>
       </div>
     </div>
   );
