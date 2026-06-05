@@ -695,7 +695,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     ];
     const F=({lbl,fkey,type="text",opts})=>(
       <div>
-        <span style={S_LABEL}>{lbl}</span>
+        <span className="cc-label">{lbl}</span>
         {opts
           ?<select value={form[fkey]||""} onChange={e=>setForm(f=>({...f,[fkey]:e.target.value}))} style={S_INPUT}>
             <option value="">–</option>
@@ -715,45 +715,67 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
       {key:"portal",     label:"Portal-Zugang"},
     ];
 
+    // Felder in Sektionen gruppieren
+    const sektionen=[
+      {titel:"Personalien", felder:["Vorname","Nachname","Geburtsdatum","Geschlecht","Nationalität","Heimatort"]},
+      {titel:"Adresse",     felder:["Strasse","PLZ / Ort","Kanton","Land"]},
+      {titel:"Kontakt",     felder:["E-Mail","Telefon"]},
+      {titel:"Vereinsdaten",felder:["Funktion","Team(s)","Mitgliedtyp","Position"]},
+      {titel:"Lizenzen",    felder:["Spielerpass","AHV-Nr.","J+S Nr.","Fairgate-ID"]},
+      {titel:"Status",      felder:["Datenstatus","Notizen"]},
+    ];
     return(
       <div>
-        {/* Header */}
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}}>
-          <Btn onClick={onClose}><TI n="arrow-left"/> Zurück</Btn>
-          <Av name={m.name} size={44}/>
-          <div style={{flex:1}}>
-            <div style={{fontWeight:700,fontSize:20,color:"var(--text)"}}>{m.name}</div>
-            <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
-              <Chip text={raw.funktion||m.role||"-"} color={R}/>
-              <Chip text={raw.mitgliedtyp||m.type||"-"} color={BL}/>
-              <Chip text={raw.datenstatus||m.status||"-"} color={statusColor(m.status)} bg={statusBg(m.status)}/>
-              {(raw.teams||[]).map(t=><Chip key={t} text={t} color={BK}/>)}
+        {/* Header Card */}
+        <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:14,padding:"20px 24px",marginBottom:16,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+          <Av name={m.name} size={56}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:22,color:"var(--text)",marginBottom:6}}>{m.name}</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+              {raw.funktion&&<Chip text={raw.funktion} color={BL}/>}
+              {raw.mitgliedtyp&&<Chip text={raw.mitgliedtyp} color="#6B7280" bg="var(--surface2)"/>}
+              <Chip text={raw.datenstatus||"ausstehend"} color={statusColor(m.status)} bg={statusBg(m.status)}/>
+              {(raw.teams||[]).map(t=><span key={t} style={{fontSize:12,padding:"2px 8px",borderRadius:6,background:"var(--surface2)",color:"var(--sub)",border:"0.5px solid var(--border)"}}>{t}</span>)}
             </div>
           </div>
-          {canEdit&&!editMode&&activeTab==="info"&&(
-            <Btn onClick={()=>setEditMode(true)}><TI n="edit"/> Bearbeiten</Btn>
-          )}
+          <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}}>
+            <Btn onClick={onClose} style={{fontSize:13}}><TI n="arrow-left"/> Zurück</Btn>
+            {canEdit&&!editMode&&activeTab==="info"&&(
+              <Btn onClick={()=>setEditMode(true)} style={{fontSize:13,background:BTN,color:BTN_TXT,border:"none"}}><TI n="edit"/> Bearbeiten</Btn>
+            )}
+          </div>
         </div>
 
         <Tabs tabs={TABS} active={activeTab} setActive={t=>{setActiveTab(t);setEditMode(false);}}/>
 
         {/* TAB: Stammdaten */}
         {activeTab==="info"&&!editMode&&(
-          <Card style={{marginTop:12}}>
-            {rows.filter(r=>canEdit?true:(r.v&&r.v!=="-")).map((r,i,arr)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:i<arr.length-1?"0.5px solid var(--border)":"none",gap:12}}>
-                <span style={{fontSize:14,color:"var(--sub)",minWidth:130,flexShrink:0}}>{r.l}</span>
-                <span style={{fontSize:14,color:r.v==="-"?"var(--sub)":"var(--text)",fontWeight:r.v==="-"?400:600,textAlign:"right"}}>{r.v}</span>
-              </div>
-            ))}
-            {saveMsg&&<div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:saveMsg.ok?"#ECFDF5":RL,color:saveMsg.ok?GN:R,fontSize:13}}>{saveMsg.text}</div>}
-          </Card>
+          <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:10}}>
+            {sektionen.map(sek=>{
+              const sFelder=rows.filter(r=>sek.felder.includes(r.l)&&(canEdit||(r.v&&r.v!=="-")));
+              if(sFelder.length===0) return null;
+              return(
+                <div key={sek.titel} className="cc-list" style={{borderRadius:12}}>
+                  <div className="cc-section-hdr">{sek.titel}</div>
+                  <div className="cc-grid-form" style={{gap:0}}>
+                    {sFelder.map((r,i)=>(
+                      <div key={i} style={{padding:"11px 16px",borderBottom:"0.5px solid var(--border)",borderRight:i%2===0&&i<sFelder.length-1?"0.5px solid var(--border)":"none"}}>
+                        <div className="cc-label" style={{marginBottom:3}}>{r.l}</div>
+                        <div style={{fontSize:14,fontWeight:r.v==="-"?400:600,color:r.v==="-"?"var(--sub)":"var(--text)"}}>{r.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {saveMsg&&<div style={{padding:"8px 12px",borderRadius:8,background:saveMsg.ok?"#ECFDF5":RL,color:saveMsg.ok?GN:R,fontSize:13}}>{saveMsg.text}</div>}
+          </div>
         )}
 
         {/* TAB: Stammdaten EDIT */}
         {activeTab==="info"&&editMode&&(
           <Card style={{marginTop:12}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div className="cc-grid-form">
               <F lbl="Vorname" fkey="vorname"/>
               <F lbl="Nachname" fkey="nachname"/>
               <F lbl="Geburtsdatum" fkey="geburtsdatum" type="date"/>
@@ -776,7 +798,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               <F lbl="Datenstatus" fkey="datenstatus" opts={["Vollständig","Prüfung fällig","Unvollständig"]}/>
             </div>
             <div style={{marginTop:10}}>
-              <span style={S_LABEL}>Notizen</span>
+              <span className="cc-label">Notizen</span>
               <textarea value={form.notizen||""} onChange={e=>setForm(f=>({...f,notizen:e.target.value}))}
                 style={{...S_INPUT,minHeight:70,resize:"vertical",width:"100%",boxSizing:"border-box",marginTop:4}}/>
             </div>
@@ -796,39 +818,42 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
 
         {/* TAB: Eltern */}
         {activeTab==="eltern"&&(
-          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:12}}>
-            {eltern.length===0&&(
-              <div style={{color:"var(--sub)",fontSize:14,textAlign:"center",padding:32}}>Keine Elternkontakte erfasst.</div>
+          <div style={{marginTop:12}}>
+            {eltern.length===0?(
+              <div className="cc-empty">Keine Elternkontakte erfasst.</div>
+            ):(
+              <div className="cc-list" style={{borderRadius:12}}>
+                {eltern.map((e,i)=>(
+                  <div key={i} className="cc-list-row" style={{flexDirection:"column",alignItems:"flex-start",gap:4,cursor:"default"}}>
+                    <div style={{fontWeight:600,fontSize:14}}>{e.vorname} {e.nachname}{e.beziehung?` · ${e.beziehung}`:""}</div>
+                    <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                      {e.email&&<span className="cc-detail-label">✉ {e.email}</span>}
+                      {e.telefon&&<span className="cc-detail-label">📞 {e.telefon}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-            {eltern.map((e,i)=>(
-              <Card key={i}>
-                <div style={{fontWeight:600,fontSize:15,marginBottom:8}}>{e.vorname} {e.nachname}{e.beziehung?` (${e.beziehung})`:""}</div>
-                <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                  {e.email&&<div style={{fontSize:14,color:"var(--sub)"}}>✉ {e.email}</div>}
-                  {e.telefon&&<div style={{fontSize:14,color:"var(--sub)"}}>📞 {e.telefon}</div>}
-                </div>
-              </Card>
-            ))}
           </div>
         )}
 
         {/* TAB: Kader / Teams */}
         {activeTab==="teams"&&(
-          <Card style={{marginTop:12}}>
-            <div style={{fontWeight:600,fontSize:14,marginBottom:12,color:"var(--sub)",textTransform:"uppercase",fontSize:11,letterSpacing:"0.05em"}}>Zugeteilte Teams</div>
+          <div style={{marginTop:12}}>
             {(raw.teams||[]).length===0?(
-              <div style={{color:"var(--sub)",fontSize:14,textAlign:"center",padding:24}}>Keine Team-Zuteilung.</div>
+              <div className="cc-empty">Keine Team-Zuteilung.</div>
             ):(
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              <div className="cc-list" style={{borderRadius:12}}>
+                <div className="cc-section-hdr">Zugeteilte Teams</div>
                 {(raw.teams||[]).map((t,i)=>(
-                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<(raw.teams.length-1)?"0.5px solid var(--border)":"none"}}>
-                    <div style={{fontWeight:600,fontSize:14}}>{t}</div>
+                  <div key={i} className="cc-list-row" style={{justifyContent:"space-between"}}>
+                    <span className="cc-list-name">{t}</span>
                     <Chip text={raw.funktion||"Spieler"} color={BL}/>
                   </div>
                 ))}
               </div>
             )}
-          </Card>
+          </div>
         )}
 
         {/* TAB: Anwesenheiten */}
