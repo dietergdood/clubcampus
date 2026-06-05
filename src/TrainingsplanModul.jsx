@@ -458,7 +458,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
     </div>
   );
 }
-function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten, sb:supabase}){
+function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten, sb:supabase, dbTeams=[]}){
   const START = 7, END = 22, H = 52;
   const isMobile = useIsMobile();
   const canEdit = role==="administrator"||role==="administration";
@@ -643,13 +643,13 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
   const kwKey = monday.getFullYear()+"_"+kw;
   const kwAusnahmen = ausnahmen[kwKey]||[];
 
-  const FCH_TEAMS = [
-    "1. Mannschaft","2. Mannschaft","3. Mannschaft","4. Mannschaft",
-    "Ältere Junioren A","Ältere Junioren B",
-    "Cc-Junioren","Dc-Junioren","Ec-Junioren","Fc-Junioren",
-    "Gc-Junioren","Hc-Junioren","Ic-Junioren",
-    "Frauen","Mädchen",
-  ];
+  const FCH_TEAMS = dbTeams.length>0
+    ? dbTeams.filter(t=>t.aktiv!==false).map(t=>t.name)
+    : ["1. Mannschaft","2. Mannschaft","3. Mannschaft","4. Mannschaft",
+       "Ältere Junioren A","Ältere Junioren B",
+       "Cc-Junioren","Dc-Junioren","Ec-Junioren","Fc-Junioren",
+       "Gc-Junioren","Hc-Junioren","Ic-Junioren",
+       "Frauen","Mädchen"];
   const alleTeams = Array.from(new Set([
     ...FCH_TEAMS,
     ...(plan?.slots||[]).map(function(s){return s.team;})
