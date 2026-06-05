@@ -1303,8 +1303,6 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
   );
 }
 
-
-export default MitgliederModul;
 /* ── ProfilView — eigenes Profil bearbeiten ── */
 function ProfilView({role, dbUser, dbMitglieder=[], sb, onReload}){
   const PASSIV=["Passivmitglied","Ehrenmitglied","Gönner"];
