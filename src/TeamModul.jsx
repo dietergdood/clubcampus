@@ -116,8 +116,10 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   const playerName=myRosterId?ROSTER.find(p=>p.id===myRosterId)?.firstName||"Spieler":"Spieler";
   const kinderNames=activeKind?activeKind.name.split(" ")[0]:(kinder.map(k=>k.name.split(" ")[0]).join(" & ")||playerName);
   const [selectedSpiel,setSelectedSpiel]=useState(null);
-  const teamInfo=TEAMS_DATA[activeTeam]||{count:ROSTER.filter(p=>(p.teams||[]).includes(activeTeam)).length,liga:"Liga A",season:"2024/25"};
-  const actualCount=ROSTER.filter(p=>(p.teams||[]).includes(activeTeam)).length||teamInfo.count;
+  const teamInfo=TEAMS_DATA[activeTeam]||{count:0,liga:"",season:"2024/25"};
+  const actualCount=dbMitglieder.length>0
+    ? dbMitglieder.filter(p=>(p.teams||[]).includes(activeTeam)&&p.aktiv!==false).length
+    : ROSTER.filter(p=>(p.teams||[]).includes(activeTeam)).length||teamInfo.count;
 
   const TABS_ALL=[
     {key:"overview",  label:"Übersicht",    short:"Übersicht", icon:"layout-dashboard"},
