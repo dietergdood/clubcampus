@@ -9,39 +9,40 @@
 export const FONT = "'Inter','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
 
 export const TEXT = {
-  xs:   11,   // Badges, Status-Labels (sparsam verwenden)
-  sm:   13,   // Sekundärer Text, Metadaten
-  md:   14,   // Standard-Fliesstext
-  lg:   16,   // Karteninhalt, wichtiger Text
-  xl:   18,   // Abschnittstitel
-  h2:   21,   // Seitentitel (H2)
-  h1:   24,   // Haupttitel (H1)
+  xs:    11,  // Badges, Meta, Labels (uppercase)
+  sm:    12,  // Chips, sekundäre Info
+  base:  13,  // Mobile Base (iOS min für kein Zoom)
+  md:    14,  // Desktop Base (Standard Fliesstext)
+  lg:    16,  // Section Titles
+  xl:    18,  // Modal Titles
+  h2:    21,  // Page Titles (H2)
+  h1:    24,  // Haupttitel (H1)
 };
 
 /* ── Abstände ──────────────────────────────────────────────────
    Konsistentes 4px-Raster
    ──────────────────────────────────────────────────────────── */
 export const SPACE = {
-  xs:  4,
-  sm:  8,
-  md:  12,
-  lg:  16,
-  xl:  20,
-  xxl: 24,
-  xxxl:32,
+  1:  4,    // micro
+  2:  8,    // small gap
+  3:  12,   // medium gap
+  4:  16,   // section gap
+  5:  20,   // panel padding
+  6:  24,   // large spacing
+  8:  32,   // page padding desktop
+  12: 48,   // section spacing
 };
 
 /* ── Border Radius ─────────────────────────────────────────────
    ──────────────────────────────────────────────────────────── */
 export const RADIUS = {
-  xs:  4,   // Kleine Badges, Tags
-  sm:  8,   // Inputs, kleine Buttons
-  md:  10,  // Standard Buttons, Chips
-  lg:  12,  // Cards, Panels
-  xl:  14,  // Grosse Cards
-  xxl: 16,  // Modals
-  pill:20,  // Pill-Buttons, Filter-Chips
-  full:"50%", // Avatare, Icons
+  xs:  4,    // Micro badges, tags
+  sm:  6,    // Buttons, inputs (Standard)
+  md:  8,    // Segments, dropdowns
+  lg:  10,   // Cards, panels
+  xl:  12,   // Grosse Cards, Modals
+  pill:20,   // Pill-Buttons, Chips
+  full:"50%",// Avatare
 };
 
 /* ── Buttons ───────────────────────────────────────────────────
@@ -181,6 +182,14 @@ export const ICON = { SM: 14, MD: 16, LG: 20 };
 /* ── Status-Hintergründe ───────────────────────────────────── */
 export const STATUS_BG  = { warn:"#FEF3C7", danger:"#FEF2F2", info:"#EFF6FF", success:"#ECFDF5" };
 export const STATUS_CLR = { warn:"#92400E", danger:"#991B1B", info:"#1E40AF", success:"#065F46" };
+
+/* ── Font Weights ─────────────────────────────────────────── */
+export const FW = {
+  normal:   400,  // Fliesstext
+  medium:   500,  // Labels, Werte, Buttons ← Standard
+  semibold: 600,  // Überschriften, wichtige Werte
+  bold:     700,  // Page Headers (sparsam)
+};
 
 /* ── Hardcoded Werte als Konstanten ───────────────────────── */
 export const WHITE   = "#fff";

@@ -13,67 +13,76 @@ const ThemeCtx = createContext({dark:false, toggle:()=>{}});
 const useTheme = ()=>useContext(ThemeCtx);
 
 const PWA_CSS=`
-:root,[data-theme=light]{
-  --bg:#F5F5F3;--surface:#fff;--surface2:#f8f8f6;
-  --border:#E0DED8;--text:#1A1A1A;--sub:#666;
-  --card-shadow:0 1px 4px rgba(0,0,0,0.06);
-}
-[data-theme=dark]{
-  --bg:#0f0f11;--surface:#18181c;--surface2:#222228;
-  --border:#2c2c36;--text:#f0f0f0;--sub:#8a8a9a;
-  --card-shadow:0 1px 4px rgba(0,0,0,0.3);
-}
-@keyframes cc-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.cc-btn-primary:hover{background:var(--btn-hover)!important;}
+@keyframes cc-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes cc-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes cc-dot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
-.cc-page{animation:cc-in 0.2s ease-out}
-.cc-card{background:var(--surface)!important;border-color:var(--border)!important;box-shadow:var(--card-shadow)!important}
+
+/* ── Base ── */
+.cc-page{animation:cc-in 0.15s ease-out}
+.cc-card{background:var(--surface)!important;border-color:var(--border)!important;box-shadow:none!important}
 .cc-topbar{background:var(--bg)!important;border-color:var(--border)!important}
 .cc-main{background:var(--bg)!important}
-.hov-row:hover{background:var(--cc-hover)!important;cursor:pointer}
+
+/* ── Nav (nur font tweaks, kein Layout) ── */
+.cc-nav-item{font-size:14px!important;font-weight:400!important}
 .cc-nav-item:not(.cc-nav-active):hover{background:var(--nav-hover,#1A1A1A)!important}
-.cc-icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background 0.15s,border-color 0.15s,color 0.15s;color:var(--sub);padding:0}
-.cc-icon-btn:hover{background:var(--surface)!important;border-color:var(--text)!important;color:var(--text)!important}
-.cc-btn-group{display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface2)}
-.cc-btn-group-item{height:32px;min-width:32px;padding:0 8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);transition:background 0.15s,color 0.15s;flex-shrink:0}
+.cc-nav-active{font-weight:500!important}
+
+/* ── Icon Button ── */
+.cc-icon-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background 0.1s,border-color 0.1s,color 0.1s;color:var(--sub);padding:0}
+.cc-icon-btn:hover{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--text)!important}
+.cc-icon-btn:active{transform:scale(0.95)}
+
+/* ── Button Group ── */
+.cc-btn-group{display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface2)}
+.cc-btn-group-item{height:32px;min-width:32px;padding:0 10px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--sub);transition:background 0.1s,color 0.1s;flex-shrink:0;font-size:13px}
 .cc-btn-group-item:hover{background:var(--surface);color:var(--text)}
+.cc-btn-group-item:active{transform:scale(0.95)}
 .cc-btn-group-active{background:var(--text)!important;color:var(--bg)!important}
 .cc-btn-group-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+
+/* ── Segment ── */
 .cc-seg{display:flex;gap:2px;background:var(--surface2);border-radius:8px;padding:3px}
-.cc-seg-item{flex:1;padding:5px 8px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:400;background:transparent;color:var(--sub);transition:all 0.15s;white-space:nowrap}
+.cc-seg-item{flex:1;padding:5px 10px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:400;background:transparent;color:var(--sub);transition:all 0.1s;white-space:nowrap;font-family:inherit}
 .cc-seg-item:hover{color:var(--text)}
-.cc-seg-active{background:var(--surface)!important;color:var(--text)!important;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
-.cc-chip-toggle{padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--sub);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0}
+.cc-seg-item:active{transform:scale(0.98)}
+.cc-seg-active{background:var(--surface)!important;color:var(--text)!important;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+
+/* ── Chip Toggle ── */
+.cc-chip-toggle{padding:3px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--sub);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.1s;white-space:nowrap;flex-shrink:0;font-family:inherit}
 .cc-chip-toggle:hover{border-color:var(--text);color:var(--text)}
+.cc-chip-toggle:active{transform:scale(0.97)}
 .cc-chip-active{border-color:var(--text)!important;background:var(--text)!important;color:var(--bg)!important}
+
+/* ── Input ── */
+.cc-input{width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.1s,box-shadow 0.1s}
+.cc-input:focus{border-color:var(--cc-accent,#FFBF00);box-shadow:0 0 0 3px var(--cc-accent-20,rgba(255,191,0,0.15))}
+
+/* ── Label ── */
 .cc-label{font-size:11px;font-weight:600;color:var(--sub);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:0.5px}
-.cc-input{width:100%;padding:9px 12px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.15s}
-.cc-input:focus{border-color:var(--text)}
-.cc-unread-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;border:2px solid var(--surface)}
-.cc-toggle{width:46px;height:26px;border-radius:13px;border:none;cursor:pointer;background:var(--border);position:relative;flex-shrink:0;transition:background 0.2s;padding:0;outline:none}
+
+/* ── Toggle ── */
+.cc-toggle{width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;background:var(--border);position:relative;flex-shrink:0;transition:background 0.15s;padding:0;outline:none}
+.cc-toggle:active{transform:scale(0.96)}
 .cc-toggle-on{background:#16A34A}
-.cc-toggle-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);transition:left 0.2s cubic-bezier(0.34,1.2,0.64,1);display:flex;align-items:center;justify-content:center}
-.cc-toggle-knob-on{left:23px;background:#fff}
 .cc-toggle-dark.cc-toggle-on{background:#1A1A1A}
+.cc-toggle-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:left 0.15s cubic-bezier(0.34,1.2,0.64,1);display:flex;align-items:center;justify-content:center}
+.cc-toggle-knob-on{left:23px;background:#fff}
 .cc-toggle-dark .cc-toggle-knob-on{background:var(--cc-accent,#FFBF00)}
+
+/* ── Primary Button ── */
+.cc-btn-primary:hover{background:var(--btn-hover)!important;}
+.cc-btn-primary:active{transform:scale(0.97)}
+
+/* ── Unread dot ── */
+.cc-unread-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;border:2px solid var(--surface)}
+
+/* ── Utilities ── */
 .cc-flex-center{display:flex;align-items:center;justify-content:center}
 .cc-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-divider{height:1px;background:var(--border);flex-shrink:0}
 .cc-shimmer{background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%);background-size:200% 100%;animation:cc-shimmer 1.4s ease-in-out infinite}
-*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
-html{scroll-behavior:smooth}
-button:active:not([disabled]){transform:scale(0.96)}
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.14);border-radius:10px}
-[data-theme=dark] ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1)}
-:focus-visible{outline:2px solid #f8de09;outline-offset:2px;border-radius:4px}
-body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-[data-theme=dark] input,[data-theme=dark] textarea,[data-theme=dark] select{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important;color-scheme:dark}
-[data-theme=dark] input::placeholder,[data-theme=dark] textarea::placeholder{color:var(--sub)!important;opacity:0.6}
-[data-theme=dark] thead td,[data-theme=dark] thead th{background:var(--surface2)!important;border-color:var(--border)!important}
-[data-theme=dark] tbody tr:hover{background:rgba(255,255,255,0.03)!important}
+.cc-hov-row:hover{background:var(--surface2)!important;cursor:pointer}
 `;
 /* localStorage polyfill voor window.storage */
 
@@ -169,25 +178,37 @@ function InfoBox({text,color=BL}){
 ========================================== */
 
 function Btn({children,onClick,variant="outline",color=null,small,disabled=false,type="button",style={}}){
-  const p=small?"4px 11px":"7px 15px";
-  const base={padding:p,borderRadius:8,fontSize:small?12:13,fontWeight:600,cursor:disabled?"not-allowed":"pointer",
-    fontFamily:FONT,minHeight:small?32:38,opacity:disabled?0.5:1,border:"none",...style};
+  const p=small?"4px 10px":"7px 14px";
+  const base={
+    display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,
+    padding:p,borderRadius:6,fontSize:small?12:13,fontWeight:500,
+    cursor:disabled?"not-allowed":"pointer",fontFamily:FONT,
+    minHeight:small?30:36,opacity:disabled?0.5:1,border:"none",
+    transition:"all 0.1s",...style
+  };
+  const activeStyle={transform:"scale(0.97)"};
   if(variant==="primary"){
-    /* color prop überschreibt Theme-Farben, sonst CSS-Variablen aus Appearance */
-    const bg = color || "var(--btn-primary,#FFBF00)";
-    const fg = color ? (color==="#F3F4F6"||color==="#E5E7EB"||color==="#F9FAFB"?"#374151":"var(--btn-primary-text,#000)") : "var(--btn-primary-text,#000)";
+    const bg=color||"var(--btn-primary,#FFBF00)";
+    const fg=color?(color==="#F3F4F6"||color==="#E5E7EB"||color==="#F9FAFB"?"#374151":"var(--btn-primary-text,#000)"):"var(--btn-primary-text,#000)";
     return <button type={type} onClick={onClick} disabled={disabled}
-      style={{...base,background:bg,color:fg,transition:"opacity 0.15s"}}
-      onMouseEnter={e=>{if(!disabled)e.currentTarget.style.opacity="0.85";}}
+      className="cc-btn-primary"
+      style={{...base,background:bg,color:fg}}
+      onMouseEnter={e=>{if(!disabled)e.currentTarget.style.opacity="0.88";}}
       onMouseLeave={e=>{e.currentTarget.style.opacity=disabled?"0.5":"1";}}
+      onMouseDown={e=>{if(!disabled)e.currentTarget.style.transform="scale(0.97)";}}
+      onMouseUp={e=>{e.currentTarget.style.transform="scale(1)";}}
+      onTouchStart={e=>{if(!disabled)e.currentTarget.style.opacity="0.75";}}
+      onTouchEnd={e=>{e.currentTarget.style.opacity=disabled?"0.5":"1";}}
     >{children}</button>;
   }
   if(variant==="ghost"){
     return <button type={type} onClick={onClick} disabled={disabled}
-      style={{...base,background:"none",border:"none",color:color==="BK"?"var(--text)":color,
-        padding:small?"4px 8px":"6px 10px"}}
+      style={{...base,background:"none",border:"none",color:color==="BK"?"var(--text)":color||"var(--sub)",
+        padding:small?"4px 8px":"5px 10px"}}
       onMouseEnter={e=>{if(!disabled)e.currentTarget.style.background="var(--surface2)";}}
       onMouseLeave={e=>{e.currentTarget.style.background="none";}}
+      onMouseDown={e=>{if(!disabled)e.currentTarget.style.transform="scale(0.97)";}}
+      onMouseUp={e=>{e.currentTarget.style.transform="scale(1)";}}
     >{children}</button>;
   }
   if(variant==="danger"){
@@ -195,13 +216,18 @@ function Btn({children,onClick,variant="outline",color=null,small,disabled=false
       style={{...base,background:"#FEF2F2",border:"1px solid #FECACA",color:"#C8102E"}}
       onMouseEnter={e=>{if(!disabled)e.currentTarget.style.background="#FEE2E2";}}
       onMouseLeave={e=>{e.currentTarget.style.background="#FEF2F2";}}
+      onMouseDown={e=>{if(!disabled)e.currentTarget.style.transform="scale(0.97)";}}
+      onMouseUp={e=>{e.currentTarget.style.transform="scale(1)";}}
     >{children}</button>;
   }
   return <button type={type} onClick={onClick} disabled={disabled}
-    style={{...base,border:"1px solid var(--border)",background:"var(--surface)",
-      color:"var(--text)",transition:"background 0.15s"}}
+    style={{...base,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)"}}
     onMouseEnter={e=>{if(!disabled)e.currentTarget.style.background="var(--surface2)";}}
     onMouseLeave={e=>{e.currentTarget.style.background="var(--surface)";}}
+    onMouseDown={e=>{if(!disabled)e.currentTarget.style.transform="scale(0.97)";}}
+    onMouseUp={e=>{e.currentTarget.style.transform="scale(1)";}}
+    onTouchStart={e=>{if(!disabled)e.currentTarget.style.opacity="0.7";}}
+    onTouchEnd={e=>{e.currentTarget.style.opacity=disabled?"0.5":"1";}}
   >{children}</button>;
 }
 
@@ -214,7 +240,7 @@ function Chip({text,color,bg,semantic,size="sm"}){
   const clr=c?c.text:(color||"var(--sub)");
   const bgc=bg||(c?c.bg:clr+"15");
   const fs=size==="sm"?11:size==="md"?12:13;
-  return <span style={{background:bgc,color:clr,fontSize:fs,fontWeight:700,padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap",letterSpacing:0.2,border:`0.5px solid ${clr}30`}}>{text}</span>;
+  return <span style={{background:bgc,color:clr,fontSize:fs,fontWeight:500,padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap",letterSpacing:0.2,border:`0.5px solid ${clr}30`}}>{text}</span>;
 }
 
 
@@ -232,7 +258,7 @@ function Stat({label,value,sub,color,semantic,icon}){
         <div style={{fontSize:11,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
         {icon&&<div style={{width:28,height:28,borderRadius:6,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color:c.text}}/></div>}
       </div>
-      <div style={{fontSize:24,fontWeight:800,color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
+      <div style={{fontSize:22,fontWeight:600,color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
       {sub&&<div style={{fontSize:12,color:"var(--sub)",marginTop:3}}>{sub}</div>}
     </div>
   );
