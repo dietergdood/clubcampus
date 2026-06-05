@@ -95,7 +95,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   };
   /* dbTeams Array → Lookup-Objekt {name: {liga, saison, count}} */
   const TEAMS_DATA=dbTeams.length>0
-    ? Object.fromEntries(dbTeams.map(t=>([t.name,{liga:t.liga||"",season:t.saison||"2024/25",count:ROSTER.filter(p=>(p.teams||[]).includes(t.name)).length||16}])))
+    ? Object.fromEntries(dbTeams.map(t=>([t.name,{liga:t.liga||"",season:t.saison||"2024/25",count:dbMitglieder.length>0?dbMitglieder.filter(m=>(m.teams||[]).includes(t.name)&&m.aktiv!==false).length:(ROSTER.filter(p=>(p.teams||[]).includes(t.name)).length||0)}])))
     : TEAMS_DATA_FALLBACK;
 
   const kinder=account?.kinder||[];
@@ -199,7 +199,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
           <span className="cc-section-hdr" style={{marginRight:4,borderBottom:"none",padding:0}}>Kind:</span>
           {kinder.map((k,i)=>{
             const active=activeKind?.name===k.name;
-            const cnt=ROSTER.filter(p=>(p.teams||[]).includes(k.team)&&!p.role).length;
+            const cnt=dbMitglieder.length>0?getMitgliederForTeam(k.team).filter(p=>!p.role).length:ROSTER.filter(p=>(p.teams||[]).includes(k.team)&&!p.role).length;
             const info=TEAMS_DATA[k.team]||{liga:"",season:""};
             return(
               <Btn onClick={()=>handleKindSwitch(k)}><div style={{width:22,height:22,borderRadius:"50%",background:active?"rgba(0,0,0,0.1)":GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"var(--text)",flexShrink:0}}> {k.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} </div> <div style={{textAlign:"left"}}> <div style={{fontSize:14,fontWeight:700,color:"var(--text)",whiteSpace:"nowrap"}}>{k.name.split(" ")[0]}</div> <div style={{fontSize:14,color:"rgba(0,0,0,0.5)"}}>{k.team} · {info.liga}</div> </div></Btn>
@@ -216,7 +216,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
             {trainerTeams.map(team=>{
               const info=TEAMS_DATA[team]||{count:18,liga:"Liga A"};
               const isActive=activeTeam===team;
-              const cnt=ROSTER.filter(p=>(p.teams||[]).includes(team)).length||info.count;
+              const cnt=dbMitglieder.length>0?getMitgliederForTeam(team).length:(ROSTER.filter(p=>(p.teams||[]).includes(team)).length||info.count);
               return(
                 <Btn onClick={()=>handleTeamSwitch(team)}><div style={{width:28,height:28,borderRadius:"50%",background:isActive?ACCENT:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:isActive?"#111":"var(--sub)",flexShrink:0}}> {team.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} </div> <div style={{textAlign:"left",minWidth:0}}> <div style={{fontSize:14,fontWeight:700,color:"var(--text)",whiteSpace:"nowrap"}}>{team}</div> <div style={{fontSize:11,color:"var(--sub)"}}>{cnt} · {info.liga}</div> </div></Btn>
               );
@@ -307,7 +307,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       {tab==="events"&&<EventsList teamOnly role={role}/>}
       {tab==="polls"&&<PollsTab role={role}/>}
       {tab==="helpers"&&<HelferModulProp teamOnly role={role} account={account} meineTeams={[activeTeam]}/>}
-      {tab==="stats"&&!limited&&<StatsTab team={activeTeam}/>}
+      {tab==="stats"&&!limited&&<StatsTab team={activeTeam} dbMitglieder={dbMitglieder}/>}
     </div>
   );
 }
@@ -348,8 +348,9 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
       <Card>
         <STitle>Info</STitle>
         {(()=>{
-          const spieler=ROSTER.filter(p=>(p.teams||[]).includes(myTeam)&&!p.role);
-          const trainer=ROSTER.filter(p=>(p.teams||[]).includes(myTeam)&&p.role);
+          const allM=getMitgliederForTeam(myTeam);
+          const spieler=allM.filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="");
+          const trainer=allM.filter(p=>p.role&&p.role.toLowerCase()!=="spieler"&&p.role!=="");
           const pos=[...new Set(spieler.map(p=>p.pos).filter(Boolean))];
           const tableData=TABLES[myTeam]||[];
           const myRow=tableData.find(r=>r.me);
@@ -399,7 +400,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const trainEvs=pastEvs.filter(e=>e.type==="Training");
           const spielEvs=pastEvs.filter(e=>e.type==="Spiel");
           /* Use same player slice as ATT_INITIAL */
-          const pids=ROSTER.filter(p=>(p.teams||[]).includes(myTeam)&&!p.role).map(p=>p.id).slice(0,12);
+          const pids=getMitgliederForTeam(myTeam).filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="").map(p=>p.id).slice(0,12);
           /* Only count "zu", "ab", "unentschuldigt" - null/fraglich excluded */
           const calcPct=(evs)=>{
             if(!evs.length) return null;
@@ -562,11 +563,12 @@ function PollsTab({role}){
   );
 }
 
-function StatsTab({team="Cc-Junioren"}){
-  /* Generate per-team stats from ROSTER + seeded random */
+function StatsTab({team="Cc-Junioren", dbMitglieder=[]}){
   const seed=(str)=>str.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
   const rnd=(n,min,max)=>{let s=seed(n+team);s=((s*1664525+1013904223)&0xFFFFFFFF)>>>0;return min+Math.floor((s/0xFFFFFFFF)*(max-min+1));};
-  const players=ROSTER.filter(p=>(p.teams||[]).includes(team)&&!p.role);
+  const players=dbMitglieder.length>0
+    ? dbMitglieder.filter(p=>(p.teams||[]).includes(team)&&p.aktiv!==false).map(p=>({firstName:p.vorname,lastName:p.nachname,pos:p.position||""}))
+    : ROSTER.filter(p=>(p.teams||[]).includes(team)&&!p.role);
   const stats=players.map(p=>{
     const nm=`${p.firstName} ${p.lastName}`;
     return{name:nm,sp:rnd(nm+"sp",6,14),tore:rnd(nm+"t",0,9),assists:rnd(nm+"a",0,7),gelb:rnd(nm+"g",0,3),rot:rnd(nm+"r",0,1)};

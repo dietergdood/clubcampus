@@ -121,7 +121,7 @@ function toDbData(form){
   };
 }
 
-function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
+function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -240,7 +240,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           <span style={{fontWeight:800,fontSize:18,color:"var(--text)",letterSpacing:-0.3}}>{selectedTeam.name}</span>
           {selectedTeam.kategorie&&<Chip text={selectedTeam.kategorie} color={BL}/>}
         </div>
-        <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>
+        <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams} dbMitglieder={dbMitglieder} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>
       </div>
     );
   }
@@ -819,7 +819,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   );
 }
 
-function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
+function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -938,7 +938,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           <span style={{fontWeight:800,fontSize:18,color:"var(--text)",letterSpacing:-0.3}}>{selectedTeam.name}</span>
           {selectedTeam.kategorie&&<Chip text={selectedTeam.kategorie} color={BL}/>}
         </div>
-        {TeamViewComponent && <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>}
+        {TeamViewComponent && <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams} dbMitglieder={dbMitglieder} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>}
       </div>
     );
   }
