@@ -1447,7 +1447,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
           </div>
         )}
         {/* Statistik-Header */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:14}}>
+        <div className="cc-grid-stats" style={{marginBottom:14}}>
           {(()=>{
             const rsvpEvs=teamEvents.filter(e=>!(e.subtype==="Vereinsanlass"&&e.rsvp===false));
             const spielTrainEvs=rsvpEvs.filter(e=>e.type==="Training"||e.type==="Spiel");

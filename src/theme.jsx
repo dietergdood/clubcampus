@@ -123,6 +123,7 @@ const PWA_CSS=`
 .cc-grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .cc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cc-grid-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cc-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .cc-count{font-size:11px;font-weight:400;color:var(--sub);opacity:0.7;margin-left:4px}
 .cc-check-row{display:flex;align-items:center;gap:12px;padding:7px 10px;border-radius:8px;background:var(--surface2);cursor:pointer}
 

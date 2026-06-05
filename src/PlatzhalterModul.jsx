@@ -21,7 +21,7 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
       {showForm&&(
         <Card style={{marginTop:14,background:"var(--surface)",border:`0.5px solid ${AM}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Reservation</h3>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+          <div className="cc-grid-3">
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Bus</label><br/><Select ><option>Bus A (9-Plätzer)</option><option>Bus B (15-Plätzer)</option></Select></div>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Datum</label><br/><input type="date" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13}}/></div>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Zeit</label><br/><input type="text" placeholder="09:00-14:00" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13}}/></div>
@@ -63,7 +63,7 @@ function MaterialView(){
       {showForm&&(
         <Card style={{marginBottom:16,background:"var(--surface)",border:`0.5px solid ${BL}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Materialanfrage</h3>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div className="cc-grid-form" style={{gap:10}}>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Art</label><br/><Select >{["Bestellung","Ersatzmaterial","Tenüs","Mangel","Defekt","Verlust","Neue Anforderung"].map(t=><option key={t}>{t}</option>)}</Select></div>
             <div><label style={{fontSize:13,color:"var(--sub)"}}>Team</label><br/><Select ><option>Cc-Junioren</option><option>D-Junioren</option></Select></div>
           </div>
@@ -173,7 +173,7 @@ function WikiView(){
   return(
     <div>
       <H1 mb={18}>Wiki</H1>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
+      <div className="cc-grid-cards" style={{gap:12}}>
         {WIKI.map((a,i)=>(
           <Card key={i} style={{cursor:"pointer"}}>
             <Chip text={a.cat} color={CC[a.cat]||"#888"} bg={(CC[a.cat]||"#888")+"18"}/>

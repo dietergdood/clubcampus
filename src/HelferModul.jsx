@@ -625,7 +625,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
       {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
       {canFreigeben&&(
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12,marginBottom:16}}>
+      <div className="cc-grid-stats" style={{marginBottom:16}}>
         <Stat label="Mitglieder" value={HELPERS.length}/>
         <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
         <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
@@ -1155,7 +1155,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           {m.schichten.length===0?(
                             <span style={{fontSize:13,color:"var(--sub)"}}>Keine Schichten übernommen.</span>
                           ):(
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8,marginBottom:10}}>
+                            <div className="cc-grid-cards" style={{gap:8,marginBottom:10}}>
                               {m.schichten.map((sid,si)=>{
                                 const anfrage=freigabeAnfragen[sid];
                                 for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
@@ -1220,7 +1220,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="erstellen"&&canErstellen&&(
         <Card>
           <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Neuen Einsatz erfassen</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
+          <div className="cc-grid-cards" style={{gap:12}}>
             {[
               {l:"Event",            type:"select",opts:["Grümpelturnier 2026","Generalversammlung 2026","+ Neuer Event…"]},
               {l:"Einsatzname",      type:"text",  ph:"z.B. Grill"},
@@ -1476,7 +1476,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
       {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
       {canFreigeben&&(
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12,marginBottom:16}}>
+      <div className="cc-grid-stats" style={{marginBottom:16}}>
         <Stat label="Mitglieder" value={HELPERS.length}/>
         <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
         <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
@@ -2010,7 +2010,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           {m.schichten.length===0?(
                             <span style={{fontSize:13,color:"var(--sub)"}}>Keine Schichten übernommen.</span>
                           ):(
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8,marginBottom:10}}>
+                            <div className="cc-grid-cards" style={{gap:8,marginBottom:10}}>
                               {m.schichten.map((sid,si)=>{
                                 const anfrage=freigabeAnfragen[sid];
                                 for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
@@ -2075,7 +2075,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="erstellen"&&canErstellen&&(
         <Card>
           <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Neuen Einsatz erfassen</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
+          <div className="cc-grid-cards" style={{gap:12}}>
             {[
               {l:"Event",            type:"select",opts:["Grümpelturnier 2026","Generalversammlung 2026","+ Neuer Event…"]},
               {l:"Einsatzname",      type:"text",  ph:"z.B. Grill"},
