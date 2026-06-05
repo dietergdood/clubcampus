@@ -78,7 +78,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-input:focus{border-color:var(--cc-accent,#FFBF00);box-shadow:0 0 0 3px var(--cc-accent-20,rgba(255,191,0,0.15))}
 
 /* ── Label ── */
-.cc-label{font-size:11px;font-weight:600;color:var(--sub);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:0.5px}
+.cc-label{font-size:12px;font-weight:600;color:#555;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:0.04em}
 
 /* ── Toggle ── */
 .cc-toggle{width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;background:var(--border);position:relative;flex-shrink:0;transition:background 0.15s;padding:0;outline:none}
