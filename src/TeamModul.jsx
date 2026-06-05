@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, avColor} from "./theme.jsx";
+import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, avColor, Stat} from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, EVENTS, NEWS, POLLS, ROSTER, TABLES } from "./demoData.js";
 
 /* ── Hilfsfunktionen ── */
@@ -353,42 +353,32 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const myRow=tableData.find(r=>r.me);
           return(
             <div>
-              <div style={{display:"flex",gap:12,marginBottom:14}}>
-                {[
-                  {l:"Spieler im Kader", v:spieler.length, c:BK},
-                  {l:"Trainer & Staff",  v:trainer.length, c:BK},
-                ].map((s,i)=>(
-                  <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:8,padding:"12px 4px"}}>
-                    <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
-                    <div style={{fontSize:13,color:"var(--sub)",marginTop:4,lineHeight:1.3,textAlign:"center"}}>{s.l}</div>
-                  </div>
-                ))}
+              <div className="cc-grid-stats" style={{marginBottom:14}}>
+                <Stat label="Spieler im Kader" value={spieler.length} semantic="neutral"/>
+                <Stat label="Trainer & Staff"  value={trainer.length} semantic="neutral"/>
                 {myRow&&(
-                  <div onClick={setTab?()=>setTab("spielplan"):undefined}
-                    style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:8,padding:"12px 4px",cursor:setTab?"pointer":"default",transition:"background 0.1s"}}
-                    onMouseEnter={e=>setTab&&(e.currentTarget.style.background=GB)}
-                    onMouseLeave={e=>setTab&&(e.currentTarget.style.background=GR)}>
-                    <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:4,textAlign:"center"}}>Tabellenrang</div>
-                    <div style={{fontSize:24,fontWeight:800,color:BL,lineHeight:1}}>{myRow.rank}.</div>
-                    <div style={{fontSize:13,color:"var(--sub)",marginTop:4,textAlign:"center"}}>{tableData.length} Teams · {myRow.pts} Punkte</div>
-                  </div>
+                  <Stat label="Tabellenrang"
+                    value={myRow.rank+"."}
+                    sub={tableData.length+" Teams · "+myRow.pts+" Punkte"}
+                    semantic="info"
+                    style={{cursor:setTab?"pointer":"default"}}
+                    onClick={setTab?()=>setTab("spielplan"):undefined}
+                  />
                 )}
               </div>
               {trainer.length>0&&(
                 <div>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Trainer &amp; Staff</div>
-                  <div className="cc-grid-2" style={{gap:8}}>
+                  <div className="cc-section-hdr">Trainer &amp; Staff</div>
+                  <div className="cc-list">
                     {trainer.map((t,i)=>(
-                    <div key={i} onClick={setTab&&setRosterInitial?()=>{setRosterInitial(t.id);setTab("roster");}:undefined}
-                      style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"var(--surface2)",borderRadius:8,cursor:setTab?"pointer":"default",transition:"background 0.1s"}}
-                      onMouseEnter={e=>setTab&&(e.currentTarget.style.background=GB)}
-                      onMouseLeave={e=>setTab&&(e.currentTarget.style.background=GR)}>
-                      <Av name={`${t.firstName} ${t.lastName}`} size={26}/>
-                      <div>
-                        <div style={{fontWeight:600,fontSize:13}}>{t.firstName} {t.lastName}</div>
-                        <div style={{fontSize:13,color:"var(--sub)"}}>{t.role}</div>
+                      <div key={i} onClick={setTab&&setRosterInitial?()=>{setRosterInitial(t.id);setTab("roster");}:undefined}
+                        className="cc-list-row" style={{cursor:setTab?"pointer":"default"}}>
+                        <Av name={`${t.firstName} ${t.lastName}`} size="sm"/>
+                        <div>
+                          <div className="cc-list-name">{t.firstName} {t.lastName}</div>
+                          <div style={{fontSize:12,color:"var(--sub)"}}>{t.role}</div>
+                        </div>
                       </div>
-                    </div>
                     ))}
                   </div>
                 </div>
@@ -431,18 +421,14 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const col=(v)=>v===null?"#aaa":v>=80?GN:v>=60?AM:R;
           const fmt=(v)=>v===null?"-":v+"%";
           return(
-            <div className="cc-grid-2" style={{gap:8}}>
+            <div className="cc-grid-stats">
               {[
                 {l:"Total",              v:fmt(calcPct(pastEvs)),           c:col(calcPct(pastEvs))},
                 {l:"Trainings",          v:fmt(calcPct(trainEvs)),          c:col(calcPct(trainEvs))},
                 {l:"Spiele",             v:fmt(calcPct(spielEvs)),          c:col(calcPct(spielEvs))},
-                {l:"Letzte 5 Trainings", v:fmt(calcPct(trainEvs.slice(-5))),c:col(calcPct(trainEvs.slice(-5)))},
+                {l:"Letzte 5",           v:fmt(calcPct(trainEvs.slice(-5))),c:col(calcPct(trainEvs.slice(-5)))},
               ].map((s,i)=>(
-                <div key={i} style={{textAlign:"center",background:"var(--surface2)",borderRadius:8,padding:"10px 4px"}}>
-                  <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Ø Anwesenheit</div>
-                  <div style={{fontSize:18,fontWeight:800,color:s.c}}>{s.v}</div>
-                  <div style={{fontSize:13,color:"var(--sub)",lineHeight:1.3,marginTop:2}}>{s.l}</div>
-                </div>
+                <Stat key={i} label={s.l} value={s.v} color={s.c}/>
               ))}
             </div>
           );
