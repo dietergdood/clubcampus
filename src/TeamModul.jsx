@@ -278,11 +278,11 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       {tab==="spielplan"&&(
         <div style={{display:"flex",flexDirection:"column",gap:20}}>
           <div>
-            <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Spielplan</div>
+            <div className="cc-section-hdr">Spielplan</div>
             <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel}/>
           </div>
           <div>
-            <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Tabelle</div>
+            <div className="cc-section-hdr">Tabelle</div>
             <TableTabProp team={activeTeam}/>
           </div>
         </div>
@@ -531,7 +531,7 @@ function PollsTab({role}){
           <Card key={i} style={{marginBottom:12}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
               <div>
-                <h3 style={{margin:"0 0 4px",fontSize:14,fontWeight:700}}>{p.title}</h3>
+                <h3 className="cc-list-name" style={{marginBottom:4}}>{p.title}</h3>
                 <Chip text={p.target} color={BL}/>
                 {" "}<Chip text={p.closed?"Geschlossen":"Offen"} color={p.closed?"#888":GN} bg={p.closed?"#f5f5f5":"#ECFDF5"}/>
               </div>
@@ -573,7 +573,7 @@ function StatsTab({team="Cc-Junioren"}){
   return(
     <Card style={{padding:0,overflowX:"auto"}}>      <table className="cc-table">
         <thead>
-          <tr style={{background:"var(--surface2)"}}>
+          <tr className="cc-tr" style={{background:"var(--bg)"}}>
             {["Spieler","Spiele","Tore","Assists","Gelb","Rot"].map((h,i)=>(
               <th key={i} style={{padding:"9px 13px",textAlign:i>0?"center":"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase"}}>{h}</th>
             ))}
@@ -582,12 +582,12 @@ function StatsTab({team="Cc-Junioren"}){
         <tbody>
           {stats.map((p,i)=>(
             <tr key={i} style={{borderTop:"0.5px solid var(--border)"}}>
-              <td style={{padding:"9px 13px"}}>
+              <td className="cc-td">
                 <Row><Av name={p.name} size={26}/><span style={{fontWeight:600}}>{p.name}</span></Row>
               </td>
-              <td style={{padding:"9px 13px",textAlign:"center"}}>{p.sp}</td>
+              <td className="cc-td" style={{textAlign:"center"}}>{p.sp}</td>
               <td style={{padding:"9px 13px",textAlign:"center",fontWeight:p.tore>=5?700:400,color:p.tore>=5?R:BK}}>{p.tore}</td>
-              <td style={{padding:"9px 13px",textAlign:"center"}}>{p.assists}</td>
+              <td className="cc-td" style={{textAlign:"center"}}>{p.assists}</td>
               <td style={{padding:"9px 13px",textAlign:"center"}}>{p.gelb>0?<span style={{background:"#FCD34D",color:"#78350F",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:13}}>{p.gelb}</span>:"-"}</td>
               <td style={{padding:"9px 13px",textAlign:"center"}}>{p.rot>0?<span style={{background:R,color:"#fff",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:13}}>{p.rot}</span>:"-"}</td>
             </tr>
@@ -623,12 +623,12 @@ function FieldVisView(){
   };
   return(
     <div>
-      <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 8px"}}>Feldsichtbarkeit</h1>
+      <H1 mb={8}>Feldsichtbarkeit</H1>
       <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 18px"}}>Konfigurierbar pro Rolle (Kap. 6.1)</p>
       <Card style={{padding:0,overflowX:"auto"}}>
         <table className="cc-table">
           <thead>
-            <tr style={{background:"var(--surface2)"}}>
+            <tr className="cc-tr" style={{background:"var(--bg)"}}>
               <th className="cc-th">Feld</th>
               {["Spieler","Eltern","Trainer","Funktionäre","Administration","Administrator"].map((h,i)=>(
                 <th key={i} style={{padding:"9px 13px",textAlign:"center",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
@@ -638,7 +638,7 @@ function FieldVisView(){
           <tbody>
             {fields.map((f,i)=>(
               <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
-                <td style={{padding:"9px 13px",fontWeight:600}}>{f.name}</td>
+                <td className="cc-td" style={{fontWeight:600}}>{f.name}</td>
                 {["spieler","eltern","trainer","funktionaer","administration","administrator"].map((r,j)=>{
                   const v=f[r];const s=rc(v);
                   return <td key={j} style={{padding:"9px 13px",textAlign:"center"}}><Chip text={v} color={s.color} bg={s.bg}/></td>;
@@ -680,7 +680,7 @@ function ProfileView({role,myRosterId,account}){
           ].map((x,i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<4?`0.5px solid ${GB}`:"none"}}>
               <span style={{fontSize:13,color:"var(--sub)"}}>{x.l}</span>
-              <span style={{fontSize:13,fontWeight:600}}>{x.v}</span>
+              <span className="cc-list-name">{x.v}</span>
             </div>
           ))}
           <div style={{marginTop:12}}><Btn variant="primary" color="#F3F4F6">Daten aktualisieren</Btn></div>
