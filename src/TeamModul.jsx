@@ -353,7 +353,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const myRow=tableData.find(r=>r.me);
           return(
             <div>
-              <div className="cc-grid-stats" style={{marginBottom:14}}>
+              <div className="cc-grid-stats-sm" style={{marginBottom:14}}>
                 <Stat label="Spieler im Kader" value={spieler.length} semantic="neutral"/>
                 <Stat label="Trainer & Staff"  value={trainer.length} semantic="neutral"/>
                 {myRow&&(
@@ -421,7 +421,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const col=(v)=>v===null?"#aaa":v>=80?GN:v>=60?AM:R;
           const fmt=(v)=>v===null?"-":v+"%";
           return(
-            <div className="cc-grid-stats">
+            <div className="cc-grid-stats-sm">
               {[
                 {l:"Total",              v:fmt(calcPct(pastEvs)),           c:col(calcPct(pastEvs))},
                 {l:"Trainings",          v:fmt(calcPct(trainEvs)),          c:col(calcPct(trainEvs))},
