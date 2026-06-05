@@ -351,7 +351,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       <div>
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
-          <Btn onClick={onClose} style={{fontSize:13}}><TI n="arrow-left"/> Zurück</Btn>
+          <Btn onClick={onClose}><TI n="arrow-left"/> Zurück</Btn>
           <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
             <Av name={m.name} size={44}/>
             <div>
@@ -402,7 +402,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     <div>
       {/* Header */}
       <div className="cc-flex-center" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:12}}>
-        <h1 style={{margin:0}}>Mitglieder</h1>
+        <h1>Mitglieder</h1>
         {canExport&&<Row align="flex-start"><Btn>Export CSV</Btn><Btn>Export Excel</Btn></Row>}
       </div>
       {/* Stats */}
@@ -444,7 +444,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       <Card style={{padding:0,overflowX:"auto"}}>
         <table className="cc-table">
           <thead>
-            <tr style={{background:"var(--surface2)"}}>
+            <tr>
               {COLS.map(c=>(
                 <th key={c.key} onClick={()=>handleSort(c.key)}
                   style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",
@@ -462,16 +462,16 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               <>
                 {groupBy!=="none"&&(
                   <tr key={"g-"+key}>
-                    <td colSpan={6} style={{padding:"10px 13px 6px",background:"var(--surface2)",
+                    <td colSpan={6} className="cc-section-hdr" style={{
                       fontWeight:700,fontSize:14,color:"var(--sub)",textTransform:"uppercase",
                       letterSpacing:0.6,borderTop:"1px solid var(--border)"}}>
-                      {key} <span style={{opacity:0.6}}>({members.length})</span>
+                      {key} <span style={{opacity:0.6,fontWeight:400}}>({members.length})</span>
                     </td>
                   </tr>
                 )}
                 {members.map((m,i)=>(
                   <tr key={m.id} onClick={()=>setSelectedMember({...m,_tab:"info"})}
-                    className="cc-tr" style={{borderTop:"0.5px solid var(--border)"}}>
+                    className="cc-tr">
                     <td className="cc-td">
                       <Row>
                         <Av name={m.name} size={28}/>
@@ -479,9 +479,9 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                       </Row>
                     </td>
                     <td className="cc-td"><RolleChip rolle={m.role}/></td>
-                    <td className="cc-detail-label" style={{padding:"9px 13px"}}>{m.team}</td>
+                    <td className="cc-td cc-detail-label">{m.team}</td>
                     <td className="cc-td"><Chip text={m.type} color={BL}/></td>
-                    <td className="cc-detail-label" style={{padding:"9px 13px"}}>{m.location}</td>
+                    <td className="cc-td cc-detail-label">{m.location}</td>
                     <td className="cc-td">
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
                     </td>
@@ -497,6 +497,233 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+/* ── Portal-Zugang Tab — Mitglied + Eltern verknüpfen ── */
+function PortalZugangTab({raw,eltern,canEdit,sb,benutzer,portalLoading,togglePortalZugang,onReload}){
+  const [elternBenutzer,setElternBenutzer]=useState({});
+  const [linkLoading,setLinkLoading]=useState({});
+  const [linkMsg,setLinkMsg]=useState({});
+  const [editEmail,setEditEmail]=useState({});   // {eltern-email: neueEmail}
+  const [emailEditing,setEmailEditing]=useState({}); // {eltern-email: true/false}
+
+  useEffect(()=>{
+    if(!sb||eltern.length===0) return;
+    (async()=>{
+      for(const e of eltern){
+        if(!e.email) continue;
+        try{
+          const {data}=await sb.from("benutzer").select("id,email,role,active,name,created_at").eq("email",e.email).single();
+          if(data) setElternBenutzer(prev=>({...prev,[e.email]:data}));
+        }catch(_){}
+      }
+    })();
+  },[eltern,sb]);
+
+  async function linkEltern(e){
+    if(!sb||!canEdit) return;
+    setLinkLoading(prev=>({...prev,[e.email]:true}));
+    setLinkMsg(prev=>({...prev,[e.email]:null}));
+    try{
+      const {data:bu,error:buErr}=await sb.from("benutzer").select("id,role,active").eq("email",e.email).single();
+      if(!bu){ setLinkMsg(prev=>({...prev,[e.email]:{ok:false,text:"Kein Konto gefunden. Elternteil muss sich zuerst registrieren."}})); setLinkLoading(prev=>({...prev,[e.email]:false})); return; }
+      const {error}=await sb.from("elternkontakte").update({benutzer_id:bu.id}).eq("mitglied_id",raw.id).eq("email",e.email);
+      if(error) throw error;
+      if(!bu.role||bu.role==="spieler") await sb.from("benutzer").update({role:"eltern"}).eq("id",bu.id);
+      setElternBenutzer(prev=>({...prev,[e.email]:{...bu,role:"eltern"}}));
+      setLinkMsg(prev=>({...prev,[e.email]:{ok:true,text:"Erfolgreich verknüpft ✓"}}));
+      if(onReload) onReload();
+    }catch(err){ setLinkMsg(prev=>({...prev,[e.email]:{ok:false,text:err.message}})); }
+    setLinkLoading(prev=>({...prev,[e.email]:false}));
+  }
+
+  async function unlinkEltern(e){
+    if(!sb||!canEdit) return;
+    setLinkLoading(prev=>({...prev,[e.email]:true}));
+    try{
+      await sb.from("elternkontakte").update({benutzer_id:null}).eq("mitglied_id",raw.id).eq("email",e.email);
+      setElternBenutzer(prev=>{const n={...prev};delete n[e.email];return n;});
+      setLinkMsg(prev=>({...prev,[e.email]:{ok:true,text:"Verknüpfung aufgehoben"}}));
+    }catch(err){ setLinkMsg(prev=>({...prev,[e.email]:{ok:false,text:err.message}})); }
+    setLinkLoading(prev=>({...prev,[e.email]:false}));
+  }
+
+  async function updateElternEmail(e, neueEmail){
+    if(!sb||!canEdit||!neueEmail.trim()) return;
+    setLinkLoading(prev=>({...prev,[e.email]:true}));
+    try{
+      // E-Mail in elternkontakte aktualisieren
+      const {error}=await sb.from("elternkontakte")
+        .update({email:neueEmail.trim()})
+        .eq("mitglied_id",raw.id)
+        .eq("email",e.email);
+      if(error) throw error;
+      // Prüfen ob Konto mit neuer E-Mail existiert
+      const {data:bu}=await sb.from("benutzer").select("id,email,role,active").eq("email",neueEmail.trim()).single();
+      if(bu){
+        // Direkt verknüpfen
+        await sb.from("elternkontakte").update({benutzer_id:bu.id}).eq("mitglied_id",raw.id).eq("email",neueEmail.trim());
+        if(!bu.role||bu.role==="spieler") await sb.from("benutzer").update({role:"eltern"}).eq("id",bu.id);
+        setElternBenutzer(prev=>({...prev,[neueEmail.trim()]:{...bu,role:"eltern"}}));
+        setLinkMsg(prev=>({...prev,[e.email]:{ok:true,text:"E-Mail aktualisiert und Konto verknüpft ✓"}}));
+      } else {
+        setLinkMsg(prev=>({...prev,[e.email]:{ok:true,text:"E-Mail aktualisiert. Konto noch nicht gefunden — Elternteil muss sich mit neuer E-Mail registrieren."}}));
+      }
+      setEmailEditing(prev=>({...prev,[e.email]:false}));
+      if(onReload) onReload();
+    }catch(err){ setLinkMsg(prev=>({...prev,[e.email]:{ok:false,text:err.message}})); }
+    setLinkLoading(prev=>({...prev,[e.email]:false}));
+  }
+
+  return(
+    <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:12}}>
+
+      {/* Mitglied Portal-Zugang */}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div className="cc-list-name">Mitglied — Portal-Zugang</div>
+          <Chip text={raw.hat_portal_zugang?"Aktiv":"Kein Zugang"} color={raw.hat_portal_zugang?GN:R} bg={raw.hat_portal_zugang?"#ECFDF5":RL}/>
+        </div>
+        {canEdit&&(
+          <button onClick={togglePortalZugang}
+            style={{width:"100%",padding:"10px",borderRadius:8,border:`0.5px solid ${raw.hat_portal_zugang?R:GN}`,background:"var(--surface)",color:raw.hat_portal_zugang?R:GN,fontSize:14,cursor:"pointer",fontWeight:500}}>
+            {raw.hat_portal_zugang?"Portal-Zugang deaktivieren":"Portal-Zugang aktivieren"}
+          </button>
+        )}
+        {portalLoading&&<div className="cc-empty" style={{padding:"8px 0"}}>Wird geladen…</div>}
+        {!portalLoading&&benutzer&&(
+          <div style={{marginTop:12}}>
+            <div className="cc-section-hdr" style={{marginBottom:8}}>Benutzer-Konto</div>
+            {[
+              {l:"E-Mail",   v:benutzer.email||"-"},
+              {l:"Rolle",    v:benutzer.role||"-"},
+              {l:"Aktiv",    v:benutzer.active?"Ja":"Nein"},
+              {l:"Erstellt", v:benutzer.created_at?new Date(benutzer.created_at).toLocaleDateString("de-CH"):"-"},
+            ].map((r,i)=>(
+              <div key={i} className="cc-list-row" style={{justifyContent:"space-between"}}>
+                <span className="cc-detail-label">{r.l}</span>
+                <span style={{fontWeight:600}}>{r.v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {!portalLoading&&!benutzer&&raw.hat_portal_zugang&&(
+          <div className="cc-empty" style={{marginTop:8,padding:12}}>
+            Kein Benutzer-Konto — Mitglied hat sich noch nicht registriert.
+          </div>
+        )}
+      </Card>
+
+      {/* Eltern verknüpfen */}
+      {eltern.length>0&&(
+        <Card>
+          <div className="cc-section-hdr" style={{marginBottom:8}}>Eltern verknüpfen</div>
+          <div className="cc-detail-label" style={{marginBottom:14,lineHeight:1.5}}>
+            Elternteile müssen sich zuerst selbst registrieren. Danach kannst du hier die Verknüpfung setzen — sie sehen dann das Kind im Portal.
+          </div>
+          {eltern.map((e,i)=>{
+            const bu=elternBenutzer[e.email];
+            const loading=linkLoading[e.email];
+            const msg=linkMsg[e.email];
+            return(
+              <div key={i} style={{padding:"14px 0",borderTop:i>0?"0.5px solid var(--border)":undefined}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap",marginBottom:8}}>
+                  <div>
+                    <div className="cc-list-name">{e.vorname||e.name||""} {e.nachname||""}{e.beziehung?` (${e.beziehung})`:""}</div>
+                    <div className="cc-detail-label">{e.email||"Keine E-Mail erfasst"}</div>
+                  </div>
+                  <Chip text={bu?"Verknüpft":"Nicht verknüpft"} color={bu?GN:"#9CA3AF"} bg={bu?"#ECFDF5":"var(--surface2)"}/>
+                </div>
+                {bu&&(
+                  <div style={{display:"flex",gap:16,fontSize:13,marginBottom:8}}>
+                    <span><span className="cc-detail-label">Rolle: </span><strong>{bu.role||"-"}</strong></span>
+                    <span><span className="cc-detail-label">Aktiv: </span><strong>{bu.active?"Ja":"Nein"}</strong></span>
+                  </div>
+                )}
+                {msg&&(
+                  <div style={{padding:"6px 10px",borderRadius:6,background:msg.ok?"#ECFDF5":RL,color:msg.ok?GN:R,fontSize:13,marginBottom:8}}>
+                    {msg.text}
+                  </div>
+                )}
+                {canEdit&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {/* E-Mail bearbeiten wenn kein Konto gefunden */}
+                    {!bu&&e.email&&(
+                      emailEditing[e.email]?(
+                        <div style={{display:"flex",gap:6}}>
+                          <input
+                            value={editEmail[e.email]??e.email}
+                            onChange={ev=>setEditEmail(prev=>({...prev,[e.email]:ev.target.value}))}
+                            placeholder="Neue E-Mail eingeben"
+                            style={{flex:1,padding:"7px 10px",border:`0.5px solid var(--border)`,borderRadius:8,fontSize:13,outline:"none",background:"var(--surface)",color:"var(--text)"}}
+                          />
+                          <button onClick={()=>updateElternEmail(e, editEmail[e.email]||e.email)} disabled={loading}
+                            style={{padding:"7px 12px",borderRadius:8,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,fontSize:13,cursor:"pointer",fontWeight:500}}>
+                            {loading?"…":"✓"}
+                          </button>
+                          <button onClick={()=>setEmailEditing(prev=>({...prev,[e.email]:false}))}
+                            style={{padding:"7px 10px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
+                            ✕
+                          </button>
+                        </div>
+                      ):(
+                        <div style={{display:"flex",gap:6}}>
+                          {e.email&&<button onClick={()=>linkEltern(e)} disabled={loading}
+                            style={{flex:1,padding:"8px",borderRadius:8,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,fontSize:13,cursor:"pointer",fontWeight:500}}>
+                            {loading?"Verknüpfe…":"↔ Mit Konto verknüpfen"}
+                          </button>}
+                          <button onClick={()=>setEmailEditing(prev=>({...prev,[e.email]:true}))}
+                            style={{padding:"8px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}
+                            title="Andere E-Mail verwenden">
+                            <TI n="mail"/> Andere E-Mail
+                          </button>
+                        </div>
+                      )
+                    )}
+                    {bu&&(
+                      <button onClick={()=>unlinkEltern(e)} disabled={loading}
+                        style={{padding:"8px 14px",borderRadius:8,border:`0.5px solid ${R}`,background:"var(--surface)",color:R,fontSize:13,cursor:"pointer"}}>
+                        {loading?"…":"Verknüpfung aufheben"}
+                      </button>
+                    )}
+                    {!e.email&&(
+                      emailEditing["_new_"+raw.id]?(
+                        <div style={{display:"flex",gap:6}}>
+                          <input
+                            value={editEmail["_new_"+raw.id]||""}
+                            onChange={ev=>setEditEmail(prev=>({...prev,["_new_"+raw.id]:ev.target.value}))}
+                            placeholder="E-Mail des Elternteils"
+                            style={{flex:1,padding:"7px 10px",border:`0.5px solid var(--border)`,borderRadius:8,fontSize:13,outline:"none",background:"var(--surface)",color:"var(--text)"}}
+                          />
+                          <button onClick={()=>updateElternEmail(e, editEmail["_new_"+raw.id]||"")} disabled={loading}
+                            style={{padding:"7px 12px",borderRadius:8,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,fontSize:13,cursor:"pointer",fontWeight:500}}>
+                            {loading?"…":"✓"}
+                          </button>
+                          <button onClick={()=>setEmailEditing(prev=>({...prev,["_new_"+raw.id]:false}))}
+                            style={{padding:"7px 10px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
+                            ✕
+                          </button>
+                        </div>
+                      ):(
+                        <button onClick={()=>setEmailEditing(prev=>({...prev,["_new_"+raw.id]:true}))}
+                          style={{padding:"8px",borderRadius:8,border:`0.5px solid ${AM}`,background:"var(--surface)",color:AM,fontSize:13,cursor:"pointer"}}>
+                          <TI n="mail-plus"/> E-Mail erfassen & verknüpfen
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
+      {eltern.length===0&&(
+        <Card><div className="cc-empty">Keine Elternkontakte erfasst.</div></Card>
+      )}
     </div>
   );
 }
@@ -735,11 +962,11 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               {raw.funktion&&<Chip text={raw.funktion} color={BL}/>}
               {raw.mitgliedtyp&&<Chip text={raw.mitgliedtyp} color="#6B7280" bg="var(--surface2)"/>}
               <Chip text={raw.datenstatus||"ausstehend"} color={statusColor(m.status)} bg={statusBg(m.status)}/>
-              {(raw.teams||[]).map(t=><span key={t} style={{fontSize:12,padding:"2px 8px",borderRadius:6,background:"var(--surface2)",color:"var(--sub)",border:"0.5px solid var(--border)"}}>{t}</span>)}
+              {(raw.teams||[]).map(t=><span key={t} className="cc-chip-toggle" style={{cursor:"default",fontSize:12,padding:"2px 8px"}}>{t}</span>)}
             </div>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}}>
-            <Btn onClick={onClose} style={{fontSize:13}}><TI n="arrow-left"/> Zurück</Btn>
+            <Btn onClick={onClose}><TI n="arrow-left"/> Zurück</Btn>
             {canEdit&&!editMode&&activeTab==="info"&&(
               <Btn onClick={()=>setEditMode(true)} style={{fontSize:13,background:BTN,color:BTN_TXT,border:"none"}}><TI n="edit"/> Bearbeiten</Btn>
             )}
@@ -755,7 +982,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               const sFelder=rows.filter(r=>sek.felder.includes(r.l)&&(canEdit||(r.v&&r.v!=="-")));
               if(sFelder.length===0) return null;
               return(
-                <div key={sek.titel} className="cc-list" style={{borderRadius:12}}>
+                <div key={sek.titel} className="cc-list">
                   <div className="cc-section-hdr">{sek.titel}</div>
                   <div className="cc-grid-form" style={{gap:0}}>
                     {sFelder.map((r,i)=>(
@@ -822,7 +1049,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             {eltern.length===0?(
               <div className="cc-empty">Keine Elternkontakte erfasst.</div>
             ):(
-              <div className="cc-list" style={{borderRadius:12}}>
+              <div className="cc-list">
                 {eltern.map((e,i)=>(
                   <div key={i} className="cc-list-row" style={{flexDirection:"column",alignItems:"flex-start",gap:4,cursor:"default"}}>
                     <div className="cc-list-name">{e.vorname} {e.nachname}{e.beziehung?` · ${e.beziehung}`:""}</div>
@@ -843,7 +1070,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             {(raw.teams||[]).length===0?(
               <div className="cc-empty">Keine Team-Zuteilung.</div>
             ):(
-              <div className="cc-list" style={{borderRadius:12}}>
+              <div className="cc-list">
                 <div className="cc-section-hdr">Zugeteilte Teams</div>
                 {(raw.teams||[]).map((t,i)=>(
                   <div key={i} className="cc-list-row" style={{justifyContent:"space-between"}}>
@@ -870,8 +1097,8 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                 <Card>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
                     <div>
-                      <span className="cc-detail-label" style={{fontSize:13}}>Total Einträge: </span>
-                      <span style={{fontWeight:600}}>{anwesenheiten.length}</span>
+                      <span className="cc-detail-label">Total Einträge: </span>
+                      <span style={{fontWeight:600,color:"var(--text)"}}>{anwesenheiten.length}</span>
                     </div>
                     <div style={{display:"flex",gap:16,fontSize:13}}>
                       <span style={{color:GN}}>✓ Anwesend: {anwesenheiten.filter(a=>a.status==="zu").length}</span>
@@ -882,7 +1109,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                     <div key={i} className="cc-list-row" style={{justifyContent:"space-between",borderTop:"0.5px solid var(--border)",borderBottom:"none"}}>
                       <div>
                         <div className="cc-list-name">{a.event_type||"Termin"}</div>
-                        <div className="cc-detail-label" style={{fontSize:12}}>{a.updated_at?.split("T")[0]||"-"}</div>
+                        <div className="cc-detail-label">{a.updated_at?.split("T")[0]||"-"}</div>
                       </div>
                       <Chip
                         text={a.status==="zu"?"Anwesend":a.status==="ab"?"Abwesend":"Offen"}
@@ -915,14 +1142,14 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
         {/* TAB: Dokumente */}
         {activeTab==="dokumente"&&(
           <Card style={{marginTop:12}}>
-            <div className="cc-empty" style={{padding:24}}>
+            <div className="cc-empty">
               Dokumentenverwaltung noch nicht verbunden.<br/>
-              <span style={{fontSize:12}}>Dokumente können über das Dokumente-Modul verwaltet werden.</span>
+              <span className="cc-detail-label">Dokumente können über das Dokumente-Modul verwaltet werden.</span>
             </div>
             {raw.notizen&&(
               <div className="cc-card" style={{marginTop:12,padding:"12px 14px"}}>
                 <div className="cc-section-hdr" style={{marginBottom:6}}>Notizen</div>
-                <div style={{lineHeight:1.6}}>{raw.notizen}</div>
+                <div>{raw.notizen}</div>
               </div>
             )}
           </Card>
@@ -930,49 +1157,12 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
 
         {/* TAB: Portal-Zugang */}
         {activeTab==="portal"&&(
-          <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:12}}>
-            <Card>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div className="cc-list-name" style={{fontSize:15}}>Portal-Zugang</div>
-                <Chip
-                  text={raw.hat_portal_zugang?"Aktiv":"Kein Zugang"}
-                  color={raw.hat_portal_zugang?GN:R}
-                  bg={raw.hat_portal_zugang?"#ECFDF5":RL}
-                />
-              </div>
-              {canEdit&&(
-                <button onClick={togglePortalZugang}
-                  style={{width:"100%",padding:"10px",borderRadius:8,border:`0.5px solid ${raw.hat_portal_zugang?R:GN}`,background:"var(--surface)",color:raw.hat_portal_zugang?R:GN,fontSize:14,cursor:"pointer",fontWeight:500}}>
-                  {raw.hat_portal_zugang?"Portal-Zugang deaktivieren":"Portal-Zugang aktivieren"}
-                </button>
-              )}
-            </Card>
-            {portalLoading&&<div className="cc-empty" style={{padding:16}}>Wird geladen…</div>}
-            {!portalLoading&&benutzer&&(
-              <Card>
-                <div className="cc-section-hdr" style={{marginBottom:10}}>Benutzer-Konto</div>
-                {[
-                  {l:"E-Mail",  v:benutzer.email||"-"},
-                  {l:"Rolle",   v:benutzer.role||"-"},
-                  {l:"Aktiv",   v:benutzer.active?"Ja":"Nein"},
-                  {l:"Erstellt",v:benutzer.created_at?new Date(benutzer.created_at).toLocaleDateString("de-CH"):"-"},
-                ].map((r,i)=>(
-                  <div key={i} className="cc-list-row" style={{justifyContent:"space-between",borderTop:"0.5px solid var(--border)"}}>
-                    <span className="cc-detail-label">{r.l}</span>
-                    <span style={{fontSize:14,fontWeight:600}}>{r.v}</span>
-                  </div>
-                ))}
-              </Card>
-            )}
-            {!portalLoading&&benutzer===null&&raw.hat_portal_zugang&&(
-              <Card>
-                <div className="cc-empty" style={{padding:16}}>
-                  Kein Benutzer-Konto gefunden.<br/>
-                  <span style={{fontSize:12}}>Das Mitglied hat noch keinen Login erstellt.</span>
-                </div>
-              </Card>
-            )}
-          </div>
+          <PortalZugangTab
+            raw={raw} eltern={eltern} canEdit={canEdit} sb={sb}
+            benutzer={benutzer} portalLoading={portalLoading}
+            togglePortalZugang={togglePortalZugang}
+            onReload={()=>{ if(onReload) onReload(); loadPortal(); }}
+          />
         )}
       </div>
     );
@@ -984,7 +1174,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     <div>
       {/* Header */}
       <div className="cc-flex-center" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:12}}>
-        <h1 style={{margin:0}}>Mitglieder</h1>
+        <h1>Mitglieder</h1>
         {canExport&&<div style={{display:"flex",gap:8}}><Btn>Export CSV</Btn><Btn>Export Excel</Btn></div>}
       </div>
       {/* Stats */}
@@ -1010,7 +1200,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
         return(
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
             <button onClick={()=>setFilterVals([])}
-              style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
+              className="cc-chip-toggle" style={{
                 background:filterVals.length===0?BK:"var(--surface)",
                 color:filterVals.length===0?"#fff":"var(--sub)",
                 fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
@@ -1036,7 +1226,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             })}
             {filterVals.length>0&&(
               <button onClick={()=>setFilterVals([])}
-                style={{padding:"4px 10px",borderRadius:20,border:"1px solid var(--border)",
+                className="cc-chip-toggle" style={{
                   background:"none",color:R,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                 × zurücksetzen
               </button>
@@ -1048,7 +1238,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
       <Card style={{padding:0,overflowX:"auto"}}>
         <table className="cc-table">
           <thead>
-            <tr style={{background:"var(--surface2)"}}>
+            <tr>
               {COLS.map(c=>(
                 <th key={c.key} onClick={()=>handleSort(c.key)}
                   style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",
@@ -1066,16 +1256,16 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               <>
                 {groupBy!=="none"&&(
                   <tr key={"g-"+key}>
-                    <td colSpan={6} style={{padding:"10px 13px 6px",background:"var(--surface2)",
+                    <td colSpan={6} className="cc-section-hdr" style={{
                       fontWeight:700,fontSize:14,color:"var(--sub)",textTransform:"uppercase",
                       letterSpacing:0.6,borderTop:"1px solid var(--border)"}}>
-                      {key} <span style={{opacity:0.6}}>({members.length})</span>
+                      {key} <span style={{opacity:0.6,fontWeight:400}}>({members.length})</span>
                     </td>
                   </tr>
                 )}
                 {members.map((m,i)=>(
                   <tr key={m.id} onClick={()=>setSelectedMember({...m,_tab:"info"})}
-                    className="cc-tr" style={{borderTop:"0.5px solid var(--border)"}}
+                    className="cc-tr"
                     onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                     <td className="cc-td">
@@ -1085,9 +1275,9 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                       </div>
                     </td>
                     <td className="cc-td"><RolleChip rolle={m.role}/></td>
-                    <td className="cc-detail-label" style={{padding:"9px 13px"}}>{m.team}</td>
+                    <td className="cc-td cc-detail-label">{m.team}</td>
                     <td className="cc-td"><Chip text={m.type} color={BL}/></td>
-                    <td className="cc-detail-label" style={{padding:"9px 13px"}}>{m.location}</td>
+                    <td className="cc-td cc-detail-label">{m.location}</td>
                     <td className="cc-td">
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
                     </td>

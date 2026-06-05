@@ -550,21 +550,37 @@ function Portal({supabaseClient}){
     try {
       const {data, error} = await sb.from("benutzer").select("*").eq("id",uid).single();
       if(data){
+        // Auto-Link: elternkontakte via E-Mail verknüpfen falls noch nicht gesetzt
+        if(email){
+          try{
+            const {data:ekCheck}=await sb.from("elternkontakte").select("id").eq("email",email).is("benutzer_id",null).limit(1);
+            if(ekCheck&&ekCheck.length>0){
+              await sb.from("elternkontakte").update({benutzer_id:uid}).eq("email",email).is("benutzer_id",null);
+              // eltern zu rollen hinzufügen (nicht überschreiben — Person kann auch Trainer sein)
+              const aktRollen = data.rollen||[data.role||"spieler"];
+              if(!aktRollen.includes("eltern")){
+                const neueRollen=[...aktRollen,"eltern"];
+                await sb.from("benutzer").update({rollen:neueRollen}).eq("id",uid);
+                data.rollen=neueRollen;
+              }
+            }
+          }catch(e){ console.warn("[FCH] auto-link eltern:", e.message); }
+        }
         // Elternkontakte laden — verknüpft via benutzer_id
         let kinder = [];
         try{
           const {data:ekData} = await sb.from("elternkontakte").select("*, mitglieder(id,vorname,nachname,teams,geburtsdatum,position,spielerpass)").eq("benutzer_id",uid);
           if(ekData&&ekData.length>0){
             kinder = ekData.map(ek=>({
-              id:         ek.mitglied_id,
-              name:       ek.mitglieder ? `${ek.mitglieder.vorname} ${ek.mitglieder.nachname}` : ek.name,
-              team:       (ek.mitglieder?.teams||[])[0]||"",
-              teams:      ek.mitglieder?.teams||[],
-              rosterId:   ek.mitglied_id,
+              id:           ek.mitglied_id,
+              name:         ek.mitglieder ? `${ek.mitglieder.vorname} ${ek.mitglieder.nachname}` : ek.name,
+              team:         (ek.mitglieder?.teams||[])[0]||"",
+              teams:        ek.mitglieder?.teams||[],
+              rosterId:     ek.mitglied_id,
               geburtsdatum: ek.mitglieder?.geburtsdatum||"",
-              position:   ek.mitglieder?.position||"",
-              spielerpass:ek.mitglieder?.spielerpass||"",
-              beziehung:  ek.beziehung||"",
+              position:     ek.mitglieder?.position||"",
+              spielerpass:  ek.mitglieder?.spielerpass||"",
+              beziehung:    ek.beziehung||"",
             }));
           }
         }catch(e){ console.warn("[FCH] elternkontakte laden:", e.message); }
@@ -731,10 +747,17 @@ function Portal({supabaseClient}){
 
   // Rolle aus DB-User oder Demo-Fallback
   const effectiveAccountKey = dbUser ? "db_user" : accountKey;
+  // Rollen-Hierarchie: stärkste Rolle = primaryRole
+  const ROLLE_PRIO = ["administrator","administration","vorstand","funktionaer","trainer","spieler","eltern"];
+  const getPrimaryRole = (rollen) => {
+    if(!rollen||rollen.length===0) return "spieler";
+    return ROLLE_PRIO.find(r => rollen.includes(r)) || rollen[0];
+  };
+
   const dbAccount = dbUser ? {
     name: dbUser.name||dbUser.email||"Benutzer",
-    rollen: [dbUser.role||"spieler"],
-    primaryRole: dbUser.role||"spieler",
+    rollen: dbUser.rollen?.length>0 ? dbUser.rollen : [dbUser.role||"spieler"],
+    primaryRole: getPrimaryRole(dbUser.rollen?.length>0 ? dbUser.rollen : [dbUser.role||"spieler"]),
     kinder: dbUser.kinder||[],
     teams: dbUser.teams||[],
     email: dbUser.email||"",
