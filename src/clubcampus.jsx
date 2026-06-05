@@ -1021,24 +1021,38 @@ function Portal({supabaseClient}){
             onOpenProfile={()=>setMobileProfileOpen(true)}
             onBack={customBack} appTheme={appTheme}/>}
           <main key={active} className="cc-page" style={{flex:1,overflowY:"auto",overflowX:"hidden"}}>
-            {/* Profil-Banner */}
+            {/* Profil-Pflicht Modal — nicht wegklickbar */}
             {(()=>{
               const fehlend = getProfilFehlend(dbUser, dbMitglieder);
-              if(fehlend.length===0||profilBannerDismissed||role==="administrator"||role==="administration") return null;
+              if(fehlend.length===0||role==="administrator"||role==="administration") return null;
               const FELD_LABELS={"vorname":"Vorname","nachname":"Nachname","geburtsdatum":"Geburtsdatum","geschlecht":"Geschlecht","nationalitaet":"Nationalität","strasse":"Strasse","plz":"PLZ","ort":"Ort","kanton":"Kanton","land":"Land","email":"E-Mail","telefon":"Handynummer"};
               return(
-                <div style={{background:"#FFFBEB",borderBottom:"1px solid #FCD34D",padding:"10px 24px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                  <span style={{fontSize:18}}>⚠️</span>
-                  <div style={{flex:1,minWidth:200}}>
-                    <span style={{fontWeight:600,fontSize:14,color:"#92400E"}}>Profil unvollständig — </span>
-                    <span style={{fontSize:13,color:"#92400E"}}>Fehlende Angaben: {fehlend.map(f=>FELD_LABELS[f]||f).join(", ")}</span>
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+                  <div style={{background:"var(--surface)",borderRadius:16,padding:32,maxWidth:480,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+                    <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>📋</div>
+                    <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 8px",textAlign:"center"}}>Profil vervollständigen</h2>
+                    <p style={{fontSize:14,color:"var(--sub)",textAlign:"center",marginBottom:20,lineHeight:1.6}}>
+                      Bitte fülle die fehlenden Pflichtfelder aus bevor du das Portal nutzen kannst.
+                    </p>
+                    <div style={{background:"var(--surface2)",borderRadius:10,padding:"12px 16px",marginBottom:20}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:8}}>Fehlende Angaben</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {fehlend.map(f=>(
+                          <span key={f} style={{fontSize:13,padding:"3px 10px",borderRadius:20,background:"#FEF3C7",color:"#92400E",fontWeight:500}}>
+                            {FELD_LABELS[f]||f}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={()=>setActivePersist("profile")}
+                      style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FFBF00)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
+                      Jetzt ausfüllen →
+                    </button>
+                    <button onClick={handleLogout}
+                      style={{width:"100%",marginTop:10,padding:"10px",borderRadius:10,border:"0.5px solid var(--border)",background:"none",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
+                      Abmelden
+                    </button>
                   </div>
-                  <button onClick={()=>{setActivePersist("profile");setProfilBannerDismissed(false);}}
-                    style={{padding:"6px 14px",borderRadius:8,border:"none",background:"#F59E0B",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
-                    Jetzt ausfüllen
-                  </button>
-                  <button onClick={()=>setProfilBannerDismissed(true)}
-                    style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#92400E",padding:"2px 4px"}}>×</button>
                 </div>
               );
             })()}
