@@ -187,7 +187,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                       {/* Platz Phase 1 */}
                       <div style={{marginBottom:8}}>
                         <div style={S_SUB}>Platz</div>
-                        <select value={form.location} onChange={e=>setForm(f=>({...f,ort:e.target.value,half:""}))}
+                        <select value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value,half:""}))}
                           style={{width:"100%",padding:"7px 10px",border:`1.5px solid ${form.location?GB:R+"80"}`,borderRadius:8,fontSize:14,outline:"none"}}>
                           <option value="" disabled>– Platz wählen –</option>
                           {TRAININGSPLAETZE.filter(p=>p.active).map(p=>(
