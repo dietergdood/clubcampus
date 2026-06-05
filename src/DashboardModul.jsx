@@ -456,7 +456,7 @@ function DashboardEltern({account,meineTeams,setActive}){
   return(
     <div>
       <H1 mb={6}>Hallo, {parentName}</H1>
-      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · Freitag, 23. Mai 2026</p>
 
       {kinder.map((kind,ki)=>{
         const team=kind.team||"Cc-Junioren";
@@ -490,12 +490,12 @@ function DashboardEltern({account,meineTeams,setActive}){
         const accentFor=(e)=>e.type==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.type==="Veranstaltung"?AM:GN;
 
         return(
-          <div key={ki} style={{marginBottom:24}}>
+          <Col key={ki} mb={24}>
             {/* Kind-Header */}
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <Row gap={8} mb={12}>
               <div style={{width:6,height:28,borderRadius:4,background:ACCENT,flexShrink:0}}/>
-              <H2 style={{marginBottom:0}}>{vorname} <span style={{fontSize:13,color:"var(--sub)",fontWeight:600}}>· {team}</span></H2>
-            </div>
+              <H2>{vorname} <span style={{fontSize:13,color:"var(--sub)",fontWeight:600}}>· {team}</span></H2>
+            </Row>
 
             {/* Stat-Kacheln */}
             {(()=>{
@@ -526,7 +526,7 @@ function DashboardEltern({account,meineTeams,setActive}){
                 <span><TI n="ball-football" size={24}/></span>
                 <Col style={{flex:1}}>
                   <div className="cc-list-name" style={{color:"var(--cc-accent)"}}>{vorname} ist im Aufgebot!</div>
-                  <div className="cc-detail-label" style={{minWidth:"auto",marginTop:2}}>
+                  <div className="cc-detail-label" style={{marginTop:2}}>
                     {`vs. ${nextAufgebotSpiel.opponent} · ${nextAufgebotSpiel.date} · ${nextAufgebotSpiel.time} Uhr`}
                   </div>
                   {nextAufgebotSpiel.treffpunkt&&<Row gap={4} mt={3}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebotSpiel.treffpunkt}</Row>}
@@ -539,16 +539,16 @@ function DashboardEltern({account,meineTeams,setActive}){
               {/* Nächste 4 Trainings & Spiele */}
               <Card style={{cursor:setActive?"pointer":"default"}} onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.kindTeam=team;setActive("team");}:undefined}>
                 <STitle action={setActive&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle →</span>}>{vorname} · Trainings & Spiele</STitle>
-                {upcoming.length===0&&<div className="cc-detail-label" style={{minWidth:"auto"}}>Keine anstehenden Trainings oder Spiele.</div>}
+                {upcoming.length===0&&<div className="cc-empty" style={{padding:"8px 0",textAlign:"left"}}>Keine anstehenden Trainings oder Spiele.</div>}
                 {upcoming.map((e,i)=>(
-                  <div key={e.id} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:i<upcoming.length-1?`0.5px solid ${GB}`:"none",alignItems:"center"}}>
+                  <div key={e.id} className="cc-list-row" style={{borderBottom:i===0&&false?undefined:undefined}}>
                     <div style={{width:3,height:30,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
-                    <div style={{flex:1,minWidth:0}}>
+                    <Col style={{flex:1,minWidth:0}}>
                       <div className="cc-list-name cc-truncate">
                         {e.type==="Training"?`Training · ${team}`:e.opponent?"vs. "+e.opponent:e.title||e.type}
                       </div>
-                      <div style={{fontSize:13,color:"var(--sub)"}}>{e.date} · {e.time} Uhr · {e.location}</div>
-                    </div>
+                      <div className="cc-detail-label" style={{marginTop:1}}>{e.date} · {e.time} Uhr · {e.location}</div>
+                    </Col>
                     <Chip text={e.type} color={accentFor(e)}/>
                   </div>
                 ))}
@@ -557,20 +557,20 @@ function DashboardEltern({account,meineTeams,setActive}){
               {/* Team-Events & Vereinsanlässe */}
               <Card style={{cursor:setActive?"pointer":"default"}} onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["team-event","vereinsanlass"];NAV_TARGET.kindTeam=team;setActive("team");}:undefined}>
                 <STitle action={setActive&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle →</span>}>{vorname} · Team-Events & Anlässe</STitle>
-                {anlaesse.length===0&&<div className="cc-detail-label" style={{minWidth:"auto"}}>Keine anstehenden Anlässe.</div>}
+                {anlaesse.length===0&&<div className="cc-empty" style={{padding:"8px 0",textAlign:"left"}}>Keine anstehenden Anlässe.</div>}
                 {anlaesse.map((e,i)=>(
-                  <div key={e.id} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:i<anlaesse.length-1?`0.5px solid ${GB}`:"none",alignItems:"center"}}>
+                  <div key={e.id} className="cc-list-row" style={{borderBottom:i===0&&false?undefined:undefined}}>
                     <div style={{width:3,height:30,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
-                    <div style={{flex:1,minWidth:0}}>
+                    <Col style={{flex:1,minWidth:0}}>
                       <div className="cc-list-name cc-truncate">{e.title||e.type}</div>
-                      <div style={{fontSize:13,color:"var(--sub)"}}>{e.date} · {e.time} Uhr · {e.location}</div>
-                    </div>
+                      <div className="cc-detail-label" style={{marginTop:1}}>{e.date} · {e.time} Uhr · {e.location}</div>
+                    </Col>
                     <Chip text={e.subtype||e.type} color={accentFor(e)}/>
                   </div>
                 ))}
               </Card>
             </div>
-          </div>
+          </Col>
         );
       })}
 
