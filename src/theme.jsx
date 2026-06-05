@@ -121,7 +121,7 @@ const PWA_CSS=`
 .cc-table-wrap{background:var(--surface);border-radius:12px;overflow:hidden;overflow-x:auto}
 .cc-grid-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .cc-grid-stats-sm{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.cc-grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.cc-grid-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .cc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cc-grid-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cc-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
@@ -153,7 +153,7 @@ const PWA_CSS=`
 
 @media(max-width:680px){
   .cc-grid-stats{grid-template-columns:repeat(2,1fr)!important}
-  .cc-grid-cards{grid-template-columns:1fr!important}
+  .cc-grid-cards{grid-template-columns:1fr!important;}
 }`;
 /* localStorage polyfill voor window.storage */
 
