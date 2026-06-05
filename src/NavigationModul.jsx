@@ -405,7 +405,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
   const toggleCollapse=()=>setCollapsed(c=>{const n=!c;try{localStorage.setItem("cc-nav-collapsed",n?"1":"0");}catch{}return n;});
   const W=collapsed?64:216;
   return(
-    <nav style={{width:W,minWidth:W,background:"var(--nav)",minHeight:"100dvh",display:"flex",flexDirection:"column",flexShrink:0,borderRight:"1px solid var(--nav-b)",transition:"width 0.22s cubic-bezier(0.4,0,0.2,1),min-width 0.22s cubic-bezier(0.4,0,0.2,1)",overflow:"hidden"}}>
+    <nav style={{width:W,minWidth:W,background:"var(--nav)",height:"100dvh",position:"sticky",top:0,display:"flex",flexDirection:"column",flexShrink:0,borderRight:"1px solid var(--nav-b)",transition:"width 0.22s cubic-bezier(0.4,0,0.2,1),min-width 0.22s cubic-bezier(0.4,0,0.2,1)",overflow:"hidden"}}>
       {/* Logo Header */}
       <div style={{padding:"18px 10px 15px",borderBottom:"1px solid var(--nav-b)",display:"flex",alignItems:"center",gap:collapsed?0:11,justifyContent:collapsed?"center":"flex-start",overflow:"hidden"}}>
         <div style={{width:44,height:44,minWidth:44,borderRadius:12,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
