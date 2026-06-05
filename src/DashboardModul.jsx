@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Card, Chip, H1, InfoBox, Row, STitle, Stat, useIsMobile , Btn, H2} from "./theme.jsx";
+import { Card, Chip, H1, InfoBox, Row, STitle, Stat, useIsMobile , Btn, H2, Col} from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS, POLLS, ROSTER, TABLES } from "./demoData.js";
 
 /* ── Shared navigation target ── */
@@ -70,8 +70,8 @@ function DashboardAdmin({setActive,account}){
             {field:"E-Mail-Adresse",member:"Noah Beispiel", conflict:"Portal ↔ Fairgate"},
             {field:"Adresse",       member:"Sara Huber",     conflict:"Fairgate ↔ Portal"},
           ].map((c,i)=>(
-            <div key={i} style={{padding:"8px 0",borderBottom:i<1?`0.5px solid ${GB}`:"none"}}>
-              <div style={{fontWeight:600,fontSize:13}}>{c.member} · {c.field}</div>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
+              <div className="cc-list-name">{c.member} · {c.field}</div>
               <div style={{fontSize:13,color:"var(--sub)"}}>{c.conflict}</div>
             </div>
           ))}
@@ -84,7 +84,7 @@ function DashboardAdmin({setActive,account}){
             {action:"Fairgate-Sync manuell", user:"Admin User",  time:"12:00"},
             {action:"Rolle geändert",         user:"Admin User",  time:"10:45"},
           ].map((a,i)=>(
-            <div key={i} style={{padding:"7px 0",borderBottom:i<2?`0.5px solid ${GB}`:"none"}}>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
               <div style={{fontSize:13,fontWeight:600}}>{a.action}</div>
               <div style={{fontSize:13,color:"var(--sub)"}}>{a.user} · {a.time+" Uhr"}</div>
             </div>
@@ -131,7 +131,7 @@ function DashboardAdministration({setActive,account}){
         <Card>
           <STitle>Zentrale Anwesenheitsstatistik</STitle>
           {[{t:"Cc-Junioren",pct:77},{t:"D-Junioren",pct:82},{t:"A-Junioren",pct:71},{t:"Aktive 1",pct:68}].map((x,i)=>(
-            <div key={i} style={{padding:"7px 0",borderBottom:i<3?`0.5px solid ${GB}`:"none"}}>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                 <span style={{fontSize:13,fontWeight:600}}>{x.t}</span>
                 <span style={{fontSize:13,fontWeight:700,color:x.pct>=75?GN:x.pct>=65?AM:R}}>{x.pct}%</span>
@@ -145,8 +145,8 @@ function DashboardAdministration({setActive,account}){
         <Card>
           <STitle>Termine · Rückmeldungen</STitle>
           {EVENTS.filter(e=>e.rsvp).map((e,i)=>(
-            <div key={i} style={{padding:"8px 0",borderBottom:i<EVENTS.filter(x=>x.rsvp).length-1?`0.5px solid ${GB}`:"none"}}>
-              <div style={{fontWeight:600,fontSize:13}}>{e.title}</div>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
+              <div className="cc-list-name">{e.title}</div>
               <div style={{display:"flex",gap:8,marginTop:4}}>
                 <Chip text={`✓ ${e.res?.y}`} semantic="success"/>
                 <Chip text={`✕ ${e.res?.n}`} semantic="danger" bg={RL}/>
@@ -177,7 +177,7 @@ function DashboardFunktionaer({setActive,account}){
         <Card>
           <STitle>Kommende Vereinsanlässe</STitle>
           {EVENTS.map((e,i)=>(
-            <div key={i} style={{padding:"8px 0",borderBottom:i<EVENTS.length-1?`0.5px solid ${GB}`:"none"}}>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between"}}>
                 <span className="cc-list-name">{e.title}</span>
                 <Chip text={e.type==="Vereinsanlass"?"Verein":"Team"} color={e.type==="Vereinsanlass"?R:BL}/>
@@ -189,7 +189,7 @@ function DashboardFunktionaer({setActive,account}){
         <Card>
           <STitle>Zentrale Anwesenheitsstatistik</STitle>
           {[{t:"Cc-Junioren",pct:77},{t:"D-Junioren",pct:82},{t:"A-Junioren",pct:71}].map((x,i)=>(
-            <div key={i} style={{padding:"7px 0",borderBottom:i<2?`0.5px solid ${GB}`:"none"}}>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                 <span style={{fontSize:13,fontWeight:600}}>{x.t}</span>
                 <span style={{fontSize:13,fontWeight:700,color:x.pct>=75?GN:AM}}>{x.pct}%</span>
@@ -221,8 +221,8 @@ function DashboardFunktionaer({setActive,account}){
         <Card>
           <STitle>Vereinsbus-Reservationen</STitle>
           {BUSES.flatMap(b=>b.reservations.map(r=>({...r,bus:b.name}))).map((r,i)=>(
-            <div key={i} style={{padding:"8px 0",borderBottom:i<2?`0.5px solid ${GB}`:"none"}}>
-              <div style={{fontWeight:600,fontSize:13}}>{r.date} · {r.time+" Uhr"}</div>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
+              <div className="cc-list-name">{r.date} · {r.time+" Uhr"}</div>
               <div style={{fontSize:13,color:"var(--sub)"}}>{r.bus} · {r.purpose}</div>
             </div>
           ))}
@@ -266,7 +266,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
             const teamPids=ROSTER.filter(p=>(p.teams||[]).includes(team)&&!p.role).map(p=>p.id);
             const missing=teamPids.filter(pid=>!ATT_INITIAL[x.id]?.[pid]?.status).length;
             return(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<arr.length-1?`0.5px solid ${GB}`:"none"}}>
+              <div key={i} className="cc-list-row" style={{borderBottom:i===0&&false?undefined:undefined}}>
                 <span style={{fontSize:13}}>{x.opponent?"Spiel vs. "+x.opponent:x.title||x.type} · {x.date}</span>
                 {missing>0&&<Chip text={`${missing} fehlen`} semantic="warning"/>}
                 {missing===0&&<Chip text="✓ Vollständig" semantic="success"/>}
@@ -277,7 +277,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
         <Card>
           <STitle>Anwesenheit letzte Anlässe</STitle>
           {ATT_LOG.slice(0,3).map((a,i)=>(
-            <div key={i} style={{padding:"7px 0",borderBottom:i<2?`0.5px solid ${GB}`:"none"}}>
+            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                 <span style={{fontSize:13,fontWeight:600}}>{a.date} <Chip text={a.type} color={a.type==="Spiel"?BL:GN}/></span>
                 <span style={{fontSize:13,fontWeight:800,color:R}}>{Math.round(a.present.length/(a.present.length+a.absent.length)*100)}%</span>
@@ -309,7 +309,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
           <STitle>Offene Abstimmungen</STitle>
           {POLLS.filter(p=>!p.closed).map((p,i)=>(
             <div key={i} style={{padding:"8px 0"}}>
-              <div style={{fontWeight:600,fontSize:13}}>{p.title}</div>
+              <div className="cc-list-name">{p.title}</div>
               <Chip text={p.target} semantic="info"/>
             </div>
           ))}
@@ -524,13 +524,13 @@ function DashboardEltern({account,meineTeams,setActive}){
               <div onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.kindTeam=team;NAV_TARGET.openEvId=nextAufgebotSpiel.id;setActive("team");}:undefined}
                 style={{background:"var(--surface)",border:"1.5px solid #818CF8",borderRadius:12,padding:"14px 18px",marginBottom:14,display:"flex",alignItems:"center",gap:12,cursor:setActive?"pointer":"default"}}>
                 <span><TI n="ball-football" size={24}/></span>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:800,fontSize:13,color:"var(--cc-accent)"}}>{vorname} ist im Aufgebot!</div>
+                <Col style={{flex:1}}>
+                  <div className="cc-list-name" style={{color:"var(--cc-accent)"}}>{vorname} ist im Aufgebot!</div>
                   <div className="cc-detail-label" style={{minWidth:"auto",marginTop:2}}>
                     {`vs. ${nextAufgebotSpiel.opponent} · ${nextAufgebotSpiel.date} · ${nextAufgebotSpiel.time} Uhr`}
                   </div>
-                  {nextAufgebotSpiel.treffpunkt&&<div className="cc-detail-label" style={{minWidth:"auto",marginTop:3,display:"flex",alignItems:"center"}}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebotSpiel.treffpunkt}</div>}
-                </div>
+                  {nextAufgebotSpiel.treffpunkt&&<Row gap={4} mt={3}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebotSpiel.treffpunkt}</Row>}
+                </Col>
                 <div style={{background:"#4F46E5",color:"#fff",fontSize:13,fontWeight:700,padding:"3px 9px",borderRadius:20}}>Aufgebot</div>
               </div>
             )}
