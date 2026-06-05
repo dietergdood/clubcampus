@@ -348,7 +348,7 @@ function Av({name="",init,size="md",bg,useTheme=false}){
   /* size: "sm"=24, "md"=32, "lg"=40 — oder direkte Zahl für Rückwärtskompatibilität */
   const px = typeof size==="number" ? size : {sm:24,md:32,lg:40}[size]||32;
   const r = Math.round(px/4);
-  const palette = bg ? {bg,text:"#fff"} : avColor(name);
+  const palette = bg ? {bg, text:bg.includes("cc-hover")||bg.includes("cc-accent-")||bg.includes("rgba(255")?"var(--cc-avatar-text,#7A6000)":"#fff"} : avColor(name);
   const isIcon = init && TI_PATHS[init];
   const l = isIcon ? null : (init||name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()||"?");
   const fs = px<=24?9:px<=32?11:13;

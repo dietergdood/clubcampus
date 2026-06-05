@@ -616,6 +616,7 @@ function Portal({supabaseClient}){
       --nav-a:${navA}!important;
       --nav-accent-text:${navAT}!important;
       --avatar-bg:${avBg}!important;
+      --cc-avatar-text:${darkenHex(acc,0.5)}!important;
       --avatar-text:${avTxt}!important;
       --nav-b:color-mix(in srgb,${nav} 80%,white 20%)!important;
       --nav-hover:${navH}!important;

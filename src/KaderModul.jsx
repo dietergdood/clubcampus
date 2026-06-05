@@ -148,7 +148,7 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
     const funktion = p.role ? normFunktion(p.role) : "Spieler/in";
     return(
       <div onClick={()=>setSelected(p)} className="cc-list-row">
-        <Av name={p.name} size="md" bg="var(--avatar-bg)"/>
+        <Av name={p.name} size="md" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
         <div style={{flex:1,minWidth:0}}>
           <div className="cc-list-name">{p.lastName} {p.firstName}</div>
           <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{funktion}</div>
@@ -204,7 +204,7 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
           <>
             <div className="cc-modal-hdr">
               <Row gap={12}>
-                <Av name={selected.name} size="lg" bg="var(--avatar-bg)"/>
+                <Av name={selected.name} size="lg" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
                 <Col gap={2}>
                   <span style={{fontWeight:600,fontSize:16,color:"var(--text)"}}>
                     {selected.lastName} {selected.firstName}
