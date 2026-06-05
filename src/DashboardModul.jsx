@@ -148,9 +148,9 @@ function DashboardAdministration({setActive,account}){
             <div key={i} style={{padding:"8px 0",borderBottom:i<EVENTS.filter(x=>x.rsvp).length-1?`0.5px solid ${GB}`:"none"}}>
               <div style={{fontWeight:600,fontSize:13}}>{e.title}</div>
               <div style={{display:"flex",gap:8,marginTop:4}}>
-                <Chip text={`✓ ${e.res?.y}`} semantic="success" bg="#ECFDF5"/>
+                <Chip text={`✓ ${e.res?.y}`} semantic="success"/>
                 <Chip text={`✕ ${e.res?.n}`} semantic="danger" bg={RL}/>
-                <Chip text={`? ${e.res?.o}`} semantic="warning" bg="#FFFBEB"/>
+                <Chip text={`? ${e.res?.o}`} semantic="warning"/>
               </div>
             </div>
           ))}
@@ -268,8 +268,8 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
             return(
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<arr.length-1?`0.5px solid ${GB}`:"none"}}>
                 <span style={{fontSize:13}}>{x.opponent?"Spiel vs. "+x.opponent:x.title||x.type} · {x.date}</span>
-                {missing>0&&<Chip text={`${missing} fehlen`} semantic="warning" bg="#FEF3C7"/>}
-                {missing===0&&<Chip text="✓ Vollständig" semantic="success" bg="#ECFDF5"/>}
+                {missing>0&&<Chip text={`${missing} fehlen`} semantic="warning"/>}
+                {missing===0&&<Chip text="✓ Vollständig" semantic="success"/>}
               </div>
             );
           })}
@@ -411,7 +411,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
             </div>
             {nextAufgebot.treffpunkt&&<div style={{fontSize:13,color:"var(--sub)",marginTop:3}}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebot.treffpunkt}</div>}
           </div>
-          <Chip text="Aufgebot" color="#4F46E5" bg="#EEF2FF"/>
+          <Chip text="Aufgebot" color="#4F46E5"/>
         </div>
       )}
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>

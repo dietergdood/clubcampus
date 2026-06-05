@@ -91,7 +91,7 @@ function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
             }}
               onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <Av name={m.name} size={26} bg="var(--surface2)"/>
+              <Av name={m.name} size={26}/>
               <div>
                 <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{m.name}</div>
                 <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div>

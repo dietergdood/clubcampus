@@ -46,7 +46,7 @@ function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
           background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,
           boxShadow:"0 4px 16px rgba(0,0,0,0.12)",overflow:"hidden"}}>
           {suggestions.map(m=>(
-            <Btn variant="ghost"><Av name={m.name} size={26} bg="var(--surface2)"/> <div> <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{m.name}</div> <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div> </div></Btn>
+            <Btn variant="ghost"><Av name={m.name} size={26}/> <div> <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{m.name}</div> <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div> </div></Btn>
           ))}
         </div>
       )}

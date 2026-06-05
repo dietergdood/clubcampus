@@ -58,7 +58,7 @@ function normFunktion(s){
 function GruppenHeader({label, count, colSpan}){
   return(
     <tr>
-      <td colSpan={colSpan} style={{padding:"6px 14px",background:"var(--surface2)",borderTop:"0.5px solid var(--border)"}}>
+      <td colSpan={colSpan} style={{padding:"6px 14px",background:"var(--bg)",borderTop:"0.5px solid var(--border)"}}>
         <Row gap={6}>
           <span className="cc-section-hdr">{label}</span>
           <span style={{fontSize:11,color:"var(--sub)",fontWeight:400,opacity:0.7}}>({count})</span>
@@ -76,8 +76,8 @@ function PosBadge({pos}){
 
 /* ── Funktions-Badge ── */
 function FunktionBadge({role}){
-  if(!role) return <span style={{fontSize:13,color:"var(--sub)"}}>Spieler/in</span>;
-  return <span style={{fontSize:11,fontWeight:700,background:"#7C3AED18",color:"#7C3AED",padding:"2px 8px",borderRadius:8,whiteSpace:"nowrap"}}>{role}</span>;
+  if(!role) return <span style={{fontSize:11,fontWeight:500,background:"var(--surface2)",color:"var(--sub)",padding:"2px 8px",borderRadius:8,whiteSpace:"nowrap",border:"0.5px solid var(--border)"}}>Spieler/in</span>;
+  return <span style={{fontSize:11,fontWeight:500,background:"var(--surface2)",color:"var(--sub)",padding:"2px 8px",borderRadius:8,whiteSpace:"nowrap",border:"0.5px solid var(--border)"}}>{role}</span>;
 }
 
 function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
@@ -187,7 +187,7 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
     <div onClick={()=>setSelected(p)}
       style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",
         borderTop:"0.5px solid var(--border)",cursor:"pointer",background:"var(--surface)"}}>
-      <Av name={p.name} size={32} bg={ACCENT20}/>
+      <Av name={p.name} size={32}/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight:600,fontSize:14,color:"var(--text)",marginBottom:3}}>
           {p.lastName} {p.firstName}
@@ -214,7 +214,7 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
         if(c.key==="name") return(
           <td key={j} style={{padding:"10px 14px"}}>
             <Row gap={10}>
-              <Av name={p.name} size={28} bg={ACCENT20}/>
+              <Av name={p.name} size={28}/>
               <Col gap={2}>
                 <span style={{fontWeight:600,fontSize:13,color:"var(--text)",whiteSpace:"nowrap"}}>
                   {p.lastName} {p.firstName}
@@ -306,7 +306,7 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
               width:"100%",maxWidth:540,maxHeight:"80vh",overflowY:"auto"}}>
             <Between style={{marginBottom:16}}>
               <Row gap={12}>
-                <Av name={selected.name} size={44} bg={ACCENT20}/>
+                <Av name={selected.name} size={44}/>
                 <Col gap={2}>
                   <span style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>
                     {selected.lastName} {selected.firstName}
@@ -420,7 +420,7 @@ function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
           border:"0.5px solid var(--border)",overflow:"hidden",overflowX:"auto"}}>
           <table className="cc-table">
             <thead>
-              <tr style={{background:"var(--surface2)"}}>
+              <tr style={{background:"var(--bg)"}}>
                 {cols.map((c,i)=>{
                   const sortable = ["name","pos","nr"].includes(c.key);
                   return(

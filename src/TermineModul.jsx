@@ -924,7 +924,7 @@ function SpielplanModul({role,team,initialSelected}){
                 <td style={{padding:"9px 13px"}}><Chip text={g.home?"H":"A"} color={g.home?"#16A34A":"#6B7280"}/></td>
                 {!isMobile&&<><td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>{g.venue.split(",")[0]}</td>
                 <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>{g.comp}</td></>}
-                <td style={{padding:"9px 13px"}}>{g.result?<span style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{g.result}{g.htResult&&<span style={{fontWeight:400,fontSize:13,color:"var(--sub)",marginLeft:5}}>({g.htResult})</span>}</span>:<Chip text="Ausstehend" color="#999" bg="#f5f5f5"/>}</td>
+                <td style={{padding:"9px 13px"}}>{g.result?<span style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{g.result}{g.htResult&&<span style={{fontWeight:400,fontSize:13,color:"var(--sub)",marginLeft:5}}>({g.htResult})</span>}</span>:<Chip text="Ausstehend" color="#999"/>}</td>
                 <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>›</td>
               </tr>
             ))}

@@ -2400,9 +2400,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <Section title="Chips & Badges" desc="Status-Anzeigen und Labels">
                   <Row2 label="Chip" code="<Chip>">
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      <Chip text="Aktiv" color={GN} bg="#ECFDF5"/>
-                      <Chip text="Inaktiv" color="#9ca3af" bg="var(--surface2)"/>
-                      <Chip text="Admin" color={BL} bg="#EFF6FF"/>
+                      <Chip text="Aktiv" color={GN}/>
+                      <Chip text="Inaktiv" color="#9ca3af"/>
+                      <Chip text="Admin" color={BL}/>
                       <Chip text="Fehler" color={R} bg={RL}/>
                     </div>
                   </Row2>

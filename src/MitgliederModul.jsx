@@ -343,12 +343,12 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       <ModalOrSheet open={true} onClose={onClose} maxWidth={540}>
         <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <Row gap={12}>
-            <Av name={m.name} size={44} bg={R}/>
+            <Av name={m.name} size={44}/>
             <div>
               <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{m.name}</div>
               <div style={{display:"flex",gap:8,marginTop:4,flexWrap:"wrap"}}>
                 <Chip text={m.role} color={R}/>
-                <Chip text={m.type} color={BL} bg="#EFF6FF"/>
+                <Chip text={m.type} color={BL}/>
                 <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
               </div>
             </div>
@@ -466,13 +466,13 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                     style={{borderTop:"0.5px solid var(--border)",cursor:"pointer"}}>
                     <td style={{padding:"9px 13px"}}>
                       <Row>
-                        <Av name={m.name} size={28} bg={R}/>
+                        <Av name={m.name} size={28}/>
                         <span style={{fontWeight:600,color:"var(--text)"}}>{m.name}</span>
                       </Row>
                     </td>
                     <td style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
                     <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
-                    <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL} bg="#EFF6FF"/></td>
+                    <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
                     <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
                     <td style={{padding:"9px 13px"}}>
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
@@ -602,12 +602,12 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       <ModalOrSheet open={true} onClose={onClose} maxWidth={540}>
         <div style={{padding:"20px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <Av name={m.name} size={44} bg={R}/>
+            <Av name={m.name} size={44}/>
             <div>
               <div style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>{m.name}</div>
               <div style={{display:"flex",gap:8,marginTop:4,flexWrap:"wrap"}}>
                 <Chip text={m.role} color={R}/>
-                <Chip text={m.type} color={BL} bg="#EFF6FF"/>
+                <Chip text={m.type} color={BL}/>
                 <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
               </div>
             </div>
@@ -749,13 +749,13 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                     <td style={{padding:"9px 13px"}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <Av name={m.name} size={28} bg={R}/>
+                        <Av name={m.name} size={28}/>
                         <span style={{fontWeight:600,color:"var(--text)"}}>{m.name}</span>
                       </div>
                     </td>
                     <td style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
                     <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
-                    <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL} bg="#EFF6FF"/></td>
+                    <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
                     <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
                     <td style={{padding:"9px 13px"}}>
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>

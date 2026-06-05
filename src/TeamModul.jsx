@@ -383,7 +383,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                       style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"var(--surface2)",borderRadius:8,cursor:setTab?"pointer":"default",transition:"background 0.1s"}}
                       onMouseEnter={e=>setTab&&(e.currentTarget.style.background=GB)}
                       onMouseLeave={e=>setTab&&(e.currentTarget.style.background=GR)}>
-                      <Av name={`${t.firstName} ${t.lastName}`} size={26} bg={R}/>
+                      <Av name={`${t.firstName} ${t.lastName}`} size={26}/>
                       <div>
                         <div style={{fontWeight:600,fontSize:13}}>{t.firstName} {t.lastName}</div>
                         <div style={{fontSize:13,color:"var(--sub)"}}>{t.role}</div>
@@ -597,7 +597,7 @@ function StatsTab({team="Cc-Junioren"}){
           {stats.map((p,i)=>(
             <tr key={i} style={{borderTop:"0.5px solid var(--border)"}}>
               <td style={{padding:"9px 13px"}}>
-                <Row><Av name={p.name} size={26} bg={R}/><span style={{fontWeight:600}}>{p.name}</span></Row>
+                <Row><Av name={p.name} size={26}/><span style={{fontWeight:600}}>{p.name}</span></Row>
               </td>
               <td style={{padding:"9px 13px",textAlign:"center"}}>{p.sp}</td>
               <td style={{padding:"9px 13px",textAlign:"center",fontWeight:p.tore>=5?700:400,color:p.tore>=5?R:BK}}>{p.tore}</td>

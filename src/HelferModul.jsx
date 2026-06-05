@@ -348,8 +348,8 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
         </div>
         <div style={{flexShrink:0}}>
           {anfragePending
-            ?<Chip text="⏳ Freigabe ausstehend" color={AM} bg="#FFFBEB"/>
-            :<Chip text="Geplant ⏳" color={AM} bg="#FFFBEB"/>
+            ?<Chip text="⏳ Freigabe ausstehend" color={AM}/>
+            :<Chip text="Geplant ⏳" color={AM}/>
           }
         </div>
       </div>
@@ -798,7 +798,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 </div>
                               ):(
                                 <>
-                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280" bg="#F3F4F6"/>)}
+                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280"/>)}
                                   {canEdit&&<Btn onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}}><TI n="edit"/></Btn>}
                                 </>
                               )}
@@ -1141,7 +1141,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           <span style={{fontWeight:600}}>{m.name}</span>
                         </Row>
                       </td>
-                      <td style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280" bg="#F3F4F6"/></td>
+                      <td style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280"/></td>
                       <td style={{padding:"9px 12px",textAlign:"center",fontWeight:700}}>{m.soll}</td>
                       <td style={{padding:"9px 12px",textAlign:"center",color:GN,fontWeight:600}}>{m.geleistet}</td>
                       <td style={{padding:"9px 12px",textAlign:"center",color:AM,fontWeight:600}}>{m.geplant}</td>
@@ -1652,7 +1652,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 </div>
                               ):(
                                 <>
-                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280" bg="#F3F4F6"/>)}
+                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280"/>)}
                                   {canEdit&&<button onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}} style={{padding:"5px 12px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>}
                                 </>
                               )}
@@ -1996,7 +1996,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           <span style={{fontWeight:600}}>{m.name}</span>
                         </div>
                       </td>
-                      <td style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280" bg="#F3F4F6"/></td>
+                      <td style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280"/></td>
                       <td style={{padding:"9px 12px",textAlign:"center",fontWeight:700}}>{m.soll}</td>
                       <td style={{padding:"9px 12px",textAlign:"center",color:GN,fontWeight:600}}>{m.geleistet}</td>
                       <td style={{padding:"9px 12px",textAlign:"center",color:AM,fontWeight:600}}>{m.geplant}</td>
