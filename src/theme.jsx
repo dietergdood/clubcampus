@@ -308,13 +308,10 @@ function Stat({label,value,sub,color,semantic,icon}){
      <Stat label="Custom" value={8} color="#7C3AED"/>  */
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div className="cc-card" style={{borderRadius:12,padding:"16px 18px",flex:1,minWidth:0}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-        <div style={{fontSize:11,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>{label}</div>
-        {icon&&<div style={{width:28,height:28,borderRadius:6,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center"}}><TI n={icon} size={14} style={{color:c.text}}/></div>}
-      </div>
-      <div style={{fontSize:22,fontWeight:600,color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
-      {sub&&<div style={{fontSize:12,color:"var(--sub)",marginTop:3}}>{sub}</div>}
+    <div className="cc-card" style={{borderRadius:12,padding:"20px 22px",flex:1,minWidth:0}}>
+      <div style={{fontSize:11,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{label}</div>
+      <div style={{fontSize:28,fontWeight:600,color:c.text,lineHeight:1,marginBottom:sub?5:0}}>{value}</div>
+      {sub&&<div style={{fontSize:12,color:"var(--sub)",marginTop:2}}>{sub}</div>}
     </div>
   );
 }
