@@ -401,6 +401,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       key:"erscheinungsbild", label:"Erscheinungsbild", icon:"palette", color:"#F59E0B", bg:"#FFFBEB",
       tabs:[
         {key:"aussehen", label:"Aussehen", icon:"palette"},
+        {key:"tokens",   label:"Design-Tokens", icon:"adjustments-horizontal"},
       ]
     },
     {
@@ -1873,6 +1874,333 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           </Card>
         </div>
       )}
+
+
+      {/* ── TAB: DESIGN-TOKENS ── */}
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="tokens"&&(()=>{
+
+        /* ── Token State ── */
+        const DEFAULTS={
+          /* Border Radius */
+          rBtn:8, rInput:8, rCard:12, rBadge:20, rModal:14, rSeg:8, rChip:20, rIconBtn:8,
+          /* Heights */
+          hBtn:32, hInput:36, hIconBtn:32,
+          /* Padding */
+          padBtnH:12, padBtnV:8, padInputH:12, padInputV:9, padCard:16,
+          /* Gap */
+          gapSm:8, gapMd:12, gapLg:16,
+          /* Font sizes */
+          fsXs:10, fsSm:11, fsBase:13, fsMd:14, fsLg:16, fsXl:21,
+          /* Font weights */
+          fwLabel:600, fwTitle:700, fwHeader:800,
+          /* Transitions */
+          tFast:100, tBase:150, tSlow:200,
+          /* Shadows */
+          shCard:1, shDrop:2, shModal:3,
+          /* Borders */
+          borderWidth:'0.5px',
+          /* cc-specific */
+          segPad:3, segItemPad:5, chipPad:4, chipPadH:12,
+          toggleW:46, toggleH:26,
+        };
+
+        const SHADOW_MAP={
+          0:'none',
+          1:'0 1px 4px rgba(0,0,0,0.06)',
+          2:'0 2px 12px rgba(0,0,0,0.08)',
+          3:'0 4px 20px rgba(0,0,0,0.12)',
+          4:'0 8px 40px rgba(0,0,0,0.18)'
+        };
+
+        const [tok, setTok] = useState(DEFAULTS);
+        const [showExport, setShowExport] = useState(false);
+
+        function set(key, val){ setTok(t=>({...t,[key]:val})); }
+
+        function applyLive(){
+          let s=document.getElementById('cc-token-overrides');
+          if(!s){s=document.createElement('style');s.id='cc-token-overrides';document.head.appendChild(s);}
+          s.textContent=generateCSS(tok);
+        }
+
+        function resetTokens(){ setTok(DEFAULTS); }
+
+        function generateCSS(t){
+          return `
+.cc-icon-btn{width:${t.hIconBtn}px;height:${t.hIconBtn}px;border-radius:${t.rIconBtn}px;border:${t.borderWidth} solid var(--border);}
+.cc-btn-group{border-radius:${t.rBtn}px;border:${t.borderWidth} solid var(--border);}
+.cc-btn-group-item{height:${t.hBtn}px;}
+.cc-input{border-radius:${t.rInput}px;padding:${t.padInputV}px ${t.padInputH}px;font-size:${t.fsBase}px;border:${t.borderWidth} solid var(--border);}
+.cc-seg{border-radius:${t.rSeg}px;padding:${t.segPad}px;}
+.cc-seg-item{padding:${t.segItemPad}px 8px;border-radius:${t.rSeg-2}px;font-size:${t.fsSm}px;transition:all ${t.tBase}ms;}
+.cc-chip-toggle{border-radius:${t.rChip}px;padding:${t.chipPad}px ${t.chipPadH}px;font-size:${t.fsSm}px;border:1.5px solid var(--border);transition:all ${t.tBase}ms;}
+.cc-card{box-shadow:${SHADOW_MAP[t.shCard]};}
+.cc-toggle{width:${t.toggleW}px;height:${t.toggleH}px;border-radius:${Math.round(t.toggleH/2)}px;transition:background ${t.tSlow}ms;}
+.cc-toggle-knob{width:${t.toggleH-6}px;height:${t.toggleH-6}px;transition:left ${t.tSlow}ms cubic-bezier(0.34,1.2,0.64,1);}
+.cc-toggle-knob-on{left:${t.toggleW-t.toggleH+3}px;}
+          `.trim();
+        }
+
+        function exportCode(t){
+          return `/* Design Tokens — generiert vom ClubCampus Konfigurator */
+export const RADIUS = {
+  btn:     ${t.rBtn},
+  input:   ${t.rInput},
+  card:    ${t.rCard},
+  badge:   ${t.rBadge},
+  modal:   ${t.rModal},
+  seg:     ${t.rSeg},
+  chip:    ${t.rChip},
+  iconBtn: ${t.rIconBtn},
+};
+export const SIZE = {
+  hBtn:    ${t.hBtn},
+  hInput:  ${t.hInput},
+  hIconBtn:${t.hIconBtn},
+};
+export const PADDING = {
+  btnH:    ${t.padBtnH},
+  btnV:    ${t.padBtnV},
+  inputH:  ${t.padInputH},
+  inputV:  ${t.padInputV},
+  card:    ${t.padCard},
+};
+export const GAP = {
+  sm: ${t.gapSm},
+  md: ${t.gapMd},
+  lg: ${t.gapLg},
+};
+export const FONT_SIZE = {
+  xs:   ${t.fsXs},
+  sm:   ${t.fsSm},
+  base: ${t.fsBase},
+  md:   ${t.fsMd},
+  lg:   ${t.fsLg},
+  xl:   ${t.fsXl},
+};
+export const FONT_WEIGHT = {
+  label:  ${t.fwLabel},
+  title:  ${t.fwTitle},
+  header: ${t.fwHeader},
+};
+export const TRANSITION = {
+  fast: ${t.tFast},
+  base: ${t.tBase},
+  slow: ${t.tSlow},
+};
+export const SHADOW = {
+  card:  '${SHADOW_MAP[t.shCard]}',
+  drop:  '${SHADOW_MAP[t.shDrop]}',
+  modal: '${SHADOW_MAP[t.shModal]}',
+};
+export const BORDER = '${t.borderWidth}';`;
+        }
+
+        /* ── Slider helper ── */
+        const Slider=({label, k, min, max, step=1, unit='px', hint})=>(
+          <div style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:'0.5px solid var(--border)'}}>
+            <div style={{width:120,flexShrink:0}}>
+              <div style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>{label}</div>
+              {hint&&<div style={{fontSize:10,color:'var(--sub)'}}>{hint}</div>}
+            </div>
+            <input type="range" min={min} max={max} step={step} value={tok[k]}
+              onChange={e=>set(k, step===1?parseInt(e.target.value):parseFloat(e.target.value))}
+              style={{flex:1,accentColor:'var(--cc-accent, #FFBF00)',height:4}}/>
+            <div style={{fontFamily:'monospace',fontSize:12,color:'var(--text)',minWidth:40,textAlign:'right',background:'var(--surface2)',padding:'2px 6px',borderRadius:4}}>
+              {tok[k]}{unit}
+            </div>
+          </div>
+        );
+
+        const Select2=({label, k, options, hint})=>(
+          <div style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:'0.5px solid var(--border)'}}>
+            <div style={{width:120,flexShrink:0}}>
+              <div style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>{label}</div>
+              {hint&&<div style={{fontSize:10,color:'var(--sub)'}}>{hint}</div>}
+            </div>
+            <select value={tok[k]} onChange={e=>set(k,e.target.value)}
+              style={{flex:1,padding:'5px 8px',borderRadius:6,border:'0.5px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:12,fontFamily:FONT}}>
+              {options.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </div>
+        );
+
+        const SectionHdr=({icon, title, color='var(--sub)'})=>(
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 0 4px',borderBottom:'2px solid var(--border)',marginBottom:4}}>
+            <TI n={icon} size={15} style={{color}}/>
+            <span style={{fontSize:13,fontWeight:800,color:'var(--text)',letterSpacing:-0.2}}>{title}</span>
+          </div>
+        );
+
+        return(
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 380px',gap:20,alignItems:'start'}}>
+
+            {/* ── LEFT: Controls ── */}
+            <div style={{display:'flex',flexDirection:'column',gap:20}}>
+
+              {/* Border Radius */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="border-radius" title="Border Radius" color="#3B82F6"/>
+                <Slider label="Button" k="rBtn" min={0} max={20} hint=".cc-icon-btn, Btn"/>
+                <Slider label="Input / Select" k="rInput" min={0} max={20} hint=".cc-input"/>
+                <Slider label="Card" k="rCard" min={0} max={24} step={2} hint=".cc-card, Card"/>
+                <Slider label="Badge / Chip" k="rBadge" min={4} max={20} hint=".cc-chip-toggle"/>
+                <Slider label="Modal" k="rModal" min={8} max={24} step={2} hint="ModalOrSheet"/>
+                <Slider label="Segment-Tab" k="rSeg" min={4} max={16} hint=".cc-seg"/>
+                <Slider label="Icon-Button" k="rIconBtn" min={4} max={16} hint=".cc-icon-btn"/>
+              </Card>
+
+              {/* Grössen */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="resize" title="Grössen & Abstände" color="#16A34A"/>
+                <Slider label="Button Höhe" k="hBtn" min={26} max={44} hint=".cc-btn-group-item"/>
+                <Slider label="Input Höhe" k="hInput" min={30} max={48} hint=".cc-input"/>
+                <Slider label="Icon-Btn Grösse" k="hIconBtn" min={24} max={44} hint=".cc-icon-btn"/>
+                <Slider label="Padding Btn H" k="padBtnH" min={8} max={24} hint="Btn horizontal"/>
+                <Slider label="Padding Btn V" k="padBtnV" min={4} max={16} hint="Btn vertikal"/>
+                <Slider label="Padding Input H" k="padInputH" min={8} max={20} hint=".cc-input"/>
+                <Slider label="Padding Input V" k="padInputV" min={6} max={16} hint=".cc-input"/>
+                <Slider label="Padding Card" k="padCard" min={10} max={28} hint=".cc-card, Card"/>
+                <Slider label="Gap klein" k="gapSm" min={4} max={16} step={2} hint="Flex-Gap klein"/>
+                <Slider label="Gap mittel" k="gapMd" min={8} max={24} step={2} hint="Flex-Gap mittel"/>
+                <Slider label="Gap gross" k="gapLg" min={12} max={32} step={4} hint="Section-Gap"/>
+              </Card>
+
+              {/* Schrift */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="typography" title="Typografie" color="#7C3AED"/>
+                <Slider label="XS (Micro)" k="fsXs" min={9} max={12} hint="Micro-Labels"/>
+                <Slider label="SM (Badge)" k="fsSm" min={10} max={13} hint=".cc-chip-toggle, Badges"/>
+                <Slider label="Base (Body)" k="fsBase" min={12} max={15} hint="Haupttext, .cc-input"/>
+                <Slider label="MD (Subtitel)" k="fsMd" min={13} max={16} hint="Subtitel"/>
+                <Slider label="LG (Section)" k="fsLg" min={14} max={20} hint="Section-Titel"/>
+                <Slider label="XL (Header)" k="fsXl" min={16} max={28} hint="Page-Header"/>
+                <Slider label="Weight Label" k="fwLabel" min={400} max={700} step={100} unit="" hint="Labels, Werte"/>
+                <Slider label="Weight Titel" k="fwTitle" min={600} max={800} step={100} unit="" hint="Überschriften"/>
+                <Slider label="Weight Header" k="fwHeader" min={700} max={900} step={100} unit="" hint="Page-Header"/>
+              </Card>
+
+              {/* Übergänge & Schatten */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="activity" title="Übergänge & Schatten" color="#F59E0B"/>
+                <Slider label="Transition schnell" k="tFast" min={50} max={200} step={25} unit="ms" hint="Hover BG"/>
+                <Slider label="Transition normal" k="tBase" min={100} max={300} step={25} unit="ms" hint="Standard"/>
+                <Slider label="Transition langsam" k="tSlow" min={150} max={400} step={25} unit="ms" hint="Animationen"/>
+                <Slider label="Schatten Card" k="shCard" min={0} max={4} hint={SHADOW_MAP[tok.shCard]}/>
+                <Slider label="Schatten Dropdown" k="shDrop" min={0} max={4} hint={SHADOW_MAP[tok.shDrop]}/>
+                <Slider label="Schatten Modal" k="shModal" min={0} max={4} hint={SHADOW_MAP[tok.shModal]}/>
+                <Select2 label="Border-Stärke" k="borderWidth"
+                  options={[{v:'0px',l:'Kein Border'},{v:'0.5px',l:'0.5px (Standard)'},{v:'1px',l:'1px'},{v:'1.5px',l:'1.5px'}]}
+                  hint=".cc-input, .cc-icon-btn etc."/>
+              </Card>
+
+              {/* Toggle */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="toggle-left" title="Toggle" color="#EC4899"/>
+                <Slider label="Breite" k="toggleW" min={36} max={60} hint=".cc-toggle"/>
+                <Slider label="Höhe" k="toggleH" min={20} max={34} hint=".cc-toggle"/>
+              </Card>
+
+              {/* Segment */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="layout-navbar" title="Segment & Chips" color="#0891B2"/>
+                <Slider label="Seg. Track Padding" k="segPad" min={2} max={8} hint=".cc-seg"/>
+                <Slider label="Seg. Item Padding V" k="segItemPad" min={3} max={10} hint=".cc-seg-item"/>
+                <Slider label="Chip Padding V" k="chipPad" min={2} max={8} hint=".cc-chip-toggle"/>
+                <Slider label="Chip Padding H" k="chipPadH" min={8} max={20} hint=".cc-chip-toggle"/>
+              </Card>
+
+            </div>
+
+            {/* ── RIGHT: Live Preview ── */}
+            <div style={{position:'sticky',top:20,display:'flex',flexDirection:'column',gap:12}}>
+
+              {/* Action Bar */}
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <Btn variant="primary" onClick={applyLive}><TI n="eye" size={13}/>Live-Vorschau</Btn>
+                <Btn onClick={()=>setShowExport(e=>!e)}><TI n="code" size={13}/>{showExport?'Code ausblenden':'Code exportieren'}</Btn>
+                <Btn onClick={resetTokens}><TI n="refresh" size={13}/>Reset</Btn>
+                <span style={{fontSize:11,color:'var(--sub)'}}>Werte in constants.js eintragen</span>
+              </div>
+
+              {/* Preview Cards */}
+              <Card style={{padding:tok.padCard,borderRadius:tok.rCard,boxShadow:SHADOW_MAP[tok.shCard]}}>
+                <div style={{fontSize:tok.fsLg,fontWeight:tok.fwTitle,marginBottom:4}}>Teamverwaltung</div>
+                <div style={{fontSize:tok.fsSm,color:'var(--sub)',marginBottom:12}}>FC Herrliberg · Saison 2025/26</div>
+                <div style={{display:'flex',gap:tok.gapSm,flexWrap:'wrap',marginBottom:12}}>
+                  <span style={{fontSize:tok.fsSm,padding:`${tok.chipPad}px ${tok.chipPadH}px`,borderRadius:tok.rBadge,background:'var(--text)',color:'var(--bg)',fontWeight:tok.fwLabel}}>Aktiv</span>
+                  <span style={{fontSize:tok.fsSm,padding:`${tok.chipPad}px ${tok.chipPadH}px`,borderRadius:tok.rBadge,border:`${tok.borderWidth} solid var(--border)`,color:'var(--sub)'}}>Archiv</span>
+                  <span style={{fontSize:tok.fsSm,padding:`${tok.chipPad}px ${tok.chipPadH}px`,borderRadius:tok.rBadge,background:'#DCFCE7',color:'#166534',fontWeight:tok.fwLabel}}>Aktiv</span>
+                </div>
+                <div style={{display:'flex',gap:tok.gapSm}}>
+                  <button style={{height:tok.hBtn,padding:`0 ${tok.padBtnH}px`,borderRadius:tok.rBtn,border:'none',background:'var(--text)',color:'var(--bg)',fontSize:tok.fsBase,fontWeight:tok.fwLabel,cursor:'pointer',fontFamily:FONT}}>Speichern</button>
+                  <button style={{height:tok.hBtn,padding:`0 ${tok.padBtnH}px`,borderRadius:tok.rBtn,border:`${tok.borderWidth} solid var(--border)`,background:'transparent',color:'var(--text)',fontSize:tok.fsBase,cursor:'pointer',fontFamily:FONT}}>Abbrechen</button>
+                  <button style={{width:tok.hIconBtn,height:tok.hIconBtn,borderRadius:tok.rIconBtn,border:`${tok.borderWidth} solid var(--border)`,background:'var(--surface2)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                    <TI n="dots-vertical" size={14} style={{color:'var(--sub)'}}/>
+                  </button>
+                </div>
+              </Card>
+
+              <Card style={{padding:tok.padCard,borderRadius:tok.rCard,boxShadow:SHADOW_MAP[tok.shCard]}}>
+                <div style={{fontSize:tok.fsBase,fontWeight:tok.fwLabel,marginBottom:tok.gapSm}}>Formular</div>
+                <div style={{marginBottom:tok.gapSm}}>
+                  <div style={{fontSize:tok.fsSm,fontWeight:tok.fwLabel,color:'var(--sub)',marginBottom:4,textTransform:'uppercase',letterSpacing:0.5}}>Teamname</div>
+                  <div style={{padding:`${tok.padInputV}px ${tok.padInputH}px`,borderRadius:tok.rInput,border:`${tok.borderWidth} solid var(--border)`,background:'var(--surface2)',fontSize:tok.fsBase,color:'var(--sub)'}}>z.B. 1. Mannschaft</div>
+                </div>
+                <div style={{background:'var(--surface2)',borderRadius:tok.rSeg,padding:tok.segPad,display:'flex',gap:2,marginBottom:tok.gapSm}}>
+                  {['Alle','Ungelesen','Gesendet'].map((t,i)=>(
+                    <div key={i} style={{flex:1,padding:`${tok.segItemPad}px 8px`,borderRadius:tok.rSeg-2,background:i===0?'var(--surface)':'transparent',fontSize:tok.fsSm,fontWeight:i===0?tok.fwTitle:400,color:i===0?'var(--text)':'var(--sub)',textAlign:'center',cursor:'pointer'}}>{t}</div>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:tok.gapSm,flexWrap:'wrap'}}>
+                  {['Alle','Broadcast','Diskussion'].map((t,i)=>(
+                    <div key={i} style={{padding:`${tok.chipPad}px ${tok.chipPadH}px`,borderRadius:tok.rChip,border:`${i===0?'2px':'1.5px'} solid ${i===0?'var(--text)':'var(--border)'}`,background:i===0?'var(--text)':'transparent',color:i===0?'var(--bg)':'var(--sub)',fontSize:tok.fsSm,fontWeight:tok.fwLabel,cursor:'pointer'}}>{t}</div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card style={{padding:0,borderRadius:tok.rCard,overflow:'hidden',boxShadow:SHADOW_MAP[tok.shCard]}}>
+                {[
+                  {init:'LM',bg:'#E6F1FB',tc:'#0C447C',name:'Luca Meier',sub:'Stürmer'},
+                  {init:'NK',bg:'#EEEDFE',tc:'#3C3489',name:'Noah Keller',sub:'Mittelfeld'},
+                  {init:'SB',bg:'#FAEEDA',tc:'#633806',name:'Simon Baur',sub:'Torwart'},
+                ].map((p,i,a)=>(
+                  <div key={i} style={{padding:`${tok.padInputV}px ${tok.padCard}px`,display:'flex',alignItems:'center',gap:tok.gapSm,borderBottom:i<a.length-1?`${tok.borderWidth} solid var(--border)`:'none'}}>
+                    <div style={{width:tok.hIconBtn,height:tok.hIconBtn,borderRadius:tok.rIconBtn,background:p.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:tok.fsXs+1,fontWeight:tok.fwTitle,color:p.tc,flexShrink:0}}>{p.init}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:tok.fsBase,fontWeight:tok.fwLabel}}>{p.name}</div>
+                      <div style={{fontSize:tok.fsSm,color:'var(--sub)'}}>{p.sub}</div>
+                    </div>
+                    <div style={{fontSize:tok.fsXs,padding:`2px 8px`,borderRadius:tok.rBadge,background:'#DCFCE7',color:'#166534',fontWeight:tok.fwLabel}}>Aktiv</div>
+                  </div>
+                ))}
+              </Card>
+
+              {/* Toggle Preview */}
+              <Card style={{padding:tok.padCard,borderRadius:tok.rCard}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div>
+                    <div style={{fontSize:tok.fsBase,fontWeight:tok.fwLabel}}>Dark Mode</div>
+                    <div style={{fontSize:tok.fsSm,color:'var(--sub)'}}>Farbschema des Portals</div>
+                  </div>
+                  <div style={{width:tok.toggleW,height:tok.toggleH,borderRadius:Math.round(tok.toggleH/2),background:'var(--border)',position:'relative',cursor:'pointer'}}>
+                    <div style={{position:'absolute',top:3,left:3,width:tok.toggleH-6,height:tok.toggleH-6,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}/>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Export Code */}
+              {showExport&&(
+                <div style={{background:'#0f0f11',borderRadius:tok.rCard,padding:14,overflowX:'auto'}}>
+                  <div style={{fontSize:10,color:'#86efac',fontFamily:'monospace',marginBottom:6}}>// constants.js</div>
+                  <pre style={{fontSize:10,color:'#e2e8f0',fontFamily:'monospace',whiteSpace:'pre-wrap',lineHeight:1.6,margin:0}}>{exportCode(tok)}</pre>
+                </div>
+              )}
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── TAB: DESIGN-SYSTEM ── */}
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="designsystem"&&(
