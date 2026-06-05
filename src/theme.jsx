@@ -173,7 +173,7 @@ const SEMANTIC = {
   warning: { text:"#C2410C", bg:"#FEF3C7" },
   info:    { text:"#1D4ED8", bg:"#DBEAFE" },
   primary: { text:"var(--btn-primary-text,#000)", bg:"var(--btn-primary,#FFBF00)" },
-  neutral: { text:"var(--sub)", bg:"var(--surface2)" },
+  neutral: { text:"var(--text)", bg:"var(--surface2)" },
 };
 export function resolveColor(sem, fallbackColor){
   if(sem && SEMANTIC[sem]) return SEMANTIC[sem];
@@ -331,7 +331,7 @@ function Stat({label,value,sub,color,semantic,icon}){
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
     <div className="cc-card" style={{borderRadius:12,padding:"20px 22px",flex:1,minWidth:0}}>
-      <div style={{fontSize:11,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>{label}</div>
+      <div style={{fontSize:12,color:"#555",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:8}}>{label}</div>
       <div className="cc-stat-value" style={{color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
       {sub&&<div style={{fontSize:12,color:"var(--sub)",lineHeight:1.4,marginTop:2}}>{sub}</div>}
     </div>
