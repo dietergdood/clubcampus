@@ -290,10 +290,12 @@ function LoginScreen({onLogin, sb, appTheme}){
     setLoading(true); setError("");
     try{
       // E-Mail prüfen + Name aus DB holen
-      const [{data:m},{data:ek}] = await Promise.all([
+      console.log("[FCH] Registrierung prüfe E-Mail:", email, "sb:", !!sb);
+      const [{data:m, error:mErr},{data:ek, error:ekErr}] = await Promise.all([
         sb.from("mitglieder").select("id,vorname,nachname").eq("email",email).eq("aktiv",true).limit(1),
-        sb.from("elternkontakte").select("id,vorname,nachname").eq("email",email).limit(1),
+        sb.from("elternkontakte").select("id,name").eq("email",email).limit(1),
       ]);
+      console.log("[FCH] mitglieder:", m, mErr, "elternkontakte:", ek, ekErr);
       const istBekannt = (m&&m.length>0) || (ek&&ek.length>0);
       if(!istBekannt){
         setError("Diese E-Mail ist nicht im System hinterlegt. Bitte wende dich an deinen Verein.");
@@ -302,7 +304,7 @@ function LoginScreen({onLogin, sb, appTheme}){
       }
       // Name aus DB — Mitglied zuerst, dann Elternteil
       const dbName = m?.[0] ? `${m[0].vorname} ${m[0].nachname}`.trim()
-        : ek?.[0] ? `${ek[0].vorname} ${ek[0].nachname}`.trim()
+        : ek?.[0] ? ek[0].name||email.split("@")[0]
         : email.split("@")[0];
 
       const {data,error:err}=await sb.auth.signUp({
