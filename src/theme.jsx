@@ -16,7 +16,7 @@ const PWA_CSS=`
 :root{
   --bg:#F5F5F3;
   --surface:#FFFFFF;
-  --surface2:#F5F5F5;
+  --surface2:#F0F0F0;
   --border:#E0DED8;
   --text:#1A1A1A;
   --sub:#888780;
