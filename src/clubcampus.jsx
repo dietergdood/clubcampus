@@ -312,6 +312,7 @@ function LoginScreen({onLogin, sb, appTheme}){
         password:pw,
         options:{ data:{ name:dbName } }
       });
+      console.log("[FCH] signUp result:", data, err);
       if(err) throw err;
       if(data.session){
         onLogin(data.session);
