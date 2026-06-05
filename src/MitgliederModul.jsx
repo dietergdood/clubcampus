@@ -816,12 +816,19 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
   const [groupBy,setGroupBy]=useState("none");
   const [filterVals,setFilterVals]=useState([]);
   const [selectedMember,setSelectedMember]=useState(null);
+  const [viewMode,setViewMode]=useState("mitglieder");
+  const [filters,setFilters]=useState({rolle:"",team:"",mitgliedtyp:"",ort:"",datenstatus:""});
+  const [showFilters,setShowFilters]=useState(false);
   const canExport=role==="administrator"||role==="administration";
   const canEdit=role==="administrator"||role==="administration";
   const [showNewForm,setShowNewForm]=useState(false);
   const [newForm,setNewForm]=useState({});
   const [newSaving,setNewSaving]=useState(false);
   const [newMsg,setNewMsg]=useState(null);
+
+  const activeFilterCount=Object.values(filters).filter(Boolean).length;
+  function setFilter(key,val){ setFilters(f=>({...f,[key]:val})); }
+  function resetFilters(){ setFilters({rolle:"",team:"",mitgliedtyp:"",ort:"",datenstatus:""}); }
 
   async function handleNewMember(){
     if(!sb||!newForm.vorname||!newForm.nachname) return;
