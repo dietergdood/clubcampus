@@ -104,7 +104,7 @@ const PWA_CSS=`
 
 /* ── Tabellen ── */
 .cc-table{width:100%;border-collapse:collapse;font-size:13px}
-.cc-th{padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--sub);border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+.cc-th{padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--sub);border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
 .cc-th-center{text-align:center}
 .cc-td{padding:9px 12px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle}
 .cc-tr:hover .cc-td{background:var(--surface2);cursor:pointer}
@@ -122,7 +122,7 @@ const PWA_CSS=`
 .cc-error-msg{font-size:11px;color:#C8102E;display:flex;align-items:center;gap:4px;margin-top:3px}
 
 /* ── Section Header ── */
-.cc-section-hdr{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--sub);padding-bottom:6px;border-bottom:0.5px solid var(--border);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.cc-section-hdr{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--sub);padding:6px 12px;border-bottom:0.5px solid var(--border);border-top:0.5px solid var(--border);margin-bottom:0;display:flex;align-items:center;gap:6px;background:var(--bg)}
 
 /* ── Modal Layout ── */
 .cc-modal-hdr{padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
