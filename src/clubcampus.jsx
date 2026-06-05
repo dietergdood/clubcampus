@@ -550,16 +550,32 @@ function Portal({supabaseClient}){
     try {
       const {data, error} = await sb.from("benutzer").select("*").eq("id",uid).single();
       if(data){
-        setDbUser(data);
-        // TODO: benutzer.mitglied_id ist uuid aber mitglieder.id ist bigint
-        // Verknüpfung funktioniert erst wenn Schema vereinheitlicht wird
+        // Elternkontakte laden — verknüpft via benutzer_id
+        let kinder = [];
+        try{
+          const {data:ekData} = await sb.from("elternkontakte").select("*, mitglieder(id,vorname,nachname,teams,geburtsdatum,position,spielerpass)").eq("benutzer_id",uid);
+          if(ekData&&ekData.length>0){
+            kinder = ekData.map(ek=>({
+              id:         ek.mitglied_id,
+              name:       ek.mitglieder ? `${ek.mitglieder.vorname} ${ek.mitglieder.nachname}` : ek.name,
+              team:       (ek.mitglieder?.teams||[])[0]||"",
+              teams:      ek.mitglieder?.teams||[],
+              rosterId:   ek.mitglied_id,
+              geburtsdatum: ek.mitglieder?.geburtsdatum||"",
+              position:   ek.mitglieder?.position||"",
+              spielerpass:ek.mitglieder?.spielerpass||"",
+              beziehung:  ek.beziehung||"",
+            }));
+          }
+        }catch(e){ console.warn("[FCH] elternkontakte laden:", e.message); }
+        setDbUser({...data, kinder});
       } else {
         console.warn("[FCH] benutzer nicht gefunden:", error?.message);
-        setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
+        setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer", kinder:[]});
       }
     } catch(e) {
       console.warn("[FCH] loadDbUser error:", e.message);
-      setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
+      setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer", kinder:[]});
     }
   }
 
@@ -719,7 +735,7 @@ function Portal({supabaseClient}){
     name: dbUser.name||dbUser.email||"Benutzer",
     rollen: [dbUser.role||"spieler"],
     primaryRole: dbUser.role||"spieler",
-    kinder: [],
+    kinder: dbUser.kinder||[],
     teams: dbUser.teams||[],
     email: dbUser.email||"",
   } : null;
@@ -789,7 +805,7 @@ function Portal({supabaseClient}){
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId} dbMitglieder={dbMitglieder}/>;
       case "team":              return role==="administrator"||role==="administration"?<TeamsVerwaltungModul sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef} dbMitglieder={dbMitglieder} TeamViewComponent={TeamView} KaderModulComponent={KaderModul} TrainingsplanModulComponent={TrainingsplanModul} TermineModulComponent={TermineModul} SpielplanModulComponent={SpielplanModul} TableTabComponent={TableTab} HelferModulComponent={HelferModul}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder} KaderModul={KaderModul} TrainingsplanModul={TrainingsplanModul} TermineModul={TermineModul} SpielplanModul={SpielplanModul} TableTab={TableTab} HelferModul={HelferModul}/>;
-      case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
+      case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} onReload={loadDbMitglieder}/>;
       case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;

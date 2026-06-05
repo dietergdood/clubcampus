@@ -438,12 +438,9 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
 function DashboardEltern({account,meineTeams,setActive}){
   const isMobile=useIsMobile();
   const parentName=account?.name?.split(" ")[0]||"Elternteil";
-  /* Stufen-Checks */
-  const darfAnmelden=kannSchreiben?kannSchreiben("events"):true;
-  const darfVerwalten=kannVerwalten?kannVerwalten("events"):isTrainer||isAdmin;
   const kinder=account?.kinder||[];
-  const today="2026-05-23";
-  const parseD=(d)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:""};
+  const today=new Date().toISOString().split("T")[0];
+  const parseD=(d)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`${new Date().getFullYear()}-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:""};
   const [aufgebotState,setAufgebotState]=useState({});
   useEffect(()=>{
     (async()=>{try{const r=await window.storage.get("aufgebot_state");if(r)setAufgebotState(JSON.parse(r.value));}catch(e){}})();
@@ -452,7 +449,15 @@ function DashboardEltern({account,meineTeams,setActive}){
   return(
     <div>
       <H1 mb={6}>{getGreeting()}, {parentName}</H1>
-      <p className="cc-detail-label" style={{marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · {getDate()}</p>
+      <p className="cc-detail-label" style={{marginBottom:18}}>Elternteil{kinder.length>0?` · ${kinder.map(k=>k.name.split(" ")[0]).join(" & ")}`:""} · {getDate()}</p>
+
+      {kinder.length===0&&(
+        <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:12,padding:"32px 24px",textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:40,marginBottom:12}}>👤</div>
+          <div style={{fontWeight:600,fontSize:16,marginBottom:8}}>Keine Kinder verknüpft</div>
+          <div className="cc-detail-label">Dein Account ist noch nicht mit einem Mitglied verknüpft.<br/>Bitte wende dich an die Vereinsadministration.</div>
+        </div>
+      )}
 
       {kinder.map((kind,ki)=>{
         const team=kind.team||"Cc-Junioren";
