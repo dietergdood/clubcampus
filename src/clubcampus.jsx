@@ -825,6 +825,7 @@ function Portal({supabaseClient}){
       if(!mData||mData.length===0) return;
       // Elternkontakte separat laden — alle auf einmal
       const {data:ekData}=await sb.from("elternkontakte").select("id,mitglied_id,vorname,nachname,email,telefon,beziehung,benutzer_id");
+      console.log("[FCH] elternkontakte geladen:", ekData?.length, ekData?.[0]);
       const ekByMitglied={};
       (ekData||[]).forEach(ek=>{
         const key=String(ek.mitglied_id); // String-Vergleich für bigint

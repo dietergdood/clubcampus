@@ -318,7 +318,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
 
   /* ── Detail-Modal ── */
   const MemberDetail=({m,onClose})=>{
-    const raw=dbMitglieder.find(d=>d.id===m.id)||{};
+    const raw=dbMitglieder.find(d=>String(d.id)===String(m.id))||{};
     const eltern=raw.eltern||[];
     const fv=getFieldVisibility(role);
     const rows=[
@@ -841,7 +841,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
 
   /* ── Mitglied-Detailseite (volle Breite, kein Modal) ── */
   const MemberDetail=({m,onClose})=>{
-    const raw=dbMitglieder.find(d=>d.id===m.id)||{};
+    const raw=dbMitglieder.find(d=>String(d.id)===String(m.id))||{};
     const eltern=raw.eltern||[];
     const fv=getFieldVisibility(role);
     const canEdit=role==="administrator"||role==="administration";
