@@ -885,11 +885,13 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
         };
         if(sb){
           const {error}=await sb.from("mitglieder").update(update).eq("id",raw.id);
-          if(error) throw error;
+          if(error){ console.error("[FCH] mitglieder update error:", error); throw error; }
           if(onReload) onReload();
+          setSaveMsg({ok:true, text:"Gespeichert ✓"});
+          setEditMode(false);
+        } else {
+          throw new Error("Keine Supabase-Verbindung");
         }
-        setSaveMsg({ok:true, text:"Gespeichert ✓"});
-        setEditMode(false);
       }catch(e){ setSaveMsg({ok:false, text:e.message}); }
       setSaving(false);
     }
