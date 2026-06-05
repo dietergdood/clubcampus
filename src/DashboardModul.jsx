@@ -404,13 +404,13 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
         <div onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.openEvId=nextAufgebot.id;setActive("team");}:undefined}
           style={{background:"var(--surface)",border:"1.5px solid #818CF8",borderRadius:12,padding:"14px 18px",marginBottom:18,display:"flex",alignItems:"center",gap:12,cursor:setActive?"pointer":"default"}}>
           <span><TI n="ball-football" size={24}/></span>
-          <div className="cc-flex-center" style={{flex:1,justifyContent:"flex-start",flexDirection:"column",alignItems:"flex-start"}}>
-            <div style={{fontWeight:800,fontSize:14,color:"var(--cc-accent)"}}>Du bist im Aufgebot!</div>
+          <Col style={{flex:1}}>
+            <div className="cc-list-name" style={{color:"var(--cc-accent)"}}>Du bist im Aufgebot!</div>
             <div className="cc-detail-label" style={{marginTop:2}}>
               {`vs. ${nextAufgebot.opponent} · ${nextAufgebot.date} · ${nextAufgebot.time} Uhr`}
             </div>
-            {nextAufgebot.treffpunkt&&<div className="cc-detail-label cc-flex-center" style={{marginTop:3,justifyContent:"flex-start"}}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebot.treffpunkt}</div>}
-          </div>
+            {nextAufgebot.treffpunkt&&<Row gap={4} mt={3}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebot.treffpunkt}</Row>}
+          </Col>
           <Chip text="Aufgebot" color="#4F46E5"/>
         </div>
       )}
@@ -421,7 +421,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
             const upcoming=ATT_EVENTS.filter(e=>(e.team===team||e.subtype==="Vereinsanlass")&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date))).slice(0,3);
             if(upcoming.length===0) return <div className="cc-empty">Keine anstehenden Termine.</div>;
             return upcoming.map((t,i)=>(
-              <div key={i} className="cc-list-row" style={{borderBottom:i<upcoming.length-1?`0.5px solid var(--border)`:"none"}}>
+              <div key={i} className="cc-list-row" style={{borderBottom:i===upcoming.length-1?"none":undefined}}>
                 <div>
                   <div className="cc-list-name">{t.opponent?"vs. "+t.opponent:t.type==="Training"?"Training · "+t.team:t.title||t.type}</div>
                   <div className="cc-detail-label">{t.date} · {t.time+" Uhr"}</div>

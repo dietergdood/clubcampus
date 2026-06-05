@@ -302,7 +302,7 @@ function Btn({children,onClick,variant="outline",color=null,small,disabled=false
   >{children}</button>;
 }
 
-function Card({children,style={},onClick}){
+function Card({children,mb=0,mt=0,style={},onClick}){
   return <div onClick={onClick} className="cc-card" style={{borderRadius:12,padding:"16px 20px",...style}}>{children}</div>;
 }
 
@@ -388,9 +388,9 @@ function Tabs({tabs,active,setActive}){
 
 
 
-function STitle({children,action}){
+function STitle({children,action,mb=14}){
   return(
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:mb}}>
       <h2 style={{margin:0,fontSize:14,fontWeight:700,letterSpacing:-0.2,color:"var(--text)"}}>{children}</h2>
       {action}
     </div>
