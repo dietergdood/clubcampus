@@ -392,7 +392,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
   return(
     <div>
       <H1 mb={6}>Hallo, {firstName}</H1>
-      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Spieler · {team} · Freitag, 23. Mai 2026</p>
+      <p className="cc-detail-label" style={{marginBottom:18}}>Spieler · {team} · Freitag, 23. Mai 2026</p>
       <div className="cc-grid-stats" style={{marginBottom:20}}>
         <Stat label="Ø Anwesenheit Trainings" value={attPct!==null?attPct+"%":"-"} sub={pastEvs.length?zuCount+"/"+pastEvs.length+" Trainings":"Noch keine vergangenen"} color={attColor}/>
         <Stat label="Nächstes Training" value={nextTraining?nextTraining.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"} sub={nextTraining?`${nextTraining.time.slice(0,5)} Uhr · ${nextTraining.location}`:"Kein Training geplant"} semantic="success"/>
@@ -403,13 +403,13 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
       {nextAufgebot&&(
         <div onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.openEvId=nextAufgebot.id;setActive("team");}:undefined}
           style={{background:"var(--surface)",border:"1.5px solid #818CF8",borderRadius:12,padding:"14px 18px",marginBottom:18,display:"flex",alignItems:"center",gap:12,cursor:setActive?"pointer":"default"}}>
-          <span style={{fontSize:24}}><TI n="ball-football"/></span>
-          <div style={{flex:1}}>
+          <span><TI n="ball-football" size={24}/></span>
+          <div className="cc-flex-center" style={{flex:1,justifyContent:"flex-start",flexDirection:"column",alignItems:"flex-start"}}>
             <div style={{fontWeight:800,fontSize:14,color:"var(--cc-accent)"}}>Du bist im Aufgebot!</div>
-            <div className="cc-detail-label" style={{minWidth:"auto",marginTop:2}}>
+            <div className="cc-detail-label" style={{marginTop:2}}>
               {`vs. ${nextAufgebot.opponent} · ${nextAufgebot.date} · ${nextAufgebot.time} Uhr`}
             </div>
-            {nextAufgebot.treffpunkt&&<div className="cc-detail-label" style={{minWidth:"auto",marginTop:3,display:"flex",alignItems:"center"}}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebot.treffpunkt}</div>}
+            {nextAufgebot.treffpunkt&&<div className="cc-detail-label cc-flex-center" style={{marginTop:3,justifyContent:"flex-start"}}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebot.treffpunkt}</div>}
           </div>
           <Chip text="Aufgebot" color="#4F46E5"/>
         </div>
@@ -419,12 +419,12 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
           <STitle>Meine nächsten Termine</STitle>
           {(()=>{
             const upcoming=ATT_EVENTS.filter(e=>(e.team===team||e.subtype==="Vereinsanlass")&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date))).slice(0,3);
-            if(upcoming.length===0) return <div className="cc-empty" style={{padding:"8px 0",textAlign:"left"}}>Keine anstehenden Termine.</div>;
+            if(upcoming.length===0) return <div className="cc-empty">Keine anstehenden Termine.</div>;
             return upcoming.map((t,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<upcoming.length-1?`0.5px solid ${GB}`:"none"}}>
+              <div key={i} className="cc-list-row" style={{borderBottom:i<upcoming.length-1?`0.5px solid var(--border)`:"none"}}>
                 <div>
                   <div className="cc-list-name">{t.opponent?"vs. "+t.opponent:t.type==="Training"?"Training · "+t.team:t.title||t.type}</div>
-                  <div className="cc-detail-label" style={{minWidth:"auto"}}>{t.date} · {t.time+" Uhr"}</div>
+                  <div className="cc-detail-label">{t.date} · {t.time+" Uhr"}</div>
                 </div>
                 <Chip text={t.subtype||t.type} color={t.type==="Spiel"?BL:t.subtype==="Team-Event"?AM:GN}/>
               </div>
@@ -523,7 +523,7 @@ function DashboardEltern({account,meineTeams,setActive}){
             {nextAufgebotSpiel&&(
               <div onClick={setActive?()=>{NAV_TARGET.tab="attendance";NAV_TARGET.filter=["training","spiele"];NAV_TARGET.kindTeam=team;NAV_TARGET.openEvId=nextAufgebotSpiel.id;setActive("team");}:undefined}
                 style={{background:"var(--surface)",border:"1.5px solid #818CF8",borderRadius:12,padding:"14px 18px",marginBottom:14,display:"flex",alignItems:"center",gap:12,cursor:setActive?"pointer":"default"}}>
-                <span style={{fontSize:24}}><TI n="ball-football"/></span>
+                <span><TI n="ball-football" size={24}/></span>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:800,fontSize:13,color:"var(--cc-accent)"}}>{vorname} ist im Aufgebot!</div>
                   <div className="cc-detail-label" style={{minWidth:"auto",marginTop:2}}>
