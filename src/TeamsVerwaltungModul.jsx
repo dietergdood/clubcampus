@@ -39,9 +39,7 @@ function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
         onChange={e=>{ setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
         onFocus={()=>setOpen(true)}
         placeholder={placeholder}
-        style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:8,
-          fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",
-          boxSizing:"border-box",outline:"none"}}
+        className="cc-input"
       />
       {open&&suggestions.length>0&&(
         <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,zIndex:200,
@@ -373,8 +371,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
         },{})
       ).sort(([a],[b])=>String(a||'').localeCompare(String(b||''))).map(([key,items])=>({key,items}));
 
-  const inputStyle={width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"};
-  const labelStyle={fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:5,display:"block",textTransform:"uppercase",letterSpacing:0.5};
+  /* inputStyle → className="cc-input", labelStyle → className="cc-label" */
 
   const KAT_COLORS={"Aktivfussball":BL,"Juniorenfussball":R,"Kinderfussball Junioren":"#F97316","Juniorinnenfussball":"#EC4899","Kinderfussball Juniorinnen":"#DB2777","Seniorenfussball":AM};
 
@@ -418,7 +415,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           <h2 style={{margin:"0 0 6px",fontSize:16,fontWeight:700,color:"var(--text)"}}>Saison wechseln</h2>
           <p style={{margin:"0 0 18px",fontSize:13,color:"var(--sub)"}}>Die neue Saison wird für <strong>alle {teams.length} Teams</strong> gleichzeitig gesetzt.</p>
           <div style={{marginBottom:16}}>
-            <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:6,display:"block",textTransform:"uppercase",letterSpacing:0.5}}>Neue Saison</label>
+            <label className="cc-label">Neue Saison</label>
             <input value={saisonDraft} onChange={e=>setSaisonDraft(e.target.value)}
               placeholder="z.B. 2025/26" autoFocus
               style={{width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
@@ -434,16 +431,16 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
       {/* Filter-Zeile */}
       <div style={{display:"flex",gap:8,marginBottom:filterOptions.length?8:14,flexWrap:"wrap"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Team, Trainer, Kurzname…"
-          style={{flex:1,minWidth:180,...inputStyle}}/>
+          className="cc-input" style={{flex:1,minWidth:180}}/>
         {/* Gruppieren nach */}
         <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVals([]);}}
-          style={{...inputStyle,width:"auto",minWidth:160,flex:"0 0 auto"}}>
+          className="cc-input" style={{width:"auto",minWidth:160,flex:"0 0 auto"}}>
           {GROUP_OPTS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
         </select>
         {/* Sortieren nach */}
         <Row gap={4} align="flex-start">
           <select value={sortCol} onChange={e=>setSortCol(e.target.value)}
-            style={{...inputStyle,width:"auto",minWidth:130,flex:"0 0 auto"}}>
+            className="cc-input" style={{width:"auto",minWidth:130,flex:"0 0 auto"}}>
             {SORT_OPTS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
           </select>
           <Btn onClick={()=>setSortDir(d=>d==="asc"?"desc":"asc")}>{sortDir==="asc"?"↑":"↓"}</Btn>
@@ -599,24 +596,26 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
       <ModalOrSheet open={showForm} onClose={()=>setShowForm(false)} maxWidth={520}>
         <div style={{padding:"20px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <ModalTitle>{editTeam?"Team bearbeiten":"Neues Team"}</ModalTitle>
-          <Btn variant="ghost" onClick={()=>setShowForm(false)} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
+          <button onClick={()=>setShowForm(false)} className="cc-icon-btn"><TI n="x" size={14}/></button>
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px 20px",display:"flex",flexDirection:"column",gap:16}}>
           {editTeam&&(
-            <div style={{display:"flex",gap:4,marginBottom:4}}>
+            <div className="cc-seg" style={{marginBottom:4}}>
               {["info","module"].map(t=>(
-                <Btn onClick={()=>setFormTab(t)}>{t==="info"?"Team-Info":"Module"}</Btn>
+                <button key={t} onClick={()=>setFormTab(t)} className={"cc-seg-item"+(formTab===t?" cc-seg-active":"")}>
+                  {t==="info"?"Team-Info":"Module"}
+                </button>
               ))}
             </div>
           )}
           {/* Ebene 1 */}
           <div>
-            <label style={labelStyle}>Hauptbereich (Ebene 1)</label>
+            <label className="cc-label">Hauptbereich (Ebene 1)</label>
             <select value={dbStufen.length>0?form.stufe_ebene1:form.hauptbereich}
               onChange={e=>{
                 if(dbStufen.length>0) setForm(p=>({...p,stufe_ebene1:Number(e.target.value)||e.target.value,stufe_ebene2:"",stufe_id:null}));
                 else setForm(p=>({...p,hauptbereich:e.target.value,vereinsstufe:"",verbandskategorie:""}));
-              }} style={inputStyle}>
+              }} className="cc-input">
               <option value="">— wählen —</option>
               {stufen1.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
@@ -624,25 +623,25 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           {/* Ebene 2 + 3 */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Vereinsstufe (Ebene 2)</label>
+              <label className="cc-label">Vereinsstufe (Ebene 2)</label>
               <select value={dbStufen.length>0?form.stufe_ebene2:form.vereinsstufe}
                 onChange={e=>{
                   if(dbStufen.length>0){
                     const s2=dbStufen.find(s=>s.id===(Number(e.target.value)||e.target.value));
                     setForm(p=>({...p,stufe_ebene2:Number(e.target.value)||e.target.value,stufe_id:null,stufenleitung:s2?.stufenleitung||p.stufenleitung}));
                   }else setForm(p=>({...p,vereinsstufe:e.target.value,verbandskategorie:""}));
-                }} style={inputStyle}>
+                }} className="cc-input">
                 <option value="">— wählen —</option>
                 {getStufen2(dbStufen.length>0?form.stufe_ebene1:form.hauptbereich).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Verbandskategorie (Ebene 3)</label>
+              <label className="cc-label">Verbandskategorie (Ebene 3)</label>
               <select value={dbStufen.length>0?form.stufe_id:form.verbandskategorie}
                 onChange={e=>{
                   if(dbStufen.length>0) setForm(p=>({...p,stufe_id:Number(e.target.value)||e.target.value||null}));
                   else setForm(p=>({...p,verbandskategorie:e.target.value}));
-                }} style={inputStyle}>
+                }} className="cc-input">
                 <option value="">— wählen —</option>
                 {getStufen3(dbStufen.length>0?form.stufe_ebene2:form.vereinsstufe).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -651,40 +650,42 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           {/* Ebene 4: Teamname + Kurzname */}
           <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Teamname (Ebene 4) *</label>
+              <label className="cc-label">Teamname (Ebene 4) *</label>
               <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}
-                placeholder="z.B. Cc-Junioren" style={inputStyle} autoFocus/>
+                placeholder="z.B. Cc-Junioren" className="cc-input" autoFocus/>
             </div>
             <div>
-              <label style={labelStyle}>Kurzname</label>
+              <label className="cc-label">Kurzname</label>
               <input value={form.kurzname} onChange={e=>setForm(p=>({...p,kurzname:e.target.value}))}
-                placeholder="z.B. Cc" style={inputStyle}/>
+                placeholder="z.B. Cc" className="cc-input"/>
             </div>
           </div>
           {/* Stufenleitung + Liga */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Stufenleitung</label>
+              <label className="cc-label">Stufenleitung</label>
               <input value={form.stufenleitung} onChange={e=>setForm(p=>({...p,stufenleitung:e.target.value}))}
-                placeholder="z.B. Stufenleitung Junioren C" style={inputStyle}/>
+                placeholder="z.B. Stufenleitung Junioren C" className="cc-input"/>
             </div>
             <div>
-              <label style={labelStyle}>Liga / Wettbewerb</label>
+              <label className="cc-label">Liga / Wettbewerb</label>
               <input value={form.liga} onChange={e=>setForm(p=>({...p,liga:e.target.value}))}
-                placeholder="z.B. U13 Liga A" style={inputStyle}/>
+                placeholder="z.B. U13 Liga A" className="cc-input"/>
             </div>
           </div>
           {/* Saison + Status */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Saison</label>
+              <label className="cc-label">Saison</label>
               <input value={form.saison} onChange={e=>setForm(p=>({...p,saison:e.target.value}))}
-                placeholder="2024/25" style={inputStyle}/>
+                placeholder="2024/25" className="cc-input"/>
             </div>
             <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-              <label style={labelStyle}>Status</label>
+              <label className="cc-label">Status</label>
               <div style={{display:"flex",alignItems:"center",gap:12,height:38}}>
-                <Btn onClick={()=>setForm(p=>({...p,aktiv:!p.aktiv}))}><div style={{position:"absolute",top:3,left:form.aktiv?21:3,width:18,height:18,borderRadius:"50%",background:form.aktiv?"#111":"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.2)",transition:"left 0.2s"}}/></Btn>
+                <button onClick={()=>setForm(p=>({...p,aktiv:!p.aktiv}))} className={"cc-toggle"+(form.aktiv?" cc-toggle-on":"")}>
+                    <div className={"cc-toggle-knob"+(form.aktiv?" cc-toggle-knob-on":"")}/>
+                  </button>
                 <span style={{fontSize:13,color:"var(--text)",fontWeight:600}}>{form.aktiv?"Aktiv":"Inaktiv"}</span>
               </div>
             </div>
@@ -696,7 +697,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             {key:"staff",       label:"Weiterer Staff",placeholder:"Name / Funktion suchen…"},
           ].map(({key,label,placeholder})=>(
             <div key={key}>
-              <label style={labelStyle}>{label}</label>
+              <label className="cc-label">{label}</label>
               <Col>
                 {(form[key]||[]).map((val,i)=>(
                   <div key={i} style={{display:"flex",gap:8}}>
@@ -714,19 +715,14 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           ))}
           {/* Beschreibung */}
           <div>
-            <label style={labelStyle}>Beschreibung (optional)</label>
+            <label className="cc-label">Beschreibung (optional)</label>
             <textarea value={form.beschreibung} onChange={e=>setForm(p=>({...p,beschreibung:e.target.value}))}
               placeholder="Zusätzliche Infos zum Team…" rows={3}
-              style={{...inputStyle,resize:"vertical"}}/>
+              className="cc-input" style={{resize:"vertical"}}/>
           </div>
           {/* Status-Meldung */}
           {msg&&(
-            <div style={{padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:600,
-              background:msg.type==="ok"?"#ECFDF5":RL,
-              color:msg.type==="ok"?GN:R,
-              border:"1px solid "+(msg.type==="ok"?GN:R)}}>
-              {msg.text}
-            </div>
+            <InfoBox text={msg.text} color={msg.type==="ok"?GN:R}/>
           )}
           {/* Modul-Tab: nur bei bestehenden Teams */}
           {editTeam&&formTab==="module"&&(
@@ -754,12 +750,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                   <div key={mod.key} onClick={()=>setForm(p=>{
                     const cur=p.module_aktiv||editTeam.module_aktiv||[];
                     return{...p,module_aktiv:isActive?cur.filter(m=>m!==mod.key):[...cur,mod.key]};
-                  })} style={{
-                    display:"flex",alignItems:"center",justifyContent:"space-between",
-                    padding:"9px 12px",borderRadius:8,marginBottom:6,cursor:"pointer",
-                    background:isActive?"var(--surface2)":"transparent",
-                    border:"1px solid "+(isActive?"var(--border)":"transparent")
-                  }}>
+                  })} className="cc-input">
                     <span style={{fontSize:13,color:"var(--text)"}}>{mod.label}</span>
                     <div style={{
                       width:36,height:20,borderRadius:10,transition:"background 0.2s",
@@ -1078,8 +1069,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
         },{})
       ).sort(([a],[b])=>String(a||'').localeCompare(String(b||''))).map(([key,items])=>({key,items}));
 
-  const inputStyle={width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"};
-  const labelStyle={fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:5,display:"block",textTransform:"uppercase",letterSpacing:0.5};
+  /* inputStyle → className="cc-input", labelStyle → className="cc-label" */
 
   const KAT_COLORS={"Aktivfussball":BL,"Juniorenfussball":R,"Kinderfussball Junioren":"#F97316","Juniorinnenfussball":"#EC4899","Kinderfussball Juniorinnen":"#DB2777","Seniorenfussball":AM};
 
@@ -1139,7 +1129,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           <h2 style={{margin:"0 0 6px",fontSize:16,fontWeight:700,color:"var(--text)"}}>Saison wechseln</h2>
           <p style={{margin:"0 0 18px",fontSize:13,color:"var(--sub)"}}>Die neue Saison wird für <strong>alle {teams.length} Teams</strong> gleichzeitig gesetzt.</p>
           <div style={{marginBottom:16}}>
-            <label style={{fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:6,display:"block",textTransform:"uppercase",letterSpacing:0.5}}>Neue Saison</label>
+            <label className="cc-label">Neue Saison</label>
             <input value={saisonDraft} onChange={e=>setSaisonDraft(e.target.value)}
               placeholder="z.B. 2025/26" autoFocus
               style={{width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
@@ -1163,16 +1153,16 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
       {/* Filter-Zeile */}
       <div style={{display:"flex",gap:8,marginBottom:filterOptions.length?8:14,flexWrap:"wrap"}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Team, Trainer, Kurzname…"
-          style={{flex:1,minWidth:180,...inputStyle}}/>
+          className="cc-input" style={{flex:1,minWidth:180}}/>
         {/* Gruppieren nach */}
         <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVals([]);}}
-          style={{...inputStyle,width:"auto",minWidth:160,flex:"0 0 auto"}}>
+          className="cc-input" style={{width:"auto",minWidth:160,flex:"0 0 auto"}}>
           {GROUP_OPTS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
         </select>
         {/* Sortieren nach */}
         <div style={{display:"flex",gap:4}}>
           <select value={sortCol} onChange={e=>setSortCol(e.target.value)}
-            style={{...inputStyle,width:"auto",minWidth:130,flex:"0 0 auto"}}>
+            className="cc-input" style={{width:"auto",minWidth:130,flex:"0 0 auto"}}>
             {SORT_OPTS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
           </select>
           <button onClick={()=>setSortDir(d=>d==="asc"?"desc":"asc")}
@@ -1384,12 +1374,12 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           )}
           {/* Ebene 1 */}
           <div>
-            <label style={labelStyle}>Hauptbereich (Ebene 1)</label>
+            <label className="cc-label">Hauptbereich (Ebene 1)</label>
             <select value={dbStufen.length>0?form.stufe_ebene1:form.hauptbereich}
               onChange={e=>{
                 if(dbStufen.length>0) setForm(p=>({...p,stufe_ebene1:Number(e.target.value)||e.target.value,stufe_ebene2:"",stufe_id:null}));
                 else setForm(p=>({...p,hauptbereich:e.target.value,vereinsstufe:"",verbandskategorie:""}));
-              }} style={inputStyle}>
+              }} className="cc-input">
               <option value="">— wählen —</option>
               {stufen1.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
@@ -1397,25 +1387,25 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           {/* Ebene 2 + 3 */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Vereinsstufe (Ebene 2)</label>
+              <label className="cc-label">Vereinsstufe (Ebene 2)</label>
               <select value={dbStufen.length>0?form.stufe_ebene2:form.vereinsstufe}
                 onChange={e=>{
                   if(dbStufen.length>0){
                     const s2=dbStufen.find(s=>s.id===(Number(e.target.value)||e.target.value));
                     setForm(p=>({...p,stufe_ebene2:Number(e.target.value)||e.target.value,stufe_id:null,stufenleitung:s2?.stufenleitung||p.stufenleitung}));
                   }else setForm(p=>({...p,vereinsstufe:e.target.value,verbandskategorie:""}));
-                }} style={inputStyle}>
+                }} className="cc-input">
                 <option value="">— wählen —</option>
                 {getStufen2(dbStufen.length>0?form.stufe_ebene1:form.hauptbereich).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Verbandskategorie (Ebene 3)</label>
+              <label className="cc-label">Verbandskategorie (Ebene 3)</label>
               <select value={dbStufen.length>0?form.stufe_id:form.verbandskategorie}
                 onChange={e=>{
                   if(dbStufen.length>0) setForm(p=>({...p,stufe_id:Number(e.target.value)||e.target.value||null}));
                   else setForm(p=>({...p,verbandskategorie:e.target.value}));
-                }} style={inputStyle}>
+                }} className="cc-input">
                 <option value="">— wählen —</option>
                 {getStufen3(dbStufen.length>0?form.stufe_ebene2:form.vereinsstufe).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -1424,38 +1414,38 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           {/* Ebene 4: Teamname + Kurzname */}
           <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Teamname (Ebene 4) *</label>
+              <label className="cc-label">Teamname (Ebene 4) *</label>
               <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}
-                placeholder="z.B. Cc-Junioren" style={inputStyle} autoFocus/>
+                placeholder="z.B. Cc-Junioren" className="cc-input" autoFocus/>
             </div>
             <div>
-              <label style={labelStyle}>Kurzname</label>
+              <label className="cc-label">Kurzname</label>
               <input value={form.kurzname} onChange={e=>setForm(p=>({...p,kurzname:e.target.value}))}
-                placeholder="z.B. Cc" style={inputStyle}/>
+                placeholder="z.B. Cc" className="cc-input"/>
             </div>
           </div>
           {/* Stufenleitung + Liga */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Stufenleitung</label>
+              <label className="cc-label">Stufenleitung</label>
               <input value={form.stufenleitung} onChange={e=>setForm(p=>({...p,stufenleitung:e.target.value}))}
-                placeholder="z.B. Stufenleitung Junioren C" style={inputStyle}/>
+                placeholder="z.B. Stufenleitung Junioren C" className="cc-input"/>
             </div>
             <div>
-              <label style={labelStyle}>Liga / Wettbewerb</label>
+              <label className="cc-label">Liga / Wettbewerb</label>
               <input value={form.liga} onChange={e=>setForm(p=>({...p,liga:e.target.value}))}
-                placeholder="z.B. U13 Liga A" style={inputStyle}/>
+                placeholder="z.B. U13 Liga A" className="cc-input"/>
             </div>
           </div>
           {/* Saison + Status */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={labelStyle}>Saison</label>
+              <label className="cc-label">Saison</label>
               <input value={form.saison} onChange={e=>setForm(p=>({...p,saison:e.target.value}))}
-                placeholder="2024/25" style={inputStyle}/>
+                placeholder="2024/25" className="cc-input"/>
             </div>
             <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-              <label style={labelStyle}>Status</label>
+              <label className="cc-label">Status</label>
               <div style={{display:"flex",alignItems:"center",gap:12,height:38}}>
                 <button onClick={()=>setForm(p=>({...p,aktiv:!p.aktiv}))} style={{
                   position:"relative",width:44,height:24,borderRadius:12,border:"none",
@@ -1475,7 +1465,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             {key:"staff",       label:"Weiterer Staff",placeholder:"Name / Funktion suchen…"},
           ].map(({key,label,placeholder})=>(
             <div key={key}>
-              <label style={labelStyle}>{label}</label>
+              <label className="cc-label">{label}</label>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {(form[key]||[]).map((val,i)=>(
                   <div key={i} style={{display:"flex",gap:8}}>
@@ -1497,19 +1487,14 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           ))}
           {/* Beschreibung */}
           <div>
-            <label style={labelStyle}>Beschreibung (optional)</label>
+            <label className="cc-label">Beschreibung (optional)</label>
             <textarea value={form.beschreibung} onChange={e=>setForm(p=>({...p,beschreibung:e.target.value}))}
               placeholder="Zusätzliche Infos zum Team…" rows={3}
-              style={{...inputStyle,resize:"vertical"}}/>
+              className="cc-input" style={{resize:"vertical"}}/>
           </div>
           {/* Status-Meldung */}
           {msg&&(
-            <div style={{padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:600,
-              background:msg.type==="ok"?"#ECFDF5":RL,
-              color:msg.type==="ok"?GN:R,
-              border:"1px solid "+(msg.type==="ok"?GN:R)}}>
-              {msg.text}
-            </div>
+            <InfoBox text={msg.text} color={msg.type==="ok"?GN:R}/>
           )}
           {/* Modul-Tab: nur bei bestehenden Teams */}
           {editTeam&&formTab==="module"&&(
@@ -1537,12 +1522,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                   <div key={mod.key} onClick={()=>setForm(p=>{
                     const cur=p.module_aktiv||editTeam.module_aktiv||[];
                     return{...p,module_aktiv:isActive?cur.filter(m=>m!==mod.key):[...cur,mod.key]};
-                  })} style={{
-                    display:"flex",alignItems:"center",justifyContent:"space-between",
-                    padding:"9px 12px",borderRadius:8,marginBottom:6,cursor:"pointer",
-                    background:isActive?"var(--surface2)":"transparent",
-                    border:"1px solid "+(isActive?"var(--border)":"transparent")
-                  }}>
+                  })} className="cc-input">
                     <span style={{fontSize:13,color:"var(--text)"}}>{mod.label}</span>
                     <div style={{
                       width:36,height:20,borderRadius:10,transition:"background 0.2s",

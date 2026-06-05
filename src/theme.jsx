@@ -47,6 +47,7 @@ const PWA_CSS=`
 .cc-chip-toggle{padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--sub);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0}
 .cc-chip-toggle:hover{border-color:var(--text);color:var(--text)}
 .cc-chip-active{border-color:var(--text)!important;background:var(--text)!important;color:var(--bg)!important}
+.cc-label{font-size:11px;font-weight:600;color:var(--sub);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:0.5px}
 .cc-input{width:100%;padding:9px 12px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.15s}
 .cc-input:focus{border-color:var(--text)}
 .cc-unread-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;border:2px solid var(--surface)}
