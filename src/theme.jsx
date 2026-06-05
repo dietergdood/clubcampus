@@ -13,6 +13,7 @@ const ThemeCtx = createContext({dark:false, toggle:()=>{}});
 const useTheme = ()=>useContext(ThemeCtx);
 
 const PWA_CSS=`
+body{font-size:14px;font-family:inherit;margin:0;padding:0}
 :root{
   --bg:#F5F5F3;
   --surface:#FFFFFF;
