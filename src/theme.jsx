@@ -154,7 +154,12 @@ const PWA_CSS=`
 @media(max-width:680px){
   .cc-grid-stats{grid-template-columns:repeat(2,1fr)!important}
   .cc-grid-cards{grid-template-columns:1fr!important;}
-}`;
+}
+.cc-stat-value{font-size:28px;font-weight:600}
+.cc-h1{font-size:24px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
+.cc-h2{font-size:18px;font-weight:600;color:var(--text);letter-spacing:-0.2px}
+.cc-stitle{display:flex;justify-content:space-between;align-items:center}
+.cc-stitle-text{margin:0;font-size:14px;font-weight:600;letter-spacing:-0.2px;color:var(--text)}`;
 /* localStorage polyfill voor window.storage */
 
 /* ── Semantische Farben ────────────────────────────────────────
@@ -326,7 +331,7 @@ function Stat({label,value,sub,color,semantic,icon}){
   return(
     <div className="cc-card" style={{borderRadius:12,padding:"20px 22px",flex:1,minWidth:0}}>
       <div style={{fontSize:11,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginBottom:8}}>{label}</div>
-      <div style={{fontSize:28,fontWeight:600,color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
+      <div className="cc-stat-value" style={{color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
       {sub&&<div style={{fontSize:12,color:"var(--sub)",lineHeight:1.4,marginTop:2}}>{sub}</div>}
     </div>
   );
@@ -390,7 +395,7 @@ function Tabs({tabs,active,setActive}){
 
 function STitle({children,action,mb=14}){
   return(
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:mb}}>
+    <div className="cc-stitle" style={{marginBottom:mb}}>
       <h2 style={{margin:0,fontSize:14,fontWeight:700,letterSpacing:-0.2,color:"var(--text)"}}>{children}</h2>
       {action}
     </div>
@@ -429,14 +434,14 @@ function Label({children, style={}}){
   return <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",...style}}>{children}</div>;
 }
 function H1({children, style={}, mb=0}){
-  return <h1 style={{fontSize:21,fontWeight:800,margin:mb?`0 0 ${mb}px`:"0",...style}}>{children}</h1>;
+  return <h1 className="cc-h1" style={{margin:mb?`0 0 ${mb}px`:"0",...style}}>{children}</h1>;
 }
 function H2({children, style={}}){
-  return <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"var(--text)",...style}}>{children}</h2>;
+  return <h2 className="cc-h2" style={{margin:0,...style}}>{children}</h2>;
 }
 function PageHeader({children, action=null, mb=18}){
   return(
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:mb}}>
+    <div className="cc-stitle" style={{marginBottom:mb}}>
       <H1>{children}</H1>
       {action}
     </div>
