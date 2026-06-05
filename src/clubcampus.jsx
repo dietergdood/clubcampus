@@ -564,13 +564,19 @@ function Portal({supabaseClient}){
   async function loadDbTeams(){
     if(!sb) return;
     try{
-      const{data,error}=await sb.from("teams").select("*, module_teams(modul,aktiv)").eq("aktiv",true).order("hauptbereich").order("name");
+      const{data,error}=await sb.from("teams").select("*").eq("aktiv",true).order("hauptbereich").order("name");
       if(error) console.warn("[FCH] loadDbTeams error:", error.message);
-      if(data&&data.length>0) setDbTeams(data.map(t=>({
-        ...t,
-        module_aktiv:(t.module_teams||[]).filter(m=>m.aktiv).map(m=>m.modul)
-      })));
-      else console.warn("[FCH] loadDbTeams: keine Teams gefunden", data);
+      if(data&&data.length>0){
+        // module_teams separat laden
+        const{data:modData}=await sb.from("module_teams").select("*").eq("aktiv",true);
+        const mods=modData||[];
+        setDbTeams(data.map(t=>({
+          ...t,
+          module_aktiv:mods.filter(m=>m.team_id===t.id).map(m=>m.modul)
+        })));
+      } else {
+        console.warn("[FCH] loadDbTeams: keine Teams gefunden", data, error);
+      }
     }catch(e){ console.warn("[FCH] loadDbTeams:", e.message); }
   }
 
