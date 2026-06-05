@@ -824,13 +824,19 @@ function Portal({supabaseClient}){
       const {data:mData}=await sb.from("mitglieder").select("*").eq("aktiv",true).order("nachname").order("vorname");
       if(!mData||mData.length===0) return;
       // Elternkontakte separat laden — alle auf einmal
-      const {data:ekData}=await sb.from("elternkontakte").select("id,mitglied_id,vorname,nachname,email,telefon,beziehung,benutzer_id");
+      const {data:ekData}=await sb.from("elternkontakte").select("id,mitglied_id,name,email,tel,beziehung,benutzer_id");
       console.log("[FCH] elternkontakte geladen:", ekData?.length, ekData?.[0]);
       const ekByMitglied={};
       (ekData||[]).forEach(ek=>{
-        const key=String(ek.mitglied_id); // String-Vergleich für bigint
+        const key=String(ek.mitglied_id);
         if(!ekByMitglied[key]) ekByMitglied[key]=[];
-        ekByMitglied[key].push(ek);
+        const nameParts=(ek.name||"").trim().split(" ");
+        ekByMitglied[key].push({
+          ...ek,
+          vorname: nameParts[0]||"",
+          nachname: nameParts.slice(1).join(" ")||"",
+          telefon: ek.tel||"",
+        });
       });
       setDbMitglieder(mData.map(m=>({...m, eltern:ekByMitglied[String(m.id)]||[]})));
     }catch(e){ console.warn("[FCH] loadDbMitglieder:", e.message); }

@@ -1084,7 +1084,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               <div className="cc-list">
                 {eltern.map((e,i)=>(
                   <div key={i} className="cc-list-row" style={{flexDirection:"column",alignItems:"flex-start",gap:4,cursor:"default"}}>
-                    <div className="cc-list-name">{e.vorname} {e.nachname}{e.beziehung?` · ${e.beziehung}`:""}</div>
+                    <div className="cc-list-name">{e.vorname||e.name||""} {e.nachname||""}{e.beziehung?` · ${e.beziehung}`:""}</div>
                     <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
                       {e.email&&<span className="cc-detail-label">✉ {e.email}</span>}
                       {e.telefon&&<span className="cc-detail-label">📞 {e.telefon}</span>}
