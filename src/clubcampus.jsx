@@ -551,6 +551,8 @@ function Portal({supabaseClient}){
       const {data, error} = await sb.from("benutzer").select("*").eq("id",uid).single();
       if(data){
         setDbUser(data);
+        // TODO: benutzer.mitglied_id ist uuid aber mitglieder.id ist bigint
+        // Verknüpfung funktioniert erst wenn Schema vereinheitlicht wird
       } else {
         console.warn("[FCH] benutzer nicht gefunden:", error?.message);
         setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});

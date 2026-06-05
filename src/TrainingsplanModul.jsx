@@ -21,8 +21,8 @@ const S_BOLD={fontSize:14,fontWeight:600,color:"var(--text)"};
 /* ── Hilfskonstanten ── */
 
 
-function PlaetzeView(){
-  const [plaetze, setPlaetze] = useState(TRAININGSPLAETZE_DEFAULT.map(p=>Object.assign({},p)));
+function PlaetzeView({sb}){
+  const [plaetze, setPlaetze] = useState([]);
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editHaelften, setEditHaelften] = useState("");
@@ -33,17 +33,44 @@ function PlaetzeView(){
   useEffect(function(){
     (async function(){
       try{
+        if(sb){
+          const {data} = await sb.from("trainingsplaetze").select("*").order("sort_order").order("name");
+          if(data&&data.length>0){
+            const mapped = data.map(function(p){ return {id:p.id, name:p.name, active:p.active, halfn:p.haelften||[]}; });
+            setPlaetze(mapped);
+            TRAININGSPLAETZE.length=0; mapped.forEach(function(x){ TRAININGSPLAETZE.push(x); });
+            return;
+          }
+        }
+        // Fallback localStorage
         const r=localStorage.getItem("trainingsplaetze_custom");
-        if(r) setPlaetze(JSON.parse(r));
+        const loaded = r?JSON.parse(r):TRAININGSPLAETZE_DEFAULT.map(p=>Object.assign({},p));
+        setPlaetze(loaded);
+        TRAININGSPLAETZE.length=0; loaded.forEach(function(x){ TRAININGSPLAETZE.push(x); });
       }catch(e){}
     })();
   },[]);
 
-  function save(p){
+  async function save(p){
     setPlaetze(p);
-    try{localStorage.setItem("trainingsplaetze_custom", JSON.stringify(p));}catch(e){}
-    TRAININGSPLAETZE.length=0;
-    p.forEach(function(x){ TRAININGSPLAETZE.push(x); });
+    TRAININGSPLAETZE.length=0; p.forEach(function(x){ TRAININGSPLAETZE.push(x); });
+    if(sb){
+      try{
+        // Upsert alle aktiven + inaktiven Plätze
+        for(let i=0;i<p.length;i++){
+          const platz=p[i];
+          await sb.from("trainingsplaetze").upsert({
+            id: typeof platz.id==="string"&&platz.id.startsWith("platz_")?undefined:platz.id,
+            name: platz.name,
+            haelften: platz.halfn||[],
+            active: platz.active,
+            sort_order: i,
+          });
+        }
+      }catch(e){ console.warn("[FCH] savePlaetze:", e.message); }
+    } else {
+      try{localStorage.setItem("trainingsplaetze_custom", JSON.stringify(p));}catch(e){}
+    }
   }
 
   function parseHaelften(str){
@@ -532,19 +559,29 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
           if(ausnahmenData){
             const ausnahmenMap = {};
             ausnahmenData.forEach(function(a){
-              const key = a.week_nr_key;
+              // DB speichert year + week_nr separat → zu kwKey "2026_21" zusammensetzen
+              const key = a.year+"_"+a.week_nr;
               if(!ausnahmenMap[key]) ausnahmenMap[key] = [];
               ausnahmenMap[key].push({
                 id: a.id,
                 slot_id: a.slot_id,
                 type: a.type,
-                datum: a.date,
-                kw_key: a.week_nr_key,
-                neue_start_zeit: a.neue_start_zeit,
-                neue_end_zeit: a.neue_end_zeit,
-                neues_ort: a.neues_ort,
-                neue_half: a.neue_half,
-                grund: a.grund||"",
+                kw_key: key,
+                week_nr: a.week_nr,
+                year: a.year,
+                neue_start: a.neue_start_zeit,
+                neue_end: a.neue_end_zeit,
+                neuer_ort: a.neuer_ort,
+                neue_half: a.neue_haelfte,
+                begruendung: a.begruendung||"",
+                // Zusatz-Felder
+                weekday: a.zusatz_wochentag,
+                team: a.zusatz_team,
+                start: a.zusatz_start_zeit,
+                end: a.zusatz_end_zeit,
+                location: a.zusatz_ort,
+                color: a.zusatz_farbe,
+                isZusatz: a.type==="zusatz",
               });
             });
             setAusnahmen(ausnahmenMap);
@@ -584,12 +621,15 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
                 team: s.team,
                 start_zeit: s.start,
                 end_zeit: s.end,
-                location: s.location,
+                location: s.location||null,
                 end_ort: s.end_ort||null,
                 half: s.half||null,
                 end_haelfte: s.end_half||null,
                 wechsel_zeit: s.wechsel_zeit||null,
                 color: s.color||null,
+                valid_from_week: s.valid_from_week||null,
+                valid_from_week_year: s.valid_from_week ? parseInt(s.valid_from_week.split("_")[0]) : null,
+                valid_from_week_nr: s.valid_from_week ? parseInt(s.valid_from_week.split("_")[1]) : null,
               });
             }
           }
@@ -604,25 +644,36 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     setAusnahmen(a);
     if(supabase){
       try{
-        // Alle Ausnahmen als flache Liste
-        const alle = Object.values(a).flat();
+        const alle = Object.entries(a).flatMap(function([kwKey, list]){
+          const parts = kwKey.split("_");
+          const year = parseInt(parts[0]);
+          const week_nr = parseInt(parts[1]);
+          return list.map(function(ausnahme){ return {...ausnahme, year, week_nr}; });
+        });
         for(const ausnahme of alle){
           await supabase.from("trainingsplan_ausnahmen").upsert({
-            id: ausnahme.id,
+            id: ausnahme.id||undefined,
             slot_id: ausnahme.slot_id||null,
             type: ausnahme.type,
             week_nr: ausnahme.week_nr,
             year: ausnahme.year,
-            neue_start_zeit: ausnahme.neue_start_zeit||null,
-            neue_end_zeit: ausnahme.neue_end_zeit||null,
-            neuer_ort: ausnahme.neues_ort||null,
+            neue_start_zeit: ausnahme.neue_start||null,
+            neue_end_zeit: ausnahme.neue_end||null,
+            neuer_ort: ausnahme.neuer_ort||null,
             neue_haelfte: ausnahme.neue_half||null,
-            grund: ausnahme.grund||null,
+            begruendung: ausnahme.begruendung||null,
+            // Zusatz-Felder
+            zusatz_wochentag: ausnahme.weekday||null,
+            zusatz_team: ausnahme.team||null,
+            zusatz_start_zeit: ausnahme.start||null,
+            zusatz_end_zeit: ausnahme.end||null,
+            zusatz_ort: ausnahme.location||null,
+            zusatz_farbe: ausnahme.color||null,
           });
         }
       }catch(e){ console.warn("[FCH] saveAusnahmen Fehler:", e.message); }
     } else {
-      window.storage.set("trainingsAusnahmen", JSON.stringify(a));
+      try{ await window.storage.set("trainingsAusnahmen", JSON.stringify(a)); }catch(e){}
     }
   }
 
@@ -1022,7 +1073,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       )}
 
       {/* === Tab: Platze === */}
-      {trainingsTab==="plaetze"&&<PlaetzeView/>}
+      {trainingsTab==="plaetze"&&<PlaetzeView sb={supabase}/>}
 
       {/* === Tab: GANTT === */}
       {trainingsTab==="gantt"&&(
@@ -1319,8 +1370,8 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
   const isEdit=!!slot?.id;
   const isZusatz=slot?.isZusatz;
 
-  // Dynamisch aus localStorage laden — damit Änderungen aus PlaetzeView sichtbar sind
-  const PLAETZE_LIVE = (()=>{
+  // TRAININGSPLAETZE wird von PlaetzeView (aus Supabase oder localStorage) befüllt
+  const PLAETZE_LIVE = TRAININGSPLAETZE.length>0 ? TRAININGSPLAETZE : (()=>{
     try{
       const r=localStorage.getItem("trainingsplaetze_custom");
       return r?JSON.parse(r):TRAININGSPLAETZE_DEFAULT.map(p=>({...p}));
