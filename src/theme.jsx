@@ -668,7 +668,7 @@ function DropMenu({items}){
   return(
     <div className="cc-menu-wrap" ref={wrapRef}>
       <button className="cc-menu-trigger" onClick={()=>setOpen(o=>!o)}>
-        <TI n="dots" size={16}/>
+        <TI n="dots-vertical" size={16}/>
       </button>
       {open&&(
         <div className="cc-menu">

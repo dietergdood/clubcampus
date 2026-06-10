@@ -61,6 +61,7 @@ const TI_PATHS={
     "plus":"<path d=\"M12 5v14\"/><path d=\"M5 12h14\"/>",
     "shirt":"<path d=\"M15 3l3 3l-2 2l4 4l-4 1v8H8v-8l-4-1l4-4l-2-2l3-3c0 0 1 2 4 2s4-2 4-2z\"/>",
     "x":"<path d=\"M18 6L6 18\"/><path d=\"M6 6l12 12\"/>",
+    "dots-vertical":"<circle cx=\"12\" cy=\"5\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"19\" r=\"1\"/>",
     "heart":"<path d=\"M19.5 12.572l-7.5 7.428l-7.5-7.428a5 5 0 1 1 7.5-6.566a5 5 0 1 1 7.5 6.572\"/>",
     "key":"<circle cx=\"8\" cy=\"15\" r=\"4\"/><path d=\"M11 12l5-5\"/><path d=\"M14 10l2 2\"/>",
     "shield-check":"<path d=\"M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1-8.5 15a12 12 0 0 1-8.5-15a12 12 0 0 0 8.5-3\"/><path d=\"M9 12l2 2l4-4\"/>",
