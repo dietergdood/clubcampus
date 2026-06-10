@@ -230,8 +230,12 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-land-option-name{flex:1}
 .cc-land-option-active{background:var(--surface2);font-weight:600}
 .cc-land-empty{padding:12px;font-size:13px;color:var(--sub);text-align:center}
-.cc-btn-danger-ghost{color:var(--r,#DC2626)!important}
-.cc-btn-danger-ghost:hover{background:var(--rl,#FEF2F2)!important}
+.cc-eltern-av{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.cc-eltern-badge{font-size:11px;padding:2px 7px;border-radius:20px;border:0.5px solid var(--border);color:var(--sub)}
+.cc-eltern-badge[data-rel="mutter"],.cc-eltern-badge[data-rel="grossmutter"]{background:#FDF2F8;border-color:#FBCFE8;color:#9D174D}
+.cc-eltern-badge[data-rel="vater"],.cc-eltern-badge[data-rel="grossvater"]{background:#EFF6FF;border-color:#BFDBFE;color:#1E40AF}
+.cc-eltern-portal-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;margin-top:8px;border-top:0.5px solid var(--border)}
+.cc-flex-wrap{flex-wrap:wrap}
 .cc-team-position-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:0.5px solid var(--border)}
 .cc-team-position-row:last-child{border-bottom:none}
 .cc-team-nr{width:34px;height:34px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);flex-shrink:0;border:0.5px solid var(--border)}

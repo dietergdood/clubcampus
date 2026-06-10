@@ -355,7 +355,7 @@ function FotoUpload({raw,canUpload,sb,onReload}){
 /* -- Kaderliste mit Feldsichtbarkeit -- */
 
 /* ── Eltern Portal-Verknüpfungs-Zeile ── */
-function ElternPortalRow({e,sb,onReload}){
+function ElternPortalSection({e,sb,onReload}){
   const [lMsg,setLMsg]=useState(null);
   const [lLoading,setLLoading]=useState(false);
   async function link(){
@@ -364,9 +364,9 @@ function ElternPortalRow({e,sb,onReload}){
     const {data:bu}=await sb.from("benutzer").select("id").eq("email",e.email).maybeSingle();
     if(bu){
       await sb.from("elternkontakte").update({benutzer_id:bu.id}).eq("id",e.id);
-      setLMsg({ok:true,text:"Verknüpft ✓"});
+      setLMsg({ok:true,text:"Portal-Zugang eingerichtet ✓"});
       if(onReload) onReload();
-    } else { setLMsg({ok:false,text:"Kein Portal-Konto für "+e.email}); }
+    } else { setLMsg({ok:false,text:"Kein Konto für "+e.email+" gefunden"}); }
     setLLoading(false);
   }
   async function unlink(){
@@ -375,14 +375,30 @@ function ElternPortalRow({e,sb,onReload}){
     if(onReload) onReload();
   }
   return(
-    <>
-      {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-4`}>{lMsg.text}</div>}
-      {e.benutzer_id
-        ?<Btn small onClick={unlink} className="cc-btn-unlink-sm">Aufheben</Btn>
-        :<Btn small onClick={link} disabled={!e.email||lLoading}>{lLoading?"…":"Verknüpfen"}</Btn>
-      }
-    </>
+    <div className="cc-eltern-portal-row">
+      <div>
+        <div className="cc-text-bold" style={{fontSize:13}}>Portal-Zugang</div>
+        <div className="cc-text-sm">{e.benutzer_id?"Aktiv":"Kein Zugang"}</div>
+      </div>
+      <div className="cc-col cc-gap-4">
+        {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"}`}>{lMsg.text}</div>}
+        {e.benutzer_id
+          ?<Btn small onClick={unlink}>Zugang entfernen</Btn>
+          :<Btn small onClick={link} disabled={!e.email||lLoading} variant="primary">
+            {lLoading?"…":"Portal-Zugang einrichten"}
+          </Btn>
+        }
+      </div>
+    </div>
   );
+}
+
+/* Avatar-Farbe nach Beziehung */
+function elternAvColor(beziehung){
+  const b=(beziehung||"").toLowerCase();
+  if(b==="mutter"||b==="grossmutter") return {bg:"#FDF2F8",text:"#9D174D"};
+  if(b==="vater"||b==="grossvater")   return {bg:"#EFF6FF",text:"#1E40AF"};
+  return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
 function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
@@ -762,6 +778,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                           <button className="cc-btn-ghost" onClick={()=>setEditEltern(null)}>×</button>
                         </div>
                         <ElternForm data={editEltern.data} onChange={d=>setEditEltern(p=>({...p,data:d}))}/>
+                        {e.id&&<ElternPortalSection e={e} sb={sb} onReload={onReload}/>}
                         {elternMsg&&<div className={`cc-badge ${elternMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{elternMsg.text}</div>}
                         <div className="cc-save-row">
                           <button className="cc-btn-ghost" onClick={()=>setEditEltern(null)}>Abbrechen</button>
@@ -772,24 +789,27 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                       </>
                     ):(
                       <div className="cc-row cc-gap-12">
-                        <Av name={name} size={48}/>
+                        {(()=>{const ac=elternAvColor(e.beziehung);return(
+                          <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
+                            {name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+                          </div>
+                        );})()}
                         <div className="cc-flex-1">
-                          <div className="cc-row cc-gap-8 cc-mb-4">
+                          <div className="cc-row cc-gap-6 cc-mb-4 cc-flex-wrap">
                             <div className="cc-text-bold cc-text-lg">{name}</div>
-                            {e.beziehung&&<span className="cc-badge cc-badge-neutral"><TI n="users" size={10}/> {e.beziehung}</span>}
+                            {e.beziehung&&<span className="cc-eltern-badge" data-rel={(e.beziehung||"").toLowerCase()}>{e.beziehung}</span>}
                             {e.benutzer_id
-                              ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal</span>
-                              :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
+                              ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal: Aktiv</span>
+                              :<span className="cc-badge cc-badge-neutral">Kein Portal-Zugang</span>
                             }
                           </div>
-                          <div className="cc-row cc-gap-16">
-                            {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
-                            {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
+                          <div className="cc-col cc-gap-2">
+                            {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{e.email}</a>}
+                            {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{tel}</a>}
                           </div>
                         </div>
                         {canEdit&&(
-                          <div className="cc-row cc-gap-6 cc-shrink-0">
-                            <ElternPortalRow e={e} sb={sb} onReload={onReload}/>
+                          <div className="cc-col cc-gap-4 cc-shrink-0">
                             <Btn small variant="ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={13}/></Btn>
                             <Btn small variant="ghost" onClick={()=>deleteEltern(e.id)} className="cc-btn-danger-ghost"><TI n="trash" size={13}/></Btn>
                           </div>
@@ -1407,6 +1427,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                           <button className="cc-btn-ghost" onClick={()=>setEditEltern(null)}>×</button>
                         </div>
                         <ElternForm data={editEltern.data} onChange={d=>setEditEltern(p=>({...p,data:d}))}/>
+                        {e.id&&<ElternPortalSection e={e} sb={sb} onReload={onReload}/>}
                         {elternMsg&&<div className={`cc-badge ${elternMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{elternMsg.text}</div>}
                         <div className="cc-save-row">
                           <button className="cc-btn-ghost" onClick={()=>setEditEltern(null)}>Abbrechen</button>
@@ -1417,24 +1438,27 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                       </>
                     ):(
                       <div className="cc-row cc-gap-12">
-                        <Av name={name} size={48}/>
+                        {(()=>{const ac=elternAvColor(e.beziehung);return(
+                          <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
+                            {name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+                          </div>
+                        );})()}
                         <div className="cc-flex-1">
-                          <div className="cc-row cc-gap-8 cc-mb-4">
+                          <div className="cc-row cc-gap-6 cc-mb-4 cc-flex-wrap">
                             <div className="cc-text-bold cc-text-lg">{name}</div>
-                            {e.beziehung&&<span className="cc-badge cc-badge-neutral"><TI n="users" size={10}/> {e.beziehung}</span>}
+                            {e.beziehung&&<span className="cc-eltern-badge" data-rel={(e.beziehung||"").toLowerCase()}>{e.beziehung}</span>}
                             {e.benutzer_id
-                              ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal</span>
-                              :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
+                              ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal: Aktiv</span>
+                              :<span className="cc-badge cc-badge-neutral">Kein Portal-Zugang</span>
                             }
                           </div>
-                          <div className="cc-row cc-gap-16">
-                            {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
-                            {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
+                          <div className="cc-col cc-gap-2">
+                            {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{e.email}</a>}
+                            {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{tel}</a>}
                           </div>
                         </div>
                         {canEdit&&(
-                          <div className="cc-row cc-gap-6 cc-shrink-0">
-                            <ElternPortalRow e={e} sb={sb} onReload={onReload}/>
+                          <div className="cc-col cc-gap-4 cc-shrink-0">
                             <Btn small variant="ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={13}/></Btn>
                             <Btn small variant="ghost" onClick={()=>deleteEltern(e.id)} className="cc-btn-danger-ghost"><TI n="trash" size={13}/></Btn>
                           </div>
