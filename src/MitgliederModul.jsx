@@ -486,7 +486,6 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
   /* ── Detail-Modal ── */
   const MemberDetail=({m,onClose})=>{
     const raw=dbMitglieder.find(d=>d.id===m.id)||{};
-    const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
@@ -497,6 +496,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
     const [teamDetails,setTeamDetails]=useState(null);
     const [elternLoaded,setElternLoaded]=useState(null);
+    const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 
     useEffect(()=>{
       if(tab==="eltern"&&sb&&raw.id&&elternLoaded===null){
@@ -1148,7 +1148,6 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
   /* ── Detail-Modal ── */
   const MemberDetail=({m,onClose})=>{
     const raw=dbMitglieder.find(d=>d.id===m.id)||{};
-    const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
@@ -1159,6 +1158,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
     const [teamDetails,setTeamDetails]=useState(null);
     const [elternLoaded,setElternLoaded]=useState(null);
+    const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 
     useEffect(()=>{
       if(tab==="eltern"&&sb&&raw.id&&elternLoaded===null){
