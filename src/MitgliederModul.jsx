@@ -442,6 +442,17 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const [benutzer,setBenutzer]=useState(null);
     const [portalMsg,setPortalMsg]=useState(null);
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
+    const [mitgliedTeams,setMitgliedTeams]=useState(null);
+
+    useEffect(()=>{
+      if(tab==="info"&&sb&&raw.id&&mitgliedTeams===null){
+        sb.from("mitglieder_teams")
+          .select("*, team:teams(id,name,stufe)")
+          .eq("mitglied_id",raw.id)
+          .eq("aktiv",true)
+          .then(({data})=>setMitgliedTeams(data||[]));
+      }
+    },[tab,raw.id]);
 
     const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
@@ -545,11 +556,8 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             <Card>
               <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
               {[
-                {l:"Mitgliedtyp",  v:m.type},
-                {l:"Funktion",     v:m.role},
-                {l:"Team(s)",      v:m.team},
-                {l:"Position",     v:raw.position||"-"},
-                {l:"Rückennummer", v:raw.rueckennr?`#${raw.rueckennr}`:"-"},
+                {l:"Mitgliedtyp",  v:raw.mitgliedtyp||m.type},
+                {l:"Funktion",     v:raw.funktion||m.role},
                 ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
                 ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
                 ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
@@ -557,6 +565,25 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
                   <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                </div>
+              ))}
+            </Card>
+            {/* Teams & Positionen */}
+            <Card>
+              <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
+              {mitgliedTeams===null&&<div className="cc-text-sm cc-text-sub">Wird geladen…</div>}
+              {mitgliedTeams!==null&&mitgliedTeams.length===0&&(
+                <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
+              )}
+              {(mitgliedTeams||[]).map((mt,i)=>(
+                <div key={i} className="cc-team-position-row">
+                  <div className={mt.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
+                    {mt.rueckennr||"—"}
+                  </div>
+                  <div className="cc-flex-1">
+                    <div className="cc-text-bold">{mt.team?.name||"-"}</div>
+                    <div className="cc-text-sm">{mt.position||mt.funktion||"—"}</div>
+                  </div>
                 </div>
               ))}
             </Card>
@@ -1046,6 +1073,17 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     const [benutzer,setBenutzer]=useState(null);
     const [portalMsg,setPortalMsg]=useState(null);
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
+    const [mitgliedTeams,setMitgliedTeams]=useState(null);
+
+    useEffect(()=>{
+      if(tab==="info"&&sb&&raw.id&&mitgliedTeams===null){
+        sb.from("mitglieder_teams")
+          .select("*, team:teams(id,name,stufe)")
+          .eq("mitglied_id",raw.id)
+          .eq("aktiv",true)
+          .then(({data})=>setMitgliedTeams(data||[]));
+      }
+    },[tab,raw.id]);
 
     const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
@@ -1149,11 +1187,8 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             <Card>
               <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
               {[
-                {l:"Mitgliedtyp",  v:m.type},
-                {l:"Funktion",     v:m.role},
-                {l:"Team(s)",      v:m.team},
-                {l:"Position",     v:raw.position||"-"},
-                {l:"Rückennummer", v:raw.rueckennr?`#${raw.rueckennr}`:"-"},
+                {l:"Mitgliedtyp",  v:raw.mitgliedtyp||m.type},
+                {l:"Funktion",     v:raw.funktion||m.role},
                 ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
                 ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
                 ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
@@ -1161,6 +1196,25 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
                   <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                </div>
+              ))}
+            </Card>
+            {/* Teams & Positionen */}
+            <Card>
+              <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
+              {mitgliedTeams===null&&<div className="cc-text-sm cc-text-sub">Wird geladen…</div>}
+              {mitgliedTeams!==null&&mitgliedTeams.length===0&&(
+                <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
+              )}
+              {(mitgliedTeams||[]).map((mt,i)=>(
+                <div key={i} className="cc-team-position-row">
+                  <div className={mt.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
+                    {mt.rueckennr||"—"}
+                  </div>
+                  <div className="cc-flex-1">
+                    <div className="cc-text-bold">{mt.team?.name||"-"}</div>
+                    <div className="cc-text-sm">{mt.position||mt.funktion||"—"}</div>
+                  </div>
                 </div>
               ))}
             </Card>

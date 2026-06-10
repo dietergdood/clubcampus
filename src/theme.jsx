@@ -198,7 +198,10 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-filter-pill{padding:4px 12px;border-radius:20px;font-size:13px;cursor:pointer;background:none;font-family:inherit;transition:background 0.1s}
 .cc-back-btn{margin-left:-8px;margin-bottom:4px}
 .cc-section-label{padding:10px 13px 6px;background:var(--surface2);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--sub)}
-.cc-border-top{border-top:0.5px solid var(--border)}
+.cc-team-position-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:0.5px solid var(--border)}
+.cc-team-position-row:last-child{border-bottom:none}
+.cc-team-nr{width:34px;height:34px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);flex-shrink:0;border:0.5px solid var(--border)}
+.cc-team-nr-empty{color:var(--sub);font-weight:400;border-style:dashed}
 .cc-pt-8{padding-top:8px}
 .cc-mb-14{margin-bottom:14px}
 .cc-text-accent{color:var(--cc-accent,#FFBF00);font-weight:600}
