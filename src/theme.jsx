@@ -618,7 +618,7 @@ function Truncate({children, lines=1, style={}}){
   return <div style={{...s,...style}}>{children}</div>;
 }
 
-function LandSelect({value,onChange,laender,getFlag,placeholder="–"}){
+function LandSelect({value,onChange,laender,placeholder="–"}){
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
   const wrapRef=useRef(null);

@@ -49,12 +49,6 @@ const LAENDER=[
 ].sort((a,b)=>a.n.localeCompare(b.n,"de"));
 
 // Flagge aus ISO2-Code (Emoji)
-function getFlag(code){
-  if(!code||code.length!==2) return "";
-  if(code.toUpperCase()==="XK") return "🇽🇰";
-  return String.fromCodePoint(...code.toUpperCase().split("").map(c=>0x1F1E6+c.charCodeAt(0)-65));
-}
-
 // Ländername aus ISO2-Code
 function getLandName(code){
   if(!code) return null;
@@ -234,7 +228,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 <div key={k}>
                   <label className="cc-label">{l}</label>
                   {isLaender?(
-                    <LandSelect value={editForm[k]||""} onChange={v=>setEditForm(f=>({...f,[k]:v}))} laender={LAENDER} getFlag={getFlag}/>
+                    <LandSelect value={editForm[k]||""} onChange={v=>setEditForm(f=>({...f,[k]:v}))} laender={LAENDER}/>
                   ):opts?(
                     <select className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}>
                       <option value="">–</option>
