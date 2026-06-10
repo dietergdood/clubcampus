@@ -574,7 +574,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
-                {l:"Nationalität", v:raw.nationalitaet||"-", flag:raw.nationalitaet?getFlag(raw.nationalitaet):null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
+                {l:"Nationalität", v:raw.nationalitaet||"-", flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
                 {l:"Heimatort",    v:raw.heimatort||"-"},
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
                 ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||"-"}]:[]),
@@ -583,7 +583,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                   <span className="cc-info-key">{r.l}</span>
                   {r.flag?(
                     <span className="cc-info-val cc-row cc-gap-6">
-                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span className="cc-land-badge">{r.flag}</span>
                       <span>{r.flagName}</span>
                     </span>
                   ):(
@@ -625,7 +625,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                   <span className="cc-info-key">{r.l}</span>
                   {r.flag?(
                     <span className="cc-info-val cc-row cc-gap-6">
-                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span className="cc-land-badge">{r.flag}</span>
                       <span>{r.flagName}</span>
                     </span>
                   ):(
@@ -1223,7 +1223,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
-                {l:"Nationalität", v:raw.nationalitaet||"-", flag:raw.nationalitaet?getFlag(raw.nationalitaet):null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
+                {l:"Nationalität", v:raw.nationalitaet||"-", flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
                 {l:"Heimatort",    v:raw.heimatort||"-"},
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
                 ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||"-"}]:[]),
@@ -1232,7 +1232,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                   <span className="cc-info-key">{r.l}</span>
                   {r.flag?(
                     <span className="cc-info-val cc-row cc-gap-6">
-                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span className="cc-land-badge">{r.flag}</span>
                       <span>{r.flagName}</span>
                     </span>
                   ):(
@@ -1274,7 +1274,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                   <span className="cc-info-key">{r.l}</span>
                   {r.flag?(
                     <span className="cc-info-val cc-row cc-gap-6">
-                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span className="cc-land-badge">{r.flag}</span>
                       <span>{r.flagName}</span>
                     </span>
                   ):(

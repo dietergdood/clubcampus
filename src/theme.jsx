@@ -207,6 +207,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-filter-pill{padding:4px 12px;border-radius:20px;font-size:13px;cursor:pointer;background:none;font-family:inherit;transition:background 0.1s}
 .cc-back-btn{margin-left:-8px;margin-bottom:4px}
 .cc-section-label{padding:10px 13px 6px;background:var(--surface2);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--sub)}
+.cc-land-badge{font-size:10px;font-weight:700;padding:2px 5px;border-radius:4px;background:var(--surface2);border:0.5px solid var(--border);color:var(--sub);letter-spacing:0.05em;flex-shrink:0}
 .cc-land-wrap{position:relative;width:100%}
 .cc-land-trigger{display:flex;align-items:center;gap:8px;padding:7px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;font-size:14px;color:var(--text);width:100%;text-align:left;font-family:inherit}
 .cc-land-trigger:focus{outline:2px solid var(--cc-accent,#FFBF00);outline-offset:1px}
@@ -642,7 +643,7 @@ function LandSelect({value,onChange,laender,getFlag,placeholder="–"}){
       <button type="button" className="cc-land-trigger" onClick={()=>setOpen(o=>!o)}>
         {selected?(
           <>
-            <span className="cc-land-flag">{getFlag(selected.c)}</span>
+            <span className="cc-land-badge">{selected.c}</span>
             <span className="cc-land-name">{selected.n}</span>
           </>
         ):(
@@ -663,7 +664,7 @@ function LandSelect({value,onChange,laender,getFlag,placeholder="–"}){
             {filtered.length===0&&<div className="cc-land-empty">Kein Ergebnis</div>}
             {filtered.map(l=>(
               <div key={l.c} className={`cc-land-option${value===l.c?" cc-land-option-active":""}`} onClick={()=>select(l.c)}>
-                <span className="cc-land-option-flag">{getFlag(l.c)}</span>
+                <span className="cc-land-badge">{l.c}</span>
                 <span className="cc-land-option-name">{l.n}</span>
               </div>
             ))}
