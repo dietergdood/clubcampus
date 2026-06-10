@@ -323,9 +323,45 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
+    const canEdit=role==="administrator"||role==="administration";
+    const [portalLoading,setPortalLoading]=useState(false);
+    const [benutzer,setBenutzer]=useState(null);
+    const [portalMsg,setPortalMsg]=useState(null);
+    const [linkEmail,setLinkEmail]=useState(raw.email||"");
 
     const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
+    useEffect(()=>{
+      if(tab==="portal"&&sb&&raw.id){
+        setPortalLoading(true);
+        sb.from("benutzer").select("*").eq("mitglied_id",raw.id).maybeSingle()
+          .then(({data})=>{setBenutzer(data);setPortalLoading(false);});
+      }
+    },[tab,raw.id]);
+
+    async function handleLink(){
+      if(!sb||!linkEmail) return;
+      setPortalLoading(true); setPortalMsg(null);
+      const {data:existing}=await sb.from("benutzer").select("id,email").eq("email",linkEmail).maybeSingle();
+      if(existing){
+        await sb.from("mitglieder").update({hat_portal_zugang:true}).eq("id",raw.id);
+        await sb.from("benutzer").update({mitglied_id:raw.id}).eq("id",existing.id);
+        setPortalMsg({ok:true,text:"Verknüpft ✓"});
+        if(onReload) onReload();
+      } else {
+        setPortalMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});
+      }
+      setPortalLoading(false);
+    }
+
+    async function handleUnlink(){
+      if(!sb) return;
+      await sb.from("mitglieder").update({hat_portal_zugang:false}).eq("id",raw.id);
+      await sb.from("benutzer").update({mitglied_id:null}).eq("mitglied_id",raw.id);
+      setBenutzer(null); setPortalMsg({ok:true,text:"Verknüpfung aufgehoben"});
+      if(onReload) onReload();
+    }
 
     return(
       <div>
@@ -367,6 +403,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             {[
               {key:"info",    label:"Profil",     icon:"user"},
               {key:"eltern",  label:`Eltern (${eltern.length})`,icon:"heart"},
+              ...(canEdit?[{key:"portal",label:"Portal-Zugang",icon:"key"}]:[]),
               {key:"stats",   label:"Statistik",  icon:"chart-bar",soon:true},
               {key:"comments",label:"Kommentare", icon:"message",  soon:true},
               {key:"ratings", label:"Bewertungen",icon:"star",     soon:true},
@@ -489,6 +526,60 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 </Card>
               );
             })}
+          </div>
+        )}
+
+        {/* Tab: Portal-Zugang */}
+        {tab==="portal"&&canEdit&&(
+          <div className="cc-col cc-gap-12">
+            <Card>
+              <div className="cc-between cc-mb-12">
+                <div className="cc-text-bold" style={{fontSize:15}}>Portal-Zugang</div>
+                <Chip text={raw.hat_portal_zugang?"Aktiv":"Kein Zugang"} color={raw.hat_portal_zugang?GN:R} bg={raw.hat_portal_zugang?"#ECFDF5":RL}/>
+              </div>
+              {raw.hat_portal_zugang&&benutzer&&(
+                <div className="cc-col cc-gap-8 cc-mb-12">
+                  {[
+                    {l:"E-Mail",   v:benutzer.email||"-"},
+                    {l:"Rolle",    v:benutzer.role||"-"},
+                    {l:"Erstellt", v:benutzer.created_at?new Date(benutzer.created_at).toLocaleDateString("de-CH"):"-"},
+                  ].map((r,i)=>(
+                    <div key={i} className="cc-info-row">
+                      <span className="cc-info-key">{r.l}</span>
+                      <span className="cc-info-val">{r.v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"}`} style={{marginBottom:12}}>{portalMsg.text}</div>}
+              {raw.hat_portal_zugang
+                ?<button className="cc-btn-danger cc-w-full" onClick={handleUnlink}>Verknüpfung aufheben</button>
+                :(
+                  <div className="cc-col cc-gap-8">
+                    <label className="cc-label">E-Mail des Benutzers</label>
+                    <input className="cc-input" value={linkEmail} onChange={e=>setLinkEmail(e.target.value)} placeholder="email@example.com"/>
+                    <button className="cc-btn-success cc-w-full" onClick={handleLink} disabled={!linkEmail||portalLoading}>
+                      {portalLoading?"Wird verknüpft…":"Mit Portal verknüpfen"}
+                    </button>
+                  </div>
+                )
+              }
+            </Card>
+            {/* Eltern Portal-Status */}
+            {eltern.length>0&&(
+              <Card>
+                <div className="cc-text-bold cc-mb-12">Eltern Portal-Status</div>
+                {eltern.map((e,i)=>(
+                  <div key={i} className="cc-info-row">
+                    <span className="cc-info-key">{e.name||`${e.vorname} ${e.nachname}`}</span>
+                    <span>{e.benutzer_id
+                      ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
+                      :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
+                    }</span>
+                  </div>
+                ))}
+              </Card>
+            )}
           </div>
         )}
 
@@ -695,9 +786,45 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
+    const canEdit=role==="administrator"||role==="administration";
+    const [portalLoading,setPortalLoading]=useState(false);
+    const [benutzer,setBenutzer]=useState(null);
+    const [portalMsg,setPortalMsg]=useState(null);
+    const [linkEmail,setLinkEmail]=useState(raw.email||"");
 
     const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
+    useEffect(()=>{
+      if(tab==="portal"&&sb&&raw.id){
+        setPortalLoading(true);
+        sb.from("benutzer").select("*").eq("mitglied_id",raw.id).maybeSingle()
+          .then(({data})=>{setBenutzer(data);setPortalLoading(false);});
+      }
+    },[tab,raw.id]);
+
+    async function handleLink(){
+      if(!sb||!linkEmail) return;
+      setPortalLoading(true); setPortalMsg(null);
+      const {data:existing}=await sb.from("benutzer").select("id,email").eq("email",linkEmail).maybeSingle();
+      if(existing){
+        await sb.from("mitglieder").update({hat_portal_zugang:true}).eq("id",raw.id);
+        await sb.from("benutzer").update({mitglied_id:raw.id}).eq("id",existing.id);
+        setPortalMsg({ok:true,text:"Verknüpft ✓"});
+        if(onReload) onReload();
+      } else {
+        setPortalMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});
+      }
+      setPortalLoading(false);
+    }
+
+    async function handleUnlink(){
+      if(!sb) return;
+      await sb.from("mitglieder").update({hat_portal_zugang:false}).eq("id",raw.id);
+      await sb.from("benutzer").update({mitglied_id:null}).eq("mitglied_id",raw.id);
+      setBenutzer(null); setPortalMsg({ok:true,text:"Verknüpfung aufgehoben"});
+      if(onReload) onReload();
+    }
 
     return(
       <div>
@@ -739,6 +866,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             {[
               {key:"info",    label:"Profil",     icon:"user"},
               {key:"eltern",  label:`Eltern (${eltern.length})`,icon:"heart"},
+              ...(canEdit?[{key:"portal",label:"Portal-Zugang",icon:"key"}]:[]),
               {key:"stats",   label:"Statistik",  icon:"chart-bar",soon:true},
               {key:"comments",label:"Kommentare", icon:"message",  soon:true},
               {key:"ratings", label:"Bewertungen",icon:"star",     soon:true},
@@ -861,6 +989,60 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 </Card>
               );
             })}
+          </div>
+        )}
+
+        {/* Tab: Portal-Zugang */}
+        {tab==="portal"&&canEdit&&(
+          <div className="cc-col cc-gap-12">
+            <Card>
+              <div className="cc-between cc-mb-12">
+                <div className="cc-text-bold" style={{fontSize:15}}>Portal-Zugang</div>
+                <Chip text={raw.hat_portal_zugang?"Aktiv":"Kein Zugang"} color={raw.hat_portal_zugang?GN:R} bg={raw.hat_portal_zugang?"#ECFDF5":RL}/>
+              </div>
+              {raw.hat_portal_zugang&&benutzer&&(
+                <div className="cc-col cc-gap-8 cc-mb-12">
+                  {[
+                    {l:"E-Mail",   v:benutzer.email||"-"},
+                    {l:"Rolle",    v:benutzer.role||"-"},
+                    {l:"Erstellt", v:benutzer.created_at?new Date(benutzer.created_at).toLocaleDateString("de-CH"):"-"},
+                  ].map((r,i)=>(
+                    <div key={i} className="cc-info-row">
+                      <span className="cc-info-key">{r.l}</span>
+                      <span className="cc-info-val">{r.v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"}`} style={{marginBottom:12}}>{portalMsg.text}</div>}
+              {raw.hat_portal_zugang
+                ?<button className="cc-btn-danger cc-w-full" onClick={handleUnlink}>Verknüpfung aufheben</button>
+                :(
+                  <div className="cc-col cc-gap-8">
+                    <label className="cc-label">E-Mail des Benutzers</label>
+                    <input className="cc-input" value={linkEmail} onChange={e=>setLinkEmail(e.target.value)} placeholder="email@example.com"/>
+                    <button className="cc-btn-success cc-w-full" onClick={handleLink} disabled={!linkEmail||portalLoading}>
+                      {portalLoading?"Wird verknüpft…":"Mit Portal verknüpfen"}
+                    </button>
+                  </div>
+                )
+              }
+            </Card>
+            {/* Eltern Portal-Status */}
+            {eltern.length>0&&(
+              <Card>
+                <div className="cc-text-bold cc-mb-12">Eltern Portal-Status</div>
+                {eltern.map((e,i)=>(
+                  <div key={i} className="cc-info-row">
+                    <span className="cc-info-key">{e.name||`${e.vorname} ${e.nachname}`}</span>
+                    <span>{e.benutzer_id
+                      ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
+                      :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
+                    }</span>
+                  </div>
+                ))}
+              </Card>
+            )}
           </div>
         )}
 
