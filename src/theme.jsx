@@ -335,7 +335,7 @@ function Stat({label,value,sub,color,semantic,icon}){
      <Stat label="Custom" value={8} color="#7C3AED"/>  */
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div className="cc-stat-card" style={{padding:"20px 22px"}}>
+    <div className="cc-stat-card" style={{padding:"20px 22px",borderLeft:`3px solid ${c.text}`}}>
       <div style={{fontSize:12,color:"#555",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:8}}>{label}</div>
       <div className="cc-stat-value" style={{color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
       {sub&&<div style={{fontSize:12,color:"var(--sub)",lineHeight:1.4,marginTop:2}}>{sub}</div>}

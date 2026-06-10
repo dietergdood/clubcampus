@@ -111,10 +111,13 @@ function DashboardAdministration({setActive,account}){
   const isMobile=useIsMobile();
   return(
     <div>
-      <H1 mb={4}>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
+      <div className="cc-row" style={{alignItems:"center",gap:10,marginBottom:4}}>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <H1>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
+      </div>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Administration · {getDate()}</p>
-      <div className="cc-grid-stats" className="cc-mb-20">
+      <div className="cc-grid-stats cc-mb-20">
         <Stat label="Mitglieder total" value="187" semantic="info"/>
         <Stat label="Datenprüfung fällig" value="12" semantic="danger" sub="halbjährliche Prüfung"/>
         <Stat label="Sync-Fehler" value="2" semantic="warning"/>
@@ -176,10 +179,13 @@ function DashboardFunktionaer({setActive,account}){
   const isMobile=useIsMobile();
   return(
     <div>
-      <H1 mb={4}>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
+      <div className="cc-row" style={{alignItems:"center",gap:10,marginBottom:4}}>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <H1>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
+      </div>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Funktionär / Vorstand · {getDate()}</p>
-      <div className="cc-grid-stats" className="cc-mb-20">
+      <div className="cc-grid-stats cc-mb-20">
         <Stat label="Offene Rückmeldungen" value="22" semantic="danger"/>
         <Stat label="Helfer-Soll erfüllt" value="61%" semantic="warning"/>
         <Stat label="Vereinsbusse heute" value="1" semantic="info" sub="Bus A reserviert"/>
@@ -263,9 +269,12 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
 
   return(
     <div>
-      <H1 mb={6}>{getGreeting()}, {firstName}</H1>
+      <div className="cc-row" style={{alignItems:"center",gap:10,marginBottom:6}}>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <H1>{getGreeting()}, {firstName}</H1>
+      </div>
       <p className="cc-detail-label" style={{marginBottom:18}}>Trainer · {trainerTeams.join(" & ")} · {getDate()}</p>
-      <div className="cc-grid-stats" className="cc-mb-20">
+      <div className="cc-grid-stats cc-mb-20">
         <Stat label="Nächstes Training" value={nextTrain?nextTrain.date.replace(/^\w+\s/,""):"-"} sub={nextTrain?`${nextTrain.time} Uhr · ${nextTrain.location}`:"Kein Training"} semantic="success"/>
         <Stat label="Nächstes Spiel"    value={nextSpiel?nextSpiel.date.replace(/^\w+\s/,""):"-"} sub={nextSpiel?`${nextSpiel.time} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel"} semantic="info"/>
         <Stat label="Ø Anwesenheit"     value="77%"      sub="letzte 5 Trainings"   semantic="success"/>
@@ -378,9 +387,12 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
 
   return(
     <div>
-      <H1 mb={6}>{getGreeting()}, {firstName}</H1>
+      <div className="cc-row" style={{alignItems:"center",gap:10,marginBottom:6}}>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <H1>{getGreeting()}, {firstName}</H1>
+      </div>
       <p className="cc-detail-label" style={{marginBottom:18}}>Spieler · {team} · {getDate()}</p>
-      <div className="cc-grid-stats" className="cc-mb-20">
+      <div className="cc-grid-stats cc-mb-20">
         <Stat label="Ø Anwesenheit Trainings" value={attPct!==null?attPct+"%":"-"} sub={pastEvs.length?zuCount+"/"+pastEvs.length+" Trainings":"Noch keine vergangenen"} color={attColor}/>
         <Stat label="Nächstes Training" value={nextTraining?nextTraining.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"} sub={nextTraining?`${nextTraining.time.slice(0,5)} Uhr · ${nextTraining.location}`:"Kein Training geplant"} semantic="success"/>
         <Stat label="Nächstes Spiel" value={nextSpiel?nextSpiel.date.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim():"-"} sub={nextSpiel?`${(nextSpiel.time||"").slice(0,5)} Uhr · ${nextSpielAufgebotStatus}`:nextSpielAufgebotStatus} color={nextSpielImAufgebot?"#4F46E5":nextSpiel?BL:"#aaa"}/>

@@ -625,7 +625,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
       {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
       {canFreigeben&&(
-      <div className="cc-grid-stats" className="cc-mb-16">
+      <div className="cc-grid-stats cc-mb-16">
         <Stat label="Mitglieder" value={HELPERS.length}/>
         <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
         <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
@@ -862,7 +862,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="mein"&&(
         <div>
           {/* Status-Kacheln */}
-          <div className="cc-grid-stats" className="cc-mb-20">
+          <div className="cc-grid-stats cc-mb-20">
             {[{l:"Soll",v:mich.soll,c:BK,bg:"#fff"},{l:"Geleistet",v:mich.geleistet,c:GN,bg:"#F0FDF4"},{l:"Geplant",v:mich.geplant,c:AM,bg:"#FFFBEB"},{l:"Offen",v:mich.offen,c:mich.offen>0?R:"#aaa",bg:mich.offen>0?"#FEF2F2":"#fff"}].map((s,i)=>(
               <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                 <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
@@ -1083,7 +1083,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             const offen=relevant.filter(m=>m.status==="Offen").length;
             const befreit=relevant.filter(m=>m.status==="Befreit").length;
             return(
-              <div className="cc-grid-stats" className="cc-mb-20">
+              <div className="cc-grid-stats cc-mb-20">
                 {[{l:"Erfüllt",v:erfuellt,c:GN,bg:"#F0FDF4"},{l:"Offen",v:offen,c:AM,bg:"#FFFBEB"},{l:"Befreit",v:befreit,c:BK,bg:"#fff"}].map((s,i)=>(
                   <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                     <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
@@ -1476,7 +1476,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
       {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
       {canFreigeben&&(
-      <div className="cc-grid-stats" className="cc-mb-16">
+      <div className="cc-grid-stats cc-mb-16">
         <Stat label="Mitglieder" value={HELPERS.length}/>
         <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
         <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
@@ -1717,7 +1717,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="mein"&&(
         <div>
           {/* Status-Kacheln */}
-          <div className="cc-grid-stats" className="cc-mb-20">
+          <div className="cc-grid-stats cc-mb-20">
             {[{l:"Soll",v:mich.soll,c:BK,bg:"#fff"},{l:"Geleistet",v:mich.geleistet,c:GN,bg:"#F0FDF4"},{l:"Geplant",v:mich.geplant,c:AM,bg:"#FFFBEB"},{l:"Offen",v:mich.offen,c:mich.offen>0?R:"#aaa",bg:mich.offen>0?"#FEF2F2":"#fff"}].map((s,i)=>(
               <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                 <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
@@ -1938,7 +1938,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             const offen=relevant.filter(m=>m.status==="Offen").length;
             const befreit=relevant.filter(m=>m.status==="Befreit").length;
             return(
-              <div className="cc-grid-stats" className="cc-mb-20">
+              <div className="cc-grid-stats cc-mb-20">
                 {[{l:"Erfüllt",v:erfuellt,c:GN,bg:"#F0FDF4"},{l:"Offen",v:offen,c:AM,bg:"#FFFBEB"},{l:"Befreit",v:befreit,c:BK,bg:"#fff"}].map((s,i)=>(
                   <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                     <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>

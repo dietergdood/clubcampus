@@ -263,7 +263,7 @@ function AttendanceCentral(){
   return(
     <div>
       <H1 mb={18}>Zentrale Anwesenheitsstatistik</H1>
-      <div className="cc-grid-stats" className="cc-mb-20">
+      <div className="cc-grid-stats cc-mb-20">
         <Stat label="Ø Alle Teams" value="75%" color={GN}/>
         <Stat label="Ø Trainings" value="72%" color={BL}/>
         <Stat label="Ø Spiele"    value="90%" color={R}/>
