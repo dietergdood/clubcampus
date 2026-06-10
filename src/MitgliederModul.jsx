@@ -321,64 +321,167 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const raw=dbMitglieder.find(d=>d.id===m.id)||{};
     const eltern=raw.eltern||[];
     const fv=getFieldVisibility(role);
-    const rows=[
-      {l:"Vorname",     v:raw.vorname||m.name.split(" ")[0]},
-      {l:"Nachname",    v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
-      ...(fv.showGebdat ?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"}]:[]),
-      {l:"Nationalität",v:raw.nationalitaet||"-"},
-      ...(fv.showAdresse?[{l:"Adresse",v:raw.strasse?`${raw.strasse}, ${raw.plz} ${raw.ort}`:m.location||"-"}]:[]),
-      ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||"-"}]:[]),
-      ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||"-"}]:[]),
-      {l:"Rolle",       v:m.role},
-      {l:"Team(s)",     v:m.team},
-      {l:"Mitgliedtyp", v:m.type},
-      {l:"Position",    v:raw.position||"-"},
-      ...(fv.showPass   ?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
-      ...(fv.showAhv    ?[{l:"AHV-Nr.",    v:raw.ahv_nr||"-"}]:[]),
-      ...(fv.showPass   ?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
-      ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
-      ...(fv.showNotizen?[{l:"Notizen",    v:raw.notizen||"-"}]:[]),
-    ];
+    const tab=selectedMember?._tab||"info";
+    const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
+
+    const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
+    const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
     return(
       <div>
-        <div className="cc-page-hdr" style={{marginBottom:16}}>
-          <div className="cc-row cc-gap-12">
-            <Btn onClick={onClose}><TI n="arrow-left"/> Zurück</Btn>
-            <Av name={m.name} size={44}/>
-            <div>
-              <div style={{fontWeight:700,fontSize:18,color:"var(--text)"}}>{m.name}</div>
-              <div className="cc-row" style={{marginTop:4}}>
-                <Chip text={m.role} color={R}/>
-                <Chip text={m.type} color={BL}/>
-                <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
+        {/* Hero Header */}
+        <div style={{background:"var(--surface)",borderRadius:16,overflow:"hidden",marginBottom:20,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+          {/* Accent Bar */}
+          <div style={{height:6,background:"var(--cc-accent,#FFBF00)"}}/>
+          <div style={{padding:"24px 28px"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
+              {/* Avatar gross */}
+              <div style={{width:80,height:80,borderRadius:16,background:"var(--cc-accent,#FFBF00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:700,color:"var(--cc-avatar-text,#000)",flexShrink:0,position:"relative"}}>
+                {initials}
+                {raw.rueckennr&&<div style={{position:"absolute",bottom:-8,right:-8,background:"var(--text)",color:"var(--bg)",fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:20,lineHeight:1.4}}>#{raw.rueckennr}</div>}
+              </div>
+              {/* Name + Meta */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                  <Btn variant="ghost" small onClick={onClose} style={{padding:"4px 8px",marginLeft:-8}}><TI n="arrow-left"/>Zurück</Btn>
+                </div>
+                <h1 style={{fontSize:24,fontWeight:800,margin:"0 0 6px",color:"var(--text)",letterSpacing:"-0.3px"}}>{m.name}</h1>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                  <Chip text={m.role} color={R}/>
+                  {raw.position&&<Chip text={raw.position} color={BL}/>}
+                  <Chip text={m.type} color={"#7C3AED"}/>
+                  <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
+                  {m.hat_portal_zugang&&<span className="cc-badge cc-badge-success"><TI n="circle-check" size={11}/> Portal</span>}
+                </div>
+              </div>
+              {/* Quick Stats */}
+              <div style={{display:"flex",gap:16,flexShrink:0}}>
+                {m.team&&<div style={{textAlign:"center"}}>
+                  <div style={{fontSize:11,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:2}}>Team</div>
+                  <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{m.team}</div>
+                </div>}
+                {age&&<div style={{textAlign:"center"}}>
+                  <div style={{fontSize:11,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:2}}>Alter</div>
+                  <div style={{fontSize:22,fontWeight:700,color:"var(--text)",lineHeight:1}}>{age}</div>
+                </div>}
               </div>
             </div>
           </div>
-        </div>
-        <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
-        {(selectedMember?._tab||"info")==="info"&&(
-          <Card style={{marginTop:12}}>
-            {rows.filter(r=>r.v&&r.v!=="-").map((r,i,arr)=>(
-              <div key={i} className="cc-info-row">
-                <span className="cc-info-key">{r.l}</span>
-                <span className="cc-info-val">{r.v}</span>
-              </div>
+          {/* Tabs */}
+          <div style={{borderTop:"0.5px solid var(--border)",display:"flex",gap:0,padding:"0 20px"}}>
+            {[
+              {key:"info",    label:"Profil",       icon:"user"},
+              {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart"},
+              {key:"stats",   label:"Statistik",    icon:"chart-bar", soon:true},
+              {key:"comments",label:"Kommentare",   icon:"message",   soon:true},
+              {key:"ratings", label:"Bewertungen",  icon:"star",      soon:true},
+            ].map(t=>(
+              <button key={t.key} onClick={()=>!t.soon&&setTab(t.key)}
+                style={{padding:"12px 16px",border:"none",background:"none",cursor:t.soon?"default":"pointer",
+                  fontSize:13,fontWeight:tab===t.key?600:400,
+                  color:tab===t.key?"var(--text)":t.soon?"var(--border)":"var(--sub)",
+                  borderBottom:tab===t.key?"2px solid var(--cc-accent,#FFBF00)":"2px solid transparent",
+                  display:"flex",alignItems:"center",gap:5,transition:"all 0.1s",whiteSpace:"nowrap",fontFamily:"inherit"}}>
+                <TI n={t.icon} size={14}/>{t.label}
+                {t.soon&&<span style={{fontSize:9,background:"var(--surface2)",color:"var(--sub)",padding:"1px 5px",borderRadius:8,marginLeft:2}}>bald</span>}
+              </button>
             ))}
-            {m.hat_portal_zugang&&(
-              <div className="cc-badge cc-badge-success" style={{marginTop:12}}>✓ Hat Portal-Zugang</div>
+          </div>
+        </div>
+
+        {/* Tab: Profil */}
+        {tab==="info"&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+            {/* Personalien */}
+            <Card>
+              <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
+              {[
+                {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
+                {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
+                ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
+                {l:"Nationalität", v:raw.nationalitaet||"-"},
+                {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
+              ].filter(r=>r.v&&r.v!=="-").map((r,i)=>(
+                <div key={i} className="cc-info-row">
+                  <span className="cc-info-key">{r.l}</span>
+                  <span className="cc-info-val">{r.v}</span>
+                </div>
+              ))}
+            </Card>
+            {/* Kontakt */}
+            {fv.showEmail||fv.showTelefon||fv.showAdresse?(
+              <Card>
+                <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
+                {[
+                  ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||"-"}]:[]),
+                  ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||"-"}]:[]),
+                  ...(fv.showAdresse?[
+                    {l:"Strasse",v:raw.strasse||"-"},
+                    {l:"PLZ/Ort",v:raw.plz&&raw.ort?`${raw.plz} ${raw.ort}`:"-"},
+                  ]:[]),
+                ].filter(r=>r.v&&r.v!=="-").map((r,i)=>(
+                  <div key={i} className="cc-info-row">
+                    <span className="cc-info-key">{r.l}</span>
+                    <span className="cc-info-val">{r.v}</span>
+                  </div>
+                ))}
+              </Card>
+            ):null}
+            {/* Vereinsdaten */}
+            <Card>
+              <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
+              {[
+                {l:"Mitgliedtyp",  v:m.type},
+                {l:"Funktion",     v:m.role},
+                {l:"Team(s)",      v:m.team},
+                {l:"Position",     v:raw.position||"-"},
+                {l:"Rückennummer", v:raw.rueckennr?`#${raw.rueckennr}`:"-"},
+                ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
+                ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
+                ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
+              ].filter(r=>r.v&&r.v!=="-").map((r,i)=>(
+                <div key={i} className="cc-info-row">
+                  <span className="cc-info-key">{r.l}</span>
+                  <span className="cc-info-val">{r.v}</span>
+                </div>
+              ))}
+            </Card>
+            {/* Notizen */}
+            {fv.showNotizen&&raw.notizen&&(
+              <Card>
+                <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
+                <div style={{fontSize:14,color:"var(--text)",lineHeight:1.6}}>{raw.notizen}</div>
+              </Card>
             )}
-          </Card>
+          </div>
         )}
-        {(selectedMember?._tab||"info")==="eltern"&&(
-          <div className="cc-col cc-gap-8 cc-mt-12">
+
+        {/* Tab: Eltern */}
+        {tab==="eltern"&&(
+          <div className="cc-col cc-gap-8">
             {eltern.length===0&&<div className="cc-empty">Keine Elternkontakte erfasst.</div>}
             {eltern.map((e,i)=>(
-              <Card key={i}>
-                <div className="cc-text-bold cc-mb-8">{e.vorname||e.name} {e.nachname||""}</div>
-                {e.email&&<div className="cc-text-sm">✉ {e.email}</div>}
-                {e.telefon&&<div className="cc-text-sm">📞 {e.telefon}</div>}
+              <Card key={i} style={{display:"flex",alignItems:"center",gap:16}}>
+                <Av name={e.name||`${e.vorname} ${e.nachname}`} size={44}/>
+                <div style={{flex:1}}>
+                  <div className="cc-text-bold" style={{fontSize:15,marginBottom:4}}>{e.vorname||e.name} {e.nachname||""}</div>
+                  <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                    {e.email&&<div className="cc-text-sm"><TI n="mail" size={12}/> {e.email}</div>}
+                    {(e.telefon||e.tel)&&<div className="cc-text-sm"><TI n="phone" size={12}/> {e.telefon||e.tel}</div>}
+                    {e.beziehung&&<div className="cc-text-sm"><TI n="users" size={12}/> {e.beziehung}</div>}
+                  </div>
+                </div>
+                {e.benutzer_id&&<span className="cc-badge cc-badge-success">Portal ✓</span>}
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Platzhalter Tabs */}
+        {(tab==="stats"||tab==="comments"||tab==="ratings")&&(
+          <div className="cc-empty" style={{padding:60}}>
+            <TI n="hourglass" size={32} style={{color:"var(--border)",display:"block",margin:"0 auto 12px"}}/>
+            Kommt bald
           </div>
         )}
       </div>
@@ -575,64 +678,167 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const raw=dbMitglieder.find(d=>d.id===m.id)||{};
     const eltern=raw.eltern||[];
     const fv=getFieldVisibility(role);
-    const rows=[
-      {l:"Vorname",     v:raw.vorname||m.name.split(" ")[0]},
-      {l:"Nachname",    v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
-      ...(fv.showGebdat ?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"}]:[]),
-      {l:"Nationalität",v:raw.nationalitaet||"-"},
-      ...(fv.showAdresse?[{l:"Adresse",v:raw.strasse?`${raw.strasse}, ${raw.plz} ${raw.ort}`:m.location||"-"}]:[]),
-      ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||"-"}]:[]),
-      ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||"-"}]:[]),
-      {l:"Rolle",       v:m.role},
-      {l:"Team(s)",     v:m.team},
-      {l:"Mitgliedtyp", v:m.type},
-      {l:"Position",    v:raw.position||"-"},
-      ...(fv.showPass   ?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
-      ...(fv.showAhv    ?[{l:"AHV-Nr.",    v:raw.ahv_nr||"-"}]:[]),
-      ...(fv.showPass   ?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
-      ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
-      ...(fv.showNotizen?[{l:"Notizen",    v:raw.notizen||"-"}]:[]),
-    ];
+    const tab=selectedMember?._tab||"info";
+    const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
+
+    const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
+    const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
     return(
       <div>
-        <div className="cc-page-hdr" style={{marginBottom:16}}>
-          <div className="cc-row cc-gap-12">
-            <Btn onClick={onClose}><TI n="arrow-left"/> Zurück</Btn>
-            <Av name={m.name} size={44}/>
-            <div>
-              <div style={{fontWeight:700,fontSize:18,color:"var(--text)"}}>{m.name}</div>
-              <div className="cc-row" style={{marginTop:4}}>
-                <Chip text={m.role} color={R}/>
-                <Chip text={m.type} color={BL}/>
-                <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
+        {/* Hero Header */}
+        <div style={{background:"var(--surface)",borderRadius:16,overflow:"hidden",marginBottom:20,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+          {/* Accent Bar */}
+          <div style={{height:6,background:"var(--cc-accent,#FFBF00)"}}/>
+          <div style={{padding:"24px 28px"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
+              {/* Avatar gross */}
+              <div style={{width:80,height:80,borderRadius:16,background:"var(--cc-accent,#FFBF00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:700,color:"var(--cc-avatar-text,#000)",flexShrink:0,position:"relative"}}>
+                {initials}
+                {raw.rueckennr&&<div style={{position:"absolute",bottom:-8,right:-8,background:"var(--text)",color:"var(--bg)",fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:20,lineHeight:1.4}}>#{raw.rueckennr}</div>}
+              </div>
+              {/* Name + Meta */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                  <Btn variant="ghost" small onClick={onClose} style={{padding:"4px 8px",marginLeft:-8}}><TI n="arrow-left"/>Zurück</Btn>
+                </div>
+                <h1 style={{fontSize:24,fontWeight:800,margin:"0 0 6px",color:"var(--text)",letterSpacing:"-0.3px"}}>{m.name}</h1>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                  <Chip text={m.role} color={R}/>
+                  {raw.position&&<Chip text={raw.position} color={BL}/>}
+                  <Chip text={m.type} color={"#7C3AED"}/>
+                  <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
+                  {m.hat_portal_zugang&&<span className="cc-badge cc-badge-success"><TI n="circle-check" size={11}/> Portal</span>}
+                </div>
+              </div>
+              {/* Quick Stats */}
+              <div style={{display:"flex",gap:16,flexShrink:0}}>
+                {m.team&&<div style={{textAlign:"center"}}>
+                  <div style={{fontSize:11,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:2}}>Team</div>
+                  <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{m.team}</div>
+                </div>}
+                {age&&<div style={{textAlign:"center"}}>
+                  <div style={{fontSize:11,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:2}}>Alter</div>
+                  <div style={{fontSize:22,fontWeight:700,color:"var(--text)",lineHeight:1}}>{age}</div>
+                </div>}
               </div>
             </div>
           </div>
-        </div>
-        <Tabs tabs={[{key:"info",label:"Infos"},{key:"eltern",label:`Eltern (${eltern.length})`}]} active={selectedMember?._tab||"info"} setActive={t=>setSelectedMember(prev=>({...prev,_tab:t}))}/>
-        {(selectedMember?._tab||"info")==="info"&&(
-          <Card style={{marginTop:12}}>
-            {rows.filter(r=>r.v&&r.v!=="-").map((r,i,arr)=>(
-              <div key={i} className="cc-info-row">
-                <span className="cc-info-key">{r.l}</span>
-                <span className="cc-info-val">{r.v}</span>
-              </div>
+          {/* Tabs */}
+          <div style={{borderTop:"0.5px solid var(--border)",display:"flex",gap:0,padding:"0 20px"}}>
+            {[
+              {key:"info",    label:"Profil",       icon:"user"},
+              {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart"},
+              {key:"stats",   label:"Statistik",    icon:"chart-bar", soon:true},
+              {key:"comments",label:"Kommentare",   icon:"message",   soon:true},
+              {key:"ratings", label:"Bewertungen",  icon:"star",      soon:true},
+            ].map(t=>(
+              <button key={t.key} onClick={()=>!t.soon&&setTab(t.key)}
+                style={{padding:"12px 16px",border:"none",background:"none",cursor:t.soon?"default":"pointer",
+                  fontSize:13,fontWeight:tab===t.key?600:400,
+                  color:tab===t.key?"var(--text)":t.soon?"var(--border)":"var(--sub)",
+                  borderBottom:tab===t.key?"2px solid var(--cc-accent,#FFBF00)":"2px solid transparent",
+                  display:"flex",alignItems:"center",gap:5,transition:"all 0.1s",whiteSpace:"nowrap",fontFamily:"inherit"}}>
+                <TI n={t.icon} size={14}/>{t.label}
+                {t.soon&&<span style={{fontSize:9,background:"var(--surface2)",color:"var(--sub)",padding:"1px 5px",borderRadius:8,marginLeft:2}}>bald</span>}
+              </button>
             ))}
-            {m.hat_portal_zugang&&(
-              <div className="cc-badge cc-badge-success" style={{marginTop:12}}>✓ Hat Portal-Zugang</div>
+          </div>
+        </div>
+
+        {/* Tab: Profil */}
+        {tab==="info"&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+            {/* Personalien */}
+            <Card>
+              <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
+              {[
+                {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
+                {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
+                ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
+                {l:"Nationalität", v:raw.nationalitaet||"-"},
+                {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
+              ].filter(r=>r.v&&r.v!=="-").map((r,i)=>(
+                <div key={i} className="cc-info-row">
+                  <span className="cc-info-key">{r.l}</span>
+                  <span className="cc-info-val">{r.v}</span>
+                </div>
+              ))}
+            </Card>
+            {/* Kontakt */}
+            {fv.showEmail||fv.showTelefon||fv.showAdresse?(
+              <Card>
+                <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
+                {[
+                  ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||"-"}]:[]),
+                  ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||"-"}]:[]),
+                  ...(fv.showAdresse?[
+                    {l:"Strasse",v:raw.strasse||"-"},
+                    {l:"PLZ/Ort",v:raw.plz&&raw.ort?`${raw.plz} ${raw.ort}`:"-"},
+                  ]:[]),
+                ].filter(r=>r.v&&r.v!=="-").map((r,i)=>(
+                  <div key={i} className="cc-info-row">
+                    <span className="cc-info-key">{r.l}</span>
+                    <span className="cc-info-val">{r.v}</span>
+                  </div>
+                ))}
+              </Card>
+            ):null}
+            {/* Vereinsdaten */}
+            <Card>
+              <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
+              {[
+                {l:"Mitgliedtyp",  v:m.type},
+                {l:"Funktion",     v:m.role},
+                {l:"Team(s)",      v:m.team},
+                {l:"Position",     v:raw.position||"-"},
+                {l:"Rückennummer", v:raw.rueckennr?`#${raw.rueckennr}`:"-"},
+                ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
+                ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
+                ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
+              ].filter(r=>r.v&&r.v!=="-").map((r,i)=>(
+                <div key={i} className="cc-info-row">
+                  <span className="cc-info-key">{r.l}</span>
+                  <span className="cc-info-val">{r.v}</span>
+                </div>
+              ))}
+            </Card>
+            {/* Notizen */}
+            {fv.showNotizen&&raw.notizen&&(
+              <Card>
+                <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
+                <div style={{fontSize:14,color:"var(--text)",lineHeight:1.6}}>{raw.notizen}</div>
+              </Card>
             )}
-          </Card>
+          </div>
         )}
-        {(selectedMember?._tab||"info")==="eltern"&&(
-          <div className="cc-col cc-gap-8 cc-mt-12">
+
+        {/* Tab: Eltern */}
+        {tab==="eltern"&&(
+          <div className="cc-col cc-gap-8">
             {eltern.length===0&&<div className="cc-empty">Keine Elternkontakte erfasst.</div>}
             {eltern.map((e,i)=>(
-              <Card key={i}>
-                <div className="cc-text-bold cc-mb-8">{e.vorname||e.name} {e.nachname||""}</div>
-                {e.email&&<div className="cc-text-sm">✉ {e.email}</div>}
-                {e.telefon&&<div className="cc-text-sm">📞 {e.telefon}</div>}
+              <Card key={i} style={{display:"flex",alignItems:"center",gap:16}}>
+                <Av name={e.name||`${e.vorname} ${e.nachname}`} size={44}/>
+                <div style={{flex:1}}>
+                  <div className="cc-text-bold" style={{fontSize:15,marginBottom:4}}>{e.vorname||e.name} {e.nachname||""}</div>
+                  <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                    {e.email&&<div className="cc-text-sm"><TI n="mail" size={12}/> {e.email}</div>}
+                    {(e.telefon||e.tel)&&<div className="cc-text-sm"><TI n="phone" size={12}/> {e.telefon||e.tel}</div>}
+                    {e.beziehung&&<div className="cc-text-sm"><TI n="users" size={12}/> {e.beziehung}</div>}
+                  </div>
+                </div>
+                {e.benutzer_id&&<span className="cc-badge cc-badge-success">Portal ✓</span>}
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Platzhalter Tabs */}
+        {(tab==="stats"||tab==="comments"||tab==="ratings")&&(
+          <div className="cc-empty" style={{padding:60}}>
+            <TI n="hourglass" size={32} style={{color:"var(--border)",display:"block",margin:"0 auto 12px"}}/>
+            Kommt bald
           </div>
         )}
       </div>
