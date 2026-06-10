@@ -408,18 +408,18 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       <div>
         {/* Hero Header */}
         <Card className="cc-card-flush cc-mb-20">
-          <div style={{height:6,background:"var(--cc-accent,#FFBF00)"}}/>
-          <div className="cc-row" style={{padding:"16px 20px 8px",gap:16,flexWrap:"wrap"}}>
+          <div className="cc-hero-stripe"/>
+          <div className="cc-hero-body">
             {/* Avatar */}
-            <div style={{width:80,height:80,borderRadius:16,background:"var(--avatar-bg,var(--cc-accent,#FFBF00))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:700,color:"var(--cc-avatar-text,#000)",flexShrink:0,position:"relative"}}>
+            <div className="cc-hero-avatar">
               {initials}
               {raw.rueckennr&&<div className="cc-profile-nr">#{raw.rueckennr}</div>}
             </div>
             {/* Meta */}
-            <div className="cc-flex-1">
+            <div className="cc-hero-meta">
               <Btn variant="ghost" small onClick={onClose} style={{marginLeft:-8,marginBottom:4}}><TI n="arrow-left"/>Zurück</Btn>
               <h1 className="cc-profile-name">{m.name}</h1>
-              <div className="cc-row" className="cc-chip-row">
+              <div className="cc-chip-row">
                 <Chip text={m.role} color={R}/>
                 {raw.position&&<Chip text={raw.position} color={BL}/>}
                 <Chip text={m.type} color={"#7C3AED"}/>
@@ -428,7 +428,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               </div>
             </div>
             {/* Quick Stats */}
-            <div className="cc-row" className="cc-col cc-gap-20 cc-shrink-0">
+            <div className="cc-hero-stats">
               {m.team&&<div className="cc-text-center">
                 <div className="cc-label">Team</div>
                 <div className="cc-text-bold">{m.team}</div>
@@ -1020,18 +1020,18 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
       <div>
         {/* Hero Header */}
         <Card className="cc-card-flush cc-mb-20">
-          <div style={{height:6,background:"var(--cc-accent,#FFBF00)"}}/>
-          <div className="cc-row" style={{padding:"16px 20px 8px",gap:16,flexWrap:"wrap"}}>
+          <div className="cc-hero-stripe"/>
+          <div className="cc-hero-body">
             {/* Avatar */}
-            <div style={{width:80,height:80,borderRadius:16,background:"var(--avatar-bg,var(--cc-accent,#FFBF00))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:700,color:"var(--cc-avatar-text,#000)",flexShrink:0,position:"relative"}}>
+            <div className="cc-hero-avatar">
               {initials}
               {raw.rueckennr&&<div className="cc-profile-nr">#{raw.rueckennr}</div>}
             </div>
             {/* Meta */}
-            <div className="cc-flex-1">
+            <div className="cc-hero-meta">
               <Btn variant="ghost" small onClick={onClose} style={{marginLeft:-8,marginBottom:4}}><TI n="arrow-left"/>Zurück</Btn>
               <h1 className="cc-profile-name">{m.name}</h1>
-              <div className="cc-row" className="cc-chip-row">
+              <div className="cc-chip-row">
                 <Chip text={m.role} color={R}/>
                 {raw.position&&<Chip text={raw.position} color={BL}/>}
                 <Chip text={m.type} color={"#7C3AED"}/>
@@ -1040,7 +1040,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               </div>
             </div>
             {/* Quick Stats */}
-            <div className="cc-row" className="cc-col cc-gap-20 cc-shrink-0">
+            <div className="cc-hero-stats">
               {m.team&&<div className="cc-text-center">
                 <div className="cc-label">Team</div>
                 <div className="cc-text-bold">{m.team}</div>
