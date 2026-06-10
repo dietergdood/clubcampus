@@ -213,7 +213,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                   Team <span style={{fontWeight:400,opacity:0.6}}>({filtered.length})</span>
                 </th>
                 {TEAM_MODS.map(m=>(
-                  <th className="cc-th" key={m.key}>
+                  <th key={m.key} style={{padding:"8px 4px",textAlign:"center",minWidth:54}}>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                       <TI n={m.icon||"circle"} size={15} style={{color:"var(--sub)"}}/>
                       <span style={{fontSize:9,color:"var(--sub)",fontWeight:400,textTransform:"uppercase",letterSpacing:0.3}}>{m.label}</span>
@@ -250,7 +250,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                     <tr key={t.id} style={{borderTop:"0.5px solid var(--border)"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <td className="cc-td" style={{padding:"8px 16px",fontWeight:500,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:14,zIndex:1}}>
+                      <td style={{padding:"8px 16px",fontWeight:500,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:14,zIndex:1}}>
                         <Row>
                           <div style={{width:3,height:20,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
                           <div style={{flex:1,minWidth:0}}>
@@ -419,7 +419,7 @@ export const BORDER = '${t.borderWidth}';`;
           rCard:     (v)=><div style={{borderRadius:v,border:'0.5px solid var(--border)',background:'var(--surface2)',padding:'6px 10px',fontSize:11,boxShadow:'0 1px 4px rgba(0,0,0,0.06)'}}>Card</div>,
           rBadge:    (v)=><div style={{borderRadius:v,background:'var(--text)',color:'var(--bg)',padding:'2px 8px',fontSize:10,fontWeight:600,display:'inline-block'}}>Aktiv</div>,
           rModal:    (v)=><div style={{borderRadius:v,border:'0.5px solid var(--border)',background:'var(--surface)',padding:'5px 10px',fontSize:11,boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}}>Modal</div>,
-          rSeg:      (v)=><div style={{borderRadius:v,background:'var(--surface2)',padding:3,display:'flex',gap:2}}><div style={{borderRadius:Math.max(0,v-2),background:'var(--surface)',padding:'3px 8px',fontSize:10,fontWeight:600}}>Tab 1</div><div style={{padding:'3px 8px',fontSize:10,color:'var(--sub)'}}>Tab 2</div>,
+          rSeg:      (v)=><div style={{borderRadius:v,background:'var(--surface2)',padding:3,display:'flex',gap:2}}><div style={{borderRadius:Math.max(0,v-2),background:'var(--surface)',padding:'3px 8px',fontSize:10,fontWeight:600}}>Tab 1</div><div style={{padding:'3px 8px',fontSize:10,color:'var(--sub)'}}>Tab 2</div></div>,
           rIconBtn:  (v)=><button style={{borderRadius:v,border:'0.5px solid var(--border)',background:'var(--surface2)',width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>⋮</button>,
           rChip:     (v)=><div style={{borderRadius:v,border:'1.5px solid var(--border)',padding:'2px 10px',fontSize:10,fontWeight:600,color:'var(--sub)',display:'inline-block'}}>Filter</div>,
           hBtn:      (v)=><button style={{height:v,padding:'0 12px',borderRadius:tok.rBtn,border:'none',background:'var(--text)',color:'var(--bg)',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>Btn</button>,
@@ -447,7 +447,7 @@ export const BORDER = '${t.borderWidth}';`;
           shModal:   (v)=><div style={{width:40,height:24,borderRadius:8,background:'var(--surface)',boxShadow:['none','0 1px 4px rgba(0,0,0,0.06)','0 2px 12px rgba(0,0,0,0.08)','0 4px 20px rgba(0,0,0,0.12)','0 8px 40px rgba(0,0,0,0.18)'][v]}}/>,
           toggleW:   (v)=><div style={{width:v,height:tok.toggleH,borderRadius:Math.round(tok.toggleH/2),background:'var(--border)',position:'relative'}}><div style={{position:'absolute',top:3,left:3,width:tok.toggleH-6,height:tok.toggleH-6,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/></div>,
           toggleH:   (v)=><div style={{width:tok.toggleW,height:v,borderRadius:Math.round(v/2),background:'var(--border)',position:'relative'}}><div style={{position:'absolute',top:3,left:3,width:v-6,height:v-6,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/></div>,
-          segPad:    (v)=><div style={{background:'var(--surface2)',borderRadius:tok.rSeg,padding:v,display:'flex',gap:2}}><div style={{background:'var(--surface)',borderRadius:tok.rSeg-2,padding:'3px 8px',fontSize:10,fontWeight:600}}>An</div><div style={{padding:'3px 8px',fontSize:10,color:'var(--sub)'}}>Aus</div>,
+          segPad:    (v)=><div style={{background:'var(--surface2)',borderRadius:tok.rSeg,padding:v,display:'flex',gap:2}}><div style={{background:'var(--surface)',borderRadius:tok.rSeg-2,padding:'3px 8px',fontSize:10,fontWeight:600}}>An</div><div style={{padding:'3px 8px',fontSize:10,color:'var(--sub)'}}>Aus</div></div>,
           chipPad:   (v)=><div style={{borderRadius:tok.rChip,border:'1.5px solid var(--border)',padding:`${v}px ${tok.chipPadH}px`,fontSize:10,fontWeight:600,color:'var(--sub)'}}>Chip</div>,
           chipPadH:  (v)=><div style={{borderRadius:tok.rChip,border:'1.5px solid var(--border)',padding:`${tok.chipPad}px ${v}px`,fontSize:10,fontWeight:600,color:'var(--sub)'}}>Chip</div>,
         };
@@ -626,7 +626,7 @@ export const BORDER = '${t.borderWidth}';`;
                 ].map((p,i,a)=>(
                   <div key={i} style={{padding:`${tok.padInputV}px ${tok.padCard}px`,display:'flex',alignItems:'center',gap:tok.gapSm,borderBottom:i<a.length-1?`${tok.borderWidth} solid var(--border)`:'none'}}>
                     <div style={{width:tok.hIconBtn,height:tok.hIconBtn,borderRadius:tok.rIconBtn,background:p.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:tok.fsXs+1,fontWeight:tok.fwTitle,color:p.tc,flexShrink:0}}>{p.init}</div>
-                    <div className="cc-flex-1">
+                    <div style={{flex:1}}>
                       <div style={{fontSize:tok.fsBase,fontWeight:tok.fwLabel}}>{p.name}</div>
                       <div style={{fontSize:tok.fsSm,color:'var(--sub)'}}>{p.sub}</div>
                     </div>
@@ -662,7 +662,8 @@ export const BORDER = '${t.borderWidth}';`;
   );
 }
 
-function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId}){
+function PortalverwaltungView(props){
+  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId} = props;
   const [tab,setTab]=useState(initialTab);
   const [module,setModule]=useState([]);
   const [moduleConfig,setModuleConfig]=useState({});
@@ -1184,7 +1185,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       {isMobile&&mobileKachel!==null&&(()=>{
         const kat=KATEGORIEN_NAV.find(k=>k.key===mobileKachel)||KATEGORIEN_NAV[0];
         return(
-          <div className="cc-mb-16">
+          <div style={{marginBottom:16}}>
             <button onClick={()=>setMobileKachel(null)}
               style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",
                 cursor:"pointer",color:"var(--sub)",fontSize:14,padding:"0 0 12px",fontFamily:"inherit"}}>
@@ -1209,7 +1210,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
       {/* ── DESKTOP: Zweistufige Navigation ── */}
       {!isMobile&&(
-        <div className="cc-mb-20">
+        <div style={{marginBottom:20}}>
           {/* Ebene 1: Hauptkategorien */}
           <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:0}}>
             {KATEGORIEN_NAV.map(k=>{
@@ -1322,7 +1323,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     <tr style={{background:"var(--surface2)",borderBottom:"1px solid var(--border)"}}>
                       <th className="cc-th">Modul</th>
                       {ROLLEN.map(r=>(
-                        <th className="cc-th" key={r}>{ROLLEN_LABELS[r]}</th>
+                        <th key={r} style={{textAlign:"center",padding:"9px 8px",fontWeight:700,
+                          color:r==="administrator"?"var(--sub)":ROLES[r]?.color||"var(--sub)",
+                          fontSize:11,minWidth:90,
+                          background:r==="administrator"?"var(--surface2)":"transparent"
+                        }}>{ROLLEN_LABELS[r]}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1341,7 +1346,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           const isExpanded=expandedModul===m.key;
                           return([
                             <tr key={m.key} style={{borderTop:"0.5px solid var(--border)",opacity:isAktiv?1:0.35,background:isPflicht?"#FFFBEB":"transparent"}}>
-                              <td className="cc-td" style={{padding:"0",position:"sticky",left:0,background:isPflicht?"#FFFBEB":isExpanded?"var(--surface2)":"var(--surface)",zIndex:1}}>
+                              <td style={{padding:"0",position:"sticky",left:0,background:isPflicht?"#FFFBEB":isExpanded?"var(--surface2)":"var(--surface)",zIndex:1}}>
                                 <div onClick={()=>setExpandedModul(isExpanded?null:m.key)}
                                   style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",cursor:"pointer"}}>
                                   <div onClick={e=>{e.stopPropagation();if(!isPflicht)toggleModulGlobal(m.key);}}
@@ -1401,12 +1406,12 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                               <tr key={m.key+"-detail"} style={{borderTop:"0.5px solid var(--border)"}}>
                                 <td colSpan={ROLLEN.length+1} style={{padding:"10px 14px",background:"var(--surface2)"}}>
                                   <div style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
-                                    <span className="cc-flex-1">Aktionen</span>
+                                    <span style={{flex:1}}>Aktionen</span>
                                     <span style={{minWidth:80,textAlign:"right"}}>Minimalstufe</span>
                                   </div>
                                   {(MODUL_AKTIONEN[m.key]||[]).map((a,ai)=>(
                                     <div key={ai} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"6px 0",borderTop:ai>0?"0.5px solid var(--border)":"none"}}>
-                                      <div className="cc-flex-1">
+                                      <div style={{flex:1}}>
                                         <span style={{fontSize:12,color:"var(--text)"}}>{a.label}</span>
                                         {a.spez&&<div style={{fontSize:10,color:"var(--sub)",marginTop:2,fontStyle:"italic"}}>{a.spez}</div>}
                                         {a.note&&<div style={{fontSize:10,color:"var(--sub)",marginTop:2}}>ℹ {a.note}</div>}
@@ -1457,20 +1462,20 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           const sc=ZUGRIFF_COLORS[stufe];
                           return(
                             <tr key={m.key} style={{borderTop:"0.5px solid var(--border)"}}>
-                              <td className="cc-td" style={{padding:"8px 14px"}}>
+                              <td style={{padding:"8px 14px"}}>
                                 <div style={{display:"flex",alignItems:"center",gap:7}}>
                                   <TI n={m.icon} size={13} style={{color:"var(--sub)"}}/>
                                   <span style={{fontWeight:500,fontSize:14}}>{m.name||m.label}</span>
                                 </div>
                               </td>
-                              <td className="cc-td" style={{padding:"8px 10px"}}>
+                              <td style={{padding:"8px 10px"}}>
                                 <div onClick={()=>{const aktiv=moduleAktiv[m.key]!==false;if(aktiv&&role!=="administrator")cycleZugriff(role,m.key);}}
                                   style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 9px",borderRadius:6,background:sc+"20",border:`1px solid ${sc}50`,cursor:"pointer"}}>
                                   <TI n={ZUGRIFF_ICONS[stufe]} size={11} style={{color:sc}}/>
                                   <span style={{fontSize:10,fontWeight:600,color:sc}}>{ZUGRIFF_LABELS[stufe]}</span>
                                 </div>
                               </td>
-                              <td className="cc-td" style={{padding:"8px 10px",fontSize:11,color:"var(--sub)"}}>{kann.length?kann.join(" · "):"Nur ansehen"}</td>
+                              <td style={{padding:"8px 10px",fontSize:11,color:"var(--sub)"}}>{kann.length?kann.join(" · "):"Nur ansehen"}</td>
                             </tr>
                           );
                         })}
@@ -1531,7 +1536,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           </div>
 
           {/* Gruppen als Grid */}
-          <div className="cc-grid-cards cc-mb-20" style={{gap:12}}>
+          <div className="cc-grid-cards" style={{gap:12}}>
           {(gruppen.length>0?gruppen:[
             {id:1,name:"Vereinsleben & Events",farbe:"#8B5CF6",beschreibung:"Anlässe, Helfereinsätze, Mitgliederliste",module:["events","helpers","members","news","docs"]},
             {id:2,name:"Betrieb & Infrastruktur",farbe:"#3B82F6",beschreibung:"Material, Busse, Garderoben",module:["material","buses","lockers","docs"]},
@@ -1898,7 +1903,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="users"&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div className="cc-text-sm">{benutzerListe.length} Benutzer</div>
+            <div style={{fontSize:14,color:"var(--sub)"}}>{benutzerListe.length} Benutzer</div>
             <Btn variant="primary" onClick={()=>{}}>+ Benutzer einladen</Btn>
           </div>
           <Card style={{padding:0,overflowX:"auto"}}>
@@ -1918,15 +1923,15 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 )}
                 {benutzerListe.map((b,i)=>(
                   <tr key={b.id} style={{borderTop:"0.5px solid var(--border)"}}>
-                    <td className="cc-td" style={{padding:"9px 13px",fontWeight:600,color:"var(--text)"}}>{b.name||"—"}</td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:12}}>{b.email}</td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}>
+                    <td style={{padding:"9px 13px",fontWeight:600,color:"var(--text)"}}>{b.name||"—"}</td>
+                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:12}}>{b.email}</td>
+                    <td style={{padding:"9px 13px"}}>
                       <select value={b.role||"spieler"} onChange={e=>updateBenutzerRolle(b.id,e.target.value)}
                         style={{padding:"5px 8px",border:"1px solid var(--border)",borderRadius:7,fontSize:12,background:"var(--surface)",color:ROLES[b.role]?.color||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
                         {ROLLEN.map(r=><option key={r} value={r}>{ROLLEN_LABELS[r]}</option>)}
                       </select>
                     </td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}>
+                    <td style={{padding:"9px 13px"}}>
                       {/* Funktionen anzeigen + zuweisen */}
                       <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
                         {(b.funktionen||[]).map(f=>(
@@ -1965,7 +1970,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                         </select>
                       </div>
                     </td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}>
+                    <td style={{padding:"9px 13px"}}>
                       <Chip text={b.aktiv!==false?"Aktiv":"Inaktiv"} color={b.aktiv!==false?GN:R} bg={b.aktiv!==false?"#ECFDF5":RL}/>
                     </td>
                   </tr>
@@ -1987,14 +1992,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <tr style={{background:"var(--surface2)"}}>
                   <th className="cc-th">Feld</th>
                   {ROLLEN.map((r,i)=>(
-                    <th className="cc-th" key={i}>{ROLLEN_LABELS[r]}</th>
+                    <th key={i} style={{padding:"9px 13px",textAlign:"center",fontWeight:600,color:"var(--sub)",fontSize:14,textTransform:"uppercase",letterSpacing:0.4}}>{ROLLEN_LABELS[r]}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {Object.entries(felderNachKey).map(([key,data],i)=>(
                   <tr key={key} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
-                    <td className="cc-td" style={{padding:"9px 13px",fontWeight:600}}>{data.label}</td>
+                    <td style={{padding:"9px 13px",fontWeight:600}}>{data.label}</td>
                     {ROLLEN.map(rolle=>{
                       const sichtbar=data.rollen[rolle]||false;
                       const isAdmin=rolle==="administrator";
@@ -2055,7 +2060,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           <Card style={{marginTop:12,padding:16}}>
             <div style={{display:"flex",alignItems:"center",gap:14}}>
               <TI n="building-community" size={18} style={{color:"var(--sub)",flexShrink:0}}/>
-              <div className="cc-flex-1">
+              <div style={{flex:1}}>
                 <div style={{fontSize:14,fontWeight:500,color:"var(--text)",marginBottom:4}}>Vereinsname</div>
                 <input value={theme.vereinsname||""} onChange={e=>updateTheme("vereinsname",e.target.value)}
                   style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14,background:"var(--surface)",color:"var(--text)",outline:"none",fontFamily:FONT}}/>
@@ -2075,7 +2080,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   :<TI n="photo" size={28} style={{color:"var(--sub)"}}/>
                 }
               </div>
-              <div className="cc-flex-1">
+              <div style={{flex:1}}>
                 <div style={{fontSize:14,fontWeight:500,color:"var(--text)",marginBottom:6}}>Logo hochladen</div>
                 <div style={{fontSize:11,color:"var(--sub)",marginBottom:10}}>SVG oder PNG, empfohlen mind. 200×200px</div>
                 <Row align="flex-start">
@@ -2166,7 +2171,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         <div>
           <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
           <div style={{height:16}}/>
-          <div className="cc-grid-cards cc-mb-20" style={{gap:14}}>
+          <div className="cc-grid-cards" style={{gap:14}}>
             {(apiVerbindungen.length>0?apiVerbindungen:Object.entries(API_INFOS).map(([key,info])=>({key,label:key,active:false,konfiguriert:false,sync_status:"deaktiviert",...info}))).map(api=>{
               const info=API_INFOS[api.key]||{};
               const statusColor=api.sync_status==="ok"?GN:api.sync_status==="fehler"?R:api.sync_status==="ausstehend"?AM:"#aaa";
@@ -2182,7 +2187,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   </div>
                   <p style={{fontSize:14,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{info.description||"Externe API-Verbindung"}</p>
                   {info.felder&&(
-                    <div className="cc-mb-12">
+                    <div style={{marginBottom:12}}>
                       <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:4}}>Synchronisierte Daten:</div>
                       {info.felder.map((f,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:14,color:"var(--sub)",padding:"2px 0"}}>
@@ -2215,7 +2220,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               <thead>
                 <tr style={{background:"var(--surface2)"}}>
                   {["Zeit","API / System","Status","Neu","Aktualisiert","Fehler","Details"].map((h,i)=>(
-                    <th className="cc-th" key={i}>{h}</th>
+                    <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:14,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2225,15 +2230,15 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 )}
                 {auditLogs.map((log,i)=>(
                   <tr key={log.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
-                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",whiteSpace:"nowrap",fontSize:14}}>
+                    <td style={{padding:"9px 13px",color:"var(--sub)",whiteSpace:"nowrap",fontSize:14}}>
                       {log.gestartet_am?new Date(log.gestartet_am).toLocaleString("de-CH",{dateStyle:"short",timeStyle:"short"}):"—"}
                     </td>
-                    <td className="cc-td" style={{padding:"9px 13px",fontWeight:600}}>{log.api_verbindungen?.label||"System"}</td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={log.status||"—"} color={log.status==="ok"?GN:log.status==="fehler"?R:AM} bg={log.status==="ok"?"#ECFDF5":log.status==="fehler"?RL:"#FFFBEB"}/></td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:GN,fontWeight:600}}>{log.datensaetze_neu||0}</td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:BL,fontWeight:600}}>{log.datensaetze_aktualisiert||0}</td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:log.datensaetze_fehler>0?R:"#aaa",fontWeight:600}}>{log.datensaetze_fehler||0}</td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:14,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.meldung||"—"}</td>
+                    <td style={{padding:"9px 13px",fontWeight:600}}>{log.api_verbindungen?.label||"System"}</td>
+                    <td style={{padding:"9px 13px"}}><Chip text={log.status||"—"} color={log.status==="ok"?GN:log.status==="fehler"?R:AM} bg={log.status==="ok"?"#ECFDF5":log.status==="fehler"?RL:"#FFFBEB"}/></td>
+                    <td style={{padding:"9px 13px",color:GN,fontWeight:600}}>{log.datensaetze_neu||0}</td>
+                    <td style={{padding:"9px 13px",color:BL,fontWeight:600}}>{log.datensaetze_aktualisiert||0}</td>
+                    <td style={{padding:"9px 13px",color:log.datensaetze_fehler>0?R:"#aaa",fontWeight:600}}>{log.datensaetze_fehler||0}</td>
+                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:14,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.meldung||"—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2256,9 +2261,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           {(()=>{
             const Section=({title,desc,children})=>(
               <div>
-                <div className="cc-mb-16">
+                <div style={{marginBottom:16}}>
                   <div style={{fontSize:16,fontWeight:800,color:"var(--text)",letterSpacing:-0.3,marginBottom:4}}>{title}</div>
-                  {desc&&<div className="cc-text-sm">{desc}</div>}
+                  {desc&&<div style={{fontSize:14,color:"var(--sub)"}}>{desc}</div>}
                 </div>
                 <Card style={{padding:20}}>
                   <div style={{display:"flex",flexDirection:"column",gap:16}}>{children}</div>
@@ -2475,7 +2480,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 {/* Avatar */}
                 <Section title="Avatare" desc="Benutzer-Darstellungen">
                   <Row2 label="Av" code="<Av>">
-                    <div className="cc-row">
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
                       <Av name="Dieter Good" size={36}/>
                       <Av name="Thomas Müller" size={36}/>
                       <Av name="Anna Keller" size={28}/>
@@ -2508,7 +2513,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     <div key={v.name} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"0.5px solid var(--border)"}}>
                       <div style={{width:32,height:32,borderRadius:8,background:`var(${v.name})`,border:"0.5px solid var(--border)",flexShrink:0}}/>
                       <code style={{fontSize:12,color:"var(--text)",background:"var(--surface2)",padding:"3px 8px",borderRadius:6,width:160,flexShrink:0}}>{v.name}</code>
-                      <span className="cc-text-sm">{v.desc}</span>
+                      <span style={{fontSize:14,color:"var(--sub)"}}>{v.desc}</span>
                     </div>
                   ))}
                 </Section>
