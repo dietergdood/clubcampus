@@ -939,10 +939,13 @@ function Portal({supabaseClient}){
 
   function sollProfilPruefen(){
     if(!dbUser||role==="administrator"||role==="administration") return false;
+    const raw=dbMitglieder.find(m=>m.id===dbUser.mitglied_id)||null;
+    // Mitglied: profil_geprueft_at aus mitglieder Tabelle nehmen
+    const geprueftAt=raw?.profil_geprueft_at||dbUser.profil_geprueft_at;
     // Erste Login: noch nie geprüft
-    if(!dbUser.profil_geprueft_at) return true;
+    if(!geprueftAt) return true;
     // Alle 6 Monate
-    const letzteP=new Date(dbUser.profil_geprueft_at);
+    const letzteP=new Date(geprueftAt);
     const sechsMonate=new Date();
     sechsMonate.setMonth(sechsMonate.getMonth()-6);
     return letzteP<sechsMonate;

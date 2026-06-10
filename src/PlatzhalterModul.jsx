@@ -337,6 +337,7 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
     if(!sb) return;
     setSaving(true); setMsg(null);
     const form=kindForms[kindId]||{};
+    const now=new Date().toISOString();
     const {error}=await sb.from("mitglieder").update({
       geburtsdatum:form.geburtsdatum||null,
       nationalitaet:form.nationalitaet||null,
@@ -346,7 +347,8 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
       telefon:form.telefon||null,
       email:form.email||null,
       datenstatus:"Geprüft",
-      updated_at:new Date().toISOString(),
+      profil_geprueft_at:now,
+      updated_at:now,
     }).eq("id",kindId);
     if(error){ setMsg({ok:false,text:error.message}); }
     else {
