@@ -48,7 +48,6 @@ const TI_PATHS={
     "chevron-right":"<polyline points=\"9 18 15 12 9 6\"/>",
     "chevrons-left":"<polyline points=\"11 17 6 12 11 7\"/><polyline points=\"18 17 13 12 18 7\"/>",
     "chevrons-right":"<polyline points=\"13 17 18 12 13 7\"/><polyline points=\"6 17 11 12 6 7\"/>",
-    "dots-vertical":"<circle cx=\"12\" cy=\"5\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"19\" r=\"1\"/>",
 };
 function TI({n, size=16, style={}}){
   const p = TI_PATHS[n];
