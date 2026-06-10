@@ -104,14 +104,14 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
 
   const Row=({label,value,mono,blue})=>(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"9px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}>
-      <span style={{fontSize:14,color:"var(--sub)",flexShrink:0,minWidth:120}}>{label}</span>
+      <span className="cc-info-key">{label}</span>
       <span style={{fontSize:14,fontWeight:600,color:blue?BL:mono?"#666":BK,textAlign:"right",wordBreak:"break-word",fontFamily:mono?"monospace":"inherit"}}>{value||"-"}</span>
     </div>
   );
 
   const NrRow=()=>(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}>
-      <span style={{fontSize:14,color:"var(--sub)",flexShrink:0,minWidth:120}}>{"Rückennummer"}</span>
+      <span className="cc-info-key">{"Rückennummer"}</span>
       {canEdit&&editingNr?(
         <input autoFocus type="number" min="1" max="99" value={nrVal}
           onChange={e=>setNrVal(e.target.value)}
@@ -156,7 +156,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           {/* PERSONALIEN */}
           <div>
             <SectionLabel>Personalien</SectionLabel>
-            <div style={{background:"var(--surface2)",borderRadius:10,overflow:"hidden"}}>
+            <div className="cc-surface-card">
               <Row label="Name"          value={person.lastName}/>
               <Row label="Vorname"       value={person.firstName}/>
               <Row label="Team(s)"       value={(person.teams||["Cc-Junioren"]).join(" · ")}/>
@@ -174,7 +174,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           {(can("street")||can("plz")||can("city")||can("canton")||can("country"))&&(
             <div>
               <SectionLabel>Adresse</SectionLabel>
-              <div style={{background:"var(--surface2)",borderRadius:10,overflow:"hidden"}}>
+              <div className="cc-surface-card">
                 {can("street") &&<Row label="Strasse"  value={person.street}/>}
                 {can("plz")    &&<Row label="PLZ"      value={person.plz}/>}
                 {can("city")   &&<Row label="Ort"      value={person.city}/>}
@@ -188,7 +188,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           {(can("email")||can("tel"))&&(
             <div>
               <SectionLabel>Kommunikation Persönlich</SectionLabel>
-              <div style={{background:"var(--surface2)",borderRadius:10,overflow:"hidden"}}>
+              <div className="cc-surface-card">
                 {can("email")&&<Row label="E-Mail"  value={person.email} blue/>}
                 {can("tel")  &&<Row label="Telefon" value={person.tel}/>}
               </div>
@@ -199,7 +199,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           {can("parent1")&&(
             <div>
               <SectionLabel>Erziehungsberechtigte Person 1</SectionLabel>
-              <div style={{background:"var(--surface2)",borderRadius:10,overflow:"hidden"}}>
+              <div className="cc-surface-card">
                 <Row label="Name"    value={person.p1Last}/>
                 <Row label="Vorname" value={person.p1First}/>
                 <Row label="E-Mail"  value={person.p1Email} blue/>
@@ -212,7 +212,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           {can("parent2")&&(
             <div>
               <SectionLabel>Erziehungsberechtigte Person 2</SectionLabel>
-              <div style={{background:"var(--surface2)",borderRadius:10,overflow:"hidden"}}>
+              <div className="cc-surface-card">
                 <Row label="Name"    value={person.p2Last}/>
                 <Row label="Vorname" value={person.p2First}/>
                 <Row label="E-Mail"  value={person.p2Email} blue/>
@@ -222,7 +222,7 @@ function MitgliedDetail({person,role,onClose,nr,onUpdateNr}){
           )}
 
           {/* Rollenhinweis */}
-          <div style={{padding:"8px 12px",background:"var(--surface)",borderRadius:8,fontSize:14,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
+          <div className="cc-hint-box" style={{display:"flex",alignItems:"center",gap:8}}>
             <span><TI n="eye"/></span>
             <span>Feldsichtbarkeit gemäss Rolle: <strong>{getRole(role).label}</strong></span>
           </div>
@@ -256,7 +256,7 @@ function ElternPortalRow({e,sb,onReload}){
     if(onReload) onReload();
   }
   return(
-    <div className="cc-mt-8" style={{borderTop:"0.5px solid var(--border)",paddingTop:8}}>
+    <div className="cc-mt-8 cc-border-top cc-pt-8">
       {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{lMsg.text}</div>}
       {e.benutzer_id?(
         <div className="cc-between">
@@ -352,8 +352,8 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
   const statusColor=s=>s==="Vollständig"?GN:s==="Prüfung fällig"?AM:R;
   const statusBg=s=>s==="Vollständig"?"#ECFDF5":s==="Prüfung fällig"?"#FFFBEB":RL;
   const SortIcon=({col})=>sortCol===col
-    ?<span style={{marginLeft:4,fontSize:11}}>{sortDir==="asc"?"▲":"▼"}</span>
-    :<span style={{marginLeft:4,fontSize:11,opacity:0.25}}>↕</span>;
+    ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
+    :<span className="cc-sort-arrow cc-text-muted">↕</span>;
 
   const inputStyle={padding:"7px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:FONT};
 
@@ -407,19 +407,19 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     return(
       <div>
         {/* Hero Header */}
-        <Card style={{padding:0,overflow:"hidden",marginBottom:20}}>
+        <Card className="cc-card-flush cc-mb-20">
           <div style={{height:6,background:"var(--cc-accent,#FFBF00)"}}/>
-          <div className="cc-row" style={{padding:"24px 28px",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
+          <div className="cc-row" style={{padding:"24px 28px",gap:20,flexWrap:"wrap"}}>
             {/* Avatar */}
             <div style={{width:80,height:80,borderRadius:16,background:"var(--avatar-bg,var(--cc-accent,#FFBF00))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:700,color:"var(--cc-avatar-text,#000)",flexShrink:0,position:"relative"}}>
               {initials}
               {raw.rueckennr&&<div className="cc-profile-nr">#{raw.rueckennr}</div>}
             </div>
             {/* Meta */}
-            <div style={{flex:1,minWidth:0}}>
+            <div className="cc-flex-1">
               <Btn variant="ghost" small onClick={onClose} style={{marginLeft:-8,marginBottom:4}}><TI n="arrow-left"/>Zurück</Btn>
               <h1 className="cc-profile-name">{m.name}</h1>
-              <div className="cc-row" style={{flexWrap:"wrap",gap:6}}>
+              <div className="cc-row" className="cc-chip-row">
                 <Chip text={m.role} color={R}/>
                 {raw.position&&<Chip text={raw.position} color={BL}/>}
                 <Chip text={m.type} color={"#7C3AED"}/>
@@ -428,19 +428,19 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               </div>
             </div>
             {/* Quick Stats */}
-            <div className="cc-row" style={{gap:20,flexShrink:0,alignItems:"flex-start"}}>
-              {m.team&&<div style={{textAlign:"center"}}>
-                <div className="cc-label" style={{marginBottom:2}}>Team</div>
+            <div className="cc-row" className="cc-col cc-gap-20 cc-shrink-0">
+              {m.team&&<div className="cc-text-center">
+                <div className="cc-label">Team</div>
                 <div className="cc-text-bold">{m.team}</div>
               </div>}
-              {age&&<div style={{textAlign:"center"}}>
-                <div className="cc-label" style={{marginBottom:2}}>Alter</div>
-                <div style={{fontSize:22,fontWeight:700,color:"var(--text)",lineHeight:1}}>{age}</div>
+              {age&&<div className="cc-text-center">
+                <div className="cc-label">Alter</div>
+                <div className="cc-stat-val">{age}</div>
               </div>}
             </div>
           </div>
           {/* Tabs mit cc-seg */}
-          <div style={{borderTop:"0.5px solid var(--border)",padding:"0 20px",display:"flex",gap:0,overflowX:"auto"}}>
+          <div className="cc-tabs-bar">
             {[
               {key:"info",    label:"Profil",     icon:"user"},
               {key:"eltern",  label:`Eltern (${eltern.length})`,icon:"heart"},
@@ -466,7 +466,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
 
         {/* Tab: Profil */}
         {tab==="info"&&(
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+          <div className="cc-grid-2">
             {/* Personalien */}
             <Card>
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
@@ -525,7 +525,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             {fv.showNotizen&&raw.notizen&&(
               <Card>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-                <div style={{fontSize:14,color:"var(--text)",lineHeight:1.6}}>{raw.notizen}</div>
+                <div className="cc-text-body">{raw.notizen}</div>
               </Card>
             )}
           </div>
@@ -651,16 +651,16 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                     ):(
                       <div className="cc-row cc-gap-12">
                         <Av name={name} size={48}/>
-                        <div className="cc-flex-1" style={{minWidth:0}}>
-                          <div className="cc-row cc-gap-8 cc-mb-4" style={{flexWrap:"wrap"}}>
-                            <div className="cc-text-bold" style={{fontSize:15}}>{name}</div>
+                        <div className="cc-flex-1">
+                          <div className="cc-row cc-gap-8 cc-mb-4">
+                            <div className="cc-text-bold cc-text-lg">{name}</div>
                             {e.beziehung&&<span className="cc-badge cc-badge-neutral"><TI n="users" size={10}/> {e.beziehung}</span>}
                             {e.benutzer_id
                               ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal</span>
                               :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
                             }
                           </div>
-                          <div className="cc-row cc-gap-16" style={{flexWrap:"wrap"}}>
+                          <div className="cc-row cc-gap-16">
                             {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
@@ -691,7 +691,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
           <div className="cc-col cc-gap-12">
             <Card>
               <div className="cc-between cc-mb-12">
-                <div className="cc-text-bold" style={{fontSize:15}}>Portal-Zugang</div>
+                <div className="cc-text-bold cc-text-lg">Portal-Zugang</div>
                 <Chip text={raw.hat_portal_zugang?"Aktiv":"Kein Zugang"} color={raw.hat_portal_zugang?GN:R} bg={raw.hat_portal_zugang?"#ECFDF5":RL}/>
               </div>
               {raw.hat_portal_zugang&&benutzer&&(
@@ -708,7 +708,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                   ))}
                 </div>
               )}
-              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"}`} style={{marginBottom:12}}>{portalMsg.text}</div>}
+              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"}`} className="cc-mb-12">{portalMsg.text}</div>}
               {raw.hat_portal_zugang
                 ?<button className="cc-btn-danger cc-w-full" onClick={handleUnlink}>Verknüpfung aufheben</button>
                 :(
@@ -733,7 +733,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             <Card>
               <div className="cc-between cc-mb-12">
                 <div>
-                  <div className="cc-text-bold" style={{fontSize:15}}>Profil-Status</div>
+                  <div className="cc-text-bold cc-text-lg">Profil-Status</div>
                   <div className="cc-text-sm cc-mt-4">
                     {raw.profil_geprueft_at
                       ?`Zuletzt geprüft am ${new Date(raw.profil_geprueft_at).toLocaleDateString("de-CH")}`
@@ -799,7 +799,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     <div>
       {/* Header */}
       <div className="cc-page-hdr">
-        <h1 style={{fontSize:21,fontWeight:800,margin:0,color:"var(--text)"}}>Mitglieder</h1>
+        <h1 className="cc-page-title">Mitglieder</h1>
         {canExport&&<Row align="flex-start"><Btn>Export CSV</Btn><Btn>Export Excel</Btn></Row>}
       </div>
       {/* Stats */}
@@ -823,12 +823,12 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       {groupBy!=="none"&&(()=>{
         const vals=[...new Set(MEMBERS.map(m=>m[groupBy]||"-"))].sort();
         return(
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+          <div className="cc-row cc-gap-8 cc-mb-14" style={{flexWrap:"wrap",alignItems:"center"}}>
             <Btn small onClick={()=>setFilterVals([])}>Alle</Btn>
             {vals.map(v=>{
               const active=filterVals.includes(v);
               return(
-                <Btn small onClick={()=>setFilterVals(prev=>active?prev.filter(x=>x!==v):[...prev,v])}>{active&&<span style={{fontSize:11}}>✓</span>} {v} <span style={{opacity:0.55,fontWeight:400}}> {allMembers.filter(m=>(m[groupBy]||"-")===v).length} </span></Btn>
+                <Btn small onClick={()=>setFilterVals(prev=>active?prev.filter(x=>x!==v):[...prev,v])}>{active&&<span className="cc-text-xs">✓</span>} {v} <span className="cc-text-muted"> {allMembers.filter(m=>(m[groupBy]||"-")===v).length} </span></Btn>
               );
             })}
             {filterVals.length>0&&(
@@ -838,13 +838,13 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
         );
       })()}
       {/* Tabelle */}
-      <Card style={{padding:0,overflowX:"auto"}}>
+      <Card className="cc-card-table">
         <div className="cc-table-wrap"><table className="cc-table">
           <thead>
-            <tr style={{background:"var(--surface2)"}}>
+            <tr className="cc-surface2">
               {COLS.map(c=>(
                 <th className="cc-th" key={c.key} onClick={()=>handleSort(c.key)}
-                  style={{cursor:"pointer",userSelect:"none"}}
+                  className="cc-clickable"
                   onMouseEnter={e=>e.currentTarget.style.color="var(--text)"}
                   onMouseLeave={e=>e.currentTarget.style.color="var(--sub)"}>
                   {c.label}<SortIcon col={c.key}/>
@@ -857,27 +857,27 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               <>
                 {groupBy!=="none"&&(
                   <tr key={"g-"+key}>
-                    <td colSpan={6} style={{padding:"10px 13px 6px",background:"var(--surface2)",
+                    <td colSpan={6} className="cc-td cc-section-label" style={{
                       fontWeight:700,fontSize:14,color:"var(--sub)",textTransform:"uppercase",
                       letterSpacing:0.6,borderTop:"1px solid var(--border)"}}>
-                      {key} <span style={{fontWeight:400,opacity:0.6}}>({members.length})</span>
+                      {key} <span className="cc-text-muted">({members.length})</span>
                     </td>
                   </tr>
                 )}
                 {members.map((m,i)=>(
                   <tr key={m.id} onClick={()=>setSelectedMember({...m,_tab:"info"})}
-                    style={{borderTop:"0.5px solid var(--border)",cursor:"pointer"}}>
-                    <td className="cc-td" style={{padding:"9px 13px"}}>
+                    className="cc-tr">
+                    <td className="cc-td" className="cc-td">
                       <Row>
                         <Av name={m.name} size={28}/>
-                        <span style={{fontWeight:600,color:"var(--text)"}}>{m.name}</span>
+                        <span className="cc-text-bold">{m.name}</span>
                       </Row>
                     </td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}>
+                    <td className="cc-td" className="cc-td"><RolleChip rolle={m.role}/></td>
+                    <td className="cc-td" className="cc-td" style={{color:"var(--sub)"}}>{m.team}</td>
+                    <td className="cc-td" className="cc-td"><Chip text={m.type} color={BL}/></td>
+                    <td className="cc-td" className="cc-td" style={{color:"var(--sub)"}}>{m.location}</td>
+                    <td className="cc-td" className="cc-td">
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
                     </td>
                   </tr>
@@ -973,8 +973,8 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
   const statusColor=s=>s==="Vollständig"?GN:s==="Prüfung fällig"?AM:R;
   const statusBg=s=>s==="Vollständig"?"#ECFDF5":s==="Prüfung fällig"?"#FFFBEB":RL;
   const SortIcon=({col})=>sortCol===col
-    ?<span style={{marginLeft:4,fontSize:11}}>{sortDir==="asc"?"▲":"▼"}</span>
-    :<span style={{marginLeft:4,fontSize:11,opacity:0.25}}>↕</span>;
+    ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
+    :<span className="cc-sort-arrow cc-text-muted">↕</span>;
 
   const inputStyle={padding:"7px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:FONT};
 
@@ -1028,19 +1028,19 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     return(
       <div>
         {/* Hero Header */}
-        <Card style={{padding:0,overflow:"hidden",marginBottom:20}}>
+        <Card className="cc-card-flush cc-mb-20">
           <div style={{height:6,background:"var(--cc-accent,#FFBF00)"}}/>
-          <div className="cc-row" style={{padding:"24px 28px",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
+          <div className="cc-row" style={{padding:"24px 28px",gap:20,flexWrap:"wrap"}}>
             {/* Avatar */}
             <div style={{width:80,height:80,borderRadius:16,background:"var(--avatar-bg,var(--cc-accent,#FFBF00))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:700,color:"var(--cc-avatar-text,#000)",flexShrink:0,position:"relative"}}>
               {initials}
               {raw.rueckennr&&<div className="cc-profile-nr">#{raw.rueckennr}</div>}
             </div>
             {/* Meta */}
-            <div style={{flex:1,minWidth:0}}>
+            <div className="cc-flex-1">
               <Btn variant="ghost" small onClick={onClose} style={{marginLeft:-8,marginBottom:4}}><TI n="arrow-left"/>Zurück</Btn>
               <h1 className="cc-profile-name">{m.name}</h1>
-              <div className="cc-row" style={{flexWrap:"wrap",gap:6}}>
+              <div className="cc-row" className="cc-chip-row">
                 <Chip text={m.role} color={R}/>
                 {raw.position&&<Chip text={raw.position} color={BL}/>}
                 <Chip text={m.type} color={"#7C3AED"}/>
@@ -1049,19 +1049,19 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               </div>
             </div>
             {/* Quick Stats */}
-            <div className="cc-row" style={{gap:20,flexShrink:0,alignItems:"flex-start"}}>
-              {m.team&&<div style={{textAlign:"center"}}>
-                <div className="cc-label" style={{marginBottom:2}}>Team</div>
+            <div className="cc-row" className="cc-col cc-gap-20 cc-shrink-0">
+              {m.team&&<div className="cc-text-center">
+                <div className="cc-label">Team</div>
                 <div className="cc-text-bold">{m.team}</div>
               </div>}
-              {age&&<div style={{textAlign:"center"}}>
-                <div className="cc-label" style={{marginBottom:2}}>Alter</div>
-                <div style={{fontSize:22,fontWeight:700,color:"var(--text)",lineHeight:1}}>{age}</div>
+              {age&&<div className="cc-text-center">
+                <div className="cc-label">Alter</div>
+                <div className="cc-stat-val">{age}</div>
               </div>}
             </div>
           </div>
           {/* Tabs mit cc-seg */}
-          <div style={{borderTop:"0.5px solid var(--border)",padding:"0 20px",display:"flex",gap:0,overflowX:"auto"}}>
+          <div className="cc-tabs-bar">
             {[
               {key:"info",    label:"Profil",     icon:"user"},
               {key:"eltern",  label:`Eltern (${eltern.length})`,icon:"heart"},
@@ -1087,7 +1087,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
 
         {/* Tab: Profil */}
         {tab==="info"&&(
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+          <div className="cc-grid-2">
             {/* Personalien */}
             <Card>
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
@@ -1146,7 +1146,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             {fv.showNotizen&&raw.notizen&&(
               <Card>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-                <div style={{fontSize:14,color:"var(--text)",lineHeight:1.6}}>{raw.notizen}</div>
+                <div className="cc-text-body">{raw.notizen}</div>
               </Card>
             )}
           </div>
@@ -1272,16 +1272,16 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                     ):(
                       <div className="cc-row cc-gap-12">
                         <Av name={name} size={48}/>
-                        <div className="cc-flex-1" style={{minWidth:0}}>
-                          <div className="cc-row cc-gap-8 cc-mb-4" style={{flexWrap:"wrap"}}>
-                            <div className="cc-text-bold" style={{fontSize:15}}>{name}</div>
+                        <div className="cc-flex-1">
+                          <div className="cc-row cc-gap-8 cc-mb-4">
+                            <div className="cc-text-bold cc-text-lg">{name}</div>
                             {e.beziehung&&<span className="cc-badge cc-badge-neutral"><TI n="users" size={10}/> {e.beziehung}</span>}
                             {e.benutzer_id
                               ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal</span>
                               :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
                             }
                           </div>
-                          <div className="cc-row cc-gap-16" style={{flexWrap:"wrap"}}>
+                          <div className="cc-row cc-gap-16">
                             {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
@@ -1312,7 +1312,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
           <div className="cc-col cc-gap-12">
             <Card>
               <div className="cc-between cc-mb-12">
-                <div className="cc-text-bold" style={{fontSize:15}}>Portal-Zugang</div>
+                <div className="cc-text-bold cc-text-lg">Portal-Zugang</div>
                 <Chip text={raw.hat_portal_zugang?"Aktiv":"Kein Zugang"} color={raw.hat_portal_zugang?GN:R} bg={raw.hat_portal_zugang?"#ECFDF5":RL}/>
               </div>
               {raw.hat_portal_zugang&&benutzer&&(
@@ -1329,7 +1329,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                   ))}
                 </div>
               )}
-              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"}`} style={{marginBottom:12}}>{portalMsg.text}</div>}
+              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"}`} className="cc-mb-12">{portalMsg.text}</div>}
               {raw.hat_portal_zugang
                 ?<button className="cc-btn-danger cc-w-full" onClick={handleUnlink}>Verknüpfung aufheben</button>
                 :(
@@ -1354,7 +1354,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             <Card>
               <div className="cc-between cc-mb-12">
                 <div>
-                  <div className="cc-text-bold" style={{fontSize:15}}>Profil-Status</div>
+                  <div className="cc-text-bold cc-text-lg">Profil-Status</div>
                   <div className="cc-text-sm cc-mt-4">
                     {raw.profil_geprueft_at
                       ?`Zuletzt geprüft am ${new Date(raw.profil_geprueft_at).toLocaleDateString("de-CH")}`
@@ -1420,8 +1420,8 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     <div>
       {/* Header */}
       <div className="cc-page-hdr">
-        <h1 style={{fontSize:21,fontWeight:800,margin:0,color:"var(--text)"}}>Mitglieder</h1>
-        {canExport&&<div style={{display:"flex",gap:8}}><Btn>Export CSV</Btn><Btn>Export Excel</Btn></div>}
+        <h1 className="cc-page-title">Mitglieder</h1>
+        {canExport&&<div className="cc-row cc-gap-8"><Btn>Export CSV</Btn><Btn>Export Excel</Btn></div>}
       </div>
       {/* Stats */}
       <div className="cc-grid-stats cc-mb-20">
@@ -1444,7 +1444,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
       {groupBy!=="none"&&(()=>{
         const vals=[...new Set(MEMBERS.map(m=>m[groupBy]||"-"))].sort();
         return(
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+          <div className="cc-row cc-gap-8 cc-mb-14" style={{flexWrap:"wrap",alignItems:"center"}}>
             <button onClick={()=>setFilterVals([])}
               style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
                 background:filterVals.length===0?BK:"var(--surface)",
@@ -1462,9 +1462,9 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                     color:active?"#fff":"var(--sub)",
                     fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s",
                     display:"flex",alignItems:"center",gap:8}}>
-                  {active&&<span style={{fontSize:11}}>✓</span>}
+                  {active&&<span className="cc-text-xs">✓</span>}
                   {v}
-                  <span style={{opacity:0.55,fontWeight:400}}>
+                  <span className="cc-text-muted">
                     {allMembers.filter(m=>(m[groupBy]||"-")===v).length}
                   </span>
                 </button>
@@ -1481,13 +1481,13 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
         );
       })()}
       {/* Tabelle */}
-      <Card style={{padding:0,overflowX:"auto"}}>
+      <Card className="cc-card-table">
         <div className="cc-table-wrap"><table className="cc-table">
           <thead>
-            <tr style={{background:"var(--surface2)"}}>
+            <tr className="cc-surface2">
               {COLS.map(c=>(
                 <th className="cc-th" key={c.key} onClick={()=>handleSort(c.key)}
-                  style={{cursor:"pointer",userSelect:"none"}}
+                  className="cc-clickable"
                   onMouseEnter={e=>e.currentTarget.style.color="var(--text)"}
                   onMouseLeave={e=>e.currentTarget.style.color="var(--sub)"}>
                   {c.label}<SortIcon col={c.key}/>
@@ -1500,29 +1500,29 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               <>
                 {groupBy!=="none"&&(
                   <tr key={"g-"+key}>
-                    <td colSpan={6} style={{padding:"10px 13px 6px",background:"var(--surface2)",
+                    <td colSpan={6} className="cc-td cc-section-label" style={{
                       fontWeight:700,fontSize:14,color:"var(--sub)",textTransform:"uppercase",
                       letterSpacing:0.6,borderTop:"1px solid var(--border)"}}>
-                      {key} <span style={{fontWeight:400,opacity:0.6}}>({members.length})</span>
+                      {key} <span className="cc-text-muted">({members.length})</span>
                     </td>
                   </tr>
                 )}
                 {members.map((m,i)=>(
                   <tr key={m.id} onClick={()=>setSelectedMember({...m,_tab:"info"})}
-                    style={{borderTop:"0.5px solid var(--border)",cursor:"pointer"}}
+                    className="cc-tr"
                     onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <td className="cc-td" style={{padding:"9px 13px"}}>
+                    <td className="cc-td" className="cc-td">
                       <div className="cc-row">
                         <Av name={m.name} size={28}/>
-                        <span style={{fontWeight:600,color:"var(--text)"}}>{m.name}</span>
+                        <span className="cc-text-bold">{m.name}</span>
                       </div>
                     </td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
-                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
-                    <td className="cc-td" style={{padding:"9px 13px"}}>
+                    <td className="cc-td" className="cc-td"><RolleChip rolle={m.role}/></td>
+                    <td className="cc-td" className="cc-td" style={{color:"var(--sub)"}}>{m.team}</td>
+                    <td className="cc-td" className="cc-td"><Chip text={m.type} color={BL}/></td>
+                    <td className="cc-td" className="cc-td" style={{color:"var(--sub)"}}>{m.location}</td>
+                    <td className="cc-td" className="cc-td">
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
                     </td>
                   </tr>
