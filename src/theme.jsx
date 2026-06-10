@@ -250,7 +250,8 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-btn-success:hover{background:#DCFCE7}
 .cc-btn-danger{padding:5px 12px;border-radius:8px;background:#FEF2F2;border:0.5px solid #FECACA;color:#991B1B;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit}
 .cc-btn-danger:hover{background:#FEE2E2}
-.cc-items-end{align-items:flex-end}font-weight:600;display:flex;align-items:center;gap:4px}
+.cc-items-end{align-items:flex-end}
+.cc-status-active{font-size:12px;color:#16A34A;font-weight:600;display:flex;align-items:center;gap:4px}
 .cc-status-active::before{content:"";width:7px;height:7px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block}
 .cc-status-inactive{font-size:12px;color:#DC2626;font-weight:600;display:flex;align-items:center;gap:4px}
 .cc-status-inactive::before{content:"";width:7px;height:7px;border-radius:50%;background:#DC2626;flex-shrink:0;display:inline-block}
