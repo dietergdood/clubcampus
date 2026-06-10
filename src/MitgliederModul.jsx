@@ -407,7 +407,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     return(
       <div>
         {/* Hero Header */}
-        <Card className="cc-card-flush cc-mb-20">
+        <Card className="cc-card-flush cc-mb-24">
           <div className="cc-hero-stripe"/>
           <div className="cc-hero-body">
             {/* Avatar */}
@@ -440,7 +440,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             </div>
           </div>
           {/* Tabs mit cc-seg */}
-          <Tabs mb={0}
+          <div style={{padding:"0 20px"}}><Tabs mb={0}
             tabs={[
               {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
               {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
@@ -452,7 +452,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             ]}
             active={tab}
             setActive={t=>!(["stats","comments","ratings"].includes(t))&&setTab(t)}
-          />
+          /></div>
         </Card>
 
         {/* Tab: Profil */}
@@ -1019,7 +1019,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     return(
       <div>
         {/* Hero Header */}
-        <Card className="cc-card-flush cc-mb-20">
+        <Card className="cc-card-flush cc-mb-24">
           <div className="cc-hero-stripe"/>
           <div className="cc-hero-body">
             {/* Avatar */}
@@ -1052,7 +1052,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             </div>
           </div>
           {/* Tabs mit cc-seg */}
-          <Tabs mb={0}
+          <div style={{padding:"0 20px"}}><Tabs mb={0}
             tabs={[
               {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
               {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
@@ -1064,7 +1064,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             ]}
             active={tab}
             setActive={t=>!(["stats","comments","ratings"].includes(t))&&setTab(t)}
-          />
+          /></div>
         </Card>
 
         {/* Tab: Profil */}
