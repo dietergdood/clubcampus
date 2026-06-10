@@ -233,7 +233,10 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cc-form-full{grid-column:1/-1}
 .cc-textarea{resize:vertical;min-height:80px}
-.cc-form-section-title:first-child{border-top:none;padding-top:0;margin-top:0}
+.cc-form-section-title{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:8px 0 2px}
+.cc-form-section-title::before{content:attr(data-label);font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap}
+.cc-form-section-title::after{content:"";flex:1;height:0.5px;background:var(--border)}
+.cc-form-section-title:first-child{margin-top:0}
 .cc-save-row{display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:0.5px solid var(--border)}
 
 /* ── Info rows ── */

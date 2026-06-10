@@ -221,7 +221,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           <div className="cc-modal-body">
             <div className="cc-form-row">
               {/* Personalien */}
-              <div className="cc-form-section-title">Personalien</div>
+              <div className="cc-form-section-title" data-label="Personalien"/>
               {[
                 {k:"vorname",      l:"Vorname"},
                 {k:"nachname",     l:"Nachname"},
@@ -249,7 +249,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 </div>
               ))}
               {/* Kontakt */}
-              <div className="cc-form-section-title cc-form-full">Kontakt</div>
+              <div className="cc-form-section-title cc-form-full" data-label="Kontakt"/>
               {[
                 {k:"email",   l:"E-Mail",  type:"email", full:true},
                 {k:"telefon", l:"Telefon", type:"tel"},
@@ -264,7 +264,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 </div>
               ))}
               {/* Vereinsdaten */}
-              <div className="cc-form-section-title cc-form-full">Vereinsdaten</div>
+              <div className="cc-form-section-title cc-form-full" data-label="Vereinsdaten"/>
               {[
                 {k:"mitgliedtyp", l:"Mitgliedtyp", opts:["Spieler","Trainer","Assistent/in","Goalietrainer","Vorstand","Kassier","Materialwart","Platzwart","Schiedsrichter","Passivmitglied","Ehrenmitglied","Gönner"]},
                 {k:"funktion",    l:"Funktion"},
