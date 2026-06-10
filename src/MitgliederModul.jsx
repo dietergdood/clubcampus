@@ -149,7 +149,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
               {m.hat_portal_zugang&&<span className="cc-badge cc-badge-success"><TI n="circle-check" size={11}/> Portal</span>}
             </div>
           </div>
-          {canUpload&&(
+          {canEdit&&(
             <Btn small onClick={()=>{setEditForm({...raw});setEditOpen(true);}}>
               <TI n="edit" size={13}/> Bearbeiten
             </Btn>
@@ -657,13 +657,13 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
                           {/* Portal-Verknüpfung inline */}
-                          {canUpload&&(
+                          {canEdit&&(
                             <ElternPortalRow
                               e={e} sb={sb} onReload={onReload}
                             />
                           )}
                         </div>
-                        {canUpload&&(
+                        {canEdit&&(
                           <div className="cc-col cc-gap-4 cc-shrink-0">
                             <button className="cc-btn-ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={14}/></button>
                             <button className="cc-btn-danger" style={{padding:"4px 8px"}} onClick={()=>deleteEltern(e.id)}><TI n="trash" size={14}/></button>
@@ -1259,13 +1259,13 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
                           {/* Portal-Verknüpfung inline */}
-                          {canUpload&&(
+                          {canEdit&&(
                             <ElternPortalRow
                               e={e} sb={sb} onReload={onReload}
                             />
                           )}
                         </div>
-                        {canUpload&&(
+                        {canEdit&&(
                           <div className="cc-col cc-gap-4 cc-shrink-0">
                             <button className="cc-btn-ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={14}/></button>
                             <button className="cc-btn-danger" style={{padding:"4px 8px"}} onClick={()=>deleteEltern(e.id)}><TI n="trash" size={14}/></button>
