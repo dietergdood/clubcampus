@@ -301,21 +301,21 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               </div>}
             </div>
           </div>
-          {/* Tabs mit cc-seg */}
-          <div className="cc-hero-tabs-wrap"><Tabs mb={0}
-            tabs={[
-              {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
-              {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
-              ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key",          short:"Portal"}]:[]),
-              ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check", short:"Daten"}]:[]),
-              {key:"stats",   label:"Statistik",   icon:"chart-bar",short:"Stats",  soon:true},
-              {key:"comments",label:"Kommentare",  icon:"message",  short:"Komm.",  soon:true},
-              {key:"ratings", label:"Bewertungen", icon:"star",     short:"Bewert.",soon:true},
-            ]}
-            active={tab}
-            setActive={t=>!(["stats","comments","ratings"].includes(t))&&setTab(t)}
-          /></div>
         </Card>
+        {/* Tabs ausserhalb Hero */}
+        <Tabs
+          tabs={[
+            {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
+            {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
+            ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key",          short:"Portal"}]:[]),
+            ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check", short:"Daten"}]:[]),
+            {key:"stats",   label:"Statistik",   icon:"chart-bar",short:"Stats",  soon:true},
+            {key:"comments",label:"Kommentare",  icon:"message",  short:"Komm.",  soon:true},
+            {key:"ratings", label:"Bewertungen", icon:"star",     short:"Bewert.",soon:true},
+          ]}
+          active={tab}
+          setActive={t=>!(["stats","comments","ratings"].includes(t))&&setTab(t)}
+        />
 
         {/* Tab: Profil */}
         {tab==="info"&&(
@@ -930,21 +930,21 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               </div>}
             </div>
           </div>
-          {/* Tabs mit cc-seg */}
-          <div className="cc-hero-tabs-wrap"><Tabs mb={0}
-            tabs={[
-              {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
-              {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
-              ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key",          short:"Portal"}]:[]),
-              ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check", short:"Daten"}]:[]),
-              {key:"stats",   label:"Statistik",   icon:"chart-bar",short:"Stats",  soon:true},
-              {key:"comments",label:"Kommentare",  icon:"message",  short:"Komm.",  soon:true},
-              {key:"ratings", label:"Bewertungen", icon:"star",     short:"Bewert.",soon:true},
-            ]}
-            active={tab}
-            setActive={t=>!(["stats","comments","ratings"].includes(t))&&setTab(t)}
-          /></div>
         </Card>
+        {/* Tabs ausserhalb Hero */}
+        <Tabs
+          tabs={[
+            {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
+            {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
+            ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key",          short:"Portal"}]:[]),
+            ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check", short:"Daten"}]:[]),
+            {key:"stats",   label:"Statistik",   icon:"chart-bar",short:"Stats",  soon:true},
+            {key:"comments",label:"Kommentare",  icon:"message",  short:"Komm.",  soon:true},
+            {key:"ratings", label:"Bewertungen", icon:"star",     short:"Bewert.",soon:true},
+          ]}
+          active={tab}
+          setActive={t=>!(["stats","comments","ratings"].includes(t))&&setTab(t)}
+        />
 
         {/* Tab: Profil */}
         {tab==="info"&&(
