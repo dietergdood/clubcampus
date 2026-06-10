@@ -356,18 +356,17 @@ function FotoUpload({raw,canUpload,sb,onReload}){
 
 /* ── Eltern Portal-Verknüpfungs-Zeile ── */
 function ElternPortalRow({e,sb,onReload}){
-  const [lEmail,setLEmail]=useState(e.email||"");
   const [lMsg,setLMsg]=useState(null);
   const [lLoading,setLLoading]=useState(false);
   async function link(){
-    if(!sb||!lEmail) return;
+    if(!sb||!e.email) return;
     setLLoading(true); setLMsg(null);
-    const {data:bu}=await sb.from("benutzer").select("id").eq("email",lEmail).maybeSingle();
+    const {data:bu}=await sb.from("benutzer").select("id").eq("email",e.email).maybeSingle();
     if(bu){
       await sb.from("elternkontakte").update({benutzer_id:bu.id}).eq("id",e.id);
       setLMsg({ok:true,text:"Verknüpft ✓"});
       if(onReload) onReload();
-    } else { setLMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail"}); }
+    } else { setLMsg({ok:false,text:"Kein Portal-Konto für "+e.email}); }
     setLLoading(false);
   }
   async function unlink(){
@@ -376,22 +375,13 @@ function ElternPortalRow({e,sb,onReload}){
     if(onReload) onReload();
   }
   return(
-    <div className="cc-mt-8 cc-border-top cc-pt-8">
-      {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{lMsg.text}</div>}
-      {e.benutzer_id?(
-        <div className="cc-between">
-          <span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal verknüpft</span>
-          <button className="cc-btn-danger" style={{padding:"3px 10px",fontSize:12}} onClick={unlink}>Aufheben</button>
-        </div>
-      ):(
-        <div className="cc-row cc-gap-8">
-          <input className="cc-input cc-flex-1" style={{height:32,fontSize:13}} value={lEmail} onChange={ev=>setLEmail(ev.target.value)} placeholder="E-Mail für Verknüpfung"/>
-          <button className="cc-btn-success cc-shrink-0" style={{padding:"4px 12px",fontSize:13}} onClick={link} disabled={!lEmail||lLoading}>
-            {lLoading?"…":"Verknüpfen"}
-          </button>
-        </div>
-      )}
-    </div>
+    <>
+      {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-4`}>{lMsg.text}</div>}
+      {e.benutzer_id
+        ?<Btn small onClick={unlink} className="cc-btn-unlink-sm">Aufheben</Btn>
+        :<Btn small onClick={link} disabled={!e.email||lLoading}>{lLoading?"…":"Verknüpfen"}</Btn>
+      }
+    </>
   );
 }
 
@@ -733,7 +723,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               {canEdit&&!editEltern&&(
                 <div className="cc-between">
                   <div className="cc-text-sm">{eltern.length} Elternkontakt{eltern.length!==1?"e":""}</div>
-                  <Btn small variant="primary" onClick={()=>setEditEltern({mode:"new",data:{mitglied_id:raw.id}})}>
+                  <Btn small onClick={()=>setEditEltern({mode:"new",data:{mitglied_id:raw.id}})}>
                     <TI n="plus"/> Hinzufügen
                   </Btn>
                 </div>
@@ -796,17 +786,12 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                             {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
-                          {/* Portal-Verknüpfung inline */}
-                          {canEdit&&(
-                            <ElternPortalRow
-                              e={e} sb={sb} onReload={onReload}
-                            />
-                          )}
                         </div>
                         {canEdit&&(
-                          <div className="cc-col cc-gap-4 cc-shrink-0">
-                            <button className="cc-btn-ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={14}/></button>
-                            <button className="cc-btn-danger" style={{padding:"4px 8px"}} onClick={()=>deleteEltern(e.id)}><TI n="trash" size={14}/></button>
+                          <div className="cc-row cc-gap-6 cc-shrink-0">
+                            <ElternPortalRow e={e} sb={sb} onReload={onReload}/>
+                            <Btn small variant="ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={13}/></Btn>
+                            <Btn small variant="ghost" onClick={()=>deleteEltern(e.id)} className="cc-btn-danger-ghost"><TI n="trash" size={13}/></Btn>
                           </div>
                         )}
                       </div>
@@ -1383,7 +1368,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               {canEdit&&!editEltern&&(
                 <div className="cc-between">
                   <div className="cc-text-sm">{eltern.length} Elternkontakt{eltern.length!==1?"e":""}</div>
-                  <Btn small variant="primary" onClick={()=>setEditEltern({mode:"new",data:{mitglied_id:raw.id}})}>
+                  <Btn small onClick={()=>setEditEltern({mode:"new",data:{mitglied_id:raw.id}})}>
                     <TI n="plus"/> Hinzufügen
                   </Btn>
                 </div>
@@ -1446,17 +1431,12 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                             {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
-                          {/* Portal-Verknüpfung inline */}
-                          {canEdit&&(
-                            <ElternPortalRow
-                              e={e} sb={sb} onReload={onReload}
-                            />
-                          )}
                         </div>
                         {canEdit&&(
-                          <div className="cc-col cc-gap-4 cc-shrink-0">
-                            <button className="cc-btn-ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={14}/></button>
-                            <button className="cc-btn-danger" style={{padding:"4px 8px"}} onClick={()=>deleteEltern(e.id)}><TI n="trash" size={14}/></button>
+                          <div className="cc-row cc-gap-6 cc-shrink-0">
+                            <ElternPortalRow e={e} sb={sb} onReload={onReload}/>
+                            <Btn small variant="ghost" onClick={()=>setEditEltern({mode:"edit",data:{...e}})}><TI n="edit" size={13}/></Btn>
+                            <Btn small variant="ghost" onClick={()=>deleteEltern(e.id)} className="cc-btn-danger-ghost"><TI n="trash" size={13}/></Btn>
                           </div>
                         )}
                       </div>
