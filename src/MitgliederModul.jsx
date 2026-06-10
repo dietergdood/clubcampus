@@ -323,7 +323,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
-    const canEdit=role==="administrator"||role==="administration";
+    const canEdit=kannVerwalten("members");
     const [portalLoading,setPortalLoading]=useState(false);
     const [benutzer,setBenutzer]=useState(null);
     const [portalMsg,setPortalMsg]=useState(null);
@@ -404,6 +404,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               {key:"info",    label:"Profil",     icon:"user"},
               {key:"eltern",  label:`Eltern (${eltern.length})`,icon:"heart"},
               ...(canEdit?[{key:"portal",label:"Portal-Zugang",icon:"key"}]:[]),
+              ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",icon:"shield-check"}]:[]),
               {key:"stats",   label:"Statistik",  icon:"chart-bar",soon:true},
               {key:"comments",label:"Kommentare", icon:"message",  soon:true},
               {key:"ratings", label:"Bewertungen",icon:"star",     soon:true},
@@ -622,6 +623,46 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                             {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
+                          {/* Portal-Verknüpfung inline */}
+                          {canEdit&&(()=>{
+                            const [lEmail,setLEmail]=useState(e.email||"");
+                            const [lMsg,setLMsg]=useState(null);
+                            const [lLoading,setLLoading]=useState(false);
+                            async function link(){
+                              if(!sb||!lEmail) return;
+                              setLLoading(true); setLMsg(null);
+                              const {data:bu}=await sb.from("benutzer").select("id").eq("email",lEmail).maybeSingle();
+                              if(bu){
+                                await sb.from("elternkontakte").update({benutzer_id:bu.id}).eq("id",e.id);
+                                setLMsg({ok:true,text:"Verknüpft ✓"});
+                                if(onReload) onReload();
+                              } else { setLMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail"}); }
+                              setLLoading(false);
+                            }
+                            async function unlink(){
+                              if(!sb) return;
+                              await sb.from("elternkontakte").update({benutzer_id:null}).eq("id",e.id);
+                              if(onReload) onReload();
+                            }
+                            return(
+                              <div className="cc-mt-8" style={{borderTop:"0.5px solid var(--border)",paddingTop:8}}>
+                                {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{lMsg.text}</div>}
+                                {e.benutzer_id?(
+                                  <div className="cc-between">
+                                    <span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal verknüpft</span>
+                                    <button className="cc-btn-danger" style={{padding:"3px 10px",fontSize:12}} onClick={unlink}>Aufheben</button>
+                                  </div>
+                                ):(
+                                  <div className="cc-row cc-gap-8">
+                                    <input className="cc-input cc-flex-1" style={{height:32,fontSize:13}} value={lEmail} onChange={ev=>setLEmail(ev.target.value)} placeholder="E-Mail für Verknüpfung"/>
+                                    <button className="cc-btn-success cc-shrink-0" style={{padding:"4px 12px",fontSize:13}} onClick={link} disabled={!lEmail||lLoading}>
+                                      {lLoading?"…":"Verknüpfen"}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                         {canEdit&&(
                           <div className="cc-col cc-gap-4 cc-shrink-0">
@@ -675,13 +716,20 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               }
             </Card>
             {/* Datenprüfung */}
+
+          </div>
+        )}
+
+        {/* Tab: Datenprüfung */}
+        {tab==="datenpruefung"&&canEdit&&(
+          <div className="cc-col cc-gap-12">
             <Card>
-              <div className="cc-between cc-mb-8">
+              <div className="cc-between cc-mb-12">
                 <div>
-                  <div className="cc-text-bold">Datenprüfung</div>
-                  <div className="cc-text-sm">
+                  <div className="cc-text-bold" style={{fontSize:15}}>Profil-Status</div>
+                  <div className="cc-text-sm cc-mt-4">
                     {raw.profil_geprueft_at
-                      ?`Zuletzt geprüft: ${new Date(raw.profil_geprueft_at).toLocaleDateString("de-CH")}`
+                      ?`Zuletzt geprüft am ${new Date(raw.profil_geprueft_at).toLocaleDateString("de-CH")}`
                       :"Noch nie geprüft"}
                   </div>
                 </div>
@@ -691,75 +739,39 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                   bg={raw.profil_geprueft_at?"#ECFDF5":"#FFFBEB"}
                 />
               </div>
+              <div className="cc-col cc-gap-8">
+                {[
+                  {l:"Vorname",      ok:!!raw.vorname},
+                  {l:"Nachname",     ok:!!raw.nachname},
+                  {l:"Geburtsdatum", ok:!!raw.geburtsdatum},
+                  {l:"Nationalität", ok:!!raw.nationalitaet},
+                  {l:"Adresse",      ok:!!(raw.strasse&&raw.plz&&raw.ort)},
+                  {l:"E-Mail",       ok:!!raw.email},
+                  {l:"Telefon",      ok:!!raw.telefon},
+                ].map((f,i)=>(
+                  <div key={i} className="cc-info-row">
+                    <span className="cc-info-key">{f.l}</span>
+                    <span>{f.ok
+                      ?<span className="cc-badge cc-badge-success"><TI n="check" size={10}/> OK</span>
+                      :<span className="cc-badge cc-badge-warning">Fehlt</span>
+                    }</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+            <Card>
+              <div className="cc-text-bold cc-mb-4">Datenprüfung anfordern</div>
+              <div className="cc-text-sm cc-mb-12">Das Mitglied wird beim nächsten Login aufgefordert, seine Daten zu prüfen und zu bestätigen.</div>
               <button className="cc-btn-ghost cc-w-full" onClick={async()=>{
                 if(!sb) return;
                 await sb.from("mitglieder").update({profil_geprueft_at:null}).eq("id",raw.id);
-                setPortalMsg({ok:true,text:"Datenprüfung zurückgesetzt — Mitglied wird beim nächsten Login aufgefordert."});
-                if(onReload) onReload();
+                setPortalMsg({ok:true,text:"Datenprüfung angefordert ✓"});
+                if(onReload) setTimeout(onReload,500);
               }}>
                 <TI n="refresh"/> Datenprüfung anfordern
               </button>
+              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{portalMsg.text}</div>}
             </Card>
-            {/* Eltern Portal-Verknüpfung */}
-            {eltern.length>0&&(
-              <Card>
-                <div className="cc-text-bold cc-mb-4">Eltern Portal-Zugang</div>
-                <div className="cc-text-sm cc-mb-12">Eltern erhalten Zugang über ihre registrierte E-Mail. Ist ein Elternteil selbst Mitglied (z.B. als Trainer), wird derselbe Account verwendet.</div>
-                {eltern.map((e,i)=>{
-                  const elternName=e.name||`${e.vorname||""} ${e.nachname||""}`.trim();
-                  const [elinkEmail,setElinkEmail]=useState(e.email||"");
-                  const [elinkMsg,setElinkMsg]=useState(null);
-                  const [elinkLoading,setElinkLoading]=useState(false);
-
-                  async function linkEltern(){
-                    if(!sb||!elinkEmail) return;
-                    setElinkLoading(true); setElinkMsg(null);
-                    const {data:existing}=await sb.from("benutzer").select("id,email").eq("email",elinkEmail).maybeSingle();
-                    if(existing){
-                      await sb.from("elternkontakte").update({benutzer_id:existing.id}).eq("id",e.id);
-                      setElinkMsg({ok:true,text:"Verknüpft ✓"});
-                      if(onReload) onReload();
-                    } else {
-                      setElinkMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});
-                    }
-                    setElinkLoading(false);
-                  }
-
-                  async function unlinkEltern(){
-                    if(!sb) return;
-                    await sb.from("elternkontakte").update({benutzer_id:null}).eq("id",e.id);
-                    setElinkMsg({ok:true,text:"Verknüpfung aufgehoben"});
-                    if(onReload) onReload();
-                  }
-
-                  return(
-                    <div key={i} style={{paddingBottom:14,marginBottom:14,borderBottom:i<eltern.length-1?"0.5px solid var(--border)":"none"}}>
-                      <div className="cc-between cc-mb-8">
-                        <div>
-                          <div className="cc-text-bold">{elternName}</div>
-                          {e.beziehung&&<div className="cc-text-sm">{e.beziehung}</div>}
-                        </div>
-                        {e.benutzer_id
-                          ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
-                          :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
-                        }
-                      </div>
-                      {elinkMsg&&<div className={`cc-badge ${elinkMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{elinkMsg.text}</div>}
-                      {e.benutzer_id?(
-                        <button className="cc-btn-danger" onClick={unlinkEltern}>Verknüpfung aufheben</button>
-                      ):(
-                        <div className="cc-row cc-gap-8">
-                          <input className="cc-input cc-flex-1" value={elinkEmail} onChange={ev=>setElinkEmail(ev.target.value)} placeholder={e.email||"email@example.com"}/>
-                          <button className="cc-btn-success cc-shrink-0" onClick={linkEltern} disabled={!elinkEmail||elinkLoading}>
-                            {elinkLoading?"…":"Verknüpfen"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </Card>
-            )}
           </div>
         )}
 
@@ -966,7 +978,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
-    const canEdit=role==="administrator"||role==="administration";
+    const canEdit=kannVerwalten("members");
     const [portalLoading,setPortalLoading]=useState(false);
     const [benutzer,setBenutzer]=useState(null);
     const [portalMsg,setPortalMsg]=useState(null);
@@ -1047,6 +1059,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               {key:"info",    label:"Profil",     icon:"user"},
               {key:"eltern",  label:`Eltern (${eltern.length})`,icon:"heart"},
               ...(canEdit?[{key:"portal",label:"Portal-Zugang",icon:"key"}]:[]),
+              ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",icon:"shield-check"}]:[]),
               {key:"stats",   label:"Statistik",  icon:"chart-bar",soon:true},
               {key:"comments",label:"Kommentare", icon:"message",  soon:true},
               {key:"ratings", label:"Bewertungen",icon:"star",     soon:true},
@@ -1265,6 +1278,46 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                             {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={13}/>{e.email}</a>}
                             {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={13}/>{tel}</a>}
                           </div>
+                          {/* Portal-Verknüpfung inline */}
+                          {canEdit&&(()=>{
+                            const [lEmail,setLEmail]=useState(e.email||"");
+                            const [lMsg,setLMsg]=useState(null);
+                            const [lLoading,setLLoading]=useState(false);
+                            async function link(){
+                              if(!sb||!lEmail) return;
+                              setLLoading(true); setLMsg(null);
+                              const {data:bu}=await sb.from("benutzer").select("id").eq("email",lEmail).maybeSingle();
+                              if(bu){
+                                await sb.from("elternkontakte").update({benutzer_id:bu.id}).eq("id",e.id);
+                                setLMsg({ok:true,text:"Verknüpft ✓"});
+                                if(onReload) onReload();
+                              } else { setLMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail"}); }
+                              setLLoading(false);
+                            }
+                            async function unlink(){
+                              if(!sb) return;
+                              await sb.from("elternkontakte").update({benutzer_id:null}).eq("id",e.id);
+                              if(onReload) onReload();
+                            }
+                            return(
+                              <div className="cc-mt-8" style={{borderTop:"0.5px solid var(--border)",paddingTop:8}}>
+                                {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{lMsg.text}</div>}
+                                {e.benutzer_id?(
+                                  <div className="cc-between">
+                                    <span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal verknüpft</span>
+                                    <button className="cc-btn-danger" style={{padding:"3px 10px",fontSize:12}} onClick={unlink}>Aufheben</button>
+                                  </div>
+                                ):(
+                                  <div className="cc-row cc-gap-8">
+                                    <input className="cc-input cc-flex-1" style={{height:32,fontSize:13}} value={lEmail} onChange={ev=>setLEmail(ev.target.value)} placeholder="E-Mail für Verknüpfung"/>
+                                    <button className="cc-btn-success cc-shrink-0" style={{padding:"4px 12px",fontSize:13}} onClick={link} disabled={!lEmail||lLoading}>
+                                      {lLoading?"…":"Verknüpfen"}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                         {canEdit&&(
                           <div className="cc-col cc-gap-4 cc-shrink-0">
@@ -1318,13 +1371,20 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               }
             </Card>
             {/* Datenprüfung */}
+
+          </div>
+        )}
+
+        {/* Tab: Datenprüfung */}
+        {tab==="datenpruefung"&&canEdit&&(
+          <div className="cc-col cc-gap-12">
             <Card>
-              <div className="cc-between cc-mb-8">
+              <div className="cc-between cc-mb-12">
                 <div>
-                  <div className="cc-text-bold">Datenprüfung</div>
-                  <div className="cc-text-sm">
+                  <div className="cc-text-bold" style={{fontSize:15}}>Profil-Status</div>
+                  <div className="cc-text-sm cc-mt-4">
                     {raw.profil_geprueft_at
-                      ?`Zuletzt geprüft: ${new Date(raw.profil_geprueft_at).toLocaleDateString("de-CH")}`
+                      ?`Zuletzt geprüft am ${new Date(raw.profil_geprueft_at).toLocaleDateString("de-CH")}`
                       :"Noch nie geprüft"}
                   </div>
                 </div>
@@ -1334,75 +1394,39 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                   bg={raw.profil_geprueft_at?"#ECFDF5":"#FFFBEB"}
                 />
               </div>
+              <div className="cc-col cc-gap-8">
+                {[
+                  {l:"Vorname",      ok:!!raw.vorname},
+                  {l:"Nachname",     ok:!!raw.nachname},
+                  {l:"Geburtsdatum", ok:!!raw.geburtsdatum},
+                  {l:"Nationalität", ok:!!raw.nationalitaet},
+                  {l:"Adresse",      ok:!!(raw.strasse&&raw.plz&&raw.ort)},
+                  {l:"E-Mail",       ok:!!raw.email},
+                  {l:"Telefon",      ok:!!raw.telefon},
+                ].map((f,i)=>(
+                  <div key={i} className="cc-info-row">
+                    <span className="cc-info-key">{f.l}</span>
+                    <span>{f.ok
+                      ?<span className="cc-badge cc-badge-success"><TI n="check" size={10}/> OK</span>
+                      :<span className="cc-badge cc-badge-warning">Fehlt</span>
+                    }</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+            <Card>
+              <div className="cc-text-bold cc-mb-4">Datenprüfung anfordern</div>
+              <div className="cc-text-sm cc-mb-12">Das Mitglied wird beim nächsten Login aufgefordert, seine Daten zu prüfen und zu bestätigen.</div>
               <button className="cc-btn-ghost cc-w-full" onClick={async()=>{
                 if(!sb) return;
                 await sb.from("mitglieder").update({profil_geprueft_at:null}).eq("id",raw.id);
-                setPortalMsg({ok:true,text:"Datenprüfung zurückgesetzt — Mitglied wird beim nächsten Login aufgefordert."});
-                if(onReload) onReload();
+                setPortalMsg({ok:true,text:"Datenprüfung angefordert ✓"});
+                if(onReload) setTimeout(onReload,500);
               }}>
                 <TI n="refresh"/> Datenprüfung anfordern
               </button>
+              {portalMsg&&<div className={`cc-badge ${portalMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{portalMsg.text}</div>}
             </Card>
-            {/* Eltern Portal-Verknüpfung */}
-            {eltern.length>0&&(
-              <Card>
-                <div className="cc-text-bold cc-mb-4">Eltern Portal-Zugang</div>
-                <div className="cc-text-sm cc-mb-12">Eltern erhalten Zugang über ihre registrierte E-Mail. Ist ein Elternteil selbst Mitglied (z.B. als Trainer), wird derselbe Account verwendet.</div>
-                {eltern.map((e,i)=>{
-                  const elternName=e.name||`${e.vorname||""} ${e.nachname||""}`.trim();
-                  const [elinkEmail,setElinkEmail]=useState(e.email||"");
-                  const [elinkMsg,setElinkMsg]=useState(null);
-                  const [elinkLoading,setElinkLoading]=useState(false);
-
-                  async function linkEltern(){
-                    if(!sb||!elinkEmail) return;
-                    setElinkLoading(true); setElinkMsg(null);
-                    const {data:existing}=await sb.from("benutzer").select("id,email").eq("email",elinkEmail).maybeSingle();
-                    if(existing){
-                      await sb.from("elternkontakte").update({benutzer_id:existing.id}).eq("id",e.id);
-                      setElinkMsg({ok:true,text:"Verknüpft ✓"});
-                      if(onReload) onReload();
-                    } else {
-                      setElinkMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});
-                    }
-                    setElinkLoading(false);
-                  }
-
-                  async function unlinkEltern(){
-                    if(!sb) return;
-                    await sb.from("elternkontakte").update({benutzer_id:null}).eq("id",e.id);
-                    setElinkMsg({ok:true,text:"Verknüpfung aufgehoben"});
-                    if(onReload) onReload();
-                  }
-
-                  return(
-                    <div key={i} style={{paddingBottom:14,marginBottom:14,borderBottom:i<eltern.length-1?"0.5px solid var(--border)":"none"}}>
-                      <div className="cc-between cc-mb-8">
-                        <div>
-                          <div className="cc-text-bold">{elternName}</div>
-                          {e.beziehung&&<div className="cc-text-sm">{e.beziehung}</div>}
-                        </div>
-                        {e.benutzer_id
-                          ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
-                          :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
-                        }
-                      </div>
-                      {elinkMsg&&<div className={`cc-badge ${elinkMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{elinkMsg.text}</div>}
-                      {e.benutzer_id?(
-                        <button className="cc-btn-danger" onClick={unlinkEltern}>Verknüpfung aufheben</button>
-                      ):(
-                        <div className="cc-row cc-gap-8">
-                          <input className="cc-input cc-flex-1" value={elinkEmail} onChange={ev=>setElinkEmail(ev.target.value)} placeholder={e.email||"email@example.com"}/>
-                          <button className="cc-btn-success cc-shrink-0" onClick={linkEltern} disabled={!elinkEmail||elinkLoading}>
-                            {elinkLoading?"…":"Verknüpfen"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </Card>
-            )}
           </div>
         )}
 
