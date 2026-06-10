@@ -141,7 +141,14 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-section-hdr{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--sub);padding:6px 12px;border-bottom:0.5px solid var(--border);border-top:0.5px solid var(--border);margin-bottom:0;display:flex;align-items:center;gap:6px;background:var(--bg)}
 
 /* ── Modal Layout ── */
-.cc-modal-hdr{padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.cc-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
+.cc-modal-box{background:var(--surface);border-radius:20px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.18)}
+.cc-modal-scroll{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.cc-sheet-overlay{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;justify-content:flex-end}
+.cc-sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.5)}
+.cc-sheet-box{position:relative;background:var(--surface);border-radius:20px 20px 0 0;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 -4px 32px rgba(0,0,0,0.18)}
+.cc-sheet-handle{display:flex;justify-content:center;padding:12px 0 4px}
+.cc-sheet-handle-bar{width:40px;height:4px;border-radius:2px;background:var(--border)}
 .cc-modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1}
 .cc-modal-ftr{padding:12px 20px;border-top:0.5px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
 
@@ -325,27 +332,18 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
   const isMobile=useIsMobile();
   if(!open) return null;
   if(isMobile) return(
-    <div style={{position:"fixed",inset:0,zIndex:2000,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-      {/* Backdrop */}
-      <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)"}}/>
-      {/* Sheet */}
-      <div style={{position:"relative",background:"var(--surface)",borderRadius:"20px 20px 0 0",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.18)"}}>
-        {/* Handle */}
-        <div style={{display:"flex",justifyContent:"center",padding:"12px 0 4px"}}>
-          <div style={{width:40,height:4,borderRadius:2,background:"var(--border)"}}/>
-        </div>
-        <div style={{overflowY:"auto",flex:1,WebkitOverflowScrolling:"touch"}}>
-          {children}
-        </div>
+    <div className="cc-sheet-overlay">
+      <div onClick={onClose} className="cc-sheet-backdrop"/>
+      <div className="cc-sheet-box">
+        <div className="cc-sheet-handle"><div className="cc-sheet-handle-bar"/></div>
+        <div className="cc-modal-scroll">{children}</div>
       </div>
     </div>
   );
   return(
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:20,width:"100%",maxWidth,maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
-        <div style={{overflowY:"auto",flex:1,WebkitOverflowScrolling:"touch"}}>
-          {children}
-        </div>
+    <div onClick={onClose} className="cc-modal-overlay">
+      <div onClick={e=>e.stopPropagation()} className="cc-modal-box" style={{maxWidth}}>
+        <div className="cc-modal-scroll">{children}</div>
       </div>
     </div>
   );

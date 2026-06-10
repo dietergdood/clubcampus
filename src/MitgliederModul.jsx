@@ -9,6 +9,58 @@ import { Av, Btn, Card, Chip, Col, ModalOrSheet, Row, SectionLabel, Stat, Tabs, 
 import { MEMBERS } from "./demoData.js";
 import { getRole } from "./NavigationModul.jsx";
 
+/* ── Länderliste ISO2 → {name, flag} ── */
+const LAENDER=[
+  {c:"CH",n:"Schweiz"},{c:"DE",n:"Deutschland"},{c:"AT",n:"Österreich"},
+  {c:"IT",n:"Italien"},{c:"FR",n:"Frankreich"},{c:"PT",n:"Portugal"},
+  {c:"ES",n:"Spanien"},{c:"TR",n:"Türkei"},{c:"XK",n:"Kosovo"},
+  {c:"RS",n:"Serbien"},{c:"HR",n:"Kroatien"},{c:"BA",n:"Bosnien-Herzegowina"},
+  {c:"MK",n:"Nordmazedonien"},{c:"AL",n:"Albanien"},{c:"ME",n:"Montenegro"},
+  {c:"SI",n:"Slowenien"},{c:"SK",n:"Slowakei"},{c:"CZ",n:"Tschechien"},
+  {c:"PL",n:"Polen"},{c:"RO",n:"Rumänien"},{c:"HU",n:"Ungarn"},
+  {c:"BG",n:"Bulgarien"},{c:"GR",n:"Griechenland"},{c:"NL",n:"Niederlande"},
+  {c:"BE",n:"Belgien"},{c:"LU",n:"Luxemburg"},{c:"GB",n:"Grossbritannien"},
+  {c:"IE",n:"Irland"},{c:"DK",n:"Dänemark"},{c:"SE",n:"Schweden"},
+  {c:"NO",n:"Norwegen"},{c:"FI",n:"Finnland"},{c:"IS",n:"Island"},
+  {c:"RU",n:"Russland"},{c:"UA",n:"Ukraine"},{c:"BY",n:"Belarus"},
+  {c:"LT",n:"Litauen"},{c:"LV",n:"Lettland"},{c:"EE",n:"Estland"},
+  {c:"MD",n:"Moldau"},{c:"GE",n:"Georgien"},{c:"AM",n:"Armenien"},
+  {c:"AZ",n:"Aserbaidschan"},{c:"KZ",n:"Kasachstan"},{c:"US",n:"USA"},
+  {c:"CA",n:"Kanada"},{c:"MX",n:"Mexiko"},{c:"BR",n:"Brasilien"},
+  {c:"AR",n:"Argentinien"},{c:"CO",n:"Kolumbien"},{c:"CL",n:"Chile"},
+  {c:"PE",n:"Peru"},{c:"UY",n:"Uruguay"},{c:"PY",n:"Paraguay"},
+  {c:"BO",n:"Bolivien"},{c:"VE",n:"Venezuela"},{c:"EC",n:"Ecuador"},
+  {c:"MA",n:"Marokko"},{c:"DZ",n:"Algerien"},{c:"TN",n:"Tunesien"},
+  {c:"EG",n:"Ägypten"},{c:"NG",n:"Nigeria"},{c:"GH",n:"Ghana"},
+  {c:"SN",n:"Senegal"},{c:"CM",n:"Kamerun"},{c:"CI",n:"Elfenbeinküste"},
+  {c:"ZA",n:"Südafrika"},{c:"KE",n:"Kenia"},{c:"ET",n:"Äthiopien"},
+  {c:"TZ",n:"Tansania"},{c:"UG",n:"Uganda"},{c:"AO",n:"Angola"},
+  {c:"CD",n:"DR Kongo"},{c:"IR",n:"Iran"},{c:"IQ",n:"Irak"},
+  {c:"SY",n:"Syrien"},{c:"LB",n:"Libanon"},{c:"JO",n:"Jordanien"},
+  {c:"SA",n:"Saudi-Arabien"},{c:"AE",n:"Vereinigte Arab. Emirate"},
+  {c:"IL",n:"Israel"},{c:"PS",n:"Palästina"},{c:"AF",n:"Afghanistan"},
+  {c:"PK",n:"Pakistan"},{c:"IN",n:"Indien"},{c:"BD",n:"Bangladesch"},
+  {c:"LK",n:"Sri Lanka"},{c:"NP",n:"Nepal"},{c:"CN",n:"China"},
+  {c:"JP",n:"Japan"},{c:"KR",n:"Südkorea"},{c:"VN",n:"Vietnam"},
+  {c:"TH",n:"Thailand"},{c:"PH",n:"Philippinen"},{c:"ID",n:"Indonesien"},
+  {c:"MY",n:"Malaysia"},{c:"SG",n:"Singapur"},{c:"AU",n:"Australien"},
+  {c:"NZ",n:"Neuseeland"},{c:"LI",n:"Liechtenstein"},{c:"MC",n:"Monaco"},
+  {c:"SM",n:"San Marino"},{c:"MT",n:"Malta"},{c:"CY",n:"Zypern"},
+].sort((a,b)=>a.n.localeCompare(b.n,"de"));
+
+// Flagge aus ISO2-Code (Emoji)
+function getFlag(code){
+  if(!code||code.length!==2) return "";
+  if(code.toUpperCase()==="XK") return "🇽🇰";
+  return String.fromCodePoint(...code.toUpperCase().split("").map(c=>0x1F1E6+c.charCodeAt(0)-65));
+}
+
+// Ländername aus ISO2-Code
+function getLandName(code){
+  if(!code) return null;
+  return LAENDER.find(l=>l.c===code.toUpperCase())?.n||code;
+}
+
 const ROLES = {
   administrator: {
     label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
@@ -114,7 +166,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       mitgliedtyp:editForm.mitgliedtyp||null, funktion:editForm.funktion||null,
       spielerpass:editForm.spielerpass||null, js_nr:editForm.js_nr||null,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
-      datenstatus:editForm.datenstatus||null,
       updated_at:new Date().toISOString(),
     }).eq("id",raw.id);
     if(error){ setEditMsg({ok:false,text:error.message}); }
@@ -176,19 +227,25 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 {k:"nachname",     l:"Nachname"},
                 {k:"geburtsdatum", l:"Geburtsdatum", type:"date"},
                 {k:"geschlecht",   l:"Geschlecht",   opts:[{v:"m",l:"Männlich"},{v:"w",l:"Weiblich"}]},
-                {k:"nationalitaet",l:"Nationalität"},
+                {k:"nationalitaet",l:"Nationalität",isLaender:true},
                 {k:"heimatort",    l:"Heimatort"},
                 {k:"ahv_nr",       l:"AHV-Nr."},
-              ].map(({k,l,type="text",opts})=>(
+              ].map(({k,l,type="text",opts,isLaender})=>(
                 <div key={k}>
                   <label className="cc-label">{l}</label>
-                  {opts
-                    ?<select className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}>
+                  {isLaender?(
+                    <select className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}>
+                      <option value="">–</option>
+                      {LAENDER.map(l=>(<option key={l.c} value={l.c}>{getFlag(l.c)} {l.n}</option>))}
+                    </select>
+                  ):opts?(
+                    <select className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}>
                       <option value="">–</option>
                       {opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                     </select>
-                    :<input className="cc-input" type={type} value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
-                  }
+                  ):(
+                    <input className="cc-input" type={type} value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
+                  )}
                 </div>
               ))}
               {/* Kontakt */}
@@ -214,7 +271,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 {k:"spielerpass", l:"Spielerpass"},
                 {k:"js_nr",       l:"J+S Nr."},
                 {k:"fairgate_id", l:"Fairgate-ID"},
-                {k:"datenstatus", l:"Datenstatus", opts:["Vollständig","Prüfung fällig","Unvollständig"]},
               ].map(({k,l,opts})=>(
                 <div key={k}>
                   <label className="cc-label">{l}</label>
@@ -521,7 +577,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
-                {l:"Nationalität", v:raw.nationalitaet||"-"},
+                {l:"Nationalität", v:raw.nationalitaet?getFlag(raw.nationalitaet)+" "+getLandName(raw.nationalitaet):"-"},
                 {l:"Heimatort",    v:raw.heimatort||"-"},
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
                 ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||"-"}]:[]),
@@ -573,14 +629,16 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               {(raw.teams||[]).length===0&&<div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>}
               {(raw.teams||[]).map((teamName,i)=>{
                 const detail=(teamDetails||[]).find(d=>d.team_name===teamName)||{};
+                const nr=detail.rueckennr||raw.rueckennr||null;
+                const pos=detail.position||raw.position||null;
                 return(
                   <div key={i} className="cc-team-position-row">
-                    <div className={detail.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
-                      {detail.rueckennr||"—"}
+                    <div className={nr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
+                      {nr||"—"}
                     </div>
                     <div className="cc-flex-1">
                       <div className="cc-text-bold">{teamName}</div>
-                      <div className="cc-text-sm">{detail.position||"—"}</div>
+                      <div className="cc-text-sm">{pos||"—"}</div>
                     </div>
                   </div>
                 );
@@ -1151,7 +1209,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
-                {l:"Nationalität", v:raw.nationalitaet||"-"},
+                {l:"Nationalität", v:raw.nationalitaet?getFlag(raw.nationalitaet)+" "+getLandName(raw.nationalitaet):"-"},
                 {l:"Heimatort",    v:raw.heimatort||"-"},
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
                 ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||"-"}]:[]),
@@ -1203,14 +1261,16 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               {(raw.teams||[]).length===0&&<div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>}
               {(raw.teams||[]).map((teamName,i)=>{
                 const detail=(teamDetails||[]).find(d=>d.team_name===teamName)||{};
+                const nr=detail.rueckennr||raw.rueckennr||null;
+                const pos=detail.position||raw.position||null;
                 return(
                   <div key={i} className="cc-team-position-row">
-                    <div className={detail.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
-                      {detail.rueckennr||"—"}
+                    <div className={nr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
+                      {nr||"—"}
                     </div>
                     <div className="cc-flex-1">
                       <div className="cc-text-bold">{teamName}</div>
-                      <div className="cc-text-sm">{detail.position||"—"}</div>
+                      <div className="cc-text-sm">{pos||"—"}</div>
                     </div>
                   </div>
                 );
