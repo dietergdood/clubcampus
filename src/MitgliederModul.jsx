@@ -382,7 +382,7 @@ function ElternPortalSection({e,sb,onReload}){
           {e.benutzer_id?"Aktiv":"Kein Zugang"}
         </div>
       </div>
-      <div className="cc-col cc-gap-4">
+      <div className="cc-col cc-gap-6 cc-items-end">
         {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"}`}>{lMsg.text}</div>}
         {e.benutzer_id
           ?<button className="cc-btn-danger" onClick={unlink}>Zugang entfernen</button>
