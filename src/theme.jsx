@@ -143,7 +143,13 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 /* ── Modal Layout ── */
 .cc-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
 .cc-modal-box{background:var(--surface);border-radius:20px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.18)}
-.cc-modal-scroll{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.cc-modal-scroll{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cc-modal-scroll::-webkit-scrollbar{width:4px}
+.cc-modal-scroll::-webkit-scrollbar-track{background:transparent}
+.cc-modal-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.cc-modal-scroll::-webkit-scrollbar-thumb:hover{background:var(--sub)}
+.cc-modal-scroll-wrap{position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column}
+.cc-modal-scroll-fade{position:absolute;bottom:0;left:0;right:0;height:32px;background:linear-gradient(transparent,var(--surface));pointer-events:none;z-index:1}
 .cc-sheet-overlay{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;justify-content:flex-end}
 .cc-sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.5)}
 .cc-sheet-box{position:relative;background:var(--surface);border-radius:20px 20px 0 0;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 -4px 32px rgba(0,0,0,0.18)}
@@ -357,14 +363,20 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
       <div onClick={onClose} className="cc-sheet-backdrop"/>
       <div className="cc-sheet-box">
         <div className="cc-sheet-handle"><div className="cc-sheet-handle-bar"/></div>
-        <div className="cc-modal-scroll">{children}</div>
+        <div className="cc-modal-scroll-wrap">
+          <div className="cc-modal-scroll">{children}</div>
+          <div className="cc-modal-scroll-fade"/>
+        </div>
       </div>
     </div>
   );
   return(
     <div onClick={onClose} className="cc-modal-overlay">
       <div onClick={e=>e.stopPropagation()} className="cc-modal-box" style={{maxWidth}}>
-        <div className="cc-modal-scroll">{children}</div>
+        <div className="cc-modal-scroll-wrap">
+          <div className="cc-modal-scroll">{children}</div>
+          <div className="cc-modal-scroll-fade"/>
+        </div>
       </div>
     </div>
   );
@@ -654,7 +666,7 @@ function LandSelect({value,onChange,laender,placeholder="–"}){
       {open&&(
         <div className="cc-land-dropdown">
           <div className="cc-land-search">
-            <span className="cc-text-sub" style={{fontSize:13}}>🔍</span>
+            <TI n="search" size={13} style={{color:"var(--sub)",flexShrink:0}}/>
             <input className="cc-land-search-input" autoFocus placeholder="Suchen…" value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
           <div className="cc-land-list">
