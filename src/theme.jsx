@@ -39,7 +39,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 /* ── Base ── */
 .cc-page{animation:cc-in 0.15s ease-out}
 .cc-card{background:var(--surface)!important;border:none!important;box-shadow:0 1px 4px rgba(0,0,0,0.06)!important}
-.cc-stat-card{background:var(--surface);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);flex:1;min-width:0;display:flex;flex-direction:column}
+.cc-stat-card{background:var(--surface);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);flex:1;min-width:0;display:flex;flex-direction:column}
 .cc-topbar{background:var(--bg)!important;border-color:var(--border)!important}
 .cc-main{background:var(--bg)!important}
 
