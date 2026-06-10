@@ -206,7 +206,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
 function FotoUpload({raw,canEdit,sb,onReload}){
   const [uploading,setUploading]=useState(false);
   const [msg,setMsg]=useState(null);
-  const inputRef=React.useRef(null);
+  const inputRef=useRef(null);
 
   async function handleUpload(e){
     const file=e.target.files?.[0];
