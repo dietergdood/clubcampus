@@ -442,15 +442,14 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
     const [benutzer,setBenutzer]=useState(null);
     const [portalMsg,setPortalMsg]=useState(null);
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
-    const [mitgliedTeams,setMitgliedTeams]=useState(null);
+    const [teamDetails,setTeamDetails]=useState(null);
 
     useEffect(()=>{
-      if(tab==="info"&&sb&&raw.id&&mitgliedTeams===null){
-        sb.from("mitglieder_teams")
-          .select("*, team:teams(id,name,stufe)")
+      if(tab==="info"&&sb&&raw.id&&teamDetails===null){
+        sb.from("mitglieder_team_details")
+          .select("*")
           .eq("mitglied_id",raw.id)
-          .eq("aktiv",true)
-          .then(({data})=>setMitgliedTeams(data||[]));
+          .then(({data})=>setTeamDetails(data||[]));
       }
     },[tab,raw.id]);
 
@@ -571,21 +570,21 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             {/* Teams & Positionen */}
             <Card>
               <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
-              {mitgliedTeams===null&&<div className="cc-text-sm cc-text-sub">Wird geladen…</div>}
-              {mitgliedTeams!==null&&mitgliedTeams.length===0&&(
-                <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
-              )}
-              {(mitgliedTeams||[]).map((mt,i)=>(
-                <div key={i} className="cc-team-position-row">
-                  <div className={mt.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
-                    {mt.rueckennr||"—"}
+              {(raw.teams||[]).length===0&&<div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>}
+              {(raw.teams||[]).map((teamName,i)=>{
+                const detail=(teamDetails||[]).find(d=>d.team_name===teamName)||{};
+                return(
+                  <div key={i} className="cc-team-position-row">
+                    <div className={detail.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
+                      {detail.rueckennr||"—"}
+                    </div>
+                    <div className="cc-flex-1">
+                      <div className="cc-text-bold">{teamName}</div>
+                      <div className="cc-text-sm">{detail.position||"—"}</div>
+                    </div>
                   </div>
-                  <div className="cc-flex-1">
-                    <div className="cc-text-bold">{mt.team?.name||"-"}</div>
-                    <div className="cc-text-sm">{mt.position||mt.funktion||"—"}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </Card>
             {/* Notizen */}
             {fv.showNotizen&&raw.notizen&&(
@@ -1073,15 +1072,14 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
     const [benutzer,setBenutzer]=useState(null);
     const [portalMsg,setPortalMsg]=useState(null);
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
-    const [mitgliedTeams,setMitgliedTeams]=useState(null);
+    const [teamDetails,setTeamDetails]=useState(null);
 
     useEffect(()=>{
-      if(tab==="info"&&sb&&raw.id&&mitgliedTeams===null){
-        sb.from("mitglieder_teams")
-          .select("*, team:teams(id,name,stufe)")
+      if(tab==="info"&&sb&&raw.id&&teamDetails===null){
+        sb.from("mitglieder_team_details")
+          .select("*")
           .eq("mitglied_id",raw.id)
-          .eq("aktiv",true)
-          .then(({data})=>setMitgliedTeams(data||[]));
+          .then(({data})=>setTeamDetails(data||[]));
       }
     },[tab,raw.id]);
 
@@ -1202,21 +1200,21 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             {/* Teams & Positionen */}
             <Card>
               <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
-              {mitgliedTeams===null&&<div className="cc-text-sm cc-text-sub">Wird geladen…</div>}
-              {mitgliedTeams!==null&&mitgliedTeams.length===0&&(
-                <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
-              )}
-              {(mitgliedTeams||[]).map((mt,i)=>(
-                <div key={i} className="cc-team-position-row">
-                  <div className={mt.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
-                    {mt.rueckennr||"—"}
+              {(raw.teams||[]).length===0&&<div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>}
+              {(raw.teams||[]).map((teamName,i)=>{
+                const detail=(teamDetails||[]).find(d=>d.team_name===teamName)||{};
+                return(
+                  <div key={i} className="cc-team-position-row">
+                    <div className={detail.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
+                      {detail.rueckennr||"—"}
+                    </div>
+                    <div className="cc-flex-1">
+                      <div className="cc-text-bold">{teamName}</div>
+                      <div className="cc-text-sm">{detail.position||"—"}</div>
+                    </div>
                   </div>
-                  <div className="cc-flex-1">
-                    <div className="cc-text-bold">{mt.team?.name||"-"}</div>
-                    <div className="cc-text-sm">{mt.position||mt.funktion||"—"}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </Card>
             {/* Notizen */}
             {fv.showNotizen&&raw.notizen&&(
