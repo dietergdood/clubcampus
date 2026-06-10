@@ -697,7 +697,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
   );
 }
 
-function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
+function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,onReload}){
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
   const [sortDir,setSortDir]=useState("asc");
