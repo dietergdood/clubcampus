@@ -450,7 +450,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
       }}>
         {!collapsed&&<div style={{fontSize:11,color:"var(--nav-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,marginBottom:9,paddingLeft:2}}>Angemeldet als</div>}
         <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:collapsed?"center":"flex-start"}}>
-          <Av size={32} name={userName}/>
+          <Av size={32} bg="var(--avatar-bg,var(--cc-accent,#FFBF00))" name={userName}/>
           {!collapsed&&(
             <div style={{minWidth:0,flex:1}}>
               <div style={{color:"var(--nav-a)",fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",letterSpacing:0.1}}>{userName}</div>
