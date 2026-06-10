@@ -241,7 +241,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-btn-ghost:hover{background:var(--surface2);color:var(--text)}
 
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
-.cc-profile-name{font-size:18px;font-weight:700;margin:0 0 4px;color:var(--text);letter-spacing:-0.2px}
+.cc-profile-name{font-size:21px;font-weight:700;margin:0 0 4px;color:var(--text);letter-spacing:-0.2px}
 .cc-profile-nr{position:absolute;bottom:-8px;right:-8px;background:var(--text);color:var(--bg);font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;line-height:1.4}
 /* ── Hero Header ── */
 .cc-hero-stripe{height:4px;background:var(--cc-accent,#FFBF00)}
