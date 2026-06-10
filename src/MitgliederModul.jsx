@@ -431,14 +431,12 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       })()}
       {/* Tabelle */}
       <Card style={{padding:0,overflowX:"auto"}}>
-        <table className="cc-table">
+        <div className="cc-table-wrap"><table className="cc-table">
           <thead>
             <tr style={{background:"var(--surface2)"}}>
               {COLS.map(c=>(
-                <th key={c.key} onClick={()=>handleSort(c.key)}
-                  style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",
-                    fontSize:14,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",
-                    userSelect:"none",whiteSpace:"nowrap"}}
+                <th className="cc-th" key={c.key} onClick={()=>handleSort(c.key)}
+                  style={{cursor:"pointer",userSelect:"none"}}
                   onMouseEnter={e=>e.currentTarget.style.color="var(--text)"}
                   onMouseLeave={e=>e.currentTarget.style.color="var(--sub)"}>
                   {c.label}<SortIcon col={c.key}/>
@@ -461,17 +459,17 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 {members.map((m,i)=>(
                   <tr key={m.id} onClick={()=>setSelectedMember({...m,_tab:"info"})}
                     style={{borderTop:"0.5px solid var(--border)",cursor:"pointer"}}>
-                    <td style={{padding:"9px 13px"}}>
+                    <td className="cc-td" style={{padding:"9px 13px"}}>
                       <Row>
                         <Av name={m.name} size={28}/>
                         <span style={{fontWeight:600,color:"var(--text)"}}>{m.name}</span>
                       </Row>
                     </td>
-                    <td style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
-                    <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
-                    <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
-                    <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
-                    <td style={{padding:"9px 13px"}}>
+                    <td className="cc-td" style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
+                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
+                    <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
+                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
+                    <td className="cc-td" style={{padding:"9px 13px"}}>
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
                     </td>
                   </tr>
@@ -479,7 +477,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               </>
             ))}
           </tbody>
-        </table>
+        </table></div>
         {filtered.length===0&&(
           <div className="cc-empty">
             Keine Mitglieder gefunden.
@@ -709,14 +707,12 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       })()}
       {/* Tabelle */}
       <Card style={{padding:0,overflowX:"auto"}}>
-        <table className="cc-table">
+        <div className="cc-table-wrap"><table className="cc-table">
           <thead>
             <tr style={{background:"var(--surface2)"}}>
               {COLS.map(c=>(
-                <th key={c.key} onClick={()=>handleSort(c.key)}
-                  style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",
-                    fontSize:14,textTransform:"uppercase",letterSpacing:0.4,cursor:"pointer",
-                    userSelect:"none",whiteSpace:"nowrap"}}
+                <th className="cc-th" key={c.key} onClick={()=>handleSort(c.key)}
+                  style={{cursor:"pointer",userSelect:"none"}}
                   onMouseEnter={e=>e.currentTarget.style.color="var(--text)"}
                   onMouseLeave={e=>e.currentTarget.style.color="var(--sub)"}>
                   {c.label}<SortIcon col={c.key}/>
@@ -741,17 +737,17 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                     style={{borderTop:"0.5px solid var(--border)",cursor:"pointer"}}
                     onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <td style={{padding:"9px 13px"}}>
+                    <td className="cc-td" style={{padding:"9px 13px"}}>
                       <div className="cc-row">
                         <Av name={m.name} size={28}/>
                         <span style={{fontWeight:600,color:"var(--text)"}}>{m.name}</span>
                       </div>
                     </td>
-                    <td style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
-                    <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
-                    <td style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
-                    <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
-                    <td style={{padding:"9px 13px"}}>
+                    <td className="cc-td" style={{padding:"9px 13px"}}><RolleChip rolle={m.role}/></td>
+                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.team}</td>
+                    <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.type} color={BL}/></td>
+                    <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.location}</td>
+                    <td className="cc-td" style={{padding:"9px 13px"}}>
                       <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
                     </td>
                   </tr>
@@ -759,7 +755,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               </>
             ))}
           </tbody>
-        </table>
+        </table></div>
         {filtered.length===0&&(
           <div className="cc-empty">
             Keine Mitglieder gefunden.
