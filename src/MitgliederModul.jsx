@@ -762,19 +762,19 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 const tel=e.telefon||e.tel;
                 return(
                   <Card key={i}>
-                    <div className="cc-row cc-gap-12">
+                    <div className="cc-row cc-gap-12 cc-items-center">
                       {(()=>{const ac=elternAvColor(e.beziehung);return(
                         <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
                           {name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
                         </div>
                       );})()}
                       <div className="cc-flex-1">
-                        <div className="cc-row cc-gap-6 cc-mb-4 cc-flex-wrap">
-                          <div className="cc-text-bold cc-text-lg">{name}</div>
-                          {e.beziehung&&<span className="cc-eltern-badge" data-rel={(e.beziehung||"").toLowerCase()}>{e.beziehung}</span>}
+                        <div className="cc-mb-2"><div className="cc-text-bold cc-text-lg">{name}</div></div>
+                        <div className="cc-row cc-gap-8 cc-mb-4 cc-flex-wrap">
+                          {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
                           {e.benutzer_id
-                            ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal: Aktiv</span>
-                            :<span className="cc-badge cc-badge-neutral">Kein Portal-Zugang</span>
+                            ?<span className="cc-status-active">Portal: Aktiv</span>
+                            :<span className="cc-status-inactive">Portal: Inaktiv</span>
                           }
                         </div>
                         <div className="cc-col cc-gap-2">
@@ -1424,19 +1424,19 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                 const tel=e.telefon||e.tel;
                 return(
                   <Card key={i}>
-                    <div className="cc-row cc-gap-12">
+                    <div className="cc-row cc-gap-12 cc-items-center">
                       {(()=>{const ac=elternAvColor(e.beziehung);return(
                         <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
                           {name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
                         </div>
                       );})()}
                       <div className="cc-flex-1">
-                        <div className="cc-row cc-gap-6 cc-mb-4 cc-flex-wrap">
-                          <div className="cc-text-bold cc-text-lg">{name}</div>
-                          {e.beziehung&&<span className="cc-eltern-badge" data-rel={(e.beziehung||"").toLowerCase()}>{e.beziehung}</span>}
+                        <div className="cc-mb-2"><div className="cc-text-bold cc-text-lg">{name}</div></div>
+                        <div className="cc-row cc-gap-8 cc-mb-4 cc-flex-wrap">
+                          {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
                           {e.benutzer_id
-                            ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Portal: Aktiv</span>
-                            :<span className="cc-badge cc-badge-neutral">Kein Portal-Zugang</span>
+                            ?<span className="cc-status-active">Portal: Aktiv</span>
+                            :<span className="cc-status-inactive">Portal: Inaktiv</span>
                           }
                         </div>
                         <div className="cc-col cc-gap-2">
