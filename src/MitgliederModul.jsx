@@ -821,7 +821,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                         </div>
                       ))}
                     </div>
-                    {editEltern.data.id&&<ElternPortalSection e={editEltern.data} sb={sb} onReload={onReload}/>}
+                    {editEltern.mode==="edit"&&<ElternPortalSection e={editEltern.data} sb={sb} onReload={onReload}/>}
                     {elternMsg&&<div className={`cc-badge ${elternMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{elternMsg.text}</div>}
                   </div>
                   <div className="cc-modal-ftr">
@@ -1483,7 +1483,7 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                         </div>
                       ))}
                     </div>
-                    {editEltern.data.id&&<ElternPortalSection e={editEltern.data} sb={sb} onReload={onReload}/>}
+                    {editEltern.mode==="edit"&&<ElternPortalSection e={editEltern.data} sb={sb} onReload={onReload}/>}
                     {elternMsg&&<div className={`cc-badge ${elternMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{elternMsg.text}</div>}
                   </div>
                   <div className="cc-modal-ftr">
