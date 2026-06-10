@@ -574,14 +574,21 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
-                {l:"Nationalität", v:raw.nationalitaet?getFlag(raw.nationalitaet)+" "+getLandName(raw.nationalitaet):"-"},
+                {l:"Nationalität", v:raw.nationalitaet||"-", flag:raw.nationalitaet?getFlag(raw.nationalitaet):null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
                 {l:"Heimatort",    v:raw.heimatort||"-"},
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
                 ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||"-"}]:[]),
               ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
-                  <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  {r.flag?(
+                    <span className="cc-info-val cc-row cc-gap-6">
+                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span>{r.flagName}</span>
+                    </span>
+                  ):(
+                    <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  )}
                 </div>
               ))}
             </Card>
@@ -616,7 +623,14 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
-                  <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  {r.flag?(
+                    <span className="cc-info-val cc-row cc-gap-6">
+                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span>{r.flagName}</span>
+                    </span>
+                  ):(
+                    <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  )}
                 </div>
               ))}
             </Card>
@@ -642,10 +656,13 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
               })}
             </Card>
             {/* Notizen */}
-            {fv.showNotizen&&raw.notizen&&(
+            {fv.showNotizen&&(
               <Card>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-                <div className="cc-text-body">{raw.notizen}</div>
+                {raw.notizen
+                  ?<div className="cc-text-body">{raw.notizen}</div>
+                  :<div className="cc-text-sm cc-text-sub">Keine Notizen.</div>
+                }
               </Card>
             )}
           </div>
@@ -1206,14 +1223,21 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum||"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
-                {l:"Nationalität", v:raw.nationalitaet?getFlag(raw.nationalitaet)+" "+getLandName(raw.nationalitaet):"-"},
+                {l:"Nationalität", v:raw.nationalitaet||"-", flag:raw.nationalitaet?getFlag(raw.nationalitaet):null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
                 {l:"Heimatort",    v:raw.heimatort||"-"},
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
                 ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||"-"}]:[]),
               ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
-                  <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  {r.flag?(
+                    <span className="cc-info-val cc-row cc-gap-6">
+                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span>{r.flagName}</span>
+                    </span>
+                  ):(
+                    <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  )}
                 </div>
               ))}
             </Card>
@@ -1248,7 +1272,14 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
-                  <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  {r.flag?(
+                    <span className="cc-info-val cc-row cc-gap-6">
+                      <span style={{fontSize:"1.2em",lineHeight:1}}>{r.flag}</span>
+                      <span>{r.flagName}</span>
+                    </span>
+                  ):(
+                    <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                  )}
                 </div>
               ))}
             </Card>
@@ -1274,10 +1305,13 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
               })}
             </Card>
             {/* Notizen */}
-            {fv.showNotizen&&raw.notizen&&(
+            {fv.showNotizen&&(
               <Card>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-                <div className="cc-text-body">{raw.notizen}</div>
+                {raw.notizen
+                  ?<div className="cc-text-body">{raw.notizen}</div>
+                  :<div className="cc-text-sm cc-text-sub">Keine Notizen.</div>
+                }
               </Card>
             )}
           </div>
