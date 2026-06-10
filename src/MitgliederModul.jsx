@@ -131,7 +131,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       <Card flush>
         <div className="cc-hero-stripe"/>
         <div className="cc-hero-body">
-          <button className="cc-hero-back" onClick={onClose}><TI n="arrow-left" size={16}/></button>
+          <Btn variant="ghost" small onClick={onClose} className="cc-hero-back"><TI n="arrow-left" size={16}/></Btn>
           <div className="cc-hero-meta">
             <h1 className="cc-profile-name">{m.name}</h1>
             <div className="cc-hero-sub">
