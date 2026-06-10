@@ -39,7 +39,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 /* ── Base ── */
 .cc-page{animation:cc-in 0.15s ease-out}
 .cc-card{background:var(--surface)!important;border:none!important;box-shadow:0 1px 4px rgba(0,0,0,0.06)!important}
-.cc-stat-card{background:var(--surface);border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.12);flex:1;min-width:0}
+.cc-stat-card{background:var(--surface);border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.12);flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
 .cc-topbar{background:var(--bg)!important;border-color:var(--border)!important}
 .cc-main{background:var(--bg)!important}
 
@@ -335,8 +335,8 @@ function Stat({label,value,sub,color,semantic,icon}){
      <Stat label="Custom" value={8} color="#7C3AED"/>  */
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div className="cc-stat-card" style={{padding:"20px 22px"}}>
-      <div style={{fontSize:12,color:"#555",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:8}}>{label}</div>
+    <div className="cc-stat-card" style={{padding:"20px 22px",minHeight:100}}>
+      <div style={{fontSize:11,color:"#555",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:8,lineHeight:1.3}}>{label}</div>
       <div className="cc-stat-value" style={{color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
       {sub&&<div style={{fontSize:12,color:"var(--sub)",lineHeight:1.4,marginTop:2}}>{sub}</div>}
     </div>
