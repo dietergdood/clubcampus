@@ -565,19 +565,64 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                 )
               }
             </Card>
-            {/* Eltern Portal-Status */}
+            {/* Eltern Portal-Verknüpfung */}
             {eltern.length>0&&(
               <Card>
-                <div className="cc-text-bold cc-mb-12">Eltern Portal-Status</div>
-                {eltern.map((e,i)=>(
-                  <div key={i} className="cc-info-row">
-                    <span className="cc-info-key">{e.name||`${e.vorname} ${e.nachname}`}</span>
-                    <span>{e.benutzer_id
-                      ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
-                      :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
-                    }</span>
-                  </div>
-                ))}
+                <div className="cc-text-bold cc-mb-4">Eltern Portal-Zugang</div>
+                <div className="cc-text-sm cc-mb-12">Eltern erhalten Zugang über ihre registrierte E-Mail. Ist ein Elternteil selbst Mitglied (z.B. als Trainer), wird derselbe Account verwendet.</div>
+                {eltern.map((e,i)=>{
+                  const elternName=e.name||`${e.vorname||""} ${e.nachname||""}`.trim();
+                  const [elinkEmail,setElinkEmail]=useState(e.email||"");
+                  const [elinkMsg,setElinkMsg]=useState(null);
+                  const [elinkLoading,setElinkLoading]=useState(false);
+
+                  async function linkEltern(){
+                    if(!sb||!elinkEmail) return;
+                    setElinkLoading(true); setElinkMsg(null);
+                    const {data:existing}=await sb.from("benutzer").select("id,email").eq("email",elinkEmail).maybeSingle();
+                    if(existing){
+                      await sb.from("elternkontakte").update({benutzer_id:existing.id}).eq("id",e.id);
+                      setElinkMsg({ok:true,text:"Verknüpft ✓"});
+                      if(onReload) onReload();
+                    } else {
+                      setElinkMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});
+                    }
+                    setElinkLoading(false);
+                  }
+
+                  async function unlinkEltern(){
+                    if(!sb) return;
+                    await sb.from("elternkontakte").update({benutzer_id:null}).eq("id",e.id);
+                    setElinkMsg({ok:true,text:"Verknüpfung aufgehoben"});
+                    if(onReload) onReload();
+                  }
+
+                  return(
+                    <div key={i} style={{paddingBottom:14,marginBottom:14,borderBottom:i<eltern.length-1?"0.5px solid var(--border)":"none"}}>
+                      <div className="cc-between cc-mb-8">
+                        <div>
+                          <div className="cc-text-bold">{elternName}</div>
+                          {e.beziehung&&<div className="cc-text-sm">{e.beziehung}</div>}
+                        </div>
+                        {e.benutzer_id
+                          ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
+                          :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
+                        }
+                      </div>
+                      {elinkMsg&&<div className={`cc-badge ${elinkMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{elinkMsg.text}</div>}
+                      {e.benutzer_id?(
+                        <button className="cc-btn-danger" onClick={unlinkEltern}>Verknüpfung aufheben</button>
+                      ):(
+                        <div className="cc-row cc-gap-8">
+                          <input className="cc-input cc-flex-1" value={elinkEmail} onChange={ev=>setElinkEmail(ev.target.value)} placeholder={e.email||"email@example.com"}/>
+                          <button className="cc-btn-success cc-shrink-0" onClick={linkEltern} disabled={!elinkEmail||elinkLoading}>
+                            {elinkLoading?"…":"Verknüpfen"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </Card>
             )}
           </div>
@@ -1028,19 +1073,64 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
                 )
               }
             </Card>
-            {/* Eltern Portal-Status */}
+            {/* Eltern Portal-Verknüpfung */}
             {eltern.length>0&&(
               <Card>
-                <div className="cc-text-bold cc-mb-12">Eltern Portal-Status</div>
-                {eltern.map((e,i)=>(
-                  <div key={i} className="cc-info-row">
-                    <span className="cc-info-key">{e.name||`${e.vorname} ${e.nachname}`}</span>
-                    <span>{e.benutzer_id
-                      ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
-                      :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
-                    }</span>
-                  </div>
-                ))}
+                <div className="cc-text-bold cc-mb-4">Eltern Portal-Zugang</div>
+                <div className="cc-text-sm cc-mb-12">Eltern erhalten Zugang über ihre registrierte E-Mail. Ist ein Elternteil selbst Mitglied (z.B. als Trainer), wird derselbe Account verwendet.</div>
+                {eltern.map((e,i)=>{
+                  const elternName=e.name||`${e.vorname||""} ${e.nachname||""}`.trim();
+                  const [elinkEmail,setElinkEmail]=useState(e.email||"");
+                  const [elinkMsg,setElinkMsg]=useState(null);
+                  const [elinkLoading,setElinkLoading]=useState(false);
+
+                  async function linkEltern(){
+                    if(!sb||!elinkEmail) return;
+                    setElinkLoading(true); setElinkMsg(null);
+                    const {data:existing}=await sb.from("benutzer").select("id,email").eq("email",elinkEmail).maybeSingle();
+                    if(existing){
+                      await sb.from("elternkontakte").update({benutzer_id:existing.id}).eq("id",e.id);
+                      setElinkMsg({ok:true,text:"Verknüpft ✓"});
+                      if(onReload) onReload();
+                    } else {
+                      setElinkMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});
+                    }
+                    setElinkLoading(false);
+                  }
+
+                  async function unlinkEltern(){
+                    if(!sb) return;
+                    await sb.from("elternkontakte").update({benutzer_id:null}).eq("id",e.id);
+                    setElinkMsg({ok:true,text:"Verknüpfung aufgehoben"});
+                    if(onReload) onReload();
+                  }
+
+                  return(
+                    <div key={i} style={{paddingBottom:14,marginBottom:14,borderBottom:i<eltern.length-1?"0.5px solid var(--border)":"none"}}>
+                      <div className="cc-between cc-mb-8">
+                        <div>
+                          <div className="cc-text-bold">{elternName}</div>
+                          {e.beziehung&&<div className="cc-text-sm">{e.beziehung}</div>}
+                        </div>
+                        {e.benutzer_id
+                          ?<span className="cc-badge cc-badge-success"><TI n="circle-check" size={10}/> Verknüpft</span>
+                          :<span className="cc-badge cc-badge-neutral">Nicht verknüpft</span>
+                        }
+                      </div>
+                      {elinkMsg&&<div className={`cc-badge ${elinkMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-8`}>{elinkMsg.text}</div>}
+                      {e.benutzer_id?(
+                        <button className="cc-btn-danger" onClick={unlinkEltern}>Verknüpfung aufheben</button>
+                      ):(
+                        <div className="cc-row cc-gap-8">
+                          <input className="cc-input cc-flex-1" value={elinkEmail} onChange={ev=>setElinkEmail(ev.target.value)} placeholder={e.email||"email@example.com"}/>
+                          <button className="cc-btn-success cc-shrink-0" onClick={linkEltern} disabled={!elinkEmail||elinkLoading}>
+                            {elinkLoading?"…":"Verknüpfen"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </Card>
             )}
           </div>
