@@ -241,18 +241,23 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-btn-ghost:hover{background:var(--surface2);color:var(--text)}
 
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
-.cc-profile-name{font-size:24px;font-weight:800;margin:0 0 6px;color:var(--text);letter-spacing:-0.3px}
+.cc-profile-name{font-size:18px;font-weight:700;margin:0 0 4px;color:var(--text);letter-spacing:-0.2px}
 .cc-profile-nr{position:absolute;bottom:-8px;right:-8px;background:var(--text);color:var(--bg);font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;line-height:1.4}
 /* ── Hero Header ── */
-.cc-hero-stripe{height:6px;background:var(--cc-accent,#FFBF00)}
-.cc-hero-body{display:flex;align-items:flex-start;gap:16px;padding:16px 20px 16px;flex-wrap:wrap}
-.cc-hero-avatar{width:80px;height:80px;border-radius:16px;background:var(--avatar-bg,var(--cc-accent,#FFBF00));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--cc-avatar-text,#000);flex-shrink:0;position:relative}
+.cc-hero-stripe{height:4px;background:var(--cc-accent,#FFBF00)}
+.cc-hero-body{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.cc-hero-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;flex-shrink:0}
+.cc-hero-back:hover{background:var(--surface2)}
 .cc-hero-meta{flex:1;min-width:0}
-.cc-hero-stats{display:flex;flex-direction:column;gap:20px;flex-shrink:0;align-items:flex-end}
-.cc-hero-sub{font-size:13px;color:var(--sub);margin-bottom:8px;line-height:1.5}
+.cc-hero-sub{font-size:13px;color:var(--sub);margin-bottom:6px;line-height:1.5}
 .cc-hero-role{font-weight:600;color:var(--text)}
 .cc-hero-sep{color:var(--border);margin:0 6px}
 .cc-hero-edit{flex-shrink:0;align-self:flex-start}
+/* ── Foto ── */
+.cc-foto-row{display:flex;align-items:center;gap:14px;padding-bottom:14px;border-bottom:0.5px solid var(--border);margin-bottom:12px}
+.cc-foto-img{width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0;border:0.5px solid var(--border)}
+.cc-foto-placeholder{width:64px;height:64px;border-radius:12px;border:1.5px dashed var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--sub)}
+.cc-hidden{display:none}
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--cc-accent,#FFBF00);text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 
@@ -411,8 +416,8 @@ function Btn({children,onClick,variant="outline",color=null,small,disabled=false
   >{children}</button>;
 }
 
-function Card({children,mb=0,mt=0,style={},onClick}){
-  return <div onClick={onClick} className="cc-card" style={{borderRadius:12,padding:"16px 20px",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:mb,marginTop:mt,...style}}>{children}</div>;
+function Card({children,mb=0,mt=0,style={},onClick,flush=false}){
+  return <div onClick={onClick} className="cc-card" style={{borderRadius:12,padding:flush?0:"16px 20px",overflow:flush?"hidden":"visible",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:mb,marginTop:mt,...style}}>{children}</div>;
 }
 
 function Chip({text,color,bg,semantic,size="sm"}){

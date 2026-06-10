@@ -128,15 +128,11 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
 
   return(
     <>
-      <Card className="cc-card-flush">
+      <Card flush>
         <div className="cc-hero-stripe"/>
         <div className="cc-hero-body">
-          <div className="cc-hero-avatar">
-            {initials}
-            {raw.rueckennr&&<div className="cc-profile-nr">#{raw.rueckennr}</div>}
-          </div>
+          <button className="cc-hero-back" onClick={onClose}><TI n="arrow-left" size={16}/></button>
           <div className="cc-hero-meta">
-            <Btn variant="ghost" small onClick={onClose} className="cc-back-btn"><TI n="arrow-left"/>Zurück</Btn>
             <h1 className="cc-profile-name">{m.name}</h1>
             <div className="cc-hero-sub">
               {rollen.map((r,i)=>(
@@ -154,11 +150,9 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             </div>
           </div>
           {canEdit&&(
-            <div className="cc-hero-edit">
-              <Btn small onClick={()=>{setEditForm({...raw});setEditOpen(true);}}>
-                <TI n="edit" size={13}/> Bearbeiten
-              </Btn>
-            </div>
+            <Btn small onClick={()=>{setEditForm({...raw});setEditOpen(true);}}>
+              <TI n="edit" size={13}/> Bearbeiten
+            </Btn>
           )}
         </div>
       </Card>
@@ -205,6 +199,64 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
         </ModalOrSheet>
       )}
     </>
+  );
+}
+
+/* ── FotoUpload: Foto in Personalien-Card ── */
+function FotoUpload({raw,canEdit,sb,onReload}){
+  const [uploading,setUploading]=useState(false);
+  const [msg,setMsg]=useState(null);
+  const inputRef=React.useRef(null);
+
+  async function handleUpload(e){
+    const file=e.target.files?.[0];
+    if(!file||!sb) return;
+    if(file.size>2*1024*1024){ setMsg({ok:false,text:"Max. 2MB"}); return; }
+    setUploading(true); setMsg(null);
+    try{
+      const ext=file.name.split(".").pop().toLowerCase();
+      const path=`${raw.id}/foto.${ext}`;
+      const {error:upErr}=await sb.storage.from("mitglieder-fotos").upload(path,file,{upsert:true});
+      if(upErr) throw upErr;
+      const {data}=sb.storage.from("mitglieder-fotos").getPublicUrl(path);
+      const {error:dbErr}=await sb.from("mitglieder").update({foto_url:data.publicUrl+"?t="+Date.now()}).eq("id",raw.id);
+      if(dbErr) throw dbErr;
+      setMsg({ok:true,text:"Foto gespeichert ✓"});
+      setTimeout(()=>{setMsg(null);if(onReload)onReload();},800);
+    }catch(e){ setMsg({ok:false,text:e.message}); }
+    setUploading(false);
+  }
+
+  async function handleDelete(){
+    if(!sb||!window.confirm("Foto wirklich löschen?")) return;
+    await sb.from("mitglieder").update({foto_url:null}).eq("id",raw.id);
+    if(onReload) onReload();
+  }
+
+  if(!raw.foto_url&&!canEdit) return null;
+
+  return(
+    <div className="cc-foto-row">
+      {raw.foto_url?(
+        <img src={raw.foto_url} className="cc-foto-img" alt="Foto"/>
+      ):(
+        <div className="cc-foto-placeholder"><TI n="photo" size={24}/></div>
+      )}
+      <div className="cc-col cc-gap-8">
+        <div className="cc-text-bold">{raw.vorname} {raw.nachname}</div>
+        {canEdit&&(
+          <div className="cc-row cc-gap-8">
+            <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleUpload}/>
+            <Btn small onClick={()=>inputRef.current?.click()} disabled={uploading}>
+              <TI n="upload" size={12}/> {raw.foto_url?"Ändern":"Foto hochladen"}
+            </Btn>
+            {raw.foto_url&&<Btn small onClick={handleDelete}><TI n="trash" size={12}/></Btn>}
+          </div>
+        )}
+        {msg&&<div className={`cc-badge ${msg.ok?"cc-badge-success":"cc-badge-danger"}`}>{msg.text}</div>}
+        {uploading&&<div className="cc-text-sm">Wird hochgeladen…</div>}
+      </div>
+    </div>
   );
 }
 
@@ -408,6 +460,8 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
             {/* Personalien */}
             <Card>
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
+              {/* Foto */}
+              <FotoUpload raw={raw} canEdit={canEdit} sb={sb} onReload={onReload}/>
               {[
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
@@ -1008,6 +1062,8 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
             {/* Personalien */}
             <Card>
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
+              {/* Foto */}
+              <FotoUpload raw={raw} canEdit={canEdit} sb={sb} onReload={onReload}/>
               {[
                 {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
                 {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
