@@ -313,6 +313,11 @@ function DesignTokensKonfigurator({isMobile, FONT, GN, R, RL, BL, AM}){
           /* cc-specific */
           segPad:3, segItemPad:5, chipPad:4, chipPadH:12,
           toggleW:46, toggleH:26,
+          /* Tabellen */
+          thPadH:10, thPadV:8, thFontSize:11, thBorderW:2,
+          tdPadH:10, tdPadV:8, tdFontSize:13,
+          /* Multi-Select */
+          msChipFontSize:11, msTriggerPad:8, msItemPad:8,
         };
 
         const SHADOW_MAP={
@@ -349,6 +354,13 @@ function DesignTokensKonfigurator({isMobile, FONT, GN, R, RL, BL, AM}){
 .cc-toggle{width:${t.toggleW}px;height:${t.toggleH}px;border-radius:${Math.round(t.toggleH/2)}px;transition:background ${t.tSlow}ms;}
 .cc-toggle-knob{width:${t.toggleH-6}px;height:${t.toggleH-6}px;transition:left ${t.tSlow}ms cubic-bezier(0.34,1.2,0.64,1);}
 .cc-toggle-knob-on{left:${t.toggleW-t.toggleH+3}px;}
+.cc-th{padding:${t.thPadV}px ${t.thPadH}px;font-size:${t.thFontSize}px;border-bottom:${t.thBorderW}px solid var(--cc-accent,#FFBF00);}
+.cc-members-th{padding:${t.thPadV}px ${t.thPadH}px;font-size:${t.thFontSize}px;border-bottom:${t.thBorderW}px solid var(--cc-accent,#FFBF00);}
+.cc-td{padding:${t.tdPadV}px ${t.tdPadH}px;font-size:${t.tdFontSize}px;}
+.cc-members-td{padding:${t.tdPadV}px ${t.tdPadH}px;font-size:${t.tdFontSize}px;}
+.cc-multiselect-trigger{padding:${t.msTriggerPad}px 12px;}
+.cc-multiselect-chip{font-size:${t.msChipFontSize}px;}
+.cc-multiselect-item{padding:${t.msItemPad}px 12px;}
           `.trim();
         }
 
@@ -404,7 +416,21 @@ export const SHADOW = {
   drop:  '${SHADOW_MAP[t.shDrop]}',
   modal: '${SHADOW_MAP[t.shModal]}',
 };
-export const BORDER = '${t.borderWidth}';`;
+export const BORDER = '${t.borderWidth}';
+export const TABLE = {
+  thPadH:    ${t.thPadH},
+  thPadV:    ${t.thPadV},
+  thFontSize:${t.thFontSize},
+  thBorderW: ${t.thBorderW},
+  tdPadH:    ${t.tdPadH},
+  tdPadV:    ${t.tdPadV},
+  tdFontSize:${t.tdFontSize},
+};
+export const MULTISELECT = {
+  chipFontSize: ${t.msChipFontSize},
+  triggerPad:   ${t.msTriggerPad},
+  itemPad:      ${t.msItemPad},
+};`;
         }
 
         /* ── Slider helper ── */
@@ -445,6 +471,16 @@ export const BORDER = '${t.borderWidth}';`;
           segPad:    (v)=><div style={{background:'var(--surface2)',borderRadius:tok.rSeg,padding:v,display:'flex',gap:2}}><div style={{background:'var(--surface)',borderRadius:tok.rSeg-2,padding:'3px 8px',fontSize:10,fontWeight:600}}>An</div><div style={{padding:'3px 8px',fontSize:10,color:'var(--sub)'}}>Aus</div></div>,
           chipPad:   (v)=><div style={{borderRadius:tok.rChip,border:'1.5px solid var(--border)',padding:`${v}px ${tok.chipPadH}px`,fontSize:10,fontWeight:600,color:'var(--sub)'}}>Chip</div>,
           chipPadH:  (v)=><div style={{borderRadius:tok.rChip,border:'1.5px solid var(--border)',padding:`${tok.chipPad}px ${v}px`,fontSize:10,fontWeight:600,color:'var(--sub)'}}>Chip</div>,
+          thPadH:    (v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${tok.thPadV}px ${v}px`,background:'var(--surface2)',fontSize:tok.thFontSize,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${tok.thBorderW}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          thPadV:    (v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${v}px ${tok.thPadH}px`,background:'var(--surface2)',fontSize:tok.thFontSize,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${tok.thBorderW}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          thFontSize:(v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${tok.thPadV}px ${tok.thPadH}px`,background:'var(--surface2)',fontSize:v,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${tok.thBorderW}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          thBorderW: (v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${tok.thPadV}px ${tok.thPadH}px`,background:'var(--surface2)',fontSize:tok.thFontSize,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${v}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          tdPadH:    (v)=><table style={{borderCollapse:'collapse'}}><tbody><tr><td style={{padding:`${tok.tdPadV}px ${v}px`,borderBottom:'0.5px solid var(--border)',fontSize:tok.tdFontSize}}>Zelle</td></tr></tbody></table>,
+          tdPadV:    (v)=><table style={{borderCollapse:'collapse'}}><tbody><tr><td style={{padding:`${v}px ${tok.tdPadH}px`,borderBottom:'0.5px solid var(--border)',fontSize:tok.tdFontSize}}>Zelle</td></tr></tbody></table>,
+          tdFontSize:(v)=><table style={{borderCollapse:'collapse'}}><tbody><tr><td style={{padding:`${tok.tdPadV}px ${tok.tdPadH}px`,borderBottom:'0.5px solid var(--border)',fontSize:v}}>Zelle</td></tr></tbody></table>,
+          msChipFontSize:(v)=><span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:20,fontSize:v,fontWeight:500,background:'var(--surface)',border:'0.5px solid var(--border)'}}>Chip ×</span>,
+          msTriggerPad:  (v)=><div style={{padding:`${v}px 12px`,border:'0.5px solid var(--border)',borderRadius:8,background:'var(--surface2)',fontSize:13,color:'var(--sub)',display:'flex',justifyContent:'space-between'}}>+ Funktion wählen <span>▾</span></div>,
+          msItemPad:     (v)=><div style={{border:'0.5px solid var(--border)',borderRadius:8,overflow:'hidden'}}><div style={{padding:`${v}px 12px`,fontSize:13,display:'flex',alignItems:'center',gap:8}}><div style={{width:14,height:14,borderRadius:3,border:'0.5px solid var(--border)'}}/> Option</div></div>,
         };
 
         const Slider=({label, k, min, max, step=1, unit='px', hint})=>(
@@ -562,6 +598,26 @@ export const BORDER = '${t.borderWidth}';`;
                 <Slider label="Seg. Item Padding V" k="segItemPad" min={3} max={10} hint=".cc-seg-item"/>
                 <Slider label="Chip Padding V" k="chipPad" min={2} max={8} hint=".cc-chip-toggle"/>
                 <Slider label="Chip Padding H" k="chipPadH" min={8} max={20} hint=".cc-chip-toggle"/>
+              </Card>
+
+              {/* Tabellen */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="table" title="Tabellen" color="#0F766E"/>
+                <Slider label="Header Padding H" k="thPadH" min={6} max={20} hint=".cc-th"/>
+                <Slider label="Header Padding V" k="thPadV" min={4} max={14} hint=".cc-th"/>
+                <Slider label="Header Schrift" k="thFontSize" min={9} max={13} hint=".cc-th"/>
+                <Slider label="Header Border" k="thBorderW" min={1} max={4} hint=".cc-th border-bottom"/>
+                <Slider label="Zelle Padding H" k="tdPadH" min={6} max={20} hint=".cc-td"/>
+                <Slider label="Zelle Padding V" k="tdPadV" min={4} max={14} hint=".cc-td"/>
+                <Slider label="Zelle Schrift" k="tdFontSize" min={11} max={15} hint=".cc-td"/>
+              </Card>
+
+              {/* Multi-Select */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="list-check" title="Multi-Select" color="#7C3AED"/>
+                <Slider label="Chip Schriftgrösse" k="msChipFontSize" min={9} max={13} hint=".cc-multiselect-chip"/>
+                <Slider label="Trigger Padding V" k="msTriggerPad" min={5} max={12} hint=".cc-multiselect-trigger"/>
+                <Slider label="Item Padding V" k="msItemPad" min={5} max={14} hint=".cc-multiselect-item"/>
               </Card>
 
             </div>
