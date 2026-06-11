@@ -294,7 +294,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-col-menu-check-on{background:var(--text);border-color:var(--text);color:var(--surface)}
 /* Desktop Tabelle */
 .cc-members-table{width:100%;border-collapse:collapse}
-.cc-members-th{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:8px 14px;border-bottom:0.5px solid var(--border);text-align:left;cursor:pointer;white-space:nowrap;background:var(--cc-accent-20,rgba(255,191,0,0.20));border-left:3px solid var(--cc-accent,#FFBF00)}
+.cc-members-th{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:8px 14px;border-bottom:0.5px solid var(--cc-accent-30,rgba(255,191,0,0.35));text-align:left;cursor:pointer;white-space:nowrap;background:var(--cc-accent-25,rgba(255,191,0,0.25))}
 .cc-members-th:hover{color:var(--text)}
 .cc-members-th-last{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .cc-members-tr{border-bottom:0.5px solid var(--border);cursor:pointer;transition:background 0.1s}
