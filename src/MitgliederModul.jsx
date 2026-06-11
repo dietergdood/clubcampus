@@ -1072,7 +1072,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
         </div>
       )}
       {/* Liste / Tabelle */}
-      <Card className="cc-card-table">
+      <Card className="cc-card-table" flush>
         {filtered.length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
         {filtered.length>0&&(isMobile?(
           /* Mobile: C-style iOS Liste */
@@ -1082,12 +1082,18 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
                 {groupBy!=="none"&&<div className="cc-members-list-group-hdr">{key} <span className="cc-text-muted">({members.length})</span></div>}
                 {members.map(m=>(
                   <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
-                    <Av name={m.name} size={36}/>
+                    <Av name={m.name} size={42}/>
                     <div className="cc-members-item-meta">
                       <div className="cc-members-item-name">{m.name}</div>
-                      <div className="cc-members-item-sub">{m.role&&m.role!=="-"?m.role:m.type}{m.team&&m.team!=="-"?" · "+m.team:""}</div>
+                      <div className="cc-members-item-sub">
+                        {m.role&&m.role!=="-"?m.role:m.type}
+                        {m.team&&m.team!=="-"?" · "+m.team.split(", ")[0]:""}
+                      </div>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                      {m.team&&m.team.split(", ").length>1&&(
+                        <span className="cc-members-item-more">+{m.team.split(", ").length-1}</span>
+                      )}
                       <span className={`cc-members-dot ${m.status==="Vollständig"||m.status==="geprüft"?"cc-members-dot-ok":m.status==="ausstehend"?"cc-members-dot-warn":"cc-members-dot-err"}`}/>
                       <TI n="chevron-right" size={14} className="cc-members-item-chevron"/>
                     </div>
