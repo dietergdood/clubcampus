@@ -121,7 +121,6 @@ function RolleChip({rolle}){
     "Elternteil":  {c:"#06B6D4",bg:"#ECFEFF"},
     "Ehrenmitglied":{c:"#f8de09",bg:"#FFFBEB"},
     "Passivmitglied":{c:"#9CA3AF",bg:"#F9FAFB"},
-    "Gönner":      {c:"#9CA3AF",bg:"#F9FAFB"},
   };
   const s=colors[rolle]||{c:"#9CA3AF",bg:"#F9FAFB"};
   return <Chip text={rolle||"-"} color={s.c} bg={s.bg}/>;
@@ -156,7 +155,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
     }
   },[editOpen]);
 
-  const MITGLIEDTYPEN=["Aktivmitglied","Juniormitglied","Passivmitglied","Ehrenmitglied","Freimitglied","Gönner"];
+  const MITGLIEDTYPEN=["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
 
   async function deleteMitglied(){
     if(!sb||!window.confirm(`${m.name} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
