@@ -973,7 +973,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
         {/* Platzhalter Tabs */}
         {(tab==="stats"||tab==="comments"||tab==="ratings")&&(
           <div className="cc-empty cc-empty-lg">
-            <TI n="hourglass" size={32} style={{color:"var(--border)",display:"block",margin:"0 auto 12px"}}/>
+            <TI n="hourglass" size={32} className="cc-empty-icon"/>
             Kommt bald
           </div>
         )}
@@ -1011,7 +1011,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
             {filterVals.length>0&&<span className="cc-ml-filter-dot"/>}
           </button>
           {filterOpen&&(
-            <div className="cc-ml-dropdown" style={{minWidth:220}}>
+            <div className="cc-ml-dropdown cc-ml-filter-dropdown">
               <div className="cc-col-menu-hdr">Filter</div>
               {[
                 {label:"Rolle", vals:[...new Set(allMembers.map(m=>m.role).filter(Boolean))]},
@@ -1044,7 +1044,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
             {!isMobile&&"Gruppieren"}
           </button>
           {groupOpen&&(
-            <div className="cc-ml-dropdown" style={{minWidth:200}}>
+            <div className="cc-ml-dropdown cc-ml-group-dropdown">
               <div className="cc-col-menu-hdr">Gruppieren nach</div>
               {GROUP_OPTIONS.map(o=>(
                 <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setFilterVals([]);setGroupOpen(false)}}>
@@ -1090,7 +1090,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
                         {m.team&&m.team!=="-"?" · "+m.team.split(", ")[0]:""}
                       </div>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                    <div className="cc-members-item-right">
                       {m.team&&m.team.split(", ").length>1&&(
                         <span className="cc-members-item-more">+{m.team.split(", ").length-1}</span>
                       )}

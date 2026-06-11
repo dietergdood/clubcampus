@@ -53,6 +53,8 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-icon-btn:hover{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--text)!important}
 .cc-icon-btn:active{transform:scale(0.95)}
 .cc-input-icon{color:var(--sub);flex-shrink:0}
+.cc-empty-icon{color:var(--border);display:block;margin:0 auto 12px}
+.cc-members-item-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 
 /* ── Button Group ── */
 .cc-btn-group{display:flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface2)}
@@ -260,6 +262,8 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0}
 .cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:hidden;z-index:200}
+.cc-ml-filter-dropdown{min-width:220px}
+.cc-ml-group-dropdown{min-width:200px}
 .cc-ml-dropdown-section-lbl{padding:6px 12px 2px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
 .cc-ml-dropdown-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cc-ml-dropdown-clear{font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;font-family:inherit}
