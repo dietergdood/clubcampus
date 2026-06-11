@@ -305,6 +305,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-members-item-sub{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-members-item-chevron{color:var(--border);flex-shrink:0}
 
+.cc-team-position-row{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:0.5px solid var(--border)}
 .cc-team-position-row:last-child{border-bottom:none}
 .cc-team-nr{width:34px;height:34px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);flex-shrink:0;border:0.5px solid var(--border)}
 .cc-team-nr-empty{color:var(--sub);font-weight:400;border-style:dashed}
