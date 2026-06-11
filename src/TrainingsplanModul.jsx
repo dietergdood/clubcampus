@@ -917,6 +917,21 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       const next = Object.assign({},ausnahmen);
       next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a){ return !(a.slot_id===ausnahme.slot_id&&a.type===ausnahme.type); }).concat([ausnahme]);
       saveAusnahmen(next);
+      // Bei Absage: trainings-Eintrag auf abgesagt=true setzen
+      if(ausnahme.type==="absage" && supabase && ausnahme.slot_id){
+        const kwParts = kwKey.split("_");
+        const year = parseInt(kwParts[0]);
+        const weekNr = parseInt(kwParts[1]);
+        // Datum des betroffenen Trainings berechnen
+        const targetDate = dayDates[DAYS.indexOf(ausnahme.weekday)];
+        if(targetDate){
+          const dateStr = targetDate.getFullYear()+"-"+String(targetDate.getMonth()+1).padStart(2,"0")+"-"+String(targetDate.getDate()).padStart(2,"0");
+          supabase.from("trainings").update({abgesagt:true})
+            .eq("trainingsplan_slot_id", ausnahme.slot_id)
+            .eq("date", dateStr)
+            .then(function({error}){ if(error) console.warn("[FCH] Absage setzen Fehler:", error.message); });
+        }
+      }
     }
     setShowAusnahmeModal(false);
   }
@@ -925,6 +940,17 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     const next = Object.assign({},ausnahmen);
     next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a){ return a!==ausnahme; });
     saveAusnahmen(next);
+    // Bei Absage-Rücknahme: trainings-Eintrag wieder auf abgesagt=false setzen
+    if(ausnahme.type==="absage" && supabase && ausnahme.slot_id){
+      const targetDate = dayDates[DAYS.indexOf(ausnahme.weekday)];
+      if(targetDate){
+        const dateStr = targetDate.getFullYear()+"-"+String(targetDate.getMonth()+1).padStart(2,"0")+"-"+String(targetDate.getDate()).padStart(2,"0");
+        supabase.from("trainings").update({abgesagt:false})
+          .eq("trainingsplan_slot_id", ausnahme.slot_id)
+          .eq("date", dateStr)
+          .then(function({error}){ if(error) console.warn("[FCH] Absage rücknahme Fehler:", error.message); });
+      }
+    }
   }
 
   function handlePlanSave(planData){
