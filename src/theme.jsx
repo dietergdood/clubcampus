@@ -294,8 +294,10 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-col-menu-check-on{background:var(--text);border-color:var(--text);color:var(--surface)}
 /* Desktop Tabelle */
 .cc-members-table{width:100%;border-collapse:collapse}
-.cc-members-th{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:8px 14px;border-top:1px solid var(--border);border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:2px solid var(--cc-accent,#FFBF00);text-align:left;cursor:pointer;white-space:nowrap;background:var(--surface2)}
+.cc-members-th{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:8px 14px;border-top:1px solid var(--border);border-bottom:2px solid var(--cc-accent,#FFBF00);border-left:none;border-right:none;text-align:left;cursor:pointer;white-space:nowrap;background:var(--surface2)}
 .cc-members-th:hover{color:var(--text)}
+.cc-members-th:first-child{border-left:1px solid var(--border)}
+.cc-members-th:last-child{border-right:1px solid var(--border)}
 .cc-members-th-last{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .cc-members-tr{border-bottom:0.5px solid var(--border);cursor:pointer;transition:background 0.1s}
 .cc-members-tr:last-child{border-bottom:none}
