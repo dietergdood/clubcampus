@@ -192,7 +192,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
   const teams=raw.teams||[m.team].filter(Boolean);
   const mitgliedtyp=raw.mitgliedtyp||m.type;
   if(mitgliedtyp) rollen.push({rolle:mitgliedtyp, teams:teams});
-  if(raw.funktion&&raw.funktion!==mitgliedtyp) rollen.push({rolle:raw.funktion, teams:[]});
+  if((raw.funktionen||[]).length>0) rollen.push(...raw.funktionen.map(f=>({rolle:f, teams:[]})));
 
   return(
     <>
@@ -455,7 +455,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
       if(m) setSelectedMember({
         id:m.id,
         name:`${m.vorname||""} ${m.nachname||""}`.trim(),
-        role:m.funktion||m.rolle||"-",
+        role:m.rolle||"-",
         type:m.mitgliedtyp||"-",
         status:m.datenstatus||"-",
         team:(m.teams||[])[0]||"-",
@@ -724,7 +724,6 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
                   <span className="cc-info-key">{r.l}</span>
                   <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
                 </div>
-              ))}
               ))}
             </Card>
             {/* Teams & Positionen */}
