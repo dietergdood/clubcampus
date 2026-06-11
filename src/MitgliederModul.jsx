@@ -436,14 +436,26 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
       }))
     :MEMBERS;
 
-  const COLS=[
-    {key:"name",   label:"Mitglied"},
-    {key:"role",   label:"Rolle"},
-    {key:"team",   label:"Team"},
-    {key:"type",   label:"Mitgliedtyp"},
-    {key:"location",label:"Wohnort"},
-    {key:"status", label:"Datenstatus"},
+  const ALL_COLS=[
+    {key:"name",        label:"Name",         default:true},
+    {key:"type",        label:"Mitgliedtyp",  default:true},
+    {key:"role",        label:"Rolle",        default:true},
+    {key:"status",      label:"Status",       default:true},
+    {key:"team",        label:"Team",         default:true},
+    {key:"location",    label:"Wohnort",      default:false},
+    {key:"spielerpass", label:"Spielerpass",  default:false},
+    {key:"fairgate_id", label:"Fairgate-ID",  default:false},
+    {key:"geburtsdatum",label:"Geburtsdatum", default:false},
   ];
+  const [visibleCols,setVisibleCols]=useState(()=>ALL_COLS.filter(c=>c.default).map(c=>c.key));
+  const [colMenuOpen,setColMenuOpen]=useState(false);
+  const colMenuRef=useRef(null);
+  useEffect(()=>{
+    function h(e){if(colMenuRef.current&&!colMenuRef.current.contains(e.target))setColMenuOpen(false);}
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+  const COLS=ALL_COLS.filter(c=>visibleCols.includes(c.key));
   const GROUP_OPTIONS=[
     {val:"none",  label:"Keine Gruppierung"},
     {val:"role",  label:"Nach Rolle"},
@@ -966,14 +978,38 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
         <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
       </div>
       {/* Filter-Zeile */}
-      <div style={{display:"flex",gap:12,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Suchen nach Name, Rolle, Team…"
-          style={{...inputStyle,flex:1,minWidth:180}}/>
-        <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVals([]);}}
-          style={{...inputStyle,minWidth:170}}>
+      <div className="cc-filter-toolbar">
+        <input className="cc-input cc-filter-search" value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Suchen nach Name, Rolle, Team…"/>
+        <select className="cc-input cc-filter-select" value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVals([]);}}>
           {GROUP_OPTIONS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
         </select>
+        {!isMobile&&(
+          <div className="cc-col-menu-wrap" ref={colMenuRef}>
+            <button className={`cc-col-menu-btn${colMenuOpen?" cc-col-menu-btn-active":""}`} onClick={()=>setColMenuOpen(o=>!o)}>
+              <TI n="columns" size={13}/>
+              Spalten
+              <span className="cc-col-menu-badge">{visibleCols.length}</span>
+            </button>
+            {colMenuOpen&&(
+              <div className="cc-col-menu-dropdown">
+                <div className="cc-col-menu-hdr">Spalten anzeigen</div>
+                {ALL_COLS.map(col=>(
+                  <div key={col.key} className="cc-col-menu-item" onClick={()=>setVisibleCols(prev=>
+                    prev.includes(col.key)
+                      ?prev.length>1?prev.filter(k=>k!==col.key):prev
+                      :[...prev,col.key]
+                  )}>
+                    <div className={`cc-col-menu-check${visibleCols.includes(col.key)?" cc-col-menu-check-on":""}`}>
+                      {visibleCols.includes(col.key)&&<TI n="check" size={10}/>}
+                    </div>
+                    {col.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {/* Gruppen-Filter Chips */}
       {groupBy!=="none"&&(()=>{
@@ -1041,18 +1077,15 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten}){
                   )}
                   {members.map(m=>(
                     <tr key={m.id} className="cc-members-tr" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
-                      <td className="cc-members-td">
-                        <div className="cc-row cc-gap-8">
-                          <Av name={m.name} size={28}/>
-                          <span className="cc-text-bold">{m.name}</span>
-                        </div>
-                      </td>
-                      <td className="cc-members-td cc-members-td-sub">{m.type||"—"}</td>
-                      <td className="cc-members-td"><RolleChip rolle={m.role}/></td>
-                      <td className="cc-members-td">
-                        <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
-                      </td>
-                      <td className="cc-members-td cc-members-td-sub">{m.team||"—"}</td>
+                      {visibleCols.includes("name")&&<td className="cc-members-td"><div className="cc-row cc-gap-8"><Av name={m.name} size={28}/><span className="cc-text-bold">{m.name}</span></div></td>}
+                      {visibleCols.includes("type")&&<td className="cc-members-td cc-members-td-sub">{m.type||"—"}</td>}
+                      {visibleCols.includes("role")&&<td className="cc-members-td"><RolleChip rolle={m.role}/></td>}
+                      {visibleCols.includes("status")&&<td className="cc-members-td"><Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/></td>}
+                      {visibleCols.includes("team")&&<td className="cc-members-td cc-members-td-sub">{m.team||"—"}</td>}
+                      {visibleCols.includes("location")&&<td className="cc-members-td cc-members-td-sub">{m.location||"—"}</td>}
+                      {visibleCols.includes("spielerpass")&&<td className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>}
+                      {visibleCols.includes("fairgate_id")&&<td className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>}
+                      {visibleCols.includes("geburtsdatum")&&<td className="cc-members-td cc-members-td-sub">{m.geburtsdatum||"—"}</td>}
                     </tr>
                   ))}
                 </React.Fragment>
@@ -1109,14 +1142,26 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
       }))
     :MEMBERS;
 
-  const COLS=[
-    {key:"name",   label:"Mitglied"},
-    {key:"role",   label:"Rolle"},
-    {key:"team",   label:"Team"},
-    {key:"type",   label:"Mitgliedtyp"},
-    {key:"location",label:"Wohnort"},
-    {key:"status", label:"Datenstatus"},
+  const ALL_COLS=[
+    {key:"name",        label:"Name",         default:true},
+    {key:"type",        label:"Mitgliedtyp",  default:true},
+    {key:"role",        label:"Rolle",        default:true},
+    {key:"status",      label:"Status",       default:true},
+    {key:"team",        label:"Team",         default:true},
+    {key:"location",    label:"Wohnort",      default:false},
+    {key:"spielerpass", label:"Spielerpass",  default:false},
+    {key:"fairgate_id", label:"Fairgate-ID",  default:false},
+    {key:"geburtsdatum",label:"Geburtsdatum", default:false},
   ];
+  const [visibleCols,setVisibleCols]=useState(()=>ALL_COLS.filter(c=>c.default).map(c=>c.key));
+  const [colMenuOpen,setColMenuOpen]=useState(false);
+  const colMenuRef=useRef(null);
+  useEffect(()=>{
+    function h(e){if(colMenuRef.current&&!colMenuRef.current.contains(e.target))setColMenuOpen(false);}
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+  const COLS=ALL_COLS.filter(c=>visibleCols.includes(c.key));
   const GROUP_OPTIONS=[
     {val:"none",  label:"Keine Gruppierung"},
     {val:"role",  label:"Nach Rolle"},
@@ -1639,14 +1684,38 @@ function MembersView({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=null,o
         <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
       </div>
       {/* Filter-Zeile */}
-      <div style={{display:"flex",gap:12,marginBottom:groupBy!=="none"?8:14,flexWrap:"wrap"}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Suchen nach Name, Rolle, Team…"
-          style={{...inputStyle,flex:1,minWidth:180}}/>
-        <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVals([]);}}
-          style={{...inputStyle,minWidth:170}}>
+      <div className="cc-filter-toolbar">
+        <input className="cc-input cc-filter-search" value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Suchen nach Name, Rolle, Team…"/>
+        <select className="cc-input cc-filter-select" value={groupBy} onChange={e=>{setGroupBy(e.target.value);setFilterVals([]);}}>
           {GROUP_OPTIONS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
         </select>
+        {!isMobile&&(
+          <div className="cc-col-menu-wrap" ref={colMenuRef}>
+            <button className={`cc-col-menu-btn${colMenuOpen?" cc-col-menu-btn-active":""}`} onClick={()=>setColMenuOpen(o=>!o)}>
+              <TI n="columns" size={13}/>
+              Spalten
+              <span className="cc-col-menu-badge">{visibleCols.length}</span>
+            </button>
+            {colMenuOpen&&(
+              <div className="cc-col-menu-dropdown">
+                <div className="cc-col-menu-hdr">Spalten anzeigen</div>
+                {ALL_COLS.map(col=>(
+                  <div key={col.key} className="cc-col-menu-item" onClick={()=>setVisibleCols(prev=>
+                    prev.includes(col.key)
+                      ?prev.length>1?prev.filter(k=>k!==col.key):prev
+                      :[...prev,col.key]
+                  )}>
+                    <div className={`cc-col-menu-check${visibleCols.includes(col.key)?" cc-col-menu-check-on":""}`}>
+                      {visibleCols.includes(col.key)&&<TI n="check" size={10}/>}
+                    </div>
+                    {col.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {/* Gruppen-Filter Chips */}
       {groupBy!=="none"&&(()=>{

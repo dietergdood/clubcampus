@@ -257,6 +257,20 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-status-inactive{font-size:12px;color:#DC2626;font-weight:600;display:flex;align-items:center;gap:4px}
 .cc-status-inactive::before{content:"";width:7px;height:7px;border-radius:50%;background:#DC2626;flex-shrink:0;display:inline-block}
 .cc-members-table{width:100%;border-collapse:collapse}
+.cc-filter-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.cc-filter-search{flex:1;min-width:180px}
+.cc-filter-select{min-width:170px}
+.cc-col-menu-wrap{position:relative;flex-shrink:0}
+.cc-col-menu-btn{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.cc-col-menu-btn:hover{background:var(--surface2)}
+.cc-col-menu-btn-active{border-color:#2563EB;color:#2563EB;background:#EFF6FF}
+.cc-col-menu-badge{background:#2563EB;color:#fff;font-size:10px;padding:1px 5px;border-radius:10px;margin-left:2px}
+.cc-col-menu-dropdown{position:absolute;top:36px;right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:180px;overflow:hidden;z-index:100}
+.cc-col-menu-hdr{padding:8px 12px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-bottom:0.5px solid var(--border)}
+.cc-col-menu-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--text);cursor:pointer}
+.cc-col-menu-item:hover{background:var(--surface2)}
+.cc-col-menu-check{width:16px;height:16px;border-radius:4px;border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cc-col-menu-check-on{background:#2563EB;border-color:#2563EB;color:#fff}
 .cc-members-th{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;border-bottom:0.5px solid var(--border);text-align:left;cursor:pointer;white-space:nowrap}
 .cc-members-th:hover{color:var(--text)}
 .cc-members-tr{border-bottom:0.5px solid var(--border);cursor:pointer}
