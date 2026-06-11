@@ -111,7 +111,9 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 
 /* ── Tabellen ── */
 .cc-table{width:100%;border-collapse:collapse;font-size:14px}
-.cc-th{padding:8px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--sub);border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
+.cc-th{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--sub);border-top:1px solid var(--border);border-bottom:2px solid var(--cc-accent,#FFBF00);border-left:none;border-right:none;background:var(--surface2);white-space:nowrap;cursor:pointer}
+.cc-th:first-child{border-left:1px solid var(--border)}
+.cc-th:last-child{border-right:1px solid var(--border)}
 .cc-th-center{text-align:center}
 .cc-td{padding:9px 12px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle}
 .cc-tr:hover .cc-td{background:var(--cc-hover,rgba(255,191,0,0.19));cursor:pointer}
