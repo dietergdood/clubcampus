@@ -310,7 +310,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-profile-name{font-size:21px;font-weight:700;margin:0 0 4px;color:var(--text);letter-spacing:-0.2px}
 .cc-profile-nr{position:absolute;bottom:-8px;right:-8px;background:var(--text);color:var(--bg);font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;line-height:1.4}
 /* ── Hero Header ── */
-.cc-hero-stripe{height:4px;background:var(--cc-accent,#FFBF00)}
+.cc-hero-stripe{height:4px;background:var(--cc-accent,#FFBF00);border-radius:12px 12px 0 0}
 .cc-hero-body{display:flex;align-items:center;gap:12px;padding:12px 16px}
 @media(min-width:681px){.cc-hero-body{padding:20px 16px}}
 .cc-hero-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;flex-shrink:0}
@@ -481,7 +481,7 @@ function Btn({children,onClick,variant="outline",color=null,small,disabled=false
 }
 
 function Card({children,mb=0,mt=0,style={},onClick,flush=false}){
-  return <div onClick={onClick} className="cc-card" style={{borderRadius:12,padding:flush?0:"16px 20px",overflow:flush?"clip":"visible",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:mb,marginTop:mt,...style}}>{children}</div>;
+  return <div onClick={onClick} className="cc-card" style={{borderRadius:12,padding:flush?0:"16px 20px",overflow:flush?"visible":"visible",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:mb,marginTop:mt,...style}}>{children}</div>;
 }
 
 function Chip({text,color,bg,semantic,size="sm"}){
