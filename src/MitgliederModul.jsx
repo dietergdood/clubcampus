@@ -147,6 +147,16 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
   const [editForm,setEditForm]=useState({...raw});
   const [editSaving,setEditSaving]=useState(false);
   const [editMsg,setEditMsg]=useState(null);
+  const [portalFunktionen,setPortalFunktionen]=useState([]);
+
+  useEffect(()=>{
+    if(sb&&editOpen&&portalFunktionen.length===0){
+      sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
+        .then(({data})=>setPortalFunktionen(data||[]));
+    }
+  },[editOpen]);
+
+  const MITGLIEDTYPEN=["Aktivmitglied","Juniormitglied","Passivmitglied","Ehrenmitglied","Freimitglied","Gönner"];
 
   async function deleteMitglied(){
     if(!sb||!window.confirm(`${m.name} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
@@ -165,7 +175,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       ahv_nr:editForm.ahv_nr||null, telefon:editForm.telefon||null,
       email:editForm.email||null, strasse:editForm.strasse||null,
       plz:editForm.plz||null, ort:editForm.ort||null, kanton:editForm.kanton||null,
-      mitgliedtyp:editForm.mitgliedtyp||null, funktion:editForm.funktion||null,
+      mitgliedtypen:editForm.mitgliedtypen||[], funktionen:editForm.funktionen||[],
       spielerpass:editForm.spielerpass||null, js_nr:editForm.js_nr||null,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
       updated_at:new Date().toISOString(),
@@ -261,22 +271,48 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
               ))}
               {/* Vereinsdaten */}
               <div className="cc-form-section-title cc-form-full" data-label="Vereinsdaten"/>
+              {/* Mitgliedtypen Multi-Select */}
+              <div className="cc-form-full">
+                <label className="cc-label">Mitgliedtyp(en)</label>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
+                  {MITGLIEDTYPEN.map(t=>{
+                    const sel=(editForm.mitgliedtypen||[]).includes(t);
+                    return(
+                      <button key={t} type="button" onClick={()=>setEditForm(f=>({...f,mitgliedtypen:sel?(f.mitgliedtypen||[]).filter(x=>x!==t):[...(f.mitgliedtypen||[]),t]}))}
+                        className={`cc-chip-toggle${sel?" cc-chip-toggle-on":""}`}>
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Funktionen Multi-Select */}
+              <div className="cc-form-full">
+                <label className="cc-label">Funktion(en)</label>
+                {portalFunktionen.length===0
+                  ?<div className="cc-text-sm" style={{color:"var(--sub)"}}>Lade Funktionen…</div>
+                  :<div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
+                    {portalFunktionen.map(f=>{
+                      const sel=(editForm.funktionen||[]).includes(f.name);
+                      const farbe=f.portal_gruppen?.farbe||"#6B7280";
+                      return(
+                        <button key={f.id} type="button" onClick={()=>setEditForm(ff=>({...ff,funktionen:sel?(ff.funktionen||[]).filter(x=>x!==f.name):[...(ff.funktionen||[]),f.name]}))}
+                          style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${sel?farbe:"var(--border)"}`,background:sel?farbe+"20":"transparent",color:sel?farbe:"var(--sub)",fontSize:12,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"inherit"}}>
+                          {f.portal_gruppen?.name?`${f.portal_gruppen.name} · `:""}{f.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                }
+              </div>
               {[
-                {k:"mitgliedtyp", l:"Mitgliedtyp", opts:["Spieler","Trainer","Assistent/in","Goalietrainer","Vorstand","Kassier","Materialwart","Platzwart","Schiedsrichter","Passivmitglied","Ehrenmitglied","Gönner"]},
-                {k:"funktion",    l:"Funktion"},
                 {k:"spielerpass", l:"Spielerpass"},
                 {k:"js_nr",       l:"J+S Nr."},
                 {k:"fairgate_id", l:"Fairgate-ID"},
-              ].map(({k,l,opts})=>(
+              ].map(({k,l})=>(
                 <div key={k}>
                   <label className="cc-label">{l}</label>
-                  {opts
-                    ?<select className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}>
-                      <option value="">–</option>
-                      {(typeof opts[0]==="string"?opts.map(o=>({v:o,l:o})):opts).map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
-                    </select>
-                    :<input className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
-                  }
+                  <input className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
                 </div>
               ))}
               {/* Notizen */}
@@ -454,6 +490,8 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
         fairgate_id:m.fairgate_id,
         hat_portal_zugang:m.hat_portal_zugang,
         foto_url:m.foto_url||null,
+        mitgliedtypen:m.mitgliedtypen||[],
+        funktionen:m.funktionen||[],
       }))
     :MEMBERS;
 
@@ -494,7 +532,11 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
     (!search||m.name.toLowerCase().includes(search.toLowerCase())||
     m.role.toLowerCase().includes(search.toLowerCase())||
     m.team.toLowerCase().includes(search.toLowerCase()))
-    &&(filterVals.length===0||filterVals.includes(m[groupBy]||"-"))
+    &&(filterVals.length===0||(
+      groupBy==="type"
+        ?(m.mitgliedtypen||[m.type]).some(t=>filterVals.includes(t))
+        :filterVals.includes(m[groupBy]||"-")
+    ))
   );
 
   const sorted=[...filtered].sort((a,b)=>{
@@ -664,24 +706,38 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
             {/* Vereinsdaten */}
             <Card>
               <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
+              {/* Mitgliedtypen als Tags */}
+              {(raw.mitgliedtypen||[]).length>0&&(
+                <div className="cc-info-row">
+                  <span className="cc-info-key">Mitgliedtyp(en)</span>
+                  <div className="cc-row cc-gap-4 cc-flex-wrap">
+                    {(raw.mitgliedtypen||[]).map(t=>(
+                      <span key={t} className="cc-badge cc-badge-neutral">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Funktionen als Tags */}
+              {(raw.funktionen||[]).length>0&&(
+                <div className="cc-info-row">
+                  <span className="cc-info-key">Funktion(en)</span>
+                  <div className="cc-row cc-gap-4 cc-flex-wrap">
+                    {(raw.funktionen||[]).map(f=>(
+                      <span key={f} className="cc-badge cc-badge-neutral">{f}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {[
-                {l:"Mitgliedtyp",  v:raw.mitgliedtyp||m.type},
-                {l:"Funktion",     v:raw.funktion||m.role},
                 ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
                 ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
                 ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
               ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
-                  {r.flag?(
-                    <span className="cc-info-val cc-row cc-gap-6">
-                      <span className="cc-land-badge">{r.flag}</span>
-                      <span>{r.flagName}</span>
-                    </span>
-                  ):(
-                    <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
-                  )}
+                  <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
                 </div>
+              ))}
               ))}
             </Card>
             {/* Teams & Positionen */}
@@ -1064,7 +1120,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
               {[
                 {label:"Rolle", vals:[...new Set(allMembers.map(m=>m.role).filter(Boolean))]},
                 {label:"Status", vals:[...new Set(allMembers.map(m=>m.status).filter(Boolean))]},
-                {label:"Mitgliedtyp", vals:[...new Set(allMembers.map(m=>m.type).filter(Boolean))]},
+                {label:"Mitgliedtyp", vals:[...new Set(allMembers.flatMap(m=>m.mitgliedtypen||[m.type]).filter(Boolean))]},
               ].map(({label,vals})=>(
                 <div key={label}>
                   <div className="cc-ml-dropdown-section-lbl">{label}</div>

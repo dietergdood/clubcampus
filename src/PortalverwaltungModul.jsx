@@ -678,12 +678,14 @@ function PortalverwaltungView(props){
   /* Gruppen & Funktionen */
   const [gruppen,setGruppen]=useState([]);
   const [funktionen,setFunktionen]=useState([]);
+  const [pvTeams,setPvTeams]=useState([]);
+  const [gruppenTeams,setGruppenTeams]=useState([]); // portal_gruppen_teams
   const [selectedGruppe,setSelectedGruppe]=useState(null);
   const [showGruppeForm,setShowGruppeForm]=useState(false);
   const [showFunktionForm,setShowFunktionForm]=useState(false);
   const [editGruppe,setEditGruppe]=useState(null);
   const [editFunktion,setEditFunktion]=useState(null);
-  const [gruppeForm,setGruppeForm]=useState({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{}});
+  const [gruppeForm,setGruppeForm]=useState({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{},teams:[]});
   const [funktionForm,setFunktionForm]=useState({name:"",beschreibung:"",gruppe_id:"",module_override:[],teams:[],filter:{},stufe_override:{}});
   /* Module & Rechte View-Toggle */
   const [moduleViewMode,setModuleViewMode]=useState("modul");
@@ -1018,7 +1020,7 @@ function PortalverwaltungView(props){
       setLoading(true);
       try{
         if(supabase){
-          const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR]=await Promise.all([
+          const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR,teamsR,gtR]=await Promise.all([
             supabase.from("api_verbindungen").select("*").order("sort_order"),
             supabase.from("api_sync_log").select("*,api_verbindungen(label)").order("gestartet_am",{ascending:false}).limit(50),
             supabase.from("benutzer").select("id,name,email,role").order("name"),
@@ -1026,6 +1028,8 @@ function PortalverwaltungView(props){
             supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe,module,modul_stufen), stufe_override").order("name"),
             supabase.from("module_config").select("*"),
             supabase.from("modul_rechte").select("*"),
+            supabase.from("teams").select("id,name,hauptbereich,kurzname").eq("aktiv",true).order("hauptbereich").order("name"),
+            supabase.from("portal_gruppen_teams").select("*"),
           ]);
           if(apiR.data) setApiVerbindungen(apiR.data);
           if(audR.data) setAuditLogs(audR.data);
@@ -1044,6 +1048,8 @@ function PortalverwaltungView(props){
           }
           if(gruppenR.data) setGruppen(gruppenR.data);
           if(funktionenR.data) setFunktionen(funktionenR.data);
+          if(teamsR.data) setPvTeams(teamsR.data);
+          if(gtR.data) setGruppenTeams(gtR.data);
           /* module_config → moduleAktiv State */
           if(mcR.data&&mcR.data.length>0&&setModuleAktiv){
             const ma={};
@@ -1529,7 +1535,7 @@ function PortalverwaltungView(props){
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:20}}>
             <InfoBox text="Gruppen bündeln Module für Funktionäre. Funktionen schränken innerhalb einer Gruppe ein (Teams, Filter)." color={BL}/>
-            <button onClick={()=>{setEditGruppe(null);setGruppeForm({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{}});setShowGruppeForm(true);}}
+            <button onClick={()=>{setEditGruppe(null);setGruppeForm({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{},teams:[]});setShowGruppeForm(true);}}
               style={{padding:"7px 16px",borderRadius:9,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0}}>
               + Neue Gruppe
             </button>
@@ -1545,6 +1551,7 @@ function PortalverwaltungView(props){
             {id:5,name:"Schiedsrichterwesen",farbe:"#06B6D4",beschreibung:"Spielplan, Koordination",module:["schedule","training","docs"]},
           ]).map(g=>{
             const gFunktionen=funktionen.filter(f=>f.gruppe_id===g.id||f.portal_gruppen?.id===g.id);
+            const gTeams=gruppenTeams.filter(gt=>gt.gruppe_id===g.id).map(gt=>pvTeams.find(t=>t.id===gt.team_id)).filter(Boolean);
             const isOpen=selectedGruppe?.id===g.id;
             const moduleLabels=(g.module||[]).map(k=>ALLE_MODULE.find(m=>m.key===k)?.label||k);
             return(
@@ -1565,6 +1572,11 @@ function PortalverwaltungView(props){
                       <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:g.farbe+"20",color:g.farbe,fontWeight:600}}>
                         {gFunktionen.length} Funktion{gFunktionen.length!==1?"en":""}
                       </span>
+                      {gTeams.length>0&&(
+                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:"#F9731620",color:"#F97316",fontWeight:600}}>
+                          {gTeams.length} Team{gTeams.length!==1?"s":""}
+                        </span>
+                      )}
                     </div>
                     {g.beschreibung&&<div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{g.beschreibung}</div>}
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
@@ -1575,7 +1587,7 @@ function PortalverwaltungView(props){
                   </div>
                   {/* Aktionen */}
                   <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 14px",flexShrink:0}}>
-                    <button onClick={e=>{e.stopPropagation();setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6",modul_stufen:g.modul_stufen||{}});setShowGruppeForm(true);}}
+                    <button onClick={e=>{e.stopPropagation();const existingTeams=gruppenTeams.filter(gt=>gt.gruppe_id===g.id).map(gt=>gt.team_id);setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6",modul_stufen:g.modul_stufen||{},teams:existingTeams});setShowGruppeForm(true);}}
                       style={{width:30,height:30,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
                       <TI n="edit" size={13}/>
                     </button>
@@ -1686,6 +1698,25 @@ function PortalverwaltungView(props){
                   placeholder="Wofür ist diese Gruppe?"
                   style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
               </div>
+              {/* Teams */}
+              {pvTeams.length>0&&(
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,display:"block"}}>
+                    Teams <span style={{fontWeight:400,fontSize:11}}>— {(gruppeForm.teams||[]).length} zugeordnet</span>
+                  </label>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {pvTeams.map(t=>{
+                      const sel=(gruppeForm.teams||[]).includes(t.id);
+                      return(
+                        <button key={t.id} onClick={()=>setGruppeForm(p=>({...p,teams:sel?(p.teams||[]).filter(x=>x!==t.id):[...(p.teams||[]),t.id]}))}
+                          style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${sel?gruppeForm.farbe:"var(--border)"}`,background:sel?gruppeForm.farbe+"15":"transparent",color:sel?gruppeForm.farbe:"var(--sub)",fontSize:12,fontWeight:sel?600:400,cursor:"pointer",fontFamily:FONT}}>
+                          {t.kurzname||t.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {/* Module */}
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,display:"block"}}>
@@ -1731,12 +1762,22 @@ function PortalverwaltungView(props){
                   if(!gruppeForm.name.trim()) return;
                   const payload={name:gruppeForm.name.trim(),beschreibung:gruppeForm.beschreibung||"",module:gruppeForm.module||[],farbe:gruppeForm.farbe||"#8B5CF6",modul_stufen:gruppeForm.modul_stufen||{},aktiv:true};
                   if(supabase){
+                    let gruppeId = editGruppe?.id;
                     if(editGruppe?.id){
                       const{error}=await supabase.from("portal_gruppen").update(payload).eq("id",editGruppe.id);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                     } else {
-                      const{error}=await supabase.from("portal_gruppen").insert(payload);
+                      const{data:newG,error}=await supabase.from("portal_gruppen").insert(payload).select().single();
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
+                      gruppeId = newG?.id;
+                    }
+                    // Teams speichern
+                    if(gruppeId){
+                      await supabase.from("portal_gruppen_teams").delete().eq("gruppe_id",gruppeId);
+                      const teamRows=(gruppeForm.teams||[]).map(tid=>({gruppe_id:gruppeId,team_id:tid}));
+                      if(teamRows.length>0) await supabase.from("portal_gruppen_teams").insert(teamRows);
+                      const{data:freshGt}=await supabase.from("portal_gruppen_teams").select("*");
+                      if(freshGt) setGruppenTeams(freshGt);
                     }
                     /* Immer neu laden nach Speichern */
                     const{data:fresh}=await supabase.from("portal_gruppen").select("*").order("name");
