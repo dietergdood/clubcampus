@@ -1003,15 +1003,60 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
           <TI n="search" size={15} style={{color:"var(--sub)",flexShrink:0}}/>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Suchen nach Name, Team, Rolle…"/>
         </div>
-        <button className={`cc-ml-btn${filterVals.length>0?" cc-active":""}`} onClick={()=>setFilterOpen(o=>!o)} style={{position:"relative"}}>
-          <TI n="filter" size={15}/>
-          {!isMobile&&"Filter"}
-          {filterVals.length>0&&<span className="cc-ml-filter-dot"/>}
-        </button>
-        <button className={`cc-ml-btn${groupBy!=="none"?" cc-active":""}`} onClick={()=>setGroupOpen(o=>!o)}>
-          <TI n="layout-rows" size={15}/>
-          {!isMobile&&"Gruppieren"}
-        </button>
+        {/* Filter Button + Dropdown */}
+        <div style={{position:"relative",flexShrink:0}}>
+          <button className={`cc-ml-btn${filterVals.length>0?" cc-active":""}`} onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false)}}>
+            <TI n="filter" size={15}/>
+            {!isMobile&&"Filter"}
+            {filterVals.length>0&&<span className="cc-ml-filter-dot"/>}
+          </button>
+          {filterOpen&&(
+            <div style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",minWidth:220,overflow:"hidden",zIndex:200}}>
+              <div className="cc-col-menu-hdr">Filter</div>
+              {[
+                {label:"Rolle", vals:[...new Set(allMembers.map(m=>m.role).filter(Boolean))]},
+                {label:"Status", vals:[...new Set(allMembers.map(m=>m.status).filter(Boolean))]},
+                {label:"Mitgliedtyp", vals:[...new Set(allMembers.map(m=>m.type).filter(Boolean))]},
+              ].map(({label,vals})=>(
+                <div key={label}>
+                  <div style={{padding:"6px 12px 2px",fontSize:11,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",borderTop:"0.5px solid var(--border)"}}>{label}</div>
+                  {vals.sort().map(v=>(
+                    <div key={v} className="cc-col-menu-item" onClick={()=>setFilterVals(prev=>prev.includes(v)?prev.filter(x=>x!==v):[...prev,v])}>
+                      <div className={`cc-col-menu-check${filterVals.includes(v)?" cc-col-menu-check-on":""}`}>
+                        {filterVals.includes(v)&&<TI n="check" size={10}/>}
+                      </div>
+                      {v}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div style={{padding:"8px 12px",borderTop:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <button style={{fontSize:12,color:"var(--sub)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setFilterVals([])}>Zurücksetzen</button>
+                <button style={{fontSize:12,fontWeight:600,color:"var(--surface)",background:"var(--text)",border:"none",padding:"5px 12px",borderRadius:6,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setFilterOpen(false)}>Fertig</button>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Gruppieren Button + Dropdown */}
+        <div style={{position:"relative",flexShrink:0}}>
+          <button className={`cc-ml-btn${groupBy!=="none"?" cc-active":""}`} onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false)}}>
+            <TI n="layout-rows" size={15}/>
+            {!isMobile&&"Gruppieren"}
+          </button>
+          {groupOpen&&(
+            <div style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",minWidth:200,overflow:"hidden",zIndex:200}}>
+              <div className="cc-col-menu-hdr">Gruppieren nach</div>
+              {GROUP_OPTIONS.map(o=>(
+                <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setFilterVals([]);setGroupOpen(false)}}>
+                  <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>
+                    {groupBy===o.val&&<TI n="check" size={10}/>}
+                  </div>
+                  {o.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       {/* Aktive Filter Chips */}
       {filterVals.length>0&&(
@@ -1023,51 +1068,6 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
           ))}
           <div className="cc-ml-chip" onClick={()=>setFilterVals([])} style={{color:"var(--sub)"}}>
             Alle zurücksetzen ×
-          </div>
-        </div>
-      )}
-      {/* Filter Dropdown */}
-      {filterOpen&&(
-        <div style={{position:"relative",zIndex:100,marginBottom:8}}>
-          <div style={{position:"absolute",top:0,left:0,background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",minWidth:220,overflow:"hidden"}}>
-            <div className="cc-col-menu-hdr">Filter</div>
-            {[
-              {label:"Rolle", vals:[...new Set(allMembers.map(m=>m.role).filter(Boolean))]},
-              {label:"Status", vals:[...new Set(allMembers.map(m=>m.status).filter(Boolean))]},
-              {label:"Mitgliedtyp", vals:[...new Set(allMembers.map(m=>m.type).filter(Boolean))]},
-            ].map(({label,vals})=>(
-              <div key={label}>
-                <div style={{padding:"6px 12px 2px",fontSize:11,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",borderTop:"0.5px solid var(--border)"}}>{label}</div>
-                {vals.sort().map(v=>(
-                  <div key={v} className="cc-col-menu-item" onClick={()=>setFilterVals(prev=>prev.includes(v)?prev.filter(x=>x!==v):[...prev,v])}>
-                    <div className={`cc-col-menu-check${filterVals.includes(v)?" cc-col-menu-check-on":""}`}>
-                      {filterVals.includes(v)&&<TI n="check" size={10}/>}
-                    </div>
-                    {v}
-                  </div>
-                ))}
-              </div>
-            ))}
-            <div style={{padding:"8px 12px",borderTop:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <button style={{fontSize:12,color:"var(--sub)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setFilterVals([])}>Zurücksetzen</button>
-              <button style={{fontSize:12,fontWeight:600,color:"var(--surface)",background:"var(--text)",border:"none",padding:"5px 12px",borderRadius:6,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setFilterOpen(false)}>Fertig</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Gruppieren Dropdown */}
-      {groupOpen&&(
-        <div style={{position:"relative",zIndex:100,marginBottom:8}}>
-          <div style={{position:"absolute",top:0,left:0,background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,boxShadow:"0 4px 20px rgba(0,0,0,0.12)",minWidth:200,overflow:"hidden"}}>
-            <div className="cc-col-menu-hdr">Gruppieren nach</div>
-            {GROUP_OPTIONS.map(o=>(
-              <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setFilterVals([]);setGroupOpen(false)}}>
-                <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>
-                  {groupBy===o.val&&<TI n="check" size={10}/>}
-                </div>
-                {o.label}
-              </div>
-            ))}
           </div>
         </div>
       )}
