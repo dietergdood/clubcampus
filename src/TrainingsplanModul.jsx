@@ -646,6 +646,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     setPlaene(p);
     if(supabase){
       try{
+        const pMitEchtenIds = [];
         for(const plan of p){
           const planId = plan.id && !plan.id.startsWith("plan_") ? plan.id : crypto.randomUUID();
           await supabase.from("trainingsplan_vorlagen").upsert({
@@ -655,13 +656,13 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
             valid_until: plan.valid_until,
             active: plan.active,
           });
+          const slotsMitEchtenIds = [];
           if(plan.slots){
             for(const s of plan.slots){
-              // Lokale IDs (slot_x_y) oder fehlende IDs → neue UUID generieren
               const slotId = s.id && !s.id.startsWith("slot_") ? s.id : crypto.randomUUID();
               await supabase.from("trainingsplan_slots").upsert({
                 id: slotId,
-                template_id: s.template_id||plan.id,
+                template_id: planId,
                 weekday: s.weekday,
                 team: s.team,
                 start_zeit: s.start,
@@ -676,11 +677,16 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
                 valid_from_week_year: s.valid_from_week ? parseInt(s.valid_from_week.split("_")[0]) : null,
                 valid_from_week_nr: s.valid_from_week ? parseInt(s.valid_from_week.split("_")[1]) : null,
               });
-              // Trainings-Einträge synchronisieren
-              await syncTrainingsFromSlot(slotId, s, plan);
+              await syncTrainingsFromSlot(slotId, s, {...plan, id: planId});
+              slotsMitEchtenIds.push({...s, id: slotId, template_id: planId});
             }
           }
+          pMitEchtenIds.push({...plan, id: planId, slots: slotsMitEchtenIds});
         }
+        // State mit echten UUIDs aktualisieren
+        setPlaene(pMitEchtenIds);
+        const aktiver = pMitEchtenIds.find(function(pl){ return pl.active; });
+        if(aktiver) setAktiverPlan(aktiver.id);
       }catch(e){ console.warn("[FCH] savePlaene Fehler:", e.message); }
     } else {
       try{ await window.storage.set("trainingsPlaene", JSON.stringify(p)); }catch(e){ localStorage.setItem("trainingsPlaene", JSON.stringify(p)); }
