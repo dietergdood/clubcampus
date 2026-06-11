@@ -716,6 +716,7 @@ function Portal({supabaseClient}){
       --cc-accent-20:${hexToRgba(acc,0.12)}!important;
       --cc-accent-15:${hexToRgba(acc,0.09)}!important;
       --cc-accent-12:${hexToRgba(acc,0.07)}!important;
+      --cc-accent-10:${hexToRgba(acc,0.10)}!important;
       --cc-accent-5:${hexToRgba(acc,0.05)}!important;
       --nav:${nav}!important;
       --nav-t:${navT}!important;
