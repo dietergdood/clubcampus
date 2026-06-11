@@ -312,6 +312,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 /* ── Hero Header ── */
 .cc-hero-stripe{height:4px;background:var(--cc-accent,#FFBF00)}
 .cc-hero-body{display:flex;align-items:center;gap:12px;padding:12px 16px}
+@media(min-width:681px){.cc-hero-body{padding:20px 16px}}
 .cc-hero-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;flex-shrink:0}
 .cc-hero-back:hover{background:var(--surface2)}
 .cc-hero-meta{flex:1;min-width:0}

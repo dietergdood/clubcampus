@@ -193,11 +193,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 </span>
               ))}
             </div>
-            <div className="cc-chip-row">
-              {raw.position&&<Chip text={raw.position} color={BL}/>}
-              <Chip text={m.status} color={statusColor(m.status)} bg={statusBg(m.status)}/>
-              {m.hat_portal_zugang&&<span className="cc-badge cc-badge-success"><TI n="circle-check" size={11}/> Portal</span>}
-            </div>
           </div>
           {canEdit&&(
             <Btn small onClick={()=>{setEditForm({...raw});setEditOpen(true);}}>
