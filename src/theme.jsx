@@ -238,7 +238,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-flex-wrap{flex-wrap:wrap}
 /* ── Dropdown Menu ── */
 .cc-menu-wrap{position:relative;flex-shrink:0}
-.cc-menu-trigger{width:28px;height:28px;border-radius:7px;border:none;background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--sub)}
+.cc-menu-trigger{width:28px;height:28px;border-radius:7px;border:0.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--sub)}
 .cc-menu-trigger:hover{background:var(--surface2)}
 .cc-menu{position:absolute;right:0;top:32px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:160px;overflow:hidden;z-index:100}
 .cc-menu-item{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:13px;color:var(--text);cursor:pointer;background:none;border:none;width:100%;text-align:left;font-family:inherit}
