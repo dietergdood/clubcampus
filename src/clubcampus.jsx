@@ -712,9 +712,11 @@ function Portal({supabaseClient}){
       --cc-accent:${acc}!important;
       --cc-accent2:${acc2}!important;
       --cc-hover:${hexToRgba(acc,0.19)}!important;
+      --cc-accent-25:${hexToRgba(acc,0.25)}!important;
       --cc-accent-20:${hexToRgba(acc,0.12)}!important;
       --cc-accent-15:${hexToRgba(acc,0.09)}!important;
       --cc-accent-12:${hexToRgba(acc,0.07)}!important;
+      --cc-accent-5:${hexToRgba(acc,0.05)}!important;
       --nav:${nav}!important;
       --nav-t:${navT}!important;
       --nav-a:${navA}!important;
