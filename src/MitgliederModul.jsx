@@ -540,7 +540,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
     const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 
     useEffect(()=>{
-      if(tab==="eltern"&&sb&&raw.id&&elternLoaded===null){
+      if((tab==="eltern"||(tab==="info"&&raw.mitgliedtyp==="Juniormitglied"))&&sb&&raw.id&&elternLoaded===null){
         sb.from("elternkontakte").select("*").eq("mitglied_id",raw.id)
           .then(({data})=>setElternLoaded(data||[]));
       }
@@ -718,6 +718,40 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
           </div>
         )}
 
+        {/* Tab: Hauptkontakt (nur Juniormitglied, im Info-Tab) */}
+        {tab==="info"&&raw.mitgliedtyp==="Juniormitglied"&&(()=>{
+          const hk=eltern.find(e=>e.hauptkontakt);
+          const hkName=hk?(hk.name||`${hk.vorname||""} ${hk.nachname||""}`.trim()||"?"):null;
+          const hkTel=hk?(hk.telefon||hk.tel):null;
+          return(
+            <Card>
+              <div className="cc-section-title"><TI n="user" size={14}/> Hauptkontakt</div>
+              {hk?(
+                <div className="cc-row cc-gap-12 cc-items-center">
+                  {(()=>{const ac=elternAvColor(hk.beziehung);return(
+                    <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
+                      {hkName.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+                    </div>
+                  );})()}
+                  <div className="cc-flex-1 cc-col cc-gap-5">
+                    <div className="cc-row cc-gap-8 cc-items-center">
+                      <span className="cc-text-bold">{hkName}</span>
+                      {hk.beziehung&&<span className="cc-badge cc-badge-neutral">{hk.beziehung}</span>}
+                    </div>
+                    {hk.email&&<a href={`mailto:${hk.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{hk.email}</a>}
+                    {hkTel&&<a href={`tel:${hkTel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{hkTel}</a>}
+                  </div>
+                </div>
+              ):(
+                <div className="cc-warn-box">
+                  <TI n="alert-triangle" size={14}/>
+                  Kein Hauptkontakt definiert — bitte im Tab "Eltern" festlegen
+                </div>
+              )}
+            </Card>
+          );
+        })()}
+
         {/* Tab: Eltern */}
         {tab==="eltern"&&(()=>{
           const [editEltern,setEditEltern]=useState(null); // {mode:"edit"|"new", data:{}}
@@ -822,6 +856,18 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
                       {canEdit&&(
                         <DropMenu items={[
                           {label:"Bearbeiten", icon:"edit",  onClick:()=>setEditEltern({mode:"edit",data:{...e}})},
+                          {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"user", onClick:async()=>{
+                            if(!sb) return;
+                            // Erst alle auf false, dann diesen auf true (oder toggle)
+                            if(!e.hauptkontakt){
+                              await sb.from("elternkontakte").update({hauptkontakt:false}).eq("mitglied_id",raw.id);
+                              await sb.from("elternkontakte").update({hauptkontakt:true}).eq("id",e.id);
+                            } else {
+                              await sb.from("elternkontakte").update({hauptkontakt:false}).eq("id",e.id);
+                            }
+                            sb.from("elternkontakte").select("*").eq("mitglied_id",raw.id)
+                              .then(({data})=>setElternLoaded(data||[]));
+                          }},
                           "sep",
                           {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteEltern(e.id)},
                         ]}/>
@@ -1084,7 +1130,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
                 {members.map(m=>(
                   <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
                     {m.foto_url
-                      ?<img src={m.foto_url} alt={m.name} style={{width:42,height:42,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                      ?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>
                       :<Av name={m.name} size={42}/>
                     }
                     <div className="cc-members-item-meta">
@@ -1154,7 +1200,7 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
                   )}
                   {members.map(m=>(
                     <tr key={m.id} className="cc-members-tr" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
-                      {visibleCols.includes("name")&&<td className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>}
+                      {visibleCols.includes("name")&&<td className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>}
                       {visibleCols.includes("type")&&<td className="cc-members-td cc-members-td-sub">{m.type||"—"}</td>}
                       {visibleCols.includes("role")&&<td className="cc-members-td"><RolleChip rolle={m.role}/></td>}
                       {visibleCols.includes("status")&&<td className="cc-members-td">

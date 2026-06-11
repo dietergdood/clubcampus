@@ -321,6 +321,11 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-members-item-sub{font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc-members-item-chevron{color:var(--border);flex-shrink:0}
 .cc-members-item-more{font-size:11px;font-weight:600;color:var(--sub);background:var(--surface2);border:0.5px solid var(--border);border-radius:4px;padding:1px 5px;flex-shrink:0}
+/* Foto-Klassen (auch für Kader) */
+.cc-avatar-foto-sm{width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.cc-avatar-foto-md{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.cc-avatar-foto-lg{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.cc-warn-box{background:#fffbeb;border:0.5px solid var(--cc-accent-border,#fde68a);border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:6px}
 
 
 .cc-team-position-row{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:0.5px solid var(--border)}
