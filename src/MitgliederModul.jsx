@@ -846,9 +846,10 @@ function MitgliederModul({role,dbMitglieder=[],kannSchreiben,kannVerwalten,sb=nu
                         <div className="cc-row cc-gap-8 cc-flex-wrap">
                           {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
                           {e.benutzer_id
-                            ?<span className="cc-status-active">Portal: Aktiv</span>
-                            :<span className="cc-status-inactive">Portal: Inaktiv</span>
+                            ?<span className="cc-status-active">● Portal: Aktiv</span>
+                            :<span className="cc-status-inactive">● Portal: Inaktiv</span>
                           }
+                          {e.hauptkontakt&&<span className="cc-status-hauptkontakt">★ Hauptkontakt</span>}
                         </div>
                         {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{e.email}</a>}
                         {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{tel}</a>}
