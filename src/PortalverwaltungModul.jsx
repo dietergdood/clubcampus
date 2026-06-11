@@ -15,11 +15,6 @@ const ROLES = {
     desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",
     level:7
   },
-  vorstand: {
-    label:"Vorstand", color:"var(--text)", bg:"#F5F5F5", icon:"scale",
-    desc:"Strategische Übersicht: alle Teams, Mitglieder lesen, Auswertungen — kein System, kein AHV",
-    level:6
-  },
   administration: {
     label:"Administration", color:"var(--text)", bg:"#F5F5F5", icon:"briefcase",
     desc:"Vereinsbüro: Stammdaten, Mitglieder, alle Teams, Exporte — kein System",
@@ -679,7 +674,9 @@ function PortalverwaltungView(props){
   const [gruppen,setGruppen]=useState([]);
   const [funktionen,setFunktionen]=useState([]);
   const [pvTeams,setPvTeams]=useState([]);
-  const [gruppenTeams,setGruppenTeams]=useState([]); // portal_gruppen_teams
+  const [gruppenTeams,setGruppenTeams]=useState([]);
+  const [rollePflichtfelder,setRollePflichtfelder]=useState([]);
+  const [mitgliedtypPflichtfelder,setMitgliedtypPflichtfelder]=useState([]); // portal_gruppen_teams
   const [selectedGruppe,setSelectedGruppe]=useState(null);
   const [showGruppeForm,setShowGruppeForm]=useState(false);
   const [showFunktionForm,setShowFunktionForm]=useState(false);
@@ -768,7 +765,8 @@ function PortalverwaltungView(props){
     {
       key:"benutzer", label:"Benutzer & Rollen", icon:"users", color:"#16A34A", bg:"#ECFDF5",
       tabs:[
-        {key:"users", label:"Benutzer & Rollen", icon:"users"},
+        {key:"users",       label:"Benutzer & Rollen",         icon:"users"},
+        {key:"mitglieder_config", label:"Mitglieder-Konfiguration", icon:"id-badge"},
       ]
     },
     {
@@ -798,8 +796,8 @@ function PortalverwaltungView(props){
   const [mobileKachel, setMobileKachel]=useState(null); // null = Landingseite
   const isMobile=useIsMobile();
 
-  const ROLLEN=["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"];
-  const ROLLEN_LABELS={administrator:"Admin",vorstand:"Vorstand",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"};
+  const ROLLEN=["administrator","administration","funktionaer","trainer","spieler","eltern"];
+  const ROLLEN_LABELS={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"};
   const KATEGORIEN=["kern","sport","kommunikation","betrieb","verwaltung","admin"];
   const KAT_LABELS={kern:"Kern",sport:"Sport",kommunikation:"Kommunikation",betrieb:"Betrieb",verwaltung:"Verwaltung",admin:"Systemverwaltung"};
 
@@ -833,7 +831,6 @@ function PortalverwaltungView(props){
 
   const ROLLEN_MODULE_DEFAULT={
     administrator:   ALLE_MODULE.map(m=>m.key),
-    vorstand:        ["dashboard","members","team","training","schedule","attendance_central","events","helpers","buses","material","media","news","wiki","docs"],
     administration:  ["dashboard","members","team","training","schedule","attendance_central","events","helpers","buses","material","lockers","media","news","wiki","docs","portal"],
     funktionaer:     ["dashboard"],
     trainer:         ["dashboard","team","training","events","helpers","buses","material","lockers","news","wiki","docs"],
@@ -843,37 +840,37 @@ function PortalverwaltungView(props){
 
   /* Modul-Aktionen für Detail-Ansicht */
   const MODUL_AKTIONEN={
-    dashboard:  [{label:"Übersicht ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"}],
+    dashboard:  [{label:"Übersicht ansehen",wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"}],
     team:       [
-      {label:"Team + Kader ansehen",          wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Team + Kader ansehen",          wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Position / Nummer ändern",      wer:["administrator","administration","trainer"],min:"schreiben",   spez:"Trainer: nur eigene Spieler"},
       {label:"Spieler hinzufügen / entfernen",wer:["administrator","administration"],         min:"verwalten"},
       {label:"Team erstellen / bearbeiten",   wer:["administrator","administration"],         min:"verwalten"},
       {label:"Trainer zuweisen",              wer:["administrator","administration"],         min:"verwalten"},
     ],
     members:    [
-      {label:"Name, Tel, E-Mail sehen",           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Name, Tel, E-Mail sehen",           wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Basis-Felder bearbeiten",           wer:["administrator","administration","trainer"],min:"schreiben",spez:"Trainer: nur eigene Spieler"},
       {label:"AHV, Bankdaten sehen",              wer:["administrator","administration"],         min:"verwalten"},
       {label:"Neue Mitglieder, Export, löschen",  wer:["administrator","administration"],         min:"verwalten"},
     ],
     training:   [
-      {label:"Trainings ansehen",              wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Trainings ansehen",              wer:["administrator","funktionaer","administration","funktionaer","trainer"],min:"lesen"},
       {label:"Training absagen",               wer:["administrator","administration","trainer"],min:"schreiben",  spez:"Trainer: nur eigene Teams"},
       {label:"Training erstellen / bearbeiten",wer:["administrator","administration","trainer"],min:"verwalten",  spez:"Trainer: nur eigene Teams"},
       {label:"Vorlagen verwalten",             wer:["administrator","administration"],min:"verwalten"},
     ],
     schedule:   [
-      {label:"Spielplan + Tabelle ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Spielplan + Tabelle ansehen",wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Daten ändern",               wer:[],                                              min:"verwalten",  note:"Nur via FVRZ-Sync"},
     ],
     attendance_central:[
-      {label:"Eigene Statistik sehen",           wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Eigene Statistik sehen",           wer:["administrator","funktionaer","administration","funktionaer","trainer"],min:"lesen"},
       {label:"Anwesenheiten eintragen / ändern", wer:["administrator","administration","trainer"],min:"schreiben", spez:"Trainer: nur eigene Spieler"},
       {label:"Alle Teams auswerten, exportieren",wer:["administrator","administration"],         min:"verwalten"},
     ],
     events:     [
-      {label:"Termine ansehen",                           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Termine ansehen",                           wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"An- / Abmelden",                           wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
       {label:"Vereinsanlass erstellen / bearbeiten",      wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Vereinsanlass absagen / löschen",           wer:["administrator","administration","funktionaer"],min:"verwalten"},
@@ -882,44 +879,44 @@ function PortalverwaltungView(props){
       {label:"Spiel-Termin bearbeiten (Treffpunkt etc.)", wer:["administrator","trainer"],        min:"verwalten", spez:"Trainer: nur eigene Teams", note:"Auto-generiert via Spielplan"},
     ],
     helpers:    [
-      {label:"Einsätze ansehen",                  wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Einsätze ansehen",                  wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"An- / Abmelden",                   wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
       {label:"Vereinseinsatz erstellen / verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Team-Einsatz erstellen / verwalten", wer:["administrator","trainer"],               min:"verwalten", spez:"Trainer: nur eigene Teams"},
       {label:"Zuteilungen verwalten",              wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     buses:      [
-      {label:"Fahrten + Belegung ansehen",   wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Fahrten + Belegung ansehen",   wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Platz reservieren / abmelden", wer:["administrator","administration","trainer","spieler"],min:"schreiben"},
       {label:"Fahrten erstellen / verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     material:   [
-      {label:"Inventar ansehen",              wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},
+      {label:"Inventar ansehen",              wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler"],min:"lesen"},
       {label:"Ausleihe beantragen",           wer:["administrator","administration","trainer"], min:"schreiben"},
       {label:"Ausleihen genehmigen",          wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Inventar + Bestände verwalten", wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     lockers:    [
-      {label:"Eigene Zuteilung ansehen", wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Eigene Zuteilung ansehen", wer:["administrator","funktionaer","administration","funktionaer","trainer"],min:"lesen"},
       {label:"Zuteilungen verwalten",    wer:["administrator","administration"],min:"verwalten"},
     ],
     news:       [
-      {label:"Artikel lesen",                    wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Artikel lesen",                    wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Vereinsnews erstellen / bearbeiten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Vereinsnews publizieren / löschen", wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     wiki:       [
-      {label:"Artikel lesen",                      wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Artikel lesen",                      wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Artikel bearbeiten",                 wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
       {label:"Artikel erstellen, löschen, Kategorien",wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     docs:       [
-      {label:"Herunterladen",                  wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Herunterladen",                  wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Hochladen, löschen",             wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Ordner / Kategorien verwalten",  wer:["administrator","administration"],             min:"verwalten"},
     ],
     media:      [
-      {label:"Anschauen",                           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},
+      {label:"Anschauen",                           wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler"],min:"lesen"},
       {label:"Fotos hochladen",                     wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
       {label:"Team-Matchbericht schreiben",         wer:["administrator","trainer"],               min:"schreiben",  spez:"Trainer: nur eigene Teams"},
       {label:"Vereinsbericht schreiben",            wer:["administrator","administration","funktionaer"],min:"schreiben"},
@@ -931,7 +928,6 @@ function PortalverwaltungView(props){
   /* Standard-Stufen pro Rolle (nur für Module mit Zugriff) */
   const ZUGRIFF_DEFAULT={
     administrator:  {_all:"verwalten"},
-    vorstand:       {_all:"lesen"},
     administration: {
       _all:"verwalten",
       dashboard:"lesen",
@@ -1050,6 +1046,13 @@ function PortalverwaltungView(props){
           if(funktionenR.data) setFunktionen(funktionenR.data);
           if(teamsR.data) setPvTeams(teamsR.data);
           if(gtR.data) setGruppenTeams(gtR.data);
+          // Pflichtfelder laden
+          const [rpfR,mtpfR]=await Promise.all([
+            supabase.from("rolle_pflichtfelder").select("*"),
+            supabase.from("mitgliedtyp_pflichtfelder").select("*"),
+          ]);
+          if(rpfR.data) setRollePflichtfelder(rpfR.data);
+          if(mtpfR.data) setMitgliedtypPflichtfelder(mtpfR.data);
           /* module_config → moduleAktiv State */
           if(mcR.data&&mcR.data.length>0&&setModuleAktiv){
             const ma={};
@@ -2021,6 +2024,127 @@ function PortalverwaltungView(props){
           </Card>
         </div>
       )}
+
+      {/* ── TAB: MITGLIEDER-KONFIGURATION ── */}
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="mitglieder_config"&&(()=>{
+        const ROLLEN_PF=["spieler","trainer","funktionaer","eltern"];
+        const ROLLEN_PF_LABELS={spieler:"Spieler",trainer:"Trainer",funktionaer:"Funktionär",eltern:"Eltern"};
+        const MITGLIEDTYPEN_PF=["Aktivmitglied","Juniormitglied","Passivmitglied","Ehrenmitglied","Freimitglied","Gönner"];
+        const MITGLIEDTYPEN_SHORT={Aktivmitglied:"Aktiv",Juniormitglied:"Junior",Passivmitglied:"Passiv",Ehrenmitglied:"Ehren",Freimitglied:"Frei","Gönner":"Gönner"};
+        const FELDER_ROLLE=["geburtsdatum","adresse","telefon","ahv_nr","spielerpass","js_nr","fairgate_id"];
+        const FELDER_ROLLE_LABELS={geburtsdatum:"Geburtsdatum",adresse:"Adresse",telefon:"Telefon",ahv_nr:"AHV-Nr.",spielerpass:"Spielerpass",js_nr:"J+S Nr.",fairgate_id:"Fairgate-ID"};
+        const FELDER_TYP=["vorname_nachname","geburtsdatum","adresse","telefon","email"];
+        const FELDER_TYP_LABELS={vorname_nachname:"Vorname / Name",geburtsdatum:"Geburtsdatum",adresse:"Adresse",telefon:"Telefon",email:"E-Mail"};
+
+        const isPflichtRolle=(rolle,feld)=>rollePflichtfelder.some(r=>r.rolle===rolle&&r.feld===feld&&r.pflicht);
+        const isPflichtTyp=(typ,feld)=>mitgliedtypPflichtfelder.some(r=>r.mitgliedtyp===typ&&r.feld===feld&&r.pflicht);
+
+        async function toggleRolle(rolle,feld,aktuell){
+          if(!supabase) return;
+          const neu=!aktuell;
+          await supabase.from("rolle_pflichtfelder").upsert({rolle,feld,pflicht:neu},{onConflict:"rolle,feld"});
+          const{data}=await supabase.from("rolle_pflichtfelder").select("*");
+          if(data) setRollePflichtfelder(data);
+        }
+
+        async function toggleTyp(mitgliedtyp,feld,aktuell){
+          if(!supabase) return;
+          const neu=!aktuell;
+          await supabase.from("mitgliedtyp_pflichtfelder").upsert({mitgliedtyp,feld,pflicht:neu},{onConflict:"mitgliedtyp,feld"});
+          const{data}=await supabase.from("mitgliedtyp_pflichtfelder").select("*");
+          if(data) setMitgliedtypPflichtfelder(data);
+        }
+
+        const thStyle={padding:"6px 10px",background:"var(--surface2)",color:"var(--sub)",fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:"0.04em",borderBottom:"0.5px solid var(--border)",textAlign:"center"};
+        const thFirstStyle={...thStyle,textAlign:"left",minWidth:130};
+        const tdStyle={padding:"8px 10px",borderBottom:"0.5px solid var(--border)",verticalAlign:"middle",textAlign:"center"};
+        const tdFirstStyle={...tdStyle,textAlign:"left",fontSize:13,color:"var(--text)"};
+
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            {/* Info-Box */}
+            <InfoBox color={BL} text={
+              <div>
+                <div style={{fontWeight:600,marginBottom:6}}>Wie funktioniert die Pflichtfelder-Logik?</div>
+                <div style={{fontSize:12,lineHeight:1.6}}>
+                  Der <strong>Mitgliedtyp</strong> definiert die Basis-Pflichtfelder und ob ein Hauptkontakt erforderlich ist. Hat ein Mitglied zusätzlich eine <strong>Rolle</strong> (Spieler, Trainer…), werden die Felder der Rollen-Matrix ergänzt.
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FFBF00)",fontSize:11}}>Mitgliedtyp-Matrix</span>
+                  <span style={{fontSize:13}}>+</span>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FFBF00)",fontSize:11}}>Rollen-Matrix (falls Rolle vorhanden)</span>
+                  <span style={{fontSize:13}}>=</span>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid #22c55e",color:"#15803d",fontSize:11,fontWeight:600}}>Effektive Pflichtfelder</span>
+                </div>
+              </div>
+            }/>
+
+            {/* Matrix 1: Mitgliedtyp */}
+            <Card>
+              <div className="cc-section-title"><TI n="id-badge" size={14}/> Pflichtfelder nach Mitgliedtyp</div>
+              <div style={{fontSize:12,color:"var(--sub)",marginBottom:12}}>Basis-Pflichtfelder — gelten immer, unabhängig von der Rolle</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>
+                    <th style={thFirstStyle}>Feld</th>
+                    {MITGLIEDTYPEN_PF.map(t=><th key={t} style={thStyle}>{MITGLIEDTYPEN_SHORT[t]}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {FELDER_TYP.map(feld=>(
+                      <tr key={feld}>
+                        <td style={tdFirstStyle}>{FELDER_TYP_LABELS[feld]}</td>
+                        {MITGLIEDTYPEN_PF.map(typ=>{
+                          const on=isPflichtTyp(typ,feld);
+                          return(
+                            <td key={typ} style={tdStyle}>
+                              <div onClick={()=>toggleTyp(typ,feld,on)}
+                                style={{width:20,height:20,borderRadius:5,border:`0.5px solid ${on?"#22c55e":"var(--border)"}`,background:on?"#ECFDF5":"transparent",display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                                {on&&<TI n="check" size={11} style={{color:"#15803d"}}/>}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Matrix 2: Rolle */}
+            <Card>
+              <div className="cc-section-title"><TI n="shield-check" size={14}/> Zusatzfelder nach Rolle</div>
+              <div style={{fontSize:12,color:"var(--sub)",marginBottom:12}}>Ergänzend zur Mitgliedtyp-Matrix — nur wenn Mitglied diese Rolle hat</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>
+                    <th style={thFirstStyle}>Feld</th>
+                    {ROLLEN_PF.map(r=><th key={r} style={thStyle}>{ROLLEN_PF_LABELS[r]}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {FELDER_ROLLE.map(feld=>(
+                      <tr key={feld}>
+                        <td style={tdFirstStyle}>{FELDER_ROLLE_LABELS[feld]}</td>
+                        {ROLLEN_PF.map(rolle=>{
+                          const on=isPflichtRolle(rolle,feld);
+                          return(
+                            <td key={rolle} style={tdStyle}>
+                              <div onClick={()=>toggleRolle(rolle,feld,on)}
+                                style={{width:20,height:20,borderRadius:5,border:`0.5px solid ${on?"#22c55e":"var(--border)"}`,background:on?"#ECFDF5":"transparent",display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                                {on&&<TI n="check" size={11} style={{color:"#15803d"}}/>}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* ── TAB: FELDSICHTBARKEIT ── */}
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="feldvis"&&(
