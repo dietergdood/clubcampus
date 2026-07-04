@@ -1043,7 +1043,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
               )}
               {(teamDetails||[]).map((k,i)=>(
                 <div key={i} className="cc-team-position-row">
-
+                  <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
                   <div className="cc-flex-1">
                     <div className="cc-text-bold">{k.teams?.name||"—"}</div>
                     <div className="cc-row cc-gap-4 cc-flex-wrap" style={{marginTop:4}}>
