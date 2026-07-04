@@ -1034,7 +1034,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
             </Card>
 
             {/* Team zuweisen Modal */}
-            <ModalOrSheet open={showTeamAssign} onClose={()=>setShowTeamAssign(false)} maxWidth={400}>
+            <ModalOrSheet open={showTeamAssign} onClose={()=>setShowTeamAssign(false)} maxWidth={560}>
               <div className="cc-modal-hdr">
                 <ModalTitle>Team zuweisen</ModalTitle>
                 <button className="cc-icon-btn" onClick={()=>setShowTeamAssign(false)}><TI n="x" size={14}/></button>
@@ -1116,7 +1116,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
             </ModalOrSheet>
 
             {/* Edit Team Modal */}
-            <ModalOrSheet open={!!editTeam} onClose={()=>{setEditTeam(null);setEditTeamFunkOpen(false);}} maxWidth={400}>
+            <ModalOrSheet open={!!editTeam} onClose={()=>{setEditTeam(null);setEditTeamFunkOpen(false);}} maxWidth={560}>
               {editTeam&&(
                 <>
                   <div className="cc-modal-hdr">
