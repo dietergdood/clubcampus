@@ -721,6 +721,28 @@ function PortalverwaltungView(props){
   const [editRolle,setEditRolle]=useState(null);
   const [showRolleForm,setShowRolleForm]=useState(false);
   const [module,setModule]=useState([]);
+
+  async function saveRolle(){
+    if(!rollenForm.name.trim()||!rollenForm.label.trim()) return;
+    const payload={name:rollenForm.name.trim(),label:rollenForm.label.trim(),prioritaet:parseInt(rollenForm.prioritaet)||50,aktiv:true};
+    if(supabase){
+      if(editRolle?.id){
+        await supabase.from("portal_rollen").update(payload).eq("id",editRolle.id);
+      } else {
+        await supabase.from("portal_rollen").insert(payload);
+      }
+      const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
+      if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
+    }
+    setShowRolleForm(false);setEditRolle(null);setRollenForm({name:"",label:"",prioritaet:50});
+  }
+
+  async function deleteRolle(id){
+    if(!supabase||!window.confirm("Rolle wirklich löschen?")) return;
+    await supabase.from("portal_rollen").update({aktiv:false}).eq("id",id);
+    const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
+    if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
+  }
   const [moduleConfig,setModuleConfig]=useState({});
   const [moduleBerechtigungen,setModuleBerechtigungen]=useState({});
   const [felder,setFelder]=useState([]);
@@ -2127,28 +2149,6 @@ function PortalverwaltungView(props){
           if(data) setMitgliedtypPflichtfelder(data);
         }
 
-
-        async function saveRolle(){
-          if(!rollenForm.name.trim()||!rollenForm.label.trim()) return;
-          const payload={name:rollenForm.name.trim(),label:rollenForm.label.trim(),prioritaet:parseInt(rollenForm.prioritaet)||50,aktiv:true};
-          if(supabase){
-            if(editRolle?.id){
-              await supabase.from("portal_rollen").update(payload).eq("id",editRolle.id);
-            } else {
-              await supabase.from("portal_rollen").insert(payload);
-            }
-            const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
-            if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
-          }
-          setShowRolleForm(false);setEditRolle(null);setRollenForm({name:"",label:"",prioritaet:50});
-        }
-
-        async function deleteRolle(id){
-          if(!supabase||!window.confirm("Rolle wirklich löschen?")) return;
-          await supabase.from("portal_rollen").update({aktiv:false}).eq("id",id);
-          const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
-          if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
-        }
 
         async function saveMitgliedtyp(){
           if(!mitgliedtypForm.name.trim()) return;
