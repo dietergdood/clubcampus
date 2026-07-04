@@ -404,7 +404,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-btn-ghost:hover{background:var(--surface2);color:var(--text)}
 
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
-.cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:var(--text)}
+.cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:#3d2800}
 .cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:0}
 .cc-member-hero-banner{background:var(--cc-accent,#FFBF00);padding:16px 16px 18px;position:relative;display:flex;align-items:center;gap:14px;padding-right:100px}
 .cc-hero-banner-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px;align-items:center}
@@ -500,7 +500,21 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
   .cc-member-detail-wrap .cc-grid-2{gap:8px}
 }
 .cc-member-detail-wrap .cc-card{padding:12px}
-.cc-member-detail-wrap .cc-info-row{padding:7px 0}`;
+.cc-member-detail-wrap .cc-info-row{padding:7px 0}
+[data-theme=dark] .cc-status-tile-icon-warn{background:rgba(180,83,9,0.25);color:#FCD34D}
+[data-theme=dark] .cc-status-tile-icon-ok{background:rgba(22,101,52,0.25);color:#86EFAC}
+[data-theme=dark] .cc-status-tile-icon-danger{background:rgba(153,27,27,0.25);color:#FCA5A5}
+[data-theme=dark] .cc-status-tile-value-warn{color:#FCD34D}
+[data-theme=dark] .cc-status-tile-value-ok{color:#86EFAC}
+[data-theme=dark] .cc-status-tile-value-danger{color:#FCA5A5}
+[data-theme=dark] .cc-role-chip{background:rgba(39,80,10,0.3);color:#86EFAC;border-color:rgba(134,239,172,0.2)}
+[data-theme=dark] .cc-hero-status-badge-warn{background:rgba(0,0,0,0.4);color:#FCD34D;border-color:rgba(252,211,77,0.3)}
+[data-theme=dark] .cc-hero-status-badge-ok{background:rgba(0,0,0,0.4);color:#86EFAC;border-color:rgba(134,239,172,0.3)}
+[data-theme=dark] .cc-member-hero-banner{background:#8a6800}
+[data-theme=dark] .cc-hero-banner-btn{background:rgba(0,0,0,0.3);border-color:rgba(0,0,0,0.4)}
+[data-theme=dark] .cc-hero-banner-btn:hover{background:rgba(0,0,0,0.45)}
+[data-theme=dark] .cc-member-hero-av{background:rgba(0,0,0,0.2);border-color:rgba(0,0,0,0.3)}
+[data-theme=dark] .cc-hero-av-edit{background:#a07800;border-color:#8a6800}`;
 /* localStorage polyfill voor window.storage */
 
 /* ── Semantische Farben ────────────────────────────────────────
