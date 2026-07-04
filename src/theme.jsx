@@ -136,7 +136,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-grid-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;align-items:stretch}
 .cc-grid-stats-sm{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .cc-grid-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
-.cc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.cc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch}
 .cc-grid-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cc-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 .cc-count{font-size:11px;font-weight:400;color:var(--sub);opacity:0.7;margin-left:4px}
