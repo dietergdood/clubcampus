@@ -220,6 +220,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
     <>
       <div className="cc-member-hero">
         <div className="cc-member-hero-banner">
+          <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
           <div className="cc-hero-av-wrap">
             <div className="cc-member-hero-av">
               {raw.foto_url
@@ -267,13 +268,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
               {raw.fairgate_id&&<span className="cc-hero-status-badge-ok"><TI n="check" size={11}/> {isMobile?"Fairgate":"Fairgate synchronisiert"}</span>}
             </div>
           </div>
-          {isMobile&&(
-            <button className="cc-hero-banner-btn" onClick={onClose} style={{flexShrink:0}}><TI n="arrow-left" size={16}/></button>
-          )}
           <div className="cc-hero-banner-actions">
-            {!isMobile&&(
-              <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
-            )}
             {canEdit&&(
               <DropMenu items={[
                 {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},

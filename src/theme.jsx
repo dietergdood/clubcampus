@@ -406,7 +406,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
 .cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:#3d2800}
 .cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:0}
-.cc-member-hero-banner{background:var(--cc-accent,#FFBF00);padding:16px 16px 18px;position:relative;display:flex;align-items:center;gap:14px;padding-right:100px}
+.cc-member-hero-banner{background:var(--cc-accent,#FFBF00);padding:16px 16px 18px;position:relative;display:flex;align-items:center;gap:12px}
 .cc-hero-banner-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px;align-items:center}
 .cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.35);color:#7a5000;cursor:pointer}
 .cc-hero-banner-btn:hover{background:rgba(255,255,255,0.5)}
