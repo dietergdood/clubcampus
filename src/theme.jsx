@@ -419,6 +419,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-member-hero-av{width:72px;height:72px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:var(--text);overflow:hidden}
 .cc-member-hero-info{flex:1;min-width:0}
 .cc-member-hero-sub{font-size:13px;color:var(--sub);margin-top:3px;margin-bottom:0}
+.cc-hero-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.cc-hero-chip{font-size:11px;padding:2px 8px;border-radius:12px;background:rgba(255,255,255,0.85);color:#3d2800;border:0.5px solid rgba(0,0,0,0.1);font-weight:500}
+.cc-hero-chip-age{color:#7a5000}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .cc-status-tile{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;min-width:0}
 .cc-status-tile-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -428,6 +431,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-tile-icon-danger{background:#FEE2E2;color:#991B1B}
 .cc-status-tile-body{display:flex;flex-direction:column;gap:2px;min-width:0}
 .cc-status-tile-label{font-size:11px;color:var(--sub);white-space:nowrap}
+.cc-status-tile-action{font-size:10px;color:var(--cc-accent,#FFBF00);font-weight:500;margin-top:3px;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;text-align:left}
+.cc-status-tile-action:hover{text-decoration:underline}
 .cc-status-tile-value{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap}
 .cc-status-tile-value-warn{font-size:14px;font-weight:600;color:#B45309}
 .cc-status-tile-value-ok{font-size:14px;font-weight:600;color:#166534}
@@ -451,6 +456,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#EAF3DE;color:#27500A;border:0.5px solid rgba(39,80,10,0.2)}
 .cc-pos-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:400;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-funk-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:400;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
+.cc-funk-gruppe-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-funk-group-label{font-size:11px;color:var(--sub);margin-bottom:6px;display:block}
 .cc-detail-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
 .cc-ahv-mask{letter-spacing:2px;color:var(--sub);font-size:13px}
@@ -694,7 +700,7 @@ function Stat({label,value,sub,color,semantic,icon}){
 /* StatusTile — wiederverwendbare Status-Kachel mit Icon + Label + Wert
    semantic: "neutral"|"ok"|"warn"|"danger"
    Verwendung: MitgliederModul, Dashboard, etc. */
-function StatusTile({label,value,icon,semantic="neutral"}){
+function StatusTile({label,value,icon,semantic="neutral",action=null}){
   return(
     <div className="cc-status-tile">
       <div className={`cc-status-tile-icon cc-status-tile-icon-${semantic}`}>
@@ -703,6 +709,7 @@ function StatusTile({label,value,icon,semantic="neutral"}){
       <div className="cc-status-tile-body">
         <span className="cc-status-tile-label">{label}</span>
         <span className={semantic==="neutral"?"cc-status-tile-value":`cc-status-tile-value-${semantic}`}>{value}</span>
+        {action&&<button className="cc-status-tile-action" onClick={action.onClick}>{action.label} →</button>}
       </div>
     </div>
   );

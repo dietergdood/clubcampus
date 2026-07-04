@@ -249,31 +249,28 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           </div>
           <div className="cc-member-hero-info">
             <h1 className="cc-page-title" style={{margin:0}}>{m.name}</h1>
-            <div className="cc-text-sub" style={{fontSize:13,marginTop:2}}>
+            <div className="cc-hero-chips">
               {(()=>{
                 const ROLLE_LABEL=dbPortalRollen.length>0
                   ?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label]))
                   :{administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",mitglied:"Mitglied",supporter:"Supporter"};
-                // Abgeleitete Rolle: Kader (Trainer>Spieler) > Vereinsfunktionen > Mitgliedtyp-Mapping > Supporter
                 const TRAINER_ROLLEN=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
                 const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
-                const hatSpielerKader=teamDetails&&teamDetails.length>0;
+                const hatSpielerKader=teamDetails&&teamDetails.length>0&&!hatTrainerKader;
                 const hatFunktionen=(raw.funktionen||[]).length>0;
-                const mitgliedtypObj=dbMitgliedtypen.find(t=>t.name===mitgliedtyp);
-                const typRolle=mitgliedtypObj?.standard_rolle||null;
-                let abgeleiteteRolle="supporter";
-                if(hatTrainerKader) abgeleiteteRolle="trainer";
-                else if(hatSpielerKader) abgeleiteteRolle="spieler";
-                else if(typRolle&&["spieler","trainer"].includes(typRolle)) abgeleiteteRolle=typRolle;
-                else if(hatFunktionen) abgeleiteteRolle="funktionaer";
-                else if(typRolle) abgeleiteteRolle=typRolle;
-                // Portal-Rolle überschreibt wenn vorhanden
-                const effektivRolle=benutzer?.role||abgeleiteteRolle;
-                const rolleLabel=ROLLE_LABEL[effektivRolle]||effektivRolle;
-                return [mitgliedtyp, age?`${age} Jahre`:null, rolleLabel].filter(Boolean).join(" · ");
+                const chips=[];
+                if(mitgliedtyp) chips.push({label:mitgliedtyp,type:"type"});
+                if(age) chips.push({label:`${age} Jahre`,type:"age"});
+                if(hatTrainerKader) chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"rolle"});
+                if(hatSpielerKader) chips.push({label:ROLLE_LABEL["spieler"]||"Spieler",type:"rolle"});
+                if(hatFunktionen) chips.push({label:ROLLE_LABEL["funktionaer"]||"Funktionär",type:"rolle"});
+                if(benutzer?.role&&["administrator","administration"].includes(benutzer.role))
+                  chips.push({label:ROLLE_LABEL[benutzer.role]||benutzer.role,type:"rolle"});
+                return chips.map((c,i)=>(
+                  <span key={i} className={`cc-hero-chip${c.type==="age"?" cc-hero-chip-age":""}`}>{c.label}</span>
+                ));
               })()}
             </div>
-
           </div>
           <div className="cc-hero-banner-actions">
             {canEdit&&(
@@ -837,10 +834,12 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
           mb={0}
         />
         <div className="cc-member-stats">
-          <StatusTile label="Mitgliedtyp"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"                              semantic="neutral"/>
-          <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}                                        icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}/>
-          <StatusTile label="Portal"        value={raw.hat_portal_zugang?(isMobile?"OK":"Eingerichtet"):(isMobile?"Fehlt":"Fehlt")} icon="key"                                  semantic={raw.hat_portal_zugang?"ok":"warn"}/>
-          <StatusTile label="Fairgate"      value={raw.fairgate_id?(isMobile?"Sync":"Synchronisiert"):"—"}                     icon="refresh"                                 semantic={raw.fairgate_id?"ok":"neutral"}/>
+          <StatusTile label="Mitgliedtyp"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"    semantic="neutral"/>
+          <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}                                        icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}
+            action={!raw.geprueft&&canEdit?{label:"Prüfung starten",onClick:()=>setTab("datenpruefung")}:null}/>
+          <StatusTile label="Portal-Zugang" value={raw.hat_portal_zugang?(isMobile?"OK":"Eingerichtet"):(isMobile?"Fehlt":"Nicht eingerichtet")} icon="key" semantic={raw.hat_portal_zugang?"ok":"warn"}
+            action={!raw.hat_portal_zugang&&canEdit?{label:"Zugang erstellen",onClick:()=>setTab("portal")}:null}/>
+          <StatusTile label="Fairgate"      value={raw.fairgate_id?(isMobile?"Sync":"Synchronisiert"):"—"}                     icon="refresh"       semantic={raw.fairgate_id?"ok":"neutral"}/>
         </div>
 
         {/* Tab: Profil */}
@@ -973,7 +972,11 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                       <div className="cc-list-item-icon"><TI n="briefcase" size={13}/></div>
                       <div className="cc-flex-1">
                         <div className="cc-text-bold">{f}</div>
-                        {gruppe&&<div className="cc-text-sm cc-text-sub">{gruppe}</div>}
+                        {gruppe&&(
+                          <div className="cc-row cc-gap-5" style={{marginTop:3}}>
+                            <span className="cc-funk-gruppe-badge" style={funkObj?.portal_gruppen?.farbe?{background:funkObj.portal_gruppen.farbe+"20",color:funkObj.portal_gruppen.farbe,borderColor:funkObj.portal_gruppen.farbe+"40"}:{}}>{gruppe}</span>
+                          </div>
+                        )}
                       </div>
                       {canEdit&&(
                         <DropMenu items={[
