@@ -926,7 +926,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                 <ModalTitle>Team zuweisen</ModalTitle>
                 <button className="cc-icon-btn" onClick={()=>setShowTeamAssign(false)}><TI n="x" size={14}/></button>
               </div>
-              <div className="cc-modal-body" className="cc-col">
+              <div className="cc-modal-body cc-col">
                 <div>
                   <label className="cc-label">Team</label>
                   <select className="cc-input" value={teamAssignForm.team_id} onChange={e=>setTeamAssignForm(p=>({...p,team_id:e.target.value}))}>
@@ -1013,7 +1013,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                     </div>
                     <button className="cc-icon-btn" onClick={()=>{setEditTeam(null);setEditTeamFunkOpen(false);}}><TI n="x" size={14}/></button>
                   </div>
-                  <div className="cc-modal-body" className="cc-col">
+                  <div className="cc-modal-body cc-col">
                     <div>
                       <label className="cc-label">Rolle im Team</label>
                       <div className="cc-multiselect">

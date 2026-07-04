@@ -80,9 +80,10 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 /* ── Input ── */
 .cc-input{width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none;transition:border-color 0.1s,box-shadow 0.1s}
 .cc-input:focus{border-color:var(--cc-accent,#FFBF00);box-shadow:0 0 0 3px var(--cc-accent-20,rgba(255,191,0,0.15))}
+select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;cursor:pointer}
 
 /* ── Label ── */
-.cc-label{font-size:12px;font-weight:600;color:#555;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:0.04em}
+.cc-label{font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px;display:block;letter-spacing:0.01em}
 
 /* ── Toggle ── */
 .cc-toggle{width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;background:var(--border);position:relative;flex-shrink:0;transition:background 0.15s;padding:0;outline:none}
