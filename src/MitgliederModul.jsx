@@ -659,11 +659,25 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     async function handleLink(){
       if(!sb||!linkEmail) return;
       setPortalLoading(true); setPortalMsg(null);
-      const {data:existing}=await sb.from("benutzer").select("id,email").eq("email",linkEmail).maybeSingle();
+      const {data:existing}=await sb.from("benutzer").select("id,email,role").eq("email",linkEmail).maybeSingle();
       if(existing){
+        // Kader-Einträge der Person laden → Rolle ableiten
+        const ROLLE_MAP={
+          "Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer",
+          "Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer",
+        };
+        const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
+        const {data:kaderData}=await sb.from("kader")
+          .select("rollen").eq("mitglied_id",raw.id).eq("aktiv",true);
+        let neueRolle = existing.role || "spieler";
+        if(kaderData&&kaderData.length>0){
+          const alleRollen=kaderData.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
+          const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
+          if(hoechste) neueRolle=hoechste;
+        }
         await sb.from("mitglieder").update({hat_portal_zugang:true}).eq("id",raw.id);
-        await sb.from("benutzer").update({mitglied_id:raw.id}).eq("id",existing.id);
-        setPortalMsg({ok:true,text:"Verknüpft ✓"});
+        await sb.from("benutzer").update({mitglied_id:raw.id, role:neueRolle}).eq("id",existing.id);
+        setPortalMsg({ok:true,text:`Verknüpft ✓ — Rolle: ${neueRolle}`});
         if(onReload) onReload();
       } else {
         setPortalMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});

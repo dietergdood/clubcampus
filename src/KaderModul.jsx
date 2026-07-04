@@ -99,6 +99,22 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     setKader(prev=>prev.map(k=>k.id===kaderId?{...k,[field]:value}:k));
   }
 
+  const ROLLE_MAP={"Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer","Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer"};
+  const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
+
+  async function updateBenutzerRolle(mitgliedId){
+    if(!sb||!mitgliedId) return;
+    // Alle aktiven Kader-Einträge über alle Teams
+    const {data:alleKader}=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
+    const {data:benutzer}=await sb.from("benutzer").select("id,role").eq("mitglied_id",mitgliedId).maybeSingle();
+    if(!benutzer) return; // Kein Portal-Zugang → nichts tun
+    const alleRollen=(alleKader||[]).flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
+    const neueRolle=PRIORITAET.find(p=>alleRollen.includes(p))||"spieler";
+    if(neueRolle!==benutzer.role){
+      await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);
+    }
+  }
+
   // Kader-Eintrag bearbeiten
   async function saveEditKader(){
     if(!sb||!editKader) return;
@@ -108,7 +124,9 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       rueckennr:editForm.rueckennr||null,
       position:editForm.position||null,
     }).eq("id",editKader.id);
-    setKader(prev=>prev.map(k=>k.id===editKader.id?{...k,...editForm}:k));
+    setKader(prev=>prev.map(k=>k.id===editKader.id?{...k,rollen:editForm.funktionen,rueckennr:editForm.rueckennr,position:editForm.position}:k));
+    // Rolle neu berechnen
+    await updateBenutzerRolle(editKader.mitglied_id);
     setEditKader(null);
     setEditFunkOpen(false);
     setEditSaving(false);
@@ -122,8 +140,11 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   // Mitglied entfernen
   async function removeMitglied(kaderId){
     if(!sb||!window.confirm("Mitglied aus dem Kader entfernen?")) return;
+    const kaderEintrag=kader.find(k=>k.id===kaderId);
     await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
     setKader(prev=>prev.filter(k=>k.id!==kaderId));
+    // Rolle neu berechnen nach Entfernen
+    if(kaderEintrag?.mitglied_id) await updateBenutzerRolle(kaderEintrag.mitglied_id);
   }
 
   // Mitglied hinzufügen
@@ -139,7 +160,15 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       aktiv:true,
       saison,
     },{onConflict:"team_id,mitglied_id,saison"});
-    if(!error){ await loadKader(); setShowAdd(false); setAddForm({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]}); setAddFunkOpen(false); setAddSearch(""); }
+    if(!error){
+      await loadKader();
+      // Rolle neu berechnen
+      await updateBenutzerRolle(addForm.mitglied_id);
+      setShowAdd(false);
+      setAddForm({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]});
+      setAddFunkOpen(false);
+      setAddSearch("");
+    }
     setAddSaving(false);
   }
 
