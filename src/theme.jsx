@@ -392,12 +392,12 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Info rows ── */
 .cc-info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:0.5px solid var(--border)}
 .cc-info-row:last-child{border-bottom:none}
-.cc-info-key{font-size:13px;color:var(--sub);flex-shrink:0;min-width:120px}
-.cc-info-val{font-size:14px;font-weight:500;color:var(--text);text-align:right}
-.cc-info-val-empty{font-size:14px;color:var(--sub);text-align:right}
+.cc-info-key{font-size:12px;color:var(--sub);flex-shrink:0;min-width:110px}
+.cc-info-val{font-size:13px;font-weight:500;color:var(--text);text-align:right}
+.cc-info-val-empty{font-size:13px;color:var(--sub);text-align:right}
 
 /* ── Section titles ── */
-.cc-section-title{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;display:flex;align-items:center;gap:5px}
+.cc-section-title{font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.6px;margin:0 0 12px;display:flex;align-items:center;gap:5px}
 
 /* ── Action buttons ── */
 .cc-btn-danger{padding:8px 16px;border-radius:8px;border:0.5px solid #FECACA;background:#FEF2F2;color:#DC2626;font-size:14px;cursor:pointer;font-family:inherit;font-weight:500;transition:background 0.1s}
@@ -409,18 +409,18 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
 .cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:var(--text)}
-.cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:0;max-width:1280px}
-.cc-member-hero-banner{background:var(--cc-accent,#FFBF00);padding:14px 16px 0;position:relative}
-.cc-hero-banner-actions{position:absolute;top:10px;right:12px;display:flex;gap:6px;align-items:center}
-.cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.35);color:#7a5000;cursor:pointer;backdrop-filter:none}
+.cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:0}
+.cc-member-hero-banner{background:var(--cc-accent,#FFBF00);padding:16px 16px 18px;position:relative;display:flex;align-items:center;gap:14px;padding-right:100px}
+.cc-hero-banner-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px;align-items:center}
+.cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.35);color:#7a5000;cursor:pointer}
 .cc-hero-banner-btn:hover{background:rgba(255,255,255,0.5)}
-.cc-hero-av-wrap{position:relative;width:72px;margin-top:-36px;z-index:1;flex-shrink:0;margin-bottom:12px}
-.cc-hero-av-edit{position:absolute;bottom:1px;right:1px;width:22px;height:22px;border-radius:50%;background:var(--cc-accent,#FFBF00);border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#7a5000}
-.cc-hero-av-edit:hover{background:#f0b000}
-.cc-member-hero-body{padding:0 16px 16px;display:flex;align-items:flex-end;gap:14px}
-.cc-member-hero-av{width:72px;height:72px;border-radius:50%;background:var(--surface);border:3px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;color:#7a5a00;overflow:hidden}
-.cc-member-hero-info{flex:1;min-width:0;padding-bottom:14px}
-.cc-member-hero-sub{font-size:13px;color:#7a5000;margin-top:3px;margin-bottom:6px}
+.cc-hero-av-wrap{position:relative;width:72px;height:72px;flex-shrink:0}
+.cc-hero-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#7a5000}
+.cc-hero-av-edit:hover{background:#fffbeb}
+.cc-member-hero-body{display:none}
+.cc-member-hero-av{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.9);border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#7a5a00;overflow:hidden}
+.cc-member-hero-info{flex:1;min-width:0}
+.cc-member-hero-sub{font-size:13px;color:#7a5000;margin-top:3px;margin-bottom:0}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .cc-member-stat{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px}
 .cc-member-stat-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -429,9 +429,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-member-stat-icon-ok{background:#DCFCE7}
 .cc-member-stat-icon-danger{background:#FEE2E2}
 .cc-member-stat-val{font-size:13px;font-weight:500;color:var(--text)}
-.cc-member-stat-val-warn{font-size:13px;font-weight:500;color:#B45309}
-.cc-member-stat-val-ok{font-size:13px;font-weight:500;color:#166534}
-.cc-member-stat-val-danger{font-size:13px;font-weight:500;color:#991B1B}
+.cc-member-stat-val-warn{font-size:13px;font-weight:600;color:#B45309}
+.cc-member-stat-val-ok{font-size:13px;font-weight:600;color:#166534}
+.cc-member-stat-val-danger{font-size:13px;font-weight:600;color:#991B1B}
 .cc-member-stat-lbl{font-size:11px;color:var(--sub);margin-top:1px}
 .cc-info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border)}
 .cc-info-row:last-child{border-bottom:none}
@@ -444,7 +444,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hk-card{border:0.5px solid var(--border);border-left:3px solid var(--cc-accent,#FFBF00);border-radius:0 8px 8px 0;padding:10px 12px;background:var(--surface2);display:flex;align-items:center;gap:10px;margin-top:8px}
 .cc-hk-sub-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--sub);margin:10px 0 0;padding-top:10px;border-top:0.5px solid var(--border);display:block}
 .cc-hk-content{flex:1;min-width:0}
-.cc-card-secondary{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:16px}
+.cc-card-secondary{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px}
 .cc-role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#EAF3DE;color:#27500A;border:0.5px solid rgba(39,80,10,0.2)}
 .cc-pos-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:400;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-funk-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:400;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
@@ -455,7 +455,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-status-badge-warn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(255,255,255,0.85);color:#92400e;border:0.5px solid rgba(146,64,14,0.25)}
 .cc-hero-status-badge-ok{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(255,255,255,0.85);color:#166534;border:0.5px solid rgba(22,101,52,0.25)}
 .cc-hero-badge-type{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(255,255,255,0.85);color:#7a5000;border:0.5px solid rgba(0,0,0,0.12)}
-.cc-hero-av-initials{font-size:22px;font-weight:500;color:#7a5a00}
+.cc-hero-av-initials{font-size:22px;font-weight:600;color:#7a5a00}
 .cc-form-nr{width:90px}
 .cc-hero-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;flex-shrink:0}
 .cc-hero-back:hover{background:var(--surface2)}

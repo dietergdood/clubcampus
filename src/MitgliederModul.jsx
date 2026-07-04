@@ -218,18 +218,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
     <>
       <div className="cc-member-hero">
         <div className="cc-member-hero-banner">
-          <div className="cc-hero-banner-actions">
-            <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
-            {canEdit&&(
-              <DropMenu items={[
-                {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
-                "sep",
-                {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},
-              ]}/>
-            )}
-          </div>
-        </div>
-        <div className="cc-member-hero-body">
           <div className="cc-hero-av-wrap">
             <div className="cc-member-hero-av">
               {raw.foto_url
@@ -256,6 +244,16 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
               {!raw.hat_portal_zugang&&<span className="cc-hero-status-badge-warn"><TI n="key" size={11}/> Portal-Zugang fehlt</span>}
               {raw.fairgate_id&&<span className="cc-hero-status-badge-ok"><TI n="check" size={11}/> Fairgate synchronisiert</span>}
             </div>
+          </div>
+          <div className="cc-hero-banner-actions">
+            <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
+            {canEdit&&(
+              <DropMenu items={[
+                {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
+                "sep",
+                {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},
+              ]}/>
+            )}
           </div>
         </div>
       </div>
