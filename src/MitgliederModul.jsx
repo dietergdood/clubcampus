@@ -584,6 +584,10 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     const [portalMsg,setPortalMsg]=useState(null);
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
     const [teamDetails,setTeamDetails]=useState(null);
+    const [showTeamAssign,setShowTeamAssign]=useState(false);
+    const [allTeams,setAllTeams]=useState([]);
+    const [teamAssignForm,setTeamAssignForm]=useState({team_id:"",funktion:"Spieler/in",rueckennr:"",position:""});
+    const [teamAssignSaving,setTeamAssignSaving]=useState(false);
     const [elternLoaded,setElternLoaded]=useState(null);
     const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 
@@ -603,7 +607,37 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
       }
     },[tab,raw.id]);
 
-    const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
+    useEffect(()=>{
+      if(showTeamAssign&&sb&&allTeams.length===0){
+        sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
+          .then(({data})=>setAllTeams(data||[]));
+      }
+    },[showTeamAssign]);
+
+    async function assignTeam(){
+      if(!sb||!teamAssignForm.team_id) return;
+      setTeamAssignSaving(true);
+      await sb.from("kader").upsert({
+        team_id:parseInt(teamAssignForm.team_id),
+        mitglied_id:raw.id,
+        funktion:teamAssignForm.funktion||"Spieler/in",
+        rueckennr:teamAssignForm.rueckennr||null,
+        position:teamAssignForm.position||null,
+        aktiv:true,
+        saison:"2025/26",
+      },{onConflict:"team_id,mitglied_id,saison"});
+      const {data}=await sb.from("kader").select("*, teams(id,name,kurzname)").eq("mitglied_id",raw.id).eq("aktiv",true);
+      if(data) setTeamDetails(data);
+      setShowTeamAssign(false);
+      setTeamAssignForm({team_id:"",funktion:"Spieler/in",rueckennr:"",position:""});
+      setTeamAssignSaving(false);
+    }
+
+    async function removeFromTeam(kaderId){
+      if(!sb||!window.confirm("Mitglied aus diesem Team entfernen?")) return;
+      await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
+      setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
+    }
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
 
     useEffect(()=>{
@@ -747,7 +781,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
               <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
               {teamDetails===null&&<div className="cc-text-sm cc-text-sub">Lade…</div>}
               {teamDetails!==null&&teamDetails.length===0&&(
-                <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen. Im Kader des jeweiligen Teams hinzufügen.</div>
+                <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
               )}
               {(teamDetails||[]).map((k,i)=>(
                 <div key={i} className="cc-team-position-row">
@@ -758,9 +792,71 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                     <div className="cc-text-bold">{k.teams?.name||"—"}</div>
                     <div className="cc-text-sm">{k.funktion||"—"}{k.position?` · ${k.position}`:""}</div>
                   </div>
+                  {canEdit&&(
+                    <button className="cc-team-remove-btn" onClick={()=>removeFromTeam(k.id)}>
+                      <TI n="trash" size={13}/>
+                    </button>
+                  )}
                 </div>
               ))}
+              {canEdit&&(
+                <button className="cc-team-add-btn" onClick={()=>setShowTeamAssign(true)}>
+                  <TI n="plus" size={14}/> Team zuweisen
+                </button>
+              )}
             </Card>
+
+            {/* Team zuweisen Modal */}
+            <ModalOrSheet open={showTeamAssign} onClose={()=>setShowTeamAssign(false)} maxWidth={400}>
+              <div className="cc-modal-hdr">
+                <ModalTitle>Team zuweisen</ModalTitle>
+                <button className="cc-icon-btn" onClick={()=>setShowTeamAssign(false)}><TI n="x" size={14}/></button>
+              </div>
+              <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <label className="cc-label">Team</label>
+                  <select className="cc-input" value={teamAssignForm.team_id} onChange={e=>setTeamAssignForm(p=>({...p,team_id:e.target.value}))}>
+                    <option value="">– wählen –</option>
+                    {allTeams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="cc-label">Funktion</label>
+                  <select className="cc-input" value={teamAssignForm.funktion} onChange={e=>setTeamAssignForm(p=>({...p,funktion:e.target.value}))}>
+                    {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>(
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <div style={{width:90}}>
+                    <label className="cc-label">Nr.</label>
+                    <input className="cc-input" type="number" min="1" max="99" placeholder="—"
+                      value={teamAssignForm.rueckennr} onChange={e=>setTeamAssignForm(p=>({...p,rueckennr:e.target.value}))}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label className="cc-label">Position</label>
+                    <select className="cc-input" value={teamAssignForm.position} onChange={e=>setTeamAssignForm(p=>({...p,position:e.target.value}))}>
+                      <option value="">—</option>
+                      <optgroup label="Torwart"><option value="TW">TW</option></optgroup>
+                      <optgroup label="Verteidiger">
+                        {["V","IV","RV","LV"].map(p=><option key={p} value={p}>{p}</option>)}
+                      </optgroup>
+                      <optgroup label="Mittelfeld">
+                        {["MF","DM","ZM","LM","RM"].map(p=><option key={p} value={p}>{p}</option>)}
+                      </optgroup>
+                      <optgroup label="Sturm"><option value="ST">ST</option></optgroup>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="cc-modal-ftr">
+                <Btn onClick={()=>setShowTeamAssign(false)}>Abbrechen</Btn>
+                <Btn variant="primary" onClick={assignTeam} disabled={!teamAssignForm.team_id||teamAssignSaving}>
+                  {teamAssignSaving?"Wird zugewiesen…":"Zuweisen"}
+                </Btn>
+              </div>
+            </ModalOrSheet>
             {/* Notizen */}
             {fv.showNotizen&&(
               <Card>

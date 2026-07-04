@@ -353,6 +353,10 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-team-position-row:last-child{border-bottom:none}
 .cc-team-nr{width:34px;height:34px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);flex-shrink:0;border:0.5px solid var(--border)}
 .cc-team-nr-empty{color:var(--sub);font-weight:400;border-style:dashed}
+.cc-team-add-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:0.5px dashed var(--border);background:transparent;color:var(--sub);font-size:13px;cursor:pointer;width:100%;margin-top:10px;font-family:inherit;transition:border-color 0.15s,color 0.15s}
+.cc-team-add-btn:hover{border-color:var(--text);color:var(--text)}
+.cc-team-remove-btn{background:none;border:none;cursor:pointer;color:var(--sub);padding:4px;display:flex;align-items:center;opacity:0.6;transition:opacity 0.15s}
+.cc-team-remove-btn:hover{opacity:1;color:var(--danger,#ef4444)}
 .cc-pt-8{padding-top:8px}
 .cc-mb-14{margin-bottom:14px}
 .cc-text-accent{color:var(--cc-accent,#FFBF00);font-weight:600}
