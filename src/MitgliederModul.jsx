@@ -1043,16 +1043,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
               )}
               {(teamDetails||[]).map((k,i)=>(
                 <div key={i} className="cc-team-position-row">
-                  <div className={k.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
-                    {k.rueckennr||"—"}
-                  </div>
+
                   <div className="cc-flex-1">
                     <div className="cc-text-bold">{k.teams?.name||"—"}</div>
                     <div className="cc-row cc-gap-4 cc-flex-wrap" style={{marginTop:4}}>
                       {(k.rollen||["Spieler/in"]).map((r,ri)=>(
                         <span key={ri} className="cc-role-chip">{r}</span>
                       ))}
-                      {k.position&&<span className="cc-pos-chip">{k.position}</span>}
                     </div>
                   </div>
                   <DropMenu items={[
