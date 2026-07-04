@@ -105,6 +105,14 @@ const NAV_BY_ROLE = {
     {key:"docs",               icon:"file-text",        label:"Dokumente"},
     {key:"profile",            icon:"user",             label:"Profil / Daten prüfen"},
   ],
+  supporter: [
+    {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
+    {key:"news",               icon:"news",             label:"News"},
+    {key:"events",             icon:"calendar-event",   label:"Termine"},
+    {key:"helpers",            icon:"heart-handshake",  label:"Helfereinsätze"},
+    {key:"nachrichten",        icon:"message",          label:"Nachrichten"},
+    {key:"profile",            icon:"user",             label:"Mein Profil"},
+  ],
 };
 
 const MOBILE_NAV_BY_ROLE = {
@@ -230,6 +238,15 @@ const MOBILE_NAV_BY_ROLE = {
       {key:"docs",               icon:"file-text",        label:"Dokumente"},
     ],
   },
+  supporter: {
+    tabs: [
+      {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
+      {key:"events",             icon:"calendar-event",   label:"Termine"},
+      {key:"helpers",            icon:"heart-handshake",  label:"Helfer"},
+      {key:"news",               icon:"news",             label:"News"},
+    ],
+    mehr: [],
+  },
 };
 
 const ROLES = {
@@ -237,11 +254,6 @@ const ROLES = {
     label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
     desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",
     level:7
-  },
-  vorstand: {
-    label:"Vorstand", color:"var(--text)", bg:"#F5F5F5", icon:"scale",
-    desc:"Strategische Übersicht: alle Teams, Mitglieder lesen, Auswertungen — kein System, kein AHV",
-    level:6
   },
   administration: {
     label:"Administration", color:"var(--text)", bg:"#F5F5F5", icon:"briefcase",

@@ -856,8 +856,8 @@ function PortalverwaltungView(props){
   const [mobileKachel, setMobileKachel]=useState(null); // null = Landingseite
   const isMobile=useIsMobile();
 
-  const ROLLEN=["administrator","administration","funktionaer","trainer","spieler","eltern"];
-  const ROLLEN_LABELS={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"};
+  const ROLLEN=["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"];
+  const ROLLEN_LABELS={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"};
   const KATEGORIEN=["kern","sport","kommunikation","betrieb","verwaltung","admin"];
   const KAT_LABELS={kern:"Kern",sport:"Sport",kommunikation:"Kommunikation",betrieb:"Betrieb",verwaltung:"Verwaltung",admin:"Systemverwaltung"};
 
@@ -896,6 +896,7 @@ function PortalverwaltungView(props){
     trainer:         ["dashboard","team","training","events","helpers","buses","material","lockers","news","wiki","docs"],
     spieler:         ["dashboard","team","events","helpers","docs","news"],
     eltern:          ["dashboard","team","events","helpers","docs","news"],
+    supporter:       ["dashboard","events","helpers","news"],
   };
 
   /* Modul-Aktionen für Detail-Ansicht */
@@ -1019,6 +1020,10 @@ function PortalverwaltungView(props){
       events:"schreiben",
       helpers:"schreiben",
       schedule:"lesen",
+    },
+    supporter:      {
+      _all:"lesen",
+      helpers:"schreiben",
     },
   };
 

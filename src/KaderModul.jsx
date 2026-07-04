@@ -100,19 +100,24 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   }
 
   const ROLLE_MAP={"Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer","Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer"};
-  const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
+  const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"];
 
   async function updateBenutzerRolle(mitgliedId){
     if(!sb||!mitgliedId) return;
-    // Alle aktiven Kader-Einträge über alle Teams
-    const {data:alleKader}=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
     const {data:benutzer}=await sb.from("benutzer").select("id,role").eq("mitglied_id",mitgliedId).maybeSingle();
-    if(!benutzer) return; // Kein Portal-Zugang → nichts tun
-    const alleRollen=(alleKader||[]).flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
-    const neueRolle=PRIORITAET.find(p=>alleRollen.includes(p))||"spieler";
-    if(neueRolle!==benutzer.role){
-      await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);
+    if(!benutzer) return;
+    const {data:alleKader}=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
+    if(!alleKader||alleKader.length===0){
+      // Keine Kader-Einträge — prüfe Vereinsfunktionen
+      const {data:mitglied}=await sb.from("mitglieder").select("funktionen").eq("id",mitgliedId).maybeSingle();
+      const hatFunktion=(mitglied?.funktionen||[]).length>0;
+      const neueRolle=hatFunktion?"funktionaer":"supporter";
+      if(neueRolle!==benutzer.role) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);
+      return;
     }
+    const alleRollen=alleKader.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
+    const neueRolle=PRIORITAET.find(p=>alleRollen.includes(p))||"supporter";
+    if(neueRolle!==benutzer.role) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);
   }
 
   // Kader-Eintrag bearbeiten

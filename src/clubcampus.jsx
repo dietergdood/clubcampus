@@ -658,7 +658,7 @@ function Portal({supabaseClient}){
               "Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer",
               "Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer",
             };
-            const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
+            const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"];
             const map={};
             kaderData.forEach(k=>{
               const portalRollen=(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean);
@@ -898,6 +898,7 @@ function Portal({supabaseClient}){
     trainer:        {_all:"lesen",team:"verwalten",training:"verwalten",events:"verwalten",attendance_central:"schreiben",helpers:"verwalten",buses:"schreiben",material:"schreiben",media:"schreiben",wiki:"schreiben",members:"schreiben",schedule:"lesen"},
     spieler:        {_all:"lesen",events:"schreiben",helpers:"schreiben",buses:"schreiben"},
     eltern:         {_all:"lesen",events:"schreiben",helpers:"schreiben",schedule:"lesen"},
+    supporter:      {_all:"lesen",helpers:"schreiben"},
   };
 
   function getZugriff(modulKey){
