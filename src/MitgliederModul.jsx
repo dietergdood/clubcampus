@@ -374,11 +374,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                   <input className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
                 </div>
               ))}
-              {/* Notizen */}
-              <div className="cc-form-full">
-                <label className="cc-label">Notizen</label>
-                <textarea className="cc-input cc-textarea" rows={3} value={editForm.notizen||""} onChange={e=>setEditForm(f=>({...f,notizen:e.target.value}))} placeholder="Notizen…"/>
-              </div>
+
             </div>
             {editMsg&&<div className={`cc-badge ${editMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{editMsg.text}</div>}
           </div>
@@ -682,10 +678,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
     },[showTeamAssign]);
 
     useEffect(()=>{
-      if(showFunkAssign&&sb&&assignFunktionen.length===0){
-        sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
+      if(sb&&assignFunktionen.length===0){
+        sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
           .then(({data})=>setAssignFunktionen(data||[]));
       }
+    },[raw.id]);
+
+    useEffect(()=>{
       if(showFunkAssign){
         setFunkSelected(raw.funktionen||[]);
         setFunkSearch("");
