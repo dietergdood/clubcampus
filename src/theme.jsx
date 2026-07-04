@@ -167,7 +167,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-sheet-handle-bar{width:40px;height:4px;border-radius:2px;background:var(--border)}
 .cc-modal-hdr{padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .cc-modal-title{font-size:16px;font-weight:700;color:var(--text)}
-.cc-modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:visible;flex:1}
+.cc-modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1}
 .cc-modal-ftr{padding:12px 20px;border-top:0.5px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
 
 /* ── Page Title ── */
