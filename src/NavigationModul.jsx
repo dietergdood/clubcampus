@@ -781,33 +781,21 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
             </div>
 
             {/* E-Mail – read only */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
-              <span style={{fontSize:14,color:"var(--sub)",minWidth:90}}>E-Mail</span>
-              <span style={{fontSize:14,fontWeight:500,color:"var(--text)",textAlign:"right"}}>{userEmail}</span>
+            <div className="cc-info-row">
+              <span className="cc-info-key">E-Mail</span>
+              <span className="cc-info-val">{userEmail}</span>
             </div>
 
             {/* Rolle */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-              padding:"11px 0",borderBottom:"1px solid var(--border)"}}>
-              <span style={{fontSize:14,color:"var(--sub)",minWidth:90}}>Rolle</span>
-              <span style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{getRole(role).label}</span>
+            <div className="cc-info-row">
+              <span className="cc-info-key">Portal-Rolle</span>
+              <span className="cc-info-val" style={{color:rc}}>{getRole(role).label}</span>
             </div>
 
-            {/* Mitglied */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0"}}>
-              <span style={{fontSize:14,color:"var(--sub)",minWidth:90}}>Verein</span>
-              <span style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{getVereinsnameStatic()}</span>
-            </div>
-
-            {/* Rollen-Badge */}
-            <div style={{marginTop:8,padding:14,background:getRole(role).bg||"var(--surface2)",borderRadius:10,border:`1px solid ${rc}30`}}>
-              <div style={{fontSize:11,color:"var(--sub)",marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8}}>Portal-Zugriffsrolle</div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:rc,flexShrink:0}}/>
-                <span style={{fontSize:14,color:rc,fontWeight:700}}>{getRole(role).label}</span>
-              </div>
-              <div style={{fontSize:12,color:"var(--sub)",lineHeight:1.5}}>{getRole(role).desc||""}</div>
+            {/* Verein */}
+            <div className="cc-info-row">
+              <span className="cc-info-key">Verein</span>
+              <span className="cc-info-val">{getVereinsnameStatic()}</span>
             </div>
 
             {nameStatus==="ok"&&!editName&&<StatusBox status="ok" msg={nameMsg}/>}

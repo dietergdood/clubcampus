@@ -151,7 +151,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-section-hdr{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--sub);padding:6px 12px;border-bottom:0.5px solid var(--border);border-top:0.5px solid var(--border);margin-bottom:0;display:flex;align-items:center;gap:6px;background:var(--bg)}
 
 /* ── Modal Layout ── */
-.cc-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
+.cc-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
 .cc-modal-box{background:var(--surface);border-radius:20px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.18)}
 .cc-modal-scroll{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .cc-modal-scroll::-webkit-scrollbar{width:4px}
