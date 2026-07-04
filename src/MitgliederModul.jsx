@@ -1051,11 +1051,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                 </div>
                 <div>
                   <label className="cc-label">Rolle im Team</label>
-                  <div className="cc-input-icon" style={{marginBottom:6}}>
-                    <TI n="search" size={14} className="cc-input-icon"/>
+                  <div style={{position:"relative",marginBottom:6}}>
+                    <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--sub)",pointerEvents:"none",display:"flex"}}>
+                      <TI n="search" size={14}/>
+                    </span>
                     <input className="cc-input" placeholder="Suchen…" value={teamAssignRolleSearch||""}
                       onChange={e=>setTeamAssignRolleSearch(e.target.value)}
-                      style={{paddingLeft:32}}/>
+                      style={{paddingLeft:34,width:"100%"}}/>
                   </div>
                   <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden",maxHeight:220,overflowY:"auto"}}>
                     {dbKaderRollen.filter(r=>!(teamAssignRolleSearch)||r.name.toLowerCase().includes((teamAssignRolleSearch||"").toLowerCase())).map(r=>{
@@ -1113,11 +1115,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                   <div className="cc-modal-body cc-col">
                     <div>
                       <label className="cc-label">Rolle im Team</label>
-                      <div className="cc-input-icon" style={{marginBottom:6}}>
-                        <TI n="search" size={14} className="cc-input-icon"/>
+                      <div style={{position:"relative",marginBottom:6}}>
+                        <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--sub)",pointerEvents:"none",display:"flex"}}>
+                          <TI n="search" size={14}/>
+                        </span>
                         <input className="cc-input" placeholder="Suchen…" value={editTeamRolleSearch||""}
                           onChange={e=>setEditTeamRolleSearch(e.target.value)}
-                          style={{paddingLeft:32}}/>
+                          style={{paddingLeft:34,width:"100%"}}/>
                       </div>
                       <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden",maxHeight:220,overflowY:"auto"}}>
                         {dbKaderRollen.filter(r=>!(editTeamRolleSearch)||r.name.toLowerCase().includes((editTeamRolleSearch||"").toLowerCase())).map(r=>{
