@@ -115,22 +115,28 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     // Nur administrator/administration nicht automatisch überschreiben
     if(["administrator","administration"].includes(benutzer.role)) return;
     const {data:mitglied}=await sb.from("mitglieder").select("funktionen,mitgliedtyp").eq("id",mitgliedId).maybeSingle();
-    const {data:alleKader}=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
+    const alleKader=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
     const TRAINER_ROLLEN_SET=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
     let neueRolle="supporter";
-    if(alleKader&&alleKader.length>0){
-      const hatTrainer=alleKader.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
+    if(alleKader.data&&alleKader.data.length>0){
+      const hatTrainer=alleKader.data.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
       if(hatTrainer) neueRolle="trainer";
       else{
-        const alleRollen=alleKader.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
+        const alleRollen=alleKader.data.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
         const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
         if(hoechste) neueRolle=hoechste;
       }
-    } else if((mitglied?.funktionen||[]).length>0){
-      neueRolle="funktionaer";
     } else if(mitglied?.mitgliedtyp){
       const {data:typData}=await sb.from("mitgliedtypen").select("standard_rolle").eq("name",mitglied.mitgliedtyp).maybeSingle();
-      if(typData?.standard_rolle) neueRolle=typData.standard_rolle;
+      if(typData?.standard_rolle&&["spieler","trainer"].includes(typData.standard_rolle)){
+        neueRolle=typData.standard_rolle;
+      } else if((mitglied?.funktionen||[]).length>0){
+        neueRolle="funktionaer";
+      } else if(typData?.standard_rolle){
+        neueRolle=typData.standard_rolle;
+      }
+    } else if((mitglied?.funktionen||[]).length>0){
+      neueRolle="funktionaer";
     }
     if(neueRolle!==benutzer.role) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);
   }

@@ -254,6 +254,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 let abgeleiteteRolle="supporter";
                 if(hatTrainerKader) abgeleiteteRolle="trainer";
                 else if(hatSpielerKader) abgeleiteteRolle="spieler";
+                else if(typRolle&&["spieler","trainer"].includes(typRolle)) abgeleiteteRolle=typRolle;
                 else if(hatFunktionen) abgeleiteteRolle="funktionaer";
                 else if(typRolle) abgeleiteteRolle=typRolle;
                 // Portal-Rolle überschreibt wenn vorhanden
@@ -757,7 +758,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
         const {data:mitgliedtypData}=await sb.from("mitgliedtypen")
           .select("standard_rolle").eq("name",raw.mitgliedtyp||"").maybeSingle();
         const TRAINER_ROLLEN_SET=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
-        // Rollenableitung: Kader > Vereinsfunktionen > Mitgliedtyp-Mapping > Supporter
+        // Rollenableitung: Kader > Mitgliedtyp (spieler/trainer) > Vereinsfunktionen > Mitgliedtyp-Rest > Supporter
         let neueRolle="supporter";
         if(kaderData&&kaderData.length>0){
           const hatTrainer=kaderData.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
@@ -767,6 +768,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
             const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
             if(hoechste) neueRolle=hoechste;
           }
+        } else if(mitgliedtypData?.standard_rolle&&["spieler","trainer"].includes(mitgliedtypData.standard_rolle)){
+          neueRolle=mitgliedtypData.standard_rolle;
         } else if((raw.funktionen||[]).length>0){
           neueRolle="funktionaer";
         } else if(mitgliedtypData?.standard_rolle){
