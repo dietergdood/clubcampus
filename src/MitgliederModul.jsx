@@ -143,6 +143,13 @@ function getFieldVisibility(role){
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
 function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const isMobile=useIsMobile();
+  const [heroMenuOpen,setHeroMenuOpen]=useState(false);
+  const heroMenuRef=useRef(null);
+  useEffect(()=>{
+    function close(e){if(heroMenuRef.current&&!heroMenuRef.current.contains(e.target))setHeroMenuOpen(false);}
+    document.addEventListener("mousedown",close);
+    return()=>document.removeEventListener("mousedown",close);
+  },[]);
   const [editOpen,setEditOpen]=useState(false);
   const [editForm,setEditForm]=useState({...raw});
   const [editSaving,setEditSaving]=useState(false);
@@ -270,11 +277,22 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           </div>
           <div className="cc-hero-banner-actions">
             {canEdit&&(
-              <DropMenu key="hero-menu" items={[
-                {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
-                "sep",
-                {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},
-              ]}/>
+              <div ref={heroMenuRef} style={{position:"relative"}}>
+                <button className="cc-hero-banner-btn" onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setHeroMenuOpen(o=>!o);}}>
+                  <TI n="dots-vertical" size={16}/>
+                </button>
+                {heroMenuOpen&&(
+                  <div className="cc-menu" style={{position:"absolute",top:"calc(100% + 4px)",right:0,left:"auto",zIndex:100}}>
+                    <button className="cc-menu-item" onClick={()=>{setHeroMenuOpen(false);setEditForm({...raw});setEditOpen(true);}}>
+                      <TI n="edit" size={13}/> Bearbeiten
+                    </button>
+                    <div className="cc-menu-sep"/>
+                    <button className="cc-menu-item cc-menu-item-danger" onClick={()=>{setHeroMenuOpen(false);deleteMitglied();}}>
+                      <TI n="trash" size={13}/> Löschen
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
