@@ -270,7 +270,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           </div>
           <div className="cc-hero-banner-actions">
             {canEdit&&(
-              <DropMenu items={[
+              <DropMenu key="hero-menu" items={[
                 {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
                 "sep",
                 {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},

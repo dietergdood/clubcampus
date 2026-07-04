@@ -844,8 +844,11 @@ function DropMenu({items}){
   const wrapRef=useRef(null);
 
   useEffect(()=>{
-    function handleClick(e){ if(wrapRef.current&&!wrapRef.current.contains(e.target)) setOpen(false); }
+    function handleClick(e){ 
+      if(wrapRef.current&&!wrapRef.current.contains(e.target)) setOpen(false); 
+    }
     document.addEventListener("mousedown",handleClick);
+    return()=>document.removeEventListener("mousedown",handleClick);
   },[]);
 
   function handleOpen(){
@@ -858,7 +861,7 @@ function DropMenu({items}){
 
   return(
     <div className="cc-menu-wrap" ref={wrapRef}>
-      <button className="cc-menu-trigger" ref={btnRef} onClick={handleOpen}>
+      <button className="cc-menu-trigger" ref={btnRef} onClick={handleOpen} onMouseDown={e=>e.stopPropagation()}>
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&(
