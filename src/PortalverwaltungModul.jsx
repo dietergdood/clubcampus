@@ -717,6 +717,7 @@ function PortalverwaltungView(props){
   const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen} = props;
   const [tab,setTab]=useState(initialTab);
   const [dbPortalRollen,setDbPortalRollen]=useState(externalRollen);
+  useEffect(()=>{if(externalRollen.length>0)setDbPortalRollen(externalRollen);},[externalRollen]);
   const [rollenForm,setRollenForm]=useState({name:"",label:"",prioritaet:50});
   const [editRolle,setEditRolle]=useState(null);
   const [showRolleForm,setShowRolleForm]=useState(false);
