@@ -247,12 +247,12 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-eltern-portal-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:10px;border-top:0.5px solid var(--border);gap:12px}
 .cc-flex-wrap{flex-wrap:wrap}
 /* ── Dropdown Menu ── */
-.cc-menu-wrap{position:relative;flex-shrink:0}
+.cc-menu-wrap{position:relative;flex-shrink:0;z-index:600}
 .cc-menu-trigger{width:28px;height:28px;border-radius:7px;border:0.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--sub)}
 .cc-menu-trigger:hover{background:var(--surface2)}
 .cc-hero-banner-actions .cc-menu-trigger{border-color:var(--border);background:var(--surface2);color:var(--text)}
 .cc-hero-banner-actions .cc-menu-trigger:hover{background:var(--surface)}
-.cc-menu{position:absolute;right:0;top:32px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:160px;overflow:hidden;z-index:500}
+.cc-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:160px;overflow:hidden;z-index:600}
 .cc-menu-item{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:13px;color:var(--text);cursor:pointer;background:none;border:none;width:100%;text-align:left;font-family:inherit}
 .cc-menu-item:hover{background:var(--surface2)}
 .cc-menu-item-danger{color:var(--r,#DC2626)}
@@ -839,7 +839,6 @@ function Truncate({children, lines=1, style={}}){
 /* ── DropMenu: Dreipunkt-Menü ── */
 function DropMenu({items}){
   const [open,setOpen]=useState(false);
-  const [pos,setPos]=useState({top:0,right:0});
   const btnRef=useRef(null);
   const wrapRef=useRef(null);
 
@@ -852,10 +851,6 @@ function DropMenu({items}){
   },[]);
 
   function handleOpen(){
-    if(btnRef.current){
-      const r=btnRef.current.getBoundingClientRect();
-      setPos({top:r.bottom+4, right:window.innerWidth-r.right});
-    }
     setOpen(o=>!o);
   }
 
@@ -865,7 +860,7 @@ function DropMenu({items}){
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&(
-        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto"}}>
+        <div className="cc-menu">
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
             :<button key={i}
