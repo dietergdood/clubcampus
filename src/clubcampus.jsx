@@ -890,6 +890,7 @@ function Portal({supabaseClient}){
   /* Modul-Sichtbarkeit prüfen: global + pro Rolle */
   const isModuleVisible=(key)=>{
     if(key==="dashboard") return true;
+    if(key==="profile") return true; // Profil immer sichtbar
     if(role==="administrator") return true; // Admin sieht immer alles
     if(moduleAktiv[key]===false) return false; // global deaktiviert
     /* Nur blocken wenn Rolle explizit konfiguriert UND mehr als 3 Module hat
