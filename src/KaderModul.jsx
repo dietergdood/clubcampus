@@ -56,6 +56,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   const [editKader,   setEditKader]   = useState(null); // Kader-Eintrag bearbeiten
   const [editForm,    setEditForm]    = useState({funktionen:[],rueckennr:"",position:""});
   const [editSaving,  setEditSaving]  = useState(false);
+  const [editFunkOpen,setEditFunkOpen]= useState(false);
   const [sheetKader,  setSheetKader]  = useState(null); // Mobile Bottom Sheet
   const [portalFunktionen, setPortalFunktionen] = useState([]);
 
@@ -118,6 +119,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     }).eq("id",editKader.id);
     setKader(prev=>prev.map(k=>k.id===editKader.id?{...k,...editForm}:k));
     setEditKader(null);
+    setEditFunkOpen(false);
     setEditSaving(false);
   }
 
@@ -246,7 +248,6 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
         {editKader&&(()=>{
           const m=editKader.mitglieder||{};
           const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
-          const [funkOpen,setFunkOpen]=useState(false);
           return(
             <>
               <div className="cc-modal-hdr">
@@ -260,7 +261,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
                 <div>
                   <label className="cc-label">Funktion(en)</label>
                   <div className="cc-multiselect">
-                    <button type="button" className="cc-multiselect-trigger" onClick={()=>setFunkOpen(o=>!o)}>
+                    <button type="button" className="cc-multiselect-trigger" onClick={()=>setEditFunkOpen(o=>!o)}>
                       <div className="cc-multiselect-chips">
                         {(editForm.funktionen||[]).length===0
                           ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
@@ -272,9 +273,9 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
                           ))
                         }
                       </div>
-                      <TI n={funkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                      <TI n={editFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
                     </button>
-                    {funkOpen&&(
+                    {editFunkOpen&&(
                       <div className="cc-multiselect-dropdown">
                         <div className="cc-multiselect-list">
                           {portalFunktionen.map(f=>{
