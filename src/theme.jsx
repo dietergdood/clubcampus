@@ -437,6 +437,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-info-val{font-size:14px;font-weight:500;color:var(--text);text-align:right}
 .cc-info-val-empty{font-size:14px;color:var(--sub);text-align:right}
 .cc-list-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.cc-role-list-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:pointer}
+.cc-role-list-item:last-child{border-bottom:none}
+.cc-role-list-item:hover{background:var(--surface2)}
+.cc-role-list-item-selected{background:var(--cc-accent-5,rgba(255,191,0,0.05))}
 .cc-list-item-row:last-child{border-bottom:none}
 .cc-list-item-icon{width:28px;height:28px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cc-hk-card{border:0.5px solid var(--border);border-left:3px solid var(--cc-accent,#FFBF00);border-radius:0 8px 8px 0;padding:10px 12px;background:var(--surface2);display:flex;align-items:center;gap:10px;margin-top:8px}

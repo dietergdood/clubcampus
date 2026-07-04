@@ -1063,7 +1063,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                     {dbKaderRollen.filter(r=>!(teamAssignRolleSearch)||r.name.toLowerCase().includes((teamAssignRolleSearch||"").toLowerCase())).map(r=>{
                       const sel=(teamAssignForm.funktionen||[]).includes(r.name);
                       return(
-                        <div key={r.name} className="cc-list-item-row" style={{cursor:"pointer",background:sel?"var(--cc-accent-5,rgba(255,191,0,0.05))":"transparent"}}
+                        <div key={r.name} className={`cc-role-list-item${sel?" cc-role-list-item-selected":""}`}
                           onClick={()=>setTeamAssignForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r.name):[...(p.funktionen||[]),r.name]}))}>
                           <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                             {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
@@ -1127,7 +1127,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                         {dbKaderRollen.filter(r=>!(editTeamRolleSearch)||r.name.toLowerCase().includes((editTeamRolleSearch||"").toLowerCase())).map(r=>{
                           const sel=(editTeamForm.funktionen||[]).includes(r.name);
                           return(
-                            <div key={r.name} className="cc-list-item-row" style={{cursor:"pointer",background:sel?"var(--cc-accent-5,rgba(255,191,0,0.05))":"transparent"}}
+                            <div key={r.name} className={`cc-role-list-item${sel?" cc-role-list-item-selected":""}`}
                               onClick={()=>setEditTeamForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r.name):[...(p.funktionen||[]),r.name]}))}>
                               <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                                 {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
