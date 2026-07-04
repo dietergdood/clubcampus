@@ -3,6 +3,7 @@
    Theme-System, Logo, CSS-Variablen, Default-Farben
    ═══════════════════════════════════════════════════════════════ */
 import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { TI } from "./icons.jsx";
 import { ACCENT, ACCENT2, ACCENT20, BK, BL, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, FONT, R } from "./constants.js";
 
@@ -252,7 +253,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-menu-trigger:hover{background:var(--surface2)}
 .cc-hero-banner-actions .cc-menu-trigger{border-color:var(--border);background:var(--surface2);color:var(--text)}
 .cc-hero-banner-actions .cc-menu-trigger:hover{background:var(--surface)}
-.cc-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:160px;overflow:hidden;z-index:9999}
+.cc-menu{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:160px;overflow:hidden;z-index:9999}
 .cc-menu-item{display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:13px;color:var(--text);cursor:pointer;background:none;border:none;width:100%;text-align:left;font-family:inherit}
 .cc-menu-item:hover{background:var(--surface2)}
 .cc-menu-item-danger{color:var(--r,#DC2626)}
@@ -868,8 +869,8 @@ function DropMenu({items}){
       <button className="cc-menu-trigger" ref={btnRef} onClick={e=>{e.stopPropagation();handleOpen();}} onMouseDown={e=>e.stopPropagation()}>
         <TI n="dots-vertical" size={16}/>
       </button>
-      {open&&(
-        <div className="cc-menu" style={{top:pos.top,right:pos.right,left:"auto"}}>
+      {open&&createPortal(
+        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999}}>
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
             :<button key={i}
@@ -880,7 +881,8 @@ function DropMenu({items}){
                 {item.label}
               </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
