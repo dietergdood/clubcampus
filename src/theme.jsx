@@ -130,7 +130,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-list-name{font-weight:500;font-size:14px;color:var(--text);white-space:nowrap}
 .cc-detail-label{font-size:14px;color:var(--sub);min-width:120px;flex-shrink:0}
 .cc-empty{padding:32px;text-align:center;color:var(--sub);font-size:14px}
-.cc-table-wrap{background:var(--surface);border-radius:12px;overflow-x:auto;overflow-y:visible}
+.cc-table-wrap{background:var(--surface);border-radius:12px;overflow-x:auto;overflow-y:visible;border:0.5px solid var(--border)}
 .cc-grid-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;align-items:stretch}
 .cc-grid-stats-sm{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .cc-grid-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
