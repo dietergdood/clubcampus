@@ -141,7 +141,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],benutzer=null,teamDetails=null}){
+function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const isMobile=useIsMobile();
   const [editOpen,setEditOpen]=useState(false);
   const [editForm,setEditForm]=useState({...raw});
@@ -797,8 +797,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
         <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit}
           sb={sb} onReload={onReload} onClose={onClose}
           statusColor={statusColor} statusBg={statusBg}
-          dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen}
-          benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen}
+          dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
+          benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         />
         {/* Stats */}
         {/* Tabs */}
