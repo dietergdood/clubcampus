@@ -624,6 +624,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     const [showTeamAssign,setShowTeamAssign]=useState(false);
     const [allTeams,setAllTeams]=useState([]);
     const [assignFunktionen,setAssignFunktionen]=useState([]);
+    const [showFunkAssign,setShowFunkAssign]=useState(false);
+    const [funkSearch,setFunkSearch]=useState("");
+    const [funkSelected,setFunkSelected]=useState([]);
     const [teamAssignForm,setTeamAssignForm]=useState({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
     const [teamFunkOpen,setTeamFunkOpen]=useState(false);
     const [teamAssignSaving,setTeamAssignSaving]=useState(false);
@@ -656,10 +659,21 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
             .then(({data})=>setAllTeams(data||[]));
         if(assignFunktionen.length===0)
-          sb.from("portal_funktionen").select("id,name").order("name")
+          sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
             .then(({data})=>setAssignFunktionen(data||[]));
       }
     },[showTeamAssign]);
+
+    useEffect(()=>{
+      if(showFunkAssign&&sb&&assignFunktionen.length===0){
+        sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
+          .then(({data})=>setAssignFunktionen(data||[]));
+      }
+      if(showFunkAssign){
+        setFunkSelected(raw.funktionen||[]);
+        setFunkSearch("");
+      }
+    },[showFunkAssign]);
 
     async function assignTeam(){
       if(!sb||!teamAssignForm.team_id) return;
@@ -679,6 +693,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
       setTeamAssignForm({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
       setTeamFunkOpen(false);
       setTeamAssignSaving(false);
+    }
+
+    async function saveFunktionen(){
+      if(!sb) return;
+      await sb.from("mitglieder").update({funktionen:funkSelected}).eq("id",raw.id);
+      setShowFunkAssign(false);
+      if(onReload) onReload();
     }
 
     async function removeFromTeam(kaderId){
@@ -911,13 +932,77 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                 {(raw.funktionen||[]).length===0&&(
                   <div className="cc-text-sm cc-text-sub">Keine Vereinsfunktionen.</div>
                 )}
-                <div className="cc-row cc-gap-6 cc-flex-wrap">
-                  {(raw.funktionen||[]).map((f,i)=>(
-                    <span key={i} className="cc-funk-chip">{f}</span>
-                  ))}
-                </div>
+                {(raw.funktionen||[]).map((f,i)=>{
+                  const funkObj=assignFunktionen.find(x=>x.name===f);
+                  const gruppe=funkObj?.portal_gruppen?.name||null;
+                  return(
+                    <div key={i} className="cc-team-position-row">
+                      <div className="cc-list-item-icon"><TI n="star" size={13}/></div>
+                      <div className="cc-flex-1">
+                        <div className="cc-text-bold">{f}</div>
+                        {gruppe&&<div className="cc-text-sm cc-text-sub">{gruppe}</div>}
+                      </div>
+                      {canEdit&&(
+                        <DropMenu items={[
+                          {label:"Entfernen", icon:"trash", danger:true, onClick:async()=>{
+                            const next=(raw.funktionen||[]).filter(x=>x!==f);
+                            await sb.from("mitglieder").update({funktionen:next}).eq("id",raw.id);
+                            if(onReload) onReload();
+                          }},
+                        ]}/>
+                      )}
+                    </div>
+                  );
+                })}
+                {canEdit&&(
+                  <button className="cc-team-add-btn" onClick={()=>setShowFunkAssign(true)}>
+                    <TI n="plus" size={14}/> Funktion hinzufügen
+                  </button>
+                )}
               </Card>
             )}
+
+            {/* Funktion hinzufügen Modal */}
+            <ModalOrSheet open={showFunkAssign} onClose={()=>setShowFunkAssign(false)} maxWidth={420}>
+              <div className="cc-modal-hdr">
+                <ModalTitle>Funktion hinzufügen</ModalTitle>
+                <button className="cc-icon-btn" onClick={()=>setShowFunkAssign(false)}><TI n="x" size={14}/></button>
+              </div>
+              <div className="cc-modal-body cc-col">
+                <input className="cc-input" placeholder="Suchen…" value={funkSearch}
+                  onChange={e=>setFunkSearch(e.target.value)} autoFocus/>
+                <div style={{maxHeight:320,overflowY:"auto"}}>
+                  {(()=>{
+                    const filtered=assignFunktionen.filter(f=>
+                      !funkSearch||f.name.toLowerCase().includes(funkSearch.toLowerCase())||
+                      (f.portal_gruppen?.name||"").toLowerCase().includes(funkSearch.toLowerCase())
+                    );
+                    const groups=[...new Set(filtered.map(f=>f.portal_gruppen?.name||"Weitere"))];
+                    return groups.map(g=>(
+                      <div key={g}>
+                        <div className="cc-hk-sub-label">{g}</div>
+                        {filtered.filter(f=>(f.portal_gruppen?.name||"Weitere")===g).map(f=>{
+                          const on=funkSelected.includes(f.name);
+                          return(
+                            <div key={f.id} className="cc-multiselect-item"
+                              onClick={()=>setFunkSelected(prev=>on?prev.filter(x=>x!==f.name):[...prev,f.name])}>
+                              <div className={on?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                {on&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                              </div>
+                              <span>{f.name}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+              <div className="cc-modal-ftr">
+                <Btn onClick={()=>setShowFunkAssign(false)}>Abbrechen</Btn>
+                <Btn variant="primary" onClick={saveFunktionen}>Speichern</Btn>
+              </div>
+            </ModalOrSheet>
 
             {/* Vereinsdaten */}
             <Card style={{gridColumn:"1/-1"}}>
