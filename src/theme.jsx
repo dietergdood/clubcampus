@@ -619,18 +619,13 @@ function Chip({text,color,bg,semantic,size="sm"}){
 
 
 function Stat({label,value,sub,color,semantic,icon}){
-  /* Verwendung:
-     <Stat label="Aktiv" value={42} semantic="success" icon="users"/>
-     <Stat label="Fehler" value={3} semantic="danger"/>
-     <Stat label="Total" value={380} semantic="info"/>
-     <Stat label="Custom" value={8} color="#7C3AED"/>  */
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div style={{background:c.bg,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
+    <div style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
       {icon&&<TI n={icon} size={18} style={{color:c.text,marginBottom:2}}/>}
       <span style={{fontSize:22,fontWeight:700,color:c.text,letterSpacing:-0.5,lineHeight:1}}>{value}</span>
-      <span style={{fontSize:11,color:c.text,opacity:0.8,textTransform:"uppercase",letterSpacing:0.5}}>{label}</span>
-      {sub&&<span style={{fontSize:12,color:c.text,opacity:0.7}}>{sub}</span>}
+      <span style={{fontSize:11,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>{label}</span>
+      {sub&&<span style={{fontSize:12,color:"var(--sub)"}}>{sub}</span>}
     </div>
   );
 }
