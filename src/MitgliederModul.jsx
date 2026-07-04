@@ -1211,23 +1211,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                     })}
                   </div>
                 </div>
-                <div className="cc-row cc-gap-10">
-                  <div className="cc-form-nr">
-                    <label className="cc-label">Nr.</label>
-                    <input className="cc-input" type="number" min="1" max="99" placeholder="—"
-                      value={teamAssignForm.rueckennr} onChange={e=>setTeamAssignForm(p=>({...p,rueckennr:e.target.value}))}/>
-                  </div>
-                  <div style={{flex:1}}>
-                    <label className="cc-label">Position</label>
-                    <select className="cc-input" value={teamAssignForm.position} onChange={e=>setTeamAssignForm(p=>({...p,position:e.target.value}))}>
-                      <option value="">—</option>
-                      <optgroup label="Torwart"><option value="TW">TW</option></optgroup>
-                      <optgroup label="Verteidiger">{["V","IV","RV","LV"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
-                      <optgroup label="Mittelfeld">{["MF","DM","ZM","LM","RM"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
-                      <optgroup label="Sturm"><option value="ST">ST</option></optgroup>
-                    </select>
-                  </div>
-                </div>
+
               </div>
               <div className="cc-modal-ftr">
                 <Btn onClick={()=>setShowTeamAssign(false)}>Abbrechen</Btn>
@@ -1275,23 +1259,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                         })}
                       </div>
                     </div>
-                    <div className="cc-row cc-gap-10">
-                      <div className="cc-form-nr">
-                        <label className="cc-label">Nr.</label>
-                        <input className="cc-input" type="number" min="1" max="99" placeholder="—"
-                          value={editTeamForm.rueckennr} onChange={e=>setEditTeamForm(p=>({...p,rueckennr:e.target.value}))}/>
-                      </div>
-                      <div style={{flex:1}}>
-                        <label className="cc-label">Position</label>
-                        <select className="cc-input" value={editTeamForm.position} onChange={e=>setEditTeamForm(p=>({...p,position:e.target.value}))}>
-                          <option value="">—</option>
-                          <optgroup label="Torwart"><option value="TW">TW</option></optgroup>
-                          <optgroup label="Verteidiger">{["V","IV","RV","LV"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
-                          <optgroup label="Mittelfeld">{["MF","DM","ZM","LM","RM"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
-                          <optgroup label="Sturm"><option value="ST">ST</option></optgroup>
-                        </select>
-                      </div>
-                    </div>
+
                   </div>
                   <div className="cc-modal-ftr">
                     <Btn onClick={()=>{setEditTeam(null);setEditTeamFunkOpen(false);}}>Abbrechen</Btn>
