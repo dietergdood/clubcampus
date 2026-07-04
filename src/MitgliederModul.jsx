@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import React from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, Row, SectionLabel, Stat, Tabs, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, SectionLabel, Stat, Tabs, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
 import { MEMBERS } from "./demoData.js";
 import { getRole } from "./NavigationModul.jsx";
 
