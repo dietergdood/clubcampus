@@ -202,9 +202,12 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
       updated_at:new Date().toISOString(),
     }).eq("id",raw.id);
-    // Rolle: nur administrator/administration manuell setzen, Rest automatisch
-    if(!error&&editForm.rolle&&editForm._benutzer_id){
-      await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
+    // Rolle speichern: immer in mitglieder.rolle, zusätzlich in benutzer.role falls verknüpft
+    if(!error){
+      await sb.from("mitglieder").update({rolle:editForm.rolle||null}).eq("id",raw.id);
+      if(editForm.rolle&&editForm._benutzer_id){
+        await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
+      }
     }
     if(error){ setEditMsg({ok:false,text:error.message}); }
     else{
@@ -238,8 +241,8 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             )}
           </div>
           <div className="cc-member-hero-info">
-            <h1 className="cc-profile-name">{m.name}</h1>
-            <div className="cc-member-hero-sub">
+            <h1 className="cc-page-title" style={{margin:0}}>{m.name}</h1>
+            <div className="cc-text-sub" style={{fontSize:13,marginTop:2}}>
               {(()=>{
                 const ROLLE_LABEL=dbPortalRollen.length>0
                   ?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label]))
@@ -263,11 +266,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 return [mitgliedtyp, age?`${age} Jahre`:null, rolleLabel].filter(Boolean).join(" · ");
               })()}
             </div>
-            <div className="cc-hero-status-badges">
-              {!raw.geprueft&&<span className="cc-hero-status-badge-warn"><TI n="alert-circle" size={11}/> {isMobile?"Datenprüfung":"Datenprüfung ausstehend"}</span>}
-              {!raw.hat_portal_zugang&&<span className="cc-hero-status-badge-warn"><TI n="key" size={11}/> {isMobile?"Kein Portal":"Portal-Zugang fehlt"}</span>}
-              {raw.fairgate_id&&<span className="cc-hero-status-badge-ok"><TI n="check" size={11}/> {isMobile?"Fairgate":"Fairgate synchronisiert"}</span>}
-            </div>
+
           </div>
           <div className="cc-hero-banner-actions">
             {canEdit&&(
