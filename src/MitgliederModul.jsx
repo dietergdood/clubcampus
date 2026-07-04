@@ -844,7 +844,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             })()}
 
             {/* Teams */}
-            <div className="cc-card-secondary">
+            <Card>
               <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
               {teamDetails===null&&<div className="cc-text-sm cc-text-sub">Lade…</div>}
               {teamDetails!==null&&teamDetails.length===0&&(
@@ -881,11 +881,11 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   <TI n="plus" size={14}/> Team zuweisen
                 </button>
               )}
-            </div>
+            </Card>
 
             {/* Vereinsfunktionen */}
             {((raw.funktionen||[]).length>0||canEdit)&&(
-              <div className="cc-card-secondary">
+              <Card>
                 <div className="cc-section-title"><TI n="star" size={14}/> Vereinsfunktionen</div>
                 {(raw.funktionen||[]).length===0&&(
                   <div className="cc-text-sm cc-text-sub">Keine Vereinsfunktionen.</div>
@@ -895,7 +895,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                     <span key={i} className="cc-funk-chip">{f}</span>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Vereinsdaten */}
@@ -1081,13 +1081,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
 
             {/* Notizen */}
             {fv.showNotizen&&(
-              <div className="cc-card-secondary" style={{gridColumn:"1/-1"}}>
+              <Card style={{gridColumn:"1/-1"}}>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
                 {raw.notizen
                   ?<div className="cc-text-body">{raw.notizen}</div>
                   :<div className="cc-text-sm cc-text-sub" style={{fontStyle:"italic"}}>Keine Notizen vorhanden.</div>
                 }
-              </div>
+              </Card>
             )}
           </div>
         )}

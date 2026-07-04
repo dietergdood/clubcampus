@@ -649,7 +649,7 @@ function Chip({text,color,bg,semantic,size="sm"}){
 function Stat({label,value,sub,color,semantic,icon}){
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
+    <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
       {icon&&<TI n={icon} size={18} style={{color:c.text,marginBottom:2}}/>}
       <span style={{fontSize:22,fontWeight:700,color:c.text,letterSpacing:-0.5,lineHeight:1}}>{value}</span>
       <span style={{fontSize:11,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>{label}</span>
