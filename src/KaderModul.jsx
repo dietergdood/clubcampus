@@ -106,10 +106,14 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     if(!sb||!mitgliedId) return;
     const {data:benutzer}=await sb.from("benutzer").select("id,role").eq("mitglied_id",mitgliedId).maybeSingle();
     if(!benutzer) return;
+    const {data:mitglied}=await sb.from("mitglieder").select("funktionen,rolle").eq("id",mitgliedId).maybeSingle();
+    // Manuell gesetzte Rolle hat höchste Priorität
+    if(mitglied?.rolle){
+      if(mitglied.rolle!==benutzer.role) await sb.from("benutzer").update({role:mitglied.rolle}).eq("id",benutzer.id);
+      return;
+    }
     const {data:alleKader}=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
     if(!alleKader||alleKader.length===0){
-      // Keine Kader-Einträge — prüfe Vereinsfunktionen
-      const {data:mitglied}=await sb.from("mitglieder").select("funktionen").eq("id",mitgliedId).maybeSingle();
       const hatFunktion=(mitglied?.funktionen||[]).length>0;
       const neueRolle=hatFunktion?"funktionaer":"supporter";
       if(neueRolle!==benutzer.role) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);

@@ -174,7 +174,8 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       // Benutzer-Rolle laden
       sb.from("benutzer").select("id,role").eq("mitglied_id",raw.id).maybeSingle()
         .then(({data})=>{
-          if(data) setEditForm(f=>({...f,rolle:data.role||"",_benutzer_id:data.id}));
+          if(data) setEditForm(f=>({...f,rolle:data.role||raw.rolle||"",_benutzer_id:data.id}));
+          else setEditForm(f=>({...f,rolle:raw.rolle||""}));
         });
     }
   },[editOpen]);
@@ -201,9 +202,13 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
       updated_at:new Date().toISOString(),
     }).eq("id",raw.id);
-    // Rolle in benutzer updaten falls vorhanden
-    if(!error&&editForm.rolle&&editForm._benutzer_id){
-      await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
+    // Rolle immer in mitglieder.rolle speichern
+    if(!error){
+      await sb.from("mitglieder").update({rolle:editForm.rolle||null}).eq("id",raw.id);
+      // Zusätzlich in benutzer.role falls Portal-Zugang vorhanden
+      if(editForm.rolle&&editForm._benutzer_id){
+        await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
+      }
     }
     if(error){ setEditMsg({ok:false,text:error.message}); }
     else{
@@ -240,9 +245,12 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             <div className="cc-member-hero-sub">
               {(()=>{
                 const ROLLE_LABEL={administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",supporter:"Supporter"};
+                // Priorität: Portal-Rolle > mitglieder.rolle > Kader-Rolle > Vereinsfunktionen > Supporter
                 const portalRolle=benutzer?.role?ROLLE_LABEL[benutzer.role]||benutzer.role:null;
+                const gespeicherteRolle=raw.rolle?ROLLE_LABEL[raw.rolle]||raw.rolle:null;
                 const kaderRolle=teamDetails&&teamDetails.length>0?(teamDetails[0].rollen||[])[0]||null:null;
-                const rolle=portalRolle||kaderRolle||null;
+                const funkRolle=(raw.funktionen||[]).length>0?"Funktionär":null;
+                const rolle=portalRolle||gespeicherteRolle||kaderRolle||funkRolle||"Supporter";
                 return [mitgliedtyp, age?`${age} Jahre`:null, rolle].filter(Boolean).join(" · ");
               })()}
             </div>
@@ -327,27 +335,16 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                   {MITGLIEDTYPEN.map(t=><option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              {/* Funktionen Multi-Select */}
-              <div className="cc-form-full">
-                <label className="cc-label">Funktion(en)</label>
-                <FunktionenMultiSelect
-                  funktionen={portalFunktionen}
-                  selected={editForm.funktionen||[]}
-                  onChange={val=>setEditForm(f=>({...f,funktionen:val}))}
-                />
+              {/* Portal-Rolle — immer sichtbar */}
+              <div>
+                <label className="cc-label">Portal-Rolle</label>
+                <select className="cc-input" value={editForm.rolle||""} onChange={e=>setEditForm(f=>({...f,rolle:e.target.value}))}>
+                  <option value="">– keine –</option>
+                  {["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"].map(r=>(
+                    <option key={r} value={r}>{{administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"}[r]}</option>
+                  ))}
+                </select>
               </div>
-              {/* Portal-Rolle */}
-              {editForm._benutzer_id&&(
-                <div>
-                  <label className="cc-label">Portal-Rolle</label>
-                  <select className="cc-input" value={editForm.rolle||""} onChange={e=>setEditForm(f=>({...f,rolle:e.target.value}))}>
-                    <option value="">– keine –</option>
-                    {["administrator","administration","funktionaer","trainer","spieler","eltern"].map(r=>(
-                      <option key={r} value={r}>{{administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"}[r]}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {[
                 {k:"spielerpass", l:"Spielerpass"},
@@ -755,11 +752,17 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
         const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
         const {data:kaderData}=await sb.from("kader")
           .select("rollen").eq("mitglied_id",raw.id).eq("aktiv",true);
-        let neueRolle = existing.role || "spieler";
-        if(kaderData&&kaderData.length>0){
+        // Priorität: 1. mitglieder.rolle (manuell gesetzt) 2. Kader-Ableitung 3. Fallback
+        let neueRolle = existing.role || "supporter";
+        if(raw.rolle){
+          // Manuell gesetzte Rolle hat höchste Priorität
+          neueRolle = raw.rolle;
+        } else if(kaderData&&kaderData.length>0){
           const alleRollen=kaderData.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
           const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
           if(hoechste) neueRolle=hoechste;
+        } else if((raw.funktionen||[]).length>0){
+          neueRolle="funktionaer";
         }
         await sb.from("mitglieder").update({hat_portal_zugang:true}).eq("id",raw.id);
         await sb.from("benutzer").update({mitglied_id:raw.id, role:neueRolle}).eq("id",existing.id);
