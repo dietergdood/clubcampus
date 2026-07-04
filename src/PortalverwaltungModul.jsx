@@ -884,7 +884,7 @@ function PortalverwaltungView(props){
   const [mobileKachel, setMobileKachel]=useState(null); // null = Landingseite
   const isMobile=useIsMobile();
 
-  const ROLLEN=["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"];
+  const ROLLEN=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["administrator","administration","funktionaer","trainer","spieler","eltern","mitglied","supporter"];
   const ROLLEN_LABELS={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"};
   const KATEGORIEN=["kern","sport","kommunikation","betrieb","verwaltung","admin"];
   const KAT_LABELS={kern:"Kern",sport:"Sport",kommunikation:"Kommunikation",betrieb:"Betrieb",verwaltung:"Verwaltung",admin:"Systemverwaltung"};
@@ -2122,8 +2122,8 @@ function PortalverwaltungView(props){
 
       {/* ── TAB: MITGLIEDER-KONFIGURATION ── */}
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="mitglieder_config"&&(()=>{
-        const ROLLEN_PF=["spieler","trainer","funktionaer","eltern"];
-        const ROLLEN_PF_LABELS={spieler:"Spieler",trainer:"Trainer",funktionaer:"Funktionär",eltern:"Eltern"};
+        const ROLLEN_PF=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["spieler","trainer","funktionaer","eltern"];
+        const ROLLEN_PF_LABELS=dbPortalRollen.length>0?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label])):{spieler:"Spieler",trainer:"Trainer",funktionaer:"Funktionär",eltern:"Eltern"};
         const MITGLIEDTYPEN_PF=["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
         const MITGLIEDTYPEN_SHORT={Aktivmitglied:"Aktivmitglied",Juniormitglied:"Juniormitglied",Funktionär:"Funktionär",Passivmitglied:"Passivmitglied",Ehrenmitglied:"Ehrenmitglied",Freimitglied:"Freimitglied"};
         const FELDER_ROLLE=["geburtsdatum","adresse","telefon","ahv_nr","spielerpass","js_nr","fairgate_id"];
