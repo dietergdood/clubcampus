@@ -106,6 +106,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-flex-center{display:flex;align-items:center;justify-content:center}
 .cc-truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-divider{height:1px;background:var(--border);flex-shrink:0}
+.cc-form-field{display:flex;flex-direction:column;gap:4px}
 .cc-shimmer{background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%);background-size:200% 100%;animation:cc-shimmer 1.4s ease-in-out infinite}
 .cc-hov-row:hover{background:var(--surface2)!important;cursor:pointer}
 
