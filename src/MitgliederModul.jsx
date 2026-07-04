@@ -753,20 +753,6 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           dbMitgliedtypen={dbMitgliedtypen}
         />
         {/* Stats */}
-        <div className="cc-member-stats">
-          <div className="cc-member-stat">
-            <div className="cc-member-stat-val">{raw.mitgliedtyp||"—"}</div>
-            <div className="cc-member-stat-lbl">Mitgliedtyp</div>
-          </div>
-          <div className="cc-member-stat">
-            <div className="cc-member-stat-val">{benutzer?.role||"—"}</div>
-            <div className="cc-member-stat-lbl">Portal-Rolle</div>
-          </div>
-          <div className="cc-member-stat">
-            <div className="cc-member-stat-val">{age||"—"}</div>
-            <div className="cc-member-stat-lbl">Alter</div>
-          </div>
-        </div>
         {/* Tabs */}
         <Tabs
           tabs={[
@@ -781,6 +767,20 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           setActive={t=>!(["stats","comments"].includes(t))&&setTab(t)}
           mb={0}
         />
+        <div className="cc-member-stats">
+          <div className="cc-member-stat">
+            <div className="cc-member-stat-val">{raw.mitgliedtyp||"—"}</div>
+            <div className="cc-member-stat-lbl">Mitgliedtyp</div>
+          </div>
+          <div className="cc-member-stat">
+            <div className="cc-member-stat-val">{benutzer?.role||"—"}</div>
+            <div className="cc-member-stat-lbl">Portal-Rolle</div>
+          </div>
+          <div className="cc-member-stat">
+            <div className="cc-member-stat-val">{age||"—"}</div>
+            <div className="cc-member-stat-lbl">Alter</div>
+          </div>
+        </div>
 
         {/* Tab: Profil */}
         {tab==="info"&&(
@@ -790,9 +790,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
               {[
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):null}]:[]),
+                {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":raw.geschlecht||null},
                 {l:"Nationalität", v:raw.nationalitaet||null, flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
                 {l:"Heimatort",    v:raw.heimatort||null},
-                {l:"Geschlecht",   v:raw.geschlecht||null},
                 ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||null}]:[]),
               ].filter(r=>canEdit||r.v).map((r,i)=>(
                 <div key={i} className="cc-info-row">
