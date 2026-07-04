@@ -22,8 +22,6 @@ const POSITION_GROUPS = [
   {label:"Sturm",       options:["ST"]},
 ];
 
-const FUNKTION_OPTIONS = ["Trainer/in","Co-Trainer/in","Assistenz","Goalietrainer/in","Masseur/in","Spieler/in"];
-const FUNKTION_ORDER   = ["Trainer/in","Co-Trainer/in","Assistenz","Goalietrainer/in","Masseur/in","Spieler/in"];
 
 const COL_DEF_ALL = [
   {key:"name",     label:"Name / Vorname", always:true},
@@ -55,11 +53,13 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   const [exportFields,setExportFields]= useState(["name","funktion","pos","nr"]);
   const [editingPos,  setEditingPos]  = useState(null);
   const [editingNr,   setEditingNr]   = useState(null);
+  const [portalFunktionen, setPortalFunktionen] = useState([]);
 
   // Mitglied hinzufügen
   const [addSearch,   setAddSearch]   = useState("");
   const [allMitglieder, setAllMitglieder] = useState([]);
-  const [addForm,     setAddForm]     = useState({mitglied_id:null,rueckennr:"",position:"",funktion:"Spieler/in"});
+  const [addForm,     setAddForm]     = useState({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]});
+  const [addFunkOpen, setAddFunkOpen]  = useState(false);
   const [addSaving,   setAddSaving]   = useState(false);
 
   const teamObj = typeof team === "object" ? team : null;
@@ -79,6 +79,14 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   }
 
   useEffect(()=>{ loadKader(); },[teamId]);
+
+  // Portal-Funktionen laden
+  useEffect(()=>{
+    if(sb&&portalFunktionen.length===0){
+      sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
+        .then(({data})=>setPortalFunktionen(data||[]));
+    }
+  },[sb]);
 
   // Alle Mitglieder für Hinzufügen laden
   useEffect(()=>{
@@ -111,11 +119,11 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       mitglied_id:addForm.mitglied_id,
       rueckennr:addForm.rueckennr||null,
       position:addForm.position||null,
-      funktion:addForm.funktion||"Spieler/in",
+      funktionen:addForm.funktionen||["Spieler/in"],
       aktiv:true,
       saison,
     },{onConflict:"team_id,mitglied_id,saison"});
-    if(!error){ await loadKader(); setShowAdd(false); setAddForm({mitglied_id:null,rueckennr:"",position:"",funktion:"Spieler/in"}); setAddSearch(""); }
+    if(!error){ await loadKader(); setShowAdd(false); setAddForm({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]}); setAddFunkOpen(false); setAddSearch(""); }
     setAddSaving(false);
   }
 
@@ -134,16 +142,12 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
 
   const grouped = groupBy
     ? Object.entries(filtered.reduce((acc,k)=>{
-        const key=k.funktion||"Spieler/in";
+        const key=(k.funktionen&&k.funktionen.length>0)?k.funktionen[0]:"Spieler/in";
         if(!acc[key]) acc[key]=[];
         acc[key].push(k); return acc;
       },{}))
-      .sort(([a],[b])=>{
-        const ia=FUNKTION_ORDER.indexOf(a), ib=FUNKTION_ORDER.indexOf(b);
-        if(ia>=0&&ib>=0) return ia-ib;
-        if(ia>=0) return -1; if(ib>=0) return 1;
-        return a.localeCompare(b);
-      }).map(([key,items])=>({key,items}))
+      .sort(([a],[b])=>a.localeCompare(b))
+      .map(([key,items])=>({key,items}))
     : [{key:null,items:filtered}];
 
   const handleExport=()=>{
@@ -155,7 +159,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
         if(c.key==="name") return `${m.nachname||""} ${m.vorname||""}`.trim();
         if(c.key==="nr")   return k.rueckennr||"-";
         if(c.key==="pos")  return k.position||"-";
-        if(c.key==="funktion") return k.funktion||"-";
+        if(c.key==="funktion") return (k.funktionen||[]).join(", ")||"-";
         if(c.key==="dob")  return m.geburtsdatum||"-";
         if(c.key==="email")return m.email||"-";
         if(c.key==="tel")  return m.telefon||"-";
@@ -183,7 +187,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
         <Av name={`${m.vorname||""} ${m.nachname||""}`} size="md" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
         <div style={{flex:1,minWidth:0}}>
           <div className="cc-list-name">{name}</div>
-          <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{k.funktion||"Spieler/in"}</div>
+          <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{(k.funktionen||["Spieler/in"]).join(" · ")}</div>
         </div>
         {/* Position */}
         <div onClick={e=>e.stopPropagation()} style={{minWidth:48,textAlign:"center"}}>
@@ -247,7 +251,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
                   <Av name={name} size="lg" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
                   <Col gap={2}>
                     <span style={{fontWeight:600,fontSize:16,color:"var(--text)"}}>{name}</span>
-                    <span style={{fontSize:12,color:"var(--sub)"}}>{selected.funktion||"Spieler/in"} · Nr. {selected.rueckennr||"—"}</span>
+                    <span style={{fontSize:12,color:"var(--sub)"}}>{(selected.funktionen||["Spieler/in"]).join(" · ")} · Nr. {selected.rueckennr||"—"}</span>
                   </Col>
                 </Row>
                 <button className="cc-icon-btn" onClick={()=>setSelected(null)}><TI n="x" size={14}/></button>
@@ -297,10 +301,46 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
           {addForm.mitglied_id&&(
             <div style={{display:"flex",gap:10}}>
               <div style={{flex:1}}>
-                <label className="cc-label">Funktion</label>
-                <select className="cc-input" value={addForm.funktion} onChange={e=>setAddForm(p=>({...p,funktion:e.target.value}))}>
-                  {FUNKTION_OPTIONS.map(f=><option key={f} value={f}>{f}</option>)}
-                </select>
+                <label className="cc-label">Funktion(en)</label>
+                <div className="cc-multiselect">
+                  <button type="button" className="cc-multiselect-trigger" onClick={()=>setAddFunkOpen(o=>!o)}>
+                    <div className="cc-multiselect-chips">
+                      {(addForm.funktionen||[]).length===0
+                        ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
+                        :(addForm.funktionen||[]).map(f=>(
+                          <span key={f} className="cc-multiselect-chip">
+                            {f}
+                            <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setAddForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
+                          </span>
+                        ))
+                      }
+                    </div>
+                    <TI n={addFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                  </button>
+                  {addFunkOpen&&(
+                    <div className="cc-multiselect-dropdown">
+                      <div className="cc-multiselect-list">
+                        {portalFunktionen.map(f=>{
+                          const sel=(addForm.funktionen||[]).includes(f.name);
+                          return(
+                            <div key={f.id} className="cc-multiselect-item" onClick={()=>setAddForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f.name):[...(p.funktionen||[]),f.name]}))}>
+                              <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                              </div>
+                              <span>{f.name}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {(addForm.funktionen||[]).length>0&&(
+                        <div className="cc-multiselect-footer">
+                          <span>{(addForm.funktionen||[]).length} ausgewählt</span>
+                          <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setAddForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div style={{width:80}}>
                 <label className="cc-label">Nr.</label>

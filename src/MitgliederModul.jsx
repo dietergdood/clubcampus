@@ -586,7 +586,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     const [teamDetails,setTeamDetails]=useState(null);
     const [showTeamAssign,setShowTeamAssign]=useState(false);
     const [allTeams,setAllTeams]=useState([]);
-    const [teamAssignForm,setTeamAssignForm]=useState({team_id:"",funktion:"Spieler/in",rueckennr:"",position:""});
+    const [assignFunktionen,setAssignFunktionen]=useState([]);
+    const [teamAssignForm,setTeamAssignForm]=useState({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
+    const [teamFunkOpen,setTeamFunkOpen]=useState(false);
     const [teamAssignSaving,setTeamAssignSaving]=useState(false);
     const [elternLoaded,setElternLoaded]=useState(null);
     const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
@@ -608,9 +610,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     },[tab,raw.id]);
 
     useEffect(()=>{
-      if(showTeamAssign&&sb&&allTeams.length===0){
-        sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
-          .then(({data})=>setAllTeams(data||[]));
+      if(showTeamAssign&&sb){
+        if(allTeams.length===0)
+          sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
+            .then(({data})=>setAllTeams(data||[]));
+        if(assignFunktionen.length===0)
+          sb.from("portal_funktionen").select("id,name").order("name")
+            .then(({data})=>setAssignFunktionen(data||[]));
       }
     },[showTeamAssign]);
 
@@ -620,7 +626,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
       await sb.from("kader").upsert({
         team_id:parseInt(teamAssignForm.team_id),
         mitglied_id:raw.id,
-        funktion:teamAssignForm.funktion||"Spieler/in",
+        funktionen:teamAssignForm.funktionen||["Spieler/in"],
         rueckennr:teamAssignForm.rueckennr||null,
         position:teamAssignForm.position||null,
         aktiv:true,
@@ -629,7 +635,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
       const {data}=await sb.from("kader").select("*, teams(id,name,kurzname)").eq("mitglied_id",raw.id).eq("aktiv",true);
       if(data) setTeamDetails(data);
       setShowTeamAssign(false);
-      setTeamAssignForm({team_id:"",funktion:"Spieler/in",rueckennr:"",position:""});
+      setTeamAssignForm({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
+      setTeamFunkOpen(false);
       setTeamAssignSaving(false);
     }
 
@@ -791,7 +798,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   </div>
                   <div className="cc-flex-1">
                     <div className="cc-text-bold">{k.teams?.name||"—"}</div>
-                    <div className="cc-text-sm">{k.funktion||"—"}{k.position?` · ${k.position}`:""}</div>
+                    <div className="cc-text-sm">{(k.funktionen||["Spieler/in"]).join(" · ")}{k.position?` · ${k.position}`:""}</div>
                   </div>
                   {canEdit&&(
                     <button className="cc-team-remove-btn" onClick={()=>removeFromTeam(k.id)}>
@@ -822,12 +829,46 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   </select>
                 </div>
                 <div>
-                  <label className="cc-label">Funktion</label>
-                  <select className="cc-input" value={teamAssignForm.funktion} onChange={e=>setTeamAssignForm(p=>({...p,funktion:e.target.value}))}>
-                    {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>(
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
+                  <label className="cc-label">Funktion(en)</label>
+                  <div className="cc-multiselect">
+                    <button type="button" className="cc-multiselect-trigger" onClick={()=>setTeamFunkOpen(o=>!o)}>
+                      <div className="cc-multiselect-chips">
+                        {(teamAssignForm.funktionen||[]).length===0
+                          ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
+                          :(teamAssignForm.funktionen||[]).map(f=>(
+                            <span key={f} className="cc-multiselect-chip">
+                              {f}
+                              <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setTeamAssignForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
+                            </span>
+                          ))
+                        }
+                      </div>
+                      <TI n={teamFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                    </button>
+                    {teamFunkOpen&&(
+                      <div className="cc-multiselect-dropdown">
+                        <div className="cc-multiselect-list">
+                          {assignFunktionen.map(f=>{
+                            const sel=(teamAssignForm.funktionen||[]).includes(f.name);
+                            return(
+                              <div key={f.id} className="cc-multiselect-item" onClick={()=>setTeamAssignForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f.name):[...(p.funktionen||[]),f.name]}))}>
+                                <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                  {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                                </div>
+                                <span>{f}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {(teamAssignForm.funktionen||[]).length>0&&(
+                          <div className="cc-multiselect-footer">
+                            <span>{(teamAssignForm.funktionen||[]).length} ausgewählt</span>
+                            <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setTeamAssignForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div style={{display:"flex",gap:10}}>
                   <div style={{width:90}}>
