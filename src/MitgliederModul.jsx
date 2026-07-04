@@ -141,7 +141,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[]}){
+function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],benutzer=null,teamDetails=null}){
   const [editOpen,setEditOpen]=useState(false);
   const [editForm,setEditForm]=useState({...raw});
   const [editSaving,setEditSaving]=useState(false);
@@ -758,6 +758,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           sb={sb} onReload={onReload} onClose={onClose}
           statusColor={statusColor} statusBg={statusBg}
           dbMitgliedtypen={dbMitgliedtypen}
+          benutzer={benutzer} teamDetails={teamDetails}
         />
         {/* Stats */}
         {/* Tabs */}
