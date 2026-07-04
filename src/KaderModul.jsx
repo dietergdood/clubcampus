@@ -100,13 +100,17 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   }
 
   const ROLLE_MAP={"Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer","Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer"};
-  const PRIORITAET_DEFAULT=["administrator","administration","funktionaer","trainer","spieler","eltern","mitglied","supporter"];
   const [dbRollenPrio,setDbRollenPrio]=useState([]);
+  const [dbKaderRollenData,setDbKaderRollenData]=useState([]);
   useEffect(()=>{
-    if(sb) sb.from("portal_rollen").select("name,prioritaet").eq("aktiv",true).order("prioritaet")
-      .then(({data})=>{if(data)setDbRollenPrio(data.map(r=>r.name));});
+    if(sb){
+      sb.from("portal_rollen").select("name,prioritaet").eq("aktiv",true).order("prioritaet")
+        .then(({data})=>{if(data)setDbRollenPrio(data.map(r=>r.name));});
+      sb.from("kader_rollen").select("*").eq("aktiv",true).order("sort_order")
+        .then(({data})=>{if(data)setDbKaderRollenData(data);});
+    }
   },[]);
-  const PRIORITAET=dbRollenPrio.length>0?dbRollenPrio:PRIORITAET_DEFAULT;
+  const PRIORITAET=dbRollenPrio;
 
   async function updateBenutzerRolle(mitgliedId){
     if(!sb||!mitgliedId) return;
@@ -116,7 +120,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     if(["administrator","administration"].includes(benutzer.role)) return;
     const {data:mitglied}=await sb.from("mitglieder").select("funktionen,mitgliedtyp").eq("id",mitgliedId).maybeSingle();
     const alleKader=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
-    const TRAINER_ROLLEN_SET=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
+    const TRAINER_ROLLEN_SET=(dbKaderRollenData||[]).filter(r=>r.ist_trainer).map(r=>r.name);
     let neueRolle="supporter";
     if(alleKader.data&&alleKader.data.length>0){
       const hatTrainer=alleKader.data.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));

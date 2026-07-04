@@ -248,7 +248,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                   ?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label]))
                   :{administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",mitglied:"Mitglied",supporter:"Supporter"};
                 // Abgeleitete Rolle: Kader (Trainer>Spieler) > Vereinsfunktionen > Mitgliedtyp-Mapping > Supporter
-                const TRAINER_ROLLEN=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
+                const TRAINER_ROLLEN=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
                 const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
                 const hatSpielerKader=teamDetails&&teamDetails.length>0;
                 const hatFunktionen=(raw.funktionen||[]).length>0;
@@ -487,7 +487,7 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
+function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
@@ -748,15 +748,14 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
       if(existing){
         // Kader-Einträge der Person laden → Rolle ableiten
         const ROLLE_MAP={
-          "Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer",
-          "Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer",
+          ...Object.fromEntries(dbKaderRollen.map(r=>[r.name,r.ist_trainer?"trainer":"spieler"])),
         };
         const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
         const {data:kaderData}=await sb.from("kader")
           .select("rollen").eq("mitglied_id",raw.id).eq("aktiv",true);
         const {data:mitgliedtypData}=await sb.from("mitgliedtypen")
           .select("standard_rolle").eq("name",raw.mitgliedtyp||"").maybeSingle();
-        const TRAINER_ROLLEN_SET=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
+        const TRAINER_ROLLEN_SET=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
         // Rollenableitung: Kader > Mitgliedtyp (spieler/trainer) > Vereinsfunktionen > Mitgliedtyp-Rest > Supporter
         let neueRolle="supporter";
         if(kaderData&&kaderData.length>0){
@@ -1068,14 +1067,14 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                     {teamFunkOpen&&(
                       <div className="cc-multiselect-dropdown">
                         <div className="cc-multiselect-list">
-                          {assignFunktionen.map(f=>{
-                            const sel=(teamAssignForm.funktionen||[]).includes(f.name);
+                          {dbKaderRollen.map(r=>r.name).map(r=>{
+                            const sel=(teamAssignForm.funktionen||[]).includes(r);
                             return(
-                              <div key={f.id} className="cc-multiselect-item" onClick={()=>setTeamAssignForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f.name):[...(p.funktionen||[]),f.name]}))}>
+                              <div key={r} className="cc-multiselect-item" onClick={()=>setTeamAssignForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r):[...(p.funktionen||[]),r]}))}>
                                 <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                                   {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
                                 </div>
-                                <span>{f.name}</span>
+                                <span>{r}</span>
                               </div>
                             );
                           })}
@@ -1148,7 +1147,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                         {editTeamFunkOpen&&(
                           <div className="cc-multiselect-dropdown">
                             <div className="cc-multiselect-list">
-                              {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>{
+                              {dbKaderRollen.map(r=>r.name).map(f=>{
                                 const sel=(editTeamForm.funktionen||[]).includes(f);
                                 return(
                                   <div key={f} className="cc-multiselect-item" onClick={()=>setEditTeamForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f):[...(p.funktionen||[]),f]}))}>
