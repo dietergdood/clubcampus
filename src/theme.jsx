@@ -759,19 +759,31 @@ function Truncate({children, lines=1, style={}}){
 /* ── DropMenu: Dreipunkt-Menü ── */
 function DropMenu({items}){
   const [open,setOpen]=useState(false);
+  const [pos,setPos]=useState({top:0,right:0});
+  const btnRef=useRef(null);
   const wrapRef=useRef(null);
+
   useEffect(()=>{
     function handleClick(e){ if(wrapRef.current&&!wrapRef.current.contains(e.target)) setOpen(false); }
     document.addEventListener("mousedown",handleClick);
     return()=>document.removeEventListener("mousedown",handleClick);
   },[]);
+
+  function handleOpen(){
+    if(btnRef.current){
+      const r=btnRef.current.getBoundingClientRect();
+      setPos({top:r.bottom+4, right:window.innerWidth-r.right});
+    }
+    setOpen(o=>!o);
+  }
+
   return(
     <div className="cc-menu-wrap" ref={wrapRef}>
-      <button className="cc-menu-trigger" onClick={()=>setOpen(o=>!o)}>
+      <button className="cc-menu-trigger" ref={btnRef} onClick={handleOpen}>
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&(
-        <div className="cc-menu">
+        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto"}}>
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
             :<button key={i}
