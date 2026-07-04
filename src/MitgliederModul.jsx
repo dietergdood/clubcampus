@@ -482,7 +482,7 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null}){
+function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
@@ -603,7 +603,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
   const inputStyle={padding:"7px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:FONT};
 
   /* ── Detail-Modal ── */
-  const MemberDetail=({m,onClose})=>{
+  const MemberDetail=({m,onClose,onNavToTeam=null})=>{
     const raw=dbMitglieder.find(d=>d.id===m.id)||{};
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
@@ -863,8 +863,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                 <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
               )}
               {(teamDetails||[]).map((k,i)=>(
-                <div key={i} className="cc-team-position-row" style={{cursor:canEdit?"pointer":"default"}}
-                  onClick={canEdit?()=>{setEditTeamForm({funktionen:k.rollen||[],rueckennr:k.rueckennr||"",position:k.position||""});setEditTeam(k);}:undefined}>
+                <div key={i} className="cc-team-position-row">
                   <div className={k.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
                     {k.rueckennr||"—"}
                   </div>
@@ -872,11 +871,16 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                     <div className="cc-text-bold">{k.teams?.name||"—"}</div>
                     <div className="cc-text-sm">{(k.rollen||["Spieler/in"]).join(" · ")}{k.position?` · ${k.position}`:""}</div>
                   </div>
-                  {canEdit&&(
-                    <button className="cc-team-remove-btn" onClick={e=>{e.stopPropagation();removeFromTeam(k.id);}}>
-                      <TI n="trash" size={13}/>
-                    </button>
-                  )}
+                  <DropMenu items={[
+                    {label:"Zum Team", icon:"arrow-right", onClick:()=>{
+                      if(typeof onNavToTeam==="function") onNavToTeam(k.team_id);
+                    }},
+                    ...(canEdit?[
+                      {label:"Bearbeiten", icon:"edit", onClick:()=>{setEditTeamForm({funktionen:k.rollen||[],rueckennr:k.rueckennr||"",position:k.position||""});setEditTeam(k);}},
+                      "sep",
+                      {label:"Entfernen", icon:"trash", danger:true, onClick:()=>removeFromTeam(k.id)},
+                    ]:[]),
+                  ]}/>
                 </div>
               ))}
               {canEdit&&(
@@ -1375,7 +1379,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     );
   };
 
-  if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)}/>;
+  if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}/>;
 
   return(
     <div>
