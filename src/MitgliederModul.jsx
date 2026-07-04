@@ -142,6 +142,7 @@ function getFieldVisibility(role){
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
 function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],benutzer=null,teamDetails=null}){
+  const isMobile=useIsMobile();
   const [editOpen,setEditOpen]=useState(false);
   const [editForm,setEditForm]=useState({...raw});
   const [editSaving,setEditSaving]=useState(false);
@@ -246,13 +247,18 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
               })()}
             </div>
             <div className="cc-hero-status-badges">
-              {!raw.geprueft&&<span className="cc-hero-status-badge-warn"><TI n="alert-circle" size={11}/> Datenprüfung ausstehend</span>}
-              {!raw.hat_portal_zugang&&<span className="cc-hero-status-badge-warn"><TI n="key" size={11}/> Portal-Zugang fehlt</span>}
-              {raw.fairgate_id&&<span className="cc-hero-status-badge-ok"><TI n="check" size={11}/> Fairgate synchronisiert</span>}
+              {!raw.geprueft&&<span className="cc-hero-status-badge-warn"><TI n="alert-circle" size={11}/> {isMobile?"Datenprüfung":"Datenprüfung ausstehend"}</span>}
+              {!raw.hat_portal_zugang&&<span className="cc-hero-status-badge-warn"><TI n="key" size={11}/> {isMobile?"Kein Portal":"Portal-Zugang fehlt"}</span>}
+              {raw.fairgate_id&&<span className="cc-hero-status-badge-ok"><TI n="check" size={11}/> {isMobile?"Fairgate":"Fairgate synchronisiert"}</span>}
             </div>
           </div>
+          {isMobile&&(
+            <button className="cc-hero-banner-btn" onClick={onClose} style={{flexShrink:0}}><TI n="arrow-left" size={16}/></button>
+          )}
           <div className="cc-hero-banner-actions">
-            <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
+            {!isMobile&&(
+              <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
+            )}
             {canEdit&&(
               <DropMenu items={[
                 {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
@@ -609,6 +615,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
     const canEdit=kannVerwalten("members");
+    const isMobile=useIsMobile();
     const [portalLoading,setPortalLoading]=useState(false);
     const [benutzer,setBenutzer]=useState(null);
     const [portalMsg,setPortalMsg]=useState(null);
@@ -752,7 +759,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     }
 
     return(
-      <div className="cc-col cc-gap-12">
+      <div className="cc-col cc-gap-12 cc-member-detail-wrap">
         {/* Hero Header */}
         <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit}
           sb={sb} onReload={onReload} onClose={onClose}
@@ -776,10 +783,10 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           mb={0}
         />
         <div className="cc-member-stats">
-          <StatusTile label="Mitgliedtyp"   value={raw.mitgliedtyp||"—"}                          icon="id-badge-2"                              semantic="neutral"/>
-          <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}            icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}/>
-          <StatusTile label="Portal-Zugang" value={raw.hat_portal_zugang?"Eingerichtet":"Fehlt"}   icon="key"                                     semantic={raw.hat_portal_zugang?"ok":"warn"}/>
-          <StatusTile label="Fairgate"      value={raw.fairgate_id?"Synchronisiert":"—"}           icon="refresh"                                 semantic={raw.fairgate_id?"ok":"neutral"}/>
+          <StatusTile label="Mitgliedtyp"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"                              semantic="neutral"/>
+          <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}                                        icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}/>
+          <StatusTile label="Portal"        value={raw.hat_portal_zugang?(isMobile?"OK":"Eingerichtet"):(isMobile?"Fehlt":"Fehlt")} icon="key"                                  semantic={raw.hat_portal_zugang?"ok":"warn"}/>
+          <StatusTile label="Fairgate"      value={raw.fairgate_id?(isMobile?"Sync":"Synchronisiert"):"—"}                     icon="refresh"                                 semantic={raw.fairgate_id?"ok":"neutral"}/>
         </div>
 
         {/* Tab: Profil */}

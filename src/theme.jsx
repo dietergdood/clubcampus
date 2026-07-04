@@ -485,7 +485,26 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
   .cc-form-row,.cc-grid-2,.cc-grid-3{grid-template-columns:1fr!important}
   .cc-page-hdr{flex-direction:column;align-items:flex-start}
   .cc-info-key{min-width:90px}
-}`;
+  .cc-member-hero-banner{padding:12px 12px 14px;padding-right:12px;gap:10px}
+  .cc-hero-av-wrap{width:52px;height:52px}
+  .cc-member-hero-av{width:52px;height:52px;font-size:16px}
+  .cc-hero-av-edit{width:18px;height:18px}
+  .cc-profile-name{font-size:16px}
+  .cc-member-hero-sub{font-size:11px}
+  .cc-hero-status-badge-warn,.cc-hero-status-badge-ok{font-size:10px;padding:2px 7px}
+  .cc-hero-banner-btn{width:26px;height:26px}
+  .cc-hero-banner-actions{position:static;gap:4px;margin-left:auto;flex-shrink:0}
+  .cc-member-stats{grid-template-columns:repeat(2,1fr)!important}
+  .cc-status-tile{padding:8px 10px}
+  .cc-status-tile-icon{width:26px;height:26px}
+  .cc-status-tile-value,.cc-status-tile-value-warn,.cc-status-tile-value-ok,.cc-status-tile-value-danger{font-size:12px}
+  .cc-detail-grid-2{grid-template-columns:1fr!important}
+  .cc-member-detail-wrap .cc-card{padding:10px 12px}
+  .cc-member-detail-wrap .cc-info-row{padding:5px 0}
+  .cc-member-detail-wrap .cc-grid-2{gap:8px}
+}
+.cc-member-detail-wrap .cc-card{padding:12px}
+.cc-member-detail-wrap .cc-info-row{padding:6px 0}`;
 /* localStorage polyfill voor window.storage */
 
 /* ── Semantische Farben ────────────────────────────────────────
