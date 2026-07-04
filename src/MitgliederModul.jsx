@@ -638,6 +638,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
       await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
       setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
     }
+    const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
 
     useEffect(()=>{
