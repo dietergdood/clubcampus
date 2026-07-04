@@ -202,13 +202,9 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
       updated_at:new Date().toISOString(),
     }).eq("id",raw.id);
-    // Rolle immer in mitglieder.rolle speichern
-    if(!error){
-      await sb.from("mitglieder").update({rolle:editForm.rolle||null}).eq("id",raw.id);
-      // Zusätzlich in benutzer.role falls Portal-Zugang vorhanden
-      if(editForm.rolle&&editForm._benutzer_id){
-        await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
-      }
+    // Rolle: nur administrator/administration manuell setzen, Rest automatisch
+    if(!error&&editForm.rolle&&editForm._benutzer_id){
+      await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
     }
     if(error){ setEditMsg({ok:false,text:error.message}); }
     else{
@@ -244,14 +240,23 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             <h1 className="cc-profile-name">{m.name}</h1>
             <div className="cc-member-hero-sub">
               {(()=>{
-                const ROLLE_LABEL={administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",supporter:"Supporter"};
-                // Priorität: Portal-Rolle > mitglieder.rolle > Kader-Rolle > Vereinsfunktionen > Supporter
-                const portalRolle=benutzer?.role?ROLLE_LABEL[benutzer.role]||benutzer.role:null;
-                const gespeicherteRolle=raw.rolle?ROLLE_LABEL[raw.rolle]||raw.rolle:null;
-                const kaderRolle=teamDetails&&teamDetails.length>0?(teamDetails[0].rollen||[])[0]||null:null;
-                const funkRolle=(raw.funktionen||[]).length>0?"Funktionär":null;
-                const rolle=portalRolle||gespeicherteRolle||kaderRolle||funkRolle||"Supporter";
-                return [mitgliedtyp, age?`${age} Jahre`:null, rolle].filter(Boolean).join(" · ");
+                const ROLLE_LABEL={administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",mitglied:"Mitglied",supporter:"Supporter"};
+                // Abgeleitete Rolle: Kader (Trainer>Spieler) > Vereinsfunktionen > Mitgliedtyp-Mapping > Supporter
+                const TRAINER_ROLLEN=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
+                const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
+                const hatSpielerKader=teamDetails&&teamDetails.length>0;
+                const hatFunktionen=(raw.funktionen||[]).length>0;
+                const mitgliedtypObj=dbMitgliedtypen.find(t=>t.name===mitgliedtyp);
+                const typRolle=mitgliedtypObj?.standard_rolle||null;
+                let abgeleiteteRolle="supporter";
+                if(hatTrainerKader) abgeleiteteRolle="trainer";
+                else if(hatSpielerKader) abgeleiteteRolle="spieler";
+                else if(hatFunktionen) abgeleiteteRolle="funktionaer";
+                else if(typRolle) abgeleiteteRolle=typRolle;
+                // Portal-Rolle überschreibt wenn vorhanden
+                const effektivRolle=benutzer?.role||abgeleiteteRolle;
+                const rolleLabel=ROLLE_LABEL[effektivRolle]||effektivRolle;
+                return [mitgliedtyp, age?`${age} Jahre`:null, rolleLabel].filter(Boolean).join(" · ");
               })()}
             </div>
             <div className="cc-hero-status-badges">
@@ -752,17 +757,23 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
         const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
         const {data:kaderData}=await sb.from("kader")
           .select("rollen").eq("mitglied_id",raw.id).eq("aktiv",true);
-        // Priorität: 1. mitglieder.rolle (manuell gesetzt) 2. Kader-Ableitung 3. Fallback
-        let neueRolle = existing.role || "supporter";
-        if(raw.rolle){
-          // Manuell gesetzte Rolle hat höchste Priorität
-          neueRolle = raw.rolle;
-        } else if(kaderData&&kaderData.length>0){
-          const alleRollen=kaderData.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
-          const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
-          if(hoechste) neueRolle=hoechste;
+        const {data:mitgliedtypData}=await sb.from("mitgliedtypen")
+          .select("standard_rolle").eq("name",raw.mitgliedtyp||"").maybeSingle();
+        const TRAINER_ROLLEN_SET=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
+        // Rollenableitung: Kader > Vereinsfunktionen > Mitgliedtyp-Mapping > Supporter
+        let neueRolle="supporter";
+        if(kaderData&&kaderData.length>0){
+          const hatTrainer=kaderData.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
+          if(hatTrainer) neueRolle="trainer";
+          else{
+            const alleRollen=kaderData.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
+            const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
+            if(hoechste) neueRolle=hoechste;
+          }
         } else if((raw.funktionen||[]).length>0){
           neueRolle="funktionaer";
+        } else if(mitgliedtypData?.standard_rolle){
+          neueRolle=mitgliedtypData.standard_rolle;
         }
         await sb.from("mitglieder").update({hat_portal_zugang:true}).eq("id",raw.id);
         await sb.from("benutzer").update({mitglied_id:raw.id, role:neueRolle}).eq("id",existing.id);

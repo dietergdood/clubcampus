@@ -736,7 +736,7 @@ function PortalverwaltungView(props){
   const [dbMitgliedtypen,setDbMitgliedtypen]=useState([]);
   const [showMitgliedtypForm,setShowMitgliedtypForm]=useState(false);
   const [editMitgliedtyp,setEditMitgliedtyp]=useState(null);
-  const [mitgliedtypForm,setMitgliedtypForm]=useState({name:"",beitragsinfo:"",hauptkontakt_pflicht:false}); // portal_gruppen_teams
+  const [mitgliedtypForm,setMitgliedtypForm]=useState({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""}); // portal_gruppen_teams
   const [selectedGruppe,setSelectedGruppe]=useState(null);
   const [showGruppeForm,setShowGruppeForm]=useState(false);
   const [showFunktionForm,setShowFunktionForm]=useState(false);
@@ -2125,7 +2125,7 @@ function PortalverwaltungView(props){
 
         async function saveMitgliedtyp(){
           if(!mitgliedtypForm.name.trim()) return;
-          const payload={name:mitgliedtypForm.name.trim(),beitragsinfo:mitgliedtypForm.beitragsinfo||"",hauptkontakt_pflicht:!!mitgliedtypForm.hauptkontakt_pflicht,aktiv:true};
+          const payload={name:mitgliedtypForm.name.trim(),beitragsinfo:mitgliedtypForm.beitragsinfo||"",hauptkontakt_pflicht:!!mitgliedtypForm.hauptkontakt_pflicht,standard_rolle:mitgliedtypForm.standard_rolle||null,aktiv:true};
           if(supabase){
             if(editMitgliedtyp?.id){
               await supabase.from("mitgliedtypen").update(payload).eq("id",editMitgliedtyp.id);
@@ -2137,7 +2137,7 @@ function PortalverwaltungView(props){
             if(data) setDbMitgliedtypen(data);
           }
           setShowMitgliedtypForm(false); setEditMitgliedtyp(null);
-          setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false});
+          setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""});
         }
 
         async function deleteMitgliedtyp(id){
@@ -2154,7 +2154,7 @@ function PortalverwaltungView(props){
             <Card>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <div className="cc-section-title"><TI n="id-badge" size={14}/> Mitgliedtypen</div>
-                <button onClick={()=>{setEditMitgliedtyp(null);setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false});setShowMitgliedtypForm(true);}}
+                <button onClick={()=>{setEditMitgliedtyp(null);setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""});setShowMitgliedtypForm(true);}}
                   style={{padding:"5px 12px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                   + Neu
                 </button>
@@ -2164,6 +2164,7 @@ function PortalverwaltungView(props){
                   <th className="cc-th" style={{textAlign:"left"}}>Name</th>
                   <th className="cc-th cc-th-center">Hauptkontakt</th>
                   <th className="cc-th" style={{textAlign:"left"}}>Beitrag</th>
+                  <th className="cc-th" style={{textAlign:"left"}}>Standard-Rolle</th>
                   <th className="cc-th cc-th-center">Aktiv</th>
                   <th className="cc-th"></th>
                 </tr></thead>
@@ -2177,6 +2178,7 @@ function PortalverwaltungView(props){
                           :<span style={{fontSize:11,color:"var(--sub)"}}>—</span>}
                       </td>
                       <td className="cc-td" style={{fontSize:12,color:"var(--sub)"}}>{t.beitragsinfo||"—"}</td>
+                      <td className="cc-td"><span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"var(--surface2)",color:"var(--sub)"}}>{t.standard_rolle||"—"}</span></td>
                       <td className="cc-td" style={{textAlign:"center"}}>
                         <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:t.aktiv?"#ECFDF5":"var(--surface2)",color:t.aktiv?"#15803d":"var(--sub)",fontWeight:500}}>
                           {t.aktiv?"Aktiv":"Inaktiv"}
@@ -2184,7 +2186,7 @@ function PortalverwaltungView(props){
                       </td>
                       <td className="cc-td" style={{textAlign:"right"}}>
                         <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
-                          <button onClick={()=>{setEditMitgliedtyp(t);setMitgliedtypForm({name:t.name,beitragsinfo:t.beitragsinfo||"",hauptkontakt_pflicht:!!t.hauptkontakt_pflicht});setShowMitgliedtypForm(true);}}
+                          <button onClick={()=>{setEditMitgliedtyp(t);setMitgliedtypForm({name:t.name,beitragsinfo:t.beitragsinfo||"",hauptkontakt_pflicht:!!t.hauptkontakt_pflicht,standard_rolle:t.standard_rolle||""});setShowMitgliedtypForm(true);}}
                             className="cc-icon-btn" style={{width:26,height:26,borderRadius:6}}>
                             <TI n="edit" size={12}/>
                           </button>
@@ -2216,6 +2218,16 @@ function PortalverwaltungView(props){
                 <div>
                   <label className="cc-label">Beitragsinfo</label>
                   <input className="cc-input" value={mitgliedtypForm.beitragsinfo||""} onChange={e=>setMitgliedtypForm(p=>({...p,beitragsinfo:e.target.value}))} placeholder="z.B. Voller Beitrag CHF 150"/>
+                </div>
+                <div>
+                  <label className="cc-label">Standard Portal-Rolle</label>
+                  <select className="cc-input" value={mitgliedtypForm.standard_rolle||""} onChange={e=>setMitgliedtypForm(p=>({...p,standard_rolle:e.target.value}))}>
+                    <option value="">– keine –</option>
+                    {[{v:"administrator",l:"Administrator"},{v:"administration",l:"Verwaltung"},{v:"funktionaer",l:"Funktionär"},{v:"trainer",l:"Trainer"},{v:"spieler",l:"Spieler"},{v:"eltern",l:"Eltern"},{v:"mitglied",l:"Mitglied"},{v:"supporter",l:"Supporter"}].map(r=>(
+                      <option key={r.v} value={r.v}>{r.l}</option>
+                    ))}
+                  </select>
+                  <div style={{fontSize:11,color:"var(--sub)",marginTop:4}}>Wird automatisch gesetzt wenn keine höhere Rolle vorliegt</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",cursor:"pointer"}}
                   onClick={()=>setMitgliedtypForm(p=>({...p,hauptkontakt_pflicht:!p.hauptkontakt_pflicht}))}>
