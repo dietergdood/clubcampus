@@ -278,11 +278,17 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           <div className="cc-hero-banner-actions">
             {canEdit&&(
               <div ref={heroMenuRef} style={{position:"relative"}}>
-                <button className="cc-hero-banner-btn" onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setHeroMenuOpen(o=>!o);}}>
+                <button className="cc-hero-banner-btn" onMouseDown={e=>e.stopPropagation()}
+                  onClick={e=>{
+                    e.stopPropagation();
+                    const r=e.currentTarget.getBoundingClientRect();
+                    heroMenuRef.current._pos={top:r.bottom+4,right:window.innerWidth-r.right};
+                    setHeroMenuOpen(o=>!o);
+                  }}>
                   <TI n="dots-vertical" size={16}/>
                 </button>
                 {heroMenuOpen&&(
-                  <div className="cc-menu" style={{position:"absolute",top:"calc(100% + 4px)",right:0,left:"auto",zIndex:100}}>
+                  <div className="cc-menu" style={{position:"fixed",top:(heroMenuRef.current?._pos?.top||0),right:(heroMenuRef.current?._pos?.right||0),left:"auto",zIndex:1999}}>
                     <button className="cc-menu-item" onClick={()=>{setHeroMenuOpen(false);setEditForm({...raw});setEditOpen(true);}}>
                       <TI n="edit" size={13}/> Bearbeiten
                     </button>
