@@ -510,6 +510,7 @@ function Portal({supabaseClient}){
   };
   const {isMobile,isTablet}=useBreakpoint();
   const [mobileProfileOpen,setMobileProfileOpen]=useState(false);
+  const [profilOverlayDismissed,setProfilOverlayDismissed]=useState(false);
   const [customBack,setCustomBack]=useState(null);
   const customBackRef=useRef(null);
   const setCustomBackAndRef=(fn)=>{customBackRef.current=fn||null;setCustomBack(fn);};
@@ -960,7 +961,7 @@ function Portal({supabaseClient}){
       case "sync":              return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "audit":             return <PortalverwaltungView initialTab="audit" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "datacheck":         return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
-      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account} sb={sb} dbUser={dbUser} dbMitglieder={dbMitglieder} onReload={loadDbMitglieder} onProfilGeprueft={markiereProfilGeprueft}/>;
+      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account} sb={sb} dbUser={dbUser} dbMitglieder={dbMitglieder} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}} onProfilGeprueft={markiereProfilGeprueft}/>;
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
   };
@@ -1043,7 +1044,7 @@ function Portal({supabaseClient}){
         {/* Profil-Pflicht Modal */}
         {(()=>{
           if(!session||role==="administrator"||role==="administration") return null;
-          if(!sollProfilPruefen()) return null;
+          if(!sollProfilPruefen()||profilOverlayDismissed) return null;
           const fehlend=getProfilFehlend();
           const LABELS={"vorname":"Vorname","nachname":"Nachname","geburtsdatum":"Geburtsdatum","telefon":"Handynummer","email":"E-Mail"};
           return(
@@ -1073,7 +1074,7 @@ function Portal({supabaseClient}){
                         ))}
                       </div>
                     </div>
-                    <button onClick={()=>setActivePersist("profile")}
+                    <button onClick={()=>{setProfilOverlayDismissed(true);setActivePersist("profile");}}
                       style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FFBF00)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
                       Jetzt ausfüllen →
                     </button>
