@@ -713,18 +713,25 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
           </div>
         ))}
         {canEdit&&(
-          <div className="cc-notiz-input-wrap">
-            <div className="cc-notiz-av cc-notiz-av-me">{initials(dbUser?.name||dbUser?.email)}</div>
-            <div className="cc-flex-1 cc-col cc-gap-6">
-              <textarea className="cc-input cc-textarea" rows={3} value={newText}
-                onChange={e=>setNewText(e.target.value)} placeholder="Neue Notiz hinzufügen…"/>
-              <div style={{display:"flex",justifyContent:"flex-end"}}>
-                <Btn variant="primary" onClick={addNotiz} disabled={adding||!newText.trim()}>
-                  {adding?"Wird gespeichert…":"Hinzufügen"}
-                </Btn>
+          newText!==""?(
+            <div className="cc-notiz-input-wrap">
+              <div className="cc-notiz-av cc-notiz-av-me">{initials(dbUser?.name||dbUser?.email)}</div>
+              <div className="cc-flex-1 cc-col cc-gap-6">
+                <textarea className="cc-input cc-textarea" rows={3} value={newText}
+                  onChange={e=>setNewText(e.target.value)} autoFocus placeholder="Neue Notiz hinzufügen…"/>
+                <div className="cc-row cc-gap-8" style={{justifyContent:"flex-end"}}>
+                  <Btn onClick={()=>setNewText("")}>Abbrechen</Btn>
+                  <Btn variant="primary" onClick={addNotiz} disabled={adding||!newText.trim()}>
+                    {adding?"Wird gespeichert…":"Hinzufügen"}
+                  </Btn>
+                </div>
               </div>
             </div>
-          </div>
+          ):(
+            <button className="cc-team-add-btn" onClick={()=>setNewText(" ")} style={{marginTop:notizen.length>0?8:0}}>
+              <TI n="plus" size={14}/> Neue Notiz
+            </button>
+          )
         )}
       </div>
     );
