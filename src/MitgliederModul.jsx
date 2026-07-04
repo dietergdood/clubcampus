@@ -147,6 +147,18 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
   const [editSaving,setEditSaving]=useState(false);
   const [editMsg,setEditMsg]=useState(null);
   const [portalFunktionen,setPortalFunktionen]=useState([]);
+  const fotoInputRef=useRef(null);
+
+  async function handleHeroFotoUpload(e){
+    const file=e.target.files?.[0];
+    if(!file) return;
+    const ext=file.name.split(".").pop();
+    const path=`${raw.id}/foto.${ext}`;
+    await sb.storage.from("mitglieder-fotos").upload(path,file,{upsert:true});
+    const {data}=sb.storage.from("mitglieder-fotos").getPublicUrl(path);
+    await sb.from("mitglieder").update({foto_url:data.publicUrl+"?t="+Date.now()}).eq("id",raw.id);
+    if(onReload) onReload();
+  }
 
   const MITGLIEDTYPEN=dbMitgliedtypen.length>0
     ?dbMitgliedtypen.map(t=>t.name)
@@ -205,15 +217,36 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
   return(
     <>
       <div className="cc-member-hero">
-        <div className="cc-member-hero-banner"/>
+        <div className="cc-member-hero-banner">
+          <div className="cc-hero-banner-actions">
+            <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
+            {canEdit&&(
+              <DropMenu items={[
+                {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
+                "sep",
+                {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},
+              ]}/>
+            )}
+          </div>
+        </div>
         <div className="cc-member-hero-body">
           <div className="cc-member-hero-info">
             <div>
-              <div className="cc-member-hero-av">
-                {raw.foto_url
-                  ?<img src={raw.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-                  :<span className="cc-hero-av-initials">{initials}</span>
-                }
+              <div className="cc-hero-av-wrap">
+                <div className="cc-member-hero-av">
+                  {raw.foto_url
+                    ?<img src={raw.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                    :<span className="cc-hero-av-initials">{initials}</span>
+                  }
+                </div>
+                {canEdit&&(
+                  <>
+                    <input ref={fotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleHeroFotoUpload}/>
+                    <button className="cc-hero-av-edit" onClick={()=>fotoInputRef.current?.click()} title="Foto ändern">
+                      <TI n="camera" size={11}/>
+                    </button>
+                  </>
+                )}
               </div>
               <h1 className="cc-profile-name cc-mt-10">{m.name}</h1>
               <div className="cc-member-hero-sub">
@@ -226,16 +259,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                   </span>
                 )}
               </div>
-            </div>
-            <div className="cc-col cc-gap-8">
-              <button className="cc-hero-back" onClick={onClose}><TI n="arrow-left" size={16}/></button>
-              {canEdit&&(
-                <DropMenu items={[
-                  {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
-                  "sep",
-                  {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},
-                ]}/>
-              )}
             </div>
           </div>
         </div>
@@ -765,7 +788,6 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             {/* Personalien */}
             <Card>
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
-              <FotoUpload raw={raw} canUpload={kannSchreiben("members")} sb={sb} onReload={onReload}/>
               {[
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):null}]:[]),
                 {l:"Nationalität", v:raw.nationalitaet||null, flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
