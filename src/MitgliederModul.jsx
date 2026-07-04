@@ -200,39 +200,46 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
     setEditSaving(false);
   }
 
-  const rollen=[];
-  const teams=[];
   const mitgliedtyp=raw.mitgliedtyp||m.type;
-  if(mitgliedtyp) rollen.push({rolle:mitgliedtyp, teams:teams});
-  if((raw.funktionen||[]).length>0) rollen.push(...raw.funktionen.map(f=>({rolle:f, teams:[]})));
 
   return(
     <>
-      <Card flush>
-        <div className="cc-hero-stripe"/>
-        <div className="cc-hero-body">
-          <button className="cc-hero-back" onClick={onClose}><TI n="arrow-left" size={16}/></button>
-          <div className="cc-hero-meta">
-            <h1 className="cc-profile-name">{m.name}</h1>
-            <div className="cc-hero-sub">
-              {rollen.map((r,i)=>(
-                <span key={i}>
-                  {i>0&&<span className="cc-hero-sep">·</span>}
-                  <span className="cc-hero-role">{r.rolle}</span>
-                  {r.teams.length>0&&<span> {r.teams.join(", ")}</span>}
-                </span>
-              ))}
+      <div className="cc-member-hero">
+        <div className="cc-member-hero-banner"/>
+        <div className="cc-member-hero-body">
+          <div className="cc-member-hero-info">
+            <div>
+              <div className="cc-member-hero-av">
+                {raw.foto_url
+                  ?<img src={raw.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                  :<span className="cc-hero-av-initials">{initials}</span>
+                }
+              </div>
+              <h1 className="cc-profile-name cc-mt-10">{m.name}</h1>
+              <div className="cc-member-hero-sub">
+                {[age?`${age} Jahre`:null, raw.geschlecht||null, raw.heimatort||null].filter(Boolean).join(" · ")}
+              </div>
+              <div className="cc-row cc-gap-6 cc-flex-wrap">
+                {mitgliedtyp&&(
+                  <span className="cc-hero-badge-type">
+                    {mitgliedtyp}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="cc-col cc-gap-8">
+              <button className="cc-hero-back" onClick={onClose}><TI n="arrow-left" size={16}/></button>
+              {canEdit&&(
+                <DropMenu items={[
+                  {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
+                  "sep",
+                  {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},
+                ]}/>
+              )}
             </div>
           </div>
-          {canEdit&&(
-          <DropMenu items={[
-              {label:"Bearbeiten", icon:"edit",  onClick:()=>{setEditForm({...raw});setEditOpen(true);}},
-              "sep",
-              {label:"Löschen",    icon:"trash", danger:true, onClick:()=>deleteMitglied()},
-            ]}/>
-          )}
         </div>
-      </Card>
+      </div>
       {editOpen&&(
         <ModalOrSheet open={true} onClose={()=>setEditOpen(false)} maxWidth={560}>
           <div className="cc-modal-hdr">
@@ -590,6 +597,10 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     const [teamAssignForm,setTeamAssignForm]=useState({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
     const [teamFunkOpen,setTeamFunkOpen]=useState(false);
     const [teamAssignSaving,setTeamAssignSaving]=useState(false);
+    const [editTeam,setEditTeam]=useState(null);
+    const [editTeamForm,setEditTeamForm]=useState({funktionen:[],rueckennr:"",position:""});
+    const [editTeamFunkOpen,setEditTeamFunkOpen]=useState(false);
+    const [editTeamSaving,setEditTeamSaving]=useState(false);
     const [elternLoaded,setElternLoaded]=useState(null);
     const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 
@@ -645,6 +656,23 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
       await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
       setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
     }
+
+    async function saveEditTeam(){
+      if(!sb||!editTeam) return;
+      setEditTeamSaving(true);
+      await sb.from("kader").update({
+        rollen:editTeamForm.funktionen||[],
+        rueckennr:editTeamForm.rueckennr||null,
+        position:editTeamForm.position||null,
+      }).eq("id",editTeam.id);
+      setTeamDetails(prev=>prev.map(k=>k.id===editTeam.id
+        ?{...k,rollen:editTeamForm.funktionen,rueckennr:editTeamForm.rueckennr,position:editTeamForm.position}
+        :k
+      ));
+      setEditTeam(null);
+      setEditTeamFunkOpen(false);
+      setEditTeamSaving(false);
+    }
     const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
 
@@ -694,14 +722,29 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     }
 
     return(
-      <div className="cc-col cc-gap-16">
+      <div className="cc-col cc-gap-12">
         {/* Hero Header */}
         <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit}
           sb={sb} onReload={onReload} onClose={onClose}
           statusColor={statusColor} statusBg={statusBg}
           dbMitgliedtypen={dbMitgliedtypen}
         />
-        {/* Tabs ausserhalb Hero */}
+        {/* Stats */}
+        <div className="cc-member-stats">
+          <div className="cc-member-stat">
+            <div className="cc-member-stat-val">{raw.mitgliedtyp||"—"}</div>
+            <div className="cc-member-stat-lbl">Mitgliedtyp</div>
+          </div>
+          <div className="cc-member-stat">
+            <div className="cc-member-stat-val">{benutzer?.role||"—"}</div>
+            <div className="cc-member-stat-lbl">Portal-Rolle</div>
+          </div>
+          <div className="cc-member-stat">
+            <div className="cc-member-stat-val">{age||"—"}</div>
+            <div className="cc-member-stat-lbl">Alter</div>
+          </div>
+        </div>
+        {/* Tabs */}
         <Tabs
           tabs={[
             {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
@@ -710,10 +753,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check", short:"Daten"}]:[]),
             {key:"stats",   label:"Statistik",   icon:"chart-bar",short:"Stats",  soon:true},
             {key:"comments",label:"Kommentare",  icon:"message",  short:"Komm.",  soon:true},
-            {key:"ratings", label:"Bewertungen", icon:"star",     short:"Bewert.",soon:true},
           ]}
           active={tab}
-          setActive={t=>!(["stats","comments","ratings"].includes(t))&&setTab(t)}
+          setActive={t=>!(["stats","comments"].includes(t))&&setTab(t)}
           mb={0}
         />
 
@@ -723,17 +765,14 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             {/* Personalien */}
             <Card>
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
-              {/* Foto */}
               <FotoUpload raw={raw} canUpload={kannSchreiben("members")} sb={sb} onReload={onReload}/>
               {[
-                {l:"Vorname",      v:raw.vorname||m.name.split(" ")[0]},
-                {l:"Nachname",     v:raw.nachname||m.name.split(" ").slice(1).join(" ")},
-                ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):"-"},{l:"Alter",v:age?age+" Jahre":"-"}]:[]),
-                {l:"Nationalität", v:raw.nationalitaet||"-", flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
-                {l:"Heimatort",    v:raw.heimatort||"-"},
-                {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":"-"},
-                ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||"-"}]:[]),
-              ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
+                ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):null}]:[]),
+                {l:"Nationalität", v:raw.nationalitaet||null, flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
+                {l:"Heimatort",    v:raw.heimatort||null},
+                {l:"Geschlecht",   v:raw.geschlecht||null},
+                ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||null}]:[]),
+              ].filter(r=>canEdit||r.v).map((r,i)=>(
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
                   {r.flag?(
@@ -742,63 +781,59 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                       <span>{r.flagName}</span>
                     </span>
                   ):(
-                    <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
+                    <span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
                   )}
                 </div>
               ))}
             </Card>
-            {/* Kontakt */}
-            {fv.showEmail||fv.showTelefon||fv.showAdresse?(
-              <Card>
-                <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
-                {[
-                  ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||"-"}]:[]),
-                  ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||"-"}]:[]),
-                  ...(fv.showAdresse?[
-                    {l:"Strasse",v:raw.strasse||"-"},
-                    {l:"PLZ/Ort",v:raw.plz&&raw.ort?`${raw.plz} ${raw.ort}`:"-"},
-                  ]:[]),
-                ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
-                  <div key={i} className="cc-info-row">
-                    <span className="cc-info-key">{r.l}</span>
-                    <span className="cc-info-val">{r.v}</span>
-                  </div>
-                ))}
-              </Card>
-            ):null}
-            {/* Vereinsdaten */}
-            <Card>
-              <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
-              {/* Mitgliedtyp */}
-              {(raw.mitgliedtyp||m.type)&&(
-                <div className="cc-info-row">
-                  <span className="cc-info-key">Mitgliedtyp</span>
-                  <span className="cc-info-val">{raw.mitgliedtyp||m.type}</span>
-                </div>
-              )}
-              {/* Funktionen als Tags */}
-              {(raw.funktionen||[]).length>0&&(
-                <div className="cc-info-row">
-                  <span className="cc-info-key">Funktion(en)</span>
-                  <div className="cc-row cc-gap-4 cc-flex-wrap">
-                    {(raw.funktionen||[]).map(f=>(
-                      <span key={f} className="cc-badge cc-badge-neutral">{f}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {[
-                ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||"-"}]:[]),
-                ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||"-"}]:[]),
-                ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||"-"}]:[]),
-              ].filter(r=>canEdit||(r.v&&r.v!=="-")).map((r,i)=>(
-                <div key={i} className="cc-info-row">
-                  <span className="cc-info-key">{r.l}</span>
-                  <span className={r.v&&r.v!=="-"?"cc-info-val":"cc-info-val cc-text-sub"}>{r.v&&r.v!=="-"?r.v:"—"}</span>
-                </div>
-              ))}
-            </Card>
-            {/* Teams & Positionen */}
+
+            {/* Kontakt + Hauptkontakt */}
+            {(fv.showEmail||fv.showTelefon||fv.showAdresse)&&(()=>{
+              const hk=raw.mitgliedtyp==="Juniormitglied"?eltern.find(e=>e.hauptkontakt):null;
+              const hkName=hk?(hk.name||`${hk.vorname||""} ${hk.nachname||""}`.trim()||"?"):null;
+              const hkTel=hk?(hk.telefon||hk.tel):null;
+              return(
+                <Card>
+                  <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
+                  {[
+                    ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||null, link:`mailto:${raw.email}`}]:[]),
+                    ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||null}]:[]),
+                    ...(fv.showAdresse?[
+                      {l:"Strasse",v:raw.strasse||null},
+                      {l:"PLZ/Ort",v:raw.plz&&raw.ort?`${raw.plz} ${raw.ort}`:null},
+                    ]:[]),
+                  ].filter(r=>canEdit||r.v).map((r,i)=>(
+                    <div key={i} className="cc-info-row">
+                      <span className="cc-info-key">{r.l}</span>
+                      <span className={r.v?"cc-info-val":"cc-info-val-empty"} style={r.link?{color:"var(--cc-blue,#0369a1)"}:{}}>{r.v||"—"}</span>
+                    </div>
+                  ))}
+                  {/* Hauptkontakt als Mini-Karte */}
+                  {hk&&(
+                    <>
+                      <span className="cc-hk-sub-label">Hauptkontakt</span>
+                      <div className="cc-hk-card">
+                        <Av name={hkName} size="md" bg="rgba(255,191,0,0.15)"/>
+                        <div className="cc-hk-content">
+                          <div className="cc-text-bold">{hkName}</div>
+                          <div className="cc-text-sm cc-text-sub">{hk.beziehung||"—"}</div>
+                          {hk.email&&<div className="cc-text-sm cc-contact-link">{hk.email}</div>}
+                          {hkTel&&<div className="cc-text-sm cc-text-sub">{hkTel}</div>}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {raw.mitgliedtyp==="Juniormitglied"&&!hk&&(
+                    <>
+                      <span className="cc-hk-sub-label">Hauptkontakt</span>
+                      <div className="cc-warn-box"><TI n="alert-triangle" size={14}/> Kein Hauptkontakt — bitte im Tab "Eltern" festlegen</div>
+                    </>
+                  )}
+                </Card>
+              );
+            })()}
+
+            {/* Teams */}
             <Card>
               <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
               {teamDetails===null&&<div className="cc-text-sm cc-text-sub">Lade…</div>}
@@ -806,7 +841,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                 <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
               )}
               {(teamDetails||[]).map((k,i)=>(
-                <div key={i} className="cc-team-position-row">
+                <div key={i} className="cc-team-position-row" style={{cursor:canEdit?"pointer":"default"}}
+                  onClick={canEdit?()=>{setEditTeamForm({funktionen:k.rollen||[],rueckennr:k.rueckennr||"",position:k.position||""});setEditTeam(k);}:undefined}>
                   <div className={k.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
                     {k.rueckennr||"—"}
                   </div>
@@ -815,7 +851,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                     <div className="cc-text-sm">{(k.rollen||["Spieler/in"]).join(" · ")}{k.position?` · ${k.position}`:""}</div>
                   </div>
                   {canEdit&&(
-                    <button className="cc-team-remove-btn" onClick={()=>removeFromTeam(k.id)}>
+                    <button className="cc-team-remove-btn" onClick={e=>{e.stopPropagation();removeFromTeam(k.id);}}>
                       <TI n="trash" size={13}/>
                     </button>
                   )}
@@ -828,13 +864,47 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
               )}
             </Card>
 
+            {/* Vereinsfunktionen */}
+            {((raw.funktionen||[]).length>0||canEdit)&&(
+              <Card>
+                <div className="cc-section-title"><TI n="star" size={14}/> Vereinsfunktionen</div>
+                {(raw.funktionen||[]).length===0&&(
+                  <div className="cc-text-sm cc-text-sub">Keine Vereinsfunktionen.</div>
+                )}
+                {(raw.funktionen||[]).map((f,i)=>(
+                  <div key={i} className="cc-list-item-row">
+                    <div className="cc-list-item-icon"><TI n="star" size={13} style={{color:"var(--sub)"}}/></div>
+                    <div className="cc-flex-1">
+                      <div className="cc-text-bold">{f}</div>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            )}
+
+            {/* Vereinsdaten */}
+            <Card style={{gridColumn:"1/-1"}}>
+              <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
+              {[
+                ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||null}]:[]),
+                ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||null}]:[]),
+                ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||null}]:[]),
+                {l:"Status", v:raw.geprueft?"geprüft":"ausstehend", color:raw.geprueft?"#15803d":"#f59e0b"},
+              ].filter(r=>canEdit||r.v).map((r,i)=>(
+                <div key={i} className="cc-info-row">
+                  <span className="cc-info-key">{r.l}</span>
+                  <span className="cc-info-val" style={r.color?{color:r.color}:{}}>{r.v||"—"}</span>
+                </div>
+              ))}
+            </Card>
+
             {/* Team zuweisen Modal */}
             <ModalOrSheet open={showTeamAssign} onClose={()=>setShowTeamAssign(false)} maxWidth={400}>
               <div className="cc-modal-hdr">
                 <ModalTitle>Team zuweisen</ModalTitle>
                 <button className="cc-icon-btn" onClick={()=>setShowTeamAssign(false)}><TI n="x" size={14}/></button>
               </div>
-              <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div className="cc-modal-body" className="cc-col">
                 <div>
                   <label className="cc-label">Team</label>
                   <select className="cc-input" value={teamAssignForm.team_id} onChange={e=>setTeamAssignForm(p=>({...p,team_id:e.target.value}))}>
@@ -843,7 +913,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   </select>
                 </div>
                 <div>
-                  <label className="cc-label">Funktion(en)</label>
+                  <label className="cc-label">Rolle im Team</label>
                   <div className="cc-multiselect">
                     <button type="button" className="cc-multiselect-trigger" onClick={()=>setTeamFunkOpen(o=>!o)}>
                       <div className="cc-multiselect-chips">
@@ -869,7 +939,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                                 <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                                   {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
                                 </div>
-                                <span>{f}</span>
+                                <span>{f.name}</span>
                               </div>
                             );
                           })}
@@ -884,8 +954,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                     )}
                   </div>
                 </div>
-                <div style={{display:"flex",gap:10}}>
-                  <div style={{width:90}}>
+                <div className="cc-row cc-gap-10">
+                  <div className="cc-form-nr">
                     <label className="cc-label">Nr.</label>
                     <input className="cc-input" type="number" min="1" max="99" placeholder="—"
                       value={teamAssignForm.rueckennr} onChange={e=>setTeamAssignForm(p=>({...p,rueckennr:e.target.value}))}/>
@@ -895,12 +965,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                     <select className="cc-input" value={teamAssignForm.position} onChange={e=>setTeamAssignForm(p=>({...p,position:e.target.value}))}>
                       <option value="">—</option>
                       <optgroup label="Torwart"><option value="TW">TW</option></optgroup>
-                      <optgroup label="Verteidiger">
-                        {["V","IV","RV","LV"].map(p=><option key={p} value={p}>{p}</option>)}
-                      </optgroup>
-                      <optgroup label="Mittelfeld">
-                        {["MF","DM","ZM","LM","RM"].map(p=><option key={p} value={p}>{p}</option>)}
-                      </optgroup>
+                      <optgroup label="Verteidiger">{["V","IV","RV","LV"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
+                      <optgroup label="Mittelfeld">{["MF","DM","ZM","LM","RM"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
                       <optgroup label="Sturm"><option value="ST">ST</option></optgroup>
                     </select>
                   </div>
@@ -913,9 +979,92 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                 </Btn>
               </div>
             </ModalOrSheet>
+
+            {/* Edit Team Modal */}
+            <ModalOrSheet open={!!editTeam} onClose={()=>{setEditTeam(null);setEditTeamFunkOpen(false);}} maxWidth={400}>
+              {editTeam&&(
+                <>
+                  <div className="cc-modal-hdr">
+                    <div>
+                      <ModalTitle>{editTeam.teams?.name||"Team"} bearbeiten</ModalTitle>
+                      <div className="cc-text-sm cc-text-sub">Saison 2025/26</div>
+                    </div>
+                    <button className="cc-icon-btn" onClick={()=>{setEditTeam(null);setEditTeamFunkOpen(false);}}><TI n="x" size={14}/></button>
+                  </div>
+                  <div className="cc-modal-body" className="cc-col">
+                    <div>
+                      <label className="cc-label">Rolle im Team</label>
+                      <div className="cc-multiselect">
+                        <button type="button" className="cc-multiselect-trigger" onClick={()=>setEditTeamFunkOpen(o=>!o)}>
+                          <div className="cc-multiselect-chips">
+                            {(editTeamForm.funktionen||[]).length===0
+                              ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
+                              :(editTeamForm.funktionen||[]).map(f=>(
+                                <span key={f} className="cc-multiselect-chip">
+                                  {f}
+                                  <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setEditTeamForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
+                                </span>
+                              ))
+                            }
+                          </div>
+                          <TI n={editTeamFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                        </button>
+                        {editTeamFunkOpen&&(
+                          <div className="cc-multiselect-dropdown">
+                            <div className="cc-multiselect-list">
+                              {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>{
+                                const sel=(editTeamForm.funktionen||[]).includes(f);
+                                return(
+                                  <div key={f} className="cc-multiselect-item" onClick={()=>setEditTeamForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f):[...(p.funktionen||[]),f]}))}>
+                                    <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                      {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                                    </div>
+                                    <span>{f}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {(editTeamForm.funktionen||[]).length>0&&(
+                              <div className="cc-multiselect-footer">
+                                <span>{editTeamForm.funktionen.length} ausgewählt</span>
+                                <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setEditTeamForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="cc-row cc-gap-10">
+                      <div className="cc-form-nr">
+                        <label className="cc-label">Nr.</label>
+                        <input className="cc-input" type="number" min="1" max="99" placeholder="—"
+                          value={editTeamForm.rueckennr} onChange={e=>setEditTeamForm(p=>({...p,rueckennr:e.target.value}))}/>
+                      </div>
+                      <div style={{flex:1}}>
+                        <label className="cc-label">Position</label>
+                        <select className="cc-input" value={editTeamForm.position} onChange={e=>setEditTeamForm(p=>({...p,position:e.target.value}))}>
+                          <option value="">—</option>
+                          <optgroup label="Torwart"><option value="TW">TW</option></optgroup>
+                          <optgroup label="Verteidiger">{["V","IV","RV","LV"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
+                          <optgroup label="Mittelfeld">{["MF","DM","ZM","LM","RM"].map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
+                          <optgroup label="Sturm"><option value="ST">ST</option></optgroup>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="cc-modal-ftr">
+                    <Btn onClick={()=>{setEditTeam(null);setEditTeamFunkOpen(false);}}>Abbrechen</Btn>
+                    <Btn variant="primary" onClick={saveEditTeam} disabled={editTeamSaving}>
+                      {editTeamSaving?"Speichert…":"Speichern"}
+                    </Btn>
+                  </div>
+                </>
+              )}
+            </ModalOrSheet>
+
             {/* Notizen */}
             {fv.showNotizen&&(
-              <Card>
+              <Card style={{gridColumn:"1/-1"}}>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
                 {raw.notizen
                   ?<div className="cc-text-body">{raw.notizen}</div>
@@ -925,40 +1074,6 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             )}
           </div>
         )}
-
-        {/* Tab: Hauptkontakt (nur Juniormitglied, im Info-Tab) */}
-        {tab==="info"&&raw.mitgliedtyp==="Juniormitglied"&&(()=>{
-          const hk=eltern.find(e=>e.hauptkontakt);
-          const hkName=hk?(hk.name||`${hk.vorname||""} ${hk.nachname||""}`.trim()||"?"):null;
-          const hkTel=hk?(hk.telefon||hk.tel):null;
-          return(
-            <Card>
-              <div className="cc-section-title"><TI n="user" size={14}/> Hauptkontakt</div>
-              {hk?(
-                <div className="cc-row cc-gap-12 cc-items-center">
-                  {(()=>{const ac=elternAvColor(hk.beziehung);return(
-                    <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
-                      {hkName.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
-                    </div>
-                  );})()}
-                  <div className="cc-flex-1 cc-col cc-gap-5">
-                    <div className="cc-row cc-gap-8 cc-items-center">
-                      <span className="cc-text-bold">{hkName}</span>
-                      {hk.beziehung&&<span className="cc-badge cc-badge-neutral">{hk.beziehung}</span>}
-                    </div>
-                    {hk.email&&<a href={`mailto:${hk.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{hk.email}</a>}
-                    {hkTel&&<a href={`tel:${hkTel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{hkTel}</a>}
-                  </div>
-                </div>
-              ):(
-                <div className="cc-warn-box">
-                  <TI n="alert-triangle" size={14}/>
-                  Kein Hauptkontakt definiert — bitte im Tab "Eltern" festlegen
-                </div>
-              )}
-            </Card>
-          );
-        })()}
 
         {/* Tab: Eltern */}
         {tab==="eltern"&&(()=>{

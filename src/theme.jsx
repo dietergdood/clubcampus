@@ -196,7 +196,7 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-page-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 .cc-gap-4{gap:4px!important}.cc-gap-5{gap:5px!important}.cc-gap-6{gap:6px!important}.cc-gap-8{gap:8px!important}.cc-gap-12{gap:12px!important}.cc-gap-16{gap:16px!important}.cc-gap-20{gap:20px!important}
 .cc-mb-4{margin-bottom:4px!important}.cc-mb-8{margin-bottom:8px!important}.cc-mb-12{margin-bottom:12px!important}.cc-mb-16{margin-bottom:16px!important}.cc-mb-20{margin-bottom:20px!important}.cc-mb-24{margin-bottom:24px!important}
-.cc-mt-8{margin-top:8px!important}.cc-mt-12{margin-top:12px!important}.cc-mt-16{margin-top:16px!important}.cc-mt-20{margin-top:20px!important}
+.cc-mt-8{margin-top:8px!important}.cc-mt-10{margin-top:10px!important}.cc-mt-12{margin-top:12px!important}.cc-mt-16{margin-top:16px!important}.cc-mt-20{margin-top:20px!important}
 .cc-w-full{width:100%}.cc-flex-1{flex:1}.cc-shrink-0{flex-shrink:0}
 
 /* ── Typography Utilities ── */
@@ -405,7 +405,33 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-btn-ghost:hover{background:var(--surface2);color:var(--text)}
 
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
-.cc-profile-name{font-size:21px;font-weight:700;margin:0 0 4px;color:var(--text);letter-spacing:-0.2px}
+.cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:var(--text)}
+.cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:0}
+.cc-member-hero-banner{height:72px;background:var(--cc-accent,#FFBF00)}
+.cc-member-hero-body{padding:0 16px 16px}
+.cc-member-hero-av{width:72px;height:72px;border-radius:50%;background:var(--surface);border:3px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;color:#7a5a00;margin-top:-36px;position:relative;z-index:1;flex-shrink:0;overflow:hidden}
+.cc-member-hero-info{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.cc-member-hero-sub{font-size:13px;color:var(--sub);margin-bottom:6px}
+.cc-member-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cc-member-stat{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:12px 14px}
+.cc-member-stat-val{font-size:15px;font-weight:500;color:var(--text)}
+.cc-member-stat-lbl{font-size:11px;color:var(--sub);margin-top:2px}
+.cc-info-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--border)}
+.cc-info-row:last-child{border-bottom:none}
+.cc-info-key{font-size:12px;color:var(--sub);flex-shrink:0}
+.cc-info-val{font-size:12px;font-weight:500;color:var(--text);text-align:right}
+.cc-info-val-empty{font-size:12px;color:var(--sub);text-align:right}
+.cc-list-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.cc-list-item-row:last-child{border-bottom:none}
+.cc-list-item-icon{width:28px;height:28px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cc-hk-card{border:0.5px solid var(--cc-accent,#FFBF00);border-radius:8px;padding:10px;background:rgba(255,191,0,0.05);display:flex;align-items:center;gap:10px;margin-top:8px}
+.cc-hk-sub-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--sub);margin:10px 0 0;padding-top:10px;border-top:0.5px solid var(--border);display:block}
+.cc-hk-content{flex:1;min-width:0}
+.cc-hero-badge-type{display:inline-flex;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(255,191,0,0.15);color:#7a5a00;border:0.5px solid var(--cc-accent,#FFBF00)}
+.cc-hero-av-initials{font-size:22px;font-weight:500;color:#7a5a00}
+.cc-form-nr{width:90px}
+.cc-hero-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;flex-shrink:0}
+.cc-hero-back:hover{background:var(--surface2)}
 .cc-profile-nr{position:absolute;bottom:-8px;right:-8px;background:var(--text);color:var(--bg);font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;line-height:1.4}
 /* ── Hero Header ── */
 .cc-hero-stripe{height:4px;background:var(--cc-accent,#FFBF00);border-radius:12px 12px 0 0}
@@ -578,8 +604,8 @@ function Btn({children,onClick,variant="outline",color=null,small,disabled=false
   >{children}</button>;
 }
 
-function Card({children,mb=0,mt=0,style={},onClick,flush=false}){
-  return <div onClick={onClick} className="cc-card" style={{borderRadius:12,padding:flush?0:"16px 20px",overflow:flush?"visible":"visible",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:mb,marginTop:mt,...style}}>{children}</div>;
+function Card({children,mb=0,mt=0,style={},onClick,flush=false,className=""}){
+  return <div onClick={onClick} className={`cc-card${flush?" cc-card-flush":""}${className?" "+className:""}`} style={{borderRadius:12,padding:flush?0:"16px 20px",overflow:"visible",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:mb,marginTop:mt,...style}}>{children}</div>;
 }
 
 function Chip({text,color,bg,semantic,size="sm"}){
@@ -600,10 +626,11 @@ function Stat({label,value,sub,color,semantic,icon}){
      <Stat label="Custom" value={8} color="#7C3AED"/>  */
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div className="cc-stat-card" style={{padding:"20px 22px",minHeight:100}}>
-      <div style={{fontSize:11,color:"#555",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:8,lineHeight:1.3}}>{label}</div>
-      <div className="cc-stat-value" style={{color:c.text,lineHeight:1,marginBottom:sub?4:0}}>{value}</div>
-      {sub&&<div style={{fontSize:12,color:"var(--sub)",lineHeight:1.4,marginTop:2}}>{sub}</div>}
+    <div style={{background:c.bg,borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
+      {icon&&<TI n={icon} size={18} style={{color:c.text,marginBottom:2}}/>}
+      <span style={{fontSize:22,fontWeight:700,color:c.text,letterSpacing:-0.5,lineHeight:1}}>{value}</span>
+      <span style={{fontSize:11,color:c.text,opacity:0.8,textTransform:"uppercase",letterSpacing:0.5}}>{label}</span>
+      {sub&&<span style={{fontSize:12,color:c.text,opacity:0.7}}>{sub}</span>}
     </div>
   );
 }
@@ -642,7 +669,7 @@ function Av({name="",init,size="md",bg,useTheme=false}){
 function Tabs({tabs,active,setActive,mb=18}){
   const isMobile=useIsMobile();
   return(
-    <div style={{display:"inline-flex",gap:2,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:mb,overflowX:"auto",flexWrap:"nowrap",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",maxWidth:"100%"}}>
+    <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:10,padding:4,marginBottom:mb,overflowX:"auto",flexShrink:0}}>
       {tabs.map(t=>(
         <button key={t.key} onClick={()=>!t.soon&&setActive(t.key)} style={{
           padding:isMobile?"6px 10px":"6px 12px",borderRadius:7,
@@ -669,7 +696,7 @@ function Tabs({tabs,active,setActive,mb=18}){
 
 function STitle({children,action,mb=14}){
   return(
-    <div className="cc-stitle" style={{marginBottom:mb}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:mb}}>
       <h2 style={{margin:0,fontSize:16,fontWeight:700,letterSpacing:-0.2,color:"var(--text)"}}>{children}</h2>
       {action}
     </div>
@@ -679,33 +706,19 @@ function STitle({children,action,mb=14}){
 
 /* ── Layout-Komponenten ── */
 function Row({children, gap=8, wrap=false, justify="flex-start", align="center", style={}, ...props}){
-  return(
-    <div style={{display:"flex",alignItems:align,justifyContent:justify,gap,flexWrap:wrap?"wrap":"nowrap",...style}} {...props}>
-      {children}
-    </div>
-  );
+  return <div style={{display:"flex",alignItems:align,justifyContent:justify,gap,flexWrap:wrap?"wrap":"nowrap",...style}} {...props}>{children}</div>;
 }
 function Col({children, gap=8, style={}, ...props}){
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap,...style}} {...props}>
-      {children}
-    </div>
-  );
+  return <div style={{display:"flex",flexDirection:"column",gap,...style}} {...props}>{children}</div>;
 }
 function Between({children, gap=8, style={}, ...props}){
-  return(
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap,...style}} {...props}>
-      {children}
-    </div>
-  );
+  return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap,...style}} {...props}>{children}</div>;
 }
 
 /* ── Typografie-Komponenten ── */
 function Sub({children, style={}, mb=0}){
-  return <div style={{fontSize:14,color:"var(--sub)",marginBottom:mb||undefined,...style}}>{children}</div>;
 }
 function Label({children, style={}}){
-  return <div style={{fontSize:14,fontWeight:600,color:"var(--sub)",...style}}>{children}</div>;
 }
 function H1({children, style={}, mb=0}){
   return <h1 className="cc-h1" style={{margin:mb?`0 0 ${mb}px`:"0",...style}}>{children}</h1>;
@@ -715,7 +728,7 @@ function H2({children, style={}}){
 }
 function PageHeader({children, action=null, mb=18}){
   return(
-    <div className="cc-stitle" style={{marginBottom:mb}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:mb}}>
       <H1>{children}</H1>
       {action}
     </div>
@@ -735,14 +748,14 @@ function Textarea({style={}, ...props}){
 
 /* ── Feedback-Komponenten ── */
 function SectionLabel({children, style={}}){
-  return <div style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.6,marginBottom:8,...style}}>{children}</div>;
+  return <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,color:"var(--sub)",margin:"12px 0 6px",...style}}>{children}</div>;
 }
 function Empty({icon="inbox", text="Keine Einträge", sub=null, style={}}){
   return(
     <div style={{textAlign:"center",padding:"32px 16px",color:"var(--sub)",...style}}>
       <TI n={icon} size={32} style={{opacity:0.3,marginBottom:8,display:"block"}}/>
-      <div style={{fontSize:14,fontWeight:600,color:"var(--sub)"}}>{text}</div>
-      {sub&&<div style={{fontSize:14,color:"var(--sub)",marginTop:4,opacity:0.7}}>{sub}</div>}
+      <div style={{fontSize:14}}>{text}</div>
+      {sub&&<div style={{fontSize:12,marginTop:4}}>{sub}</div>}
     </div>
   );
 }
@@ -753,7 +766,6 @@ function Truncate({children, lines=1, style={}}){
   const s = lines===1
     ? {overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}
     : {overflow:"hidden",display:"-webkit-box",WebkitLineClamp:lines,WebkitBoxOrient:"vertical"};
-  return <div style={{...s,...style}}>{children}</div>;
 }
 
 /* ── DropMenu: Dreipunkt-Menü ── */
@@ -766,7 +778,6 @@ function DropMenu({items}){
   useEffect(()=>{
     function handleClick(e){ if(wrapRef.current&&!wrapRef.current.contains(e.target)) setOpen(false); }
     document.addEventListener("mousedown",handleClick);
-    return()=>document.removeEventListener("mousedown",handleClick);
   },[]);
 
   function handleOpen(){
@@ -810,7 +821,6 @@ function LandSelect({value,onChange,laender,placeholder="–"}){
       if(wrapRef.current&&!wrapRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener("mousedown",handleClick);
-    return()=>document.removeEventListener("mousedown",handleClick);
   },[]);
 
   const filtered=laender.filter(l=>
@@ -843,9 +853,8 @@ function LandSelect({value,onChange,laender,placeholder="–"}){
             <div className="cc-land-option" onClick={()=>select("")}>
               <span className="cc-land-option-name cc-text-sub">– Keine Angabe</span>
             </div>
-            {filtered.length===0&&<div className="cc-land-empty">Kein Ergebnis</div>}
             {filtered.map(l=>(
-              <div key={l.c} className={`cc-land-option${value===l.c?" cc-land-option-active":""}`} onClick={()=>select(l.c)}>
+              <div key={l.c} className="cc-land-option" onClick={()=>select(l.c)}>
                 <span className="cc-land-badge">{l.c}</span>
                 <span className="cc-land-option-name">{l.n}</span>
               </div>
@@ -870,7 +879,6 @@ function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
   useEffect(()=>{
     function handleClick(e){ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener("mousedown",handleClick);
-    return()=>document.removeEventListener("mousedown",handleClick);
   },[]);
 
   // Gruppieren
@@ -905,14 +913,13 @@ function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
           <input className="cc-multiselect-search" placeholder="Funktion suchen…" value={search}
             onChange={e=>setSearch(e.target.value)} autoFocus/>
           <div className="cc-multiselect-list">
-            {filtered.length===0&&<div style={{padding:"12px",fontSize:13,color:"var(--sub)",textAlign:"center"}}>Keine Funktionen gefunden</div>}
             {groups.map(g=>(
               <div key={g}>
-                <div className="cc-multiselect-group">{g}</div>
+                <div className="cc-multiselect-group-label">{g}</div>
                 {filtered.filter(f=>(f.portal_gruppen?.name||"Weitere")===g).map(f=>{
                   const on=selected.includes(f.name);
                   return(
-                    <div key={f.id} className="cc-multiselect-item" onClick={()=>toggle(f.name)}>
+                    <div key={f.name} className="cc-multiselect-item" onClick={()=>toggle(f.name)}>
                       <div className={on?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                         {on&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
                       </div>
