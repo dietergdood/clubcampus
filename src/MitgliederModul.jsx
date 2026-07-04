@@ -928,7 +928,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             {/* Vereinsfunktionen */}
             {((raw.funktionen||[]).length>0||canEdit)&&(
               <Card>
-                <div className="cc-section-title"><TI n="star" size={14}/> Vereinsfunktionen</div>
+                <div className="cc-section-title"><TI n="briefcase" size={14}/> Vereinsfunktionen</div>
                 {(raw.funktionen||[]).length===0&&(
                   <div className="cc-text-sm cc-text-sub">Keine Vereinsfunktionen.</div>
                 )}
@@ -937,7 +937,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   const gruppe=funkObj?.portal_gruppen?.name||null;
                   return(
                     <div key={i} className="cc-team-position-row">
-                      <div className="cc-list-item-icon"><TI n="star" size={13}/></div>
+                      <div className="cc-list-item-icon"><TI n="briefcase" size={13}/></div>
                       <div className="cc-flex-1">
                         <div className="cc-text-bold">{f}</div>
                         {gruppe&&<div className="cc-text-sm cc-text-sub">{gruppe}</div>}
