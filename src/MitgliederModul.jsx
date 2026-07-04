@@ -141,7 +141,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],benutzer=null,teamDetails=null}){
+function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],benutzer=null,teamDetails=null}){
   const isMobile=useIsMobile();
   const [editOpen,setEditOpen]=useState(false);
   const [editForm,setEditForm]=useState({...raw});
@@ -240,7 +240,9 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             <h1 className="cc-profile-name">{m.name}</h1>
             <div className="cc-member-hero-sub">
               {(()=>{
-                const ROLLE_LABEL={administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",mitglied:"Mitglied",supporter:"Supporter"};
+                const ROLLE_LABEL=dbPortalRollen.length>0
+                  ?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label]))
+                  :{administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",mitglied:"Mitglied",supporter:"Supporter"};
                 // Abgeleitete Rolle: Kader (Trainer>Spieler) > Vereinsfunktionen > Mitgliedtyp-Mapping > Supporter
                 const TRAINER_ROLLEN=["Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz"];
                 const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
@@ -345,8 +347,8 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 <label className="cc-label">Portal-Rolle</label>
                 <select className="cc-input" value={editForm.rolle||""} onChange={e=>setEditForm(f=>({...f,rolle:e.target.value}))}>
                   <option value="">– keine –</option>
-                  {["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"].map(r=>(
-                    <option key={r} value={r}>{{administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"}[r]}</option>
+                  {(dbPortalRollen.length>0?dbPortalRollen:[{name:"administrator",label:"Administrator"},{name:"administration",label:"Verwaltung"},{name:"funktionaer",label:"Funktionär"},{name:"trainer",label:"Trainer"},{name:"spieler",label:"Spieler"},{name:"eltern",label:"Eltern"},{name:"mitglied",label:"Mitglied"},{name:"supporter",label:"Supporter"}]).map(r=>(
+                    <option key={r.name} value={r.name}>{r.label}</option>
                   ))}
                 </select>
               </div>
@@ -490,7 +492,7 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
+function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
@@ -799,8 +801,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
         <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit}
           sb={sb} onReload={onReload} onClose={onClose}
           statusColor={statusColor} statusBg={statusBg}
-          dbMitgliedtypen={dbMitgliedtypen}
-          benutzer={benutzer} teamDetails={teamDetails}
+          dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen}
+          benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen}
         />
         {/* Stats */}
         {/* Tabs */}

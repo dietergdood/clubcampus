@@ -100,7 +100,13 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   }
 
   const ROLLE_MAP={"Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer","Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer"};
-  const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"];
+  const PRIORITAET_DEFAULT=["administrator","administration","funktionaer","trainer","spieler","eltern","mitglied","supporter"];
+  const [dbRollenPrio,setDbRollenPrio]=useState([]);
+  useEffect(()=>{
+    if(sb) sb.from("portal_rollen").select("name,prioritaet").eq("aktiv",true).order("prioritaet")
+      .then(({data})=>{if(data)setDbRollenPrio(data.map(r=>r.name));});
+  },[]);
+  const PRIORITAET=dbRollenPrio.length>0?dbRollenPrio:PRIORITAET_DEFAULT;
 
   async function updateBenutzerRolle(mitgliedId){
     if(!sb||!mitgliedId) return;
