@@ -877,11 +877,12 @@ function DropMenu({items}){
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&createPortal(
-        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999}}>
+        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999,fontFamily:"var(--font-sans,inherit)"}}>
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
             :<button key={i}
                 className={`cc-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                onMouseDown={e=>{e.stopPropagation();}}
                 onClick={()=>{setOpen(false);item.onClick();}}
               >
                 {item.icon&&<TI n={item.icon} size={13}/>}
