@@ -58,7 +58,6 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   const [editSaving,  setEditSaving]  = useState(false);
   const [editFunkOpen,setEditFunkOpen]= useState(false);
   const [sheetKader,  setSheetKader]  = useState(null); // Mobile Bottom Sheet
-  const [portalFunktionen, setPortalFunktionen] = useState([]);
 
   // Mitglied hinzufügen
   const [addSearch,   setAddSearch]   = useState("");
@@ -85,14 +84,6 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
 
   useEffect(()=>{ loadKader(); },[teamId]);
 
-  // Portal-Funktionen laden
-  useEffect(()=>{
-    if(sb&&portalFunktionen.length===0){
-      sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
-        .then(({data})=>setPortalFunktionen(data||[]));
-    }
-  },[sb]);
-
   // Alle Mitglieder für Hinzufügen laden
   useEffect(()=>{
     if(showAdd&&sb&&allMitglieder.length===0){
@@ -113,7 +104,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     if(!sb||!editKader) return;
     setEditSaving(true);
     await sb.from("kader").update({
-      funktionen:editForm.funktionen||[],
+      rollen:editForm.funktionen||[],
       rueckennr:editForm.rueckennr||null,
       position:editForm.position||null,
     }).eq("id",editKader.id);
@@ -124,7 +115,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   }
 
   function openEdit(k){
-    setEditForm({funktionen:k.funktionen||[],rueckennr:k.rueckennr||"",position:k.position||""});
+    setEditForm({funktionen:k.rollen||[],rueckennr:k.rueckennr||"",position:k.position||""});
     setEditKader(k);
   }
 
@@ -144,7 +135,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       mitglied_id:addForm.mitglied_id,
       rueckennr:addForm.rueckennr||null,
       position:addForm.position||null,
-      funktionen:addForm.funktionen||["Spieler/in"],
+      rollen:addForm.funktionen||["Spieler/in"],
       aktiv:true,
       saison,
     },{onConflict:"team_id,mitglied_id,saison"});
@@ -167,7 +158,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
 
   const grouped = groupBy
     ? Object.entries(filtered.reduce((acc,k)=>{
-        const key=(k.funktionen&&k.funktionen.length>0)?k.funktionen[0]:"Spieler/in";
+        const key=(k.rollen&&k.rollen.length>0)?k.rollen[0]:"Spieler/in";
         if(!acc[key]) acc[key]=[];
         acc[key].push(k); return acc;
       },{}))
@@ -184,7 +175,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
         if(c.key==="name") return `${m.nachname||""} ${m.vorname||""}`.trim();
         if(c.key==="nr")   return k.rueckennr||"-";
         if(c.key==="pos")  return k.position||"-";
-        if(c.key==="funktion") return (k.funktionen||[]).join(", ")||"-";
+        if(c.key==="funktion") return (k.rollen||[]).join(", ")||"-";
         if(c.key==="dob")  return m.geburtsdatum||"-";
         if(c.key==="email")return m.email||"-";
         if(c.key==="tel")  return m.telefon||"-";
@@ -223,7 +214,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
         <div style={{flex:1,minWidth:0}}>
           <div className="cc-list-name">{name}</div>
           <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>
-            {(k.funktionen||["Spieler/in"]).join(" · ")}
+            {(k.rollen||["Spieler/in"]).join(" · ")}
             {k.position?` · ${k.position}`:""}
           </div>
         </div>
@@ -259,7 +250,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
               </div>
               <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:14}}>
                 <div>
-                  <label className="cc-label">Funktion(en)</label>
+                  <label className="cc-label">Rolle im Team</label>
                   <div className="cc-multiselect">
                     <button type="button" className="cc-multiselect-trigger" onClick={()=>setEditFunkOpen(o=>!o)}>
                       <div className="cc-multiselect-chips">
@@ -278,14 +269,14 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
                     {editFunkOpen&&(
                       <div className="cc-multiselect-dropdown">
                         <div className="cc-multiselect-list">
-                          {portalFunktionen.map(f=>{
-                            const sel=(editForm.funktionen||[]).includes(f.name);
+                          {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>{
+                            const sel=(editForm.funktionen||[]).includes(f);
                             return(
-                              <div key={f.id} className="cc-multiselect-item" onClick={()=>setEditForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f.name):[...(p.funktionen||[]),f.name]}))}>
+                              <div key={f} className="cc-multiselect-item" onClick={()=>setEditForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f):[...(p.funktionen||[]),f]}))}>
                                 <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                                   {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
                                 </div>
-                                <span>{f.name}</span>
+                                <span>{f}</span>
                               </div>
                             );
                           })}
@@ -372,7 +363,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
                   <Av name={name} size="lg" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
                   <Col gap={2}>
                     <span style={{fontWeight:600,fontSize:16,color:"var(--text)"}}>{name}</span>
-                    <span style={{fontSize:12,color:"var(--sub)"}}>{(selected.funktionen||["Spieler/in"]).join(" · ")} · Nr. {selected.rueckennr||"—"}</span>
+                    <span style={{fontSize:12,color:"var(--sub)"}}>{(selected.rollen||["Spieler/in"]).join(" · ")} · Nr. {selected.rueckennr||"—"}</span>
                   </Col>
                 </Row>
                 <button className="cc-icon-btn" onClick={()=>setSelected(null)}><TI n="x" size={14}/></button>
@@ -422,7 +413,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
           {addForm.mitglied_id&&(
             <div style={{display:"flex",gap:10}}>
               <div style={{flex:1}}>
-                <label className="cc-label">Funktion(en)</label>
+                <label className="cc-label">Rolle im Team</label>
                 <div className="cc-multiselect">
                   <button type="button" className="cc-multiselect-trigger" onClick={()=>setAddFunkOpen(o=>!o)}>
                     <div className="cc-multiselect-chips">
@@ -441,14 +432,14 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
                   {addFunkOpen&&(
                     <div className="cc-multiselect-dropdown">
                       <div className="cc-multiselect-list">
-                        {portalFunktionen.map(f=>{
-                          const sel=(addForm.funktionen||[]).includes(f.name);
+                        {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>{
+                          const sel=(addForm.funktionen||[]).includes(f);
                           return(
-                            <div key={f.id} className="cc-multiselect-item" onClick={()=>setAddForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f.name):[...(p.funktionen||[]),f.name]}))}>
+                            <div key={f} className="cc-multiselect-item" onClick={()=>setAddForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f):[...(p.funktionen||[]),f]}))}>
                               <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                                 {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
                               </div>
-                              <span>{f.name}</span>
+                              <span>{f}</span>
                             </div>
                           );
                         })}

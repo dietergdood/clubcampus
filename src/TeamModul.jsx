@@ -19,10 +19,16 @@ function kannHelferEinsatzErstellen(role, typ, team, meineTeams=[]){
 
 const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
 
-function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null}){
+function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null}){
   const isMobile=useIsMobile();
-  /* Modul-Sichtbarkeit: Props oder Fallback alles sichtbar */
   const moduleOk=(modul)=>!isModuleVisible||isModuleVisible(modul)||!modul;
+
+  // Berechtigung pro Team prüfen
+  const getRoleForTeam=(teamId)=>{
+    if(role==="administrator"||role==="administration") return "administrator";
+    return teamRollen[teamId]||null;
+  };
+  const kannBearbeitenInTeam=(teamId)=>["trainer","administrator","administration"].includes(getRoleForTeam(teamId)||role);
 
   /* Mitglieder für ein Team: aus DB wenn vorhanden, sonst ROSTER Fallback */
   const getMitgliederForTeam=(teamName)=>{
@@ -275,7 +281,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
         <Tabs tabs={tabs} active={tab} setActive={setTab}/>
       )}
       {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial} dbMitglieder={dbMitglieder}/>}
-      {tab==="roster"&&<KaderModulProp role={role} team={activeTeamObj||activeTeam} sb={sb} onSelectMember={onSelectMember}/>}
+      {tab==="roster"&&<KaderModulProp role={kannBearbeitenInTeam(activeTeamObj?.id)?"trainer":role} team={activeTeamObj||activeTeam} sb={sb} onSelectMember={onSelectMember}/>}
       {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb} dbTeams={dbTeams}/>}
       {tab==="spielplan"&&(
         <div className="cc-flex-center" style={{flexDirection:"column",gap:20,alignItems:"stretch"}}>

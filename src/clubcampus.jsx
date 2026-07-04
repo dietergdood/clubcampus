@@ -640,13 +640,41 @@ function Portal({supabaseClient}){
     return function(){ subscription.unsubscribe(); if(themeSub) sb.removeChannel(themeSub); };
   },[]);
 
+  const [teamRollen,setTeamRollen]=useState({}); // {team_id: ["spieler"|"trainer"|...]}
+
   async function loadDbUser(uid, email){
     try {
       const {data, error} = await sb.from("benutzer").select("*").eq("id",uid).single();
       if(data){
         setDbUser(data);
-        // TODO: benutzer.mitglied_id ist uuid aber mitglieder.id ist bigint
-        // Verknüpfung funktioniert erst wenn Schema vereinheitlicht wird
+        // Kader-Einträge laden für Team-Rollen
+        if(data.mitglied_id){
+          const {data:kaderData}=await sb.from("kader")
+            .select("team_id, rollen")
+            .eq("mitglied_id", data.mitglied_id)
+            .eq("aktiv", true);
+          if(kaderData){
+            const ROLLE_MAP={
+              "Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer",
+              "Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer",
+            };
+            const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
+            const map={};
+            kaderData.forEach(k=>{
+              const portalRollen=(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean);
+              const hoechste=PRIORITAET.find(p=>portalRollen.includes(p))||"spieler";
+              map[k.team_id]=hoechste;
+            });
+            setTeamRollen(map);
+            // Höchste Rolle über alle Teams → benutzer.role updaten
+            const alleRollen=Object.values(map);
+            const hoechsteGlobal=PRIORITAET.find(p=>alleRollen.includes(p));
+            if(hoechsteGlobal&&hoechsteGlobal!==data.role){
+              await sb.from("benutzer").update({role:hoechsteGlobal}).eq("id",uid);
+              setDbUser(prev=>({...prev,role:hoechsteGlobal}));
+            }
+          }
+        }
       } else {
         console.warn("[FCH] benutzer nicht gefunden:", error?.message);
         setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
@@ -834,12 +862,18 @@ function Portal({supabaseClient}){
   const role = rawRole.toLowerCase()
     .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue");
   const kinder = account.kinder||[];
-  const spielerTeam = account.teams?.length>0 ? account.teams : [];
-  const trainerTeams = account.teams||["Cc-Junioren"];
-  const meineTeams = role==="trainer"
-    ? trainerTeams
-    : kinder.length>0 ? [...new Set(kinder.map(k=>k.team))]
-    : spielerTeam.length>0 ? spielerTeam : ["Cc-Junioren"];
+
+  // Teams aus Kader ableiten
+  const meineTeamIds = Object.keys(teamRollen).map(Number);
+  const trainerTeamIds = meineTeamIds.filter(id=>["trainer"].includes(teamRollen[id]));
+  const trainerTeams = trainerTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter(Boolean);
+  const spielerTeam = meineTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter(Boolean);
+  const meineTeams = role==="administrator"||role==="administration"
+    ? dbTeams.map(t=>t.name)
+    : role==="trainer"
+      ? trainerTeams.length>0 ? trainerTeams : spielerTeam
+      : kinder.length>0 ? [...new Set(kinder.map(k=>k.team))]
+      : spielerTeam;
   const myRosterId = account.rosterId||(role==="spieler"?1:role==="eltern"?1:role==="trainer"?200:null);
   /* Dynamische Navigation (funktionaer/stufenleitung aus Gruppen) */
   /* Modul-Sichtbarkeit prüfen: global + pro Rolle */
@@ -892,7 +926,7 @@ function Portal({supabaseClient}){
     if(!isModuleVisible(active)) return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
-      case "team":              return role==="administrator"||role==="administration"?<TeamsVerwaltungModul sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef} dbMitglieder={dbMitglieder} TeamViewComponent={TeamView} KaderModulComponent={KaderModul} TrainingsplanModulComponent={TrainingsplanModul} TermineModulComponent={TermineModul} SpielplanModulComponent={SpielplanModul} TableTabComponent={TableTab} HelferModulComponent={HelferModul}/>:<TeamView role={role} trainerTeams={trainerTeams} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder} KaderModul={KaderModul} TrainingsplanModul={TrainingsplanModul} TermineModul={TermineModul} SpielplanModul={SpielplanModul} TableTab={TableTab} HelferModul={HelferModul} onSelectMember={m=>{setNavToMember(m.id||m.mitglied_id);setActivePersist("members");}}/>;
+      case "team":              return role==="administrator"||role==="administration"?<TeamsVerwaltungModul sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef} dbMitglieder={dbMitglieder} TeamViewComponent={TeamView} KaderModulComponent={KaderModul} TrainingsplanModulComponent={TrainingsplanModul} TermineModulComponent={TermineModul} SpielplanModulComponent={SpielplanModul} TableTabComponent={TableTab} HelferModulComponent={HelferModul}/>:<TeamView role={role} trainerTeams={trainerTeams} teamRollen={teamRollen} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder} KaderModul={KaderModul} TrainingsplanModul={TrainingsplanModul} TermineModul={TermineModul} SpielplanModul={SpielplanModul} TableTab={TableTab} HelferModul={HelferModul} onSelectMember={m=>{setNavToMember(m.id||m.mitglied_id);setActivePersist("members");}}/>;
       case "members":           return <MembersView role={role} dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} onReload={loadDbMitglieder} navToMember={navToMember} onNavToMemberDone={()=>setNavToMember(null)}/>;
       case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "mitglieder_config": return <PortalverwaltungView initialTab="mitglieder_config" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;

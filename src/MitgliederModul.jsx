@@ -626,7 +626,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
       await sb.from("kader").upsert({
         team_id:parseInt(teamAssignForm.team_id),
         mitglied_id:raw.id,
-        funktionen:teamAssignForm.funktionen||["Spieler/in"],
+        rollen:teamAssignForm.funktionen||["Spieler/in"],
         rueckennr:teamAssignForm.rueckennr||null,
         position:teamAssignForm.position||null,
         aktiv:true,
@@ -798,7 +798,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   </div>
                   <div className="cc-flex-1">
                     <div className="cc-text-bold">{k.teams?.name||"—"}</div>
-                    <div className="cc-text-sm">{(k.funktionen||["Spieler/in"]).join(" · ")}{k.position?` · ${k.position}`:""}</div>
+                    <div className="cc-text-sm">{(k.rollen||["Spieler/in"]).join(" · ")}{k.position?` · ${k.position}`:""}</div>
                   </div>
                   {canEdit&&(
                     <button className="cc-team-remove-btn" onClick={()=>removeFromTeam(k.id)}>
