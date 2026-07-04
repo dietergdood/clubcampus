@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import React from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, SectionLabel, Stat, Tabs, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, SectionLabel, Stat, StatusTile, Tabs, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
 import { MEMBERS } from "./demoData.js";
 import { getRole } from "./NavigationModul.jsx";
 
@@ -762,28 +762,10 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           mb={0}
         />
         <div className="cc-member-stats">
-          <div className="cc-member-stat">
-            <div className="cc-member-stat-icon cc-member-stat-icon-neutral"><TI n="id-badge-2" size={15} style={{color:"var(--sub)"}}/></div>
-            <div><div className="cc-member-stat-lbl">Mitgliedtyp</div><div className="cc-member-stat-val">{raw.mitgliedtyp||"—"}</div></div>
-          </div>
-          <div className="cc-member-stat">
-            <div className={"cc-member-stat-icon "+(raw.geprueft?"cc-member-stat-icon-ok":"cc-member-stat-icon-warn")}>
-              <TI n={raw.geprueft?"shield-check":"alert-circle"} size={15} style={{color:raw.geprueft?"#166534":"#B45309"}}/>
-            </div>
-            <div><div className="cc-member-stat-lbl">Datenprüfung</div><div className={"cc-member-stat-val"+(raw.geprueft?"-ok":"-warn")}>{raw.geprueft?"Geprüft":"Ausstehend"}</div></div>
-          </div>
-          <div className="cc-member-stat">
-            <div className={"cc-member-stat-icon "+(raw.hat_portal_zugang?"cc-member-stat-icon-ok":"cc-member-stat-icon-warn")}>
-              <TI n="key" size={15} style={{color:raw.hat_portal_zugang?"#166534":"#B45309"}}/>
-            </div>
-            <div><div className="cc-member-stat-lbl">Portal-Zugang</div><div className={"cc-member-stat-val"+(raw.hat_portal_zugang?"-ok":"-warn")}>{raw.hat_portal_zugang?"Eingerichtet":"Fehlt"}</div></div>
-          </div>
-          <div className="cc-member-stat">
-            <div className={"cc-member-stat-icon "+(raw.fairgate_id?"cc-member-stat-icon-ok":"cc-member-stat-icon-neutral")}>
-              <TI n="refresh" size={15} style={{color:raw.fairgate_id?"#166534":"var(--sub)"}}/>
-            </div>
-            <div><div className="cc-member-stat-lbl">Fairgate</div><div className={"cc-member-stat-val"+(raw.fairgate_id?"-ok":"")}>{raw.fairgate_id?"Synchronisiert":"—"}</div></div>
-          </div>
+          <StatusTile label="Mitgliedtyp"   value={raw.mitgliedtyp||"—"}                          icon="id-badge-2"                              semantic="neutral"/>
+          <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}            icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}/>
+          <StatusTile label="Portal-Zugang" value={raw.hat_portal_zugang?"Eingerichtet":"Fehlt"}   icon="key"                                     semantic={raw.hat_portal_zugang?"ok":"warn"}/>
+          <StatusTile label="Fairgate"      value={raw.fairgate_id?"Synchronisiert":"—"}           icon="refresh"                                 semantic={raw.fairgate_id?"ok":"neutral"}/>
         </div>
 
         {/* Tab: Profil */}

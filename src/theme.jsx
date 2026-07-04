@@ -422,17 +422,18 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-member-hero-info{flex:1;min-width:0}
 .cc-member-hero-sub{font-size:13px;color:#7a5000;margin-top:3px;margin-bottom:0}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.cc-member-stat{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px}
-.cc-member-stat-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.cc-member-stat-icon-neutral{background:var(--surface2)}
-.cc-member-stat-icon-warn{background:#FEF3C7}
-.cc-member-stat-icon-ok{background:#DCFCE7}
-.cc-member-stat-icon-danger{background:#FEE2E2}
-.cc-member-stat-val{font-size:13px;font-weight:500;color:var(--text)}
-.cc-member-stat-val-warn{font-size:13px;font-weight:600;color:#B45309}
-.cc-member-stat-val-ok{font-size:13px;font-weight:600;color:#166534}
-.cc-member-stat-val-danger{font-size:13px;font-weight:600;color:#991B1B}
-.cc-member-stat-lbl{font-size:11px;color:var(--sub);margin-top:1px}
+.cc-status-tile{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;min-width:0}
+.cc-status-tile-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cc-status-tile-icon-neutral{background:var(--surface2);color:var(--sub)}
+.cc-status-tile-icon-warn{background:#FEF3C7;color:#B45309}
+.cc-status-tile-icon-ok{background:#DCFCE7;color:#166534}
+.cc-status-tile-icon-danger{background:#FEE2E2;color:#991B1B}
+.cc-status-tile-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cc-status-tile-label{font-size:11px;color:var(--sub);white-space:nowrap}
+.cc-status-tile-value{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap}
+.cc-status-tile-value-warn{font-size:13px;font-weight:600;color:#B45309}
+.cc-status-tile-value-ok{font-size:13px;font-weight:600;color:#166534}
+.cc-status-tile-value-danger{font-size:13px;font-weight:600;color:#991B1B}
 .cc-info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border)}
 .cc-info-row:last-child{border-bottom:none}
 .cc-info-key{font-size:12px;color:var(--sub);flex-shrink:0}
@@ -653,6 +654,23 @@ function Stat({label,value,sub,color,semantic,icon}){
       <span style={{fontSize:22,fontWeight:700,color:c.text,letterSpacing:-0.5,lineHeight:1}}>{value}</span>
       <span style={{fontSize:11,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>{label}</span>
       {sub&&<span style={{fontSize:12,color:"var(--sub)"}}>{sub}</span>}
+    </div>
+  );
+}
+
+/* StatusTile — wiederverwendbare Status-Kachel mit Icon + Label + Wert
+   semantic: "neutral"|"ok"|"warn"|"danger"
+   Verwendung: MitgliederModul, Dashboard, etc. */
+function StatusTile({label,value,icon,semantic="neutral"}){
+  return(
+    <div className="cc-status-tile">
+      <div className={`cc-status-tile-icon cc-status-tile-icon-${semantic}`}>
+        <TI n={icon} size={16}/>
+      </div>
+      <div className="cc-status-tile-body">
+        <span className="cc-status-tile-label">{label}</span>
+        <span className={semantic==="neutral"?"cc-status-tile-value":`cc-status-tile-value-${semantic}`}>{value}</span>
+      </div>
     </div>
   );
 }
@@ -964,4 +982,4 @@ function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
   );
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect };
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect };
