@@ -152,17 +152,11 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
     ?dbMitgliedtypen.map(t=>t.name)
     :["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
 
-  const [pvTeams,setPvTeams]=useState([]);
-
   useEffect(()=>{
     if(sb&&editOpen){
       if(portalFunktionen.length===0){
         sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
           .then(({data})=>setPortalFunktionen(data||[]));
-      }
-      if(pvTeams.length===0){
-        sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
-          .then(({data})=>setPvTeams(data||[]));
       }
       // Benutzer-Rolle laden
       sb.from("benutzer").select("id,role").eq("mitglied_id",raw.id).maybeSingle()
@@ -190,7 +184,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       email:editForm.email||null, strasse:editForm.strasse||null,
       plz:editForm.plz||null, ort:editForm.ort||null, kanton:editForm.kanton||null,
       mitgliedtyp:editForm.mitgliedtyp||null, funktionen:editForm.funktionen||[],
-      teams:editForm.teams||[],
       spielerpass:editForm.spielerpass||null, js_nr:editForm.js_nr||null,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
       updated_at:new Date().toISOString(),
@@ -208,7 +201,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
   }
 
   const rollen=[];
-  const teams=raw.teams||[m.team].filter(Boolean);
+  const teams=[];
   const mitgliedtyp=raw.mitgliedtyp||m.type;
   if(mitgliedtyp) rollen.push({rolle:mitgliedtyp, teams:teams});
   if((raw.funktionen||[]).length>0) rollen.push(...raw.funktionen.map(f=>({rolle:f, teams:[]})));
@@ -319,25 +312,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                   </select>
                 </div>
               )}
-              {/* Teams */}
-              {pvTeams.length>0&&(
-                <div className="cc-form-full">
-                  <label className="cc-label">Teams</label>
-                  <div className="cc-row cc-gap-6 cc-flex-wrap" style={{marginTop:4}}>
-                    {pvTeams.map(t=>{
-                      const name=t.name;
-                      const sel=(editForm.teams||[]).includes(name);
-                      return(
-                        <button key={t.id} type="button"
-                          onClick={()=>setEditForm(f=>({...f,teams:sel?(f.teams||[]).filter(x=>x!==name):[...(f.teams||[]),name]}))}
-                          className={`cc-chip-toggle${sel?" cc-chip-toggle-on":""}`}>
-                          {t.kurzname||t.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+
               {[
                 {k:"spielerpass", l:"Spielerpass"},
                 {k:"js_nr",       l:"J+S Nr."},
@@ -621,9 +596,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
 
     useEffect(()=>{
       if(tab==="info"&&sb&&raw.id&&teamDetails===null){
-        sb.from("mitglieder_team_details")
-          .select("*")
-          .eq("mitglied_id",raw.id)
+        sb.from("kader")
+          .select("*, teams(id,name,kurzname)")
+          .eq("mitglied_id",raw.id).eq("aktiv",true)
           .then(({data})=>setTeamDetails(data||[]));
       }
     },[tab,raw.id]);
@@ -770,23 +745,21 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             {/* Teams & Positionen */}
             <Card>
               <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
-              {(raw.teams||[]).length===0&&<div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>}
-              {(raw.teams||[]).map((teamName,i)=>{
-                const detail=(teamDetails||[]).find(d=>d.team_name===teamName)||{};
-                const nr=detail.rueckennr||raw.rueckennr||null;
-                const pos=detail.position||raw.position||null;
-                return(
-                  <div key={i} className="cc-team-position-row">
-                    <div className={nr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
-                      {nr||"—"}
-                    </div>
-                    <div className="cc-flex-1">
-                      <div className="cc-text-bold">{teamName}</div>
-                      <div className="cc-text-sm">{pos||"—"}</div>
-                    </div>
+              {teamDetails===null&&<div className="cc-text-sm cc-text-sub">Lade…</div>}
+              {teamDetails!==null&&teamDetails.length===0&&(
+                <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen. Im Kader des jeweiligen Teams hinzufügen.</div>
+              )}
+              {(teamDetails||[]).map((k,i)=>(
+                <div key={i} className="cc-team-position-row">
+                  <div className={k.rueckennr?"cc-team-nr":"cc-team-nr cc-team-nr-empty"}>
+                    {k.rueckennr||"—"}
                   </div>
-                );
-              })}
+                  <div className="cc-flex-1">
+                    <div className="cc-text-bold">{k.teams?.name||"—"}</div>
+                    <div className="cc-text-sm">{k.funktion||"—"}{k.position?` · ${k.position}`:""}</div>
+                  </div>
+                </div>
+              ))}
             </Card>
             {/* Notizen */}
             {fv.showNotizen&&(
