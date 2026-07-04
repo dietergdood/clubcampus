@@ -869,7 +869,7 @@ function DropMenu({items}){
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&(
-        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999}}>
+        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:1999}}>
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
             :<button key={i}
