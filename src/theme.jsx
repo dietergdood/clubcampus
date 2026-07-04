@@ -439,7 +439,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-list-item-row:last-child{border-bottom:none}
 .cc-list-item-icon{width:28px;height:28px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cc-hk-card{border:0.5px solid var(--border);border-left:3px solid var(--cc-accent,#FFBF00);border-radius:0 8px 8px 0;padding:10px 12px;background:var(--surface2);display:flex;align-items:center;gap:10px;margin-top:8px}
-.cc-hk-sub-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--sub);margin:10px 0 0;padding-top:10px;border-top:0.5px solid var(--border);display:block}
+.cc-hk-sub-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--sub);margin:12px 0 6px;display:block}
 .cc-hk-content{flex:1;min-width:0}
 .cc-card-secondary{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px}
 .cc-role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#EAF3DE;color:#27500A;border:0.5px solid rgba(39,80,10,0.2)}
