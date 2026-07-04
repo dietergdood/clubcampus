@@ -839,6 +839,7 @@ function Truncate({children, lines=1, style={}}){
 /* ── DropMenu: Dreipunkt-Menü ── */
 function DropMenu({items}){
   const [open,setOpen]=useState(false);
+  const [pos,setPos]=useState({top:0,right:0});
   const btnRef=useRef(null);
   const wrapRef=useRef(null);
 
@@ -851,6 +852,10 @@ function DropMenu({items}){
   },[]);
 
   function handleOpen(){
+    if(btnRef.current){
+      const r=btnRef.current.getBoundingClientRect();
+      setPos({top:r.bottom+4, right:window.innerWidth-r.right});
+    }
     setOpen(o=>!o);
   }
 
@@ -860,7 +865,7 @@ function DropMenu({items}){
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&(
-        <div className="cc-menu">
+        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999}}>
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
             :<button key={i}
