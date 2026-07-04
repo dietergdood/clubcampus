@@ -1350,7 +1350,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           </div>
         ):(
           /* Desktop: A-style kompakte Tabelle */
-          <div className="cc-table-wrap"><table className="cc-members-table">
+          <div className="cc-table-wrap"><div className="cc-table-wrap-inner"><table className="cc-members-table">
             <thead>
               <tr>
                 {COLS.map((col,i)=>(
@@ -1413,7 +1413,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                 </React.Fragment>
               ))}
             </tbody>
-          </table></div>
+          </table></div></div>
         ))}
       </Card>
     </div>

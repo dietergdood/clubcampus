@@ -541,6 +541,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
         <div style={{padding:24,textAlign:"center",color:"var(--sub)",fontSize:13}}>Lade Kader…</div>
       ):(
         <div className="cc-table-wrap">
+          <div className="cc-table-wrap-inner">
           <div style={{display:"grid",gridTemplateColumns:"1fr 60px 52px 24px"+(canEdit?" 24px":""),
             padding:"8px 14px",background:"var(--bg)",borderBottom:"1px solid var(--border)"}}>
             <span className="cc-label" style={{marginBottom:0}}>Spieler</span>
@@ -560,6 +561,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
           {filtered.length===0&&!loading&&(
             <div className="cc-empty">{kader.length===0?"Noch keine Kadermitglieder. Mitglied hinzufügen ↑":"Keine Spieler gefunden"}</div>
           )}
+          </div>
         </div>
       )}
     </div>
