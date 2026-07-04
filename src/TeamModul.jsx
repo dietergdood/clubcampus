@@ -19,7 +19,7 @@ function kannHelferEinsatzErstellen(role, typ, team, meineTeams=[]){
 
 const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
 
-function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null}){
+function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null,navToTeam=null,onNavToTeamDone=null}){
   const isMobile=useIsMobile();
   const moduleOk=(modul)=>!isModuleVisible||isModuleVisible(modul)||!modul;
 
@@ -111,6 +111,14 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
   const [activeTeam,setActiveTeam]=useState(
     isEltern&&kinder[0]?.team ? kinder[0].team : trainerTeams[0]||"Cc-Junioren"
   );
+
+  /* navToTeam: direkte Navigation zu einem Team via ID */
+  useEffect(()=>{
+    if(navToTeam&&dbTeams.length>0){
+      const team=dbTeams.find(t=>t.id===navToTeam);
+      if(team){setActiveTeam(team.name);if(onNavToTeamDone)onNavToTeamDone();}
+    }
+  },[navToTeam,dbTeams]);
 
   /* When eltern switches child, update activeTeam too */
   const handleKindSwitch=(kind)=>{

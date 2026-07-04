@@ -121,7 +121,7 @@ function toDbData(form){
   };
 }
 
-function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
+function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null,navToTeam=null,onNavToTeamDone=null}){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -230,6 +230,14 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   const [showSaison,setShowSaison]=useState(false);
   const [saisonDraft,setSaisonDraft]=useState("2025/26");
   const [selectedTeam,setSelectedTeam]=useState(null);
+
+  /* navToTeam: direkte Navigation zu einem Team via ID */
+  useEffect(()=>{
+    if(navToTeam&&dbTeams.length>0){
+      const team=dbTeams.find(t=>t.id===navToTeam);
+      if(team){setSelectedTeam(team);if(onNavToTeamDone)onNavToTeamDone();}
+    }
+  },[navToTeam,dbTeams]);
 
   /* Teams kommen via dbTeams Prop aus App (dort geladen) */
 
@@ -928,6 +936,14 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   const [showSaison,setShowSaison]=useState(false);
   const [saisonDraft,setSaisonDraft]=useState("2025/26");
   const [selectedTeam,setSelectedTeam]=useState(null);
+
+  /* navToTeam: direkte Navigation zu einem Team via ID */
+  useEffect(()=>{
+    if(navToTeam&&dbTeams.length>0){
+      const team=dbTeams.find(t=>t.id===navToTeam);
+      if(team){setSelectedTeam(team);if(onNavToTeamDone)onNavToTeamDone();}
+    }
+  },[navToTeam,dbTeams]);
 
   /* Teams kommen via dbTeams Prop aus App (dort geladen) */
 
