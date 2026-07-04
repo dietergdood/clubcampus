@@ -230,35 +230,31 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           </div>
         </div>
         <div className="cc-member-hero-body">
+          <div className="cc-hero-av-wrap">
+            <div className="cc-member-hero-av">
+              {raw.foto_url
+                ?<img src={raw.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                :<span className="cc-hero-av-initials">{initials}</span>
+              }
+            </div>
+            {canEdit&&(
+              <>
+                <input ref={fotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleHeroFotoUpload}/>
+                <button className="cc-hero-av-edit" onClick={()=>fotoInputRef.current?.click()} title="Foto ändern">
+                  <TI n="camera" size={11}/>
+                </button>
+              </>
+            )}
+          </div>
           <div className="cc-member-hero-info">
-            <div>
-              <div className="cc-hero-av-wrap">
-                <div className="cc-member-hero-av">
-                  {raw.foto_url
-                    ?<img src={raw.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-                    :<span className="cc-hero-av-initials">{initials}</span>
-                  }
-                </div>
-                {canEdit&&(
-                  <>
-                    <input ref={fotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleHeroFotoUpload}/>
-                    <button className="cc-hero-av-edit" onClick={()=>fotoInputRef.current?.click()} title="Foto ändern">
-                      <TI n="camera" size={11}/>
-                    </button>
-                  </>
-                )}
-              </div>
-              <h1 className="cc-profile-name cc-mt-10">{m.name}</h1>
-              <div className="cc-member-hero-sub">
-                {[age?`${age} Jahre`:null, raw.geschlecht||null, raw.heimatort||null].filter(Boolean).join(" · ")}
-              </div>
-              <div className="cc-row cc-gap-6 cc-flex-wrap">
-                {mitgliedtyp&&(
-                  <span className="cc-hero-badge-type">
-                    {mitgliedtyp}
-                  </span>
-                )}
-              </div>
+            <h1 className="cc-profile-name">{m.name}</h1>
+            <div className="cc-member-hero-sub">
+              {[mitgliedtyp, age?`${age} Jahre`:null, raw.heimatort||null].filter(Boolean).join(" · ")}
+            </div>
+            <div className="cc-hero-status-badges">
+              {!raw.geprueft&&<span className="cc-hero-status-badge-warn"><TI n="alert-circle" size={11}/> Datenprüfung ausstehend</span>}
+              {!raw.hat_portal_zugang&&<span className="cc-hero-status-badge-warn"><TI n="key" size={11}/> Portal-Zugang fehlt</span>}
+              {raw.fairgate_id&&<span className="cc-hero-status-badge-ok"><TI n="check" size={11}/> Fairgate synchronisiert</span>}
             </div>
           </div>
         </div>
@@ -769,16 +765,26 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
         />
         <div className="cc-member-stats">
           <div className="cc-member-stat">
-            <div className="cc-member-stat-val">{raw.mitgliedtyp||"—"}</div>
-            <div className="cc-member-stat-lbl">Mitgliedtyp</div>
+            <div className="cc-member-stat-icon cc-member-stat-icon-neutral"><TI n="id-badge-2" size={15} style={{color:"var(--sub)"}}/></div>
+            <div><div className="cc-member-stat-lbl">Mitgliedtyp</div><div className="cc-member-stat-val">{raw.mitgliedtyp||"—"}</div></div>
           </div>
           <div className="cc-member-stat">
-            <div className="cc-member-stat-val">{benutzer?.role||"—"}</div>
-            <div className="cc-member-stat-lbl">Portal-Rolle</div>
+            <div className={"cc-member-stat-icon "+(raw.geprueft?"cc-member-stat-icon-ok":"cc-member-stat-icon-warn")}>
+              <TI n={raw.geprueft?"shield-check":"alert-circle"} size={15} style={{color:raw.geprueft?"#166534":"#B45309"}}/>
+            </div>
+            <div><div className="cc-member-stat-lbl">Datenprüfung</div><div className={"cc-member-stat-val"+(raw.geprueft?"-ok":"-warn")}>{raw.geprueft?"Geprüft":"Ausstehend"}</div></div>
           </div>
           <div className="cc-member-stat">
-            <div className="cc-member-stat-val">{age||"—"}</div>
-            <div className="cc-member-stat-lbl">Alter</div>
+            <div className={"cc-member-stat-icon "+(raw.hat_portal_zugang?"cc-member-stat-icon-ok":"cc-member-stat-icon-warn")}>
+              <TI n="key" size={15} style={{color:raw.hat_portal_zugang?"#166534":"#B45309"}}/>
+            </div>
+            <div><div className="cc-member-stat-lbl">Portal-Zugang</div><div className={"cc-member-stat-val"+(raw.hat_portal_zugang?"-ok":"-warn")}>{raw.hat_portal_zugang?"Eingerichtet":"Fehlt"}</div></div>
+          </div>
+          <div className="cc-member-stat">
+            <div className={"cc-member-stat-icon "+(raw.fairgate_id?"cc-member-stat-icon-ok":"cc-member-stat-icon-neutral")}>
+              <TI n="refresh" size={15} style={{color:raw.fairgate_id?"#166534":"var(--sub)"}}/>
+            </div>
+            <div><div className="cc-member-stat-lbl">Fairgate</div><div className={"cc-member-stat-val"+(raw.fairgate_id?"-ok":"")}>{raw.fairgate_id?"Synchronisiert":"—"}</div></div>
           </div>
         </div>
 
@@ -793,7 +799,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":raw.geschlecht||null},
                 {l:"Nationalität", v:raw.nationalitaet||null, flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
                 {l:"Heimatort",    v:raw.heimatort||null},
-                ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||null}]:[]),
+                ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||null,masked:true}]:[]),
               ].filter(r=>canEdit||r.v).map((r,i)=>(
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
@@ -803,7 +809,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                       <span>{r.flagName}</span>
                     </span>
                   ):(
-                    <span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
+                    r.masked&&r.v
+                    ?<span className="cc-ahv-mask">••• •• ••••</span>
+                    :<span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
                   )}
                 </div>
               ))}
@@ -856,7 +864,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
             })()}
 
             {/* Teams */}
-            <Card>
+            <div className="cc-card-secondary">
               <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
               {teamDetails===null&&<div className="cc-text-sm cc-text-sub">Lade…</div>}
               {teamDetails!==null&&teamDetails.length===0&&(
@@ -869,7 +877,12 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   </div>
                   <div className="cc-flex-1">
                     <div className="cc-text-bold">{k.teams?.name||"—"}</div>
-                    <div className="cc-text-sm">{(k.rollen||["Spieler/in"]).join(" · ")}{k.position?` · ${k.position}`:""}</div>
+                    <div className="cc-row cc-gap-4 cc-flex-wrap" style={{marginTop:4}}>
+                      {(k.rollen||["Spieler/in"]).map((r,ri)=>(
+                        <span key={ri} className="cc-role-chip">{r}</span>
+                      ))}
+                      {k.position&&<span className="cc-pos-chip">{k.position}</span>}
+                    </div>
                   </div>
                   <DropMenu items={[
                     {label:"Zum Team", icon:"arrow-right", onClick:()=>{
@@ -888,40 +901,38 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
                   <TI n="plus" size={14}/> Team zuweisen
                 </button>
               )}
-            </Card>
+            </div>
 
             {/* Vereinsfunktionen */}
             {((raw.funktionen||[]).length>0||canEdit)&&(
-              <Card>
+              <div className="cc-card-secondary">
                 <div className="cc-section-title"><TI n="star" size={14}/> Vereinsfunktionen</div>
                 {(raw.funktionen||[]).length===0&&(
                   <div className="cc-text-sm cc-text-sub">Keine Vereinsfunktionen.</div>
                 )}
-                {(raw.funktionen||[]).map((f,i)=>(
-                  <div key={i} className="cc-list-item-row">
-                    <div className="cc-list-item-icon"><TI n="star" size={13} style={{color:"var(--sub)"}}/></div>
-                    <div className="cc-flex-1">
-                      <div className="cc-text-bold">{f}</div>
-                    </div>
-                  </div>
-                ))}
-              </Card>
+                <div className="cc-row cc-gap-6 cc-flex-wrap">
+                  {(raw.funktionen||[]).map((f,i)=>(
+                    <span key={i} className="cc-funk-chip">{f}</span>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Vereinsdaten */}
             <Card style={{gridColumn:"1/-1"}}>
-              <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
-              {[
-                ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||null}]:[]),
-                ...(fv.showPass?[{l:"J+S Nr.",    v:raw.js_nr||null}]:[]),
-                ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||null}]:[]),
-                {l:"Status", v:raw.geprueft?"geprüft":"ausstehend", color:raw.geprueft?"#15803d":"#f59e0b"},
-              ].filter(r=>canEdit||r.v).map((r,i)=>(
-                <div key={i} className="cc-info-row">
-                  <span className="cc-info-key">{r.l}</span>
-                  <span className="cc-info-val" style={r.color?{color:r.color}:{}}>{r.v||"—"}</span>
-                </div>
-              ))}
+              <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
+              <div className="cc-detail-grid-2">
+                {[
+                  ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||null},{l:"J+S Nr.",v:raw.js_nr||null}]:[]),
+                  ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||null}]:[]),
+                  {l:"Eintritt", v:raw.eintrittsdatum?new Date(raw.eintrittsdatum).toLocaleDateString("de-CH"):null},
+                ].filter(r=>canEdit||r.v).map((r,i)=>(
+                  <div key={i} className="cc-info-row">
+                    <span className="cc-info-key">{r.l}</span>
+                    <span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
+                  </div>
+                ))}
+              </div>
             </Card>
 
             {/* Team zuweisen Modal */}
@@ -1090,13 +1101,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
 
             {/* Notizen */}
             {fv.showNotizen&&(
-              <Card style={{gridColumn:"1/-1"}}>
+              <div className="cc-card-secondary" style={{gridColumn:"1/-1"}}>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
                 {raw.notizen
                   ?<div className="cc-text-body">{raw.notizen}</div>
-                  :<div className="cc-text-sm cc-text-sub">Keine Notizen.</div>
+                  :<div className="cc-text-sm cc-text-sub" style={{fontStyle:"italic"}}>Keine Notizen vorhanden.</div>
                 }
-              </Card>
+              </div>
             )}
           </div>
         )}
