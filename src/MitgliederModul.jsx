@@ -237,7 +237,13 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           <div className="cc-member-hero-info">
             <h1 className="cc-profile-name">{m.name}</h1>
             <div className="cc-member-hero-sub">
-              {[mitgliedtyp, age?`${age} Jahre`:null, raw.heimatort||null].filter(Boolean).join(" · ")}
+              {(()=>{
+                const ROLLE_LABEL={administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",supporter:"Supporter"};
+                const portalRolle=benutzer?.role?ROLLE_LABEL[benutzer.role]||benutzer.role:null;
+                const kaderRolle=teamDetails&&teamDetails.length>0?(teamDetails[0].rollen||[])[0]||null:null;
+                const rolle=portalRolle||kaderRolle||null;
+                return [mitgliedtyp, age?`${age} Jahre`:null, rolle].filter(Boolean).join(" · ");
+              })()}
             </div>
             <div className="cc-hero-status-badges">
               {!raw.geprueft&&<span className="cc-hero-status-badge-warn"><TI n="alert-circle" size={11}/> Datenprüfung ausstehend</span>}
@@ -692,6 +698,13 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
     }
     const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
     const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
+    useEffect(()=>{
+      if(sb&&raw.id&&benutzer===null){
+        sb.from("benutzer").select("*").eq("mitglied_id",raw.id).maybeSingle()
+          .then(({data})=>setBenutzer(data));
+      }
+    },[raw.id]);
 
     useEffect(()=>{
       if(tab==="portal"&&sb&&raw.id){
