@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import { GN, R, BL } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card } from "./theme.jsx";
+import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card, DropMenu } from "./theme.jsx";
 
 const FIELD_VIS = {
   administrator: ["dob","nat","heimatort","ahv","pass","street","plz","city","canton","email","tel","js","fairgate"],
@@ -53,6 +53,10 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   const [exportFields,setExportFields]= useState(["name","funktion","pos","nr"]);
   const [editingPos,  setEditingPos]  = useState(null);
   const [editingNr,   setEditingNr]   = useState(null);
+  const [editKader,   setEditKader]   = useState(null); // Kader-Eintrag bearbeiten
+  const [editForm,    setEditForm]    = useState({funktionen:[],rueckennr:"",position:""});
+  const [editSaving,  setEditSaving]  = useState(false);
+  const [sheetKader,  setSheetKader]  = useState(null); // Mobile Bottom Sheet
   const [portalFunktionen, setPortalFunktionen] = useState([]);
 
   // Mitglied hinzufügen
@@ -101,6 +105,25 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     if(!sb) return;
     await sb.from("kader").update({[field]:value}).eq("id",kaderId);
     setKader(prev=>prev.map(k=>k.id===kaderId?{...k,[field]:value}:k));
+  }
+
+  // Kader-Eintrag bearbeiten
+  async function saveEditKader(){
+    if(!sb||!editKader) return;
+    setEditSaving(true);
+    await sb.from("kader").update({
+      funktionen:editForm.funktionen||[],
+      rueckennr:editForm.rueckennr||null,
+      position:editForm.position||null,
+    }).eq("id",editKader.id);
+    setKader(prev=>prev.map(k=>k.id===editKader.id?{...k,...editForm}:k));
+    setEditKader(null);
+    setEditSaving(false);
+  }
+
+  function openEdit(k){
+    setEditForm({funktionen:k.funktionen||[],rueckennr:k.rueckennr||"",position:k.position||""});
+    setEditKader(k);
   }
 
   // Mitglied entfernen
@@ -182,57 +205,35 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   const KaderRow=({k})=>{
     const m=k.mitglieder||{};
     const name=`${m.nachname||""} ${m.vorname||""}`.trim()||"?";
+    const handleRowClick=()=>{
+      if(isMobile) setSheetKader(k);
+      else onSelectMember?onSelectMember({...m,name:`${m.vorname||""} ${m.nachname||""}`.trim(),id:m.id}):setSelected(k);
+    };
+    const menuItems=[
+      {label:"Spieler-Detail anzeigen", icon:"user", onClick:()=>onSelectMember?onSelectMember({...m,name:`${m.vorname||""} ${m.nachname||""}`.trim(),id:m.id}):setSelected(k)},
+      {label:"Kader-Eintrag bearbeiten", icon:"edit", onClick:()=>openEdit(k)},
+      "sep",
+      {label:"Aus Kader entfernen", icon:"trash", danger:true, onClick:()=>removeMitglied(k.id)},
+    ];
     return(
-      <div onClick={()=>onSelectMember?onSelectMember({...m,name:`${m.vorname||""} ${m.nachname||""}`.trim(),id:m.id}):setSelected(k)} className="cc-list-row">
+      <div onClick={handleRowClick} className="cc-list-row">
         <Av name={`${m.vorname||""} ${m.nachname||""}`} size="md" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
         <div style={{flex:1,minWidth:0}}>
           <div className="cc-list-name">{name}</div>
-          <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{(k.funktionen||["Spieler/in"]).join(" · ")}</div>
+          <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>
+            {(k.funktionen||["Spieler/in"]).join(" · ")}
+            {k.position?` · ${k.position}`:""}
+          </div>
         </div>
-        {/* Position */}
-        <div onClick={e=>e.stopPropagation()} style={{minWidth:48,textAlign:"center"}}>
-          {canEdit&&editingPos===k.id?(
-            <select autoFocus value={k.position||""}
-              onChange={e=>{updateKaderField(k.id,"position",e.target.value);setEditingPos(null);}}
-              onBlur={()=>setEditingPos(null)}
-              className="cc-input" style={{width:64,padding:"3px 6px",fontSize:12}}>
-              <option value="">-</option>
-              {POSITION_GROUPS.map(g=>(
-                <optgroup key={g.label} label={g.label}>
-                  {g.options.map(o=><option key={o} value={o}>{o}</option>)}
-                </optgroup>
-              ))}
-            </select>
-          ):(
-            <span onClick={canEdit?()=>setEditingPos(k.id):undefined}
-              className="cc-chip-toggle" style={{cursor:canEdit?"pointer":"default",fontSize:11,padding:"2px 8px"}}>
-              {k.position||"-"}
-            </span>
-          )}
-        </div>
-        {/* Nr */}
-        <div onClick={e=>e.stopPropagation()} style={{minWidth:40,textAlign:"right"}}>
-          {canEdit&&editingNr===k.id?(
-            <input autoFocus type="number" min="1" max="99"
-              value={k.rueckennr||""}
-              onChange={e=>updateKaderField(k.id,"rueckennr",e.target.value)}
-              onBlur={()=>setEditingNr(null)}
-              onKeyDown={e=>{if(e.key==="Enter")setEditingNr(null);}}
-              className="cc-input" style={{width:52,textAlign:"center",padding:"3px 6px",fontSize:12}}/>
-          ):(
-            <span onClick={canEdit?()=>setEditingNr(k.id):undefined}
-              style={{fontSize:12,fontWeight:600,color:"var(--sub)",cursor:canEdit?"pointer":"default",
-                padding:"2px 6px",borderRadius:6,background:"var(--surface2)"}}>
-              {k.rueckennr||"-"}
-            </span>
-          )}
+        <div className="cc-team-nr" style={k.rueckennr?{}:{borderStyle:"dashed",color:"var(--sub)",fontWeight:400}}>
+          {k.rueckennr||"—"}
         </div>
         {canEdit&&(
-          <div onClick={e=>{e.stopPropagation();removeMitglied(k.id);}} style={{padding:"0 4px",cursor:"pointer",color:"var(--sub)"}}>
-            <TI n="trash" size={13}/>
+          <div onClick={e=>e.stopPropagation()}>
+            <DropMenu items={menuItems}/>
           </div>
         )}
-        <TI n="chevron-right" size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+        {!canEdit&&<TI n="chevron-right" size={14} style={{color:"var(--sub)",flexShrink:0}}/>}
       </div>
     );
   };
@@ -240,6 +241,125 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   return(
     <div>
       {/* Detail Modal */}
+      {/* Edit Kader Modal */}
+      <ModalOrSheet open={!!editKader} onClose={()=>setEditKader(null)} maxWidth={400}>
+        {editKader&&(()=>{
+          const m=editKader.mitglieder||{};
+          const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
+          const [funkOpen,setFunkOpen]=useState(false);
+          return(
+            <>
+              <div className="cc-modal-hdr">
+                <div>
+                  <ModalTitle>{name} bearbeiten</ModalTitle>
+                  <div style={{fontSize:11,color:"var(--sub)",marginTop:2}}>{teamName} · {saison}</div>
+                </div>
+                <button className="cc-icon-btn" onClick={()=>setEditKader(null)}><TI n="x" size={14}/></button>
+              </div>
+              <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <label className="cc-label">Funktion(en)</label>
+                  <div className="cc-multiselect">
+                    <button type="button" className="cc-multiselect-trigger" onClick={()=>setFunkOpen(o=>!o)}>
+                      <div className="cc-multiselect-chips">
+                        {(editForm.funktionen||[]).length===0
+                          ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
+                          :(editForm.funktionen||[]).map(f=>(
+                            <span key={f} className="cc-multiselect-chip">
+                              {f}
+                              <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setEditForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
+                            </span>
+                          ))
+                        }
+                      </div>
+                      <TI n={funkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                    </button>
+                    {funkOpen&&(
+                      <div className="cc-multiselect-dropdown">
+                        <div className="cc-multiselect-list">
+                          {portalFunktionen.map(f=>{
+                            const sel=(editForm.funktionen||[]).includes(f.name);
+                            return(
+                              <div key={f.id} className="cc-multiselect-item" onClick={()=>setEditForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f.name):[...(p.funktionen||[]),f.name]}))}>
+                                <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                  {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                                </div>
+                                <span>{f.name}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {(editForm.funktionen||[]).length>0&&(
+                          <div className="cc-multiselect-footer">
+                            <span>{editForm.funktionen.length} ausgewählt</span>
+                            <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setEditForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <div style={{width:90}}>
+                    <label className="cc-label">Nr.</label>
+                    <input className="cc-input" type="number" min="1" max="99" placeholder="—"
+                      value={editForm.rueckennr} onChange={e=>setEditForm(p=>({...p,rueckennr:e.target.value}))}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label className="cc-label">Position</label>
+                    <select className="cc-input" value={editForm.position} onChange={e=>setEditForm(p=>({...p,position:e.target.value}))}>
+                      <option value="">—</option>
+                      {POSITION_GROUPS.map(g=>(
+                        <optgroup key={g.label} label={g.label}>
+                          {g.options.map(o=><option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="cc-modal-ftr">
+                <Btn onClick={()=>setEditKader(null)}>Abbrechen</Btn>
+                <Btn variant="primary" onClick={saveEditKader} disabled={editSaving}>
+                  {editSaving?"Speichert…":"Speichern"}
+                </Btn>
+              </div>
+            </>
+          );
+        })()}
+      </ModalOrSheet>
+
+      {/* Mobile Bottom Sheet */}
+      <ModalOrSheet open={!!sheetKader} onClose={()=>setSheetKader(null)} maxWidth={400}>
+        {sheetKader&&(()=>{
+          const m=sheetKader.mitglieder||{};
+          const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
+          return(
+            <>
+              <div className="cc-modal-hdr">
+                <ModalTitle>{name}</ModalTitle>
+                <button className="cc-icon-btn" onClick={()=>setSheetKader(null)}><TI n="x" size={14}/></button>
+              </div>
+              <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:0,padding:0}}>
+                {[
+                  {label:"Spieler-Detail anzeigen", icon:"user", onClick:()=>{setSheetKader(null);onSelectMember?onSelectMember({...m,name,id:m.id}):setSelected(sheetKader);}},
+                  ...(canEdit?[
+                    {label:"Kader-Eintrag bearbeiten", icon:"edit", onClick:()=>{setSheetKader(null);openEdit(sheetKader);}},
+                    {label:"Aus Kader entfernen", icon:"trash", danger:true, onClick:()=>{setSheetKader(null);removeMitglied(sheetKader.id);}},
+                  ]:[]),
+                ].map((item,i)=>(
+                  <button key={i} onClick={item.onClick}
+                    className={`cc-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                    style={{padding:"14px 20px",fontSize:14,borderBottom:"0.5px solid var(--border)"}}>
+                    <TI n={item.icon} size={16}/>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+      </ModalOrSheet>
       <ModalOrSheet open={!!selected} onClose={()=>setSelected(null)} maxWidth={540}>
         {selected&&(()=>{
           const m=selected.mitglieder||{};
