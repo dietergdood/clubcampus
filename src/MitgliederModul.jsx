@@ -632,6 +632,8 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
     const [editTeam,setEditTeam]=useState(null);
     const [editTeamForm,setEditTeamForm]=useState({funktionen:[],rueckennr:"",position:""});
     const [editTeamFunkOpen,setEditTeamFunkOpen]=useState(false);
+    const [teamAssignRolleSearch,setTeamAssignRolleSearch]=useState("");
+    const [editTeamRolleSearch,setEditTeamRolleSearch]=useState("");
     const [editTeamSaving,setEditTeamSaving]=useState(false);
     const [elternLoaded,setElternLoaded]=useState(null);
     const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
@@ -1049,44 +1051,26 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                 </div>
                 <div>
                   <label className="cc-label">Rolle im Team</label>
-                  <div className="cc-multiselect">
-                    <button type="button" className="cc-multiselect-trigger" onClick={()=>setTeamFunkOpen(o=>!o)}>
-                      <div className="cc-multiselect-chips">
-                        {(teamAssignForm.funktionen||[]).length===0
-                          ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
-                          :(teamAssignForm.funktionen||[]).map(f=>(
-                            <span key={f} className="cc-multiselect-chip">
-                              {f}
-                              <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setTeamAssignForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
-                            </span>
-                          ))
-                        }
-                      </div>
-                      <TI n={teamFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
-                    </button>
-                    {teamFunkOpen&&(
-                      <div className="cc-multiselect-dropdown">
-                        <div className="cc-multiselect-list">
-                          {dbKaderRollen.map(r=>r.name).map(r=>{
-                            const sel=(teamAssignForm.funktionen||[]).includes(r);
-                            return(
-                              <div key={r} className="cc-multiselect-item" onClick={()=>setTeamAssignForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r):[...(p.funktionen||[]),r]}))}>
-                                <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
-                                  {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
-                                </div>
-                                <span>{r}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {(teamAssignForm.funktionen||[]).length>0&&(
-                          <div className="cc-multiselect-footer">
-                            <span>{(teamAssignForm.funktionen||[]).length} ausgewählt</span>
-                            <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setTeamAssignForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                  <div className="cc-input-icon" style={{marginBottom:6}}>
+                    <TI n="search" size={14} className="cc-input-icon"/>
+                    <input className="cc-input" placeholder="Suchen…" value={teamAssignRolleSearch||""}
+                      onChange={e=>setTeamAssignRolleSearch(e.target.value)}
+                      style={{paddingLeft:32}}/>
+                  </div>
+                  <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden",maxHeight:220,overflowY:"auto"}}>
+                    {dbKaderRollen.filter(r=>!(teamAssignRolleSearch)||r.name.toLowerCase().includes((teamAssignRolleSearch||"").toLowerCase())).map(r=>{
+                      const sel=(teamAssignForm.funktionen||[]).includes(r.name);
+                      return(
+                        <div key={r.name} className="cc-list-item-row" style={{cursor:"pointer",background:sel?"var(--cc-accent-5,rgba(255,191,0,0.05))":"transparent"}}
+                          onClick={()=>setTeamAssignForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r.name):[...(p.funktionen||[]),r.name]}))}>
+                          <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                            {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
                           </div>
-                        )}
-                      </div>
-                    )}
+                          <span style={{fontSize:13,flex:1}}>{r.name}</span>
+                          {r.ist_trainer&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:"#FEF3C7",color:"#B45309"}}>Trainer</span>}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="cc-row cc-gap-10">
@@ -1129,44 +1113,26 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                   <div className="cc-modal-body cc-col">
                     <div>
                       <label className="cc-label">Rolle im Team</label>
-                      <div className="cc-multiselect">
-                        <button type="button" className="cc-multiselect-trigger" onClick={()=>setEditTeamFunkOpen(o=>!o)}>
-                          <div className="cc-multiselect-chips">
-                            {(editTeamForm.funktionen||[]).length===0
-                              ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
-                              :(editTeamForm.funktionen||[]).map(f=>(
-                                <span key={f} className="cc-multiselect-chip">
-                                  {f}
-                                  <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setEditTeamForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
-                                </span>
-                              ))
-                            }
-                          </div>
-                          <TI n={editTeamFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
-                        </button>
-                        {editTeamFunkOpen&&(
-                          <div className="cc-multiselect-dropdown">
-                            <div className="cc-multiselect-list">
-                              {dbKaderRollen.map(r=>r.name).map(f=>{
-                                const sel=(editTeamForm.funktionen||[]).includes(f);
-                                return(
-                                  <div key={f} className="cc-multiselect-item" onClick={()=>setEditTeamForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f):[...(p.funktionen||[]),f]}))}>
-                                    <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
-                                      {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
-                                    </div>
-                                    <span>{f}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {(editTeamForm.funktionen||[]).length>0&&(
-                              <div className="cc-multiselect-footer">
-                                <span>{editTeamForm.funktionen.length} ausgewählt</span>
-                                <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setEditTeamForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                      <div className="cc-input-icon" style={{marginBottom:6}}>
+                        <TI n="search" size={14} className="cc-input-icon"/>
+                        <input className="cc-input" placeholder="Suchen…" value={editTeamRolleSearch||""}
+                          onChange={e=>setEditTeamRolleSearch(e.target.value)}
+                          style={{paddingLeft:32}}/>
+                      </div>
+                      <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden",maxHeight:220,overflowY:"auto"}}>
+                        {dbKaderRollen.filter(r=>!(editTeamRolleSearch)||r.name.toLowerCase().includes((editTeamRolleSearch||"").toLowerCase())).map(r=>{
+                          const sel=(editTeamForm.funktionen||[]).includes(r.name);
+                          return(
+                            <div key={r.name} className="cc-list-item-row" style={{cursor:"pointer",background:sel?"var(--cc-accent-5,rgba(255,191,0,0.05))":"transparent"}}
+                              onClick={()=>setEditTeamForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r.name):[...(p.funktionen||[]),r.name]}))}>
+                              <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
                               </div>
-                            )}
-                          </div>
-                        )}
+                              <span style={{fontSize:13,flex:1}}>{r.name}</span>
+                              {r.ist_trainer&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:"#FEF3C7",color:"#B45309"}}>Trainer</span>}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                     <div className="cc-row cc-gap-10">
