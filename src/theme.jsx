@@ -247,7 +247,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-eltern-portal-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:10px;border-top:0.5px solid var(--border);gap:12px}
 .cc-flex-wrap{flex-wrap:wrap}
 /* ── Dropdown Menu ── */
-.cc-menu-wrap{position:relative;flex-shrink:0;z-index:600}
+.cc-menu-wrap{position:relative;flex-shrink:0}
 .cc-menu-trigger{width:28px;height:28px;border-radius:7px;border:0.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--sub)}
 .cc-menu-trigger:hover{background:var(--surface2)}
 .cc-hero-banner-actions .cc-menu-trigger{border-color:var(--border);background:var(--surface2);color:var(--text)}
