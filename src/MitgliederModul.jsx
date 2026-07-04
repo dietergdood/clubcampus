@@ -260,7 +260,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 const hatFunktionen=(raw.funktionen||[]).length>0;
                 const chips=[];
                 if(mitgliedtyp) chips.push({label:mitgliedtyp,type:"type"});
-                if(age) chips.push({label:`${age} Jahre`,type:"age"});
+                
                 if(hatTrainerKader) chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"rolle"});
                 if(hatSpielerKader) chips.push({label:ROLLE_LABEL["spieler"]||"Spieler",type:"rolle"});
                 if(hatFunktionen) chips.push({label:ROLLE_LABEL["funktionaer"]||"Funktionär",type:"rolle"});
@@ -849,6 +849,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
             <Card>
               <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
               {[
+                ...(age?[{l:"Alter",v:`${age} Jahre`}]:[]),
                 ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):null}]:[]),
                 {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":raw.geschlecht||null},
                 {l:"Nationalität", v:raw.nationalitaet||null, flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
