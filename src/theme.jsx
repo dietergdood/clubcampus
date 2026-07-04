@@ -431,7 +431,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-tile-icon-danger{background:#FEE2E2;color:#991B1B}
 .cc-status-tile-body{display:flex;flex-direction:column;gap:2px;min-width:0}
 .cc-status-tile-label{font-size:11px;color:var(--sub);white-space:nowrap}
-.cc-status-tile-action{font-size:10px;color:var(--cc-accent,#FFBF00);font-weight:500;margin-top:3px;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;text-align:left}
+.cc-status-tile-action{font-size:10px;color:#B45309;font-weight:500;margin-top:3px;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;text-align:left}
 .cc-status-tile-action:hover{text-decoration:underline}
 .cc-status-tile-value{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap}
 .cc-status-tile-value-warn{font-size:14px;font-weight:600;color:#B45309}
