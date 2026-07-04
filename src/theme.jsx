@@ -877,7 +877,7 @@ function DropMenu({items}){
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&createPortal(
-        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999,fontFamily:"var(--font-sans,inherit)"}}>
+        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999,fontFamily:FONT}}>
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
             :<button key={i}
