@@ -152,10 +152,23 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
     ?dbMitgliedtypen.map(t=>t.name)
     :["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
 
+  const [pvTeams,setPvTeams]=useState([]);
+
   useEffect(()=>{
-    if(sb&&editOpen&&portalFunktionen.length===0){
-      sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
-        .then(({data})=>setPortalFunktionen(data||[]));
+    if(sb&&editOpen){
+      if(portalFunktionen.length===0){
+        sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
+          .then(({data})=>setPortalFunktionen(data||[]));
+      }
+      if(pvTeams.length===0){
+        sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
+          .then(({data})=>setPvTeams(data||[]));
+      }
+      // Benutzer-Rolle laden
+      sb.from("benutzer").select("id,role").eq("mitglied_id",raw.id).maybeSingle()
+        .then(({data})=>{
+          if(data) setEditForm(f=>({...f,rolle:data.role||"",_benutzer_id:data.id}));
+        });
     }
   },[editOpen]);
 
@@ -177,10 +190,15 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
       email:editForm.email||null, strasse:editForm.strasse||null,
       plz:editForm.plz||null, ort:editForm.ort||null, kanton:editForm.kanton||null,
       mitgliedtyp:editForm.mitgliedtyp||null, funktionen:editForm.funktionen||[],
+      teams:editForm.teams||[],
       spielerpass:editForm.spielerpass||null, js_nr:editForm.js_nr||null,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
       updated_at:new Date().toISOString(),
     }).eq("id",raw.id);
+    // Rolle in benutzer updaten falls vorhanden
+    if(!error&&editForm.rolle&&editForm._benutzer_id){
+      await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
+    }
     if(error){ setEditMsg({ok:false,text:error.message}); }
     else{
       setEditMsg({ok:true,text:"Gespeichert ✓"});
@@ -289,6 +307,37 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                   onChange={val=>setEditForm(f=>({...f,funktionen:val}))}
                 />
               </div>
+              {/* Portal-Rolle */}
+              {editForm._benutzer_id&&(
+                <div>
+                  <label className="cc-label">Portal-Rolle</label>
+                  <select className="cc-input" value={editForm.rolle||""} onChange={e=>setEditForm(f=>({...f,rolle:e.target.value}))}>
+                    <option value="">– keine –</option>
+                    {["administrator","administration","funktionaer","trainer","spieler","eltern"].map(r=>(
+                      <option key={r} value={r}>{{administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"}[r]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* Teams */}
+              {pvTeams.length>0&&(
+                <div className="cc-form-full">
+                  <label className="cc-label">Teams</label>
+                  <div className="cc-row cc-gap-6 cc-flex-wrap" style={{marginTop:4}}>
+                    {pvTeams.map(t=>{
+                      const name=t.name;
+                      const sel=(editForm.teams||[]).includes(name);
+                      return(
+                        <button key={t.id} type="button"
+                          onClick={()=>setEditForm(f=>({...f,teams:sel?(f.teams||[]).filter(x=>x!==name):[...(f.teams||[]),name]}))}
+                          className={`cc-chip-toggle${sel?" cc-chip-toggle-on":""}`}>
+                          {t.kurzname||t.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {[
                 {k:"spielerpass", l:"Spielerpass"},
                 {k:"js_nr",       l:"J+S Nr."},
@@ -626,7 +675,6 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           tabs={[
             {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
             {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
-            ...(canEdit?[{key:"vereinsdaten",  label:"Vereinsdaten",  icon:"shirt",        short:"Verein"}]:[]),
             ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key",          short:"Portal"}]:[]),
             ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check", short:"Daten"}]:[]),
             {key:"stats",   label:"Statistik",   icon:"chart-bar",short:"Stats",  soon:true},
@@ -957,134 +1005,6 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],kannSchreiben,
           );
         })()}
 
-        {/* Tab: Vereinsdaten */}
-        {tab==="vereinsdaten"&&canEdit&&(()=>{
-          const [vForm,setVForm]=useState({
-            mitgliedtyp:raw.mitgliedtyp||"",
-            rolle:benutzer?.role||"",
-            funktionen:raw.funktionen||[],
-            teams:raw.teams||[],
-          });
-          const [vSaving,setVSaving]=useState(false);
-          const [vMsg,setVMsg]=useState(null);
-          const [pvFunktionen,setPvFunktionen]=useState([]);
-          const [pvTeams,setPvTeams]=useState([]);
-
-          useEffect(()=>{
-            if(sb){
-              sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
-                .then(({data})=>setPvFunktionen(data||[]));
-              sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
-                .then(({data})=>setPvTeams(data||[]));
-            }
-          },[]);
-
-          async function saveVereinsdaten(){
-            setVSaving(true);
-            try{
-              await sb.from("mitglieder").update({
-                mitgliedtyp:vForm.mitgliedtyp||null,
-                funktionen:vForm.funktionen||[],
-                teams:vForm.teams||[],
-              }).eq("id",raw.id);
-              if(benutzer?.id&&vForm.rolle&&vForm.rolle!==benutzer.role){
-                await sb.from("benutzer").update({role:vForm.rolle}).eq("id",benutzer.id);
-              }
-              setVMsg("Gespeichert");
-              onReload();
-              setTimeout(()=>setVMsg(null),2500);
-            }catch(e){ setVMsg("Fehler: "+e.message); }
-            setVSaving(false);
-          }
-
-          const ROLLEN=["administrator","administration","funktionaer","trainer","spieler","eltern"];
-          const ROLLEN_LABELS={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"};
-
-          return(
-            <div className="cc-col cc-gap-16">
-              <Card>
-                <div className="cc-section-title"><TI n="shirt" size={14}/> Vereinsdaten</div>
-
-                {/* Mitgliedtyp */}
-                <div className="cc-form-field">
-                  <label className="cc-label">Mitgliedtyp</label>
-                  <select className="cc-input" value={vForm.mitgliedtyp} onChange={e=>setVForm(p=>({...p,mitgliedtyp:e.target.value}))}>
-                    <option value="">– wählen –</option>
-                    {dbMitgliedtypen.map(t=><option key={t.id} value={t.name}>{t.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="cc-divider"/>
-
-                {/* Portal-Rolle */}
-                {raw.hat_portal_zugang&&benutzer&&(
-                  <div className="cc-form-field">
-                    <label className="cc-label">Portal-Rolle <span style={{fontWeight:400,fontSize:10,textTransform:"none",letterSpacing:0}}>— steuert Zugriffsrechte</span></label>
-                    <select className="cc-input" value={vForm.rolle} onChange={e=>setVForm(p=>({...p,rolle:e.target.value}))}>
-                      <option value="">– keine –</option>
-                      {ROLLEN.map(r=><option key={r} value={r}>{ROLLEN_LABELS[r]}</option>)}
-                    </select>
-                    <div className="cc-text-sm cc-text-sub" style={{marginTop:4,display:"flex",alignItems:"center",gap:4}}>
-                      <TI n="info-circle" size={12}/> Nur änderbar wenn Mitglied Portal-Zugang hat
-                    </div>
-                  </div>
-                )}
-
-                <div className="cc-divider"/>
-
-                {/* Funktionen */}
-                <div className="cc-form-field">
-                  <label className="cc-label">Vereinsfunktion(en) <span style={{fontWeight:400,fontSize:10,textTransform:"none",letterSpacing:0}}>— was jemand im Verein macht</span></label>
-                  <FunktionenMultiSelect
-                    funktionen={pvFunktionen}
-                    selected={vForm.funktionen||[]}
-                    onChange={val=>setVForm(p=>({...p,funktionen:val}))}
-                  />
-                  <div className="cc-text-sm cc-text-sub" style={{marginTop:4,display:"flex",alignItems:"center",gap:4}}>
-                    <TI n="info-circle" size={12}/> Spieler/Trainer sind Rollen, keine Funktionen
-                  </div>
-                </div>
-
-                <div className="cc-divider"/>
-
-                {/* Teams */}
-                <div className="cc-form-field">
-                  <label className="cc-label">Teams</label>
-                  <div className="cc-row cc-gap-6 cc-flex-wrap" style={{marginTop:4}}>
-                    {pvTeams.map(t=>{
-                      const sel=(vForm.teams||[]).includes(t.name||t.kurzname);
-                      return(
-                        <button key={t.id} type="button"
-                          onClick={()=>{
-                            const name=t.name||t.kurzname;
-                            setVForm(p=>({...p,teams:sel?p.teams.filter(x=>x!==name):[...p.teams,name]}));
-                          }}
-                          className={`cc-chip-toggle${sel?" cc-chip-toggle-on":""}`}>
-                          {t.kurzname||t.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="cc-divider"/>
-
-                {/* Speichern */}
-                <div className="cc-row cc-gap-10" style={{paddingTop:4}}>
-                  <button onClick={saveVereinsdaten} disabled={vSaving}
-                    style={{flex:1,padding:"10px",borderRadius:10,background:"var(--cc-accent,#FFBF00)",color:"#000",border:"none",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",opacity:vSaving?0.7:1}}>
-                    {vSaving?"Speichert…":"Speichern"}
-                  </button>
-                  <button onClick={()=>setTab("info")}
-                    className="cc-icon-btn" style={{width:"auto",padding:"0 16px",borderRadius:10}}>
-                    Abbrechen
-                  </button>
-                </div>
-                {vMsg&&<div className="cc-text-sm" style={{color:vMsg.startsWith("Fehler")?"var(--danger,#ef4444)":"var(--cc-success,#16a34a)",marginTop:6}}>{vMsg}</div>}
-              </Card>
-            </div>
-          );
-        })()}
 
         {/* Tab: Portal-Zugang */}
         {tab==="portal"&&canEdit&&(
