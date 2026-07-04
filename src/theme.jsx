@@ -865,7 +865,7 @@ function DropMenu({items}){
 
   return(
     <div className="cc-menu-wrap" ref={wrapRef}>
-      <button className="cc-menu-trigger" ref={btnRef} onClick={handleOpen} onMouseDown={e=>e.stopPropagation()}>
+      <button className="cc-menu-trigger" ref={btnRef} onClick={e=>{e.stopPropagation();handleOpen();}} onMouseDown={e=>e.stopPropagation()}>
         <TI n="dots-vertical" size={16}/>
       </button>
       {open&&(
