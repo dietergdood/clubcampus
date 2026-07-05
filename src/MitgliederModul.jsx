@@ -644,7 +644,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
 
     useEffect(()=>{
       if(!sb||!mitgliedId) return;
-      sb.from("mitglieder_notizen").select("*").eq("mitglied_id",mitgliedId).order("created_at",{ascending:false})
+      sb.from("mitglieder_notizen")
+        .select("*,benutzer:autor_id(mitglied_id,mitglieder(foto_url))")
+        .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false})
         .then(({data})=>setNotizen(data||[]));
     },[mitgliedId]);
 
@@ -696,7 +698,12 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
         )}
         {notizen.map(n=>(
           <div key={n.id} className="cc-notiz-entry">
-            <div className="cc-notiz-av">{initials(n.autor_name)}</div>
+            <div className="cc-notiz-av" style={{overflow:"hidden",padding:0}}>
+              {n.benutzer?.mitglieder?.foto_url
+                ?<img src={n.benutzer.mitglieder.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                :<span>{initials(n.autor_name)}</span>
+              }
+            </div>
             <div className="cc-flex-1">
               <div className="cc-notiz-meta">
                 <span className="cc-notiz-author">{n.autor_name||"Unbekannt"}</span>
