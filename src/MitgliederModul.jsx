@@ -1127,9 +1127,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   <div className="cc-list-item-icon"><TI n="ball-football" size={13}/>
                   <div className="cc-text-bold cc-flex-1">{k.teams?.name||"—"}</div>
                   <div className="cc-row cc-gap-4 cc-flex-wrap">
-                    {(k.rollen||["Spieler/in"]).map((r,ri)=>(
-                      <span key={ri} className="cc-role-chip">{r}</span>
-                    ))}
+                    {(k.rollen||["Spieler/in"]).map((r,ri)=>{
+                      const isTrainer=dbKaderRollen.some(kr=>kr.name===r&&kr.ist_trainer);
+                      return <span key={ri} className={isTrainer?"cc-role-chip cc-role-chip-trainer":"cc-role-chip"}>{r}</span>;
+                    })}
                   </div>
                   <DropMenu items={[
                     {label:"Zum Team", icon:"arrow-right", onClick:()=>{

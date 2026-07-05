@@ -499,6 +499,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hk-content{flex:1;min-width:0}
 .cc-card-secondary{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px}
 .cc-role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#EAF3DE;color:#27500A;border:0.5px solid rgba(39,80,10,0.2)}
+.cc-role-chip-trainer{background:#FEF3C7;color:#B45309;border-color:rgba(180,83,9,0.2)}
 .cc-pos-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:400;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-funk-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:400;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
 .cc-funk-gruppe-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
@@ -576,6 +577,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 [data-theme=dark] .cc-status-tile-value-ok{color:#86EFAC}
 [data-theme=dark] .cc-status-tile-value-danger{color:#FCA5A5}
 [data-theme=dark] .cc-role-chip{background:rgba(39,80,10,0.3);color:#86EFAC;border-color:rgba(134,239,172,0.2)}
+[data-theme=dark] .cc-role-chip-trainer{background:rgba(180,83,9,0.25);color:#FCD34D;border-color:rgba(252,211,77,0.2)}
 [data-theme=dark] .cc-hero-status-badge-warn{background:rgba(0,0,0,0.4);color:#FCD34D;border-color:rgba(252,211,77,0.3)}
 [data-theme=dark] .cc-hero-status-badge-ok{background:rgba(0,0,0,0.4);color:#86EFAC;border-color:rgba(134,239,172,0.3)}
 [data-theme=dark] .cc-hero-banner-btn:hover{background:rgba(255,255,255,0.12)}
