@@ -808,13 +808,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     },[tab,raw.id]);
 
     useEffect(()=>{
-      if(tab==="info"&&sb&&raw.id&&teamDetails===null){
+      if(sb&&raw.id&&teamDetails===null){
         sb.from("kader")
           .select("*, teams(id,name,kurzname)")
           .eq("mitglied_id",raw.id).eq("aktiv",true)
           .then(({data})=>setTeamDetails(data||[]));
       }
-    },[tab,raw.id]);
+    },[raw.id]);
 
     useEffect(()=>{
       if(showTeamAssign&&sb){
