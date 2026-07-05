@@ -276,8 +276,8 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             <div className="cc-hero-status-strip">
               {raw.aktiv!==false&&<span className="cc-hero-status-pill cc-hero-status-pill-ok"><TI n="circle-check" size={11}/>Aktiv</span>}
               {raw.aktiv===false&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="circle-x" size={11}/>Inaktiv</span>}
-              {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Fairgate</span>}
-              {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Daten offen</span>}
+              {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Sync OK</span>}
+              {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
             </div>
             {canEdit&&(
               <div ref={heroMenuRef} style={{position:"relative"}}>
@@ -637,17 +637,9 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
 
     useEffect(()=>{
       if(!sb||!mitgliedId) return;
-      sb.from("mitglieder_notizen")
-        .select("*,benutzer:autor_id(name,mitglied_id,mitglieder(foto_url))")
+      sb.from("mitglieder_notizen").select("*")
         .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false})
-        .then(({data,error})=>{
-          if(error){
-            sb.from("mitglieder_notizen").select("*").eq("mitglied_id",mitgliedId)
-              .order("created_at",{ascending:false}).then(({data:d2})=>setNotizen(d2||[]));
-          } else {
-            setNotizen(data||[]);
-          }
-        });
+        .then(({data})=>setNotizen(data||[]));
     },[mitgliedId]);
 
     async function addNotiz(){
@@ -658,8 +650,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
         mitglied_id:mitgliedId, text:newText.trim(),
         autor_id:dbUser?.id||null, autor_name:autorName,
       });
-      const {data:fresh}=await sb.from("mitglieder_notizen")
-        .select("*,benutzer:autor_id(name,mitglied_id,mitglieder(foto_url))")
+      const {data:fresh}=await sb.from("mitglieder_notizen").select("*")
         .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false});
       setNotizen(fresh||[]);
       setNewText(""); setAdding(false);
@@ -701,15 +692,10 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
         )}
         {notizen.map(n=>(
           <div key={n.id} className="cc-notiz-entry">
-            <div className="cc-notiz-av" style={{overflow:"hidden",padding:0}}>
-              {n.benutzer?.mitglieder?.foto_url
-                ?<img src={n.benutzer.mitglieder.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-                :<span>{initials(n.autor_name||n.benutzer?.name)}</span>
-              }
-            </div>
+            <div className="cc-notiz-av">{initials(n.autor_name)}</div>
             <div className="cc-flex-1">
               <div className="cc-notiz-meta">
-                <span className="cc-notiz-author">{n.autor_name||n.benutzer?.name||"Unbekannt"}</span>
+                <span className="cc-notiz-author">{n.autor_name||"Unbekannt"}</span>
                 <span className="cc-notiz-dot"/>
                 <span>{formatDate(n.created_at)}</span>
                 {n.updated_at!==n.created_at&&<><span className="cc-notiz-dot"/><span className="cc-text-xs cc-text-sub">bearbeitet</span></>}
@@ -1294,7 +1280,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
             {fv.showNotizen&&(
               <Card style={{gridColumn:"1/-1"}}>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-                <NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={benutzer}/>
+                <div style={{color:"var(--text)"}}><NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={benutzer}/></div>
               </Card>
             )}
           </div>
