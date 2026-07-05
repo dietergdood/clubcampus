@@ -978,27 +978,49 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 </button>
               ))}
               {moreTabs.length>0&&(
-                <div ref={mehrRef} style={{position:"relative",marginLeft:"auto"}}>
-                  <button
-                    className={`cc-member-tab${moreActive?" cc-member-tab-active":""}`}
-                    onClick={()=>setMehrOpen(o=>!o)}
-                  >
-                    <TI n="dots" size={13}/>
-                    {moreActive?allTabs.find(t=>t.key===tab)?.label:"Mehr"}
-                  </button>
-                  {mehrOpen&&(
-                    <div className="cc-mehr-dropdown">
-                      {moreTabs.map(t=>(
-                        <button key={t.key} className={`cc-mehr-item${tab===t.key?" cc-mehr-item-active":""}`}
-                          onClick={()=>{setTab(t.key);setMehrOpen(false);}}
-                        >
-                          {t.icon&&<TI n={t.icon} size={14}/>}
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
+                <>
+                  <div ref={mehrRef} style={{position:"relative",marginLeft:"auto"}}>
+                    <button
+                      className={`cc-member-tab${moreActive?" cc-member-tab-active":""}`}
+                      onClick={()=>setMehrOpen(o=>!o)}
+                    >
+                      <TI n="dots" size={13}/>
+                      {moreActive?allTabs.find(t=>t.key===tab)?.label:"Mehr"}
+                    </button>
+                    {mehrOpen&&!isMobile&&(
+                      <div className="cc-mehr-dropdown">
+                        {moreTabs.map(t=>(
+                          <button key={t.key} className={`cc-mehr-item${tab===t.key?" cc-mehr-item-active":""}`}
+                            onClick={()=>{setTab(t.key);setMehrOpen(false);}}
+                          >
+                            {t.icon&&<TI n={t.icon} size={14}/>}
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {isMobile&&(
+                    <ModalOrSheet open={mehrOpen} onClose={()=>setMehrOpen(false)} maxWidth={480}>
+                      <div className="cc-modal-hdr">
+                        <ModalTitle>Weitere Tabs</ModalTitle>
+                        <Btn variant="ghost" small onClick={()=>setMehrOpen(false)}><TI n="x" size={14}/></Btn>
+                      </div>
+                      <div className="cc-modal-body cc-col">
+                        {moreTabs.map(t=>(
+                          <button key={t.key}
+                            className={`cc-mehr-item${tab===t.key?" cc-mehr-item-active":""}`}
+                            style={{width:"100%",borderRadius:10,padding:"12px 16px",fontSize:14}}
+                            onClick={()=>{setTab(t.key);setMehrOpen(false);}}
+                          >
+                            {t.icon&&<TI n={t.icon} size={16}/>}
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </ModalOrSheet>
                   )}
-                </div>
+                </>
               )}
             </div>
           );
