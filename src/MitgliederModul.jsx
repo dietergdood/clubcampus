@@ -682,6 +682,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [teamsPopover,setTeamsPopover]=useState(null);
   const [pageSize,setPageSize]=useState(50);
   const [exportOpen,setExportOpen]=useState(false);
+  const [selectMode,setSelectMode]=useState(false);
+  const [selected,setSelected]=useState(new Set());
   const [customViews,setCustomViews]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
   const [saveViewName,setSaveViewName]=useState("");
@@ -836,6 +838,22 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       .then(({data})=>setCustomViews(data||[]));
   },[account?.id]);
 
+  function toggleSelectMode(){
+    setSelectMode(m=>{
+      if(m) setSelected(new Set());
+      return !m;
+    });
+  }
+  function toggleSelectRow(id){
+    setSelected(prev=>{
+      const s=new Set(prev);
+      s.has(id)?s.delete(id):s.add(id);
+      return s;
+    });
+  }
+  function toggleSelectAll(){
+    setSelected(prev=>prev.size===paged.length?new Set():new Set(paged.map(m=>m.id)));
+  }
   function handleColDragStart(key){ setDragCol(key); }
   function handleColDragOver(e,key){ e.preventDefault(); setDragOverCol(key); }
   function handleColDrop(targetKey){
@@ -2029,6 +2047,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           </div>
         )}
 
+        {/* Auswaehlen - nur Desktop */}
+        {!isMobile&&(
+          <button className={`cc-ml-btn${selectMode?" cc-active":""}`} onClick={toggleSelectMode}>
+            <TI n="checkbox" size={15}/>
+            {selectMode?"Modus aktiv":"Auswählen"}
+          </button>
+        )}
+
         {/* Spalten - nur Desktop */}
         {!isMobile&&<div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
           <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
@@ -2110,6 +2136,20 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         </div>
       )}
 
+      {/* Selektionsleiste */}
+      {selectMode&&!isMobile&&(
+        <div className="cc-sel-bar">
+          <div className="cc-col-menu-check cc-col-menu-check-on cc-sel-all" onClick={toggleSelectAll}>
+            <TI n={selected.size===paged.length?"check":"minus"} size={10}/>
+          </div>
+          <span className="cc-sel-bar-info">{selected.size} ausgewählt</span>
+          <button className="cc-ml-btn" onClick={()=>{}}><TI n="download" size={14}/> Export</button>
+          <button className="cc-ml-btn" onClick={()=>{}}><TI n="user-off" size={14}/> Deaktivieren</button>
+          <button className="cc-ml-btn cc-ml-btn-danger" onClick={()=>{if(window.confirm(`Wirklich ${selected.size} Mitglieder löschen?`)){setSelected(new Set());}}}><TI n="trash" size={14}/> Löschen (DSGVO)</button>
+          <button className="cc-btn-ghost" onClick={()=>{setSelected(new Set());setSelectMode(false);}}><TI n="x" size={13}/> Abbrechen</button>
+        </div>
+      )}
+
       {/* Liste / Tabelle */}
       <Card className="cc-card-table" flush>
         {filtered.length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
@@ -2152,6 +2192,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           <div className="cc-table-wrap"><div className="cc-table-wrap-inner"><table className="cc-members-table">
             <thead>
               <tr>
+                {selectMode&&<th style={{width:36,padding:"8px 12px"}}>
+                  <div className={`cc-col-menu-check${selected.size===paged.length&&paged.length>0?" cc-col-menu-check-on":""}`} onClick={toggleSelectAll}>
+                    {selected.size===paged.length&&paged.length>0&&<TI n="check" size={10}/>}
+                  </div>
+                </th>}
                 {COLS.map(col=>(
                   <th key={col.key}
                     className={`cc-members-th${dragCol&&dragCol!==col.key?" cc-members-th-drop-target":""}${dragCol===col.key?" cc-members-th-dragging":""}`}
@@ -2187,7 +2232,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                     <tr className="cc-members-group-hdr"><td colSpan={COLS.length+1}>{key} <span className="cc-text-muted">({members.length})</span></td></tr>
                   )}
                   {members.map(m=>(
-                    <tr key={m.id} className="cc-members-tr" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
+                    <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
+                      onClick={()=>selectMode?toggleSelectRow(m.id):setSelectedMember({...m,_tab:"info"})}>
+                      {selectMode&&<td style={{width:36,padding:"8px 12px"}} onClick={e=>e.stopPropagation()}>
+                        <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
+                          {selected.has(m.id)&&<TI n="check" size={10}/>}
+                        </div>
+                      </td>}
                       {COLS.map(col=>{
                         switch(col.key){
                           case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>;
