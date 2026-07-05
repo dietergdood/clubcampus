@@ -813,8 +813,25 @@ function Portal({supabaseClient}){
   async function loadDbMitglieder(){
     if(!sb) return;
     try{
-      const{data}=await sb.from("mitglieder").select("*").eq("aktiv",true).order("nachname").order("vorname");
-      if(data&&data.length>0) setDbMitglieder(data);
+      const[mitgliederRes,kaderRes]=await Promise.all([
+        sb.from("mitglieder").select("*").eq("aktiv",true).order("nachname").order("vorname"),
+        sb.from("kader").select("mitglied_id,rollen,teams(id,name)").eq("aktiv",true),
+      ]);
+      const kaderMap={};
+      (kaderRes.data||[]).forEach(k=>{
+        if(!kaderMap[k.mitglied_id]) kaderMap[k.mitglied_id]={rollen:[],teams:[]};
+        (k.rollen||[]).forEach(r=>{
+          if(!kaderMap[k.mitglied_id].rollen.includes(r)) kaderMap[k.mitglied_id].rollen.push(r);
+        });
+        if(k.teams?.name&&!kaderMap[k.mitglied_id].teams.includes(k.teams.name))
+          kaderMap[k.mitglied_id].teams.push(k.teams.name);
+      });
+      const data=(mitgliederRes.data||[]).map(m=>({
+        ...m,
+        kader_rollen:kaderMap[m.id]?.rollen||[],
+        kader_teams:kaderMap[m.id]?.teams||[],
+      }));
+      if(data.length>0) setDbMitglieder(data);
     }catch(e){ console.warn("[FCH] loadDbMitglieder:", e.message); }
   }
 

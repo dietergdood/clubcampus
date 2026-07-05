@@ -572,7 +572,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const allMembers=dbMitglieder.map(m=>{
     /* Rollen ableiten */
     const rollenSet=new Set();
-    if(m.rolle&&m.rolle!=="-") rollenSet.add(ROLLE_LABEL[m.rolle]||m.rolle);
+    (m.kader_rollen||[]).forEach(r=>rollenSet.add(ROLLE_LABEL[r]||r));
+    if(rollenSet.size===0&&m.rolle&&m.rolle!=="-") rollenSet.add(ROLLE_LABEL[m.rolle]||m.rolle);
     /* Portal-Zugang */
     const portalStatus=m.hat_portal_zugang?"Aktiv":"Nicht eingerichtet";
     /* Datenpruefung */
@@ -585,7 +586,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       type:m.mitgliedtyp||"-",
       rollen:[...rollenSet],
       role:m.rolle||"-",
-      teams:(m.teams||[]),
+      teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams:(m.teams||[]),
       team:(m.teams||[]).join(", ")||"-",
       datenpruefung:dpStatus,
       status:m.datenstatus||"Ausstehend",
