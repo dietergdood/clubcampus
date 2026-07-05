@@ -815,7 +815,7 @@ function Portal({supabaseClient}){
     try{
       const[mitgliederRes,kaderRes]=await Promise.all([
         sb.from("mitglieder").select("*").eq("aktiv",true).order("nachname").order("vorname"),
-        sb.from("kader").select("mitglied_id,rollen,teams(id,name)").eq("aktiv",true),
+        sb.from("kader").select("mitglied_id,rollen,teams(id,name,kurzname)").eq("aktiv",true),
       ]);
       const kaderMap={};
       (kaderRes.data||[]).forEach(k=>{
