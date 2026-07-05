@@ -452,6 +452,17 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-mehr-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:14px;color:var(--text);font-weight:400;cursor:pointer;font-family:inherit;text-align:left}
 .cc-mehr-sheet-item:last-child{border-bottom:none}
 .cc-mehr-sheet-item-active{color:var(--cc-accent,#FFBF00);font-weight:600}
+.cc-notiz-list{display:flex;flex-direction:column;gap:0}
+.cc-mehr-btn-wrap{position:relative;margin-left:auto}
+.cc-check-icon{color:#15803d}
+.cc-trainer-badge{font-size:10px;padding:1px 6px;border-radius:10px;background:#FEF3C7;color:#B45309}
+.cc-card-full{grid-column:1/-1}
+.cc-list-scroll{max-height:320px;overflow-y:auto}
+.cc-role-list-wrap{border:0.5px solid var(--border);border-radius:8px;overflow:hidden;max-height:220px;overflow-y:auto}
+.cc-search-input-wrap{position:relative;margin-bottom:6px}
+.cc-search-input-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--sub);pointer-events:none;display:flex}
+.cc-search-input{padding-left:34px;width:100%}
+.cc-justify-end{justify-content:flex-end}
 .cc-page-shell{width:min(100%,1400px);margin:0 auto}
 .cc-page-narrow{max-width:960px;margin:0 auto}
 .cc-page-default{max-width:1400px;margin:0 auto}

@@ -442,7 +442,7 @@ function FotoUpload({raw,canUpload,sb,onReload}){
       {raw.foto_url?(
         <img src={raw.foto_url} className="cc-foto-img" alt="Foto"/>
       ):(
-        <div className="cc-foto-placeholder"><TI n="photo" size={24}/></div>
+        <div className="cc-foto-placeholder"><TI n="photo" size={24}/>
       )}
       <div className="cc-col cc-gap-8">
         <div className="cc-text-bold">{raw.vorname} {raw.nachname}</div>
@@ -693,7 +693,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(notizen===null) return <div className="cc-text-sm cc-text-sub">Lade…</div>;
 
     return(
-      <div className="cc-col" style={{gap:0}}>
+      <div className="cc-notiz-list">
         {notizen.length===0&&!canEdit&&(
           <div className="cc-text-sm cc-text-sub" style={{fontStyle:"italic"}}>Keine Notizen vorhanden.</div>
         )}
@@ -717,7 +717,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   </div>
                 </div>
               ):(
-                <div className="cc-notiz-text" style={{color:"var(--text)",textDecoration:"none"}}>{n.text}</div>
+                <div className="cc-notiz-text">{n.text}</div>
               )}
             </div>
             {canEdit&&editId!==n.id&&(
@@ -736,7 +736,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               <div className="cc-flex-1 cc-col cc-gap-6">
                 <textarea className="cc-input cc-textarea" rows={3} value={newText}
                   onChange={e=>setNewText(e.target.value)} autoFocus placeholder="Neue Notiz hinzufügen…"/>
-                <div className="cc-row cc-gap-8" style={{justifyContent:"flex-end"}}>
+                <div className="cc-row cc-gap-8 cc-justify-end">
                   <Btn onClick={()=>setNewText("")}>Abbrechen</Btn>
                   <Btn variant="primary" onClick={addNotiz} disabled={adding||!newText.trim()}>
                     {adding?"Wird gespeichert…":"Hinzufügen"}
@@ -974,7 +974,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           const moreTabs=isMobile?allTabs.slice(MOBILE_VISIBLE):[];
           const moreActive=moreTabs.some(t=>t.key===tab);
           return(
-            <div className="cc-member-tabs" style={{position:"relative"}}>
+            <div className="cc-member-tabs">
               {visibleTabs.map(t=>(
                 <button key={t.key}
                   className={`cc-member-tab${tab===t.key?" cc-member-tab-active":""}`}
@@ -986,7 +986,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               ))}
               {moreTabs.length>0&&(
                 <>
-                  <div ref={mehrRef} style={{position:"relative",marginLeft:"auto"}}>
+                  <div ref={mehrRef} className="cc-mehr-btn-wrap">
                     <button
                       className={`cc-member-tab${moreActive?" cc-member-tab-active":""}`}
                       onClick={()=>setMehrOpen(o=>!o)}
@@ -1124,7 +1124,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               )}
               {(teamDetails||[]).map((k,i)=>(
                 <div key={i} className="cc-team-position-row">
-                  <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
+                  <div className="cc-list-item-icon"><TI n="ball-football" size={13}/>
                   <div className="cc-text-bold cc-flex-1">{k.teams?.name||"—"}</div>
                   <div className="cc-row cc-gap-4 cc-flex-wrap">
                     {(k.rollen||["Spieler/in"]).map((r,ri)=>(
@@ -1162,7 +1162,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   const gruppe=funkObj?.portal_gruppen?.name||null;
                   return(
                     <div key={i} className="cc-team-position-row">
-                      <div className="cc-list-item-icon"><TI n="briefcase" size={13}/></div>
+                      <div className="cc-list-item-icon"><TI n="briefcase" size={13}/>
                       <div className="cc-text-bold cc-flex-1">{f}</div>
                       {gruppe&&(
                         <span className="cc-funk-gruppe-badge" style={funkObj?.portal_gruppen?.farbe?{background:funkObj.portal_gruppen.farbe+"20",color:funkObj.portal_gruppen.farbe,borderColor:funkObj.portal_gruppen.farbe+"40"}:{}}>{gruppe}</span>
@@ -1196,7 +1196,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               <div className="cc-modal-body cc-col">
                 <input className="cc-input" placeholder="Suchen…" value={funkSearch}
                   onChange={e=>setFunkSearch(e.target.value)} autoFocus/>
-                <div style={{maxHeight:320,overflowY:"auto"}}>
+                <div className="cc-list-scroll">
                   {(()=>{
                     const filtered=assignFunktionen.filter(f=>
                       !funkSearch||f.name.toLowerCase().includes(funkSearch.toLowerCase())||
@@ -1212,7 +1212,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                             <div key={f.id} className="cc-multiselect-item"
                               onClick={()=>setFunkSelected(prev=>on?prev.filter(x=>x!==f.name):[...prev,f.name])}>
                               <div className={on?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
-                                {on&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                                {on&&<TI n="check" size={10} className="cc-check-icon"/>}
                               </div>
                               <span>{f.name}</span>
                             </div>
@@ -1230,7 +1230,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </ModalOrSheet>
 
             {/* Vereinsdaten */}
-            <Card style={{gridColumn:"1/-1"}}>
+            <Card className="cc-card-full">
               <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
               <div className="cc-detail-grid-2">
                 {[
@@ -1262,25 +1262,25 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 </div>
                 <div>
                   <label className="cc-label">Rolle im Team</label>
-                  <div style={{position:"relative",marginBottom:6}}>
-                    <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--sub)",pointerEvents:"none",display:"flex"}}>
+                  <div className="cc-search-input-wrap">
+                    <span className="cc-search-input-icon">
                       <TI n="search" size={14}/>
                     </span>
                     <input className="cc-input" placeholder="Suchen…" value={teamAssignRolleSearch||""}
                       onChange={e=>setTeamAssignRolleSearch(e.target.value)}
                       style={{paddingLeft:34,width:"100%"}}/>
                   </div>
-                  <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden",maxHeight:220,overflowY:"auto"}}>
+                  <div className="cc-role-list-wrap">
                     {dbKaderRollen.filter(r=>!(teamAssignRolleSearch)||r.name.toLowerCase().includes((teamAssignRolleSearch||"").toLowerCase())).map(r=>{
                       const sel=(teamAssignForm.funktionen||[]).includes(r.name);
                       return(
                         <div key={r.name} className={`cc-role-list-item${sel?" cc-role-list-item-selected":""}`}
                           onClick={()=>setTeamAssignForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r.name):[...(p.funktionen||[]),r.name]}))}>
                           <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
-                            {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                            {sel&&<TI n="check" size={10} className="cc-check-icon"/>}
                           </div>
-                          <span style={{fontSize:13,flex:1}}>{r.name}</span>
-                          {r.ist_trainer&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:"#FEF3C7",color:"#B45309"}}>Trainer</span>}
+                          <span className="cc-flex-1" style={{fontSize:13}}>{r.name}</span>
+                          {r.ist_trainer&&<span className="cc-trainer-badge">Trainer</span>}
                         </div>
                       );
                     })}
@@ -1310,25 +1310,25 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   <div className="cc-modal-body cc-col">
                     <div>
                       <label className="cc-label">Rolle im Team</label>
-                      <div style={{position:"relative",marginBottom:6}}>
-                        <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--sub)",pointerEvents:"none",display:"flex"}}>
+                      <div className="cc-search-input-wrap">
+                        <span className="cc-search-input-icon">
                           <TI n="search" size={14}/>
                         </span>
                         <input className="cc-input" placeholder="Suchen…" value={editTeamRolleSearch||""}
                           onChange={e=>setEditTeamRolleSearch(e.target.value)}
                           style={{paddingLeft:34,width:"100%"}}/>
                       </div>
-                      <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden",maxHeight:220,overflowY:"auto"}}>
+                      <div className="cc-role-list-wrap">
                         {dbKaderRollen.filter(r=>!(editTeamRolleSearch)||r.name.toLowerCase().includes((editTeamRolleSearch||"").toLowerCase())).map(r=>{
                           const sel=(editTeamForm.funktionen||[]).includes(r.name);
                           return(
                             <div key={r.name} className={`cc-role-list-item${sel?" cc-role-list-item-selected":""}`}
                               onClick={()=>setEditTeamForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==r.name):[...(p.funktionen||[]),r.name]}))}>
                               <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
-                                {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                                {sel&&<TI n="check" size={10} className="cc-check-icon"/>}
                               </div>
-                              <span style={{fontSize:13,flex:1}}>{r.name}</span>
-                              {r.ist_trainer&&<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:"#FEF3C7",color:"#B45309"}}>Trainer</span>}
+                              <span className="cc-flex-1" style={{fontSize:13}}>{r.name}</span>
+                              {r.ist_trainer&&<span className="cc-trainer-badge">Trainer</span>}
                             </div>
                           );
                         })}
@@ -1348,9 +1348,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
             {/* Notizen */}
             {fv.showNotizen&&(
-              <Card style={{gridColumn:"1/-1"}}>
+              <Card className="cc-card-full">
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-                <div style={{color:"var(--text)"}}><NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={account}/></div>
+                <NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={account}/>
               </Card>
             )}
           </div>
