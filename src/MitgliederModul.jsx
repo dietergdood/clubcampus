@@ -301,6 +301,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 className={`cc-hero-tab${activeTab===t.key?" cc-hero-tab-active":""}${t.soon?" cc-hero-tab-soon":""}`}
                 onClick={()=>!t.soon&&onTabChange&&onTabChange(t.key)}
               >
+                {t.icon&&<TI n={t.icon} size={13}/>}
                 {t.label}
                 {t.soon&&<span className="cc-hero-tab-soon-badge">bald</span>}
               </button>
@@ -947,12 +948,12 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
           dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           heroTabs={[
-            {key:"info",    label:"Profil"},
-            {key:"eltern",  label:`Eltern (${eltern.length})`},
-            ...(canEdit?[{key:"portal",       label:"Portal-Zugang"}]:[]),
-            ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung"}]:[]),
-            {key:"stats",   label:"Statistik",  soon:true},
-            {key:"comments",label:"Kommentare", soon:true},
+            {key:"info",    label:"Profil",        icon:"user"},
+            {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart"},
+            ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key"}]:[]),
+            ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check"}]:[]),
+            {key:"stats",   label:"Statistik",  icon:"chart-bar", soon:true},
+            {key:"comments",label:"Kommentare", icon:"message",   soon:true},
           ]}
           activeTab={tab}
           onTabChange={t=>setTab(t)}
