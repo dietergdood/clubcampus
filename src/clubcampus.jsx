@@ -763,8 +763,6 @@ function Portal({supabaseClient}){
       --btn-primary:${btn}!important;
       --btn-primary-text:${btnT}!important;
       --btn-hover:${btnHov}!important;
-      --cc-hero-bg:${t.heroBg||"#000000"}!important;
-      --cc-hero-text:${t.heroText||"#FFFFFF"}!important;
     }
     .cc-btn-primary:hover{background:var(--btn-hover)!important;transition:background 0.15s;}`;
   }
