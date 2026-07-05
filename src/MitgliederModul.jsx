@@ -536,6 +536,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [groupOpen,setGroupOpen]=useState(false);
   const [colMenuOpen,setColMenuOpen]=useState(false);
   const [savedView,setSavedView]=useState("standard");
+  const [customViews,setCustomViews]=useState([]);
+  const [saveViewOpen,setSaveViewOpen]=useState(false);
+  const [saveViewName,setSaveViewName]=useState("");
+  const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
 
   // Direkte Navigation vom Kader-Modul
@@ -572,7 +576,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     /* Portal-Zugang */
     const portalStatus=m.hat_portal_zugang?"Aktiv":"Nicht eingerichtet";
     /* Datenpruefung */
-    const dpStatus=m.datenstatus==="Vollstandig"||m.datenstatus==="Vollständig"?"Geprueft":m.datenstatus||"Ausstehend";
+    const dpStatus=(!m.datenstatus||m.datenstatus==="Vollstandig"||m.datenstatus==="Vollständig"||m.datenstatus==="geprüft"||m.datenstatus==="Geprueft")&&m.geprueft===true?"Geprueft":m.geprueft===false||!m.geprueft?"Ausstehend":m.datenstatus||"Ausstehend";
     return{
       id:m.id,
       name:`${m.vorname||""} ${m.nachname||""}`.trim(),
@@ -664,8 +668,46 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   ];
   function applyView(viewKey){
     setSavedView(viewKey);
-    setVisibleCols(SAVED_VIEWS[viewKey].cols);
+    setVisibleCols(SAVED_VIEWS[viewKey]?.cols||SAVED_VIEWS.standard.cols);
     setFilterVals({});
+  }
+
+  function applyCustomView(v){
+    setSavedView("custom_"+v.id);
+    setVisibleCols(v.spalten||SAVED_VIEWS.standard.cols);
+    setFilterVals(v.filter||{});
+    setGroupBy(v.gruppierung||"none");
+  }
+
+  useEffect(()=>{
+    if(!sb||!account?.id) return;
+    sb.from("mitglieder_ansichten")
+      .select("*").eq("benutzer_id",account.id)
+      .order("created_at",{ascending:true})
+      .then(({data})=>setCustomViews(data||[]));
+  },[account?.id]);
+
+  async function saveCurrentView(){
+    if(!saveViewName.trim()||!sb||!account?.id) return;
+    setSavingView(true);
+    const {data}=await sb.from("mitglieder_ansichten").insert({
+      benutzer_id:account.id,
+      name:saveViewName.trim(),
+      spalten:visibleCols,
+      filter:filterVals,
+      gruppierung:groupBy,
+    }).select().single();
+    if(data) setCustomViews(prev=>[...prev,data]);
+    setSaveViewName("");
+    setSaveViewOpen(false);
+    setSavingView(false);
+  }
+
+  async function deleteCustomView(id){
+    if(!sb) return;
+    await sb.from("mitglieder_ansichten").delete().eq("id",id);
+    setCustomViews(prev=>prev.filter(v=>v.id!==id));
+    if(savedView==="custom_"+id) applyView("standard");
   }
 
   function handleSort(key){
@@ -1742,7 +1784,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
   /* Datenpruefung Zelle */
   function DpBadge({val}){
-    if(val==="Geprueft") return <span className="cc-ml-badge cc-ml-badge-ok">Geprueft</span>;
+    if(val==="Geprueft") return <span className="cc-ml-badge cc-ml-badge-ok">Geprüft</span>;
     if(val==="Ausstehend") return <span className="cc-ml-badge cc-ml-badge-warn">Ausstehend</span>;
     return <span className="cc-ml-badge cc-ml-badge-err">{val||"Unbekannt"}</span>;
   }
@@ -1773,6 +1815,39 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             onClick={()=>applyView(k)}
           >{v.label}</button>
         ))}
+        {customViews.map(v=>(
+          <div key={v.id} className="cc-ml-view-custom">
+            <button
+              className={`cc-ml-view-btn${savedView==="custom_"+v.id?" cc-ml-view-btn-active":""}`}
+              onClick={()=>applyCustomView(v)}
+            >{v.name}</button>
+            <button className="cc-ml-view-del" onClick={()=>deleteCustomView(v.id)} title="Löschen">
+              <TI n="x" size={10}/>
+            </button>
+          </div>
+        ))}
+        {saveViewOpen?(
+          <div className="cc-ml-view-save-form">
+            <input
+              className="cc-ml-view-save-input"
+              placeholder="Name der Ansicht…"
+              value={saveViewName}
+              onChange={e=>setSaveViewName(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&saveCurrentView()}
+              autoFocus
+            />
+            <Btn small variant="primary" onClick={saveCurrentView} disabled={savingView||!saveViewName.trim()}>
+              {savingView?"...":"Speichern"}
+            </Btn>
+            <Btn small onClick={()=>{setSaveViewOpen(false);setSaveViewName("");}}>
+              <TI n="x" size={12}/>
+            </Btn>
+          </div>
+        ):(
+          <button className="cc-ml-view-btn cc-ml-view-btn-add" onClick={()=>setSaveViewOpen(true)}>
+            <TI n="plus" size={12}/> Ansicht speichern
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
