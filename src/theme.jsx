@@ -407,7 +407,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
 .cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:var(--text)}
 .cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:visible;margin-bottom:0;position:relative}
-.cc-member-hero-banner{background:var(--nav,#000000);padding:16px 16px 12px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0}
+.cc-member-hero-banner{background:var(--nav,#000000);padding:12px 16px 10px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0}
 [data-theme=dark] .cc-member-hero-banner{background:var(--nav,#000000)}
 .cc-member-hero-banner .cc-page-title{color:var(--nav-t,#FFFFFF)}
 .cc-hero-banner-actions{position:absolute;top:50%;right:12px;transform:translateY(-50%);display:flex;gap:8px;align-items:center}
@@ -417,11 +417,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-status-pill-warn{color:#FCD34D;background:rgba(252,211,77,0.1);border-color:rgba(252,211,77,0.2)}
 .cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(128,128,128,0.3);background:rgba(128,128,128,0.15);color:var(--nav-t,#FFFFFF);cursor:pointer}
 .cc-hero-banner-btn:hover{background:rgba(255,255,255,0.15)}
-.cc-hero-av-wrap{position:relative;width:72px;height:72px;flex-shrink:0}
+.cc-hero-av-wrap{position:relative;width:56px;height:56px;flex-shrink:0}
 .cc-hero-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text)}
 .cc-hero-av-edit:hover{background:var(--surface)}
 .cc-member-hero-body{display:none}
-.cc-member-hero-av{width:72px;height:72px;border-radius:50%;background:var(--surface2);border:2.5px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:var(--text);overflow:hidden}
+.cc-member-hero-av{width:56px;height:56px;border-radius:50%;background:var(--surface2);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:var(--text);overflow:hidden}
 .cc-member-hero-info{flex:1;min-width:0}
 .cc-member-hero-sub{font-size:13px;color:var(--sub);margin-top:3px;margin-bottom:0}
 .cc-hero-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
@@ -437,7 +437,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-tab-soon-badge{font-size:9px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);padding:1px 5px;border-radius:6px}
 .cc-member-tabs{display:flex;gap:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
 .cc-member-tabs::-webkit-scrollbar{display:none}
-.cc-member-tab{padding:6px 12px;border-radius:7px;background:transparent;border:none;color:var(--sub);font-size:13px;font-weight:400;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:background 0.1s,color 0.1s;min-height:34px}
+.cc-member-tab{padding:6px 12px;border-radius:7px;background:transparent;border:none;color:var(--sub);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:background 0.1s,color 0.1s;min-height:34px}
 .cc-member-tab:hover{background:var(--surface2);color:var(--text)}
 .cc-member-tab-active{background:var(--surface2);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -588,6 +588,14 @@ function darkenHex(hex,pct=0.12){
   return "#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join("");
 }
 
+function contrastColor(hex){
+  const h=(hex||"#000000").replace("#","");
+  const r=parseInt(h.slice(0,2),16);
+  const g=parseInt(h.slice(2,4),16);
+  const b=parseInt(h.slice(4,6),16);
+  const luminance=(0.299*r+0.587*g+0.114*b)/255;
+  return luminance>0.5?"#000000":"#FFFFFF";
+}
 /* ClubCampus-Farben: Standard-Branding für neue Vereine */
 const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FFBF00", vereinsfarbe2:"#000000",
@@ -1055,4 +1063,4 @@ function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
   );
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect };
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect };

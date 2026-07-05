@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR, GB } from "./constants.js";
 import { TI, TI_PATHS } from "./icons.jsx";
-import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle , avColor} from "./theme.jsx";
+import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle , avColor} from "./theme.jsx";
 import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT , MEMBERS, FUNKTIONEN} from "./demoData.js";
 import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./NavigationModul.jsx";
 import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./DashboardModul.jsx";
@@ -732,14 +732,14 @@ function Portal({supabaseClient}){
     const nav=t.navBg||"#000000";
     const navT=t.navText||"#FFFFFF";
     const navA=t.navAccent||t.vereinsfarbe1||"#FFBF00";
-    const navAT=t.navAccentText||t.vereinsfarbe2||"#000000";
+    const navAT=t.navAccentText||contrastColor(navA);
     const avBg=t.avatarBg||t.vereinsfarbe1||"#FFBF00";
-    const avTxt=t.avatarText||t.vereinsfarbe2||"#000000";
+    const avTxt=t.avatarText||contrastColor(avBg);
     const navH=t.navHover||"#1A1A1A";
     const acc=t.vereinsfarbe1||"#FFBF00";
     const acc2=t.vereinsfarbe2||"#000000";
     const btn=t.btnPrimary||"#FFBF00";
-    const btnT=t.btnPrimaryText||"#000000";
+    const btnT=t.btnPrimaryText||contrastColor(btn);
     const btnHov=darkenHex(t.btnPrimary||"#FFBF00");
     s.textContent=`:root,[data-theme],[data-theme=dark],[data-theme=light]{
       --cc-accent:${acc}!important;
@@ -1123,7 +1123,7 @@ function Portal({supabaseClient}){
             onLogout={sb&&session ? handleLogout : undefined}
             onOpenProfile={()=>setMobileProfileOpen(true)}
             onBack={customBack} appTheme={appTheme}/>}
-          <main key={active} className="cc-page" style={{flex:1,overflowY:"auto",overflowX:"hidden"}}><div style={{maxWidth:1600,margin:"0 auto",padding:isMobile?"16px 12px calc(90px + env(safe-area-inset-bottom, 0px))":isTablet?"20px 24px 28px":"32px 48px",minHeight:"100%"}}>{getView()}</div></main>
+          <main key={active} className="cc-page" style={{flex:1,overflowY:"auto",overflowX:"hidden"}}><div style={{maxWidth:1600,margin:"0 auto",padding:isMobile?"16px 12px calc(90px + env(safe-area-inset-bottom, 0px))":isTablet?"20px 20px 28px":"28px 32px",minHeight:"100%"}}>{getView()}</div></main>
           {isMobile&&<MobileNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} effectiveNav={effectiveNav}/>}
         </div>
       </div>
