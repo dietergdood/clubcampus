@@ -621,7 +621,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   /* Gespeicherte Ansichten */
   const SAVED_VIEWS={
-    standard:      {label:"Standard",       cols:["name","mitgliedschaft","rollen","teams","datenpruefung","portal"]},
+    standard:      {label:"Standard",       cols:["name","mitgliedschaft","rollen","teams","portal","datenpruefung"]},
     administration:{label:"Verwaltung",     cols:["name","email","telefon","ort","mitgliedschaft","datenpruefung"]},
     sport:         {label:"Sportbetrieb",   cols:["name","teams","position","rueckennr","spielerpass","geburtsdatum"]},
     datenpruefung: {label:"Datenprüfung",   cols:["name","datenpruefung","email","portal","mitgliedschaft"]},
