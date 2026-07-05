@@ -340,7 +340,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-members-group-hdr td{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.07em;padding:10px 14px 5px;background:var(--bg);border-top:0.5px solid var(--border)}
 /* Mobile Liste */
 .cc-members-list-group-hdr{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.08em;padding:8px 14px 4px;background:var(--surface2)}
-.cc-members-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:0.5px solid var(--border);cursor:pointer;background:var(--surface);transition:background 0.1s}
+.cc-members-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--border);cursor:pointer;background:var(--surface);transition:background 0.1s}
+.cc-members-item-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.cc-members-item-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
 .cc-members-item:last-child{border-bottom:none}
 .cc-members-item:active{background:var(--surface2)}
 .cc-members-item-meta{flex:1;min-width:0}

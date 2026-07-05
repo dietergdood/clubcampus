@@ -2068,22 +2068,28 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
                     {m.foto_url
                       ?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>
-                      :<Av name={m.name} size={42}/>
+                      :<Av name={m.name} size={38}/>
                     }
                     <div className="cc-members-item-meta">
                       <div className="cc-members-item-name">{m.name}</div>
                       <div className="cc-members-item-sub">
-                        {m.mitgliedschaft!=="-"?m.mitgliedschaft:m.rollen[0]||"-"}
-                        {m.teams[0]?" · "+(m.teams[0]?.kurz||m.teams[0]):""}
-                        {m.teams.length>1?` +${m.teams.length-1}`:""}
+                        {m.mitgliedschaft!=="-"?m.mitgliedschaft:""}
                       </div>
+                      {m.rollen.length>0&&(
+                        <div className="cc-members-item-chips">
+                          {m.rollen.slice(0,2).map((r,i)=>{
+                            const rawR=(m.kader_rollen_raw||[])[i]||"";
+                            const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");
+                            return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;
+                          })}
+                          {m.rollen.length>2&&<span className="cc-ml-more">+{m.rollen.length-2}</span>}
+                        </div>
+                      )}
                     </div>
                     <div className="cc-members-item-right">
-                      <span className={`cc-members-dot ${m.datenpruefung==="Geprueft"?"cc-members-dot-ok":m.datenpruefung==="Ausstehend"?"cc-members-dot-warn":"cc-members-dot-err"}`}/>
                       <TI n="chevron-right" size={14} className="cc-members-item-chevron"/>
                     </div>
                   </div>
-                ))}
               </div>
             ))}
           </div>
