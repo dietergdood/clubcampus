@@ -531,9 +531,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [sortCol,setSortCol]=useState("name");
   const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("none");
-  const [filterVals,setFilterVals]=useState([]);
+  const [filterVals,setFilterVals]=useState({});
   const [filterOpen,setFilterOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
+  const [colMenuOpen,setColMenuOpen]=useState(false);
+  const [savedView,setSavedView]=useState("standard");
   const [selectedMember,setSelectedMember]=useState(null);
 
   // Direkte Navigation vom Kader-Modul
@@ -555,37 +557,89 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   },[navToMember,dbMitglieder]);
   const canExport=role==="administrator"||role==="administration";
 
-  const allMembers=dbMitglieder.map(m=>({
-        id:m.id,
-        name:`${m.vorname} ${m.nachname}`,
-        vorname:m.vorname, nachname:m.nachname,
-        role:m.rolle||"-",
-        team:(m.teams||[]).join(", ")||"-",
-        type:m.mitgliedtyp||"-",
-        location:m.ort||"-",
-        status:m.datenstatus||"Vollständig",
-        email:m.email, telefon:m.telefon,
-        geburtsdatum:m.geburtsdatum, position:m.position,
-        fairgate_id:m.fairgate_id,
-        hat_portal_zugang:m.hat_portal_zugang,
-        foto_url:m.foto_url||null,
-        mitgliedtyp:m.mitgliedtyp||"-",
-        funktionen:m.funktionen||[],
-      }));
+  const TRAINER_KEYS=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
+  const allMembers=dbMitglieder.map(m=>{
+    /* Rollen ableiten */
+    const rollenSet=new Set();
+    if(m.rolle&&m.rolle!=="-") rollenSet.add(m.rolle);
+    /* Portal-Zugang */
+    const portalStatus=m.hat_portal_zugang?"Aktiv":"Nicht eingerichtet";
+    /* Datenpruefung */
+    const dpStatus=m.datenstatus==="Vollstandig"||m.datenstatus==="Vollst\u00e4ndig"?"Geprueft":m.datenstatus||"Ausstehend";
+    return{
+      id:m.id,
+      name:`${m.vorname||""} ${m.nachname||""}`.trim(),
+      vorname:m.vorname, nachname:m.nachname,
+      mitgliedschaft:m.mitgliedtyp||"-",
+      type:m.mitgliedtyp||"-",
+      rollen:[...rollenSet],
+      role:m.rolle||"-",
+      teams:(m.teams||[]),
+      team:(m.teams||[]).join(", ")||"-",
+      datenpruefung:dpStatus,
+      status:m.datenstatus||"Ausstehend",
+      portal:portalStatus,
+      hat_portal_zugang:m.hat_portal_zugang,
+      ort:m.ort||"-",
+      location:m.ort||"-",
+      email:m.email,
+      telefon:m.telefon,
+      geburtsdatum:m.geburtsdatum,
+      alter:m.geburtsdatum?Math.floor((Date.now()-new Date(m.geburtsdatum))/(365.25*24*3600*1000)):null,
+      geschlecht:m.geschlecht==="m"?"M\u00e4nnlich":m.geschlecht==="w"?"Weiblich":m.geschlecht||"-",
+      nationalitaet:m.nationalitaet||"-",
+      position:m.position,
+      fairgate_id:m.fairgate_id,
+      js_nr:m.js_nr,
+      spielerpass:m.spielerpass,
+      eintritt:m.eintrittsdatum,
+      rueckennr:m.rueckennr,
+      foto_url:m.foto_url||null,
+      funktionen:m.funktionen||[],
+    };
+  });
 
-  const ALL_COLS=[
-    {key:"name",        label:"Name",         default:true},
-    {key:"type",        label:"Mitgliedtyp",  default:true},
-    {key:"role",        label:"Rolle",        default:true},
-    {key:"status",      label:"Status",       default:true},
-    {key:"team",        label:"Team",         default:true},
-    {key:"location",    label:"Wohnort",      default:false},
-    {key:"spielerpass", label:"Spielerpass",  default:false},
-    {key:"fairgate_id", label:"Fairgate-ID",  default:false},
-    {key:"geburtsdatum",label:"Geburtsdatum", default:false},
+  /* Gespeicherte Ansichten */
+  const SAVED_VIEWS={
+    standard:      {label:"Standard",       cols:["name","mitgliedschaft","rollen","teams","datenpruefung","portal"]},
+    administration:{label:"Verwaltung",     cols:["name","mitgliedschaft","email","telefon","datenpruefung","portal"]},
+    sport:         {label:"Sportbetrieb",   cols:["name","mitgliedschaft","teams","spielerpass","geburtsdatum"]},
+    datenpruefung: {label:"Datenpruefung",  cols:["name","mitgliedschaft","datenpruefung","email","portal"]},
+    gv:            {label:"GV/Stimmrecht",  cols:["name","mitgliedschaft","eintritt","email"]},
+  };
+
+  /* Spaltendefinitionen */
+  const COL_GROUPS=[
+    {group:"Personendaten", cols:[
+      {key:"name",          label:"Name",           default:true, alwaysOn:true},
+      {key:"geburtsdatum",  label:"Geburtsdatum",   default:false},
+      {key:"alter",         label:"Alter",          default:false},
+      {key:"geschlecht",    label:"Geschlecht",     default:false},
+      {key:"nationalitaet", label:"Nationalitat",   default:false},
+      {key:"ort",           label:"Wohnort",        default:false},
+      {key:"email",         label:"E-Mail",         default:false},
+      {key:"telefon",       label:"Telefon",        default:false},
+    ]},
+    {group:"Verein", cols:[
+      {key:"mitgliedschaft",label:"Mitgliedschaft", default:true},
+      {key:"rollen",        label:"Rollen",         default:true},
+      {key:"eintritt",      label:"Eintritt",       default:false},
+      {key:"spielerpass",   label:"Spielerpass",    default:false},
+      {key:"fairgate_id",   label:"Fairgate-ID",    default:false},
+      {key:"js_nr",         label:"J+S Nr.",        default:false},
+    ]},
+    {group:"Portal", cols:[
+      {key:"portal",        label:"Portal-Zugang",  default:true},
+      {key:"datenpruefung", label:"Datenpruefung",  default:true},
+    ]},
+    {group:"Sport", cols:[
+      {key:"teams",         label:"Teams",          default:true},
+      {key:"position",      label:"Position",       default:false},
+      {key:"rueckennr",     label:"Trikotnummer",   default:false},
+    ]},
   ];
-  const [visibleCols,setVisibleCols]=useState(()=>ALL_COLS.filter(c=>c.default).map(c=>c.key));
-  const [colMenuOpen,setColMenuOpen]=useState(false);
+  const ALL_COLS=COL_GROUPS.flatMap(g=>g.cols);
+  const [visibleCols,setVisibleCols]=useState(()=>SAVED_VIEWS.standard.cols);
   const colMenuRef=useRef(null);
   useEffect(()=>{
     function h(e){if(colMenuRef.current&&!colMenuRef.current.contains(e.target))setColMenuOpen(false);}
@@ -594,52 +648,76 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   },[]);
   const COLS=ALL_COLS.filter(c=>visibleCols.includes(c.key));
   const GROUP_OPTIONS=[
-    {val:"none",  label:"Keine Gruppierung"},
-    {val:"role",  label:"Nach Rolle"},
-    {val:"team",  label:"Nach Team"},
-    {val:"type",  label:"Nach Mitgliedtyp"},
-    {val:"status",label:"Nach Datenstatus"},
+    {val:"none",          label:"Keine Gruppierung"},
+    {val:"rollen",        label:"Nach Rolle"},
+    {val:"teams",         label:"Nach Team"},
+    {val:"mitgliedschaft",label:"Nach Mitgliedschaft"},
+    {val:"datenpruefung", label:"Nach Datenpruefung"},
+    {val:"portal",        label:"Nach Portal-Zugang"},
   ];
+  function applyView(viewKey){
+    setSavedView(viewKey);
+    setVisibleCols(SAVED_VIEWS[viewKey].cols);
+    setFilterVals({});
+  }
 
   function handleSort(key){
     if(sortCol===key) setSortDir(d=>d==="asc"?"desc":"asc");
     else{ setSortCol(key); setSortDir("asc"); }
   }
 
-  const filtered=allMembers.filter(m=>
-    (!search||m.name.toLowerCase().includes(search.toLowerCase())||
-    m.role.toLowerCase().includes(search.toLowerCase())||
-    m.team.toLowerCase().includes(search.toLowerCase()))
-    &&(filterVals.length===0||(
-      filterVals.includes(m[groupBy]||"-")
-    ))
-  );
+  /* Filter */
+  const FILTER_DEFS=[
+    {key:"mitgliedschaft", label:"Mitgliedschaft", vals:[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(Boolean))]},
+    {key:"rollen",         label:"Rollen",         vals:[...new Set(allMembers.flatMap(m=>m.rollen).filter(Boolean))]},
+    {key:"datenpruefung",  label:"Datenpruefung",  vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
+    {key:"portal",         label:"Portal-Zugang",  vals:[...new Set(allMembers.map(m=>m.portal).filter(Boolean))]},
+    {key:"teams",          label:"Teams",          vals:[...new Set(allMembers.flatMap(m=>m.teams).filter(Boolean))].sort()},
+  ];
 
-  const sorted=[...filtered].sort((a,b)=>{
-    const av=String(a[sortCol]??""); const bv=String(b[sortCol]??"");
-    return sortDir==="asc"?String(av||'').localeCompare(String(bv||'')):String(bv||'').localeCompare(String(av||''));
+  const filtered=allMembers.filter(m=>{
+    if(search){
+      const q=search.toLowerCase();
+      const hit=m.name.toLowerCase().includes(q)||
+        m.mitgliedschaft.toLowerCase().includes(q)||
+        m.rollen.some(r=>r.toLowerCase().includes(q))||
+        m.teams.some(t=>t.toLowerCase().includes(q))||
+        (m.email||"").toLowerCase().includes(q);
+      if(!hit) return false;
+    }
+    for(const [fKey,fVals] of Object.entries(filterVals)){
+      if(!fVals||fVals.length===0) continue;
+      const mVal=Array.isArray(m[fKey])?m[fKey]:[m[fKey]];
+      if(!mVal.some(v=>fVals.includes(v))) return false;
+    }
+    return true;
   });
 
-  /* Gruppierung */
+  const sorted=[...filtered].sort((a,b)=>{
+    const av=Array.isArray(a[sortCol])?(a[sortCol][0]||""):String(a[sortCol]??"");
+    const bv=Array.isArray(b[sortCol])?(b[sortCol][0]||""):String(b[sortCol]??"");
+    return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
+  });
+
   let groups=[];
   if(groupBy==="none"){
     groups=[{key:"",members:sorted}];
   }else{
     const map={};
     sorted.forEach(m=>{
-      const k=m[groupBy]||"-";
-      if(!map[k]) map[k]=[];
-      map[k].push(m);
+      const vals=Array.isArray(m[groupBy])?m[groupBy]:[m[groupBy]||"-"];
+      vals.forEach(k=>{
+        if(!map[k]) map[k]=[];
+        map[k].push(m);
+      });
     });
-    groups=Object.entries(map).sort(([a],[b])=>String(a||'').localeCompare(String(b||''))).map(([k,members])=>({key:k,members}));
+    groups=Object.entries(map).sort(([a],[b])=>String(a||"").localeCompare(String(b||""))).map(([k,members])=>({key:k,members}));
   }
 
-  const statusColor=s=>s==="Vollständig"?GN:s==="Prüfung fällig"?AM:R;
+  const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
   const SortIcon=({col})=>sortCol===col
-    ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
-    :<span className="cc-sort-arrow cc-text-muted">↕</span>;
-
-  const inputStyle={padding:"7px 12px",border:"1px solid var(--border)",borderRadius:8,fontSize:14,outline:"none",background:"var(--surface2)",color:"var(--text)",fontFamily:FONT};
+    ?<span className="cc-sort-arrow">{sortDir==="asc"?"\u25b2":"\u25bc"}</span>
+    :<span className="cc-sort-arrow cc-text-muted">\u2195</span>;
 
   /* ── Detail-Modal ── */
   function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
@@ -1645,63 +1723,101 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}/>;
 
+  /* KPI helpers */
+  const totalCount=allMembers.length;
+  const portalAktiv=allMembers.filter(m=>m.hat_portal_zugang).length;
+  const dpOffen=allMembers.filter(m=>m.datenpruefung!=="Geprueft").length;
+  const ohneTeam=allMembers.filter(m=>m.teams.length===0).length;
+
+  /* Portal-Zugang Zelle */
+  function PortalBadge({val}){
+    if(val==="Aktiv") return <span className="cc-ml-badge cc-ml-badge-ok">Aktiv</span>;
+    return <span className="cc-ml-badge cc-ml-badge-muted">Fehlt</span>;
+  }
+  /* Datenpruefung Zelle */
+  function DpBadge({val}){
+    if(val==="Geprueft") return <span className="cc-ml-badge cc-ml-badge-ok">Geprueft</span>;
+    if(val==="Ausstehend") return <span className="cc-ml-badge cc-ml-badge-warn">Ausstehend</span>;
+    return <span className="cc-ml-badge cc-ml-badge-err">{val||"Unbekannt"}</span>;
+  }
+
   return(
     <div className="cc-page-wide">
       {/* Header */}
       <div className="cc-page-hdr">
         <h1 className="cc-page-title">Mitglieder</h1>
-        {canExport&&<Row align="flex-start"><Btn>Export CSV</Btn><Btn>Export Excel</Btn></Row>}
+        <div className="cc-row cc-gap-8">
+          {canExport&&<><Btn small><TI n="download" size={13}/> CSV</Btn><Btn small><TI n="table" size={13}/> Excel</Btn></>}
+        </div>
       </div>
-      {/* Stats */}
+
+      {/* KPI */}
       <div className="cc-grid-stats cc-mb-20">
-        <Stat label="Total" value={allMembers.length} color={BL}/>
-        <Stat label="Trainer" value={allMembers.filter(m=>m.role==="Trainer").length} color={R}/>
-        <Stat label="Aktivmitglieder" value={allMembers.filter(m=>m.type==="Aktivmitglied").length} color={GN}/>
-        <Stat label="Datenprüfung fällig" value={allMembers.filter(m=>m.status!=="Vollständig").length} color={AM}/>
+        <Stat label="Total" value={totalCount} color={BL}/>
+        <Stat label="Portal aktiv" value={portalAktiv} color={GN}/>
+        <Stat label="Pruefung offen" value={dpOffen} color={AM}/>
+        <Stat label="Ohne Team" value={ohneTeam} color={R}/>
       </div>
+
+      {/* Gespeicherte Ansichten */}
+      <div className="cc-ml-views">
+        {Object.entries(SAVED_VIEWS).map(([k,v])=>(
+          <button key={k}
+            className={`cc-ml-view-btn${savedView===k?" cc-ml-view-btn-active":""}`}
+            onClick={()=>applyView(k)}
+          >{v.label}</button>
+        ))}
+      </div>
+
       {/* Toolbar */}
       <div className="cc-ml-toolbar">
         <div className="cc-ml-srch">
           <TI n="search" size={15} className="cc-input-icon"/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Suchen nach Name, Team, Rolle…"/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Suchen nach Name, Team, Rolle\u2026"/>
         </div>
-        {/* Filter Button + Dropdown */}
+
+        {/* Filter */}
         <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${filterVals.length>0?" cc-active":""}`} onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false)}}>
+          <button className={`cc-ml-btn${Object.values(filterVals).some(v=>v&&v.length>0)?" cc-active":""}`}
+            onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false);setColMenuOpen(false);}}>
             <TI n="filter" size={15}/>
             {!isMobile&&"Filter"}
-            {filterVals.length>0&&<span className="cc-ml-filter-dot"/>}
+            {Object.values(filterVals).some(v=>v&&v.length>0)&&<span className="cc-ml-filter-dot"/>}
           </button>
           {filterOpen&&(
             <div className="cc-ml-dropdown cc-ml-filter-dropdown">
               <div className="cc-col-menu-hdr">Filter</div>
-              {[
-                {label:"Rolle", vals:[...new Set(allMembers.map(m=>m.role).filter(Boolean))]},
-                {label:"Status", vals:[...new Set(allMembers.map(m=>m.status).filter(Boolean))]},
-                {label:"Mitgliedtyp", vals:[...new Set(allMembers.map(m=>m.mitgliedtyp||m.type).filter(Boolean))]},
-              ].map(({label,vals})=>(
-                <div key={label}>
+              {FILTER_DEFS.map(({key,label,vals})=>(
+                <div key={key}>
                   <div className="cc-ml-dropdown-section-lbl">{label}</div>
-                  {vals.sort().map(v=>(
-                    <div key={v} className="cc-col-menu-item" onClick={()=>setFilterVals(prev=>prev.includes(v)?prev.filter(x=>x!==v):[...prev,v])}>
-                      <div className={`cc-col-menu-check${filterVals.includes(v)?" cc-col-menu-check-on":""}`}>
-                        {filterVals.includes(v)&&<TI n="check" size={10}/>}
+                  {vals.sort().map(v=>{
+                    const active=(filterVals[key]||[]).includes(v);
+                    return(
+                      <div key={v} className="cc-col-menu-item" onClick={()=>setFilterVals(prev=>({
+                        ...prev,
+                        [key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]
+                      }))}>
+                        <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>
+                          {active&&<TI n="check" size={10}/>}
+                        </div>
+                        {v}
                       </div>
-                      {v}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
               <div className="cc-ml-dropdown-footer">
-                <button className="cc-ml-dropdown-clear" onClick={()=>setFilterVals([])}>Zurücksetzen</button>
+                <button className="cc-ml-dropdown-clear" onClick={()=>setFilterVals({})}>Zur�cksetzen</button>
                 <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
               </div>
             </div>
           )}
         </div>
-        {/* Gruppieren Button + Dropdown */}
+
+        {/* Gruppieren */}
         <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${groupBy!=="none"?" cc-active":""}`} onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false)}}>
+          <button className={`cc-ml-btn${groupBy!=="none"?" cc-active":""}`}
+            onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false);setColMenuOpen(false);}}>
             <TI n="layout-rows" size={15}/>
             {!isMobile&&"Gruppieren"}
           </button>
@@ -1709,7 +1825,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             <div className="cc-ml-dropdown cc-ml-group-dropdown">
               <div className="cc-col-menu-hdr">Gruppieren nach</div>
               {GROUP_OPTIONS.map(o=>(
-                <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setFilterVals([]);setGroupOpen(false)}}>
+                <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setGroupOpen(false);}}>
                   <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>
                     {groupBy===o.val&&<TI n="check" size={10}/>}
                   </div>
@@ -1719,25 +1835,56 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </div>
           )}
         </div>
-      </div>
-      {/* Aktive Filter Chips */}
-      {filterVals.length>0&&(
-        <div className="cc-ml-chips">
-          {filterVals.map(v=>(
-            <div key={v} className="cc-ml-chip" onClick={()=>setFilterVals(prev=>prev.filter(x=>x!==v))}>
-              {v} <span className="cc-ml-chip-x">×</span>
+
+        {/* Spalten */}
+        <div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
+          <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
+            onClick={()=>{setColMenuOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);}}>
+            <TI n="layout-columns" size={15}/>
+            {!isMobile&&"Spalten"}
+          </button>
+          {colMenuOpen&&(
+            <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
+              <div className="cc-col-menu-hdr">Spalten anzeigen</div>
+              {COL_GROUPS.map(({group,cols})=>(
+                <div key={group}>
+                  <div className="cc-ml-dropdown-section-lbl">{group}</div>
+                  {cols.map(c=>(
+                    <div key={c.key} className={`cc-col-menu-item${c.alwaysOn?" cc-col-menu-item-disabled":""}`}
+                      onClick={e=>{
+                        e.stopPropagation();
+                        if(c.alwaysOn) return;
+                        setVisibleCols(prev=>prev.includes(c.key)?prev.length>1?prev.filter(k=>k!==c.key):prev:[...prev,c.key]);
+                      }}>
+                      <div className={`cc-col-menu-check${visibleCols.includes(c.key)?" cc-col-menu-check-on":""}`}>
+                        {visibleCols.includes(c.key)&&<TI n="check" size={10}/>}
+                      </div>
+                      {c.label}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
-          ))}
-          <div className="cc-ml-chip cc-text-sub" onClick={()=>setFilterVals([])}>
-            Alle zurücksetzen ×
-          </div>
+          )}
+        </div>
+      </div>
+
+      {/* Aktive Filter Chips */}
+      {Object.entries(filterVals).some(([,v])=>v&&v.length>0)&&(
+        <div className="cc-ml-chips">
+          {Object.entries(filterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
+            <div key={k+v} className="cc-ml-chip" onClick={()=>setFilterVals(prev=>({...prev,[k]:(prev[k]||[]).filter(x=>x!==v)}))}>
+              {v} <span className="cc-ml-chip-x">�</span>
+            </div>
+          )))}
+          <div className="cc-ml-chip cc-text-sub" onClick={()=>setFilterVals({})}>Alle zur�cksetzen �</div>
         </div>
       )}
+
       {/* Liste / Tabelle */}
       <Card className="cc-card-table" flush>
         {filtered.length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
         {filtered.length>0&&(isMobile?(
-          /* Mobile: C-style iOS Liste */
           <div>
             {groups.map(({key,members})=>(
               <div key={key}>
@@ -1751,15 +1898,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                     <div className="cc-members-item-meta">
                       <div className="cc-members-item-name">{m.name}</div>
                       <div className="cc-members-item-sub">
-                        {m.role&&m.role!=="-"?m.role:m.type}
-                        {m.team&&m.team!=="-"?" · "+m.team.split(", ")[0]:""}
+                        {m.mitgliedschaft!=="-"?m.mitgliedschaft:m.rollen[0]||"-"}
+                        {m.teams[0]?" � "+m.teams[0]:""}
+                        {m.teams.length>1?` +${m.teams.length-1}`:""}
                       </div>
                     </div>
                     <div className="cc-members-item-right">
-                      {m.team&&m.team.split(", ").length>1&&(
-                        <span className="cc-members-item-more">+{m.team.split(", ").length-1}</span>
-                      )}
-                      <span className={`cc-members-dot ${m.status==="Vollständig"||m.status==="geprüft"?"cc-members-dot-ok":m.status==="ausstehend"?"cc-members-dot-warn":"cc-members-dot-err"}`}/>
+                      <span className={`cc-members-dot ${m.datenpruefung==="Geprueft"?"cc-members-dot-ok":m.datenpruefung==="Ausstehend"?"cc-members-dot-warn":"cc-members-dot-err"}`}/>
                       <TI n="chevron-right" size={14} className="cc-members-item-chevron"/>
                     </div>
                   </div>
@@ -1768,65 +1913,45 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             ))}
           </div>
         ):(
-          /* Desktop: A-style kompakte Tabelle */
           <div className="cc-table-wrap"><div className="cc-table-wrap-inner"><table className="cc-members-table">
             <thead>
               <tr>
-                {COLS.map((col,i)=>(
+                {COLS.map(col=>(
                   <th key={col.key} className="cc-members-th" onClick={()=>handleSort(col.key)}>
-                    {i===COLS.length-1?(
-                      <div className="cc-members-th-last">
-                        <span>{col.label}<span className="cc-sort-arrow">{sortCol===col.key?(sortDir==="asc"?"▲":"▼"):"↕"}</span></span>
-                        <div className="cc-col-menu-wrap" ref={colMenuRef}>
-                          <button className={`cc-col-icon-btn${colMenuOpen?" cc-col-menu-check-on":""}`}
-                            onClick={e=>{e.stopPropagation();setColMenuOpen(o=>!o)}}
-                            title="Spalten auswählen">
-                            <TI n="layout-columns" size={14}/>
-                          </button>
-                          {colMenuOpen&&(
-                            <div className="cc-col-menu-dropdown">
-                              <div className="cc-col-menu-hdr">Spalten anzeigen</div>
-                              {ALL_COLS.map(c=>(
-                                <div key={c.key} className="cc-col-menu-item" onClick={e=>{e.stopPropagation();setVisibleCols(prev=>
-                                  prev.includes(c.key)?prev.length>1?prev.filter(k=>k!==c.key):prev:[...prev,c.key]
-                                )}}>
-                                  <div className={`cc-col-menu-check${visibleCols.includes(c.key)?" cc-col-menu-check-on":""}`}>
-                                    {visibleCols.includes(c.key)&&<TI n="check" size={10}/>}
-                                  </div>
-                                  {c.label}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ):(
-                      <span>{col.label}<span className="cc-sort-arrow">{sortCol===col.key?(sortDir==="asc"?"▲":"▼"):"↕"}</span></span>
-                    )}
+                    {col.label}<SortIcon col={col.key}/>
                   </th>
                 ))}
+                <th className="cc-members-th cc-members-th-actions"/>
               </tr>
             </thead>
             <tbody>
               {groups.map(({key,members})=>(
                 <Fragment key={key}>
                   {groupBy!=="none"&&(
-                    <tr className="cc-members-group-hdr"><td colSpan={COLS.length}>{key} <span className="cc-text-muted">({members.length})</span></td></tr>
+                    <tr className="cc-members-group-hdr"><td colSpan={COLS.length+1}>{key} <span className="cc-text-muted">({members.length})</span></td></tr>
                   )}
                   {members.map(m=>(
                     <tr key={m.id} className="cc-members-tr" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
                       {visibleCols.includes("name")&&<td className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>}
-                      {visibleCols.includes("type")&&<td className="cc-members-td cc-members-td-sub">{m.type||"—"}</td>}
-                      {visibleCols.includes("role")&&<td className="cc-members-td"><RolleChip rolle={m.role}/></td>}
-                      {visibleCols.includes("status")&&<td className="cc-members-td">
-                        <span className="cc-members-dot" style={{background:statusColor(m.status)}}/>
-                        <span className="cc-members-td-sub">{m.status}</span>
-                      </td>}
-                      {visibleCols.includes("team")&&<td className="cc-members-td cc-members-td-sub">{m.team||"—"}</td>}
-                      {visibleCols.includes("location")&&<td className="cc-members-td cc-members-td-sub">{m.location||"—"}</td>}
-                      {visibleCols.includes("spielerpass")&&<td className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>}
-                      {visibleCols.includes("fairgate_id")&&<td className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>}
-                      {visibleCols.includes("geburtsdatum")&&<td className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>}
+                      {visibleCols.includes("mitgliedschaft")&&<td className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"\u2014"}</td>}
+                      {visibleCols.includes("rollen")&&<td className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=><span key={i} className="cc-role-chip cc-role-chip-sm" style={{marginRight:3}}>{r}</span>):<span className="cc-members-td-sub">\u2014</span>}</td>}
+                      {visibleCols.includes("teams")&&<td className="cc-members-td cc-members-td-sub">{m.teams.length>0?<span>{m.teams[0]}{m.teams.length>1&&<span className="cc-ml-more">+{m.teams.length-1}</span>}</span>:"\u2014"}</td>}
+                      {visibleCols.includes("datenpruefung")&&<td className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>}
+                      {visibleCols.includes("portal")&&<td className="cc-members-td"><PortalBadge val={m.portal}/></td>}
+                      {visibleCols.includes("email")&&<td className="cc-members-td cc-members-td-sub">{m.email||"\u2014"}</td>}
+                      {visibleCols.includes("telefon")&&<td className="cc-members-td cc-members-td-sub">{m.telefon||"\u2014"}</td>}
+                      {visibleCols.includes("geburtsdatum")&&<td className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"\u2014"}</td>}
+                      {visibleCols.includes("alter")&&<td className="cc-members-td cc-members-td-sub">{m.alter||"\u2014"}</td>}
+                      {visibleCols.includes("geschlecht")&&<td className="cc-members-td cc-members-td-sub">{m.geschlecht||"\u2014"}</td>}
+                      {visibleCols.includes("nationalitaet")&&<td className="cc-members-td cc-members-td-sub">{m.nationalitaet||"\u2014"}</td>}
+                      {visibleCols.includes("ort")&&<td className="cc-members-td cc-members-td-sub">{m.ort||"\u2014"}</td>}
+                      {visibleCols.includes("spielerpass")&&<td className="cc-members-td cc-members-td-sub">{m.spielerpass||"\u2014"}</td>}
+                      {visibleCols.includes("fairgate_id")&&<td className="cc-members-td cc-members-td-sub">{m.fairgate_id||"\u2014"}</td>}
+                      {visibleCols.includes("js_nr")&&<td className="cc-members-td cc-members-td-sub">{m.js_nr||"\u2014"}</td>}
+                      {visibleCols.includes("eintritt")&&<td className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"\u2014"}</td>}
+                      {visibleCols.includes("position")&&<td className="cc-members-td cc-members-td-sub">{m.position||"\u2014"}</td>}
+                      {visibleCols.includes("rueckennr")&&<td className="cc-members-td cc-members-td-sub">{m.rueckennr||"\u2014"}</td>}
+                      <td className="cc-members-td cc-members-td-actions"/>
                     </tr>
                   ))}
                 </Fragment>
