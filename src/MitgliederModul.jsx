@@ -2,7 +2,7 @@
    ClubCampus MitgliederModul — MitgliederModul.jsx
    Mitgliederverwaltung und -liste
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
 import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
@@ -1809,7 +1809,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </thead>
             <tbody>
               {groups.map(({key,members})=>(
-                <React.Fragment key={key}>
+                <Fragment key={key}>
                   {groupBy!=="none"&&(
                     <tr className="cc-members-group-hdr"><td colSpan={COLS.length}>{key} <span className="cc-text-muted">({members.length})</span></td></tr>
                   )}
@@ -1829,7 +1829,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       {visibleCols.includes("geburtsdatum")&&<td className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>}
                     </tr>
                   ))}
-                </React.Fragment>
+                </Fragment>
               ))}
             </tbody>
           </table></div></div>
