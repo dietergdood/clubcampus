@@ -920,8 +920,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
   });
 
-  const paged=isMobile?sorted:sorted.slice(0,pageSize);
-  const hasMore=!isMobile&&sorted.length>pageSize;
+  const paged=sorted;
+  const hasMore=false;
   let groups=[];
   if(groupBy==="none"){
     groups=[{key:"",members:paged}];
