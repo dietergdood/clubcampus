@@ -692,18 +692,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       .then(({data})=>setCustomViews(data||[]));
   },[account?.id]);
 
-  function handleColDragStart(key){
-    setDragCol(key);
-    function onUp(){ handleColDragEnd(); document.removeEventListener("mouseup",onUp); }
-    document.addEventListener("mouseup",onUp);
-  }
+  function handleColDragStart(key){ setDragCol(key); }
   function handleColDragOver(e,key){ e.preventDefault(); setDragOverCol(key); }
-  function handleColDrop(key){
-    if(!dragCol||dragCol===key){ setDragCol(null); setDragOverCol(null); return; }
+  function handleColDrop(targetKey){
+    if(!dragCol||dragCol===targetKey) return;
     setVisibleCols(prev=>{
       const cols=[...prev];
       const fromIdx=cols.indexOf(dragCol);
-      const toIdx=cols.indexOf(key);
+      const toIdx=cols.indexOf(targetKey);
       if(fromIdx<0||toIdx<0) return cols;
       cols.splice(fromIdx,1);
       cols.splice(toIdx,0,dragCol);
@@ -2032,19 +2028,26 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               <tr>
                 {COLS.map(col=>(
                   <th key={col.key}
-                    className={`cc-members-th${dragOverCol===col.key&&dragCol!==col.key?" cc-members-th-drag-over":""}`}
-                    onMouseEnter={()=>setDragOverCol(col.key)}
-                    onMouseUp={()=>{if(dragCol&&dragCol!==col.key)handleColDrop(col.key);}}
+                    className={`cc-members-th${dragCol&&dragCol!==col.key?" cc-members-th-drop-target":""}${dragCol===col.key?" cc-members-th-dragging":""}`}
+                    onClick={()=>{
+                      if(dragCol){
+                        if(dragCol!==col.key) handleColDrop(col.key);
+                        else handleColDragEnd();
+                      } else {
+                        handleSort(col.key);
+                      }
+                    }}
                   >
                     <span className="cc-members-th-inner">
                       {col.key!=="name"&&(
                         <span
-                          className="cc-col-drag-handle"
-                          onMouseDown={e=>{e.preventDefault();e.stopPropagation();handleColDragStart(col.key);}}
+                          className={`cc-col-drag-handle${dragCol===col.key?" cc-col-drag-handle-active":""}`}
+                          onClick={e=>{e.stopPropagation();dragCol===col.key?handleColDragEnd():handleColDragStart(col.key);}}
+                          title={dragCol===col.key?"Verschieben abbrechen":"Spalte verschieben"}
                           aria-hidden="true"
                         ><TI n="grip-vertical" size={11}/></span>
                       )}
-                      <span onClick={()=>!dragCol&&handleSort(col.key)} style={{cursor:"pointer"}}>{col.label}<SortIcon col={col.key}/></span>
+                      <span style={{cursor:dragCol?"crosshair":"pointer"}}>{col.label}{!dragCol&&<SortIcon col={col.key}/>}</span>
                     </span>
                   </th>
                 ))}
