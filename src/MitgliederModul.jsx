@@ -1610,7 +1610,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}/>;
 
   return(
-    <div>
+    <div className="cc-page-wide">
       {/* Header */}
       <div className="cc-page-hdr">
         <h1 className="cc-page-title">Mitglieder</h1>
