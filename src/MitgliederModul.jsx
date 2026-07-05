@@ -558,10 +558,17 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const canExport=role==="administrator"||role==="administration";
 
   const TRAINER_KEYS=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
+  const ROLLE_LABEL=Object.fromEntries([
+    ...dbPortalRollen.map(r=>[r.name,r.label]),
+    ["administrator","Administrator"],["administration","Verwaltung"],
+    ["funktionaer","Funktionär"],["trainer","Trainer/in"],
+    ["spieler","Spieler/in"],["eltern","Elternteil"],
+    ["mitglied","Mitglied"],["supporter","Supporter"],
+  ]);
   const allMembers=dbMitglieder.map(m=>{
     /* Rollen ableiten */
     const rollenSet=new Set();
-    if(m.rolle&&m.rolle!=="-") rollenSet.add(m.rolle);
+    if(m.rolle&&m.rolle!=="-") rollenSet.add(ROLLE_LABEL[m.rolle]||m.rolle);
     /* Portal-Zugang */
     const portalStatus=m.hat_portal_zugang?"Aktiv":"Nicht eingerichtet";
     /* Datenpruefung */
