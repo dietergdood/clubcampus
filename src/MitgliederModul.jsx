@@ -638,7 +638,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
     useEffect(()=>{
       if(!sb||!mitgliedId) return;
       sb.from("mitglieder_notizen")
-        .select("*,benutzer:autor_id(mitglied_id,mitglieder(foto_url))")
+        .select("*,benutzer:autor_id(name,mitglied_id,mitglieder(foto_url))")
         .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false})
         .then(({data,error})=>{
           if(error){
@@ -659,7 +659,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
         autor_id:dbUser?.id||null, autor_name:autorName,
       });
       const {data:fresh}=await sb.from("mitglieder_notizen")
-        .select("*,benutzer:autor_id(mitglied_id,mitglieder(foto_url))")
+        .select("*,benutzer:autor_id(name,mitglied_id,mitglieder(foto_url))")
         .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false});
       setNotizen(fresh||[]);
       setNewText(""); setAdding(false);
@@ -724,7 +724,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                   </div>
                 </div>
               ):(
-                <div className="cc-notiz-text" style={{color:"var(--text)"}}>{n.text}</div>
+                <div className="cc-notiz-text" style={{color:"var(--text)",textDecoration:"none"}}>{n.text}</div>
               )}
             </div>
             {canEdit&&editId!==n.id&&(

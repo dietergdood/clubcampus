@@ -482,7 +482,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-notiz-meta{font-size:11px;color:var(--sub);margin-bottom:3px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .cc-notiz-author{font-weight:500;color:var(--text)}
 .cc-notiz-dot{width:3px;height:3px;border-radius:50%;background:var(--border);flex-shrink:0}
-.cc-notiz-text{font-size:13px;color:var(--text);line-height:1.5;text-decoration:none}
+.cc-notiz-text{font-size:13px;color:var(--text)!important;line-height:1.5;text-decoration:none!important}
 .cc-notiz-edit-area{border-color:var(--cc-accent,#FFBF00)!important;background:rgba(255,191,0,0.04)!important}
 .cc-notiz-input-wrap{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border)}
 .cc-funk-group-label{font-size:11px;color:var(--sub);margin-bottom:6px;display:block}
