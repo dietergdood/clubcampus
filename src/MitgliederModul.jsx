@@ -267,7 +267,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
                 if(benutzer?.role&&["administrator","administration"].includes(benutzer.role))
                   chips.push({label:ROLLE_LABEL[benutzer.role]||benutzer.role,type:"rolle"});
                 return chips.map((c,i)=>(
-                  <span key={i} className={`cc-hero-chip${c.type==="age"?" cc-hero-chip-age":""}`}>{c.label}</span>
+                  <span key={i} className={`cc-hero-chip${c.type==="type"?" cc-hero-chip-primary":c.type==="age"?" cc-hero-chip-age":""}`}>{c.label}</span>
                 ));
               })()}
             </div>
