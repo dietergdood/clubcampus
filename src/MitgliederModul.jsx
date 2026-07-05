@@ -538,6 +538,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [savedView,setSavedView]=useState("standard");
   const [dragCol,setDragCol]=useState(null);
   const [dragOverCol,setDragOverCol]=useState(null);
+  const [colDragSrc,setColDragSrc]=useState(null);
+  const [colDragOver,setColDragOver]=useState(null);
   const [teamsPopover,setTeamsPopover]=useState(null);
   const [pageSize,setPageSize]=useState(50);
   const [customViews,setCustomViews]=useState([]);
@@ -1953,31 +1955,62 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           </button>
           {colMenuOpen&&(
             <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
-              <div className="cc-col-menu-hdr">Spalten anzeigen</div>
-              {COL_GROUPS.map(({group,cols})=>(
-                <div key={group}>
-                  <div className="cc-ml-dropdown-section-lbl">{group}</div>
-                  {cols.map(c=>(
-                    <div key={c.key} className={`cc-col-menu-item${c.alwaysOn?" cc-col-menu-item-disabled":""}`}
-                      onClick={e=>{
-                        e.stopPropagation();
-                        if(c.alwaysOn) return;
-                        setVisibleCols(prev=>prev.includes(c.key)?prev.length>1?prev.filter(k=>k!==c.key):prev:[...prev,c.key]);
-                      }}>
-                      <div className={`cc-col-menu-check${visibleCols.includes(c.key)?" cc-col-menu-check-on":""}`}>
-                        {visibleCols.includes(c.key)&&<TI n="check" size={10}/>}
+              <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+              {visibleCols.map((key,idx)=>{
+                const col=ALL_COLS.find(c=>c.key===key);
+                if(!col) return null;
+                return(
+                  <div key={key}
+                    className={`cc-col-menu-item cc-col-menu-item-active${colDragOver===key&&colDragSrc!==key?" cc-col-menu-item-dragover":""}`}
+                    draggable={!col.alwaysOn}
+                    onDragStart={e=>{e.dataTransfer.effectAllowed="move";setColDragSrc(key);}}
+                    onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setColDragOver(key);}}
+                    onDrop={e=>{
+                      e.preventDefault();
+                      if(!colDragSrc||colDragSrc===key) return;
+                      setVisibleCols(prev=>{
+                        const cols=[...prev];
+                        const from=cols.indexOf(colDragSrc);
+                        const to=cols.indexOf(key);
+                        if(from<0||to<0) return cols;
+                        cols.splice(from,1);
+                        cols.splice(to,0,colDragSrc);
+                        return cols;
+                      });
+                      setColDragSrc(null); setColDragOver(null);
+                    }}
+                    onDragEnd={()=>{setColDragSrc(null);setColDragOver(null);}}
+                    onClick={e=>{
+                      e.stopPropagation();
+                      if(col.alwaysOn) return;
+                      setVisibleCols(prev=>prev.length>1?prev.filter(k=>k!==key):prev);
+                    }}
+                  >
+                    {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle" style={{opacity:0.4,cursor:"grab"}}/>}
+                    {col.alwaysOn&&<TI n="lock" size={11} style={{opacity:0.3,marginRight:2}}/>}
+                    <span style={{flex:1,fontSize:13}}>{col.label}</span>
+                    {!col.alwaysOn&&<TI n="x" size={11} style={{opacity:0.4}}/>}
+                  </div>
+                );
+              })}
+              <div className="cc-col-menu-hdr" style={{marginTop:8}}>Inaktive Spalten</div>
+              {COL_GROUPS.map(({group,cols})=>{
+                const inactive=cols.filter(c=>!visibleCols.includes(c.key)&&!c.alwaysOn);
+                if(inactive.length===0) return null;
+                return(
+                  <div key={group}>
+                    <div className="cc-ml-dropdown-section-lbl">{group}</div>
+                    {inactive.map(c=>(
+                      <div key={c.key} className="cc-col-menu-item"
+                        onClick={e=>{e.stopPropagation();setVisibleCols(prev=>[...prev,c.key]);}}>
+                        <div className="cc-col-menu-check"/>
+                        <span style={{flex:1,fontSize:13,color:"var(--sub)"}}>{c.label}</span>
+                        <TI n="plus" size={11} style={{opacity:0.4}}/>
                       </div>
-                      <span style={{flex:1}}>{c.label}</span>
-                      {visibleCols.includes(c.key)&&!c.alwaysOn&&(
-                        <span className="cc-col-arrows" onClick={e=>e.stopPropagation()}>
-                          <button className="cc-col-arrow-btn" onClick={e=>{e.stopPropagation();setVisibleCols(prev=>{const i=prev.indexOf(c.key);if(i<=1)return prev;const n=[...prev];[n[i-1],n[i]]=[n[i],n[i-1]];return n;})}}><TI n="chevron-up" size={10}/></button>
-                          <button className="cc-col-arrow-btn" onClick={e=>{e.stopPropagation();setVisibleCols(prev=>{const i=prev.indexOf(c.key);if(i<0||i>=prev.length-1)return prev;const n=[...prev];[n[i],n[i+1]]=[n[i+1],n[i]];return n;})}}><TI n="chevron-down" size={10}/></button>
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
