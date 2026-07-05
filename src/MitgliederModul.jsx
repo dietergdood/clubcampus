@@ -1920,7 +1920,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 </div>
               ))}
               <div className="cc-ml-dropdown-footer">
-                <button className="cc-ml-dropdown-clear" onClick={()=>setFilterVals({})}>Zurücksetzen</button>
+                <button className="cc-ml-dropdown-clear" onClick={()=>setFilterVals({})}>ZurÃ¼cksetzen</button>
                 <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
               </div>
             </div>
@@ -2024,10 +2024,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         <div className="cc-ml-chips">
           {Object.entries(filterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
             <div key={k+v} className="cc-ml-chip" onClick={()=>setFilterVals(prev=>({...prev,[k]:(prev[k]||[]).filter(x=>x!==v)}))}>
-              {v} <span className="cc-ml-chip-x">×</span>
+              {v} <span className="cc-ml-chip-x">Ã—</span>
             </div>
           )))}
-          <div className="cc-ml-chip cc-text-sub" onClick={()=>setFilterVals({})}>Alle zurücksetzen ×</div>
+          <div className="cc-ml-chip cc-text-sub" onClick={()=>setFilterVals({})}>Alle zurücksetzen Ã—</div>
         </div>
       )}
 
