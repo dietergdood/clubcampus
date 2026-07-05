@@ -435,7 +435,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-tab-active{color:var(--nav-a,var(--cc-accent,#FFBF00))!important;border-bottom-color:var(--nav-a,var(--cc-accent,#FFBF00))!important;opacity:1!important}
 .cc-hero-tab-soon{opacity:0.25!important;cursor:default}
 .cc-hero-tab-soon-badge{font-size:9px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);padding:1px 5px;border-radius:6px}
-.cc-member-tabs{display:flex;gap:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.cc-member-tabs{display:flex;gap:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:4px;overflow:visible;scrollbar-width:none;flex-shrink:0}
 .cc-member-tabs::-webkit-scrollbar{display:none}
 .cc-member-tab{padding:6px 12px;border-radius:7px;background:transparent;border:none;color:var(--sub);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:background 0.1s,color 0.1s;min-height:34px}
 .cc-member-tab:hover{background:var(--surface2);color:var(--text)}
