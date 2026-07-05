@@ -1924,32 +1924,61 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             {Object.values(filterVals).some(v=>v&&v.length>0)&&<span className="cc-ml-filter-dot"/>}
           </button>
           {filterOpen&&(
-            <div className="cc-ml-dropdown cc-ml-filter-dropdown">
-              <div className="cc-col-menu-hdr">Filter</div>
-              {FILTER_DEFS.map(({key,label,vals})=>(
-                <div key={key}>
-                  <div className="cc-ml-dropdown-section-lbl">{label}</div>
-                  {vals.sort().map(v=>{
-                    const active=(filterVals[key]||[]).includes(v);
-                    return(
-                      <div key={v} className="cc-col-menu-item" onClick={()=>setFilterVals(prev=>({
-                        ...prev,
-                        [key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]
-                      }))}>
-                        <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>
-                          {active&&<TI n="check" size={10}/>}
-                        </div>
-                        {v}
-                      </div>
-                    );
-                  })}
+            isMobile?(
+              <div className="cc-mehr-sheet-overlay" onClick={()=>setFilterOpen(false)}>
+                <div className="cc-mehr-sheet-backdrop"/>
+                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()} style={{maxHeight:"80vh",overflowY:"auto"}}>
+                  <div className="cc-mehr-sheet-handle"/>
+                  <div className="cc-mehr-sheet-title">Filter</div>
+                  {FILTER_DEFS.map(({key,label,vals})=>(
+                    <div key={key}>
+                      <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 0 4px"}}>{label}</div>
+                      {vals.sort().map(v=>{
+                        const active=(filterVals[key]||[]).includes(v);
+                        return(
+                          <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 0"}}
+                            onMouseDown={e=>{e.stopPropagation();setFilterVals(prev=>({...prev,[key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]}));}}>
+                            <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                            {v}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  <div className="cc-ml-dropdown-footer" style={{padding:"12px 0 0"}}>
+                    <button className="cc-ml-dropdown-clear" onMouseDown={()=>setFilterVals({})}>Zurücksetzen</button>
+                    <button className="cc-ml-dropdown-apply" onMouseDown={()=>setFilterOpen(false)}>Fertig</button>
+                  </div>
                 </div>
-              ))}
-              <div className="cc-ml-dropdown-footer">
-                <button className="cc-ml-dropdown-clear" onClick={()=>setFilterVals({})}>Zurücksetzen</button>
-                <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
               </div>
-            </div>
+            ):(
+              <div className="cc-ml-dropdown cc-ml-filter-dropdown">
+                <div className="cc-col-menu-hdr">Filter</div>
+                {FILTER_DEFS.map(({key,label,vals})=>(
+                  <div key={key}>
+                    <div className="cc-ml-dropdown-section-lbl">{label}</div>
+                    {vals.sort().map(v=>{
+                      const active=(filterVals[key]||[]).includes(v);
+                      return(
+                        <div key={v} className="cc-col-menu-item" onClick={()=>setFilterVals(prev=>({
+                          ...prev,
+                          [key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]
+                        }))}>
+                          <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>
+                            {active&&<TI n="check" size={10}/>}
+                          </div>
+                          {v}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+                <div className="cc-ml-dropdown-footer">
+                  <button className="cc-ml-dropdown-clear" onClick={()=>setFilterVals({})}>Zurücksetzen</button>
+                  <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
+                </div>
+              </div>
+            )
           )}
         </div>
 
@@ -1961,17 +1990,36 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             {!isMobile&&"Gruppieren"}
           </button>
           {groupOpen&&(
-            <div className="cc-ml-dropdown cc-ml-group-dropdown">
-              <div className="cc-col-menu-hdr">Gruppieren nach</div>
-              {GROUP_OPTIONS.map(o=>(
-                <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setGroupOpen(false);}}>
-                  <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>
-                    {groupBy===o.val&&<TI n="check" size={10}/>}
-                  </div>
-                  {o.label}
+            isMobile?(
+              <div className="cc-mehr-sheet-overlay" onClick={()=>setGroupOpen(false)}>
+                <div className="cc-mehr-sheet-backdrop"/>
+                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                  <div className="cc-mehr-sheet-handle"/>
+                  <div className="cc-mehr-sheet-title">Gruppieren nach</div>
+                  {GROUP_OPTIONS.map(o=>(
+                    <div key={o.val}
+                      className="cc-mehr-sheet-item"
+                      style={{borderBottom:"0.5px solid var(--border)",fontWeight:groupBy===o.val?600:400,color:groupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
+                      onMouseDown={e=>{e.stopPropagation();setGroupBy(o.val);setGroupOpen(false);}}>
+                      {groupBy===o.val&&<TI n="check" size={14}/>}
+                      {o.label}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ):(
+              <div className="cc-ml-dropdown cc-ml-group-dropdown">
+                <div className="cc-col-menu-hdr">Gruppieren nach</div>
+                {GROUP_OPTIONS.map(o=>(
+                  <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setGroupOpen(false);}}>
+                    <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>
+                      {groupBy===o.val&&<TI n="check" size={10}/>}
+                    </div>
+                    {o.label}
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
 
