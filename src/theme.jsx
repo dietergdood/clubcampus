@@ -498,6 +498,15 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-members-td-actions{width:40px}
 .cc-col-menu-dropdown-wide{min-width:220px}
 .cc-col-menu-item-disabled{opacity:0.5;cursor:default}
+.cc-members-th-drag{cursor:grab;user-select:none}
+.cc-members-th-drag:active{cursor:grabbing}
+.cc-members-th-drag-over{background:var(--cc-accent-5,rgba(255,191,0,0.05));border-left:2px solid var(--cc-accent,#FFBF00)}
+.cc-members-th-inner{display:flex;align-items:center;gap:4px}
+.cc-col-drag-handle{color:var(--border-strong);opacity:0;transition:opacity 0.1s}
+.cc-members-th:hover .cc-col-drag-handle{opacity:1}
+.cc-col-arrows{display:flex;flex-direction:column;gap:1px;margin-left:auto}
+.cc-col-arrow-btn{display:flex;align-items:center;justify-content:center;width:16px;height:14px;border:none;background:transparent;cursor:pointer;color:var(--sub);padding:0}
+.cc-col-arrow-btn:hover{color:var(--text)}
 [data-theme=dark] .cc-ml-badge-ok{background:rgba(22,101,52,0.3);color:#86EFAC}
 [data-theme=dark] .cc-ml-badge-warn{background:rgba(180,83,9,0.25);color:#FCD34D}
 [data-theme=dark] .cc-ml-badge-err{background:rgba(153,27,27,0.3);color:#FCA5A5}

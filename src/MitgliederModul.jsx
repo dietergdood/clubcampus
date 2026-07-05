@@ -536,6 +536,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [groupOpen,setGroupOpen]=useState(false);
   const [colMenuOpen,setColMenuOpen]=useState(false);
   const [savedView,setSavedView]=useState("standard");
+  const [dragCol,setDragCol]=useState(null);
+  const [dragOverCol,setDragOverCol]=useState(null);
   const [teamsPopover,setTeamsPopover]=useState(null);
   const [customViews,setCustomViews]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
@@ -689,6 +691,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       .order("created_at",{ascending:true})
       .then(({data})=>setCustomViews(data||[]));
   },[account?.id]);
+
+  function handleColDragStart(key){ setDragCol(key); }
+  function handleColDragOver(e,key){ e.preventDefault(); setDragOverCol(key); }
+  function handleColDrop(key){
+    if(!dragCol||dragCol===key) return;
+    setVisibleCols(prev=>{
+      const cols=[...prev];
+      const fromIdx=cols.indexOf(dragCol);
+      const toIdx=cols.indexOf(key);
+      if(fromIdx<0||toIdx<0) return cols;
+      cols.splice(fromIdx,1);
+      cols.splice(toIdx,0,dragCol);
+      return cols;
+    });
+    setDragCol(null);
+    setDragOverCol(null);
+  }
+  function handleColDragEnd(){ setDragCol(null); setDragOverCol(null); }
 
   async function saveCurrentView(){
     if(!saveViewName.trim()||!sb||!account?.id) return;
@@ -1943,7 +1963,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       <div className={`cc-col-menu-check${visibleCols.includes(c.key)?" cc-col-menu-check-on":""}`}>
                         {visibleCols.includes(c.key)&&<TI n="check" size={10}/>}
                       </div>
-                      {c.label}
+                      <span style={{flex:1}}>{c.label}</span>
+                      {visibleCols.includes(c.key)&&!c.alwaysOn&&(
+                        <span className="cc-col-arrows" onClick={e=>e.stopPropagation()}>
+                          <button className="cc-col-arrow-btn" onClick={e=>{e.stopPropagation();setVisibleCols(prev=>{const i=prev.indexOf(c.key);if(i<=1)return prev;const n=[...prev];[n[i-1],n[i]]=[n[i],n[i-1]];return n;})}}><TI n="chevron-up" size={10}/></button>
+                          <button className="cc-col-arrow-btn" onClick={e=>{e.stopPropagation();setVisibleCols(prev=>{const i=prev.indexOf(c.key);if(i<0||i>=prev.length-1)return prev;const n=[...prev];[n[i],n[i+1]]=[n[i+1],n[i]];return n;})}}><TI n="chevron-down" size={10}/></button>
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -2001,8 +2027,19 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             <thead>
               <tr>
                 {COLS.map(col=>(
-                  <th key={col.key} className="cc-members-th" onClick={()=>handleSort(col.key)}>
-                    {col.label}<SortIcon col={col.key}/>
+                  <th key={col.key}
+                    className={`cc-members-th cc-members-th-drag${dragOverCol===col.key&&dragCol!==col.key?" cc-members-th-drag-over":""}`}
+                    draggable={col.key!=="name"}
+                    onDragStart={()=>handleColDragStart(col.key)}
+                    onDragOver={e=>handleColDragOver(e,col.key)}
+                    onDrop={()=>handleColDrop(col.key)}
+                    onDragEnd={handleColDragEnd}
+                    onClick={()=>handleSort(col.key)}
+                  >
+                    <span className="cc-members-th-inner">
+                      {col.key!=="name"&&<TI n="grip-vertical" size={11} className="cc-col-drag-handle" aria-hidden="true"/>}
+                      {col.label}<SortIcon col={col.key}/>
+                    </span>
                   </th>
                 ))}
                 <th className="cc-members-th cc-members-th-actions"/>
