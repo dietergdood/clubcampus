@@ -482,7 +482,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-role-list-item:hover{background:var(--surface2)}
 .cc-role-list-item-selected{background:var(--cc-accent-5,rgba(255,191,0,0.05))}
 .cc-list-item-row:last-child{border-bottom:none}
-.cc-list-item-icon{width:28px;height:28px;border-radius:6px;background:rgba(255,191,0,0.12);border:0.5px solid rgba(255,191,0,0.2);color:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cc-list-item-icon{width:28px;height:28px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);color:var(--sub);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cc-hk-card{border:0.5px solid var(--border);border-left:3px solid var(--cc-accent,#FFBF00);border-radius:0 8px 8px 0;padding:10px 12px;background:var(--surface2);display:flex;align-items:center;gap:10px;margin-top:8px}
 .cc-hk-sub-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--sub);margin:12px 0 6px;display:block}
 .cc-hk-content{flex:1;min-width:0}
