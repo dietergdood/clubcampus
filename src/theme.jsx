@@ -407,7 +407,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
 .cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:var(--text)}
 .cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:visible;margin-bottom:0;position:relative}
-.cc-member-hero-banner{background:var(--cc-hero-bg,#000000);padding:16px 16px 18px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0}
+.cc-member-hero-banner{background:var(--cc-hero-bg,#000000);padding:16px 16px 12px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0}
 [data-theme=dark] .cc-member-hero-banner{background:var(--cc-hero-bg,#000000)}
 .cc-member-hero-banner .cc-page-title{color:var(--cc-hero-text,#FFFFFF)}
 .cc-hero-banner-actions{position:absolute;top:50%;right:12px;transform:translateY(-50%);display:flex;gap:6px;align-items:center}
@@ -424,7 +424,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-chip{font-size:11px;padding:2px 8px;border-radius:12px;background:rgba(128,128,128,0.2);color:var(--cc-hero-text,#FFFFFF);border:0.5px solid rgba(128,128,128,0.25);font-weight:500}
 .cc-hero-chip-age{color:#7a5000}
 .cc-hero-chip-primary{background:rgba(255,191,0,0.2);color:#FFBF00;border-color:rgba(255,191,0,0.35)}
-.cc-hero-tabs{display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.cc-hero-tabs{display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.08);overflow-x:auto;scrollbar-width:none;background:var(--cc-hero-bg,#000000);padding:0 16px;border-radius:0}
 .cc-hero-tabs::-webkit-scrollbar{display:none}
 .cc-hero-tab{padding:10px 14px;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:6px;transition:color 0.15s;WebkitTapHighlightColor:transparent}
 .cc-hero-tab:hover{color:rgba(255,255,255,0.7)}

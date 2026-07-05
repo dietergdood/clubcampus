@@ -295,7 +295,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
           </div>
         </div>
         {heroTabs.length>0&&(
-          <div className="cc-hero-tabs">
+          <div className="cc-hero-tabs" style={{marginTop:0}}>
             {heroTabs.map(t=>(
               <button key={t.key}
                 className={`cc-hero-tab${activeTab===t.key?" cc-hero-tab-active":""}${t.soon?" cc-hero-tab-soon":""}`}
@@ -1052,13 +1052,11 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
               {(teamDetails||[]).map((k,i)=>(
                 <div key={i} className="cc-team-position-row">
                   <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
-                  <div className="cc-flex-1">
-                    <div className="cc-text-bold">{k.teams?.name||"—"}</div>
-                    <div className="cc-row cc-gap-4 cc-flex-wrap" style={{marginTop:4}}>
-                      {(k.rollen||["Spieler/in"]).map((r,ri)=>(
-                        <span key={ri} className="cc-role-chip">{r}</span>
-                      ))}
-                    </div>
+                  <div className="cc-text-bold cc-flex-1">{k.teams?.name||"—"}</div>
+                  <div className="cc-row cc-gap-4 cc-flex-wrap">
+                    {(k.rollen||["Spieler/in"]).map((r,ri)=>(
+                      <span key={ri} className="cc-role-chip">{r}</span>
+                    ))}
                   </div>
                   <DropMenu items={[
                     {label:"Zum Team", icon:"arrow-right", onClick:()=>{
@@ -1092,14 +1090,10 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                   return(
                     <div key={i} className="cc-team-position-row">
                       <div className="cc-list-item-icon"><TI n="briefcase" size={13}/></div>
-                      <div className="cc-flex-1">
-                        <div className="cc-text-bold">{f}</div>
-                        {gruppe&&(
-                          <div className="cc-row cc-gap-5" style={{marginTop:3}}>
-                            <span className="cc-funk-gruppe-badge" style={funkObj?.portal_gruppen?.farbe?{background:funkObj.portal_gruppen.farbe+"20",color:funkObj.portal_gruppen.farbe,borderColor:funkObj.portal_gruppen.farbe+"40"}:{}}>{gruppe}</span>
-                          </div>
-                        )}
-                      </div>
+                      <div className="cc-text-bold cc-flex-1">{f}</div>
+                      {gruppe&&(
+                        <span className="cc-funk-gruppe-badge" style={funkObj?.portal_gruppen?.farbe?{background:funkObj.portal_gruppen.farbe+"20",color:funkObj.portal_gruppen.farbe,borderColor:funkObj.portal_gruppen.farbe+"40"}:{}}>{gruppe}</span>
+                      )}
                       {canEdit&&(
                         <DropMenu items={[
                           {label:"Entfernen", icon:"trash", danger:true, onClick:async()=>{
