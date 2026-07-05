@@ -542,6 +542,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [colDragOver,setColDragOver]=useState(null);
   const [teamsPopover,setTeamsPopover]=useState(null);
   const [pageSize,setPageSize]=useState(50);
+  const [exportOpen,setExportOpen]=useState(false);
   const [customViews,setCustomViews]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
   const [saveViewName,setSaveViewName]=useState("");
@@ -621,9 +622,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* Gespeicherte Ansichten */
   const SAVED_VIEWS={
     standard:      {label:"Standard",       cols:["name","mitgliedschaft","rollen","teams","datenpruefung","portal"]},
-    administration:{label:"Verwaltung",     cols:["name","mitgliedschaft","email","telefon","datenpruefung","portal"]},
-    sport:         {label:"Sportbetrieb",   cols:["name","mitgliedschaft","teams","spielerpass","geburtsdatum"]},
-    datenpruefung: {label:"Datenpruefung",  cols:["name","mitgliedschaft","datenpruefung","email","portal"]},
+    administration:{label:"Verwaltung",     cols:["name","email","telefon","ort","mitgliedschaft","datenpruefung"]},
+    sport:         {label:"Sportbetrieb",   cols:["name","teams","position","rueckennr","spielerpass","geburtsdatum"]},
+    datenpruefung: {label:"Datenprüfung",   cols:["name","datenpruefung","email","portal","mitgliedschaft"]},
     gv:            {label:"GV/Stimmrecht",  cols:["name","mitgliedschaft","eintritt","email"]},
   };
 
@@ -1852,7 +1853,17 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       <div className="cc-page-hdr">
         <h1 className="cc-page-title">Mitglieder</h1>
         <div className="cc-row cc-gap-8">
-          {canExport&&<><Btn small><TI n="download" size={13}/> CSV</Btn><Btn small><TI n="table" size={13}/> Excel</Btn></>}
+          {canExport&&(
+            <div className="cc-ml-dropdown-wrap">
+              <Btn small onClick={()=>setExportOpen(o=>!o)}><TI n="download" size={13}/> Export <TI n="chevron-down" size={11}/></Btn>
+              {exportOpen&&(
+                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:120}}>
+                  <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="file-text" size={14}/> CSV</div>
+                  <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="table" size={14}/> Excel</div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1861,7 +1872,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         <Stat label="Total" value={totalCount} color={BL}/>
         <Stat label="Portal aktiv" value={portalAktiv} color={GN}/>
         <Stat label="Prüfung offen" value={dpOffen} color={AM}/>
-        <Stat label="Ohne Team" value={ohneTeam} color={R}/>
+        <Stat label="Ohne Team" value={ohneTeam} color={AM}/>
       </div>
       {/* Aufschluesselung */}
       <div className="cc-kpi-breakdown cc-mb-20">
@@ -2056,8 +2067,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       <div key={c.key} className="cc-col-menu-item"
                         onClick={e=>{e.stopPropagation();setVisibleCols(prev=>[...prev,c.key]);}}>
                         <div className="cc-col-menu-check"/>
-                        <span style={{flex:1,fontSize:13,color:"var(--sub)"}}>{c.label}</span>
-                        <TI n="plus" size={11} style={{opacity:0.4}}/>
+                        <span style={{flex:1,fontSize:13}}>{c.label}</span>
                       </div>
                     ))}
                   </div>

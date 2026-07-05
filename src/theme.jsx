@@ -523,7 +523,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-teams-popover-item:last-child{border-bottom:none}
 .cc-members-th-actions{width:40px}
 .cc-members-td-actions{width:40px}
-.cc-col-menu-dropdown-wide{min-width:220px}
+.cc-col-menu-dropdown-wide{min-width:300px;max-height:420px;overflow-y:auto}
 .cc-col-menu-item-disabled{opacity:0.5;cursor:default}
 .cc-members-th-drop-target{background:var(--cc-accent-5,rgba(255,191,0,0.05));cursor:crosshair}
 .cc-members-th-dragging{background:var(--cc-accent-12,rgba(255,191,0,0.08));border-bottom:2px solid var(--cc-accent,#FFBF00)}
@@ -534,7 +534,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-arrows{display:flex;flex-direction:column;gap:1px;margin-left:auto}
 .cc-col-arrow-btn{display:flex;align-items:center;justify-content:center;width:16px;height:14px;border:none;background:transparent;cursor:pointer;color:var(--sub);padding:0}
 .cc-col-arrow-btn:hover{color:var(--text)}
-.cc-col-menu-item-active{background:var(--surface2)}
+.cc-col-menu-item-active{background:var(--surface2);border-radius:6px;margin:1px 4px}
 .cc-col-menu-item-dragover{border-top:2px solid var(--cc-accent,#FFBF00);background:var(--cc-accent-5,rgba(255,191,0,0.05))}
 .cc-col-menu-hdr-hint{font-size:10px;font-weight:400;color:var(--sub);margin-left:6px}
 [data-theme=dark] .cc-ml-badge-ok{background:rgba(22,101,52,0.3);color:#86EFAC}
