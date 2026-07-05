@@ -1000,7 +1000,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       onClick={()=>setMehrOpen(o=>!o)}
                     >
                       <TI n="dots" size={13}/>
-                      {moreActive?allTabs.find(t=>t.key===tab)?.label:"Mehr"}
+                      {"Mehr"}
                     </button>
                     {mehrOpen&&!isMobile&&(
                       <div className="cc-mehr-dropdown">
