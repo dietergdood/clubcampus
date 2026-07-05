@@ -823,8 +823,8 @@ function Portal({supabaseClient}){
         (k.rollen||[]).forEach(r=>{
           if(!kaderMap[k.mitglied_id].rollen.includes(r)) kaderMap[k.mitglied_id].rollen.push(r);
         });
-        if(k.teams?.name&&!kaderMap[k.mitglied_id].teams.includes(k.teams.name))
-          kaderMap[k.mitglied_id].teams.push(k.teams.name);
+        if(k.teams?.name&&!kaderMap[k.mitglied_id].teams.find(t=>t.name===k.teams.name))
+          kaderMap[k.mitglied_id].teams.push({name:k.teams.name,kurz:k.teams.kurzname||k.teams.name});
       });
       const data=(mitgliederRes.data||[]).map(m=>({
         ...m,

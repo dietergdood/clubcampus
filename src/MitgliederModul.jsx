@@ -588,7 +588,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       rollen:[...rollenSet],
       kader_rollen_raw:m.kader_rollen||[],
       role:m.rolle||"-",
-      teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams:(m.teams||[]),
+      teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams.map(t=>typeof t==="object"?t:{name:t,kurz:t}):(m.teams||[]).map(t=>({name:t,kurz:t})),
       team:(m.teams||[]).join(", ")||"-",
       datenpruefung:dpStatus,
       status:m.datenstatus||"Ausstehend",
@@ -1983,7 +1983,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       <div className="cc-members-item-name">{m.name}</div>
                       <div className="cc-members-item-sub">
                         {m.mitgliedschaft!=="-"?m.mitgliedschaft:m.rollen[0]||"-"}
-                        {m.teams[0]?" � "+m.teams[0]:""}
+                        {m.teams[0]?" � "+(m.teams[0]?.kurz||m.teams[0]):""}
                         {m.teams.length>1?` +${m.teams.length-1}`:""}
                       </div>
                     </div>
@@ -2021,7 +2021,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                           case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>;
                           case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
                           case "rollen": return <td key="rollen" className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`} style={{marginRight:3}}>{r}</span>;}):(<span className="cc-members-td-sub">—</span>)}</td>;
-                          case "teams": return <td key="teams" className="cc-members-td cc-members-td-sub" onClick={e=>e.stopPropagation()}>{m.teams.length>0?(<span className="cc-row cc-gap-4">{m.teams[0]}{m.teams.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:m.teams,x:e.clientX,y:e.clientY});}}>+{m.teams.length-1}</button>}</span>):"—"}</td>;
+                          case "teams": return <td key="teams" className="cc-members-td cc-members-td-sub" onClick={e=>e.stopPropagation()}>{m.teams.length>0?(<span className="cc-row cc-gap-4">{m.teams[0]?.kurz||m.teams[0]}{m.teams.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:m.teams,x:e.clientX,y:e.clientY});}}>+{m.teams.length-1}</button>}</span>):"—"}</td>;
                           case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
                           case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
                           case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
@@ -2061,7 +2061,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               {teamsPopover.teams.map((t,i)=>(
                 <div key={i} className="cc-mehr-sheet-item" style={{borderBottom:i<teamsPopover.teams.length-1?"0.5px solid var(--border)":"none"}}>
                   <TI n="ball-football" size={16}/>
-                  {t}
+                  {t?.name||t}
                 </div>
               ))}
             </div>
@@ -2073,7 +2073,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               {teamsPopover.teams.map((t,i)=>(
                 <div key={i} className="cc-teams-popover-item">
                   <TI n="ball-football" size={13}/>
-                  {t}
+                  {t?.name||t}
                 </div>
               ))}
             </div>
