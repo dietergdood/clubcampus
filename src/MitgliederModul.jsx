@@ -585,6 +585,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       mitgliedschaft:m.mitgliedtyp||"-",
       type:m.mitgliedtyp||"-",
       rollen:[...rollenSet],
+      kader_rollen_raw:m.kader_rollen||[],
       role:m.rolle||"-",
       teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams:(m.teams||[]),
       team:(m.teams||[]).join(", ")||"-",
@@ -2016,7 +2017,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                     <tr key={m.id} className="cc-members-tr" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
                       {visibleCols.includes("name")&&<td className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>}
                       {visibleCols.includes("mitgliedschaft")&&<td className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>}
-                      {visibleCols.includes("rollen")&&<td className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=><span key={i} className="cc-role-chip cc-role-chip-sm" style={{marginRight:3}}>{r}</span>):<span className="cc-members-td-sub">—</span>}</td>}
+                      {visibleCols.includes("rollen")&&<td className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`} style={{marginRight:3}}>{r}</span>;}):(<span className="cc-members-td-sub">—</span>)}</td>}
                       {visibleCols.includes("teams")&&<td className="cc-members-td cc-members-td-sub">{m.teams.length>0?<span>{m.teams[0]}{m.teams.length>1&&<span className="cc-ml-more">+{m.teams.length-1}</span>}</span>:"—"}</td>}
                       {visibleCols.includes("datenpruefung")&&<td className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>}
                       {visibleCols.includes("portal")&&<td className="cc-members-td"><PortalBadge val={m.portal}/></td>}
