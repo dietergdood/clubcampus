@@ -539,6 +539,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [dragCol,setDragCol]=useState(null);
   const [dragOverCol,setDragOverCol]=useState(null);
   const [teamsPopover,setTeamsPopover]=useState(null);
+  const [pageSize,setPageSize]=useState(50);
   const [customViews,setCustomViews]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
   const [saveViewName,setSaveViewName]=useState("");
@@ -737,6 +738,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(sortCol===key) setSortDir(d=>d==="asc"?"desc":"asc");
     else{ setSortCol(key); setSortDir("asc"); }
   }
+  useEffect(()=>setPageSize(50),[search,filterVals,groupBy,sortCol,sortDir]);
 
   /* Filter */
   const FILTER_DEFS=[
@@ -771,12 +773,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
   });
 
+  const paged=sorted.slice(0,pageSize);
+  const hasMore=sorted.length>pageSize;
   let groups=[];
   if(groupBy==="none"){
-    groups=[{key:"",members:sorted}];
+    groups=[{key:"",members:paged}];
   }else{
     const map={};
-    sorted.forEach(m=>{
+    paged.forEach(m=>{
       const vals=Array.isArray(m[groupBy])?m[groupBy]:[m[groupBy]||"-"];
       vals.forEach(k=>{
         if(!map[k]) map[k]=[];
@@ -2094,6 +2098,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </tbody>
           </table></div></div>
         ))}
+      {hasMore&&(
+        <div style={{textAlign:"center",padding:"16px 0"}}>
+          <Btn onClick={()=>setPageSize(p=>p+50)}>
+            <TI n="chevron-down" size={14}/> Weitere {Math.min(50,sorted.length-pageSize)} laden
+          </Btn>
+          <span style={{marginLeft:12,fontSize:12,color:"var(--sub)"}}>{pageSize} von {sorted.length} angezeigt</span>
+        </div>
+      )}
+
       </Card>
 
       {/* Teams Popover / Sheet */}
