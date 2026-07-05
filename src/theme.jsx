@@ -486,6 +486,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-badge-muted{background:var(--surface2);color:var(--sub)}
 .cc-role-chip-sm{font-size:10px;padding:1px 6px}
 .cc-ml-more{font-size:11px;color:var(--sub);margin-left:4px}
+.cc-team-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
 .cc-ml-more-btn{font-size:11px;color:var(--text-accent,#0369a1);background:var(--bg-accent,#e0f2fe);border:none;border-radius:10px;padding:1px 7px;cursor:pointer;font-family:inherit;font-weight:500}
 .cc-ml-more-btn:hover{background:var(--border-accent,#bae6fd)}
 .cc-teams-popover{position:fixed;z-index:2000;pointer-events:none}
