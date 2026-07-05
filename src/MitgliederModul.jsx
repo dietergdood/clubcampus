@@ -2028,17 +2028,22 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               <tr>
                 {COLS.map(col=>(
                   <th key={col.key}
-                    className={`cc-members-th cc-members-th-drag${dragOverCol===col.key&&dragCol!==col.key?" cc-members-th-drag-over":""}`}
-                    draggable={col.key!=="name"}
-                    onDragStart={()=>handleColDragStart(col.key)}
+                    className={`cc-members-th${dragOverCol===col.key&&dragCol!==col.key?" cc-members-th-drag-over":""}`}
                     onDragOver={e=>handleColDragOver(e,col.key)}
                     onDrop={()=>handleColDrop(col.key)}
                     onDragEnd={handleColDragEnd}
-                    onClick={()=>handleSort(col.key)}
                   >
                     <span className="cc-members-th-inner">
-                      {col.key!=="name"&&<TI n="grip-vertical" size={11} className="cc-col-drag-handle" aria-hidden="true"/>}
-                      {col.label}<SortIcon col={col.key}/>
+                      {col.key!=="name"&&(
+                        <span
+                          className="cc-col-drag-handle"
+                          draggable
+                          onDragStart={e=>{e.stopPropagation();handleColDragStart(col.key);}}
+                          onMouseDown={e=>e.stopPropagation()}
+                          aria-hidden="true"
+                        ><TI n="grip-vertical" size={11}/></span>
+                      )}
+                      <span onClick={()=>handleSort(col.key)} style={{cursor:"pointer"}}>{col.label}<SortIcon col={col.key}/></span>
                     </span>
                   </th>
                 ))}
