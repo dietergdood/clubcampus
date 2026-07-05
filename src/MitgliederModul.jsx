@@ -774,8 +774,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   });
 
   const sorted=[...filtered].sort((a,b)=>{
-    const av=Array.isArray(a[sortCol])?(a[sortCol][0]||""):String(a[sortCol]??"");
-    const bv=Array.isArray(b[sortCol])?(b[sortCol][0]||""):String(b[sortCol]??"");
+    const getVal=m=>{const v=m[sortCol];if(Array.isArray(v)){const f=v[0];return f?.name||f||"";}return String(v??"");};
+    const av=getVal(a);
+    const bv=getVal(b);
     return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
   });
 
