@@ -565,7 +565,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     /* Portal-Zugang */
     const portalStatus=m.hat_portal_zugang?"Aktiv":"Nicht eingerichtet";
     /* Datenpruefung */
-    const dpStatus=m.datenstatus==="Vollstandig"||m.datenstatus==="Vollst\u00e4ndig"?"Geprueft":m.datenstatus||"Ausstehend";
+    const dpStatus=m.datenstatus==="Vollstandig"||m.datenstatus==="Vollständig"?"Geprueft":m.datenstatus||"Ausstehend";
     return{
       id:m.id,
       name:`${m.vorname||""} ${m.nachname||""}`.trim(),
@@ -586,7 +586,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       telefon:m.telefon,
       geburtsdatum:m.geburtsdatum,
       alter:m.geburtsdatum?Math.floor((Date.now()-new Date(m.geburtsdatum))/(365.25*24*3600*1000)):null,
-      geschlecht:m.geschlecht==="m"?"M\u00e4nnlich":m.geschlecht==="w"?"Weiblich":m.geschlecht||"-",
+      geschlecht:m.geschlecht==="m"?"Männlich":m.geschlecht==="w"?"Weiblich":m.geschlecht||"-",
       nationalitaet:m.nationalitaet||"-",
       position:m.position,
       fairgate_id:m.fairgate_id,
@@ -716,8 +716,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
   const SortIcon=({col})=>sortCol===col
-    ?<span className="cc-sort-arrow">{sortDir==="asc"?"\u25b2":"\u25bc"}</span>
-    :<span className="cc-sort-arrow cc-text-muted">\u2195</span>;
+    ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
+    :<span className="cc-sort-arrow cc-text-muted">↕</span>;
 
   /* ── Detail-Modal ── */
   function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
@@ -1773,7 +1773,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       <div className="cc-ml-toolbar">
         <div className="cc-ml-srch">
           <TI n="search" size={15} className="cc-input-icon"/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Suchen nach Name, Team, Rolle\u2026"/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Suchen nach Name, Team, Rolle…"/>
         </div>
 
         {/* Filter */}
@@ -1933,24 +1933,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   {members.map(m=>(
                     <tr key={m.id} className="cc-members-tr" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
                       {visibleCols.includes("name")&&<td className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>}
-                      {visibleCols.includes("mitgliedschaft")&&<td className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"\u2014"}</td>}
-                      {visibleCols.includes("rollen")&&<td className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=><span key={i} className="cc-role-chip cc-role-chip-sm" style={{marginRight:3}}>{r}</span>):<span className="cc-members-td-sub">\u2014</span>}</td>}
-                      {visibleCols.includes("teams")&&<td className="cc-members-td cc-members-td-sub">{m.teams.length>0?<span>{m.teams[0]}{m.teams.length>1&&<span className="cc-ml-more">+{m.teams.length-1}</span>}</span>:"\u2014"}</td>}
+                      {visibleCols.includes("mitgliedschaft")&&<td className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>}
+                      {visibleCols.includes("rollen")&&<td className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=><span key={i} className="cc-role-chip cc-role-chip-sm" style={{marginRight:3}}>{r}</span>):<span className="cc-members-td-sub">—</span>}</td>}
+                      {visibleCols.includes("teams")&&<td className="cc-members-td cc-members-td-sub">{m.teams.length>0?<span>{m.teams[0]}{m.teams.length>1&&<span className="cc-ml-more">+{m.teams.length-1}</span>}</span>:"—"}</td>}
                       {visibleCols.includes("datenpruefung")&&<td className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>}
                       {visibleCols.includes("portal")&&<td className="cc-members-td"><PortalBadge val={m.portal}/></td>}
-                      {visibleCols.includes("email")&&<td className="cc-members-td cc-members-td-sub">{m.email||"\u2014"}</td>}
-                      {visibleCols.includes("telefon")&&<td className="cc-members-td cc-members-td-sub">{m.telefon||"\u2014"}</td>}
-                      {visibleCols.includes("geburtsdatum")&&<td className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"\u2014"}</td>}
-                      {visibleCols.includes("alter")&&<td className="cc-members-td cc-members-td-sub">{m.alter||"\u2014"}</td>}
-                      {visibleCols.includes("geschlecht")&&<td className="cc-members-td cc-members-td-sub">{m.geschlecht||"\u2014"}</td>}
-                      {visibleCols.includes("nationalitaet")&&<td className="cc-members-td cc-members-td-sub">{m.nationalitaet||"\u2014"}</td>}
-                      {visibleCols.includes("ort")&&<td className="cc-members-td cc-members-td-sub">{m.ort||"\u2014"}</td>}
-                      {visibleCols.includes("spielerpass")&&<td className="cc-members-td cc-members-td-sub">{m.spielerpass||"\u2014"}</td>}
-                      {visibleCols.includes("fairgate_id")&&<td className="cc-members-td cc-members-td-sub">{m.fairgate_id||"\u2014"}</td>}
-                      {visibleCols.includes("js_nr")&&<td className="cc-members-td cc-members-td-sub">{m.js_nr||"\u2014"}</td>}
-                      {visibleCols.includes("eintritt")&&<td className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"\u2014"}</td>}
-                      {visibleCols.includes("position")&&<td className="cc-members-td cc-members-td-sub">{m.position||"\u2014"}</td>}
-                      {visibleCols.includes("rueckennr")&&<td className="cc-members-td cc-members-td-sub">{m.rueckennr||"\u2014"}</td>}
+                      {visibleCols.includes("email")&&<td className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>}
+                      {visibleCols.includes("telefon")&&<td className="cc-members-td cc-members-td-sub">{m.telefon||"—"}</td>}
+                      {visibleCols.includes("geburtsdatum")&&<td className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>}
+                      {visibleCols.includes("alter")&&<td className="cc-members-td cc-members-td-sub">{m.alter||"—"}</td>}
+                      {visibleCols.includes("geschlecht")&&<td className="cc-members-td cc-members-td-sub">{m.geschlecht||"—"}</td>}
+                      {visibleCols.includes("nationalitaet")&&<td className="cc-members-td cc-members-td-sub">{m.nationalitaet||"—"}</td>}
+                      {visibleCols.includes("ort")&&<td className="cc-members-td cc-members-td-sub">{m.ort||"—"}</td>}
+                      {visibleCols.includes("spielerpass")&&<td className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>}
+                      {visibleCols.includes("fairgate_id")&&<td className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>}
+                      {visibleCols.includes("js_nr")&&<td className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>}
+                      {visibleCols.includes("eintritt")&&<td className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"—"}</td>}
+                      {visibleCols.includes("position")&&<td className="cc-members-td cc-members-td-sub">{m.position||"—"}</td>}
+                      {visibleCols.includes("rueckennr")&&<td className="cc-members-td cc-members-td-sub">{m.rueckennr||"—"}</td>}
                       <td className="cc-members-td cc-members-td-actions"/>
                     </tr>
                   ))}
