@@ -1124,7 +1124,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               )}
               {(teamDetails||[]).map((k,i)=>(
                 <div key={i} className="cc-team-position-row">
-                  <div className="cc-list-item-icon"><TI n="ball-football" size={13}/>
+                  <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
                   <div className="cc-text-bold cc-flex-1">{k.teams?.name||"—"}</div>
                   <div className="cc-row cc-gap-4 cc-flex-wrap">
                     {(k.rollen||["Spieler/in"]).map((r,ri)=>{
