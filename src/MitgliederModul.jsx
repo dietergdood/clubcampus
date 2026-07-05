@@ -1804,10 +1804,35 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}/>;
 
   /* KPI helpers */
+  const [breakdownOpen,setBreakdownOpen]=useState(false);
   const totalCount=allMembers.length;
   const portalAktiv=allMembers.filter(m=>m.hat_portal_zugang).length;
   const dpOffen=allMembers.filter(m=>m.datenpruefung!=="Geprueft").length;
   const ohneTeam=allMembers.filter(m=>m.teams.length===0).length;
+  /* Mitgliedschaft-Aufschluesselung */
+  const byMitgliedschaft=(typ)=>allMembers.filter(m=>m.mitgliedschaft===typ).length;
+  const trainerCount=allMembers.filter(m=>m.rollen.some(r=>r.toLowerCase().includes("trainer"))).length;
+  const funktionaerCount=allMembers.filter(m=>m.rollen.some(r=>r.toLowerCase().includes("funktion"))).length;
+  const BREAKDOWN=[
+    {label:"Aktivmitglieder",   key:"Aktivmitglied",    color:"ok"},
+    {label:"Juniorenmitglieder",key:"Juniormitglied",    color:"accent"},
+    {label:"Passivmitglieder",  key:"Passivmitglied",   color:"muted"},
+    {label:"Ehrenmitglieder",   key:"Ehrenmitglied",    color:"warn"},
+    {label:"Freimitglieder",    key:"Freimitglied",     color:"muted"},
+    {label:"Trainer/innen",     key:"__trainer",        color:"trainer"},
+    {label:"Funktionär/innen",  key:"__funktionaer",    color:"trainer"},
+  ];
+  function bdCount(b){
+    if(b.key==="__trainer") return trainerCount;
+    if(b.key==="__funktionaer") return funktionaerCount;
+    return byMitgliedschaft(b.key);
+  }
+  function bdFilter(b){
+    if(b.key==="__trainer") setFilterVals(prev=>({...prev,rollen:["Trainer/in"]}));
+    else if(b.key==="__funktionaer") setFilterVals(prev=>({...prev,rollen:["Funktionär"]}));
+    else setFilterVals(prev=>({...prev,mitgliedschaft:[b.key]}));
+    setBreakdownOpen(false);
+  }
 
   /* Portal-Zugang Zelle */
   function PortalBadge({val}){
@@ -1832,11 +1857,35 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {/* KPI */}
-      <div className="cc-grid-stats cc-mb-20">
+      <div className="cc-grid-stats cc-mb-8">
         <Stat label="Total" value={totalCount} color={BL}/>
         <Stat label="Portal aktiv" value={portalAktiv} color={GN}/>
-        <Stat label="Pruefung offen" value={dpOffen} color={AM}/>
+        <Stat label="Prüfung offen" value={dpOffen} color={AM}/>
         <Stat label="Ohne Team" value={ohneTeam} color={R}/>
+      </div>
+      {/* Aufschluesselung */}
+      <div className="cc-kpi-breakdown cc-mb-20">
+        <button className="cc-kpi-breakdown-toggle" onClick={()=>setBreakdownOpen(o=>!o)}>
+          <span className="cc-text-sm cc-text-sub">Mitgliedschaft</span>
+          {!breakdownOpen&&(
+            <span className="cc-kpi-preview">
+              {BREAKDOWN.filter(b=>bdCount(b)>0).slice(0,4).map(b=>(
+                <span key={b.key} className={`cc-kpi-pill cc-kpi-pill-${b.color}`}>{b.label.split("mitglied")[0].split("mitglieder")[0]} {bdCount(b)}</span>
+              ))}
+            </span>
+          )}
+          <TI n={breakdownOpen?"chevron-up":"chevron-down"} size={13} className="cc-text-sub"/>
+        </button>
+        {breakdownOpen&&(
+          <div className="cc-kpi-breakdown-body">
+            {BREAKDOWN.map(b=>(
+              <button key={b.key} className={`cc-kpi-tile cc-kpi-tile-${b.color}`} onClick={()=>bdFilter(b)}>
+                <span className="cc-kpi-tile-label">{b.label}</span>
+                <span className="cc-kpi-tile-value">{bdCount(b)}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Gespeicherte Ansichten */}
