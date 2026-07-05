@@ -536,6 +536,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [groupOpen,setGroupOpen]=useState(false);
   const [colMenuOpen,setColMenuOpen]=useState(false);
   const [savedView,setSavedView]=useState("standard");
+  const [teamsPopover,setTeamsPopover]=useState(null);
   const [customViews,setCustomViews]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
   const [saveViewName,setSaveViewName]=useState("");
@@ -2015,25 +2016,30 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   )}
                   {members.map(m=>(
                     <tr key={m.id} className="cc-members-tr" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
-                      {visibleCols.includes("name")&&<td className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>}
-                      {visibleCols.includes("mitgliedschaft")&&<td className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>}
-                      {visibleCols.includes("rollen")&&<td className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`} style={{marginRight:3}}>{r}</span>;}):(<span className="cc-members-td-sub">—</span>)}</td>}
-                      {visibleCols.includes("teams")&&<td className="cc-members-td cc-members-td-sub">{m.teams.length>0?<span>{m.teams[0]}{m.teams.length>1&&<span className="cc-ml-more">+{m.teams.length-1}</span>}</span>:"—"}</td>}
-                      {visibleCols.includes("datenpruefung")&&<td className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>}
-                      {visibleCols.includes("portal")&&<td className="cc-members-td"><PortalBadge val={m.portal}/></td>}
-                      {visibleCols.includes("email")&&<td className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>}
-                      {visibleCols.includes("telefon")&&<td className="cc-members-td cc-members-td-sub">{m.telefon||"—"}</td>}
-                      {visibleCols.includes("geburtsdatum")&&<td className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>}
-                      {visibleCols.includes("alter")&&<td className="cc-members-td cc-members-td-sub">{m.alter||"—"}</td>}
-                      {visibleCols.includes("geschlecht")&&<td className="cc-members-td cc-members-td-sub">{m.geschlecht||"—"}</td>}
-                      {visibleCols.includes("nationalitaet")&&<td className="cc-members-td cc-members-td-sub">{m.nationalitaet||"—"}</td>}
-                      {visibleCols.includes("ort")&&<td className="cc-members-td cc-members-td-sub">{m.ort||"—"}</td>}
-                      {visibleCols.includes("spielerpass")&&<td className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>}
-                      {visibleCols.includes("fairgate_id")&&<td className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>}
-                      {visibleCols.includes("js_nr")&&<td className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>}
-                      {visibleCols.includes("eintritt")&&<td className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"—"}</td>}
-                      {visibleCols.includes("position")&&<td className="cc-members-td cc-members-td-sub">{m.position||"—"}</td>}
-                      {visibleCols.includes("rueckennr")&&<td className="cc-members-td cc-members-td-sub">{m.rueckennr||"—"}</td>}
+                      {COLS.map(col=>{
+                        switch(col.key){
+                          case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>;
+                          case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
+                          case "rollen": return <td key="rollen" className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`} style={{marginRight:3}}>{r}</span>;}):(<span className="cc-members-td-sub">—</span>)}</td>;
+                          case "teams": return <td key="teams" className="cc-members-td cc-members-td-sub" onClick={e=>e.stopPropagation()}>{m.teams.length>0?(<span className="cc-row cc-gap-4">{m.teams[0]}{m.teams.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:m.teams,x:e.clientX,y:e.clientY});}}>+{m.teams.length-1}</button>}</span>):"—"}</td>;
+                          case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
+                          case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
+                          case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
+                          case "telefon": return <td key="telefon" className="cc-members-td cc-members-td-sub">{m.telefon||"—"}</td>;
+                          case "geburtsdatum": return <td key="geburtsdatum" className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>;
+                          case "alter": return <td key="alter" className="cc-members-td cc-members-td-sub">{m.alter||"—"}</td>;
+                          case "geschlecht": return <td key="geschlecht" className="cc-members-td cc-members-td-sub">{m.geschlecht||"—"}</td>;
+                          case "nationalitaet": return <td key="nationalitaet" className="cc-members-td cc-members-td-sub">{m.nationalitaet||"—"}</td>;
+                          case "ort": return <td key="ort" className="cc-members-td cc-members-td-sub">{m.ort||"—"}</td>;
+                          case "spielerpass": return <td key="spielerpass" className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>;
+                          case "fairgate_id": return <td key="fairgate_id" className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>;
+                          case "js_nr": return <td key="js_nr" className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>;
+                          case "eintritt": return <td key="eintritt" className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"—"}</td>;
+                          case "position": return <td key="position" className="cc-members-td cc-members-td-sub">{m.position||"—"}</td>;
+                          case "rueckennr": return <td key="rueckennr" className="cc-members-td cc-members-td-sub">{m.rueckennr||"—"}</td>;
+                          default: return <td key={col.key} className="cc-members-td cc-members-td-sub">—</td>;
+                        }
+                      })}
                       <td className="cc-members-td cc-members-td-actions"/>
                     </tr>
                   ))}
@@ -2043,6 +2049,37 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           </table></div></div>
         ))}
       </Card>
+
+      {/* Teams Popover / Sheet */}
+      {teamsPopover&&(
+        isMobile?(
+          <div className="cc-mehr-sheet-overlay" onClick={()=>setTeamsPopover(null)}>
+            <div className="cc-mehr-sheet-backdrop"/>
+            <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+              <div className="cc-mehr-sheet-handle"/>
+              <div className="cc-mehr-sheet-title">Teams</div>
+              {teamsPopover.teams.map((t,i)=>(
+                <div key={i} className="cc-mehr-sheet-item" style={{borderBottom:i<teamsPopover.teams.length-1?"0.5px solid var(--border)":"none"}}>
+                  <TI n="ball-football" size={16}/>
+                  {t}
+                </div>
+              ))}
+            </div>
+          </div>
+        ):(
+          <div className="cc-teams-popover" style={{top:teamsPopover.y+8,left:teamsPopover.x}}>
+            <div className="cc-teams-popover-backdrop" onClick={()=>setTeamsPopover(null)}/>
+            <div className="cc-teams-popover-box">
+              {teamsPopover.teams.map((t,i)=>(
+                <div key={i} className="cc-teams-popover-item">
+                  <TI n="ball-football" size={13}/>
+                  {t}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      )}
     </div>
   );
 }

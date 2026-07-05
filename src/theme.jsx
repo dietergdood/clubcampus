@@ -486,6 +486,13 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-badge-muted{background:var(--surface2);color:var(--sub)}
 .cc-role-chip-sm{font-size:10px;padding:1px 6px}
 .cc-ml-more{font-size:11px;color:var(--sub);margin-left:4px}
+.cc-ml-more-btn{font-size:11px;color:var(--text-accent,#0369a1);background:var(--bg-accent,#e0f2fe);border:none;border-radius:10px;padding:1px 7px;cursor:pointer;font-family:inherit;font-weight:500}
+.cc-ml-more-btn:hover{background:var(--border-accent,#bae6fd)}
+.cc-teams-popover{position:fixed;z-index:2000;pointer-events:none}
+.cc-teams-popover-backdrop{position:fixed;inset:0;pointer-events:all}
+.cc-teams-popover-box{position:relative;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:4px;min-width:180px;box-shadow:0 4px 16px rgba(0,0,0,0.1);pointer-events:all}
+.cc-teams-popover-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--text);border-bottom:0.5px solid var(--border)}
+.cc-teams-popover-item:last-child{border-bottom:none}
 .cc-members-th-actions{width:40px}
 .cc-members-td-actions{width:40px}
 .cc-col-menu-dropdown-wide{min-width:220px}
