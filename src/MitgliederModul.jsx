@@ -1008,25 +1008,23 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       </div>
                     )}
                   </div>
-                  {isMobile&&(
-                    <ModalOrSheet open={mehrOpen} onClose={()=>setMehrOpen(false)} maxWidth={480}>
-                      <div className="cc-modal-hdr">
-                        <ModalTitle>Weitere Tabs</ModalTitle>
-                        <Btn variant="ghost" small onClick={()=>setMehrOpen(false)}><TI n="x" size={14}/></Btn>
-                      </div>
-                      <div className="cc-modal-body cc-col">
+                  {isMobile&&mehrOpen&&(
+                    <div className="cc-mehr-sheet-overlay">
+                      <div className="cc-mehr-sheet-backdrop" onMouseDown={()=>setMehrOpen(false)}/>
+                      <div className="cc-mehr-sheet-box">
+                        <div className="cc-mehr-sheet-handle"/>
+                        <div className="cc-mehr-sheet-title">Weitere Tabs</div>
                         {moreTabs.map(t=>(
                           <button key={t.key}
-                            className={`cc-mehr-item${tab===t.key?" cc-mehr-item-active":""}`}
-                            style={{width:"100%",borderRadius:10,padding:"12px 16px",fontSize:14}}
-                            onClick={()=>{setTab(t.key);setMehrOpen(false);}}
+                            className={`cc-mehr-sheet-item${tab===t.key?" cc-mehr-sheet-item-active":""}`}
+                            onMouseDown={(e)=>{e.stopPropagation();setTab(t.key);setMehrOpen(false);}}
                           >
-                            {t.icon&&<TI n={t.icon} size={16}/>}
+                            {t.icon&&<TI n={t.icon} size={18}/>}
                             {t.label}
                           </button>
                         ))}
                       </div>
-                    </ModalOrSheet>
+                    </div>
                   )}
                 </>
               )}
