@@ -156,6 +156,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
   const [editMsg,setEditMsg]=useState(null);
   const [portalFunktionen,setPortalFunktionen]=useState([]);
   const fotoInputRef=useRef(null);
+  const [fotoOverlay,setFotoOverlay]=useState(false);
 
   async function handleHeroFotoUpload(e){
     const file=e.target.files?.[0];
@@ -232,19 +233,37 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
         <div className="cc-member-hero-banner">
           <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
           <div className="cc-hero-av-wrap">
-            <div className="cc-member-hero-av">
+            <div className="cc-member-hero-av" style={{cursor:canEdit?"pointer":"default"}}
+              onClick={()=>canEdit&&(raw.foto_url?setFotoOverlay(true):fotoInputRef.current?.click())}>
               {raw.foto_url
                 ?<img src={raw.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
                 :<span className="cc-hero-av-initials">{initials}</span>
               }
             </div>
             {canEdit&&(
-              <>
-                <input ref={fotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleHeroFotoUpload}/>
-                <button className="cc-hero-av-edit" onClick={()=>fotoInputRef.current?.click()} title="Foto ändern">
-                  <TI n="camera" size={11}/>
-                </button>
-              </>
+              <input ref={fotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleHeroFotoUpload}/>
+            )}
+            {fotoOverlay&&raw.foto_url&&(
+              <div className="cc-foto-overlay" onMouseDown={()=>setFotoOverlay(false)}>
+                <div className="cc-foto-overlay-box" onMouseDown={e=>e.stopPropagation()}>
+                  <img src={raw.foto_url} className="cc-foto-overlay-img" alt=""/>
+                  <div className="cc-foto-overlay-actions">
+                    <Btn onClick={()=>{setFotoOverlay(false);fotoInputRef.current?.click();}}>
+                      <TI n="camera" size={14}/> Ändern
+                    </Btn>
+                    <Btn variant="danger" onClick={async()=>{
+                      await sb.from("mitglieder").update({foto_url:null}).eq("id",raw.id);
+                      setFotoOverlay(false);
+                      if(onReload) onReload();
+                    }}>
+                      <TI n="trash" size={14}/> Löschen
+                    </Btn>
+                    <button className="cc-foto-overlay-close" onMouseDown={()=>setFotoOverlay(false)}>
+                      <TI n="x" size={16}/>
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
           <div className="cc-member-hero-info">
@@ -1163,7 +1182,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   const gruppe=funkObj?.portal_gruppen?.name||null;
                   return(
                     <div key={i} className="cc-team-position-row">
-                      <div className="cc-list-item-icon"><TI n="briefcase" size={13}/>
+                      <div className="cc-list-item-icon"><TI n="briefcase" size={13}/></div>
                       <div className="cc-text-bold cc-flex-1">{f}</div>
                       {gruppe&&(
                         <span className="cc-funk-gruppe-badge" style={funkObj?.portal_gruppen?.farbe?{background:funkObj.portal_gruppen.farbe+"20",color:funkObj.portal_gruppen.farbe,borderColor:funkObj.portal_gruppen.farbe+"40"}:{}}>{gruppe}</span>

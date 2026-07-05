@@ -463,6 +463,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-search-input-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--sub);pointer-events:none;display:flex}
 .cc-search-input{padding-left:34px;width:100%}
 .cc-justify-end{justify-content:flex-end}
+.cc-foto-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center}
+.cc-foto-overlay-box{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:360px;width:90%}
+.cc-foto-overlay-img{width:100%;max-width:320px;height:320px;object-fit:cover;border-radius:16px;border:2px solid rgba(255,255,255,0.15)}
+.cc-foto-overlay-actions{display:flex;gap:8px;align-items:center}
+.cc-foto-overlay-close{position:absolute;top:-12px;right:-12px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .cc-page-shell{width:min(100%,1400px);margin:0 auto}
 .cc-page-narrow{max-width:960px;margin:0 auto}
 .cc-page-default{max-width:1400px;margin:0 auto}
