@@ -276,7 +276,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             <div className="cc-hero-status-strip">
               {raw.aktiv!==false&&<span className="cc-hero-status-pill cc-hero-status-pill-ok"><TI n="circle-check" size={11}/>Aktiv</span>}
               {raw.aktiv===false&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="circle-x" size={11}/>Inaktiv</span>}
-              {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Sync OK</span>}
+              {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Fairgate OK</span>}
               {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
             </div>
             {canEdit&&(
