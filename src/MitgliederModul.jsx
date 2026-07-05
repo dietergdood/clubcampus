@@ -141,7 +141,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,heroTabs=[],activeTab=null,onTabChange=null}){
+function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const isMobile=useIsMobile();
   const [heroMenuOpen,setHeroMenuOpen]=useState(false);
   const heroMenuRef=useRef(null);
@@ -273,6 +273,12 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             </div>
           </div>
           <div className="cc-hero-banner-actions">
+            <div className="cc-hero-status-strip">
+              {raw.aktiv!==false&&<span className="cc-hero-status-pill cc-hero-status-pill-ok"><TI n="circle-check" size={11}/>Aktiv</span>}
+              {raw.aktiv===false&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="circle-x" size={11}/>Inaktiv</span>}
+              {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Fairgate</span>}
+              {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Daten offen</span>}
+            </div>
             {canEdit&&(
               <div ref={heroMenuRef} style={{position:"relative"}}>
                 <button className="cc-hero-banner-btn" onMouseDown={e=>e.stopPropagation()}
@@ -294,20 +300,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             )}
           </div>
         </div>
-        {heroTabs.length>0&&(
-          <div className="cc-hero-tabs" style={{marginTop:0}}>
-            {heroTabs.map(t=>(
-              <button key={t.key}
-                className={`cc-hero-tab${activeTab===t.key?" cc-hero-tab-active":""}${t.soon?" cc-hero-tab-soon":""}`}
-                onClick={()=>!t.soon&&onTabChange&&onTabChange(t.key)}
-              >
-                {t.icon&&<TI n={t.icon} size={13}/>}
-                {t.label}
-                {t.soon&&<span className="cc-hero-tab-soon-badge">bald</span>}
-              </button>
-            ))}
-          </div>
-        )}
+
       </div>
       {editOpen&&(
         <ModalOrSheet open={true} onClose={()=>setEditOpen(false)} maxWidth={560}>
@@ -647,18 +640,28 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
       sb.from("mitglieder_notizen")
         .select("*,benutzer:autor_id(mitglied_id,mitglieder(foto_url))")
         .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false})
-        .then(({data})=>setNotizen(data||[]));
+        .then(({data,error})=>{
+          if(error){
+            sb.from("mitglieder_notizen").select("*").eq("mitglied_id",mitgliedId)
+              .order("created_at",{ascending:false}).then(({data:d2})=>setNotizen(d2||[]));
+          } else {
+            setNotizen(data||[]);
+          }
+        });
     },[mitgliedId]);
 
     async function addNotiz(){
       if(!newText.trim()||!sb) return;
       setAdding(true);
       const autorName=dbUser?.name||dbUser?.email||"Unbekannt";
-      const {data}=await sb.from("mitglieder_notizen").insert({
+      await sb.from("mitglieder_notizen").insert({
         mitglied_id:mitgliedId, text:newText.trim(),
         autor_id:dbUser?.id||null, autor_name:autorName,
-      }).select().single();
-      if(data) setNotizen(prev=>[data,...(prev||[])]);
+      });
+      const {data:fresh}=await sb.from("mitglieder_notizen")
+        .select("*,benutzer:autor_id(mitglied_id,mitglieder(foto_url))")
+        .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false});
+      setNotizen(fresh||[]);
       setNewText(""); setAdding(false);
     }
 
@@ -954,19 +957,25 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
           statusColor={statusColor} statusBg={statusBg}
           dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
-          heroTabs={[
+        />
+        <div className="cc-member-tabs">
+          {[
             {key:"info",    label:"Profil",        icon:"user"},
             {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart"},
             ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key"}]:[]),
             ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check"}]:[]),
-            {key:"stats",   label:"Statistik",  icon:"chart-bar", soon:true},
-            {key:"comments",label:"Kommentare", icon:"message",   soon:true},
-          ]}
-          activeTab={tab}
-          onTabChange={t=>setTab(t)}
-        />
+          ].map(t=>(
+            <button key={t.key}
+              className={`cc-member-tab${tab===t.key?" cc-member-tab-active":""}`}
+              onClick={()=>setTab(t.key)}
+            >
+              {t.icon&&<TI n={t.icon} size={13}/>}
+              {t.label}
+            </button>
+          ))}
+        </div>
         <div className="cc-member-stats">
-          <StatusTile label="Mitgliedtyp"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"    semantic="neutral"/>
+          <StatusTile label="Mitgliedschaft"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"    semantic="neutral"/>
           <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}                                        icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}
             action={!raw.geprueft&&canEdit?{label:"Prüfung starten",onClick:()=>setTab("datenpruefung")}:null}/>
           <StatusTile label="Portal-Zugang" value={raw.hat_portal_zugang?(isMobile?"OK":"Eingerichtet"):(isMobile?"Fehlt":"Nicht eingerichtet")} icon="key" semantic={raw.hat_portal_zugang?"ok":"warn"}

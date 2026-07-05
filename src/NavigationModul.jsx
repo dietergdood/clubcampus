@@ -12,21 +12,26 @@ import { USER_ACCOUNTS } from "./demoData.js";
 const NAV_BY_ROLE = {
   administrator: [
     {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
+    {group:"Verein"},
     {key:"members",            icon:"users",            label:"Mitglieder"},
     {key:"team",               icon:"wappen",           label:"Teams"},
+    {key:"events",             icon:"calendar-event",   label:"Termine"},
+    {key:"docs",               icon:"file-text",        label:"Dokumente"},
+    {group:"Sport"},
     {key:"training",           icon:"calendar",         label:"Trainingsplan"},
     {key:"schedule",           icon:"flag",             label:"Spielplan/FVRZ"},
     {key:"attendance_central", icon:"chart-bar",        label:"Anwesenheitsstatistik"},
-    {key:"news",               icon:"news",             label:"News"},
-    {key:"nachrichten",        icon:"message",          label:"Nachrichten"},
-    {key:"events",             icon:"calendar-event",   label:"Termine"},
+    {key:"lockers",            icon:"door-exit",        label:"Garderoben"},
+    {group:"Betrieb"},
     {key:"helpers",            icon:"heart-handshake",  label:"Helfereinsätze"},
     {key:"buses",              icon:"bus",              label:"Vereinsbusse"},
     {key:"material",           icon:"package",          label:"Material"},
-    {key:"lockers",            icon:"door-exit",        label:"Garderoben"},
+    {group:"Kommunikation"},
+    {key:"news",               icon:"news",             label:"News"},
+    {key:"nachrichten",        icon:"message",          label:"Nachrichten"},
     {key:"media",              icon:"speakerphone",     label:"Medien & Berichte"},
     {key:"wiki",               icon:"book",             label:"Wiki"},
-    {key:"docs",               icon:"file-text",        label:"Dokumente"},
+    {group:"Admin"},
     {key:"portal",             icon:"settings",         label:"Portalverwaltung"},
   ],
   vorstand: [
@@ -432,16 +437,18 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
       </div>
       {/* Nav items */}
       <div style={{flex:1,padding:"10px 8px",overflowY:"auto",overflowX:"hidden"}}>
-        {nav.map(n=>(
-          <button key={n.key} onClick={()=>setActive(n.key)} title={collapsed?n.label:undefined}
+        {nav.map((n,i)=>(
+          n.group
+          ?(!collapsed&&<div key={`g${i}`} style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--nav-t)",opacity:0.35,padding:"14px 12px 4px",userSelect:"none"}}>{n.group}</div>)
+          :<button key={n.key} onClick={()=>setActive(n.key)} title={collapsed?n.label:undefined}
             className={`cc-nav-item${active===n.key?" cc-nav-active":""}`}
             style={{
             width:"100%",display:"flex",alignItems:"center",gap:collapsed?0:11,
-            padding:collapsed?"10px 0":"10px 12px",borderRadius:9,border:"none",
+            padding:collapsed?"10px 0":"8px 12px",borderRadius:9,border:"none",
             background:active===n.key?"var(--nav-a)":"transparent",
             color:active===n.key?"var(--nav-accent-text)":"var(--nav-t)",
             cursor:"pointer",fontSize:13.5,fontWeight:active===n.key?600:400,
-            textAlign:"left",marginBottom:2,letterSpacing:0.1,
+            textAlign:"left",marginBottom:1,letterSpacing:0.1,
             transition:"background 0.15s",fontFamily:"inherit",
             justifyContent:collapsed?"center":"flex-start",
           }}>
