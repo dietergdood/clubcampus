@@ -3,11 +3,9 @@
    Mitgliederverwaltung und -liste
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import React from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, SectionLabel, Stat, StatusTile, Tabs, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
-import { MEMBERS } from "./demoData.js";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
 import { getRole } from "./NavigationModul.jsx";
 
 /* ── Länderliste ISO2 → {name, flag} ── */
@@ -141,7 +139,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
+function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const isMobile=useIsMobile();
   const [heroMenuOpen,setHeroMenuOpen]=useState(false);
   const heroMenuRef=useRef(null);
@@ -154,7 +152,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
   const [editForm,setEditForm]=useState({...raw});
   const [editSaving,setEditSaving]=useState(false);
   const [editMsg,setEditMsg]=useState(null);
-  const [portalFunktionen,setPortalFunktionen]=useState([]);
   const fotoInputRef=useRef(null);
   const [fotoOverlay,setFotoOverlay]=useState(false);
 
@@ -175,10 +172,6 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
 
   useEffect(()=>{
     if(sb&&editOpen){
-      if(portalFunktionen.length===0){
-        sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
-          .then(({data})=>setPortalFunktionen(data||[]));
-      }
       // Benutzer-Rolle laden
       sb.from("benutzer").select("id,role").eq("mitglied_id",raw.id).maybeSingle()
         .then(({data})=>{
@@ -562,9 +555,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   },[navToMember,dbMitglieder]);
   const canExport=role==="administrator"||role==="administration";
 
-  /* Mitglieder: aus Supabase wenn geladen, sonst MEMBERS Fallback */
-  const allMembers=dbMitglieder.length>0
-    ?dbMitglieder.map(m=>({
+  const allMembers=dbMitglieder.map(m=>({
         id:m.id,
         name:`${m.vorname} ${m.nachname}`,
         vorname:m.vorname, nachname:m.nachname,
@@ -580,8 +571,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         foto_url:m.foto_url||null,
         mitgliedtyp:m.mitgliedtyp||"-",
         funktionen:m.funktionen||[],
-      }))
-    :MEMBERS;
+      }));
 
   const ALL_COLS=[
     {key:"name",        label:"Name",         default:true},
@@ -645,7 +635,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
   const statusColor=s=>s==="Vollständig"?GN:s==="Prüfung fällig"?AM:R;
-  const statusBg=s=>s==="Vollständig"?"#ECFDF5":s==="Prüfung fällig"?"#FFFBEB":RL;
   const SortIcon=({col})=>sortCol===col
     ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
     :<span className="cc-sort-arrow cc-text-muted">↕</span>;
@@ -974,7 +963,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         {/* Hero Header */}
         <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit}
           sb={sb} onReload={onReload} onClose={onClose}
-          statusColor={statusColor} statusBg={statusBg}
+          statusColor={statusColor}
           dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         />
