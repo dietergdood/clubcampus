@@ -625,7 +625,7 @@ function ModalOrSheet({open,onClose,children,maxWidth=660}){
   if(isMobile) return(
     <div className="cc-sheet-overlay">
       <div onClick={onClose} className="cc-sheet-backdrop"/>
-      <div className="cc-sheet-box">
+      <div className="cc-sheet-box" onClick={e=>e.stopPropagation()}>
         <div className="cc-sheet-handle"><div className="cc-sheet-handle-bar"/></div>
         <div className="cc-modal-scroll-wrap">
           <div className="cc-modal-scroll">{children}</div>
