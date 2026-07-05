@@ -442,7 +442,7 @@ function FotoUpload({raw,canUpload,sb,onReload}){
       {raw.foto_url?(
         <img src={raw.foto_url} className="cc-foto-img" alt="Foto"/>
       ):(
-        <div className="cc-foto-placeholder"><TI n="photo" size={24}/>
+        <div className="cc-foto-placeholder"><TI n="photo" size={24}/></div>
       )}
       <div className="cc-col cc-gap-8">
         <div className="cc-text-bold">{raw.vorname} {raw.nachname}</div>
