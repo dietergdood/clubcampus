@@ -463,6 +463,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-search-input-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--sub);pointer-events:none;display:flex}
 .cc-search-input{padding-left:34px;width:100%}
 .cc-justify-end{justify-content:flex-end}
+.cc-hero-av-img{width:100%;height:100%;object-fit:cover}
+.cc-member-hero-name{margin:0}
+.cc-empty-italic{font-style:italic}
+.cc-role-name{font-size:13px;flex:1}
 .cc-foto-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center}
 .cc-foto-overlay-box{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:360px;width:90%}
 .cc-foto-overlay-img{width:100%;max-width:320px;height:320px;object-fit:cover;border-radius:16px;border:2px solid rgba(255,255,255,0.15)}

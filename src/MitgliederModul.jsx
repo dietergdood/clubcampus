@@ -229,7 +229,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             <div className="cc-member-hero-av" style={{cursor:canEdit?"pointer":"default"}}
               onClick={()=>canEdit&&(raw.foto_url?setFotoOverlay(true):fotoInputRef.current?.click())}>
               {raw.foto_url
-                ?<img src={raw.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                ?<img src={raw.foto_url} className="cc-hero-av-img" alt=""/>
                 :<span className="cc-hero-av-initials">{initials}</span>
               }
             </div>
@@ -260,7 +260,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             )}
           </div>
           <div className="cc-member-hero-info">
-            <h1 className="cc-page-title" style={{margin:0}}>{m.name}</h1>
+            <h1 className="cc-page-title cc-member-hero-name">{m.name}</h1>
             <div className="cc-hero-chips">
               {(()=>{
                 const ROLLE_LABEL=dbPortalRollen.length>0
@@ -703,7 +703,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return(
       <div className="cc-notiz-list">
         {notizen.length===0&&!canEdit&&(
-          <div className="cc-text-sm cc-text-sub" style={{fontStyle:"italic"}}>Keine Notizen vorhanden.</div>
+          <div className="cc-text-sm cc-text-sub cc-empty-italic">Keine Notizen vorhanden.</div>
         )}
         {notizen.map(n=>(
           <div key={n.id} className="cc-notiz-entry">
@@ -1277,7 +1277,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                     </span>
                     <input className="cc-input" placeholder="Suchen…" value={teamAssignRolleSearch||""}
                       onChange={e=>setTeamAssignRolleSearch(e.target.value)}
-                      style={{paddingLeft:34,width:"100%"}}/>
+                      className="cc-search-input"/>
                   </div>
                   <div className="cc-role-list-wrap">
                     {dbKaderRollen.filter(r=>!(teamAssignRolleSearch)||r.name.toLowerCase().includes((teamAssignRolleSearch||"").toLowerCase())).map(r=>{
@@ -1288,7 +1288,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                           <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                             {sel&&<TI n="check" size={10} className="cc-check-icon"/>}
                           </div>
-                          <span className="cc-flex-1" style={{fontSize:13}}>{r.name}</span>
+                          <span className="cc-role-name">{r.name}</span>
                           {r.ist_trainer&&<span className="cc-trainer-badge">Trainer</span>}
                         </div>
                       );
@@ -1325,7 +1325,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                         </span>
                         <input className="cc-input" placeholder="Suchen…" value={editTeamRolleSearch||""}
                           onChange={e=>setEditTeamRolleSearch(e.target.value)}
-                          style={{paddingLeft:34,width:"100%"}}/>
+                          className="cc-search-input"/>
                       </div>
                       <div className="cc-role-list-wrap">
                         {dbKaderRollen.filter(r=>!(editTeamRolleSearch)||r.name.toLowerCase().includes((editTeamRolleSearch||"").toLowerCase())).map(r=>{
@@ -1336,7 +1336,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                               <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
                                 {sel&&<TI n="check" size={10} className="cc-check-icon"/>}
                               </div>
-                              <span className="cc-flex-1" style={{fontSize:13}}>{r.name}</span>
+                              <span className="cc-role-name">{r.name}</span>
                               {r.ist_trainer&&<span className="cc-trainer-badge">Trainer</span>}
                             </div>
                           );
