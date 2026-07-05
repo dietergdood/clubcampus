@@ -1878,14 +1878,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {/* Aufschluesselung */}
       <div className="cc-kpi-breakdown cc-mb-20">
         <button className="cc-kpi-breakdown-toggle" onClick={()=>setBreakdownOpen(o=>!o)}>
-          <span className="cc-text-sm cc-text-sub">Mitgliedschaft</span>
-          {!breakdownOpen&&(
-            <span className="cc-kpi-preview">
-              {BREAKDOWN.filter(b=>bdCount(b)>0).slice(0,4).map(b=>(
-                <span key={b.key} className={`cc-kpi-pill cc-kpi-pill-${b.color}`}>{b.label.split("mitglied")[0].split("mitglieder")[0]} {bdCount(b)}</span>
-              ))}
-            </span>
-          )}
+          <span className="cc-text-sm cc-text-sub">Mitgliedschaft Aufschlüsselung</span>
           <TI n={breakdownOpen?"chevron-up":"chevron-down"} size={13} className="cc-text-sub"/>
         </button>
         {breakdownOpen&&(
