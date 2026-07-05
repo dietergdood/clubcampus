@@ -920,8 +920,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
   });
 
-  const paged=sorted.slice(0,pageSize);
-  const hasMore=sorted.length>pageSize;
+  const paged=isMobile?sorted:sorted.slice(0,pageSize);
+  const hasMore=!isMobile&&sorted.length>pageSize;
   let groups=[];
   if(groupBy==="none"){
     groups=[{key:"",members:paged}];
@@ -1865,8 +1865,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         )}
       </div>
 
-      {/* Gespeicherte Ansichten */}
-      <div className="cc-ml-views">
+      {/* Gespeicherte Ansichten - nur Desktop */}
+      {!isMobile&&<div className="cc-ml-views">
         {Object.entries(SAVED_VIEWS).map(([k,v])=>(
           <button key={k}
             className={`cc-ml-view-btn${savedView===k?" cc-ml-view-btn-active":""}`}
@@ -1906,7 +1906,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             <TI n="plus" size={12}/> Ansicht speichern
           </button>
         )}
-      </div>
+      </div>}
 
       {/* Toolbar */}
       <div className="cc-ml-toolbar">
@@ -1975,8 +1975,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           )}
         </div>
 
-        {/* Spalten */}
-        <div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
+        {/* Spalten - nur Desktop */}
+        {!isMobile&&<div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
           <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
             onClick={()=>{setColMenuOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);}}>
             <TI n="layout-columns" size={15}/>
@@ -2041,7 +2041,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               })}
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Aktive Filter Chips */}
@@ -2166,7 +2166,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </tbody>
           </table></div></div>
         ))}
-      {hasMore&&(
+      {hasMore&&!isMobile&&(
         <div style={{textAlign:"center",padding:"16px 0"}}>
           <Btn onClick={()=>setPageSize(p=>p+50)}>
             <TI n="chevron-down" size={14}/> Weitere {Math.min(50,sorted.length-pageSize)} laden
