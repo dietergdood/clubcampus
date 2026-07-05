@@ -692,10 +692,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       .then(({data})=>setCustomViews(data||[]));
   },[account?.id]);
 
-  function handleColDragStart(key){ setDragCol(key); }
+  function handleColDragStart(key){
+    setDragCol(key);
+    function onUp(){ handleColDragEnd(); document.removeEventListener("mouseup",onUp); }
+    document.addEventListener("mouseup",onUp);
+  }
   function handleColDragOver(e,key){ e.preventDefault(); setDragOverCol(key); }
   function handleColDrop(key){
-    if(!dragCol||dragCol===key) return;
+    if(!dragCol||dragCol===key){ setDragCol(null); setDragOverCol(null); return; }
     setVisibleCols(prev=>{
       const cols=[...prev];
       const fromIdx=cols.indexOf(dragCol);
@@ -2029,21 +2033,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 {COLS.map(col=>(
                   <th key={col.key}
                     className={`cc-members-th${dragOverCol===col.key&&dragCol!==col.key?" cc-members-th-drag-over":""}`}
-                    onDragOver={e=>handleColDragOver(e,col.key)}
-                    onDrop={()=>handleColDrop(col.key)}
-                    onDragEnd={handleColDragEnd}
+                    onMouseEnter={()=>setDragOverCol(col.key)}
+                    onMouseUp={()=>{if(dragCol&&dragCol!==col.key)handleColDrop(col.key);}}
                   >
                     <span className="cc-members-th-inner">
                       {col.key!=="name"&&(
                         <span
                           className="cc-col-drag-handle"
-                          draggable
-                          onDragStart={e=>{e.stopPropagation();handleColDragStart(col.key);}}
-                          onMouseDown={e=>e.stopPropagation()}
+                          onMouseDown={e=>{e.preventDefault();e.stopPropagation();handleColDragStart(col.key);}}
                           aria-hidden="true"
                         ><TI n="grip-vertical" size={11}/></span>
                       )}
-                      <span onClick={()=>handleSort(col.key)} style={{cursor:"pointer"}}>{col.label}<SortIcon col={col.key}/></span>
+                      <span onClick={()=>!dragCol&&handleSort(col.key)} style={{cursor:"pointer"}}>{col.label}<SortIcon col={col.key}/></span>
                     </span>
                   </th>
                 ))}
