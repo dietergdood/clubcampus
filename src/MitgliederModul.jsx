@@ -748,7 +748,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {key:"rollen",         label:"Rollen",         vals:[...new Set(allMembers.flatMap(m=>m.rollen).filter(Boolean))]},
     {key:"datenpruefung",  label:"Datenpruefung",  vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
     {key:"portal",         label:"Portal-Zugang",  vals:[...new Set(allMembers.map(m=>m.portal).filter(Boolean))]},
-    {key:"teams",          label:"Teams",          vals:[...new Set(allMembers.flatMap(m=>m.teams).filter(Boolean))].sort()},
+    {key:"teams",          label:"Teams",          vals:[...new Set(allMembers.flatMap(m=>m.teams.map(t=>t?.name||t)).filter(Boolean))].sort()},
   ];
 
   const filtered=allMembers.filter(m=>{
@@ -757,13 +757,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       const hit=m.name.toLowerCase().includes(q)||
         m.mitgliedschaft.toLowerCase().includes(q)||
         m.rollen.some(r=>r.toLowerCase().includes(q))||
-        m.teams.some(t=>t.toLowerCase().includes(q))||
+        m.teams.some(t=>(t?.name||t||"").toLowerCase().includes(q))||
         (m.email||"").toLowerCase().includes(q);
       if(!hit) return false;
     }
     for(const [fKey,fVals] of Object.entries(filterVals)){
       if(!fVals||fVals.length===0) continue;
-      const mVal=Array.isArray(m[fKey])?m[fKey]:[m[fKey]];
+      const raw=m[fKey];
+      const mVal=Array.isArray(raw)
+        ?raw.map(v=>v?.name||v)
+        :[raw?.name||raw];
       if(!mVal.some(v=>fVals.includes(v))) return false;
     }
     return true;
