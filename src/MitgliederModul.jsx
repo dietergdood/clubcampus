@@ -506,7 +506,7 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
+function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
@@ -1280,7 +1280,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
             {fv.showNotizen&&(
               <Card style={{gridColumn:"1/-1"}}>
                 <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-                <div style={{color:"var(--text)"}}><NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={benutzer}/></div>
+                <div style={{color:"var(--text)"}}><NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={account}/></div>
               </Card>
             )}
           </div>
