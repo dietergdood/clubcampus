@@ -468,12 +468,12 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-funk-gruppe-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-notiz-entry{display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)}
 .cc-notiz-entry:last-of-type{border-bottom:none}
-.cc-notiz-av{width:28px;height:28px;border-radius:50%;background:#FAEEDA;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#92400e;flex-shrink:0}
-.cc-notiz-av-me{background:#EAF3DE;color:#27500A;margin-top:2px}
+.cc-notiz-av{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--sub);flex-shrink:0}
+.cc-notiz-av-me{background:var(--cc-accent-12,rgba(255,191,0,0.08));color:var(--cc-accent,#FFBF00);margin-top:2px}
 .cc-notiz-meta{font-size:11px;color:var(--sub);margin-bottom:3px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .cc-notiz-author{font-weight:500;color:var(--text)}
 .cc-notiz-dot{width:3px;height:3px;border-radius:50%;background:var(--border);flex-shrink:0}
-.cc-notiz-text{font-size:13px;color:var(--text);line-height:1.5}
+.cc-notiz-text{font-size:13px;color:var(--text);line-height:1.5;text-decoration:none}
 .cc-notiz-edit-area{border-color:var(--cc-accent,#FFBF00)!important;background:rgba(255,191,0,0.04)!important}
 .cc-notiz-input-wrap{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border)}
 .cc-funk-group-label{font-size:11px;color:var(--sub);margin-bottom:6px;display:block}

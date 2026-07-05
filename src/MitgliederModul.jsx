@@ -714,7 +714,7 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
                   </div>
                 </div>
               ):(
-                <div className="cc-notiz-text">{n.text}</div>
+                <div className="cc-notiz-text" style={{color:"var(--text)"}}>{n.text}</div>
               )}
             </div>
             {canEdit&&editId!==n.id&&(
