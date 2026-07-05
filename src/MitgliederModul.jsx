@@ -1825,19 +1825,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {/* Header */}
       <div className="cc-page-hdr">
         <h1 className="cc-page-title">Mitglieder</h1>
-        <div className="cc-row cc-gap-8">
-          {canExport&&(
-            <div className="cc-ml-dropdown-wrap">
-              <Btn small onClick={()=>setExportOpen(o=>!o)}><TI n="download" size={13}/> Export <TI n="chevron-down" size={11}/></Btn>
-              {exportOpen&&(
-                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:120}}>
-                  <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="file-text" size={14}/> CSV</div>
-                  <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="table" size={14}/> Excel</div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+
       </div>
 
       {/* KPI */}
@@ -2022,6 +2010,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             )
           )}
         </div>
+
+        {/* Export */}
+        {canExport&&(
+          <div className="cc-ml-dropdown-wrap">
+            <button className={`cc-ml-btn${exportOpen?" cc-active":""}`}
+              onClick={()=>{setExportOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setColMenuOpen(false);}}>
+              <TI n="download" size={15}/>
+              {!isMobile&&"Export"}
+            </button>
+            {exportOpen&&(
+              <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:130}}>
+                <div className="cc-col-menu-hdr">Export</div>
+                <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="file-text" size={14}/> CSV</div>
+                <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="table" size={14}/> Excel</div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Spalten - nur Desktop */}
         {!isMobile&&<div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
