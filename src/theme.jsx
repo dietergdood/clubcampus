@@ -407,10 +407,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
 .cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:var(--text)}
 .cc-member-hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:visible;margin-bottom:0;position:relative}
-.cc-member-hero-banner{background:var(--cc-accent,#FFBF00);padding:16px 16px 18px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0}
-[data-theme=dark] .cc-member-hero-banner{background:var(--surface)}
+.cc-member-hero-banner{background:var(--cc-hero-bg,#000000);padding:16px 16px 18px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0}
+[data-theme=dark] .cc-member-hero-banner{background:var(--cc-hero-bg,#000000)}
+.cc-member-hero-banner .cc-page-title{color:var(--cc-hero-text,#FFFFFF)}
 .cc-hero-banner-actions{position:absolute;top:50%;right:12px;transform:translateY(-50%);display:flex;gap:6px;align-items:center}
-.cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer}
+.cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(128,128,128,0.3);background:rgba(128,128,128,0.15);color:var(--cc-hero-text,#FFFFFF);cursor:pointer}
 .cc-hero-banner-btn:hover{background:var(--surface)}
 .cc-hero-av-wrap{position:relative;width:72px;height:72px;flex-shrink:0}
 .cc-hero-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text)}
@@ -420,7 +421,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-member-hero-info{flex:1;min-width:0}
 .cc-member-hero-sub{font-size:13px;color:var(--sub);margin-top:3px;margin-bottom:0}
 .cc-hero-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.cc-hero-chip{font-size:11px;padding:2px 8px;border-radius:12px;background:rgba(255,255,255,0.85);color:#3d2800;border:0.5px solid rgba(0,0,0,0.1);font-weight:500}
+.cc-hero-chip{font-size:11px;padding:2px 8px;border-radius:12px;background:rgba(128,128,128,0.2);color:var(--cc-hero-text,#FFFFFF);border:0.5px solid rgba(128,128,128,0.25);font-weight:500}
 .cc-hero-chip-age{color:#7a5000}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .cc-status-tile{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;min-width:0}
@@ -474,7 +475,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-status-badge-warn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:#92400e;border:0.5px solid var(--border)}
 .cc-hero-status-badge-ok{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:#166534;border:0.5px solid var(--border)}
 .cc-hero-badge-type{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
-.cc-hero-av-initials{font-size:22px;font-weight:600;color:var(--text)}
+.cc-hero-av-initials{font-size:22px;font-weight:600;color:var(--cc-hero-text,#FFFFFF)}
 .cc-form-nr{width:90px}
 .cc-hero-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;flex-shrink:0}
 .cc-hero-back:hover{background:var(--surface2)}
@@ -575,6 +576,7 @@ const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FFBF00", vereinsfarbe2:"#000000",
   navBg:"#000000", navText:"#FFFFFF", navAccent:null, navAccentText:null, navHover:"#1A1A1A", avatarBg:null, avatarText:null,
   btnPrimary:"#FFBF00", btnPrimaryText:"#000000",
+  heroBg:"#000000", heroText:"#FFFFFF",
   vereinsname:"Mein Verein", logo:null,
 };
 
