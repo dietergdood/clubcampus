@@ -704,12 +704,12 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
             <div className="cc-notiz-av" style={{overflow:"hidden",padding:0}}>
               {n.benutzer?.mitglieder?.foto_url
                 ?<img src={n.benutzer.mitglieder.foto_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-                :<span>{initials(n.autor_name)}</span>
+                :<span>{initials(n.autor_name||n.benutzer?.name)}</span>
               }
             </div>
             <div className="cc-flex-1">
               <div className="cc-notiz-meta">
-                <span className="cc-notiz-author">{n.autor_name||"Unbekannt"}</span>
+                <span className="cc-notiz-author">{n.autor_name||n.benutzer?.name||"Unbekannt"}</span>
                 <span className="cc-notiz-dot"/>
                 <span>{formatDate(n.created_at)}</span>
                 {n.updated_at!==n.created_at&&<><span className="cc-notiz-dot"/><span className="cc-text-xs cc-text-sub">bearbeitet</span></>}
