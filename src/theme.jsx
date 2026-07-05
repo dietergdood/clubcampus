@@ -440,6 +440,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-member-tab{padding:6px 12px;border-radius:7px;background:transparent;border:none;color:var(--sub);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:background 0.1s,color 0.1s;min-height:34px}
 .cc-member-tab:hover{background:var(--surface2);color:var(--text)}
 .cc-member-tab-active{background:var(--surface2);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.cc-mehr-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:4px;min-width:170px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.cc-mehr-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:7px;font-size:13px;color:var(--text);cursor:pointer;border:none;background:transparent;width:100%;font-family:inherit;text-align:left}
+.cc-mehr-item:hover{background:var(--surface2)}
+.cc-mehr-item-active{background:var(--cc-accent-5,rgba(255,191,0,0.05));color:var(--cc-accent,#FFBF00);font-weight:500}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .cc-status-tile{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;min-width:0}
 .cc-status-tile-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}

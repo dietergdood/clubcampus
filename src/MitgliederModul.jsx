@@ -756,6 +756,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const isMobile=useIsMobile();
     const [portalLoading,setPortalLoading]=useState(false);
     const [benutzer,setBenutzer]=useState(null);
+    const [mehrOpen,setMehrOpen]=useState(false);
+    const mehrRef=useRef(null);
+    useEffect(()=>{
+      if(!mehrOpen) return;
+      const handler=(e)=>{if(mehrRef.current&&!mehrRef.current.contains(e.target))setMehrOpen(false);};
+      document.addEventListener("mousedown",handler);
+      return()=>document.removeEventListener("mousedown",handler);
+    },[mehrOpen]);
     const [portalMsg,setPortalMsg]=useState(null);
     const [linkEmail,setLinkEmail]=useState(raw.email||"");
     const [teamDetails,setTeamDetails]=useState(null);
@@ -944,22 +952,57 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         />
-        <div className="cc-member-tabs">
-          {[
-            {key:"info",    label:"Profil",        icon:"user"},
-            {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart"},
+        {(()=>{
+          const allTabs=[
+            {key:"info",           label:"Profil",          icon:"user"},
+            {key:"eltern",         label:`Eltern (${eltern.length})`, icon:"heart"},
+            {key:"stats",          label:"Statistik",       icon:"chart-bar"},
+            {key:"helpers",        label:"Helfereinsätze",   icon:"heart-handshake"},
+            {key:"entwicklung",    label:"Entwicklung",     icon:"trending-up"},
             ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key"}]:[]),
             ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check"}]:[]),
-          ].map(t=>(
-            <button key={t.key}
-              className={`cc-member-tab${tab===t.key?" cc-member-tab-active":""}`}
-              onClick={()=>setTab(t.key)}
-            >
-              {t.icon&&<TI n={t.icon} size={13}/>}
-              {t.label}
-            </button>
-          ))}
-        </div>
+          ];
+          const MOBILE_VISIBLE=3;
+          const visibleTabs=isMobile?allTabs.slice(0,MOBILE_VISIBLE):allTabs;
+          const moreTabs=isMobile?allTabs.slice(MOBILE_VISIBLE):[];
+          const moreActive=moreTabs.some(t=>t.key===tab);
+          return(
+            <div className="cc-member-tabs" style={{position:"relative"}}>
+              {visibleTabs.map(t=>(
+                <button key={t.key}
+                  className={`cc-member-tab${tab===t.key?" cc-member-tab-active":""}`}
+                  onClick={()=>setTab(t.key)}
+                >
+                  {t.icon&&<TI n={t.icon} size={13}/>}
+                  {t.label}
+                </button>
+              ))}
+              {moreTabs.length>0&&(
+                <div ref={mehrRef} style={{position:"relative",marginLeft:"auto"}}>
+                  <button
+                    className={`cc-member-tab${moreActive?" cc-member-tab-active":""}`}
+                    onClick={()=>setMehrOpen(o=>!o)}
+                  >
+                    <TI n="dots" size={13}/>
+                    {moreActive?allTabs.find(t=>t.key===tab)?.label:"Mehr"}
+                  </button>
+                  {mehrOpen&&(
+                    <div className="cc-mehr-dropdown">
+                      {moreTabs.map(t=>(
+                        <button key={t.key} className={`cc-mehr-item${tab===t.key?" cc-mehr-item-active":""}`}
+                          onClick={()=>{setTab(t.key);setMehrOpen(false);}}
+                        >
+                          {t.icon&&<TI n={t.icon} size={14}/>}
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <div className="cc-member-stats">
           <StatusTile label="Mitgliedschaft"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"    semantic="neutral"/>
           <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}                                        icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}
