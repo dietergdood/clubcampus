@@ -428,7 +428,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-tabs::-webkit-scrollbar{display:none}
 .cc-hero-tab{padding:10px 14px;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:6px;transition:color 0.15s;WebkitTapHighlightColor:transparent}
 .cc-hero-tab:hover{color:rgba(255,255,255,0.7)}
-.cc-hero-tab-active{color:#FFBF00!important;border-bottom-color:var(--cc-accent,#FFBF00)!important}
+.cc-hero-tab-active{color:var(--cc-accent,#FFBF00)!important;border-bottom-color:var(--cc-accent,#FFBF00)!important}
 .cc-hero-tab-soon{color:rgba(255,255,255,0.2)!important;cursor:default}
 .cc-hero-tab-soon-badge{font-size:9px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);padding:1px 5px;border-radius:6px}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
