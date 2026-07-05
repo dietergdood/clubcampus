@@ -340,7 +340,7 @@ function LoginScreen({onLogin, sb, appTheme}){
       <div style={{width:"100%",maxWidth:400,padding:"0 20px"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{width:64,height:64,borderRadius:16,display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:12,overflow:"hidden"}}>
-            <img src={appTheme?.logo||LOGO_B64} style={{width:64,height:64,objectFit:"cover"}} alt="Logo"/>
+            <img src={appTheme?.logo||'/logo.png'} style={{width:64,height:64,objectFit:"cover"}} alt="Logo"/>
           </div>
           <div style={{fontWeight:800,fontSize:21,color:"var(--text)",marginTop:4}}>{appTheme?.vereinsname||getVereinsnameStatic()}</div>
           <div style={{fontSize:14,color:"var(--sub)",marginTop:3,fontWeight:600}}>ClubCampus</div>
@@ -853,7 +853,7 @@ function Portal({supabaseClient}){
       <div style={{minHeight:"100dvh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{textAlign:"center"}}>
           <div style={{width:64,height:64,borderRadius:16,overflow:"hidden",display:"inline-flex",marginBottom:12}}>
-            <img src={appTheme?.logo||LOGO_B64} style={{width:64,height:64,objectFit:"cover"}} alt="Logo"/>
+            <img src={appTheme?.logo||'/logo.png'} style={{width:64,height:64,objectFit:"cover"}} alt="Logo"/>
           </div>
           <div className="cc-text-sm">Wird geladen…</div>
         </div>
