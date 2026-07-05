@@ -2090,6 +2090,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       <TI n="chevron-right" size={14} className="cc-members-item-chevron"/>
                     </div>
                   </div>
+                ))}
               </div>
             ))}
           </div>
