@@ -141,7 +141,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
+function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,statusBg,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,heroTabs=[],activeTab=null,onTabChange=null}){
   const isMobile=useIsMobile();
   const [heroMenuOpen,setHeroMenuOpen]=useState(false);
   const heroMenuRef=useRef(null);
@@ -294,6 +294,19 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,statusColor,
             )}
           </div>
         </div>
+        {heroTabs.length>0&&(
+          <div className="cc-hero-tabs">
+            {heroTabs.map(t=>(
+              <button key={t.key}
+                className={`cc-hero-tab${activeTab===t.key?" cc-hero-tab-active":""}${t.soon?" cc-hero-tab-soon":""}`}
+                onClick={()=>!t.soon&&onTabChange&&onTabChange(t.key)}
+              >
+                {t.label}
+                {t.soon&&<span className="cc-hero-tab-soon-badge">bald</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {editOpen&&(
         <ModalOrSheet open={true} onClose={()=>setEditOpen(false)} maxWidth={560}>
@@ -933,21 +946,16 @@ function MitgliederModul({role,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen
           statusColor={statusColor} statusBg={statusBg}
           dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
-        />
-        {/* Stats */}
-        {/* Tabs */}
-        <Tabs
-          tabs={[
-            {key:"info",    label:"Profil",      icon:"user",    short:"Profil"},
-            {key:"eltern",  label:`Eltern (${eltern.length})`, icon:"heart", short:"Eltern"},
-            ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key",          short:"Portal"}]:[]),
-            ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check", short:"Daten"}]:[]),
-            {key:"stats",   label:"Statistik",   icon:"chart-bar",short:"Stats",  soon:true},
-            {key:"comments",label:"Kommentare",  icon:"message",  short:"Komm.",  soon:true},
+          heroTabs={[
+            {key:"info",    label:"Profil"},
+            {key:"eltern",  label:`Eltern (${eltern.length})`},
+            ...(canEdit?[{key:"portal",       label:"Portal-Zugang"}]:[]),
+            ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung"}]:[]),
+            {key:"stats",   label:"Statistik",  soon:true},
+            {key:"comments",label:"Kommentare", soon:true},
           ]}
-          active={tab}
-          setActive={t=>!(["stats","comments"].includes(t))&&setTab(t)}
-          mb={0}
+          activeTab={tab}
+          onTabChange={t=>setTab(t)}
         />
         <div className="cc-member-stats">
           <StatusTile label="Mitgliedtyp"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"    semantic="neutral"/>

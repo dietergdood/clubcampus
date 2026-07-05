@@ -424,6 +424,13 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-chip{font-size:11px;padding:2px 8px;border-radius:12px;background:rgba(128,128,128,0.2);color:var(--cc-hero-text,#FFFFFF);border:0.5px solid rgba(128,128,128,0.25);font-weight:500}
 .cc-hero-chip-age{color:#7a5000}
 .cc-hero-chip-primary{background:rgba(255,191,0,0.2);color:#FFBF00;border-color:rgba(255,191,0,0.35)}
+.cc-hero-tabs{display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.cc-hero-tabs::-webkit-scrollbar{display:none}
+.cc-hero-tab{padding:10px 14px;font-size:13px;color:rgba(255,255,255,0.4);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:6px;transition:color 0.15s;WebkitTapHighlightColor:transparent}
+.cc-hero-tab:hover{color:rgba(255,255,255,0.7)}
+.cc-hero-tab-active{color:#FFBF00!important;border-bottom-color:var(--cc-accent,#FFBF00)!important}
+.cc-hero-tab-soon{color:rgba(255,255,255,0.2)!important;cursor:default}
+.cc-hero-tab-soon-badge{font-size:9px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);padding:1px 5px;border-radius:6px}
 .cc-member-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .cc-status-tile{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;min-width:0}
 .cc-status-tile-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
