@@ -1317,7 +1317,12 @@ reloadMember, refreshArchivCount, brauchtEltern,
                 {/* Hauptkontakt als Mini-Karte */}
                 {hk&&(
                   <>
-                    <span className="cc-hk-sub-label"><TI n="star" size={11}/> Hauptkontakt / Elternkontakt</span>
+                    <div className="cc-hk-sub-label">
+                      <span className="cc-hk-sub-label-text"><TI n="star" size={11}/> Hauptkontakt / Elternkontakt</span>
+                      <button className="cc-hk-tab-link" onClick={()=>setTab("eltern")}>
+                        Eltern ({eltern.length}) <TI n="chevron-right" size={12}/>
+                      </button>
+                    </div>
                     <div className="cc-hk-card">
                       <Av name={hkName} size="md" bg="rgba(255,191,0,0.15)"/>
                       <div className="cc-hk-content">
@@ -1331,7 +1336,12 @@ reloadMember, refreshArchivCount, brauchtEltern,
                 )}
                 {brauchtEltern(raw.mitgliedtyp)&&!hk&&(
                   <>
-                    <span className="cc-hk-sub-label"><TI n="star" size={11}/> Hauptkontakt / Elternkontakt</span>
+                    <div className="cc-hk-sub-label">
+                      <span className="cc-hk-sub-label-text"><TI n="star" size={11}/> Hauptkontakt / Elternkontakt</span>
+                      <button className="cc-hk-tab-link" onClick={()=>setTab("eltern")}>
+                        Eltern ({eltern.length}) <TI n="chevron-right" size={12}/>
+                      </button>
+                    </div>
                     <div className="cc-warn-box"><TI n="alert-triangle" size={14}/> Kein Hauptkontakt — bitte im Tab "Eltern" festlegen</div>
                   </>
                 )}
