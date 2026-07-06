@@ -1211,7 +1211,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
-    const canEdit=kannVerwalten("members");
+    const canEdit=kannVerwalten("members")&&!m._readonly;
+    const canDelete=kannVerwalten("members");
     const isMobile=useIsMobile();
     const [portalLoading,setPortalLoading]=useState(false);
     const [benutzer,setBenutzer]=useState(null);
@@ -1621,7 +1622,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       )}
                       {canEdit&&(
                         <DropMenu items={[
-                          {label:"Entfernen", icon:"trash", danger:true, onClick:async()=>{
+                          {label:"Entfernen", icon:"trash", danger:true, hidden:!canDelete, onClick:async()=>{
                             const next=(raw.funktionen||[]).filter(x=>x!==f);
                             await sb.from("mitglieder").update({funktionen:next}).eq("id",raw.id);
                             if(onReload) onReload();

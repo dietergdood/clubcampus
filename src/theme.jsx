@@ -1055,6 +1055,7 @@ function DropMenu({items}){
         <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999,fontFamily:FONT}}>
           {items.map((item,i)=>item==="sep"
             ?<div key={i} className="cc-menu-sep"/>
+            :item.hidden?null
             :<button key={i}
                 className={`cc-menu-item${item.danger?" cc-menu-item-danger":""}`}
                 onMouseDown={e=>{e.stopPropagation();}}
