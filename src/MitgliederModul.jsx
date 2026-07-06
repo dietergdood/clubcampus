@@ -313,13 +313,13 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                       </button>
                     )}
                     {canEdit&&raw.aktiv!==false&&(
-                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} archivieren?`,confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}}>
+                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} archivieren?`,confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}>
                         <TI n="archive" size={13}/> Archivieren
                       </button>
                     )}
                     {raw.aktiv===false&&(
                       <>
-                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}}}>
+                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}>
                           <TI n="user-check" size={13}/> Reaktivieren
                         </button>
                         <div className="cc-menu-sep"/>
@@ -668,7 +668,6 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
         </ModalOrSheet>
       )}
     </div>
-  </>
   );
 }
 
