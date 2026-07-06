@@ -1272,16 +1272,16 @@ reloadMember, refreshArchivCount, brauchtEltern,
               ...(age?[{l:"Alter",v:`${age} Jahre`}]:[]),
               ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):null}]:[]),
               {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":raw.geschlecht||null},
-              {l:"Nationalität", v:raw.nationalitaet||null, flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null},
+              {l:"Nationalität", v:raw.nationalitaet||null, flag:raw.nationalitaet?raw.nationalitaet.toUpperCase():null, flagName:raw.nationalitaet?getLandName(raw.nationalitaet):null, flag2:raw.nationalitaet2?raw.nationalitaet2.toUpperCase():null, flagName2:raw.nationalitaet2?getLandName(raw.nationalitaet2):null},
               {l:"Heimatort",    v:raw.heimatort||null},
               ...(fv.showAhv?[{l:"AHV-Nr.",v:raw.ahv_nr||null,masked:true}]:[]),
             ].filter(r=>canEdit||r.v).map((r,i)=>(
               <div key={i} className="cc-info-row">
                 <span className="cc-info-key">{r.l}</span>
                 {r.flag?(
-                  <span className="cc-info-val cc-row cc-gap-6">
-                    <span className="cc-land-badge">{r.flag}</span>
-                    <span>{r.flagName}</span>
+                  <span className="cc-info-val cc-row cc-gap-6" style={{flexWrap:"wrap"}}>
+                    <span className="cc-row cc-gap-4"><span className="cc-land-badge">{r.flag}</span><span>{r.flagName}</span></span>
+                    {r.flag2&&<><span style={{color:"var(--sub)"}}>·</span><span className="cc-row cc-gap-4"><span className="cc-land-badge">{r.flag2}</span><span>{r.flagName2}</span></span></>}
                   </span>
                 ):(
                   r.masked&&r.v
@@ -1810,6 +1810,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       alter:m.geburtsdatum?Math.floor((Date.now()-new Date(m.geburtsdatum))/(365.25*24*3600*1000)):null,
       geschlecht:m.geschlecht==="m"?"Männlich":m.geschlecht==="w"?"Weiblich":m.geschlecht||"-",
       nationalitaet:m.nationalitaet||"-",
+      nationalitaet2:m.nationalitaet2||null,
       position:m.position,
       fairgate_id:m.fairgate_id,
       js_nr:m.js_nr,
@@ -1840,6 +1841,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {key:"alter",         label:"Alter",          default:false},
       {key:"geschlecht",    label:"Geschlecht",     default:false},
       {key:"nationalitaet", label:"Nationalität",  default:false},
+      {key:"nationalitaet2", label:"Nationalität 2", default:false},
       {key:"heimatort",     label:"Heimatort",      default:false},
       {key:"ahv_nr",        label:"AHV-Nr.",        default:false},
     ]},
@@ -1893,7 +1895,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         if(k==="rollen") return (m.rollen||[]).join(", ");
         if(k==="teams") return (m.teams||[]).map(t=>t.name||t).join(", ");
         if(k==="funktionen") return (m.funktionen||[]).join(", ");
-        if(k==="geburtsdatum") return m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"";
+        if(k==="nationalitaet") return m.nationalitaet&&m.nationalitaet!=="-"?m.nationalitaet:"";
+        if(k==="nationalitaet2") return m.nationalitaet2||"";
         if(k==="eintritt") return m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"";
         if(k==="portal") return m.hat_portal_zugang?"Aktiv":"Kein Zugang";
         if(k==="datenpruefung") return m.profil_geprueft_at?"Geprüft":"Ausstehend";
@@ -2438,6 +2441,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                           case "alter": return <td key="alter" className="cc-members-td cc-members-td-sub">{m.alter||"—"}</td>;
                           case "geschlecht": return <td key="geschlecht" className="cc-members-td cc-members-td-sub">{m.geschlecht||"—"}</td>;
                           case "nationalitaet": return <td key="nationalitaet" className="cc-members-td cc-members-td-sub">{m.nationalitaet||"—"}</td>;
+                          case "nationalitaet2": return <td key="nationalitaet2" className="cc-members-td cc-members-td-sub">{m.nationalitaet2||"—"}</td>;
                           case "ort": return <td key="ort" className="cc-members-td cc-members-td-sub">{m.ort||"—"}</td>;
                           case "spielerpass": return <td key="spielerpass" className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>;
                           case "fairgate_id": return <td key="fairgate_id" className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>;
