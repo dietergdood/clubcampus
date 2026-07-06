@@ -142,13 +142,6 @@ function getFieldVisibility(role){
 function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
-  const [heroMenuOpen,setHeroMenuOpen]=useState(false);
-  const heroMenuRef=useRef(null);
-  useEffect(()=>{
-    function close(e){if(heroMenuRef.current&&!heroMenuRef.current.contains(e.target))setHeroMenuOpen(false);}
-    document.addEventListener("mousedown",close);
-    return()=>document.removeEventListener("mousedown",close);
-  },[]);
   const [editOpen,setEditOpen]=useState(false);
   const [editForm,setEditForm]=useState({...raw});
   const [editSaving,setEditSaving]=useState(false);
@@ -300,37 +293,13 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
               {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
             </div>
             {(canEdit||canDelete)&&(
-              <div ref={heroMenuRef} style={{position:"relative"}}>
-                <button className="cc-hero-banner-btn" onMouseDown={e=>e.stopPropagation()}
-                  onClick={e=>{e.stopPropagation();setHeroMenuOpen(o=>!o);}}>
-                  <TI n="dots-vertical" size={16}/>
-                </button>
-                {heroMenuOpen&&(
-                  <div className="cc-menu" style={{position:"absolute",top:"calc(100% + 4px)",right:0,left:"auto",zIndex:100}}>
-                    {canEdit&&(
-                      <button className="cc-menu-item" onClick={()=>{setHeroMenuOpen(false);setEditForm({...raw});setEditOpen(true);}}>
-                        <TI n="edit" size={13}/> Bearbeiten
-                      </button>
-                    )}
-                    {canEdit&&raw.aktiv!==false&&(
-                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}>
-                        <TI n="archive" size={13}/> Archivieren
-                      </button>
-                    )}
-                    {raw.aktiv===false&&(
-                      <>
-                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}>
-                          <TI n="user-check" size={13}/> Reaktivieren
-                        </button>
-                        <div className="cc-menu-sep"/>
-                      </>
-                    )}
-                    <button className="cc-menu-item cc-menu-item-danger" onClick={()=>{setHeroMenuOpen(false);deleteMitglied();}}>
-                      <TI n="trash" size={13}/> Löschen
-                    </button>
-                  </div>
-                )}
-              </div>
+              <DropMenu items={[
+                ...(canEdit?[{icon:"edit",label:"Bearbeiten",onClick:()=>{setEditForm({...raw});setEditOpen(true);}}]:[]),
+                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
+                ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
+                "sep",
+                {icon:"trash",label:"Löschen",danger:true,onClick:()=>deleteMitglied()},
+              ]}/>
             )}
           </div>
         </div>
