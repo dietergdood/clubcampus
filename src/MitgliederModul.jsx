@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar } from "./theme.jsx";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader } from "./theme.jsx";
 import { getRole } from "./NavigationModul.jsx";
 
 /* ── Länderliste ISO2 → {name, flag} ── */
@@ -814,10 +814,8 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
                 <tr>
                   {archivSelectMode&&<th className="cc-members-th" style={{width:36}}><input type="checkbox" onChange={e=>setArchivSelected(e.target.checked?filtered.map(m=>m.id):[])}/></th>}
                   {[["nachname","Name"],["mitgliedtyp","Mitgliedschaft"],["deaktiviert_am","Archiviert am"],["deaktiviert_von","Archiviert von"]].map(([col,lbl])=>(
-                    <th key={col} className="cc-members-th" style={{cursor:"pointer"}} onClick={()=>{
-                      if(archivSortCol===col) setArchivSortDir(d=>d==="asc"?"desc":"asc");
-                      else{setArchivSortCol(col);setArchivSortDir("asc");}
-                    }}>{lbl}{archivSortCol===col&&<span className="cc-sort-arrow">{archivSortDir==="asc"?"▲":"▼"}</span>}</th>
+                    <SortHeader key={col} col={col} label={lbl} sortCol={archivSortCol} sortDir={archivSortDir}
+                      onSort={col=>{if(archivSortCol===col)setArchivSortDir(d=>d==="asc"?"desc":"asc");else{setArchivSortCol(col);setArchivSortDir("asc");}}}/>
                   ))}
                   <th className="cc-members-th"/>
                 </tr>

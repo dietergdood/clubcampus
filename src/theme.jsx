@@ -1686,4 +1686,22 @@ function BulkBar({
   );
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar };
+
+/* ── SortHeader: Sortierbarer Tabellen-Header ── */
+function SortHeader({label, col, sortCol, sortDir, onSort, style={}, className="cc-members-th"}){
+  const active=sortCol===col;
+  return(
+    <th
+      className={className}
+      style={{cursor:"pointer",...style}}
+      onClick={()=>onSort(col)}>
+      {label}
+      {active
+        ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
+        :<span className="cc-sort-arrow cc-text-muted">↕</span>
+      }
+    </th>
+  );
+}
+
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader };
