@@ -908,7 +908,7 @@ function Av({name,init,size="md",bg,useTheme=false}){
   const r = Math.round(px/4);
   const palette = bg ? {bg, text:bg.includes("cc-hover")||bg.includes("cc-accent")||bg.includes("rgba(255")||bg==="#FFBF00"?"var(--cc-avatar-text,#7A6000)":"#fff"} : avColor(name);
   const isIcon = init && TI_PATHS[init];
-  const l = isIcon ? null : (init||name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()||"?");
+  const l = isIcon ? null : (init||(name||"?").split(" ").filter(Boolean).map(n=>n[0]||"").join("").slice(0,2).toUpperCase()||"?");
   const fs = px<=24?9:px<=32?11:13;
   return(
     <div style={{width:px,height:px,borderRadius:r,background:palette.bg,
