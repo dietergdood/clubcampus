@@ -313,7 +313,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                       </button>
                     )}
                     {canEdit&&raw.aktiv!==false&&(
-                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} archivieren?`,confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}>
+                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}>
                         <TI n="archive" size={13}/> Archivieren
                       </button>
                     )}
@@ -1925,7 +1925,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
   async function handleBulkDeactivate(){
     if(!sb||selected.size===0) return;
-    const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,confirmLabel:"Archivieren"});if(!ok) return;
+    const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok) return;
     const ids=[...selected];
     const deaktiviertVon=account?.name||account?.email||"Administrator";
     await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:deaktiviertVon}).in("id",ids);
