@@ -2258,14 +2258,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           >{v.label}</button>
         ))}
         {customViews.map(v=>(
-          <div key={v.id} className="cc-ml-view-custom">
+          <div key={v.id} className={`cc-ml-view-custom${savedView==="custom_"+v.id?" cc-ml-view-custom-active":""}`}>
             <button
               className={`cc-ml-view-btn${savedView==="custom_"+v.id?" cc-ml-view-btn-active":""}`}
               onClick={()=>applyCustomView(v)}
             >{v.name}</button>
-            <button className="cc-ml-view-del" onClick={()=>deleteCustomView(v.id)} title="Löschen">
-              <TI n="x" size={10}/>
-            </button>
+            {savedView==="custom_"+v.id&&(
+              <button className="cc-ml-view-del-active" onClick={()=>deleteCustomView(v.id)} title="Löschen">
+                <TI n="x" size={11}/>
+              </button>
+            )}
           </div>
         ))}
         {saveViewOpen?(

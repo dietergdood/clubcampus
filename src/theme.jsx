@@ -504,8 +504,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-view-btn:hover{background:var(--surface2);color:var(--text)}
 .cc-ml-view-btn-active{background:var(--cc-accent,#FFBF00);color:#000;border-color:var(--cc-accent,#FFBF00)}
 .cc-ml-view-custom{display:flex;align-items:center;gap:2px}
-.cc-ml-view-del{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--sub);cursor:pointer;opacity:0.4;transition:color 0.1s,opacity 0.1s;flex-shrink:0}
-.cc-ml-view-del:hover{color:#DC2626;opacity:1}
+.cc-ml-view-custom{display:inline-flex;align-items:center}
+.cc-ml-view-custom-active{background:#000;border-radius:20px;padding-right:4px}
+.cc-ml-view-custom-active .cc-ml-view-btn-active{border-radius:20px 0 0 20px;padding-right:6px}
+.cc-ml-view-del-active{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;flex-shrink:0}
+.cc-ml-view-del-active:hover{background:rgba(220,38,38,0.8)}
 .cc-ml-view-save-form{display:flex;align-items:center;gap:6px}
 .cc-ml-view-save-input{padding:4px 10px;border:0.5px solid var(--border);border-radius:20px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);outline:none;width:160px}
 .cc-ml-view-save-input:focus{border-color:var(--cc-accent,#FFBF00)}
