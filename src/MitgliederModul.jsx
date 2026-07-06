@@ -837,7 +837,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
 }
 
 
-function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
+function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount}){
   const [confirm,confirmDialog]=useConfirm();
   const [notizen,setNotizen]=useState(null);
   const [newText,setNewText]=useState("");
@@ -850,7 +850,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
     if(!sb||!mitgliedId) return;
     sb.from("mitglieder_notizen").select("*")
       .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false})
-      .then(({data})=>setNotizen(data||[]));
+      .then(({data})=>{const d=data||[];setNotizen(d);if(onCount)onCount(d.length);});
   },[mitgliedId]);
 
   async function addNotiz(){
@@ -863,7 +863,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
     });
     const {data:fresh}=await sb.from("mitglieder_notizen").select("*")
       .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false});
-    setNotizen(fresh||[]);
+    const d=fresh||[];setNotizen(d);if(onCount)onCount(d.length);
     setNewText(""); setAdding(false);
   }
 
@@ -878,7 +878,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
   async function deleteNotiz(id){
     const ok=await confirm({title:"Notiz löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("mitglieder_notizen").delete().eq("id",id);
-    setNotizen(prev=>prev.filter(n=>n.id!==id));
+    setNotizen(prev=>{const d=prev.filter(n=>n.id!==id);if(onCount)onCount(d.length);return d;});
   }
 
   function formatDate(ts){
@@ -988,6 +988,8 @@ reloadMember, refreshArchivCount, brauchtEltern,
     return()=>document.removeEventListener("mousedown",handler);
   },[mehrOpen]);
   const [portalMsg,setPortalMsg]=useState(null);
+  const [ahvVisible,setAhvVisible]=useState(false);
+  const [notizenCount,setNotizenCount]=useState(null);
   const [linkEmail,setLinkEmail]=useState(raw.email||"");
   const [teamDetails,setTeamDetails]=useState(null);
   const [showTeamAssign,setShowTeamAssign]=useState(false);
@@ -1279,7 +1281,15 @@ reloadMember, refreshArchivCount, brauchtEltern,
                   </span>
                 ):(
                   r.masked&&r.v
-                  ?<span className="cc-ahv-mask">••• •• ••••</span>
+                  ?<span className="cc-ahv-row">
+                    {ahvVisible
+                      ?<span className="cc-info-val">{r.v}</span>
+                      :<span className="cc-ahv-mask">••• •• ••••</span>
+                    }
+                    <button className="cc-ahv-toggle" onClick={()=>setAhvVisible(v=>!v)} title={ahvVisible?"Verbergen":"Anzeigen"}>
+                      <TI n={ahvVisible?"eye-off":"eye"} size={14}/>
+                    </button>
+                  </span>
                   :<span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
                 )}
               </div>
@@ -1580,8 +1590,11 @@ reloadMember, refreshArchivCount, brauchtEltern,
           {/* Notizen */}
           {fv.showNotizen&&(
             <Card className="cc-card-full">
-              <div className="cc-section-title"><TI n="notes" size={14}/> Notizen</div>
-              <NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={account}/>
+              <div className="cc-section-title">
+                <TI n="notes" size={14}/> Notizen
+                {notizenCount>0&&<span className="cc-notiz-count-badge">{notizenCount}</span>}
+              </div>
+              <NotizenVerlauf mitgliedId={raw.id} canEdit={canEdit} sb={sb} dbUser={account} onCount={setNotizenCount}/>
             </Card>
           )}
         </div>

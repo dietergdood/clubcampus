@@ -649,6 +649,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-funk-group-label{font-size:11px;color:var(--sub);margin-bottom:6px;display:block}
 .cc-detail-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
 .cc-ahv-mask{letter-spacing:2px;color:var(--sub);font-size:13px}
+.cc-ahv-row{display:flex;align-items:center;gap:6px}
+.cc-ahv-toggle{background:none;border:none;padding:2px;cursor:pointer;color:var(--sub);display:flex;align-items:center;line-height:1;border-radius:4px}
+.cc-ahv-toggle:hover{color:var(--text)}
+.cc-notiz-count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;font-size:11px;font-weight:600;background:rgba(255,191,0,0.15);color:#856404;border:0.5px solid rgba(255,191,0,0.3);margin-left:6px}
 .cc-hero-status-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .cc-hero-status-badge-warn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:#92400e;border:0.5px solid var(--border)}
 .cc-hero-status-badge-ok{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:#166534;border:0.5px solid var(--border)}
