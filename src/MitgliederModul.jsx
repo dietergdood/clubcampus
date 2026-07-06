@@ -1349,6 +1349,23 @@ reloadMember, refreshArchivCount, brauchtEltern,
             );
           })()}
 
+          {/* Vereinsdaten */}
+          <Card className="cc-card-full">
+            <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
+            <div className="cc-info-grid">
+              {[
+                ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||null},{l:"J+S Nr.",v:raw.js_nr||null}]:[]),
+                ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||null}]:[]),
+                {l:"Eintritt", v:raw.eintrittsdatum?new Date(raw.eintrittsdatum).toLocaleDateString("de-CH"):null},
+              ].filter(r=>canEdit||r.v).map((r,i)=>(
+                <div key={i} className="cc-info-row">
+                  <span className="cc-info-key">{r.l}</span>
+                  <span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
           {/* Teams */}
           <Card>
             <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
@@ -1463,23 +1480,6 @@ reloadMember, refreshArchivCount, brauchtEltern,
               <Btn variant="primary" onClick={saveFunktionen}>Speichern</Btn>
             </div>
           </ModalOrSheet>
-
-          {/* Vereinsdaten */}
-          <Card className="cc-card-full">
-            <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
-            <div className="cc-info-grid">
-              {[
-                ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||null},{l:"J+S Nr.",v:raw.js_nr||null}]:[]),
-                ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||null}]:[]),
-                {l:"Eintritt", v:raw.eintrittsdatum?new Date(raw.eintrittsdatum).toLocaleDateString("de-CH"):null},
-              ].filter(r=>canEdit||r.v).map((r,i)=>(
-                <div key={i} className="cc-info-row">
-                  <span className="cc-info-key">{r.l}</span>
-                  <span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
 
           {/* Team zuweisen Modal */}
           <ModalOrSheet open={showTeamAssign} onClose={()=>setShowTeamAssign(false)} maxWidth={560}>
