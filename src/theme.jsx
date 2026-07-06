@@ -546,7 +546,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-menu-icon-lock{opacity:0.3;margin-right:2px}
 .cc-col-menu-hdr-mt{margin-top:8px}
 .cc-col-menu-group-hdr{font-size:10px;font-weight:500;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px 4px}
-.cc-members-name-link{cursor:pointer;font-weight:500;color:inherit}
+.cc-members-name-link{cursor:pointer;font-weight:600}
 .cc-members-name-link:hover{text-decoration:underline;text-underline-offset:2px}
 .cc-col-search-wrap{display:flex;align-items:center;gap:6px;margin:4px 8px 2px;padding:4px 8px;background:var(--surface1);border:0.5px solid var(--border);border-radius:6px}
 .cc-col-search-icon{color:var(--sub);flex-shrink:0}
