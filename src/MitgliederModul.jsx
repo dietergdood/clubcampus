@@ -1207,7 +1207,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
   const MemberDetail=({m,onClose,onNavToTeam=null})=>{
-    const raw=dbMitglieder.find(d=>d.id===m.id)||{};
+    const raw=dbMitglieder.find(d=>d.id===m.id)||m||{};
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
