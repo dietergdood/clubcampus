@@ -682,11 +682,11 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
   const isMobile=useIsMobile();
   const [archivSearch,setArchivSearch]=useState("");
   const [archivFilterVals,setArchivFilterVals]=useState({});
-  const [archivFilterOpen,setArchivFilterOpen]=useState(false);
   const [archivGroupBy,setArchivGroupBy]=useState("none");
-  const [archivGroupOpen,setArchivGroupOpen]=useState(false);
   const [archivSortCol,setArchivSortCol]=useState("deaktiviert_am");
   const [archivSortDir,setArchivSortDir]=useState("desc");
+  const [archivSelectMode,setArchivSelectMode]=useState(false);
+  const [archivSelected,setArchivSelected]=useState([]);
 
   async function reaktivieren(e,id,name){
     e.stopPropagation();
@@ -755,106 +755,43 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
         <TI n="info-circle" size={15}/>
         Archivierte Mitglieder — Daten sind noch vorhanden und können reaktiviert werden.
       </div>
-      <div className="cc-ml-toolbar cc-mb-16">
-        <div className="cc-ml-srch">
-          <TI n="search" size={15} className="cc-input-icon"/>
-          <input value={archivSearch} onChange={e=>setArchivSearch(e.target.value)} placeholder="Suchen…"/>
+      <Toolbar
+        search={archivSearch} onSearch={setArchivSearch}
+        filterDefs={ARCHIV_FILTER_DEFS}
+        filterVals={archivFilterVals}
+        onFilterChange={(key,val,active)=>{
+          if(key==="__reset"){setArchivFilterVals({});return;}
+          setArchivFilterVals(prev=>({
+            ...prev,
+            [key]:active?[...(prev[key]||[]),val]:(prev[key]||[]).filter(x=>x!==val)
+          }));
+        }}
+        groupOptions={ARCHIV_GROUP_OPTIONS}
+        groupBy={archivGroupBy} onGroupChange={setArchivGroupBy}
+        moreItems={[
+          {header:true,label:"Aktionen"},
+          {icon:"checkbox",label:archivSelectMode?"Auswahl beenden":"Mehrere auswählen",onClick:()=>{setArchivSelectMode(o=>!o);setArchivSelected([]);} },
+        ]}
+      />
+      {archivSelectMode&&archivSelected.length>0&&(
+        <div className="cc-ml-bulk-bar cc-mb-16">
+          <span className="cc-text-sub">{archivSelected.length} ausgewählt</span>
+          <Btn small onClick={async()=>{
+            if(!sb||!window.confirm(`${archivSelected.length} Mitglieder reaktivieren?`)) return;
+            for(const id of archivSelected){
+              await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
+              if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
+            }
+            setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
+          }}><TI n="user-check" size={13}/> Reaktivieren</Btn>
+          <Btn small variant="danger" onClick={async()=>{
+            if(!sb||!window.confirm(`${archivSelected.length} Mitglieder unwiderruflich löschen?`)) return;
+            for(const id of archivSelected) await sb.from("mitglieder").delete().eq("id",id);
+            setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
+          }}><TI n="trash" size={13}/> Löschen</Btn>
+          <Btn small onClick={()=>{setArchivSelectMode(false);setArchivSelected([]);}}><TI n="x" size={12}/></Btn>
         </div>
-        <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${archivGroupBy!=="none"?" cc-active":""}`} onClick={()=>setArchivGroupOpen(o=>!o)}>
-            <TI n="layout-rows" size={15}/>
-            {!isMobile&&"Gruppieren"}
-          </button>
-          {archivGroupOpen&&(
-            isMobile?(
-              <div className="cc-mehr-sheet-overlay" onClick={()=>setArchivGroupOpen(false)}>
-                <div className="cc-mehr-sheet-backdrop"/>
-                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
-                  <div className="cc-mehr-sheet-handle"/>
-                  <div className="cc-mehr-sheet-title">Gruppieren nach</div>
-                  {ARCHIV_GROUP_OPTIONS.map(o=>(
-                    <div key={o.val} className="cc-mehr-sheet-item"
-                      style={{fontWeight:archivGroupBy===o.val?600:400,color:archivGroupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
-                      onMouseDown={e=>{e.stopPropagation();setArchivGroupBy(o.val);setArchivGroupOpen(false);}}>
-                      {archivGroupBy===o.val&&<TI n="check" size={14}/>}{o.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ):(
-              <div className="cc-ml-dropdown">
-                <div className="cc-col-menu-hdr">Gruppieren nach</div>
-                {ARCHIV_GROUP_OPTIONS.map(o=>(
-                  <div key={o.val} className="cc-col-menu-item" onClick={()=>{setArchivGroupBy(o.val);setArchivGroupOpen(false);}}>
-                    <div className={`cc-col-menu-check${archivGroupBy===o.val?" cc-col-menu-check-on":""}`}>{archivGroupBy===o.val&&<TI n="check" size={10}/>}</div>
-                    {o.label}
-                  </div>
-                ))}
-              </div>
-            )
-          )}
-        </div>
-        <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${hasActiveFilter?" cc-active":""}`} onClick={()=>setArchivFilterOpen(o=>!o)}>
-            <TI n="filter" size={15}/>
-            {!isMobile&&"Filter"}
-            {hasActiveFilter&&<span className="cc-ml-filter-dot"/>}
-          </button>
-          {archivFilterOpen&&(
-            isMobile?(
-              <div className="cc-mehr-sheet-overlay" onClick={()=>setArchivFilterOpen(false)}>
-                <div className="cc-mehr-sheet-backdrop"/>
-                <div className="cc-mehr-sheet-box cc-filter-sheet-box" onClick={e=>e.stopPropagation()}>
-                  <div className="cc-mehr-sheet-handle"/>
-                  <div className="cc-mehr-sheet-title">Filter</div>
-                  {ARCHIV_FILTER_DEFS.map(({key,label,vals})=>(
-                    <div key={key}>
-                      <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 0 4px"}}>{label}</div>
-                      {vals.map(v=>{
-                        const active=(archivFilterVals[key]||[]).includes(v);
-                        return(
-                          <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 0"}}
-                            onMouseDown={e=>{e.stopPropagation();setArchivFilterVals(prev=>({...prev,[key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]}));}}>
-                            <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
-                            {v}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                  <div className="cc-ml-dropdown-footer" style={{padding:"12px 0 0"}}>
-                    <button className="cc-ml-dropdown-clear" onMouseDown={()=>setArchivFilterVals({})}>Zurücksetzen</button>
-                    <button className="cc-ml-dropdown-apply" onMouseDown={()=>setArchivFilterOpen(false)}>Fertig</button>
-                  </div>
-                </div>
-              </div>
-            ):(
-              <div className="cc-ml-dropdown cc-ml-filter-dropdown">
-                <div className="cc-col-menu-hdr">Filter</div>
-                {ARCHIV_FILTER_DEFS.map(({key,label,vals})=>(
-                  <div key={key}>
-                    <div className="cc-ml-dropdown-section-lbl">{label}</div>
-                    {vals.map(v=>{
-                      const active=(archivFilterVals[key]||[]).includes(v);
-                      return(
-                        <div key={v} className="cc-col-menu-item" onClick={()=>setArchivFilterVals(prev=>({...prev,[key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]}))}
-                        >
-                          <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
-                          {v}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-                <div className="cc-ml-dropdown-footer">
-                  <button className="cc-ml-dropdown-clear" onClick={()=>setArchivFilterVals({})}>Zurücksetzen</button>
-                  <button className="cc-ml-dropdown-apply" onClick={()=>setArchivFilterOpen(false)}>Fertig</button>
-                </div>
-              </div>
-            )
-          )}
-        </div>
-      </div>
+      )}
       {hasActiveFilter&&(
         <div className="cc-ml-chips cc-mb-16">
           {Object.entries(archivFilterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
@@ -872,6 +809,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
             <table className="cc-members-table">
               <thead>
                 <tr>
+                  {archivSelectMode&&<th className="cc-members-th" style={{width:36}}><input type="checkbox" onChange={e=>setArchivSelected(e.target.checked?filtered.map(m=>m.id):[])}/></th>}
                   {[["nachname","Name"],["mitgliedtyp","Mitgliedschaft"],["deaktiviert_am","Archiviert am"],["deaktiviert_von","Archiviert von"]].map(([col,lbl])=>(
                     <th key={col} className="cc-members-th" style={{cursor:"pointer"}} onClick={()=>{
                       if(archivSortCol===col) setArchivSortDir(d=>d==="asc"?"desc":"asc");
@@ -888,7 +826,8 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
                       <tr><td colSpan={5} className="cc-members-list-group-hdr">{key} <span className="cc-text-muted">({members.length})</span></td></tr>
                     )}
                     {members.map(m=>(
-                  <tr key={m.id} className="cc-members-tr" onClick={()=>onOpenMember&&onOpenMember(m)}>
+                  <tr key={m.id} className="cc-members-tr" onClick={()=>!archivSelectMode&&onOpenMember&&onOpenMember(m)}>
+                      {archivSelectMode&&<td className="cc-members-td" style={{width:36}} onClick={e=>e.stopPropagation()}><input type="checkbox" checked={archivSelected.includes(m.id)} onChange={e=>setArchivSelected(prev=>e.target.checked?[...prev,m.id]:prev.filter(id=>id!==m.id))}/></td>}
                     <td className="cc-members-td">
                       <div className="cc-row cc-gap-8">
                         <Av name={`${m.vorname||""} ${m.nachname||""}`} size={26}/>
