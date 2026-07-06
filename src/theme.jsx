@@ -645,7 +645,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-status-badge-warn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:#92400e;border:0.5px solid var(--border)}
 .cc-hero-status-badge-ok{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:#166534;border:0.5px solid var(--border)}
 .cc-hero-badge-type{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
-.cc-hero-av-initials{font-size:22px;font-weight:600;color:var(--nav-t,#FFFFFF)}
+.cc-hero-av-initials{font-size:22px;font-weight:600;color:var(--cc-avatar-text)}
 .cc-form-nr{width:90px}
 .cc-hero-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:0.5px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;flex-shrink:0}
 .cc-hero-back:hover{background:var(--surface2)}
