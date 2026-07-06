@@ -2327,7 +2327,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           <div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
             <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
               onClick={()=>setColMenuOpen(o=>!o)}>
-              <TI n="layout-columns" size={15}/>
+              <TI n="table" size={15}/>
             </button>
             {colMenuOpen&&(
               <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
