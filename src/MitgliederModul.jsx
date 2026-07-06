@@ -1904,8 +1904,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     ]},
     {group:"Sport", cols:[
       {key:"teams",         label:"Teams",          default:true},
-      {key:"position",      label:"Position",       default:false},
-      {key:"rueckennr",     label:"Trikotnummer",   default:false},
     ]},
   ];
   const ALL_COLS=COL_GROUPS.flatMap(g=>g.cols);

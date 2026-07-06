@@ -275,7 +275,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0}
 .cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:hidden;z-index:200}
 .cc-ml-filter-dropdown{min-width:220px}
-.cc-ml-group-dropdown{min-width:200px}
+.cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
 .cc-ml-dropdown-section-lbl{padding:6px 12px 2px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
 .cc-ml-dropdown-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cc-ml-dropdown-clear{font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;font-family:inherit}
@@ -1378,7 +1378,7 @@ function Toolbar({
                   </div>
                 </div>
               ):(
-                <div className="cc-ml-dropdown">
+                <div className="cc-ml-dropdown cc-ml-group-dropdown">
                   <div className="cc-col-menu-hdr">Gruppieren nach</div>
                   {groupOptions.map(o=>(
                     <div key={o.val} className="cc-col-menu-item"
