@@ -1916,7 +1916,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   ];
   const ALL_COLS=COL_GROUPS.flatMap(g=>g.cols);
   const [visibleCols,setVisibleCols]=useState(()=>SAVED_VIEWS.standard.cols);
-  const COLS=ALL_COLS.filter(c=>visibleCols.includes(c.key));
+  const COLS=visibleCols.map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
   const GROUP_OPTIONS=[
     {val:"none",           label:"Keine Gruppierung"},
     {val:"mitgliedschaft", label:"Nach Mitgliedschaft"},
