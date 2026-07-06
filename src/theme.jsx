@@ -609,11 +609,14 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-tile-value-warn{font-size:14px;font-weight:600;color:#B45309}
 .cc-status-tile-value-ok{font-size:14px;font-weight:600;color:#166534}
 .cc-status-tile-value-danger{font-size:14px;font-weight:600;color:#991B1B}
-.cc-info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.cc-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cc-info-row{padding:8px 0;border-bottom:0.5px solid var(--border)}
 .cc-info-row:last-child{border-bottom:none}
-.cc-info-key{font-size:13px;color:var(--sub);flex-shrink:0;min-width:110px}
-.cc-info-val{font-size:14px;font-weight:500;color:var(--text);text-align:right}
-.cc-info-val-empty{font-size:14px;color:var(--sub);text-align:right}
+.cc-info-row:nth-child(odd){padding-right:14px;border-right:0.5px solid var(--border)}
+.cc-info-row:nth-child(even){padding-left:14px;border-right:none}
+.cc-info-key{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--sub);margin-bottom:2px;display:block}
+.cc-info-val{font-size:14px;font-weight:500;color:var(--text);text-align:left}
+.cc-info-val-empty{font-size:14px;color:var(--sub);text-align:left}
 .cc-list-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
 .cc-role-list-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:pointer}
 .cc-role-list-item:last-child{border-bottom:none}
@@ -675,7 +678,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 @media(max-width:680px){
   .cc-form-row,.cc-grid-2,.cc-grid-3{grid-template-columns:1fr!important}
   .cc-page-hdr{flex-direction:column;align-items:flex-start}
-  .cc-info-key{min-width:90px;font-size:12px}
+  .cc-info-grid{grid-template-columns:1fr}
+  .cc-info-row:nth-child(odd){padding-right:0;border-right:none}
+  .cc-info-row:nth-child(even){padding-left:0}
+  .cc-info-key{font-size:10px}
   .cc-member-hero-banner{padding:12px 12px 14px;padding-right:12px;gap:10px}
   .cc-hero-av-wrap{width:52px;height:52px}
   .cc-member-hero-av{width:52px;height:52px;font-size:16px}

@@ -1265,6 +1265,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
           {/* Personalien */}
           <Card>
             <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
+            <div className="cc-info-grid">
             {[
               ...(age?[{l:"Alter",v:`${age} Jahre`}]:[]),
               ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):null}]:[]),
@@ -1287,6 +1288,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
                 )}
               </div>
             ))}
+            </div>
           </Card>
 
           {/* Kontakt + Hauptkontakt */}
@@ -1297,6 +1299,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
             return(
               <Card>
                 <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
+                <div className="cc-info-grid">
                 {[
                   ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||null, link:`mailto:${raw.email}`}]:[]),
                   ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||null}]:[]),
@@ -1310,6 +1313,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
                     <span className={r.v?"cc-info-val":"cc-info-val-empty"} style={r.link?{color:"var(--cc-blue,#0369a1)"}:{}}>{r.v||"—"}</span>
                   </div>
                 ))}
+                </div>
                 {/* Hauptkontakt als Mini-Karte */}
                 {hk&&(
                   <>
@@ -1453,7 +1457,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
           {/* Vereinsdaten */}
           <Card className="cc-card-full">
             <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
-            <div className="cc-detail-grid-2">
+            <div className="cc-info-grid">
               {[
                 ...(fv.showPass?[{l:"Spielerpass",v:raw.spielerpass||null},{l:"J+S Nr.",v:raw.js_nr||null}]:[]),
                 ...(fv.showFairgateId?[{l:"Fairgate-ID",v:raw.fairgate_id||null}]:[]),
@@ -1590,7 +1594,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
               <Chip text={raw.hat_portal_zugang?"Aktiv":"Kein Zugang"} color={raw.hat_portal_zugang?GN:R} bg={raw.hat_portal_zugang?"#ECFDF5":RL}/>
             </div>
             {raw.hat_portal_zugang&&benutzer&&(
-              <div className="cc-col cc-gap-8 cc-mb-12">
+              <div className="cc-info-grid cc-mb-12">
                 {[
                   {l:"E-Mail",   v:benutzer.email||"-"},
                   {l:"Rolle",    v:benutzer.role||"-"},
@@ -1641,7 +1645,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
                 bg={raw.profil_geprueft_at?"#ECFDF5":"#FFFBEB"}
               />
             </div>
-            <div className="cc-col cc-gap-8">
+            <div className="cc-info-grid">
               {[
                 {l:"Vorname",      ok:!!raw.vorname},
                 {l:"Nachname",     ok:!!raw.nachname},
