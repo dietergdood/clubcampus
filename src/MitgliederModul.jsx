@@ -265,8 +265,6 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
                 const hatSpielerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>!TRAINER_ROLLEN.includes(r)));
                 const chips=[];
-                if(mitgliedtyp) chips.push({label:mitgliedtyp,type:"type"});
-                
                 if(hatTrainerKader) chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"rolle"});
                 if(hatSpielerKader) chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"rolle"});
                 if(benutzer?.role==="funktionaer") chips.push({label:ROLLE_LABEL["funktionaer"]||"Funktionär",type:"rolle"});
@@ -277,9 +275,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 const hidden=chips.length-MAX;
                 return(
                   <>
-                    {visible.map((c,i)=>(
-                      <span key={i} className={`cc-hero-chip${c.type==="type"?" cc-hero-chip-primary":c.type==="age"?" cc-hero-chip-age":""}`}>{c.label}</span>
-                    ))}
+                    {visible.map((c,i)=>(<span key={i} className="cc-hero-chip cc-hero-chip-primary">{c.label}</span>))}
                     {hidden>0&&<span className="cc-hero-chip">+{hidden}</span>}
                   </>
                 );
