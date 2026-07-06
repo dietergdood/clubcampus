@@ -683,6 +683,10 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
   const [archivSearch,setArchivSearch]=useState("");
   const [archivFilterVals,setArchivFilterVals]=useState({});
   const [archivFilterOpen,setArchivFilterOpen]=useState(false);
+  const [archivGroupBy,setArchivGroupBy]=useState("none");
+  const [archivGroupOpen,setArchivGroupOpen]=useState(false);
+  const [archivSortCol,setArchivSortCol]=useState("deaktiviert_am");
+  const [archivSortDir,setArchivSortDir]=useState("desc");
 
   async function reaktivieren(e,id,name){
     e.stopPropagation();
@@ -701,6 +705,19 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
 
   const ARCHIV_FILTER_DEFS=[
     {key:"mitgliedtyp", label:"Mitgliedschaft", vals:[...new Set(archivData.map(m=>m.mitgliedtyp).filter(Boolean))].sort()},
+    {key:"deaktiviert_von", label:"Archiviert von", vals:[...new Set(archivData.map(m=>m.deaktiviert_von).filter(Boolean))].sort()},
+  ];
+  const ARCHIV_GROUP_OPTIONS=[
+    {val:"none",           label:"Keine Gruppierung"},
+    {val:"mitgliedtyp",    label:"Nach Mitgliedschaft"},
+    {val:"deaktiviert_von",label:"Nach Archiviert von"},
+    {val:"__archiviertjahr",label:"Nach Archiviert im Jahr"},
+  ];
+  const ARCHIV_SORT_OPTIONS=[
+    {val:"nachname",       label:"Name"},
+    {val:"mitgliedtyp",    label:"Mitgliedschaft"},
+    {val:"deaktiviert_am", label:"Archiviert am"},
+    {val:"deaktiviert_von",label:"Archiviert von"},
   ];
   const hasActiveFilter=Object.values(archivFilterVals).some(v=>v&&v.length>0);
 
@@ -712,7 +729,25 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
       if(!vals.includes(m[k])) return false;
     }
     return true;
+  }).sort((a,b)=>{
+    const av=a[archivSortCol]||"";
+    const bv=b[archivSortCol]||"";
+    const cmp=String(av).localeCompare(String(bv));
+    return archivSortDir==="asc"?cmp:-cmp;
   });
+
+  function getArchivGroupKey(m){
+    if(archivGroupBy==="__archiviertjahr") return m.deaktiviert_am?String(new Date(m.deaktiviert_am).getFullYear()):"Unbekannt";
+    return m[archivGroupBy]||"-";
+  }
+  const archivGroups=archivGroupBy==="none"
+    ?[{key:"",members:filtered}]
+    :Object.entries(filtered.reduce((acc,m)=>{
+        const k=getArchivGroupKey(m);
+        if(!acc[k]) acc[k]=[];
+        acc[k].push(m);
+        return acc;
+      },{})).sort(([a],[b])=>String(a).localeCompare(String(b))).map(([k,members])=>({key:k,members}));
 
   return(
     <div>
@@ -724,6 +759,40 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
         <div className="cc-ml-srch">
           <TI n="search" size={15} className="cc-input-icon"/>
           <input value={archivSearch} onChange={e=>setArchivSearch(e.target.value)} placeholder="Suchen…"/>
+        </div>
+        <div className="cc-ml-dropdown-wrap">
+          <button className={`cc-ml-btn${archivGroupBy!=="none"?" cc-active":""}`} onClick={()=>setArchivGroupOpen(o=>!o)}>
+            <TI n="layout-rows" size={15}/>
+            {!isMobile&&"Gruppieren"}
+          </button>
+          {archivGroupOpen&&(
+            isMobile?(
+              <div className="cc-mehr-sheet-overlay" onClick={()=>setArchivGroupOpen(false)}>
+                <div className="cc-mehr-sheet-backdrop"/>
+                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                  <div className="cc-mehr-sheet-handle"/>
+                  <div className="cc-mehr-sheet-title">Gruppieren nach</div>
+                  {ARCHIV_GROUP_OPTIONS.map(o=>(
+                    <div key={o.val} className="cc-mehr-sheet-item"
+                      style={{fontWeight:archivGroupBy===o.val?600:400,color:archivGroupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
+                      onMouseDown={e=>{e.stopPropagation();setArchivGroupBy(o.val);setArchivGroupOpen(false);}}>
+                      {archivGroupBy===o.val&&<TI n="check" size={14}/>}{o.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ):(
+              <div className="cc-ml-dropdown">
+                <div className="cc-col-menu-hdr">Gruppieren nach</div>
+                {ARCHIV_GROUP_OPTIONS.map(o=>(
+                  <div key={o.val} className="cc-col-menu-item" onClick={()=>{setArchivGroupBy(o.val);setArchivGroupOpen(false);}}>
+                    <div className={`cc-col-menu-check${archivGroupBy===o.val?" cc-col-menu-check-on":""}`}>{archivGroupBy===o.val&&<TI n="check" size={10}/>}</div>
+                    {o.label}
+                  </div>
+                ))}
+              </div>
+            )
+          )}
         </div>
         <div className="cc-ml-dropdown-wrap">
           <button className={`cc-ml-btn${hasActiveFilter?" cc-active":""}`} onClick={()=>setArchivFilterOpen(o=>!o)}>
@@ -803,15 +872,22 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
             <table className="cc-members-table">
               <thead>
                 <tr>
-                  <th className="cc-members-th">Name</th>
-                  <th className="cc-members-th">Mitgliedschaft</th>
-                  <th className="cc-members-th">Archiviert am</th>
-                  <th className="cc-members-th">Archiviert von</th>
+                  {[["nachname","Name"],["mitgliedtyp","Mitgliedschaft"],["deaktiviert_am","Archiviert am"],["deaktiviert_von","Archiviert von"]].map(([col,lbl])=>(
+                    <th key={col} className="cc-members-th" style={{cursor:"pointer"}} onClick={()=>{
+                      if(archivSortCol===col) setArchivSortDir(d=>d==="asc"?"desc":"asc");
+                      else{setArchivSortCol(col);setArchivSortDir("asc");}
+                    }}>{lbl}{archivSortCol===col&&<span className="cc-sort-arrow">{archivSortDir==="asc"?"▲":"▼"}</span>}</th>
+                  ))}
                   <th className="cc-members-th"/>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(m=>(
+                {archivGroups.map(({key,members})=>(
+                  <Fragment key={key}>
+                    {archivGroupBy!=="none"&&(
+                      <tr><td colSpan={5} className="cc-members-list-group-hdr">{key} <span className="cc-text-muted">({members.length})</span></td></tr>
+                    )}
+                    {members.map(m=>(
                   <tr key={m.id} className="cc-members-tr" onClick={()=>onOpenMember&&onOpenMember(m)}>
                     <td className="cc-members-td">
                       <div className="cc-row cc-gap-8">
@@ -835,6 +911,8 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
                       </div>
                     </td>
                   </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -1850,7 +1928,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {val:"nationalitaet",  label:"Nach Nationalität"},
     {val:"ort",            label:"Nach Wohnort"},
     {val:"__jahrgang",     label:"Nach Jahrgang"},
-    {val:"__altersgruppe", label:"Nach Altersgruppe"},
     {val:"__eintrittsjahr",label:"Nach Eintrittsjahr"},
   ];
   function applyView(viewKey){
@@ -2010,17 +2087,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(g==="__jahrgang"){
       if(!m.geburtsdatum) return "Unbekannt";
       return String(new Date(m.geburtsdatum).getFullYear());
-    }
-    if(g==="__altersgruppe"){
-      if(!m.geburtsdatum) return "Unbekannt";
-      const age=Math.floor((new Date()-new Date(m.geburtsdatum))/31557600000);
-      if(age<10) return "U10";
-      if(age<13) return "U13";
-      if(age<16) return "U16";
-      if(age<19) return "U19";
-      if(age<30) return "Aktive (19-29)";
-      if(age<45) return "Aktive (30-44)";
-      return "Veteranen (45+)";
     }
     if(g==="__eintrittsjahr"){
       if(!m.eintritt) return "Unbekannt";
