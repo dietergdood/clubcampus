@@ -708,8 +708,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 }
 .cc-member-detail-wrap .cc-card{padding:14px 16px}
 .cc-member-detail-wrap .cc-info-row{padding:7px 0}
-.cc-member-detail-wrap .cc-info-row:nth-child(odd){padding-right:14px}
-.cc-member-detail-wrap .cc-info-row:nth-child(even){padding-left:14px}
+@media(min-width:681px){
+  .cc-member-detail-wrap .cc-info-row:nth-child(odd){padding-right:14px}
+  .cc-member-detail-wrap .cc-info-row:nth-child(even){padding-left:14px}
+}
 [data-theme=dark] .cc-status-tile-icon-warn{background:rgba(180,83,9,0.25);color:#FCD34D}
 [data-theme=dark] .cc-status-tile-icon-ok{background:rgba(22,101,52,0.25);color:#86EFAC}
 [data-theme=dark] .cc-status-tile-icon-danger{background:rgba(153,27,27,0.25);color:#FCA5A5}
