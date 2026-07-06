@@ -153,7 +153,7 @@ export const GB         = COLOR.border;
 
 /* ── Breakpoints ───────────────────────────────────────────── */
 export const BP = {
-  mobile: 680,
+  mobile: 768,
   tablet: 1024,
 };
 export const BP_MOBILE = BP.mobile;
