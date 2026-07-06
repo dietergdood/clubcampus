@@ -267,9 +267,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 const chips=[];
                 if(hatTrainerKader) chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"kader"});
                 if(hatSpielerKader) chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"kader"});
-                if(benutzer?.role==="funktionaer") chips.push({label:ROLLE_LABEL["funktionaer"]||"Funktionär",type:"portal"});
-                if(benutzer?.role&&["administrator","administration"].includes(benutzer.role))
-                  chips.push({label:ROLLE_LABEL[benutzer.role]||benutzer.role,type:"portal"});
+                if(benutzer?.role) chips.push({label:ROLLE_LABEL[benutzer.role]||benutzer.role,type:"portal"});
                 const MAX=isMobile?2:chips.length;
                 const visible=chips.slice(0,MAX);
                 const hidden=chips.length-MAX;
