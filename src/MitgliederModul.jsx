@@ -1053,13 +1053,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const filtered=allMembers.filter(m=>{
     if(search){
-      const q=search.toLowerCase();
-      const hit=m.name.toLowerCase().includes(q)||
-        m.mitgliedschaft.toLowerCase().includes(q)||
-        m.rollen.some(r=>r.toLowerCase().includes(q))||
-        m.teams.some(t=>(t?.name||t||"").toLowerCase().includes(q))||
-        (m.email||"").toLowerCase().includes(q);
-      if(!hit) return false;
+      const terms=search.toLowerCase().split(/\s+/).filter(Boolean);
+      const haystack=[
+        m.name,m.mitgliedschaft,
+        ...m.rollen,
+        ...m.teams.map(t=>t?.name||t||""),
+        ...m.teams.map(t=>t?.kurz||""),
+        m.email||"",
+      ].join(" ").toLowerCase();
+      if(!terms.every(t=>haystack.includes(t))) return false;
     }
     for(const [fKey,fVals] of Object.entries(filterVals)){
       if(!fVals||fVals.length===0) continue;
