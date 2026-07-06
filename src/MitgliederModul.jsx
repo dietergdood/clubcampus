@@ -664,12 +664,32 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-function ArchivView({archivData,archivLoaded,sb,account,onReload}){
-  async function reaktivieren(id,name){
+function ArchivView({archivData,archivLoaded,sb,account,onReload,onOpenMember}){
+  const [archivSearch,setArchivSearch]=useState("");
+  const [archivFilter,setArchivFilter]=useState("alle");
+
+  async function reaktivieren(e,id,name){
+    e.stopPropagation();
     if(!sb||!window.confirm(`${name} reaktivieren?`)) return;
     await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
     if(onReload) onReload();
   }
+
+  async function loeschen(e,id,name){
+    e.stopPropagation();
+    if(!sb||!window.confirm(`${name} unwiderruflich löschen (DSGVO)?`)) return;
+    await sb.from("mitglieder").delete().eq("id",id);
+    if(onReload) onReload();
+  }
+
+  const typen=["alle",...new Set(archivData.map(m=>m.mitgliedtyp).filter(Boolean))];
+
+  const filtered=archivData.filter(m=>{
+    const name=`${m.vorname||""} ${m.nachname||""}`.toLowerCase();
+    if(archivSearch&&!name.includes(archivSearch.toLowerCase())) return false;
+    if(archivFilter!=="alle"&&m.mitgliedtyp!==archivFilter) return false;
+    return true;
+  });
 
   return(
     <div>
@@ -677,9 +697,18 @@ function ArchivView({archivData,archivLoaded,sb,account,onReload}){
         <TI n="info-circle" size={15}/>
         Deaktivierte Mitglieder — Daten sind noch vorhanden und können reaktiviert werden.
       </div>
+      <div className="cc-ml-toolbar cc-mb-16">
+        <div className="cc-ml-srch">
+          <TI n="search" size={15} className="cc-input-icon"/>
+          <input value={archivSearch} onChange={e=>setArchivSearch(e.target.value)} placeholder="Suchen…"/>
+        </div>
+        <select className="cc-input" style={{width:"auto",minWidth:160}} value={archivFilter} onChange={e=>setArchivFilter(e.target.value)}>
+          {typen.map(t=><option key={t} value={t}>{t==="alle"?"Alle Mitgliedschaften":t}</option>)}
+        </select>
+      </div>
       {!archivLoaded&&<div className="cc-empty">Wird geladen…</div>}
-      {archivLoaded&&archivData.length===0&&<div className="cc-empty">Keine archivierten Mitglieder.</div>}
-      {archivLoaded&&archivData.length>0&&(
+      {archivLoaded&&filtered.length===0&&<div className="cc-empty">Keine archivierten Mitglieder gefunden.</div>}
+      {archivLoaded&&filtered.length>0&&(
         <Card flush>
           <div className="cc-table-wrap"><div className="cc-table-wrap-inner">
             <table className="cc-members-table">
@@ -693,8 +722,8 @@ function ArchivView({archivData,archivLoaded,sb,account,onReload}){
                 </tr>
               </thead>
               <tbody>
-                {archivData.map(m=>(
-                  <tr key={m.id} className="cc-members-tr">
+                {filtered.map(m=>(
+                  <tr key={m.id} className="cc-members-tr" onClick={()=>onOpenMember&&onOpenMember(m)}>
                     <td className="cc-members-td">
                       <div className="cc-row cc-gap-8">
                         <Av name={`${m.vorname||""} ${m.nachname||""}`} size={26}/>
@@ -707,9 +736,14 @@ function ArchivView({archivData,archivLoaded,sb,account,onReload}){
                     </td>
                     <td className="cc-members-td cc-members-td-sub">{m.deaktiviert_von||"—"}</td>
                     <td className="cc-members-td" style={{textAlign:"right"}}>
-                      <Btn small onClick={()=>reaktivieren(m.id,`${m.vorname} ${m.nachname}`)}>
-                        <TI n="user-check" size={13}/> Reaktivieren
-                      </Btn>
+                      <div className="cc-row cc-gap-6" onClick={e=>e.stopPropagation()}>
+                        <Btn small onClick={e=>reaktivieren(e,m.id,`${m.vorname} ${m.nachname}`)}>
+                          <TI n="user-check" size={13}/> Reaktivieren
+                        </Btn>
+                        <Btn small variant="danger" onClick={e=>loeschen(e,m.id,`${m.vorname} ${m.nachname}`)}>
+                          <TI n="trash" size={13}/>
+                        </Btn>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -717,7 +751,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onReload}){
             </table>
           </div></div>
           <div style={{padding:"8px 16px",fontSize:12,color:"var(--sub)"}}>
-            {archivData.length} deaktivierte Mitglieder
+            {filtered.length} von {archivData.length} archivierten Mitgliedern
           </div>
         </Card>
       )}
@@ -1948,7 +1982,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {archivTab?(
-        <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}}/>
+        <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={m=>setSelectedMember({...m,_tab:"info",_readonly:true})}/>
       ):(
       <>
       {/* KPI */}
