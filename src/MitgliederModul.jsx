@@ -1781,6 +1781,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [filterOpen,setFilterOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
   const [colMenuOpen,setColMenuOpen]=useState(false);
+  const [colSearch,setColSearch]=useState("");
   const [savedView,setSavedView]=useState("standard");
   const [dragCol,setDragCol]=useState(null);
   const [dragOverCol,setDragOverCol]=useState(null);
@@ -1869,6 +1870,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       rueckennr:m.rueckennr,
       foto_url:m.foto_url||null,
       funktionen:m.funktionen||[],
+      strasse:m.strasse,
+      heimatort:m.heimatort,
+      ahv_nr:m.ahv_nr,
     };
   });
 
@@ -1885,18 +1889,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {key:"geburtsdatum",  label:"Geburtsdatum",   default:false},
       {key:"alter",         label:"Alter",          default:false},
       {key:"geschlecht",    label:"Geschlecht",     default:false},
-      {key:"nationalitaet", label:"Nationalitat",   default:false},
-      {key:"ort",           label:"Wohnort",        default:false},
+      {key:"nationalitaet", label:"Nationalität",  default:false},
+      {key:"heimatort",     label:"Heimatort",      default:false},
+    ]},
+    {group:"Kontakt", cols:[
       {key:"email",         label:"E-Mail",         default:false},
       {key:"telefon",       label:"Telefon",        default:false},
+      {key:"strasse",       label:"Strasse",        default:false},
+      {key:"ort",           label:"PLZ/Ort",        default:false},
     ]},
     {group:"Verein", cols:[
       {key:"mitgliedschaft",label:"Mitgliedschaft", default:true},
       {key:"rollen",        label:"Rollen",         default:true},
+      {key:"funktionen",    label:"Vereinsfunktionen",default:false},
       {key:"eintritt",      label:"Eintritt",       default:false},
       {key:"spielerpass",   label:"Spielerpass",    default:false},
       {key:"fairgate_id",   label:"Fairgate-ID",    default:false},
       {key:"js_nr",         label:"J+S Nr.",        default:false},
+      {key:"ahv_nr",        label:"AHV-Nr.",        default:false},
     ]},
     {group:"Portal", cols:[
       {key:"portal",        label:"Portal-Zugang",  default:true},
@@ -2340,13 +2350,25 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   );
                 })}
                 <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
-                {COL_GROUPS.map(g=>{
-                  const inactiveCols=g.cols.filter(c=>!visibleCols.includes(c.key));
-                  if(inactiveCols.length===0) return null;
-                  return(
+                <div className="cc-col-search-wrap">
+                  <TI n="search" size={13} className="cc-col-search-icon"/>
+                  <input className="cc-col-search-input" value={colSearch}
+                    onChange={e=>setColSearch(e.target.value)}
+                    placeholder="Spalte suchen…"/>
+                  {colSearch&&<button className="cc-col-search-clear" onClick={()=>setColSearch("")}><TI n="x" size={11}/></button>}
+                </div>
+                {(()=>{
+                  const q=colSearch.toLowerCase();
+                  const groups=COL_GROUPS.map(g=>({...g,
+                    cols:g.cols.filter(c=>!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
+                      .sort((a,b)=>a.label.localeCompare(b.label))
+                  })).filter(g=>g.cols.length>0);
+                  const total=groups.reduce((n,g)=>n+g.cols.length,0);
+                  if(total===0) return <div className="cc-col-search-empty">Keine Spalte gefunden</div>;
+                  return groups.map(g=>(
                     <div key={g.group}>
                       <div className="cc-col-menu-group-hdr">{g.group}</div>
-                      {inactiveCols.map(c=>(
+                      {g.cols.map(c=>(
                         <div key={c.key} className="cc-col-menu-item"
                           onClick={()=>setVisibleCols(prev=>[...prev,c.key])}>
                           <div className="cc-col-menu-check"/>
@@ -2354,8 +2376,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                         </div>
                       ))}
                     </div>
-                  );
-                })}
+                  ));
+                })()}
               </div>
             )}
           </div>
@@ -2484,8 +2506,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                           case "fairgate_id": return <td key="fairgate_id" className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>;
                           case "js_nr": return <td key="js_nr" className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>;
                           case "eintritt": return <td key="eintritt" className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"—"}</td>;
-                          case "position": return <td key="position" className="cc-members-td cc-members-td-sub">{m.position||"—"}</td>;
-                          case "rueckennr": return <td key="rueckennr" className="cc-members-td cc-members-td-sub">{m.rueckennr||"—"}</td>;
+                          case "strasse": return <td key="strasse" className="cc-members-td cc-members-td-sub">{m.strasse||"—"}</td>;
+                          case "heimatort": return <td key="heimatort" className="cc-members-td cc-members-td-sub">{m.heimatort||"—"}</td>;
+                          case "ahv_nr": return <td key="ahv_nr" className="cc-members-td cc-members-td-sub">{m.ahv_nr?"••• •• ••••":"—"}</td>;
+                          case "funktionen": return <td key="funktionen" className="cc-members-td cc-members-td-sub">{(m.funktionen||[]).join(", ")||"—"}</td>;
                           default: return <td key={col.key} className="cc-members-td cc-members-td-sub">—</td>;
                         }
                       })}
