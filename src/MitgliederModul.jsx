@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar } from "./theme.jsx";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton } from "./theme.jsx";
 import { getRole } from "./NavigationModul.jsx";
 
 /* ── Länderliste ISO2 → {name, flag} ── */
@@ -1780,8 +1780,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [filterVals,setFilterVals]=useState({});
   const [filterOpen,setFilterOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
-  const [colMenuOpen,setColMenuOpen]=useState(false);
-  const [colSearch,setColSearch]=useState("");
   const [savedView,setSavedView]=useState("standard");
   const [dragCol,setDragCol]=useState(null);
   const [dragOverCol,setDragOverCol]=useState(null);
@@ -1918,12 +1916,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   ];
   const ALL_COLS=COL_GROUPS.flatMap(g=>g.cols);
   const [visibleCols,setVisibleCols]=useState(()=>SAVED_VIEWS.standard.cols);
-  const colMenuRef=useRef(null);
   useEffect(()=>{
-    function h(e){if(colMenuRef.current&&!colMenuRef.current.contains(e.target))setColMenuOpen(false);}
-    document.addEventListener("mousedown",h);
-    return()=>document.removeEventListener("mousedown",h);
-  },[]);
   const COLS=ALL_COLS.filter(c=>visibleCols.includes(c.key));
   const GROUP_OPTIONS=[
     {val:"none",           label:"Keine Gruppierung"},
@@ -2324,63 +2317,17 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
         ]}
         colMenu={!isMobile&&(
-          <div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
-            <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
-              onClick={()=>setColMenuOpen(o=>!o)}>
-              <TI n="table" size={15}/>
-            </button>
-            {colMenuOpen&&(
-              <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
-                <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
-                {visibleCols.filter(k=>COLS.find(c=>c.key===k)).map((key,idx)=>{
-                  const col=COLS.find(c=>c.key===key);
-                  return(
-                    <div key={key} className={`cc-col-menu-item${dragCol===key?" cc-col-menu-item-dragging":""}`}
-                      draggable={!col.alwaysOn}
-                      onDragStart={()=>handleColDragStart(key)}
-                      onDragOver={e=>{e.preventDefault();handleColDragOver(key);}}
-                      onDrop={()=>handleColDrop(key)}
-                      onDragEnd={handleColDragEnd}
-                      onClick={()=>!col.alwaysOn&&setVisibleCols(prev=>prev.filter(k=>k!==key))}>
-                      {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
-                      {col.alwaysOn&&<TI n="lock" size={11} className="cc-col-menu-icon-lock"/>}
-                      <span className="cc-flex-1" style={{fontSize:13}}>{col.label}</span>
-                      {!col.alwaysOn&&<TI n="x" size={11} style={{opacity:0.4}}/>}
-                    </div>
-                  );
-                })}
-                <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
-                <div className="cc-col-search-wrap">
-                  <TI n="search" size={13} className="cc-col-search-icon"/>
-                  <input className="cc-col-search-input" value={colSearch}
-                    onChange={e=>setColSearch(e.target.value)}
-                    placeholder="Spalte suchen…"/>
-                  {colSearch&&<button className="cc-col-search-clear" onClick={()=>setColSearch("")}><TI n="x" size={11}/></button>}
-                </div>
-                {(()=>{
-                  const q=colSearch.toLowerCase();
-                  const groups=COL_GROUPS.map(g=>({...g,
-                    cols:g.cols.filter(c=>!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
-                      .sort((a,b)=>a.label.localeCompare(b.label))
-                  })).filter(g=>g.cols.length>0);
-                  const total=groups.reduce((n,g)=>n+g.cols.length,0);
-                  if(total===0) return <div className="cc-col-search-empty">Keine Spalte gefunden</div>;
-                  return groups.map(g=>(
-                    <div key={g.group}>
-                      <div className="cc-col-menu-group-hdr">{g.group}</div>
-                      {g.cols.map(c=>(
-                        <div key={c.key} className="cc-col-menu-item"
-                          onClick={()=>setVisibleCols(prev=>[...prev,c.key])}>
-                          <div className="cc-col-menu-check"/>
-                          <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ));
-                })()}
-              </div>
-            )}
-          </div>
+          <ColMenuButton
+            colGroups={COL_GROUPS}
+            visibleCols={visibleCols}
+            onVisibleColsChange={setVisibleCols}
+            dragCol={dragCol}
+            dragOverCol={dragOverCol}
+            onDragStart={handleColDragStart}
+            onDragOver={handleColDragOver}
+            onDrop={handleColDrop}
+            onDragEnd={handleColDragEnd}
+          />
         )}
       />
 
@@ -2481,7 +2428,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   )}
                   {members.map(m=>(
                     <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
-                      onClick={()=>selectMode?toggleSelectRow(m.id):setSelectedMember({...m,_tab:"info"})}>
+                      onClick={()=>selectMode?toggleSelectRow(m.id):null}>
                       {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
                         <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
                           {selected.has(m.id)&&<TI n="check" size={10}/>}
@@ -2489,7 +2436,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       </td>}
                       {COLS.map(col=>{
                         switch(col.key){
-                          case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name||"?"} size={26}/>}<span className="cc-text-bold">{m.name}</span></div></td>;
+                          case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm"/>:<Av name={m.name||"?"} size={26}/>}<span className="cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
                           case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
                           case "rollen": return <td key="rollen" className="cc-members-td">{m.rollen.length>0?m.rollen.map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`} style={{marginRight:3}}>{r}</span>;}):(<span className="cc-members-td-sub">—</span>)}</td>;
                           case "teams": return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{m.teams.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{m.teams.slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{m.teams.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:m.teams,x:e.clientX,y:e.clientY});}}>+{m.teams.length-1}</button>}</span>):"—"}</td>;
