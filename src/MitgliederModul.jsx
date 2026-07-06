@@ -1801,23 +1801,21 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const portalAktiv=allMembers.filter(m=>m.hat_portal_zugang).length;
   const dpOffen=allMembers.filter(m=>m.datenpruefung!=="Geprueft").length;
   const ohneTeam=allMembers.filter(m=>m.teams.length===0).length;
-  /* Mitgliedschaft-Aufschluesselung */
-  const byMitgliedschaft=(typ)=>allMembers.filter(m=>m.mitgliedschaft===typ).length;
+  /* Mitgliedschaft-Aufschluesselung - dynamisch */
   const trainerCount=allMembers.filter(m=>m.rollen.some(r=>r.toLowerCase().includes("trainer"))).length;
   const funktionaerCount=allMembers.filter(m=>m.rollen.some(r=>r.toLowerCase().includes("funktion"))).length;
+  const mitgliedTypen=dbMitgliedtypen.length>0
+    ?dbMitgliedtypen.map(t=>t.name)
+    :[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(v=>v&&v!=="-"))].sort();
   const BREAKDOWN=[
-    {label:"Aktivmitglieder",   key:"Aktivmitglied",    color:"ok"},
-    {label:"Juniorenmitglieder",key:"Juniormitglied",    color:"accent"},
-    {label:"Passivmitglieder",  key:"Passivmitglied",   color:"muted"},
-    {label:"Ehrenmitglieder",   key:"Ehrenmitglied",    color:"warn"},
-    {label:"Freimitglieder",    key:"Freimitglied",     color:"muted"},
-    {label:"Trainer/innen",     key:"__trainer",        color:"trainer"},
-    {label:"Funktionär/innen",  key:"__funktionaer",    color:"trainer"},
+    ...mitgliedTypen.map(typ=>({label:typ,key:typ,color:"muted"})),
+    {label:"Trainer/innen",     key:"__trainer",     color:"trainer"},
+    {label:"Funktionär/innen", key:"__funktionaer",color:"trainer"},
   ];
   function bdCount(b){
     if(b.key==="__trainer") return trainerCount;
     if(b.key==="__funktionaer") return funktionaerCount;
-    return byMitgliedschaft(b.key);
+    return allMembers.filter(m=>m.mitgliedschaft===b.key).length;
   }
   function bdFilter(b){
     if(b.key==="__trainer") setFilterVals(prev=>({...prev,rollen:["Trainer/in"]}));
