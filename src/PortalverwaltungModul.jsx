@@ -828,9 +828,12 @@ function PortalverwaltungView(props){
       r.setProperty("--cc-accent",    td.vereinsfarbe1||"#FFBF00");
       r.setProperty("--cc-accent2",   td.vereinsfarbe2||"#000000");
       r.setProperty("--cc-hover",     hexToRgba(td.vereinsfarbe1||"#FFBF00",0.19));
+      r.setProperty("--cc-accent-25", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.25));
       r.setProperty("--cc-accent-20", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.12));
       r.setProperty("--cc-accent-15", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.09));
       r.setProperty("--cc-accent-12", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.07));
+      r.setProperty("--cc-accent-10", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.10));
+      r.setProperty("--cc-accent-5",  hexToRgba(td.vereinsfarbe1||"#FFBF00",0.05));
       r.setProperty("--nav",          td.navBg||"#000000");
       r.setProperty("--nav-t",        td.navText||"#FFFFFF");
       r.setProperty("--nav-a",        td.navAccent||"#FFBF00");
@@ -3129,11 +3132,15 @@ function PortalverwaltungView(props){
                     {name:"--cc-accent2",desc:"Vereinsfarbe 2 (Kontrastfarbe)"},
                     {name:"--btn-hover",desc:"Vereinsfarbe 1 −12% (darkenHex) → Hover-State Primär-Button"},
                     {name:"--cc-hover",desc:"Vereinsfarbe 1 × 19% Opacity → Hover-Hintergründe"},
+                    {name:"--cc-accent-25",desc:"Vereinsfarbe 1 × 25% → Hero-Avatar Hintergrund"},
                     {name:"--cc-accent-20",desc:"Vereinsfarbe 1 × 12% → leichte Tönungen"},
                     {name:"--cc-accent-15",desc:"Vereinsfarbe 1 × 9% → sehr helle Tönungen"},
                     {name:"--cc-accent-12",desc:"Vereinsfarbe 1 × 7% → minimale Tönungen"},
+                    {name:"--cc-accent-10",desc:"Vereinsfarbe 1 × 10%"},
+                    {name:"--cc-accent-5", desc:"Vereinsfarbe 1 × 5% → minimale Hintergründe"},
                     {name:"--nav",desc:"Nav-Hintergrundfarbe"},
                     {name:"--nav-hover",desc:"Nav-Item Hover-Farbe"},
+                    {name:"--btn-primary-text",desc:"Primär-Button Textfarbe"},
                     {name:"--avatar-bg",desc:"Avatar-Hintergrund"},
                   ].map(v=>(
                     <div key={v.name} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"0.5px solid var(--border)"}}>
