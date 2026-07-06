@@ -598,8 +598,8 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
                 <div className="cc-row cc-gap-8 cc-flex-wrap">
                   {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
                   {e.benutzer_id
-                    ?<span className="cc-status-active">● Portal: Aktiv</span>
-                    :<span className="cc-status-inactive">● Portal: Inaktiv</span>
+                    ?<span className="cc-status-active">Portal: Aktiv</span>
+                    :<span className="cc-status-inactive">Portal: Inaktiv</span>
                   }
                   {e.hauptkontakt&&<span className="cc-status-hauptkontakt">★ Hauptkontakt</span>}
                 </div>
