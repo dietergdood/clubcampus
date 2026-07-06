@@ -773,23 +773,26 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
           {icon:"checkbox",label:archivSelectMode?"Auswahl beenden":"Mehrere auswählen",onClick:()=>{setArchivSelectMode(o=>!o);setArchivSelected([]);} },
         ]}
       />
-      {archivSelectMode&&archivSelected.length>0&&(
-        <div className="cc-ml-bulk-bar cc-mb-16">
-          <span className="cc-text-sub">{archivSelected.length} ausgewählt</span>
-          <Btn small onClick={async()=>{
-            if(!sb||!window.confirm(`${archivSelected.length} Mitglieder reaktivieren?`)) return;
+      {archivSelectMode&&(
+        <div className="cc-sel-bar">
+          <div className="cc-col-menu-check cc-col-menu-check-on cc-sel-all" onClick={()=>setArchivSelected(archivSelected.length===filtered.length?[]:filtered.map(m=>m.id))}>
+            <TI n={archivSelected.length===filtered.length?"check":"minus"} size={10}/>
+          </div>
+          <span className="cc-sel-bar-info">{archivSelected.length} ausgewählt</span>
+          <button className="cc-ml-btn" onClick={async()=>{
+            if(!archivSelected.length||!sb||!window.confirm(`${archivSelected.length} Mitglieder reaktivieren?`)) return;
             for(const id of archivSelected){
               await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
               if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
             }
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
-          }}><TI n="user-check" size={13}/> Reaktivieren</Btn>
-          <Btn small variant="danger" onClick={async()=>{
-            if(!sb||!window.confirm(`${archivSelected.length} Mitglieder unwiderruflich löschen?`)) return;
+          }}><TI n="user-check" size={14}/> Reaktivieren</button>
+          <button className="cc-ml-btn cc-ml-btn-danger" onClick={async()=>{
+            if(!archivSelected.length||!sb||!window.confirm(`${archivSelected.length} Mitglieder unwiderruflich löschen?`)) return;
             for(const id of archivSelected) await sb.from("mitglieder").delete().eq("id",id);
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
-          }}><TI n="trash" size={13}/> Löschen</Btn>
-          <Btn small onClick={()=>{setArchivSelectMode(false);setArchivSelected([]);}}><TI n="x" size={12}/></Btn>
+          }}><TI n="trash" size={14}/> Löschen (DSGVO)</button>
+          <button className="cc-btn-ghost" onClick={()=>{setArchivSelected([]);setArchivSelectMode(false);}}><TI n="x" size={13}/> Abbrechen</button>
         </div>
       )}
       {hasActiveFilter&&(
