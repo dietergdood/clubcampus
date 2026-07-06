@@ -298,7 +298,7 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,dbMitgliedty
               {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Fairgate OK</span>}
               {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
             </div>
-            {canEdit&&(
+            {(canEdit||canDelete)&&(
               <div ref={heroMenuRef} style={{position:"relative"}}>
                 <button className="cc-hero-banner-btn" onMouseDown={e=>e.stopPropagation()}
                   onClick={e=>{e.stopPropagation();setHeroMenuOpen(o=>!o);}}>
@@ -306,10 +306,12 @@ function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,dbMitgliedty
                 </button>
                 {heroMenuOpen&&(
                   <div className="cc-menu" style={{position:"absolute",top:"calc(100% + 4px)",right:0,left:"auto",zIndex:100}}>
-                    <button className="cc-menu-item" onClick={()=>{setHeroMenuOpen(false);setEditForm({...raw});setEditOpen(true);}}>
-                      <TI n="edit" size={13}/> Bearbeiten
-                    </button>
-                    <div className="cc-menu-sep"/>
+                    {canEdit&&(
+                      <button className="cc-menu-item" onClick={()=>{setHeroMenuOpen(false);setEditForm({...raw});setEditOpen(true);}}>
+                        <TI n="edit" size={13}/> Bearbeiten
+                      </button>
+                    )}
+                    {canEdit&&<div className="cc-menu-sep"/>}
                     <button className="cc-menu-item cc-menu-item-danger" onClick={()=>{setHeroMenuOpen(false);deleteMitglied();}}>
                       <TI n="trash" size={13}/> Löschen
                     </button>
@@ -1418,8 +1420,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             {key:"stats",          label:"Statistik",       icon:"chart-bar"},
             {key:"helpers",        label:"Helfereinsätze",   icon:"heart-handshake"},
             {key:"entwicklung",    label:"Entwicklung",     icon:"trending-up"},
-            ...(canEdit?[{key:"portal",       label:"Portal-Zugang", icon:"key"}]:[]),
-            ...(canEdit?[{key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check"}]:[]),
+            {key:"portal",       label:"Portal-Zugang", icon:"key"},
+            {key:"datenpruefung",label:"Datenprüfung",  icon:"shield-check"},
           ];
           const MOBILE_VISIBLE=3;
           const visibleTabs=isMobile?allTabs.slice(0,MOBILE_VISIBLE):allTabs;
@@ -1814,7 +1816,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
         {/* Tab: Portal-Zugang */}
 
-        {tab==="portal"&&canEdit&&(
+        {tab==="portal"&&(
           <div className="cc-col cc-gap-16">
             <Card>
               <div className="cc-between cc-mb-12">
@@ -1855,7 +1857,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         )}
 
         {/* Tab: Datenprüfung */}
-        {tab==="datenpruefung"&&canEdit&&(
+        {tab==="datenpruefung"&&(
           <div className="cc-col cc-gap-16">
             <Card>
               <div className="cc-between cc-mb-12">

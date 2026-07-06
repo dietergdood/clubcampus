@@ -418,6 +418,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-status-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--nav-t,rgba(255,255,255,0.6));background:rgba(255,255,255,0.08);border:0.5px solid rgba(255,255,255,0.12);padding:3px 8px;border-radius:20px;white-space:nowrap}
 .cc-hero-status-pill-ok{color:#86EFAC;background:rgba(134,239,172,0.1);border-color:rgba(134,239,172,0.2)}
 .cc-hero-status-pill-warn{color:#FCD34D;background:rgba(252,211,77,0.1);border-color:rgba(252,211,77,0.2)}
+.cc-hero-status-pill-err{color:#FCA5A5;background:rgba(252,165,165,0.1);border-color:rgba(252,165,165,0.2)}
 .cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(128,128,128,0.3);background:rgba(128,128,128,0.15);color:var(--nav-t,#FFFFFF);cursor:pointer}
 .cc-hero-banner-btn:hover{background:rgba(255,255,255,0.15)}
 .cc-hero-av-wrap{position:relative;width:56px;height:56px;flex-shrink:0}
