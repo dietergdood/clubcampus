@@ -265,17 +265,17 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
                 const hatSpielerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>!TRAINER_ROLLEN.includes(r)));
                 const chips=[];
-                if(hatTrainerKader) chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"rolle"});
-                if(hatSpielerKader) chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"rolle"});
-                if(benutzer?.role==="funktionaer") chips.push({label:ROLLE_LABEL["funktionaer"]||"Funktionär",type:"rolle"});
+                if(hatTrainerKader) chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"kader"});
+                if(hatSpielerKader) chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"kader"});
+                if(benutzer?.role==="funktionaer") chips.push({label:ROLLE_LABEL["funktionaer"]||"Funktionär",type:"portal"});
                 if(benutzer?.role&&["administrator","administration"].includes(benutzer.role))
-                  chips.push({label:ROLLE_LABEL[benutzer.role]||benutzer.role,type:"rolle"});
+                  chips.push({label:ROLLE_LABEL[benutzer.role]||benutzer.role,type:"portal"});
                 const MAX=isMobile?2:chips.length;
                 const visible=chips.slice(0,MAX);
                 const hidden=chips.length-MAX;
                 return(
                   <>
-                    {visible.map((c,i)=>(<span key={i} className="cc-hero-chip cc-hero-chip-primary">{c.label}</span>))}
+                    {visible.map((c,i)=>(<span key={i} className={c.type==="portal"?"cc-hero-chip cc-hero-chip-primary":"cc-hero-chip"}>{c.label}</span>))}
                     {hidden>0&&<span className="cc-hero-chip">+{hidden}</span>}
                   </>
                 );
