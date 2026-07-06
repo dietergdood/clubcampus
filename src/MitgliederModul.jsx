@@ -1877,6 +1877,36 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {val:"__jahrgang",     label:"Nach Jahrgang"},
     {val:"__eintrittsjahr",label:"Nach Eintrittsjahr"},
   ];
+  function exportData(format){
+    const exportCols=COLS.filter(c=>c.key!=="name").map(c=>c.key);
+    const headers=["Name",...COLS.filter(c=>c.key!=="name").map(c=>c.label)];
+    const rows=filtered.map(m=>[
+      m.name,
+      ...exportCols.map(k=>{
+        if(k==="rollen") return (m.rollen||[]).join(", ");
+        if(k==="teams") return (m.teams||[]).map(t=>t.name||t).join(", ");
+        if(k==="funktionen") return (m.funktionen||[]).join(", ");
+        if(k==="geburtsdatum") return m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"";
+        if(k==="eintritt") return m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"";
+        if(k==="portal") return m.hat_portal_zugang?"Aktiv":"Kein Zugang";
+        if(k==="datenpruefung") return m.profil_geprueft_at?"Geprüft":"Ausstehend";
+        return m[k]!=null?String(m[k]):"";
+      })
+    ]);
+    if(format==="csv"){
+      const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v||"").replace(/"/g,"\"\"")}"` ).join(";")).join("\r\n");
+      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="mitglieder.csv";a.click();URL.revokeObjectURL(url);
+    } else {
+      // Excel via tab-separated with .xls mime
+      const tsv=[headers,...rows].map(r=>r.map(v=>String(v||"").replace(/\t/g," ")).join("\t")).join("\r\n");
+      const blob=new Blob(["\uFEFF"+tsv],{type:"application/vnd.ms-excel;charset=utf-8;"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="mitglieder.xls";a.click();URL.revokeObjectURL(url);
+    }
+  }
+
   function applyView(viewKey){
     setSavedView(viewKey);
     setVisibleCols(SAVED_VIEWS[viewKey]?.cols||SAVED_VIEWS.standard.cols);
@@ -2277,8 +2307,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           ...(canExport?[
             "sep",
             {header:true,label:"Export"},
-            {icon:"file-text",label:"Liste als CSV exportieren",onClick:()=>{}},
-            {icon:"table",label:"Liste als Excel exportieren",onClick:()=>{}},
+            {icon:"file-text",label:"Liste als CSV exportieren",onClick:()=>exportData("csv")},
+            {icon:"table",label:"Liste als Excel exportieren",onClick:()=>exportData("excel")},
           ]:[]),
         ]}
       />
@@ -2291,7 +2321,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           total={paged.length}
           onSelectAll={toggleSelectAll}
           actions={[
-            {icon:"download", label:"Export", onClick:()=>{}},
+            {icon:"download", label:"Auswahl als CSV", onClick:()=>exportData("csv")},
             {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
             {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
           ]}
