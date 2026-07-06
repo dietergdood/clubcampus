@@ -421,6 +421,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-status-pill-err{color:#FCA5A5;background:rgba(252,165,165,0.1);border-color:rgba(252,165,165,0.2)}
 .cc-hero-banner-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(128,128,128,0.3);background:rgba(128,128,128,0.15);color:var(--nav-t,#FFFFFF);cursor:pointer}
 .cc-hero-banner-btn:hover{background:rgba(255,255,255,0.15)}
+.cc-hero-menu-trigger .cc-menu-trigger{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:0.5px solid rgba(128,128,128,0.3);background:rgba(128,128,128,0.15);color:var(--nav-t,#FFFFFF);cursor:pointer}
+.cc-hero-menu-trigger .cc-menu-trigger:hover{background:rgba(255,255,255,0.15)}
 .cc-hero-av-wrap{position:relative;width:56px;height:56px;flex-shrink:0}
 .cc-hero-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text)}
 .cc-hero-av-edit:hover{background:var(--surface)}

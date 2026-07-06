@@ -294,13 +294,13 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
               {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
             </div>
             {(canEdit||canDelete)&&(
-              <DropMenu items={[
+              <div className="cc-hero-menu-trigger"><DropMenu items={[
                 ...(canEdit?[{icon:"edit",label:"Bearbeiten",onClick:()=>{setEditForm({...raw});setEditOpen(true);}}]:[]),
                 ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
                 ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
                 "sep",
                 {icon:"trash",label:"Löschen",danger:true,onClick:()=>deleteMitglied()},
-              ]}/>
+              ]}/></div>
             )}
           </div>
         </div>
