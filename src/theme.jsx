@@ -894,7 +894,8 @@ export function avColor(name){
   return AV_PALETTES[i];
 }
 
-function Av({name="",init,size="md",bg,useTheme=false}){
+function Av({name,init,size="md",bg,useTheme=false}){
+  name=name||"";
   /* size: "sm"=24, "md"=32, "lg"=40 — oder direkte Zahl für Rückwärtskompatibilität */
   const px = typeof size==="number" ? size : {sm:24,md:32,lg:40}[size]||32;
   const r = Math.round(px/4);
