@@ -1265,8 +1265,8 @@ reloadMember, refreshArchivCount, brauchtEltern,
             <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
             <div className="cc-info-grid">
             {[
-              {l:"Vorname",      v:raw.vorname||null},
               {l:"Nachname",     v:raw.nachname||null},
+              {l:"Vorname",      v:raw.vorname||null},
               ...(age?[{l:"Alter",v:`${age} Jahre`}]:[]),
               ...(fv.showGebdat?[{l:"Geburtsdatum",v:raw.geburtsdatum?new Date(raw.geburtsdatum).toLocaleDateString("de-CH"):null}]:[]),
               {l:"Geschlecht",   v:raw.geschlecht==="m"?"Männlich":raw.geschlecht==="w"?"Weiblich":raw.geschlecht||null},
