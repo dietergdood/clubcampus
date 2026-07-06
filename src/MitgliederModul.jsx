@@ -681,7 +681,7 @@ function elternAvColor(beziehung){
 function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=null,onReload,onOpenMember}){
   const isMobile=useIsMobile();
   const [archivSearch,setArchivSearch]=useState("");
-  const [archivFilter,setArchivFilter]=useState("alle");
+  const [archivFilterVals,setArchivFilterVals]=useState({});
   const [archivFilterOpen,setArchivFilterOpen]=useState(false);
 
   async function reaktivieren(e,id,name){
@@ -699,12 +699,18 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
     if(onReload) onReload();
   }
 
-  const typen=["alle",...new Set(archivData.map(m=>m.mitgliedtyp).filter(Boolean))];
+  const ARCHIV_FILTER_DEFS=[
+    {key:"mitgliedtyp", label:"Mitgliedschaft", vals:[...new Set(archivData.map(m=>m.mitgliedtyp).filter(Boolean))].sort()},
+  ];
+  const hasActiveFilter=Object.values(archivFilterVals).some(v=>v&&v.length>0);
 
   const filtered=archivData.filter(m=>{
     const name=`${m.vorname||""} ${m.nachname||""}`.toLowerCase();
     if(archivSearch&&!name.includes(archivSearch.toLowerCase())) return false;
-    if(archivFilter!=="alle"&&m.mitgliedtyp!==archivFilter) return false;
+    for(const [k,vals] of Object.entries(archivFilterVals)){
+      if(!vals||vals.length===0) continue;
+      if(!vals.includes(m[k])) return false;
+    }
     return true;
   });
 
@@ -720,44 +726,75 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
           <input value={archivSearch} onChange={e=>setArchivSearch(e.target.value)} placeholder="Suchen…"/>
         </div>
         <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${archivFilter!=="alle"?" cc-active":""}`} onClick={()=>setArchivFilterOpen(o=>!o)}>
+          <button className={`cc-ml-btn${hasActiveFilter?" cc-active":""}`} onClick={()=>setArchivFilterOpen(o=>!o)}>
             <TI n="filter" size={15}/>
-            {!isMobile&&(archivFilter==="alle"?"Mitgliedschaft":archivFilter)}
-            {archivFilter!=="alle"&&<span className="cc-ml-filter-dot"/>}
+            {!isMobile&&"Filter"}
+            {hasActiveFilter&&<span className="cc-ml-filter-dot"/>}
           </button>
           {archivFilterOpen&&(
             isMobile?(
               <div className="cc-mehr-sheet-overlay" onClick={()=>setArchivFilterOpen(false)}>
                 <div className="cc-mehr-sheet-backdrop"/>
-                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                <div className="cc-mehr-sheet-box cc-filter-sheet-box" onClick={e=>e.stopPropagation()}>
                   <div className="cc-mehr-sheet-handle"/>
-                  <div className="cc-mehr-sheet-title">Mitgliedschaft</div>
-                  {typen.map(t=>(
-                    <div key={t} className="cc-mehr-sheet-item"
-                      style={{fontWeight:archivFilter===t?600:400,color:archivFilter===t?"var(--cc-accent,#FFBF00)":"var(--text)"}}
-                      onMouseDown={e=>{e.stopPropagation();setArchivFilter(t);setArchivFilterOpen(false);}}>
-                      {archivFilter===t&&<TI n="check" size={14}/>}
-                      {t==="alle"?"Alle Mitgliedschaften":t}
+                  <div className="cc-mehr-sheet-title">Filter</div>
+                  {ARCHIV_FILTER_DEFS.map(({key,label,vals})=>(
+                    <div key={key}>
+                      <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 0 4px"}}>{label}</div>
+                      {vals.map(v=>{
+                        const active=(archivFilterVals[key]||[]).includes(v);
+                        return(
+                          <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 0"}}
+                            onMouseDown={e=>{e.stopPropagation();setArchivFilterVals(prev=>({...prev,[key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]}));}}>
+                            <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                            {v}
+                          </div>
+                        );
+                      })}
                     </div>
                   ))}
+                  <div className="cc-ml-dropdown-footer" style={{padding:"12px 0 0"}}>
+                    <button className="cc-ml-dropdown-clear" onMouseDown={()=>setArchivFilterVals({})}>Zurücksetzen</button>
+                    <button className="cc-ml-dropdown-apply" onMouseDown={()=>setArchivFilterOpen(false)}>Fertig</button>
+                  </div>
                 </div>
               </div>
             ):(
-              <div className="cc-ml-dropdown">
-                <div className="cc-col-menu-hdr">Mitgliedschaft</div>
-                {typen.map(t=>(
-                  <div key={t} className="cc-col-menu-item" onClick={()=>{setArchivFilter(t);setArchivFilterOpen(false);}}>
-                    <div className={`cc-col-menu-check${archivFilter===t?" cc-col-menu-check-on":""}`}>
-                      {archivFilter===t&&<TI n="check" size={10}/>}
-                    </div>
-                    {t==="alle"?"Alle Mitgliedschaften":t}
+              <div className="cc-ml-dropdown cc-ml-filter-dropdown">
+                <div className="cc-col-menu-hdr">Filter</div>
+                {ARCHIV_FILTER_DEFS.map(({key,label,vals})=>(
+                  <div key={key}>
+                    <div className="cc-ml-dropdown-section-lbl">{label}</div>
+                    {vals.map(v=>{
+                      const active=(archivFilterVals[key]||[]).includes(v);
+                      return(
+                        <div key={v} className="cc-col-menu-item" onClick={()=>setArchivFilterVals(prev=>({...prev,[key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]}))}
+                        >
+                          <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                          {v}
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
+                <div className="cc-ml-dropdown-footer">
+                  <button className="cc-ml-dropdown-clear" onClick={()=>setArchivFilterVals({})}>Zurücksetzen</button>
+                  <button className="cc-ml-dropdown-apply" onClick={()=>setArchivFilterOpen(false)}>Fertig</button>
+                </div>
               </div>
             )
           )}
         </div>
       </div>
+      {hasActiveFilter&&(
+        <div className="cc-ml-chips cc-mb-16">
+          {Object.entries(archivFilterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
+            <div key={k+v} className="cc-ml-chip" onClick={()=>setArchivFilterVals(prev=>({...prev,[k]:(prev[k]||[]).filter(x=>x!==v)}))}
+            >{v} <span className="cc-ml-chip-x">×</span></div>
+          )))}
+          <div className="cc-ml-chip cc-text-sub" onClick={()=>setArchivFilterVals({})}>Alle löschen</div>
+        </div>
+      )}
       {!archivLoaded&&<div className="cc-empty">Wird geladen…</div>}
       {archivLoaded&&filtered.length===0&&<div className="cc-empty">Keine archivierten Mitglieder gefunden.</div>}
       {archivLoaded&&filtered.length>0&&(
