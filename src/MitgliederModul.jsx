@@ -679,8 +679,10 @@ function elternAvColor(beziehung){
 }
 
 function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=null,onReload,onOpenMember}){
+  const isMobile=useIsMobile();
   const [archivSearch,setArchivSearch]=useState("");
   const [archivFilter,setArchivFilter]=useState("alle");
+  const [archivFilterOpen,setArchivFilterOpen]=useState(false);
 
   async function reaktivieren(e,id,name){
     e.stopPropagation();
@@ -717,9 +719,44 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
           <TI n="search" size={15} className="cc-input-icon"/>
           <input value={archivSearch} onChange={e=>setArchivSearch(e.target.value)} placeholder="Suchen…"/>
         </div>
-        <select className="cc-input" style={{width:"auto",minWidth:160}} value={archivFilter} onChange={e=>setArchivFilter(e.target.value)}>
-          {typen.map(t=><option key={t} value={t}>{t==="alle"?"Alle Mitgliedschaften":t}</option>)}
-        </select>
+        <div className="cc-ml-dropdown-wrap">
+          <button className={`cc-ml-btn${archivFilter!=="alle"?" cc-active":""}`} onClick={()=>setArchivFilterOpen(o=>!o)}>
+            <TI n="filter" size={15}/>
+            {!isMobile&&(archivFilter==="alle"?"Mitgliedschaft":archivFilter)}
+            {archivFilter!=="alle"&&<span className="cc-ml-filter-dot"/>}
+          </button>
+          {archivFilterOpen&&(
+            isMobile?(
+              <div className="cc-mehr-sheet-overlay" onClick={()=>setArchivFilterOpen(false)}>
+                <div className="cc-mehr-sheet-backdrop"/>
+                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                  <div className="cc-mehr-sheet-handle"/>
+                  <div className="cc-mehr-sheet-title">Mitgliedschaft</div>
+                  {typen.map(t=>(
+                    <div key={t} className="cc-mehr-sheet-item"
+                      style={{fontWeight:archivFilter===t?600:400,color:archivFilter===t?"var(--cc-accent,#FFBF00)":"var(--text)"}}
+                      onMouseDown={e=>{e.stopPropagation();setArchivFilter(t);setArchivFilterOpen(false);}}>
+                      {archivFilter===t&&<TI n="check" size={14}/>}
+                      {t==="alle"?"Alle Mitgliedschaften":t}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ):(
+              <div className="cc-ml-dropdown">
+                <div className="cc-col-menu-hdr">Mitgliedschaft</div>
+                {typen.map(t=>(
+                  <div key={t} className="cc-col-menu-item" onClick={()=>{setArchivFilter(t);setArchivFilterOpen(false);}}>
+                    <div className={`cc-col-menu-check${archivFilter===t?" cc-col-menu-check-on":""}`}>
+                      {archivFilter===t&&<TI n="check" size={10}/>}
+                    </div>
+                    {t==="alle"?"Alle Mitgliedschaften":t}
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
       </div>
       {!archivLoaded&&<div className="cc-empty">Wird geladen…</div>}
       {archivLoaded&&filtered.length===0&&<div className="cc-empty">Keine archivierten Mitglieder gefunden.</div>}
@@ -880,9 +917,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const SAVED_VIEWS={
     standard:      {label:"Standard",       cols:["name","mitgliedschaft","rollen","teams","portal","datenpruefung"]},
     administration:{label:"Verwaltung",     cols:["name","email","telefon","ort","mitgliedschaft","datenpruefung"]},
-    sport:         {label:"Sportbetrieb",   cols:["name","teams","position","rueckennr","spielerpass","geburtsdatum"]},
-    datenpruefung: {label:"Datenprüfung",   cols:["name","datenpruefung","email","portal","mitgliedschaft"]},
-    gv:            {label:"GV/Stimmrecht",  cols:["name","mitgliedschaft","eintritt","email"]},
   };
 
   /* Spaltendefinitionen */
@@ -1238,8 +1272,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(onReload) onReload();
   }
 
+  const brauchtEltern=(mitgliedtyp)=>
+    dbMitgliedtypen.some(t=>t.name===mitgliedtyp&&t.hauptkontakt_pflicht);
+
   const MemberDetail=({m,onClose,onNavToTeam=null,onReaktiviert=null})=>{
-    const raw={...(dbMitglieder.find(d=>d.id===m.id)||{}), ...m};
+    const dbRaw=dbMitglieder.find(d=>d.id===m.id)||{};
+    const raw={...dbRaw,...Object.fromEntries(Object.entries(m).filter(([k,v])=>v!==undefined&&v!==null||!dbRaw[k]))};
     const fv=getFieldVisibility(role);
     const tab=selectedMember?._tab||"info";
     const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
@@ -1278,7 +1316,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 
     useEffect(()=>{
-      if((tab==="eltern"||(tab==="info"&&raw.mitgliedtyp==="Juniormitglied"))&&sb&&raw.id&&elternLoaded===null){
+      if((tab==="eltern"||(tab==="info"&&brauchtEltern(raw.mitgliedtyp)))&&sb&&raw.id&&elternLoaded===null){
         sb.from("elternkontakte").select("*").eq("mitglied_id",raw.id)
           .then(({data})=>setElternLoaded(data||[]));
       }
@@ -1556,7 +1594,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
             {/* Kontakt + Hauptkontakt */}
             {(fv.showEmail||fv.showTelefon||fv.showAdresse)&&(()=>{
-              const hk=raw.mitgliedtyp==="Juniormitglied"?eltern.find(e=>e.hauptkontakt):null;
+              const hk=brauchtEltern(raw.mitgliedtyp)?eltern.find(e=>e.hauptkontakt):null;
               const hkName=hk?(hk.name||`${hk.vorname||""} ${hk.nachname||""}`.trim()||"?"):null;
               const hkTel=hk?(hk.telefon||hk.tel):null;
               return(
@@ -1590,7 +1628,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       </div>
                     </>
                   )}
-                  {raw.mitgliedtyp==="Juniormitglied"&&!hk&&(
+                  {brauchtEltern(raw.mitgliedtyp)&&!hk&&(
                     <>
                       <span className="cc-hk-sub-label"><TI n="star" size={11}/> Hauptkontakt / Elternkontakt</span>
                       <div className="cc-warn-box"><TI n="alert-triangle" size={14}/> Kein Hauptkontakt — bitte im Tab "Eltern" festlegen</div>
