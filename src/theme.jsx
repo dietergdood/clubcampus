@@ -410,7 +410,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Profil-spezifisch (minimale Ergänzungen) ── */
 .cc-profile-name{font-size:20px;font-weight:500;margin:0 0 2px;color:var(--text)}
 .cc-member-hero{background:transparent;border:none;border-radius:16px;overflow:visible;margin-bottom:0;position:relative}
-.cc-member-hero-banner{background:var(--nav,#000000);padding:12px 16px 10px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0}
+.cc-member-hero-banner{background:var(--nav,#000000);padding:12px 16px 10px;position:relative;display:flex;align-items:center;gap:12px;border-radius:16px 16px 0 0;border-bottom:3px solid var(--cc-accent,#FFBF00)}
 [data-theme=dark] .cc-member-hero-banner{background:var(--nav,#000000)}
 .cc-member-hero-banner .cc-page-title{color:var(--nav-t,#FFFFFF)}
 .cc-hero-banner-actions{position:absolute;top:50%;right:12px;transform:translateY(-50%);display:flex;gap:8px;align-items:center}
