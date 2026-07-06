@@ -537,6 +537,13 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-arrows{display:flex;flex-direction:column;gap:1px;margin-left:auto}
 .cc-col-arrow-btn{display:flex;align-items:center;justify-content:center;width:16px;height:14px;border:none;background:transparent;cursor:pointer;color:var(--sub);padding:0}
 .cc-col-arrow-btn:hover{color:var(--text)}
+.cc-archiv-footer{padding:8px 16px;font-size:12px;color:var(--sub)}
+.cc-page-title-mr{margin-right:24px}
+.cc-filter-sheet-box{max-height:80vh;overflow-y:auto}
+.cc-col-menu-icon-drag{opacity:0.4;cursor:grab}
+.cc-col-menu-icon-lock{opacity:0.3;margin-right:2px}
+.cc-col-menu-hdr-mt{margin-top:8px}
+.cc-members-cb-col{width:36px;padding:8px 12px}
 .cc-col-menu-item-active{background:var(--surface2);border-radius:6px;margin:1px 4px}
 .cc-ml-tabs-bar{display:flex;gap:0;border-bottom:0.5px solid var(--border);align-self:flex-end}
 .cc-ml-tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--sub);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;margin-bottom:-0.5px;font-family:inherit}

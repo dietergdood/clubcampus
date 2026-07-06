@@ -750,7 +750,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onReload,onOpenMember}){
               </tbody>
             </table>
           </div></div>
-          <div style={{padding:"8px 16px",fontSize:12,color:"var(--sub)"}}>
+          <div className="cc-archiv-footer">
             {filtered.length} von {archivData.length} archivierten Mitgliedern
           </div>
         </Card>
@@ -1966,7 +1966,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {/* Header + Tabs */}
       <div className="cc-page-hdr">
         <div className="cc-row cc-gap-0">
-          <h1 className="cc-page-title" style={{marginRight:24}}>Mitglieder</h1>
+          <h1 className="cc-page-title cc-page-title-mr">Mitglieder</h1>
           {(role==="administrator"||role==="administration")&&(
             <div className="cc-ml-tabs-bar">
               <button className={`cc-ml-tab${!archivTab?" cc-ml-tab-active":""}`} onClick={()=>setArchivTab(false)}>
@@ -2082,7 +2082,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             isMobile?(
               <div className="cc-mehr-sheet-overlay" onClick={()=>setFilterOpen(false)}>
                 <div className="cc-mehr-sheet-backdrop"/>
-                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()} style={{maxHeight:"80vh",overflowY:"auto"}}>
+                <div className="cc-mehr-sheet-box cc-filter-sheet-box" onClick={e=>e.stopPropagation()}>
                   <div className="cc-mehr-sheet-handle"/>
                   <div className="cc-mehr-sheet-title">Filter</div>
                   {FILTER_DEFS.map(({key,label,vals})=>(
@@ -2244,14 +2244,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       setVisibleCols(prev=>prev.length>1?prev.filter(k=>k!==key):prev);
                     }}
                   >
-                    {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle" style={{opacity:0.4,cursor:"grab"}}/>}
-                    {col.alwaysOn&&<TI n="lock" size={11} style={{opacity:0.3,marginRight:2}}/>}
-                    <span style={{flex:1,fontSize:13}}>{col.label}</span>
+                    {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
+                    {col.alwaysOn&&<TI n="lock" size={11} className="cc-col-menu-icon-lock"/>}
+                    <span className="cc-flex-1" style={{fontSize:13}}>{col.label}</span>
                     {!col.alwaysOn&&<TI n="x" size={11} style={{opacity:0.4}}/>}
                   </div>
                 );
               })}
-              <div className="cc-col-menu-hdr" style={{marginTop:8}}>Inaktive Spalten</div>
+              <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
               {COL_GROUPS.map(({group,cols})=>{
                 const inactive=cols.filter(c=>!visibleCols.includes(c.key)&&!c.alwaysOn);
                 if(inactive.length===0) return null;
@@ -2262,7 +2262,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       <div key={c.key} className="cc-col-menu-item"
                         onClick={e=>{e.stopPropagation();setVisibleCols(prev=>[...prev,c.key]);}}>
                         <div className="cc-col-menu-check"/>
-                        <span style={{flex:1,fontSize:13}}>{c.label}</span>
+                        <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
                       </div>
                     ))}
                   </div>
@@ -2341,7 +2341,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           <div className="cc-table-wrap"><div className="cc-table-wrap-inner"><table className="cc-members-table">
             <thead>
               <tr>
-                {selectMode&&<th style={{width:36,padding:"8px 12px"}}>
+                {selectMode&&<th className="cc-members-cb-col">
                   <div className={`cc-col-menu-check${selected.size===paged.length&&paged.length>0?" cc-col-menu-check-on":""}`} onClick={toggleSelectAll}>
                     {selected.size===paged.length&&paged.length>0&&<TI n="check" size={10}/>}
                   </div>
@@ -2383,7 +2383,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   {members.map(m=>(
                     <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
                       onClick={()=>selectMode?toggleSelectRow(m.id):setSelectedMember({...m,_tab:"info"})}>
-                      {selectMode&&<td style={{width:36,padding:"8px 12px"}} onClick={e=>e.stopPropagation()}>
+                      {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
                         <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
                           {selected.has(m.id)&&<TI n="check" size={10}/>}
                         </div>
