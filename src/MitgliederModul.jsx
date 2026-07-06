@@ -664,6 +664,68 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
+function ArchivView({archivData,archivLoaded,sb,account,onReload}){
+  async function reaktivieren(id,name){
+    if(!sb||!window.confirm(`${name} reaktivieren?`)) return;
+    await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
+    if(onReload) onReload();
+  }
+
+  return(
+    <div>
+      <div className="cc-info-box cc-info-box-warn cc-mb-16">
+        <TI n="info-circle" size={15}/>
+        Deaktivierte Mitglieder — Daten sind noch vorhanden und können reaktiviert werden.
+      </div>
+      {!archivLoaded&&<div className="cc-empty">Wird geladen…</div>}
+      {archivLoaded&&archivData.length===0&&<div className="cc-empty">Keine archivierten Mitglieder.</div>}
+      {archivLoaded&&archivData.length>0&&(
+        <Card flush>
+          <div className="cc-table-wrap"><div className="cc-table-wrap-inner">
+            <table className="cc-members-table">
+              <thead>
+                <tr>
+                  <th className="cc-members-th">Name</th>
+                  <th className="cc-members-th">Mitgliedschaft</th>
+                  <th className="cc-members-th">Deaktiviert am</th>
+                  <th className="cc-members-th">Deaktiviert von</th>
+                  <th className="cc-members-th"/>
+                </tr>
+              </thead>
+              <tbody>
+                {archivData.map(m=>(
+                  <tr key={m.id} className="cc-members-tr">
+                    <td className="cc-members-td">
+                      <div className="cc-row cc-gap-8">
+                        <Av name={`${m.vorname||""} ${m.nachname||""}`} size={26}/>
+                        <span className="cc-text-bold">{m.vorname} {m.nachname}</span>
+                      </div>
+                    </td>
+                    <td className="cc-members-td cc-members-td-sub">{m.mitgliedtyp||"—"}</td>
+                    <td className="cc-members-td cc-members-td-sub">
+                      {m.deaktiviert_am?new Date(m.deaktiviert_am).toLocaleDateString("de-CH"):"—"}
+                    </td>
+                    <td className="cc-members-td cc-members-td-sub">{m.deaktiviert_von||"—"}</td>
+                    <td className="cc-members-td" style={{textAlign:"right"}}>
+                      <Btn small onClick={()=>reaktivieren(m.id,`${m.vorname} ${m.nachname}`)}>
+                        <TI n="user-check" size={13}/> Reaktivieren
+                      </Btn>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div></div>
+          <div style={{padding:"8px 16px",fontSize:12,color:"var(--sub)"}}>
+            {archivData.length} deaktivierte Mitglieder
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
   const [search,setSearch]=useState("");
@@ -690,6 +752,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
+  const [archivTab,setArchivTab]=useState(false);
+  const [archivData,setArchivData]=useState([]);
+  const [archivLoaded,setArchivLoaded]=useState(false);
 
   // Direkte Navigation vom Kader-Modul
   useEffect(()=>{
@@ -853,6 +918,26 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
   function toggleSelectAll(){
     setSelected(prev=>prev.size===paged.length?new Set():new Set(paged.map(m=>m.id)));
+  }
+  async function handleBulkDelete(){
+    if(!sb||selected.size===0) return;
+    if(!window.confirm(`Wirklich ${selected.size} Mitglieder unwiderruflich löschen? Diese Aktion kann nicht rükgängig gemacht werden.`)) return;
+    const ids=[...selected];
+    await sb.from("mitglieder").delete().in("id",ids);
+    setSelected(new Set());
+    setSelectMode(false);
+    if(onReload) onReload();
+  }
+  async function handleBulkDeactivate(){
+    if(!sb||selected.size===0) return;
+    if(!window.confirm(`${selected.size} Mitglieder deaktivieren?`)) return;
+    const ids=[...selected];
+    const deaktiviertVon=account?.name||account?.email||"Administrator";
+    await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:deaktiviertVon}).in("id",ids);
+    setSelected(new Set());
+    setSelectMode(false);
+    setArchivLoaded(false);
+    if(onReload) onReload();
   }
   function handleColDragStart(key){ setDragCol(key); }
   function handleColDragOver(e,key){ e.preventDefault(); setDragOverCol(key); }
@@ -1838,12 +1923,34 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   return(
     <div className="cc-page-wide">
-      {/* Header */}
+      {/* Header + Tabs */}
       <div className="cc-page-hdr">
-        <h1 className="cc-page-title">Mitglieder</h1>
+        <div className="cc-row cc-gap-0">
+          <h1 className="cc-page-title" style={{marginRight:24}}>Mitglieder</h1>
+          {(role==="administrator"||role==="administration")&&(
+            <div className="cc-ml-tabs-bar">
+              <button className={`cc-ml-tab${!archivTab?" cc-ml-tab-active":""}`} onClick={()=>setArchivTab(false)}>
+                Aktive <span className="cc-ml-tab-count">{allMembers.length}</span>
+              </button>
+              <button className={`cc-ml-tab${archivTab?" cc-ml-tab-active":""}`} onClick={()=>{
+                setArchivTab(true);
+                if(!archivLoaded&&sb){
+                  sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von").eq("aktiv",false).order("deaktiviert_am",{ascending:false})
+                    .then(({data})=>{setArchivData(data||[]);setArchivLoaded(true);});
+                }
+              }}>
+                Archiv {archivLoaded&&<span className="cc-ml-tab-count">{archivData.length}</span>}
+              </button>
+            </div>
+          )}
+        </div>
 
       </div>
 
+      {archivTab?(
+        <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}}/>
+      ):(
+      <>
       {/* KPI */}
       <div className="cc-grid-stats cc-mb-8">
         <Stat label="Total" value={totalCount} color={BL}/>
@@ -2142,8 +2249,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           </div>
           <span className="cc-sel-bar-info">{selected.size} ausgewählt</span>
           <button className="cc-ml-btn" onClick={()=>{}}><TI n="download" size={14}/> Export</button>
-          <button className="cc-ml-btn" onClick={()=>{}}><TI n="user-off" size={14}/> Deaktivieren</button>
-          <button className="cc-ml-btn cc-ml-btn-danger" onClick={()=>{if(window.confirm(`Wirklich ${selected.size} Mitglieder löschen?`)){setSelected(new Set());}}}><TI n="trash" size={14}/> Löschen (DSGVO)</button>
+          <button className="cc-ml-btn" onClick={handleBulkDeactivate}><TI n="user-off" size={14}/> Deaktivieren</button>
+          <button className="cc-ml-btn cc-ml-btn-danger" onClick={handleBulkDelete}><TI n="trash" size={14}/> Löschen (DSGVO)</button>
           <button className="cc-btn-ghost" onClick={()=>{setSelected(new Set());setSelectMode(false);}}><TI n="x" size={13}/> Abbrechen</button>
         </div>
       )}
@@ -2279,6 +2386,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       )}
 
       </Card>
+
+      </>
+      )}
 
       {/* Teams Popover / Sheet */}
       {teamsPopover&&(
