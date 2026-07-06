@@ -95,6 +95,7 @@ const TI_PATHS={
     "arrow-narrow-right":"<path d=\"M5 12h14\"/><path d=\"M15 8l4 4l-4 4\"/>",
     "chevron-up":"<polyline points=\"18 15 12 9 6 15\"/>",
     "chevron-down":"<polyline points=\"6 9 12 15 18 9\"/>",
+    "trending-up":"<polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\"/><polyline points=\"16 7 22 7 22 13\"/>",
 };
 function TI({n, size=16, style={}}){
   const p = TI_PATHS[n];
