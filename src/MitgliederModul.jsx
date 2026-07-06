@@ -1988,7 +1988,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {archivTab?(
-        <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={m=>setSelectedMember({...m,_tab:"info",_readonly:true})}/>
+        <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
+          if(!sb) return;
+          const {data}=await sb.from("mitglieder").select("*").eq("id",m.id).single();
+          if(data) setSelectedMember({...data,_tab:"info",_readonly:true});
+        }}/>
       ):(
       <>
       {/* KPI */}
