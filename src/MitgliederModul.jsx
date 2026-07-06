@@ -1993,15 +1993,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
   function handleColDragStart(key){ setDragCol(key); }
   function handleColDragOver(key){ setDragOverCol(key); }
-  function handleColDrop(targetKey){
-    if(!dragCol||dragCol===targetKey) return;
+  function handleColDrop(targetKey, dragKey){
+    const from=dragKey||dragCol;
+    if(!from||from===targetKey) return;
     setVisibleCols(prev=>{
       const cols=[...prev];
-      const fromIdx=cols.indexOf(dragCol);
+      const fromIdx=cols.indexOf(from);
       const toIdx=cols.indexOf(targetKey);
       if(fromIdx<0||toIdx<0) return cols;
       cols.splice(fromIdx,1);
-      cols.splice(toIdx,0,dragCol);
+      cols.splice(toIdx,0,from);
       return cols;
     });
     setDragCol(null);

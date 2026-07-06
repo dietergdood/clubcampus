@@ -1529,7 +1529,7 @@ function ColMenuButton({
                 draggable={!col.alwaysOn}
                 onDragStart={()=>onDragStart&&onDragStart(key)}
                 onDragOver={e=>{e.preventDefault();onDragOver&&onDragOver(key);}}
-                onDrop={()=>onDrop&&onDrop(key)}
+                onDrop={()=>onDrop&&onDrop(key,dragCol)}
                 onDragEnd={()=>onDragEnd&&onDragEnd()}
                 onClick={()=>!col.alwaysOn&&onVisibleColsChange&&onVisibleColsChange(visibleCols.filter(k=>k!==key))}>
                 {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
