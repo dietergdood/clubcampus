@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader } from "./theme.jsx";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, useConfirm } from "./theme.jsx";
 import { getRole } from "./NavigationModul.jsx";
 
 /* ── Länderliste ISO2 → {name, flag} ── */
@@ -140,6 +140,7 @@ function getFieldVisibility(role){
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
 function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
+  const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const [heroMenuOpen,setHeroMenuOpen]=useState(false);
   const heroMenuRef=useRef(null);
@@ -182,7 +183,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
   },[editOpen]);
 
   async function deleteMitglied(){
-    if(!sb||!window.confirm(`${m.name} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+    const ok=await confirm({title:`${m.name} löschen?`,message:"Diese Aktion kann nicht rückgängig gemacht werden.",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("mitglieder").update({aktiv:false}).eq("id",raw.id);
     if(onClose) onClose();
     if(onReload) onReload();
@@ -221,7 +222,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
   const mitgliedtyp=raw.mitgliedtyp||m.type;
 
   return(
-    <>
+    <>{confirmDialog}
       <div className="cc-member-hero">
         <div className="cc-member-hero-banner">
           <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
@@ -312,13 +313,13 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                       </button>
                     )}
                     {canEdit&&raw.aktiv!==false&&(
-                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} archivieren?`)){const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}}>
+                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);confirm({title:`${m.name} archivieren?`,confirmLabel:"Archivieren"}).then(async ok=>{if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();})}}}>
                         <TI n="archive" size={13}/> Archivieren
                       </button>
                     )}
                     {raw.aktiv===false&&(
                       <>
-                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} reaktivieren?`)){await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}}>
+                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"}).then(async ok=>{if(!ok)return;await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);})}}}>
                           <TI n="user-check" size={13}/> Reaktivieren
                         </button>
                         <div className="cc-menu-sep"/>
@@ -456,7 +457,7 @@ function FotoUpload({raw,canUpload,sb,onReload}){
   }
 
   async function handleDelete(){
-    if(!sb||!window.confirm("Foto wirklich löschen?")) return;
+    const ok=await confirm({title:"Foto löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("mitglieder").update({foto_url:null}).eq("id",raw.id);
     if(onReload) onReload();
   }
@@ -567,7 +568,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
   }
 
   async function deleteEltern(id){
-    if(!sb||!window.confirm("Elternkontakt wirklich löschen?")) return;
+    const ok=await confirm({title:"Elternkontakt löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("elternkontakte").delete().eq("id",id);
     if(onReload) onReload();
   }
@@ -667,6 +668,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
         </ModalOrSheet>
       )}
     </div>
+  </>
   );
 }
 
@@ -679,6 +681,7 @@ function elternAvColor(beziehung){
 }
 
 function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=null,onReload,onOpenMember}){
+  const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const [archivSearch,setArchivSearch]=useState("");
   const [archivFilterVals,setArchivFilterVals]=useState({});
@@ -690,7 +693,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
 
   async function reaktivieren(e,id,name){
     e.stopPropagation();
-    if(!sb||!window.confirm(`${name} reaktivieren?`)) return;
+    const ok=await confirm({title:`${name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!sb||!ok) return;
     await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
     if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
     if(onReload) onReload();
@@ -698,7 +701,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
 
   async function loeschen(e,id,name){
     e.stopPropagation();
-    if(!sb||!window.confirm(`${name} unwiderruflich löschen (DSGVO)?`)) return;
+    const ok=await confirm({title:`${name} löschen (DSGVO)?`,message:"Diese Aktion ist unwiderruflich.",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("mitglieder").delete().eq("id",id);
     if(onReload) onReload();
   }
@@ -750,6 +753,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
       },{})).sort(([a],[b])=>String(a).localeCompare(String(b))).map(([k,members])=>({key:k,members}));
 
   return(
+    <>{confirmDialog}
     <div>
       <div className="cc-info-box cc-info-box-warn cc-mb-16">
         <TI n="info-circle" size={15}/>
@@ -780,7 +784,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
         onSelectAll={()=>setArchivSelected(archivSelected.length===filtered.length?[]:filtered.map(m=>m.id))}
         actions={[
           {icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:async()=>{
-            if(!archivSelected.length||!sb||!window.confirm(`${archivSelected.length} Mitglieder reaktivieren?`)) return;
+            if(!archivSelected.length) return;const ok=await confirm({title:`${archivSelected.length} Mitglieder reaktivieren?`,confirmLabel:"Reaktivieren"});if(!sb||!ok) return;
             for(const id of archivSelected){
               await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
               if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
@@ -788,7 +792,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
           }},
           {icon:"trash", label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:async()=>{
-            if(!archivSelected.length||!sb||!window.confirm(`${archivSelected.length} Mitglieder unwiderruflich löschen?`)) return;
+            if(!archivSelected.length) return;const ok=await confirm({title:`${archivSelected.length} Mitglieder löschen?`,message:"Diese Aktion ist unwiderruflich (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
             for(const id of archivSelected) await sb.from("mitglieder").delete().eq("id",id);
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
           }},
@@ -863,11 +867,13 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
         </Card>
       )}
     </div>
+  </>
   );
 }
 
 
 function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
+  const [confirm,confirmDialog]=useConfirm();
   const [notizen,setNotizen]=useState(null);
   const [newText,setNewText]=useState("");
   const [adding,setAdding]=useState(false);
@@ -905,7 +911,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
   }
 
   async function deleteNotiz(id){
-    if(!sb||!window.confirm("Notiz wirklich löschen?")) return;
+    const ok=await confirm({title:"Notiz löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("mitglieder_notizen").delete().eq("id",id);
     setNotizen(prev=>prev.filter(n=>n.id!==id));
   }
@@ -926,6 +932,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
   if(notizen===null) return <div className="cc-text-sm cc-text-sub">Lade…</div>;
 
   return(
+    <>{confirmDialog}
     <div className="cc-notiz-list">
       {notizen.length===0&&!canEdit&&(
         <div className="cc-text-sm cc-text-sub cc-empty-italic">Keine Notizen vorhanden.</div>
@@ -984,6 +991,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser}){
         )
       )}
     </div>
+  </>
   );
 }
 
@@ -1104,7 +1112,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
   }
 
   async function removeFromTeam(kaderId){
-    if(!sb||!window.confirm("Mitglied aus diesem Team entfernen?")) return;
+    const ok=await confirm({title:"Aus Team entfernen?",confirmLabel:"Entfernen"});if(!sb||!ok) return;
     await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
     setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
   }
@@ -1713,13 +1721,12 @@ reloadMember, refreshArchivCount, brauchtEltern,
 
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
+  const [confirm,confirmDialog]=useConfirm();
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
   const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("none");
   const [filterVals,setFilterVals]=useState({});
-  const [filterOpen,setFilterOpen]=useState(false);
-  const [groupOpen,setGroupOpen]=useState(false);
   const [savedView,setSavedView]=useState("standard");
   const [dragCol,setDragCol]=useState(null);
   const [dragOverCol,setDragOverCol]=useState(null);
@@ -1727,7 +1734,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [colDragOver,setColDragOver]=useState(null);
   const [teamsPopover,setTeamsPopover]=useState(null);
   const [pageSize,setPageSize]=useState(50);
-  const [exportOpen,setExportOpen]=useState(false);
   const [selectMode,setSelectMode]=useState(false);
   const [selected,setSelected]=useState(new Set());
   const [customViews,setCustomViews]=useState([]);
@@ -1911,7 +1917,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
   async function handleBulkDelete(){
     if(!sb||selected.size===0) return;
-    if(!window.confirm(`Wirklich ${selected.size} Mitglieder unwiderruflich löschen? Diese Aktion kann nicht rükgängig gemacht werden.`)) return;
+    const ok=await confirm({title:`${selected.size} Mitglieder löschen?`,message:"Diese Aktion kann nicht rükgängig gemacht werden (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!ok) return;
     const ids=[...selected];
     await sb.from("mitglieder").delete().in("id",ids);
     setSelected(new Set());
@@ -1920,7 +1926,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
   async function handleBulkDeactivate(){
     if(!sb||selected.size===0) return;
-    if(!window.confirm(`${selected.size} Mitglieder archivieren?`)) return;
+    const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,confirmLabel:"Archivieren"});if(!ok) return;
     const ids=[...selected];
     const deaktiviertVon=account?.name||account?.email||"Administrator";
     await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:deaktiviertVon}).in("id",ids);
@@ -2131,6 +2137,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
   return(
+    <>{confirmDialog}
     <div className="cc-page-wide">
       {/* Header + Tabs */}
       <div className="cc-page-hdr">
@@ -2461,6 +2468,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         )
       )}
     </div>
+  </>
   );
 }
 
