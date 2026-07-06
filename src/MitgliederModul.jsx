@@ -1248,6 +1248,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
           </div>
         );
       })()}
+      {tab==="info"&&(
       <div className="cc-member-stats">
         <StatusTile label="Mitgliedschaft"   value={raw.mitgliedtyp||"—"}                                                    icon="id-badge-2"    semantic="neutral"/>
         <StatusTile label="Datenprüfung"  value={raw.geprueft?"Geprüft":"Ausstehend"}                                        icon={raw.geprueft?"shield-check":"alert-circle"} semantic={raw.geprueft?"ok":"warn"}
@@ -1256,6 +1257,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
           action={!raw.hat_portal_zugang&&canEdit?{label:"Zugang erstellen",onClick:()=>setTab("portal")}:null}/>
         <StatusTile label="Fairgate"      value={raw.fairgate_id?(isMobile?"Sync":"Synchronisiert"):"—"}                     icon="refresh"       semantic={raw.fairgate_id?"ok":"neutral"}/>
       </div>
+      )}
 
       {/* Tab: Profil */}
       {tab==="info"&&(
