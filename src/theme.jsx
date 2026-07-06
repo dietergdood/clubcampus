@@ -425,7 +425,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text)}
 .cc-hero-av-edit:hover{background:var(--surface)}
 .cc-member-hero-body{display:none}
-.cc-member-hero-av{width:56px;height:56px;border-radius:50%;background:var(--surface2);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:var(--text);overflow:hidden}
+.cc-member-hero-av{width:56px;height:56px;border-radius:50%;background:var(--cc-accent-25);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:var(--cc-accent,#FFBF00);overflow:hidden}
 .cc-member-hero-info{flex:1;min-width:0}
 .cc-member-hero-sub{font-size:13px;color:var(--sub);margin-top:3px;margin-bottom:0}
 .cc-hero-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
