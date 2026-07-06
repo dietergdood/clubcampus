@@ -2311,6 +2311,23 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         moreItems={[
           {header:true,label:"Aktionen"},
           {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
+          ...(!isMobile?[{
+            icon:"table",label:"Spalten",
+            subPanel:(
+              <ColMenuButton
+                colGroups={COL_GROUPS}
+                visibleCols={visibleCols}
+                onVisibleColsChange={setVisibleCols}
+                dragCol={dragCol}
+                dragOverCol={dragOverCol}
+                onDragStart={handleColDragStart}
+                onDragOver={handleColDragOver}
+                onDrop={handleColDrop}
+                onDragEnd={handleColDragEnd}
+                inline
+              />
+            ),
+          }]:[]),
           ...(canExport?[
             "sep",
             {header:true,label:"Export"},
@@ -2318,19 +2335,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             {icon:"table",label:"Liste als Excel exportieren",onClick:()=>{}},
           ]:[]),
         ]}
-        colMenu={!isMobile&&(
-          <ColMenuButton
-            colGroups={COL_GROUPS}
-            visibleCols={visibleCols}
-            onVisibleColsChange={setVisibleCols}
-            dragCol={dragCol}
-            dragOverCol={dragOverCol}
-            onDragStart={handleColDragStart}
-            onDragOver={handleColDragOver}
-            onDrop={handleColDrop}
-            onDragEnd={handleColDragEnd}
-          />
-        )}
       />
 
       {/* Selektionsleiste */}

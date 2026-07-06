@@ -2,7 +2,7 @@
    ClubCampus Theme — theme.jsx
    Theme-System, Logo, CSS-Variablen, Default-Farben
    ═══════════════════════════════════════════════════════════════ */
-import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { TI } from "./icons.jsx";
 import { ACCENT, ACCENT2, ACCENT20, BK, BL, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, FONT, R } from "./constants.js";
@@ -548,6 +548,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-menu-icon-drag{opacity:0.4;cursor:grab}
 .cc-col-menu-icon-lock{opacity:0.3;margin-right:2px}
 .cc-col-menu-hdr-mt{margin-top:8px}
+.cc-ml-more-subpanel{border-top:0.5px solid var(--border);padding:4px 0;margin-top:2px}
 .cc-col-menu-group-hdr{font-size:10px;font-weight:500;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px 4px}
 .cc-members-name-link{cursor:pointer}
 .cc-members-name-link:hover{text-decoration:underline;text-underline-offset:2px}
@@ -1262,6 +1263,7 @@ function Toolbar({
   const [filterOpen,setFilterOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
   const [moreOpen,setMoreOpen]=useState(false);
+  const [moreSubPanel,setMoreSubPanel]=useState(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
 
   const hasActiveFilter=Object.values(filterVals).some(v=>v&&v.length>0);
@@ -1446,16 +1448,28 @@ function Toolbar({
                   </div>
                 </div>
               ):(
-                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:200}}>
-                  {moreItems.map((item,i)=>item==="sep"
-                    ?<div key={i} className="cc-menu-sep"/>
-                    :item.header
-                    ?<div key={i} className="cc-col-menu-hdr">{item.label}</div>
-                    :<div key={i} className={`cc-col-menu-item${item.danger?" cc-menu-item-danger":""}`}
-                        onClick={()=>{setMoreOpen(false);item.onClick();}}>
+                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220}}>
+                  {moreItems.map((item,i)=>{
+                    if(item==="sep") return <div key={i} className="cc-menu-sep"/>;
+                    if(item.header) return <div key={i} className="cc-col-menu-hdr">{item.label}</div>;
+                    if(item.hidden) return null;
+                    if(item.subPanel) return(
+                      <Fragment key={i}>
+                        <div className="cc-col-menu-item" style={{justifyContent:"space-between"}}
+                          onClick={()=>setMoreSubPanel(p=>p===i?null:i)}>
+                          <span style={{display:"flex",alignItems:"center",gap:8}}>{item.icon&&<TI n={item.icon} size={14}/>}{item.label}</span>
+                          <TI n={moreSubPanel===i?"chevron-down":"chevron-right"} size={12}/>
+                        </div>
+                        {moreSubPanel===i&&<div className="cc-ml-more-subpanel">{item.subPanel}</div>}
+                      </Fragment>
+                    );
+                    return(
+                      <div key={i} className={`cc-col-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                        onClick={()=>{setMoreOpen(false);setMoreSubPanel(null);item.onClick();}}>
                         {item.icon&&<TI n={item.icon} size={14}/>}{item.label}
                       </div>
-                  )}
+                    );
+                  })}
                 </div>
               )
             )}
@@ -1487,6 +1501,62 @@ function Toolbar({
 }
 
 
+function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDragStart,onDragOver,onDrop,onDragEnd,search,setSearch}){
+  const allCols=colGroups.flatMap(g=>g.cols);
+  return(
+    <div>
+      <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+      {visibleCols.filter(k=>allCols.find(c=>c.key===k)).map(key=>{
+        const col=allCols.find(c=>c.key===key);
+        if(!col) return null;
+        return(
+          <div key={key}
+            className={`cc-col-menu-item cc-col-menu-item-active${dragCol===key?" cc-col-menu-item-dragging":""}`}
+            draggable={!col.alwaysOn}
+            onDragStart={()=>onDragStart&&onDragStart(key)}
+            onDragOver={e=>{e.preventDefault();onDragOver&&onDragOver(key);}}
+            onDrop={()=>onDrop&&onDrop(key,dragCol)}
+            onDragEnd={()=>onDragEnd&&onDragEnd()}
+            onClick={()=>!col.alwaysOn&&onVisibleColsChange&&onVisibleColsChange(visibleCols.filter(k=>k!==key))}>
+            {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
+            {col.alwaysOn&&<TI n="lock" size={11} className="cc-col-menu-icon-lock"/>}
+            <span className="cc-flex-1" style={{fontSize:13}}>{col.label}</span>
+            {!col.alwaysOn&&<TI n="x" size={11} style={{opacity:0.4}}/>}
+          </div>
+        );
+      })}
+      <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
+      <div className="cc-col-search-wrap">
+        <TI n="search" size={13} className="cc-col-search-icon"/>
+        <input className="cc-col-search-input" value={search}
+          onChange={e=>setSearch(e.target.value)}
+          placeholder="Spalte suchen…"/>
+        {search&&<button className="cc-col-search-clear" onClick={()=>setSearch("")}><TI n="x" size={11}/></button>}
+      </div>
+      {(()=>{
+        const q=search.toLowerCase();
+        const groups=colGroups.map(g=>({...g,
+          cols:g.cols.filter(c=>!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
+            .sort((a,b)=>a.label.localeCompare(b.label))
+        })).filter(g=>g.cols.length>0);
+        if(groups.length===0) return <div className="cc-col-search-empty">Keine Spalte gefunden</div>;
+        return groups.map(g=>(
+          <div key={g.group}>
+            <div className="cc-col-menu-group-hdr">{g.group}</div>
+            {g.cols.map(c=>(
+              <div key={c.key} className="cc-col-menu-item"
+                onClick={()=>onVisibleColsChange&&onVisibleColsChange([...visibleCols,c.key])}>
+                <div className="cc-col-menu-check"/>
+                <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
+              </div>
+            ))}
+          </div>
+        ));
+      })()}
+    </div>
+  );
+}
+
 /* ── ColMenuButton: Spalten-Auswahl Button + Dropdown ── */
 function ColMenuButton({
   /* Spalten-Gruppen: [{group, cols:[{key,label,alwaysOn?}]}] */
@@ -1501,6 +1571,7 @@ function ColMenuButton({
   onDragOver=null,
   onDrop=null,
   onDragEnd=null,
+  inline=false,
 }){
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
@@ -1513,6 +1584,8 @@ function ColMenuButton({
   },[]);
 
   const allCols=colGroups.flatMap(g=>g.cols);
+
+  if(inline) return <ColMenuContent colGroups={colGroups} visibleCols={visibleCols} onVisibleColsChange={onVisibleColsChange} dragCol={dragCol} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} search={search} setSearch={setSearch}/>;
 
   return(
     <div className="cc-ml-dropdown-wrap" ref={ref}>
