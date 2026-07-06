@@ -1606,7 +1606,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </Card>
 
             {/* Vereinsfunktionen */}
-            {((raw.funktionen||[]).length>0||canEdit)&&(
+            {(true)&&(
               <Card>
                 <div className="cc-section-title"><TI n="briefcase" size={14}/> Vereinsfunktionen</div>
                 {(raw.funktionen||[]).length===0&&(
