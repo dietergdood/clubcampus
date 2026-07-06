@@ -1992,7 +1992,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(onReload) onReload();
   }
   function handleColDragStart(key){ setDragCol(key); }
-  function handleColDragOver(e,key){ e.preventDefault(); setDragOverCol(key); }
+  function handleColDragOver(key){ setDragOverCol(key); }
   function handleColDrop(targetKey){
     if(!dragCol||dragCol===targetKey) return;
     setVisibleCols(prev=>{
@@ -2342,7 +2342,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   );
                 })}
                 <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
-                {COLS.filter(c=>!visibleCols.includes(c.key)).map(c=>(
+                {ALL_COLS.filter(c=>!visibleCols.includes(c.key)).map(c=>(
                   <div key={c.key} className="cc-col-menu-item"
                     onClick={()=>setVisibleCols(prev=>[...prev,c.key])}>
                     <div className="cc-col-menu-check"/>
