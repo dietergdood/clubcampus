@@ -316,7 +316,14 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                         <TI n="archive" size={13}/> Archivieren
                       </button>
                     )}
-                    <div className="cc-menu-sep"/>
+                    {raw.aktiv===false&&(
+                      <>
+                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} reaktivieren?`)){await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onReload)onReload();onClose();}}}>
+                          <TI n="user-check" size={13}/> Reaktivieren
+                        </button>
+                        <div className="cc-menu-sep"/>
+                      </>
+                    )}
                     <button className="cc-menu-item cc-menu-item-danger" onClick={()=>{setHeroMenuOpen(false);deleteMitglied();}}>
                       <TI n="trash" size={13}/> Löschen
                     </button>
