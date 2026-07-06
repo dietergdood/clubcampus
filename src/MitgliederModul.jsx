@@ -2404,38 +2404,53 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           )}
         </div>
 
-        {/* Export */}
-        {canExport&&(
-          <div className="cc-ml-dropdown-wrap">
-            <button className={`cc-ml-btn${exportOpen?" cc-active":""}`}
-              onClick={()=>{setExportOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setColMenuOpen(false);}}>
-              <TI n="download" size={15}/>
-              {!isMobile&&"Export"}
-            </button>
-            {exportOpen&&(
-              <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:130}}>
-                <div className="cc-col-menu-hdr">Export</div>
-                <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="file-text" size={14}/> CSV</div>
-                <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="table" size={14}/> Excel</div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Auswaehlen - nur Desktop */}
-        {!isMobile&&(
-          <button className={`cc-ml-btn${selectMode?" cc-active":""}`} onClick={toggleSelectMode}>
-            <TI n="checkbox" size={15}/>
-            {selectMode?"Modus aktiv":"Auswählen"}
+        {/* Mehr-Menu: Export, Auswaehlen, Spalten */}
+        <div className="cc-ml-dropdown-wrap">
+          <button className={`cc-ml-btn${exportOpen||selectMode?" cc-active":""}`}
+            onClick={()=>{setExportOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setColMenuOpen(false);}}>
+            <TI n="dots" size={15}/>
           </button>
-        )}
+          {exportOpen&&(
+            isMobile?(
+              <div className="cc-mehr-sheet-overlay" onClick={()=>setExportOpen(false)}>
+                <div className="cc-mehr-sheet-backdrop"/>
+                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                  <div className="cc-mehr-sheet-handle"/>
+                  <div className="cc-mehr-sheet-title">Optionen</div>
+                  {canExport&&(
+                    <>
+                      <div className="cc-mehr-sheet-item" onMouseDown={e=>{e.stopPropagation();setExportOpen(false);}}><TI n="file-text" size={16}/> Liste als CSV exportieren</div>
+                      <div className="cc-mehr-sheet-item" onMouseDown={e=>{e.stopPropagation();setExportOpen(false);}}><TI n="table" size={16}/> Liste als Excel exportieren</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ):(
+              <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:200}}>
+                {canExport&&(
+                  <>
+                    <div className="cc-col-menu-hdr">Export</div>
+                    <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="file-text" size={14}/> Liste als CSV exportieren</div>
+                    <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="table" size={14}/> Liste als Excel exportieren</div>
+                    <div className="cc-menu-sep"/>
+                  </>
+                )}
+                <div className="cc-col-menu-hdr">Aktionen</div>
+                <div className="cc-col-menu-item" onClick={()=>{toggleSelectMode();setExportOpen(false);}}>
+                  <TI n="checkbox" size={14}/> {selectMode?"Auswahlmodus beenden":"Mitglieder auswählen"}
+                </div>
+                <div className="cc-menu-sep"/>
+                <div className="cc-col-menu-hdr">Spalten</div>
+              </div>
+            )
+          )}
+        </div>
 
-        {/* Spalten - nur Desktop */}
+        {/* Spalten - nur Desktop, inline nach Mehr-Menu */}
         {!isMobile&&<div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
           <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
             onClick={()=>{setColMenuOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);}}>
             <TI n="layout-columns" size={15}/>
-            {!isMobile&&"Spalten"}
           </button>
           {colMenuOpen&&(
             <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
