@@ -612,6 +612,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
 .cc-info-row{padding:8px 0;border-bottom:0.5px solid var(--border)}
 .cc-info-row:last-child{border-bottom:none}
+.cc-info-row:nth-last-child(2):nth-child(odd){border-bottom:none}
 .cc-info-row:nth-child(odd){padding-right:14px;border-right:0.5px solid var(--border)}
 .cc-info-row:nth-child(even){padding-left:14px;border-right:none}
 .cc-info-key{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--sub);margin-bottom:2px;display:block}
