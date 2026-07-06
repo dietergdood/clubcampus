@@ -2309,14 +2309,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         groupOptions={GROUP_OPTIONS} groupOptionsMore={GROUP_OPTIONS_MORE}
         groupBy={groupBy} onGroupChange={setGroupBy}
         moreItems={[
+          {header:true,label:"Aktionen"},
+          {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
           ...(canExport?[
+            "sep",
             {header:true,label:"Export"},
             {icon:"file-text",label:"Liste als CSV exportieren",onClick:()=>{}},
             {icon:"table",label:"Liste als Excel exportieren",onClick:()=>{}},
-            "sep",
           ]:[]),
-          {header:true,label:"Aktionen"},
-          {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
         ]}
         colMenu={!isMobile&&(
           <ColMenuButton
