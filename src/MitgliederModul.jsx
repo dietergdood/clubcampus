@@ -1924,6 +1924,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {val:"teams",          label:"Nach Team"},
     {val:"portal",         label:"Nach Portal-Zugang"},
     {val:"datenpruefung",  label:"Nach Datenprüfung"},
+  ];
+  const GROUP_OPTIONS_MORE=[
     {val:"geschlecht",     label:"Nach Geschlecht"},
     {val:"nationalitaet",  label:"Nach Nationalität"},
     {val:"ort",            label:"Nach Wohnort"},
@@ -2301,7 +2303,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             [key]:active?[...(prev[key]||[]),val]:(prev[key]||[]).filter(x=>x!==val)
           }));
         }}
-        groupOptions={GROUP_OPTIONS}
+        groupOptions={GROUP_OPTIONS} groupOptionsMore={GROUP_OPTIONS_MORE}
         groupBy={groupBy} onGroupChange={setGroupBy}
         moreItems={[
           ...(canExport?[

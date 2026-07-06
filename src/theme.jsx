@@ -1238,7 +1238,7 @@ function Toolbar({
   /* Filter */
   filterDefs=[], filterVals={}, onFilterChange=null,
   /* Gruppieren */
-  groupOptions=[], groupBy="none", onGroupChange=null,
+  groupOptions=[], groupOptionsMore=[], groupBy="none", onGroupChange=null,
   /* Mehr-Menu */
   moreItems=[],
   /* Spalten */
@@ -1250,6 +1250,7 @@ function Toolbar({
   const [filterOpen,setFilterOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
   const [moreOpen,setMoreOpen]=useState(false);
+  const [groupMoreOpen,setGroupMoreOpen]=useState(false);
 
   const hasActiveFilter=Object.values(filterVals).some(v=>v&&v.length>0);
   const activeFilterCount=Object.values(filterVals).reduce((n,v)=>n+(v?.length||0),0);
@@ -1355,10 +1356,24 @@ function Toolbar({
                     {groupOptions.map(o=>(
                       <div key={o.val} className="cc-mehr-sheet-item"
                         style={{fontWeight:groupBy===o.val?600:400,color:groupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
-                        onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>
-                        {groupBy===o.val&&<TI n="check" size={14}/>}{o.label}
+                        onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>\n                        {groupBy===o.val&&<TI n="check" size={14}/>}{o.label}
                       </div>
                     ))}
+                    {groupOptionsMore.length>0&&(
+                      <>
+                        <div className="cc-mehr-sheet-item" style={{color:"var(--sub)",fontWeight:500}}
+                          onMouseDown={e=>{e.stopPropagation();setGroupMoreOpen(o=>!o);}}>
+                          <TI n={groupMoreOpen?"chevron-up":"chevron-down"} size={14}/>
+                          Weitere ({groupOptionsMore.length})
+                        </div>
+                        {groupMoreOpen&&groupOptionsMore.map(o=>(
+                          <div key={o.val} className="cc-mehr-sheet-item"
+                            style={{fontWeight:groupBy===o.val?600:400,color:groupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
+                            onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>\n                            {groupBy===o.val&&<TI n="check" size={14}/>}{o.label}
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               ):(
@@ -1371,6 +1386,22 @@ function Toolbar({
                       {o.label}
                     </div>
                   ))}
+                  {groupOptionsMore.length>0&&(
+                    <>
+                      <div className="cc-col-menu-item cc-text-sub" style={{cursor:"pointer",fontWeight:500}}
+                        onClick={()=>setGroupMoreOpen(o=>!o)}>
+                        <TI n={groupMoreOpen?"chevron-up":"chevron-down"} size={12}/>
+                        Weitere ({groupOptionsMore.length})
+                      </div>
+                      {groupMoreOpen&&groupOptionsMore.map(o=>(
+                        <div key={o.val} className="cc-col-menu-item"
+                          onClick={()=>{onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>
+                          <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>{groupBy===o.val&&<TI n="check" size={10}/>}</div>
+                          {o.label}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               )
             )}
