@@ -650,6 +650,11 @@ function Portal({supabaseClient}){
     try {
       const {data, error} = await sb.from("benutzer").select("*").eq("id",uid).single();
       if(data){
+        if(data.aktiv===false){
+          setError("Dein Portal-Zugang wurde deaktiviert. Bitte wende dich an den Vereinsadministrator.");
+          await sb.auth.signOut();
+          return;
+        }
         setDbUser(data);
         // Kader-Einträge laden für Team-Rollen
         if(data.mitglied_id){
@@ -810,6 +815,32 @@ function Portal({supabaseClient}){
     }catch(e){ console.warn("[FCH] loadDbFunktionen:", e.message); }
   }
 
+  /* Portal-Zugang pruefen und ggf. deaktivieren beim Mitglied-Deaktivieren */
+  async function updatePortalZugang(mitgliedId, aktiv){
+    if(!sb) return;
+    try{
+      /* Benutzer des Mitglieds laden */
+      const {data:bu}=await sb.from("benutzer").select("id").eq("mitglied_id",mitgliedId).maybeSingle();
+      if(!bu) return; /* Kein Portal-Zugang vorhanden */
+
+      if(aktiv){
+        /* Reaktivieren: immer Portal freischalten */
+        await sb.from("benutzer").update({aktiv:true}).eq("id",bu.id);
+      } else {
+        /* Deaktivieren: pruefen ob noch andere aktive Kinder via Elternkontakt */
+        const {data:elternLinks}=await sb.from("elternkontakte")
+          .select("id,mitglied_id,mitglieder(aktiv)")
+          .eq("benutzer_id",bu.id);
+        const hatAndereAktiveKinder=(elternLinks||[]).some(e=>
+          e.mitglied_id!==mitgliedId && e.mitglieder?.aktiv===true
+        );
+        if(!hatAndereAktiveKinder){
+          await sb.from("benutzer").update({aktiv:false}).eq("id",bu.id);
+        }
+      }
+    }catch(e){ console.warn("[CCH] updatePortalZugang:", e.message); }
+  }
+
   async function loadDbMitglieder(){
     if(!sb) return;
     try{
@@ -966,7 +997,7 @@ function Portal({supabaseClient}){
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
       case "team":              return role==="administrator"||role==="administration"?<TeamsVerwaltungModul sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef} dbMitglieder={dbMitglieder} TeamViewComponent={TeamView} KaderModulComponent={KaderModul} TrainingsplanModulComponent={TrainingsplanModul} TermineModulComponent={TermineModul} SpielplanModulComponent={SpielplanModul} TableTabComponent={TableTab} HelferModulComponent={HelferModul} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)}/>:<TeamView role={role} trainerTeams={trainerTeams} teamRollen={teamRollen} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder} KaderModul={KaderModul} TrainingsplanModul={TrainingsplanModul} TermineModul={TermineModul} SpielplanModul={SpielplanModul} TableTab={TableTab} HelferModul={HelferModul} onSelectMember={m=>{setNavToMember(m.id||m.mitglied_id);setActivePersist("members");}} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)}/>;
-      case "members":           return <MembersView role={role} account={account} dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} onReload={loadDbMitglieder} navToMember={navToMember} onNavToMemberDone={()=>setNavToMember(null)} onNavToTeam={teamId=>{setNavToTeam(teamId);setActivePersist("team");}}/>;
+      case "members":           return <MembersView role={role} account={account} dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} onReload={loadDbMitglieder} onUpdatePortalZugang={updatePortalZugang} navToMember={navToMember} onNavToMemberDone={()=>setNavToMember(null)} onNavToTeam={teamId=>{setNavToTeam(teamId);setActivePersist("team");}}/>;
       case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "mitglieder_config": return <PortalverwaltungView initialTab="mitglieder_config" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;

@@ -311,7 +311,12 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                         <TI n="edit" size={13}/> Bearbeiten
                       </button>
                     )}
-                    {canEdit&&<div className="cc-menu-sep"/>}
+                    {canEdit&&raw.aktiv!==false&&(
+                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} deaktivieren?`)){const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload();onClose();}}}>
+                        <TI n="user-off" size={13}/> Deaktivieren
+                      </button>
+                    )}
+                    <div className="cc-menu-sep"/>
                     <button className="cc-menu-item cc-menu-item-danger" onClick={()=>{setHeroMenuOpen(false);deleteMitglied();}}>
                       <TI n="trash" size={13}/> Löschen
                     </button>
@@ -666,7 +671,7 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-function ArchivView({archivData,archivLoaded,sb,account,onReload,onOpenMember}){
+function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=null,onReload,onOpenMember}){
   const [archivSearch,setArchivSearch]=useState("");
   const [archivFilter,setArchivFilter]=useState("alle");
 
@@ -674,6 +679,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onReload,onOpenMember}){
     e.stopPropagation();
     if(!sb||!window.confirm(`${name} reaktivieren?`)) return;
     await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
+    if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
     if(onReload) onReload();
   }
 
@@ -762,7 +768,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onReload,onOpenMember}){
 }
 
 
-function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
+function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
@@ -971,6 +977,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const ids=[...selected];
     const deaktiviertVon=account?.name||account?.email||"Administrator";
     await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:deaktiviertVon}).in("id",ids);
+    if(onUpdatePortalZugang) await Promise.all(ids.map(id=>onUpdatePortalZugang(id,false)));
     setSelected(new Set());
     setSelectMode(false);
     setArchivLoaded(false);
@@ -1991,7 +1998,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {archivTab?(
-        <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
+        <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           const {data}=await sb.from("mitglieder").select("*").eq("id",m.id).single();
           if(data) setSelectedMember({...data,name:`${data.vorname||""} ${data.nachname||""}`.trim()||"?",_tab:"info",_readonly:true});
