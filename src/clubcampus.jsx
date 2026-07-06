@@ -917,6 +917,7 @@ function Portal({supabaseClient}){
   // Rolle aus DB-User oder Demo-Fallback
   const effectiveAccountKey = dbUser ? "db_user" : accountKey;
   const dbAccount = dbUser ? {
+    id: dbUser.id,
     name: dbUser.name||dbUser.email||"Benutzer",
     rollen: [dbUser.role||"spieler"],
     primaryRole: dbUser.role||"spieler",
