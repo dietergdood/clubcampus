@@ -312,8 +312,8 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                       </button>
                     )}
                     {canEdit&&raw.aktiv!==false&&(
-                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} deaktivieren?`)){const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload();onClose();}}}>
-                        <TI n="user-off" size={13}/> Deaktivieren
+                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} archivieren?`)){const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload();onClose();}}}>
+                        <TI n="archive" size={13}/> Archivieren
                       </button>
                     )}
                     <div className="cc-menu-sep"/>
@@ -703,7 +703,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
     <div>
       <div className="cc-info-box cc-info-box-warn cc-mb-16">
         <TI n="info-circle" size={15}/>
-        Deaktivierte Mitglieder — Daten sind noch vorhanden und können reaktiviert werden.
+        Archivierte Mitglieder — Daten sind noch vorhanden und können reaktiviert werden.
       </div>
       <div className="cc-ml-toolbar cc-mb-16">
         <div className="cc-ml-srch">
@@ -724,8 +724,8 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
                 <tr>
                   <th className="cc-members-th">Name</th>
                   <th className="cc-members-th">Mitgliedschaft</th>
-                  <th className="cc-members-th">Deaktiviert am</th>
-                  <th className="cc-members-th">Deaktiviert von</th>
+                  <th className="cc-members-th">Archiviert am</th>
+                  <th className="cc-members-th">Archiviert von</th>
                   <th className="cc-members-th"/>
                 </tr>
               </thead>
@@ -973,7 +973,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
   async function handleBulkDeactivate(){
     if(!sb||selected.size===0) return;
-    if(!window.confirm(`${selected.size} Mitglieder deaktivieren?`)) return;
+    if(!window.confirm(`${selected.size} Mitglieder archivieren?`)) return;
     const ids=[...selected];
     const deaktiviertVon=account?.name||account?.email||"Administrator";
     await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:deaktiviertVon}).in("id",ids);
@@ -2303,7 +2303,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           </div>
           <span className="cc-sel-bar-info">{selected.size} ausgewählt</span>
           <button className="cc-ml-btn" onClick={()=>{}}><TI n="download" size={14}/> Export</button>
-          <button className="cc-ml-btn" onClick={handleBulkDeactivate}><TI n="user-off" size={14}/> Deaktivieren</button>
+          <button className="cc-ml-btn" onClick={handleBulkDeactivate}><TI n="archive" size={14}/> Archivieren</button>
           <button className="cc-ml-btn cc-ml-btn-danger" onClick={handleBulkDelete}><TI n="trash" size={14}/> Löschen (DSGVO)</button>
           <button className="cc-btn-ghost" onClick={()=>{setSelected(new Set());setSelectMode(false);}}><TI n="x" size={13}/> Abbrechen</button>
         </div>
