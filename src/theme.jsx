@@ -1481,4 +1481,94 @@ function Toolbar({
   );
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar };
+
+/* ── ColMenuButton: Spalten-Auswahl Button + Dropdown ── */
+function ColMenuButton({
+  /* Spalten-Gruppen: [{group, cols:[{key,label,alwaysOn?}]}] */
+  colGroups=[],
+  /* Aktive Spalten-Keys */
+  visibleCols=[],
+  onVisibleColsChange=null,
+  /* Drag & Drop handlers */
+  dragCol=null,
+  dragOverCol=null,
+  onDragStart=null,
+  onDragOver=null,
+  onDrop=null,
+  onDragEnd=null,
+}){
+  const [open,setOpen]=useState(false);
+  const [search,setSearch]=useState("");
+  const ref=useRef(null);
+
+  useEffect(()=>{
+    function handleClick(e){if(ref.current&&!ref.current.contains(e.target))setOpen(false);}
+    document.addEventListener("mousedown",handleClick);
+    return()=>document.removeEventListener("mousedown",handleClick);
+  },[]);
+
+  const allCols=colGroups.flatMap(g=>g.cols);
+
+  return(
+    <div className="cc-ml-dropdown-wrap" ref={ref}>
+      <button className={`cc-ml-btn${open?" cc-active":""}`}
+        onClick={()=>setOpen(o=>!o)}>
+        <TI n="table" size={15}/>
+      </button>
+      {open&&(
+        <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
+          <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+          {visibleCols.filter(k=>allCols.find(c=>c.key===k)).map(key=>{
+            const col=allCols.find(c=>c.key===key);
+            if(!col) return null;
+            return(
+              <div key={key}
+                className={`cc-col-menu-item cc-col-menu-item-active${dragCol===key?" cc-col-menu-item-dragging":""}`}
+                draggable={!col.alwaysOn}
+                onDragStart={()=>onDragStart&&onDragStart(key)}
+                onDragOver={e=>{e.preventDefault();onDragOver&&onDragOver(key);}}
+                onDrop={()=>onDrop&&onDrop(key)}
+                onDragEnd={()=>onDragEnd&&onDragEnd()}
+                onClick={()=>!col.alwaysOn&&onVisibleColsChange&&onVisibleColsChange(visibleCols.filter(k=>k!==key))}>
+                {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
+                {col.alwaysOn&&<TI n="lock" size={11} className="cc-col-menu-icon-lock"/>}
+                <span className="cc-flex-1" style={{fontSize:13}}>{col.label}</span>
+                {!col.alwaysOn&&<TI n="x" size={11} style={{opacity:0.4}}/>}
+              </div>
+            );
+          })}
+          <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
+          <div className="cc-col-search-wrap">
+            <TI n="search" size={13} className="cc-col-search-icon"/>
+            <input className="cc-col-search-input" value={search}
+              onChange={e=>setSearch(e.target.value)}
+              placeholder="Spalte suchen…"/>
+            {search&&<button className="cc-col-search-clear" onClick={()=>setSearch("")}><TI n="x" size={11}/></button>}
+          </div>
+          {(()=>{
+            const q=search.toLowerCase();
+            const groups=colGroups.map(g=>({...g,
+              cols:g.cols.filter(c=>!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
+                .sort((a,b)=>a.label.localeCompare(b.label))
+            })).filter(g=>g.cols.length>0);
+            if(groups.length===0) return <div className="cc-col-search-empty">Keine Spalte gefunden</div>;
+            return groups.map(g=>(
+              <div key={g.group}>
+                <div className="cc-col-menu-group-hdr">{g.group}</div>
+                {g.cols.map(c=>(
+                  <div key={c.key} className="cc-col-menu-item"
+                    onClick={()=>onVisibleColsChange&&onVisibleColsChange([...visibleCols,c.key])}>
+                    <div className="cc-col-menu-check"/>
+                    <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
+                  </div>
+                ))}
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton };
