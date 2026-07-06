@@ -456,6 +456,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-mehr-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:14px;color:var(--text);font-weight:400;cursor:pointer;font-family:inherit;text-align:left}
 .cc-mehr-sheet-item:last-child{border-bottom:none}
 .cc-mehr-sheet-item-active{color:var(--cc-accent,#FFBF00);font-weight:600}
+.cc-mehr-sheet-item-danger{color:#DC2626!important}
 .cc-notiz-list{display:flex;flex-direction:column;gap:0}
 .cc-mehr-btn-wrap{position:relative;margin-left:auto}
 .cc-check-icon{color:#15803d}
@@ -1030,6 +1031,7 @@ function DropMenu({items}){
   const [pos,setPos]=useState({top:0,right:0});
   const btnRef=useRef(null);
   const wrapRef=useRef(null);
+  const isMobile=useIsMobile();
 
   useEffect(()=>{
     function handleClick(e){ 
@@ -1040,34 +1042,56 @@ function DropMenu({items}){
   },[]);
 
   function handleOpen(){
-    if(btnRef.current){
+    if(!isMobile&&btnRef.current){
       const r=btnRef.current.getBoundingClientRect();
       setPos({top:r.bottom+4, right:window.innerWidth-r.right});
     }
     setOpen(o=>!o);
   }
 
+  const visibleItems=items.filter(item=>item!=="sep"&&!item.hidden);
+
   return(
     <div className="cc-menu-wrap" ref={wrapRef}>
       <button className="cc-menu-trigger" ref={btnRef} onClick={e=>{e.stopPropagation();handleOpen();}} onMouseDown={e=>e.stopPropagation()}>
         <TI n="dots-vertical" size={16}/>
       </button>
-      {open&&createPortal(
-        <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999,fontFamily:FONT}}>
-          {items.map((item,i)=>item==="sep"
-            ?<div key={i} className="cc-menu-sep"/>
-            :item.hidden?null
-            :<button key={i}
-                className={`cc-menu-item${item.danger?" cc-menu-item-danger":""}`}
-                onMouseDown={e=>{e.stopPropagation();}}
-                onClick={()=>{setOpen(false);item.onClick();}}
-              >
-                {item.icon&&<TI n={item.icon} size={13}/>}
-                {item.label}
-              </button>
-          )}
-        </div>,
-        document.body
+      {open&&(
+        isMobile?createPortal(
+          <div className="cc-mehr-sheet-overlay" onMouseDown={()=>setOpen(false)}>
+            <div className="cc-mehr-sheet-backdrop"/>
+            <div className="cc-mehr-sheet-box" onMouseDown={e=>e.stopPropagation()}>
+              <div className="cc-mehr-sheet-handle"/>
+              {items.map((item,i)=>item==="sep"?null:item.hidden?null:(
+                <button key={i}
+                  className={`cc-mehr-sheet-item${item.danger?" cc-mehr-sheet-item-danger":""}`}
+                  style={{borderBottom:i<items.length-1?"0.5px solid var(--border)":"none"}}
+                  onMouseDown={e=>{e.stopPropagation();setOpen(false);item.onClick();}}
+                >
+                  {item.icon&&<TI n={item.icon} size={16}/>}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body
+        ):createPortal(
+          <div className="cc-menu" style={{position:"fixed",top:pos.top,right:pos.right,left:"auto",zIndex:9999,fontFamily:FONT}}>
+            {items.map((item,i)=>item==="sep"
+              ?<div key={i} className="cc-menu-sep"/>
+              :item.hidden?null
+              :<button key={i}
+                  className={`cc-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                  onMouseDown={e=>{e.stopPropagation();}}
+                  onClick={()=>{setOpen(false);item.onClick();}}
+                >
+                  {item.icon&&<TI n={item.icon} size={13}/>}
+                  {item.label}
+                </button>
+            )}
+          </div>,
+          document.body
+        )
       )}
     </div>
   );
