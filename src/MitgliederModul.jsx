@@ -1993,7 +1993,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       <>
       {/* KPI */}
       <div className="cc-grid-stats cc-mb-8">
-        <Stat label="Total" value={totalCount} color={BL}/>
+        <Stat label="Mitglieder" value={totalCount} color={BL}/>
         <Stat label="Portal aktiv" value={portalAktiv} color={GN}/>
         <Stat label="Prüfung offen" value={dpOffen} color={AM}/>
         <Stat label="Ohne Team" value={ohneTeam} color={AM}/>
