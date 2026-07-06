@@ -1840,12 +1840,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   },[]);
   const COLS=ALL_COLS.filter(c=>visibleCols.includes(c.key));
   const GROUP_OPTIONS=[
-    {val:"none",          label:"Keine Gruppierung"},
-    {val:"rollen",        label:"Nach Rolle"},
-    {val:"teams",         label:"Nach Team"},
-    {val:"mitgliedschaft",label:"Nach Mitgliedschaft"},
-    {val:"datenpruefung", label:"Nach Datenpruefung"},
-    {val:"portal",        label:"Nach Portal-Zugang"},
+    {val:"none",           label:"Keine Gruppierung"},
+    {val:"mitgliedschaft", label:"Nach Mitgliedschaft"},
+    {val:"rollen",         label:"Nach Rolle"},
+    {val:"teams",          label:"Nach Team"},
+    {val:"portal",         label:"Nach Portal-Zugang"},
+    {val:"datenpruefung",  label:"Nach Datenprüfung"},
+    {val:"geschlecht",     label:"Nach Geschlecht"},
+    {val:"nationalitaet",  label:"Nach Nationalität"},
+    {val:"ort",            label:"Nach Wohnort"},
+    {val:"__jahrgang",     label:"Nach Jahrgang"},
+    {val:"__altersgruppe", label:"Nach Altersgruppe"},
+    {val:"__eintrittsjahr",label:"Nach Eintrittsjahr"},
   ];
   function applyView(viewKey){
     setSavedView(viewKey);
@@ -2000,12 +2006,36 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const paged=sorted;
   const hasMore=false;
   let groups=[];
+  function getGroupKey(m,g){
+    if(g==="__jahrgang"){
+      if(!m.geburtsdatum) return "Unbekannt";
+      return String(new Date(m.geburtsdatum).getFullYear());
+    }
+    if(g==="__altersgruppe"){
+      if(!m.geburtsdatum) return "Unbekannt";
+      const age=Math.floor((new Date()-new Date(m.geburtsdatum))/31557600000);
+      if(age<10) return "U10";
+      if(age<13) return "U13";
+      if(age<16) return "U16";
+      if(age<19) return "U19";
+      if(age<30) return "Aktive (19-29)";
+      if(age<45) return "Aktive (30-44)";
+      return "Veteranen (45+)";
+    }
+    if(g==="__eintrittsjahr"){
+      if(!m.eintritt) return "Unbekannt";
+      return String(new Date(m.eintritt).getFullYear());
+    }
+    return null;
+  }
+
   if(groupBy==="none"){
     groups=[{key:"",members:paged}];
   }else{
     const map={};
     paged.forEach(m=>{
-      const vals=Array.isArray(m[groupBy])?m[groupBy]:[m[groupBy]||"-"];
+      const computed=getGroupKey(m,groupBy);
+      const vals=computed!==null?[computed]:Array.isArray(m[groupBy])?m[groupBy]:[m[groupBy]||"-"];
       vals.forEach(k=>{
         if(!map[k]) map[k]=[];
         map[k].push(m);
