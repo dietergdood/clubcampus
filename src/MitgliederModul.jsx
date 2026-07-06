@@ -139,7 +139,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
+function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const isMobile=useIsMobile();
   const [heroMenuOpen,setHeroMenuOpen]=useState(false);
   const heroMenuRef=useRef(null);
@@ -312,13 +312,13 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                       </button>
                     )}
                     {canEdit&&raw.aktiv!==false&&(
-                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} archivieren?`)){const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);}}}>
+                      <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} archivieren?`)){const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}}>
                         <TI n="archive" size={13}/> Archivieren
                       </button>
                     )}
                     {raw.aktiv===false&&(
                       <>
-                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} reaktivieren?`)){await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onReaktiviert)onReaktiviert();else if(onReload)onReload(raw.id);}}}>
+                        <button className="cc-menu-item" onClick={async()=>{setHeroMenuOpen(false);if(window.confirm(`${m.name} reaktivieren?`)){await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}}>
                           <TI n="user-check" size={13}/> Reaktivieren
                         </button>
                         <div className="cc-menu-sep"/>
@@ -985,6 +985,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const deaktiviertVon=account?.name||account?.email||"Administrator";
     await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:deaktiviertVon}).in("id",ids);
     if(onUpdatePortalZugang) await Promise.all(ids.map(id=>onUpdatePortalZugang(id,false)));
+    refreshArchivCount();
     setSelected(new Set());
     setSelectMode(false);
     setArchivLoaded(false);
@@ -1224,6 +1225,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     );
   }
 
+  async function refreshArchivCount(){
+    if(!sb) return;
+    const {count}=await sb.from("mitglieder").select("id",{count:"exact",head:true}).eq("aktiv",false);
+    setArchivCount(count||0);
+  }
+
   async function reloadMember(id){
     if(!sb) return;
     const {data}=await sb.from("mitglieder").select("*").eq("id",id).single();
@@ -1432,7 +1439,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       <div className="cc-col cc-gap-12 cc-member-detail-wrap">
         {/* Hero Header */}
         <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit} canDelete={canDelete}
-          sb={sb} onReload={(id)=>id?reloadMember(id):onReload()} onClose={onClose} onReaktiviert={onReaktiviert}
+          sb={sb} onReload={(id)=>id?reloadMember(id):onReload()} onClose={onClose} onReaktiviert={onReaktiviert} onRefreshCount={refreshArchivCount}
           dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         />
@@ -1945,7 +1952,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     );
   };
 
-  if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam} onReaktiviert={()=>{setArchivLoaded(false);setSelectedMember(null);}}/>;
+  if(selectedMember) return <MemberDetail m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam} onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}/>;
 
   /* KPI helpers */
   const totalCount=allMembers.length;
