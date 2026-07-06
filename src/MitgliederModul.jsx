@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect } from "./theme.jsx";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar } from "./theme.jsx";
 import { getRole } from "./NavigationModul.jsx";
 
 /* ── Länderliste ISO2 → {name, flag} ── */
@@ -2290,241 +2290,69 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>}
 
       {/* Toolbar */}
-      <div className="cc-ml-toolbar">
-        <div className="cc-ml-srch">
-          <TI n="search" size={15} className="cc-input-icon"/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Suchen nach Name, Team, Rolle…"/>
-        </div>
-
-        {/* Filter */}
-        <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${Object.values(filterVals).some(v=>v&&v.length>0)?" cc-active":""}`}
-            onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false);setColMenuOpen(false);}}>
-            <TI n="filter" size={15}/>
-            {!isMobile&&"Filter"}
-            {Object.values(filterVals).some(v=>v&&v.length>0)&&<span className="cc-ml-filter-dot"/>}
-          </button>
-          {filterOpen&&(
-            isMobile?(
-              <div className="cc-mehr-sheet-overlay" onClick={()=>setFilterOpen(false)}>
-                <div className="cc-mehr-sheet-backdrop"/>
-                <div className="cc-mehr-sheet-box cc-filter-sheet-box" onClick={e=>e.stopPropagation()}>
-                  <div className="cc-mehr-sheet-handle"/>
-                  <div className="cc-mehr-sheet-title">Filter</div>
-                  {FILTER_DEFS.map(({key,label,vals})=>(
-                    <div key={key}>
-                      <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 0 4px"}}>{label}</div>
-                      {vals.sort().map(v=>{
-                        const active=(filterVals[key]||[]).includes(v);
-                        return(
-                          <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 0"}}
-                            onMouseDown={e=>{e.stopPropagation();setFilterVals(prev=>({...prev,[key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]}));}}>
-                            <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
-                            {v}
-                          </div>
-                        );
-                      })}
+      <Toolbar
+        search={search} onSearch={setSearch}
+        filterDefs={FILTER_DEFS}
+        filterVals={filterVals}
+        onFilterChange={(key,val,active)=>{
+          if(key==="__reset"){setFilterVals({});return;}
+          setFilterVals(prev=>({
+            ...prev,
+            [key]:active?[...(prev[key]||[]),val]:(prev[key]||[]).filter(x=>x!==val)
+          }));
+        }}
+        groupOptions={GROUP_OPTIONS}
+        groupBy={groupBy} onGroupChange={setGroupBy}
+        moreItems={[
+          ...(canExport?[
+            {header:true,label:"Export"},
+            {icon:"file-text",label:"Liste als CSV exportieren",onClick:()=>{}},
+            {icon:"table",label:"Liste als Excel exportieren",onClick:()=>{}},
+            "sep",
+          ]:[]),
+          {header:true,label:"Aktionen"},
+          {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
+        ]}
+        colMenu={!isMobile&&(
+          <div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
+            <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
+              onClick={()=>setColMenuOpen(o=>!o)}>
+              <TI n="layout-columns" size={15}/>
+            </button>
+            {colMenuOpen&&(
+              <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
+                <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+                {visibleCols.filter(k=>COLS.find(c=>c.key===k)).map((key,idx)=>{
+                  const col=COLS.find(c=>c.key===key);
+                  return(
+                    <div key={key} className={`cc-col-menu-item${dragCol===key?" cc-col-menu-item-dragging":""}`}
+                      draggable={!col.alwaysOn}
+                      onDragStart={()=>handleColDragStart(key)}
+                      onDragOver={e=>{e.preventDefault();handleColDragOver(key);}}
+                      onDrop={()=>handleColDrop(key)}
+                      onDragEnd={handleColDragEnd}
+                      onClick={()=>!col.alwaysOn&&setVisibleCols(prev=>prev.filter(k=>k!==key))}>
+                      {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
+                      {col.alwaysOn&&<TI n="lock" size={11} className="cc-col-menu-icon-lock"/>}
+                      <span className="cc-flex-1" style={{fontSize:13}}>{col.label}</span>
+                      {!col.alwaysOn&&<TI n="x" size={11} style={{opacity:0.4}}/>}
                     </div>
-                  ))}
-                  <div className="cc-ml-dropdown-footer" style={{padding:"12px 0 0"}}>
-                    <button className="cc-ml-dropdown-clear" onMouseDown={()=>setFilterVals({})}>Zurücksetzen</button>
-                    <button className="cc-ml-dropdown-apply" onMouseDown={()=>setFilterOpen(false)}>Fertig</button>
-                  </div>
-                </div>
-              </div>
-            ):(
-              <div className="cc-ml-dropdown cc-ml-filter-dropdown">
-                <div className="cc-col-menu-hdr">Filter</div>
-                {FILTER_DEFS.map(({key,label,vals})=>(
-                  <div key={key}>
-                    <div className="cc-ml-dropdown-section-lbl">{label}</div>
-                    {vals.sort().map(v=>{
-                      const active=(filterVals[key]||[]).includes(v);
-                      return(
-                        <div key={v} className="cc-col-menu-item" onClick={()=>setFilterVals(prev=>({
-                          ...prev,
-                          [key]:active?(prev[key]||[]).filter(x=>x!==v):[...(prev[key]||[]),v]
-                        }))}>
-                          <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>
-                            {active&&<TI n="check" size={10}/>}
-                          </div>
-                          {v}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-                <div className="cc-ml-dropdown-footer">
-                  <button className="cc-ml-dropdown-clear" onClick={()=>setFilterVals({})}>Zurücksetzen</button>
-                  <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
-                </div>
-              </div>
-            )
-          )}
-        </div>
-
-        {/* Gruppieren */}
-        <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${groupBy!=="none"?" cc-active":""}`}
-            onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false);setColMenuOpen(false);}}>
-            <TI n="layout-rows" size={15}/>
-            {!isMobile&&"Gruppieren"}
-          </button>
-          {groupOpen&&(
-            isMobile?(
-              <div className="cc-mehr-sheet-overlay" onClick={()=>setGroupOpen(false)}>
-                <div className="cc-mehr-sheet-backdrop"/>
-                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
-                  <div className="cc-mehr-sheet-handle"/>
-                  <div className="cc-mehr-sheet-title">Gruppieren nach</div>
-                  {GROUP_OPTIONS.map(o=>(
-                    <div key={o.val}
-                      className="cc-mehr-sheet-item"
-                      style={{borderBottom:"0.5px solid var(--border)",fontWeight:groupBy===o.val?600:400,color:groupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
-                      onMouseDown={e=>{e.stopPropagation();setGroupBy(o.val);setGroupOpen(false);}}>
-                      {groupBy===o.val&&<TI n="check" size={14}/>}
-                      {o.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ):(
-              <div className="cc-ml-dropdown cc-ml-group-dropdown">
-                <div className="cc-col-menu-hdr">Gruppieren nach</div>
-                {GROUP_OPTIONS.map(o=>(
-                  <div key={o.val} className="cc-col-menu-item" onClick={()=>{setGroupBy(o.val);setGroupOpen(false);}}>
-                    <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>
-                      {groupBy===o.val&&<TI n="check" size={10}/>}
-                    </div>
-                    {o.label}
+                  );
+                })}
+                <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
+                {COLS.filter(c=>!visibleCols.includes(c.key)).map(c=>(
+                  <div key={c.key} className="cc-col-menu-item"
+                    onClick={()=>setVisibleCols(prev=>[...prev,c.key])}>
+                    <div className="cc-col-menu-check"/>
+                    <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
+                    <span className="cc-col-menu-cat">{c.category}</span>
                   </div>
                 ))}
               </div>
-            )
-          )}
-        </div>
-
-        {/* Mehr-Menu: Export, Auswaehlen, Spalten */}
-        <div className="cc-ml-dropdown-wrap">
-          <button className={`cc-ml-btn${exportOpen||selectMode?" cc-active":""}`}
-            onClick={()=>{setExportOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setColMenuOpen(false);}}>
-            <TI n="dots" size={15}/>
-          </button>
-          {exportOpen&&(
-            isMobile?(
-              <div className="cc-mehr-sheet-overlay" onClick={()=>setExportOpen(false)}>
-                <div className="cc-mehr-sheet-backdrop"/>
-                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
-                  <div className="cc-mehr-sheet-handle"/>
-                  <div className="cc-mehr-sheet-title">Optionen</div>
-                  {canExport&&(
-                    <>
-                      <div className="cc-mehr-sheet-item" onMouseDown={e=>{e.stopPropagation();setExportOpen(false);}}><TI n="file-text" size={16}/> Liste als CSV exportieren</div>
-                      <div className="cc-mehr-sheet-item" onMouseDown={e=>{e.stopPropagation();setExportOpen(false);}}><TI n="table" size={16}/> Liste als Excel exportieren</div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ):(
-              <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:200}}>
-                {canExport&&(
-                  <>
-                    <div className="cc-col-menu-hdr">Export</div>
-                    <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="file-text" size={14}/> Liste als CSV exportieren</div>
-                    <div className="cc-col-menu-item" onClick={()=>setExportOpen(false)}><TI n="table" size={14}/> Liste als Excel exportieren</div>
-                    <div className="cc-menu-sep"/>
-                  </>
-                )}
-                <div className="cc-col-menu-hdr">Aktionen</div>
-                <div className="cc-col-menu-item" onClick={()=>{toggleSelectMode();setExportOpen(false);}}>
-                  <TI n="checkbox" size={14}/> {selectMode?"Auswahlmodus beenden":"Mitglieder auswählen"}
-                </div>
-                <div className="cc-menu-sep"/>
-                <div className="cc-col-menu-hdr">Spalten</div>
-              </div>
-            )
-          )}
-        </div>
-
-        {/* Spalten - nur Desktop, inline nach Mehr-Menu */}
-        {!isMobile&&<div className="cc-ml-dropdown-wrap" ref={colMenuRef}>
-          <button className={`cc-ml-btn${colMenuOpen?" cc-active":""}`}
-            onClick={()=>{setColMenuOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);}}>
-            <TI n="layout-columns" size={15}/>
-          </button>
-          {colMenuOpen&&(
-            <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
-              <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
-              {visibleCols.map((key,idx)=>{
-                const col=ALL_COLS.find(c=>c.key===key);
-                if(!col) return null;
-                return(
-                  <div key={key}
-                    className={`cc-col-menu-item cc-col-menu-item-active${colDragOver===key&&colDragSrc!==key?" cc-col-menu-item-dragover":""}`}
-                    draggable={!col.alwaysOn}
-                    onDragStart={e=>{e.dataTransfer.effectAllowed="move";setColDragSrc(key);}}
-                    onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setColDragOver(key);}}
-                    onDrop={e=>{
-                      e.preventDefault();
-                      if(!colDragSrc||colDragSrc===key) return;
-                      setVisibleCols(prev=>{
-                        const cols=[...prev];
-                        const from=cols.indexOf(colDragSrc);
-                        const to=cols.indexOf(key);
-                        if(from<0||to<0) return cols;
-                        cols.splice(from,1);
-                        cols.splice(to,0,colDragSrc);
-                        return cols;
-                      });
-                      setColDragSrc(null); setColDragOver(null);
-                    }}
-                    onDragEnd={()=>{setColDragSrc(null);setColDragOver(null);}}
-                    onClick={e=>{
-                      e.stopPropagation();
-                      if(col.alwaysOn) return;
-                      setVisibleCols(prev=>prev.length>1?prev.filter(k=>k!==key):prev);
-                    }}
-                  >
-                    {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
-                    {col.alwaysOn&&<TI n="lock" size={11} className="cc-col-menu-icon-lock"/>}
-                    <span className="cc-flex-1" style={{fontSize:13}}>{col.label}</span>
-                    {!col.alwaysOn&&<TI n="x" size={11} style={{opacity:0.4}}/>}
-                  </div>
-                );
-              })}
-              <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
-              {COL_GROUPS.map(({group,cols})=>{
-                const inactive=cols.filter(c=>!visibleCols.includes(c.key)&&!c.alwaysOn);
-                if(inactive.length===0) return null;
-                return(
-                  <div key={group}>
-                    <div className="cc-ml-dropdown-section-lbl">{group}</div>
-                    {inactive.map(c=>(
-                      <div key={c.key} className="cc-col-menu-item"
-                        onClick={e=>{e.stopPropagation();setVisibleCols(prev=>[...prev,c.key]);}}>
-                        <div className="cc-col-menu-check"/>
-                        <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>}
-      </div>
-
-      {/* Aktive Filter Chips */}
-      {Object.entries(filterVals).some(([,v])=>v&&v.length>0)&&(
-        <div className="cc-ml-chips">
-          {Object.entries(filterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
-            <div key={k+v} className="cc-ml-chip" onClick={()=>setFilterVals(prev=>({...prev,[k]:(prev[k]||[]).filter(x=>x!==v)}))}>
-              {v} <span className="cc-ml-chip-x">×</span>
-            </div>
-          )))}
-          <div className="cc-ml-chip cc-text-sub" onClick={()=>setFilterVals({})}>Alle zur�cksetzen ×</div>
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      />
 
       {/* Selektionsleiste */}
       {selectMode&&!isMobile&&(

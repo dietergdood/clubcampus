@@ -561,6 +561,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-btn-danger{border-color:#FCA5A5!important;background:#FEE2E2!important;color:#991B1B!important}
 .cc-ml-btn-danger:hover{background:#FEE2E2!important}
 .cc-btn-ghost{border:none;background:transparent;color:var(--sub);font-size:12px;cursor:pointer;padding:5px 8px;font-family:inherit;display:flex;align-items:center;gap:4px}
+.cc-ml-filter-badge{min-width:16px;height:16px;border-radius:8px;background:var(--cc-accent-text,#000);color:var(--cc-accent,#FFBF00);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:4px}
+.cc-ml-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
 .cc-members-tr-selected td{background:#FFFBEB!important}
 .cc-col-menu-item-dragover{border-top:2px solid var(--cc-accent,#FFBF00);background:var(--cc-accent-5,rgba(255,191,0,0.05))}
 .cc-col-menu-hdr-hint{font-size:10px;font-weight:400;color:var(--sub);margin-left:6px}
@@ -1228,4 +1230,217 @@ function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
   );
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect };
+
+/* ── Toolbar: Wiederverwendbare Such/Filter/Gruppier-Leiste ── */
+function Toolbar({
+  /* Suche */
+  search="", onSearch=null,
+  /* Filter */
+  filterDefs=[], filterVals={}, onFilterChange=null,
+  /* Gruppieren */
+  groupOptions=[], groupBy="none", onGroupChange=null,
+  /* Mehr-Menu */
+  moreItems=[],
+  /* Spalten */
+  colMenu=null,
+  /* Rechter Slot */
+  right=null,
+}){
+  const isMobile=useIsMobile();
+  const [filterOpen,setFilterOpen]=useState(false);
+  const [groupOpen,setGroupOpen]=useState(false);
+  const [moreOpen,setMoreOpen]=useState(false);
+
+  const hasActiveFilter=Object.values(filterVals).some(v=>v&&v.length>0);
+  const activeFilterCount=Object.values(filterVals).reduce((n,v)=>n+(v?.length||0),0);
+  const isGrouped=groupBy&&groupBy!=="none";
+
+  const accentStyle={background:"var(--cc-accent,#FFBF00)",borderColor:"var(--cc-accent,#FFBF00)",color:"var(--cc-accent-text,#000)"};
+
+  return(
+    <div>
+      <div className="cc-ml-toolbar">
+        {/* Suche */}
+        {onSearch!==null&&(
+          <div className="cc-ml-srch">
+            <TI n="search" size={15} className="cc-input-icon"/>
+            <input value={search} onChange={e=>onSearch(e.target.value)} placeholder="Suchen…"/>
+          </div>
+        )}
+
+        {/* Filter */}
+        {filterDefs.length>0&&(
+          <div className="cc-ml-dropdown-wrap">
+            <button
+              className="cc-ml-btn"
+              style={hasActiveFilter?accentStyle:{}}
+              onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false);setMoreOpen(false);}}>
+              <TI n="filter" size={15}/>
+              {!isMobile&&"Filter"}
+              {hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}
+            </button>
+            {filterOpen&&(
+              isMobile?(
+                <div className="cc-mehr-sheet-overlay" onClick={()=>setFilterOpen(false)}>
+                  <div className="cc-mehr-sheet-backdrop"/>
+                  <div className="cc-mehr-sheet-box cc-filter-sheet-box" onClick={e=>e.stopPropagation()}>
+                    <div className="cc-mehr-sheet-handle"/>
+                    <div className="cc-mehr-sheet-title">Filter</div>
+                    {filterDefs.map(({key,label,vals})=>(
+                      <div key={key}>
+                        <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 0 4px"}}>{label}</div>
+                        {vals.map(v=>{
+                          const active=(filterVals[key]||[]).includes(v);
+                          return(
+                            <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 0"}}
+                              onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
+                              <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                              {v}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                    <div className="cc-ml-dropdown-footer" style={{padding:"12px 0 0"}}>
+                      <button className="cc-ml-dropdown-clear" onMouseDown={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
+                      <button className="cc-ml-dropdown-apply" onMouseDown={()=>setFilterOpen(false)}>Fertig</button>
+                    </div>
+                  </div>
+                </div>
+              ):(
+                <div className="cc-ml-dropdown cc-ml-filter-dropdown">
+                  <div className="cc-col-menu-hdr">Filter</div>
+                  {filterDefs.map(({key,label,vals})=>(
+                    <div key={key}>
+                      <div className="cc-ml-dropdown-section-lbl">{label}</div>
+                      {vals.map(v=>{
+                        const active=(filterVals[key]||[]).includes(v);
+                        return(
+                          <div key={v} className="cc-col-menu-item"
+                            onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
+                            <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                            {v}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  <div className="cc-ml-dropdown-footer">
+                    <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
+                    <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Gruppieren */}
+        {groupOptions.length>0&&(
+          <div className="cc-ml-dropdown-wrap">
+            <button
+              className="cc-ml-btn"
+              style={isGrouped?accentStyle:{}}
+              onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false);setMoreOpen(false);}}>
+              <TI n="layout-rows" size={15}/>
+              {!isMobile&&"Gruppieren"}
+            </button>
+            {groupOpen&&(
+              isMobile?(
+                <div className="cc-mehr-sheet-overlay" onClick={()=>setGroupOpen(false)}>
+                  <div className="cc-mehr-sheet-backdrop"/>
+                  <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                    <div className="cc-mehr-sheet-handle"/>
+                    <div className="cc-mehr-sheet-title">Gruppieren nach</div>
+                    {groupOptions.map(o=>(
+                      <div key={o.val} className="cc-mehr-sheet-item"
+                        style={{fontWeight:groupBy===o.val?600:400,color:groupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
+                        onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>
+                        {groupBy===o.val&&<TI n="check" size={14}/>}{o.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ):(
+                <div className="cc-ml-dropdown">
+                  <div className="cc-col-menu-hdr">Gruppieren nach</div>
+                  {groupOptions.map(o=>(
+                    <div key={o.val} className="cc-col-menu-item"
+                      onClick={()=>{onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>
+                      <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>{groupBy===o.val&&<TI n="check" size={10}/>}</div>
+                      {o.label}
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Separator vor Mehr/Spalten */}
+        {(moreItems.length>0||colMenu)&&<div className="cc-ml-sep"/>}
+
+        {/* Mehr-Menu */}
+        {moreItems.length>0&&(
+          <div className="cc-ml-dropdown-wrap">
+            <button className="cc-ml-btn"
+              onClick={()=>{setMoreOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);}}>
+              <TI n="dots" size={15}/>
+            </button>
+            {moreOpen&&(
+              isMobile?(
+                <div className="cc-mehr-sheet-overlay" onClick={()=>setMoreOpen(false)}>
+                  <div className="cc-mehr-sheet-backdrop"/>
+                  <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                    <div className="cc-mehr-sheet-handle"/>
+                    {moreItems.map((item,i)=>item==="sep"?null:(
+                      <button key={i}
+                        className={`cc-mehr-sheet-item${item.danger?" cc-mehr-sheet-item-danger":""}`}
+                        onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);item.onClick();}}>
+                        {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ):(
+                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:200}}>
+                  {moreItems.map((item,i)=>item==="sep"
+                    ?<div key={i} className="cc-menu-sep"/>
+                    :item.header
+                    ?<div key={i} className="cc-col-menu-hdr">{item.label}</div>
+                    :<div key={i} className={`cc-col-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                        onClick={()=>{setMoreOpen(false);item.onClick();}}>
+                        {item.icon&&<TI n={item.icon} size={14}/>}{item.label}
+                      </div>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Spalten-Slot */}
+        {colMenu}
+
+        {/* Rechter Slot */}
+        {right&&<><div className="cc-ml-sep"/>{right}</>}
+      </div>
+
+      {/* Aktive Filter Chips */}
+      {hasActiveFilter&&(
+        <div className="cc-ml-chips">
+          {Object.entries(filterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
+            <div key={k+v} className="cc-ml-chip"
+              onClick={()=>onFilterChange&&onFilterChange(k,v,false)}>
+              {v} <span className="cc-ml-chip-x">×</span>
+            </div>
+          )))}
+          <div className="cc-ml-chip cc-text-sub"
+            onClick={()=>onFilterChange&&onFilterChange("__reset")}>Alle löschen</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar };
