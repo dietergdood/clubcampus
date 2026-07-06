@@ -450,7 +450,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-mehr-item-active{background:var(--cc-accent-5,rgba(255,191,0,0.05));color:var(--cc-accent,#FFBF00);font-weight:500}
 .cc-mehr-sheet-overlay{position:fixed;inset:0;z-index:3000;display:flex;flex-direction:column;justify-content:flex-end}
 .cc-mehr-sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.5)}
-.cc-mehr-sheet-box{position:relative;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 16px 32px}
+.cc-mehr-sheet-box{position:relative;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 16px 32px;font-family:inherit}
 .cc-mehr-sheet-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
 .cc-mehr-sheet-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:8px}
 .cc-mehr-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:14px;color:var(--text);font-weight:400;cursor:pointer;font-family:inherit;text-align:left}
@@ -1075,7 +1075,7 @@ function DropMenu({items}){
         isMobile?createPortal(
           <div className="cc-mehr-sheet-overlay" onMouseDown={()=>setOpen(false)}>
             <div className="cc-mehr-sheet-backdrop"/>
-            <div className="cc-mehr-sheet-box" onMouseDown={e=>e.stopPropagation()}>
+            <div className="cc-mehr-sheet-box" style={{fontFamily:FONT}} onMouseDown={e=>e.stopPropagation()}>
               <div className="cc-mehr-sheet-handle"/>
               {items.map((item,i)=>item==="sep"?null:item.hidden?null:(
                 <button key={i}

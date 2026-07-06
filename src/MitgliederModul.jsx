@@ -3,6 +3,7 @@
    Mitgliederverwaltung und -liste
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, Fragment } from "react";
+import * as XLSX from "xlsx";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
 import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, useConfirm } from "./theme.jsx";
@@ -1868,11 +1869,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       const url=URL.createObjectURL(blob);
       const a=document.createElement("a");a.href=url;a.download="mitglieder.csv";a.click();URL.revokeObjectURL(url);
     } else {
-      // Excel via tab-separated with .xls mime
-      const tsv=[headers,...rows].map(r=>r.map(v=>String(v||"").replace(/\t/g," ")).join("\t")).join("\r\n");
-      const blob=new Blob(["\uFEFF"+tsv],{type:"application/vnd.ms-excel;charset=utf-8;"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");a.href=url;a.download="mitglieder.xls";a.click();URL.revokeObjectURL(url);
+      const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,"Mitglieder");
+      XLSX.writeFile(wb,"mitglieder.xlsx");
     }
   }
 
