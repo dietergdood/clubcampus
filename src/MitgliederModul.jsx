@@ -577,7 +577,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
           <Card key={i}>
             <div className="cc-row cc-gap-12 cc-items-center">
               <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
-                {name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
+                {(name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
               </div>
               <div className="cc-flex-1 cc-col cc-gap-5">
                 <div className="cc-text-bold cc-text-lg">{name}</div>
@@ -1335,7 +1335,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       setEditTeamSaving(false);
     }
     const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
-    const initials=m.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+    const initials=(m.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
 
     useEffect(()=>{
       if(sb&&raw.id&&benutzer===null){
@@ -1991,7 +1991,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         <ArchivView archivData={archivData} archivLoaded={archivLoaded} sb={sb} account={account} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           const {data}=await sb.from("mitglieder").select("*").eq("id",m.id).single();
-          if(data) setSelectedMember({...data,_tab:"info",_readonly:true});
+          if(data) setSelectedMember({...data,name:`${data.vorname||""} ${data.nachname||""}`.trim()||"?",_tab:"info",_readonly:true});
         }}/>
       ):(
       <>
