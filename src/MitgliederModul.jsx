@@ -1382,12 +1382,16 @@ reloadMember, refreshArchivCount, brauchtEltern,
             {(teamDetails||[]).map((k,i)=>(
               <div key={i} className="cc-team-position-row">
                 <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
-                <div className="cc-text-bold cc-flex-1">{k.teams?.name||"—"}</div>
-                <div className="cc-row cc-gap-4 cc-flex-wrap">
-                  {(k.rollen||["Spieler/in"]).map((r,ri)=>{
-                    const isTrainer=dbKaderRollen.some(kr=>kr.name===r&&kr.ist_trainer);
-                    return <span key={ri} className={isTrainer?"cc-role-chip cc-role-chip-trainer":"cc-role-chip"}>{r}</span>;
-                  })}
+                <div className="cc-team-position-body">
+                  <div className="cc-team-position-name">{k.teams?.name||"—"}</div>
+                  {(k.rollen||["Spieler/in"]).length>0&&(
+                    <div className="cc-team-position-chips">
+                      {(k.rollen||["Spieler/in"]).map((r,ri)=>{
+                        const isTrainer=dbKaderRollen.some(kr=>kr.name===r&&kr.ist_trainer);
+                        return <span key={ri} className={isTrainer?"cc-role-chip cc-role-chip-trainer":"cc-role-chip"}>{r}</span>;
+                      })}
+                    </div>
+                  )}
                 </div>
                 <DropMenu items={[
                   {label:"Zum Team", icon:"arrow-right", onClick:()=>{
@@ -1421,10 +1425,14 @@ reloadMember, refreshArchivCount, brauchtEltern,
                 return(
                   <div key={i} className="cc-team-position-row">
                     <div className="cc-list-item-icon"><TI n="briefcase" size={13}/></div>
-                    <div className="cc-text-bold cc-flex-1">{f}</div>
-                    {gruppe&&(
-                      <span className="cc-funk-gruppe-badge" style={funkObj?.portal_gruppen?.farbe?{background:funkObj.portal_gruppen.farbe+"20",color:funkObj.portal_gruppen.farbe,borderColor:funkObj.portal_gruppen.farbe+"40"}:{}}>{gruppe}</span>
-                    )}
+                    <div className="cc-team-position-body">
+                      <div className="cc-team-position-name">{f}</div>
+                      {gruppe&&(
+                        <div className="cc-team-position-chips">
+                          <span className="cc-funk-gruppe-badge" style={funkObj?.portal_gruppen?.farbe?{background:funkObj.portal_gruppen.farbe+"20",color:funkObj.portal_gruppen.farbe,borderColor:funkObj.portal_gruppen.farbe+"40"}:{}}>{gruppe}</span>
+                        </div>
+                      )}
+                    </div>
                     {canEdit&&(
                       <DropMenu items={[
                         {label:"Entfernen", icon:"trash", danger:true, hidden:!canDelete, onClick:async()=>{
