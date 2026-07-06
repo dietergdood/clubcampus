@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton } from "./theme.jsx";
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar } from "./theme.jsx";
 import { getRole } from "./NavigationModul.jsx";
 
 /* ── Länderliste ISO2 → {name, flag} ── */
@@ -773,28 +773,28 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
           {icon:"checkbox",label:archivSelectMode?"Auswahl beenden":"Mehrere auswählen",onClick:()=>{setArchivSelectMode(o=>!o);setArchivSelected([]);} },
         ]}
       />
-      {archivSelectMode&&(
-        <div className="cc-sel-bar">
-          <div className="cc-col-menu-check cc-col-menu-check-on cc-sel-all" onClick={()=>setArchivSelected(archivSelected.length===filtered.length?[]:filtered.map(m=>m.id))}>
-            <TI n={archivSelected.length===filtered.length?"check":"minus"} size={10}/>
-          </div>
-          <span className="cc-sel-bar-info">{archivSelected.length} ausgewählt</span>
-          <button className="cc-ml-btn" onClick={async()=>{
+      <BulkBar
+        show={archivSelectMode}
+        count={archivSelected.length}
+        total={filtered.length}
+        onSelectAll={()=>setArchivSelected(archivSelected.length===filtered.length?[]:filtered.map(m=>m.id))}
+        actions={[
+          {icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:async()=>{
             if(!archivSelected.length||!sb||!window.confirm(`${archivSelected.length} Mitglieder reaktivieren?`)) return;
             for(const id of archivSelected){
               await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
               if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
             }
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
-          }}><TI n="user-check" size={14}/> Reaktivieren</button>
-          <button className="cc-ml-btn cc-ml-btn-danger" onClick={async()=>{
+          }},
+          {icon:"trash", label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:async()=>{
             if(!archivSelected.length||!sb||!window.confirm(`${archivSelected.length} Mitglieder unwiderruflich löschen?`)) return;
             for(const id of archivSelected) await sb.from("mitglieder").delete().eq("id",id);
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
-          }}><TI n="trash" size={14}/> Löschen (DSGVO)</button>
-          <button className="cc-btn-ghost" onClick={()=>{setArchivSelected([]);setArchivSelectMode(false);}}><TI n="x" size={13}/> Abbrechen</button>
-        </div>
-      )}
+          }},
+        ]}
+        onCancel={()=>{setArchivSelected([]);setArchivSelectMode(false);}}
+      />
       {hasActiveFilter&&(
         <div className="cc-ml-chips cc-mb-16">
           {Object.entries(archivFilterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
@@ -2280,17 +2280,19 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       />
 
       {/* Selektionsleiste */}
-      {selectMode&&!isMobile&&(
-        <div className="cc-sel-bar">
-          <div className="cc-col-menu-check cc-col-menu-check-on cc-sel-all" onClick={toggleSelectAll}>
-            <TI n={selected.size===paged.length?"check":"minus"} size={10}/>
-          </div>
-          <span className="cc-sel-bar-info">{selected.size} ausgewählt</span>
-          <button className="cc-ml-btn" onClick={()=>{}}><TI n="download" size={14}/> Export</button>
-          <button className="cc-ml-btn" onClick={handleBulkDeactivate}><TI n="archive" size={14}/> Archivieren</button>
-          <button className="cc-ml-btn cc-ml-btn-danger" onClick={handleBulkDelete}><TI n="trash" size={14}/> Löschen (DSGVO)</button>
-          <button className="cc-btn-ghost" onClick={()=>{setSelected(new Set());setSelectMode(false);}}><TI n="x" size={13}/> Abbrechen</button>
-        </div>
+      {!isMobile&&(
+        <BulkBar
+          show={selectMode}
+          count={selected.size}
+          total={paged.length}
+          onSelectAll={toggleSelectAll}
+          actions={[
+            {icon:"download", label:"Export", onClick:()=>{}},
+            {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
+            {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
+          ]}
+          onCancel={()=>{setSelected(new Set());setSelectMode(false);}}
+        />
       )}
 
       {/* Liste / Tabelle */}
