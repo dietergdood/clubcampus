@@ -1832,6 +1832,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const COL_GROUPS=[
     {group:"Personendaten", cols:[
       {key:"name",          label:"Name",           default:true, alwaysOn:true},
+      {key:"nachname",      label:"Nachname",       default:false},
+      {key:"vorname",       label:"Vorname",        default:false},
       {key:"geburtsdatum",  label:"Geburtsdatum",   default:false},
       {key:"alter",         label:"Alter",          default:false},
       {key:"geschlecht",    label:"Geschlecht",     default:false},
@@ -2442,6 +2444,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                           case "strasse": return <td key="strasse" className="cc-members-td cc-members-td-sub">{m.strasse||"—"}</td>;
                           case "heimatort": return <td key="heimatort" className="cc-members-td cc-members-td-sub">{m.heimatort||"—"}</td>;
                           case "ahv_nr": return <td key="ahv_nr" className="cc-members-td cc-members-td-sub">{m.ahv_nr?"••• •• ••••":"—"}</td>;
+                          case "vorname": return <td key="vorname" className="cc-members-td cc-members-td-sub">{m.vorname||"—"}</td>;
+                          case "nachname": return <td key="nachname" className="cc-members-td cc-members-td-sub">{m.nachname||"—"}</td>;
                           case "funktionen": return <td key="funktionen" className="cc-members-td cc-members-td-sub">{(m.funktionen||[]).join(", ")||"—"}</td>;
                           default: return <td key={col.key} className="cc-members-td cc-members-td-sub">—</td>;
                         }
