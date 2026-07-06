@@ -2342,14 +2342,22 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   );
                 })}
                 <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
-                {ALL_COLS.filter(c=>!visibleCols.includes(c.key)).map(c=>(
-                  <div key={c.key} className="cc-col-menu-item"
-                    onClick={()=>setVisibleCols(prev=>[...prev,c.key])}>
-                    <div className="cc-col-menu-check"/>
-                    <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
-                    <span className="cc-col-menu-cat">{c.category}</span>
-                  </div>
-                ))}
+                {COL_GROUPS.map(g=>{
+                  const inactiveCols=g.cols.filter(c=>!visibleCols.includes(c.key));
+                  if(inactiveCols.length===0) return null;
+                  return(
+                    <div key={g.group}>
+                      <div className="cc-col-menu-group-hdr">{g.group}</div>
+                      {inactiveCols.map(c=>(
+                        <div key={c.key} className="cc-col-menu-item"
+                          onClick={()=>setVisibleCols(prev=>[...prev,c.key])}>
+                          <div className="cc-col-menu-check"/>
+                          <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
