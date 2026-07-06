@@ -789,6 +789,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [archivTab,setArchivTab]=useState(false);
   const [archivData,setArchivData]=useState([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
+  const [archivCount,setArchivCount]=useState(null);
 
   // Direkte Navigation vom Kader-Modul
   useEffect(()=>{
@@ -1019,6 +1020,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     else{ setSortCol(key); setSortDir("asc"); }
   }
   useEffect(()=>setPageSize(50),[search,filterVals,groupBy,sortCol,sortDir]);
+  useEffect(()=>{
+    if(!sb) return;
+    sb.from("mitglieder").select("id",{count:"exact",head:true}).eq("aktiv",false)
+      .then(({count})=>setArchivCount(count||0));
+  },[sb,archivLoaded]);
 
   /* Filter */
   const FILTER_DEFS=[
@@ -1973,7 +1979,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                     .then(({data})=>{setArchivData(data||[]);setArchivLoaded(true);});
                 }
               }}>
-                Archiv {archivLoaded&&<span className="cc-ml-tab-count">{archivData.length}</span>}
+                Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
               </button>
             </div>
           )}
