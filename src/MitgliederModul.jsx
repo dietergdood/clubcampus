@@ -189,7 +189,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
     const {error}=await sb.from("mitglieder").update({
       vorname:editForm.vorname||null, nachname:editForm.nachname||null,
       geburtsdatum:editForm.geburtsdatum||null, geschlecht:editForm.geschlecht||null,
-      nationalitaet:editForm.nationalitaet||null, heimatort:editForm.heimatort||null,
+      nationalitaet:editForm.nationalitaet||null, nationalitaet2:editForm.nationalitaet2||null, heimatort:editForm.heimatort||null,
       ahv_nr:editForm.ahv_nr||null, telefon:editForm.telefon||null,
       email:editForm.email||null, strasse:editForm.strasse||null,
       plz:editForm.plz||null, ort:editForm.ort||null, kanton:editForm.kanton||null,
@@ -317,7 +317,8 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 {k:"nachname",     l:"Nachname"},
                 {k:"geburtsdatum", l:"Geburtsdatum", type:"date"},
                 {k:"geschlecht",   l:"Geschlecht",   opts:[{v:"m",l:"Männlich"},{v:"w",l:"Weiblich"}]},
-                {k:"nationalitaet",l:"Nationalität",isLaender:true},
+                {k:"nationalitaet", l:"Nationalität",  isLaender:true},
+                {k:"nationalitaet2",l:"Nationalität 2",isLaender:true},
                 {k:"heimatort",    l:"Heimatort"},
                 {k:"ahv_nr",       l:"AHV-Nr."},
               ].map(({k,l,type="text",opts,isLaender})=>(
