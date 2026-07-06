@@ -508,7 +508,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-view-custom-active{background:var(--cc-accent,#FFBF00);border-radius:20px;padding-right:4px}
 .cc-ml-view-custom-active .cc-ml-view-btn-active{border-radius:20px 0 0 20px;padding-right:6px;background:var(--cc-accent,#FFBF00);color:var(--cc-accent-text,#000);border-color:var(--cc-accent,#FFBF00)}
 .cc-ml-view-del-active{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,0.15);color:var(--cc-accent-text,#000);cursor:pointer;flex-shrink:0}
-.cc-ml-view-del-active:hover{background:rgba(220,38,38,0.7);color:#fff}
+.cc-ml-view-del-active:hover{background:rgba(0,0,0,0.25)}
 .cc-ml-view-save-form{display:flex;align-items:center;gap:6px}
 .cc-ml-view-save-input{padding:4px 10px;border:0.5px solid var(--border);border-radius:20px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);outline:none;width:160px}
 .cc-ml-view-save-input:focus{border-color:var(--cc-accent,#FFBF00)}
