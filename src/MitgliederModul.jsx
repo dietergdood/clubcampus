@@ -139,7 +139,7 @@ function getFieldVisibility(role){
 }
 
 /* ── MemberHero: Hero-Header mit Edit-Modal ── */
-function MemberHero({m,raw,initials,age,canEdit,sb,onReload,onClose,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
+function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const isMobile=useIsMobile();
   const [heroMenuOpen,setHeroMenuOpen]=useState(false);
   const heroMenuRef=useRef(null);
@@ -1408,7 +1408,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return(
       <div className="cc-col cc-gap-12 cc-member-detail-wrap">
         {/* Hero Header */}
-        <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit}
+        <MemberHero m={m} raw={raw} initials={initials} age={age} canEdit={canEdit} canDelete={canDelete}
           sb={sb} onReload={onReload} onClose={onClose}
           dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
           benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
