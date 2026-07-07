@@ -2118,7 +2118,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const hasMore=false;
   let groups=[];
   function getGroupKey(m,g){
-    if(g==="_jahrgang"){
+    if(g==="__jahrgang"){
       if(!m.geburtsdatum) return "Unbekannt";
       return String(new Date(m.geburtsdatum).getFullYear());
     }
@@ -2128,6 +2128,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     }
     if(g==="teams"){
       return m.teams&&m.teams.length>0?m.teams.map(t=>t?.name||t):["Kein Team"];
+    }
+    if(g==="rollen"){
+      const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
+      return portalLabel||"Keine Rolle";
     }
     return null;
   }
