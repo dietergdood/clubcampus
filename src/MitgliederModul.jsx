@@ -221,12 +221,15 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
         <div className="cc-member-hero-banner">
           <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
           <div className="cc-hero-av-wrap">
-            <div className="cc-member-hero-av" style={{cursor:canEdit?"pointer":"default"}}
+            <div className="cc-member-hero-av cc-hero-av-hoverable" style={{cursor:canEdit?"pointer":"default"}}
               onClick={()=>canEdit&&(raw.foto_url?setFotoOverlay(true):fotoInputRef.current?.click())}>
               {raw.foto_url
                 ?<img src={raw.foto_url} className="cc-hero-av-img" alt=""/>
                 :<span className="cc-hero-av-initials">{initials}</span>
               }
+              {canEdit&&!raw.foto_url&&(
+                <div className="cc-hero-av-cam-overlay"><TI n="camera" size={18}/></div>
+              )}
             </div>
             {canEdit&&(
               <input ref={fotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleHeroFotoUpload}/>

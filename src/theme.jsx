@@ -432,6 +432,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-av-wrap{position:relative;width:56px;height:56px;flex-shrink:0}
 .cc-hero-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text)}
 .cc-hero-av-edit:hover{background:var(--surface)}
+.cc-hero-av-cam-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;pointer-events:none;color:#fff;font-size:18px}
+.cc-hero-av-hoverable:hover .cc-hero-av-cam-overlay{opacity:1}
 .cc-member-hero-body{display:none}
 .cc-member-hero-av{width:56px;height:56px;border-radius:50%;background:var(--avatar-bg);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:var(--cc-avatar-text);overflow:hidden}
 .cc-member-hero-info{flex:1;min-width:0}
