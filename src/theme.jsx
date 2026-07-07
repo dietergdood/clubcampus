@@ -360,12 +360,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-team-position-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--border)}
 .cc-team-position-row:last-child{border-bottom:none}
 .cc-team-position-body{flex:1;min-width:0}
-.cc-team-position-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px}
-.cc-team-position-name-link{font-size:14px;font-weight:500;color:var(--text);margin-bottom:3px;cursor:pointer;text-decoration:none}
+.cc-team-position-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px}
+.cc-team-position-name-link{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;cursor:pointer;text-decoration:none}
 .cc-team-position-name-link:hover{text-decoration:underline}
 .cc-team-position-row-mobile{cursor:pointer}
 .cc-team-position-chips{display:flex;flex-wrap:wrap;gap:4px}
-.cc-team-position-chips .cc-role-chip{font-size:10px;padding:1px 7px}
 .cc-team-nr{width:26px;height:26px;border-radius:6px;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#7a5000;flex-shrink:0}
 .cc-team-nr-empty{background:var(--surface2);color:var(--sub);font-weight:400;border:0.5px dashed var(--border)}
 .cc-team-add-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:0.5px dashed var(--border);background:transparent;color:var(--sub);font-size:13px;cursor:pointer;width:100%;margin-top:10px;font-family:inherit;transition:border-color 0.15s,color 0.15s}
@@ -641,7 +640,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-role-chip-trainer{background:#FEF3C7;color:#B45309;border-color:rgba(180,83,9,0.2)}
 .cc-pos-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:400;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-funk-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:400;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
-.cc-funk-gruppe-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
+.cc-funk-gruppe-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-notiz-entry{display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border)}
 .cc-notiz-entry:last-of-type{border-bottom:none}
 .cc-notiz-av{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--sub);flex-shrink:0}
