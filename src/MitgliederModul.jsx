@@ -1431,7 +1431,11 @@ reloadMember, refreshArchivCount, brauchtEltern,
                   }
                   {(k.rollen||["Spieler/in"]).length>0&&(
                     <div className="cc-team-position-chips">
-                      {(k.rollen||["Spieler/in"]).map((r,ri)=>{
+                      {[...(k.rollen||["Spieler/in"])].sort((a,b)=>{
+                        const aT=dbKaderRollen.some(kr=>kr.name===a&&kr.ist_trainer);
+                        const bT=dbKaderRollen.some(kr=>kr.name===b&&kr.ist_trainer);
+                        return aT===bT?0:aT?-1:1;
+                      }).map((r,ri)=>{
                         const isTrainer=dbKaderRollen.some(kr=>kr.name===r&&kr.ist_trainer);
                         return <span key={ri} className={isTrainer?"cc-role-chip cc-role-chip-trainer":"cc-role-chip"}>{r}</span>;
                       })}
