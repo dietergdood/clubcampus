@@ -2113,13 +2113,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const hasMore=false;
   let groups=[];
   function getGroupKey(m,g){
-    if(g==="__jahrgang"){
+    if(g==="_jahrgang"){
       if(!m.geburtsdatum) return "Unbekannt";
       return String(new Date(m.geburtsdatum).getFullYear());
     }
     if(g==="__eintrittsjahr"){
       if(!m.eintritt) return "Unbekannt";
       return String(new Date(m.eintritt).getFullYear());
+    }
+    if(g==="teams"){
+      return m.teams&&m.teams.length>0?m.teams.map(t=>t?.name||t):["Kein Team"];
     }
     return null;
   }
@@ -2130,7 +2133,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const map={};
     paged.forEach(m=>{
       const computed=getGroupKey(m,groupBy);
-      const vals=computed!==null?[computed]:Array.isArray(m[groupBy])?m[groupBy]:[m[groupBy]||"-"];
+      const vals=computed!==null?(Array.isArray(computed)?computed:[computed]):Array.isArray(m[groupBy])?m[groupBy].map(t=>t?.name||t||"-"):[m[groupBy]||"-"];
       vals.forEach(k=>{
         if(!map[k]) map[k]=[];
         map[k].push(m);
