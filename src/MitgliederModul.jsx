@@ -1052,6 +1052,37 @@ reloadMember, refreshArchivCount, brauchtEltern,
     }
   },[showFunkAssign]);
 
+  async function ableitRolle(){
+    if(!sb||!raw.id) return;
+    const ROLLE_MAP=Object.fromEntries(dbKaderRollen.map(r=>[r.name,r.ist_trainer?"trainer":"spieler"]));
+    const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
+    const TRAINER_ROLLEN_SET=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
+    const [{data:kaderData},{data:mitgliedtypData},{data:benutzerData}]=await Promise.all([
+      sb.from("kader").select("rollen").eq("mitglied_id",raw.id).eq("aktiv",true),
+      sb.from("mitgliedtypen").select("standard_rolle").eq("name",raw.mitgliedtyp||"").maybeSingle(),
+      sb.from("benutzer").select("id,role").eq("mitglied_id",raw.id).maybeSingle(),
+    ]);
+    let neueRolle="supporter";
+    if(kaderData&&kaderData.length>0){
+      const hatTrainer=kaderData.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
+      if(hatTrainer) neueRolle="trainer";
+      else{
+        const alleRollen=kaderData.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
+        const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
+        if(hoechste) neueRolle=hoechste;
+      }
+    } else if(mitgliedtypData?.standard_rolle&&["spieler","trainer"].includes(mitgliedtypData.standard_rolle)){
+      neueRolle=mitgliedtypData.standard_rolle;
+    } else if((raw.funktionen||[]).length>0){
+      neueRolle="funktionaer";
+    } else if(mitgliedtypData?.standard_rolle){
+      neueRolle=mitgliedtypData.standard_rolle;
+    }
+    await sb.from("mitglieder").update({rolle:neueRolle}).eq("id",raw.id);
+    if(benutzerData?.id) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzerData.id);
+    setBenutzer(prev=>prev?{...prev,role:neueRolle}:{role:neueRolle});
+  }
+
   async function assignTeam(){
     if(!sb||!teamAssignForm.team_id) return;
     setTeamAssignSaving(true);
@@ -1066,6 +1097,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
     },{onConflict:"team_id,mitglied_id,saison"});
     const {data}=await sb.from("kader").select("*, teams(id,name,kurzname)").eq("mitglied_id",raw.id).eq("aktiv",true);
     if(data) setTeamDetails(data);
+    await ableitRolle();
     setShowTeamAssign(false);
     setTeamAssignForm({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
     setTeamFunkOpen(false);
@@ -1083,6 +1115,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
     const ok=await confirm({title:"Aus Team entfernen?",confirmLabel:"Entfernen"});if(!sb||!ok) return;
     await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
     setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
+    await ableitRolle();
   }
 
   async function saveEditTeam(){
@@ -1097,6 +1130,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
       ?{...k,rollen:editTeamForm.funktionen,rueckennr:editTeamForm.rueckennr,position:editTeamForm.position}
       :k
     ));
+    await ableitRolle();
     setEditTeam(null);
     setEditTeamFunkOpen(false);
     setEditTeamSaving(false);
