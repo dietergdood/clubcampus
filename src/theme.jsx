@@ -690,6 +690,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
   .cc-info-grid{grid-template-columns:1fr}
   .cc-info-row:nth-child(odd){padding-right:0;border-right:none}
   .cc-info-row:nth-child(even){padding-left:0}
+  .cc-member-tabs{width:100%}
+  .cc-member-tab{flex:1;justify-content:center;padding:6px 6px;font-size:12px}
+  .cc-mehr-btn-wrap{flex:1;margin-left:0!important}
   .cc-info-key{font-size:10px}
   .cc-member-hero-banner{padding:12px 12px 14px;padding-right:12px;gap:10px}
   .cc-hero-av-wrap{width:52px;height:52px}
