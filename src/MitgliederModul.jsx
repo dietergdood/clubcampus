@@ -1081,6 +1081,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
     await sb.from("mitglieder").update({rolle:neueRolle}).eq("id",raw.id);
     if(benutzerData?.id) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzerData.id);
     setBenutzer(prev=>prev?{...prev,role:neueRolle}:{role:neueRolle});
+    if(onReload) onReload();
   }
 
   async function assignTeam(){
