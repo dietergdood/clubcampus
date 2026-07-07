@@ -360,8 +360,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-team-position-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--border)}
 .cc-team-position-row:last-child{border-bottom:none}
 .cc-team-position-body{flex:1;min-width:0}
-.cc-team-position-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px}
-.cc-team-position-name-link{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px;cursor:pointer;text-decoration:none}
+.cc-team-position-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px}
+.cc-team-position-name-link{font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px;cursor:pointer;text-decoration:none}
 .cc-team-position-name-link:hover{text-decoration:underline}
 .cc-team-position-row-mobile{cursor:pointer}
 .cc-team-position-chips{display:flex;flex-wrap:wrap;gap:4px}
