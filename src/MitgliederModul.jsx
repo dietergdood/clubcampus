@@ -264,11 +264,11 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 const TRAINER_ROLLEN=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
                 const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
                 const hatSpielerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>!TRAINER_ROLLEN.includes(r)));
-                const chips=[];
                 const portalRolle=benutzer?.role||raw.rolle||null;
-                if(hatTrainerKader) chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"kader"});
-                if(hatSpielerKader) chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"kader"});
+                const chips=[];
                 if(portalRolle) chips.push({label:ROLLE_LABEL[portalRolle]||portalRolle,type:"portal"});
+                if(hatTrainerKader&&portalRolle!=="trainer") chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"kader"});
+                if(hatSpielerKader&&portalRolle!=="spieler") chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"kader"});
                 const MAX=isMobile?2:chips.length;
                 const visible=chips.slice(0,MAX);
                 const hidden=chips.length-MAX;
