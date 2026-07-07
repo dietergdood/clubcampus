@@ -2073,7 +2073,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* Filter */
   const FILTER_DEFS=[
     {key:"mitgliedschaft", label:"Mitgliedschaft", vals:[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(Boolean))]},
-    {key:"rollen",         label:"Rollen",         vals:[...new Set(allMembers.flatMap(m=>m.rollen).filter(Boolean))]},
+    {key:"rollen", label:"Rollen", vals:[...new Set(allMembers.map(m=>m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null).filter(Boolean))].sort()},
     {key:"datenpruefung",  label:"Datenpruefung",  vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
     {key:"portal",         label:"Portal-Zugang",  vals:[...new Set(allMembers.map(m=>m.portal).filter(Boolean))]},
     {key:"teams",          label:"Teams",          vals:[...new Set(allMembers.flatMap(m=>m.teams.map(t=>t?.name||t)).filter(Boolean))].sort()},
@@ -2093,6 +2093,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     }
     for(const [fKey,fVals] of Object.entries(filterVals)){
       if(!fVals||fVals.length===0) continue;
+      if(fKey==="rollen"){
+        const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
+        if(!portalLabel||!fVals.includes(portalLabel)) return false;
+        continue;
+      }
       const raw=m[fKey];
       const mVal=Array.isArray(raw)
         ?raw.map(v=>v?.name||v)
