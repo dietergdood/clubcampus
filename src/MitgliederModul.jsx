@@ -1420,10 +1420,15 @@ reloadMember, refreshArchivCount, brauchtEltern,
               <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
             )}
             {(teamDetails||[]).map((k,i)=>(
-              <div key={i} className="cc-team-position-row">
+              <div key={i} className={`cc-team-position-row${isMobile&&onNavToTeam?" cc-team-position-row-mobile":""}`}
+                onClick={isMobile&&onNavToTeam?()=>onNavToTeam(k.team_id):undefined}
+              >
                 <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
                 <div className="cc-team-position-body">
-                  <div className="cc-team-position-name">{k.teams?.name||"—"}</div>
+                  {!isMobile&&onNavToTeam
+                    ?<span className="cc-team-position-name-link" onClick={e=>{e.stopPropagation();onNavToTeam(k.team_id);}}>{k.teams?.name||"—"}</span>
+                    :<div className="cc-team-position-name">{k.teams?.name||"—"}</div>
+                  }
                   {(k.rollen||["Spieler/in"]).length>0&&(
                     <div className="cc-team-position-chips">
                       {(k.rollen||["Spieler/in"]).map((r,ri)=>{
@@ -1434,9 +1439,6 @@ reloadMember, refreshArchivCount, brauchtEltern,
                   )}
                 </div>
                 <DropMenu items={[
-                  {label:"Zum Team", icon:"arrow-right", onClick:()=>{
-                    if(typeof onNavToTeam==="function") onNavToTeam(k.team_id);
-                  }},
                   ...(canEdit?[
                     {label:"Bearbeiten", icon:"edit", onClick:()=>{setEditTeamForm({funktionen:k.rollen||[],rueckennr:k.rueckennr||"",position:k.position||""});setEditTeam(k);}},
                     "sep",

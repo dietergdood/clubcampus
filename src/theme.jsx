@@ -361,6 +361,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-team-position-row:last-child{border-bottom:none}
 .cc-team-position-body{flex:1;min-width:0}
 .cc-team-position-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.cc-team-position-name-link{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;cursor:pointer;text-decoration:none}
+.cc-team-position-name-link:hover{text-decoration:underline}
+.cc-team-position-row-mobile{cursor:pointer}
 .cc-team-position-chips{display:flex;flex-wrap:wrap;gap:4px}
 .cc-team-nr{width:26px;height:26px;border-radius:6px;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#7a5000;flex-shrink:0}
 .cc-team-nr-empty{background:var(--surface2);color:var(--sub);font-weight:400;border:0.5px dashed var(--border)}
