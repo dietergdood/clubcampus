@@ -4,57 +4,72 @@
 Module sind fachlich getrennt, aber über gemeinsame Domains verbunden.
 Keine Isolation — Verbindung über Services und Hooks.
 
-## Ordnerstruktur
+## Aktuelle Ordnerstruktur
 
 ```
 src/
-  domains/          ← Business-Logik, Services, Hooks
-    person/         ← Personen-Normalisierung, Utilities
-    roles/          ← Rollen-Ableitung, Prioritäten
-    permissions/    ← Berechtigungen pro Modul und Rolle
-    season/         ← Saison-Utilities (nie hardcoden!)
-    members/        ← Mitglieder-Service
-    kader/          ← Kader-Service + Hook
-    teams/          ← Teams-Service + Hook
-    termine/        ← Termine-Service
-    helfer/         ← Helfer-Service
-
-  shared/           ← Wiederverwendbare UI-Bausteine
+  domains/                          ← Business-Logik, Services, Hooks
+    permissions/
+      permissions.js                ← canEdit/canDelete/canExport pro Modul
     person/
-      PersonAvatar.jsx    ← Av + Kamera-Overlay
-      PersonSummary.jsx   ← Name + Subtitle + Right-Slot
-      PersonSelector.jsx  ← Suche + Auswahl
+      personTypes.js                ← toPerson() Normalisierer
+      personUtils.js                ← vollname(), initials(), age(), formatDatum()
+    roles/
+      roleUtils.js                  ← ableitRolle(), ROLLE_PRIORITAET, ROLLE_LABEL
+    season/
+      seasonUtils.js                ← currentSeason(), formatSaison()
+    teams/
+      teamService.js                ← fetchTeams(), createTeam(), updateTeam()
+      useTeams.js                   ← Hook: teams, loading, reload
 
-  modules/          ← Alle Modul-Dateien
-    MitgliederModul.jsx
-    KaderModul.jsx
-    TermineModul.jsx
-    HelferModul.jsx
-    TrainingsplanModul.jsx
-    TeamsVerwaltungModul.jsx
-    PortalverwaltungModul.jsx
-    NachrichtenModul.jsx
-    DashboardModul.jsx
-    TeamModul.jsx
-    NavigationModul.jsx
-    PlatzhalterModul.jsx
-    portal/               ← PortalverwaltungModul aufgeteilt
-      DesignTokensTab.jsx
-      RollenTab.jsx
-      ModuleTab.jsx
-      MitgliederKonfigTab.jsx
-    members/              ← MitgliederModul aufgeteilt
+  shared/                           ← Wiederverwendbare UI-Bausteine
+    person/
+      PersonAvatar.jsx              ← Av + Kamera-Overlay
+      PersonSelector.jsx            ← Suche + Auswahl
+      PersonSummary.jsx             ← Name + Subtitle + Right-Slot
+
+  modules/                          ← Alle Modul-Dateien
+    members/                        ← MitgliederModul aufgeteilt
+      ElternTab.jsx
       MemberDetail.jsx
       MemberHero.jsx
-      ElternTab.jsx
+      memberUtils.jsx               ← LAENDER, getLandName, RolleChip, getFieldVisibility
+    portal/                         ← PortalverwaltungModul aufgeteilt
+      ApiTab.jsx
+      AuditTab.jsx
+      AussehenTab.jsx
+      DesignSystemTab.jsx           ← Living Style Guide (auto aus COMPONENT_REGISTRY)
+      FeldvisTab.jsx
+      GruppenTab.jsx
+      KaderRollenTab.jsx
+      MitgliederKonfigTab.jsx
+      ModuleRechteTab.jsx
+      RollenTab.jsx
+      TeamModuleMatrix.jsx
+      TeamModuleTab.jsx
+      UsersTab.jsx
+      portalUtils.js                ← ZUGRIFF_*, ALLE_MODULE, ROLES, KAT_LABELS etc.
+    DashboardModul.jsx
+    HelferModul.jsx                 ← Phase 4: noch demoData
+    KaderModul.jsx
+    MitgliederModul.jsx
+    NachrichtenModul.jsx
+    NavigationModul.jsx
+    PlatzhalterModul.jsx
+    PortalverwaltungModul.jsx
+    TeamModul.jsx                   ← Phase 4: noch demoData
+    TeamsVerwaltungModul.jsx
+    TermineModul.jsx                ← Phase 4: noch demoData
+    TrainingsplanModul.jsx          ← Phase 4: noch demoData
 
-  theme.jsx         ← Design-System (bleibt im Root)
-  constants.js      ← Design-Tokens, Konstanten
-  icons.jsx         ← Icon-Definitionen
-  supabase.js       ← Supabase-Client
-  clubcampus.jsx    ← Haupt-Entry
-  main.jsx
-  App.jsx
+  App.jsx                           ← bleibt im Root
+  clubcampus.jsx                    ← Haupt-Entry
+  constants.js                      ← Design-Tokens, Konstanten
+  demoData.js                       ← ⚠️ TEMPORÄR — löschen wenn Phase 4 fertig
+  icons.jsx                         ← Icon-Definitionen
+  main.jsx                          ← bleibt im Root
+  supabase.js                       ← Supabase-Client
+  theme.jsx                         ← Design-System + COMPONENT_REGISTRY
 ```
 
 ## Die eine Regel
@@ -96,6 +111,54 @@ Vor jedem neuen Modul:
 - [ ] Kein `demoData` Import
 - [ ] Kein `sb.from()` direkt in Komponenten → Service nutzen
 - [ ] Modul-Datei in `src/modules/` ablegen
+
+## Pflege dieser Datei
+
+Diese Datei wird automatisch aktualisiert wenn:
+- Neue Dateien erstellt oder verschoben werden
+- Phase-Status sich ändert (z.B. Modul auf Supabase migriert)
+- Neue Komponenten in COMPONENT_REGISTRY eingetragen werden
+- Eine Session abgeschlossen wird
+
+**Manuell nie nötig** — Claude hält sie aktuell.
+
+## Arbeitsweise
+
+**Vor jeder Umsetzung:**
+1. Gründlich analysieren — alle Abhängigkeiten, Props, Imports, CSS-Klassen
+2. Plan vorlegen und Didi fragen
+3. Erst bei explizitem OK umsetzen
+4. Umsetzung konzentriert und vollständig — lieber länger als fehlerhaft
+5. Build verifizieren (`npx vite build` grün) bevor Files geliefert werden
+6. Alle Props/Imports/Abhängigkeiten prüfen bevor Code geliefert wird
+
+**Keine Halbheiten:**
+- Nie Annahmen über Props oder Signatures — immer prüfen
+- Nie Files liefern ohne Build-Verifikation
+- Nie Fehler auf "später" verschieben
+
+## CSS-Regeln
+
+**Vor jedem Styling:**
+1. Zuerst bestehende `cc-*` Klassen in `theme.jsx` prüfen
+2. Bestehende Klasse verwenden wenn vorhanden
+3. Kein Inline-CSS wenn eine `cc-*` Klasse existiert
+4. Neue CSS-Klassen nur mit Rücksprache mit Didi
+5. Falls neue Klasse nötig: in `theme.jsx` mit `cc-` Prefix, nie inline
+
+```jsx
+// ✗ FALSCH — Inline-CSS obwohl cc-Klasse existiert
+<div style={{display:"flex",gap:8,alignItems:"center"}}>
+
+// ✓ RICHTIG — bestehende Klasse nutzen
+<div className="cc-row cc-gap-8">
+
+// ✗ FALSCH — neue Klasse ohne Rücksprache
+.meine-neue-klasse { ... }
+
+// ✓ RICHTIG — erst fragen, dann in theme.jsx mit cc- Prefix
+// → Rücksprache mit Didi → dann: .cc-meine-klasse { ... } in theme.jsx
+```
 
 ## Verbotene Patterns
 
