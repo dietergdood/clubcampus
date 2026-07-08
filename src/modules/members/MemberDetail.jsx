@@ -182,6 +182,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
     setTeamAssignForm({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
     setTeamFunkOpen(false);
     setTeamAssignSaving(false);
+    if(onReload) onReload();
   }
 
   async function saveFunktionen(){
@@ -214,12 +215,13 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
     setEditTeam(null);
     setEditTeamFunkOpen(false);
     setEditTeamSaving(false);
+    if(onReload) onReload();
   }
 
   useEffect(()=>{
     if(sb&&raw.id&&benutzer===null){
       fetchBenutzerFuerMitglied(sb,raw.id)
-        .then(({data})=>setBenutzer(data));
+        .then(data=>setBenutzer(data));
     }
   },[raw.id]);
 
