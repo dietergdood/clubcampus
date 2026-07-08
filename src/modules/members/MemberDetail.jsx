@@ -462,7 +462,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                     :<div className="cc-team-position-name">{k.teams?.name||"—"}</div>
                   }
                   {(k.rollen||["Spieler/in"]).length>0&&(
-                    <div className="cc-team-position-chips">
+                    <div className="cc-team-role-chips">
                       {[...(k.rollen||["Spieler/in"])].sort((a,b)=>{
                         const aT=dbKaderRollen.some(kr=>kr.name===a&&kr.ist_trainer);
                         const bT=dbKaderRollen.some(kr=>kr.name===b&&kr.ist_trainer);
