@@ -11,6 +11,7 @@ import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.js";
 import { currentSeason } from "../../domains/season/seasonUtils.js";
 import { MemberHero, FotoUpload } from "./MemberHero.jsx";
 import { LAENDER, getLandName, getFieldVisibility, RolleChip } from "./memberUtils.jsx";
+import { NotizenVerlauf } from "./NotizenVerlauf.jsx";
 
 export function InfoTab({raw,tab,canEdit,sb,role,account,dbMitglieder,dbMitgliedtypen,dbPortalRollen,dbKaderRollen,kannVerwalten,onReload,onNavToTeam,onClose,brauchtEltern,TRAINER_KEYS,ROLLE_LABEL,editField,setEditField,editVal,setEditVal,saving,setSaving,ahvVisible,setAhvVisible,showTeamAssign,setShowTeamAssign,teamAssignForm,setTeamAssignForm,teamAssignSearch,setTeamAssignSearch,teamAssignRolleSearch,setTeamAssignRolleSearch,editTeamIdx,setEditTeamIdx,editTeamForm,setEditTeamForm,editTeamRolleSearch,setEditTeamRolleSearch,showFunkAssign,setShowFunkAssign,funkSearch,setFunkSearch,funkSelected,setFunkSelected,roleEditOpen,setRoleEditOpen,notizenCount,setNotizenCount,teamsPopover,setTeamsPopover,setTab}) {
   return (

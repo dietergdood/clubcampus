@@ -33,6 +33,14 @@ reloadMember, refreshArchivCount, brauchtEltern,
   const setTab=t=>setSelectedMember(prev=>({...prev,_tab:t}));
   const canEdit=kannVerwalten("members")&&!m._readonly;
   const canDelete=kannVerwalten("members");
+  const TRAINER_KEYS=(dbKaderRollen||[]).filter(r=>r.ist_trainer).map(r=>r.name);
+  const ROLLE_LABEL=Object.fromEntries([
+    ...(dbPortalRollen||[]).map(r=>[r.name,r.label]),
+    ["administrator","Administrator"],["administration","Verwaltung"],
+    ["funktionaer","Funktionär"],["trainer","Trainer/in"],
+    ["spieler","Spieler/in"],["eltern","Elternteil"],
+    ["mitglied","Mitglied"],["supporter","Supporter"],
+  ]);
   const isMobile=useIsMobile();
   const [portalLoading,setPortalLoading]=useState(false);
   const [benutzer,setBenutzer]=useState(null);
