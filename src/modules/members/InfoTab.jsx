@@ -120,7 +120,7 @@ export function InfoTab({raw,tab,canEdit,sb,role,account,dbMitglieder,dbMitglied
     setEditTeamSaving(false);
   }
   const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
-  const initials=(m.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+  const initials=(raw.name||raw.vorname||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
 
   useEffect(()=>{
     if(sb&&raw.id&&benutzer===null){
