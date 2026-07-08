@@ -2,7 +2,7 @@
    ClubCampus — MitgliederModul.jsx
    State, Logik und Koordination — Render via MembersView
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../constants.js";
 import { TI } from "../icons.jsx";
 import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
@@ -199,21 +199,21 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* computed values are in MembersView */
   /* ── Render ── */
 
-  const FILTER_DEFS=[
+  const FILTER_DEFS=useMemo(()=>[
     {key:"mitgliedschaft", label:"Mitgliedschaft", vals:[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(Boolean))]},
     {key:"rollen", label:"Rollen", vals:[...new Set(allMembers.map(m=>m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null).filter(Boolean))].sort()},
     {key:"datenpruefung",  label:"Datenpruefung",  vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
     {key:"portal",         label:"Portal-Zugang",  vals:[...new Set(allMembers.map(m=>m.portal).filter(Boolean))]},
     {key:"teams",          label:"Teams",          vals:[...new Set(allMembers.flatMap(m=>(m.teams||[]).map(t=>t?.name||t)).filter(Boolean))].sort()},
-  ];
+  ],[allMembers,ROLLE_LABEL]);
 
-  const filtered=filterMembers(allMembers,search,filterVals,ROLLE_LABEL);
+  const filtered=useMemo(()=>filterMembers(allMembers,search,filterVals,ROLLE_LABEL),[allMembers,search,filterVals,ROLLE_LABEL]);
 
-  const sorted=sortMembers(filtered,sortCol,sortDir);
+  const sorted=useMemo(()=>sortMembers(filtered,sortCol,sortDir),[filtered,sortCol,sortDir]);
 
   const paged=sorted;
   const hasMore=false;
-  const groups=buildGroups(paged,groupBy,ROLLE_LABEL);
+  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL),[paged,groupBy,ROLLE_LABEL]);
 
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
   const SortIcon=({col})=>sortCol===col
