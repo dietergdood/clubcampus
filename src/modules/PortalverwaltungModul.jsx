@@ -5,8 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.js";
 import { TI } from "../icons.jsx";
-import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile , avColor} from "../theme.jsx";
-import { FUNKTIONEN } from "../demoData.js";
+import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile, avColor, useConfirm, ConfirmDialog } from "../theme.jsx";
 
 /* ── Geteilte Konstanten ── */
 const ROLES = {
@@ -715,6 +714,7 @@ export const MULTISELECT = {
 
 function PortalverwaltungView(props){
   const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen} = props;
+  const [confirm,confirmDialog]=useConfirm();
   const [tab,setTab]=useState(initialTab);
   const [dbPortalRollen,setDbPortalRollen]=useState(externalRollen);
   useEffect(()=>{if(externalRollen.length>0)setDbPortalRollen(externalRollen);},[externalRollen]);
@@ -744,7 +744,8 @@ function PortalverwaltungView(props){
   }
 
   async function deleteKaderRolle(id){
-    if(!supabase||!window.confirm("Kader-Rolle wirklich löschen?")) return;
+    const ok=await confirm({title:"Kader-Rolle löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
+    if(!supabase||!ok) return;
     await supabase.from("kader_rollen").update({aktiv:false}).eq("id",id);
     const{data}=await supabase.from("kader_rollen").select("*").eq("aktiv",true).order("sort_order");
     if(data){setDbKaderRollen(data);if(onReloadKaderRollen)onReloadKaderRollen();}
@@ -766,7 +767,8 @@ function PortalverwaltungView(props){
   }
 
   async function deleteRolle(id){
-    if(!supabase||!window.confirm("Rolle wirklich löschen?")) return;
+    const ok=await confirm({title:"Rolle löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
+    if(!supabase||!ok) return;
     await supabase.from("portal_rollen").update({aktiv:false}).eq("id",id);
     const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
     if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
@@ -1242,6 +1244,9 @@ function PortalverwaltungView(props){
   async function updateBenutzerRolle(id,role){
     if(!supabase) return;
     await supabase.from("benutzer").update({role}).eq("id",id);
+    // mitglieder.rolle synchron halten
+    const {data:b}=await supabase.from("benutzer").select("mitglied_id").eq("id",id).maybeSingle();
+    if(b?.mitglied_id) await supabase.from("mitglieder").update({rolle:role}).eq("id",b.mitglied_id);
     setBenutzerListe(prev=>prev.map(b=>b.id===id?{...b,role}:b));
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
@@ -2200,7 +2205,8 @@ function PortalverwaltungView(props){
         }
 
         async function deleteMitgliedtyp(id){
-          if(!supabase||!window.confirm("Mitgliedtyp wirklich löschen?")) return;
+          const ok=await confirm({title:"Mitgliedtyp löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
+          if(!supabase||!ok) return;
           await supabase.from("mitgliedtypen").update({aktiv:false}).eq("id",id);
           const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
           if(data) setDbMitgliedtypen(data);
@@ -3155,6 +3161,7 @@ function PortalverwaltungView(props){
           })()}
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }
