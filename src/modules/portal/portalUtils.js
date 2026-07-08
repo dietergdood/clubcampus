@@ -177,3 +177,36 @@ export const ZUGRIFF_DEFAULT={
     },
   };
 
+
+export const ROLES = {
+  administrator: {
+    label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
+    desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",
+    level:7
+  },
+  administration: {
+    label:"Administration", color:"var(--text)", bg:"#F5F5F5", icon:"briefcase",
+    desc:"Vereinsbüro: Stammdaten, Mitglieder, alle Teams, Exporte — kein System",
+    level:5
+  },
+  funktionaer: {
+    label:"Funktionär", color:"var(--text)", bg:"#F5F5F5", icon:"heart-handshake",
+    desc:"Module + Teams gemäss zugewiesener Gruppe/Funktion",
+    level:4
+  },
+  trainer: {
+    label:"Trainer", color:"var(--text)", bg:"#F5F5F5", icon:"ball-football",
+    desc:"Eigene Teams: Kader, Trainings, Anwesenheiten",
+    level:3
+  },
+  spieler: {
+    label:"Spieler", color:"var(--text)", bg:"#F5F5F5", icon:"target",
+    desc:"Eigenes Team lesen: Spielplan, Termine, Helfereinsätze",
+    level:2
+  },
+  eltern: {
+    label:"Eltern", color:"var(--text)", bg:"#F5F5F5", icon:"user",
+    desc:"Nur eigene Kinder: Termine, Anwesenheit, Abstimmungen",
+    level:1
+  },
+};

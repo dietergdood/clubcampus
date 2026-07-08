@@ -603,7 +603,7 @@ function PortalverwaltungView(props){
           moduleDirty={moduleDirty} setModuleDirty={setModuleDirty}
           ALLE_MODULE={ALLE_MODULE} effRechte={effRechte}
           getZugriff={getZugriff} setZugriffStufe={setZugriffStufe} cycleZugriff={cycleZugriff}
-          toggleModulGlobal={toggleModulGlobal} toggleBerechtigung={toggleBerechtigung} tab={tab}
+          toggleModulGlobal={toggleModulGlobal} toggleBerechtigung={toggleBerechtigung} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} tab={tab}
         />
       <GruppenTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
@@ -623,13 +623,13 @@ function PortalverwaltungView(props){
         />
       <FeldvisTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
-          isMobile={isMobile} mobileKachel={mobileKachel} toggleFeld={toggleFeld} tab={tab}
+          isMobile={isMobile} mobileKachel={mobileKachel} toggleFeld={toggleFeld} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} tab={tab}
         />
       <UsersTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
           isMobile={isMobile} mobileKachel={mobileKachel}
           benutzerListe={benutzerListe} setBenutzerListe={setBenutzerListe}
-          dbPortalRollen={dbPortalRollen} updateBenutzerRolle={updateBenutzerRolle} tab={tab}
+          dbPortalRollen={dbPortalRollen} updateBenutzerRolle={updateBenutzerRolle} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} tab={tab}
         />
       <MitgliederKonfigTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}

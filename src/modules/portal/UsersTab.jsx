@@ -6,8 +6,9 @@ import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip,
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.js";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
+import { ROLES } from "./portalUtils.js";
 
-export function UsersTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,benutzerListe,setBenutzerListe,dbPortalRollen,updateBenutzerRolle,tab}) {
+export function UsersTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,benutzerListe,setBenutzerListe,dbPortalRollen,updateBenutzerRolle,tab,ROLLEN,ROLLEN_LABELS}) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="users"&&(

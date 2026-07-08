@@ -4,11 +4,11 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate, InfoBox} from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.js";
+import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT, STATUS_BG } from "../../constants.js";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
-import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS } from "./portalUtils.js";
+import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, ROLES } from "./portalUtils.js";
 
-export function ModuleRechteTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,module,moduleAktiv,setModuleAktiv,moduleRechte,setModuleRechte,moduleConfig,moduleBerechtigungen,expandedModul,setExpandedModul,moduleViewMode,setModuleViewMode,moduleDirty,setModuleDirty,ALLE_MODULE,effRechte,getZugriff,setZugriffStufe,cycleZugriff,toggleModulGlobal,toggleBerechtigung,tab}) {
+export function ModuleRechteTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,module,moduleAktiv,setModuleAktiv,moduleRechte,setModuleRechte,moduleConfig,moduleBerechtigungen,expandedModul,setExpandedModul,moduleViewMode,setModuleViewMode,moduleDirty,setModuleDirty,ALLE_MODULE,effRechte,getZugriff,setZugriffStufe,cycleZugriff,toggleModulGlobal,toggleBerechtigung,tab,ROLLEN,ROLLEN_LABELS}) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="module"&&(
