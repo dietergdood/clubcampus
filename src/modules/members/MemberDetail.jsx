@@ -24,7 +24,7 @@ sb, role, account,
 dbMitglieder=[], dbMitgliedtypen=[], dbPortalRollen=[], dbKaderRollen=[],
 kannVerwalten, onReload, onUpdatePortalZugang=null,
 setSelectedMember, selectedMember,
-reloadMember, refreshArchivCount, brauchtEltern,
+reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 }){
   const dbRaw=dbMitglieder.find(d=>d.id===m.id)||{};
   const raw={...dbRaw,...Object.fromEntries(Object.entries(m).filter(([k,v])=>v!==undefined&&v!==null||!dbRaw[k]))};
@@ -75,6 +75,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
   const [editTeamRolleSearch,setEditTeamRolleSearch]=useState("");
   const [editTeamSaving,setEditTeamSaving]=useState(false);
   const [elternLoaded,setElternLoaded]=useState(null);
+  const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
   const [editField,setEditField]=useState(null);
   const [editVal,setEditVal]=useState("");
   const [saving,setSaving]=useState(false);
