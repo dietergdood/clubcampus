@@ -526,7 +526,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                           aria-hidden="true"
                         ><TI n="grip-vertical" size={11}/></span>
                       )}
-                      <span style={{cursor:dragCol?"crosshair":"pointer"}}>{col.label}{!dragCol&&<SortIcon col={col.key}/>}</span>
+                      <span>{col.label}<SortIcon col={col.key}/></span>
                     </span>
                   </th>
                 ))}
