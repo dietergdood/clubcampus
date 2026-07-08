@@ -683,9 +683,8 @@ reloadMember, refreshArchivCount, brauchtEltern,
                   <span className="cc-search-input-icon">
                     <TI n="search" size={14}/>
                   </span>
-                  <input className="cc-input" placeholder="Suchen…" value={teamAssignRolleSearch||""}
-                    onChange={e=>setTeamAssignRolleSearch(e.target.value)}
-                    className="cc-search-input"/>
+                  <input className="cc-search-input" placeholder="Suchen…" value={teamAssignRolleSearch||""}
+                    onChange={e=>setTeamAssignRolleSearch(e.target.value)}/>
                 </div>
                 <div className="cc-role-list-wrap">
                   {dbKaderRollen.filter(r=>!(teamAssignRolleSearch)||r.name.toLowerCase().includes((teamAssignRolleSearch||"").toLowerCase())).map(r=>{
@@ -731,9 +730,8 @@ reloadMember, refreshArchivCount, brauchtEltern,
                       <span className="cc-search-input-icon">
                         <TI n="search" size={14}/>
                       </span>
-                      <input className="cc-input" placeholder="Suchen…" value={editTeamRolleSearch||""}
-                        onChange={e=>setEditTeamRolleSearch(e.target.value)}
-                        className="cc-search-input"/>
+                      <input className="cc-search-input" placeholder="Suchen…" value={editTeamRolleSearch||""}
+                        onChange={e=>setEditTeamRolleSearch(e.target.value)}/>
                     </div>
                     <div className="cc-role-list-wrap">
                       {dbKaderRollen.filter(r=>!(editTeamRolleSearch)||r.name.toLowerCase().includes((editTeamRolleSearch||"").toLowerCase())).map(r=>{

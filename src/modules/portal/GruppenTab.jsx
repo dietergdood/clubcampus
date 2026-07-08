@@ -6,6 +6,7 @@ import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip,
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.js";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
+import { ZUGRIFF_LABELS, ZUGRIFF_COLORS, ALLE_MODULE } from "./portalUtils.js";
 
 export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,gruppen,setGruppen,funktionen,setFunktionen,pvTeams,gruppenTeams,setGruppenTeams,selectedGruppe,setSelectedGruppe,showGruppeForm,setShowGruppeForm,showFunktionForm,setShowFunktionForm,editGruppe,setEditGruppe,editFunktion,setEditFunktion,gruppeForm,setGruppeForm,funktionForm,setFunktionForm,tab}) {
   return (
