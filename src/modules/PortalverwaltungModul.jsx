@@ -623,7 +623,7 @@ function PortalverwaltungView(props){
         />
       <FeldvisTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
-          isMobile={isMobile} mobileKachel={mobileKachel} toggleFeld={toggleFeld} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} tab={tab}
+          isMobile={isMobile} mobileKachel={mobileKachel} toggleFeld={toggleFeld} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} felderNachKey={felderNachKey} tab={tab}
         />
       <UsersTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}

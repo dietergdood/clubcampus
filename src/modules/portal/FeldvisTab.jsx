@@ -7,7 +7,7 @@ import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.js";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
 
-export function FeldvisTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,toggleFeld,tab,ROLLEN,ROLLEN_LABELS}) {
+export function FeldvisTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,toggleFeld,tab,ROLLEN,ROLLEN_LABELS,felderNachKey}) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="feldvis"&&(
