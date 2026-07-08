@@ -2160,8 +2160,8 @@ function PortalverwaltungView(props){
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="mitglieder_config"&&(()=>{
         const ROLLEN_PF=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["spieler","trainer","funktionaer","eltern"];
         const ROLLEN_PF_LABELS=dbPortalRollen.length>0?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label])):{spieler:"Spieler",trainer:"Trainer",funktionaer:"Funktionär",eltern:"Eltern"};
-        const MITGLIEDTYPEN_PF=["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
-        const MITGLIEDTYPEN_SHORT={Aktivmitglied:"Aktivmitglied",Juniormitglied:"Juniormitglied",Funktionär:"Funktionär",Passivmitglied:"Passivmitglied",Ehrenmitglied:"Ehrenmitglied",Freimitglied:"Freimitglied"};
+        const MITGLIEDTYPEN_PF=dbMitgliedtypen.filter(t=>t.aktiv!==false).map(t=>t.name);
+        const MITGLIEDTYPEN_SHORT=Object.fromEntries(dbMitgliedtypen.filter(t=>t.aktiv!==false).map(t=>[t.name,t.name]));
         const FELDER_ROLLE=["geburtsdatum","adresse","telefon","ahv_nr","spielerpass","js_nr","fairgate_id"];
         const FELDER_ROLLE_LABELS={geburtsdatum:"Geburtsdatum",adresse:"Adresse",telefon:"Telefon",ahv_nr:"AHV-Nr.",spielerpass:"Spielerpass",js_nr:"J+S Nr.",fairgate_id:"Fairgate-ID"};
         const FELDER_TYP=["vorname_nachname","geburtsdatum","adresse","telefon","email"];
