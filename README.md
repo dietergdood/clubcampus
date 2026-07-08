@@ -131,6 +131,10 @@ src/
 public/
   logo.png          <- ClubCampus Standard-Logo (Fallback)
   manifest.json     <- PWA Manifest
+
+supabase/
+  schema.sql        <- Schema, Tabellen, Policies, RLS, Funktionen (kein Datendump)
+                       Wird nach jeder Session manuell aktualisiert und committed.
 ```
 
 → Vollständige Struktur und Entwicklungsregeln: [ARCHITECTURE.md](./ARCHITECTURE.md)
@@ -143,9 +147,16 @@ public/
 
 | | |
 |---|---|
-| Supabase DB | West EU (Ireland / eu-west-1) — Migration nach Zürich (eu-central-2) geplant |
+| Supabase DB | Central Europe (Zürich / eu-central-2) |
 | Deployment | [clubcampus.vercel.app](https://clubcampus.vercel.app) |
-| Ziel-Domain | fch.clubcampus.app |
+| Ziel-Domain | clubcampus.app/fcherrliberg (geplant — heute noch kein Slug-Routing) |
+
+**Geplantes URL-Schema:**
+- `clubcampus.app/fcherrliberg`
+- `clubcampus.app/fckloten`
+- `clubcampus.app/svsportverein`
+
+Heute lädt die App den Verein via `.single()` aus der `vereine` Tabelle — kein Slug-Routing. Der Umbau auf pfadbasiertes Routing (Slug → verein_id) ist geplant.
 
 ---
 
