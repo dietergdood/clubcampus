@@ -6,6 +6,7 @@ import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip,
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.js";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
+import { TeamModuleMatrix } from "./TeamModuleMatrix.jsx";
 
 export function TeamModuleTab({supabase,loading,isMobile,mobileKachel,tab}) {
   return (

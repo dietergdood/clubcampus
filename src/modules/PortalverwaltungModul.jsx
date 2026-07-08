@@ -603,7 +603,7 @@ function PortalverwaltungView(props){
           moduleDirty={moduleDirty} setModuleDirty={setModuleDirty}
           ALLE_MODULE={ALLE_MODULE} effRechte={effRechte}
           getZugriff={getZugriff} setZugriffStufe={setZugriffStufe} cycleZugriff={cycleZugriff}
-          toggleModulGlobal={toggleModulGlobal} toggleBerechtigung={toggleBerechtigung} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} gruppen={gruppen} tab={tab}
+          toggleModulGlobal={toggleModulGlobal} toggleBerechtigung={toggleBerechtigung} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} gruppen={gruppen} zugriffStufen={zugriffStufen} setZugriffStufen={setZugriffStufen} effZugriff={effZugriff} toggleModulRolle={toggleModulRolle} tab={tab}
         />
       <GruppenTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}

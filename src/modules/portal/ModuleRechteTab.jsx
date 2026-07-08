@@ -8,7 +8,7 @@ import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT, STATUS_BG }
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
 import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, ROLES } from "./portalUtils.js";
 
-export function ModuleRechteTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,module,moduleAktiv,setModuleAktiv,moduleRechte,setModuleRechte,moduleConfig,moduleBerechtigungen,expandedModul,setExpandedModul,moduleViewMode,setModuleViewMode,moduleDirty,setModuleDirty,ALLE_MODULE,effRechte,getZugriff,setZugriffStufe,cycleZugriff,toggleModulGlobal,toggleBerechtigung,tab,ROLLEN,ROLLEN_LABELS,gruppen}) {
+export function ModuleRechteTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,module,moduleAktiv,setModuleAktiv,moduleRechte,setModuleRechte,moduleConfig,moduleBerechtigungen,expandedModul,setExpandedModul,moduleViewMode,setModuleViewMode,moduleDirty,setModuleDirty,ALLE_MODULE,effRechte,getZugriff,setZugriffStufe,cycleZugriff,toggleModulGlobal,toggleBerechtigung,tab,ROLLEN,ROLLEN_LABELS,gruppen,zugriffStufen,setZugriffStufen,effZugriff,toggleModulRolle}) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="module"&&(
