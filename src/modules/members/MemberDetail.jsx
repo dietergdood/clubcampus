@@ -135,17 +135,17 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
   useEffect(()=>{
     if(showTeamAssign&&sb){
-      if(allTeams.length===0)
+      if((allTeams||[]).length===0)
         sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
           .then(({data})=>setAllTeams(data||[]));
-      if(assignFunktionen.length===0)
+      if((assignFunktionen||[]).length===0)
         sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
           .then(({data})=>setAssignFunktionen(data||[]));
     }
   },[showTeamAssign]);
 
   useEffect(()=>{
-    if(sb&&assignFunktionen.length===0){
+    if(sb&&(assignFunktionen||[]).length===0){
       sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
         .then(({data})=>setAssignFunktionen(data||[]));
     }
@@ -238,7 +238,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
       {(()=>{
         const allTabs=[
           {key:"info",           label:"Profil",          icon:"user"},
-          {key:"eltern",         label:`Eltern (${eltern.length})`, icon:"heart"},
+          {key:"eltern",         label:`Eltern (${(eltern||[]).length})`, icon:"heart"},
           {key:"stats",          label:"Statistik",       icon:"chart-bar"},
           {key:"helpers",        label:"Helfereinsätze",   icon:"heart-handshake"},
           {key:"entwicklung",    label:"Entwicklung",     icon:"trending-up"},
@@ -389,7 +389,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                     <div className="cc-hk-sub-label">
                       <span className="cc-hk-sub-label-text"><TI n="star" size={11}/> Hauptkontakt / Elternkontakt</span>
                       <button className="cc-hk-tab-link" onClick={()=>setTab("eltern")}>
-                        Eltern ({eltern.length}) <TI n="chevron-right" size={12}/>
+                        Eltern ({(eltern||[]).length}) <TI n="chevron-right" size={12}/>
                       </button>
                     </div>
                     <div className="cc-hk-card">
@@ -408,7 +408,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                     <div className="cc-hk-sub-label">
                       <span className="cc-hk-sub-label-text"><TI n="star" size={11}/> Hauptkontakt / Elternkontakt</span>
                       <button className="cc-hk-tab-link" onClick={()=>setTab("eltern")}>
-                        Eltern ({eltern.length}) <TI n="chevron-right" size={12}/>
+                        Eltern ({(eltern||[]).length}) <TI n="chevron-right" size={12}/>
                       </button>
                     </div>
                     <div className="cc-warn-box"><TI n="alert-triangle" size={14}/> Kein Hauptkontakt — bitte im Tab "Eltern" festlegen</div>

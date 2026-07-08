@@ -29,7 +29,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
     if(onReload) onReload();
   }
 
-  const MITGLIEDTYPEN=dbMitgliedtypen.length>0
+  const MITGLIEDTYPEN=(dbMitgliedtypen||[]).length>0
     ?dbMitgliedtypen.map(t=>t.name)
     :["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
 
@@ -129,7 +129,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
             <h1 className="cc-page-title cc-member-hero-name">{m.name}</h1>
             <div className="cc-hero-chips">
               {(()=>{
-                const ROLLE_LABEL=dbPortalRollen.length>0
+                const ROLLE_LABEL=(dbPortalRollen||[]).length>0
                   ?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label]))
                   :{administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",mitglied:"Mitglied",supporter:"Supporter"};
                 const TRAINER_ROLLEN=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
@@ -141,9 +141,9 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 if(portalRolleClean) chips.push({label:ROLLE_LABEL[portalRolleClean]||portalRolleClean,type:"portal"});
                 if(hatTrainerKader&&portalRolleClean!=="trainer") chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"kader"});
                 if(hatSpielerKader&&portalRolleClean!=="spieler") chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"kader"});
-                const MAX=isMobile?2:chips.length;
+                const MAX=isMobile?2:(chips||[]).length;
                 const visible=chips.slice(0,MAX);
-                const hidden=chips.length-MAX;
+                const hidden=(chips||[]).length-MAX;
                 return(
                   <>
                     {visible.map((c,i)=>(<span key={i} className={c.type==="portal"?"cc-hero-chip cc-hero-chip-primary":"cc-hero-chip"}>{c.label}</span>))}
@@ -237,7 +237,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                 <label className="cc-label">Portal-Rolle</label>
                 <select className="cc-input" value={editForm.rolle||""} onChange={e=>setEditForm(f=>({...f,rolle:e.target.value}))}>
                   <option value="">– keine –</option>
-                  {(dbPortalRollen.length>0?dbPortalRollen:[{name:"administrator",label:"Administrator"},{name:"administration",label:"Verwaltung"},{name:"funktionaer",label:"Funktionär"},{name:"trainer",label:"Trainer"},{name:"spieler",label:"Spieler"},{name:"eltern",label:"Eltern"},{name:"mitglied",label:"Mitglied"},{name:"supporter",label:"Supporter"}]).map(r=>(
+                  {((dbPortalRollen||[]).length>0?dbPortalRollen:[{name:"administrator",label:"Administrator"},{name:"administration",label:"Verwaltung"},{name:"funktionaer",label:"Funktionär"},{name:"trainer",label:"Trainer"},{name:"spieler",label:"Spieler"},{name:"eltern",label:"Eltern"},{name:"mitglied",label:"Mitglied"},{name:"supporter",label:"Supporter"}]).map(r=>(
                     <option key={r.name} value={r.name}>{r.label}</option>
                   ))}
                 </select>
