@@ -21,12 +21,12 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
       {showForm&&(
         <Card style={{marginTop:14,background:"var(--surface)",border:`0.5px solid ${AM}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Reservation</h3>
-          <div className="cc-grid-3">
-            <div><label className="cc-text-sm">Bus</label><br/><Select ><option>Bus A (9-Plätzer)</option><option>Bus B (15-Plätzer)</option></Select></div>
-            <div><label className="cc-text-sm">Datum</label><br/><input type="date" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:14}}/></div>
-            <div><label className="cc-text-sm">Zeit</label><br/><input type="text" placeholder="09:00-14:00" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:14}}/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+            <div><label style={{fontSize:13,color:"var(--sub)"}}>Bus</label><br/><Select ><option>Bus A (9-Plätzer)</option><option>Bus B (15-Plätzer)</option></Select></div>
+            <div><label style={{fontSize:13,color:"var(--sub)"}}>Datum</label><br/><input type="date" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13}}/></div>
+            <div><label style={{fontSize:13,color:"var(--sub)"}}>Zeit</label><br/><input type="text" placeholder="09:00-14:00" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13}}/></div>
           </div>
-          <div style={{marginTop:10}}><label className="cc-text-sm">Zweck</label><br/><input type="text" placeholder="z.B. Auswärtsspiel vs. FC Küsnacht" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:14,boxSizing:"border-box"}}/></div>
+          <div style={{marginTop:10}}><label style={{fontSize:13,color:"var(--sub)"}}>Zweck</label><br/><input type="text" placeholder="z.B. Auswärtsspiel vs. FC Küsnacht" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/></div>
           <div style={{marginTop:10,display:"flex",gap:8}}><Btn variant="primary" color="#F3F4F6" onClick={()=>setShowForm(false)}>Reservieren</Btn><Btn onClick={()=>setShowForm(false)}>Abbrechen</Btn></div>
         </Card>
       )}
@@ -37,11 +37,11 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
             {bus.reservations.map((r,j)=>(
               <div key={j} style={{padding:"9px 0",borderBottom:j<bus.reservations.length-1?`0.5px solid ${GB}`:"none"}}>
                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                  <span style={{fontWeight:600,fontSize:14}}>{r.date} · {r.time+" Uhr"}</span>
-                  <Chip text="Reserviert" color={BL}/>
+                  <span style={{fontWeight:600,fontSize:13}}>{r.date} · {r.time+" Uhr"}</span>
+                  <Chip text="Reserviert" color={BL} bg="#EFF6FF"/>
                 </div>
-                <div style={{fontSize:14,color:"var(--sub)",marginTop:2}}>{r.purpose}</div>
-                <div className="cc-text-sm">von {r.by} · {r.team}</div>
+                <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{r.purpose}</div>
+                <div style={{fontSize:13,color:"var(--sub)"}}>von {r.by} · {r.team}</div>
               </div>
             ))}
           </Card>
@@ -63,36 +63,36 @@ function MaterialView(){
       {showForm&&(
         <Card style={{marginBottom:16,background:"var(--surface)",border:`0.5px solid ${BL}`}}>
           <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700}}>Neue Materialanfrage</h3>
-          <div className="cc-grid-form" style={{gap:10}}>
-            <div><label className="cc-text-sm">Art</label><br/><Select >{["Bestellung","Ersatzmaterial","Tenüs","Mangel","Defekt","Verlust","Neue Anforderung"].map(t=><option key={t}>{t}</option>)}</Select></div>
-            <div><label className="cc-text-sm">Team</label><br/><Select ><option>Cc-Junioren</option><option>D-Junioren</option></Select></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div><label style={{fontSize:13,color:"var(--sub)"}}>Art</label><br/><Select >{["Bestellung","Ersatzmaterial","Tenüs","Mangel","Defekt","Verlust","Neue Anforderung"].map(t=><option key={t}>{t}</option>)}</Select></div>
+            <div><label style={{fontSize:13,color:"var(--sub)"}}>Team</label><br/><Select ><option>Cc-Junioren</option><option>D-Junioren</option></Select></div>
           </div>
-          <div style={{marginTop:10}}><label className="cc-text-sm">Beschreibung</label><br/><input type="text" placeholder="z.B. Neue Bälle Grösse 4" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:14,boxSizing:"border-box"}}/></div>
+          <div style={{marginTop:10}}><label style={{fontSize:13,color:"var(--sub)"}}>Beschreibung</label><br/><input type="text" placeholder="z.B. Neue Bälle Grösse 4" style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/></div>
           <div style={{marginTop:10,display:"flex",gap:8}}><Btn variant="primary" color="#F3F4F6" onClick={()=>setShowForm(false)}>Einreichen</Btn><Btn onClick={()=>setShowForm(false)}>Abbrechen</Btn></div>
         </Card>
       )}
       <Card style={{padding:0,overflowX:"auto"}}>
-        <div className="cc-table-wrap"><table className="cc-table">
+        <table className="cc-table">
           <thead>
             <tr style={{background:"var(--surface2)"}}>
               {["Team","Art","Material","von","Datum","Status"].map((h,i)=>(
-                <th className="cc-th" key={i}>{h}</th>
+                <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {MATERIAL.map((m,i)=>(
               <tr key={m.id} style={{borderTop:"0.5px solid var(--border)"}}>
-                <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.team} color={R}/></td>
-                <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.type} color={TC[m.type]||"#888"} bg={(TC[m.type]||"#888")+"18"}/></td>
-                <td className="cc-td" style={{padding:"9px 13px",fontWeight:600}}>{m.item}</td>
-                <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.by}</td>
-                <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{m.date}</td>
-                <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.status} color={m.status==="Erledigt"?GN:m.status==="In Bearbeitung"?BL:AM} bg={m.status==="Erledigt"?"#ECFDF5":m.status==="In Bearbeitung"?"#EFF6FF":"#FFFBEB"}/></td>
+                <td style={{padding:"9px 13px"}}><Chip text={m.team} color={R}/></td>
+                <td style={{padding:"9px 13px"}}><Chip text={m.type} color={TC[m.type]||"#888"} bg={(TC[m.type]||"#888")+"18"}/></td>
+                <td style={{padding:"9px 13px",fontWeight:600}}>{m.item}</td>
+                <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.by}</td>
+                <td style={{padding:"9px 13px",color:"var(--sub)"}}>{m.date}</td>
+                <td style={{padding:"9px 13px"}}><Chip text={m.status} color={m.status==="Erledigt"?GN:m.status==="In Bearbeitung"?BL:AM} bg={m.status==="Erledigt"?"#ECFDF5":m.status==="In Bearbeitung"?"#EFF6FF":"#FFFBEB"}/></td>
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </table>
       </Card>
     </div>
   );
@@ -108,12 +108,12 @@ function LockersView(){
   return(
     <div>
       <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Garderobenplan</h1>
-      <p style={{color:"var(--sub)",fontSize:14,margin:"0 0 18px"}}>Gantt-Ansicht · 07:00-22:00 Uhr</p>
+      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 18px"}}>Gantt-Ansicht · 07:00-22:00 Uhr</p>
       <Card style={{padding:0,overflowX:"auto"}}>
         <div style={{minWidth:600}}>
           <div style={{display:"grid",gridTemplateColumns:"110px 1fr",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)"}}>
-            <div style={{padding:"9px 12px",fontWeight:700,fontSize:14,color:"var(--sub)"}}>Garderobe</div>
-            <div style={{padding:"9px 12px",fontSize:14,color:"var(--sub)",borderLeft:`0.5px solid ${GB}`,position:"relative",height:28}}>
+            <div style={{padding:"9px 12px",fontWeight:700,fontSize:13,color:"var(--sub)"}}>Garderobe</div>
+            <div style={{padding:"9px 12px",fontSize:13,color:"var(--sub)",borderLeft:`0.5px solid ${GB}`,position:"relative",height:28}}>
               {[7,9,11,13,15,17,19,21].map((h,i)=>(
                 <span key={i} style={{position:"absolute",left:`${(h-START)/(END-START)*100}%`,transform:"translateX(-50%)"}}>{h}:00</span>
               ))}
@@ -121,14 +121,14 @@ function LockersView(){
           </div>
           {LOCKERS.map((lr,i)=>(
             <div key={i} style={{display:"grid",gridTemplateColumns:"110px 1fr",borderBottom:i<LOCKERS.length-1?`0.5px solid ${GB}`:"none",minHeight:H*2+12}}>
-              <div style={{padding:"8px 12px",fontSize:14,fontWeight:600,borderRight:`0.5px solid ${GB}`,display:"flex",alignItems:"center",background:"var(--surface2)"}}>{lr.name}</div>
+              <div style={{padding:"8px 12px",fontSize:13,fontWeight:600,borderRight:`0.5px solid ${GB}`,display:"flex",alignItems:"center",background:"var(--surface2)"}}>{lr.name}</div>
               <div style={{position:"relative",height:H*2+12}}>
                 {lr.assignments.map((a,j)=>{
                   const left=(a.start-START)/(END-START)*100, width=(a.end-a.start)/(END-START)*100;
                   return(
                     <div key={j} title={`${a.team} · ${fmt(a.start)}-${fmt(a.end)}`} style={{position:"absolute",left:`${left}%`,width:`${width}%`,top:j*(H+4)+4,height:H,background:a.color,borderRadius:5,padding:"3px 7px",overflow:"hidden",cursor:"help"}}>
-                      <div style={{color:"#fff",fontSize:14,fontWeight:700,whiteSpace:"nowrap"}}>{a.team} ({a.type})</div>
-                      <div style={{color:"rgba(255,255,255,0.8)",fontSize:14}}>{fmt(a.start)}-{fmt(a.end)}</div>
+                      <div style={{color:"#fff",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}}>{a.team} ({a.type})</div>
+                      <div style={{color:"rgba(255,255,255,0.8)",fontSize:13}}>{fmt(a.start)}-{fmt(a.end)}</div>
                     </div>
                   );
                 })}
@@ -150,15 +150,15 @@ function MediaView(){
         <Btn variant="primary" color="#F3F4F6">+ Beitrag einreichen</Btn>
       </Between>
       {MEDIA.map((m,i)=>(
-        <Card key={i} className="cc-mb-12">
+        <Card key={i} style={{marginBottom:12}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div>
               <div style={{display:"flex",gap:6,marginBottom:5,flexWrap:"wrap"}}>
                 <Chip text={m.cat} color={R}/>
-                {m.area.map((a,j)=><Chip key={j} text={a} color={BL}/>)}
+                {m.area.map((a,j)=><Chip key={j} text={a} color={BL} bg="#EFF6FF"/>)}
               </div>
               <h3 style={{margin:"0 0 4px",fontSize:14,fontWeight:700}}>{m.title}</h3>
-              <div className="cc-text-sm">{m.team} · {m.date} · {m.author}</div>
+              <div style={{fontSize:13,color:"var(--sub)"}}>{m.team} · {m.date} · {m.author}</div>
             </div>
             <Chip text={m.status} color={SC[m.status]||"#888"} bg={(SC[m.status]||"#888")+"18"}/>
           </div>
@@ -173,12 +173,12 @@ function WikiView(){
   return(
     <div>
       <H1 mb={18}>Wiki</H1>
-      <div className="cc-grid-cards cc-mb-20" style={{gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
         {WIKI.map((a,i)=>(
           <Card key={i} style={{cursor:"pointer"}}>
             <Chip text={a.cat} color={CC[a.cat]||"#888"} bg={(CC[a.cat]||"#888")+"18"}/>
             <h3 style={{margin:"6px 0 3px",fontSize:14,fontWeight:700}}>{a.title}</h3>
-            <div className="cc-text-sm">Aktualisiert {a.updated}</div>
+            <div style={{fontSize:13,color:"var(--sub)"}}>Aktualisiert {a.updated}</div>
           </Card>
         ))}
       </div>
@@ -202,13 +202,13 @@ function DocsView(){
         {docs.map((d,i)=>(
           <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<docs.length-1?`0.5px solid ${GB}`:"none"}}>
             <div style={{width:34,height:34,borderRadius:8,background:(TC[d.type]||"#888")+"20",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontSize:14,fontWeight:800,color:TC[d.type]||"#888"}}>{d.type}</span>
+              <span style={{fontSize:13,fontWeight:800,color:TC[d.type]||"#888"}}>{d.type}</span>
             </div>
-            <div className="cc-flex-1">
-              <div style={{fontWeight:600,fontSize:14}}>{d.name}</div>
-              <div className="cc-text-sm">{d.size} · {d.updated}</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:600,fontSize:13}}>{d.name}</div>
+              <div style={{fontSize:13,color:"var(--sub)"}}>{d.size} · {d.updated}</div>
             </div>
-            <Chip text={d.area} color="#666"/>
+            <Chip text={d.area} color="#666" bg="#f5f5f5"/>
             <Btn>↓ Download</Btn>
           </div>
         ))}
@@ -245,14 +245,14 @@ function NewsView({role,meineTeams,kannVerwalten}){
         {canCreate&&<Btn variant="primary" color="#F3F4F6">+ Beitrag</Btn>}
       </Between>
       {visible.map((n,i)=>(
-        <Card key={i} className="cc-mb-12">
+        <Card key={i} style={{marginBottom:12}}>
           <div style={{display:"flex",gap:7,marginBottom:6,flexWrap:"wrap",alignItems:"center"}}>
             <Chip text={n.target} color={R}/>
-            <Chip text={n.channel} color={BL}/>
-            <span className="cc-text-sm">{n.date} · {n.author}</span>
+            <Chip text={n.channel} color={BL} bg="#EFF6FF"/>
+            <span style={{fontSize:13,color:"var(--sub)"}}>{n.date} · {n.author}</span>
           </div>
           <h3 style={{margin:"0 0 6px",fontSize:15,fontWeight:700}}>{n.title}</h3>
-          <p style={{margin:0,fontSize:14,color:"var(--sub)",lineHeight:1.65}}>{n.content}</p>
+          <p style={{margin:0,fontSize:13,color:"var(--sub)",lineHeight:1.65}}>{n.content}</p>
         </Card>
       ))}
     </div>
@@ -263,18 +263,18 @@ function AttendanceCentral(){
   return(
     <div>
       <H1 mb={18}>Zentrale Anwesenheitsstatistik</H1>
-      <div className="cc-grid-stats cc-mb-20">
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
         <Stat label="Ø Alle Teams" value="75%" color={GN}/>
         <Stat label="Ø Trainings" value="72%" color={BL}/>
         <Stat label="Ø Spiele"    value="90%" color={R}/>
         <Stat label="Teams total" value="8"   color={BK}/>
       </div>
       <Card style={{padding:0,overflowX:"auto"}}>
-        <div className="cc-table-wrap"><table className="cc-table">
+        <table className="cc-table">
           <thead>
             <tr style={{background:"var(--surface2)"}}>
               {["Team","Ø Total","Ø Training","Ø Spiele","Spieler"].map((h,i)=>(
-                <th className="cc-th" key={i}>{h}</th>
+                <th key={i} style={{padding:"9px 13px",textAlign:i>0?"center":"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -287,15 +287,15 @@ function AttendanceCentral(){
               {t:"Aktive 1",  tot:75,tr:72,sp:90,n:22},
             ].map((r,i)=>(
               <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
-                <td className="cc-td" style={{padding:"9px 13px",fontWeight:600}}>{r.t}</td>
-                <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",fontWeight:700,color:r.tot>=75?GN:r.tot>=65?AM:R}}>{r.tot}%</td>
-                <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.tr}%</td>
-                <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.sp}%</td>
-                <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.n}</td>
+                <td style={{padding:"9px 13px",fontWeight:600}}>{r.t}</td>
+                <td style={{padding:"9px 13px",textAlign:"center",fontWeight:700,color:r.tot>=75?GN:r.tot>=65?AM:R}}>{r.tot}%</td>
+                <td style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.tr}%</td>
+                <td style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.sp}%</td>
+                <td style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.n}</td>
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </table>
       </Card>
     </div>
   );
@@ -304,185 +304,74 @@ function AttendanceCentral(){
 /* -- TRAININGSPLÄTZE VERWALTUNG -- */
 
 
-function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGeprueft}){
+function ProfileView({role,myRosterId,account}){
   const isEltern=role==="eltern";
-  const [saving,setSaving]=useState(false);
-  const [msg,setMsg]=useState(null);
-
-  // Mein Mitglied-Eintrag (falls vorhanden)
-  const meinMitglied=dbMitglieder.find(m=>m.id===dbUser?.mitglied_id)||null;
-
-  // Kinder (bei Eltern): alle Mitglieder wo ich als Elternteil verknüpft bin
-  const kinder=isEltern
-    ?dbMitglieder.filter(m=>(m.eltern||[]).some(e=>e.benutzer_id===dbUser?.id))
-    :[];
-
-  // Formular-State für Kinder-Bearbeitung
-  const [kindForms,setKindForms]=useState({});
-  const [kindEdit,setKindEdit]=useState(null); // mitglied_id
-
-  function getKindForm(k){
-    return kindForms[k.id]||{
-      geburtsdatum:k.geburtsdatum||"",
-      nationalitaet:k.nationalitaet||"",
-      strasse:k.strasse||"",
-      plz:k.plz||"",
-      ort:k.ort||"",
-      telefon:k.telefon||"",
-      email:k.email||"",
-    };
-  }
-
-  async function saveKind(kindId){
-    if(!sb) return;
-    setSaving(true); setMsg(null);
-    const form=kindForms[kindId]||{};
-    const now=new Date().toISOString();
-    const {error}=await sb.from("mitglieder").update({
-      geburtsdatum:form.geburtsdatum||null,
-      nationalitaet:form.nationalitaet||null,
-      strasse:form.strasse||null,
-      plz:form.plz||null,
-      ort:form.ort||null,
-      telefon:form.telefon||null,
-      email:form.email||null,
-      datenstatus:"Geprüft",
-      profil_geprueft_at:now,
-      updated_at:now,
-    }).eq("id",kindId);
-    if(error){ setMsg({ok:false,text:error.message}); }
-    else {
-      setMsg({ok:true,text:"Gespeichert ✓"});
-      setKindEdit(null);
-      if(onReload) onReload();
-      setTimeout(()=>setMsg(null),2000);
-    }
-    setSaving(false);
-  }
-
-  const PFLICHT_FELDER=[
-    {k:"geburtsdatum",l:"Geburtsdatum",type:"date"},
-    {k:"nationalitaet",l:"Nationalität",type:"text"},
-    {k:"strasse",l:"Strasse",type:"text"},
-    {k:"plz",l:"PLZ",type:"text"},
-    {k:"ort",l:"Ort",type:"text"},
-    {k:"telefon",l:"Telefon",type:"tel"},
-    {k:"email",l:"E-Mail",type:"email"},
-  ];
-
+  const player=ROSTER.find(p=>p.id===(myRosterId||1))||ROSTER.find(p=>p.id===1);
+  const name=isEltern?(account?.name||"Anna Meier"):(player?`${player.firstName} ${player.lastName}`:"Luca Meier");
+  const kinder=account?.kinder||[];
   return(
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
-        <H1 mb={0}>{isEltern?"Profil & Kinder prüfen":"Mein Profil"}</H1>
-        {onProfilGeprueft&&(
-          <Btn variant="primary" onClick={onProfilGeprueft}>
-            <TI n="circle-check"/> Alles geprüft ✓
-          </Btn>
-        )}
-      </div>
-
-      {msg&&<div className={`cc-badge ${msg.ok?"cc-badge-success":"cc-badge-danger"} cc-mb-12`}>{msg.text}</div>}
-
-      <div style={{display:"flex",flexDirection:"column",gap:16}}>
-
-        {/* Meine eigenen Daten */}
+      <H1 mb={18}>{isEltern?"Profil / Daten prüfen":"Mein Profil"}</H1>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <Card>
-          <STitle>Meine Kontaktdaten</STitle>
+          <STitle>Persönliche Daten</STitle>
           {[
-            {l:"Name",    v:dbUser?.name||account?.name||"-"},
-            {l:"E-Mail",  v:dbUser?.email||"-"},
-            {l:"Telefon", v:dbUser?.telefon||"-"},
-          ].map((x,i,arr)=>(
-            <div key={i} className="cc-info-row">
-              <span className="cc-info-key">{x.l}</span>
-              <span className="cc-info-val">{x.v}</span>
+            {l:"Name",v:name},
+            {l:"Geburtsdatum",v:player?.dob||"-"},
+            {l:"Adresse",v:player?.address||"-"},
+            {l:"E-Mail",v:player?.email||"-"},
+            {l:"Telefon",v:player?.tel||"-"},
+          ].map((x,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<4?`0.5px solid ${GB}`:"none"}}>
+              <span style={{fontSize:13,color:"var(--sub)"}}>{x.l}</span>
+              <span style={{fontSize:13,fontWeight:500}}>{x.v}</span>
             </div>
           ))}
-          <div className="cc-mt-12 cc-text-sm">
-            Kontaktdaten können unter Einstellungen → Konto geändert werden.
-          </div>
+          <div style={{marginTop:12}}><Btn variant="primary" color="#F3F4F6">Daten aktualisieren</Btn></div>
         </Card>
-
-        {/* Kinder (für Eltern) */}
-        {kinder.map((k)=>{
-          const isEditing=kindEdit===k.id;
-          const form=getKindForm(k);
-          const fehlend=PFLICHT_FELDER.filter(f=>!k[f.k]);
-          const vollstaendig=fehlend.length===0;
+        {isEltern&&kinder.map((kind,ki)=>{
+          const kindPlayer=ROSTER.find(p=>p.name===kind.name||p.id===kind.rosterId);
+          const kp=kindPlayer||{};
+          const rows=[
+            {l:"Name",              v:`${kp.firstName||""} ${kp.lastName||""}`.trim()||kind.name,     ok:!!(kp.firstName&&kp.lastName)},
+            {l:"Team",              v:kind.team,                                                        ok:true},
+            {l:"Geburtsdatum",      v:kp.dob||"-",                                                     ok:!!kp.dob},
+            {l:"Nationalität",      v:kp.nat||"-",                                                     ok:!!kp.nat},
+            {l:"AHV-Nummer",        v:kp.ahv||"-",                                                     ok:!!kp.ahv},
+            {l:"Spielerpass",       v:kp.pass||"-",                                                    ok:!!kp.pass},
+            {l:"Strasse",           v:kp.street||"-",                                                  ok:!!kp.street},
+            {l:"PLZ / Ort",         v:kp.plz&&kp.city?`${kp.plz} ${kp.city}`:"-",                   ok:!!(kp.plz&&kp.city)},
+            {l:"E-Mail",            v:kp.email||"-",                                                   ok:!!kp.email},
+            {l:"Telefon",           v:kp.tel||"-",                                                     ok:!!kp.tel},
+            {l:"Elternteil 1",      v:kp.p1First?`${kp.p1First} ${kp.p1Last}`:"-",                  ok:!!(kp.p1First&&kp.p1Last)},
+            {l:"E-Mail Elternteil 1",v:kp.p1Email||"-",                                               ok:!!kp.p1Email},
+            {l:"Tel. Elternteil 1", v:kp.p1Tel||"-",                                                  ok:!!kp.p1Tel},
+            {l:"Elternteil 2",      v:kp.p2First?`${kp.p2First} ${kp.p2Last}`:"-",                  ok:!!(kp.p2First&&kp.p2Last)},
+            {l:"E-Mail Elternteil 2",v:kp.p2Email||"-",                                               ok:!!kp.p2Email},
+            {l:"Tel. Elternteil 2", v:kp.p2Tel||"-",                                                  ok:!!kp.p2Tel},
+          ];
+          const allOk=rows.every(r=>r.ok);
           return(
-            <Card key={k.id}>
-              <div className="cc-between cc-mb-12">
-                <div>
-                  <div className="cc-text-bold" style={{fontSize:16}}>{k.vorname} {k.nachname}</div>
-                  <div className="cc-text-sm">{(k.teams||[]).join(", ")||"-"} · {k.funktion||"Spieler"}</div>
-                </div>
-                <div className="cc-row cc-gap-8">
-                  <Chip
-                    text={vollstaendig?"✓ Vollständig":"Prüfung fällig"}
-                    color={vollstaendig?GN:AM}
-                    bg={vollstaendig?"#ECFDF5":"#FFFBEB"}
-                  />
-                  {!isEditing&&<Btn small onClick={()=>setKindEdit(k.id)}><TI n="edit"/> Bearbeiten</Btn>}
-                </div>
-              </div>
-
-              {!vollstaendig&&!isEditing&&(
-                <div className="cc-badge cc-badge-warning cc-mb-12">
-                  Fehlende Angaben: {fehlend.map(f=>f.l).join(", ")}
-                </div>
-              )}
-
-              {isEditing?(
-                <>
-                  <div className="cc-form-row">
-                    {PFLICHT_FELDER.map(({k:fk,l,type})=>(
-                      <div key={fk} className={fk==="strasse"||fk==="email"?"cc-form-full":""}>
-                        <label className="cc-label">{l}</label>
-                        <input className="cc-input" type={type}
-                          value={form[fk]||""}
-                          onChange={e=>setKindForms(prev=>({...prev,[k.id]:{...form,[fk]:e.target.value}}))}
-                          placeholder={l}/>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="cc-save-row">
-                    <button className="cc-btn-ghost" onClick={()=>setKindEdit(null)}>Abbrechen</button>
-                    <Btn variant="primary" onClick={()=>saveKind(k.id)} disabled={saving}>
-                      {saving?"Speichert…":"Speichern & bestätigen"}
-                    </Btn>
-                  </div>
-                </>
-              ):(
-                <div>
-                  {PFLICHT_FELDER.map(({k:fk,l},i)=>(
-                    <div key={fk} className="cc-info-row">
-                      <span className="cc-info-key">{l}</span>
-                      <span className={k[fk]?"cc-info-val":"cc-info-val-empty"}>{k[fk]||"—"}</span>
+            <Card key={ki}>
+              <STitle action={<Chip text={allOk?"✓ Vollständig":"Prüfung fällig"} color={allOk?GN:AM} bg={allOk?"#ECFDF5":"#FFFBEB"}/>}>
+                {kind.name.split(" ")[0]} - Daten prüfen
+              </STitle>
+              {!allOk&&<InfoBox text="Halbjährliche Datenprüfung fällig. Bitte alle Felder bestätigen oder korrigieren." color={AM}/>}
+              <div style={{marginTop:8}}>
+                {rows.map((x,i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:i<rows.length-1?`0.5px solid ${GB}`:"none"}}>
+                    <div style={{minWidth:140}}>
+                      <div style={{fontSize:13,color:"var(--sub)"}}>{x.l}</div>
+                      <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginTop:1,wordBreak:"break-all"}}>{x.v}</div>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <Chip text={x.ok?"✓ OK":"Prüfen"} color={x.ok?GN:R} bg={x.ok?"#ECFDF5":RL}/>
+                  </div>
+                ))}
+              </div>
+              <div style={{marginTop:14}}><Btn variant="primary" color={GN}>Daten bestätigen</Btn></div>
             </Card>
           );
         })}
-
-        {/* Mein Mitglied-Eintrag (falls Elternteil auch Mitglied) */}
-        {meinMitglied&&(
-          <Card>
-            <STitle>Meine Vereinsdaten</STitle>
-            {[
-              {l:"Funktion",    v:meinMitglied.funktion||"-"},
-              {l:"Team(s)",     v:(meinMitglied.teams||[]).join(", ")||"-"},
-              {l:"Mitgliedtyp", v:meinMitglied.mitgliedtyp||"-"},
-            ].map((x,i)=>(
-              <div key={i} className="cc-info-row">
-                <span className="cc-info-key">{x.l}</span>
-                <span className="cc-info-val">{x.v}</span>
-              </div>
-            ))}
-          </Card>
-        )}
-
       </div>
     </div>
   );
@@ -495,7 +384,7 @@ function DarkModeRow(){
   return(
     <Between>
       <div>
-        <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{dark?"Dunkel":"Hell"}</div>
+        <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{dark?"Dunkel":"Hell"}</div>
         <div style={{fontSize:12,color:"var(--sub)",marginTop:1}}>Farbschema des Portals</div>
       </div>
       <Btn onClick={toggle}><div style={{ position:"absolute",top:3,left:dark?22:3,width:20,height:20, borderRadius:"50%",background:dark?"#111":"#fff", boxShadow:"0 1px 4px rgba(0,0,0,0.2)", transition:"left 0.2s cubic-bezier(0.34,1.2,0.64,1)" }}/></Btn>
@@ -515,11 +404,11 @@ function DataCheckView(){
         <Stat label="Sync-Fehler"    value="5"  color="#888"/>
       </div>
       <Card style={{padding:0,overflowX:"auto"}}>
-        <div className="cc-table-wrap"><table className="cc-table">
+        <table className="cc-table">
           <thead>
             <tr style={{background:"var(--surface2)"}}>
               {["Mitglied","Problem","Zuletzt geprüft","Aktion"].map((h,i)=>(
-                <th className="cc-th" key={i}>{h}</th>
+                <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -531,14 +420,14 @@ function DataCheckView(){
               {n:"Beat Keller",  p:"Prüfung fällig",   d:"Okt 2024"},
             ].map((r,i)=>(
               <tr key={i} style={{borderTop:"0.5px solid var(--border)"}}>
-                <td className="cc-td" style={{padding:"9px 13px",fontWeight:600}}>{r.n}</td>
-                <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={r.p} color={r.p.includes("Sync")?R:AM} bg={r.p.includes("Sync")?RL:"#FFFBEB"}/></td>
-                <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)"}}>{r.d}</td>
-                <td className="cc-td" style={{padding:"9px 13px"}}><Btn small>Erinnerung</Btn></td>
+                <td style={{padding:"9px 13px",fontWeight:600}}>{r.n}</td>
+                <td style={{padding:"9px 13px"}}><Chip text={r.p} color={r.p.includes("Sync")?R:AM} bg={r.p.includes("Sync")?RL:"#FFFBEB"}/></td>
+                <td style={{padding:"9px 13px",color:"var(--sub)"}}>{r.d}</td>
+                <td style={{padding:"9px 13px"}}><Btn small>Erinnerung</Btn></td>
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </table>
       </Card>
     </div>
   );

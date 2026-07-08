@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK } from "./constants.js";
 import { TI } from "./icons.jsx";
-import { useIsMobile, ModalOrSheet, Btn, Chip, Av, Stat, Col, Row, ModalTitle, avColor, InfoBox } from "./theme.jsx";
+import { useIsMobile, ModalOrSheet, Btn, Chip , Av, Stat, Col, Row, ModalTitle, avColor} from "./theme.jsx";
 import { MEMBERS, ROSTER } from "./demoData.js";
 
 /* ── Hilfsfunktionen & Konstanten ── */
@@ -46,7 +46,7 @@ function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
           background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,
           boxShadow:"0 4px 16px rgba(0,0,0,0.12)",overflow:"hidden"}}>
           {suggestions.map(m=>(
-            <Btn variant="ghost"><Av name={m.name} size={26}/> <div> <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{m.name}</div> <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div> </div></Btn>
+            <Btn variant="ghost"><Av name={m.name} size={26} bg="var(--surface2)"/> <div> <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{m.name}</div> <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div> </div></Btn>
           ))}
         </div>
       )}
@@ -98,30 +98,7 @@ const TEAM_HIERARCHY={
   },
 };
 
-/* Nur echte teams-Spalten extrahieren — keine form-internen Felder */
-function toDbData(form){
-  return {
-    name: form.name,
-    kategorie: form.kategorie||form.hauptbereich||"",
-    liga: form.liga||"",
-    saison: form.saison||"",
-    trainer: form.trainer||null,
-    trainer2: form.trainer2||null,
-    aktiv: form.aktiv??true,
-    beschreibung: form.beschreibung||null,
-    haupttrainer: form.haupttrainer||[],
-    staff: form.staff||[],
-    co_trainers: form.co_trainers||[],
-    stufe_id: form.stufe_id||null,
-    kurzname: form.kurzname||null,
-    hauptbereich: form.hauptbereich||null,
-    vereinsstufe: form.vereinsstufe||null,
-    verbandskategorie: form.verbandskategorie||null,
-    stufenleitung: form.stufenleitung||null,
-  };
-}
-
-function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null,navToTeam=null,onNavToTeamDone=null}){
+function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -231,14 +208,6 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   const [saisonDraft,setSaisonDraft]=useState("2025/26");
   const [selectedTeam,setSelectedTeam]=useState(null);
 
-  /* navToTeam: direkte Navigation zu einem Team via ID */
-  useEffect(()=>{
-    if(navToTeam&&dbTeams.length>0){
-      const team=dbTeams.find(t=>t.id===navToTeam);
-      if(team){setSelectedTeam(team);if(onNavToTeamDone)onNavToTeamDone();}
-    }
-  },[navToTeam,dbTeams]);
-
   /* Teams kommen via dbTeams Prop aus App (dort geladen) */
 
   if(selectedTeam){
@@ -248,7 +217,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           <span style={{fontWeight:800,fontSize:18,color:"var(--text)",letterSpacing:-0.3}}>{selectedTeam.name}</span>
           {selectedTeam.kategorie&&<Chip text={selectedTeam.kategorie} color={BL}/>}
         </div>
-        <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} sb={sb} dbTeams={dbTeams} dbMitglieder={dbMitglieder} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>
+        <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>
       </div>
     );
   }
@@ -260,7 +229,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
     try{
       if(sb){
         if(editTeam){
-          const saveData=toDbData(form);const{error}=await sb.from("teams").update({...saveData,updated_at:new Date().toISOString()}).eq("id",editTeam.id);
+          const saveData={...form};if(form.stufe_id) saveData.stufe_id=form.stufe_id;const{error}=await sb.from("teams").update({...saveData,updated_at:new Date().toISOString()}).eq("id",editTeam.id);
           if(error) throw error;
           setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
           /* team_module speichern falls geändert */
@@ -270,7 +239,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
           }
         }else{
-          const saveData=toDbData(form);const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString()}).select().single();
+          const saveData={...form};if(form.stufe_id) saveData.stufe_id=form.stufe_id;const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString()}).select().single();
           if(error) throw error;
           setTeams(ts=>[...ts,data]);
           /* team_module für neues Team */
@@ -409,12 +378,12 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   return(
     <div>
       {/* Header */}
-      <div className="cc-page-hdr">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div>
           <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 4px",color:"var(--text)"}}>Teams</h1>
-          <div className="cc-text-sm">{teams.filter(t=>t.aktiv!==false).length} aktive Teams · {teams.filter(t=>t.aktiv===false).length} inaktiv</div>
+          <div style={{fontSize:13,color:"var(--sub)"}}>{teams.filter(t=>t.aktiv!==false).length} aktive Teams · {teams.filter(t=>t.aktiv===false).length} inaktiv</div>
         </div>
-        <div className="cc-row">
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
           {/* View Toggle */}
           <div className="cc-btn-group">
             {["list","grid"].map(m=>(
@@ -444,8 +413,8 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
       <ModalOrSheet open={showSaison} onClose={()=>setShowSaison(false)} maxWidth={380}>
         <div style={{padding:"24px 20px"}}>
           <h2 style={{margin:"0 0 6px",fontSize:16,fontWeight:700,color:"var(--text)"}}>Saison wechseln</h2>
-          <p style={{margin:"0 0 18px",fontSize:14,color:"var(--sub)"}}>Die neue Saison wird für <strong>alle {teams.length} Teams</strong> gleichzeitig gesetzt.</p>
-          <div className="cc-mb-16">
+          <p style={{margin:"0 0 18px",fontSize:13,color:"var(--sub)"}}>Die neue Saison wird für <strong>alle {teams.length} Teams</strong> gleichzeitig gesetzt.</p>
+          <div style={{marginBottom:16}}>
             <label className="cc-label">Neue Saison</label>
             <input value={saisonDraft} onChange={e=>setSaisonDraft(e.target.value)}
               placeholder="z.B. 2025/26" autoFocus
@@ -455,7 +424,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             <Btn variant="primary" color={BTN} onClick={handleSaisonAlle} disabled={saving||!saisonDraft.trim()}>{saving?"Wird gesetzt…":"Für alle übernehmen"}</Btn>
             <Btn onClick={()=>setShowSaison(false)}>Abbrechen</Btn>
           </Row>
-          {!sb&&<div style={{fontSize:14,color:"var(--sub)",textAlign:"center",marginTop:10}}>Demo: nur lokal.</div>}
+          {!sb&&<div style={{fontSize:13,color:"var(--sub)",textAlign:"center",marginTop:10}}>Demo: nur lokal.</div>}
         </div>
       </ModalOrSheet>
 
@@ -504,14 +473,14 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           {groupedTeams.map(({key,items})=>(
             <div key={key||"all"}>
               {groupBy!=="none"&&key&&(
-                <div style={{padding:"10px 4px 6px",fontWeight:700,fontSize:14,color:"var(--sub)",
+                <div style={{padding:"10px 4px 6px",fontWeight:700,fontSize:13,color:"var(--sub)",
                   textTransform:"uppercase",letterSpacing:0.7,marginTop:8,
                   borderBottom:"1px solid var(--border)",marginBottom:8}}>
                   {key} <span style={{fontWeight:400,opacity:0.6}}>({items.length})</span>
                 </div>
               )}
               <div style={viewMode==="grid"
-                ?{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}
+                ?{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12,marginBottom:groupBy!=="none"?16:8}
                 :{display:"flex",flexDirection:"column",gap:8,marginBottom:groupBy!=="none"?16:8}}>
                 {items.map(team=>{
             const katColor=KAT_COLORS[team.hauptbereich]||KAT_COLORS[team.kategorie]||BL;
@@ -554,7 +523,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                         )}
                       </div>
                     </div>
-                    <div style={{fontSize:14,color:"var(--sub)",display:"flex",flexDirection:"column",gap:4}}>
+                    <div style={{fontSize:13,color:"var(--sub)",display:"flex",flexDirection:"column",gap:4}}>
                       <span>{sp.e1}{sp.e2?" · "+sp.e2:""}</span>
                       {team.liga&&<span>{team.liga}</span>}
                       <div style={{display:"flex",gap:12,marginTop:4}}>
@@ -571,12 +540,12 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                       <TI n="ball-football" size={18} style={{color:katColor}}/>
                     </div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div className="cc-row">
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                         <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{team.name}</span>
                         {team.kurzname&&<span style={{fontSize:11,fontWeight:700,color:katColor,background:katColor+"15",padding:"2px 7px",borderRadius:6}}>{team.kurzname}</span>}
                         {isInaktiv&&<Chip text="Inaktiv" color="#9ca3af"/>}
                       </div>
-                      <div style={{fontSize:14,color:"var(--sub)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
                         {sp.e1&&<span style={{fontWeight:600}}>{sp.e1}</span>}
                         {sp.e2&&<span>· {sp.e2}</span>}
                         {team.liga&&<span>· {team.liga}</span>}
@@ -616,7 +585,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             </div>
           ))}
           {sorted.length===0&&(
-            <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14}}>
+            <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:13}}>
               Keine Teams gefunden.
             </div>
           )}
@@ -652,7 +621,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             </select>
           </div>
           {/* Ebene 2 + 3 */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Vereinsstufe (Ebene 2)</label>
               <select value={dbStufen.length>0?form.stufe_ebene2:form.vereinsstufe}
@@ -679,7 +648,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             </div>
           </div>
           {/* Ebene 4: Teamname + Kurzname */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Teamname (Ebene 4) *</label>
               <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}
@@ -692,7 +661,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             </div>
           </div>
           {/* Stufenleitung + Liga */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Stufenleitung</label>
               <input value={form.stufenleitung} onChange={e=>setForm(p=>({...p,stufenleitung:e.target.value}))}
@@ -705,7 +674,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             </div>
           </div>
           {/* Saison + Status */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Saison</label>
               <input value={form.saison} onChange={e=>setForm(p=>({...p,saison:e.target.value}))}
@@ -717,7 +686,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                 <button onClick={()=>setForm(p=>({...p,aktiv:!p.aktiv}))} className={"cc-toggle"+(form.aktiv?" cc-toggle-on":"")}>
                     <div className={"cc-toggle-knob"+(form.aktiv?" cc-toggle-knob-on":"")}/>
                   </button>
-                <span style={{fontSize:14,color:"var(--text)",fontWeight:600}}>{form.aktiv?"Aktiv":"Inaktiv"}</span>
+                <span style={{fontSize:13,color:"var(--text)",fontWeight:600}}>{form.aktiv?"Aktiv":"Inaktiv"}</span>
               </div>
             </div>
           </div>
@@ -736,7 +705,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                       value={val}
                       onChange={v=>setForm(p=>({...p,[key]:p[key].map((x,j)=>j===i?v:x)}))}
                       placeholder={placeholder}
-                      className="cc-flex-1"/>
+                      style={{flex:1}}/>
                     <Btn onClick={()=>setForm(p=>({...p,[key]:p[key].filter((_,j)=>j!==i)}))} style={{ width:36,height:38 }}>×</Btn>
                   </div>
                 ))}
@@ -758,7 +727,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           {/* Modul-Tab: nur bei bestehenden Teams */}
           {editTeam&&formTab==="module"&&(
             <div>
-              <div style={{fontSize:14,color:"var(--sub)",marginBottom:12}}>
+              <div style={{fontSize:13,color:"var(--sub)",marginBottom:12}}>
                 Module ein/ausschalten für dieses Team. Trainer sehen nur aktive Module.
               </div>
               {[
@@ -782,7 +751,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                     const cur=p.module_aktiv||editTeam.module_aktiv||[];
                     return{...p,module_aktiv:isActive?cur.filter(m=>m!==mod.key):[...cur,mod.key]};
                   })} className="cc-input">
-                    <span style={{fontSize:14,color:"var(--text)"}}>{mod.label}</span>
+                    <span style={{fontSize:13,color:"var(--text)"}}>{mod.label}</span>
                     <div style={{
                       width:36,height:20,borderRadius:10,transition:"background 0.2s",
                       background:isActive?BK:"var(--border)",position:"relative"
@@ -803,7 +772,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             <Btn variant="primary" color={BTN} onClick={handleSave} disabled={saving}>{saving?"Speichern…":editTeam?"Änderungen speichern":"Team erstellen"}</Btn>
             <Btn onClick={()=>setShowForm(false)}>Abbrechen</Btn>
           </Row>
-          {!sb&&<div style={{fontSize:14,color:"var(--sub)",textAlign:"center"}}>Demo-Modus: Änderungen nicht persistent.</div>}
+          {!sb&&<div style={{fontSize:13,color:"var(--sub)",textAlign:"center"}}>Demo-Modus: Änderungen nicht persistent.</div>}
         </div>
       </ModalOrSheet>
 
@@ -814,7 +783,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             <TI n="trash" size={22} style={{color:R}}/>
           </div>
           <div style={{fontWeight:700,fontSize:16,color:"var(--text)",marginBottom:8}}>Team löschen?</div>
-          <div style={{fontSize:14,color:"var(--sub)",marginBottom:20}}>
+          <div style={{fontSize:13,color:"var(--sub)",marginBottom:20}}>
             <strong style={{color:"var(--text)"}}>{deleteConfirm?.name}</strong> wird dauerhaft entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
           </div>
           <Row gap={12} align="flex-start">
@@ -827,7 +796,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   );
 }
 
-function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
+function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null}){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -937,14 +906,6 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   const [saisonDraft,setSaisonDraft]=useState("2025/26");
   const [selectedTeam,setSelectedTeam]=useState(null);
 
-  /* navToTeam: direkte Navigation zu einem Team via ID */
-  useEffect(()=>{
-    if(navToTeam&&dbTeams.length>0){
-      const team=dbTeams.find(t=>t.id===navToTeam);
-      if(team){setSelectedTeam(team);if(onNavToTeamDone)onNavToTeamDone();}
-    }
-  },[navToTeam,dbTeams]);
-
   /* Teams kommen via dbTeams Prop aus App (dort geladen) */
 
   if(selectedTeam){
@@ -954,7 +915,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           <span style={{fontWeight:800,fontSize:18,color:"var(--text)",letterSpacing:-0.3}}>{selectedTeam.name}</span>
           {selectedTeam.kategorie&&<Chip text={selectedTeam.kategorie} color={BL}/>}
         </div>
-        {TeamViewComponent && <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} sb={sb} dbTeams={dbTeams} dbMitglieder={dbMitglieder} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>}
+        {TeamViewComponent && <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} dbTeams={dbTeams} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent}/>}
       </div>
     );
   }
@@ -966,7 +927,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
     try{
       if(sb){
         if(editTeam){
-          const saveData=toDbData(form);const{error}=await sb.from("teams").update({...saveData,updated_at:new Date().toISOString()}).eq("id",editTeam.id);
+          const saveData={...form};if(form.stufe_id) saveData.stufe_id=form.stufe_id;const{error}=await sb.from("teams").update({...saveData,updated_at:new Date().toISOString()}).eq("id",editTeam.id);
           if(error) throw error;
           setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
           /* team_module speichern falls geändert */
@@ -976,7 +937,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
           }
         }else{
-          const saveData=toDbData(form);const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString()}).select().single();
+          const saveData={...form};if(form.stufe_id) saveData.stufe_id=form.stufe_id;const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString()}).select().single();
           if(error) throw error;
           setTeams(ts=>[...ts,data]);
           /* team_module für neues Team */
@@ -1115,12 +1076,12 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   return(
     <div>
       {/* Header */}
-      <div className="cc-page-hdr">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div>
           <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 4px",color:"var(--text)"}}>Teams</h1>
-          <div className="cc-text-sm">{teams.filter(t=>t.aktiv!==false).length} aktive Teams · {teams.filter(t=>t.aktiv===false).length} inaktiv</div>
+          <div style={{fontSize:13,color:"var(--sub)"}}>{teams.filter(t=>t.aktiv!==false).length} aktive Teams · {teams.filter(t=>t.aktiv===false).length} inaktiv</div>
         </div>
-        <div className="cc-row">
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
           {/* View Toggle */}
           <div style={{display:"flex",border:"1px solid var(--border)",borderRadius:8,overflow:"hidden"}}>
             {["list","grid"].map(m=>(
@@ -1143,7 +1104,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 minWidth:180,overflow:"hidden"}}>
                 <button onClick={()=>{setSaisonDraft(teams[0]?.saison||"2025/26");setShowSaison(true);setOpenMenuId(null);}}
                   style={{width:"100%",padding:"11px 16px",border:"none",background:"none",cursor:"pointer",
-                    display:"flex",alignItems:"center",gap:12,fontFamily:FONT,fontSize:14,color:"var(--text)",textAlign:"left"}}
+                    display:"flex",alignItems:"center",gap:12,fontFamily:FONT,fontSize:13,color:"var(--text)",textAlign:"left"}}
                   onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                   onMouseLeave={e=>e.currentTarget.style.background="none"}>
                   <TI n="calendar" size={14} style={{color:"var(--sub)",flexShrink:0}}/>Saison wechseln
@@ -1151,7 +1112,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 <div style={{height:1,background:"var(--border)",margin:"0 12px"}}/>
                 <button onClick={()=>{openNeu();setOpenMenuId(null);}}
                   style={{width:"100%",padding:"11px 16px",border:"none",background:"none",cursor:"pointer",
-                    display:"flex",alignItems:"center",gap:12,fontFamily:FONT,fontSize:14,color:"var(--text)",textAlign:"left",fontWeight:600}}
+                    display:"flex",alignItems:"center",gap:12,fontFamily:FONT,fontSize:13,color:"var(--text)",textAlign:"left",fontWeight:600}}
                   onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                   onMouseLeave={e=>e.currentTarget.style.background="none"}>
                   <TI n="edit" size={14} style={{color:"var(--sub)",flexShrink:0}}/>+ Neues Team
@@ -1166,8 +1127,8 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
       <ModalOrSheet open={showSaison} onClose={()=>setShowSaison(false)} maxWidth={380}>
         <div style={{padding:"24px 20px"}}>
           <h2 style={{margin:"0 0 6px",fontSize:16,fontWeight:700,color:"var(--text)"}}>Saison wechseln</h2>
-          <p style={{margin:"0 0 18px",fontSize:14,color:"var(--sub)"}}>Die neue Saison wird für <strong>alle {teams.length} Teams</strong> gleichzeitig gesetzt.</p>
-          <div className="cc-mb-16">
+          <p style={{margin:"0 0 18px",fontSize:13,color:"var(--sub)"}}>Die neue Saison wird für <strong>alle {teams.length} Teams</strong> gleichzeitig gesetzt.</p>
+          <div style={{marginBottom:16}}>
             <label className="cc-label">Neue Saison</label>
             <input value={saisonDraft} onChange={e=>setSaisonDraft(e.target.value)}
               placeholder="z.B. 2025/26" autoFocus
@@ -1185,7 +1146,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </button>
             <Btn onClick={()=>setShowSaison(false)}>Abbrechen</Btn>
           </div>
-          {!sb&&<div style={{fontSize:14,color:"var(--sub)",textAlign:"center",marginTop:10}}>Demo: nur lokal.</div>}
+          {!sb&&<div style={{fontSize:13,color:"var(--sub)",textAlign:"center",marginTop:10}}>Demo: nur lokal.</div>}
         </div>
       </ModalOrSheet>
 
@@ -1205,7 +1166,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             {SORT_OPTS.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
           </select>
           <button onClick={()=>setSortDir(d=>d==="asc"?"desc":"asc")}
-            style={{padding:"9px 11px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",fontSize:14,color:"var(--sub)",fontFamily:FONT,flexShrink:0}}>
+            style={{padding:"9px 11px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",fontSize:13,color:"var(--sub)",fontFamily:FONT,flexShrink:0}}>
             {sortDir==="asc"?"↑":"↓"}
           </button>
         </div>
@@ -1217,7 +1178,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             style={{padding:"4px 12px",borderRadius:20,border:"1px solid var(--border)",
               background:filterVals.length===0?BK:"var(--surface)",
               color:filterVals.length===0?"#fff":"var(--sub)",
-              fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
+              fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,transition:"all 0.15s"}}>
             Alle
           </button>
           {filterOptions.map(v=>{
@@ -1225,7 +1186,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             const c=KAT_COLORS[v]||(active?BK:"var(--sub)");
             return(
               <button key={v} onClick={()=>setFilterVals(prev=>active?prev.filter(x=>x!==v):[...prev,v])}
-                style={{padding:"4px 12px",borderRadius:20,fontFamily:FONT,fontSize:14,fontWeight:600,cursor:"pointer",
+                style={{padding:"4px 12px",borderRadius:20,fontFamily:FONT,fontSize:13,fontWeight:600,cursor:"pointer",
                   transition:"all 0.15s",display:"flex",alignItems:"center",gap:4,
                   border:"1px solid "+(active?c:"var(--border)"),
                   background:active?c+"18":"var(--surface)",
@@ -1255,14 +1216,14 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           {groupedTeams.map(({key,items})=>(
             <div key={key||"all"}>
               {groupBy!=="none"&&key&&(
-                <div style={{padding:"10px 4px 6px",fontWeight:700,fontSize:14,color:"var(--sub)",
+                <div style={{padding:"10px 4px 6px",fontWeight:700,fontSize:13,color:"var(--sub)",
                   textTransform:"uppercase",letterSpacing:0.7,marginTop:8,
                   borderBottom:"1px solid var(--border)",marginBottom:8}}>
                   {key} <span style={{fontWeight:400,opacity:0.6}}>({items.length})</span>
                 </div>
               )}
               <div style={viewMode==="grid"
-                ?{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}
+                ?{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12,marginBottom:groupBy!=="none"?16:8}
                 :{display:"flex",flexDirection:"column",gap:8,marginBottom:groupBy!=="none"?16:8}}>
                 {items.map(team=>{
             const katColor=KAT_COLORS[team.hauptbereich]||KAT_COLORS[team.kategorie]||BL;
@@ -1281,7 +1242,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                   /* ── KACHEL-LAYOUT ── */
                   <div style={{display:"flex",flexDirection:"column",gap:12}}>
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
-                      <div className="cc-row cc-gap-12">
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
                         <div style={{width:40,height:40,borderRadius:10,background:katColor+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                           <TI n="ball-football" size={18} style={{color:katColor}}/>
                         </div>
@@ -1301,7 +1262,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                               {icon:"edit", label:"Bearbeiten",color:"var(--text)", fn:()=>{openEdit(team);closeMenu();}},
                               {icon:"trash",label:"Löschen",   color:R,  fn:()=>{setDeleteConfirm(team);closeMenu();}},
                             ].map(a=>(
-                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontFamily:FONT,fontSize:14,color:a.color,textAlign:"left"}}
+                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontFamily:FONT,fontSize:13,color:a.color,textAlign:"left"}}
                                 onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                                 onMouseLeave={e=>e.currentTarget.style.background="none"}>
                                 <TI n={a.icon} size={13}/>{a.label}
@@ -1311,7 +1272,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                         )}
                       </div>
                     </div>
-                    <div style={{fontSize:14,color:"var(--sub)",display:"flex",flexDirection:"column",gap:4}}>
+                    <div style={{fontSize:13,color:"var(--sub)",display:"flex",flexDirection:"column",gap:4}}>
                       <span>{sp.e1}{sp.e2?" · "+sp.e2:""}</span>
                       {team.liga&&<span>{team.liga}</span>}
                       <div style={{display:"flex",gap:12,marginTop:4}}>
@@ -1323,17 +1284,17 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                   </div>
                 ):(
                   /* ── LISTEN-LAYOUT ── */
-                  <div className="cc-row cc-gap-12">
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
                     <div style={{width:42,height:42,borderRadius:10,background:katColor+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                       <TI n="ball-football" size={18} style={{color:katColor}}/>
                     </div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div className="cc-row">
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                         <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{team.name}</span>
                         {team.kurzname&&<span style={{fontSize:11,fontWeight:700,color:katColor,background:katColor+"15",padding:"2px 7px",borderRadius:6}}>{team.kurzname}</span>}
                         {isInaktiv&&<Chip text="Inaktiv" color="#9ca3af"/>}
                       </div>
-                      <div style={{fontSize:14,color:"var(--sub)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:4,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
                         {sp.e1&&<span style={{fontWeight:600}}>{sp.e1}</span>}
                         {sp.e2&&<span>· {sp.e2}</span>}
                         {team.liga&&<span>· {team.liga}</span>}
@@ -1354,7 +1315,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                               {icon:"edit", label:"Bearbeiten",color:"var(--text)", fn:()=>{openEdit(team);closeMenu();}},
                               {icon:"trash",label:"Löschen",   color:R,  fn:()=>{setDeleteConfirm(team);closeMenu();}},
                             ].map(a=>(
-                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontFamily:FONT,fontSize:14,color:a.color,textAlign:"left"}}
+                              <button key={a.label} onClick={a.fn} style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontFamily:FONT,fontSize:13,color:a.color,textAlign:"left"}}
                                 onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                                 onMouseLeave={e=>e.currentTarget.style.background="none"}>
                                 <TI n={a.icon} size={14}/>{a.label}
@@ -1385,7 +1346,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </div>
           ))}
           {sorted.length===0&&(
-            <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14}}>
+            <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:13}}>
               Keine Teams gefunden.
             </div>
           )}
@@ -1404,7 +1365,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
               {["info","module"].map(t=>(
                 <button key={t} onClick={()=>setFormTab(t)} style={{
                   padding:"8px 14px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:FONT,
-                  fontSize:14,fontWeight:600,
+                  fontSize:13,fontWeight:600,
                   background:formTab===t?"var(--text)":"var(--surface2)",
                   color:formTab===t?"var(--surface)":"var(--sub)"
                 }}>{t==="info"?"Team-Info":"Module"}</button>
@@ -1424,7 +1385,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </select>
           </div>
           {/* Ebene 2 + 3 */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Vereinsstufe (Ebene 2)</label>
               <select value={dbStufen.length>0?form.stufe_ebene2:form.vereinsstufe}
@@ -1451,7 +1412,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </div>
           </div>
           {/* Ebene 4: Teamname + Kurzname */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Teamname (Ebene 4) *</label>
               <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}
@@ -1464,7 +1425,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </div>
           </div>
           {/* Stufenleitung + Liga */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Stufenleitung</label>
               <input value={form.stufenleitung} onChange={e=>setForm(p=>({...p,stufenleitung:e.target.value}))}
@@ -1477,7 +1438,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </div>
           </div>
           {/* Saison + Status */}
-          <div className="cc-grid-form">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
               <label className="cc-label">Saison</label>
               <input value={form.saison} onChange={e=>setForm(p=>({...p,saison:e.target.value}))}
@@ -1493,7 +1454,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 }}>
                   <div style={{position:"absolute",top:3,left:form.aktiv?21:3,width:18,height:18,borderRadius:"50%",background:form.aktiv?"#111":"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.2)",transition:"left 0.2s"}}/>
                 </button>
-                <span style={{fontSize:14,color:"var(--text)",fontWeight:600}}>{form.aktiv?"Aktiv":"Inaktiv"}</span>
+                <span style={{fontSize:13,color:"var(--text)",fontWeight:600}}>{form.aktiv?"Aktiv":"Inaktiv"}</span>
               </div>
             </div>
           </div>
@@ -1512,13 +1473,13 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                       value={val}
                       onChange={v=>setForm(p=>({...p,[key]:p[key].map((x,j)=>j===i?v:x)}))}
                       placeholder={placeholder}
-                      className="cc-flex-1"/>
+                      style={{flex:1}}/>
                     <button onClick={()=>setForm(p=>({...p,[key]:p[key].filter((_,j)=>j!==i)}))}
                       style={{width:36,height:38,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",color:R,flexShrink:0,fontSize:16}}>×</button>
                   </div>
                 ))}
                 <button onClick={()=>setForm(p=>({...p,[key]:[...(p[key]||[]),""]}))}
-                  style={{padding:"7px 14px",borderRadius:8,border:"1px dashed var(--border)",background:"none",cursor:"pointer",fontSize:14,color:"var(--sub)",fontFamily:FONT,textAlign:"left"}}>
+                  style={{padding:"7px 14px",borderRadius:8,border:"1px dashed var(--border)",background:"none",cursor:"pointer",fontSize:13,color:"var(--sub)",fontFamily:FONT,textAlign:"left"}}>
                   + {label} hinzufügen
                 </button>
               </div>
@@ -1538,7 +1499,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
           {/* Modul-Tab: nur bei bestehenden Teams */}
           {editTeam&&formTab==="module"&&(
             <div>
-              <div style={{fontSize:14,color:"var(--sub)",marginBottom:12}}>
+              <div style={{fontSize:13,color:"var(--sub)",marginBottom:12}}>
                 Module ein/ausschalten für dieses Team. Trainer sehen nur aktive Module.
               </div>
               {[
@@ -1562,7 +1523,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                     const cur=p.module_aktiv||editTeam.module_aktiv||[];
                     return{...p,module_aktiv:isActive?cur.filter(m=>m!==mod.key):[...cur,mod.key]};
                   })} className="cc-input">
-                    <span style={{fontSize:14,color:"var(--text)"}}>{mod.label}</span>
+                    <span style={{fontSize:13,color:"var(--text)"}}>{mod.label}</span>
                     <div style={{
                       width:36,height:20,borderRadius:10,transition:"background 0.2s",
                       background:isActive?BK:"var(--border)",position:"relative"
@@ -1591,7 +1552,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             </button>
             <Btn onClick={()=>setShowForm(false)}>Abbrechen</Btn>
           </div>
-          {!sb&&<div style={{fontSize:14,color:"var(--sub)",textAlign:"center"}}>Demo-Modus: Änderungen nicht persistent.</div>}
+          {!sb&&<div style={{fontSize:13,color:"var(--sub)",textAlign:"center"}}>Demo-Modus: Änderungen nicht persistent.</div>}
         </div>
       </ModalOrSheet>
 
@@ -1602,7 +1563,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             <TI n="trash" size={22} style={{color:R}}/>
           </div>
           <div style={{fontWeight:700,fontSize:16,color:"var(--text)",marginBottom:8}}>Team löschen?</div>
-          <div style={{fontSize:14,color:"var(--sub)",marginBottom:20}}>
+          <div style={{fontSize:13,color:"var(--sub)",marginBottom:20}}>
             <strong style={{color:"var(--text)"}}>{deleteConfirm?.name}</strong> wird dauerhaft entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
           </div>
           <div style={{display:"flex",gap:12}}>

@@ -7,16 +7,14 @@ import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT,
 import { TI } from "./icons.jsx";
 import { useIsMobile, ModalOrSheet, Card, Chip , Stat, Av, Col, Row, SectionLabel, Btn, avColor} from "./theme.jsx";
 import { ATT_EVENTS, ATT_INITIAL, GANTT, ROSTER, SCHEDULE, TABLES, TRAININGSPLAETZE_DEFAULT } from "./demoData.js";
-import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.jsx";
 
 
 /* ── Style-Konstanten ── */
-const S_FIELD_LABEL={fontSize:11,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"};
-const S_SUB={fontSize:14,color:"var(--sub)",marginBottom:4};
-const S_INPUT={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",boxSizing:"border-box",background:"var(--surface)",color:"var(--text)"};
-const S_SELECT={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",background:"var(--surface)",color:"var(--text)"};
+const S_FIELD_LABEL={fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5};
+const S_SUB={fontSize:13,color:"var(--sub)",marginBottom:4};
+const S_INPUT={width:"100%",padding:"8px 10px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,outline:"none",boxSizing:"border-box"};
 const S_LIST_ITEM={padding:"10px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"};
-const S_06={fontSize:14,fontWeight:600,color:"var(--text)"};
+const S_06={fontSize:13,fontWeight:600,color:"var(--text)"};
 const S_07={display:"flex",gap:8,flexWrap:"wrap"};
 const S_08={display:"flex",gap:12};
 const S_10={display:"flex",flexDirection:"column",gap:8};
@@ -54,6 +52,447 @@ function kannTerminErstellen(role, typ, team, meineTeams=[]){
   return false;
 }
 
+
+
+/* ── Demo-Daten (werden durch Supabase ersetzt) ── */
+
+function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, onSave, onDelete, onAusnahme, onClose}){
+  const DAYS=["Mo","Di","Mi","Do","Fr","Sa","So"];
+  const TEAM_COLORS_MAP={};
+  (plan?.slots||[]).forEach(s=>{TEAM_COLORS_MAP[s.team]=s.color;});
+  const isEdit=!!slot?.id;
+  const isZusatz=slot?.isZusatz;
+
+  // Build list of next 20 KWs from current week
+  const baseMonday = monday ? new Date(monday) : new Date(2026,4,18);
+  function getKWLabel(offset){
+    const d = new Date(baseMonday);
+    d.setDate(d.getDate() + offset*7);
+    function getKW(dt){ const j=new Date(dt.getFullYear(),0,4); return Math.ceil(((dt-j)/86400000+j.getDay()+1)/7); }
+    const kwNum = getKW(d);
+    const dd = String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0");
+    const de = new Date(d); de.setDate(de.getDate()+6);
+    const de2 = String(de.getDate()).padStart(2,"0")+"."+String(de.getMonth()+1).padStart(2,"0");
+    return {offset, kwNum, label:"KW "+kwNum+" ("+dd+"–"+de2+")", key:d.getFullYear()+"_"+kwNum};
+  }
+  const kwOptions = Array.from({length:20},function(_,i){ return getKWLabel(i); });
+  const [selectedKwOffset, setSelectedKwOffset] = useState(0);
+  const selectedKw = kwOptions[selectedKwOffset];
+
+  const [form, setForm] = useState({
+    weekday: slot?.weekday||(prefill?.weekday)||"Mo",
+    team: slot?.team||teams[0]||"",
+    start: slot?.start||(prefill?.start)||17,
+    end: slot?.end||(prefill?.end)||18.5,
+    ort: slot?.location||(prefill?.location)||"",
+    half: slot?.half||(prefill?.half)||"",
+    wechsel_zeit: slot?.wechsel_zeit||"",
+    end_ort: slot?.end_ort||"",
+    end_half: slot?.end_half||"",
+    color: slot?.color||TEAM_COLORS_MAP[slot?.team||""]||BL,
+  });
+  const [ausnahmeMode, setAusnahmeMode] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [ausnahmeTyp, setAusnahmeTyp] = useState("absage");
+  const [fuerAlleWochen, setFuerAlleWochen] = useState(false);
+  const [verschiebungStart, setVerschiebungStart] = useState(slot?.start||17);
+  const [verschiebungEnd, setVerschiebungEnd] = useState(slot?.end||18.5);
+  const [verschiebungOrt, setVerschiebungOrt] = useState(slot?.location||"");
+  const [verschiebungGrund, setVerschiebungGrund] = useState("");
+
+  const TIMES = Array.from({length:(22-7)*2+1},(_,i)=>7+i*0.5);
+  const fmtT = v=>`${Math.floor(v).toString().padStart(2,"0")}:${v%1===0?"00":"30"}`;
+
+  const COLORS = ["#C8102E","#2563EB","#059669","#7C3AED","#0891B2","#D97706","#64748B","#DB2777"];
+
+  return(
+    <ModalOrSheet open onClose={onClose} maxWidth={480}>
+      <div style={{padding:"0 0 8px"}}>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid var(--border)"}}>
+          <div style={{fontWeight:700,fontSize:14}}>{isEdit?(isZusatz?"Zusatztraining":"Training bearbeiten"):"Training hinzufügen"}</div>
+          <Btn variant="ghost" onClick={onClose} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
+        </div>
+
+        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
+          {!ausnahmeMode?(
+            <>
+              {/* Kalenderwoche - nur bei neuen Trainings */}
+              {!isEdit&&(
+                <div>
+                  <div style={S_FIELD_LABEL}>Kalenderwoche</div>
+                  <select value={selectedKwOffset} onChange={e=>setSelectedKwOffset(parseInt(e.target.value))}
+                    style={{width:"100%",padding:"8px 10px",border:"1px solid "+GB,borderRadius:8,fontSize:13,outline:"none"}}>
+                    {kwOptions.map(function(o){
+                      return <option key={o.offset} value={o.offset}>{o.label}{o.offset===0?" (diese Woche)":""}</option>;
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {/* Wochentag */}
+              <div>
+                <div style={S_FIELD_LABEL}>Wochentag</div>
+                <div style={S_07}>
+                  {DAYS.map(d=>(
+                    <button key={d} onClick={()=>setForm(f=>({...f,weekday:d}))}
+                      style={{padding:"5px 11px",borderRadius:20,border:`1.5px solid ${form.weekday===d?BK:GB}`,background:form.weekday===d?BK:"#fff",color:form.weekday===d?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Team */}
+              <div>
+                <div style={S_FIELD_LABEL}>Team</div>
+                <select value={form.team} onChange={e=>setForm(f=>({...f,team:e.target.value,color:TEAM_COLORS_MAP[e.target.value]||f.color}))}
+                  style={S_INPUT}>
+                  {teams.map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              {/* Zeit */}
+              <div style={S_08}>
+                <div style={{flex:1}}>
+                  <div style={S_FIELD_LABEL}>Von</div>
+                  <select value={form.start} onChange={e=>setForm(f=>({...f,start:parseFloat(e.target.value)}))}
+                    style={S_INPUT}>
+                    {TIMES.map(t=><option key={t} value={t}>{fmtT(t)}</option>)}
+                  </select>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={S_FIELD_LABEL}>Bis</div>
+                  <select value={form.end} onChange={e=>setForm(f=>({...f,end:parseFloat(e.target.value)}))}
+                    style={S_INPUT}>
+                    {TIMES.filter(t=>t>form.start).map(t=><option key={t} value={t}>{fmtT(t)}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Platzeinteilung */}
+
+                  <div style={{background:"#F8F8F6",borderRadius:8,padding:"12px",display:"flex",flexDirection:"column",gap:12}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Platzeinteilung</div>
+
+                    {/* Phase 1 */}
+                    <div style={{background:"var(--surface)",borderRadius:8,padding:"10px 12px",border:"0.5px solid var(--border)"}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",marginBottom:10}}>
+                        Phase 1
+                        <span style={{fontWeight:400,color:"var(--sub)",marginLeft:6}}>
+                          {fmtT(form.start)} – {form.wechsel_zeit?fmtT(form.wechsel_zeit):fmtT(form.end)}
+                        </span>
+                      </div>
+
+                      {/* Platz Phase 1 */}
+                      <div style={{marginBottom:8}}>
+                        <div style={S_SUB}>Platz</div>
+                        <select value={form.location} onChange={e=>setForm(f=>({...f,ort:e.target.value,half:""}))}
+                          style={{width:"100%",padding:"7px 10px",border:`1.5px solid ${form.location?GB:R+"80"}`,borderRadius:8,fontSize:13,outline:"none"}}>
+                          <option value="" disabled>– Platz wählen –</option>
+                          {TRAININGSPLAETZE.filter(p=>p.active).map(p=>(
+                            <option key={p.id} value={p.name}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Seite Phase 1 */}
+                      {form.location&&(TRAININGSPLAETZE.find(p=>p.name===form.location)?.halfn||[]).length>0&&(
+                        <div>
+                          <div style={S_SUB}>Seite</div>
+                          <div style={S_07}>
+                            <button onClick={()=>setForm(f=>({...f,half:""}))}
+                              style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${!form.half?BK:GB}`,background:!form.half?BK:"#fff",color:!form.half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                              Ganzer Platz
+                            </button>
+                            {(TRAININGSPLAETZE.find(p=>p.name===form.location)?.halfn||[]).map(h=>(
+                              <button key={h} onClick={()=>setForm(f=>({...f,half:h}))}
+                                style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${form.half===h?BL:GB}`,background:form.half===h?BL:"#fff",color:form.half===h?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                                {h}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Wechsel-Zeitpunkt */}
+                    {form.location&&(
+                      <Row gap={12}>
+                        <div style={{fontSize:13,color:"var(--sub)",flexShrink:0}}>Wechsel um:</div>
+                        <select value={form.wechsel_zeit} onChange={e=>setForm(f=>({...f,wechsel_zeit:e.target.value?parseFloat(e.target.value):"",end_ort:"",end_half:""}))}
+                          style={{flex:1,padding:"7px 10px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,outline:"none"}}>
+                          <option value="">– kein Wechsel –</option>
+                          {Array.from({length:(form.end-form.start)*4},(_,i)=>form.start+i*0.25+0.25).filter(t=>t<form.end).map(t=>(
+                            <option key={t} value={t}>{Math.floor(t).toString().padStart(2,"0")}:{Math.round((t%1)*60).toString().padStart(2,"0")} Uhr</option>
+                          ))}
+                        </select>
+                      </Row>
+                    )}
+
+                    {/* Phase 2 */}
+                    {form.location&&form.wechsel_zeit&&(
+                      <div style={{background:"var(--surface)",borderRadius:8,padding:"10px 12px",border:"0.5px solid var(--border)"}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",marginBottom:10}}>
+                          Phase 2
+                          <span style={{fontWeight:400,color:"var(--sub)",marginLeft:6}}>
+                            {fmtT(form.wechsel_zeit)} – {fmtT(form.end)}
+                          </span>
+                        </div>
+
+                        {/* Platz Phase 2 */}
+                        <div style={{marginBottom:8}}>
+                          <div style={S_SUB}>Platz</div>
+                          <select value={form.end_ort} onChange={e=>setForm(f=>({...f,end_ort:e.target.value,end_half:""}))}
+                            style={{width:"100%",padding:"7px 10px",border:"1px solid var(--border)",borderRadius:8,fontSize:13,outline:"none"}}>
+                            <option value="">– gleich wie Phase 1 ({form.location}) –</option>
+                            {TRAININGSPLAETZE.filter(p=>p.active).map(p=>(
+                              <option key={p.id} value={p.name}>{p.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Seite Phase 2 */}
+                        {(TRAININGSPLAETZE.find(p=>p.name===(form.end_ort||form.location))?.halfn||[]).length>0&&(
+                          <div>
+                            <div style={S_SUB}>Seite</div>
+                            <div style={S_07}>
+                              <button onClick={()=>setForm(f=>({...f,end_half:""}))}
+                                style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${!form.end_half?BK:GB}`,background:!form.end_half?BK:"#fff",color:!form.end_half?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                                Ganzer Platz
+                              </button>
+                              {(TRAININGSPLAETZE.find(p=>p.name===(form.end_ort||form.location))?.halfn||[]).map(h=>(
+                                <button key={h} onClick={()=>setForm(f=>({...f,end_half:h}))}
+                                  style={{padding:"5px 12px",borderRadius:20,border:`1.5px solid ${form.end_half===h?BL:GB}`,background:form.end_half===h?BL:"#fff",color:form.end_half===h?"#fff":"#555",fontSize:13,cursor:"pointer"}}>
+                                  {h}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Zusammenfassung */}
+                    {form.location&&(
+                      <div style={{fontSize:13,color:"var(--sub)",padding:"8px 10px",background:"var(--surface)",borderRadius:6,lineHeight:1.7}}>
+                        <div>
+                          <strong>{fmtT(form.start)}–{form.wechsel_zeit?fmtT(form.wechsel_zeit):fmtT(form.end)}</strong>
+                          {" "}{form.location}{form.half?" / "+form.half:" / Ganzer Platz"}
+                        </div>
+                        {form.wechsel_zeit&&(
+                          <div>
+                            <strong>{fmtT(form.wechsel_zeit)}–{fmtT(form.end)}</strong>
+                            {" "}{form.end_ort||form.location}{form.end_half?" / "+form.end_half:" / Ganzer Platz"}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+              {/* Farbe */}
+              <div>
+                <div style={S_FIELD_LABEL}>Farbe</div>
+                <Row align="flex-start">
+                  {COLORS.map(c=>(
+                    <button key={c} onClick={()=>setForm(f=>({...f,color:c}))}
+                      style={{width:24,height:24,borderRadius:"50%",background:c,border:form.color===c?"3px solid #1A1A1A":"2px solid transparent",cursor:"pointer"}}/>
+                  ))}
+                </Row>
+              </div>
+
+              {/* Aktionen */}
+              {showSaveDialog ? (
+                <div style={{background:"#F8F8F6",borderRadius:10,padding:"14px",display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{isEdit?"Änderung übernehmen für:":"Training gilt:"}</div>
+                  <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:true, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
+                    style={{padding:"8px 14px",borderRadius:10,border:`1.5px solid ${BL}`,background:"var(--surface)",color:BL,fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
+                    <div style={{fontWeight:700}}>Nur diese Woche</div>
+                    <div style={{fontSize:13,fontWeight:400,color:"var(--sub)",marginTop:2}}>{isEdit?"Wird als Ausnahme gespeichert":"Einmaliger Zusatztermin"}</div>
+                  </button>
+                  <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:false, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
+                    style={{padding:"10px 18px",borderRadius:10,border:`1.5px solid ${BK}`,background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
+                    <div style={{fontWeight:700}}>Dauerhaft (neuer Standard)</div>
+                    <div style={{fontSize:13,fontWeight:400,color:"rgba(255,255,255,0.7)",marginTop:2}}>
+                      {isEdit?"Gilt fur alle zukunftigen Wochen":"Ab "+selectedKw.label+" bis Ende des Trainingsplans"}
+                    </div>
+                  </button>
+                  <button onClick={()=>setShowSaveDialog(false)}
+                    style={{padding:"8px 14px",borderRadius:10,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
+                    Abbrechen
+                  </button>
+                </div>
+              ) : (
+                <div style={{display:"flex",gap:8,marginTop:4}}>
+                  <button onClick={()=>{ if(!form.location){alert("Bitte einen Platz auswählen.");return;} setShowSaveDialog(true); }}
+                    style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:form.location?BK:"#ccc",color:"#fff",fontSize:13,fontWeight:600,cursor:form.location?"pointer":"not-allowed"}}>
+                    {isEdit?"Speichern":"Hinzufügen"}
+                  </button>
+                </div>
+              )}
+
+              {isEdit&&!isZusatz&&(
+                <Row align="flex-start">
+                  <button onClick={()=>setAusnahmeMode(true)}
+                    style={{flex:1,padding:"9px",borderRadius:10,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
+                    <TI n="bolt"/> Ausnahme diese Woche
+                  </button>
+                  <button onClick={onDelete}
+                    style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${R}`,background:RL,color:R,fontSize:13,cursor:"pointer"}}>
+                    Löschen
+                  </button>
+                </Row>
+              )}
+            </>
+          ):(
+            /* Ausnahme-Modus */
+            <>
+              <div style={{padding:"10px 12px",background:"var(--surface)",borderRadius:8,border:"1px solid #FED7AA",fontSize:13,color:STATUS_CLR.warn}}>
+                <strong>{slot?.team} · {slot?.weekday}</strong> - Ausnahme für diese Woche (oder als neuer Standard).
+              </div>
+
+              {/* Typ-Auswahl */}
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Typ</div>
+                <div style={S_07}>
+                  {[{v:"absage",l:"Absagen",icon:"✕"},{v:"verschiebung",l:"Verschieben",icon:"⏰"},{v:"location",l:"Ort ändern",icon:"map-pin"}].map(t=>(
+                    <button key={t.v} onClick={()=>setAusnahmeTyp(t.v)}
+                      style={{flex:1,padding:"8px 14px",borderRadius:8,border:`1.5px solid ${ausnahmeTyp===t.v?(t.v==="absage"?R:BL):GB}`,background:ausnahmeTyp===t.v?(t.v==="absage"?RL:"#EFF6FF"):"#fff",color:ausnahmeTyp===t.v?(t.v==="absage"?R:BL):"#555",fontSize:13,cursor:"pointer",minWidth:80}}>
+                      {t.icon} {t.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Verschiebung: neue Zeit */}
+              {ausnahmeTyp==="verschiebung"&&(
+                <div style={S_08}>
+                  <div style={{flex:1}}>
+                    <div style={S_FIELD_LABEL}>Neue Zeit von</div>
+                    <select value={verschiebungStart} onChange={e=>setVerschiebungStart(parseFloat(e.target.value))}
+                      style={S_INPUT}>
+                      {Array.from({length:(22-7)*2+1},(_,i)=>7+i*0.5).map(t=>(
+                        <option key={t} value={t}>{Math.floor(t).toString().padStart(2,"0")}:{t%1===0?"00":"30"}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={S_FIELD_LABEL}>Bis</div>
+                    <select value={verschiebungEnd} onChange={e=>setVerschiebungEnd(parseFloat(e.target.value))}
+                      style={S_INPUT}>
+                      {Array.from({length:(22-7)*2+1},(_,i)=>7+i*0.5).filter(t=>t>verschiebungStart).map(t=>(
+                        <option key={t} value={t}>{Math.floor(t).toString().padStart(2,"0")}:{t%1===0?"00":"30"}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Ort ändern */}
+              {ausnahmeTyp==="location"&&(
+                <div>
+                  <div style={S_FIELD_LABEL}>Neuer Platz</div>
+                  <select value={verschiebungOrt} onChange={e=>setVerschiebungOrt(e.target.value)}
+                    style={S_INPUT}>
+                    <option value="" disabled>- Platz wählen (Pflichtfeld) -</option>
+                    {TRAININGSPLAETZE.filter(p=>p.active).map(p=>(
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Begründung */}
+              <div>
+                <div style={S_FIELD_LABEL}>Begründung <span style={{fontWeight:400,textTransform:"none"}}>(optional)</span></div>
+                <input value={verschiebungGrund} onChange={e=>setVerschiebungGrund(e.target.value)}
+                  placeholder="z.B. Platz für Spiel benötigt"
+                  style={S_INPUT}/>
+              </div>
+
+              {/* Als Standard */}
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--surface2)",borderRadius:8}}>
+                <input type="checkbox" id="fuerAlle" checked={fuerAlleWochen} onChange={e=>setFuerAlleWochen(e.target.checked)}
+                  style={{width:16,height:16,cursor:"pointer"}}/>
+                <label htmlFor="fuerAlle" style={{fontSize:13,cursor:"pointer"}}>
+                  Als neuer Standard übernehmen (alle zukünftigen Wochen)
+                </label>
+              </div>
+
+              <Row align="flex-start">
+                <button onClick={()=>onAusnahme({
+                  type:ausnahmeTyp,
+                  slot_id:slot.id,
+                  weekday:slot.weekday,
+                  team:slot.team,
+                  ...(ausnahmeTyp==="verschiebung"?{neue_start:verschiebungStart,neue_end:verschiebungEnd}:{}),
+                  ...(ausnahmeTyp==="location"?{neuer_ort:verschiebungOrt}:{}),
+                  begruendung:verschiebungGrund,
+                },fuerAlleWochen)}
+                  style={{flex:1,padding:"8px 14px",borderRadius:10,border:"none",background:ausnahmeTyp==="absage"?R:BK,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                  {ausnahmeTyp==="absage"?"Absagen":ausnahmeTyp==="verschiebung"?"Verschieben":"Ort ändern"}
+                </button>
+                <button onClick={()=>setAusnahmeMode(false)}
+                  style={{padding:"10px 18px",borderRadius:10,border:"1px solid var(--border)",background:"var(--surface)",fontSize:13,cursor:"pointer"}}>
+                  Zurück
+                </button>
+              </Row>
+            </>
+          )}
+        </div>
+      </div>
+    </ModalOrSheet>
+  );
+}
+
+/* -- Plan-Editor-Modal -- */
+function PlanEditorModal({plan, plaene, onSave, onClose}){
+  const [form, setForm] = useState({
+    name: plan?.name||"Neuer Trainingsplan",
+    valid_from: plan?.valid_from||new Date().toISOString().split("T")[0],
+    valid_until: plan?.valid_until||"",
+    active: plan?.active??true,
+  });
+
+  return(
+    <ModalOrSheet open onClose={onClose} maxWidth={480}>
+      <div style={{padding:"0 0 8px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid var(--border)"}}>
+          <div style={{fontWeight:700,fontSize:14}}>{plan?.id?"Plan bearbeiten":"Neuer Plan"}</div>
+          <Btn variant="ghost" onClick={onClose} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
+        </div>
+        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
+          <div>
+            <div style={S_FIELD_LABEL}>Name</div>
+            <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}
+              style={S_INPUT}/>
+          </div>
+          <div style={S_08}>
+            <div style={{flex:1}}>
+              <div style={S_FIELD_LABEL}>Gültig ab</div>
+              <input type="date" value={form.valid_from} onChange={e=>setForm(f=>({...f,valid_from:e.target.value}))}
+                style={S_INPUT}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={S_FIELD_LABEL}>Gültig bis</div>
+              <input type="date" value={form.valid_until} onChange={e=>setForm(f=>({...f,valid_until:e.target.value}))}
+                style={S_INPUT}/>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--surface2)",borderRadius:8}}>
+            <input type="checkbox" id="planAktiv" checked={form.active} onChange={e=>setForm(f=>({...f,active:e.target.checked}))}
+              style={{width:16,height:16,cursor:"pointer"}}/>
+            <label htmlFor="planAktiv" style={{fontSize:13,cursor:"pointer"}}>Plan aktiv (erscheint bei Teams als Termine)</label>
+          </div>
+          <button onClick={()=>onSave(form)}
+            style={{width:"100%",padding:"12px 20px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+            Speichern
+          </button>
+        </div>
+      </div>
+    </ModalOrSheet>
+  );
+}
 
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
@@ -131,18 +570,18 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
   };
 
   const ST=({children})=>(<SectionLabel>{children}</SectionLabel>);
-  const IR=({label,value})=>(<div style={{display:"flex",justifyContent:"space-between",padding:"8px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}><span style={{fontSize:14,color:"var(--sub)",flexShrink:0,minWidth:130}}>{label}</span><span style={{fontSize:14,fontWeight:600,textAlign:"right"}}>{value||"-"}</span></div>);
+  const IR=({label,value})=>(<div style={{display:"flex",justifyContent:"space-between",padding:"8px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}><span style={{fontSize:13,color:"var(--sub)",flexShrink:0,minWidth:130}}>{label}</span><span style={{fontSize:13,fontWeight:600,textAlign:"right"}}>{value||"-"}</span></div>);
   const EZ=({icon,text,min,onDelete})=>(
     <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"0.5px solid var(--border)"}}>
-      <span style={{fontSize:14,color:"var(--sub)",minWidth:28,fontWeight:600,flexShrink:0}}>{icon}</span>
-      <span style={{flex:1,fontSize:14}}>{text}</span>
-      {min&&<span style={{fontSize:14,color:"var(--sub)",flexShrink:0}}>{min}{"'"}</span>}
+      <span style={{fontSize:13,color:"var(--sub)",minWidth:28,fontWeight:600,flexShrink:0}}>{icon}</span>
+      <span style={{flex:1,fontSize:13}}>{text}</span>
+      {min&&<span style={{fontSize:13,color:"var(--sub)",flexShrink:0}}>{min}{"'"}</span>}
       {editMode&&onDelete&&<Btn variant="ghost" onClick={onDelete} style={{color:"var(--sub)"}}>{"x"}</Btn>}
     </div>
   );
-  const AR=({children,onAdd})=>(<div style={{display:"flex",gap:8,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"4px 10px",borderRadius:6,fontSize:14,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
-  const SS=({value,onChange,options,placeholder,style={}})=>(<select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none",...style}}><option value="">{placeholder||"-"}</option>{options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>);
-  const MI=({value,onChange})=>(<input type="number" min="1" max="90" placeholder="Min" value={value} onChange={e=>onChange(e.target.value)} style={{width:46,padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none"}}/>);
+  const AR=({children,onAdd})=>(<div style={{display:"flex",gap:8,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
+  const SS=({value,onChange,options,placeholder,style={}})=>(<select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",...style}}><option value="">{placeholder||"-"}</option>{options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>);
+  const MI=({value,onChange})=>(<input type="number" min="1" max="90" placeholder="Min" value={value} onChange={e=>onChange(e.target.value)} style={{width:46,padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none"}}/>);
 
   return(
     <div onClick={onClose} style={isMobile?{position:"fixed",inset:0,zIndex:2000,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.5)"}:{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -153,9 +592,9 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
           {/* Top row */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
             <div>
-              <div style={{color:"rgba(0,0,0,0.45)",fontSize:14,fontWeight:600,letterSpacing:0.6,textTransform:"uppercase",marginBottom:4}}>{spiel.comp}</div>
+              <div style={{color:"rgba(0,0,0,0.45)",fontSize:13,fontWeight:600,letterSpacing:0.6,textTransform:"uppercase",marginBottom:4}}>{spiel.comp}</div>
               <div style={{color:BK,fontWeight:800,fontSize:18,lineHeight:1.15}}>{getVereinsnameStatic()}</div>
-              <div style={{color:"rgba(0,0,0,0.55)",fontSize:14,marginTop:1}}>vs. {spiel.opponent}</div>
+              <div style={{color:"rgba(0,0,0,0.55)",fontSize:13,marginTop:1}}>vs. {spiel.opponent}</div>
             </div>
             {played?(
               <div style={{display:"none"}}/>
@@ -165,7 +604,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
             <button onClick={onClose} style={{background:"rgba(0,0,0,0.1)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:"var(--surface2)",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           {/* Meta strip */}
-          <div style={{display:"flex",gap:16,paddingBottom:14,fontSize:14,color:"rgba(0,0,0,0.55)"}}>
+          <div style={{display:"flex",gap:16,paddingBottom:14,fontSize:13,color:"rgba(0,0,0,0.55)"}}>
             <span><TI n="calendar" style={{marginRight:3}}/> {spiel.date}</span>
             <span><TI n="clock" style={{marginRight:3}}/> {spiel.time} Uhr</span>
             <span>{spiel.home?"Heim":"Auswärts"}</span>
@@ -175,7 +614,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
           <div style={{display:"flex",gap:4,marginTop:-1}}>
             {[{key:"info",label:"Spielinfo"},{key:"stats",label:played?"Statistik":"Startaufstellung"},...(played?[{key:"motm",label:"Player of the Match"}]:[])].map(t=>(
               <button key={t.key} onClick={()=>setActiveTab(t.key)}
-                style={{padding:"8px 14px",border:"none",borderRadius:"10px 10px 0 0",background:activeTab===t.key?"#fff":"transparent",color:activeTab===t.key?BK:"rgba(0,0,0,0.5)",fontWeight:activeTab===t.key?700:500,cursor:"pointer",fontSize:14,transition:"all 0.1s"}}>
+                style={{padding:"8px 14px",border:"none",borderRadius:"10px 10px 0 0",background:activeTab===t.key?"#fff":"transparent",color:activeTab===t.key?BK:"rgba(0,0,0,0.5)",fontWeight:activeTab===t.key?700:500,cursor:"pointer",fontSize:13,transition:"all 0.1s"}}>
                 {t.label}
               </button>
             ))}
@@ -190,15 +629,15 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               {/* Ergebnis-Banner für gespielte Spiele */}
               {played&&(
                 <div style={{background:"linear-gradient(135deg,#3B82F6 0%,#60A5FA 100%)",borderRadius:14,padding:"16px 20px",display:"flex",alignItems:"center",gap:16}}>
-                  <div className="cc-flex-1">
-                    <div style={{fontSize:14,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:4}}>Endergebnis</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:4}}>Endergebnis</div>
                     <div style={{fontSize:24,fontWeight:800,color:"#fff",letterSpacing:3,lineHeight:1}}>{spiel.result}</div>
-                    {spiel.htResult&&<div style={{fontSize:14,color:"rgba(255,255,255,0.4)",marginTop:4}}>Halbzeit: {spiel.htResult}</div>}
+                    {spiel.htResult&&<div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginTop:4}}>Halbzeit: {spiel.htResult}</div>}
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:14,color:"rgba(255,255,255,0.4)",marginBottom:4}}>{spiel.home?"Heimspiel":"Auswärtsspiel"}</div>
-                    {spiel.att&&<div style={{fontSize:14,color:"rgba(255,255,255,0.6)"}}><TI n="users" style={{marginRight:3}}/> {spiel.att} Spieler</div>}
-                    <div style={{marginTop:8}}><span style={{background:spiel.result?.split(":")[0]>spiel.result?.split(":")[1]?"#16A34A":spiel.result?.split(":")[0]===spiel.result?.split(":")[1]?"#F3F4F6":"#DC2626",color:"#fff",fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20}}>{spiel.result?.split(":")[0]>spiel.result?.split(":")[1]?"Sieg":spiel.result?.split(":")[0]===spiel.result?.split(":")[1]?"Unentschieden":"Niederlage"}</span></div>
+                    <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:4}}>{spiel.home?"Heimspiel":"Auswärtsspiel"}</div>
+                    {spiel.att&&<div style={{fontSize:13,color:"rgba(255,255,255,0.6)"}}><TI n="users" style={{marginRight:3}}/> {spiel.att} Spieler</div>}
+                    <div style={{marginTop:8}}><span style={{background:spiel.result?.split(":")[0]>spiel.result?.split(":")[1]?"#16A34A":spiel.result?.split(":")[0]===spiel.result?.split(":")[1]?"#F3F4F6":"#DC2626",color:"#fff",fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20}}>{spiel.result?.split(":")[0]>spiel.result?.split(":")[1]?"Sieg":spiel.result?.split(":")[0]===spiel.result?.split(":")[1]?"Unentschieden":"Niederlage"}</span></div>
                   </div>
                 </div>
               )}
@@ -208,8 +647,8 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 <div style={{background:"var(--surface2)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:21}}><TI n="map-pin"/></span>
                   <div>
-                    <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Spielort</div>
-                    <div style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{spiel.venue}</div>
+                    <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Spielort</div>
+                    <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{spiel.venue}</div>
                     <div style={S_SUB}>{spiel.venueAddr}</div>
                   </div>
                 </div>
@@ -217,8 +656,8 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                   <div style={{background:"var(--surface)",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,border:"0.5px solid #DBEAFE"}}>
                     <span style={{fontSize:21}}><TI n="target"/></span>
                     <div>
-                      <div style={{fontSize:14,color:BL,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Treffpunkt</div>
-                      <div style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{spiel.treffpunkt}</div>
+                      <div style={{fontSize:13,color:BL,fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Treffpunkt</div>
+                      <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{spiel.treffpunkt}</div>
                     </div>
                   </div>
                 )}
@@ -232,7 +671,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
                 <div style={S_LIST_ITEM}>
                   <span style={S_SUB}>Spielnummer</span>
-                  <span style={{fontSize:14,fontWeight:600,color:"var(--text)",fontFamily:"monospace"}}>{spiel.spielNr}</span>
+                  <span style={{fontSize:13,fontWeight:600,color:"var(--text)",fontFamily:"monospace"}}>{spiel.spielNr}</span>
                 </div>
                 <div style={S_LIST_ITEM}>
                   <span style={S_SUB}>Datum &amp; Zeit</span>
@@ -244,7 +683,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
                 <div style={{padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={S_SUB}>Status</span>
-                  <span style={{background:"var(--surface)",color:"#065F46",fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20}}>{spiel.status}</span>
+                  <span style={{background:"var(--surface)",color:"#065F46",fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20}}>{spiel.status}</span>
                 </div>
               </div>
 
@@ -260,8 +699,8 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
               </div>
 
-              {spiel.notes&&<div style={{background:"var(--surface)",borderRadius:10,padding:"10px 14px",fontSize:14,color:STATUS_CLR.warn,border:"0.5px solid #FDE68A",display:"flex",gap:8,alignItems:"flex-start"}}><span>⚠</span><span>{spiel.notes}</span></div>}
-              <div style={{padding:"8px 12px",background:"#F0F9FF",borderRadius:8,fontSize:14,color:BL,display:"flex",gap:8,alignItems:"center"}}><span><TI n="refresh"/></span><span>Synchronisiert mit <strong>fvrz.ch</strong> · {spiel.spielNr}</span></div>
+              {spiel.notes&&<div style={{background:"var(--surface)",borderRadius:10,padding:"10px 14px",fontSize:13,color:STATUS_CLR.warn,border:"0.5px solid #FDE68A",display:"flex",gap:8,alignItems:"flex-start"}}><span>⚠</span><span>{spiel.notes}</span></div>}
+              <div style={{padding:"8px 12px",background:"#F0F9FF",borderRadius:8,fontSize:13,color:BL,display:"flex",gap:8,alignItems:"center"}}><span><TI n="refresh"/></span><span>Synchronisiert mit <strong>fvrz.ch</strong> · {spiel.spielNr}</span></div>
             </Col>
           )}
 
@@ -270,7 +709,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
             <div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <div style={S_SUB}>Manuell erfasst · nicht von FVRZ</div>
-                {canEdit&&<button onClick={()=>setEditMode(v=>!v)} style={{padding:"4px 11px",borderRadius:6,fontSize:14,fontWeight:600,cursor:"pointer",border:`0.5px solid ${editMode?GN:GB}`,background:editMode?"#F0FDF4":"#fff",color:editMode?GN:BL}}>{editMode?"Fertig ✓":"Bearbeiten"}</button>}
+                {canEdit&&<button onClick={()=>setEditMode(v=>!v)} style={{padding:"4px 11px",borderRadius:6,fontSize:13,fontWeight:600,cursor:"pointer",border:`0.5px solid ${editMode?GN:GB}`,background:editMode?"#F0FDF4":"#fff",color:editMode?GN:BL}}>{editMode?"Fertig ✓":"Bearbeiten"}</button>}
               </div>
 
               <ST>Kader ({stats.kader.length} Spieler · {stats.kader.length-(stats.ersatz||[]).length} Start · {(stats.ersatz||[]).filter(id=>stats.kader.includes(id)).length} Ersatz)</ST>
@@ -288,23 +727,23 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                   })
                   .map(p=>(
                     <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,background:"var(--surface2)",borderRadius:6,padding:"5px 10px"}}>
-                      <span style={{fontSize:14,fontWeight:700,color:getNr(p.id)?R:"#ccc",minWidth:22,textAlign:"right"}}>{getNr(p.id)||"-"}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:getNr(p.id)?R:"#ccc",minWidth:22,textAlign:"right"}}>{getNr(p.id)||"-"}</span>
                       <Av name={p.name} size={20} bg={(stats.ersatz||[]).includes(p.id)?"#9CA3AF":"#16A34A"}/>
-                      <span style={{fontSize:14,fontWeight:600,flex:1}}>{p.firstName} {p.lastName}</span>
+                      <span style={{fontSize:13,fontWeight:600,flex:1}}>{p.firstName} {p.lastName}</span>
                       {/* Start / Ersatz toggle */}
                       {canEdit?(
                         <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:"0.5px solid var(--border)",flexShrink:0}}>
                           <button onClick={()=>setStats(s=>({...s,ersatz:(s.ersatz||[]).filter(x=>x!==p.id)}))}
-                            style={{padding:"2px 7px",fontSize:14,fontWeight:700,border:"none",cursor:"pointer",background:!(stats.ersatz||[]).includes(p.id)?"#16A34A":"#fff",color:!(stats.ersatz||[]).includes(p.id)?"#fff":"#888"}}>
+                            style={{padding:"2px 7px",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",background:!(stats.ersatz||[]).includes(p.id)?"#16A34A":"#fff",color:!(stats.ersatz||[]).includes(p.id)?"#fff":"#888"}}>
                             Start
                           </button>
                           <button onClick={()=>setStats(s=>({...s,ersatz:[...(s.ersatz||[]).filter(x=>x!==p.id),p.id]}))}
-                            style={{padding:"2px 7px",fontSize:14,fontWeight:700,border:"none",borderLeft:`0.5px solid ${GB}`,cursor:"pointer",background:(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#fff",color:(stats.ersatz||[]).includes(p.id)?"#fff":"#888"}}>
+                            style={{padding:"2px 7px",fontSize:13,fontWeight:700,border:"none",borderLeft:`0.5px solid ${GB}`,cursor:"pointer",background:(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#fff",color:(stats.ersatz||[]).includes(p.id)?"#fff":"#888"}}>
                             Ersatz
                           </button>
                         </div>
                       ):(
-                        <span style={{fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:6,background:(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#DCFCE7",color:(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#16A34A",border:`0.5px solid ${(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#16A34A60"}`,flexShrink:0}}>
+                        <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:6,background:(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#DCFCE7",color:(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#16A34A",border:`0.5px solid ${(stats.ersatz||[]).includes(p.id)?"#F3F4F6":"#16A34A60"}`,flexShrink:0}}>
                           {(stats.ersatz||[]).includes(p.id)?"Ersatz":"Start"}
                         </span>
                       )}
@@ -315,7 +754,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               </div>
               {editMode&&<AR onAdd={()=>{const p=ROSTER.find(r=>r.name===newTor.kaderName);if(p&&!stats.kader.includes(p.id))setStats(s=>({...s,kader:[...s.kader,p.id]}));setNewTor(t=>({...t,kaderName:""}));}}><SS value={newTor.kaderName||""} onChange={v=>setNewTor(t=>({...t,kaderName:v}))} options={spielerNamen.filter(n=>!kaderNamen.includes(n))} placeholder="Spieler auswählen"/></AR>}
 
-              {!played&&<div style={{padding:"10px 12px",background:"var(--surface)",borderRadius:8,fontSize:14,color:BL,marginTop:8}}>≡ Startaufstellung - Tore, Assists und Karten können nach dem Spiel erfasst werden.</div>}
+              {!played&&<div style={{padding:"10px 12px",background:"var(--surface)",borderRadius:8,fontSize:13,color:BL,marginTop:8}}>≡ Startaufstellung - Tore, Assists und Karten können nach dem Spiel erfasst werden.</div>}
 
               {played&&<><ST>Tore ({stats.tore.length})</ST>
               {stats.tore.length===0&&!editMode&&<div style={S_SUB}>Keine Tore erfasst.</div>}
@@ -335,7 +774,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               {stats.karten.length===0&&!editMode&&<div style={S_SUB}>Keine Karten erfasst.</div>}
               {stats.karten.map((k,i)=>{
                 const ks=KARTEN_STYLE[k.type]||KARTEN_STYLE["gelb"];
-                const karteBadge=<span style={{background:ks.bg,color:ks.color,fontSize:14,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{ks.label}</span>;
+                const karteBadge=<span style={{background:ks.bg,color:ks.color,fontSize:13,fontWeight:700,padding:"1px 5px",borderRadius:4}}>{ks.label}</span>;
                 return <EZ key={i} icon={karteBadge} text={k.spieler} min={k.min} onDelete={()=>setStats(s=>({...s,karten:s.karten.filter((_,j)=>j!==i)}))}/>;
               })}
               {editMode&&<AR onAdd={()=>{if(!newKarte.spieler)return;setStats(s=>({...s,karten:[...s.karten,{spieler:newKarte.spieler,min:newKarte.min||"",type:newKarte.type}]}));setNewKarte({spieler:"",min:"",type:"gelb"});}}><SS value={newKarte.spieler} onChange={v=>setNewKarte(k=>({...k,spieler:v}))} options={spielerNamen} placeholder="Spieler"/><SS value={newKarte.type} onChange={v=>setNewKarte(k=>({...k,type:v}))} options={[{value:"gelb",label:"Gelb"},{value:"gelb-rot",label:"Gelb-Rot"},{value:"rot",label:"Rot"}]}/><MI value={newKarte.min} onChange={v=>setNewKarte(k=>({...k,min:v}))}/></AR>}
@@ -344,7 +783,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               {stats.wechsel.length===0&&!editMode&&<div style={S_SUB}>Keine Wechsel erfasst.</div>}
               {stats.wechsel.map((w,i)=>{
                 const wText=(
-                  <span className="cc-row">
+                  <span style={{display:"flex",gap:8,alignItems:"center"}}>
                     <span style={{color:R}}>{"Raus: "+w.raus}</span>
                     <span style={{color:"var(--sub)"}}>{"/"}</span>
                     <span style={{color:GN}}>{"Rein: "+w.rein}</span>
@@ -354,7 +793,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               })}
               {editMode&&<AR onAdd={()=>{if(!newWechsel.raus||!newWechsel.rein)return;setStats(s=>({...s,wechsel:[...s.wechsel,{raus:newWechsel.raus,rein:newWechsel.rein,min:newWechsel.min||""}]}));setNewWechsel({raus:"",rein:"",min:""});}}><SS value={newWechsel.raus} onChange={v=>setNewWechsel(w=>({...w,raus:v}))} options={spielerNamen} placeholder="Raus"/><SS value={newWechsel.rein} onChange={v=>setNewWechsel(w=>({...w,rein:v}))} options={spielerNamen} placeholder="Rein"/><MI value={newWechsel.min} onChange={v=>setNewWechsel(w=>({...w,min:v}))}/></AR>}
 
-              <div style={{marginTop:12,padding:"7px 11px",background:"var(--surface2)",borderRadius:8,fontSize:14,color:"var(--sub)"}}>Manuell durch Trainer erfasst · nicht Teil der FVRZ-Synchronisation</div>
+              <div style={{marginTop:12,padding:"7px 11px",background:"var(--surface2)",borderRadius:8,fontSize:13,color:"var(--sub)"}}>Manuell durch Trainer erfasst · nicht Teil der FVRZ-Synchronisation</div>
               </>}
             </div>
           )}
@@ -384,28 +823,28 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
             return(
               <div>
                 {/* Podium */}
-                <div className="cc-mb-16">
-                  {topGroups.length===0&&<div style={{fontSize:14,color:"var(--sub)",padding:"12px",background:"var(--surface2)",borderRadius:8,textAlign:"center",marginBottom:12}}>Noch keine Stimmen abgegeben</div>}
+                <div style={{marginBottom:16}}>
+                  {topGroups.length===0&&<div style={{fontSize:13,color:"var(--sub)",padding:"12px",background:"var(--surface2)",borderRadius:8,textAlign:"center",marginBottom:12}}>Noch keine Stimmen abgegeben</div>}
                   {topGroups.map((grp,gi)=>(
                     <div key={gi} style={{background:gradients[gi],border:`1px solid ${borders[gi]}`,borderRadius:10,padding:"11px 16px",marginBottom:6}}>
-                      <div style={{fontSize:14,fontWeight:700,color:borders[gi],textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{medals[gi]} Platz {grp.rank}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:borders[gi],textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{medals[gi]} Platz {grp.rank}</div>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
                         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                           {grp.players.map(pl=>(
-                            <div key={pl.id} className="cc-row">
+                            <div key={pl.id} style={{display:"flex",alignItems:"center",gap:8}}>
                               <Av name={pl.name} size={24} bg={gi===0?AM:"#9CA3AF"}/>
                               <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{pl.firstName} {pl.lastName}</span>
                             </div>
                           ))}
                         </div>
-                        <span style={{fontSize:14,color:borders[gi],fontWeight:600}}>{grp.votes} {grp.votes===1?"Stimme":"Stimmen"}</span>
+                        <span style={{fontSize:13,color:borders[gi],fontWeight:600}}>{grp.votes} {grp.votes===1?"Stimme":"Stimmen"}</span>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Voting list */}
-                <div style={{fontSize:14,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Abstimmen</div>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Abstimmen</div>
                 <div style={S_10}>
                   {roster.map(pl=>{
                     const vv=counts[pl.id]||0;
@@ -417,8 +856,8 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                         <Av name={pl.name} size={28} bg={isVoted?AM:R}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                            <span style={{fontWeight:isVoted?700:500,fontSize:14}}>{pl.firstName} {pl.lastName}</span>
-                            <span style={{fontSize:14,fontWeight:700,color:isVoted?AM:"#aaa"}}>{vv>0?vv+(vv===1?" Stimme":" Stimmen"):""}</span>
+                            <span style={{fontWeight:isVoted?700:500,fontSize:13}}>{pl.firstName} {pl.lastName}</span>
+                            <span style={{fontSize:13,fontWeight:700,color:isVoted?AM:"#aaa"}}>{vv>0?vv+(vv===1?" Stimme":" Stimmen"):""}</span>
                           </div>
                           <div style={{height:4,background:"var(--surface2)",borderRadius:2}}>
                             <div style={{height:"100%",width:barPct+"%",background:isVoted?AM:"#F3F4F6",borderRadius:2}}/>
@@ -429,7 +868,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                     );
                   })}
                 </div>
-                <div style={{marginTop:12,padding:"7px 11px",background:"var(--surface2)",borderRadius:8,fontSize:14,color:"var(--sub)"}}>Jeder Spieler kann einmal abstimmen · Ergebnis nach Spielschluss sichtbar</div>
+                <div style={{marginTop:12,padding:"7px 11px",background:"var(--surface2)",borderRadius:8,fontSize:13,color:"var(--sub)"}}>Jeder Spieler kann einmal abstimmen · Ergebnis nach Spielschluss sichtbar</div>
               </div>
             );
           })()}
@@ -464,11 +903,11 @@ function SpielplanModul({role,team,initialSelected}){
     <>
       {selected&&<SpielDetail spiel={selected} onClose={()=>setSelected(null)} canEdit={canEdit} motmAll={motmAll} setMotmAll={setMotmAll}/>}
       <Card style={{padding:0,overflowX:"auto"}}>
-        <div className="cc-table-wrap"><table className="cc-table">
+        <table className="cc-table">
           <thead>
             <tr style={{background:"var(--surface2)"}}>
               {["Datum","Zeit","Gegner","H/A","Ort","Wettbewerb","Resultat",""].map((h,i)=>(
-                <th className="cc-th" key={i}>{h}</th>
+                <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4,whiteSpace:"nowrap"}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -479,18 +918,18 @@ function SpielplanModul({role,team,initialSelected}){
                 onClick={()=>setSelected(g)}
                 className="hov-row"
                 style={{borderTop:"0.5px solid var(--border)",background:g.result?"var(--surface2)":"var(--surface)",cursor:"pointer",height:isMobile?52:40}}>
-                <td className="cc-td" style={{padding:"11px 13px",fontWeight:600,whiteSpace:"nowrap"}}>{g.date}</td>
-                {!isMobile&&<td className="cc-td" style={{padding:"9px 13px"}}>{g.time+" Uhr"}</td>}
-                <td className="cc-td" style={{padding:"9px 13px",fontWeight:600}}>{g.opponent}</td>
-                <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={g.home?"H":"A"} color={g.home?"#16A34A":"#6B7280"}/></td>
-                {!isMobile&&<><td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:14}}>{g.venue.split(",")[0]}</td>
-                <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:14}}>{g.comp}</td></>}
-                <td className="cc-td" style={{padding:"9px 13px"}}>{g.result?<span style={{fontWeight:600,fontSize:14,color:"var(--text)"}}>{g.result}{g.htResult&&<span style={{fontWeight:400,fontSize:14,color:"var(--sub)",marginLeft:5}}>({g.htResult})</span>}</span>:<Chip text="Ausstehend" color="#999"/>}</td>
-                <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:14}}>›</td>
+                <td style={{padding:"11px 13px",fontWeight:600,whiteSpace:"nowrap"}}>{g.date}</td>
+                {!isMobile&&<td style={{padding:"9px 13px"}}>{g.time+" Uhr"}</td>}
+                <td style={{padding:"9px 13px",fontWeight:600}}>{g.opponent}</td>
+                <td style={{padding:"9px 13px"}}><Chip text={g.home?"H":"A"} color={g.home?"#16A34A":"#6B7280"}/></td>
+                {!isMobile&&<><td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>{g.venue.split(",")[0]}</td>
+                <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>{g.comp}</td></>}
+                <td style={{padding:"9px 13px"}}>{g.result?<span style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{g.result}{g.htResult&&<span style={{fontWeight:400,fontSize:13,color:"var(--sub)",marginLeft:5}}>({g.htResult})</span>}</span>:<Chip text="Ausstehend" color="#999" bg="#f5f5f5"/>}</td>
+                <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13}}>›</td>
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </table>
       </Card>
     </>
   );
@@ -503,30 +942,30 @@ function TableTab({team}){
     <div>
 
       <Card style={{padding:0,overflowX:"auto"}}>
-        <div className="cc-table-wrap"><table className="cc-table">
+        <table className="cc-table">
           <thead>
             <tr style={{background:"var(--surface2)"}}>
               {["#","Mannschaft","Sp","S","U","N","Tore","+/-","Pts"].map((h,i)=>(
-                <th className="cc-th" key={i}>{h}</th>
+                <th key={i} style={{padding:"9px 13px",textAlign:i>1?"center":"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((r,i)=>(
               <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:r.me?ACCENT20:i%2===0?"var(--surface)":"var(--surface2)"}}>
-                <td className="cc-td" style={{padding:"9px 13px",fontWeight:700,color:"var(--sub)"}}>{r.rank}</td>
-                <td className="cc-td" style={{padding:"9px 13px",fontWeight:r.me?700:400,color:r.me?BK:BK}}>
+                <td style={{padding:"9px 13px",fontWeight:700,color:"var(--sub)"}}>{r.rank}</td>
+                <td style={{padding:"9px 13px",fontWeight:r.me?700:400,color:r.me?BK:BK}}>
                   {r.team}
                   {r.me&&<span style={{display:"inline-block",width:7,height:7,borderRadius:"50%",background:ACCENT,marginLeft:6,verticalAlign:"middle"}}/>}
                 </td>
                 {[r.sp,r.s,r.u,r.n].map((v,j)=><td key={j} style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{v}</td>)}
-                <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.tore}</td>
-                <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",fontWeight:600,color:r.diff>0?GN:r.diff<0?R:"#555"}}>{r.diff>0?"+":""}{r.diff}</td>
-                <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",fontWeight:800}}>{r.pts}</td>
+                <td style={{padding:"9px 13px",textAlign:"center",color:"var(--sub)"}}>{r.tore}</td>
+                <td style={{padding:"9px 13px",textAlign:"center",fontWeight:600,color:r.diff>0?GN:r.diff<0?R:"#555"}}>{r.diff>0?"+":""}{r.diff}</td>
+                <td style={{padding:"9px 13px",textAlign:"center",fontWeight:800}}>{r.pts}</td>
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </table>
       </Card>
     </div>
   );
@@ -891,7 +1330,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                 return(
                   <div style={{background:hBg,borderRadius:"20px 20px 0 0",padding:"20px 22px",color:"#fff"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                      <span style={{background:hBtn,color:hTxt,fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:0.6}}>{selEv.subtype||selEv.type}</span>
+                      <span style={{background:hBtn,color:hTxt,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:0.6}}>{selEv.subtype||selEv.type}</span>
                       <button onClick={()=>setModalOpen(false)} style={{background:hBtn,border:"none",borderRadius:"50%",width:30,height:30,color:hTxt,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
                     <div style={{fontWeight:800,fontSize:21,lineHeight:1.2,marginBottom:12,color:hTxt}}>
@@ -899,10 +1338,10 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                     </div>
                     {/* Info Pills */}
                     <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                      <span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="calendar" style={{marginRight:3}}/> {selEv.date}{selEv.endDate?" - "+selEv.endDate:""}</span>
-                      <span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="clock" style={{marginRight:3}}/> {selEv.time} Uhr</span>
-                      <span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="map-pin" style={{marginRight:3}}/> {selEv.location}</span>
-                      {selEv.treffpunkt&&<span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="target" style={{marginRight:3}}/> {selEv.treffpunkt}</span>}
+                      <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="calendar" style={{marginRight:3}}/> {selEv.date}{selEv.endDate?" - "+selEv.endDate:""}</span>
+                      <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="clock" style={{marginRight:3}}/> {selEv.time} Uhr</span>
+                      <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="map-pin" style={{marginRight:3}}/> {selEv.location}</span>
+                      {selEv.treffpunkt&&<span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}><TI n="target" style={{marginRight:3}}/> {selEv.treffpunkt}</span>}
                     </div>
                   </div>
                 );
@@ -911,17 +1350,17 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
               {selEv.description&&(
                 <div style={{padding:"14px 20px",borderBottom:"0.5px solid var(--border)",display:"flex",gap:12,background:"var(--surface)"}}>
                   <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
-                  <p style={{margin:0,fontSize:14,color:"var(--text)",lineHeight:1.65}}>{selEv.description}</p>
+                  <p style={{margin:0,fontSize:13,color:"var(--text)",lineHeight:1.65}}>{selEv.description}</p>
                 </div>
               )}
               {/* Weitere Informationen */}
               {(trainerNotes[selEv.id]||besammlungen[selEv.id])&&(
                 <div style={{padding:"14px 20px",borderBottom:"0.5px solid var(--border)",background:"var(--surface)"}}>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>≡ Weitere Informationen</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>≡ Weitere Informationen</div>
                   {besammlungen[selEv.id]&&(besammlungen[selEv.id].time||besammlungen[selEv.id].location)&&(
                     <div style={{marginBottom:trainerNotes[selEv.id]?8:0}}>
-                      <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:2}}><TI n="target" style={{marginRight:3}}/> Treffpunkt</div>
-                      <div style={{fontSize:14,color:"var(--text)",fontWeight:600}}>
+                      <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:2}}><TI n="target" style={{marginRight:3}}/> Treffpunkt</div>
+                      <div style={{fontSize:13,color:"var(--text)",fontWeight:600}}>
                         {besammlungen[selEv.id].date&&<span style={{marginRight:8}}><TI n="calendar" style={{marginRight:3}}/> {besammlungen[selEv.id].date}</span>}
                         {besammlungen[selEv.id].time&&<span style={{marginRight:8}}><TI n="clock" style={{marginRight:3}}/> {besammlungen[selEv.id].time} Uhr</span>}
                         {besammlungen[selEv.id].location&&<span><TI n="target" style={{marginRight:3}}/> {besammlungen[selEv.id].location}</span>}
@@ -930,8 +1369,8 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   )}
                   {trainerNotes[selEv.id]&&(
                     <div>
-                      <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:2}}><TI n="edit" style={{marginRight:3}}/> Bemerkungen</div>
-                      <p style={{margin:0,fontSize:14,color:"#1a3a2a",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{trainerNotes[selEv.id]}</p>
+                      <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:2}}><TI n="edit" style={{marginRight:3}}/> Bemerkungen</div>
+                      <p style={{margin:0,fontSize:13,color:"#1a3a2a",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{trainerNotes[selEv.id]}</p>
                     </div>
                   )}
                 </div>
@@ -939,9 +1378,9 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
               {/* Zum Spielplan Link bei Spielen */}
               {selEv.type==="Spiel"&&onNavigateToSpiel&&(
                 <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <span style={{fontSize:14,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
+                  <span style={{fontSize:13,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                   <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
-                    style={{fontSize:14,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
+                    style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                     Zum Spielplan →
                   </button>
                 </div>
@@ -954,8 +1393,8 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                     <div style={{background:"var(--surface)",border:"1.5px solid #818CF8",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <span style={{fontSize:18}}><TI n="ball-football"/></span>
                       <div>
-                        <div style={{fontWeight:700,fontSize:14,color:"var(--cc-accent)"}}>Du bist im Aufgebot!</div>
-                        <div style={{fontSize:14,color:"var(--sub)",marginTop:2}}>
+                        <div style={{fontWeight:700,fontSize:13,color:"var(--cc-accent)"}}>Du bist im Aufgebot!</div>
+                        <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>
                           {selEv.treffpunkt?`Treffpunkt: ${selEv.treffpunkt}`:"Treffpunkt folgt"}
                         </div>
                       </div>
@@ -968,15 +1407,15 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                     const alleAufgebotene=[...(isInAufgebot(selEv.id,myId)&&ichSelbst?[{...ichSelbst,ich:true}]:[]),...mitspieler];
                     if(alleAufgebotene.length===0) return null;
                     return(
-                      <div className="cc-mb-12">
-                        <div style={{fontSize:14,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Aufgebot ({alleAufgebotene.length})</div>
+                      <div style={{marginBottom:12}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Aufgebot ({alleAufgebotene.length})</div>
                         <div style={S_10}>
                           {alleAufgebotene.map(p=>(
                             <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:p.ich?"#4F46E5":"#EEF2FF",borderRadius:8}}>
                               <Av name={p.name} size={26} bg={p.ich?"rgba(255,255,255,0.3)":"#6366F1"}/>
-                              <div className="cc-flex-1">
-                                <div style={{fontSize:14,fontWeight:700,color:p.ich?"#fff":"#4F46E5"}}>{p.firstName} {p.lastName}{p.ich?" (Du)":""}</div>
-                                {p.pos&&p.pos!=="-"&&<div style={{fontSize:14,color:p.ich?"rgba(255,255,255,0.7)":"#818CF8"}}>{p.pos}</div>}
+                              <div style={{flex:1}}>
+                                <div style={{fontSize:13,fontWeight:700,color:p.ich?"#fff":"#4F46E5"}}>{p.firstName} {p.lastName}{p.ich?" (Du)":""}</div>
+                                {p.pos&&p.pos!=="-"&&<div style={{fontSize:13,color:p.ich?"rgba(255,255,255,0.7)":"#818CF8"}}>{p.pos}</div>}
                               </div>
                             </div>
                           ))}
@@ -984,14 +1423,14 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                       </div>
                     );
                   })()}
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Meine Rückmeldung</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:10}}>Meine Rückmeldung</div>
                   <div style={S_08}>
                     {["zu","ab"].map(s=>{
                       const resp=getResp(selEv.id,myId);
                       const active=resp.status===s;
                       return(
                         <button key={s} onClick={()=>setResp(selEv.id,myId,active?null:s)}
-                          style={{flex:1,padding:"8px 14px",borderRadius:10,border:`1.5px solid ${active?(s==="zu"?GN:R):GB}`,background:active?(s==="zu"?"#ECFDF5":RL):"#fff",color:active?(s==="zu"?GN:R):"#888",fontWeight:active?700:400,fontSize:14,cursor:"pointer"}}>
+                          style={{flex:1,padding:"8px 14px",borderRadius:10,border:`1.5px solid ${active?(s==="zu"?GN:R):GB}`,background:active?(s==="zu"?"#ECFDF5":RL):"#fff",color:active?(s==="zu"?GN:R):"#888",fontWeight:active?700:400,fontSize:13,cursor:"pointer"}}>
                           {s==="zu"?"✓ Zusagen":"✕ Absagen"}
                         </button>
                       );
@@ -1000,7 +1439,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   {getResp(selEv.id,myId).status==="ab"&&(
                     <textarea value={getResp(selEv.id,myId).note||""} onChange={e=>setResp(selEv.id,myId,"ab",e.target.value)}
                       placeholder="Begründung (optional)…" rows={2}
-                      style={{width:"100%",marginTop:8,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,resize:"vertical",boxSizing:"border-box",fontFamily:FONT}}/>
+                      style={{width:"100%",marginTop:8,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,resize:"vertical",boxSizing:"border-box",fontFamily:FONT}}/>
                   )}
                 </div>
               )}
@@ -1008,7 +1447,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
           </div>
         )}
         {/* Statistik-Header */}
-        <div className="cc-grid-stats cc-mb-20" style={{marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:14}}>
           {(()=>{
             const rsvpEvs=teamEvents.filter(e=>!(e.subtype==="Vereinsanlass"&&e.rsvp===false));
             const spielTrainEvs=rsvpEvs.filter(e=>e.type==="Training"||e.type==="Spiel");
@@ -1045,14 +1484,14 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
         {/* Team-Filter (nur wenn mehrere Teams) */}
         {hasMultiTeams&&(
           <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-            <span style={{fontSize:14,color:"var(--sub)",fontWeight:600,alignSelf:"center",marginRight:2}}>{isEltern?"Kind:":"Team:"}</span>
+            <span style={{fontSize:13,color:"var(--sub)",fontWeight:600,alignSelf:"center",marginRight:2}}>{isEltern?"Kind:":"Team:"}</span>
             {["alle",...allTeams].map(t=>{
               const active=selectedTeam===t;
               const kind=isEltern?kinder.find(k=>k.team===t):null;
               const label=t==="alle"?(isEltern?"Alle Kinder":"Alle Teams"):kind?`${kind.name.split(" ")[0]} · ${t}`:t;
               return(
                 <button key={t} onClick={()=>setSelectedTeam(t)}
-                  style={{padding:"5px 12px",borderRadius:20,border:`0.5px solid ${active?ACCENT:GB}`,background:active?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:14,fontWeight:active?700:400,cursor:"pointer"}}>
+                  style={{padding:"5px 12px",borderRadius:20,border:`0.5px solid ${active?ACCENT:GB}`,background:active?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,fontWeight:active?700:400,cursor:"pointer"}}>
                   {label}
                 </button>
               );
@@ -1073,7 +1512,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
               const active=isFilterActive(f.k);
               return(
                 <button key={f.k} onClick={()=>toggleFilter(f.k)}
-                  style={{padding:"7px 16px",borderRadius:20,border:`1.5px solid ${active?"#1A1A1A":GB}`,background:active?"#1A1A1A":"transparent",color:active?"#fff":"#666",fontSize:14,fontWeight:active?600:400,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s"}}>
+                  style={{padding:"7px 16px",borderRadius:20,border:`1.5px solid ${active?"#1A1A1A":GB}`,background:active?"#1A1A1A":"transparent",color:active?"#fff":"#666",fontSize:13,fontWeight:active?600:400,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s"}}>
                   {f.l}
                 </button>
               );
@@ -1081,8 +1520,8 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
           </div>
           {/* Zeit-Toggle - eigene Zeile auf Mobile durch flex-basis 100% */}
           <button onClick={()=>setTimeFilter(p=>p==="kommend"?"vergangen":"kommend")}
-            style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:14,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
-            <span style={{fontSize:14,opacity:0.6}}>{"▾"}</span>
+            style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
+            <span style={{fontSize:13,opacity:0.6}}>{"▾"}</span>
             <span>{timeFilter==="kommend"?"Vergangene Termine":"Kommende Termine"}</span>
           </button>
         </div>
@@ -1123,24 +1562,24 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                 <div onClick={()=>openEvent(ev.id)} style={{flex:1,padding:"12px 14px",minWidth:0,display:"flex",alignItems:"center",gap:16,cursor:"pointer"}}>
                   {/* Datum-Block */}
                   <div style={{width:62,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
-                    <div style={{fontSize:14,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
                     <div style={{fontSize:18,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
-                    <div style={{fontSize:14,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
                   </div>
                   {/* Text */}
                   <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:4}}>
-                    <div className="cc-row">
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
                         {ev.opponent?"vs. "+ev.opponent:ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
                       </div>
-                      <span style={{background:accentColor+"18",color:accentColor,fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
+                      <span style={{background:accentColor+"18",color:accentColor,fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
                         {ev.subtype||ev.type}
                       </span>
-                      {isCancelled&&<span style={{fontSize:14,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R,flexShrink:0}}>⚠ Abgesagt</span>}
-                      {inAufgebot&&<span style={{fontSize:14,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:"var(--cc-accent)",flexShrink:0}}><TI n="ball-football" style={{marginRight:3}}/> Aufgebot</span>}
-                      {past&&<span style={{fontSize:14,fontWeight:600,padding:"2px 8px",borderRadius:20,background:isZu?"#ECFDF5":isAb?RL:"#F3F4F6",color:isZu?GN:isAb?R:"#aaa",flexShrink:0}}>{isZu?"✓ Anwesend":isAb?"✕ Abwesend":"-"}</span>}
+                      {isCancelled&&<span style={{fontSize:13,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R,flexShrink:0}}>⚠ Abgesagt</span>}
+                      {inAufgebot&&<span style={{fontSize:13,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:"var(--cc-accent)",flexShrink:0}}><TI n="ball-football" style={{marginRight:3}}/> Aufgebot</span>}
+                      {past&&<span style={{fontSize:13,fontWeight:600,padding:"2px 8px",borderRadius:20,background:isZu?"#ECFDF5":isAb?RL:"#F3F4F6",color:isZu?GN:isAb?R:"#aaa",flexShrink:0}}>{isZu?"✓ Anwesend":isAb?"✕ Abwesend":"-"}</span>}
                     </div>
-                    <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"2px 6px",fontSize:14,color:"var(--sub)"}}>
+                    <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"2px 6px",fontSize:13,color:"var(--sub)"}}>
                       <span><TI n="clock" style={{marginRight:3}}/> {ev.time} Uhr</span>
                       {ev.type==="Spiel"&&ev.treffpunkt&&(<>
                         <span style={{color:"var(--border)"}}>·</span>
@@ -1155,13 +1594,13 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   <div style={{padding:"10px 12px",borderTop:"0.5px solid var(--border)"}} onClick={e=>e.stopPropagation()}>
                     <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:4}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:14,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▲</span>
                         <span>{isZu?"Zugesagt":"Zusagen"}</span>
                       </button>
                       <div style={{width:1,background:GB,flexShrink:0,margin:"4px 0"}}/>
                       <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:14,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":(!isZu&&!isAb)?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▽</span>
                         <span>{isAb?"Abgesagt":"Absagen"}</span>
                       </button>
@@ -1172,13 +1611,13 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   <div style={{borderTop:"0.5px solid var(--border)",padding:"8px 12px"}} onClick={e=>e.stopPropagation()}>
                     <textarea value={resp.note} onChange={e=>setResp(ev.id,myId,"ab",e.target.value)}
                       placeholder="Begründung (optional)…" rows={2}
-                      style={{width:"100%",padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,resize:"vertical",boxSizing:"border-box",fontFamily:FONT}}/>
+                      style={{width:"100%",padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,resize:"vertical",boxSizing:"border-box",fontFamily:FONT}}/>
                   </div>
                 )}
                 {canCancel&&(
                   <div style={{borderTop:"0.5px solid var(--border)",display:"flex",justifyContent:"flex-end",padding:"8px 12px"}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>toggleCancel(ev.id)}
-                      style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${isCancelled?R:GB}`,background:isCancelled?RL:"transparent",color:isCancelled?R:"#bbb",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+                      style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${isCancelled?R:GB}`,background:isCancelled?RL:"transparent",color:isCancelled?R:"#bbb",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                       {isCancelled?"↩ Rückgängig":"✕ Absagen"}
                     </button>
                   </div>
@@ -1188,7 +1627,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
           })}
           {filteredEvents.length>5&&(
             <button onClick={()=>setShowMoreEvents(p=>!p)}
-              style={{padding:'12px 0',borderRadius:12,border:"0.5px solid var(--border)",background:'#fff',color:'#555',fontSize:14,fontWeight:600,cursor:'pointer',width:'100%'}}>
+              style={{padding:'12px 0',borderRadius:12,border:"0.5px solid var(--border)",background:'#fff',color:'#555',fontSize:13,fontWeight:600,cursor:'pointer',width:'100%'}}>
               {showMoreEvents?`↑ Weniger anzeigen`:`+ ${filteredEvents.length-5} weitere anzeigen`}
             </button>
           )}
@@ -1215,18 +1654,18 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   {cancelledEvents[selEv.id]&&(
                     <div style={{background:hBtn,borderRadius:10,padding:"8px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8,border:"0.5px solid rgba(0,0,0,0.1)"}}>
                       <span style={{fontSize:16}}>⚠</span>
-                      <span style={{color:hTxt,fontWeight:700,fontSize:14}}>Dieser Termin wurde abgesagt</span>
-                      {isTrainer&&<button onClick={()=>toggleCancel(selEv.id)} style={{marginLeft:"auto",fontSize:14,padding:"3px 10px",borderRadius:20,border:"0.5px solid rgba(255,255,255,0.4)",background:"transparent",color:"#fff",cursor:"pointer",fontWeight:600}}>↩ Rückgängig</button>}
+                      <span style={{color:hTxt,fontWeight:700,fontSize:13}}>Dieser Termin wurde abgesagt</span>
+                      {isTrainer&&<button onClick={()=>toggleCancel(selEv.id)} style={{marginLeft:"auto",fontSize:13,padding:"3px 10px",borderRadius:20,border:"0.5px solid rgba(255,255,255,0.4)",background:"transparent",color:"#fff",cursor:"pointer",fontWeight:600}}>↩ Rückgängig</button>}
                     </div>
                   )}
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                    <span style={{background:hBtn,color:hTxt,fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20,letterSpacing:0.8,textTransform:"uppercase"}}>
+                    <span style={{background:hBtn,color:hTxt,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,letterSpacing:0.8,textTransform:"uppercase"}}>
                       {selEv.subtype||selEv.type}
                     </span>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                       {isTrainer&&!isPast(selEv)&&(selEv.type==="Training"||selEv.subtype==="Team-Event")&&(
                         <button onClick={()=>toggleCancel(selEv.id)}
-                          style={{display:"flex",alignItems:"center",gap:8,background:cancelledEvents[selEv.id]?hBtn:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:14,fontWeight:700}}>
+                          style={{display:"flex",alignItems:"center",gap:8,background:cancelledEvents[selEv.id]?hBtn:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13,fontWeight:700}}>
                           {cancelledEvents[selEv.id]?"↩ Reaktivieren":"✕ Training absagen"}
                         </button>
                       )}
@@ -1239,36 +1678,36 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   </div>
                   {/* Info Pills */}
                   <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
-                    <span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20}}><TI n="calendar" style={{marginRight:3}}/> {selEv.date}{selEv.endDate?" - "+selEv.endDate:""}</span>
-                    <span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20}}><TI n="clock" style={{marginRight:3}}/> {selEv.time} Uhr</span>
-                    <span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20}}><TI n="map-pin" style={{marginRight:3}}/> {selEv.location}</span>
-                    {(()=>{const b=besammlungen[selEv.id]||{};const t=b.time||"";const o=b.location||selEv.treffpunkt||"";return (t||o)?<span style={{background:hBtn,color:hTxt,fontSize:14,padding:"4px 10px",borderRadius:20}}><TI n="target" style={{marginRight:3}}/> {t?t+" Uhr":""}{t&&o?" · ":""}{o}</span>:null;})()}
+                    <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20}}><TI n="calendar" style={{marginRight:3}}/> {selEv.date}{selEv.endDate?" - "+selEv.endDate:""}</span>
+                    <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20}}><TI n="clock" style={{marginRight:3}}/> {selEv.time} Uhr</span>
+                    <span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20}}><TI n="map-pin" style={{marginRight:3}}/> {selEv.location}</span>
+                    {(()=>{const b=besammlungen[selEv.id]||{};const t=b.time||"";const o=b.location||selEv.treffpunkt||"";return (t||o)?<span style={{background:hBtn,color:hTxt,fontSize:13,padding:"4px 10px",borderRadius:20}}><TI n="target" style={{marginRight:3}}/> {t?t+" Uhr":""}{t&&o?" · ":""}{o}</span>:null;})()}
                   </div>
                   {/* Deadline & Erinnerung - für alle editierbaren Events */}
                   {canEditEvent(selEv)&&(
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",paddingTop:10,borderTop:"0.5px solid rgba(0,0,0,0.1)"}}>
-                      <span style={{color:hTxtSub,fontSize:14,fontWeight:700,letterSpacing:0.5}}>⏰ DEADLINE</span>
+                      <span style={{color:hTxtSub,fontSize:13,fontWeight:700,letterSpacing:0.5}}>⏰ DEADLINE</span>
                       {editingDeadline?(
-                        <div className="cc-row">
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
                           <input type="date"
                             defaultValue={(()=>{const d=deadlines[selEv.id];if(!d)return"";try{const p=d.split(",")[0].trim().replace(/^\S+\s+/,"").split(".");return `2026-${p[1]?.padStart(2,"0")}-${p[0]?.padStart(2,"0")}`;}catch(e){return "";}})()}
                             onBlur={e=>{const d=e.target.value;if(d){const[y,m,day]=d.split("-");const days=["So","Mo","Di","Mi","Do","Fr","Sa"];const wd=days[new Date(d).getDay()];const time=(deadlines[selEv.id]||"").split(",")[1]?.trim()||"18:00";setDeadlines(prev=>({...prev,[selEv.id]:`${wd} ${day}.${m}.${y}, ${time}`}));}setEditingDeadline(false);}}
-                            style={{background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.2)",borderRadius:6,padding:"3px 8px",color:hTxt,fontSize:14,outline:"none",colorScheme:"dark"}} autoFocus/>
+                            style={{background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.2)",borderRadius:6,padding:"3px 8px",color:hTxt,fontSize:13,outline:"none",colorScheme:"dark"}} autoFocus/>
                           <input type="time"
                             defaultValue={(deadlines[selEv.id]||"").split(",")[1]?.trim()||"18:00"}
                             onBlur={e=>{const t=e.target.value;if(t){const curDate=(deadlines[selEv.id]||"").split(",")[0].trim();setDeadlines(prev=>({...prev,[selEv.id]:`${curDate}, ${t}`}));}}}
-                            style={{background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.2)",borderRadius:6,padding:"3px 8px",color:hTxt,fontSize:14,outline:"none",colorScheme:"dark",width:80}}/>
+                            style={{background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.2)",borderRadius:6,padding:"3px 8px",color:hTxt,fontSize:13,outline:"none",colorScheme:"dark",width:80}}/>
                           <button onClick={()=>setEditingDeadline(false)}
-                            style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:20,padding:"5px 12px",color:"#fff",fontSize:14,cursor:"pointer",fontWeight:600}}>✓</button>
+                            style={{background:"rgba(255,255,255,0.2)",border:"none",borderRadius:20,padding:"5px 12px",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:600}}>✓</button>
                         </div>
                       ):(
                         <span onClick={()=>setEditingDeadline(true)}
-                          style={{color:hTxt,fontWeight:600,fontSize:14,cursor:"pointer",background:hBtn,padding:"3px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}>
+                          style={{color:hTxt,fontWeight:600,fontSize:13,cursor:"pointer",background:hBtn,padding:"3px 10px",borderRadius:20,display:"flex",alignItems:"center",gap:4}}>
                           {deadlines[selEv.id]||"Setzen"}{deadlines[selEv.id]?" Uhr":""}
                         </span>
                       )}
                       <button onClick={()=>setAutoReminder(prev=>({...prev,[selEv.id]:!prev[selEv.id]}))}
-                        style={{display:"flex",alignItems:"center",gap:8,background:hBtn,border:"0.5px solid rgba(0,0,0,0.1)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:14}}>
+                        style={{display:"flex",alignItems:"center",gap:8,background:hBtn,border:"0.5px solid rgba(0,0,0,0.1)",borderRadius:20,padding:"5px 12px",cursor:"pointer",color:hTxt,fontSize:13}}>
                         <span style={{width:22,height:12,borderRadius:6,background:autoReminder[selEv.id]?(hLight?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.85)"):"rgba(0,0,0,0.15)",position:"relative",display:"inline-block",flexShrink:0}}>
                           <span style={{position:"absolute",top:2,left:autoReminder[selEv.id]?11:2,width:8,height:8,borderRadius:"50%",background:autoReminder[selEv.id]?GN:(hLight?"rgba(0,0,0,0.2)":"rgba(255,255,255,0.4)")}}/>
                         </span>
@@ -1279,7 +1718,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                       {autoReminder[selEv.id]&&(
                         <select value={reminderTimes[selEv.id]||"3h"}
                           onChange={e=>setReminderTimes(prev=>({...prev,[selEv.id]:e.target.value}))}
-                          style={{background:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",color:hTxt,fontSize:14,cursor:"pointer",outline:"none"}}>
+                          style={{background:hBtn,border:"0.5px solid rgba(0,0,0,0.15)",borderRadius:20,padding:"5px 12px",color:hTxt,fontSize:13,cursor:"pointer",outline:"none"}}>
                           {REMINDER_OPTIONS.map(o=><option key={o.v} value={o.v} style={{color:"var(--text)",background:"var(--surface)"}}>{o.l}</option>)}
                         </select>
                       )}
@@ -1292,85 +1731,85 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
             {selEv.description&&(
               <div style={{padding:"14px 20px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",gap:12,alignItems:"flex-start"}}>
                 <span style={{fontSize:18,flexShrink:0,marginTop:1}}>ℹ️</span>
-                <p style={{margin:0,fontSize:14,color:"var(--text)",lineHeight:1.7}}>{selEv.description}</p>
+                <p style={{margin:0,fontSize:13,color:"var(--text)",lineHeight:1.7}}>{selEv.description}</p>
               </div>
             )}
             {/* Weitere Informationen */}
             <div style={{padding:"14px 20px",borderBottom:"0.5px solid var(--border)",background:"var(--surface)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div style={{fontSize:14,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>≡ Weitere Informationen</div>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>≡ Weitere Informationen</div>
                 {canEditEvent(selEv)&&(
                   <button onClick={()=>setEditingNote(v=>!v)}
-                    style={{fontSize:14,fontWeight:600,color:editingNote?R:BL,background:"transparent",border:"none",cursor:"pointer",padding:"2px 6px"}}>
+                    style={{fontSize:13,fontWeight:600,color:editingNote?R:BL,background:"transparent",border:"none",cursor:"pointer",padding:"2px 6px"}}>
                     {editingNote?"Fertig ✓":"Bearbeiten"}
                   </button>
                 )}
               </div>
               {/* Besammlung */}
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:6}}><TI n="target" style={{marginRight:3}}/> Treffpunkt</div>
+                <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:6}}><TI n="target" style={{marginRight:3}}/> Treffpunkt</div>
                 {editingNote&&canEditEvent(selEv)?(
                   <div style={S_10}>
-                    <div className="cc-grid-2" style={{gap:8}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                       <div>
-                        <div style={{fontSize:14,color:"var(--sub)",marginBottom:2}}>Datum</div>
+                        <div style={{fontSize:13,color:"var(--sub)",marginBottom:2}}>Datum</div>
                         <input type="date" value={(()=>{const d=besammlungen[selEv.id]?.date||selEv.date||"";const c=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1]?.padStart(2,"0")}-${p[0]?.padStart(2,"0")}`:"";})()}
                           onChange={e=>{const v=e.target.value;if(v){const[y,m,d]=v.split("-");const days=["So","Mo","Di","Mi","Do","Fr","Sa"];const wd=days[new Date(v).getDay()];saveBesammlung(selEv.id,"date",`${wd} ${d}.${m}.`);}}}
-                          style={{width:"100%",padding:"7px 8px",border:"1px solid var(--border)",borderRadius:6,fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                          style={{width:"100%",padding:"7px 8px",border:"1px solid var(--border)",borderRadius:6,fontSize:13,boxSizing:"border-box",outline:"none"}}/>
                       </div>
                       <div>
-                        <div style={{fontSize:14,color:"var(--sub)",marginBottom:2}}>Uhrzeit</div>
+                        <div style={{fontSize:13,color:"var(--sub)",marginBottom:2}}>Uhrzeit</div>
                         <input type="time" value={besammlungen[selEv.id]?.time||""}
                           onChange={e=>saveBesammlung(selEv.id,"time",e.target.value)}
-                          style={{width:"100%",padding:"7px 8px",border:"1px solid var(--border)",borderRadius:6,fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                          style={{width:"100%",padding:"7px 8px",border:"1px solid var(--border)",borderRadius:6,fontSize:13,boxSizing:"border-box",outline:"none"}}/>
                       </div>
                     </div>
                     <div>
-                      <div style={{fontSize:14,color:"var(--sub)",marginBottom:2}}>Ort</div>
+                      <div style={{fontSize:13,color:"var(--sub)",marginBottom:2}}>Ort</div>
                       <input value={besammlungen[selEv.id]?.location||""} onChange={e=>saveBesammlung(selEv.id,"location",e.target.value)}
                         placeholder="z.B. Sportanlage Aabach, Parkplatz Bahnhof…"
-                        style={{width:"100%",padding:"7px 8px",border:"1px solid var(--border)",borderRadius:6,fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                        style={{width:"100%",padding:"7px 8px",border:"1px solid var(--border)",borderRadius:6,fontSize:13,boxSizing:"border-box",outline:"none"}}/>
                     </div>
                   </div>
                 ):(()=>{
                   const b=besammlungen[selEv.id]||{};
                   const hasData=b.time||b.location||b.date;
                   return hasData?(
-                    <div style={{fontSize:14,color:"var(--text)"}}>
+                    <div style={{fontSize:13,color:"var(--text)"}}>
                       {b.date&&<span style={{marginRight:8}}><TI n="calendar" style={{marginRight:3}}/> {b.date}</span>}
                       {b.time&&<span style={{marginRight:8}}><TI n="clock" style={{marginRight:3}}/> {b.time} Uhr</span>}
                       {b.location&&<span><TI n="map-pin" style={{marginRight:3}}/> {b.location}</span>}
                     </div>
-                  ):<div style={{fontSize:14,color:"var(--sub)",fontStyle:"italic"}}>Noch nicht gesetzt</div>;
+                  ):<div style={{fontSize:13,color:"var(--sub)",fontStyle:"italic"}}>Noch nicht gesetzt</div>;
                 })()}
               </div>
               {/* Notizen */}
               <div>
-                <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:4}}><TI n="edit" style={{marginRight:3}}/> Bemerkungen</div>
+                <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:4}}><TI n="edit" style={{marginRight:3}}/> Bemerkungen</div>
                 {editingNote&&canEditEvent(selEv)?(
                   <textarea value={trainerNotes[selEv.id]||""} onChange={e=>saveTrainerNote(selEv.id,e.target.value)}
                     placeholder="Bemerkungen, Taktik-Hinweise, Infos für Spieler und Eltern…" rows={3}
-                    style={{width:"100%",padding:"10px 12px",border:`1.5px solid ${GN}`,borderRadius:10,fontSize:14,resize:"vertical",boxSizing:"border-box",fontFamily:FONT,lineHeight:1.6,outline:"none",color:"var(--text)"}}/>
+                    style={{width:"100%",padding:"10px 12px",border:`1.5px solid ${GN}`,borderRadius:10,fontSize:13,resize:"vertical",boxSizing:"border-box",fontFamily:FONT,lineHeight:1.6,outline:"none",color:"var(--text)"}}/>
                 ):trainerNotes[selEv.id]?(
-                  <p style={{margin:0,fontSize:14,color:"#1a3a2a",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{trainerNotes[selEv.id]}</p>
+                  <p style={{margin:0,fontSize:13,color:"#1a3a2a",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{trainerNotes[selEv.id]}</p>
                 ):(
-                  canEditEvent(selEv)&&<div style={{fontSize:14,color:"var(--sub)",fontStyle:"italic"}}>Noch keine Notizen.</div>
+                  canEditEvent(selEv)&&<div style={{fontSize:13,color:"var(--sub)",fontStyle:"italic"}}>Noch keine Notizen.</div>
                 )}
               </div>
             </div>
             {/* Zum Spielplan Link bei Spielen */}
             {selEv.type==="Spiel"&&onNavigateToSpiel&&(
               <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <span style={{fontSize:14,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
+                <span style={{fontSize:13,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
                 <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
-                  style={{fontSize:14,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
+                  style={{fontSize:13,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                   Zum Spielplan →
                 </button>
               </div>
             )}
             {/* Readonly banner for trainer on Vereinsanlass with RSVP */}
             {(isTrainer||isAdmin)&&!canEditEvent(selEv)&&selEv.rsvp!==false&&(
-              <div style={{padding:"8px 16px",background:"var(--surface)",borderBottom:`0.5px solid #FED7AA`,fontSize:14,color:STATUS_CLR.warn,display:"flex",alignItems:"center",gap:8}}>
+              <div style={{padding:"8px 16px",background:"var(--surface)",borderBottom:`0.5px solid #FED7AA`,fontSize:13,color:STATUS_CLR.warn,display:"flex",alignItems:"center",gap:8}}>
                 <span>{"ℹ️"}</span>
                 <span>Vereinsanlass - nur Administratoren können Anwesenheiten bearbeiten. Du siehst die Übersicht als Lesezugriff.</span>
               </div>
@@ -1387,13 +1826,13 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   {items.map(s=>(
                     <div key={s.l} style={{flex:1,background:s.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:`0.5px solid ${s.c}20`}}>
                       <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
-                      <div style={{fontSize:14,color:s.c,fontWeight:600,marginTop:3,opacity:0.8}}>{s.l}</div>
+                      <div style={{fontSize:13,color:s.c,fontWeight:600,marginTop:3,opacity:0.8}}>{s.l}</div>
                     </div>
                   ))}
                   {c.aufgebot>0&&(
                     <div style={{flex:1,background:"var(--surface)",borderRadius:10,padding:"10px 8px",textAlign:"center",border:"0.5px solid #818CF820"}}>
                       <div style={{fontSize:24,fontWeight:800,color:"var(--sub)",lineHeight:1}}>{c.aufgebot}</div>
-                      <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginTop:3,opacity:0.8}}>Aufgebot</div>
+                      <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginTop:3,opacity:0.8}}>Aufgebot</div>
                     </div>
                   )}
                 </div>
@@ -1402,7 +1841,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
             {/* Spieler-Liste */}
             <div style={{padding:"0 0 4px"}}>
               <div style={{padding:"8px 20px 4px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)"}}>
-                <div style={{display:"grid",gridTemplateColumns:`1fr auto auto${selEv.type==="Spiel"?" auto":""}`,fontSize:14,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,gap:"0 16px"}}>
+                <div style={{display:"grid",gridTemplateColumns:`1fr auto auto${selEv.type==="Spiel"?" auto":""}`,fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,gap:"0 16px"}}>
                   <span>Spieler</span><span style={{textAlign:"center"}}>Status</span><span style={{minWidth:80,textAlign:"left"}}>Begründung</span>{selEv.type==="Spiel"&&<span style={{textAlign:"center",color:"var(--cc-accent)"}}><TI n="ball-football"/></span>}
                 </div>
               </div>
@@ -1416,7 +1855,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                       <div style={{width:4,height:28,borderRadius:2,background:statusColor,flexShrink:0}}/>
                       <Av name={p.name} size={28} bg={resp.status==="zu"?GN:resp.status==="ab"?R:resp.status==="unentschuldigt"?AM:resp.status==="fraglich"?AM:"#D1D5DB"}/>
                       <div>
-                        <div style={{fontWeight:600,fontSize:14}}>{p.firstName} {p.lastName}</div>
+                        <div style={{fontWeight:600,fontSize:13}}>{p.firstName} {p.lastName}</div>
                         {getNr(p.id)&&<div style={S_SUB}>{"#"+getNr(p.id)}</div>}
                       </div>
                     </Row>
@@ -1439,9 +1878,9 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                           readOnly={!canEditEvent(selEv)}
                           onBlur={()=>setShowNoteFor(null)}
                           placeholder="Begründung…" rows={2} autoFocus
-                          style={{width:"100%",padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,resize:"none",fontFamily:FONT}}/>
+                          style={{width:"100%",padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,resize:"none",fontFamily:FONT}}/>
                       ):(
-                        <span style={{fontSize:14,color:resp.note?"#555":"#ccc",fontStyle:resp.note?"normal":"italic"}}>{resp.note||"-"}</span>
+                        <span style={{fontSize:13,color:resp.note?"#555":"#ccc",fontStyle:resp.note?"normal":"italic"}}>{resp.note||"-"}</span>
                       )}
                     </div>
                     {selEv.type==="Spiel"&&(
@@ -1468,15 +1907,15 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
             const active=isFilterActive(f);
             return(
               <button key={f} onClick={()=>toggleFilter(f)}
-                style={{padding:"7px 16px",borderRadius:20,border:`1.5px solid ${active?"#1A1A1A":GB}`,background:active?"#1A1A1A":"transparent",color:active?"#fff":"#666",fontSize:14,fontWeight:active?600:400,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s"}}>
+                style={{padding:"7px 16px",borderRadius:20,border:`1.5px solid ${active?"#1A1A1A":GB}`,background:active?"#1A1A1A":"transparent",color:active?"#fff":"#666",fontSize:13,fontWeight:active?600:400,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s"}}>
                 {f==="alle"?"Alle":f==="training"?"Trainings":f==="spiele"?"Spiele":f==="team-event"?"Teamevents":"Vereinsanlass"}
               </button>
             );
           })}
         </div>
         <button onClick={()=>setTimeFilter(p=>p==="kommend"?"vergangen":"kommend")}
-          style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:14,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
-          <span style={{fontSize:14,opacity:0.6}}>{"▾"}</span>
+          style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,flexBasis:"100%",transition:"all 0.15s"}}>
+          <span style={{fontSize:13,opacity:0.6}}>{"▾"}</span>
           <span>{timeFilter==="kommend"?"Vergangene Termine":"Kommende Termine"}</span>
         </button>
       </div>
@@ -1510,16 +1949,16 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                 <>
                   <div onClick={()=>openEvent(ev.id)} style={{background:headerBg,padding:"12px 14px",display:"flex",alignItems:"center",gap:0}}>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:56,paddingRight:14}}>
-                      <div style={{fontSize:14,fontWeight:600,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:0.6}}>{weekday}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:0.6}}>{weekday}</div>
                       <div style={{fontSize:21,fontWeight:700,color:"#fff",lineHeight:1.1}}>{dayNum}.</div>
-                      <div style={{fontSize:14,fontWeight:600,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:0.4}}>{monName}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:0.4}}>{monName}</div>
                     </div>
                     <div style={{width:1,alignSelf:"stretch",background:"rgba(255,255,255,0.15)",marginRight:14,flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:14,color:"#fff",lineHeight:1.25,textDecoration:isCancelled?"line-through":"none"}}>
                         {ev.opponent?"vs. "+ev.opponent:ev.title||ev.type}
                       </div>
-                      <div style={{fontSize:14,color:"rgba(255,255,255,0.5)",marginTop:2}}>
+                      <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:2}}>
                         {isSpiel?(ev.home?"Heimspiel":"Auswärtsspiel"):ev.subtype||ev.type}
                         {isCancelled&&" · ⚠ Abgesagt"}
                       </div>
@@ -1542,19 +1981,19 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                 /* -- TRAINING / STANDARD: schlank wie Bild 2 -- */
                 <div onClick={()=>openEvent(ev.id)} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:16}}>
                   <div style={{width:58,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:10,padding:"8px 6px"}}>
-                    <div style={{fontSize:14,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{weekday}</div>
                     <div style={{fontSize:18,fontWeight:700,color:"var(--text)",lineHeight:1}}>{dayNum}</div>
-                    <div style={{fontSize:14,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>{monName}</div>
                   </div>
                   <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:4}}>
-                    <div className="cc-row">
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                       <div style={{fontWeight:600,fontSize:14,color:isCancelled?"#aaa":"#1A1A1A",textDecoration:isCancelled?"line-through":"none"}}>
                         {ev.type==="Training"?"Training · "+ev.team:ev.title||ev.type}
                       </div>
-                      <span style={{background:accentColor+"18",color:accentColor,fontSize:14,fontWeight:600,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
+                      <span style={{background:accentColor+"18",color:accentColor,fontSize:13,fontWeight:600,padding:"2px 8px",borderRadius:20,flexShrink:0}}>
                         {ev.subtype||ev.type}
                       </span>
-                      {isCancelled&&<span style={{fontSize:14,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R}}>⚠ Abgesagt</span>}
+                      {isCancelled&&<span style={{fontSize:13,fontWeight:600,padding:"2px 8px",borderRadius:20,background:RL,color:R}}>⚠ Abgesagt</span>}
                     </div>
                     <div style={S_SUB}><TI n="clock" style={{marginRight:3}}/> {ev.time} Uhr</div>
                   </div>
@@ -1573,7 +2012,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   ].map((s,i,arr)=>(
                     <div key={i} style={{flex:1,padding:"9px 2px",borderRight:i<arr.length-1?`0.5px solid ${GB}`:"none",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
                       <div style={{fontSize:14,fontWeight:700,color:s.value>0?s.color:"var(--border)",lineHeight:1}}>{s.value}</div>
-                      <div style={{fontSize:14,color:s.value>0?s.color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.3,fontWeight:600,opacity:0.8}}>{s.label}</div>
+                      <div style={{fontSize:13,color:s.value>0?s.color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.3,fontWeight:600,opacity:0.8}}>{s.label}</div>
                     </div>
                   ))}
                 </div>
@@ -1589,13 +2028,13 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                   <div style={{padding:"10px 12px",background:"var(--surface)"}} onClick={e=>e.stopPropagation()}>
                     <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:4}}>
                       <button onClick={()=>setResp(ev.id,myId,isZu?null:"zu")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":none?"#888":"#bbb",fontSize:14,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isZu?"#16A34A":"transparent",color:isZu?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isZu?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▲</span>
                         <span>{isZu?"Zugesagt":"Zusagen"}</span>
                       </button>
                       <div style={{width:1,background:GB,flexShrink:0,margin:"4px 0"}}/>
                       <button onClick={()=>setResp(ev.id,myId,isAb?null:"ab")}
-                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":none?"#888":"#bbb",fontSize:14,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                        style={{flex:1,padding:"8px 14px",border:"none",borderRadius:8,background:isAb?"#DC2626":"transparent",color:isAb?"#fff":none?"#888":"#bbb",fontSize:13,fontWeight:isAb?700:400,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         <span style={{fontSize:14}}>▽</span>
                         <span>{isAb?"Abgesagt":"Absagen"}</span>
                       </button>
@@ -1608,7 +2047,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
         })}
         {filteredEvents.length>5&&(
           <button onClick={()=>setShowMoreEvents(p=>!p)}
-            style={{padding:"8px 0",borderRadius:10,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:14,fontWeight:600,cursor:"pointer",width:"100%"}}>
+            style={{padding:"8px 0",borderRadius:10,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,fontWeight:600,cursor:"pointer",width:"100%"}}>
             {showMoreEvents?`↑ Weniger anzeigen`:`+ ${filteredEvents.length-5} weitere anzeigen`}
           </button>
         )}

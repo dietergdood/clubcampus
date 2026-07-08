@@ -3,18 +3,18 @@ import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT,
 import { TI, TI_PATHS } from "./icons.jsx";
 import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle , avColor} from "./theme.jsx";
 import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT , MEMBERS, FUNKTIONEN} from "./demoData.js";
-import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./NavigationModul.jsx";
-import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./DashboardModul.jsx";
-import { TeamView, TeamOverview, EventsList } from "./TeamModul.jsx";
-import { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab } from "./TermineModul.jsx";
-import { TrainingsplanModul, PlaetzeView } from "./TrainingsplanModul.jsx";
-import { TeamsVerwaltungModul } from "./TeamsVerwaltungModul.jsx";
-import MitgliederModul, { MembersView } from "./MitgliederModul.jsx";
-import KaderModul from "./KaderModul.jsx";
-import { HelferModul, HelpersList } from "./HelferModul.jsx";
-import NachrichtenModul from "./NachrichtenModul.jsx";
-import { TeamModuleMatrix, PortalverwaltungView } from "./PortalverwaltungModul.jsx";
-import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView, DarkModeRow, DataCheckView, getTeamsFromFunktionen, getTeamsFromGruppen } from "./PlatzhalterModul.jsx";
+import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./modules/NavigationModul.jsx";
+import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./modules/DashboardModul.jsx";
+import { TeamView, TeamOverview, EventsList } from "./modules/TeamModul.jsx";
+import { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab } from "./modules/TermineModul.jsx";
+import { TrainingsplanModul, PlaetzeView } from "./modules/TrainingsplanModul.jsx";
+import { TeamsVerwaltungModul } from "./modules/TeamsVerwaltungModul.jsx";
+import MitgliederModul, { MembersView } from "./modules/MitgliederModul.jsx";
+import KaderModul from "./modules/KaderModul.jsx";
+import { HelferModul, HelpersList } from "./modules/HelferModul.jsx";
+import NachrichtenModul from "./modules/NachrichtenModul.jsx";
+import { TeamModuleMatrix, PortalverwaltungView } from "./modules/PortalverwaltungModul.jsx";
+import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView, DarkModeRow, DataCheckView, getTeamsFromFunktionen, getTeamsFromGruppen } from "./modules/PlatzhalterModul.jsx";
 
 
 function Skel({h=14,w="100%",br=6,mb=0,style={}}){

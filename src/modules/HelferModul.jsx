@@ -14,7 +14,7 @@ function Tabs({tabs,active,setActive}){
   return(
     <div style={{display:"flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,overflowX:"auto",flexWrap:"nowrap",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
       {tabs.map(t=>(
-        <Btn onClick={()=>setActive(t.key)}>{isMobile&&t.icon&&<TI n={t.icon} size={13} className="cc-shrink-0"/>} {isMobile&&t.short?t.short:t.label}</Btn>
+        <Btn onClick={()=>setActive(t.key)}>{isMobile&&t.icon&&<TI n={t.icon} size={13} style={{flexShrink:0}}/>} {isMobile&&t.short?t.short:t.label}</Btn>
       ))}
     </div>
   );
@@ -37,7 +37,7 @@ function BemerkungEdit({notes,onSave}){
   if(editing) return(
     <div style={{display:"flex",gap:4,marginTop:4,alignItems:"center"}} onClick={e=>e.stopPropagation()}>
       <input autoFocus value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Bemerkung…"
-        style={{padding:"2px 7px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none",width:130}}
+        style={{padding:"2px 7px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:130}}
         onKeyDown={e=>{if(e.key==="Enter"){onSave(draft);setEditing(false);}if(e.key==="Escape")setEditing(false);}}/>
       <Btn onClick={()=>{onSave(draft);setEditing(false);}}>✓</Btn>
       <Btn onClick={()=>setEditing(false)}>✕</Btn>
@@ -108,14 +108,14 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
         {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:10}}>
           <div style={{minWidth:0}}>
-            <div style={{fontWeight:700,fontSize:14,color:"var(--text)",lineHeight:1.2}}>{schicht.label}</div>
-            <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:4}}>
+            <div style={{fontWeight:700,fontSize:13,color:"var(--text)",lineHeight:1.2}}>{schicht.label}</div>
+            <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:4}}>
               <span><TI n="map-pin"/></span><span>{einsatz.location}</span>
             </div>
-            {notes&&<div style={{fontSize:14,color:AM,marginTop:3,fontStyle:"italic"}}><TI n="edit" style={{marginRight:3}}/> {notes}</div>}
+            {notes&&<div style={{fontSize:13,color:AM,marginTop:3,fontStyle:"italic"}}><TI n="edit" style={{marginRight:3}}/> {notes}</div>}
             {canEdit&&onSaveBemerkung&&<BemerkungEdit notes={notes} onSave={onSaveBemerkung}/>}
           </div>
-          <span style={{fontSize:14,fontWeight:700,padding:"3px 9px",borderRadius:20,background:statusBg,color:statusColor,flexShrink:0,whiteSpace:"nowrap"}}>
+          <span style={{fontSize:13,fontWeight:700,padding:"3px 9px",borderRadius:20,background:statusBg,color:statusColor,flexShrink:0,whiteSpace:"nowrap"}}>
             {statusText}
           </span>
         </div>
@@ -127,8 +127,8 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 
         {/* Plätze Zähler */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:ichDrin||!voll?10:0}}>
-          <Btn variant="ghost" onClick={()=>setShowHelfer(v=>!v)}><span style={{fontSize:14,display:"inline-block",transform:showHelfer?"rotate(90deg)":"none"}}>▶</span> <span><strong style={{color:"var(--text)"}}>{filled}</strong> / {max} belegt</span></Btn>
-          {ichDrin&&<span style={{fontSize:14,color:GN,fontWeight:700}}>Du dabei ✓</span>}
+          <Btn variant="ghost" onClick={()=>setShowHelfer(v=>!v)}><span style={{fontSize:13,display:"inline-block",transform:showHelfer?"rotate(90deg)":"none"}}>▶</span> <span><strong style={{color:"var(--text)"}}>{filled}</strong> / {max} belegt</span></Btn>
+          {ichDrin&&<span style={{fontSize:13,color:GN,fontWeight:700}}>Du dabei ✓</span>}
         </div>
 
         {showHelfer&&(
@@ -136,14 +136,14 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
             {helfer.map((h,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:h===meinName?"#DCFCE7":"#F3F4F6",borderRadius:6,padding:"4px 8px"}}>
                 <Av name={h} size={16} bg={h===meinName?GN:"#9CA3AF"}/>
-                <span style={{fontSize:14,fontWeight:h===meinName?700:500,color:h===meinName?GN:"#374151",flex:1}}>{h}</span>
-                {h===meinName&&<span style={{fontSize:14,color:GN}}>Du</span>}
+                <span style={{fontSize:13,fontWeight:h===meinName?700:500,color:h===meinName?GN:"#374151",flex:1}}>{h}</span>
+                {h===meinName&&<span style={{fontSize:13,color:GN}}>Du</span>}
               </div>
             ))}
             {Array.from({length:max-filled},(_,i)=>(
               <div key={`f${i}`} style={{display:"flex",alignItems:"center",gap:8,background:"var(--surface)",border:"1px dashed #D1D5DB",borderRadius:6,padding:"4px 8px"}}>
                 <div style={{width:16,height:16,borderRadius:"50%",background:"#E5E7EB",flexShrink:0}}/>
-                <span className="cc-text-sm">Freier Platz</span>
+                <span style={{fontSize:13,color:"var(--sub)"}}>Freier Platz</span>
               </div>
             ))}
           </div>
@@ -162,27 +162,27 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 
           {/* Bestätigung nach Absenden */}
           {showAnfrageOk&&(
-            <div style={{fontSize:14,color:GN,fontWeight:600,padding:"3px 0"}}>✓ Anfrage gesendet - wird von Funktionär/Admin geprüft.</div>
+            <div style={{fontSize:13,color:GN,fontWeight:600,padding:"3px 0"}}>✓ Anfrage gesendet - wird von Funktionär/Admin geprüft.</div>
           )}
 
           {/* Ausstehende Anfrage */}
           {anfragePending&&!showAnfrageOk&&(
             <div style={{background:AM+"12",border:`0.5px solid ${AM}`,borderRadius:6,padding:"8px 10px"}}>
-              <div style={{fontSize:14,color:AM,fontWeight:700,marginBottom:3}}>⏳ Freigabe ausstehend</div>
-              <div className="cc-text-sm">Begründung: <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em></div>
+              <div style={{fontSize:13,color:AM,fontWeight:700,marginBottom:3}}>⏳ Freigabe ausstehend</div>
+              <div style={{fontSize:13,color:"var(--sub)"}}>Begründung: <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em></div>
             </div>
           )}
 
           {/* Freigabe-Anfrage Formular */}
           {showAnfrageForm&&(
             <div style={{padding:"10px 12px",background:"var(--surface)",border:`0.5px solid ${AM}`,borderRadius:8}}>
-              <div style={{fontSize:14,fontWeight:700,color:AM,marginBottom:6}}>Grund für die Freigabe-Anfrage</div>
+              <div style={{fontSize:13,fontWeight:700,color:AM,marginBottom:6}}>Grund für die Freigabe-Anfrage</div>
               <textarea
                 value={anfrageBegruendung}
                 onChange={e=>setAnfrageBegruendung(e.target.value)}
                 placeholder="z.B. Terminkonflikt, Krankheit, familiärer Grund …"
                 rows={3}
-                style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,resize:"vertical",boxSizing:"border-box",marginBottom:7,fontFamily:FONT}}
+                style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,resize:"vertical",boxSizing:"border-box",marginBottom:7,fontFamily:FONT}}
               />
               <Row align="flex-start">
                 <Btn small onClick={handleAnfrageSenden} disabled={!anfrageBegruendung.trim()}>Anfrage senden</Btn>
@@ -194,15 +194,15 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
           {/* Übertragung-Formular */}
           {showTransfer&&(
             <div style={{padding:"9px 11px",background:"var(--surface)",border:`0.5px solid #0891B2`,borderRadius:8}}>
-              <div style={{fontSize:14,fontWeight:600,color:"#0891B2",marginBottom:6}}>Schicht an wen übertragen?</div>
+              <div style={{fontSize:13,fontWeight:600,color:"#0891B2",marginBottom:6}}>Schicht an wen übertragen?</div>
               {/* Suchfeld */}
               <div style={{position:"relative",marginBottom:6}}>
-                <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+                <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
                 <input
                   value={zuteilSearch}
                   onChange={e=>{setZuteilSearch(e.target.value);setTransferTarget("");}}
                   placeholder="Person suchen…"
-                  style={{width:"100%",padding:"5px 8px 5px 26px",border:`0.5px solid ${zuteilSearch?"#0891B2":GB}`,borderRadius:6,fontSize:14,outline:"none",boxSizing:"border-box"}}
+                  style={{width:"100%",padding:"5px 8px 5px 26px",border:`0.5px solid ${zuteilSearch?"#0891B2":GB}`,borderRadius:6,fontSize:13,outline:"none",boxSizing:"border-box"}}
                 />
                 {zuteilSearch&&<Btn variant="ghost" onClick={()=>{setZuteilSearch("");setTransferTarget("");}}>×</Btn>}
               </div>
@@ -210,7 +210,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
               {(()=>{
                 const kandidaten=ALLE_HELFER_NAMEN.filter(n=>n!==meinName&&!helfer.includes(n));
                 const gefiltert=kandidaten.filter(n=>!zuteilSearch||n.toLowerCase().includes(zuteilSearch.toLowerCase()));
-                if(gefiltert.length===0) return <div style={{fontSize:14,color:"var(--sub)",padding:"4px 0",marginBottom:7}}>Keine Treffer.</div>;
+                if(gefiltert.length===0) return <div style={{fontSize:13,color:"var(--sub)",padding:"4px 0",marginBottom:7}}>Keine Treffer.</div>;
                 return(
                   <div style={{maxHeight:140,overflowY:"auto",display:"flex",flexDirection:"column",gap:4,marginBottom:7}}>
                     {gefiltert.map(n=>{
@@ -218,7 +218,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
                       const info=h?.gruppe||h?.role||"";
                       const selected=transferTarget===n;
                       return(
-                        <Btn onClick={()=>setTransferTarget(selected?"":n)}><Av name={n} size={20} bg={selected?"#0891B2":"#9CA3AF"}/> <div style={{flex:1,minWidth:0}}> <div style={{fontSize:14,fontWeight:selected?700:400,color:selected?"#0891B2":"#374151"}}>{n}</div> {info&&<div className="cc-text-sm">{info}</div>} </div> {selected&&<span style={{fontSize:14,color:"#0891B2",flexShrink:0}}>✓</span>}</Btn>
+                        <Btn onClick={()=>setTransferTarget(selected?"":n)}><Av name={n} size={20} bg={selected?"#0891B2":"#9CA3AF"}/> <div style={{flex:1,minWidth:0}}> <div style={{fontSize:13,fontWeight:selected?700:400,color:selected?"#0891B2":"#374151"}}>{n}</div> {info&&<div style={{fontSize:13,color:"var(--sub)"}}>{info}</div>} </div> {selected&&<span style={{fontSize:13,color:"#0891B2",flexShrink:0}}>✓</span>}</Btn>
                       );
                     })}
                   </div>
@@ -244,29 +244,29 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
           {/* Zuteilungs-Formular */}
           {canZuteilen&&showZuteilen&&(
             <div style={{padding:"9px 11px",background:"var(--surface)",border:`0.5px solid ${GN}`,borderRadius:8}}>
-              <div style={{fontSize:14,fontWeight:600,color:GN,marginBottom:6}}>Wen zuteilen?</div>
+              <div style={{fontSize:13,fontWeight:600,color:GN,marginBottom:6}}>Wen zuteilen?</div>
               {/* Suchfeld */}
               <div style={{position:"relative",marginBottom:6}}>
-                <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+                <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
                 <input
                   value={zuteilSearch}
                   onChange={e=>{setZuteilSearch(e.target.value);setZuteilTarget("");}}
                   placeholder="Name suchen…"
-                  style={{width:"100%",padding:"5px 8px 5px 26px",border:`0.5px solid ${zuteilSearch?GN:GB}`,borderRadius:6,fontSize:14,outline:"none",boxSizing:"border-box"}}
+                  style={{width:"100%",padding:"5px 8px 5px 26px",border:`0.5px solid ${zuteilSearch?GN:GB}`,borderRadius:6,fontSize:13,outline:"none",boxSizing:"border-box"}}
                 />
                 {zuteilSearch&&<Btn variant="ghost" onClick={()=>{setZuteilSearch("");setZuteilTarget("");}}>×</Btn>}
               </div>
               {/* Gefilterte Liste */}
               {(()=>{
                 const gefiltert=zuteilKandidaten.filter(n=>n.toLowerCase().includes(zuteilSearch.toLowerCase()));
-                if(gefiltert.length===0) return <div style={{fontSize:14,color:"var(--sub)",padding:"4px 0"}}>Keine Treffer.</div>;
+                if(gefiltert.length===0) return <div style={{fontSize:13,color:"var(--sub)",padding:"4px 0"}}>Keine Treffer.</div>;
                 return(
                   <div style={{maxHeight:140,overflowY:"auto",display:"flex",flexDirection:"column",gap:4,marginBottom:7}}>
                     {gefiltert.map(n=>{
                       const gruppe=HELPERS.find(m=>m.name===n)?.gruppe||"";
                       const selected=zuteilTarget===n;
                       return(
-                        <Btn onClick={()=>setZuteilTarget(selected?"":n)}><Av name={n} size={20} bg={selected?GN:"#bbb"}/> <div className="cc-flex-1"> <div style={{fontSize:14,fontWeight:selected?700:400,color:selected?GN:BK}}> {n}{n===meinName&&<span style={{fontSize:14,color:GN,marginLeft:5}}>(ich)</span>} </div> {gruppe&&<div style={{fontSize:14,color:"var(--sub)",marginTop:1}}>{gruppe}</div>} </div> {selected&&<span style={{fontSize:14,color:GN,flexShrink:0}}>✓</span>}</Btn>
+                        <Btn onClick={()=>setZuteilTarget(selected?"":n)}><Av name={n} size={20} bg={selected?GN:"#bbb"}/> <div style={{flex:1}}> <div style={{fontSize:13,fontWeight:selected?700:400,color:selected?GN:BK}}> {n}{n===meinName&&<span style={{fontSize:13,color:GN,marginLeft:5}}>(ich)</span>} </div> {gruppe&&<div style={{fontSize:13,color:"var(--sub)",marginTop:1}}>{gruppe}</div>} </div> {selected&&<span style={{fontSize:13,color:GN,flexShrink:0}}>✓</span>}</Btn>
                       );
                     })}
                   </div>
@@ -290,8 +290,8 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
         <div style={{marginTop:8,padding:"9px 12px",background:AM+"12",border:`0.5px solid ${AM}`,borderRadius:8}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
             <div>
-              <div style={{fontSize:14,color:AM,fontWeight:700,marginBottom:2}}>Freigabe-Anfrage von {anfrageData?.name}</div>
-              <div className="cc-text-sm">Begründung: <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em></div>
+              <div style={{fontSize:13,color:AM,fontWeight:700,marginBottom:2}}>Freigabe-Anfrage von {anfrageData?.name}</div>
+              <div style={{fontSize:13,color:"var(--sub)"}}>Begründung: <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em></div>
             </div>
             <Btn variant="primary" color={AM} small onClick={()=>onFreigeben(schicht.id,null)}>Freigeben ✓</Btn>
           </div>
@@ -340,16 +340,16 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
       <div style={{padding:"14px 18px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16}}>
         <div>
           <div style={{fontSize:16,fontWeight:700,color:"var(--text)",letterSpacing:-0.2}}>{schicht.eventName}</div>
-          <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <span>{schicht.einsatzName}</span>
             {schicht.einsatzDate&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+schicht.einsatzDate}</span></>}
             {schicht.einsatzOrt&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+schicht.einsatzOrt}</span></>}
           </div>
         </div>
-        <div className="cc-shrink-0">
+        <div style={{flexShrink:0}}>
           {anfragePending
-            ?<Chip text="⏳ Freigabe ausstehend" color={AM}/>
-            :<Chip text="Geplant ⏳" color={AM}/>
+            ?<Chip text="⏳ Freigabe ausstehend" color={AM} bg="#FFFBEB"/>
+            :<Chip text="Geplant ⏳" color={AM} bg="#FFFBEB"/>
           }
         </div>
       </div>
@@ -357,16 +357,16 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:8}}>
         <div>
-          <div style={{fontWeight:700,fontSize:14}}>{schicht.label}</div>
+          <div style={{fontWeight:700,fontSize:13}}>{schicht.label}</div>
         </div>
       </div>
 
       {/* Bestätigung nach Absenden */}
-      {sent&&<div style={{fontSize:14,color:GN,fontWeight:600,marginBottom:6}}>✓ Anfrage gesendet - wird von Funktionär/Admin geprüft.</div>}
+      {sent&&<div style={{fontSize:13,color:GN,fontWeight:600,marginBottom:6}}>✓ Anfrage gesendet - wird von Funktionär/Admin geprüft.</div>}
 
       {/* Ausstehende Anfrage: Begründung anzeigen */}
       {anfragePending&&(
-        <div style={{fontSize:14,color:AM,background:"var(--surface)",borderRadius:6,padding:"6px 9px",border:`0.5px solid ${AM}40`}}>
+        <div style={{fontSize:13,color:AM,background:"var(--surface)",borderRadius:6,padding:"6px 9px",border:`0.5px solid ${AM}40`}}>
           <span style={{fontWeight:700}}>Begründung:</span> <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em><br/>
           <span style={{color:"var(--sub)",marginTop:3,display:"block"}}>Wartet auf Freigabe durch Funktionär/Admin.</span>
         </div>
@@ -385,13 +385,13 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
           {/* Freigabe-Formular */}
           {showAnfrageForm&&(
             <div style={{padding:"9px 11px",background:"var(--surface)",border:`0.5px solid ${AM}`,borderRadius:8}}>
-              <div style={{fontSize:14,fontWeight:700,color:AM,marginBottom:6}}>Grund für die Freigabe-Anfrage</div>
+              <div style={{fontSize:13,fontWeight:700,color:AM,marginBottom:6}}>Grund für die Freigabe-Anfrage</div>
               <textarea
                 value={begruendung}
                 onChange={e=>setBegruendung(e.target.value)}
                 placeholder="z.B. Terminkonflikt, Krankheit, familiärer Grund …"
                 rows={3}
-                style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,resize:"vertical",boxSizing:"border-box",marginBottom:7,fontFamily:FONT}}
+                style={{width:"100%",padding:"6px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,resize:"vertical",boxSizing:"border-box",marginBottom:7,fontFamily:FONT}}
               />
               <Row align="flex-start">
                 <Btn small onClick={handleSenden} disabled={!begruendung.trim()}>Anfrage senden</Btn>
@@ -403,8 +403,8 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
           {/* Übertragung-Formular */}
           {showTransfer&&(
             <div style={{padding:"9px 11px",background:"var(--surface)",border:`0.5px solid ${BL}`,borderRadius:8}}>
-              <div style={{fontSize:14,fontWeight:600,color:BL,marginBottom:6}}>Schicht übertragen an:</div>
-              <select value={transferTarget} onChange={e=>setTransferTarget(e.target.value)} style={{width:"100%",padding:"5px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,marginBottom:7}}>
+              <div style={{fontSize:13,fontWeight:600,color:BL,marginBottom:6}}>Schicht übertragen an:</div>
+              <select value={transferTarget} onChange={e=>setTransferTarget(e.target.value)} style={{width:"100%",padding:"5px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,marginBottom:7}}>
                 <option value="">- Person auswählen -</option>
                 {ALLE_HELFER_NAMEN.filter(n=>n!==meinName).map(n=>(
                   <option key={n} value={n}>{n}</option>
@@ -625,7 +625,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
       {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
       {canFreigeben&&(
-      <div className="cc-grid-stats cc-mb-16">
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12,marginBottom:16}}>
         <Stat label="Mitglieder" value={HELPERS.length}/>
         <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
         <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
@@ -644,7 +644,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* Eltern: Anmelden als Switcher */}
       {elternPersonen&&(
         <div style={{display:"flex",gap:8,marginBottom:14,padding:"10px 12px",background:"var(--surface2)",borderRadius:10,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginRight:2}}>Anmelden als:</span>
+          <span style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginRight:2}}>Anmelden als:</span>
           {elternPersonen.map((p,i)=>{
             const active=aktivePerson===p;
             return(
@@ -659,12 +659,12 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
             {/* Suchfeld */}
             <div style={{position:"relative",flexShrink:0}}>
-              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
               <input
                 value={browseSearch}
                 onChange={e=>setBrowseSearch(e.target.value)}
                 placeholder="Einsatz oder Schicht suchen…"
-                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${browseSearch?ACCENT:GB}`,borderRadius:20,fontSize:14,outline:"none",width:"100%",maxWidth:210,background:"var(--surface)"}}
+                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${browseSearch?ACCENT:GB}`,borderRadius:20,fontSize:13,outline:"none",width:"100%",maxWidth:210,background:"var(--surface)"}}
               />
               {browseSearch&&(
                 <Btn variant="ghost" onClick={()=>setBrowseSearch("")}>×</Btn>
@@ -673,7 +673,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             <div style={{width:"1px",height:22,background:GB}}/>
             {/* Event-Filter als Dropdown */}
             <select value={selectedEvent||""} onChange={e=>setSelectedEvent(e.target.value?Number(e.target.value):null)}
-              style={{padding:"5px 12px",border:`0.5px solid ${selectedEvent?ACCENT:GB}`,borderRadius:20,fontSize:14,color:"var(--text)",background:selectedEvent?"var(--cc-hover)":"#fff",cursor:"pointer",outline:"none",fontWeight:selectedEvent?700:400}}>
+              style={{padding:"5px 12px",border:`0.5px solid ${selectedEvent?ACCENT:GB}`,borderRadius:20,fontSize:13,color:"var(--text)",background:selectedEvent?"var(--cc-hover)":"#fff",cursor:"pointer",outline:"none",fontWeight:selectedEvent?700:400}}>
               <option value="">Alle Events</option>
               {HELPER_EVENTS.map(ev=>(
                 <option key={ev.id} value={ev.id}>{ev.name}</option>
@@ -724,7 +724,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                         {ev.name}
                         <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
                       </div>
-                      <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                         <span>{""+ev.date}</span>
                         <span style={{opacity:0.4}}>{"|"}</span>
                         <span>{""+ev.loc}</span>
@@ -741,7 +741,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                         ].map((s,i)=>(
                           <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
                             <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
-                            <div style={{fontSize:14,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
+                            <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
                           </div>
                         ));
                       })()}
@@ -751,7 +751,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   {/* Einsätze */}
                   {!isCollapsed&&<div style={{background:"var(--surface)"}}>
                     {einsaetzeVisible.length===0?(
-                      <div style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14,background:"var(--surface2)"}}>Keine offenen Schichten in diesem Event.</div>
+                      <div style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13,background:"var(--surface2)"}}>Keine offenen Schichten in diesem Event.</div>
                     ):einsaetzeVisible.map((einsatz,ei)=>{
                       const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                       const eOffen=einsatz.schichten.length-eBelegt;
@@ -764,17 +764,17 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                             <Row gap={12}>
                               <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                               <div>
-                                <div style={{fontWeight:700,fontSize:14,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
-                                  <span style={{fontSize:14,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
+                                <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
+                                  <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
                                   {einsatz.name}
                                 </div>
-                                <div style={{fontSize:14,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
+                                <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
                                   <span>{""+einsatz.time+" Uhr"}</span>
                                   <span style={{color:"var(--border)"}}>{"|"}</span>
                                   <span>{""+einsatz.location}</span>
                                 </div>
                                 {bemerkungState[`e${einsatz.id}`]&&(
-                                  <div style={{fontSize:14,color:AM,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
+                                  <div style={{fontSize:13,color:AM,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
                                     <span><TI n="edit"/></span><span style={{fontStyle:"italic"}}>{bemerkungState[`e${einsatz.id}`]}</span>
                                   </div>
                                 )}
@@ -788,7 +788,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                     const cur=gruppenState[einsatz.id]||einsatz.gruppen;
                                     const checked=cur.includes(g);
                                     return(
-                                      <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:14,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                                      <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:13,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
                                         <input type="checkbox" checked={checked} onChange={()=>setGruppenState(prev=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter(x=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
                                         {g}
                                       </label>
@@ -798,16 +798,16 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 </div>
                               ):(
                                 <>
-                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280"/>)}
+                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280" bg="#F3F4F6"/>)}
                                   {canEdit&&<Btn onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}}><TI n="edit"/></Btn>}
                                 </>
                               )}
                               {/* Bemerkung Edit */}
                               {canEdit&&(editingBemerkung===`e${einsatz.id}`?(
-                                <div onClick={e=>e.stopPropagation()} className="cc-row">
+                                <div onClick={e=>e.stopPropagation()} style={{display:"flex",gap:8,alignItems:"center"}}>
                                   <input autoFocus value={bemerkungDraft} onChange={e=>setBemerkungDraft(e.target.value)}
                                     placeholder="Bemerkung…"
-                                    style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none",width:160}}/>
+                                    style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:160}}/>
                                   <Btn small onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)}>✓</Btn>
                                   <Btn small onClick={()=>setEditingBemerkung(null)}>✕</Btn>
                                 </div>
@@ -819,7 +819,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                 const offenPlätze=totalPlätze-belegtPlätze;
                                 return(
-                                  <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
+                                  <span style={{fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
                                     {offenPlätze===0?"✓ Alle besetzt":`${offenPlätze} / ${totalPlätze} offen`}
                                   </span>
                                 );
@@ -862,17 +862,17 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="mein"&&(
         <div>
           {/* Status-Kacheln */}
-          <div className="cc-grid-stats cc-mb-20">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
             {[{l:"Soll",v:mich.soll,c:BK,bg:"#fff"},{l:"Geleistet",v:mich.geleistet,c:GN,bg:"#F0FDF4"},{l:"Geplant",v:mich.geplant,c:AM,bg:"#FFFBEB"},{l:"Offen",v:mich.offen,c:mich.offen>0?R:"#aaa",bg:mich.offen>0?"#FEF2F2":"#fff"}].map((s,i)=>(
               <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                 <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
-                <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
+                <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
               </div>
             ))}
           </div>
           {/* Status-Banner */}
           <div style={{padding:"10px 16px",borderRadius:10,marginBottom:18,background:mich.status==="Erfüllt"?"#F0FDF4":mich.status==="Geplant erfüllt"?"#FFFBEB":mich.status==="Befreit"?"#F3F4F6":"#FEF2F2",border:`0.5px solid ${mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#ccc":R}`}}>
-            <div style={{fontWeight:700,fontSize:14,color:mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#888":R}}>
+            <div style={{fontWeight:700,fontSize:13,color:mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#888":R}}>
               {mich.status==="Erfüllt"&&"✓ Soll erfüllt - Danke für deinen Einsatz!"}
               {mich.status==="Geplant erfüllt"&&"⏳ Geplant erfüllt - Schichten noch ausstehend"}
               {mich.status==="Offen"&&`${mich.offen} Einsatz${mich.offen>1?"ätze":""} noch offen`}
@@ -895,8 +895,8 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                 {geplant.length>0&&(
                   <div style={{marginBottom:18}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                      <span style={{background:"var(--surface)",color:AM,fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #FDE68A`}}>⏳ Geplant</span>
-                      <span className="cc-text-sm">{geplant.length+" Schicht"+(geplant.length!==1?"en":"")}</span>
+                      <span style={{background:"var(--surface)",color:AM,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #FDE68A`}}>⏳ Geplant</span>
+                      <span style={{color:"var(--sub)",fontSize:13}}>{geplant.length+" Schicht"+(geplant.length!==1?"en":"")}</span>
                     </div>
                     <Col>
                       {geplant.map((s,i)=>{
@@ -908,10 +908,10 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   </div>
                 )}
                 {geleistet.length>0&&(
-                  <div className="cc-mb-16">
+                  <div style={{marginBottom:16}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                      <span style={{background:"var(--surface)",color:GN,fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #BBF7D0`}}>✓ Geleistet</span>
-                      <span className="cc-text-sm">{geleistet.length+" Schicht"+(geleistet.length!==1?"en":"")}</span>
+                      <span style={{background:"var(--surface)",color:GN,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #BBF7D0`}}>✓ Geleistet</span>
+                      <span style={{color:"var(--sub)",fontSize:13}}>{geleistet.length+" Schicht"+(geleistet.length!==1?"en":"")}</span>
                     </div>
                     <Col>
                       {geleistet.map((s,i)=>(
@@ -919,17 +919,17 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           <div style={{padding:"14px 18px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                             <div>
                               <div style={{fontSize:16,fontWeight:700,color:"var(--text)",letterSpacing:-0.2}}>{s.eventName}</div>
-                              <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                                 <span>{s.einsatzName}</span>
                                 {s.einsatzDate&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzDate}</span></>}
                                 {s.einsatzOrt&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzOrt}</span></>}
                               </div>
                             </div>
-                            <span style={{fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN,flexShrink:0}}>✓ Geleistet</span>
+                            <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN,flexShrink:0}}>✓ Geleistet</span>
                           </div>
                           <div style={{padding:"8px 14px"}}>
-                            <div style={{fontWeight:600,fontSize:14}}>{s.label}</div>
-                            <div style={{fontSize:14,color:"var(--sub)",marginTop:2}}>{""+s.einsatzDate+(s.einsatzOrt?" · "+s.einsatzOrt:"")}</div>
+                            <div style={{fontWeight:600,fontSize:13}}>{s.label}</div>
+                            <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{""+s.einsatzDate+(s.einsatzOrt?" · "+s.einsatzOrt:"")}</div>
                           </div>
                         </div>
                       ))}
@@ -947,7 +947,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* -- TAB: MEINEM TEAM ZUGEWIESEN -- */}
       {helperTab==="team"&&meinGruppe&&(
         <div>
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:16,fontSize:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:16,fontSize:13}}>
             <span style={{fontSize:14}}><TI n="users"/></span>
             <span>Einsätze für deine Teams: {meineGruppen.map((g,i)=><strong key={i}>{i>0?" · ":""}{g}</strong>)}</span>
           </div>
@@ -984,7 +984,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           {ev.name}
                           <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isTeamCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
                         </div>
-                        <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                           <span>{""+ev.date}</span>
                           <span style={{opacity:0.4}}>{"|"}</span>
                           <span>{""+ev.loc}</span>
@@ -1001,7 +1001,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           ].map((s,i)=>(
                             <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
                               <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
-                              <div style={{fontSize:14,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
+                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
                             </div>
                           ));
                         })()}
@@ -1021,11 +1021,11 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                               <Row gap={12}>
                                 <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                                 <div>
-                                  <div style={{fontWeight:700,fontSize:14,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
-                                    <span style={{fontSize:14,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
+                                  <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
+                                    <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
                                     {einsatz.name}
                                   </div>
-                                  <div style={{fontSize:14,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
+                                  <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
                                     <span>{""+einsatz.time+" Uhr"}</span>
                                     <span style={{color:"var(--border)"}}>{"|"}</span>
                                     <span>{""+einsatz.location}</span>
@@ -1041,7 +1041,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                   const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                   const offenPlätze=totalPlätze-belegtPlätze;
                                   return(
-                                    <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
+                                    <span style={{fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
                                       {offenPlätze===0?"✓ Alle besetzt":`${offenPlätze} / ${totalPlätze} offen`}
                                     </span>
                                   );
@@ -1070,7 +1070,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
         <div>
           {/* Team-Filter Hinweis für Trainer */}
           {isTrainer&&(
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:13}}>
               <span style={{fontSize:14}}><TI n="eye"/></span>
               <span>Du siehst nur Mitglieder deines Teams: <strong>Cc-Junioren</strong></span>
             </div>
@@ -1083,11 +1083,11 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             const offen=relevant.filter(m=>m.status==="Offen").length;
             const befreit=relevant.filter(m=>m.status==="Befreit").length;
             return(
-              <div className="cc-grid-stats cc-mb-20">
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
                 {[{l:"Erfüllt",v:erfuellt,c:GN,bg:"#F0FDF4"},{l:"Offen",v:offen,c:AM,bg:"#FFFBEB"},{l:"Befreit",v:befreit,c:BK,bg:"#fff"}].map((s,i)=>(
                   <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                     <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
-                    <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
+                    <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
                   </div>
                 ))}
               </div>
@@ -1097,9 +1097,9 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           {/* Suche + Filter */}
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center",width:"100%",rowGap:6}}>
             <div style={{position:"relative",flexShrink:0}}>
-              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglied suchen…"
-                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${search?ACCENT:GB}`,borderRadius:20,fontSize:14,outline:"none",width:"100%",maxWidth:190,background:"var(--surface)"}}/>
+                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${search?ACCENT:GB}`,borderRadius:20,fontSize:13,outline:"none",width:"100%",maxWidth:190,background:"var(--surface)"}}/>
               {search&&<Btn variant="ghost" onClick={()=>setSearch("")}>×</Btn>}
             </div>
             <div style={{width:"1px",height:22,background:GB}}/>
@@ -1117,11 +1117,11 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           </div>
 
           <Card style={{padding:0,overflowX:"auto"}}>
-            <div className="cc-table-wrap"><table className="cc-table">
+            <table className="cc-table">
               <thead>
                 <tr style={{background:"var(--surface2)"}}>
                   {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h,i)=>(
-                    <th className="cc-th" key={i}>{h}</th>
+                    <th key={i} style={{padding:"9px 12px",textAlign:i>1?"center":"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1135,27 +1135,27 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                     <tr key={m.id} onClick={()=>setExpandedMember(expandedMember===m.id?null:m.id)}
                       style={{borderTop:"0.5px solid var(--border)",background:expandedMember===m.id?"var(--cc-hover)":"#fff",cursor:"pointer"}}
                       className="hov-row">
-                      <td className="cc-td" style={{padding:"9px 12px"}}>
+                      <td style={{padding:"9px 12px"}}>
                         <Row>
                           <Av name={m.name} size={22} bg={SC[m.status]?.c||"#6B7280"}/>
                           <span style={{fontWeight:600}}>{m.name}</span>
                         </Row>
                       </td>
-                      <td className="cc-td" style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280"/></td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",fontWeight:700}}>{m.soll}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:GN,fontWeight:600}}>{m.geleistet}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:AM,fontWeight:600}}>{m.geplant}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:m.offen>0?R:"#aaa",fontWeight:m.offen>0?700:400}}>{m.offen}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center"}}><Chip text={m.status} color={SC[m.status]?.c||"#888"} bg={SC[m.status]?.bg}/></td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:"var(--sub)",fontSize:14}}>{expandedMember===m.id?"▲":"▼"}</td>
+                      <td style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280" bg="#F3F4F6"/></td>
+                      <td style={{padding:"9px 12px",textAlign:"center",fontWeight:700}}>{m.soll}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:GN,fontWeight:600}}>{m.geleistet}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:AM,fontWeight:600}}>{m.geplant}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:m.offen>0?R:"#aaa",fontWeight:m.offen>0?700:400}}>{m.offen}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center"}}><Chip text={m.status} color={SC[m.status]?.c||"#888"} bg={SC[m.status]?.bg}/></td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:"var(--sub)",fontSize:13}}>{expandedMember===m.id?"▲":"▼"}</td>
                     </tr>
                     {expandedMember===m.id&&(
                       <tr key={`d${m.id}`} style={{borderTop:"0.5px solid var(--border)"}}>
                         <td colSpan={8} style={{padding:"10px 20px 14px",background:"var(--surface2)"}}>
                           {m.schichten.length===0?(
-                            <span className="cc-text-sm">Keine Schichten übernommen.</span>
+                            <span style={{fontSize:13,color:"var(--sub)"}}>Keine Schichten übernommen.</span>
                           ):(
-                            <div className="cc-grid-cards cc-mb-20" style={{gap:8,marginBottom:10}}>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8,marginBottom:10}}>
                               {m.schichten.map((sid,si)=>{
                                 const anfrage=freigabeAnfragen[sid];
                                 for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
@@ -1167,24 +1167,24 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                     const iso=parts.length===3?`${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`:"";
                                     const past=iso<"2026-05-23"&&iso!=="";
                                     const statusBadge=anfrage
-                                      ?<span style={{fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:AM,border:`0.5px solid #FDE68A`}}>⏳ Freigabe ausstehend</span>
+                                      ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:AM,border:`0.5px solid #FDE68A`}}>⏳ Freigabe ausstehend</span>
                                       :past
-                                        ?<span style={{fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN}}>✓ Geleistet</span>
-                                        :<span style={{fontSize:14,padding:"2px 4px",color:AM}}>⏳</span>;
+                                        ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN}}>✓ Geleistet</span>
+                                        :<span style={{fontSize:13,padding:"2px 4px",color:AM}}>⏳</span>;
                                     return(
                                       <div key={sid} style={{borderRadius:10,overflow:"hidden",border:`0.5px solid ${anfrage?AM:GB}`,background:anfrage?"#FFFBEB":"#fff",borderTop:`3px solid ${ev.color||"#64748B"}`}}>
                                         {/* Header */}
                                         <div style={{padding:"8px 12px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                                           <div>
-                                            <div style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{ev.name}</div>
-                                            <div style={{fontSize:14,color:"var(--sub)",marginTop:1}}>{e.name}</div>
+                                            <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{ev.name}</div>
+                                            <div style={{fontSize:13,color:"var(--sub)",marginTop:1}}>{e.name}</div>
                                           </div>
                                           {statusBadge}
                                         </div>
                                         {/* Body */}
                                         <div style={{padding:"7px 12px"}}>
-                                          <div style={{fontWeight:600,fontSize:14,color:"var(--text)"}}>{s.label}</div>
-                                          <div style={{fontSize:14,color:"var(--sub)",marginTop:2,display:"flex",gap:8}}>
+                                          <div style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{s.label}</div>
+                                          <div style={{fontSize:13,color:"var(--sub)",marginTop:2,display:"flex",gap:8}}>
                                             <span>{""+e.date}</span>
                                             {e.location&&<><span style={{opacity:0.3}}>|</span><span>{""+e.location}</span></>}
                                           </div>
@@ -1211,7 +1211,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   </>
                 ))}
               </tbody>
-            </table></div>
+            </table>
           </Card>
         </div>
       )}
@@ -1220,7 +1220,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="erstellen"&&canErstellen&&(
         <Card>
           <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Neuen Einsatz erfassen</div>
-          <div className="cc-grid-cards cc-mb-20" style={{gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
             {[
               {l:"Event",            type:"select",opts:["Grümpelturnier 2026","Generalversammlung 2026","+ Neuer Event…"]},
               {l:"Einsatzname",      type:"text",  ph:"z.B. Grill"},
@@ -1230,13 +1230,13 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               {l:"Freigabe Gruppen", type:"gruppen"},
             ].map((f,i)=>(
               <div key={i}>
-                <label style={{fontSize:14,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
+                <label style={{fontSize:13,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
                 {f.type==="gruppen"?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>
                     {HELPER_GRUPPEN.map(g=>{
                       const checked=newEinsatzGruppen.includes(g);
                       return(
-                        <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                        <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
                           <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen(prev=>checked?prev.filter(x=>x!==g):[...prev,g])} style={{display:"none"}}/>
                           {g}
                         </label>
@@ -1244,22 +1244,22 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                     })}
                   </div>
                 ):f.type==="select"?(
-                  <select style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14}}>
+                  <select style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13}}>
                     {f.opts?.map(o=><option key={o}>{o}</option>)}
                   </select>
                 ):(
-                  <Input type={f.type||"text"} placeholder={f.ph} style={{fontSize:14,boxSizing:"border-box"}}/>
+                  <Input type={f.type||"text"} placeholder={f.ph} style={{fontSize:13,boxSizing:"border-box"}}/>
                 )}
               </div>
             ))}
           </div>
-          <div className="cc-mt-16">
-            <div style={{fontWeight:600,fontSize:14,marginBottom:8}}>Schichten</div>
+          <div style={{marginTop:16}}>
+            <div style={{fontWeight:600,fontSize:13,marginBottom:8}}>Schichten</div>
             {[1,2,3].map(n=>(
               <div key={n} style={{display:"flex",gap:8,marginBottom:7,alignItems:"center"}}>
-                <input placeholder={`Schicht ${n}: z.B. Grill 10:00-14:00`} style={{flex:1,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14}}/>
-                <input type="number" placeholder="Max" style={{width:55,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14}}/>
-                <span className="cc-text-sm">Plätze</span>
+                <input placeholder={`Schicht ${n}: z.B. Grill 10:00-14:00`} style={{flex:1,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                <input type="number" placeholder="Max" style={{width:55,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                <span style={{fontSize:13,color:"var(--sub)"}}>Plätze</span>
               </div>
             ))}
             <Btn variant="ghost">+ Schicht hinzufügen</Btn>
@@ -1476,7 +1476,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
       {/* KPI-Leiste - nur für Admin/Administration/Funktionär */}
       {canFreigeben&&(
-      <div className="cc-grid-stats cc-mb-16">
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12,marginBottom:16}}>
         <Stat label="Mitglieder" value={HELPERS.length}/>
         <Stat label="Soll erfüllt" value={mitgliederCalc.filter(m=>["Erfüllt","Geplant erfüllt"].includes(m.status)).length} color={GN}/>
         <Stat label="Noch offen" value={mitgliederCalc.filter(m=>m.status==="Offen").length} color={R}/>
@@ -1487,7 +1487,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* Sub-Tabs */}
       <div style={{display:"flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,width:"fit-content"}}>
         {TABS.map(t=>(
-          <button key={t.key} onClick={()=>setHelperTab(t.key)} style={{padding:"8px 14px",border:"none",borderRadius:8,background:helperTab===t.key?"#fff":"transparent",color:helperTab===t.key?BK:"#999",fontWeight:helperTab===t.key?700:400,cursor:"pointer",fontSize:14,boxShadow:helperTab===t.key?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>{t.label}</button>
+          <button key={t.key} onClick={()=>setHelperTab(t.key)} style={{padding:"8px 14px",border:"none",borderRadius:8,background:helperTab===t.key?"#fff":"transparent",color:helperTab===t.key?BK:"#999",fontWeight:helperTab===t.key?700:400,cursor:"pointer",fontSize:13,boxShadow:helperTab===t.key?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap"}}>{t.label}</button>
         ))}
       </div>
 
@@ -1495,12 +1495,12 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* Eltern: Anmelden als Switcher */}
       {elternPersonen&&(
         <div style={{display:"flex",gap:8,marginBottom:14,padding:"10px 12px",background:"var(--surface2)",borderRadius:10,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginRight:2}}>Anmelden als:</span>
+          <span style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginRight:2}}>Anmelden als:</span>
           {elternPersonen.map((p,i)=>{
             const active=aktivePerson===p;
             return(
               <button key={i} onClick={()=>setAktivePerson(p)}
-                style={{padding:"6px 14px",borderRadius:20,border:`0.5px solid ${active?ACCENT:GB}`,background:active?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:14,fontWeight:active?700:400,cursor:"pointer"}}>
+                style={{padding:"6px 14px",borderRadius:20,border:`0.5px solid ${active?ACCENT:GB}`,background:active?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,fontWeight:active?700:400,cursor:"pointer"}}>
                 {i===0?`${p} (Elternteil)`:p}
               </button>
             );
@@ -1513,21 +1513,21 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
             {/* Suchfeld */}
             <div style={{position:"relative",flexShrink:0}}>
-              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
               <input
                 value={browseSearch}
                 onChange={e=>setBrowseSearch(e.target.value)}
                 placeholder="Einsatz oder Schicht suchen…"
-                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${browseSearch?ACCENT:GB}`,borderRadius:20,fontSize:14,outline:"none",width:"100%",maxWidth:210,background:"var(--surface)"}}
+                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${browseSearch?ACCENT:GB}`,borderRadius:20,fontSize:13,outline:"none",width:"100%",maxWidth:210,background:"var(--surface)"}}
               />
               {browseSearch&&(
-                <button onClick={()=>setBrowseSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:14,color:"var(--sub)",lineHeight:1}}>×</button>
+                <button onClick={()=>setBrowseSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:13,color:"var(--sub)",lineHeight:1}}>×</button>
               )}
             </div>
             <div style={{width:"1px",height:22,background:GB}}/>
             {/* Event-Filter als Dropdown */}
             <select value={selectedEvent||""} onChange={e=>setSelectedEvent(e.target.value?Number(e.target.value):null)}
-              style={{padding:"5px 12px",border:`0.5px solid ${selectedEvent?ACCENT:GB}`,borderRadius:20,fontSize:14,color:"var(--text)",background:selectedEvent?"var(--cc-hover)":"#fff",cursor:"pointer",outline:"none",fontWeight:selectedEvent?700:400}}>
+              style={{padding:"5px 12px",border:`0.5px solid ${selectedEvent?ACCENT:GB}`,borderRadius:20,fontSize:13,color:"var(--text)",background:selectedEvent?"var(--cc-hover)":"#fff",cursor:"pointer",outline:"none",fontWeight:selectedEvent?700:400}}>
               <option value="">Alle Events</option>
               {HELPER_EVENTS.map(ev=>(
                 <option key={ev.id} value={ev.id}>{ev.name}</option>
@@ -1535,8 +1535,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             </select>
             <div style={{width:"1px",height:22,background:GB,margin:"0 2px"}}/>
             {/* Schichten-Filter */}
-            <button onClick={()=>setFilterOffen(false)} style={{padding:"8px 16px",borderRadius:20,border:`0.5px solid ${!filterOffen?ACCENT:GB}`,background:!filterOffen?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:14,cursor:"pointer",fontWeight:!filterOffen?700:400}}>Alle Schichten</button>
-            <button onClick={()=>setFilterOffen(true)} style={{padding:"8px 16px",borderRadius:20,border:`0.5px solid ${filterOffen?ACCENT:GB}`,background:filterOffen?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:14,cursor:"pointer",fontWeight:filterOffen?700:400}}>Nur offen</button>
+            <button onClick={()=>setFilterOffen(false)} style={{padding:"8px 16px",borderRadius:20,border:`0.5px solid ${!filterOffen?ACCENT:GB}`,background:!filterOffen?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,cursor:"pointer",fontWeight:!filterOffen?700:400}}>Alle Schichten</button>
+            <button onClick={()=>setFilterOffen(true)} style={{padding:"8px 16px",borderRadius:20,border:`0.5px solid ${filterOffen?ACCENT:GB}`,background:filterOffen?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,cursor:"pointer",fontWeight:filterOffen?700:400}}>Nur offen</button>
           </div>
 
           {/* Alle Events nacheinander */}
@@ -1578,7 +1578,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                         {ev.name}
                         <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
                       </div>
-                      <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                         <span>{""+ev.date}</span>
                         <span style={{opacity:0.4}}>{"|"}</span>
                         <span>{""+ev.loc}</span>
@@ -1595,7 +1595,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                         ].map((s,i)=>(
                           <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
                             <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
-                            <div style={{fontSize:14,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
+                            <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
                           </div>
                         ));
                       })()}
@@ -1605,7 +1605,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   {/* Einsätze */}
                   {!isCollapsed&&<div style={{background:"var(--surface)"}}>
                     {einsaetzeVisible.length===0?(
-                      <div style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14,background:"var(--surface2)"}}>Keine offenen Schichten in diesem Event.</div>
+                      <div style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13,background:"var(--surface2)"}}>Keine offenen Schichten in diesem Event.</div>
                     ):einsaetzeVisible.map((einsatz,ei)=>{
                       const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                       const eOffen=einsatz.schichten.length-eBelegt;
@@ -1615,20 +1615,20 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                         <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
                           {/* Einsatz-Zeile */}
                           <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
-                            <div className="cc-row cc-gap-12">
+                            <div style={{display:"flex",alignItems:"center",gap:12}}>
                               <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                               <div>
-                                <div style={{fontWeight:700,fontSize:14,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
-                                  <span style={{fontSize:14,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
+                                <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
+                                  <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
                                   {einsatz.name}
                                 </div>
-                                <div style={{fontSize:14,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
+                                <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
                                   <span>{""+einsatz.time+" Uhr"}</span>
                                   <span style={{color:"var(--border)"}}>{"|"}</span>
                                   <span>{""+einsatz.location}</span>
                                 </div>
                                 {bemerkungState[`e${einsatz.id}`]&&(
-                                  <div style={{fontSize:14,color:AM,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
+                                  <div style={{fontSize:13,color:AM,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
                                     <span><TI n="edit"/></span><span style={{fontStyle:"italic"}}>{bemerkungState[`e${einsatz.id}`]}</span>
                                   </div>
                                 )}
@@ -1642,39 +1642,39 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                     const cur=gruppenState[einsatz.id]||einsatz.gruppen;
                                     const checked=cur.includes(g);
                                     return(
-                                      <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:14,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                                      <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:13,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
                                         <input type="checkbox" checked={checked} onChange={()=>setGruppenState(prev=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter(x=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
                                         {g}
                                       </label>
                                     );
                                   })}
-                                  <button onClick={e=>{e.stopPropagation();setEditingGruppen(null);}} style={{padding:"5px 12px",borderRadius:20,fontSize:14,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓ Fertig</button>
+                                  <button onClick={e=>{e.stopPropagation();setEditingGruppen(null);}} style={{padding:"5px 12px",borderRadius:20,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓ Fertig</button>
                                 </div>
                               ):(
                                 <>
-                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280"/>)}
-                                  {canEdit&&<button onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}} style={{padding:"5px 12px",borderRadius:20,fontSize:14,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>}
+                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280" bg="#F3F4F6"/>)}
+                                  {canEdit&&<button onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}} style={{padding:"5px 12px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>}
                                 </>
                               )}
                               {/* Bemerkung Edit */}
                               {canEdit&&(editingBemerkung===`e${einsatz.id}`?(
-                                <div onClick={e=>e.stopPropagation()} className="cc-row">
+                                <div onClick={e=>e.stopPropagation()} style={{display:"flex",gap:8,alignItems:"center"}}>
                                   <input autoFocus value={bemerkungDraft} onChange={e=>setBemerkungDraft(e.target.value)}
                                     placeholder="Bemerkung…"
-                                    style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none",width:160}}/>
-                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"4px 10px",borderRadius:6,fontSize:14,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓</button>
-                                  <button onClick={()=>setEditingBemerkung(null)} style={{padding:"4px 10px",borderRadius:6,fontSize:14,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}>✕</button>
+                                    style={{padding:"3px 8px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,outline:"none",width:160}}/>
+                                  <button onClick={()=>saveBemerkung(`e${einsatz.id}`,bemerkungDraft)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,border:`0.5px solid ${GN}`,background:"var(--surface)",color:GN,cursor:"pointer"}}>✓</button>
+                                  <button onClick={()=>setEditingBemerkung(null)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}>✕</button>
                                 </div>
                               ):(
                                 <button onClick={e=>{e.stopPropagation();setEditingBemerkung(`e${einsatz.id}`);setBemerkungDraft(bemerkungState[`e${einsatz.id}`]||"");}}
-                                  style={{padding:"5px 12px",borderRadius:20,fontSize:14,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>
+                                  style={{padding:"5px 12px",borderRadius:20,fontSize:13,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>
                               ))}
                               {(()=>{
                                 const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
                                 const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                 const offenPlätze=totalPlätze-belegtPlätze;
                                 return(
-                                  <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
+                                  <span style={{fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
                                     {offenPlätze===0?"✓ Alle besetzt":`${offenPlätze} / ${totalPlätze} offen`}
                                   </span>
                                 );
@@ -1706,7 +1706,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             })&&(
               <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)"}}>
                 Keine Einsätze oder Schichten gefunden für <strong style={{color:"var(--text)"}}>„{browseSearch}"</strong>
-                <br/><button onClick={()=>setBrowseSearch("")} style={{marginTop:10,padding:"5px 12px",borderRadius:20,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:14,cursor:"pointer"}}>Suche zurücksetzen</button>
+                <br/><button onClick={()=>setBrowseSearch("")} style={{marginTop:10,padding:"5px 12px",borderRadius:20,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>Suche zurücksetzen</button>
               </div>
             )}
           </div>
@@ -1717,17 +1717,17 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="mein"&&(
         <div>
           {/* Status-Kacheln */}
-          <div className="cc-grid-stats cc-mb-20">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
             {[{l:"Soll",v:mich.soll,c:BK,bg:"#fff"},{l:"Geleistet",v:mich.geleistet,c:GN,bg:"#F0FDF4"},{l:"Geplant",v:mich.geplant,c:AM,bg:"#FFFBEB"},{l:"Offen",v:mich.offen,c:mich.offen>0?R:"#aaa",bg:mich.offen>0?"#FEF2F2":"#fff"}].map((s,i)=>(
               <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                 <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
-                <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
+                <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
               </div>
             ))}
           </div>
           {/* Status-Banner */}
           <div style={{padding:"10px 16px",borderRadius:10,marginBottom:18,background:mich.status==="Erfüllt"?"#F0FDF4":mich.status==="Geplant erfüllt"?"#FFFBEB":mich.status==="Befreit"?"#F3F4F6":"#FEF2F2",border:`0.5px solid ${mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#ccc":R}`}}>
-            <div style={{fontWeight:700,fontSize:14,color:mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#888":R}}>
+            <div style={{fontWeight:700,fontSize:13,color:mich.status==="Erfüllt"?GN:mich.status==="Geplant erfüllt"?AM:mich.status==="Befreit"?"#888":R}}>
               {mich.status==="Erfüllt"&&"✓ Soll erfüllt - Danke für deinen Einsatz!"}
               {mich.status==="Geplant erfüllt"&&"⏳ Geplant erfüllt - Schichten noch ausstehend"}
               {mich.status==="Offen"&&`${mich.offen} Einsatz${mich.offen>1?"ätze":""} noch offen`}
@@ -1750,8 +1750,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                 {geplant.length>0&&(
                   <div style={{marginBottom:18}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                      <span style={{background:"var(--surface)",color:AM,fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #FDE68A`}}>⏳ Geplant</span>
-                      <span className="cc-text-sm">{geplant.length+" Schicht"+(geplant.length!==1?"en":"")}</span>
+                      <span style={{background:"var(--surface)",color:AM,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #FDE68A`}}>⏳ Geplant</span>
+                      <span style={{color:"var(--sub)",fontSize:13}}>{geplant.length+" Schicht"+(geplant.length!==1?"en":"")}</span>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       {geplant.map((s,i)=>{
@@ -1763,10 +1763,10 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   </div>
                 )}
                 {geleistet.length>0&&(
-                  <div className="cc-mb-16">
+                  <div style={{marginBottom:16}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                      <span style={{background:"var(--surface)",color:GN,fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #BBF7D0`}}>✓ Geleistet</span>
-                      <span className="cc-text-sm">{geleistet.length+" Schicht"+(geleistet.length!==1?"en":"")}</span>
+                      <span style={{background:"var(--surface)",color:GN,fontSize:13,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`0.5px solid #BBF7D0`}}>✓ Geleistet</span>
+                      <span style={{color:"var(--sub)",fontSize:13}}>{geleistet.length+" Schicht"+(geleistet.length!==1?"en":"")}</span>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       {geleistet.map((s,i)=>(
@@ -1774,17 +1774,17 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           <div style={{padding:"14px 18px",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                             <div>
                               <div style={{fontSize:16,fontWeight:700,color:"var(--text)",letterSpacing:-0.2}}>{s.eventName}</div>
-                              <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                                 <span>{s.einsatzName}</span>
                                 {s.einsatzDate&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzDate}</span></>}
                                 {s.einsatzOrt&&<><span style={{opacity:0.4}}>{"|"}</span><span>{""+s.einsatzOrt}</span></>}
                               </div>
                             </div>
-                            <span style={{fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN,flexShrink:0}}>✓ Geleistet</span>
+                            <span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN,flexShrink:0}}>✓ Geleistet</span>
                           </div>
                           <div style={{padding:"8px 14px"}}>
-                            <div style={{fontWeight:600,fontSize:14}}>{s.label}</div>
-                            <div style={{fontSize:14,color:"var(--sub)",marginTop:2}}>{""+s.einsatzDate+(s.einsatzOrt?" · "+s.einsatzOrt:"")}</div>
+                            <div style={{fontWeight:600,fontSize:13}}>{s.label}</div>
+                            <div style={{fontSize:13,color:"var(--sub)",marginTop:2}}>{""+s.einsatzDate+(s.einsatzOrt?" · "+s.einsatzOrt:"")}</div>
                           </div>
                         </div>
                       ))}
@@ -1802,7 +1802,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {/* -- TAB: MEINEM TEAM ZUGEWIESEN -- */}
       {helperTab==="team"&&meinGruppe&&(
         <div>
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:16,fontSize:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:16,fontSize:13}}>
             <span style={{fontSize:14}}><TI n="users"/></span>
             <span>Einsätze für deine Teams: {meineGruppen.map((g,i)=><strong key={i}>{i>0?" · ":""}{g}</strong>)}</span>
           </div>
@@ -1839,7 +1839,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           {ev.name}
                           <span style={{fontSize:14,opacity:0.4,transition:"transform 0.2s",display:"inline-block",transform:isTeamCollapsed?"rotate(-90deg)":"rotate(0deg)"}}>{"▾"}</span>
                         </div>
-                        <div style={{fontSize:14,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <div style={{fontSize:13,color:"var(--sub)",marginTop:3,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                           <span>{""+ev.date}</span>
                           <span style={{opacity:0.4}}>{"|"}</span>
                           <span>{""+ev.loc}</span>
@@ -1856,7 +1856,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           ].map((s,i)=>(
                             <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:"8px 16px",textAlign:"center",minWidth:64}}>
                               <div style={{fontSize:21,fontWeight:800,lineHeight:1,color:s.tc}}>{s.v}</div>
-                              <div style={{fontSize:14,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
+                              <div style={{fontSize:13,color:"var(--sub)",marginTop:3,textTransform:"uppercase",letterSpacing:0.6,fontWeight:600}}>{s.l}</div>
                             </div>
                           ));
                         })()}
@@ -1873,14 +1873,14 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                         return(
                           <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
                             <div onClick={()=>toggleEinsatz(einsatz.id)} style={{padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--surface)",borderBottom:"0.5px solid var(--border)",cursor:"pointer",userSelect:"none"}}>
-                              <div className="cc-row cc-gap-12">
+                              <div style={{display:"flex",alignItems:"center",gap:12}}>
                                 <div style={{width:3,height:32,borderRadius:2,background:eBarColor,flexShrink:0}}/>
                                 <div>
-                                  <div style={{fontWeight:700,fontSize:14,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
-                                    <span style={{fontSize:14,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
+                                  <div style={{fontWeight:700,fontSize:13,color:"var(--text)",display:"flex",alignItems:"center",gap:8}}>
+                                    <span style={{fontSize:13,color:"var(--sub)",display:"inline-block",transform:collapsedEinsaetze[einsatz.id]?"rotate(0deg)":"rotate(90deg)",transition:"transform 0.15s"}}>▶</span>
                                     {einsatz.name}
                                   </div>
-                                  <div style={{fontSize:14,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
+                                  <div style={{fontSize:13,color:"var(--sub)",marginTop:1,display:"flex",alignItems:"center",gap:8}}>
                                     <span>{""+einsatz.time+" Uhr"}</span>
                                     <span style={{color:"var(--border)"}}>{"|"}</span>
                                     <span>{""+einsatz.location}</span>
@@ -1896,7 +1896,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                   const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                   const offenPlätze=totalPlätze-belegtPlätze;
                                   return(
-                                    <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
+                                    <span style={{fontSize:13,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
                                       {offenPlätze===0?"✓ Alle besetzt":`${offenPlätze} / ${totalPlätze} offen`}
                                     </span>
                                   );
@@ -1925,7 +1925,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
         <div>
           {/* Team-Filter Hinweis für Trainer */}
           {isTrainer&&(
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",background:"var(--surface2)",border:"0.5px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:13}}>
               <span style={{fontSize:14}}><TI n="eye"/></span>
               <span>Du siehst nur Mitglieder deines Teams: <strong>Cc-Junioren</strong></span>
             </div>
@@ -1938,11 +1938,11 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             const offen=relevant.filter(m=>m.status==="Offen").length;
             const befreit=relevant.filter(m=>m.status==="Befreit").length;
             return(
-              <div className="cc-grid-stats cc-mb-20">
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,160px),1fr))",gap:12,marginBottom:20}}>
                 {[{l:"Erfüllt",v:erfuellt,c:GN,bg:"#F0FDF4"},{l:"Offen",v:offen,c:AM,bg:"#FFFBEB"},{l:"Befreit",v:befreit,c:BK,bg:"#fff"}].map((s,i)=>(
                   <div key={i} style={{background:s.bg,border:"0.5px solid var(--border)",borderRadius:14,padding:"14px 16px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
                     <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1,marginBottom:4}}>{s.v}</div>
-                    <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
+                    <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6}}>{s.l}</div>
                   </div>
                 ))}
               </div>
@@ -1952,15 +1952,15 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           {/* Suche + Filter */}
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center",width:"100%",rowGap:6}}>
             <div style={{position:"relative",flexShrink:0}}>
-              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
+              <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--sub)",pointerEvents:"none"}}><TI n="search"/></span>
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglied suchen…"
-                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${search?ACCENT:GB}`,borderRadius:20,fontSize:14,outline:"none",width:"100%",maxWidth:190,background:"var(--surface)"}}/>
-              {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:14,color:"var(--sub)",lineHeight:1}}>×</button>}
+                style={{padding:"6px 10px 6px 28px",border:`0.5px solid ${search?ACCENT:GB}`,borderRadius:20,fontSize:13,outline:"none",width:"100%",maxWidth:190,background:"var(--surface)"}}/>
+              {search&&<button onClick={()=>setSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:13,color:"var(--sub)",lineHeight:1}}>×</button>}
             </div>
             <div style={{width:"1px",height:22,background:GB}}/>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {["alle","Offen","Geplant erfüllt","Erfüllt","Befreit"].map(f=>(
-                <button key={f} onClick={()=>setFilterStatus(f)} style={{padding:"5px 12px",border:`0.5px solid ${filterStatus===f?ACCENT:GB}`,borderRadius:20,background:filterStatus===f?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:14,cursor:"pointer",fontWeight:filterStatus===f?700:400}}>{f==="alle"?"Alle":f}</button>
+                <button key={f} onClick={()=>setFilterStatus(f)} style={{padding:"5px 12px",border:`0.5px solid ${filterStatus===f?ACCENT:GB}`,borderRadius:20,background:filterStatus===f?"var(--cc-hover)":"#fff",color:"var(--text)",fontSize:13,cursor:"pointer",fontWeight:filterStatus===f?700:400}}>{f==="alle"?"Alle":f}</button>
               ))}
             </div>
             {!isTrainer&&(
@@ -1972,11 +1972,11 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           </div>
 
           <Card style={{padding:0,overflowX:"auto"}}>
-            <div className="cc-table-wrap"><table className="cc-table">
+            <table className="cc-table">
               <thead>
                 <tr style={{background:"var(--surface2)"}}>
                   {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h,i)=>(
-                    <th className="cc-th" key={i}>{h}</th>
+                    <th key={i} style={{padding:"9px 12px",textAlign:i>1?"center":"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1990,27 +1990,27 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                     <tr key={m.id} onClick={()=>setExpandedMember(expandedMember===m.id?null:m.id)}
                       style={{borderTop:"0.5px solid var(--border)",background:expandedMember===m.id?"var(--cc-hover)":"#fff",cursor:"pointer"}}
                       className="hov-row">
-                      <td className="cc-td" style={{padding:"9px 12px"}}>
-                        <div className="cc-row">
+                      <td style={{padding:"9px 12px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <Av name={m.name} size={22} bg={SC[m.status]?.c||"#6B7280"}/>
                           <span style={{fontWeight:600}}>{m.name}</span>
                         </div>
                       </td>
-                      <td className="cc-td" style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280"/></td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",fontWeight:700}}>{m.soll}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:GN,fontWeight:600}}>{m.geleistet}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:AM,fontWeight:600}}>{m.geplant}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:m.offen>0?R:"#aaa",fontWeight:m.offen>0?700:400}}>{m.offen}</td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center"}}><Chip text={m.status} color={SC[m.status]?.c||"#888"} bg={SC[m.status]?.bg}/></td>
-                      <td className="cc-td" style={{padding:"9px 12px",textAlign:"center",color:"var(--sub)",fontSize:14}}>{expandedMember===m.id?"▲":"▼"}</td>
+                      <td style={{padding:"9px 12px"}}><Chip text={m.gruppe} color="#6B7280" bg="#F3F4F6"/></td>
+                      <td style={{padding:"9px 12px",textAlign:"center",fontWeight:700}}>{m.soll}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:GN,fontWeight:600}}>{m.geleistet}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:AM,fontWeight:600}}>{m.geplant}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:m.offen>0?R:"#aaa",fontWeight:m.offen>0?700:400}}>{m.offen}</td>
+                      <td style={{padding:"9px 12px",textAlign:"center"}}><Chip text={m.status} color={SC[m.status]?.c||"#888"} bg={SC[m.status]?.bg}/></td>
+                      <td style={{padding:"9px 12px",textAlign:"center",color:"var(--sub)",fontSize:13}}>{expandedMember===m.id?"▲":"▼"}</td>
                     </tr>
                     {expandedMember===m.id&&(
                       <tr key={`d${m.id}`} style={{borderTop:"0.5px solid var(--border)"}}>
                         <td colSpan={8} style={{padding:"10px 20px 14px",background:"var(--surface2)"}}>
                           {m.schichten.length===0?(
-                            <span className="cc-text-sm">Keine Schichten übernommen.</span>
+                            <span style={{fontSize:13,color:"var(--sub)"}}>Keine Schichten übernommen.</span>
                           ):(
-                            <div className="cc-grid-cards cc-mb-20" style={{gap:8,marginBottom:10}}>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8,marginBottom:10}}>
                               {m.schichten.map((sid,si)=>{
                                 const anfrage=freigabeAnfragen[sid];
                                 for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
@@ -2022,24 +2022,24 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                     const iso=parts.length===3?`${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`:"";
                                     const past=iso<"2026-05-23"&&iso!=="";
                                     const statusBadge=anfrage
-                                      ?<span style={{fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:AM,border:`0.5px solid #FDE68A`}}>⏳ Freigabe ausstehend</span>
+                                      ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:AM,border:`0.5px solid #FDE68A`}}>⏳ Freigabe ausstehend</span>
                                       :past
-                                        ?<span style={{fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN}}>✓ Geleistet</span>
-                                        :<span style={{fontSize:14,padding:"2px 4px",color:AM}}>⏳</span>;
+                                        ?<span style={{fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,background:"var(--surface)",color:GN}}>✓ Geleistet</span>
+                                        :<span style={{fontSize:13,padding:"2px 4px",color:AM}}>⏳</span>;
                                     return(
                                       <div key={sid} style={{borderRadius:10,overflow:"hidden",border:`0.5px solid ${anfrage?AM:GB}`,background:anfrage?"#FFFBEB":"#fff",borderTop:`3px solid ${ev.color||"#64748B"}`}}>
                                         {/* Header */}
                                         <div style={{padding:"8px 12px",background:"var(--surface2)",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                                           <div>
-                                            <div style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{ev.name}</div>
-                                            <div style={{fontSize:14,color:"var(--sub)",marginTop:1}}>{e.name}</div>
+                                            <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{ev.name}</div>
+                                            <div style={{fontSize:13,color:"var(--sub)",marginTop:1}}>{e.name}</div>
                                           </div>
                                           {statusBadge}
                                         </div>
                                         {/* Body */}
                                         <div style={{padding:"7px 12px"}}>
-                                          <div style={{fontWeight:600,fontSize:14,color:"var(--text)"}}>{s.label}</div>
-                                          <div style={{fontSize:14,color:"var(--sub)",marginTop:2,display:"flex",gap:8}}>
+                                          <div style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{s.label}</div>
+                                          <div style={{fontSize:13,color:"var(--sub)",marginTop:2,display:"flex",gap:8}}>
                                             <span>{""+e.date}</span>
                                             {e.location&&<><span style={{opacity:0.3}}>|</span><span>{""+e.location}</span></>}
                                           </div>
@@ -2066,7 +2066,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   </>
                 ))}
               </tbody>
-            </table></div>
+            </table>
           </Card>
         </div>
       )}
@@ -2075,7 +2075,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
       {helperTab==="erstellen"&&canErstellen&&(
         <Card>
           <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>Neuen Einsatz erfassen</div>
-          <div className="cc-grid-cards cc-mb-20" style={{gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
             {[
               {l:"Event",            type:"select",opts:["Grümpelturnier 2026","Generalversammlung 2026","+ Neuer Event…"]},
               {l:"Einsatzname",      type:"text",  ph:"z.B. Grill"},
@@ -2085,13 +2085,13 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               {l:"Freigabe Gruppen", type:"gruppen"},
             ].map((f,i)=>(
               <div key={i}>
-                <label style={{fontSize:14,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
+                <label style={{fontSize:13,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
                 {f.type==="gruppen"?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>
                     {HELPER_GRUPPEN.map(g=>{
                       const checked=newEinsatzGruppen.includes(g);
                       return(
-                        <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
+                        <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
                           <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen(prev=>checked?prev.filter(x=>x!==g):[...prev,g])} style={{display:"none"}}/>
                           {g}
                         </label>
@@ -2099,25 +2099,25 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                     })}
                   </div>
                 ):f.type==="select"?(
-                  <select style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14}}>
+                  <select style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13}}>
                     {f.opts?.map(o=><option key={o}>{o}</option>)}
                   </select>
                 ):(
-                  <input type={f.type||"text"} placeholder={f.ph} style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14,boxSizing:"border-box"}}/>
+                  <input type={f.type||"text"} placeholder={f.ph} style={{width:"100%",padding:"7px 9px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
                 )}
               </div>
             ))}
           </div>
-          <div className="cc-mt-16">
-            <div style={{fontWeight:600,fontSize:14,marginBottom:8}}>Schichten</div>
+          <div style={{marginTop:16}}>
+            <div style={{fontWeight:600,fontSize:13,marginBottom:8}}>Schichten</div>
             {[1,2,3].map(n=>(
               <div key={n} style={{display:"flex",gap:8,marginBottom:7,alignItems:"center"}}>
-                <input placeholder={`Schicht ${n}: z.B. Grill 10:00-14:00`} style={{flex:1,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14}}/>
-                <input type="number" placeholder="Max" style={{width:55,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14}}/>
-                <span className="cc-text-sm">Plätze</span>
+                <input placeholder={`Schicht ${n}: z.B. Grill 10:00-14:00`} style={{flex:1,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                <input type="number" placeholder="Max" style={{width:55,padding:"6px 9px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                <span style={{fontSize:13,color:"var(--sub)"}}>Plätze</span>
               </div>
             ))}
-            <button style={{fontSize:14,color:BL,background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>+ Schicht hinzufügen</button>
+            <button style={{fontSize:13,color:BL,background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>+ Schicht hinzufügen</button>
           </div>
           <div style={{marginTop:16,display:"flex",gap:8}}>
             <Btn variant="primary" color="#F3F4F6">Einsatz erstellen</Btn>
