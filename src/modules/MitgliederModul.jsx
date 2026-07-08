@@ -88,7 +88,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       rollen:[...rollenSet],
       kader_rollen_raw:m.kader_rollen||[],
       role:m.rolle||"-",
-      teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams.map(t=>typeof t==="object"?t:{name:t,kurz:t}):(m.teams||[]).map(t=>({name:t,kurz:t})),
+      teams:(m.kader_teams||[])&&(m.kader_teams||[]).length>0?(m.kader_teams||[]).map(t=>typeof t==="object"?t:{name:t,kurz:t}):(m.teams||[]).map(t=>({name:t,kurz:t})),
       team:(m.teams||[]).join(", ")||"-",
       datenpruefung:dpStatus,
       status:m.datenstatus||"Ausstehend",
