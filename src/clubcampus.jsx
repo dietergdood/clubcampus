@@ -686,11 +686,11 @@ function Portal({supabaseClient}){
         }
       } else {
         console.warn("[FCH] benutzer nicht gefunden:", error?.message);
-        setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
+        setDbUser({id:uid, email:email||"", role:"__kein_zugang", teams:[], name:email||"Benutzer"});
       }
     } catch(e) {
       console.warn("[FCH] loadDbUser error:", e.message);
-      setDbUser({id:uid, email:email||"", role:"administrator", teams:[], name:email||"Benutzer"});
+      setDbUser({id:uid, email:email||"", role:"__kein_zugang", teams:[], name:email||"Benutzer"});
     }
   }
 
@@ -912,6 +912,30 @@ function Portal({supabaseClient}){
   // Login-Screen wenn nicht eingeloggt (oder kein Supabase)
   if(sb && !session){
     return <LoginScreen sb={sb} onLogin={s=>setSession(s)} appTheme={appTheme}/>;
+  }
+
+  // Kein Portal-Zugang
+  if(dbUser && dbUser.role === "__kein_zugang"){
+    return(
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)",padding:24}}>
+        <div style={{maxWidth:400,textAlign:"center"}}>
+          <div style={{width:64,height:64,borderRadius:"50%",background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h2 style={{fontSize:20,fontWeight:700,margin:"0 0 8px",color:"var(--text)"}}>Kein Portal-Zugang</h2>
+          <p style={{fontSize:14,color:"var(--sub)",margin:"0 0 24px",lineHeight:1.5}}>
+            Dein Konto ({dbUser.email}) hat keinen aktiven Portal-Zugang.<br/>
+            Bitte wende dich an den Vereinsadministrator.
+          </p>
+          <button
+            onClick={async()=>{ await sb.auth.signOut(); setSession(null); setDbUser(null); }}
+            style={{padding:"10px 24px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",fontSize:14,cursor:"pointer"}}
+          >
+            Abmelden
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Rolle aus DB-User oder Demo-Fallback
