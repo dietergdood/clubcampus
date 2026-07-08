@@ -3,6 +3,7 @@ import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT,
 import { TI, TI_PATHS } from "./icons.jsx";
 import { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle , avColor} from "./theme.jsx";
 import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT , MEMBERS, FUNKTIONEN} from "./demoData.js";
+import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.js";
 import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./modules/NavigationModul.jsx";
 import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./modules/DashboardModul.jsx";
 import { TeamView, TeamOverview, EventsList } from "./modules/TeamModul.jsx";
@@ -667,17 +668,16 @@ function Portal({supabaseClient}){
               "Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer",
               "Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer",
             };
-            const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern","supporter"];
             const map={};
             kaderData.forEach(k=>{
               const portalRollen=(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean);
-              const hoechste=PRIORITAET.find(p=>portalRollen.includes(p))||"spieler";
+              const hoechste=ROLLE_PRIORITAET.find(p=>portalRollen.includes(p))||"spieler";
               map[k.team_id]=hoechste;
             });
             setTeamRollen(map);
             // Höchste Rolle über alle Teams → benutzer.role updaten
             const alleRollen=Object.values(map);
-            const hoechsteGlobal=PRIORITAET.find(p=>alleRollen.includes(p));
+            const hoechsteGlobal=ROLLE_PRIORITAET.find(p=>alleRollen.includes(p));
             if(hoechsteGlobal&&hoechsteGlobal!==data.role){
               await sb.from("benutzer").update({role:hoechsteGlobal}).eq("id",uid);
               setDbUser(prev=>({...prev,role:hoechsteGlobal}));
