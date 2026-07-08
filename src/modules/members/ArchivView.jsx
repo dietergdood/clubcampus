@@ -9,7 +9,7 @@ import { Btn, Row, Col, Between, Sub, Empty, useIsMobile, DropMenu, ModalOrSheet
 import { TI } from "../../icons.jsx";
 import { GN, R, AM, BL, BK } from "../../constants.js";
 
-function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=null,onReload,onOpenMember}){
+function ArchivView({archivData,setArchivData,archivLoaded,sb,account,onUpdatePortalZugang=null,onReload,onOpenMember}){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const [archivSearch,setArchivSearch]=useState("");
