@@ -229,3 +229,54 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 1. ZIP des aktuellen Repos hochladen
 2. Diese ARCHITECTURE.md erwähnen
 3. Claude kennt damit sofort die Regeln und den aktuellen Stand
+
+
+## Datenbankregeln (Supabase)
+
+### Pflicht für jede neue Tabelle
+
+```sql
+CREATE TABLE neue_tabelle (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  verein_id   uuid NOT NULL REFERENCES vereine(id),  -- IMMER
+  -- ... Felder ...
+  created_at  timestamptz DEFAULT now()
+);
+
+CREATE INDEX ON neue_tabelle(verein_id);              -- IMMER
+ALTER TABLE neue_tabelle ENABLE ROW LEVEL SECURITY;   -- IMMER
+
+-- Minimale Policies (anpassen je nach Tabelle):
+CREATE POLICY "neue_tabelle_select" ON neue_tabelle
+  FOR SELECT USING (verein_id = get_my_verein_id());
+
+CREATE POLICY "neue_tabelle_write_admin" ON neue_tabelle
+  FOR ALL USING (verein_id = get_my_verein_id() AND is_admin());
+```
+
+### Pflicht beim INSERT in der App
+
+```javascript
+await sb.from("neue_tabelle").insert({
+  verein_id: tenant.id,  // IMMER mitgeben
+  // ... Felder ...
+});
+```
+
+### Hilfsfunktionen (bereits in DB definiert)
+
+- `get_my_verein_id()` — gibt verein_id des eingeloggten Users zurück
+- `get_my_role()` — gibt Rolle des eingeloggten Users zurück
+- `is_admin()` — true wenn administrator oder administration
+- `is_trainer()` — true wenn trainer
+
+### Policy-Muster nach Zugriffstyp
+
+| Typ | SELECT | INSERT/UPDATE/DELETE |
+|-----|--------|----------------------|
+| Vereinskonfiguration | alle im Verein | nur is_admin() |
+| Mitgliederdaten | admin/trainer/funktionaer | nur is_admin() |
+| Persönliche Daten | benutzer_id = auth.uid() | benutzer_id = auth.uid() |
+| Veranstaltungen | alle im Verein | admin/trainer/funktionaer |
+| Audit/Log | nur is_admin() | System (kein Check) |
+
