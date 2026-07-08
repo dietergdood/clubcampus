@@ -27,15 +27,23 @@ src/
       PersonAvatar.jsx              ← Av + Kamera-Overlay
       PersonSelector.jsx            ← Suche + Auswahl
       PersonSummary.jsx             ← Name + Subtitle + Right-Slot
+      MemberHero.jsx                ← TODO: hierher verschieben bei KaderModul-Migration
+      MemberDetail.jsx              ← TODO: hierher verschieben bei KaderModul-Migration
+    list/
+      MemberListView.jsx            ← TODO: erstellen bei KaderModul-Migration (Toolbar+Tabelle+Mobile, wiederverwendbar für Mitglieder+Kader)
 
   modules/                          ← Alle Modul-Dateien
-    members/                        ← MitgliederModul aufgeteilt
+    members/
       ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen)
-      ElternTab.jsx                 ← Elternkontakte
-      MemberDetail.jsx              ← Mitglied-Detailansicht
+      DatenpruefungTab.jsx          ← Datenprüfung-Tab
+      ElternTab.jsx                 ← Elternkontakte-Tab
+      InfoTab.jsx                   ← Info-Tab (Felder, Rollen, Teams, Notizen)
+      MemberDetail.jsx              ← State + Navigation + Tab-Routing (348Z)
       MemberHero.jsx                ← Hero-Banner mit Avatar
-      MembersView.jsx               ← Hauptliste, Tabelle, Toolbar, KPIs
+      NotizenVerlauf.jsx            ← Notizen-Komponente
+      PortalTab.jsx                 ← Portal-Zugang-Tab
       memberConstants.js            ← ROLES, FIELD_VIS, COL_GROUPS, GROUP_OPTIONS
+      memberDataUtils.js            ← mapMembers, filterMembers, sortMembers, exportData
       memberUtils.jsx               ← LAENDER, getLandName, RolleChip, getFieldVisibility
     portal/                         ← PortalverwaltungModul aufgeteilt
       ApiTab.jsx
