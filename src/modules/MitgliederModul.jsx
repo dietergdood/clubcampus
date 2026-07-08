@@ -3,7 +3,6 @@
    State, Logik und Koordination — Render via MembersView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, Fragment } from "react";
-import * as XLSX from "xlsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../constants.js";
 import { TI } from "../icons.jsx";
 import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
@@ -14,6 +13,7 @@ import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
 import { currentSeason } from "../domains/season/seasonUtils.js";
 import { LAENDER, getLandName, RolleChip, getFieldVisibility } from "./members/memberUtils.jsx";
 import { ROLES, FIELD_VIS, SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
+import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.js";
 import { ArchivView } from "./members/ArchivView.jsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";
 
@@ -72,52 +72,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     ["spieler","Spieler/in"],["eltern","Elternteil"],
     ["mitglied","Mitglied"],["supporter","Supporter"],
   ]);
-  const allMembers=dbMitglieder.map(m=>{
-    /* Rollen ableiten */
-    const rollenSet=new Set();
-    (m.kader_rollen||[]).forEach(r=>rollenSet.add(ROLLE_LABEL[r]||r));
-    if(rollenSet.size===0&&m.rolle&&m.rolle!=="-") rollenSet.add(ROLLE_LABEL[m.rolle]||m.rolle);
-    /* Portal-Zugang */
-    const portalStatus=m.hat_portal_zugang?"Aktiv":"Nicht eingerichtet";
-    /* Datenpruefung */
-    const dpStatus=(!m.datenstatus||m.datenstatus==="Vollstandig"||m.datenstatus==="Vollständig"||m.datenstatus==="geprüft"||m.datenstatus==="Geprueft")&&m.geprueft===true?"Geprueft":m.geprueft===false||!m.geprueft?"Ausstehend":m.datenstatus||"Ausstehend";
-    return{
-      id:m.id,
-      name:(`${m.vorname||""} ${m.nachname||""}`).trim()||"?",
-      vorname:m.vorname, nachname:m.nachname,
-      mitgliedschaft:m.mitgliedtyp||"-",
-      type:m.mitgliedtyp||"-",
-      rollen:[...rollenSet],
-      kader_rollen_raw:m.kader_rollen||[],
-      role:m.rolle||"-",
-      teams:(m.kader_teams||[])&&(m.kader_teams||[]).length>0?(m.kader_teams||[]).map(t=>typeof t==="object"?t:{name:t,kurz:t}):(m.teams||[]).map(t=>({name:t,kurz:t})),
-      team:(m.teams||[]).join(", ")||"-",
-      datenpruefung:dpStatus,
-      status:m.datenstatus||"Ausstehend",
-      portal:portalStatus,
-      hat_portal_zugang:m.hat_portal_zugang,
-      ort:m.ort||"-",
-      location:m.ort||"-",
-      email:m.email,
-      telefon:m.telefon,
-      geburtsdatum:m.geburtsdatum,
-      alter:m.geburtsdatum?Math.floor((Date.now()-new Date(m.geburtsdatum))/(365.25*24*3600*1000)):null,
-      geschlecht:m.geschlecht||null,
-      nationalitaet:m.nationalitaet||"-",
-      nationalitaet2:m.nationalitaet2||null,
-      position:m.position,
-      fairgate_id:m.fairgate_id,
-      js_nr:m.js_nr,
-      spielerpass:m.spielerpass,
-      eintritt:m.eintrittsdatum,
-      rueckennr:m.rueckennr,
-      foto_url:m.foto_url||null,
-      funktionen:m.funktionen||[],
-      strasse:m.strasse,
-      heimatort:m.heimatort,
-      ahv_nr:m.ahv_nr,
-    };
-  });
+  const allMembers=mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen);
 
   /* Gespeicherte Ansichten */
   const SAVED_VIEWS={
@@ -180,35 +135,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {val:"__jahrgang",     label:"Nach Jahrgang"},
     {val:"__eintrittsjahr",label:"Nach Eintrittsjahr"},
   ];
-  function exportData(format){
-    const exportCols=COLS.filter(c=>c.key!=="name").map(c=>c.key);
-    const headers=["Name",...COLS.filter(c=>c.key!=="name").map(c=>c.label)];
-    const rows=filtered.map(m=>[
-      m.name,
-      ...exportCols.map(k=>{
-        if(k==="rollen") return (m.rollen||[]).join(", ");
-        if(k==="teams") return (m.teams||[]).map(t=>t.name||t).join(", ");
-        if(k==="funktionen") return (m.funktionen||[]).join(", ");
-        if(k==="nationalitaet") return m.nationalitaet&&m.nationalitaet!=="-"?m.nationalitaet:"";
-        if(k==="nationalitaet2") return m.nationalitaet2||"";
-        if(k==="eintritt") return m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"";
-        if(k==="portal") return m.hat_portal_zugang?"Aktiv":"Kein Zugang";
-        if(k==="datenpruefung") return m.profil_geprueft_at?"Geprüft":"Ausstehend";
-        return m[k]!=null?String(m[k]):"";
-      })
-    ]);
-    if(format==="csv"){
-      const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v||"").replace(/"/g,"\"\"")}"` ).join(";")).join("\r\n");
-      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");a.href=url;a.download="mitglieder.csv";a.click();URL.revokeObjectURL(url);
-    } else {
-      const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-      const wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,ws,"Mitglieder");
-      XLSX.writeFile(wb,"mitglieder.xlsx");
-    }
-  }
+  function exportData(format){ exportDataUtil(filtered,COLS,format); }
 
   function applyView(viewKey){
     setSavedView(viewKey);
@@ -339,77 +266,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {key:"teams",          label:"Teams",          vals:[...new Set(allMembers.flatMap(m=>(m.teams||[]).map(t=>t?.name||t)).filter(Boolean))].sort()},
   ];
 
-  const filtered=allMembers.filter(m=>{
-    if(search){
-      const terms=search.toLowerCase().split(/\s+/).filter(Boolean);
-      const haystack=[
-        m.name,m.mitgliedschaft,
-        ...(m.rollen||[]),
-        ...(m.teams||[]).map(t=>t?.name||t||""),
-        ...(m.teams||[]).map(t=>t?.kurz||""),
-        m.email||"",
-      ].join(" ").toLowerCase();
-      if(!terms.every(t=>haystack.includes(t))) return false;
-    }
-    for(const [fKey,fVals] of Object.entries(filterVals)){
-      if(!fVals||fVals.length===0) continue;
-      if(fKey==="rollen"){
-        const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
-        if(!portalLabel||!fVals.includes(portalLabel)) return false;
-        continue;
-      }
-      const raw=m[fKey];
-      const mVal=Array.isArray(raw)
-        ?raw.map(v=>v?.name||v)
-        :[raw?.name||raw];
-      if(!mVal.some(v=>fVals.includes(v))) return false;
-    }
-    return true;
-  });
+  const filtered=filterMembers(allMembers,search,filterVals,ROLLE_LABEL);
 
-  const sorted=[...filtered].sort((a,b)=>{
-    const getVal=m=>{const v=m[sortCol];if(Array.isArray(v)){const f=v[0];return f?.name||f||"";}return String(v??"");};
-    const av=getVal(a);
-    const bv=getVal(b);
-    return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
-  });
+  const sorted=sortMembers(filtered,sortCol,sortDir);
 
   const paged=sorted;
   const hasMore=false;
-  let groups=[];
-  function getGroupKey(m,g){
-    if(g==="__jahrgang"){
-      if(!m.geburtsdatum) return "Unbekannt";
-      return String(new Date(m.geburtsdatum).getFullYear());
-    }
-    if(g==="__eintrittsjahr"){
-      if(!m.eintritt) return "Unbekannt";
-      return String(new Date(m.eintritt).getFullYear());
-    }
-    if(g==="teams"){
-      return (m.teams||[])&&(m.teams||[]).length>0?(m.teams||[]).map(t=>t?.name||t):["Kein Team"];
-    }
-    if(g==="rollen"){
-      const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
-      return portalLabel||"Keine Rolle";
-    }
-    return null;
-  }
-
-  if(groupBy==="none"){
-    groups=[{key:"",members:paged}];
-  }else{
-    const map={};
-    paged.forEach(m=>{
-      const computed=getGroupKey(m,groupBy);
-      const vals=computed!==null?(Array.isArray(computed)?computed:[computed]):Array.isArray(m[groupBy])?m[groupBy].map(t=>t?.name||t||"-"):[m[groupBy]||"-"];
-      vals.forEach(k=>{
-        if(!map[k]) map[k]=[];
-        map[k].push(m);
-      });
-    });
-    groups=Object.entries(map).sort(([a],[b])=>String(a||"").localeCompare(String(b||""))).map(([k,members])=>({key:k,members}));
-  }
+  const groups=buildGroups(paged,groupBy,ROLLE_LABEL);
 
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
   const SortIcon=({col})=>sortCol===col
@@ -674,16 +537,21 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                       <div className="cc-members-item-sub">
                         {m.mitgliedschaft!=="-"?m.mitgliedschaft:""}
                       </div>
-                      {(m.rollen||[]).length>0&&(
-                        <div className="cc-members-item-chips">
-                          {(m.rollen||[]).slice(0,2).map((r,i)=>{
-                            const rawR=(m.kader_rollen_raw||[])[i]||"";
-                            const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");
-                            return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;
-                          })}
-                          {(m.rollen||[]).length>2&&<span className="cc-ml-more">+{(m.rollen||[]).length-2}</span>}
-                        </div>
-                      )}
+                      {(m.rollen||[]).length>0&&(()=>{
+                        const portalRaw=m.role&&m.role!=="-"?m.role:null;
+                        const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;
+                        const portalIsTrainer=portalRaw==="trainer";
+                        const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel)return false;if(portalIsTrainer&&isT)return false;return true;});
+                        const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];
+                        return all.length>0?(
+                          <div className="cc-members-item-chips">
+                            {all.slice(0,2).map((c,i)=>(
+                              <span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`}>{c.label}</span>
+                            ))}
+                            {all.length>2&&<span className="cc-ml-more">+{all.length-2}</span>}
+                          </div>
+                        ):null;
+                      })()}
                     </div>
                     <div className="cc-members-item-right">
                       <TI n="chevron-right" size={14} className="cc-members-item-chevron"/>
