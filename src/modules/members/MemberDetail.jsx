@@ -197,7 +197,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
   }
 
   async function removeFromTeam(kaderId){
-    const ok=await confirm({title:"Aus Team entfernen?",confirmLabel:"Entfernen"});if(!sb||!ok) return;
+    const ok=await confirm({title:"Aus Team entfernen?",danger:true,confirmLabel:"Entfernen"});if(!sb||!ok) return;
     await deaktiviereKader(sb,kaderId);
     setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
     await ableitRolle();
@@ -377,7 +377,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                 <div className="cc-info-grid">
                 {[
                   ...(fv.showEmail  ?[{l:"E-Mail",  v:raw.email||null, link:`mailto:${raw.email}`}]:[]),
-                  ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||null}]:[]),
+                  ...(fv.showTelefon?[{l:"Telefon", v:raw.telefon||null, link:raw.telefon?`tel:${raw.telefon}`:null}]:[]),
                   ...(fv.showAdresse?[
                     {l:"Strasse",v:raw.strasse||null},
                     {l:"PLZ/Ort",v:raw.plz&&raw.ort?`${raw.plz} ${raw.ort}`:null},
@@ -385,7 +385,10 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                 ].filter(r=>canEdit||r.v).map((r,i)=>(
                   <div key={i} className="cc-info-row">
                     <span className="cc-info-key">{r.l}</span>
-                    <span className={r.v?"cc-info-val":"cc-info-val-empty"} style={r.link?{color:"var(--cc-blue,#0369a1)"}:{}}>{r.v||"—"}</span>
+                    {r.link&&r.v
+                      ?<a href={r.link} className="cc-contact-link">{r.v}</a>
+                      :<span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
+                    }
                   </div>
                 ))}
                 </div>
@@ -403,8 +406,8 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                       <div className="cc-hk-content">
                         <div className="cc-text-bold">{hkName}</div>
                         <div className="cc-text-sm cc-text-sub">{hk.beziehung||"—"}</div>
-                        {hk.email&&<div className="cc-text-sm cc-contact-link">{hk.email}</div>}
-                        {hkTel&&<div className="cc-text-sm cc-text-sub">{hkTel}</div>}
+                        {hk.email&&<a href={`mailto:${hk.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{hk.email}</a>}
+                        {hkTel&&<a href={`tel:${hkTel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{hkTel}</a>}
                       </div>
                     </div>
                   </>
