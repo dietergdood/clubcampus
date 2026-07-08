@@ -2,7 +2,7 @@
    ClubCampus — modules/members/MemberHero.jsx
    Hero-Header des Mitglied-Detailbereichs
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Av, Btn, ModalOrSheet, ModalTitle, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, useConfirm, ConfirmDialog } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT } from "../../constants.js";
