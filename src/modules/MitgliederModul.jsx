@@ -74,67 +74,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   ]);
   const allMembers=mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen);
 
-  /* Gespeicherte Ansichten */
-  const SAVED_VIEWS={
-    standard:      {label:"Standard",       cols:["name","mitgliedschaft","rollen","teams","portal","datenpruefung"]},
-    administration:{label:"Verwaltung",     cols:["name","email","telefon","ort","mitgliedschaft","datenpruefung"]},
-  };
-
-  /* Spaltendefinitionen */
-  const COL_GROUPS=[
-    {group:"Personendaten", cols:[
-      {key:"name",          label:"Name",           default:true, alwaysOn:true},
-      {key:"nachname",      label:"Nachname",       default:false},
-      {key:"vorname",       label:"Vorname",        default:false},
-      {key:"geburtsdatum",  label:"Geburtsdatum",   default:false},
-      {key:"alter",         label:"Alter",          default:false},
-      {key:"geschlecht",    label:"Geschlecht",     default:false},
-      {key:"nationalitaet", label:"Nationalität",  default:false},
-      {key:"nationalitaet2", label:"Nationalität 2", default:false},
-      {key:"heimatort",     label:"Heimatort",      default:false},
-      {key:"ahv_nr",        label:"AHV-Nr.",        default:false},
-    ]},
-    {group:"Kontakt", cols:[
-      {key:"email",         label:"E-Mail",         default:false},
-      {key:"telefon",       label:"Telefon",        default:false},
-      {key:"strasse",       label:"Strasse",        default:false},
-      {key:"ort",           label:"PLZ/Ort",        default:false},
-    ]},
-    {group:"Verein", cols:[
-      {key:"mitgliedschaft",label:"Mitgliedschaft", default:true},
-      {key:"rollen",        label:"Rollen",         default:true},
-      {key:"funktionen",    label:"Vereinsfunktionen",default:false},
-      {key:"eintritt",      label:"Eintritt",       default:false},
-      {key:"spielerpass",   label:"Spielerpass",    default:false},
-      {key:"fairgate_id",   label:"Fairgate-ID",    default:false},
-      {key:"js_nr",         label:"J+S Nr.",        default:false},
-    ]},
-    {group:"Portal", cols:[
-      {key:"portal",        label:"Portal-Zugang",  default:true},
-      {key:"datenpruefung", label:"Datenpruefung",  default:true},
-    ]},
-    {group:"Sport", cols:[
-      {key:"teams",         label:"Teams",          default:true},
-    ]},
-  ];
-  const ALL_COLS=COL_GROUPS.flatMap(g=>g.cols);
   const [visibleCols,setVisibleCols]=useState(()=>SAVED_VIEWS.standard.cols);
   const COLS=visibleCols.map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
-  const GROUP_OPTIONS=[
-    {val:"none",           label:"Keine Gruppierung"},
-    {val:"mitgliedschaft", label:"Nach Mitgliedschaft"},
-    {val:"rollen",         label:"Nach Rolle"},
-    {val:"teams",          label:"Nach Team"},
-    {val:"portal",         label:"Nach Portal-Zugang"},
-    {val:"datenpruefung",  label:"Nach Datenprüfung"},
-  ];
-  const GROUP_OPTIONS_MORE=[
-    {val:"geschlecht",     label:"Nach Geschlecht"},
-    {val:"nationalitaet",  label:"Nach Nationalität"},
-    {val:"ort",            label:"Nach Wohnort"},
-    {val:"__jahrgang",     label:"Nach Jahrgang"},
-    {val:"__eintrittsjahr",label:"Nach Eintrittsjahr"},
-  ];
   function exportData(format){ exportDataUtil(filtered,COLS,format); }
 
   function applyView(viewKey){
