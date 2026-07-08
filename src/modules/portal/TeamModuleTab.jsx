@@ -8,7 +8,7 @@ import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../.
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
 import { TeamModuleMatrix } from "./TeamModuleMatrix.jsx";
 
-export function TeamModuleTab({supabase,loading,isMobile,mobileKachel,tab}) {
+export function TeamModuleTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,tab}) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="teammodule"&&(()=>{

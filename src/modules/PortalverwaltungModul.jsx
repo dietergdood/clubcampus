@@ -619,7 +619,7 @@ function PortalverwaltungView(props){
           funktionForm={funktionForm} setFunktionForm={setFunktionForm} tab={tab}
         />
       <TeamModuleTab
-          supabase={supabase} loading={loading} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab}
+          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab}
         />
       <FeldvisTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
