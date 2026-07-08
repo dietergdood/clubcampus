@@ -232,6 +232,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
 
   return(
+    <>{confirmDialog}
     <div className="cc-col cc-gap-12 cc-member-detail-wrap">
       {/* Hero Header */}
       <MemberHero m={m} raw={raw} initials={initials} canEdit={canEdit}
@@ -793,6 +794,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
         <div className="cc-empty-state"><div className="cc-empty-icon"><TI n="chart-bar" size={32}/></div><div>Kommt bald</div></div>
       )}
     </div>
+  </>
   );
 }
 
