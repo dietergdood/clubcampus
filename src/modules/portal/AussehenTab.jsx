@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate, InfoBox} from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.js";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
+import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor, LOGO_B64 } from "../../theme.jsx";
 
 export function AussehenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,theme,updateTheme,saveTheme,themeDirty,setThemeDirty,vereinId,applyTheme,tab}) {
   return (
