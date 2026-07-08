@@ -321,6 +321,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     sb.from("mitglieder").select("id",{count:"exact",head:true}).eq("aktiv",false)
       .then(({count})=>setArchivCount(count||0));
   },[sb,archivLoaded]);
+  useEffect(()=>{
+    if(!sb||!archivTab||archivLoaded) return;
+    sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von").eq("aktiv",false).order("deaktiviert_am",{ascending:false})
+      .then(({data})=>{setArchivData(data||[]);setArchivLoaded(true);});
+  },[sb,archivTab,archivLoaded]);
 
   /* Filter */
   /* computed values are in MembersView */
