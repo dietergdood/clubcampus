@@ -497,7 +497,7 @@ function PortalverwaltungView(props){
       {isMobile&&mobileKachel===null&&(
         <div className="cc-grid-form">
           {KATEGORIEN_NAV.map(k=>(
-            <button key={k.key} onClick={()=>{setMobileKachel(k.key);setTab(k.tabs[0].key);setAktiveKat(k.key);}}
+            <button key={k.key} onClick={()=>{setMobileKachel(k.key);if(k.tabs[0])setTab(k.tabs[0].key);setAktiveKat(k.key);}}
               style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:10,
                 padding:"16px",borderRadius:12,border:"0.5px solid var(--border)",
                 background:"var(--surface)",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>
@@ -547,7 +547,7 @@ function PortalverwaltungView(props){
             {KATEGORIEN_NAV.map(k=>{
               const isAktiv=k.key===aktiveKat;
               return(
-                <button key={k.key} onClick={()=>{setAktiveKat(k.key);setTab(k.tabs[0].key);}}
+                <button key={k.key} onClick={()=>{setAktiveKat(k.key);if(k.tabs[0])setTab(k.tabs[0].key);}}
                   style={{display:"flex",alignItems:"center",gap:6,padding:"9px 16px",
                     background:isAktiv?k.bg:"none",border:"none",
                     borderBottom:isAktiv?"2px solid "+k.color:"2px solid transparent",
