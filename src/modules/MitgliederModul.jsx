@@ -322,7 +322,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* Mitgliedschaft-Aufschluesselung - dynamisch */
   const trainerCount=allMembers.filter(m=>(m.rollen||[]).some(r=>r.toLowerCase().includes("trainer"))).length;
   const funktionaerCount=allMembers.filter(m=>(m.rollen||[]).some(r=>r.toLowerCase().includes("funktion"))).length;
-  const mitgliedTypen=dbMitgliedtypen.length>0
+  const mitgliedTypen=(dbMitgliedtypen||[]).length>0
     ?dbMitgliedtypen.map(t=>t.name)
     :[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(v=>v&&v!=="-"))].sort();
   const BREAKDOWN=[
@@ -364,7 +364,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           {(role==="administrator"||role==="administration")&&(
             <div className="cc-ml-tabs-bar">
               <button className={`cc-ml-tab${!archivTab?" cc-ml-tab-active":""}`} onClick={()=>setArchivTab(false)}>
-                Aktive <span className="cc-ml-tab-count">{allMembers.length}</span>
+                Aktive <span className="cc-ml-tab-count">{(allMembers||[]).length}</span>
               </button>
               <button className={`cc-ml-tab${archivTab?" cc-ml-tab-active":""}`} onClick={()=>{
                 setArchivTab(true);
@@ -507,7 +507,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         <BulkBar
           show={selectMode}
           count={selected.size}
-          total={paged.length}
+          total={(paged||[]).length}
           onSelectAll={toggleSelectAll}
           actions={[
             {icon:"download", label:"Auswahl als CSV", onClick:()=>exportData("csv")},
@@ -520,12 +520,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       {/* Liste / Tabelle */}
       <Card className="cc-card-table" flush>
-        {filtered.length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
-        {filtered.length>0&&(isMobile?(
+        {(filtered||[]).length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
+        {(filtered||[]).length>0&&(isMobile?(
           <div>
             {groups.map(({key,members})=>(
               <div key={key}>
-                {groupBy!=="none"&&<div className="cc-members-list-group-hdr">{key} <span className="cc-text-muted">({members.length})</span></div>}
+                {groupBy!=="none"&&<div className="cc-members-list-group-hdr">{key} <span className="cc-text-muted">{(members||[]).length}</span></div>}
                 {members.map(m=>(
                   <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
                     {m.foto_url
@@ -602,7 +602,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               {groups.map(({key,members})=>(
                 <Fragment key={key}>
                   {groupBy!=="none"&&(
-                    <tr className="cc-members-group-hdr"><td colSpan={COLS.length+1}>{key} <span className="cc-text-muted">({members.length})</span></td></tr>
+                    <tr className="cc-members-group-hdr"><td colSpan={COLS.length+1}>{key} <span className="cc-text-muted">{(members||[]).length}</span></td></tr>
                   )}
                   {members.map(m=>(
                     <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
