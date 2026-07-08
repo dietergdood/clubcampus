@@ -142,11 +142,11 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
         <Row gap={8} style={{flexWrap:"wrap",alignItems:"center"}}>
           <span className="cc-chip-toggle cc-chip-active">Aktiv</span>
           <span className="cc-chip-toggle">Inaktiv</span>
-          <Chip color={GN} bg="#ECFDF5">Aktiv</Chip>
-          <Chip color={R} bg="#FEF2F2">Inaktiv</Chip>
-          <Chip color={AM} bg="#FEF3C7">Warnung</Chip>
-          <Chip color={BL} bg="#EFF6FF">Info</Chip>
-          <Chip color="var(--btn-primary-text)" bg="var(--cc-accent)">Vereinsfarbe</Chip>
+          <Chip text="Aktiv" color={GN} bg="#ECFDF5"/>
+          <Chip text="Inaktiv" color={R} bg="#FEF2F2"/>
+          <Chip text="Warnung" color={AM} bg="#FEF3C7"/>
+          <Chip text="Info" color={BL} bg="#EFF6FF"/>
+          <Chip text="Vereinsfarbe" color="var(--btn-primary-text)" bg="var(--cc-accent)"/>
         </Row>
       </Sec>
 
@@ -197,12 +197,25 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       </Sec>
 
       {/* Toolbar */}
-      <Sec title="Toolbar (Suche, Filter, Spalten)">
+      <Sec title="Toolbar (Suche, Filter, Gruppieren, Spalten)">
         <Toolbar
           search={search}
           onSearch={setSearch}
-          searchPlaceholder="Mitglieder suchen…"
-          colMenuButton={
+          filterDefs={[
+            {key:"rolle",  label:"Rolle",  vals:["Trainer/in","Spieler/in","Elternteil","Funktionär"]},
+            {key:"team",   label:"Team",   vals:["FCH 1","FCH 2","Ba"]},
+            {key:"aktiv",  label:"Status", vals:["Aktiv","Inaktiv"]},
+          ]}
+          filterVals={{}}
+          onFilterChange={()=>{}}
+          groupOptions={[
+            {key:"none",  label:"Keine Gruppierung"},
+            {key:"rolle", label:"Nach Rolle"},
+            {key:"team",  label:"Nach Team"},
+          ]}
+          groupBy="none"
+          onGroupChange={()=>{}}
+          colMenu={
             <ColMenuButton
               allCols={ALL_COLS}
               visibleCols={visibleCols}
@@ -248,8 +261,8 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
                   <td className="cc-td"><input type="checkbox" checked={selected.includes(m.id)} onChange={()=>{}}/></td>
                   {visibleCols.includes("name") && <td className="cc-td"><Row gap={8} style={{alignItems:"center"}}><Av name={m.name} size={26}/><span style={{fontWeight:500}}>{m.name}</span></Row></td>}
                   {visibleCols.includes("rolle") && <td className="cc-td"><Sub>{m.rolle}</Sub></td>}
-                  {visibleCols.includes("team") && <td className="cc-td"><Chip color={BL} bg="#EFF6FF">{m.team}</Chip></td>}
-                  {visibleCols.includes("aktiv") && <td className="cc-td"><Chip color={m.aktiv?GN:R} bg={m.aktiv?"#ECFDF5":"#FEF2F2"}>{m.aktiv?"Aktiv":"Inaktiv"}</Chip></td>}
+                  {visibleCols.includes("team") && <td className="cc-td"><Chip text={m.team} color={BL} bg="#EFF6FF"/></td>}
+                  {visibleCols.includes("aktiv") && <td className="cc-td"><Chip text={m.aktiv?"Aktiv":"Inaktiv"} color={m.aktiv?GN:R} bg={m.aktiv?"#ECFDF5":"#FEF2F2"}/></td>}
                 </tr>
               ))}
             </tbody>
@@ -280,9 +293,11 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       {/* StatusTile */}
       <Sec title="Status-Tiles">
         <Row gap={8} style={{flexWrap:"wrap"}}>
-          <StatusTile label="Aktiv" value="Ja" color={GN}/>
-          <StatusTile label="Portal" value="Verknüpft" color={BL}/>
-          <StatusTile label="Rolle" value="Trainer" color={AM}/>
+          <StatusTile label="Aktiv" value="Ja" icon="check" semantic="ok"/>
+          <StatusTile label="Portal" value="Verknüpft" icon="link" semantic="ok"/>
+          <StatusTile label="Rolle" value="Trainer" icon="ball-football" semantic="neutral"/>
+          <StatusTile label="Zahlung" value="Ausstehend" icon="alert-triangle" semantic="warn"/>
+          <StatusTile label="Gesperrt" value="Ja" icon="lock" semantic="danger"/>
         </Row>
       </Sec>
 
