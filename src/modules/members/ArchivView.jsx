@@ -8,6 +8,7 @@ import { Btn, Row, Col, Between, Sub, Empty, useIsMobile, DropMenu, ModalOrSheet
          Toolbar } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { GN, R, AM, BL, BK } from "../../constants.js";
+import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.js";
 
 function ArchivView({archivData,setArchivData,archivLoaded,sb,account,onUpdatePortalZugang=null,onReload,onOpenMember}){
   const [confirm,confirmDialog]=useConfirm();
@@ -23,7 +24,7 @@ function ArchivView({archivData,setArchivData,archivLoaded,sb,account,onUpdatePo
   async function reaktivieren(e,id,name){
     e.stopPropagation();
     const ok=await confirm({title:`${name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!sb||!ok) return;
-    await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
+    await reaktiviereMitglied(sb,id);
     if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
     setArchivData(prev=>prev.filter(m=>m.id!==id));
     if(onReload) onReload();
@@ -32,7 +33,7 @@ function ArchivView({archivData,setArchivData,archivLoaded,sb,account,onUpdatePo
   async function loeschen(e,id,name){
     e.stopPropagation();
     const ok=await confirm({title:`${name} löschen (DSGVO)?`,message:"Diese Aktion ist unwiderruflich.",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
-    await sb.from("mitglieder").delete().eq("id",id);
+    await deleteMitglied(sb,id);
     setArchivData(prev=>prev.filter(m=>m.id!==id));
     if(onReload) onReload();
   }
@@ -117,7 +118,7 @@ function ArchivView({archivData,setArchivData,archivLoaded,sb,account,onUpdatePo
           {icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:async()=>{
             if(!archivSelected.length) return;const ok=await confirm({title:`${archivSelected.length} Mitglieder reaktivieren?`,confirmLabel:"Reaktivieren"});if(!sb||!ok) return;
             for(const id of archivSelected){
-              await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
+              await reaktiviereMitglied(sb,id);
               if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
             }
             setArchivData(prev=>prev.filter(m=>!archivSelected.includes(m.id)));
@@ -125,7 +126,7 @@ function ArchivView({archivData,setArchivData,archivLoaded,sb,account,onUpdatePo
           }},
           {icon:"trash", label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:async()=>{
             if(!archivSelected.length) return;const ok=await confirm({title:`${archivSelected.length} Mitglieder löschen?`,message:"Diese Aktion ist unwiderruflich (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
-            for(const id of archivSelected) await sb.from("mitglieder").delete().eq("id",id);
+            for(const id of archivSelected) await deleteMitglied(sb,id);
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
           }},
         ]}

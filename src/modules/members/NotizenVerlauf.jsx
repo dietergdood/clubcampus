@@ -7,10 +7,7 @@ import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTi
          Toolbar, ColMenuButton, SortHeader, useConfirm, ConfirmDialog } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../../constants.js";
-import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.js";
-import { currentSeason } from "../../domains/season/seasonUtils.js";
-import { MemberHero, FotoUpload } from "./MemberHero.jsx";
-import { LAENDER, getLandName, getFieldVisibility, RolleChip } from "./memberUtils.jsx";
+import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.js";
 
 function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount}){
   const [confirm,confirmDialog]=useConfirm();
@@ -23,36 +20,30 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount}){
 
   useEffect(()=>{
     if(!sb||!mitgliedId) return;
-    sb.from("mitglieder_notizen").select("*")
-      .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false})
-      .then(({data})=>{const d=data||[];setNotizen(d);if(onCount)onCount(d.length);});
+    fetchNotizen(sb,mitgliedId).then(d=>{setNotizen(d);if(onCount)onCount(d.length);});
   },[mitgliedId]);
 
   async function addNotiz(){
     if(!newText.trim()||!sb) return;
     setAdding(true);
     const autorName=dbUser?.name||dbUser?.email||"Unbekannt";
-    await sb.from("mitglieder_notizen").insert({
-      mitglied_id:mitgliedId, text:newText.trim(),
-      autor_id:dbUser?.id||null, autor_name:autorName,
-    });
-    const {data:fresh}=await sb.from("mitglieder_notizen").select("*")
-      .eq("mitglied_id",mitgliedId).order("created_at",{ascending:false});
-    const d=fresh||[];setNotizen(d);if(onCount)onCount(d.length);
+    await insertNotiz(sb,{mitglied_id:mitgliedId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName});
+    const d=await fetchNotizen(sb,mitgliedId);
+    setNotizen(d);if(onCount)onCount(d.length);
     setNewText(""); setAdding(false);
   }
 
   async function saveEdit(id){
     if(!editText.trim()||!sb) return;
     setEditSaving(true);
-    await sb.from("mitglieder_notizen").update({text:editText.trim(),updated_at:new Date().toISOString()}).eq("id",id);
+    await updateNotiz(sb,id,editText.trim());
     setNotizen(prev=>prev.map(n=>n.id===id?{...n,text:editText.trim()}:n));
     setEditId(null); setEditSaving(false);
   }
 
   async function deleteNotiz(id){
     const ok=await confirm({title:"Notiz löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
-    await sb.from("mitglieder_notizen").delete().eq("id",id);
+    await deleteNotizService(sb,id);
     setNotizen(prev=>{const d=prev.filter(n=>n.id!==id);if(onCount)onCount(d.length);return d;});
   }
 

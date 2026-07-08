@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Av, Btn, Card, ModalOrSheet, ModalTitle, useIsMobile, avColor, DropMenu, useConfirm, ConfirmDialog } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { GN, R, RL, BL } from "../../constants.js";
+import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, linkElternBenutzer, unlinkElternBenutzer, fetchElternkontakte, fetchBenutzerByEmail } from "../../domains/members/memberService.js";
 
 function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();
@@ -19,9 +20,9 @@ function ElternPortalSection({e,sb,onReload}){
   async function link(){
     if(!sb||!e.email) return;
     setLLoading(true); setLMsg(null);
-    const {data:bu}=await sb.from("benutzer").select("id").eq("email",e.email).maybeSingle();
+    const bu = await fetchBenutzerByEmail(sb,e.email);
     if(bu){
-      await sb.from("elternkontakte").update({benutzer_id:bu.id}).eq("id",e.id);
+      await linkElternBenutzer(sb,e.id,bu.id);
       setLMsg({ok:true,text:"Zugang eingerichtet ✓"});
       if(onReload) onReload();
     } else { setLMsg({ok:false,text:"Kein Konto für "+e.email+" gefunden"}); }
@@ -29,7 +30,7 @@ function ElternPortalSection({e,sb,onReload}){
   }
   async function unlink(){
     if(!sb) return;
-    await sb.from("elternkontakte").update({benutzer_id:null}).eq("id",e.id);
+    await unlinkElternBenutzer(sb,e.id);
     if(onReload) onReload();
   }
   return(
@@ -65,7 +66,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
     try{
       const d=editEltern.data;
       if(editEltern.mode==="new"){
-        const {error}=await sb.from("elternkontakte").insert({
+        const error=await insertElternkontakt(sb,{
           mitglied_id:raw.id,
           vorname:d.vorname||null, nachname:d.nachname||null,
           name:d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||null,
@@ -74,12 +75,12 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
         });
         if(error) throw error;
       } else {
-        const {error}=await sb.from("elternkontakte").update({
+        const error=await updateElternkontakt(sb,d.id,{
           vorname:d.vorname||null, nachname:d.nachname||null,
           name:d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||null,
           email:d.email||null, telefon:d.telefon||null,
           beziehung:d.beziehung||null,
-        }).eq("id",d.id);
+        });
         if(error) throw error;
       }
       setElternMsg({ok:true,text:"Gespeichert ✓"});
@@ -90,7 +91,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
 
   async function deleteEltern(id){
     const ok=await confirm({title:"Elternkontakt löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
-    await sb.from("elternkontakte").delete().eq("id",id);
+    await deleteElternkontakt(sb,id);
     if(onReload) onReload();
   }
 
@@ -134,13 +135,11 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
                   {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"user", onClick:async()=>{
                     if(!sb) return;
                     if(!e.hauptkontakt){
-                      await sb.from("elternkontakte").update({hauptkontakt:false}).eq("mitglied_id",raw.id);
-                      await sb.from("elternkontakte").update({hauptkontakt:true}).eq("id",e.id);
+                      await setHauptkontakt(sb,raw.id,e.id);
                     } else {
-                      await sb.from("elternkontakte").update({hauptkontakt:false}).eq("id",e.id);
+                      await updateElternkontakt(sb,e.id,{hauptkontakt:false});
                     }
-                    sb.from("elternkontakte").select("*").eq("mitglied_id",raw.id)
-                      .then(({data})=>setElternLoaded(data||[]));
+                    fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
                   }},
                   "sep",
                   {label:"Löschen", icon:"trash", danger:true, onClick:()=>deleteEltern(e.id)},

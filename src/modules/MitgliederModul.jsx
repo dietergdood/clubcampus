@@ -10,6 +10,7 @@ import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTi
          Toolbar, ColMenuButton, BulkBar, SortHeader, useConfirm, ConfirmDialog,
          Tabs, STitle, Between, Sub, Label, Select, Empty, InfoBox } from "../theme.jsx";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
+import { fetchAnsichten, insertAnsicht, deleteAnsicht, archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied } from "../domains/members/memberService.js";
 import { currentSeason } from "../domains/season/seasonUtils.js";
 import { LAENDER, getLandName, RolleChip, getFieldVisibility } from "./members/memberUtils.jsx";
 import { ROLES, FIELD_VIS, SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
@@ -93,10 +94,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   useEffect(()=>{
     if(!sb||!account?.id) return;
-    sb.from("mitglieder_ansichten")
-      .select("*").eq("benutzer_id",account.id)
-      .order("created_at",{ascending:true})
-      .then(({data})=>setCustomViews(data||[]));
+    fetchAnsichten(sb,account.id).then(data=>setCustomViews(data));
   },[account?.id]);
 
   function toggleSelectMode(){
@@ -119,7 +117,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(!sb||selected.size===0) return;
     const ok=await confirm({title:`${selected.size} Mitglieder löschen?`,message:"Diese Aktion kann nicht rükgängig gemacht werden (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!ok) return;
     const ids=[...selected];
-    await sb.from("mitglieder").delete().in("id",ids);
+    for(const id of ids) await deleteMitglied(sb,id);
     setSelected(new Set());
     setSelectMode(false);
     if(onReload) onReload();
@@ -129,7 +127,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok) return;
     const ids=[...selected];
     const deaktiviertVon=account?.name||account?.email||"Administrator";
-    await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:deaktiviertVon}).in("id",ids);
+    await archiviereMitglied(sb,ids,deaktiviertVon);
     if(onUpdatePortalZugang) await Promise.all(ids.map(id=>onUpdatePortalZugang(id,false)));
     refreshArchivCount();
     setSelected(new Set());
@@ -159,7 +157,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   async function saveCurrentView(){
     if(!saveViewName.trim()||!sb||!account?.id) return;
     setSavingView(true);
-    const {data}=await sb.from("mitglieder_ansichten").insert({
+    const data=await insertAnsicht(sb,{
       benutzer_id:account.id,
       name:saveViewName.trim(),
       spalten:visibleCols,
@@ -174,7 +172,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   async function deleteCustomView(id){
     if(!sb) return;
-    await sb.from("mitglieder_ansichten").delete().eq("id",id);
+    await deleteAnsicht(sb,id);
     setCustomViews(prev=>prev.filter(v=>v.id!==id));
     if(savedView==="custom_"+id) applyView("standard");
   }
@@ -186,13 +184,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   useEffect(()=>setPageSize(50),[search,filterVals,groupBy,sortCol,sortDir]);
   useEffect(()=>{
     if(!sb) return;
-    sb.from("mitglieder").select("id",{count:"exact",head:true}).eq("aktiv",false)
-      .then(({count})=>setArchivCount(count||0));
+    fetchArchivCount(sb).then(count=>setArchivCount(count));
   },[sb,archivLoaded]);
   useEffect(()=>{
     if(!sb||!archivTab||archivLoaded) return;
-    sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von").eq("aktiv",false).order("deaktiviert_am",{ascending:false})
-      .then(({data})=>{setArchivData(data||[]);setArchivLoaded(true);});
+    fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
   },[sb,archivTab,archivLoaded]);
 
   /* Filter */
@@ -223,13 +219,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* ── Detail-Modal ── */
   async function refreshArchivCount(){
     if(!sb) return;
-    const {count}=await sb.from("mitglieder").select("id",{count:"exact",head:true}).eq("aktiv",false);
-    setArchivCount(count||0);
+    fetchArchivCount(sb).then(count=>setArchivCount(count));
   }
 
   async function reloadMember(id){
     if(!sb) return;
-    const {data}=await sb.from("mitglieder").select("*").eq("id",id).single();
+    const data=await fetchMitglied(sb,id);
     if(data) setSelectedMember(prev=>({...prev,...data}));
     if(onReload) onReload();
   }
@@ -310,8 +305,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               <button className={`cc-ml-tab${archivTab?" cc-ml-tab-active":""}`} onClick={()=>{
                 setArchivTab(true);
                 if(!archivLoaded&&sb){
-                  sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von").eq("aktiv",false).order("deaktiviert_am",{ascending:false})
-                    .then(({data})=>{setArchivData(data||[]);setArchivLoaded(true);});
+                  fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
                 }
               }}>
                 Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
@@ -325,7 +319,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {archivTab?(
         <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} account={account} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
-          const {data}=await sb.from("mitglieder").select("*").eq("id",m.id).single();
+          const data=await fetchMitglied(sb,m.id);
           if(data) setSelectedMember({...data,name:`${data.vorname||""} ${data.nachname||""}`.trim()||"?",_tab:"info",_readonly:true});
         }}/>
       ):(

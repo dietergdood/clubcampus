@@ -9,6 +9,14 @@ import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTi
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../../constants.js";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.js";
+import {
+  fetchBenutzerFuerMitglied, fetchBenutzerByEmail,
+  portalZugangAktivieren, portalZugangDeaktivieren,
+  fetchElternkontakte, fetchKaderFuerMitglied,
+  fetchAktiveTeams, fetchPortalFunktionenMitGruppe, fetchPortalFunktionen,
+  upsertKader, updateKader, deaktiviereKader,
+  updateMitglied,
+} from "../../domains/members/memberService.js";
 import { currentSeason } from "../../domains/season/seasonUtils.js";
 import { MemberHero, FotoUpload } from "./MemberHero.jsx";
 import { ElternTab } from "./ElternTab.jsx";
@@ -84,19 +92,17 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
   useEffect(()=>{
     if(tab==="portal"&&sb&&raw.id){
       setPortalLoading(true);
-      sb.from("benutzer").select("*").eq("mitglied_id",raw.id).maybeSingle()
-        .then(({data})=>{setBenutzer(data);setPortalLoading(false);});
+      fetchBenutzerFuerMitglied(sb,raw.id).then(data=>{setBenutzer(data);setPortalLoading(false);});
     }
   },[tab,raw.id]);
 
   async function handleLink(){
     if(!sb||!linkEmail) return;
     setPortalLoading(true); setPortalMsg(null);
-    const {data:existing}=await sb.from("benutzer").select("id,email,role").eq("email",linkEmail).maybeSingle();
+    const existing=await fetchBenutzerByEmail(sb,linkEmail);
     if(existing){
       const neueRolle=await ableitUndSaveRolle(sb,raw.id,dbKaderRollen,raw.mitgliedtyp,raw.funktionen);
-      await sb.from("mitglieder").update({hat_portal_zugang:true}).eq("id",raw.id);
-      await sb.from("benutzer").update({mitglied_id:raw.id, role:neueRolle}).eq("id",existing.id);
+      await portalZugangAktivieren(sb,raw.id,existing.id,neueRolle);
       setPortalMsg({ok:true,text:`Verknüpft ✓ — Rolle: ${neueRolle}`});
       if(onReload) onReload();
     } else {
@@ -107,8 +113,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
   async function handleUnlink(){
     if(!sb) return;
-    await sb.from("mitglieder").update({hat_portal_zugang:false}).eq("id",raw.id);
-    await sb.from("benutzer").update({mitglied_id:null}).eq("mitglied_id",raw.id);
+    await portalZugangDeaktivieren(sb,raw.id);
     setBenutzer(null); setPortalMsg({ok:true,text:"Verknüpfung aufgehoben"});
     if(onReload) onReload();
   }
@@ -119,35 +124,28 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
   useEffect(()=>{
     if((tab==="eltern"||(tab==="info"&&brauchtEltern(raw.mitgliedtyp)))&&sb&&raw.id&&elternLoaded===null){
-      sb.from("elternkontakte").select("*").eq("mitglied_id",raw.id)
-        .then(({data})=>setElternLoaded(data||[]));
+      fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
     }
   },[tab,raw.id]);
 
   useEffect(()=>{
     if(sb&&raw.id&&teamDetails===null){
-      sb.from("kader")
-        .select("*, teams(id,name,kurzname)")
-        .eq("mitglied_id",raw.id).eq("aktiv",true)
-        .then(({data})=>setTeamDetails(data||[]));
+      fetchKaderFuerMitglied(sb,raw.id).then(data=>setTeamDetails(data));
     }
   },[raw.id]);
 
   useEffect(()=>{
     if(showTeamAssign&&sb){
       if((allTeams||[]).length===0)
-        sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
-          .then(({data})=>setAllTeams(data||[]));
+        fetchAktiveTeams(sb).then(data=>setAllTeams(data));
       if((assignFunktionen||[]).length===0)
-        sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
-          .then(({data})=>setAssignFunktionen(data||[]));
+        fetchPortalFunktionenMitGruppe(sb).then(data=>setAssignFunktionen(data));
     }
   },[showTeamAssign]);
 
   useEffect(()=>{
     if(sb&&(assignFunktionen||[]).length===0){
-      sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
-        .then(({data})=>setAssignFunktionen(data||[]));
+      fetchPortalFunktionen(sb).then(data=>setAssignFunktionen(data));
     }
   },[raw.id]);
 
@@ -168,7 +166,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
   async function assignTeam(){
     if(!sb||!teamAssignForm.team_id) return;
     setTeamAssignSaving(true);
-    await sb.from("kader").upsert({
+    await upsertKader(sb,{
       team_id:parseInt(teamAssignForm.team_id),
       mitglied_id:raw.id,
       rollen:teamAssignForm.funktionen||["Spieler/in"],
@@ -176,9 +174,9 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
       position:teamAssignForm.position||null,
       aktiv:true,
       saison:currentSeason(),
-    },{onConflict:"team_id,mitglied_id,saison"});
-    const {data}=await sb.from("kader").select("*, teams(id,name,kurzname)").eq("mitglied_id",raw.id).eq("aktiv",true);
-    if(data) setTeamDetails(data);
+    });
+    const data=await fetchKaderFuerMitglied(sb,raw.id);
+    setTeamDetails(data);
     await ableitRolle();
     setShowTeamAssign(false);
     setTeamAssignForm({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
@@ -188,14 +186,14 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
   async function saveFunktionen(){
     if(!sb) return;
-    await sb.from("mitglieder").update({funktionen:funkSelected}).eq("id",raw.id);
+    await updateMitglied(sb,raw.id,{funktionen:funkSelected});
     setShowFunkAssign(false);
     if(onReload) onReload();
   }
 
   async function removeFromTeam(kaderId){
     const ok=await confirm({title:"Aus Team entfernen?",confirmLabel:"Entfernen"});if(!sb||!ok) return;
-    await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
+    await deaktiviereKader(sb,kaderId);
     setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
     await ableitRolle();
   }
@@ -203,11 +201,11 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
   async function saveEditTeam(){
     if(!sb||!editTeam) return;
     setEditTeamSaving(true);
-    await sb.from("kader").update({
+    await updateKader(sb,editTeam.id,{
       rollen:editTeamForm.funktionen||[],
       rueckennr:editTeamForm.rueckennr||null,
       position:editTeamForm.position||null,
-    }).eq("id",editTeam.id);
+    });
     setTeamDetails(prev=>prev.map(k=>k.id===editTeam.id
       ?{...k,rollen:editTeamForm.funktionen,rueckennr:editTeamForm.rueckennr,position:editTeamForm.position}
       :k
@@ -220,7 +218,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
   useEffect(()=>{
     if(sb&&raw.id&&benutzer===null){
-      sb.from("benutzer").select("*").eq("mitglied_id",raw.id).maybeSingle()
+      fetchBenutzerFuerMitglied(sb,raw.id)
         .then(({data})=>setBenutzer(data));
     }
   },[raw.id]);
@@ -506,7 +504,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                       <DropMenu items={[
                         {label:"Entfernen", icon:"trash", danger:true, hidden:!canDelete, onClick:async()=>{
                           const next=(raw.funktionen||[]).filter(x=>x!==f);
-                          await sb.from("mitglieder").update({funktionen:next}).eq("id",raw.id);
+                          await updateMitglied(sb,raw.id,{funktionen:next});
                           if(onReload) onReload();
                         }},
                       ]}/>
@@ -769,7 +767,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
             <div className="cc-text-sm cc-mb-12">Das Mitglied wird beim nächsten Login aufgefordert, seine Daten zu prüfen und zu bestätigen.</div>
             <button className="cc-btn-ghost cc-w-full" onClick={async()=>{
               if(!sb) return;
-              await sb.from("mitglieder").update({profil_geprueft_at:null}).eq("id",raw.id);
+              await updateMitglied(sb,raw.id,{profil_geprueft_at:null});
               setPortalMsg({ok:true,text:"Datenprüfung angefordert ✓"});
               if(onReload) setTimeout(onReload,500);
             }}>
