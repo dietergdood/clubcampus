@@ -127,7 +127,7 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 | Phase | Inhalt | Status |
 |-------|--------|--------|
 | 1 | Foundation (domains/person, domains/roles, domains/permissions, shared/person) | ✅ Fertig |
-| 2 | MitgliederModul + KaderModul aufteilen | ⏳ Offen |
+| 2 | MitgliederModul + KaderModul aufteilen | ✅ Fertig |
 | 3 | PortalverwaltungModul aufteilen + Teams Domain | ⏳ Offen |
 | 4 | Termine + Helfer + Dashboard → Supabase, demoData.js löschen | ⏳ Offen |
 
