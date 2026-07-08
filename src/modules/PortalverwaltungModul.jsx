@@ -17,6 +17,7 @@ import { KaderRollenTab } from "./portal/KaderRollenTab.jsx";
 import { AussehenTab } from "./portal/AussehenTab.jsx";
 import { ApiTab } from "./portal/ApiTab.jsx";
 import { AuditTab } from "./portal/AuditTab.jsx";
+import { DesignSystemTab } from "./portal/DesignSystemTab.jsx";
 import { TeamModuleMatrix } from "./portal/TeamModuleMatrix.jsx";
 import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ZUGRIFF_DEFAULT, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, KATEGORIEN, API_INFOS } from "./portal/portalUtils.js";
 
@@ -267,13 +268,9 @@ function PortalverwaltungView(props){
     {
       key:"system", label:"System", icon:"settings", color:"#7C3AED", bg:"#F5F3FF",
       tabs:[
-        {key:"api",   label:"API-Verbindungen", icon:"plug"},
-        {key:"audit", label:"Audit-Logs",       icon:"clipboard-list"},
-      ]
-    },
-    {
-      key:"design", label:"Design-System", icon:"layout-2", color:"#EC4899", bg:"#FDF2F8",
-      tabs:[
+        {key:"api",          label:"API-Verbindungen", icon:"plug"},
+        {key:"audit",        label:"Audit-Logs",       icon:"clipboard-list"},
+        {key:"designsystem", label:"Design-System",    icon:"palette"},
       ]
     },
   ];
@@ -673,6 +670,10 @@ function PortalverwaltungView(props){
       <AuditTab
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}
           auditLogs={auditLogs} tab={tab}
+        />
+      <DesignSystemTab
+          loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}
+          tab={tab}
         />
 
       {/* ── DESIGN TOKENS TABS (inline) ── */}
