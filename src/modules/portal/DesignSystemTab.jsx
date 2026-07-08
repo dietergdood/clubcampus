@@ -2,7 +2,7 @@
    ClubCampus — modules/portal/DesignSystemTab.jsx
    Living Style Guide — alle UI-Komponenten mit echtem Theme
    ═══════════════════════════════════════════════════════════════ */
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label,
          H1, H2, Input, Select, Textarea, SectionLabel, Empty, DropMenu,
          Toolbar, ColMenuButton, BulkBar, SortHeader, InfoBox, ModalOrSheet,
@@ -14,8 +14,9 @@ function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function TokenRow({ name, desc }) {
-  const val = cssVar(name);
+function TokenRow({ name, desc, tick }) {
+  const [val, setVal] = useState(() => cssVar(name));
+  useEffect(() => { setVal(cssVar(name)); }, [name, tick]);
   const isColor = val.startsWith("#") || val.startsWith("rgb");
   return (
     <div style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)"}}>
@@ -29,10 +30,13 @@ function TokenRow({ name, desc }) {
   );
 }
 
-function Sec({title, children}) {
+function Sec({title, children, action}) {
   return (
     <div style={{marginBottom:28}}>
-      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--sub)",marginBottom:10,paddingBottom:6,borderBottom:"0.5px solid var(--border)"}}>{title}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,paddingBottom:6,borderBottom:"0.5px solid var(--border)"}}>
+        <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--sub)"}}>{title}</div>
+        {action}
+      </div>
       {children}
     </div>
   );
@@ -54,6 +58,7 @@ const ALL_COLS = [
 ];
 
 export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
+  const [tick, setTick] = useState(0);
   const [search, setSearch] = useState("");
   const [visibleCols, setVisibleCols] = useState(["name","rolle","team","aktiv"]);
   const [sortKey, setSortKey] = useState("name");
@@ -62,6 +67,13 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("liste");
   const [confirm, confirmDialog] = useConfirm();
+
+  useEffect(() => {
+    if (tab !== "designsystem") return;
+    const observer = new MutationObserver(() => setTick(t => t + 1));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    return () => observer.disconnect();
+  }, [tab]);
 
   if (loading || (isMobile && mobileKachel === null) || tab !== "designsystem") return null;
 
@@ -77,7 +89,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
   return (
     <div style={{display:"contents"}}>
       {/* CSS Variablen */}
-      <Sec title="Aktive CSS-Variablen">
+      <Sec title="Aktive CSS-Variablen" action={<button className="cc-btn-outline" onClick={()=>setTick(t=>t+1)} style={{fontSize:11}}><TI n="refresh" size={12}/> Aktualisieren</button>}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6}}>
           {[
             {name:"--cc-accent",    desc:"Vereinsfarbe 1"},
@@ -94,7 +106,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
             {name:"--text",         desc:"Haupttext"},
             {name:"--sub",          desc:"Sekundärtext"},
             {name:"--border",       desc:"Trennlinie"},
-          ].map(t => <TokenRow key={t.name} {...t}/>)}
+          ].map(t => <TokenRow key={t.name} {...t} tick={tick}/>)}
         </div>
       </Sec>
 
