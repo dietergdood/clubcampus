@@ -73,6 +73,14 @@ reloadMember, refreshArchivCount, brauchtEltern,
   const [editTeamRolleSearch,setEditTeamRolleSearch]=useState("");
   const [editTeamSaving,setEditTeamSaving]=useState(false);
   const [elternLoaded,setElternLoaded]=useState(null);
+  const [editField,setEditField]=useState(null);
+  const [editVal,setEditVal]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [editTeamIdx,setEditTeamIdx]=useState(null);
+  const [roleEditOpen,setRoleEditOpen]=useState(false);
+  const [teamsPopover,setTeamsPopover]=useState(null);
+  const [portalData,setPortalData]=useState(null);
+  const [teamAssignSearch,setTeamAssignSearch]=useState("");
   const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 
   useEffect(()=>{
