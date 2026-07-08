@@ -11,7 +11,7 @@ import { currentSeason } from "../../domains/season/seasonUtils.js";
 import { MemberHero, FotoUpload } from "./MemberHero.jsx";
 import { LAENDER, getLandName, getFieldVisibility, RolleChip } from "./memberUtils.jsx";
 
-export function PortalTab({raw,tab,canEdit,sb,role,account,dbPortalRollen,kannVerwalten,onReload,onUpdatePortalZugang,portalData,setPortalData,portalLoading,setPortalLoading}) {
+export function PortalTab({raw,tab,canEdit,sb,role,account,dbPortalRollen,kannVerwalten,onReload,onUpdatePortalZugang,portalData,setPortalData,portalLoading,setPortalLoading,benutzer,setBenutzer,linkEmail,setLinkEmail,portalMsg,setPortalMsg,handleLink,handleUnlink}) {
   return (
     <div style={{display:'contents'}}>
       {tab==="portal"&&(

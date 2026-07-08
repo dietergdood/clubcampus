@@ -16,6 +16,8 @@ import { NotizenVerlauf } from "./NotizenVerlauf.jsx";
 export function InfoTab({raw,tab,canEdit,sb,role,account,dbMitglieder,dbMitgliedtypen,dbPortalRollen,dbKaderRollen,kannVerwalten,onReload,onNavToTeam,onClose,brauchtEltern,TRAINER_KEYS,ROLLE_LABEL,editField,setEditField,editVal,setEditVal,saving,setSaving,ahvVisible,setAhvVisible,showTeamAssign,setShowTeamAssign,teamAssignForm,setTeamAssignForm,teamAssignSearch,setTeamAssignSearch,teamAssignRolleSearch,setTeamAssignRolleSearch,editTeamIdx,setEditTeamIdx,editTeamForm,setEditTeamForm,editTeamRolleSearch,setEditTeamRolleSearch,showFunkAssign,setShowFunkAssign,funkSearch,setFunkSearch,funkSelected,setFunkSelected,roleEditOpen,setRoleEditOpen,notizenCount,setNotizenCount,teamsPopover,setTeamsPopover,setTab,benutzer,setBenutzer,allTeams,setAllTeams,assignFunktionen,setAssignFunktionen,editTeam,setEditTeam,editTeamSaving,setEditTeamSaving,teamAssignSaving,setTeamAssignSaving,teamDetails,setTeamDetails,elternLoaded,setElternLoaded,teamFunkOpen,setTeamFunkOpen,editTeamFunkOpen,setEditTeamFunkOpen}) {
   const isMobile = useIsMobile();
   const [confirm,confirmDialog] = useConfirm();
+  const fv = getFieldVisibility(role);
+  const canDelete = kannVerwalten('members');
 
   const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
 

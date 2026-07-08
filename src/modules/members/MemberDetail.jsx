@@ -232,6 +232,10 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
           onReload={onReload} onUpdatePortalZugang={onUpdatePortalZugang}
           portalData={portalData} setPortalData={setPortalData}
           portalLoading={portalLoading} setPortalLoading={setPortalLoading}
+          benutzer={benutzer} setBenutzer={setBenutzer}
+          linkEmail={linkEmail} setLinkEmail={setLinkEmail}
+          portalMsg={portalMsg} setPortalMsg={setPortalMsg}
+          handleLink={handleLink} handleUnlink={handleUnlink}
         />
       )}
       {tab==="datenpruefung"&&(
@@ -239,6 +243,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
           raw={raw} tab={tab} canEdit={canEdit} sb={sb}
           kannVerwalten={kannVerwalten} onReload={onReload}
           onProfilGeprueft={onProfilGeprueft}
+          portalMsg={portalMsg} setPortalMsg={setPortalMsg}
         />
       )}
       {(tab==="stats"||tab==="comments"||tab==="ratings")&&(

@@ -11,7 +11,7 @@ import { currentSeason } from "../../domains/season/seasonUtils.js";
 import { MemberHero, FotoUpload } from "./MemberHero.jsx";
 import { LAENDER, getLandName, getFieldVisibility, RolleChip } from "./memberUtils.jsx";
 
-export function DatenpruefungTab({raw,tab,canEdit,sb,kannVerwalten,onReload,onProfilGeprueft}) {
+export function DatenpruefungTab({raw,tab,canEdit,sb,kannVerwalten,onReload,onProfilGeprueft,portalMsg,setPortalMsg}) {
   return (
     <div style={{display:'contents'}}>
       {tab==="datenpruefung"&&(
