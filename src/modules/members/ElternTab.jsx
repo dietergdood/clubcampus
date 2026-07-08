@@ -140,6 +140,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
                       await updateElternkontakt(sb,e.id,{hauptkontakt:false});
                     }
                     fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
+                    if(onReload) onReload();
                   }},
                   "sep",
                   {label:"Löschen", icon:"trash", danger:true, onClick:()=>deleteEltern(e.id)},
