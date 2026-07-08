@@ -41,6 +41,8 @@ reloadMember, refreshArchivCount, brauchtEltern,
     ["spieler","Spieler/in"],["eltern","Elternteil"],
     ["mitglied","Mitglied"],["supporter","Supporter"],
   ]);
+  const initials=(m.name||raw.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+  const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
   const isMobile=useIsMobile();
   const [portalLoading,setPortalLoading]=useState(false);
   const [benutzer,setBenutzer]=useState(null);
