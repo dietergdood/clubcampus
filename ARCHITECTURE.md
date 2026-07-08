@@ -230,6 +230,14 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 2. Diese ARCHITECTURE.md erwähnen
 3. Claude kennt damit sofort die Regeln und den aktuellen Stand
 
+## Session-Abschluss Routine
+
+1. Schema, Policies und Rollen vom Zürich-Projekt dumpen (keine Daten):
+```bash
+npx supabase db dump --db-url "postgresql://postgres.otiyvvxoqghtkcgsjmrv:PASSWORT@aws-1-eu-central-2.pooler.supabase.com:5432/postgres" > supabase/schema.sql
+```
+2. `supabase/schema.sql` auf GitHub committen (enthält: Tabellen, Policies, RLS, Funktionen, Rollen — keine Nutzdaten)
+
 
 ## Datenbankregeln (Supabase)
 
