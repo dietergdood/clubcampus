@@ -518,14 +518,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                     }}
                   >
                     <span className="cc-members-th-inner">
-                      {col.key!=="name"&&(
-                        <span
-                          className={`cc-col-drag-handle${dragCol===col.key?" cc-col-drag-handle-active":""}`}
-                          onClick={e=>{e.stopPropagation();dragCol===col.key?handleColDragEnd():handleColDragStart(col.key);}}
-                          title={dragCol===col.key?"Verschieben abbrechen":"Spalte verschieben"}
-                          aria-hidden="true"
-                        ><TI n="grip-vertical" size={11}/></span>
-                      )}
+
                       <span>{col.label}<SortIcon col={col.key}/></span>
                     </span>
                   </th>
