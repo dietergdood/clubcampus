@@ -3,10 +3,10 @@
    Portalverwaltung: Module, Berechtigungen, Benutzer, Aussehen
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "./constants.js";
-import { TI } from "./icons.jsx";
-import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile , avColor} from "./theme.jsx";
-import { FUNKTIONEN } from "./demoData.js";
+import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.js";
+import { TI } from "../icons.jsx";
+import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile , avColor} from "../theme.jsx";
+import { FUNKTIONEN } from "../demoData.js";
 
 /* ── Geteilte Konstanten ── */
 const ROLES = {
@@ -14,11 +14,6 @@ const ROLES = {
     label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
     desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",
     level:7
-  },
-  vorstand: {
-    label:"Vorstand", color:"var(--text)", bg:"#F5F5F5", icon:"scale",
-    desc:"Strategische Übersicht: alle Teams, Mitglieder lesen, Auswertungen — kein System, kein AHV",
-    level:6
   },
   administration: {
     label:"Administration", color:"var(--text)", bg:"#F5F5F5", icon:"briefcase",
@@ -127,7 +122,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
     setTimeout(()=>setSaveMsg(""),2000);
   }
 
-  if(loading) return <div style={{padding:20,color:"var(--sub)",fontSize:13}}>Lade Team-Module…</div>;
+  if(loading) return <div style={{padding:20,color:"var(--sub)",fontSize:14}}>Lade Team-Module…</div>;
 
   const hauptbereiche=["alle",...[...new Set(teams.map(t=>t.hauptbereich).filter(Boolean))]];
   const filtered=filterHaupt==="alle"?teams:teams.filter(t=>t.hauptbereich===filterHaupt);
@@ -250,11 +245,11 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                     <tr key={t.id} style={{borderTop:"0.5px solid var(--border)"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <td style={{padding:"8px 16px",fontWeight:500,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:13,zIndex:1}}>
+                      <td style={{padding:"8px 16px",fontWeight:500,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:14,zIndex:1}}>
                         <Row>
                           <div style={{width:3,height:20,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
+                            <div style={{fontWeight:600,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
                             {t.kurzname&&t.kurzname!==t.name&&<div style={{fontSize:10,color:"var(--sub)"}}>{t.kurzname}</div>}
                           </div>
                           <div onClick={()=>TEAM_MODS.forEach(m=>toggleTeamModul(t.id,m.key,!allAktiv))}
@@ -318,6 +313,11 @@ function DesignTokensKonfigurator({isMobile, FONT, GN, R, RL, BL, AM}){
           /* cc-specific */
           segPad:3, segItemPad:5, chipPad:4, chipPadH:12,
           toggleW:46, toggleH:26,
+          /* Tabellen */
+          thPadH:10, thPadV:8, thFontSize:11, thBorderW:2,
+          tdPadH:10, tdPadV:8, tdFontSize:13,
+          /* Multi-Select */
+          msChipFontSize:11, msTriggerPad:8, msItemPad:8,
         };
 
         const SHADOW_MAP={
@@ -354,6 +354,13 @@ function DesignTokensKonfigurator({isMobile, FONT, GN, R, RL, BL, AM}){
 .cc-toggle{width:${t.toggleW}px;height:${t.toggleH}px;border-radius:${Math.round(t.toggleH/2)}px;transition:background ${t.tSlow}ms;}
 .cc-toggle-knob{width:${t.toggleH-6}px;height:${t.toggleH-6}px;transition:left ${t.tSlow}ms cubic-bezier(0.34,1.2,0.64,1);}
 .cc-toggle-knob-on{left:${t.toggleW-t.toggleH+3}px;}
+.cc-th{padding:${t.thPadV}px ${t.thPadH}px;font-size:${t.thFontSize}px;border-bottom:${t.thBorderW}px solid var(--cc-accent,#FFBF00);}
+.cc-members-th{padding:${t.thPadV}px ${t.thPadH}px;font-size:${t.thFontSize}px;border-bottom:${t.thBorderW}px solid var(--cc-accent,#FFBF00);}
+.cc-td{padding:${t.tdPadV}px ${t.tdPadH}px;font-size:${t.tdFontSize}px;}
+.cc-members-td{padding:${t.tdPadV}px ${t.tdPadH}px;font-size:${t.tdFontSize}px;}
+.cc-multiselect-trigger{padding:${t.msTriggerPad}px 12px;}
+.cc-multiselect-chip{font-size:${t.msChipFontSize}px;}
+.cc-multiselect-item{padding:${t.msItemPad}px 12px;}
           `.trim();
         }
 
@@ -409,7 +416,21 @@ export const SHADOW = {
   drop:  '${SHADOW_MAP[t.shDrop]}',
   modal: '${SHADOW_MAP[t.shModal]}',
 };
-export const BORDER = '${t.borderWidth}';`;
+export const BORDER = '${t.borderWidth}';
+export const TABLE = {
+  thPadH:    ${t.thPadH},
+  thPadV:    ${t.thPadV},
+  thFontSize:${t.thFontSize},
+  thBorderW: ${t.thBorderW},
+  tdPadH:    ${t.tdPadH},
+  tdPadV:    ${t.tdPadV},
+  tdFontSize:${t.tdFontSize},
+};
+export const MULTISELECT = {
+  chipFontSize: ${t.msChipFontSize},
+  triggerPad:   ${t.msTriggerPad},
+  itemPad:      ${t.msItemPad},
+};`;
         }
 
         /* ── Slider helper ── */
@@ -450,6 +471,16 @@ export const BORDER = '${t.borderWidth}';`;
           segPad:    (v)=><div style={{background:'var(--surface2)',borderRadius:tok.rSeg,padding:v,display:'flex',gap:2}}><div style={{background:'var(--surface)',borderRadius:tok.rSeg-2,padding:'3px 8px',fontSize:10,fontWeight:600}}>An</div><div style={{padding:'3px 8px',fontSize:10,color:'var(--sub)'}}>Aus</div></div>,
           chipPad:   (v)=><div style={{borderRadius:tok.rChip,border:'1.5px solid var(--border)',padding:`${v}px ${tok.chipPadH}px`,fontSize:10,fontWeight:600,color:'var(--sub)'}}>Chip</div>,
           chipPadH:  (v)=><div style={{borderRadius:tok.rChip,border:'1.5px solid var(--border)',padding:`${tok.chipPad}px ${v}px`,fontSize:10,fontWeight:600,color:'var(--sub)'}}>Chip</div>,
+          thPadH:    (v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${tok.thPadV}px ${v}px`,background:'var(--surface2)',fontSize:tok.thFontSize,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${tok.thBorderW}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          thPadV:    (v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${v}px ${tok.thPadH}px`,background:'var(--surface2)',fontSize:tok.thFontSize,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${tok.thBorderW}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          thFontSize:(v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${tok.thPadV}px ${tok.thPadH}px`,background:'var(--surface2)',fontSize:v,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${tok.thBorderW}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          thBorderW: (v)=><table style={{borderCollapse:'collapse'}}><thead><tr><th style={{padding:`${tok.thPadV}px ${tok.thPadH}px`,background:'var(--surface2)',fontSize:tok.thFontSize,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em',color:'var(--sub)',borderBottom:`${v}px solid var(--cc-accent,#FFBF00)`}}>Spalte</th></tr></thead></table>,
+          tdPadH:    (v)=><table style={{borderCollapse:'collapse'}}><tbody><tr><td style={{padding:`${tok.tdPadV}px ${v}px`,borderBottom:'0.5px solid var(--border)',fontSize:tok.tdFontSize}}>Zelle</td></tr></tbody></table>,
+          tdPadV:    (v)=><table style={{borderCollapse:'collapse'}}><tbody><tr><td style={{padding:`${v}px ${tok.tdPadH}px`,borderBottom:'0.5px solid var(--border)',fontSize:tok.tdFontSize}}>Zelle</td></tr></tbody></table>,
+          tdFontSize:(v)=><table style={{borderCollapse:'collapse'}}><tbody><tr><td style={{padding:`${tok.tdPadV}px ${tok.tdPadH}px`,borderBottom:'0.5px solid var(--border)',fontSize:v}}>Zelle</td></tr></tbody></table>,
+          msChipFontSize:(v)=><span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:20,fontSize:v,fontWeight:500,background:'var(--surface)',border:'0.5px solid var(--border)'}}>Chip ×</span>,
+          msTriggerPad:  (v)=><div style={{padding:`${v}px 12px`,border:'0.5px solid var(--border)',borderRadius:8,background:'var(--surface2)',fontSize:13,color:'var(--sub)',display:'flex',justifyContent:'space-between'}}>+ Funktion wählen <span>▾</span></div>,
+          msItemPad:     (v)=><div style={{border:'0.5px solid var(--border)',borderRadius:8,overflow:'hidden'}}><div style={{padding:`${v}px 12px`,fontSize:13,display:'flex',alignItems:'center',gap:8}}><div style={{width:14,height:14,borderRadius:3,border:'0.5px solid var(--border)'}}/> Option</div></div>,
         };
 
         const Slider=({label, k, min, max, step=1, unit='px', hint})=>(
@@ -486,7 +517,7 @@ export const BORDER = '${t.borderWidth}';`;
         const SectionHdr=({icon, title, color='var(--sub)'})=>(
           <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 0 4px',borderBottom:'2px solid var(--border)',marginBottom:4}}>
             <TI n={icon} size={15} style={{color}}/>
-            <span style={{fontSize:13,fontWeight:800,color:'var(--text)',letterSpacing:-0.2}}>{title}</span>
+            <span style={{fontSize:14,fontWeight:800,color:'var(--text)',letterSpacing:-0.2}}>{title}</span>
           </div>
         );
 
@@ -567,6 +598,26 @@ export const BORDER = '${t.borderWidth}';`;
                 <Slider label="Seg. Item Padding V" k="segItemPad" min={3} max={10} hint=".cc-seg-item"/>
                 <Slider label="Chip Padding V" k="chipPad" min={2} max={8} hint=".cc-chip-toggle"/>
                 <Slider label="Chip Padding H" k="chipPadH" min={8} max={20} hint=".cc-chip-toggle"/>
+              </Card>
+
+              {/* Tabellen */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="table" title="Tabellen" color="#0F766E"/>
+                <Slider label="Header Padding H" k="thPadH" min={6} max={20} hint=".cc-th"/>
+                <Slider label="Header Padding V" k="thPadV" min={4} max={14} hint=".cc-th"/>
+                <Slider label="Header Schrift" k="thFontSize" min={9} max={13} hint=".cc-th"/>
+                <Slider label="Header Border" k="thBorderW" min={1} max={4} hint=".cc-th border-bottom"/>
+                <Slider label="Zelle Padding H" k="tdPadH" min={6} max={20} hint=".cc-td"/>
+                <Slider label="Zelle Padding V" k="tdPadV" min={4} max={14} hint=".cc-td"/>
+                <Slider label="Zelle Schrift" k="tdFontSize" min={11} max={15} hint=".cc-td"/>
+              </Card>
+
+              {/* Multi-Select */}
+              <Card style={{padding:16}}>
+                <SectionHdr icon="list-check" title="Multi-Select" color="#7C3AED"/>
+                <Slider label="Chip Schriftgrösse" k="msChipFontSize" min={9} max={13} hint=".cc-multiselect-chip"/>
+                <Slider label="Trigger Padding V" k="msTriggerPad" min={5} max={12} hint=".cc-multiselect-trigger"/>
+                <Slider label="Item Padding V" k="msItemPad" min={5} max={14} hint=".cc-multiselect-item"/>
               </Card>
 
             </div>
@@ -662,9 +713,64 @@ export const BORDER = '${t.borderWidth}';`;
   );
 }
 
-function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId}){
+function PortalverwaltungView(props){
+  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen} = props;
   const [tab,setTab]=useState(initialTab);
+  const [dbPortalRollen,setDbPortalRollen]=useState(externalRollen);
+  useEffect(()=>{if(externalRollen.length>0)setDbPortalRollen(externalRollen);},[externalRollen]);
+  const [dbKaderRollen,setDbKaderRollen]=useState(externalKaderRollen);
+  useEffect(()=>{if(externalKaderRollen.length>0)setDbKaderRollen(externalKaderRollen);},[externalKaderRollen]);
+  const [kaderRolleForm,setKaderRolleForm]=useState({name:"",ist_trainer:false,sort_order:50});
+  const [editKaderRolle,setEditKaderRolle]=useState(null);
+  const [showKaderRolleForm,setShowKaderRolleForm]=useState(false);
+  const [rollenForm,setRollenForm]=useState({name:"",label:"",prioritaet:50});
+  const [editRolle,setEditRolle]=useState(null);
+  const [showRolleForm,setShowRolleForm]=useState(false);
   const [module,setModule]=useState([]);
+
+  async function saveKaderRolle(){
+    if(!kaderRolleForm.name.trim()) return;
+    const payload={name:kaderRolleForm.name.trim(),ist_trainer:!!kaderRolleForm.ist_trainer,sort_order:parseInt(kaderRolleForm.sort_order)||50,aktiv:true};
+    if(supabase){
+      if(editKaderRolle?.id){
+        await supabase.from("kader_rollen").update(payload).eq("id",editKaderRolle.id);
+      } else {
+        await supabase.from("kader_rollen").insert(payload);
+      }
+      const{data}=await supabase.from("kader_rollen").select("*").eq("aktiv",true).order("sort_order");
+      if(data){setDbKaderRollen(data);if(onReloadKaderRollen)onReloadKaderRollen();}
+    }
+    setShowKaderRolleForm(false);setEditKaderRolle(null);setKaderRolleForm({name:"",ist_trainer:false,sort_order:50});
+  }
+
+  async function deleteKaderRolle(id){
+    if(!supabase||!window.confirm("Kader-Rolle wirklich löschen?")) return;
+    await supabase.from("kader_rollen").update({aktiv:false}).eq("id",id);
+    const{data}=await supabase.from("kader_rollen").select("*").eq("aktiv",true).order("sort_order");
+    if(data){setDbKaderRollen(data);if(onReloadKaderRollen)onReloadKaderRollen();}
+  }
+
+  async function saveRolle(){
+    if(!rollenForm.name.trim()||!rollenForm.label.trim()) return;
+    const payload={name:rollenForm.name.trim(),label:rollenForm.label.trim(),prioritaet:parseInt(rollenForm.prioritaet)||50,aktiv:true};
+    if(supabase){
+      if(editRolle?.id){
+        await supabase.from("portal_rollen").update(payload).eq("id",editRolle.id);
+      } else {
+        await supabase.from("portal_rollen").insert(payload);
+      }
+      const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
+      if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
+    }
+    setShowRolleForm(false);setEditRolle(null);setRollenForm({name:"",label:"",prioritaet:50});
+  }
+
+  async function deleteRolle(id){
+    if(!supabase||!window.confirm("Rolle wirklich löschen?")) return;
+    await supabase.from("portal_rollen").update({aktiv:false}).eq("id",id);
+    const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
+    if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
+  }
   const [moduleConfig,setModuleConfig]=useState({});
   const [moduleBerechtigungen,setModuleBerechtigungen]=useState({});
   const [felder,setFelder]=useState([]);
@@ -677,12 +783,20 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   /* Gruppen & Funktionen */
   const [gruppen,setGruppen]=useState([]);
   const [funktionen,setFunktionen]=useState([]);
+  const [pvTeams,setPvTeams]=useState([]);
+  const [gruppenTeams,setGruppenTeams]=useState([]);
+  const [rollePflichtfelder,setRollePflichtfelder]=useState([]);
+  const [mitgliedtypPflichtfelder,setMitgliedtypPflichtfelder]=useState([]);
+  const [dbMitgliedtypen,setDbMitgliedtypen]=useState([]);
+  const [showMitgliedtypForm,setShowMitgliedtypForm]=useState(false);
+  const [editMitgliedtyp,setEditMitgliedtyp]=useState(null);
+  const [mitgliedtypForm,setMitgliedtypForm]=useState({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""}); // portal_gruppen_teams
   const [selectedGruppe,setSelectedGruppe]=useState(null);
   const [showGruppeForm,setShowGruppeForm]=useState(false);
   const [showFunktionForm,setShowFunktionForm]=useState(false);
   const [editGruppe,setEditGruppe]=useState(null);
   const [editFunktion,setEditFunktion]=useState(null);
-  const [gruppeForm,setGruppeForm]=useState({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{}});
+  const [gruppeForm,setGruppeForm]=useState({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{},teams:[]});
   const [funktionForm,setFunktionForm]=useState({name:"",beschreibung:"",gruppe_id:"",module_override:[],teams:[],filter:{},stufe_override:{}});
   /* Module & Rechte View-Toggle */
   const [moduleViewMode,setModuleViewMode]=useState("modul");
@@ -714,9 +828,12 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       r.setProperty("--cc-accent",    td.vereinsfarbe1||"#FFBF00");
       r.setProperty("--cc-accent2",   td.vereinsfarbe2||"#000000");
       r.setProperty("--cc-hover",     hexToRgba(td.vereinsfarbe1||"#FFBF00",0.19));
+      r.setProperty("--cc-accent-25", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.25));
       r.setProperty("--cc-accent-20", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.12));
       r.setProperty("--cc-accent-15", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.09));
       r.setProperty("--cc-accent-12", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.07));
+      r.setProperty("--cc-accent-10", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.10));
+      r.setProperty("--cc-accent-5",  hexToRgba(td.vereinsfarbe1||"#FFBF00",0.05));
       r.setProperty("--nav",          td.navBg||"#000000");
       r.setProperty("--nav-t",        td.navText||"#FFFFFF");
       r.setProperty("--nav-a",        td.navAccent||"#FFBF00");
@@ -765,7 +882,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
     {
       key:"benutzer", label:"Benutzer & Rollen", icon:"users", color:"#16A34A", bg:"#ECFDF5",
       tabs:[
-        {key:"users", label:"Benutzer & Rollen", icon:"users"},
+        {key:"users",       label:"Benutzer & Rollen",         icon:"users"},
+        {key:"mitglieder_config", label:"Mitglieder-Konfiguration", icon:"id-badge"},
+        {key:"rollen", label:"Portal-Rollen", icon:"shield"},
+        {key:"kader_rollen", label:"Kader-Rollen", icon:"users"},
       ]
     },
     {
@@ -783,7 +903,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       ]
     },
     {
-      key:"design", label:"Design-System", icon:"palette", color:"#EC4899", bg:"#FDF2F8",
+      key:"design", label:"Design-System", icon:"layout-2", color:"#EC4899", bg:"#FDF2F8",
       tabs:[
         {key:"designsystem", label:"CSS-Klassen", icon:"code"},
       ]
@@ -795,8 +915,8 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   const [mobileKachel, setMobileKachel]=useState(null); // null = Landingseite
   const isMobile=useIsMobile();
 
-  const ROLLEN=["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"];
-  const ROLLEN_LABELS={administrator:"Admin",vorstand:"Vorstand",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern"};
+  const ROLLEN=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["administrator","administration","funktionaer","trainer","spieler","eltern","mitglied","supporter"];
+  const ROLLEN_LABELS={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"};
   const KATEGORIEN=["kern","sport","kommunikation","betrieb","verwaltung","admin"];
   const KAT_LABELS={kern:"Kern",sport:"Sport",kommunikation:"Kommunikation",betrieb:"Betrieb",verwaltung:"Verwaltung",admin:"Systemverwaltung"};
 
@@ -830,47 +950,47 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
   const ROLLEN_MODULE_DEFAULT={
     administrator:   ALLE_MODULE.map(m=>m.key),
-    vorstand:        ["dashboard","members","team","training","schedule","attendance_central","events","helpers","buses","material","media","news","wiki","docs"],
     administration:  ["dashboard","members","team","training","schedule","attendance_central","events","helpers","buses","material","lockers","media","news","wiki","docs","portal"],
     funktionaer:     ["dashboard"],
     trainer:         ["dashboard","team","training","events","helpers","buses","material","lockers","news","wiki","docs"],
     spieler:         ["dashboard","team","events","helpers","docs","news"],
     eltern:          ["dashboard","team","events","helpers","docs","news"],
+    supporter:       ["dashboard","events","helpers","news"],
   };
 
   /* Modul-Aktionen für Detail-Ansicht */
   const MODUL_AKTIONEN={
-    dashboard:  [{label:"Übersicht ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"}],
+    dashboard:  [{label:"Übersicht ansehen",wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"}],
     team:       [
-      {label:"Team + Kader ansehen",          wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Team + Kader ansehen",          wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Position / Nummer ändern",      wer:["administrator","administration","trainer"],min:"schreiben",   spez:"Trainer: nur eigene Spieler"},
       {label:"Spieler hinzufügen / entfernen",wer:["administrator","administration"],         min:"verwalten"},
       {label:"Team erstellen / bearbeiten",   wer:["administrator","administration"],         min:"verwalten"},
       {label:"Trainer zuweisen",              wer:["administrator","administration"],         min:"verwalten"},
     ],
     members:    [
-      {label:"Name, Tel, E-Mail sehen",           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Name, Tel, E-Mail sehen",           wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Basis-Felder bearbeiten",           wer:["administrator","administration","trainer"],min:"schreiben",spez:"Trainer: nur eigene Spieler"},
       {label:"AHV, Bankdaten sehen",              wer:["administrator","administration"],         min:"verwalten"},
       {label:"Neue Mitglieder, Export, löschen",  wer:["administrator","administration"],         min:"verwalten"},
     ],
     training:   [
-      {label:"Trainings ansehen",              wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Trainings ansehen",              wer:["administrator","funktionaer","administration","funktionaer","trainer"],min:"lesen"},
       {label:"Training absagen",               wer:["administrator","administration","trainer"],min:"schreiben",  spez:"Trainer: nur eigene Teams"},
       {label:"Training erstellen / bearbeiten",wer:["administrator","administration","trainer"],min:"verwalten",  spez:"Trainer: nur eigene Teams"},
       {label:"Vorlagen verwalten",             wer:["administrator","administration"],min:"verwalten"},
     ],
     schedule:   [
-      {label:"Spielplan + Tabelle ansehen",wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Spielplan + Tabelle ansehen",wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Daten ändern",               wer:[],                                              min:"verwalten",  note:"Nur via FVRZ-Sync"},
     ],
     attendance_central:[
-      {label:"Eigene Statistik sehen",           wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Eigene Statistik sehen",           wer:["administrator","funktionaer","administration","funktionaer","trainer"],min:"lesen"},
       {label:"Anwesenheiten eintragen / ändern", wer:["administrator","administration","trainer"],min:"schreiben", spez:"Trainer: nur eigene Spieler"},
       {label:"Alle Teams auswerten, exportieren",wer:["administrator","administration"],         min:"verwalten"},
     ],
     events:     [
-      {label:"Termine ansehen",                           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Termine ansehen",                           wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"An- / Abmelden",                           wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
       {label:"Vereinsanlass erstellen / bearbeiten",      wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Vereinsanlass absagen / löschen",           wer:["administrator","administration","funktionaer"],min:"verwalten"},
@@ -879,44 +999,44 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       {label:"Spiel-Termin bearbeiten (Treffpunkt etc.)", wer:["administrator","trainer"],        min:"verwalten", spez:"Trainer: nur eigene Teams", note:"Auto-generiert via Spielplan"},
     ],
     helpers:    [
-      {label:"Einsätze ansehen",                  wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Einsätze ansehen",                  wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"An- / Abmelden",                   wer:["administrator","administration","funktionaer","trainer","spieler","eltern"],min:"schreiben"},
       {label:"Vereinseinsatz erstellen / verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Team-Einsatz erstellen / verwalten", wer:["administrator","trainer"],               min:"verwalten", spez:"Trainer: nur eigene Teams"},
       {label:"Zuteilungen verwalten",              wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     buses:      [
-      {label:"Fahrten + Belegung ansehen",   wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Fahrten + Belegung ansehen",   wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Platz reservieren / abmelden", wer:["administrator","administration","trainer","spieler"],min:"schreiben"},
       {label:"Fahrten erstellen / verwalten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     material:   [
-      {label:"Inventar ansehen",              wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},
+      {label:"Inventar ansehen",              wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler"],min:"lesen"},
       {label:"Ausleihe beantragen",           wer:["administrator","administration","trainer"], min:"schreiben"},
       {label:"Ausleihen genehmigen",          wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Inventar + Bestände verwalten", wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     lockers:    [
-      {label:"Eigene Zuteilung ansehen", wer:["administrator","vorstand","administration","funktionaer","trainer"],min:"lesen"},
+      {label:"Eigene Zuteilung ansehen", wer:["administrator","funktionaer","administration","funktionaer","trainer"],min:"lesen"},
       {label:"Zuteilungen verwalten",    wer:["administrator","administration"],min:"verwalten"},
     ],
     news:       [
-      {label:"Artikel lesen",                    wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Artikel lesen",                    wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Vereinsnews erstellen / bearbeiten",wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Vereinsnews publizieren / löschen", wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     wiki:       [
-      {label:"Artikel lesen",                      wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Artikel lesen",                      wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Artikel bearbeiten",                 wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
       {label:"Artikel erstellen, löschen, Kategorien",wer:["administrator","administration","funktionaer"],min:"verwalten"},
     ],
     docs:       [
-      {label:"Herunterladen",                  wer:["administrator","vorstand","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
+      {label:"Herunterladen",                  wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
       {label:"Hochladen, löschen",             wer:["administrator","administration","funktionaer"],min:"verwalten"},
       {label:"Ordner / Kategorien verwalten",  wer:["administrator","administration"],             min:"verwalten"},
     ],
     media:      [
-      {label:"Anschauen",                           wer:["administrator","vorstand","administration","funktionaer","trainer","spieler"],min:"lesen"},
+      {label:"Anschauen",                           wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler"],min:"lesen"},
       {label:"Fotos hochladen",                     wer:["administrator","administration","funktionaer","trainer"],min:"schreiben"},
       {label:"Team-Matchbericht schreiben",         wer:["administrator","trainer"],               min:"schreiben",  spez:"Trainer: nur eigene Teams"},
       {label:"Vereinsbericht schreiben",            wer:["administrator","administration","funktionaer"],min:"schreiben"},
@@ -928,7 +1048,6 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   /* Standard-Stufen pro Rolle (nur für Module mit Zugriff) */
   const ZUGRIFF_DEFAULT={
     administrator:  {_all:"verwalten"},
-    vorstand:       {_all:"lesen"},
     administration: {
       _all:"verwalten",
       dashboard:"lesen",
@@ -960,6 +1079,10 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       events:"schreiben",
       helpers:"schreiben",
       schedule:"lesen",
+    },
+    supporter:      {
+      _all:"lesen",
+      helpers:"schreiben",
     },
   };
 
@@ -1017,7 +1140,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       setLoading(true);
       try{
         if(supabase){
-          const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR]=await Promise.all([
+          const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR,teamsR,gtR]=await Promise.all([
             supabase.from("api_verbindungen").select("*").order("sort_order"),
             supabase.from("api_sync_log").select("*,api_verbindungen(label)").order("gestartet_am",{ascending:false}).limit(50),
             supabase.from("benutzer").select("id,name,email,role").order("name"),
@@ -1025,6 +1148,8 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe,module,modul_stufen), stufe_override").order("name"),
             supabase.from("module_config").select("*"),
             supabase.from("modul_rechte").select("*"),
+            supabase.from("teams").select("id,name,hauptbereich,kurzname").eq("aktiv",true).order("hauptbereich").order("name"),
+            supabase.from("portal_gruppen_teams").select("*"),
           ]);
           if(apiR.data) setApiVerbindungen(apiR.data);
           if(audR.data) setAuditLogs(audR.data);
@@ -1043,6 +1168,17 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           }
           if(gruppenR.data) setGruppen(gruppenR.data);
           if(funktionenR.data) setFunktionen(funktionenR.data);
+          if(teamsR.data) setPvTeams(teamsR.data);
+          if(gtR.data) setGruppenTeams(gtR.data);
+          // Pflichtfelder laden
+          const [rpfR,mtpfR]=await Promise.all([
+            supabase.from("rolle_pflichtfelder").select("*"),
+            supabase.from("mitgliedtyp_pflichtfelder").select("*"),
+          ]);
+          if(rpfR.data) setRollePflichtfelder(rpfR.data);
+          if(mtpfR.data) setMitgliedtypPflichtfelder(mtpfR.data);
+          const{data:mtData}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
+          if(mtData) setDbMitgliedtypen(mtData);
           /* module_config → moduleAktiv State */
           if(mcR.data&&mcR.data.length>0&&setModuleAktiv){
             const ma={};
@@ -1156,14 +1292,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
         <div>
           <H1>Portalverwaltung</H1>
-          <div style={{fontSize:13,color:"var(--sub)",marginTop:3}}>Module, Benutzer, API-Verbindungen und Einstellungen</div>
+          <div style={{fontSize:14,color:"var(--sub)",marginTop:3}}>Module, Benutzer, API-Verbindungen und Einstellungen</div>
         </div>
         {saveMsg&&<Chip text={saveMsg} color={saveMsg==="Ungespeichert"?R:GN} bg={saveMsg==="Ungespeichert"?RL:"#ECFDF5"}/>}
       </div>
 
       {/* ── MOBILE: Kacheln oder Unternavigation ── */}
       {isMobile&&mobileKachel===null&&(
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+        <div className="cc-grid-form">
           {KATEGORIEN_NAV.map(k=>(
             <button key={k.key} onClick={()=>{setMobileKachel(k.key);setTab(k.tabs[0].key);setAktiveKat(k.key);}}
               style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:10,
@@ -1187,7 +1323,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
           <div style={{marginBottom:16}}>
             <button onClick={()=>setMobileKachel(null)}
               style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",
-                cursor:"pointer",color:"var(--sub)",fontSize:13,padding:"0 0 12px",fontFamily:"inherit"}}>
+                cursor:"pointer",color:"var(--sub)",fontSize:14,padding:"0 0 12px",fontFamily:"inherit"}}>
               <TI n="arrow-left" size={14}/>Übersicht
             </button>
             {kat.tabs.length>1&&(
@@ -1219,7 +1355,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   style={{display:"flex",alignItems:"center",gap:6,padding:"9px 16px",
                     background:isAktiv?k.bg:"none",border:"none",
                     borderBottom:isAktiv?"2px solid "+k.color:"2px solid transparent",
-                    cursor:"pointer",fontSize:13,fontWeight:isAktiv?700:400,
+                    cursor:"pointer",fontSize:14,fontWeight:isAktiv?700:400,
                     color:isAktiv?k.color:"var(--sub)",marginBottom:-1,fontFamily:"inherit",
                     borderRadius:"6px 6px 0 0",whiteSpace:"nowrap"}}>
                   <TI n={k.icon} size={15} style={{color:isAktiv?k.color:"var(--sub)"}}/>
@@ -1252,7 +1388,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         </div>
       )}
 
-      {loading&&(!isMobile||mobileKachel!==null)&&<div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:13}}>Wird geladen…</div>}
+      {loading&&(!isMobile||mobileKachel!==null)&&<div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:14}}>Wird geladen…</div>}
 
       {/* ── TAB: MODULE & RECHTE ── */}
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="module"&&(
@@ -1354,7 +1490,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                                     <div style={{position:"absolute",top:2,width:11,height:11,borderRadius:"50%",background:"var(--surface)",transition:"left 0.15s",left:isAktiv||isPflicht?13:2}}/>
                                   </div>
                                   <TI n={m.icon} size={13} style={{color:isPflicht?"#B45309":"var(--sub)",flexShrink:0}}/>
-                                  <span style={{fontWeight:500,color:isPflicht?"#B45309":isExpanded?"var(--text)":"var(--text)",fontSize:13}}>{m.name||m.label}</span>
+                                  <span style={{fontWeight:500,color:isPflicht?"#B45309":isExpanded?"var(--text)":"var(--text)",fontSize:14}}>{m.name||m.label}</span>
                                   {isPflicht&&<span style={{fontSize:9,padding:"1px 5px",borderRadius:5,background:STATUS_BG.warn,color:"#B45309",fontWeight:600}}>Pflicht</span>}
                                   <TI n={isExpanded?"chevron-up":"chevron-down"} size={11} style={{color:"var(--sub)",marginLeft:"auto"}}/>
                                 </div>
@@ -1464,7 +1600,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                               <td style={{padding:"8px 14px"}}>
                                 <div style={{display:"flex",alignItems:"center",gap:7}}>
                                   <TI n={m.icon} size={13} style={{color:"var(--sub)"}}/>
-                                  <span style={{fontWeight:500,fontSize:13}}>{m.name||m.label}</span>
+                                  <span style={{fontWeight:500,fontSize:14}}>{m.name||m.label}</span>
                                 </div>
                               </td>
                               <td style={{padding:"8px 10px"}}>
@@ -1503,7 +1639,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     ]).map(g=>(
                       <div key={g.name} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",borderRadius:8,border:"0.5px solid var(--border)"}}>
                         <div style={{width:8,height:8,borderRadius:"50%",background:g.farbe,flexShrink:0}}/>
-                        <span style={{fontWeight:500,fontSize:13,flex:1}}>{g.name}</span>
+                        <span style={{fontWeight:500,fontSize:14,flex:1}}>{g.name}</span>
                         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                           {(g.module||[]).map(mk=>{
                             const mod=ALLE_MODULE.find(m=>m.key===mk);
@@ -1528,14 +1664,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:20}}>
             <InfoBox text="Gruppen bündeln Module für Funktionäre. Funktionen schränken innerhalb einer Gruppe ein (Teams, Filter)." color={BL}/>
-            <button onClick={()=>{setEditGruppe(null);setGruppeForm({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{}});setShowGruppeForm(true);}}
-              style={{padding:"7px 16px",borderRadius:9,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0}}>
+            <button onClick={()=>{setEditGruppe(null);setGruppeForm({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{},teams:[]});setShowGruppeForm(true);}}
+              style={{padding:"7px 16px",borderRadius:9,border:"none",background:BTN,color:BTN_TXT,transition:"background 0.15s",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT,flexShrink:0}}>
               + Neue Gruppe
             </button>
           </div>
 
           {/* Gruppen als Grid */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
+          <div className="cc-grid-cards" style={{gap:12}}>
           {(gruppen.length>0?gruppen:[
             {id:1,name:"Vereinsleben & Events",farbe:"#8B5CF6",beschreibung:"Anlässe, Helfereinsätze, Mitgliederliste",module:["events","helpers","members","news","docs"]},
             {id:2,name:"Betrieb & Infrastruktur",farbe:"#3B82F6",beschreibung:"Material, Busse, Garderoben",module:["material","buses","lockers","docs"]},
@@ -1544,6 +1680,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             {id:5,name:"Schiedsrichterwesen",farbe:"#06B6D4",beschreibung:"Spielplan, Koordination",module:["schedule","training","docs"]},
           ]).map(g=>{
             const gFunktionen=funktionen.filter(f=>f.gruppe_id===g.id||f.portal_gruppen?.id===g.id);
+            const gTeams=gruppenTeams.filter(gt=>gt.gruppe_id===g.id).map(gt=>pvTeams.find(t=>t.id===gt.team_id)).filter(Boolean);
             const isOpen=selectedGruppe?.id===g.id;
             const moduleLabels=(g.module||[]).map(k=>ALLE_MODULE.find(m=>m.key===k)?.label||k);
             return(
@@ -1564,6 +1701,11 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                       <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:g.farbe+"20",color:g.farbe,fontWeight:600}}>
                         {gFunktionen.length} Funktion{gFunktionen.length!==1?"en":""}
                       </span>
+                      {gTeams.length>0&&(
+                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:"#F9731620",color:"#F97316",fontWeight:600}}>
+                          {gTeams.length} Team{gTeams.length!==1?"s":""}
+                        </span>
+                      )}
                     </div>
                     {g.beschreibung&&<div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{g.beschreibung}</div>}
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
@@ -1574,7 +1716,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   </div>
                   {/* Aktionen */}
                   <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 14px",flexShrink:0}}>
-                    <button onClick={e=>{e.stopPropagation();setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6",modul_stufen:g.modul_stufen||{}});setShowGruppeForm(true);}}
+                    <button onClick={e=>{e.stopPropagation();const existingTeams=gruppenTeams.filter(gt=>gt.gruppe_id===g.id).map(gt=>gt.team_id);setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6",modul_stufen:g.modul_stufen||{},teams:existingTeams});setShowGruppeForm(true);}}
                       style={{width:30,height:30,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
                       <TI n="edit" size={13}/>
                     </button>
@@ -1601,7 +1743,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     {/* Funktionen-Grid */}
                     <div style={{padding:"6px 12px 14px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:8}}>
                       {gFunktionen.length===0&&(
-                        <div style={{gridColumn:"1/-1",padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13,border:"1px dashed var(--border)",borderRadius:10}}>
+                        <div style={{gridColumn:"1/-1",padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14,border:"1px dashed var(--border)",borderRadius:10}}>
                           Noch keine Funktionen — klicke «+ Funktion hinzufügen»
                         </div>
                       )}
@@ -1611,7 +1753,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                           border:"1px solid var(--border)",padding:"11px 13px"
                         }}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-                            <span style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{f.name}</span>
+                            <span style={{fontWeight:600,fontSize:14,color:"var(--text)"}}>{f.name}</span>
                             <button onClick={()=>{setEditFunktion(f);setFunktionForm({name:f.name,beschreibung:f.beschreibung||"",gruppe_id:f.gruppe_id||g.id,module_override:f.module_override||[],teams:f.teams||[],filter:f.filter||{}});setShowFunktionForm(true);}}
                               style={{width:26,height:26,borderRadius:7,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)",flexShrink:0}}>
                               <TI n="edit" size={12}/>
@@ -1664,7 +1806,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Gruppenname *</label>
                   <input value={gruppeForm.name} onChange={e=>setGruppeForm(p=>({...p,name:e.target.value}))}
                     placeholder="z.B. Vereinsleben & Events" autoFocus
-                    style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
+                    style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
                 </div>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Farbe</label>
@@ -1683,8 +1825,27 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Beschreibung</label>
                 <input value={gruppeForm.beschreibung||""} onChange={e=>setGruppeForm(p=>({...p,beschreibung:e.target.value}))}
                   placeholder="Wofür ist diese Gruppe?"
-                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
               </div>
+              {/* Teams */}
+              {pvTeams.length>0&&(
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,display:"block"}}>
+                    Teams <span style={{fontWeight:400,fontSize:11}}>— {(gruppeForm.teams||[]).length} zugeordnet</span>
+                  </label>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {pvTeams.map(t=>{
+                      const sel=(gruppeForm.teams||[]).includes(t.id);
+                      return(
+                        <button key={t.id} onClick={()=>setGruppeForm(p=>({...p,teams:sel?(p.teams||[]).filter(x=>x!==t.id):[...(p.teams||[]),t.id]}))}
+                          style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${sel?gruppeForm.farbe:"var(--border)"}`,background:sel?gruppeForm.farbe+"15":"transparent",color:sel?gruppeForm.farbe:"var(--sub)",fontSize:12,fontWeight:sel?600:400,cursor:"pointer",fontFamily:FONT}}>
+                          {t.kurzname||t.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {/* Module */}
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,display:"block"}}>
@@ -1730,12 +1891,22 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   if(!gruppeForm.name.trim()) return;
                   const payload={name:gruppeForm.name.trim(),beschreibung:gruppeForm.beschreibung||"",module:gruppeForm.module||[],farbe:gruppeForm.farbe||"#8B5CF6",modul_stufen:gruppeForm.modul_stufen||{},aktiv:true};
                   if(supabase){
+                    let gruppeId = editGruppe?.id;
                     if(editGruppe?.id){
                       const{error}=await supabase.from("portal_gruppen").update(payload).eq("id",editGruppe.id);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                     } else {
-                      const{error}=await supabase.from("portal_gruppen").insert(payload);
+                      const{data:newG,error}=await supabase.from("portal_gruppen").insert(payload).select().single();
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
+                      gruppeId = newG?.id;
+                    }
+                    // Teams speichern
+                    if(gruppeId){
+                      await supabase.from("portal_gruppen_teams").delete().eq("gruppe_id",gruppeId);
+                      const teamRows=(gruppeForm.teams||[]).map(tid=>({gruppe_id:gruppeId,team_id:tid}));
+                      if(teamRows.length>0) await supabase.from("portal_gruppen_teams").insert(teamRows);
+                      const{data:freshGt}=await supabase.from("portal_gruppen_teams").select("*");
+                      if(freshGt) setGruppenTeams(freshGt);
                     }
                     /* Immer neu laden nach Speichern */
                     const{data:fresh}=await supabase.from("portal_gruppen").select("*").order("name");
@@ -1754,7 +1925,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   setShowGruppeForm(false); setEditGruppe(null);
                   setSaveMsg(editGruppe?"Gruppe gespeichert":"Gruppe erstellt");
                   setTimeout(()=>setSaveMsg(""),2000);
-                }} style={{flex:1,padding:"10px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                }} style={{flex:1,padding:"10px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
                   {editGruppe?"Änderungen speichern":"Gruppe erstellen"}
                 </button>
                 <Btn onClick={()=>{setShowGruppeForm(false);setEditGruppe(null);}}>Abbrechen</Btn>
@@ -1782,14 +1953,14 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Name *</label>
                 <input value={funktionForm.name} onChange={e=>setFunktionForm(p=>({...p,name:e.target.value}))}
                   placeholder="z.B. Chef Anlässe" autoFocus
-                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
               </div>
               {/* Beschreibung */}
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Beschreibung</label>
                 <input value={funktionForm.beschreibung||""} onChange={e=>setFunktionForm(p=>({...p,beschreibung:e.target.value}))}
                   placeholder="Was macht diese Funktion?"
-                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:13,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:9,fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",boxSizing:"border-box",outline:"none"}}/>
               </div>
               {/* Module einschränken + Stufe überschreiben */}
               <div>
@@ -1866,7 +2037,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   setShowFunktionForm(false); setEditFunktion(null);
                   setSaveMsg(editFunktion?"Funktion gespeichert":"Funktion erstellt");
                   setTimeout(()=>setSaveMsg(""),2000);
-                }} style={{flex:1,padding:"10px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                }} style={{flex:1,padding:"10px",borderRadius:10,background:BTN,color:BTN_TXT,transition:"background 0.15s",border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
                   {editFunktion?"Änderungen speichern":"Funktion erstellen"}
                 </button>
                 <Btn onClick={()=>{setShowFunktionForm(false);setEditFunktion(null);}}>Abbrechen</Btn>
@@ -1902,7 +2073,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="users"&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div style={{fontSize:13,color:"var(--sub)"}}>{benutzerListe.length} Benutzer</div>
+            <div style={{fontSize:14,color:"var(--sub)"}}>{benutzerListe.length} Benutzer</div>
             <Btn variant="primary" onClick={()=>{}}>+ Benutzer einladen</Btn>
           </div>
           <Card style={{padding:0,overflowX:"auto"}}>
@@ -1918,7 +2089,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               </thead>
               <tbody>
                 {benutzerListe.length===0&&(
-                  <tr><td colSpan={5} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13}}>Keine Benutzer gefunden</td></tr>
+                  <tr className="cc-tr"><td colSpan={5} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14}}>Keine Benutzer gefunden</td></tr>
                 )}
                 {benutzerListe.map((b,i)=>(
                   <tr key={b.id} style={{borderTop:"0.5px solid var(--border)"}}>
@@ -1980,7 +2151,397 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         </div>
       )}
 
+      {/* ── TAB: MITGLIEDER-KONFIGURATION ── */}
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="mitglieder_config"&&(()=>{
+        const ROLLEN_PF=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["spieler","trainer","funktionaer","eltern"];
+        const ROLLEN_PF_LABELS=dbPortalRollen.length>0?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label])):{spieler:"Spieler",trainer:"Trainer",funktionaer:"Funktionär",eltern:"Eltern"};
+        const MITGLIEDTYPEN_PF=["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
+        const MITGLIEDTYPEN_SHORT={Aktivmitglied:"Aktivmitglied",Juniormitglied:"Juniormitglied",Funktionär:"Funktionär",Passivmitglied:"Passivmitglied",Ehrenmitglied:"Ehrenmitglied",Freimitglied:"Freimitglied"};
+        const FELDER_ROLLE=["geburtsdatum","adresse","telefon","ahv_nr","spielerpass","js_nr","fairgate_id"];
+        const FELDER_ROLLE_LABELS={geburtsdatum:"Geburtsdatum",adresse:"Adresse",telefon:"Telefon",ahv_nr:"AHV-Nr.",spielerpass:"Spielerpass",js_nr:"J+S Nr.",fairgate_id:"Fairgate-ID"};
+        const FELDER_TYP=["vorname_nachname","geburtsdatum","adresse","telefon","email"];
+        const FELDER_TYP_LABELS={vorname_nachname:"Vorname / Name",geburtsdatum:"Geburtsdatum",adresse:"Adresse",telefon:"Telefon",email:"E-Mail"};
+
+        const isPflichtRolle=(rolle,feld)=>rollePflichtfelder.some(r=>r.rolle===rolle&&r.feld===feld&&r.pflicht);
+        const isPflichtTyp=(typ,feld)=>mitgliedtypPflichtfelder.some(r=>r.mitgliedtyp===typ&&r.feld===feld&&r.pflicht);
+
+        async function toggleRolle(rolle,feld,aktuell){
+          if(!supabase) return;
+          const neu=!aktuell;
+          await supabase.from("rolle_pflichtfelder").upsert({rolle,feld,pflicht:neu},{onConflict:"rolle,feld"});
+          const{data}=await supabase.from("rolle_pflichtfelder").select("*");
+          if(data) setRollePflichtfelder(data);
+        }
+
+        async function toggleTyp(mitgliedtyp,feld,aktuell){
+          if(!supabase) return;
+          const neu=!aktuell;
+          await supabase.from("mitgliedtyp_pflichtfelder").upsert({mitgliedtyp,feld,pflicht:neu},{onConflict:"mitgliedtyp,feld"});
+          const{data}=await supabase.from("mitgliedtyp_pflichtfelder").select("*");
+          if(data) setMitgliedtypPflichtfelder(data);
+        }
+
+
+        async function saveMitgliedtyp(){
+          if(!mitgliedtypForm.name.trim()) return;
+          const payload={name:mitgliedtypForm.name.trim(),beitragsinfo:mitgliedtypForm.beitragsinfo||"",hauptkontakt_pflicht:!!mitgliedtypForm.hauptkontakt_pflicht,standard_rolle:mitgliedtypForm.standard_rolle||null,aktiv:true};
+          if(supabase){
+            if(editMitgliedtyp?.id){
+              await supabase.from("mitgliedtypen").update(payload).eq("id",editMitgliedtyp.id);
+            } else {
+              const maxSort=Math.max(0,...dbMitgliedtypen.map(t=>t.sort_order||0));
+              await supabase.from("mitgliedtypen").insert({...payload,sort_order:maxSort+1});
+            }
+            const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
+            if(data) setDbMitgliedtypen(data);
+          }
+          setShowMitgliedtypForm(false); setEditMitgliedtyp(null);
+          setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""});
+        }
+
+        async function deleteMitgliedtyp(id){
+          if(!supabase||!window.confirm("Mitgliedtyp wirklich löschen?")) return;
+          await supabase.from("mitgliedtypen").update({aktiv:false}).eq("id",id);
+          const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
+          if(data) setDbMitgliedtypen(data);
+        }
+
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+            {/* Mitgliedtypen verwalten */}
+            <Card>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div className="cc-section-title"><TI n="id-badge" size={14}/> Mitgliedtypen</div>
+                <button onClick={()=>{setEditMitgliedtyp(null);setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""});setShowMitgliedtypForm(true);}}
+                  style={{padding:"5px 12px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                  + Neu
+                </button>
+              </div>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr>
+                  <th className="cc-th" style={{textAlign:"left"}}>Name</th>
+                  <th className="cc-th cc-th-center">Hauptkontakt</th>
+                  <th className="cc-th" style={{textAlign:"left"}}>Beitrag</th>
+                  <th className="cc-th" style={{textAlign:"left"}}>Standard-Rolle</th>
+                  <th className="cc-th cc-th-center">Aktiv</th>
+                  <th className="cc-th"></th>
+                </tr></thead>
+                <tbody>
+                  {dbMitgliedtypen.map(t=>(
+                    <tr key={t.id} className="cc-tr">
+                      <td className="cc-td" style={{fontWeight:500}}>{t.name}</td>
+                      <td className="cc-td" style={{textAlign:"center"}}>
+                        {t.hauptkontakt_pflicht
+                          ?<span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#fef9c3",color:"#854d0e",fontWeight:600}}>★ Pflicht</span>
+                          :<span style={{fontSize:11,color:"var(--sub)"}}>—</span>}
+                      </td>
+                      <td className="cc-td" style={{fontSize:12,color:"var(--sub)"}}>{t.beitragsinfo||"—"}</td>
+                      <td className="cc-td"><span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"var(--surface2)",color:"var(--sub)"}}>{t.standard_rolle||"—"}</span></td>
+                      <td className="cc-td" style={{textAlign:"center"}}>
+                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:t.aktiv?"#ECFDF5":"var(--surface2)",color:t.aktiv?"#15803d":"var(--sub)",fontWeight:500}}>
+                          {t.aktiv?"Aktiv":"Inaktiv"}
+                        </span>
+                      </td>
+                      <td className="cc-td" style={{textAlign:"right"}}>
+                        <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
+                          <button onClick={()=>{setEditMitgliedtyp(t);setMitgliedtypForm({name:t.name,beitragsinfo:t.beitragsinfo||"",hauptkontakt_pflicht:!!t.hauptkontakt_pflicht,standard_rolle:t.standard_rolle||""});setShowMitgliedtypForm(true);}}
+                            className="cc-icon-btn" style={{width:26,height:26,borderRadius:6}}>
+                            <TI n="edit" size={12}/>
+                          </button>
+                          <button onClick={()=>deleteMitgliedtyp(t.id)}
+                            className="cc-icon-btn" style={{width:26,height:26,borderRadius:6,color:"var(--danger,#ef4444)"}}>
+                            <TI n="trash" size={12}/>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+
+            {/* Mitgliedtyp bearbeiten Modal */}
+            <ModalOrSheet open={showMitgliedtypForm} onClose={()=>{setShowMitgliedtypForm(false);setEditMitgliedtyp(null);}} maxWidth={420}>
+              <div style={{padding:"20px 20px 0",flexShrink:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                  <ModalTitle>{editMitgliedtyp?"Mitgliedtyp bearbeiten":"Neuer Mitgliedtyp"}</ModalTitle>
+                  <button onClick={()=>{setShowMitgliedtypForm(false);setEditMitgliedtyp(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+                </div>
+              </div>
+              <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <label className="cc-label">Name *</label>
+                  <input className="cc-input" value={mitgliedtypForm.name} onChange={e=>setMitgliedtypForm(p=>({...p,name:e.target.value}))} placeholder="z.B. Aktivmitglied" autoFocus/>
+                </div>
+                <div>
+                  <label className="cc-label">Beitragsinfo</label>
+                  <input className="cc-input" value={mitgliedtypForm.beitragsinfo||""} onChange={e=>setMitgliedtypForm(p=>({...p,beitragsinfo:e.target.value}))} placeholder="z.B. Voller Beitrag CHF 150"/>
+                </div>
+                <div>
+                  <label className="cc-label">Standard Portal-Rolle</label>
+                  <select className="cc-input" value={mitgliedtypForm.standard_rolle||""} onChange={e=>setMitgliedtypForm(p=>({...p,standard_rolle:e.target.value}))}>
+                    <option value="">– keine –</option>
+                    {[{v:"administrator",l:"Administrator"},{v:"administration",l:"Verwaltung"},{v:"funktionaer",l:"Funktionär"},{v:"trainer",l:"Trainer"},{v:"spieler",l:"Spieler"},{v:"eltern",l:"Eltern"},{v:"mitglied",l:"Mitglied"},{v:"supporter",l:"Supporter"}].map(r=>(
+                      <option key={r.v} value={r.v}>{r.l}</option>
+                    ))}
+                  </select>
+                  <div style={{fontSize:11,color:"var(--sub)",marginTop:4}}>Wird automatisch gesetzt wenn keine höhere Rolle vorliegt</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",cursor:"pointer"}}
+                  onClick={()=>setMitgliedtypForm(p=>({...p,hauptkontakt_pflicht:!p.hauptkontakt_pflicht}))}>
+                  <div style={{width:18,height:18,borderRadius:4,border:`0.5px solid ${mitgliedtypForm.hauptkontakt_pflicht?"#22c55e":"var(--border)"}`,background:mitgliedtypForm.hauptkontakt_pflicht?"#ECFDF5":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {mitgliedtypForm.hauptkontakt_pflicht&&<TI n="check" size={11} style={{color:"#15803d"}}/>}
+                  </div>
+                  <span style={{fontSize:13}}>Hauptkontakt Pflicht</span>
+                  <span style={{fontSize:12,color:"var(--sub)",marginLeft:"auto"}}>nur für Minderjährige</span>
+                </div>
+                <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"0.5px solid var(--border)"}}>
+                  <button onClick={saveMitgliedtyp} style={{flex:1,padding:10,borderRadius:10,background:BTN,color:BTN_TXT,border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                    {editMitgliedtyp?"Speichern":"Erstellen"}
+                  </button>
+                  <Btn onClick={()=>{setShowMitgliedtypForm(false);setEditMitgliedtyp(null);}}>Abbrechen</Btn>
+                </div>
+              </div>
+            </ModalOrSheet>
+
+            {/* Info-Box */}
+            <InfoBox color={BL} text={
+              <div>
+                <div style={{fontWeight:600,marginBottom:6}}>Wie funktioniert die Pflichtfelder-Logik?</div>
+                <div style={{fontSize:12,lineHeight:1.6}}>
+                  Der <strong>Mitgliedtyp</strong> definiert die Basis-Pflichtfelder und ob ein Hauptkontakt erforderlich ist. Hat ein Mitglied zusätzlich eine <strong>Rolle</strong> (Spieler, Trainer…), werden die Felder der Rollen-Matrix ergänzt.
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FFBF00)",fontSize:11}}>Mitgliedtyp-Matrix</span>
+                  <span style={{fontSize:13}}>+</span>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FFBF00)",fontSize:11}}>Rollen-Matrix (falls Rolle vorhanden)</span>
+                  <span style={{fontSize:13}}>=</span>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid #22c55e",color:"#15803d",fontSize:11,fontWeight:600}}>Effektive Pflichtfelder</span>
+                </div>
+              </div>
+            }/>
+
+            {/* Matrix 1: Mitgliedtyp */}
+            <Card>
+              <div className="cc-section-title"><TI n="id-badge" size={14}/> Pflichtfelder nach Mitgliedtyp</div>
+              <div style={{fontSize:12,color:"var(--sub)",marginBottom:12}}>Basis-Pflichtfelder — gelten immer, unabhängig von der Rolle</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>
+                    <th className="cc-th" style={{textAlign:"left",minWidth:160}}>Feld</th>
+                    {MITGLIEDTYPEN_PF.map(t=><th key={t} className="cc-th cc-th-center">{MITGLIEDTYPEN_SHORT[t]}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {FELDER_TYP.map(feld=>(
+                      <tr key={feld} className="cc-tr">
+                        <td className="cc-td">{FELDER_TYP_LABELS[feld]}</td>
+                        {MITGLIEDTYPEN_PF.map(typ=>{
+                          const on=isPflichtTyp(typ,feld);
+                          return(
+                            <td key={typ} className="cc-td" style={{textAlign:"center"}}>
+                              <div onClick={()=>toggleTyp(typ,feld,on)}
+                                style={{width:20,height:20,borderRadius:5,border:`0.5px solid ${on?"#22c55e":"var(--border)"}`,background:on?"#ECFDF5":"transparent",display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                                {on&&<TI n="check" size={11} style={{color:"#15803d"}}/>}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Matrix 2: Rolle */}
+            <Card>
+              <div className="cc-section-title"><TI n="shield-check" size={14}/> Zusatzfelder nach Rolle</div>
+              <div style={{fontSize:12,color:"var(--sub)",marginBottom:12}}>Ergänzend zur Mitgliedtyp-Matrix — nur wenn Mitglied diese Rolle hat</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>
+                    <th className="cc-th" style={{textAlign:"left",minWidth:160}}>Feld</th>
+                    {ROLLEN_PF.map(r=><th key={r} className="cc-th cc-th-center">{ROLLEN_PF_LABELS[r]}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {FELDER_ROLLE.map(feld=>(
+                      <tr key={feld} className="cc-tr">
+                        <td className="cc-td">{FELDER_ROLLE_LABELS[feld]}</td>
+                        {ROLLEN_PF.map(rolle=>{
+                          const on=isPflichtRolle(rolle,feld);
+                          return(
+                            <td key={rolle} className="cc-td" style={{textAlign:"center"}}>
+                              <div onClick={()=>toggleRolle(rolle,feld,on)}
+                                style={{width:20,height:20,borderRadius:5,border:`0.5px solid ${on?"#22c55e":"var(--border)"}`,background:on?"#ECFDF5":"transparent",display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                                {on&&<TI n="check" size={11} style={{color:"#15803d"}}/>}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
+
       {/* ── TAB: FELDSICHTBARKEIT ── */}
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="rollen"&&(()=>{
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <Card>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div className="cc-section-title"><TI n="shield" size={14}/> Portal-Rollen</div>
+                <button onClick={()=>{setEditRolle(null);setRollenForm({name:"",label:"",prioritaet:50});setShowRolleForm(true);}}
+                  style={{padding:"5px 12px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                  + Neu
+                </button>
+              </div>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr>
+                  <th className="cc-th" style={{textAlign:"left"}}>Name</th>
+                  <th className="cc-th" style={{textAlign:"left"}}>Label</th>
+                  <th className="cc-th cc-th-center">Priorität</th>
+                  <th className="cc-th"></th>
+                </tr></thead>
+                <tbody>
+                  {dbPortalRollen.map(r=>(
+                    <tr key={r.id} className="cc-tr">
+                      <td className="cc-td" style={{fontWeight:500,fontFamily:"monospace",fontSize:12}}>{r.name}</td>
+                      <td className="cc-td">{r.label}</td>
+                      <td className="cc-td" style={{textAlign:"center"}}>
+                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"var(--surface2)",color:"var(--sub)"}}>{r.prioritaet}</span>
+                      </td>
+                      <td className="cc-td" style={{textAlign:"right"}}>
+                        <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
+                          <button onClick={()=>{setEditRolle(r);setRollenForm({name:r.name,label:r.label,prioritaet:r.prioritaet});setShowRolleForm(true);}}
+                            className="cc-icon-btn" style={{width:26,height:26,borderRadius:6}}><TI n="edit" size={12}/></button>
+                          <button onClick={()=>deleteRolle(r.id)}
+                            className="cc-icon-btn" style={{width:26,height:26,borderRadius:6,color:"var(--danger,#ef4444)"}}><TI n="trash" size={12}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+            <ModalOrSheet open={showRolleForm} onClose={()=>{setShowRolleForm(false);setEditRolle(null);}} maxWidth={400}>
+              <div style={{padding:"20px 20px 0",flexShrink:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                  <ModalTitle>{editRolle?"Rolle bearbeiten":"Neue Rolle"}</ModalTitle>
+                  <button onClick={()=>{setShowRolleForm(false);setEditRolle(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+                </div>
+              </div>
+              <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <label className="cc-label">Name (intern) *</label>
+                  <input className="cc-input" value={rollenForm.name} onChange={e=>setRollenForm(p=>({...p,name:e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"")}))} placeholder="z.B. schiedsrichter" autoFocus disabled={!!editRolle}/>
+                  <div style={{fontSize:11,color:"var(--sub)",marginTop:4}}>Kleinbuchstaben, keine Sonderzeichen. Kann nach dem Erstellen nicht mehr geändert werden.</div>
+                </div>
+                <div>
+                  <label className="cc-label">Label (Anzeige) *</label>
+                  <input className="cc-input" value={rollenForm.label} onChange={e=>setRollenForm(p=>({...p,label:e.target.value}))} placeholder="z.B. Schiedsrichter"/>
+                </div>
+                <div>
+                  <label className="cc-label">Priorität (tiefer = höhere Berechtigung)</label>
+                  <input className="cc-input" type="number" min={1} max={999} value={rollenForm.prioritaet} onChange={e=>setRollenForm(p=>({...p,prioritaet:e.target.value}))} placeholder="50"/>
+                  <div style={{fontSize:11,color:"var(--sub)",marginTop:4}}>Aktuell: {dbPortalRollen.map(r=>`${r.prioritaet} ${r.label}`).join(" → ")}</div>
+                </div>
+                <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"0.5px solid var(--border)"}}>
+                  <button onClick={saveRolle} style={{flex:1,padding:10,borderRadius:10,background:BTN,color:BTN_TXT,border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                    {editRolle?"Speichern":"Erstellen"}
+                  </button>
+                  <Btn onClick={()=>{setShowRolleForm(false);setEditRolle(null);}}>Abbrechen</Btn>
+                </div>
+              </div>
+            </ModalOrSheet>
+          </div>
+        );
+      })()}
+
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="kader_rollen"&&(()=>{
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <Card>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div className="cc-section-title"><TI n="users" size={14}/> Kader-Rollen</div>
+                <button onClick={()=>{setEditKaderRolle(null);setKaderRolleForm({name:"",ist_trainer:false,sort_order:50});setShowKaderRolleForm(true);}}
+                  style={{padding:"5px 12px",borderRadius:8,border:"none",background:BTN,color:BTN_TXT,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                  + Neu
+                </button>
+              </div>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr>
+                  <th className="cc-th" style={{textAlign:"left"}}>Name</th>
+                  <th className="cc-th cc-th-center">Ist Trainer</th>
+                  <th className="cc-th cc-th-center">Reihenfolge</th>
+                  <th className="cc-th"></th>
+                </tr></thead>
+                <tbody>
+                  {dbKaderRollen.map(r=>(
+                    <tr key={r.id} className="cc-tr">
+                      <td className="cc-td" style={{fontWeight:500}}>{r.name}</td>
+                      <td className="cc-td" style={{textAlign:"center"}}>
+                        {r.ist_trainer
+                          ?<span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"#DCFCE7",color:"#166534",fontWeight:600}}>Ja</span>
+                          :<span style={{fontSize:11,color:"var(--sub)"}}>—</span>}
+                      </td>
+                      <td className="cc-td" style={{textAlign:"center"}}>
+                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:"var(--surface2)",color:"var(--sub)"}}>{r.sort_order}</span>
+                      </td>
+                      <td className="cc-td" style={{textAlign:"right"}}>
+                        <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
+                          <button onClick={()=>{setEditKaderRolle(r);setKaderRolleForm({name:r.name,ist_trainer:!!r.ist_trainer,sort_order:r.sort_order});setShowKaderRolleForm(true);}}
+                            className="cc-icon-btn" style={{width:26,height:26,borderRadius:6}}><TI n="edit" size={12}/></button>
+                          <button onClick={()=>deleteKaderRolle(r.id)}
+                            className="cc-icon-btn" style={{width:26,height:26,borderRadius:6,color:"var(--danger,#ef4444)"}}><TI n="trash" size={12}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+            <ModalOrSheet open={showKaderRolleForm} onClose={()=>{setShowKaderRolleForm(false);setEditKaderRolle(null);}} maxWidth={400}>
+              <div style={{padding:"20px 20px 0",flexShrink:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                  <ModalTitle>{editKaderRolle?"Kader-Rolle bearbeiten":"Neue Kader-Rolle"}</ModalTitle>
+                  <button onClick={()=>{setShowKaderRolleForm(false);setEditKaderRolle(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
+                </div>
+              </div>
+              <div style={{padding:"0 20px 20px",display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <label className="cc-label">Name *</label>
+                  <input className="cc-input" value={kaderRolleForm.name} onChange={e=>setKaderRolleForm(p=>({...p,name:e.target.value}))} placeholder="z.B. Libero" autoFocus/>
+                </div>
+                <div>
+                  <label className="cc-label">Reihenfolge</label>
+                  <input className="cc-input" type="number" min={1} max={999} value={kaderRolleForm.sort_order} onChange={e=>setKaderRolleForm(p=>({...p,sort_order:e.target.value}))}/>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",cursor:"pointer"}}
+                  onClick={()=>setKaderRolleForm(p=>({...p,ist_trainer:!p.ist_trainer}))}>
+                  <div style={{width:18,height:18,borderRadius:4,border:`0.5px solid ${kaderRolleForm.ist_trainer?"#22c55e":"var(--border)"}`,background:kaderRolleForm.ist_trainer?"#ECFDF5":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {kaderRolleForm.ist_trainer&&<TI n="check" size={11} style={{color:"#15803d"}}/>}
+                  </div>
+                  <span style={{fontSize:13}}>Gilt als Trainer-Rolle</span>
+                  <span style={{fontSize:12,color:"var(--sub)",marginLeft:"auto"}}>beeinflusst Rollenableitung</span>
+                </div>
+                <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"0.5px solid var(--border)"}}>
+                  <button onClick={saveKaderRolle} style={{flex:1,padding:10,borderRadius:10,background:BTN,color:BTN_TXT,border:"none",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
+                    {editKaderRolle?"Speichern":"Erstellen"}
+                  </button>
+                  <Btn onClick={()=>{setShowKaderRolleForm(false);setEditKaderRolle(null);}}>Abbrechen</Btn>
+                </div>
+              </div>
+            </ModalOrSheet>
+          </div>
+        );
+      })()}
+
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="feldvis"&&(
         <div>
           <InfoBox text="Steuert welche Mitglieder-Felder pro Rolle sichtbar sind. Änderungen wirken sofort." color={BL}/>
@@ -1991,7 +2552,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <tr style={{background:"var(--surface2)"}}>
                   <th className="cc-th">Feld</th>
                   {ROLLEN.map((r,i)=>(
-                    <th key={i} style={{padding:"9px 13px",textAlign:"center",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{ROLLEN_LABELS[r]}</th>
+                    <th key={i} style={{padding:"9px 13px",textAlign:"center",fontWeight:600,color:"var(--sub)",fontSize:14,textTransform:"uppercase",letterSpacing:0.4}}>{ROLLEN_LABELS[r]}</th>
                   ))}
                 </tr>
               </thead>
@@ -2006,7 +2567,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                         <td key={rolle} style={{padding:"9px 13px",textAlign:"center"}}>
                           <div onClick={isAdmin?undefined:()=>toggleFeld(key,rolle,!sichtbar)}
                             style={{width:20,height:20,borderRadius:4,background:sichtbar?GN:"#e5e7eb",cursor:isAdmin?"not-allowed":"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center",border:`1px solid ${sichtbar?"#16a34a":"#d1d5db"}`}}>
-                            {sichtbar&&<TI n="check" style={{fontSize:13,color:"#fff"}}/>}
+                            {sichtbar&&<TI n="check" style={{fontSize:14,color:"#fff"}}/>}
                           </div>
                         </td>
                       );
@@ -2014,7 +2575,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   </tr>
                 ))}
                 {Object.keys(felderNachKey).length===0&&(
-                  <tr><td colSpan={7} style={{padding:20,textAlign:"center",color:"var(--sub)",fontSize:13}}>
+                  <tr className="cc-tr"><td colSpan={7} style={{padding:20,textAlign:"center",color:"var(--sub)",fontSize:14}}>
                     Noch keine Felder konfiguriert — SQL-Schema importieren
                   </td></tr>
                 )}
@@ -2060,9 +2621,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
             <div style={{display:"flex",alignItems:"center",gap:14}}>
               <TI n="building-community" size={18} style={{color:"var(--sub)",flexShrink:0}}/>
               <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>Vereinsname</div>
+                <div style={{fontSize:14,fontWeight:500,color:"var(--text)",marginBottom:4}}>Vereinsname</div>
                 <input value={theme.vereinsname||""} onChange={e=>updateTheme("vereinsname",e.target.value)}
-                  style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,background:"var(--surface)",color:"var(--text)",outline:"none",fontFamily:FONT}}/>
+                  style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14,background:"var(--surface)",color:"var(--text)",outline:"none",fontFamily:FONT}}/>
                 <div style={{fontSize:11,color:"var(--sub)",marginTop:3}}>Wird unter dem Portal-Logo angezeigt</div>
               </div>
             </div>
@@ -2080,7 +2641,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 }
               </div>
               <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:6}}>Logo hochladen</div>
+                <div style={{fontSize:14,fontWeight:500,color:"var(--text)",marginBottom:6}}>Logo hochladen</div>
                 <div style={{fontSize:11,color:"var(--sub)",marginBottom:10}}>SVG oder PNG, empfohlen mind. 200×200px</div>
                 <Row align="flex-start">
                   <label style={{
@@ -2129,7 +2690,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <input type="color" value={theme[item.key]||(item.key==="navAccent"||item.key==="avatarBg"?theme.vereinsfarbe1:item.key==="navAccentText"||item.key==="avatarText"?theme.vereinsfarbe2||"#000000":"#000000")||"#000000"} onChange={e=>updateTheme(item.key,e.target.value)}
                   style={{width:36,height:36,borderRadius:8,border:"0.5px solid var(--border)",padding:2,cursor:"pointer",background:"none"}}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{item.label}</div>
+                  <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{item.label}</div>
                   <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{item.hint}</div>
                 </div>
                 <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]||(["navAccent","navAccentText","avatarBg","avatarText"].includes(item.key)?"auto":"")}</code>
@@ -2145,7 +2706,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
 
           {/* Speichern */}
           <div style={{display:"flex",gap:10,marginTop:16}}>
-            <Btn variant="primary" onClick={saveTheme} style={{padding:"9px 24px",fontSize:13,fontWeight:700}}>
+            <Btn variant="primary" onClick={saveTheme} style={{padding:"9px 24px",fontSize:14,fontWeight:700}}>
               Speichern & anwenden
             </Btn>
             <Btn onClick={()=>{
@@ -2170,7 +2731,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
         <div>
           <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
           <div style={{height:16}}/>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+          <div className="cc-grid-cards" style={{gap:14}}>
             {(apiVerbindungen.length>0?apiVerbindungen:Object.entries(API_INFOS).map(([key,info])=>({key,label:key,active:false,konfiguriert:false,sync_status:"deaktiviert",...info}))).map(api=>{
               const info=API_INFOS[api.key]||{};
               const statusColor=api.sync_status==="ok"?GN:api.sync_status==="fehler"?R:api.sync_status==="ausstehend"?AM:"#aaa";
@@ -2184,19 +2745,19 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     </Row>
                     <Chip text={api.sync_status||"deaktiviert"} color={statusColor} bg={statusBg}/>
                   </div>
-                  <p style={{fontSize:13,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{info.description||"Externe API-Verbindung"}</p>
+                  <p style={{fontSize:14,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{info.description||"Externe API-Verbindung"}</p>
                   {info.felder&&(
                     <div style={{marginBottom:12}}>
-                      <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,marginBottom:4}}>Synchronisierte Daten:</div>
+                      <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:4}}>Synchronisierte Daten:</div>
                       {info.felder.map((f,i)=>(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:"var(--sub)",padding:"2px 0"}}>
-                          <TI n="check" style={{fontSize:13,color:api.active?GN:"#ccc"}}/>{f}
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:14,color:"var(--sub)",padding:"2px 0"}}>
+                          <TI n="check" style={{fontSize:14,color:api.active?GN:"#ccc"}}/>{f}
                         </div>
                       ))}
                     </div>
                   )}
                   {api.letzter_sync&&(
-                    <div style={{fontSize:13,color:"var(--sub)",marginBottom:10}}>
+                    <div style={{fontSize:14,color:"var(--sub)",marginBottom:10}}>
                       Letzter Sync: {new Date(api.letzter_sync).toLocaleString("de-CH")}
                     </div>
                   )}
@@ -2219,17 +2780,17 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               <thead>
                 <tr style={{background:"var(--surface2)"}}>
                   {["Zeit","API / System","Status","Neu","Aktualisiert","Fehler","Details"].map((h,i)=>(
-                    <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
+                    <th key={i} style={{padding:"9px 13px",textAlign:"left",fontWeight:600,color:"var(--sub)",fontSize:14,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {auditLogs.length===0&&(
-                  <tr><td colSpan={7} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:13}}>Noch keine Sync-Logs vorhanden</td></tr>
+                  <tr className="cc-tr"><td colSpan={7} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14}}>Noch keine Sync-Logs vorhanden</td></tr>
                 )}
                 {auditLogs.map((log,i)=>(
                   <tr key={log.id} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
-                    <td style={{padding:"9px 13px",color:"var(--sub)",whiteSpace:"nowrap",fontSize:13}}>
+                    <td style={{padding:"9px 13px",color:"var(--sub)",whiteSpace:"nowrap",fontSize:14}}>
                       {log.gestartet_am?new Date(log.gestartet_am).toLocaleString("de-CH",{dateStyle:"short",timeStyle:"short"}):"—"}
                     </td>
                     <td style={{padding:"9px 13px",fontWeight:600}}>{log.api_verbindungen?.label||"System"}</td>
@@ -2237,7 +2798,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     <td style={{padding:"9px 13px",color:GN,fontWeight:600}}>{log.datensaetze_neu||0}</td>
                     <td style={{padding:"9px 13px",color:BL,fontWeight:600}}>{log.datensaetze_aktualisiert||0}</td>
                     <td style={{padding:"9px 13px",color:log.datensaetze_fehler>0?R:"#aaa",fontWeight:600}}>{log.datensaetze_fehler||0}</td>
-                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:13,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.meldung||"—"}</td>
+                    <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:14,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.meldung||"—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2262,7 +2823,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               <div>
                 <div style={{marginBottom:16}}>
                   <div style={{fontSize:16,fontWeight:800,color:"var(--text)",letterSpacing:-0.3,marginBottom:4}}>{title}</div>
-                  {desc&&<div style={{fontSize:13,color:"var(--sub)"}}>{desc}</div>}
+                  {desc&&<div style={{fontSize:14,color:"var(--sub)"}}>{desc}</div>}
                 </div>
                 <Card style={{padding:20}}>
                   <div style={{display:"flex",flexDirection:"column",gap:16}}>{children}</div>
@@ -2275,21 +2836,33 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
   "cc-btn-group-item": "height:32px; min-width:32px; padding:0 8px; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--sub); transition:background 0.15s,color 0.15s; flex-shrink:0",
   "cc-btn-group-sep": "width:1px; height:20px; background:var(--border); flex-shrink:0",
   "cc-card": "background:var(--surface)!important; border-color:var(--border)!important; box-shadow:var(--card-shadow)!important",
-  "cc-chip-active": "border-color:var(--text)!important; background:var(--text)!important; color:var(--bg)!important",
   "cc-chip-toggle": "padding:4px 12px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--sub); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; white-space:nowrap; flex-shrink:0",
   "cc-divider": "height:1px; background:var(--border); flex-shrink:0",
   "cc-flex-center": "display:flex; align-items:center; justify-content:center",
-  "cc-icon-btn": "width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:background 0.15s,border-color 0.15s,color 0.15s; color:var(--sub); padding:0",
-  "cc-input": "width:100%; padding:9px 12px; border-radius:8px; border:0.5px solid var(--border); background:var(--surface2); color:var(--text); font-size:13px; font-family:inherit; box-sizing:border-box; outline:none; transition:border-color 0.15s",
+  "cc-icon-btn": "width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; color:var(--sub); padding:0",
+  "cc-input": "width:100%; padding:9px 12px; border-radius:8px; border:0.5px solid var(--border); background:var(--surface2); color:var(--text); font-size:13px; font-family:inherit; box-sizing:border-box; outline:none",
   "cc-main": "background:var(--bg)!important",
+  "cc-members-td": "padding:9px 12px; border-bottom:0.5px solid var(--border); font-size:13px; vertical-align:middle; color:var(--text)",
+  "cc-members-th": "padding:8px 12px; background:var(--surface2); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--sub); border-bottom:2px solid var(--cc-accent,#FFBF00)",
+  "cc-members-tr": "hover: background var(--cc-hover) auf allen cc-td Kinder",
+  "cc-multiselect": "position:relative; width:100%",
+  "cc-multiselect-trigger": "width:100%; padding:8px 12px; border:0.5px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; display:flex; align-items:center; gap:8px",
+  "cc-multiselect-chip": "display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:500; background:var(--surface); border:0.5px solid var(--border)",
+  "cc-multiselect-dropdown": "position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--surface); border:0.5px solid var(--border); border-radius:10px; z-index:300; overflow:hidden",
+  "cc-multiselect-item": "display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; font-size:13px",
   "cc-page": "animation:cc-in 0.2s ease-out",
   "cc-seg": "display:flex; gap:2px; background:var(--surface2); border-radius:8px; padding:3px",
   "cc-seg-active": "background:var(--surface)!important; color:var(--text)!important; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,0.08)",
-  "cc-seg-item": "flex:1; padding:5px 8px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:400; background:transparent; color:var(--sub); transition:all 0.15s; white-space:nowrap",
+  "cc-seg-item": "flex:1; padding:5px 8px; border-radius:6px; border:none; cursor:pointer; font-size:12px; background:transparent; color:var(--sub); transition:all 0.15s; white-space:nowrap",
   "cc-shimmer": "background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%); background-size:200% 100%; animation:cc-shimmer 1.4s ease-in-out infinite",
+  "cc-td": "padding:8px 10px; border-bottom:0.5px solid var(--border); vertical-align:middle; font-size:13px",
+  "cc-th": "padding:8px 10px; background:var(--surface2); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--sub); border-bottom:2px solid var(--cc-accent,#FFBF00)",
+  "cc-th-center": "text-align:center (kombiniert mit cc-th)",
   "cc-topbar": "background:var(--bg)!important; border-color:var(--border)!important",
+  "cc-tr": "hover: background var(--cc-hover); cursor:pointer",
+  "cc-tr-zebra": "nth-child(even): background var(--surface2); nth-child(odd): background var(--surface)",
   "cc-truncate": "overflow:hidden; text-overflow:ellipsis; white-space:nowrap",
-  "cc-unread-dot": "position:absolute; top:-2px; right:-2px; width:8px; height:8px; border-radius:50%; border:2px solid var(--surface)"
+  "cc-unread-dot": "position:absolute; top:-2px; right:-2px; width:8px; height:8px; border-radius:50%; border:2px solid var(--surface)",
 };
             const Row2=({label,children,code,usage})=>{
               const cssKey=code&&code.startsWith(".")?code.replace(/^\.([\w-]+).*/,"$1"):null;
@@ -2297,7 +2870,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
               return(
                 <div style={{display:"flex",alignItems:"flex-start",gap:16,padding:"14px 0",borderBottom:"0.5px solid var(--border)"}}>
                   <div style={{width:270,flexShrink:0}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"var(--text)",marginBottom:4}}>{label}</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--text)",marginBottom:4}}>{label}</div>
                     {code&&<code style={{fontSize:11,color:"#7C3AED",background:"#F5F3FF",padding:"2px 8px",borderRadius:4,display:"inline-block",marginBottom:6}}>{""+code}</code>}
                     {cssDef&&(
                       <div style={{background:"#0f0f11",borderRadius:6,padding:"7px 10px",marginBottom:6,overflowX:"auto"}}>
@@ -2354,7 +2927,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     </div>
                   </Row2>
                   <Row2 label="Truncate" code=".cc-truncate" usage={["—"]}>
-                    <div className="cc-truncate" style={{maxWidth:200,fontSize:13,color:"var(--text)"}}>Sehr langer Text der abgeschnitten wird wenn er zu lang ist</div>
+                    <div className="cc-truncate" style={{maxWidth:200,fontSize:14,color:"var(--text)"}}>Sehr langer Text der abgeschnitten wird wenn er zu lang ist</div>
                   </Row2>
                   <Row2 label="Divider" code=".cc-divider" usage={["Nachrichten","Portalverwaltung"]}>
                     <div style={{width:200}}><div className="cc-divider"/></div>
@@ -2400,9 +2973,9 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <Section title="Chips & Badges" desc="Status-Anzeigen und Labels">
                   <Row2 label="Chip" code="<Chip>">
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      <Chip text="Aktiv" color={GN} bg="#ECFDF5"/>
-                      <Chip text="Inaktiv" color="#9ca3af" bg="var(--surface2)"/>
-                      <Chip text="Admin" color={BL} bg="#EFF6FF"/>
+                      <Chip text="Aktiv" color={GN}/>
+                      <Chip text="Inaktiv" color="#9ca3af"/>
+                      <Chip text="Admin" color={BL}/>
                       <Chip text="Fehler" color={R} bg={RL}/>
                     </div>
                   </Row2>
@@ -2422,7 +2995,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   </Row2>
                   <Row2 label="Ungelesen-Dot" code=".cc-unread-dot" usage={["Nachrichten"]}>
                     <div style={{position:"relative",display:"inline-block"}}>
-                      <div style={{width:34,height:34,borderRadius:10,background:"#E1F5EE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#085041"}}>DG</div>
+                      <div style={{width:34,height:34,borderRadius:10,background:"#E1F5EE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#085041"}}>DG</div>
                       <div className="cc-unread-dot" style={{background:BL}}/>
                     </div>
                   </Row2>
@@ -2432,7 +3005,7 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                 <Section title="Karten & Layout" desc="Container-Komponenten">
                   <Row2 label="Card" code="<Card>" usage={["Mitglieder","TeamsVerwaltung","clubcampus"]}>
                     <Card style={{padding:"12px 16px",maxWidth:200}}>
-                      <div style={{fontSize:13,fontWeight:600}}>Karten-Inhalt</div>
+                      <div style={{fontSize:14,fontWeight:600}}>Karten-Inhalt</div>
                       <div style={{fontSize:12,color:"var(--sub)"}}>Beschreibung</div>
                     </Card>
                   </Row2>
@@ -2444,6 +3017,63 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                   </Row2>
                   <Row2 label="InfoBox" code="<InfoBox>">
                     <InfoBox text="Dies ist eine Informationsbox für Hinweise." color={BL}/>
+                  </Row2>
+                </Section>
+
+                {/* Tabellen */}
+                <Section title="Tabellen" desc="cc-th, cc-td, cc-tr — konsistentes Tabellendesign">
+                  <Row2 label="Tabellen-Header" code=".cc-th" usage={["Mitgliederliste","Portalverwaltung","Mitglieder-Konfiguration"]}>
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <thead><tr>
+                        <th className="cc-th" style={{textAlign:"left"}}>Name</th>
+                        <th className="cc-th cc-th-center">Rolle</th>
+                        <th className="cc-th cc-th-center">Status</th>
+                      </tr></thead>
+                    </table>
+                  </Row2>
+                  <Row2 label="Tabellen-Zeile + Zelle" code=".cc-tr .cc-td" usage={["Mitgliederliste","Portalverwaltung"]}>
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <tbody>
+                        <tr className="cc-tr"><td className="cc-td">Peter Müller</td><td className="cc-td">Trainer</td><td className="cc-td">Aktiv</td></tr>
+                        <tr className="cc-tr"><td className="cc-td">Maria Meier</td><td className="cc-td">Spieler</td><td className="cc-td">Aktiv</td></tr>
+                      </tbody>
+                    </table>
+                  </Row2>
+                  <Row2 label="Members-Header" code=".cc-members-th" usage={["Mitgliederliste"]}>
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <thead><tr>
+                        <th className="cc-members-th" style={{textAlign:"left"}}>Name</th>
+                        <th className="cc-members-th" style={{textAlign:"center"}}>Team</th>
+                      </tr></thead>
+                    </table>
+                  </Row2>
+                </Section>
+
+                {/* Multi-Select */}
+                <Section title="Multi-Select Dropdown" desc="FunktionenMultiSelect — Suchfeld + Checkboxen + Chips">
+                  <Row2 label="Trigger" code=".cc-multiselect-trigger" usage={["MitgliederModul"]}>
+                    <div className="cc-multiselect" style={{maxWidth:340}}>
+                      <button type="button" className="cc-multiselect-trigger">
+                        <div className="cc-multiselect-chips">
+                          <span className="cc-multiselect-chip">Materialwart <span className="cc-multiselect-chip-x">×</span></span>
+                          <span className="cc-multiselect-chip">Stufenleitung Bc <span className="cc-multiselect-chip-x">×</span></span>
+                        </div>
+                        <TI n="chevron-down" size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                      </button>
+                    </div>
+                  </Row2>
+                  <Row2 label="Dropdown-Item" code=".cc-multiselect-item" usage={["MitgliederModul"]}>
+                    <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden",maxWidth:300}}>
+                      <div className="cc-multiselect-group">Stufenleitende</div>
+                      <div className="cc-multiselect-item">
+                        <div className="cc-multiselect-cb-on"><TI n="check" size={10} style={{color:"#15803d"}}/></div>
+                        <span>Stufenleitung Junioren B</span>
+                      </div>
+                      <div className="cc-multiselect-item">
+                        <div className="cc-multiselect-cb"></div>
+                        <span>Stufenleitung Senioren</span>
+                      </div>
+                    </div>
                   </Row2>
                 </Section>
 
@@ -2502,17 +3132,21 @@ function PortalverwaltungView({initialTab="module",moduleAktiv={},setModuleAktiv
                     {name:"--cc-accent2",desc:"Vereinsfarbe 2 (Kontrastfarbe)"},
                     {name:"--btn-hover",desc:"Vereinsfarbe 1 −12% (darkenHex) → Hover-State Primär-Button"},
                     {name:"--cc-hover",desc:"Vereinsfarbe 1 × 19% Opacity → Hover-Hintergründe"},
+                    {name:"--cc-accent-25",desc:"Vereinsfarbe 1 × 25% → Hero-Avatar Hintergrund"},
                     {name:"--cc-accent-20",desc:"Vereinsfarbe 1 × 12% → leichte Tönungen"},
                     {name:"--cc-accent-15",desc:"Vereinsfarbe 1 × 9% → sehr helle Tönungen"},
                     {name:"--cc-accent-12",desc:"Vereinsfarbe 1 × 7% → minimale Tönungen"},
+                    {name:"--cc-accent-10",desc:"Vereinsfarbe 1 × 10%"},
+                    {name:"--cc-accent-5", desc:"Vereinsfarbe 1 × 5% → minimale Hintergründe"},
                     {name:"--nav",desc:"Nav-Hintergrundfarbe"},
                     {name:"--nav-hover",desc:"Nav-Item Hover-Farbe"},
+                    {name:"--btn-primary-text",desc:"Primär-Button Textfarbe"},
                     {name:"--avatar-bg",desc:"Avatar-Hintergrund"},
                   ].map(v=>(
                     <div key={v.name} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"0.5px solid var(--border)"}}>
                       <div style={{width:32,height:32,borderRadius:8,background:`var(${v.name})`,border:"0.5px solid var(--border)",flexShrink:0}}/>
                       <code style={{fontSize:12,color:"var(--text)",background:"var(--surface2)",padding:"3px 8px",borderRadius:6,width:160,flexShrink:0}}>{v.name}</code>
-                      <span style={{fontSize:13,color:"var(--sub)"}}>{v.desc}</span>
+                      <span style={{fontSize:14,color:"var(--sub)"}}>{v.desc}</span>
                     </div>
                   ))}
                 </Section>

@@ -3,9 +3,9 @@
    Broadcast & Diskussions-Modul
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, GN, BL, R, RL } from "./constants.js";
-import { TI } from "./icons.jsx";
-import { ModalOrSheet, ModalTitle, Row, useIsMobile, Btn } from "./theme.jsx";
+import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, GN, BL, R, RL } from "../constants.js";
+import { TI } from "../icons.jsx";
+import { ModalOrSheet, ModalTitle, Row, useIsMobile, Btn } from "../theme.jsx";
 
 const S_LABEL={fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5};
 
@@ -140,7 +140,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
             </Btn>
           )}
           <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
-            <div style={{width:36,height:36,borderRadius:10,background:av.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:av.txt,flexShrink:0}}>
+            <div style={{width:36,height:36,borderRadius:10,background:av.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:av.txt,flexShrink:0}}>
               {initials(selected.autor_name)}
             </div>
             <div style={{flex:1,minWidth:0}}>
@@ -174,7 +174,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
               {dateien.map(d=>(
                 <a key={d.id} href={d.datei_url} target="_blank" rel="noreferrer"
-                  style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8,textDecoration:"none",background:"var(--surface2)"}}>
+                  style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14,color:"var(--sub)",display:"flex",alignItems:"center",gap:8,textDecoration:"none",background:"var(--surface2)"}}>
                   <TI n="paperclip" size={13}/>{d.datei_name}
                 </a>
               ))}
@@ -196,7 +196,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
                     </div>
                     <div style={{flex:1,background:"var(--surface2)",borderRadius:10,padding:"10px 14px"}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                        <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{a.autor_name}</span>
+                        <span style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{a.autor_name}</span>
                         <span style={{fontSize:11,color:"var(--sub)"}}>{fmtTime(a.erstellt_am)}</span>
                         {kannVerwalten&&(
                           <button onClick={async()=>{await sb.from("nachrichten_antworten").delete().eq("id",a.id);loadAntworten(selected.id);}}
@@ -205,7 +205,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
                           </button>
                         )}
                       </div>
-                      <p style={{fontSize:13,color:"var(--text)",margin:0,lineHeight:1.6}}>{a.inhalt}</p>
+                      <p style={{fontSize:14,color:"var(--text)",margin:0,lineHeight:1.6}}>{a.inhalt}</p>
                     </div>
                   </div>
                 );
@@ -274,13 +274,13 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
         {/* List */}
         <div style={{flex:1,overflowY:"auto"}}>
           {loading?(
-            <div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:13}}>Wird geladen…</div>
+            <div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:14}}>Wird geladen…</div>
           ):filtered.length===0?(
             <div style={{padding:40,textAlign:"center"}}>
               <div style={{width:48,height:48,borderRadius:14,background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}>
                 <TI n="inbox" size={22} style={{color:"var(--border)"}}/>
               </div>
-              <div style={{fontSize:13,color:"var(--sub)",fontWeight:500}}>Keine Nachrichten</div>
+              <div style={{fontSize:14,color:"var(--sub)",fontWeight:500}}>Keine Nachrichten</div>
             </div>
           ):filtered.map(n=>{
             const isSelected=selected?.id===n.id;
@@ -299,7 +299,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                      <span style={{fontSize:13,fontWeight:isUngelesen?700:500,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,marginRight:8}}>{n.titel}</span>
+                      <span style={{fontSize:14,fontWeight:isUngelesen?700:500,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,marginRight:8}}>{n.titel}</span>
                       <span style={{fontSize:11,color:"var(--sub)",flexShrink:0}}>{fmtTime(n.erstellt_am)}</span>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -339,7 +339,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
                 <button key={t} onClick={()=>setNeuForm(f=>({...f,typ:t}))}
                   style={{flex:1,padding:"10px",borderRadius:10,border:`2px solid ${neuForm.typ===t?ACCENT:"var(--border)"}`,
                     background:neuForm.typ===t?ACCENT+"15":"var(--surface2)",
-                    cursor:"pointer",fontFamily:FONT,fontSize:13,fontWeight:600,
+                    cursor:"pointer",fontFamily:FONT,fontSize:14,fontWeight:600,
                     color:neuForm.typ===t?"var(--text)":"var(--sub)",transition:"all 0.15s"}}>
                   {t==="broadcast"?"📢 Broadcast":"💬 Diskussion"}
                 </button>
@@ -363,21 +363,21 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
             </div>
             {neuForm.empfaenger_typ==="rolle"&&(
               <select value={neuForm.empfaenger_rolle} onChange={e=>setNeuForm(f=>({...f,empfaenger_rolle:e.target.value}))}
-                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--text)",fontSize:13,fontFamily:FONT,outline:"none"}}>
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--text)",fontSize:14,fontFamily:FONT,outline:"none"}}>
                 <option value="">Empfänger wählen…</option>
                 {ROLLEN_OPTS.map(r=><option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             )}
             {neuForm.empfaenger_typ==="gruppe"&&(
               <select value={neuForm.empfaenger_gruppe_id||""} onChange={e=>setNeuForm(f=>({...f,empfaenger_gruppe_id:e.target.value?parseInt(e.target.value):null}))}
-                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--text)",fontSize:13,fontFamily:FONT,outline:"none"}}>
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--text)",fontSize:14,fontFamily:FONT,outline:"none"}}>
                 <option value="">Gruppe wählen…</option>
                 {gruppen.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             )}
             {neuForm.empfaenger_typ==="team"&&(
               <select value={neuForm.empfaenger_team} onChange={e=>setNeuForm(f=>({...f,empfaenger_team:e.target.value}))}
-                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--text)",fontSize:13,fontFamily:FONT,outline:"none"}}>
+                style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--text)",fontSize:14,fontFamily:FONT,outline:"none"}}>
                 <option value="">Team wählen…</option>
                 {dbTeams.map(t=><option key={t.id||t.name} value={t.name}>{t.name}</option>)}
               </select>

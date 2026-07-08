@@ -1,23 +1,19 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus KaderModul — KaderModul.jsx
-   Team-Kader Ansicht mit Spielerliste
+   ClubCampus KaderModul — Supabase-Version
    ═══════════════════════════════════════════════════════════════ */
-import { useState } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT20, GN, R, BL, BK, GB } from "./constants.js";
-import { TI } from "./icons.jsx";
-import { useIsMobile, Card, Chip, Av, Row, Between, Col, SectionLabel, Btn, Input , avColor} from "./theme.jsx";
-import { ROSTER } from "./demoData.js";
+import { useState, useEffect, useRef } from "react";
+import { GN, R, BL } from "../constants.js";
+import { TI } from "../icons.jsx";
+import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card, DropMenu } from "../theme.jsx";
 
 const FIELD_VIS = {
-  administrator: ["dob","nat","heimatort","ahv","pass","street","plz","city","canton","country","email","tel","parent1","parent2","js","fairgate"],
-  administration:["dob","nat","heimatort","ahv","pass","street","plz","city","canton","country","email","tel","parent1","parent2","js","fairgate"],
+  administrator: ["dob","nat","heimatort","ahv","pass","street","plz","city","canton","email","tel","js","fairgate"],
+  administration:["dob","nat","heimatort","ahv","pass","street","plz","city","canton","email","tel","js","fairgate"],
   funktionaer:   ["dob","pass","street","plz","city","email","tel"],
-  trainer:       ["dob","nat","heimatort","pass","street","plz","city","email","tel","parent1","parent2"],
+  trainer:       ["dob","nat","heimatort","pass","street","plz","city","email","tel"],
   spieler:       ["dob","pass","street","plz","city","email","tel"],
   eltern:        ["dob","pass","street","plz","city","email","tel"],
 };
-
-const NR_CACHE = {data: Object.fromEntries(ROSTER.map(p=>[p.id,p.rueckennr||""]))};
 
 const POSITION_GROUPS = [
   {label:"Torwart",     options:["TW"]},
@@ -26,11 +22,10 @@ const POSITION_GROUPS = [
   {label:"Sturm",       options:["ST"]},
 ];
 
-const FUNKTION_ORDER = ["Trainer/in","Co-Trainer/in","Assistent/in","Goalietrainer/in","Masseur/in","Admin","TW","V","IV","RV","LV","DM","ZM","MF","LM","RM","ST"];
 
 const COL_DEF_ALL = [
   {key:"name",     label:"Name / Vorname", always:true},
-  {key:"role",     label:"Funktion",       always:true},
+  {key:"funktion", label:"Funktion",       always:true},
   {key:"pos",      label:"Position",       always:true},
   {key:"nr",       label:"Nr.",            always:true},
   {key:"dob",      label:"Geburtsdatum",   field:"dob"},
@@ -42,425 +37,586 @@ const COL_DEF_ALL = [
   {key:"fairgate", label:"Fairgate-ID",    field:"fairgate"},
 ];
 
-function normFunktion(s){
-  if(!s) return "-";
-  const l = s.toLowerCase();
-  if(l.includes("goalietrain")||l.includes("goalitrain")) return "Goalietrainer/in";
-  if(l.includes("co-train")||l.includes("co train")||l.includes("cotrainer")) return "Co-Trainer/in";
-  if(l.includes("assistent")||l.includes("assistenz")) return "Assistent/in";
-  if(l.includes("masseur")||l.includes("physiother")) return "Masseur/in";
-  if(l.includes("admin")||l.includes("sekretär")||l.includes("aktuarin")) return "Admin";
-  if(l.includes("train")) return "Trainer/in";
-  return s;
-}
-
-/* ── Gruppen-Header Zeile ── */
-function GruppenHeader({label, count, colSpan}){
-  return(
-    <tr>
-      <td colSpan={colSpan} style={{padding:"6px 14px",background:"var(--surface2)",borderTop:"0.5px solid var(--border)"}}>
-        <Row gap={6}>
-          <span className="cc-section-hdr">{label}</span>
-          <span style={{fontSize:11,color:"var(--sub)",fontWeight:400,opacity:0.7}}>({count})</span>
-        </Row>
-      </td>
-    </tr>
-  );
-}
-
-/* ── Positions-Badge ── */
-function PosBadge({pos}){
-  if(!pos) return <span style={{fontSize:13,color:"var(--sub)"}}>-</span>;
-  return <span style={{fontSize:12,fontWeight:700,color:"var(--sub)",background:"var(--surface2)",padding:"2px 8px",borderRadius:6}}>{pos}</span>;
-}
-
-/* ── Funktions-Badge ── */
-function FunktionBadge({role}){
-  if(!role) return <span style={{fontSize:13,color:"var(--sub)"}}>Spieler/in</span>;
-  return <span style={{fontSize:11,fontWeight:700,background:"#7C3AED18",color:"#7C3AED",padding:"2px 8px",borderRadius:8,whiteSpace:"nowrap"}}>{role}</span>;
-}
-
-function KaderModul({role, team, initialSelected=null, teamRosterData=null}){
+function KaderModul({role, team, sb=null, onSelectMember=null}){
   const isMobile = useIsMobile();
   const vis = FIELD_VIS[role]||[];
   const canEdit = ["trainer","administrator","administration"].includes(role);
-  const canExport = ["trainer","funktionaer","vorstand","administration","administrator"].includes(role);
-  const isSimple = ["trainer","spieler","eltern"].includes(role);
+  const canExport = ["trainer","funktionaer","administration","administrator"].includes(role);
 
-  const baseRoster = teamRosterData||(team ? ROSTER.filter(p=>(p.teams||[]).includes(team)) : ROSTER);
-  const initPlayer = typeof initialSelected==="number" ? baseRoster.find(p=>p.id===initialSelected)||null : initialSelected;
+  const [kader,       setKader]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [selected,    setSelected]    = useState(null);
+  const [search,      setSearch]      = useState("");
+  const [groupBy,     setGroupBy]     = useState(true);
+  const [showExport,  setShowExport]  = useState(false);
+  const [showAdd,     setShowAdd]     = useState(false);
+  const [exportFields,setExportFields]= useState(["name","funktion","pos","nr"]);
+  const [editingPos,  setEditingPos]  = useState(null);
+  const [editingNr,   setEditingNr]   = useState(null);
+  const [editKader,   setEditKader]   = useState(null); // Kader-Eintrag bearbeiten
+  const [editForm,    setEditForm]    = useState({funktionen:[],rueckennr:"",position:""});
+  const [editSaving,  setEditSaving]  = useState(false);
+  const [editFunkOpen,setEditFunkOpen]= useState(false);
+  const [sheetKader,  setSheetKader]  = useState(null); // Mobile Bottom Sheet
 
-  const [selected,   setSelected]   = useState(initPlayer);
-  const [search,     setSearch]     = useState("");
-  const [sortKey,    setSortKey]    = useState("name");
-  const [sortDir,    setSortDir]    = useState(1);
-  const [groupBy,    setGroupBy]    = useState(true);
-  const [showExport, setShowExport] = useState(false);
-  const [editingPos, setEditingPos] = useState(null);
-  const [editingNr,  setEditingNr]  = useState(null);
-  const [exportFields, setExportFields] = useState(["name","role","pos","nr"]);
-  const [positions,  setPositions]  = useState(()=>Object.fromEntries(baseRoster.map(p=>[p.id,p.pos])));
-  const [rueckennrn, setRueckennrn] = useState(()=>Object.fromEntries(baseRoster.map(p=>[p.id,p.rueckennr||""])));
-  const [nrLoaded,   setNrLoaded]   = useState(false);
+  // Mitglied hinzufügen
+  const [addSearch,   setAddSearch]   = useState("");
+  const [allMitglieder, setAllMitglieder] = useState([]);
+  const [addForm,     setAddForm]     = useState({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]});
+  const [addFunkOpen, setAddFunkOpen]  = useState(false);
+  const [addSaving,   setAddSaving]   = useState(false);
 
-  if(!nrLoaded){
-    setNrLoaded(true);
-    (async()=>{
-      try{
-        const res = await window.storage.get("rueckennrn");
-        if(res){ const d=JSON.parse(res.value); Object.assign(NR_CACHE.data,d); setRueckennrn(p=>({...p,...d})); }
-      }catch(e){}
-    })();
+  const teamObj = typeof team === "object" ? team : null;
+  const teamId  = teamObj?.id || null;
+  const teamName= teamObj?.name || team || "";
+  const saison  = "2025/26";
+
+  // Kader laden
+  async function loadKader(){
+    if(!sb||!teamId){ setLoading(false); return; }
+    setLoading(true);
+    const {data}=await sb.from("kader")
+      .select("*, mitglieder(id,vorname,nachname,geburtsdatum,nationalitaet,heimatort,ahv_nr,telefon,email,strasse,plz,ort,kanton,spielerpass,js_nr,fairgate_id)")
+      .eq("team_id",teamId).eq("aktiv",true).eq("saison",saison).order("rueckennr");
+    if(data) setKader(data);
+    setLoading(false);
   }
 
-  const saveNr = (newNrn) => {
-    setRueckennrn(newNrn);
-    Object.assign(NR_CACHE.data, newNrn);
-    window.storage.set("rueckennrn", JSON.stringify(newNrn)).catch(()=>{});
-  };
+  useEffect(()=>{ loadKader(); },[teamId]);
 
-  const handleSort = (key) => {
-    if(sortKey===key) setSortDir(d=>d*-1);
-    else { setSortKey(key); setSortDir(1); }
-  };
+  // Alle Mitglieder für Hinzufügen laden
+  useEffect(()=>{
+    if(showAdd&&sb&&allMitglieder.length===0){
+      sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp").eq("aktiv",true).order("nachname")
+        .then(({data})=>setAllMitglieder(data||[]));
+    }
+  },[showAdd]);
 
-  const cols = (isSimple ? COL_DEF_ALL.filter(c=>["name","role","pos","nr"].includes(c.key)) : COL_DEF_ALL)
-    .filter(c=>c.always||vis.includes(c.field));
+  // Kader-Eintrag updaten (Nr oder Position)
+  async function updateKaderField(kaderId, field, value){
+    if(!sb) return;
+    await sb.from("kader").update({[field]:value}).eq("id",kaderId);
+    setKader(prev=>prev.map(k=>k.id===kaderId?{...k,[field]:value}:k));
+  }
 
-  const filtered = [...baseRoster]
-    .filter(p=>p.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b)=>{
-      if(sortKey==="name"){
-        const va=String((a.lastName||"")+(a.firstName||"")||a.name||"");
-        const vb=String((b.lastName||"")+(b.firstName||"")||b.name||"");
-        return va.localeCompare(vb)*sortDir;
+  const ROLLE_MAP={"Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer","Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer"};
+  const [dbRollenPrio,setDbRollenPrio]=useState([]);
+  const [dbKaderRollenData,setDbKaderRollenData]=useState([]);
+  useEffect(()=>{
+    if(sb){
+      sb.from("portal_rollen").select("name,prioritaet").eq("aktiv",true).order("prioritaet")
+        .then(({data})=>{if(data)setDbRollenPrio(data.map(r=>r.name));});
+      sb.from("kader_rollen").select("*").eq("aktiv",true).order("sort_order")
+        .then(({data})=>{if(data)setDbKaderRollenData(data);});
+    }
+  },[]);
+  const PRIORITAET=dbRollenPrio;
+
+  async function updateBenutzerRolle(mitgliedId){
+    if(!sb||!mitgliedId) return;
+    const {data:benutzer}=await sb.from("benutzer").select("id,role").eq("mitglied_id",mitgliedId).maybeSingle();
+    if(!benutzer) return;
+    // Nur administrator/administration nicht automatisch überschreiben
+    if(["administrator","administration"].includes(benutzer.role)) return;
+    const {data:mitglied}=await sb.from("mitglieder").select("funktionen,mitgliedtyp").eq("id",mitgliedId).maybeSingle();
+    const alleKader=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
+    const TRAINER_ROLLEN_SET=(dbKaderRollenData||[]).filter(r=>r.ist_trainer).map(r=>r.name);
+    let neueRolle="supporter";
+    if(alleKader.data&&alleKader.data.length>0){
+      const hatTrainer=alleKader.data.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
+      if(hatTrainer) neueRolle="trainer";
+      else{
+        const alleRollen=alleKader.data.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
+        const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
+        if(hoechste) neueRolle=hoechste;
       }
-      if(sortKey==="pos"){ return String(positions[a.id]||"").localeCompare(String(positions[b.id]||""))*sortDir; }
-      if(sortKey==="nr"){
-        const va=rueckennrn[a.id]?parseInt(rueckennrn[a.id]):9999;
-        const vb=rueckennrn[b.id]?parseInt(rueckennrn[b.id]):9999;
-        return (va-vb)*sortDir;
+    } else if(mitglied?.mitgliedtyp){
+      const {data:typData}=await sb.from("mitgliedtypen").select("standard_rolle").eq("name",mitglied.mitgliedtyp).maybeSingle();
+      if(typData?.standard_rolle&&["spieler","trainer"].includes(typData.standard_rolle)){
+        neueRolle=typData.standard_rolle;
+      } else if((mitglied?.funktionen||[]).length>0){
+        neueRolle="funktionaer";
+      } else if(typData?.standard_rolle){
+        neueRolle=typData.standard_rolle;
       }
-      return 0;
-    });
+    } else if((mitglied?.funktionen||[]).length>0){
+      neueRolle="funktionaer";
+    }
+    if(neueRolle!==benutzer.role) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);
+  }
+
+  // Kader-Eintrag bearbeiten
+  async function saveEditKader(){
+    if(!sb||!editKader) return;
+    setEditSaving(true);
+    await sb.from("kader").update({
+      rollen:editForm.funktionen||[],
+      rueckennr:editForm.rueckennr||null,
+      position:editForm.position||null,
+    }).eq("id",editKader.id);
+    setKader(prev=>prev.map(k=>k.id===editKader.id?{...k,rollen:editForm.funktionen,rueckennr:editForm.rueckennr,position:editForm.position}:k));
+    // Rolle neu berechnen
+    await updateBenutzerRolle(editKader.mitglied_id);
+    setEditKader(null);
+    setEditFunkOpen(false);
+    setEditSaving(false);
+  }
+
+  function openEdit(k){
+    setEditForm({funktionen:k.rollen||[],rueckennr:k.rueckennr||"",position:k.position||""});
+    setEditKader(k);
+  }
+
+  // Mitglied entfernen
+  async function removeMitglied(kaderId){
+    if(!sb||!window.confirm("Mitglied aus dem Kader entfernen?")) return;
+    const kaderEintrag=kader.find(k=>k.id===kaderId);
+    await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
+    setKader(prev=>prev.filter(k=>k.id!==kaderId));
+    // Rolle neu berechnen nach Entfernen
+    if(kaderEintrag?.mitglied_id) await updateBenutzerRolle(kaderEintrag.mitglied_id);
+  }
+
+  // Mitglied hinzufügen
+  async function addMitglied(){
+    if(!sb||!addForm.mitglied_id||!teamId) return;
+    setAddSaving(true);
+    const {error}=await sb.from("kader").upsert({
+      team_id:teamId,
+      mitglied_id:addForm.mitglied_id,
+      rueckennr:addForm.rueckennr||null,
+      position:addForm.position||null,
+      rollen:addForm.funktionen||["Spieler/in"],
+      aktiv:true,
+      saison,
+    },{onConflict:"team_id,mitglied_id,saison"});
+    if(!error){
+      await loadKader();
+      // Rolle neu berechnen
+      await updateBenutzerRolle(addForm.mitglied_id);
+      setShowAdd(false);
+      setAddForm({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]});
+      setAddFunkOpen(false);
+      setAddSearch("");
+    }
+    setAddSaving(false);
+  }
+
+  // Mitglieder die schon im Kader sind filtern
+  const kaderMitgliedIds=new Set(kader.map(k=>k.mitglied_id));
+  const filteredAdd=allMitglieder
+    .filter(m=>!kaderMitgliedIds.has(m.id))
+    .filter(m=>`${m.vorname} ${m.nachname}`.toLowerCase().includes(addSearch.toLowerCase()));
+
+  // Kader filtern + gruppieren
+  const filtered=kader.filter(k=>{
+    const m=k.mitglieder;
+    if(!m) return false;
+    return `${m.vorname} ${m.nachname}`.toLowerCase().includes(search.toLowerCase());
+  });
 
   const grouped = groupBy
-    ? Object.entries(filtered.reduce((acc,p)=>{
-        const key = normFunktion(p.role||positions[p.id])||"Spieler/in";
+    ? Object.entries(filtered.reduce((acc,k)=>{
+        const key=(k.rollen&&k.rollen.length>0)?k.rollen[0]:"Spieler/in";
         if(!acc[key]) acc[key]=[];
-        acc[key].push(p); return acc;
+        acc[key].push(k); return acc;
       },{}))
-      .sort(([a],[b])=>{
-        const ia=FUNKTION_ORDER.indexOf(a), ib=FUNKTION_ORDER.indexOf(b);
-        if(ia>=0&&ib>=0) return ia-ib;
-        if(ia>=0) return -1; if(ib>=0) return 1;
-        return a.localeCompare(b);
-      })
+      .sort(([a],[b])=>a.localeCompare(b))
       .map(([key,items])=>({key,items}))
-    : [{key:null, items:filtered}];
+    : [{key:null,items:filtered}];
 
-  const SortIcon = ({col}) => sortKey===col
-    ? <TI n={sortDir===1?"arrow-up":"arrow-down"} size={13} style={{marginLeft:3,color:R}}/>
-    : <TI n="arrows-sort" size={13} style={{marginLeft:3,color:"var(--sub)",opacity:0.5}}/>;
-
-  /* ── Export Modal ── */
-  const handleExport = () => {
-    const fields = COL_DEF_ALL.filter(c=>exportFields.includes(c.key));
-    const header = fields.map(c=>c.label).join(";");
-    const rows = filtered.map(p=>fields.map(c=>{
-      if(c.key==="name") return `${p.lastName||""} ${p.firstName||""}`.trim()||p.name;
-      if(c.key==="nr")   return rueckennrn[p.id]||"-";
-      if(c.key==="pos")  return positions[p.id]||"-";
-      if(c.key==="role") return p.role||"Spieler/in";
-      return p[c.field]||"-";
-    }).join(";")).join("\n");
-    const csv = `${header}\n${rows}`;
-    const a = document.createElement("a");
-    a.href = "data:text/csv;charset=utf-8,"+encodeURIComponent(csv);
-    a.download = `Kader_${team||"Export"}_${new Date().toISOString().slice(0,10)}.csv`;
+  const handleExport=()=>{
+    const fields=COL_DEF_ALL.filter(c=>exportFields.includes(c.key));
+    const header=fields.map(c=>c.label).join(";");
+    const rows=filtered.map(k=>{
+      const m=k.mitglieder||{};
+      return fields.map(c=>{
+        if(c.key==="name") return `${m.nachname||""} ${m.vorname||""}`.trim();
+        if(c.key==="nr")   return k.rueckennr||"-";
+        if(c.key==="pos")  return k.position||"-";
+        if(c.key==="funktion") return (k.rollen||[]).join(", ")||"-";
+        if(c.key==="dob")  return m.geburtsdatum||"-";
+        if(c.key==="email")return m.email||"-";
+        if(c.key==="tel")  return m.telefon||"-";
+        if(c.key==="pass") return m.spielerpass||"-";
+        if(c.key==="js")   return m.js_nr||"-";
+        if(c.key==="ahv")  return m.ahv_nr||"-";
+        if(c.key==="fairgate") return m.fairgate_id||"-";
+        return "-";
+      }).join(";");
+    }).join("\n");
+    const csv=`${header}\n${rows}`;
+    const a=document.createElement("a");
+    a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);
+    a.download=`Kader_${teamName}_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
     setShowExport(false);
   };
 
-  /* ── Mobile Zeile ── */
-  const MobileRow = ({p}) => (
-    <div onClick={()=>setSelected(p)}
-      style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",
-        borderTop:"0.5px solid var(--border)",cursor:"pointer",background:"var(--surface)"}}>
-      <Av name={p.name} size={32} bg={ACCENT20}/>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:600,fontSize:14,color:"var(--text)",marginBottom:3}}>
-          {p.lastName} {p.firstName}
+  /* ── Kader Row ── */
+  const KaderRow=({k})=>{
+    const m=k.mitglieder||{};
+    const name=`${m.nachname||""} ${m.vorname||""}`.trim()||"?";
+    const handleRowClick=()=>{
+      if(isMobile) setSheetKader(k);
+      else onSelectMember?onSelectMember({...m,name:`${m.vorname||""} ${m.nachname||""}`.trim(),id:m.id}):setSelected(k);
+    };
+    const menuItems=[
+      {label:"Spieler-Detail anzeigen", icon:"user", onClick:()=>onSelectMember?onSelectMember({...m,name:`${m.vorname||""} ${m.nachname||""}`.trim(),id:m.id}):setSelected(k)},
+      {label:"Kader-Eintrag bearbeiten", icon:"edit", onClick:()=>openEdit(k)},
+      "sep",
+      {label:"Aus Kader entfernen", icon:"trash", danger:true, onClick:()=>removeMitglied(k.id)},
+    ];
+    return(
+      <div onClick={handleRowClick} className="cc-list-row">
+        <Av name={`${m.vorname||""} ${m.nachname||""}`} size="md" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
+        <div style={{flex:1,minWidth:0}}>
+          <div className="cc-list-name">{name}</div>
+          <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>
+            {(k.rollen||["Spieler/in"]).join(" · ")}
+            {k.position?` · ${k.position}`:""}
+          </div>
         </div>
-        <Row gap={6} wrap>
-          {positions[p.id]&&<PosBadge pos={positions[p.id]}/>}
-          {rueckennrn[p.id]&&<span style={{fontSize:12,color:"var(--sub)"}}>Nr. {rueckennrn[p.id]}</span>}
-          {p.role&&<FunktionBadge role={p.role}/>}
-          {!p.role&&p.teams&&p.teams.length>1&&p.teams.map((t,i)=>(
-            <span key={i} style={{fontSize:12,fontWeight:600,background:i===0?R+"15":"#EFF6FF",color:i===0?R:BL,padding:"2px 6px",borderRadius:6}}>{t}</span>
-          ))}
-        </Row>
+        <div className="cc-team-nr" style={k.rueckennr?{}:{borderStyle:"dashed",color:"var(--sub)",fontWeight:400}}>
+          {k.rueckennr||"—"}
+        </div>
+        {canEdit&&(
+          <div onClick={e=>e.stopPropagation()}>
+            <DropMenu items={menuItems}/>
+          </div>
+        )}
+        {!canEdit&&<TI n="chevron-right" size={14} style={{color:"var(--sub)",flexShrink:0}}/>}
       </div>
-      <TI n="chevron-right" size={16} style={{color:"var(--sub)",flexShrink:0}}/>
-    </div>
-  );
-
-  /* ── Desktop Zeile ── */
-  const DesktopRow = ({p}) => (
-    <tr onClick={()=>setSelected(p)} className="hov-row"
-      style={{borderTop:"0.5px solid var(--border)",cursor:"pointer"}}>
-      {cols.map((c,j)=>{
-        /* Name */
-        if(c.key==="name") return(
-          <td key={j} style={{padding:"10px 14px"}}>
-            <Row gap={10}>
-              <Av name={p.name} size={28} bg={ACCENT20}/>
-              <Col gap={2}>
-                <span style={{fontWeight:600,fontSize:13,color:"var(--text)",whiteSpace:"nowrap"}}>
-                  {p.lastName} {p.firstName}
-                </span>
-                {!p.role&&p.teams&&p.teams.length>1&&(
-                  <Row gap={4} wrap>
-                    {p.teams.map((t,i)=>(
-                      <span key={i} style={{fontSize:11,fontWeight:600,background:i===0?R+"15":"#EFF6FF",color:i===0?R:BL,padding:"1px 6px",borderRadius:6}}>{t}</span>
-                    ))}
-                  </Row>
-                )}
-              </Col>
-            </Row>
-          </td>
-        );
-        /* Funktion */
-        if(c.key==="role") return(
-          <td key={j} style={{padding:"10px 14px"}}>
-            <FunktionBadge role={p.role}/>
-          </td>
-        );
-        /* Position */
-        if(c.key==="pos") return(
-          <td key={j} style={{padding:"10px 14px"}} onClick={e=>e.stopPropagation()}>
-            {canEdit&&editingPos===p.id?(
-              <select autoFocus value={positions[p.id]||""}
-                onChange={e=>{setPositions(prev=>({...prev,[p.id]:e.target.value}));setEditingPos(null);}}
-                onBlur={()=>setEditingPos(null)}
-                style={{padding:"3px 8px",border:`1.5px solid ${R}`,borderRadius:6,fontSize:13,
-                  fontWeight:600,color:R,background:"var(--surface)",outline:"none"}}>
-                <option value="">- keine -</option>
-                {POSITION_GROUPS.map(g=>(
-                  <optgroup key={g.label} label={g.label}>
-                    {g.options.map(pos=><option key={pos} value={pos}>{pos}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-            ):(
-              <Row gap={6} style={{cursor:canEdit?"pointer":"default"}}
-                onClick={canEdit?()=>setEditingPos(p.id):undefined}>
-                <PosBadge pos={positions[p.id]}/>
-                {canEdit&&<TI n="edit" size={13} style={{color:"var(--sub)",opacity:0.5}}/>}
-              </Row>
-            )}
-          </td>
-        );
-        /* Nummer */
-        if(c.key==="nr") return(
-          <td key={j} style={{padding:"10px 14px",textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-            {canEdit&&editingNr===p.id?(
-              <input autoFocus type="number" min="1" max="99"
-                value={rueckennrn[p.id]}
-                onChange={e=>saveNr({...rueckennrn,[p.id]:e.target.value})}
-                onBlur={()=>setEditingNr(null)}
-                onKeyDown={e=>{if(e.key==="Enter")setEditingNr(null);}}
-                style={{width:42,padding:"3px 6px",border:`1.5px solid ${R}`,borderRadius:6,
-                  fontSize:13,fontWeight:700,textAlign:"center",color:R,outline:"none"}}/>
-            ):(
-              <Row gap={4} justify="center" style={{cursor:canEdit?"pointer":"default"}}
-                onClick={canEdit?()=>setEditingNr(p.id):undefined}>
-                <span style={{fontSize:13,fontWeight:600,color:"var(--sub)"}}>
-                  {rueckennrn[p.id]||"-"}
-                </span>
-                {canEdit&&<TI n="edit" size={13} style={{color:"var(--sub)",opacity:0.5}}/>}
-              </Row>
-            )}
-          </td>
-        );
-        /* AHV */
-        if(c.key==="ahv") return <td key={j} style={{padding:"10px 14px",color:"var(--sub)",fontSize:13}}>••••••••</td>;
-        /* Default */
-        return <td key={j} style={{padding:"10px 14px",color:c.field==="email"?BL:"var(--sub)",fontSize:13,whiteSpace:"nowrap"}}>{p[c.field]||"-"}</td>;
-      })}
-      <td style={{padding:"10px 14px",textAlign:"right"}}>
-        <TI n="chevron-right" size={16} style={{color:"var(--sub)"}}/>
-      </td>
-    </tr>
-  );
+    );
+  };
 
   return(
     <div>
-      {/* Mitglied-Detail Modal */}
-      {selected&&(
-        <div onClick={()=>setSelected(null)}
-          style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:300,
-            display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-          <div onClick={e=>e.stopPropagation()}
-            style={{background:"var(--surface)",borderRadius:"16px 16px 0 0",padding:20,
-              width:"100%",maxWidth:540,maxHeight:"80vh",overflowY:"auto"}}>
-            <Between style={{marginBottom:16}}>
-              <Row gap={12}>
-                <Av name={selected.name} size={44} bg={ACCENT20}/>
-                <Col gap={2}>
-                  <span style={{fontWeight:700,fontSize:16,color:"var(--text)"}}>
-                    {selected.lastName} {selected.firstName}
-                  </span>
-                  <FunktionBadge role={selected.role}/>
-                </Col>
-              </Row>
-              <Btn variant="ghost" onClick={()=>setSelected(null)} style={{color:"var(--sub)",fontSize:20}}>×</Btn>
-            </Between>
-            <Col gap={8}>
-              {selected.dob&&vis.includes("dob")&&(
-                <Row gap={8}>
-                  <span style={{fontSize:13,color:"var(--sub)",minWidth:100}}>Geburtsdatum</span>
-                  <span style={{fontSize:13,color:"var(--text)"}}>{selected.dob}</span>
+      {/* Detail Modal */}
+      {/* Edit Kader Modal */}
+      <ModalOrSheet open={!!editKader} onClose={()=>setEditKader(null)} maxWidth={400}>
+        {editKader&&(()=>{
+          const m=editKader.mitglieder||{};
+          const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
+          return(
+            <>
+              <div className="cc-modal-hdr">
+                <div>
+                  <ModalTitle>{name} bearbeiten</ModalTitle>
+                  <div style={{fontSize:11,color:"var(--sub)",marginTop:2}}>{teamName} · {saison}</div>
+                </div>
+                <button className="cc-icon-btn" onClick={()=>setEditKader(null)}><TI n="x" size={14}/></button>
+              </div>
+              <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <label className="cc-label">Rolle im Team</label>
+                  <div className="cc-multiselect">
+                    <button type="button" className="cc-multiselect-trigger" onClick={()=>setEditFunkOpen(o=>!o)}>
+                      <div className="cc-multiselect-chips">
+                        {(editForm.funktionen||[]).length===0
+                          ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
+                          :(editForm.funktionen||[]).map(f=>(
+                            <span key={f} className="cc-multiselect-chip">
+                              {f}
+                              <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setEditForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
+                            </span>
+                          ))
+                        }
+                      </div>
+                      <TI n={editFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                    </button>
+                    {editFunkOpen&&(
+                      <div className="cc-multiselect-dropdown">
+                        <div className="cc-multiselect-list">
+                          {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>{
+                            const sel=(editForm.funktionen||[]).includes(f);
+                            return(
+                              <div key={f} className="cc-multiselect-item" onClick={()=>setEditForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f):[...(p.funktionen||[]),f]}))}>
+                                <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                  {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                                </div>
+                                <span>{f}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {(editForm.funktionen||[]).length>0&&(
+                          <div className="cc-multiselect-footer">
+                            <span>{editForm.funktionen.length} ausgewählt</span>
+                            <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setEditForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <div style={{width:90}}>
+                    <label className="cc-label">Nr.</label>
+                    <input className="cc-input" type="number" min="1" max="99" placeholder="—"
+                      value={editForm.rueckennr} onChange={e=>setEditForm(p=>({...p,rueckennr:e.target.value}))}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label className="cc-label">Position</label>
+                    <select className="cc-input" value={editForm.position} onChange={e=>setEditForm(p=>({...p,position:e.target.value}))}>
+                      <option value="">—</option>
+                      {POSITION_GROUPS.map(g=>(
+                        <optgroup key={g.label} label={g.label}>
+                          {g.options.map(o=><option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="cc-modal-ftr">
+                <Btn onClick={()=>setEditKader(null)}>Abbrechen</Btn>
+                <Btn variant="primary" onClick={saveEditKader} disabled={editSaving}>
+                  {editSaving?"Speichert…":"Speichern"}
+                </Btn>
+              </div>
+            </>
+          );
+        })()}
+      </ModalOrSheet>
+
+      {/* Mobile Bottom Sheet */}
+      <ModalOrSheet open={!!sheetKader} onClose={()=>setSheetKader(null)} maxWidth={400}>
+        {sheetKader&&(()=>{
+          const m=sheetKader.mitglieder||{};
+          const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
+          return(
+            <>
+              <div className="cc-modal-hdr">
+                <ModalTitle>{name}</ModalTitle>
+                <button className="cc-icon-btn" onClick={()=>setSheetKader(null)}><TI n="x" size={14}/></button>
+              </div>
+              <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:0,padding:0}}>
+                {[
+                  {label:"Spieler-Detail anzeigen", icon:"user", onClick:()=>{setSheetKader(null);onSelectMember?onSelectMember({...m,name,id:m.id}):setSelected(sheetKader);}},
+                  ...(canEdit?[
+                    {label:"Kader-Eintrag bearbeiten", icon:"edit", onClick:()=>{setSheetKader(null);openEdit(sheetKader);}},
+                    {label:"Aus Kader entfernen", icon:"trash", danger:true, onClick:()=>{setSheetKader(null);removeMitglied(sheetKader.id);}},
+                  ]:[]),
+                ].map((item,i)=>(
+                  <button key={i} onClick={item.onClick}
+                    className={`cc-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                    style={{padding:"14px 20px",fontSize:14,borderBottom:"0.5px solid var(--border)"}}>
+                    <TI n={item.icon} size={16}/>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+      </ModalOrSheet>
+      <ModalOrSheet open={!!selected} onClose={()=>setSelected(null)} maxWidth={540}>
+        {selected&&(()=>{
+          const m=selected.mitglieder||{};
+          const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
+          return(
+            <>
+              <div className="cc-modal-hdr">
+                <Row gap={12}>
+                  <Av name={name} size="lg" bg="var(--cc-hover,rgba(255,191,0,0.19))"/>
+                  <Col gap={2}>
+                    <span style={{fontWeight:600,fontSize:16,color:"var(--text)"}}>{name}</span>
+                    <span style={{fontSize:12,color:"var(--sub)"}}>{(selected.rollen||["Spieler/in"]).join(" · ")} · Nr. {selected.rueckennr||"—"}</span>
+                  </Col>
                 </Row>
-              )}
-              {selected.email&&vis.includes("email")&&(
-                <Row gap={8}>
-                  <span style={{fontSize:13,color:"var(--sub)",minWidth:100}}>E-Mail</span>
-                  <span style={{fontSize:13,color:BL}}>{selected.email}</span>
-                </Row>
-              )}
-              {selected.tel&&vis.includes("tel")&&(
-                <Row gap={8}>
-                  <span style={{fontSize:13,color:"var(--sub)",minWidth:100}}>Telefon</span>
-                  <span style={{fontSize:13,color:"var(--text)"}}>{selected.tel}</span>
-                </Row>
-              )}
-            </Col>
-          </div>
+                <button className="cc-icon-btn" onClick={()=>setSelected(null)}><TI n="x" size={14}/></button>
+              </div>
+              <div className="cc-modal-body">
+                {[
+                  {label:"Geburtsdatum", value:m.geburtsdatum, field:"dob"},
+                  {label:"E-Mail",       value:m.email,        field:"email",   color:BL},
+                  {label:"Telefon",      value:m.telefon,      field:"tel"},
+                  {label:"Spielerpass",  value:m.spielerpass,  field:"pass"},
+                  {label:"J+S Nr.",      value:m.js_nr,        field:"js"},
+                  {label:"AHV-Nr.",      value:m.ahv_nr,       field:"ahv"},
+                  {label:"Fairgate-ID",  value:m.fairgate_id,  field:"fairgate"},
+                ].filter(r=>r.value&&vis.includes(r.field)).map(r=>(
+                  <Row key={r.field} gap={8}>
+                    <span className="cc-detail-label">{r.label}</span>
+                    <span style={{fontSize:14,color:r.color||"var(--text)"}}>{r.value}</span>
+                  </Row>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+      </ModalOrSheet>
+
+      {/* Mitglied hinzufügen Modal */}
+      <ModalOrSheet open={showAdd} onClose={()=>{setShowAdd(false);setAddSearch("");}} maxWidth={440}>
+        <div className="cc-modal-hdr">
+          <ModalTitle>Mitglied zum Kader hinzufügen</ModalTitle>
+          <button className="cc-icon-btn" onClick={()=>setShowAdd(false)}><TI n="x" size={14}/></button>
         </div>
-      )}
+        <div className="cc-modal-body" style={{display:"flex",flexDirection:"column",gap:14}}>
+          <input className="cc-input" placeholder="Mitglied suchen…" value={addSearch} onChange={e=>setAddSearch(e.target.value)} autoFocus/>
+          <div style={{maxHeight:180,overflowY:"auto",border:"0.5px solid var(--border)",borderRadius:8}}>
+            {filteredAdd.length===0&&<div style={{padding:12,fontSize:13,color:"var(--sub)",textAlign:"center"}}>Keine Mitglieder gefunden</div>}
+            {filteredAdd.map(m=>(
+              <div key={m.id} onClick={()=>setAddForm(p=>({...p,mitglied_id:m.id}))}
+                style={{padding:"8px 12px",fontSize:13,cursor:"pointer",background:addForm.mitglied_id===m.id?"var(--cc-hover,rgba(255,191,0,0.15))":"transparent",display:"flex",alignItems:"center",gap:8,borderBottom:"0.5px solid var(--border)"}}>
+                <div style={{width:16,height:16,borderRadius:4,border:`0.5px solid ${addForm.mitglied_id===m.id?"#22c55e":"var(--border)"}`,background:addForm.mitglied_id===m.id?"#ECFDF5":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  {addForm.mitglied_id===m.id&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                </div>
+                <span>{m.nachname} {m.vorname}</span>
+                {m.mitgliedtyp&&<span style={{fontSize:11,color:"var(--sub)",marginLeft:"auto"}}>{m.mitgliedtyp}</span>}
+              </div>
+            ))}
+          </div>
+          {addForm.mitglied_id&&(
+            <div style={{display:"flex",gap:10}}>
+              <div style={{flex:1}}>
+                <label className="cc-label">Rolle im Team</label>
+                <div className="cc-multiselect">
+                  <button type="button" className="cc-multiselect-trigger" onClick={()=>setAddFunkOpen(o=>!o)}>
+                    <div className="cc-multiselect-chips">
+                      {(addForm.funktionen||[]).length===0
+                        ?<span style={{color:"var(--sub)",fontSize:13}}>– wählen –</span>
+                        :(addForm.funktionen||[]).map(f=>(
+                          <span key={f} className="cc-multiselect-chip">
+                            {f}
+                            <span className="cc-multiselect-chip-x" onMouseDown={e=>{e.stopPropagation();setAddForm(p=>({...p,funktionen:p.funktionen.filter(x=>x!==f)}));}}>×</span>
+                          </span>
+                        ))
+                      }
+                    </div>
+                    <TI n={addFunkOpen?"chevron-up":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                  </button>
+                  {addFunkOpen&&(
+                    <div className="cc-multiselect-dropdown">
+                      <div className="cc-multiselect-list">
+                        {["Spieler/in","Trainer/in","Co-Trainer/in","Goalietrainer/in","Assistenz","Masseur/in"].map(f=>{
+                          const sel=(addForm.funktionen||[]).includes(f);
+                          return(
+                            <div key={f} className="cc-multiselect-item" onClick={()=>setAddForm(p=>({...p,funktionen:sel?p.funktionen.filter(x=>x!==f):[...(p.funktionen||[]),f]}))}>
+                              <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                                {sel&&<TI n="check" size={10} style={{color:"#15803d"}}/>}
+                              </div>
+                              <span>{f}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {(addForm.funktionen||[]).length>0&&(
+                        <div className="cc-multiselect-footer">
+                          <span>{(addForm.funktionen||[]).length} ausgewählt</span>
+                          <button style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--sub)",fontFamily:"inherit"}} onClick={()=>setAddForm(p=>({...p,funktionen:[]}))}>Alle entfernen</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{width:80}}>
+                <label className="cc-label">Nr.</label>
+                <input className="cc-input" type="number" min="1" max="99" placeholder="—" value={addForm.rueckennr} onChange={e=>setAddForm(p=>({...p,rueckennr:e.target.value}))}/>
+              </div>
+              <div style={{width:90}}>
+                <label className="cc-label">Position</label>
+                <select className="cc-input" value={addForm.position} onChange={e=>setAddForm(p=>({...p,position:e.target.value}))}>
+                  <option value="">—</option>
+                  {POSITION_GROUPS.map(g=>(
+                    <optgroup key={g.label} label={g.label}>
+                      {g.options.map(o=><option key={o} value={o}>{o}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="cc-modal-ftr">
+          <Btn onClick={()=>{setShowAdd(false);setAddSearch("");}}>Abbrechen</Btn>
+          <Btn variant="primary" onClick={addMitglied} disabled={!addForm.mitglied_id||addSaving}>
+            {addSaving?"Wird hinzugefügt…":"Hinzufügen"}
+          </Btn>
+        </div>
+      </ModalOrSheet>
 
       {/* Export Modal */}
-      {showExport&&(
-        <div onClick={()=>setShowExport(false)}
-          style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:300,
-            display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <div onClick={e=>e.stopPropagation()}
-            style={{background:"var(--surface)",borderRadius:16,padding:24,
-              width:320,maxWidth:"90vw",boxShadow:"0 8px 40px rgba(0,0,0,0.18)"}}>
-            <h2 style={{margin:"0 0 4px",fontSize:16,fontWeight:700,color:"var(--text)"}}>Kaderliste exportieren</h2>
-            <p style={{margin:"0 0 16px",fontSize:13,color:"var(--sub)"}}>Felder auswählen die exportiert werden sollen</p>
-            <Col gap={6} style={{marginBottom:20}}>
-              {COL_DEF_ALL.map(c=>(
-                <label key={c.key}
-                  style={{display:"flex",alignItems:"center",gap:12,padding:"6px 10px",
-                    borderRadius:8,background:"var(--surface2)",cursor:"pointer"}}>
-                  <input type="checkbox" checked={exportFields.includes(c.key)}
-                    onChange={e=>setExportFields(prev=>e.target.checked?[...prev,c.key]:prev.filter(k=>k!==c.key))}
-                    style={{width:16,height:16,accentColor:BK,cursor:"pointer"}}/>
-                  <span style={{fontSize:13,color:"var(--text)"}}>{c.label}</span>
-                </label>
-              ))}
-            </Col>
-            <Row gap={8}>
-              <Btn variant="primary" color={BK} onClick={handleExport}>Exportieren</Btn>
-              <Btn onClick={()=>setShowExport(false)}>Abbrechen</Btn>
-            </Row>
-          </div>
+      <ModalOrSheet open={showExport} onClose={()=>setShowExport(false)} maxWidth={360}>
+        <div className="cc-modal-hdr">
+          <ModalTitle>Kaderliste exportieren</ModalTitle>
+          <button className="cc-icon-btn" onClick={()=>setShowExport(false)}><TI n="x" size={14}/></button>
         </div>
-      )}
+        <div className="cc-modal-body">
+          <p style={{fontSize:14,color:"var(--sub)"}}>Felder auswählen die exportiert werden sollen</p>
+          <Col gap={6}>
+            {COL_DEF_ALL.map(c=>(
+              <label key={c.key} className="cc-check-row">
+                <input type="checkbox" checked={exportFields.includes(c.key)}
+                  onChange={e=>setExportFields(prev=>e.target.checked?[...prev,c.key]:prev.filter(k=>k!==c.key))}
+                  style={{width:16,height:16,accentColor:"var(--text)",cursor:"pointer"}}/>
+                <span style={{fontSize:14,color:"var(--text)"}}>{c.label}</span>
+              </label>
+            ))}
+          </Col>
+        </div>
+        <div className="cc-modal-ftr">
+          <Btn onClick={()=>setShowExport(false)}>Abbrechen</Btn>
+          <Btn variant="primary" onClick={handleExport}>Exportieren</Btn>
+        </div>
+      </ModalOrSheet>
 
       {/* Toolbar */}
       <Between style={{marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <Input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Spieler suchen…" style={{width:200}}/>
+        <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Spieler suchen…" style={{width:200}}/>
         <Row gap={8}>
-          {canExport&&(
-            <Btn onClick={()=>setShowExport(true)}>
-              <Row gap={6}><TI n="file-download" size={14} style={{color:GN}}/>Export</Row>
+          {canEdit&&(
+            <Btn onClick={()=>setShowAdd(true)}>
+              <TI n="user-plus" size={14}/> Hinzufügen
             </Btn>
           )}
-          <Btn onClick={()=>setGroupBy(g=>!g)}
-            style={groupBy?{background:BK+"12",borderColor:BK,color:BK}:{}}>
-            <Row gap={6}><TI n="layout-list" size={14}/>Gruppieren</Row>
+          {canExport&&(
+            <Btn onClick={()=>setShowExport(true)}>
+              <TI n="file-download" size={14}/> Export
+            </Btn>
+          )}
+          <Btn onClick={()=>setGroupBy(g=>!g)} style={groupBy?{background:"var(--text)",color:"var(--bg)"}:{}}>
+            <TI n="layout-list" size={14}/> Gruppieren
           </Btn>
-          <span style={{fontSize:13,color:"var(--sub)",padding:"6px 10px",
-            background:"var(--surface2)",borderRadius:8,fontWeight:600}}>
+          <span className="cc-chip-toggle" style={{cursor:"default",fontWeight:600}}>
             {filtered.length} Mitglieder
           </span>
         </Row>
       </Between>
 
-      {/* Mobile */}
-      {isMobile?(
-        <div style={{background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)",overflow:"hidden"}}>
+      {/* Liste */}
+      {loading?(
+        <div style={{padding:24,textAlign:"center",color:"var(--sub)",fontSize:13}}>Lade Kader…</div>
+      ):(
+        <div className="cc-table-wrap">
+          <div className="cc-table-wrap-inner">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 60px 52px 24px"+(canEdit?" 24px":""),
+            padding:"8px 14px",background:"var(--bg)",borderBottom:"1px solid var(--border)"}}>
+            <span className="cc-label" style={{marginBottom:0}}>Spieler</span>
+            <span className="cc-label" style={{marginBottom:0,textAlign:"center"}}>Pos</span>
+            <span className="cc-label" style={{marginBottom:0,textAlign:"right"}}>Nr.</span>
+            <span/>
+            {canEdit&&<span/>}
+          </div>
           {grouped.flatMap(({key,items})=>[
             key&&(
-              <div key={`h-${key}`}
-                style={{padding:"7px 16px",background:"var(--surface2)",
-                  borderTop:"0.5px solid var(--border)"}}>
-                <Row gap={6}>
-                  <span style={{fontSize:11,fontWeight:700,color:"var(--sub)",
-                    textTransform:"uppercase",letterSpacing:0.6}}>{key}</span>
-                  <span style={{fontSize:11,color:"var(--sub)",opacity:0.7}}>({items.length})</span>
-                </Row>
+              <div key={`h-${key}`} className="cc-section-hdr" style={{padding:"6px 14px",margin:0}}>
+                {key}<span className="cc-count">({items.length})</span>
               </div>
             ),
-            ...items.map(p=><MobileRow key={p.id} p={p}/>),
+            ...items.map(k=><KaderRow key={k.id} k={k}/>),
           ]).filter(Boolean)}
-          {filtered.length===0&&(
-            <div style={{padding:32,textAlign:"center",color:"var(--sub)",fontSize:13}}>
-              Keine Spieler gefunden
-            </div>
+          {filtered.length===0&&!loading&&(
+            <div className="cc-empty">{kader.length===0?"Noch keine Kadermitglieder. Mitglied hinzufügen ↑":"Keine Spieler gefunden"}</div>
           )}
-        </div>
-      ):(
-        /* Desktop Tabelle */
-        <div style={{background:"var(--surface)",borderRadius:12,
-          border:"0.5px solid var(--border)",overflow:"hidden",overflowX:"auto"}}>
-          <table className="cc-table">
-            <thead>
-              <tr style={{background:"var(--surface2)"}}>
-                {cols.map((c,i)=>{
-                  const sortable = ["name","pos","nr"].includes(c.key);
-                  return(
-                    <th key={i} onClick={sortable?()=>handleSort(c.key):undefined}
-                      style={{padding:"9px 14px",textAlign:"left",fontWeight:600,
-                        color:"var(--sub)",fontSize:11,textTransform:"uppercase",
-                        letterSpacing:0.5,whiteSpace:"nowrap",
-                        cursor:sortable?"pointer":"default",userSelect:"none"}}>
-                      <Row gap={4}>{c.label}{sortable&&<SortIcon col={c.key}/>}</Row>
-                    </th>
-                  );
-                })}
-                <th style={{width:32}}/>
-              </tr>
-            </thead>
-            <tbody>
-              {grouped.flatMap(({key,items})=>[
-                key&&<GruppenHeader key={`h-${key}`} label={key} count={items.length} colSpan={cols.length+1}/>,
-                ...items.map(p=><DesktopRow key={p.id} p={p}/>),
-              ]).filter(Boolean)}
-              {filtered.length===0&&(
-                <tr><td colSpan={cols.length+1}
-                  style={{padding:32,textAlign:"center",color:"var(--sub)",fontSize:13}}>
-                  Keine Spieler gefunden
-                </td></tr>
-              )}
-            </tbody>
-          </table>
+          </div>
         </div>
       )}
     </div>
   );
-}
-
-function getNr(id){
-  try{
-    const s=localStorage.getItem("rueckennrn");
-    if(s){const d=JSON.parse(s);if(d[id]) return d[id];}
-  }catch{}
-  return "";
 }
 
 export default KaderModul;

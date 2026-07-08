@@ -3,10 +3,10 @@
    Team-Ansicht: Übersicht, Kader, Training, Spielplan etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "./constants.js";
-import { TI } from "./icons.jsx";
-import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, avColor} from "./theme.jsx";
-import { ATT_EVENTS, ATT_INITIAL, EVENTS, NEWS, POLLS, ROSTER, TABLES } from "./demoData.js";
+import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.js";
+import { TI } from "../icons.jsx";
+import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, avColor, Stat} from "../theme.jsx";
+import { ATT_EVENTS, ATT_INITIAL, EVENTS, NEWS, POLLS, ROSTER, TABLES } from "../demoData.js";
 
 /* ── Hilfsfunktionen ── */
 /* STitle via ./theme.jsx */
@@ -19,10 +19,16 @@ function kannHelferEinsatzErstellen(role, typ, team, meineTeams=[]){
 
 const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
 
-function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp}){
+function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null,navToTeam=null,onNavToTeamDone=null}){
   const isMobile=useIsMobile();
-  /* Modul-Sichtbarkeit: Props oder Fallback alles sichtbar */
   const moduleOk=(modul)=>!isModuleVisible||isModuleVisible(modul)||!modul;
+
+  // Berechtigung pro Team prüfen
+  const getRoleForTeam=(teamId)=>{
+    if(role==="administrator"||role==="administration") return "administrator";
+    return teamRollen[teamId]||null;
+  };
+  const kannBearbeitenInTeam=(teamId)=>["trainer","administrator","administration"].includes(getRoleForTeam(teamId)||role);
 
   /* Mitglieder für ein Team: aus DB wenn vorhanden, sonst ROSTER Fallback */
   const getMitgliederForTeam=(teamName)=>{
@@ -95,7 +101,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   };
   /* dbTeams Array → Lookup-Objekt {name: {liga, saison, count}} */
   const TEAMS_DATA=dbTeams.length>0
-    ? Object.fromEntries(dbTeams.map(t=>([t.name,{liga:t.liga||"",season:t.saison||"2024/25",count:ROSTER.filter(p=>(p.teams||[]).includes(t.name)).length||16}])))
+    ? Object.fromEntries(dbTeams.map(t=>([t.name,{liga:t.liga||"",season:t.saison||"2024/25",count:dbMitglieder.length>0?dbMitglieder.filter(m=>(m.teams||[]).includes(t.name)&&m.aktiv!==false).length:(ROSTER.filter(p=>(p.teams||[]).includes(t.name)).length||0)}])))
     : TEAMS_DATA_FALLBACK;
 
   const kinder=account?.kinder||[];
@@ -105,6 +111,14 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   const [activeTeam,setActiveTeam]=useState(
     isEltern&&kinder[0]?.team ? kinder[0].team : trainerTeams[0]||"Cc-Junioren"
   );
+
+  /* navToTeam: direkte Navigation zu einem Team via ID */
+  useEffect(()=>{
+    if(navToTeam&&dbTeams.length>0){
+      const team=dbTeams.find(t=>t.id===navToTeam);
+      if(team){setActiveTeam(team.name);if(onNavToTeamDone)onNavToTeamDone();}
+    }
+  },[navToTeam,dbTeams]);
 
   /* When eltern switches child, update activeTeam too */
   const handleKindSwitch=(kind)=>{
@@ -116,8 +130,10 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
   const playerName=myRosterId?ROSTER.find(p=>p.id===myRosterId)?.firstName||"Spieler":"Spieler";
   const kinderNames=activeKind?activeKind.name.split(" ")[0]:(kinder.map(k=>k.name.split(" ")[0]).join(" & ")||playerName);
   const [selectedSpiel,setSelectedSpiel]=useState(null);
-  const teamInfo=TEAMS_DATA[activeTeam]||{count:ROSTER.filter(p=>(p.teams||[]).includes(activeTeam)).length,liga:"Liga A",season:"2024/25"};
-  const actualCount=ROSTER.filter(p=>(p.teams||[]).includes(activeTeam)).length||teamInfo.count;
+  const teamInfo=TEAMS_DATA[activeTeam]||{count:0,liga:"",season:"2024/25"};
+  const actualCount=dbMitglieder.length>0
+    ? dbMitglieder.filter(p=>(p.teams||[]).includes(activeTeam)&&p.aktiv!==false).length
+    : ROSTER.filter(p=>(p.teams||[]).includes(activeTeam)).length||teamInfo.count;
 
   const TABS_ALL=[
     {key:"overview",  label:"Übersicht",    short:"Übersicht", icon:"layout-dashboard"},
@@ -194,13 +210,13 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       {/* Kind-Selektor (nur wenn Eltern mehrere Kinder haben) */}
       {hasMultiKinder&&(
         <div style={{display:"flex",gap:8,marginBottom:18,padding:"12px 14px",background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)",boxShadow:"0 1px 4px rgba(0,0,0,0.04)",flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginRight:4}}>Kind:</span>
+          <span className="cc-section-hdr" style={{marginRight:4,borderBottom:"none",padding:0}}>Kind:</span>
           {kinder.map((k,i)=>{
             const active=activeKind?.name===k.name;
-            const cnt=ROSTER.filter(p=>(p.teams||[]).includes(k.team)&&!p.role).length;
+            const cnt=dbMitglieder.length>0?getMitgliederForTeam(k.team).filter(p=>!p.role).length:ROSTER.filter(p=>(p.teams||[]).includes(k.team)&&!p.role).length;
             const info=TEAMS_DATA[k.team]||{liga:"",season:""};
             return(
-              <Btn onClick={()=>handleKindSwitch(k)}><div style={{width:22,height:22,borderRadius:"50%",background:active?"rgba(0,0,0,0.1)":GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"var(--text)",flexShrink:0}}> {k.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} </div> <div style={{textAlign:"left"}}> <div style={{fontSize:13,fontWeight:700,color:"var(--text)",whiteSpace:"nowrap"}}>{k.name.split(" ")[0]}</div> <div style={{fontSize:13,color:"rgba(0,0,0,0.5)"}}>{k.team} · {info.liga}</div> </div></Btn>
+              <Btn onClick={()=>handleKindSwitch(k)}><div style={{width:22,height:22,borderRadius:"50%",background:active?"rgba(0,0,0,0.1)":GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"var(--text)",flexShrink:0}}> {k.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} </div> <div style={{textAlign:"left"}}> <div style={{fontSize:14,fontWeight:700,color:"var(--text)",whiteSpace:"nowrap"}}>{k.name.split(" ")[0]}</div> <div style={{fontSize:14,color:"rgba(0,0,0,0.5)"}}>{k.team} · {info.liga}</div> </div></Btn>
             );
           })}
         </div>
@@ -209,14 +225,14 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       {/* Team-Selektor (Trainer) */}
       {hasMultiTeams&&(
         <div style={{marginBottom:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)",overflow:"hidden"}}>
-          <div style={{padding:"8px 10px",fontSize:11,color:"var(--sub)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.8,borderBottom:"0.5px solid var(--border)"}}>Team wechseln</div>
+          <div className="cc-section-hdr" style={{padding:"8px 10px",marginBottom:0}}>Team wechseln</div>
           <div style={{display:"flex",gap:6,padding:"10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
             {trainerTeams.map(team=>{
               const info=TEAMS_DATA[team]||{count:18,liga:"Liga A"};
               const isActive=activeTeam===team;
-              const cnt=ROSTER.filter(p=>(p.teams||[]).includes(team)).length||info.count;
+              const cnt=dbMitglieder.length>0?getMitgliederForTeam(team).length:(ROSTER.filter(p=>(p.teams||[]).includes(team)).length||info.count);
               return(
-                <Btn onClick={()=>handleTeamSwitch(team)}><div style={{width:28,height:28,borderRadius:"50%",background:isActive?ACCENT:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:isActive?"#111":"var(--sub)",flexShrink:0}}> {team.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} </div> <div style={{textAlign:"left",minWidth:0}}> <div style={{fontSize:13,fontWeight:700,color:"var(--text)",whiteSpace:"nowrap"}}>{team}</div> <div style={{fontSize:11,color:"var(--sub)"}}>{cnt} · {info.liga}</div> </div></Btn>
+                <Btn onClick={()=>handleTeamSwitch(team)}><div style={{width:28,height:28,borderRadius:"50%",background:isActive?ACCENT:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:isActive?"#111":"var(--sub)",flexShrink:0}}> {team.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} </div> <div style={{textAlign:"left",minWidth:0}}> <div style={{fontSize:14,fontWeight:700,color:"var(--text)",whiteSpace:"nowrap"}}>{team}</div> <div style={{fontSize:11,color:"var(--sub)"}}>{cnt} · {info.liga}</div> </div></Btn>
               );
             })}
           </div>
@@ -248,7 +264,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
                 <div onClick={e=>e.stopPropagation()}
                   style={{background:"var(--surface)",borderRadius:"20px 20px 0 0",padding:"8px 0 calc(env(safe-area-inset-bottom) + 80px)"}}>
                   <div style={{width:36,height:4,borderRadius:2,background:"var(--border)",margin:"4px auto 12px"}}/>
-                  <div style={{padding:"0 8px 6px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Weitere Tabs</div>
+                  <div className="cc-section-hdr" style={{padding:"0 8px 6px",borderBottom:"none",marginBottom:0}}>Weitere Tabs</div>
                   {mehrTabs.map(t=>(
                     <Btn onClick={()=>{setTab(t.key);setShowMehrTab(false);}}><div style={{width:40,height:40,borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center", background:tab===t.key?ACCENT:"var(--surface2)",flexShrink:0}}> <TI n={t.icon||"circle"} size={19} style={{color:tab===t.key?"#111":"var(--sub)"}}/> </div> <span style={{fontSize:15,fontWeight:tab===t.key?600:400,color:tab===t.key?"var(--text)":"var(--sub)"}}>{t.label}</span> {tab===t.key&&<TI n="check" size={16} style={{color:ACCENT,marginLeft:"auto"}}/>}</Btn>
                   ))}
@@ -272,17 +288,17 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       })():(
         <Tabs tabs={tabs} active={tab} setActive={setTab}/>
       )}
-      {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial}/>}
-      {tab==="roster"&&<KaderModulProp role={role} team={activeTeam} initialSelected={rosterInitial} teamRosterData={getMitgliederForTeam(activeTeam)}/>}
-      {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb}/>}
+      {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial} dbMitglieder={dbMitglieder}/>}
+      {tab==="roster"&&<KaderModulProp role={kannBearbeitenInTeam(activeTeamObj?.id)?"trainer":role} team={activeTeamObj||activeTeam} sb={sb} onSelectMember={onSelectMember}/>}
+      {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb} dbTeams={dbTeams}/>}
       {tab==="spielplan"&&(
-        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+        <div className="cc-flex-center" style={{flexDirection:"column",gap:20,alignItems:"stretch"}}>
           <div>
-            <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Spielplan</div>
+            <div className="cc-section-hdr">Spielplan</div>
             <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel}/>
           </div>
           <div>
-            <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>Tabelle</div>
+            <div className="cc-section-hdr">Tabelle</div>
             <TableTabProp team={activeTeam}/>
           </div>
         </div>
@@ -305,21 +321,28 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],setActive,myRosterId,accoun
       {tab==="events"&&<EventsList teamOnly role={role}/>}
       {tab==="polls"&&<PollsTab role={role}/>}
       {tab==="helpers"&&<HelferModulProp teamOnly role={role} account={account} meineTeams={[activeTeam]}/>}
-      {tab==="stats"&&!limited&&<StatsTab team={activeTeam}/>}
+      {tab==="stats"&&!limited&&<StatsTab team={activeTeam} dbMitglieder={dbMitglieder}/>}
     </div>
   );
 }
 
-function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial}){
+function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial,dbMitglieder=[]}){
   const isMobile=useIsMobile();
   const isEltern=role==="eltern";
-  const today="2026-05-23";
-  const parseEvDate=(d)=>{
-    if(!d) return "";
-    const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
-    const parts=clean.split(".");
-    if(parts.length>=2) return `2026-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
-    return "";
+  const today=new Date().toISOString().split("T")[0];
+
+  const getMitgliederForTeam=(teamName)=>{
+    if(dbMitglieder.length>0){
+      return dbMitglieder
+        .filter(m=>(m.teams||[]).includes(teamName)&&m.aktiv!==false)
+        .map(m=>({
+          id:m.id, name:`${m.vorname} ${m.nachname}`,
+          firstName:m.vorname||"", lastName:m.nachname||"",
+          role:m.funktion||"", pos:m.position||"",
+          teams:m.teams||[], rueckennr:m.rueckennr||"",
+        }));
+    }
+    return ROSTER.filter(p=>(p.teams||[]).includes(teamName));
   };
   const myTeam=team||"Cc-Junioren";
   const upcoming=ATT_EVENTS
@@ -341,54 +364,45 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
   const termine=allTermine;
 
   return(
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+    <div className="cc-grid-cards cc-mb-20" style={{gridTemplateColumns:isMobile?"1fr":undefined}}>
       {/* Team Übersicht */}
       <Card>
         <STitle>Info</STitle>
         {(()=>{
-          const spieler=ROSTER.filter(p=>(p.teams||[]).includes(myTeam)&&!p.role);
-          const trainer=ROSTER.filter(p=>(p.teams||[]).includes(myTeam)&&p.role);
+          const allM=getMitgliederForTeam(myTeam);
+          const spieler=allM.filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="");
+          const trainer=allM.filter(p=>p.role&&p.role.toLowerCase()!=="spieler"&&p.role!=="");
           const pos=[...new Set(spieler.map(p=>p.pos).filter(Boolean))];
           const tableData=TABLES[myTeam]||[];
           const myRow=tableData.find(r=>r.me);
           return(
             <div>
-              <div style={{display:"flex",gap:12,marginBottom:14}}>
-                {[
-                  {l:"Spieler im Kader", v:spieler.length, c:BK},
-                  {l:"Trainer & Staff",  v:trainer.length, c:BK},
-                ].map((s,i)=>(
-                  <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:8,padding:"12px 4px"}}>
-                    <div style={{fontSize:24,fontWeight:800,color:s.c,lineHeight:1}}>{s.v}</div>
-                    <div style={{fontSize:13,color:"var(--sub)",marginTop:4,lineHeight:1.3,textAlign:"center"}}>{s.l}</div>
-                  </div>
-                ))}
+              <div className="cc-grid-stats-sm" style={{marginBottom:14}}>
+                <Stat label="Spieler im Kader" value={spieler.length} semantic="neutral"/>
+                <Stat label="Trainer & Staff"  value={trainer.length} semantic="neutral"/>
                 {myRow&&(
-                  <div onClick={setTab?()=>setTab("spielplan"):undefined}
-                    style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--surface2)",borderRadius:8,padding:"12px 4px",cursor:setTab?"pointer":"default",transition:"background 0.1s"}}
-                    onMouseEnter={e=>setTab&&(e.currentTarget.style.background=GB)}
-                    onMouseLeave={e=>setTab&&(e.currentTarget.style.background=GR)}>
-                    <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:4,textAlign:"center"}}>Tabellenrang</div>
-                    <div style={{fontSize:24,fontWeight:800,color:BL,lineHeight:1}}>{myRow.rank}.</div>
-                    <div style={{fontSize:13,color:"var(--sub)",marginTop:4,textAlign:"center"}}>{tableData.length} Teams · {myRow.pts} Punkte</div>
-                  </div>
+                  <Stat label="Tabellenrang"
+                    value={myRow.rank+"."}
+                    sub={tableData.length+" Teams · "+myRow.pts+" Punkte"}
+                    semantic="neutral"
+                    style={{cursor:setTab?"pointer":"default"}}
+                    onClick={setTab?()=>setTab("spielplan"):undefined}
+                  />
                 )}
               </div>
               {trainer.length>0&&(
                 <div>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Trainer &amp; Staff</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div className="cc-section-hdr">Trainer &amp; Staff</div>
+                  <div className="cc-list">
                     {trainer.map((t,i)=>(
-                    <div key={i} onClick={setTab&&setRosterInitial?()=>{setRosterInitial(t.id);setTab("roster");}:undefined}
-                      style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"var(--surface2)",borderRadius:8,cursor:setTab?"pointer":"default",transition:"background 0.1s"}}
-                      onMouseEnter={e=>setTab&&(e.currentTarget.style.background=GB)}
-                      onMouseLeave={e=>setTab&&(e.currentTarget.style.background=GR)}>
-                      <Av name={`${t.firstName} ${t.lastName}`} size={26} bg={R}/>
-                      <div>
-                        <div style={{fontWeight:600,fontSize:13}}>{t.firstName} {t.lastName}</div>
-                        <div style={{fontSize:13,color:"var(--sub)"}}>{t.role}</div>
+                      <div key={i} onClick={setTab&&setRosterInitial?()=>{setRosterInitial(t.id);setTab("roster");}:undefined}
+                        className="cc-list-row" style={{cursor:setTab?"pointer":"default"}}>
+                        <Av name={`${t.firstName} ${t.lastName}`} size="sm"/>
+                        <div>
+                          <div className="cc-list-name">{t.firstName} {t.lastName}</div>
+                          <div className="cc-detail-label" style={{minWidth:"auto"}}>{t.role}</div>
+                        </div>
                       </div>
-                    </div>
                     ))}
                   </div>
                 </div>
@@ -407,7 +421,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const trainEvs=pastEvs.filter(e=>e.type==="Training");
           const spielEvs=pastEvs.filter(e=>e.type==="Spiel");
           /* Use same player slice as ATT_INITIAL */
-          const pids=ROSTER.filter(p=>(p.teams||[]).includes(myTeam)&&!p.role).map(p=>p.id).slice(0,12);
+          const pids=getMitgliederForTeam(myTeam).filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="").map(p=>p.id).slice(0,12);
           /* Only count "zu", "ab", "unentschuldigt" - null/fraglich excluded */
           const calcPct=(evs)=>{
             if(!evs.length) return null;
@@ -431,37 +445,33 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const col=(v)=>v===null?"#aaa":v>=80?GN:v>=60?AM:R;
           const fmt=(v)=>v===null?"-":v+"%";
           return(
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div className="cc-grid-stats-sm">
               {[
                 {l:"Total",              v:fmt(calcPct(pastEvs)),           c:col(calcPct(pastEvs))},
                 {l:"Trainings",          v:fmt(calcPct(trainEvs)),          c:col(calcPct(trainEvs))},
                 {l:"Spiele",             v:fmt(calcPct(spielEvs)),          c:col(calcPct(spielEvs))},
-                {l:"Letzte 5 Trainings", v:fmt(calcPct(trainEvs.slice(-5))),c:col(calcPct(trainEvs.slice(-5)))},
+                {l:"Letzte 5",           v:fmt(calcPct(trainEvs.slice(-5))),c:col(calcPct(trainEvs.slice(-5)))},
               ].map((s,i)=>(
-                <div key={i} style={{textAlign:"center",background:"var(--surface2)",borderRadius:8,padding:"10px 4px"}}>
-                  <div style={{fontSize:13,color:"var(--sub)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.4,marginBottom:2}}>Ø Anwesenheit</div>
-                  <div style={{fontSize:18,fontWeight:800,color:s.c}}>{s.v}</div>
-                  <div style={{fontSize:13,color:"var(--sub)",lineHeight:1.3,marginTop:2}}>{s.l}</div>
-                </div>
+                <Stat key={i} label={s.l} value={s.v} color={s.c}/>
               ))}
             </div>
           );
         })()}
       </Card>
       <Card style={{cursor:setTab?"pointer":"default"}} onClick={setTab?()=>{setAttFilter&&setAttFilter(["training","spiele"]);setTab("attendance");}:undefined}>
-        <STitle action={setTab&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle anzeigen →</span>}>Spielplan &amp; Training</STitle>
+        <STitle action={setTab&&<button className="cc-btn-outline" onClick={()=>{setAttFilter&&setAttFilter(["training","spiele"]);setTab("attendance");}}>Alle <TI n="chevron-right" size={13}/></button>}>Spielplan &amp; Training</STitle>
         {(()=>{
           const shown=spielplan.slice(0,4);
           return(<>
-            {shown.length===0&&<div style={{fontSize:13,color:"var(--sub)",padding:"8px 0"}}>Keine anstehenden Spiele oder Trainings.</div>}
+            {shown.length===0&&<div className="cc-empty" style={{padding:"8px 0"}}>Keine anstehenden Spiele oder Trainings.</div>}
             {shown.map((e,i)=>(
               <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:i<shown.length-1?`0.5px solid ${GB}`:"none"}}>
                 <div style={{width:3,height:32,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:600,fontSize:13,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  <div className="cc-list-name cc-truncate">
                     {e.opponent?"vs. "+e.opponent:e.type==="Training"?"Training · "+e.team:e.title||e.type}
                   </div>
-                  <div style={{fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
                     <span>{e.date}{e.endDate?" - "+e.endDate:""}</span>
                     <span style={{color:"var(--border)"}}>·</span>
                     <span>{e.time+" Uhr"}</span>
@@ -469,21 +479,21 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                     <span>{e.location}</span>
                   </div>
                 </div>
-                <span style={{fontSize:13,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0}}>{e.type}</span>
+                <span style={{fontSize:14,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0}}>{e.type}</span>
               </div>
             ))}
           </>);
         })()}
       </Card>
       <Card style={{cursor:setTab?"pointer":"default"}} onClick={setTab?()=>{setAttFilter&&setAttFilter(["team-event","vereinsanlass"]);setTab("attendance");}:undefined}>
-        <STitle action={setTab&&<span style={{fontSize:13,color:BL,fontWeight:600}}>Alle anzeigen →</span>}>Vereinsanlässe &amp; Team-Events</STitle>
-        {termine.length===0&&<div style={{fontSize:13,color:"var(--sub)",padding:"8px 0"}}>Keine anstehenden Anlässe.</div>}
+        <STitle action={setTab&&<button className="cc-btn-outline" onClick={()=>{setAttFilter&&setAttFilter(["team-event","vereinsanlass"]);setTab("attendance");}}>Alle <TI n="chevron-right" size={13}/></button>}>Vereinsanlässe &amp; Team-Events</STitle>
+        {termine.length===0&&<div className="cc-empty" style={{padding:"8px 0"}}>Keine anstehenden Anlässe.</div>}
         {termine.map((e,i)=>(
           <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:i<termine.length-1?`0.5px solid ${GB}`:"none"}}>
             <div style={{width:3,height:32,borderRadius:2,background:accentFor(e),flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:600,fontSize:13,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis"}}>{e.title||e.type}</div>
-              <div style={{fontSize:13,color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
+              <div className="cc-list-name cc-truncate">{e.title||e.type}</div>
+              <div style={{color:"var(--sub)",display:"flex",alignItems:"center",gap:8}}>
                 <span>{e.date}{e.endDate?" - "+e.endDate:""}</span>
                 <span style={{color:"var(--border)"}}>·</span>
                 <span>{e.time+" Uhr"}</span>
@@ -491,7 +501,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                 <span>{e.location}</span>
               </div>
             </div>
-            <span style={{fontSize:13,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0,whiteSpace:"nowrap"}}>{e.subtype||e.type}</span>
+            <span style={{fontSize:14,fontWeight:700,padding:"2px 7px",borderRadius:20,background:accentFor(e)+"18",color:accentFor(e),flexShrink:0,whiteSpace:"nowrap"}}>{e.subtype||e.type}</span>
           </div>
         ))}
       </Card>
@@ -516,7 +526,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
               "A-Junioren":         "Konditionstraining ab nächster Woche. Neue Taktikbesprechung Mi 28.05. nach Training. Auswärtsspiel Sa 31.05.",
             };
             const text=NEWS[myTeam]||"Keine aktuellen Teamnews.";
-            return <p style={{margin:0,fontSize:13,color:"var(--sub)",lineHeight:1.65}}>{text}</p>;
+            return <p style={{margin:0,color:"var(--text)",lineHeight:1.65}}>{text}</p>;
           })()}
         </Card>
       )}
@@ -542,14 +552,14 @@ function PollsTab({role}){
       {!canCreate&&<InfoBox text="Spieler und Eltern können an Abstimmungen teilnehmen, aber keine erstellen." color={BL}/>}
       <div style={{marginTop:14}}>
         {POLLS.map((p,i)=>(
-          <Card key={i} style={{marginBottom:12}}>
+          <Card key={i} className="cc-mb-12">
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
               <div>
-                <h3 style={{margin:"0 0 4px",fontSize:14,fontWeight:700}}>{p.title}</h3>
+                <h3 className="cc-list-name" style={{marginBottom:4}}>{p.title}</h3>
                 <Chip text={p.target} color={BL}/>
                 {" "}<Chip text={p.closed?"Geschlossen":"Offen"} color={p.closed?"#888":GN} bg={p.closed?"#f5f5f5":"#ECFDF5"}/>
               </div>
-              <span style={{fontSize:13,color:"var(--sub)"}}>{p.votes.reduce((a,b)=>a+b,0)} Stimmen</span>
+              <span className="cc-detail-label" style={{minWidth:"auto"}}>{p.votes.reduce((a,b)=>a+b,0)} Stimmen</span>
             </div>
             {p.options.map((opt,j)=>{
               const tot=p.votes.reduce((a,b)=>a+b,0);
@@ -557,7 +567,7 @@ function PollsTab({role}){
               const my=votes[i]===j;
               return(
                 <div key={j} onClick={()=>!p.closed&&setVotes(v=>({...v,[i]:j}))} style={{marginBottom:7,cursor:p.closed?"default":"pointer"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:2}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:14,marginBottom:2}}>
                     <span style={{fontWeight:my?700:400}}>{opt}{my?" ✓":""}</span>
                     <span style={{color:"var(--sub)",fontWeight:600}}>{pct}%</span>
                   </div>
@@ -574,40 +584,41 @@ function PollsTab({role}){
   );
 }
 
-function StatsTab({team="Cc-Junioren"}){
-  /* Generate per-team stats from ROSTER + seeded random */
+function StatsTab({team="Cc-Junioren", dbMitglieder=[]}){
   const seed=(str)=>str.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
   const rnd=(n,min,max)=>{let s=seed(n+team);s=((s*1664525+1013904223)&0xFFFFFFFF)>>>0;return min+Math.floor((s/0xFFFFFFFF)*(max-min+1));};
-  const players=ROSTER.filter(p=>(p.teams||[]).includes(team)&&!p.role);
+  const players=dbMitglieder.length>0
+    ? dbMitglieder.filter(p=>(p.teams||[]).includes(team)&&p.aktiv!==false).map(p=>({firstName:p.vorname,lastName:p.nachname,pos:p.position||""}))
+    : ROSTER.filter(p=>(p.teams||[]).includes(team)&&!p.role);
   const stats=players.map(p=>{
     const nm=`${p.firstName} ${p.lastName}`;
     return{name:nm,sp:rnd(nm+"sp",6,14),tore:rnd(nm+"t",0,9),assists:rnd(nm+"a",0,7),gelb:rnd(nm+"g",0,3),rot:rnd(nm+"r",0,1)};
   }).sort((a,b)=>b.tore-a.tore);
-  if(stats.length===0) return <Card><div style={{textAlign:"center",color:"var(--sub)",padding:20}}>Keine Spielerstatistiken verfügbar.</div></Card>;
+  if(stats.length===0) return <Card><div className="cc-empty">Keine Spielerstatistiken verfügbar.</div></Card>;
   return(
-    <Card style={{padding:0,overflowX:"auto"}}>      <table className="cc-table">
+    <Card style={{padding:0,overflowX:"auto"}}>      <div className="cc-table-wrap"><table className="cc-table">
         <thead>
-          <tr style={{background:"var(--surface2)"}}>
+          <tr className="cc-tr" style={{background:"var(--bg)"}}>
             {["Spieler","Spiele","Tore","Assists","Gelb","Rot"].map((h,i)=>(
-              <th key={i} style={{padding:"9px 13px",textAlign:i>0?"center":"left",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase"}}>{h}</th>
+              <th key={i} className={i>0?"cc-th cc-th-center":"cc-th"}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {stats.map((p,i)=>(
-            <tr key={i} style={{borderTop:"0.5px solid var(--border)"}}>
-              <td style={{padding:"9px 13px"}}>
-                <Row><Av name={p.name} size={26} bg={R}/><span style={{fontWeight:600}}>{p.name}</span></Row>
+            <tr key={i} className="cc-tr">
+              <td className="cc-td">
+                <Row><Av name={p.name} size="sm"/><span className="cc-list-name">{p.name}</span></Row>
               </td>
-              <td style={{padding:"9px 13px",textAlign:"center"}}>{p.sp}</td>
-              <td style={{padding:"9px 13px",textAlign:"center",fontWeight:p.tore>=5?700:400,color:p.tore>=5?R:BK}}>{p.tore}</td>
-              <td style={{padding:"9px 13px",textAlign:"center"}}>{p.assists}</td>
-              <td style={{padding:"9px 13px",textAlign:"center"}}>{p.gelb>0?<span style={{background:"#FCD34D",color:"#78350F",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:13}}>{p.gelb}</span>:"-"}</td>
-              <td style={{padding:"9px 13px",textAlign:"center"}}>{p.rot>0?<span style={{background:R,color:"#fff",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:13}}>{p.rot}</span>:"-"}</td>
+              <td className="cc-td" style={{textAlign:"center"}}>{p.sp}</td>
+              <td className="cc-td" style={{textAlign:"center",fontWeight:p.tore>=5?700:400,color:p.tore>=5?R:BK}}>{p.tore}</td>
+              <td className="cc-td" style={{textAlign:"center"}}>{p.assists}</td>
+              <td className="cc-td" style={{textAlign:"center"}}>{p.gelb>0?<span style={{background:"#FCD34D",color:"#78350F",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:14}}>{p.gelb}</span>:"-"}</td>
+              <td className="cc-td" style={{textAlign:"center"}}>{p.rot>0?<span style={{background:R,color:"#fff",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:14}}>{p.rot}</span>:"-"}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
     </Card>
   );
 }
@@ -637,30 +648,30 @@ function FieldVisView(){
   };
   return(
     <div>
-      <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 8px"}}>Feldsichtbarkeit</h1>
-      <p style={{color:"var(--sub)",fontSize:13,margin:"0 0 18px"}}>Konfigurierbar pro Rolle (Kap. 6.1)</p>
+      <H1 mb={8}>Feldsichtbarkeit</H1>
+      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Konfigurierbar pro Rolle (Kap. 6.1)</p>
       <Card style={{padding:0,overflowX:"auto"}}>
-        <table className="cc-table">
+        <div className="cc-table-wrap"><table className="cc-table">
           <thead>
-            <tr style={{background:"var(--surface2)"}}>
+            <tr className="cc-tr" style={{background:"var(--bg)"}}>
               <th className="cc-th">Feld</th>
               {["Spieler","Eltern","Trainer","Funktionäre","Administration","Administrator"].map((h,i)=>(
-                <th key={i} style={{padding:"9px 13px",textAlign:"center",fontWeight:600,color:"var(--sub)",fontSize:13,textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
+                <th key={i} className="cc-th cc-th-center">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {fields.map((f,i)=>(
-              <tr key={i} style={{borderTop:"0.5px solid var(--border)",background:i%2===0?"var(--surface)":"var(--surface2)"}}>
-                <td style={{padding:"9px 13px",fontWeight:600}}>{f.name}</td>
+              <tr key={i} className="cc-tr">
+                <td className="cc-td" style={{fontWeight:600}}>{f.name}</td>
                 {["spieler","eltern","trainer","funktionaer","administration","administrator"].map((r,j)=>{
                   const v=f[r];const s=rc(v);
-                  return <td key={j} style={{padding:"9px 13px",textAlign:"center"}}><Chip text={v} color={s.color} bg={s.bg}/></td>;
+                  return <td key={j} className="cc-td" style={{textAlign:"center"}}><Chip text={v} color={s.color} bg={s.bg}/></td>;
                 })}
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </Card>
     </div>
   );
@@ -693,11 +704,11 @@ function ProfileView({role,myRosterId,account}){
             {l:"Telefon",v:player?.tel||"-"},
           ].map((x,i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<4?`0.5px solid ${GB}`:"none"}}>
-              <span style={{fontSize:13,color:"var(--sub)"}}>{x.l}</span>
-              <span style={{fontSize:13,fontWeight:600}}>{x.v}</span>
+              <span style={{color:"var(--sub)"}}>{x.l}</span>
+              <span className="cc-list-name">{x.v}</span>
             </div>
           ))}
-          <div style={{marginTop:12}}><Btn variant="primary" color="#F3F4F6">Daten aktualisieren</Btn></div>
+          <div className="cc-mt-12"><Btn variant="primary" color="#F3F4F6">Daten aktualisieren</Btn></div>
         </Card>
         {isEltern&&kinder.map((kind,ki)=>{
           const kindPlayer=ROSTER.find(p=>p.name===kind.name||p.id===kind.rosterId);
@@ -731,8 +742,8 @@ function ProfileView({role,myRosterId,account}){
                 {rows.map((x,i)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:i<rows.length-1?`0.5px solid ${GB}`:"none"}}>
                     <div style={{minWidth:140}}>
-                      <div style={{fontSize:13,color:"var(--sub)"}}>{x.l}</div>
-                      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginTop:1,wordBreak:"break-all"}}>{x.v}</div>
+                      <div style={{color:"var(--sub)"}}>{x.l}</div>
+                      <div style={{fontSize:14,fontWeight:600,color:"var(--text)",marginTop:1,wordBreak:"break-all"}}>{x.v}</div>
                     </div>
                     <Chip text={x.ok?"✓ OK":"Prüfen"} color={x.ok?GN:R} bg={x.ok?"#ECFDF5":RL}/>
                   </div>
@@ -776,38 +787,38 @@ function EventsList({teamOnly,role}){
       {showForm&&canCreate&&(
         <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:12,padding:"16px 18px",marginBottom:16,marginTop:10}}>
           <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>{"Neuer "+(isTrainer?"Team-Event":"Anlass")}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10}}>
+          <div className="cc-grid-form">
             <div>
-              <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Titel</div>
+              <label className="cc-label">Titel</label>
               <input value={newEvent.title} onChange={e=>setNewEvent(p=>({...p,title:e.target.value}))}
-                placeholder="Titel des Anlasses" style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,boxSizing:"border-box"}}/>
+                placeholder="Titel des Anlasses" style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,boxSizing:"border-box"}}/>
             </div>
             <div>
-              <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Typ</div>
+              <label className="cc-label">Typ</label>
               <select value={newEvent.type} onChange={e=>setNewEvent(p=>({...p,type:e.target.value}))}
-                style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}>
+                className="cc-input">
                 {typeOptions.map(t=><option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Datum</div>
+              <label className="cc-label">Datum</label>
               <input type="date" value={newEvent.date} onChange={e=>setNewEvent(p=>({...p,date:e.target.value}))}
-                style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                className="cc-input"/>
             </div>
             <div>
-              <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Uhrzeit</div>
+              <label className="cc-label">Uhrzeit</label>
               <input type="time" value={newEvent.time} onChange={e=>setNewEvent(p=>({...p,time:e.target.value}))}
-                style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13}}/>
+                className="cc-input"/>
             </div>
             <div style={{gridColumn:"1/-1"}}>
-              <div style={{fontSize:13,color:"var(--sub)",marginBottom:4}}>Ort</div>
+              <label className="cc-label">Ort</label>
               <input value={newEvent.loc} onChange={e=>setNewEvent(p=>({...p,loc:e.target.value}))}
-                placeholder="Vereinslokal, Mehrzweckhalle…" style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:13,boxSizing:"border-box"}}/>
+                placeholder="Vereinslokal, Mehrzweckhalle…" style={{width:"100%",padding:"6px 10px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,boxSizing:"border-box"}}/>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
             <input type="checkbox" id="rsvp-chk" checked={newEvent.rsvp} onChange={e=>setNewEvent(p=>({...p,rsvp:e.target.checked}))} style={{cursor:"pointer"}}/>
-            <label htmlFor="rsvp-chk" style={{fontSize:13,cursor:"pointer"}}>Rückmeldung erforderlich</label>
+            <label htmlFor="rsvp-chk" style={{fontSize:14,cursor:"pointer"}}>Rückmeldung erforderlich</label>
           </div>
           <Row align="flex-start">
             <Btn variant="primary" color="#F3F4F6">Erstellen</Btn>
@@ -826,35 +837,35 @@ function EventsList({teamOnly,role}){
               <div style={{flex:1,padding:"14px 16px",minWidth:0}}>
                 {/* Type + RSVP badge row */}
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                  <span style={{background:accentColor+"18",color:accentColor,fontSize:13,fontWeight:700,padding:"2px 8px",borderRadius:20,border:`0.5px solid ${accentColor}30`}}>
+                  <span style={{background:accentColor+"18",color:accentColor,fontSize:14,fontWeight:700,padding:"2px 8px",borderRadius:20,border:`0.5px solid ${accentColor}30`}}>
                     {e.type}
                   </span>
                   {e.rsvp&&(
-                    <span style={{fontSize:13,fontWeight:600,color:AM,background:"var(--surface)",border:"0.5px solid #FDE68A",padding:"2px 8px",borderRadius:20}}>
+                    <span style={{fontSize:14,fontWeight:600,color:AM,background:"var(--surface)",border:"0.5px solid #FDE68A",padding:"2px 8px",borderRadius:20}}>
                       {"Rückmeldung erforderlich"}
                     </span>
                   )}
                   {e.rsvp&&e.res&&(
                     <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{display:"flex",alignItems:"center",gap:4,fontSize:13,color:GN,fontWeight:700}}>
-                        <span style={{width:18,height:18,borderRadius:"50%",background:GN,color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{"✓"}</span>
+                      <span style={{display:"flex",alignItems:"center",gap:4,fontSize:14,color:GN,fontWeight:700}}>
+                        <span style={{width:18,height:18,borderRadius:"50%",background:GN,color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700}}>{"✓"}</span>
                         {e.res.y}
                       </span>
-                      <span style={{display:"flex",alignItems:"center",gap:4,fontSize:13,color:R,fontWeight:700}}>
-                        <span style={{width:18,height:18,borderRadius:"50%",background:R,color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{"✕"}</span>
+                      <span style={{display:"flex",alignItems:"center",gap:4,fontSize:14,color:R,fontWeight:700}}>
+                        <span style={{width:18,height:18,borderRadius:"50%",background:R,color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700}}>{"✕"}</span>
                         {e.res.n}
                       </span>
-                      <span style={{display:"flex",alignItems:"center",gap:4,fontSize:13,color:AM,fontWeight:700}}>
-                        <span style={{width:18,height:18,borderRadius:"50%",background:STATUS_BG.warn,border:`1.5px solid ${AM}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:13,color:AM,fontWeight:800}}>{"?"}</span>
+                      <span style={{display:"flex",alignItems:"center",gap:4,fontSize:14,color:AM,fontWeight:700}}>
+                        <span style={{width:18,height:18,borderRadius:"50%",background:STATUS_BG.warn,border:`1.5px solid ${AM}`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:14,color:AM,fontWeight:800}}>{"?"}</span>
                         {e.res.o}
                       </span>
                     </div>
                   )}
                 </div>
                 {/* Title */}
-                <div style={{fontWeight:700,fontSize:14,color:"var(--text)",marginBottom:7}}>{e.title}</div>
+                <div className="cc-list-name" style={{marginBottom:7}}>{e.title}</div>
                 {/* Meta */}
-                <div style={{display:"flex",alignItems:"center",gap:0,flexWrap:"wrap",fontSize:13,color:"var(--sub)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:0,flexWrap:"wrap",fontSize:14,color:"var(--sub)"}}>
                   <span style={{display:"flex",alignItems:"center",gap:4}}>
                     <span><TI n="calendar"/></span>{e.date}{e.endDate?" - "+e.endDate:""}
                   </span>
