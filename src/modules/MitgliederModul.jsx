@@ -607,7 +607,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               <div className="cc-mehr-sheet-handle"/>
               <div className="cc-mehr-sheet-title">Teams</div>
               {teamsPopover.teams.map((t,i)=>(
-                <div key={i} className="cc-mehr-sheet-item" style={{borderBottom:i<(teamsPopover.teams||[]).length-1?"0.5px solid var(--border)":"none"}}>
+                <div key={i} className="cc-mehr-sheet-item">
                   <TI n="ball-football" size={16}/>
                   {t?.kurz||t?.name||t}
                 </div>
