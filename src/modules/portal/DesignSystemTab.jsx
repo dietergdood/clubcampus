@@ -1,246 +1,341 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/portal/DesignSystemTab.jsx
-   Living Style Guide — zeigt alle aktiven CSS-Variablen und
-   UI-Komponenten live mit dem aktuellen Theme
+   Living Style Guide — alle UI-Komponenten mit echtem Theme
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label,
+         H1, H2, Input, Select, Textarea, SectionLabel, Empty, DropMenu,
+         Toolbar, ColMenuButton, BulkBar, SortHeader, InfoBox, ModalOrSheet,
+         ModalTitle, useConfirm, ConfirmDialog, StatusTile } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
+import { GN, R, RL, BL, AM, BK, GB } from "../../constants.js";
 
-/* Helper: liest CSS-Variable live aus dem DOM */
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-/* Farbswatch + Variablenname + Wert */
 function TokenRow({ name, desc }) {
-  const [val, setVal] = useState("");
-  useEffect(() => { setVal(cssVar(name)); }, [name]);
-  const isColor = val.startsWith("#") || val.startsWith("rgb") || val.startsWith("rgba");
+  const val = cssVar(name);
+  const isColor = val.startsWith("#") || val.startsWith("rgb");
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"6px 10px", borderRadius:8, border:"0.5px solid var(--border)", background:"var(--surface)" }}>
-      {isColor && (
-        <div style={{ width:28, height:28, borderRadius:6, background:val, border:"0.5px solid var(--border)", flexShrink:0 }}/>
-      )}
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:11, fontFamily:"monospace", fontWeight:600, color:"var(--text)" }}>{name}</div>
-        {desc && <div style={{ fontSize:10, color:"var(--sub)", marginTop:1 }}>{desc}</div>}
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)"}}>
+      {isColor && <div style={{width:26,height:26,borderRadius:6,background:val,border:"0.5px solid var(--border)",flexShrink:0}}/>}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:11,fontFamily:"monospace",fontWeight:600,color:"var(--text)"}}>{name}</div>
+        {desc && <div style={{fontSize:10,color:"var(--sub)"}}>{desc}</div>}
       </div>
-      <div style={{ fontSize:10, fontFamily:"monospace", color:"var(--sub)", flexShrink:0, maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{val}</div>
+      <div style={{fontSize:10,fontFamily:"monospace",color:"var(--sub)",flexShrink:0,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{val||"—"}</div>
     </div>
   );
 }
 
-function Section({ title, children }) {
+function Sec({title, children}) {
   return (
-    <div style={{ marginBottom:24 }}>
-      <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", color:"var(--sub)", marginBottom:10, paddingBottom:6, borderBottom:"0.5px solid var(--border)" }}>{title}</div>
+    <div style={{marginBottom:28}}>
+      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--sub)",marginBottom:10,paddingBottom:6,borderBottom:"0.5px solid var(--border)"}}>{title}</div>
       {children}
     </div>
   );
 }
 
-function TokenGrid({ tokens }) {
+const DEMO_MEMBERS = [
+  {id:1, name:"Adrian Bürgi",   rolle:"Trainer/in",  aktiv:true,  team:"FCH 1"},
+  {id:2, name:"Anna Koch",      rolle:"Spieler/in",  aktiv:true,  team:"FCH 2"},
+  {id:3, name:"Beat Müller",    rolle:"Elternteil",  aktiv:false, team:"Ba"},
+  {id:4, name:"Claudia Meier",  rolle:"Funktionär",  aktiv:true,  team:"FCH 1"},
+  {id:5, name:"David Steiner",  rolle:"Spieler/in",  aktiv:true,  team:"FCH 2"},
+];
+
+const ALL_COLS = [
+  {key:"name",  label:"Name"},
+  {key:"rolle", label:"Rolle"},
+  {key:"team",  label:"Team"},
+  {key:"aktiv", label:"Status"},
+];
+
+export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
+  const [search, setSearch] = useState("");
+  const [visibleCols, setVisibleCols] = useState(["name","rolle","team","aktiv"]);
+  const [sortKey, setSortKey] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
+  const [selected, setSelected] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("liste");
+  const [confirm, confirmDialog] = useConfirm();
+
+  if (loading || (isMobile && mobileKachel === null) || tab !== "designsystem") return null;
+
+  const filtered = DEMO_MEMBERS
+    .filter(m => m.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b) => sortDir==="asc" ? a[sortKey]?.localeCompare?.(b[sortKey])||0 : b[sortKey]?.localeCompare?.(a[sortKey])||0);
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir(d => d==="asc"?"desc":"asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:6 }}>
-      {tokens.map(t => <TokenRow key={t.name} {...t}/>)}
-    </div>
-  );
-}
-
-export function DesignSystemTab({ loading, isMobile, mobileKachel, tab }) {
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    if (tab === "designsystem") setTick(t => t + 1);
-  }, [tab]);
-
-  if (loading || (isMobile && mobileKachel === null)) return null;
-  if (tab !== "designsystem") return null;
-
-  return (
-    <div style={{ display:"contents" }}>
-      {!loading && (!isMobile || mobileKachel !== null) && tab === "designsystem" && (
-        <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
-
-          {/* Vereinsfarben */}
-          <Section title="Vereinsfarben">
-            <TokenGrid tokens={[
-              { name:"--cc-accent",    desc:"Hauptfarbe" },
-              { name:"--cc-accent2",   desc:"Sekundärfarbe" },
-              { name:"--cc-hover",     desc:"Hover-Tinting" },
-              { name:"--cc-accent-25", desc:"25% Transparenz" },
-              { name:"--cc-accent-20", desc:"20% Transparenz" },
-              { name:"--cc-accent-15", desc:"15% Transparenz" },
-              { name:"--cc-accent-12", desc:"12% Transparenz" },
-              { name:"--cc-accent-10", desc:"10% Transparenz" },
-              { name:"--cc-accent-5",  desc:"5% Transparenz" },
-            ]}/>
-          </Section>
-
-          {/* Navigation */}
-          <Section title="Navigation">
-            <TokenGrid tokens={[
-              { name:"--nav",       desc:"Nav Hintergrund" },
-              { name:"--nav-t",     desc:"Nav Text" },
-              { name:"--nav-a",     desc:"Nav Akzent (aktiv)" },
-              { name:"--nav-hover", desc:"Nav Hover" },
-            ]}/>
-          </Section>
-
-          {/* Buttons */}
-          <Section title="Buttons">
-            <TokenGrid tokens={[
-              { name:"--btn-primary",      desc:"Primär-Button Hintergrund" },
-              { name:"--btn-primary-text", desc:"Primär-Button Text" },
-              { name:"--btn-hover",        desc:"Primär-Button Hover" },
-            ]}/>
-          </Section>
-
-          {/* Surfaces */}
-          <Section title="Surfaces (Dark/Light Mode)">
-            <TokenGrid tokens={[
-              { name:"--bg",       desc:"Seitenhintergrund" },
-              { name:"--surface",  desc:"Card-Hintergrund" },
-              { name:"--surface2", desc:"Erhöhte Fläche" },
-              { name:"--text",     desc:"Haupttext" },
-              { name:"--sub",      desc:"Sekundärtext" },
-              { name:"--border",   desc:"Trennlinie" },
-            ]}/>
-          </Section>
-
-          {/* Avatar */}
-          <Section title="Avatar">
-            <TokenGrid tokens={[
-              { name:"--avatar-bg",       desc:"Avatar Hintergrund" },
-              { name:"--cc-avatar-text",  desc:"Avatar Text" },
-            ]}/>
-          </Section>
-
-          {/* UI-Komponenten Vorschau */}
-          <Section title="Buttons">
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-              <button className="cc-btn-primary" style={{ padding:"8px 16px", borderRadius:8, border:"none", background:"var(--btn-primary)", color:"var(--btn-primary-text)", fontSize:13, fontWeight:600, cursor:"pointer" }}>Primär</button>
-              <button className="cc-btn-outline">Outline</button>
-              <button className="cc-icon-btn"><TI n="settings" size={14}/></button>
-              <button style={{ padding:"8px 16px", borderRadius:8, border:"0.5px solid var(--border)", background:"var(--surface2)", color:"var(--text)", fontSize:13, cursor:"pointer" }}>Sekundär</button>
-              <button style={{ padding:"8px 16px", borderRadius:8, border:"none", background:"#FEF2F2", color:"#C8102E", fontSize:13, fontWeight:600, cursor:"pointer" }}>Gefahr</button>
-            </div>
-          </Section>
-
-          <Section title="Chips und Badges">
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-              <span className="cc-chip-toggle cc-chip-active">Aktiv</span>
-              <span className="cc-chip-toggle">Inaktiv</span>
-              <span style={{ padding:"2px 10px", borderRadius:20, background:"var(--cc-accent)", color:"var(--btn-primary-text)", fontSize:11, fontWeight:600 }}>Vereinsfarbe</span>
-              <span style={{ padding:"2px 10px", borderRadius:20, background:"#ECFDF5", color:"#15803D", fontSize:11, fontWeight:600 }}>Aktiv</span>
-              <span style={{ padding:"2px 10px", borderRadius:20, background:"#FEF2F2", color:"#C8102E", fontSize:11, fontWeight:600 }}>Inaktiv</span>
-              <span style={{ padding:"2px 10px", borderRadius:20, background:"#FEF3C7", color:"#B45309", fontSize:11, fontWeight:600 }}>Warnung</span>
-            </div>
-          </Section>
-
-          <Section title="Tabs / Segmente">
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div className="cc-seg" style={{ maxWidth:320 }}>
-                <button className="cc-seg-item cc-seg-active">Profil</button>
-                <button className="cc-seg-item">Kader</button>
-                <button className="cc-seg-item">Eltern</button>
-              </div>
-              <div style={{ display:"flex", gap:0, borderBottom:"1px solid var(--border)" }}>
-                {["Übersicht","Mitglieder","Kader","Termine"].map((t,i) => (
-                  <button key={t} style={{ padding:"8px 16px", border:"none", background:"transparent", cursor:"pointer", fontSize:13, fontWeight:i===0?700:400, color:i===0?"var(--text)":"var(--sub)", borderBottom:i===0?"2px solid var(--cc-accent)":"2px solid transparent", marginBottom:-1 }}>{t}</button>
-                ))}
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Inputs">
-            <div style={{ display:"flex", flexDirection:"column", gap:8, maxWidth:400 }}>
-              <input className="cc-input" placeholder="Text-Input…"/>
-              <div style={{ position:"relative" }}>
-                <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"var(--sub)" }}><TI n="search" size={14}/></span>
-                <input className="cc-input" style={{ paddingLeft:32 }} placeholder="Suchen…"/>
-              </div>
-              <select className="cc-input">
-                <option>Option 1</option>
-                <option>Option 2</option>
-              </select>
-            </div>
-          </Section>
-
-          <Section title="Tabelle">
-            <div style={{ border:"0.5px solid var(--border)", borderRadius:8, overflow:"hidden" }}>
-              <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                <thead>
-                  <tr>
-                    {["Name","Rolle","Status"].map(h => (
-                      <th key={h} className="cc-th">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ["Adrian Bürgi","Trainer/in","Aktiv"],
-                    ["Anna Koch","Spieler/in","Aktiv"],
-                    ["Beat Müller","Elternteil","Inaktiv"],
-                  ].map((row,i) => (
-                    <tr key={i} className="cc-tr">
-                      <td className="cc-td" style={{ fontWeight:500 }}>{row[0]}</td>
-                      <td className="cc-td" style={{ color:"var(--sub)" }}>{row[1]}</td>
-                      <td className="cc-td">
-                        <span style={{ padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:600, background:row[2]==="Aktiv"?"#ECFDF5":"#FEF2F2", color:row[2]==="Aktiv"?"#15803D":"#C8102E" }}>{row[2]}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Section>
-
-          <Section title="Avatare">
-            <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
-              {[24,32,40,52].map(s => (
-                <div key={s} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-                  <div style={{ width:s, height:s, borderRadius:"50%", background:"var(--avatar-bg,var(--cc-accent))", display:"flex", alignItems:"center", justifyContent:"center", fontSize:s*0.35, fontWeight:700, color:"var(--cc-avatar-text,var(--btn-primary-text))" }}>AB</div>
-                  <div style={{ fontSize:10, color:"var(--sub)" }}>{s}px</div>
-                </div>
-              ))}
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-                <div style={{ width:40, height:40, borderRadius:"50%", background:"var(--avatar-bg,var(--cc-accent))", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"var(--cc-avatar-text,var(--btn-primary-text))", border:"2px solid var(--cc-accent)" }}>AB</div>
-                <div style={{ fontSize:10, color:"var(--sub)" }}>mit Border</div>
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Karten">
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:10 }}>
-              <div style={{ background:"var(--surface)", border:"0.5px solid var(--border)", borderRadius:10, padding:"14px 16px" }}>
-                <div style={{ fontSize:11, color:"var(--sub)", marginBottom:4 }}>Mitglieder</div>
-                <div style={{ fontSize:22, fontWeight:700, color:"var(--text)" }}>142</div>
-              </div>
-              <div style={{ background:"var(--surface)", border:"0.5px solid var(--border)", borderRadius:10, padding:"14px 16px" }}>
-                <div style={{ fontSize:11, color:"var(--sub)", marginBottom:4 }}>Teams</div>
-                <div style={{ fontSize:22, fontWeight:700, color:"var(--text)" }}>8</div>
-              </div>
-              <div style={{ background:"var(--cc-hover)", border:"0.5px solid var(--cc-accent)", borderRadius:10, padding:"14px 16px" }}>
-                <div style={{ fontSize:11, color:"var(--sub)", marginBottom:4 }}>Akzent-Card</div>
-                <div style={{ fontSize:22, fontWeight:700, color:"var(--text)" }}>24</div>
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Trenner und Zustände">
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <div className="cc-divider"/>
-              <div style={{ display:"flex", gap:8 }}>
-                <div style={{ padding:"8px 12px", borderRadius:8, background:"#ECFDF5", border:"0.5px solid #BBF7D0", color:"#15803D", fontSize:13 }}><TI n="check" size={14}/> Erfolgreich gespeichert</div>
-                <div style={{ padding:"8px 12px", borderRadius:8, background:"#FEF3C7", border:"0.5px solid #FDE68A", color:"#B45309", fontSize:13 }}><TI n="alert-triangle" size={14}/> Achtung</div>
-                <div style={{ padding:"8px 12px", borderRadius:8, background:"#FEF2F2", border:"0.5px solid #FECACA", color:"#C8102E", fontSize:13 }}><TI n="x" size={14}/> Fehler</div>
-              </div>
-            </div>
-          </Section>
-
+    <div style={{display:"contents"}}>
+      {/* CSS Variablen */}
+      <Sec title="Aktive CSS-Variablen">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6}}>
+          {[
+            {name:"--cc-accent",    desc:"Vereinsfarbe 1"},
+            {name:"--cc-accent2",   desc:"Vereinsfarbe 2"},
+            {name:"--cc-hover",     desc:"Hover-Tinting"},
+            {name:"--nav",          desc:"Nav Hintergrund"},
+            {name:"--nav-t",        desc:"Nav Text"},
+            {name:"--nav-a",        desc:"Nav Akzent"},
+            {name:"--btn-primary",  desc:"Button Hintergrund"},
+            {name:"--btn-primary-text", desc:"Button Text"},
+            {name:"--bg",           desc:"Seitenhintergrund"},
+            {name:"--surface",      desc:"Card"},
+            {name:"--surface2",     desc:"Erhöhte Fläche"},
+            {name:"--text",         desc:"Haupttext"},
+            {name:"--sub",          desc:"Sekundärtext"},
+            {name:"--border",       desc:"Trennlinie"},
+          ].map(t => <TokenRow key={t.name} {...t}/>)}
         </div>
-      )}
+      </Sec>
+
+      {/* Typografie */}
+      <Sec title="Typografie">
+        <Col gap={8}>
+          <H1>H1 Seitentitel</H1>
+          <H2>H2 Abschnittstitel</H2>
+          <STitle>Section Title</STitle>
+          <div style={{fontSize:14,color:"var(--text)"}}>Body Text — 14px Standard</div>
+          <Sub>Sekundärtext — var(--sub)</Sub>
+          <Label>Label / Feldbezeichnung</Label>
+          <div style={{fontSize:11,color:"var(--sub)"}}>Klein — 11px für Badges, Meta</div>
+        </Col>
+      </Sec>
+
+      {/* Buttons */}
+      <Sec title="Buttons">
+        <Row gap={8} style={{flexWrap:"wrap",alignItems:"center"}}>
+          <Btn>Primär</Btn>
+          <Btn color="var(--surface2)" textColor="var(--text)" style={{border:"0.5px solid var(--border)"}}>Sekundär</Btn>
+          <Btn color={R} textColor="#fff">Gefahr</Btn>
+          <Btn color={GN} textColor="#fff">Erfolg</Btn>
+          <button className="cc-btn-outline"><TI n="download" size={13}/> Export</button>
+          <button className="cc-icon-btn"><TI n="settings" size={14}/></button>
+          <button className="cc-icon-btn"><TI n="edit" size={14}/></button>
+          <button className="cc-icon-btn"><TI n="trash" size={14}/></button>
+        </Row>
+      </Sec>
+
+      {/* Chips & Badges */}
+      <Sec title="Chips und Badges">
+        <Row gap={8} style={{flexWrap:"wrap",alignItems:"center"}}>
+          <span className="cc-chip-toggle cc-chip-active">Aktiv</span>
+          <span className="cc-chip-toggle">Inaktiv</span>
+          <Chip color={GN} bg="#ECFDF5">Aktiv</Chip>
+          <Chip color={R} bg="#FEF2F2">Inaktiv</Chip>
+          <Chip color={AM} bg="#FEF3C7">Warnung</Chip>
+          <Chip color={BL} bg="#EFF6FF">Info</Chip>
+          <Chip color="var(--btn-primary-text)" bg="var(--cc-accent)">Vereinsfarbe</Chip>
+        </Row>
+      </Sec>
+
+      {/* DropMenu */}
+      <Sec title="DropMenu">
+        <Row gap={12} style={{alignItems:"flex-start"}}>
+          <DropMenu
+            trigger={<button className="cc-btn-outline"><TI n="dots-vertical" size={14}/> Aktionen</button>}
+            items={[
+              {icon:"edit", label:"Bearbeiten", onClick:()=>{}},
+              {icon:"download", label:"Exportieren", onClick:()=>{}},
+              "sep",
+              {icon:"trash", label:"Löschen", onClick:()=>{}, danger:true},
+            ]}
+          />
+          <InfoBox text="DropMenu wird auf Mobile automatisch zum Bottom Sheet." color={BL}/>
+        </Row>
+      </Sec>
+
+      {/* Tabs */}
+      <Sec title="Tabs und Segmente">
+        <Col gap={16}>
+          <Tabs
+            tabs={[{key:"liste",label:"Liste"},{key:"kacheln",label:"Kacheln"},{key:"export",label:"Export"}]}
+            active={activeTab}
+            onChange={setActiveTab}
+          />
+          <div className="cc-seg" style={{maxWidth:300}}>
+            <button className="cc-seg-item cc-seg-active">Aktiv</button>
+            <button className="cc-seg-item">Archiv</button>
+            <button className="cc-seg-item">Alle</button>
+          </div>
+        </Col>
+      </Sec>
+
+      {/* Inputs */}
+      <Sec title="Inputs">
+        <Col gap={8} style={{maxWidth:400}}>
+          <Input placeholder="Text-Input…"/>
+          <Input placeholder="Suchen…" icon={<TI n="search" size={14}/>}/>
+          <Select>
+            <option>Option 1</option>
+            <option>Option 2</option>
+            <option>Option 3</option>
+          </Select>
+          <Textarea placeholder="Mehrzeiliger Text…" rows={3}/>
+        </Col>
+      </Sec>
+
+      {/* Toolbar */}
+      <Sec title="Toolbar (Suche, Filter, Spalten)">
+        <Toolbar
+          search={search}
+          onSearch={setSearch}
+          searchPlaceholder="Mitglieder suchen…"
+          colMenuButton={
+            <ColMenuButton
+              allCols={ALL_COLS}
+              visibleCols={visibleCols}
+              onChangeVisible={setVisibleCols}
+            />
+          }
+          moreItems={[
+            {icon:"download", label:"CSV exportieren", onClick:()=>{}},
+            {icon:"file-spreadsheet", label:"Excel exportieren", onClick:()=>{}},
+          ]}
+        />
+      </Sec>
+
+      {/* BulkBar */}
+      <Sec title="BulkBar (Mehrfachauswahl)">
+        <BulkBar
+          count={3}
+          onClear={()=>setSelected([])}
+          actions={[
+            {icon:"archive", label:"Archivieren", onClick:()=>{}},
+            {icon:"download", label:"Exportieren", onClick:()=>{}},
+          ]}
+        />
+      </Sec>
+
+      {/* Tabelle mit SortHeader */}
+      <Sec title="Tabelle mit SortHeader">
+        <div style={{border:"0.5px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead>
+              <tr>
+                <th style={{width:36,padding:"8px 12px",background:"var(--surface2)",borderBottom:"2px solid var(--cc-accent)"}}>
+                  <input type="checkbox" onChange={e=>setSelected(e.target.checked?filtered.map(m=>m.id):[])} checked={selected.length===filtered.length&&filtered.length>0}/>
+                </th>
+                {ALL_COLS.filter(c=>visibleCols.includes(c.key)).map(c=>(
+                  <SortHeader key={c.key} label={c.label} sortKey={c.key} currentSort={sortKey} dir={sortDir} onSort={toggleSort}/>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(m=>(
+                <tr key={m.id} className="cc-tr" onClick={()=>setSelected(s=>s.includes(m.id)?s.filter(x=>x!==m.id):[...s,m.id])} style={{background:selected.includes(m.id)?"var(--cc-hover)":undefined}}>
+                  <td className="cc-td"><input type="checkbox" checked={selected.includes(m.id)} onChange={()=>{}}/></td>
+                  {visibleCols.includes("name") && <td className="cc-td"><Row gap={8} style={{alignItems:"center"}}><Av name={m.name} size={26}/><span style={{fontWeight:500}}>{m.name}</span></Row></td>}
+                  {visibleCols.includes("rolle") && <td className="cc-td"><Sub>{m.rolle}</Sub></td>}
+                  {visibleCols.includes("team") && <td className="cc-td"><Chip color={BL} bg="#EFF6FF">{m.team}</Chip></td>}
+                  {visibleCols.includes("aktiv") && <td className="cc-td"><Chip color={m.aktiv?GN:R} bg={m.aktiv?"#ECFDF5":"#FEF2F2"}>{m.aktiv?"Aktiv":"Inaktiv"}</Chip></td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {selected.length>0&&<div style={{marginTop:8}}><BulkBar count={selected.length} onClear={()=>setSelected([])} actions={[{icon:"archive",label:"Archivieren",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}}]}/></div>}
+      </Sec>
+
+      {/* Cards & Stats */}
+      <Sec title="Cards und Stats">
+        <Row gap={10} style={{flexWrap:"wrap"}}>
+          <Stat label="Mitglieder" value={142}/>
+          <Stat label="Teams" value={8}/>
+          <Stat label="Aktiv" value={134} color={GN}/>
+          <Stat label="Inaktiv" value={8} color={R}/>
+        </Row>
+        <div style={{marginTop:12}}>
+          <Card>
+            <Between>
+              <STitle>Beispiel-Card</STitle>
+              <button className="cc-icon-btn"><TI n="dots-vertical" size={14}/></button>
+            </Between>
+            <Sub style={{marginTop:4}}>Cards verwenden var(--surface) als Hintergrund.</Sub>
+          </Card>
+        </div>
+      </Sec>
+
+      {/* StatusTile */}
+      <Sec title="Status-Tiles">
+        <Row gap={8} style={{flexWrap:"wrap"}}>
+          <StatusTile label="Aktiv" value="Ja" color={GN}/>
+          <StatusTile label="Portal" value="Verknüpft" color={BL}/>
+          <StatusTile label="Rolle" value="Trainer" color={AM}/>
+        </Row>
+      </Sec>
+
+      {/* Avatar */}
+      <Sec title="Avatare">
+        <Row gap={16} style={{alignItems:"flex-end",flexWrap:"wrap"}}>
+          {[24,32,40,52].map(s=>(
+            <Col key={s} gap={6} style={{alignItems:"center"}}>
+              <Av name="Adrian Bürgi" size={s}/>
+              <Sub>{s}px</Sub>
+            </Col>
+          ))}
+          <Col gap={6} style={{alignItems:"center"}}>
+            <Av name="Anna Koch" size={40} style={{border:"2px solid var(--cc-accent)"}}/>
+            <Sub>mit Border</Sub>
+          </Col>
+        </Row>
+      </Sec>
+
+      {/* Modal */}
+      <Sec title="Modal / Sheet">
+        <Row gap={8}>
+          <Btn onClick={()=>setShowModal(true)}>Modal öffnen</Btn>
+          <InfoBox text="Auf Mobile wird automatisch ein Bottom Sheet angezeigt." color={BL}/>
+        </Row>
+        <ModalOrSheet open={showModal} onClose={()=>setShowModal(false)} title="Beispiel-Modal">
+          <ModalTitle>Beispiel-Modal</ModalTitle>
+          <Col gap={12} style={{padding:"16px 20px"}}>
+            <Input placeholder="Name…"/>
+            <Select><option>Option 1</option><option>Option 2</option></Select>
+            <Row gap={8}>
+              <Btn onClick={()=>setShowModal(false)}>Speichern</Btn>
+              <button className="cc-btn-outline" onClick={()=>setShowModal(false)}>Abbrechen</button>
+            </Row>
+          </Col>
+        </ModalOrSheet>
+      </Sec>
+
+      {/* ConfirmDialog */}
+      <Sec title="ConfirmDialog">
+        <Row gap={8}>
+          <Btn color={R} textColor="#fff" onClick={async()=>{
+            const ok=await confirm({title:"Wirklich löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
+            if(ok) alert("Gelöscht!");
+          }}>Löschen mit Bestätigung</Btn>
+          <InfoBox text="Ersetzt window.confirm() überall im Portal." color={BL}/>
+        </Row>
+        {confirmDialog}
+      </Sec>
+
+      {/* InfoBox */}
+      <Sec title="InfoBox">
+        <Col gap={8}>
+          <InfoBox text="Info-Hinweis — für neutrale Informationen." color={BL}/>
+          <InfoBox text="Erfolgs-Meldung — Aktion erfolgreich." color={GN}/>
+          <InfoBox text="Warnung — bitte prüfen." color={AM}/>
+          <InfoBox text="Fehler — Aktion fehlgeschlagen." color={R}/>
+        </Col>
+      </Sec>
+
+      {/* Empty State */}
+      <Sec title="Empty State">
+        <Empty icon="users" text="Keine Mitglieder gefunden" sub="Passe den Suchbegriff an oder füge neue Mitglieder hinzu."/>
+      </Sec>
+
     </div>
   );
 }
