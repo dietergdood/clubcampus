@@ -6,7 +6,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label,
          H1, H2, Input, Select, Textarea, SectionLabel, Empty, DropMenu,
          Toolbar, ColMenuButton, BulkBar, SortHeader, InfoBox, ModalOrSheet,
-         ModalTitle, useConfirm, ConfirmDialog, StatusTile } from "../../theme.jsx";
+         ModalTitle, useConfirm, ConfirmDialog, StatusTile,
+         COMPONENT_REGISTRY } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { GN, R, RL, BL, AM, BK, GB } from "../../constants.js";
 
@@ -361,6 +362,39 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       {/* Empty State */}
       <Sec title="Empty State">
         <Empty icon="users" text="Keine Mitglieder gefunden" sub="Passe den Suchbegriff an oder füge neue Mitglieder hinzu."/>
+      </Sec>
+
+      {/* Komponenten-Registry */}
+      <Sec title={`Alle Komponenten (${COMPONENT_REGISTRY.length})`}>
+        {["Listen","Navigation","Overlays","Feedback","Basics","Layout","Formulare"].map(cat => {
+          const comps = COMPONENT_REGISTRY.filter(c => c.category === cat);
+          if (!comps.length) return null;
+          return (
+            <div key={cat} style={{marginBottom:16}}>
+              <div style={{fontSize:10,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:8}}>{cat}</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {comps.map(c => (
+                  <div key={c.name} style={{padding:"10px 14px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)"}}>
+                    <Between style={{marginBottom:4}}>
+                      <div style={{fontWeight:600,fontSize:13,color:"var(--text)",fontFamily:"monospace"}}>{c.name}</div>
+                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                        {c.usedIn.map(u=>(
+                          <span key={u} style={{fontSize:10,padding:"1px 6px",borderRadius:4,background:"var(--surface2)",color:"var(--sub)",border:"0.5px solid var(--border)"}}>{u}</span>
+                        ))}
+                      </div>
+                    </Between>
+                    <div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{c.desc}</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {c.props.map(p=>(
+                        <code key={p} style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"var(--cc-accent-5,rgba(255,191,0,0.05))",border:"0.5px solid var(--cc-accent-10,rgba(255,191,0,0.1))",color:"var(--text)"}}>{p}</code>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </Sec>
 
     </div>

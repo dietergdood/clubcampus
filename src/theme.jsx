@@ -1773,4 +1773,158 @@ function useConfirm(){
   return [confirm, dialog];
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT_REGISTRY — Alle wiederverwendbaren UI-Komponenten
+   Neue Komponenten IMMER hier eintragen (siehe ARCHITECTURE.md)
+   ═══════════════════════════════════════════════════════════════ */
+export const COMPONENT_REGISTRY = [
+  {
+    name: "Toolbar",
+    desc: "Suche, Filter, Gruppieren, Mehr-Menu, Spaltenauswahl. Wird in allen Listen-Modulen verwendet.",
+    category: "Listen",
+    usedIn: ["MitgliederModul", "KaderModul", "HelferModul"],
+    props: ["search+onSearch", "filterDefs+filterVals+onFilterChange", "groupOptions+groupBy+onGroupChange", "colMenu", "moreItems"],
+  },
+  {
+    name: "ColMenuButton",
+    desc: "Spaltenauswahl mit Drag&Drop und Suche. Immer zusammen mit Toolbar verwendet.",
+    category: "Listen",
+    usedIn: ["MitgliederModul"],
+    props: ["allCols", "visibleCols", "onChangeVisible"],
+  },
+  {
+    name: "BulkBar",
+    desc: "Aktionsleiste für Mehrfachauswahl. Erscheint wenn Zeilen selektiert sind.",
+    category: "Listen",
+    usedIn: ["MitgliederModul"],
+    props: ["count", "onClear", "actions[]"],
+  },
+  {
+    name: "SortHeader",
+    desc: "Sortierbarer Tabellen-Header mit Pfeil-Indikator.",
+    category: "Listen",
+    usedIn: ["MitgliederModul", "KaderModul"],
+    props: ["label", "col", "sortCol", "sortDir", "onSort"],
+  },
+  {
+    name: "DropMenu",
+    desc: "Kontext-Menu mit Items. Auf Mobile automatisch Bottom Sheet.",
+    category: "Navigation",
+    usedIn: ["MitgliederModul", "KaderModul", "PortalverwaltungModul"],
+    props: ["items[]", "trigger"],
+  },
+  {
+    name: "ModalOrSheet",
+    desc: "Modal auf Desktop, Bottom Sheet auf Mobile. Immer verwenden statt eigenem Modal.",
+    category: "Overlays",
+    usedIn: ["MitgliederModul", "ElternTab", "KaderModul"],
+    props: ["open", "onClose", "title", "maxWidth"],
+  },
+  {
+    name: "ConfirmDialog + useConfirm",
+    desc: "Ersetzt window.confirm(). Hook gibt [confirm, dialog] zurück. confirmDialog ins JSX rendern.",
+    category: "Overlays",
+    usedIn: ["MitgliederModul", "PortalverwaltungModul", "TrainingsplanModul"],
+    props: ["useConfirm() → [confirm, confirmDialog]", "confirm({title, message, confirmLabel})"],
+  },
+  {
+    name: "InfoBox",
+    desc: "Farbiger Hinweiskasten. Farbe via color prop (BL=Info, GN=Erfolg, AM=Warnung, R=Fehler).",
+    category: "Feedback",
+    usedIn: ["Überall"],
+    props: ["text", "color"],
+  },
+  {
+    name: "StatusTile",
+    desc: "Status-Kachel mit Icon, Label und Wert. Für Profil-Übersichten.",
+    category: "Feedback",
+    usedIn: ["MemberDetail", "DashboardModul"],
+    props: ["label", "value", "icon", "semantic (ok|warn|danger|neutral)", "action"],
+  },
+  {
+    name: "Btn",
+    desc: "Primär-Button mit Vereinsfarbe. Für Sekundär-Aktionen cc-btn-outline verwenden.",
+    category: "Basics",
+    usedIn: ["Überall"],
+    props: ["onClick", "color", "textColor", "small", "disabled"],
+  },
+  {
+    name: "Card",
+    desc: "Weisser Container mit Border und Schatten.",
+    category: "Basics",
+    usedIn: ["Überall"],
+    props: ["mb", "mt", "flush", "onClick"],
+  },
+  {
+    name: "Chip",
+    desc: "Farbiger Badge. text-Prop für Label, color für Textfarbe, bg für Hintergrund.",
+    category: "Basics",
+    usedIn: ["Überall"],
+    props: ["text", "color", "bg", "semantic", "size"],
+  },
+  {
+    name: "Stat",
+    desc: "Statistik-Kachel mit Label, Wert und optionaler Farbe.",
+    category: "Basics",
+    usedIn: ["DashboardModul", "PortalverwaltungModul"],
+    props: ["label", "value", "sub", "color", "semantic", "icon"],
+  },
+  {
+    name: "Av",
+    desc: "Avatar mit Initialen und automatischer Farbzuweisung aus Name-Hash.",
+    category: "Basics",
+    usedIn: ["Überall"],
+    props: ["name", "size (sm|md|lg oder px-Zahl)", "bg"],
+  },
+  {
+    name: "Tabs",
+    desc: "Tab-Navigation. Für Segment-Control cc-seg/cc-seg-item/cc-seg-active verwenden.",
+    category: "Navigation",
+    usedIn: ["MemberDetail", "KaderModul"],
+    props: ["tabs[] (key+label)", "active", "setActive", "mb"],
+  },
+  {
+    name: "Row / Col / Between",
+    desc: "Layout-Helfer. Row=horizontal, Col=vertikal, Between=space-between.",
+    category: "Layout",
+    usedIn: ["Überall"],
+    props: ["gap", "wrap", "justify", "align", "style"],
+  },
+  {
+    name: "H1 / H2 / STitle / Sub / Label",
+    desc: "Typografie-Komponenten. STitle für Section-Überschriften, Sub für sekundären Text.",
+    category: "Layout",
+    usedIn: ["Überall"],
+    props: ["children", "mb", "style"],
+  },
+  {
+    name: "Input / Select / Textarea",
+    desc: "Formular-Elemente mit cc-input Styling.",
+    category: "Formulare",
+    usedIn: ["Überall"],
+    props: ["Standard HTML props + style"],
+  },
+  {
+    name: "Empty",
+    desc: "Leer-Zustand mit Icon und Text.",
+    category: "Feedback",
+    usedIn: ["Überall"],
+    props: ["icon", "text", "sub"],
+  },
+  {
+    name: "FunktionenMultiSelect",
+    desc: "Multi-Select für Vereinsfunktionen mit Suche und Gruppenfilter.",
+    category: "Formulare",
+    usedIn: ["MitgliederModul", "GruppenTab"],
+    props: ["funktionen[]", "selected[]", "onChange"],
+  },
+  {
+    name: "LandSelect",
+    desc: "Länder-Auswahl mit Flaggen und Suche.",
+    category: "Formulare",
+    usedIn: ["MitgliederModul"],
+    props: ["value", "onChange", "laender[]", "placeholder"],
+  },
+];
+
 export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm };

@@ -66,6 +66,22 @@ Shared  →  kennt keine Module             ✗
 Module  →  importieren sich nie gegenseitig ✗
 ```
 
+## Checkliste für neue theme.jsx Komponenten
+
+Neue UI-Komponenten IMMER in COMPONENT_REGISTRY eintragen (theme.jsx, vor dem export):
+
+```js
+{
+  name: "MeineKomponente",
+  desc: "Was sie tut und wann man sie verwendet",
+  category: "Basics|Listen|Navigation|Overlays|Feedback|Layout|Formulare",
+  usedIn: ["ModulName"],
+  props: ["prop1", "prop2+prop3"],
+}
+```
+
+→ Erscheint automatisch im Portalverwaltung → System → Design-System Tab
+
 ## Checkliste für neue Module
 
 Vor jedem neuen Modul:
