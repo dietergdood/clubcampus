@@ -25,6 +25,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
     const ok=await confirm({title:`${name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!sb||!ok) return;
     await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
     if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
+    setArchivData(prev=>prev.filter(m=>m.id!==id));
     if(onReload) onReload();
   }
 
@@ -32,6 +33,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
     e.stopPropagation();
     const ok=await confirm({title:`${name} löschen (DSGVO)?`,message:"Diese Aktion ist unwiderruflich.",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("mitglieder").delete().eq("id",id);
+    setArchivData(prev=>prev.filter(m=>m.id!==id));
     if(onReload) onReload();
   }
 
@@ -118,6 +120,7 @@ function ArchivView({archivData,archivLoaded,sb,account,onUpdatePortalZugang=nul
               await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",id);
               if(onUpdatePortalZugang) await onUpdatePortalZugang(id,true);
             }
+            setArchivData(prev=>prev.filter(m=>!archivSelected.includes(m.id)));
             setArchivSelected([]);setArchivSelectMode(false);if(onReload)onReload();
           }},
           {icon:"trash", label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:async()=>{
