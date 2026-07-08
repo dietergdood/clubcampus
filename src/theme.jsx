@@ -358,7 +358,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-warn-box{background:#fffbeb;border:0.5px solid var(--cc-accent-border,#fde68a);border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:6px}
 
 
-.cc-team-position-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--border)}
+.cc-team-position-row{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:0.5px solid var(--border)}
 .cc-team-position-row:last-child{border-bottom:none}
 .cc-team-position-body{flex:1;min-width:0}
 .cc-team-position-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:8px}
