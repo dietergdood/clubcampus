@@ -11,9 +11,8 @@ import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
 import { currentSeason } from "../domains/season/seasonUtils.js";
 import { LAENDER, getLandName, RolleChip, getFieldVisibility } from "./members/memberUtils.jsx";
 import { ROLES, FIELD_VIS, SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
-import { MembersView } from "./members/MembersView.jsx";
-import { MemberDetail } from "./members/MemberDetail.jsx";
 import { ArchivView } from "./members/ArchivView.jsx";
+import { MemberDetail } from "./members/MemberDetail.jsx";
 
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
   const isMobile=useIsMobile();
@@ -824,4 +823,5 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 }
 
 export { MitgliederModul };
+export const MembersView = MitgliederModul;
 export default MitgliederModul;
