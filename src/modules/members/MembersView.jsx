@@ -89,7 +89,7 @@ export function MembersView({
       return String(new Date(m.eintritt).getFullYear());
     }
     if(g==="teams"){
-      return m.teams&&m.teams.length>0?m.teams.map(t=>t?.name||t):["Kein Team"];
+      return m.teams&&(m.teams||[]).length>0?m.teams.map(t=>t?.name||t):["Kein Team"];
     }
     if(g==="rollen"){
       const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
@@ -157,10 +157,10 @@ export function MembersView({
   const totalCount=allMembers.length;
   const portalAktiv=allMembers.filter(m=>m.hat_portal_zugang).length;
   const dpOffen=allMembers.filter(m=>m.datenpruefung!=="Geprueft").length;
-  const ohneTeam=allMembers.filter(m=>m.teams.length===0).length;
+  const ohneTeam=allMembers.filter(m=>(m.teams||[]).length===0).length;
   /* Mitgliedschaft-Aufschluesselung - dynamisch */
-  const trainerCount=allMembers.filter(m=>m.rollen.some(r=>r.toLowerCase().includes("trainer"))).length;
-  const funktionaerCount=allMembers.filter(m=>m.rollen.some(r=>r.toLowerCase().includes("funktion"))).length;
+  const trainerCount=allMembers.filter(m=>(m.rollen||[]).some(r=>r.toLowerCase().includes("trainer"))).length;
+  const funktionaerCount=allMembers.filter(m=>(m.rollen||[]).some(r=>r.toLowerCase().includes("funktion"))).length;
   const mitgliedTypen=dbMitgliedtypen.length>0
     ?dbMitgliedtypen.map(t=>t.name)
     :[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(v=>v&&v!=="-"))].sort();
@@ -376,14 +376,14 @@ export function MembersView({
                       <div className="cc-members-item-sub">
                         {m.mitgliedschaft!=="-"?m.mitgliedschaft:""}
                       </div>
-                      {m.rollen.length>0&&(
+                      {(m.rollen||[]).length>0&&(
                         <div className="cc-members-item-chips">
-                          {m.rollen.slice(0,2).map((r,i)=>{
+                          {(m.rollen||[]).slice(0,2).map((r,i)=>{
                             const rawR=(m.kader_rollen_raw||[])[i]||"";
                             const isT=TRAINER_KEYS.some(k=>rawR===k)||r.toLowerCase().includes("trainer");
                             return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;
                           })}
-                          {m.rollen.length>2&&<span className="cc-ml-more">+{m.rollen.length-2}</span>}
+                          {(m.rollen||[]).length>2&&<span className="cc-ml-more">+{(m.rollen||[]).length-2}</span>}
                         </div>
                       )}
                     </div>
@@ -451,7 +451,7 @@ export function MembersView({
                           case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm" style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
                           case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
                           case "rollen": return <td key="rollen" className="cc-members-td">{(()=>{const portalRaw=m.role&&m.role!=="-"?m.role:null;const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;const portalIsTrainer=portalRaw==="trainer";const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel) return false;if(portalIsTrainer&&isT) return false;return true;});const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];return all.length>0?all.map((c,i)=><span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`} style={{marginRight:3}}>{c.label}</span>):(<span className="cc-members-td-sub">—</span>);})()}</td>;
-                          case "teams": return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{m.teams.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{m.teams.slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{m.teams.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:m.teams,x:e.clientX,y:e.clientY});}}>+{m.teams.length-1}</button>}</span>):"—"}</td>;
+                          case "teams": return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{(m.teams||[]).length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{(m.teams||[]).slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{(m.teams||[]).length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:m.teams,x:e.clientX,y:e.clientY});}}>+{(m.teams||[]).length-1}</button>}</span>):"—"}</td>;
                           case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
                           case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
                           case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
