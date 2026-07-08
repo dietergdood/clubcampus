@@ -115,6 +115,31 @@ function PortalverwaltungView(props){
     const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
     if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
   }
+
+  async function saveMitgliedtyp(){
+    if(!mitgliedtypForm.name.trim()) return;
+    const payload={name:mitgliedtypForm.name.trim(),beitragsinfo:mitgliedtypForm.beitragsinfo||"",hauptkontakt_pflicht:!!mitgliedtypForm.hauptkontakt_pflicht,standard_rolle:mitgliedtypForm.standard_rolle||null,aktiv:true};
+    if(supabase){
+      if(editMitgliedtyp?.id){
+        await supabase.from("mitgliedtypen").update(payload).eq("id",editMitgliedtyp.id);
+      } else {
+        const maxSort=Math.max(0,...dbMitgliedtypen.map(t=>t.sort_order||0));
+        await supabase.from("mitgliedtypen").insert({...payload,sort_order:maxSort+1});
+      }
+      const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
+      if(data) setDbMitgliedtypen(data);
+    }
+    setShowMitgliedtypForm(false); setEditMitgliedtyp(null);
+    setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""});
+  }
+
+  async function deleteMitgliedtyp(id){
+    const ok=await confirm({title:"Mitgliedtyp löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
+    if(!supabase||!ok) return;
+    await supabase.from("mitgliedtypen").update({aktiv:false}).eq("id",id);
+    const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
+    if(data) setDbMitgliedtypen(data);
+  }
   const [moduleConfig,setModuleConfig]=useState({});
   const [moduleBerechtigungen,setModuleBerechtigungen]=useState({});
   const [felder,setFelder]=useState([]);
