@@ -2,9 +2,9 @@
    ClubCampus — modules/members/InfoTab.jsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import {Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
+import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
          useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect,
-         Toolbar, ColMenuButton, SortHeader} from "../../theme.jsx";
+         Toolbar, ColMenuButton, SortHeader, useConfirm, ConfirmDialog } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../../constants.js";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.js";
@@ -15,6 +15,121 @@ import { NotizenVerlauf } from "./NotizenVerlauf.jsx";
 
 export function InfoTab({raw,tab,canEdit,sb,role,account,dbMitglieder,dbMitgliedtypen,dbPortalRollen,dbKaderRollen,kannVerwalten,onReload,onNavToTeam,onClose,brauchtEltern,TRAINER_KEYS,ROLLE_LABEL,editField,setEditField,editVal,setEditVal,saving,setSaving,ahvVisible,setAhvVisible,showTeamAssign,setShowTeamAssign,teamAssignForm,setTeamAssignForm,teamAssignSearch,setTeamAssignSearch,teamAssignRolleSearch,setTeamAssignRolleSearch,editTeamIdx,setEditTeamIdx,editTeamForm,setEditTeamForm,editTeamRolleSearch,setEditTeamRolleSearch,showFunkAssign,setShowFunkAssign,funkSearch,setFunkSearch,funkSelected,setFunkSelected,roleEditOpen,setRoleEditOpen,notizenCount,setNotizenCount,teamsPopover,setTeamsPopover,setTab}) {
   const isMobile = useIsMobile();
+  const [confirm,confirmDialog] = useConfirm();
+
+  const eltern=elternLoaded!==null?elternLoaded:(raw.eltern||[]);
+
+  useEffect(()=>{
+    if((tab==="eltern"||(tab==="info"&&brauchtEltern(raw.mitgliedtyp)))&&sb&&raw.id&&elternLoaded===null){
+      sb.from("elternkontakte").select("*").eq("mitglied_id",raw.id)
+        .then(({data})=>setElternLoaded(data||[]));
+    }
+  },[tab,raw.id]);
+
+  useEffect(()=>{
+    if(sb&&raw.id&&teamDetails===null){
+      sb.from("kader")
+        .select("*, teams(id,name,kurzname)")
+        .eq("mitglied_id",raw.id).eq("aktiv",true)
+        .then(({data})=>setTeamDetails(data||[]));
+    }
+  },[raw.id]);
+
+  useEffect(()=>{
+    if(showTeamAssign&&sb){
+      if(allTeams.length===0)
+        sb.from("teams").select("id,name,kurzname").eq("aktiv",true).order("name")
+          .then(({data})=>setAllTeams(data||[]));
+      if(assignFunktionen.length===0)
+        sb.from("portal_funktionen").select("id,name,portal_gruppen(name)").order("name")
+          .then(({data})=>setAssignFunktionen(data||[]));
+    }
+  },[showTeamAssign]);
+
+  useEffect(()=>{
+    if(sb&&assignFunktionen.length===0){
+      sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
+        .then(({data})=>setAssignFunktionen(data||[]));
+    }
+  },[raw.id]);
+
+  useEffect(()=>{
+    if(showFunkAssign){
+      setFunkSelected(raw.funktionen||[]);
+      setFunkSearch("");
+    }
+  },[showFunkAssign]);
+
+  async function ableitRolle(){
+    if(!sb||!raw.id) return;
+    const neueRolle=await ableitUndSaveRolle(sb,raw.id,dbKaderRollen,raw.mitgliedtyp,raw.funktionen);
+    setBenutzer(prev=>prev?{...prev,role:neueRolle}:{role:neueRolle});
+    if(onReload) onReload();
+  }
+
+  async function assignTeam(){
+    if(!sb||!teamAssignForm.team_id) return;
+    setTeamAssignSaving(true);
+    await sb.from("kader").upsert({
+      team_id:parseInt(teamAssignForm.team_id),
+      mitglied_id:raw.id,
+      rollen:teamAssignForm.funktionen||["Spieler/in"],
+      rueckennr:teamAssignForm.rueckennr||null,
+      position:teamAssignForm.position||null,
+      aktiv:true,
+      saison:currentSeason(),
+    },{onConflict:"team_id,mitglied_id,saison"});
+    const {data}=await sb.from("kader").select("*, teams(id,name,kurzname)").eq("mitglied_id",raw.id).eq("aktiv",true);
+    if(data) setTeamDetails(data);
+    await ableitRolle();
+    setShowTeamAssign(false);
+    setTeamAssignForm({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
+    setTeamFunkOpen(false);
+    setTeamAssignSaving(false);
+  }
+
+  async function saveFunktionen(){
+    if(!sb) return;
+    await sb.from("mitglieder").update({funktionen:funkSelected}).eq("id",raw.id);
+    setShowFunkAssign(false);
+    if(onReload) onReload();
+  }
+
+  async function removeFromTeam(kaderId){
+    const ok=await confirm({title:"Aus Team entfernen?",confirmLabel:"Entfernen"});if(!sb||!ok) return;
+    await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
+    setTeamDetails(prev=>prev.filter(k=>k.id!==kaderId));
+    await ableitRolle();
+  }
+
+  async function saveEditTeam(){
+    if(!sb||!editTeam) return;
+    setEditTeamSaving(true);
+    await sb.from("kader").update({
+      rollen:editTeamForm.funktionen||[],
+      rueckennr:editTeamForm.rueckennr||null,
+      position:editTeamForm.position||null,
+    }).eq("id",editTeam.id);
+    setTeamDetails(prev=>prev.map(k=>k.id===editTeam.id
+      ?{...k,rollen:editTeamForm.funktionen,rueckennr:editTeamForm.rueckennr,position:editTeamForm.position}
+      :k
+    ));
+    await ableitRolle();
+    setEditTeam(null);
+    setEditTeamFunkOpen(false);
+    setEditTeamSaving(false);
+  }
+  const age=raw.geburtsdatum?Math.floor((new Date()-new Date(raw.geburtsdatum))/31557600000):null;
+  const initials=(m.name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+
+  useEffect(()=>{
+    if(sb&&raw.id&&benutzer===null){
+      sb.from("benutzer").select("*").eq("mitglied_id",raw.id).maybeSingle()
+        .then(({data})=>setBenutzer(data));
+    }
+  },[raw.id]);
+
+
   return (
     <div style={{display:'contents'}}>  
       {tab==="info"&&(
