@@ -386,7 +386,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
                   <div key={i} className="cc-info-row">
                     <span className="cc-info-key">{r.l}</span>
                     {r.link&&r.v
-                      ?<a href={r.link} className={r.link.startsWith("tel:")?"cc-info-val":"cc-contact-link"}>{r.v}</a>
+                      ?<a href={r.link} className={r.link.startsWith("tel:")?"cc-contact-link-plain":"cc-contact-link"}>{r.v}</a>
                       :<span className={r.v?"cc-info-val":"cc-info-val-empty"}>{r.v||"—"}</span>
                     }
                   </div>

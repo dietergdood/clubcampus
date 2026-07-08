@@ -688,6 +688,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hidden{display:none}
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:#2563EB;text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
+.cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text);text-decoration:none}
 
 /* ── Mobile responsive ── */
 @media(max-width:680px){
