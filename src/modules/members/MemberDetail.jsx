@@ -679,7 +679,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
 
       {/* Tab: Eltern */}
-      {tab==="eltern"&&<ElternTab canEdit={canEdit} raw={raw} sb={sb} onReload={onReload} setElternLoaded={setElternLoaded}/>}
+      {tab==="eltern"&&<ElternTab eltern={eltern} canEdit={canEdit} raw={raw} sb={sb} onReload={onReload} setElternLoaded={setElternLoaded}/>}
 
       {/* Tab: Portal */}
       {tab==="portal"&&(
