@@ -30,9 +30,12 @@ src/
 
   modules/                          ← Alle Modul-Dateien
     members/                        ← MitgliederModul aufgeteilt
-      ElternTab.jsx
-      MemberDetail.jsx
-      MemberHero.jsx
+      ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen)
+      ElternTab.jsx                 ← Elternkontakte
+      MemberDetail.jsx              ← Mitglied-Detailansicht
+      MemberHero.jsx                ← Hero-Banner mit Avatar
+      MembersView.jsx               ← Hauptliste, Tabelle, Toolbar, KPIs
+      memberConstants.js            ← ROLES, FIELD_VIS, COL_GROUPS, GROUP_OPTIONS
       memberUtils.jsx               ← LAENDER, getLandName, RolleChip, getFieldVisibility
     portal/                         ← PortalverwaltungModul aufgeteilt
       ApiTab.jsx
