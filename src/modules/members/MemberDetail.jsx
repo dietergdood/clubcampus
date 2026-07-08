@@ -104,7 +104,8 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
       const neueRolle=await ableitUndSaveRolle(sb,raw.id,dbKaderRollen,raw.mitgliedtyp,raw.funktionen);
       await portalZugangAktivieren(sb,raw.id,existing.id,neueRolle);
       setPortalMsg({ok:true,text:`Verknüpft ✓ — Rolle: ${neueRolle}`});
-      if(onReload) onReload();
+      if(reloadMember) reloadMember(raw.id);
+      else if(onReload) onReload();
     } else {
       setPortalMsg({ok:false,text:"Kein Benutzer mit dieser E-Mail gefunden."});
     }
@@ -115,7 +116,8 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
     if(!sb) return;
     await portalZugangDeaktivieren(sb,raw.id);
     setBenutzer(null); setPortalMsg({ok:true,text:"Verknüpfung aufgehoben"});
-    if(onReload) onReload();
+    if(reloadMember) reloadMember(raw.id);
+    else if(onReload) onReload();
   }
 
   const [confirm,confirmDialog] = useConfirm();
@@ -182,14 +184,16 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
     setTeamAssignForm({team_id:"",funktionen:["Spieler/in"],rueckennr:"",position:""});
     setTeamFunkOpen(false);
     setTeamAssignSaving(false);
-    if(onReload) onReload();
+    if(reloadMember) reloadMember(raw.id);
+    else if(onReload) onReload();
   }
 
   async function saveFunktionen(){
     if(!sb) return;
     await updateMitglied(sb,raw.id,{funktionen:funkSelected});
     setShowFunkAssign(false);
-    if(onReload) onReload();
+    if(reloadMember) reloadMember(raw.id);
+    else if(onReload) onReload();
   }
 
   async function removeFromTeam(kaderId){
@@ -215,7 +219,8 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
     setEditTeam(null);
     setEditTeamFunkOpen(false);
     setEditTeamSaving(false);
-    if(onReload) onReload();
+    if(reloadMember) reloadMember(raw.id);
+    else if(onReload) onReload();
   }
 
   useEffect(()=>{
@@ -679,7 +684,7 @@ reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft=null,
 
 
       {/* Tab: Eltern */}
-      {tab==="eltern"&&<ElternTab eltern={eltern} canEdit={canEdit} raw={raw} sb={sb} onReload={onReload} setElternLoaded={setElternLoaded}/>}
+      {tab==="eltern"&&<ElternTab eltern={eltern} canEdit={canEdit} raw={raw} sb={sb} onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}} setElternLoaded={setElternLoaded}/>}
 
       {/* Tab: Portal */}
       {tab==="portal"&&(
