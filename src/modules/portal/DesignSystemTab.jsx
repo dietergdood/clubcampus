@@ -68,6 +68,193 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("liste");
   const [confirm, confirmDialog] = useConfirm();
+  const [openPreviews, setOpenPreviews] = useState({});
+  const [demoSearch, setDemoSearch] = useState("");
+  const [demoFilter, setDemoFilter] = useState({});
+  const [demoGroup, setDemoGroup] = useState("none");
+  const [demoCols, setDemoCols] = useState(["name","rolle","team"]);
+  const [demoModal, setDemoModal] = useState(false);
+  const [demoSort, setDemoSort] = useState({col:"name",dir:"asc"});
+  const [demoTabActive, setDemoTabActive] = useState("liste");
+
+  const DEMO_COLS = [{key:"name",label:"Name"},{key:"rolle",label:"Rolle"},{key:"team",label:"Team"}];
+  const DEMO_MEMBERS = [
+    {id:1,name:"Adrian Bürgi",rolle:"Trainer/in",team:"FCH 1"},
+    {id:2,name:"Anna Koch",rolle:"Spieler/in",team:"FCH 2"},
+    {id:3,name:"Beat Müller",rolle:"Elternteil",team:"Ba"},
+  ];
+
+  const DEMO_MAP = {
+    "Toolbar": ()=>(
+      <Toolbar search={demoSearch} onSearch={setDemoSearch}
+        filterDefs={[{key:"rolle",label:"Rolle",vals:["Trainer/in","Spieler/in"]},{key:"team",label:"Team",vals:["FCH 1","FCH 2"]}]}
+        filterVals={demoFilter} onFilterChange={(k,v)=>setDemoFilter(p=>({...p,[k]:v}))}
+        groupOptions={[{key:"none",label:"Keine"},{key:"rolle",label:"Nach Rolle"},{key:"team",label:"Nach Team"}]}
+        groupBy={demoGroup} onGroupChange={setDemoGroup}
+        colMenu={<ColMenuButton allCols={DEMO_COLS} visibleCols={demoCols} onChangeVisible={setDemoCols}/>}
+        moreItems={[{icon:"download",label:"CSV exportieren",onClick:()=>{}}]}
+      />
+    ),
+    "ColMenuButton": ()=>(
+      <Row gap={8}><ColMenuButton allCols={DEMO_COLS} visibleCols={demoCols} onChangeVisible={setDemoCols}/><Sub>Spalten ein-/ausblenden + sortieren</Sub></Row>
+    ),
+    "BulkBar": ()=>(
+      <BulkBar count={2} onClear={()=>{}} actions={[{icon:"archive",label:"Archivieren",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}}]}/>
+    ),
+    "SortHeader": ()=>(
+      <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden"}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr>
+            {DEMO_COLS.map(c=><SortHeader key={c.key} label={c.label} col={c.key} sortCol={demoSort.col} sortDir={demoSort.dir} onSort={k=>setDemoSort(s=>({col:k,dir:s.col===k&&s.dir==="asc"?"desc":"asc"}))}/>)}
+          </tr></thead>
+          <tbody>{DEMO_MEMBERS.map(m=><tr key={m.id} className="cc-tr"><td className="cc-td" style={{fontWeight:500}}>{m.name}</td><td className="cc-td">{m.rolle}</td><td className="cc-td">{m.team}</td></tr>)}</tbody>
+        </table>
+      </div>
+    ),
+    "DropMenu": ()=>(
+      <Row gap={12}>
+        <DropMenu trigger={<button className="cc-btn-outline"><TI n="dots-vertical" size={14}/> Aktionen</button>}
+          items={[{icon:"edit",label:"Bearbeiten",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}},"sep",{icon:"trash",label:"Löschen",onClick:()=>{},danger:true}]}/>
+        <Sub>Auf Mobile → Bottom Sheet</Sub>
+      </Row>
+    ),
+    "Tabs": ()=>(
+      <Col gap={12}>
+        <Tabs tabs={[{key:"liste",label:"Liste"},{key:"kacheln",label:"Kacheln"},{key:"export",label:"Export"}]} active={demoTabActive} setActive={setDemoTabActive}/>
+        <div className="cc-seg" style={{maxWidth:260}}>
+          <button className="cc-seg-item cc-seg-active">Aktiv</button>
+          <button className="cc-seg-item">Archiv</button>
+          <button className="cc-seg-item">Alle</button>
+        </div>
+      </Col>
+    ),
+    "ModalOrSheet": ()=>(
+      <Row gap={8}>
+        <Btn onClick={()=>setDemoModal(true)}>Modal öffnen</Btn>
+        <ModalOrSheet open={demoModal} onClose={()=>setDemoModal(false)} title="Beispiel">
+          <ModalTitle>Beispiel-Modal</ModalTitle>
+          <Col gap={12} style={{padding:"16px 20px"}}>
+            <Input placeholder="Name…"/>
+            <Row gap={8}><Btn onClick={()=>setDemoModal(false)}>Speichern</Btn><button className="cc-btn-outline" onClick={()=>setDemoModal(false)}>Abbrechen</button></Row>
+          </Col>
+        </ModalOrSheet>
+      </Row>
+    ),
+    "ConfirmDialog + useConfirm": ()=>(
+      <Btn onClick={async()=>{await confirm({title:"Wirklich löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});}}>Löschen mit Bestätigung testen</Btn>
+    ),
+    "InfoBox": ()=>(
+      <Col gap={6}>
+        <InfoBox text="Info-Hinweis — für neutrale Informationen." color="#3B82F6"/>
+        <InfoBox text="Erfolgs-Meldung — Aktion erfolgreich." color="#22C55E"/>
+        <InfoBox text="Warnung — bitte prüfen." color="#F97316"/>
+        <InfoBox text="Fehler — Aktion fehlgeschlagen." color="#E24B4A"/>
+      </Col>
+    ),
+    "StatusTile": ()=>(
+      <Row gap={8} style={{flexWrap:"wrap"}}>
+        <StatusTile label="Aktiv" value="Ja" icon="check" semantic="ok"/>
+        <StatusTile label="Portal" value="Verknüpft" icon="link" semantic="ok"/>
+        <StatusTile label="Rolle" value="Trainer" icon="ball-football" semantic="neutral"/>
+        <StatusTile label="Zahlung" value="Ausstehend" icon="alert-triangle" semantic="warn"/>
+        <StatusTile label="Gesperrt" value="Ja" icon="lock" semantic="danger"/>
+      </Row>
+    ),
+    "Empty": ()=>(
+      <Empty icon="users" text="Keine Mitglieder gefunden" sub="Passe den Suchbegriff an."/>
+    ),
+    "Btn": ()=>(
+      <Row gap={8} style={{flexWrap:"wrap"}}>
+        <Btn>Primär</Btn>
+        <Btn color="var(--surface2)" style={{border:"0.5px solid var(--border)"}}>Sekundär</Btn>
+        <Btn color="#E24B4A" textColor="#fff">Gefahr</Btn>
+        <Btn color="#22C55E" textColor="#fff">Erfolg</Btn>
+        <button className="cc-btn-outline"><TI n="download" size={13}/> Export</button>
+        <button className="cc-icon-btn"><TI n="settings" size={14}/></button>
+        <button className="cc-icon-btn"><TI n="edit" size={14}/></button>
+      </Row>
+    ),
+    "Card": ()=>(
+      <Card>
+        <Between><STitle>Beispiel-Card</STitle><button className="cc-icon-btn"><TI n="dots-vertical" size={14}/></button></Between>
+        <Sub style={{marginTop:4}}>Inhalt einer Card-Komponente mit Border und leichtem Schatten.</Sub>
+      </Card>
+    ),
+    "Chip": ()=>(
+      <Row gap={6} style={{flexWrap:"wrap"}}>
+        <Chip text="Aktiv" color="#15803D" bg="#ECFDF5"/>
+        <Chip text="Inaktiv" color="#C8102E" bg="#FEF2F2"/>
+        <Chip text="Warnung" color="#B45309" bg="#FEF3C7"/>
+        <Chip text="Info" color="#1D4ED8" bg="#EFF6FF"/>
+        <Chip text="Vereinsfarbe" color="var(--btn-primary-text)" bg="var(--cc-accent)"/>
+        <span className="cc-chip-toggle cc-chip-active">Toggle aktiv</span>
+        <span className="cc-chip-toggle">Toggle inaktiv</span>
+      </Row>
+    ),
+    "Stat": ()=>(
+      <Row gap={8} style={{flexWrap:"wrap"}}>
+        <Stat label="Mitglieder" value={142}/>
+        <Stat label="Teams" value={8}/>
+        <Stat label="Aktiv" value={134} color="#22C55E"/>
+        <Stat label="Inaktiv" value={8} color="#E24B4A"/>
+      </Row>
+    ),
+    "Av": ()=>(
+      <Row gap={16} style={{alignItems:"flex-end",flexWrap:"wrap"}}>
+        {[24,32,40,52].map(s=>(
+          <Col key={s} gap={4} style={{alignItems:"center"}}>
+            <Av name="Adrian Bürgi" size={s}/>
+            <Sub>{s}px</Sub>
+          </Col>
+        ))}
+        <Col gap={4} style={{alignItems:"center"}}>
+          <Av name="Anna Koch" size={40} style={{border:"2px solid var(--cc-accent)"}}/>
+          <Sub>Border</Sub>
+        </Col>
+      </Row>
+    ),
+    "Row / Col / Between": ()=>(
+      <Col gap={8}>
+        <Row gap={8} style={{background:"var(--surface2)",padding:8,borderRadius:6}}>
+          <div style={{background:"var(--cc-accent)",width:24,height:24,borderRadius:4}}/>
+          <Sub>Row: horizontal, gap=8</Sub>
+        </Row>
+        <Col gap={4} style={{background:"var(--surface2)",padding:8,borderRadius:6}}>
+          <div style={{background:"var(--cc-accent)",width:"100%",height:6,borderRadius:3}}/>
+          <div style={{background:"var(--cc-accent)",width:"60%",height:6,borderRadius:3}}/>
+          <Sub>Col: vertikal, gap=4</Sub>
+        </Col>
+        <Between style={{background:"var(--surface2)",padding:8,borderRadius:6}}>
+          <Sub>Links</Sub><Sub>Rechts (Between)</Sub>
+        </Between>
+      </Col>
+    ),
+    "H1 / H2 / STitle / Sub / Label": ()=>(
+      <Col gap={6}>
+        <H1>H1 Seitentitel</H1>
+        <H2>H2 Abschnittstitel</H2>
+        <STitle>Section Title</STitle>
+        <Sub>Sekundärtext — var(--sub)</Sub>
+        <Label>Feldbezeichnung</Label>
+        <div style={{fontSize:14,color:"var(--text)"}}>Body Text 14px</div>
+        <div style={{fontSize:11,color:"var(--sub)"}}>Klein 11px — Badges, Meta</div>
+      </Col>
+    ),
+    "Input / Select / Textarea": ()=>(
+      <Col gap={8} style={{maxWidth:340}}>
+        <Input placeholder="Text-Input…"/>
+        <Input placeholder="Mit Icon…" icon={<TI n="search" size={14}/>}/>
+        <Select><option>Option 1</option><option>Option 2</option></Select>
+        <Textarea placeholder="Mehrzeiliger Text…" rows={2}/>
+      </Col>
+    ),
+    "FunktionenMultiSelect": ()=>(
+      <div style={{fontSize:13,color:"var(--sub)",padding:"8px 12px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>Benötigt Vereinsfunktionen aus Supabase</div>
+    ),
+    "LandSelect": ()=>(
+      <div style={{fontSize:13,color:"var(--sub)",padding:"8px 12px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>Benötigt Länderliste (LAENDER aus memberUtils)</div>
+    ),
+  };
 
   useEffect(() => {
     if (tab !== "designsystem") return;
@@ -365,7 +552,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       </Sec>
 
       {/* Komponenten-Registry */}
-      <Sec title={`Alle Komponenten (${COMPONENT_REGISTRY.length})`}>
+      <Sec title={`Alle Komponenten (${COMPONENT_REGISTRY.length})`} action={<span style={{fontSize:11,color:"var(--sub)"}}>Klick zum Aufklappen</span>}>
         {["Listen","Navigation","Overlays","Feedback","Basics","Layout","Formulare"].map(cat => {
           const comps = COMPONENT_REGISTRY.filter(c => c.category === cat);
           if (!comps.length) return null;
@@ -373,24 +560,45 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
             <div key={cat} style={{marginBottom:16}}>
               <div style={{fontSize:10,fontWeight:600,color:"var(--sub)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:8}}>{cat}</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {comps.map(c => (
-                  <div key={c.name} style={{padding:"10px 14px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)"}}>
-                    <Between style={{marginBottom:4}}>
-                      <div style={{fontWeight:600,fontSize:13,color:"var(--text)",fontFamily:"monospace"}}>{c.name}</div>
-                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                        {c.usedIn.map(u=>(
-                          <span key={u} style={{fontSize:10,padding:"1px 6px",borderRadius:4,background:"var(--surface2)",color:"var(--sub)",border:"0.5px solid var(--border)"}}>{u}</span>
-                        ))}
+                {comps.map(c => {
+                  const isOpen = openPreviews[c.name];
+                  const DemoFn = DEMO_MAP[c.name];
+                  return (
+                    <div key={c.name} style={{borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface)",overflow:"hidden"}}>
+                      <div
+                        style={{padding:"10px 14px",cursor:"pointer",userSelect:"none"}}
+                        onClick={()=>setOpenPreviews(p=>({...p,[c.name]:!p[c.name]}))}
+                      >
+                        <Between>
+                          <Row gap={8}>
+                            <TI n={isOpen?"chevron-down":"chevron-right"} size={12} style={{color:"var(--sub)",flexShrink:0}}/>
+                            <div style={{fontWeight:600,fontSize:13,color:"var(--text)",fontFamily:"monospace"}}>{c.name}</div>
+                          </Row>
+                          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                            {c.usedIn.map(u=>(
+                              <span key={u} style={{fontSize:10,padding:"1px 6px",borderRadius:4,background:"var(--surface2)",color:"var(--sub)",border:"0.5px solid var(--border)"}}>{u}</span>
+                            ))}
+                          </div>
+                        </Between>
+                        <div style={{fontSize:12,color:"var(--sub)",marginTop:4,marginLeft:20}}>{c.desc}</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,marginLeft:20}}>
+                          {c.props.map(p=>(
+                            <code key={p} style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"var(--cc-accent-5,rgba(255,191,0,0.05))",border:"0.5px solid var(--cc-accent-10,rgba(255,191,0,0.1))",color:"var(--text)"}}>{p}</code>
+                          ))}
+                        </div>
                       </div>
-                    </Between>
-                    <div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{c.desc}</div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      {c.props.map(p=>(
-                        <code key={p} style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"var(--cc-accent-5,rgba(255,191,0,0.05))",border:"0.5px solid var(--cc-accent-10,rgba(255,191,0,0.1))",color:"var(--text)"}}>{p}</code>
-                      ))}
+                      {isOpen && DemoFn && (
+                        <div style={{padding:"14px 16px",borderTop:"0.5px solid var(--border)",background:"var(--bg)"}}>
+                          <div style={{fontSize:10,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em",color:"var(--sub)",marginBottom:10}}>Vorschau</div>
+                          {DemoFn()}
+                        </div>
+                      )}
+                      {isOpen && !DemoFn && (
+                        <div style={{padding:"14px 16px",borderTop:"0.5px solid var(--border)",background:"var(--bg)",fontSize:12,color:"var(--sub)"}}>Keine Vorschau verfügbar</div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
