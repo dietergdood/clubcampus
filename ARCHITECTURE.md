@@ -30,22 +30,19 @@ src/
       MemberHero.jsx                ← TODO: hierher verschieben bei KaderModul-Migration
       MemberDetail.jsx              ← TODO: hierher verschieben bei KaderModul-Migration
     list/
-      MemberListView.jsx            ← TODO: erstellen bei KaderModul-Migration (Toolbar+Tabelle+Mobile, wiederverwendbar für Mitglieder+Kader)
+      MemberListView.jsx            ← TODO: erstellen bei KaderModul-Migration
 
   modules/                          ← Alle Modul-Dateien
-    members/
+    members/                        ← MitgliederModul aufgeteilt
       ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen)
-      DatenpruefungTab.jsx          ← Datenprüfung-Tab
       ElternTab.jsx                 ← Elternkontakte-Tab
-      InfoTab.jsx                   ← Info-Tab (Felder, Rollen, Teams, Notizen)
-      MemberDetail.jsx              ← State + Navigation + Tab-Routing (348Z)
-      MemberHero.jsx                ← Hero-Banner mit Avatar
+      MemberDetail.jsx              ← Detailansicht mit allen Tabs inline (796Z)
+      MemberHero.jsx                ← Hero-Banner mit Avatar + FotoUpload
       NotizenVerlauf.jsx            ← Notizen-Komponente
-      PortalTab.jsx                 ← Portal-Zugang-Tab
       memberConstants.js            ← ROLES, FIELD_VIS, COL_GROUPS, GROUP_OPTIONS
       memberDataUtils.js            ← mapMembers, filterMembers, sortMembers, exportData
       memberUtils.jsx               ← LAENDER, getLandName, RolleChip, getFieldVisibility
-    portal/                         ← PortalverwaltungModul aufgeteilt
+    portal/                         ← PortalverwaltungModul aufgeteilt (1 Tab = 1 Datei)
       ApiTab.jsx
       AuditTab.jsx
       AussehenTab.jsx
@@ -61,26 +58,26 @@ src/
       UsersTab.jsx
       portalUtils.js                ← ZUGRIFF_*, ALLE_MODULE, ROLES, KAT_LABELS etc.
     DashboardModul.jsx
-    HelferModul.jsx                 ← Phase 4: noch demoData
+    HelferModul.jsx                 ← ⚠️ Phase 4: noch demoData (2164Z)
     KaderModul.jsx
-    MitgliederModul.jsx
+    MitgliederModul.jsx             ← State + Logik + Render (702Z)
     NachrichtenModul.jsx
     NavigationModul.jsx
     PlatzhalterModul.jsx
-    PortalverwaltungModul.jsx
-    TeamModul.jsx                   ← Phase 4: noch demoData
-    TeamsVerwaltungModul.jsx
-    TermineModul.jsx                ← Phase 4: noch demoData
-    TrainingsplanModul.jsx          ← Phase 4: noch demoData
+    PortalverwaltungModul.jsx       ← State + Tab-Routing (687Z)
+    TeamModul.jsx                   ← ⚠️ Phase 4: noch demoData
+    TeamsVerwaltungModul.jsx        ← ⚠️ Phase 4: noch demoData
+    TermineModul.jsx                ← ⚠️ Phase 4: noch demoData (1631Z)
+    TrainingsplanModul.jsx          ← ⚠️ Phase 4: noch demoData (1804Z)
 
-  App.jsx                           ← bleibt im Root
-  clubcampus.jsx                    ← Haupt-Entry
-  constants.js                      ← Design-Tokens, Konstanten
+  App.jsx
+  clubcampus.jsx                    ← Haupt-Entry (1184Z)
+  constants.js
   demoData.js                       ← ⚠️ TEMPORÄR — löschen wenn Phase 4 fertig
-  icons.jsx                         ← Icon-Definitionen
-  main.jsx                          ← bleibt im Root
-  supabase.js                       ← Supabase-Client
-  theme.jsx                         ← Design-System + COMPONENT_REGISTRY
+  icons.jsx
+  main.jsx
+  supabase.js
+  theme.jsx                         ← Design-System + COMPONENT_REGISTRY (1930Z)
 ```
 
 ## Die eine Regel
@@ -147,6 +144,12 @@ Diese Datei wird automatisch aktualisiert wenn:
 - Nie Annahmen über Props oder Signatures — immer prüfen
 - Nie Files liefern ohne Build-Verifikation
 - Nie Fehler auf "später" verschieben
+
+**Pflicht nach jedem Auslagern einer Komponente:**
+1. Alle Props die neue Komponente empfängt → werden sie vom Parent übergeben?
+2. Alle Variablen die neue Komponente verwendet → lokal definiert oder als Prop?
+3. Build-Check reicht nicht — er findet keine fehlenden Runtime-Props
+4. Prop-Audit mit Script prüfen bevor Files geliefert werden
 
 ## CSS-Regeln
 
