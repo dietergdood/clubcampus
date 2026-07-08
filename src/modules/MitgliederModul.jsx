@@ -8,6 +8,8 @@ import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../const
 import { TI } from "../icons.jsx";
 import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile, useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, useConfirm } from "../theme.jsx";
 import { getRole } from "./NavigationModul.jsx";
+import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
+import { currentSeason } from "../domains/season/seasonUtils.js";
 
 /* ── Länderliste ISO2 → {name, flag} ── */
 const LAENDER=[
@@ -1057,32 +1059,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
 
   async function ableitRolle(){
     if(!sb||!raw.id) return;
-    const ROLLE_MAP=Object.fromEntries(dbKaderRollen.map(r=>[r.name,r.ist_trainer?"trainer":"spieler"]));
-    const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
-    const TRAINER_ROLLEN_SET=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
-    const [{data:kaderData},{data:mitgliedtypData},{data:benutzerData}]=await Promise.all([
-      sb.from("kader").select("rollen").eq("mitglied_id",raw.id).eq("aktiv",true),
-      sb.from("mitgliedtypen").select("standard_rolle").eq("name",raw.mitgliedtyp||"").maybeSingle(),
-      sb.from("benutzer").select("id,role").eq("mitglied_id",raw.id).maybeSingle(),
-    ]);
-    let neueRolle="supporter";
-    if(kaderData&&kaderData.length>0){
-      const hatTrainer=kaderData.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
-      if(hatTrainer) neueRolle="trainer";
-      else{
-        const alleRollen=kaderData.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
-        const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
-        if(hoechste) neueRolle=hoechste;
-      }
-    } else if(mitgliedtypData?.standard_rolle&&["spieler","trainer"].includes(mitgliedtypData.standard_rolle)){
-      neueRolle=mitgliedtypData.standard_rolle;
-    } else if((raw.funktionen||[]).length>0){
-      neueRolle="funktionaer";
-    } else if(mitgliedtypData?.standard_rolle){
-      neueRolle=mitgliedtypData.standard_rolle;
-    }
-    await sb.from("mitglieder").update({rolle:neueRolle}).eq("id",raw.id);
-    if(benutzerData?.id) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzerData.id);
+    const neueRolle=await ableitUndSaveRolle(sb,raw.id,dbKaderRollen,raw.mitgliedtyp,raw.funktionen);
     setBenutzer(prev=>prev?{...prev,role:neueRolle}:{role:neueRolle});
     if(onReload) onReload();
   }
@@ -1097,7 +1074,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
       rueckennr:teamAssignForm.rueckennr||null,
       position:teamAssignForm.position||null,
       aktiv:true,
-      saison:"2025/26",
+      saison:currentSeason(),
     },{onConflict:"team_id,mitglied_id,saison"});
     const {data}=await sb.from("kader").select("*, teams(id,name,kurzname)").eq("mitglied_id",raw.id).eq("aktiv",true);
     if(data) setTeamDetails(data);
@@ -1162,33 +1139,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
     setPortalLoading(true); setPortalMsg(null);
     const {data:existing}=await sb.from("benutzer").select("id,email,role").eq("email",linkEmail).maybeSingle();
     if(existing){
-      // Kader-Einträge der Person laden → Rolle ableiten
-      const ROLLE_MAP={
-        ...Object.fromEntries(dbKaderRollen.map(r=>[r.name,r.ist_trainer?"trainer":"spieler"])),
-      };
-      const PRIORITAET=["administrator","administration","funktionaer","trainer","spieler","eltern"];
-      const {data:kaderData}=await sb.from("kader")
-        .select("rollen").eq("mitglied_id",raw.id).eq("aktiv",true);
-      const {data:mitgliedtypData}=await sb.from("mitgliedtypen")
-        .select("standard_rolle").eq("name",raw.mitgliedtyp||"").maybeSingle();
-      const TRAINER_ROLLEN_SET=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
-      // Rollenableitung: Kader > Mitgliedtyp (spieler/trainer) > Vereinsfunktionen > Mitgliedtyp-Rest > Supporter
-      let neueRolle="supporter";
-      if(kaderData&&kaderData.length>0){
-        const hatTrainer=kaderData.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
-        if(hatTrainer) neueRolle="trainer";
-        else{
-          const alleRollen=kaderData.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
-          const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
-          if(hoechste) neueRolle=hoechste;
-        }
-      } else if(mitgliedtypData?.standard_rolle&&["spieler","trainer"].includes(mitgliedtypData.standard_rolle)){
-        neueRolle=mitgliedtypData.standard_rolle;
-      } else if((raw.funktionen||[]).length>0){
-        neueRolle="funktionaer";
-      } else if(mitgliedtypData?.standard_rolle){
-        neueRolle=mitgliedtypData.standard_rolle;
-      }
+      const neueRolle=await ableitUndSaveRolle(sb,raw.id,dbKaderRollen,raw.mitgliedtyp,raw.funktionen);
       await sb.from("mitglieder").update({hat_portal_zugang:true}).eq("id",raw.id);
       await sb.from("benutzer").update({mitglied_id:raw.id, role:neueRolle}).eq("id",existing.id);
       setPortalMsg({ok:true,text:`Verknüpft ✓ — Rolle: ${neueRolle}`});

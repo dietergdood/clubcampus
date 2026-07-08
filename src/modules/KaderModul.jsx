@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from "react";
 import { GN, R, BL } from "../constants.js";
 import { TI } from "../icons.jsx";
 import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card, DropMenu } from "../theme.jsx";
+import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
+import { currentSeason } from "../domains/season/seasonUtils.js";
 
 const FIELD_VIS = {
   administrator: ["dob","nat","heimatort","ahv","pass","street","plz","city","canton","email","tel","js","fairgate"],
@@ -69,7 +71,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   const teamObj = typeof team === "object" ? team : null;
   const teamId  = teamObj?.id || null;
   const teamName= teamObj?.name || team || "";
-  const saison  = "2025/26";
+  const saison  = currentSeason();
 
   // Kader laden
   async function loadKader(){
@@ -110,39 +112,10 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
         .then(({data})=>{if(data)setDbKaderRollenData(data);});
     }
   },[]);
-  const PRIORITAET=dbRollenPrio;
-
   async function updateBenutzerRolle(mitgliedId){
     if(!sb||!mitgliedId) return;
-    const {data:benutzer}=await sb.from("benutzer").select("id,role").eq("mitglied_id",mitgliedId).maybeSingle();
-    if(!benutzer) return;
-    // Nur administrator/administration nicht automatisch überschreiben
-    if(["administrator","administration"].includes(benutzer.role)) return;
     const {data:mitglied}=await sb.from("mitglieder").select("funktionen,mitgliedtyp").eq("id",mitgliedId).maybeSingle();
-    const alleKader=await sb.from("kader").select("rollen").eq("mitglied_id",mitgliedId).eq("aktiv",true);
-    const TRAINER_ROLLEN_SET=(dbKaderRollenData||[]).filter(r=>r.ist_trainer).map(r=>r.name);
-    let neueRolle="supporter";
-    if(alleKader.data&&alleKader.data.length>0){
-      const hatTrainer=alleKader.data.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN_SET.includes(r)));
-      if(hatTrainer) neueRolle="trainer";
-      else{
-        const alleRollen=alleKader.data.flatMap(k=>(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean));
-        const hoechste=PRIORITAET.find(p=>alleRollen.includes(p));
-        if(hoechste) neueRolle=hoechste;
-      }
-    } else if(mitglied?.mitgliedtyp){
-      const {data:typData}=await sb.from("mitgliedtypen").select("standard_rolle").eq("name",mitglied.mitgliedtyp).maybeSingle();
-      if(typData?.standard_rolle&&["spieler","trainer"].includes(typData.standard_rolle)){
-        neueRolle=typData.standard_rolle;
-      } else if((mitglied?.funktionen||[]).length>0){
-        neueRolle="funktionaer";
-      } else if(typData?.standard_rolle){
-        neueRolle=typData.standard_rolle;
-      }
-    } else if((mitglied?.funktionen||[]).length>0){
-      neueRolle="funktionaer";
-    }
-    if(neueRolle!==benutzer.role) await sb.from("benutzer").update({role:neueRolle}).eq("id",benutzer.id);
+    await ableitUndSaveRolle(sb,mitgliedId,dbKaderRollenData||[],mitglied?.mitgliedtyp,mitglied?.funktionen);
   }
 
   // Kader-Eintrag bearbeiten
