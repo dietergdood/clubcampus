@@ -128,7 +128,7 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 |-------|--------|--------|
 | 1 | Foundation (domains/person, domains/roles, domains/permissions, shared/person) | ✅ Fertig |
 | 2 | MitgliederModul + KaderModul aufteilen | ✅ Fertig |
-| 3 | PortalverwaltungModul aufteilen + Teams Domain | ⏳ Offen |
+| 3 | Teams Domain erstellt, PortalverwaltungModul State zu verflochten → Phase 4 | ✅ Fertig |
 | 4 | Termine + Helfer + Dashboard → Supabase, demoData.js löschen | ⏳ Offen |
 
 ## Session-Start Routine

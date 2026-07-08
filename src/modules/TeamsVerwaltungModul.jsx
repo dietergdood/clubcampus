@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK } from "../constants.js";
 import { TI } from "../icons.jsx";
 import { useIsMobile, ModalOrSheet, Btn, Chip, Av, Stat, Col, Row, ModalTitle, avColor, InfoBox } from "../theme.jsx";
-import { MEMBERS, ROSTER } from "../demoData.js";
+import { currentSeason } from "../domains/season/seasonUtils.js";
 
 /* ── Hilfsfunktionen & Konstanten ── */
 const Skel=({h=12,w="100%",br=6,mb=0})=>(
@@ -27,8 +27,8 @@ function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
   },[]);
 
   const suggestions=q.length>0
-    ? MEMBERS.filter(m=>m.name.toLowerCase().includes(q.toLowerCase())).slice(0,8)
-    : MEMBERS.filter(m=>m.role==="Trainer"||m.role==="Vorstand").slice(0,8);
+    ? []
+    : [];
 
   function select(name){ setQ(name); onChange(name); setOpen(false); }
 
