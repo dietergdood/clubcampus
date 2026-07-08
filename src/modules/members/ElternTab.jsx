@@ -84,6 +84,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
         if(error) throw error;
       }
       setElternMsg({ok:true,text:"Gespeichert ✓"});
+      fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
       setTimeout(()=>{setEditEltern(null);setElternMsg(null);if(onReload)onReload();},800);
     }catch(e){setElternMsg({ok:false,text:e.message});}
     setElternSaving(false);
