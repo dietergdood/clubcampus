@@ -2,9 +2,9 @@
    ClubCampus — modules/members/InfoTab.jsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
+import {Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
          useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect,
-         Toolbar, ColMenuButton, SortHeader, useConfirm, ConfirmDialog } from "../../theme.jsx";
+         Toolbar, ColMenuButton, SortHeader} from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../../constants.js";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.js";
@@ -14,6 +14,7 @@ import { LAENDER, getLandName, getFieldVisibility, RolleChip } from "./memberUti
 import { NotizenVerlauf } from "./NotizenVerlauf.jsx";
 
 export function InfoTab({raw,tab,canEdit,sb,role,account,dbMitglieder,dbMitgliedtypen,dbPortalRollen,dbKaderRollen,kannVerwalten,onReload,onNavToTeam,onClose,brauchtEltern,TRAINER_KEYS,ROLLE_LABEL,editField,setEditField,editVal,setEditVal,saving,setSaving,ahvVisible,setAhvVisible,showTeamAssign,setShowTeamAssign,teamAssignForm,setTeamAssignForm,teamAssignSearch,setTeamAssignSearch,teamAssignRolleSearch,setTeamAssignRolleSearch,editTeamIdx,setEditTeamIdx,editTeamForm,setEditTeamForm,editTeamRolleSearch,setEditTeamRolleSearch,showFunkAssign,setShowFunkAssign,funkSearch,setFunkSearch,funkSelected,setFunkSelected,roleEditOpen,setRoleEditOpen,notizenCount,setNotizenCount,teamsPopover,setTeamsPopover,setTab}) {
+  const isMobile = useIsMobile();
   return (
     <div style={{display:'contents'}}>  
       {tab==="info"&&(
