@@ -1214,7 +1214,7 @@ reloadMember, refreshArchivCount, brauchtEltern,
         sb={sb} onReload={(id)=>id?reloadMember(id):onReload()} onClose={onClose} onReaktiviert={onReaktiviert} onRefreshCount={refreshArchivCount}
         account={account} onUpdatePortalZugang={onUpdatePortalZugang}
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
-        benutzer={benutzer} teamDetails={teamDetails} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
+        benutzer={benutzer} teamDetails={teamDetails}
       />
       {(()=>{
         const allTabs=[
