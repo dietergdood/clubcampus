@@ -373,6 +373,29 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           </div>
         </td>;
       }
+      case "funktionen_gruppen": {
+        if(gc.type==="team") return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
+        const gruppenFilter=filterVals["funktionsgruppen"]||[];
+        // Gruppen-Funktionen Paare aufbauen
+        const paare=(m.funktionen||[]).map(f=>{
+          const pf=portalFunktionen.find(x=>x.name===f);
+          return {funktion:f, gruppe:pf?.portal_gruppen?.name||null, farbe:pf?.portal_gruppen?.farbe||null};
+        }).filter(p=>{
+          if(gc.type==="gruppe") return p.gruppe===gc.key;
+          return gruppenFilter.length===0||gruppenFilter.includes(p.gruppe);
+        });
+        if(paare.length===0) return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
+        return <td key="funktionen_gruppen" className="cc-members-td">
+          <div className="cc-col cc-gap-4">
+            {paare.map((p,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                {p.gruppe&&<span className="cc-funk-gruppe-badge" style={p.farbe?{background:p.farbe+"20",color:p.farbe,borderColor:p.farbe+"40",flexShrink:0}:{flexShrink:0}}>{p.gruppe}</span>}
+                <span style={{fontSize:12,color:"var(--text)"}}>{p.funktion}</span>
+              </div>
+            ))}
+          </div>
+        </td>;
+      }
       case "funktionen": {
         if(gc.type==="team") return <td key="funktionen" className="cc-members-td cc-members-td-sub">—</td>;
         const gruppenFilter=filterVals["funktionsgruppen"]||[];
