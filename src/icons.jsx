@@ -18,6 +18,7 @@ const TI_PATHS={
     "calendar":"<rect x=\"4\" y=\"5\" width=\"16\" height=\"16\" rx=\"2\"/><line x1=\"16\" y1=\"3\" x2=\"16\" y2=\"7\"/><line x1=\"8\" y1=\"3\" x2=\"8\" y2=\"7\"/><line x1=\"4\" y1=\"11\" x2=\"20\" y2=\"11\"/>",
     "calendar-event":"<rect x=\"4\" y=\"5\" width=\"16\" height=\"16\" rx=\"2\"/><line x1=\"16\" y1=\"3\" x2=\"16\" y2=\"7\"/><line x1=\"8\" y1=\"3\" x2=\"8\" y2=\"7\"/><line x1=\"4\" y1=\"11\" x2=\"20\" y2=\"11\"/><rect x=\"8\" y=\"15\" width=\"2\" height=\"2\"/>",
     "chart-bar":"<rect x=\"3\" y=\"12\" width=\"4\" height=\"8\" rx=\"1\"/><rect x=\"9\" y=\"8\" width=\"4\" height=\"12\" rx=\"1\"/><rect x=\"15\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"/>",
+    "chart-pie":"<path d=\"M12 2a10 10 0 0 1 10 10h-10z\"/><path d=\"M12 2a10 10 0 1 0 10 10l-10 0z\"/>",
     "check":"<path d=\"M5 12l5 5l10-10\"/>",
     "clipboard-list":"<path d=\"M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2\"/><rect x=\"9\" y=\"3\" width=\"6\" height=\"4\" rx=\"2\"/><line x1=\"9\" y1=\"12\" x2=\"15\" y2=\"12\"/><line x1=\"9\" y1=\"16\" x2=\"12\" y2=\"16\"/>",
     "clock":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><polyline points=\"12 7 12 12 15 15\"/>",
