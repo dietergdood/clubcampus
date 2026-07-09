@@ -121,8 +121,20 @@ function MemberDetail({
 
   async function handleUnlink() {
     if (!sb) return;
+    setPortalLoading(true);
     await portalZugangDeaktivieren(sb, raw.id);
-    setBenutzer(null); setPortalMsg({ ok: true, text: "Verknüpfung aufgehoben" });
+    setPortalMsg({ ok: true, text: "Zugang deaktiviert" });
+    setPortalLoading(false);
+    if (reloadMember) reloadMember(raw.id);
+    else if (onReload) onReload();
+  }
+
+  async function handleReactivate() {
+    if (!sb || !benutzer) return;
+    setPortalLoading(true);
+    await portalZugangAktivieren(sb, raw.id, benutzer.id, benutzer.role);
+    setPortalMsg({ ok: true, text: "Zugang reaktiviert ✓" });
+    setPortalLoading(false);
     if (reloadMember) reloadMember(raw.id);
     else if (onReload) onReload();
   }
@@ -241,10 +253,9 @@ function MemberDetail({
 
       {tab === "portal" && (
         <PortalTab
-          raw={raw} sb={sb} benutzer={benutzer}
-          linkEmail={linkEmail} setLinkEmail={setLinkEmail}
-          portalMsg={portalMsg} setPortalMsg={setPortalMsg} portalLoading={portalLoading}
-          handleLink={handleLink} handleUnlink={handleUnlink}
+          raw={raw} benutzer={benutzer}
+          portalMsg={portalMsg} portalLoading={portalLoading}
+          handleUnlink={handleUnlink} handleReactivate={handleReactivate}
         />
       )}
 
