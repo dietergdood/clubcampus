@@ -241,9 +241,9 @@ function MemberDetail({
 
       {tab === "portal" && (
         <PortalTab
-          raw={raw} benutzer={benutzer}
+          raw={raw} sb={sb} benutzer={benutzer}
           linkEmail={linkEmail} setLinkEmail={setLinkEmail}
-          portalMsg={portalMsg} portalLoading={portalLoading}
+          portalMsg={portalMsg} setPortalMsg={setPortalMsg} portalLoading={portalLoading}
           handleLink={handleLink} handleUnlink={handleUnlink}
         />
       )}

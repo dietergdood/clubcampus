@@ -1,16 +1,42 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/tabs/PortalTab.jsx
-   Portal-Zugang Tab: Verknüpfung, Rolle, Link/Unlink
+   Portal-Zugang Tab: Verknüpfung, Rolle, Link/Unlink, Einladung
    ═══════════════════════════════════════════════════════════════ */
+import { useState } from "react";
 import { Card, Chip } from "../../../theme.jsx";
+import { TI } from "../../../icons.jsx";
 import { GN, R, RL } from "../../../constants.js";
 
 function PortalTab({
-  raw, benutzer,
+  raw, sb, benutzer,
   linkEmail, setLinkEmail,
-  portalMsg, portalLoading,
+  portalMsg, setPortalMsg, portalLoading,
   handleLink, handleUnlink,
 }) {
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  async function handleInvite() {
+    if (!linkEmail) return;
+    setInviteLoading(true);
+    setPortalMsg(null);
+    try {
+      const res = await sb.functions.invoke("invite-user", {
+        body: {
+          email: linkEmail,
+          redirect_url: window.location.origin,
+        },
+      });
+      if (res.error || res.data?.error) {
+        setPortalMsg({ ok: false, text: res.data?.error || res.error.message });
+      } else {
+        setPortalMsg({ ok: true, text: `Einladung gesendet an ${linkEmail} ✓` });
+      }
+    } catch (e) {
+      setPortalMsg({ ok: false, text: e.message });
+    }
+    setInviteLoading(false);
+  }
+
   return (
     <div className="cc-col cc-gap-16">
       <Card>
@@ -57,7 +83,16 @@ function PortalTab({
                 onClick={handleLink}
                 disabled={!linkEmail || portalLoading}
               >
-                {portalLoading ? "Wird verknüpft…" : "Mit Portal verknüpfen"}
+                {portalLoading ? "Wird verknüpft…" : "Mit bestehendem Konto verknüpfen"}
+              </button>
+              <div className="cc-divider-label">oder</div>
+              <button
+                className="cc-btn-ghost cc-w-full"
+                onClick={handleInvite}
+                disabled={!linkEmail || inviteLoading}
+              >
+                <TI n="mail" size={14}/>
+                {inviteLoading ? "Einladung wird gesendet…" : "Einladung per E-Mail senden"}
               </button>
             </div>
           )
