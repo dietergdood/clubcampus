@@ -4,7 +4,7 @@
    Wiederverwendbar in: MitgliederModul, KaderModul etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, ModalOrSheet, ModalTitle } from "../../theme.jsx";
+import { Btn, Card, ModalOrSheet, ModalTitle, DropMenu } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { updateMitglied } from "../../domains/members/memberService.js";
 
@@ -61,17 +61,14 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
                   </div>
                 )}
               </div>
-              {canEdit && canDelete && (
-                <button
-                  className="cc-team-remove-btn"
-                  onClick={async () => {
-                    const next = (raw.funktionen || []).filter(x => x !== f);
-                    await updateMitglied(sb, raw.id, { funktionen: next });
-                    if (onReload) onReload();
-                  }}
-                >
-                  <TI n="x" size={14}/>
-                </button>
+              {canEdit && (
+                <DropMenu items={[
+                  {label:"Entfernen", icon:"trash", danger:true, hidden:!canDelete, onClick:async()=>{
+                    const next=(raw.funktionen||[]).filter(x=>x!==f);
+                    await updateMitglied(sb,raw.id,{funktionen:next});
+                    if(onReload) onReload();
+                  }},
+                ]}/>
               )}
             </div>
           );
