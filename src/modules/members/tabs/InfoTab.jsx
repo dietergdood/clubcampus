@@ -3,6 +3,7 @@
    Profil-Tab: StatusTiles, Personalien, Kontakt, Vereinsdaten,
    Teams, Vereinsfunktionen, Notizen
    ═══════════════════════════════════════════════════════════════ */
+import { useRef } from "react";
 import { Card, StatusTile, useIsMobile } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.jsx";
@@ -24,6 +25,7 @@ function InfoTab({
   vereinId,
 }) {
   const isMobile = useIsMobile();
+  const notizAddRef = useRef(null);
 
   return (
     <div className="cc-col cc-gap-12">
@@ -103,9 +105,16 @@ function InfoTab({
         {/* Notizen */}
         {fv.showNotizen && (
           <Card className="cc-card-full">
-            <div className="cc-section-title">
-              <TI n="notes" size={14}/> Notizen
-              {notizenCount > 0 && <span className="cc-notiz-count-badge">{notizenCount}</span>}
+            <div className="cc-section-title cc-between">
+              <span className="cc-row cc-gap-6">
+                <TI n="notes" size={14}/> Notizen
+                {notizenCount > 0 && <span className="cc-notiz-count-badge">{notizenCount}</span>}
+              </span>
+              {canEdit && (
+                <button className="cc-btn-ghost-sm" onClick={() => notizAddRef.current?.()}>
+                  <TI n="plus" size={13}/> Notiz hinzufügen
+                </button>
+              )}
             </div>
             <NotizenVerlauf
               mitgliedId={raw.id}
@@ -114,6 +123,7 @@ function InfoTab({
               dbUser={account}
               onCount={setNotizenCount}
               vereinId={vereinId}
+              onAddRef={notizAddRef}
             />
           </Card>
         )}

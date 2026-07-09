@@ -9,8 +9,11 @@ import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../../constants.js";
 import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.js";
 
-function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null}){
+function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}){
+  // onAddRef: wenn gesetzt, wird setNewText(" ") nach aussen exponiert
   const [confirm,confirmDialog]=useConfirm();
+  // Exponiere "neue Notiz starten" nach aussen
+  if(onAddRef) onAddRef.current=()=>setNewText(" ");
   const [notizen,setNotizen]=useState(null);
   const [newText,setNewText]=useState("");
   const [adding,setAdding]=useState(false);
@@ -65,6 +68,23 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null}){
   return(
     <>{confirmDialog}
     <div className="cc-notiz-list">
+      {canEdit&&(
+        newText!==""?(
+          <div className="cc-notiz-input-wrap">
+            <div className="cc-notiz-av cc-notiz-av-me">{initials(dbUser?.name||dbUser?.email)}</div>
+            <div className="cc-flex-1 cc-col cc-gap-6">
+              <textarea className="cc-input cc-textarea" rows={3} value={newText}
+                onChange={e=>setNewText(e.target.value)} autoFocus placeholder="Neue Notiz hinzufügen…"/>
+              <div className="cc-row cc-gap-8 cc-justify-end">
+                <Btn onClick={()=>setNewText("")}>Abbrechen</Btn>
+                <Btn variant="primary" onClick={addNotiz} disabled={adding||!newText.trim()}>
+                  {adding?"Wird gespeichert…":"Hinzufügen"}
+                </Btn>
+              </div>
+            </div>
+          </div>
+        ):null
+      )}
       {notizen.length===0&&!canEdit&&(
         <div className="cc-text-sm cc-text-sub cc-empty-italic">Keine Notizen vorhanden.</div>
       )}
@@ -100,27 +120,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null}){
           )}
         </div>
       ))}
-      {canEdit&&(
-        newText!==""?(
-          <div className="cc-notiz-input-wrap">
-            <div className="cc-notiz-av cc-notiz-av-me">{initials(dbUser?.name||dbUser?.email)}</div>
-            <div className="cc-flex-1 cc-col cc-gap-6">
-              <textarea className="cc-input cc-textarea" rows={3} value={newText}
-                onChange={e=>setNewText(e.target.value)} autoFocus placeholder="Neue Notiz hinzufügen…"/>
-              <div className="cc-row cc-gap-8 cc-justify-end">
-                <Btn onClick={()=>setNewText("")}>Abbrechen</Btn>
-                <Btn variant="primary" onClick={addNotiz} disabled={adding||!newText.trim()}>
-                  {adding?"Wird gespeichert…":"Hinzufügen"}
-                </Btn>
-              </div>
-            </div>
-          </div>
-        ):(
-          <button className="cc-team-add-btn" onClick={()=>setNewText(" ")} style={{marginTop:notizen.length>0?8:0}}>
-            <TI n="plus" size={14}/> Neue Notiz
-          </button>
-        )
-      )}
+
     </div>
   </>
   );
