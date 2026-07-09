@@ -1664,7 +1664,7 @@ function Toolbar({
                               if(!inSection) return null;
                               return(
                                 <div key={i} style={{display:"flex",alignItems:"center",borderBottom:"0.5px solid var(--border)"}}>
-                                  <button className="cc-mehr-sheet-item" style={{flex:1,borderBottom:"none"}}
+                                  <button className="cc-mehr-sheet-item" style={{flex:1,borderBottom:"none",padding:"13px 20px"}}
                                     onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
                                     {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
                                   </button>
