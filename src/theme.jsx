@@ -1310,6 +1310,8 @@ function Toolbar({
   filterDefs=[], filterVals={}, onFilterChange=null,
   /* Gruppieren */
   groupOptions=[], groupOptionsMore=[], groupBy="none", onGroupChange=null, multiGroup=false,
+  externalFilterOpen=false, onExternalFilterClose=null,
+  externalGroupOpen=false, onExternalGroupClose=null,
   /* Mehr-Menu */
   moreItems=[],
   /* Spalten */
