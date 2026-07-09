@@ -1324,6 +1324,7 @@ function Toolbar({
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
   const filterRef=useRef(null);
   const groupRef=useRef(null);
+  const moreRef=useRef(null);
   useEffect(()=>{
     if(!filterOpen) return;
     const h=e=>{if(filterRef.current&&!filterRef.current.contains(e.target))setFilterOpen(false);};
@@ -1336,6 +1337,12 @@ function Toolbar({
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[groupOpen]);
+  useEffect(()=>{
+    if(!moreOpen||isMobile) return;
+    const h=e=>{if(moreRef.current&&!moreRef.current.contains(e.target))setMoreOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[moreOpen,isMobile]);
 
   const hasActiveFilter=Object.values(filterVals).some(v=>v&&v.length>0);
   const activeFilterCount=Object.values(filterVals).reduce((n,v)=>n+(v?.length||0),0);
@@ -1494,7 +1501,7 @@ function Toolbar({
 
         {/* Mehr-Menu */}
         {moreItems.length>0&&(
-          <div className="cc-ml-dropdown-wrap">
+          <div ref={moreRef} className="cc-ml-dropdown-wrap">
             <button className="cc-ml-btn"
               onClick={()=>{setMoreOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);}}>
               <TI n="dots" size={15}/>
