@@ -1666,7 +1666,7 @@ function Toolbar({
                                 <div key={i} style={{display:"flex",alignItems:"center",borderBottom:"0.5px solid var(--border)"}}>
                                   <button className="cc-mehr-sheet-item" style={{flex:1,borderBottom:"none",padding:"13px 20px"}}
                                     onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
-                                    {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
+                                    {item.icon?<TI n={item.icon} size={16}/>:<TI n="layout" size={16}/>}{item.label}
                                   </button>
                                   {item.onDelete&&(
                                     <button className="cc-icon-btn" style={{color:"var(--sub)",flexShrink:0,padding:"10px 16px",fontSize:18}}
