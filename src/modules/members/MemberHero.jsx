@@ -26,7 +26,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
     await sb.storage.from("mitglieder-fotos").upload(path,file,{upsert:true});
     const {data}=sb.storage.from("mitglieder-fotos").getPublicUrl(path);
     await sb.from("mitglieder").update({foto_url:data.publicUrl+"?t="+Date.now()}).eq("id",raw.id);
-    if(onReload) onReload();
+    if(onReload) onReload(raw.id);
   }
 
   const MITGLIEDTYPEN=(dbMitgliedtypen||[]).length>0
@@ -48,7 +48,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
     const ok=await confirm({title:`${m.name} löschen?`,message:"Diese Aktion kann nicht rückgängig gemacht werden.",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await sb.from("mitglieder").update({aktiv:false}).eq("id",raw.id);
     if(onClose) onClose();
-    if(onReload) onReload();
+    if(onReload) onReload(raw.id);
   }
 
   async function saveEdit(){
@@ -76,7 +76,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
     if(error){ setEditMsg({ok:false,text:error.message}); }
     else{
       setEditMsg({ok:true,text:"Gespeichert ✓"});
-      setTimeout(()=>{setEditOpen(false);setEditMsg(null);if(onReload)onReload();},600);
+      setTimeout(()=>{setEditOpen(false);setEditMsg(null);if(onReload)onReload(raw.id);},600);
     }
     setEditSaving(false);
   }
