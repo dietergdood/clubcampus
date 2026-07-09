@@ -1548,41 +1548,41 @@ function Toolbar({
               isMobile?(
                 <div className="cc-mehr-sheet-overlay" onClick={()=>{setMoreOpen(false);setMobileSubMenu(null);}}>
                   <div className="cc-mehr-sheet-backdrop"/>
-                  <div className="cc-mehr-sheet-box" style={{padding:0,paddingBottom:32}} onClick={e=>e.stopPropagation()}>
+                  <div className="cc-mehr-sheet-box" style={{padding:"0 0 32px"}} onClick={e=>e.stopPropagation()}>
                     <div className="cc-mehr-sheet-handle" style={{margin:"10px auto 0"}}/>
                     {mobileSubMenu===null?(
                       // Stufe 1: Hauptmenü
                       <div>
                         {filterDefs.length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("filter");}}>
                             <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="filter" size={18}/> Filter{hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
                         {groupOptions.length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("group");}}>
                             <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="layout-rows" size={18}/> Gruppieren{isGrouped&&<span className="cc-ml-filter-badge" style={{background:"var(--cc-accent)",color:"#000"}}>aktiv</span>}</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Ansichten").length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("views");}}>
-                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="layout" size={18}/> Ansichten</span>
+                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="bookmark" size={18}/> Ansichten</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Aktionen").length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("actions");}}>
                             <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="settings" size={18}/> Aktionen</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Export").length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("export");}}>
                             <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="download" size={18}/> Exportieren</span>
                             <TI n="chevron-right" size={14}/>
