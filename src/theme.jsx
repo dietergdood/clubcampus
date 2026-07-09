@@ -273,7 +273,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-hauptkontakt{font-size:12px;color:#c2410c;font-weight:600}
 .cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0}
-.cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:hidden;z-index:200}
+.cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:visible;z-index:200}
 .cc-ml-filter-dropdown{min-width:220px}
 .cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
 .cc-ml-dropdown-section-lbl{padding:6px 12px 2px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
@@ -1451,6 +1451,10 @@ function Toolbar({
                   <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
                     <div className="cc-mehr-sheet-handle"/>
                     <div className="cc-mehr-sheet-title">Gruppieren nach</div>
+                    <div style={{display:"flex",justifyContent:"space-between",padding:"0 16px 12px",borderBottom:"0.5px solid var(--border)",marginBottom:4}}>
+                      <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(["none"]);setGroupOpen(false);}}>Zurücksetzen</button>
+                      <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setGroupOpen(false);}}>Fertig</button>
+                    </div>
                     {groupOptions.map(o=>(
                       <div key={o.val} className="cc-mehr-sheet-item"
                         style={{fontWeight:isGroupActive(o.val)?600:400,color:isGroupActive(o.val)?"var(--cc-accent,#FFBF00)":"var(--text)"}}
@@ -1478,6 +1482,10 @@ function Toolbar({
                 </div>
               ):(
                 <div className="cc-ml-dropdown cc-ml-group-dropdown">
+                  <div className="cc-ml-dropdown-footer" style={{borderBottom:"0.5px solid var(--border)",borderTop:"none",paddingBottom:8,marginBottom:4}}>
+                    <button className="cc-ml-dropdown-clear" onClick={()=>{onGroupChange&&onGroupChange(["none"]);setGroupOpen(false);}}>Zurücksetzen</button>
+                    <button className="cc-ml-dropdown-apply" onClick={()=>setGroupOpen(false)}>Fertig</button>
+                  </div>
                   <div className="cc-col-menu-hdr">Gruppieren nach</div>
                   {groupOptions.map(o=>(
                     <div key={o.val} className="cc-col-menu-item"

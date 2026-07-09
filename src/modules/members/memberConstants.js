@@ -62,6 +62,7 @@ export const COL_GROUPS = [
   ]},
   {group:"Sport", cols:[
     {key:"teams",         label:"Teams",          default:true},
+    {key:"kaderrollen",   label:"Kaderrolle",     default:false},
   ]},
 ];
 
@@ -69,7 +70,6 @@ export const ALL_COLS = COL_GROUPS.flatMap(g => g.cols);
 
 // Einzelne Gruppierungs-Optionen (für jede Ebene)
 export const GROUP_OPTIONS = [
-  {val:"none",              label:"Keine Gruppierung"},
   {val:"mitgliedschaft",    label:"Mitgliedschaft"},
   {val:"rollen",            label:"Rolle"},
   {val:"teams",             label:"Team"},
