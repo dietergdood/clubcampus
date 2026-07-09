@@ -41,6 +41,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
+  const breakdownRef=useRef(null);
+  useEffect(()=>{
+    if(!breakdownOpen||isMobile) return;
+    const h=e=>{if(breakdownRef.current&&!breakdownRef.current.contains(e.target))setBreakdownOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[breakdownOpen,isMobile]);
   const [archivTab,setArchivTab]=useState(false);
   const [archivData,setArchivData]=useState([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
@@ -327,28 +334,43 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       ):(
       <>
       {/* KPI */}
-      <div className="cc-grid-stats cc-mb-8">
-        <Stat label="Mitglieder" value={totalCount} color={BL}/>
+      <div className="cc-grid-stats cc-mb-20">
+        {/* Mitglieder Card mit Aufschlüsselung */}
+        <div ref={breakdownRef} style={{position:"relative"}}>
+          <Stat label="Mitglieder" value={totalCount} color={BL}
+            onClick={()=>setBreakdownOpen(o=>!o)}
+          />
+          {breakdownOpen&&(
+            isMobile?(
+              <div className="cc-mehr-sheet-overlay" onClick={()=>setBreakdownOpen(false)}>
+                <div className="cc-mehr-sheet-backdrop"/>
+                <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
+                  <div className="cc-mehr-sheet-handle"/>
+                  <div className="cc-mehr-sheet-title">Aufschlüsselung</div>
+                  {BREAKDOWN.map(b=>(
+                    <button key={b.key} className="cc-mehr-sheet-item" onMouseDown={e=>{e.stopPropagation();setBreakdownOpen(false);bdFilter(b);}}>
+                      <span style={{flex:1}}>{b.label}</span>
+                      <span style={{fontWeight:500}}>{bdCount(b)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ):(
+              <div className="cc-breakdown-popover">
+                <div className="cc-breakdown-popover-title">Aufschlüsselung</div>
+                {BREAKDOWN.map(b=>(
+                  <button key={b.key} className="cc-breakdown-popover-item" onClick={()=>{setBreakdownOpen(false);bdFilter(b);}}>
+                    <span>{b.label}</span>
+                    <span style={{fontWeight:500}}>{bdCount(b)}</span>
+                  </button>
+                ))}
+              </div>
+            )
+          )}
+        </div>
         <Stat label="Portal aktiv" value={portalAktiv} color={GN}/>
         <Stat label="Prüfung offen" value={dpOffen} color={AM}/>
         <Stat label="Ohne Team" value={ohneTeam} color={AM}/>
-      </div>
-      {/* Aufschluesselung */}
-      <div className="cc-kpi-breakdown cc-mb-20">
-        <button className="cc-kpi-breakdown-toggle" onClick={()=>setBreakdownOpen(o=>!o)}>
-          <span className="cc-text-sm cc-text-sub">Mitgliedschaft Aufschlüsselung</span>
-          <TI n={breakdownOpen?"chevron-up":"chevron-down"} size={13} className="cc-text-sub"/>
-        </button>
-        {breakdownOpen&&(
-          <div className="cc-kpi-breakdown-body">
-            {BREAKDOWN.map(b=>(
-              <button key={b.key} className={`cc-kpi-tile cc-kpi-tile-${b.color}`} onClick={()=>bdFilter(b)}>
-                <span className="cc-kpi-tile-label">{b.label}</span>
-                <span className="cc-kpi-tile-value">{bdCount(b)}</span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Gespeicherte Ansichten - nur Desktop */}

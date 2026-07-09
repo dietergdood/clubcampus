@@ -690,6 +690,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:#2563EB;text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 .cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text)!important;text-decoration:none!important;display:inline}
+.cc-breakdown-popover{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:8px;min-width:220px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.cc-breakdown-popover-title{font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:4px 8px 8px}
+.cc-breakdown-popover-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:7px 8px;border-radius:6px;border:none;background:transparent;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;gap:12px}
+.cc-breakdown-popover-item:hover{background:var(--cc-hover)}
 .cc-views-dropdown{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface2);border:0.5px solid var(--border);border-radius:10px;padding:4px;min-width:200px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
 .cc-views-dropdown-empty{padding:8px 12px;font-size:12px;color:var(--sub)}
 .cc-views-dropdown-item{display:flex;align-items:center;border-radius:6px}
@@ -924,12 +928,17 @@ function Chip({text,color,bg,semantic,size="sm"}){
 
 
 
-function Stat({label,value,sub,color,semantic,icon}){
+function Stat({label,value,sub,color,semantic,icon,onClick}){
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
-    <div style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
-      {icon&&<TI n={icon} size={18} style={{color:c.text,marginBottom:2}}/>}
-      <span style={{fontSize:22,fontWeight:700,color:c.text,letterSpacing:-0.5,lineHeight:1}}>{value}</span>
+    <div
+      onClick={onClick}
+      style={{background:"var(--surface)",border:"0.5px solid var(--border)",borderRadius:10,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4,cursor:onClick?"pointer":"default",userSelect:"none"}}
+    >
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+        <span style={{fontSize:22,fontWeight:700,color:c.text,letterSpacing:-0.5,lineHeight:1}}>{value}</span>
+        {onClick&&<TI n="chart-pie" size={13} style={{color:"var(--sub)",marginTop:4}}/>}
+      </div>
       <span style={{fontSize:11,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>{label}</span>
       {sub&&<span style={{fontSize:12,color:"var(--sub)"}}>{sub}</span>}
     </div>
