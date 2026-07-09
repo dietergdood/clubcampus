@@ -28,12 +28,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [filterVals,setFilterVals]=useState({});
   const [savedView,setSavedView]=useState("standard");
   const [dragCol,setDragCol]=useState(null);
-  useEffect(()=>{
-    if(!viewsDropOpen) return;
-    const h=e=>{if(viewsDropRef.current&&!viewsDropRef.current.contains(e.target))setViewsDropOpen(false);};
-    document.addEventListener("mousedown",h);
-    return()=>document.removeEventListener("mousedown",h);
-  },[viewsDropOpen]);
   const [dragOverCol,setDragOverCol]=useState(null);
   const [colDragSrc,setColDragSrc]=useState(null);
   const [colDragOver,setColDragOver]=useState(null);
@@ -46,6 +40,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [saveViewName,setSaveViewName]=useState("");
   const [viewsDropOpen,setViewsDropOpen]=useState(false);
   const viewsDropRef=useRef(null);
+  useEffect(()=>{
+    if(!viewsDropOpen) return;
+    const h=e=>{if(viewsDropRef.current&&!viewsDropRef.current.contains(e.target))setViewsDropOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[viewsDropOpen]);
   const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
