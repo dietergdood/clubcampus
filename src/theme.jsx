@@ -1574,13 +1574,7 @@ function Toolbar({
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
-                        {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Aktionen").length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
-                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("actions");}}>
-                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="settings" size={18}/> Aktionen</span>
-                            <TI n="chevron-right" size={14}/>
-                          </button>
-                        )}
+
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Export").length>0&&(
                           <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("export");}}>
