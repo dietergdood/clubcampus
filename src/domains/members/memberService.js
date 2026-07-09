@@ -164,7 +164,7 @@ export async function deaktiviereKader(sb, id) {
 
 export async function fetchBenutzerFuerMitglied(sb, mitgliedId) {
   const { data } = await sb.from("benutzer")
-    .select("*")
+    .select("id,email,role,created_at,last_sign_in_at,aktiv")
     .eq("mitglied_id", mitgliedId)
     .maybeSingle();
   return data;

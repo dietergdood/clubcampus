@@ -31,9 +31,10 @@ function PortalTab({
           <>
             <div className="cc-info-grid cc-mb-12">
               {[
-                { l: "E-Mail",   v: benutzer.email || "-" },
-                { l: "Rolle",    v: benutzer.role || "-" },
-                { l: "Erstellt", v: benutzer.created_at ? new Date(benutzer.created_at).toLocaleDateString("de-CH") : "-" },
+                { l: "E-Mail",        v: benutzer.email || "-" },
+                { l: "Rolle",         v: benutzer.role || "-" },
+                { l: "Erstellt",      v: benutzer.created_at ? new Date(benutzer.created_at).toLocaleDateString("de-CH") : "-" },
+                { l: "Letztes Login", v: benutzer.last_sign_in_at ? new Date(benutzer.last_sign_in_at).toLocaleString("de-CH", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Noch nie" },
               ].map((r, i) => (
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
@@ -52,8 +53,9 @@ function PortalTab({
           <>
             <div className="cc-info-grid cc-mb-12">
               {[
-                { l: "E-Mail", v: benutzer.email || "-" },
-                { l: "Rolle",  v: benutzer.role || "-" },
+                { l: "E-Mail",        v: benutzer.email || "-" },
+                { l: "Rolle",         v: benutzer.role || "-" },
+                { l: "Letztes Login", v: benutzer.last_sign_in_at ? new Date(benutzer.last_sign_in_at).toLocaleString("de-CH", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Noch nie" },
               ].map((r, i) => (
                 <div key={i} className="cc-info-row">
                   <span className="cc-info-key">{r.l}</span>
