@@ -465,6 +465,13 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-mehr-sheet-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
 .cc-mehr-sheet-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:8px}
 .cc-mehr-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:14px;color:var(--text);font-weight:400;cursor:pointer;font-family:inherit;text-align:left}
+.cc-sheet-nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 20px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;text-align:left}
+.cc-sheet-nav-item:active{background:var(--cc-hover)}
+.cc-sheet-nav-left{display:flex;align-items:center;gap:12px}
+.cc-sheet-subhdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 8px}
+.cc-sheet-subhdr-title{font-size:15px;font-weight:600;color:var(--text)}
+.cc-sheet-scroll{border-top:0.5px solid var(--border);max-height:60vh;overflow-y:auto}
+.cc-sheet-trash{color:var(--sub);flex-shrink:0;margin-right:16px;width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .cc-mehr-sheet-item:last-child{border-bottom:none}
 .cc-mehr-sheet-item-active{color:var(--cc-accent,#FFBF00);font-weight:600}
 .cc-mehr-sheet-item-danger{color:#DC2626!important}
@@ -1554,31 +1561,31 @@ function Toolbar({
                       // Stufe 1: Hauptmenü
                       <div>
                         {filterDefs.length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
+                          <button className="cc-sheet-nav-item"
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("filter");}}>
-                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="filter" size={18}/> Filter{hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}</span>
+                            <span className="cc-sheet-nav-left"><TI n="filter" size={18}/> Filter{hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
                         {groupOptions.length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
+                          <button className="cc-sheet-nav-item"
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("group");}}>
-                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="layout-rows" size={18}/> Gruppieren{isGrouped&&<span className="cc-ml-filter-badge" style={{background:"var(--cc-accent)",color:"#000"}}>aktiv</span>}</span>
+                            <span className="cc-sheet-nav-left"><TI n="layout-rows" size={18}/> Gruppieren{isGrouped&&<span className="cc-ml-filter-badge" style={{background:"var(--cc-accent)",color:"#000"}}>aktiv</span>}</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Ansichten").length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
+                          <button className="cc-sheet-nav-item"
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("views");}}>
-                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="bookmark" size={18}/> Ansichten</span>
+                            <span className="cc-sheet-nav-left"><TI n="bookmark" size={18}/> Ansichten</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
 
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Export").length>0&&(
-                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between",padding:"14px 20px"}}
+                          <button className="cc-sheet-nav-item"
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("export");}}>
-                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="download" size={18}/> Exportieren</span>
+                            <span className="cc-sheet-nav-left"><TI n="download" size={18}/> Exportieren</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
                         )}
@@ -1586,21 +1593,21 @@ function Toolbar({
                     ):mobileSubMenu==="filter"?(
                       // Stufe 2: Filter
                       <div>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px 8px"}}>
+                        <div className="cc-sheet-subhdr">
                           <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
                             <TI n="chevron-left" size={16}/>
                           </button>
-                          <span style={{fontSize:15,fontWeight:600}}>Filter</span>
+                          <span className="cc-sheet-subhdr-title">Filter</span>
                           <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
                         </div>
-                        <div style={{borderTop:"0.5px solid var(--border)",maxHeight:"60vh",overflowY:"auto"}}>
+                        <div className="cc-sheet-scroll">
                           {filterDefs.map(({key,label,vals})=>(
                             <div key={key}>
-                              <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 16px 4px"}}>{label}</div>
+                              <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 20px 4px"}}>{label}</div>
                               {vals.map(v=>{
                                 const active=(filterVals[key]||[]).includes(v);
                                 return(
-                                  <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 16px"}}
+                                  <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 20px"}}
                                     onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
                                     <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`} style={{marginRight:10}}>
                                       {active&&<TI n="check" size={10}/>}
@@ -1621,16 +1628,16 @@ function Toolbar({
                     ):mobileSubMenu==="group"?(
                       // Stufe 2: Gruppieren
                       <div>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px 8px"}}>
+                        <div className="cc-sheet-subhdr">
                           <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
                             <TI n="chevron-left" size={16}/>
                           </button>
-                          <span style={{fontSize:15,fontWeight:600}}>Gruppieren</span>
+                          <span className="cc-sheet-subhdr-title">Gruppieren</span>
                           <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
                         </div>
-                        <div style={{borderTop:"0.5px solid var(--border)",maxHeight:"60vh",overflowY:"auto"}}>
+                        <div className="cc-sheet-scroll">
                           {[...groupOptions,...groupOptionsMore].map(o=>(
-                            <div key={o.val} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 16px"}}
+                            <div key={o.val} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 20px"}}
                               onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);}}>
                               <div className={`cc-col-menu-check${isGroupActive(o.val)?" cc-col-menu-check-on":""}`} style={{marginRight:10}}>
                                 {isGroupActive(o.val)&&<TI n="check" size={10}/>}
@@ -1648,13 +1655,14 @@ function Toolbar({
                     ):(
                       // Stufe 2: Ansichten / Aktionen / Export
                       <div>
-                        <div style={{display:"flex",alignItems:"center",padding:"12px 20px 8px",gap:12}}>
-                          <button className="cc-icon-btn" style={{padding:0}} onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
-                            <TI n="chevron-left" size={18}/>
+                        <div className="cc-sheet-subhdr">
+                          <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
+                            <TI n="chevron-left" size={16}/>
                           </button>
-                          <span style={{fontSize:15,fontWeight:600}}>{mobileSubMenu==="views"?"Ansichten":mobileSubMenu==="export"?"Exportieren":"Aktionen"}</span>
+                          <span className="cc-sheet-subhdr-title">{mobileSubMenu==="views"?"Ansichten":mobileSubMenu==="export"?"Exportieren":"Aktionen"}</span>
+                          <div style={{width:32}}/>
                         </div>
-                        <div style={{borderTop:"0.5px solid var(--border)",maxHeight:"60vh",overflowY:"auto"}}>
+                        <div className="cc-sheet-scroll">
                           {(()=>{
                             const section=mobileSubMenu==="views"?"Ansichten":mobileSubMenu==="export"?"Export":"Aktionen";
                             let inSection=false;
@@ -1669,7 +1677,7 @@ function Toolbar({
                                     {item.icon?<TI n={item.icon} size={16}/>:<TI n="layout" size={16}/>}{item.label}
                                   </button>
                                   {item.onDelete&&(
-                                    <button className="cc-icon-btn" style={{color:"var(--sub)",flexShrink:0,marginRight:16}}
+                                    <button className="cc-sheet-trash"
                                       onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onDelete();}}>
                                       <TI n="trash" size={15}/>
                                     </button>
