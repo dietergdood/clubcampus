@@ -37,8 +37,8 @@ function ElternPortalSection({e,sb,onReload}){
             {loading?"…":"Zugang deaktivieren"}
           </button>
           :e.email
-            ?<span className="cc-text-xs cc-text-sub">Registrierung mit {e.email}</span>
-            :<span className="cc-text-xs cc-text-sub">Keine E-Mail hinterlegt</span>
+            ?<span className="cc-warn-box">Registrierung mit <strong>{e.email}</strong></span>
+            :<span className="cc-warn-box">Keine E-Mail hinterlegt</span>
         }
       </div>
     </div>
