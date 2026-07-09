@@ -111,7 +111,7 @@ function InfoTab({
                 {notizenCount > 0 && <span className="cc-notiz-count-badge">{notizenCount}</span>}
               </span>
               {canEdit && (
-                <button className="cc-btn-ghost-sm" onClick={() => notizAddRef.current?.()}>
+                <button className="cc-btn-ghost" onClick={() => notizAddRef.current?.()}>
                   <TI n="plus" size={13}/> Notiz hinzufügen
                 </button>
               )}

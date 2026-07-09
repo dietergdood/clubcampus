@@ -690,8 +690,6 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:#2563EB;text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 .cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text)!important;text-decoration:none!important;display:inline}
-.cc-btn-ghost-sm{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;border:0.5px solid var(--border-strong);background:var(--surface1);font-size:12px;font-weight:500;color:var(--text);cursor:pointer}
-.cc-btn-ghost-sm:hover{background:var(--cc-hover)}
 .cc-divider-label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);text-align:center}.cc-divider-label::before,.cc-divider-label::after{content:"";flex:1;border-top:0.5px solid var(--border)}
 
 /* ── Mobile responsive ── */
