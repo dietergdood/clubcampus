@@ -314,12 +314,17 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
   // Zellen-Rendering (wiederverwendbar)
-  function renderCell(col,m){
+  function renderCell(col,m,groupContext={type:"none",key:null}){
+    const gc=groupContext;
     switch(col.key){
       case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
       case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
       case "rollen": return <td key="rollen" className="cc-members-td">{(()=>{const portalRaw=m.role&&m.role!=="-"?m.role:null;const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;const portalIsTrainer=portalRaw==="trainer";const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel) return false;if(portalIsTrainer&&isT) return false;return true;});const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];return (all||[]).length>0?all.map((c,i)=><span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`}>{c.label}</span>):(<span className="cc-members-td-sub">—</span>);})()}</td>;
-      case "teams": return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{(m.teams||[]).length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{(m.teams||[]).slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{(m.teams||[]).length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:(m.teams||[]),x:e.clientX,y:e.clientY});}}>+{(m.teams||[]).length-1}</button>}</span>):"—"}</td>;
+      case "teams": {
+        if(gc.type==="gruppe") return <td key="teams" className="cc-members-td cc-members-td-sub">—</td>;
+        const teamsToShow=gc.type==="team"?(m.teams||[]).filter(t=>(t?.name||t)===gc.key):(m.teams||[]);
+        return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{teamsToShow.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{teamsToShow.slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{teamsToShow.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:teamsToShow,x:e.clientX,y:e.clientY});}}>+{teamsToShow.length-1}</button>}</span>):"—"}</td>;
+      }
       case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
       case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
       case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
@@ -339,9 +344,30 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       case "heimatort": return <td key="heimatort" className="cc-members-td cc-members-td-sub">{m.heimatort||"—"}</td>;
       case "ahv_nr": return <td key="ahv_nr" className="cc-members-td cc-members-td-sub">{m.ahv_nr||"—"}</td>;
       case "strasse": return <td key="strasse" className="cc-members-td cc-members-td-sub">{m.strasse||"—"}</td>;
-      case "funktionen": return <td key="funktionen" className="cc-members-td cc-members-td-sub">{(m.funktionen||[]).join(", ")||"—"}</td>;
-      case "kaderrollen": return <td key="kaderrollen" className="cc-members-td">{(m.kader_rollen_raw||[]).length===0?"—":(m.kader_rollen_raw||[]).map((r,i)=>{const isT=TRAINER_KEYS.some(k=>k===r);return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;})}</td>;
-      case "funktionsgruppen": return <td key="funktionsgruppen" className="cc-members-td">{(m.funktionsgruppen||[]).length===0?"—":(m.funktionsgruppen||[]).map((g,i)=>{const pf=portalFunktionen.find(f=>f.portal_gruppen?.name===g);const farbe=pf?.portal_gruppen?.farbe;return <span key={i} className="cc-funk-gruppe-badge" style={farbe?{background:farbe+"20",color:farbe,borderColor:farbe+"40"}:{}}>{g}</span>;})}</td>;
+      case "funktionen": {
+        if(gc.type==="team") return <td key="funktionen" className="cc-members-td cc-members-td-sub">—</td>;
+        const gruppenFilter=filterVals["funktionsgruppen"]||[];
+        const funktionenToShow=gc.type==="gruppe"
+          ?(m.funktionen||[]).filter(f=>{const pf=portalFunktionen.find(x=>x.name===f);return pf?.portal_gruppen?.name===gc.key;})
+          :(gruppenFilter.length>0?(m.funktionen||[]).filter(f=>{const pf=portalFunktionen.find(x=>x.name===f);return gruppenFilter.includes(pf?.portal_gruppen?.name);}):(m.funktionen||[]));
+        return <td key="funktionen" className="cc-members-td cc-members-td-sub">{funktionenToShow.join(", ")||"—"}</td>;
+      }
+      case "kaderrollen": {
+        if(gc.type==="gruppe") return <td key="kaderrollen" className="cc-members-td cc-members-td-sub">—</td>;
+        const kaderFilter=filterVals["kaderrollen"]||[];
+        const rollenToShow=gc.type==="team"
+          ?( kaderFilter.length>0?(m.kader_rollen_raw||[]).filter(r=>kaderFilter.includes(r)):(m.kader_rollen_raw||[]) )
+          :(m.kader_rollen_raw||[]);
+        return <td key="kaderrollen" className="cc-members-td">{rollenToShow.length===0?"—":rollenToShow.map((r,i)=>{const isT=TRAINER_KEYS.some(k=>k===r);return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;})}</td>;
+      }
+      case "funktionsgruppen": {
+        if(gc.type==="team") return <td key="funktionsgruppen" className="cc-members-td cc-members-td-sub">—</td>;
+        const gruppenFilter=filterVals["funktionsgruppen"]||[];
+        const gruppenToShow=gc.type==="gruppe"
+          ?[(gc.key)]
+          :(gruppenFilter.length>0?(m.funktionsgruppen||[]).filter(g=>gruppenFilter.includes(g)):(m.funktionsgruppen||[]));
+        return <td key="funktionsgruppen" className="cc-members-td">{gruppenToShow.length===0?"—":gruppenToShow.map((g,i)=>{const pf=portalFunktionen.find(f=>f.portal_gruppen?.name===g);const farbe=pf?.portal_gruppen?.farbe;return <span key={i} className="cc-funk-gruppe-badge" style={farbe?{background:farbe+"20",color:farbe,borderColor:farbe+"40"}:{}}>{g}</span>;})}</td>;
+      }
       default: return <td key={col.key} className="cc-members-td cc-members-td-sub">{m[col.key]||"—"}</td>;
     }
   }
@@ -371,32 +397,35 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     ));
   }
 
-  function renderGroupsTable(groups, depth=0){
-    return groups.map(({key,label,type,members,children})=>(
-      <Fragment key={key}>
-        {hasGroup&&(
-          <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`}>
-            <td colSpan={COLS.length+1} style={depth>0?{paddingLeft:depth*16+14}:{}}>
-              {type==="team"&&<TI n="ball-football" size={11}/>}
-              {type==="gruppe"&&<TI n="briefcase" size={11}/>}
-              {label} <span className="cc-text-muted">{members.length}</span>
-            </td>
-          </tr>
-        )}
-        {children?renderGroupsTable(children,depth+1):members.map(m=>(
-          <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
-            onClick={()=>selectMode?toggleSelectRow(m.id):null}>
-            {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
-              <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
-                {selected.has(m.id)&&<TI n="check" size={10}/>}
-              </div>
-            </td>}
-            {COLS.map(col=>renderCell(col,m))}
-            <td className="cc-members-td cc-members-td-actions"/>
-          </tr>
-        ))}
-      </Fragment>
-    ));
+  function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}){
+    return groups.map(({key,label,type,members,children})=>{
+      const groupContext=type!=="none"?{type,key}:parentContext;
+      return(
+        <Fragment key={key}>
+          {hasGroup&&(
+            <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`}>
+              <td colSpan={COLS.length+1} style={depth>0?{paddingLeft:depth*16+14}:{}}>
+                {type==="team"&&<TI n="ball-football" size={11}/>}
+                {type==="gruppe"&&<TI n="briefcase" size={11}/>}
+                {label} <span className="cc-text-muted">{members.length}</span>
+              </td>
+            </tr>
+          )}
+          {children?renderGroupsTable(children,depth+1,groupContext):members.map(m=>(
+            <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
+              onClick={()=>selectMode?toggleSelectRow(m.id):null}>
+              {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
+                <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
+                  {selected.has(m.id)&&<TI n="check" size={10}/>}
+                </div>
+              </td>}
+              {COLS.map(col=>renderCell(col,m,groupContext))}
+              <td className="cc-members-td cc-members-td-actions"/>
+            </tr>
+          ))}
+        </Fragment>
+      );
+    });
   }
 
   return(
