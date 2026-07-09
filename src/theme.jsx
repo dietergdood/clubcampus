@@ -1322,6 +1322,20 @@ function Toolbar({
   const [moreOpen,setMoreOpen]=useState(false);
   const [moreSubPanel,setMoreSubPanel]=useState(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
+  const filterRef=useRef(null);
+  const groupRef=useRef(null);
+  useEffect(()=>{
+    if(!filterOpen) return;
+    const h=e=>{if(filterRef.current&&!filterRef.current.contains(e.target))setFilterOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[filterOpen]);
+  useEffect(()=>{
+    if(!groupOpen) return;
+    const h=e=>{if(groupRef.current&&!groupRef.current.contains(e.target))setGroupOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[groupOpen]);
 
   const hasActiveFilter=Object.values(filterVals).some(v=>v&&v.length>0);
   const activeFilterCount=Object.values(filterVals).reduce((n,v)=>n+(v?.length||0),0);
