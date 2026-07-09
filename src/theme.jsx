@@ -471,7 +471,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-sheet-subhdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 8px}
 .cc-sheet-subhdr-title{font-size:15px;font-weight:600;color:var(--text)}
 .cc-sheet-scroll{border-top:0.5px solid var(--border);max-height:60vh;overflow-y:auto}
-.cc-sheet-trash{color:var(--sub);flex-shrink:0;margin-right:16px;width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cc-sheet-trash{color:var(--sub);flex-shrink:0;margin-right:16px;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit}
 .cc-mehr-sheet-item:last-child{border-bottom:none}
 .cc-mehr-sheet-item-active{color:var(--cc-accent,#FFBF00);font-weight:600}
 .cc-mehr-sheet-item-danger{color:#DC2626!important}
@@ -1671,8 +1671,8 @@ function Toolbar({
                               if(item.header){inSection=item.label===section;return null;}
                               if(!inSection) return null;
                               return(
-                                <div key={i} style={{display:"flex",alignItems:"center",borderBottom:"0.5px solid var(--border)"}}>
-                                  <button className="cc-mehr-sheet-item" style={{flex:1,borderBottom:"none",padding:"13px 20px"}}
+                                <div key={i} style={{display:"flex",alignItems:"center",borderBottom:"0.5px solid var(--border)",overflow:"visible"}}>
+                                  <button className="cc-mehr-sheet-item" style={{flex:1,borderBottom:"none",padding:"13px 20px",minWidth:0}}
                                     onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
                                     {item.icon?<TI n={item.icon} size={16}/>:<TI n="layout" size={16}/>}{item.label}
                                   </button>
