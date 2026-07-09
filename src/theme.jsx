@@ -1669,9 +1669,9 @@ function Toolbar({
                                     {item.icon?<TI n={item.icon} size={16}/>:<TI n="layout" size={16}/>}{item.label}
                                   </button>
                                   {item.onDelete&&(
-                                    <button className="cc-icon-btn" style={{color:"var(--sub)",flexShrink:0,padding:"10px 16px",fontSize:18}}
+                                    <button className="cc-icon-btn" style={{color:"var(--sub)",flexShrink:0,marginRight:16}}
                                       onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onDelete();}}>
-                                      <TI n="trash" size={18}/>
+                                      <TI n="trash" size={15}/>
                                     </button>
                                   )}
                                 </div>
