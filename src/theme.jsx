@@ -1460,8 +1460,14 @@ function Toolbar({
                         style={{fontWeight:isGroupActive(o.val)?600:400,color:isGroupActive(o.val)?"var(--cc-accent,#FFBF00)":"var(--text)"}}
                         onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
                         {isGroupActive(o.val)&&<TI n="check" size={14}/>}{o.label}
+                        {o.val==="__teams_funktionen"&&<TI n="info-circle" size={13} style={{marginLeft:"auto",color:"var(--sub)"}}/>}
                       </div>
                     ))}
+                    {isGroupActive("__teams_funktionen")&&(
+                      <div style={{margin:"0 16px 8px",background:"var(--bg-accent,#EFF6FF)",border:"0.5px solid var(--border-accent,#BFDBFE)",borderRadius:8,padding:"8px 10px",fontSize:12,color:"var(--text-secondary)",lineHeight:1.5}}>
+                        Zeigt Trainer und Funktionäre in einer gemeinsamen Liste — ideal für Kontaktlisten oder Vereinsverzeichnisse.
+                      </div>
+                    )}
                     {groupOptionsMore.length>0&&(
                       <>
                         <div className="cc-mehr-sheet-item" style={{color:"var(--sub)",fontWeight:500}}
@@ -1492,8 +1498,14 @@ function Toolbar({
                       onClick={()=>{toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
                       <div className={`cc-col-menu-check${isGroupActive(o.val)?" cc-col-menu-check-on":""}`}>{isGroupActive(o.val)&&<TI n="check" size={10}/>}</div>
                       {o.label}
+                      {o.val==="__teams_funktionen"&&<TI n="info-circle" size={12} style={{marginLeft:"auto",color:"var(--sub)"}}/>}
                     </div>
                   ))}
+                  {isGroupActive("__teams_funktionen")&&(
+                    <div style={{margin:"0 8px 6px",background:"var(--bg-accent,#EFF6FF)",border:"0.5px solid var(--border-accent,#BFDBFE)",borderRadius:8,padding:"8px 10px",fontSize:12,color:"var(--text-secondary)",lineHeight:1.5}}>
+                      Zeigt Trainer und Funktionäre in einer gemeinsamen Liste — ideal für Kontaktlisten oder Vereinsverzeichnisse.
+                    </div>
+                  )}
                   {groupOptionsMore.length>0&&(
                     <>
                       <div className="cc-col-menu-item cc-text-sub" style={{cursor:"pointer",fontWeight:500}}
