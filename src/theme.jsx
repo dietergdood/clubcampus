@@ -587,6 +587,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-btn-ghost{border:none;background:transparent;color:var(--sub);font-size:12px;cursor:pointer;padding:5px 8px;font-family:inherit;display:flex;align-items:center;gap:4px}
 .cc-ml-filter-badge{min-width:16px;height:16px;border-radius:8px;background:var(--cc-accent-text,#000);color:var(--cc-accent,#FFBF00);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:4px}
 .cc-ml-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
+.cc-ml-toolbar{flex-wrap:nowrap;overflow:visible}
 .cc-members-tr-selected td{background:#FFFBEB!important}
 .cc-col-menu-item-dragover{border-top:2px solid var(--cc-accent,#FFBF00);background:var(--cc-accent-5,rgba(255,191,0,0.05))}
 .cc-col-menu-hdr-hint{font-size:10px;font-weight:400;color:var(--sub);margin-left:6px}
@@ -1529,7 +1530,7 @@ function Toolbar({
         )}
 
         {/* Separator vor Mehr/Spalten */}
-        {(moreItems.length>0||colMenu)&&<div className="cc-ml-sep"/>}
+        {(moreItems.length>0||colMenu)&&!isMobile&&<div className="cc-ml-sep"/>}
 
         {/* Mehr-Menu */}
         {moreItems.length>0&&(
