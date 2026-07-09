@@ -402,7 +402,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             danger:false,
           })),
           "sep",
-          {icon:"columns",label:"Spalten",children:colMenuItems},
           {icon:"device-floppy",label:"Als neue Ansicht speichern",onClick:()=>setSaveViewOpen(true)},
           ...(canExport?[
             "sep",
