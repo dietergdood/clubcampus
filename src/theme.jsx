@@ -1487,11 +1487,22 @@ function Toolbar({
                   <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
                     <div className="cc-mehr-sheet-handle"/>
                     {moreItems.map((item,i)=>item==="sep"?null:(
-                      <button key={i}
-                        className={`cc-mehr-sheet-item${item.danger?" cc-mehr-sheet-item-danger":""}`}
-                        onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);item.onClick();}}>
-                        {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
-                      </button>
+                      <div key={i} style={{display:"flex",alignItems:"center"}}>
+                        <button
+                          className={`cc-mehr-sheet-item${item.danger?" cc-mehr-sheet-item-danger":""}`}
+                          style={{flex:1,borderBottom:"none"}}
+                          onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);item.onClick();}}>
+                          {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
+                        </button>
+                        {item.onDelete&&(
+                          <button
+                            className="cc-icon-btn"
+                            style={{color:"var(--sub)",flexShrink:0,padding:"8px 12px"}}
+                            onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);item.onDelete();}}>
+                            <TI n="trash" size={14}/>
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1513,8 +1524,19 @@ function Toolbar({
                     );
                     return(
                       <div key={i} className={`cc-col-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                        style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}
                         onClick={()=>{setMoreOpen(false);setMoreSubPanel(null);item.onClick();}}>
-                        {item.icon&&<TI n={item.icon} size={14}/>}{item.label}
+                        <span style={{display:"flex",alignItems:"center",gap:8}}>
+                          {item.icon&&<TI n={item.icon} size={14}/>}{item.label}
+                        </span>
+                        {item.onDelete&&(
+                          <button
+                            className="cc-icon-btn"
+                            style={{color:"var(--sub)",opacity:0.6,padding:"2px 4px"}}
+                            onClick={e=>{e.stopPropagation();setMoreOpen(false);item.onDelete();}}>
+                            <TI n="trash" size={12}/>
+                          </button>
+                        )}
                       </div>
                     );
                   })}

@@ -399,7 +399,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             icon:savedView==="custom_"+v.id?"check":"layout",
             label:v.name,
             onClick:()=>applyCustomView(v),
-            danger:false,
+            onDelete:()=>deleteCustomView(v.id),
           })),
           "sep",
           {icon:"device-floppy",label:"Als neue Ansicht speichern",onClick:()=>setSaveViewOpen(true)},
