@@ -361,6 +361,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               <div className="cc-members-item-name">{m.name}</div>
               <div className="cc-members-item-sub">{m.mitgliedschaft||""}{m.role&&m.role!=="-"?" · "+(ROLLE_LABEL[m.role]||m.role):""}</div>
             </div>
+            <div className="cc-members-item-right"><TI n="chevron-right" size={14} className="cc-members-item-chevron"/></div>
           </div>
         ))}
       </div>
@@ -388,9 +389,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               </div>
             </td>}
             {COLS.map(col=>renderCell(col,m))}
-            <td className="cc-members-td cc-members-td-actions" onClick={e=>e.stopPropagation()}>
-              <button className="cc-members-row-btn" onClick={()=>setSelectedMember({...m,_tab:"info"})}><TI n="chevron-right" size={14}/></button>
-            </td>
+            <td className="cc-members-td cc-members-td-actions"/>
           </tr>
         ))}
       </Fragment>
