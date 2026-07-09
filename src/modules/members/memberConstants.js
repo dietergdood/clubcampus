@@ -73,13 +73,15 @@ export const GROUP_OPTIONS = [
   {val:"mitgliedschaft",    label:"Mitgliedschaft"},
   {val:"rollen",            label:"Rolle"},
   {val:"teams",             label:"Team"},
-  {val:"portal",            label:"Portal-Zugang"},
-  {val:"datenpruefung",     label:"Datenprüfung"},
+  {val:"kaderrollen",       label:"Kaderrolle"},
   {val:"funktionsgruppen",  label:"Funktionsgruppe"},
+  {val:"funktionen",        label:"Vereinsfunktion"},
   {val:"__teams_funktionen",label:"Team & Funktionsgruppe"},
 ];
 
 export const GROUP_OPTIONS_MORE = [
+  {val:"portal",          label:"Portal-Zugang"},
+  {val:"datenpruefung",   label:"Datenprüfung"},
   {val:"geschlecht",      label:"Geschlecht"},
   {val:"nationalitaet",   label:"Nationalität"},
   {val:"ort",             label:"Wohnort"},

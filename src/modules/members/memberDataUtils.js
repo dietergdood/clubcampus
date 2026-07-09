@@ -104,6 +104,8 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
     return filtered.length>0?filtered:["Kein Team"];
   }
   if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return [portalLabel||"Keine Rolle"]; }
+  if(g==="kaderrollen"){ return (m.kader_rollen_raw||[]).length>0?m.kader_rollen_raw:["Keine Kaderrolle"]; }
+  if(g==="funktionen"){ return (m.funktionen||[]).length>0?m.funktionen:["Keine Vereinsfunktion"]; }
   if(g==="funktionsgruppen"){
     const gruppenFilter=filterVals["funktionsgruppen"]||[];
     const allGruppen=m.funktionsgruppen||[];
