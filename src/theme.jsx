@@ -1356,7 +1356,7 @@ function Toolbar({
 
         {/* Filter */}
         {filterDefs.length>0&&(
-          <div className="cc-ml-dropdown-wrap">
+          <div ref={filterRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={hasActiveFilter?accentStyle:{}}
@@ -1419,7 +1419,7 @@ function Toolbar({
 
         {/* Gruppieren */}
         {groupOptions.length>0&&(
-          <div className="cc-ml-dropdown-wrap">
+          <div ref={groupRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={isGrouped?accentStyle:{}}
