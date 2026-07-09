@@ -91,7 +91,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const [visibleCols,setVisibleCols]=useState(()=>SAVED_VIEWS.standard.cols);
   const COLS=visibleCols.map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
-  function exportData(format){ exportDataUtil(filtered,COLS,format); }
+  function exportData(format){ exportDataUtil(filtered,COLS,format,groups); }
 
   function applyView(viewKey){
     setSavedView(viewKey);
@@ -641,8 +641,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           ...(canExport?[
             "sep",
             {header:true,label:"Export"},
-            {icon:"file-text",label:"Liste als CSV exportieren",onClick:()=>exportData("csv")},
-            {icon:"table",label:"Liste als Excel exportieren",onClick:()=>exportData("excel")},
+            {icon:"file-text",label:"Liste als CSV (flach)",onClick:()=>exportData("csv")},
+            {icon:"file-text",label:"Liste als CSV (mit Gruppen)",onClick:()=>exportData("csv-gruppen")},
+            {icon:"table",label:"Liste als Excel (pro Gruppe ein Sheet)",onClick:()=>exportData("excel-sheets")},
           ]:[]),
         ]}
       />
