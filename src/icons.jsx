@@ -18,6 +18,7 @@ const TI_PATHS={
     "calendar":"<rect x=\"4\" y=\"5\" width=\"16\" height=\"16\" rx=\"2\"/><line x1=\"16\" y1=\"3\" x2=\"16\" y2=\"7\"/><line x1=\"8\" y1=\"3\" x2=\"8\" y2=\"7\"/><line x1=\"4\" y1=\"11\" x2=\"20\" y2=\"11\"/>",
     "calendar-event":"<rect x=\"4\" y=\"5\" width=\"16\" height=\"16\" rx=\"2\"/><line x1=\"16\" y1=\"3\" x2=\"16\" y2=\"7\"/><line x1=\"8\" y1=\"3\" x2=\"8\" y2=\"7\"/><line x1=\"4\" y1=\"11\" x2=\"20\" y2=\"11\"/><rect x=\"8\" y=\"15\" width=\"2\" height=\"2\"/>",
     "chart-bar":"<rect x=\"3\" y=\"12\" width=\"4\" height=\"8\" rx=\"1\"/><rect x=\"9\" y=\"8\" width=\"4\" height=\"12\" rx=\"1\"/><rect x=\"15\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"/>",
+    "layout":"<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><line x1=\"3\" y1=\"9\" x2=\"21\" y2=\"9\"/><line x1=\"9\" y1=\"21\" x2=\"9\" y2=\"9\"/>",
     "bookmark":"<path d=\"M6 3h12a1 1 0 0 1 1 1v17l-7-3-7 3V4a1 1 0 0 1 1-1z\"/>",
     "chart-pie":"<path d=\"M12 2a10 10 0 0 1 10 10h-10z\"/><path d=\"M12 2a10 10 0 1 0 10 10l-10 0z\"/>",
     "device-floppy":"<path d=\"M6 4h9l3 3v11a1 1 0 0 1-1 1h-14a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1z\"/><path d=\"M9 4v6h6v-6\"/><path d=\"M8 18v-4h8v4\"/>",
