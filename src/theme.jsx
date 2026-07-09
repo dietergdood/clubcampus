@@ -690,6 +690,19 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:#2563EB;text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 .cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text)!important;text-decoration:none!important;display:inline}
+.cc-views-dropdown{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface2);border:0.5px solid var(--border);border-radius:10px;padding:4px;min-width:200px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.cc-views-dropdown-empty{padding:8px 12px;font-size:12px;color:var(--sub)}
+.cc-views-dropdown-item{display:flex;align-items:center;border-radius:6px}
+.cc-views-dropdown-item:hover{background:var(--cc-hover)}
+.cc-views-dropdown-item-active .cc-views-dropdown-label{font-weight:500;color:var(--cc-accent)}
+.cc-views-dropdown-label{flex:1;padding:8px 12px;font-size:13px;color:var(--text);background:none;border:none;cursor:pointer;text-align:left;font-family:inherit}
+.cc-views-dropdown-del{padding:6px 8px;background:none;border:none;cursor:pointer;color:var(--sub);opacity:0;transition:opacity 0.15s}
+.cc-views-dropdown-item:hover .cc-views-dropdown-del{opacity:1}
+.cc-views-dropdown-sep{border-top:0.5px solid var(--border);margin:4px 0}
+.cc-views-dropdown-save{display:flex;align-items:center;gap:6px;padding:6px 8px}
+.cc-views-dropdown-save-btn{padding:5px 8px;border-radius:6px;border:none;background:var(--cc-accent);color:#000;cursor:pointer;display:flex;align-items:center}
+.cc-views-dropdown-add{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:13px;color:var(--sub);background:none;border:none;cursor:pointer;width:100%;font-family:inherit}
+.cc-views-dropdown-add:hover{color:var(--text);background:var(--cc-hover);border-radius:6px}
 .cc-divider-label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);text-align:center}.cc-divider-label::before,.cc-divider-label::after{content:"";flex:1;border-top:0.5px solid var(--border)}
 
 /* ── Mobile responsive ── */

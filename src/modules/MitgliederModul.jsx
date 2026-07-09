@@ -28,6 +28,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [filterVals,setFilterVals]=useState({});
   const [savedView,setSavedView]=useState("standard");
   const [dragCol,setDragCol]=useState(null);
+  useEffect(()=>{
+    if(!viewsDropOpen) return;
+    const h=e=>{if(viewsDropRef.current&&!viewsDropRef.current.contains(e.target))setViewsDropOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[viewsDropOpen]);
   const [dragOverCol,setDragOverCol]=useState(null);
   const [colDragSrc,setColDragSrc]=useState(null);
   const [colDragOver,setColDragOver]=useState(null);
@@ -38,6 +44,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [customViews,setCustomViews]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
   const [saveViewName,setSaveViewName]=useState("");
+  const [viewsDropOpen,setViewsDropOpen]=useState(false);
+  const viewsDropRef=useRef(null);
   const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
@@ -359,41 +367,53 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             onClick={()=>applyView(k)}
           >{v.label}</button>
         ))}
-        {customViews.map(v=>(
-          <div key={v.id} className={`cc-ml-view-custom${savedView==="custom_"+v.id?" cc-ml-view-custom-active":""}`}>
-            <button
-              className={`cc-ml-view-btn${savedView==="custom_"+v.id?" cc-ml-view-btn-active":""}`}
-              onClick={()=>applyCustomView(v)}
-            >{v.name}</button>
-            {savedView==="custom_"+v.id&&(
-              <button className="cc-ml-view-del-active" onClick={()=>deleteCustomView(v.id)} title="Löschen">
-                <TI n="x" size={11}/>
-              </button>
-            )}
-          </div>
-        ))}
-        {saveViewOpen?(
-          <div className="cc-ml-view-save-form">
-            <input
-              className="cc-ml-view-save-input"
-              placeholder="Name der Ansicht…"
-              value={saveViewName}
-              onChange={e=>setSaveViewName(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&saveCurrentView()}
-              autoFocus
-            />
-            <Btn small variant="primary" onClick={saveCurrentView} disabled={savingView||!saveViewName.trim()}>
-              {savingView?"...":"Speichern"}
-            </Btn>
-            <Btn small onClick={()=>{setSaveViewOpen(false);setSaveViewName("");}}>
-              <TI n="x" size={12}/>
-            </Btn>
-          </div>
-        ):(
-          <button className="cc-ml-view-btn cc-ml-view-btn-add" onClick={()=>setSaveViewOpen(true)}>
-            <TI n="plus" size={12}/> Ansicht speichern
+        {/* Dropdown für Custom Views */}
+        <div ref={viewsDropRef} style={{position:"relative"}}>
+          <button
+            className={`cc-ml-view-btn${customViews.some(v=>savedView==="custom_"+v.id)?" cc-ml-view-btn-active":""}`}
+            onClick={()=>setViewsDropOpen(o=>!o)}
+          >
+            {customViews.find(v=>savedView==="custom_"+v.id)?.name||"Ansichten"}
+            <TI n="chevron-down" size={11}/>
           </button>
-        )}
+          {viewsDropOpen&&(
+            <div className="cc-views-dropdown">
+              {customViews.length===0&&(
+                <div className="cc-views-dropdown-empty">Keine gespeicherten Ansichten</div>
+              )}
+              {customViews.map(v=>(
+                <div key={v.id} className={`cc-views-dropdown-item${savedView==="custom_"+v.id?" cc-views-dropdown-item-active":""}`}>
+                  <button className="cc-views-dropdown-label" onClick={()=>{applyCustomView(v);setViewsDropOpen(false);}}>
+                    {v.name}
+                  </button>
+                  <button className="cc-views-dropdown-del" onClick={()=>deleteCustomView(v.id)} title="Löschen">
+                    <TI n="trash" size={12}/>
+                  </button>
+                </div>
+              ))}
+              <div className="cc-views-dropdown-sep"/>
+              {saveViewOpen?(
+                <div className="cc-views-dropdown-save">
+                  <input
+                    className="cc-ml-view-save-input"
+                    placeholder="Name der Ansicht…"
+                    value={saveViewName}
+                    onChange={e=>setSaveViewName(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&saveCurrentView()}
+                    autoFocus
+                  />
+                  <button className="cc-views-dropdown-save-btn" onClick={saveCurrentView} disabled={savingView||!saveViewName.trim()}>
+                    <TI n="check" size={13}/>
+                  </button>
+                </div>
+              ):(
+                <button className="cc-views-dropdown-add" onClick={()=>setSaveViewOpen(true)}>
+                  <TI n="plus" size={13}/> Als neue Ansicht speichern
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>}
 
       {/* Toolbar */}
@@ -429,6 +449,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 inline
               />
             ),
+          }]:[]),
+          "sep",
+          {header:true,label:"Ansichten"},
+          ...Object.entries(SAVED_VIEWS).map(([k,v])=>({
+            icon:savedView===k?"check":"layout",
+            label:v.label,
+            onClick:()=>applyView(k),
+          })),
+          ...customViews.map(v=>({
+            icon:savedView==="custom_"+v.id?"check":"layout",
+            label:v.name,
+            onClick:()=>applyCustomView(v),
+            danger:false,
+          })),
+          ...(isMobile?[{
+            icon:"device-floppy",
+            label:"Als neue Ansicht speichern",
+            onClick:()=>setSaveViewOpen(true),
           }]:[]),
           ...(canExport?[
             "sep",
