@@ -56,11 +56,26 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
       ].join(" ").toLowerCase();
       if(!terms.every(t=>haystack.includes(t))) return false;
     }
+    // Teams + Funktionsgruppen mit ODER verknüpfen
+    const teamsVals=filterVals["teams"]||[];
+    const gruppenVals=filterVals["funktionsgruppen"]||[];
+    if(teamsVals.length>0||gruppenVals.length>0){
+      const inTeam=teamsVals.length>0&&(m.teams||[]).map(t=>t?.name||t).some(t=>teamsVals.includes(t));
+      const inGruppe=gruppenVals.length>0&&(m.funktionsgruppen||[]).some(g=>gruppenVals.includes(g));
+      if(!inTeam&&!inGruppe) return false;
+    }
+    // Alle anderen Filter mit UND
     for(const [fKey,fVals] of Object.entries(filterVals)){
       if(!fVals||fVals.length===0) continue;
+      if(fKey==="teams"||fKey==="funktionsgruppen") continue; // bereits oben behandelt
       if(fKey==="rollen"){
         const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
         if(!portalLabel||!fVals.includes(portalLabel)) return false;
+        continue;
+      }
+      if(fKey==="kaderrollen"){
+        const kaderRollen=m.kader_rollen_raw||[];
+        if(!kaderRollen.some(r=>fVals.includes(r))) return false;
         continue;
       }
       const raw=m[fKey];
