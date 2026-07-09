@@ -36,6 +36,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [selectMode,setSelectMode]=useState(false);
   const [selected,setSelected]=useState(new Set());
   const [customViews,setCustomViews]=useState([]);
+  const [portalFunktionen,setPortalFunktionen]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
   const [saveViewName,setSaveViewName]=useState("");
   const [savingView,setSavingView]=useState(false);
@@ -80,7 +81,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     ["spieler","Spieler/in"],["eltern","Elternteil"],
     ["mitglied","Mitglied"],["supporter","Supporter"],
   ]);
-  const allMembers=mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen);
+  const funktionenGruppenMap=Object.fromEntries(
+    (portalFunktionen||[]).map(f=>[f.name,f.portal_gruppen?.name||null])
+  );
+  const allMembers=mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen).map(m=>({
+    ...m,
+    funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter(Boolean))],
+  }));
 
   const [visibleCols,setVisibleCols]=useState(()=>SAVED_VIEWS.standard.cols);
   const COLS=visibleCols.map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
@@ -102,6 +109,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   useEffect(()=>{
     if(!sb||!account?.id) return;
     fetchAnsichten(sb,account.id).then(data=>setCustomViews(data));
+    if(portalFunktionen.length===0)
+      sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
+        .then(({data})=>setPortalFunktionen(data||[]));
   },[account?.id]);
 
   function toggleSelectMode(){
@@ -209,6 +219,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {key:"datenpruefung",  label:"Datenpruefung",  vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
     {key:"portal",         label:"Portal-Zugang",  vals:[...new Set(allMembers.map(m=>m.portal).filter(Boolean))]},
     {key:"teams",          label:"Teams",          vals:[...new Set(allMembers.flatMap(m=>(m.teams||[]).map(t=>t?.name||t)).filter(Boolean))].sort()},
+    {key:"funktionsgruppen",label:"Funktionsgruppe", vals:[...new Set(allMembers.flatMap(m=>m.funktionsgruppen||[]).filter(Boolean))].sort()},
   ],[allMembers,ROLLE_LABEL]);
 
   const filtered=useMemo(()=>filterMembers(allMembers,search,filterVals,ROLLE_LABEL),[allMembers,search,filterVals,ROLLE_LABEL]);
@@ -586,6 +597,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                           case "vorname": return <td key="vorname" className="cc-members-td cc-members-td-sub">{m.vorname||"—"}</td>;
                           case "nachname": return <td key="nachname" className="cc-members-td cc-members-td-sub">{m.nachname||"—"}</td>;
                           case "funktionen": return <td key="funktionen" className="cc-members-td cc-members-td-sub">{(m.funktionen||[]).join(", ")||"—"}</td>;
+                          case "funktionsgruppen": return <td key="funktionsgruppen" className="cc-members-td">
+                            {(m.funktionsgruppen||[]).length===0?"—":(m.funktionsgruppen||[]).map((g,i)=>{
+                              const pf=portalFunktionen.find(f=>f.portal_gruppen?.name===g);
+                              const farbe=pf?.portal_gruppen?.farbe;
+                              return <span key={i} className="cc-funk-gruppe-badge" style={farbe?{background:farbe+"20",color:farbe,borderColor:farbe+"40"}:{}}>{g}</span>;
+                            })}
+                          </td>;
                           default: return <td key={col.key} className="cc-members-td cc-members-td-sub">—</td>;
                         }
                       })}

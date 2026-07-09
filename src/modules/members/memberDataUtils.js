@@ -107,6 +107,7 @@ export function exportData(filtered, COLS, format) {
       if(k==="rollen") return (m.rollen||[]).join(", ");
       if(k==="teams") return (m.teams||[]).map(t=>t.name||t).join(", ");
       if(k==="funktionen") return (m.funktionen||[]).join(", ");
+      if(k==="funktionsgruppen") return (m.funktionsgruppen||[]).join(", ");
       if(k==="nationalitaet") return m.nationalitaet&&m.nationalitaet!=="-"?m.nationalitaet:"";
       if(k==="nationalitaet2") return m.nationalitaet2||"";
       if(k==="eintritt") return m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"";

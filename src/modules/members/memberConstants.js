@@ -50,6 +50,7 @@ export const COL_GROUPS = [
     {key:"mitgliedschaft",label:"Mitgliedschaft", default:true},
     {key:"rollen",        label:"Rollen",         default:true},
     {key:"funktionen",    label:"Vereinsfunktionen", default:false},
+    {key:"funktionsgruppen", label:"Funktionsgruppe",  default:false},
     {key:"eintritt",      label:"Eintritt",       default:false},
     {key:"spielerpass",   label:"Spielerpass",    default:false},
     {key:"fairgate_id",   label:"Fairgate-ID",    default:false},
@@ -73,6 +74,7 @@ export const GROUP_OPTIONS = [
   {val:"teams",          label:"Nach Team"},
   {val:"portal",         label:"Nach Portal-Zugang"},
   {val:"datenpruefung",  label:"Nach Datenprüfung"},
+  {val:"funktionsgruppen",label:"Nach Funktionsgruppe"},
 ];
 
 export const GROUP_OPTIONS_MORE = [
