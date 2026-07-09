@@ -24,7 +24,7 @@ export function mapMembers(dbMitglieder, dbPortalRollen, dbKaderRollen) {
       name:(`${m.vorname||""} ${m.nachname||""}`).trim()||"?",
       vorname:m.vorname, nachname:m.nachname,
       mitgliedschaft:m.mitgliedtyp||"-", type:m.mitgliedtyp||"-",
-      rollen:[...rollenSet], kader_rollen_raw:m.kader_rollen||[],
+      rollen:[...rollenSet], kader_rollen_raw:m.kader_rollen||[], kader_eintraege:m.kader_eintraege||[],
       role:m.rolle||"-",
       teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams.map(t=>typeof t==="object"?t:{name:t,kurz:t}):(m.teams||[]).map(t=>({name:t,kurz:t})),
       team:(m.teams||[]).join(", ")||"-",
