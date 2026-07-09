@@ -1320,6 +1320,8 @@ function Toolbar({
   const isMobile=useIsMobile();
   const [filterOpen,setFilterOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
+  useEffect(()=>{if(externalFilterOpen){setFilterOpen(true);setGroupOpen(false);setMoreOpen(false);}},[externalFilterOpen]);
+  useEffect(()=>{if(externalGroupOpen){setGroupOpen(true);setFilterOpen(false);setMoreOpen(false);}},[externalGroupOpen]);
   const [moreOpen,setMoreOpen]=useState(false);
   const [moreSubPanel,setMoreSubPanel]=useState(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
@@ -1327,7 +1329,7 @@ function Toolbar({
   const groupRef=useRef(null);
   const moreRef=useRef(null);
   useEffect(()=>{
-    if(!filterOpen) return;
+    if(!filterOpen){onExternalFilterClose&&onExternalFilterClose(); return;}
     const h=e=>{if(filterRef.current&&!filterRef.current.contains(e.target))setFilterOpen(false);};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
@@ -1374,7 +1376,7 @@ function Toolbar({
 
         {/* Filter */}
         {filterDefs.length>0&&(
-          <div ref={filterRef} className="cc-ml-dropdown-wrap">
+          <div ref={filterRef} className="cc-ml-dropdown-wrap" style={isMobile?{display:"none"}:{}}>
             <button
               className="cc-ml-btn"
               style={hasActiveFilter?accentStyle:{}}
@@ -1437,7 +1439,7 @@ function Toolbar({
 
         {/* Gruppieren */}
         {groupOptions.length>0&&(
-          <div ref={groupRef} className="cc-ml-dropdown-wrap">
+          <div ref={groupRef} className="cc-ml-dropdown-wrap" style={isMobile?{display:"none"}:{}}>
             <button
               className="cc-ml-btn"
               style={isGrouped?accentStyle:{}}

@@ -42,6 +42,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
+  const [mobileFilterOpen,setMobileFilterOpen]=useState(false);
+  const [mobileGroupOpen,setMobileGroupOpen]=useState(false);
   const breakdownRef=useRef(null);
   useEffect(()=>{
     if(!breakdownOpen||isMobile) return;
@@ -232,6 +234,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const hasMore=false;
   const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,filterVals),[paged,groupBy,ROLLE_LABEL,filterVals]);
   const hasGroup=Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
+  const activeFilterCount=Object.values(filterVals).filter(v=>v&&v.length>0).length;
+  const hasActiveFilter=activeFilterCount>0;
 
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
   const SortIcon=({col})=>sortCol===col
@@ -603,7 +607,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         groupOptions={GROUP_OPTIONS} groupOptionsMore={GROUP_OPTIONS_MORE}
         groupBy={groupBy} onGroupChange={setGroupBy}
         multiGroup
+        externalFilterOpen={mobileFilterOpen} onExternalFilterClose={()=>setMobileFilterOpen(false)}
+        externalGroupOpen={mobileGroupOpen} onExternalGroupClose={()=>setMobileGroupOpen(false)}
         moreItems={[
+          ...(isMobile?[
+            {header:true,label:"Ansicht"},
+            {icon:"filter",label:"Filter"+(hasActiveFilter?" ("+activeFilterCount+")":""),onClick:()=>setMobileFilterOpen(true)},
+            {icon:"layout-rows",label:"Gruppieren"+(hasGroup?" (aktiv)":""),onClick:()=>setMobileGroupOpen(true)},
+            "sep",
+          ]:[]),
           {header:true,label:"Aktionen"},
           {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
           ...(!isMobile?[{
