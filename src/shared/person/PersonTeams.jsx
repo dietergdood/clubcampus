@@ -106,7 +106,10 @@ function PersonTeams({
     <>
       {confirmDialog}
       <Card>
-        <div className="cc-section-title"><TI n="users" size={14}/> Teams</div>
+        <div className="cc-section-title cc-between">
+          <span className="cc-row cc-gap-6"><TI n="users" size={14}/> Teams</span>
+          {canEdit && <button className="cc-btn-ghost" onClick={openTeamAssign}><TI n="plus" size={13}/> Zuweisen</button>}
+        </div>
         {teamDetails === null && <div className="cc-text-sm cc-text-sub">Lade…</div>}
         {teamDetails !== null && teamDetails.length === 0 && (
           <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
@@ -145,11 +148,7 @@ function PersonTeams({
             ]}/>
           </div>
         ))}
-        {canEdit && (
-          <button className="cc-team-add-btn" onClick={openTeamAssign}>
-            <TI n="plus" size={14}/> Team zuweisen
-          </button>
-        )}
+
       </Card>
 
       {/* Team zuweisen Modal */}

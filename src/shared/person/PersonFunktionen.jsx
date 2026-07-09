@@ -36,7 +36,10 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
   return (
     <>
       <Card>
-        <div className="cc-section-title"><TI n="briefcase" size={14}/> Vereinsfunktionen</div>
+        <div className="cc-section-title cc-between">
+          <span className="cc-row cc-gap-6"><TI n="briefcase" size={14}/> Vereinsfunktionen</span>
+          {canEdit && <button className="cc-btn-ghost" onClick={openFunkModal}><TI n="plus" size={13}/> Hinzufügen</button>}
+        </div>
         {(raw.funktionen || []).length === 0 && (
           <div className="cc-text-sm cc-text-sub">Keine Vereinsfunktionen.</div>
         )}
@@ -73,11 +76,7 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
             </div>
           );
         })}
-        {canEdit && (
-          <button className="cc-team-add-btn" onClick={openFunkModal}>
-            <TI n="plus" size={14}/> Funktion hinzufügen
-          </button>
-        )}
+
       </Card>
 
       {/* Funktion hinzufügen Modal */}
