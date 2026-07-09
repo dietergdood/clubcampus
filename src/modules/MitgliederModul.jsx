@@ -301,6 +301,29 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   return(
     <>{confirmDialog}
+    {/* Ansicht speichern Modal */}
+    <ModalOrSheet open={saveViewOpen} onClose={()=>{setSaveViewOpen(false);setSaveViewName("");}} maxWidth={380}>
+      <div className="cc-modal-hdr">
+        <ModalTitle>Als neue Ansicht speichern</ModalTitle>
+        <button className="cc-icon-btn" onClick={()=>{setSaveViewOpen(false);setSaveViewName("");}}><TI n="x" size={14}/></button>
+      </div>
+      <div className="cc-modal-body cc-col cc-gap-8">
+        <input
+          className="cc-input"
+          placeholder="Name der Ansicht…"
+          value={saveViewName}
+          onChange={e=>setSaveViewName(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&saveCurrentView()}
+          autoFocus
+        />
+      </div>
+      <div className="cc-modal-ftr">
+        <Btn onClick={()=>{setSaveViewOpen(false);setSaveViewName("");}}>Abbrechen</Btn>
+        <Btn variant="primary" onClick={saveCurrentView} disabled={savingView||!saveViewName.trim()}>
+          {savingView?"Speichert…":"Speichern"}
+        </Btn>
+      </div>
+    </ModalOrSheet>
     <div className="cc-page-wide">
       {/* Header + Tabs */}
       <div className="cc-page-hdr">
