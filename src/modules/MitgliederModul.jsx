@@ -38,14 +38,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [customViews,setCustomViews]=useState([]);
   const [saveViewOpen,setSaveViewOpen]=useState(false);
   const [saveViewName,setSaveViewName]=useState("");
-  const [viewsDropOpen,setViewsDropOpen]=useState(false);
-  const viewsDropRef=useRef(null);
-  useEffect(()=>{
-    if(!viewsDropOpen) return;
-    const h=e=>{if(viewsDropRef.current&&!viewsDropRef.current.contains(e.target))setViewsDropOpen(false);};
-    document.addEventListener("mousedown",h);
-    return()=>document.removeEventListener("mousedown",h);
-  },[viewsDropOpen]);
   const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
@@ -360,61 +352,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {/* Gespeicherte Ansichten - nur Desktop */}
-      {!isMobile&&<div className="cc-ml-views">
-        {Object.entries(SAVED_VIEWS).map(([k,v])=>(
-          <button key={k}
-            className={`cc-ml-view-btn${savedView===k?" cc-ml-view-btn-active":""}`}
-            onClick={()=>applyView(k)}
-          >{v.label}</button>
-        ))}
-        {/* Dropdown für Custom Views */}
-        <div ref={viewsDropRef} style={{position:"relative"}}>
-          <button
-            className={`cc-ml-view-btn${customViews.some(v=>savedView==="custom_"+v.id)?" cc-ml-view-btn-active":""}`}
-            onClick={()=>setViewsDropOpen(o=>!o)}
-          >
-            {customViews.find(v=>savedView==="custom_"+v.id)?.name||"Ansichten"}
-            <TI n="chevron-down" size={11}/>
-          </button>
-          {viewsDropOpen&&(
-            <div className="cc-views-dropdown">
-              {customViews.length===0&&(
-                <div className="cc-views-dropdown-empty">Keine gespeicherten Ansichten</div>
-              )}
-              {customViews.map(v=>(
-                <div key={v.id} className={`cc-views-dropdown-item${savedView==="custom_"+v.id?" cc-views-dropdown-item-active":""}`}>
-                  <button className="cc-views-dropdown-label" onClick={()=>{applyCustomView(v);setViewsDropOpen(false);}}>
-                    {v.name}
-                  </button>
-                  <button className="cc-views-dropdown-del" onClick={()=>deleteCustomView(v.id)} title="Löschen">
-                    <TI n="trash" size={12}/>
-                  </button>
-                </div>
-              ))}
-              <div className="cc-views-dropdown-sep"/>
-              {saveViewOpen?(
-                <div className="cc-views-dropdown-save">
-                  <input
-                    className="cc-ml-view-save-input"
-                    placeholder="Name der Ansicht…"
-                    value={saveViewName}
-                    onChange={e=>setSaveViewName(e.target.value)}
-                    onKeyDown={e=>e.key==="Enter"&&saveCurrentView()}
-                    autoFocus
-                  />
-                  <button className="cc-views-dropdown-save-btn" onClick={saveCurrentView} disabled={savingView||!saveViewName.trim()}>
-                    <TI n="check" size={13}/>
-                  </button>
-                </div>
-              ):(
-                <button className="cc-views-dropdown-add" onClick={()=>setSaveViewOpen(true)}>
-                  <TI n="plus" size={13}/> Als neue Ansicht speichern
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>}
+
 
       {/* Toolbar */}
       <Toolbar
@@ -463,11 +401,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             onClick:()=>applyCustomView(v),
             danger:false,
           })),
-          ...(isMobile?[{
-            icon:"device-floppy",
-            label:"Als neue Ansicht speichern",
-            onClick:()=>setSaveViewOpen(true),
-          }]:[]),
+          "sep",
+          {icon:"columns",label:"Spalten",children:colMenuItems},
+          {icon:"device-floppy",label:"Als neue Ansicht speichern",onClick:()=>setSaveViewOpen(true)},
           ...(canExport?[
             "sep",
             {header:true,label:"Export"},
