@@ -461,7 +461,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-mehr-item-active{background:var(--cc-accent-5,rgba(255,191,0,0.05));color:var(--cc-accent,#FFBF00);font-weight:500}
 .cc-mehr-sheet-overlay{position:fixed;inset:0;z-index:3000;display:flex;flex-direction:column;justify-content:flex-end}
 .cc-mehr-sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.5)}
-.cc-mehr-sheet-box{position:relative;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 16px 32px;font-family:inherit}
+.cc-mehr-sheet-box{position:relative;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 16px 32px;font-family:inherit;overflow:visible}
 .cc-mehr-sheet-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
 .cc-mehr-sheet-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:8px}
 .cc-mehr-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:14px;color:var(--text);font-weight:400;cursor:pointer;font-family:inherit;text-align:left}
@@ -470,8 +470,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-sheet-nav-left{display:flex;align-items:center;gap:12px}
 .cc-sheet-subhdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 8px}
 .cc-sheet-subhdr-title{font-size:15px;font-weight:600;color:var(--text)}
-.cc-sheet-scroll{border-top:0.5px solid var(--border);max-height:60vh;overflow-y:auto}
-.cc-sheet-trash{color:var(--sub);flex-shrink:0;margin-right:16px;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit}
+.cc-sheet-scroll{border-top:0.5px solid var(--border);max-height:60vh;overflow-y:auto;overflow-x:visible}
+.cc-sheet-trash{color:var(--sub);flex-shrink:0;margin-right:20px;width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;overflow:visible}
 .cc-mehr-sheet-item:last-child{border-bottom:none}
 .cc-mehr-sheet-item-active{color:var(--cc-accent,#FFBF00);font-weight:600}
 .cc-mehr-sheet-item-danger{color:#DC2626!important}
