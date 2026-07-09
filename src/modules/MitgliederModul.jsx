@@ -42,8 +42,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
-  const [mobileFilterOpen,setMobileFilterOpen]=useState(false);
-  const [mobileGroupOpen,setMobileGroupOpen]=useState(false);
+  const [mobileFilterOpen,setMobileFilterOpen]=useState(0);
+  const [mobileGroupOpen,setMobileGroupOpen]=useState(0);
   const breakdownRef=useRef(null);
   useEffect(()=>{
     if(!breakdownOpen||isMobile) return;
@@ -607,13 +607,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         groupOptions={GROUP_OPTIONS} groupOptionsMore={GROUP_OPTIONS_MORE}
         groupBy={groupBy} onGroupChange={setGroupBy}
         multiGroup
-        externalFilterOpen={mobileFilterOpen} onExternalFilterClose={()=>setMobileFilterOpen(false)}
-        externalGroupOpen={mobileGroupOpen} onExternalGroupClose={()=>setMobileGroupOpen(false)}
+        externalFilterOpen={mobileFilterOpen}
+        externalGroupOpen={mobileGroupOpen}
         moreItems={[
           ...(isMobile?[
             {header:true,label:"Ansicht"},
-            {icon:"filter",label:"Filter"+(hasActiveFilter?" ("+activeFilterCount+")":""),onClick:()=>setMobileFilterOpen(true)},
-            {icon:"layout-rows",label:"Gruppieren"+(hasGroup?" (aktiv)":""),onClick:()=>setMobileGroupOpen(true)},
+            {icon:"filter",label:"Filter"+(hasActiveFilter?" ("+activeFilterCount+")":""),onClick:()=>setMobileFilterOpen(c=>c+1)},
+            {icon:"layout-rows",label:"Gruppieren"+(hasGroup?" (aktiv)":""),onClick:()=>setMobileGroupOpen(c=>c+1)},
             "sep",
           ]:[]),
           {header:true,label:"Aktionen"},

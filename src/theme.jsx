@@ -1322,11 +1322,12 @@ function Toolbar({
   const isMobile=useIsMobile();
   const [filterOpen,setFilterOpen]=useState(false);
   const [groupOpen,setGroupOpen]=useState(false);
-  useEffect(()=>{if(externalFilterOpen){setFilterOpen(true);setGroupOpen(false);setMoreOpen(false);}},[externalFilterOpen]);
-  useEffect(()=>{if(externalGroupOpen){setGroupOpen(true);setFilterOpen(false);setMoreOpen(false);}},[externalGroupOpen]);
+  useEffect(()=>{if(externalFilterOpen>0){setFilterOpen(true);setGroupOpen(false);setMoreOpen(false);}},[externalFilterOpen]);
+  useEffect(()=>{if(externalGroupOpen>0){setGroupOpen(true);setFilterOpen(false);setMoreOpen(false);}},[externalGroupOpen]);
   const [moreOpen,setMoreOpen]=useState(false);
   const [moreSubPanel,setMoreSubPanel]=useState(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
+  const [mobileSubMenu,setMobileSubMenu]=useState(null); // null | "filter" | "group" | "views" | "export"
   const filterRef=useRef(null);
   const groupRef=useRef(null);
   const moreRef=useRef(null);
@@ -1540,33 +1541,152 @@ function Toolbar({
         {moreItems.length>0&&(
           <div ref={moreRef} className="cc-ml-dropdown-wrap">
             <button className="cc-ml-btn"
-              onClick={()=>{setMoreOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);}}>
+              onClick={()=>{setMoreOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setMobileSubMenu(null);}}>
               <TI n="dots" size={15}/>
             </button>
             {moreOpen&&(
               isMobile?(
-                <div className="cc-mehr-sheet-overlay" onClick={()=>setMoreOpen(false)}>
+                <div className="cc-mehr-sheet-overlay" onClick={()=>{setMoreOpen(false);setMobileSubMenu(null);}}>
                   <div className="cc-mehr-sheet-backdrop"/>
-                  <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
-                    <div className="cc-mehr-sheet-handle"/>
-                    {moreItems.map((item,i)=>item==="sep"?null:(
-                      <div key={i} style={{display:"flex",alignItems:"center"}}>
-                        <button
-                          className={`cc-mehr-sheet-item${item.danger?" cc-mehr-sheet-item-danger":""}`}
-                          style={{flex:1,borderBottom:"none"}}
-                          onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);item.onClick();}}>
-                          {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
-                        </button>
-                        {item.onDelete&&(
-                          <button
-                            className="cc-icon-btn"
-                            style={{color:"var(--sub)",flexShrink:0,padding:"8px 12px"}}
-                            onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);item.onDelete();}}>
-                            <TI n="trash" size={14}/>
+                  <div className="cc-mehr-sheet-box" style={{padding:0,paddingBottom:32}} onClick={e=>e.stopPropagation()}>
+                    <div className="cc-mehr-sheet-handle" style={{margin:"10px auto 0"}}/>
+                    {mobileSubMenu===null?(
+                      // Stufe 1: Hauptmenü
+                      <div>
+                        {filterDefs.length>0&&(
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("filter");}}>
+                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="filter" size={18}/> Filter{hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}</span>
+                            <TI n="chevron-right" size={14}/>
+                          </button>
+                        )}
+                        {groupOptions.length>0&&(
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("group");}}>
+                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="layout-rows" size={18}/> Gruppieren{isGrouped&&<span className="cc-ml-filter-badge" style={{background:"var(--cc-accent)",color:"#000"}}>aktiv</span>}</span>
+                            <TI n="chevron-right" size={14}/>
+                          </button>
+                        )}
+                        {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Ansichten").length>0&&(
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("views");}}>
+                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="layout" size={18}/> Ansichten</span>
+                            <TI n="chevron-right" size={14}/>
+                          </button>
+                        )}
+                        {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Aktionen").length>0&&(
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("actions");}}>
+                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="settings" size={18}/> Aktionen</span>
+                            <TI n="chevron-right" size={14}/>
+                          </button>
+                        )}
+                        {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Export").length>0&&(
+                          <button className="cc-mehr-sheet-item" style={{width:"100%",justifyContent:"space-between"}}
+                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("export");}}>
+                            <span style={{display:"flex",alignItems:"center",gap:12}}><TI n="download" size={18}/> Exportieren</span>
+                            <TI n="chevron-right" size={14}/>
                           </button>
                         )}
                       </div>
-                    ))}
+                    ):mobileSubMenu==="filter"?(
+                      // Stufe 2: Filter
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px 8px"}}>
+                          <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
+                            <TI n="chevron-left" size={16}/>
+                          </button>
+                          <span style={{fontSize:15,fontWeight:600}}>Filter</span>
+                          <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
+                        </div>
+                        <div style={{borderTop:"0.5px solid var(--border)",maxHeight:"60vh",overflowY:"auto"}}>
+                          {filterDefs.map(({key,label,vals})=>(
+                            <div key={key}>
+                              <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 16px 4px"}}>{label}</div>
+                              {vals.map(v=>{
+                                const active=(filterVals[key]||[]).includes(v);
+                                return(
+                                  <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 16px"}}
+                                    onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
+                                    <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`} style={{marginRight:10}}>
+                                      {active&&<TI n="check" size={10}/>}
+                                    </div>
+                                    {v}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                          {hasActiveFilter&&(
+                            <div style={{padding:"8px 16px"}}>
+                              <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange("__reset");}}>Alle Filter zurücksetzen</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ):mobileSubMenu==="group"?(
+                      // Stufe 2: Gruppieren
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px 8px"}}>
+                          <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
+                            <TI n="chevron-left" size={16}/>
+                          </button>
+                          <span style={{fontSize:15,fontWeight:600}}>Gruppieren</span>
+                          <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
+                        </div>
+                        <div style={{borderTop:"0.5px solid var(--border)",maxHeight:"60vh",overflowY:"auto"}}>
+                          {[...groupOptions,...groupOptionsMore].map(o=>(
+                            <div key={o.val} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 16px"}}
+                              onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);}}>
+                              <div className={`cc-col-menu-check${isGroupActive(o.val)?" cc-col-menu-check-on":""}`} style={{marginRight:10}}>
+                                {isGroupActive(o.val)&&<TI n="check" size={10}/>}
+                              </div>
+                              {o.label}
+                            </div>
+                          ))}
+                          {isGrouped&&(
+                            <div style={{padding:"8px 16px"}}>
+                              <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(["none"]);}}>Gruppierung zurücksetzen</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ):(
+                      // Stufe 2: Ansichten / Aktionen / Export
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",padding:"12px 16px 8px",gap:8}}>
+                          <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
+                            <TI n="chevron-left" size={16}/>
+                          </button>
+                          <span style={{fontSize:15,fontWeight:600}}>{mobileSubMenu==="views"?"Ansichten":mobileSubMenu==="export"?"Exportieren":"Aktionen"}</span>
+                        </div>
+                        <div style={{borderTop:"0.5px solid var(--border)",maxHeight:"60vh",overflowY:"auto"}}>
+                          {(()=>{
+                            const section=mobileSubMenu==="views"?"Ansichten":mobileSubMenu==="export"?"Export":"Aktionen";
+                            let inSection=false;
+                            return moreItems.map((item,i)=>{
+                              if(item==="sep"){inSection=false;return null;}
+                              if(item.header){inSection=item.label===section;return null;}
+                              if(!inSection) return null;
+                              return(
+                                <div key={i} style={{display:"flex",alignItems:"center",borderBottom:"0.5px solid var(--border)"}}>
+                                  <button className="cc-mehr-sheet-item" style={{flex:1,borderBottom:"none"}}
+                                    onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
+                                    {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
+                                  </button>
+                                  {item.onDelete&&(
+                                    <button className="cc-icon-btn" style={{color:"var(--sub)",flexShrink:0,padding:"8px 12px"}}
+                                      onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onDelete();}}>
+                                      <TI n="trash" size={14}/>
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ):(
