@@ -429,6 +429,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}){
     return groups.map(({key,label,type,members,children})=>{
       const groupContext=type!=="none"?{type,key}:parentContext;
+      // Leere Team-Gruppen ausblenden
+      const visibleMembers=groupContext.type==="team"?members.filter(m=>{
+        const kaderFilter=filterVals["kaderrollen"]||[];
+        if(kaderFilter.length===0) return true;
+        const teamRollen=(m.kader_eintraege||[]).filter(e=>e.team?.name===groupContext.key).flatMap(e=>e.rollen);
+        return teamRollen.some(r=>kaderFilter.includes(r));
+      }):members;
+      if(!children&&visibleMembers.length===0) return null;
       return(
         <Fragment key={key}>
           {hasGroup&&(
@@ -440,15 +448,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               </td>
             </tr>
           )}
-          {children?renderGroupsTable(children,depth+1,groupContext):members.filter(m=>{
-            if(groupContext.type==="team"){
-              const kaderFilter=filterVals["kaderrollen"]||[];
-              if(kaderFilter.length===0) return true;
-              const teamRollen=(m.kader_eintraege||[]).filter(e=>e.team?.name===groupContext.key).flatMap(e=>e.rollen);
-              return teamRollen.some(r=>kaderFilter.includes(r));
-            }
-            return true;
-          }).map(m=>(
+          {children?renderGroupsTable(children,depth+1,groupContext):visibleMembers.map(m=>(
             <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
               onClick={()=>selectMode?toggleSelectRow(m.id):null}>
               {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
