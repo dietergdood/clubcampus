@@ -67,7 +67,7 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
     // Alle anderen Filter mit UND
     for(const [fKey,fVals] of Object.entries(filterVals)){
       if(!fVals||fVals.length===0) continue;
-      if(fKey==="teams"||fKey==="funktionsgruppen") continue; // bereits oben behandelt
+      if(fKey==="teams"||fKey==="funktionsgruppen") continue;
       if(fKey==="rollen"){
         const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
         if(!portalLabel||!fVals.includes(portalLabel)) return false;
