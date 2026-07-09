@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Av, Btn, Card, ModalOrSheet, ModalTitle, useIsMobile, avColor, DropMenu, useConfirm, ConfirmDialog } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { GN, R, RL, BL } from "../../../constants.js";
-import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, linkElternBenutzer, unlinkElternBenutzer, fetchElternkontakte, fetchBenutzerByEmail } from "../../../domains/members/memberService.js";
+import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte } from "../../../domains/members/memberService.js";
 
 function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();
@@ -15,22 +15,12 @@ function elternAvColor(beziehung){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 function ElternPortalSection({e,sb,onReload}){
-  const [lMsg,setLMsg]=useState(null);
-  const [lLoading,setLLoading]=useState(false);
-  async function link(){
-    if(!sb||!e.email) return;
-    setLLoading(true); setLMsg(null);
-    const bu = await fetchBenutzerByEmail(sb,e.email);
-    if(bu){
-      await linkElternBenutzer(sb,e.id,bu.id);
-      setLMsg({ok:true,text:"Zugang eingerichtet ✓"});
-      if(onReload) onReload();
-    } else { setLMsg({ok:false,text:"Kein Konto für "+e.email+" gefunden"}); }
-    setLLoading(false);
-  }
+  const [loading,setLoading]=useState(false);
   async function unlink(){
     if(!sb) return;
+    setLoading(true);
     await unlinkElternBenutzer(sb,e.id);
+    setLoading(false);
     if(onReload) onReload();
   }
   return(
@@ -42,12 +32,13 @@ function ElternPortalSection({e,sb,onReload}){
         </div>
       </div>
       <div className="cc-col cc-gap-6 cc-items-end">
-        {lMsg&&<div className={`cc-badge ${lMsg.ok?"cc-badge-success":"cc-badge-danger"}`}>{lMsg.text}</div>}
         {e.benutzer_id
-          ?<button className="cc-btn-danger" onClick={unlink}>Zugang entfernen</button>
-          :<button className="cc-btn-success" onClick={link} disabled={!e.email||lLoading}>
-            {lLoading?"…":"Zugang einrichten"}
+          ?<button className="cc-btn-danger" onClick={unlink} disabled={loading}>
+            {loading?"…":"Zugang deaktivieren"}
           </button>
+          :e.email
+            ?<span className="cc-text-xs cc-text-sub">Registrierung mit {e.email}</span>
+            :<span className="cc-text-xs cc-text-sub">Keine E-Mail hinterlegt</span>
         }
       </div>
     </div>
