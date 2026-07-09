@@ -21,6 +21,7 @@ function InfoTab({
   onNavToTeam,
   notizenCount, setNotizenCount,
   onReload, ableitRolle,
+  vereinId,
 }) {
   const isMobile = useIsMobile();
 
@@ -90,6 +91,7 @@ function InfoTab({
           assignFunktionen={assignFunktionen} setAssignFunktionen={setAssignFunktionen}
           onNavToTeam={onNavToTeam}
           onReload={onReload} ableitRolle={ableitRolle}
+          vereinId={vereinId}
         />
 
         <PersonFunktionen
@@ -111,6 +113,7 @@ function InfoTab({
               sb={sb}
               dbUser={account}
               onCount={setNotizenCount}
+              vereinId={vereinId}
             />
           </Card>
         )}

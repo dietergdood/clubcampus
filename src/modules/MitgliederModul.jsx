@@ -18,7 +18,7 @@ import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as expo
 import { ArchivView } from "./members/ArchivView.jsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";
 
-function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null}){
+function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}){
   const isMobile=useIsMobile();
   const [confirm,confirmDialog]=useConfirm();
   const [search,setSearch]=useState("");
@@ -159,11 +159,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setSavingView(true);
     const data=await insertAnsicht(sb,{
       benutzer_id:account.id,
+      verein_id:vereinId,
       name:saveViewName.trim(),
       spalten:visibleCols,
       filter:filterVals,
       gruppierung:groupBy,
-    }).select().single();
+    });
     if(data) setCustomViews(prev=>[...prev,data]);
     setSaveViewName("");
     setSaveViewOpen(false);
@@ -244,6 +245,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       kannVerwalten={kannVerwalten} onReload={onReload} onUpdatePortalZugang={onUpdatePortalZugang}
       setSelectedMember={setSelectedMember} selectedMember={selectedMember}
       reloadMember={reloadMember} refreshArchivCount={refreshArchivCount} brauchtEltern={brauchtEltern}
+      vereinId={vereinId}
     />
   );
 

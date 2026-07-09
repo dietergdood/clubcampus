@@ -9,7 +9,7 @@ import { TI } from "../../icons.jsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../../constants.js";
 import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.js";
 
-function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount}){
+function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null}){
   const [confirm,confirmDialog]=useConfirm();
   const [notizen,setNotizen]=useState(null);
   const [newText,setNewText]=useState("");
@@ -27,7 +27,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount}){
     if(!newText.trim()||!sb) return;
     setAdding(true);
     const autorName=dbUser?.name||dbUser?.email||"Unbekannt";
-    await insertNotiz(sb,{mitglied_id:mitgliedId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName});
+    await insertNotiz(sb,{mitglied_id:mitgliedId,verein_id:vereinId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName});
     const d=await fetchNotizen(sb,mitgliedId);
     setNotizen(d);if(onCount)onCount(d.length);
     setNewText(""); setAdding(false);

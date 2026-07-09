@@ -21,6 +21,7 @@ function PersonTeams({
   raw,
   sb,
   canEdit,
+  vereinId,
   dbKaderRollen = [],
   teamDetails,
   setTeamDetails,
@@ -58,6 +59,7 @@ function PersonTeams({
     await upsertKader(sb, {
       team_id: parseInt(teamAssignForm.team_id),
       mitglied_id: raw.id,
+      verein_id: vereinId,
       rollen: teamAssignForm.funktionen || ["Spieler/in"],
       rueckennr: teamAssignForm.rueckennr || null,
       position: teamAssignForm.position || null,

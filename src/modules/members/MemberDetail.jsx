@@ -14,7 +14,7 @@ import {
   updateMitglied,
 } from "../../domains/members/memberService.js";
 import { MemberHero } from "./MemberHero.jsx";
-import { ElternTab } from "./ElternTab.jsx";
+import { ElternTab } from "./tabs/ElternTab.jsx";
 import { InfoTab } from "./tabs/InfoTab.jsx";
 import { PortalTab } from "./tabs/PortalTab.jsx";
 import { DatenpruefungTab } from "./tabs/DatenpruefungTab.jsx";
@@ -27,6 +27,7 @@ function MemberDetail({
   kannVerwalten, onReload, onUpdatePortalZugang = null,
   setSelectedMember, selectedMember,
   reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft = null,
+  vereinId = null,
 }) {
   const dbRaw = dbMitglieder.find(d => d.id === m.id) || {};
   const raw = { ...dbRaw, ...Object.fromEntries(Object.entries(m).filter(([k, v]) => v !== undefined && v !== null || !dbRaw[k])) };
@@ -225,6 +226,7 @@ function MemberDetail({
           onNavToTeam={onNavToTeam}
           notizenCount={notizenCount} setNotizenCount={setNotizenCount}
           onReload={onReload} ableitRolle={ableitRolle}
+          vereinId={vereinId}
         />
       )}
 
@@ -233,6 +235,7 @@ function MemberDetail({
           eltern={eltern} canEdit={canEdit} raw={raw} sb={sb}
           onReload={() => { if (reloadMember) reloadMember(raw.id); if (onReload) onReload(); }}
           setElternLoaded={setElternLoaded}
+          vereinId={vereinId}
         />
       )}
 

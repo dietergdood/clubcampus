@@ -3,10 +3,10 @@
    Elternkontakte-Tab im Mitglied-Detail
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Av, Btn, Card, ModalOrSheet, ModalTitle, useIsMobile, avColor, DropMenu, useConfirm, ConfirmDialog } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
-import { GN, R, RL, BL } from "../../constants.js";
-import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, linkElternBenutzer, unlinkElternBenutzer, fetchElternkontakte, fetchBenutzerByEmail } from "../../domains/members/memberService.js";
+import { Av, Btn, Card, ModalOrSheet, ModalTitle, useIsMobile, avColor, DropMenu, useConfirm, ConfirmDialog } from "../../../theme.jsx";
+import { TI } from "../../../icons.jsx";
+import { GN, R, RL, BL } from "../../../constants.js";
+import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, linkElternBenutzer, unlinkElternBenutzer, fetchElternkontakte, fetchBenutzerByEmail } from "../../../domains/members/memberService.js";
 
 function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();
@@ -55,7 +55,7 @@ function ElternPortalSection({e,sb,onReload}){
 }
 
 /* Avatar-Farbe nach Beziehung */
-function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
+function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null}){
   const [editEltern,setEditEltern]=useState(null);
   const [elternMsg,setElternMsg]=useState(null);
   const [elternSaving,setElternSaving]=useState(false);
@@ -68,6 +68,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded}){
       if(editEltern.mode==="new"){
         const error=await insertElternkontakt(sb,{
           mitglied_id:raw.id,
+          verein_id:vereinId,
           vorname:d.vorname||null, nachname:d.nachname||null,
           name:d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||null,
           email:d.email||null, telefon:d.telefon||null,
