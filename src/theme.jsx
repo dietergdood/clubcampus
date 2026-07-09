@@ -1308,7 +1308,7 @@ function Toolbar({
   /* Filter */
   filterDefs=[], filterVals={}, onFilterChange=null,
   /* Gruppieren */
-  groupOptions=[], groupOptionsMore=[], groupBy="none", onGroupChange=null,
+  groupOptions=[], groupOptionsMore=[], groupBy="none", onGroupChange=null, multiGroup=false,
   /* Mehr-Menu */
   moreItems=[],
   /* Spalten */
@@ -1346,9 +1346,19 @@ function Toolbar({
 
   const hasActiveFilter=Object.values(filterVals).some(v=>v&&v.length>0);
   const activeFilterCount=Object.values(filterVals).reduce((n,v)=>n+(v?.length||0),0);
-  const isGrouped=groupBy&&groupBy!=="none";
+  const groupByArr=Array.isArray(groupBy)?groupBy:[groupBy];
+  const isGrouped=groupByArr.some(g=>g&&g!=="none");
 
   const accentStyle={background:"var(--cc-accent,#FFBF00)",borderColor:"var(--cc-accent,#FFBF00)",color:"var(--cc-accent-text,#000)"};
+  const isGroupActive=v=>groupByArr.includes(v);
+  function toggleGroup(val){
+    if(!onGroupChange) return;
+    if(!multiGroup){ onGroupChange(val==="none"?"none":val); return; }
+    if(val==="none"){ onGroupChange(["none"]); return; }
+    const curr=groupByArr.filter(g=>g&&g!=="none");
+    if(curr.includes(val)) onGroupChange(curr.filter(g=>g!==val).length>0?curr.filter(g=>g!==val):["none"]);
+    else onGroupChange([...curr,val]);
+  }
 
   return(
     <div>
@@ -1443,8 +1453,9 @@ function Toolbar({
                     <div className="cc-mehr-sheet-title">Gruppieren nach</div>
                     {groupOptions.map(o=>(
                       <div key={o.val} className="cc-mehr-sheet-item"
-                        style={{fontWeight:groupBy===o.val?600:400,color:groupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
-                        onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>\n                        {groupBy===o.val&&<TI n="check" size={14}/>}{o.label}
+                        style={{fontWeight:isGroupActive(o.val)?600:400,color:isGroupActive(o.val)?"var(--cc-accent,#FFBF00)":"var(--text)"}}
+                        onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
+                        {isGroupActive(o.val)&&<TI n="check" size={14}/>}{o.label}
                       </div>
                     ))}
                     {groupOptionsMore.length>0&&(
@@ -1456,8 +1467,9 @@ function Toolbar({
                         </div>
                         {groupMoreOpen&&groupOptionsMore.map(o=>(
                           <div key={o.val} className="cc-mehr-sheet-item"
-                            style={{fontWeight:groupBy===o.val?600:400,color:groupBy===o.val?"var(--cc-accent,#FFBF00)":"var(--text)"}}
-                            onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>\n                            {groupBy===o.val&&<TI n="check" size={14}/>}{o.label}
+                            style={{fontWeight:isGroupActive(o.val)?600:400,color:isGroupActive(o.val)?"var(--cc-accent,#FFBF00)":"var(--text)"}}
+                            onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
+                            {isGroupActive(o.val)&&<TI n="check" size={14}/>}{o.label}
                           </div>
                         ))}
                       </>
@@ -1469,8 +1481,8 @@ function Toolbar({
                   <div className="cc-col-menu-hdr">Gruppieren nach</div>
                   {groupOptions.map(o=>(
                     <div key={o.val} className="cc-col-menu-item"
-                      onClick={()=>{onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>
-                      <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>{groupBy===o.val&&<TI n="check" size={10}/>}</div>
+                      onClick={()=>{toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
+                      <div className={`cc-col-menu-check${isGroupActive(o.val)?" cc-col-menu-check-on":""}`}>{isGroupActive(o.val)&&<TI n="check" size={10}/>}</div>
                       {o.label}
                     </div>
                   ))}
@@ -1483,8 +1495,8 @@ function Toolbar({
                       </div>
                       {groupMoreOpen&&groupOptionsMore.map(o=>(
                         <div key={o.val} className="cc-col-menu-item"
-                          onClick={()=>{onGroupChange&&onGroupChange(o.val);setGroupOpen(false);}}>
-                          <div className={`cc-col-menu-check${groupBy===o.val?" cc-col-menu-check-on":""}`}>{groupBy===o.val&&<TI n="check" size={10}/>}</div>
+                          onClick={()=>{toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
+                          <div className={`cc-col-menu-check${isGroupActive(o.val)?" cc-col-menu-check-on":""}`}>{isGroupActive(o.val)&&<TI n="check" size={10}/>}</div>
                           {o.label}
                         </div>
                       ))}

@@ -80,22 +80,62 @@ export function sortMembers(filtered, sortCol, sortDir) {
 }
 
 export function getGroupKey(m, g, ROLLE_LABEL) {
-  if(g==="__jahrgang"){ if(!m.geburtsdatum) return "Unbekannt"; return String(new Date(m.geburtsdatum).getFullYear()); }
-  if(g==="__eintrittsjahr"){ if(!m.eintritt) return "Unbekannt"; return String(new Date(m.eintritt).getFullYear()); }
+  if(g==="__jahrgang"){ if(!m.geburtsdatum) return ["Unbekannt"]; return [String(new Date(m.geburtsdatum).getFullYear())]; }
+  if(g==="__eintrittsjahr"){ if(!m.eintritt) return ["Unbekannt"]; return [String(new Date(m.eintritt).getFullYear())]; }
   if(g==="teams"){ return (m.teams||[]).length>0?(m.teams||[]).map(t=>t?.name||t):["Kein Team"]; }
-  if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return portalLabel||"Keine Rolle"; }
-  return null;
+  if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return [portalLabel||"Keine Rolle"]; }
+  if(g==="funktionsgruppen"){ return (m.funktionsgruppen||[]).length>0?m.funktionsgruppen:["Keine Funktionsgruppe"]; }
+  if(g==="__teams_funktionen"){
+    const teams=(m.teams||[]).map(t=>({key:t?.name||t,type:"team"}));
+    const gruppen=(m.funktionsgruppen||[]).map(g=>({key:g,type:"gruppe"}));
+    return [...gruppen,...teams].length>0?[...gruppen,...teams]:[{key:"Keine Zuordnung",type:"none"}];
+  }
+  const v=m[g];
+  if(Array.isArray(v)) return v.map(t=>t?.name||t||"-").filter(Boolean).length>0?v.map(t=>t?.name||t||"-").filter(Boolean):["-"];
+  return [String(v||"-")];
 }
 
 export function buildGroups(paged, groupBy, ROLLE_LABEL) {
-  if(groupBy==="none") return [{key:"",members:paged}];
+  // groupBy kann String oder Array sein
+  const levels=Array.isArray(groupBy)?groupBy:[groupBy];
+  const firstLevel=levels[0]||"none";
+  const restLevels=levels.slice(1);
+
+  if(firstLevel==="none") return [{key:"",label:"",type:"none",members:paged,children:null}];
+
   const map={};
+  const meta={};
   paged.forEach(m=>{
-    const computed=getGroupKey(m,groupBy,ROLLE_LABEL);
-    const vals=computed!==null?(Array.isArray(computed)?computed:[computed]):Array.isArray(m[groupBy])?m[groupBy].map(t=>t?.name||t||"-"):[m[groupBy]||"-"];
-    vals.forEach(k=>{ if(!map[k]) map[k]=[]; map[k].push(m); });
+    const keys=getGroupKey(m,firstLevel,ROLLE_LABEL);
+    keys.forEach(k=>{
+      const keyStr=typeof k==="object"?k.key:k;
+      const keyType=typeof k==="object"?k.type:"default";
+      if(!map[keyStr]) { map[keyStr]=[]; meta[keyStr]=keyType; }
+      map[keyStr].push(m);
+    });
   });
-  return Object.entries(map).sort(([a],[b])=>String(a||"").localeCompare(String(b||""))).map(([k,members])=>({key:k,members}));
+
+  // Sortierung: für __teams_funktionen erst Gruppen dann Teams
+  let entries=Object.entries(map);
+  if(firstLevel==="__teams_funktionen"){
+    entries=entries.sort(([a],[b])=>{
+      const aIsTeam=meta[a]==="team"; const bIsTeam=meta[b]==="team";
+      if(aIsTeam!==bIsTeam) return aIsTeam?1:-1;
+      return String(a).localeCompare(String(b));
+    });
+  } else {
+    entries=entries.sort(([a],[b])=>String(a).localeCompare(String(b)));
+  }
+
+  return entries.map(([k,members])=>({
+    key:k,
+    label:k,
+    type:meta[k]||"default",
+    members,
+    children:restLevels.length>0&&restLevels[0]!=="none"
+      ?buildGroups(members,restLevels,ROLLE_LABEL)
+      :null,
+  }));
 }
 
 export function exportData(filtered, COLS, format) {

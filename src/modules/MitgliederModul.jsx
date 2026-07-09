@@ -24,7 +24,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [search,setSearch]=useState("");
   const [sortCol,setSortCol]=useState("name");
   const [sortDir,setSortDir]=useState("asc");
-  const [groupBy,setGroupBy]=useState("none");
+  const [groupBy,setGroupBy]=useState(["none"]);
   const [filterVals,setFilterVals]=useState({});
   const [savedView,setSavedView]=useState("standard");
   const [dragCol,setDragCol]=useState(null);
@@ -103,7 +103,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setSavedView("custom_"+v.id);
     setVisibleCols(v.spalten||SAVED_VIEWS.standard.cols);
     setFilterVals(v.filter||{});
-    setGroupBy(v.gruppierung||"none");
+    setGroupBy(Array.isArray(v.gruppierung)?v.gruppierung:[v.gruppierung||"none"]);
   }
 
   useEffect(()=>{
@@ -180,7 +180,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       name:saveViewName.trim(),
       spalten:visibleCols,
       filter:filterVals,
-      gruppierung:groupBy,
+      gruppierung:Array.isArray(groupBy)?groupBy:[groupBy],
     });
     if(data) setCustomViews(prev=>[...prev,data]);
     setSaveViewName("");
@@ -229,6 +229,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const paged=sorted;
   const hasMore=false;
   const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL),[paged,groupBy,ROLLE_LABEL]);
+  const hasGroup=Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
 
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
   const SortIcon=({col})=>sortCol===col
@@ -308,6 +309,92 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(val==="Geprueft") return <span className="cc-ml-badge cc-ml-badge-ok">Geprüft</span>;
     if(val==="Ausstehend") return <span className="cc-ml-badge cc-ml-badge-warn">Ausstehend</span>;
     return <span className="cc-ml-badge cc-ml-badge-err">{val||"Unbekannt"}</span>;
+  }
+
+  // Zellen-Rendering (wiederverwendbar)
+  function renderCell(col,m){
+    switch(col.key){
+      case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
+      case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
+      case "rollen": return <td key="rollen" className="cc-members-td">{(()=>{const portalRaw=m.role&&m.role!=="-"?m.role:null;const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;const portalIsTrainer=portalRaw==="trainer";const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel) return false;if(portalIsTrainer&&isT) return false;return true;});const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];return (all||[]).length>0?all.map((c,i)=><span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`}>{c.label}</span>):(<span className="cc-members-td-sub">—</span>);})()}</td>;
+      case "teams": return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{(m.teams||[]).length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{(m.teams||[]).slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{(m.teams||[]).length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:(m.teams||[]),x:e.clientX,y:e.clientY});}}>+{(m.teams||[]).length-1}</button>}</span>):"—"}</td>;
+      case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
+      case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
+      case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
+      case "telefon": return <td key="telefon" className="cc-members-td cc-members-td-sub">{m.telefon||"—"}</td>;
+      case "geburtsdatum": return <td key="geburtsdatum" className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>;
+      case "alter": return <td key="alter" className="cc-members-td cc-members-td-sub">{m.alter||"—"}</td>;
+      case "geschlecht": return <td key="geschlecht" className="cc-members-td cc-members-td-sub">{m.geschlecht==="m"?"Männlich":m.geschlecht==="w"?"Weiblich":m.geschlecht||"—"}</td>;
+      case "nationalitaet": return <td key="nationalitaet" className="cc-members-td cc-members-td-sub">{m.nationalitaet||"—"}</td>;
+      case "nationalitaet2": return <td key="nationalitaet2" className="cc-members-td cc-members-td-sub">{m.nationalitaet2||"—"}</td>;
+      case "ort": return <td key="ort" className="cc-members-td cc-members-td-sub">{m.ort||"—"}</td>;
+      case "spielerpass": return <td key="spielerpass" className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>;
+      case "fairgate_id": return <td key="fairgate_id" className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>;
+      case "js_nr": return <td key="js_nr" className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>;
+      case "eintritt": return <td key="eintritt" className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"—"}</td>;
+      case "nachname": return <td key="nachname" className="cc-members-td cc-members-td-sub">{m.nachname||"—"}</td>;
+      case "vorname": return <td key="vorname" className="cc-members-td cc-members-td-sub">{m.vorname||"—"}</td>;
+      case "heimatort": return <td key="heimatort" className="cc-members-td cc-members-td-sub">{m.heimatort||"—"}</td>;
+      case "ahv_nr": return <td key="ahv_nr" className="cc-members-td cc-members-td-sub">{m.ahv_nr||"—"}</td>;
+      case "strasse": return <td key="strasse" className="cc-members-td cc-members-td-sub">{m.strasse||"—"}</td>;
+      case "funktionen": return <td key="funktionen" className="cc-members-td cc-members-td-sub">{(m.funktionen||[]).join(", ")||"—"}</td>;
+      case "funktionsgruppen": return <td key="funktionsgruppen" className="cc-members-td">{(m.funktionsgruppen||[]).length===0?"—":(m.funktionsgruppen||[]).map((g,i)=>{const pf=portalFunktionen.find(f=>f.portal_gruppen?.name===g);const farbe=pf?.portal_gruppen?.farbe;return <span key={i} className="cc-funk-gruppe-badge" style={farbe?{background:farbe+"20",color:farbe,borderColor:farbe+"40"}:{}}>{g}</span>;})}</td>;
+      default: return <td key={col.key} className="cc-members-td cc-members-td-sub">{m[col.key]||"—"}</td>;
+    }
+  }
+
+  // Rekursive Gruppen-Rendering Hilfsfunktion
+  function renderGroupsMobile(groups, depth=0){
+    return groups.map(({key,label,type,members,children})=>(
+      <div key={key}>
+        {hasGroup&&(
+          <div className={`cc-members-list-group-hdr${depth>0?" cc-members-list-group-hdr-sub":""}`} style={depth>0?{paddingLeft:depth*16+12}:{}}>
+            {type==="team"&&<TI n="ball-football" size={11}/>}
+            {type==="gruppe"&&<TI n="briefcase" size={11}/>}
+            {label} <span className="cc-text-muted">{members.length}</span>
+          </div>
+        )}
+        {children?renderGroupsMobile(children,depth+1):members.map(m=>(
+          <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
+            {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
+            <div className="cc-members-item-body">
+              <div className="cc-members-item-name">{m.name}</div>
+              <div className="cc-members-item-sub">{m.mitgliedschaft||""}{m.role&&m.role!=="-"?" · "+(ROLLE_LABEL[m.role]||m.role):""}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ));
+  }
+
+  function renderGroupsTable(groups, depth=0){
+    return groups.map(({key,label,type,members,children})=>(
+      <Fragment key={key}>
+        {hasGroup&&(
+          <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`}>
+            <td colSpan={COLS.length+1} style={depth>0?{paddingLeft:depth*16+14}:{}}>
+              {type==="team"&&<TI n="ball-football" size={11}/>}
+              {type==="gruppe"&&<TI n="briefcase" size={11}/>}
+              {label} <span className="cc-text-muted">{members.length}</span>
+            </td>
+          </tr>
+        )}
+        {children?renderGroupsTable(children,depth+1):members.map(m=>(
+          <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
+            onClick={()=>selectMode?toggleSelectRow(m.id):null}>
+            {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
+              <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
+                {selected.has(m.id)&&<TI n="check" size={10}/>}
+              </div>
+            </td>}
+            {COLS.map(col=>renderCell(col,m))}
+            <td className="cc-members-td cc-members-td-actions" onClick={e=>e.stopPropagation()}>
+              <button className="cc-members-row-btn" onClick={()=>setSelectedMember({...m,_tab:"info"})}><TI n="chevron-right" size={14}/></button>
+            </td>
+          </tr>
+        ))}
+      </Fragment>
+    ));
   }
 
   return(
@@ -424,6 +511,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         }}
         groupOptions={GROUP_OPTIONS} groupOptionsMore={GROUP_OPTIONS_MORE}
         groupBy={groupBy} onGroupChange={setGroupBy}
+        multiGroup
         moreItems={[
           {header:true,label:"Aktionen"},
           {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
@@ -489,43 +577,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         {(filtered||[]).length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
         {(filtered||[]).length>0&&(isMobile?(
           <div>
-            {groups.map(({key,members})=>(
-              <div key={key}>
-                {groupBy!=="none"&&<div className="cc-members-list-group-hdr">{key} <span className="cc-text-muted">{(members||[]).length}</span></div>}
-                {members.map(m=>(
-                  <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
-                    {m.foto_url
-                      ?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>
-                      :<Av name={m.name||"?"} size={38}/>
-                    }
-                    <div className="cc-members-item-meta">
-                      <div className="cc-members-item-name">{m.name}</div>
-                      <div className="cc-members-item-sub">
-                        {m.mitgliedschaft!=="-"?m.mitgliedschaft:""}
-                      </div>
-                      {(m.rollen||[]).length>0&&(()=>{
-                        const portalRaw=m.role&&m.role!=="-"?m.role:null;
-                        const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;
-                        const portalIsTrainer=portalRaw==="trainer";
-                        const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel)return false;if(portalIsTrainer&&isT)return false;return true;});
-                        const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];
-                        return (all||[]).length>0?(
-                          <div className="cc-members-item-chips">
-                            {all.slice(0,2).map((c,i)=>(
-                              <span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`}>{c.label}</span>
-                            ))}
-                            {(all||[]).length>2&&<span className="cc-ml-more">+{(all||[]).length-2}</span>}
-                          </div>
-                        ):null;
-                      })()}
-                    </div>
-                    <div className="cc-members-item-right">
-                      <TI n="chevron-right" size={14} className="cc-members-item-chevron"/>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
+            {renderGroupsMobile(groups)}
           </div>
         ):(
           <div className="cc-table-wrap"><div className="cc-table-wrap-inner"><table className="cc-members-table">
@@ -558,60 +610,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               </tr>
             </thead>
             <tbody>
-              {groups.map(({key,members})=>(
-                <Fragment key={key}>
-                  {groupBy!=="none"&&(
-                    <tr className="cc-members-group-hdr"><td colSpan={COLS.length+1}>{key} <span className="cc-text-muted">{(members||[]).length}</span></td></tr>
-                  )}
-                  {members.map(m=>(
-                    <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
-                      onClick={()=>selectMode?toggleSelectRow(m.id):null}>
-                      {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
-                        <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
-                          {selected.has(m.id)&&<TI n="check" size={10}/>}
-                        </div>
-                      </td>}
-                      {COLS.map(col=>{
-                        switch(col.key){
-                          case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
-                          case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
-                          case "rollen": return <td key="rollen" className="cc-members-td">{(()=>{const portalRaw=m.role&&m.role!=="-"?m.role:null;const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;const portalIsTrainer=portalRaw==="trainer";const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel) return false;if(portalIsTrainer&&isT) return false;return true;});const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];return (all||[]).length>0?all.map((c,i)=><span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`} >{c.label}</span>):(<span className="cc-members-td-sub">—</span>);})()}</td>;
-                          case "teams": return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{(m.teams||[]).length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{(m.teams||[]).slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{(m.teams||[]).length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:(m.teams||[]),x:e.clientX,y:e.clientY});}}>+{(m.teams||[]).length-1}</button>}</span>):"—"}</td>;
-                          case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
-                          case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
-                          case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
-                          case "telefon": return <td key="telefon" className="cc-members-td cc-members-td-sub">{m.telefon||"—"}</td>;
-                          case "geburtsdatum": return <td key="geburtsdatum" className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>;
-                          case "alter": return <td key="alter" className="cc-members-td cc-members-td-sub">{m.alter||"—"}</td>;
-                          case "geschlecht": return <td key="geschlecht" className="cc-members-td cc-members-td-sub">{m.geschlecht==="m"?"Männlich":m.geschlecht==="w"?"Weiblich":m.geschlecht||"—"}</td>;
-                          case "nationalitaet": return <td key="nationalitaet" className="cc-members-td cc-members-td-sub">{m.nationalitaet||"—"}</td>;
-                          case "nationalitaet2": return <td key="nationalitaet2" className="cc-members-td cc-members-td-sub">{m.nationalitaet2||"—"}</td>;
-                          case "ort": return <td key="ort" className="cc-members-td cc-members-td-sub">{m.ort||"—"}</td>;
-                          case "spielerpass": return <td key="spielerpass" className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>;
-                          case "fairgate_id": return <td key="fairgate_id" className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>;
-                          case "js_nr": return <td key="js_nr" className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>;
-                          case "eintritt": return <td key="eintritt" className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"—"}</td>;
-                          case "strasse": return <td key="strasse" className="cc-members-td cc-members-td-sub">{m.strasse||"—"}</td>;
-                          case "heimatort": return <td key="heimatort" className="cc-members-td cc-members-td-sub">{m.heimatort||"—"}</td>;
-                          case "ahv_nr": return <td key="ahv_nr" className="cc-members-td cc-members-td-sub">{m.ahv_nr?"••• •• ••••":"—"}</td>;
-                          case "vorname": return <td key="vorname" className="cc-members-td cc-members-td-sub">{m.vorname||"—"}</td>;
-                          case "nachname": return <td key="nachname" className="cc-members-td cc-members-td-sub">{m.nachname||"—"}</td>;
-                          case "funktionen": return <td key="funktionen" className="cc-members-td cc-members-td-sub">{(m.funktionen||[]).join(", ")||"—"}</td>;
-                          case "funktionsgruppen": return <td key="funktionsgruppen" className="cc-members-td">
-                            {(m.funktionsgruppen||[]).length===0?"—":(m.funktionsgruppen||[]).map((g,i)=>{
-                              const pf=portalFunktionen.find(f=>f.portal_gruppen?.name===g);
-                              const farbe=pf?.portal_gruppen?.farbe;
-                              return <span key={i} className="cc-funk-gruppe-badge" style={farbe?{background:farbe+"20",color:farbe,borderColor:farbe+"40"}:{}}>{g}</span>;
-                            })}
-                          </td>;
-                          default: return <td key={col.key} className="cc-members-td cc-members-td-sub">—</td>;
-                        }
-                      })}
-                      <td className="cc-members-td cc-members-td-actions"/>
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
+              {renderGroupsTable(groups)}
             </tbody>
           </table></div></div>
         ))}

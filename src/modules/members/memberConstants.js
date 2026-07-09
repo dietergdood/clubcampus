@@ -67,20 +67,22 @@ export const COL_GROUPS = [
 
 export const ALL_COLS = COL_GROUPS.flatMap(g => g.cols);
 
+// Einzelne Gruppierungs-Optionen (für jede Ebene)
 export const GROUP_OPTIONS = [
-  {val:"none",           label:"Keine Gruppierung"},
-  {val:"mitgliedschaft", label:"Nach Mitgliedschaft"},
-  {val:"rollen",         label:"Nach Rolle"},
-  {val:"teams",          label:"Nach Team"},
-  {val:"portal",         label:"Nach Portal-Zugang"},
-  {val:"datenpruefung",  label:"Nach Datenprüfung"},
-  {val:"funktionsgruppen",label:"Nach Funktionsgruppe"},
+  {val:"none",              label:"Keine Gruppierung"},
+  {val:"mitgliedschaft",    label:"Mitgliedschaft"},
+  {val:"rollen",            label:"Rolle"},
+  {val:"teams",             label:"Team"},
+  {val:"portal",            label:"Portal-Zugang"},
+  {val:"datenpruefung",     label:"Datenprüfung"},
+  {val:"funktionsgruppen",  label:"Funktionsgruppe"},
+  {val:"__teams_funktionen",label:"Team & Funktionsgruppe"},
 ];
 
 export const GROUP_OPTIONS_MORE = [
-  {val:"geschlecht",      label:"Nach Geschlecht"},
-  {val:"nationalitaet",   label:"Nach Nationalität"},
-  {val:"ort",             label:"Nach Wohnort"},
-  {val:"__jahrgang",      label:"Nach Jahrgang"},
-  {val:"__eintrittsjahr", label:"Nach Eintrittsjahr"},
+  {val:"geschlecht",      label:"Geschlecht"},
+  {val:"nationalitaet",   label:"Nationalität"},
+  {val:"ort",             label:"Wohnort"},
+  {val:"__jahrgang",      label:"Jahrgang"},
+  {val:"__eintrittsjahr", label:"Eintrittsjahr"},
 ];
