@@ -850,17 +850,23 @@ function Portal({supabaseClient}){
       ]);
       const kaderMap={};
       (kaderRes.data||[]).forEach(k=>{
-        if(!kaderMap[k.mitglied_id]) kaderMap[k.mitglied_id]={rollen:[],teams:[]};
+        if(!kaderMap[k.mitglied_id]) kaderMap[k.mitglied_id]={rollen:[],teams:[],kader:[]};
         (k.rollen||[]).forEach(r=>{
           if(!kaderMap[k.mitglied_id].rollen.includes(r)) kaderMap[k.mitglied_id].rollen.push(r);
         });
         if(k.teams?.name&&!kaderMap[k.mitglied_id].teams.find(t=>t.name===k.teams.name))
           kaderMap[k.mitglied_id].teams.push({name:k.teams.name,kurz:k.teams.kurzname||k.teams.name});
+        // Team-Rollen Paare für kombinierte Anzeige
+        kaderMap[k.mitglied_id].kader.push({
+          team:{name:k.teams?.name,kurz:k.teams?.kurzname||k.teams?.name},
+          rollen:k.rollen||[]
+        });
       });
       const data=(mitgliederRes.data||[]).map(m=>({
         ...m,
         kader_rollen:kaderMap[m.id]?.rollen||[],
         kader_teams:kaderMap[m.id]?.teams||[],
+        kader_eintraege:kaderMap[m.id]?.kader||[],
       }));
       if(data.length>0) setDbMitglieder(data);
     }catch(e){ console.warn("[FCH] loadDbMitglieder:", e.message); }

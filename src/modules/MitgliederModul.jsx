@@ -345,34 +345,27 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       case "ahv_nr": return <td key="ahv_nr" className="cc-members-td cc-members-td-sub">{m.ahv_nr||"—"}</td>;
       case "strasse": return <td key="strasse" className="cc-members-td cc-members-td-sub">{m.strasse||"—"}</td>;
       case "teams_rollen": {
-        // Kombinierte Teams & Rollen Spalte
         if(gc.type==="gruppe") return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
         const teamsFilter=filterVals["teams"]||[];
         const kaderFilter=filterVals["kaderrollen"]||[];
-        const teams=gc.type==="team"
-          ?(m.teams||[]).filter(t=>(t?.name||t)===gc.key)
-          :(teamsFilter.length>0?(m.teams||[]).filter(t=>teamsFilter.includes(t?.name||t)):(m.teams||[]));
-        if(teams.length===0) return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
+        const eintraege=(m.kader_eintraege||[]).filter(e=>{
+          const teamMatch=gc.type==="team"?e.team?.name===gc.key:(teamsFilter.length===0||teamsFilter.includes(e.team?.name));
+          const rolleMatch=kaderFilter.length===0||e.rollen.some(r=>kaderFilter.includes(r));
+          return teamMatch&&rolleMatch;
+        });
+        if(eintraege.length===0) return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
         return <td key="teams_rollen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
-            {teams.map((t,i)=>{
-              const teamName=t?.name||t;
-              const teamKurzname=t?.kurzname||t?.kurz||teamName;
-              // Kaderrollen für dieses Team
-              const teamRollen=(m.kader_rollen_raw||[]).filter((_,j)=>{
-                const teamRef=(m.teams||[])[j];
-                return (teamRef?.name||teamRef)===teamName;
-              });
-              const rollenToShow=kaderFilter.length>0?teamRollen.filter(r=>kaderFilter.includes(r)):teamRollen;
-              if(gc.type==="team"&&rollenToShow.length===0&&kaderFilter.length>0) return null;
+            {eintraege.map((e,i)=>{
+              const rollenToShow=kaderFilter.length>0?e.rollen.filter(r=>kaderFilter.includes(r)):e.rollen;
               return(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span className="cc-team-chip" style={{minWidth:36,textAlign:"center",flexShrink:0}}>{teamKurzname}</span>
+                  <span className="cc-team-chip" style={{minWidth:36,textAlign:"center",flexShrink:0}}>{e.team?.kurz||e.team?.name||"—"}</span>
                   <span style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-                    {rollenToShow.length>0?rollenToShow.map((r,ri)=>{
+                    {rollenToShow.map((r,ri)=>{
                       const isT=TRAINER_KEYS.some(k=>k===r);
                       return <span key={ri} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;
-                    }):<span className="cc-members-td-sub" style={{fontSize:11}}>—</span>}
+                    })}
                   </span>
                 </div>
               );
