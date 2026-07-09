@@ -1648,9 +1648,9 @@ function Toolbar({
                     ):(
                       // Stufe 2: Ansichten / Aktionen / Export
                       <div>
-                        <div style={{display:"flex",alignItems:"center",padding:"12px 16px 8px",gap:8}}>
-                          <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
-                            <TI n="chevron-left" size={16}/>
+                        <div style={{display:"flex",alignItems:"center",padding:"12px 20px 8px",gap:12}}>
+                          <button className="cc-icon-btn" style={{padding:0}} onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
+                            <TI n="chevron-left" size={18}/>
                           </button>
                           <span style={{fontSize:15,fontWeight:600}}>{mobileSubMenu==="views"?"Ansichten":mobileSubMenu==="export"?"Exportieren":"Aktionen"}</span>
                         </div>
@@ -1669,9 +1669,9 @@ function Toolbar({
                                     {item.icon&&<TI n={item.icon} size={16}/>}{item.label}
                                   </button>
                                   {item.onDelete&&(
-                                    <button className="cc-icon-btn" style={{color:"var(--sub)",flexShrink:0,padding:"8px 12px"}}
+                                    <button className="cc-icon-btn" style={{color:"var(--sub)",flexShrink:0,padding:"10px 16px",fontSize:18}}
                                       onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onDelete();}}>
-                                      <TI n="trash" size={14}/>
+                                      <TI n="trash" size={18}/>
                                     </button>
                                   )}
                                 </div>
