@@ -440,7 +440,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               </td>
             </tr>
           )}
-          {children?renderGroupsTable(children,depth+1,groupContext):members.map(m=>(
+          {children?renderGroupsTable(children,depth+1,groupContext):members.filter(m=>{
+            if(groupContext.type==="team"){
+              const kaderFilter=filterVals["kaderrollen"]||[];
+              if(kaderFilter.length===0) return true;
+              const teamRollen=(m.kader_eintraege||[]).filter(e=>e.team?.name===groupContext.key).flatMap(e=>e.rollen);
+              return teamRollen.some(r=>kaderFilter.includes(r));
+            }
+            return true;
+          }).map(m=>(
             <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
               onClick={()=>selectMode?toggleSelectRow(m.id):null}>
               {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
