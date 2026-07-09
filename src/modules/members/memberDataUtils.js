@@ -94,15 +94,32 @@ export function sortMembers(filtered, sortCol, sortDir) {
   });
 }
 
-export function getGroupKey(m, g, ROLLE_LABEL) {
+export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   if(g==="__jahrgang"){ if(!m.geburtsdatum) return ["Unbekannt"]; return [String(new Date(m.geburtsdatum).getFullYear())]; }
   if(g==="__eintrittsjahr"){ if(!m.eintritt) return ["Unbekannt"]; return [String(new Date(m.eintritt).getFullYear())]; }
-  if(g==="teams"){ return (m.teams||[]).length>0?(m.teams||[]).map(t=>t?.name||t):["Kein Team"]; }
+  if(g==="teams"){
+    const teamsFilter=filterVals["teams"]||[];
+    const allTeams=(m.teams||[]).map(t=>t?.name||t);
+    const filtered=teamsFilter.length>0?allTeams.filter(t=>teamsFilter.includes(t)):allTeams;
+    return filtered.length>0?filtered:["Kein Team"];
+  }
   if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return [portalLabel||"Keine Rolle"]; }
-  if(g==="funktionsgruppen"){ return (m.funktionsgruppen||[]).length>0?m.funktionsgruppen:["Keine Funktionsgruppe"]; }
+  if(g==="funktionsgruppen"){
+    const gruppenFilter=filterVals["funktionsgruppen"]||[];
+    const allGruppen=m.funktionsgruppen||[];
+    const filtered=gruppenFilter.length>0?allGruppen.filter(g=>gruppenFilter.includes(g)):allGruppen;
+    return filtered.length>0?filtered:["Keine Funktionsgruppe"];
+  }
   if(g==="__teams_funktionen"){
-    const teams=(m.teams||[]).map(t=>({key:t?.name||t,type:"team"}));
-    const gruppen=(m.funktionsgruppen||[]).map(g=>({key:g,type:"gruppe"}));
+    const teamsFilter=filterVals["teams"]||[];
+    const gruppenFilter=filterVals["funktionsgruppen"]||[];
+    const teams=(m.teams||[])
+      .map(t=>t?.name||t)
+      .filter(t=>teamsFilter.length===0||teamsFilter.includes(t))
+      .map(t=>({key:t,type:"team"}));
+    const gruppen=(m.funktionsgruppen||[])
+      .filter(g=>gruppenFilter.length===0||gruppenFilter.includes(g))
+      .map(g=>({key:g,type:"gruppe"}));
     return [...gruppen,...teams].length>0?[...gruppen,...teams]:[{key:"Keine Zuordnung",type:"none"}];
   }
   const v=m[g];
@@ -110,7 +127,7 @@ export function getGroupKey(m, g, ROLLE_LABEL) {
   return [String(v||"-")];
 }
 
-export function buildGroups(paged, groupBy, ROLLE_LABEL) {
+export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}) {
   // groupBy kann String oder Array sein
   const levels=Array.isArray(groupBy)?groupBy:[groupBy];
   const firstLevel=levels[0]||"none";
@@ -121,7 +138,7 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL) {
   const map={};
   const meta={};
   paged.forEach(m=>{
-    const keys=getGroupKey(m,firstLevel,ROLLE_LABEL);
+    const keys=getGroupKey(m,firstLevel,ROLLE_LABEL,filterVals);
     keys.forEach(k=>{
       const keyStr=typeof k==="object"?k.key:k;
       const keyType=typeof k==="object"?k.type:"default";

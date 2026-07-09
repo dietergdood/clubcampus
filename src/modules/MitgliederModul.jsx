@@ -229,7 +229,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const paged=sorted;
   const hasMore=false;
-  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL),[paged,groupBy,ROLLE_LABEL]);
+  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,filterVals),[paged,groupBy,ROLLE_LABEL,filterVals]);
   const hasGroup=Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
 
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
