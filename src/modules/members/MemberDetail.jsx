@@ -225,7 +225,7 @@ function MemberDetail({
           assignFunktionen={assignFunktionen} setAssignFunktionen={setAssignFunktionen}
           onNavToTeam={onNavToTeam}
           notizenCount={notizenCount} setNotizenCount={setNotizenCount}
-          onReload={onReload} ableitRolle={ableitRolle}
+          onReload={onReload} reloadMember={reloadMember} ableitRolle={ableitRolle}
           vereinId={vereinId}
         />
       )}

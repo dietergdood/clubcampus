@@ -20,7 +20,7 @@ function InfoTab({
   assignFunktionen, setAssignFunktionen,
   onNavToTeam,
   notizenCount, setNotizenCount,
-  onReload, ableitRolle,
+  onReload, reloadMember=null, ableitRolle,
   vereinId,
 }) {
   const isMobile = useIsMobile();
@@ -90,14 +90,14 @@ function InfoTab({
           allTeams={allTeams} setAllTeams={setAllTeams}
           assignFunktionen={assignFunktionen} setAssignFunktionen={setAssignFunktionen}
           onNavToTeam={onNavToTeam}
-          onReload={onReload} ableitRolle={ableitRolle}
+          onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}} ableitRolle={ableitRolle}
           vereinId={vereinId}
         />
 
         <PersonFunktionen
           raw={raw} sb={sb} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
-          onReload={onReload}
+          onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}}
         />
 
         {/* Notizen */}
