@@ -23,7 +23,7 @@ export const FIELD_VIS = {
 };
 
 export const SAVED_VIEWS = {
-  standard:      { label:"Standard",   cols:["name","mitgliedschaft","rollen","teams","portal","datenpruefung"] },
+  standard:      { label:"Standard",   cols:["name","mitgliedschaft","rollen","teams_rollen","portal","datenpruefung"] },
   administration:{ label:"Verwaltung", cols:["name","email","telefon","ort","mitgliedschaft","datenpruefung"] },
 };
 
@@ -61,8 +61,9 @@ export const COL_GROUPS = [
     {key:"datenpruefung", label:"Datenpruefung",  default:true},
   ]},
   {group:"Sport", cols:[
-    {key:"teams",         label:"Teams",          default:true},
+    {key:"teams",         label:"Teams",          default:false},
     {key:"kaderrollen",   label:"Kaderrolle",     default:false},
+    {key:"teams_rollen",  label:"Teams & Rollen",  default:true},
   ]},
 ];
 
