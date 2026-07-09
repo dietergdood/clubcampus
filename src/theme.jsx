@@ -281,7 +281,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-dropdown-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cc-ml-dropdown-clear{font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;font-family:inherit}
 .cc-ml-dropdown-clear:hover{color:var(--text)}
-.cc-ml-dropdown-apply{font-size:12px;font-weight:600;color:var(--surface);background:var(--text);border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit}
+.cc-ml-dropdown-apply{font-size:12px;font-weight:600;color:#000;background:var(--cc-accent,#FFBF00);border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit}
 .cc-multiselect{position:relative;width:100%}
 .cc-multiselect-trigger{width:100%;padding:8px 12px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--text);text-align:left;font-family:inherit}
 .cc-multiselect-chips{display:flex;gap:4px;flex-wrap:wrap;flex:1;min-width:0}
@@ -1373,14 +1373,14 @@ function Toolbar({
                         })}
                       </div>
                     ))}
-                    <div className="cc-ml-dropdown-footer" style={{padding:"12px 0 0"}}>
-                      <button className="cc-ml-dropdown-clear" onMouseDown={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
-                      <button className="cc-ml-dropdown-apply" onMouseDown={()=>setFilterOpen(false)}>Fertig</button>
-                    </div>
                   </div>
                 </div>
               ):(
                 <div className="cc-ml-dropdown cc-ml-filter-dropdown">
+                  <div className="cc-ml-dropdown-footer" style={{borderBottom:"0.5px solid var(--border)",borderTop:"none",paddingBottom:8,marginBottom:4}}>
+                    <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
+                    <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
+                  </div>
                   <div className="cc-col-menu-hdr">Filter</div>
                   {filterDefs.map(({key,label,vals})=>(
                     <div key={key}>
@@ -1397,10 +1397,6 @@ function Toolbar({
                       })}
                     </div>
                   ))}
-                  <div className="cc-ml-dropdown-footer">
-                    <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
-                    <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
-                  </div>
                 </div>
               )
             )}
