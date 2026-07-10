@@ -299,6 +299,19 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-mobile-item span{font-size:14px;color:var(--text)}
 .cc-filter-mobile-divider{height:8px;background:var(--surface-1);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
 .cc-filter-mobile-footer{padding:12px 20px}
+.cc-group-drag-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:grab;background:var(--surface)}
+.cc-group-drag-item:hover{background:var(--surface2)}
+.cc-group-drag-item.cc-drag-over{border-top:2px solid var(--cc-accent,#FFBF00)}
+.cc-group-drag-handle{color:var(--sub);cursor:grab;font-size:14px;flex-shrink:0}
+.cc-group-drag-nr{width:18px;height:18px;border-radius:50%;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0}
+.cc-group-inactive-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:0.5px solid var(--border);cursor:pointer;font-size:12px;color:var(--sub)}
+.cc-group-inactive-item:hover{background:var(--surface2);color:var(--text)}
+.cc-group-mobile-level{display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:0.5px solid var(--border);cursor:pointer}
+.cc-group-mobile-dot{width:22px;height:22px;border-radius:50%;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0}
+.cc-group-mobile-dot-empty{width:22px;height:22px;border-radius:50%;background:var(--surface2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--sub);flex-shrink:0}
+.cc-group-mobile-lbl{flex:1;font-size:15px;color:var(--text)}
+.cc-group-mobile-lbl-empty{flex:1;font-size:14px;color:var(--sub)}
+.cc-group-preview{padding:10px 20px;font-size:12px;color:var(--sub);border-top:0.5px solid var(--border);background:var(--surface2)}
 .cc-filter-mobile-checkbox{width:16px;height:16px;accent-color:#000;flex-shrink:0;pointer-events:none}
 @media(max-width:680px){.cc-filter-sec-hdr{padding:15px 20px 17px}.cc-filter-sec-name{font-size:13px}.cc-filter-sec-badge{font-size:12px;padding:2px 8px}.cc-mehr-sheet-item{padding:14px 20px;font-size:15px}.cc-filter-divider{margin:8px 0}}
 .cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
@@ -1428,6 +1441,9 @@ function Toolbar({
   const [moreOpen,setMoreOpen]=useState(false);
   const [moreSubPanel,setMoreSubPanel]=useState(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
+  const [dragGroup,setDragGroup]=useState(null);
+  const [dragOverGroup,setDragOverGroup]=useState(null);
+  const [mobileGroupPicker,setMobileGroupPicker]=useState(null); // index of level being picked
   const [mobileSubMenu,setMobileSubMenu]=useState(null); // null | "filter" | "group" | "views" | "export"
   const filterRef=useRef(null);
   const groupRef=useRef(null);
@@ -1626,40 +1642,58 @@ function Toolbar({
                   </div>
                 </div>
               ):(
-                <div className="cc-ml-dropdown cc-ml-group-dropdown">
+                <div className="cc-ml-dropdown cc-ml-group-dropdown" style={{minWidth:240}}>
                   <div className="cc-filter-footer">
                     <button className="cc-ml-dropdown-clear" onClick={()=>{onGroupChange&&onGroupChange(["none"]);setGroupOpen(false);}}>Zurücksetzen</button>
                     <button className="cc-ml-dropdown-apply" onClick={()=>setGroupOpen(false)}>Fertig</button>
                   </div>
-                  <div className="cc-col-menu-hdr">Gruppieren nach</div>
-                  {groupOptions.map(o=>(
-                    <div key={o.val} className="cc-col-menu-item"
-                      onClick={()=>{toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
-                      <div className={`cc-col-menu-check${isGroupActive(o.val)?" cc-col-menu-check-on":""}`}>{isGroupActive(o.val)&&<TI n="check" size={10}/>}</div>
+                  {groupByArr.filter(g=>g&&g!=="none").length>0&&(
+                    <>
+                      <div className="cc-col-menu-hdr">Aktiv <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+                      {groupByArr.filter(g=>g&&g!=="none").map((val,idx)=>{
+                        const opt=[...groupOptions,...groupOptionsMore].find(o=>o.val===val);
+                        if(!opt) return null;
+                        return(
+                          <div key={val}
+                            className={`cc-group-drag-item${dragOverGroup===val?" cc-drag-over":""}`}
+                            draggable
+                            onDragStart={()=>setDragGroup(val)}
+                            onDragOver={e=>{e.preventDefault();setDragOverGroup(val);}}
+                            onDrop={e=>{
+                              e.preventDefault();
+                              if(dragGroup&&dragGroup!==val){
+                                const curr=groupByArr.filter(g=>g&&g!=="none");
+                                const from=curr.indexOf(dragGroup),to=curr.indexOf(val);
+                                const next=[...curr];
+                                next.splice(from,1);next.splice(to,0,dragGroup);
+                                onGroupChange&&onGroupChange(next);
+                              }
+                              setDragGroup(null);setDragOverGroup(null);
+                            }}
+                            onDragEnd={()=>{setDragGroup(null);setDragOverGroup(null);}}>
+                            <TI n="grip-vertical" size={14} className="cc-group-drag-handle"/>
+                            <div className="cc-group-drag-nr">{idx+1}</div>
+                            <span style={{flex:1,fontSize:13}}>{opt.label}</span>
+                            <button style={{background:"none",border:"none",color:"var(--sub)",cursor:"pointer",fontSize:15,padding:"0 2px"}}
+                              onClick={e=>{e.stopPropagation();toggleGroup(val);}}>×</button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                  <div className="cc-col-menu-hdr" style={{marginTop:groupByArr.filter(g=>g&&g!=="none").length>0?0:0}}>Hinzufügen</div>
+                  {[...groupOptions,...groupOptionsMore].filter(o=>!groupByArr.includes(o.val)).map(o=>(
+                    <div key={o.val} className="cc-group-inactive-item"
+                      onClick={()=>toggleGroup(o.val)}>
+                      <TI n="plus" size={12}/>
                       {o.label}
                       {o.val==="__teams_funktionen"&&<TI n="info-circle" size={12} style={{marginLeft:"auto",color:"var(--sub)"}}/>}
                     </div>
                   ))}
-                  {isGroupActive("__teams_funktionen")&&(
-                    <div style={{margin:"0 8px 6px",background:"var(--bg-accent,#EFF6FF)",border:"0.5px solid var(--border-accent,#BFDBFE)",borderRadius:8,padding:"8px 10px",fontSize:12,color:"var(--text-secondary)",lineHeight:1.5}}>
-                      Zeigt Trainer und Funktionäre in einer gemeinsamen Liste — ideal für Kontaktlisten oder Vereinsverzeichnisse.
+                  {groupByArr.filter(g=>g&&g!=="none").length>0&&(
+                    <div style={{padding:"6px 12px 8px",fontSize:11,color:"var(--sub)",borderTop:"0.5px solid var(--border)"}}>
+                      {groupByArr.filter(g=>g&&g!=="none").map(v=>[...groupOptions,...groupOptionsMore].find(o=>o.val===v)?.label).filter(Boolean).join(" › ")}
                     </div>
-                  )}
-                  {groupOptionsMore.length>0&&(
-                    <>
-                      <div className="cc-col-menu-item cc-text-sub" style={{cursor:"pointer",fontWeight:500}}
-                        onClick={()=>setGroupMoreOpen(o=>!o)}>
-                        <TI n={groupMoreOpen?"chevron-up":"chevron-down"} size={12}/>
-                        Weitere ({groupOptionsMore.length})
-                      </div>
-                      {groupMoreOpen&&groupOptionsMore.map(o=>(
-                        <div key={o.val} className="cc-col-menu-item"
-                          onClick={()=>{toggleGroup(o.val);if(!multiGroup)setGroupOpen(false);}}>
-                          <div className={`cc-col-menu-check${isGroupActive(o.val)?" cc-col-menu-check-on":""}`}>{isGroupActive(o.val)&&<TI n="check" size={10}/>}</div>
-                          {o.label}
-                        </div>
-                      ))}
-                    </>
                   )}
                 </div>
               )
@@ -1771,7 +1805,7 @@ function Toolbar({
                         </div>
                       </div>
                     ):mobileSubMenu==="group"?(
-                      // Stufe 2: Gruppieren
+                      // Stufe 2: Gruppieren — Ebenen
                       <div>
                         <div className="cc-sheet-subhdr">
                           <button className="cc-icon-btn" onMouseDown={e=>{e.stopPropagation();setMobileSubMenu(null);}}>
@@ -1781,16 +1815,56 @@ function Toolbar({
                           <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
                         </div>
                         <div className="cc-sheet-scroll">
-                          {[...groupOptions,...groupOptionsMore].map(o=>(
-                            <div key={o.val} className="cc-filter-mobile-item"
-                              onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);}}>
-                              <input type="checkbox" readOnly checked={isGroupActive(o.val)} className="cc-filter-mobile-checkbox"/>
-                              <span>{o.label}</span>
+                          {groupByArr.filter(g=>g&&g!=="none").map((val,idx)=>{
+                            const opt=[...groupOptions,...groupOptionsMore].find(o=>o.val===val);
+                            if(!opt) return null;
+                            return(
+                              <div key={val} className="cc-group-mobile-level"
+                                onMouseDown={e=>{e.stopPropagation();setMobileGroupPicker(idx);}}>
+                                <div className="cc-group-mobile-dot">{idx+1}</div>
+                                <span className="cc-group-mobile-lbl">{opt.label}</span>
+                                <button style={{background:"none",border:"none",color:"var(--sub)",cursor:"pointer",fontSize:18,padding:"0 2px"}}
+                                  onMouseDown={e=>{e.stopPropagation();toggleGroup(val);}}>×</button>
+                              </div>
+                            );
+                          })}
+                          {groupByArr.filter(g=>g&&g!=="none").length<3&&(
+                            <div className="cc-group-mobile-level" style={{opacity:0.5}}
+                              onMouseDown={e=>{e.stopPropagation();setMobileGroupPicker(groupByArr.filter(g=>g&&g!=="none").length);}}>
+                              <div className="cc-group-mobile-dot-empty"><TI n="plus" size={10}/></div>
+                              <span className="cc-group-mobile-lbl-empty">Ebene hinzufügen</span>
+                              <TI n="chevron-right" size={14} style={{color:"var(--sub)"}}/>
                             </div>
-                          ))}
+                          )}
+                          {mobileGroupPicker!==null&&(
+                            <div style={{borderTop:"1px solid var(--border)",marginTop:4}}>
+                              <div style={{padding:"10px 20px 4px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:".06em",background:"var(--surface2)"}}>Ebene {mobileGroupPicker+1} wählen</div>
+                              {[...groupOptions,...groupOptionsMore].filter(o=>!groupByArr.includes(o.val)).map(o=>(
+                                <div key={o.val} className="cc-filter-mobile-item"
+                                  onMouseDown={e=>{
+                                    e.stopPropagation();
+                                    const curr=groupByArr.filter(g=>g&&g!=="none");
+                                    curr.splice(mobileGroupPicker,0,o.val);
+                                    onGroupChange&&onGroupChange(curr);
+                                    setMobileGroupPicker(null);
+                                  }}>
+                                  <span style={{flex:1}}>{o.label}</span>
+                                  <TI n="chevron-right" size={13} style={{color:"var(--sub)"}}/>
+                                </div>
+                              ))}
+                              <div className="cc-filter-mobile-footer">
+                                <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();setMobileGroupPicker(null);}}>Abbrechen</button>
+                              </div>
+                            </div>
+                          )}
                           {isGrouped&&(
-                            <div style={{padding:"12px 20px"}}>
-                              <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(["none"]);}}>Gruppierung zurücksetzen</button>
+                            <div className="cc-group-preview">
+                              {groupByArr.filter(g=>g&&g!=="none").map(v=>[...groupOptions,...groupOptionsMore].find(o=>o.val===v)?.label).filter(Boolean).join(" › ")}
+                            </div>
+                          )}
+                          {isGrouped&&(
+                            <div className="cc-filter-mobile-footer">
+                              <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onGroupChange&&onGroupChange(["none"]);setMobileGroupPicker(null);}}>Alle zurücksetzen</button>
                             </div>
                           )}
                         </div>
