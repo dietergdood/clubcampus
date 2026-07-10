@@ -512,7 +512,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-mehr-sheet-box{position:relative;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 16px 32px;font-family:inherit;overflow:visible}
 .cc-mehr-sheet-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
 .cc-mehr-sheet-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:8px}
-.cc-mehr-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 4px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:14px;color:var(--text);font-weight:400;cursor:pointer;font-family:inherit;text-align:left}
+.cc-mehr-sheet-item{display:flex;align-items:center;gap:12px;width:100%;padding:11px 20px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:14px;color:var(--text);font-weight:400;cursor:pointer;font-family:inherit;text-align:left}
 .cc-sheet-nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 20px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;text-align:left}
 .cc-sheet-nav-item:active{background:var(--cc-hover)}
 .cc-sheet-nav-left{display:flex;align-items:center;gap:12px}

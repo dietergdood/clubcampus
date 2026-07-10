@@ -722,8 +722,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         />
       )}
 
-      {/* Liste / Tabelle */}
-      <Card className="cc-card-table" flush>
+
       {/* Toolbar */}
       <Toolbar
         search={search} onSearch={setSearch}
@@ -748,6 +747,17 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         groupOptions={GROUP_OPTIONS} groupOptionsMore={GROUP_OPTIONS_MORE}
         groupBy={groupBy} onGroupChange={setGroupBy}
         multiGroup
+        colMenu={!isMobile&&<ColMenuButton
+          colGroups={COL_GROUPS}
+          visibleCols={visibleCols}
+          onVisibleColsChange={setVisibleCols}
+          dragCol={dragCol}
+          dragOverCol={dragOverCol}
+          onDragStart={handleColDragStart}
+          onDragOver={handleColDragOver}
+          onDrop={handleColDrop}
+          onDragEnd={handleColDragEnd}
+        />}
         externalFilterOpen={mobileFilterOpen}
         externalGroupOpen={mobileGroupOpen}
         moreItems={[
@@ -764,23 +774,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             "sep",
           ]:[]),
           {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
-          ...(!isMobile?[{
-            icon:"table",label:"Spalten",
-            subPanel:(
-              <ColMenuButton
-                colGroups={COL_GROUPS}
-                visibleCols={visibleCols}
-                onVisibleColsChange={setVisibleCols}
-                dragCol={dragCol}
-                dragOverCol={dragOverCol}
-                onDragStart={handleColDragStart}
-                onDragOver={handleColDragOver}
-                onDrop={handleColDrop}
-                onDragEnd={handleColDragEnd}
-                inline
-              />
-            ),
-          }]:[]),
           "sep",
           {header:true,label:"Ansichten"},
           ...Object.entries(SAVED_VIEWS).map(([k,v])=>({
@@ -806,6 +799,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           ]:[]),
         ]}
       />
+
+      {/* Liste / Tabelle */}
+      <Card className="cc-card-table" flush>
 
 
         {(filtered||[]).length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
