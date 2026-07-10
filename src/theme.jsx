@@ -283,7 +283,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 @media(max-width:680px){.cc-filter-search{padding:10px 20px}.cc-filter-search input{font-size:16px;padding:8px 12px;border-radius:8px}}
 .cc-filter-sec-hdr{display:flex;align-items:center;gap:6px;padding:10px 12px;cursor:pointer;border-top:0.5px solid var(--border);user-select:none}
 .cc-filter-sec-hdr:first-child{border-top:none}
-.cc-filter-divider{height:1px;background:var(--border-strong);margin:6px 0}
+.cc-filter-divider{height:0;border:none;border-top:1px solid var(--border-strong);margin:8px 0}
 .cc-filter-sec-name{flex:1;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em}
 .cc-filter-sec-badge{font-size:10px;background:var(--cc-accent,#FFBF00);color:#000;font-weight:600;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 .cc-filter-sec-body{padding:2px 0 4px}
