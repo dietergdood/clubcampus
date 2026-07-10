@@ -1470,11 +1470,14 @@ function Toolbar({
 
         {/* Filter */}
         {filterDefs.length>0&&(
-          <div ref={filterRef} className="cc-ml-dropdown-wrap" style={isMobile?{display:"none"}:{}}>
+          <div ref={filterRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={hasActiveFilter?accentStyle:{}}
-              onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false);setMoreOpen(false);}}>
+              onClick={()=>{
+                if(isMobile){setFilterSearch("");setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));setMoreOpen(true);setMobileSubMenu("filter");}
+                else{setFilterOpen(o=>!o);setGroupOpen(false);setMoreOpen(false);}
+              }}>
               <TI n="filter" size={15}/>
               {!isMobile&&"Filter"}
               {hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}
@@ -1546,11 +1549,14 @@ function Toolbar({
 
         {/* Gruppieren */}
         {groupOptions.length>0&&(
-          <div ref={groupRef} className="cc-ml-dropdown-wrap" style={isMobile?{display:"none"}:{}}>
+          <div ref={groupRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={isGrouped?accentStyle:{}}
-              onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false);setMoreOpen(false);}}>
+              onClick={()=>{
+                if(isMobile){setMoreOpen(true);setMobileSubMenu("group");}
+                else{setGroupOpen(o=>!o);setFilterOpen(false);setMoreOpen(false);}
+              }}>
               <TI n="layout-rows" size={15}/>
               {!isMobile&&"Gruppieren"}
             </button>
@@ -1657,20 +1663,7 @@ function Toolbar({
                     {mobileSubMenu===null?(
                       // Stufe 1: Hauptmenü
                       <div>
-                        {filterDefs.length>0&&(
-                          <button className="cc-sheet-nav-item"
-                            onMouseDown={e=>{e.stopPropagation();setFilterSearch("");setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));setMobileSubMenu("filter");}}>
-                            <span className="cc-sheet-nav-left"><TI n="filter" size={18}/> Filter{hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}</span>
-                            <TI n="chevron-right" size={14}/>
-                          </button>
-                        )}
-                        {groupOptions.length>0&&(
-                          <button className="cc-sheet-nav-item"
-                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("group");}}>
-                            <span className="cc-sheet-nav-left"><TI n="layout-rows" size={18}/> Gruppieren{isGrouped&&<span className="cc-ml-filter-badge" style={{background:"var(--cc-accent)",color:"#000"}}>aktiv</span>}</span>
-                            <TI n="chevron-right" size={14}/>
-                          </button>
-                        )}
+
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Ansichten").length>0&&(
                           <button className="cc-sheet-nav-item"
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("views");}}>
