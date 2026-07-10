@@ -119,7 +119,15 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
   });
 }
 
-export function sortMembers(filtered, sortCol, sortDir) {
+export function sortMembers(filtered, sortCol, sortDir, manualOrder=[]) {
+  if(manualOrder.length>0){
+    const orderMap=new Map(manualOrder.map((id,i)=>[id,i]));
+    return [...filtered].sort((a,b)=>{
+      const ai=orderMap.has(a.id)?orderMap.get(a.id):Infinity;
+      const bi=orderMap.has(b.id)?orderMap.get(b.id):Infinity;
+      return ai-bi;
+    });
+  }
   return [...filtered].sort((a,b)=>{
     const getVal=m=>{
       if(sortCol==="name") return `${m.vorname||""} ${m.nachname||""}`.trim().toLowerCase();

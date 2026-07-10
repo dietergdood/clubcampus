@@ -39,6 +39,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [groupOrder,setGroupOrder]=useState({});
   const [dragGroup,setDragGroup]=useState(null);
   const [dragOverGroup,setDragOverGroup]=useState(null);
+  const [manualOrder,setManualOrder]=useState([]);
+  const [dragRow,setDragRow]=useState(null);
+  const [dragOverRow,setDragOverRow]=useState(null);
   const [selected,setSelected]=useState(new Set());
   const [customViews,setCustomViews]=useState([]);
   const [portalFunktionen,setPortalFunktionen]=useState([]);
@@ -109,6 +112,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setFilterVals({});
     setGroupBy(["none"]);
     setGroupOrder({});
+    setManualOrder([]);
   }
 
   function applyCustomView(v){
@@ -117,6 +121,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setFilterVals(v.filter||{});
     setGroupBy(Array.isArray(v.gruppierung)?v.gruppierung:[v.gruppierung||"none"]);
     setGroupOrder(v.gruppenreihenfolge||{});
+    setManualOrder(v.zeilenreihenfolge||[]);
   }
 
   useEffect(()=>{
@@ -195,6 +200,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       filter:filterVals,
       gruppierung:Array.isArray(groupBy)?groupBy:[groupBy],
       gruppenreihenfolge:groupOrder,
+      zeilenreihenfolge:manualOrder,
     });
     if(data) setCustomViews(prev=>[...prev,data]);
     setSaveViewName("");
@@ -210,6 +216,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
   function handleSort(key){
+    setManualOrder([]);
     if(sortCol===key) setSortDir(d=>d==="asc"?"desc":"asc");
     else{ setSortCol(key); setSortDir("asc"); }
   }
@@ -251,7 +258,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const filtered=useMemo(()=>filterMembers(allMembers,search,filterVals,ROLLE_LABEL),[allMembers,search,filterVals,ROLLE_LABEL]);
 
-  const sorted=useMemo(()=>sortMembers(filtered,sortCol,sortDir),[filtered,sortCol,sortDir]);
+  const sorted=useMemo(()=>sortMembers(filtered,sortCol,sortDir,manualOrder),[filtered,sortCol,sortDir,manualOrder]);
 
   const paged=sorted;
   const hasMore=false;
@@ -590,12 +597,34 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </tr>
           )}
           {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext,newTeamContext,Array.isArray(groupBy)?groupBy[depth+1]:null):visibleMembers.map(m=>(
-            <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
-              onClick={()=>selectMode?toggleSelectRow(m.id):null}>
+            <tr key={m.id}
+              className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}${!hasGroup&&dragOverRow===m.id?" cc-group-drag-over":""}`}
+              onClick={()=>selectMode?toggleSelectRow(m.id):null}
+              draggable={!hasGroup}
+              onDragStart={!hasGroup?e=>{e.stopPropagation();setDragRow(m.id);}:undefined}
+              onDragOver={!hasGroup?e=>{e.preventDefault();e.stopPropagation();setDragOverRow(m.id);}:undefined}
+              onDrop={!hasGroup?e=>{
+                e.preventDefault();e.stopPropagation();
+                if(dragRow&&dragRow!==m.id){
+                  const curr=manualOrder.length>0?manualOrder:paged.map(p=>p.id);
+                  const from=curr.indexOf(dragRow);
+                  const to=curr.indexOf(m.id);
+                  if(from!==-1&&to!==-1){
+                    const next=[...curr];
+                    next.splice(from,1);next.splice(to,0,dragRow);
+                    setManualOrder(next);
+                  }
+                }
+                setDragRow(null);setDragOverRow(null);
+              }:undefined}
+              onDragEnd={!hasGroup?()=>{setDragRow(null);setDragOverRow(null);}:undefined}>
               {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
                 <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
                   {selected.has(m.id)&&<TI n="check" size={10}/>}
                 </div>
+              </td>}
+              {!hasGroup&&<td className="cc-members-td cc-members-row-grip">
+                <TI n="grip-vertical" size={13} className="cc-members-row-grip-icon"/>
               </td>}
               {COLS.map(col=>renderCell(col,m,effectiveGc))}
               <td className="cc-members-td cc-members-td-actions"/>
