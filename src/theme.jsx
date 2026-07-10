@@ -1933,7 +1933,7 @@ function Toolbar({
                   </div>
                 </div>
               ):(
-                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220,position:"relative"}}>
+                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220,overflow:"visible"}}>
                   {(()=>{
                     let currentSection=null;
                     return moreItems.map((item,i)=>{
