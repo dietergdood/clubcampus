@@ -847,6 +847,7 @@ function Portal({supabaseClient}){
       const[mitgliederRes,kaderRes,benutzerRes]=await Promise.all([
         sb.from("mitglieder").select("*").eq("aktiv",true).order("nachname").order("vorname"),
         sb.from("kader").select("mitglied_id,rollen,teams(id,name,kurzname)").eq("aktiv",true),
+        sb.from("benutzer").select("mitglied_id,aktiv"),
       ]);
       // benutzerMap: mitglied_id → {exists, aktiv}
       const benutzerMap={};
