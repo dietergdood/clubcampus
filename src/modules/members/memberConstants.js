@@ -49,8 +49,7 @@ export const COL_GROUPS = [
   {group:"Verein", cols:[
     {key:"mitgliedschaft",label:"Mitgliedschaft", default:true},
     {key:"rollen",        label:"Portalrolle",    default:true},
-    {key:"funktionen",    label:"Vereinsfunktionen", default:false},
-    {key:"funktionsgruppen", label:"Funktionsgruppe",  default:false},
+
     {key:"eintritt",      label:"Eintritt",       default:false},
     {key:"spielerpass",   label:"Spielerpass",    default:false},
     {key:"fairgate_id",   label:"Fairgate-ID",    default:false},
@@ -61,10 +60,12 @@ export const COL_GROUPS = [
     {key:"datenpruefung", label:"Datenpruefung",  default:true},
   ]},
   {group:"Sport", cols:[
-    {key:"teams",         label:"Teams",          default:false},
-    {key:"kaderrollen",   label:"Kaderrolle",     default:false},
-    {key:"teams_rollen",       label:"Teams & Kaderrollen",      default:true},
-    {key:"funktionen_gruppen",  label:"Funktionen", default:true},
+    {key:"teams_rollen",       label:"Teams & Kaderrollen", default:true},
+    {key:"funktionen_gruppen",  label:"Funktionen",          default:true},
+    {key:"teams",         label:"Teams",          default:false, hidden:true},
+    {key:"kaderrollen",   label:"Kaderrolle",     default:false, hidden:true},
+    {key:"funktionen",    label:"Vereinsfunktionen", default:false, hidden:true},
+    {key:"funktionsgruppen", label:"Funktionsgruppe", default:false, hidden:true},
   ]},
 ];
 

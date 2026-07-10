@@ -1822,7 +1822,7 @@ function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDra
       {(()=>{
         const q=search.toLowerCase();
         const groups=colGroups.map(g=>({...g,
-          cols:g.cols.filter(c=>!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
+          cols:g.cols.filter(c=>!c.hidden&&!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
             .sort((a,b)=>a.label.localeCompare(b.label))
         })).filter(g=>g.cols.length>0);
         if(groups.length===0) return <div className="cc-col-search-empty">Keine Spalte gefunden</div>;
@@ -1912,7 +1912,7 @@ function ColMenuButton({
           {(()=>{
             const q=search.toLowerCase();
             const groups=colGroups.map(g=>({...g,
-              cols:g.cols.filter(c=>!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
+              cols:g.cols.filter(c=>!c.hidden&&!visibleCols.includes(c.key)&&(!q||c.label.toLowerCase().includes(q)))
                 .sort((a,b)=>a.label.localeCompare(b.label))
             })).filter(g=>g.cols.length>0);
             if(groups.length===0) return <div className="cc-col-search-empty">Keine Spalte gefunden</div>;

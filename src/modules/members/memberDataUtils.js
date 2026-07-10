@@ -226,16 +226,32 @@ function csvDownload(data, filename) {
 }
 
 export function exportData(filtered, COLS, format, groups=null) {
-  const headers=["Name",...COLS.filter(c=>c.key!=="name").map(c=>c.label)];
+  // Bei flachem CSV: teams_rollen und funktionen_gruppen in separate Spalten expandieren
+  function expandCols(cols){
+    const expanded=[];
+    for(const c of cols){
+      if(c.key==="teams_rollen"){
+        expanded.push({key:"teams",label:"Teams"},{key:"kaderrollen",label:"Kaderrollen"});
+      } else if(c.key==="funktionen_gruppen"){
+        expanded.push({key:"funktionsgruppen",label:"Funktionsgruppe"},{key:"funktionen",label:"Vereinsfunktionen"});
+      } else {
+        expanded.push(c);
+      }
+    }
+    return expanded;
+  }
   const hasGroups=groups&&groups.length>0&&groups[0].key!=="";
 
   if(format==="csv") {
-    // Flacher CSV — alle Daten ohne Gruppen-Kontext
-    const rows=filtered.map(m=>getExportRows(m,COLS,{type:"none",key:null}));
+    // Flacher CSV — expandierte Spalten
+    const flatCols=expandCols(COLS);
+    const headers=["Name",...flatCols.filter(c=>c.key!=="name").map(c=>c.label)];
+    const rows=filtered.map(m=>getExportRows(m,flatCols,{type:"none",key:null}));
     csvDownload([headers,...rows],"mitglieder.csv");
 
   } else if(format==="csv-gruppen") {
-    // CSV mit Gruppen-Header Zeilen
+    // CSV mit Gruppen — kombinierte Spalten behalten
+    const headers=["Name",...COLS.filter(c=>c.key!=="name").map(c=>c.label)];
     if(!hasGroups){
       const rows=filtered.map(m=>getExportRows(m,COLS,{type:"none",key:null}));
       csvDownload([headers,...rows],"mitglieder-gruppen.csv");
@@ -257,10 +273,12 @@ export function exportData(filtered, COLS, format, groups=null) {
     csvDownload(allRows,"mitglieder-gruppen.csv");
 
   } else if(format==="excel-sheets") {
-    // Excel mit einem Sheet pro Gruppe
+    // Excel — expandierte Spalten für bessere Weiterverarbeitung
+    const flatCols=expandCols(COLS);
+    const headers=["Name",...flatCols.filter(c=>c.key!=="name").map(c=>c.label)];
     const wb=XLSX.utils.book_new();
     if(!hasGroups){
-      const rows=filtered.map(m=>getExportRows(m,COLS,{type:"none",key:null}));
+      const rows=filtered.map(m=>getExportRows(m,flatCols,{type:"none",key:null}));
       const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
       XLSX.utils.book_append_sheet(wb,ws,"Mitglieder");
     } else {
@@ -268,7 +286,7 @@ export function exportData(filtered, COLS, format, groups=null) {
         grps.forEach(({key,label,type,members,children})=>{
           if(children){ addSheets(children); return; }
           const gc=type!=="none"?{type,key}:{type:"none",key:null};
-          const rows=members.map(m=>getExportRows(m,COLS,gc));
+          const rows=members.map(m=>getExportRows(m,flatCols,gc));
           const sheetName=(label||key||"Gruppe").slice(0,31).replace(/[\/\*\?\[\]\:]/g,"");
           const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
           XLSX.utils.book_append_sheet(wb,ws,sheetName);
