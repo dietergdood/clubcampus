@@ -162,7 +162,7 @@ function PersonTeams({
             <label className="cc-label">Team</label>
             <select className="cc-input" value={teamAssignForm.team_id} onChange={e => setTeamAssignForm(p => ({ ...p, team_id: e.target.value }))}>
               <option value="">– wählen –</option>
-              {allTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {(allTeams||[]).filter(t=>!(teamDetails||[]).some(k=>k.team_id===t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
           <div>
