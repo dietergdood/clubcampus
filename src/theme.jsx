@@ -300,6 +300,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-mobile-divider{height:8px;background:var(--surface-1);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
 .cc-filter-mobile-footer{padding:12px 20px}
 .cc-filter-or-badge{font-size:9px;font-weight:700;background:var(--cc-accent,#FFBF00);color:#000;padding:2px 6px;border-radius:3px;align-self:center}
+.cc-filter-und-badge{font-size:9px;font-weight:700;background:var(--surface2);border:0.5px solid var(--border);color:var(--sub);padding:2px 6px;border-radius:3px;align-self:center}
 .cc-filter-or-sep{display:flex;align-items:center;gap:8px;padding:4px 12px;border-top:0.5px solid var(--border)}
 .cc-filter-or-line{flex:1;height:0.5px;background:var(--border)}
 .cc-ml-chip-or{font-size:11px;color:var(--sub);padding:0 2px;font-style:italic}
@@ -1548,6 +1549,7 @@ function Toolbar({
                     const q=filterSearch.toLowerCase();
                     if(type==="divider") return q?null:<div key={key} className="cc-filter-divider"/>;
                     if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
+                    if(type==="und-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-und-badge">UND</span><div className="cc-filter-or-line"/></div>;
                     const isRange=type==="range";
                     const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                     if(!isRange&&visVals.length===0) return null;
@@ -1789,6 +1791,7 @@ function Toolbar({
                             const q=filterSearch.toLowerCase();
                             if(type==="divider") return q?null:<div key={key} className="cc-filter-mobile-divider"/>;
                             if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
+                    if(type==="und-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-und-badge">UND</span><div className="cc-filter-or-line"/></div>;
                             const isRange=type==="range";
                             const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                             if(!isRange&&visVals.length===0) return null;

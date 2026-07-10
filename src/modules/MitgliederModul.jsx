@@ -232,13 +232,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const ALTER_MAX=useMemo(()=>{const alters=allMembers.map(m=>m.alter).filter(v=>v!=null);return alters.length?Math.max(...alters):90;},[allMembers]);
 
   const FILTER_DEFS=useMemo(()=>[
+    {key:"__und_1",         type:"und-divider"},
     {key:"mitgliedschaft",  label:"Mitgliedschaft",  vals:[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(Boolean))]},
     {key:"geschlecht",      label:"Geschlecht",      vals:["Männlich","Weiblich","Divers"]},
     {key:"teams",           label:"Teams",           vals:[...new Set(allMembers.flatMap(m=>(m.teams||[]).map(t=>t?.name||t)).filter(Boolean))].sort()},
+    {key:"__or_divider",    type:"or-divider"},
     {key:"kaderrollen",     label:"Kaderrollen",     vals:[...new Set(allMembers.flatMap(m=>(m.kader_rollen_raw||[])).filter(Boolean))].sort()},
     {key:"funktionen",      label:"Funktion",        vals:[...new Set(allMembers.flatMap(m=>m.funktionen||[]).filter(Boolean))].sort()},
-    {key:"__or_divider",    type:"or-divider"},
     {key:"funktionsgruppen",label:"Funktionsgruppe", vals:[...new Set(allMembers.flatMap(m=>m.funktionsgruppen||[]).filter(Boolean))].sort()},
+    {key:"__und_2",         type:"und-divider"},
     {key:"wohnort",         label:"Wohnort",         vals:[...new Set(allMembers.map(m=>m.wohnort).filter(Boolean))].sort()},
     {key:"jahrgang",        label:"Jahrgang",        type:"range", min:JAHRGANG_MIN, max:JAHRGANG_MAX},
     {key:"alter",           label:"Alter",           type:"range", min:0, max:ALTER_MAX, suffix:" J."},
