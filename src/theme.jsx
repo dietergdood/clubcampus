@@ -351,7 +351,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-menu-check-on{background:var(--text);border-color:var(--text);color:var(--surface)}
 /* Desktop Tabelle */
 .cc-members-table{width:100%;border-collapse:collapse}
-.cc-members-th{position:sticky;top:0;z-index:2;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:6px 14px;border-top:1px solid var(--border);border-bottom:1px solid var(--cc-accent,#FFBF00);border-left:none;border-right:none;text-align:left;cursor:pointer;white-space:nowrap;background:var(--surface2)}
+.cc-members-th{position:sticky;top:0;z-index:10;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:6px 14px;border-top:1px solid var(--border);border-bottom:1px solid var(--cc-accent,#FFBF00);border-left:none;border-right:none;text-align:left;cursor:pointer;white-space:nowrap;background:var(--surface2)}
 .cc-members-th:hover{color:var(--text)}
 .cc-members-th:first-child{border-left:1px solid var(--border)}
 .cc-members-th:last-child{border-right:1px solid var(--border)}
@@ -736,7 +736,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:#2563EB;text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 .cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text)!important;text-decoration:none!important;display:inline}
-.cc-teams-rollen-row{font-size:12px;color:var(--text);line-height:1.8}
+.cc-teams-rollen-row{font-size:12px;color:var(--text);line-height:1.4}
 .cc-members-td-mitglied{font-size:12px;color:var(--text)}
 .cc-kpi-breakdown-label{flex:1}
 .cc-kpi-breakdown-value{font-weight:500}
