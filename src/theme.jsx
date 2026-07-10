@@ -276,7 +276,16 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:0}
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0}
 .cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:visible;z-index:200}
-.cc-ml-filter-dropdown{min-width:220px}
+.cc-ml-filter-dropdown{min-width:240px}
+.cc-filter-search{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:0.5px solid var(--border)}
+.cc-filter-search input{flex:1;border:0.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface-1,#f5f5f5);color:var(--text);outline:none;font-family:inherit}
+.cc-filter-search input:focus{border-color:var(--cc-accent,#FFBF00)}
+.cc-filter-sec-hdr{display:flex;align-items:center;gap:6px;padding:7px 12px;cursor:pointer;border-top:0.5px solid var(--border);user-select:none}
+.cc-filter-sec-hdr:first-child{border-top:none}
+.cc-filter-sec-name{flex:1;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em}
+.cc-filter-sec-badge{font-size:10px;background:var(--cc-accent,#FFBF00);color:#000;font-weight:600;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
+.cc-filter-sec-body{padding:2px 0 4px}
+.cc-filter-sec-body .cc-col-menu-item{padding:5px 12px}
 .cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
 .cc-ml-dropdown-section-lbl{padding:6px 12px 2px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
 .cc-ml-dropdown-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
@@ -1359,6 +1368,8 @@ function Toolbar({
 }){
   const isMobile=useIsMobile();
   const [filterOpen,setFilterOpen]=useState(false);
+  const [filterSearch,setFilterSearch]=useState("");
+  const [openSecs,setOpenSecs]=useState(new Set());
   const [groupOpen,setGroupOpen]=useState(false);
   useEffect(()=>{if(externalFilterOpen>0){setFilterOpen(true);setGroupOpen(false);setMoreOpen(false);}},[externalFilterOpen]);
   useEffect(()=>{if(externalGroupOpen>0){setGroupOpen(true);setFilterOpen(false);setMoreOpen(false);}},[externalGroupOpen]);
@@ -1369,6 +1380,12 @@ function Toolbar({
   const filterRef=useRef(null);
   const groupRef=useRef(null);
   const moreRef=useRef(null);
+  useEffect(()=>{
+    if(filterOpen){
+      setFilterSearch("");
+      setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));
+    }
+  },[filterOpen]);
   useEffect(()=>{
     if(!filterOpen){onExternalFilterClose&&onExternalFilterClose(); return;}
     const h=e=>{if(filterRef.current&&!filterRef.current.contains(e.target))setFilterOpen(false);};
@@ -1426,54 +1443,61 @@ function Toolbar({
               {!isMobile&&"Filter"}
               {hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}
             </button>
-            {filterOpen&&(
-              isMobile?(
-                <div className="cc-mehr-sheet-overlay" onClick={()=>setFilterOpen(false)}>
-                  <div className="cc-mehr-sheet-backdrop"/>
-                  <div className="cc-mehr-sheet-box cc-filter-sheet-box" onClick={e=>e.stopPropagation()}>
-                    <div className="cc-mehr-sheet-handle"/>
-                    <div className="cc-mehr-sheet-title">Filter</div>
-                    {filterDefs.map(({key,label,vals})=>(
-                      <div key={key}>
-                        <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 0 4px"}}>{label}</div>
-                        {vals.map(v=>{
-                          const active=(filterVals[key]||[]).includes(v);
-                          return(
-                            <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 0"}}
-                              onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
-                              <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
-                              {v}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ):(
+            {filterOpen&&!isMobile&&(
                 <div className="cc-ml-dropdown cc-ml-filter-dropdown">
-                  <div className="cc-ml-dropdown-footer" style={{borderBottom:"0.5px solid var(--border)",borderTop:"none",paddingBottom:8,marginBottom:4}}>
+                  <div className="cc-ml-dropdown-footer" style={{borderBottom:"0.5px solid var(--border)",borderTop:"none",paddingBottom:8,marginBottom:0}}>
                     <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
                     <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
                   </div>
-                  <div className="cc-col-menu-hdr">Filter</div>
-                  {filterDefs.map(({key,label,vals})=>(
-                    <div key={key}>
-                      <div className="cc-ml-dropdown-section-lbl">{label}</div>
-                      {vals.map(v=>{
-                        const active=(filterVals[key]||[]).includes(v);
-                        return(
-                          <div key={v} className="cc-col-menu-item"
-                            onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
-                            <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
-                            {v}
+                  <div className="cc-filter-search">
+                    <TI n="search" size={13} style={{color:"var(--sub)",flexShrink:0}}/>
+                    <input
+                      autoFocus
+                      placeholder="Filtern…"
+                      value={filterSearch}
+                      onChange={e=>{
+                        const q=e.target.value;
+                        setFilterSearch(q);
+                        if(q){
+                          const matching=new Set(filterDefs.filter(({vals})=>vals.some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
+                          setOpenSecs(matching);
+                        } else {
+                          setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));
+                        }
+                      }}
+                    />
+                  </div>
+                  {filterDefs.map(({key,label,vals})=>{
+                    const q=filterSearch.toLowerCase();
+                    const visVals=q?vals.filter(v=>v.toLowerCase().includes(q)):vals;
+                    if(visVals.length===0) return null;
+                    const isOpen=openSecs.has(key);
+                    const selCount=(filterVals[key]||[]).length;
+                    return(
+                      <div key={key}>
+                        <div className="cc-filter-sec-hdr" onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
+                          <span className="cc-filter-sec-name">{label}</span>
+                          {selCount>0&&<span className="cc-filter-sec-badge">{selCount}</span>}
+                          <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
+                        </div>
+                        {isOpen&&(
+                          <div className="cc-filter-sec-body">
+                            {visVals.map(v=>{
+                              const active=(filterVals[key]||[]).includes(v);
+                              return(
+                                <div key={v} className="cc-col-menu-item"
+                                  onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
+                                  <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                                  {v}
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )
             )}
           </div>
         )}
@@ -1593,7 +1617,7 @@ function Toolbar({
                       <div>
                         {filterDefs.length>0&&(
                           <button className="cc-sheet-nav-item"
-                            onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("filter");}}>
+                            onMouseDown={e=>{e.stopPropagation();setFilterSearch("");setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));setMobileSubMenu("filter");}}>
                             <span className="cc-sheet-nav-left"><TI n="filter" size={18}/> Filter{hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
@@ -1631,26 +1655,59 @@ function Toolbar({
                           <span className="cc-sheet-subhdr-title">Filter</span>
                           <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
                         </div>
+                        <div className="cc-filter-search" style={{padding:"8px 20px"}}>
+                          <TI n="search" size={13} style={{color:"var(--sub)",flexShrink:0}}/>
+                          <input
+                            placeholder="Filtern…"
+                            value={filterSearch}
+                            onChange={e=>{
+                              const q=e.target.value;
+                              setFilterSearch(q);
+                              if(q){
+                                const matching=new Set(filterDefs.filter(({vals})=>vals.some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
+                                setOpenSecs(matching);
+                              } else {
+                                setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));
+                              }
+                            }}
+                          />
+                        </div>
                         <div className="cc-sheet-scroll">
-                          {filterDefs.map(({key,label,vals})=>(
-                            <div key={key}>
-                              <div className="cc-ml-dropdown-section-lbl" style={{padding:"8px 20px 4px"}}>{label}</div>
-                              {vals.map(v=>{
-                                const active=(filterVals[key]||[]).includes(v);
-                                return(
-                                  <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 20px"}}
-                                    onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
-                                    <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`} style={{marginRight:10}}>
-                                      {active&&<TI n="check" size={10}/>}
-                                    </div>
-                                    {v}
+                          {filterDefs.map(({key,label,vals})=>{
+                            const q=filterSearch.toLowerCase();
+                            const visVals=q?vals.filter(v=>v.toLowerCase().includes(q)):vals;
+                            if(visVals.length===0) return null;
+                            const isOpen=openSecs.has(key);
+                            const selCount=(filterVals[key]||[]).length;
+                            return(
+                              <div key={key}>
+                                <div className="cc-filter-sec-hdr" style={{padding:"7px 20px"}}
+                                  onMouseDown={e=>{e.stopPropagation();setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;});}}>
+                                  <span className="cc-filter-sec-name">{label}</span>
+                                  {selCount>0&&<span className="cc-filter-sec-badge">{selCount}</span>}
+                                  <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
+                                </div>
+                                {isOpen&&(
+                                  <div className="cc-filter-sec-body">
+                                    {visVals.map(v=>{
+                                      const active=(filterVals[key]||[]).includes(v);
+                                      return(
+                                        <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 20px"}}
+                                          onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
+                                          <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`} style={{marginRight:10}}>
+                                            {active&&<TI n="check" size={10}/>}
+                                          </div>
+                                          {v}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          ))}
+                                )}
+                              </div>
+                            );
+                          })}
                           {hasActiveFilter&&(
-                            <div style={{padding:"8px 16px"}}>
+                            <div style={{padding:"8px 20px"}}>
                               <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange("__reset");}}>Alle Filter zurücksetzen</button>
                             </div>
                           )}
