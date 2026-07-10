@@ -34,6 +34,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [teamsPopover,setTeamsPopover]=useState(null);
   const [pageSize,setPageSize]=useState(50);
   const [selectMode,setSelectMode]=useState(false);
+  const [collapsedGroups,setCollapsedGroups]=useState(new Set());
   const [selected,setSelected]=useState(new Set());
   const [customViews,setCustomViews]=useState([]);
   const [portalFunktionen,setPortalFunktionen]=useState([]);
@@ -513,7 +514,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}){
     return groups.map(({key,label,type,members,children})=>{
       const groupContext=type!=="none"?{type,key}:parentContext;
-      // Leere Team-Gruppen ausblenden
       const visibleMembers=groupContext.type==="team"?members.filter(m=>{
         const kaderFilter=filterVals["kaderrollen"]||[];
         if(kaderFilter.length===0) return true;
@@ -521,18 +521,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         return teamRollen.some(r=>kaderFilter.includes(r));
       }):members;
       if(!children&&visibleMembers.length===0) return null;
+      const isCollapsed=collapsedGroups.has(key);
+      const toggleCollapse=()=>setCollapsedGroups(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;});
       return(
         <Fragment key={key}>
           {hasGroup&&(
-            <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`}>
-              <td colSpan={COLS.length+1} style={depth>0?{paddingLeft:depth*16+14}:{}}>
-                {type==="team"&&<TI n="ball-football" size={11}/>}
-                {type==="gruppe"&&<TI n="briefcase" size={11}/>}
-                {label} <span className="cc-text-muted">{members.length}</span>
+            <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`} onClick={toggleCollapse}>
+              <td colSpan={COLS.length+(selectMode?2:1)}>
+                <div className="cc-members-group-hdr-inner" style={depth>0?{paddingLeft:depth*16}:{}}>
+                  <TI n={isCollapsed?"chevron-right":"chevron-down"} size={12} style={{color:"var(--sub)",flexShrink:0}}/>
+                  {type==="team"&&<TI n="ball-football" size={11}/>}
+                  {type==="gruppe"&&<TI n="briefcase" size={11}/>}
+                  <span className="cc-members-group-hdr-name">{label}</span>
+                  <span className="cc-members-group-hdr-count">{members.length}</span>
+                </div>
               </td>
             </tr>
           )}
-          {children?renderGroupsTable(children,depth+1,groupContext):visibleMembers.map(m=>(
+          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext):visibleMembers.map(m=>(
             <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
               onClick={()=>selectMode?toggleSelectRow(m.id):null}>
               {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
@@ -543,7 +549,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               {COLS.map(col=>renderCell(col,m,groupContext))}
               <td className="cc-members-td cc-members-td-actions"/>
             </tr>
-          ))}
+          )))}
         </Fragment>
       );
     });
@@ -702,6 +708,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           ]:[]),
           {header:true,label:"Aktionen"},
           {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
+          ...(hasGroup?[
+            {icon:"fold",label:"Alle einklappen",onClick:()=>setCollapsedGroups(new Set(groups.map(g=>g.key)))},
+            {icon:"fold-up",label:"Alle ausklappen",onClick:()=>setCollapsedGroups(new Set())},
+          ]:[]),
           ...(!isMobile?[{
             icon:"table",label:"Spalten",
             subPanel:(

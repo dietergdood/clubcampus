@@ -365,7 +365,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-members-dot-ok{background:#22c55e}
 .cc-members-dot-warn{background:#f59e0b}
 .cc-members-dot-err{background:#ef4444}
-.cc-members-group-hdr td{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.07em;padding:10px 14px 5px;background:var(--bg);border-top:0.5px solid var(--border);display:flex;align-items:center;gap:6px}
+.cc-members-group-hdr{cursor:pointer}.cc-members-group-hdr:hover td{background:var(--surface2)}.cc-members-group-hdr td{padding:8px 14px;background:var(--surface1,var(--surface2));border-top:1px solid var(--border);border-bottom:0.5px solid var(--border)}.cc-members-group-hdr-inner{display:flex;align-items:center;gap:8px}.cc-members-group-hdr-name{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.07em}.cc-members-group-hdr-count{font-size:11px;color:var(--muted,var(--sub));font-weight:400}.cc-members-group-hdr-sub td{padding:6px 14px}
 /* Mobile Liste */
 .cc-members-list-group-hdr{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.08em;padding:8px 14px 4px;background:var(--surface2)}
 .cc-members-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--border);cursor:pointer;background:var(--surface);transition:background 0.1s;justify-content:space-between}
