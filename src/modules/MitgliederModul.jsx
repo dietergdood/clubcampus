@@ -324,7 +324,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     switch(col.key){
       case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
       case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td" style={{fontSize:12,color:"var(--text)"}}>{m.mitgliedschaft||"—"}</td>;
-      case "rollen": return <td key="rollen" className="cc-members-td">{(()=>{const portalRaw=m.role&&m.role!=="-"?m.role:null;const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;const portalIsTrainer=portalRaw==="trainer";const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel) return false;if(portalIsTrainer&&isT) return false;return true;});const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];return (all||[]).length>0?all.map((c,i)=><span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`}>{c.label}</span>):(<span className="cc-members-td-sub">—</span>);})()}</td>;
+      case "rollen": {
+        const portalRaw=m.role&&m.role!=="-"?m.role:null;
+        const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;
+        const isTrainer=TRAINER_KEYS.some(k=>k===portalRaw);
+        return <td key="rollen" className="cc-members-td">
+          {portalLabel
+            ?<span className={`cc-role-chip cc-role-chip-sm${isTrainer?" cc-role-chip-trainer":""}`}>{portalLabel}</span>
+            :<span className="cc-members-td-sub">—</span>}
+        </td>;
+      }
       case "teams": {
         if(gc.type==="gruppe") return <td key="teams" className="cc-members-td cc-members-td-sub">—</td>;
         const teamsToShow=gc.type==="team"?(m.teams||[]).filter(t=>(t?.name||t)===gc.key):(m.teams||[]);
