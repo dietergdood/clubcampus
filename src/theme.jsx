@@ -706,6 +706,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 .cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text)!important;text-decoration:none!important;display:inline}
 .cc-teams-rollen-row{font-size:12px;color:var(--text);line-height:1.8}
+.cc-members-td-mitglied{font-size:12px;color:var(--text)}
+.cc-kpi-breakdown-label{flex:1}
+.cc-kpi-breakdown-value{font-weight:500}
 .cc-teams-rollen-team{font-weight:600}
 .cc-teams-rollen-sep{color:var(--sub);margin:0 4px}
 .cc-teams-rollen-rolle{color:var(--text-secondary,#555)}

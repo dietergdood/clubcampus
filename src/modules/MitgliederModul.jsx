@@ -323,7 +323,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const gc=groupContext;
     switch(col.key){
       case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
-      case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td" style={{fontSize:12,color:"var(--text)"}}>{m.mitgliedschaft||"—"}</td>;
+      case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-mitglied">{m.mitgliedschaft||"—"}</td>;
       case "rollen": {
         const portalRaw=m.role&&m.role!=="-"?m.role:null;
         const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;
@@ -580,8 +580,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   <div className="cc-mehr-sheet-title">Aufschlüsselung</div>
                   {BREAKDOWN.map(b=>(
                     <button key={b.key} className="cc-mehr-sheet-item" onMouseDown={e=>{e.stopPropagation();setBreakdownOpen(false);bdFilter(b);}}>
-                      <span style={{flex:1}}>{b.label}</span>
-                      <span style={{fontWeight:500}}>{bdCount(b)}</span>
+                      <span className="cc-kpi-breakdown-label">{b.label}</span>
+                      <span className="cc-kpi-breakdown-value">{bdCount(b)}</span>
                     </button>
                   ))}
                 </div>
@@ -592,7 +592,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 {BREAKDOWN.map(b=>(
                   <button key={b.key} className="cc-breakdown-popover-item" onClick={()=>{setBreakdownOpen(false);bdFilter(b);}}>
                     <span>{b.label}</span>
-                    <span style={{fontWeight:500}}>{bdCount(b)}</span>
+                    <span className="cc-kpi-breakdown-value">{bdCount(b)}</span>
                   </button>
                 ))}
               </div>

@@ -48,7 +48,7 @@ export const COL_GROUPS = [
   ]},
   {group:"Verein", cols:[
     {key:"mitgliedschaft",label:"Mitgliedschaft", default:true},
-    {key:"rollen",        label:"Rollen",         default:true},
+    {key:"rollen",        label:"Systemrolle",    default:true},
     {key:"funktionen",    label:"Vereinsfunktionen", default:false},
     {key:"funktionsgruppen", label:"Funktionsgruppe",  default:false},
     {key:"eintritt",      label:"Eintritt",       default:false},
