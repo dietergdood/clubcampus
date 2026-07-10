@@ -370,6 +370,22 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         if(gc.type==="gruppe") return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
         const teamsFilter=filterVals["teams"]||[];
         const kaderFilter=filterVals["kaderrollen"]||[];
+        // Bei Kaderrolle-Gruppierung: nur Einträge mit dieser Rolle
+        if(gc.type==="kaderrolle"){
+          const eFiltered=(m.kader_eintraege||[]).map(e=>({...e,rollen:e.rollen.filter(r=>r===gc.key)})).filter(e=>e.rollen.length>0);
+          if(eFiltered.length===0) return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
+          return <td key="teams_rollen" className="cc-members-td">
+            <div className="cc-col cc-gap-4">
+              {eFiltered.slice(0,3).map((e,i)=>(
+                <div key={i} className="cc-teams-rollen-row">
+                  <span className="cc-teams-rollen-team">{e.team?.kurz||e.team?.name||"—"}</span>
+                  <span className="cc-teams-rollen-sep">·</span>
+                  {e.rollen.map((r,ri)=><span key={ri} className="cc-teams-rollen-rolle">{r}</span>)}
+                </div>
+              ))}
+            </div>
+          </td>;
+        }
         const eintraege=(m.kader_eintraege||[]).filter(e=>{
           const teamMatch=gc.type==="team"?e.team?.name===gc.key:(teamsFilter.length===0||teamsFilter.includes(e.team?.name));
           const rolleMatch=kaderFilter.length===0||e.rollen.some(r=>kaderFilter.includes(r));
@@ -406,10 +422,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       case "funktionen_gruppen": {
         if(gc.type==="team") return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
         const gruppenFilter=filterVals["funktionsgruppen"]||[];
-        const paare=(m.funktionen||[]).map(f=>{
+        const paare=(gc.type==="funktion"
+          ?(m.funktionen||[]).filter(f=>f===gc.key)
+          :(m.funktionen||[])).map(f=>{
           const pf=portalFunktionen.find(x=>x.name===f);
           return {funktion:f, gruppe:pf?.portal_gruppen?.name||null};
         }).filter(p=>{
+          if(gc.type==="funktion") return true;
           if(gc.type==="gruppe") return p.gruppe===gc.key;
           return gruppenFilter.length===0||gruppenFilter.includes(p.gruppe);
         });
