@@ -758,7 +758,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-teams-rollen-team{font-weight:600}
 .cc-teams-rollen-sep{color:var(--sub);margin:0 4px}
 .cc-teams-rollen-rolle{color:var(--text-secondary,#555)}
-.cc-teams-rollen-more{font-size:11px;color:var(--sub)}
+.cc-teams-rollen-more{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:3px;font-family:inherit}.cc-teams-rollen-more:hover{color:var(--text)}
 .cc-funk-row{display:flex;align-items:center;gap:6px;line-height:1.8;margin-bottom:2px}
 .cc-funk-row .cc-text-sm{color:var(--text)!important}
 .cc-portal-status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500}

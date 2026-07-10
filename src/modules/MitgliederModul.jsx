@@ -35,6 +35,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [pageSize,setPageSize]=useState(50);
   const [selectMode,setSelectMode]=useState(false);
   const [collapsedGroups,setCollapsedGroups]=useState(new Set());
+  const [expandedTeams,setExpandedTeams]=useState(new Set());
   const [selected,setSelected]=useState(new Set());
   const [customViews,setCustomViews]=useState([]);
   const [portalFunktionen,setPortalFunktionen]=useState([]);
@@ -407,7 +408,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           return aIsTrainer===bIsTrainer?0:aIsTrainer?-1:1;
         });
         if(eintraege.length===0) return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
-        const visibleE=eintraege.slice(0,2);
+        const isExpanded=expandedTeams.has(m.id);
+        const visibleE=isExpanded?eintraege:eintraege.slice(0,2);
         const restE=eintraege.length-2;
         return <td key="teams_rollen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
@@ -425,7 +427,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 </div>
               );
             })}
-            {restE>0&&<span className="cc-teams-rollen-more">+{restE} weitere</span>}
+            {restE>0&&(
+              <button className="cc-teams-rollen-more" style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:3,fontFamily:"inherit"}}
+                onClick={e=>{e.stopPropagation();setExpandedTeams(prev=>{const n=new Set(prev);n.has(m.id)?n.delete(m.id):n.add(m.id);return n;})}}>
+                {isExpanded
+                  ? <><TI n="chevron-up" size={10}/>weniger</>
+                  : <><TI n="chevron-down" size={10}/>+{restE} weitere</>
+                }
+              </button>
+            )}
           </div>
         </td>;
       }
