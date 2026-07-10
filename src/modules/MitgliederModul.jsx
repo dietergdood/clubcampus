@@ -649,6 +649,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {/* Gespeicherte Ansichten - nur Desktop */}
 
 
+      {/* Selektionsleiste */}
+      {!isMobile&&(
+        <BulkBar
+          show={selectMode}
+          count={selected.size}
+          total={(paged||[]).length}
+          onSelectAll={toggleSelectAll}
+          actions={[
+            {icon:"download", label:"Auswahl als CSV", onClick:()=>exportData("csv")},
+            {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
+            {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
+          ]}
+          onCancel={()=>{setSelected(new Set());setSelectMode(false);}}
+        />
+      )}
+
+      {/* Liste / Tabelle */}
+      <Card className="cc-card-table" flush>
       {/* Toolbar */}
       <Toolbar
         search={search} onSearch={setSearch}
@@ -726,24 +744,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         ]}
       />
 
-      {/* Selektionsleiste */}
-      {!isMobile&&(
-        <BulkBar
-          show={selectMode}
-          count={selected.size}
-          total={(paged||[]).length}
-          onSelectAll={toggleSelectAll}
-          actions={[
-            {icon:"download", label:"Auswahl als CSV", onClick:()=>exportData("csv")},
-            {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
-            {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
-          ]}
-          onCancel={()=>{setSelected(new Set());setSelectMode(false);}}
-        />
-      )}
-
-      {/* Liste / Tabelle */}
-      <Card className="cc-card-table" flush>
         {(filtered||[]).length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
         {(filtered||[]).length>0&&(isMobile?(
           <div>
