@@ -726,11 +726,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             "sep",
           ]:[]),
           {header:true,label:"Aktionen"},
-          {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
           ...(hasGroup?[
             {icon:"chevrons-up",label:"Alle einklappen",onClick:()=>setCollapsedGroups(new Set(groups.map(g=>g.key)))},
             {icon:"chevrons-down",label:"Alle ausklappen",onClick:()=>setCollapsedGroups(new Set())},
+            "sep",
           ]:[]),
+          {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
           ...(!isMobile?[{
             icon:"table",label:"Spalten",
             subPanel:(
