@@ -307,6 +307,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-footer{padding:8px 12px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cc-ml-dropdown-clear{font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;font-family:inherit}
 .cc-ml-dropdown-clear:hover{color:var(--text)}
+@media(max-width:680px){.cc-ml-dropdown-clear{font-size:15px;padding:4px 0}}
 .cc-ml-dropdown-apply{font-size:12px;font-weight:600;color:#000;background:var(--cc-accent,#FFBF00);border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit}
 .cc-multiselect{position:relative;width:100%}
 .cc-multiselect-trigger{width:100%;padding:8px 12px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--text);text-align:left;font-family:inherit}
@@ -1901,8 +1902,8 @@ function Toolbar({
             ));
           })}
           </div>
-          <button className="cc-ml-dropdown-clear" style={{flexShrink:0}}
-            onClick={()=>onFilterChange&&onFilterChange("__reset")}>Filter zurücksetzen</button>
+          <div className="cc-ml-chip" style={{flexShrink:0,borderStyle:"dashed",color:"var(--sub)"}}
+            onClick={()=>onFilterChange&&onFilterChange("__reset")}>Alle löschen</div>
         </div>
       )}
     </div>
