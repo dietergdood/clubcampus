@@ -288,10 +288,23 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-sec-body{padding:4px 0 8px}
 .cc-range-slider{width:100%;accent-color:var(--cc-accent,#FFBF00)}
 .cc-filter-sec-body .cc-col-menu-item{padding:8px 12px}
+.cc-filter-checkbox{width:14px;height:14px;accent-color:#000;flex-shrink:0;pointer-events:none}
+.cc-range-filter-wrap{padding:8px 12px 10px}
+.cc-range-filter-wrap-lg{padding:8px 20px 10px}
+.cc-range-input{width:72px;border:0.5px solid var(--border);border-radius:6px;padding:4px 7px;font-size:12px;background:var(--surface-1,#f5f5f5);color:var(--text);outline:none;font-family:inherit}
+.cc-range-sep{font-size:11px;color:var(--sub)}
+.cc-range-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-top:3px}
+.cc-filter-mobile-sec{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;padding:14px 20px 6px;background:var(--surface-1);border-bottom:0.5px solid var(--border)}
+.cc-filter-mobile-item{display:flex;align-items:center;gap:12px;padding:11px 20px;border-bottom:0.5px solid var(--border);cursor:pointer}
+.cc-filter-mobile-item span{font-size:14px;color:var(--text)}
+.cc-filter-mobile-divider{height:8px;background:var(--surface-1);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
+.cc-filter-mobile-footer{padding:12px 20px}
+.cc-filter-mobile-checkbox{width:16px;height:16px;accent-color:#000;flex-shrink:0;pointer-events:none}
 @media(max-width:680px){.cc-filter-sec-hdr{padding:15px 20px 17px}.cc-filter-sec-name{font-size:13px}.cc-filter-sec-badge{font-size:12px;padding:2px 8px}.cc-mehr-sheet-item{padding:14px 20px;font-size:15px}.cc-filter-divider{margin:8px 0}}
 .cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
 .cc-ml-dropdown-section-lbl{padding:13px 12px 13px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
 .cc-ml-dropdown-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.cc-filter-footer{padding:8px 12px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cc-ml-dropdown-clear{font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;font-family:inherit}
 .cc-ml-dropdown-clear:hover{color:var(--text)}
 .cc-ml-dropdown-apply{font-size:12px;font-weight:600;color:#000;background:var(--cc-accent,#FFBF00);border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit}
@@ -1360,28 +1373,28 @@ function RangeFilter({min,max,suffix,rv,rangeKey,onFilterChange,padLeft=12}){
   useEffect(()=>{setLocalVon(String(rv.von??min));setLocalBis(String(rv.bis??max));},[rv.von,rv.bis,min,max]);
   const commitVon=()=>{const v=Math.max(min,Math.min(max,Number(localVon)||min));setLocalVon(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:v,bis:rv.bis??max});};
   const commitBis=()=>{const v=Math.max(min,Math.min(max,Number(localBis)||max));setLocalBis(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:rv.von??min,bis:v});};
-  const numStyle={width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"};
+  const wrapClass=padLeft>12?"cc-range-filter-wrap-lg":"cc-range-filter-wrap";
   return(
-    <div style={{padding:`8px ${padLeft}px 10px`}}>
-      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-        <input type="number" min={min} max={max} step={1} style={numStyle}
+    <div className={wrapClass}>
+      <div className="cc-row cc-gap-6" style={{marginBottom:6}}>
+        <input type="number" min={min} max={max} step={1} className="cc-range-input"
           value={localVon}
           onChange={e=>setLocalVon(e.target.value)}
           onBlur={commitVon}
           onKeyDown={e=>e.key==="Enter"&&commitVon()}/>
-        <span style={{fontSize:11,color:"var(--sub)"}}>–</span>
-        <input type="number" min={min} max={max} step={1} style={numStyle}
+        <span className="cc-range-sep">–</span>
+        <input type="number" min={min} max={max} step={1} className="cc-range-input"
           value={localBis}
           onChange={e=>setLocalBis(e.target.value)}
           onBlur={commitBis}
           onKeyDown={e=>e.key==="Enter"&&commitBis()}/>
-        {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
+        {suffix&&<span className="cc-range-sep">{suffix}</span>}
       </div>
       <input type="range" min={min} max={max} value={rv.von??min} step={1} className="cc-range-slider" style={{marginBottom:3}}
         onChange={e=>{const v=Number(e.target.value);setLocalVon(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:v,bis:rv.bis??max});}}/>
       <input type="range" min={min} max={max} value={rv.bis??max} step={1} className="cc-range-slider"
         onChange={e=>{const v=Number(e.target.value);setLocalBis(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:rv.von??min,bis:v});}}/>
-      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
+      <div className="cc-range-labels">
         <span>{min}{suffix||""}</span><span>{max}{suffix||""}</span>
       </div>
     </div>
@@ -1486,7 +1499,7 @@ function Toolbar({
             </button>
             {filterOpen&&!isMobile&&(
                 <div className="cc-ml-dropdown cc-ml-filter-dropdown">
-                  <div className="cc-ml-dropdown-footer" style={{borderBottom:"0.5px solid var(--border)",borderTop:"none",paddingBottom:8,marginBottom:0}}>
+                  <div className="cc-filter-footer">
                     <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
                     <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
                   </div>
@@ -1521,9 +1534,9 @@ function Toolbar({
                     const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
                     return(
                       <div key={key}>
-                        <div className="cc-ml-dropdown-section-lbl" style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
+                        <div className="cc-ml-dropdown-section-lbl cc-between" style={{cursor:"pointer"}} onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
                           <span>{label}</span>
-                          <span style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span className="cc-row cc-gap-6">
                             {selCount>0&&<span className="cc-filter-sec-badge">{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
                             <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
                           </span>
@@ -1537,7 +1550,7 @@ function Toolbar({
                               return(
                                 <div key={v} className="cc-col-menu-item"
                                   onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
-                                  <input type="checkbox" readOnly checked={active} style={{width:14,height:14,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
+                                  <input type="checkbox" readOnly checked={active} className="cc-filter-checkbox"/>
                                   {v}
                                 </div>
                               );
@@ -1609,7 +1622,7 @@ function Toolbar({
                 </div>
               ):(
                 <div className="cc-ml-dropdown cc-ml-group-dropdown">
-                  <div className="cc-ml-dropdown-footer" style={{borderBottom:"0.5px solid var(--border)",borderTop:"none",paddingBottom:8,marginBottom:4}}>
+                  <div className="cc-filter-footer">
                     <button className="cc-ml-dropdown-clear" onClick={()=>{onGroupChange&&onGroupChange(["none"]);setGroupOpen(false);}}>Zurücksetzen</button>
                     <button className="cc-ml-dropdown-apply" onClick={()=>setGroupOpen(false)}>Fertig</button>
                   </div>
@@ -1695,7 +1708,7 @@ function Toolbar({
                           <span className="cc-sheet-subhdr-title">Filter</span>
                           <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
                         </div>
-                        <div className="cc-filter-search" style={{padding:"8px 20px"}}>
+                        <div className="cc-filter-search">
                           <TI n="search" size={13} style={{color:"var(--sub)",flexShrink:0}}/>
                           <input
                             placeholder="Filtern…"
@@ -1715,7 +1728,7 @@ function Toolbar({
                         <div className="cc-sheet-scroll">
                           {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                             const q=filterSearch.toLowerCase();
-                            if(type==="divider") return q?null:<div key={key} style={{height:8,background:"var(--surface-1)",borderTop:"0.5px solid var(--border)",borderBottom:"0.5px solid var(--border)"}}/>;
+                            if(type==="divider") return q?null:<div key={key} className="cc-filter-mobile-divider"/>;
                             const isRange=type==="range";
                             const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                             if(!isRange&&visVals.length===0) return null;
@@ -1725,7 +1738,7 @@ function Toolbar({
                             const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
                             return(
                               <div key={key}>
-                                <div style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:".07em",padding:"14px 20px 6px",background:"var(--surface-1)",borderBottom:"0.5px solid var(--border)"}}>
+                                <div className="cc-filter-mobile-sec">
                                   {label}{selCount>0&&<span className="cc-filter-sec-badge" style={{marginLeft:8}}>{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
                                 </div>
                                 {isRange?(
@@ -1734,10 +1747,10 @@ function Toolbar({
                                   visVals.map(v=>{
                                     const active=(filterVals[key]||[]).includes(v);
                                     return(
-                                      <div key={v} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
+                                      <div key={v} className="cc-filter-mobile-item"
                                         onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
-                                        <input type="checkbox" readOnly checked={active} style={{width:16,height:16,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
-                                        <span style={{fontSize:14,color:"var(--text)"}}>{v}</span>
+                                        <input type="checkbox" readOnly checked={active} className="cc-filter-mobile-checkbox"/>
+                                        <span>{v}</span>
                                       </div>
                                     );
                                   })
@@ -1746,7 +1759,7 @@ function Toolbar({
                             );
                           })}
                           {hasActiveFilter&&(
-                            <div style={{padding:"12px 20px"}}>
+                            <div className="cc-filter-mobile-footer">
                               <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange("__reset");}}>Alle Filter zurücksetzen</button>
                             </div>
                           )}
@@ -1764,10 +1777,10 @@ function Toolbar({
                         </div>
                         <div className="cc-sheet-scroll">
                           {[...groupOptions,...groupOptionsMore].map(o=>(
-                            <div key={o.val} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
+                            <div key={o.val} className="cc-filter-mobile-item"
                               onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);}}>
-                              <input type="checkbox" readOnly checked={isGroupActive(o.val)} style={{width:16,height:16,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
-                              <span style={{fontSize:14,color:"var(--text)"}}>{o.label}</span>
+                              <input type="checkbox" readOnly checked={isGroupActive(o.val)} className="cc-filter-mobile-checkbox"/>
+                              <span>{o.label}</span>
                             </div>
                           ))}
                           {isGrouped&&(
