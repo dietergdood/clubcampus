@@ -53,17 +53,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return()=>document.removeEventListener("mousedown",h);
   },[breakdownOpen,isMobile]);
 
-  // Infinite Scroll
-  useEffect(()=>{
-    if(!sentinelRef.current) return;
-    const observer=new IntersectionObserver(entries=>{
-      if(entries[0].isIntersecting&&pageSize<sorted.length){
-        setPageSize(p=>Math.min(p+50,sorted.length));
-      }
-    },{threshold:0.1});
-    observer.observe(sentinelRef.current);
-    return()=>observer.disconnect();
-  },[pageSize,sorted.length]);
+
   const [archivTab,setArchivTab]=useState(false);
   const [archivData,setArchivData]=useState([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
@@ -413,10 +403,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       case "funktionen_gruppen": {
         if(gc.type==="team") return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
         const gruppenFilter=filterVals["funktionsgruppen"]||[];
-        // Gruppen-Funktionen Paare aufbauen
         const paare=(m.funktionen||[]).map(f=>{
           const pf=portalFunktionen.find(x=>x.name===f);
-          return {funktion:f, gruppe:pf?.portal_gruppen?.name||null, farbe:pf?.portal_gruppen?.farbe||null};
+          return {funktion:f, gruppe:pf?.portal_gruppen?.name||null};
         }).filter(p=>{
           if(gc.type==="gruppe") return p.gruppe===gc.key;
           return gruppenFilter.length===0||gruppenFilter.includes(p.gruppe);
@@ -425,9 +414,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         return <td key="funktionen_gruppen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
             {paare.map((p,i)=>(
-              <div key={i} className="cc-funk-row">
-                {p.gruppe&&<span className="cc-funk-gruppe-badge-sm" style={p.farbe?{background:p.farbe+"20",color:p.farbe,borderColor:p.farbe+"40"}:{}}>{p.gruppe}</span>}
-                <span className="cc-text-sm">{p.funktion}</span>
+              <div key={i} className="cc-teams-rollen-row">
+                {p.gruppe&&<span className="cc-teams-rollen-team">{p.gruppe}</span>}
+                {p.gruppe&&p.funktion&&<span className="cc-teams-rollen-sep">·</span>}
+                <span className="cc-teams-rollen-rolle">{p.funktion}</span>
               </div>
             ))}
           </div>
