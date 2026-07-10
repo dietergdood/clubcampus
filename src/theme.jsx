@@ -2155,6 +2155,15 @@ export const COMPONENT_REGISTRY = [
     category: "Listen",
     usedIn: ["MitgliederModul", "KaderModul", "HelferModul"],
     props: ["search+onSearch", "filterDefs+filterVals+onFilterChange", "groupOptions+groupBy+onGroupChange", "colMenu", "moreItems"],
+    css: ["cc-filter-search", "cc-filter-sec-hdr", "cc-filter-sec-name", "cc-filter-sec-badge", "cc-filter-sec-body", "cc-ml-chip", "cc-ml-chips", "cc-ml-chip-x"],
+  },
+  {
+    name: "RangeFilter",
+    desc: "Zahlen-Range-Filter mit zwei Slidern + editierbaren Inputs (von/bis). Wird in Toolbar filterDefs mit type:'range' verwendet.",
+    category: "Formulare",
+    usedIn: ["MitgliederModul"],
+    props: ["min", "max", "suffix", "rv", "rangeKey", "onFilterChange", "padLeft"],
+    css: ["cc-range-slider"],
   },
   {
     name: "ColMenuButton",
