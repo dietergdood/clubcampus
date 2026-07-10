@@ -1734,10 +1734,10 @@ function Toolbar({
                                   visVals.map(v=>{
                                     const active=(filterVals[key]||[]).includes(v);
                                     return(
-                                      <div key={v} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
+                                      <div key={v} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
                                         onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
-                                        <input type="checkbox" readOnly checked={active} style={{width:18,height:18,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
-                                        <span style={{fontSize:15,color:"var(--text)"}}>{v}</span>
+                                        <input type="checkbox" readOnly checked={active} style={{width:16,height:16,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
+                                        <span style={{fontSize:14,color:"var(--text)"}}>{v}</span>
                                       </div>
                                     );
                                   })
