@@ -1576,7 +1576,11 @@ function Toolbar({
                 else{setGroupOpen(o=>!o);setFilterOpen(false);setMoreOpen(false);}
               }}>
               <TI n="layout-rows" size={15}/>
-              {!isMobile&&"Gruppieren"}
+              {!isMobile&&(isGrouped
+                ? [...groupOptions,...(groupOptionsMore||[])].filter(o=>groupByArr.includes(o.val)).map(o=>o.label).join(", ")
+                : "Gruppieren"
+              )}
+              {isGrouped&&!isMobile&&<span style={{marginLeft:4,opacity:0.7}} onClick={e=>{e.stopPropagation();onGroupChange&&onGroupChange(["none"]);setGroupOpen(false);}}>×</span>}
             </button>
             {groupOpen&&(
               isMobile?(
