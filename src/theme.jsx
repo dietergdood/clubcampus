@@ -212,7 +212,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-stat-val{font-size:22px;font-weight:700;color:var(--text);line-height:1}
 .cc-surface2{background:var(--surface2)}
 .cc-surface-card{background:var(--surface2);border-radius:10px;overflow:hidden}
-.cc-card-table{padding:0;overflow-x:auto}
+.cc-card-table{padding:0;overflow:visible}
 .cc-card-flush{padding:0;overflow:hidden}
 .cc-clickable{cursor:pointer;user-select:none}
 .cc-chip-row{display:flex;flex-wrap:wrap;gap:6px}
@@ -322,7 +322,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:0.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--sub);cursor:pointer;position:relative;flex-shrink:0}
 .cc-ml-icon-btn:hover{background:var(--surface2);color:var(--text)}
 .cc-ml-filter-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;position:absolute;top:5px;right:5px;border:1.5px solid var(--surface)}
-.cc-ml-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.cc-ml-chips{display:flex;gap:6px;flex-wrap:wrap;padding:6px 12px;border-bottom:0.5px solid var(--border);margin-bottom:0}
 .cc-ml-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 10px;border-radius:6px;font-size:12px;font-weight:500;background:var(--surface2);border:0.5px solid var(--border);color:var(--text);cursor:pointer}
 .cc-ml-chip:hover{border-color:var(--sub)}
 .cc-ml-chip-x{font-size:13px;color:var(--sub)}
