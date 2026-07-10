@@ -115,6 +115,17 @@ export function sortMembers(filtered, sortCol, sortDir) {
   return [...filtered].sort((a,b)=>{
     const getVal=m=>{
       if(sortCol==="name") return `${m.vorname||""} ${m.nachname||""}`.trim().toLowerCase();
+      if(sortCol==="teams_rollen"||sortCol==="teams"){
+        const t=(m.teams||[])[0];
+        return String(t?.name||t||"").toLowerCase();
+      }
+      if(sortCol==="funktionen_gruppen"||sortCol==="funktionsgruppen"){
+        return String((m.funktionsgruppen||[])[0]||"").toLowerCase();
+      }
+      if(sortCol==="kaderrollen"){
+        return String((m.kader_rollen_raw||[])[0]||"").toLowerCase();
+      }
+      if(sortCol==="rollen") return String(m.role||"").toLowerCase();
       const v=m[sortCol];
       if(v==null||v==="-") return "";
       if(Array.isArray(v)){
