@@ -844,10 +844,15 @@ function Portal({supabaseClient}){
   async function loadDbMitglieder(){
     if(!sb) return;
     try{
-      const[mitgliederRes,kaderRes]=await Promise.all([
+      const[mitgliederRes,kaderRes,benutzerRes]=await Promise.all([
         sb.from("mitglieder").select("*").eq("aktiv",true).order("nachname").order("vorname"),
         sb.from("kader").select("mitglied_id,rollen,teams(id,name,kurzname)").eq("aktiv",true),
       ]);
+      // benutzerMap: mitglied_id → {exists, aktiv}
+      const benutzerMap={};
+      (benutzerRes.data||[]).forEach(b=>{
+        if(b.mitglied_id) benutzerMap[b.mitglied_id]={exists:true,aktiv:b.aktiv!==false};
+      });
       const kaderMap={};
       (kaderRes.data||[]).forEach(k=>{
         if(!kaderMap[k.mitglied_id]) kaderMap[k.mitglied_id]={rollen:[],teams:[],kader:[]};
@@ -867,6 +872,8 @@ function Portal({supabaseClient}){
         kader_rollen:kaderMap[m.id]?.rollen||[],
         kader_teams:kaderMap[m.id]?.teams||[],
         kader_eintraege:kaderMap[m.id]?.kader||[],
+        hat_benutzer:!!benutzerMap[m.id],
+        benutzer_deaktiviert:benutzerMap[m.id]?.exists&&!benutzerMap[m.id]?.aktiv,
       }));
       if(data.length>0) setDbMitglieder(data);
     }catch(e){ console.warn("[FCH] loadDbMitglieder:", e.message); }

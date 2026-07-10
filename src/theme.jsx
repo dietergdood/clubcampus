@@ -698,6 +698,12 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:#2563EB;text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 .cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text)!important;text-decoration:none!important;display:inline}
+.cc-portal-status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500}
+.cc-portal-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.cc-portal-status-aktiv{color:#16A34A}.cc-portal-status-aktiv .cc-portal-dot{background:#16A34A}
+.cc-portal-status-deaktiviert{color:#D97706}.cc-portal-status-deaktiviert .cc-portal-dot{background:#D97706}
+.cc-portal-status-kein{color:#DC2626}.cc-portal-status-kein .cc-portal-dot{background:#DC2626}
+.cc-funk-gruppe-badge-sm{padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap;border:0.5px solid transparent;flex-shrink:0}
 .cc-breakdown-popover{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:8px;min-width:220px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
 .cc-breakdown-popover-title{font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:4px 8px 8px}
 .cc-breakdown-popover-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:7px 8px;border-radius:6px;border:none;background:transparent;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;gap:12px}

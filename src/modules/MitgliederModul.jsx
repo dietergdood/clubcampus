@@ -307,8 +307,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   /* Portal-Zugang Zelle */
   function PortalBadge({val}){
-    if(val==="Aktiv") return <span className="cc-ml-badge cc-ml-badge-ok">Aktiv</span>;
-    return <span className="cc-ml-badge cc-ml-badge-muted">Fehlt</span>;
+    if(val==="Aktiv") return <span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>;
+    if(val==="Deaktiviert") return <span className="cc-portal-status cc-portal-status-deaktiviert"><span className="cc-portal-dot"/> Deaktiviert</span>;
+    return <span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>;
   }
   /* Datenpruefung Zelle */
   function DpBadge({val}){
@@ -356,6 +357,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           const teamMatch=gc.type==="team"?e.team?.name===gc.key:(teamsFilter.length===0||teamsFilter.includes(e.team?.name));
           const rolleMatch=kaderFilter.length===0||e.rollen.some(r=>kaderFilter.includes(r));
           return teamMatch&&rolleMatch;
+        }).sort((a,b)=>{
+          // Trainer-Einträge zuerst
+          const aIsTrainer=a.rollen.some(r=>TRAINER_KEYS.includes(r));
+          const bIsTrainer=b.rollen.some(r=>TRAINER_KEYS.includes(r));
+          return aIsTrainer===bIsTrainer?0:aIsTrainer?-1:1;
         });
         if(eintraege.length===0) return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
         return <td key="teams_rollen" className="cc-members-td">
@@ -363,14 +369,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             {eintraege.map((e,i)=>{
               const rollenToShow=kaderFilter.length>0?e.rollen.filter(r=>kaderFilter.includes(r)):e.rollen;
               return(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span className="cc-team-chip" style={{minWidth:36,textAlign:"center",flexShrink:0}}>{e.team?.kurz||e.team?.name||"—"}</span>
-                  <span style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                <div key={i} style={{fontSize:12,color:"#333",lineHeight:1.6}}>
+                  {e.team?.kurz||e.team?.name||"—"}
+                  {rollenToShow.length>0&&<>
+                    <span style={{color:"#CCC",margin:"0 4px"}}>·</span>
                     {rollenToShow.map((r,ri)=>{
                       const isT=TRAINER_KEYS.some(k=>k===r);
-                      return <span key={ri} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;
+                      return <span key={ri} style={isT?{color:"#B45309",fontWeight:500}:{}}>{r}{ri<rollenToShow.length-1?", ":""}</span>;
                     })}
-                  </span>
+                  </>}
                 </div>
               );
             })}
@@ -392,8 +399,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         return <td key="funktionen_gruppen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
             {paare.map((p,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                {p.gruppe&&<span className="cc-funk-gruppe-badge" style={p.farbe?{background:p.farbe+"20",color:p.farbe,borderColor:p.farbe+"40",flexShrink:0}:{flexShrink:0}}>{p.gruppe}</span>}
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6,lineHeight:1.6}}>
+                {p.gruppe&&<span className="cc-funk-gruppe-badge-sm" style={p.farbe?{background:p.farbe+"20",color:p.farbe,borderColor:p.farbe+"40"}:{}}>{p.gruppe}</span>}
                 <span style={{fontSize:12,color:"var(--text)"}}>{p.funktion}</span>
               </div>
             ))}
