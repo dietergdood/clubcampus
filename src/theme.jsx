@@ -275,7 +275,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-hauptkontakt{font-size:12px;color:#c2410c;font-weight:600}
 .cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:0;padding:7px 12px;border-bottom:0.5px solid var(--border)}
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0}
-.cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:hidden;z-index:200}
+.cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:visible;z-index:200}
 .cc-ml-filter-dropdown{min-width:240px}
 .cc-filter-search{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:0.5px solid var(--border)}
 .cc-filter-search input{flex:1;border:0.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface-1,#f5f5f5);color:var(--text);outline:none;font-family:inherit}
