@@ -1723,7 +1723,7 @@ function Toolbar({
         {moreItems.length>0&&(
           <div ref={moreRef} className="cc-ml-dropdown-wrap">
             <button className="cc-ml-btn"
-              onClick={()=>{setMoreOpen(o=>{const next=!o;if(next)setOpenMoreSections(new Set(isGrouped?["Aktionen"]:[]));return next;});setFilterOpen(false);setGroupOpen(false);setMobileSubMenu(null);}}>
+              onClick={()=>{setMoreOpen(o=>{const next=!o;if(next)setOpenMoreSections(new Set(["Aktionen"]));return next;});setFilterOpen(false);setGroupOpen(false);setMobileSubMenu(null);}}>
               <TI n="dots" size={15}/>
             </button>
             {moreOpen&&(
