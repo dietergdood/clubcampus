@@ -27,9 +27,10 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
   }
 
   const filtered = assignFunktionen.filter(f =>
+    !(raw.funktionen||[]).includes(f.name) && (
     !funkSearch ||
     f.name.toLowerCase().includes(funkSearch.toLowerCase()) ||
-    (f.portal_gruppen?.name || "").toLowerCase().includes(funkSearch.toLowerCase())
+    (f.portal_gruppen?.name || "").toLowerCase().includes(funkSearch.toLowerCase()))
   );
   const groups = [...new Set(filtered.map(f => f.portal_gruppen?.name || "Weitere"))];
 
