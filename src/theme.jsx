@@ -281,14 +281,15 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-search input{flex:1;border:0.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface-1,#f5f5f5);color:var(--text);outline:none;font-family:inherit}
 .cc-filter-search input:focus{border-color:var(--cc-accent,#FFBF00)}
 @media(max-width:680px){.cc-filter-search{padding:10px 20px}.cc-filter-search input{font-size:16px;padding:8px 12px;border-radius:8px}}
-.cc-filter-sec-hdr{display:flex;align-items:center;gap:6px;padding:7px 12px;cursor:pointer;border-top:0.5px solid var(--border);user-select:none}
+.cc-filter-sec-hdr{display:flex;align-items:center;gap:6px;padding:10px 12px;cursor:pointer;border-top:0.5px solid var(--border);user-select:none}
 .cc-filter-sec-hdr:first-child{border-top:none}
+.cc-filter-divider{height:1px;background:var(--border-strong);margin:6px 0}
 .cc-filter-sec-name{flex:1;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em}
 .cc-filter-sec-badge{font-size:10px;background:var(--cc-accent,#FFBF00);color:#000;font-weight:600;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 .cc-filter-sec-body{padding:2px 0 4px}
 .cc-range-slider{width:100%;accent-color:var(--cc-accent,#FFBF00)}
 .cc-filter-sec-body .cc-col-menu-item{padding:5px 12px}
-@media(max-width:680px){.cc-filter-sec-hdr{padding:14px 20px 16px}.cc-filter-sec-name{font-size:13px}.cc-filter-sec-badge{font-size:12px;padding:2px 8px}.cc-mehr-sheet-item{padding:14px 20px;font-size:15px}}
+@media(max-width:680px){.cc-filter-sec-hdr{padding:15px 20px 17px}.cc-filter-sec-name{font-size:13px}.cc-filter-sec-badge{font-size:12px;padding:2px 8px}.cc-mehr-sheet-item{padding:14px 20px;font-size:15px}.cc-filter-divider{margin:8px 0}}
 .cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
 .cc-ml-dropdown-section-lbl{padding:6px 12px 2px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
 .cc-ml-dropdown-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
@@ -1510,6 +1511,7 @@ function Toolbar({
                   </div>
                   {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                     const q=filterSearch.toLowerCase();
+                    if(type==="divider") return q?null:<div key={key} className="cc-filter-divider"/>;
                     const isRange=type==="range";
                     const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                     if(!isRange&&visVals.length===0) return null;
@@ -1712,6 +1714,7 @@ function Toolbar({
                         <div className="cc-sheet-scroll">
                           {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                             const q=filterSearch.toLowerCase();
+                            if(type==="divider") return q?null:<div key={key} className="cc-filter-divider" style={{margin:"8px 20px"}}/>;
                             const isRange=type==="range";
                             const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                             if(!isRange&&visVals.length===0) return null;
