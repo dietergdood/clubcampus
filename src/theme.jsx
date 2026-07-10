@@ -1928,7 +1928,7 @@ function Toolbar({
                   {(()=>{
                     let currentSection=null;
                     return moreItems.map((item,i)=>{
-                      if(item==="sep") return null;
+                      if(item==="sep") return openMoreSections.has(currentSection)?<div key={i} className="cc-menu-sep"/>:null;
                       if(item.header){
                         currentSection=item.label;
                         const isOpen=openMoreSections.has(item.label);

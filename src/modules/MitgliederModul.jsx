@@ -762,6 +762,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             onDelete:()=>deleteCustomView(v.id),
           })),
           "sep",
+          "sep",
           {icon:"device-floppy",label:"Als neue Ansicht speichern",onClick:()=>setSaveViewOpen(true)},
           ...(canExport?[
             "sep",
