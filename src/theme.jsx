@@ -751,7 +751,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-contact-link{display:flex;align-items:center;gap:5px;font-size:13px;color:#2563EB;text-decoration:none;font-weight:500}
 .cc-contact-link-muted{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);text-decoration:none}
 .cc-contact-link-plain{font-size:14px;font-weight:500;color:var(--text)!important;text-decoration:none!important;display:inline}
-.cc-teams-rollen-row{font-size:12px;color:var(--text);line-height:1.4}
+.cc-teams-rollen-row{font-size:12px;color:var(--text);line-height:1.5}
 .cc-members-td-mitglied{font-size:12px;color:var(--text)}
 .cc-kpi-breakdown-label{flex:1}
 .cc-kpi-breakdown-value{font-weight:500}
@@ -1680,7 +1680,7 @@ function Toolbar({
                     </>
                   )}
                   <div className="cc-ml-dropdown-section-lbl">Hinzufügen</div>
-                  {[...groupOptions,...groupOptionsMore].filter(o=>!groupByArr.includes(o.val)).map(o=>(
+                  {groupOptions.filter(o=>!groupByArr.includes(o.val)).map(o=>(
                     <div key={o.val} className="cc-group-inactive-item"
                       onClick={()=>toggleGroup(o.val)}>
                       <TI n="plus" size={12}/>
@@ -1688,6 +1688,22 @@ function Toolbar({
                       {o.val==="__teams_funktionen"&&<TI n="info-circle" size={12} style={{marginLeft:"auto",color:"var(--sub)"}}/>}
                     </div>
                   ))}
+                  {groupOptionsMore.filter(o=>!groupByArr.includes(o.val)).length>0&&(
+                    <>
+                      <div className="cc-group-inactive-item cc-text-sub" style={{fontWeight:500}}
+                        onClick={()=>setGroupMoreOpen(o=>!o)}>
+                        <TI n={groupMoreOpen?"chevron-up":"chevron-down"} size={12}/>
+                        Weitere ({groupOptionsMore.filter(o=>!groupByArr.includes(o.val)).length})
+                      </div>
+                      {groupMoreOpen&&groupOptionsMore.filter(o=>!groupByArr.includes(o.val)).map(o=>(
+                        <div key={o.val} className="cc-group-inactive-item"
+                          onClick={()=>toggleGroup(o.val)}>
+                          <TI n="plus" size={12}/>
+                          {o.label}
+                        </div>
+                      ))}
+                    </>
+                  )}
                   {groupByArr.filter(g=>g&&g!=="none").length>0&&(
                     <div style={{padding:"6px 12px 8px",fontSize:11,color:"var(--sub)",borderTop:"0.5px solid var(--border)"}}>
                       {groupByArr.filter(g=>g&&g!=="none").map(v=>[...groupOptions,...groupOptionsMore].find(o=>o.val===v)?.label).filter(Boolean).join(" › ")}
