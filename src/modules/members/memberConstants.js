@@ -63,7 +63,7 @@ export const COL_GROUPS = [
   {group:"Sport", cols:[
     {key:"teams",         label:"Teams",          default:false},
     {key:"kaderrollen",   label:"Kaderrolle",     default:false},
-    {key:"teams_rollen",       label:"Teams & Rollen",           default:true},
+    {key:"teams_rollen",       label:"Teams & Kaderrollen",      default:true},
     {key:"funktionen_gruppen",  label:"Funktionen", default:true},
   ]},
 ];
