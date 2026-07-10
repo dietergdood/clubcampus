@@ -290,7 +290,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-sec-body .cc-col-menu-item{padding:8px 12px}
 @media(max-width:680px){.cc-filter-sec-hdr{padding:15px 20px 17px}.cc-filter-sec-name{font-size:13px}.cc-filter-sec-badge{font-size:12px;padding:2px 8px}.cc-mehr-sheet-item{padding:14px 20px;font-size:15px}.cc-filter-divider{margin:8px 0}}
 .cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
-.cc-ml-dropdown-section-lbl{padding:6px 12px 2px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
+.cc-ml-dropdown-section-lbl{padding:12px 12px 4px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
 .cc-ml-dropdown-footer{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .cc-ml-dropdown-clear{font-size:12px;color:var(--sub);background:none;border:none;cursor:pointer;font-family:inherit}
 .cc-ml-dropdown-clear:hover{color:var(--text)}
