@@ -530,13 +530,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     ));
   }
 
-  function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}){
+  function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}, teamContext={type:"none",key:null}){
     return groups.map(({key,label,type,members,children})=>{
       const groupContext=type!=="none"?{type,key}:parentContext;
-      const visibleMembers=groupContext.type==="team"?members.filter(m=>{
+      const newTeamContext=type==="team"?{type,key}:(type==="gruppe"?{type,key}:teamContext);
+      const effectiveGc=groupContext.type==="team"||groupContext.type==="gruppe"?groupContext:(newTeamContext.type==="team"||newTeamContext.type==="gruppe"?newTeamContext:groupContext);
+      const visibleMembers=effectiveGc.type==="team"?members.filter(m=>{
         const kaderFilter=filterVals["kaderrollen"]||[];
         if(kaderFilter.length===0) return true;
-        const teamRollen=(m.kader_eintraege||[]).filter(e=>e.team?.name===groupContext.key).flatMap(e=>e.rollen);
+        const teamRollen=(m.kader_eintraege||[]).filter(e=>e.team?.name===effectiveGc.key).flatMap(e=>e.rollen);
         return teamRollen.some(r=>kaderFilter.includes(r));
       }):members;
       if(!children&&visibleMembers.length===0) return null;
@@ -555,7 +557,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               </td>
             </tr>
           )}
-          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext):visibleMembers.map(m=>(
+          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext,newTeamContext):visibleMembers.map(m=>(
             <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
               onClick={()=>selectMode?toggleSelectRow(m.id):null}>
               {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
@@ -563,7 +565,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                   {selected.has(m.id)&&<TI n="check" size={10}/>}
                 </div>
               </td>}
-              {COLS.map(col=>renderCell(col,m,groupContext))}
+              {COLS.map(col=>renderCell(col,m,effectiveGc))}
               <td className="cc-members-td cc-members-td-actions"/>
             </tr>
           )))}
