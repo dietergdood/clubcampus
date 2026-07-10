@@ -315,6 +315,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-srch{flex:1;max-width:65%;display:flex;align-items:center;gap:8px;padding:0 12px;height:36px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface)}
 .cc-ml-srch input{border:none;outline:none;background:transparent;font-size:14px;color:var(--text);flex:1;font-family:inherit}
 .cc-ml-srch input::placeholder{color:var(--sub)}
+@media(max-width:680px){.cc-ml-srch{max-width:45%;min-width:0}}
 .cc-ml-btn{height:36px;padding:0 12px;display:flex;align-items:center;gap:6px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--sub);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;position:relative}
 .cc-ml-btn:hover{background:var(--surface2);color:var(--text)}
 .cc-ml-btn.cc-active{border-color:var(--text);color:var(--text)}
