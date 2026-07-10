@@ -1882,12 +1882,22 @@ function Toolbar({
       {/* Aktive Filter Chips */}
       {hasActiveFilter&&(
         <div className="cc-ml-chips">
-          {Object.entries(filterVals).flatMap(([k,vals])=>(vals||[]).map(v=>(
-            <div key={k+v} className="cc-ml-chip"
-              onClick={()=>onFilterChange&&onFilterChange(k,v,false)}>
-              {v} <span className="cc-ml-chip-x">×</span>
-            </div>
-          )))}
+          {Object.entries(filterVals).flatMap(([k,vals])=>{
+            if(!vals) return [];
+            if(typeof vals==="object"&&!Array.isArray(vals)){
+              if(vals.von==null&&vals.bis==null) return [];
+              const def=filterDefs.find(d=>d.key===k);
+              const label=def?def.label:k;
+              const display=`${label}: ${vals.von??def?.min??''}–${vals.bis??def?.max??''}${def?.suffix||''}`;
+              return [<div key={k} className="cc-ml-chip" onClick={()=>onFilterChange&&onFilterChange("__range",{rangeKey:k,von:null,bis:null})}>{display} <span className="cc-ml-chip-x">×</span></div>];
+            }
+            return (vals||[]).map(v=>(
+              <div key={k+v} className="cc-ml-chip"
+                onClick={()=>onFilterChange&&onFilterChange(k,v,false)}>
+                {v} <span className="cc-ml-chip-x">×</span>
+              </div>
+            ));
+          })}
           <div className="cc-ml-chip cc-text-sub"
             onClick={()=>onFilterChange&&onFilterChange("__reset")}>Alle löschen</div>
         </div>

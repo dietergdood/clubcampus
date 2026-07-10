@@ -658,7 +658,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           if(key==="__reset"){setFilterVals({});return;}
           if(key==="__range"){
             const {rangeKey,von,bis}=val;
-            setFilterVals(prev=>({...prev,[rangeKey]:{von,bis}}));
+            if(von==null&&bis==null){
+              setFilterVals(prev=>{const n={...prev};delete n[rangeKey];return n;});
+            } else {
+              setFilterVals(prev=>({...prev,[rangeKey]:{von,bis}}));
+            }
             return;
           }
           setFilterVals(prev=>({
