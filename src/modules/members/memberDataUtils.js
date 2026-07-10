@@ -113,9 +113,20 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
 
 export function sortMembers(filtered, sortCol, sortDir) {
   return [...filtered].sort((a,b)=>{
-    const getVal=m=>{const v=m[sortCol];if(Array.isArray(v)){const f=v[0];return f?.name||f||"";}return String(v??"");};
+    const getVal=m=>{
+      if(sortCol==="name") return `${m.vorname||""} ${m.nachname||""}`.trim().toLowerCase();
+      const v=m[sortCol];
+      if(v==null||v==="-") return "";
+      if(Array.isArray(v)){
+        const first=v[0];
+        return String(first?.name||first||"").toLowerCase();
+      }
+      return String(v).toLowerCase();
+    };
     const av=getVal(a), bv=getVal(b);
-    return sortDir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
+    if(av===""&&bv!=="") return 1;
+    if(bv===""&&av!=="") return -1;
+    return sortDir==="asc"?av.localeCompare(bv,"de"):bv.localeCompare(av,"de");
   });
 }
 
