@@ -1442,7 +1442,7 @@ function Toolbar({
   const [moreOpen,setMoreOpen]=useState(false);
   const [moreSubPanel,setMoreSubPanel]=useState(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
-  const [openMoreSections,setOpenMoreSections]=useState(new Set(["Aktionen","Ansichten","Export"]));
+  const [openMoreSections,setOpenMoreSections]=useState(new Set());
   const [dragGroup,setDragGroup]=useState(null);
   const [dragOverGroup,setDragOverGroup]=useState(null);
   const [mobileGroupPicker,setMobileGroupPicker]=useState(null); // index of level being picked
@@ -1723,7 +1723,7 @@ function Toolbar({
         {moreItems.length>0&&(
           <div ref={moreRef} className="cc-ml-dropdown-wrap">
             <button className="cc-ml-btn"
-              onClick={()=>{setMoreOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setMobileSubMenu(null);}}>
+              onClick={()=>{setMoreOpen(o=>{const next=!o;if(next)setOpenMoreSections(new Set(isGrouped?["Aktionen"]:[]));return next;});setFilterOpen(false);setGroupOpen(false);setMobileSubMenu(null);}}>
               <TI n="dots" size={15}/>
             </button>
             {moreOpen&&(
