@@ -65,11 +65,19 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
       const inGruppe=gruppenVals.length>0&&(m.funktionsgruppen||[]).some(g=>gruppenVals.includes(g));
       if(!inTeam&&!inGruppe) return false;
     }
+    // Kaderrollen + Vereinsfunktionen mit ODER verknüpfen
+    const kaderVals=filterVals["kaderrollen"]||[];
+    const funktionenVals=filterVals["funktionen"]||[];
+    if(kaderVals.length>0||funktionenVals.length>0){
+      const inKader=kaderVals.length>0&&(m.kader_rollen_raw||[]).some(r=>kaderVals.includes(r));
+      const inFunktion=funktionenVals.length>0&&(m.funktionen||[]).some(f=>funktionenVals.includes(f));
+      if(!inKader&&!inFunktion) return false;
+    }
     // Alle anderen Filter mit UND
     for(const [fKey,fVals] of Object.entries(filterVals)){
       if(!fVals||(Array.isArray(fVals)&&fVals.length===0)) continue;
       if(typeof fVals==="object"&&!Array.isArray(fVals)&&fKey!=="jahrgang"&&fKey!=="alter") continue;
-      if(fKey==="teams"||fKey==="funktionsgruppen") continue;
+      if(fKey==="teams"||fKey==="funktionsgruppen"||fKey==="kaderrollen"||fKey==="funktionen") continue;
       if(fKey==="jahrgang"){
         const {von,bis}=fVals||{};
         if(von==null&&bis==null) continue;

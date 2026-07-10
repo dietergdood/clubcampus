@@ -299,6 +299,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-mobile-item span{font-size:14px;color:var(--text)}
 .cc-filter-mobile-divider{height:8px;background:var(--surface-1);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
 .cc-filter-mobile-footer{padding:12px 20px}
+.cc-filter-or-badge{font-size:9px;font-weight:700;background:var(--cc-accent,#FFBF00);color:#000;padding:2px 6px;border-radius:3px;align-self:center}
+.cc-filter-or-sep{display:flex;align-items:center;gap:8px;padding:4px 12px;border-top:0.5px solid var(--border)}
+.cc-filter-or-line{flex:1;height:0.5px;background:var(--border)}
+.cc-ml-chip-or{font-size:11px;color:var(--sub);padding:0 2px;font-style:italic}
 .cc-group-drag-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:grab;background:var(--surface2)}
 .cc-group-drag-item:hover{background:var(--surface2)}
 .cc-group-drag-item.cc-drag-over{border-top:2px solid var(--cc-accent,#FFBF00)}
@@ -1543,6 +1547,7 @@ function Toolbar({
                   {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                     const q=filterSearch.toLowerCase();
                     if(type==="divider") return q?null:<div key={key} className="cc-filter-divider"/>;
+                    if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
                     const isRange=type==="range";
                     const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                     if(!isRange&&visVals.length===0) return null;
@@ -1783,6 +1788,7 @@ function Toolbar({
                           {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                             const q=filterSearch.toLowerCase();
                             if(type==="divider") return q?null:<div key={key} className="cc-filter-mobile-divider"/>;
+                            if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
                             const isRange=type==="range";
                             const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                             if(!isRange&&visVals.length===0) return null;
@@ -1988,22 +1994,31 @@ function Toolbar({
       {hasActiveFilter&&(
         <div className="cc-ml-chips" style={{justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {Object.entries(filterVals).flatMap(([k,vals])=>{
-            if(!vals) return [];
-            if(typeof vals==="object"&&!Array.isArray(vals)){
-              if(vals.von==null&&vals.bis==null) return [];
-              const def=filterDefs.find(d=>d.key===k);
-              const label=def?def.label:k;
-              const display=`${label}: ${vals.von??def?.min??''}–${vals.bis??def?.max??''}${def?.suffix||''}`;
-              return [<div key={k} className="cc-ml-chip" onClick={()=>onFilterChange&&onFilterChange("__range",{rangeKey:k,von:null,bis:null})}>{display} <span className="cc-ml-chip-x">×</span></div>];
-            }
-            return (vals||[]).map(v=>(
-              <div key={k+v} className="cc-ml-chip"
-                onClick={()=>onFilterChange&&onFilterChange(k,v,false)}>
-                {v} <span className="cc-ml-chip-x">×</span>
-              </div>
-            ));
-          })}
+          {(()=>{
+            const OR_GROUPS=[["kaderrollen","funktionen"],["teams","funktionsgruppen"]];
+            const chips=[];
+            let lastGroup=null;
+            Object.entries(filterVals).forEach(([k,vals])=>{
+              if(!vals) return;
+              if(typeof vals==="object"&&!Array.isArray(vals)){
+                if(vals.von==null&&vals.bis==null) return;
+                const def=filterDefs.find(d=>d.key===k);
+                const label=def?def.label:k;
+                const display=`${label}: ${vals.von??def?.min??''}–${vals.bis??def?.max??''}${def?.suffix||''}`;
+                chips.push(<div key={k} className="cc-ml-chip" onClick={()=>onFilterChange&&onFilterChange("__range",{rangeKey:k,von:null,bis:null})}>{display} <span className="cc-ml-chip-x">×</span></div>);
+                return;
+              }
+              const currentGroup=OR_GROUPS.find(g=>g.includes(k));
+              if(currentGroup&&lastGroup&&currentGroup===lastGroup){
+                chips.push(<span key={k+"_or"} className="cc-ml-chip-or">oder</span>);
+              }
+              lastGroup=currentGroup||null;
+              (vals||[]).forEach(v=>{
+                chips.push(<div key={k+v} className="cc-ml-chip" onClick={()=>onFilterChange&&onFilterChange(k,v,false)}>{v} <span className="cc-ml-chip-x">×</span></div>);
+              });
+            });
+            return chips;
+          })()}
           </div>
           <button className="cc-ml-dropdown-clear" style={{flexShrink:0,marginLeft:4}}
             onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
