@@ -1550,7 +1550,7 @@ function Toolbar({
                               return(
                                 <div key={v} className="cc-col-menu-item"
                                   onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
-                                  <input type="checkbox" readOnly checked={active} className="cc-filter-checkbox"/>
+                                  <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
                                   {v}
                                 </div>
                               );
