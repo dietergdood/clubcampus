@@ -1351,6 +1351,40 @@ function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
 
 
 /* ── Toolbar: Wiederverwendbare Such/Filter/Gruppier-Leiste ── */
+function RangeFilter({min,max,suffix,rv,rangeKey,onFilterChange,padLeft=12}){
+  const [localVon,setLocalVon]=useState(String(rv.von??min));
+  const [localBis,setLocalBis]=useState(String(rv.bis??max));
+  useEffect(()=>{setLocalVon(String(rv.von??min));setLocalBis(String(rv.bis??max));},[rv.von,rv.bis,min,max]);
+  const commitVon=()=>{const v=Math.max(min,Math.min(max,Number(localVon)||min));setLocalVon(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:v,bis:rv.bis??max});};
+  const commitBis=()=>{const v=Math.max(min,Math.min(max,Number(localBis)||max));setLocalBis(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:rv.von??min,bis:v});};
+  const numStyle={width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"};
+  return(
+    <div style={{padding:`8px ${padLeft}px 10px`}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+        <input type="number" min={min} max={max} step={1} style={numStyle}
+          value={localVon}
+          onChange={e=>setLocalVon(e.target.value)}
+          onBlur={commitVon}
+          onKeyDown={e=>e.key==="Enter"&&commitVon()}/>
+        <span style={{fontSize:11,color:"var(--sub)"}}>–</span>
+        <input type="number" min={min} max={max} step={1} style={numStyle}
+          value={localBis}
+          onChange={e=>setLocalBis(e.target.value)}
+          onBlur={commitBis}
+          onKeyDown={e=>e.key==="Enter"&&commitBis()}/>
+        {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
+      </div>
+      <input type="range" min={min} max={max} value={rv.von??min} step={1} className="cc-range-slider" style={{marginBottom:3}}
+        onChange={e=>{const v=Number(e.target.value);setLocalVon(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:v,bis:rv.bis??max});}}/>
+      <input type="range" min={min} max={max} value={rv.bis??max} step={1} className="cc-range-slider"
+        onChange={e=>{const v=Number(e.target.value);setLocalBis(String(v));onFilterChange&&onFilterChange("__range",{rangeKey,von:rv.von??min,bis:v});}}/>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
+        <span>{min}{suffix||""}</span><span>{max}{suffix||""}</span>
+      </div>
+    </div>
+  );
+}
+
 function Toolbar({
   /* Suche */
   search="", onSearch=null,
@@ -1486,25 +1520,7 @@ function Toolbar({
                           <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
                         </div>
                         {isOpen&&(isRange?(
-                          <div className="cc-filter-sec-body" style={{padding:"8px 12px 10px"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                              <input type="number" min={min} max={max} value={rv.von??min} step={1}
-                                style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
-                                onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
-                              <span style={{fontSize:11,color:"var(--sub)"}}>–</span>
-                              <input type="number" min={min} max={max} value={rv.bis??max} step={1}
-                                style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
-                                onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
-                              {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
-                            </div>
-                            <input type="range" min={min} max={max} value={rv.von??min} step={1} className="cc-range-slider" style={{marginBottom:3}}
-                              onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
-                            <input type="range" min={min} max={max} value={rv.bis??max} step={1} className="cc-range-slider"
-                              onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
-                            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
-                              <span>{min}{suffix||""}</span><span>{max}{suffix||""}</span>
-                            </div>
-                          </div>
+                          <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={12}/>
                         ):(
                           <div className="cc-filter-sec-body">
                             {visVals.map(v=>{
@@ -1717,29 +1733,7 @@ function Toolbar({
                                   <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
                                 </div>
                                 {isOpen&&(isRange?(
-                                  <div className="cc-filter-sec-body" style={{padding:"8px 20px 10px"}}>
-                                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                                      <input type="number" min={min} max={max} value={rv.von??min} step={1}
-                                        style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
-                                        onMouseDown={e=>e.stopPropagation()}
-                                        onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
-                                      <span style={{fontSize:11,color:"var(--sub)"}}>–</span>
-                                      <input type="number" min={min} max={max} value={rv.bis??max} step={1}
-                                        style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
-                                        onMouseDown={e=>e.stopPropagation()}
-                                        onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
-                                      {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
-                                    </div>
-                                    <input type="range" min={min} max={max} value={rv.von??min} step={1} className="cc-range-slider" style={{marginBottom:3}}
-                                      onMouseDown={e=>e.stopPropagation()}
-                                      onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
-                                    <input type="range" min={min} max={max} value={rv.bis??max} step={1} className="cc-range-slider"
-                                      onMouseDown={e=>e.stopPropagation()}
-                                      onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
-                                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
-                                      <span>{min}{suffix||""}</span><span>{max}{suffix||""}</span>
-                                    </div>
-                                  </div>
+                                  <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={20}/>
                                 ):(
                                   <div className="cc-filter-sec-body">
                                     {visVals.map(v=>{
