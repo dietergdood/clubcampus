@@ -304,13 +304,12 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-or-sep{display:flex;align-items:center;gap:8px;padding:4px 12px;border-top:0.5px solid var(--border)}
 .cc-filter-or-line{flex:1;height:0.5px;background:var(--border)}
 .cc-ml-chip-or{font-size:11px;color:var(--sub);padding:0 2px;font-style:italic}
-.cc-group-drag-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:grab;background:var(--surface2)}
+.cc-group-drag-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:grab;background:var(--surface2);font-size:13px}
 .cc-group-drag-item:hover{background:var(--surface2)}
 .cc-group-drag-item.cc-drag-over{border-top:2px solid var(--cc-accent,#FFBF00)}
 .cc-group-drag-handle{color:var(--sub);cursor:grab;font-size:14px;flex-shrink:0}
 .cc-group-drag-nr{width:18px;height:18px;border-radius:50%;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0}
 .cc-group-inactive-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:pointer;font-size:13px;color:var(--text)}
-.cc-group-inactive-item:hover{background:var(--surface2)}
 .cc-group-inactive-item:hover{background:var(--surface2);color:var(--text)}
 .cc-group-mobile-level{display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:0.5px solid var(--border);cursor:pointer}
 .cc-group-mobile-dot{width:22px;height:22px;border-radius:50%;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0}
@@ -1655,7 +1654,7 @@ function Toolbar({
                   </div>
                   {groupByArr.filter(g=>g&&g!=="none").length>0&&(
                     <>
-                      <div className="cc-col-menu-hdr">Aktiv <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+                      <div className="cc-ml-dropdown-section-lbl">Aktiv <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
                       {groupByArr.filter(g=>g&&g!=="none").map((val,idx)=>{
                         const opt=[...groupOptions,...groupOptionsMore].find(o=>o.val===val);
                         if(!opt) return null;
