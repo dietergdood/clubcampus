@@ -191,7 +191,7 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   return [String(v||"-")];
 }
 
-export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGroup=null) {
+export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGroup=null, groupOrder={}) {
   // groupBy kann String oder Array sein
   const levels=Array.isArray(groupBy)?groupBy:[groupBy];
   const firstLevel=levels[0]||"none";
@@ -211,9 +211,19 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGr
     });
   });
 
-  // Sortierung: für __teams_funktionen erst Gruppen dann Teams
+  // Sortierung: custom groupOrder wenn vorhanden, sonst alphabetisch
   let entries=Object.entries(map);
-  if(firstLevel==="__teams_funktionen"){
+  const orderForLevel=groupOrder[firstLevel];
+  if(orderForLevel&&orderForLevel.length>0){
+    entries=entries.sort(([a],[b])=>{
+      const ai=orderForLevel.indexOf(a);
+      const bi=orderForLevel.indexOf(b);
+      if(ai===-1&&bi===-1) return String(a).localeCompare(String(b));
+      if(ai===-1) return 1;
+      if(bi===-1) return -1;
+      return ai-bi;
+    });
+  } else if(firstLevel==="__teams_funktionen"){
     entries=entries.sort(([a],[b])=>{
       const aIsTeam=meta[a]==="team"; const bIsTeam=meta[b]==="team";
       if(aIsTeam!==bIsTeam) return aIsTeam?1:-1;
@@ -231,7 +241,8 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGr
     children:restLevels.length>0&&restLevels[0]!=="none"
       ?buildGroups(members,restLevels,ROLLE_LABEL,
           (meta[k]==="gruppe")?{...filterVals,__parentGruppe:k}:filterVals,
-          {type:meta[k]||"default",key:k})
+          {type:meta[k]||"default",key:k},
+          groupOrder)
       :null,
   }));
 }

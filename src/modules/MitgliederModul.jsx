@@ -36,6 +36,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [selectMode,setSelectMode]=useState(false);
   const [collapsedGroups,setCollapsedGroups]=useState(new Set());
   const [expandedTeams,setExpandedTeams]=useState(new Set());
+  const [groupOrder,setGroupOrder]=useState({});
+  const [dragGroup,setDragGroup]=useState(null);
+  const [dragOverGroup,setDragOverGroup]=useState(null);
   const [selected,setSelected]=useState(new Set());
   const [customViews,setCustomViews]=useState([]);
   const [portalFunktionen,setPortalFunktionen]=useState([]);
@@ -105,6 +108,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setVisibleCols(SAVED_VIEWS[viewKey]?.cols||SAVED_VIEWS.standard.cols);
     setFilterVals({});
     setGroupBy(["none"]);
+    setGroupOrder({});
   }
 
   function applyCustomView(v){
@@ -112,6 +116,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setVisibleCols(v.spalten||SAVED_VIEWS.standard.cols);
     setFilterVals(v.filter||{});
     setGroupBy(Array.isArray(v.gruppierung)?v.gruppierung:[v.gruppierung||"none"]);
+    setGroupOrder(v.gruppenreihenfolge||{});
   }
 
   useEffect(()=>{
@@ -189,6 +194,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       spalten:visibleCols,
       filter:filterVals,
       gruppierung:Array.isArray(groupBy)?groupBy:[groupBy],
+      gruppenreihenfolge:groupOrder,
     });
     if(data) setCustomViews(prev=>[...prev,data]);
     setSaveViewName("");
@@ -246,7 +252,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const paged=sorted;
   const hasMore=false;
-  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen}),[paged,groupBy,ROLLE_LABEL,filterVals,portalFunktionen]);
+  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen},null,groupOrder),[paged,groupBy,ROLLE_LABEL,filterVals,portalFunktionen,groupOrder]);
   const hasGroup=Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
   const activeFilterCount=Object.values(filterVals).filter(v=>{if(!v) return false; if(Array.isArray(v)) return v.length>0; if(typeof v==="object") return v.von!=null||v.bis!=null; return false;}).length;
   const hasActiveFilter=activeFilterCount>0;
@@ -530,7 +536,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     ));
   }
 
-  function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}, teamContext={type:"none",key:null}){
+  function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}, teamContext={type:"none",key:null}, levelKey=null){
+    const currentLevelKey=levelKey||(Array.isArray(groupBy)?groupBy[depth]:groupBy)||"none";
     return groups.map(({key,label,type,members,children})=>{
       const groupContext=type!=="none"?{type,key}:parentContext;
       const newTeamContext=type==="team"?{type,key}:(type==="gruppe"?{type,key}:teamContext);
@@ -544,20 +551,42 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       if(!children&&visibleMembers.length===0) return null;
       const isCollapsed=collapsedGroups.has(key);
       const toggleCollapse=()=>setCollapsedGroups(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;});
+      const isDragOver=dragOverGroup===key;
       return(
         <Fragment key={key}>
           {hasGroup&&(
-            <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`} onClick={toggleCollapse}>
+            <tr
+              className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}${isDragOver?" cc-group-drag-over":""}`}
+              onClick={toggleCollapse}
+              draggable
+              onDragStart={e=>{e.stopPropagation();setDragGroup({key,levelKey:currentLevelKey});}}
+              onDragOver={e=>{e.preventDefault();e.stopPropagation();setDragOverGroup(key);}}
+              onDrop={e=>{
+                e.preventDefault();e.stopPropagation();
+                if(dragGroup&&dragGroup.key!==key&&dragGroup.levelKey===currentLevelKey){
+                  const currentOrder=groupOrder[currentLevelKey]||groups.map(g=>g.key);
+                  const from=currentOrder.indexOf(dragGroup.key);
+                  const to=currentOrder.indexOf(key);
+                  if(from!==-1&&to!==-1){
+                    const next=[...currentOrder];
+                    next.splice(from,1);next.splice(to,0,dragGroup.key);
+                    setGroupOrder(prev=>({...prev,[currentLevelKey]:next}));
+                  }
+                }
+                setDragGroup(null);setDragOverGroup(null);
+              }}
+              onDragEnd={()=>{setDragGroup(null);setDragOverGroup(null);}}>
               <td colSpan={COLS.length+(selectMode?2:1)}>
                 <div className="cc-members-group-hdr-inner" style={depth>0?{paddingLeft:depth*16}:{}}>
                   <TI n={isCollapsed?"chevron-right":"chevron-down"} size={14} className="cc-members-group-hdr-chevron"/>
                   <span className="cc-members-group-hdr-name">{label}</span>
                   <span className="cc-members-group-hdr-count">{members.length}</span>
+                  <TI n="grip-horizontal" size={14} className="cc-members-group-hdr-grip"/>
                 </div>
               </td>
             </tr>
           )}
-          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext,newTeamContext):visibleMembers.map(m=>(
+          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext,newTeamContext,Array.isArray(groupBy)?groupBy[depth+1]:null):visibleMembers.map(m=>(
             <tr key={m.id} className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}`}
               onClick={()=>selectMode?toggleSelectRow(m.id):null}>
               {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
