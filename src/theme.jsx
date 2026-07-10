@@ -212,7 +212,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-stat-val{font-size:22px;font-weight:700;color:var(--text);line-height:1}
 .cc-surface2{background:var(--surface2)}
 .cc-surface-card{background:var(--surface2);border-radius:10px;overflow:hidden}
-.cc-card-table{padding:0;overflow:visible}
+.cc-card-table{padding:0;overflow:visible;border-radius:0 0 12px 12px;border-top:none}
 .cc-card-flush{padding:0;overflow:visible}
 .cc-clickable{cursor:pointer;user-select:none}
 .cc-chip-row{display:flex;flex-wrap:wrap;gap:6px}
@@ -273,7 +273,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-inactive{font-size:12px;color:#DC2626;font-weight:600;display:flex;align-items:center;gap:4px}
 .cc-status-inactive::before{content:"";width:7px;height:7px;border-radius:50%;background:#DC2626;flex-shrink:0;display:inline-block}
 .cc-status-hauptkontakt{font-size:12px;color:#c2410c;font-weight:600}
-.cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:0;padding:7px 12px;border-bottom:0.5px solid var(--border);position:relative;z-index:50}
+.cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:0;padding:7px 12px;border-bottom:0.5px solid var(--border);background:var(--surface);border:0.5px solid var(--border);border-radius:12px 12px 0 0;border-bottom:0.5px solid var(--border)}
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0;z-index:300}
 .cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:visible;z-index:200}
 .cc-ml-filter-dropdown{min-width:240px}
@@ -619,7 +619,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-menu-icon-drag{opacity:0.4;cursor:grab}
 .cc-col-menu-icon-lock{opacity:0.3;margin-right:2px}
 .cc-col-menu-hdr-mt{margin-top:8px}
-.cc-ml-more-subpanel{position:absolute;right:calc(100% + 4px);top:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);min-width:240px;max-height:480px;overflow-y:auto;z-index:400;padding:4px 0}
+.cc-ml-more-subpanel{border-top:0.5px solid var(--border);padding:4px 0;margin-top:2px}
 .cc-col-menu-group-hdr{font-size:10px;font-weight:500;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px 4px}
 .cc-members-name-link{cursor:pointer}
 .cc-members-name-link:hover{text-decoration:underline;text-underline-offset:2px}
@@ -1933,7 +1933,7 @@ function Toolbar({
                   </div>
                 </div>
               ):(
-                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220,overflow:"visible"}}>
+                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220}}>
                   {(()=>{
                     let currentSection=null;
                     return moreItems.map((item,i)=>{
