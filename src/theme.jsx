@@ -304,7 +304,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-group-drag-item.cc-drag-over{border-top:2px solid var(--cc-accent,#FFBF00)}
 .cc-group-drag-handle{color:var(--sub);cursor:grab;font-size:14px;flex-shrink:0}
 .cc-group-drag-nr{width:18px;height:18px;border-radius:50%;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0}
-.cc-group-inactive-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:0.5px solid var(--border);cursor:pointer;font-size:12px;color:var(--sub)}
+.cc-group-inactive-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:pointer;font-size:13px;color:var(--text)}
+.cc-group-inactive-item:hover{background:var(--surface2)}
 .cc-group-inactive-item:hover{background:var(--surface2);color:var(--text)}
 .cc-group-mobile-level{display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:0.5px solid var(--border);cursor:pointer}
 .cc-group-mobile-dot{width:22px;height:22px;border-radius:50%;background:var(--cc-accent,#FFBF00);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0}
@@ -1681,7 +1682,7 @@ function Toolbar({
                       })}
                     </>
                   )}
-                  <div className="cc-col-menu-hdr" style={{marginTop:groupByArr.filter(g=>g&&g!=="none").length>0?0:0}}>Hinzufügen</div>
+                  <div className="cc-ml-dropdown-section-lbl">Hinzufügen</div>
                   {[...groupOptions,...groupOptionsMore].filter(o=>!groupByArr.includes(o.val)).map(o=>(
                     <div key={o.val} className="cc-group-inactive-item"
                       onClick={()=>toggleGroup(o.val)}>
