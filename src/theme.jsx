@@ -1500,7 +1500,7 @@ function Toolbar({
                         const q=e.target.value;
                         setFilterSearch(q);
                         if(q){
-                          const matching=new Set(filterDefs.filter(({vals})=>vals.some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
+                          const matching=new Set(filterDefs.filter(({vals,type})=>type!=="range"&&(vals||[]).some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
                           setOpenSecs(matching);
                         } else {
                           setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
@@ -1701,7 +1701,7 @@ function Toolbar({
                               const q=e.target.value;
                               setFilterSearch(q);
                               if(q){
-                                const matching=new Set(filterDefs.filter(({vals})=>vals.some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
+                                const matching=new Set(filterDefs.filter(({vals,type})=>type!=="range"&&(vals||[]).some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
                                 setOpenSecs(matching);
                               } else {
                                 setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
