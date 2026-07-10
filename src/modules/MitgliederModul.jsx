@@ -453,7 +453,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           return gruppenFilter.length===0||gruppenFilter.includes(p.gruppe);
         });
         if(paare.length===0) return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
-        const visible=paare.slice(0,2);
+        const isFExpanded=expandedTeams.has("f_"+m.id);
+        const visible=isFExpanded?paare:paare.slice(0,2);
         const rest=paare.length-2;
         return <td key="funktionen_gruppen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
@@ -464,7 +465,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 <span className="cc-teams-rollen-rolle">{p.funktion}</span>
               </div>
             ))}
-            {rest>0&&<span className="cc-teams-rollen-more">+{rest} weitere</span>}
+            {rest>0&&(
+              <button className="cc-teams-rollen-more" style={{background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:3,fontFamily:"inherit"}}
+                onClick={e=>{e.stopPropagation();setExpandedTeams(prev=>{const n=new Set(prev);n.has("f_"+m.id)?n.delete("f_"+m.id):n.add("f_"+m.id);return n;})}}>
+                {isFExpanded
+                  ? <><TI n="chevron-up" size={10}/>weniger</>
+                  : <><TI n="chevron-down" size={10}/>+{rest} weitere</>
+                }
+              </button>
+            )}
           </div>
         </td>;
       }
@@ -539,9 +548,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`} onClick={toggleCollapse}>
               <td colSpan={COLS.length+(selectMode?2:1)}>
                 <div className="cc-members-group-hdr-inner" style={depth>0?{paddingLeft:depth*16}:{}}>
-                  <TI n={isCollapsed?"chevron-right":"chevron-down"} size={12} style={{color:"var(--sub)",flexShrink:0}}/>
-                  {type==="team"&&<TI n="ball-football" size={11}/>}
-                  {type==="gruppe"&&<TI n="briefcase" size={11}/>}
+                  <TI n={isCollapsed?"chevron-right":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
                   <span className="cc-members-group-hdr-name">{label}</span>
                   <span className="cc-members-group-hdr-count">{members.length}</span>
                 </div>
