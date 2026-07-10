@@ -68,6 +68,7 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
     // Alle anderen Filter mit UND
     for(const [fKey,fVals] of Object.entries(filterVals)){
       if(!fVals||(Array.isArray(fVals)&&fVals.length===0)) continue;
+      if(typeof fVals==="object"&&!Array.isArray(fVals)&&fKey!=="jahrgang"&&fKey!=="alter") continue;
       if(fKey==="teams"||fKey==="funktionsgruppen") continue;
       if(fKey==="jahrgang"){
         const {von,bis}=fVals||{};

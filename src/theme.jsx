@@ -285,6 +285,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-sec-name{flex:1;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em}
 .cc-filter-sec-badge{font-size:10px;background:var(--cc-accent,#FFBF00);color:#000;font-weight:600;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
 .cc-filter-sec-body{padding:2px 0 4px}
+.cc-range-slider{width:100%;accent-color:var(--cc-accent,#FFBF00)}
 .cc-filter-sec-body .cc-col-menu-item{padding:5px 12px}
 .cc-ml-group-dropdown{min-width:200px;white-space:nowrap}
 .cc-ml-dropdown-section-lbl{padding:6px 12px 2px;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--border)}
@@ -1496,9 +1497,9 @@ function Toolbar({
                                 onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
                               {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
                             </div>
-                            <input type="range" min={min} max={max} value={rv.von??min} step={1} style={{width:"100%",accentColor:"#FFBF00",marginBottom:3}}
+                            <input type="range" min={min} max={max} value={rv.von??min} step={1} className="cc-range-slider" style={{marginBottom:3}}
                               onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
-                            <input type="range" min={min} max={max} value={rv.bis??max} step={1} style={{width:"100%",accentColor:"#FFBF00"}}
+                            <input type="range" min={min} max={max} value={rv.bis??max} step={1} className="cc-range-slider"
                               onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
                             <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
                               <span>{min}{suffix||""}</span><span>{max}{suffix||""}</span>
@@ -1729,10 +1730,10 @@ function Toolbar({
                                         onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
                                       {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
                                     </div>
-                                    <input type="range" min={min} max={max} value={rv.von??min} step={1} style={{width:"100%",accentColor:"#FFBF00",marginBottom:3}}
+                                    <input type="range" min={min} max={max} value={rv.von??min} step={1} className="cc-range-slider" style={{marginBottom:3}}
                                       onMouseDown={e=>e.stopPropagation()}
                                       onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
-                                    <input type="range" min={min} max={max} value={rv.bis??max} step={1} style={{width:"100%",accentColor:"#FFBF00"}}
+                                    <input type="range" min={min} max={max} value={rv.bis??max} step={1} className="cc-range-slider"
                                       onMouseDown={e=>e.stopPropagation()}
                                       onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
                                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
