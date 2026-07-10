@@ -74,7 +74,7 @@ export const ALL_COLS = COL_GROUPS.flatMap(g => g.cols);
 // Einzelne Gruppierungs-Optionen (für jede Ebene)
 export const GROUP_OPTIONS = [
   {val:"mitgliedschaft",    label:"Mitgliedschaft"},
-  {val:"rollen",            label:"Rolle"},
+  {val:"rollen",            label:"Portalrolle"},
   {val:"teams",             label:"Team"},
   {val:"kaderrollen",       label:"Kaderrolle"},
   {val:"funktionsgruppen",  label:"Funktionsgruppe"},
