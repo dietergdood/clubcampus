@@ -101,7 +101,7 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
     const teamsFilter=filterVals["teams"]||[];
     const allTeams=(m.teams||[]).map(t=>t?.name||t);
     const filtered=teamsFilter.length>0?allTeams.filter(t=>teamsFilter.includes(t)):allTeams;
-    return filtered.length>0?filtered:["Kein Team"];
+    return filtered.length>0?filtered.map(t=>({key:t,type:"team"})):[{key:"Kein Team",type:"team"}];
   }
   if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return [portalLabel||"Keine Rolle"]; }
   if(g==="kaderrollen"){ return (m.kader_rollen_raw||[]).length>0?m.kader_rollen_raw:["Keine Kaderrolle"]; }
@@ -110,7 +110,7 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
     const gruppenFilter=filterVals["funktionsgruppen"]||[];
     const allGruppen=m.funktionsgruppen||[];
     const filtered=gruppenFilter.length>0?allGruppen.filter(g=>gruppenFilter.includes(g)):allGruppen;
-    return filtered.length>0?filtered:["Keine Funktionsgruppe"];
+    return filtered.length>0?filtered.map(g=>({key:g,type:"gruppe"})):[{key:"Keine Funktionsgruppe",type:"gruppe"}];
   }
   if(g==="__teams_funktionen"){
     const teamsFilter=filterVals["teams"]||[];
