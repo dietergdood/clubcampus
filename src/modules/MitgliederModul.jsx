@@ -407,8 +407,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           return aIsTrainer===bIsTrainer?0:aIsTrainer?-1:1;
         });
         if(eintraege.length===0) return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
-        const visibleE=eintraege.slice(0,3);
-        const restE=eintraege.length-3;
+        const visibleE=eintraege.slice(0,2);
+        const restE=eintraege.length-2;
         return <td key="teams_rollen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
             {visibleE.map((e,i)=>{
