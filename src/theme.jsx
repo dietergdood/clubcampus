@@ -1726,6 +1726,9 @@ function Toolbar({
         {/* Separator vor Mehr/Spalten */}
 
 
+        {/* Spalten-Slot */}
+        {colMenu&&<div className="cc-ml-dropdown-wrap">{colMenu}</div>}
+
         {/* Mehr-Menu */}
         {moreItems.length>0&&(
           <div ref={moreRef} className="cc-ml-dropdown-wrap">
@@ -1985,9 +1988,6 @@ function Toolbar({
             )}
           </div>
         )}
-
-        {/* Spalten-Slot */}
-        {colMenu}
 
         {/* Rechter Slot */}
         {right&&<><div className="cc-ml-sep"/>{right}</>}
