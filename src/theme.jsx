@@ -619,7 +619,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-menu-icon-drag{opacity:0.4;cursor:grab}
 .cc-col-menu-icon-lock{opacity:0.3;margin-right:2px}
 .cc-col-menu-hdr-mt{margin-top:8px}
-.cc-ml-more-subpanel{border-top:0.5px solid var(--border);padding:4px 0;margin-top:2px}
+.cc-ml-more-subpanel{position:absolute;right:calc(100% + 4px);top:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);min-width:240px;max-height:480px;overflow-y:auto;z-index:400;padding:4px 0}
 .cc-col-menu-group-hdr{font-size:10px;font-weight:500;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px 4px}
 .cc-members-name-link{cursor:pointer}
 .cc-members-name-link:hover{text-decoration:underline;text-underline-offset:2px}
@@ -1933,7 +1933,7 @@ function Toolbar({
                   </div>
                 </div>
               ):(
-                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220}}>
+                <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220,position:"relative"}}>
                   {(()=>{
                     let currentSection=null;
                     return moreItems.map((item,i)=>{
@@ -1956,7 +1956,7 @@ function Toolbar({
                           <div className="cc-col-menu-item" style={{justifyContent:"space-between"}}
                             onClick={()=>setMoreSubPanel(p=>p===i?null:i)}>
                             <span style={{display:"flex",alignItems:"center",gap:8}}>{item.icon&&<TI n={item.icon} size={14}/>}{item.label}</span>
-                            <TI n={moreSubPanel===i?"chevron-down":"chevron-right"} size={12}/>
+                            <TI n="chevron-right" size={12}/>
                           </div>
                           {moreSubPanel===i&&<div className="cc-ml-more-subpanel">{item.subPanel}</div>}
                         </Fragment>
