@@ -1764,10 +1764,10 @@ function Toolbar({
                         </div>
                         <div className="cc-sheet-scroll">
                           {[...groupOptions,...groupOptionsMore].map(o=>(
-                            <div key={o.val} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
+                            <div key={o.val} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
                               onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);}}>
-                              <input type="checkbox" readOnly checked={isGroupActive(o.val)} style={{width:18,height:18,accentColor:"var(--cc-accent,#FFBF00)",flexShrink:0,pointerEvents:"none"}}/>
-                              <span style={{fontSize:15,color:"var(--text)"}}>{o.label}</span>
+                              <input type="checkbox" readOnly checked={isGroupActive(o.val)} style={{width:16,height:16,accentColor:"var(--cc-accent,#FFBF00)",flexShrink:0,pointerEvents:"none"}}/>
+                              <span style={{fontSize:14,color:"var(--text)"}}>{o.label}</span>
                             </div>
                           ))}
                           {isGrouped&&(
