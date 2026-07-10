@@ -2016,6 +2016,8 @@ function Toolbar({
 
 function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDragStart,onDragOver,onDrop,onDragEnd,search,setSearch}){
   const allCols=colGroups.flatMap(g=>g.cols);
+  const [openGroups,setOpenGroups]=useState(new Set());
+  const toggleGroup=g=>setOpenGroups(prev=>{const n=new Set(prev);n.has(g)?n.delete(g):n.add(g);return n;});
   return(
     <div>
       <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
@@ -2053,18 +2055,25 @@ function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDra
             .sort((a,b)=>a.label.localeCompare(b.label))
         })).filter(g=>g.cols.length>0);
         if(groups.length===0) return <div className="cc-col-search-empty">Keine Spalte gefunden</div>;
-        return groups.map(g=>(
-          <div key={g.group}>
-            <div className="cc-col-menu-group-hdr">{g.group}</div>
-            {g.cols.map(c=>(
-              <div key={c.key} className="cc-col-menu-item"
-                onClick={()=>onVisibleColsChange&&onVisibleColsChange([...visibleCols,c.key])}>
-                <div className="cc-col-menu-check"/>
-                <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
+        return groups.map(g=>{
+          const isOpen=search?true:openGroups.has(g.group);
+          return(
+            <div key={g.group}>
+              <div className="cc-ml-dropdown-section-lbl cc-between" style={{cursor:"pointer"}}
+                onClick={()=>toggleGroup(g.group)}>
+                <span>{g.group}</span>
+                <TI n={isOpen?"chevron-down":"chevron-right"} size={12}/>
               </div>
-            ))}
-          </div>
-        ));
+              {isOpen&&g.cols.map(c=>(
+                <div key={c.key} className="cc-col-menu-item"
+                  onClick={()=>onVisibleColsChange&&onVisibleColsChange([...visibleCols,c.key])}>
+                  <div className="cc-col-menu-check"/>
+                  <span className="cc-flex-1" style={{fontSize:13}}>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          );
+        });
       })()}
     </div>
   );
