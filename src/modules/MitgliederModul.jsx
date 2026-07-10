@@ -327,10 +327,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       case "rollen": {
         const portalRaw=m.role&&m.role!=="-"?m.role:null;
         const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;
-        const isTrainer=TRAINER_KEYS.some(k=>k===portalRaw);
+        const roleClass=!portalRaw?"":
+          portalRaw==="administrator"||portalRaw==="administration"?"cc-role-chip-admin":
+          TRAINER_KEYS.some(k=>k===portalRaw)?"cc-role-chip-trainer":
+          portalRaw==="spieler"||portalRaw==="spielerin"?"cc-role-chip-spieler":
+          portalRaw==="funktionaer"||portalRaw==="funktionär"?"cc-role-chip-funktionaer":
+          portalRaw==="eltern"?"cc-role-chip-eltern":"";
         return <td key="rollen" className="cc-members-td">
           {portalLabel
-            ?<span className={`cc-role-chip cc-role-chip-sm${isTrainer?" cc-role-chip-trainer":""}`}>{portalLabel}</span>
+            ?<span className={`cc-role-chip cc-role-chip-sm ${roleClass}`}>{portalLabel}</span>
             :<span className="cc-members-td-sub">—</span>}
         </td>;
       }

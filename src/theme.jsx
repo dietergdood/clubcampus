@@ -544,7 +544,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-dp-status-err{color:#DC2626}.cc-dp-status-err .cc-dp-dot{background:#DC2626}
 .cc-ml-badge-err{background:#FEE2E2;color:#991B1B}
 .cc-ml-badge-muted{background:var(--surface2);color:var(--sub)}
-.cc-role-chip-sm{font-size:10px;padding:1px 6px}
+.cc-role-chip-sm{font-size:10px;padding:1px 5px}
 .cc-ml-more{font-size:11px;color:var(--sub);margin-left:4px}
 .cc-team-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
 .cc-ml-more-btn{font-size:11px;color:var(--text-accent,#0369a1);background:var(--bg-accent,#e0f2fe);border:none;border-radius:10px;padding:1px 7px;cursor:pointer;font-family:inherit;font-weight:500}
@@ -656,6 +656,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hk-content{flex:1;min-width:0}
 .cc-card-secondary{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px}
 .cc-role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#EFF6FF;color:#1E40AF;border:0.5px solid rgba(30,64,175,0.2)}
+.cc-role-chip-admin{background:#334155;color:#F1F5F9;border-color:#334155}
+.cc-role-chip-trainer{background:#FEF3C7;color:#92400E;border-color:rgba(146,64,14,0.2)}
+.cc-role-chip-spieler{background:#EFF6FF;color:#1E40AF;border-color:rgba(30,64,175,0.2)}
+.cc-role-chip-funktionaer{background:#EDE9FE;color:#5B21B6;border-color:rgba(91,33,182,0.2)}
+.cc-role-chip-eltern{background:#F3F4F6;color:#374151;border-color:rgba(55,65,81,0.2)}
 .cc-role-chip-trainer{background:#FEF3C7;color:#B45309;border-color:rgba(180,83,9,0.2)}
 .cc-pos-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:400;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-funk-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:400;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
@@ -784,6 +789,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 [data-theme=dark] .cc-status-tile-value-ok{color:#86EFAC}
 [data-theme=dark] .cc-status-tile-value-danger{color:#FCA5A5}
 [data-theme=dark] .cc-role-chip{background:rgba(30,64,175,0.25);color:#93C5FD;border-color:rgba(147,197,253,0.2)}
+[data-theme=dark] .cc-role-chip-admin{background:#475569;color:#F1F5F9;border-color:#475569}
+[data-theme=dark] .cc-role-chip-trainer{background:rgba(146,64,14,0.25);color:#FCD34D;border-color:rgba(252,211,77,0.2)}
+[data-theme=dark] .cc-role-chip-funktionaer{background:rgba(91,33,182,0.25);color:#C4B5FD;border-color:rgba(196,181,253,0.2)}
 [data-theme=dark] .cc-role-chip-trainer{background:rgba(180,83,9,0.25);color:#FCD34D;border-color:rgba(252,211,77,0.2)}
 [data-theme=dark] .cc-hero-status-badge-warn{background:rgba(0,0,0,0.4);color:#FCD34D;border-color:rgba(252,211,77,0.3)}
 [data-theme=dark] .cc-hero-status-badge-ok{background:rgba(0,0,0,0.4);color:#86EFAC;border-color:rgba(134,239,172,0.3)}
