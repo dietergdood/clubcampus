@@ -219,16 +219,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* computed values are in MembersView */
   /* ── Render ── */
 
+  const JAHRGANG_MIN=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter(Boolean);return jgs.length?Math.min(...jgs):1940;},[allMembers]);
+  const JAHRGANG_MAX=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter(Boolean);return jgs.length?Math.max(...jgs):new Date().getFullYear();},[allMembers]);
+  const ALTER_MAX=useMemo(()=>{const alters=allMembers.map(m=>m.alter).filter(v=>v!=null);return alters.length?Math.max(...alters):90;},[allMembers]);
+
   const FILTER_DEFS=useMemo(()=>[
     {key:"mitgliedschaft",  label:"Mitgliedschaft",  vals:[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(Boolean))]},
+    {key:"geschlecht",      label:"Geschlecht",      vals:["Männlich","Weiblich","Divers"]},
     {key:"teams",           label:"Teams",           vals:[...new Set(allMembers.flatMap(m=>(m.teams||[]).map(t=>t?.name||t)).filter(Boolean))].sort()},
     {key:"kaderrollen",     label:"Kaderrollen",     vals:[...new Set(allMembers.flatMap(m=>(m.kader_rollen_raw||[])).filter(Boolean))].sort()},
     {key:"funktionsgruppen",label:"Funktionsgruppe", vals:[...new Set(allMembers.flatMap(m=>m.funktionsgruppen||[]).filter(Boolean))].sort()},
     {key:"funktionen",      label:"Funktion",        vals:[...new Set(allMembers.flatMap(m=>m.funktionen||[]).filter(Boolean))].sort()},
     {key:"rollen",          label:"Portalrollen",    vals:[...new Set(allMembers.map(m=>m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null).filter(Boolean))].sort()},
     {key:"portal",          label:"Portal-Zugang",   vals:[...new Set(allMembers.map(m=>m.portal).filter(Boolean))]},
+    {key:"wohnort",         label:"Wohnort",         vals:[...new Set(allMembers.map(m=>m.wohnort).filter(Boolean))].sort()},
     {key:"datenpruefung",   label:"Datenprüfung",    vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
-  ],[allMembers,ROLLE_LABEL]);
+    {key:"jahrgang",        label:"Jahrgang",        type:"range", min:JAHRGANG_MIN, max:JAHRGANG_MAX},
+    {key:"alter",           label:"Alter",           type:"range", min:0, max:ALTER_MAX, suffix:" J."},
+  ],[allMembers,ROLLE_LABEL,JAHRGANG_MIN,JAHRGANG_MAX,ALTER_MAX]);
 
   const filtered=useMemo(()=>filterMembers(allMembers,search,filterVals,ROLLE_LABEL),[allMembers,search,filterVals,ROLLE_LABEL]);
 
@@ -238,7 +246,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const hasMore=false;
   const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen}),[paged,groupBy,ROLLE_LABEL,filterVals,portalFunktionen]);
   const hasGroup=Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
-  const activeFilterCount=Object.values(filterVals).filter(v=>v&&v.length>0).length;
+  const activeFilterCount=Object.values(filterVals).filter(v=>{if(!v) return false; if(Array.isArray(v)) return v.length>0; if(typeof v==="object") return v.von!=null||v.bis!=null; return false;}).length;
   const hasActiveFilter=activeFilterCount>0;
 
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
@@ -648,6 +656,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         filterVals={filterVals}
         onFilterChange={(key,val,active)=>{
           if(key==="__reset"){setFilterVals({});return;}
+          if(key==="__range"){
+            const {rangeKey,von,bis}=val;
+            setFilterVals(prev=>({...prev,[rangeKey]:{von,bis}}));
+            return;
+          }
           setFilterVals(prev=>({
             ...prev,
             [key]:active?[...(prev[key]||[]),val]:(prev[key]||[]).filter(x=>x!==val)

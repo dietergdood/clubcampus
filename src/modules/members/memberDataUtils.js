@@ -30,7 +30,8 @@ export function mapMembers(dbMitglieder, dbPortalRollen, dbKaderRollen) {
       team:(m.teams||[]).join(", ")||"-",
       datenpruefung:dpStatus, status:m.datenstatus||"Ausstehend",
       portal:portalStatus, hat_portal_zugang:m.hat_portal_zugang, hat_benutzer:m.hat_benutzer,
-      ort:m.ort||"-", location:m.ort||"-",
+      ort:m.ort||"-", location:m.ort||"-", plz:m.plz||null,
+      wohnort:m.plz&&m.ort?`${m.plz} ${m.ort}`:(m.ort||null),
       email:m.email, telefon:m.telefon, geburtsdatum:m.geburtsdatum,
       alter:m.geburtsdatum?Math.floor((Date.now()-new Date(m.geburtsdatum))/(365.25*24*3600*1000)):null,
       geschlecht:m.geschlecht||null,
@@ -66,8 +67,25 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
     }
     // Alle anderen Filter mit UND
     for(const [fKey,fVals] of Object.entries(filterVals)){
-      if(!fVals||fVals.length===0) continue;
+      if(!fVals||(Array.isArray(fVals)&&fVals.length===0)) continue;
       if(fKey==="teams"||fKey==="funktionsgruppen") continue;
+      if(fKey==="jahrgang"){
+        const {von,bis}=fVals||{};
+        if(von==null&&bis==null) continue;
+        const jg=m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null;
+        if(!jg) return false;
+        if(von!=null&&jg<von) return false;
+        if(bis!=null&&jg>bis) return false;
+        continue;
+      }
+      if(fKey==="alter"){
+        const {von,bis}=fVals||{};
+        if(von==null&&bis==null) continue;
+        if(m.alter==null) return false;
+        if(von!=null&&m.alter<von) return false;
+        if(bis!=null&&m.alter>bis) return false;
+        continue;
+      }
       if(fKey==="rollen"){
         const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
         if(!portalLabel||!fVals.includes(portalLabel)) return false;
@@ -76,6 +94,12 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
       if(fKey==="kaderrollen"){
         const kaderRollen=m.kader_rollen_raw||[];
         if(!kaderRollen.some(r=>fVals.includes(r))) return false;
+        continue;
+      }
+      if(fKey==="geschlecht"){
+        const GESCH_MAP={"m":"Männlich","w":"Weiblich","d":"Divers"};
+        const label=GESCH_MAP[m.geschlecht]||m.geschlecht||null;
+        if(!label||!fVals.includes(label)) return false;
         continue;
       }
       const raw=m[fKey];

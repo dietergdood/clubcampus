@@ -1383,7 +1383,7 @@ function Toolbar({
   useEffect(()=>{
     if(filterOpen){
       setFilterSearch("");
-      setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));
+      setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
     }
   },[filterOpen]);
   useEffect(()=>{
@@ -1405,8 +1405,8 @@ function Toolbar({
     return()=>document.removeEventListener("mousedown",h);
   },[moreOpen,isMobile]);
 
-  const hasActiveFilter=Object.values(filterVals).some(v=>v&&v.length>0);
-  const activeFilterCount=Object.values(filterVals).reduce((n,v)=>n+(v?.length||0),0);
+  const hasActiveFilter=Object.values(filterVals).some(v=>{if(!v) return false; if(Array.isArray(v)) return v.length>0; if(typeof v==="object") return v.von!=null||v.bis!=null; return false;});
+  const activeFilterCount=Object.values(filterVals).reduce((n,v)=>{if(!v) return n; if(Array.isArray(v)) return n+(v.length||0); if(typeof v==="object") return n+((v.von!=null||v.bis!=null)?1:0); return n;},0);
   const groupByArr=Array.isArray(groupBy)?groupBy:[groupBy];
   const isGrouped=groupByArr.some(g=>g&&g!=="none");
 
@@ -1462,25 +1462,49 @@ function Toolbar({
                           const matching=new Set(filterDefs.filter(({vals})=>vals.some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
                           setOpenSecs(matching);
                         } else {
-                          setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));
+                          setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
                         }
                       }}
                     />
                   </div>
-                  {filterDefs.map(({key,label,vals})=>{
+                  {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                     const q=filterSearch.toLowerCase();
-                    const visVals=q?vals.filter(v=>v.toLowerCase().includes(q)):vals;
-                    if(visVals.length===0) return null;
+                    const isRange=type==="range";
+                    const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
+                    if(!isRange&&visVals.length===0) return null;
+                    if(isRange&&q&&!label.toLowerCase().includes(q)) return null;
                     const isOpen=openSecs.has(key);
-                    const selCount=(filterVals[key]||[]).length;
+                    const rv=filterVals[key]||{};
+                    const rangeActive=isRange&&(rv.von!=null||rv.bis!=null);
+                    const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
                     return(
                       <div key={key}>
                         <div className="cc-filter-sec-hdr" onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
                           <span className="cc-filter-sec-name">{label}</span>
-                          {selCount>0&&<span className="cc-filter-sec-badge">{selCount}</span>}
+                          {selCount>0&&<span className="cc-filter-sec-badge">{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
                           <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
                         </div>
-                        {isOpen&&(
+                        {isOpen&&(isRange?(
+                          <div className="cc-filter-sec-body" style={{padding:"8px 12px 10px"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                              <input type="number" min={min} max={max} value={rv.von??min} step={1}
+                                style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
+                                onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
+                              <span style={{fontSize:11,color:"var(--sub)"}}>–</span>
+                              <input type="number" min={min} max={max} value={rv.bis??max} step={1}
+                                style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
+                                onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
+                              {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
+                            </div>
+                            <input type="range" min={min} max={max} value={rv.von??min} step={1} style={{width:"100%",accentColor:"#FFBF00",marginBottom:3}}
+                              onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
+                            <input type="range" min={min} max={max} value={rv.bis??max} step={1} style={{width:"100%",accentColor:"#FFBF00"}}
+                              onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
+                            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
+                              <span>{min}{suffix||""}</span><span>{max}{suffix||""}</span>
+                            </div>
+                          </div>
+                        ):(
                           <div className="cc-filter-sec-body">
                             {visVals.map(v=>{
                               const active=(filterVals[key]||[]).includes(v);
@@ -1493,7 +1517,7 @@ function Toolbar({
                               );
                             })}
                           </div>
-                        )}
+                        ))}
                       </div>
                     );
                   })}
@@ -1617,7 +1641,7 @@ function Toolbar({
                       <div>
                         {filterDefs.length>0&&(
                           <button className="cc-sheet-nav-item"
-                            onMouseDown={e=>{e.stopPropagation();setFilterSearch("");setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));setMobileSubMenu("filter");}}>
+                            onMouseDown={e=>{e.stopPropagation();setFilterSearch("");setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));setMobileSubMenu("filter");}}>
                             <span className="cc-sheet-nav-left"><TI n="filter" size={18}/> Filter{hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}</span>
                             <TI n="chevron-right" size={14}/>
                           </button>
@@ -1667,27 +1691,55 @@ function Toolbar({
                                 const matching=new Set(filterDefs.filter(({vals})=>vals.some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
                                 setOpenSecs(matching);
                               } else {
-                                setOpenSecs(new Set(filterDefs.filter(({key})=>(filterVals[key]||[]).length>0).map(({key})=>key)));
+                                setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
                               }
                             }}
                           />
                         </div>
                         <div className="cc-sheet-scroll">
-                          {filterDefs.map(({key,label,vals})=>{
+                          {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                             const q=filterSearch.toLowerCase();
-                            const visVals=q?vals.filter(v=>v.toLowerCase().includes(q)):vals;
-                            if(visVals.length===0) return null;
+                            const isRange=type==="range";
+                            const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
+                            if(!isRange&&visVals.length===0) return null;
+                            if(isRange&&q&&!label.toLowerCase().includes(q)) return null;
                             const isOpen=openSecs.has(key);
-                            const selCount=(filterVals[key]||[]).length;
+                            const rv=filterVals[key]||{};
+                            const rangeActive=isRange&&(rv.von!=null||rv.bis!=null);
+                            const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
                             return(
                               <div key={key}>
                                 <div className="cc-filter-sec-hdr" style={{padding:"7px 20px"}}
                                   onMouseDown={e=>{e.stopPropagation();setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;});}}>
                                   <span className="cc-filter-sec-name">{label}</span>
-                                  {selCount>0&&<span className="cc-filter-sec-badge">{selCount}</span>}
+                                  {selCount>0&&<span className="cc-filter-sec-badge">{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
                                   <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
                                 </div>
-                                {isOpen&&(
+                                {isOpen&&(isRange?(
+                                  <div className="cc-filter-sec-body" style={{padding:"8px 20px 10px"}}>
+                                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                                      <input type="number" min={min} max={max} value={rv.von??min} step={1}
+                                        style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
+                                        onMouseDown={e=>e.stopPropagation()}
+                                        onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
+                                      <span style={{fontSize:11,color:"var(--sub)"}}>–</span>
+                                      <input type="number" min={min} max={max} value={rv.bis??max} step={1}
+                                        style={{width:72,border:"0.5px solid var(--border)",borderRadius:6,padding:"4px 7px",fontSize:12,background:"var(--surface-1,#f5f5f5)",color:"var(--text)",outline:"none",fontFamily:"inherit"}}
+                                        onMouseDown={e=>e.stopPropagation()}
+                                        onChange={e=>{const v=Math.max(min,Math.min(max,Number(e.target.value)));onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
+                                      {suffix&&<span style={{fontSize:11,color:"var(--sub)"}}>{suffix}</span>}
+                                    </div>
+                                    <input type="range" min={min} max={max} value={rv.von??min} step={1} style={{width:"100%",accentColor:"#FFBF00",marginBottom:3}}
+                                      onMouseDown={e=>e.stopPropagation()}
+                                      onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:v,bis:rv.bis??max});}}/>
+                                    <input type="range" min={min} max={max} value={rv.bis??max} step={1} style={{width:"100%",accentColor:"#FFBF00"}}
+                                      onMouseDown={e=>e.stopPropagation()}
+                                      onChange={e=>{const v=Number(e.target.value);onFilterChange&&onFilterChange("__range",{rangeKey:key,von:rv.von??min,bis:v});}}/>
+                                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--sub)",marginTop:3}}>
+                                      <span>{min}{suffix||""}</span><span>{max}{suffix||""}</span>
+                                    </div>
+                                  </div>
+                                ):(
                                   <div className="cc-filter-sec-body">
                                     {visVals.map(v=>{
                                       const active=(filterVals[key]||[]).includes(v);
@@ -1702,7 +1754,7 @@ function Toolbar({
                                       );
                                     })}
                                   </div>
-                                )}
+                                ))}
                               </div>
                             );
                           })}
