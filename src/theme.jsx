@@ -359,7 +359,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-members-tr{border-bottom:0.5px solid var(--border);cursor:pointer;transition:background 0.1s}
 .cc-members-tr:last-child{border-bottom:none}
 .cc-members-tr:hover{background:var(--cc-accent-10,rgba(255,191,0,0.10))}
-.cc-members-td{padding:10px 14px;font-size:14px;color:var(--text);white-space:nowrap}
+.cc-members-td{padding:10px 14px;font-size:14px;color:var(--text);white-space:nowrap;vertical-align:middle}
 .cc-members-td-sub{font-size:13px;color:var(--sub)}
 .cc-members-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0;margin-right:5px;vertical-align:middle}
 .cc-members-dot-ok{background:#22c55e}
