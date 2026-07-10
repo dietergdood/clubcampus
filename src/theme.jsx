@@ -281,7 +281,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-search input{flex:1;border:0.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface-1,#f5f5f5);color:var(--text);outline:none;font-family:inherit}
 .cc-filter-search input:focus{border-color:var(--cc-accent,#FFBF00)}
 @media(max-width:680px){.cc-filter-search{padding:10px 20px}.cc-filter-search input{font-size:16px;padding:8px 12px;border-radius:8px}}
-.cc-filter-sec-hdr{display:flex;align-items:center;gap:6px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border-strong);user-select:none}
+.cc-filter-sec-hdr{display:flex;align-items:center;gap:6px;padding:12px 12px 10px;cursor:pointer;border-bottom:1px solid var(--border-strong);user-select:none}
 .cc-filter-divider{height:0;border:none;border-top:1px solid var(--border-strong);margin:8px 0}
 .cc-filter-sec-name{flex:1;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.05em}
 .cc-filter-sec-badge{font-size:10px;background:var(--cc-accent,#FFBF00);color:#000;font-weight:600;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
@@ -1713,46 +1713,38 @@ function Toolbar({
                         <div className="cc-sheet-scroll">
                           {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
                             const q=filterSearch.toLowerCase();
-                            if(type==="divider") return q?null:<div key={key} className="cc-filter-divider" style={{margin:"8px 20px"}}/>;
+                            if(type==="divider") return q?null:<div key={key} style={{height:8,background:"var(--surface-1)",borderTop:"0.5px solid var(--border)",borderBottom:"0.5px solid var(--border)"}}/>;
                             const isRange=type==="range";
                             const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
                             if(!isRange&&visVals.length===0) return null;
                             if(isRange&&q&&!label.toLowerCase().includes(q)) return null;
-                            const isOpen=openSecs.has(key);
                             const rv=filterVals[key]||{};
                             const rangeActive=isRange&&(rv.von!=null||rv.bis!=null);
                             const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
                             return(
                               <div key={key}>
-                                <div className="cc-filter-sec-hdr" style={{padding:"7px 20px"}}
-                                  onMouseDown={e=>{e.stopPropagation();setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;});}}>
-                                  <span className="cc-filter-sec-name">{label}</span>
-                                  {selCount>0&&<span className="cc-filter-sec-badge">{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
-                                  <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
+                                <div style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:".07em",padding:"14px 20px 6px",background:"var(--surface-1)",borderBottom:"0.5px solid var(--border)"}}>
+                                  {label}{selCount>0&&<span className="cc-filter-sec-badge" style={{marginLeft:8}}>{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
                                 </div>
-                                {isOpen&&(isRange?(
+                                {isRange?(
                                   <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={20}/>
                                 ):(
-                                  <div className="cc-filter-sec-body">
-                                    {visVals.map(v=>{
-                                      const active=(filterVals[key]||[]).includes(v);
-                                      return(
-                                        <div key={v} className="cc-mehr-sheet-item" style={{borderBottom:"none",padding:"10px 20px"}}
-                                          onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
-                                          <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`} style={{marginRight:10}}>
-                                            {active&&<TI n="check" size={10}/>}
-                                          </div>
-                                          {v}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ))}
+                                  visVals.map(v=>{
+                                    const active=(filterVals[key]||[]).includes(v);
+                                    return(
+                                      <div key={v} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
+                                        onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
+                                        <input type="checkbox" readOnly checked={active} style={{width:18,height:18,accentColor:"var(--cc-accent,#FFBF00)",flexShrink:0,pointerEvents:"none"}}/>
+                                        <span style={{fontSize:15,color:"var(--text)"}}>{v}</span>
+                                      </div>
+                                    );
+                                  })
+                                )}
                               </div>
                             );
                           })}
                           {hasActiveFilter&&(
-                            <div style={{padding:"8px 20px"}}>
+                            <div style={{padding:"12px 20px"}}>
                               <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange("__reset");}}>Alle Filter zurücksetzen</button>
                             </div>
                           )}
