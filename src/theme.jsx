@@ -1878,7 +1878,8 @@ function Toolbar({
 
       {/* Aktive Filter Chips */}
       {hasActiveFilter&&(
-        <div className="cc-ml-chips">
+        <div className="cc-ml-chips" style={{justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {Object.entries(filterVals).flatMap(([k,vals])=>{
             if(!vals) return [];
             if(typeof vals==="object"&&!Array.isArray(vals)){
@@ -1895,8 +1896,9 @@ function Toolbar({
               </div>
             ));
           })}
-          <div className="cc-ml-chip cc-text-sub"
-            onClick={()=>onFilterChange&&onFilterChange("__reset")}>Alle löschen</div>
+          </div>
+          <button className="cc-ml-dropdown-clear" style={{flexShrink:0}}
+            onClick={()=>onFilterChange&&onFilterChange("__reset")}>Filter zurücksetzen</button>
         </div>
       )}
     </div>
