@@ -548,7 +548,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             <tr className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}`} onClick={toggleCollapse}>
               <td colSpan={COLS.length+(selectMode?2:1)}>
                 <div className="cc-members-group-hdr-inner" style={depth>0?{paddingLeft:depth*16}:{}}>
-                  <TI n={isCollapsed?"chevron-right":"chevron-down"} size={14} style={{color:"var(--sub)",flexShrink:0}}/>
+                  <TI n={isCollapsed?"chevron-right":"chevron-down"} size={14} className="cc-members-group-hdr-chevron"/>
                   <span className="cc-members-group-hdr-name">{label}</span>
                   <span className="cc-members-group-hdr-count">{members.length}</span>
                 </div>
