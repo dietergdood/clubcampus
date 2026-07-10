@@ -381,9 +381,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           return aIsTrainer===bIsTrainer?0:aIsTrainer?-1:1;
         });
         if(eintraege.length===0) return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
+        const visibleE=eintraege.slice(0,3);
+        const restE=eintraege.length-3;
         return <td key="teams_rollen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
-            {eintraege.map((e,i)=>{
+            {visibleE.map((e,i)=>{
               const rollenToShow=kaderFilter.length>0?e.rollen.filter(r=>kaderFilter.includes(r)):e.rollen;
               return(
                 <div key={i} className="cc-teams-rollen-row">
@@ -397,6 +399,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 </div>
               );
             })}
+            {restE>0&&<span className="cc-teams-rollen-more">+{restE} weitere</span>}
           </div>
         </td>;
       }
@@ -411,15 +414,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           return gruppenFilter.length===0||gruppenFilter.includes(p.gruppe);
         });
         if(paare.length===0) return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
+        const visible=paare.slice(0,2);
+        const rest=paare.length-2;
         return <td key="funktionen_gruppen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
-            {paare.map((p,i)=>(
+            {visible.map((p,i)=>(
               <div key={i} className="cc-teams-rollen-row">
                 {p.gruppe&&<span className="cc-teams-rollen-team">{p.gruppe}</span>}
                 {p.gruppe&&p.funktion&&<span className="cc-teams-rollen-sep">·</span>}
                 <span className="cc-teams-rollen-rolle">{p.funktion}</span>
               </div>
             ))}
+            {rest>0&&<span className="cc-teams-rollen-more">+{rest} weitere</span>}
           </div>
         </td>;
       }
