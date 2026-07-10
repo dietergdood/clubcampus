@@ -122,6 +122,9 @@ export function sortMembers(filtered, sortCol, sortDir) {
       if(sortCol==="funktionen_gruppen"||sortCol==="funktionsgruppen"){
         return String((m.funktionsgruppen||[])[0]||"").toLowerCase();
       }
+      if(sortCol==="funktionen"){
+        return String((m.funktionen||[])[0]||"").toLowerCase();
+      }
       if(sortCol==="kaderrollen"){
         return String((m.kader_rollen_raw||[])[0]||"").toLowerCase();
       }
