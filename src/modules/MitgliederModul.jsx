@@ -323,7 +323,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const gc=groupContext;
     switch(col.key){
       case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
-      case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-sub">{m.mitgliedschaft||"—"}</td>;
+      case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td" style={{fontSize:12,color:"var(--text)"}}>{m.mitgliedschaft||"—"}</td>;
       case "rollen": return <td key="rollen" className="cc-members-td">{(()=>{const portalRaw=m.role&&m.role!=="-"?m.role:null;const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;const portalIsTrainer=portalRaw==="trainer";const kaderWithMeta=(m.rollen||[]).map((r,i)=>{const rawR=(m.kader_rollen_raw||[])[i]||"";const isT=TRAINER_KEYS.some(k=>rawR===k);return{label:r,rawR,isT};}).filter(({label,isT})=>{if(label===portalLabel) return false;if(portalIsTrainer&&isT) return false;return true;});const all=[...(portalLabel?[{label:portalLabel,isT:portalIsTrainer}]:[]),...kaderWithMeta];return (all||[]).length>0?all.map((c,i)=><span key={i} className={`cc-role-chip cc-role-chip-sm${c.isT?" cc-role-chip-trainer":""}`}>{c.label}</span>):(<span className="cc-members-td-sub">—</span>);})()}</td>;
       case "teams": {
         if(gc.type==="gruppe") return <td key="teams" className="cc-members-td cc-members-td-sub">—</td>;
@@ -369,14 +369,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             {eintraege.map((e,i)=>{
               const rollenToShow=kaderFilter.length>0?e.rollen.filter(r=>kaderFilter.includes(r)):e.rollen;
               return(
-                <div key={i} style={{fontSize:12,color:"#333",lineHeight:1.6}}>
-                  {e.team?.kurz||e.team?.name||"—"}
+                <div key={i} className="cc-teams-rollen-row">
+                  <span className="cc-teams-rollen-team">{e.team?.kurz||e.team?.name||"—"}</span>
                   {rollenToShow.length>0&&<>
-                    <span style={{color:"#CCC",margin:"0 4px"}}>·</span>
-                    {rollenToShow.map((r,ri)=>{
-                      const isT=TRAINER_KEYS.some(k=>k===r);
-                      return <span key={ri} style={isT?{color:"#B45309",fontWeight:500}:{}}>{r}{ri<rollenToShow.length-1?", ":""}</span>;
-                    })}
+                    <span className="cc-teams-rollen-sep">·</span>
+                    {rollenToShow.map((r,ri)=>(
+                      <span key={ri} className="cc-teams-rollen-rolle">{r}{ri<rollenToShow.length-1?", ":""}</span>
+                    ))}
                   </>}
                 </div>
               );
@@ -399,9 +398,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         return <td key="funktionen_gruppen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
             {paare.map((p,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:6,lineHeight:1.6}}>
+              <div key={i} className="cc-funk-row">
                 {p.gruppe&&<span className="cc-funk-gruppe-badge-sm" style={p.farbe?{background:p.farbe+"20",color:p.farbe,borderColor:p.farbe+"40"}:{}}>{p.gruppe}</span>}
-                <span style={{fontSize:12,color:"var(--text)"}}>{p.funktion}</span>
+                <span className="cc-text-sm">{p.funktion}</span>
               </div>
             ))}
           </div>

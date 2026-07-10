@@ -64,7 +64,7 @@ export const COL_GROUPS = [
     {key:"teams",         label:"Teams",          default:false},
     {key:"kaderrollen",   label:"Kaderrolle",     default:false},
     {key:"teams_rollen",       label:"Teams & Rollen",           default:true},
-    {key:"funktionen_gruppen",  label:"Funktionsgruppe & Funktion", default:true},
+    {key:"funktionen_gruppen",  label:"Funktionen", default:true},
   ]},
 ];
 
