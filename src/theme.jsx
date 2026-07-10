@@ -299,7 +299,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-mobile-item span{font-size:14px;color:var(--text)}
 .cc-filter-mobile-divider{height:8px;background:var(--surface-1);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
 .cc-filter-mobile-footer{padding:12px 20px}
-.cc-filter-or-badge{font-size:9px;font-weight:700;background:var(--cc-accent,#FFBF00);color:#000;padding:2px 6px;border-radius:3px;align-self:center}
+.cc-filter-or-badge{font-size:9px;font-weight:700;background:var(--surface2);border:0.5px solid var(--border);color:var(--sub);padding:2px 6px;border-radius:3px;align-self:center}
 .cc-filter-und-badge{font-size:9px;font-weight:700;background:var(--surface2);border:0.5px solid var(--border);color:var(--sub);padding:2px 6px;border-radius:3px;align-self:center}
 .cc-filter-or-sep{display:flex;align-items:center;gap:8px;padding:4px 12px;border-top:0.5px solid var(--border)}
 .cc-filter-or-line{flex:1;height:0.5px;background:var(--border)}
