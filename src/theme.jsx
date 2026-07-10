@@ -1535,7 +1535,7 @@ function Toolbar({
                             {visVals.map(v=>{
                               const active=(filterVals[key]||[]).includes(v);
                               return(
-                                <div key={v} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",cursor:"pointer",fontSize:12,color:"var(--text)"}}
+                                <div key={v} className="cc-col-menu-item"
                                   onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
                                   <input type="checkbox" readOnly checked={active} style={{width:14,height:14,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
                                   {v}
