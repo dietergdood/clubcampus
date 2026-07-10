@@ -1442,6 +1442,7 @@ function Toolbar({
   const [moreOpen,setMoreOpen]=useState(false);
   const [moreSubPanel,setMoreSubPanel]=useState(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
+  const [openMoreSections,setOpenMoreSections]=useState(new Set(["Aktionen","Ansichten","Export"]));
   const [dragGroup,setDragGroup]=useState(null);
   const [dragOverGroup,setDragOverGroup]=useState(null);
   const [mobileGroupPicker,setMobileGroupPicker]=useState(null); // index of level being picked
@@ -1924,38 +1925,52 @@ function Toolbar({
                 </div>
               ):(
                 <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220}}>
-                  {moreItems.map((item,i)=>{
-                    if(item==="sep") return <div key={i} className="cc-menu-sep"/>;
-                    if(item.header) return <div key={i} className="cc-col-menu-hdr">{item.label}</div>;
-                    if(item.hidden) return null;
-                    if(item.subPanel) return(
-                      <Fragment key={i}>
-                        <div className="cc-col-menu-item" style={{justifyContent:"space-between"}}
-                          onClick={()=>setMoreSubPanel(p=>p===i?null:i)}>
-                          <span style={{display:"flex",alignItems:"center",gap:8}}>{item.icon&&<TI n={item.icon} size={14}/>}{item.label}</span>
-                          <TI n={moreSubPanel===i?"chevron-down":"chevron-right"} size={12}/>
+                  {(()=>{
+                    let currentSection=null;
+                    return moreItems.map((item,i)=>{
+                      if(item==="sep") return null;
+                      if(item.header){
+                        currentSection=item.label;
+                        const isOpen=openMoreSections.has(item.label);
+                        return(
+                          <div key={i} className="cc-ml-dropdown-section-lbl cc-between" style={{cursor:"pointer"}}
+                            onClick={()=>setOpenMoreSections(prev=>{const n=new Set(prev);n.has(item.label)?n.delete(item.label):n.add(item.label);return n;})}>
+                            <span>{item.label}</span>
+                            <TI n={isOpen?"chevron-down":"chevron-right"} size={12}/>
+                          </div>
+                        );
+                      }
+                      if(!openMoreSections.has(currentSection)) return null;
+                      if(item.hidden) return null;
+                      if(item.subPanel) return(
+                        <Fragment key={i}>
+                          <div className="cc-col-menu-item" style={{justifyContent:"space-between"}}
+                            onClick={()=>setMoreSubPanel(p=>p===i?null:i)}>
+                            <span style={{display:"flex",alignItems:"center",gap:8}}>{item.icon&&<TI n={item.icon} size={14}/>}{item.label}</span>
+                            <TI n={moreSubPanel===i?"chevron-down":"chevron-right"} size={12}/>
+                          </div>
+                          {moreSubPanel===i&&<div className="cc-ml-more-subpanel">{item.subPanel}</div>}
+                        </Fragment>
+                      );
+                      return(
+                        <div key={i} className={`cc-col-menu-item${item.danger?" cc-menu-item-danger":""}`}
+                          style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}
+                          onClick={()=>{setMoreOpen(false);setMoreSubPanel(null);item.onClick();}}>
+                          <span style={{display:"flex",alignItems:"center",gap:8}}>
+                            {item.icon&&<TI n={item.icon} size={14}/>}{item.label}
+                          </span>
+                          {item.onDelete&&(
+                            <button
+                              className="cc-icon-btn"
+                              style={{color:"var(--sub)",opacity:0.6,padding:"2px 4px"}}
+                              onClick={e=>{e.stopPropagation();setMoreOpen(false);item.onDelete();}}>
+                              <TI n="trash" size={12}/>
+                            </button>
+                          )}
                         </div>
-                        {moreSubPanel===i&&<div className="cc-ml-more-subpanel">{item.subPanel}</div>}
-                      </Fragment>
-                    );
-                    return(
-                      <div key={i} className={`cc-col-menu-item${item.danger?" cc-menu-item-danger":""}`}
-                        style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}
-                        onClick={()=>{setMoreOpen(false);setMoreSubPanel(null);item.onClick();}}>
-                        <span style={{display:"flex",alignItems:"center",gap:8}}>
-                          {item.icon&&<TI n={item.icon} size={14}/>}{item.label}
-                        </span>
-                        {item.onDelete&&(
-                          <button
-                            className="cc-icon-btn"
-                            style={{color:"var(--sub)",opacity:0.6,padding:"2px 4px"}}
-                            onClick={e=>{e.stopPropagation();setMoreOpen(false);item.onDelete();}}>
-                            <TI n="trash" size={12}/>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               )
             )}
