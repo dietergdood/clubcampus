@@ -380,7 +380,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-members-dot-ok{background:#22c55e}
 .cc-members-dot-warn{background:#f59e0b}
 .cc-members-dot-err{background:#ef4444}
-.cc-members-group-hdr{cursor:pointer}.cc-members-group-hdr td{padding:8px 14px;background:var(--surface2);border-top:1px solid var(--border);border-bottom:0.5px solid var(--border)}.cc-members-group-hdr:hover td{background:var(--border)}.cc-members-group-hdr-inner{display:flex;align-items:center;gap:8px}.cc-members-group-hdr-name{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.07em}.cc-members-group-hdr-count{font-size:11px;color:var(--sub);font-weight:400}.cc-members-group-hdr-sub td{padding:6px 14px}
+.cc-members-group-hdr{cursor:pointer}.cc-members-group-hdr td{padding:9px 14px;background:#EBEBEB;border-top:1px solid var(--border);border-bottom:0.5px solid var(--border)}.cc-members-group-hdr:hover td{background:#E0E0E0}.cc-members-group-hdr-inner{display:flex;align-items:center;gap:8px}.cc-members-group-hdr-name{font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:0.07em}.cc-members-group-hdr-count{font-size:10px;color:var(--sub);font-weight:500;background:var(--border);border-radius:4px;padding:1px 5px;margin-left:2px}.cc-members-group-hdr-sub td{padding:7px 14px}
 /* Mobile Liste */
 .cc-members-list-group-hdr{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:0.08em;padding:8px 14px 4px;background:var(--surface2)}
 .cc-members-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--border);cursor:pointer;background:var(--surface);transition:background 0.1s;justify-content:space-between}
@@ -1990,8 +1990,8 @@ function Toolbar({
             ));
           })}
           </div>
-          <div className="cc-ml-chip" style={{flexShrink:0,borderStyle:"dashed",color:"var(--sub)"}}
-            onClick={()=>onFilterChange&&onFilterChange("__reset")}>Alle löschen</div>
+          <button className="cc-ml-dropdown-clear" style={{flexShrink:0,marginLeft:4}}
+            onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
         </div>
       )}
     </div>
