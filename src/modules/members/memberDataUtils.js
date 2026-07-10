@@ -167,7 +167,7 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}) {
     type:meta[k]||"default",
     members,
     children:restLevels.length>0&&restLevels[0]!=="none"
-      ?buildGroups(members,restLevels,ROLLE_LABEL)
+      ?buildGroups(members,restLevels,ROLLE_LABEL,filterVals)
       :null,
   }));
 }
