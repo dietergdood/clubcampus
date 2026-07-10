@@ -2134,7 +2134,7 @@ function ColMenuButton({
         <TI n="table" size={15}/>
       </button>
       {open&&(
-        <div className="cc-ml-dropdown" style={{minWidth:240}}>
+        <div className="cc-ml-dropdown cc-ml-filter-dropdown">
           <ColMenuContent
             colGroups={colGroups}
             visibleCols={visibleCols}
