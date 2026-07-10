@@ -2038,7 +2038,7 @@ function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDra
   const toggleGroup=g=>setOpenGroups(prev=>{const n=new Set(prev);n.has(g)?n.delete(g):n.add(g);return n;});
   return(
     <div>
-      <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+      <div className="cc-col-menu-group-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
       {visibleCols.filter(k=>allCols.find(c=>c.key===k)).map(key=>{
         const col=allCols.find(c=>c.key===key);
         if(!col) return null;
@@ -2058,7 +2058,7 @@ function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDra
           </div>
         );
       })}
-      <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
+      <div className="cc-col-menu-group-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
       <div className="cc-col-search-wrap">
         <TI n="search" size={13} className="cc-col-search-icon"/>
         <input className="cc-col-search-input" value={search}
@@ -2135,7 +2135,7 @@ function ColMenuButton({
       </button>
       {open&&(
         <div className="cc-col-menu-dropdown cc-col-menu-dropdown-wide">
-          <div className="cc-col-menu-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
+          <div className="cc-col-menu-group-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
           {visibleCols.filter(k=>allCols.find(c=>c.key===k)).map(key=>{
             const col=allCols.find(c=>c.key===key);
             if(!col) return null;
@@ -2155,7 +2155,7 @@ function ColMenuButton({
               </div>
             );
           })}
-          <div className="cc-col-menu-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
+          <div className="cc-col-menu-group-hdr cc-col-menu-hdr-mt">Inaktive Spalten</div>
           <div className="cc-col-search-wrap">
             <TI n="search" size={13} className="cc-col-search-icon"/>
             <input className="cc-col-search-input" value={search}
