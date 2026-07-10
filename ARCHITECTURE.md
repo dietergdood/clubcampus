@@ -39,9 +39,13 @@ src/
       MemberDetail.jsx              ← Detailansicht mit allen Tabs inline (796Z)
       MemberHero.jsx                ← Hero-Banner mit Avatar + FotoUpload
       NotizenVerlauf.jsx            ← Notizen-Komponente
-      memberConstants.js            ← ROLES, FIELD_VIS, COL_GROUPS, GROUP_OPTIONS
-      memberDataUtils.js            ← mapMembers, filterMembers, sortMembers, exportData
+      memberConstants.js            ← ROLES, FIELD_VIS, COL_GROUPS, GROUP_OPTIONS, GROUP_OPTIONS_MORE
+      memberDataUtils.js            ← mapMembers, filterMembers, sortMembers, buildGroups, exportData (3 Varianten)
       memberUtils.jsx               ← LAENDER, getLandName, RolleChip, getFieldVisibility
+      tabs/
+        InfoTab.jsx
+        PortalTab.jsx
+        ElternTab.jsx
     portal/                         ← PortalverwaltungModul aufgeteilt (1 Tab = 1 Datei)
       ApiTab.jsx
       AuditTab.jsx
@@ -223,6 +227,61 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 | 2 | MitgliederModul + KaderModul aufteilen | ✅ Fertig |
 | 3 | Teams Domain erstellt, PortalverwaltungModul State zu verflochten → Phase 4 | ✅ Fertig |
 | 4 | Termine + Helfer + Dashboard → Supabase, demoData.js löschen | ⏳ Offen |
+
+## Session 15 — MitgliederModul Grossüberarbeitung (10.07.2026)
+
+### Neue Spalten (memberConstants.js)
+- `teams_rollen` — "Teams & Kaderrollen": Teamname semibold · Rolle grau, kein Chip
+- `funktionen_gruppen` — "Funktionen": Gruppenname semibold · Funktion normal, kein Chip
+- `teams`, `kaderrollen`, `funktionen`, `funktionsgruppen` — `hidden:true` (nicht in Spaltenauswahl, für Export)
+
+### Daten (clubcampus.jsx)
+- `kader_eintraege`: Array von `{team, rollen}` Paaren — korrekte Team-Rollen Zuordnung
+- `hat_benutzer` + `benutzer_deaktiviert` aus `benutzer`-Tabelle beim Laden berechnet
+- `benutzer`-Tabelle in Promise.all mitgeladen
+
+### Design-Entscheide
+- Portalrollen farblich: Admin=Slate, Trainer=Orange, Spieler=Blau, Funktionär=Lila, Eltern=Grau
+- Portal-Zugang: Punkt + Text (Aktiv=grün, Deaktiviert=orange, Kein Zugang=grau)
+- Datenprüfung: Punkt + Text (Geprüft=grün, Ausstehend=gedämpft-orange)
+- Sortier-Icon: aktiv=gelb, inaktiv=nur bei Hover (↕ ausgeblendet)
+- Tabellenkopf: 1px gelbe Linie, normale Schrift (kein uppercase+spacing)
+- Zeilenhöhe: `padding:5px 14px; vertical-align:top`
+
+### Gruppierung
+- `groupContext` (`{type:"team"|"gruppe"|"funktion"|"kaderrolle"|"none", key}`) an `renderCell` weitergegeben
+- `type` in `getGroupKey` für alle Gruppierungstypen gesetzt
+- `filterVals.__parentGruppe` für kontextuelle Untergruppierung (Funktionsgruppe → Vereinsfunktion)
+- `filterVals.__portalFunktionen` für Funktionszuordnung im rekursiven buildGroups
+- Leere Team-Gruppen ausgeblendet wenn Kaderrolle-Filter aktiv
+- `filterVals` wird an rekursiven `buildGroups` Aufruf weitergegeben
+
+### Export (3 Varianten)
+- CSV flach: `teams_rollen` → Teams + Kaderrollen Spalten, `funktionen_gruppen` → Funktionsgruppe + Vereinsfunktionen
+- CSV mit Gruppen: kombinierte Spalten behalten
+- Excel pro Sheet: expandierte Spalten
+
+### Mobile Bottom Sheet (theme.jsx)
+- Zweistufiges Bottom Sheet: Stufe 1 = Hauptmenü (Filter/Gruppieren/Ansichten/Export), Stufe 2 = jeweiliges Untermenü
+- Neue CSS-Klassen: `cc-sheet-nav-item`, `cc-sheet-nav-left`, `cc-sheet-subhdr`, `cc-sheet-subhdr-title`, `cc-sheet-scroll`, `cc-sheet-trash`
+
+### Neue CSS-Klassen (theme.jsx)
+- `cc-portal-status`, `cc-portal-dot`, `cc-portal-status-aktiv/deaktiviert/kein`
+- `cc-dp-status`, `cc-dp-dot`, `cc-dp-status-warn/ok/err`
+- `cc-teams-rollen-row`, `cc-teams-rollen-team`, `cc-teams-rollen-sep`, `cc-teams-rollen-rolle`, `cc-teams-rollen-more`
+- `cc-funk-row`, `cc-funk-gruppe-badge-sm`
+- `cc-role-chip-admin/trainer/spieler/funktionaer/eltern`
+- `cc-members-td-mitglied`, `cc-kpi-breakdown-label/value`, `cc-sort-hover-icon`
+
+### SQL ausgeführt (10.07.2026)
+- `last_sign_in_at` Spalte + Trigger auf `benutzer` Tabelle → `supabase/migrations/last_sign_in_migration.sql`
+- `gruppierung` Spalte in `mitglieder_ansichten` auf `jsonb` geändert → `supabase/migrations/gruppierung_jsonb_migration.sql`
+
+### Offene TODOs (für Session 16+)
+- Inline-Editing (Klick auf Zelle → direkt bearbeiten)
+- Portalrollenfarben konsequent im ganzen Portal (NavigationModul, PortalTab etc.)
+- Funktionär Rollenname in DB evtl. anpassen
+- `@tanstack/react-virtual` installiert aber nicht implementiert (Infinite Scroll als Lösung)
 
 ## Session-Start Routine
 
