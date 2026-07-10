@@ -273,7 +273,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-inactive{font-size:12px;color:#DC2626;font-weight:600;display:flex;align-items:center;gap:4px}
 .cc-status-inactive::before{content:"";width:7px;height:7px;border-radius:50%;background:#DC2626;flex-shrink:0;display:inline-block}
 .cc-status-hauptkontakt{font-size:12px;color:#c2410c;font-weight:600}
-.cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:0;padding:7px 12px;border-bottom:0.5px solid var(--border)}
+.cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:0;padding:7px 12px;border-bottom:0.5px solid var(--border);position:relative;z-index:50}
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0;z-index:300}
 .cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:visible;z-index:200}
 .cc-ml-filter-dropdown{min-width:240px}
