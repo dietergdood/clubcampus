@@ -325,7 +325,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-menu-check-on{background:var(--text);border-color:var(--text);color:var(--surface)}
 /* Desktop Tabelle */
 .cc-members-table{width:100%;border-collapse:collapse}
-.cc-members-th{position:sticky;top:0;z-index:2;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:8px 14px;border-top:1px solid var(--border);border-bottom:1px solid var(--cc-accent,#FFBF00);border-left:none;border-right:none;text-align:left;cursor:pointer;white-space:nowrap;background:var(--surface2)}
+.cc-members-th{position:sticky;top:0;z-index:2;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:6px 14px;border-top:1px solid var(--border);border-bottom:1px solid var(--cc-accent,#FFBF00);border-left:none;border-right:none;text-align:left;cursor:pointer;white-space:nowrap;background:var(--surface2)}
 .cc-members-th:hover{color:var(--text)}
 .cc-members-th:first-child{border-left:1px solid var(--border)}
 .cc-members-th:last-child{border-right:1px solid var(--border)}
@@ -711,7 +711,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-portal-status-aktiv{color:#16A34A}.cc-portal-status-aktiv .cc-portal-dot{background:#16A34A}
 .cc-portal-status-deaktiviert{color:#D97706}.cc-portal-status-deaktiviert .cc-portal-dot{background:#D97706}
 .cc-portal-status-kein{color:var(--sub)}.cc-portal-status-kein .cc-portal-dot{background:var(--sub)}
-.cc-funk-gruppe-badge-sm{padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap;border:0.5px solid transparent;flex-shrink:0}
+.cc-funk-gruppe-badge-sm{padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;border:0.5px solid transparent;flex-shrink:0}
 .cc-breakdown-popover{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:8px;min-width:220px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
 .cc-breakdown-popover-title{font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;padding:4px 8px 8px}
 .cc-breakdown-popover-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:7px 8px;border-radius:6px;border:none;background:transparent;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;gap:12px}
