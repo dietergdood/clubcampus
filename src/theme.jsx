@@ -299,7 +299,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-filter-mobile-item span{font-size:14px;color:var(--text)}
 .cc-filter-mobile-divider{height:8px;background:var(--surface-1);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
 .cc-filter-mobile-footer{padding:12px 20px}
-.cc-group-drag-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:grab;background:var(--surface)}
+.cc-group-drag-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:grab;background:var(--surface2)}
 .cc-group-drag-item:hover{background:var(--surface2)}
 .cc-group-drag-item.cc-drag-over{border-top:2px solid var(--cc-accent,#FFBF00)}
 .cc-group-drag-handle{color:var(--sub);cursor:grab;font-size:14px;flex-shrink:0}
@@ -1594,11 +1594,8 @@ function Toolbar({
                 else{setGroupOpen(o=>!o);setFilterOpen(false);setMoreOpen(false);}
               }}>
               <TI n="layout-rows" size={15}/>
-              {!isMobile&&(isGrouped
-                ? [...groupOptions,...(groupOptionsMore||[])].filter(o=>groupByArr.includes(o.val)).map(o=>o.label).join(", ")
-                : "Gruppieren"
-              )}
-              {isGrouped&&!isMobile&&<span style={{marginLeft:4,opacity:0.7}} onClick={e=>{e.stopPropagation();onGroupChange&&onGroupChange(["none"]);setGroupOpen(false);}}>×</span>}
+              {!isMobile&&"Gruppieren"}
+              {isGrouped&&!isMobile&&<span className="cc-ml-filter-badge">{groupByArr.filter(g=>g&&g!=="none").length}</span>}
             </button>
             {groupOpen&&(
               isMobile?(
