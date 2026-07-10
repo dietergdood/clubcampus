@@ -66,6 +66,8 @@ const TI_PATHS={
     "chevron-right":"<polyline points=\"9 18 15 12 9 6\"/>",
     "chevrons-left":"<polyline points=\"11 17 6 12 11 7\"/><polyline points=\"18 17 13 12 18 7\"/>",
     "chevrons-right":"<polyline points=\"13 17 18 12 13 7\"/><polyline points=\"6 17 11 12 6 7\"/>",
+    "chevrons-up":"<polyline points=\"7 11 12 6 17 11\"/><polyline points=\"7 18 12 13 17 18\"/>",
+    "chevrons-down":"<polyline points=\"7 6 12 11 17 6\"/><polyline points=\"7 13 12 18 17 13\"/>",
     "arrow-left":"<path d=\"M5 12h14\"/><path d=\"M5 12l6 6\"/><path d=\"M5 12l6-6\"/>",
     "arrow-right":"<path d=\"M19 12H5\"/><path d=\"M19 12l-6 6\"/><path d=\"M19 12l-6-6\"/>",
     "address-book":"<rect x=\"4\" y=\"3\" width=\"16\" height=\"18\" rx=\"2\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/><path d=\"M9.5 17h5\"/>",
