@@ -1521,7 +1521,7 @@ function Toolbar({
                     const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
                     return(
                       <div key={key}>
-                        <div className="cc-filter-sec-hdr" onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px 5px",borderBottom:"2px solid var(--cc-accent,#FFBF00)",cursor:"pointer",marginTop:8}} onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
                           <span className="cc-filter-sec-name">{label}</span>
                           {selCount>0&&<span className="cc-filter-sec-badge">{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
                           <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
