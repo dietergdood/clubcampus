@@ -709,8 +709,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           {header:true,label:"Aktionen"},
           {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
           ...(hasGroup?[
-            {icon:"fold",label:"Alle einklappen",onClick:()=>setCollapsedGroups(new Set(groups.map(g=>g.key)))},
-            {icon:"fold-up",label:"Alle ausklappen",onClick:()=>setCollapsedGroups(new Set())},
+            {icon:"chevrons-up",label:"Alle einklappen",onClick:()=>setCollapsedGroups(new Set(groups.map(g=>g.key)))},
+            {icon:"chevrons-down",label:"Alle ausklappen",onClick:()=>setCollapsedGroups(new Set())},
           ]:[]),
           ...(!isMobile?[{
             icon:"table",label:"Spalten",
