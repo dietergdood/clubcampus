@@ -1535,11 +1535,11 @@ function Toolbar({
                             {visVals.map(v=>{
                               const active=(filterVals[key]||[]).includes(v);
                               return(
-                                <div key={v} className="cc-col-menu-item"
+                                <label key={v} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",cursor:"pointer",fontSize:12,color:"var(--text)"}}
                                   onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
-                                  <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                                  <input type="checkbox" readOnly checked={active} style={{width:14,height:14,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
                                   {v}
-                                </div>
+                                </label>
                               );
                             })}
                           </div>
@@ -1736,7 +1736,7 @@ function Toolbar({
                                     return(
                                       <div key={v} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
                                         onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
-                                        <input type="checkbox" readOnly checked={active} style={{width:18,height:18,accentColor:"var(--cc-accent,#FFBF00)",flexShrink:0,pointerEvents:"none"}}/>
+                                        <input type="checkbox" readOnly checked={active} style={{width:18,height:18,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
                                         <span style={{fontSize:15,color:"var(--text)"}}>{v}</span>
                                       </div>
                                     );
@@ -1766,7 +1766,7 @@ function Toolbar({
                           {[...groupOptions,...groupOptionsMore].map(o=>(
                             <div key={o.val} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:"0.5px solid var(--border)",cursor:"pointer"}}
                               onMouseDown={e=>{e.stopPropagation();toggleGroup(o.val);}}>
-                              <input type="checkbox" readOnly checked={isGroupActive(o.val)} style={{width:16,height:16,accentColor:"var(--cc-accent,#FFBF00)",flexShrink:0,pointerEvents:"none"}}/>
+                              <input type="checkbox" readOnly checked={isGroupActive(o.val)} style={{width:16,height:16,accentColor:"#000",flexShrink:0,pointerEvents:"none"}}/>
                               <span style={{fontSize:14,color:"var(--text)"}}>{o.label}</span>
                             </div>
                           ))}
