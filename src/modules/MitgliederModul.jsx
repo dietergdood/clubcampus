@@ -45,12 +45,25 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [mobileFilterOpen,setMobileFilterOpen]=useState(0);
   const [mobileGroupOpen,setMobileGroupOpen]=useState(0);
   const breakdownRef=useRef(null);
+  const sentinelRef=useRef(null);
   useEffect(()=>{
     if(!breakdownOpen||isMobile) return;
     const h=e=>{if(breakdownRef.current&&!breakdownRef.current.contains(e.target))setBreakdownOpen(false);};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[breakdownOpen,isMobile]);
+
+  // Infinite Scroll
+  useEffect(()=>{
+    if(!sentinelRef.current) return;
+    const observer=new IntersectionObserver(entries=>{
+      if(entries[0].isIntersecting&&pageSize<sorted.length){
+        setPageSize(p=>Math.min(p+50,sorted.length));
+      }
+    },{threshold:0.1});
+    observer.observe(sentinelRef.current);
+    return()=>observer.disconnect();
+  },[pageSize,sorted.length]);
   const [archivTab,setArchivTab]=useState(false);
   const [archivData,setArchivData]=useState([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
@@ -739,11 +752,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           </table></div></div>
         ))}
       {hasMore&&!isMobile&&(
-        <div className="cc-text-center cc-py-16">
-          <Btn onClick={()=>setPageSize(p=>p+50)}>
-            <TI n="chevron-down" size={14}/> Weitere {Math.min(50,sorted.length-pageSize)} laden
-          </Btn>
-          <span className="cc-text-xs cc-ml-12">{pageSize} von {sorted.length} angezeigt</span>
+        <div ref={sentinelRef} style={{height:40,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <span className="cc-text-xs cc-text-sub">{pageSize} von {sorted.length} geladen…</span>
         </div>
       )}
 
