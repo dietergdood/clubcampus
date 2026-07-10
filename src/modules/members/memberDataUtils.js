@@ -105,7 +105,19 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   }
   if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return [portalLabel||"Keine Rolle"]; }
   if(g==="kaderrollen"){ return (m.kader_rollen_raw||[]).length>0?m.kader_rollen_raw.map(r=>({key:r,type:"kaderrolle"})):[{key:"Keine Kaderrolle",type:"kaderrolle"}]; }
-  if(g==="funktionen"){ return (m.funktionen||[]).length>0?m.funktionen.map(f=>({key:f,type:"funktion"})):[{key:"Keine Vereinsfunktion",type:"funktion"}]; }
+  if(g==="funktionen"){
+    const allFunk=m.funktionen||[];
+    // Wenn parent eine Funktionsgruppe ist, nur Funktionen dieser Gruppe zeigen
+    if(filterVals.__parentGruppe){
+      const pgName=filterVals.__parentGruppe;
+      const filtered=allFunk.filter(f=>{
+        const pf=(filterVals.__portalFunktionen||[]).find(x=>x.name===f);
+        return pf?.portal_gruppen?.name===pgName;
+      });
+      return filtered.length>0?filtered.map(f=>({key:f,type:"funktion"})):[{key:"Keine Vereinsfunktion",type:"funktion"}];
+    }
+    return allFunk.length>0?allFunk.map(f=>({key:f,type:"funktion"})):[{key:"Keine Vereinsfunktion",type:"funktion"}];
+  }
   if(g==="funktionsgruppen"){
     const gruppenFilter=filterVals["funktionsgruppen"]||[];
     const allGruppen=m.funktionsgruppen||[];
@@ -129,7 +141,7 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   return [String(v||"-")];
 }
 
-export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}) {
+export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGroup=null) {
   // groupBy kann String oder Array sein
   const levels=Array.isArray(groupBy)?groupBy:[groupBy];
   const firstLevel=levels[0]||"none";
@@ -167,7 +179,9 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}) {
     type:meta[k]||"default",
     members,
     children:restLevels.length>0&&restLevels[0]!=="none"
-      ?buildGroups(members,restLevels,ROLLE_LABEL,filterVals)
+      ?buildGroups(members,restLevels,ROLLE_LABEL,
+          (meta[k]==="gruppe")?{...filterVals,__parentGruppe:k}:filterVals,
+          {type:meta[k]||"default",key:k})
       :null,
   }));
 }

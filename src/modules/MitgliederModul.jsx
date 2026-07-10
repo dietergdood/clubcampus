@@ -235,7 +235,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const paged=sorted;
   const hasMore=false;
-  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,filterVals),[paged,groupBy,ROLLE_LABEL,filterVals]);
+  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen}),[paged,groupBy,ROLLE_LABEL,filterVals,portalFunktionen]);
   const hasGroup=Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
   const activeFilterCount=Object.values(filterVals).filter(v=>v&&v.length>0).length;
   const hasActiveFilter=activeFilterCount>0;
