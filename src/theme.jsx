@@ -537,6 +537,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-ml-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
 .cc-ml-badge-ok{background:#DCFCE7;color:#166534}
 .cc-ml-badge-warn{background:#FEF3C7;color:#B45309}
+.cc-dp-status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500}
+.cc-dp-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.cc-dp-status-warn{color:#B45309}.cc-dp-status-warn .cc-dp-dot{background:#B45309}
+.cc-dp-status-ok{color:#16A34A}.cc-dp-status-ok .cc-dp-dot{background:#16A34A}
+.cc-dp-status-err{color:#DC2626}.cc-dp-status-err .cc-dp-dot{background:#DC2626}
 .cc-ml-badge-err{background:#FEE2E2;color:#991B1B}
 .cc-ml-badge-muted{background:var(--surface2);color:var(--sub)}
 .cc-role-chip-sm{font-size:10px;padding:1px 6px}
@@ -650,7 +655,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hk-tab-link{font-size:12px;font-weight:500;color:var(--cc-blue,#185FA5);display:flex;align-items:center;gap:2px;cursor:pointer;text-transform:none;letter-spacing:normal;background:none;border:none;padding:0}
 .cc-hk-content{flex:1;min-width:0}
 .cc-card-secondary{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px}
-.cc-role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#EAF3DE;color:#27500A;border:0.5px solid rgba(39,80,10,0.2)}
+.cc-role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:#D1FAE5;color:#065F46;border:0.5px solid rgba(6,95,70,0.25)}
 .cc-role-chip-trainer{background:#FEF3C7;color:#B45309;border-color:rgba(180,83,9,0.2)}
 .cc-pos-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:400;background:var(--surface2);color:var(--sub);border:0.5px solid var(--border)}
 .cc-funk-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:400;background:var(--surface2);color:var(--text);border:0.5px solid var(--border)}
