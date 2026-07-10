@@ -131,8 +131,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-list-name{font-weight:500;font-size:14px;color:var(--text);white-space:nowrap}
 .cc-detail-label{font-size:14px;color:var(--sub);min-width:120px;flex-shrink:0}
 .cc-empty{padding:32px;text-align:center;color:var(--sub);font-size:14px}
-.cc-table-wrap{background:var(--surface);overflow:hidden;border-radius:0 0 11px 11px}
-.cc-table-wrap-inner{overflow-x:auto;overflow-y:auto;width:100%;max-height:calc(100vh - 268px);position:relative;z-index:0}
+.cc-table-wrap{background:var(--surface);border-radius:0 0 11px 11px}
+.cc-table-wrap-inner{overflow-x:auto;overflow-y:auto;width:100%;max-height:calc(100vh - 268px)}
 .cc-table-wrap-inner{overflow-x:auto}
 .cc-grid-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;align-items:stretch}
 .cc-grid-stats-sm{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
