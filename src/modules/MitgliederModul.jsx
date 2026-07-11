@@ -270,7 +270,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
   const SortIcon=({col})=>sortCol===col
     ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
-    :<span className="cc-sort-arrow cc-text-muted">↕</span>;
+    :<span className="cc-sort-hover-icon">↕</span>;
 
   /* ── Detail-Modal ── */
   async function refreshArchivCount(){
