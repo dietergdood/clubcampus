@@ -217,7 +217,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-clickable{cursor:pointer;user-select:none}
 .cc-chip-row{display:flex;flex-wrap:wrap;gap:6px}
 .cc-tabs-bar{border-top:0.5px solid var(--border);padding:0 20px;display:flex;gap:0;overflow-x:auto}
-.cc-sort-arrow{margin-left:4px;font-size:11px;opacity:1;color:var(--text)}
+.cc-sort-arrow{margin-left:4px;font-size:11px;opacity:1;color:var(--sub)}
 .cc-sort-hover-icon{margin-left:3px;font-size:9px;color:var(--sub);opacity:0;transition:opacity 0.15s}
 .cc-members-th:hover .cc-sort-hover-icon{opacity:0.4}
 .cc-hint-box{padding:8px 12px;background:var(--surface);border-radius:8px;font-size:14px;color:var(--sub);display:flex;align-items:center;gap:8px}
@@ -2202,7 +2202,7 @@ function SortHeader({label, col, sortCol, sortDir, onSort, style={}, className="
       <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
         {label}
         {active
-          ?<span style={{color:"var(--cc-accent,#FFBF00)",fontSize:9}}>{sortDir==="asc"?"▲":"▼"}</span>
+          ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
           :<span className="cc-sort-hover-icon">↕</span>
         }
       </span>
