@@ -239,12 +239,6 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGr
       if(bi===-1) return -1;
       return ai-bi;
     });
-  } else if(firstLevel==="__teams_funktionen"){
-    entries=entries.sort(([a],[b])=>{
-      const aIsTeam=meta[a]==="team"; const bIsTeam=meta[b]==="team";
-      if(aIsTeam!==bIsTeam) return aIsTeam?1:-1;
-      return String(a).localeCompare(String(b));
-    });
   } else {
     entries=entries.sort(([a],[b])=>String(a).localeCompare(String(b)));
   }
