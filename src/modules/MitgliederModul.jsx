@@ -39,7 +39,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [groupOrder,setGroupOrder]=useState({});
   const [dragGroup,setDragGroup]=useState(null);
   const [dragOverGroup,setDragOverGroup]=useState(null);
-  const [manualOrder,setManualOrder]=useState([]);
+  const [manualOrder,setManualOrder]=useState({});
   const [dragRow,setDragRow]=useState(null);
   const [dragOverRow,setDragOverRow]=useState(null);
   const [selected,setSelected]=useState(new Set());
@@ -112,7 +112,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setFilterVals({});
     setGroupBy(["none"]);
     setGroupOrder({});
-    setManualOrder([]);
+    setManualOrder({});
   }
 
   function applyCustomView(v){
@@ -216,7 +216,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
   function handleSort(key){
-    setManualOrder([]);
+    setManualOrder({});
     if(sortCol===key) setSortDir(d=>d==="asc"?"desc":"asc");
     else{ setSortCol(key); setSortDir("asc"); }
   }
@@ -258,7 +258,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   const filtered=useMemo(()=>filterMembers(allMembers,search,filterVals,ROLLE_LABEL),[allMembers,search,filterVals,ROLLE_LABEL]);
 
-  const sorted=useMemo(()=>sortMembers(filtered,sortCol,sortDir,manualOrder),[filtered,sortCol,sortDir,manualOrder]);
+  const sorted=useMemo(()=>sortMembers(filtered,sortCol,sortDir),[filtered,sortCol,sortDir]);
 
   const paged=sorted;
   const hasMore=false;
@@ -559,6 +559,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         return teamRollen.some(r=>kaderFilter.includes(r));
       }):members;
       if(!children&&visibleMembers.length===0) return null;
+      // Manuelle Reihenfolge innerhalb der Gruppe
+      const groupManualOrder=manualOrder[key];
+      const orderedMembers=groupManualOrder&&groupManualOrder.length>0
+        ?[...visibleMembers].sort((a,b)=>{
+            const ai=groupManualOrder.indexOf(a.id);
+            const bi=groupManualOrder.indexOf(b.id);
+            if(ai===-1&&bi===-1) return 0;
+            if(ai===-1) return 1;
+            if(bi===-1) return -1;
+            return ai-bi;
+          })
+        :visibleMembers;
       const isCollapsed=collapsedGroups.has(key);
       const toggleCollapse=()=>setCollapsedGroups(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;});
       const isDragOver=dragOverGroup===key;
@@ -596,35 +608,32 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
               </td>
             </tr>
           )}
-          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext,newTeamContext,Array.isArray(groupBy)?groupBy[depth+1]:null):visibleMembers.map(m=>(
+          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext,newTeamContext,Array.isArray(groupBy)?groupBy[depth+1]:null):orderedMembers.map(m=>(
             <tr key={m.id}
-              className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}${!hasGroup&&dragOverRow===m.id?" cc-group-drag-over":""}`}
+              className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}${hasGroup&&dragOverRow===m.id?" cc-group-drag-over":""}${hasGroup?" cc-members-tr-draggable":""}`}
               onClick={()=>selectMode?toggleSelectRow(m.id):null}
-              draggable={!hasGroup}
-              onDragStart={!hasGroup?e=>{e.stopPropagation();setDragRow(m.id);}:undefined}
-              onDragOver={!hasGroup?e=>{e.preventDefault();e.stopPropagation();setDragOverRow(m.id);}:undefined}
-              onDrop={!hasGroup?e=>{
+              draggable={hasGroup}
+              onDragStart={hasGroup?e=>{e.stopPropagation();setDragRow({id:m.id,groupKey:key});}:undefined}
+              onDragOver={hasGroup?e=>{e.preventDefault();e.stopPropagation();setDragOverRow(m.id);}:undefined}
+              onDrop={hasGroup?e=>{
                 e.preventDefault();e.stopPropagation();
-                if(dragRow&&dragRow!==m.id){
-                  const curr=manualOrder.length>0?manualOrder:paged.map(p=>p.id);
-                  const from=curr.indexOf(dragRow);
+                if(dragRow&&dragRow.id!==m.id&&dragRow.groupKey===key){
+                  const curr=(manualOrder[key]||orderedMembers.map(p=>p.id));
+                  const from=curr.indexOf(dragRow.id);
                   const to=curr.indexOf(m.id);
                   if(from!==-1&&to!==-1){
                     const next=[...curr];
-                    next.splice(from,1);next.splice(to,0,dragRow);
-                    setManualOrder(next);
+                    next.splice(from,1);next.splice(to,0,dragRow.id);
+                    setManualOrder(prev=>({...prev,[key]:next}));
                   }
                 }
                 setDragRow(null);setDragOverRow(null);
               }:undefined}
-              onDragEnd={!hasGroup?()=>{setDragRow(null);setDragOverRow(null);}:undefined}>
+              onDragEnd={hasGroup?()=>{setDragRow(null);setDragOverRow(null);}:undefined}>
               {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
                 <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
                   {selected.has(m.id)&&<TI n="check" size={10}/>}
                 </div>
-              </td>}
-              {!hasGroup&&<td className="cc-members-td cc-members-row-grip">
-                <TI n="grip-vertical" size={13} className="cc-members-row-grip-icon"/>
               </td>}
               {COLS.map(col=>renderCell(col,m,effectiveGc))}
               <td className="cc-members-td cc-members-td-actions"/>
