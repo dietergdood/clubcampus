@@ -736,16 +736,16 @@ function Portal({supabaseClient}){
     if(!s){s=document.createElement("style");s.id="cc-theme-vars";document.head.appendChild(s);}
     const nav=t.navBg||"#000000";
     const navT=t.navText||"#FFFFFF";
-    const navA=t.navAccent||t.vereinsfarbe1||"#FFBF00";
+    const navA=t.navAccent||t.vereinsfarbe1||"#FEC604";
     const navAT=t.navAccentText||contrastColor(navA);
-    const avBg=t.avatarBg||t.vereinsfarbe1||"#FFBF00";
+    const avBg=t.avatarBg||t.vereinsfarbe1||"#FEC604";
     const avTxt=t.avatarText||contrastColor(avBg);
     const navH=t.navHover||"#1A1A1A";
-    const acc=t.vereinsfarbe1||"#FFBF00";
+    const acc=t.vereinsfarbe1||"#FEC604";
     const acc2=t.vereinsfarbe2||"#000000";
-    const btn=t.btnPrimary||"#FFBF00";
+    const btn=t.btnPrimary||"#FEC604";
     const btnT=t.btnPrimaryText||contrastColor(btn);
-    const btnHov=darkenHex(t.btnPrimary||"#FFBF00");
+    const btnHov=darkenHex(t.btnPrimary||"#FEC604");
     s.textContent=`:root,[data-theme],[data-theme=dark],[data-theme=light]{
       --cc-accent:${acc}!important;
       --cc-accent2:${acc2}!important;
@@ -1149,10 +1149,10 @@ function Portal({supabaseClient}){
               <div style={{background:"var(--surface)",borderRadius:16,padding:32,maxWidth:480,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
                 <div style={{textAlign:"center",marginBottom:12}}>
                   <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="26" cy="26" r="26" fill="var(--cc-accent,#FFBF00)" fillOpacity="0.15"/>
-                    <path d="M18 16h4.5a3.5 3.5 0 0 1 7 0H34a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V18a2 2 0 0 1 2-2z" stroke="var(--cc-accent,#FFBF00)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                    <path d="M22 16a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1H22v-1z" fill="var(--cc-accent,#FFBF00)" fillOpacity="0.5"/>
-                    <path d="M21 25h10M21 30h7" stroke="var(--cc-accent,#FFBF00)" strokeWidth="2" strokeLinecap="round"/>
+                    <circle cx="26" cy="26" r="26" fill="var(--cc-accent,#FEC604)" fillOpacity="0.15"/>
+                    <path d="M18 16h4.5a3.5 3.5 0 0 1 7 0H34a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V18a2 2 0 0 1 2-2z" stroke="var(--cc-accent,#FEC604)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                    <path d="M22 16a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1H22v-1z" fill="var(--cc-accent,#FEC604)" fillOpacity="0.5"/>
+                    <path d="M21 25h10M21 30h7" stroke="var(--cc-accent,#FEC604)" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                 </div>
                 {fehlend.length>0?(
@@ -1172,7 +1172,7 @@ function Portal({supabaseClient}){
                       </div>
                     </div>
                     <button onClick={()=>{setProfilOverlayDismissed(true);setActivePersist("profile");}}
-                      style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FFBF00)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
+                      style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FEC604)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
                       Jetzt ausfüllen →
                     </button>
                   </>
@@ -1185,7 +1185,7 @@ function Portal({supabaseClient}){
                         :"Es ist Zeit deine Daten zu prüfen (alle 6 Monate)."}
                     </p>
                     <button onClick={()=>setActivePersist("profile")}
-                      style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FFBF00)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
+                      style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FEC604)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
                       Daten jetzt prüfen →
                     </button>
                     <button onClick={markiereProfilGeprueft}

@@ -173,9 +173,9 @@ export function MitgliederKonfigTab({supabase,loading,saveMsg,setSaveMsg,isMobil
                   Der <strong>Mitgliedtyp</strong> definiert die Basis-Pflichtfelder und ob ein Hauptkontakt erforderlich ist. Hat ein Mitglied zusätzlich eine <strong>Rolle</strong> (Spieler, Trainer…), werden die Felder der Rollen-Matrix ergänzt.
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
-                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FFBF00)",fontSize:11}}>Mitgliedtyp-Matrix</span>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FEC604)",fontSize:11}}>Mitgliedtyp-Matrix</span>
                   <span style={{fontSize:13}}>+</span>
-                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FFBF00)",fontSize:11}}>Rollen-Matrix (falls Rolle vorhanden)</span>
+                  <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FEC604)",fontSize:11}}>Rollen-Matrix (falls Rolle vorhanden)</span>
                   <span style={{fontSize:13}}>=</span>
                   <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid #22c55e",color:"#15803d",fontSize:11,fontWeight:600}}>Effektive Pflichtfelder</span>
                 </div>

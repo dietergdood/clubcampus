@@ -196,22 +196,22 @@ function PortalverwaltungView(props){
       /* CSS sofort anwenden */
       const r=document.documentElement.style;
       const td={...THEME_DEFAULT_STATIC,...themeRef.current};
-      r.setProperty("--cc-accent",    td.vereinsfarbe1||"#FFBF00");
+      r.setProperty("--cc-accent",    td.vereinsfarbe1||"#FEC604");
       r.setProperty("--cc-accent2",   td.vereinsfarbe2||"#000000");
-      r.setProperty("--cc-hover",     hexToRgba(td.vereinsfarbe1||"#FFBF00",0.19));
-      r.setProperty("--cc-accent-25", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.25));
-      r.setProperty("--cc-accent-20", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.12));
-      r.setProperty("--cc-accent-15", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.09));
-      r.setProperty("--cc-accent-12", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.07));
-      r.setProperty("--cc-accent-10", hexToRgba(td.vereinsfarbe1||"#FFBF00",0.10));
-      r.setProperty("--cc-accent-5",  hexToRgba(td.vereinsfarbe1||"#FFBF00",0.05));
+      r.setProperty("--cc-hover",     hexToRgba(td.vereinsfarbe1||"#FEC604",0.19));
+      r.setProperty("--cc-accent-25", hexToRgba(td.vereinsfarbe1||"#FEC604",0.25));
+      r.setProperty("--cc-accent-20", hexToRgba(td.vereinsfarbe1||"#FEC604",0.12));
+      r.setProperty("--cc-accent-15", hexToRgba(td.vereinsfarbe1||"#FEC604",0.09));
+      r.setProperty("--cc-accent-12", hexToRgba(td.vereinsfarbe1||"#FEC604",0.07));
+      r.setProperty("--cc-accent-10", hexToRgba(td.vereinsfarbe1||"#FEC604",0.10));
+      r.setProperty("--cc-accent-5",  hexToRgba(td.vereinsfarbe1||"#FEC604",0.05));
       r.setProperty("--nav",          td.navBg||"#000000");
       r.setProperty("--nav-t",        td.navText||"#FFFFFF");
-      r.setProperty("--nav-a",        td.navAccent||"#FFBF00");
+      r.setProperty("--nav-a",        td.navAccent||"#FEC604");
       r.setProperty("--nav-hover",    td.navHover||"#1A1A1A");
-      r.setProperty("--btn-primary",  td.btnPrimary||"#FFBF00");
+      r.setProperty("--btn-primary",  td.btnPrimary||"#FEC604");
       r.setProperty("--btn-primary-text",td.btnPrimaryText||"#000000");
-      r.setProperty("--btn-hover",    darkenHex(td.btnPrimary||"#FFBF00"));
+      r.setProperty("--btn-hover",    darkenHex(td.btnPrimary||"#FEC604"));
       /* React State + localStorage */
       const themeToSave={...td};
       setAppTheme(themeToSave);

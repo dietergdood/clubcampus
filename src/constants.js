@@ -105,21 +105,21 @@ export const COLOR = {
 /* Theme-abhängige Farben (via CSS-Variablen) */
 export const THEME = {
   /* Vereinsfarben (überschrieben via applyThemeCss) */
-  accent:     "var(--cc-accent,#FFBF00)",
+  accent:     "var(--cc-accent,#FEC604)",
   accent2:    "var(--cc-accent2,#000000)",
-  accent20:   "var(--cc-accent-20,rgba(255,191,0,0.12))",
-  accent15:   "var(--cc-accent-15,rgba(255,191,0,0.09))",
-  accent12:   "var(--cc-accent-12,rgba(255,191,0,0.07))",
+  accent20:   "var(--cc-accent-20,rgba(254,198,4,0.12))",
+  accent15:   "var(--cc-accent-15,rgba(254,198,4,0.09))",
+  accent12:   "var(--cc-accent-12,rgba(254,198,4,0.07))",
 
   /* Buttons */
-  btnPrimary: "var(--btn-primary,#FFBF00)",
+  btnPrimary: "var(--btn-primary,#FEC604)",
   btnText:    "var(--btn-primary-text,#000)",
   btnHover:   "var(--btn-hover,#E6AC00)",
 
   /* Navigation */
   nav:        "var(--nav,#000000)",
   navText:    "var(--nav-t,#FFFFFF)",
-  navAccent:  "var(--nav-a,#FFBF00)",
+  navAccent:  "var(--nav-a,#FEC604)",
 
   /* Surfaces */
   bg:         "var(--bg)",

@@ -39,7 +39,7 @@ function DashboardAdmin({setActive,account}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FEC604)",flexShrink:0}}/>
         <H1>{getGreeting()}, {vorname}</H1>
       </div>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Systemübersicht</p>
@@ -115,7 +115,7 @@ function DashboardAdministration({setActive,account}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FEC604)",flexShrink:0}}/>
         <H1>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
       </div>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
@@ -183,7 +183,7 @@ function DashboardFunktionaer({setActive,account}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FEC604)",flexShrink:0}}/>
         <H1>{getGreeting()}, {(account?.name||"Nutzer").split(" ")[0]}</H1>
       </div>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Übersicht</p>
@@ -273,7 +273,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FEC604)",flexShrink:0}}/>
         <H1>{getGreeting()}, {firstName}</H1>
       </div>
       <p className="cc-detail-label" style={{marginBottom:18}}>Trainer · {trainerTeams.join(" & ")} · {getDate()}</p>
@@ -391,7 +391,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FEC604)",flexShrink:0}}/>
         <H1>{getGreeting()}, {firstName}</H1>
       </div>
       <p className="cc-detail-label" style={{marginBottom:18}}>Spieler · {team} · {getDate()}</p>
@@ -458,7 +458,7 @@ function DashboardEltern({account,meineTeams,setActive}){
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FFBF00)",flexShrink:0}}/>
+        <div style={{width:4,height:32,borderRadius:2,background:"var(--cc-accent,#FEC604)",flexShrink:0}}/>
         <H1>{getGreeting()}, {parentName}</H1>
       </div>
       <p className="cc-detail-label" style={{marginBottom:18}}>Elternteil · {kinder.map(k=>k.name.split(" ")[0]).join(" & ")} · {getDate()}</p>
