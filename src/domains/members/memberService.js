@@ -62,7 +62,8 @@ export async function fetchAnsichten(sb, benutzerId, typ="mitglieder") {
 }
 
 export async function insertAnsicht(sb, ansicht) {
-  const { data } = await sb.from("mitglieder_ansichten").insert(ansicht).select().single();
+  const { data, error } = await sb.from("mitglieder_ansichten").insert(ansicht).select().single();
+  if (error) console.error("insertAnsicht error:", error);
   return data;
 }
 
