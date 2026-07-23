@@ -84,8 +84,8 @@ export function ListView({
   moreActions = [],
   // Footer
   footerLabel,
-  // Export
-  exportFn,
+  // External filter control (e.g. from KPI cards)
+  externalSetFilter,
   exportFormats = [],
 }) {
   const isMobile = useIsMobile();
@@ -239,8 +239,8 @@ export function ListView({
 
   const groups = useMemo(() => {
     if (!hasGroup || !buildGroupsFn) return [{ key: "__all", label: "", type: "none", members: paged, children: null }];
-    return buildGroupsFn(paged, groupBy, groupOrder);
-  }, [paged, groupBy, groupOrder, hasGroup, buildGroupsFn]);
+    return buildGroupsFn(paged, groupBy, groupOrder, filterVals);
+  }, [paged, groupBy, groupOrder, hasGroup, buildGroupsFn, filterVals]);
 
   // ── COLS ────────────────────────────────────────────────────
   const COLS = visibleCols.map(k => colDefs.find(c => c.key === k)).filter(Boolean);
@@ -373,7 +373,7 @@ export function ListView({
                         </div>
                       </td>
                     )}
-                    {COLS.map(col => renderCell ? renderCell(col, row, { type: type || "none", key }) : <td key={col.key} className="cc-members-td">{String(row[col.key] || "—")}</td>)}
+                    {COLS.map(col => renderCell ? renderCell(col, row, { type: type || "none", key }, filterVals) : <td key={col.key} className="cc-members-td">{String(row[col.key] || "—")}</td>)}
                     <td className="cc-members-td cc-members-td-actions" />
                   </tr>
                 );
@@ -383,6 +383,11 @@ export function ListView({
       );
     });
   }
+
+  // External filter
+  useEffect(() => {
+    if (externalSetFilter) externalSetFilter.current = (vals) => setFilterVals(prev => ({...prev, ...vals}));
+  }, [externalSetFilter]);
 
   // Export callback
   useEffect(() => {}, []); // placeholder
@@ -400,7 +405,10 @@ export function ListView({
           count={selected.size}
           total={paged.length}
           onSelectAll={toggleSelectAll}
-          actions={bulkActions}
+          actions={bulkActions.map(a => ({
+            ...a,
+            onClick: () => a.onClick(selected),
+          }))}
           onCancel={() => { setSelected(new Set()); setSelectMode(false); }}
         />
       )}

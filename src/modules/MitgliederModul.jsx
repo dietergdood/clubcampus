@@ -24,7 +24,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const isMobile=useIsMobile();
   const [confirm,confirmDialog]=useConfirm();
   const [teamsPopover,setTeamsPopover]=useState(null);
-  const [selectMode,setSelectMode]=useState(false);
   const [expandedTeams,setExpandedTeams]=useState(new Set());
   const [portalFunktionen,setPortalFunktionen]=useState([]);
   const [selectedMember,setSelectedMember]=useState(null);
@@ -80,6 +79,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter(Boolean))],
   }));
 
+  const exportDataRef = useRef(null);
+  const filterRef = useRef(null);
   function exportData(rows, cols, groups, format){ exportDataUtil(rows, cols, format, groups); }
 
 
@@ -92,25 +93,21 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   },[account?.id]);
 
 
-  async function handleBulkDelete(){
-    if(!sb||selected.size===0) return;
+  async function handleBulkDelete(selected){
+    if(!sb||!selected||selected.size===0) return;
     const ok=await confirm({title:`${selected.size} Mitglieder löschen?`,message:"Diese Aktion kann nicht rükgängig gemacht werden (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!ok) return;
     const ids=[...selected];
     for(const id of ids) await deleteMitglied(sb,id);
-    setSelected(new Set());
-    setSelectMode(false);
     if(onReload) onReload();
   }
-  async function handleBulkDeactivate(){
-    if(!sb||selected.size===0) return;
+  async function handleBulkDeactivate(selected){
+    if(!sb||!selected||selected.size===0) return;
     const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok) return;
     const ids=[...selected];
     const deaktiviertVon=account?.name||account?.email||"Administrator";
     await archiviereMitglied(sb,ids,deaktiviertVon);
     if(onUpdatePortalZugang) await Promise.all(ids.map(id=>onUpdatePortalZugang(id,false)));
     refreshArchivCount();
-    setSelected(new Set());
-    setSelectMode(false);
     setArchivLoaded(false);
     if(onReload) onReload();
   }
@@ -213,9 +210,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return allMembers.filter(m=>m.mitgliedschaft===b.key).length;
   }
   function bdFilter(b){
-    if(b.key==="__trainer") setFilterVals(prev=>({...prev,rollen:["Trainer/in"]}));
-    else if(b.key==="__funktionaer") setFilterVals(prev=>({...prev,rollen:["Funktionär"]}));
-    else setFilterVals(prev=>({...prev,mitgliedschaft:[b.key]}));
+    const vals = b.key==="__trainer"?{rollen:["Trainer/in"]}:
+                 b.key==="__funktionaer"?{rollen:["Funktionär"]}:
+                 {mitgliedschaft:[b.key]};
+    if(filterRef.current) filterRef.current(vals);
     setBreakdownOpen(false);
   }
 
@@ -233,7 +231,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
   // Zellen-Rendering (wiederverwendbar)
-  function renderCell(col,m,groupContext={type:"none",key:null}){
+  function renderCell(col,m,groupContext={type:"none",key:null},filterVals={}){
     const gc=groupContext;
     switch(col.key){
       case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
@@ -491,7 +489,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         rows={allMembers}
         filterFn={(rows,search,filterVals)=>filterMembers(rows,search,filterVals,ROLLE_LABEL)}
         sortFn={sortMembers}
-        buildGroupsFn={(rows,groupBy,groupOrder)=>buildGroups(rows,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen},null,groupOrder)}
+        buildGroupsFn={(rows,groupBy,groupOrder,filterVals)=>buildGroups(rows,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen},null,groupOrder)}
         colDefs={ALL_COLS}
         colGroups={COL_GROUPS}
         defaultCols={SAVED_VIEWS.standard.cols}
@@ -500,7 +498,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         groupOptions={GROUP_OPTIONS}
         groupOptionsMore={GROUP_OPTIONS_MORE}
         multiGroup
-        renderCell={(col,m,gc)=>renderCell(col,m,gc)}
+        renderCell={(col,m,gc,filterVals)=>renderCell(col,m,gc,filterVals)}
         renderMobile={m=>(
           <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
             {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
@@ -526,6 +524,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           {label:"Liste als CSV (mit Gruppen)",          format:"csv-gruppen"},
           {label:"Liste als Excel (pro Gruppe ein Sheet)",format:"excel-sheets", icon:"table"},
         ] : []}
+        externalSetFilter={filterRef}
         footerLabel={(f,t)=>`${f} von ${t} Mitgliedern`}
       />
       </>
