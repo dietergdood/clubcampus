@@ -143,10 +143,13 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
                   {label:"Bearbeiten", icon:"edit", onClick:()=>setEditEltern({mode:"edit",data:{...e}})},
                   {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"user", onClick:async()=>{
                     if(!sb) return;
+                    const name=`${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
                     if(!e.hauptkontakt){
                       await setHauptkontakt(sb,raw.id,e.id);
+                      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
                     } else {
                       await updateElternkontakt(sb,e.id,{hauptkontakt:false});
+                      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
                     }
                     fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
                     if(onReload) onReload();

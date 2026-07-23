@@ -126,9 +126,9 @@ function VerlaufTab({ raw, sb }) {
                           </span>
                         </div>
                         <div className="cc-verlauf-werte">
-                          <span className="cc-verlauf-alt">{formatWert(e.feld, e.alter_wert) || "—"}</span>
+                          <span className="cc-verlauf-alt">{SENSITIV_FELDER.includes(e.feld) ? "••• •• ••••" : (formatWert(e.feld, e.alter_wert) || "—")}</span>
                           <TI n="arrow-right" size={12} style={{color:"var(--sub)"}}/>
-                          <span className="cc-verlauf-neu">{formatWert(e.feld, e.neuer_wert) || "—"}</span>
+                          <span className="cc-verlauf-neu">{SENSITIV_FELDER.includes(e.feld) ? "••• •• ••••" : (formatWert(e.feld, e.neuer_wert) || "—")}</span>
                         </div>
                       </>
                     ) : (
