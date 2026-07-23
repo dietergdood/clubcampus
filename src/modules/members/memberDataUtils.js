@@ -382,3 +382,48 @@ export function exportData(filtered, COLS, format, groups=null) {
     XLSX.writeFile(wb,"mitglieder.xlsx");
   }
 }
+
+// ── Eltern ────────────────────────────────────────────────────────
+export function mapEltern(raw) {
+  return (raw||[]).map(e=>{
+    const kind=e.mitglieder;
+    const kindName=kind?`${kind.vorname||""} ${kind.nachname||""}`.trim():"—";
+    const kindTeams=(kind?.teams||[]).map(t=>t?.team?.name||t?.team?.kurz||"").filter(Boolean);
+    return {
+      id:          e.id,
+      mitglied_id: e.mitglied_id,
+      name:        `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"—",
+      vorname:     e.vorname||"",
+      nachname:    e.nachname||"",
+      email:       e.email||"",
+      telefon:     e.telefon||"",
+      beziehung:   e.beziehung||"",
+      portal:      e.benutzer_id?"Aktiv":"Kein Zugang",
+      benutzer_id: e.benutzer_id||null,
+      hauptkontakt:e.hauptkontakt||false,
+      kind_id:     kind?.id||null,
+      kind_name:   kindName,
+      kind_teams:  kindTeams,
+    };
+  });
+}
+
+export function filterEltern(eltern, search) {
+  const q=(search||"").toLowerCase();
+  if(!q) return eltern;
+  return eltern.filter(e=>
+    e.name.toLowerCase().includes(q)||
+    e.email.toLowerCase().includes(q)||
+    e.kind_name.toLowerCase().includes(q)
+  );
+}
+
+export function sortEltern(eltern, col, dir) {
+  return [...eltern].sort((a,b)=>{
+    const av=String(a[col]||"").toLowerCase();
+    const bv=String(b[col]||"").toLowerCase();
+    if(av===""&&bv!=="") return 1;
+    if(bv===""&&av!=="") return -1;
+    return dir==="asc"?av.localeCompare(bv,"de"):bv.localeCompare(av,"de");
+  });
+}
