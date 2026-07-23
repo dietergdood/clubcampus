@@ -85,7 +85,7 @@ function PersonTeams({
     const ok = await confirm({ title: "Aus Team entfernen?", danger: true, confirmLabel: "Entfernen" });
     if (!sb || !ok) return;
     const kader = teamDetails?.find(k => k.id === kaderId);
-    const teamName = kader?.team?.name || kaderId;
+    const teamName = kader?.teams?.name || kader?.team?.name || kaderId;
     await deaktiviereKader(sb, kaderId);
     if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     setTeamDetails(prev => prev.filter(k => k.id !== kaderId));
@@ -103,7 +103,7 @@ function PersonTeams({
       position: editTeamForm.position || null,
     });
     if (vereinId && alterRollen !== neueRollen) {
-      const teamName = editTeam.team?.name || "Team";
+      const teamName = editTeam.teams?.name || editTeam.team?.name || "Team";
       logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
     }
     setTeamDetails(prev => prev.map(k => k.id === editTeam.id

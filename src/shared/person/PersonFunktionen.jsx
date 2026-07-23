@@ -79,6 +79,7 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
                   {label:"Entfernen", icon:"trash", danger:true, hidden:!canDelete, onClick:async()=>{
                     const next=(raw.funktionen||[]).filter(x=>x!==f);
                     await updateMitglied(sb,raw.id,{funktionen:next});
+                    if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.FUNKTION_GEAENDERT,`Vereinsfunktion entfernt: ${f}`,"funktionen",f,account?.name||account?.email||"Administrator");
                     if(onReload) onReload();
                   }},
                 ]}/>
