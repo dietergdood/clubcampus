@@ -16,6 +16,7 @@ import { LAENDER, getLandName, RolleChip, getFieldVisibility } from "./members/m
 import { ROLES, FIELD_VIS, SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.js";
 import { ArchivView } from "./members/ArchivView.jsx";
+import { ElternListView } from "./members/ElternListView.jsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";
 
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}){
@@ -63,6 +64,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
 
   const [archivTab,setArchivTab]=useState(false);
+  const [elternTab,setElternTab]=useState(false);
   const [archivData,setArchivData]=useState([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
   const [archivCount,setArchivCount]=useState(null);
@@ -676,16 +678,19 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           <h1 className="cc-page-title cc-page-title-mr">Mitglieder</h1>
           {(role==="administrator"||role==="administration")&&(
             <div className="cc-ml-tabs-bar">
-              <button className={`cc-ml-tab${!archivTab?" cc-ml-tab-active":""}`} onClick={()=>setArchivTab(false)}>
+              <button className={`cc-ml-tab${!archivTab&&!elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setArchivTab(false);setElternTab(false);}}>
                 Aktive <span className="cc-ml-tab-count">{(allMembers||[]).length}</span>
               </button>
               <button className={`cc-ml-tab${archivTab?" cc-ml-tab-active":""}`} onClick={()=>{
-                setArchivTab(true);
+                setArchivTab(true);setElternTab(false);
                 if(!archivLoaded&&sb){
                   fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
                 }
               }}>
                 Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
+              </button>
+              <button className={`cc-ml-tab${elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setElternTab(true);setArchivTab(false);}}>
+                Eltern
               </button>
             </div>
           )}
@@ -693,7 +698,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       </div>
 
-      {archivTab?(
+      {elternTab?(
+        <ElternListView sb={sb} vereinId={vereinId} kannVerwalten={kannVerwalten}/>
+      ):archivTab?(
         <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} account={account} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           const data=await fetchMitglied(sb,m.id);
