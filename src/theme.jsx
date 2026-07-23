@@ -2772,7 +2772,7 @@ function useAddrSearch(strasse, plz){
     timerRef.current=setTimeout(async()=>{
       try{
         const query=plz?`${q} ${plz}`:q;
-        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${encodeURIComponent(query)}&limit=6&lang=de&sr=4326&origins=address,street`;
+        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${encodeURIComponent(query)}&limit=6&lang=de&sr=4326&origins=address%2Cstreet`;
         const res=await fetch(url);
         const json=await res.json();
         const results=(json.results||[]).map(r=>{
