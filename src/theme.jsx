@@ -2005,7 +2005,7 @@ function Toolbar({
                           </div>
                         );
                       }
-                      if(!openMoreSections.has(currentSection)) return null;
+                      if(currentSection !== null && !openMoreSections.has(currentSection)) return null;
                       if(item.hidden) return null;
                       if(item.subPanel) return(
                         <Fragment key={i}>
