@@ -7,6 +7,7 @@ import { Btn, Av, useConfirm, ConfirmDialog } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.js";
 import { ListView } from "../../shared/list/ListView.jsx";
+import { exportListData } from "../../shared/list/exportUtils.js";
 
 const COL_DEFS = [
   { key:"name",           label:"Name",          default:true, alwaysOn:true },
@@ -176,6 +177,20 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, accoun
           bulkActions={[
             { icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:reaktivieren },
             { icon:"trash",      label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:loeschen },
+          ]}
+          exportFn={(rows, cols, groups, format) => exportListData(rows, cols, groups, format, {
+            filename: "archiv",
+            sheetName: "Archiv",
+            getCellValue: (col, row) => {
+              if (col.key === "deaktiviert_am") return row.deaktiviert_am_fmt;
+              if (col.key === "actions") return "";
+              return String(row[col.key] || "");
+            },
+          })}
+          exportFormats={[
+            {label:"Als CSV (flach)",        format:"csv"},
+            {label:"Als CSV (mit Gruppen)",  format:"csv-gruppen"},
+            {label:"Excel (pro Gruppe)",     format:"excel-sheets", icon:"table"},
           ]}
           footerLabel={(f,t) => `${f} von ${t} archivierten Mitgliedern`}
         />

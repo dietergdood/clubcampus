@@ -7,6 +7,7 @@ import { Av } from "../../theme.jsx";
 import { fetchAlleElternkontakte } from "../../domains/members/memberService.js";
 import { mapEltern, filterEltern, sortEltern } from "./memberDataUtils.js";
 import { ListView } from "../../shared/list/ListView.jsx";
+import { exportListData } from "../../shared/list/exportUtils.js";
 
 const COL_DEFS = [
   { key:"name",      label:"Name",      default:true, alwaysOn:true },
@@ -99,13 +100,8 @@ export function ElternListView({ sb, vereinId, account }) {
     { key:"portal",    label:"Portal",    vals:["Aktiv","Kein Zugang"] },
   ];
 
-  function exportCSV(rows, cols) {
-    const header = cols.map(c=>c.label).join(";");
-    const csv = [header, ...rows.map(e=>cols.map(c=>String(e[c.key]||"")).join(";"))].join("\n");
-    const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download="eltern.csv"; a.click();
-    URL.revokeObjectURL(url);
+  function exportCSV(rows, cols, groups, format) {
+    exportListData(rows, cols, groups, format, { filename:"eltern", sheetName:"Eltern" });
   }
 
   return (
@@ -125,7 +121,11 @@ export function ElternListView({ sb, vereinId, account }) {
       viewTyp="eltern"
       footerLabel={(f,t) => `${f} von ${t} Elternkontakten`}
       exportFn={exportCSV}
-      exportFormats={[{label:"E-Mail-Liste als CSV", format:"csv"}]}
+      exportFormats={[
+        {label:"E-Mail-Liste als CSV (flach)",        format:"csv"},
+        {label:"E-Mail-Liste als CSV (mit Gruppen)",  format:"csv-gruppen"},
+        {label:"Excel (pro Gruppe ein Sheet)",         format:"excel-sheets", icon:"table"},
+      ]}
     />
   );
 }
