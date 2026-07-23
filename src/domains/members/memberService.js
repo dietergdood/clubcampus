@@ -52,10 +52,11 @@ export async function fetchArchivCount(sb) {
 
 /* ── Mitglieder Ansichten ── */
 
-export async function fetchAnsichten(sb, benutzerId) {
+export async function fetchAnsichten(sb, benutzerId, typ="mitglieder") {
   const { data } = await sb.from("mitglieder_ansichten")
     .select("*")
     .eq("benutzer_id", benutzerId)
+    .eq("typ", typ)
     .order("created_at", { ascending: true });
   return data || [];
 }
