@@ -2761,6 +2761,9 @@ function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHint=true,
 
 
 /* ── AddressInput: Adress-Autocomplete via swisstopo ── */
+// PLZ→Kanton Map für CH (aus Photon state-Feld ableiten)
+const CH_KANTON_MAP={"Aargau":"AG","Appenzell Ausserrhoden":"AR","Appenzell Innerrhoden":"AI","Basel-Landschaft":"BL","Basel-Stadt":"BS","Bern":"BE","Fribourg":"FR","Freiburg":"FR","Genf":"GE","Genève":"GE","Glarus":"GL","Graubünden":"GR","Grisons":"GR","Jura":"JU","Luzern":"LU","Neuenburg":"NE","Neuchâtel":"NE","Nidwalden":"NW","Obwalden":"OW","Schaffhausen":"SH","Schwyz":"SZ","Solothurn":"SO","St. Gallen":"SG","Tessin":"TI","Ticino":"TI","Thurgau":"TG","Uri":"UR","Waadt":"VD","Vaud":"VD","Wallis":"VS","Valais":"VS","Zug":"ZG","Zürich":"ZH"};
+
 function useAddrSearch(strasse, plz){
   const [suggestions,setSuggestions]=useState([]);
   const timerRef=useRef(null);
@@ -2772,26 +2775,22 @@ function useAddrSearch(strasse, plz){
     timerRef.current=setTimeout(async()=>{
       try{
         const query=plz?`${q} ${plz}`:q;
-        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${encodeURIComponent(query)}&limit=6&lang=de&sr=4326&origins=address`;
+        // DACH Bounding Box: Schweiz, Deutschland, Österreich
+        const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=de&limit=6&bbox=5.9,45.8,17.2,55.1&layer=house&layer=street`;
         const res=await fetch(url);
         const json=await res.json();
-        const results=(json.results||[]).map(r=>{
-          const a=r.attrs;
-          const fullLabel=(a.label||"").replace(/<[^>]+>/g,"").trim();
-          const detail=(a.detail||"").trim();
-          // PLZ aus label oder detail extrahieren
-          const plzMatch=fullLabel.match(/\b(\d{4})\b/)||detail.match(/\b(\d{4})\b/);
-          const plzVal=plzMatch?.[1]||"";
-          // Strasse = alles vor der PLZ im label (oder ganzes label wenn keine PLZ drin)
-          const plzIdxLabel=plzVal?fullLabel.indexOf(plzVal):-1;
-          const strasseVal=plzIdxLabel>0?fullLabel.slice(0,plzIdxLabel).trim():fullLabel;
-          // Ort aus detail nach PLZ, ohne CH/Kantonskürzel
-          const plzIdxDetail=plzVal?detail.indexOf(plzVal):-1;
-          const afterPlz=plzIdxDetail>=0?detail.slice(plzIdxDetail+4).trim():"";
-          const ortParts=afterPlz.split(" ").filter(p=>p&&!/^(ch|ag|ai|ar|be|bl|bs|fr|ge|gl|gr|ju|lu|ne|nw|ow|sg|sh|so|sz|tg|ti|ur|vd|vs|zg|zh)$/i.test(p));
-          const ortVal=ortParts.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
-          return {label:fullLabel,strasse:strasseVal,plz:plzVal,ort:ortVal,raw:a};
-        });
+        const results=(json.features||[])
+          .map(f=>{
+            const p=f.properties;
+            const strasseVal=[p.street,p.housenumber].filter(Boolean).join(" ");
+            const plzVal=p.postcode||"";
+            const ortVal=p.city||p.locality||p.town||p.village||"";
+            const stateVal=p.state||"";
+            const kantonVal=CH_KANTON_MAP[stateVal]||"";
+            if(!strasseVal) return null;
+            return {strasse:strasseVal,plz:plzVal,ort:ortVal,staat:stateVal,kanton:kantonVal,land:p.countrycode||""};
+          })
+          .filter(Boolean);
         setSuggestions(results);
       }catch(e){setSuggestions([]);}
     },300);
@@ -2805,23 +2804,19 @@ function usePlzLookup(plz, onResult){
   const timerRef=useRef(null);
   useEffect(()=>{
     const q=(plz||"").trim();
-    if(!/^\d{4}$/.test(q)) return;
+    if(q.length<4) return;
     clearTimeout(timerRef.current);
     timerRef.current=setTimeout(async()=>{
       try{
-        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${q}&limit=3&lang=de&sr=4326&origins=zipcode`;
+        const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=de&limit=3&layer=district&layer=city&bbox=5.9,45.8,17.2,55.1`;
         const res=await fetch(url);
         const json=await res.json();
-        const r=json.results?.[0];
-        if(!r) return;
-        // label enthält z.B. "8706 - Meilen" — sauberer als detail
-        const label=(r.attrs.label||"").replace(/<[^>]+>/g,"").trim();
-        const labelMatch=label.match(/^\d{4}\s*[-–]?\s*(.+)$/);
-        const ortVal=labelMatch?labelMatch[1].trim():"";
-        // Kanton aus attrs.detail: z.B. "8706 meilen ch zh"
-        const detail=(r.attrs.detail||"").toLowerCase();
-        const kantonMatch=detail.match(/\b(ag|ai|ar|be|bl|bs|fr|ge|gl|gr|ju|lu|ne|nw|ow|sg|sh|so|sz|tg|ti|ur|vd|vs|zg|zh)\b/g);
-        const kantonVal=kantonMatch?kantonMatch[kantonMatch.length-1].toUpperCase():"";
+        const f=json.features?.find(f=>f.properties.postcode===q||f.properties.postcode?.startsWith(q));
+        if(!f) return;
+        const p=f.properties;
+        const ortVal=p.city||p.locality||p.town||p.village||p.name||"";
+        const stateVal=p.state||"";
+        const kantonVal=CH_KANTON_MAP[stateVal]||"";
         if(ortVal) onResult({ort:ortVal,kanton:kantonVal||null});
       }catch(e){}
     },400);

@@ -57,6 +57,7 @@ function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,
     onStrasse(s.strasse);
     if(s.plz) onPlz(s.plz);
     if(s.ort) onOrt(s.ort);
+    if(s.kanton) onKanton(s.kanton);
     setShowSug(false);
   }
 
