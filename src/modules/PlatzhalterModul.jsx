@@ -7,6 +7,7 @@ import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, 
 import { TI } from "../icons.jsx";
 import { useIsMobile, useTheme, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av , Tabs, STitle, Between, Col, H1, Row, Select} from "../theme.jsx";
 import { BUSES, MATERIAL, LOCKERS, MEDIA, WIKI, NEWS, MEMBERS , USER_ACCOUNTS, ROSTER} from "../demoData.js";
+import { logAenderung } from "../domains/members/memberService.js";
 import { getRole } from "./NavigationModul.jsx";
 
 function BusesView({role,kannSchreiben,kannVerwalten}){
@@ -304,7 +305,7 @@ function AttendanceCentral(){
 /* -- TRAININGSPLÄTZE VERWALTUNG -- */
 
 
-function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGeprueft}){
+function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGeprueft,vereinId=null}){
   const isEltern=role==="eltern";
   const [saving,setSaving]=useState(false);
   const [msg,setMsg]=useState(null);
@@ -338,6 +339,7 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
     setSaving(true); setMsg(null);
     const form=kindForms[kindId]||{};
     const now=new Date().toISOString();
+    const kind=dbMitglieder.find(m=>m.id===kindId);
     const {error}=await sb.from("mitglieder").update({
       geburtsdatum:form.geburtsdatum||null,
       nationalitaet:form.nationalitaet||null,
@@ -352,6 +354,16 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
     }).eq("id",kindId);
     if(error){ setMsg({ok:false,text:error.message}); }
     else {
+      // Felder loggen die sich geändert haben
+      if(vereinId && kind) {
+        const geaendertVon = `${kind.vorname||""} ${kind.nachname||""}`.trim() || account?.email || "Mitglied";
+        const felder = ["geburtsdatum","nationalitaet","strasse","plz","ort","telefon","email"];
+        for(const f of felder) {
+          const alt = kind[f] || null;
+          const neu = form[f] || null;
+          if(alt !== neu) logAenderung(sb, kindId, vereinId, f, alt, neu, geaendertVon);
+        }
+      }
       setMsg({ok:true,text:"Gespeichert ✓"});
       setKindEdit(null);
       if(onReload) onReload();

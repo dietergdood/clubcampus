@@ -1058,7 +1058,7 @@ function Portal({supabaseClient}){
       case "sync":              return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "audit":             return <PortalverwaltungView initialTab="audit" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "datacheck":         return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
-      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account} sb={sb} dbUser={dbUser} dbMitglieder={dbMitglieder} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}} onProfilGeprueft={markiereProfilGeprueft}/>;
+      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account} sb={sb} dbUser={dbUser} dbMitglieder={dbMitglieder} vereinId={vereinId} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}} onProfilGeprueft={markiereProfilGeprueft}/>;
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
   };
