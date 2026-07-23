@@ -898,6 +898,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
   .cc-member-detail-wrap .cc-card{padding:10px 12px}
   .cc-member-detail-wrap .cc-info-row{padding:6px 0}
   .cc-member-detail-wrap .cc-info-row:nth-child(odd){padding-right:0}
+  .cc-verlauf-header{flex-direction:column;align-items:flex-start;gap:2px}
+  .cc-verlauf-meta{margin-top:0}
   .cc-member-detail-wrap .cc-info-row:nth-child(even){padding-left:0}
   .cc-member-detail-wrap .cc-grid-2{gap:8px}
 }
