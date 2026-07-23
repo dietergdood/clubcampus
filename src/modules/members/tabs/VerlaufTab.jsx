@@ -1,15 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/tabs/VerlaufTab.jsx
    Änderungshistorie + Aktivitäten — kombiniert, chronologisch,
-   mit Datum-Trennern.
-
-   Zwei Quellen:
-   - mitglieder_aenderungen: echte Wert-zu-Wert-Änderungen
-   - mitglieder_aktivitaeten: strukturierte Ereignisse
-
-   Darstellung:
-   - Änderungen: Feld · alt → neu
-   - Aktivitäten: Icon + Beschreibung (z.B. "Team zugewiesen")
+   mit Datum-Trennern. Einträge innerhalb 60s vom selben User
+   werden gruppiert (z.B. Adressänderung = 1 Eintrag).
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 import { Card, EmptyState } from "../../../theme.jsx";
@@ -17,6 +10,7 @@ import { TI } from "../../../icons.jsx";
 import { fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP } from "../../../domains/members/memberService.js";
 
 const SENSITIV_FELDER = ["ahv_nr"];
+const ADRESS_FELDER = ["strasse","plz","ort","kanton"];
 
 const ROLLE_LABEL = {
   administrator: "Administrator", administration: "Verwaltung",
@@ -67,6 +61,31 @@ function uhrzeit(ts) {
   return new Date(ts).toLocaleTimeString("de-CH", { hour:"2-digit", minute:"2-digit" });
 }
 
+// Einträge gruppieren: gleicher User + innerhalb 60s = eine Gruppe
+function gruppiereEintraege(eintraege) {
+  const gruppen = [];
+  let aktGruppe = null;
+
+  for (const e of eintraege) {
+    const ts = new Date(e.geaendert_at).getTime();
+    const user = e.geaendert_von || "";
+
+    if (
+      aktGruppe &&
+      aktGruppe.user === user &&
+      aktGruppe._typ === e._typ &&
+      Math.abs(aktGruppe.ts - ts) < 60000
+    ) {
+      aktGruppe.items.push(e);
+      aktGruppe.ts = Math.max(aktGruppe.ts, ts);
+    } else {
+      aktGruppe = { user, ts, _typ: e._typ, items: [e] };
+      gruppen.push(aktGruppe);
+    }
+  }
+  return gruppen;
+}
+
 function VerlaufTab({ raw, sb }) {
   const [eintraege, setEintraege] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +97,6 @@ function VerlaufTab({ raw, sb }) {
       fetchAenderungen(sb, raw.id),
       fetchAktivitaeten(sb, raw.id),
     ]).then(([aenderungen, aktivitaeten]) => {
-      // Kombinieren und chronologisch sortieren (neueste zuerst)
       const alle = [
         ...aenderungen.map(a => ({ ...a, _typ: "aenderung" })),
         ...aktivitaeten.map(a => ({ ...a, _typ: "aktivitaet" })),
@@ -88,11 +106,13 @@ function VerlaufTab({ raw, sb }) {
     });
   }, [raw?.id]);
 
+  const gruppen = gruppiereEintraege(eintraege);
+
   // Nach Datum gruppieren
-  const nachDatum = eintraege.reduce((acc, e) => {
-    const label = datumLabel(e.geaendert_at);
+  const nachDatum = gruppen.reduce((acc, g) => {
+    const label = datumLabel(g.ts);
     if (!acc[label]) acc[label] = [];
-    acc[label].push(e);
+    acc[label].push(g);
     return acc;
   }, {});
 
@@ -109,44 +129,72 @@ function VerlaufTab({ raw, sb }) {
           <EmptyState icon="history" title="Noch keine Einträge" subtitle="Änderungen und Aktivitäten werden hier protokolliert."/>
         ) : (
           <div className="cc-verlauf-list">
-            {Object.entries(nachDatum).map(([datum, items]) => (
+            {Object.entries(nachDatum).map(([datum, gruppen]) => (
               <div key={datum}>
-                {/* Datum-Trenner */}
                 <div className="cc-verlauf-date-sep">
                   <div className="cc-verlauf-date-line"/>
                   <div className="cc-verlauf-date-label">{datum}</div>
                   <div className="cc-verlauf-date-line"/>
                 </div>
 
-                {items.map((e, i) => (
-                  <div key={e.id} className={`cc-verlauf-item${i < items.length-1 ? " cc-verlauf-item-border" : ""}`}>
-                    {e._typ === "aenderung" ? (
-                      /* Änderung: alt → neu */
-                      <>
-                        <div className="cc-verlauf-header">
-                          <span className="cc-verlauf-feld">{FELD_LABEL[e.feld] || e.feld}</span>
-                          <span className="cc-verlauf-meta">
-                            {e.geaendert_von && <span className="cc-verlauf-user"><TI n="user" size={11}/> {e.geaendert_von}</span>}
-                            <span className="cc-verlauf-datum">{uhrzeit(e.geaendert_at)}</span>
-                          </span>
-                        </div>
-                        <div className="cc-verlauf-werte">
-                          <span className="cc-verlauf-alt">{SENSITIV_FELDER.includes(e.feld) ? "••• •• ••••" : (formatWert(e.feld, e.alter_wert) || "—")}</span>
-                          <TI n="arrow-right" size={12} style={{color:"var(--sub)"}}/>
-                          <span className="cc-verlauf-neu">{SENSITIV_FELDER.includes(e.feld) ? "••• •• ••••" : (formatWert(e.feld, e.neuer_wert) || "—")}</span>
-                        </div>
-                      </>
+                {gruppen.map((g, gi) => (
+                  <div key={gi} className={`cc-verlauf-item${gi < gruppen.length-1 ? " cc-verlauf-item-border" : ""}`}>
+                    {/* User + Zeit oben */}
+                    <div className="cc-verlauf-meta cc-mb-4">
+                      {g.user && <span className="cc-verlauf-user"><TI n="user" size={11}/> {g.user}</span>}
+                      <span className="cc-verlauf-datum">{uhrzeit(g.ts)}</span>
+                    </div>
+
+                    {g._typ === "aenderung" ? (
+                      /* Änderungen: Adressfelder zusammenfassen */
+                      <div className="cc-verlauf-felder">
+                        {(()=>{
+                          const adressItems = g.items.filter(e => ADRESS_FELDER.includes(e.feld));
+                          const restItems   = g.items.filter(e => !ADRESS_FELDER.includes(e.feld));
+                          const result = [];
+
+                          // Adresse als Gruppe
+                          if (adressItems.length > 0) {
+                            result.push(
+                              <div key="adresse" className="cc-verlauf-gruppe">
+                                <span className="cc-verlauf-feld">Adresse</span>
+                                {adressItems.map(e => (
+                                  <div key={e.id} className="cc-verlauf-werte">
+                                    <span className="cc-verlauf-feld-sub">{FELD_LABEL[e.feld]||e.feld}:</span>
+                                    <span className="cc-verlauf-alt">{formatWert(e.feld, e.alter_wert)||"—"}</span>
+                                    <TI n="arrow-right" size={11} style={{color:"var(--sub)",flexShrink:0}}/>
+                                    <span className="cc-verlauf-neu">{formatWert(e.feld, e.neuer_wert)||"—"}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+
+                          // Restliche Felder einzeln
+                          restItems.forEach(e => {
+                            result.push(
+                              <div key={e.id} className="cc-verlauf-gruppe">
+                                <span className="cc-verlauf-feld">{FELD_LABEL[e.feld]||e.feld}</span>
+                                <div className="cc-verlauf-werte">
+                                  <span className="cc-verlauf-alt">{SENSITIV_FELDER.includes(e.feld)?"••• •• ••••":(formatWert(e.feld,e.alter_wert)||"—")}</span>
+                                  <TI n="arrow-right" size={11} style={{color:"var(--sub)",flexShrink:0}}/>
+                                  <span className="cc-verlauf-neu">{SENSITIV_FELDER.includes(e.feld)?"••• •• ••••":(formatWert(e.feld,e.neuer_wert)||"—")}</span>
+                                </div>
+                              </div>
+                            );
+                          });
+                          return result;
+                        })()}
+                      </div>
                     ) : (
-                      /* Aktivität: Icon + Beschreibung */
-                      <div className="cc-verlauf-header">
-                        <span className="cc-verlauf-aktivitaet">
-                          <span className="cc-verlauf-aktivitaet-icon"><TI n={aktivitaetIcon(e.typ)} size={12}/></span>
-                          {e.beschreibung}
-                        </span>
-                        <span className="cc-verlauf-meta">
-                          {e.geaendert_von && <span className="cc-verlauf-user"><TI n="user" size={11}/> {e.geaendert_von}</span>}
-                          <span className="cc-verlauf-datum">{uhrzeit(e.geaendert_at)}</span>
-                        </span>
+                      /* Aktivitäten */
+                      <div className="cc-verlauf-felder">
+                        {g.items.map(e => (
+                          <div key={e.id} className="cc-verlauf-aktivitaet">
+                            <span className="cc-verlauf-aktivitaet-icon"><TI n={aktivitaetIcon(e.typ)} size={12}/></span>
+                            {e.beschreibung}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
