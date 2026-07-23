@@ -1789,11 +1789,11 @@ function Toolbar({
                       <div>
 
                         {(()=>{
-                          let inAktionen=false;
+                          let hasHeader=false;
                           return moreItems.map((item,i)=>{
                             if(item==="sep"){return null;}
-                            if(item.header){inAktionen=item.label==="Aktionen";return null;}
-                            if(!inAktionen) return null;
+                            if(item.header){hasHeader=true;return null;}
+                            if(hasHeader) return null;
                             return(
                               <button key={i} className="cc-sheet-nav-item"
                                 onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
