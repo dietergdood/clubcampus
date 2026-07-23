@@ -284,7 +284,7 @@ function MemberDetail({
       )}
 
       {tab === "verlauf" && (
-        <VerlaufTab raw={raw} sb={sb}/>
+        <VerlaufTab raw={raw} sb={sb} key={`verlauf-${raw.id}-${raw.aktiv}-${raw.updated_at}`}/>
       )}
 
       {(tab === "stats" || tab === "comments" || tab === "ratings") && (
