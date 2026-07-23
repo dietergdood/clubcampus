@@ -134,7 +134,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-inline-field{position:relative;cursor:pointer;border-radius:5px;padding:2px 6px;margin:-2px -6px;transition:background 0.1s}
 .cc-inline-field:hover{background:var(--surface)}
 .cc-inline-field:hover .cc-inline-pencil{opacity:1}
-.cc-inline-pencil{opacity:0;color:var(--sub);font-size:12px;margin-left:5px;transition:opacity 0.1s}
+.cc-inline-pencil{opacity:0;color:var(--sub);font-size:14px;margin-left:6px;transition:opacity 0.1s;flex-shrink:0}
 .cc-inline-empty{color:var(--sub);font-style:italic}
 .cc-inline-input{width:100%;font-size:13px;height:28px;border:1.5px solid var(--cc-accent,#FEC604);border-radius:5px;padding:0 8px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box}
 .cc-inline-select{width:100%;font-size:13px;height:28px;border:1.5px solid var(--cc-accent,#FEC604);border-radius:5px;padding:0 6px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box}
@@ -596,6 +596,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-addr-suggestion-sub{font-size:11px;color:var(--sub)}
 .cc-addr-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto}
 .cc-phone-sep{height:0.5px;background:var(--border);margin:2px 0}
+.cc-card-edit-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:var(--sub);cursor:pointer;font-family:inherit;flex-shrink:0;transition:background 0.1s,color 0.1s}
+.cc-card-edit-btn:hover{background:var(--surface2);color:var(--text)}
+.cc-card-edit-btn-active{color:var(--text);background:var(--surface2)}
+.cc-section-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cc-section-title-row .cc-section-title{margin-bottom:0}
 .cc-inline-save-btn{padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:var(--text);color:var(--bg);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500}
 .cc-inline-save-btn:hover{opacity:0.85}
 .cc-inline-cancel-btn{padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:transparent;color:var(--sub);font-size:12px;cursor:pointer;font-family:inherit}
@@ -2860,7 +2865,7 @@ function InlineField({ label, value, field, type="text", opts=null, canEdit=fals
         <span className={`cc-inline-field ${value?"cc-info-val":"cc-info-val-empty"}`}
           onClick={()=>startEdit(field,value||"")}>
           {value||<span className="cc-inline-empty">nicht erfasst</span>}
-          <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+          <span className="cc-inline-pencil"><TI n="pencil" size={14}/></span>
         </span>
       )}
     </div>

@@ -28,6 +28,7 @@ function NatBadge({ code }) {
 
 function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null }) {
   const [ahvVisible, setAhvVisible] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [natEditing, setNatEditing] = useState(false);
   const [nat1Val, setNat1Val] = useState("");
   const [nat2Val, setNat2Val] = useState("");
@@ -42,10 +43,10 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
   const geschlechtLabel = raw.geschlecht === "m" ? "Männlich" : raw.geschlecht === "w" ? "Weiblich" : raw.geschlecht || null;
   const gebdatLabel = raw.geburtsdatum ? new Date(raw.geburtsdatum).toLocaleDateString("de-CH") : null;
 
-  const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit };
+  const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editMode };
 
   function startNatEdit() {
-    if (!canEdit) return;
+    if (!canEdit || !editMode) return;
     setNat1Val(raw.nationalitaet || "");
     setNat2Val(raw.nationalitaet2 || "");
     setNatEditing(true);
@@ -65,7 +66,15 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
 
   return (
     <Card>
-      <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
+      <div className="cc-section-title-row">
+        <div className="cc-section-title"><TI n="id-badge-2" size={14}/> Personalien</div>
+        {canEdit && (
+          <button className={`cc-card-edit-btn${editMode?" cc-card-edit-btn-active":""}`}
+            onClick={()=>setEditMode(m=>!m)} title={editMode?"Bearbeiten beenden":"Bearbeiten"}>
+            <TI n={editMode?"x":"pencil"} size={16}/>
+          </button>
+        )}
+      </div>
       <div className="cc-info-grid">
         <InlineField label="Nachname"     field="nachname"     value={raw.nachname||null}  {...ieProps}/>
         <InlineField label="Vorname"      field="vorname"      value={raw.vorname||null}   {...ieProps}/>
@@ -119,7 +128,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
                   {nat2Name && <><span className="cc-text-sub">·</span><NatBadge code={raw.nationalitaet2}/> {nat2Name}</>}
                 </span>
               ) : <span className="cc-inline-empty">nicht erfasst</span>}
-              {canEdit && <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>}
+              {canEdit && editMode && <span className="cc-inline-pencil"><TI n="pencil" size={14}/></span>}
             </span>
           )}
         </div>
@@ -151,7 +160,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
                 </button>
               </span>
             ) : (
-              <span className="cc-inline-field cc-info-val-empty" onClick={()=>ie.startEdit("ahv_nr","")}>
+              <span className={`cc-inline-field cc-info-val-empty`} onClick={editMode?()=>ie.startEdit("ahv_nr",""):undefined}>
                 <span className="cc-inline-empty">nicht erfasst</span>
                 <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
               </span>

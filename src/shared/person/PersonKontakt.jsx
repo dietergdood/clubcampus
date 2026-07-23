@@ -12,6 +12,7 @@ const KANTON_OPTS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU"
 
 function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null, eltern, brauchtEltern, setTab }) {
   const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload, vereinId, account, rawData: raw });
+  const [editMode, setEditMode] = useState(false);
 
   if (!fv.showEmail && !fv.showTelefon && !fv.showAdresse) return null;
 
@@ -19,14 +20,38 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
   const hkName = hk ? (hk.name || `${hk.vorname||""} ${hk.nachname||""}`.trim() || "?") : null;
   const hkTel = hk ? (hk.telefon || hk.tel) : null;
 
-  const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit };
+  const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editMode };
 
   return (
     <Card>
-      <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
+      <div className="cc-section-title-row">
+        <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
+        {canEdit && (
+          <button className={`cc-card-edit-btn${editMode?" cc-card-edit-btn-active":""}`}
+            onClick={()=>setEditMode(m=>!m)} title={editMode?"Bearbeiten beenden":"Bearbeiten"}>
+            <TI n={editMode?"x":"pencil"} size={16}/>
+          </button>
+        )}
+      </div>
       <div className="cc-info-grid">
-        {fv.showEmail   && <InlineField label="E-Mail"  field="email"   value={raw.email||null}   type="email" {...ieProps}/>}
-        {fv.showTelefon && <InlineField label="Telefon" field="telefon" value={raw.telefon||null} type="phone" {...ieProps}/>}
+        {fv.showEmail && (editMode
+          ? <InlineField label="E-Mail" field="email" value={raw.email||null} type="email" {...ieProps}/>
+          : <div className="cc-info-row">
+              <span className="cc-info-key">E-Mail</span>
+              {raw.email
+                ? <a href={`mailto:${raw.email}`} className="cc-contact-link">{raw.email}</a>
+                : <span className="cc-info-val-empty">—</span>}
+            </div>
+        )}}
+        {fv.showTelefon && (editMode
+          ? <InlineField label="Telefon" field="telefon" value={raw.telefon||null} type="phone" {...ieProps}/>
+          : <div className="cc-info-row">
+              <span className="cc-info-key">Telefon</span>
+              {raw.telefon
+                ? <a href={`tel:${raw.telefon}`} className="cc-contact-link-muted">{raw.telefon}</a>
+                : <span className="cc-info-val-empty">—</span>}
+            </div>
+        )}}
         {fv.showAdresse && <AdressFelder raw={raw} ie={ie} ieProps={ieProps} KANTON_OPTS={KANTON_OPTS}/>}
       </div>
 

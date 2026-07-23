@@ -3,7 +3,7 @@
    Profil-Tab: StatusTiles, Personalien, Kontakt, Vereinsdaten,
    Teams, Vereinsfunktionen, Notizen
    ═══════════════════════════════════════════════════════════════ */
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Card, StatusTile, useIsMobile, InlineField } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.jsx";
@@ -28,7 +28,8 @@ function InfoTab({
   const isMobile = useIsMobile();
   const notizAddRef = useRef(null);
   const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload: ()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); } });
-  const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit };
+  const [editModeVerein, setEditModeVerein] = useState(false);
+  const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editModeVerein };
 
   const MITGLIEDTYP_OPTS = (dbMitgliedtypen||[]).map(t=>({v:t.name,l:t.name}));
 
@@ -75,7 +76,15 @@ function InfoTab({
 
         {/* Vereinsdaten */}
         <Card className="cc-card-full">
-          <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
+          <div className="cc-section-title-row">
+            <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
+            {canEdit && (
+              <button className={`cc-card-edit-btn${editModeVerein?" cc-card-edit-btn-active":""}`}
+                onClick={()=>setEditModeVerein(m=>!m)} title={editModeVerein?"Bearbeiten beenden":"Bearbeiten"}>
+                <TI n={editModeVerein?"x":"pencil"} size={16}/>
+              </button>
+            )}
+          </div>
           <div className="cc-info-grid">
             <InlineField label="Mitgliedtyp" field="mitgliedtyp" value={raw.mitgliedtyp||null}
               opts={MITGLIEDTYP_OPTS} {...ieProps}
