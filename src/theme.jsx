@@ -1787,7 +1787,7 @@ function Toolbar({
                         {(()=>{
                           let inAktionen=false;
                           return moreItems.map((item,i)=>{
-                            if(item==="sep"){inAktionen=false;return null;}
+                            if(item==="sep"){return null;}
                             if(item.header){inAktionen=item.label==="Aktionen";return null;}
                             if(!inAktionen) return null;
                             return(

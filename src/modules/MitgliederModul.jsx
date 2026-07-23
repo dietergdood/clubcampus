@@ -281,7 +281,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         externalSetFilter={filterRef}
         footerLabel={(f,t)=>`${f} von ${t} Mitgliedern`}
         moreActions={kannVerwalten("members") ? [
-          "sep",
           { icon:"user-plus", label:"Mitglied hinzufügen", onClick:()=>setShowNeuesMitglied(true) },
         ] : []}
       />
