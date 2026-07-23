@@ -10,8 +10,9 @@ Keine Isolation — Verbindung über Services und Hooks.
 src/
   domains/                          ← Business-Logik, Services, Hooks
     members/
-      memberService.js              ← fetchMitglieder, fetchArchiv, fetchEltern, fetchAnsichten, updateMitglied, updateMitgliedFoto, deleteMitgliedFoto, fetchBenutzerByMitglied etc.
+      memberService.js              ← fetchMitglieder, updateMitglied, logAenderung, logAktivitaet, fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP, insertMitglied etc.
       useMemberMeta.js              ← Hook: ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
+      useInlineEdit.js              ← Hook für Inline Cell Editing (startEdit, saveEdit, cancelEdit, handleKey, feedback)
     permissions/
       permissions.js                ← canEdit/canDelete/canExport pro Modul
     person/
@@ -48,15 +49,33 @@ src/
       MemberHero.jsx                ← Hero-Banner mit Avatar + FotoUpload
       MemberKPIs.jsx                ← KPI-Cards + Aufschlüsselung
       MemberListCell.jsx            ← makeMemberRenderCell() Factory für ListView
+      NeuesMitgliedModal.jsx        ← Neues Mitglied anlegen (Mitgliedtyp → Pflichtfelder)
       NotizenVerlauf.jsx            ← Notizen-Komponente
       memberConstants.js            ← COL_GROUPS, SAVED_VIEWS, GROUP_OPTIONS, GROUP_OPTIONS_MORE
-      memberDataUtils.js            ← mapMembers, filterMembers, sortMembers, buildGroups, exportData
+      memberDataUtils.js            ← Re-Exports (mapMembers, filterMembers etc.)
+      memberMapper.js               ← DB→UI Transformation
+      memberFilter.js               ← Filter + Sort mit UND/ODER-Logik
+      memberGrouping.js             ← Gruppierungslogik
+      memberExportUtils.js          ← mitglieder-spezifischer Export
       memberUtils.jsx               ← getFieldVisibility; re-exportiert LAENDER, getLandName, RolleChip
       tabs/
         DatenpruefungTab.jsx
         ElternTab.jsx
         InfoTab.jsx
-        PortalTab.jsx
+        PortalTab.jsx               ← Portalrolle inline editierbar
+        VerlaufTab.jsx              ← Änderungshistorie (aenderungen + aktivitaeten kombiniert)
+      __tests__/
+        memberFilter.test.js (18)
+        memberGrouping.test.js (18)
+        memberMapper.test.js (23)
+        memberListCell.test.jsx (21)
+        useInlineEdit.test.jsx (18)
+        neuesMitgliedModal.test.jsx (13)
+        verlaufTab.test.jsx (12)
+        elternTab.test.jsx (11)
+        portalTab.test.jsx (13, 2 skip)
+        personFunktionen.test.jsx (12)
+        personTeams.test.jsx (8)
     portal/                         ← PortalverwaltungModul aufgeteilt (1 Tab = 1 Datei)
       ApiTab.jsx
       AuditTab.jsx
@@ -158,7 +177,7 @@ Vor jedem neuen Modul:
 - [ ] Service in `domains/[modul]/[modul]Service.js` erstellen
 - [ ] Hook in `domains/[modul]/use[Modul].js` erstellen (wenn State nötig)
 - [ ] Permissions in `domains/permissions/permissions.js` ergänzen
-- [ ] `PersonSummary`/`PersonAvatar` aus `shared/person/` nutzen
+- [ ] `PersonSummary`/`PersonAvatar` aus `shared/person/` nutzen — Inline CSS dort zuerst bereinigen (6 Stellen PersonSelector, 4 PersonSummary, 2 PersonAvatar)
 - [ ] `ableitRolle` aus `domains/roles/roleUtils.js` nutzen
 - [ ] `currentSeason()` aus `domains/season/seasonUtils.js` nutzen
 - [ ] Kein `window.confirm` → `useConfirm` aus `theme.jsx`
@@ -499,3 +518,90 @@ Zielwerte:
 Detailgrad: [Kurzfassung / Standard / Ausführlich mit Verbesserungsvorschlägen]
 Fokus: [optional]
 ```
+
+---
+
+## Session 17 — 23.07.2026
+
+### Abgeschlossene Arbeiten
+
+#### Inline Editing
+- `useInlineEdit` Hook (`src/domains/members/useInlineEdit.js`) — zentraler Hook für alle Inline-Felder
+- `InlineField` Komponente in `theme.jsx` — klickbares Feld mit Input/Dropdown + Hint
+- `PersonPersonalien.jsx` — alle Felder inline editierbar inkl. Nationalität (kombiniert, zwei Dropdowns)
+- `PersonKontakt.jsx` — E-Mail, Telefon, Adresse inline editierbar
+- `InfoTab.jsx` — Vereinsdaten Card inline editierbar
+- `PortalTab.jsx` — Portalrolle inline editierbar mit sofortigem State-Update
+- AHV-Nr. maskiert aber editierbar
+- `MemberEditModal.jsx` entfernt — kein Modal mehr für Stammdaten
+
+#### Neues Mitglied anlegen
+- `NeuesMitgliedModal.jsx` — Mitgliedtyp zuerst → dynamische Pflichtfelder aus DB
+- `insertMitglied` + `fetchMitgliedtypPflichtfelder` in `memberService.js`
+- Unbekannte Felder (z.B. `vorname_nachname`) werden in Validierung übersprungen
+- `FELD_LABEL` aus `memberService` für Fehlermeldungen
+- Button "Mitglied hinzufügen" in `MitgliederModul` (nur Admins, `<Btn variant="primary">`)
+
+#### Änderungshistorie — vollständig
+**Zwei Tabellen:**
+- `mitglieder_aenderungen` — echte Wert-zu-Wert-Änderungen (beide Seiten nicht null)
+- `mitglieder_aktivitaeten` — strukturierte Ereignisse
+
+**Logging eingebaut in:**
+- `useInlineEdit` — alle Inline-Felder (Personalien, Kontakt, Vereinsdaten)
+- `PersonTeams` — Team zuweisen/entfernen, Kaderrollen ändern
+- `PersonFunktionen` — Funktion hinzufügen/entfernen (Modal + DropMenu)
+- `ElternTab` — Elternkontakt hinzufügen/bearbeiten/löschen/Hauptkontakt
+- `PortalTab` — Portalrolle ändern
+- `MemberHero` — Archivieren/Reaktivieren (loggt VOR der Aktion)
+- `MemberDetail` — Portal deaktivieren/reaktivieren
+- `NeuesMitgliedModal` — "Mitglied angelegt"
+- `PlatzhalterModul` — Mitglied-Selbständerungen via Datenprüfung
+- Supabase Trigger `handle_new_user` — Portal-Aktivierung
+
+**`logAenderung` Entscheidungslogik:**
+- `Wert A → Wert B` → `mitglieder_aenderungen`
+- `null → Wert` → `mitglieder_aktivitaeten` (FELD_ERFASST)
+- `Wert → null` → `mitglieder_aktivitaeten` (FELD_GELEERT)
+
+**`AKTIVITAET_TYP` Konstanten:** ANGELEGT, FELD_ERFASST, FELD_GELEERT, TEAM_HINZUGEFUEGT, TEAM_ENTFERNT, KADERROLLE_GEAENDERT, FUNKTION_GEAENDERT, ELTERN_HINZUGEFUEGT, ELTERN_ENTFERNT, ELTERN_GEAENDERT, PORTAL_AKTIVIERT, PORTAL_DEAKTIVIERT, PORTAL_REAKTIVIERT, ARCHIVIERT, REAKTIVIERT
+
+#### VerlaufTab
+- Zwei Quellen kombiniert, chronologisch, Datum-Trenner
+- Änderungen: Feld + alt→neu; Aktivitäten: Icon + Beschreibung
+- AHV-Nr. beide Seiten maskiert; Rollen übersetzt; Geschlecht übersetzt
+- Auto-Reload via Key (`raw.id + raw.aktiv + raw.updated_at`)
+
+#### CSS/Icons
+- Neue Klassen: `cc-label-req`, `cc-hint-sub`, `cc-info-hint`, `cc-text-right`, `cc-relative`, `cc-cursor-pointer`, `cc-verlauf-*`, `cc-land-badge`
+- `cc-info-grid`: `align-items:stretch`; `cc-info-row`: `flex-direction:column;justify-content:center`
+- Neue Icons: `pencil`, `history`, `user-plus`, `users-plus`, `users-minus`, `heart-plus`, `heart-minus`, `activity`, `loader`
+
+#### SQL-Migrationen (alle ausgeführt)
+- `mitglieder_aenderungen_migration.sql` ✅
+- `mitglieder_aktivitaeten_migration.sql` ✅
+- `portal_aktivierung_log_migration.sql` ✅
+
+#### Tests — 167/167 grün (11 Files)
+- `useInlineEdit.test.jsx` (18), `neuesMitgliedModal.test.jsx` (13)
+- `verlaufTab.test.jsx` (12), `elternTab.test.jsx` (11), `portalTab.test.jsx` (13, 2 skip)
+- `personFunktionen.test.jsx` (12), `personTeams.test.jsx` (8)
+
+#### Bewertung Session 17: 9.7/10
+
+---
+
+### OFFENE ARBEIT (nächste Session)
+
+**Priorität 1:**
+- Kader + Termine → Supabase Migration
+  - MemberHero + MemberDetail → `src/shared/person/` verschieben
+  - `src/shared/list/MemberListView.jsx` erstellen
+  - `PersonSummary`/`PersonAvatar` aus `shared/person/` nutzen — Inline CSS zuerst bereinigen (6 Stellen PersonSelector, 4 PersonSummary, 2 PersonAvatar)
+  - TeamsVerwaltungModul Zeilen 273+979: `verein_id: tenant.id` fehlt
+
+**Priorität 2:**
+- Eltern-Tab: n:m Struktur (mehrere Kinder pro Elternteil)
+- Demo-Daten entfernen aus `portal_pwa.jsx`/`demoData.js`
+- ARCHITECTURE.md Phase 1 (Foundation/domains refactor) nicht gestartet
+- Portalverwaltung Mitglieder-Konfiguration Tab (CRUD + Matrizen)

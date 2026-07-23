@@ -102,63 +102,35 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
-  v_rollen  text[];
-  v_funktion text;
-  v_name    text;
-  v_ist_eltern boolean := false;
+  v_mitglied_id bigint;
+  v_verein_id   uuid;
+  v_name        text;
 BEGIN
+  -- Mitglied anhand E-Mail finden
+  SELECT id, verein_id INTO v_mitglied_id, v_verein_id
+  FROM public.mitglieder
+  WHERE email = NEW.email AND aktiv = true
+  LIMIT 1;
+
   v_name := COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email,'@',1));
 
-  -- Rolle aus mitglieder.funktion ableiten
-  BEGIN
-    SELECT funktion INTO v_funktion
-    FROM public.mitglieder
-    WHERE email = NEW.email AND aktiv = true
-    LIMIT 1;
-  EXCEPTION WHEN OTHERS THEN
-    v_funktion := NULL;
-  END;
+  -- benutzer Eintrag erstellen (bestehende Logik)
+  INSERT INTO public.benutzer (id, email, name, role, active)
+  VALUES (NEW.id, NEW.email, v_name, 'mitglied', true)
+  ON CONFLICT (id) DO NOTHING;
 
-  -- Standardrolle basierend auf Funktion
-  IF v_funktion ILIKE '%trainer%' OR v_funktion ILIKE '%coach%' THEN
-    v_rollen := ARRAY['trainer'];
-  ELSIF v_funktion ILIKE '%vorstand%' OR v_funktion ILIKE '%präsident%' OR v_funktion ILIKE '%kassier%' THEN
-    v_rollen := ARRAY['funktionaer'];
-  ELSIF v_funktion ILIKE '%administration%' OR v_funktion ILIKE '%sekretariat%' THEN
-    v_rollen := ARRAY['administration'];
-  ELSIF v_funktion IS NOT NULL THEN
-    v_rollen := ARRAY['spieler'];
-  ELSE
-    v_rollen := ARRAY[]::text[]; -- kein Mitglied gefunden
+  -- mitglieder verknüpfen
+  IF v_mitglied_id IS NOT NULL THEN
+    UPDATE public.mitglieder
+      SET hat_portal_zugang = true, updated_at = now()
+      WHERE id = v_mitglied_id;
+
+    -- Portal-Aktivierung loggen
+    INSERT INTO public.mitglieder_aktivitaeten
+      (mitglied_id, verein_id, typ, beschreibung, geaendert_von)
+    VALUES
+      (v_mitglied_id, v_verein_id, 'portal_aktiviert', 'Portal-Zugang aktiviert', v_name);
   END IF;
-
-  -- Elternkontakt prüfen
-  BEGIN
-    IF EXISTS (SELECT 1 FROM public.elternkontakte WHERE email = NEW.email AND benutzer_id IS NULL) THEN
-      v_ist_eltern := true;
-      IF NOT ('eltern' = ANY(v_rollen)) THEN
-        v_rollen := array_append(v_rollen, 'eltern');
-      END IF;
-      UPDATE public.elternkontakte
-        SET benutzer_id = NEW.id
-        WHERE email = NEW.email AND benutzer_id IS NULL;
-    END IF;
-  EXCEPTION WHEN OTHERS THEN
-    NULL;
-  END;
-
-  -- Fallback: wenn keine Rolle gefunden
-  IF array_length(v_rollen, 1) IS NULL THEN
-    v_rollen := ARRAY['spieler'];
-  END IF;
-
-  BEGIN
-    INSERT INTO public.benutzer (id, email, name, role, rollen, active)
-    VALUES (NEW.id, NEW.email, v_name, v_rollen[1], v_rollen, true)
-    ON CONFLICT (id) DO NOTHING;
-  EXCEPTION WHEN OTHERS THEN
-    NULL;
-  END;
 
   RETURN NEW;
 END;
@@ -836,6 +808,37 @@ COMMENT ON COLUMN "public"."mitglieder"."rolle" IS 'Veraltet – wird durch funk
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."mitglieder_aenderungen" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "mitglied_id" bigint NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "feld" "text" NOT NULL,
+    "alter_wert" "text",
+    "neuer_wert" "text",
+    "geaendert_von" "text",
+    "geaendert_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."mitglieder_aenderungen" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."mitglieder_aktivitaeten" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "mitglied_id" bigint NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "typ" "text" NOT NULL,
+    "beschreibung" "text" NOT NULL,
+    "feld" "text",
+    "wert" "text",
+    "geaendert_von" "text",
+    "geaendert_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."mitglieder_aktivitaeten" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."mitglieder_ansichten" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "verein_id" "uuid",
@@ -846,7 +849,11 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder_ansichten" (
     "gruppierung" "jsonb" DEFAULT '["none"]'::"jsonb",
     "ist_standard" boolean DEFAULT false,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "zeilenreihenfolge" "jsonb" DEFAULT '{}'::"jsonb",
+    "typ" "text" DEFAULT 'mitglieder'::"text",
+    "geteilt" boolean DEFAULT false,
+    "gruppenreihenfolge" "jsonb" DEFAULT '{}'::"jsonb"
 );
 
 
@@ -1880,6 +1887,16 @@ ALTER TABLE ONLY "public"."medien"
 
 
 
+ALTER TABLE ONLY "public"."mitglieder_aenderungen"
+    ADD CONSTRAINT "mitglieder_aenderungen_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."mitglieder_aktivitaeten"
+    ADD CONSTRAINT "mitglieder_aktivitaeten_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."mitglieder_ansichten"
     ADD CONSTRAINT "mitglieder_ansichten_pkey" PRIMARY KEY ("id");
 
@@ -2352,6 +2369,14 @@ CREATE INDEX "idx_trainings_verein" ON "public"."trainings" USING "btree" ("vere
 
 
 
+CREATE INDEX "mitglieder_aenderungen_mitglied_idx" ON "public"."mitglieder_aenderungen" USING "btree" ("mitglied_id", "geaendert_at" DESC);
+
+
+
+CREATE INDEX "mitglieder_aktivitaeten_mitglied_idx" ON "public"."mitglieder_aktivitaeten" USING "btree" ("mitglied_id", "geaendert_at" DESC);
+
+
+
 CREATE OR REPLACE TRIGGER "mc_updated_at" BEFORE UPDATE ON "public"."module_config" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
 
 
@@ -2702,6 +2727,26 @@ ALTER TABLE ONLY "public"."medien"
 
 ALTER TABLE ONLY "public"."medien"
     ADD CONSTRAINT "medien_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."mitglieder_aenderungen"
+    ADD CONSTRAINT "mitglieder_aenderungen_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."mitglieder_aenderungen"
+    ADD CONSTRAINT "mitglieder_aenderungen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."mitglieder_aktivitaeten"
+    ADD CONSTRAINT "mitglieder_aktivitaeten_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."mitglieder_aktivitaeten"
+    ADD CONSTRAINT "mitglieder_aktivitaeten_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id") ON DELETE CASCADE;
 
 
 
@@ -3142,6 +3187,14 @@ CREATE POLICY "abstimmungen_write" ON "public"."abstimmungen" USING ((("verein_i
 
 
 
+CREATE POLICY "admin_all" ON "public"."mitglieder_aenderungen" TO "authenticated" USING (("public"."is_admin"() OR (( SELECT "public"."get_my_verein_id"() AS "get_my_verein_id") = "verein_id"))) WITH CHECK ((( SELECT "public"."get_my_verein_id"() AS "get_my_verein_id") = "verein_id"));
+
+
+
+CREATE POLICY "admin_all" ON "public"."mitglieder_aktivitaeten" TO "authenticated" USING (("public"."is_admin"() OR (( SELECT "public"."get_my_verein_id"() AS "get_my_verein_id") = "verein_id"))) WITH CHECK ((( SELECT "public"."get_my_verein_id"() AS "get_my_verein_id") = "verein_id"));
+
+
+
 CREATE POLICY "ansichten_select" ON "public"."mitglieder_ansichten" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND (("benutzer_id" = "auth"."uid"()) OR ("ist_standard" = true) OR "public"."is_admin"())));
 
 
@@ -3294,6 +3347,10 @@ ALTER TABLE "public"."elternkontakte" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "elternkontakte_select" ON "public"."elternkontakte" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND ("public"."is_admin"() OR ("benutzer_id" = "auth"."uid"()) OR ("public"."get_my_role"() = ANY (ARRAY['trainer'::"text", 'funktionaer'::"text"])))));
+
+
+
+CREATE POLICY "elternkontakte_verein" ON "public"."elternkontakte" USING (("verein_id" = "public"."get_my_verein_id"()));
 
 
 
@@ -3456,6 +3513,12 @@ CREATE POLICY "medien_write" ON "public"."medien" USING ((("verein_id" = "public
 
 
 ALTER TABLE "public"."mitglieder" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."mitglieder_aenderungen" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."mitglieder_aktivitaeten" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mitglieder_ansichten" ENABLE ROW LEVEL SECURITY;
@@ -4367,6 +4430,18 @@ GRANT ALL ON TABLE "public"."medien" TO "service_role";
 GRANT ALL ON TABLE "public"."mitglieder" TO "anon";
 GRANT ALL ON TABLE "public"."mitglieder" TO "authenticated";
 GRANT ALL ON TABLE "public"."mitglieder" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."mitglieder_aenderungen" TO "anon";
+GRANT ALL ON TABLE "public"."mitglieder_aenderungen" TO "authenticated";
+GRANT ALL ON TABLE "public"."mitglieder_aenderungen" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."mitglieder_aktivitaeten" TO "anon";
+GRANT ALL ON TABLE "public"."mitglieder_aktivitaeten" TO "authenticated";
+GRANT ALL ON TABLE "public"."mitglieder_aktivitaeten" TO "service_role";
 
 
 
