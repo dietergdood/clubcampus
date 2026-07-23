@@ -3,7 +3,7 @@
    Elternkontakte-Tab im Mitglied-Detail
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm } from "../../../theme.jsx";
+import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte, logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../../domains/members/memberService.js";
 
@@ -176,9 +176,8 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
                 {k:"nachname",  l:"Nachname"},
                 {k:"beziehung", l:"Beziehung", opts:["Mutter","Vater","Elternteil","Grossmutter","Grossvater","Vormund"]},
                 {k:"email",     l:"E-Mail",    type:"email"},
-                {k:"telefon",   l:"Telefon",   type:"tel"},
               ].map(({k,l,type="text",opts})=>(
-                <div key={k} className={k==="email"||k==="telefon"?"cc-form-full":""}>
+                <div key={k} className={k==="email"?"cc-form-full":""}>
                   <label className="cc-label">{l}</label>
                   {opts
                     ?<select className="cc-input" value={editEltern.data[k]||""} onChange={ev=>setEditEltern(p=>({...p,data:{...p.data,[k]:ev.target.value}}))}>\n                      <option value="">– wählen –</option>
