@@ -589,6 +589,12 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-phone-dd-item-active{background:var(--cc-hover,rgba(254,198,4,0.1));font-weight:500}
 .cc-phone-dd-name{flex:1}
 .cc-phone-dd-code{color:var(--sub);font-size:12px}
+.cc-addr-suggestion{display:flex;flex-direction:column;gap:1px;padding:8px 12px;cursor:pointer;border-bottom:0.5px solid var(--border);font-size:13px;color:var(--text)}
+.cc-addr-suggestion:hover{background:var(--surface2)}
+.cc-addr-suggestion:last-child{border-bottom:none}
+.cc-addr-suggestion-main{font-weight:500}
+.cc-addr-suggestion-sub{font-size:11px;color:var(--sub)}
+.cc-addr-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto}
 .cc-phone-sep{height:0.5px;background:var(--border);margin:2px 0}
 .cc-inline-save-btn{padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:var(--text);color:var(--bg);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500}
 .cc-inline-save-btn:hover{opacity:0.85}
@@ -2488,6 +2494,13 @@ export const COMPONENT_REGISTRY = [
     props: ["funktionen[]", "selected[]", "onChange"],
   },
   {
+    name: "useAddrSearch",
+    desc: "Hook: Adress-Autocomplete via swisstopo API. Gibt Vorschläge für Strasse+PLZ+Ort zurück.",
+    category: "Formulare",
+    usedIn: ["PersonKontakt", "NeuesMitgliedModal"],
+    props: ["strasse", "plz"],
+  },
+  {
     name: "PhoneInput",
     desc: "Telefonnummer-Eingabe mit Ländervorwahl-Dropdown, automatischer Formatierung und Validierung.",
     category: "Formulare",
@@ -2744,6 +2757,64 @@ function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHint=true,
   );
 }
 
+
+/* ── AddressInput: Adress-Autocomplete via swisstopo ── */
+function useAddrSearch(strasse, plz){
+  const [suggestions,setSuggestions]=useState([]);
+  const timerRef=useRef(null);
+
+  useEffect(()=>{
+    const q=(strasse||"").trim();
+    if(q.length<3){setSuggestions([]);return;}
+    clearTimeout(timerRef.current);
+    timerRef.current=setTimeout(async()=>{
+      try{
+        const query=plz?`${q} ${plz}`:q;
+        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${encodeURIComponent(query)}&limit=6&lang=de&sr=4326&origins=address`;
+        const res=await fetch(url);
+        const json=await res.json();
+        const results=(json.results||[]).map(r=>{
+          const a=r.attrs;
+          const strNr=(a.label||"").replace(/<[^>]+>/g,"");
+          const plzOrt=a.detail||"";
+          const parts=plzOrt.trim().split(" ");
+          const plzVal=parts.find(p=>/^\d{4}$/.test(p))||"";
+          const ortVal=parts.filter(p=>!/^\d{4}$/.test(p)).join(" ");
+          return {label:strNr,strasse:strNr.replace(/\s+\d+$/, "").trim(),hausnr:strNr.match(/\d+$/)?.[0]||"",plz:plzVal,ort:ortVal,raw:a};
+        });
+        setSuggestions(results);
+      }catch(e){setSuggestions([]);}
+    },300);
+    return()=>clearTimeout(timerRef.current);
+  },[strasse,plz]);
+
+  return suggestions;
+}
+
+function usePlzLookup(plz, onResult){
+  const timerRef=useRef(null);
+  useEffect(()=>{
+    const q=(plz||"").trim();
+    if(!/^\d{4}$/.test(q)) return;
+    clearTimeout(timerRef.current);
+    timerRef.current=setTimeout(async()=>{
+      try{
+        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${q}&limit=3&lang=de&sr=4326&origins=zipcode`;
+        const res=await fetch(url);
+        const json=await res.json();
+        const r=json.results?.[0];
+        if(!r) return;
+        const detail=r.attrs.detail||"";
+        const parts=detail.trim().split(" ");
+        const ortVal=parts.filter(p=>!/^\d{4}$/.test(p)).join(" ");
+        const kantonVal=r.attrs.geom_st_box2d?.match(/canton=([A-Z]{2})/)?.[1]||"";
+        if(ortVal) onResult({ort:ortVal,kanton:kantonVal||null});
+      }catch(e){}
+    },400);
+    return()=>clearTimeout(timerRef.current);
+  },[plz]);
+}
+
 /* ── InlineField: Klickbares Feld mit Inline-Editing ── */
 function InlineField({ label, value, field, type="text", opts=null, canEdit=false, editing, editVal, setEditVal, startEdit, saveEdit, cancelEdit, handleKey, feedback, saving }){
   const isEditing = editing === field;
@@ -2822,4 +2893,4 @@ function DpBadge({val}){
   return <span className="cc-dp-status cc-dp-status-err"><span className="cc-dp-dot"/> {val||"Unbekannt"}</span>;
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge, EmptyState, InlineField, PhoneInput };
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge, EmptyState, InlineField, PhoneInput, useAddrSearch, usePlzLookup };

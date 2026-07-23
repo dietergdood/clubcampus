@@ -3,7 +3,8 @@
    Kontakt-Card mit Inline Editing
    Props: raw, fv, canEdit, sb, onReload, eltern, brauchtEltern, setTab
    ═══════════════════════════════════════════════════════════════ */
-import { Av, Card, InlineField } from "../../theme.jsx";
+import { useState, useRef, useEffect } from "react";
+import { Av, Card, InlineField, useAddrSearch, usePlzLookup } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { useInlineEdit } from "../../domains/members/useInlineEdit.js";
 
@@ -26,12 +27,7 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
       <div className="cc-info-grid">
         {fv.showEmail   && <InlineField label="E-Mail"  field="email"   value={raw.email||null}   type="email" {...ieProps}/>}
         {fv.showTelefon && <InlineField label="Telefon" field="telefon" value={raw.telefon||null} type="phone" {...ieProps}/>}
-        {fv.showAdresse && <>
-          <InlineField label="Strasse" field="strasse" value={raw.strasse||null} {...ieProps}/>
-          <InlineField label="PLZ"     field="plz"     value={raw.plz||null}     {...ieProps}/>
-          <InlineField label="Ort"     field="ort"     value={raw.ort||null}     {...ieProps}/>
-          <InlineField label="Kanton"  field="kanton"  value={raw.kanton||null}  opts={KANTON_OPTS} {...ieProps} startEdit={()=>ie.startEdit("kanton",raw.kanton||"")} saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
-        </>}
+        {fv.showAdresse && <AdressFelder raw={raw} ie={ie} ieProps={ieProps} KANTON_OPTS={KANTON_OPTS}/>}
       </div>
 
       {/* Hauptkontakt Mini-Karte */}
@@ -66,6 +62,91 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
         </>
       )}
     </Card>
+  );
+}
+
+function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
+  const [strasseInput, setStrasseInput] = useState(raw.strasse||"");
+  const [plzInput, setPlzInput] = useState(raw.plz||"");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const wrapRef = useRef(null);
+  const suggestions = useAddrSearch(strasseInput, plzInput);
+
+  usePlzLookup(plzInput, ({ort, kanton})=>{
+    if(ort && !ie.editing) {
+      ie.saveEdit("ort", ort);
+      if(kanton) ie.saveEdit("kanton", kanton);
+    }
+  });
+
+  useEffect(()=>{
+    const h=e=>{if(wrapRef.current&&!wrapRef.current.contains(e.target)) setShowSuggestions(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+
+  function applySuggestion(s){
+    setStrasseInput(s.label);
+    setPlzInput(s.plz);
+    setShowSuggestions(false);
+    ie.saveEdit("strasse", s.label);
+    if(s.plz) ie.saveEdit("plz", s.plz);
+    if(s.ort) ie.saveEdit("ort", s.ort);
+  }
+
+  return(
+    <>
+      <div className="cc-info-row cc-relative" ref={wrapRef}>
+        <span className="cc-info-key">Strasse</span>
+        {ieProps.editing==="strasse"?(
+          <div style={{flex:1,position:"relative"}}>
+            <input className="cc-inline-input" value={strasseInput} autoFocus
+              onChange={e=>{setStrasseInput(e.target.value);ieProps.setEditVal(e.target.value);setShowSuggestions(true);}}
+              onKeyDown={e=>{if(e.key==="Enter"){ieProps.saveEdit("strasse",strasseInput);setShowSuggestions(false);}if(e.key==="Escape"){ieProps.cancelEdit();setShowSuggestions(false);}}}
+              onBlur={()=>{setTimeout(()=>setShowSuggestions(false),150);}}
+            />
+            {showSuggestions&&suggestions.length>0&&(
+              <div className="cc-addr-dropdown">
+                {suggestions.map((s,i)=>(
+                  <div key={i} className="cc-addr-suggestion" onMouseDown={()=>applySuggestion(s)}>
+                    <span className="cc-addr-suggestion-main">{s.label}</span>
+                    {s.plz&&<span className="cc-addr-suggestion-sub">{s.plz} {s.ort}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="cc-inline-hint">Enter speichern · Esc abbrechen</div>
+          </div>
+        ):(
+          <span className={`cc-inline-field ${raw.strasse?"cc-info-val":"cc-info-val-empty"}`}
+            onClick={()=>{setStrasseInput(raw.strasse||"");ieProps.startEdit("strasse",raw.strasse||"");setShowSuggestions(true);}}>
+            {raw.strasse||<span className="cc-inline-empty">nicht erfasst</span>}
+            <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+          </span>
+        )}
+      </div>
+      <div className="cc-info-row">
+        <span className="cc-info-key">PLZ</span>
+        {ieProps.editing==="plz"?(
+          <div style={{flex:1}}>
+            <input className="cc-inline-input" value={plzInput} autoFocus maxLength={4}
+              onChange={e=>{setPlzInput(e.target.value);ieProps.setEditVal(e.target.value);}}
+              onKeyDown={e=>{if(e.key==="Enter"){ieProps.saveEdit("plz",plzInput);}if(e.key==="Escape")ieProps.cancelEdit();}}
+              onBlur={()=>ieProps.saveEdit("plz",plzInput)}
+            />
+            <div className="cc-inline-hint">Enter speichern · Esc abbrechen</div>
+          </div>
+        ):(
+          <span className={`cc-inline-field ${raw.plz?"cc-info-val":"cc-info-val-empty"}`}
+            onClick={()=>{setPlzInput(raw.plz||"");ieProps.startEdit("plz",raw.plz||"");}}>
+            {raw.plz||<span className="cc-inline-empty">nicht erfasst</span>}
+            <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+          </span>
+        )}
+      </div>
+      <InlineField label="Ort"    field="ort"    value={raw.ort||null}    {...ieProps}/>
+      <InlineField label="Kanton" field="kanton" value={raw.kanton||null} opts={KANTON_OPTS} {...ieProps} startEdit={()=>ie.startEdit("kanton",raw.kanton||"")} saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
+    </>
   );
 }
 

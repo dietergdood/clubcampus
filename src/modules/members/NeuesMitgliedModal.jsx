@@ -11,8 +11,8 @@
      Aktivtypen:  geburtsdatum*, geschlecht*, strasse*, plz*, ort*, telefon*, email, portalrolle
      Passivtypen: geburtsdatum*, geschlecht*, strasse*, plz*, ort*, telefon*
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect } from "react";
-import { Btn, ModalOrSheet, PhoneInput } from "../../theme.jsx";
+import { useState, useEffect, useRef } from "react";
+import { Btn, ModalOrSheet, PhoneInput, useAddrSearch, usePlzLookup } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.js";
 
@@ -34,6 +34,72 @@ const GESCHLECHT_OPTS = [
   { v: "w", l: "Weiblich" },
   { v: "d", l: "Divers" },
 ];
+
+const KANTON_OPTS_M = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"];
+
+function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,pflichtStrasse,pflichtPlz,pflichtOrt}){
+  const [showSug,setShowSug]=useState(false);
+  const wrapRef=useRef(null);
+  const suggestions=useAddrSearch(strasse,plz);
+
+  usePlzLookup(plz,({ort:o,kanton:k})=>{
+    if(o) onOrt(o);
+    if(k) onKanton(k);
+  });
+
+  useEffect(()=>{
+    const h=e=>{if(wrapRef.current&&!wrapRef.current.contains(e.target)) setShowSug(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+
+  function apply(s){
+    onStrasse(s.label);
+    if(s.plz) onPlz(s.plz);
+    if(s.ort) onOrt(s.ort);
+    setShowSug(false);
+  }
+
+  return(
+    <>
+      <div className="cc-form-full cc-relative" ref={wrapRef}>
+        <label className="cc-label">Strasse {pflichtStrasse&&<span className="cc-label-req">*</span>}</label>
+        <input className="cc-input" type="text" value={strasse}
+          onChange={e=>{onStrasse(e.target.value);setShowSug(true);}}
+          onFocus={()=>setShowSug(true)}
+          onBlur={()=>setTimeout(()=>setShowSug(false),150)}
+          placeholder="Seestrasse 1"/>
+        {showSug&&suggestions.length>0&&(
+          <div className="cc-addr-dropdown">
+            {suggestions.map((s,i)=>(
+              <div key={i} className="cc-addr-suggestion" onMouseDown={()=>apply(s)}>
+                <span className="cc-addr-suggestion-main">{s.label}</span>
+                {s.plz&&<span className="cc-addr-suggestion-sub">{s.plz} {s.ort}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <label className="cc-label">PLZ {pflichtPlz&&<span className="cc-label-req">*</span>}</label>
+        <input className="cc-input" type="text" value={plz} maxLength={4}
+          onChange={e=>onPlz(e.target.value)} placeholder="8704"/>
+      </div>
+      <div>
+        <label className="cc-label">Ort {pflichtOrt&&<span className="cc-label-req">*</span>}</label>
+        <input className="cc-input" type="text" value={ort}
+          onChange={e=>onOrt(e.target.value)} placeholder="Herrliberg"/>
+      </div>
+      <div>
+        <label className="cc-label">Kanton</label>
+        <select className="cc-input" value={kanton} onChange={e=>onKanton(e.target.value)}>
+          <option value="">— wählen —</option>
+          {KANTON_OPTS_M.map(k=><option key={k} value={k}>{k}</option>)}
+        </select>
+      </div>
+    </>
+  );
+}
 
 export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPortalRollen, dbPflichtfelder=[], vereinId, onSuccess, account=null }) {
   const [form, setForm] = useState({ mitgliedtyp: "" });
@@ -178,22 +244,21 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             </>)}
 
             {/* Adresse */}
-            {istPflicht("strasse") && (
-              <div className="cc-form-full">
-                <label className="cc-label">Strasse <span className="cc-label-req">*</span></label>
-                <input className="cc-input" type="text" value={form.strasse||""} onChange={e=>set("strasse",e.target.value)} placeholder="Seestrasse 1"/>
-              </div>
+            {(istPflicht("strasse")||istPflicht("plz")||istPflicht("ort")) && (
+              <AdresseFormular
+                strasse={form.strasse||""}
+                plz={form.plz||""}
+                ort={form.ort||""}
+                kanton={form.kanton||""}
+                onStrasse={v=>set("strasse",v)}
+                onPlz={v=>set("plz",v)}
+                onOrt={v=>set("ort",v)}
+                onKanton={v=>set("kanton",v)}
+                pflichtStrasse={istPflicht("strasse")}
+                pflichtPlz={istPflicht("plz")}
+                pflichtOrt={istPflicht("ort")}
+              />
             )}
-            {(istPflicht("plz")||istPflicht("ort")) && (<>
-              <div>
-                <label className="cc-label">PLZ {istPflicht("plz")&&<span className="cc-label-req">*</span>}</label>
-                <input className="cc-input" type="text" value={form.plz||""} onChange={e=>set("plz",e.target.value)} placeholder="8704"/>
-              </div>
-              <div>
-                <label className="cc-label">Ort {istPflicht("ort")&&<span className="cc-label-req">*</span>}</label>
-                <input className="cc-input" type="text" value={form.ort||""} onChange={e=>set("ort",e.target.value)} placeholder="Herrliberg"/>
-              </div>
-            </>)}
 
             {/* Telefon */}
             {istPflicht("telefon") && (
