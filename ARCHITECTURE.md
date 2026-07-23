@@ -456,3 +456,46 @@ await sb.from("neue_tabelle").insert({
 | Veranstaltungen | alle im Verein | admin/trainer/funktionaer |
 | Audit/Log | nur is_admin() | System (kein Check) |
 
+
+## Bewertungs-Prompt
+
+Folgenden Prompt am Anfang einer Session einfügen um ein Modul oder das Gesamtprodukt zu bewerten:
+
+```
+Bewerte [MODUL / Gesamtprodukt] von ClubCampus anhand des folgenden Rahmens.
+Gib für jeden Bereich eine Punktzahl von 0–10 und berechne die gewichtete Gesamtpunktzahl.
+Prüfe zusätzlich die Ausschlusskriterien — ein Treffer begrenzt die Gesamtbewertung unabhängig vom Resultat.
+
+Bewertungsbereiche (Gewichtung × Punktzahl ÷ 10 = Beitrag):
+1.  Produktnutzen & Problemlösung         10% — Löst es echte Vereinsprobleme besser als Excel/WhatsApp/Fairgate?
+2.  Zielgruppen- & Rollenfit               6% — Passt es für Admin, Trainer, Spieler, Eltern, Funktionär, Mehrfachrollen?
+3.  Informationsarchitektur & Navigation   7% — Findet der Benutzer schnell was er sucht? Max. 3 Klicks zu Kernfunktionen.
+4.  Usability & Arbeitsabläufe            12% — ★ KRITISCH — Kann der Benutzer ohne Erklärung seine Aufgabe erledigen?
+5.  Visuelles Design & Markenqualität      7% — Konsistenz, Hierarchie, Mandanten-Branding ohne Farbmischmasch.
+6.  Mobile & Barrierefreiheit              7% — PWA, einhändig bedienbar, Kontrast, Fokuszustände.
+7.  Funktionale Qualität & Vollständigkeit 10% — Module vollständig durchdacht und untereinander verknüpft?
+8.  Rollen, Berechtigungen & Mandanten     9% — ★ KRITISCH — Min. 8/10 für Marktreife. verein_id, RLS, Datentrennung.
+9.  Datenqualität & Integrationen          7% — Fairgate, SFV, Kalender, Export. Klare Datenhoheit.
+10. Datenschutz & Informationssicherheit   8% — ★ KRITISCH — Min. 8/10. DSGVO, nDSG, RLS, Secrets, Audit-Log.
+11. Performance & Stabilität               6% — <0.2s Reaktion, <2s Seitenlade, <5s komplexe Auswertung.
+12. Administration & Skalierbarkeit        5% — Mandant-Setup ohne Code, Betrieb, Migration, Rollback.
+13. Onboarding & Akzeptanz                 3% — Erster Login verständlich, ohne Schulung nutzbar.
+14. Marktfähigkeit & Geschäftsmodell       3% — SaaS-Reife, USP vs. Fairgate/ClubDesk, Positionierung.
+
+Ausschlusskriterien (bei Treffer: Gesamtbewertung max. 60%, unabhängig vom Resultat):
+- Benutzer kann Daten anderer Vereine sehen
+- RLS oder Zugriffskontrollen unvollständig
+- Kernprozesse auf Smartphone nicht nutzbar
+- Trainer/Eltern können fremde Mitgliederdaten abrufen
+- Daten können ohne Wiederherstellung verloren gehen
+- Neuer Verein nur durch Codeanpassungen einrichtbar
+- Sensible Daten in URLs, Logs oder frei zugänglichen Dateien
+
+Zielwerte:
+- ≥ 75% → stabiler FCH-Einsatz
+- ≥ 82% → externe Pilotvereine
+- ≥ 88% → professioneller Marktstart
+
+Detailgrad: [Kurzfassung / Standard / Ausführlich mit Verbesserungsvorschlägen]
+Fokus: [optional]
+```
