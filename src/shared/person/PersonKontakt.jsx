@@ -42,7 +42,7 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
                 ? <a href={`mailto:${raw.email}`} className="cc-contact-link">{raw.email}</a>
                 : <span className="cc-info-val-empty">—</span>}
             </div>
-        )}}
+        )}
         {fv.showTelefon && (editMode
           ? <InlineField label="Telefon" field="telefon" value={raw.telefon||null} type="phone" {...ieProps}/>
           : <div className="cc-info-row">
@@ -51,7 +51,7 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
                 ? <a href={`tel:${raw.telefon}`} className="cc-contact-link-muted">{raw.telefon}</a>
                 : <span className="cc-info-val-empty">—</span>}
             </div>
-        )}}
+        )}
         {fv.showAdresse && <AdressFelder raw={raw} ie={ie} ieProps={ieProps} KANTON_OPTS={KANTON_OPTS}/>}
       </div>
 

@@ -2777,12 +2777,15 @@ function useAddrSearch(strasse, plz){
         const json=await res.json();
         const results=(json.results||[]).map(r=>{
           const a=r.attrs;
-          const strNr=(a.label||"").replace(/<[^>]+>/g,"");
-          const plzOrt=a.detail||"";
-          const parts=plzOrt.trim().split(" ");
-          const plzVal=parts.find(p=>/^\d{4}$/.test(p))||"";
-          const ortVal=parts.filter(p=>!/^\d{4}$/.test(p)).join(" ");
-          return {label:strNr,strasse:strNr.replace(/\s+\d+$/, "").trim(),hausnr:strNr.match(/\d+$/)?.[0]||"",plz:plzVal,ort:ortVal,raw:a};
+          const strNr=(a.label||"").replace(/<[^>]+>/g,"").trim();
+          const detail=(a.detail||"").trim();
+          // detail: "kirchgasse 2 8706 meilen ch zh" → PLZ 4-stellig extrahieren
+          const plzVal=detail.match(/\b(\d{4})\b/)?.[1]||"";
+          // Ort: Wörter nach PLZ, vor Kürzel "ch" und Kantonskürzel
+          const afterPlz=plzVal?detail.slice(detail.indexOf(plzVal)+4).trim():"";
+          const ortParts=afterPlz.split(" ").filter(p=>p&&!/^(ch|ag|ai|ar|be|bl|bs|fr|ge|gl|gr|ju|lu|ne|nw|ow|sg|sh|so|sz|tg|ti|ur|vd|vs|zg|zh)$/i.test(p));
+          const ortVal=ortParts.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
+          return {label:strNr,strasse:strNr,plz:plzVal,ort:ortVal,raw:a};
         });
         setSuggestions(results);
       }catch(e){setSuggestions([]);}
@@ -2806,10 +2809,14 @@ function usePlzLookup(plz, onResult){
         const json=await res.json();
         const r=json.results?.[0];
         if(!r) return;
-        const detail=r.attrs.detail||"";
-        const parts=detail.trim().split(" ");
-        const ortVal=parts.filter(p=>!/^\d{4}$/.test(p)).join(" ");
-        const kantonVal=r.attrs.geom_st_box2d?.match(/canton=([A-Z]{2})/)?.[1]||"";
+        // label enthält z.B. "8706 - Meilen" — sauberer als detail
+        const label=(r.attrs.label||"").replace(/<[^>]+>/g,"").trim();
+        const labelMatch=label.match(/^\d{4}\s*[-–]?\s*(.+)$/);
+        const ortVal=labelMatch?labelMatch[1].trim():"";
+        // Kanton aus attrs.detail: z.B. "8706 meilen ch zh"
+        const detail=(r.attrs.detail||"").toLowerCase();
+        const kantonMatch=detail.match(/\b(ag|ai|ar|be|bl|bs|fr|ge|gl|gr|ju|lu|ne|nw|ow|sg|sh|so|sz|tg|ti|ur|vd|vs|zg|zh)\b/g);
+        const kantonVal=kantonMatch?kantonMatch[kantonMatch.length-1].toUpperCase():"";
         if(ortVal) onResult({ort:ortVal,kanton:kantonVal||null});
       }catch(e){}
     },400);
