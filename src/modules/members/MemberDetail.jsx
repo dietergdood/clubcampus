@@ -96,6 +96,12 @@ function MemberDetail({
   }, [raw.id]);
 
   /* ── Aktionen ── */
+  /* ── Portal-Zugang Logik ─────────────────────────────────────
+     ableitRolle: leitet Portalrolle aus Kaderrolle/Mitgliedtyp ab
+     handleLink:  verknüpft Mitglied mit bestehendem Benutzer via E-Mail
+     handleUnlink: deaktiviert Portalzugang (Benutzer bleibt erhalten)
+     handleReactivate: reaktiviert deaktivierten Portalzugang
+  ── */
   async function ableitRolle() {
     if (!sb || !raw.id) return;
     const neueRolle = await ableitUndSaveRolle(sb, raw.id, dbKaderRollen, raw.mitgliedtyp, raw.funktionen);

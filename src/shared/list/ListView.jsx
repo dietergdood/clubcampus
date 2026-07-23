@@ -351,6 +351,12 @@ export function ListView({
   ];
 
   // ── Gruppen Tabelle rendern ───────────────────────────────────
+  // Rekursiv — wird für jede Gruppierungsebene aufgerufen.
+  // depth: aktuelle Tiefe (0 = erste Ebene, 1 = zweite Ebene etc.)
+  // parentCtx: Gruppenkontext der übergeordneten Ebene
+  //   → bei Team→Kaderrolle Gruppierung bekommt renderCell den Team-Kontext
+  //   → effectiveCtx: bei kaderrolle/funktion den Parent-Kontext weitergeben
+  //     damit renderCell weiss in welchem Team die Kaderrolle liegt
   function renderGroupsTable(groups, depth = 0, levelKey = null, parentCtx = {type:"none",key:null}) {
     const currentLevelKey = levelKey || (Array.isArray(groupBy) ? groupBy[depth] : groupBy) || "none";
     return groups.map(({ key, label, type, members, children }) => {

@@ -21,8 +21,11 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
   function renderCell(col,m,groupContext={type:"none",key:null},filterVals={}){
     const gc=groupContext;
     switch(col.key){
+      // Avatar + Name + Klick öffnet Mitglied-Detail
       case "name": return <td key="name" className="cc-members-td"><div className="cc-row cc-gap-8">{m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-sm cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}/>:<span className="cc-clickable" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}><Av name={m.name||"?"} size={26}/></span>}<span className="cc-text-bold cc-members-name-link" onClick={e=>{e.stopPropagation();setSelectedMember({...m,_tab:"info"});}}>{m.name}</span></div></td>;
+      // Mitgliedschaftstyp (Aktivmitglied, Juniormitglied etc.)
       case "mitgliedschaft": return <td key="mitgliedschaft" className="cc-members-td cc-members-td-mitglied">{m.mitgliedschaft||"—"}</td>;
+      // Portalrolle als farbiger Chip (Admin=Slate, Trainer=Orange etc.)
       case "rollen": {
         const portalRaw=m.role&&m.role!=="-"?m.role:null;
         const portalLabel=portalRaw?(ROLLE_LABEL[portalRaw]||portalRaw):null;
@@ -38,12 +41,15 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
             :<span className="cc-members-td-sub">—</span>}
         </td>;
       }
+      // Teams als Chips — bei gc.type="gruppe" leer (Teams sind nicht relevant)
       case "teams": {
         if(gc.type==="gruppe") return <td key="teams" className="cc-members-td cc-members-td-sub">—</td>;
         const teamsToShow=gc.type==="team"?(m.teams||[]).filter(t=>(t?.name||t)===gc.key):(m.teams||[]);
         return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{teamsToShow.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{teamsToShow.slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{teamsToShow.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:teamsToShow,x:e.clientX,y:e.clientY});}}>+{teamsToShow.length-1}</button>}</span>):"—"}</td>;
       }
+      // Datenprüfungs-Status Badge
       case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
+      // Portal-Zugang Status Badge
       case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
       case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
       case "telefon": return <td key="telefon" className="cc-members-td cc-members-td-sub">{m.telefon||"—"}</td>;
@@ -62,6 +68,10 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       case "heimatort": return <td key="heimatort" className="cc-members-td cc-members-td-sub">{m.heimatort||"—"}</td>;
       case "ahv_nr": return <td key="ahv_nr" className="cc-members-td cc-members-td-sub">{m.ahv_nr||"—"}</td>;
       case "strasse": return <td key="strasse" className="cc-members-td cc-members-td-sub">{m.strasse||"—"}</td>;
+      // Teams & Kaderrollen — kontextsensitiv:
+      // - gc.type="kaderrolle": nur Einträge mit dieser Rolle
+      // - gc.type="team": nur Einträge dieses Teams
+      // - gc.subType="kaderrolle": Team+Kaderrolle Mehrfachgruppierung
       case "teams_rollen": {
         if(gc.type==="gruppe") return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
         const teamsFilter=filterVals["teams"]||[];
@@ -125,6 +135,9 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
           </div>
         </td>;
       }
+      // Vereinsfunktionen mit Gruppe — kontextsensitiv:
+      // - gc.type="team": leer (Funktionen sind nicht team-spezifisch)
+      // - gc.type="gruppe": nur Funktionen dieser Gruppe
       case "funktionen_gruppen": {
         if(gc.type==="team") return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
         const gruppenFilter=filterVals["funktionsgruppen"]||[];
@@ -163,6 +176,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
           </div>
         </td>;
       }
+      // Vereinsfunktionen — bei gc.type="team" leer
       case "funktionen": {
         if(gc.type==="team") return <td key="funktionen" className="cc-members-td cc-members-td-sub">—</td>;
         const gruppenFilter=filterVals["funktionsgruppen"]||[];
@@ -171,6 +185,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
           :(gruppenFilter.length>0?(m.funktionen||[]).filter(f=>{const pf=portalFunktionen.find(x=>x.name===f);return gruppenFilter.includes(pf?.portal_gruppen?.name);}):(m.funktionen||[]));
         return <td key="funktionen" className="cc-members-td cc-members-td-sub">{funktionenToShow.join(", ")||"—"}</td>;
       }
+      // Kaderrollen als Chips — Trainer-Rollen orange markiert
       case "kaderrollen": {
         if(gc.type==="gruppe") return <td key="kaderrollen" className="cc-members-td cc-members-td-sub">—</td>;
         const kaderFilter=filterVals["kaderrollen"]||[];
@@ -179,6 +194,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
           :(m.kader_rollen_raw||[]);
         return <td key="kaderrollen" className="cc-members-td">{rollenToShow.length===0?"—":rollenToShow.map((r,i)=>{const isT=TRAINER_KEYS.some(k=>k===r);return <span key={i} className={`cc-role-chip cc-role-chip-sm${isT?" cc-role-chip-trainer":""}`}>{r}</span>;})}</td>;
       }
+      // Funktionsgruppen als farbige Badges (Farbe aus Vereinskonfiguration)
       case "funktionsgruppen": {
         if(gc.type==="team") return <td key="funktionsgruppen" className="cc-members-td cc-members-td-sub">—</td>;
         const gruppenFilter=filterVals["funktionsgruppen"]||[];
