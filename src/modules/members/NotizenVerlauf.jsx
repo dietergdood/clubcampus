@@ -1,12 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/NotizenVerlauf.jsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
-import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
-         useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect,
-         Toolbar, ColMenuButton, SortHeader, useConfirm, ConfirmDialog } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../../constants.js";
+import { useState, useEffect } from "react";
+import { Btn, useConfirm, DropMenu } from "../../theme.jsx";
 import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.js";
 
 function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}){
