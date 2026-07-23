@@ -14,7 +14,7 @@
 import { useState, useEffect } from "react";
 import { Btn, ModalOrSheet } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { insertMitglied } from "../../domains/members/memberService.js";
+import { insertMitglied, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.js";
 
 const PASSIV_TYPEN = ["Passivmitglied", "Ehrenmitglied", "Gönner", "Freimitglied"];
 
@@ -35,7 +35,7 @@ const GESCHLECHT_OPTS = [
   { v: "d", l: "Divers" },
 ];
 
-export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPortalRollen, dbPflichtfelder=[], vereinId, onSuccess }) {
+export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPortalRollen, dbPflichtfelder=[], vereinId, onSuccess, account=null }) {
   const [form, setForm] = useState({ mitgliedtyp: "" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -99,6 +99,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     }, vereinId);
     setSaving(false);
     if (!id) { setMsg({ ok: false, text: "Fehler beim Speichern." }); return; }
+    // Aktivität "angelegt" loggen
+    const von = account?.name || account?.email || "Administrator";
+    logAktivitaet(sb, id, vereinId, AKTIVITAET_TYP.ANGELEGT, "Mitglied angelegt", null, null, von);
     setMsg({ ok: true, text: "Mitglied angelegt ✓" });
     setTimeout(() => {
       setForm({ mitgliedtyp: "" });

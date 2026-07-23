@@ -149,10 +149,15 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-empty-state-btn{margin-top:8px;font-size:12px;padding:6px 14px;border-radius:var(--cc-radius,8px);border:0.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
 .cc-empty-state-btn:hover{background:var(--surface)}
 .cc-verlauf-list{display:flex;flex-direction:column}
+.cc-verlauf-date-sep{display:flex;align-items:center;gap:10px;padding:10px 0 4px}
+.cc-verlauf-date-line{flex:1;height:0.5px;background:var(--border)}
+.cc-verlauf-date-label{font-size:11px;font-weight:500;color:var(--sub);white-space:nowrap}
 .cc-verlauf-item{padding:10px 0}
 .cc-verlauf-item-border{border-bottom:0.5px solid var(--border)}
 .cc-verlauf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
 .cc-verlauf-feld{font-size:13px;font-weight:500;color:var(--text)}
+.cc-verlauf-aktivitaet{font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px}
+.cc-verlauf-aktivitaet-icon{display:flex;align-items:center;color:var(--sub)}
 .cc-verlauf-meta{display:flex;align-items:center;gap:10px}
 .cc-verlauf-user{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:3px}
 .cc-verlauf-datum{font-size:11px;color:var(--sub)}

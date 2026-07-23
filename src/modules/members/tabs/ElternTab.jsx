@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
-import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte, logAenderung } from "../../../domains/members/memberService.js";
+import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte, logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../../domains/members/memberService.js";
 
 function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();
@@ -68,7 +68,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
         });
         if(error) throw error;
         const name=d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||"?";
-        if(vereinId) logAenderung(sb,raw.id,vereinId,"elternkontakte",null,name,geaendertVon);
+        if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,`Elternkontakt hinzugefügt: ${name}`,"elternkontakte",name,geaendertVon);
       } else {
         const alter=eltern.find(e=>e.id===d.id);
         const alterName=alter?`${alter.vorname||""} ${alter.nachname||""}`.trim():null;
@@ -80,7 +80,12 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
         });
         if(error) throw error;
         const neuerName=d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||"?";
-        if(vereinId&&alterName!==neuerName) logAenderung(sb,raw.id,vereinId,"elternkontakte",alterName,neuerName,geaendertVon);
+        if(vereinId) {
+          if(alterName&&neuerName&&alterName!==neuerName)
+            logAenderung(sb,raw.id,vereinId,"elternkontakte",alterName,neuerName,geaendertVon);
+          else if(alterName!==neuerName)
+            logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Elternkontakt bearbeitet: ${neuerName}`,"elternkontakte",neuerName,geaendertVon);
+        }
       }
       setElternMsg({ok:true,text:"Gespeichert ✓"});
       fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
@@ -94,7 +99,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
     const elternItem=eltern.find(e=>e.id===id);
     const name=elternItem?`${elternItem.vorname||""} ${elternItem.nachname||""}`.trim():null;
     await deleteElternkontakt(sb,id);
-    if(vereinId&&name) logAenderung(sb,raw.id,vereinId,"elternkontakte",name,null,geaendertVon);
+    if(vereinId&&name) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
     setElternLoaded(null);
     if(onReload) onReload();
   }

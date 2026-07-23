@@ -16,6 +16,8 @@ import {
   updateKader,
   deaktiviereKader,
   logAenderung,
+  logAktivitaet,
+  AKTIVITAET_TYP,
 } from "../../domains/members/memberService.js";
 
 function PersonTeams({
@@ -69,7 +71,7 @@ function PersonTeams({
       aktiv: true,
       saison: currentSeason(),
     });
-    if (vereinId) logAenderung(sb, raw.id, vereinId, "teams", null, teamName, account?.name||account?.email||"Administrator");
+    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     const data = await fetchKaderFuerMitglied(sb, raw.id);
     setTeamDetails(data);
     await ableitRolle();
@@ -85,7 +87,7 @@ function PersonTeams({
     const kader = teamDetails?.find(k => k.id === kaderId);
     const teamName = kader?.team?.name || kaderId;
     await deaktiviereKader(sb, kaderId);
-    if (vereinId) logAenderung(sb, raw.id, vereinId, "teams", teamName, null, account?.name||account?.email||"Administrator");
+    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     setTeamDetails(prev => prev.filter(k => k.id !== kaderId));
     await ableitRolle();
   }

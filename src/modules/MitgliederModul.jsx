@@ -190,6 +190,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         dbPortalRollen={dbPortalRollen}
         dbPflichtfelder={dbPflichtfelder}
         vereinId={vereinId}
+        account={account}
         onSuccess={()=>{ if(onReload) onReload(); }}
       />
     <div className="cc-page-wide">

@@ -20,6 +20,8 @@ vi.mock('../../../icons.jsx', () => ({
 
 vi.mock('../../../domains/members/memberService.js', () => ({
   insertMitglied: vi.fn().mockResolvedValue('new-id-123'),
+  logAktivitaet: vi.fn().mockResolvedValue(undefined),
+  AKTIVITAET_TYP: { ANGELEGT: "angelegt" },
 }));
 import { insertMitglied } from '../../../domains/members/memberService.js';
 

@@ -298,14 +298,35 @@ export const FELD_LABEL = {
 
 export async function logAenderung(sb, mitgliedId, vereinId, feld, alterWert, neuerWert, geaendertVon) {
   if (alterWert === neuerWert) return; // Keine Änderung
-  await sb.from("mitglieder_aenderungen").insert({
-    mitglied_id:   mitgliedId,
-    verein_id:     vereinId,
-    feld,
-    alter_wert:    alterWert ? String(alterWert) : null,
-    neuer_wert:    neuerWert ? String(neuerWert) : null,
-    geaendert_von: geaendertVon || null,
-  });
+
+  const feldLabel = FELD_LABEL[feld] || feld;
+  const von = geaendertVon || "Administrator";
+
+  if (alterWert && neuerWert) {
+    // Echter Wechsel: Wert A → Wert B → in mitglieder_aenderungen
+    await sb.from("mitglieder_aenderungen").insert({
+      mitglied_id:   mitgliedId,
+      verein_id:     vereinId,
+      feld,
+      alter_wert:    String(alterWert),
+      neuer_wert:    String(neuerWert),
+      geaendert_von: von,
+    });
+  } else if (!alterWert && neuerWert) {
+    // Erstmalig erfasst: null → Wert → in mitglieder_aktivitaeten
+    await logAktivitaet(sb, mitgliedId, vereinId,
+      AKTIVITAET_TYP.FELD_ERFASST,
+      `${feldLabel} erfasst`,
+      feld, String(neuerWert), von
+    );
+  } else if (alterWert && !neuerWert) {
+    // Geleert: Wert → null → in mitglieder_aktivitaeten
+    await logAktivitaet(sb, mitgliedId, vereinId,
+      AKTIVITAET_TYP.FELD_GELEERT,
+      `${feldLabel} geleert`,
+      feld, String(alterWert), von
+    );
+  }
 }
 
 export async function fetchAenderungen(sb, mitgliedId) {
@@ -314,5 +335,40 @@ export async function fetchAenderungen(sb, mitgliedId) {
     .eq("mitglied_id", mitgliedId)
     .order("geaendert_at", { ascending: false })
     .limit(50);
+  return data || [];
+}
+
+// ── Aktivitäten-Typen ─────────────────────────────────────────
+export const AKTIVITAET_TYP = {
+  ANGELEGT:            "angelegt",
+  FELD_ERFASST:        "feld_erfasst",
+  FELD_GELEERT:        "feld_geleert",
+  TEAM_HINZUGEFUEGT:   "team_hinzugefuegt",
+  TEAM_ENTFERNT:       "team_entfernt",
+  KADERROLLE_GEAENDERT:"kaderrolle_geaendert",
+  FUNKTION_GEAENDERT:  "funktion_geaendert",
+  ELTERN_HINZUGEFUEGT: "eltern_hinzugefuegt",
+  ELTERN_ENTFERNT:     "eltern_entfernt",
+  ELTERN_GEAENDERT:    "eltern_geaendert",
+};
+
+export async function logAktivitaet(sb, mitgliedId, vereinId, typ, beschreibung, feld=null, wert=null, geaendertVon=null) {
+  await sb.from("mitglieder_aktivitaeten").insert({
+    mitglied_id:   mitgliedId,
+    verein_id:     vereinId,
+    typ,
+    beschreibung,
+    feld:          feld || null,
+    wert:          wert || null,
+    geaendert_von: geaendertVon || null,
+  });
+}
+
+export async function fetchAktivitaeten(sb, mitgliedId) {
+  const { data } = await sb.from("mitglieder_aktivitaeten")
+    .select("*")
+    .eq("mitglied_id", mitgliedId)
+    .order("geaendert_at", { ascending: false })
+    .limit(100);
   return data || [];
 }
