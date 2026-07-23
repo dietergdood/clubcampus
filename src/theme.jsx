@@ -2469,6 +2469,7 @@ function InlineField({ label, value, field, type="text", opts=null, canEdit=fals
               onBlur={()=>saveEdit(field,editVal)}/>
           )}
           {!opts&&<div className="cc-inline-hint">Enter speichern · Esc abbrechen</div>}
+          {opts&&<div className="cc-inline-hint">Esc abbrechen</div>}
         </div>
       ):(
         <span className={`cc-inline-field ${value?"cc-info-val":"cc-info-val-empty"}`}

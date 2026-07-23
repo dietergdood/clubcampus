@@ -88,12 +88,13 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
         <div className="cc-info-row">
           <span className="cc-info-key">Nationalität</span>
           {natEditing ? (
-            <div className="cc-col cc-gap-6 cc-flex-1">
+            <div className="cc-col cc-gap-6 cc-flex-1 cc-nat-edit-wrap">
               <div>
                 <div className="cc-inline-hint">1</div>
                 <select className="cc-inline-select" value={nat1Val} autoFocus
                   onChange={e=>setNat1Val(e.target.value)}
-                  onKeyDown={e=>{if(e.key==="Escape")cancelNat();}}>
+                  onKeyDown={e=>{if(e.key==="Escape")cancelNat();if(e.key==="Enter")saveNat();}}
+                  onBlur={e=>{if(!e.currentTarget.closest('.cc-nat-edit-wrap')?.contains(e.relatedTarget))saveNat();}}>
                   <option value="">— keine —</option>
                   {LAENDER_OPTS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                 </select>
@@ -102,8 +103,8 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
                 <div className="cc-inline-hint">2</div>
                 <select className="cc-inline-select" value={nat2Val}
                   onChange={e=>setNat2Val(e.target.value)}
-                  onBlur={saveNat}
-                  onKeyDown={e=>{if(e.key==="Escape")cancelNat();}}>
+                  onKeyDown={e=>{if(e.key==="Escape")cancelNat();if(e.key==="Enter")saveNat();}}
+                  onBlur={e=>{if(!e.currentTarget.closest('.cc-nat-edit-wrap')?.contains(e.relatedTarget))saveNat();}}>
                   {LAENDER_OPTS2.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                 </select>
               </div>
