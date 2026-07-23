@@ -10,7 +10,7 @@ import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTi
          useConfirm, ConfirmDialog,
          Tabs, STitle, Between, Sub, Label, Select, Empty, InfoBox } from "../theme.jsx";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
-import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied } from "../domains/members/memberService.js";
+import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte } from "../domains/members/memberService.js";
 import { currentSeason } from "../domains/season/seasonUtils.js";
 import { LAENDER, getLandName, RolleChip, getFieldVisibility } from "./members/memberUtils.jsx";
 import { ROLES, FIELD_VIS, SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
@@ -42,6 +42,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [archivData,setArchivData]=useState([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
   const [archivCount,setArchivCount]=useState(null);
+  const [elternCount,setElternCount]=useState(null);
 
   // Direkte Navigation vom Kader-Modul
   useEffect(()=>{
@@ -118,6 +119,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(!sb) return;
     fetchArchivCount(sb).then(count=>setArchivCount(count));
   },[sb,archivLoaded]);
+  useEffect(()=>{
+    if(!sb||!vereinId) return;
+    fetchAlleElternkontakte(sb,vereinId).then(data=>setElternCount(data.length));
+  },[sb,vereinId]);
   useEffect(()=>{
     if(!sb||!archivTab||archivLoaded) return;
     fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
@@ -422,7 +427,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
               </button>
               <button className={`cc-ml-tab${elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setElternTab(true);setArchivTab(false);}}>
-                Eltern
+                Eltern {elternCount!==null&&<span className="cc-ml-tab-count">{elternCount}</span>}
               </button>
             </div>
           )}
