@@ -3,8 +3,8 @@
    Eltern-Tab — nutzt zentrale ListView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Av } from "../../theme.jsx";
-import { fetchAlleElternkontakte } from "../../domains/members/memberService.js";
+import { Av, useConfirm, ConfirmDialog } from "../../theme.jsx";
+import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.js";
 import { mapEltern, filterEltern, sortEltern } from "./memberDataUtils.js";
 import { ListView } from "../../shared/list/ListView.jsx";
 import { exportListData } from "../../shared/list/exportUtils.js";
@@ -89,11 +89,20 @@ function renderElternCell(col, e) {
 
 export function ElternListView({ sb, vereinId, account }) {
   const [rows, setRows] = useState([]);
+  const [confirm, confirmDialog] = useConfirm();
 
   useEffect(() => {
     if (!sb || !vereinId) return;
     fetchAlleElternkontakte(sb, vereinId).then(data => setRows(mapEltern(data)));
   }, [sb, vereinId]);
+
+  async function loeschen(selected) {
+    if (!selected?.size) return;
+    const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:"Die Elternkontakte werden auch beim verknüpften Kind entfernt.", danger:true, confirmLabel:"Löschen" });
+    if (!sb || !ok) return;
+    for (const id of selected) await deleteElternkontakt(sb, id);
+    setRows(prev => prev.filter(r => !selected.has(r.id)));
+  }
 
   const filterDefs = [
     { key:"beziehung", label:"Beziehung", vals:[...new Set(rows.map(e=>e.beziehung).filter(Boolean))].sort() },
@@ -105,28 +114,34 @@ export function ElternListView({ sb, vereinId, account }) {
   }
 
   return (
-    <ListView
-      rows={rows}
-      filterFn={filterElternFn}
-      sortFn={sortEltern}
-      buildGroupsFn={buildElternGroups}
-      colDefs={COL_DEFS}
-      colGroups={COL_GROUPS}
-      colGroups={COL_GROUPS}
-      filterDefs={filterDefs}
-      groupOptions={GROUP_OPTIONS}
-      renderCell={renderElternCell}
-      sb={sb}
-      account={account}
-      vereinId={vereinId}
-      viewTyp="eltern"
-      footerLabel={(f,t) => `${f} von ${t} Elternkontakten`}
-      exportFn={exportCSV}
-      exportFormats={[
-        {label:"E-Mail-Liste als CSV (flach)",        format:"csv"},
-        {label:"E-Mail-Liste als CSV (mit Gruppen)",  format:"csv-gruppen"},
-        {label:"Excel (pro Gruppe ein Sheet)",         format:"excel-sheets", icon:"table"},
-      ]}
-    />
+    <>
+      {confirmDialog}
+      <ListView
+        rows={rows}
+        filterFn={filterElternFn}
+        sortFn={sortEltern}
+        buildGroupsFn={buildElternGroups}
+        colDefs={COL_DEFS}
+        colGroups={COL_GROUPS}
+        filterDefs={filterDefs}
+        groupOptions={GROUP_OPTIONS}
+        renderCell={renderElternCell}
+        sb={sb}
+        account={account}
+        vereinId={vereinId}
+        viewTyp="eltern"
+        selectable
+        bulkActions={[
+          { icon:"trash", label:"Löschen", danger:true, requiresSelection:true, onClick:loeschen },
+        ]}
+        footerLabel={(f,t) => `${f} von ${t} Elternkontakten`}
+        exportFn={exportCSV}
+        exportFormats={[
+          {label:"E-Mail-Liste als CSV (flach)",        format:"csv"},
+          {label:"E-Mail-Liste als CSV (mit Gruppen)",  format:"csv-gruppen"},
+          {label:"Excel (pro Gruppe ein Sheet)",         format:"excel-sheets", icon:"table"},
+        ]}
+      />
+    </>
   );
 }
