@@ -14,7 +14,7 @@
 import { useState, useEffect } from "react";
 import { Btn, ModalOrSheet } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { insertMitglied, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.js";
+import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.js";
 
 const PASSIV_TYPEN = ["Passivmitglied", "Ehrenmitglied", "Gönner", "Freimitglied"];
 
@@ -70,10 +70,11 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     if (!form.mitgliedtyp) return "Bitte Mitgliedtyp wählen.";
     if (!form.vorname?.trim()) return "Vorname ist Pflicht.";
     if (!form.nachname?.trim()) return "Nachname ist Pflicht.";
+    const BEKANNTE_FELDER = ["geburtsdatum","geschlecht","strasse","plz","ort","telefon","email","ahv_nr","nationalitaet","heimatort"];
     for (const feld of pflichtfelder) {
+      if (!BEKANNTE_FELDER.includes(feld)) continue; // unbekannte Felder überspringen
       if (!form[feld]?.trim()) {
-        const labels = { geburtsdatum: "Geburtsdatum", geschlecht: "Geschlecht", strasse: "Strasse", plz: "PLZ", ort: "Ort", telefon: "Telefon" };
-        return `${labels[feld] || feld} ist Pflicht.`;
+        return `${FELD_LABEL[feld] || feld} ist Pflicht.`;
       }
     }
     return null;
