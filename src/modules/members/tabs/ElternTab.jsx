@@ -85,6 +85,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
   async function deleteEltern(id){
     const ok=await confirm({title:"Elternkontakt löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await deleteElternkontakt(sb,id);
+    setElternLoaded(null);
     if(onReload) onReload();
   }
 

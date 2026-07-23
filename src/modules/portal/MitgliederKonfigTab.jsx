@@ -58,7 +58,9 @@ export function MitgliederKonfigTab({supabase,loading,saveMsg,setSaveMsg,isMobil
         }
 
         async function deleteMitgliedtyp(id){
-          if(!supabase||!window.confirm("Mitgliedtyp wirklich löschen?")) return;
+          if(!supabase) return;
+          const ok = await confirm({title:"Mitgliedtyp löschen?", message:"Diese Aktion kann nicht rückgängig gemacht werden.", danger:true, confirmLabel:"Löschen"});
+          if(!ok) return;
           await supabase.from("mitgliedtypen").update({aktiv:false}).eq("id",id);
           const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
           if(data) setDbMitgliedtypen(data);
