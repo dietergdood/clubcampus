@@ -82,9 +82,9 @@ export function ElternListView({ sb, vereinId, account }) {
     { key:"portal",    label:"Portal",    vals:["Aktiv","Kein Zugang"] },
   ];
 
-  function exportCSV() {
-    const header = COL_DEFS.map(c=>c.label).join(";");
-    const csv = [header, ...rows.map(e=>COL_DEFS.map(c=>String(e[c.key]||"")).join(";"))].join("\n");
+  function exportCSV(rows, cols) {
+    const header = cols.map(c=>c.label).join(";");
+    const csv = [header, ...rows.map(e=>cols.map(c=>String(e[c.key]||"")).join(";"))].join("\n");
     const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href=url; a.download="eltern.csv"; a.click();
@@ -107,10 +107,8 @@ export function ElternListView({ sb, vereinId, account }) {
       vereinId={vereinId}
       viewTyp="eltern"
       footerLabel={(f,t) => `${f} von ${t} Elternkontakten`}
-      moreActions={[
-        {header:true, label:"Export"},
-        {icon:"file-text", label:"E-Mail-Liste als CSV", onClick:exportCSV},
-      ]}
+      exportFn={exportCSV}
+      exportFormats={[{label:"E-Mail-Liste als CSV", format:"csv"}]}
     />
   );
 }

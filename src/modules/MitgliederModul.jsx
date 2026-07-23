@@ -81,8 +81,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }));
 
   const COLS=visibleCols.map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
-  const exportDataRef = useRef({filtered:[], COLS:[], groups:[]});
-  function exportData(format){ exportDataUtil(exportDataRef.current.filtered, exportDataRef.current.COLS, format, exportDataRef.current.groups); }
+  function exportData(rows, cols, groups, format){ exportDataUtil(rows, cols, format, groups); }
 
 
 
@@ -519,19 +518,15 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         viewTyp="mitglieder"
         selectable
         bulkActions={[
-          {icon:"download", label:"Auswahl als CSV", onClick:()=>exportData("csv")},
           {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
           {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
         ]}
-        moreActions={canExport?[
-          {header:true, label:"Export"},
-          {icon:"file-text", label:"Liste als CSV (flach)",           onClick:()=>exportData("csv")},
-          {icon:"file-text", label:"Liste als CSV (mit Gruppen)",     onClick:()=>exportData("csv-gruppen")},
-          {icon:"table",     label:"Liste als Excel (pro Gruppe ein Sheet)", onClick:()=>exportData("excel-sheets")},
-        ]:[]}
-        onExportReady={({rows,cols,groups})=>{
-          exportDataRef.current={filtered:rows,COLS:cols,groups};
-        }}
+        exportFn={canExport ? exportData : undefined}
+        exportFormats={canExport ? [
+          {label:"Liste als CSV (flach)",                format:"csv"},
+          {label:"Liste als CSV (mit Gruppen)",          format:"csv-gruppen"},
+          {label:"Liste als Excel (pro Gruppe ein Sheet)",format:"excel-sheets", icon:"table"},
+        ] : []}
         footerLabel={(f,t)=>`${f} von ${t} Mitgliedern`}
       />
       </>

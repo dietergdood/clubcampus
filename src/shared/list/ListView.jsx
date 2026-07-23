@@ -85,7 +85,8 @@ export function ListView({
   // Footer
   footerLabel,
   // Export
-  onExportReady,
+  exportFn,
+  exportFormats = [],
 }) {
   const isMobile = useIsMobile();
 
@@ -279,6 +280,15 @@ export function ListView({
       onDelete: () => deleteView(v.id),
     })),
     { icon: "device-floppy", label: "Als neue Ansicht speichern", onClick: () => setSaveOpen(true) },
+    ...(exportFn && exportFormats.length > 0 ? [
+      "sep",
+      { header: true, label: "Export" },
+      ...exportFormats.map(f => ({
+        icon: f.icon || "file-text",
+        label: f.label,
+        onClick: () => exportFn(sorted, COLS, groups, f.format),
+      })),
+    ] : []),
   ];
 
   // ── Gruppen Tabelle rendern ───────────────────────────────────
@@ -375,9 +385,7 @@ export function ListView({
   }
 
   // Export callback
-  useEffect(() => {
-    if (onExportReady) onExportReady({ rows: sorted, cols: COLS, groups });
-  }, [sorted, COLS, groups]);
+  useEffect(() => {}, []); // placeholder
 
   const footer = footerLabel
     ? footerLabel(filtered.length, rows.length)
