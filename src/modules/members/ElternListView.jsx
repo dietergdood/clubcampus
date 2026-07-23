@@ -34,18 +34,35 @@ function filterElternFn(rows, search, filterVals) {
   return result;
 }
 
-function buildElternGroups(rows, groupBy) {
-  const gKey = Array.isArray(groupBy) ? groupBy[0] : groupBy;
-  if (!gKey || gKey === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
+function buildElternGroups(rows, groupBy, groupOrder) {
+  const levels = Array.isArray(groupBy) ? groupBy : [groupBy];
+  const firstLevel = levels[0] || "none";
+  const restLevels = levels.slice(1);
+  if (!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
   const map = {};
   rows.forEach(e => {
-    const k = e[gKey] || "—";
+    const k = e[firstLevel] || "—";
     if (!map[k]) map[k] = [];
     map[k].push(e);
   });
-  return Object.entries(map)
-    .sort(([a],[b]) => String(a).localeCompare(String(b), "de"))
-    .map(([k, members]) => ({ key:k, label:k, type:"none", members, children:null }));
+  const orderForLevel = groupOrder?.[firstLevel];
+  let entries = Object.entries(map);
+  if (orderForLevel?.length) {
+    entries = entries.sort(([a],[b]) => {
+      const ai = orderForLevel.indexOf(a), bi = orderForLevel.indexOf(b);
+      if (ai === -1 && bi === -1) return String(a).localeCompare(String(b));
+      if (ai === -1) return 1; if (bi === -1) return -1;
+      return ai - bi;
+    });
+  } else {
+    entries = entries.sort(([a],[b]) => String(a).localeCompare(String(b), "de"));
+  }
+  return entries.map(([k, members]) => ({
+    key: k, label: k, type: "none", members,
+    children: restLevels.length > 0 && restLevels[0] !== "none"
+      ? buildElternGroups(members, restLevels, groupOrder)
+      : null,
+  }));
 }
 
 function renderElternCell(col, e) {
