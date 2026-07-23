@@ -103,6 +103,18 @@ export async function fetchElternkontakte(sb, mitgliedId) {
   return data || [];
 }
 
+export async function fetchAlleElternkontakte(sb, vereinId) {
+  const { data } = await sb.from("elternkontakte")
+    .select(`
+      id, vorname, nachname, name, email, telefon, beziehung,
+      benutzer_id, hauptkontakt, mitglied_id,
+      mitglieder:mitglied_id (id, vorname, nachname, teams:kader_eintraege(team:teams(id,name,kurz)))
+    `)
+    .eq("verein_id", vereinId)
+    .order("nachname", { ascending: true });
+  return data || [];
+}
+
 export async function insertElternkontakt(sb, kontakt) {
   const { error } = await sb.from("elternkontakte").insert(kontakt);
   return error;
