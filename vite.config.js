@@ -7,7 +7,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
   },
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     globals: true,
+    setupFiles: ['./src/test-setup.js'],
   },
 })

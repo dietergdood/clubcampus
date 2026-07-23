@@ -1,5 +1,5 @@
 {
-  "name": "fc-herrliberg-portal",
+  "name": "clubcampus",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -17,8 +17,11 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.3.1",
     "@vitest/ui": "^4.1.10",
+    "jsdom": "^29.1.1",
     "vite": "^5.4.1",
     "vitest": "^4.1.10"
   }
