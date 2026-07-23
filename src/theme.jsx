@@ -2772,22 +2772,24 @@ function useAddrSearch(strasse, plz){
     timerRef.current=setTimeout(async()=>{
       try{
         const query=plz?`${q} ${plz}`:q;
-        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${encodeURIComponent(query)}&limit=6&lang=de&sr=4326&origins=address`;
+        const url=`https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&searchText=${encodeURIComponent(query)}&limit=6&lang=de&sr=4326&origins=address,street`;
         const res=await fetch(url);
         const json=await res.json();
         const results=(json.results||[]).map(r=>{
           const a=r.attrs;
-          // label enthält z.B. "St. Gallerstrasse 18 8716 Schmerikon"
           const fullLabel=(a.label||"").replace(/<[^>]+>/g,"").trim();
-          // PLZ = erste 4-stellige Zahl
-          const plzMatch=fullLabel.match(/\b(\d{4})\b/);
+          const detail=(a.detail||"").trim();
+          // PLZ aus label oder detail extrahieren
+          const plzMatch=fullLabel.match(/\b(\d{4})\b/)||detail.match(/\b(\d{4})\b/);
           const plzVal=plzMatch?.[1]||"";
-          // Strasse = alles VOR der PLZ
-          const strasseVal=plzVal?fullLabel.slice(0,fullLabel.indexOf(plzVal)).trim():fullLabel;
-          // Ort = alles NACH der PLZ, vor CH/Kanton
-          const afterPlz=plzVal?fullLabel.slice(fullLabel.indexOf(plzVal)+4).trim():"";
+          // Strasse = alles vor der PLZ im label (oder ganzes label wenn keine PLZ drin)
+          const plzIdxLabel=plzVal?fullLabel.indexOf(plzVal):-1;
+          const strasseVal=plzIdxLabel>0?fullLabel.slice(0,plzIdxLabel).trim():fullLabel;
+          // Ort aus detail nach PLZ, ohne CH/Kantonskürzel
+          const plzIdxDetail=plzVal?detail.indexOf(plzVal):-1;
+          const afterPlz=plzIdxDetail>=0?detail.slice(plzIdxDetail+4).trim():"";
           const ortParts=afterPlz.split(" ").filter(p=>p&&!/^(ch|ag|ai|ar|be|bl|bs|fr|ge|gl|gr|ju|lu|ne|nw|ow|sg|sh|so|sz|tg|ti|ur|vd|vs|zg|zh)$/i.test(p));
-          const ortVal=ortParts.join(" ");
+          const ortVal=ortParts.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
           return {label:fullLabel,strasse:strasseVal,plz:plzVal,ort:ortVal,raw:a};
         });
         setSuggestions(results);
