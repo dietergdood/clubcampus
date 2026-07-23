@@ -292,6 +292,8 @@ export const FELD_LABEL = {
   plz: "PLZ", ort: "Ort", kanton: "Kanton",
   mitgliedtyp: "Mitgliedtyp", rolle: "Portalrolle",
   spielerpass: "Spielerpass", js_nr: "J+S Nr.", fairgate_id: "Fairgate-ID",
+  teams: "Teams", kaderrollen: "Kaderrollen",
+  funktionen: "Vereinsfunktionen", elternkontakte: "Elternkontakte",
 };
 
 export async function logAenderung(sb, mitgliedId, vereinId, feld, alterWert, neuerWert, geaendertVon) {

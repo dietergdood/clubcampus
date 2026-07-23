@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
-import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte } from "../../../domains/members/memberService.js";
+import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte, logAenderung } from "../../../domains/members/memberService.js";
 
 function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();
@@ -45,11 +45,12 @@ function ElternPortalSection({e,sb,onReload}){
 }
 
 /* Avatar-Farbe nach Beziehung */
-function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null}){
+function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null,account=null}){
   const [confirm, confirmDialog] = useConfirm();
   const [editEltern,setEditEltern]=useState(null);
   const [elternMsg,setElternMsg]=useState(null);
   const [elternSaving,setElternSaving]=useState(false);
+  const geaendertVon = account?.name||account?.email||"Administrator";
 
   async function saveEltern(){
     if(!sb) return;
@@ -66,7 +67,11 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
           beziehung:d.beziehung||null,
         });
         if(error) throw error;
+        const name=d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||"?";
+        if(vereinId) logAenderung(sb,raw.id,vereinId,"elternkontakte",null,name,geaendertVon);
       } else {
+        const alter=eltern.find(e=>e.id===d.id);
+        const alterName=alter?`${alter.vorname||""} ${alter.nachname||""}`.trim():null;
         const error=await updateElternkontakt(sb,d.id,{
           vorname:d.vorname||null, nachname:d.nachname||null,
           name:d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||null,
@@ -74,6 +79,8 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
           beziehung:d.beziehung||null,
         });
         if(error) throw error;
+        const neuerName=d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||"?";
+        if(vereinId&&alterName!==neuerName) logAenderung(sb,raw.id,vereinId,"elternkontakte",alterName,neuerName,geaendertVon);
       }
       setElternMsg({ok:true,text:"Gespeichert ✓"});
       fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
@@ -84,7 +91,10 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
 
   async function deleteEltern(id){
     const ok=await confirm({title:"Elternkontakt löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
+    const elternItem=eltern.find(e=>e.id===id);
+    const name=elternItem?`${elternItem.vorname||""} ${elternItem.nachname||""}`.trim():null;
     await deleteElternkontakt(sb,id);
+    if(vereinId&&name) logAenderung(sb,raw.id,vereinId,"elternkontakte",name,null,geaendertVon);
     setElternLoaded(null);
     if(onReload) onReload();
   }

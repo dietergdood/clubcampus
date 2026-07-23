@@ -255,7 +255,7 @@ function MemberDetail({
           eltern={eltern} canEdit={canEdit} raw={raw} sb={sb}
           onReload={() => { if (reloadMember) reloadMember(raw.id); if (onReload) onReload(); }}
           setElternLoaded={setElternLoaded}
-          vereinId={vereinId}
+          vereinId={vereinId} account={account}
         />
       )}
 
