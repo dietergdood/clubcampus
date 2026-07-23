@@ -1,21 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/MemberHero.jsx
    Hero-Header des Mitglied-Detailbereichs
+   Kein Edit-Modal mehr — alle Felder inline editierbar in InfoTab
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { ROLLE_LABEL } from "../../domains/roles/roleUtils.js";
-import { LAENDER } from "./memberUtils.jsx";
-import { MemberEditModal } from "./MemberEditModal.jsx";
-import { updateMitglied, updateMitgliedRolle, updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, fetchBenutzerByMitglied } from "../../domains/members/memberService.js";
-function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
+import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied } from "../../domains/members/memberService.js";
+
+function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
-  const [editOpen,setEditOpen]=useState(false);
-  const [editForm,setEditForm]=useState({...raw});
-  const [editSaving,setEditSaving]=useState(false);
-  const [editMsg,setEditMsg]=useState(null);
   const fotoInputRef=useRef(null);
   const [fotoOverlay,setFotoOverlay]=useState(false);
 
@@ -26,50 +21,13 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
     if(onReload) onReload(raw.id);
   }
 
-  const MITGLIEDTYPEN=(dbMitgliedtypen||[]).length>0
-    ?dbMitgliedtypen.map(t=>t.name)
-    :["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
-
-  useEffect(()=>{
-    if(sb&&editOpen){
-      fetchBenutzerByMitglied(sb, raw.id).then(data=>{
-        if(data) setEditForm(f=>({...f,rolle:data.role||raw.rolle||"",_benutzer_id:data.id}));
-        else setEditForm(f=>({...f,rolle:raw.rolle||""}));
-      });
-    }
-  },[editOpen]);
-
-  async function deleteMitglied(){
-    const ok=await confirm({title:`${m.name} löschen?`,message:"Diese Aktion kann nicht rückgängig gemacht werden.",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
+  async function handleLoeschen(){
+    const ok=await confirm({title:`${m.name} löschen?`,message:"Diese Aktion kann nicht rückgängig gemacht werden.",danger:true,confirmLabel:"Löschen"});
+    if(!sb||!ok) return;
     await deleteMitglied(sb, raw.id);
     if(onClose) onClose();
     if(onReload) onReload(raw.id);
   }
-
-  async function saveEdit(){
-    if(!sb) return;
-    setEditSaving(true); setEditMsg(null);
-    const ok = await updateMitglied(sb, raw.id, {
-      vorname:editForm.vorname||null, nachname:editForm.nachname||null,
-      geburtsdatum:editForm.geburtsdatum||null, geschlecht:editForm.geschlecht||null,
-      nationalitaet:editForm.nationalitaet||null, nationalitaet2:editForm.nationalitaet2||null, heimatort:editForm.heimatort||null,
-      ahv_nr:editForm.ahv_nr||null, telefon:editForm.telefon||null,
-      email:editForm.email||null, strasse:editForm.strasse||null,
-      plz:editForm.plz||null, ort:editForm.ort||null, kanton:editForm.kanton||null,
-      mitgliedtyp:editForm.mitgliedtyp||null, funktionen:editForm.funktionen||[],
-      spielerpass:editForm.spielerpass||null, js_nr:editForm.js_nr||null,
-      fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
-    });
-    if(ok) await updateMitgliedRolle(sb, raw.id, editForm.rolle, editForm._benutzer_id);
-    if(!ok){ setEditMsg({ok:false,text:"Fehler beim Speichern"}); }
-    else{
-      setEditMsg({ok:true,text:"Gespeichert ✓"});
-      setTimeout(()=>{setEditOpen(false);setEditMsg(null);if(onReload)onReload(raw.id);},600);
-    }
-    setEditSaving(false);
-  }
-
-  const mitgliedtyp=raw.mitgliedtyp||m.type;
 
   return(
     <>{confirmDialog}
@@ -150,26 +108,15 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
             </div>
             {(canEdit||canDelete)&&(
               <div className="cc-hero-menu-trigger"><DropMenu items={[
-                ...(canEdit?[{icon:"edit",label:"Bearbeiten",onClick:()=>{setEditForm({...raw});setEditOpen(true);}}]:[]),
                 ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
                 ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await reaktiviereMitglied(sb, raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
                 "sep",
-                {icon:"trash",label:"Löschen",danger:true,onClick:()=>deleteMitglied()},
+                {icon:"trash",label:"Löschen",danger:true,onClick:handleLoeschen},
               ]}/></div>
             )}
           </div>
         </div>
-
       </div>
-      {editOpen&&(
-        <MemberEditModal
-          m={m}
-          editForm={editForm} setEditForm={setEditForm}
-          editMsg={editMsg} editSaving={editSaving}
-          onSave={saveEdit} onClose={()=>setEditOpen(false)}
-          LAENDER={LAENDER} MITGLIEDTYPEN={MITGLIEDTYPEN} dbPortalRollen={dbPortalRollen}
-        />
-      )}
     </>
   );
 }

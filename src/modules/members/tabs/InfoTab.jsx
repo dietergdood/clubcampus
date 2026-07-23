@@ -4,13 +4,14 @@
    Teams, Vereinsfunktionen, Notizen
    ═══════════════════════════════════════════════════════════════ */
 import { useRef } from "react";
-import { Card, StatusTile, useIsMobile } from "../../../theme.jsx";
+import { Card, StatusTile, useIsMobile, InlineField } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.jsx";
 import { PersonKontakt } from "../../../shared/person/PersonKontakt.jsx";
 import { PersonTeams } from "../../../shared/person/PersonTeams.jsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.jsx";
 import { NotizenVerlauf } from "../NotizenVerlauf.jsx";
+import { useInlineEdit } from "../../../domains/members/useInlineEdit.js";
 
 function InfoTab({
   raw, fv, canEdit, canDelete, sb, account,
@@ -26,6 +27,10 @@ function InfoTab({
 }) {
   const isMobile = useIsMobile();
   const notizAddRef = useRef(null);
+  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload: ()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); } });
+  const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit };
+
+  const MITGLIEDTYP_OPTS = (dbMitgliedtypen||[]).map(t=>({v:t.name,l:t.name}));
 
   return (
     <div className="cc-col cc-gap-12">
@@ -61,10 +66,10 @@ function InfoTab({
 
       {/* Grid: Personalien + Kontakt + Vereinsdaten + Teams + Funktionen + Notizen */}
       <div className="cc-grid-2">
-        <PersonPersonalien raw={raw} fv={fv} canEdit={canEdit}/>
+        <PersonPersonalien raw={raw} fv={fv} canEdit={canEdit} sb={sb} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}/>
 
         <PersonKontakt
-          raw={raw} fv={fv} canEdit={canEdit}
+          raw={raw} fv={fv} canEdit={canEdit} sb={sb} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}
           eltern={eltern} brauchtEltern={brauchtEltern} setTab={setTab}
         />
 
@@ -72,16 +77,23 @@ function InfoTab({
         <Card className="cc-card-full">
           <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
           <div className="cc-info-grid">
-            {[
-              ...(fv.showPass ? [{ l: "Spielerpass", v: raw.spielerpass || null }, { l: "J+S Nr.", v: raw.js_nr || null }] : []),
-              ...(fv.showFairgateId ? [{ l: "Fairgate-ID", v: raw.fairgate_id || null }] : []),
-              { l: "Eintritt", v: raw.eintrittsdatum ? new Date(raw.eintrittsdatum).toLocaleDateString("de-CH") : null },
-            ].filter(r => canEdit || r.v).map((r, i) => (
-              <div key={i} className="cc-info-row">
-                <span className="cc-info-key">{r.l}</span>
-                <span className={r.v ? "cc-info-val" : "cc-info-val-empty"}>{r.v || "—"}</span>
-              </div>
-            ))}
+            <InlineField label="Mitgliedtyp" field="mitgliedtyp" value={raw.mitgliedtyp||null}
+              opts={MITGLIEDTYP_OPTS} {...ieProps}
+              startEdit={()=>ie.startEdit("mitgliedtyp", raw.mitgliedtyp||"")}
+              saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
+            {fv.showPass&&<>
+              <InlineField label="Spielerpass" field="spielerpass" value={raw.spielerpass||null} {...ieProps}/>
+              <InlineField label="J+S Nr."     field="js_nr"       value={raw.js_nr||null}       {...ieProps}/>
+            </>}
+            {fv.showFairgateId&&(
+              <InlineField label="Fairgate-ID" field="fairgate_id" value={raw.fairgate_id||null} {...ieProps}/>
+            )}
+            <div className="cc-info-row">
+              <span className="cc-info-key">Eintritt</span>
+              <span className={raw.eintrittsdatum?"cc-info-val":"cc-info-val-empty"}>
+                {raw.eintrittsdatum?new Date(raw.eintrittsdatum).toLocaleDateString("de-CH"):"—"}
+              </span>
+            </div>
           </div>
         </Card>
 

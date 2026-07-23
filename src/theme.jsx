@@ -131,6 +131,16 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-list-name{font-weight:500;font-size:14px;color:var(--text);white-space:nowrap}
 .cc-detail-label{font-size:14px;color:var(--sub);min-width:120px;flex-shrink:0}
 .cc-empty{padding:32px;text-align:center;color:var(--sub);font-size:14px}
+.cc-inline-field{position:relative;cursor:pointer;border-radius:5px;padding:2px 6px;margin:-2px -6px;transition:background 0.1s}
+.cc-inline-field:hover{background:var(--surface)}
+.cc-inline-field:hover .cc-inline-pencil{opacity:1}
+.cc-inline-pencil{opacity:0;color:var(--sub);font-size:12px;margin-left:5px;transition:opacity 0.1s}
+.cc-inline-empty{color:var(--sub);font-style:italic}
+.cc-inline-input{width:100%;font-size:13px;height:28px;border:1.5px solid var(--cc-accent,#FFBF00);border-radius:5px;padding:0 8px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box}
+.cc-inline-select{width:100%;font-size:13px;height:28px;border:1.5px solid var(--cc-accent,#FFBF00);border-radius:5px;padding:0 6px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box}
+.cc-inline-hint{font-size:10px;color:var(--sub);margin-top:2px}
+.cc-inline-feedback-ok{font-size:13px;color:var(--green,#3B6D11);display:flex;align-items:center;gap:4px}
+.cc-inline-feedback-err{font-size:13px;color:var(--red,#A32D2D);display:flex;align-items:center;gap:4px}
 .cc-empty-state{padding:32px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
 .cc-empty-state-icon{width:48px;height:48px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--sub);margin-bottom:4px}
 .cc-empty-state-icon-danger{color:var(--red,#E24B4A)}
@@ -2420,7 +2430,54 @@ export const COMPONENT_REGISTRY = [
 ];
 
 
-/* ── EmptyState: Leere Listen, Fehler, kein Ergebnis ── */
+/* ── InlineField: Klickbares Feld mit Inline-Editing ── */
+function InlineField({ label, value, field, type="text", opts=null, canEdit=false, editing, editVal, setEditVal, startEdit, saveEdit, cancelEdit, handleKey, feedback, saving }){
+  const isEditing = editing === field;
+  const hasFeedback = feedback?.field === field;
+  if(!canEdit) return(
+    <div className="cc-info-row">
+      <span className="cc-info-key">{label}</span>
+      <span className={value?"cc-info-val":"cc-info-val-empty"}>{value||"—"}</span>
+    </div>
+  );
+  return(
+    <div className="cc-info-row">
+      <span className="cc-info-key">{label}</span>
+      {hasFeedback?(
+        <span className={feedback.ok?"cc-inline-feedback-ok":"cc-inline-feedback-err"}>
+          <TI n={feedback.ok?"check":"alert-circle"} size={13}/>
+          {feedback.ok?"Gespeichert":"Fehler"}
+        </span>
+      ):isEditing?(
+        <div style={{flex:1}}>
+          {opts?(
+            <select className="cc-inline-select" value={editVal} autoFocus
+              onChange={e=>{setEditVal(e.target.value);saveEdit(field,e.target.value);}}
+              onKeyDown={e=>e.key==="Escape"&&cancelEdit()}
+              onBlur={cancelEdit}>
+              <option value="">— wählen —</option>
+              {opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}
+            </select>
+          ):(
+            <input className="cc-inline-input" type={type} value={editVal} autoFocus
+              onChange={e=>setEditVal(e.target.value)}
+              onKeyDown={e=>handleKey(e,field)}
+              onBlur={()=>saveEdit(field,editVal)}/>
+          )}
+          {!opts&&<div className="cc-inline-hint">Enter speichern · Esc abbrechen</div>}
+        </div>
+      ):(
+        <span className={`cc-inline-field ${value?"cc-info-val":"cc-info-val-empty"}`}
+          onClick={()=>startEdit(field,value||"")}>
+          {value||<span className="cc-inline-empty">nicht erfasst</span>}
+          <TI n="pencil" size={11} className="cc-inline-pencil"/>
+        </span>
+      )}
+    </div>
+  );
+}
+
+
 function EmptyState({icon, title, subtitle, action, onAction, danger=false}){
   return(
     <div className="cc-empty-state">
@@ -2446,4 +2503,4 @@ function DpBadge({val}){
   return <span className="cc-dp-status cc-dp-status-err"><span className="cc-dp-dot"/> {val||"Unbekannt"}</span>;
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge, EmptyState };
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge, EmptyState, InlineField };
