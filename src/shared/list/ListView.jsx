@@ -89,6 +89,8 @@ export function ListView({
   // Export
   exportFn,
   exportFormats = [],
+  // Admin
+  isAdmin = false,
 }) {
   const isMobile = useIsMobile();
 
@@ -115,6 +117,7 @@ export function ListView({
   const [savedView,      setSavedView]      = useState(savedViews ? Object.keys(savedViews)[0] : null);
   const [saveOpen,       setSaveOpen]       = useState(false);
   const [saveName,       setSaveName]       = useState("");
+  const [saveGeteilt,    setSaveGeteilt]    = useState(false);
   const [saving,         setSaving]         = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(0);
   const [mobileGroupOpen,  setMobileGroupOpen]  = useState(0);
@@ -158,13 +161,15 @@ export function ListView({
       gruppenreihenfolge: groupOrder,
       zeilenreihenfolge:  manualOrder,
       typ:              viewTyp,
+      geteilt:          saveGeteilt,
     });
     if (data) setCustomViews(prev => [...prev, data]);
-    setSaveName(""); setSaveOpen(false); setSaving(false);
+    setSaveName(""); setSaveGeteilt(false); setSaveOpen(false); setSaving(false);
   }
 
-  async function deleteView(id) {
+  async function deleteView(id, ownerId) {
     if (!sb) return;
+    if (ownerId !== account?.id && !isAdmin) return;
     await deleteAnsicht(sb, id);
     setCustomViews(prev => prev.filter(v => v.id !== id));
     if (savedView === "custom_" + id) {
@@ -318,12 +323,21 @@ export function ListView({
       label: v.label,
       onClick: () => applyStandardView(key),
     })) : []),
-    ...customViews.map(v => ({
+    ...customViews.filter(v => v.benutzer_id === account?.id).map(v => ({
       icon: savedView === "custom_" + v.id ? "check" : "layout",
       label: v.name,
       onClick: () => applyCustomView(v),
-      onDelete: () => deleteView(v.id),
+      onDelete: () => deleteView(v.id, v.benutzer_id),
     })),
+    ...(customViews.filter(v => v.geteilt && v.benutzer_id !== account?.id).length > 0 ? [
+      { header: true, label: "Geteilte Ansichten" },
+      ...customViews.filter(v => v.geteilt && v.benutzer_id !== account?.id).map(v => ({
+        icon: savedView === "custom_" + v.id ? "check" : "layout",
+        label: v.name,
+        onClick: () => applyCustomView(v),
+        onDelete: isAdmin ? () => deleteView(v.id, v.benutzer_id) : undefined,
+      })),
+    ] : []),
     { icon: "device-floppy", label: "Als neue Ansicht speichern", onClick: () => setSaveOpen(true) },
     ...(exportFn && exportFormats.length > 0 ? [
       "sep",
@@ -544,6 +558,12 @@ export function ListView({
             onKeyDown={e => e.key === "Enter" && saveView()}
             autoFocus
           />
+          {isAdmin && (
+            <label className="cc-row cc-gap-8" style={{cursor:"pointer",fontSize:13}}>
+              <input type="checkbox" checked={saveGeteilt} onChange={e => setSaveGeteilt(e.target.checked)}/>
+              Für alle Benutzer freigeben
+            </label>
+          )}
         </div>
         <div className="cc-modal-ftr">
           <Btn onClick={() => { setSaveOpen(false); setSaveName(""); }}>Abbrechen</Btn>

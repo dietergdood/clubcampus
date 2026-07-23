@@ -47,7 +47,7 @@ function renderElternCell(col, e) {
   }
 }
 
-export function ElternListView({ sb, vereinId, account }) {
+export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
   const [rows, setRows] = useState([]);
   const [confirm, confirmDialog] = useConfirm();
 
@@ -85,6 +85,7 @@ export function ElternListView({ sb, vereinId, account }) {
         account={account}
         vereinId={vereinId}
         viewTyp="eltern"
+        isAdmin={isAdmin}
         selectable
         bulkActions={[
           { icon:"trash", label:"Löschen", danger:true, requiresSelection:true, onClick:loeschen },

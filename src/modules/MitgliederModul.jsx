@@ -436,7 +436,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {elternTab?(
-        <ElternListView sb={sb} vereinId={vereinId} kannVerwalten={kannVerwalten}/>
+        <ElternListView sb={sb} vereinId={vereinId} account={account} isAdmin={role==="administrator"||role==="administration"}/>
       ):archivTab?(
         <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
@@ -516,6 +516,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         account={account}
         vereinId={vereinId}
         viewTyp="mitglieder"
+        isAdmin={role==="administrator"||role==="administration"}
         selectable
         bulkActions={[
           {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
