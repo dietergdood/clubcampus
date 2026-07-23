@@ -2,7 +2,7 @@
    ClubCampus — modules/members/ArchivView.jsx
    Archiv-Tab — nutzt zentrale ListView
    ═══════════════════════════════════════════════════════════════ */
-import { Btn, Av, useConfirm, ConfirmDialog } from "../../theme.jsx";
+import { Btn, Av, useConfirm } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.js";
 import { ListView } from "../../shared/list/ListView.jsx";

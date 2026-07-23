@@ -3,7 +3,7 @@
    Eltern-Tab — nutzt zentrale ListView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Av, useConfirm, ConfirmDialog } from "../../theme.jsx";
+import { Av, useConfirm } from "../../theme.jsx";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.js";
 import { mapEltern } from "./memberDataUtils.js";
 import { ListView } from "../../shared/list/ListView.jsx";

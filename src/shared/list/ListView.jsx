@@ -5,7 +5,7 @@
    Material, Helfer, Events etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo, Fragment } from "react";
-import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn, Input } from "../../theme.jsx";
+import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.js";
 
@@ -303,13 +303,6 @@ export function ListView({
     : <span className="cc-sort-hover-icon">↕</span>;
 
   // ── moreItems ────────────────────────────────────────────────
-  const activeFilterCount = Object.values(filterVals).filter(v => {
-    if (!v) return false;
-    if (Array.isArray(v)) return v.length > 0;
-    if (typeof v === "object") return v.von != null || v.bis != null;
-    return false;
-  }).length;
-
   const moreItems = [
     { header: true, label: "Aktionen" },
     ...(hasGroup ? [
@@ -444,9 +437,6 @@ export function ListView({
     if (externalSetFilter) externalSetFilter.current = (vals) => setFilterVals(prev => ({...prev, ...vals}));
   }, [externalSetFilter]);
 
-  // Export callback
-  useEffect(() => {}, []); // placeholder
-
   const footer = footerLabel
     ? footerLabel(filtered.length, rows.length)
     : `${filtered.length} von ${rows.length} Einträgen`;
@@ -495,7 +485,6 @@ export function ListView({
           />
         )}
         moreItems={moreItems}
-        right={isMobile ? undefined : undefined}
       />
 
       {/* Tabelle */}
