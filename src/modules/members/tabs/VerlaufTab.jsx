@@ -7,6 +7,23 @@ import { Card, EmptyState } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { fetchAenderungen, FELD_LABEL } from "../../../domains/members/memberService.js";
 
+const SENSITIV_FELDER = ["ahv_nr"];
+
+const ROLLE_LABEL = {
+  administrator: "Administrator", administration: "Verwaltung",
+  funktionaer: "Funktionär", trainer: "Trainer/in",
+  spieler: "Spieler/in", eltern: "Elternteil",
+  mitglied: "Mitglied", supporter: "Supporter",
+};
+
+function formatWertAnzeige(feld, wert) {
+  if (!wert) return null;
+  if (SENSITIV_FELDER.includes(feld)) return "••• •• ••••";
+  if (feld === "rolle") return ROLLE_LABEL[wert] || wert;
+  if (feld === "geschlecht") return wert === "m" ? "Männlich" : wert === "w" ? "Weiblich" : wert;
+  return wert;
+}
+
 function VerlaufTab({ raw, sb }) {
   const [aenderungen, setAenderungen] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,9 +45,10 @@ function VerlaufTab({ raw, sb }) {
     });
   }
 
-  function formatWert(wert) {
-    if (!wert) return <span className="cc-text-sub">—</span>;
-    return wert;
+  function formatWert(feld, wert) {
+    const anzeige = formatWertAnzeige(feld, wert);
+    if (!anzeige) return <span className="cc-text-sub">—</span>;
+    return anzeige;
   }
 
   return (
@@ -58,9 +76,9 @@ function VerlaufTab({ raw, sb }) {
                   </span>
                 </div>
                 <div className="cc-verlauf-werte">
-                  <span className="cc-verlauf-alt">{formatWert(a.alter_wert)}</span>
+                  <span className="cc-verlauf-alt">{formatWert(a.feld, a.alter_wert)}</span>
                   <TI n="arrow-right" size={12} style={{color:"var(--sub)"}}/>
-                  <span className="cc-verlauf-neu">{formatWert(a.neuer_wert)}</span>
+                  <span className="cc-verlauf-neu">{formatWert(a.feld, a.neuer_wert)}</span>
                 </div>
               </div>
             ))}
