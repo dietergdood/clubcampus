@@ -3,39 +3,44 @@
    Globale Elternkontakte-Liste im MitgliederModul
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo } from "react";
-import { Av, Card, Toolbar, SortHeader, useIsMobile } from "../../theme.jsx";
+import { Av, Card, Toolbar, useIsMobile, ModalOrSheet, ModalTitle, Input } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { fetchAlleElternkontakte } from "../../domains/members/memberService.js";
+import { fetchAlleElternkontakte, fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.js";
 import { mapEltern, filterEltern, sortEltern } from "./memberDataUtils.js";
 
 const COL_DEFS = [
-  { key:"name",       label:"Name",        default:true,  alwaysOn:true },
-  { key:"beziehung",  label:"Beziehung",   default:true  },
-  { key:"email",      label:"E-Mail",      default:true  },
-  { key:"telefon",    label:"Telefon",     default:true  },
-  { key:"kind_name",  label:"Kind",        default:true  },
-  { key:"kind_teams", label:"Teams (Kind)",default:false },
-  { key:"portal",     label:"Portal",      default:true  },
+  { key:"name",      label:"Name",      default:true, alwaysOn:true },
+  { key:"beziehung", label:"Beziehung", default:true  },
+  { key:"email",     label:"E-Mail",    default:true  },
+  { key:"telefon",   label:"Telefon",   default:true  },
+  { key:"kind_name", label:"Kind",      default:true  },
+  { key:"portal",    label:"Portal",    default:true  },
 ];
 
-const COL_GROUPS = [
-  { group:"Elternkontakt", cols: COL_DEFS },
+const COL_GROUPS = [{ group:"Elternkontakt", cols:COL_DEFS }];
+
+const GROUP_OPTIONS = [
+  { val:"kind_name",  label:"Kind"        },
+  { val:"beziehung",  label:"Beziehung"   },
+  { val:"portal",     label:"Portal"      },
 ];
 
-const FILTER_DEFS_BASE = [
-  { key:"beziehung", label:"Beziehung", vals:["Mutter","Vater","Grossmutter","Grossvater","Andere"] },
-  { key:"portal",    label:"Portal",    vals:["Aktiv","Kein Zugang"] },
-];
-
-export function ElternListView({ sb, vereinId, kannVerwalten }) {
+export function ElternListView({ sb, vereinId, account, kannVerwalten }) {
   const isMobile = useIsMobile();
-  const [rawData,    setRawData]    = useState([]);
-  const [loaded,     setLoaded]     = useState(false);
-  const [search,     setSearch]     = useState("");
-  const [filterVals, setFilterVals] = useState({});
-  const [sortCol,    setSortCol]    = useState("name");
-  const [sortDir,    setSortDir]    = useState("asc");
-  const [visibleCols,setVisibleCols]= useState(COL_DEFS.filter(c=>c.default).map(c=>c.key));
+  const [rawData,     setRawData]     = useState([]);
+  const [loaded,      setLoaded]      = useState(false);
+  const [search,      setSearch]      = useState("");
+  const [filterVals,  setFilterVals]  = useState({});
+  const [sortCol,     setSortCol]     = useState("name");
+  const [sortDir,     setSortDir]     = useState("asc");
+  const [visibleCols, setVisibleCols] = useState(COL_DEFS.filter(c=>c.default).map(c=>c.key));
+  const [groupBy,     setGroupBy]     = useState(["none"]);
+  const [customViews, setCustomViews] = useState([]);
+  const [savedView,   setSavedView]   = useState(null);
+  const [saveOpen,    setSaveOpen]    = useState(false);
+  const [saveName,    setSaveName]    = useState("");
+  const [saving,      setSaving]      = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
 
   useEffect(()=>{
     if(!sb||!vereinId||loaded) return;
@@ -45,29 +50,44 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
     });
   },[sb,vereinId,loaded]);
 
+  useEffect(()=>{
+    if(!sb||!account?.id) return;
+    fetchAnsichten(sb, account.id, "eltern").then(setCustomViews);
+  },[sb,account?.id]);
+
   const allEltern = rawData;
 
-  // Filter-Definitionen dynamisch
   const FILTER_DEFS = useMemo(()=>[
-    ...FILTER_DEFS_BASE,
-    { key:"kind_teams", label:"Team (Kind)", vals:[...new Set(allEltern.flatMap(e=>e.kind_teams).filter(Boolean))].sort() },
+    { key:"beziehung", label:"Beziehung", vals:[...new Set(allEltern.map(e=>e.beziehung).filter(Boolean))].sort() },
+    { key:"portal",    label:"Portal",    vals:["Aktiv","Kein Zugang"] },
   ],[allEltern]);
 
-  // Filter anwenden
   const filtered = useMemo(()=>{
     let result = filterEltern(allEltern, search);
     Object.entries(filterVals).forEach(([k,vals])=>{
       if(!vals||!Array.isArray(vals)||vals.length===0) return;
-      if(k==="kind_teams"){
-        result = result.filter(e=>e.kind_teams.some(t=>vals.includes(t)));
-      } else {
-        result = result.filter(e=>vals.includes(e[k]));
-      }
+      result = result.filter(e=>vals.includes(e[k]));
     });
     return result;
   },[allEltern, search, filterVals]);
 
   const sorted = useMemo(()=>sortEltern(filtered, sortCol, sortDir),[filtered, sortCol, sortDir]);
+
+  const hasGroup = Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
+
+  // Gruppierung bauen
+  const groups = useMemo(()=>{
+    if(!hasGroup) return [{key:"__all",label:"",members:sorted}];
+    const gKey = Array.isArray(groupBy)?groupBy[0]:groupBy;
+    const map = {};
+    sorted.forEach(e=>{
+      const k = e[gKey]||"—";
+      if(!map[k]) map[k]=[];
+      map[k].push(e);
+    });
+    return Object.entries(map).sort(([a],[b])=>String(a).localeCompare(String(b),"de"))
+      .map(([k,members])=>({key:k,label:k,members}));
+  },[sorted, groupBy, hasGroup]);
 
   function handleSort(key){
     if(sortCol===key) setSortDir(d=>d==="asc"?"desc":"asc");
@@ -82,22 +102,49 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
     });
   }
 
+  function applyCustomView(v){
+    setSavedView("custom_"+v.id);
+    setVisibleCols(v.spalten||COL_DEFS.filter(c=>c.default).map(c=>c.key));
+    setFilterVals(v.filter||{});
+    setGroupBy(Array.isArray(v.gruppierung)?v.gruppierung:[v.gruppierung||"none"]);
+  }
+
+  async function saveView(){
+    if(!saveName.trim()||!sb||!account?.id) return;
+    setSaving(true);
+    const data = await insertAnsicht(sb,{
+      benutzer_id: account.id,
+      verein_id:   vereinId,
+      name:        saveName.trim(),
+      spalten:     visibleCols,
+      filter:      filterVals,
+      gruppierung: Array.isArray(groupBy)?groupBy:[groupBy],
+      typ:         "eltern",
+    });
+    if(data) setCustomViews(prev=>[...prev,data]);
+    setSaveName(""); setSaveOpen(false); setSaving(false);
+  }
+
+  async function deleteView(id){
+    if(!sb) return;
+    await deleteAnsicht(sb,id);
+    setCustomViews(prev=>prev.filter(v=>v.id!==id));
+    if(savedView==="custom_"+id){ setSavedView(null); }
+  }
+
   function exportCSV(){
     const cols = visibleCols.map(k=>COL_DEFS.find(c=>c.key===k)).filter(Boolean);
     const header = cols.map(c=>c.label).join(";");
-    const rows = sorted.map(e=>cols.map(c=>{
-      const v=e[c.key];
-      return Array.isArray(v)?v.join(", "):(v||"");
-    }).join(";"));
+    const rows = sorted.map(e=>cols.map(c=>String(e[c.key]||"")).join(";"));
     const csv = [header,...rows].join("\n");
     const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href=url; a.download="eltern.csv"; a.click();
+    const a = document.createElement("a"); a.href=url; a.download="eltern.csv"; a.click();
     URL.revokeObjectURL(url);
   }
 
   const COLS = visibleCols.map(k=>COL_DEFS.find(c=>c.key===k)).filter(Boolean);
+  const activeFilterCount = Object.values(filterVals).filter(v=>Array.isArray(v)&&v.length>0).length;
 
   const SortIcon = ({col})=>sortCol===col
     ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
@@ -120,10 +167,6 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
         return <td key="telefon" className="cc-members-td cc-members-td-sub">{e.telefon||"—"}</td>;
       case "kind_name":
         return <td key="kind_name" className="cc-members-td cc-members-td-sub">{e.kind_name||"—"}</td>;
-      case "kind_teams":
-        return <td key="kind_teams" className="cc-members-td cc-members-td-sub">
-          {e.kind_teams.length>0?e.kind_teams.join(", "):"—"}
-        </td>;
       case "portal":
         return <td key="portal" className="cc-members-td">
           {e.benutzer_id
@@ -136,7 +179,19 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
     }
   }
 
-  const activeFilterCount = Object.values(filterVals).filter(v=>Array.isArray(v)&&v.length>0).length;
+  const moreItems = [
+    {header:true, label:"Ansichten"},
+    ...customViews.map(v=>({
+      label: v.name,
+      icon: savedView==="custom_"+v.id?"check":"layout-list",
+      onClick: ()=>applyCustomView(v),
+      onDelete: ()=>deleteView(v.id),
+    })),
+    {icon:"device-floppy", label:"Als neue Ansicht speichern", onClick:()=>setSaveOpen(true)},
+    "sep",
+    {header:true, label:"Export"},
+    {icon:"file-text", label:"E-Mail-Liste als CSV", onClick:exportCSV},
+  ];
 
   return (
     <>
@@ -145,10 +200,11 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
         filterDefs={FILTER_DEFS}
         filterVals={filterVals}
         onFilterChange={handleFilterChange}
-        moreItems={[
-          {header:true, label:"Export"},
-          {icon:"file-text", label:"E-Mail-Liste als CSV", onClick:exportCSV},
-        ]}
+        groupOptions={GROUP_OPTIONS}
+        groupBy={groupBy}
+        onGroupChange={setGroupBy}
+        colMenu={!isMobile&&<span/>}
+        moreItems={moreItems}
       />
 
       <Card className="cc-card-table" flush>
@@ -162,8 +218,7 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
               <thead>
                 <tr>
                   {COLS.map(col=>(
-                    <th key={col.key} className="cc-members-th"
-                      onClick={()=>handleSort(col.key)}>
+                    <th key={col.key} className="cc-members-th" onClick={()=>handleSort(col.key)}>
                       <span className="cc-members-th-inner">
                         <span>{col.label}<SortIcon col={col.key}/></span>
                       </span>
@@ -173,11 +228,27 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map(e=>(
-                  <tr key={e.id} className="cc-members-tr">
-                    {COLS.map(col=>renderCell(col,e))}
-                    <td className="cc-members-td cc-members-td-actions"/>
-                  </tr>
+                {groups.map(({key,label,members})=>(
+                  <>
+                    {hasGroup&&(
+                      <tr key={"hdr_"+key} className="cc-members-group-hdr"
+                        onClick={()=>setCollapsedGroups(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
+                        <td colSpan={COLS.length+1}>
+                          <div className="cc-members-group-hdr-inner">
+                            <TI n={collapsedGroups.has(key)?"chevron-right":"chevron-down"} size={14} className="cc-members-group-hdr-chevron"/>
+                            <span className="cc-members-group-hdr-name">{label}</span>
+                            <span className="cc-members-group-hdr-count">{members.length}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {!collapsedGroups.has(key)&&members.map(e=>(
+                      <tr key={e.id} className="cc-members-tr">
+                        {COLS.map(col=>renderCell(col,e))}
+                        <td className="cc-members-td cc-members-td-actions"/>
+                      </tr>
+                    ))}
+                  </>
                 ))}
               </tbody>
             </table>
@@ -185,6 +256,19 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
         )}
         <div className="cc-archiv-footer">{sorted.length} von {allEltern.length} Elternkontakten</div>
       </Card>
+
+      {/* Ansicht speichern Modal */}
+      <ModalOrSheet open={saveOpen} onClose={()=>{setSaveOpen(false);setSaveName("");}} maxWidth={380}>
+        <ModalTitle>Ansicht speichern</ModalTitle>
+        <div className="cc-col cc-gap-12" style={{padding:"0 0 8px"}}>
+          <Input value={saveName} onChange={e=>setSaveName(e.target.value)}
+            placeholder="Name der Ansicht" autoFocus
+            onKeyDown={e=>e.key==="Enter"&&saveView()}/>
+          <button className="cc-btn-primary" onClick={saveView} disabled={saving||!saveName.trim()}>
+            {saving?"Speichern…":"Speichern"}
+          </button>
+        </div>
+      </ModalOrSheet>
     </>
   );
 }
