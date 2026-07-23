@@ -3,7 +3,7 @@
    State-Verwaltung, Tab-Bar, Tab-Routing
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { useIsMobile, useConfirm, ConfirmDialog } from "../../theme.jsx";
+import { useIsMobile, useConfirm } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.js";
 import {

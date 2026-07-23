@@ -3,9 +3,8 @@
    Elternkontakte-Tab im Mitglied-Detail
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Av, Btn, Card, ModalOrSheet, ModalTitle, useIsMobile, avColor, DropMenu, useConfirm, ConfirmDialog } from "../../../theme.jsx";
+import { Btn, Card, ModalOrSheet, DropMenu } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
-import { GN, R, RL, BL } from "../../../constants.js";
 import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte } from "../../../domains/members/memberService.js";
 
 function elternAvColor(beziehung){
