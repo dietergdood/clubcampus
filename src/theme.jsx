@@ -148,6 +148,17 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-empty-state-sub{font-size:12px;color:var(--sub);line-height:1.5;max-width:240px}
 .cc-empty-state-btn{margin-top:8px;font-size:12px;padding:6px 14px;border-radius:var(--cc-radius,8px);border:0.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
 .cc-empty-state-btn:hover{background:var(--surface)}
+.cc-verlauf-list{display:flex;flex-direction:column}
+.cc-verlauf-item{padding:10px 0}
+.cc-verlauf-item-border{border-bottom:0.5px solid var(--border)}
+.cc-verlauf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.cc-verlauf-feld{font-size:13px;font-weight:500;color:var(--text)}
+.cc-verlauf-meta{display:flex;align-items:center;gap:10px}
+.cc-verlauf-user{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:3px}
+.cc-verlauf-datum{font-size:11px;color:var(--sub)}
+.cc-verlauf-werte{display:flex;align-items:center;gap:8px;font-size:13px}
+.cc-verlauf-alt{color:var(--sub);text-decoration:line-through}
+.cc-verlauf-neu{color:var(--text);font-weight:500}
 .cc-table-wrap{background:var(--surface);border-radius:0 0 11px 11px}
 .cc-table-wrap-inner{overflow-x:auto;overflow-y:auto;width:100%;max-height:calc(100vh - 268px)}
 .cc-table-wrap-inner{overflow-x:auto}

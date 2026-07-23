@@ -283,3 +283,34 @@ export async function fetchMitgliedtypPflichtfelder(sb) {
   const { data } = await sb.from("mitgliedtyp_pflichtfelder").select("*");
   return data || [];
 }
+
+export const FELD_LABEL = {
+  vorname: "Vorname", nachname: "Nachname", email: "E-Mail",
+  telefon: "Telefon", geburtsdatum: "Geburtsdatum", geschlecht: "Geschlecht",
+  nationalitaet: "Nationalität 1", nationalitaet2: "Nationalität 2",
+  heimatort: "Heimatort", ahv_nr: "AHV-Nr.", strasse: "Strasse",
+  plz: "PLZ", ort: "Ort", kanton: "Kanton",
+  mitgliedtyp: "Mitgliedtyp", rolle: "Portalrolle",
+  spielerpass: "Spielerpass", js_nr: "J+S Nr.", fairgate_id: "Fairgate-ID",
+};
+
+export async function logAenderung(sb, mitgliedId, vereinId, feld, alterWert, neuerWert, geaendertVon) {
+  if (alterWert === neuerWert) return; // Keine Änderung
+  await sb.from("mitglieder_aenderungen").insert({
+    mitglied_id:   mitgliedId,
+    verein_id:     vereinId,
+    feld,
+    alter_wert:    alterWert ? String(alterWert) : null,
+    neuer_wert:    neuerWert ? String(neuerWert) : null,
+    geaendert_von: geaendertVon || null,
+  });
+}
+
+export async function fetchAenderungen(sb, mitgliedId) {
+  const { data } = await sb.from("mitglieder_aenderungen")
+    .select("*")
+    .eq("mitglied_id", mitgliedId)
+    .order("geaendert_at", { ascending: false })
+    .limit(50);
+  return data || [];
+}

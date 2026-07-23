@@ -18,6 +18,7 @@ import { ElternTab } from "./tabs/ElternTab.jsx";
 import { InfoTab } from "./tabs/InfoTab.jsx";
 import { PortalTab } from "./tabs/PortalTab.jsx";
 import { DatenpruefungTab } from "./tabs/DatenpruefungTab.jsx";
+import { VerlaufTab } from "./tabs/VerlaufTab.jsx";
 import { getFieldVisibility } from "./memberUtils.jsx";
 
 function MemberDetail({
@@ -152,6 +153,7 @@ function MemberDetail({
     { key: "stats",         label: "Statistik",      icon: "chart-bar" },
     { key: "portal",        label: "Portal-Zugang",  icon: "key" },
     { key: "datenpruefung", label: "Datenprüfung",   icon: "shield-check" },
+    { key: "verlauf",       label: "Verlauf",         icon: "history" },
   ];
   const MOBILE_VISIBLE = 3;
   const visibleTabs = isMobile ? allTabs.slice(0, MOBILE_VISIBLE) : allTabs;
@@ -274,6 +276,10 @@ function MemberDetail({
           portalMsg={portalMsg} setPortalMsg={setPortalMsg}
           onReload={onReload}
         />
+      )}
+
+      {tab === "verlauf" && (
+        <VerlaufTab raw={raw} sb={sb}/>
       )}
 
       {(tab === "stats" || tab === "comments" || tab === "ratings") && (

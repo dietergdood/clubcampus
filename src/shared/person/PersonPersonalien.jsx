@@ -26,12 +26,12 @@ function NatBadge({ code }) {
   return <span className="cc-land-badge">{code}</span>;
 }
 
-function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
+function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null }) {
   const [ahvVisible, setAhvVisible] = useState(false);
   const [natEditing, setNatEditing] = useState(false);
   const [nat1Val, setNat1Val] = useState("");
   const [nat2Val, setNat2Val] = useState("");
-  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload });
+  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload, vereinId, account, rawData: raw });
 
   const age = raw.geburtsdatum
     ? Math.floor((new Date() - new Date(raw.geburtsdatum)) / 31557600000)

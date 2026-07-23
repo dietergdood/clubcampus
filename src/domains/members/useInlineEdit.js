@@ -13,9 +13,9 @@
      Esc   → cancelEdit()
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useCallback } from "react";
-import { updateMitglied } from "./memberService.js";
+import { updateMitglied, logAenderung } from "./memberService.js";
 
-export function useInlineEdit({ sb, mitgliedId, onReload }) {
+export function useInlineEdit({ sb, mitgliedId, onReload, vereinId=null, account=null, rawData=null }) {
   const [editing, setEditing]   = useState(null);   // aktuell editiertes Feld (key)
   const [editVal, setEditVal]   = useState("");      // aktueller Eingabewert
   const [saving, setSaving]     = useState(false);
@@ -35,11 +35,18 @@ export function useInlineEdit({ sb, mitgliedId, onReload }) {
   const saveEdit = useCallback(async (field, value) => {
     if (!sb || !mitgliedId) return;
     setSaving(true);
+    // Alten Wert für Änderungshistorie merken
+    const alterWert = rawData ? rawData[field] : null;
     const ok = await updateMitglied(sb, mitgliedId, { [field]: value || null });
     setSaving(false);
     setEditing(null);
     setEditVal("");
     if (ok) {
+      // Änderung loggen wenn vereinId und account vorhanden
+      if (vereinId && alterWert !== (value || null)) {
+        const geaendertVon = account?.name || account?.email || "Administrator";
+        logAenderung(sb, mitgliedId, vereinId, field, alterWert, value || null, geaendertVon);
+      }
       setFeedback({ field, ok: true });
       setTimeout(() => setFeedback(null), 1500);
       if (onReload) onReload();
@@ -47,7 +54,7 @@ export function useInlineEdit({ sb, mitgliedId, onReload }) {
       setFeedback({ field, ok: false });
       setTimeout(() => setFeedback(null), 2500);
     }
-  }, [sb, mitgliedId, onReload]);
+  }, [sb, mitgliedId, onReload, vereinId, account, rawData]);
 
   // Keyboard handler für Input-Felder
   const handleKey = useCallback((e, field) => {

@@ -66,10 +66,10 @@ function InfoTab({
 
       {/* Grid: Personalien + Kontakt + Vereinsdaten + Teams + Funktionen + Notizen */}
       <div className="cc-grid-2">
-        <PersonPersonalien raw={raw} fv={fv} canEdit={canEdit} sb={sb} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}/>
+        <PersonPersonalien raw={raw} fv={fv} canEdit={canEdit} sb={sb} vereinId={vereinId} account={account} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}/>
 
         <PersonKontakt
-          raw={raw} fv={fv} canEdit={canEdit} sb={sb} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}
+          raw={raw} fv={fv} canEdit={canEdit} sb={sb} vereinId={vereinId} account={account} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}
           eltern={eltern} brauchtEltern={brauchtEltern} setTab={setTab}
         />
 

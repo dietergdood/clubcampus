@@ -9,8 +9,8 @@ import { useInlineEdit } from "../../domains/members/useInlineEdit.js";
 
 const KANTON_OPTS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"].map(k=>({v:k,l:k}));
 
-function PersonKontakt({ raw, fv, canEdit, sb, onReload, eltern, brauchtEltern, setTab }) {
-  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload });
+function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null, eltern, brauchtEltern, setTab }) {
+  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload, vereinId, account, rawData: raw });
 
   if (!fv.showEmail && !fv.showTelefon && !fv.showAdresse) return null;
 
