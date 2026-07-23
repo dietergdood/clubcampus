@@ -84,6 +84,8 @@ export function ListView({
   moreActions = [],
   // Footer
   footerLabel,
+  // Export
+  onExportReady,
 }) {
   const isMobile = useIsMobile();
 
@@ -371,6 +373,11 @@ export function ListView({
       );
     });
   }
+
+  // Export callback
+  useEffect(() => {
+    if (onExportReady) onExportReady({ rows: sorted, cols: COLS, groups });
+  }, [sorted, COLS, groups]);
 
   const footer = footerLabel
     ? footerLabel(filtered.length, rows.length)

@@ -17,42 +17,18 @@ import { ROLES, FIELD_VIS, SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GRO
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.js";
 import { ArchivView } from "./members/ArchivView.jsx";
 import { ElternListView } from "./members/ElternListView.jsx";
+import { ListView } from "../shared/list/ListView.jsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";
 
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}){
   const isMobile=useIsMobile();
   const [confirm,confirmDialog]=useConfirm();
-  const [search,setSearch]=useState("");
-  const [sortCol,setSortCol]=useState("name");
-  const [sortDir,setSortDir]=useState("asc");
-  const [groupBy,setGroupBy]=useState(["none"]);
-  const [filterVals,setFilterVals]=useState({});
-  const [savedView,setSavedView]=useState("standard");
-  const [dragCol,setDragCol]=useState(null);
-  const [dragOverCol,setDragOverCol]=useState(null);
-  const [colDragSrc,setColDragSrc]=useState(null);
-  const [colDragOver,setColDragOver]=useState(null);
   const [teamsPopover,setTeamsPopover]=useState(null);
-  const [pageSize,setPageSize]=useState(50);
   const [selectMode,setSelectMode]=useState(false);
-  const [collapsedGroups,setCollapsedGroups]=useState(new Set());
   const [expandedTeams,setExpandedTeams]=useState(new Set());
-  const [groupOrder,setGroupOrder]=useState({});
-  const [dragGroup,setDragGroup]=useState(null);
-  const [dragOverGroup,setDragOverGroup]=useState(null);
-  const [manualOrder,setManualOrder]=useState({});
-  const [dragRow,setDragRow]=useState(null);
-  const [dragOverRow,setDragOverRow]=useState(null);
-  const [selected,setSelected]=useState(new Set());
-  const [customViews,setCustomViews]=useState([]);
   const [portalFunktionen,setPortalFunktionen]=useState([]);
-  const [saveViewOpen,setSaveViewOpen]=useState(false);
-  const [saveViewName,setSaveViewName]=useState("");
-  const [savingView,setSavingView]=useState(false);
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
-  const [mobileFilterOpen,setMobileFilterOpen]=useState(0);
-  const [mobileGroupOpen,setMobileGroupOpen]=useState(0);
   const breakdownRef=useRef(null);
   const sentinelRef=useRef(null);
   useEffect(()=>{
@@ -104,52 +80,20 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter(Boolean))],
   }));
 
-  const [visibleCols,setVisibleCols]=useState(()=>SAVED_VIEWS.standard.cols);
   const COLS=visibleCols.map(k=>ALL_COLS.find(c=>c.key===k)).filter(Boolean);
-  function exportData(format){ exportDataUtil(filtered,COLS,format,groups); }
+  const exportDataRef = useRef({filtered:[], COLS:[], groups:[]});
+  function exportData(format){ exportDataUtil(exportDataRef.current.filtered, exportDataRef.current.COLS, format, exportDataRef.current.groups); }
 
-  function applyView(viewKey){
-    setSavedView(viewKey);
-    setVisibleCols(SAVED_VIEWS[viewKey]?.cols||SAVED_VIEWS.standard.cols);
-    setFilterVals({});
-    setGroupBy(["none"]);
-    setGroupOrder({});
-    setManualOrder({});
-  }
 
-  function applyCustomView(v){
-    setSavedView("custom_"+v.id);
-    setVisibleCols(v.spalten||SAVED_VIEWS.standard.cols);
-    setFilterVals(v.filter||{});
-    setGroupBy(Array.isArray(v.gruppierung)?v.gruppierung:[v.gruppierung||"none"]);
-    setGroupOrder(v.gruppenreihenfolge||{});
-    setManualOrder(v.zeilenreihenfolge||[]);
-  }
 
   useEffect(()=>{
     if(!sb||!account?.id) return;
-    fetchAnsichten(sb,account.id,"mitglieder").then(data=>setCustomViews(data));
     if(portalFunktionen.length===0)
       sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
         .then(({data})=>setPortalFunktionen(data||[]));
   },[account?.id]);
 
-  function toggleSelectMode(){
-    setSelectMode(m=>{
-      if(m) setSelected(new Set());
-      return !m;
-    });
-  }
-  function toggleSelectRow(id){
-    setSelected(prev=>{
-      const s=new Set(prev);
-      s.has(id)?s.delete(id):s.add(id);
-      return s;
-    });
-  }
-  function toggleSelectAll(){
-    setSelected(prev=>prev.size===paged.length?new Set():new Set(paged.map(m=>m.id)));
-  }
+
   async function handleBulkDelete(){
     if(!sb||selected.size===0) return;
     const ok=await confirm({title:`${selected.size} Mitglieder löschen?`,message:"Diese Aktion kann nicht rükgängig gemacht werden (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!ok) return;
@@ -172,57 +116,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setArchivLoaded(false);
     if(onReload) onReload();
   }
-  function handleColDragStart(key){ setDragCol(key); }
-  function handleColDragOver(key){ setDragOverCol(key); }
-  function handleColDrop(targetKey, dragKey){
-    const from=dragKey||dragCol;
-    if(!from||from===targetKey) return;
-    setVisibleCols(prev=>{
-      const cols=[...prev];
-      const fromIdx=cols.indexOf(from);
-      const toIdx=cols.indexOf(targetKey);
-      if(fromIdx<0||toIdx<0) return cols;
-      cols.splice(fromIdx,1);
-      cols.splice(toIdx,0,from);
-      return cols;
-    });
-    setDragCol(null);
-    setDragOverCol(null);
-  }
-  function handleColDragEnd(){ setDragCol(null); setDragOverCol(null); }
 
-  async function saveCurrentView(){
-    if(!saveViewName.trim()||!sb||!account?.id) return;
-    setSavingView(true);
-    const data=await insertAnsicht(sb,{
-      benutzer_id:account.id,
-      verein_id:vereinId,
-      name:saveViewName.trim(),
-      spalten:visibleCols,
-      filter:filterVals,
-      gruppierung:Array.isArray(groupBy)?groupBy:[groupBy],
-      gruppenreihenfolge:groupOrder,
-      zeilenreihenfolge:manualOrder,
-    });
-    if(data) setCustomViews(prev=>[...prev,data]);
-    setSaveViewName("");
-    setSaveViewOpen(false);
-    setSavingView(false);
-  }
 
-  async function deleteCustomView(id){
-    if(!sb) return;
-    await deleteAnsicht(sb,id);
-    setCustomViews(prev=>prev.filter(v=>v.id!==id));
-    if(savedView==="custom_"+id) applyView("standard");
-  }
 
-  function handleSort(key){
-    setManualOrder({});
-    if(sortCol===key) setSortDir(d=>d==="asc"?"desc":"asc");
-    else{ setSortCol(key); setSortDir("asc"); }
-  }
-  useEffect(()=>setPageSize(50),[search,filterVals,groupBy,sortCol,sortDir]);
+
+
   useEffect(()=>{
     if(!sb) return;
     fetchArchivCount(sb).then(count=>setArchivCount(count));
@@ -258,21 +156,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     {key:"datenpruefung",   label:"Datenprüfung",    vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
   ],[allMembers,ROLLE_LABEL,JAHRGANG_MIN,JAHRGANG_MAX,ALTER_MAX]);
 
-  const filtered=useMemo(()=>filterMembers(allMembers,search,filterVals,ROLLE_LABEL),[allMembers,search,filterVals,ROLLE_LABEL]);
-
-  const sorted=useMemo(()=>sortMembers(filtered,sortCol,sortDir),[filtered,sortCol,sortDir]);
-
-  const paged=sorted;
-  const hasMore=false;
-  const groups=useMemo(()=>buildGroups(paged,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen},null,groupOrder),[paged,groupBy,ROLLE_LABEL,filterVals,portalFunktionen,groupOrder]);
-  const hasGroup=Array.isArray(groupBy)?groupBy.some(g=>g&&g!=="none"):groupBy!=="none";
-  const activeFilterCount=Object.values(filterVals).filter(v=>{if(!v) return false; if(Array.isArray(v)) return v.length>0; if(typeof v==="object") return v.von!=null||v.bis!=null; return false;}).length;
-  const hasActiveFilter=activeFilterCount>0;
-
   const dpColor=s=>s==="Geprueft"?GN:s==="Ausstehend"?AM:R;
-  const SortIcon=({col})=>sortCol===col
-    ?<span className="cc-sort-arrow">{sortDir==="asc"?"▲":"▼"}</span>
-    :<span className="cc-sort-hover-icon">↕</span>;
 
   /* ── Detail-Modal ── */
   async function refreshArchivCount(){
@@ -523,154 +407,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     }
   }
 
-  // Rekursive Gruppen-Rendering Hilfsfunktion
-  function renderGroupsMobile(groups, depth=0){
-    return groups.map(({key,label,type,members,children})=>(
-      <div key={key}>
-        {hasGroup&&(
-          <div className={`cc-members-list-group-hdr${depth>0?" cc-members-list-group-hdr-sub":""}`} style={depth>0?{paddingLeft:depth*16+12}:{}}>
-            {type==="team"&&<TI n="ball-football" size={11}/>}
-            {type==="gruppe"&&<TI n="briefcase" size={11}/>}
-            {label} <span className="cc-text-muted">{members.length}</span>
-          </div>
-        )}
-        {children?renderGroupsMobile(children,depth+1):members.map(m=>(
-          <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
-            {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
-            <div className="cc-members-item-body">
-              <div className="cc-members-item-name">{m.name}</div>
-              <div className="cc-members-item-sub">{m.mitgliedschaft||""}{m.role&&m.role!=="-"?" · "+(ROLLE_LABEL[m.role]||m.role):""}</div>
-            </div>
-            <div className="cc-members-item-right"><TI n="chevron-right" size={14} className="cc-members-item-chevron"/></div>
-          </div>
-        ))}
-      </div>
-    ));
-  }
-
-  function renderGroupsTable(groups, depth=0, parentContext={type:"none",key:null}, teamContext={type:"none",key:null}, levelKey=null){
-    const currentLevelKey=levelKey||(Array.isArray(groupBy)?groupBy[depth]:groupBy)||"none";
-    return groups.map(({key,label,type,members,children})=>{
-      const groupContext=type!=="none"?{type,key}:parentContext;
-      const newTeamContext=type==="team"?{type,key}:(type==="gruppe"?{type,key}:teamContext);
-      const effectiveGc=groupContext.type==="team"||groupContext.type==="gruppe"?groupContext:(newTeamContext.type==="team"||newTeamContext.type==="gruppe"?newTeamContext:groupContext);
-      const visibleMembers=effectiveGc.type==="team"?members.filter(m=>{
-        const kaderFilter=filterVals["kaderrollen"]||[];
-        if(kaderFilter.length===0) return true;
-        const teamRollen=(m.kader_eintraege||[]).filter(e=>e.team?.name===effectiveGc.key).flatMap(e=>e.rollen);
-        return teamRollen.some(r=>kaderFilter.includes(r));
-      }):members;
-      if(!children&&visibleMembers.length===0) return null;
-      // Manuelle Reihenfolge innerhalb der Gruppe
-      const groupManualOrder=manualOrder[key];
-      const orderedMembers=groupManualOrder&&groupManualOrder.length>0
-        ?[...visibleMembers].sort((a,b)=>{
-            const ai=groupManualOrder.indexOf(a.id);
-            const bi=groupManualOrder.indexOf(b.id);
-            if(ai===-1&&bi===-1) return 0;
-            if(ai===-1) return 1;
-            if(bi===-1) return -1;
-            return ai-bi;
-          })
-        :visibleMembers;
-      const isCollapsed=collapsedGroups.has(key);
-      const toggleCollapse=()=>setCollapsedGroups(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;});
-      const isDragOver=dragOverGroup===key;
-      return(
-        <Fragment key={key}>
-          {hasGroup&&(
-            <tr
-              className={`cc-members-group-hdr${depth>0?" cc-members-group-hdr-sub":""}${isDragOver?" cc-group-drag-over":""}`}
-              onClick={toggleCollapse}
-              draggable
-              onDragStart={e=>{e.stopPropagation();setDragGroup({key,levelKey:currentLevelKey});}}
-              onDragOver={e=>{e.preventDefault();e.stopPropagation();setDragOverGroup(key);}}
-              onDrop={e=>{
-                e.preventDefault();e.stopPropagation();
-                if(dragGroup&&dragGroup.key!==key&&dragGroup.levelKey===currentLevelKey){
-                  const currentOrder=groupOrder[currentLevelKey]||groups.map(g=>g.key);
-                  const from=currentOrder.indexOf(dragGroup.key);
-                  const to=currentOrder.indexOf(key);
-                  if(from!==-1&&to!==-1){
-                    const next=[...currentOrder];
-                    next.splice(from,1);next.splice(to,0,dragGroup.key);
-                    setGroupOrder(prev=>({...prev,[currentLevelKey]:next}));
-                  }
-                }
-                setDragGroup(null);setDragOverGroup(null);
-              }}
-              onDragEnd={()=>{setDragGroup(null);setDragOverGroup(null);}}>
-              <td colSpan={COLS.length+(selectMode?2:1)}>
-                <div className="cc-members-group-hdr-inner" style={depth>0?{paddingLeft:depth*16}:{}}>
-                  <TI n={isCollapsed?"chevron-right":"chevron-down"} size={14} className="cc-members-group-hdr-chevron"/>
-                  <span className="cc-members-group-hdr-name">{label}</span>
-                  <span className="cc-members-group-hdr-count">{members.length}</span>
-                  <TI n="grip-horizontal" size={14} className="cc-members-group-hdr-grip"/>
-                </div>
-              </td>
-            </tr>
-          )}
-          {!isCollapsed&&(children?renderGroupsTable(children,depth+1,groupContext,newTeamContext,Array.isArray(groupBy)?groupBy[depth+1]:null):orderedMembers.map(m=>(
-            <tr key={m.id}
-              className={`cc-members-tr${selected.has(m.id)?" cc-members-tr-selected":""}${hasGroup&&dragOverRow===m.id?" cc-group-drag-over":""}${hasGroup?" cc-members-tr-draggable":""}`}
-              onClick={()=>selectMode?toggleSelectRow(m.id):null}
-              draggable={hasGroup}
-              onDragStart={hasGroup?e=>{e.stopPropagation();setDragRow({id:m.id,groupKey:key});}:undefined}
-              onDragOver={hasGroup?e=>{e.preventDefault();e.stopPropagation();setDragOverRow(m.id);}:undefined}
-              onDrop={hasGroup?e=>{
-                e.preventDefault();e.stopPropagation();
-                if(dragRow&&dragRow.id!==m.id&&dragRow.groupKey===key){
-                  const curr=(manualOrder[key]||orderedMembers.map(p=>p.id));
-                  const from=curr.indexOf(dragRow.id);
-                  const to=curr.indexOf(m.id);
-                  if(from!==-1&&to!==-1){
-                    const next=[...curr];
-                    next.splice(from,1);next.splice(to,0,dragRow.id);
-                    setManualOrder(prev=>({...prev,[key]:next}));
-                  }
-                }
-                setDragRow(null);setDragOverRow(null);
-              }:undefined}
-              onDragEnd={hasGroup?()=>{setDragRow(null);setDragOverRow(null);}:undefined}>
-              {selectMode&&<td className="cc-members-cb-col" onClick={e=>e.stopPropagation()}>
-                <div className={`cc-col-menu-check${selected.has(m.id)?" cc-col-menu-check-on":""}`} onClick={()=>toggleSelectRow(m.id)}>
-                  {selected.has(m.id)&&<TI n="check" size={10}/>}
-                </div>
-              </td>}
-              {COLS.map(col=>renderCell(col,m,effectiveGc))}
-              <td className="cc-members-td cc-members-td-actions"/>
-            </tr>
-          )))}
-        </Fragment>
-      );
-    });
-  }
-
   return(
     <>{confirmDialog}
-    {/* Ansicht speichern Modal */}
-    <ModalOrSheet open={saveViewOpen} onClose={()=>{setSaveViewOpen(false);setSaveViewName("");}} maxWidth={380}>
-      <div className="cc-modal-hdr">
-        <ModalTitle>Als neue Ansicht speichern</ModalTitle>
-        <button className="cc-icon-btn" onClick={()=>{setSaveViewOpen(false);setSaveViewName("");}}><TI n="x" size={14}/></button>
-      </div>
-      <div className="cc-modal-body cc-col cc-gap-8">
-        <input
-          className="cc-input"
-          placeholder="Name der Ansicht…"
-          value={saveViewName}
-          onChange={e=>setSaveViewName(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&saveCurrentView()}
-          autoFocus
-        />
-      </div>
-      <div className="cc-modal-ftr">
-        <Btn onClick={()=>{setSaveViewOpen(false);setSaveViewName("");}}>Abbrechen</Btn>
-        <Btn variant="primary" onClick={saveCurrentView} disabled={savingView||!saveViewName.trim()}>
-          {savingView?"Speichert…":"Speichern"}
-        </Btn>
-      </div>
-    </ModalOrSheet>
     <div className="cc-page-wide">
       {/* Header + Tabs */}
       <div className="cc-page-hdr">
@@ -751,152 +489,51 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {/* Gespeicherte Ansichten - nur Desktop */}
 
 
-      {/* Selektionsleiste */}
-      {!isMobile&&(
-        <BulkBar
-          show={selectMode}
-          count={selected.size}
-          total={(paged||[]).length}
-          onSelectAll={toggleSelectAll}
-          actions={[
-            {icon:"download", label:"Auswahl als CSV", onClick:()=>exportData("csv")},
-            {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
-            {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
-          ]}
-          onCancel={()=>{setSelected(new Set());setSelectMode(false);}}
-        />
-      )}
-
-
-      {/* Toolbar */}
-      <Toolbar
-        search={search} onSearch={setSearch}
+      <ListView
+        rows={allMembers}
+        filterFn={(rows,search,filterVals)=>filterMembers(rows,search,filterVals,ROLLE_LABEL)}
+        sortFn={sortMembers}
+        buildGroupsFn={(rows,groupBy,groupOrder)=>buildGroups(rows,groupBy,ROLLE_LABEL,{...filterVals,__portalFunktionen:portalFunktionen},null,groupOrder)}
+        colDefs={ALL_COLS}
+        colGroups={COL_GROUPS}
+        defaultCols={SAVED_VIEWS.standard.cols}
+        savedViews={SAVED_VIEWS}
         filterDefs={FILTER_DEFS}
-        filterVals={filterVals}
-        onFilterChange={(key,val,active)=>{
-          if(key==="__reset"){setFilterVals({});return;}
-          if(key==="__range"){
-            const {rangeKey,von,bis}=val;
-            if(von==null&&bis==null){
-              setFilterVals(prev=>{const n={...prev};delete n[rangeKey];return n;});
-            } else {
-              setFilterVals(prev=>({...prev,[rangeKey]:{von,bis}}));
-            }
-            return;
-          }
-          setFilterVals(prev=>({
-            ...prev,
-            [key]:active?[...(prev[key]||[]),val]:(prev[key]||[]).filter(x=>x!==val)
-          }));
-        }}
-        groupOptions={GROUP_OPTIONS} groupOptionsMore={GROUP_OPTIONS_MORE}
-        groupBy={groupBy} onGroupChange={setGroupBy}
+        groupOptions={GROUP_OPTIONS}
+        groupOptionsMore={GROUP_OPTIONS_MORE}
         multiGroup
-        colMenu={!isMobile&&<ColMenuButton
-          colGroups={COL_GROUPS}
-          visibleCols={visibleCols}
-          onVisibleColsChange={setVisibleCols}
-          dragCol={dragCol}
-          dragOverCol={dragOverCol}
-          onDragStart={handleColDragStart}
-          onDragOver={handleColDragOver}
-          onDrop={handleColDrop}
-          onDragEnd={handleColDragEnd}
-        />}
-        externalFilterOpen={mobileFilterOpen}
-        externalGroupOpen={mobileGroupOpen}
-        moreItems={[
-          ...(isMobile?[
-            {header:true,label:"Ansicht"},
-            {icon:"filter",label:"Filter"+(hasActiveFilter?" ("+activeFilterCount+")":""),onClick:()=>setMobileFilterOpen(c=>c+1)},
-            {icon:"layout-rows",label:"Gruppieren"+(hasGroup?" (aktiv)":""),onClick:()=>setMobileGroupOpen(c=>c+1)},
-            "sep",
-          ]:[]),
-          {header:true,label:"Aktionen"},
-          ...(hasGroup?[
-            {icon:"chevrons-up",label:"Alle einklappen",onClick:()=>setCollapsedGroups(new Set(groups.map(g=>g.key)))},
-            {icon:"chevrons-down",label:"Alle ausklappen",onClick:()=>setCollapsedGroups(new Set())},
-            "sep",
-          ]:[]),
-          {icon:"checkbox",label:selectMode?"Auswahlmodus beenden":"Mitglieder auswählen",onClick:toggleSelectMode},
-          "sep",
-          {header:true,label:"Ansichten"},
-          ...Object.entries(SAVED_VIEWS).map(([k,v])=>({
-            icon:savedView===k?"check":"layout",
-            label:v.label,
-            onClick:()=>applyView(k),
-          })),
-          ...customViews.map(v=>({
-            icon:savedView==="custom_"+v.id?"check":"layout",
-            label:v.name,
-            onClick:()=>applyCustomView(v),
-            onDelete:()=>deleteCustomView(v.id),
-          })),
-          "sep",
-          "sep",
-          {icon:"device-floppy",label:"Als neue Ansicht speichern",onClick:()=>setSaveViewOpen(true)},
-          ...(canExport?[
-            "sep",
-            {header:true,label:"Export"},
-            {icon:"file-text",label:"Liste als CSV (flach)",onClick:()=>exportData("csv")},
-            {icon:"file-text",label:"Liste als CSV (mit Gruppen)",onClick:()=>exportData("csv-gruppen")},
-            {icon:"table",label:"Liste als Excel (pro Gruppe ein Sheet)",onClick:()=>exportData("excel-sheets")},
-          ]:[]),
-        ]}
-      />
-
-      {/* Liste / Tabelle */}
-      <Card className="cc-card-table" flush>
-
-
-        {(filtered||[]).length===0&&<div className="cc-empty">Keine Mitglieder gefunden.</div>}
-        {(filtered||[]).length>0&&(isMobile?(
-          <div>
-            {renderGroupsMobile(groups)}
+        renderCell={(col,m,gc)=>renderCell(col,m,gc)}
+        renderMobile={m=>(
+          <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
+            {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
+            <div className="cc-members-item-body">
+              <div className="cc-members-item-name">{m.name}</div>
+              <div className="cc-members-item-sub">{m.mitgliedschaft||""}{m.role&&m.role!=="-"?" · "+(ROLLE_LABEL[m.role]||m.role):""}</div>
+            </div>
+            <div className="cc-members-item-right"><TI n="chevron-right" size={14} className="cc-members-item-chevron"/></div>
           </div>
-        ):(
-          <div className="cc-table-wrap"><div className="cc-table-wrap-inner"><table className="cc-members-table">
-            <thead>
-              <tr>
-                {selectMode&&<th className="cc-members-cb-col">
-                  <div className={`cc-col-menu-check${selected.size===paged.length&&paged.length>0?" cc-col-menu-check-on":""}`} onClick={toggleSelectAll}>
-                    {selected.size===paged.length&&paged.length>0&&<TI n="check" size={10}/>}
-                  </div>
-                </th>}
-                {COLS.map(col=>(
-                  <th key={col.key}
-                    className={`cc-members-th${dragCol&&dragCol!==col.key?" cc-members-th-drop-target":""}${dragCol===col.key?" cc-members-th-dragging":""}`}
-                    onClick={()=>{
-                      if(dragCol){
-                        if(dragCol!==col.key) handleColDrop(col.key);
-                        else handleColDragEnd();
-                      } else {
-                        handleSort(col.key);
-                      }
-                    }}
-                  >
-                    <span className="cc-members-th-inner">
-
-                      <span>{col.label}<SortIcon col={col.key}/></span>
-                    </span>
-                  </th>
-                ))}
-                <th className="cc-members-th cc-members-th-actions"/>
-              </tr>
-            </thead>
-            <tbody>
-              {renderGroupsTable(groups)}
-            </tbody>
-          </table></div></div>
-        ))}
-      {hasMore&&!isMobile&&(
-        <div ref={sentinelRef} style={{height:40,display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <span className="cc-text-xs cc-text-sub">{pageSize} von {sorted.length} geladen…</span>
-        </div>
-      )}
-
-      </Card>
-
+        )}
+        sb={sb}
+        account={account}
+        vereinId={vereinId}
+        viewTyp="mitglieder"
+        selectable
+        bulkActions={[
+          {icon:"download", label:"Auswahl als CSV", onClick:()=>exportData("csv")},
+          {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
+          {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
+        ]}
+        moreActions={canExport?[
+          {header:true, label:"Export"},
+          {icon:"file-text", label:"Liste als CSV (flach)",           onClick:()=>exportData("csv")},
+          {icon:"file-text", label:"Liste als CSV (mit Gruppen)",     onClick:()=>exportData("csv-gruppen")},
+          {icon:"table",     label:"Liste als Excel (pro Gruppe ein Sheet)", onClick:()=>exportData("excel-sheets")},
+        ]:[]}
+        onExportReady={({rows,cols,groups})=>{
+          exportDataRef.current={filtered:rows,COLS:cols,groups};
+        }}
+        footerLabel={(f,t)=>`${f} von ${t} Mitgliedern`}
+      />
       </>
       )}
 
