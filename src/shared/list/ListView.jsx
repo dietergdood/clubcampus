@@ -313,14 +313,16 @@ export function ListView({
 
   // ── moreItems ────────────────────────────────────────────────
   const moreItems = [
-    { header: true, label: "Aktionen" },
+    // moreActions zuerst — prominent, ohne Sektion
+    ...moreActions,
+    ...((moreActions.length > 0 && !isMobile && (hasGroup || selectable)) ? ["sep"] : []),
+    // Aktionen-Sektion (nur Desktop, nur wenn relevant)
+    ...(!isMobile && (hasGroup || selectable) ? [{ header: true, label: "Aktionen" }] : []),
+    ...(!isMobile && selectable ? [{ icon: "checkbox", label: selectMode ? "Auswahlmodus beenden" : "Auswählen", onClick: () => { setSelectMode(m => { if (m) setSelected(new Set()); return !m; }); } }] : []),
     ...(!isMobile && hasGroup ? [
       { icon: "chevrons-up",   label: "Alle einklappen", onClick: () => setCollapsedGroups(new Set(groups.map(g => g.key))) },
       { icon: "chevrons-down", label: "Alle ausklappen", onClick: () => setCollapsedGroups(new Set()) },
-      "sep",
     ] : []),
-    ...(!isMobile && selectable ? [{ icon: "checkbox", label: selectMode ? "Auswahlmodus beenden" : "Auswählen", onClick: () => { setSelectMode(m => { if (m) setSelected(new Set()); return !m; }); } }] : []),
-    ...moreActions,
     { header: true, label: "Ansichten" },
     ...(savedViews ? Object.entries(savedViews).map(([key, v]) => ({
       icon: savedView === key ? "check" : "layout",
