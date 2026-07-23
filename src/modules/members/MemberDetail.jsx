@@ -259,9 +259,12 @@ function MemberDetail({
 
       {tab === "portal" && (
         <PortalTab
-          raw={raw} benutzer={benutzer}
+          raw={raw} benutzer={benutzer} sb={sb}
+          dbPortalRollen={dbPortalRollen}
           portalMsg={portalMsg} portalLoading={portalLoading}
           handleUnlink={handleUnlink} handleReactivate={handleReactivate}
+          setBenutzer={setBenutzer}
+          onReload={()=>{ if(reloadMember) reloadMember(raw.id); if(onReload) onReload(); }}
         />
       )}
 
