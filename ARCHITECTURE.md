@@ -152,8 +152,9 @@ Diese Datei wird automatisch aktualisiert wenn:
 **Pflicht nach jedem Auslagern einer Komponente:**
 1. Alle Props die neue Komponente empfängt → werden sie vom Parent übergeben?
 2. Alle Variablen die neue Komponente verwendet → lokal definiert oder als Prop?
-3. Build-Check reicht nicht — er findet keine fehlenden Runtime-Props
-4. Prop-Audit mit Script prüfen bevor Files geliefert werden
+3. Factory-Funktionen (`makeXxx`) → geben sie das Objekt/die Funktion zurück (`return ...`)?
+4. Build-Check reicht nicht — er findet keine fehlenden Runtime-Props oder fehlende Return-Statements
+5. Prop-Audit mit Script prüfen bevor Files geliefert werden
 
 ## CSS-Regeln
 
