@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { Card } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { getLandName } from "../../modules/members/memberUtils.jsx";
+import { getLandName } from "../../domains/person/personUtils.js";
 
 function PersonPersonalien({ raw, fv, canEdit }) {
   const [ahvVisible, setAhvVisible] = useState(false);

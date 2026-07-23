@@ -764,7 +764,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-teams-rollen-team{font-weight:600}
 .cc-teams-rollen-sep{color:var(--sub);margin:0 4px}
 .cc-teams-rollen-rolle{color:var(--text-secondary,#555)}
-.cc-teams-rollen-more{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:3px;font-family:inherit}.cc-teams-rollen-more:hover{color:var(--text)}
+.cc-teams-rollen-more{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:3px;font-family:inherit;background:none;border:none;cursor:pointer;padding:0}.cc-teams-rollen-more:hover{color:var(--text)}
 .cc-funk-row{display:flex;align-items:center;gap:6px;line-height:1.8;margin-bottom:2px}
 .cc-funk-row .cc-text-sm{color:var(--text)!important}
 .cc-portal-status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500}
@@ -2412,4 +2412,19 @@ export const COMPONENT_REGISTRY = [
   },
 ];
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm };
+
+/* ── PortalBadge: Portal-Zugang Status ── */
+function PortalBadge({val}){
+  if(val==="Aktiv") return <span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>;
+  if(val==="Deaktiviert") return <span className="cc-portal-status cc-portal-status-deaktiviert"><span className="cc-portal-dot"/> Deaktiviert</span>;
+  return <span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>;
+}
+
+/* ── DpBadge: Datenprüfungs-Status ── */
+function DpBadge({val}){
+  if(val==="Geprueft") return <span className="cc-dp-status cc-dp-status-ok"><span className="cc-dp-dot"/> Geprüft</span>;
+  if(val==="Ausstehend") return <span className="cc-dp-status cc-dp-status-warn"><span className="cc-dp-dot"/> Ausstehend</span>;
+  return <span className="cc-dp-status cc-dp-status-err"><span className="cc-dp-dot"/> {val||"Unbekannt"}</span>;
+}
+
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge };
