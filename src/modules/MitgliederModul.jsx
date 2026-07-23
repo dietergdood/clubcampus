@@ -298,12 +298,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </div>
           </td>;
         }
+        // Bei Team+Kaderrolle Mehrfachgruppierung: Team-Kontext + Kaderrolle als Subkontext
+        const rolleFilter=gc.subType==="kaderrolle"?[gc.subKey]:(kaderFilter.length>0?kaderFilter:null);
         const eintraege=(m.kader_eintraege||[]).filter(e=>{
           const teamMatch=gc.type==="team"?e.team?.name===gc.key:(teamsFilter.length===0||teamsFilter.includes(e.team?.name));
-          const rolleMatch=kaderFilter.length===0||e.rollen.some(r=>kaderFilter.includes(r));
+          const rolleMatch=rolleFilter?e.rollen.some(r=>rolleFilter.includes(r)):true;
           return teamMatch&&rolleMatch;
         }).sort((a,b)=>{
-          // Trainer-Einträge zuerst
           const aIsTrainer=a.rollen.some(r=>TRAINER_KEYS.includes(r));
           const bIsTrainer=b.rollen.some(r=>TRAINER_KEYS.includes(r));
           return aIsTrainer===bIsTrainer?0:aIsTrainer?-1:1;
@@ -315,7 +316,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         return <td key="teams_rollen" className="cc-members-td">
           <div className="cc-col cc-gap-4">
             {visibleE.map((e,i)=>{
-              const rollenToShow=kaderFilter.length>0?e.rollen.filter(r=>kaderFilter.includes(r)):e.rollen;
+              const rollenToShow=rolleFilter?e.rollen.filter(r=>rolleFilter.includes(r)):e.rollen;
               return(
                 <div key={i} className="cc-teams-rollen-row">
                   <span className="cc-teams-rollen-team">{e.team?.kurz||e.team?.name||"—"}</span>

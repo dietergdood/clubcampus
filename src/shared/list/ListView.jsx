@@ -362,7 +362,7 @@ export function ListView({
       const effectiveCtx = (type==="team"||type==="gruppe")
         ? currentCtx
         : (parentCtx.type==="team"||parentCtx.type==="gruppe") 
-          ? parentCtx 
+          ? { ...parentCtx, subType: type, subKey: key }
           : currentCtx;
       const groupManualOrder = manualOrder[key];
       const orderedMembers = groupManualOrder && groupManualOrder.length > 0
