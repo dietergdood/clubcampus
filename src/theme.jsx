@@ -1784,6 +1784,21 @@ function Toolbar({
                       // Stufe 1: Hauptmenü
                       <div>
 
+                        {(()=>{
+                          let inAktionen=false;
+                          return moreItems.map((item,i)=>{
+                            if(item==="sep"){inAktionen=false;return null;}
+                            if(item.header){inAktionen=item.label==="Aktionen";return null;}
+                            if(!inAktionen) return null;
+                            return(
+                              <button key={i} className="cc-sheet-nav-item"
+                                onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
+                                <span className="cc-sheet-nav-left">{item.icon&&<TI n={item.icon} size={18}/>}{item.label}</span>
+                              </button>
+                            );
+                          });
+                        })()}
+
                         {moreItems.filter(item=>item!=="sep"&&item.header&&item.label==="Ansichten").length>0&&(
                           <button className="cc-sheet-nav-item"
                             onMouseDown={e=>{e.stopPropagation();setMobileSubMenu("views");}}>
