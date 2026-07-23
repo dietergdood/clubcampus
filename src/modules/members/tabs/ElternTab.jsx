@@ -1,11 +1,22 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/ElternTab.jsx
-   Elternkontakte-Tab im Mitglied-Detail
+   Elternkontakte-Tab im Mitglied-Detail (n:m via eltern_kinder)
+
+   Logik:
+   - Ein Elternteil kann mehrere Kinder haben
+   - hauptkontakt ist pro Kind in eltern_kinder gesetzt
+   - Entknüpfen des letzten Kindes → deleteElternkontakt
+   - E-Mail Pflichtfeld
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
-import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte, logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../../domains/members/memberService.js";
+import {
+  insertElternkontakt, updateElternkontakt, deleteElternkontakt,
+  unlinkKind, setHauptkontakt, unlinkElternBenutzer,
+  fetchElternkontakte, fetchKinderFuerElternteil,
+  logAenderung, logAktivitaet, AKTIVITAET_TYP
+} from "../../../domains/members/memberService.js";
 
 function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();
@@ -13,6 +24,7 @@ function elternAvColor(beziehung){
   if(b==="vater"||b==="grossvater")   return {bg:"#EFF6FF",text:"#1E40AF"};
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
+
 function ElternPortalSection({e,sb,onReload}){
   const [loading,setLoading]=useState(false);
   async function unlink(){
@@ -44,64 +56,136 @@ function ElternPortalSection({e,sb,onReload}){
   );
 }
 
-/* Avatar-Farbe nach Beziehung */
-function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null,account=null}){
+function KinderListe({elternId, sb}){
+  const [kinder, setKinder] = useState(null);
+  const [open, setOpen] = useState(false);
+
+  async function load(){
+    if(!sb) return;
+    const data = await fetchKinderFuerElternteil(sb, elternId);
+    setKinder(data);
+    setOpen(true);
+  }
+
+  if(!open) return(
+    <button className="cc-text-sm cc-text-sub cc-link-btn" onClick={load}>
+      Weitere Kinder anzeigen
+    </button>
+  );
+
+  return(
+    <div className="cc-col cc-gap-4 cc-mt-4">
+      <div className="cc-text-sm cc-text-sub">Verknüpfte Kinder:</div>
+      {(kinder||[]).map(k=>(
+        <div key={k.mitglied_id} className="cc-text-sm">
+          <TI n="user" size={11}/> {k.mitglieder?.vorname} {k.mitglieder?.nachname}
+          {k.hauptkontakt&&<span className="cc-status-hauptkontakt cc-ml-6">★ HK</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null}){
   const [confirm, confirmDialog] = useConfirm();
-  const [editEltern,setEditEltern]=useState(null);
-  const [elternMsg,setElternMsg]=useState(null);
-  const [elternSaving,setElternSaving]=useState(false);
+  const [editEltern, setEditEltern] = useState(null);
+  const [elternMsg, setElternMsg] = useState(null);
+  const [elternSaving, setElternSaving] = useState(false);
   const geaendertVon = account?.name||account?.email||"Administrator";
+
+  async function reload(){
+    const data = await fetchElternkontakte(sb, raw.id);
+    setElternLoaded(data);
+    if(onReload) onReload();
+  }
+
+  function validate(d){
+    if(!d.vorname?.trim()) return "Vorname ist Pflichtfeld";
+    if(!d.nachname?.trim()) return "Nachname ist Pflichtfeld";
+    if(!d.email?.trim()) return "E-Mail ist Pflichtfeld";
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return "Ungültige E-Mail-Adresse";
+    return null;
+  }
 
   async function saveEltern(){
     if(!sb) return;
+    const d = editEltern.data;
+    const err = validate(d);
+    if(err){ setElternMsg({ok:false,text:err}); return; }
+
     setElternSaving(true); setElternMsg(null);
     try{
-      const d=editEltern.data;
+      const name = [d.vorname,d.nachname].filter(Boolean).join(" ");
+
       if(editEltern.mode==="new"){
-        const error=await insertElternkontakt(sb,{
-          mitglied_id:raw.id,
-          verein_id:vereinId,
-          vorname:d.vorname||null, nachname:d.nachname||null,
-          name:d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||null,
-          email:d.email||null, telefon:d.telefon||null,
-          beziehung:d.beziehung||null,
+        const error = await insertElternkontakt(sb,{
+          mitglied_id: raw.id,
+          verein_id: vereinId,
+          vorname: d.vorname||null,
+          nachname: d.nachname||null,
+          name,
+          email: d.email||null,
+          telefon: d.telefon||null,
+          beziehung: d.beziehung||null,
         });
         if(error) throw error;
-        const name=d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||"?";
         if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,`Elternkontakt hinzugefügt: ${name}`,"elternkontakte",name,geaendertVon);
       } else {
-        const alter=eltern.find(e=>e.id===d.id);
-        const alterName=alter?`${alter.vorname||""} ${alter.nachname||""}`.trim():null;
-        const error=await updateElternkontakt(sb,d.id,{
-          vorname:d.vorname||null, nachname:d.nachname||null,
-          name:d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||null,
-          email:d.email||null, telefon:d.telefon||null,
-          beziehung:d.beziehung||null,
+        const alter = eltern.find(e=>e.id===d.id);
+        const alterName = alter?`${alter.vorname||""} ${alter.nachname||""}`.trim():null;
+        const error = await updateElternkontakt(sb,d.id,{
+          vorname: d.vorname||null,
+          nachname: d.nachname||null,
+          name,
+          email: d.email||null,
+          telefon: d.telefon||null,
+          beziehung: d.beziehung||null,
         });
         if(error) throw error;
-        const neuerName=d.vorname&&d.nachname?`${d.vorname} ${d.nachname}`:d.name||"?";
-        if(vereinId) {
-          if(alterName&&neuerName&&alterName!==neuerName)
-            logAenderung(sb,raw.id,vereinId,"elternkontakte",alterName,neuerName,geaendertVon);
-          else if(alterName!==neuerName)
-            logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Elternkontakt bearbeitet: ${neuerName}`,"elternkontakte",neuerName,geaendertVon);
+        if(vereinId){
+          if(alterName&&name&&alterName!==name)
+            logAenderung(sb,raw.id,vereinId,"elternkontakte",alterName,name,geaendertVon);
+          else
+            logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Elternkontakt bearbeitet: ${name}`,"elternkontakte",name,geaendertVon);
         }
       }
       setElternMsg({ok:true,text:"Gespeichert ✓"});
-      fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
-      setTimeout(()=>{setEditEltern(null);setElternMsg(null);if(onReload)onReload();},800);
-    }catch(e){setElternMsg({ok:false,text:e.message});}
+      setTimeout(()=>{ setEditEltern(null); setElternMsg(null); reload(); },800);
+    }catch(e){ setElternMsg({ok:false,text:e.message}); }
     setElternSaving(false);
   }
 
-  async function deleteEltern(id){
-    const ok=await confirm({title:"Elternkontakt löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
-    const elternItem=eltern.find(e=>e.id===id);
-    const name=elternItem?`${elternItem.vorname||""} ${elternItem.nachname||""}`.trim():null;
-    await deleteElternkontakt(sb,id);
-    if(vereinId&&name) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
-    setElternLoaded(null);
-    if(onReload) onReload();
+  async function handleEntknuepfen(e){
+    const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
+    const ok = await confirm({
+      title:`${name} entknüpfen?`,
+      message:"Das Kind wird vom Elternkontakt entknüpft. Falls dies das letzte Kind ist, wird der Elternkontakt gelöscht.",
+      danger:true,
+      confirmLabel:"Entknüpfen"
+    });
+    if(!ok) return;
+
+    const { verbleibendeKinder } = await unlinkKind(sb, e.id, raw.id);
+    if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entknüpft: ${name}`,"elternkontakte",name,geaendertVon);
+
+    if(verbleibendeKinder === 0){
+      // Letztes Kind — Elternkontakt löschen
+      await deleteElternkontakt(sb, e.id);
+    }
+    reload();
+  }
+
+  async function handleHauptkontakt(e){
+    const name = `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
+    if(!e.hauptkontakt){
+      await setHauptkontakt(sb, raw.id, e.id, vereinId);
+      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
+    } else {
+      // Hauptkontakt entfernen
+      await sb.from("eltern_kinder").update({hauptkontakt:false}).eq("eltern_id",e.id).eq("mitglied_id",raw.id);
+      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
+    }
+    reload();
   }
 
   return(
@@ -116,11 +200,11 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
       )}
       {eltern.length===0&&<EmptyState icon="heart" title="Keine Elternkontakte" subtitle="Noch kein Elternkontakt für dieses Mitglied erfasst."/>}
       {eltern.map((e,i)=>{
-        const name=e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
-        const tel=e.telefon||e.tel;
-        const ac=elternAvColor(e.beziehung);
+        const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
+        const tel = e.telefon||e.tel;
+        const ac = elternAvColor(e.beziehung);
         return(
-          <Card key={i}>
+          <Card key={e.id||i}>
             <div className="cc-row cc-gap-12 cc-items-center">
               <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
                 {(name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
@@ -136,32 +220,21 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
                   {e.hauptkontakt&&<span className="cc-status-hauptkontakt">★ Hauptkontakt</span>}
                 </div>
                 {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{e.email}</a>}
-                {tel&&<a href={`tel:${tel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{tel}</a>}
+                {tel&&<a href={`tel:${tel}`} className="cc-contact-link-plain"><TI n="phone" size={12}/>{tel}</a>}
               </div>
               {canEdit&&(
                 <DropMenu items={[
                   {label:"Bearbeiten", icon:"edit", onClick:()=>setEditEltern({mode:"edit",data:{...e}})},
-                  {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"user", onClick:async()=>{
-                    if(!sb) return;
-                    const name=`${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
-                    if(!e.hauptkontakt){
-                      await setHauptkontakt(sb,raw.id,e.id);
-                      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
-                    } else {
-                      await updateElternkontakt(sb,e.id,{hauptkontakt:false});
-                      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
-                    }
-                    fetchElternkontakte(sb,raw.id).then(data=>setElternLoaded(data));
-                    if(onReload) onReload();
-                  }},
+                  {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"star", onClick:()=>handleHauptkontakt(e)},
                   "sep",
-                  {label:"Löschen", icon:"trash", danger:true, onClick:()=>deleteEltern(e.id)},
+                  {label:"Entknüpfen", icon:"unlink", danger:true, onClick:()=>handleEntknuepfen(e)},
                 ]}/>
               )}
             </div>
           </Card>
         );
       })}
+
       {editEltern&&(
         <ModalOrSheet open={true} onClose={()=>{setEditEltern(null);setElternMsg(null);}} maxWidth={480}>
           <div className="cc-modal-hdr">
@@ -170,23 +243,27 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
           </div>
           <div className="cc-modal-body">
             <div className="cc-form-row">
-              <div className="cc-form-section-title" data-label="Personalien"/>
               {[
-                {k:"vorname",   l:"Vorname"},
-                {k:"nachname",  l:"Nachname"},
-                {k:"beziehung", l:"Beziehung", opts:["Mutter","Vater","Elternteil","Grossmutter","Grossvater","Vormund"]},
-                {k:"email",     l:"E-Mail",    type:"email"},
-              ].map(({k,l,type="text",opts})=>(
-                <div key={k} className={k==="email"?"cc-form-full":""}>
-                  <label className="cc-label">{l}</label>
+                {k:"vorname",   l:"Vorname",    req:true},
+                {k:"nachname",  l:"Nachname",   req:true},
+                {k:"beziehung", l:"Beziehung",  opts:["Mutter","Vater","Elternteil","Grossmutter","Grossvater","Vormund"]},
+                {k:"email",     l:"E-Mail",     type:"email", req:true, full:true},
+              ].map(({k,l,type="text",opts,req,full})=>(
+                <div key={k} className={full?"cc-form-full":""}>
+                  <label className="cc-label">{l}{req&&<span className="cc-label-req"> *</span>}</label>
                   {opts
-                    ?<select className="cc-input" value={editEltern.data[k]||""} onChange={ev=>setEditEltern(p=>({...p,data:{...p.data,[k]:ev.target.value}}))}>\n                      <option value="">– wählen –</option>
+                    ?<select className="cc-input" value={editEltern.data[k]||""} onChange={ev=>setEditEltern(p=>({...p,data:{...p.data,[k]:ev.target.value}}))}>
+                      <option value="">– wählen –</option>
                       {opts.map(o=><option key={o}>{o}</option>)}
                     </select>
                     :<input className="cc-input" type={type} value={editEltern.data[k]||""} onChange={ev=>setEditEltern(p=>({...p,data:{...p.data,[k]:ev.target.value}}))} placeholder={l}/>
                   }
                 </div>
               ))}
+              <div className="cc-form-full">
+                <label className="cc-label">Telefon</label>
+                <PhoneInput value={editEltern.data.telefon||""} onChange={v=>setEditEltern(p=>({...p,data:{...p.data,telefon:v}}))} showHint={false}/>
+              </div>
             </div>
             {editEltern.mode==="edit"&&<ElternPortalSection e={editEltern.data} sb={sb} onReload={onReload}/>}
             {elternMsg&&<div className={`cc-badge ${elternMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{elternMsg.text}</div>}
@@ -203,7 +280,5 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
     </div>
   );
 }
-
-
 
 export { ElternTab, ElternPortalSection, elternAvColor };
