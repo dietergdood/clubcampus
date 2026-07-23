@@ -6,9 +6,9 @@
 import { useState } from "react";
 import { Btn, Card, ModalOrSheet, ModalTitle, DropMenu } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { updateMitglied } from "../../domains/members/memberService.js";
+import { updateMitglied, logAenderung } from "../../domains/members/memberService.js";
 
-function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onReload }) {
+function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onReload, vereinId=null, account=null }) {
   const [showFunkAssign, setShowFunkAssign] = useState(false);
   const [funkSearch, setFunkSearch] = useState("");
   const [funkSelected, setFunkSelected] = useState([]);
@@ -21,7 +21,12 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
 
   async function saveFunktionen() {
     if (!sb) return;
+    const alterFunk = (raw.funktionen || []).join(", ");
+    const neueFunk = funkSelected.join(", ");
     await updateMitglied(sb, raw.id, { funktionen: funkSelected });
+    if (vereinId && alterFunk !== neueFunk) {
+      logAenderung(sb, raw.id, vereinId, "funktionen", alterFunk||null, neueFunk||null, account?.name||account?.email||"Administrator");
+    }
     setShowFunkAssign(false);
     if (onReload) onReload();
   }

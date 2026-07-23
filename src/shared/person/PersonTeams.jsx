@@ -15,6 +15,7 @@ import {
   upsertKader,
   updateKader,
   deaktiviereKader,
+  logAenderung,
 } from "../../domains/members/memberService.js";
 
 function PersonTeams({
@@ -22,6 +23,7 @@ function PersonTeams({
   sb,
   canEdit,
   vereinId,
+  account = null,
   dbKaderRollen = [],
   teamDetails,
   setTeamDetails,
@@ -56,6 +58,7 @@ function PersonTeams({
   async function assignTeam() {
     if (!sb || !teamAssignForm.team_id) return;
     setTeamAssignSaving(true);
+    const teamName = allTeams?.find(t => String(t.id) === String(teamAssignForm.team_id))?.name || teamAssignForm.team_id;
     await upsertKader(sb, {
       team_id: parseInt(teamAssignForm.team_id),
       mitglied_id: raw.id,
@@ -66,6 +69,7 @@ function PersonTeams({
       aktiv: true,
       saison: currentSeason(),
     });
+    if (vereinId) logAenderung(sb, raw.id, vereinId, "teams", null, teamName, account?.name||account?.email||"Administrator");
     const data = await fetchKaderFuerMitglied(sb, raw.id);
     setTeamDetails(data);
     await ableitRolle();
@@ -78,7 +82,10 @@ function PersonTeams({
   async function removeFromTeam(kaderId) {
     const ok = await confirm({ title: "Aus Team entfernen?", danger: true, confirmLabel: "Entfernen" });
     if (!sb || !ok) return;
+    const kader = teamDetails?.find(k => k.id === kaderId);
+    const teamName = kader?.team?.name || kaderId;
     await deaktiviereKader(sb, kaderId);
+    if (vereinId) logAenderung(sb, raw.id, vereinId, "teams", teamName, null, account?.name||account?.email||"Administrator");
     setTeamDetails(prev => prev.filter(k => k.id !== kaderId));
     await ableitRolle();
   }
@@ -86,11 +93,17 @@ function PersonTeams({
   async function saveEditTeam() {
     if (!sb || !editTeam) return;
     setEditTeamSaving(true);
+    const alterRollen = (editTeam.rollen || []).join(", ");
+    const neueRollen = (editTeamForm.funktionen || []).join(", ");
     await updateKader(sb, editTeam.id, {
       rollen: editTeamForm.funktionen || [],
       rueckennr: editTeamForm.rueckennr || null,
       position: editTeamForm.position || null,
     });
+    if (vereinId && alterRollen !== neueRollen) {
+      const teamName = editTeam.team?.name || "Team";
+      logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
+    }
     setTeamDetails(prev => prev.map(k => k.id === editTeam.id
       ? { ...k, rollen: editTeamForm.funktionen, rueckennr: editTeamForm.rueckennr, position: editTeamForm.position }
       : k

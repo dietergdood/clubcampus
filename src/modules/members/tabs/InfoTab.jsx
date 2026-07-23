@@ -105,13 +105,14 @@ function InfoTab({
           assignFunktionen={assignFunktionen} setAssignFunktionen={setAssignFunktionen}
           onNavToTeam={onNavToTeam}
           onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}} ableitRolle={ableitRolle}
-          vereinId={vereinId}
+          vereinId={vereinId} account={account}
         />
 
         <PersonFunktionen
           raw={raw} sb={sb} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
           onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}}
+          vereinId={vereinId} account={account}
         />
 
         {/* Notizen */}
