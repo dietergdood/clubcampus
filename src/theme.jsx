@@ -601,10 +601,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-card-edit-btn-active{color:var(--text);background:var(--surface2)}
 .cc-section-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .cc-section-title-row .cc-section-title{margin-bottom:0}
-.cc-inline-save-btn{padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:var(--text);color:var(--bg);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500}
-.cc-inline-save-btn:hover{opacity:0.85}
-.cc-inline-cancel-btn{padding:4px 10px;border-radius:6px;border:0.5px solid var(--border);background:transparent;color:var(--sub);font-size:12px;cursor:pointer;font-family:inherit}
-.cc-inline-cancel-btn:hover{background:var(--surface2)}
+
 .cc-mehr-btn-wrap{position:relative;margin-left:auto}
 .cc-check-icon{color:#15803d}
 .cc-trainer-badge{font-size:10px;padding:1px 6px;border-radius:10px;background:#FEF3C7;color:#B45309}

@@ -150,9 +150,9 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
             ) : raw.ahv_nr ? (
               <span className="cc-ahv-row">
                 {ahvVisible
-                  ? <span className="cc-inline-field cc-info-val" onClick={()=>ie.startEdit("ahv_nr", raw.ahv_nr)}>
+                  ? <span className={`cc-inline-field cc-info-val`} onClick={editMode?()=>ie.startEdit("ahv_nr", raw.ahv_nr):undefined}>
                       {raw.ahv_nr}
-                      <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+                      {editMode&&<span className="cc-inline-pencil"><TI n="pencil" size={14}/></span>}
                     </span>
                   : <span className="cc-ahv-mask">••• •• ••••</span>}
                 <button className="cc-ahv-toggle" onClick={()=>setAhvVisible(v=>!v)} title={ahvVisible?"Verbergen":"Anzeigen"}>
@@ -162,7 +162,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
             ) : (
               <span className={`cc-inline-field cc-info-val-empty`} onClick={editMode?()=>ie.startEdit("ahv_nr",""):undefined}>
                 <span className="cc-inline-empty">nicht erfasst</span>
-                <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+                {editMode&&<span className="cc-inline-pencil"><TI n="pencil" size={14}/></span>}
               </span>
             )}
           </div>
