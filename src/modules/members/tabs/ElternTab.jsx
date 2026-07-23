@@ -3,7 +3,7 @@
    Elternkontakte-Tab im Mitglied-Detail
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, ModalOrSheet, DropMenu, EmptyState } from "../../../theme.jsx";
+import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte } from "../../../domains/members/memberService.js";
 
@@ -46,6 +46,7 @@ function ElternPortalSection({e,sb,onReload}){
 
 /* Avatar-Farbe nach Beziehung */
 function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null}){
+  const [confirm, confirmDialog] = useConfirm();
   const [editEltern,setEditEltern]=useState(null);
   const [elternMsg,setElternMsg]=useState(null);
   const [elternSaving,setElternSaving]=useState(false);
@@ -180,6 +181,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
           </div>
         </ModalOrSheet>
       )}
+      {confirmDialog}
     </div>
   );
 }
