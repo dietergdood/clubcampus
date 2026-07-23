@@ -357,9 +357,13 @@ export function ListView({
       if (!children && (!members || members.length === 0)) return null;
       // Effektiver Gruppenkontext: aktueller oder übergeordneter Team/Gruppe Kontext
       const currentCtx = { type: type || "none", key };
-      const effectiveCtx = (type==="team"||type==="gruppe"||type==="kaderrolle"||type==="funktion")
+      // Bei kaderrolle/funktion: Team-Kontext vom Parent weitergeben (für renderCell)
+      // Bei team/gruppe: eigener Kontext
+      const effectiveCtx = (type==="team"||type==="gruppe")
         ? currentCtx
-        : (parentCtx.type!=="none" ? parentCtx : currentCtx);
+        : (parentCtx.type==="team"||parentCtx.type==="gruppe") 
+          ? parentCtx 
+          : currentCtx;
       const groupManualOrder = manualOrder[key];
       const orderedMembers = groupManualOrder && groupManualOrder.length > 0
         ? [...(members||[])].sort((a, b) => {

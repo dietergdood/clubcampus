@@ -283,7 +283,22 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 - Funktionär Rollenname in DB evtl. anpassen
 - `@tanstack/react-virtual` installiert aber nicht implementiert (Infinite Scroll als Lösung)
 
-## Session-Start Routine
+## Refactoring-Regeln
+
+**Vor jedem Refactoring einer bestehenden Komponente:**
+1. Alle bestehenden Features dokumentieren — was macht die Komponente, welche Edge Cases sind implementiert
+2. Besonders kritisch: Filter-Kontext, Gruppen-Kontext, `effectiveGc`/`parentContext` Propagierung bei rekursiven Strukturen
+3. Nach dem Refactoring jeden Feature-Punkt einzeln verifizieren — Build grün ≠ Feature funktioniert
+4. Konkret testen: alle Gruppierungsoptionen × alle Filterkombinationen
+5. Nie annehmen dass eine vereinfachte Version dasselbe tut wie die Original-Implementation
+
+**Bekannte Fallgruben bei MitgliederModul:**
+- `effectiveCtx` / `parentContext` muss durch alle Rekursionsebenen von `renderGroupsTable` propagiert werden — Zeilen bekommen sonst falschen Gruppenkontext
+- `getGroupKey` für Teams muss `kaderrollen` Filter berücksichtigen — sonst erscheinen Mitglieder in Teams ohne die gefilterte Rolle
+- `filterVals` muss an `buildGroups` und `renderCell` weitergegeben werden — Kontext-sensitives Rendering funktioniert sonst nicht
+- `__portalFunktionen` und `__parentGruppe` in `filterVals` sind spezielle interne Schlüssel für rekursive Gruppierung
+
+
 
 1. ZIP des aktuellen Repos hochladen
 2. Diese ARCHITECTURE.md erwähnen
