@@ -112,6 +112,7 @@ export function ElternListView({ sb, vereinId, account }) {
       buildGroupsFn={buildElternGroups}
       colDefs={COL_DEFS}
       colGroups={COL_GROUPS}
+      colGroups={COL_GROUPS}
       filterDefs={filterDefs}
       groupOptions={GROUP_OPTIONS}
       renderCell={renderElternCell}

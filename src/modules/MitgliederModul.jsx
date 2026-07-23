@@ -2,15 +2,15 @@
    ClubCampus — MitgliederModul.jsx
    State, Logik und Koordination — Render via MembersView
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK } from "../constants.js";
 import { TI } from "../icons.jsx";
 import { Av, Btn, Card, Chip, Col, ModalOrSheet, ModalTitle, Row, Stat, StatusTile,
          useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect,
-         Toolbar, ColMenuButton, BulkBar, SortHeader, useConfirm, ConfirmDialog,
+         useConfirm, ConfirmDialog,
          Tabs, STitle, Between, Sub, Label, Select, Empty, InfoBox } from "../theme.jsx";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
-import { fetchAnsichten, insertAnsicht, deleteAnsicht, archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied } from "../domains/members/memberService.js";
+import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied } from "../domains/members/memberService.js";
 import { currentSeason } from "../domains/season/seasonUtils.js";
 import { LAENDER, getLandName, RolleChip, getFieldVisibility } from "./members/memberUtils.jsx";
 import { ROLES, FIELD_VIS, SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
@@ -29,7 +29,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [selectedMember,setSelectedMember]=useState(null);
   const [breakdownOpen,setBreakdownOpen]=useState(false);
   const breakdownRef=useRef(null);
-  const sentinelRef=useRef(null);
   useEffect(()=>{
     if(!breakdownOpen||isMobile) return;
     const h=e=>{if(breakdownRef.current&&!breakdownRef.current.contains(e.target))setBreakdownOpen(false);};
@@ -79,7 +78,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter(Boolean))],
   }));
 
-  const exportDataRef = useRef(null);
   const filterRef = useRef(null);
   function exportData(rows, cols, groups, format){ exportDataUtil(rows, cols, format, groups); }
 
@@ -435,7 +433,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {elternTab?(
         <ElternListView sb={sb} vereinId={vereinId} kannVerwalten={kannVerwalten}/>
       ):archivTab?(
-        <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} account={account} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
+        <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           const data=await fetchMitglied(sb,m.id);
           if(data) setSelectedMember({...data,name:`${data.vorname||""} ${data.nachname||""}`.trim()||"?",_tab:"info",_readonly:true});

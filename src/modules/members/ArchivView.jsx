@@ -2,7 +2,6 @@
    ClubCampus — modules/members/ArchivView.jsx
    Archiv-Tab — nutzt zentrale ListView
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useRef } from "react";
 import { Btn, Av, useConfirm, ConfirmDialog } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.js";
@@ -90,7 +89,7 @@ function buildArchivGroups(rows, groupBy, groupOrder) {
   }));
 }
 
-export function ArchivView({ archivData, setArchivData, archivLoaded, sb, account, onUpdatePortalZugang, onReload, onOpenMember }) {
+export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpdatePortalZugang, onReload, onOpenMember }) {
   const [confirm, confirmDialog] = useConfirm();
   const rows = (archivData || []).map(mapArchivRow);
 
