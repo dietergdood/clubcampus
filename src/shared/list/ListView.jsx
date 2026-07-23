@@ -86,6 +86,8 @@ export function ListView({
   footerLabel,
   // External filter control (e.g. from KPI cards)
   externalSetFilter,
+  // Export
+  exportFn,
   exportFormats = [],
 }) {
   const isMobile = useIsMobile();
