@@ -208,14 +208,22 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   if(g==="__teams_funktionen"){
     const teamsFilter=filterVals["teams"]||[];
     const gruppenFilter=filterVals["funktionsgruppen"]||[];
-    const teams=(m.teams||[])
-      .map(t=>t?.name||t)
-      .filter(t=>teamsFilter.length===0||teamsFilter.includes(t))
-      .map(t=>({key:t,type:"team"}));
+    const kaderFilter=filterVals["kaderrollen"]||[];
+    const funktionenFilter=filterVals["funktionen"]||[];
+    let teams=(m.teams||[]).map(t=>t?.name||t);
+    if(teamsFilter.length>0) teams=teams.filter(t=>teamsFilter.includes(t));
+    // Wenn Kaderrolle Filter aktiv: nur Teams wo diese Rolle zutrifft
+    if(kaderFilter.length>0){
+      teams=teams.filter(teamName=>{
+        const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===teamName);
+        return eintraege.some(e=>e.rollen.some(r=>kaderFilter.includes(r)));
+      });
+    }
     const gruppen=(m.funktionsgruppen||[])
       .filter(g=>gruppenFilter.length===0||gruppenFilter.includes(g))
       .map(g=>({key:g,type:"gruppe"}));
-    return [...gruppen,...teams].length>0?[...gruppen,...teams]:[{key:"Keine Zuordnung",type:"none"}];
+    const teamsMapped=teams.map(t=>({key:t,type:"team"}));
+    return [...gruppen,...teamsMapped].length>0?[...gruppen,...teamsMapped]:[{key:"Keine Zuordnung",type:"none"}];
   }
   const v=m[g];
   if(Array.isArray(v)) return v.map(t=>t?.name||t||"-").filter(Boolean).length>0?v.map(t=>t?.name||t||"-").filter(Boolean):["-"];
