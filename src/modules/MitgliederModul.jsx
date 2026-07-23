@@ -128,7 +128,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   useEffect(()=>{
     if(!sb||!account?.id) return;
-    fetchAnsichten(sb,account.id).then(data=>setCustomViews(data));
+    fetchAnsichten(sb,account.id,"mitglieder").then(data=>setCustomViews(data));
     if(portalFunktionen.length===0)
       sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
         .then(({data})=>setPortalFunktionen(data||[]));
