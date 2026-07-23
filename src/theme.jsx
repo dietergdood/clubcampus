@@ -2776,7 +2776,7 @@ function useAddrSearch(strasse, plz){
       try{
         const query=q;
         // DACH Bounding Box: Schweiz, Deutschland, Österreich
-        const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=de&limit=10&layer=house&layer=street&countrycodes=ch%2Cde%2Cat%2Cli`;
+        const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=de&limit=15`;
         const res=await fetch(url);
         const json=await res.json();
         const seen=new Set();
@@ -2789,6 +2789,7 @@ function useAddrSearch(strasse, plz){
             const stateVal=p.state||"";
             const kantonVal=CH_KANTON_MAP[stateVal]||"";
             if(!strasseVal) return null;
+            if(!['ch','de','at','li'].includes((p.countrycode||'').toLowerCase())) return null;
             const key=`${strasseVal}|${plzVal}|${ortVal}`;
             if(seen.has(key)) return null;
             seen.add(key);
