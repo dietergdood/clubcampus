@@ -9,11 +9,14 @@ Keine Isolation — Verbindung über Services und Hooks.
 ```
 src/
   domains/                          ← Business-Logik, Services, Hooks
+    members/
+      memberService.js              ← fetchMitglieder, fetchArchiv, fetchEltern, fetchAnsichten etc.
+      useMemberMeta.js              ← Hook: ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
     permissions/
       permissions.js                ← canEdit/canDelete/canExport pro Modul
     person/
       personTypes.js                ← toPerson() Normalisierer
-      personUtils.js                ← vollname(), initials(), age(), formatDatum()
+      personUtils.js                ← vollname(), initials(), age(), formatDatum(), LAENDER, getLandName
     roles/
       roleUtils.js                  ← ableitRolle(), ROLLE_PRIORITAET, ROLLE_LABEL
     season/
@@ -23,29 +26,36 @@ src/
       useTeams.js                   ← Hook: teams, loading, reload
 
   shared/                           ← Wiederverwendbare UI-Bausteine
+    list/
+      ListView.jsx                  ← Zentrale Listenkomponente (Filter, Gruppierung, Ansichten, Export)
+      exportUtils.js                ← exportListData(), buildFilterDefs(), csvDownload()
     person/
       PersonAvatar.jsx              ← Av + Kamera-Overlay
+      PersonFunktionen.jsx          ← Vereinsfunktionen-Ansicht
+      PersonKontakt.jsx             ← Kontaktdaten-Ansicht
+      PersonPersonalien.jsx         ← Personalien-Ansicht
       PersonSelector.jsx            ← Suche + Auswahl
       PersonSummary.jsx             ← Name + Subtitle + Right-Slot
-      MemberHero.jsx                ← TODO: hierher verschieben bei KaderModul-Migration
-      MemberDetail.jsx              ← TODO: hierher verschieben bei KaderModul-Migration
-    list/
-      MemberListView.jsx            ← TODO: erstellen bei KaderModul-Migration
+      PersonTeams.jsx               ← Teams-Ansicht
+      RolleChip.jsx                 ← Rollen-Badge (wiederverwendbar in allen Modulen)
 
   modules/                          ← Alle Modul-Dateien
     members/                        ← MitgliederModul aufgeteilt
-      ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen)
-      ElternTab.jsx                 ← Elternkontakte-Tab
-      MemberDetail.jsx              ← Detailansicht mit allen Tabs inline (796Z)
+      ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen) — nutzt ListView
+      ElternListView.jsx            ← Eltern-Tab (Liste) — nutzt ListView
+      MemberDetail.jsx              ← Detailansicht mit allen Tabs
       MemberHero.jsx                ← Hero-Banner mit Avatar + FotoUpload
+      MemberKPIs.jsx                ← KPI-Cards + Aufschlüsselung
+      MemberListCell.jsx            ← makeMemberRenderCell() Factory für ListView
       NotizenVerlauf.jsx            ← Notizen-Komponente
-      memberConstants.js            ← ROLES, FIELD_VIS, COL_GROUPS, GROUP_OPTIONS, GROUP_OPTIONS_MORE
-      memberDataUtils.js            ← mapMembers, filterMembers, sortMembers, buildGroups, exportData (3 Varianten)
-      memberUtils.jsx               ← LAENDER, getLandName, RolleChip, getFieldVisibility
+      memberConstants.js            ← COL_GROUPS, SAVED_VIEWS, GROUP_OPTIONS, GROUP_OPTIONS_MORE
+      memberDataUtils.js            ← mapMembers, filterMembers, sortMembers, buildGroups, exportData
+      memberUtils.jsx               ← getFieldVisibility; re-exportiert LAENDER, getLandName, RolleChip
       tabs/
+        DatenpruefungTab.jsx
+        ElternTab.jsx
         InfoTab.jsx
         PortalTab.jsx
-        ElternTab.jsx
     portal/                         ← PortalverwaltungModul aufgeteilt (1 Tab = 1 Datei)
       ApiTab.jsx
       AuditTab.jsx
@@ -62,26 +72,26 @@ src/
       UsersTab.jsx
       portalUtils.js                ← ZUGRIFF_*, ALLE_MODULE, ROLES, KAT_LABELS etc.
     DashboardModul.jsx
-    HelferModul.jsx                 ← ⚠️ Phase 4: noch demoData (2164Z)
-    KaderModul.jsx
-    MitgliederModul.jsx             ← State + Logik + Render (702Z)
+    HelferModul.jsx                 ← ⚠️ Phase 4: noch demoData (2164Z), RolleChip dupliziert → shared nutzen
+    KaderModul.jsx                  ← ⚠️ Phase 4: Supabase-Migration offen
+    MitgliederModul.jsx             ← State + Koordination (305Z)
     NachrichtenModul.jsx
     NavigationModul.jsx
     PlatzhalterModul.jsx
-    PortalverwaltungModul.jsx       ← State + Tab-Routing (687Z)
+    PortalverwaltungModul.jsx       ← State + Tab-Routing
     TeamModul.jsx                   ← ⚠️ Phase 4: noch demoData
-    TeamsVerwaltungModul.jsx        ← ⚠️ Phase 4: noch demoData
-    TermineModul.jsx                ← ⚠️ Phase 4: noch demoData (1631Z)
-    TrainingsplanModul.jsx          ← ⚠️ Phase 4: noch demoData (1804Z)
+    TeamsVerwaltungModul.jsx        ← ⚠️ Phase 4: noch demoData; verein_id bei INSERT fehlt (Zeilen 273+979)
+    TermineModul.jsx                ← ⚠️ Phase 4: noch demoData
+    TrainingsplanModul.jsx          ← ⚠️ Phase 4: noch demoData
 
   App.jsx
-  clubcampus.jsx                    ← Haupt-Entry (1184Z)
+  clubcampus.jsx                    ← Haupt-Entry
   constants.js
   demoData.js                       ← ⚠️ TEMPORÄR — löschen wenn Phase 4 fertig
   icons.jsx
   main.jsx
   supabase.js
-  theme.jsx                         ← Design-System + COMPONENT_REGISTRY (1930Z)
+  theme.jsx                         ← Design-System + COMPONENT_REGISTRY + PortalBadge + DpBadge
 ```
 
 ## Die eine Regel
@@ -229,7 +239,52 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 | 3 | Teams Domain erstellt, PortalverwaltungModul State zu verflochten → Phase 4 | ✅ Fertig |
 | 4 | Termine + Helfer + Dashboard → Supabase, demoData.js löschen | ⏳ Offen |
 
-## Session 15 — MitgliederModul Grossüberarbeitung (10.07.2026)
+## Session 17 — ListView-Zentralisierung + MitgliederModul Refactoring (23.07.2026)
+
+### Zentrale ListView-Architektur
+- `ListView.jsx` — Default filterFn, sortFn, buildGroupsFn, renderCell eingebaut
+- `exportUtils.js` — `exportListData()`, `buildFilterDefs()`, `csvDownload()` zentral
+- `ArchivView` + `ElternListView` nutzen jetzt ListView-Defaults (keine eigenen filterFn/sortFn mehr)
+- Geteilte Ansichten: `geteilt boolean` in `mitglieder_ansichten`, Admin kann freigeben
+- `effectiveCtx` / `parentCtx` Propagierung durch alle Rekursionsebenen von `renderGroupsTable`
+
+### Neue Files
+- `src/domains/members/useMemberMeta.js` — Hook: ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
+- `src/modules/members/MemberListCell.jsx` — makeMemberRenderCell() Factory
+- `src/modules/members/MemberKPIs.jsx` — KPI-Cards + Aufschlüsselung
+- `src/shared/person/RolleChip.jsx` — shared RolleChip (war in memberUtils + HelferModul dupliziert)
+- `src/domains/person/personUtils.js` — +LAENDER, +getLandName (war in memberUtils, shared importiert falsch)
+- `theme.jsx` — +PortalBadge, +DpBadge, cc-teams-rollen-more CSS komplett
+
+### SQL-Migrationen (alle ausgeführt ✅)
+- `mitglieder_ansichten_geteilt_migration.sql` — `geteilt boolean DEFAULT false`
+- `gruppenreihenfolge jsonb` — fehlte noch in mitglieder_ansichten
+
+### Kritische Bugfixes (reparierte Regressionen)
+- `getGroupKey` für Teams: Kaderrolle-Filter berücksichtigt → nur Teams zeigen wo Rolle zutrifft
+- `getGroupKey` für Kaderrollen: `__parentTeam` aus `buildGroups` genutzt → nur Rollen im übergeordneten Team
+- `buildGroups`: `__parentTeam` bei Team-Gruppen weitergegeben (analog zu `__parentGruppe`)
+- `effectiveCtx` in ListView: bei Team+Kaderrolle Mehrfachgruppierung `subType`/`subKey` weitergeben
+- `renderCell` teams_rollen: `rolleFilter` aus `subType/subKey` bei Mehrfachgruppierung
+
+### MitgliederModul Zeilenzahlen
+| File | Vorher | Nachher |
+|------|--------|---------|
+| MitgliederModul.jsx | 571 | 305 |
+| MemberListCell.jsx | — | 181 (neu) |
+| MemberKPIs.jsx | — | 89 (neu) |
+| useMemberMeta.js | — | 26 (neu) |
+| memberDataUtils.js | 428 | 407 |
+| memberUtils.jsx | 136 | 33 |
+
+### Offene TODOs (Session 18+)
+- Inline Cell Editing (MitgliederModul)
+- Portalrollenfarben konsequent im ganzen Portal
+- Kader+Termine → Supabase Migration
+- HelferModul: RolleChip Duplikat → `src/shared/person/RolleChip.jsx` nutzen
+- Elternkontakte: n:m Verknüpfung, "Supporter" wenn kein Kind mehr
+
+
 
 ### Neue Spalten (memberConstants.js)
 - `teams_rollen` — "Teams & Kaderrollen": Teamname semibold · Rolle grau, kein Chip
