@@ -388,7 +388,6 @@ export function mapEltern(raw) {
   return (raw||[]).map(e=>{
     const kind=e.mitglieder;
     const kindName=kind?`${kind.vorname||""} ${kind.nachname||""}`.trim():"—";
-    const kindTeams=(kind?.teams||[]).map(t=>t?.team?.name||t?.team?.kurz||"").filter(Boolean);
     return {
       id:          e.id,
       mitglied_id: e.mitglied_id,
@@ -403,7 +402,7 @@ export function mapEltern(raw) {
       hauptkontakt:e.hauptkontakt||false,
       kind_id:     kind?.id||null,
       kind_name:   kindName,
-      kind_teams:  kindTeams,
+      kind_teams:  [],
     };
   });
 }
