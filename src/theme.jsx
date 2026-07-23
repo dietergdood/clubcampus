@@ -562,6 +562,10 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-mehr-sheet-item-active{color:var(--cc-accent,#FFBF00);font-weight:600}
 .cc-mehr-sheet-item-danger{color:#DC2626!important}
 .cc-notiz-list{display:flex;flex-direction:column;gap:0}
+.cc-expand-all-bar{display:flex;align-items:center;gap:6px;justify-content:flex-end;padding:4px 14px;margin-bottom:-1px}
+.cc-expand-all-btn{background:none;border:none;cursor:pointer;font-size:11px;color:var(--sub);font-family:inherit;display:flex;align-items:center;gap:3px;padding:2px 0}
+.cc-expand-all-btn:hover{color:var(--text)}
+.cc-expand-all-sep{font-size:11px;color:var(--border-strong)}
 .cc-mehr-btn-wrap{position:relative;margin-left:auto}
 .cc-check-icon{color:#15803d}
 .cc-trainer-badge{font-size:10px;padding:1px 6px;border-radius:10px;background:#FEF3C7;color:#B45309}

@@ -315,14 +315,10 @@ export function ListView({
   const moreItems = [
     // moreActions zuerst — prominent, ohne Sektion
     ...moreActions,
-    ...((moreActions.length > 0 && !isMobile && (hasGroup || selectable)) ? ["sep"] : []),
+    ...((moreActions.length > 0 && !isMobile && selectable) ? ["sep"] : []),
     // Aktionen-Sektion (nur Desktop, nur wenn relevant)
-    ...(!isMobile && (hasGroup || selectable) ? [{ header: true, label: "Aktionen" }] : []),
+    ...(!isMobile && selectable ? [{ header: true, label: "Aktionen" }] : []),
     ...(!isMobile && selectable ? [{ icon: "checkbox", label: selectMode ? "Auswahlmodus beenden" : "Auswählen", onClick: () => { setSelectMode(m => { if (m) setSelected(new Set()); return !m; }); } }] : []),
-    ...(!isMobile && hasGroup ? [
-      { icon: "chevrons-up",   label: "Alle einklappen", onClick: () => setCollapsedGroups(new Set(groups.map(g => g.key))) },
-      { icon: "chevrons-down", label: "Alle ausklappen", onClick: () => setCollapsedGroups(new Set()) },
-    ] : []),
     { header: true, label: "Ansichten" },
     ...(savedViews ? Object.entries(savedViews).map(([key, v]) => ({
       icon: savedView === key ? "check" : "layout",
@@ -521,6 +517,19 @@ export function ListView({
         )}
         moreItems={moreItems}
       />
+
+      {/* Alle ein/ausklappen — nur wenn gruppiert, nur Desktop */}
+      {hasGroup && !isMobile && (
+        <div className="cc-expand-all-bar">
+          <button className="cc-expand-all-btn" onClick={() => setCollapsedGroups(new Set(groups.map(g => g.key)))}>
+            <TI n="chevrons-up" size={11}/> alle einklappen
+          </button>
+          <span className="cc-expand-all-sep">·</span>
+          <button className="cc-expand-all-btn" onClick={() => setCollapsedGroups(new Set())}>
+            <TI n="chevrons-down" size={11}/> alle ausklappen
+          </button>
+        </div>
+      )}
 
       {/* Tabelle */}
       <Card className="cc-card-table" flush>
