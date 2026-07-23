@@ -88,7 +88,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
         <div className="cc-info-row">
           <span className="cc-info-key">Nationalität</span>
           {natEditing ? (
-            <div className="cc-col cc-gap-6" style={{flex:1}}>
+            <div className="cc-col cc-gap-6 cc-flex-1">
               <div>
                 <div className="cc-inline-hint">1</div>
                 <select className="cc-inline-select" value={nat1Val} autoFocus
@@ -129,7 +129,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
           <div className="cc-info-row">
             <span className="cc-info-key">AHV-Nr.</span>
             {ie.editing === "ahv_nr" ? (
-              <div className="cc-col" style={{flex:1}}>
+              <div className="cc-col cc-flex-1">
                 <input className="cc-inline-input" type="text" value={ie.editVal} autoFocus
                   onChange={e=>ie.setEditVal(e.target.value)}
                   onKeyDown={e=>ie.handleKey(e,"ahv_nr")}

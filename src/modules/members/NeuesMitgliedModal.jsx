@@ -127,7 +127,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
           {/* Mitgliedtyp — immer zuerst */}
           <div className="cc-form-full">
             <label className="cc-label">
-              Mitgliedtyp <span style={{color:"var(--red,#A32D2D)"}}>*</span>
+              Mitgliedtyp <span className="cc-label-req">*</span>
             </label>
             <select className="cc-input" value={form.mitgliedtyp} onChange={e => set("mitgliedtyp", e.target.value)}
               style={!form.mitgliedtyp ? {borderColor:"var(--cc-accent,#FFBF00)"} : {}}>
@@ -135,7 +135,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               {mitgliedtypen.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             {!form.mitgliedtyp && (
-              <div className="cc-text-sm" style={{color:"var(--sub)",marginTop:4}}>
+              <div className="cc-hint-sub">
                 Bestimmt welche Pflichtfelder erscheinen
               </div>
             )}
@@ -146,11 +146,11 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
 
             {/* Vorname / Nachname */}
             <div>
-              <label className="cc-label">Vorname <span style={{color:"var(--red,#A32D2D)"}}>*</span></label>
+              <label className="cc-label">Vorname <span className="cc-label-req">*</span></label>
               <input className="cc-input" type="text" value={form.vorname||""} onChange={e=>set("vorname",e.target.value)} placeholder="Adrian"/>
             </div>
             <div>
-              <label className="cc-label">Nachname <span style={{color:"var(--red,#A32D2D)"}}>*</span></label>
+              <label className="cc-label">Nachname <span className="cc-label-req">*</span></label>
               <input className="cc-input" type="text" value={form.nachname||""} onChange={e=>set("nachname",e.target.value)} placeholder="Bürgi"/>
             </div>
 
@@ -158,13 +158,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             {(istPflicht("geburtsdatum")||istPflicht("geschlecht")) && (<>
               <div>
                 <label className="cc-label">
-                  Geburtsdatum {istPflicht("geburtsdatum")&&<span style={{color:"var(--red,#A32D2D)"}}>*</span>}
+                  Geburtsdatum {istPflicht("geburtsdatum")&&<span className="cc-label-req">*</span>}
                 </label>
                 <input className="cc-input" type="date" value={form.geburtsdatum||""} onChange={e=>set("geburtsdatum",e.target.value)}/>
               </div>
               <div>
                 <label className="cc-label">
-                  Geschlecht {istPflicht("geschlecht")&&<span style={{color:"var(--red,#A32D2D)"}}>*</span>}
+                  Geschlecht {istPflicht("geschlecht")&&<span className="cc-label-req">*</span>}
                 </label>
                 <select className="cc-input" value={form.geschlecht||""} onChange={e=>set("geschlecht",e.target.value)}>
                   <option value="">— wählen —</option>
@@ -176,17 +176,17 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             {/* Adresse */}
             {istPflicht("strasse") && (
               <div className="cc-form-full">
-                <label className="cc-label">Strasse <span style={{color:"var(--red,#A32D2D)"}}>*</span></label>
+                <label className="cc-label">Strasse <span className="cc-label-req">*</span></label>
                 <input className="cc-input" type="text" value={form.strasse||""} onChange={e=>set("strasse",e.target.value)} placeholder="Seestrasse 1"/>
               </div>
             )}
             {(istPflicht("plz")||istPflicht("ort")) && (<>
               <div>
-                <label className="cc-label">PLZ {istPflicht("plz")&&<span style={{color:"var(--red,#A32D2D)"}}>*</span>}</label>
+                <label className="cc-label">PLZ {istPflicht("plz")&&<span className="cc-label-req">*</span>}</label>
                 <input className="cc-input" type="text" value={form.plz||""} onChange={e=>set("plz",e.target.value)} placeholder="8704"/>
               </div>
               <div>
-                <label className="cc-label">Ort {istPflicht("ort")&&<span style={{color:"var(--red,#A32D2D)"}}>*</span>}</label>
+                <label className="cc-label">Ort {istPflicht("ort")&&<span className="cc-label-req">*</span>}</label>
                 <input className="cc-input" type="text" value={form.ort||""} onChange={e=>set("ort",e.target.value)} placeholder="Herrliberg"/>
               </div>
             </>)}
@@ -194,7 +194,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             {/* Telefon */}
             {istPflicht("telefon") && (
               <div className="cc-form-full">
-                <label className="cc-label">Telefon <span style={{color:"var(--red,#A32D2D)"}}>*</span></label>
+                <label className="cc-label">Telefon <span className="cc-label-req">*</span></label>
                 <input className="cc-input" type="tel" value={form.telefon||""} onChange={e=>set("telefon",e.target.value)} placeholder="079 123 45 67"/>
               </div>
             )}
@@ -204,7 +204,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               <div className="cc-form-full">
                 <label className="cc-label">E-Mail</label>
                 <input className="cc-input" type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} placeholder="adrian@example.ch"/>
-                <div className="cc-text-sm" style={{color:"var(--sub)",marginTop:3}}>Optional — wird für Portal-Einladung benötigt</div>
+                <div className="cc-hint-sub">Optional — wird für Portal-Einladung benötigt</div>
               </div>
             )}
 
@@ -220,7 +220,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             )}
 
             <div className="cc-form-full">
-              <div className="cc-info-box" style={{fontSize:12,color:"var(--sub)",padding:"8px 10px",background:"var(--surface)",borderRadius:6,border:"0.5px solid var(--border)"}}>
+              <div className="cc-info-hint">
                 <TI n="info-circle" size={13}/> Alle weiteren Angaben (AHV-Nr., Nationalität, Spielerpass etc.) können danach im Profil ergänzt werden.
               </div>
             </div>

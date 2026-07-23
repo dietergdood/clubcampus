@@ -110,7 +110,7 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
       case "deaktiviert_am":
         return <td key="deaktiviert_am" className="cc-members-td cc-members-td-sub">{m.deaktiviert_am_fmt}</td>;
       case "actions":
-        return <td key="actions" className="cc-members-td" style={{textAlign:"right"}}>
+        return <td key="actions" className="cc-members-td cc-text-right">
           <div className="cc-row cc-gap-6" onClick={e=>e.stopPropagation()}>
             <Btn small onClick={()=>reaktivieren(new Set([m.id]))}><TI n="user-check" size={13}/> Reaktivieren</Btn>
             <Btn small variant="danger" onClick={()=>loeschen(new Set([m.id]))}><TI n="trash" size={13}/></Btn>

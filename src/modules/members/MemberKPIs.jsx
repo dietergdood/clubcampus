@@ -51,7 +51,7 @@ export function MemberKPIs({ allMembers, dbMitgliedtypen, onFilter }) {
 
   return (
     <div className="cc-grid-stats cc-mb-20">
-      <div ref={breakdownRef} style={{position:"relative"}}>
+      <div ref={breakdownRef} className="cc-relative">
         <Stat label="Mitglieder" value={totalCount} color={BL} onClick={() => setBreakdownOpen(o => !o)}/>
         {breakdownOpen && (
           isMobile ? (

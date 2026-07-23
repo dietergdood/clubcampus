@@ -35,7 +35,7 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
         <div className="cc-member-hero-banner">
           <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
           <div className="cc-hero-av-wrap">
-            <div className="cc-member-hero-av cc-hero-av-hoverable" style={{cursor:canEdit?"pointer":"default"}}
+            <div className={`cc-member-hero-av cc-hero-av-hoverable${canEdit?" cc-cursor-pointer":""}`}
               onClick={()=>canEdit&&(raw.foto_url?setFotoOverlay(true):fotoInputRef.current?.click())}>
               {raw.foto_url
                 ?<img src={raw.foto_url} className="cc-hero-av-img" alt=""/>
