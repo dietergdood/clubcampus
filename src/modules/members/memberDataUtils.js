@@ -181,7 +181,16 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
     return allTeams.length>0?allTeams.map(t=>({key:t,type:"team"})):[{key:"Kein Team",type:"team"}];
   }
   if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return [portalLabel||"Keine Rolle"]; }
-  if(g==="kaderrollen"){ return (m.kader_rollen_raw||[]).length>0?m.kader_rollen_raw.map(r=>({key:r,type:"kaderrolle"})):[{key:"Keine Kaderrolle",type:"kaderrolle"}]; }
+  if(g==="kaderrollen"){
+    const parentTeam=filterVals.__parentTeam;
+    if(parentTeam){
+      // Nur Kaderrollen die das Mitglied in diesem Team hat
+      const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===parentTeam);
+      const rollen=[...new Set(eintraege.flatMap(e=>e.rollen))];
+      return rollen.length>0?rollen.map(r=>({key:r,type:"kaderrolle"})):[{key:"Keine Kaderrolle",type:"kaderrolle"}];
+    }
+    return (m.kader_rollen_raw||[]).length>0?m.kader_rollen_raw.map(r=>({key:r,type:"kaderrolle"})):[{key:"Keine Kaderrolle",type:"kaderrolle"}];
+  }
   if(g==="funktionen"){
     const allFunk=m.funktionen||[];
     // Wenn parent eine Funktionsgruppe ist, nur Funktionen dieser Gruppe zeigen
@@ -205,10 +214,8 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
     const teamsFilter=filterVals["teams"]||[];
     const gruppenFilter=filterVals["funktionsgruppen"]||[];
     const kaderFilter=filterVals["kaderrollen"]||[];
-    const funktionenFilter=filterVals["funktionen"]||[];
     let teams=(m.teams||[]).map(t=>t?.name||t);
     if(teamsFilter.length>0) teams=teams.filter(t=>teamsFilter.includes(t));
-    // Wenn Kaderrolle Filter aktiv: nur Teams wo diese Rolle zutrifft
     if(kaderFilter.length>0){
       teams=teams.filter(teamName=>{
         const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===teamName);
@@ -269,7 +276,9 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGr
     members,
     children:restLevels.length>0&&restLevels[0]!=="none"
       ?buildGroups(members,restLevels,ROLLE_LABEL,
-          (meta[k]==="gruppe")?{...filterVals,__parentGruppe:k}:filterVals,
+          (meta[k]==="gruppe")?{...filterVals,__parentGruppe:k}:
+          (meta[k]==="team")?{...filterVals,__parentTeam:k}:
+          filterVals,
           {type:meta[k]||"default",key:k},
           groupOrder)
       :null,
