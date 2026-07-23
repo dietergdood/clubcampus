@@ -80,7 +80,8 @@ function MemberDetail({
   }, [tab, raw.id]);
 
   useEffect(() => {
-    if (sb && raw.id && teamDetails === null) {
+    if (sb && raw.id) {
+      setTeamDetails(null);
       fetchKaderFuerMitglied(sb, raw.id).then(data => setTeamDetails(data));
     }
   }, [raw.id]);
