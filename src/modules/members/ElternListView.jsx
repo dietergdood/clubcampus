@@ -115,9 +115,7 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
       case "beziehung":
         return <td key="beziehung" className="cc-members-td cc-members-td-sub">{e.beziehung||"—"}</td>;
       case "email":
-        return <td key="email" className="cc-members-td cc-members-td-sub">
-          {e.email?<a href={`mailto:${e.email}`} style={{color:"var(--text)",textDecoration:"none"}} onClick={ev=>ev.stopPropagation()}>{e.email}</a>:"—"}
-        </td>;
+        return <td key="email" className="cc-members-td cc-members-td-sub">{e.email||"—"}</td>;
       case "telefon":
         return <td key="telefon" className="cc-members-td cc-members-td-sub">{e.telefon||"—"}</td>;
       case "kind_name":
@@ -128,10 +126,10 @@ export function ElternListView({ sb, vereinId, kannVerwalten }) {
         </td>;
       case "portal":
         return <td key="portal" className="cc-members-td">
-          <div className={`cc-row cc-gap-6 cc-status-${e.benutzer_id?"active":"inactive"}`}>
-            <span className={`cc-members-dot ${e.benutzer_id?"cc-members-dot-ok":"cc-members-dot-warn"}`}/>
-            {e.portal}
-          </div>
+          {e.benutzer_id
+            ?<span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>
+            :<span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>
+          }
         </td>;
       default:
         return <td key={col.key} className="cc-members-td cc-members-td-sub">{String(e[col.key]||"—")}</td>;
