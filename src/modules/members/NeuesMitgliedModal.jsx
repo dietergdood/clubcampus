@@ -54,7 +54,7 @@ function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,
   },[]);
 
   function apply(s){
-    onStrasse(s.label);
+    onStrasse(s.strasse);
     if(s.plz) onPlz(s.plz);
     if(s.ort) onOrt(s.ort);
     setShowSug(false);
@@ -73,7 +73,7 @@ function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,
           <div className="cc-addr-dropdown">
             {suggestions.map((s,i)=>(
               <div key={i} className="cc-addr-suggestion" onMouseDown={()=>apply(s)}>
-                <span className="cc-addr-suggestion-main">{s.label}</span>
+                <span className="cc-addr-suggestion-main">{s.strasse}</span>
                 {s.plz&&<span className="cc-addr-suggestion-sub">{s.plz} {s.ort}</span>}
               </div>
             ))}

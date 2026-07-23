@@ -111,10 +111,10 @@ function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
   },[]);
 
   function applySuggestion(s){
-    setStrasseInput(s.label);
+    setStrasseInput(s.strasse);
     setPlzInput(s.plz);
     setShowSuggestions(false);
-    ie.saveEdit("strasse", s.label);
+    ie.saveEdit("strasse", s.strasse);
     if(s.plz) ie.saveEdit("plz", s.plz);
     if(s.ort) ie.saveEdit("ort", s.ort);
   }
@@ -134,7 +134,7 @@ function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
               <div className="cc-addr-dropdown">
                 {suggestions.map((s,i)=>(
                   <div key={i} className="cc-addr-suggestion" onMouseDown={()=>applySuggestion(s)}>
-                    <span className="cc-addr-suggestion-main">{s.label}</span>
+                    <span className="cc-addr-suggestion-main">{s.strasse}</span>
                     {s.plz&&<span className="cc-addr-suggestion-sub">{s.plz} {s.ort}</span>}
                   </div>
                 ))}
