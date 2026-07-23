@@ -145,9 +145,9 @@ function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
           </div>
         ):(
           <span className={`cc-inline-field ${raw.strasse?"cc-info-val":"cc-info-val-empty"}`}
-            onClick={()=>{setStrasseInput(raw.strasse||"");ieProps.startEdit("strasse",raw.strasse||"");setShowSuggestions(true);}}>
+            onClick={ieProps.canEdit?()=>{setStrasseInput(raw.strasse||"");ieProps.startEdit("strasse",raw.strasse||"");setShowSuggestions(true);}:undefined}>
             {raw.strasse||<span className="cc-inline-empty">nicht erfasst</span>}
-            <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+            {ieProps.canEdit&&<span className="cc-inline-pencil"><TI n="pencil" size={14}/></span>}
           </span>
         )}
       </div>
@@ -164,9 +164,9 @@ function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
           </div>
         ):(
           <span className={`cc-inline-field ${raw.plz?"cc-info-val":"cc-info-val-empty"}`}
-            onClick={()=>{setPlzInput(raw.plz||"");ieProps.startEdit("plz",raw.plz||"");}}>
+            onClick={ieProps.canEdit?()=>{setPlzInput(raw.plz||"");ieProps.startEdit("plz",raw.plz||"");}:undefined}>
             {raw.plz||<span className="cc-inline-empty">nicht erfasst</span>}
-            <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+            {ieProps.canEdit&&<span className="cc-inline-pencil"><TI n="pencil" size={14}/></span>}
           </span>
         )}
       </div>
