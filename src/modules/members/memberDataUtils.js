@@ -171,15 +171,11 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
     const funktionenFilter=filterVals["funktionen"]||[];
     let allTeams=(m.teams||[]).map(t=>t?.name||t);
     if(teamsFilter.length>0) allTeams=allTeams.filter(t=>teamsFilter.includes(t));
-    // Wenn Kaderrolle/Funktion/Gruppe Filter aktiv: nur Teams zeigen wo diese Rolle zutrifft
-    if(kaderFilter.length>0||gruppenFilter.length>0||funktionenFilter.length>0){
+    // Wenn Kaderrolle Filter aktiv: nur Teams zeigen wo diese Rolle zutrifft
+    if(kaderFilter.length>0){
       allTeams=allTeams.filter(teamName=>{
         const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===teamName);
-        const hatKaderrolle=kaderFilter.length===0||eintraege.some(e=>e.rollen.some(r=>kaderFilter.includes(r)));
-        const hatFunktion=funktionenFilter.length===0||(m.funktionen||[]).some(f=>funktionenFilter.includes(f));
-        const hatGruppe=gruppenFilter.length===0||(m.funktionsgruppen||[]).some(g=>gruppenFilter.includes(g));
-        // Team zeigen wenn: Kaderrolle in diesem Team ODER Funktion/Gruppe (nicht team-spezifisch)
-        return hatKaderrolle||hatFunktion||hatGruppe;
+        return eintraege.some(e=>e.rollen.some(r=>kaderFilter.includes(r)));
       });
     }
     return allTeams.length>0?allTeams.map(t=>({key:t,type:"team"})):[{key:"Kein Team",type:"team"}];
