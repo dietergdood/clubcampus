@@ -2470,7 +2470,7 @@ function InlineField({ label, value, field, type="text", opts=null, canEdit=fals
         <span className={`cc-inline-field ${value?"cc-info-val":"cc-info-val-empty"}`}
           onClick={()=>startEdit(field,value||"")}>
           {value||<span className="cc-inline-empty">nicht erfasst</span>}
-          <TI n="pencil" size={11} className="cc-inline-pencil"/>
+          <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
         </span>
       )}
     </div>
