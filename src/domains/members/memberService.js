@@ -160,7 +160,7 @@ export async function fetchKaderEintraege(sb, mitgliedId) {
 }
 
 export async function upsertKader(sb, eintrag) {
-  return sb.from("kader").upsert(eintrag);
+  return sb.from("kader").upsert(eintrag, { onConflict: "mitglied_id,team_id,saison" });
 }
 
 export async function updateKader(sb, id, fields) {
