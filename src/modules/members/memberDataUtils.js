@@ -166,9 +166,23 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   if(g==="__eintrittsjahr"){ if(!m.eintritt) return ["Unbekannt"]; return [String(new Date(m.eintritt).getFullYear())]; }
   if(g==="teams"){
     const teamsFilter=filterVals["teams"]||[];
-    const allTeams=(m.teams||[]).map(t=>t?.name||t);
-    const filtered=teamsFilter.length>0?allTeams.filter(t=>teamsFilter.includes(t)):allTeams;
-    return filtered.length>0?filtered.map(t=>({key:t,type:"team"})):[{key:"Kein Team",type:"team"}];
+    const kaderFilter=filterVals["kaderrollen"]||[];
+    const gruppenFilter=filterVals["funktionsgruppen"]||[];
+    const funktionenFilter=filterVals["funktionen"]||[];
+    let allTeams=(m.teams||[]).map(t=>t?.name||t);
+    if(teamsFilter.length>0) allTeams=allTeams.filter(t=>teamsFilter.includes(t));
+    // Wenn Kaderrolle/Funktion/Gruppe Filter aktiv: nur Teams zeigen wo diese Rolle zutrifft
+    if(kaderFilter.length>0||gruppenFilter.length>0||funktionenFilter.length>0){
+      allTeams=allTeams.filter(teamName=>{
+        const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===teamName);
+        const hatKaderrolle=kaderFilter.length===0||eintraege.some(e=>e.rollen.some(r=>kaderFilter.includes(r)));
+        const hatFunktion=funktionenFilter.length===0||(m.funktionen||[]).some(f=>funktionenFilter.includes(f));
+        const hatGruppe=gruppenFilter.length===0||(m.funktionsgruppen||[]).some(g=>gruppenFilter.includes(g));
+        // Team zeigen wenn: Kaderrolle in diesem Team ODER Funktion/Gruppe (nicht team-spezifisch)
+        return hatKaderrolle||hatFunktion||hatGruppe;
+      });
+    }
+    return allTeams.length>0?allTeams.map(t=>({key:t,type:"team"})):[{key:"Kein Team",type:"team"}];
   }
   if(g==="rollen"){ const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null; return [portalLabel||"Keine Rolle"]; }
   if(g==="kaderrollen"){ return (m.kader_rollen_raw||[]).length>0?m.kader_rollen_raw.map(r=>({key:r,type:"kaderrolle"})):[{key:"Keine Kaderrolle",type:"kaderrolle"}]; }
