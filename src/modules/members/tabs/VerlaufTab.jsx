@@ -38,6 +38,8 @@ function aktivitaetIcon(typ) {
     case AKTIVITAET_TYP.PORTAL_AKTIVIERT:    return "key";
     case AKTIVITAET_TYP.PORTAL_DEAKTIVIERT:  return "key";
     case AKTIVITAET_TYP.PORTAL_REAKTIVIERT:  return "key";
+    case AKTIVITAET_TYP.ARCHIVIERT:          return "archive";
+    case AKTIVITAET_TYP.REAKTIVIERT:         return "user-check";
     case AKTIVITAET_TYP.ANGELEGT:            return "user-plus";
     case AKTIVITAET_TYP.FELD_ERFASST:        return "plus";
     case AKTIVITAET_TYP.FELD_GELEERT:        return "minus";

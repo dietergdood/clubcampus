@@ -6,9 +6,9 @@
 import { useState, useRef } from "react";
 import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied } from "../../domains/members/memberService.js";
+import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.js";
 
-function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
+function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null}){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef(null);
@@ -108,8 +108,8 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
             </div>
             {(canEdit||canDelete)&&(
               <div className="cc-hero-menu-trigger"><DropMenu items={[
-                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
-                ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await reaktiviereMitglied(sb, raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
+                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await archiviereMitglied(sb, [raw.id], n);if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
+                ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await reaktiviereMitglied(sb, raw.id);if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
                 "sep",
                 {icon:"trash",label:"Löschen",danger:true,onClick:handleLoeschen},
               ]}/></div>

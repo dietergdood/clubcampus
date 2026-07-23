@@ -353,6 +353,8 @@ export const AKTIVITAET_TYP = {
   PORTAL_AKTIVIERT:    "portal_aktiviert",
   PORTAL_DEAKTIVIERT:  "portal_deaktiviert",
   PORTAL_REAKTIVIERT:  "portal_reaktiviert",
+  ARCHIVIERT:          "archiviert",
+  REAKTIVIERT:         "reaktiviert",
 };
 
 export async function logAktivitaet(sb, mitgliedId, vereinId, typ, beschreibung, feld=null, wert=null, geaendertVon=null) {

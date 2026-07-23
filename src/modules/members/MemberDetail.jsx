@@ -169,12 +169,13 @@ function MemberDetail({
 
       {/* Hero */}
       <MemberHero
-        m={m} raw={raw} initials={initials} canEdit={canEdit}
+        m={m} raw={raw} initials={initials} canEdit={canEdit} canDelete={canDelete}
         sb={sb} onReload={id => id ? reloadMember(id) : onReload()} onClose={onClose}
         onReaktiviert={onReaktiviert} onRefreshCount={refreshArchivCount}
         account={account} onUpdatePortalZugang={onUpdatePortalZugang}
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         benutzer={benutzer} teamDetails={teamDetails}
+        vereinId={vereinId}
       />
 
       {/* Tab-Bar */}
