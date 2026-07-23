@@ -271,12 +271,12 @@ export function ListView({
     ...moreActions,
     { header: true, label: "Ansichten" },
     ...(savedViews ? Object.entries(savedViews).map(([key, v]) => ({
-      icon: savedView === key ? "check" : "list",
+      icon: savedView === key ? "check" : "layout",
       label: v.label,
       onClick: () => applyStandardView(key),
     })) : []),
     ...customViews.map(v => ({
-      icon: savedView === "custom_" + v.id ? "check" : "list",
+      icon: savedView === "custom_" + v.id ? "check" : "layout",
       label: v.name,
       onClick: () => applyCustomView(v),
       onDelete: () => deleteView(v.id),
