@@ -4,15 +4,27 @@
 
    makeMemberRenderCell({ ...props }) => renderCell(col, row, gc, filterVals)
 
-   gc (groupContext):
-     { type: "team"|"gruppe"|"kaderrolle"|"funktion"|"none", key: string }
-     Bei Mehrfachgruppierung zusaetzlich:
-     { ...teamCtx, subType: "kaderrolle", subKey: "Co-Trainer/in" }
+   gc (groupContext) von ListView.renderGroupsTable:
+     Einfache Gruppierung (z.B. nach Team):
+       gc = { type: "team", key: "1. Mannschaft" }
+
+     Mehrfachgruppierung (z.B. Team → Kaderrolle):
+       Depth 1 (Team):      gc = { type: "team", key: "1. Mannschaft" }
+       Depth 2 (Kaderrolle): gc = { type: "team", key: "1. Mannschaft",
+                                    subType: "kaderrolle", subKey: "Co-Trainer/in" }
+
+       → subType/subKey werden von ListView gesetzt wenn ein Mitglied in einer
+         Untergruppe einer Team-Gruppe ist.
+       → renderCell nutzt gc.subKey als Rollen-Filter:
+         "Zeige nur Kadereinträge wo Rolle === 'Co-Trainer/in' UND Team === '1. Mannschaft'"
+       → Ohne subType/subKey würde "FCH 1 · Co-Trainer/in, Spieler/in" erscheinen
+         (alle Rollen im Team), mit subType nur "FCH 1 · Co-Trainer/in"
 
    Kritische Cases:
-     teams_rollen  => kontextsensitiv: zeigt nur Eintraege des aktuellen Teams/Kaderrolle
-     funktionen    => kontextsensitiv: zeigt nur Funktionen der aktuellen Gruppe
-     funktionsgruppen => kontextsensitiv: zeigt nur gefilterte Gruppen
+     teams_rollen     => kontextsensitiv nach gc.type + gc.subType
+     funktionen       => bei gc.type="team" leer (Funktionen sind nicht team-spezifisch)
+     funktionen_gruppen => bei gc.type="team" leer, bei gc.type="gruppe" gefiltert
+     funktionsgruppen => bei gc.type="team" leer, sonst mit Vereinsfarbe
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.jsx";
 import { Av, PortalBadge, DpBadge } from "../../theme.jsx";

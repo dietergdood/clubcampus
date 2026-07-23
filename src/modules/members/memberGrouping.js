@@ -5,6 +5,50 @@
    NICHT ÄNDERN ohne alle 10 Gruppierungsszenarien zu testen!
    Siehe ARCHITECTURE.md → "Bekannte Fallgruben bei MitgliederModul"
 
+   ── Ablauf bei Mehrfachgruppierung ["teams", "kaderrollen"] ──
+
+   buildGroups(paged, ["teams","kaderrollen"], ...)
+     │
+     ├─ Ebene 1: getGroupKey(m, "teams", ...)
+     │    → ["1. Mannschaft", "A-Junioren"] (Mitglied in 2 Teams)
+     │    → Gruppen: { "1. Mannschaft": [...], "A-Junioren": [...] }
+     │
+     └─ Ebene 2 (rekursiv): buildGroups(members, ["kaderrollen"], ...,
+                              filterVals = { __parentTeam: "1. Mannschaft" })
+          │
+          └─ getGroupKey(m, "kaderrollen", filterVals)
+               → __parentTeam ist gesetzt → nur Rollen in "1. Mannschaft"
+               → ["Co-Trainer/in"] statt alle Rollen des Mitglieds
+
+   Resultat:
+     1. MANNSCHAFT
+       └─ CO-TRAINER/IN
+            └─ Adrian Schmid   ← zeigt "FCH 1 · Co-Trainer/in"
+     A-JUNIOREN
+       └─ TRAINER/IN
+            └─ Adrian Schmid   ← zeigt "A-Jun. · Trainer/in"
+
+   ── effectiveCtx in ListView.renderGroupsTable ──
+
+   renderGroupsTable übergibt parentCtx an renderCell:
+     Depth 0: parentCtx = {type:"none"}
+     Depth 1 (Team): currentCtx = {type:"team", key:"1. Mannschaft"}
+                     effectiveCtx = {type:"team", key:"1. Mannschaft"}
+                     → wird als parentCtx an Depth 2 weitergegeben
+     Depth 2 (Kaderrolle): currentCtx = {type:"kaderrolle", key:"Co-Trainer/in"}
+                            effectiveCtx = {type:"team", key:"1. Mannschaft",
+                                           subType:"kaderrolle", subKey:"Co-Trainer/in"}
+                            → renderCell weiss: Team = "1. Mannschaft", Rolle = "Co-Trainer/in"
+                            → teams_rollen Spalte zeigt nur "FCH 1 · Co-Trainer/in"
+
+   ── Kaderrolle-Filter + Gruppierung nach Team ──
+
+   Filter: kaderrollen = ["Co-Trainer/in"]
+   getGroupKey(m, "teams", filterVals):
+     → filtert allTeams: nur Teams wo m.kader_eintraege Rolle "Co-Trainer/in" hat
+     → Adrian Kaiser (nur Spieler in "2. Mannschaft") → "2. Mannschaft" wird entfernt
+     → Adrian Kaiser (Co-Trainer in "A-Junioren") → "A-Junioren" bleibt
+
    getGroupKey: Gibt Gruppenschlüssel(s) eines Mitglieds zurück.
      Immer ein ARRAY — ein Mitglied kann in mehreren Gruppen erscheinen.
      type: "team"|"gruppe"|"kaderrolle"|"funktion"|"none"
@@ -12,8 +56,8 @@
    buildGroups: Baut rekursive Gruppenstruktur für ListView auf.
      Mehrfachgruppierung via Array: ["teams", "kaderrollen"]
      Kontext-Weitergabe via filterVals:
-       __parentTeam    → kaderrollen nur in diesem Team
-       __parentGruppe  → funktionen nur in dieser Gruppe
+       __parentTeam       → kaderrollen nur in diesem Team
+       __parentGruppe     → funktionen nur in dieser Gruppe
        __portalFunktionen → für Funktions-Gruppen-Zuordnung
    ═══════════════════════════════════════════════════════════════ */
 
