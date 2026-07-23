@@ -236,7 +236,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       {/* Neues Mitglied Button */}
       {kannVerwalten("members") && (
-        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+        <div className="cc-row cc-justify-end cc-mb-8">
           <button className="cc-btn cc-btn-primary" onClick={()=>setShowNeuesMitglied(true)}>
             <TI n="plus" size={14}/> Mitglied hinzufügen
           </button>
