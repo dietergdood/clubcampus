@@ -2777,15 +2777,18 @@ function useAddrSearch(strasse, plz){
         const json=await res.json();
         const results=(json.results||[]).map(r=>{
           const a=r.attrs;
-          const strNr=(a.label||"").replace(/<[^>]+>/g,"").trim();
-          const detail=(a.detail||"").trim();
-          // detail: "kirchgasse 2 8706 meilen ch zh" → PLZ 4-stellig extrahieren
-          const plzVal=detail.match(/\b(\d{4})\b/)?.[1]||"";
-          // Ort: Wörter nach PLZ, vor Kürzel "ch" und Kantonskürzel
-          const afterPlz=plzVal?detail.slice(detail.indexOf(plzVal)+4).trim():"";
+          // label enthält z.B. "St. Gallerstrasse 18 8716 Schmerikon"
+          const fullLabel=(a.label||"").replace(/<[^>]+>/g,"").trim();
+          // PLZ = erste 4-stellige Zahl
+          const plzMatch=fullLabel.match(/\b(\d{4})\b/);
+          const plzVal=plzMatch?.[1]||"";
+          // Strasse = alles VOR der PLZ
+          const strasseVal=plzVal?fullLabel.slice(0,fullLabel.indexOf(plzVal)).trim():fullLabel;
+          // Ort = alles NACH der PLZ, vor CH/Kanton
+          const afterPlz=plzVal?fullLabel.slice(fullLabel.indexOf(plzVal)+4).trim():"";
           const ortParts=afterPlz.split(" ").filter(p=>p&&!/^(ch|ag|ai|ar|be|bl|bs|fr|ge|gl|gr|ju|lu|ne|nw|ow|sg|sh|so|sz|tg|ti|ur|vd|vs|zg|zh)$/i.test(p));
-          const ortVal=ortParts.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
-          return {label:strNr,strasse:strNr,plz:plzVal,ort:ortVal,raw:a};
+          const ortVal=ortParts.join(" ");
+          return {label:fullLabel,strasse:strasseVal,plz:plzVal,ort:ortVal,raw:a};
         });
         setSuggestions(results);
       }catch(e){setSuggestions([]);}
