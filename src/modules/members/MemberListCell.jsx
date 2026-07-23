@@ -1,6 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/MemberListCell.jsx
-   renderCell für MitgliederModul ListView
+   renderCell Factory fuer MitgliederModul ListView
+
+   makeMemberRenderCell({ ...props }) => renderCell(col, row, gc, filterVals)
+
+   gc (groupContext):
+     { type: "team"|"gruppe"|"kaderrolle"|"funktion"|"none", key: string }
+     Bei Mehrfachgruppierung zusaetzlich:
+     { ...teamCtx, subType: "kaderrolle", subKey: "Co-Trainer/in" }
+
+   Kritische Cases:
+     teams_rollen  => kontextsensitiv: zeigt nur Eintraege des aktuellen Teams/Kaderrolle
+     funktionen    => kontextsensitiv: zeigt nur Funktionen der aktuellen Gruppe
+     funktionsgruppen => kontextsensitiv: zeigt nur gefilterte Gruppen
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.jsx";
 import { Av, PortalBadge, DpBadge } from "../../theme.jsx";

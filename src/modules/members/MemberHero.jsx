@@ -3,10 +3,11 @@
    Hero-Header des Mitglied-Detailbereichs
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { Btn, Card, ModalOrSheet, useIsMobile, LandSelect, DropMenu, useConfirm, Select } from "../../theme.jsx";
+import { Btn, ModalOrSheet, useIsMobile, LandSelect, DropMenu, useConfirm } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { ROLLE_LABEL } from "../../domains/roles/roleUtils.js";
 import { LAENDER } from "./memberUtils.jsx";
+import { updateMitglied, updateMitgliedRolle, updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, fetchBenutzerByMitglied } from "../../domains/members/memberService.js";
 function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
@@ -20,11 +21,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
   async function handleHeroFotoUpload(e){
     const file=e.target.files?.[0];
     if(!file) return;
-    const ext=file.name.split(".").pop();
-    const path=`${raw.id}/foto.${ext}`;
-    await sb.storage.from("mitglieder-fotos").upload(path,file,{upsert:true});
-    const {data}=sb.storage.from("mitglieder-fotos").getPublicUrl(path);
-    await sb.from("mitglieder").update({foto_url:data.publicUrl+"?t="+Date.now()}).eq("id",raw.id);
+    await updateMitgliedFoto(sb, raw.id, file);
     if(onReload) onReload(raw.id);
   }
 
@@ -34,18 +31,16 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
 
   useEffect(()=>{
     if(sb&&editOpen){
-      // Benutzer-Rolle laden
-      sb.from("benutzer").select("id,role").eq("mitglied_id",raw.id).maybeSingle()
-        .then(({data})=>{
-          if(data) setEditForm(f=>({...f,rolle:data.role||raw.rolle||"",_benutzer_id:data.id}));
-          else setEditForm(f=>({...f,rolle:raw.rolle||""}));
-        });
+      fetchBenutzerByMitglied(sb, raw.id).then(data=>{
+        if(data) setEditForm(f=>({...f,rolle:data.role||raw.rolle||"",_benutzer_id:data.id}));
+        else setEditForm(f=>({...f,rolle:raw.rolle||""}));
+      });
     }
   },[editOpen]);
 
   async function deleteMitglied(){
     const ok=await confirm({title:`${m.name} löschen?`,message:"Diese Aktion kann nicht rückgängig gemacht werden.",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
-    await sb.from("mitglieder").update({aktiv:false}).eq("id",raw.id);
+    await deleteMitglied(sb, raw.id);
     if(onClose) onClose();
     if(onReload) onReload(raw.id);
   }
@@ -53,7 +48,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
   async function saveEdit(){
     if(!sb) return;
     setEditSaving(true); setEditMsg(null);
-    const {error}=await sb.from("mitglieder").update({
+    const ok = await updateMitglied(sb, raw.id, {
       vorname:editForm.vorname||null, nachname:editForm.nachname||null,
       geburtsdatum:editForm.geburtsdatum||null, geschlecht:editForm.geschlecht||null,
       nationalitaet:editForm.nationalitaet||null, nationalitaet2:editForm.nationalitaet2||null, heimatort:editForm.heimatort||null,
@@ -63,16 +58,9 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
       mitgliedtyp:editForm.mitgliedtyp||null, funktionen:editForm.funktionen||[],
       spielerpass:editForm.spielerpass||null, js_nr:editForm.js_nr||null,
       fairgate_id:editForm.fairgate_id||null, notizen:editForm.notizen||null,
-      updated_at:new Date().toISOString(),
-    }).eq("id",raw.id);
-    // Rolle speichern: immer in mitglieder.rolle, zusätzlich in benutzer.role falls verknüpft
-    if(!error){
-      await sb.from("mitglieder").update({rolle:editForm.rolle||null}).eq("id",raw.id);
-      if(editForm.rolle&&editForm._benutzer_id){
-        await sb.from("benutzer").update({role:editForm.rolle}).eq("id",editForm._benutzer_id);
-      }
-    }
-    if(error){ setEditMsg({ok:false,text:error.message}); }
+    });
+    if(ok) await updateMitgliedRolle(sb, raw.id, editForm.rolle, editForm._benutzer_id);
+    if(!ok){ setEditMsg({ok:false,text:"Fehler beim Speichern"}); }
     else{
       setEditMsg({ok:true,text:"Gespeichert ✓"});
       setTimeout(()=>{setEditOpen(false);setEditMsg(null);if(onReload)onReload(raw.id);},600);
@@ -110,7 +98,7 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
                       <TI n="camera" size={14}/> Ändern
                     </Btn>
                     <Btn variant="danger" onClick={async()=>{
-                      await sb.from("mitglieder").update({foto_url:null}).eq("id",raw.id);
+                      await deleteMitgliedFoto(sb, raw.id);
                       setFotoOverlay(false);
                       if(onReload) onReload();
                     }}>
@@ -162,8 +150,8 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
             {(canEdit||canDelete)&&(
               <div className="cc-hero-menu-trigger"><DropMenu items={[
                 ...(canEdit?[{icon:"edit",label:"Bearbeiten",onClick:()=>{setEditForm({...raw});setEditOpen(true);}}]:[]),
-                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await sb.from("mitglieder").update({aktiv:false,deaktiviert_am:new Date().toISOString(),deaktiviert_von:n}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
-                ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await sb.from("mitglieder").update({aktiv:true,deaktiviert_am:null,deaktiviert_von:null}).eq("id",raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
+                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
+                ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;await reaktiviereMitglied(sb, raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
                 "sep",
                 {icon:"trash",label:"Löschen",danger:true,onClick:()=>deleteMitglied()},
               ]}/></div>
@@ -268,66 +256,4 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
   );
 }
 
-/* ── FotoUpload: Foto in Personalien-Card ── */
-function FotoUpload({raw,canUpload,sb,onReload}){
-  const [uploading,setUploading]=useState(false);
-  const [msg,setMsg]=useState(null);
-  const inputRef=useRef(null);
-
-  async function handleUpload(e){
-    const file=e.target.files?.[0];
-    if(!file||!sb) return;
-    if(file.size>2*1024*1024){ setMsg({ok:false,text:"Max. 2MB"}); return; }
-    setUploading(true); setMsg(null);
-    try{
-      const ext=file.name.split(".").pop().toLowerCase();
-      const path=`${raw.id}/foto.${ext}`;
-      const {error:upErr}=await sb.storage.from("mitglieder-fotos").upload(path,file,{upsert:true});
-      if(upErr) throw upErr;
-      const {data}=sb.storage.from("mitglieder-fotos").getPublicUrl(path);
-      const {error:dbErr}=await sb.from("mitglieder").update({foto_url:data.publicUrl+"?t="+Date.now()}).eq("id",raw.id);
-      if(dbErr) throw dbErr;
-      setMsg({ok:true,text:"Foto gespeichert ✓"});
-      setTimeout(()=>{setMsg(null);if(onReload)onReload();},800);
-    }catch(e){ setMsg({ok:false,text:e.message}); }
-    setUploading(false);
-  }
-
-  async function handleDelete(){
-    const ok=await confirm({title:"Foto löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
-    await sb.from("mitglieder").update({foto_url:null}).eq("id",raw.id);
-    if(onReload) onReload();
-  }
-
-  if(!raw.foto_url&&!canUpload) return null;
-
-  return(
-    <div className="cc-foto-row">
-      {raw.foto_url?(
-        <img src={raw.foto_url} className="cc-foto-img" alt="Foto"/>
-      ):(
-        <div className="cc-foto-placeholder"><TI n="photo" size={24}/></div>
-      )}
-      <div className="cc-col cc-gap-8">
-        <div className="cc-text-bold">{raw.vorname} {raw.nachname}</div>
-        {canUpload&&(
-          <div className="cc-row cc-gap-8">
-            <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="cc-hidden" onChange={handleUpload}/>
-            <Btn small onClick={()=>inputRef.current?.click()} disabled={uploading}>
-              <TI n="upload" size={12}/> {raw.foto_url?"Ändern":"Foto hochladen"}
-            </Btn>
-            {raw.foto_url&&<Btn small onClick={handleDelete}><TI n="trash" size={12}/></Btn>}
-          </div>
-        )}
-        {msg&&<div className={`cc-badge ${msg.ok?"cc-badge-success":"cc-badge-danger"}`}>{msg.text}</div>}
-        {uploading&&<div className="cc-text-sm">Wird hochgeladen…</div>}
-      </div>
-    </div>
-  );
-}
-
-/* -- Kaderliste mit Feldsichtbarkeit -- */
-
-/* ── Eltern Portal-Verknüpfungs-Zeile ── */
-
-export { MemberHero, FotoUpload };
+export { MemberHero };

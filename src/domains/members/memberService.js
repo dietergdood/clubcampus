@@ -11,10 +11,6 @@ export async function fetchMitglied(sb, id) {
   return data;
 }
 
-export async function updateMitglied(sb, id, fields) {
-  return sb.from("mitglieder").update(fields).eq("id", id);
-}
-
 export async function deleteMitglied(sb, id) {
   return sb.from("mitglieder").delete().eq("id", id);
 }
@@ -231,4 +227,42 @@ export async function fetchAktiveTeams(sb) {
     .eq("aktiv", true)
     .order("name");
   return data || [];
+}
+
+export async function updateMitglied(sb, id, fields) {
+  const { error } = await sb.from("mitglieder").update({
+    ...fields,
+    updated_at: new Date().toISOString(),
+  }).eq("id", id);
+  if (error) console.error("updateMitglied error:", error);
+  return !error;
+}
+
+export async function updateMitgliedRolle(sb, id, rolle, benutzerId=null) {
+  await sb.from("mitglieder").update({ rolle: rolle||null }).eq("id", id);
+  if (rolle && benutzerId) {
+    await sb.from("benutzer").update({ role: rolle }).eq("id", benutzerId);
+  }
+}
+
+export async function updateMitgliedFoto(sb, id, file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  const path = `${id}/foto.${ext}`;
+  const { error: upErr } = await sb.storage.from("mitglieder-fotos").upload(path, file, { upsert: true });
+  if (upErr) throw upErr;
+  const { data } = sb.storage.from("mitglieder-fotos").getPublicUrl(path);
+  const { error: dbErr } = await sb.from("mitglieder").update({ foto_url: data.publicUrl + "?t=" + Date.now() }).eq("id", id);
+  if (dbErr) throw dbErr;
+  return data.publicUrl;
+}
+
+export async function deleteMitgliedFoto(sb, id) {
+  const { error } = await sb.from("mitglieder").update({ foto_url: null }).eq("id", id);
+  if (error) console.error("deleteMitgliedFoto error:", error);
+  return !error;
+}
+
+export async function fetchBenutzerByMitglied(sb, mitgliedId) {
+  const { data } = await sb.from("benutzer").select("id,role").eq("mitglied_id", mitgliedId).maybeSingle();
+  return data;
 }

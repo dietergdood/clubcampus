@@ -161,6 +161,21 @@ export function sortMembers(filtered, sortCol, sortDir, manualOrder=[]) {
   });
 }
 
+/*
+  getGroupKey(m, g, ROLLE_LABEL, filterVals)
+  Gibt die Gruppenschluessel(s) eines Mitglieds fuer eine Gruppierungsebene zurueck.
+  Gibt immer ein ARRAY zurueck (ein Mitglied kann in mehreren Gruppen erscheinen).
+
+  Spezialfelder in filterVals:
+    __parentTeam    => gesetzt wenn uebergeordnete Gruppe ein Team ist
+                       => kaderrollen zeigt nur Rollen in DIESEM Team
+    __parentGruppe  => gesetzt wenn uebergeordnete Gruppe eine Funktionsgruppe ist
+                       => funktionen zeigt nur Funktionen DIESER Gruppe
+    __portalFunktionen => alle Portal-Funktionen mit Gruppen-Zuordnung
+
+  type-Werte: "team" | "gruppe" | "kaderrolle" | "funktion" | "none"
+  Diese types werden von renderCell und effectiveCtx in ListView genutzt.
+*/
 export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   if(g==="__jahrgang"){ if(!m.geburtsdatum) return ["Unbekannt"]; return [String(new Date(m.geburtsdatum).getFullYear())]; }
   if(g==="__eintrittsjahr"){ if(!m.eintritt) return ["Unbekannt"]; return [String(new Date(m.eintritt).getFullYear())]; }
@@ -233,6 +248,21 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   return [String(v||"-")];
 }
 
+/*
+  buildGroups(paged, groupBy, ROLLE_LABEL, filterVals, parentGroup, groupOrder)
+  Baut die rekursive Gruppenstruktur fuer ListView auf.
+
+  Mehrfachgruppierung: groupBy ist ein Array ["teams", "kaderrollen"]
+    => Ebene 1: Teams, Ebene 2: Kaderrollen innerhalb des Teams
+
+  Kontext-Weitergabe:
+    - Bei Team-Gruppe: __parentTeam in filterVals setzen
+      => getGroupKey fuer kaderrollen gibt nur Rollen in DIESEM Team zurueck
+    - Bei Gruppe-Gruppe: __parentGruppe in filterVals setzen
+      => getGroupKey fuer funktionen gibt nur Funktionen dieser Gruppe zurueck
+
+  NICHT AENDERN ohne alle Gruppierungsszenarien zu testen (Szenarien 1-10 in ARCHITECTURE.md)
+*/
 export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGroup=null, groupOrder={}) {
   // groupBy kann String oder Array sein
   const levels=Array.isArray(groupBy)?groupBy:[groupBy];
