@@ -12,7 +12,7 @@
      Passivtypen: geburtsdatum*, geschlecht*, strasse*, plz*, ort*, telefon*
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Btn, ModalOrSheet } from "../../theme.jsx";
+import { Btn, ModalOrSheet, PhoneInput } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.js";
 
@@ -199,7 +199,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             {istPflicht("telefon") && (
               <div className="cc-form-full">
                 <label className="cc-label">Telefon <span className="cc-label-req">*</span></label>
-                <input className="cc-input" type="tel" value={form.telefon||""} onChange={e=>set("telefon",e.target.value)} placeholder="079 123 45 67"/>
+                <PhoneInput value={form.telefon||""} onChange={v=>set("telefon",v)} showHint={false}/>
               </div>
             )}
 

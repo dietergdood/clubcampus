@@ -25,7 +25,7 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
       <div className="cc-section-title"><TI n="address-book" size={14}/> Kontakt</div>
       <div className="cc-info-grid">
         {fv.showEmail   && <InlineField label="E-Mail"  field="email"   value={raw.email||null}   type="email" {...ieProps}/>}
-        {fv.showTelefon && <InlineField label="Telefon" field="telefon" value={raw.telefon||null} type="tel"   {...ieProps}/>}
+        {fv.showTelefon && <InlineField label="Telefon" field="telefon" value={raw.telefon||null} type="phone" {...ieProps}/>}
         {fv.showAdresse && <>
           <InlineField label="Strasse" field="strasse" value={raw.strasse||null} {...ieProps}/>
           <InlineField label="PLZ"     field="plz"     value={raw.plz||null}     {...ieProps}/>
