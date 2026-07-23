@@ -221,6 +221,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
 
       <ListView
+        emptyIcon="users"
+        emptyTitle="Noch keine Mitglieder"
+        emptySubtitle="Füge das erste Mitglied hinzu, um loszulegen."
         rows={allMembers}
         filterFn={(rows,search,filterVals)=>filterMembers(rows,search,filterVals,ROLLE_LABEL)}
         sortFn={sortMembers}

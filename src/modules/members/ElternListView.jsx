@@ -96,6 +96,9 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
     <>
       {confirmDialog}
       <ListView
+        emptyIcon="heart"
+        emptyTitle="Noch keine Elternkontakte"
+        emptySubtitle="Elternkontakte werden beim Mitglied erfasst."
         rows={rows}
         colDefs={COL_DEFS}
         colGroups={COL_GROUPS}

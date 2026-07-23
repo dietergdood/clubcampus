@@ -131,6 +131,13 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-list-name{font-weight:500;font-size:14px;color:var(--text);white-space:nowrap}
 .cc-detail-label{font-size:14px;color:var(--sub);min-width:120px;flex-shrink:0}
 .cc-empty{padding:32px;text-align:center;color:var(--sub);font-size:14px}
+.cc-empty-state{padding:32px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.cc-empty-state-icon{width:48px;height:48px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--sub);margin-bottom:4px}
+.cc-empty-state-icon-danger{color:var(--red,#E24B4A)}
+.cc-empty-state-title{font-size:14px;font-weight:500;color:var(--text)}
+.cc-empty-state-sub{font-size:12px;color:var(--sub);line-height:1.5;max-width:240px}
+.cc-empty-state-btn{margin-top:8px;font-size:12px;padding:6px 14px;border-radius:var(--cc-radius,8px);border:0.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+.cc-empty-state-btn:hover{background:var(--surface)}
 .cc-table-wrap{background:var(--surface);border-radius:0 0 11px 11px}
 .cc-table-wrap-inner{overflow-x:auto;overflow-y:auto;width:100%;max-height:calc(100vh - 268px)}
 .cc-table-wrap-inner{overflow-x:auto}
@@ -2413,7 +2420,19 @@ export const COMPONENT_REGISTRY = [
 ];
 
 
-/* ── PortalBadge: Portal-Zugang Status ── */
+/* ── EmptyState: Leere Listen, Fehler, kein Ergebnis ── */
+function EmptyState({icon, title, subtitle, action, onAction, danger=false}){
+  return(
+    <div className="cc-empty-state">
+      {icon&&<div className={`cc-empty-state-icon${danger?" cc-empty-state-icon-danger":""}`}><TI n={icon} size={22}/></div>}
+      <div className="cc-empty-state-title">{title}</div>
+      {subtitle&&<div className="cc-empty-state-sub">{subtitle}</div>}
+      {action&&onAction&&<button className="cc-empty-state-btn" onClick={onAction}>{action}</button>}
+    </div>
+  );
+}
+
+
 function PortalBadge({val}){
   if(val==="Aktiv") return <span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>;
   if(val==="Deaktiviert") return <span className="cc-portal-status cc-portal-status-deaktiviert"><span className="cc-portal-dot"/> Deaktiviert</span>;
@@ -2427,4 +2446,4 @@ function DpBadge({val}){
   return <span className="cc-dp-status cc-dp-status-err"><span className="cc-dp-dot"/> {val||"Unbekannt"}</span>;
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge };
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge, EmptyState };

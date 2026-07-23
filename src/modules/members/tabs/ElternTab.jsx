@@ -3,7 +3,7 @@
    Elternkontakte-Tab im Mitglied-Detail
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, ModalOrSheet, DropMenu } from "../../../theme.jsx";
+import { Btn, Card, ModalOrSheet, DropMenu, EmptyState } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, setHauptkontakt, unlinkElternBenutzer, fetchElternkontakte } from "../../../domains/members/memberService.js";
 
@@ -97,7 +97,7 @@ function ElternTab({eltern,canEdit,raw,sb,onReload,setElternLoaded,vereinId=null
           </Btn>
         </div>
       )}
-      {eltern.length===0&&<div className="cc-empty">Keine Elternkontakte erfasst.</div>}
+      {eltern.length===0&&<EmptyState icon="heart" title="Keine Elternkontakte" subtitle="Noch kein Elternkontakt für dieses Mitglied erfasst."/>}
       {eltern.map((e,i)=>{
         const name=e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
         const tel=e.telefon||e.tel;

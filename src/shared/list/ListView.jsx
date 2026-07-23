@@ -5,7 +5,7 @@
    Material, Helfer, Events etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo, Fragment } from "react";
-import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn } from "../../theme.jsx";
+import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn, EmptyState } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.js";
 
@@ -91,6 +91,10 @@ export function ListView({
   exportFormats = [],
   // Admin
   isAdmin = false,
+  // Empty state
+  emptyIcon = "list",
+  emptyTitle = "Noch keine Einträge",
+  emptySubtitle = "Füge den ersten Eintrag hinzu, um loszulegen.",
 }) {
   const isMobile = useIsMobile();
 
@@ -519,9 +523,9 @@ export function ListView({
       {/* Tabelle */}
       <Card className="cc-card-table" flush>
         {rows.length === 0 ? (
-          <div className="cc-empty">Keine Einträge.</div>
+          <EmptyState icon={emptyIcon} title={emptyTitle} subtitle={emptySubtitle}/>
         ) : filtered.length === 0 ? (
-          <div className="cc-empty">Keine Einträge gefunden.</div>
+          <EmptyState icon="filter-off" title="Keine Einträge gefunden" subtitle="Passe die Filter an oder setze sie zurück." action="Filter zurücksetzen" onAction={()=>setFilterVals({})}/>
         ) : isMobile && renderMobile ? (
           <div>{groups.map(({ key, label, members, children }) => (
             <div key={key}>

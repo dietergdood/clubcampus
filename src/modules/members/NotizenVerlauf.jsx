@@ -2,7 +2,7 @@
    ClubCampus — modules/members/NotizenVerlauf.jsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Btn, useConfirm, DropMenu } from "../../theme.jsx";
+import { Btn, useConfirm, DropMenu, EmptyState } from "../../theme.jsx";
 import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.js";
 
 function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}){
@@ -82,7 +82,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAd
         ):null
       )}
       {notizen.length===0&&!canEdit&&(
-        <div className="cc-text-sm cc-text-sub cc-empty-italic">Keine Notizen vorhanden.</div>
+        <EmptyState icon="notes" title="Noch keine Notizen" subtitle="Halte wichtige Informationen zu diesem Mitglied fest."/>
       )}
       {notizen.map(n=>(
         <div key={n.id} className="cc-notiz-entry">
