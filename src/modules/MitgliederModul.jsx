@@ -8,7 +8,7 @@ import { TI } from "../icons.jsx";
 import { Av, Card, Stat, PortalBadge, DpBadge,
          useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect,
          useConfirm, ConfirmDialog,
-         Tabs, STitle, Between, Sub, Label, Select, Empty, InfoBox } from "../theme.jsx";
+         Tabs, STitle, Between, Sub, Label, Select, Empty, InfoBox, Btn } from "../theme.jsx";
 import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte } from "../domains/members/memberService.js";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.js";
@@ -237,9 +237,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {/* Neues Mitglied Button */}
       {kannVerwalten("members") && (
         <div className="cc-row cc-justify-end cc-mb-8">
-          <button className="cc-btn cc-btn-primary" onClick={()=>setShowNeuesMitglied(true)}>
+          <Btn variant="primary" onClick={()=>setShowNeuesMitglied(true)}>
             <TI n="plus" size={14}/> Mitglied hinzufügen
-          </button>
+          </Btn>
         </div>
       )}
 
