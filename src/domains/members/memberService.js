@@ -164,7 +164,7 @@ export async function linkKind(sb, elternId, mitgliedId, vereinId, hauptkontakt=
 }
 
 export async function unlinkKind(sb, elternId, mitgliedId) {
-  // Kind entknüpfen — prüft ob letztes Kind
+  // Kind entknüpfen
   await sb.from("eltern_kinder").delete()
     .eq("eltern_id", elternId)
     .eq("mitglied_id", mitgliedId);
@@ -172,7 +172,12 @@ export async function unlinkKind(sb, elternId, mitgliedId) {
   const { count } = await sb.from("eltern_kinder")
     .select("id", { count: "exact", head: true })
     .eq("eltern_id", elternId);
-  return { verbleibendeKinder: count || 0 };
+  // Ist das Kind noch aktiv im Verein?
+  const { data: kind } = await sb.from("mitglieder")
+    .select("aktiv")
+    .eq("id", mitgliedId)
+    .maybeSingle();
+  return { verbleibendeKinder: count || 0, kindNochAktiv: kind?.aktiv === true };
 }
 
 export async function deleteElternkontakt(sb, id) {

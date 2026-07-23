@@ -159,18 +159,29 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
     const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
     const ok = await confirm({
       title:`${name} entknüpfen?`,
-      message:"Das Kind wird vom Elternkontakt entknüpft. Falls dies das letzte Kind ist, wird der Elternkontakt gelöscht.",
+      message:"Dieses Kind wird vom Elternkontakt getrennt.",
       danger:true,
       confirmLabel:"Entknüpfen"
     });
     if(!ok) return;
 
-    const { verbleibendeKinder } = await unlinkKind(sb, e.id, raw.id);
+    const { verbleibendeKinder, kindNochAktiv } = await unlinkKind(sb, e.id, raw.id);
     if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entknüpft: ${name}`,"elternkontakte",name,geaendertVon);
 
     if(verbleibendeKinder === 0){
-      // Letztes Kind — Elternkontakt löschen
-      await deleteElternkontakt(sb, e.id);
+      if(kindNochAktiv){
+        // Kind noch im Verein (z.B. Junioren → Aktiv) → Elternteil wird Supporter
+        // TODO: E-Mail an Elternteil senden (benötigt Edge Function)
+        await updateElternkontakt(sb, e.id, { supporter: true });
+        // Benutzer-Rolle zu "supporter" ändern falls Portal-Zugang vorhanden
+        if(e.benutzer_id){
+          await sb.from("benutzer").update({ role: "supporter" }).eq("id", e.benutzer_id);
+        }
+      } else {
+        // Kind nicht mehr im Verein → Elternkontakt löschen
+        // TODO: E-Mail Bestätigung an Elternteil senden
+        await deleteElternkontakt(sb, e.id);
+      }
     }
     reload();
   }
