@@ -154,7 +154,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-verlauf-date-label{font-size:11px;font-weight:500;color:var(--sub);white-space:nowrap}
 .cc-verlauf-item{padding:10px 0}
 .cc-verlauf-item-border{border-bottom:0.5px solid var(--border)}
-.cc-verlauf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.cc-verlauf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .cc-verlauf-feld{font-size:13px;font-weight:500;color:var(--text)}
 .cc-verlauf-aktivitaet{font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px}
 .cc-verlauf-aktivitaet-icon{display:flex;align-items:center;color:var(--sub)}
@@ -903,6 +903,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
   .cc-member-detail-wrap .cc-info-row{padding:6px 0}
   .cc-member-detail-wrap .cc-info-row:nth-child(odd){padding-right:0}
   .cc-verlauf-werte{flex-wrap:wrap}
+  .cc-verlauf-header{flex-direction:column;align-items:flex-start;gap:2px}
   .cc-member-detail-wrap .cc-info-row:nth-child(even){padding-left:0}
   .cc-member-detail-wrap .cc-grid-2{gap:8px}
 }

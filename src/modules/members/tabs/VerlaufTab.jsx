@@ -139,10 +139,13 @@ function VerlaufTab({ raw, sb }) {
 
                 {gruppen.map((g, gi) => (
                   <div key={gi} className={`cc-verlauf-item${gi < gruppen.length-1 ? " cc-verlauf-item-border" : ""}`}>
-                    {/* User + Zeit oben */}
-                    <div className="cc-verlauf-meta cc-mb-4">
-                      {g.user && <span className="cc-verlauf-user"><TI n="user" size={11}/> {g.user}</span>}
-                      <span className="cc-verlauf-datum">{uhrzeit(g.ts)}</span>
+                    {/* Header: Leer links, User+Zeit rechts — Mobile stapelt */}
+                    <div className="cc-verlauf-header">
+                      <span/>
+                      <span className="cc-verlauf-meta">
+                        {g.user && <span className="cc-verlauf-user"><TI n="user" size={11}/> {g.user}</span>}
+                        <span className="cc-verlauf-datum">{uhrzeit(g.ts)}</span>
+                      </span>
                     </div>
 
                     {g._typ === "aenderung" ? (
