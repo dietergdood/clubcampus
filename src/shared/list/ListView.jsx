@@ -351,10 +351,15 @@ export function ListView({
   ];
 
   // ── Gruppen Tabelle rendern ───────────────────────────────────
-  function renderGroupsTable(groups, depth = 0, levelKey = null) {
+  function renderGroupsTable(groups, depth = 0, levelKey = null, parentCtx = {type:"none",key:null}) {
     const currentLevelKey = levelKey || (Array.isArray(groupBy) ? groupBy[depth] : groupBy) || "none";
     return groups.map(({ key, label, type, members, children }) => {
       if (!children && (!members || members.length === 0)) return null;
+      // Effektiver Gruppenkontext: aktueller oder übergeordneter Team/Gruppe Kontext
+      const currentCtx = { type: type || "none", key };
+      const effectiveCtx = (type==="team"||type==="gruppe"||type==="kaderrolle"||type==="funktion")
+        ? currentCtx
+        : (parentCtx.type!=="none" ? parentCtx : currentCtx);
       const groupManualOrder = manualOrder[key];
       const orderedMembers = groupManualOrder && groupManualOrder.length > 0
         ? [...(members||[])].sort((a, b) => {
@@ -403,7 +408,7 @@ export function ListView({
             </tr>
           )}
           {!isCollapsed && (children
-            ? renderGroupsTable(children, depth + 1, Array.isArray(groupBy) ? groupBy[depth + 1] : null)
+            ? renderGroupsTable(children, depth + 1, Array.isArray(groupBy) ? groupBy[depth + 1] : null, effectiveCtx)
             : orderedMembers.map(row => {
                 const id = getRowId(row);
                 return (
@@ -433,7 +438,7 @@ export function ListView({
                       </td>
                     )}
                     {COLS.map(col => renderCell
-                      ? renderCell(col, row, { type: type || "none", key }, filterVals)
+                      ? renderCell(col, row, effectiveCtx, filterVals)
                       : <td key={col.key} className="cc-members-td cc-members-td-sub">{String(row[col.key] ?? "—")}</td>
                     )}
                     <td className="cc-members-td cc-members-td-actions" />
