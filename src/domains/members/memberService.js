@@ -104,14 +104,15 @@ export async function fetchElternkontakte(sb, mitgliedId) {
 }
 
 export async function fetchAlleElternkontakte(sb, vereinId) {
-  const { data } = await sb.from("elternkontakte")
+  const { data, error } = await sb.from("elternkontakte")
     .select(`
       id, vorname, nachname, name, email, telefon, beziehung,
       benutzer_id, hauptkontakt, mitglied_id,
-      mitglieder:mitglied_id (id, vorname, nachname, teams:kader_eintraege(team:teams(id,name,kurz)))
+      mitglieder:mitglied_id (id, vorname, nachname)
     `)
     .eq("verein_id", vereinId)
     .order("nachname", { ascending: true });
+  if(error) console.error("fetchAlleElternkontakte error:", error);
   return data || [];
 }
 
