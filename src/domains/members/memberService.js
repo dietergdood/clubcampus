@@ -305,7 +305,7 @@ export async function logAenderung(sb, mitgliedId, vereinId, feld, alterWert, ne
   if (alterWert && neuerWert) {
     // Echter Wechsel: Wert A → Wert B → in mitglieder_aenderungen
     await sb.from("mitglieder_aenderungen").insert({
-      mitglied_id:   mitgliedId,
+      mitglied_id:   parseInt(mitgliedId),
       verein_id:     vereinId,
       feld,
       alter_wert:    String(alterWert),
@@ -354,7 +354,7 @@ export const AKTIVITAET_TYP = {
 
 export async function logAktivitaet(sb, mitgliedId, vereinId, typ, beschreibung, feld=null, wert=null, geaendertVon=null) {
   await sb.from("mitglieder_aktivitaeten").insert({
-    mitglied_id:   mitgliedId,
+    mitglied_id:   parseInt(mitgliedId),
     verein_id:     vereinId,
     typ,
     beschreibung,

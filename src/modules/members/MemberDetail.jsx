@@ -266,6 +266,7 @@ function MemberDetail({
           portalMsg={portalMsg} portalLoading={portalLoading}
           handleUnlink={handleUnlink} handleReactivate={handleReactivate}
           setBenutzer={setBenutzer}
+          vereinId={vereinId} account={account}
           onReload={()=>{ if(reloadMember) reloadMember(raw.id); if(onReload) onReload(); }}
         />
       )}

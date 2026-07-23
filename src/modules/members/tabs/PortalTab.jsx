@@ -6,12 +6,13 @@ import { useState } from "react";
 import { Card, Chip } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { GN, R, RL } from "../../../constants.js";
-import { updateMitgliedRolle } from "../../../domains/members/memberService.js";
+import { updateMitgliedRolle, logAenderung } from "../../../domains/members/memberService.js";
 
 function PortalTab({
   raw, benutzer, sb, dbPortalRollen,
   portalMsg, portalLoading,
   handleUnlink, handleReactivate, onReload, setBenutzer,
+  vereinId=null, account=null,
 }) {
   const aktiv = raw.hat_portal_zugang && benutzer;
   const deaktiviert = !raw.hat_portal_zugang && benutzer;
@@ -35,7 +36,12 @@ function PortalTab({
   async function saveRolle() {
     if (!sb) return;
     setRolleSaving(true);
+    const alterRolle = benutzer?.role || raw.rolle || null;
     await updateMitgliedRolle(sb, raw.id, rolleVal, benutzer?.id);
+    if (vereinId) {
+      const von = account?.name||account?.email||"Administrator";
+      logAenderung(sb, raw.id, vereinId, "rolle", alterRolle, rolleVal||null, von);
+    }
     setRolleSaving(false);
     setRolleEditing(false);
     if (setBenutzer) setBenutzer(prev => prev ? { ...prev, role: rolleVal } : prev);
