@@ -266,3 +266,20 @@ export async function fetchBenutzerByMitglied(sb, mitgliedId) {
   const { data } = await sb.from("benutzer").select("id,role").eq("mitglied_id", mitgliedId).maybeSingle();
   return data;
 }
+
+export async function insertMitglied(sb, fields, vereinId) {
+  const { data, error } = await sb.from("mitglieder").insert({
+    ...fields,
+    verein_id: vereinId,
+    aktiv: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).select("id").single();
+  if (error) { console.error("insertMitglied error:", error); return null; }
+  return data?.id;
+}
+
+export async function fetchMitgliedtypPflichtfelder(sb) {
+  const { data } = await sb.from("mitgliedtyp_pflichtfelder").select("*");
+  return data || [];
+}

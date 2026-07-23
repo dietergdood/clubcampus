@@ -19,6 +19,8 @@ import { useMemberMeta } from "../domains/members/useMemberMeta.js";
 import { ElternListView } from "./members/ElternListView.jsx";
 import { ListView } from "../shared/list/ListView.jsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";
+import { NeuesMitgliedModal } from "./members/NeuesMitgliedModal.jsx";
+import { fetchMitgliedtypPflichtfelder } from "../domains/members/memberService.js";
 
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}){
   const isMobile=useIsMobile();
@@ -27,6 +29,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [expandedTeams,setExpandedTeams]=useState(new Set());
   const [portalFunktionen,setPortalFunktionen]=useState([]);
   const [selectedMember,setSelectedMember]=useState(null);
+  const [showNeuesMitglied,setShowNeuesMitglied]=useState(false);
+  const [dbPflichtfelder,setDbPflichtfelder]=useState([]);
 
 
   const [archivTab,setArchivTab]=useState(false);
@@ -71,6 +75,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(portalFunktionen.length===0)
       sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
         .then(({data})=>setPortalFunktionen(data||[]));
+    fetchMitgliedtypPflichtfelder(sb).then(data=>setDbPflichtfelder(data));
   },[account?.id]);
 
 
@@ -177,6 +182,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   return(
     <>{confirmDialog}
+      <NeuesMitgliedModal
+        open={showNeuesMitglied}
+        onClose={()=>setShowNeuesMitglied(false)}
+        sb={sb}
+        dbMitgliedtypen={dbMitgliedtypen}
+        dbPortalRollen={dbPortalRollen}
+        dbPflichtfelder={dbPflichtfelder}
+        vereinId={vereinId}
+        onSuccess={()=>{ if(onReload) onReload(); }}
+      />
     <div className="cc-page-wide">
       {/* Header + Tabs */}
       <div className="cc-page-hdr">
@@ -219,6 +234,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       {/* Gespeicherte Ansichten - nur Desktop */}
 
+      {/* Neues Mitglied Button */}
+      {kannVerwalten("members") && (
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+          <button className="cc-btn cc-btn-primary" onClick={()=>setShowNeuesMitglied(true)}>
+            <TI n="plus" size={14}/> Mitglied hinzufügen
+          </button>
+        </div>
+      )}
 
       <ListView
         emptyIcon="users"
