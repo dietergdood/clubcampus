@@ -3,10 +3,11 @@
    Hero-Header des Mitglied-Detailbereichs
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { Btn, ModalOrSheet, useIsMobile, LandSelect, DropMenu, useConfirm } from "../../theme.jsx";
+import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { ROLLE_LABEL } from "../../domains/roles/roleUtils.js";
 import { LAENDER } from "./memberUtils.jsx";
+import { MemberEditModal } from "./MemberEditModal.jsx";
 import { updateMitglied, updateMitgliedRolle, updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, fetchBenutzerByMitglied } from "../../domains/members/memberService.js";
 function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null}){
   const [confirm,confirmDialog]=useConfirm();
@@ -161,96 +162,13 @@ function MemberHero({m,raw,initials,age,canEdit,canDelete=false,sb,onReload,onCl
 
       </div>
       {editOpen&&(
-        <ModalOrSheet open={true} onClose={()=>setEditOpen(false)} maxWidth={560}>
-          <div className="cc-modal-hdr">
-            <div className="cc-modal-title">{m.name} bearbeiten</div>
-            <Btn variant="ghost" small onClick={()=>setEditOpen(false)}><TI n="x" size={14}/></Btn>
-          </div>
-          <div className="cc-modal-body">
-            <div className="cc-form-row">
-              {/* Personalien */}
-              <div className="cc-form-section-title" data-label="Personalien"/>
-              {[
-                {k:"vorname",      l:"Vorname"},
-                {k:"nachname",     l:"Nachname"},
-                {k:"geburtsdatum", l:"Geburtsdatum", type:"date"},
-                {k:"geschlecht",   l:"Geschlecht",   opts:[{v:"m",l:"Männlich"},{v:"w",l:"Weiblich"}]},
-                {k:"nationalitaet", l:"Nationalität",  isLaender:true},
-                {k:"nationalitaet2",l:"Nationalität 2",isLaender:true},
-                {k:"heimatort",    l:"Heimatort"},
-                {k:"ahv_nr",       l:"AHV-Nr."},
-              ].map(({k,l,type="text",opts,isLaender})=>(
-                <div key={k}>
-                  <label className="cc-label">{l}</label>
-                  {isLaender?(
-                    <LandSelect value={editForm[k]||""} onChange={v=>setEditForm(f=>({...f,[k]:v}))} laender={LAENDER}/>
-                  ):opts?(
-                    <select className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}>
-                      <option value="">–</option>
-                      {opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
-                    </select>
-                  ):(
-                    <input className="cc-input" type={type} value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
-                  )}
-                </div>
-              ))}
-              {/* Kontakt */}
-              <div className="cc-form-section-title cc-form-full" data-label="Kontakt"/>
-              {[
-                {k:"email",   l:"E-Mail",  type:"email", full:true},
-                {k:"telefon", l:"Telefon", type:"tel"},
-                {k:"strasse", l:"Strasse", full:true},
-                {k:"plz",     l:"PLZ"},
-                {k:"ort",     l:"Ort"},
-                {k:"kanton",  l:"Kanton"},
-              ].map(({k,l,type="text",full})=>(
-                <div key={k} className={full?"cc-form-full":""}>
-                  <label className="cc-label">{l}</label>
-                  <input className="cc-input" type={type} value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
-                </div>
-              ))}
-              {/* Vereinsdaten */}
-              <div className="cc-form-section-title cc-form-full" data-label="Vereinsdaten"/>
-              {/* Mitgliedtyp Single-Select */}
-              <div>
-                <label className="cc-label">Mitgliedtyp</label>
-                <select className="cc-input" value={editForm.mitgliedtyp||""} onChange={e=>setEditForm(f=>({...f,mitgliedtyp:e.target.value}))}>
-                  <option value="">– wählen –</option>
-                  {MITGLIEDTYPEN.map(t=><option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              {/* Portal-Rolle — immer sichtbar */}
-              <div>
-                <label className="cc-label">Portal-Rolle</label>
-                <select className="cc-input" value={editForm.rolle||""} onChange={e=>setEditForm(f=>({...f,rolle:e.target.value}))}>
-                  <option value="">– keine –</option>
-                  {((dbPortalRollen||[]).length>0?dbPortalRollen:[{name:"administrator",label:"Administrator"},{name:"administration",label:"Verwaltung"},{name:"funktionaer",label:"Funktionär"},{name:"trainer",label:"Trainer"},{name:"spieler",label:"Spieler"},{name:"eltern",label:"Eltern"},{name:"mitglied",label:"Mitglied"},{name:"supporter",label:"Supporter"}]).map(r=>(
-                    <option key={r.name} value={r.name}>{r.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {[
-                {k:"spielerpass", l:"Spielerpass"},
-                {k:"js_nr",       l:"J+S Nr."},
-                {k:"fairgate_id", l:"Fairgate-ID"},
-              ].map(({k,l})=>(
-                <div key={k}>
-                  <label className="cc-label">{l}</label>
-                  <input className="cc-input" value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
-                </div>
-              ))}
-
-            </div>
-            {editMsg&&<div className={`cc-badge ${editMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{editMsg.text}</div>}
-          </div>
-          <div className="cc-modal-ftr">
-            <Btn onClick={()=>setEditOpen(false)}>Abbrechen</Btn>
-            <Btn variant="primary" onClick={saveEdit} disabled={editSaving}>
-              {editSaving?"Speichert…":"Speichern"}
-            </Btn>
-          </div>
-        </ModalOrSheet>
+        <MemberEditModal
+          m={m}
+          editForm={editForm} setEditForm={setEditForm}
+          editMsg={editMsg} editSaving={editSaving}
+          onSave={saveEdit} onClose={()=>setEditOpen(false)}
+          LAENDER={LAENDER} MITGLIEDTYPEN={MITGLIEDTYPEN} dbPortalRollen={dbPortalRollen}
+        />
       )}
     </>
   );

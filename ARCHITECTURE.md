@@ -10,7 +10,7 @@ Keine Isolation — Verbindung über Services und Hooks.
 src/
   domains/                          ← Business-Logik, Services, Hooks
     members/
-      memberService.js              ← fetchMitglieder, fetchArchiv, fetchEltern, fetchAnsichten etc.
+      memberService.js              ← fetchMitglieder, fetchArchiv, fetchEltern, fetchAnsichten, updateMitglied, updateMitgliedFoto, deleteMitgliedFoto, fetchBenutzerByMitglied etc.
       useMemberMeta.js              ← Hook: ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
     permissions/
       permissions.js                ← canEdit/canDelete/canExport pro Modul
@@ -43,6 +43,7 @@ src/
     members/                        ← MitgliederModul aufgeteilt
       ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen) — nutzt ListView
       ElternListView.jsx            ← Eltern-Tab (Liste) — nutzt ListView
+      FotoUpload.jsx                ← Foto-Upload Komponente (ausgelagert aus MemberHero)
       MemberDetail.jsx              ← Detailansicht mit allen Tabs
       MemberHero.jsx                ← Hero-Banner mit Avatar + FotoUpload
       MemberKPIs.jsx                ← KPI-Cards + Aufschlüsselung
@@ -94,7 +95,38 @@ src/
   theme.jsx                         ← Design-System + COMPONENT_REGISTRY + PortalBadge + DpBadge
 ```
 
-## Die eine Regel
+## Prinzip: Auslagern und Wiederverwenden
+
+**Vor jedem neuen Feature oder Komponente:**
+1. Prüfen ob etwas Ähnliches bereits in `shared/`, `domains/` oder `theme.jsx` existiert
+2. Prüfen ob bestehende Logik in `memberService.js`, `exportUtils.js`, `personUtils.js` etc. genutzt werden kann
+3. Nie duplizieren — lieber zentralisieren und importieren
+
+**Wann auslagern?**
+- Komponente ist >80 Zeilen und hat einen klar abgrenzbaren Zweck → eigene Datei
+- Logik wird in mehr als einem Modul genutzt oder könnte genutzt werden → `shared/` oder `domains/`
+- Service-Calls (`sb.from()`) in einer Komponente → in `memberService.js` (oder jeweiligen Service)
+- Render-Logik mischt sich mit State-Logik → trennen
+
+**Konkrete Checkliste beim Bauen:**
+- [ ] Gibt es bereits eine `cc-*` CSS-Klasse für dieses Styling? → nutzen, nicht inline
+- [ ] Gibt es bereits eine Komponente in `theme.jsx`? → importieren
+- [ ] Gibt es bereits eine Komponente in `shared/`? → importieren
+- [ ] Gibt es bereits eine Service-Funktion in `memberService.js`? → nutzen
+- [ ] Gibt es bereits einen Hook in `domains/`? → nutzen
+- [ ] Ist diese Logik auch für KaderModul / HelferModul nützlich? → in `shared/` oder `domains/`
+
+**Bekannte wiederverwendbare Bausteine:**
+- `ListView.jsx` — für jede tabellarische Liste mit Filter/Gruppierung/Export
+- `exportListData()` — für generischen CSV/Excel Export
+- `buildFilterDefs()` — für automatische Filter-Definitionen aus Daten
+- `PortalBadge`, `DpBadge` — Portal-Zugang und Datenprüfungs-Status
+- `RolleChip` — Rollen-Badge
+- `useMemberMeta()` — ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
+- `LAENDER`, `getLandName` — Länderliste und Ländername
+- `PersonPersonalien`, `PersonKontakt`, `PersonTeams`, `PersonFunktionen` — Detail-Ansichten
+
+
 
 ```
 Module  →  dürfen Domains verwenden       ✓
@@ -248,8 +280,14 @@ import { PersonSummary } from "../../shared/person/PersonSummary";
 - Geteilte Ansichten: `geteilt boolean` in `mitglieder_ansichten`, Admin kann freigeben
 - `effectiveCtx` / `parentCtx` Propagierung durch alle Rekursionsebenen von `renderGroupsTable`
 
+### Storage Policy (nachträglich)
+- `mitglieder-fotos` Bucket: `WITH CHECK` für UPDATE Policy fehlte → manuell ergänzt
+
 ### Neue Files
-- `src/domains/members/useMemberMeta.js` — Hook: ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
+- `src/modules/members/FotoUpload.jsx` — Foto-Upload (ausgelagert aus MemberHero)
+- `src/domains/members/memberService.js` — +updateMitglied, +updateMitgliedRolle, +updateMitgliedFoto, +deleteMitgliedFoto, +fetchBenutzerByMitglied
+
+
 - `src/modules/members/MemberListCell.jsx` — makeMemberRenderCell() Factory
 - `src/modules/members/MemberKPIs.jsx` — KPI-Cards + Aufschlüsselung
 - `src/shared/person/RolleChip.jsx` — shared RolleChip (war in memberUtils + HelferModul dupliziert)
