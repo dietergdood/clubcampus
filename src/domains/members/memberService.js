@@ -350,6 +350,9 @@ export const AKTIVITAET_TYP = {
   ELTERN_HINZUGEFUEGT: "eltern_hinzugefuegt",
   ELTERN_ENTFERNT:     "eltern_entfernt",
   ELTERN_GEAENDERT:    "eltern_geaendert",
+  PORTAL_AKTIVIERT:    "portal_aktiviert",
+  PORTAL_DEAKTIVIERT:  "portal_deaktiviert",
+  PORTAL_REAKTIVIERT:  "portal_reaktiviert",
 };
 
 export async function logAktivitaet(sb, mitgliedId, vereinId, typ, beschreibung, feld=null, wert=null, geaendertVon=null) {

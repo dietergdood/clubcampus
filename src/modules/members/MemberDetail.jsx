@@ -12,6 +12,7 @@ import {
   fetchElternkontakte, fetchKaderFuerMitglied,
   fetchPortalFunktionen,
   updateMitglied,
+  logAktivitaet, AKTIVITAET_TYP,
 } from "../../domains/members/memberService.js";
 import { MemberHero } from "./MemberHero.jsx";
 import { ElternTab } from "./tabs/ElternTab.jsx";
@@ -130,6 +131,7 @@ function MemberDetail({
     if (!sb) return;
     setPortalLoading(true);
     await portalZugangDeaktivieren(sb, raw.id);
+    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.PORTAL_DEAKTIVIERT, "Portal-Zugang deaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang deaktiviert" });
     setPortalLoading(false);
     if (reloadMember) reloadMember(raw.id);
@@ -140,6 +142,7 @@ function MemberDetail({
     if (!sb || !benutzer) return;
     setPortalLoading(true);
     await portalZugangAktivieren(sb, raw.id, benutzer.id, benutzer.role);
+    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.PORTAL_REAKTIVIERT, "Portal-Zugang reaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang reaktiviert ✓" });
     setPortalLoading(false);
     if (reloadMember) reloadMember(raw.id);
