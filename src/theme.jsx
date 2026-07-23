@@ -2628,11 +2628,10 @@ const PHONE_COUNTRIES=[
 function formatPhoneNum(raw){
   const digits=raw.replace(/\D/g,"");
   if(!digits) return "";
-  const groups=[];
-  let i=0;
-  if(digits.length<=4){return digits;}
-  if(digits.length<=7){return digits.slice(0,2)+" "+digits.slice(2);}
-  if(digits.length<=9){return digits.slice(0,2)+" "+digits.slice(2,5)+" "+digits.slice(5);}
+  if(digits.length<=2) return digits;
+  if(digits.length<=5) return digits.slice(0,2)+" "+digits.slice(2);
+  if(digits.length<=7) return digits.slice(0,2)+" "+digits.slice(2,5)+" "+digits.slice(5);
+  if(digits.length<=9) return digits.slice(0,2)+" "+digits.slice(2,5)+" "+digits.slice(5,7)+" "+digits.slice(7);
   return digits.slice(0,2)+" "+digits.slice(2,5)+" "+digits.slice(5,7)+" "+digits.slice(7,9)+(digits.length>9?" "+digits.slice(9):"");
 }
 
@@ -2774,12 +2773,8 @@ function InlineField({ label, value, field, type="text", opts=null, canEdit=fals
               {opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}
             </select>
           ):type==="phone"?(
-            <div>
+            <div onKeyDown={e=>{if(e.key==="Enter")saveEdit(field,editVal);if(e.key==="Escape")cancelEdit();}}>
               <PhoneInput value={editVal} onChange={v=>setEditVal(v)} showHint={true}/>
-              <div className="cc-row cc-gap-6" style={{marginTop:6}}>
-                <button className="cc-inline-save-btn" onMouseDown={()=>saveEdit(field,editVal)}>Speichern</button>
-                <button className="cc-inline-cancel-btn" onMouseDown={cancelEdit}>Abbrechen</button>
-              </div>
             </div>
           ):(
             <input className="cc-inline-input" type={type} value={editVal} autoFocus
