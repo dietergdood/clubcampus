@@ -23,9 +23,8 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
     ? Math.floor((new Date() - new Date(raw.geburtsdatum)) / 31557600000)
     : null;
 
-  const natLabel = raw.nationalitaet ? getLandName(raw.nationalitaet) || raw.nationalitaet : null;
-  const nat2Label = raw.nationalitaet2 ? getLandName(raw.nationalitaet2) || raw.nationalitaet2 : null;
-  const natDisplay = natLabel && nat2Label ? `${natLabel} · ${nat2Label}` : (natLabel || null);
+  const natLabel = raw.nationalitaet ? `${raw.nationalitaet} · ${getLandName(raw.nationalitaet)||raw.nationalitaet}` : null;
+  const nat2Label = raw.nationalitaet2 ? `${raw.nationalitaet2} · ${getLandName(raw.nationalitaet2)||raw.nationalitaet2}` : null;
 
   const geschlechtLabel = raw.geschlecht === "m" ? "Männlich" : raw.geschlecht === "w" ? "Weiblich" : raw.geschlecht || null;
   const gebdatLabel = raw.geburtsdatum ? new Date(raw.geburtsdatum).toLocaleDateString("de-CH") : null;
@@ -53,9 +52,13 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
           opts={GESCHLECHT_OPTS} {...ieProps}
           startEdit={()=>ie.startEdit("geschlecht", raw.geschlecht||"")}
           saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
-        <InlineField label="Nationalität" field="nationalitaet" value={natDisplay}
-          opts={LAENDER.map(l=>({v:l.c,l:l.n}))} {...ieProps}
+        <InlineField label="Nationalität 1" field="nationalitaet" value={natLabel}
+          opts={LAENDER.map(l=>({v:l.c,l:`${l.c} · ${l.n}`}))} {...ieProps}
           startEdit={()=>ie.startEdit("nationalitaet", raw.nationalitaet||"")}
+          saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
+        <InlineField label="Nationalität 2" field="nationalitaet2" value={nat2Label}
+          opts={[{v:"",l:"— keine —"},...LAENDER.map(l=>({v:l.c,l:`${l.c} · ${l.n}`}))]} {...ieProps}
+          startEdit={()=>ie.startEdit("nationalitaet2", raw.nationalitaet2||"")}
           saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
         <InlineField label="Heimatort"   field="heimatort"   value={raw.heimatort||null}   {...ieProps}/>
         {fv.showAhv && (
