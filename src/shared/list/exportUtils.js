@@ -43,7 +43,7 @@ function defaultGetCellValue(col, row) {
   return String(v);
 }
 
-function csvDownload(data, filename) {
+export function csvDownload(data, filename) {
   const rows = data.map(r => r.map(v => '"' + String(v || "").replace(/"/g, '""') + '"').join(";"));
   const csv = "\uFEFF" + rows.join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

@@ -5,9 +5,30 @@
 import { useState, useEffect } from "react";
 import { Av, useConfirm } from "../../theme.jsx";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.js";
-import { mapEltern } from "./memberDataUtils.js";
 import { ListView } from "../../shared/list/ListView.jsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.js";
+
+function mapEltern(raw) {
+  return (raw||[]).map(e=>{
+    const kind = e.mitglieder;
+    const kindName = kind ? `${kind.vorname||""} ${kind.nachname||""}`.trim() : "—";
+    return {
+      id:          e.id,
+      mitglied_id: e.mitglied_id,
+      name:        `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"—",
+      vorname:     e.vorname||"",
+      nachname:    e.nachname||"",
+      email:       e.email||"",
+      telefon:     e.telefon||"",
+      beziehung:   e.beziehung||"",
+      portal:      e.benutzer_id?"Aktiv":"Kein Zugang",
+      benutzer_id: e.benutzer_id||null,
+      hauptkontakt:e.hauptkontakt||false,
+      kind_id:     kind?.id||null,
+      kind_name:   kindName,
+    };
+  });
+}
 
 const COL_DEFS = [
   { key:"name",      label:"Name",      default:true, alwaysOn:true },

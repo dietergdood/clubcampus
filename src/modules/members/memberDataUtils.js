@@ -3,6 +3,7 @@
    Datentransformation und Filterlogik für MitgliederModul
    ═══════════════════════════════════════════════════════════════ */
 import * as XLSX from "xlsx";
+import { csvDownload } from "../../shared/list/exportUtils.js";
 
 /* Rohe DB-Mitglieder in UI-Objekte transformieren */
 export function mapMembers(dbMitglieder, dbPortalRollen, dbKaderRollen) {
@@ -302,13 +303,6 @@ function getExportRows(m, COLS, gc) {
   return [m.name,...exportCols.map(k=>exportCellValue(k,m,gc))];
 }
 
-function csvDownload(data, filename) {
-  const rows=data.map(r=>r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(";"));
-  const csv="\uFEFF"+rows.join("\r\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
-}
 
 export function exportData(filtered, COLS, format, groups=null) {
   // Bei flachem CSV: teams_rollen und funktionen_gruppen in separate Spalten expandieren
@@ -383,46 +377,4 @@ export function exportData(filtered, COLS, format, groups=null) {
   }
 }
 
-// ── Eltern ────────────────────────────────────────────────────────
-export function mapEltern(raw) {
-  return (raw||[]).map(e=>{
-    const kind=e.mitglieder;
-    const kindName=kind?`${kind.vorname||""} ${kind.nachname||""}`.trim():"—";
-    return {
-      id:          e.id,
-      mitglied_id: e.mitglied_id,
-      name:        `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"—",
-      vorname:     e.vorname||"",
-      nachname:    e.nachname||"",
-      email:       e.email||"",
-      telefon:     e.telefon||"",
-      beziehung:   e.beziehung||"",
-      portal:      e.benutzer_id?"Aktiv":"Kein Zugang",
-      benutzer_id: e.benutzer_id||null,
-      hauptkontakt:e.hauptkontakt||false,
-      kind_id:     kind?.id||null,
-      kind_name:   kindName,
-      kind_teams:  [],
-    };
-  });
-}
 
-export function filterEltern(eltern, search) {
-  const q=(search||"").toLowerCase();
-  if(!q) return eltern;
-  return eltern.filter(e=>
-    e.name.toLowerCase().includes(q)||
-    e.email.toLowerCase().includes(q)||
-    e.kind_name.toLowerCase().includes(q)
-  );
-}
-
-export function sortEltern(eltern, col, dir) {
-  return [...eltern].sort((a,b)=>{
-    const av=String(a[col]||"").toLowerCase();
-    const bv=String(b[col]||"").toLowerCase();
-    if(av===""&&bv!=="") return 1;
-    if(bv===""&&av!=="") return -1;
-    return dir==="asc"?av.localeCompare(bv,"de"):bv.localeCompare(av,"de");
-  });
-}
