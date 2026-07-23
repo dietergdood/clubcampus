@@ -315,7 +315,7 @@ export function ListView({
   const moreItems = [
     // moreActions zuerst — prominent, ohne Sektion
     ...moreActions,
-    ...(moreActions.length > 0 ? ["sep"] : []),
+    ...(moreActions.length > 0 && !isMobile ? ["sep"] : []),
     // Aktionen-Sektion (nur Desktop, nur wenn relevant)
     ...(!isMobile && selectable ? [{ header: true, label: "Aktionen" }] : []),
     ...(!isMobile && selectable ? [{ icon: "checkbox", label: selectMode ? "Auswahlmodus beenden" : "Auswählen", onClick: () => { setSelectMode(m => { if (m) setSelected(new Set()); return !m; }); } }] : []),
