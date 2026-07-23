@@ -54,24 +54,39 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload }) {
           startEdit={()=>ie.startEdit("geschlecht", raw.geschlecht||"")}
           saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
         <InlineField label="Nationalität" field="nationalitaet" value={natDisplay}
-          opts={LAENDER.map(l=>({v:l.code,l:l.name}))} {...ieProps}
+          opts={LAENDER.map(l=>({v:l.c,l:l.n}))} {...ieProps}
           startEdit={()=>ie.startEdit("nationalitaet", raw.nationalitaet||"")}
           saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
         <InlineField label="Heimatort"   field="heimatort"   value={raw.heimatort||null}   {...ieProps}/>
         {fv.showAhv && (
           <div className="cc-info-row">
             <span className="cc-info-key">AHV-Nr.</span>
-            {raw.ahv_nr ? (
+            {ie.editing === "ahv_nr" ? (
+              <div style={{flex:1}}>
+                <input className="cc-inline-input" type="text" value={ie.editVal} autoFocus
+                  onChange={e=>ie.setEditVal(e.target.value)}
+                  onKeyDown={e=>ie.handleKey(e,"ahv_nr")}
+                  onBlur={()=>ie.saveEdit("ahv_nr",ie.editVal)}
+                  placeholder="756.XXXX.XXXX.XX"/>
+                <div className="cc-inline-hint">Enter speichern · Esc abbrechen</div>
+              </div>
+            ) : raw.ahv_nr ? (
               <span className="cc-ahv-row">
                 {ahvVisible
-                  ? <span className="cc-info-val">{raw.ahv_nr}</span>
+                  ? <span className={`cc-inline-field cc-info-val`} onClick={()=>ie.startEdit("ahv_nr", raw.ahv_nr)}>
+                      {raw.ahv_nr}
+                      <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+                    </span>
                   : <span className="cc-ahv-mask">••• •• ••••</span>}
                 <button className="cc-ahv-toggle" onClick={()=>setAhvVisible(v=>!v)} title={ahvVisible?"Verbergen":"Anzeigen"}>
                   <TI n={ahvVisible?"eye-off":"eye"} size={14}/>
                 </button>
               </span>
             ) : (
-              <InlineField label="" field="ahv_nr" value={null} {...ieProps}/>
+              <span className="cc-inline-field cc-info-val-empty" onClick={()=>ie.startEdit("ahv_nr","")}>
+                <span className="cc-inline-empty">nicht erfasst</span>
+                <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+              </span>
             )}
           </div>
         )}
