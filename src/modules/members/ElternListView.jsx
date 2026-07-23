@@ -98,7 +98,9 @@ export function ElternListView({ sb, vereinId, account }) {
 
   async function loeschen(selected) {
     if (!selected?.size) return;
-    const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:"Die Elternkontakte werden auch beim verknüpften Kind entfernt.", danger:true, confirmLabel:"Löschen" });
+    const kinder = [...selected].map(id => rows.find(r => r.id === id)?.kind_name).filter(Boolean);
+    const kinderText = kinder.length > 0 ? `\n\nBetroffene Kinder: ${kinder.join(", ")}` : "";
+    const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:`Die Elternkontakte werden auch beim verknüpften Kind entfernt.${kinderText}`, danger:true, confirmLabel:"Löschen" });
     if (!sb || !ok) return;
     for (const id of selected) await deleteElternkontakt(sb, id);
     setRows(prev => prev.filter(r => !selected.has(r.id)));
