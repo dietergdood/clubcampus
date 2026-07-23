@@ -6,66 +6,45 @@ import { Btn, Av, useConfirm, ConfirmDialog } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.js";
 import { ListView } from "../../shared/list/ListView.jsx";
-import { exportListData } from "../../shared/list/exportUtils.js";
+import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.js";
 
 const COL_DEFS = [
   { key:"name",           label:"Name",          default:true, alwaysOn:true },
   { key:"mitgliedtyp",    label:"Mitgliedschaft", default:true },
   { key:"deaktiviert_am", label:"Archiviert am",  default:true },
   { key:"deaktiviert_von",label:"Archiviert von", default:true },
+  { key:"actions",        label:"",               default:true, alwaysOn:true },
 ];
 
-const COL_GROUPS = [{ group:"Archiv", cols:COL_DEFS }];
+const COL_GROUPS = [{ group:"Archiv", cols:COL_DEFS.filter(c=>c.key!=="actions") }];
 
 const GROUP_OPTIONS = [
-  { val:"mitgliedtyp",     label:"Mitgliedschaft"    },
-  { val:"deaktiviert_von", label:"Archiviert von"    },
-  { val:"deaktiviert_am",  label:"Archiviert im Jahr"},
+  { val:"mitgliedtyp",     label:"Mitgliedschaft"     },
+  { val:"deaktiviert_von", label:"Archiviert von"     },
+  { val:"deaktiviert_am",  label:"Archiviert im Jahr" },
 ];
 
 function mapArchivRow(m) {
   return {
-    id:              m.id,
-    name:            `${m.vorname||""} ${m.nachname||""}`.trim(),
-    vorname:         m.vorname||"",
-    nachname:        m.nachname||"",
-    mitgliedtyp:     m.mitgliedtyp||"—",
-    deaktiviert_am:  m.deaktiviert_am||"",
+    id:                 m.id,
+    name:               `${m.vorname||""} ${m.nachname||""}`.trim(),
+    mitgliedtyp:        m.mitgliedtyp||"—",
+    deaktiviert_am:     m.deaktiviert_am ? String(new Date(m.deaktiviert_am).getFullYear()) : "—",
     deaktiviert_am_fmt: m.deaktiviert_am ? new Date(m.deaktiviert_am).toLocaleDateString("de-CH") : "—",
-    deaktiviert_von: m.deaktiviert_von||"—",
-    _raw:            m,
+    deaktiviert_von:    m.deaktiviert_von||"—",
+    _raw:               m,
   };
 }
 
-function filterArchiv(rows, search, filterVals) {
-  return rows.filter(m => {
-    if (search && !m.name.toLowerCase().includes(search.toLowerCase())) return false;
-    for (const [k, vals] of Object.entries(filterVals)) {
-      if (!vals || vals.length === 0) continue;
-      if (!vals.includes(m[k])) return false;
-    }
-    return true;
-  });
-}
-
-function sortArchiv(rows, col, dir) {
-  return [...rows].sort((a, b) => {
-    const av = String(a[col] || "");
-    const bv = String(b[col] || "");
-    return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
-}
-
-function buildArchivGroups(rows, groupBy, groupOrder) {
+// buildGroupsFn nur für deaktiviert_am (Jahr) nötig — Rest via Default
+function buildArchivGroups(rows, groupBy, groupOrder, filterVals) {
   const levels = Array.isArray(groupBy) ? groupBy : [groupBy];
   const firstLevel = levels[0] || "none";
   const restLevels = levels.slice(1);
   if (!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
   const map = {};
   rows.forEach(r => {
-    const k = firstLevel === "deaktiviert_am"
-      ? (r.deaktiviert_am ? String(new Date(r.deaktiviert_am).getFullYear()) : "Unbekannt")
-      : (r[firstLevel] || "—");
+    const k = firstLevel === "deaktiviert_am" ? r.deaktiviert_am : (r[firstLevel] || "—");
     if (!map[k]) map[k] = [];
     map[k].push(r);
   });
@@ -74,7 +53,7 @@ function buildArchivGroups(rows, groupBy, groupOrder) {
   if (orderForLevel?.length) {
     entries = entries.sort(([a],[b]) => {
       const ai = orderForLevel.indexOf(a), bi = orderForLevel.indexOf(b);
-      if (ai === -1 && bi === -1) return String(a).localeCompare(String(b));
+      if (ai === -1 && bi === -1) return String(a).localeCompare(String(b), "de");
       if (ai === -1) return 1; if (bi === -1) return -1;
       return ai - bi;
     });
@@ -114,10 +93,10 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
     if (onReload) onReload();
   }
 
-  const filterDefs = [
-    { key:"mitgliedtyp",     label:"Mitgliedschaft",  vals:[...new Set(rows.map(m=>m.mitgliedtyp).filter(Boolean))].sort() },
-    { key:"deaktiviert_von", label:"Archiviert von",  vals:[...new Set(rows.map(m=>m.deaktiviert_von).filter(Boolean))].sort() },
-  ];
+  const filterDefs = buildFilterDefs(rows, [
+    { key:"mitgliedtyp",     label:"Mitgliedschaft" },
+    { key:"deaktiviert_von", label:"Archiviert von" },
+  ]);
 
   function renderCell(col, m) {
     switch(col.key) {
@@ -133,12 +112,8 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
       case "actions":
         return <td key="actions" className="cc-members-td" style={{textAlign:"right"}}>
           <div className="cc-row cc-gap-6" onClick={e=>e.stopPropagation()}>
-            <Btn small onClick={()=>reaktivieren(new Set([m.id]))}>
-              <TI n="user-check" size={13}/> Reaktivieren
-            </Btn>
-            <Btn small variant="danger" onClick={()=>loeschen(new Set([m.id]))}>
-              <TI n="trash" size={13}/>
-            </Btn>
+            <Btn small onClick={()=>reaktivieren(new Set([m.id]))}><TI n="user-check" size={13}/> Reaktivieren</Btn>
+            <Btn small variant="danger" onClick={()=>loeschen(new Set([m.id]))}><TI n="trash" size={13}/></Btn>
           </div>
         </td>;
       default:
@@ -146,45 +121,32 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
     }
   }
 
-  const colDefsWithActions = [
-    ...COL_DEFS,
-    { key:"actions", label:"", default:true, alwaysOn:true },
-  ];
-
   return (
     <>
       {confirmDialog}
       <div className="cc-info-box cc-info-box-warn cc-mb-16">
-        <TI n="info-circle" size={15}/>
-        Archivierte Mitglieder — Daten sind noch vorhanden und können reaktiviert werden.
+        <TI n="info-circle" size={15}/> Archivierte Mitglieder — Daten sind noch vorhanden und können reaktiviert werden.
       </div>
       {!archivLoaded ? (
         <div className="cc-empty">Wird geladen…</div>
       ) : (
         <ListView
           rows={rows}
-          filterFn={filterArchiv}
-          sortFn={sortArchiv}
           buildGroupsFn={buildArchivGroups}
-          colDefs={colDefsWithActions}
+          colDefs={COL_DEFS}
           colGroups={COL_GROUPS}
-          defaultCols={colDefsWithActions.map(c=>c.key)}
+          defaultCols={COL_DEFS.map(c=>c.key)}
           filterDefs={filterDefs}
           groupOptions={GROUP_OPTIONS}
           renderCell={renderCell}
           selectable
           bulkActions={[
             { icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:reaktivieren },
-            { icon:"trash",      label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:loeschen },
+            { icon:"trash", label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:loeschen },
           ]}
-          exportFn={(rows, cols, groups, format) => exportListData(rows, cols, groups, format, {
-            filename: "archiv",
-            sheetName: "Archiv",
-            getCellValue: (col, row) => {
-              if (col.key === "deaktiviert_am") return row.deaktiviert_am_fmt;
-              if (col.key === "actions") return "";
-              return String(row[col.key] || "");
-            },
+          exportFn={(rows,cols,groups,format) => exportListData(rows,cols,groups,format,{
+            filename:"archiv", sheetName:"Archiv",
+            getCellValue:(col,row) => col.key==="deaktiviert_am" ? row.deaktiviert_am_fmt : col.key==="actions" ? "" : String(row[col.key]||""),
           })}
           exportFormats={[
             {label:"Als CSV (flach)",        format:"csv"},

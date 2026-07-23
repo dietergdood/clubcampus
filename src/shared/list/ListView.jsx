@@ -226,13 +226,32 @@ export function ListView({
 
   // ── Daten Pipeline ──────────────────────────────────────────
   const filtered = useMemo(() => {
-    if (!filterFn) return rows;
-    return filterFn(rows, search, filterVals);
+    if (filterFn) return filterFn(rows, search, filterVals);
+    // Default: search auf name, filterVals auf row[key]
+    return rows.filter(row => {
+      if (search) {
+        const q = search.toLowerCase();
+        const name = String(row.name || row.label || "").toLowerCase();
+        if (!name.includes(q)) return false;
+      }
+      for (const [k, vals] of Object.entries(filterVals)) {
+        if (!vals || vals.length === 0) continue;
+        const v = row[k];
+        if (Array.isArray(v)) { if (!v.some(x => vals.includes(x))) return false; }
+        else if (!vals.includes(v)) return false;
+      }
+      return true;
+    });
   }, [rows, search, filterVals, filterFn]);
 
   const sorted = useMemo(() => {
-    if (!sortFn) return filtered;
-    return sortFn(filtered, sortCol, sortDir);
+    if (sortFn) return sortFn(filtered, sortCol, sortDir);
+    // Default: localeCompare auf row[col]
+    return [...filtered].sort((a, b) => {
+      const av = String(a[sortCol] ?? "");
+      const bv = String(b[sortCol] ?? "");
+      return sortDir === "asc" ? av.localeCompare(bv, "de") : bv.localeCompare(av, "de");
+    });
   }, [filtered, sortCol, sortDir, sortFn]);
 
   const paged = sorted;
@@ -240,8 +259,39 @@ export function ListView({
   const hasGroup = Array.isArray(groupBy) ? groupBy.some(g => g && g !== "none") : groupBy !== "none";
 
   const groups = useMemo(() => {
-    if (!hasGroup || !buildGroupsFn) return [{ key: "__all", label: "", type: "none", members: paged, children: null }];
-    return buildGroupsFn(paged, groupBy, groupOrder, filterVals);
+    if (!hasGroup) return [{ key: "__all", label: "", type: "none", members: paged, children: null }];
+    if (buildGroupsFn) return buildGroupsFn(paged, groupBy, groupOrder, filterVals);
+    // Default: rekursive Gruppierung nach row[key]
+    function buildDefault(rows, levels, groupOrder) {
+      const firstLevel = levels[0] || "none";
+      const restLevels = levels.slice(1);
+      if (!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
+      const map = {};
+      rows.forEach(r => {
+        const k = String(r[firstLevel] ?? "—");
+        if (!map[k]) map[k] = [];
+        map[k].push(r);
+      });
+      const orderForLevel = groupOrder?.[firstLevel];
+      let entries = Object.entries(map);
+      if (orderForLevel?.length) {
+        entries = entries.sort(([a],[b]) => {
+          const ai = orderForLevel.indexOf(a), bi = orderForLevel.indexOf(b);
+          if (ai === -1 && bi === -1) return String(a).localeCompare(String(b), "de");
+          if (ai === -1) return 1; if (bi === -1) return -1;
+          return ai - bi;
+        });
+      } else {
+        entries = entries.sort(([a],[b]) => String(a).localeCompare(String(b), "de"));
+      }
+      return entries.map(([k, members]) => ({
+        key: k, label: k, type: "none", members,
+        children: restLevels.length > 0 && restLevels[0] !== "none"
+          ? buildDefault(members, restLevels, groupOrder)
+          : null,
+      }));
+    }
+    return buildDefault(paged, Array.isArray(groupBy) ? groupBy : [groupBy], groupOrder);
   }, [paged, groupBy, groupOrder, hasGroup, buildGroupsFn, filterVals]);
 
   // ── COLS ────────────────────────────────────────────────────
@@ -375,7 +425,10 @@ export function ListView({
                         </div>
                       </td>
                     )}
-                    {COLS.map(col => renderCell ? renderCell(col, row, { type: type || "none", key }, filterVals) : <td key={col.key} className="cc-members-td">{String(row[col.key] || "—")}</td>)}
+                    {COLS.map(col => renderCell
+                      ? renderCell(col, row, { type: type || "none", key }, filterVals)
+                      : <td key={col.key} className="cc-members-td cc-members-td-sub">{String(row[col.key] ?? "—")}</td>
+                    )}
                     <td className="cc-members-td cc-members-td-actions" />
                   </tr>
                 );

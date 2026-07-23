@@ -1,14 +1,40 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — shared/list/exportUtils.js
-   Zentrale Export-Funktion für alle ListView-basierten Module.
-
-   Wird genutzt von: MitgliederModul, ElternListView, ArchivView
-   und künftig Material, Helfer, Events etc.
-
-   getCellValue(col, row, groupCtx) — optional, Default: row[col.key]
-   Ermöglicht modul-spezifische Formatierung (z.B. Datum, Arrays)
+   Zentrale Export-Funktion + Filter-Hilfsfunktion für alle
+   ListView-basierten Module.
    ═══════════════════════════════════════════════════════════════ */
 import * as XLSX from "xlsx";
+
+/*
+  buildFilterDefs(rows, fields)
+
+  Baut FILTER_DEFS automatisch aus den Daten auf.
+
+  fields: Array von Feld-Definitionen:
+    { key, label }                    → vals aus rows[key] (distinct, sorted)
+    { key, label, vals }              → fixe Werte (z.B. ["Aktiv", "Kein Zugang"])
+    { key, label, type:"range", min, max, suffix } → Range-Filter
+    { key, label, flatMap: fn }       → fn(row) gibt Array zurück (z.B. Teams)
+    { key, type:"or-divider" }        → ODER-Trenner
+    { key, type:"und-divider" }       → UND-Trenner
+
+  Beispiel:
+    buildFilterDefs(rows, [
+      { key:"mitgliedschaft", label:"Mitgliedschaft" },
+      { key:"__or_divider",   type:"or-divider" },
+      { key:"portal",         label:"Portal", vals:["Aktiv","Kein Zugang"] },
+    ])
+*/
+export function buildFilterDefs(rows, fields) {
+  return fields.map(f => {
+    if (f.type === "or-divider" || f.type === "und-divider" || f.type === "range") return f;
+    if (f.vals) return f;
+    if (f.flatMap) {
+      return { ...f, vals: [...new Set(rows.flatMap(r => f.flatMap(r)).filter(Boolean))].sort() };
+    }
+    return { ...f, vals: [...new Set(rows.map(r => r[f.key]).filter(Boolean))].sort() };
+  });
+}
 
 function defaultGetCellValue(col, row) {
   const v = row[col.key];
