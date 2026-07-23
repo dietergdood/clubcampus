@@ -48,7 +48,7 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
           : <div className="cc-info-row">
               <span className="cc-info-key">Telefon</span>
               {raw.telefon
-                ? <a href={`tel:${raw.telefon}`} className="cc-contact-link-muted">{raw.telefon}</a>
+                ? <a href={`tel:${raw.telefon}`} className="cc-contact-link-plain">{raw.telefon}</a>
                 : <span className="cc-info-val-empty">—</span>}
             </div>
         )}
@@ -70,7 +70,7 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
               <div className="cc-text-bold">{hkName}</div>
               <div className="cc-text-sm cc-text-sub">{hk.beziehung||"—"}</div>
               {hk.email&&<a href={`mailto:${hk.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{hk.email}</a>}
-              {hkTel&&<a href={`tel:${hkTel}`} className="cc-contact-link-muted"><TI n="phone" size={12}/>{hkTel}</a>}
+              {hkTel&&<a href={`tel:${hkTel}`} className="cc-contact-link-plain"><TI n="phone" size={12}/>{hkTel}</a>}
             </div>
           </div>
         </>
