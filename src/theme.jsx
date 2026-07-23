@@ -2776,21 +2776,26 @@ function useAddrSearch(strasse, plz){
       try{
         const query=plz?`${q} ${plz}`:q;
         // DACH Bounding Box: Schweiz, Deutschland, Österreich
-        const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=de&limit=6&bbox=5.9,45.8,17.2,55.1&layer=house&layer=street`;
+        const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lang=de&limit=10&bbox=5.9,45.8,17.2,55.1&layer=house&layer=street`;
         const res=await fetch(url);
         const json=await res.json();
+        const seen=new Set();
         const results=(json.features||[])
           .map(f=>{
             const p=f.properties;
-            const strasseVal=[p.street,p.housenumber].filter(Boolean).join(" ");
+            const strasseVal=p.street?(p.housenumber?`${p.street} ${p.housenumber}`:p.street):"";
             const plzVal=p.postcode||"";
             const ortVal=p.city||p.locality||p.town||p.village||"";
             const stateVal=p.state||"";
             const kantonVal=CH_KANTON_MAP[stateVal]||"";
             if(!strasseVal) return null;
+            const key=`${strasseVal}|${plzVal}|${ortVal}`;
+            if(seen.has(key)) return null;
+            seen.add(key);
             return {strasse:strasseVal,plz:plzVal,ort:ortVal,staat:stateVal,kanton:kantonVal,land:p.countrycode||""};
           })
-          .filter(Boolean);
+          .filter(Boolean)
+          .slice(0,6);
         setSuggestions(results);
       }catch(e){setSuggestions([]);}
     },300);
