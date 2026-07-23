@@ -1791,7 +1791,7 @@ function Toolbar({
                         {(()=>{
                           let hasHeader=false;
                           return moreItems.map((item,i)=>{
-                            if(item==="sep"){return null;}
+                            if(item==="sep"){return hasHeader?null:<div key={i} className="cc-menu-sep" style={{margin:"4px 0"}}/>;}
                             if(item.header){hasHeader=true;return null;}
                             if(hasHeader) return null;
                             return(
