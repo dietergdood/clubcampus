@@ -5,16 +5,25 @@ import { useState, useEffect } from "react";
 import type { MutableRefObject } from "react";
 import { Btn, useConfirm, DropMenu, EmptyState } from "../../theme.ts";
 import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.ts";
-import type { DbUser, Sb } from "../../types.ts";
+import type { Sb } from "../../types.ts";
 
 /* Direkt aus der Service-Rückgabe abgeleitet */
 type Notiz = Awaited<ReturnType<typeof fetchNotizen>>[number];
+
+/* Autor einer Notiz. Der einzige Aufrufer (InfoTab) reicht ein Account
+   durch, nicht den DbUser, als der das Prop bisher deklariert war —
+   gelesen werden ohnehin nur id, name und email. */
+interface NotizAutor {
+  id?: string | null;
+  name?: string | null;
+  email?: string | null;
+}
 
 interface NotizenVerlaufProps {
   mitgliedId: number;
   canEdit?: boolean;
   sb: Sb;
-  dbUser?: DbUser | null;
+  dbUser?: NotizAutor | null;
   /* Meldet die Anzahl Notizen nach aussen (Badge im Tab) */
   onCount?: ((anzahl: number) => void) | null;
   vereinId?: string | null;

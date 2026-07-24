@@ -4,6 +4,7 @@
    Wiederverwendbar in: MitgliederModul, KaderModul, Aufgebote etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMobile, RollenAuswahlListe } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { DropMenu } from "../../theme.ts";
@@ -21,6 +22,10 @@ import {
 } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, SbClient } from "../../types.ts";
 import type { RolleOption } from "../forms/RollenAuswahlListe.tsx";
+/* Gemeinsame Form fuer Vereinsfunktionen — der Besitzer-State wird aus
+   fetchPortalFunktionen befuellt (mit farbe), diese Komponente schreibt
+   aus fetchPortalFunktionenMitGruppe (ohne farbe) zurueck. */
+import type { FunktionMitGruppe } from "./types.ts";
 
 /* Direkt aus den Service-Rückgaben abgeleitet — so bleiben die Formen
    automatisch deckungsgleich mit den Supabase-Abfragen. */
@@ -37,11 +42,13 @@ interface PersonTeamsProps {
   dbKaderRollen?: RolleOption[];
   /* Kader-Einträge des Mitglieds inkl. Team — von fetchKaderFuerMitglied */
   teamDetails?: KaderDetail[] | null;
-  setTeamDetails: (details: KaderDetail[] | ((prev: KaderDetail[]) => KaderDetail[])) => void;
+  /* Der Besitzer-State ist bis zum ersten Laden null — der Updater muss
+     damit umgehen können. */
+  setTeamDetails: Dispatch<SetStateAction<KaderDetail[] | null>>;
   allTeams?: TeamOption[] | null;
   setAllTeams: (teams: TeamOption[]) => void;
-  assignFunktionen?: FunktionOption[] | null;
-  setAssignFunktionen: (funktionen: FunktionOption[]) => void;
+  assignFunktionen?: FunktionMitGruppe[] | null;
+  setAssignFunktionen: (funktionen: FunktionMitGruppe[]) => void;
   onNavToTeam?: ((teamId: number) => void) | null;
   onReload?: (() => void) | null;
   /* Leitet die Portalrolle neu ab, nachdem sich die Kaderzugehörigkeit ändert */
@@ -118,7 +125,7 @@ function PersonTeams({
     const teamName = kader?.teams?.name || String(kaderId);
     await deaktiviereKader(sb, kaderId);
     if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
-    setTeamDetails(prev => prev.filter(k => k.id !== kaderId));
+    setTeamDetails(prev => (prev || []).filter(k => k.id !== kaderId));
     await ableitRolle();
   }
 
@@ -136,7 +143,7 @@ function PersonTeams({
       const teamName = editTeam.teams?.name || "Team";
       logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
     }
-    setTeamDetails(prev => prev.map(k => k.id === editTeam.id
+    setTeamDetails(prev => (prev || []).map(k => k.id === editTeam.id
       ? { ...k, rollen: editTeamForm.funktionen, rueckennr: editTeamForm.rueckennr, position: editTeamForm.position }
       : k
     ));

@@ -8,7 +8,7 @@ import type { ChangeEvent } from "react";
 import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
-import type { Account, DbUser, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../../types.ts";
+import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../../types.ts";
 /* KaderRolle aus types.ts kennt ist_trainer nicht (die Spalte existiert in
    kader_rollen). KaderRolleOption ist die dafür gedachte Option-Form und
    wird schon von useMemberMeta genutzt. */
@@ -35,7 +35,8 @@ interface MemberHeroProps {
   dbMitgliedtypen?: Mitgliedtyp[];
   dbPortalRollen?: PortalRolle[];
   dbKaderRollen?: KaderRolleOption[];
-  benutzer?: DbUser | null;
+  /* Der Portal-Benutzer des Mitglieds; gelesen wird nur die Rolle */
+  benutzer?: { role?: string | null } | null;
   teamDetails?: KaderDetail[] | null;
   vereinId?: string | null;
 }

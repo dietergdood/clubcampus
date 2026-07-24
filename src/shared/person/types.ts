@@ -33,7 +33,8 @@ export interface FieldVisibility {
 
 /* Vereinsfunktion mit optionaler Gruppe (portal_funktionen + portal_gruppen) */
 export interface FunktionMitGruppe {
-  id?: string;
+  /* portal_funktionen.id ist bigint — war hier faelschlich string */
+  id?: number;
   name: string;
   portal_gruppen?: {
     name?: string | null;

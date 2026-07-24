@@ -1,9 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/tabs/InfoTab.jsx
+   ClubCampus — modules/members/tabs/InfoTab.tsx
    Profil-Tab: StatusTiles, Personalien, Kontakt, Vereinsdaten,
    Teams, Vereinsfunktionen, Notizen
    ═══════════════════════════════════════════════════════════════ */
 import { useRef, useState } from "react";
+import type { ComponentProps } from "react";
 import { Card, StatusTile, useIsMobile, InlineField } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.tsx";
@@ -12,6 +13,40 @@ import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
+import type { Account, Mitglied, Mitgliedtyp, Sb } from "../../../types.ts";
+import type { FieldVisibility } from "../../../shared/person/types.ts";
+
+/* Die Teams-/Funktionen-Karten sind reines Durchreichen — ihre Formen
+   direkt von den Kindern ableiten, statt sie hier zu wiederholen. */
+type TeamsProps   = ComponentProps<typeof PersonTeams>;
+type KontaktProps = ComponentProps<typeof PersonKontakt>;
+
+interface InfoTabProps {
+  raw: Mitglied;
+  fv: FieldVisibility;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  sb: Sb;
+  account?: Account | null;
+  dbKaderRollen?: TeamsProps["dbKaderRollen"];
+  dbMitgliedtypen?: Mitgliedtyp[];
+  eltern?: KontaktProps["eltern"];
+  brauchtEltern: KontaktProps["brauchtEltern"];
+  setTab: (tab: string) => void;
+  teamDetails?: TeamsProps["teamDetails"];
+  setTeamDetails: TeamsProps["setTeamDetails"];
+  allTeams?: TeamsProps["allTeams"];
+  setAllTeams: TeamsProps["setAllTeams"];
+  assignFunktionen: NonNullable<TeamsProps["assignFunktionen"]>;
+  setAssignFunktionen: TeamsProps["setAssignFunktionen"];
+  onNavToTeam?: ((teamId: number) => void) | null;
+  notizenCount?: number | null;
+  setNotizenCount: (anzahl: number) => void;
+  onReload?: (() => void) | null;
+  reloadMember?: ((id: number) => void) | null;
+  ableitRolle: () => Promise<void> | void;
+  vereinId?: string | null;
+}
 
 function InfoTab({
   raw, fv, canEdit, canDelete, sb, account,
@@ -24,14 +59,15 @@ function InfoTab({
   notizenCount, setNotizenCount,
   onReload, reloadMember=null, ableitRolle,
   vereinId,
-}) {
+}: InfoTabProps) {
   const isMobile = useIsMobile();
-  const notizAddRef = useRef(null);
+  const notizAddRef = useRef<(() => void) | null>(null);
   const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload: ()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); } });
   const [editModeVerein, setEditModeVerein] = useState(false);
   const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editModeVerein };
 
   const MITGLIEDTYP_OPTS = (dbMitgliedtypen||[]).map(t=>({v:t.name,l:t.name}));
+  const eintrittsdatum = (raw as { eintrittsdatum?: string | null }).eintrittsdatum;
 
   return (
     <div className="cc-col cc-gap-12">
@@ -43,12 +79,16 @@ function InfoTab({
           icon="id-badge-2"
           semantic="neutral"
         />
+        {/* Datenprüfung hängt an profil_geprueft_at — das früher hier
+            gelesene Feld `geprueft` gibt es in mitglieder nicht, die Kachel
+            stand dadurch immer auf "Ausstehend". Gleiche Korrektur wie in
+            memberMapper, DatenpruefungTab und MemberHero. */}
         <StatusTile
           label="Datenprüfung"
-          value={raw.geprueft ? "Geprüft" : "Ausstehend"}
-          icon={raw.geprueft ? "shield-check" : "alert-circle"}
-          semantic={raw.geprueft ? "ok" : "warn"}
-          action={!raw.geprueft && canEdit ? { label: "Prüfung starten", onClick: () => setTab("datenpruefung") } : null}
+          value={raw.profil_geprueft_at ? "Geprüft" : "Ausstehend"}
+          icon={raw.profil_geprueft_at ? "shield-check" : "alert-circle"}
+          semantic={raw.profil_geprueft_at ? "ok" : "warn"}
+          action={!raw.profil_geprueft_at && canEdit ? { label: "Prüfung starten", onClick: () => setTab("datenpruefung") } : null}
         />
         <StatusTile
           label="Portal-Zugang"
@@ -97,17 +137,24 @@ function InfoTab({
             {fv.showFairgateId&&(
               <InlineField label="Fairgate-ID" field="fairgate_id" value={raw.fairgate_id||null} {...ieProps}/>
             )}
+            {/* ⚠ eintrittsdatum hat keine Spalte in mitglieder (siehe MitgliedRoh
+                in memberMapper) — die Zeile zeigt konstant "—". Bewusst so
+                belassen: es gibt kein Beitrittsdatum, das man stattdessen
+                lesen könnte; created_at ist das Anlagedatum des Datensatzes. */}
             <div className="cc-info-row">
               <span className="cc-info-key">Eintritt</span>
-              <span className={raw.eintrittsdatum?"cc-info-val":"cc-info-val-empty"}>
-                {raw.eintrittsdatum?new Date(raw.eintrittsdatum).toLocaleDateString("de-CH"):"—"}
+              <span className={eintrittsdatum?"cc-info-val":"cc-info-val-empty"}>
+                {eintrittsdatum?new Date(eintrittsdatum).toLocaleDateString("de-CH"):"—"}
               </span>
             </div>
           </div>
         </Card>
 
+        {/* PersonTeams und PersonFunktionen verlangen einen echten Client.
+            InfoTab wird nur innerhalb einer angemeldeten Session gerendert,
+            in der sb gesetzt ist. */}
         <PersonTeams
-          raw={raw} sb={sb} canEdit={canEdit}
+          raw={raw} sb={sb!} canEdit={canEdit}
           dbKaderRollen={dbKaderRollen}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
           allTeams={allTeams} setAllTeams={setAllTeams}
@@ -118,7 +165,7 @@ function InfoTab({
         />
 
         <PersonFunktionen
-          raw={raw} sb={sb} canEdit={canEdit} canDelete={canDelete}
+          raw={raw} sb={sb!} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
           onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}}
           vereinId={vereinId} account={account}
@@ -130,7 +177,7 @@ function InfoTab({
             <div className="cc-section-title cc-between">
               <span className="cc-row cc-gap-6">
                 <TI n="notes" size={14}/> Notizen
-                {notizenCount > 0 && <span className="cc-notiz-count-badge">{notizenCount}</span>}
+                {notizenCount != null && notizenCount > 0 && <span className="cc-notiz-count-badge">{notizenCount}</span>}
               </span>
               {canEdit && (
                 <button className="cc-btn-ghost" onClick={() => notizAddRef.current?.()}>
