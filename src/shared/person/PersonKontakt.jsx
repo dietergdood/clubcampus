@@ -4,6 +4,7 @@
    Props: raw, fv, canEdit, sb, onReload, eltern, brauchtEltern, setTab
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
+import { BL, GR } from "../../constants.js";
 import { Av, Card, InlineField, useAddrSearch, usePlzLookup } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { useInlineEdit } from "../../domains/members/useInlineEdit.js";

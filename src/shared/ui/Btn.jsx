@@ -1,4 +1,4 @@
-import { FONT } from "../../constants.js";
+import { FONT, BK} from "../../constants.js";
 
 export function Btn({children,onClick,variant="outline",color=null,small,disabled=false,type="button",style={}}){
   const p=small?"4px 10px":"7px 14px";
