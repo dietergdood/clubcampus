@@ -26,6 +26,7 @@ export function FunktionenMultiSelect({funktionen=[],selected=[],onChange}: Funk
   useEffect(()=>{
     function handleClick(e: MouseEvent){ if(ref.current&&e.target instanceof Node&&!ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener("mousedown",handleClick);
+    return()=>document.removeEventListener("mousedown",handleClick);
   },[]);
 
   // Gruppieren

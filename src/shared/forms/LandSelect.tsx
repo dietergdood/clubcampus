@@ -23,6 +23,7 @@ export function LandSelect({value,onChange,laender,placeholder="–"}: LandSelec
       if(wrapRef.current&&e.target instanceof Node&&!wrapRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener("mousedown",handleClick);
+    return()=>document.removeEventListener("mousedown",handleClick);
   },[]);
 
   const filtered=laender.filter(l=>
