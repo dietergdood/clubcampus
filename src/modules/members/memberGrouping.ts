@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/memberGrouping.js
+   ClubCampus — modules/members/memberGrouping.ts
    Gruppierungslogik für MitgliederModul ListView
 
    NICHT ÄNDERN ohne alle 10 Gruppierungsszenarien zu testen!
@@ -11,57 +11,67 @@
      │
      ├─ Ebene 1: getGroupKey(m, "teams", ...)
      │    → ["1. Mannschaft", "A-Junioren"] (Mitglied in 2 Teams)
-     │    → Gruppen: { "1. Mannschaft": [...], "A-Junioren": [...] }
      │
      └─ Ebene 2 (rekursiv): buildGroups(members, ["kaderrollen"], ...,
                               filterVals = { __parentTeam: "1. Mannschaft" })
-          │
-          └─ getGroupKey(m, "kaderrollen", filterVals)
-               → __parentTeam ist gesetzt → nur Rollen in "1. Mannschaft"
-               → ["Co-Trainer/in"] statt alle Rollen des Mitglieds
+          → getGroupKey sieht __parentTeam → nur Rollen in diesem Team
 
-   Resultat:
-     1. MANNSCHAFT
-       └─ CO-TRAINER/IN
-            └─ Adrian Schmid   ← zeigt "FCH 1 · Co-Trainer/in"
-     A-JUNIOREN
-       └─ TRAINER/IN
-            └─ Adrian Schmid   ← zeigt "A-Jun. · Trainer/in"
-
-   ── effectiveCtx in ListView.renderGroupsTable ──
-
-   renderGroupsTable übergibt parentCtx an renderCell:
-     Depth 0: parentCtx = {type:"none"}
-     Depth 1 (Team): currentCtx = {type:"team", key:"1. Mannschaft"}
-                     effectiveCtx = {type:"team", key:"1. Mannschaft"}
-                     → wird als parentCtx an Depth 2 weitergegeben
-     Depth 2 (Kaderrolle): currentCtx = {type:"kaderrolle", key:"Co-Trainer/in"}
-                            effectiveCtx = {type:"team", key:"1. Mannschaft",
-                                           subType:"kaderrolle", subKey:"Co-Trainer/in"}
-                            → renderCell weiss: Team = "1. Mannschaft", Rolle = "Co-Trainer/in"
-                            → teams_rollen Spalte zeigt nur "FCH 1 · Co-Trainer/in"
-
-   ── Kaderrolle-Filter + Gruppierung nach Team ──
-
-   Filter: kaderrollen = ["Co-Trainer/in"]
-   getGroupKey(m, "teams", filterVals):
-     → filtert allTeams: nur Teams wo m.kader_eintraege Rolle "Co-Trainer/in" hat
-     → Adrian Kaiser (nur Spieler in "2. Mannschaft") → "2. Mannschaft" wird entfernt
-     → Adrian Kaiser (Co-Trainer in "A-Junioren") → "A-Junioren" bleibt
-
-   getGroupKey: Gibt Gruppenschlüssel(s) eines Mitglieds zurück.
-     Immer ein ARRAY — ein Mitglied kann in mehreren Gruppen erscheinen.
-     type: "team"|"gruppe"|"kaderrolle"|"funktion"|"none"
-
-   buildGroups: Baut rekursive Gruppenstruktur für ListView auf.
-     Mehrfachgruppierung via Array: ["teams", "kaderrollen"]
-     Kontext-Weitergabe via filterVals:
-       __parentTeam       → kaderrollen nur in diesem Team
-       __parentGruppe     → funktionen nur in dieser Gruppe
-       __portalFunktionen → für Funktions-Gruppen-Zuordnung
+   Kontext-Weitergabe via filterVals:
+     __parentTeam       → kaderrollen nur in diesem Team
+     __parentGruppe     → funktionen nur in dieser Gruppe
+     __portalFunktionen → für Funktions-Gruppen-Zuordnung
    ═══════════════════════════════════════════════════════════════ */
+import { memberFeld } from "./memberMapper.ts";
+import type { MemberRow } from "./memberMapper.ts";
 
-export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
+/* Eigener Gruppentyp statt ListGroup: dessen members sind ListRow
+   (Index-Signatur), MemberRow ist ein Interface und damit nicht zuweisbar.
+   Die Umsetzung an der ListView-Grenze passiert in MitgliederModul. */
+export interface MemberGroup {
+  key: string;
+  label: string;
+  type: string;
+  members: MemberRow[];
+  children: MemberGroup[] | null;
+}
+
+/* Ein Gruppenschlüssel — entweder blosser Text oder Text mit Typ.
+   Der Typ landet später in GroupContext.type. */
+export interface GroupKey {
+  key: string;
+  type: string;
+}
+
+export type GroupKeyResult = string | GroupKey;
+
+/* Die internen Kontextschlüssel liegen im selben Objekt wie die normalen
+   Filterwerte, tragen aber andere Typen — daher eigene Beschreibung. */
+export interface GroupFilterVals {
+  [key: string]: unknown;
+  __parentTeam?: string;
+  __parentGruppe?: string;
+  __portalFunktionen?: { name: string; portal_gruppen?: { name?: string | null } | null }[];
+}
+
+function alsListe(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+}
+
+function teamName(t: unknown): string {
+  if (!t) return "";
+  if (typeof t === "string") return t;
+  if (typeof t === "object") {
+    for (const [k, v] of Object.entries(t)) if (k === "name" && typeof v === "string") return v;
+  }
+  return "";
+}
+
+export function getGroupKey(
+  m: MemberRow,
+  g: string,
+  ROLLE_LABEL: Record<string, string>,
+  filterVals: GroupFilterVals = {},
+): GroupKeyResult[] {
   // ── Jahrgangs-Gruppierung ────────────────────────────────────
   if(g==="__jahrgang"){
     if(!m.geburtsdatum) return ["Unbekannt"];
@@ -75,13 +85,13 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
   // ── Teams ────────────────────────────────────────────────────
   // Wenn Kaderrolle-Filter aktiv: nur Teams zeigen wo diese Rolle zutrifft
   if(g==="teams"){
-    const teamsFilter=filterVals["teams"]||[];
-    const kaderFilter=filterVals["kaderrollen"]||[];
-    let allTeams=(m.teams||[]).map(t=>t?.name||t);
+    const teamsFilter=alsListe(filterVals["teams"]);
+    const kaderFilter=alsListe(filterVals["kaderrollen"]);
+    let allTeams=(m.teams||[]).map(t=>teamName(t));
     if(teamsFilter.length>0) allTeams=allTeams.filter(t=>teamsFilter.includes(t));
     if(kaderFilter.length>0){
-      allTeams=allTeams.filter(teamName=>{
-        const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===teamName);
+      allTeams=allTeams.filter(tName=>{
+        const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===tName);
         return eintraege.some(e=>e.rollen.some(r=>kaderFilter.includes(r)));
       });
     }
@@ -125,40 +135,50 @@ export function getGroupKey(m, g, ROLLE_LABEL, filterVals={}) {
 
   // ── Funktionsgruppen ─────────────────────────────────────────
   if(g==="funktionsgruppen"){
-    const gruppenFilter=filterVals["funktionsgruppen"]||[];
+    const gruppenFilter=alsListe(filterVals["funktionsgruppen"]);
     const allGruppen=m.funktionsgruppen||[];
-    const filtered=gruppenFilter.length>0?allGruppen.filter(g=>gruppenFilter.includes(g)):allGruppen;
-    return filtered.length>0?filtered.map(g=>({key:g,type:"gruppe"})):[{key:"Keine Funktionsgruppe",type:"gruppe"}];
+    const filtered=gruppenFilter.length>0?allGruppen.filter(x=>gruppenFilter.includes(x)):allGruppen;
+    return filtered.length>0?filtered.map(x=>({key:x,type:"gruppe"})):[{key:"Keine Funktionsgruppe",type:"gruppe"}];
   }
 
   // ── Teams & Funktionsgruppen kombiniert ──────────────────────
   // Zeigt Teams (mit Kaderrolle-Filter) und Funktionsgruppen nebeneinander
   if(g==="__teams_funktionen"){
-    const teamsFilter=filterVals["teams"]||[];
-    const gruppenFilter=filterVals["funktionsgruppen"]||[];
-    const kaderFilter=filterVals["kaderrollen"]||[];
-    let teams=(m.teams||[]).map(t=>t?.name||t);
+    const teamsFilter=alsListe(filterVals["teams"]);
+    const gruppenFilter=alsListe(filterVals["funktionsgruppen"]);
+    const kaderFilter=alsListe(filterVals["kaderrollen"]);
+    let teams=(m.teams||[]).map(t=>teamName(t));
     if(teamsFilter.length>0) teams=teams.filter(t=>teamsFilter.includes(t));
     if(kaderFilter.length>0){
-      teams=teams.filter(teamName=>{
-        const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===teamName);
+      teams=teams.filter(tName=>{
+        const eintraege=(m.kader_eintraege||[]).filter(e=>e.team?.name===tName);
         return eintraege.some(e=>e.rollen.some(r=>kaderFilter.includes(r)));
       });
     }
     const gruppen=(m.funktionsgruppen||[])
-      .filter(g=>gruppenFilter.length===0||gruppenFilter.includes(g))
-      .map(g=>({key:g,type:"gruppe"}));
+      .filter(x=>gruppenFilter.length===0||gruppenFilter.includes(x))
+      .map(x=>({key:x,type:"gruppe"}));
     const teamsMapped=teams.map(t=>({key:t,type:"team"}));
     return [...gruppen,...teamsMapped].length>0?[...gruppen,...teamsMapped]:[{key:"Keine Zuordnung",type:"none"}];
   }
 
   // ── Fallback: direkter Feldwert ──────────────────────────────
-  const v=m[g];
-  if(Array.isArray(v)) return v.map(t=>t?.name||t||"-").filter(Boolean).length>0?v.map(t=>t?.name||t||"-").filter(Boolean):["-"];
+  const v=memberFeld(m,g);
+  if(Array.isArray(v)){
+    const namen=v.map(t=>teamName(t)||"-").filter(Boolean);
+    return namen.length>0?namen:["-"];
+  }
   return [String(v||"-")];
 }
 
-export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGroup=null, groupOrder={}) {
+export function buildGroups(
+  paged: MemberRow[],
+  groupBy: string | string[],
+  ROLLE_LABEL: Record<string, string>,
+  filterVals: GroupFilterVals = {},
+  _parentGroup: { type: string; key: string } | null = null,
+  groupOrder: Record<string, string[]> = {},
+): MemberGroup[] {
   const levels=Array.isArray(groupBy)?groupBy:[groupBy];
   const firstLevel=levels[0]||"none";
   const restLevels=levels.slice(1);
@@ -166,8 +186,8 @@ export function buildGroups(paged, groupBy, ROLLE_LABEL, filterVals={}, parentGr
   if(firstLevel==="none") return [{key:"",label:"",type:"none",members:paged,children:null}];
 
   // Mitglieder auf Gruppen aufteilen
-  const map={};
-  const meta={};
+  const map: Record<string, MemberRow[]>={};
+  const meta: Record<string, string>={};
   paged.forEach(m=>{
     const keys=getGroupKey(m,firstLevel,ROLLE_LABEL,filterVals);
     keys.forEach(k=>{

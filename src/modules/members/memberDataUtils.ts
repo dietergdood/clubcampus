@@ -1,9 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/memberDataUtils.js
+   ClubCampus — modules/members/memberDataUtils.ts
    Re-exportiert alle Mitglieder-Datenfunktionen.
    Importiere direkt aus den Untermodulen für neue Verwendungen.
    ═══════════════════════════════════════════════════════════════ */
-export { mapMembers }                       from "./memberMapper.js";
-export { filterMembers, sortMembers }       from "./memberFilter.js";
-export { getGroupKey, buildGroups }         from "./memberGrouping.js";
-export { exportData }                       from "./memberExportUtils.js";
+export { mapMembers }                       from "./memberMapper.ts";
+export type { MappedMember, MemberRow }     from "./memberMapper.ts";
+export { filterMembers, sortMembers }       from "./memberFilter.ts";
+export { getGroupKey, buildGroups }         from "./memberGrouping.ts";
+export { exportData }                       from "./memberExportUtils.ts";

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/memberFilter.js
+   ClubCampus — modules/members/memberFilter.ts
    Filter- und Sortierlogik für MitgliederModul
 
    filterMembers: Kombiniert UND/ODER-Logik:
@@ -8,8 +8,47 @@
      - Alle anderen Filter: UND
      - Jahrgang + Alter: Range-Filter (UND)
    ═══════════════════════════════════════════════════════════════ */
+import { memberFeld } from "./memberMapper.ts";
+import type { MemberRow } from "./memberMapper.ts";
+import type { FilterVals } from "../../shared/list/types.ts";
+import type { RowId } from "../../shared/list/types.ts";
 
-export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
+/* Teams liegen mal als Objekt, mal als blosser Name vor */
+type TeamRef = { name?: string | null; kurz?: string | null } | string | null | undefined;
+
+function teamName(t: TeamRef): string {
+  if (!t) return "";
+  return typeof t === "string" ? t : (t.name || "");
+}
+
+/* Entspricht dem früheren `v?.name || v`: bei Objekten die name-Eigenschaft,
+   sonst der Wert selbst. Ohne Cast, weil der Feldzugriff unknown liefert. */
+function wertName(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "object") {
+    for (const [k, val] of Object.entries(v)) if (k === "name" && typeof val === "string") return val;
+    return "";
+  }
+  return String(v);
+}
+
+/* Auswahlliste eines Filters (Bereichsfilter liefern kein Array) */
+function alsListe(v: FilterVals[string]): string[] {
+  return Array.isArray(v) ? v : [];
+}
+
+/* Bereichsgrenzen eines Range-Filters */
+function alsBereich(v: FilterVals[string]): { von?: number | null; bis?: number | null } {
+  return v && !Array.isArray(v) ? v : {};
+}
+
+export function filterMembers(
+  allMembers: MemberRow[],
+  search: string,
+  filterVals: FilterVals,
+  ROLLE_LABEL: Record<string, string>,
+): MemberRow[] {
   return allMembers.filter(m => {
     // Volltext-Suche: alle Terme müssen im Haystack vorkommen
     if(search){
@@ -17,24 +56,24 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
       const haystack=[
         m.name, m.mitgliedschaft,
         ...(m.rollen||[]),
-        ...(m.teams||[]).map(t=>t?.name||t||""),
-        ...(m.teams||[]).map(t=>t?.kurz||""),
+        ...(m.teams||[]).map(t=>teamName(t)),
+        ...(m.teams||[]).map(t=>(typeof t==="string"?"":t?.kurz||"")),
         m.email||"",
       ].join(" ").toLowerCase();
       if(!terms.every(t=>haystack.includes(t))) return false;
     }
 
     // Teams: ODER-verknüpft (separat von den anderen ODER-Filtern)
-    const teamsVals=filterVals["teams"]||[];
+    const teamsVals=alsListe(filterVals["teams"]);
     if(teamsVals.length>0){
-      const inTeam=(m.teams||[]).map(t=>t?.name||t).some(t=>teamsVals.includes(t));
+      const inTeam=(m.teams||[]).map(t=>teamName(t)).some(t=>teamsVals.includes(t));
       if(!inTeam) return false;
     }
 
     // Kaderrollen + Vereinsfunktionen + Funktionsgruppen: ODER untereinander
-    const kaderVals=filterVals["kaderrollen"]||[];
-    const funktionenVals=filterVals["funktionen"]||[];
-    const gruppenVals=filterVals["funktionsgruppen"]||[];
+    const kaderVals=alsListe(filterVals["kaderrollen"]);
+    const funktionenVals=alsListe(filterVals["funktionen"]);
+    const gruppenVals=alsListe(filterVals["funktionsgruppen"]);
     if(kaderVals.length>0||funktionenVals.length>0||gruppenVals.length>0){
       const inKader=kaderVals.length>0&&(m.kader_rollen_raw||[]).some(r=>kaderVals.includes(r));
       const inFunktion=funktionenVals.length>0&&(m.funktionen||[]).some(f=>funktionenVals.includes(f));
@@ -50,7 +89,7 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
 
       // Jahrgang Range-Filter
       if(fKey==="jahrgang"){
-        const {von,bis}=fVals||{};
+        const {von,bis}=alsBereich(fVals);
         if(von==null&&bis==null) continue;
         const jg=m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null;
         if(!jg) return false;
@@ -61,7 +100,7 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
 
       // Alter Range-Filter
       if(fKey==="alter"){
-        const {von,bis}=fVals||{};
+        const {von,bis}=alsBereich(fVals);
         if(von==null&&bis==null) continue;
         if(m.alter==null) return false;
         if(von!=null&&m.alter<von) return false;
@@ -69,10 +108,12 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
         continue;
       }
 
+      const werte=alsListe(fVals);
+
       // Portalrollen: Label-Vergleich
       if(fKey==="rollen"){
         const portalLabel=m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null;
-        if(!portalLabel||!fVals.includes(portalLabel)) return false;
+        if(!portalLabel||!werte.includes(portalLabel)) return false;
         continue;
       }
 
@@ -81,39 +122,44 @@ export function filterMembers(allMembers, search, filterVals, ROLLE_LABEL) {
 
       // Geschlecht: Code → Label
       if(fKey==="geschlecht"){
-        const GESCH_MAP={"m":"Männlich","w":"Weiblich","d":"Divers"};
-        const label=GESCH_MAP[m.geschlecht]||m.geschlecht||null;
-        if(!label||!fVals.includes(label)) return false;
+        const GESCH_MAP: Record<string,string>={"m":"Männlich","w":"Weiblich","d":"Divers"};
+        const label=(m.geschlecht?GESCH_MAP[m.geschlecht]:null)||m.geschlecht||null;
+        if(!label||!werte.includes(label)) return false;
         continue;
       }
 
       // Standard-Filter: direkter Wertvergleich
-      const raw=m[fKey];
-      const mVal=Array.isArray(raw)?raw.map(v=>v?.name||v):[raw?.name||raw];
-      if(!mVal.some(v=>fVals.includes(v))) return false;
+      const raw=memberFeld(m,fKey);
+      const mVal=Array.isArray(raw)?raw.map(v=>wertName(v)):[wertName(raw)];
+      if(!mVal.some(v=>werte.includes(v))) return false;
     }
     return true;
   });
 }
 
-export function sortMembers(filtered, sortCol, sortDir, manualOrder=[]) {
+export function sortMembers(
+  filtered: MemberRow[],
+  sortCol: string,
+  sortDir: "asc" | "desc",
+  manualOrder: RowId[] = [],
+): MemberRow[] {
   // Manuelle Reihenfolge (Drag & Drop) hat Vorrang
   if(manualOrder.length>0){
     const orderMap=new Map(manualOrder.map((id,i)=>[id,i]));
     return [...filtered].sort((a,b)=>{
-      const ai=orderMap.has(a.id)?orderMap.get(a.id):Infinity;
-      const bi=orderMap.has(b.id)?orderMap.get(b.id):Infinity;
+      const ai=orderMap.has(a.id)?orderMap.get(a.id)!:Infinity;
+      const bi=orderMap.has(b.id)?orderMap.get(b.id)!:Infinity;
       return ai-bi;
     });
   }
 
   return [...filtered].sort((a,b)=>{
-    const getVal=m=>{
+    const getVal=(m: MemberRow): string=>{
       // Spezielle Sortierschlüssel für zusammengesetzte Spalten
       if(sortCol==="name") return `${m.vorname||""} ${m.nachname||""}`.trim().toLowerCase();
       if(sortCol==="teams_rollen"||sortCol==="teams"){
         const t=(m.teams||[])[0];
-        return String(t?.name||t||"").toLowerCase();
+        return teamName(t).toLowerCase();
       }
       if(sortCol==="funktionen_gruppen"||sortCol==="funktionsgruppen"){
         return String((m.funktionsgruppen||[])[0]||"").toLowerCase();
@@ -126,11 +172,10 @@ export function sortMembers(filtered, sortCol, sortDir, manualOrder=[]) {
       }
       if(sortCol==="rollen") return String(m.role||"").toLowerCase();
       // Standard: direkter Feldwert
-      const v=m[sortCol];
+      const v=memberFeld(m,sortCol);
       if(v==null||v==="-") return "";
       if(Array.isArray(v)){
-        const first=v[0];
-        return String(first?.name||first||"").toLowerCase();
+        return wertName(v[0]).toLowerCase();
       }
       return String(v).toLowerCase();
     };

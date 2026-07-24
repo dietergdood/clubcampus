@@ -3,7 +3,7 @@
    Unit-Tests für mapMembers
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from 'vitest';
-import { mapMembers } from '../memberMapper.js';
+import { mapMembers } from '../memberMapper.ts';
 
 const DB_PORTAL_ROLLEN = [
   { name: 'trainer', label: 'Trainer/in' },

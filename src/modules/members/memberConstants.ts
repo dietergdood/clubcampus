@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/memberConstants.js
+   ClubCampus — modules/members/memberConstants.ts
    Konstanten für MitgliederModul
    ═══════════════════════════════════════════════════════════════ */
 

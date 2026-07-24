@@ -4,7 +4,7 @@
    Alle 10 Gruppierungsszenarien aus ARCHITECTURE.md
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from 'vitest';
-import { getGroupKey, buildGroups } from '../memberGrouping.js';
+import { getGroupKey, buildGroups } from '../memberGrouping.ts';
 
 // ── Testdaten ────────────────────────────────────────────────────
 const ROLLE_LABEL = {

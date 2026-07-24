@@ -20,7 +20,7 @@ import { InfoTab } from "./tabs/InfoTab.jsx";
 import { PortalTab } from "./tabs/PortalTab.jsx";
 import { DatenpruefungTab } from "./tabs/DatenpruefungTab.jsx";
 import { VerlaufTab } from "./tabs/VerlaufTab.jsx";
-import { getFieldVisibility } from "./memberUtils.jsx";
+import { getFieldVisibility } from "./memberUtils.tsx";
 
 function MemberDetail({
   m, onClose, onNavToTeam = null, onReaktiviert = null,
