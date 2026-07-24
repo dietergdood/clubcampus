@@ -54,7 +54,9 @@ export async function ableitRolle(
     .eq('aktiv', true);
 
   if (kaderData && kaderData.length > 0) {
-    const alleRollenNamen: string[] = kaderData.flatMap((k: { rollen: string[] }) => k.rollen || []);
+    /* kader.rollen ist in der DB nullable — || [] fängt das ab.
+       Keine Inline-Annotation mehr: der generierte Typ ist genauer. */
+    const alleRollenNamen: string[] = kaderData.flatMap(k => k.rollen || []);
     const hatTrainer = alleRollenNamen.some(r => TRAINER_ROLLEN.includes(r));
     if (hatTrainer) return 'trainer';
 
@@ -73,9 +75,13 @@ export async function ableitRolle(
       .eq('name', mitgliedtyp)
       .maybeSingle();
 
-    const stdRolle = (typData as { standard_rolle?: string } | null)?.standard_rolle;
-    if (stdRolle && ['spieler', 'trainer'].includes(stdRolle)) return stdRolle as Rolle;
+    const stdRolle = typData?.standard_rolle;
+    /* Vergleich statt includes(): narrowt stdRolle auf die Rolle-Union */
+    if (stdRolle === 'spieler' || stdRolle === 'trainer') return stdRolle;
     if (funktionen && funktionen.length > 0) return 'funktionaer';
+    /* portal_rollen ist pro Verein konfigurierbar, standard_rolle daher ein
+       freier String. Der Wert wird unverändert durchgereicht (bisheriges
+       Verhalten); er muss nicht zwingend in der Rolle-Union enthalten sein. */
     if (stdRolle) return stdRolle as Rolle;
   }
 
@@ -91,9 +97,8 @@ export async function saveRolle(sb: Sb, mitgliedId: number, neueRolle: Rolle): P
     .select('id')
     .eq('mitglied_id', mitgliedId)
     .maybeSingle();
-  const b = benutzer as { id: string } | null;
-  if (b?.id) {
-    await sb.from('benutzer').update({ role: neueRolle }).eq('id', b.id);
+  if (benutzer?.id) {
+    await sb.from('benutzer').update({ role: neueRolle }).eq('id', benutzer.id);
   }
 }
 

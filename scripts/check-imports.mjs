@@ -42,7 +42,15 @@ function walk(dir) {
     return /\.(js|jsx|ts|tsx)$/.test(e.name) ? [p] : [];
   });
 }
-const files = walk(SRC).filter(p => !p.includes("__tests__") && p !== constantsFile);
+/* database.types.ts ist generiert und nutzt R als Typparameter — das
+   schlaegt sonst als fehlender Import der Konstante R an. */
+const GENERIERT = ["database.types.ts"];
+
+const files = walk(SRC).filter(p =>
+  !p.includes("__tests__") &&
+  p !== constantsFile &&
+  !GENERIERT.some(g => p.endsWith(g))
+);
 
 /* Import-Statements, Kommentare und String-Literale entfernen, damit
    kurze Namen wie R, GB oder BL nicht in Texten/CSS falsch anschlagen. */
