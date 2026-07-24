@@ -21,6 +21,9 @@ vi.mock('../../../theme.jsx', () => ({
   useConfirm: () => [vi.fn().mockResolvedValue(true), <div key="cd"/>],
   ConfirmDialog: () => null,
   useIsMobile: () => false,
+  /* Rendert bewusst nichts: die Rollennamen kaemen sonst doppelt vor
+     (einmal als Chip, einmal in der Auswahlliste) und getByText waere mehrdeutig. */
+  RollenAuswahlListe: () => null,
 }));
 
 vi.mock('../../../icons.jsx', () => ({

@@ -12,6 +12,13 @@ vi.mock('../../../theme.jsx', () => ({
     <button onClick={onClick} disabled={disabled}>{children}</button>
   ),
   ModalOrSheet: ({ open, children }) => open ? <div>{children}</div> : null,
+  /* Spiegelt die Signatur von shared/forms/PhoneInput.jsx:
+     onChange bekommt den Wert direkt, nicht das Event. */
+  PhoneInput: ({ value = "", onChange, placeholder = "79 123 45 67" }) => (
+    <input placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}/>
+  ),
+  useAddrSearch: () => [],
+  usePlzLookup: () => {},
 }));
 
 vi.mock('../../../icons.jsx', () => ({
@@ -147,7 +154,7 @@ describe('NeuesMitgliedModal', () => {
       // Mindestfelder ausfüllen
       fireEvent.change(screen.getByPlaceholderText('Adrian'), { target: { value: 'Adrian' } });
       fireEvent.change(screen.getByPlaceholderText('Bürgi'), { target: { value: 'Bürgi' } });
-      fireEvent.change(screen.getByPlaceholderText('079 123 45 67'), { target: { value: '079 123 45 67' } });
+      fireEvent.change(screen.getByPlaceholderText('79 123 45 67'), { target: { value: '079 123 45 67' } });
       // Geburtsdatum
       const inputs = document.querySelectorAll('input[type="date"]');
       if (inputs.length > 0) fireEvent.change(inputs[0], { target: { value: '1990-01-01' } });
@@ -165,7 +172,7 @@ describe('NeuesMitgliedModal', () => {
       fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Passivmitglied' } });
       fireEvent.change(screen.getByPlaceholderText('Adrian'), { target: { value: 'Adrian' } });
       fireEvent.change(screen.getByPlaceholderText('Bürgi'), { target: { value: 'Bürgi' } });
-      fireEvent.change(screen.getByPlaceholderText('079 123 45 67'), { target: { value: '079 123 45 67' } });
+      fireEvent.change(screen.getByPlaceholderText('79 123 45 67'), { target: { value: '079 123 45 67' } });
       const inputs = document.querySelectorAll('input[type="date"]');
       if (inputs.length > 0) fireEvent.change(inputs[0], { target: { value: '1990-01-01' } });
       fireEvent.click(screen.getByText('Mitglied anlegen'));

@@ -74,10 +74,23 @@ describe('VerlaufTab', () => {
   });
 
   describe('Änderungen anzeigen', () => {
+    /* Adressfelder (strasse/plz/ort/kanton) werden unter der Gruppe "Adresse"
+       zusammengefasst, der Feldname erscheint dort als Unter-Label mit Doppelpunkt. */
     it('zeigt Feldname einer Änderung', async () => {
       fetchAenderungen.mockResolvedValue([AENDERUNG]);
       render(<VerlaufTab raw={RAW} sb={SB}/>);
-      await waitFor(() => expect(screen.getByText('Strasse')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText('Adresse')).toBeTruthy());
+      expect(screen.getByText('Strasse:')).toBeTruthy();
+    });
+
+    it('zeigt Nicht-Adressfelder ohne Gruppierung', async () => {
+      fetchAenderungen.mockResolvedValue([{
+        ...AENDERUNG, feld: 'email',
+        alter_wert: 'alt@test.ch', neuer_wert: 'neu@test.ch',
+      }]);
+      render(<VerlaufTab raw={RAW} sb={SB}/>);
+      await waitFor(() => expect(screen.getByText('E-Mail')).toBeTruthy());
+      expect(screen.queryByText('Adresse')).toBeNull();
     });
 
     it('zeigt alten und neuen Wert', async () => {
@@ -163,7 +176,7 @@ describe('VerlaufTab', () => {
       fetchAktivitaeten.mockResolvedValue([AKTIVITAET]);
       render(<VerlaufTab raw={RAW} sb={SB}/>);
       await waitFor(() => {
-        expect(screen.getByText('Strasse')).toBeTruthy();
+        expect(screen.getByText('Strasse:')).toBeTruthy();
         expect(screen.getByText('Team zugewiesen: 1. Mannschaft')).toBeTruthy();
       });
     });
