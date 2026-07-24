@@ -13,7 +13,7 @@
      Bei type="gruppe" → nur Eintraege dieser Gruppe
    ═══════════════════════════════════════════════════════════════ */
 import * as XLSX from "xlsx";
-import { csvDownload } from "../../shared/list/exportUtils.js";
+import { csvDownload } from "../../shared/list/exportUtils.ts";
 
 function exportCellValue(k, m, groupContext={type:"none",key:null}) {
   const gc=groupContext;

@@ -1,9 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/exportUtils.js
+   ClubCampus — shared/list/exportUtils.ts
    Zentrale Export-Funktion + Filter-Hilfsfunktion für alle
    ListView-basierten Module.
    ═══════════════════════════════════════════════════════════════ */
 import * as XLSX from "xlsx";
+import type {
+  ColDef, ExportFormat, FilterDef, GetCellValue, GroupContext, ListGroup, ListRow,
+} from "./types.ts";
 
 /*
   buildFilterDefs(rows, fields)
@@ -25,31 +28,41 @@ import * as XLSX from "xlsx";
       { key:"portal",         label:"Portal", vals:["Aktiv","Kein Zugang"] },
     ])
 */
-export function buildFilterDefs(rows, fields) {
+export function buildFilterDefs(rows: ListRow[], fields: FilterDef[]): FilterDef[] {
   return fields.map(f => {
     if (f.type === "or-divider" || f.type === "und-divider" || f.type === "range") return f;
     if (f.vals) return f;
     if (f.flatMap) {
-      return { ...f, vals: [...new Set(rows.flatMap(r => f.flatMap(r)).filter(Boolean))].sort() };
+      const flat = f.flatMap;
+      return { ...f, vals: [...new Set(rows.flatMap(r => flat(r)).filter((v): v is string => !!v))].sort() };
     }
-    return { ...f, vals: [...new Set(rows.map(r => r[f.key]).filter(Boolean))].sort() };
+    return { ...f, vals: [...new Set(rows.map(r => r[f.key]).filter((v): v is string => !!v))].sort() };
   });
 }
 
-function defaultGetCellValue(col, row) {
+const defaultGetCellValue: GetCellValue = (col, row) => {
   const v = row[col.key];
   if (v == null) return "";
   if (Array.isArray(v)) return v.join(", ");
   return String(v);
-}
+};
 
-export function csvDownload(data, filename) {
+export function csvDownload(data: (string | number)[][], filename: string): void {
   const rows = data.map(r => r.map(v => '"' + String(v || "").replace(/"/g, '""') + '"').join(";"));
-  const csv = "\uFEFF" + rows.join("\r\n");
+  /* Führendes BOM, damit Excel die UTF-8-Umlaute korrekt liest */
+  const csv = "﻿" + rows.join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
+}
+
+export interface ExportOptions {
+  getCellValue?: GetCellValue;
+  /* Dateiname ohne Extension */
+  filename?: string;
+  /* Excel-Sheetname, wenn nicht gruppiert */
+  sheetName?: string;
 }
 
 /*
@@ -59,12 +72,14 @@ export function csvDownload(data, filename) {
   cols    — sichtbare Spalten [{key, label}]
   groups  — Gruppenstruktur von buildGroupsFn
   format  — "csv" | "csv-gruppen" | "excel-sheets"
-  options:
-    getCellValue(col, row, groupCtx) — wie Zellwert formatiert wird
-    filename   — Dateiname ohne Extension (default: "export")
-    sheetName  — Excel Sheet Name wenn keine Gruppen (default: "Daten")
 */
-export function exportListData(rows, cols, groups, format, options = {}) {
+export function exportListData(
+  rows: ListRow[],
+  cols: ColDef[],
+  groups: ListGroup[],
+  format: ExportFormat,
+  options: ExportOptions = {},
+): void {
   const {
     getCellValue = defaultGetCellValue,
     filename = "export",
@@ -74,7 +89,7 @@ export function exportListData(rows, cols, groups, format, options = {}) {
   const hasGroups = groups && groups.length > 0 && groups[0].key !== "__all" && groups[0].key !== "";
   const headers = cols.map(c => c.label);
 
-  function getRow(row, groupCtx = { type: "none", key: null }) {
+  function getRow(row: ListRow, groupCtx: GroupContext = { type: "none", key: null }): string[] {
     return cols.map(col => getCellValue(col, row, groupCtx));
   }
 
@@ -89,16 +104,16 @@ export function exportListData(rows, cols, groups, format, options = {}) {
       csvDownload([headers, ...rows.map(r => getRow(r))], `${filename}-gruppen.csv`);
       return;
     }
-    const allRows = [headers];
-    function addGroups(grps) {
+    const allRows: string[][] = [headers];
+    function addGroups(grps: ListGroup[]){
       grps.forEach(({ key, label, type, members, children }) => {
-        allRows.push([label || key, ...new Array(headers.length - 1).fill("")]);
+        allRows.push([label || key, ...new Array<string>(headers.length - 1).fill("")]);
         if (children) addGroups(children);
         else {
-          const gc = type !== "none" ? { type, key } : { type: "none", key: null };
+          const gc: GroupContext = type !== "none" ? { type, key } : { type: "none", key: null };
           members.forEach(r => allRows.push(getRow(r, gc)));
         }
-        allRows.push(new Array(headers.length).fill(""));
+        allRows.push(new Array<string>(headers.length).fill(""));
       });
     }
     addGroups(groups);
@@ -111,10 +126,10 @@ export function exportListData(rows, cols, groups, format, options = {}) {
       const ws = XLSX.utils.aoa_to_sheet([headers, ...rows.map(r => getRow(r))]);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     } else {
-      function addSheets(grps) {
+      function addSheets(grps: ListGroup[]){
         grps.forEach(({ key, label, type, members, children }) => {
           if (children) { addSheets(children); return; }
-          const gc = type !== "none" ? { type, key } : { type: "none", key: null };
+          const gc: GroupContext = type !== "none" ? { type, key } : { type: "none", key: null };
           const sheetRows = members.map(r => getRow(r, gc));
           const name = (label || key || "Gruppe").slice(0, 31).replace(/[\/\*\?\[\]\:]/g, "");
           const ws = XLSX.utils.aoa_to_sheet([headers, ...sheetRows]);

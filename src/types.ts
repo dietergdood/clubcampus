@@ -190,18 +190,18 @@ export interface Aktivitaet {
 }
 
 // ── Ansicht (gespeicherte ListView-Konfiguration) ─────────────────
-export interface Ansicht {
-  id: string;
-  benutzer_id: string;
-  verein_id: string;
-  name: string;
-  spalten: string[];
-  filter: Record<string, unknown>;
-  gruppierung: string[];
-  gruppenreihenfolge: Record<string, string[]>;
-  zeilenreihenfolge: Record<string, number[]>;
-  typ: string;
-  geteilt: boolean;
+/* Basis aus dem Schema. filter, gruppierung, gruppenreihenfolge und
+   zeilenreihenfolge sind dort jsonb; die App legt eine engere Struktur
+   hinein, die hier beschrieben wird. */
+export interface Ansicht extends Omit<
+  Tables<'mitglieder_ansichten'>,
+  'filter' | 'gruppierung' | 'gruppenreihenfolge' | 'zeilenreihenfolge'
+> {
+  /* Strukturgleich zu FilterVals aus shared/list: Auswahlliste oder Bereich */
+  filter: Record<string, string[] | { von?: number | null; bis?: number | null }> | null;
+  gruppierung: string[] | null;
+  gruppenreihenfolge: Record<string, string[]> | null;
+  zeilenreihenfolge: Record<string, unknown[]> | null;
 }
 
 // ── Kader ────────────────────────────────────────────────────────

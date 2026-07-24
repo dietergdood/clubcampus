@@ -1,12 +1,63 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/ListView.jsx
+   ClubCampus — shared/list/ListView.tsx
    Zentrale generische Listen-/Tabellenkomponente
-   State + Logic → useListView.js
+   State + Logic → useListView.ts
    ═══════════════════════════════════════════════════════════════ */
 import { Fragment } from "react";
 import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn, EmptyState } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { useListView } from "./useListView.js";
+import { useListView } from "./useListView.ts";
+import type { Account, Sb } from "../../types.ts";
+import type {
+  ColDef, ColGroup, ExportFormat, ExportFormatOption, FilterDef, FilterVals,
+  GetRowId, GroupContext, GroupOption, ListBulkAction, ListGroup, ListRow,
+  MoreEntry, RenderCell, RenderMobile, SavedViews,
+} from "./types.ts";
+
+export interface ListViewProps {
+  // Daten
+  rows?: ListRow[];
+  filterFn?: (rows: ListRow[], search: string, filterVals: FilterVals) => ListRow[];
+  sortFn?: (rows: ListRow[], sortCol: string, sortDir: "asc" | "desc") => ListRow[];
+  buildGroupsFn?: (rows: ListRow[], groupBy: string[], groupOrder: Record<string, string[]>, filterVals: FilterVals) => ListGroup[];
+  // Spalten
+  colDefs?: ColDef[];
+  colGroups?: ColGroup[];
+  defaultCols?: string[];
+  savedViews?: SavedViews | null;
+  // Filter + Gruppierung
+  filterDefs?: FilterDef[];
+  groupOptions?: GroupOption[];
+  groupOptionsMore?: GroupOption[];
+  multiGroup?: boolean;
+  // Render
+  renderCell?: RenderCell;
+  renderMobile?: RenderMobile;
+  getRowId?: GetRowId;
+  // Supabase / Ansichten
+  sb?: Sb;
+  account?: Account | null;
+  vereinId?: string | null;
+  viewTyp?: string;
+  // Selektierung
+  selectable?: boolean;
+  bulkActions?: ListBulkAction[];
+  // Weitere Aktionen
+  moreActions?: MoreEntry[];
+  // Footer
+  footerLabel?: (gefiltert: number, gesamt: number) => string;
+  // External filter control
+  externalSetFilter?: { current: ((vals: FilterVals) => void) | null } | null;
+  // Export
+  exportFn?: (rows: ListRow[], cols: ColDef[], groups: ListGroup[], format: ExportFormat) => void;
+  exportFormats?: ExportFormatOption[];
+  // Admin
+  isAdmin?: boolean;
+  // Empty state
+  emptyIcon?: string;
+  emptyTitle?: string;
+  emptySubtitle?: string;
+}
 
 export function ListView({
   // Daten
@@ -51,7 +102,7 @@ export function ListView({
   emptyIcon = "list",
   emptyTitle = "Noch keine Einträge",
   emptySubtitle = "Füge den ersten Eintrag hinzu, um loszulegen.",
-}) {
+}: ListViewProps) {
   const isMobile = useIsMobile();
 
   const {
@@ -88,22 +139,22 @@ export function ListView({
     rows, colDefs, defaultCols, savedViews,
     filterFn, sortFn, buildGroupsFn,
     filterDefs, groupOptions, groupOptionsMore, multiGroup,
-    getRowId, sb, account, vereinId, viewTyp,
+    getRowId, sb: sb ?? null, account, vereinId, viewTyp,
     selectable, moreActions, exportFn, exportFormats,
     isAdmin, isMobile, externalSetFilter,
   });
 
-  const SortIcon = ({ col }) => sortCol === col
+  const SortIcon = ({ col }: { col: string }) => sortCol === col
     ? <span className="cc-sort-arrow">{sortDir === "asc" ? "▲" : "▼"}</span>
     : <span className="cc-sort-hover-icon">↕</span>;
 
   // ── Gruppen Tabelle rendern ───────────────────────────────────
-  function renderGroupsTable(groups, depth = 0, levelKey = null, parentCtx = {type:"none",key:null}) {
+  function renderGroupsTable(groups: ListGroup[], depth = 0, levelKey: string | null = null, parentCtx: GroupContext = {type:"none",key:null}) {
     const currentLevelKey = levelKey || (Array.isArray(groupBy) ? groupBy[depth] : groupBy) || "none";
     return groups.map(({ key, label, type, members, children }) => {
       if (!children && (!members || members.length === 0)) return null;
-      const currentCtx = { type: type || "none", key };
-      const effectiveCtx = (type==="team"||type==="gruppe")
+      const currentCtx: GroupContext = { type: type || "none", key };
+      const effectiveCtx: GroupContext = (type==="team"||type==="gruppe")
         ? currentCtx
         : (parentCtx.type==="team"||parentCtx.type==="gruppe")
           ? { ...parentCtx, subType: type, subKey: key }
@@ -159,7 +210,7 @@ export function ListView({
             : orderedMembers.map(row => {
                 const id = getRowId(row);
                 return (
-                  <tr key={id}
+                  <tr key={String(id)}
                     className={`cc-members-tr${selected.has(id) ? " cc-members-tr-selected" : ""}${hasGroup && dragOverRow === id ? " cc-group-drag-over" : ""}${hasGroup ? " cc-members-tr-draggable" : ""}`}
                     draggable={hasGroup}
                     onDragStart={hasGroup ? e => { e.stopPropagation(); setDragRow({ id, groupKey: key }); } : undefined}
@@ -225,7 +276,7 @@ export function ListView({
         groupOptions={groupOptions}
         groupOptionsMore={groupOptionsMore}
         groupBy={groupBy}
-        onGroupChange={setGroupBy}
+        onGroupChange={g => setGroupBy(Array.isArray(g) ? g : [g])}
         multiGroup={multiGroup}
         externalFilterOpen={mobileFilterOpen}
         externalGroupOpen={mobileGroupOpen}

@@ -6,8 +6,8 @@ import { useState, useEffect } from "react";
 import { Av, useConfirm, useIsMobile } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.js";
-import { ListView } from "../../shared/list/ListView.jsx";
-import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.js";
+import { ListView } from "../../shared/list/ListView.tsx";
+import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
 
 function getKinderMitTeams(alleKinder) {
   return (alleKinder||[]).map(k => {

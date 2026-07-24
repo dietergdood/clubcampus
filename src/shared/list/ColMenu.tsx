@@ -1,14 +1,33 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/ColMenu.jsx
+   ClubCampus — shared/list/ColMenu.tsx
    Spalten-Auswahl Komponenten
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { TI } from "../../icons.tsx";
+import type { ColGroup } from "./types.ts";
 
-export function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDragStart,onDragOver,onDrop,onDragEnd,search,setSearch}){
+interface ColMenuSharedProps {
+  colGroups?: ColGroup[];
+  visibleCols?: string[];
+  onVisibleColsChange?: ((cols: string[]) => void) | null;
+  dragCol?: string | null;
+  onDragStart?: ((key: string) => void) | null;
+  onDragOver?: ((key: string) => void) | null;
+  onDrop?: ((targetKey: string, dragKey: string | null) => void) | null;
+  onDragEnd?: (() => void) | null;
+}
+
+interface ColMenuContentProps extends ColMenuSharedProps {
+  colGroups: ColGroup[];
+  visibleCols: string[];
+  search: string;
+  setSearch: (search: string) => void;
+}
+
+export function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDragStart,onDragOver,onDrop,onDragEnd,search,setSearch}: ColMenuContentProps){
   const allCols=colGroups.flatMap(g=>g.cols);
-  const [openGroups,setOpenGroups]=useState(new Set());
-  const toggleGroup=g=>setOpenGroups(prev=>{const n=new Set(prev);n.has(g)?n.delete(g):n.add(g);return n;});
+  const [openGroups,setOpenGroups]=useState<Set<string>>(new Set());
+  const toggleGroup=(g: string)=>setOpenGroups(prev=>{const n=new Set(prev);n.has(g)?n.delete(g):n.add(g);return n;});
   return(
     <div>
       <div className="cc-col-menu-group-hdr">Aktive Spalten <span className="cc-col-menu-hdr-hint">ziehen zum sortieren</span></div>
@@ -21,7 +40,7 @@ export function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCo
             draggable={!col.alwaysOn}
             onDragStart={()=>onDragStart&&onDragStart(key)}
             onDragOver={e=>{e.preventDefault();onDragOver&&onDragOver(key);}}
-            onDrop={()=>onDrop&&onDrop(key,dragCol)}
+            onDrop={()=>onDrop&&onDrop(key,dragCol??null)}
             onDragEnd={()=>onDragEnd&&onDragEnd()}
             onClick={()=>!col.alwaysOn&&onVisibleColsChange&&onVisibleColsChange(visibleCols.filter(k=>k!==key))}>
             {!col.alwaysOn&&<TI n="grip-vertical" size={13} className="cc-col-drag-handle cc-col-menu-icon-drag"/>}
@@ -70,24 +89,29 @@ export function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCo
   );
 }
 
+interface ColMenuButtonProps extends ColMenuSharedProps {
+  dragOverCol?: string | null;
+  /* Ohne Button direkt einbetten (Mobile-Sheet) */
+  inline?: boolean;
+}
+
 export function ColMenuButton({
   colGroups=[],
   visibleCols=[],
   onVisibleColsChange=null,
   dragCol=null,
-  dragOverCol=null,
   onDragStart=null,
   onDragOver=null,
   onDrop=null,
   onDragEnd=null,
   inline=false,
-}){
+}: ColMenuButtonProps){
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
-  const ref=useRef(null);
+  const ref=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
-    function handleClick(e){if(ref.current&&!ref.current.contains(e.target))setOpen(false);}
+    function handleClick(e: MouseEvent){if(ref.current&&e.target instanceof Node&&!ref.current.contains(e.target))setOpen(false);}
     document.addEventListener("mousedown",handleClick);
     return()=>document.removeEventListener("mousedown",handleClick);
   },[]);

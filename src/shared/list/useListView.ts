@@ -1,9 +1,45 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/useListView.js
+   ClubCampus — shared/list/useListView.ts
    State + Logic Hook für ListView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo } from "react";
 import { fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.js";
+import type { Account, Ansicht, Sb } from "../../types.ts";
+import type {
+  ColDef, ExportFormat, ExportFormatOption, FilterDef, FilterVals, FilterValue,
+  GetRowId, GroupOption, ListGroup, ListRow, MoreEntry, SavedViews,
+} from "./types.ts";
+import type { RangeFilterPayload } from "./RangeFilter.tsx";
+
+export interface UseListViewProps {
+  rows: ListRow[];
+  colDefs: ColDef[];
+  defaultCols?: string[];
+  savedViews?: SavedViews | null;
+  filterFn?: (rows: ListRow[], search: string, filterVals: FilterVals) => ListRow[];
+  sortFn?: (rows: ListRow[], sortCol: string, sortDir: "asc" | "desc") => ListRow[];
+  buildGroupsFn?: (rows: ListRow[], groupBy: string[], groupOrder: Record<string, string[]>, filterVals: FilterVals) => ListGroup[];
+  filterDefs: FilterDef[];
+  groupOptions: GroupOption[];
+  groupOptionsMore: GroupOption[];
+  multiGroup: boolean;
+  getRowId: GetRowId;
+  sb: Sb;
+  account?: Account | null;
+  vereinId?: string | null;
+  viewTyp: string;
+  selectable: boolean;
+  moreActions: MoreEntry[];
+  exportFn?: (rows: ListRow[], cols: ColDef[], groups: ListGroup[], format: ExportFormat) => void;
+  exportFormats: ExportFormatOption[];
+  isAdmin: boolean;
+  isMobile: boolean;
+  externalSetFilter?: { current: ((vals: FilterVals) => void) | null } | null;
+}
+
+/* Zwischenstand beim Ziehen von Gruppen bzw. Zeilen */
+interface DragGroupState { key: string; levelKey: string }
+interface DragRowState { id: unknown; groupKey: string }
 
 export function useListView({
   rows,
@@ -29,29 +65,29 @@ export function useListView({
   isAdmin,
   isMobile,
   externalSetFilter,
-}) {
+}: UseListViewProps) {
   const initialCols = defaultCols || colDefs.filter(c => c.default).map(c => c.key);
 
   // ── State ────────────────────────────────────────────────────
-  const [visibleCols,      setVisibleCols]      = useState(initialCols);
+  const [visibleCols,      setVisibleCols]      = useState<string[]>(initialCols);
   const [search,           setSearch]           = useState("");
-  const [filterVals,       setFilterVals]       = useState({});
+  const [filterVals,       setFilterVals]       = useState<FilterVals>({});
   const [sortCol,          setSortCol]          = useState(colDefs[0]?.key || "");
-  const [sortDir,          setSortDir]          = useState("asc");
-  const [groupBy,          setGroupBy]          = useState(["none"]);
-  const [groupOrder,       setGroupOrder]       = useState({});
-  const [manualOrder,      setManualOrder]      = useState({});
-  const [collapsedGroups,  setCollapsedGroups]  = useState(new Set());
-  const [dragGroup,        setDragGroup]        = useState(null);
-  const [dragOverGroup,    setDragOverGroup]    = useState(null);
-  const [dragRow,          setDragRow]          = useState(null);
-  const [dragOverRow,      setDragOverRow]      = useState(null);
-  const [dragCol,          setDragCol]          = useState(null);
-  const [dragOverCol,      setDragOverCol]      = useState(null);
-  const [selected,         setSelected]         = useState(new Set());
+  const [sortDir,          setSortDir]          = useState<"asc" | "desc">("asc");
+  const [groupBy,          setGroupBy]          = useState<string[]>(["none"]);
+  const [groupOrder,       setGroupOrder]       = useState<Record<string, string[]>>({});
+  const [manualOrder,      setManualOrder]      = useState<Record<string, unknown[]>>({});
+  const [collapsedGroups,  setCollapsedGroups]  = useState<Set<string>>(new Set());
+  const [dragGroup,        setDragGroup]        = useState<DragGroupState | null>(null);
+  const [dragOverGroup,    setDragOverGroup]    = useState<string | null>(null);
+  const [dragRow,          setDragRow]          = useState<DragRowState | null>(null);
+  const [dragOverRow,      setDragOverRow]      = useState<unknown>(null);
+  const [dragCol,          setDragCol]          = useState<string | null>(null);
+  const [dragOverCol,      setDragOverCol]      = useState<string | null>(null);
+  const [selected,         setSelected]         = useState<Set<unknown>>(new Set());
   const [selectMode,       setSelectMode]       = useState(false);
-  const [customViews,      setCustomViews]      = useState([]);
-  const [savedView,        setSavedView]        = useState(savedViews ? Object.keys(savedViews)[0] : null);
+  const [customViews,      setCustomViews]      = useState<Ansicht[]>([]);
+  const [savedView,        setSavedView]        = useState<string | null>(savedViews ? Object.keys(savedViews)[0] : null);
   const [saveOpen,         setSaveOpen]         = useState(false);
   const [saveName,         setSaveName]         = useState("");
   const [saveGeteilt,      setSaveGeteilt]      = useState(false);
@@ -71,7 +107,7 @@ export function useListView({
   }, [externalSetFilter]);
 
   // ── Ansichten anwenden ───────────────────────────────────────
-  function applyStandardView(key) {
+  function applyStandardView(key: string) {
     if (!savedViews?.[key]) return;
     setSavedView(key);
     setVisibleCols(savedViews[key].cols);
@@ -81,7 +117,7 @@ export function useListView({
     setManualOrder({});
   }
 
-  function applyCustomView(v) {
+  function applyCustomView(v: Ansicht) {
     setSavedView("custom_" + v.id);
     setVisibleCols(v.spalten || initialCols);
     setFilterVals(v.filter || {});
@@ -109,7 +145,7 @@ export function useListView({
     setSaveName(""); setSaveGeteilt(false); setSaveOpen(false); setSaving(false);
   }
 
-  async function deleteView(id, ownerId) {
+  async function deleteView(id: string, ownerId: string | null) {
     if (!sb) return;
     if (ownerId !== account?.id && !isAdmin) return;
     await deleteAnsicht(sb, id);
@@ -125,16 +161,17 @@ export function useListView({
   }
 
   // ── Sort ─────────────────────────────────────────────────────
-  function handleSort(key) {
+  function handleSort(key: string) {
     setManualOrder({});
     if (sortCol === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortCol(key); setSortDir("asc"); }
   }
 
   // ── Filter ───────────────────────────────────────────────────
-  function handleFilterChange(key, val, active) {
+  function handleFilterChange(key: string, val?: string | RangeFilterPayload, active?: boolean) {
     if (key === "__reset") { setFilterVals({}); return; }
-    if (key === "__range") {
+    /* typeof-Prüfung statt Cast: narrowt die Union auf RangeFilterPayload */
+    if (key === "__range" && val && typeof val === "object") {
       const { rangeKey, von, bis } = val;
       if (von == null && bis == null) {
         setFilterVals(prev => { const n = { ...prev }; delete n[rangeKey]; return n; });
@@ -144,13 +181,14 @@ export function useListView({
       return;
     }
     setFilterVals(prev => {
-      const cur = prev[key] || [];
-      return { ...prev, [key]: active ? [...cur, val] : cur.filter(v => v !== val) };
+      const cur = prev[key];
+      const list: string[] = Array.isArray(cur) ? cur : [];
+      return { ...prev, [key]: active ? [...list, String(val)] : list.filter(v => v !== val) };
     });
   }
 
   // ── Spalten Drag ─────────────────────────────────────────────
-  function handleColDrop(targetKey, dragKey) {
+  function handleColDrop(targetKey: string, dragKey?: string | null) {
     const from = dragKey || dragCol;
     if (!from || from === targetKey) return;
     setVisibleCols(prev => {
@@ -164,7 +202,7 @@ export function useListView({
   }
 
   // ── Selektierung ─────────────────────────────────────────────
-  function toggleSelectRow(id) {
+  function toggleSelectRow(id: unknown) {
     setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
 
@@ -178,10 +216,13 @@ export function useListView({
         if (!name.includes(q)) return false;
       }
       for (const [k, vals] of Object.entries(filterVals)) {
-        if (!vals || vals.length === 0) continue;
+        /* Array.isArray schliesst Range-Filter aus. Ohne diese Prüfung lief
+           die Standard-Pipeline bei einem gesetzten Range-Filter in
+           vals.includes(...) und damit in einen TypeError. */
+        if (!vals || !Array.isArray(vals) || vals.length === 0) continue;
         const v = row[k];
         if (Array.isArray(v)) { if (!v.some(x => vals.includes(x))) return false; }
-        else if (!vals.includes(v)) return false;
+        else if (typeof v !== "string" || !vals.includes(v)) return false;
       }
       return true;
     });
@@ -198,14 +239,14 @@ export function useListView({
 
   const hasGroup = Array.isArray(groupBy) ? groupBy.some(g => g && g !== "none") : groupBy !== "none";
 
-  const groups = useMemo(() => {
+  const groups: ListGroup[] = useMemo(() => {
     if (!hasGroup) return [{ key: "__all", label: "", type: "none", members: sorted, children: null }];
     if (buildGroupsFn) return buildGroupsFn(sorted, groupBy, groupOrder, filterVals);
-    function buildDefault(rows, levels, groupOrder) {
+    function buildDefault(rows: ListRow[], levels: string[], groupOrder: Record<string, string[]>): ListGroup[] {
       const firstLevel = levels[0] || "none";
       const restLevels = levels.slice(1);
       if (!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
-      const map = {};
+      const map: Record<string, ListRow[]> = {};
       rows.forEach(r => { const k = String(r[firstLevel] ?? "—"); if (!map[k]) map[k] = []; map[k].push(r); });
       const orderForLevel = groupOrder?.[firstLevel];
       let entries = Object.entries(map);
@@ -230,11 +271,11 @@ export function useListView({
   }, [sorted, groupBy, groupOrder, hasGroup, buildGroupsFn, filterVals]);
 
   // ── moreItems ────────────────────────────────────────────────
-  const COLS = visibleCols.map(k => colDefs.find(c => c.key === k)).filter(Boolean);
+  const COLS = visibleCols.map(k => colDefs.find(c => c.key === k)).filter((c): c is ColDef => !!c);
 
-  const moreItems = [
+  const moreItems: MoreEntry[] = [
     ...moreActions,
-    ...(moreActions.length > 0 && !isMobile ? ["sep"] : []),
+    ...(moreActions.length > 0 && !isMobile ? ["sep" as const] : []),
     ...(!isMobile && selectable ? [{ header: true, label: "Aktionen" }] : []),
     ...(!isMobile && selectable ? [{ icon: "checkbox", label: selectMode ? "Auswahlmodus beenden" : "Auswählen", onClick: () => { setSelectMode(m => { if (m) setSelected(new Set()); return !m; }); } }] : []),
     { header: true, label: "Ansichten" },
@@ -260,7 +301,7 @@ export function useListView({
     ] : []),
     { icon: "device-floppy", label: "Als neue Ansicht speichern", onClick: () => setSaveOpen(true) },
     ...(exportFn && exportFormats.length > 0 ? [
-      "sep",
+      "sep" as const,
       { header: true, label: "Export" },
       ...exportFormats.map(f => ({
         icon: f.icon || "file-text",

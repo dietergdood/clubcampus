@@ -13,7 +13,7 @@ import { MemberKPIs } from "./members/MemberKPIs.jsx";
 import { makeMemberRenderCell } from "./members/MemberListCell.jsx";
 import { useMemberMeta } from "../domains/members/useMemberMeta.js";
 import { ElternListView } from "./members/ElternListView.jsx";
-import { ListView } from "../shared/list/ListView.jsx";
+import { ListView } from "../shared/list/ListView.tsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";
 import { NeuesMitgliedModal } from "./members/NeuesMitgliedModal.jsx";
 

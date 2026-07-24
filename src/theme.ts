@@ -26,10 +26,10 @@ export { ModalOrSheet } from "./shared/ui/Modal.tsx";
 export { Stat } from "./shared/ui/Stat.tsx";
 export { SortHeader } from "./shared/list/SortHeader.tsx";
 export { BulkBar } from "./shared/list/BulkBar.tsx";
-export { ColMenuContent, ColMenuButton } from "./shared/list/ColMenu.jsx";
+export { ColMenuContent, ColMenuButton } from "./shared/list/ColMenu.tsx";
 export { RangeFilter } from "./shared/list/RangeFilter.tsx";
 export { COMPONENT_REGISTRY } from "./shared/componentRegistry.js";
-export { Toolbar } from "./shared/list/Toolbar.jsx";
+export { Toolbar } from "./shared/list/Toolbar.tsx";
 
 
 /* Annotation absichtlich: ohne sie leitet TS aus dem ~93 KB langen

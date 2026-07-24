@@ -11,11 +11,13 @@ export interface RangeValue {
   bis?: number | null;
 }
 
-/* Nutzlast, die RangeFilter unter dem Schlüssel "__range" zurückmeldet */
+/* Nutzlast, die RangeFilter unter dem Schlüssel "__range" zurückmeldet.
+   von/bis sind null, wenn der Filter entfernt wird (Chip-Klick in der
+   Toolbar) — useListView löscht den Eintrag dann aus filterVals. */
 export interface RangeFilterPayload {
   rangeKey: string;
-  von: number;
-  bis: number;
+  von: number | null;
+  bis: number | null;
 }
 
 interface RangeFilterProps {

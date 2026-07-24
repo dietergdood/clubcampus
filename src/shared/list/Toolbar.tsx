@@ -1,17 +1,52 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/Toolbar.jsx
+   ClubCampus — shared/list/Toolbar.tsx
    Liste Toolbar: Suche, Filter, Gruppierung, Mehr-Menü, Spalten
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, Fragment, useMemo } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
 import { useIsMobile } from "../ui/hooks.ts";
 import { RangeFilter } from "./RangeFilter.tsx";
+import type { RangeFilterPayload, RangeValue } from "./RangeFilter.tsx";
+import type { FilterDef, FilterVals, GroupOption, MoreEntry } from "./types.ts";
 
+/* Ein Filterwert wird gesetzt (key,val,active) oder ein Range gemeldet
+   ("__range", payload) bzw. alles zurückgesetzt ("__reset"). */
+export type FilterChangeHandler = (key: string, val?: string | RangeFilterPayload, active?: boolean) => void;
+
+/* filterVals hält je nach Filterart eine Auswahlliste oder einen Bereich.
+   Diese beiden Helfer holen die passende Sicht heraus, ohne Cast. */
+function alsListe(v: FilterVals[string]): string[] {
+  return Array.isArray(v) ? v : [];
+}
+function alsBereich(v: FilterVals[string]): RangeValue {
+  return v && !Array.isArray(v) ? v : {};
+}
+
+/* Schlüssel aller Filter, die gerade einen Wert haben — diese Sektionen
+   werden beim Öffnen des Filtermenüs aufgeklappt. */
+function aktiveSektionen(filterDefs: FilterDef[], filterVals: FilterVals): Set<string> {
+  return new Set(filterDefs.filter(({key,type})=>{
+    if(type==="range"){const b=alsBereich(filterVals[key]);return b.von!=null||b.bis!=null;}
+    return alsListe(filterVals[key]).length>0;
+  }).map(({key})=>key));
+}
+
+interface FilterBodyProps {
+  filterDefs: FilterDef[];
+  filterVals: FilterVals;
+  onFilterChange?: FilterChangeHandler | null;
+  filterSearch: string;
+  setFilterSearch: (q: string) => void;
+  openSecs: Set<string>;
+  setOpenSecs: (secs: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  mobile?: boolean;
+}
 
 /* ── FilterBody: Gemeinsamer Filter-Inhalt Desktop+Mobile ── */
-function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setFilterSearch, openSecs, setOpenSecs, mobile=false }){
+function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setFilterSearch, openSecs, setOpenSecs, mobile=false }: FilterBodyProps){
   return(
     <>
       <div className="cc-filter-search">
@@ -27,12 +62,12 @@ function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setF
               const matching=new Set(filterDefs.filter(({vals,type})=>type!=="range"&&(vals||[]).some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
               setOpenSecs(matching);
             } else {
-              setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
+              setOpenSecs(aktiveSektionen(filterDefs,filterVals));
             }
           }}
         />
       </div>
-      {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
+      {filterDefs.map(({key,label="",vals=[],type,min=0,max=0,suffix})=>{
         const q=filterSearch.toLowerCase();
         if(type==="divider") return q?null:<div key={key} className={mobile?"cc-filter-mobile-divider":"cc-filter-divider"}/>;
         if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
@@ -41,9 +76,9 @@ function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setF
         const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
         if(!isRange&&visVals.length===0) return null;
         if(isRange&&q&&!label.toLowerCase().includes(q)) return null;
-        const rv=filterVals[key]||{};
+        const rv=alsBereich(filterVals[key]);
         const rangeActive=isRange&&(rv.von!=null||rv.bis!=null);
-        const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
+        const selCount=isRange?(rangeActive?1:0):alsListe(filterVals[key]).length;
         if(mobile){
           return(
             <div key={key}>
@@ -51,10 +86,10 @@ function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setF
                 {label}{selCount>0&&<span className="cc-filter-sec-badge" style={{marginLeft:8}}>{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
               </div>
               {isRange?(
-                <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={20}/>
+                <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange ?? undefined} padLeft={20}/>
               ):(
                 visVals.map(v=>{
-                  const active=(filterVals[key]||[]).includes(v);
+                  const active=alsListe(filterVals[key]).includes(v);
                   return(
                     <div key={v} className="cc-filter-mobile-item"
                       onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
@@ -79,11 +114,11 @@ function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setF
               </span>
             </div>
             {isOpen&&(isRange?(
-              <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={12}/>
+              <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange ?? undefined} padLeft={12}/>
             ):(
               <div className="cc-filter-sec-body">
                 {visVals.map(v=>{
-                  const active=(filterVals[key]||[]).includes(v);
+                  const active=alsListe(filterVals[key]).includes(v);
                   return(
                     <div key={v} className="cc-col-menu-item"
                       onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
@@ -101,6 +136,33 @@ function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setF
   );
 }
 
+export interface ToolbarProps {
+  /* Suche — onSearch=null blendet das Suchfeld aus */
+  search?: string;
+  onSearch?: ((q: string) => void) | null;
+  /* Filter */
+  filterDefs?: FilterDef[];
+  filterVals?: FilterVals;
+  onFilterChange?: FilterChangeHandler | null;
+  /* Gruppieren */
+  groupOptions?: GroupOption[];
+  groupOptionsMore?: GroupOption[];
+  groupBy?: string | string[];
+  onGroupChange?: ((groupBy: string | string[]) => void) | null;
+  multiGroup?: boolean;
+  /* Zähler: jede Erhöhung öffnet das jeweilige Mobile-Panel */
+  externalFilterOpen?: number;
+  onExternalFilterClose?: (() => void) | null;
+  externalGroupOpen?: number;
+  onExternalGroupClose?: (() => void) | null;
+  /* Mehr-Menu */
+  moreItems?: MoreEntry[];
+  /* Spalten */
+  colMenu?: ReactNode;
+  /* Rechter Slot */
+  right?: ReactNode;
+}
+
 export function Toolbar({
   /* Suche */
   search="", onSearch=null,
@@ -108,54 +170,54 @@ export function Toolbar({
   filterDefs=[], filterVals={}, onFilterChange=null,
   /* Gruppieren */
   groupOptions=[], groupOptionsMore=[], groupBy="none", onGroupChange=null, multiGroup=false,
-  externalFilterOpen=false, onExternalFilterClose=null,
-  externalGroupOpen=false, onExternalGroupClose=null,
+  externalFilterOpen=0, onExternalFilterClose=null,
+  externalGroupOpen=0, onExternalGroupClose=null,
   /* Mehr-Menu */
   moreItems=[],
   /* Spalten */
   colMenu=null,
   /* Rechter Slot */
   right=null,
-}){
+}: ToolbarProps){
   const isMobile=useIsMobile();
   const [filterOpen,setFilterOpen]=useState(false);
   const [filterSearch,setFilterSearch]=useState("");
-  const [openSecs,setOpenSecs]=useState(new Set());
+  const [openSecs,setOpenSecs]=useState<Set<string>>(new Set());
   const [groupOpen,setGroupOpen]=useState(false);
   useEffect(()=>{if(externalFilterOpen>0){setFilterOpen(true);setGroupOpen(false);setMoreOpen(false);}},[externalFilterOpen]);
   useEffect(()=>{if(externalGroupOpen>0){setGroupOpen(true);setFilterOpen(false);setMoreOpen(false);}},[externalGroupOpen]);
   const [moreOpen,setMoreOpen]=useState(false);
-  const [moreSubPanel,setMoreSubPanel]=useState(null);
+  const [moreSubPanel,setMoreSubPanel]=useState<number|null>(null);
   const [groupMoreOpen,setGroupMoreOpen]=useState(false);
   const [openMoreSections,setOpenMoreSections]=useState(new Set());
-  const [dragGroup,setDragGroup]=useState(null);
-  const [dragOverGroup,setDragOverGroup]=useState(null);
-  const [mobileGroupPicker,setMobileGroupPicker]=useState(null); // index of level being picked
-  const [mobileSubMenu,setMobileSubMenu]=useState(null); // null | "filter" | "group" | "views" | "export"
-  const filterRef=useRef(null);
-  const groupRef=useRef(null);
-  const moreRef=useRef(null);
+  const [dragGroup,setDragGroup]=useState<string|null>(null);
+  const [dragOverGroup,setDragOverGroup]=useState<string|null>(null);
+  const [mobileGroupPicker,setMobileGroupPicker]=useState<number|null>(null); // index of level being picked
+  const [mobileSubMenu,setMobileSubMenu]=useState<"filter"|"group"|"views"|"export"|null>(null);
+  const filterRef=useRef<HTMLDivElement>(null);
+  const groupRef=useRef<HTMLDivElement>(null);
+  const moreRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     if(filterOpen){
       setFilterSearch("");
-      setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
+      setOpenSecs(aktiveSektionen(filterDefs,filterVals));
     }
   },[filterOpen]);
   useEffect(()=>{
     if(!filterOpen){onExternalFilterClose&&onExternalFilterClose(); return;}
-    const h=e=>{if(filterRef.current&&!filterRef.current.contains(e.target))setFilterOpen(false);};
+    const h=(e: MouseEvent)=>{if(filterRef.current&&e.target instanceof Node&&!filterRef.current.contains(e.target))setFilterOpen(false);};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[filterOpen]);
   useEffect(()=>{
     if(!groupOpen) return;
-    const h=e=>{if(groupRef.current&&!groupRef.current.contains(e.target))setGroupOpen(false);};
+    const h=(e: MouseEvent)=>{if(groupRef.current&&e.target instanceof Node&&!groupRef.current.contains(e.target))setGroupOpen(false);};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[groupOpen]);
   useEffect(()=>{
     if(!moreOpen||isMobile) return;
-    const h=e=>{if(moreRef.current&&!moreRef.current.contains(e.target))setMoreOpen(false);};
+    const h=(e: MouseEvent)=>{if(moreRef.current&&e.target instanceof Node&&!moreRef.current.contains(e.target))setMoreOpen(false);};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[moreOpen,isMobile]);
@@ -166,8 +228,8 @@ export function Toolbar({
   const isGrouped=groupByArr.some(g=>g&&g!=="none");
 
   const accentStyle={background:"var(--cc-accent,#FEC604)",borderColor:"var(--cc-accent,#FEC604)",color:"var(--cc-accent-text,#000)"};
-  const isGroupActive=v=>groupByArr.includes(v);
-  function toggleGroup(val){
+  const isGroupActive=(v: string)=>groupByArr.includes(v);
+  function toggleGroup(val: string){
     if(!onGroupChange) return;
     if(!multiGroup){ onGroupChange(val==="none"?"none":val); return; }
     if(val==="none"){ onGroupChange(["none"]); return; }
@@ -194,7 +256,7 @@ export function Toolbar({
               className="cc-ml-btn"
               style={hasActiveFilter?accentStyle:{}}
               onClick={()=>{
-                if(isMobile){setFilterSearch("");setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));setMoreOpen(true);setMobileSubMenu("filter");}
+                if(isMobile){setFilterSearch("");setOpenSecs(aktiveSektionen(filterDefs,filterVals));setMoreOpen(true);setMobileSubMenu("filter");}
                 else{setFilterOpen(o=>!o);setGroupOpen(false);setMoreOpen(false);}
               }}>
               <TI n="filter" size={15}/>
@@ -207,7 +269,7 @@ export function Toolbar({
                     <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
                     <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
                   </div>
-                  <FilterBody filterDefs={filterDefs} filterVals={filterVals} onFilterChange={onFilterChange} filterSearch={filterSearch} setFilterSearch={setFilterSearch} openSecs={openSecs} setOpenSecs={setOpenSecs}/>
+                  <FilterBody filterDefs={filterDefs} filterVals={filterVals} onFilterChange={onFilterChange ?? undefined} filterSearch={filterSearch} setFilterSearch={setFilterSearch} openSecs={openSecs} setOpenSecs={setOpenSecs}/>
                 </div>
             )}
           </div>
@@ -376,7 +438,7 @@ export function Toolbar({
                             if(hasHeader) return null;
                             return(
                               <button key={i} className="cc-sheet-nav-item"
-                                onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
+                                onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick?.();}}>
                                 <span className="cc-sheet-nav-left">{item.icon&&<TI n={item.icon} size={18}/>}{item.label}</span>
                               </button>
                             );
@@ -410,7 +472,7 @@ export function Toolbar({
                           <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
                         </div>
                         <div className="cc-sheet-scroll">
-                          <FilterBody filterDefs={filterDefs} filterVals={filterVals} onFilterChange={onFilterChange} filterSearch={filterSearch} setFilterSearch={setFilterSearch} openSecs={openSecs} setOpenSecs={setOpenSecs} mobile={true}/>
+                          <FilterBody filterDefs={filterDefs} filterVals={filterVals} onFilterChange={onFilterChange ?? undefined} filterSearch={filterSearch} setFilterSearch={setFilterSearch} openSecs={openSecs} setOpenSecs={setOpenSecs} mobile={true}/>
                           {hasActiveFilter&&(
                             <div className="cc-filter-mobile-footer">
                               <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange("__reset");}}>Alle Filter zurücksetzen</button>
@@ -504,12 +566,12 @@ export function Toolbar({
                               return(
                                 <div key={i} style={{display:"flex",alignItems:"center",borderBottom:"0.5px solid var(--border)",overflow:"visible"}}>
                                   <button className="cc-mehr-sheet-item" style={{flex:1,borderBottom:"none",padding:"13px 20px",minWidth:0}}
-                                    onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick();}}>
+                                    onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onClick?.();}}>
                                     {item.icon?<TI n={item.icon} size={16}/>:<TI n="layout" size={16}/>}{item.label}
                                   </button>
                                   {item.onDelete&&(
                                     <button className="cc-sheet-trash"
-                                      onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onDelete();}}>
+                                      onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);item.onDelete?.();}}>
                                       <TI n="trash" size={15}/>
                                     </button>
                                   )}
@@ -525,7 +587,7 @@ export function Toolbar({
               ):(
                 <div className="cc-ml-dropdown" style={{right:0,left:"auto",minWidth:220}}>
                   {(()=>{
-                    let currentSection=null;
+                    let currentSection: string|null=null;
                     return moreItems.map((item,i)=>{
                       if(item==="sep") return openMoreSections.has(currentSection)?<div key={i} className="cc-menu-sep"/>:null;
                       if(item.header){
@@ -554,7 +616,7 @@ export function Toolbar({
                       return(
                         <div key={i} className={`cc-col-menu-item${item.danger?" cc-menu-item-danger":""}`}
                           style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}
-                          onClick={()=>{setMoreOpen(false);setMoreSubPanel(null);item.onClick();}}>
+                          onClick={()=>{setMoreOpen(false);setMoreSubPanel(null);item.onClick?.();}}>
                           <span style={{display:"flex",alignItems:"center",gap:8}}>
                             {item.icon&&<TI n={item.icon} size={14}/>}{item.label}
                           </span>
@@ -562,7 +624,7 @@ export function Toolbar({
                             <button
                               className="cc-icon-btn"
                               style={{color:"var(--sub)",opacity:0.6,padding:"2px 4px"}}
-                              onClick={e=>{e.stopPropagation();setMoreOpen(false);item.onDelete();}}>
+                              onClick={e=>{e.stopPropagation();setMoreOpen(false);item.onDelete?.();}}>
                               <TI n="trash" size={12}/>
                             </button>
                           )}
@@ -586,8 +648,8 @@ export function Toolbar({
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {(()=>{
             const OR_GROUPS=[["kaderrollen","funktionen"],["teams","funktionsgruppen"]];
-            const chips=[];
-            let lastGroup=null;
+            const chips: ReactNode[]=[];
+            let lastGroup: string[]|null=null;
             Object.entries(filterVals).forEach(([k,vals])=>{
               if(!vals) return;
               if(typeof vals==="object"&&!Array.isArray(vals)){
