@@ -14,14 +14,6 @@ import type { MemberRow } from "./memberMapper.ts";
 import type { ColDef, ExportFormat, GroupContext } from "../../shared/list/types.ts";
 import type { MemberGroup } from "./memberGrouping.ts";
 
-/* ⚠ profil_geprueft_at wird von mapMembers nicht mitgegeben. Die Spalte
-   existiert in mitglieder, landet aber nicht im UI-Objekt — der Export
-   meldet für datenpruefung deshalb immer "Ausstehend".
-   Siehe offene Punkte der Migration. */
-interface MemberRowExport extends MemberRow {
-  profil_geprueft_at?: string | null;
-}
-
 function teamName(t: unknown): string {
   if (!t) return "";
   if (typeof t === "string") return t;
@@ -31,7 +23,7 @@ function teamName(t: unknown): string {
   return "";
 }
 
-function exportCellValue(k: string, m: MemberRowExport, groupContext: GroupContext = {type:"none",key:null}): string {
+function exportCellValue(k: string, m: MemberRow, groupContext: GroupContext = {type:"none",key:null}): string {
   const gc=groupContext;
   if(k==="rollen") return (m.rollen||[]).join(", ");
   if(k==="teams"){
@@ -69,7 +61,7 @@ function exportCellValue(k: string, m: MemberRowExport, groupContext: GroupConte
   return v!=null?String(v):"";
 }
 
-function getExportRows(m: MemberRowExport, COLS: ColDef[], gc: GroupContext): string[] {
+function getExportRows(m: MemberRow, COLS: ColDef[], gc: GroupContext): string[] {
   const exportCols=COLS.filter(c=>c.key!=="name").map(c=>c.key);
   return [m.name,...exportCols.map(k=>exportCellValue(k,m,gc))];
 }

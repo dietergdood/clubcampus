@@ -4,12 +4,10 @@
    ═══════════════════════════════════════════════════════════════ */
 import type { Mitglied, PortalRolle } from "../../types.ts";
 
-/* ⚠ geprueft, eintrittsdatum und teams haben KEINE Spalte in mitglieder
-   und sind auch keine der von loadDbMitglieder ergänzten Felder. Der Code
-   unten liest sie trotzdem; sie sind zur Laufzeit immer undefined.
-   Siehe offene Punkte der Migration. */
+/* ⚠ eintrittsdatum und teams haben KEINE Spalte in mitglieder und sind auch
+   keine der von loadDbMitglieder ergänzten Felder. Der Code unten liest sie
+   trotzdem; sie sind zur Laufzeit immer undefined. Siehe offene Punkte. */
 interface MitgliedRoh extends Mitglied {
-  geprueft?: boolean;
   eintrittsdatum?: string | null;
   teams?: string[];
 }
@@ -36,7 +34,11 @@ export function mapMembers(
     (m.kader_rollen||[]).forEach(r=>rollenSet.add(ROLLE_LABEL[r]||r));
     if(rollenSet.size===0&&m.rolle&&m.rolle!=="-") rollenSet.add(ROLLE_LABEL[m.rolle]||m.rolle);
     const portalStatus=m.hat_portal_zugang?"Aktiv":(m.hat_benutzer?"Deaktiviert":"Kein Zugang");
-    const dpStatus=(!m.datenstatus||m.datenstatus==="Vollstandig"||m.datenstatus==="Vollständig"||m.datenstatus==="geprüft"||m.datenstatus==="Geprueft")&&m.geprueft===true?"Geprueft":m.geprueft===false||!m.geprueft?"Ausstehend":m.datenstatus||"Ausstehend";
+    /* Datenprüfung hängt an profil_geprueft_at (seit Session 17). Die alte
+       Bedingung prüfte ein Feld `geprueft`, das es in mitglieder nicht gibt —
+       dadurch stand hier für jedes Mitglied konstant "Ausstehend".
+       datenstatus ist veraltet und wird nicht mehr ausgewertet. */
+    const dpStatus=m.profil_geprueft_at?"Geprueft":"Ausstehend";
     return {
       id:m.id,
       name:(`${m.vorname||""} ${m.nachname||""}`).trim()||"?",
@@ -47,6 +49,8 @@ export function mapMembers(
       teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams.map(t=>typeof t==="object"?t:{name:t,kurz:t}):(m.teams||[]).map(t=>({name:t,kurz:t})),
       team:(m.teams||[]).join(", ")||"-",
       datenpruefung:dpStatus, status:m.datenstatus||"Ausstehend",
+      /* Wird vom Export gelesen und fehlte bisher im UI-Objekt */
+      profil_geprueft_at:m.profil_geprueft_at||null,
       portal:portalStatus, hat_portal_zugang:m.hat_portal_zugang, hat_benutzer:m.hat_benutzer,
       ort:m.ort||"-", location:m.ort||"-", plz:m.plz||null,
       wohnort:m.plz&&m.ort?`${m.plz} ${m.ort}`:(m.ort||null),
