@@ -202,3 +202,86 @@ export function useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, s
     handleLogout,
   };
 }
+
+export function useTenant({ sb, setTenant, setAppTheme, applyThemeCss, THEME_DEFAULT_STATIC }) {
+  async function loadTenant() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb.from("vereine").select("id,name,theme").single();
+      if (error || !data) return;
+      setTenant(data);
+      const t = { ...THEME_DEFAULT_STATIC, ...(data.theme || {}) };
+      setAppTheme(t);
+      applyThemeCss(t);
+      try { localStorage.setItem("cc-theme", JSON.stringify(t)); } catch {}
+    } catch (e) { console.warn("[CC] loadTenant:", e.message); }
+  }
+  return { loadTenant };
+}
+
+export function useDbUser({ sb, setDbUser, setTeamRollen, setError, ROLLE_PRIORITAET }) {
+  async function loadDbUser(uid, email) {
+    try {
+      const { data, error } = await sb.from("benutzer").select("*").eq("id", uid).single();
+      if (data) {
+        if (data.aktiv === false) {
+          setError("Dein Portal-Zugang wurde deaktiviert. Bitte wende dich an den Vereinsadministrator.");
+          await sb.auth.signOut();
+          return;
+        }
+        setDbUser(data);
+        if (data.mitglied_id) {
+          const { data: kaderData } = await sb.from("kader")
+            .select("team_id, rollen")
+            .eq("mitglied_id", data.mitglied_id)
+            .eq("aktiv", true);
+          if (kaderData) {
+            const ROLLE_MAP = {
+              "Spieler/in": "spieler", "Trainer/in": "trainer", "Co-Trainer/in": "trainer",
+              "Goalietrainer/in": "trainer", "Assistenz": "funktionaer", "Masseur/in": "funktionaer",
+            };
+            const map = {};
+            kaderData.forEach(k => {
+              const portalRollen = (k.rollen || []).map(r => ROLLE_MAP[r]).filter(Boolean);
+              const hoechste = ROLLE_PRIORITAET.find(p => portalRollen.includes(p)) || "spieler";
+              map[k.team_id] = hoechste;
+            });
+            setTeamRollen(map);
+            const alleRollen = Object.values(map);
+            const hoechsteGlobal = ROLLE_PRIORITAET.find(p => alleRollen.includes(p));
+            if (hoechsteGlobal && hoechsteGlobal !== data.role) {
+              await sb.from("benutzer").update({ role: hoechsteGlobal }).eq("id", uid);
+              setDbUser(prev => ({ ...prev, role: hoechsteGlobal }));
+            }
+          }
+        }
+      } else {
+        console.warn("[FCH] benutzer nicht gefunden:", error?.message);
+        setDbUser({ id: uid, email: email || "", role: "__kein_zugang", teams: [], name: email || "Benutzer" });
+      }
+    } catch (e) {
+      console.warn("[FCH] loadDbUser error:", e.message);
+      setDbUser({ id: uid, email: email || "", role: "__kein_zugang", teams: [], name: email || "Benutzer" });
+    }
+  }
+  return { loadDbUser };
+}
+
+export function useDbTeams({ sb, setDbTeams }) {
+  async function loadDbTeams() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb.from("teams").select("*").eq("aktiv", true).order("hauptbereich").order("name");
+      if (error) console.warn("[FCH] loadDbTeams error:", error.message);
+      if (data && data.length > 0) {
+        let mods = [];
+        try { const { data: modData } = await sb.from("team_module").select("*"); mods = modData || []; } catch {}
+        setDbTeams(data.map(t => ({
+          ...t,
+          module_aktiv: mods.filter(m => m.team_id === t.id && m.aktiv).map(m => m.modul)
+        })));
+      }
+    } catch (e) { console.warn("[FCH] loadDbTeams:", e.message); }
+  }
+  return { loadDbTeams };
+}

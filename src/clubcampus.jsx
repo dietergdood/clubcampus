@@ -6,8 +6,9 @@ import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT, MEMBERS, FUNKTIONEN} from "./de
 import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.js";
 import { Skel, SkelCard, SkelList } from "./shared/ui/Skeleton.jsx";
 import { LoginScreen } from "./modules/LoginScreen.jsx";
-import { useAppData } from "./domains/app/useAppData.js";
+import { useAppData, useTenant, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
 import { usePermissions } from "./domains/app/usePermissions.js";
+import { useProfilCheck } from "./domains/app/useProfilCheck.js";
 import { TEAM_HIERARCHY, NAV_TARGET, FIELD_VIS, INITIAL_PLAENE } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./modules/NavigationModul.jsx";
 import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./modules/DashboardModul.jsx";
@@ -191,22 +192,6 @@ function Portal({supabaseClient}){
   /* ── Tenant State ── */
   const [tenant,setTenant]=useState(null); // {slug, name, theme}
 
-  /* Tenant aus Supabase laden */
-  async function loadTenant(){
-    if(!sb) return;
-    try{
-      /* Theme aus vereine laden - kein Login nötig (public read) */
-      const{data,error}=await sb.from("vereine").select("id,name,theme").single();
-      if(error||!data) return;
-      setTenant(data);
-      const t={...THEME_DEFAULT_STATIC,...(data.theme||{})};
-      setAppTheme(t);
-      applyThemeCss(t);
-      /* localStorage aktualisieren */
-      try{localStorage.setItem("cc-theme",JSON.stringify(t));}catch{}
-    }catch(e){console.warn("[CC] loadTenant:",e.message);}
-  }
-
   /* ── Inter Font + PWA Globals ── */
   useEffect(()=>{
     if(!document.getElementById("inter-font")){
@@ -278,73 +263,8 @@ function Portal({supabaseClient}){
   },[]);
 
   const [teamRollen,setTeamRollen]=useState({}); // {team_id: ["spieler"|"trainer"|...]}
-
-  async function loadDbUser(uid, email){
-    try {
-      const {data, error} = await sb.from("benutzer").select("*").eq("id",uid).single();
-      if(data){
-        if(data.aktiv===false){
-          setError("Dein Portal-Zugang wurde deaktiviert. Bitte wende dich an den Vereinsadministrator.");
-          await sb.auth.signOut();
-          return;
-        }
-        setDbUser(data);
-        // Kader-Einträge laden für Team-Rollen
-        if(data.mitglied_id){
-          const {data:kaderData}=await sb.from("kader")
-            .select("team_id, rollen")
-            .eq("mitglied_id", data.mitglied_id)
-            .eq("aktiv", true);
-          if(kaderData){
-            const ROLLE_MAP={
-              "Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer",
-              "Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer",
-            };
-            const map={};
-            kaderData.forEach(k=>{
-              const portalRollen=(k.rollen||[]).map(r=>ROLLE_MAP[r]).filter(Boolean);
-              const hoechste=ROLLE_PRIORITAET.find(p=>portalRollen.includes(p))||"spieler";
-              map[k.team_id]=hoechste;
-            });
-            setTeamRollen(map);
-            // Höchste Rolle über alle Teams → benutzer.role updaten
-            const alleRollen=Object.values(map);
-            const hoechsteGlobal=ROLLE_PRIORITAET.find(p=>alleRollen.includes(p));
-            if(hoechsteGlobal&&hoechsteGlobal!==data.role){
-              await sb.from("benutzer").update({role:hoechsteGlobal}).eq("id",uid);
-              setDbUser(prev=>({...prev,role:hoechsteGlobal}));
-            }
-          }
-        }
-      } else {
-        console.warn("[FCH] benutzer nicht gefunden:", error?.message);
-        setDbUser({id:uid, email:email||"", role:"__kein_zugang", teams:[], name:email||"Benutzer"});
-      }
-    } catch(e) {
-      console.warn("[FCH] loadDbUser error:", e.message);
-      setDbUser({id:uid, email:email||"", role:"__kein_zugang", teams:[], name:email||"Benutzer"});
-    }
-  }
-
-  async function loadDbTeams(){
-    if(!sb) return;
-    try{
-      const{data,error}=await sb.from("teams").select("*").eq("aktiv",true).order("hauptbereich").order("name");
-      if(error) console.warn("[FCH] loadDbTeams error:", error.message);
-      if(data&&data.length>0){
-        // module_teams optional laden
-        let mods=[];
-        try{
-          const{data:modData}=await sb.from("team_module").select("*");
-          mods=modData||[];
-        }catch(e){}
-        setDbTeams(data.map(t=>({
-          ...t,
-          module_aktiv:mods.filter(m=>m.team_id===t.id&&m.aktiv).map(m=>m.modul)
-        })));
-      }
-    }catch(e){ console.warn("[FCH] loadDbTeams:", e.message); }
-  }
+  const { loadDbUser } = useDbUser({ sb, setDbUser, setTeamRollen, setError, ROLLE_PRIORITAET });
+  const { loadDbTeams } = useDbTeams({ sb, setDbTeams });
 
   /* ── Theme aus Supabase laden ── */
   const {
@@ -495,77 +415,9 @@ function Portal({supabaseClient}){
     }
   };
 
-  function getProfilFehlend(){
-    if(!dbUser) return [];
-    const isEltern=role==="eltern"&&!dbMitglieder.find(m=>m.id===dbUser.mitglied_id);
-    if(isEltern){
-      const fehlend=[];
-      // Eigene Daten
-      if(!dbUser.vorname) fehlend.push("vorname");
-      if(!dbUser.nachname) fehlend.push("nachname");
-      if(!dbUser.telefon) fehlend.push("telefon");
-      // Kinder-Daten: alle verknüpften Kinder prüfen
-      const kinder=dbMitglieder.filter(m=>
-        (m.eltern||[]).some(e=>e.benutzer_id===dbUser.id)
-      );
-      kinder.forEach(kind=>{
-        if(!kind.geburtsdatum) fehlend.push(`${kind.vorname}: Geburtsdatum`);
-        if(!kind.nationalitaet) fehlend.push(`${kind.vorname}: Nationalität`);
-        if(!kind.strasse) fehlend.push(`${kind.vorname}: Adresse`);
-      });
-      return fehlend;
-    }
-    const raw=dbMitglieder.find(m=>m.id===dbUser.mitglied_id)||{};
-    const isPassiv=["Passivmitglied","Ehrenmitglied","Gönner"].includes(raw.mitgliedtyp);
-    const fehlend=[];
-    if(!raw.vorname) fehlend.push("vorname");
-    if(!raw.nachname) fehlend.push("nachname");
-    if(!isPassiv&&!raw.geburtsdatum) fehlend.push("geburtsdatum");
-    if(!raw.telefon&&!raw.email) fehlend.push("telefon");
-    return fehlend;
-  }
-
-  function sollProfilPruefen(){
-    if(!dbUser||role==="administrator"||role==="administration") return false;
-    const raw=dbMitglieder.find(m=>m.id===dbUser.mitglied_id)||null;
-    const sechsMonate=new Date();
-    sechsMonate.setMonth(sechsMonate.getMonth()-6);
-
-    // Eigenes geprueft_at (aus mitglieder oder benutzer)
-    const eigenesGeprueft=raw?.profil_geprueft_at||dbUser.profil_geprueft_at;
-    if(!eigenesGeprueft) return true;
-    if(new Date(eigenesGeprueft)<sechsMonate) return true;
-
-    // Für Eltern: auch Kinder prüfen
-    if(role==="eltern"){
-      const kinder=dbMitglieder.filter(m=>
-        (m.eltern||[]).some(e=>e.benutzer_id===dbUser.id)
-      );
-      for(const kind of kinder){
-        if(!kind.profil_geprueft_at) return true;
-        if(new Date(kind.profil_geprueft_at)<sechsMonate) return true;
-      }
-    }
-
-    return false;
-  }
-
-  async function markiereProfilGeprueft(){
-    if(!sb||!dbUser) return;
-    const now=new Date().toISOString();
-    // Eigenes benutzer-Eintrag
-    await sb.from("benutzer").update({profil_geprueft_at:now}).eq("id",dbUser.id);
-    // Für Eltern: alle Kinder ebenfalls markieren
-    if(role==="eltern"){
-      const kinder=dbMitglieder.filter(m=>
-        (m.eltern||[]).some(e=>e.benutzer_id===dbUser.id)
-      );
-      for(const kind of kinder){
-        await sb.from("mitglieder").update({profil_geprueft_at:now}).eq("id",kind.id);
-      }
-    }
-    setDbUser(u=>u?{...u,profil_geprueft_at:now}:u);
-  }
+  const { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft } = useProfilCheck({
+    sb, dbUser, role, dbMitglieder, setDbUser,
+  });
 
   return(
     <ThemeCtx.Provider value={{dark,toggle:toggleDark}}>
