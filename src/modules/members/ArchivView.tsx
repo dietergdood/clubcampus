@@ -1,14 +1,20 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/ArchivView.jsx
+   ClubCampus — modules/members/ArchivView.tsx
    Archiv-Tab — nutzt zentrale ListView
    ═══════════════════════════════════════════════════════════════ */
 import { Btn, Av, useConfirm, EmptyState } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.ts";
+import { reaktiviereMitglied, deleteMitglied, fetchArchiv } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
+import type { ColDef, ColGroup, GroupOption, ListGroup, ListRow, RowId } from "../../shared/list/types.ts";
+import type { Sb, SetState } from "../../types.ts";
 
-const COL_DEFS = [
+/* Archivierte Mitglieder kommen aus fetchArchiv — nur eine Teilauswahl
+   der Spalten, deshalb direkt vom Service abgeleitet. */
+type ArchivMitglied = Awaited<ReturnType<typeof fetchArchiv>>[number];
+
+const COL_DEFS: ColDef[] = [
   { key:"name",           label:"Name",          default:true, alwaysOn:true },
   { key:"mitgliedtyp",    label:"Mitgliedschaft", default:true },
   { key:"deaktiviert_am", label:"Archiviert am",  default:true },
@@ -16,15 +22,15 @@ const COL_DEFS = [
   { key:"actions",        label:"",               default:true, alwaysOn:true },
 ];
 
-const COL_GROUPS = [{ group:"Archiv", cols:COL_DEFS.filter(c=>c.key!=="actions") }];
+const COL_GROUPS: ColGroup[] = [{ group:"Archiv", cols:COL_DEFS.filter(c=>c.key!=="actions") }];
 
-const GROUP_OPTIONS = [
+const GROUP_OPTIONS: GroupOption[] = [
   { val:"mitgliedtyp",     label:"Mitgliedschaft"     },
   { val:"deaktiviert_von", label:"Archiviert von"     },
   { val:"deaktiviert_am",  label:"Archiviert im Jahr" },
 ];
 
-function mapArchivRow(m) {
+function mapArchivRow(m: ArchivMitglied) {
   return {
     id:                 m.id,
     name:               `${m.vorname||""} ${m.nachname||""}`.trim(),
@@ -36,15 +42,24 @@ function mapArchivRow(m) {
   };
 }
 
+/* Aus mapArchivRow abgeleitet, damit die Zeilenform nicht auseinanderläuft.
+   Der Schnitt mit ListRow liefert die Index-Signatur, die ListView (T extends
+   ListRow) verlangt und die renderCell für m[col.key] braucht. */
+type ArchivRow = ListRow & ReturnType<typeof mapArchivRow>;
+
 // buildGroupsFn nur für deaktiviert_am (Jahr) nötig — Rest via Default
-function buildArchivGroups(rows, groupBy, groupOrder, filterVals) {
+function buildArchivGroups(
+  rows: ArchivRow[],
+  groupBy: string[] | string,
+  groupOrder?: Record<string, string[]>,
+): ListGroup<ArchivRow>[] {
   const levels = Array.isArray(groupBy) ? groupBy : [groupBy];
   const firstLevel = levels[0] || "none";
   const restLevels = levels.slice(1);
   if (!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
-  const map = {};
+  const map: Record<string, ArchivRow[]> = {};
   rows.forEach(r => {
-    const k = firstLevel === "deaktiviert_am" ? r.deaktiviert_am : (r[firstLevel] || "—");
+    const k = firstLevel === "deaktiviert_am" ? r.deaktiviert_am : String(r[firstLevel] || "—");
     if (!map[k]) map[k] = [];
     map[k].push(r);
   });
@@ -68,27 +83,38 @@ function buildArchivGroups(rows, groupBy, groupOrder, filterVals) {
   }));
 }
 
-export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpdatePortalZugang, onReload, onOpenMember }) {
-  const [confirm, confirmDialog] = useConfirm();
-  const rows = (archivData || []).map(mapArchivRow);
+interface ArchivViewProps {
+  archivData: ArchivMitglied[];
+  setArchivData: SetState<ArchivMitglied[]>;
+  archivLoaded: boolean;
+  sb: Sb;
+  /* Setzt den Portal-Zugang beim Reaktivieren wieder aktiv */
+  onUpdatePortalZugang?: ((mitgliedId: number, aktiv: boolean) => Promise<void> | void) | null;
+  onReload?: (() => void) | null;
+  onOpenMember?: ((m: ArchivMitglied) => void) | null;
+}
 
-  async function reaktivieren(selected) {
+export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpdatePortalZugang, onReload, onOpenMember }: ArchivViewProps) {
+  const [confirm, confirmDialog] = useConfirm();
+  const rows: ArchivRow[] = (archivData || []).map(mapArchivRow);
+
+  async function reaktivieren(selected: Set<RowId>) {
     if (!selected?.size) return;
     const ok = await confirm({ title:`${selected.size} Mitglieder reaktivieren?`, confirmLabel:"Reaktivieren" });
     if (!sb || !ok) return;
     for (const id of selected) {
-      await reaktiviereMitglied(sb, id);
-      if (onUpdatePortalZugang) await onUpdatePortalZugang(id, true);
+      await reaktiviereMitglied(sb, Number(id));
+      if (onUpdatePortalZugang) await onUpdatePortalZugang(Number(id), true);
     }
     setArchivData(prev => prev.filter(m => !selected.has(m.id)));
     if (onReload) onReload();
   }
 
-  async function loeschen(selected) {
+  async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
     const ok = await confirm({ title:`${selected.size} Mitglieder löschen?`, message:"Diese Aktion ist unwiderruflich (DSGVO).", danger:true, confirmLabel:"Löschen" });
     if (!sb || !ok) return;
-    for (const id of selected) await deleteMitglied(sb, id);
+    for (const id of selected) await deleteMitglied(sb, Number(id));
     setArchivData(prev => prev.filter(m => !selected.has(m.id)));
     if (onReload) onReload();
   }
@@ -98,7 +124,7 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
     { key:"deaktiviert_von", label:"Archiviert von" },
   ]);
 
-  function renderCell(col, m) {
+  function renderCell(col: ColDef, m: ArchivRow) {
     switch(col.key) {
       case "name":
         return <td key="name" className="cc-members-td">
@@ -130,7 +156,7 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
       {!archivLoaded ? (
         <EmptyState icon="loader" title="Wird geladen…"/>
       ) : (
-        <ListView
+        <ListView<ArchivRow>
           rows={rows}
           buildGroupsFn={buildArchivGroups}
           colDefs={COL_DEFS}

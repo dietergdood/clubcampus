@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/ElternSucheModal.jsx
+   ClubCampus — modules/members/ElternSucheModal.tsx
    Modal zum Suchen + Verknüpfen bestehender Elternkontakte
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
@@ -7,19 +7,35 @@ import { Btn, ModalOrSheet } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { sucheElternkontakte, linkKind } from "../../domains/members/memberService.ts";
 import { elternAvColor } from "./tabs/ElternTab.jsx";
+import type { Sb } from "../../types.ts";
 
-export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepft }) {
-  const [tab, setTab] = useState("suche");
+/* Direkt aus der Service-Rückgabe abgeleitet */
+type ElternTreffer = Awaited<ReturnType<typeof sucheElternkontakte>>[number];
+
+interface ElternSucheModalProps {
+  open: boolean;
+  onClose: () => void;
+  /* Das Kind, mit dem verknüpft wird — gebraucht wird nur die ID */
+  raw: { id: number };
+  sb: Sb;
+  vereinId: string | null;
+  /* "neu" signalisiert dem Aufrufer, das Erfassungsformular zu öffnen */
+  onVerknuepft: (mode?: "neu") => void;
+}
+
+export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepft }: ElternSucheModalProps) {
+  const [tab, setTab] = useState<"suche"|"neu">("suche");
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [results, setResults] = useState<ElternTreffer[]>([]);
+  const [selected, setSelected] = useState<ElternTreffer|null>(null);
   const [saving, setSaving] = useState(false);
-  const timerRef = useRef(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
+      if (!sb || !vereinId) return;
       const data = await sucheElternkontakte(sb, vereinId, query);
       setResults(data);
     }, 300);
@@ -27,7 +43,9 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
   }, [query]);
 
   async function verknuepfen() {
-    if (!selected) return;
+    /* eltern_kinder.verein_id ist NOT NULL — ohne sb/vereinId würde das
+       Insert ohnehin scheitern, deshalb hier schon abbrechen. */
+    if (!selected || !sb || !vereinId) return;
     setSaving(true);
     await linkKind(sb, selected.id, raw.id, vereinId, false);
     setSaving(false);

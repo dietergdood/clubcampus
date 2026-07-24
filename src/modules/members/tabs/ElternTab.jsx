@@ -11,7 +11,7 @@
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { useState } from "react";
-import { ElternSucheModal } from "../ElternSucheModal.jsx";
+import { ElternSucheModal } from "../ElternSucheModal.tsx";
 import {
   insertElternkontakt, updateElternkontakt, deleteElternkontakt,
   unlinkKind, setHauptkontakt, unlinkElternBenutzer,

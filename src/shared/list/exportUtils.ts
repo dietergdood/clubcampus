@@ -57,8 +57,8 @@ export function csvDownload(data: (string | number)[][], filename: string): void
   URL.revokeObjectURL(url);
 }
 
-export interface ExportOptions {
-  getCellValue?: GetCellValue;
+export interface ExportOptions<T extends ListRow = ListRow> {
+  getCellValue?: GetCellValue<T>;
   /* Dateiname ohne Extension */
   filename?: string;
   /* Excel-Sheetname, wenn nicht gruppiert */
@@ -73,12 +73,12 @@ export interface ExportOptions {
   groups  — Gruppenstruktur von buildGroupsFn
   format  — "csv" | "csv-gruppen" | "excel-sheets"
 */
-export function exportListData(
-  rows: ListRow[],
+export function exportListData<T extends ListRow = ListRow>(
+  rows: T[],
   cols: ColDef[],
-  groups: ListGroup[],
+  groups: ListGroup<T>[],
   format: ExportFormat,
-  options: ExportOptions = {},
+  options: ExportOptions<T> = {},
 ): void {
   const {
     getCellValue = defaultGetCellValue,
@@ -89,7 +89,7 @@ export function exportListData(
   const hasGroups = groups && groups.length > 0 && groups[0].key !== "__all" && groups[0].key !== "";
   const headers = cols.map(c => c.label);
 
-  function getRow(row: ListRow, groupCtx: GroupContext = { type: "none", key: null }): string[] {
+  function getRow(row: T, groupCtx: GroupContext = { type: "none", key: null }): string[] {
     return cols.map(col => getCellValue(col, row, groupCtx));
   }
 
@@ -105,7 +105,7 @@ export function exportListData(
       return;
     }
     const allRows: string[][] = [headers];
-    function addGroups(grps: ListGroup[]){
+    function addGroups(grps: ListGroup<T>[]){
       grps.forEach(({ key, label, type, members, children }) => {
         allRows.push([label || key, ...new Array<string>(headers.length - 1).fill("")]);
         if (children) addGroups(children);
@@ -126,7 +126,7 @@ export function exportListData(
       const ws = XLSX.utils.aoa_to_sheet([headers, ...rows.map(r => getRow(r))]);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     } else {
-      function addSheets(grps: ListGroup[]){
+      function addSheets(grps: ListGroup<T>[]){
         grps.forEach(({ key, label, type, members, children }) => {
           if (children) { addSheets(children); return; }
           const gc: GroupContext = type !== "none" ? { type, key } : { type: "none", key: null };

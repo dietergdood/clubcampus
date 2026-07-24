@@ -1,27 +1,39 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/ElternListView.jsx
+   ClubCampus — modules/members/ElternListView.tsx
    Eltern-Liste mit Kind+Team Anzeige, Fold-out, Filter, Gruppierung
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Av, useConfirm, useIsMobile } from "../../theme.ts";
+import { Av, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
+import type { ColDef, ColGroup, GroupOption, ListGroup, ListRow, RowId } from "../../shared/list/types.ts";
+import type { Account, Sb, SetState } from "../../types.ts";
 
-function getKinderMitTeams(alleKinder) {
+/* Direkt aus der Service-Rückgabe abgeleitet */
+type ElternkontaktRoh = Awaited<ReturnType<typeof fetchAlleElternkontakte>>[number];
+type KindVerknuepfung = ElternkontaktRoh["_alle_kinder"][number];
+
+interface KindMitTeams {
+  name: string;
+  teams: string[];
+  mitglied_id: number;
+}
+
+function getKinderMitTeams(alleKinder: KindVerknuepfung[]): KindMitTeams[] {
   return (alleKinder||[]).map(k => {
     const m = k.mitglieder;
     const name = m ? `${m.vorname||""} ${m.nachname||""}`.trim() : "?";
     const teams = (m?.kader||[])
       .filter(ka => ka.aktiv)
       .map(ka => ka.teams?.kurzname||ka.teams?.name)
-      .filter(Boolean);
+      .filter((t): t is string => Boolean(t));
     return { name, teams, mitglied_id: k.mitglied_id };
   });
 }
 
-function mapEltern(raw) {
+function mapEltern(raw: ElternkontaktRoh[] | null | undefined) {
   return (raw||[]).map(e => {
     const kinder = getKinderMitTeams(e._alle_kinder||[]);
     const alleTeams = [...new Set(kinder.flatMap(k => k.teams))];
@@ -45,7 +57,11 @@ function mapEltern(raw) {
   });
 }
 
-const COL_DEFS = [
+/* Schnitt mit ListRow liefert die Index-Signatur, die ListView
+   (T extends ListRow) verlangt und renderCell für e[col.key] braucht. */
+type ElternRow = ListRow & ReturnType<typeof mapEltern>[number];
+
+const COL_DEFS: ColDef[] = [
   { key:"name",      label:"Name",      default:true, alwaysOn:true },
   { key:"beziehung", label:"Beziehung", default:true },
   { key:"email",     label:"E-Mail",    default:true },
@@ -54,23 +70,23 @@ const COL_DEFS = [
   { key:"portal",    label:"Portal",    default:true },
 ];
 
-const COL_GROUPS = [{ group:"Elternkontakt", cols:COL_DEFS }];
+const COL_GROUPS: ColGroup[] = [{ group:"Elternkontakt", cols:COL_DEFS }];
 
-const GROUP_OPTIONS = [
+const GROUP_OPTIONS: GroupOption[] = [
   { val:"teams",     label:"Team"       },
   { val:"beziehung", label:"Beziehung"  },
   { val:"portal",    label:"Portal"     },
 ];
 
-function buildElternGroups(rows, groupBy, groupOrder) {
+function buildElternGroups(rows: ElternRow[], groupBy: string[] | string): ListGroup<ElternRow>[] {
   const firstLevel = Array.isArray(groupBy) ? groupBy[0] : groupBy;
   if(!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
 
-  const map = {};
+  const map: Record<string, ElternRow[]> = {};
   rows.forEach(r => {
     // Bei Array-Feldern (teams) → Zeile in mehrere Gruppen
     const val = r[firstLevel];
-    const keys = Array.isArray(val) && val.length > 0 ? val : [String(val ?? "—")];
+    const keys = Array.isArray(val) && val.length > 0 ? val.map(v => String(v)) : [String(val ?? "—")];
     keys.forEach(k => {
       if(!map[k]) map[k] = [];
       // Duplikate vermeiden
@@ -83,8 +99,13 @@ function buildElternGroups(rows, groupBy, groupOrder) {
     .map(([k, members]) => ({ key:k, label:k, type:"none", members, children:null }));
 }
 
-function makeElternRenderCell({ expandedKinder, setExpandedKinder }) {
-  return function renderElternCell(col, e) {
+interface ElternRenderCellDeps {
+  expandedKinder: Set<string>;
+  setExpandedKinder: SetState<Set<string>>;
+}
+
+function makeElternRenderCell({ expandedKinder, setExpandedKinder }: ElternRenderCellDeps) {
+  return function renderElternCell(col: ColDef, e: ElternRow) {
     switch(col.key) {
       case "name":
         return <td key="name" className="cc-members-td">
@@ -135,10 +156,17 @@ function makeElternRenderCell({ expandedKinder, setExpandedKinder }) {
   };
 }
 
-export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
-  const [rows, setRows] = useState([]);
+interface ElternListViewProps {
+  sb: Sb;
+  vereinId: string | null;
+  account?: Account | null;
+  isAdmin?: boolean;
+}
+
+export function ElternListView({ sb, vereinId, account, isAdmin = false }: ElternListViewProps) {
+  const [rows, setRows] = useState<ElternRow[]>([]);
   const [confirm, confirmDialog] = useConfirm();
-  const [expandedKinder, setExpandedKinder] = useState(new Set());
+  const [expandedKinder, setExpandedKinder] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!sb || !vereinId) return;
@@ -152,19 +180,19 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
 
   const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder });
 
-  async function loeschen(selected) {
+  async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
     const namen = [...selected].map(id => rows.find(r => r.id === id)?.name).filter(Boolean);
     const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:`Gelöscht werden: ${namen.join(", ")}`, danger:true, confirmLabel:"Löschen" });
     if (!sb || !ok) return;
-    for (const id of selected) await deleteElternkontakt(sb, id);
+    for (const id of selected) await deleteElternkontakt(sb, String(id));
     setRows(prev => prev.filter(r => !selected.has(r.id)));
   }
 
   return (
     <>
       {confirmDialog}
-      <ListView
+      <ListView<ElternRow>
         emptyIcon="heart"
         emptyTitle="Noch keine Elternkontakte"
         emptySubtitle="Elternkontakte werden beim Mitglied erfasst."
