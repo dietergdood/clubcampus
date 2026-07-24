@@ -3,7 +3,7 @@
    Login, Register, Reset Password
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { FONT } from "../constants.js";
+import { FONT , GB } from "../constants.js";
 import { LOGO_B64 } from "../theme.jsx";
 import { TI } from "../icons.jsx";
 function LoginScreen({onLogin, sb, appTheme}){

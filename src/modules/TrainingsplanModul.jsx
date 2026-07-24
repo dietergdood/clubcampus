@@ -3,7 +3,7 @@
    Trainingsplan mit Gantt-Ansicht und Platzverwaltung
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { ACCENT, ACCENT2, ACCENT20, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.js";
+import { ACCENT, ACCENT2, ACCENT20, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR  } from "../constants.js";
 import { TI } from "../icons.jsx";
 import { useIsMobile, ModalOrSheet, Col, Row, H1, Btn, SectionLabel, Empty, Input, useConfirm, ConfirmDialog } from "../theme.jsx";
 import { ATT_EVENTS, GANTT, INITIAL_PLAENE, TRAININGSPLAETZE_DEFAULT } from "../demoData.js";

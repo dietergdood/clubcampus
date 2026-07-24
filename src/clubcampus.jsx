@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR, GB } from "./constants.js";
+import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR } from "./constants.js";
 import { TI, TI_PATHS } from "./icons.jsx";
 import { LOGO_B64, ThemeCtx, useTheme, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, avColor} from "./theme.jsx";
 import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT, MEMBERS, FUNKTIONEN} from "./demoData.js";
