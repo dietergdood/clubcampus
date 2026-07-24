@@ -454,7 +454,7 @@ function Portal({supabaseClient}){
 
   /* ── App-Level Zugriffstufen-Hilfsfunktionen ── */
   const { getZugriff, kannLesen, kannSchreiben, kannVerwalten } = usePermissions({
-    role, moduleRechte, zugriffStufen, dbFunktionen,
+    role, moduleRechte, zugriffStufen: null, dbFunktionen,
   });
 
   const handleAccountChange=(key)=>{
