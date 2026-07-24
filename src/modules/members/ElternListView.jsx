@@ -62,6 +62,27 @@ const GROUP_OPTIONS = [
   { val:"portal",    label:"Portal"     },
 ];
 
+function buildElternGroups(rows, groupBy, groupOrder) {
+  const firstLevel = Array.isArray(groupBy) ? groupBy[0] : groupBy;
+  if(!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
+
+  const map = {};
+  rows.forEach(r => {
+    // Bei Array-Feldern (teams) → Zeile in mehrere Gruppen
+    const val = r[firstLevel];
+    const keys = Array.isArray(val) && val.length > 0 ? val : [String(val ?? "—")];
+    keys.forEach(k => {
+      if(!map[k]) map[k] = [];
+      // Duplikate vermeiden
+      if(!map[k].find(x => x.id === r.id)) map[k].push(r);
+    });
+  });
+
+  return Object.entries(map)
+    .sort(([a],[b]) => String(a).localeCompare(String(b), "de"))
+    .map(([k, members]) => ({ key:k, label:k, type:"none", members, children:null }));
+}
+
 function makeElternRenderCell({ expandedKinder, setExpandedKinder }) {
   return function renderElternCell(col, e) {
     switch(col.key) {
@@ -124,13 +145,6 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
     fetchAlleElternkontakte(sb, vereinId).then(data => setRows(mapEltern(data)));
   }, [sb, vereinId]);
 
-  // Für Gruppierung nach Teams: Zeile pro Team expandieren
-  const expandedRows = rows.flatMap(e =>
-    e.teams.length > 0
-      ? e.teams.map(t => ({ ...e, _groupKey: t }))
-      : [{ ...e, _groupKey: "—" }]
-  );
-
   const filterDefs = buildFilterDefs(rows, [
     { key:"beziehung", label:"Beziehung" },
     { key:"portal",    label:"Portal", vals:["Aktiv","Kein Zugang"] },
@@ -159,6 +173,7 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
         colGroups={COL_GROUPS}
         filterDefs={filterDefs}
         groupOptions={GROUP_OPTIONS}
+        buildGroupsFn={buildElternGroups}
         renderCell={renderCell}
         sb={sb}
         account={account}
