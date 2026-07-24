@@ -3,7 +3,8 @@
    Eltern-Tab — nutzt zentrale ListView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Av, useConfirm } from "../../theme.jsx";
+import { Av, useConfirm, useIsMobile } from "../../theme.jsx";
+import { TI } from "../../icons.jsx";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.js";
 import { ListView } from "../../shared/list/ListView.jsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.js";
@@ -48,39 +49,56 @@ const GROUP_OPTIONS = [
   { val:"portal",     label:"Portal"    },
 ];
 
-function renderElternCell(col, e) {
-  switch(col.key) {
-    case "name":
-      return <td key="name" className="cc-members-td">
-        <div className="cc-row cc-gap-8">
-          <Av name={e.name||"?"} size={26}/>
-          <span className="cc-text-bold">{e.name}</span>
-        </div>
-      </td>;
-    case "portal":
-      return <td key="portal" className="cc-members-td">
-        {e.benutzer_id
-          ?<span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>
-          :<span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>
-        }
-      </td>;
-    case "kind_name":
-      return <td key="kind_name" className="cc-members-td cc-members-td-sub">
-        {(e.kinder||[]).length>0
-          ?<span className="cc-row cc-gap-4 cc-flex-wrap">
-            <span>{(e.kinder||[]).slice(0,1).join("")}</span>
-            {(e.kinder||[]).length>1&&<span className="cc-ml-more-btn">+{(e.kinder||[]).length-1}</span>}
-          </span>
-          :"—"}
-      </td>;
-    default:
-      return <td key={col.key} className="cc-members-td cc-members-td-sub">{String(e[col.key]||"—")}</td>;
-  }
+function makeElternRenderCell({ expandedKinder, setExpandedKinder }) {
+  return function renderElternCell(col, e) {
+    switch(col.key) {
+      case "name":
+        return <td key="name" className="cc-members-td">
+          <div className="cc-row cc-gap-8">
+            <Av name={e.name||"?"} size={26}/>
+            <span className="cc-text-bold">{e.name}</span>
+          </div>
+        </td>;
+      case "portal":
+        return <td key="portal" className="cc-members-td">
+          {e.benutzer_id
+            ?<span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>
+            :<span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>
+          }
+        </td>;
+      case "kind_name": {
+        const isExp = expandedKinder.has(e.id);
+        const visible = isExp ? (e.kinder||[]) : (e.kinder||[]).slice(0,2);
+        const rest = (e.kinder||[]).length - 2;
+        return <td key="kind_name" className="cc-members-td" onClick={ev=>ev.stopPropagation()}>
+          <div className="cc-col cc-gap-4">
+            {visible.map((k,i)=>(
+              <div key={i} className="cc-teams-rollen-row">
+                <span className="cc-teams-rollen-rolle">{k}</span>
+              </div>
+            ))}
+            {rest>0&&(
+              <button className="cc-teams-rollen-more" onClick={ev=>{
+                ev.stopPropagation();
+                setExpandedKinder(prev=>{const n=new Set(prev);n.has(e.id)?n.delete(e.id):n.add(e.id);return n;});
+              }}>
+                {isExp?<><TI n="chevron-up" size={10}/>weniger</>:<><TI n="chevron-down" size={10}/>+{rest} weitere</>}
+              </button>
+            )}
+          </div>
+        </td>;
+      }
+      default:
+        return <td key={col.key} className="cc-members-td cc-members-td-sub">{String(e[col.key]||"—")}</td>;
+    }
+  };
 }
 
 export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
   const [rows, setRows] = useState([]);
   const [confirm, confirmDialog] = useConfirm();
+  const [expandedKinder, setExpandedKinder] = useState(new Set());
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!sb || !vereinId) return;
@@ -91,6 +109,8 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
     { key:"beziehung", label:"Beziehung" },
     { key:"portal",    label:"Portal", vals:["Aktiv","Kein Zugang"] },
   ]);
+
+  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder });
 
   async function loeschen(selected) {
     if (!selected?.size) return;
@@ -105,6 +125,7 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
   return (
     <>
       {confirmDialog}
+
       <ListView
         emptyIcon="heart"
         emptyTitle="Noch keine Elternkontakte"
@@ -114,7 +135,7 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
         colGroups={COL_GROUPS}
         filterDefs={filterDefs}
         groupOptions={GROUP_OPTIONS}
-        renderCell={renderElternCell}
+        renderCell={renderCell}
         sb={sb}
         account={account}
         vereinId={vereinId}
