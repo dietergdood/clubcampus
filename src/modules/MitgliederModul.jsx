@@ -3,13 +3,9 @@
    State, Logik und Koordination — Render via MembersView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, useMemo } from "react";
-import { GN, AM, BL } from "../constants.js";
 import { TI } from "../icons.jsx";
-import { Av, Card, Stat, PortalBadge, DpBadge,
-         useIsMobile, avColor, LandSelect, DropMenu, FunktionenMultiSelect,
-         useConfirm, ConfirmDialog,
-         Tabs, STitle, Between, Sub, Label, Select, Empty, InfoBox } from "../theme.jsx";
-import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte } from "../domains/members/memberService.js";
+import { Av, useIsMobile, useConfirm, Tabs } from "../theme.jsx";
+import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder } from "../domains/members/memberService.js";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.js";
 import { ArchivView } from "./members/ArchivView.jsx";
@@ -20,12 +16,10 @@ import { ElternListView } from "./members/ElternListView.jsx";
 import { ListView } from "../shared/list/ListView.jsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";
 import { NeuesMitgliedModal } from "./members/NeuesMitgliedModal.jsx";
-import { fetchMitgliedtypPflichtfelder } from "../domains/members/memberService.js";
 
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}){
   const isMobile=useIsMobile();
   const [confirm,confirmDialog]=useConfirm();
-  const [teamsPopover,setTeamsPopover]=useState(null);
   const [expandedTeams,setExpandedTeams]=useState(new Set());
   const [portalFunktionen,setPortalFunktionen]=useState([]);
   const [selectedMember,setSelectedMember]=useState(null);
@@ -178,7 +172,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
 
   /* Portal-Zugang Zelle */
-  const renderCell = makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, teamsPopover, setTeamsPopover, expandedTeams, setExpandedTeams, setSelectedMember });
+  const renderCell = makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, expandedTeams, setExpandedTeams, setSelectedMember });
 
   return(
     <>{confirmDialog}
@@ -288,35 +282,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       )}
 
       {/* Teams Popover / Sheet */}
-      {teamsPopover&&(
-        isMobile?(
-          <div className="cc-mehr-sheet-overlay" onClick={()=>setTeamsPopover(null)}>
-            <div className="cc-mehr-sheet-backdrop"/>
-            <div className="cc-mehr-sheet-box" onClick={e=>e.stopPropagation()}>
-              <div className="cc-mehr-sheet-handle"/>
-              <div className="cc-mehr-sheet-title">Teams</div>
-              {teamsPopover.teams.map((t,i)=>(
-                <div key={i} className="cc-mehr-sheet-item">
-                  <TI n="ball-football" size={16}/>
-                  {t?.kurz||t?.name||t}
-                </div>
-              ))}
-            </div>
-          </div>
-        ):(
-          <div className="cc-teams-popover" style={{top:teamsPopover.y+8,left:teamsPopover.x}}>
-            <div className="cc-teams-popover-backdrop" onClick={()=>setTeamsPopover(null)}/>
-            <div className="cc-teams-popover-box">
-              {teamsPopover.teams.map((t,i)=>(
-                <div key={i} className="cc-teams-popover-item">
-                  <TI n="ball-football" size={13}/>
-                  {t?.kurz||t?.name||t}
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      )}
     </div>
   </>
   );

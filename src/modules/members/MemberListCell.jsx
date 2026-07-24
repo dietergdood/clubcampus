@@ -29,7 +29,7 @@
 import { TI } from "../../icons.jsx";
 import { Av, PortalBadge, DpBadge } from "../../theme.jsx";
 
-export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, teamsPopover, setTeamsPopover, expandedTeams, setExpandedTeams, setSelectedMember }) {
+export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, expandedTeams, setExpandedTeams, setSelectedMember }) {
   function renderCell(col,m,groupContext={type:"none",key:null},filterVals={}){
     const gc=groupContext;
     switch(col.key){
@@ -57,7 +57,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       case "teams": {
         if(gc.type==="gruppe") return <td key="teams" className="cc-members-td cc-members-td-sub">—</td>;
         const teamsToShow=gc.type==="team"?(m.teams||[]).filter(t=>(t?.name||t)===gc.key):(m.teams||[]);
-        return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{teamsToShow.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{teamsToShow.slice(0,1).map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}{teamsToShow.length>1&&<button className="cc-ml-more cc-ml-more-btn" onClick={e=>{e.stopPropagation();setTeamsPopover(teamsPopover?.id===m.id?null:{id:m.id,teams:teamsToShow,x:e.clientX,y:e.clientY});}}>+{teamsToShow.length-1}</button>}</span>):"—"}</td>;
+        return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{teamsToShow.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{teamsToShow.map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}</span>):"—"}</td>;
       }
       // Datenprüfungs-Status Badge
       case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
