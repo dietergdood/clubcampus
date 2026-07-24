@@ -10,8 +10,8 @@ import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.j
 
 function mapEltern(raw) {
   return (raw||[]).map(e=>{
-    const kind = e.mitglieder;
-    const kindName = kind ? `${kind.vorname||""} ${kind.nachname||""}`.trim() : "—";
+    const alleKinder = e._alle_kinder||[];
+    const kinderNamen = alleKinder.map(k=>`${k.mitglieder?.vorname||""} ${k.mitglieder?.nachname||""}`.trim()).filter(Boolean);
     return {
       id:          e.id,
       mitglied_id: e.mitglied_id,
@@ -24,8 +24,9 @@ function mapEltern(raw) {
       portal:      e.benutzer_id?"Aktiv":"Kein Zugang",
       benutzer_id: e.benutzer_id||null,
       hauptkontakt:e.hauptkontakt||false,
-      kind_id:     kind?.id||null,
-      kind_name:   kindName,
+      kind_id:     alleKinder[0]?.mitglied_id||null,
+      kind_name:   kinderNamen.join(", ")||"—",
+      kinder:      kinderNamen,
     };
   });
 }
@@ -62,6 +63,15 @@ function renderElternCell(col, e) {
           ?<span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>
           :<span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>
         }
+      </td>;
+    case "kind_name":
+      return <td key="kind_name" className="cc-members-td">
+        {(e.kinder||[]).length>0
+          ?<span className="cc-row cc-gap-4 cc-flex-wrap">
+            {(e.kinder||[]).slice(0,1).map((k,i)=><span key={i} className="cc-team-chip">{k}</span>)}
+            {(e.kinder||[]).length>1&&<span className="cc-ml-more">+{(e.kinder||[]).length-1}</span>}
+          </span>
+          :"—"}
       </td>;
     default:
       return <td key={col.key} className="cc-members-td cc-members-td-sub">{String(e[col.key]||"—")}</td>;
