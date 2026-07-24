@@ -14,12 +14,12 @@ import type {
   MoreEntry, RenderCell, RenderMobile, SavedViews,
 } from "./types.ts";
 
-export interface ListViewProps {
+export interface ListViewProps<T extends ListRow = ListRow> {
   // Daten
-  rows?: ListRow[];
-  filterFn?: (rows: ListRow[], search: string, filterVals: FilterVals) => ListRow[];
-  sortFn?: (rows: ListRow[], sortCol: string, sortDir: "asc" | "desc") => ListRow[];
-  buildGroupsFn?: (rows: ListRow[], groupBy: string[], groupOrder: Record<string, string[]>, filterVals: FilterVals) => ListGroup[];
+  rows?: T[];
+  filterFn?: (rows: T[], search: string, filterVals: FilterVals) => T[];
+  sortFn?: (rows: T[], sortCol: string, sortDir: "asc" | "desc") => T[];
+  buildGroupsFn?: (rows: T[], groupBy: string[], groupOrder: Record<string, string[]>, filterVals: FilterVals) => ListGroup<T>[];
   // Spalten
   colDefs?: ColDef[];
   colGroups?: ColGroup[];
@@ -31,9 +31,9 @@ export interface ListViewProps {
   groupOptionsMore?: GroupOption[];
   multiGroup?: boolean;
   // Render
-  renderCell?: RenderCell;
-  renderMobile?: RenderMobile;
-  getRowId?: GetRowId;
+  renderCell?: RenderCell<T>;
+  renderMobile?: RenderMobile<T>;
+  getRowId?: GetRowId<T>;
   // Supabase / Ansichten
   sb?: Sb;
   account?: Account | null;
@@ -49,7 +49,7 @@ export interface ListViewProps {
   // External filter control
   externalSetFilter?: { current: ((vals: FilterVals) => void) | null } | null;
   // Export
-  exportFn?: (rows: ListRow[], cols: ColDef[], groups: ListGroup[], format: ExportFormat) => void;
+  exportFn?: (rows: T[], cols: ColDef[], groups: ListGroup<T>[], format: ExportFormat) => void;
   exportFormats?: ExportFormatOption[];
   // Admin
   isAdmin?: boolean;
@@ -59,7 +59,7 @@ export interface ListViewProps {
   emptySubtitle?: string;
 }
 
-export function ListView({
+export function ListView<T extends ListRow = ListRow>({
   // Daten
   rows = [],
   filterFn,
@@ -102,7 +102,7 @@ export function ListView({
   emptyIcon = "list",
   emptyTitle = "Noch keine Einträge",
   emptySubtitle = "Füge den ersten Eintrag hinzu, um loszulegen.",
-}: ListViewProps) {
+}: ListViewProps<T>) {
   const isMobile = useIsMobile();
 
   const {
@@ -149,7 +149,7 @@ export function ListView({
     : <span className="cc-sort-hover-icon">↕</span>;
 
   // ── Gruppen Tabelle rendern ───────────────────────────────────
-  function renderGroupsTable(groups: ListGroup[], depth = 0, levelKey: string | null = null, parentCtx: GroupContext = {type:"none",key:null}) {
+  function renderGroupsTable(groups: ListGroup<T>[], depth = 0, levelKey: string | null = null, parentCtx: GroupContext = {type:"none",key:null}) {
     const currentLevelKey = levelKey || (Array.isArray(groupBy) ? groupBy[depth] : groupBy) || "none";
     return groups.map(({ key, label, type, members, children }) => {
       if (!children && (!members || members.length === 0)) return null;

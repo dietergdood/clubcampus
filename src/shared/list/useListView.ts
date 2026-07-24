@@ -11,26 +11,26 @@ import type {
 } from "./types.ts";
 import type { RangeFilterPayload } from "./RangeFilter.tsx";
 
-export interface UseListViewProps {
-  rows: ListRow[];
+export interface UseListViewProps<T extends ListRow = ListRow> {
+  rows: T[];
   colDefs: ColDef[];
   defaultCols?: string[];
   savedViews?: SavedViews | null;
-  filterFn?: (rows: ListRow[], search: string, filterVals: FilterVals) => ListRow[];
-  sortFn?: (rows: ListRow[], sortCol: string, sortDir: "asc" | "desc") => ListRow[];
-  buildGroupsFn?: (rows: ListRow[], groupBy: string[], groupOrder: Record<string, string[]>, filterVals: FilterVals) => ListGroup[];
+  filterFn?: (rows: T[], search: string, filterVals: FilterVals) => T[];
+  sortFn?: (rows: T[], sortCol: string, sortDir: "asc" | "desc") => T[];
+  buildGroupsFn?: (rows: T[], groupBy: string[], groupOrder: Record<string, string[]>, filterVals: FilterVals) => ListGroup<T>[];
   filterDefs: FilterDef[];
   groupOptions: GroupOption[];
   groupOptionsMore: GroupOption[];
   multiGroup: boolean;
-  getRowId: GetRowId;
+  getRowId: GetRowId<T>;
   sb: Sb;
   account?: Account | null;
   vereinId?: string | null;
   viewTyp: string;
   selectable: boolean;
   moreActions: MoreEntry[];
-  exportFn?: (rows: ListRow[], cols: ColDef[], groups: ListGroup[], format: ExportFormat) => void;
+  exportFn?: (rows: T[], cols: ColDef[], groups: ListGroup<T>[], format: ExportFormat) => void;
   exportFormats: ExportFormatOption[];
   isAdmin: boolean;
   isMobile: boolean;
@@ -41,7 +41,7 @@ export interface UseListViewProps {
 interface DragGroupState { key: string; levelKey: string }
 interface DragRowState { id: RowId; groupKey: string }
 
-export function useListView({
+export function useListView<T extends ListRow = ListRow>({
   rows,
   colDefs,
   defaultCols,
@@ -65,7 +65,7 @@ export function useListView({
   isAdmin,
   isMobile,
   externalSetFilter,
-}: UseListViewProps) {
+}: UseListViewProps<T>) {
   const initialCols = defaultCols || colDefs.filter(c => c.default).map(c => c.key);
 
   // ── State ────────────────────────────────────────────────────
@@ -239,14 +239,14 @@ export function useListView({
 
   const hasGroup = Array.isArray(groupBy) ? groupBy.some(g => g && g !== "none") : groupBy !== "none";
 
-  const groups: ListGroup[] = useMemo(() => {
+  const groups: ListGroup<T>[] = useMemo(() => {
     if (!hasGroup) return [{ key: "__all", label: "", type: "none", members: sorted, children: null }];
     if (buildGroupsFn) return buildGroupsFn(sorted, groupBy, groupOrder, filterVals);
-    function buildDefault(rows: ListRow[], levels: string[], groupOrder: Record<string, string[]>): ListGroup[] {
+    function buildDefault(rows: T[], levels: string[], groupOrder: Record<string, string[]>): ListGroup<T>[] {
       const firstLevel = levels[0] || "none";
       const restLevels = levels.slice(1);
       if (!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
-      const map: Record<string, ListRow[]> = {};
+      const map: Record<string, T[]> = {};
       rows.forEach(r => { const k = String(r[firstLevel] ?? "—"); if (!map[k]) map[k] = []; map[k].push(r); });
       const orderForLevel = groupOrder?.[firstLevel];
       let entries = Object.entries(map);

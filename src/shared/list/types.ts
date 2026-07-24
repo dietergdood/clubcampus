@@ -64,12 +64,12 @@ export interface GroupContext {
   subKey?: string;
 }
 
-export interface ListGroup {
+export interface ListGroup<T extends ListRow = ListRow> {
   key: string;
   label: string;
   type: string;
-  members: ListRow[];
-  children: ListGroup[] | null;
+  members: T[];
+  children: ListGroup<T>[] | null;
 }
 
 /* ── Mehr-Menü ───────────────────────────────────────────────── */
@@ -106,7 +106,7 @@ export interface ExportFormatOption {
   icon?: string;
 }
 
-export type GetCellValue = (col: ColDef, row: ListRow, groupCtx: GroupContext) => string;
+export type GetCellValue<T extends ListRow = ListRow> = (col: ColDef, row: T, groupCtx: GroupContext) => string;
 
 /* ── Bulk-Aktionen ───────────────────────────────────────────── */
 export interface ListBulkAction {
@@ -118,9 +118,9 @@ export interface ListBulkAction {
 }
 
 /* ── Render-Callbacks ────────────────────────────────────────── */
-export type RenderCell = (col: ColDef, row: ListRow, ctx: GroupContext, filterVals: FilterVals) => ReactNode;
-export type RenderMobile = (row: ListRow) => ReactNode;
+export type RenderCell<T extends ListRow = ListRow> = (col: ColDef, row: T, ctx: GroupContext, filterVals: FilterVals) => ReactNode;
+export type RenderMobile<T extends ListRow = ListRow> = (row: T) => ReactNode;
 /* Zeilen-IDs landen in gespeicherten Ansichten (zeilenreihenfolge) und
    müssen deshalb JSON-fähig sein. */
 export type RowId = string | number;
-export type GetRowId = (row: ListRow) => RowId;
+export type GetRowId<T extends ListRow = ListRow> = (row: T) => RowId;

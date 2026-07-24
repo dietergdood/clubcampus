@@ -72,9 +72,11 @@ export type MappedMember = ReturnType<typeof mapMembers>[number];
 
 /* Was MitgliederModul daraus macht: funktionsgruppen wird dort aus
    funktionen + funktionenGruppenMap nachgereicht. */
-export interface MemberRow extends MappedMember {
+/* Type-Alias statt Interface: nur so erfuellt der Typ die Constraint
+   T extends ListRow (Index-Signatur) von ListView. */
+export type MemberRow = MappedMember & {
   funktionsgruppen?: string[];
-}
+};
 
 /* Dynamischer Feldzugriff (Filter, Gruppierung, Export lesen Spalten über
    ihren Key). Über Object.entries statt Index-Zugriff, damit es ohne Cast

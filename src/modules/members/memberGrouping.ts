@@ -23,17 +23,11 @@
    ═══════════════════════════════════════════════════════════════ */
 import { memberFeld } from "./memberMapper.ts";
 import type { MemberRow } from "./memberMapper.ts";
+import type { ListGroup } from "../../shared/list/types.ts";
 
-/* Eigener Gruppentyp statt ListGroup: dessen members sind ListRow
-   (Index-Signatur), MemberRow ist ein Interface und damit nicht zuweisbar.
-   Die Umsetzung an der ListView-Grenze passiert in MitgliederModul. */
-export interface MemberGroup {
-  key: string;
-  label: string;
-  type: string;
-  members: MemberRow[];
-  children: MemberGroup[] | null;
-}
+/* Jetzt direkt die generische ListGroup — moeglich, seit MemberRow ein
+   Type-Alias ist und damit die ListRow-Constraint erfuellt. */
+export type MemberGroup = ListGroup<MemberRow>;
 
 /* Ein Gruppenschlüssel — entweder blosser Text oder Text mit Typ.
    Der Typ landet später in GroupContext.type. */
