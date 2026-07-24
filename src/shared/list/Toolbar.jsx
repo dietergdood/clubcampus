@@ -2,12 +2,104 @@
    ClubCampus — shared/list/Toolbar.jsx
    Liste Toolbar: Suche, Filter, Gruppierung, Mehr-Menü, Spalten
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { TI } from "../../icons.jsx";
 import { FONT } from "../../constants.js";
 import { useIsMobile } from "../ui/hooks.jsx";
 import { RangeFilter } from "./RangeFilter.jsx";
+
+
+/* ── FilterBody: Gemeinsamer Filter-Inhalt Desktop+Mobile ── */
+function FilterBody({ filterDefs, filterVals, onFilterChange, filterSearch, setFilterSearch, openSecs, setOpenSecs, mobile=false }){
+  return(
+    <>
+      <div className="cc-filter-search">
+        <TI n="search" size={13} style={{color:"var(--sub)",flexShrink:0}}/>
+        <input
+          autoFocus={!mobile}
+          placeholder="Filtern…"
+          value={filterSearch}
+          onChange={e=>{
+            const q=e.target.value;
+            setFilterSearch(q);
+            if(q){
+              const matching=new Set(filterDefs.filter(({vals,type})=>type!=="range"&&(vals||[]).some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
+              setOpenSecs(matching);
+            } else {
+              setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
+            }
+          }}
+        />
+      </div>
+      {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
+        const q=filterSearch.toLowerCase();
+        if(type==="divider") return q?null:<div key={key} className={mobile?"cc-filter-mobile-divider":"cc-filter-divider"}/>;
+        if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
+        if(type==="und-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-und-badge">UND</span><div className="cc-filter-or-line"/></div>;
+        const isRange=type==="range";
+        const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
+        if(!isRange&&visVals.length===0) return null;
+        if(isRange&&q&&!label.toLowerCase().includes(q)) return null;
+        const rv=filterVals[key]||{};
+        const rangeActive=isRange&&(rv.von!=null||rv.bis!=null);
+        const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
+        if(mobile){
+          return(
+            <div key={key}>
+              <div className="cc-filter-mobile-sec">
+                {label}{selCount>0&&<span className="cc-filter-sec-badge" style={{marginLeft:8}}>{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
+              </div>
+              {isRange?(
+                <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={20}/>
+              ):(
+                visVals.map(v=>{
+                  const active=(filterVals[key]||[]).includes(v);
+                  return(
+                    <div key={v} className="cc-filter-mobile-item"
+                      onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
+                      <input type="checkbox" readOnly checked={active} className="cc-filter-mobile-checkbox"/>
+                      <span>{v}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          );
+        }
+        const isOpen=openSecs.has(key);
+        return(
+          <div key={key}>
+            <div className="cc-ml-dropdown-section-lbl cc-between" style={{cursor:"pointer"}}
+              onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
+              <span>{label}</span>
+              <span className="cc-row cc-gap-6">
+                {selCount>0&&<span className="cc-filter-sec-badge">{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
+                <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
+              </span>
+            </div>
+            {isOpen&&(isRange?(
+              <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={12}/>
+            ):(
+              <div className="cc-filter-sec-body">
+                {visVals.map(v=>{
+                  const active=(filterVals[key]||[]).includes(v);
+                  return(
+                    <div key={v} className="cc-col-menu-item"
+                      onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
+                      <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
+                      {v}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 export function Toolbar({
   /* Suche */
@@ -115,65 +207,7 @@ export function Toolbar({
                     <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
                     <button className="cc-ml-dropdown-apply" onClick={()=>setFilterOpen(false)}>Fertig</button>
                   </div>
-                  <div className="cc-filter-search">
-                    <TI n="search" size={13} style={{color:"var(--sub)",flexShrink:0}}/>
-                    <input
-                      autoFocus
-                      placeholder="Filtern…"
-                      value={filterSearch}
-                      onChange={e=>{
-                        const q=e.target.value;
-                        setFilterSearch(q);
-                        if(q){
-                          const matching=new Set(filterDefs.filter(({vals,type})=>type!=="range"&&(vals||[]).some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
-                          setOpenSecs(matching);
-                        } else {
-                          setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
-                        }
-                      }}
-                    />
-                  </div>
-                  {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
-                    const q=filterSearch.toLowerCase();
-                    if(type==="divider") return q?null:<div key={key} className="cc-filter-divider"/>;
-                    if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
-                    if(type==="und-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-und-badge">UND</span><div className="cc-filter-or-line"/></div>;
-                    const isRange=type==="range";
-                    const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
-                    if(!isRange&&visVals.length===0) return null;
-                    if(isRange&&q&&!label.toLowerCase().includes(q)) return null;
-                    const isOpen=openSecs.has(key);
-                    const rv=filterVals[key]||{};
-                    const rangeActive=isRange&&(rv.von!=null||rv.bis!=null);
-                    const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
-                    return(
-                      <div key={key}>
-                        <div className="cc-ml-dropdown-section-lbl cc-between" style={{cursor:"pointer"}} onClick={()=>setOpenSecs(prev=>{const n=new Set(prev);n.has(key)?n.delete(key):n.add(key);return n;})}>
-                          <span>{label}</span>
-                          <span className="cc-row cc-gap-6">
-                            {selCount>0&&<span className="cc-filter-sec-badge">{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
-                            <TI n={isOpen?"chevron-down":"chevron-right"} size={13} style={{color:"var(--sub)"}}/>
-                          </span>
-                        </div>
-                        {isOpen&&(isRange?(
-                          <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={12}/>
-                        ):(
-                          <div className="cc-filter-sec-body">
-                            {visVals.map(v=>{
-                              const active=(filterVals[key]||[]).includes(v);
-                              return(
-                                <div key={v} className="cc-col-menu-item"
-                                  onClick={()=>onFilterChange&&onFilterChange(key,v,!active)}>
-                                  <div className={`cc-col-menu-check${active?" cc-col-menu-check-on":""}`}>{active&&<TI n="check" size={10}/>}</div>
-                                  {v}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
+                  <FilterBody filterDefs={filterDefs} filterVals={filterVals} onFilterChange={onFilterChange} filterSearch={filterSearch} setFilterSearch={setFilterSearch} openSecs={openSecs} setOpenSecs={setOpenSecs}/>
                 </div>
             )}
           </div>
@@ -375,58 +409,8 @@ export function Toolbar({
                           <span className="cc-sheet-subhdr-title">Filter</span>
                           <button className="cc-ml-dropdown-apply" onMouseDown={e=>{e.stopPropagation();setMoreOpen(false);setMobileSubMenu(null);}}>Fertig</button>
                         </div>
-                        <div className="cc-filter-search">
-                          <TI n="search" size={13} style={{color:"var(--sub)",flexShrink:0}}/>
-                          <input
-                            placeholder="Filtern…"
-                            value={filterSearch}
-                            onChange={e=>{
-                              const q=e.target.value;
-                              setFilterSearch(q);
-                              if(q){
-                                const matching=new Set(filterDefs.filter(({vals,type})=>type!=="range"&&(vals||[]).some(v=>v.toLowerCase().includes(q.toLowerCase()))).map(({key})=>key));
-                                setOpenSecs(matching);
-                              } else {
-                                setOpenSecs(new Set(filterDefs.filter(({key,type})=>type==="range"?(filterVals[key]&&(filterVals[key].von!=null||filterVals[key].bis!=null)):(filterVals[key]||[]).length>0).map(({key})=>key)));
-                              }
-                            }}
-                          />
-                        </div>
                         <div className="cc-sheet-scroll">
-                          {filterDefs.map(({key,label,vals,type,min,max,suffix})=>{
-                            const q=filterSearch.toLowerCase();
-                            if(type==="divider") return q?null:<div key={key} className="cc-filter-mobile-divider"/>;
-                            if(type==="or-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-or-badge">ODER</span><div className="cc-filter-or-line"/></div>;
-                    if(type==="und-divider") return q?null:<div key={key} className="cc-filter-or-sep"><div className="cc-filter-or-line"/><span className="cc-filter-und-badge">UND</span><div className="cc-filter-or-line"/></div>;
-                            const isRange=type==="range";
-                            const visVals=isRange?[]:(q?vals.filter(v=>v.toLowerCase().includes(q)):vals);
-                            if(!isRange&&visVals.length===0) return null;
-                            if(isRange&&q&&!label.toLowerCase().includes(q)) return null;
-                            const rv=filterVals[key]||{};
-                            const rangeActive=isRange&&(rv.von!=null||rv.bis!=null);
-                            const selCount=isRange?(rangeActive?1:0):(filterVals[key]||[]).length;
-                            return(
-                              <div key={key}>
-                                <div className="cc-filter-mobile-sec">
-                                  {label}{selCount>0&&<span className="cc-filter-sec-badge" style={{marginLeft:8}}>{isRange?`${rv.von??min}–${rv.bis??max}`:selCount}</span>}
-                                </div>
-                                {isRange?(
-                                  <RangeFilter key={key} min={min} max={max} suffix={suffix} rv={rv} rangeKey={key} onFilterChange={onFilterChange} padLeft={20}/>
-                                ):(
-                                  visVals.map(v=>{
-                                    const active=(filterVals[key]||[]).includes(v);
-                                    return(
-                                      <div key={v} className="cc-filter-mobile-item"
-                                        onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange(key,v,!active);}}>
-                                        <input type="checkbox" readOnly checked={active} className="cc-filter-mobile-checkbox"/>
-                                        <span>{v}</span>
-                                      </div>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            );
-                          })}
+                          <FilterBody filterDefs={filterDefs} filterVals={filterVals} onFilterChange={onFilterChange} filterSearch={filterSearch} setFilterSearch={setFilterSearch} openSecs={openSecs} setOpenSecs={setOpenSecs} mobile={true}/>
                           {hasActiveFilter&&(
                             <div className="cc-filter-mobile-footer">
                               <button className="cc-ml-dropdown-clear" onMouseDown={e=>{e.stopPropagation();onFilterChange&&onFilterChange("__reset");}}>Alle Filter zurücksetzen</button>
