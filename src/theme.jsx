@@ -2,11 +2,7 @@
    ClubCampus Theme — theme.jsx
    Theme-System, Logo, CSS-Variablen, Default-Farben
    ═══════════════════════════════════════════════════════════════ */
-import { createContext, useContext, useState, useEffect, useRef, Fragment } from "react";
-import { createPortal } from "react-dom";
-import { TI } from "./icons.jsx";
-import { ACCENT, ACCENT2, ACCENT20, BK, BL, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, FONT, R } from "./constants.js";
-import { useIsMobile } from "./shared/ui/hooks.jsx";
+import { createContext, useContext } from "react";
 export { Btn } from "./shared/ui/Btn.jsx";
 export { resolveColor, hexToRgba, darkenHex, contrastColor } from "./shared/utils/colorUtils.js";
 export { Card, Chip, StatusTile, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, EmptyState, InfoBox } from "./shared/ui/primitives.jsx";
@@ -963,13 +959,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 [data-theme=dark] .cc-hero-banner-btn:hover{background:rgba(255,255,255,0.12)}
 [data-theme=dark] .cc-member-hero-av{background:rgba(0,0,0,0.2);border-color:rgba(255,255,255,0.15)}
 [data-theme=dark] .cc-hero-av-edit{background:#a07800;border-color:#8a6800}`;
-/* localStorage polyfill voor window.storage */
 
-/* ── Semantische Farben ────────────────────────────────────────
-   Löst "success"|"danger"|"warning"|"info"|"primary"|"neutral"
-   auf konkrete Farb-Paare {text, bg}
-   ──────────────────────────────────────────────────────────── */
-// Color utils → shared/utils/colorUtils.js
 /* ClubCampus-Farben: Standard-Branding für neue Vereine */
 const THEME_DEFAULT_STATIC={
   vereinsfarbe1:"#FEC604", vereinsfarbe2:"#000000",
@@ -978,45 +968,4 @@ const THEME_DEFAULT_STATIC={
   vereinsname:"Mein Verein", logo:null,
 };
 
-
-
-
-// useBreakpoint, useIsMobile → shared/ui/hooks.jsx
-
-// ModalOrSheet → shared/ui/Modal.jsx
-
-/* -- ROLLEN-DEFINITIONEN -- */
-/* ── PORTAL-ROLLEN (Zugriffsrechte) ────────────────────────────
-   Steuern Navigation + Sichtbarkeit im Portal.
-   Unabhängig von der Vereinsfunktion (FUNKTIONEN).
-───────────────────────────────────────────────────────────── */
-/* ── ClubCampus-Farben (Standard-Branding) ── */
-/* Vereinsname global lesbar (aus localStorage wenn kein appTheme prop) */
-
-// InfoBox → shared/ui/primitives.jsx
-
-/* ==========================================
-   ROLLEN-SWITCHER MODAL
-========================================== */
-
-// Btn → src/shared/ui/Btn.jsx
-
-// Card → shared/ui/primitives.jsx
-
-// function Chip({ → shared/ui/primitives.jsx
-
-
-
-// Stat → shared/ui/Stat.jsx
-
-/* StatusTile — wiederverwendbare Status-Kachel mit Icon + Label + Wert
-   semantic: "neutral"|"ok"|"warn"|"danger"
-   Verwendung: MitgliederModul, Dashboard, etc. */
-// function Status → shared/ui/primitives.jsx
-
-/* Konsistente Farben aus Name-Hash */
-// Av, avColor, Tabs, DropMenu, LandSelect, FunktionenMultiSelect → shared/ui/ und shared/forms/
-// RangeFilter → shared/list/RangeFilter.jsx
-
-// Toolbar → shared/list/Toolbar.jsx
 export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, THEME_DEFAULT_STATIC };
