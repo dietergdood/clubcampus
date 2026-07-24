@@ -1,19 +1,39 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/MemberKPIs.jsx
+   ClubCampus — modules/members/MemberKPIs.tsx
    KPI-Cards + Aufschlüsselung für MitgliederModul
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { Stat, useIsMobile } from "../../theme.ts";
 import { GN, AM, BL } from "../../constants.ts";
+import type { MemberRow } from "./memberMapper.ts";
+import type { FilterVals } from "../../shared/list/types.ts";
 
-export function MemberKPIs({ allMembers, dbMitgliedtypen, onFilter }) {
+interface MitgliedtypOption {
+  name: string;
+}
+
+interface MemberKPIsProps {
+  allMembers: MemberRow[];
+  dbMitgliedtypen?: MitgliedtypOption[] | null;
+  /* Setzt Filter in der Liste, wenn eine Kachel angeklickt wird */
+  onFilter?: ((vals: FilterVals) => void) | null;
+}
+
+/* Ein Eintrag der Aufschlüsselung: entweder ein Mitgliedtyp oder eine
+   der beiden Sonderauswertungen. */
+interface BreakdownEintrag {
+  label: string;
+  key: string;
+}
+
+export function MemberKPIs({ allMembers, dbMitgliedtypen, onFilter }: MemberKPIsProps) {
   const isMobile = useIsMobile();
   const [breakdownOpen, setBreakdownOpen] = useState(false);
-  const breakdownRef = useRef(null);
+  const breakdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!breakdownOpen || isMobile) return;
-    const h = e => { if (breakdownRef.current && !breakdownRef.current.contains(e.target)) setBreakdownOpen(false); };
+    const h = (e: MouseEvent) => { if (breakdownRef.current && e.target instanceof Node && !breakdownRef.current.contains(e.target)) setBreakdownOpen(false); };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [breakdownOpen, isMobile]);
@@ -26,22 +46,22 @@ export function MemberKPIs({ allMembers, dbMitgliedtypen, onFilter }) {
   const funktionaerCount = allMembers.filter(m => (m.rollen||[]).some(r => r.toLowerCase().includes("funktion"))).length;
 
   const mitgliedTypen = (dbMitgliedtypen||[]).length > 0
-    ? dbMitgliedtypen.map(t => t.name)
+    ? (dbMitgliedtypen || []).map(t => t.name)
     : [...new Set(allMembers.map(m => m.mitgliedschaft).filter(v => v && v !== "-"))].sort();
 
-  const BREAKDOWN = [
+  const BREAKDOWN: BreakdownEintrag[] = [
     ...mitgliedTypen.map(typ => ({label:typ, key:typ})),
     {label:"Trainer/innen",    key:"__trainer"},
     {label:"Funktionär/innen", key:"__funktionaer"},
   ];
 
-  function bdCount(b) {
+  function bdCount(b: BreakdownEintrag) {
     if (b.key === "__trainer")    return trainerCount;
     if (b.key === "__funktionaer") return funktionaerCount;
     return allMembers.filter(m => m.mitgliedschaft === b.key).length;
   }
 
-  function bdFilter(b) {
+  function bdFilter(b: BreakdownEintrag) {
     const vals = b.key === "__trainer"    ? {rollen:["Trainer/in"]} :
                  b.key === "__funktionaer" ? {rollen:["Funktionär"]} :
                  {mitgliedschaft:[b.key]};

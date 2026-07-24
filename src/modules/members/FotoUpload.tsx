@@ -1,18 +1,32 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/FotoUpload.jsx
+   ClubCampus — modules/members/FotoUpload.tsx
    Foto-Upload Komponente für Mitglieder-Personalien
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef } from "react";
 import { Btn } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { updateMitgliedFoto, deleteMitgliedFoto } from "../../domains/members/memberService.ts";
+import type { ChangeEvent } from "react";
+import type { Mitglied, Sb } from "../../types.ts";
 
-export function FotoUpload({ raw, canUpload, sb, onReload }) {
+interface FotoUploadProps {
+  raw: Mitglied;
+  canUpload?: boolean;
+  sb: Sb;
+  onReload?: (() => void) | null;
+}
+
+interface UploadMeldung {
+  ok: boolean;
+  text: string;
+}
+
+export function FotoUpload({ raw, canUpload, sb, onReload }: FotoUploadProps) {
   const [uploading, setUploading] = useState(false);
-  const [msg, setMsg] = useState(null);
-  const inputRef = useRef(null);
+  const [msg, setMsg] = useState<UploadMeldung | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleUpload(e) {
+  async function handleUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !sb) return;
     if (file.size > 2 * 1024 * 1024) { setMsg({ok:false, text:"Max. 2MB"}); return; }
@@ -21,7 +35,7 @@ export function FotoUpload({ raw, canUpload, sb, onReload }) {
       await updateMitgliedFoto(sb, raw.id, file);
       setMsg({ok:true, text:"Foto gespeichert ✓"});
       setTimeout(() => { setMsg(null); if (onReload) onReload(); }, 800);
-    } catch(e) { setMsg({ok:false, text:e.message}); }
+    } catch(e) { setMsg({ok:false, text: e instanceof Error ? e.message : "Upload fehlgeschlagen"}); }
     setUploading(false);
   }
 

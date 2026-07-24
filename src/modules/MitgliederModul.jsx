@@ -9,7 +9,7 @@ import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetc
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.jsx";
-import { MemberKPIs } from "./members/MemberKPIs.jsx";
+import { MemberKPIs } from "./members/MemberKPIs.tsx";
 import { makeMemberRenderCell } from "./members/MemberListCell.jsx";
 import { useMemberMeta } from "../domains/members/useMemberMeta.ts";
 import { ElternListView } from "./members/ElternListView.jsx";
