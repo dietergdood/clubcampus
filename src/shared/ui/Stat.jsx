@@ -3,7 +3,7 @@
    Statistik-Kachel Komponente
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.jsx";
-import { resolveColor } from "../utils/colorUtils.js";
+import { resolveColor } from "../utils/colorUtils.ts";
 
 export function Stat({label,value,sub,color,semantic,icon,onClick}){
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};

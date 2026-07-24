@@ -5,7 +5,7 @@
 import { createContext, useContext } from "react";
 import { R } from "./constants.ts";
 export { Btn } from "./shared/ui/Btn.jsx";
-export { resolveColor, hexToRgba, darkenHex, contrastColor } from "./shared/utils/colorUtils.js";
+export { resolveColor, hexToRgba, darkenHex, contrastColor } from "./shared/utils/colorUtils.ts";
 export { Card, Chip, StatusTile, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, EmptyState, InfoBox } from "./shared/ui/primitives.jsx";
 export { useBreakpoint, useIsMobile } from "./shared/ui/hooks.jsx";
 export { PhoneInput } from "./shared/forms/PhoneInput.jsx";
