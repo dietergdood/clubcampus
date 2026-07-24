@@ -1,9 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/ui/Skeleton.jsx
+   ClubCampus — shared/ui/Skeleton.tsx
    Loading Skeleton Komponenten
    ═══════════════════════════════════════════════════════════════ */
+import type { CSSProperties } from "react";
 
-export function Skel({h=14,w="100%",br=6,mb=0,style={}}){
+interface SkelProps {
+  h?: number | string;
+  w?: number | string;
+  br?: number;
+  mb?: number;
+  style?: CSSProperties;
+}
+
+export function Skel({h=14,w="100%",br=6,mb=0,style={}}: SkelProps){
   return <div style={{height:h,width:w,borderRadius:br,marginBottom:mb,background:"linear-gradient(90deg,var(--border) 25%,var(--surface2) 50%,var(--border) 75%)",backgroundSize:"200% 100%",animation:"cc-shimmer 1.5s infinite",...style}}/>;
 }
 
@@ -17,7 +26,11 @@ export function SkelCard(){
   );
 }
 
-export function SkelList({rows=4}){
+interface SkelListProps {
+  rows?: number;
+}
+
+export function SkelList({rows=4}: SkelListProps){
   return(
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
       {Array.from({length:rows},(_,i)=>(

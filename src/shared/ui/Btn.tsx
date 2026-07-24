@@ -1,8 +1,28 @@
-import { FONT, BK} from "../../constants.ts";
+/* ═══════════════════════════════════════════════════════════════
+   ClubCampus — shared/ui/Btn.tsx
+   Button in vier Varianten
+   ═══════════════════════════════════════════════════════════════ */
+import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
+import { FONT } from "../../constants.ts";
 
-export function Btn({children,onClick,variant="outline",color=null,small,disabled=false,type="button",style={}}){
+/* Abgeleitet aus den im Code tatsächlich verwendeten Werten —
+   deckt sich mit den vier hier behandelten Zweigen. */
+export type ButtonVariant = "primary" | "ghost" | "danger" | "outline";
+
+interface BtnProps {
+  children?: ReactNode;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
+  variant?: ButtonVariant;
+  color?: string | null;
+  small?: boolean;
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  style?: CSSProperties;
+}
+
+export function Btn({children,onClick,variant="outline",color=null,small,disabled=false,type="button",style={}}: BtnProps){
   const p=small?"4px 10px":"7px 14px";
-  const base={
+  const base: CSSProperties={
     display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,
     padding:p,borderRadius:6,fontSize:small?12:13,fontWeight:500,
     cursor:disabled?"not-allowed":"pointer",fontFamily:FONT,

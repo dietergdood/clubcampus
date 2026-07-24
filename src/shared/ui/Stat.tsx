@@ -1,11 +1,27 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/ui/Stat.jsx
+   ClubCampus — shared/ui/Stat.tsx
    Statistik-Kachel Komponente
    ═══════════════════════════════════════════════════════════════ */
+import type { MouseEventHandler, ReactNode } from "react";
 import { TI } from "../../icons.tsx";
 import { resolveColor } from "../utils/colorUtils.ts";
+import type { SemanticKey } from "../utils/colorUtils.ts";
 
-export function Stat({label,value,sub,color,semantic,icon,onClick}){
+interface StatProps {
+  label?: ReactNode;
+  value?: ReactNode;
+  sub?: ReactNode;
+  color?: string;
+  /* Schlägt in SEMANTIC nach — nicht zu verwechseln mit dem semantic von
+     StatusTile, das einen CSS-Klassennamen bildet. */
+  semantic?: SemanticKey;
+  /* Teil der Prop-Schnittstelle, wird im Rumpf nicht ausgewertet:
+     die Kachel rendert bei onClick ein festes chart-pie-Icon. */
+  icon?: string;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+}
+
+export function Stat({label,value,sub,color,semantic,onClick}: StatProps){
   const c=semantic?resolveColor(semantic):{text:color||"var(--text)",bg:(color||"var(--sub)")+"20"};
   return(
     <div

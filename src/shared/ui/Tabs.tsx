@@ -1,12 +1,29 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/ui/Tabs.jsx
+   ClubCampus — shared/ui/Tabs.tsx
    Tab-Navigation Komponente
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
-import { useIsMobile } from "./hooks.jsx";
+import { useIsMobile } from "./hooks.ts";
 
-export function Tabs({tabs,active,setActive,mb=18}){
+export interface TabDef {
+  key: string;
+  label: string;
+  /* Kurzform, wird auf Mobile statt label gezeigt */
+  short?: string;
+  icon?: string;
+  /* Tab ist sichtbar, aber noch nicht klickbar ("bald") */
+  soon?: boolean;
+}
+
+interface TabsProps {
+  tabs: TabDef[];
+  active: string;
+  setActive: (key: string) => void;
+  mb?: number;
+}
+
+export function Tabs({tabs,active,setActive,mb=18}: TabsProps){
   const isMobile=useIsMobile();
   return(
     <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:10,padding:4,marginBottom:mb,overflowX:"auto",flexShrink:0}}>
@@ -30,4 +47,3 @@ export function Tabs({tabs,active,setActive,mb=18}){
     </div>
   );
 }
-

@@ -4,7 +4,7 @@ import { TI, TI_PATHS } from "./icons.tsx";
 import { LOGO_B64, ThemeCtx, useTheme, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, avColor} from "./theme.ts";
 import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT, MEMBERS, FUNKTIONEN} from "./demoData.js";
 import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.ts";
-import { Skel, SkelCard, SkelList } from "./shared/ui/Skeleton.jsx";
+import { Skel, SkelCard, SkelList } from "./shared/ui/Skeleton.tsx";
 import { LoginScreen } from "./modules/LoginScreen.jsx";
 import { useAppData, useTenant, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
 import { usePermissions } from "./domains/app/usePermissions.ts";

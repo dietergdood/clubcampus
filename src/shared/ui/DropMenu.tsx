@@ -1,23 +1,38 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/ui/DropMenu.jsx
+   ClubCampus — shared/ui/DropMenu.tsx
    Dreipunkt-Dropdown Menü
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
-import { useIsMobile } from "./hooks.jsx";
+import { useIsMobile } from "./hooks.ts";
 
-export function DropMenu({items}){
+export interface DropMenuItem {
+  label: string;
+  icon?: string;
+  onClick: () => void;
+  danger?: boolean;
+  hidden?: boolean;
+}
+
+/* Aufrufer mischen Einträge mit dem Literal "sep" für den Trenner. */
+export type DropMenuEntry = DropMenuItem | "sep";
+
+interface DropMenuProps {
+  items: DropMenuEntry[];
+}
+
+export function DropMenu({items}: DropMenuProps){
   const [open,setOpen]=useState(false);
   const [pos,setPos]=useState({top:0,right:0});
-  const btnRef=useRef(null);
-  const wrapRef=useRef(null);
+  const btnRef=useRef<HTMLButtonElement>(null);
+  const wrapRef=useRef<HTMLDivElement>(null);
   const isMobile=useIsMobile();
 
   useEffect(()=>{
-    function handleClick(e){ 
-      if(wrapRef.current&&!wrapRef.current.contains(e.target)) setOpen(false); 
+    function handleClick(e: MouseEvent){
+      if(wrapRef.current&&e.target instanceof Node&&!wrapRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener("mousedown",handleClick);
     return()=>document.removeEventListener("mousedown",handleClick);
@@ -78,4 +93,3 @@ export function DropMenu({items}){
     </div>
   );
 }
-

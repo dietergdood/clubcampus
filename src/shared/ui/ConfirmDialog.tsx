@@ -1,12 +1,28 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/ui/ConfirmDialog.jsx
+   ClubCampus — shared/ui/ConfirmDialog.tsx
    Bestätigungs-Dialog + useConfirm Hook
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
+import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { FONT } from "../../constants.ts";
 
-export function ConfirmDialog({open, title, message, confirmLabel="Bestätigen", cancelLabel="Abbrechen", danger=false, onConfirm, onCancel}){
+/* Optionen, die der Aufrufer an confirm() übergibt */
+export interface ConfirmOptions {
+  title: string;
+  message?: string;
+  danger?: boolean;
+  confirmLabel?: string;
+}
+
+interface ConfirmDialogProps extends ConfirmOptions {
+  open: boolean;
+  cancelLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmDialog({open, title, message, confirmLabel="Bestätigen", cancelLabel="Abbrechen", danger=false, onConfirm, onCancel}: ConfirmDialogProps){
   if(!open) return null;
   return createPortal(
     <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)",fontFamily:FONT}}>
@@ -23,10 +39,23 @@ export function ConfirmDialog({open, title, message, confirmLabel="Bestätigen",
   );
 }
 
-export function useConfirm(){
-  const [state,setState]=useState({open:false,title:"",message:"",danger:false,confirmLabel:"Bestätigen",resolve:null});
-  const confirm=({title,message,danger=false,confirmLabel="Bestätigen"})=>new Promise(resolve=>{
-    setState({open:true,title,message,danger,confirmLabel,resolve});
+interface ConfirmState extends ConfirmOptions {
+  open: boolean;
+  message: string;
+  danger: boolean;
+  confirmLabel: string;
+  /* null bis confirm() das erste Mal aufgerufen wurde */
+  resolve: ((value: boolean) => void) | null;
+}
+
+/* Rückgabe ist bewusst ein Tupel, die Aufrufer destrukturieren
+   `const [confirm, confirmDialog] = useConfirm()`. */
+export type UseConfirmResult = [(options: ConfirmOptions) => Promise<boolean>, ReactElement];
+
+export function useConfirm(): UseConfirmResult {
+  const [state,setState]=useState<ConfirmState>({open:false,title:"",message:"",danger:false,confirmLabel:"Bestätigen",resolve:null});
+  const confirm=({title,message,danger=false,confirmLabel="Bestätigen"}: ConfirmOptions)=>new Promise<boolean>(resolve=>{
+    setState({open:true,title,message:message??"",danger,confirmLabel,resolve});
   });
   const dialog=(
     <ConfirmDialog
@@ -35,8 +64,8 @@ export function useConfirm(){
       message={state.message}
       danger={state.danger}
       confirmLabel={state.confirmLabel}
-      onConfirm={()=>{setState(s=>({...s,open:false}));state.resolve(true);}}
-      onCancel={()=>{setState(s=>({...s,open:false}));state.resolve(false);}}
+      onConfirm={()=>{setState(s=>({...s,open:false}));state.resolve?.(true);}}
+      onCancel={()=>{setState(s=>({...s,open:false}));state.resolve?.(false);}}
     />
   );
   return [confirm, dialog];

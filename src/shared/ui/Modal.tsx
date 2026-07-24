@@ -1,10 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/ui/Modal.jsx
+   ClubCampus — shared/ui/Modal.tsx
    ModalOrSheet — Desktop Modal / Mobile Bottom Sheet
    ═══════════════════════════════════════════════════════════════ */
-import { useIsMobile } from "./hooks.jsx";
+import type { ReactNode } from "react";
+import { useIsMobile } from "./hooks.ts";
 
-export function ModalOrSheet({open,onClose,children,maxWidth=660}){
+interface ModalOrSheetProps {
+  open: boolean;
+  onClose?: () => void;
+  children?: ReactNode;
+  maxWidth?: number;
+}
+
+export function ModalOrSheet({open,onClose,children,maxWidth=660}: ModalOrSheetProps){
   const isMobile=useIsMobile();
   if(!open) return null;
   if(isMobile) return(
