@@ -5,7 +5,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { makeMemberRenderCell } from '../MemberListCell.jsx';
+import { makeMemberRenderCell } from '../MemberListCell.tsx';
 
 // ── Mocks ────────────────────────────────────────────────────────
 vi.mock('../../../icons.tsx', () => ({

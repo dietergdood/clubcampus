@@ -34,7 +34,7 @@ function wertName(v: unknown): string {
 }
 
 /* Auswahlliste eines Filters (Bereichsfilter liefern kein Array) */
-function alsListe(v: FilterVals[string]): string[] {
+export function alsListe(v: FilterVals[string]): string[] {
   return Array.isArray(v) ? v : [];
 }
 

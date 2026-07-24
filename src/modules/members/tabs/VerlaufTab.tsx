@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/tabs/VerlaufTab.jsx
+   ClubCampus — modules/members/tabs/VerlaufTab.tsx
    Änderungshistorie + Aktivitäten — kombiniert, chronologisch,
    mit Datum-Trennern. Einträge innerhalb 60s vom selben User
    werden gruppiert (z.B. Adressänderung = 1 Eintrag).
@@ -8,18 +8,35 @@ import { useState, useEffect } from "react";
 import { Card, EmptyState } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP } from "../../../domains/members/memberService.ts";
+import type { Mitglied, Sb } from "../../../types.ts";
+
+/* Direkt aus den Service-Rückgaben abgeleitet. _typ unterscheidet die
+   beiden Quellen, nachdem sie zu einer Liste zusammengeführt wurden. */
+type AenderungEintrag  = Awaited<ReturnType<typeof fetchAenderungen>>[number]  & { _typ: "aenderung" };
+type AktivitaetEintrag = Awaited<ReturnType<typeof fetchAktivitaeten>>[number] & { _typ: "aktivitaet" };
+type Eintrag = AenderungEintrag | AktivitaetEintrag;
+
+const istAenderung  = (e: Eintrag): e is AenderungEintrag  => e._typ === "aenderung";
+const istAktivitaet = (e: Eintrag): e is AktivitaetEintrag => e._typ === "aktivitaet";
+
+interface Gruppe {
+  user: string;
+  ts: number;
+  _typ: Eintrag["_typ"];
+  items: Eintrag[];
+}
 
 const SENSITIV_FELDER = ["ahv_nr"];
 const ADRESS_FELDER = ["strasse","plz","ort","kanton"];
 
-const ROLLE_LABEL = {
+const ROLLE_LABEL: Record<string, string> = {
   administrator: "Administrator", administration: "Verwaltung",
   funktionaer: "Funktionär", trainer: "Trainer/in",
   spieler: "Spieler/in", eltern: "Elternteil",
   mitglied: "Mitglied", supporter: "Supporter",
 };
 
-function formatWert(feld, wert) {
+function formatWert(feld: string, wert: string | null): string | null {
   if (!wert) return null;
   if (SENSITIV_FELDER.includes(feld)) return "••• •• ••••";
   if (feld === "rolle") return ROLLE_LABEL[wert] || wert;
@@ -27,7 +44,7 @@ function formatWert(feld, wert) {
   return wert;
 }
 
-function aktivitaetIcon(typ) {
+function aktivitaetIcon(typ: string): string {
   switch(typ) {
     case AKTIVITAET_TYP.PORTAL_AKTIVIERT:    return "key";
     case AKTIVITAET_TYP.PORTAL_DEAKTIVIERT:  return "key";
@@ -48,7 +65,7 @@ function aktivitaetIcon(typ) {
   }
 }
 
-function datumLabel(ts) {
+function datumLabel(ts: number): string {
   const d = new Date(ts);
   const heute = new Date();
   const gestern = new Date(); gestern.setDate(gestern.getDate()-1);
@@ -57,14 +74,14 @@ function datumLabel(ts) {
   return d.toLocaleDateString("de-CH", { day:"2-digit", month:"2-digit", year:"numeric" });
 }
 
-function uhrzeit(ts) {
+function uhrzeit(ts: number): string {
   return new Date(ts).toLocaleTimeString("de-CH", { hour:"2-digit", minute:"2-digit" });
 }
 
 // Einträge gruppieren: gleicher User + innerhalb 60s = eine Gruppe
-function gruppiereEintraege(eintraege) {
-  const gruppen = [];
-  let aktGruppe = null;
+function gruppiereEintraege(eintraege: Eintrag[]): Gruppe[] {
+  const gruppen: Gruppe[] = [];
+  let aktGruppe: Gruppe | null = null;
 
   for (const e of eintraege) {
     const ts = new Date(e.geaendert_at).getTime();
@@ -86,8 +103,13 @@ function gruppiereEintraege(eintraege) {
   return gruppen;
 }
 
-function VerlaufTab({ raw, sb }) {
-  const [eintraege, setEintraege] = useState([]);
+interface VerlaufTabProps {
+  raw: Mitglied;
+  sb: Sb;
+}
+
+function VerlaufTab({ raw, sb }: VerlaufTabProps) {
+  const [eintraege, setEintraege] = useState<Eintrag[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -97,10 +119,10 @@ function VerlaufTab({ raw, sb }) {
       fetchAenderungen(sb, raw.id),
       fetchAktivitaeten(sb, raw.id),
     ]).then(([aenderungen, aktivitaeten]) => {
-      const alle = [
-        ...aenderungen.map(a => ({ ...a, _typ: "aenderung" })),
-        ...aktivitaeten.map(a => ({ ...a, _typ: "aktivitaet" })),
-      ].sort((a, b) => new Date(b.geaendert_at) - new Date(a.geaendert_at));
+      const alle: Eintrag[] = [
+        ...aenderungen.map(a => ({ ...a, _typ: "aenderung" as const })),
+        ...aktivitaeten.map(a => ({ ...a, _typ: "aktivitaet" as const })),
+      ].sort((a, b) => new Date(b.geaendert_at).getTime() - new Date(a.geaendert_at).getTime());
       setEintraege(alle);
       setLoading(false);
     });
@@ -109,7 +131,7 @@ function VerlaufTab({ raw, sb }) {
   const gruppen = gruppiereEintraege(eintraege);
 
   // Nach Datum gruppieren
-  const nachDatum = gruppen.reduce((acc, g) => {
+  const nachDatum = gruppen.reduce<Record<string, Gruppe[]>>((acc, g) => {
     const label = datumLabel(g.ts);
     if (!acc[label]) acc[label] = [];
     acc[label].push(g);
@@ -152,8 +174,11 @@ function VerlaufTab({ raw, sb }) {
                       /* Änderungen: Adressfelder zusammenfassen */
                       <div className="cc-verlauf-felder">
                         {(()=>{
-                          const adressItems = g.items.filter(e => ADRESS_FELDER.includes(e.feld));
-                          const restItems   = g.items.filter(e => !ADRESS_FELDER.includes(e.feld));
+                          /* gruppiereEintraege trennt nach _typ — die Gruppe enthält
+                             hier ausschliesslich Änderungen. */
+                          const items = g.items.filter(istAenderung);
+                          const adressItems = items.filter(e => ADRESS_FELDER.includes(e.feld));
+                          const restItems   = items.filter(e => !ADRESS_FELDER.includes(e.feld));
                           const result = [];
 
                           // Adresse als Gruppe
@@ -192,7 +217,7 @@ function VerlaufTab({ raw, sb }) {
                     ) : (
                       /* Aktivitäten */
                       <div className="cc-verlauf-felder">
-                        {g.items.map(e => (
+                        {g.items.filter(istAktivitaet).map(e => (
                           <div key={e.id} className="cc-verlauf-aktivitaet">
                             <span className="cc-verlauf-aktivitaet-icon"><TI n={aktivitaetIcon(e.typ)} size={12}/></span>
                             {e.beschreibung}

@@ -14,12 +14,12 @@ import {
   updateMitglied,
   logAktivitaet, AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
-import { MemberHero } from "./MemberHero.jsx";
+import { MemberHero } from "./MemberHero.tsx";
 import { ElternTab } from "./tabs/ElternTab.jsx";
 import { InfoTab } from "./tabs/InfoTab.jsx";
 import { PortalTab } from "./tabs/PortalTab.tsx";
 import { DatenpruefungTab } from "./tabs/DatenpruefungTab.tsx";
-import { VerlaufTab } from "./tabs/VerlaufTab.jsx";
+import { VerlaufTab } from "./tabs/VerlaufTab.tsx";
 import { getFieldVisibility } from "./memberUtils.tsx";
 
 function MemberDetail({

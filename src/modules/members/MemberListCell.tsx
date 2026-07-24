@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/MemberListCell.jsx
+   ClubCampus — modules/members/MemberListCell.tsx
    renderCell Factory fuer MitgliederModul ListView
 
    makeMemberRenderCell({ ...props }) => renderCell(col, row, gc, filterVals)
@@ -28,9 +28,29 @@
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.tsx";
 import { Av, PortalBadge, DpBadge } from "../../theme.ts";
+import { memberFeld } from "./memberMapper.ts";
+import type { MemberRow } from "./memberMapper.ts";
+import type { fetchPortalFunktionen } from "../../domains/members/memberService.ts";
+import { alsListe } from "./memberFilter.ts";
+import type { ColDef, FilterVals, GroupContext, RenderCell, RowId } from "../../shared/list/types.ts";
+import type { SetState } from "../../types.ts";
 
-export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, expandedTeams, setExpandedTeams, setSelectedMember }) {
-  function renderCell(col,m,groupContext={type:"none",key:null},filterVals={}){
+/* MitgliederModul lädt portal_funktionen mit Gruppe + Farbe — gleiche
+   Auswahl wie fetchPortalFunktionen, deshalb von dort abgeleitet. */
+type PortalFunktionMitFarbe = Awaited<ReturnType<typeof fetchPortalFunktionen>>[number];
+
+interface MemberRenderCellDeps {
+  portalFunktionen: PortalFunktionMitFarbe[];
+  TRAINER_KEYS: string[];
+  ROLLE_LABEL: Record<string, string>;
+  /* Enthält Mitglied-IDs (Teams-Spalte) und "f_"+ID (Funktionen-Spalte) */
+  expandedTeams: Set<RowId>;
+  setExpandedTeams: SetState<Set<RowId>>;
+  setSelectedMember: (m: MemberRow & { _tab?: string }) => void;
+}
+
+export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, expandedTeams, setExpandedTeams, setSelectedMember }: MemberRenderCellDeps): RenderCell<MemberRow> {
+  function renderCell(col: ColDef, m: MemberRow, groupContext: GroupContext={type:"none",key:null}, filterVals: FilterVals={}){
     const gc=groupContext;
     switch(col.key){
       // Avatar + Name + Klick öffnet Mitglied-Detail
@@ -56,8 +76,8 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       // Teams als Chips — bei gc.type="gruppe" leer (Teams sind nicht relevant)
       case "teams": {
         if(gc.type==="gruppe") return <td key="teams" className="cc-members-td cc-members-td-sub">—</td>;
-        const teamsToShow=gc.type==="team"?(m.teams||[]).filter(t=>(t?.name||t)===gc.key):(m.teams||[]);
-        return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{teamsToShow.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{teamsToShow.map((t,i)=><span key={i} className="cc-team-chip">{t?.kurz||t?.name||t}</span>)}</span>):"—"}</td>;
+        const teamsToShow=gc.type==="team"?(m.teams||[]).filter(t=>t.name===gc.key):(m.teams||[]);
+        return <td key="teams" className="cc-members-td" onClick={e=>e.stopPropagation()}>{teamsToShow.length>0?(<span className="cc-row cc-gap-4 cc-flex-wrap">{teamsToShow.map((t,i)=><span key={i} className="cc-team-chip">{t.kurz||t.name}</span>)}</span>):"—"}</td>;
       }
       // Datenprüfungs-Status Badge
       case "datenpruefung": return <td key="datenpruefung" className="cc-members-td"><DpBadge val={m.datenpruefung}/></td>;
@@ -86,8 +106,8 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       // - gc.subType="kaderrolle": Team+Kaderrolle Mehrfachgruppierung
       case "teams_rollen": {
         if(gc.type==="gruppe") return <td key="teams_rollen" className="cc-members-td cc-members-td-sub">—</td>;
-        const teamsFilter=filterVals["teams"]||[];
-        const kaderFilter=filterVals["kaderrollen"]||[];
+        const teamsFilter=alsListe(filterVals["teams"]);
+        const kaderFilter=alsListe(filterVals["kaderrollen"]);
         // Bei Kaderrolle-Gruppierung: nur Einträge mit dieser Rolle
         if(gc.type==="kaderrolle"){
           const eFiltered=(m.kader_eintraege||[]).map(e=>({...e,rollen:e.rollen.filter(r=>r===gc.key)})).filter(e=>e.rollen.length>0);
@@ -107,7 +127,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
         // Bei Team+Kaderrolle Mehrfachgruppierung: Team-Kontext + Kaderrolle als Subkontext
         const rolleFilter=gc.subType==="kaderrolle"?[gc.subKey]:(kaderFilter.length>0?kaderFilter:null);
         const eintraege=(m.kader_eintraege||[]).filter(e=>{
-          const teamMatch=gc.type==="team"?e.team?.name===gc.key:(teamsFilter.length===0||teamsFilter.includes(e.team?.name));
+          const teamMatch=gc.type==="team"?e.team?.name===gc.key:(teamsFilter.length===0||teamsFilter.includes(e.team?.name??""));
           const rolleMatch=rolleFilter?e.rollen.some(r=>rolleFilter.includes(r)):true;
           return teamMatch&&rolleMatch;
         }).sort((a,b)=>{
@@ -152,7 +172,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       // - gc.type="gruppe": nur Funktionen dieser Gruppe
       case "funktionen_gruppen": {
         if(gc.type==="team") return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
-        const gruppenFilter=filterVals["funktionsgruppen"]||[];
+        const gruppenFilter=alsListe(filterVals["funktionsgruppen"]);
         const paare=(gc.type==="funktion"
           ?(m.funktionen||[]).filter(f=>f===gc.key)
           :(m.funktionen||[])).map(f=>{
@@ -161,7 +181,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
         }).filter(p=>{
           if(gc.type==="funktion") return true;
           if(gc.type==="gruppe") return p.gruppe===gc.key;
-          return gruppenFilter.length===0||gruppenFilter.includes(p.gruppe);
+          return gruppenFilter.length===0||gruppenFilter.includes(p.gruppe??"");
         });
         if(paare.length===0) return <td key="funktionen_gruppen" className="cc-members-td cc-members-td-sub">—</td>;
         const isFExpanded=expandedTeams.has("f_"+m.id);
@@ -191,16 +211,16 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       // Vereinsfunktionen — bei gc.type="team" leer
       case "funktionen": {
         if(gc.type==="team") return <td key="funktionen" className="cc-members-td cc-members-td-sub">—</td>;
-        const gruppenFilter=filterVals["funktionsgruppen"]||[];
+        const gruppenFilter=alsListe(filterVals["funktionsgruppen"]);
         const funktionenToShow=gc.type==="gruppe"
           ?(m.funktionen||[]).filter(f=>{const pf=portalFunktionen.find(x=>x.name===f);return pf?.portal_gruppen?.name===gc.key;})
-          :(gruppenFilter.length>0?(m.funktionen||[]).filter(f=>{const pf=portalFunktionen.find(x=>x.name===f);return gruppenFilter.includes(pf?.portal_gruppen?.name);}):(m.funktionen||[]));
+          :(gruppenFilter.length>0?(m.funktionen||[]).filter(f=>{const pf=portalFunktionen.find(x=>x.name===f);return gruppenFilter.includes(pf?.portal_gruppen?.name??"");}):(m.funktionen||[]));
         return <td key="funktionen" className="cc-members-td cc-members-td-sub">{funktionenToShow.join(", ")||"—"}</td>;
       }
       // Kaderrollen als Chips — Trainer-Rollen orange markiert
       case "kaderrollen": {
         if(gc.type==="gruppe") return <td key="kaderrollen" className="cc-members-td cc-members-td-sub">—</td>;
-        const kaderFilter=filterVals["kaderrollen"]||[];
+        const kaderFilter=alsListe(filterVals["kaderrollen"]);
         const rollenToShow=gc.type==="team"
           ?( kaderFilter.length>0?(m.kader_rollen_raw||[]).filter(r=>kaderFilter.includes(r)):(m.kader_rollen_raw||[]) )
           :(m.kader_rollen_raw||[]);
@@ -209,13 +229,13 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       // Funktionsgruppen als farbige Badges (Farbe aus Vereinskonfiguration)
       case "funktionsgruppen": {
         if(gc.type==="team") return <td key="funktionsgruppen" className="cc-members-td cc-members-td-sub">—</td>;
-        const gruppenFilter=filterVals["funktionsgruppen"]||[];
+        const gruppenFilter=alsListe(filterVals["funktionsgruppen"]);
         const gruppenToShow=gc.type==="gruppe"
           ?[(gc.key)]
           :(gruppenFilter.length>0?(m.funktionsgruppen||[]).filter(g=>gruppenFilter.includes(g)):(m.funktionsgruppen||[]));
         return <td key="funktionsgruppen" className="cc-members-td">{gruppenToShow.length===0?"—":gruppenToShow.map((g,i)=>{const pf=portalFunktionen.find(f=>f.portal_gruppen?.name===g);const farbe=pf?.portal_gruppen?.farbe;return <span key={i} className="cc-funk-gruppe-badge" style={farbe?{background:farbe+"20",color:farbe,borderColor:farbe+"40"}:{}}>{g}</span>;})}</td>;
       }
-      default: return <td key={col.key} className="cc-members-td cc-members-td-sub">{m[col.key]||"—"}</td>;
+      default: return <td key={col.key} className="cc-members-td cc-members-td-sub">{String(memberFeld(m,col.key)||"—")}</td>;
     }
   }
   return renderCell;

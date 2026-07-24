@@ -1,22 +1,54 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/MemberHero.jsx
+   ClubCampus — modules/members/MemberHero.tsx
    Hero-Header des Mitglied-Detailbereichs
    Kein Edit-Modal mehr — alle Felder inline editierbar in InfoTab
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef } from "react";
+import type { ChangeEvent } from "react";
 import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
+import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
+import type { Account, DbUser, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../../types.ts";
+/* KaderRolle aus types.ts kennt ist_trainer nicht (die Spalte existiert in
+   kader_rollen). KaderRolleOption ist die dafür gedachte Option-Form und
+   wird schon von useMemberMeta genutzt. */
+import type { KaderRolleOption } from "../../domains/members/useMemberMeta.ts";
 
-function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null}){
+/* Kader-Einträge des Mitglieds inkl. Team — von fetchKaderFuerMitglied */
+type KaderDetail = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
+
+interface MemberHeroProps {
+  /* Gemapptes Anzeigeobjekt — gebraucht wird nur der Name */
+  m: { name: string };
+  raw: Mitglied;
+  initials: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  sb: Sb;
+  /* Ohne ID lädt der Aufrufer die ganze Liste neu, mit ID nur das Mitglied */
+  onReload?: ((id?: number) => void) | null;
+  onClose?: (() => void) | null;
+  onReaktiviert?: ((id: number) => void) | null;
+  onRefreshCount?: (() => void) | null;
+  account?: Account | null;
+  onUpdatePortalZugang?: ((mitgliedId: number, aktiv: boolean) => Promise<void> | void) | null;
+  dbMitgliedtypen?: Mitgliedtyp[];
+  dbPortalRollen?: PortalRolle[];
+  dbKaderRollen?: KaderRolleOption[];
+  benutzer?: DbUser | null;
+  teamDetails?: KaderDetail[] | null;
+  vereinId?: string | null;
+}
+
+function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
-  const fotoInputRef=useRef(null);
+  const fotoInputRef=useRef<HTMLInputElement>(null);
   const [fotoOverlay,setFotoOverlay]=useState(false);
 
-  async function handleHeroFotoUpload(e){
+  async function handleHeroFotoUpload(e: ChangeEvent<HTMLInputElement>){
     const file=e.target.files?.[0];
-    if(!file) return;
+    if(!file||!sb) return;
     await updateMitgliedFoto(sb, raw.id, file);
     if(onReload) onReload(raw.id);
   }
@@ -33,7 +65,7 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
     <>{confirmDialog}
       <div className="cc-member-hero">
         <div className="cc-member-hero-banner">
-          <button className="cc-hero-banner-btn" onClick={onClose}><TI n="arrow-left" size={16}/></button>
+          <button className="cc-hero-banner-btn" onClick={()=>onClose&&onClose()}><TI n="arrow-left" size={16}/></button>
           <div className="cc-hero-av-wrap">
             <div className={`cc-member-hero-av cc-hero-av-hoverable${canEdit?" cc-cursor-pointer":""}`}
               onClick={()=>canEdit&&(raw.foto_url?setFotoOverlay(true):fotoInputRef.current?.click())}>
@@ -57,6 +89,7 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                       <TI n="camera" size={14}/> Ändern
                     </Btn>
                     <Btn variant="danger" onClick={async()=>{
+                      if(!sb) return;
                       await deleteMitgliedFoto(sb, raw.id);
                       setFotoOverlay(false);
                       if(onReload) onReload();
@@ -75,7 +108,7 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
             <h1 className="cc-page-title cc-member-hero-name">{m.name}</h1>
             <div className="cc-hero-chips">
               {(()=>{
-                const ROLLE_LABEL=(dbPortalRollen||[]).length>0
+                const ROLLE_LABEL: Record<string,string>=(dbPortalRollen||[]).length>0
                   ?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label]))
                   :{administrator:"Administrator",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Elternteil",mitglied:"Mitglied",supporter:"Supporter"};
                 const TRAINER_ROLLEN=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
@@ -83,7 +116,7 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                 const hatSpielerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>!TRAINER_ROLLEN.includes(r)));
                 const portalRolle=(benutzer?.role||raw.rolle||null);
                 const portalRolleClean=portalRolle&&portalRolle!=="-"?portalRolle:null;
-                const chips=[];
+                const chips: {label:string;type:string}[]=[];
                 if(portalRolleClean) chips.push({label:ROLLE_LABEL[portalRolleClean]||portalRolleClean,type:"portal"});
                 if(hatTrainerKader&&portalRolleClean!=="trainer") chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"kader"});
                 if(hatSpielerKader&&portalRolleClean!=="spieler") chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"kader"});
@@ -104,13 +137,17 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
               {raw.aktiv!==false&&<span className="cc-hero-status-pill cc-hero-status-pill-ok"><TI n="circle-check" size={11}/>Aktiv</span>}
               {raw.aktiv===false&&<span className="cc-hero-status-pill cc-hero-status-pill-err"><TI n="user-off" size={11}/>Inaktiv</span>}
               {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Fairgate OK</span>}
-              {!raw.geprueft&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
+              {/* Datenprüfung hängt an profil_geprueft_at — das früher hier
+                  gelesene Feld `geprueft` gibt es in mitglieder nicht, die
+                  Pille stand dadurch bei jedem Mitglied. Gleiche Korrektur
+                  wie in memberMapper und DatenpruefungTab. */}
+              {!raw.profil_geprueft_at&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
             </div>
             {(canEdit||canDelete)&&(
               <div className="cc-hero-menu-trigger"><DropMenu items={[
-                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
-                ...(raw.aktiv===false?["sep",{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
-                "sep",
+                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
+                ...(raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
+                "sep" as const,
                 {icon:"trash",label:"Löschen",danger:true,onClick:handleLoeschen},
               ]}/></div>
             )}

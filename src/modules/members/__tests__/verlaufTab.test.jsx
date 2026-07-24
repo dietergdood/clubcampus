@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { VerlaufTab } from '../tabs/VerlaufTab.jsx';
+import { VerlaufTab } from '../tabs/VerlaufTab.tsx';
 
 vi.mock('../../../theme.ts', () => ({
   Card: ({ children }) => <div>{children}</div>,

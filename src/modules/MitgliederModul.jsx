@@ -10,7 +10,7 @@ import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } 
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.tsx";
 import { MemberKPIs } from "./members/MemberKPIs.tsx";
-import { makeMemberRenderCell } from "./members/MemberListCell.jsx";
+import { makeMemberRenderCell } from "./members/MemberListCell.tsx";
 import { useMemberMeta } from "../domains/members/useMemberMeta.ts";
 import { ElternListView } from "./members/ElternListView.tsx";
 import { ListView } from "../shared/list/ListView.tsx";
