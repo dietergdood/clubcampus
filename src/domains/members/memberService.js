@@ -119,7 +119,17 @@ export async function fetchAlleElternkontakte(sb, vereinId) {
     .eq("verein_id", vereinId)
     .order("nachname", { ascending: true });
   if(error) console.error("fetchAlleElternkontakte error:", error);
-  return data || [];
+  // Flatten: erstes Kind als mitglieder/mitglied_id für Rückwärtskompatibilität mit ElternListView
+  return (data||[]).map(e => {
+    const erstesKind = e.eltern_kinder?.[0];
+    return {
+      ...e,
+      mitglied_id: erstesKind?.mitglied_id || null,
+      hauptkontakt: erstesKind?.hauptkontakt || false,
+      mitglieder: erstesKind?.mitglieder || null,
+      _alle_kinder: e.eltern_kinder || [],
+    };
+  });
 }
 
 export async function fetchKinderFuerElternteil(sb, elternId) {
