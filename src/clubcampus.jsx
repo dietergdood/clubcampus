@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR, GB } from "./constants.js";
 import { TI, TI_PATHS } from "./icons.jsx";
 import { LOGO_B64, ThemeCtx, useTheme, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, avColor} from "./theme.jsx";
-import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT , MEMBERS, FUNKTIONEN} from "./demoData.js";
+import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT, MEMBERS, FUNKTIONEN} from "./demoData.js";
 import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.js";
 import { Skel, SkelCard, SkelList } from "./shared/ui/Skeleton.jsx";
 import { LoginScreen } from "./modules/LoginScreen.jsx";
 import { useAppData } from "./domains/app/useAppData.js";
+import { usePermissions } from "./domains/app/usePermissions.js";
+import { TEAM_HIERARCHY, NAV_TARGET, FIELD_VIS, INITIAL_PLAENE } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./modules/NavigationModul.jsx";
 import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./modules/DashboardModul.jsx";
 import { TeamView, TeamOverview, EventsList } from "./modules/TeamModul.jsx";
@@ -87,129 +89,6 @@ function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
 /* -- Farben & Konstanten via ./constants.js -- */
 
 /* ── TEAM-HIERARCHIE (Baumstruktur) ── */
-const TEAM_HIERARCHY={
-  "Aktivfussball":{
-    "Aktive Herren":  ["Aktive Herren"],
-    "Aktive Frauen":  ["Aktive Frauen"],
-  },
-  "Juniorenfussball":{
-    "Junioren A":["Junioren A"],
-    "Junioren B":["Junioren B"],
-    "Junioren C":["Junioren C"],
-    "Junioren D":["Junioren D-9","Junioren D-7"],
-  },
-  "Kinderfussball Junioren":{
-    "Junioren E":["Junioren E"],
-    "Junioren F":["Junioren F"],
-    "Junioren G":["Junioren G"],
-  },
-  "Juniorinnenfussball":{
-    "Juniorinnen B / FF-21":["Juniorinnen FF-21"],
-    "Juniorinnen C / FF-17":["Juniorinnen FF-17"],
-    "Juniorinnen D / FF-14":["Juniorinnen FF-14 9v9","Juniorinnen FF-14 7v7","Juniorinnen FF-14"],
-  },
-  "Kinderfussball Juniorinnen":{
-    "Juniorinnen E / FF-11":["Juniorinnen FF-11"],
-    "Juniorinnen F / FF-9": ["Juniorinnen FF-9"],
-    "Juniorinnen G / FF-7": ["Juniorinnen FF-7"],
-  },
-  "Seniorenfussball":{
-    "Senioren 30+":["Senioren 30+"],
-    "Senioren 40+":["Senioren 40+"],
-    "Senioren 50+":["Senioren 50+"],
-    "Senioren 60+":["Senioren 60+"],
-  },
-};
-
-
-
-/* ── PWA THEME SYSTEM ── */
-
-/* ── Globales CSS (wird per useEffect injiziert) ── */
-if(typeof window!=="undefined"&&!window.storage){
-  window.storage={
-    get:async(k)=>{const v=localStorage.getItem(k);return v?{value:v}:null;},
-    set:async(k,v)=>{localStorage.setItem(k,v);return{key:k,value:v};},
-    delete:async(k)=>{localStorage.removeItem(k);return{key:k,deleted:true};},
-    list:async(prefix="")=>{const keys=Object.keys(localStorage).filter(k=>k.startsWith(prefix));return{keys};},
-  };
-}
-
-/* Icons via ./icons.js */
-
-/* ── Shared navigation target (cross-module) ── */
-const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
-const FIELD_VIS = {
-  administrator: ["dob","nat","heimatort","ahv","pass","street","plz","city","canton","country","email","tel","pass","parent1","parent2","js","fairgate"],
-  administration:["dob","nat","heimatort","ahv","pass","street","plz","city","canton","country","email","tel","parent1","parent2","js","fairgate"],
-  funktionaer:   ["dob","pass","street","plz","city","email","tel"],
-  trainer:       ["dob","nat","heimatort","pass","street","plz","city","email","tel","parent1","parent2"],
-  spieler:       ["dob","pass","street","plz","city","email","tel"],
-  eltern:        ["dob","pass","street","plz","city","email","tel"],
-};
-
-/* -- DATA -- */
-const NR_CACHE={data:Object.fromEntries(ROSTER.map(p=>[p.id,p.rueckennr||""]))};
-(async()=>{
-  try{
-    const res=await window.storage.get("rueckennrn");
-    if(res){const d=JSON.parse(res.value);Object.assign(NR_CACHE.data,d);}
-  }catch(e){}
-})();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ==========================================
-   KLEINE HILFKOMPONENTEN
-========================================== */
-/* ==========================================
-   ROLLEN-SWITCHER MODAL
-========================================== */
-/* ==========================================
-   LAYOUT
-========================================== */
-/* ==========================================
-   MEIN TEAM (rollenabhängig)
-========================================== */
-
-/* == TRAININGSPLAN DATA == */
-const INITIAL_PLAENE = [
-  {
-    id: "plan_1",
-    name: "Trainingsplan Saison 2025/26",
-    valid_from: "2025-08-01",
-    valid_until: "2026-06-30",
-    active: true,
-    slots: GANTT.flatMap((d,di) => d.slots.map((s,si) => ({
-      id: "slot_"+di+"_"+si,
-      weekday: d.day,
-      team: s.team,
-      start: s.start,
-      end: s.end,
-      ort: s.field,
-      end_ort: "",
-      half: "",
-      end_half: "",
-      wechsel_zeit: "",
-      color: s.color,
-    })))
-  }
-];
 
 /* == PLATZ-GANTT == */
 
@@ -574,31 +453,9 @@ function Portal({supabaseClient}){
     .filter(n=>isModuleVisible(n.key));
 
   /* ── App-Level Zugriffstufen-Hilfsfunktionen ── */
-  const APP_ZUGRIFF_DEFAULT={
-    administrator:  {_all:"verwalten"},
-    administration: {_all:"verwalten",dashboard:"lesen"},
-    funktionaer:    {_all:"lesen"},
-    trainer:        {_all:"lesen",team:"verwalten",training:"verwalten",events:"verwalten",attendance_central:"schreiben",helpers:"verwalten",buses:"schreiben",material:"schreiben",media:"schreiben",wiki:"schreiben",members:"schreiben",schedule:"lesen"},
-    spieler:        {_all:"lesen",events:"schreiben",helpers:"schreiben",buses:"schreiben"},
-    eltern:         {_all:"lesen",events:"schreiben",helpers:"schreiben",schedule:"lesen"},
-    supporter:      {_all:"lesen",helpers:"schreiben"},
-  };
-
-  function getZugriff(modulKey){
-    /* Funktionäre: Stufe via Gruppen & Funktionen */
-    if(role==="funktionaer"){
-      return getEffektiveStufeForFunktionaer(dbFunktionen, modulKey);
-    }
-    const effR=moduleRechte||{};
-    const hatZugriff=effR[role]?effR[role].includes(modulKey):(APP_ZUGRIFF_DEFAULT[role]?.[modulKey]||APP_ZUGRIFF_DEFAULT[role]?._all||"lesen")!=="none";
-    if(!hatZugriff) return null;
-    const zs=typeof zugriffStufen!=="undefined"?zugriffStufen:null;
-    return zs?.[role]?.[modulKey]||APP_ZUGRIFF_DEFAULT[role]?.[modulKey]||APP_ZUGRIFF_DEFAULT[role]?._all||"lesen";
-  }
-
-  const kannLesen   =(mod)=>!!getZugriff(mod);
-  const kannSchreiben=(mod)=>["schreiben","verwalten"].includes(getZugriff(mod));
-  const kannVerwalten=(mod)=>getZugriff(mod)==="verwalten";
+  const { getZugriff, kannLesen, kannSchreiben, kannVerwalten } = usePermissions({
+    role, moduleRechte, zugriffStufen, dbFunktionen,
+  });
 
   const handleAccountChange=(key)=>{
     setAccountKey(key);
