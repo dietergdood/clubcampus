@@ -285,6 +285,13 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-land-option-name{flex:1}
 .cc-land-option-active{background:var(--surface2);font-weight:600}
 .cc-land-empty{padding:12px;font-size:13px;color:var(--sub);text-align:center}
+.cc-tab-row{display:flex;border-bottom:0.5px solid var(--border)}
+.cc-tab-btn{flex:1;padding:10px;font-size:13px;border:none;background:transparent;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+.cc-tab-btn:hover{color:var(--text)}
+.cc-tab-btn-active{color:var(--text);font-weight:500;border-bottom:2px solid var(--text)}
+.cc-eltern-result{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;border:0.5px solid var(--border);cursor:pointer}
+.cc-eltern-result:hover{background:var(--surface2)}
+.cc-eltern-result-active{border-color:var(--text);background:var(--surface2)}
 .cc-eltern-av{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
 .cc-eltern-badge{font-size:11px;padding:2px 7px;border-radius:20px;border:0.5px solid var(--border);color:var(--sub)}
 .cc-eltern-badge[data-rel="mutter"],.cc-eltern-badge[data-rel="grossmutter"]{background:#FDF2F8;border-color:#FBCFE8;color:#9D174D}

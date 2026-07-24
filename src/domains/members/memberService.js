@@ -139,6 +139,18 @@ export async function fetchKinderFuerElternteil(sb, elternId) {
   return data || [];
 }
 
+export async function sucheElternkontakte(sb, vereinId, query) {
+  // Sucht bestehende Elternkontakte nach Name oder E-Mail
+  const q = (query||"").trim().toLowerCase();
+  if(!q) return [];
+  const { data } = await sb.from("elternkontakte")
+    .select("id, vorname, nachname, name, email, beziehung, eltern_kinder(mitglied_id, mitglieder:mitglied_id(id, vorname, nachname))")
+    .eq("verein_id", vereinId)
+    .or(`vorname.ilike.%${q}%,nachname.ilike.%${q}%,email.ilike.%${q}%`)
+    .limit(10);
+  return data || [];
+}
+
 export async function insertElternkontakt(sb, kontakt) {
   // kontakt enthält mitglied_id + verein_id — zuerst elternkontakt anlegen, dann verknüpfen
   const { mitglied_id, hauptkontakt=false, ...elternFelder } = kontakt;

@@ -8,13 +8,13 @@
    - Entknüpfen des letzten Kindes → deleteElternkontakt
    - E-Mail Pflichtfeld
    ═══════════════════════════════════════════════════════════════ */
-import { useState } from "react";
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
+import { useState, useEffect, useRef } from "react";
 import {
   insertElternkontakt, updateElternkontakt, deleteElternkontakt,
-  unlinkKind, setHauptkontakt, unlinkElternBenutzer,
-  fetchElternkontakte, fetchKinderFuerElternteil,
+  unlinkKind, linkKind, setHauptkontakt, unlinkElternBenutzer,
+  fetchElternkontakte, fetchKinderFuerElternteil, sucheElternkontakte,
   logAenderung, logAktivitaet, AKTIVITAET_TYP
 } from "../../../domains/members/memberService.js";
 
@@ -86,11 +86,121 @@ function KinderListe({elternId, sb}){
   );
 }
 
+function ElternSucheModal({open, onClose, raw, sb, vereinId, onVerknuepft}){
+  const [tab, setTab] = useState("suche");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(()=>{
+    if(!query.trim()){ setResults([]); return; }
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async()=>{
+      const data = await sucheElternkontakte(sb, vereinId, query);
+      // Bereits verknüpfte Eltern ausfiltern
+      setResults(data);
+    }, 300);
+    return ()=>clearTimeout(timerRef.current);
+  },[query]);
+
+  async function verknuepfen(){
+    if(!selected) return;
+    setSaving(true);
+    await linkKind(sb, selected.id, raw.id, vereinId, false);
+    setSaving(false);
+    onVerknuepft();
+    onClose();
+  }
+
+  if(!open) return null;
+  return(
+    <ModalOrSheet open={true} onClose={onClose} maxWidth={480}>
+      <div className="cc-modal-hdr">
+        <div className="cc-modal-title">Elternkontakt hinzufügen</div>
+        <Btn variant="ghost" small onClick={onClose}><TI n="x" size={14}/></Btn>
+      </div>
+
+      {/* Tabs */}
+      <div className="cc-tab-row" style={{borderBottom:"0.5px solid var(--border)"}}>
+        <button className={`cc-tab-btn${tab==="suche"?" cc-tab-btn-active":""}`} onClick={()=>setTab("suche")}>Bestehenden suchen</button>
+        <button className={`cc-tab-btn${tab==="neu"?" cc-tab-btn-active":""}`} onClick={()=>setTab("neu")}>Neu erfassen</button>
+      </div>
+
+      {tab==="suche"?(
+        <div className="cc-modal-body">
+          <div className="cc-relative">
+            <TI n="search" size={14} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--sub)"}}/>
+            <input className="cc-input" style={{paddingLeft:32}} placeholder="Name oder E-Mail suchen…"
+              value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}} autoFocus/>
+          </div>
+
+          {results.length>0&&(
+            <div className="cc-col cc-gap-6 cc-mt-8">
+              {results.map(e=>{
+                const name = `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
+                const initials = name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
+                const ac = elternAvColor(e.beziehung);
+                const kinder = e.eltern_kinder||[];
+                const isSel = selected?.id===e.id;
+                return(
+                  <div key={e.id}
+                    className={`cc-eltern-result${isSel?" cc-eltern-result-active":""}`}
+                    onClick={()=>setSelected(isSel?null:e)}>
+                    <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>{initials}</div>
+                    <div className="cc-flex-1 cc-col cc-gap-3">
+                      <div className="cc-text-bold cc-text-sm">{name}</div>
+                      {e.beziehung&&<div className="cc-text-sm cc-text-sub">{e.beziehung}{e.email?` · ${e.email}`:""}</div>}
+                      {kinder.map((k,i)=>(
+                        <div key={i} className="cc-text-sm cc-text-sub">
+                          <TI n="link" size={10}/> {k.mitglieder?.vorname} {k.mitglieder?.nachname}
+                        </div>
+                      ))}
+                    </div>
+                    {isSel&&<TI n="check" size={16} style={{color:"#16a34a",flexShrink:0}}/>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {query.trim()&&results.length===0&&(
+            <div className="cc-text-sm cc-text-sub cc-mt-8" style={{textAlign:"center"}}>Keine Treffer — im Tab "Neu erfassen" anlegen.</div>
+          )}
+          {!query.trim()&&(
+            <div className="cc-text-sm cc-text-sub cc-mt-8" style={{textAlign:"center"}}>Name oder E-Mail eingeben…</div>
+          )}
+        </div>
+      ):(
+        <div className="cc-modal-body">
+          <div className="cc-text-sm cc-text-sub">Neuen Elternkontakt anlegen und mit diesem Kind verknüpfen.</div>
+        </div>
+      )}
+
+      <div className="cc-modal-ftr">
+        <Btn onClick={onClose}>Abbrechen</Btn>
+        {tab==="suche"?(
+          <Btn variant="primary" onClick={verknuepfen} disabled={!selected||saving}>
+            {saving?"Verknüpft…":"Verknüpfen"}
+          </Btn>
+        ):(
+          <Btn variant="primary" onClick={()=>{
+            onClose();
+            // öffnet neues Erfassungs-Modal — Signal nach oben
+            if(onVerknuepft) onVerknuepft("neu");
+          }}>Weiter</Btn>
+        )}
+      </div>
+    </ModalOrSheet>
+  );
+}
+
 function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null}){
   const [confirm, confirmDialog] = useConfirm();
   const [editEltern, setEditEltern] = useState(null);
   const [elternMsg, setElternMsg] = useState(null);
   const [elternSaving, setElternSaving] = useState(false);
+  const [showSuche, setShowSuche] = useState(false);
   const geaendertVon = account?.name||account?.email||"Administrator";
 
   async function reload(){
@@ -204,11 +314,21 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       {canEdit&&!editEltern&&(
         <div className="cc-between">
           <div className="cc-text-sm">{eltern.length} Elternkontakt{eltern.length!==1?"e":""}</div>
-          <Btn small onClick={()=>setEditEltern({mode:"new",data:{mitglied_id:raw.id}})}>
+          <Btn small onClick={()=>setShowSuche(true)}>
             <TI n="plus"/> Hinzufügen
           </Btn>
         </div>
       )}
+      <ElternSucheModal
+        open={showSuche}
+        onClose={()=>setShowSuche(false)}
+        raw={raw} sb={sb} vereinId={vereinId}
+        onVerknuepft={(mode)=>{
+          setShowSuche(false);
+          if(mode==="neu") setEditEltern({mode:"neu",data:{mitglied_id:raw.id}});
+          else reload();
+        }}
+      />
       {eltern.length===0&&<EmptyState icon="heart" title="Keine Elternkontakte" subtitle="Noch kein Elternkontakt für dieses Mitglied erfasst."/>}
       {eltern.map((e,i)=>{
         const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
