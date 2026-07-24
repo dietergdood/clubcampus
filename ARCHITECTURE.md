@@ -605,3 +605,26 @@ Fokus: [optional]
 - Demo-Daten entfernen aus `portal_pwa.jsx`/`demoData.js`
 - ARCHITECTURE.md Phase 1 (Foundation/domains refactor) nicht gestartet
 - Portalverwaltung Mitglieder-Konfiguration Tab (CRUD + Matrizen)
+
+## Post-Refactoring Pflicht-Workflow
+
+Nach **jedem** grossen Refactoring (Auslagern von Komponenten, Hooks, Dateien verschieben):
+
+```bash
+# 1. Fehlende Konstanten-Imports prüfen
+python3 scripts/check_imports.py
+
+# 2. Automatisch fixen
+python3 scripts/check_imports_fix.py
+
+# 3. Build verifizieren
+npm run build
+```
+
+**Warum:** Konstanten aus `constants.js` (GB, ACCENT, FONT, R, etc.) wurden früher implizit
+durch `clubcampus.jsx` geerbt. Seit dem Refactoring ist jedes Modul eigenständig und muss
+Konstanten explizit importieren. Das Skript findet fehlende Imports automatisch.
+
+**Scripts:** `scripts/check_imports.py` (prüfen) und `scripts/check_imports_fix.py` (auto-fix)
+
+**Claude macht dies automatisch** am Ende jeder Session die ein Refactoring enthält.
