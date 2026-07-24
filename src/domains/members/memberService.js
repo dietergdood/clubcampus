@@ -114,12 +114,17 @@ export async function fetchAlleElternkontakte(sb, vereinId) {
     .select(`
       id, vorname, nachname, name, email, telefon, beziehung,
       benutzer_id,
-      eltern_kinder(mitglied_id, hauptkontakt, mitglieder:mitglied_id(id, vorname, nachname))
+      eltern_kinder(
+        mitglied_id, hauptkontakt,
+        mitglieder:mitglied_id(
+          id, vorname, nachname,
+          kader(rollen, aktiv, teams(id, name, kurzname))
+        )
+      )
     `)
     .eq("verein_id", vereinId)
     .order("nachname", { ascending: true });
   if(error) console.error("fetchAlleElternkontakte error:", error);
-  // Flatten: erstes Kind als mitglieder/mitglied_id für Rückwärtskompatibilität mit ElternListView
   return (data||[]).map(e => {
     const erstesKind = e.eltern_kinder?.[0];
     return {

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/ElternListView.jsx
-   Eltern-Tab — nutzt zentrale ListView
+   Eltern-Liste mit Kind+Team Anzeige, Fold-out, Filter, Gruppierung
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 import { Av, useConfirm, useIsMobile } from "../../theme.jsx";
@@ -9,10 +9,22 @@ import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/memb
 import { ListView } from "../../shared/list/ListView.jsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.js";
 
+function getKinderMitTeams(alleKinder) {
+  return (alleKinder||[]).map(k => {
+    const m = k.mitglieder;
+    const name = m ? `${m.vorname||""} ${m.nachname||""}`.trim() : "?";
+    const teams = (m?.kader||[])
+      .filter(ka => ka.aktiv)
+      .map(ka => ka.teams?.kurzname||ka.teams?.name)
+      .filter(Boolean);
+    return { name, teams, mitglied_id: k.mitglied_id };
+  });
+}
+
 function mapEltern(raw) {
-  return (raw||[]).map(e=>{
-    const alleKinder = e._alle_kinder||[];
-    const kinderNamen = alleKinder.map(k=>`${k.mitglieder?.vorname||""} ${k.mitglieder?.nachname||""}`.trim()).filter(Boolean);
+  return (raw||[]).map(e => {
+    const kinder = getKinderMitTeams(e._alle_kinder||[]);
+    const alleTeams = [...new Set(kinder.flatMap(k => k.teams))];
     return {
       id:          e.id,
       mitglied_id: e.mitglied_id,
@@ -25,9 +37,10 @@ function mapEltern(raw) {
       portal:      e.benutzer_id?"Aktiv":"Kein Zugang",
       benutzer_id: e.benutzer_id||null,
       hauptkontakt:e.hauptkontakt||false,
-      kind_id:     alleKinder[0]?.mitglied_id||null,
-      kind_name:   kinderNamen.join(", ")||"—",
-      kinder:      kinderNamen,
+      kind_id:     kinder[0]?.mitglied_id||null,
+      kind_name:   kinder.map(k=>k.name).join(", ")||"—",
+      kinder,
+      teams:       alleTeams,
     };
   });
 }
@@ -44,9 +57,9 @@ const COL_DEFS = [
 const COL_GROUPS = [{ group:"Elternkontakt", cols:COL_DEFS }];
 
 const GROUP_OPTIONS = [
-  { val:"kind_name",  label:"Kind"      },
-  { val:"beziehung",  label:"Beziehung" },
-  { val:"portal",     label:"Portal"    },
+  { val:"teams",     label:"Team"       },
+  { val:"beziehung", label:"Beziehung"  },
+  { val:"portal",    label:"Portal"     },
 ];
 
 function makeElternRenderCell({ expandedKinder, setExpandedKinder }) {
@@ -68,13 +81,17 @@ function makeElternRenderCell({ expandedKinder, setExpandedKinder }) {
         </td>;
       case "kind_name": {
         const isExp = expandedKinder.has(e.id);
-        const visible = isExp ? (e.kinder||[]) : (e.kinder||[]).slice(0,2);
-        const rest = (e.kinder||[]).length - 2;
+        const visible = isExp ? e.kinder : e.kinder.slice(0, 2);
+        const rest = e.kinder.length - 2;
         return <td key="kind_name" className="cc-members-td" onClick={ev=>ev.stopPropagation()}>
           <div className="cc-col cc-gap-4">
-            {visible.map((k,i)=>(
+            {visible.map((k,i) => (
               <div key={i} className="cc-teams-rollen-row">
-                <span className="cc-teams-rollen-rolle">{k}</span>
+                <span className="cc-teams-rollen-team">{k.name}</span>
+                {k.teams.length>0&&<>
+                  <span className="cc-teams-rollen-sep">·</span>
+                  <span className="cc-teams-rollen-rolle">{k.teams.join(", ")}</span>
+                </>}
               </div>
             ))}
             {rest>0&&(
@@ -82,7 +99,10 @@ function makeElternRenderCell({ expandedKinder, setExpandedKinder }) {
                 ev.stopPropagation();
                 setExpandedKinder(prev=>{const n=new Set(prev);n.has(e.id)?n.delete(e.id):n.add(e.id);return n;});
               }}>
-                {isExp?<><TI n="chevron-up" size={10}/>weniger</>:<><TI n="chevron-down" size={10}/>+{rest} weitere</>}
+                {isExp
+                  ?<><TI n="chevron-up" size={10}/>weniger</>
+                  :<><TI n="chevron-down" size={10}/>+{rest} weitere</>
+                }
               </button>
             )}
           </div>
@@ -98,12 +118,18 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
   const [rows, setRows] = useState([]);
   const [confirm, confirmDialog] = useConfirm();
   const [expandedKinder, setExpandedKinder] = useState(new Set());
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!sb || !vereinId) return;
     fetchAlleElternkontakte(sb, vereinId).then(data => setRows(mapEltern(data)));
   }, [sb, vereinId]);
+
+  // Für Gruppierung nach Teams: Zeile pro Team expandieren
+  const expandedRows = rows.flatMap(e =>
+    e.teams.length > 0
+      ? e.teams.map(t => ({ ...e, _groupKey: t }))
+      : [{ ...e, _groupKey: "—" }]
+  );
 
   const filterDefs = buildFilterDefs(rows, [
     { key:"beziehung", label:"Beziehung" },
@@ -114,9 +140,8 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
 
   async function loeschen(selected) {
     if (!selected?.size) return;
-    const kinder = [...selected].map(id => rows.find(r => r.id === id)?.kind_name).filter(Boolean);
-    const kinderText = kinder.length > 0 ? `\n\nBetroffene Kinder: ${kinder.join(", ")}` : "";
-    const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:`Die Elternkontakte werden auch beim verknüpften Kind entfernt.${kinderText}`, danger:true, confirmLabel:"Löschen" });
+    const namen = [...selected].map(id => rows.find(r => r.id === id)?.name).filter(Boolean);
+    const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:`Gelöscht werden: ${namen.join(", ")}`, danger:true, confirmLabel:"Löschen" });
     if (!sb || !ok) return;
     for (const id of selected) await deleteElternkontakt(sb, id);
     setRows(prev => prev.filter(r => !selected.has(r.id)));
@@ -125,7 +150,6 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }) {
   return (
     <>
       {confirmDialog}
-
       <ListView
         emptyIcon="heart"
         emptyTitle="Noch keine Elternkontakte"
