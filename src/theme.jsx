@@ -3,6 +3,7 @@
    Theme-System, Logo, CSS-Variablen, Default-Farben
    ═══════════════════════════════════════════════════════════════ */
 import { createContext, useContext } from "react";
+import { R } from "./constants.js";
 export { Btn } from "./shared/ui/Btn.jsx";
 export { resolveColor, hexToRgba, darkenHex, contrastColor } from "./shared/utils/colorUtils.js";
 export { Card, Chip, StatusTile, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, EmptyState, InfoBox } from "./shared/ui/primitives.jsx";

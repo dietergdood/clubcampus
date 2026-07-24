@@ -12,6 +12,7 @@
      Passivtypen: geburtsdatum*, geschlecht*, strasse*, plz*, ort*, telefon*
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
+import { BL, GR } from "../../constants.js";
 import { Btn, ModalOrSheet, PhoneInput, useAddrSearch, usePlzLookup } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.js";
