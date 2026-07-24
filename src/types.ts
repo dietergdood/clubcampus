@@ -122,7 +122,8 @@ export interface Mitgliedtyp {
 export interface MitgliedtypPflichtfeld {
   mitgliedtyp: string;
   feld: string;
-  pflicht: boolean;
+  /* Nullable in mitgliedtyp_pflichtfelder — Leser prüfen auf truthy */
+  pflicht: boolean | null;
 }
 
 // ── Portal-Rollen ────────────────────────────────────────────────

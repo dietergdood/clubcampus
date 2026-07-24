@@ -1,13 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — MitgliederModul.jsx
+   ClubCampus — MitgliederModul.tsx
    State, Logik und Koordination — Render via MembersView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
-import { Av, useIsMobile, useConfirm, Tabs } from "../theme.ts";
-import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder } from "../domains/members/memberService.ts";
+import { Av, useConfirm } from "../theme.ts";
+import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder, fetchPortalFunktionen } from "../domains/members/memberService.ts";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
+import type { MemberRow } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.tsx";
 import { MemberKPIs } from "./members/MemberKPIs.tsx";
 import { makeMemberRenderCell } from "./members/MemberListCell.tsx";
@@ -15,24 +16,58 @@ import { useMemberMeta } from "../domains/members/useMemberMeta.ts";
 import { ElternListView } from "./members/ElternListView.tsx";
 import { ListView } from "../shared/list/ListView.tsx";
 import { MemberDetail } from "./members/MemberDetail.tsx";
+import type { SelectedMember } from "./members/MemberDetail.tsx";
 import { NeuesMitgliedModal } from "./members/NeuesMitgliedModal.tsx";
+import type { ColDef, ExportFormat, FilterDef, FilterVals, RowId } from "../shared/list/types.ts";
+import type { MemberGroup } from "./members/memberGrouping.ts";
+import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../types.ts";
+import type { KaderRolleDb } from "../domains/roles/roleUtils.ts";
 
-function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}){
-  const isMobile=useIsMobile();
+/* Vereinsfunktionen mit Gruppe und Farbe — dieselbe Auswahl, die
+   MemberListCell für die Funktionsgruppen-Badges braucht. */
+type PortalFunktionMitFarbe = Awaited<ReturnType<typeof fetchPortalFunktionen>>[number];
+type Pflichtfeld = Awaited<ReturnType<typeof fetchMitgliedtypPflichtfelder>>[number];
+
+/* mitgliedtypen.hauptkontakt_pflicht steuert, ob ein Elternkontakt nötig
+   ist. Mitgliedtyp aus types.ts kennt die Spalte nicht. */
+interface MitgliedtypMitPflicht extends Mitgliedtyp {
+  hauptkontakt_pflicht?: boolean | null;
+}
+
+interface MitgliederModulProps {
+  role: string;
+  account?: Account | null;
+  dbMitglieder?: Mitglied[];
+  dbMitgliedtypen?: MitgliedtypMitPflicht[];
+  dbPortalRollen?: PortalRolle[];
+  dbKaderRollen?: KaderRolleDb[];
+  kannSchreiben?: (modul: string) => boolean;
+  kannVerwalten: (modul: string) => boolean;
+  sb?: Sb;
+  onReload: () => void;
+  onUpdatePortalZugang?: ((mitgliedId: number, aktiv: boolean) => Promise<void> | void) | null;
+  /* ID aus dem Kader-Modul — öffnet direkt das Detail des Mitglieds */
+  navToMember?: number | null;
+  onNavToMemberDone?: (() => void) | null;
+  onNavToTeam?: ((teamId: number) => void) | null;
+  vereinId?: string | null;
+}
+
+function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}: MitgliederModulProps){
   const [confirm,confirmDialog]=useConfirm();
-  const [expandedTeams,setExpandedTeams]=useState(new Set());
-  const [portalFunktionen,setPortalFunktionen]=useState([]);
-  const [selectedMember,setSelectedMember]=useState(null);
+  const [expandedTeams,setExpandedTeams]=useState<Set<RowId>>(new Set());
+  const [portalFunktionen,setPortalFunktionen]=useState<PortalFunktionMitFarbe[]>([]);
+  const [selectedMember,setSelectedMember]=useState<SelectedMember|null>(null);
   const [showNeuesMitglied,setShowNeuesMitglied]=useState(false);
-  const [dbPflichtfelder,setDbPflichtfelder]=useState([]);
+  const [dbPflichtfelder,setDbPflichtfelder]=useState<Pflichtfeld[]>([]);
 
 
   const [archivTab,setArchivTab]=useState(false);
   const [elternTab,setElternTab]=useState(false);
-  const [archivData,setArchivData]=useState([]);
+  const [archivData,setArchivData]=useState<Awaited<ReturnType<typeof fetchArchiv>>>([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
-  const [archivCount,setArchivCount]=useState(null);
-  const [elternCount,setElternCount]=useState(null);
+  const [archivCount,setArchivCount]=useState<number|null>(null);
+  const [elternCount,setElternCount]=useState<number|null>(null);
 
   // Direkte Navigation vom Kader-Modul
   useEffect(()=>{
@@ -44,7 +79,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         role:m.rolle||"-",
         type:m.mitgliedtyp||"-",
         status:m.datenstatus||"-",
-        team:(m.teams||[])[0]||"-",
+        /* ⚠ mitglieder hat keine Spalte teams (siehe MitgliedRoh in
+           memberMapper), der frühere Zugriff ergab immer "-". MemberDetail
+           liest das Feld ohnehin nicht. */
+        team:"-",
         hat_portal_zugang:m.hat_portal_zugang,
         _tab:"info",
       });
@@ -54,36 +92,35 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const canExport=role==="administrator"||role==="administration";
 
   const { ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap } = useMemberMeta(dbPortalRollen, dbKaderRollen, portalFunktionen);
-  const allMembers=mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen).map(m=>({
+  const allMembers: MemberRow[]=mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen).map(m=>({
     ...m,
-    funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter(Boolean))],
+    funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter((g): g is string => Boolean(g)))],
   }));
 
-  const filterRef = useRef(null);
-  function exportData(rows, cols, groups, format){ exportDataUtil(rows, cols, format, groups); }
+  const filterRef = useRef<((vals: FilterVals) => void) | null>(null);
+  function exportData(rows: MemberRow[], cols: ColDef[], groups: MemberGroup[], format: ExportFormat){ exportDataUtil(rows, cols, format, groups); }
 
 
 
   useEffect(()=>{
     if(!sb||!account?.id) return;
     if(portalFunktionen.length===0)
-      sb.from("portal_funktionen").select("id,name,portal_gruppen(name,farbe)").order("name")
-        .then(({data})=>setPortalFunktionen(data||[]));
+      fetchPortalFunktionen(sb).then(data=>setPortalFunktionen(data));
     fetchMitgliedtypPflichtfelder(sb).then(data=>setDbPflichtfelder(data));
   },[account?.id]);
 
 
-  async function handleBulkDelete(selected){
+  async function handleBulkDelete(selected: Set<RowId>){
     if(!sb||!selected||selected.size===0) return;
     const ok=await confirm({title:`${selected.size} Mitglieder löschen?`,message:"Diese Aktion kann nicht rükgängig gemacht werden (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!ok) return;
-    const ids=[...selected];
+    const ids=[...selected].map(Number);
     for(const id of ids) await deleteMitglied(sb,id);
     if(onReload) onReload();
   }
-  async function handleBulkDeactivate(selected){
+  async function handleBulkDeactivate(selected: Set<RowId>){
     if(!sb||!selected||selected.size===0) return;
     const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok) return;
-    const ids=[...selected];
+    const ids=[...selected].map(Number);
     const deaktiviertVon=account?.name||account?.email||"Administrator";
     await archiviereMitglied(sb,ids,deaktiviertVon);
     if(onUpdatePortalZugang) await Promise.all(ids.map(id=>onUpdatePortalZugang(id,false)));
@@ -91,7 +128,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setArchivLoaded(false);
     if(onReload) onReload();
   }
-
 
 
 
@@ -113,24 +149,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* computed values are in MembersView */
   /* ── Render ── */
 
-  const JAHRGANG_MIN=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter(Boolean);return jgs.length?Math.min(...jgs):1940;},[allMembers]);
-  const JAHRGANG_MAX=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter(Boolean);return jgs.length?Math.max(...jgs):new Date().getFullYear();},[allMembers]);
-  const ALTER_MAX=useMemo(()=>{const alters=allMembers.map(m=>m.alter).filter(v=>v!=null);return alters.length?Math.max(...alters):90;},[allMembers]);
+  const JAHRGANG_MIN=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter((j): j is number => j!==null);return jgs.length?Math.min(...jgs):1940;},[allMembers]);
+  const JAHRGANG_MAX=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter((j): j is number => j!==null);return jgs.length?Math.max(...jgs):new Date().getFullYear();},[allMembers]);
+  const ALTER_MAX=useMemo(()=>{const alters=allMembers.map(m=>m.alter).filter((v): v is number => v!=null);return alters.length?Math.max(...alters):90;},[allMembers]);
 
-  const FILTER_DEFS=useMemo(()=>[
+  const FILTER_DEFS=useMemo<FilterDef[]>(()=>[
     {key:"__und_1",         type:"und-divider"},
     {key:"mitgliedschaft",  label:"Mitgliedschaft",  vals:[...new Set(allMembers.map(m=>m.mitgliedschaft).filter(Boolean))]},
     {key:"geschlecht",      label:"Geschlecht",      vals:["Männlich","Weiblich","Divers"]},
-    {key:"teams",           label:"Teams",           vals:[...new Set(allMembers.flatMap(m=>(m.teams||[]).map(t=>t?.name||t)).filter(Boolean))].sort()},
+    {key:"teams",           label:"Teams",           vals:[...new Set(allMembers.flatMap(m=>(m.teams||[]).map(t=>t.name)).filter(Boolean))].sort()},
     {key:"__or_divider",    type:"or-divider"},
     {key:"kaderrollen",     label:"Kaderrollen",     vals:[...new Set(allMembers.flatMap(m=>(m.kader_rollen_raw||[])).filter(Boolean))].sort()},
     {key:"funktionen",      label:"Funktion",        vals:[...new Set(allMembers.flatMap(m=>m.funktionen||[]).filter(Boolean))].sort()},
     {key:"funktionsgruppen",label:"Funktionsgruppe", vals:[...new Set(allMembers.flatMap(m=>m.funktionsgruppen||[]).filter(Boolean))].sort()},
     {key:"__und_2",         type:"und-divider"},
-    {key:"wohnort",         label:"Wohnort",         vals:[...new Set(allMembers.map(m=>m.wohnort).filter(Boolean))].sort()},
+    {key:"wohnort",         label:"Wohnort",         vals:[...new Set(allMembers.map(m=>m.wohnort).filter((o): o is string => Boolean(o)))].sort()},
     {key:"jahrgang",        label:"Jahrgang",        type:"range", min:JAHRGANG_MIN, max:JAHRGANG_MAX},
     {key:"alter",           label:"Alter",           type:"range", min:0, max:ALTER_MAX, suffix:" J."},
-    {key:"rollen",          label:"Portalrollen",    vals:[...new Set(allMembers.map(m=>m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null).filter(Boolean))].sort()},
+    {key:"rollen",          label:"Portalrollen",    vals:[...new Set(allMembers.map(m=>m.role&&m.role!=="-"?(ROLLE_LABEL[m.role]||m.role):null).filter((r): r is string => r!==null))].sort()},
     {key:"portal",          label:"Portal-Zugang",   vals:[...new Set(allMembers.map(m=>m.portal).filter(Boolean))]},
     {key:"datenpruefung",   label:"Datenprüfung",    vals:[...new Set(allMembers.map(m=>m.datenpruefung).filter(Boolean))]},
   ],[allMembers,ROLLE_LABEL,JAHRGANG_MIN,JAHRGANG_MAX,ALTER_MAX]);
@@ -142,14 +178,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     fetchArchivCount(sb).then(count=>setArchivCount(count));
   }
 
-  async function reloadMember(id){
+  async function reloadMember(id: number){
     if(!sb) return;
     const data=await fetchMitglied(sb,id);
-    if(data) setSelectedMember(prev=>({...prev,...data}));
+    if(data) setSelectedMember(prev=>prev?{...prev,...data}:prev);
     if(onReload) onReload();
   }
 
-  const brauchtEltern=(mitgliedtyp)=>
+  const brauchtEltern=(mitgliedtyp: string|null|undefined)=>
     dbMitgliedtypen.some(t=>t.name===mitgliedtyp&&t.hauptkontakt_pflicht);
 
 
@@ -229,7 +265,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       {/* Gespeicherte Ansichten - nur Desktop */}
 
-      <ListView
+      <ListView<MemberRow>
         emptyIcon="users"
         emptyTitle="Noch keine Mitglieder"
         emptySubtitle="Füge das erste Mitglied hinzu, um loszulegen."

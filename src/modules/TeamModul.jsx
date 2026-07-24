@@ -535,7 +535,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
 }
 
 /* -- Mitglied-Detailansicht (Modal) -- */
-/* MitgliederModul via ./MitgliederModul.jsx */
+/* MitgliederModul via ./MitgliederModul.tsx */
 
 /* KaderModul via ./KaderModul.jsx */
 
