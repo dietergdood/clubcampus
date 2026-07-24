@@ -11,14 +11,16 @@
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
 import { useState, useEffect, useRef } from "react";
+import { ElternSucheModal } from "../ElternSucheModal.jsx";
 import {
   insertElternkontakt, updateElternkontakt, deleteElternkontakt,
   unlinkKind, linkKind, setHauptkontakt, unlinkElternBenutzer,
   fetchElternkontakte, fetchKinderFuerElternteil, sucheElternkontakte,
+  updateBenutzerRolle, clearHauptkontaktFuerKind,
   logAenderung, logAktivitaet, AKTIVITAET_TYP
 } from "../../../domains/members/memberService.js";
 
-function elternAvColor(beziehung){
+export function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();
   if(b==="mutter"||b==="grossmutter") return {bg:"#FDF2F8",text:"#9D174D"};
   if(b==="vater"||b==="grossvater")   return {bg:"#EFF6FF",text:"#1E40AF"};
@@ -83,115 +85,6 @@ function KinderListe({elternId, sb}){
         </div>
       ))}
     </div>
-  );
-}
-
-function ElternSucheModal({open, onClose, raw, sb, vereinId, onVerknuepft}){
-  const [tab, setTab] = useState("suche");
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const timerRef = useRef(null);
-
-  useEffect(()=>{
-    if(!query.trim()){ setResults([]); return; }
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async()=>{
-      const data = await sucheElternkontakte(sb, vereinId, query);
-      // Bereits verknüpfte Eltern ausfiltern
-      setResults(data);
-    }, 300);
-    return ()=>clearTimeout(timerRef.current);
-  },[query]);
-
-  async function verknuepfen(){
-    if(!selected) return;
-    setSaving(true);
-    await linkKind(sb, selected.id, raw.id, vereinId, false);
-    setSaving(false);
-    onVerknuepft();
-    onClose();
-  }
-
-  if(!open) return null;
-  return(
-    <ModalOrSheet open={true} onClose={onClose} maxWidth={480}>
-      <div className="cc-modal-hdr">
-        <div className="cc-modal-title">Elternkontakt hinzufügen</div>
-        <Btn variant="ghost" small onClick={onClose}><TI n="x" size={14}/></Btn>
-      </div>
-
-      {/* Tabs */}
-      <div className="cc-tab-row" style={{borderBottom:"0.5px solid var(--border)"}}>
-        <button className={`cc-tab-btn${tab==="suche"?" cc-tab-btn-active":""}`} onClick={()=>setTab("suche")}>Bestehenden suchen</button>
-        <button className={`cc-tab-btn${tab==="neu"?" cc-tab-btn-active":""}`} onClick={()=>setTab("neu")}>Neu erfassen</button>
-      </div>
-
-      {tab==="suche"?(
-        <div className="cc-modal-body">
-          <div className="cc-relative">
-            <TI n="search" size={14} style={{position:"absolute",left:10,top:10,color:"var(--sub)"}}/>
-            <input className="cc-input" style={{paddingLeft:34}} placeholder="Name oder E-Mail suchen…"
-              value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}} autoFocus/>
-          </div>
-
-          {results.length>0&&(
-            <div className="cc-col cc-gap-6 cc-mt-8">
-              {results.map(e=>{
-                const name = `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
-                const initials = name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
-                const ac = elternAvColor(e.beziehung);
-                const kinder = e.eltern_kinder||[];
-                const isSel = selected?.id===e.id;
-                return(
-                  <div key={e.id}
-                    className={`cc-eltern-result${isSel?" cc-eltern-result-active":""}`}
-                    onClick={()=>setSelected(isSel?null:e)}>
-                    <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>{initials}</div>
-                    <div className="cc-flex-1 cc-col cc-gap-3">
-                      <div className="cc-text-bold cc-text-sm">{name}</div>
-                      {e.beziehung&&<div className="cc-text-sm cc-text-sub">{e.beziehung}{e.email?` · ${e.email}`:""}</div>}
-                      {kinder.map((k,i)=>(
-                        <div key={i} className="cc-text-sm cc-text-sub">
-                          <TI n="users" size={12}/> {k.mitglieder?.vorname} {k.mitglieder?.nachname}
-                        </div>
-                      ))}
-                    </div>
-                    {isSel&&<TI n="check" size={16} style={{color:"#16a34a",flexShrink:0}}/>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {query.trim()&&results.length===0&&(
-            <div className="cc-text-sm cc-text-sub cc-mt-8" style={{textAlign:"center"}}>Keine Treffer — im Tab "Neu erfassen" anlegen.</div>
-          )}
-          {!query.trim()&&(
-            <div className="cc-text-sm cc-text-sub cc-mt-8" style={{textAlign:"center"}}>Name oder E-Mail eingeben…</div>
-          )}
-        </div>
-      ):(
-        <div className="cc-modal-body">
-          <div className="cc-text-sm cc-text-sub">Neuen Elternkontakt anlegen und mit diesem Kind verknüpfen.</div>
-        </div>
-      )}
-
-      <div className="cc-modal-ftr">
-        <Btn onClick={onClose}>Abbrechen</Btn>
-        {tab==="suche"?(
-          <Btn variant="primary" onClick={verknuepfen} disabled={!selected||saving}>
-            {saving?"Verknüpft…":"Verknüpfen"}
-          </Btn>
-        ):(
-          <Btn variant="primary" onClick={()=>{
-            onClose();
-            // öffnet neues Erfassungs-Modal — Signal nach oben
-            if(onVerknuepft) onVerknuepft("neu");
-          }}>Weiter</Btn>
-        )}
-      </div>
-    </ModalOrSheet>
   );
 }
 
@@ -285,7 +178,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
         await updateElternkontakt(sb, e.id, { supporter: true });
         // Benutzer-Rolle zu "supporter" ändern falls Portal-Zugang vorhanden
         if(e.benutzer_id){
-          await sb.from("benutzer").update({ role: "supporter" }).eq("id", e.benutzer_id);
+          await updateBenutzerRolle(sb, e.benutzer_id, "supporter");
         }
       } else {
         // Kind nicht mehr im Verein → Elternkontakt löschen
@@ -303,7 +196,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
     } else {
       // Hauptkontakt entfernen
-      await sb.from("eltern_kinder").update({hauptkontakt:false}).eq("eltern_id",e.id).eq("mitglied_id",raw.id);
+      await clearHauptkontaktFuerKind(sb, e.id, raw.id);
       if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
     }
     reload();
@@ -412,4 +305,4 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
   );
 }
 
-export { ElternTab, ElternPortalSection, elternAvColor };
+export { ElternTab, ElternPortalSection };

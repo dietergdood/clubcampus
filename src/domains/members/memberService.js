@@ -221,6 +221,15 @@ export async function setHauptkontakt(sb, mitgliedId, elternId, vereinId) {
     .eq("mitglied_id", mitgliedId);
 }
 
+export async function updateBenutzerRolle(sb, benutzerId, rolle) {
+  return sb.from("benutzer").update({ role: rolle }).eq("id", benutzerId);
+}
+
+export async function clearHauptkontaktFuerKind(sb, elternId, mitgliedId) {
+  return sb.from("eltern_kinder").update({ hauptkontakt: false })
+    .eq("eltern_id", elternId).eq("mitglied_id", mitgliedId);
+}
+
 export async function unlinkElternBenutzer(sb, kontaktId) {
   return sb.from("elternkontakte").update({ benutzer_id: null }).eq("id", kontaktId);
 }
