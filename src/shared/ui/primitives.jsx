@@ -11,9 +11,11 @@ export function Card({children,mb=0,mt=0,style={},onClick,flush=false,className=
 }
 
 export function Chip({text,color,bg,semantic,size="sm"}){
-  const resolved=semantic?resolveColor(semantic,color):color;
-  const resolvedBg=semantic?resolveColor(semantic+"20",bg):bg;
-  return <span style={{display:"inline-flex",alignItems:"center",padding:size==="sm"?"2px 8px":"3px 10px",borderRadius:20,fontSize:size==="sm"?11:12,fontWeight:500,background:resolvedBg||"var(--surface2)",color:resolved||"var(--sub)",border:`1px solid ${resolvedBg||"var(--border)"}`,whiteSpace:"nowrap",lineHeight:1.4}}>{text}</span>;
+  const c=semantic?resolveColor(semantic):null;
+  const clr=c?c.text:(color||"var(--sub)");
+  const bgc=bg||(c?c.bg:clr+"15");
+  const fs=size==="sm"?11:size==="md"?12:13;
+  return <span style={{background:bgc,color:clr,fontSize:fs,fontWeight:500,padding:"3px 10px",borderRadius:20,whiteSpace:"nowrap",letterSpacing:0.2,border:`0.5px solid ${clr}30`}}>{text}</span>;
 }
 
 export function StatusTile({label,value,icon,semantic="neutral",action=null}){
