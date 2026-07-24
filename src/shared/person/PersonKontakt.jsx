@@ -125,7 +125,7 @@ function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
       <div className="cc-info-row cc-relative" ref={wrapRef}>
         <span className="cc-info-key">Strasse</span>
         {ieProps.editing==="strasse"?(
-          <div style={{flex:1,position:"relative"}}>
+          <div className="cc-flex-1 cc-relative">
             <input className="cc-inline-input" value={strasseInput} autoFocus
               onChange={e=>{setStrasseInput(e.target.value);ieProps.setEditVal(e.target.value);setShowSuggestions(true);}}
               onKeyDown={e=>{if(e.key==="Enter"){ieProps.saveEdit("strasse",strasseInput);setShowSuggestions(false);}if(e.key==="Escape"){ieProps.cancelEdit();setShowSuggestions(false);}}}
@@ -154,7 +154,7 @@ function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
       <div className="cc-info-row">
         <span className="cc-info-key">PLZ</span>
         {ieProps.editing==="plz"?(
-          <div style={{flex:1}}>
+          <div className="cc-flex-1">
             <input className="cc-inline-input" value={plzInput} autoFocus maxLength={4}
               onChange={e=>{setPlzInput(e.target.value);ieProps.setEditVal(e.target.value);}}
               onKeyDown={e=>{if(e.key==="Enter"){ieProps.saveEdit("plz",plzInput);}if(e.key==="Escape")ieProps.cancelEdit();}}

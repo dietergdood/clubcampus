@@ -52,7 +52,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
         <div className="cc-modal-body">
           <div className="cc-relative">
             <TI n="search" size={14} style={{position:"absolute",left:10,top:10,color:"var(--sub)"}}/>
-            <input className="cc-input" style={{paddingLeft:34}} placeholder="Name oder E-Mail suchen…"
+            <input className="cc-input cc-search-input" placeholder="Name oder E-Mail suchen…"
               value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}} autoFocus/>
           </div>
 
