@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ElternTab } from '../tabs/ElternTab.jsx';
+import { ElternTab } from '../tabs/ElternTab.tsx';
 
 vi.mock('../../../theme.ts', () => ({
   Btn: ({ children, onClick, small }) => <button onClick={onClick}>{children}</button>,

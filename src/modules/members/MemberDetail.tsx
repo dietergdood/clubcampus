@@ -3,7 +3,7 @@
    State-Verwaltung, Tab-Bar, Tab-Routing
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import type { ComponentProps, ReactElement } from "react";
+import type { ComponentProps } from "react";
 import { useIsMobile, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
@@ -16,7 +16,7 @@ import {
   logAktivitaet, AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
 import { MemberHero } from "./MemberHero.tsx";
-import { ElternTab } from "./tabs/ElternTab.jsx";
+import { ElternTab } from "./tabs/ElternTab.tsx";
 import { InfoTab } from "./tabs/InfoTab.tsx";
 import { PortalTab } from "./tabs/PortalTab.tsx";
 import type { PortalBenutzer } from "./tabs/PortalTab.tsx";
@@ -31,20 +31,6 @@ import type { FunktionMitGruppe } from "../../shared/person/types.ts";
 type KaderDetail  = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
 type Elternkontakt = Awaited<ReturnType<typeof fetchElternkontakte>>[number];
 type TeamOption   = NonNullable<ComponentProps<typeof InfoTab>["allTeams"]>;
-
-/* ElternTab ist noch JavaScript. TypeScript leitet seine Prop-Typen aus den
-   Default-Werten ab (vereinId=null ⇒ Typ null) und lehnt deshalb korrekte
-   Werte ab. Diese Brücke fällt weg, sobald ElternTab migriert ist. */
-const ElternTabTyped = ElternTab as (props: {
-  eltern: Elternkontakt[];
-  canEdit: boolean;
-  raw: Mitglied;
-  sb: Sb;
-  onReload: () => void;
-  setElternLoaded: SetState<Elternkontakt[] | null>;
-  vereinId: string | null;
-  account?: Account | null;
-}) => ReactElement;
 
 /* Das ausgewählte Mitglied kommt je nach Einstieg in einer anderen Form:
    als gemappte Listenzeile, als schlankes Navigationsobjekt aus dem
@@ -327,7 +313,7 @@ function MemberDetail({
       )}
 
       {tab === "eltern" && (
-        <ElternTabTyped
+        <ElternTab
           eltern={eltern} canEdit={canEdit} raw={raw} sb={sb}
           onReload={() => { if (reloadMember) reloadMember(raw.id); if (onReload) onReload(); }}
           setElternLoaded={setElternLoaded}

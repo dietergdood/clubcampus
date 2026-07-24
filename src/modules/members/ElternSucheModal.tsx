@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { Btn, ModalOrSheet } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { sucheElternkontakte, linkKind } from "../../domains/members/memberService.ts";
-import { elternAvColor } from "./tabs/ElternTab.jsx";
+import { elternAvColor } from "./tabs/ElternTab.tsx";
 import type { Sb } from "../../types.ts";
 
 /* Direkt aus der Service-Rückgabe abgeleitet */

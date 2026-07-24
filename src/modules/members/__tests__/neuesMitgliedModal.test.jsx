@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { NeuesMitgliedModal } from '../NeuesMitgliedModal.jsx';
+import { NeuesMitgliedModal } from '../NeuesMitgliedModal.tsx';
 
 // ── Mocks ────────────────────────────────────────────────────────
 vi.mock('../../../theme.ts', () => ({

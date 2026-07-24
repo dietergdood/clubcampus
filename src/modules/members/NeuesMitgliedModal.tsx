@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/NeuesMitgliedModal.jsx
+   ClubCampus — modules/members/NeuesMitgliedModal.tsx
    Modal zum Anlegen eines neuen Mitglieds.
 
    Mitgliedtyp zuerst wählen → dynamische Pflichtfelder erscheinen.
@@ -12,14 +12,35 @@
      Passivtypen: geburtsdatum*, geschlecht*, strasse*, plz*, ort*, telefon*
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { BL, GR } from "../../constants.ts";
 import { Btn, ModalOrSheet, PhoneInput, useAddrSearch, usePlzLookup } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
+import type { Account, Mitgliedtyp, MitgliedtypPflichtfeld, PortalRolle, Sb } from "../../types.ts";
+import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
 
 const PASSIV_TYPEN = ["Passivmitglied", "Ehrenmitglied", "Gönner", "Freimitglied"];
 
-function getPflichtfelder(mitgliedtyp, dbPflichtfelder) {
+/* Eingabefelder des Formulars — alle optional, validate() prüft die
+   Pflichtfelder je Mitgliedtyp. */
+interface MitgliedFormular {
+  mitgliedtyp: string;
+  vorname?: string;
+  nachname?: string;
+  geburtsdatum?: string;
+  geschlecht?: string;
+  strasse?: string;
+  plz?: string;
+  ort?: string;
+  kanton?: string;
+  telefon?: string;
+  email?: string;
+  ahv_nr?: string;
+  nationalitaet?: string;
+  heimatort?: string;
+  rolle?: string;
+}
+
+function getPflichtfelder(mitgliedtyp: string, dbPflichtfelder: MitgliedtypPflichtfeld[]): string[] {
   // DB-Konfiguration nutzen wenn vorhanden
   const dbFelder = dbPflichtfelder.filter(p => p.mitgliedtyp === mitgliedtyp && p.pflicht);
   if (dbFelder.length > 0) return dbFelder.map(p => p.feld);
@@ -38,9 +59,23 @@ const GESCHLECHT_OPTS = [
 
 const KANTON_OPTS_M = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"];
 
-function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,pflichtStrasse,pflichtPlz,pflichtOrt}){
+interface AdresseFormularProps {
+  strasse: string;
+  plz: string;
+  ort: string;
+  kanton: string;
+  onStrasse: (v: string) => void;
+  onPlz: (v: string) => void;
+  onOrt: (v: string) => void;
+  onKanton: (v: string) => void;
+  pflichtStrasse?: boolean;
+  pflichtPlz?: boolean;
+  pflichtOrt?: boolean;
+}
+
+function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,pflichtStrasse,pflichtPlz,pflichtOrt}: AdresseFormularProps){
   const [showSug,setShowSug]=useState(false);
-  const wrapRef=useRef(null);
+  const wrapRef=useRef<HTMLDivElement>(null);
   const suggestions=useAddrSearch(strasse,plz);
 
   usePlzLookup(plz,({ort:o,kanton:k})=>{
@@ -49,12 +84,12 @@ function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,
   });
 
   useEffect(()=>{
-    const h=e=>{if(wrapRef.current&&!wrapRef.current.contains(e.target)) setShowSug(false);};
+    const h=(e: MouseEvent)=>{if(wrapRef.current&&e.target instanceof Node&&!wrapRef.current.contains(e.target)) setShowSug(false);};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[]);
 
-  function apply(s){
+  function apply(s: (typeof suggestions)[number]){
     onStrasse(s.strasse);
     if(s.plz) onPlz(s.plz);
     if(s.ort) onOrt(s.ort);
@@ -103,16 +138,28 @@ function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,
   );
 }
 
-export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPortalRollen, dbPflichtfelder=[], vereinId, onSuccess, account=null }) {
-  const [form, setForm] = useState({ mitgliedtyp: "" });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+interface NeuesMitgliedModalProps {
+  open: boolean;
+  onClose: () => void;
+  sb: Sb;
+  dbMitgliedtypen?: Mitgliedtyp[] | null;
+  dbPortalRollen?: Pick<PortalRolle, "name" | "label">[] | null;
+  dbPflichtfelder?: MitgliedtypPflichtfeld[];
+  vereinId: string | null;
+  onSuccess?: ((id: number) => void) | null;
+  account?: Account | null;
+}
 
-  const mitgliedtypen = dbMitgliedtypen?.length > 0
+export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPortalRollen, dbPflichtfelder=[], vereinId, onSuccess, account=null }: NeuesMitgliedModalProps) {
+  const [form, setForm] = useState<MitgliedFormular>({ mitgliedtyp: "" });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<StatusMeldung | null>(null);
+
+  const mitgliedtypen = dbMitgliedtypen && dbMitgliedtypen.length > 0
     ? dbMitgliedtypen.map(t => t.name)
     : ["Aktivmitglied", "Juniormitglied", "Passivmitglied", "Ehrenmitglied"];
 
-  const portalRollen = dbPortalRollen?.length > 0
+  const portalRollen = dbPortalRollen && dbPortalRollen.length > 0
     ? dbPortalRollen
     : [
         { name: "trainer",     label: "Trainer/in" },
@@ -126,10 +173,10 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     ? getPflichtfelder(form.mitgliedtyp, dbPflichtfelder)
     : [];
 
-  const istPflicht = (feld) => pflichtfelder.includes(feld);
+  const istPflicht = (feld: string) => pflichtfelder.includes(feld);
   const istPassiv = PASSIV_TYPEN.includes(form.mitgliedtyp);
 
-  function set(key, val) {
+  function set(key: keyof MitgliedFormular, val: string) {
     setForm(f => ({ ...f, [key]: val }));
     setMsg(null);
   }
@@ -138,10 +185,12 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     if (!form.mitgliedtyp) return "Bitte Mitgliedtyp wählen.";
     if (!form.vorname?.trim()) return "Vorname ist Pflicht.";
     if (!form.nachname?.trim()) return "Nachname ist Pflicht.";
-    const BEKANNTE_FELDER = ["geburtsdatum","geschlecht","strasse","plz","ort","telefon","email","ahv_nr","nationalitaet","heimatort"];
+    const BEKANNTE_FELDER = ["geburtsdatum","geschlecht","strasse","plz","ort","telefon","email","ahv_nr","nationalitaet","heimatort"] as const;
     for (const feld of pflichtfelder) {
-      if (!BEKANNTE_FELDER.includes(feld)) continue; // unbekannte Felder überspringen
-      if (!form[feld]?.trim()) {
+      /* unbekannte Felder überspringen — mitgliedtyp_pflichtfelder kann
+         Felder enthalten, die dieses Formular nicht anbietet */
+      if (!(BEKANNTE_FELDER as readonly string[]).includes(feld)) continue;
+      if (!form[feld as (typeof BEKANNTE_FELDER)[number]]?.trim()) {
         return `${FELD_LABEL[feld] || feld} ist Pflicht.`;
       }
     }
@@ -151,11 +200,15 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
   async function handleSave() {
     const err = validate();
     if (err) { setMsg({ ok: false, text: err }); return; }
-    if (!sb) return;
+    /* verein_id ist in mitglieder NOT NULL — ohne vereinId würde das Insert
+       zwangsläufig scheitern. */
+    if (!sb || !vereinId) return;
     setSaving(true); setMsg(null);
     const id = await insertMitglied(sb, {
-      vorname:      form.vorname?.trim() || null,
-      nachname:     form.nachname?.trim() || null,
+      /* vorname und nachname sind in mitglieder NOT NULL; validate() oben
+         hat beide bereits als nicht leer geprüft. */
+      vorname:      form.vorname!.trim(),
+      nachname:     form.nachname!.trim(),
       geburtsdatum: form.geburtsdatum || null,
       geschlecht:   form.geschlecht || null,
       strasse:      form.strasse?.trim() || null,

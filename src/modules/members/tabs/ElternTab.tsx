@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/ElternTab.jsx
+   ClubCampus — modules/members/tabs/ElternTab.tsx
    Elternkontakte-Tab im Mitglied-Detail (n:m via eltern_kinder)
 
    Logik:
@@ -19,18 +19,47 @@ import {
   updateBenutzerRolle, clearHauptkontaktFuerKind,
   logAenderung, logAktivitaet, AKTIVITAET_TYP
 } from "../../../domains/members/memberService.ts";
+import type { ElternkontaktMitLink } from "../../../domains/members/elternService.ts";
+import type { Account, Mitglied, Sb, SetState, TablesUpdate } from "../../../types.ts";
+import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
-export function elternAvColor(beziehung){
+/* Formularzustand des Bearbeiten-/Anlegen-Modals. Beim Anlegen sind nur
+   mitglied_id und die eingetippten Felder gesetzt. */
+interface ElternFormular {
+  id?: string;
+  mitglied_id?: number;
+  /* Beim Bearbeiten wird eine DB-Zeile hineinkopiert, deren Felder null
+     sein können; beim Anlegen sind sie undefined. */
+  vorname?: string | null;
+  nachname?: string | null;
+  email?: string | null;
+  telefon?: string | null;
+  beziehung?: string | null;
+  benutzer_id?: string | null;
+}
+
+interface EditState {
+  mode: "neu" | "edit";
+  data: ElternFormular;
+}
+
+export function elternAvColor(beziehung: string | null | undefined){
   const b=(beziehung||"").toLowerCase();
   if(b==="mutter"||b==="grossmutter") return {bg:"#FDF2F8",text:"#9D174D"};
   if(b==="vater"||b==="grossvater")   return {bg:"#EFF6FF",text:"#1E40AF"};
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-function ElternPortalSection({e,sb,onReload}){
+interface ElternPortalSectionProps {
+  e: ElternFormular;
+  sb: Sb;
+  onReload?: (() => void) | null;
+}
+
+function ElternPortalSection({e,sb,onReload}: ElternPortalSectionProps){
   const [loading,setLoading]=useState(false);
   async function unlink(){
-    if(!sb) return;
+    if(!sb||!e.id) return;
     setLoading(true);
     await unlinkElternBenutzer(sb,e.id);
     setLoading(false);
@@ -58,8 +87,15 @@ function ElternPortalSection({e,sb,onReload}){
   );
 }
 
-function KinderListe({elternId, sb}){
-  const [kinder, setKinder] = useState(null);
+type KindEintrag = Awaited<ReturnType<typeof fetchKinderFuerElternteil>>[number];
+
+interface KinderListeProps {
+  elternId: string;
+  sb: Sb;
+}
+
+function KinderListe({elternId, sb}: KinderListeProps){
+  const [kinder, setKinder] = useState<KindEintrag[] | null>(null);
   const [open, setOpen] = useState(false);
 
   async function load(){
@@ -88,30 +124,45 @@ function KinderListe({elternId, sb}){
   );
 }
 
-function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null}){
+interface ElternTabProps {
+  eltern: ElternkontaktMitLink[];
+  canEdit?: boolean;
+  raw: Mitglied;
+  sb: Sb;
+  onReload?: (() => void) | null;
+  setElternLoaded: SetState<ElternkontaktMitLink[] | null>;
+  vereinId?: string | null;
+  account?: Account | null;
+}
+
+function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null}: ElternTabProps){
   const [confirm, confirmDialog] = useConfirm();
-  const [editEltern, setEditEltern] = useState(null);
-  const [elternMsg, setElternMsg] = useState(null);
+  const [editEltern, setEditEltern] = useState<EditState | null>(null);
+  const [elternMsg, setElternMsg] = useState<StatusMeldung | null>(null);
   const [elternSaving, setElternSaving] = useState(false);
   const [showSuche, setShowSuche] = useState(false);
   const geaendertVon = account?.name||account?.email||"Administrator";
 
   async function reload(){
+    if(!sb) return;
     const data = await fetchElternkontakte(sb, raw.id);
     setElternLoaded(data);
     if(onReload) onReload();
   }
 
-  function validate(d){
+  function validate(d: ElternFormular){
     if(!d.vorname?.trim()) return "Vorname ist Pflichtfeld";
     if(!d.nachname?.trim()) return "Nachname ist Pflichtfeld";
-    if(!d.email?.trim()) return "E-Mail ist Pflichtfeld";
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return "Ungültige E-Mail-Adresse";
+    const email = d.email ?? "";
+    if(!email.trim()) return "E-Mail ist Pflichtfeld";
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Ungültige E-Mail-Adresse";
     return null;
   }
 
   async function saveEltern(){
-    if(!sb) return;
+    /* verein_id ist in elternkontakte NOT NULL — ohne vereinId würde das
+       Insert zwangsläufig scheitern. */
+    if(!sb||!editEltern||!vereinId) return;
     const d = editEltern.data;
     const err = validate(d);
     if(err){ setElternMsg({ok:false,text:err}); return; }
@@ -132,8 +183,8 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
           beziehung: d.beziehung||null,
         });
         if(error) throw error;
-        if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,`Elternkontakt hinzugefügt: ${name}`,"elternkontakte",name,geaendertVon);
-      } else {
+        logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,`Elternkontakt hinzugefügt: ${name}`,"elternkontakte",name,geaendertVon);
+      } else if(d.id) {
         const alter = eltern.find(e=>e.id===d.id);
         const alterName = alter?`${alter.vorname||""} ${alter.nachname||""}`.trim():null;
         const error = await updateElternkontakt(sb,d.id,{
@@ -145,20 +196,19 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
           beziehung: d.beziehung||null,
         });
         if(error) throw error;
-        if(vereinId){
-          if(alterName&&name&&alterName!==name)
-            logAenderung(sb,raw.id,vereinId,"elternkontakte",alterName,name,geaendertVon);
-          else
-            logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Elternkontakt bearbeitet: ${name}`,"elternkontakte",name,geaendertVon);
-        }
+        if(alterName&&name&&alterName!==name)
+          logAenderung(sb,raw.id,vereinId,"elternkontakte",alterName,name,geaendertVon);
+        else
+          logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Elternkontakt bearbeitet: ${name}`,"elternkontakte",name,geaendertVon);
       }
       setElternMsg({ok:true,text:"Gespeichert ✓"});
       setTimeout(()=>{ setEditEltern(null); setElternMsg(null); reload(); },800);
-    }catch(e){ setElternMsg({ok:false,text:e.message}); }
+    }catch(e){ setElternMsg({ok:false,text:e instanceof Error?e.message:String(e)}); }
     setElternSaving(false);
   }
 
-  async function handleEntknuepfen(e){
+  async function handleEntknuepfen(e: ElternkontaktMitLink){
+    if(!sb||!e.id) return;
     const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
     const ok = await confirm({
       title:`${name} entknüpfen?`,
@@ -175,7 +225,12 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       if(kindNochAktiv){
         // Kind noch im Verein (z.B. Junioren → Aktiv) → Elternteil wird Supporter
         // TODO: E-Mail an Elternteil senden (benötigt Edge Function)
-        await updateElternkontakt(sb, e.id, { supporter: true });
+        /* ⚠ supporter hat keine Spalte in elternkontakte (siehe Elternkontakt
+           in types.ts und ELTERN_LOGIK.md). Dieses Update scheitert still —
+           der Rückgabefehler wird bewusst nicht ausgewertet, damit das
+           Entknüpfen selbst durchläuft. Solange die Spalte fehlt, wird aus
+           dem Elternteil kein Supporter. */
+        await updateElternkontakt(sb, e.id, { supporter: true } as TablesUpdate<"elternkontakte">);
         // Benutzer-Rolle zu "supporter" ändern falls Portal-Zugang vorhanden
         if(e.benutzer_id){
           await updateBenutzerRolle(sb, e.benutzer_id, "supporter");
@@ -189,7 +244,8 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
     reload();
   }
 
-  async function handleHauptkontakt(e){
+  async function handleHauptkontakt(e: ElternkontaktMitLink){
+    if(!sb||!e.id) return;
     const name = `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
     if(!e.hauptkontakt){
       await setHauptkontakt(sb, raw.id, e.id, vereinId);
@@ -225,6 +281,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       {eltern.length===0&&<EmptyState icon="heart" title="Keine Elternkontakte" subtitle="Noch kein Elternkontakt für dieses Mitglied erfasst."/>}
       {eltern.map((e,i)=>{
         const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
+        /* elternkontakte hat historisch beide Spalten: telefon und tel */
         const tel = e.telefon||e.tel;
         const ac = elternAvColor(e.beziehung);
         return(
@@ -267,26 +324,26 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
           </div>
           <div className="cc-modal-body">
             <div className="cc-form-row">
-              {[
+              {([
                 {k:"vorname",   l:"Vorname",    req:true},
                 {k:"nachname",  l:"Nachname",   req:true},
                 {k:"beziehung", l:"Beziehung",  opts:["Mutter","Vater","Elternteil","Grossmutter","Grossvater","Vormund"]},
                 {k:"email",     l:"E-Mail",     type:"email", req:true, full:true},
-              ].map(({k,l,type="text",opts,req,full})=>(
+              ] as const).map(({k,l,type="text",opts,req,full}: {k:keyof ElternFormular;l:string;type?:string;opts?:readonly string[];req?:boolean;full?:boolean})=>(
                 <div key={k} className={full?"cc-form-full":""}>
                   <label className="cc-label">{l}{req&&<span className="cc-label-req"> *</span>}</label>
                   {opts
-                    ?<select className="cc-input" value={editEltern.data[k]||""} onChange={ev=>setEditEltern(p=>({...p,data:{...p.data,[k]:ev.target.value}}))}>
+                    ?<select className="cc-input" value={String(editEltern.data[k]||"")} onChange={ev=>setEditEltern(p=>p?{...p,data:{...p.data,[k]:ev.target.value}}:p)}>
                       <option value="">– wählen –</option>
                       {opts.map(o=><option key={o}>{o}</option>)}
                     </select>
-                    :<input className="cc-input" type={type} value={editEltern.data[k]||""} onChange={ev=>setEditEltern(p=>({...p,data:{...p.data,[k]:ev.target.value}}))} placeholder={l}/>
+                    :<input className="cc-input" type={type} value={String(editEltern.data[k]||"")} onChange={ev=>setEditEltern(p=>p?{...p,data:{...p.data,[k]:ev.target.value}}:p)} placeholder={l}/>
                   }
                 </div>
               ))}
               <div className="cc-form-full">
                 <label className="cc-label">Telefon</label>
-                <PhoneInput value={editEltern.data.telefon||""} onChange={v=>setEditEltern(p=>({...p,data:{...p.data,telefon:v}}))} showHint={false}/>
+                <PhoneInput value={editEltern.data.telefon||""} onChange={v=>setEditEltern(p=>p?{...p,data:{...p.data,telefon:v}}:p)} showHint={false}/>
               </div>
             </div>
             {editEltern.mode==="edit"&&<ElternPortalSection e={editEltern.data} sb={sb} onReload={onReload}/>}

@@ -9,9 +9,9 @@ import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../../types.ts";
-/* KaderRolle aus types.ts kennt ist_trainer nicht (die Spalte existiert in
-   kader_rollen). KaderRolleOption ist die dafür gedachte Option-Form und
-   wird schon von useMemberMeta genutzt. */
+/* Nicht KaderRolle aus types.ts: dort ist aktiv Pflicht, MemberDetail reicht
+   aber KaderRolleDb durch. KaderRolleOption verlangt nur, was hier gelesen
+   wird, und ist schon von useMemberMeta belegt. */
 import type { KaderRolleOption } from "../../domains/members/useMemberMeta.ts";
 
 /* Kader-Einträge des Mitglieds inkl. Team — von fetchKaderFuerMitglied */

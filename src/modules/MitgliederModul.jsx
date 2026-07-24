@@ -15,7 +15,7 @@ import { useMemberMeta } from "../domains/members/useMemberMeta.ts";
 import { ElternListView } from "./members/ElternListView.tsx";
 import { ListView } from "../shared/list/ListView.tsx";
 import { MemberDetail } from "./members/MemberDetail.tsx";
-import { NeuesMitgliedModal } from "./members/NeuesMitgliedModal.jsx";
+import { NeuesMitgliedModal } from "./members/NeuesMitgliedModal.tsx";
 
 function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],kannSchreiben,kannVerwalten,sb=null,onReload,onUpdatePortalZugang=null,navToMember=null,onNavToMemberDone=null,onNavToTeam=null,vereinId=null}){
   const isMobile=useIsMobile();

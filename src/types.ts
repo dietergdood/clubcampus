@@ -138,6 +138,9 @@ export interface KaderRolle {
   label?: string;
   aktiv: boolean;
   sort_order?: number;
+  /* Unterscheidet Trainer- von Spielerrollen (Spalte in kader_rollen).
+     Fehlte hier, obwohl roleUtils und useMemberMeta darauf aufbauen. */
+  ist_trainer: boolean;
 }
 
 // ── Theme ────────────────────────────────────────────────────────
@@ -158,17 +161,27 @@ export interface AppTheme {
 }
 
 // ── Funktion ─────────────────────────────────────────────────────
+/* Beide Formen sind an portal_funktionen/portal_gruppen ausgerichtet.
+   Vorher standen hier id: string (beide Spalten sind bigint) sowie modul und
+   stufe — Felder, die es nicht gibt. Gelesen werden von
+   getEffektiveStufeForFunktionaer (NavigationModul) die Override-Felder der
+   Funktion und module/modul_stufen der Gruppe. */
 export interface PortalFunktion {
-  id: string;
+  id: number;
   name: string;
+  /* Übersteuern die Angaben der Gruppe, wenn gesetzt */
+  module_override?: string[] | null;
+  stufe_override?: Record<string, string> | null;
   portal_gruppen?: PortalGruppe | null;
 }
 
 export interface PortalGruppe {
-  id: string;
+  id: number;
   name: string;
-  modul?: string | null;
-  stufe?: string | null;
+  farbe?: string | null;
+  /* Module, die die Gruppe freischaltet, und die Zugriffstufe je Modul */
+  module?: string[] | null;
+  modul_stufen?: Record<string, string> | null;
 }
 
 // ── Änderungshistorie ────────────────────────────────────────────
