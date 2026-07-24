@@ -23,7 +23,7 @@ export function useProfilCheck({ sb, dbUser, role, dbMitglieder, setDbUser }: Us
       if (!dbUser.nachname) fehlend.push('nachname');
       if (!dbUser.telefon)  fehlend.push('telefon');
       const kinder = dbMitglieder.filter(m =>
-        (m.eltern || []).some((e: { benutzer_id?: string }) => e.benutzer_id === dbUser.id)
+        (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
       );
       kinder.forEach(kind => {
         if (!kind.geburtsdatum) fehlend.push(`${kind.vorname}: Geburtsdatum`);
@@ -52,7 +52,7 @@ export function useProfilCheck({ sb, dbUser, role, dbMitglieder, setDbUser }: Us
     if (new Date(eigenesGeprueft) < sechsMonate) return true;
     if (role === 'eltern') {
       const kinder = dbMitglieder.filter(m =>
-        (m.eltern || []).some((e: { benutzer_id?: string }) => e.benutzer_id === dbUser.id)
+        (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
       );
       for (const kind of kinder) {
         if (!kind.profil_geprueft_at) return true;
@@ -68,7 +68,7 @@ export function useProfilCheck({ sb, dbUser, role, dbMitglieder, setDbUser }: Us
     await sb.from('benutzer').update({ profil_geprueft_at: now }).eq('id', dbUser.id);
     if (role === 'eltern') {
       const kinder = dbMitglieder.filter(m =>
-        (m.eltern || []).some((e: { benutzer_id?: string }) => e.benutzer_id === dbUser.id)
+        (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
       );
       for (const kind of kinder) {
         await sb.from('mitglieder').update({ profil_geprueft_at: now }).eq('id', kind.id);
