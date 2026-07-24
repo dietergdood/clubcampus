@@ -3,7 +3,6 @@
    Kleine UI-Primitive ohne gegenseitige Abhängigkeiten
    ═══════════════════════════════════════════════════════════════ */
 import { FONT } from "../../constants.js";
-import { resolveColor } from "../utils/colorUtils.js";
 import { TI } from "../../icons.jsx";
 
 export function Card({children,mb=0,mt=0,style={},onClick,flush=false,className=""}){
@@ -19,16 +18,16 @@ export function Chip({text,color,bg,semantic,size="sm"}){
 }
 
 export function StatusTile({label,value,icon,semantic="neutral",action=null}){
-  const col=resolveColor(semantic,"#888");
-  const bg=resolveColor(semantic+"10","var(--surface2)");
   return(
-    <div style={{background:bg,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-      {icon&&<TI n={icon} size={20} style={{color:col,flexShrink:0}}/>}
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:11,color:"var(--sub)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5}}>{label}</div>
-        <div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginTop:2}}>{value}</div>
+    <div className="cc-status-tile">
+      <div className={`cc-status-tile-icon cc-status-tile-icon-${semantic}`}>
+        {icon&&<TI n={icon} size={16}/>}
       </div>
-      {action}
+      <div className="cc-status-tile-body">
+        <span className="cc-status-tile-label">{label}</span>
+        <span className={semantic==="neutral"?"cc-status-tile-value":`cc-status-tile-value-${semantic}`}>{value}</span>
+        {action&&<button className="cc-status-tile-action" onClick={action.onClick}>{action.label} →</button>}
+      </div>
     </div>
   );
 }
