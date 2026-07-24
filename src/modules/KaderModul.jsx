@@ -2,11 +2,11 @@
    ClubCampus KaderModul — Supabase-Version
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { GN, R, BL } from "../constants.js";
+import { GN, R, BL } from "../constants.ts";
 import { TI } from "../icons.jsx";
 import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card, DropMenu } from "../theme.jsx";
-import { ableitUndSaveRolle } from "../domains/roles/roleUtils.js";
-import { currentSeason } from "../domains/season/seasonUtils.js";
+import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
+import { currentSeason } from "../domains/season/seasonUtils.ts";
 
 const FIELD_VIS = {
   administrator: ["dob","nat","heimatort","ahv","pass","street","plz","city","canton","email","tel","js","fairgate"],

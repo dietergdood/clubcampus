@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { Card, InlineField } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { getLandName, LAENDER } from "../../domains/person/personUtils.js";
+import { getLandName, LAENDER } from "../../domains/person/personUtils.ts";
 import { useInlineEdit } from "../../domains/members/useInlineEdit.js";
 
 const GESCHLECHT_OPTS = [

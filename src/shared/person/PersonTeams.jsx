@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMobile, RollenAuswahlListe } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { DropMenu } from "../../theme.jsx";
-import { currentSeason } from "../../domains/season/seasonUtils.js";
+import { currentSeason } from "../../domains/season/seasonUtils.ts";
 import {
   fetchKaderFuerMitglied,
   fetchAktiveTeams,

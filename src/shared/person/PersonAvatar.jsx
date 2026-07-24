@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { Av } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { initials } from "../../domains/person/personUtils.js";
+import { initials } from "../../domains/person/personUtils.ts";
 
 /**
  * @param {object}   person     - Person-Objekt (name, fotoUrl, vorname, nachname)

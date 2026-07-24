@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { TI } from "../../icons.jsx";
-import { FONT, AM, GB, GR} from "../../constants.js";
+import { FONT, AM, GB, GR} from "../../constants.ts";
 
 const PHONE_COUNTRIES=[
   {flag:"🇨🇭",name:"Schweiz",dial:"+41",code:"CH"},

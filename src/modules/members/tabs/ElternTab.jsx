@@ -120,7 +120,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
     try{
       const name = [d.vorname,d.nachname].filter(Boolean).join(" ");
 
-      if(editEltern.mode==="new"){
+      if(editEltern.mode==="neu"){
         const error = await insertElternkontakt(sb,{
           mitglied_id: raw.id,
           verein_id: vereinId,
@@ -262,7 +262,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       {editEltern&&(
         <ModalOrSheet open={true} onClose={()=>{setEditEltern(null);setElternMsg(null);}} maxWidth={480}>
           <div className="cc-modal-hdr">
-            <div className="cc-modal-title">{editEltern.mode==="new"?"Neuer Elternkontakt":"Elternkontakt bearbeiten"}</div>
+            <div className="cc-modal-title">{editEltern.mode==="neu"?"Neuer Elternkontakt":"Elternkontakt bearbeiten"}</div>
             <Btn variant="ghost" small onClick={()=>setEditEltern(null)}><TI n="x" size={14}/></Btn>
           </div>
           <div className="cc-modal-body">

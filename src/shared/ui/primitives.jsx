@@ -2,7 +2,7 @@
    ClubCampus — shared/ui/primitives.jsx
    Kleine UI-Primitive ohne gegenseitige Abhängigkeiten
    ═══════════════════════════════════════════════════════════════ */
-import { FONT } from "../../constants.js";
+import { FONT } from "../../constants.ts";
 import { TI } from "../../icons.jsx";
 
 export function Card({children,mb=0,mt=0,style={},onClick,flush=false,className=""}){

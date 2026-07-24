@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR } from "./constants.js";
+import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR } from "./constants.ts";
 import { TI, TI_PATHS } from "./icons.jsx";
 import { LOGO_B64, ThemeCtx, useTheme, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, avColor} from "./theme.jsx";
 import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT, MEMBERS, FUNKTIONEN} from "./demoData.js";
-import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.js";
+import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.ts";
 import { Skel, SkelCard, SkelList } from "./shared/ui/Skeleton.jsx";
 import { LoginScreen } from "./modules/LoginScreen.jsx";
 import { useAppData, useTenant, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
-import { usePermissions } from "./domains/app/usePermissions.js";
-import { useProfilCheck } from "./domains/app/useProfilCheck.js";
+import { usePermissions } from "./domains/app/usePermissions.ts";
+import { useProfilCheck } from "./domains/app/useProfilCheck.ts";
 import { NAV_TARGET, FIELD_VIS, INITIAL_PLAENE } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./modules/NavigationModul.jsx";
 import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./modules/DashboardModul.jsx";

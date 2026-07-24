@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { Stat, useIsMobile } from "../../theme.jsx";
-import { GN, AM, BL } from "../../constants.js";
+import { GN, AM, BL } from "../../constants.ts";
 
 export function MemberKPIs({ allMembers, dbMitgliedtypen, onFilter }) {
   const isMobile = useIsMobile();

@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { FONT } from "../../constants.js";
+import { FONT } from "../../constants.ts";
 
 export function ConfirmDialog({open, title, message, confirmLabel="Bestätigen", cancelLabel="Abbrechen", danger=false, onConfirm, onCancel}){
   if(!open) return null;

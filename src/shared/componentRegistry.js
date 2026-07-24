@@ -182,3 +182,4 @@ export const COMPONENT_REGISTRY = [
     props: ["value", "onChange", "laender[]", "placeholder"],
   },
 ];
+import { AM, BL, GN, R } from "../constants.ts";

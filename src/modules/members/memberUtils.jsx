@@ -5,7 +5,7 @@
 import { Chip } from "../../theme.jsx";
 
 // Re-exports für Rückwärtskompatibilität
-export { LAENDER, getLandName } from "../../domains/person/personUtils.js";
+export { LAENDER, getLandName } from "../../domains/person/personUtils.ts";
 export { RolleChip } from "../../shared/person/RolleChip.jsx";
 
 const ROLES = {

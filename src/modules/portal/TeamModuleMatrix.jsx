@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { Btn, Card, Chip, useIsMobile, InfoBox, Col, Row, Stat} from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { GN, BL, GB, BK, FONT} from "../../constants.js";
+import { GN, BL, GB, BK, FONT} from "../../constants.ts";
 
 function maxStufe(a, b){
   if(!a) return b; if(!b) return a;

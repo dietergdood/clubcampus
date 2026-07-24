@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { TI } from "../../icons.jsx";
-import { FONT } from "../../constants.js";
+import { FONT } from "../../constants.ts";
 import { useIsMobile } from "./hooks.jsx";
 
 export function DropMenu({items}){

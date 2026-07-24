@@ -3,7 +3,7 @@
    Breakpoint-Hooks
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { BP_MOBILE, BP_TABLET } from "../../constants.js";
+import { BP_MOBILE, BP_TABLET } from "../../constants.ts";
 
 export function useBreakpoint(){
   const [w,setW]=useState(typeof window!=="undefined"?window.innerWidth:1200);

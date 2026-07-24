@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { Card, Chip } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
-import { GN, R, RL } from "../../../constants.js";
+import { GN, R, RL } from "../../../constants.ts";
 import { updateMitgliedRolle, logAenderung } from "../../../domains/members/memberService.js";
 
 function PortalTab({

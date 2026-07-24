@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { TI } from "../../icons.jsx";
-import { FONT } from "../../constants.js";
+import { FONT } from "../../constants.ts";
 
 export function LandSelect({value,onChange,laender,placeholder="–"}){
   const [open,setOpen]=useState(false);

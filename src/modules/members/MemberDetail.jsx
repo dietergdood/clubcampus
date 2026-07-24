@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useIsMobile, useConfirm } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.js";
+import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import {
   fetchBenutzerFuerMitglied, fetchBenutzerByEmail,
   portalZugangAktivieren, portalZugangDeaktivieren,

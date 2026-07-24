@@ -3,7 +3,7 @@
    Inline-Editierfeld für Profilansichten
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.jsx";
-import { FONT } from "../../constants.js";
+import { FONT } from "../../constants.ts";
 import { PhoneInput } from "./PhoneInput.jsx";
 
 export function InlineField({ label, value, field, type="text", opts=null, canEdit=false, editing, editVal, setEditVal, startEdit, saveEdit, cancelEdit, handleKey, feedback, saving }){

@@ -3,7 +3,7 @@
    Tab-Navigation Komponente
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.jsx";
-import { FONT } from "../../constants.js";
+import { FONT } from "../../constants.ts";
 import { useIsMobile } from "./hooks.jsx";
 
 export function Tabs({tabs,active,setActive,mb=18}){

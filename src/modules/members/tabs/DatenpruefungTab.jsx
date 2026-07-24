@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { Card, Chip } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
-import { GN, AM } from "../../../constants.js";
+import { GN, AM } from "../../../constants.ts";
 import { updateMitglied } from "../../../domains/members/memberService.js";
 
 function DatenpruefungTab({ raw, sb, portalMsg, setPortalMsg, onReload }) {

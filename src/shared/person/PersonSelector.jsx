@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect } from "react";
 import { PersonSummary } from "./PersonSummary.jsx";
 import { TI } from "../../icons.jsx";
-import { vollname } from "../../domains/person/personUtils.js";
+import { vollname } from "../../domains/person/personUtils.ts";
 
 /**
  * @param {Array}    persons     - Liste von Person-Objekten

@@ -3,7 +3,7 @@
    Adress-Autocomplete Hooks via Photon API
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { BL, GR } from "../../constants.js";
+import { BL, GR } from "../../constants.ts";
 
 const CH_KANTON_MAP={"Aargau":"AG","Appenzell Ausserrhoden":"AR","Appenzell Innerrhoden":"AI","Basel-Landschaft":"BL","Basel-Stadt":"BS","Bern":"BE","Fribourg":"FR","Freiburg":"FR","Genf":"GE","Genève":"GE","Glarus":"GL","Graubünden":"GR","Grisons":"GR","Jura":"JU","Luzern":"LU","Neuenburg":"NE","Neuchâtel":"NE","Nidwalden":"NW","Obwalden":"OW","Schaffhausen":"SH","Schwyz":"SZ","Solothurn":"SO","St. Gallen":"SG","Tessin":"TI","Ticino":"TI","Thurgau":"TG","Uri":"UR","Waadt":"VD","Vaud":"VD","Wallis":"VS","Valais":"VS","Zug":"ZG","Zürich":"ZH"};
 

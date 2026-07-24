@@ -9,7 +9,7 @@ import { Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label,
          ModalTitle, useConfirm, ConfirmDialog, StatusTile,
          COMPONENT_REGISTRY } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { GN, R, RL, BL, AM, BK, GB } from "../../constants.js";
+import { GN, R, RL, BL, AM, BK, GB } from "../../constants.ts";
 
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();

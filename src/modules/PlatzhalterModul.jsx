@@ -3,7 +3,7 @@
    Placeholder-Ansichten (werden durch echte Module ersetzt)
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GR, GB } from "../constants.js";
+import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GR, GB } from "../constants.ts";
 import { TI } from "../icons.jsx";
 import { useIsMobile, useTheme, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av , Tabs, STitle, Between, Col, H1, Row, Select} from "../theme.jsx";
 import { BUSES, MATERIAL, LOCKERS, MEDIA, WIKI, NEWS, MEMBERS , USER_ACCOUNTS, ROSTER} from "../demoData.js";
