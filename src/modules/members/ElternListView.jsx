@@ -65,11 +65,11 @@ function renderElternCell(col, e) {
         }
       </td>;
     case "kind_name":
-      return <td key="kind_name" className="cc-members-td">
+      return <td key="kind_name" className="cc-members-td cc-members-td-sub">
         {(e.kinder||[]).length>0
           ?<span className="cc-row cc-gap-4 cc-flex-wrap">
-            {(e.kinder||[]).slice(0,1).map((k,i)=><span key={i} className="cc-team-chip">{k}</span>)}
-            {(e.kinder||[]).length>1&&<span className="cc-ml-more">+{(e.kinder||[]).length-1}</span>}
+            <span>{(e.kinder||[]).slice(0,1).join("")}</span>
+            {(e.kinder||[]).length>1&&<span className="cc-ml-more-btn">+{(e.kinder||[]).length-1}</span>}
           </span>
           :"—"}
       </td>;
