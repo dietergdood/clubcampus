@@ -1,12 +1,19 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/forms/PhoneInput.jsx
+   ClubCampus — shared/forms/PhoneInput.tsx
    Telefon-Eingabe mit Länderauswahl
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
+import type { ChangeEvent } from "react";
 import { TI } from "../../icons.tsx";
-import { FONT, AM, GB, GR} from "../../constants.ts";
 
-const PHONE_COUNTRIES=[
+export interface PhoneCountry {
+  flag: string;
+  name: string;
+  dial: string;
+  code: string;
+}
+
+const PHONE_COUNTRIES: PhoneCountry[]=[
   {flag:"🇨🇭",name:"Schweiz",dial:"+41",code:"CH"},
   {flag:"🇩🇪",name:"Deutschland",dial:"+49",code:"DE"},
   {flag:"🇦🇹",name:"Österreich",dial:"+43",code:"AT"},
@@ -126,7 +133,7 @@ const PHONE_COUNTRIES=[
   {flag:"🇦🇲",name:"Armenien",dial:"+374",code:"AM"},
 ];
 
-function formatPhoneNum(raw){
+function formatPhoneNum(raw: string): string {
   const digits=raw.replace(/\D/g,"");
   if(!digits) return "";
   if(digits.length<=2) return digits;
@@ -136,12 +143,22 @@ function formatPhoneNum(raw){
   return digits.slice(0,2)+" "+digits.slice(2,5)+" "+digits.slice(5,7)+" "+digits.slice(7,9)+(digits.length>9?" "+digits.slice(9):"");
 }
 
-function isPhoneValid(num){
+function isPhoneValid(num: string): boolean {
   const digits=num.replace(/\D/g,"");
   return digits.length>=7&&digits.length<=15;
 }
 
-export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHint=true,className=""}){
+interface PhoneInputProps {
+  value?: string | null;
+  /* Bekommt die vollständige Nummer inkl. Vorwahl ("+41 79 123 45 67")
+     oder einen leeren String, wenn nichts eingegeben ist. */
+  onChange: (full: string) => void;
+  placeholder?: string;
+  showHint?: boolean;
+  className?: string;
+}
+
+export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHint=true,className=""}: PhoneInputProps){
   const [country,setCountry]=useState(()=>{
     if(value&&value.startsWith("+")){
       const m=PHONE_COUNTRIES.find(c=>value.startsWith(c.dial));
@@ -157,10 +174,10 @@ export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHin
   });
   const [ddOpen,setDdOpen]=useState(false);
   const [search,setSearch]=useState("");
-  const wrapRef=useRef(null);
+  const wrapRef=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
-    const h=e=>{if(wrapRef.current&&!wrapRef.current.contains(e.target)){setDdOpen(false);setSearch("");}};
+    const h=(e: MouseEvent)=>{if(wrapRef.current&&e.target instanceof Node&&!wrapRef.current.contains(e.target)){setDdOpen(false);setSearch("");}};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[]);
@@ -175,7 +192,7 @@ export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHin
     }
   },[value]);
 
-  function handleNumChange(e){
+  function handleNumChange(e: ChangeEvent<HTMLInputElement>){
     const raw=e.target.value.replace(/[^0-9\s]/g,"");
     const formatted=formatPhoneNum(raw);
     setNum(formatted);
@@ -183,7 +200,7 @@ export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHin
     onChange(full);
   }
 
-  function selectCountry(c){
+  function selectCountry(c: PhoneCountry){
     setCountry(c);
     setDdOpen(false);
     setSearch("");

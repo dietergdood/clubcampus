@@ -1,19 +1,26 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/forms/LandSelect.jsx
+   ClubCampus — shared/forms/LandSelect.tsx
    Länder-Dropdown
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { TI } from "../../icons.tsx";
-import { FONT } from "../../constants.ts";
+import type { Land } from "../../domains/person/personUtils.ts";
 
-export function LandSelect({value,onChange,laender,placeholder="–"}){
+interface LandSelectProps {
+  value?: string | null;
+  onChange: (code: string) => void;
+  laender: Land[];
+  placeholder?: string;
+}
+
+export function LandSelect({value,onChange,laender,placeholder="–"}: LandSelectProps){
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
-  const wrapRef=useRef(null);
+  const wrapRef=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
-    function handleClick(e){
-      if(wrapRef.current&&!wrapRef.current.contains(e.target)) setOpen(false);
+    function handleClick(e: MouseEvent){
+      if(wrapRef.current&&e.target instanceof Node&&!wrapRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener("mousedown",handleClick);
   },[]);
@@ -23,7 +30,7 @@ export function LandSelect({value,onChange,laender,placeholder="–"}){
   );
   const selected=value?laender.find(l=>l.c===value):null;
 
-  function select(code){ onChange(code); setOpen(false); setSearch(""); }
+  function select(code: string){ onChange(code); setOpen(false); setSearch(""); }
 
   return(
     <div className="cc-land-wrap" ref={wrapRef}>
@@ -60,4 +67,3 @@ export function LandSelect({value,onChange,laender,placeholder="–"}){
     </div>
   );
 }
-

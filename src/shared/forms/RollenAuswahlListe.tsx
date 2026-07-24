@@ -1,11 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/forms/RollenAuswahlListe.jsx
+   ClubCampus — shared/forms/RollenAuswahlListe.tsx
    Shared Rollenauswahl mit Suche + Checkboxen
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.tsx";
 
-export function RollenAuswahlListe({rollen=[], selected=[], onChange, search="", onSearchChange}){
-  function toggle(name){
+export interface RolleOption {
+  name: string;
+  ist_trainer?: boolean;
+}
+
+interface RollenAuswahlListeProps {
+  rollen?: RolleOption[];
+  selected?: string[];
+  onChange: (rollen: string[]) => void;
+  search?: string;
+  onSearchChange: (search: string) => void;
+}
+
+export function RollenAuswahlListe({rollen=[], selected=[], onChange, search="", onSearchChange}: RollenAuswahlListeProps){
+  function toggle(name: string){
     onChange(selected.includes(name)?selected.filter(x=>x!==name):[...selected,name]);
   }
   const filtered=search?rollen.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())):rollen;
@@ -38,4 +51,3 @@ export function RollenAuswahlListe({rollen=[], selected=[], onChange, search="",
     </div>
   );
 }
-

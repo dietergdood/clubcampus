@@ -1,18 +1,30 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/forms/FunktionenMultiSelect.jsx
+   ClubCampus — shared/forms/FunktionenMultiSelect.tsx
    Multi-Select für Vereinsfunktionen
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { TI } from "../../icons.tsx";
-import { FONT } from "../../constants.ts";
 
-export function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
+/* Strukturell kompatibel zu PortalFunktion aus types.ts, verlangt aber
+   nur die Felder, die diese Komponente wirklich liest. */
+export interface FunktionOption {
+  name: string;
+  portal_gruppen?: { name?: string | null } | null;
+}
+
+interface FunktionenMultiSelectProps {
+  funktionen?: FunktionOption[];
+  selected?: string[];
+  onChange: (funktionen: string[]) => void;
+}
+
+export function FunktionenMultiSelect({funktionen=[],selected=[],onChange}: FunktionenMultiSelectProps){
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
-  const ref=useRef(null);
+  const ref=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
-    function handleClick(e){ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); }
+    function handleClick(e: MouseEvent){ if(ref.current&&e.target instanceof Node&&!ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener("mousedown",handleClick);
   },[]);
 
@@ -21,7 +33,7 @@ export function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
     (f.portal_gruppen?.name||"").toLowerCase().includes(search.toLowerCase()));
   const groups=[...new Set(filtered.map(f=>f.portal_gruppen?.name||"Weitere"))];
 
-  function toggle(name){
+  function toggle(name: string){
     const next=selected.includes(name)?selected.filter(x=>x!==name):[...selected,name];
     onChange(next);
   }
@@ -76,4 +88,3 @@ export function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){
     </div>
   );
 }
-

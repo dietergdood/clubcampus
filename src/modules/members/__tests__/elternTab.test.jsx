@@ -19,7 +19,7 @@ vi.mock('../../../theme.ts', () => ({
   ),
   EmptyState: ({ title }) => <div data-testid="empty">{title}</div>,
   useConfirm: () => [vi.fn().mockResolvedValue(true), <div key="cd"/>],
-  /* Spiegelt die Signatur von shared/forms/PhoneInput.jsx:
+  /* Spiegelt die Signatur von shared/forms/PhoneInput.tsx:
      onChange bekommt den Wert direkt, nicht das Event. */
   PhoneInput: ({ value = "", onChange, placeholder = "79 123 45 67" }) => (
     <input placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}/>

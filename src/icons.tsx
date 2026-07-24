@@ -130,11 +130,12 @@ interface TIProps {
   n: IconName | (string & {});
   size?: number;
   style?: CSSProperties;
+  className?: string;
 }
 
-function TI({n, size=16, style={}}: TIProps){
+function TI({n, size=16, style={}, className}: TIProps){
   const p = PATHS[n];
-  if(!p) return <span style={{display:"inline-block",width:size,height:size,...style}}/>;
+  if(!p) return <span className={className} style={{display:"inline-block",width:size,height:size,...style}}/>;
   return(
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -147,6 +148,7 @@ function TI({n, size=16, style={}}: TIProps){
       strokeLinecap="round"
       strokeLinejoin="round"
       style={style}
+      className={className}
       dangerouslySetInnerHTML={{__html:p}}
     />
   );

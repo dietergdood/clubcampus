@@ -12,7 +12,7 @@ vi.mock('../../../theme.ts', () => ({
     <button onClick={onClick} disabled={disabled}>{children}</button>
   ),
   ModalOrSheet: ({ open, children }) => open ? <div>{children}</div> : null,
-  /* Spiegelt die Signatur von shared/forms/PhoneInput.jsx:
+  /* Spiegelt die Signatur von shared/forms/PhoneInput.tsx:
      onChange bekommt den Wert direkt, nicht das Event. */
   PhoneInput: ({ value = "", onChange, placeholder = "79 123 45 67" }) => (
     <input placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}/>
