@@ -6,7 +6,20 @@ import { THEME_DEFAULT_STATIC, hexToRgba, darkenHex, contrastColor } from "../..
 
 export function useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
   setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
-  setSession, setDbUser }) {
+  setSession, setDbUser, setTenant }) {
+
+  async function loadTenant() {
+    if (!sb) return;
+    try {
+      const { data, error } = await sb.from("vereine").select("id,name,theme").single();
+      if (error || !data) return;
+      if (setTenant) setTenant(data);
+      const t = { ...THEME_DEFAULT_STATIC, ...(data.theme || {}) };
+      setAppTheme(t);
+      applyThemeCss(t);
+      try { localStorage.setItem("cc-theme", JSON.stringify(t)); } catch {}
+    } catch (e) { console.warn("[CC] loadTenant:", e.message); }
+  }
 
   async function loadTheme() {
     if (!sb) return;
@@ -195,7 +208,7 @@ export function useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, s
   }
 
   return {
-    loadTheme, applyThemeCss, loadModuleConfig,
+    loadTenant, loadTheme, applyThemeCss, loadModuleConfig,
     loadDbStufen, loadDbFunktionen, updatePortalZugang,
     loadDbMitglieder, loadDbMitgliedtypen,
     loadDbPortalRollen, loadDbKaderRollen,

@@ -269,14 +269,14 @@ function Portal({supabaseClient}){
 
   /* ── Theme aus Supabase laden ── */
   const {
-    loadTheme, applyThemeCss, loadModuleConfig,
+    loadTheme, applyThemeCss, loadModuleConfig, loadTenant,
     loadDbStufen, loadDbFunktionen, updatePortalZugang,
     loadDbMitglieder, loadDbMitgliedtypen,
     loadDbPortalRollen, loadDbKaderRollen,
     handleLogout: _handleLogout,
   } = useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
     setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
-    setSession, setDbUser });
+    setSession, setDbUser, setTenant });
 
   async function handleLogout(){
     await _handleLogout();
