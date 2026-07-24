@@ -10,12 +10,12 @@
    ═══════════════════════════════════════════════════════════════ */
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.jsx";
 import { TI } from "../../../icons.jsx";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { ElternSucheModal } from "../ElternSucheModal.jsx";
 import {
   insertElternkontakt, updateElternkontakt, deleteElternkontakt,
-  unlinkKind, linkKind, setHauptkontakt, unlinkElternBenutzer,
-  fetchElternkontakte, fetchKinderFuerElternteil, sucheElternkontakte,
+  unlinkKind, setHauptkontakt, unlinkElternBenutzer,
+  fetchElternkontakte, fetchKinderFuerElternteil,
   updateBenutzerRolle, clearHauptkontaktFuerKind,
   logAenderung, logAktivitaet, AKTIVITAET_TYP
 } from "../../../domains/members/memberService.js";
