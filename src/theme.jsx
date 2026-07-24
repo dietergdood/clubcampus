@@ -6,6 +6,7 @@ import { createContext, useContext, useState, useEffect, useRef, Fragment } from
 import { createPortal } from "react-dom";
 import { TI } from "./icons.jsx";
 import { ACCENT, ACCENT2, ACCENT20, BK, BL, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, FONT, R } from "./constants.js";
+import { useIsMobile } from "./shared/ui/hooks.jsx";
 export { Btn } from "./shared/ui/Btn.jsx";
 export { resolveColor, hexToRgba, darkenHex, contrastColor } from "./shared/utils/colorUtils.js";
 export { Card, Chip, StatusTile, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, EmptyState, InfoBox } from "./shared/ui/primitives.jsx";
