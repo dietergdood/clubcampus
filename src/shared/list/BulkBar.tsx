@@ -1,8 +1,26 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/BulkBar.jsx
+   ClubCampus — shared/list/BulkBar.tsx
    Auswahl-Aktionsleiste
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.tsx";
+
+export interface BulkAction {
+  label: string;
+  icon?: string;
+  onClick: () => void;
+  danger?: boolean;
+  /* Button wird deaktiviert, solange nichts ausgewählt ist */
+  requiresSelection?: boolean;
+}
+
+interface BulkBarProps {
+  count?: number;
+  total?: number;
+  onSelectAll?: (() => void) | null;
+  actions?: BulkAction[];
+  onCancel?: (() => void) | null;
+  show?: boolean;
+}
 
 export function BulkBar({
   count=0,
@@ -11,7 +29,7 @@ export function BulkBar({
   actions=[],
   onCancel=null,
   show=true,
-}){
+}: BulkBarProps){
   if(!show) return null;
   const allSelected=count>0&&count===total;
   return(

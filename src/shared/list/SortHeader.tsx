@@ -1,9 +1,22 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/SortHeader.jsx
+   ClubCampus — shared/list/SortHeader.tsx
    Sortierbarer Tabellen-Header
    ═══════════════════════════════════════════════════════════════ */
+import type { CSSProperties, ReactNode } from "react";
 
-export function SortHeader({label, col, sortCol, sortDir, onSort, style={}, className="cc-members-th"}){
+export type SortDir = "asc" | "desc";
+
+interface SortHeaderProps {
+  label?: ReactNode;
+  col: string;
+  sortCol?: string | null;
+  sortDir?: SortDir;
+  onSort: (col: string) => void;
+  style?: CSSProperties;
+  className?: string;
+}
+
+export function SortHeader({label, col, sortCol, sortDir, onSort, style={}, className="cc-members-th"}: SortHeaderProps){
   const active=sortCol===col;
   return(
     <th

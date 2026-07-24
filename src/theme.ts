@@ -20,14 +20,14 @@ export { LandSelect } from "./shared/forms/LandSelect.tsx";
 export { FunktionenMultiSelect } from "./shared/forms/FunktionenMultiSelect.tsx";
 export { RollenAuswahlListe } from "./shared/forms/RollenAuswahlListe.tsx";
 export { InlineField } from "./shared/forms/InlineField.tsx";
-export { PortalBadge, DpBadge } from "./shared/list/PortalBadge.jsx";
+export { PortalBadge, DpBadge } from "./shared/list/PortalBadge.tsx";
 export { ConfirmDialog, useConfirm } from "./shared/ui/ConfirmDialog.tsx";
 export { ModalOrSheet } from "./shared/ui/Modal.tsx";
 export { Stat } from "./shared/ui/Stat.tsx";
-export { SortHeader } from "./shared/list/SortHeader.jsx";
-export { BulkBar } from "./shared/list/BulkBar.jsx";
+export { SortHeader } from "./shared/list/SortHeader.tsx";
+export { BulkBar } from "./shared/list/BulkBar.tsx";
 export { ColMenuContent, ColMenuButton } from "./shared/list/ColMenu.jsx";
-export { RangeFilter } from "./shared/list/RangeFilter.jsx";
+export { RangeFilter } from "./shared/list/RangeFilter.tsx";
 export { COMPONENT_REGISTRY } from "./shared/componentRegistry.js";
 export { Toolbar } from "./shared/list/Toolbar.jsx";
 

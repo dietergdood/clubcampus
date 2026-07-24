@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
 import { useIsMobile } from "../ui/hooks.ts";
-import { RangeFilter } from "./RangeFilter.jsx";
+import { RangeFilter } from "./RangeFilter.tsx";
 
 
 /* ── FilterBody: Gemeinsamer Filter-Inhalt Desktop+Mobile ── */
@@ -626,7 +626,7 @@ export function Toolbar({
 
 // PhoneInput, useAddrSearch, usePlzLookup → shared/forms/
 // RollenAuswahlListe, InlineField → shared/forms/
-// PortalBadge → shared/list/PortalBadge.jsx
+// PortalBadge → shared/list/PortalBadge.tsx
 
-// DpBadge → shared/list/PortalBadge.jsx
+// DpBadge → shared/list/PortalBadge.tsx
 

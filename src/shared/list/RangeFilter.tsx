@@ -1,10 +1,34 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/list/RangeFilter.jsx
+   ClubCampus — shared/list/RangeFilter.tsx
    Bereichs-Filter mit Slider und Eingabefeldern
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 
-export function RangeFilter({min,max,suffix,rv,rangeKey,onFilterChange,padLeft=12}){
+/* Aktueller Wert des Filters. von/bis sind offen, solange der Benutzer
+   die Grenze nicht angefasst hat — dann gelten min bzw. max. */
+export interface RangeValue {
+  von?: number | null;
+  bis?: number | null;
+}
+
+/* Nutzlast, die RangeFilter unter dem Schlüssel "__range" zurückmeldet */
+export interface RangeFilterPayload {
+  rangeKey: string;
+  von: number;
+  bis: number;
+}
+
+interface RangeFilterProps {
+  min: number;
+  max: number;
+  suffix?: string;
+  rv: RangeValue;
+  rangeKey: string;
+  onFilterChange?: (key: string, value: RangeFilterPayload) => void;
+  padLeft?: number;
+}
+
+export function RangeFilter({min,max,suffix,rv,rangeKey,onFilterChange,padLeft=12}: RangeFilterProps){
   const [localVon,setLocalVon]=useState(String(rv.von??min));
   const [localBis,setLocalBis]=useState(String(rv.bis??max));
   useEffect(()=>{setLocalVon(String(rv.von??min));setLocalBis(String(rv.bis??max));},[rv.von,rv.bis,min,max]);
