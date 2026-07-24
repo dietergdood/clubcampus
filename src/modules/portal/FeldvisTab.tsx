@@ -1,13 +1,30 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/FeldvisTab.jsx
+   ClubCampus — modules/portal/FeldvisTab.tsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
-import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate, InfoBox} from "../../theme.ts";
+import { Card, InfoBox } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
+import { GN, BL } from "../../constants.ts";
 
-export function FeldvisTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,toggleFeld,tab,ROLLEN,ROLLEN_LABELS,felderNachKey}) {
+/* Ein Mitglieder-Feld mit seiner Sichtbarkeit je Rolle —
+   aufgebaut aus feldsichtbarkeit im Parent. */
+export interface FeldSichtbarkeit {
+  label: string;
+  rollen: Record<string, boolean>;
+}
+
+interface FeldvisTabProps {
+  loading: boolean;
+  isMobile: boolean;
+  /* null = Kachel-Landingseite auf Mobile */
+  mobileKachel: string | null;
+  toggleFeld: (feldKey: string, rolle: string, sichtbar: boolean) => void;
+  tab: string;
+  ROLLEN: string[];
+  ROLLEN_LABELS: Record<string, string>;
+  felderNachKey: Record<string, FeldSichtbarkeit>;
+}
+
+export function FeldvisTab({loading,isMobile,mobileKachel,toggleFeld,tab,ROLLEN,ROLLEN_LABELS,felderNachKey}: FeldvisTabProps) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="feldvis"&&(

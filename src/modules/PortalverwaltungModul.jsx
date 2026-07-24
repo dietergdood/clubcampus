@@ -8,18 +8,18 @@ import { TI } from "../icons.tsx";
 import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile, avColor, useConfirm, ConfirmDialog } from "../theme.ts";
 import { ModuleRechteTab } from "./portal/ModuleRechteTab.jsx";
 import { GruppenTab } from "./portal/GruppenTab.jsx";
-import { TeamModuleTab } from "./portal/TeamModuleTab.jsx";
-import { FeldvisTab } from "./portal/FeldvisTab.jsx";
+import { TeamModuleTab } from "./portal/TeamModuleTab.tsx";
+import { FeldvisTab } from "./portal/FeldvisTab.tsx";
 import { UsersTab } from "./portal/UsersTab.jsx";
 import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.jsx";
 import { RollenTab } from "./portal/RollenTab.jsx";
 import { KaderRollenTab } from "./portal/KaderRollenTab.jsx";
 import { AussehenTab } from "./portal/AussehenTab.jsx";
-import { ApiTab } from "./portal/ApiTab.jsx";
-import { AuditTab } from "./portal/AuditTab.jsx";
+import { ApiTab } from "./portal/ApiTab.tsx";
+import { AuditTab } from "./portal/AuditTab.tsx";
 import { DesignSystemTab } from "./portal/DesignSystemTab.jsx";
 import { TeamModuleMatrix } from "./portal/TeamModuleMatrix.jsx";
-import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ZUGRIFF_DEFAULT, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, KATEGORIEN, API_INFOS } from "./portal/portalUtils.js";
+import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ZUGRIFF_DEFAULT, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, KATEGORIEN, API_INFOS } from "./portal/portalUtils.ts";
 
 /* ── Geteilte Konstanten ── */
 const ROLES = {
@@ -427,7 +427,10 @@ function PortalverwaltungView(props){
 
   async function toggleFeld(feldKey,rolle,sichtbar){
     if(!supabase) return;
-    await supabase.from("feldsichtbarkeit").upsert({feld_key:feldKey,role,sichtbar},{onConflict:"feld_key,role"});
+    /* Die Kurzschreibweise `role` griff auf einen Bezeichner zu, den es hier
+       nicht gibt — der Parameter heisst `rolle`. Das Umschalten der
+       Feldsichtbarkeit lief dadurch in einen ReferenceError. */
+    await supabase.from("feldsichtbarkeit").upsert({feld_key:feldKey,role:rolle,sichtbar},{onConflict:"feld_key,role"});
     setFelder(prev=>prev.map(f=>f.feld_key===feldKey&&f.role===rolle?{...f,sichtbar}:f));
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
@@ -616,10 +619,10 @@ function PortalverwaltungView(props){
           funktionForm={funktionForm} setFunktionForm={setFunktionForm} tab={tab}
         />
       <TeamModuleTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab}
         />
       <FeldvisTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
+          loading={loading}
           isMobile={isMobile} mobileKachel={mobileKachel} toggleFeld={toggleFeld} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} felderNachKey={felderNachKey} tab={tab}
         />
       <UsersTab
@@ -664,8 +667,8 @@ function PortalverwaltungView(props){
           vereinId={vereinId} applyTheme={applyTheme} tab={tab}
         />
       <ApiTab
-          supabase={supabase} loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}
-          felder={felder} apiVerbindungen={apiVerbindungen} tab={tab}
+          loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}
+          apiVerbindungen={apiVerbindungen} tab={tab}
         />
       <AuditTab
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}

@@ -1,17 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/portalUtils.js
+   ClubCampus — modules/portal/portalUtils.ts
    Gemeinsame Konstanten für alle Portalverwaltungs-Tabs
    ═══════════════════════════════════════════════════════════════ */
+import type { Zugriffstufe } from "../../types.ts";
 
-export const ZUGRIFF_ORDER = ["lesen","schreiben","verwalten"];
-export const ZUGRIFF_LABELS = {"lesen":"Lesen","schreiben":"Schreiben","verwalten":"Verwalten"};
-export const ZUGRIFF_COLORS = {"lesen":"#3B82F6","schreiben":"#F97316","verwalten":"#22C55E"};
-export const ZUGRIFF_ICONS  = {"lesen":"eye","schreiben":"edit","verwalten":"settings"};
+export const ZUGRIFF_ORDER: Zugriffstufe[] = ["lesen","schreiben","verwalten"];
+export const ZUGRIFF_LABELS: Record<string,string> = {"lesen":"Lesen","schreiben":"Schreiben","verwalten":"Verwalten"};
+export const ZUGRIFF_COLORS: Record<string,string> = {"lesen":"#3B82F6","schreiben":"#F97316","verwalten":"#22C55E"};
+export const ZUGRIFF_ICONS: Record<string,string>  = {"lesen":"eye","schreiben":"edit","verwalten":"settings"};
 
 export const KATEGORIEN = ["kern","sport","kommunikation","betrieb","verwaltung","admin"];
-export const KAT_LABELS = {kern:"Kern",sport:"Sport",kommunikation:"Kommunikation",betrieb:"Betrieb",verwaltung:"Verwaltung",admin:"Admin"};
+export const KAT_LABELS: Record<string,string> = {kern:"Kern",sport:"Sport",kommunikation:"Kommunikation",betrieb:"Betrieb",verwaltung:"Verwaltung",admin:"Admin"};
 
-export const API_INFOS={
+/* Beschreibung einer externen Schnittstelle (Anzeige im API-Tab) */
+export interface ApiInfo {
+  description: string;
+  felder: string[];
+}
+
+export const API_INFOS: Record<string, ApiInfo>={
     fairgate:   {description:"Mitglieder, Gruppen, Stammdaten automatisch synchronisieren",felder:["Personen & Adressen","Kontaktdaten","Elternkontakte","Teams & Gruppen","Spielerpassdaten","J+S Nummern"]},
     football_ch:{description:"Spielpläne, Resultate und Ranglisten von Football.ch importieren",felder:["Spielplan","Resultate","Ranglisten","Teaminfos"]},
     fvrz:       {description:"Spielplan und Tabelle vom FVRZ (Fussballverband Region Zürich)",felder:["Spielplan","Tabelle","Resultate","Spielernummern"]},
@@ -19,8 +26,18 @@ export const API_INFOS={
     sfa:        {description:"Spielerdaten und Lizenzen von Swiss Football Association",felder:["Spielerlizenzen","Transferdaten","Sperren"]},
   };
 
+/* Ein Modul der Portalverwaltung */
+export interface ModulDef {
+  key: string;
+  label: string;
+  icon: string;
+  kat: string;
+  /* Kann nicht deaktiviert werden */
+  pflicht?: boolean;
+}
+
   /* ── Alle Module als Fallback ── */
-export const ALLE_MODULE=[
+export const ALLE_MODULE: ModulDef[]=[
     {key:"dashboard",  label:"Dashboard",         icon:"layout-dashboard", kat:"kern",          pflicht:true},
     {key:"members",    label:"Mitglieder",         icon:"users",            kat:"verwaltung"},
     {key:"team",       label:"Teams",              icon:"ball-football",    kat:"sport"},
@@ -39,7 +56,7 @@ export const ALLE_MODULE=[
     {key:"portal",     label:"Portalverwaltung",   icon:"settings",         kat:"admin",         pflicht:true},
   ];
 
-export const ROLLEN_MODULE_DEFAULT={
+export const ROLLEN_MODULE_DEFAULT: Record<string,string[]>={
     administrator:   ALLE_MODULE.map(m=>m.key),
     administration:  ["dashboard","members","team","training","schedule","attendance_central","events","helpers","buses","material","lockers","media","news","wiki","docs","portal"],
     funktionaer:     ["dashboard"],
@@ -49,8 +66,22 @@ export const ROLLEN_MODULE_DEFAULT={
     supporter:       ["dashboard","events","helpers","news"],
   };
 
+/* Eine Aktion innerhalb eines Moduls — zeigt in der Detail-Ansicht,
+   wer sie ab welcher Zugriffstufe ausführen darf. */
+export interface ModulAktion {
+  label: string;
+  /* Rollen, die die Aktion überhaupt sehen */
+  wer: string[];
+  /* Mindeststufe */
+  min: Zugriffstufe;
+  /* Einschränkung, z.B. "Trainer: nur eigene Teams" */
+  spez?: string;
+  /* Hinweis, wenn die Aktion nicht im Portal passiert */
+  note?: string;
+}
+
   /* Modul-Aktionen für Detail-Ansicht */
-export const MODUL_AKTIONEN={
+export const MODUL_AKTIONEN: Record<string, ModulAktion[]>={
     dashboard:  [{label:"Übersicht ansehen",wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"}],
     team:       [
       {label:"Team + Kader ansehen",          wer:["administrator","funktionaer","administration","funktionaer","trainer","spieler","eltern"],min:"lesen"},
@@ -136,8 +167,11 @@ export const MODUL_AKTIONEN={
     portal:     [{label:"Benutzer, Module, Berechtigungen",wer:["administrator","administration"],min:"verwalten"}],
   };
 
+/* Standardstufe je Modul; _all gilt für alle nicht einzeln genannten */
+export type ZugriffDefaultMap = Record<string, Zugriffstufe> & { _all?: Zugriffstufe };
+
   /* Standard-Stufen pro Rolle (nur für Module mit Zugriff) */
-export const ZUGRIFF_DEFAULT={
+export const ZUGRIFF_DEFAULT: Record<string, ZugriffDefaultMap>={
     administrator:  {_all:"verwalten"},
     administration: {
       _all:"verwalten",
@@ -177,8 +211,17 @@ export const ZUGRIFF_DEFAULT={
     },
   };
 
+/* Anzeige-Metadaten einer Portalrolle */
+export interface RolleInfo {
+  label: string;
+  color: string;
+  bg: string;
+  icon: string;
+  desc: string;
+  level: number;
+}
 
-export const ROLES = {
+export const ROLES: Record<string, RolleInfo> = {
   administrator: {
     label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
     desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",

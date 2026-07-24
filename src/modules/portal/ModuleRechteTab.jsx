@@ -6,7 +6,7 @@ import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip,
 import { TI } from "../../icons.tsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT, STATUS_BG } from "../../constants.ts";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
-import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, ROLES } from "./portalUtils.js";
+import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, ROLES } from "./portalUtils.ts";
 
 export function ModuleRechteTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,module,moduleAktiv,setModuleAktiv,moduleRechte,setModuleRechte,moduleConfig,moduleBerechtigungen,expandedModul,setExpandedModul,moduleViewMode,setModuleViewMode,moduleDirty,setModuleDirty,ALLE_MODULE,effRechte,getZugriff,setZugriffStufe,cycleZugriff,toggleModulGlobal,toggleBerechtigung,tab,ROLLEN,ROLLEN_LABELS,gruppen,zugriffStufen,setZugriffStufen,effZugriff,toggleModulRolle}) {
   return (

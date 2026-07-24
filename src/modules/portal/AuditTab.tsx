@@ -1,13 +1,31 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/AuditTab.jsx
+   ClubCampus — modules/portal/AuditTab.tsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
-import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate } from "../../theme.ts";
-import { TI } from "../../icons.tsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
+import { Card, Chip } from "../../theme.ts";
+import { GN, R, RL, BL, AM } from "../../constants.ts";
 
-export function AuditTab({loading,isMobile,mobileKachel,auditLogs,tab}) {
+/* Eine Zeile aus api_sync_log, mit dem Label der verknüpften Verbindung */
+export interface SyncLog {
+  id: string;
+  gestartet_am?: string | null;
+  status?: string | null;
+  datensaetze_neu?: number | null;
+  datensaetze_aktualisiert?: number | null;
+  datensaetze_fehler?: number | null;
+  meldung?: string | null;
+  api_verbindungen?: { label?: string | null } | null;
+}
+
+interface AuditTabProps {
+  loading: boolean;
+  isMobile: boolean;
+  /* null = Kachel-Landingseite auf Mobile */
+  mobileKachel: string | null;
+  auditLogs: SyncLog[];
+  tab: string;
+}
+
+export function AuditTab({loading,isMobile,mobileKachel,auditLogs,tab}: AuditTabProps) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="audit"&&(
@@ -34,7 +52,7 @@ export function AuditTab({loading,isMobile,mobileKachel,auditLogs,tab}) {
                     <td style={{padding:"9px 13px"}}><Chip text={log.status||"—"} color={log.status==="ok"?GN:log.status==="fehler"?R:AM} bg={log.status==="ok"?"#ECFDF5":log.status==="fehler"?RL:"#FFFBEB"}/></td>
                     <td style={{padding:"9px 13px",color:GN,fontWeight:600}}>{log.datensaetze_neu||0}</td>
                     <td style={{padding:"9px 13px",color:BL,fontWeight:600}}>{log.datensaetze_aktualisiert||0}</td>
-                    <td style={{padding:"9px 13px",color:log.datensaetze_fehler>0?R:"#aaa",fontWeight:600}}>{log.datensaetze_fehler||0}</td>
+                    <td style={{padding:"9px 13px",color:(log.datensaetze_fehler??0)>0?R:"#aaa",fontWeight:600}}>{log.datensaetze_fehler||0}</td>
                     <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:14,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.meldung||"—"}</td>
                   </tr>
                 ))}

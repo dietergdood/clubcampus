@@ -6,7 +6,7 @@ import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip,
 import { TI } from "../../icons.tsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
 import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
-import { ROLES } from "./portalUtils.js";
+import { ROLES } from "./portalUtils.ts";
 
 export function UsersTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,benutzerListe,setBenutzerListe,dbPortalRollen,updateBenutzerRolle,tab,ROLLEN,ROLLEN_LABELS,funktionen}) {
   return (

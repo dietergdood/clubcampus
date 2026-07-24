@@ -1,14 +1,32 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/ApiTab.jsx
+   ClubCampus — modules/portal/ApiTab.tsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
-import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate, InfoBox} from "../../theme.ts";
+import { Btn, Card, Chip, Row, InfoBox } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
-import { API_INFOS } from "./portalUtils.js";
+import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
+import { API_INFOS } from "./portalUtils.ts";
 
-export function ApiTab({supabase,loading,isMobile,mobileKachel,felder,apiVerbindungen,tab}) {
+/* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
+   API_INFOS Platzhalter derselben Form. */
+export interface ApiVerbindung {
+  key: string;
+  label?: string | null;
+  active?: boolean | null;
+  konfiguriert?: boolean | null;
+  sync_status?: string | null;
+  letzter_sync?: string | null;
+}
+
+interface ApiTabProps {
+  loading: boolean;
+  isMobile: boolean;
+  /* null = Kachel-Landingseite auf Mobile */
+  mobileKachel: string | null;
+  apiVerbindungen: ApiVerbindung[];
+  tab: string;
+}
+
+export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab}: ApiTabProps) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&(
@@ -16,8 +34,8 @@ export function ApiTab({supabase,loading,isMobile,mobileKachel,felder,apiVerbind
           <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
           <div style={{height:16}}/>
           <div className="cc-grid-cards" style={{gap:14}}>
-            {(apiVerbindungen.length>0?apiVerbindungen:Object.entries(API_INFOS).map(([key,info])=>({key,label:key,active:false,konfiguriert:false,sync_status:"deaktiviert",...info}))).map(api=>{
-              const info=API_INFOS[api.key]||{};
+            {(apiVerbindungen.length>0?apiVerbindungen:Object.keys(API_INFOS).map((key): ApiVerbindung=>({key,label:key,active:false,konfiguriert:false,sync_status:"deaktiviert"}))).map(api=>{
+              const info=API_INFOS[api.key];
               const statusColor=api.sync_status==="ok"?GN:api.sync_status==="fehler"?R:api.sync_status==="ausstehend"?AM:"#aaa";
               const statusBg=api.sync_status==="ok"?"#ECFDF5":api.sync_status==="fehler"?RL:api.sync_status==="ausstehend"?"#FFFBEB":"#f5f5f3";
               return(
@@ -29,8 +47,8 @@ export function ApiTab({supabase,loading,isMobile,mobileKachel,felder,apiVerbind
                     </Row>
                     <Chip text={api.sync_status||"deaktiviert"} color={statusColor} bg={statusBg}/>
                   </div>
-                  <p style={{fontSize:14,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{info.description||"Externe API-Verbindung"}</p>
-                  {info.felder&&(
+                  <p style={{fontSize:14,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{info?.description||"Externe API-Verbindung"}</p>
+                  {info?.felder&&(
                     <div style={{marginBottom:12}}>
                       <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:4}}>Synchronisierte Daten:</div>
                       {info.felder.map((f,i)=>(
@@ -46,8 +64,8 @@ export function ApiTab({supabase,loading,isMobile,mobileKachel,felder,apiVerbind
                     </div>
                   )}
                   <Row align="flex-start">
-                    {api.active&&<Btn sm variant="primary" color={BL} onClick={()=>{}}>Sync starten</Btn>}
-                    <Btn sm variant="outline" color="#888" onClick={()=>{}}>Konfigurieren</Btn>
+                    {api.active&&<Btn small variant="primary" color={BL} onClick={()=>{}}>Sync starten</Btn>}
+                    <Btn small variant="outline" color="#888" onClick={()=>{}}>Konfigurieren</Btn>
                   </Row>
                 </Card>
               );
