@@ -4,7 +4,7 @@
    Wiederverwendbar in: MitgliederModul, KaderModul, Aufgebote etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMobile } from "../../theme.jsx";
+import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMobile, RollenAuswahlListe } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
 import { DropMenu } from "../../theme.jsx";
 import { currentSeason } from "../../domains/season/seasonUtils.js";
@@ -182,35 +182,13 @@ function PersonTeams({
           </div>
           <div>
             <label className="cc-label">Rolle im Team</label>
-            <div className="cc-search-input-wrap">
-              <span className="cc-search-input-icon"><TI n="search" size={14}/></span>
-              <input
-                className="cc-search-input"
-                placeholder="Suchen…"
-                value={teamAssignRolleSearch || ""}
-                onChange={e => setTeamAssignRolleSearch(e.target.value)}
-              />
-            </div>
-            <div className="cc-role-list-wrap">
-              {dbKaderRollen
-                .filter(r => !teamAssignRolleSearch || r.name.toLowerCase().includes(teamAssignRolleSearch.toLowerCase()))
-                .map(r => {
-                  const sel = (teamAssignForm.funktionen || []).includes(r.name);
-                  return (
-                    <div
-                      key={r.name}
-                      className={`cc-role-list-item${sel ? " cc-role-list-item-selected" : ""}`}
-                      onClick={() => setTeamAssignForm(p => ({ ...p, funktionen: sel ? p.funktionen.filter(x => x !== r.name) : [...(p.funktionen || []), r.name] }))}
-                    >
-                      <div className={sel ? "cc-multiselect-cb-on" : "cc-multiselect-cb"}>
-                        {sel && <TI n="check" size={10} className="cc-check-icon"/>}
-                      </div>
-                      <span className="cc-role-name">{r.name}</span>
-                      {r.ist_trainer && <span className="cc-trainer-badge">Trainer</span>}
-                    </div>
-                  );
-                })}
-            </div>
+            <RollenAuswahlListe
+              rollen={dbKaderRollen}
+              selected={teamAssignForm.funktionen||[]}
+              onChange={f=>setTeamAssignForm(p=>({...p,funktionen:f}))}
+              search={teamAssignRolleSearch||""}
+              onSearchChange={setTeamAssignRolleSearch}
+            />
           </div>
         </div>
         <div className="cc-modal-ftr">
@@ -235,35 +213,13 @@ function PersonTeams({
             <div className="cc-modal-body cc-col">
               <div>
                 <label className="cc-label">Rolle im Team</label>
-                <div className="cc-search-input-wrap">
-                  <span className="cc-search-input-icon"><TI n="search" size={14}/></span>
-                  <input
-                    className="cc-search-input"
-                    placeholder="Suchen…"
-                    value={editTeamRolleSearch || ""}
-                    onChange={e => setEditTeamRolleSearch(e.target.value)}
-                  />
-                </div>
-                <div className="cc-role-list-wrap">
-                  {dbKaderRollen
-                    .filter(r => !editTeamRolleSearch || r.name.toLowerCase().includes(editTeamRolleSearch.toLowerCase()))
-                    .map(r => {
-                      const sel = (editTeamForm.funktionen || []).includes(r.name);
-                      return (
-                        <div
-                          key={r.name}
-                          className={`cc-role-list-item${sel ? " cc-role-list-item-selected" : ""}`}
-                          onClick={() => setEditTeamForm(p => ({ ...p, funktionen: sel ? p.funktionen.filter(x => x !== r.name) : [...(p.funktionen || []), r.name] }))}
-                        >
-                          <div className={sel ? "cc-multiselect-cb-on" : "cc-multiselect-cb"}>
-                            {sel && <TI n="check" size={10} className="cc-check-icon"/>}
-                          </div>
-                          <span className="cc-role-name">{r.name}</span>
-                          {r.ist_trainer && <span className="cc-trainer-badge">Trainer</span>}
-                        </div>
-                      );
-                    })}
-                </div>
+                <RollenAuswahlListe
+                  rollen={dbKaderRollen}
+                  selected={editTeamForm.funktionen||[]}
+                  onChange={f=>setEditTeamForm(p=>({...p,funktionen:f}))}
+                  search={editTeamRolleSearch||""}
+                  onSearchChange={setEditTeamRolleSearch}
+                />
               </div>
             </div>
             <div className="cc-modal-ftr">

@@ -778,6 +778,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-info-val{font-size:14px;font-weight:500;color:var(--text);text-align:left}
 .cc-info-val-empty{font-size:14px;color:var(--sub);text-align:left}
 .cc-list-item-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.cc-role-list-footer{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-top:0.5px solid var(--border);font-size:12px;color:var(--sub)}
+.cc-role-list-clear{background:none;border:none;cursor:pointer;font-size:12px;color:var(--sub);font-family:inherit}
+.cc-role-list-clear:hover{color:var(--text)}
 .cc-role-list-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:0.5px solid var(--border);cursor:pointer}
 .cc-role-list-item:last-child{border-bottom:none}
 .cc-role-list-item:hover{background:var(--surface2)}
@@ -2516,6 +2519,13 @@ export const COMPONENT_REGISTRY = [
     props: ["strasse", "plz"],
   },
   {
+    name: "RollenAuswahlListe",
+    desc: "Shared Rollenauswahl mit Suche, Checkboxen und Trainer-Badge. Für PersonTeams und KaderModul.",
+    category: "Formulare",
+    usedIn: ["PersonTeams"],
+    props: ["rollen", "selected", "onChange", "search", "onSearchChange"],
+  },
+  {
     name: "PhoneInput",
     desc: "Telefonnummer-Eingabe mit Ländervorwahl-Dropdown, automatischer Formatierung und Validierung.",
     category: "Formulare",
@@ -2843,6 +2853,42 @@ function usePlzLookup(plz, onResult){
   },[plz]);
 }
 
+/* ── RollenAuswahlListe: Shared Rollenauswahl für PersonTeams + KaderModul ── */
+function RollenAuswahlListe({rollen=[], selected=[], onChange, search="", onSearchChange}){
+  function toggle(name){
+    onChange(selected.includes(name)?selected.filter(x=>x!==name):[...selected,name]);
+  }
+  const filtered=search?rollen.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())):rollen;
+  return(
+    <div>
+      <div className="cc-search-input-wrap">
+        <span className="cc-search-input-icon"><TI n="search" size={14}/></span>
+        <input className="cc-search-input" placeholder="Suchen…" value={search} onChange={e=>onSearchChange(e.target.value)}/>
+      </div>
+      <div className="cc-role-list-wrap">
+        {filtered.map(r=>{
+          const sel=selected.includes(r.name);
+          return(
+            <div key={r.name} className={`cc-role-list-item${sel?" cc-role-list-item-selected":""}`} onClick={()=>toggle(r.name)}>
+              <div className={sel?"cc-multiselect-cb-on":"cc-multiselect-cb"}>
+                {sel&&<TI n="check" size={10} className="cc-check-icon"/>}
+              </div>
+              <span className="cc-role-name">{r.name}</span>
+              {r.ist_trainer&&<span className="cc-trainer-badge">Trainer</span>}
+            </div>
+          );
+        })}
+      </div>
+      {selected.length>0&&(
+        <div className="cc-role-list-footer">
+          <span>{selected.length} ausgewählt</span>
+          <button className="cc-role-list-clear" onClick={()=>onChange([])}>Alle entfernen</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── InlineField: Klickbares Feld mit Inline-Editing ── */
 function InlineField({ label, value, field, type="text", opts=null, canEdit=false, editing, editVal, setEditVal, startEdit, saveEdit, cancelEdit, handleKey, feedback, saving }){
   const isEditing = editing === field;
@@ -2921,4 +2967,4 @@ function DpBadge({val}){
   return <span className="cc-dp-status cc-dp-status-err"><span className="cc-dp-dot"/> {val||"Unbekannt"}</span>;
 }
 
-export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge, EmptyState, InlineField, PhoneInput, useAddrSearch, usePlzLookup };
+export { LOGO_B64, ThemeCtx, useTheme, PWA_CSS, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, StatusTile, Av, Tabs, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, LandSelect, DropMenu, FunktionenMultiSelect, Toolbar, ColMenuButton, BulkBar, SortHeader, ConfirmDialog, useConfirm, PortalBadge, DpBadge, EmptyState, InlineField, PhoneInput, useAddrSearch, usePlzLookup, RollenAuswahlListe };
