@@ -263,6 +263,7 @@ function Portal({supabaseClient}){
   },[]);
 
   const [teamRollen,setTeamRollen]=useState({}); // {team_id: ["spieler"|"trainer"|...]}
+  const [error, setError] = useState(null);
   const { loadDbUser } = useDbUser({ sb, setDbUser, setTeamRollen, setError, ROLLE_PRIORITAET });
   const { loadDbTeams } = useDbTeams({ sb, setDbTeams });
 
@@ -282,6 +283,20 @@ function Portal({supabaseClient}){
     setActive("dashboard");
   }
 
+
+  // Fehler-Screen (z.B. deaktivierter Benutzer)
+  if(error){
+    return(
+      <div style={{minHeight:"100dvh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{maxWidth:400,textAlign:"center"}}>
+          <div style={{fontSize:14,color:"var(--sub)",marginBottom:16}}>{error}</div>
+          <button onClick={()=>{ setError(null); setSession(null); }} style={{padding:"8px 20px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",fontSize:14,cursor:"pointer"}}>
+            Zurück zum Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Lade-Screen (initial oder während dbUser lädt nach Login)
   if(session===undefined){
