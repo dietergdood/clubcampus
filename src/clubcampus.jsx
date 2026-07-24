@@ -9,7 +9,7 @@ import { LoginScreen } from "./modules/LoginScreen.jsx";
 import { useAppData, useTenant, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
 import { usePermissions } from "./domains/app/usePermissions.js";
 import { useProfilCheck } from "./domains/app/useProfilCheck.js";
-import { TEAM_HIERARCHY, NAV_TARGET, FIELD_VIS, INITIAL_PLAENE } from "./modules/appConstants.js";
+import { NAV_TARGET, FIELD_VIS, INITIAL_PLAENE } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./modules/NavigationModul.jsx";
 import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./modules/DashboardModul.jsx";
 import { TeamView, TeamOverview, EventsList } from "./modules/TeamModul.jsx";

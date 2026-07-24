@@ -4,41 +4,6 @@
    ═══════════════════════════════════════════════════════════════ */
 import { GANTT } from "../demoData.js";
 
-/* ── Team-Hierarchie (Baumstruktur für TeamsVerwaltung) ── */
-export const TEAM_HIERARCHY = {
-  "Aktivfussball": {
-    "Aktive Herren":  ["Aktive Herren"],
-    "Aktive Frauen":  ["Aktive Frauen"],
-  },
-  "Juniorenfussball": {
-    "Junioren A": ["Junioren A"],
-    "Junioren B": ["Junioren B"],
-    "Junioren C": ["Junioren C"],
-    "Junioren D": ["Junioren D-9","Junioren D-7"],
-  },
-  "Kinderfussball Junioren": {
-    "Junioren E": ["Junioren E"],
-    "Junioren F": ["Junioren F"],
-    "Junioren G": ["Junioren G"],
-  },
-  "Juniorinnenfussball": {
-    "Juniorinnen B / FF-21": ["Juniorinnen FF-21"],
-    "Juniorinnen C / FF-17": ["Juniorinnen FF-17"],
-    "Juniorinnen D / FF-14": ["Juniorinnen FF-14 9v9","Juniorinnen FF-14 7v7","Juniorinnen FF-14"],
-  },
-  "Kinderfussball Juniorinnen": {
-    "Juniorinnen E / FF-11": ["Juniorinnen FF-11"],
-    "Juniorinnen F / FF-9":  ["Juniorinnen FF-9"],
-    "Juniorinnen G / FF-7":  ["Juniorinnen FF-7"],
-  },
-  "Seniorenfussball": {
-    "Senioren 30+": ["Senioren 30+"],
-    "Senioren 40+": ["Senioren 40+"],
-    "Senioren 50+": ["Senioren 50+"],
-    "Senioren 60+": ["Senioren 60+"],
-  },
-};
-
 /* ── Shared Navigation Target (cross-module Seiteneffekt) ── */
 export const NAV_TARGET = { tab: null, filter: null, kindTeam: null, openEvId: null, selectedSpiel: null };
 
