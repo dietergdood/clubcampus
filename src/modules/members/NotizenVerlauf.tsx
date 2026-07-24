@@ -1,19 +1,35 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/NotizenVerlauf.jsx
+   ClubCampus — modules/members/NotizenVerlauf.tsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
+import type { MutableRefObject } from "react";
 import { Btn, useConfirm, DropMenu, EmptyState } from "../../theme.ts";
 import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.ts";
+import type { DbUser, Sb } from "../../types.ts";
 
-function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}){
-  // onAddRef: wenn gesetzt, wird setNewText(" ") nach aussen exponiert
+/* Direkt aus der Service-Rückgabe abgeleitet */
+type Notiz = Awaited<ReturnType<typeof fetchNotizen>>[number];
+
+interface NotizenVerlaufProps {
+  mitgliedId: number;
+  canEdit?: boolean;
+  sb: Sb;
+  dbUser?: DbUser | null;
+  /* Meldet die Anzahl Notizen nach aussen (Badge im Tab) */
+  onCount?: ((anzahl: number) => void) | null;
+  vereinId?: string | null;
+  /* Wenn gesetzt, wird "neue Notiz starten" nach aussen exponiert */
+  onAddRef?: MutableRefObject<(() => void) | null> | null;
+}
+
+function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}: NotizenVerlaufProps){
   const [confirm,confirmDialog]=useConfirm();
   // Exponiere "neue Notiz starten" nach aussen
   if(onAddRef) onAddRef.current=()=>setNewText(" ");
-  const [notizen,setNotizen]=useState(null);
+  const [notizen,setNotizen]=useState<Notiz[]|null>(null);
   const [newText,setNewText]=useState("");
   const [adding,setAdding]=useState(false);
-  const [editId,setEditId]=useState(null);
+  const [editId,setEditId]=useState<number|null>(null);
   const [editText,setEditText]=useState("");
   const [editSaving,setEditSaving]=useState(false);
 
@@ -23,7 +39,9 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAd
   },[mitgliedId]);
 
   async function addNotiz(){
-    if(!newText.trim()||!sb) return;
+    /* verein_id ist in mitglieder_notizen NOT NULL — ohne vereinId würde
+       das Insert zwangsläufig scheitern, deshalb hier schon abbrechen. */
+    if(!newText.trim()||!sb||!vereinId) return;
     setAdding(true);
     const autorName=dbUser?.name||dbUser?.email||"Unbekannt";
     await insertNotiz(sb,{mitglied_id:mitgliedId,verein_id:vereinId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName});
@@ -32,30 +50,31 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAd
     setNewText(""); setAdding(false);
   }
 
-  async function saveEdit(id){
+  async function saveEdit(id: number){
     if(!editText.trim()||!sb) return;
     setEditSaving(true);
     await updateNotiz(sb,id,editText.trim());
-    setNotizen(prev=>prev.map(n=>n.id===id?{...n,text:editText.trim()}:n));
+    setNotizen(prev=>(prev||[]).map(n=>n.id===id?{...n,text:editText.trim()}:n));
     setEditId(null); setEditSaving(false);
   }
 
-  async function deleteNotiz(id){
+  async function deleteNotiz(id: number){
     const ok=await confirm({title:"Notiz löschen?",danger:true,confirmLabel:"Löschen"});if(!sb||!ok) return;
     await deleteNotizService(sb,id);
-    setNotizen(prev=>{const d=prev.filter(n=>n.id!==id);if(onCount)onCount(d.length);return d;});
+    setNotizen(prev=>{const d=(prev||[]).filter(n=>n.id!==id);if(onCount)onCount(d.length);return d;});
   }
 
-  function formatDate(ts){
+  function formatDate(ts: string | null){
+    if(!ts) return "";
     const d=new Date(ts);
     const now=new Date();
-    const diff=now-d;
+    const diff=now.getTime()-d.getTime();
     if(diff<86400000&&d.getDate()===now.getDate()) return `heute, ${d.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"})}`;
     if(diff<172800000) return "gestern";
     return d.toLocaleDateString("de-CH");
   }
 
-  function initials(name){
+  function initials(name?: string | null){
     return (name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
   }
 
@@ -110,7 +129,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAd
           {canEdit&&editId!==n.id&&(
             <DropMenu items={[
               {label:"Bearbeiten",icon:"edit",onClick:()=>{setEditId(n.id);setEditText(n.text);}},
-              "sep",
+              "sep" as const,
               {label:"Löschen",icon:"trash",danger:true,onClick:()=>deleteNotiz(n.id)},
             ]}/>
           )}

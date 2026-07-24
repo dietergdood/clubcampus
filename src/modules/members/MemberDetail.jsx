@@ -17,8 +17,8 @@ import {
 import { MemberHero } from "./MemberHero.jsx";
 import { ElternTab } from "./tabs/ElternTab.jsx";
 import { InfoTab } from "./tabs/InfoTab.jsx";
-import { PortalTab } from "./tabs/PortalTab.jsx";
-import { DatenpruefungTab } from "./tabs/DatenpruefungTab.jsx";
+import { PortalTab } from "./tabs/PortalTab.tsx";
+import { DatenpruefungTab } from "./tabs/DatenpruefungTab.tsx";
 import { VerlaufTab } from "./tabs/VerlaufTab.jsx";
 import { getFieldVisibility } from "./memberUtils.tsx";
 

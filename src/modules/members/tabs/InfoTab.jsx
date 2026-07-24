@@ -10,7 +10,7 @@ import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.tsx"
 import { PersonKontakt } from "../../../shared/person/PersonKontakt.tsx";
 import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
-import { NotizenVerlauf } from "../NotizenVerlauf.jsx";
+import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
 
 function InfoTab({

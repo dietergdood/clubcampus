@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PortalTab } from '../tabs/PortalTab.jsx';
+import { PortalTab } from '../tabs/PortalTab.tsx';
 
 vi.mock('../../../theme.ts', () => ({
   Card: ({ children }) => <div>{children}</div>,

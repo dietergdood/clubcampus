@@ -1,26 +1,52 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/members/tabs/PortalTab.jsx
+   ClubCampus — modules/members/tabs/PortalTab.tsx
    Portal-Zugang Tab: Status, Rolle editierbar, Deaktivieren
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
 import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, R, RL } from "../../../constants.ts";
-import { updateMitgliedRolle, logAenderung } from "../../../domains/members/memberService.ts";
+import { updateMitgliedRolle, logAenderung, fetchBenutzerFuerMitglied } from "../../../domains/members/memberService.ts";
+import type { Account, Mitglied, Sb } from "../../../types.ts";
+import type { StatusMeldung } from "./DatenpruefungTab.tsx";
+
+/* Aus der Service-Rückgabe abgeleitet — dieselben Felder, die
+   fetchBenutzerFuerMitglied selektiert. */
+export type PortalBenutzer = NonNullable<Awaited<ReturnType<typeof fetchBenutzerFuerMitglied>>>;
+
+interface RolleOption {
+  name: string;
+  label: string;
+}
+
+interface PortalTabProps {
+  raw: Mitglied;
+  benutzer?: PortalBenutzer | null;
+  sb: Sb;
+  dbPortalRollen?: RolleOption[] | null;
+  portalMsg?: StatusMeldung | null;
+  portalLoading?: boolean;
+  handleUnlink: () => void;
+  handleReactivate: () => void;
+  onReload?: (() => void) | null;
+  setBenutzer?: ((update: (prev: PortalBenutzer | null) => PortalBenutzer | null) => void) | null;
+  vereinId?: string | null;
+  account?: Account | null;
+}
 
 function PortalTab({
   raw, benutzer, sb, dbPortalRollen,
   portalMsg, portalLoading,
   handleUnlink, handleReactivate, onReload, setBenutzer,
   vereinId=null, account=null,
-}) {
+}: PortalTabProps) {
   const aktiv = raw.hat_portal_zugang && benutzer;
   const deaktiviert = !raw.hat_portal_zugang && benutzer;
   const [rolleEditing, setRolleEditing] = useState(false);
   const [rolleVal, setRolleVal] = useState("");
   const [rolleSaving, setRolleSaving] = useState(false);
 
-  const portalRollen = dbPortalRollen?.length > 0
+  const portalRollen: RolleOption[] = dbPortalRollen && dbPortalRollen.length > 0
     ? dbPortalRollen
     : [
         { name: "administrator",  label: "Administrator" },
@@ -48,7 +74,7 @@ function PortalTab({
     if (onReload) onReload();
   }
 
-  function RolleField({ currentRole }) {
+  function RolleField({ currentRole }: { currentRole?: string | null }) {
     const label = portalRollen.find(r => r.name === currentRole)?.label || currentRole || "—";
     if (!rolleEditing) return (
       <span className="cc-inline-field cc-info-val" onClick={()=>{ setRolleVal(currentRole||""); setRolleEditing(true); }}>
@@ -83,7 +109,7 @@ function PortalTab({
         </div>
 
         {/* Aktiv */}
-        {aktiv && (
+        {aktiv && benutzer && (
           <>
             <div className="cc-info-grid cc-mb-12">
               <div className="cc-info-row">
@@ -110,7 +136,7 @@ function PortalTab({
         )}
 
         {/* Deaktiviert */}
-        {deaktiviert && (
+        {deaktiviert && benutzer && (
           <>
             <div className="cc-info-grid cc-mb-12">
               <div className="cc-info-row">
