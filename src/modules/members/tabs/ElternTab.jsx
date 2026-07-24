@@ -131,8 +131,8 @@ function ElternSucheModal({open, onClose, raw, sb, vereinId, onVerknuepft}){
       {tab==="suche"?(
         <div className="cc-modal-body">
           <div className="cc-relative">
-            <TI n="search" size={14} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--sub)"}}/>
-            <input className="cc-input" style={{paddingLeft:32}} placeholder="Name oder E-Mail suchen…"
+            <TI n="search" size={14} style={{position:"absolute",left:10,top:10,color:"var(--sub)"}}/>
+            <input className="cc-input" style={{paddingLeft:34}} placeholder="Name oder E-Mail suchen…"
               value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}} autoFocus/>
           </div>
 
@@ -154,7 +154,7 @@ function ElternSucheModal({open, onClose, raw, sb, vereinId, onVerknuepft}){
                       {e.beziehung&&<div className="cc-text-sm cc-text-sub">{e.beziehung}{e.email?` · ${e.email}`:""}</div>}
                       {kinder.map((k,i)=>(
                         <div key={i} className="cc-text-sm cc-text-sub">
-                          <TI n="link" size={10}/> {k.mitglieder?.vorname} {k.mitglieder?.nachname}
+                          <TI n="users" size={12}/> {k.mitglieder?.vorname} {k.mitglieder?.nachname}
                         </div>
                       ))}
                     </div>
