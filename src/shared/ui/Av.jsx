@@ -2,7 +2,7 @@
    ClubCampus — shared/ui/Av.jsx
    Avatar-Komponente mit Name-Hash-Farben
    ═══════════════════════════════════════════════════════════════ */
-import { TI, TI_PATHS } from "../../icons.jsx";
+import { TI, TI_PATHS } from "../../icons.tsx";
 
 const AV_PALETTES=[
   {bg:"#E6F1FB",text:"#0C447C"},{bg:"#EEEDFE",text:"#3C3489"},

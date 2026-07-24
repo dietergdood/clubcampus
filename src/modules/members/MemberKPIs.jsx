@@ -3,7 +3,7 @@
    KPI-Cards + Aufschlüsselung für MitgliederModul
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
-import { Stat, useIsMobile } from "../../theme.jsx";
+import { Stat, useIsMobile } from "../../theme.ts";
 import { GN, AM, BL } from "../../constants.ts";
 
 export function MemberKPIs({ allMembers, dbMitgliedtypen, onFilter }) {

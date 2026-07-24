@@ -5,8 +5,8 @@
    werden gruppiert (z.B. Adressänderung = 1 Eintrag).
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Card, EmptyState } from "../../../theme.jsx";
-import { TI } from "../../../icons.jsx";
+import { Card, EmptyState } from "../../../theme.ts";
+import { TI } from "../../../icons.tsx";
 import { fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP } from "../../../domains/members/memberService.js";
 
 const SENSITIV_FELDER = ["ahv_nr"];

@@ -26,8 +26,8 @@
      funktionen_gruppen => bei gc.type="team" leer, bei gc.type="gruppe" gefiltert
      funktionsgruppen => bei gc.type="team" leer, sonst mit Vereinsfarbe
    ═══════════════════════════════════════════════════════════════ */
-import { TI } from "../../icons.jsx";
-import { Av, PortalBadge, DpBadge } from "../../theme.jsx";
+import { TI } from "../../icons.tsx";
+import { Av, PortalBadge, DpBadge } from "../../theme.ts";
 
 export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, expandedTeams, setExpandedTeams, setSelectedMember }) {
   function renderCell(col,m,groupContext={type:"none",key:null},filterVals={}){

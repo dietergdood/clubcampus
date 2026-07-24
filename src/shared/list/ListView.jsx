@@ -4,8 +4,8 @@
    State + Logic → useListView.js
    ═══════════════════════════════════════════════════════════════ */
 import { Fragment } from "react";
-import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn, EmptyState } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn, EmptyState } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { useListView } from "./useListView.js";
 
 export function ListView({

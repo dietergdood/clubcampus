@@ -4,8 +4,8 @@
    Kein Edit-Modal mehr — alle Felder inline editierbar in InfoTab
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef } from "react";
-import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.js";
 
 function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null}){

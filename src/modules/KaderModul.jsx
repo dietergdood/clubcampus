@@ -3,8 +3,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { GN, R, BL } from "../constants.ts";
-import { TI } from "../icons.jsx";
-import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card, DropMenu } from "../theme.jsx";
+import { TI } from "../icons.tsx";
+import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card, DropMenu } from "../theme.ts";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
 import { currentSeason } from "../domains/season/seasonUtils.ts";
 

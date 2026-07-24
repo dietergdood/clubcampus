@@ -2,10 +2,10 @@
    ClubCampus — modules/portal/UsersTab.jsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, Fragment } from "react";
-import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.jsx";
+import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
 import { ROLES } from "./portalUtils.js";
 
 export function UsersTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,benutzerListe,setBenutzerListe,dbPortalRollen,updateBenutzerRolle,tab,ROLLEN,ROLLEN_LABELS,funktionen}) {

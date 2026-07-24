@@ -3,8 +3,8 @@
    Modal zum Suchen + Verknüpfen bestehender Elternkontakte
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { Btn, ModalOrSheet } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Btn, ModalOrSheet } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { sucheElternkontakte, linkKind } from "../../domains/members/memberService.js";
 import { elternAvColor } from "./tabs/ElternTab.jsx";
 

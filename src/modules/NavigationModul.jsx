@@ -4,8 +4,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GB } from "../constants.ts";
-import { TI, TI_PATHS } from "../icons.jsx";
-import { LOGO_B64, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs , useTheme, Between, Col, H1, Row, avColor} from "../theme.jsx";
+import { TI, TI_PATHS } from "../icons.tsx";
+import { LOGO_B64, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs , useTheme, Between, Col, H1, Row, avColor} from "../theme.ts";
 import { USER_ACCOUNTS } from "../demoData.js";
 
 /* ── Navigationsdaten & Hilfsfunktionen ── */

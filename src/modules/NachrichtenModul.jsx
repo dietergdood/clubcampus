@@ -4,8 +4,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, GN, BL, R, RL } from "../constants.ts";
-import { TI } from "../icons.jsx";
-import { ModalOrSheet, ModalTitle, Row, useIsMobile, Btn } from "../theme.jsx";
+import { TI } from "../icons.tsx";
+import { ModalOrSheet, ModalTitle, Row, useIsMobile, Btn } from "../theme.ts";
 
 const S_LABEL={fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5};
 

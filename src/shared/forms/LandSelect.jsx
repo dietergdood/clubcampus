@@ -3,7 +3,7 @@
    Länder-Dropdown
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
 
 export function LandSelect({value,onChange,laender,placeholder="–"}){

@@ -4,8 +4,8 @@
    Teams, Vereinsfunktionen, Notizen
    ═══════════════════════════════════════════════════════════════ */
 import { useRef, useState } from "react";
-import { Card, StatusTile, useIsMobile, InlineField } from "../../../theme.jsx";
-import { TI } from "../../../icons.jsx";
+import { Card, StatusTile, useIsMobile, InlineField } from "../../../theme.ts";
+import { TI } from "../../../icons.tsx";
 import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.jsx";
 import { PersonKontakt } from "../../../shared/person/PersonKontakt.jsx";
 import { PersonTeams } from "../../../shared/person/PersonTeams.jsx";

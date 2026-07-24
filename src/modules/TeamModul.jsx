@@ -4,12 +4,12 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.ts";
-import { TI } from "../icons.jsx";
-import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, avColor, Stat} from "../theme.jsx";
+import { TI } from "../icons.tsx";
+import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, avColor, Stat} from "../theme.ts";
 import { ATT_EVENTS, ATT_INITIAL, EVENTS, NEWS, POLLS, ROSTER, TABLES } from "../demoData.js";
 
 /* ── Hilfsfunktionen ── */
-/* STitle via ./theme.jsx */
+/* STitle via ./theme.ts */
 
 function kannHelferEinsatzErstellen(role, typ, team, meineTeams=[]){
   if(role==="administrator"||role==="administration"||role==="funktionaer") return true;

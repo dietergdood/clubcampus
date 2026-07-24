@@ -4,8 +4,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
 import { FONT , GB, ACCENT, GN} from "../constants.ts";
-import { LOGO_B64 } from "../theme.jsx";
-import { TI } from "../icons.jsx";
+import { LOGO_B64 } from "../theme.ts";
+import { TI } from "../icons.tsx";
 function LoginScreen({onLogin, sb, appTheme}){
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");

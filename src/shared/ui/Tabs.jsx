@@ -2,7 +2,7 @@
    ClubCampus — shared/ui/Tabs.jsx
    Tab-Navigation Komponente
    ═══════════════════════════════════════════════════════════════ */
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
 import { useIsMobile } from "./hooks.jsx";
 

@@ -5,8 +5,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { BL, GR } from "../../constants.ts";
-import { Av, Card, InlineField, useAddrSearch, usePlzLookup } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Av, Card, InlineField, useAddrSearch, usePlzLookup } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { useInlineEdit } from "../../domains/members/useInlineEdit.js";
 
 const KANTON_OPTS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"].map(k=>({v:k,l:k}));

@@ -3,7 +3,7 @@
    Spalten-Auswahl Komponenten
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 
 export function ColMenuContent({colGroups,visibleCols,onVisibleColsChange,dragCol,onDragStart,onDragOver,onDrop,onDragEnd,search,setSearch}){
   const allCols=colGroups.flatMap(g=>g.cols);

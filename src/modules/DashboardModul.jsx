@@ -4,8 +4,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, ACCENT} from "../constants.ts";
-import { TI } from "../icons.jsx";
-import { Card, Chip, H1, InfoBox, Row, Between, STitle, Stat, useIsMobile, Btn, H2, Col } from "../theme.jsx";
+import { TI } from "../icons.tsx";
+import { Card, Chip, H1, InfoBox, Row, Between, STitle, Stat, useIsMobile, Btn, H2, Col } from "../theme.ts";
 import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS, POLLS, ROSTER, TABLES } from "../demoData.js";
 
 /* ── Shared navigation target ── */

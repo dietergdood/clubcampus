@@ -7,7 +7,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NeuesMitgliedModal } from '../NeuesMitgliedModal.jsx';
 
 // ── Mocks ────────────────────────────────────────────────────────
-vi.mock('../../../theme.jsx', () => ({
+vi.mock('../../../theme.ts', () => ({
   Btn: ({ children, onClick, disabled }) => (
     <button onClick={onClick} disabled={disabled}>{children}</button>
   ),
@@ -21,7 +21,7 @@ vi.mock('../../../theme.jsx', () => ({
   usePlzLookup: () => {},
 }));
 
-vi.mock('../../../icons.jsx', () => ({
+vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 

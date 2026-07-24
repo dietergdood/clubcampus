@@ -3,8 +3,8 @@
    Eltern-Liste mit Kind+Team Anzeige, Fold-out, Filter, Gruppierung
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Av, useConfirm, useIsMobile } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Av, useConfirm, useIsMobile } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.js";
 import { ListView } from "../../shared/list/ListView.jsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.js";

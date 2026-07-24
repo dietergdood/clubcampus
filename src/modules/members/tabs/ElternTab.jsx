@@ -8,8 +8,8 @@
    - Entknüpfen des letzten Kindes → deleteElternkontakt
    - E-Mail Pflichtfeld
    ═══════════════════════════════════════════════════════════════ */
-import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.jsx";
-import { TI } from "../../../icons.jsx";
+import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.ts";
+import { TI } from "../../../icons.tsx";
 import { useState } from "react";
 import { ElternSucheModal } from "../ElternSucheModal.jsx";
 import {

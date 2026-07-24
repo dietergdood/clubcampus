@@ -4,8 +4,8 @@
    Wiederverwendbar in: MitgliederModul, KaderModul etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, ModalOrSheet, ModalTitle, DropMenu } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Btn, Card, ModalOrSheet, ModalTitle, DropMenu } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { updateMitglied, logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.js";
 
 function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onReload, vereinId=null, account=null }) {

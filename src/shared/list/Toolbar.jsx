@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, Fragment, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
 import { useIsMobile } from "../ui/hooks.jsx";
 import { RangeFilter } from "./RangeFilter.jsx";

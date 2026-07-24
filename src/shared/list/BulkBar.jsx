@@ -2,7 +2,7 @@
    ClubCampus — shared/list/BulkBar.jsx
    Auswahl-Aktionsleiste
    ═══════════════════════════════════════════════════════════════ */
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 
 export function BulkBar({
   count=0,

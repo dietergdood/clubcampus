@@ -3,7 +3,7 @@
    Telefon-Eingabe mit Länderauswahl
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { FONT, AM, GB, GR} from "../../constants.ts";
 
 const PHONE_COUNTRIES=[

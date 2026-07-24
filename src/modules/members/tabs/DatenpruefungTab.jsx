@@ -2,8 +2,8 @@
    ClubCampus — modules/members/tabs/DatenpruefungTab.jsx
    Datenprüfung Tab: Profil-Status, Felder-Checkliste, Anfordern
    ═══════════════════════════════════════════════════════════════ */
-import { Card, Chip } from "../../../theme.jsx";
-import { TI } from "../../../icons.jsx";
+import { Card, Chip } from "../../../theme.ts";
+import { TI } from "../../../icons.tsx";
 import { GN, AM } from "../../../constants.ts";
 import { updateMitglied } from "../../../domains/members/memberService.js";
 

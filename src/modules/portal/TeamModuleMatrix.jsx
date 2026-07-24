@@ -3,8 +3,8 @@
    Team-Modul-Matrix Komponente
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Btn, Card, Chip, useIsMobile, InfoBox, Col, Row, Stat} from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Btn, Card, Chip, useIsMobile, InfoBox, Col, Row, Stat} from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { GN, BL, GB, BK, FONT} from "../../constants.ts";
 
 function maxStufe(a, b){

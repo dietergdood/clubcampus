@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus Icons — icons.jsx
+   ClubCampus Icons — icons.tsx
    Tabler Icons als SVG-Komponente
    ═══════════════════════════════════════════════════════════════ */
+import type { CSSProperties } from "react";
 
 const TI_PATHS={
     "ball-football":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 3c0 0 2 4 2 9s-2 9-2 9\"/><path d=\"M3 12c0 0 4-2 9-2s9 2 9 2\"/><path d=\"M5.6 5.6c0 0 3.4 1.4 6.4 6.4s1.4 6.4 1.4 6.4\"/>",
@@ -112,9 +113,27 @@ const TI_PATHS={
     "chevron-up":"<polyline points=\"18 15 12 9 6 15\"/>",
     "chevron-down":"<polyline points=\"6 9 12 15 18 9\"/>",
     "trending-up":"<polyline points=\"22 7 13.5 15.5 8.5 10.5 2 17\"/><polyline points=\"16 7 22 7 22 13\"/>",
-};
-function TI({n, size=16, style={}}){
-  const p = TI_PATHS[n];
+} satisfies Record<string, string>;
+
+/** Namen aller definierten Icons — für Autovervollständigung. */
+export type IconName = keyof typeof TI_PATHS;
+
+/* Geweitete Sicht auf dieselbe Tabelle: erlaubt den Lookup mit beliebigem
+   String ohne Cast. Die Zuweisung prüft der Compiler. */
+const PATHS: Record<string, string | undefined> = TI_PATHS;
+
+interface TIProps {
+  /* Viele Aufrufer setzen n dynamisch (aktivitaetIcon(), ZUGRIFF_ICONS[stufe],
+     item.icon aus DropMenu-Daten). Deshalb sind beliebige Strings erlaubt —
+     unbekannte Namen rendern per Design einen leeren Platzhalter.
+     `string & {}` erhält dabei die Vorschläge aus IconName. */
+  n: IconName | (string & {});
+  size?: number;
+  style?: CSSProperties;
+}
+
+function TI({n, size=16, style={}}: TIProps){
+  const p = PATHS[n];
   if(!p) return <span style={{display:"inline-block",width:size,height:size,...style}}/>;
   return(
     <svg

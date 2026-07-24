@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { PersonSummary } from "./PersonSummary.jsx";
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { vollname } from "../../domains/person/personUtils.ts";
 
 /**

@@ -2,7 +2,7 @@
    ClubCampus — modules/members/NotizenVerlauf.jsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Btn, useConfirm, DropMenu, EmptyState } from "../../theme.jsx";
+import { Btn, useConfirm, DropMenu, EmptyState } from "../../theme.ts";
 import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.js";
 
 function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}){

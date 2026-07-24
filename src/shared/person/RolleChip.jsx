@@ -2,7 +2,7 @@
    ClubCampus — shared/person/RolleChip.jsx
    Rolle-Badge — wiederverwendbar in allen Modulen
    ═══════════════════════════════════════════════════════════════ */
-import { Chip } from "../../theme.jsx";
+import { Chip } from "../../theme.ts";
 
 export function RolleChip({ rolle }) {
   const colors = {

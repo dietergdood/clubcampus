@@ -4,8 +4,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GR, GB } from "../constants.ts";
-import { TI } from "../icons.jsx";
-import { Av, Between, Btn, Card, Chip, Col, H1, InfoBox, Input, Row, Stat, useIsMobile , avColor} from "../theme.jsx";
+import { TI } from "../icons.tsx";
+import { Av, Between, Btn, Card, Chip, Col, H1, InfoBox, Input, Row, Stat, useIsMobile , avColor} from "../theme.ts";
 import { HELPER_GRUPPEN, HELPER_EVENTS, HELPERS } from "../demoData.js";
 
 /* ── Hilfsfunktionen ── */

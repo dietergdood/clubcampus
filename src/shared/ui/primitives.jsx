@@ -3,7 +3,7 @@
    Kleine UI-Primitive ohne gegenseitige Abhängigkeiten
    ═══════════════════════════════════════════════════════════════ */
 import { FONT } from "../../constants.ts";
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 
 export function Card({children,mb=0,mt=0,style={},onClick,flush=false,className=""}){
   return <div onClick={onClick} className={`cc-card${flush?" cc-card-flush":""}${className?" "+className:""}`} style={{borderRadius:12,padding:flush?0:"16px 20px",overflow:"visible",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:mb,marginTop:mt,...style}}>{children}</div>;

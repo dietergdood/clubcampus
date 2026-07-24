@@ -7,8 +7,8 @@
    Beide Felder werden beim Schliessen gespeichert.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Card, InlineField } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Card, InlineField } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { getLandName, LAENDER } from "../../domains/person/personUtils.ts";
 import { useInlineEdit } from "../../domains/members/useInlineEdit.js";
 

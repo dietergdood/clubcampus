@@ -2,8 +2,8 @@
    ClubCampus — shared/person/PersonAvatar.jsx
    Avatar-Komponente — wiederverwendbar in allen Modulen
    ═══════════════════════════════════════════════════════════════ */
-import { Av } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Av } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { initials } from "../../domains/person/personUtils.ts";
 
 /**

@@ -2,7 +2,7 @@
    ClubCampus — shared/forms/InlineField.jsx
    Inline-Editierfeld für Profilansichten
    ═══════════════════════════════════════════════════════════════ */
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
 import { PhoneInput } from "./PhoneInput.jsx";
 

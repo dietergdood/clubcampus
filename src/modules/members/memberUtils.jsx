@@ -2,7 +2,7 @@
    ClubCampus — modules/members/memberUtils.jsx
    Mitglieder-spezifische Helpers
    ═══════════════════════════════════════════════════════════════ */
-import { Chip } from "../../theme.jsx";
+import { Chip } from "../../theme.ts";
 
 // Re-exports für Rückwärtskompatibilität
 export { LAENDER, getLandName } from "../../domains/person/personUtils.ts";

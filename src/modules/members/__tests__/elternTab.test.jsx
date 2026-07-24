@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ElternTab } from '../tabs/ElternTab.jsx';
 
-vi.mock('../../../theme.jsx', () => ({
+vi.mock('../../../theme.ts', () => ({
   Btn: ({ children, onClick, small }) => <button onClick={onClick}>{children}</button>,
   Card: ({ children }) => <div>{children}</div>,
   ModalOrSheet: ({ open, children }) => open ? <div>{children}</div> : null,
@@ -26,7 +26,7 @@ vi.mock('../../../theme.jsx', () => ({
   ),
 }));
 
-vi.mock('../../../icons.jsx', () => ({
+vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 

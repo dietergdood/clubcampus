@@ -2,7 +2,7 @@
    ClubCampus — shared/forms/RollenAuswahlListe.jsx
    Shared Rollenauswahl mit Suche + Checkboxen
    ═══════════════════════════════════════════════════════════════ */
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 
 export function RollenAuswahlListe({rollen=[], selected=[], onChange, search="", onSearchChange}){
   function toggle(name){

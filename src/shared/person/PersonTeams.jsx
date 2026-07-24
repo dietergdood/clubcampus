@@ -4,9 +4,9 @@
    Wiederverwendbar in: MitgliederModul, KaderModul, Aufgebote etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMobile, RollenAuswahlListe } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
-import { DropMenu } from "../../theme.jsx";
+import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMobile, RollenAuswahlListe } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
+import { DropMenu } from "../../theme.ts";
 import { currentSeason } from "../../domains/season/seasonUtils.ts";
 import {
   fetchKaderFuerMitglied,

@@ -4,8 +4,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK } from "../constants.ts";
-import { TI } from "../icons.jsx";
-import { useIsMobile, ModalOrSheet, Btn, Chip, Av, Stat, Col, Row, ModalTitle, avColor, InfoBox } from "../theme.jsx";
+import { TI } from "../icons.tsx";
+import { useIsMobile, ModalOrSheet, Btn, Chip, Av, Stat, Col, Row, ModalTitle, avColor, InfoBox } from "../theme.ts";
 import { currentSeason } from "../domains/season/seasonUtils.ts";
 
 /* ── Hilfsfunktionen & Konstanten ── */

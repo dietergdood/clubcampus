@@ -3,8 +3,8 @@
    State, Logik und Koordination — Render via MembersView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef, useMemo } from "react";
-import { TI } from "../icons.jsx";
-import { Av, useIsMobile, useConfirm, Tabs } from "../theme.jsx";
+import { TI } from "../icons.tsx";
+import { Av, useIsMobile, useConfirm, Tabs } from "../theme.ts";
 import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder } from "../domains/members/memberService.js";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.js";

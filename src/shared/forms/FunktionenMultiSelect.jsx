@@ -3,7 +3,7 @@
    Multi-Select für Vereinsfunktionen
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { FONT } from "../../constants.ts";
 
 export function FunktionenMultiSelect({funktionen=[],selected=[],onChange}){

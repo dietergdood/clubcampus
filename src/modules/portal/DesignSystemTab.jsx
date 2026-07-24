@@ -7,8 +7,8 @@ import { Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label,
          H1, H2, Input, Select, Textarea, SectionLabel, Empty, DropMenu,
          Toolbar, ColMenuButton, BulkBar, SortHeader, InfoBox, ModalOrSheet,
          ModalTitle, useConfirm, ConfirmDialog, StatusTile,
-         COMPONENT_REGISTRY } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+         COMPONENT_REGISTRY } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { GN, R, RL, BL, AM, BK, GB } from "../../constants.ts";
 
 function cssVar(name) {

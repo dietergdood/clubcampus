@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PersonFunktionen } from '../../../shared/person/PersonFunktionen.jsx';
 
-vi.mock('../../../theme.jsx', () => ({
+vi.mock('../../../theme.ts', () => ({
   Btn: ({ children, onClick }) => <button onClick={onClick}>{children}</button>,
   Card: ({ children }) => <div>{children}</div>,
   ModalOrSheet: ({ open, children }) => open ? <div data-testid="modal">{children}</div> : null,
@@ -20,7 +20,7 @@ vi.mock('../../../theme.jsx', () => ({
   ),
 }));
 
-vi.mock('../../../icons.jsx', () => ({
+vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 

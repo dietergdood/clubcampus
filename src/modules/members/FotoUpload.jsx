@@ -3,8 +3,8 @@
    Foto-Upload Komponente für Mitglieder-Personalien
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef } from "react";
-import { Btn } from "../../theme.jsx";
-import { TI } from "../../icons.jsx";
+import { Btn } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
 import { updateMitgliedFoto, deleteMitgliedFoto } from "../../domains/members/memberService.js";
 
 export function FotoUpload({ raw, canUpload, sb, onReload }) {

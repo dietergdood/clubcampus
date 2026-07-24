@@ -3,8 +3,8 @@
    Portal-Zugang Tab: Status, Rolle editierbar, Deaktivieren
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Card, Chip } from "../../../theme.jsx";
-import { TI } from "../../../icons.jsx";
+import { Card, Chip } from "../../../theme.ts";
+import { TI } from "../../../icons.tsx";
 import { GN, R, RL } from "../../../constants.ts";
 import { updateMitgliedRolle, logAenderung } from "../../../domains/members/memberService.js";
 

@@ -2,7 +2,7 @@
    ClubCampus — shared/ui/Stat.jsx
    Statistik-Kachel Komponente
    ═══════════════════════════════════════════════════════════════ */
-import { TI } from "../../icons.jsx";
+import { TI } from "../../icons.tsx";
 import { resolveColor } from "../utils/colorUtils.ts";
 
 export function Stat({label,value,sub,color,semantic,icon,onClick}){
