@@ -1,19 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/person/PersonAvatar.jsx
+   ClubCampus — shared/person/PersonAvatar.tsx
    Avatar-Komponente — wiederverwendbar in allen Modulen
    ═══════════════════════════════════════════════════════════════ */
+import type { MouseEventHandler } from "react";
 import { Av } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { initials } from "../../domains/person/personUtils.ts";
+import type { PersonAnzeige } from "./types.ts";
 
-/**
- * @param {object}   person     - Person-Objekt (name, fotoUrl, vorname, nachname)
- * @param {number}   size       - Avatar-Grösse in px (default: 40)
- * @param {boolean}  canEdit    - Kamera-Overlay anzeigen wenn kein Foto
- * @param {function} onClick    - Klick-Handler (für Foto-Upload)
- * @param {string}   className  - zusätzliche CSS-Klassen
- */
-export function PersonAvatar({ person, size = 40, canEdit = false, onClick, className = "" }) {
+interface PersonAvatarProps {
+  person?: PersonAnzeige | null;
+  /* Avatar-Grösse in px */
+  size?: number;
+  /* Kamera-Overlay anzeigen, wenn kein Foto hinterlegt ist */
+  canEdit?: boolean;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  className?: string;
+}
+
+export function PersonAvatar({ person, size = 40, canEdit = false, onClick, className = "" }: PersonAvatarProps) {
   const name = person?.name || (person ? `${person.vorname || ""} ${person.nachname || ""}`.trim() : "?");
   const fotoUrl = person?.fotoUrl || person?.foto_url;
 

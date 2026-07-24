@@ -18,7 +18,7 @@ import {
   fetchElternkontakte, fetchKinderFuerElternteil,
   updateBenutzerRolle, clearHauptkontaktFuerKind,
   logAenderung, logAktivitaet, AKTIVITAET_TYP
-} from "../../../domains/members/memberService.js";
+} from "../../../domains/members/memberService.ts";
 
 export function elternAvColor(beziehung){
   const b=(beziehung||"").toLowerCase();

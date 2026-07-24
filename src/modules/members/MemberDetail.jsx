@@ -13,7 +13,7 @@ import {
   fetchPortalFunktionen,
   updateMitglied,
   logAktivitaet, AKTIVITAET_TYP,
-} from "../../domains/members/memberService.js";
+} from "../../domains/members/memberService.ts";
 import { MemberHero } from "./MemberHero.jsx";
 import { ElternTab } from "./tabs/ElternTab.jsx";
 import { InfoTab } from "./tabs/InfoTab.jsx";

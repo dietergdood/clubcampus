@@ -19,13 +19,13 @@ vi.mock('../../../constants.js', () => ({
   GN: '#3B6D11', R: '#A32D2D', RL: '#FCEBEB',
 }));
 
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   updateMitgliedRolle: vi.fn().mockResolvedValue(undefined),
   logAenderung: vi.fn().mockResolvedValue(undefined),
   AKTIVITAET_TYP: {},
 }));
 
-import { updateMitgliedRolle, logAenderung } from '../../../domains/members/memberService.js';
+import { updateMitgliedRolle, logAenderung } from '../../../domains/members/memberService.ts';
 
 const DB_PORTAL_ROLLEN = [
   { name: 'trainer',  label: 'Trainer/in' },

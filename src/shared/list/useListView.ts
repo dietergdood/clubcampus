@@ -3,11 +3,11 @@
    State + Logic Hook für ListView
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo } from "react";
-import { fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.js";
+import { fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.ts";
 import type { Account, Ansicht, Sb } from "../../types.ts";
 import type {
   ColDef, ExportFormat, ExportFormatOption, FilterDef, FilterVals, FilterValue,
-  GetRowId, GroupOption, ListGroup, ListRow, MoreEntry, SavedViews,
+  GetRowId, GroupOption, ListGroup, ListRow, MoreEntry, RowId, SavedViews,
 } from "./types.ts";
 import type { RangeFilterPayload } from "./RangeFilter.tsx";
 
@@ -39,7 +39,7 @@ export interface UseListViewProps {
 
 /* Zwischenstand beim Ziehen von Gruppen bzw. Zeilen */
 interface DragGroupState { key: string; levelKey: string }
-interface DragRowState { id: unknown; groupKey: string }
+interface DragRowState { id: RowId; groupKey: string }
 
 export function useListView({
   rows,
@@ -76,15 +76,15 @@ export function useListView({
   const [sortDir,          setSortDir]          = useState<"asc" | "desc">("asc");
   const [groupBy,          setGroupBy]          = useState<string[]>(["none"]);
   const [groupOrder,       setGroupOrder]       = useState<Record<string, string[]>>({});
-  const [manualOrder,      setManualOrder]      = useState<Record<string, unknown[]>>({});
+  const [manualOrder,      setManualOrder]      = useState<Record<string, RowId[]>>({});
   const [collapsedGroups,  setCollapsedGroups]  = useState<Set<string>>(new Set());
   const [dragGroup,        setDragGroup]        = useState<DragGroupState | null>(null);
   const [dragOverGroup,    setDragOverGroup]    = useState<string | null>(null);
   const [dragRow,          setDragRow]          = useState<DragRowState | null>(null);
-  const [dragOverRow,      setDragOverRow]      = useState<unknown>(null);
+  const [dragOverRow,      setDragOverRow]      = useState<RowId | null>(null);
   const [dragCol,          setDragCol]          = useState<string | null>(null);
   const [dragOverCol,      setDragOverCol]      = useState<string | null>(null);
-  const [selected,         setSelected]         = useState<Set<unknown>>(new Set());
+  const [selected,         setSelected]         = useState<Set<RowId>>(new Set());
   const [selectMode,       setSelectMode]       = useState(false);
   const [customViews,      setCustomViews]      = useState<Ansicht[]>([]);
   const [savedView,        setSavedView]        = useState<string | null>(savedViews ? Object.keys(savedViews)[0] : null);
@@ -202,7 +202,7 @@ export function useListView({
   }
 
   // ── Selektierung ─────────────────────────────────────────────
-  function toggleSelectRow(id: unknown) {
+  function toggleSelectRow(id: RowId) {
     setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
 

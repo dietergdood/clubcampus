@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, R, RL } from "../../../constants.ts";
-import { updateMitgliedRolle, logAenderung } from "../../../domains/members/memberService.js";
+import { updateMitgliedRolle, logAenderung } from "../../../domains/members/memberService.ts";
 
 function PortalTab({
   raw, benutzer, sb, dbPortalRollen,

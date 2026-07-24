@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PersonFunktionen } from '../../../shared/person/PersonFunktionen.jsx';
+import { PersonFunktionen } from '../../../shared/person/PersonFunktionen.tsx';
 
 vi.mock('../../../theme.ts', () => ({
   Btn: ({ children, onClick }) => <button onClick={onClick}>{children}</button>,
@@ -24,14 +24,14 @@ vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   updateMitglied: vi.fn().mockResolvedValue(true),
   logAenderung: vi.fn().mockResolvedValue(undefined),
   logAktivitaet: vi.fn().mockResolvedValue(undefined),
   AKTIVITAET_TYP: { FUNKTION_GEAENDERT: "funktion_geaendert" },
 }));
 
-import { updateMitglied, logAktivitaet } from '../../../domains/members/memberService.js';
+import { updateMitglied, logAktivitaet } from '../../../domains/members/memberService.ts';
 
 const RAW = { id: 1, funktionen: ['Präsident', 'Kassier'] };
 const RAW_LEER = { id: 1, funktionen: [] };

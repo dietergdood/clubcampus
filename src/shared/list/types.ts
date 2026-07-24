@@ -114,10 +114,13 @@ export interface ListBulkAction {
   icon?: string;
   danger?: boolean;
   requiresSelection?: boolean;
-  onClick: (selected: Set<unknown>) => void;
+  onClick: (selected: Set<RowId>) => void;
 }
 
 /* ── Render-Callbacks ────────────────────────────────────────── */
 export type RenderCell = (col: ColDef, row: ListRow, ctx: GroupContext, filterVals: FilterVals) => ReactNode;
 export type RenderMobile = (row: ListRow) => ReactNode;
-export type GetRowId = (row: ListRow) => unknown;
+/* Zeilen-IDs landen in gespeicherten Ansichten (zeilenreihenfolge) und
+   müssen deshalb JSON-fähig sein. */
+export type RowId = string | number;
+export type GetRowId = (row: ListRow) => RowId;

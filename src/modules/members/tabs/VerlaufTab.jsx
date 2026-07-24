@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { Card, EmptyState } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
-import { fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP } from "../../../domains/members/memberService.js";
+import { fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP } from "../../../domains/members/memberService.ts";
 
 const SENSITIV_FELDER = ["ahv_nr"];
 const ADRESS_FELDER = ["strasse","plz","ort","kanton"];

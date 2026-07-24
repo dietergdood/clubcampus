@@ -3,12 +3,14 @@
    Personen-Utilities — einmal definiert, überall nutzbar
    ═══════════════════════════════════════════════════════════════ */
 
-interface PersonLike {
-  vorname?: string;
-  firstName?: string;
-  nachname?: string;
-  lastName?: string;
-  name?: string;
+/* Exportiert, damit Aufrufer denselben Vertrag beschreiben können.
+   Alle Felder auch null — die Spalten in mitglieder sind nullable. */
+export interface PersonLike {
+  vorname?: string | null;
+  firstName?: string | null;
+  nachname?: string | null;
+  lastName?: string | null;
+  name?: string | null;
 }
 
 export function vollname(m: PersonLike | null | undefined): string {

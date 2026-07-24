@@ -5,7 +5,7 @@
 import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, AM } from "../../../constants.ts";
-import { updateMitglied } from "../../../domains/members/memberService.js";
+import { updateMitglied } from "../../../domains/members/memberService.ts";
 
 function DatenpruefungTab({ raw, sb, portalMsg, setPortalMsg, onReload }) {
   const felder = [

@@ -25,12 +25,12 @@ vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   insertMitglied: vi.fn().mockResolvedValue('new-id-123'),
   logAktivitaet: vi.fn().mockResolvedValue(undefined),
   AKTIVITAET_TYP: { ANGELEGT: "angelegt" },
 }));
-import { insertMitglied } from '../../../domains/members/memberService.js';
+import { insertMitglied } from '../../../domains/members/memberService.ts';
 
 const DB_MITGLIEDTYPEN = [
   { name: 'Aktivmitglied' },

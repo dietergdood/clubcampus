@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/person/PersonPersonalien.jsx
+   ClubCampus — shared/person/PersonPersonalien.tsx
    Personalien-Card mit Inline Editing
 
    Nationalität: eine halbe Zelle, beide Badges nebeneinander.
@@ -10,9 +10,12 @@ import { useState } from "react";
 import { Card, InlineField } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { getLandName, LAENDER } from "../../domains/person/personUtils.ts";
-import { useInlineEdit } from "../../domains/members/useInlineEdit.js";
+import { useInlineEdit } from "../../domains/members/useInlineEdit.ts";
+import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
+import type { Account, Mitglied, Sb } from "../../types.ts";
+import type { FieldVisibility } from "./types.ts";
 
-const GESCHLECHT_OPTS = [
+const GESCHLECHT_OPTS: InlineFieldOption[] = [
   { v: "m", l: "Männlich" },
   { v: "w", l: "Weiblich" },
   { v: "d", l: "Divers" },
@@ -21,12 +24,22 @@ const GESCHLECHT_OPTS = [
 const LAENDER_OPTS = LAENDER.map(l => ({ v: l.c, l: `${l.c} · ${l.n}` }));
 const LAENDER_OPTS2 = [{ v: "", l: "— keine —" }, ...LAENDER_OPTS];
 
-function NatBadge({ code }) {
+function NatBadge({ code }: { code?: string | null }) {
   if (!code) return null;
   return <span className="cc-land-badge">{code}</span>;
 }
 
-function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null }) {
+interface PersonPersonalienProps {
+  raw: Mitglied;
+  fv: FieldVisibility;
+  canEdit?: boolean;
+  sb: Sb;
+  onReload?: (() => void) | null;
+  vereinId?: string | null;
+  account?: Account | null;
+}
+
+function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null }: PersonPersonalienProps) {
   const [ahvVisible, setAhvVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [natEditing, setNatEditing] = useState(false);
@@ -35,7 +48,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
   const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload, vereinId, account, rawData: raw });
 
   const age = raw.geburtsdatum
-    ? Math.floor((new Date() - new Date(raw.geburtsdatum)) / 31557600000)
+    ? Math.floor((Date.now() - new Date(raw.geburtsdatum).getTime()) / 31557600000)
     : null;
 
   const nat1Name = raw.nationalitaet ? getLandName(raw.nationalitaet) || raw.nationalitaet : null;
@@ -57,7 +70,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
     if (!sb || !raw.id) return;
     await ie.saveEdit("nationalitaet", nat1Val);
     // nat2 direkt speichern ohne useInlineEdit (eigener Aufruf)
-    const { updateMitglied } = await import("../../domains/members/memberService.js");
+    const { updateMitglied } = await import("../../domains/members/memberService.ts");
     await updateMitglied(sb, raw.id, { nationalitaet2: nat2Val || null });
     if (onReload) onReload();
   }

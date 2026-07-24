@@ -6,12 +6,12 @@
 import { useRef, useState } from "react";
 import { Card, StatusTile, useIsMobile, InlineField } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
-import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.jsx";
-import { PersonKontakt } from "../../../shared/person/PersonKontakt.jsx";
-import { PersonTeams } from "../../../shared/person/PersonTeams.jsx";
-import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.jsx";
+import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.tsx";
+import { PersonKontakt } from "../../../shared/person/PersonKontakt.tsx";
+import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
+import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
 import { NotizenVerlauf } from "../NotizenVerlauf.jsx";
-import { useInlineEdit } from "../../../domains/members/useInlineEdit.js";
+import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
 
 function InfoTab({
   raw, fv, canEdit, canDelete, sb, account,

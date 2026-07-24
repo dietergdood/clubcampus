@@ -1,9 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — domains/members/elternService.js
+   ClubCampus — domains/members/elternService.ts
    Alle Elternkontakt-Funktionen (n:m via eltern_kinder)
    ═══════════════════════════════════════════════════════════════ */
+import type { PostgrestError } from "@supabase/supabase-js";
+import type { Elternkontakt, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
-export async function fetchElternkontakte(sb, mitgliedId) {
+/* Elternkontakt inklusive der Angaben aus der Verknüpfungstabelle */
+export interface ElternkontaktMitLink extends Partial<Elternkontakt> {
+  hauptkontakt: boolean | null;
+}
+
+export async function fetchElternkontakte(sb: SbClient, mitgliedId: number): Promise<ElternkontaktMitLink[]> {
   const { data } = await sb.from("eltern_kinder")
     .select("hauptkontakt, elternkontakte(*)")
     .eq("mitglied_id", mitgliedId);
@@ -11,11 +18,10 @@ export async function fetchElternkontakte(sb, mitgliedId) {
   return data.map(row => ({
     ...row.elternkontakte,
     hauptkontakt: row.hauptkontakt,
-    _verknuepfung_id: row.id,
   }));
 }
 
-export async function fetchAlleElternkontakte(sb, vereinId) {
+export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
   const { data, error } = await sb.from("elternkontakte")
     .select(`
       id, vorname, nachname, name, email, telefon, beziehung,
@@ -43,14 +49,14 @@ export async function fetchAlleElternkontakte(sb, vereinId) {
   });
 }
 
-export async function fetchKinderFuerElternteil(sb, elternId) {
+export async function fetchKinderFuerElternteil(sb: SbClient, elternId: string) {
   const { data } = await sb.from("eltern_kinder")
     .select("mitglied_id, hauptkontakt, mitglieder:mitglied_id(id, vorname, nachname, aktiv, mitgliedtyp)")
     .eq("eltern_id", elternId);
   return data || [];
 }
 
-export async function sucheElternkontakte(sb, vereinId, query) {
+export async function sucheElternkontakte(sb: SbClient, vereinId: string, query: string) {
   const q = (query||"").trim().toLowerCase();
   if(!q) return [];
   const { data } = await sb.from("elternkontakte")
@@ -61,8 +67,24 @@ export async function sucheElternkontakte(sb, vereinId, query) {
   return data || [];
 }
 
-export async function insertElternkontakt(sb, kontakt) {
-  const { mitglied_id, hauptkontakt=false, ...elternFelder } = kontakt;
+/* Eingabe von insertElternkontakt: Kontaktfelder plus die Verknüpfung,
+   die anschliessend in eltern_kinder geschrieben wird. */
+export interface NeuerElternkontakt extends Omit<TablesInsert<"elternkontakte">, "hauptkontakt"> {
+  /* Kind, mit dem der neue Kontakt verknüpft wird. Die Spalte ist laut
+     ELTERN_LOGIK.md deprecated (verknüpft wird über eltern_kinder), in der
+     Datenbank aber weiterhin NOT NULL — daher Pflichtfeld. */
+  mitglied_id: number;
+  /* Nur für den eltern_kinder-Eintrag, keine Spalte in elternkontakte */
+  hauptkontakt?: boolean;
+}
+
+export async function insertElternkontakt(sb: SbClient, kontakt: NeuerElternkontakt): Promise<PostgrestError | null> {
+  const { hauptkontakt=false, ...elternFelder } = kontakt;
+  const mitglied_id = elternFelder.mitglied_id;
+  /* ⚠ elternkontakte.mitglied_id ist bigint NOT NULL ohne Default. Bisher
+     wurde die Spalte beim Insert herausdestrukturiert und damit weggelassen —
+     jeder neue Elternkontakt scheiterte an der NOT-NULL-Verletzung. Sie wird
+     jetzt mitgeschrieben, bis die Spalte laut ELTERN_LOGIK.md entfällt. */
   const { data, error } = await sb.from("elternkontakte").insert(elternFelder).select().single();
   if (error) return error;
   if (mitglied_id) {
@@ -77,16 +99,16 @@ export async function insertElternkontakt(sb, kontakt) {
   return null;
 }
 
-export async function updateElternkontakt(sb, id, fields) {
+export async function updateElternkontakt(sb: SbClient, id: string, fields: TablesUpdate<"elternkontakte">): Promise<PostgrestError | null> {
   const { error } = await sb.from("elternkontakte").update(fields).eq("id", id);
   return error;
 }
 
-export async function deleteElternkontakt(sb, id) {
+export async function deleteElternkontakt(sb: SbClient, id: string) {
   return sb.from("elternkontakte").delete().eq("id", id);
 }
 
-export async function linkKind(sb, elternId, mitgliedId, vereinId, hauptkontakt=false) {
+export async function linkKind(sb: SbClient, elternId: string, mitgliedId: number, vereinId: string, hauptkontakt = false): Promise<PostgrestError | null> {
   const { error } = await sb.from("eltern_kinder").upsert({
     eltern_id: elternId,
     mitglied_id: mitgliedId,
@@ -96,7 +118,12 @@ export async function linkKind(sb, elternId, mitgliedId, vereinId, hauptkontakt=
   return error;
 }
 
-export async function unlinkKind(sb, elternId, mitgliedId) {
+export interface UnlinkErgebnis {
+  verbleibendeKinder: number;
+  kindNochAktiv: boolean;
+}
+
+export async function unlinkKind(sb: SbClient, elternId: string, mitgliedId: number): Promise<UnlinkErgebnis> {
   await sb.from("eltern_kinder").delete()
     .eq("eltern_id", elternId)
     .eq("mitglied_id", mitgliedId);
@@ -110,26 +137,26 @@ export async function unlinkKind(sb, elternId, mitgliedId) {
   return { verbleibendeKinder: count || 0, kindNochAktiv: kind?.aktiv === true };
 }
 
-export async function setHauptkontakt(sb, mitgliedId, elternId, vereinId) {
+export async function setHauptkontakt(sb: SbClient, mitgliedId: number, elternId: string, _vereinId?: string | null) {
   await sb.from("eltern_kinder").update({ hauptkontakt: false }).eq("mitglied_id", mitgliedId);
   await sb.from("eltern_kinder").update({ hauptkontakt: true })
     .eq("eltern_id", elternId)
     .eq("mitglied_id", mitgliedId);
 }
 
-export async function updateBenutzerRolle(sb, benutzerId, rolle) {
+export async function updateBenutzerRolle(sb: SbClient, benutzerId: string, rolle: string) {
   return sb.from("benutzer").update({ role: rolle }).eq("id", benutzerId);
 }
 
-export async function clearHauptkontaktFuerKind(sb, elternId, mitgliedId) {
+export async function clearHauptkontaktFuerKind(sb: SbClient, elternId: string, mitgliedId: number) {
   return sb.from("eltern_kinder").update({ hauptkontakt: false })
     .eq("eltern_id", elternId).eq("mitglied_id", mitgliedId);
 }
 
-export async function unlinkElternBenutzer(sb, kontaktId) {
+export async function unlinkElternBenutzer(sb: SbClient, kontaktId: string) {
   return sb.from("elternkontakte").update({ benutzer_id: null }).eq("id", kontaktId);
 }
 
-export async function linkElternBenutzer(sb, kontaktId, benutzerId) {
+export async function linkElternBenutzer(sb: SbClient, kontaktId: string, benutzerId: string) {
   return sb.from("elternkontakte").update({ benutzer_id: benutzerId }).eq("id", kontaktId);
 }

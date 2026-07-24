@@ -1,17 +1,30 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/person/PersonFunktionen.jsx
+   ClubCampus — shared/person/PersonFunktionen.tsx
    Vereinsfunktionen-Card + Funktion hinzufügen Modal
    Wiederverwendbar in: MitgliederModul, KaderModul etc.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
 import { Btn, Card, ModalOrSheet, ModalTitle, DropMenu } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { updateMitglied, logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.js";
+import { updateMitglied, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
+import type { Account, Mitglied, SbClient } from "../../types.ts";
+import type { FunktionMitGruppe } from "./types.ts";
 
-function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onReload, vereinId=null, account=null }) {
+interface PersonFunktionenProps {
+  raw: Mitglied;
+  sb: SbClient;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  assignFunktionen: FunktionMitGruppe[];
+  onReload?: (() => void) | null;
+  vereinId?: string | null;
+  account?: Account | null;
+}
+
+function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onReload, vereinId=null, account=null }: PersonFunktionenProps) {
   const [showFunkAssign, setShowFunkAssign] = useState(false);
   const [funkSearch, setFunkSearch] = useState("");
-  const [funkSelected, setFunkSelected] = useState([]);
+  const [funkSelected, setFunkSelected] = useState<string[]>([]);
 
   function openFunkModal() {
     setFunkSelected(raw.funktionen || []);

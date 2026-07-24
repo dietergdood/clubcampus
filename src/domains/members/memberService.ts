@@ -1,21 +1,22 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — domains/members/memberService.js
+   ClubCampus — domains/members/memberService.ts
    Alle Supabase-Calls für Mitglieder, Notizen, Elternkontakte,
    Kader, Benutzer (Portal-Zugang), Ansichten
    ═══════════════════════════════════════════════════════════════ */
+import type { Ansicht, SbClient, Tables, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* ── Mitglieder ── */
 
-export async function fetchMitglied(sb, id) {
+export async function fetchMitglied(sb: SbClient, id: number) {
   const { data } = await sb.from("mitglieder").select("*").eq("id", id).single();
   return data;
 }
 
-export async function deleteMitglied(sb, id) {
+export async function deleteMitglied(sb: SbClient, id: number) {
   return sb.from("mitglieder").delete().eq("id", id);
 }
 
-export async function archiviereMitglied(sb, id, deaktiviertVon) {
+export async function archiviereMitglied(sb: SbClient, id: number | number[], deaktiviertVon: string | null) {
   return sb.from("mitglieder").update({
     aktiv: false,
     deaktiviert_am: new Date().toISOString(),
@@ -23,7 +24,7 @@ export async function archiviereMitglied(sb, id, deaktiviertVon) {
   }).in("id", Array.isArray(id) ? id : [id]);
 }
 
-export async function reaktiviereMitglied(sb, id) {
+export async function reaktiviereMitglied(sb: SbClient, id: number) {
   return sb.from("mitglieder").update({
     aktiv: true,
     deaktiviert_am: null,
@@ -31,7 +32,7 @@ export async function reaktiviereMitglied(sb, id) {
   }).eq("id", id);
 }
 
-export async function fetchArchiv(sb) {
+export async function fetchArchiv(sb: SbClient) {
   const { data } = await sb.from("mitglieder")
     .select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von")
     .eq("aktiv", false)
@@ -39,7 +40,7 @@ export async function fetchArchiv(sb) {
   return data || [];
 }
 
-export async function fetchArchivCount(sb) {
+export async function fetchArchivCount(sb: SbClient): Promise<number> {
   const { count } = await sb.from("mitglieder")
     .select("id", { count: "exact", head: true })
     .eq("aktiv", false);
@@ -48,28 +49,28 @@ export async function fetchArchivCount(sb) {
 
 /* ── Mitglieder Ansichten ── */
 
-export async function fetchAnsichten(sb, benutzerId, typ="mitglieder") {
+export async function fetchAnsichten(sb: SbClient, benutzerId: string, typ = "mitglieder"): Promise<Ansicht[]> {
   const { data } = await sb.from("mitglieder_ansichten")
     .select("*")
     .eq("typ", typ)
     .or(`benutzer_id.eq.${benutzerId},geteilt.eq.true`)
     .order("created_at", { ascending: true });
-  return data || [];
+  return (data || []) as Ansicht[];
 }
 
-export async function insertAnsicht(sb, ansicht) {
+export async function insertAnsicht(sb: SbClient, ansicht: TablesInsert<"mitglieder_ansichten">): Promise<Ansicht | null> {
   const { data, error } = await sb.from("mitglieder_ansichten").insert(ansicht).select().single();
   if (error) console.error("insertAnsicht error:", error);
-  return data;
+  return (data as Ansicht | null) ?? null;
 }
 
-export async function deleteAnsicht(sb, id) {
+export async function deleteAnsicht(sb: SbClient, id: string) {
   return sb.from("mitglieder_ansichten").delete().eq("id", id);
 }
 
 /* ── Notizen ── */
 
-export async function fetchNotizen(sb, mitgliedId) {
+export async function fetchNotizen(sb: SbClient, mitgliedId: number) {
   const { data } = await sb.from("mitglieder_notizen")
     .select("*")
     .eq("mitglied_id", mitgliedId)
@@ -77,29 +78,29 @@ export async function fetchNotizen(sb, mitgliedId) {
   return data || [];
 }
 
-export async function insertNotiz(sb, notiz) {
+export async function insertNotiz(sb: SbClient, notiz: TablesInsert<"mitglieder_notizen">) {
   return sb.from("mitglieder_notizen").insert(notiz);
 }
 
-export async function updateNotiz(sb, id, text) {
+export async function updateNotiz(sb: SbClient, id: number, text: string) {
   return sb.from("mitglieder_notizen").update({
     text,
     updated_at: new Date().toISOString(),
   }).eq("id", id);
 }
 
-export async function deleteNotiz(sb, id) {
+export async function deleteNotiz(sb: SbClient, id: number) {
   return sb.from("mitglieder_notizen").delete().eq("id", id);
 }
 
 /* ── Elternkontakte ── */
 
-// Eltern-Funktionen → elternService.js
-export * from "./elternService.js";
+// Eltern-Funktionen → elternService.ts
+export * from "./elternService.ts";
 
 /* ── Kader ── */
 
-export async function fetchKaderFuerMitglied(sb, mitgliedId) {
+export async function fetchKaderFuerMitglied(sb: SbClient, mitgliedId: number) {
   const { data } = await sb.from("kader")
     .select("*, teams(id,name,kurzname)")
     .eq("mitglied_id", mitgliedId)
@@ -107,7 +108,7 @@ export async function fetchKaderFuerMitglied(sb, mitgliedId) {
   return data || [];
 }
 
-export async function fetchKaderEintraege(sb, mitgliedId) {
+export async function fetchKaderEintraege(sb: SbClient, mitgliedId: number) {
   const { data } = await sb.from("kader")
     .select("team_id, rollen")
     .eq("mitglied_id", mitgliedId)
@@ -115,21 +116,21 @@ export async function fetchKaderEintraege(sb, mitgliedId) {
   return data || [];
 }
 
-export async function upsertKader(sb, eintrag) {
+export async function upsertKader(sb: SbClient, eintrag: TablesInsert<"kader">) {
   return sb.from("kader").upsert(eintrag, { onConflict: "mitglied_id,team_id,saison" });
 }
 
-export async function updateKader(sb, id, fields) {
+export async function updateKader(sb: SbClient, id: number, fields: TablesUpdate<"kader">) {
   return sb.from("kader").update(fields).eq("id", id);
 }
 
-export async function deaktiviereKader(sb, id) {
+export async function deaktiviereKader(sb: SbClient, id: number) {
   return sb.from("kader").update({ aktiv: false }).eq("id", id);
 }
 
 /* ── Benutzer (Portal-Zugang) ── */
 
-export async function fetchBenutzerFuerMitglied(sb, mitgliedId) {
+export async function fetchBenutzerFuerMitglied(sb: SbClient, mitgliedId: number) {
   const { data } = await sb.from("benutzer")
     .select("id,email,role,created_at,last_sign_in_at,aktiv")
     .eq("mitglied_id", mitgliedId)
@@ -137,7 +138,7 @@ export async function fetchBenutzerFuerMitglied(sb, mitgliedId) {
   return data;
 }
 
-export async function fetchBenutzerByEmail(sb, email) {
+export async function fetchBenutzerByEmail(sb: SbClient, email: string) {
   const { data } = await sb.from("benutzer")
     .select("id,email,role")
     .eq("email", email)
@@ -145,30 +146,30 @@ export async function fetchBenutzerByEmail(sb, email) {
   return data;
 }
 
-export async function updateBenutzer(sb, id, fields) {
+export async function updateBenutzer(sb: SbClient, id: string, fields: TablesUpdate<"benutzer">) {
   return sb.from("benutzer").update(fields).eq("id", id);
 }
 
-export async function portalZugangAktivieren(sb, mitgliedId, benutzerId, neueRolle) {
+export async function portalZugangAktivieren(sb: SbClient, mitgliedId: number, benutzerId: string, neueRolle: string) {
   await sb.from("mitglieder").update({ hat_portal_zugang: true }).eq("id", mitgliedId);
   await sb.from("benutzer").update({ mitglied_id: mitgliedId, role: neueRolle }).eq("id", benutzerId);
 }
 
-export async function portalZugangDeaktivieren(sb, mitgliedId) {
+export async function portalZugangDeaktivieren(sb: SbClient, mitgliedId: number) {
   await sb.from("mitglieder").update({ hat_portal_zugang: false }).eq("id", mitgliedId);
   await sb.from("benutzer").update({ mitglied_id: null }).eq("mitglied_id", mitgliedId);
 }
 
 /* ── Portal Funktionen ── */
 
-export async function fetchPortalFunktionen(sb) {
+export async function fetchPortalFunktionen(sb: SbClient) {
   const { data } = await sb.from("portal_funktionen")
     .select("id,name,portal_gruppen(name,farbe)")
     .order("name");
   return data || [];
 }
 
-export async function fetchPortalFunktionenMitGruppe(sb) {
+export async function fetchPortalFunktionenMitGruppe(sb: SbClient) {
   const { data } = await sb.from("portal_funktionen")
     .select("id,name,portal_gruppen(name)")
     .order("name");
@@ -177,7 +178,7 @@ export async function fetchPortalFunktionenMitGruppe(sb) {
 
 /* ── Teams ── */
 
-export async function fetchAktiveTeams(sb) {
+export async function fetchAktiveTeams(sb: SbClient) {
   const { data } = await sb.from("teams")
     .select("id,name,kurzname")
     .eq("aktiv", true)
@@ -185,7 +186,7 @@ export async function fetchAktiveTeams(sb) {
   return data || [];
 }
 
-export async function updateMitglied(sb, id, fields) {
+export async function updateMitglied(sb: SbClient, id: number, fields: TablesUpdate<"mitglieder">): Promise<boolean> {
   const { error } = await sb.from("mitglieder").update({
     ...fields,
     updated_at: new Date().toISOString(),
@@ -194,15 +195,15 @@ export async function updateMitglied(sb, id, fields) {
   return !error;
 }
 
-export async function updateMitgliedRolle(sb, id, rolle, benutzerId=null) {
+export async function updateMitgliedRolle(sb: SbClient, id: number, rolle: string | null, benutzerId: string | null = null) {
   await sb.from("mitglieder").update({ rolle: rolle||null }).eq("id", id);
   if (rolle && benutzerId) {
     await sb.from("benutzer").update({ role: rolle }).eq("id", benutzerId);
   }
 }
 
-export async function updateMitgliedFoto(sb, id, file) {
-  const ext = file.name.split(".").pop().toLowerCase();
+export async function updateMitgliedFoto(sb: SbClient, id: number, file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const path = `${id}/foto.${ext}`;
   const { error: upErr } = await sb.storage.from("mitglieder-fotos").upload(path, file, { upsert: true });
   if (upErr) throw upErr;
@@ -212,18 +213,22 @@ export async function updateMitgliedFoto(sb, id, file) {
   return data.publicUrl;
 }
 
-export async function deleteMitgliedFoto(sb, id) {
+export async function deleteMitgliedFoto(sb: SbClient, id: number): Promise<boolean> {
   const { error } = await sb.from("mitglieder").update({ foto_url: null }).eq("id", id);
   if (error) console.error("deleteMitgliedFoto error:", error);
   return !error;
 }
 
-export async function fetchBenutzerByMitglied(sb, mitgliedId) {
+export async function fetchBenutzerByMitglied(sb: SbClient, mitgliedId: number) {
   const { data } = await sb.from("benutzer").select("id,role").eq("mitglied_id", mitgliedId).maybeSingle();
   return data;
 }
 
-export async function insertMitglied(sb, fields, vereinId) {
+export async function insertMitglied(
+  sb: SbClient,
+  fields: Omit<TablesInsert<"mitglieder">, "verein_id">,
+  vereinId: string,
+): Promise<number | null> {
   const { data, error } = await sb.from("mitglieder").insert({
     ...fields,
     verein_id: vereinId,
@@ -232,15 +237,15 @@ export async function insertMitglied(sb, fields, vereinId) {
     updated_at: new Date().toISOString(),
   }).select("id").single();
   if (error) { console.error("insertMitglied error:", error); return null; }
-  return data?.id;
+  return data?.id ?? null;
 }
 
-export async function fetchMitgliedtypPflichtfelder(sb) {
+export async function fetchMitgliedtypPflichtfelder(sb: SbClient) {
   const { data } = await sb.from("mitgliedtyp_pflichtfelder").select("*");
   return data || [];
 }
 
-export const FELD_LABEL = {
+export const FELD_LABEL: Record<string, string> = {
   vorname: "Vorname", nachname: "Nachname", email: "E-Mail",
   telefon: "Telefon", geburtsdatum: "Geburtsdatum", geschlecht: "Geschlecht",
   nationalitaet: "Nationalität 1", nationalitaet2: "Nationalität 2",
@@ -252,7 +257,19 @@ export const FELD_LABEL = {
   funktionen: "Vereinsfunktionen", elternkontakte: "Elternkontakte",
 };
 
-export async function logAenderung(sb, mitgliedId, vereinId, feld, alterWert, neuerWert, geaendertVon) {
+/* Werte, die in der Historie landen — die Aufrufer geben auch Zahlen
+   oder Arrays weiter, deshalb bewusst weit gefasst. */
+export type LogWert = string | number | boolean | null | undefined;
+
+export async function logAenderung(
+  sb: SbClient,
+  mitgliedId: number | string,
+  vereinId: string,
+  feld: string,
+  alterWert: LogWert,
+  neuerWert: LogWert,
+  geaendertVon?: string | null,
+): Promise<void> {
   if (alterWert === neuerWert) return; // Keine Änderung
 
   const feldLabel = FELD_LABEL[feld] || feld;
@@ -261,7 +278,7 @@ export async function logAenderung(sb, mitgliedId, vereinId, feld, alterWert, ne
   if (alterWert && neuerWert) {
     // Echter Wechsel: Wert A → Wert B → in mitglieder_aenderungen
     await sb.from("mitglieder_aenderungen").insert({
-      mitglied_id:   parseInt(mitgliedId),
+      mitglied_id:   parseInt(String(mitgliedId)),
       verein_id:     vereinId,
       feld,
       alter_wert:    String(alterWert),
@@ -285,7 +302,7 @@ export async function logAenderung(sb, mitgliedId, vereinId, feld, alterWert, ne
   }
 }
 
-export async function fetchAenderungen(sb, mitgliedId) {
+export async function fetchAenderungen(sb: SbClient, mitgliedId: number) {
   const { data } = await sb.from("mitglieder_aenderungen")
     .select("*")
     .eq("mitglied_id", mitgliedId)
@@ -311,21 +328,32 @@ export const AKTIVITAET_TYP = {
   PORTAL_REAKTIVIERT:  "portal_reaktiviert",
   ARCHIVIERT:          "archiviert",
   REAKTIVIERT:         "reaktiviert",
-};
+} as const;
 
-export async function logAktivitaet(sb, mitgliedId, vereinId, typ, beschreibung, feld=null, wert=null, geaendertVon=null) {
+export type AktivitaetTyp = typeof AKTIVITAET_TYP[keyof typeof AKTIVITAET_TYP];
+
+export async function logAktivitaet(
+  sb: SbClient,
+  mitgliedId: number | string,
+  vereinId: string,
+  typ: AktivitaetTyp,
+  beschreibung: string,
+  feld: string | null = null,
+  wert: LogWert = null,
+  geaendertVon: string | null = null,
+): Promise<void> {
   await sb.from("mitglieder_aktivitaeten").insert({
-    mitglied_id:   parseInt(mitgliedId),
+    mitglied_id:   parseInt(String(mitgliedId)),
     verein_id:     vereinId,
     typ,
     beschreibung,
     feld:          feld || null,
-    wert:          wert || null,
+    wert:          wert == null ? null : String(wert),
     geaendert_von: geaendertVon || null,
   });
 }
 
-export async function fetchAktivitaeten(sb, mitgliedId) {
+export async function fetchAktivitaeten(sb: SbClient, mitgliedId: number) {
   const { data } = await sb.from("mitglieder_aktivitaeten")
     .select("*")
     .eq("mitglied_id", mitgliedId)

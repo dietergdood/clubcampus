@@ -5,13 +5,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
 import { Av, useIsMobile, useConfirm, Tabs } from "../theme.ts";
-import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder } from "../domains/members/memberService.js";
+import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder } from "../domains/members/memberService.ts";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.js";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.js";
 import { ArchivView } from "./members/ArchivView.jsx";
 import { MemberKPIs } from "./members/MemberKPIs.jsx";
 import { makeMemberRenderCell } from "./members/MemberListCell.jsx";
-import { useMemberMeta } from "../domains/members/useMemberMeta.js";
+import { useMemberMeta } from "../domains/members/useMemberMeta.ts";
 import { ElternListView } from "./members/ElternListView.jsx";
 import { ListView } from "../shared/list/ListView.tsx";
 import { MemberDetail } from "./members/MemberDetail.jsx";

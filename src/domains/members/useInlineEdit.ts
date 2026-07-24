@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — domains/members/useInlineEdit.js
+   ClubCampus — domains/members/useInlineEdit.ts
    Hook für Inline Cell Editing in PersonPersonalien, PersonKontakt
    und Vereinsdaten.
 
@@ -13,15 +13,42 @@
      Esc   → cancelEdit()
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useCallback } from "react";
-import { updateMitglied, logAenderung } from "./memberService.js";
+import type { KeyboardEvent } from "react";
+import { updateMitglied, logAenderung } from "./memberService.ts";
+import type { LogWert } from "./memberService.ts";
+import type { Account, Sb } from "../../types.ts";
+import type { InlineFeedback } from "../../shared/forms/InlineField.tsx";
 
-export function useInlineEdit({ sb, mitgliedId, onReload, vereinId=null, account=null, rawData=null }) {
-  const [editing, setEditing]   = useState(null);   // aktuell editiertes Feld (key)
-  const [editVal, setEditVal]   = useState("");      // aktueller Eingabewert
+export interface UseInlineEditProps {
+  sb: Sb;
+  mitgliedId?: number | null;
+  onReload?: (() => void) | null;
+  vereinId?: string | null;
+  account?: Account | null;
+  /* Aktueller Datensatz — liefert den alten Wert für die Historie */
+  rawData?: object | null;
+}
+
+/* Liest ein Feld aus dem Rohdatensatz, ohne Index-Zugriff auf einen
+   Interface-Typ (und damit ohne Cast). */
+function leseFeld(obj: object | null | undefined, feld: string): LogWert {
+  if (!obj) return null;
+  for (const [k, v] of Object.entries(obj)) {
+    if (k !== feld) continue;
+    if (v == null) return null;
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return v;
+    return String(v);
+  }
+  return null;
+}
+
+export function useInlineEdit({ sb, mitgliedId, onReload, vereinId=null, account=null, rawData=null }: UseInlineEditProps) {
+  const [editing, setEditing]   = useState<string | null>(null); // aktuell editiertes Feld (key)
+  const [editVal, setEditVal]   = useState("");                  // aktueller Eingabewert
   const [saving, setSaving]     = useState(false);
-  const [feedback, setFeedback] = useState(null);   // { field, ok }
+  const [feedback, setFeedback] = useState<InlineFeedback | null>(null);
 
-  const startEdit = useCallback((field, currentVal) => {
+  const startEdit = useCallback((field: string, currentVal?: string | null) => {
     setEditing(field);
     setEditVal(currentVal ?? "");
     setFeedback(null);
@@ -32,11 +59,11 @@ export function useInlineEdit({ sb, mitgliedId, onReload, vereinId=null, account
     setEditVal("");
   }, []);
 
-  const saveEdit = useCallback(async (field, value) => {
+  const saveEdit = useCallback(async (field: string, value: string) => {
     if (!sb || !mitgliedId) return;
     setSaving(true);
     // Alten Wert für Änderungshistorie merken
-    const alterWert = rawData ? rawData[field] : null;
+    const alterWert = leseFeld(rawData, field);
     const ok = await updateMitglied(sb, mitgliedId, { [field]: value || null });
     setSaving(false);
     setEditing(null);
@@ -57,7 +84,7 @@ export function useInlineEdit({ sb, mitgliedId, onReload, vereinId=null, account
   }, [sb, mitgliedId, onReload, vereinId, account, rawData]);
 
   // Keyboard handler für Input-Felder
-  const handleKey = useCallback((e, field) => {
+  const handleKey = useCallback((e: KeyboardEvent<HTMLInputElement>, field: string) => {
     if (e.key === "Enter") { e.preventDefault(); saveEdit(field, editVal); }
     if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
   }, [editVal, saveEdit, cancelEdit]);

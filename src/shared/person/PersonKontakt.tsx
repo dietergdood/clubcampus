@@ -1,17 +1,38 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/person/PersonKontakt.jsx
+   ClubCampus — shared/person/PersonKontakt.tsx
    Kontakt-Card mit Inline Editing
    Props: raw, fv, canEdit, sb, onReload, eltern, brauchtEltern, setTab
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
-import { BL, GR } from "../../constants.ts";
 import { Av, Card, InlineField, useAddrSearch, usePlzLookup } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { useInlineEdit } from "../../domains/members/useInlineEdit.js";
+import { useInlineEdit } from "../../domains/members/useInlineEdit.ts";
+import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
+import type { AddressSuggestion } from "../../shared/forms/AddressInput.tsx";
+import type { Account, Mitglied, Sb } from "../../types.ts";
+import type { ElternkontaktMitLink } from "../../domains/members/elternService.ts";
+import type { FieldVisibility } from "./types.ts";
 
-const KANTON_OPTS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"].map(k=>({v:k,l:k}));
+const KANTON_OPTS: InlineFieldOption[] = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"].map(k=>({v:k,l:k}));
 
-function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null, eltern, brauchtEltern, setTab }) {
+/* Die von useInlineEdit gelieferten Felder, die an InlineField gereicht werden */
+type InlineEdit = ReturnType<typeof useInlineEdit>;
+
+interface PersonKontaktProps {
+  raw: Mitglied;
+  fv: FieldVisibility;
+  canEdit?: boolean;
+  sb: Sb;
+  onReload?: (() => void) | null;
+  vereinId?: string | null;
+  account?: Account | null;
+  eltern?: ElternkontaktMitLink[] | null;
+  /* Entscheidet anhand des Mitgliedtyps, ob ein Elternkontakt nötig ist */
+  brauchtEltern: (mitgliedtyp: string | null | undefined) => boolean;
+  setTab: (tab: string) => void;
+}
+
+function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null, eltern, brauchtEltern, setTab }: PersonKontaktProps) {
   const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload, vereinId, account, rawData: raw });
   const [editMode, setEditMode] = useState(false);
 
@@ -91,11 +112,19 @@ function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=
   );
 }
 
-function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
+interface AdressFelderProps {
+  raw: Mitglied;
+  ie: InlineEdit;
+  /* Die an InlineField durchgereichten Felder inkl. canEdit */
+  ieProps: Pick<InlineEdit, "editing"|"editVal"|"setEditVal"|"startEdit"|"saveEdit"|"cancelEdit"|"handleKey"|"feedback"|"saving"> & { canEdit?: boolean };
+  KANTON_OPTS: InlineFieldOption[];
+}
+
+function AdressFelder({raw, ie, ieProps, KANTON_OPTS}: AdressFelderProps){
   const [strasseInput, setStrasseInput] = useState(raw.strasse||"");
   const [plzInput, setPlzInput] = useState(raw.plz||"");
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const wrapRef = useRef(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const suggestions = useAddrSearch(strasseInput, plzInput);
 
   usePlzLookup(plzInput, ({ort, kanton})=>{
@@ -106,12 +135,12 @@ function AdressFelder({raw, ie, ieProps, KANTON_OPTS}){
   });
 
   useEffect(()=>{
-    const h=e=>{if(wrapRef.current&&!wrapRef.current.contains(e.target)) setShowSuggestions(false);};
+    const h=(e: MouseEvent)=>{if(wrapRef.current&&e.target instanceof Node&&!wrapRef.current.contains(e.target)) setShowSuggestions(false);};
     document.addEventListener("mousedown",h);
     return()=>document.removeEventListener("mousedown",h);
   },[]);
 
-  function applySuggestion(s){
+  function applySuggestion(s: AddressSuggestion){
     setStrasseInput(s.strasse);
     setPlzInput(s.plz);
     setShowSuggestions(false);

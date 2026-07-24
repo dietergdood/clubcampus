@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { Btn, Av, useConfirm, EmptyState } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.js";
+import { reaktiviereMitglied, deleteMitglied } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
 

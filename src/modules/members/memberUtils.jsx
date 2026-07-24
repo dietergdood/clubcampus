@@ -6,7 +6,7 @@ import { Chip } from "../../theme.ts";
 
 // Re-exports für Rückwärtskompatibilität
 export { LAENDER, getLandName } from "../../domains/person/personUtils.ts";
-export { RolleChip } from "../../shared/person/RolleChip.jsx";
+export { RolleChip } from "../../shared/person/RolleChip.tsx";
 
 const ROLES = {
   administrator: { label:"Administrator", level:7 },

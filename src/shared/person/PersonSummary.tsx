@@ -1,22 +1,28 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/person/PersonSummary.jsx
+   ClubCampus — shared/person/PersonSummary.tsx
    Personen-Zeile — flexibel per Props für alle Module
    Nutzung:
      Kader:      <PersonSummary person={p} subtitle="Trainer/in" right={<Nr>9</Nr>}/>
      Mitglieder: <PersonSummary person={p} subtitle="Juniorenmitglied" right={<StatusBadge/>}/>
      Helfer:     <PersonSummary person={p} subtitle="3 Einsätze"/>
    ═══════════════════════════════════════════════════════════════ */
-import { PersonAvatar } from "./PersonAvatar.jsx";
+import type { MouseEventHandler, ReactNode } from "react";
+import { PersonAvatar } from "./PersonAvatar.tsx";
+import type { PersonAnzeige } from "./types.ts";
 
-/**
- * @param {object}    person    - Person-Objekt
- * @param {string}    subtitle  - Sekundäre Info (Rolle, Mitgliedtyp etc.)
- * @param {string}    meta      - Tertiäre Info (Email, Telefon etc.)
- * @param {ReactNode} right     - Rechter Slot (Badge, Button, Nummer etc.)
- * @param {function}  onClick   - Klick-Handler auf die ganze Zeile
- * @param {number}    avatarSize - Avatar-Grösse (default: 36)
- * @param {string}    className  - CSS-Klassen
- */
+interface PersonSummaryProps {
+  person?: PersonAnzeige | null;
+  /* Sekundäre Info (Rolle, Mitgliedtyp etc.) */
+  subtitle?: ReactNode;
+  /* Tertiäre Info (E-Mail, Telefon etc.) */
+  meta?: ReactNode;
+  /* Rechter Slot (Badge, Button, Nummer etc.) */
+  right?: ReactNode;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  avatarSize?: number;
+  className?: string;
+}
+
 export function PersonSummary({
   person,
   subtitle,
@@ -25,7 +31,7 @@ export function PersonSummary({
   onClick,
   avatarSize = 36,
   className = "",
-}) {
+}: PersonSummaryProps) {
   const name = person?.name || `${person?.vorname || ""} ${person?.nachname || ""}`.trim() || "?";
 
   return (

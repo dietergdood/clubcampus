@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Btn, ModalOrSheet } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { sucheElternkontakte, linkKind } from "../../domains/members/memberService.js";
+import { sucheElternkontakte, linkKind } from "../../domains/members/memberService.ts";
 import { elternAvColor } from "./tabs/ElternTab.jsx";
 
 export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepft }) {

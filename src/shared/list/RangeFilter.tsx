@@ -6,10 +6,12 @@ import { useState, useEffect } from "react";
 
 /* Aktueller Wert des Filters. von/bis sind offen, solange der Benutzer
    die Grenze nicht angefasst hat — dann gelten min bzw. max. */
-export interface RangeValue {
+/* Bewusst ein Type-Alias statt eines Interface: nur so ist der Typ einer
+   Index-Signatur (Json) zuweisbar, wenn eine Ansicht gespeichert wird. */
+export type RangeValue = {
   von?: number | null;
   bis?: number | null;
-}
+};
 
 /* Nutzlast, die RangeFilter unter dem Schlüssel "__range" zurückmeldet.
    von/bis sind null, wenn der Filter entfernt wird (Chip-Klick in der

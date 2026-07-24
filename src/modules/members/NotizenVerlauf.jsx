@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 import { Btn, useConfirm, DropMenu, EmptyState } from "../../theme.ts";
-import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.js";
+import { fetchNotizen, insertNotiz, updateNotiz, deleteNotiz as deleteNotizService } from "../../domains/members/memberService.ts";
 
 function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}){
   // onAddRef: wenn gesetzt, wird setNewText(" ") nach aussen exponiert

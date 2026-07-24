@@ -78,7 +78,7 @@ export function ListView({
   // Render
   renderCell,
   renderMobile,
-  getRowId = (r) => r.id,
+  getRowId = (r) => { const id = r.id; return typeof id === "number" ? id : String(id); },
   // Supabase / Ansichten
   sb,
   account,

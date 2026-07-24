@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/person/PersonTeams.jsx
+   ClubCampus — shared/person/PersonTeams.tsx
    Teams-Card + Team zuweisen / bearbeiten / entfernen Modals
    Wiederverwendbar in: MitgliederModul, KaderModul, Aufgebote etc.
    ═══════════════════════════════════════════════════════════════ */
@@ -18,7 +18,35 @@ import {
   logAenderung,
   logAktivitaet,
   AKTIVITAET_TYP,
-} from "../../domains/members/memberService.js";
+} from "../../domains/members/memberService.ts";
+import type { Account, Mitglied, SbClient } from "../../types.ts";
+import type { RolleOption } from "../forms/RollenAuswahlListe.tsx";
+
+/* Direkt aus den Service-Rückgaben abgeleitet — so bleiben die Formen
+   automatisch deckungsgleich mit den Supabase-Abfragen. */
+type KaderDetail = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
+type TeamOption = Awaited<ReturnType<typeof fetchAktiveTeams>>[number];
+type FunktionOption = Awaited<ReturnType<typeof fetchPortalFunktionenMitGruppe>>[number];
+
+interface PersonTeamsProps {
+  raw: Mitglied;
+  sb: SbClient;
+  canEdit?: boolean;
+  vereinId?: string | null;
+  account?: Account | null;
+  dbKaderRollen?: RolleOption[];
+  /* Kader-Einträge des Mitglieds inkl. Team — von fetchKaderFuerMitglied */
+  teamDetails?: KaderDetail[] | null;
+  setTeamDetails: (details: KaderDetail[] | ((prev: KaderDetail[]) => KaderDetail[])) => void;
+  allTeams?: TeamOption[] | null;
+  setAllTeams: (teams: TeamOption[]) => void;
+  assignFunktionen?: FunktionOption[] | null;
+  setAssignFunktionen: (funktionen: FunktionOption[]) => void;
+  onNavToTeam?: ((teamId: number) => void) | null;
+  onReload?: (() => void) | null;
+  /* Leitet die Portalrolle neu ab, nachdem sich die Kaderzugehörigkeit ändert */
+  ableitRolle: () => Promise<void> | void;
+}
 
 function PersonTeams({
   raw,
@@ -36,15 +64,15 @@ function PersonTeams({
   onNavToTeam = null,
   onReload,
   ableitRolle,
-}) {
+}: PersonTeamsProps) {
   const isMobile = useIsMobile();
   const [confirm, confirmDialog] = useConfirm();
   const [showTeamAssign, setShowTeamAssign] = useState(false);
   const [teamAssignForm, setTeamAssignForm] = useState({ team_id: "", funktionen: ["Spieler/in"], rueckennr: "", position: "" });
   const [teamAssignRolleSearch, setTeamAssignRolleSearch] = useState("");
   const [teamAssignSaving, setTeamAssignSaving] = useState(false);
-  const [editTeam, setEditTeam] = useState(null);
-  const [editTeamForm, setEditTeamForm] = useState({ funktionen: [], rueckennr: "", position: "" });
+  const [editTeam, setEditTeam] = useState<KaderDetail | null>(null);
+  const [editTeamForm, setEditTeamForm] = useState<{funktionen: string[]; rueckennr: string; position: string}>({ funktionen: [], rueckennr: "", position: "" });
   const [editTeamRolleSearch, setEditTeamRolleSearch] = useState("");
   const [editTeamSaving, setEditTeamSaving] = useState(false);
   const [editTeamFunkOpen, setEditTeamFunkOpen] = useState(false);
@@ -58,7 +86,9 @@ function PersonTeams({
   }
 
   async function assignTeam() {
-    if (!sb || !teamAssignForm.team_id) return;
+    /* verein_id ist in kader NOT NULL — ohne vereinId wuerde der Upsert
+       zwangslaeufig scheitern, deshalb hier schon abbrechen. */
+    if (!sb || !teamAssignForm.team_id || !vereinId) return;
     setTeamAssignSaving(true);
     const teamName = allTeams?.find(t => String(t.id) === String(teamAssignForm.team_id))?.name || teamAssignForm.team_id;
     await upsertKader(sb, {
@@ -81,11 +111,11 @@ function PersonTeams({
     if (onReload) onReload();
   }
 
-  async function removeFromTeam(kaderId) {
+  async function removeFromTeam(kaderId: number) {
     const ok = await confirm({ title: "Aus Team entfernen?", danger: true, confirmLabel: "Entfernen" });
     if (!sb || !ok) return;
     const kader = teamDetails?.find(k => k.id === kaderId);
-    const teamName = kader?.teams?.name || kader?.team?.name || kaderId;
+    const teamName = kader?.teams?.name || String(kaderId);
     await deaktiviereKader(sb, kaderId);
     if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     setTeamDetails(prev => prev.filter(k => k.id !== kaderId));
@@ -103,7 +133,7 @@ function PersonTeams({
       position: editTeamForm.position || null,
     });
     if (vereinId && alterRollen !== neueRollen) {
-      const teamName = editTeam.teams?.name || editTeam.team?.name || "Team";
+      const teamName = editTeam.teams?.name || "Team";
       logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
     }
     setTeamDetails(prev => prev.map(k => k.id === editTeam.id
@@ -125,20 +155,20 @@ function PersonTeams({
           <span className="cc-row cc-gap-6"><TI n="users" size={14}/> Teams</span>
           {canEdit && <button className="cc-btn-ghost" onClick={openTeamAssign}><TI n="plus" size={13}/> Zuweisen</button>}
         </div>
-        {teamDetails === null && <div className="cc-text-sm cc-text-sub">Lade…</div>}
-        {teamDetails !== null && teamDetails.length === 0 && (
+        {(teamDetails ?? null) === null && <div className="cc-text-sm cc-text-sub">Lade…</div>}
+        {teamDetails != null && teamDetails.length === 0 && (
           <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
         )}
         {(teamDetails || []).map((k, i) => (
           <div
             key={i}
             className={`cc-team-position-row${isMobile && onNavToTeam ? " cc-team-position-row-mobile" : ""}`}
-            onClick={isMobile && onNavToTeam ? () => onNavToTeam(k.team_id) : undefined}
+            onClick={isMobile && onNavToTeam ? () => k.team_id != null && onNavToTeam(k.team_id) : undefined}
           >
             <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
             <div className="cc-team-position-body">
               {!isMobile && onNavToTeam
-                ? <span className="cc-team-position-name-link" onClick={e => { e.stopPropagation(); onNavToTeam(k.team_id); }}>{k.teams?.name || "—"}</span>
+                ? <span className="cc-team-position-name-link" onClick={e => { e.stopPropagation(); k.team_id != null && onNavToTeam(k.team_id); }}>{k.teams?.name || "—"}</span>
                 : <div className="cc-team-position-name">{k.teams?.name || "—"}</div>
               }
               {(k.rollen || ["Spieler/in"]).length > 0 && (
@@ -157,7 +187,7 @@ function PersonTeams({
             <DropMenu items={[
               ...(canEdit ? [
                 { label: "Bearbeiten", icon: "edit", onClick: () => { setEditTeamForm({ funktionen: k.rollen || [], rueckennr: k.rueckennr || "", position: k.position || "" }); setEditTeam(k); } },
-                "sep",
+                "sep" as const,
                 { label: "Entfernen", icon: "trash", danger: true, onClick: () => removeFromTeam(k.id) },
               ] : []),
             ]}/>

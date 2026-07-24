@@ -15,7 +15,7 @@ vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   fetchAenderungen: vi.fn(),
   fetchAktivitaeten: vi.fn(),
   FELD_LABEL: {
@@ -32,7 +32,7 @@ vi.mock('../../../domains/members/memberService.js', () => ({
   },
 }));
 
-import { fetchAenderungen, fetchAktivitaeten } from '../../../domains/members/memberService.js';
+import { fetchAenderungen, fetchAktivitaeten } from '../../../domains/members/memberService.ts';
 
 const RAW = { id: 1 };
 const SB = {};

@@ -1,11 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — shared/person/RolleChip.jsx
+   ClubCampus — shared/person/RolleChip.tsx
    Rolle-Badge — wiederverwendbar in allen Modulen
    ═══════════════════════════════════════════════════════════════ */
 import { Chip } from "../../theme.ts";
 
-export function RolleChip({ rolle }) {
-  const colors = {
+interface RolleChipProps {
+  rolle?: string | null;
+}
+
+export function RolleChip({ rolle }: RolleChipProps) {
+  const colors: Record<string, { c: string; bg: string }> = {
     "Spieler":       {c:"#22C55E",bg:"#F0FDF4"},
     "Trainer":       {c:"#F97316",bg:"#FFF7ED"},
     "Assistent/in":  {c:"#F97316",bg:"#FFF7ED"},
@@ -19,6 +23,6 @@ export function RolleChip({ rolle }) {
     "Ehrenmitglied": {c:"#f8de09",bg:"#FFFBEB"},
     "Passivmitglied":{c:"#9CA3AF",bg:"#F9FAFB"},
   };
-  const s = colors[rolle] || {c:"#9CA3AF",bg:"#F9FAFB"};
+  const s = (rolle && colors[rolle]) || {c:"#9CA3AF",bg:"#F9FAFB"};
   return <Chip text={rolle||"–"} color={s.c} bg={s.bg}/>;
 }

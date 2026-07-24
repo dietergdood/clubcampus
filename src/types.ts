@@ -9,7 +9,11 @@ import type { Database } from './database.types.ts';
 /* database.types.ts wird generiert:
      npx supabase gen types typescript --project-id <ref> > src/database.types.ts
    Nach jeder Schema-Änderung neu erzeugen. */
-export type Sb = SupabaseClient<Database> | null;
+/* Verbundener Client. Services verlangen diesen Typ — die Aufrufer
+   prüfen vorher auf null. */
+export type SbClient = SupabaseClient<Database>;
+/* Wie er in der App herumgereicht wird: vor dem Login noch nicht da. */
+export type Sb = SbClient | null;
 
 /* Zeilen-, Insert- und Update-Typen einer Tabelle bequem abgreifen:
      type Mitglied = Tables<'mitglieder'>  */
@@ -201,7 +205,7 @@ export interface Ansicht extends Omit<
   filter: Record<string, string[] | { von?: number | null; bis?: number | null }> | null;
   gruppierung: string[] | null;
   gruppenreihenfolge: Record<string, string[]> | null;
-  zeilenreihenfolge: Record<string, unknown[]> | null;
+  zeilenreihenfolge: Record<string, (string | number)[]> | null;
 }
 
 // ── Kader ────────────────────────────────────────────────────────

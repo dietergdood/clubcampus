@@ -5,7 +5,7 @@
 import { useState, useRef } from "react";
 import { Btn } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { updateMitgliedFoto, deleteMitgliedFoto } from "../../domains/members/memberService.js";
+import { updateMitgliedFoto, deleteMitgliedFoto } from "../../domains/members/memberService.ts";
 
 export function FotoUpload({ raw, canUpload, sb, onReload }) {
   const [uploading, setUploading] = useState(false);

@@ -15,7 +15,7 @@ import { useState, useEffect, useRef } from "react";
 import { BL, GR } from "../../constants.ts";
 import { Btn, ModalOrSheet, PhoneInput, useAddrSearch, usePlzLookup } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.js";
+import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
 
 const PASSIV_TYPEN = ["Passivmitglied", "Ehrenmitglied", "Gönner", "Freimitglied"];
 

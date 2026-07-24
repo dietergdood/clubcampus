@@ -30,7 +30,7 @@ vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   insertElternkontakt: vi.fn().mockResolvedValue(null),
   updateElternkontakt: vi.fn().mockResolvedValue(null),
   deleteElternkontakt: vi.fn().mockResolvedValue(null),
@@ -55,7 +55,7 @@ vi.mock('../../../domains/members/memberService.js', () => ({
   },
 }));
 
-import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, unlinkKind, logAktivitaet } from '../../../domains/members/memberService.js';
+import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, unlinkKind, logAktivitaet } from '../../../domains/members/memberService.ts';
 
 /* "Hinzufügen" öffnet seit dem n:m-Umbau zuerst die Suche.
    Der Weg zum Neu-Formular: Hinzufügen → Tab "Neu erfassen" → Weiter. */
