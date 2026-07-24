@@ -1,56 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — shared/list/ListView.jsx
    Zentrale generische Listen-/Tabellenkomponente
-   Wird genutzt von: MitgliederModul, ElternListView, und künftig
-   Material, Helfer, Events etc.
+   State + Logic → useListView.js
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { Fragment } from "react";
 import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn, EmptyState } from "../../theme.jsx";
 import { TI } from "../../icons.jsx";
-import { fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.js";
-
-/*
-  Props:
-  ── Daten ──────────────────────────────────────────────────────
-  rows          Array       Bereits gemappte Zeilen
-  filterFn      Function    (rows, search, filterVals) => filtered
-  sortFn        Function    (rows, col, dir) => sorted
-  buildGroupsFn Function    (rows, groupBy, groupOrder) => groups
-                            Optional — wenn null: flache Liste
-  
-  ── Spalten ────────────────────────────────────────────────────
-  colDefs       Array       [{key, label, default, alwaysOn, hidden}]
-  colGroups     Array       [{group, cols}]
-  defaultCols   Array       Keys der Standard-Spalten
-  savedViews    Object      {key: {label, cols}} Standard-Ansichten (optional)
-  
-  ── Filter + Gruppierung ───────────────────────────────────────
-  filterDefs    Array       FILTER_DEFS
-  groupOptions  Array       [{val, label}]
-  groupOptionsMore Array    [{val, label}] (optional)
-  multiGroup    Boolean     Mehrfachgruppierung (default: true)
-  
-  ── Render ─────────────────────────────────────────────────────
-  renderCell    Function    (col, row, groupCtx) => <td>
-  renderMobile  Function    (row) => <div> (optional)
-  getRowId      Function    (row) => id (default: row.id)
-  
-  ── Ansichten (Supabase) ───────────────────────────────────────
-  sb            Object      Supabase Client
-  account       Object      {id, name, email}
-  vereinId      String      Verein UUID
-  viewTyp       String      "mitglieder" | "eltern" | "material" etc.
-  
-  ── Selektierung ───────────────────────────────────────────────
-  selectable    Boolean     Auswahlmodus (default: false)
-  bulkActions   Array       [{icon, label, onClick, danger, requiresSelection}]
-  
-  ── Weitere Aktionen im ··· Menü ───────────────────────────────
-  moreActions   Array       zusätzliche moreItems
-  
-  ── Footer ─────────────────────────────────────────────────────
-  footerLabel   Function    (filtered, total) => string
-*/
+import { useListView } from "./useListView.js";
 
 export function ListView({
   // Daten
@@ -84,7 +40,7 @@ export function ListView({
   moreActions = [],
   // Footer
   footerLabel,
-  // External filter control (e.g. from KPI cards)
+  // External filter control
   externalSetFilter,
   // Export
   exportFn,
@@ -98,288 +54,67 @@ export function ListView({
 }) {
   const isMobile = useIsMobile();
 
-  // ── State ────────────────────────────────────────────────────
-  const initialCols = defaultCols || colDefs.filter(c => c.default).map(c => c.key);
-  const [visibleCols,    setVisibleCols]    = useState(initialCols);
-  const [search,         setSearch]         = useState("");
-  const [filterVals,     setFilterVals]     = useState({});
-  const [sortCol,        setSortCol]        = useState(colDefs[0]?.key || "");
-  const [sortDir,        setSortDir]        = useState("asc");
-  const [groupBy,        setGroupBy]        = useState(["none"]);
-  const [groupOrder,     setGroupOrder]     = useState({});
-  const [manualOrder,    setManualOrder]    = useState({});
-  const [collapsedGroups,setCollapsedGroups]= useState(new Set());
-  const [dragGroup,      setDragGroup]      = useState(null);
-  const [dragOverGroup,  setDragOverGroup]  = useState(null);
-  const [dragRow,        setDragRow]        = useState(null);
-  const [dragOverRow,    setDragOverRow]    = useState(null);
-  const [dragCol,        setDragCol]        = useState(null);
-  const [dragOverCol,    setDragOverCol]    = useState(null);
-  const [selected,       setSelected]       = useState(new Set());
-  const [selectMode,     setSelectMode]     = useState(false);
-  const [customViews,    setCustomViews]    = useState([]);
-  const [savedView,      setSavedView]      = useState(savedViews ? Object.keys(savedViews)[0] : null);
-  const [saveOpen,       setSaveOpen]       = useState(false);
-  const [saveName,       setSaveName]       = useState("");
-  const [saveGeteilt,    setSaveGeteilt]    = useState(false);
-  const [saving,         setSaving]         = useState(false);
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(0);
-  const [mobileGroupOpen,  setMobileGroupOpen]  = useState(0);
+  const {
+    visibleCols, setVisibleCols,
+    search, setSearch,
+    filterVals, setFilterVals,
+    sortCol, sortDir,
+    groupBy, setGroupBy,
+    groupOrder, setGroupOrder,
+    manualOrder, setManualOrder,
+    collapsedGroups, setCollapsedGroups,
+    dragGroup, setDragGroup,
+    dragOverGroup, setDragOverGroup,
+    dragRow, setDragRow,
+    dragOverRow, setDragOverRow,
+    dragCol, setDragCol,
+    dragOverCol, setDragOverCol,
+    selected, setSelected,
+    selectMode, setSelectMode,
+    saveOpen, setSaveOpen,
+    saveName, setSaveName,
+    saveGeteilt, setSaveGeteilt,
+    saving,
+    mobileFilterOpen,
+    mobileGroupOpen,
+    filtered, sorted, groups, hasGroup, COLS, moreItems,
+    handleSort,
+    handleFilterChange,
+    handleColDrop,
+    toggleSelectRow,
+    toggleSelectAll,
+    saveView,
+  } = useListView({
+    rows, colDefs, defaultCols, savedViews,
+    filterFn, sortFn, buildGroupsFn,
+    filterDefs, groupOptions, groupOptionsMore, multiGroup,
+    getRowId, sb, account, vereinId, viewTyp,
+    selectable, moreActions, exportFn, exportFormats,
+    isAdmin, isMobile, externalSetFilter,
+  });
 
-  // ── Ansichten laden ─────────────────────────────────────────
-  useEffect(() => {
-    if (!sb || !account?.id) return;
-    fetchAnsichten(sb, account.id, viewTyp).then(setCustomViews);
-  }, [sb, account?.id, viewTyp]);
-
-  // ── Ansichten anwenden ───────────────────────────────────────
-  function applyStandardView(key) {
-    if (!savedViews?.[key]) return;
-    setSavedView(key);
-    setVisibleCols(savedViews[key].cols);
-    setFilterVals({});
-    setGroupBy(["none"]);
-    setGroupOrder({});
-    setManualOrder({});
-  }
-
-  function applyCustomView(v) {
-    setSavedView("custom_" + v.id);
-    setVisibleCols(v.spalten || initialCols);
-    setFilterVals(v.filter || {});
-    setGroupBy(Array.isArray(v.gruppierung) ? v.gruppierung : [v.gruppierung || "none"]);
-    setGroupOrder(v.gruppenreihenfolge || {});
-    setManualOrder(v.zeilenreihenfolge || {});
-  }
-
-  async function saveView() {
-    if (!saveName.trim() || !sb || !account?.id) return;
-    setSaving(true);
-    const data = await insertAnsicht(sb, {
-      benutzer_id:      account.id,
-      verein_id:        vereinId,
-      name:             saveName.trim(),
-      spalten:          visibleCols,
-      filter:           filterVals,
-      gruppierung:      Array.isArray(groupBy) ? groupBy : [groupBy],
-      gruppenreihenfolge: groupOrder,
-      zeilenreihenfolge:  manualOrder,
-      typ:              viewTyp,
-      geteilt:          saveGeteilt,
-    });
-    if (data) setCustomViews(prev => [...prev, data]);
-    setSaveName(""); setSaveGeteilt(false); setSaveOpen(false); setSaving(false);
-  }
-
-  async function deleteView(id, ownerId) {
-    if (!sb) return;
-    if (ownerId !== account?.id && !isAdmin) return;
-    await deleteAnsicht(sb, id);
-    setCustomViews(prev => prev.filter(v => v.id !== id));
-    if (savedView === "custom_" + id) {
-      setSavedView(savedViews ? Object.keys(savedViews)[0] : null);
-      setVisibleCols(initialCols);
-      setFilterVals({});
-      setGroupBy(["none"]);
-      setGroupOrder({});
-      setManualOrder({});
-    }
-  }
-
-  // ── Sort ────────────────────────────────────────────────────
-  function handleSort(key) {
-    setManualOrder({});
-    if (sortCol === key) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortCol(key); setSortDir("asc"); }
-  }
-
-  // ── Filter ──────────────────────────────────────────────────
-  function handleFilterChange(key, val, active) {
-    if (key === "__reset") { setFilterVals({}); return; }
-    if (key === "__range") {
-      const { rangeKey, von, bis } = val;
-      if (von == null && bis == null) {
-        setFilterVals(prev => { const n = { ...prev }; delete n[rangeKey]; return n; });
-      } else {
-        setFilterVals(prev => ({ ...prev, [rangeKey]: { von, bis } }));
-      }
-      return;
-    }
-    setFilterVals(prev => {
-      const cur = prev[key] || [];
-      return { ...prev, [key]: active ? [...cur, val] : cur.filter(v => v !== val) };
-    });
-  }
-
-  // ── Spalten Drag ────────────────────────────────────────────
-  function handleColDrop(targetKey, dragKey) {
-    const from = dragKey || dragCol;
-    if (!from || from === targetKey) return;
-    setVisibleCols(prev => {
-      const cols = [...prev];
-      const fi = cols.indexOf(from), ti = cols.indexOf(targetKey);
-      if (fi < 0 || ti < 0) return cols;
-      cols.splice(fi, 1); cols.splice(ti, 0, from);
-      return cols;
-    });
-    setDragCol(null); setDragOverCol(null);
-  }
-
-  // ── Selektierung ────────────────────────────────────────────
-  function toggleSelectRow(id) {
-    setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
-  }
-  function toggleSelectAll() {
-    setSelected(prev => prev.size === paged.length ? new Set() : new Set(paged.map(r => getRowId(r))));
-  }
-
-  // ── Daten Pipeline ──────────────────────────────────────────
-  const filtered = useMemo(() => {
-    if (filterFn) return filterFn(rows, search, filterVals);
-    // Default: search auf name, filterVals auf row[key]
-    return rows.filter(row => {
-      if (search) {
-        const q = search.toLowerCase();
-        const name = String(row.name || row.label || "").toLowerCase();
-        if (!name.includes(q)) return false;
-      }
-      for (const [k, vals] of Object.entries(filterVals)) {
-        if (!vals || vals.length === 0) continue;
-        const v = row[k];
-        if (Array.isArray(v)) { if (!v.some(x => vals.includes(x))) return false; }
-        else if (!vals.includes(v)) return false;
-      }
-      return true;
-    });
-  }, [rows, search, filterVals, filterFn]);
-
-  const sorted = useMemo(() => {
-    if (sortFn) return sortFn(filtered, sortCol, sortDir);
-    // Default: localeCompare auf row[col]
-    return [...filtered].sort((a, b) => {
-      const av = String(a[sortCol] ?? "");
-      const bv = String(b[sortCol] ?? "");
-      return sortDir === "asc" ? av.localeCompare(bv, "de") : bv.localeCompare(av, "de");
-    });
-  }, [filtered, sortCol, sortDir, sortFn]);
-
-  const paged = sorted;
-
-  const hasGroup = Array.isArray(groupBy) ? groupBy.some(g => g && g !== "none") : groupBy !== "none";
-
-  const groups = useMemo(() => {
-    if (!hasGroup) return [{ key: "__all", label: "", type: "none", members: paged, children: null }];
-    if (buildGroupsFn) return buildGroupsFn(paged, groupBy, groupOrder, filterVals);
-    // Default: rekursive Gruppierung nach row[key]
-    function buildDefault(rows, levels, groupOrder) {
-      const firstLevel = levels[0] || "none";
-      const restLevels = levels.slice(1);
-      if (!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
-      const map = {};
-      rows.forEach(r => {
-        const k = String(r[firstLevel] ?? "—");
-        if (!map[k]) map[k] = [];
-        map[k].push(r);
-      });
-      const orderForLevel = groupOrder?.[firstLevel];
-      let entries = Object.entries(map);
-      if (orderForLevel?.length) {
-        entries = entries.sort(([a],[b]) => {
-          const ai = orderForLevel.indexOf(a), bi = orderForLevel.indexOf(b);
-          if (ai === -1 && bi === -1) return String(a).localeCompare(String(b), "de");
-          if (ai === -1) return 1; if (bi === -1) return -1;
-          return ai - bi;
-        });
-      } else {
-        entries = entries.sort(([a],[b]) => String(a).localeCompare(String(b), "de"));
-      }
-      return entries.map(([k, members]) => ({
-        key: k, label: k, type: "none", members,
-        children: restLevels.length > 0 && restLevels[0] !== "none"
-          ? buildDefault(members, restLevels, groupOrder)
-          : null,
-      }));
-    }
-    return buildDefault(paged, Array.isArray(groupBy) ? groupBy : [groupBy], groupOrder);
-  }, [paged, groupBy, groupOrder, hasGroup, buildGroupsFn, filterVals]);
-
-  // ── COLS ────────────────────────────────────────────────────
-  const COLS = visibleCols.map(k => colDefs.find(c => c.key === k)).filter(Boolean);
-
-  // ── SortIcon ────────────────────────────────────────────────
   const SortIcon = ({ col }) => sortCol === col
     ? <span className="cc-sort-arrow">{sortDir === "asc" ? "▲" : "▼"}</span>
     : <span className="cc-sort-hover-icon">↕</span>;
 
-  // ── moreItems ────────────────────────────────────────────────
-  const moreItems = [
-    // moreActions zuerst — prominent, ohne Sektion
-    ...moreActions,
-    ...(moreActions.length > 0 && !isMobile ? ["sep"] : []),
-    // Aktionen-Sektion (nur Desktop, nur wenn relevant)
-    ...(!isMobile && selectable ? [{ header: true, label: "Aktionen" }] : []),
-    ...(!isMobile && selectable ? [{ icon: "checkbox", label: selectMode ? "Auswahlmodus beenden" : "Auswählen", onClick: () => { setSelectMode(m => { if (m) setSelected(new Set()); return !m; }); } }] : []),
-    { header: true, label: "Ansichten" },
-    ...(savedViews ? Object.entries(savedViews).map(([key, v]) => ({
-      icon: savedView === key ? "check" : "layout",
-      label: v.label,
-      onClick: () => applyStandardView(key),
-    })) : []),
-    ...customViews.filter(v => v.benutzer_id === account?.id).map(v => ({
-      icon: savedView === "custom_" + v.id ? "check" : "layout",
-      label: v.name,
-      onClick: () => applyCustomView(v),
-      onDelete: () => deleteView(v.id, v.benutzer_id),
-    })),
-    ...(customViews.filter(v => v.geteilt && v.benutzer_id !== account?.id).length > 0 ? [
-      { header: true, label: "Geteilte Ansichten" },
-      ...customViews.filter(v => v.geteilt && v.benutzer_id !== account?.id).map(v => ({
-        icon: savedView === "custom_" + v.id ? "check" : "layout",
-        label: v.name,
-        onClick: () => applyCustomView(v),
-        onDelete: isAdmin ? () => deleteView(v.id, v.benutzer_id) : undefined,
-      })),
-    ] : []),
-    { icon: "device-floppy", label: "Als neue Ansicht speichern", onClick: () => setSaveOpen(true) },
-    ...(exportFn && exportFormats.length > 0 ? [
-      "sep",
-      { header: true, label: "Export" },
-      ...exportFormats.map(f => ({
-        icon: f.icon || "file-text",
-        label: f.label,
-        onClick: () => exportFn(sorted, COLS, groups, f.format),
-      })),
-    ] : []),
-  ];
-
   // ── Gruppen Tabelle rendern ───────────────────────────────────
-  // Rekursiv — wird für jede Gruppierungsebene aufgerufen.
-  // depth: aktuelle Tiefe (0 = erste Ebene, 1 = zweite Ebene etc.)
-  // parentCtx: Gruppenkontext der übergeordneten Ebene
-  //   → bei Team→Kaderrolle Gruppierung bekommt renderCell den Team-Kontext
-  //   → effectiveCtx: bei kaderrolle/funktion den Parent-Kontext weitergeben
-  //     damit renderCell weiss in welchem Team die Kaderrolle liegt
   function renderGroupsTable(groups, depth = 0, levelKey = null, parentCtx = {type:"none",key:null}) {
     const currentLevelKey = levelKey || (Array.isArray(groupBy) ? groupBy[depth] : groupBy) || "none";
     return groups.map(({ key, label, type, members, children }) => {
       if (!children && (!members || members.length === 0)) return null;
-      // Effektiver Gruppenkontext: aktueller oder übergeordneter Team/Gruppe Kontext
       const currentCtx = { type: type || "none", key };
-      // Bei kaderrolle/funktion: Team-Kontext vom Parent weitergeben (für renderCell)
-      // Bei team/gruppe: eigener Kontext
       const effectiveCtx = (type==="team"||type==="gruppe")
         ? currentCtx
-        : (parentCtx.type==="team"||parentCtx.type==="gruppe") 
+        : (parentCtx.type==="team"||parentCtx.type==="gruppe")
           ? { ...parentCtx, subType: type, subKey: key }
           : currentCtx;
       const groupManualOrder = manualOrder[key];
-      const orderedMembers = groupManualOrder && groupManualOrder.length > 0
+      const orderedMembers = groupManualOrder?.length
         ? [...(members||[])].sort((a, b) => {
             const ai = groupManualOrder.indexOf(getRowId(a));
             const bi = groupManualOrder.indexOf(getRowId(b));
             if (ai === -1 && bi === -1) return 0;
-            if (ai === -1) return 1;
-            if (bi === -1) return -1;
+            if (ai === -1) return 1; if (bi === -1) return -1;
             return ai - bi;
           })
         : (members || []);
@@ -463,11 +198,6 @@ export function ListView({
     });
   }
 
-  // External filter
-  useEffect(() => {
-    if (externalSetFilter) externalSetFilter.current = (vals) => setFilterVals(prev => ({...prev, ...vals}));
-  }, [externalSetFilter]);
-
   const footer = footerLabel
     ? footerLabel(filtered.length, rows.length)
     : `${filtered.length} von ${rows.length} Einträgen`;
@@ -479,12 +209,9 @@ export function ListView({
         <BulkBar
           show={selectMode}
           count={selected.size}
-          total={paged.length}
+          total={sorted.length}
           onSelectAll={toggleSelectAll}
-          actions={bulkActions.map(a => ({
-            ...a,
-            onClick: () => a.onClick(selected),
-          }))}
+          actions={bulkActions.map(a => ({ ...a, onClick: () => a.onClick(selected) }))}
           onCancel={() => { setSelected(new Set()); setSelectMode(false); }}
         />
       )}
@@ -518,7 +245,7 @@ export function ListView({
         moreItems={moreItems}
       />
 
-      {/* Alle ein/ausklappen — nur wenn gruppiert, nur Desktop */}
+      {/* Alle ein/ausklappen */}
       {hasGroup && !isMobile && (
         <div className="cc-expand-all-bar">
           <button className="cc-expand-all-btn" onClick={() => setCollapsedGroups(new Set(groups.map(g => g.key)))}>
@@ -536,9 +263,9 @@ export function ListView({
         {rows.length === 0 ? (
           <EmptyState icon={emptyIcon} title={emptyTitle} subtitle={emptySubtitle}/>
         ) : filtered.length === 0 ? (
-          <EmptyState icon="filter-off" title="Keine Einträge gefunden" subtitle="Passe die Filter an oder setze sie zurück." action="Filter zurücksetzen" onAction={()=>setFilterVals({})}/>
+          <EmptyState icon="filter-off" title="Keine Einträge gefunden" subtitle="Passe die Filter an oder setze sie zurück." action="Filter zurücksetzen" onAction={() => setFilterVals({})}/>
         ) : isMobile && renderMobile ? (
-          <div>{groups.map(({ key, label, members, children }) => (
+          <div>{groups.map(({ key, label, members }) => (
             <div key={key}>
               {hasGroup && label && <div className="cc-members-list-group-hdr">{label} <span className="cc-text-muted">{members.length}</span></div>}
               {(members || []).map(row => renderMobile(row))}
@@ -550,8 +277,8 @@ export function ListView({
               <thead>
                 <tr>
                   {selectMode && <th className="cc-members-th cc-members-cb-col">
-                    <div className={`cc-col-menu-check${selected.size === paged.length && paged.length > 0 ? " cc-col-menu-check-on" : ""}`} onClick={toggleSelectAll}>
-                      {selected.size === paged.length && paged.length > 0 && <TI n="check" size={10} />}
+                    <div className={`cc-col-menu-check${selected.size === sorted.length && sorted.length > 0 ? " cc-col-menu-check-on" : ""}`} onClick={toggleSelectAll}>
+                      {selected.size === sorted.length && sorted.length > 0 && <TI n="check" size={10} />}
                     </div>
                   </th>}
                   {COLS.map(col => (
