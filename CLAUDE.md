@@ -22,11 +22,11 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 Kein Linter konfiguriert. Tests existieren ausschliesslich unter `src/modules/members/__tests__/` (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`).
 
-Stand 24.07.2026: 173 grün, 2 skipped, 0 rot.
+Stand 24.07.2026: 174 grün, 2 skipped, 0 rot.
 
 **Häufigste Testfalle:** Die Tests mocken `theme.jsx` mit einer Factory, die die benötigten Exporte einzeln auflistet. Nutzt eine Komponente eine weitere Komponente aus `theme.jsx`, wirft Vitest bereits bei der blossen Referenz (`No "X" export is defined on the mock`) — und zwar für die ganze Testdatei, nicht nur den betroffenen Fall. Wer einen Import in einer getesteten Komponente ergänzt, ergänzt den Mock mit.
 
-**Env-Variablen** (`.env`, gitignored) sind Pflicht — ohne sie ist `supabaseClient` `null` und `clubcampus.jsx:113` läuft in einen ReferenceError:
+**Env-Variablen** (`.env`, gitignored) sind Pflicht — ohne sie bleibt `supabaseClient` `null` und die App zeigt nur den Login-Screen:
 
 ```
 VITE_SUPABASE_URL=…
@@ -35,7 +35,7 @@ VITE_SUPABASE_ANON_KEY=…
 
 ## Architektur — Gesamtbild
 
-**Kein Router.** `src/clubcampus.jsx` (`Portal`) ist Root-Komponente, Datenlader und Router in einem:
+**Kein Router.** `src/clubcampus.tsx` (`Portal`) ist Root-Komponente, Datenlader und Router in einem:
 
 - `active` (String-Key) steuert die Ansicht über einen `switch` in `getView()`; persistiert in `window.location.hash` + `sessionStorage`, `popstate` für Browser-Zurück. Sub-Navigation (z.B. Team-Detail) registriert einen `customBack`-Callback.
 - Alle App-Daten (`dbUser`, `dbTeams`, `dbMitglieder`, `dbStufen`, `dbMitgliedtypen`, `dbPortalRollen`, `dbKaderRollen`, `dbFunktionen`, `tenant`) werden nach Login in `Portal` geladen und per **Prop-Drilling** in die Module gereicht — inklusive des Supabase-Clients `sb`.
@@ -49,7 +49,7 @@ VITE_SUPABASE_ANON_KEY=…
 **Zwei Berechtigungsschichten** — nicht verwechseln:
 1. `domains/app/usePermissions.ts` — Zugriffstufen `lesen | schreiben | verwalten` pro Modul-Key. Quelle: DB (`module_config`, `modul_rechte`, via `localStorage` gecached) mit `APP_ZUGRIFF_DEFAULT` als Fallback. Liefert `kannLesen/kannSchreiben/kannVerwalten`, die als Props in die Module wandern. Für Rolle `funktionaer` kommt die Stufe stattdessen aus `portal_funktionen`/`portal_gruppen` (`getEffektiveStufeForFunktionaer`).
 2. `domains/permissions/permissions.js` — statische Prädikate pro Fachbereich (`memberPermissions.canEdit(role)` etc.).
-Zusätzlich blendet `isModuleVisible()` in `clubcampus.jsx` Module global/rollenbasiert aus; `administrator` sieht immer alles.
+Zusätzlich blendet `isModuleVisible()` in `clubcampus.tsx` Module global/rollenbasiert aus; `administrator` sieht immer alles.
 
 **Rollen:** `administrator`, `administration`, `trainer`, `funktionaer`, `spieler`, `eltern` (+ `supporter`). Umlaute werden für Rollen-Keys normalisiert (`funktionär` → `funktionaer`).
 
@@ -88,9 +88,11 @@ Inline-Editing läuft über `domains/members/useInlineEdit.js` + `InlineField`; 
 
 ## Migrationsstand
 
-Nicht alle Module hängen an Supabase. `src/demoData.js` ist temporär und wird noch importiert von: `DashboardModul`, `TermineModul`, `TrainingsplanModul`, `HelferModul`, `TeamModul`, `PlatzhalterModul`, `NavigationModul` (`USER_ACCOUNTS`), `appConstants.js` und `clubcampus.jsx`. Neue Features nie gegen `demoData` bauen — Service + Supabase.
+Nicht alle Module hängen an Supabase. `src/demoData.js` ist temporär und wird noch importiert von: `DashboardModul`, `TermineModul`, `TrainingsplanModul`, `HelferModul`, `TeamModul`, `PlatzhalterModul`, `NavigationModul` (`USER_ACCOUNTS`), `appConstants.js` und `clubcampus.tsx` (nur noch `USER_ACCOUNTS`). Neue Features nie gegen `demoData` bauen — Service + Supabase.
 
-TypeScript-Migration läuft schrittweise: `.ts` bereits in `domains/app/`, `domains/person/`, `domains/roles/`, `domains/season/`, plus `types.ts` und `constants.ts`. `tsconfig` ist `strict`, aber `checkJs: false` und es gibt keine CI-Typprüfung.
+TypeScript-Migration läuft schrittweise. Fertig: `domains/`, `shared/`, `src/modules/members/` samt `MitgliederModul`, sowie `clubcampus.tsx`. Offen: die übrigen `src/modules/*.jsx` (Dashboard, Termine, Trainingsplan, Helfer, Team, Kader, Nachrichten, Platzhalter, Navigation, LoginScreen) und `modules/portal/`. `tsconfig` ist `strict`, aber `checkJs: false` und es gibt keine CI-Typprüfung.
+
+**Migriert man eine Komponente, die von `clubcampus.tsx` gerendert wird**, dann die zugehörige Zeile aus dem `JsComponent`-Block oben in `clubcampus.tsx` entfernen — dieser Block umgeht die Prop-Prüfung für die noch nicht migrierten Module. Grund: TypeScript leitet Prop-Typen von JS-Komponenten aus deren Default-Werten ab (`sb=null` ⇒ Typ `null`, `dbTeams=[]` ⇒ `never[]`) und lehnt damit korrekte Werte ab.
 
 ## Konventionen
 
@@ -114,4 +116,9 @@ TypeScript-Migration läuft schrittweise: `.ts` bereits in `domains/app/`, `doma
 
 ## Bekannte Defekte
 
-- `clubcampus.jsx:113` referenziert ein nicht importiertes `supabase`; `clubcampus.jsx:428` übergibt ein undefiniertes `vereinId` an `ProfileView` (sollte `tenant?.id` sein). Beides schlägt erst zur Laufzeit zu — die TS-Migration von `clubcampus.jsx` wird es aufdecken.
+- **Kein Beitrittsdatum.** `mitglieder` hat keine Spalte dafür; `InfoTab` und `memberMapper` lesen ein `eintrittsdatum`, das es nicht gibt. Die Zeile „Eintritt" im Profil und die Spalte in der Liste bleiben konstant leer. `created_at` ist das Anlagedatum des Datensatzes und kein Ersatz.
+- **Supporter-Logik läuft ins Leere.** `elternkontakte` hat keine Spalte `supporter`. `ElternTab` schreibt sie beim Entknüpfen des letzten Kindes trotzdem (siehe `ELTERN_LOGIK.md`); das Update scheitert still, der Fehler wird nicht ausgewertet.
+- `Mitgliedtyp` in `types.ts` bildet `mitgliedtypen` nur teilweise ab — es fehlen `id`, `hauptkontakt_pflicht`, `standard_rolle` und `beitragsinfo`. `MitgliederModul` ergänzt `hauptkontakt_pflicht` lokal.
+- Vier fast gleiche Kaderrollen-Typen nebeneinander: `KaderRolle` (`types.ts`), `KaderRolleDb` (`roleUtils`), `KaderRolleOption` (`useMemberMeta`), `RolleOption` (`RollenAuswahlListe`).
+
+Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `clubcampus` (ReferenceError statt Login-Screen, sobald die Env-Variablen fehlten), das undefinierte `vereinId` an `ProfileView`, sowie das Phantomfeld `geprueft` in `MemberHero` und `InfoTab` (Datenprüfungs-Status stand konstant auf „offen"/„Ausstehend").

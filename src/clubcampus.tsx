@@ -1,137 +1,120 @@
+/* ═══════════════════════════════════════════════════════════════
+   ClubCampus — clubcampus.tsx
+   Root-Komponente, Datenlader und Router in einem
+   ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { FONT, BP_MOBILE, BP_TABLET, BTN_COLOR as BTN, BTN_TXT, BTN_HOV, ACCENT, ACCENT2, ACCENT20, ACCENT15, ACCENT12, GN, R, RL, BL, AM, BK, GR } from "./constants.ts";
-import { TI, TI_PATHS } from "./icons.tsx";
-import { LOGO_B64, ThemeCtx, useTheme, hexToRgba, darkenHex, contrastColor, THEME_DEFAULT_STATIC, useBreakpoint, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs, STitle, avColor} from "./theme.ts";
-import { ROSTER, USER_ACCOUNTS, SCHEDULE, GANTT, MEMBERS, FUNKTIONEN} from "./demoData.js";
+import type { ReactElement } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { FONT } from "./constants.ts";
+import { ThemeCtx, THEME_DEFAULT_STATIC, useBreakpoint } from "./theme.ts";
+import { USER_ACCOUNTS } from "./demoData.js";
 import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.ts";
-import { Skel, SkelCard, SkelList } from "./shared/ui/Skeleton.tsx";
-import { LoginScreen } from "./modules/LoginScreen.jsx";
-import { useAppData, useTenant, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
+import type { KaderRolleDb } from "./domains/roles/roleUtils.ts";
+import { LoginScreen as LoginScreenJs } from "./modules/LoginScreen.jsx";
+import { useAppData, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
 import { usePermissions } from "./domains/app/usePermissions.ts";
 import { useProfilCheck } from "./domains/app/useProfilCheck.ts";
-import { NAV_TARGET, FIELD_VIS, INITIAL_PLAENE } from "./modules/appConstants.js";
-import { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer } from "./modules/NavigationModul.jsx";
-import { Dashboard, DashboardAdmin, DashboardAdministration, DashboardFunktionaer, DashboardTrainer, DashboardSpieler, DashboardEltern } from "./modules/DashboardModul.jsx";
-import { TeamView, TeamOverview, EventsList } from "./modules/TeamModul.jsx";
-import { SlotModal, SpielDetail, TermineModul, SpielplanModul, TableTab } from "./modules/TermineModul.jsx";
-import { TrainingsplanModul, PlaetzeView } from "./modules/TrainingsplanModul.jsx";
-import { TeamsVerwaltungModul } from "./modules/TeamsVerwaltungModul.jsx";
-import MitgliederModul, { MembersView } from "./modules/MitgliederModul.tsx";
+import { NAV_TARGET } from "./modules/appConstants.js";
+import { SideNav as SideNavJs, TopBar as TopBarJs, MobileNav as MobileNavJs, getNavForRole, ProfileModal as ProfileModalJs, getVereinsnameStatic } from "./modules/NavigationModul.jsx";
+import { Dashboard as DashboardJs } from "./modules/DashboardModul.jsx";
+import { TeamView as TeamViewJs } from "./modules/TeamModul.jsx";
+import { TermineModul as TermineModulJs, SpielplanModul as SpielplanModulJs, TableTab } from "./modules/TermineModul.jsx";
+import { TrainingsplanModul as TrainingsplanModulJs } from "./modules/TrainingsplanModul.jsx";
+import { TeamsVerwaltungModul as TeamsVerwaltungModulJs } from "./modules/TeamsVerwaltungModul.jsx";
+import { MembersView } from "./modules/MitgliederModul.tsx";
 import KaderModul from "./modules/KaderModul.jsx";
-import { HelferModul, HelpersList } from "./modules/HelferModul.jsx";
-import NachrichtenModul from "./modules/NachrichtenModul.jsx";
-import { TeamModuleMatrix, PortalverwaltungView } from "./modules/PortalverwaltungModul.jsx";
-import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView, DarkModeRow, DataCheckView, getTeamsFromFunktionen, getTeamsFromGruppen } from "./modules/PlatzhalterModul.jsx";
+import { HelferModul, HelpersList as HelpersListJs } from "./modules/HelferModul.jsx";
+import NachrichtenModulJs from "./modules/NachrichtenModul.jsx";
+import { PortalverwaltungView as PortalverwaltungViewJs } from "./modules/PortalverwaltungModul.jsx";
+import { BusesView as BusesViewJs, MaterialView as MaterialViewJs, LockersView as LockersViewJs, MediaView as MediaViewJs, WikiView as WikiViewJs, DocsView as DocsViewJs, NewsView as NewsViewJs, AttendanceCentral as AttendanceCentralJs, ProfileView as ProfileViewJs } from "./modules/PlatzhalterModul.jsx";
+import type {
+  Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
+  PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
+} from "./types.ts";
 
+/* ── Brücke zu den noch nicht migrierten JS-Modulen ───────────────
+   TypeScript leitet die Prop-Typen von JavaScript-Komponenten aus deren
+   Default-Werten ab: `sb=null` wird zu Typ `null`, `dbTeams=[]` zu
+   `never[]`. Korrekte Werte werden dadurch abgelehnt, und Parameter ohne
+   Default gelten als Pflichtprops. Bis die Module migriert sind, werden
+   sie hier als Komponenten mit freien Props geführt — das entspricht dem
+   heutigen Stand, denn geprüft wurden ihre Props als JS ohnehin nie.
+   Jede Zeile verschwindet mit der Migration des jeweiligen Moduls.
+   MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
+type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
+const LoginScreen           = LoginScreenJs           as unknown as JsComponent;
+const SideNav               = SideNavJs               as unknown as JsComponent;
+const TopBar                = TopBarJs                as unknown as JsComponent;
+const MobileNav             = MobileNavJs             as unknown as JsComponent;
+const ProfileModal          = ProfileModalJs          as unknown as JsComponent;
+const Dashboard             = DashboardJs             as unknown as JsComponent;
+const TeamView              = TeamViewJs              as unknown as JsComponent;
+const TermineModul          = TermineModulJs          as unknown as JsComponent;
+const SpielplanModul        = SpielplanModulJs        as unknown as JsComponent;
+const TrainingsplanModul    = TrainingsplanModulJs    as unknown as JsComponent;
+const TeamsVerwaltungModul  = TeamsVerwaltungModulJs  as unknown as JsComponent;
+const HelpersList           = HelpersListJs           as unknown as JsComponent;
+const NachrichtenModul      = NachrichtenModulJs      as unknown as JsComponent;
+const PortalverwaltungView  = PortalverwaltungViewJs  as unknown as JsComponent;
+const BusesView             = BusesViewJs             as unknown as JsComponent;
+const MaterialView          = MaterialViewJs          as unknown as JsComponent;
+const LockersView           = LockersViewJs           as unknown as JsComponent;
+const MediaView             = MediaViewJs             as unknown as JsComponent;
+const WikiView              = WikiViewJs              as unknown as JsComponent;
+const DocsView              = DocsViewJs              as unknown as JsComponent;
+const NewsView              = NewsViewJs              as unknown as JsComponent;
+const AttendanceCentral     = AttendanceCentralJs     as unknown as JsComponent;
+const ProfileView           = ProfileViewJs           as unknown as JsComponent;
 
-/* Reusable Modal/BottomSheet - desktop: centered modal, mobile: slides up from bottom */
-/* ── PERSON PICKER ── */
+/* Ebenfalls noch JS: TS liest die Initialwerte (null) als Typ. */
+const navTarget = NAV_TARGET as { tab: string|null; selectedSpiel: unknown };
+/* ⚠ Die Demo-Accounts aus demoData erfüllen Account nicht: ihnen fehlen id
+   und teams, dafür tragen manche ein trainerTeams. Sie greifen nur, wenn
+   kein DB-Benutzer geladen ist (also ohne Supabase). Bewusst über unknown
+   gecastet — der Fallback verschwindet mit demoData. */
+const demoAccounts = USER_ACCOUNTS as unknown as Record<string, Account|undefined>;
 
-
-function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
-  const [q,setQ]=useState(value||"");
-  const [open,setOpen]=useState(false);
-  const ref=useRef(null);
-
-  useEffect(()=>{ setQ(value||""); },[value]);
-  useEffect(()=>{
-    const fn=(e)=>{ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown",fn);
-    return()=>document.removeEventListener("mousedown",fn);
-  },[]);
-
-  const suggestions=q.length>0
-    ? MEMBERS.filter(m=>m.name.toLowerCase().includes(q.toLowerCase())).slice(0,8)
-    : MEMBERS.filter(m=>m.role==="Trainer"||m.role==="Vorstand").slice(0,8);
-
-  function select(name){ setQ(name); onChange(name); setOpen(false); }
-
-  return(
-    <div ref={ref} style={{position:"relative",...style}}>
-      <input
-        value={q}
-        onChange={e=>{ setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
-        onFocus={()=>setOpen(true)}
-        placeholder={placeholder}
-        style={{width:"100%",padding:"9px 12px",border:"1px solid var(--border)",borderRadius:8,
-          fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",
-          boxSizing:"border-box",outline:"none"}}
-      />
-      {open&&suggestions.length>0&&(
-        <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,zIndex:200,
-          background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,
-          boxShadow:"0 4px 16px rgba(0,0,0,0.12)",overflow:"hidden"}}>
-          {suggestions.map(m=>(
-            <button key={m.id} onMouseDown={()=>select(m.name)} style={{
-              width:"100%",padding:"9px 14px",border:"none",background:"none",
-              cursor:"pointer",display:"flex",alignItems:"center",gap:12,
-              textAlign:"left",fontFamily:FONT
-            }}
-              onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
-              onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <Av name={m.name} size={26}/>
-              <div>
-                <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{m.name}</div>
-                <div style={{fontSize:11,color:"var(--sub)"}}>{m.role}{m.team&&m.team!=="-"?" · "+m.team:""}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+/* Nachwuchsstufen — geladen von loadDbStufen, nur durchgereicht */
+interface Stufe {
+  id: number;
+  name: string;
+  [key: string]: unknown;
 }
 
-
-
-/* -- SUPABASE wird als Prop von App.jsx übergeben (kein Import hier) -- */
-
-/* -- Farben & Konstanten via ./constants.js -- */
-
-/* ── TEAM-HIERARCHIE (Baumstruktur) ── */
-
-/* == PLATZ-GANTT == */
-
-
-/* ==========================================
-   ADMIN-EXKLUSIVE VIEWS
-========================================== */
-/* Vereinsfunktion → farbiger Chip */
-
-
-
-
-
-/* ==========================================
-   PROFIL MODAL
-========================================== */
-/* ── DARK MODE ROW (für ProfileModal) ── */
+interface PortalProps {
+  /* Von App.jsx erzeugt; null, wenn die Env-Variablen fehlen */
+  supabaseClient: Sb;
+}
 
 /* ── APP ROOT ── */
-function Portal({supabaseClient}){
-  const sbRef = useRef(supabaseClient||supabase||null);
+function Portal({supabaseClient}: PortalProps){
+  /* Früher stand hier `supabaseClient||supabase||null`. Ein globales
+     `supabase` gibt es nicht — sobald supabaseClient null war (fehlende
+     Env-Variablen), lief die Zeile in einen ReferenceError statt den
+     Login-Screen zu zeigen. */
+  const sbRef = useRef<Sb>(supabaseClient||null);
   const sb = sbRef.current;
-  const [session,setSession]=useState(sb ? undefined : null);
-  const [dbUser,setDbUser]=useState(null);
-  const [navToMember,setNavToMember]=useState(null); // mitglied_id für direkte Navigation
-  const [navToTeam,setNavToTeam]=useState(null);     // team_id für direkte Navigation
-  const [dbTeams,setDbTeams]=useState([]);
-  const [dbStufen,setDbStufen]=useState([]);
-  const [dbMitglieder,setDbMitglieder]=useState([]);
-  const [dbFunktionen,setDbFunktionen]=useState([]); // portal_funktionen des eingeloggten Benutzers
-  const [dbMitgliedtypen,setDbMitgliedtypen]=useState([]);
-  const [dbPortalRollen,setDbPortalRollen]=useState([]);
-  const [dbKaderRollen,setDbKaderRollen]=useState([]);
+  const [session,setSession]=useState<Session|null|undefined>(sb ? undefined : null);
+  const [dbUser,setDbUser]=useState<DbUser|null>(null);
+  const [navToMember,setNavToMember]=useState<number|null>(null); // mitglied_id für direkte Navigation
+  const [navToTeam,setNavToTeam]=useState<number|null>(null);     // team_id für direkte Navigation
+  const [dbTeams,setDbTeams]=useState<Team[]>([]);
+  const [dbStufen,setDbStufen]=useState<Stufe[]>([]);
+  const [dbMitglieder,setDbMitglieder]=useState<Mitglied[]>([]);
+  const [dbFunktionen,setDbFunktionen]=useState<PortalFunktion[]>([]); // portal_funktionen des eingeloggten Benutzers
+  const [dbMitgliedtypen,setDbMitgliedtypen]=useState<Mitgliedtyp[]>([]);
+  const [dbPortalRollen,setDbPortalRollen]=useState<PortalRolle[]>([]);
+  const [dbKaderRollen,setDbKaderRollen]=useState<KaderRolleDb[]>([]);
   /* Globale Modul-Konfiguration (aus Portalverwaltung) */
-  const [moduleAktiv,setModuleAktiv]=useState(()=>{
+  const [moduleAktiv,setModuleAktiv]=useState<ModuleAktiv>(()=>{
     try{const s=localStorage.getItem("cc-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
   });
-  const [moduleRechte,setModuleRechte]=useState(()=>{
+  const [moduleRechte,setModuleRechte]=useState<ModuleRechte|null>(()=>{
     try{const s=localStorage.getItem("cc-module-rechte");return s?JSON.parse(s):null;}catch{return null;}
   });
   const [accountKey,setAccountKey]=useState("trainer");
-  const [activeSubRole,setActiveSubRole]=useState(null);
+  const [activeSubRole,setActiveSubRole]=useState<string|null>(null);
   const [active,setActive]=useState(()=>{
     try{
       const hash=window.location.hash.replace("#","");
@@ -139,7 +122,7 @@ function Portal({supabaseClient}){
       return sessionStorage.getItem("cc-active")||"dashboard";
     }catch{return "dashboard";}
   });
-  const setActivePersist=(key)=>{
+  const setActivePersist=(key: string)=>{
     try{
       sessionStorage.setItem("cc-active",key);
       window.history.pushState({page:key},"","#"+key);
@@ -150,13 +133,13 @@ function Portal({supabaseClient}){
   const {isMobile,isTablet}=useBreakpoint();
   const [mobileProfileOpen,setMobileProfileOpen]=useState(false);
   const [profilOverlayDismissed,setProfilOverlayDismissed]=useState(false);
-  const [customBack,setCustomBack]=useState(null);
-  const customBackRef=useRef(null);
-  const setCustomBackAndRef=(fn)=>{customBackRef.current=fn||null;setCustomBack(fn);};
+  const [customBack,setCustomBack]=useState<(()=>void)|null>(null);
+  const customBackRef=useRef<(()=>void)|null>(null);
+  const setCustomBackAndRef=(fn: (()=>void)|null)=>{customBackRef.current=fn||null;setCustomBack(fn);};
 
   /* Browser Zurück/Vor via popstate */
   useEffect(()=>{
-    const onPop=(e)=>{
+    const onPop=(e: PopStateEvent)=>{
       /* Sub-Navigation offen (z.B. Team-Detail): zurück zur Übersicht */
       if(customBackRef.current){
         customBackRef.current();
@@ -182,15 +165,15 @@ function Portal({supabaseClient}){
   const [dark,setDark]=useState(()=>{
     try{const s=localStorage.getItem("cc-dark");return s?JSON.parse(s):window.matchMedia("(prefers-color-scheme: dark)").matches;}catch{return false;}
   });
-  const toggleDark=()=>setDark(d=>{const n=!d;try{localStorage.setItem("cc-dark",n);}catch{}return n;});
+  const toggleDark=()=>setDark((d: boolean)=>{const n=!d;try{localStorage.setItem("cc-dark",JSON.stringify(n));}catch{}return n;});
 
   /* ── App-Level Theme State ── */
-  const [appTheme,setAppTheme]=useState(()=>{
+  const [appTheme,setAppTheme]=useState<AppTheme>(()=>{
     try{const s=localStorage.getItem("cc-theme");return s?{...THEME_DEFAULT_STATIC,...JSON.parse(s)}:THEME_DEFAULT_STATIC;}catch{return THEME_DEFAULT_STATIC;}
   });
 
   /* ── Tenant State ── */
-  const [tenant,setTenant]=useState(null); // {slug, name, theme}
+  const [tenant,setTenant]=useState<Tenant|null>(null); // {slug, name, theme}
 
   /* ── Inter Font + PWA Globals ── */
   useEffect(()=>{
@@ -199,11 +182,11 @@ function Portal({supabaseClient}){
       l.href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap";
       document.head.appendChild(l);
     }
-    let m=document.querySelector("meta[name=viewport]");
+    let m=document.querySelector<HTMLMetaElement>("meta[name=viewport]");
     if(!m){m=document.createElement("meta");m.name="viewport";document.head.appendChild(m);}
     m.content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=yes";
     /* PWA Standalone – Adressleiste ausblenden */
-    const setMeta=(n,v)=>{let t=document.querySelector(`meta[name="${n}"]`);if(!t){t=document.createElement("meta");t.name=n;document.head.appendChild(t);}t.content=v;};
+    const setMeta=(n: string,v: string)=>{let t=document.querySelector<HTMLMetaElement>(`meta[name="${n}"]`);if(!t){t=document.createElement("meta");t.name=n;document.head.appendChild(t);}t.content=v;};
     setMeta("apple-mobile-web-app-capable","yes");
     setMeta("apple-mobile-web-app-status-bar-style","black-translucent");
     setMeta("mobile-web-app-capable","yes");
@@ -213,7 +196,7 @@ function Portal({supabaseClient}){
       const lm=document.createElement("link");lm.rel="manifest";lm.href="/manifest.json";
       document.head.appendChild(lm);
     }
-    let th=document.querySelector("meta[name=theme-color]");
+    let th=document.querySelector<HTMLMetaElement>("meta[name=theme-color]");
     if(!th){th=document.createElement("meta");th.name="theme-color";document.head.appendChild(th);}
     th.content=dark?"#0a0a0c":"#141414";
   },[dark]);
@@ -246,7 +229,7 @@ function Portal({supabaseClient}){
     });
 
     /* Realtime: Theme-Änderungen sofort übernehmen */
-    let themeSub=null;
+    let themeSub: ReturnType<typeof sb.channel>|null=null;
     try{
       themeSub=sb.channel("theme-changes")
         .on("postgres_changes",{event:"UPDATE",schema:"public",table:"vereine"},
@@ -262,8 +245,10 @@ function Portal({supabaseClient}){
     return function(){ subscription.unsubscribe(); if(themeSub) sb.removeChannel(themeSub); };
   },[]);
 
-  const [teamRollen,setTeamRollen]=useState({}); // {team_id: ["spieler"|"trainer"|...]}
-  const [error, setError] = useState(null);
+  /* Höchste Kaderrolle je Team — eine Rolle pro Team, kein Array
+     (der frühere Kommentar behauptete das Gegenteil). */
+  const [teamRollen,setTeamRollen]=useState<TeamRollenMap>({});
+  const [error, setError] = useState<string|null>(null);
   const { loadDbUser } = useDbUser({ sb, setDbUser, setTeamRollen, setError, ROLLE_PRIORITAET });
   const { loadDbTeams } = useDbTeams({ sb, setDbTeams });
 
@@ -314,7 +299,7 @@ function Portal({supabaseClient}){
 
   // Login-Screen wenn nicht eingeloggt (oder kein Supabase)
   if(sb && !session){
-    return <LoginScreen sb={sb} onLogin={s=>setSession(s)} appTheme={appTheme}/>;
+    return <LoginScreen sb={sb} onLogin={(s: Session)=>setSession(s)} appTheme={appTheme}/>;
   }
 
   // Kein Portal-Zugang
@@ -331,7 +316,7 @@ function Portal({supabaseClient}){
             Bitte wende dich an den Vereinsadministrator.
           </p>
           <button
-            onClick={async()=>{ await sb.auth.signOut(); setSession(null); setDbUser(null); }}
+            onClick={async()=>{ if(sb) await sb.auth.signOut(); setSession(null); setDbUser(null); }}
             style={{padding:"10px 24px",borderRadius:8,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",fontSize:14,cursor:"pointer"}}
           >
             Abmelden
@@ -342,21 +327,25 @@ function Portal({supabaseClient}){
   }
 
   // Rolle aus DB-User oder Demo-Fallback
-  const effectiveAccountKey = dbUser ? "db_user" : accountKey;
-  const dbAccount = dbUser ? {
+  const dbAccount: Account|null = dbUser ? {
     id: dbUser.id,
+    /* role ist hier nie '__kein_zugang' — der Fall ist oben abgefangen */
     name: dbUser.name||dbUser.email||"Benutzer",
-    rollen: [dbUser.role||"spieler"],
-    primaryRole: dbUser.role||"spieler",
+    rollen: [(dbUser.role as Rolle)||"spieler"],
+    primaryRole: (dbUser.role as Rolle)||"spieler",
     kinder: [],
     teams: dbUser.teams||[],
     email: dbUser.email||"",
   } : null;
 
-  const account = dbAccount || USER_ACCOUNTS[accountKey] || USER_ACCOUNTS.trainer;
+  const account: Account = dbAccount || demoAccounts[accountKey] || demoAccounts.trainer!;
   const rawRole = activeSubRole || account.primaryRole || "spieler";
+  /* Umlaute normalisieren (funktionär → funktionaer). Der Wert kann auch ein
+     in portal_rollen frei angelegter Schlüssel sein und damit ausserhalb der
+     Rolle-Union liegen — die Leser behandeln unbekannte Schlüssel wie eine
+     Rolle ohne Sonderrechte. */
   const role = rawRole.toLowerCase()
-    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue");
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue") as Rolle;
   const kinder = account.kinder||[];
 
   // Teams aus Kader ableiten
@@ -373,7 +362,7 @@ function Portal({supabaseClient}){
   const myRosterId = account.rosterId||(role==="spieler"?1:role==="eltern"?1:role==="trainer"?200:null);
   /* Dynamische Navigation (funktionaer/stufenleitung aus Gruppen) */
   /* Modul-Sichtbarkeit prüfen: global + pro Rolle */
-  const isModuleVisible=(key)=>{
+  const isModuleVisible=(key: string)=>{
     if(key==="dashboard") return true;
     if(key==="profile") return true; // Profil immer sichtbar
     if(role==="administrator") return true; // Admin sieht immer alles
@@ -385,14 +374,14 @@ function Portal({supabaseClient}){
   };
 
   const effectiveNav = getNavForRole(role, dbFunktionen)
-    .filter(n=>isModuleVisible(n.key));
+    .filter((n: {key: string})=>isModuleVisible(n.key));
 
   /* ── App-Level Zugriffstufen-Hilfsfunktionen ── */
-  const { getZugriff, kannLesen, kannSchreiben, kannVerwalten } = usePermissions({
+  const { kannSchreiben, kannVerwalten } = usePermissions({
     role, moduleRechte, zugriffStufen: null, dbFunktionen,
   });
 
-  const handleAccountChange=(key)=>{
+  const handleAccountChange=(key: string)=>{
     setAccountKey(key);
     setActiveSubRole(null);
     setActive("dashboard");
@@ -402,7 +391,7 @@ function Portal({supabaseClient}){
     if(!isModuleVisible(active)) return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
     switch(active){
       case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
-      case "team":              return role==="administrator"||role==="administration"?<TeamsVerwaltungModul sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef} dbMitglieder={dbMitglieder} TeamViewComponent={TeamView} KaderModulComponent={KaderModul} TrainingsplanModulComponent={TrainingsplanModul} TermineModulComponent={TermineModul} SpielplanModulComponent={SpielplanModul} TableTabComponent={TableTab} HelferModulComponent={HelferModul} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)}/>:<TeamView role={role} trainerTeams={trainerTeams} teamRollen={teamRollen} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder} KaderModul={KaderModul} TrainingsplanModul={TrainingsplanModul} TermineModul={TermineModul} SpielplanModul={SpielplanModul} TableTab={TableTab} HelferModul={HelferModul} onSelectMember={m=>{setNavToMember(m.id||m.mitglied_id);setActivePersist("members");}} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)}/>;
+      case "team":              return role==="administrator"||role==="administration"?<TeamsVerwaltungModul sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef} dbMitglieder={dbMitglieder} TeamViewComponent={TeamView} KaderModulComponent={KaderModul} TrainingsplanModulComponent={TrainingsplanModul} TermineModulComponent={TermineModul} SpielplanModulComponent={SpielplanModul} TableTabComponent={TableTab} HelferModulComponent={HelferModul} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)}/>:<TeamView role={role} trainerTeams={trainerTeams} teamRollen={teamRollen} setActive={setActive} myRosterId={myRosterId} account={account} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder} KaderModul={KaderModul} TrainingsplanModul={TrainingsplanModul} TermineModul={TermineModul} SpielplanModul={SpielplanModul} TableTab={TableTab} HelferModul={HelferModul} onSelectMember={(m: {id?: number; mitglied_id?: number})=>{setNavToMember(m.id||m.mitglied_id||null);setActivePersist("members");}} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)}/>;
       case "members":           return <MembersView role={role} account={account} dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} onReload={loadDbMitglieder} onUpdatePortalZugang={updatePortalZugang} navToMember={navToMember} onNavToMemberDone={()=>setNavToMember(null)} onNavToTeam={teamId=>{setNavToTeam(teamId);setActivePersist("team");}} vereinId={tenant?.id}/>;
       case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "mitglieder_config": return <PortalverwaltungView initialTab="mitglieder_config" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
@@ -411,7 +400,7 @@ function Portal({supabaseClient}){
       case "training":          return <TrainingsplanModul role={role} team={role==="trainer"?meineTeams?.[0]:undefined} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} dbTeams={dbTeams}/>;
       case "schedule":          return <SpielplanModul role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
-      case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:14,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><TermineModul role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActive} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} onNavigateToSpiel={(spiel)=>{NAV_TARGET.tab="spielplan";NAV_TARGET.selectedSpiel=spiel;setActive("team");}}/></div>;
+      case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:14,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><TermineModul role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActive} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} onNavigateToSpiel={(spiel: unknown)=>{navTarget.tab="spielplan";navTarget.selectedSpiel=spiel;setActive("team");}}/></div>;
       case "helpers":           return <HelpersList role={role} meineTeams={meineTeams} account={account} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
       case "buses":             return <BusesView role={role} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten}/>;
       case "material":          return <MaterialView/>;
@@ -425,7 +414,9 @@ function Portal({supabaseClient}){
       case "sync":              return <PortalverwaltungView initialTab="api" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "audit":             return <PortalverwaltungView initialTab="audit" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "datacheck":         return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
-      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account} sb={sb} dbUser={dbUser} dbMitglieder={dbMitglieder} vereinId={vereinId} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}} onProfilGeprueft={markiereProfilGeprueft}/>;
+      /* vereinId war hier ein undefinierter Bezeichner und lief zur Laufzeit
+         in einen ReferenceError, sobald der Profil-Tab geöffnet wurde. */
+      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account} sb={sb} dbUser={dbUser} dbMitglieder={dbMitglieder} vereinId={tenant?.id} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}} onProfilGeprueft={markiereProfilGeprueft}/>;
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
   };
@@ -442,7 +433,7 @@ function Portal({supabaseClient}){
           if(!session||role==="administrator"||role==="administration") return null;
           if(!sollProfilPruefen()||profilOverlayDismissed) return null;
           const fehlend=getProfilFehlend();
-          const LABELS={"vorname":"Vorname","nachname":"Nachname","geburtsdatum":"Geburtsdatum","telefon":"Handynummer","email":"E-Mail"};
+          const LABELS: Record<string,string>={"vorname":"Vorname","nachname":"Nachname","geburtsdatum":"Geburtsdatum","telefon":"Handynummer","email":"E-Mail"};
           return(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
               <div style={{background:"var(--surface)",borderRadius:16,padding:32,maxWidth:480,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
@@ -501,19 +492,19 @@ function Portal({supabaseClient}){
             </div>
           );
         })()}
-        {!isMobile&&<SideNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} appTheme={appTheme}/>}
+        {!isMobile&&<SideNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={(n: string)=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} appTheme={appTheme}/>}
         <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
           {isMobile&&<TopBar role={role} active={active} setActive={setActivePersist}
             account={account} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole}
-            onRoleChange={(key)=>handleAccountChange(key)} isMobile={isMobile}
+            onRoleChange={(key: string)=>handleAccountChange(key)} isMobile={isMobile}
             onLogout={sb&&session ? handleLogout : undefined}
             onOpenProfile={()=>setMobileProfileOpen(true)}
             onBack={customBack} appTheme={appTheme}/>}
           <main key={active} className="cc-page" style={{flex:1,overflowY:"auto",overflowX:"hidden"}}><div className="cc-page-shell" style={{padding:isMobile?"16px 12px calc(90px + env(safe-area-inset-bottom, 0px))":isTablet?"20px 20px 28px":"28px 40px",minHeight:"100%"}}>{getView()}</div></main>
-          {isMobile&&<MobileNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} effectiveNav={effectiveNav}/>}
+          {isMobile&&<MobileNav role={role} active={active} setActive={setActivePersist} account={account} sb={sb} onNameUpdated={(n: string)=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined} effectiveNav={effectiveNav}/>}
         </div>
       </div>
-      {isMobile&&<ProfileModal open={mobileProfileOpen} onClose={()=>setMobileProfileOpen(false)} account={account} role={role} sb={sb} onNameUpdated={n=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
+      {isMobile&&<ProfileModal open={mobileProfileOpen} onClose={()=>setMobileProfileOpen(false)} account={account} role={role} sb={sb} onNameUpdated={(n: string)=>setDbUser(u=>u?{...u,name:n}:u)} onLogout={sb&&session?handleLogout:undefined}/>}
     </ThemeCtx.Provider>
   );
 }

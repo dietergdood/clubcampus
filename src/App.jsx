@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import Portal from "./clubcampus.jsx";
+import Portal from "./clubcampus.tsx";
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
