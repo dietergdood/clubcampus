@@ -1,36 +1,52 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/LoginScreen.jsx
+   ClubCampus — modules/LoginScreen.tsx
    Login, Register, Reset Password
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { FONT , GB, ACCENT, GN} from "../constants.ts";
-import { LOGO_B64 } from "../theme.ts";
+import type { CSSProperties, FormEvent } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { FONT, GB, ACCENT, GN } from "../constants.ts";
 import { TI } from "../icons.tsx";
-function LoginScreen({onLogin, sb, appTheme}){
+/* getVereinsnameStatic wurde bisher genutzt, aber nie importiert — der
+   Fallback-Vereinsname lief in einen ReferenceError, sobald appTheme keinen
+   Namen trug. */
+import { getVereinsnameStatic } from "./NavigationModul.jsx";
+import type { AppTheme, SbClient } from "../types.ts";
+
+interface LoginScreenProps {
+  onLogin: (session: Session) => void;
+  sb: SbClient;
+  appTheme?: AppTheme | null;
+}
+
+type Mode = "login" | "register" | "reset";
+
+function LoginScreen({onLogin, sb, appTheme}: LoginScreenProps){
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");
   const [pw2,setPw2]=useState("");
   const [showPw,setShowPw]=useState(false);
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
-  const [mode,setMode]=useState("login"); // "login" | "register" | "reset"
+  const [mode,setMode]=useState<Mode>("login");
   const [resetSent,setResetSent]=useState(false);
   const [regDone,setRegDone]=useState(false);
 
-  async function handleLogin(e){
+  async function handleLogin(e: FormEvent<HTMLFormElement>){
     e.preventDefault();
     setLoading(true); setError("");
     try{
       const {data,error:err}=await sb.auth.signInWithPassword({email,password:pw});
       if(err) throw err;
-      onLogin(data.session);
+      if(data.session) onLogin(data.session);
     }catch(err){
-      setError(err.message==="Invalid login credentials"?"E-Mail oder Passwort falsch.":err.message||"Fehler beim Einloggen.");
+      const msg=err instanceof Error?err.message:"";
+      setError(msg==="Invalid login credentials"?"E-Mail oder Passwort falsch.":msg||"Fehler beim Einloggen.");
     }
     setLoading(false);
   }
 
-  async function handleRegister(e){
+  async function handleRegister(e: FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(pw!==pw2){ setError("Passwörter stimmen nicht überein."); return; }
     if(pw.length<6){ setError("Passwort muss mindestens 6 Zeichen haben."); return; }
@@ -68,23 +84,23 @@ function LoginScreen({onLogin, sb, appTheme}){
         }
       }
       if(data.session){ onLogin(data.session); } else { setRegDone(true); }
-    }catch(err){ setError(err.message||"Fehler bei der Registrierung."); }
+    }catch(err){ setError(err instanceof Error?err.message:"Fehler bei der Registrierung."); }
     setLoading(false);
   }
 
-  async function handleReset(e){
+  async function handleReset(e: FormEvent<HTMLFormElement>){
     e.preventDefault();
     setLoading(true); setError("");
     try{
       const {error:err}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
       if(err) throw err;
       setResetSent(true);
-    }catch(err){ setError(err.message||"Fehler beim Senden."); }
+    }catch(err){ setError(err instanceof Error?err.message:"Fehler beim Senden."); }
     setLoading(false);
   }
 
-  const S_INPUT={width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box",background:"var(--surface2)",color:"var(--text)"};
-  const S_LABEL={fontSize:14,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5};
+  const S_INPUT: CSSProperties={width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+GB,fontSize:14,outline:"none",boxSizing:"border-box",background:"var(--surface2)",color:"var(--text)"};
+  const S_LABEL: CSSProperties={fontSize:14,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:5};
 
   return(
     <div style={{minHeight:"100dvh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:FONT,WebkitFontSmoothing:"antialiased",color:"var(--text)"}}>

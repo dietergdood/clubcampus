@@ -10,7 +10,7 @@ import { ThemeCtx, THEME_DEFAULT_STATIC, useBreakpoint } from "./theme.ts";
 import { USER_ACCOUNTS } from "./demoData.js";
 import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.ts";
 import type { KaderRolleDb } from "./domains/roles/roleUtils.ts";
-import { LoginScreen as LoginScreenJs } from "./modules/LoginScreen.jsx";
+import { LoginScreen } from "./modules/LoginScreen.tsx";
 import { useAppData, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
 import { usePermissions } from "./domains/app/usePermissions.ts";
 import { useProfilCheck } from "./domains/app/useProfilCheck.ts";
@@ -43,7 +43,6 @@ import type {
    MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
 type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
-const LoginScreen           = LoginScreenJs           as unknown as JsComponent;
 const SideNav               = SideNavJs               as unknown as JsComponent;
 const TopBar                = TopBarJs                as unknown as JsComponent;
 const MobileNav             = MobileNavJs             as unknown as JsComponent;
