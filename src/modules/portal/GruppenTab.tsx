@@ -1,14 +1,116 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/GruppenTab.jsx
+   ClubCampus — modules/portal/GruppenTab.tsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
-import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate, InfoBox} from "../../theme.ts";
+import { Btn, Card, Col, ModalOrSheet, ModalTitle, SectionLabel, InfoBox } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
+import { BTN_COLOR as BTN, BTN_TXT, BL, FONT } from "../../constants.ts";
 import { ZUGRIFF_LABELS, ZUGRIFF_COLORS, ALLE_MODULE } from "./portalUtils.ts";
+import type { Sb, SetState } from "../../types.ts";
+import type { Json } from "../../database.types.ts";
 
-export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,gruppen,setGruppen,funktionen,setFunktionen,pvTeams,gruppenTeams,setGruppenTeams,selectedGruppe,setSelectedGruppe,showGruppeForm,setShowGruppeForm,showFunktionForm,setShowFunktionForm,editGruppe,setEditGruppe,editFunktion,setEditFunktion,gruppeForm,setGruppeForm,funktionForm,setFunktionForm,tab}) {
+/* Zeile aus portal_gruppen */
+export interface Gruppe {
+  id: number;
+  name: string;
+  beschreibung?: string | null;
+  module?: string[] | null;
+  farbe?: string | null;
+  modul_stufen?: Record<string, string> | null;
+  aktiv?: boolean | null;
+}
+
+/* Zeile aus portal_funktionen, inkl. optionaler Gruppen-Join */
+export interface Funktion {
+  id: number;
+  name: string;
+  beschreibung?: string | null;
+  gruppe_id?: number | null;
+  module_override?: string[] | null;
+  stufe_override?: Record<string, string> | null;
+  teams?: string[] | null;
+  filter?: Json;
+  aktiv?: boolean | null;
+  portal_gruppen?: { id?: number; name?: string | null; farbe?: string | null } | null;
+}
+
+interface PvTeam {
+  id: number;
+  name: string;
+  kurzname?: string | null;
+}
+
+interface GruppeTeam {
+  gruppe_id: number | null;
+  team_id: number | null;
+}
+
+export interface GruppeFormular {
+  name: string;
+  beschreibung: string;
+  module: string[];
+  farbe: string;
+  modul_stufen: Record<string, string>;
+  teams: number[];
+}
+
+export interface FunktionFormular {
+  name: string;
+  beschreibung: string;
+  gruppe_id: number | string;
+  module_override: string[];
+  /* portal_funktionen.teams ist string[]; das Modal hat kein Team-Feld,
+     der Wert wird nur aus der Zeile übernommen und zurückgeschrieben. */
+  teams: string[];
+  /* filter ist eine jsonb-Spalte — als Json, damit es direkt ins Insert passt */
+  filter: Json;
+  stufe_override?: Record<string, string>;
+}
+
+const STUFEN=["lesen","schreiben","verwalten"];
+const STUFE_RANG: Record<string,number>={lesen:1,schreiben:2,verwalten:3};
+const GRUPPE_FARBEN=["#8B5CF6","#3B82F6","#22C55E","#F97316","#06B6D4","#EF4444","#F59E0B","#EC4899"];
+
+const FALLBACK_GRUPPEN: Gruppe[]=[
+  {id:1,name:"Vereinsleben & Events",farbe:"#8B5CF6",beschreibung:"Anlässe, Helfereinsätze, Mitgliederliste",module:["events","helpers","members","news","docs"]},
+  {id:2,name:"Betrieb & Infrastruktur",farbe:"#3B82F6",beschreibung:"Material, Busse, Garderoben",module:["material","buses","lockers","docs"]},
+  {id:3,name:"Kommunikation & Medien",farbe:"#22C55E",beschreibung:"Website, Social Media, Wiki, News",module:["media","wiki","news","docs"]},
+  {id:4,name:"Stufenleitende",farbe:"#F97316",beschreibung:"Teams und Kader der zugewiesenen Stufe",module:["team","training","events","attendance_central","members","helpers"]},
+  {id:5,name:"Schiedsrichterwesen",farbe:"#06B6D4",beschreibung:"Spielplan, Koordination",module:["schedule","training","docs"]},
+];
+
+interface GruppenTabProps {
+  supabase: Sb;
+  loading: boolean;
+  isMobile: boolean;
+  /* null = Kachel-Landingseite auf Mobile */
+  mobileKachel: string | null;
+  tab: string;
+  vereinId: string | null;
+  setSaveMsg: (msg: string) => void;
+  gruppen: Gruppe[];
+  setGruppen: SetState<Gruppe[]>;
+  funktionen: Funktion[];
+  setFunktionen: SetState<Funktion[]>;
+  pvTeams: PvTeam[];
+  gruppenTeams: GruppeTeam[];
+  setGruppenTeams: SetState<GruppeTeam[]>;
+  selectedGruppe: Gruppe | null;
+  setSelectedGruppe: SetState<Gruppe | null>;
+  showGruppeForm: boolean;
+  setShowGruppeForm: SetState<boolean>;
+  showFunktionForm: boolean;
+  setShowFunktionForm: SetState<boolean>;
+  editGruppe: Gruppe | null;
+  setEditGruppe: SetState<Gruppe | null>;
+  editFunktion: Funktion | null;
+  setEditFunktion: SetState<Funktion | null>;
+  gruppeForm: GruppeFormular;
+  setGruppeForm: SetState<GruppeFormular>;
+  funktionForm: FunktionFormular;
+  setFunktionForm: SetState<FunktionFormular>;
+}
+
+export function GruppenTab({supabase,loading,isMobile,mobileKachel,tab,vereinId,setSaveMsg,gruppen,setGruppen,funktionen,setFunktionen,pvTeams,gruppenTeams,setGruppenTeams,selectedGruppe,setSelectedGruppe,showGruppeForm,setShowGruppeForm,showFunktionForm,setShowFunktionForm,editGruppe,setEditGruppe,editFunktion,setEditFunktion,gruppeForm,setGruppeForm,funktionForm,setFunktionForm}: GruppenTabProps) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="gruppen"&&(
@@ -23,33 +125,27 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
 
           {/* Gruppen als Grid */}
           <div className="cc-grid-cards" style={{gap:12}}>
-          {(gruppen.length>0?gruppen:[
-            {id:1,name:"Vereinsleben & Events",farbe:"#8B5CF6",beschreibung:"Anlässe, Helfereinsätze, Mitgliederliste",module:["events","helpers","members","news","docs"]},
-            {id:2,name:"Betrieb & Infrastruktur",farbe:"#3B82F6",beschreibung:"Material, Busse, Garderoben",module:["material","buses","lockers","docs"]},
-            {id:3,name:"Kommunikation & Medien",farbe:"#22C55E",beschreibung:"Website, Social Media, Wiki, News",module:["media","wiki","news","docs"]},
-            {id:4,name:"Stufenleitende",farbe:"#F97316",beschreibung:"Teams und Kader der zugewiesenen Stufe",module:["team","training","events","attendance_central","members","helpers"]},
-            {id:5,name:"Schiedsrichterwesen",farbe:"#06B6D4",beschreibung:"Spielplan, Koordination",module:["schedule","training","docs"]},
-          ]).map(g=>{
+          {(gruppen.length>0?gruppen:FALLBACK_GRUPPEN).map(g=>{
             const gFunktionen=funktionen.filter(f=>f.gruppe_id===g.id||f.portal_gruppen?.id===g.id);
             const gTeams=gruppenTeams.filter(gt=>gt.gruppe_id===g.id).map(gt=>pvTeams.find(t=>t.id===gt.team_id)).filter(Boolean);
             const isOpen=selectedGruppe?.id===g.id;
             const moduleLabels=(g.module||[]).map(k=>ALLE_MODULE.find(m=>m.key===k)?.label||k);
             return(
               <div key={g.id} style={{
-                borderRadius:14,border:`1.5px solid ${isOpen?g.farbe:"var(--border)"}`,
+                borderRadius:14,border:`1.5px solid ${isOpen?g.farbe||"var(--border)":"var(--border)"}`,
                 overflow:"hidden",
-                background:isOpen?g.farbe+"08":"var(--surface)",
+                background:isOpen?(g.farbe||"#888")+"08":"var(--surface)",
                 transition:"all 0.15s"
               }}>
                 {/* Gruppen-Header */}
                 <div style={{display:"flex",alignItems:"center",gap:0}}>
                   {/* Farbstreifen */}
-                  <div style={{width:4,alignSelf:"stretch",background:g.farbe,flexShrink:0}}/>
+                  <div style={{width:4,alignSelf:"stretch",background:g.farbe||"#888",flexShrink:0}}/>
                   <div onClick={()=>setSelectedGruppe(isOpen?null:g)}
                     style={{flex:1,padding:"14px 16px",cursor:"pointer",minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
                       <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{g.name}</span>
-                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:g.farbe+"20",color:g.farbe,fontWeight:600}}>
+                      <span style={{fontSize:11,padding:"2px 8px",borderRadius:6,background:(g.farbe||"#888")+"20",color:g.farbe||"#888",fontWeight:600}}>
                         {gFunktionen.length} Funktion{gFunktionen.length!==1?"en":""}
                       </span>
                       {gTeams.length>0&&(
@@ -61,13 +157,13 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
                     {g.beschreibung&&<div style={{fontSize:12,color:"var(--sub)",marginBottom:6}}>{g.beschreibung}</div>}
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                       {moduleLabels.map(ml=>(
-                        <span key={ml} style={{fontSize:11,padding:"2px 9px",borderRadius:8,background:g.farbe+"15",color:g.farbe}}>{ml}</span>
+                        <span key={ml} style={{fontSize:11,padding:"2px 9px",borderRadius:8,background:(g.farbe||"#888")+"15",color:g.farbe||"#888"}}>{ml}</span>
                       ))}
                     </div>
                   </div>
                   {/* Aktionen */}
                   <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 14px",flexShrink:0}}>
-                    <button onClick={e=>{e.stopPropagation();const existingTeams=gruppenTeams.filter(gt=>gt.gruppe_id===g.id).map(gt=>gt.team_id);setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6",modul_stufen:g.modul_stufen||{},teams:existingTeams});setShowGruppeForm(true);}}
+                    <button onClick={e=>{e.stopPropagation();const existingTeams=gruppenTeams.filter(gt=>gt.gruppe_id===g.id).map(gt=>gt.team_id).filter((id): id is number => id!==null);setEditGruppe(g);setGruppeForm({name:g.name,beschreibung:g.beschreibung||"",module:g.module||[],farbe:g.farbe||"#8B5CF6",modul_stufen:g.modul_stufen||{},teams:existingTeams});setShowGruppeForm(true);}}
                       style={{width:30,height:30,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
                       <TI n="edit" size={13}/>
                     </button>
@@ -79,14 +175,14 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
 
                 {/* Expandierte Funktionen */}
                 {isOpen&&(
-                  <div style={{borderTop:`1px solid ${g.farbe}30`,background:"var(--surface2)"}}>
+                  <div style={{borderTop:`1px solid ${(g.farbe||"#888")}30`,background:"var(--surface2)"}}>
                     {/* Funktionen-Header */}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px 6px"}}>
                       <SectionLabel style={{marginBottom:0}}>
                         Funktionen
                       </SectionLabel>
                       <button onClick={()=>{setEditFunktion(null);setFunktionForm({name:"",beschreibung:"",gruppe_id:g.id,module_override:[],teams:[],filter:{}});setShowFunktionForm(true);}}
-                        style={{padding:"4px 12px",borderRadius:7,border:`1px solid ${g.farbe}`,background:g.farbe+"15",color:g.farbe,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
+                        style={{padding:"4px 12px",borderRadius:7,border:`1px solid ${g.farbe||"#888"}`,background:(g.farbe||"#888")+"15",color:g.farbe||"#888",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
                         + Funktion hinzufügen
                       </button>
                     </div>
@@ -105,24 +201,24 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
                         }}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
                             <span style={{fontWeight:600,fontSize:14,color:"var(--text)"}}>{f.name}</span>
-                            <button onClick={()=>{setEditFunktion(f);setFunktionForm({name:f.name,beschreibung:f.beschreibung||"",gruppe_id:f.gruppe_id||g.id,module_override:f.module_override||[],teams:f.teams||[],filter:f.filter||{}});setShowFunktionForm(true);}}
+                            <button onClick={()=>{setEditFunktion(f);setFunktionForm({name:f.name,beschreibung:f.beschreibung||"",gruppe_id:f.gruppe_id||g.id,module_override:f.module_override||[],teams:f.teams||[],filter:f.filter||{},stufe_override:f.stufe_override||{}});setShowFunktionForm(true);}}
                               style={{width:26,height:26,borderRadius:7,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)",flexShrink:0}}>
                               <TI n="edit" size={12}/>
                             </button>
                           </div>
                           {f.beschreibung&&<div style={{fontSize:11,color:"var(--sub)",marginBottom:6}}>{f.beschreibung}</div>}
                           <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                            {f.module_override?.length>0
-                              ?f.module_override.map(m=>{const ml=ALLE_MODULE.find(x=>x.key===m);return(
+                            {(f.module_override?.length||0)>0
+                              ?f.module_override!.map(m=>{const ml=ALLE_MODULE.find(x=>x.key===m);return(
                                 <span key={m} style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"#3B82F615",color:"#3B82F6"}}>
                                   <TI n="arrow-narrow-right" size={9}/> {ml?.label||m}
                                 </span>
                               );})
                               :<span style={{fontSize:10,color:"var(--sub)",fontStyle:"italic"}}>alle Gruppen-Module</span>
                             }
-                            {f.teams?.length>0&&(
+                            {(f.teams?.length||0)>0&&(
                               <span style={{fontSize:10,padding:"1px 7px",borderRadius:6,background:"#F9731615",color:"#F97316"}}>
-                                {f.teams.length} Team{f.teams.length!==1?"s":""}
+                                {f.teams!.length} Team{f.teams!.length!==1?"s":""}
                               </span>
                             )}
                           </div>
@@ -162,7 +258,7 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5,display:"block"}}>Farbe</label>
                   <div style={{display:"flex",gap:5}}>
-                    {["#8B5CF6","#3B82F6","#22C55E","#F97316","#06B6D4","#EF4444","#F59E0B","#EC4899"].map(c=>(
+                    {GRUPPE_FARBEN.map(c=>(
                       <div key={c} onClick={()=>setGruppeForm(p=>({...p,farbe:c}))}
                         style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",
                           border:`3px solid ${gruppeForm.farbe===c?"var(--text)":"transparent"}`,
@@ -206,7 +302,6 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
                   {ALLE_MODULE.filter(m=>m.key!=="dashboard"&&m.key!=="portal").map(m=>{
                     const sel=(gruppeForm.module||[]).includes(m.key);
                     const stufe=(gruppeForm.modul_stufen||{})[m.key]||"lesen";
-                    const STUFEN=["lesen","schreiben","verwalten"];
                     return(
                       <div key={m.key} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,border:`1px solid ${sel?gruppeForm.farbe:"var(--border)"}`,background:sel?gruppeForm.farbe+"08":"transparent"}}>
                         {/* Modul aktivieren */}
@@ -241,34 +336,36 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
                 <button onClick={async()=>{
                   if(!gruppeForm.name.trim()) return;
                   const payload={name:gruppeForm.name.trim(),beschreibung:gruppeForm.beschreibung||"",module:gruppeForm.module||[],farbe:gruppeForm.farbe||"#8B5CF6",modul_stufen:gruppeForm.modul_stufen||{},aktiv:true};
-                  if(supabase){
-                    let gruppeId = editGruppe?.id;
+                  /* verein_id ist in portal_gruppen (und portal_gruppen_teams)
+                     NOT NULL — ohne fiel jede Neuanlage durch. */
+                  if(supabase&&vereinId){
+                    let gruppeId: number|undefined = editGruppe?.id;
                     if(editGruppe?.id){
                       const{error}=await supabase.from("portal_gruppen").update(payload).eq("id",editGruppe.id);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                     } else {
-                      const{data:newG,error}=await supabase.from("portal_gruppen").insert(payload).select().single();
+                      const{data:newG,error}=await supabase.from("portal_gruppen").insert({...payload,verein_id:vereinId}).select().single();
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                       gruppeId = newG?.id;
                     }
                     // Teams speichern
                     if(gruppeId){
                       await supabase.from("portal_gruppen_teams").delete().eq("gruppe_id",gruppeId);
-                      const teamRows=(gruppeForm.teams||[]).map(tid=>({gruppe_id:gruppeId,team_id:tid}));
+                      const teamRows=(gruppeForm.teams||[]).map(tid=>({gruppe_id:gruppeId!,team_id:tid,verein_id:vereinId}));
                       if(teamRows.length>0) await supabase.from("portal_gruppen_teams").insert(teamRows);
                       const{data:freshGt}=await supabase.from("portal_gruppen_teams").select("*");
-                      if(freshGt) setGruppenTeams(freshGt);
+                      if(freshGt) setGruppenTeams(freshGt);  // Schema-Row deckt GruppeTeam ab
                     }
                     /* Immer neu laden nach Speichern */
                     const{data:fresh}=await supabase.from("portal_gruppen").select("*").order("name");
-                    if(fresh) setGruppen(fresh);
+                    if(fresh) setGruppen(fresh as unknown as Gruppe[]); /* modul_stufen kommt als Json */
                   } else {
                     if(editGruppe){
                       setGruppen(prev=>{
                         const updated=prev.map(g=>g.id===editGruppe.id?{...g,...payload}:g);
                         return updated.length>0?updated:[{id:editGruppe.id,...payload}];
                       });
-                      if(selectedGruppe?.id===editGruppe.id) setSelectedGruppe(g=>({...g,...payload}));
+                      if(selectedGruppe?.id===editGruppe.id) setSelectedGruppe(g=>g?{...g,...payload}:g);
                     } else {
                       setGruppen(prev=>[...prev,{id:Date.now(),...payload}]);
                     }
@@ -290,7 +387,7 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                 <div>
                   <ModalTitle>{editFunktion?"Funktion bearbeiten":"Neue Funktion"}</ModalTitle>
-                  {selectedGruppe&&<div style={{fontSize:12,color:selectedGruppe.farbe,fontWeight:600,marginTop:2}}>in {selectedGruppe.name}</div>}
+                  {selectedGruppe&&<div style={{fontSize:12,color:selectedGruppe.farbe||"var(--sub)",fontWeight:600,marginTop:2}}>in {selectedGruppe.name}</div>}
                 </div>
                 <button onClick={()=>{setShowFunktionForm(false);setEditFunktion(null);}} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--sub)",lineHeight:1}}>×</button>
               </div>
@@ -327,8 +424,6 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
                     const m=ALLE_MODULE.find(x=>x.key===mk)||{key:mk,label:mk,icon:"circle"};
                     const gruppeStufe=(selectedGruppe?.modul_stufen||{})[mk]||"lesen";
                     const override=(funktionForm.stufe_override||{})[mk];
-                    const STUFEN=["lesen","schreiben","verwalten"];
-                    const STUFE_RANG={lesen:1,schreiben:2,verwalten:3};
                     return(
                       <div key={mk} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:8,border:"0.5px solid var(--border)"}}>
                         <TI n={m.icon||"circle"} size={13} style={{color:"var(--sub)",flexShrink:0}}/>
@@ -357,27 +452,29 @@ export function GruppenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileK
               <div style={{display:"flex",gap:10,paddingTop:4,borderTop:"1px solid var(--border)"}}>
                 <button onClick={async()=>{
                   if(!funktionForm.name.trim()) return;
+                  const gruppeId=funktionForm.gruppe_id||selectedGruppe?.id;
                   const payload={
                     name:funktionForm.name.trim(),
                     beschreibung:funktionForm.beschreibung||"",
-                    gruppe_id:funktionForm.gruppe_id||selectedGruppe?.id,
+                    gruppe_id:typeof gruppeId==="string"?Number(gruppeId)||null:gruppeId??null,
                     module_override:funktionForm.module_override||[],
                     stufe_override:funktionForm.stufe_override||{},
                     teams:funktionForm.teams||[],
                     filter:funktionForm.filter||{},
                     aktiv:true
                   };
-                  if(supabase){
+                  if(supabase&&vereinId){
                     if(editFunktion?.id){
                       const{error}=await supabase.from("portal_funktionen").update(payload).eq("id",editFunktion.id);
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                     } else {
-                      const{error}=await supabase.from("portal_funktionen").insert(payload);
+                      /* verein_id ist in portal_funktionen NOT NULL. */
+                      const{error}=await supabase.from("portal_funktionen").insert({...payload,verein_id:vereinId});
                       if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                     }
                     /* Immer neu laden nach Speichern */
                     const{data:fresh}=await supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe)").order("name");
-                    if(fresh) setFunktionen(fresh);
+                    if(fresh) setFunktionen(fresh as unknown as Funktion[]); /* filter/stufe_override kommen als Json */
                   } else {
                     if(editFunktion){
                       setFunktionen(prev=>prev.map(f=>f.id===editFunktion.id?{...f,...payload}:f));

@@ -7,7 +7,7 @@ import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT,
 import { TI } from "../icons.tsx";
 import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile, avColor, useConfirm, ConfirmDialog } from "../theme.ts";
 import { ModuleRechteTab } from "./portal/ModuleRechteTab.tsx";
-import { GruppenTab } from "./portal/GruppenTab.jsx";
+import { GruppenTab } from "./portal/GruppenTab.tsx";
 import { TeamModuleTab } from "./portal/TeamModuleTab.tsx";
 import { FeldvisTab } from "./portal/FeldvisTab.tsx";
 import { UsersTab } from "./portal/UsersTab.tsx";
@@ -588,7 +588,7 @@ function PortalverwaltungView(props){
           toggleModulGlobal={toggleModulGlobal} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} gruppen={gruppen} zugriffStufen={zugriffStufen} setZugriffStufen={setZugriffStufen} effZugriff={effZugriff} toggleModulRolle={toggleModulRolle} tab={tab} vereinId={vereinId}
         />
       <GruppenTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} vereinId={vereinId}
           isMobile={isMobile} mobileKachel={mobileKachel}
           gruppen={gruppen} setGruppen={setGruppen} funktionen={funktionen} setFunktionen={setFunktionen}
           pvTeams={pvTeams} gruppenTeams={gruppenTeams} setGruppenTeams={setGruppenTeams}
