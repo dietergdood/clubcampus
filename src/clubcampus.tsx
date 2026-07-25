@@ -26,7 +26,7 @@ import KaderModul from "./modules/KaderModul.jsx";
 import { HelferModul, HelpersList as HelpersListJs } from "./modules/HelferModul.jsx";
 import NachrichtenModulJs from "./modules/NachrichtenModul.jsx";
 import { PortalverwaltungView } from "./modules/PortalverwaltungModul.tsx";
-import { BusesView as BusesViewJs, MaterialView as MaterialViewJs, LockersView as LockersViewJs, MediaView as MediaViewJs, WikiView as WikiViewJs, DocsView as DocsViewJs, NewsView as NewsViewJs, AttendanceCentral as AttendanceCentralJs, ProfileView as ProfileViewJs } from "./modules/PlatzhalterModul.jsx";
+import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView } from "./modules/PlatzhalterModul.tsx";
 import type {
   Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
@@ -55,15 +55,6 @@ const TrainingsplanModul    = TrainingsplanModulJs    as unknown as JsComponent;
 const TeamsVerwaltungModul  = TeamsVerwaltungModulJs  as unknown as JsComponent;
 const HelpersList           = HelpersListJs           as unknown as JsComponent;
 const NachrichtenModul      = NachrichtenModulJs      as unknown as JsComponent;
-const BusesView             = BusesViewJs             as unknown as JsComponent;
-const MaterialView          = MaterialViewJs          as unknown as JsComponent;
-const LockersView           = LockersViewJs           as unknown as JsComponent;
-const MediaView             = MediaViewJs             as unknown as JsComponent;
-const WikiView              = WikiViewJs              as unknown as JsComponent;
-const DocsView              = DocsViewJs              as unknown as JsComponent;
-const NewsView              = NewsViewJs              as unknown as JsComponent;
-const AttendanceCentral     = AttendanceCentralJs     as unknown as JsComponent;
-const ProfileView           = ProfileViewJs           as unknown as JsComponent;
 
 /* Ebenfalls noch JS: TS liest die Initialwerte (null) als Typ. */
 const navTarget = NAV_TARGET as { tab: string|null; selectedSpiel: unknown };

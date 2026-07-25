@@ -1,16 +1,25 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus PlatzhalterModul — PlatzhalterModul.jsx
+   ClubCampus PlatzhalterModul — PlatzhalterModul.tsx
    Placeholder-Ansichten (werden durch echte Module ersetzt)
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GR, GB } from "../constants.ts";
+import { useState } from "react";
+import { GN, R, RL, BL, AM, BK, GB } from "../constants.ts";
 import { TI } from "../icons.tsx";
-import { useIsMobile, useTheme, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av , Tabs, STitle, Between, Col, H1, Row, Select} from "../theme.ts";
-import { BUSES, MATERIAL, LOCKERS, MEDIA, WIKI, NEWS, MEMBERS , USER_ACCOUNTS, ROSTER} from "../demoData.js";
+import { useTheme, InfoBox, Btn, Card, Chip, Stat, STitle, Between, H1, Select } from "../theme.ts";
+import { BUSES, MATERIAL, LOCKERS, MEDIA, WIKI, NEWS } from "../demoData.js";
 import { logAenderung } from "../domains/members/memberService.ts";
-import { getRole } from "./NavigationModul.jsx";
+import type { Account, DbUser, Mitglied, Sb } from "../types.ts";
 
-function BusesView({role,kannSchreiben,kannVerwalten}){
+/* Berechtigungsprädikate, wie sie usePermissions liefert */
+type KannFn = (modul: string) => boolean;
+
+interface BusesViewProps {
+  role?: string;
+  kannSchreiben?: KannFn;
+  kannVerwalten?: KannFn;
+}
+
+function BusesView(_props: BusesViewProps){
   const [showForm,setShowForm]=useState(false);
   return(
     <div>
@@ -54,7 +63,7 @@ function BusesView({role,kannSchreiben,kannVerwalten}){
 
 function MaterialView(){
   const [showForm,setShowForm]=useState(false);
-  const TC={Bestellung:BL,Defekt:R,Tenüs:GN,Mangel:AM};
+  const TC: Record<string,string>={Bestellung:BL,Defekt:R,Tenüs:GN,Mangel:AM};
   return(
     <div>
       <Between style={{marginBottom:18}}>
@@ -82,7 +91,7 @@ function MaterialView(){
             </tr>
           </thead>
           <tbody>
-            {MATERIAL.map((m,i)=>(
+            {MATERIAL.map((m)=>(
               <tr key={m.id} style={{borderTop:"0.5px solid var(--border)"}}>
                 <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.team} color={R}/></td>
                 <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={m.type} color={TC[m.type]||"#888"} bg={(TC[m.type]||"#888")+"18"}/></td>
@@ -99,13 +108,9 @@ function MaterialView(){
   );
 }
 
-/* ══════════════════════════════════════════
-   TEAMS VERWALTUNG (Admin)
-══════════════════════════════════════════ */
-
 function LockersView(){
   const START=7,END=22,H=24;
-  const fmt=v=>v%1===0?`${v}:00`:Math.floor(v)+":30";
+  const fmt=(v: number)=>v%1===0?`${v}:00`:Math.floor(v)+":30";
   return(
     <div>
       <h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Garderobenplan</h1>
@@ -143,7 +148,7 @@ function LockersView(){
 }
 
 function MediaView(){
-  const SC={Eingereicht:AM,"In Prüfung":BL,Freigegeben:GN,Veröffentlicht:"#7C3AED",Archiviert:"#888"};
+  const SC: Record<string,string>={Eingereicht:AM,"In Prüfung":BL,Freigegeben:GN,Veröffentlicht:"#7C3AED",Archiviert:"#888"};
   return(
     <div>
       <Between style={{marginBottom:18}}>
@@ -156,7 +161,7 @@ function MediaView(){
             <div>
               <div style={{display:"flex",gap:6,marginBottom:5,flexWrap:"wrap"}}>
                 <Chip text={m.cat} color={R}/>
-                {m.area.map((a,j)=><Chip key={j} text={a} color={BL}/>)}
+                {m.area.map((a: string,j: number)=><Chip key={j} text={a} color={BL}/>)}
               </div>
               <h3 style={{margin:"0 0 4px",fontSize:14,fontWeight:700}}>{m.title}</h3>
               <div className="cc-text-sm">{m.team} · {m.date} · {m.author}</div>
@@ -170,7 +175,7 @@ function MediaView(){
 }
 
 function WikiView(){
-  const CC={Trainer:R,Vereinsbus:BL,Spieltag:GN,"J+S":AM,Helfereinsatz:"#7C3AED",Kommunikation:"#888"};
+  const CC: Record<string,string>={Trainer:R,Vereinsbus:BL,Spieltag:GN,"J+S":AM,Helfereinsatz:"#7C3AED",Kommunikation:"#888"};
   return(
     <div>
       <H1 mb={18}>Wiki</H1>
@@ -195,7 +200,7 @@ function DocsView(){
     {name:"J+S Kursunterlagen",         type:"PDF", size:"5.2 MB",updated:"01.09.2024",area:"J+S"},
     {name:"Nutzungsregeln Vereinsbusse",type:"PDF", size:"0.2 MB",updated:"15.03.2026",area:"Vereinsbus"},
   ];
-  const TC={PDF:R,DOCX:BL,XLSX:GN};
+  const TC: Record<string,string>={PDF:R,DOCX:BL,XLSX:GN};
   return(
     <div>
       <H1 mb={18}>Dokumente</H1>
@@ -218,18 +223,26 @@ function DocsView(){
   );
 }
 
-function NewsView({role,meineTeams,kannVerwalten}){
-  const canCreate=kannVerwalten?kannVerwalten("media"):(["trainer","administrator","administration","funktionaer"].includes(role));
+interface NewsViewProps {
+  role?: string;
+  /* clubcampus leitet die Teams über filter(Boolean) ab, daher können
+     type-seitig undefined-Einträge drin sein — hier herausgefiltert. */
+  meineTeams?: (string | undefined)[];
+  kannVerwalten?: KannFn;
+}
+
+function NewsView({role,meineTeams,kannVerwalten}: NewsViewProps){
+  const canCreate=kannVerwalten?kannVerwalten("media"):(["trainer","administrator","administration","funktionaer"].includes(role||""));
 
   /* Determine which targets are visible for this role/team */
-  const myTeams=meineTeams||["Cc-Junioren"];
-  const isAdmin=["administrator","administration","funktionaer"].includes(role);
+  const myTeams: string[]=(meineTeams||["Cc-Junioren"]).filter((t): t is string=>!!t);
+  const isAdmin=["administrator","administration","funktionaer"].includes(role||"");
   const isTrainer=role==="trainer";
 
   const JUNIOREN_TEAMS=["Cc-Junioren","A-Junioren","Ba-Junioren","Bb-Junioren","Ca-Junioren","Da-Junioren","Db-Junioren","C-Juniorinnen","F-Juniorinnen","E-Juniorinnen","D-Juniorinnen"];
   const hasJunioren=myTeams.some(t=>JUNIOREN_TEAMS.includes(t));
 
-  const isVisible=(n)=>{
+  const isVisible=(n: {target: string})=>{
     if(isAdmin) return true;
     if(n.target==="Alle") return true;
     if(myTeams.includes(n.target)) return true;
@@ -302,27 +315,61 @@ function AttendanceCentral(){
   );
 }
 
-/* -- TRAININGSPLÄTZE VERWALTUNG -- */
+/* Pflichtfelder, die Eltern für ihre Kinder ausfüllen — alle Strings */
+interface KindForm {
+  geburtsdatum: string;
+  nationalitaet: string;
+  strasse: string;
+  plz: string;
+  ort: string;
+  telefon: string;
+  email: string;
+}
 
+const PFLICHT_FELDER: { k: keyof KindForm; l: string; type: string }[]=[
+  {k:"geburtsdatum",l:"Geburtsdatum",type:"date"},
+  {k:"nationalitaet",l:"Nationalität",type:"text"},
+  {k:"strasse",l:"Strasse",type:"text"},
+  {k:"plz",l:"PLZ",type:"text"},
+  {k:"ort",l:"Ort",type:"text"},
+  {k:"telefon",l:"Telefon",type:"tel"},
+  {k:"email",l:"E-Mail",type:"email"},
+];
 
-function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGeprueft,vereinId=null}){
+/* ⚠ teams und funktion sind keine Spalten in mitglieder (siehe MitgliedRoh
+   in memberMapper) — die Anzeige unten läuft konstant auf "-"/"Spieler". */
+type MitgliedAnzeige = Mitglied & { teams?: string[]; funktion?: string };
+
+interface ProfileViewProps {
+  role?: string;
+  myRosterId?: number | null;
+  account?: Account | null;
+  sb: Sb;
+  dbUser?: DbUser | null;
+  dbMitglieder?: Mitglied[];
+  onReload?: (() => void) | null;
+  onProfilGeprueft?: (() => void) | null;
+  vereinId?: string | null;
+}
+
+function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGeprueft,vereinId=null}: ProfileViewProps){
   const isEltern=role==="eltern";
   const [saving,setSaving]=useState(false);
-  const [msg,setMsg]=useState(null);
+  const [msg,setMsg]=useState<{ok:boolean;text:string}|null>(null);
 
   // Mein Mitglied-Eintrag (falls vorhanden)
-  const meinMitglied=dbMitglieder.find(m=>m.id===dbUser?.mitglied_id)||null;
+  const meinMitglied: MitgliedAnzeige|null=dbMitglieder.find(m=>m.id===dbUser?.mitglied_id)||null;
 
   // Kinder (bei Eltern): alle Mitglieder wo ich als Elternteil verknüpft bin
-  const kinder=isEltern
+  const kinder: MitgliedAnzeige[]=isEltern
     ?dbMitglieder.filter(m=>(m.eltern||[]).some(e=>e.benutzer_id===dbUser?.id))
     :[];
 
   // Formular-State für Kinder-Bearbeitung
-  const [kindForms,setKindForms]=useState({});
-  const [kindEdit,setKindEdit]=useState(null); // mitglied_id
+  const [kindForms,setKindForms]=useState<Record<number, KindForm>>({});
+  const [kindEdit,setKindEdit]=useState<number|null>(null); // mitglied_id
 
-  function getKindForm(k){
+  function getKindForm(k: Mitglied): KindForm{
     return kindForms[k.id]||{
       geburtsdatum:k.geburtsdatum||"",
       nationalitaet:k.nationalitaet||"",
@@ -334,10 +381,10 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
     };
   }
 
-  async function saveKind(kindId){
+  async function saveKind(kindId: number){
     if(!sb) return;
     setSaving(true); setMsg(null);
-    const form=kindForms[kindId]||{};
+    const form: Partial<KindForm>=kindForms[kindId]||{};
     const now=new Date().toISOString();
     const kind=dbMitglieder.find(m=>m.id===kindId);
     const {error}=await sb.from("mitglieder").update({
@@ -357,11 +404,10 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
       // Felder loggen die sich geändert haben
       if(vereinId && kind) {
         const geaendertVon = `${kind.vorname||""} ${kind.nachname||""}`.trim() || account?.email || "Mitglied";
-        const felder = ["geburtsdatum","nationalitaet","strasse","plz","ort","telefon","email"];
-        for(const f of felder) {
-          const alt = kind[f] || null;
+        for(const f of PFLICHT_FELDER.map(pf=>pf.k)) {
+          const alt = (kind as unknown as Record<string, unknown>)[f] ?? null;
           const neu = form[f] || null;
-          if(alt !== neu) logAenderung(sb, kindId, vereinId, f, alt, neu, geaendertVon);
+          if(alt !== neu) logAenderung(sb, kindId, vereinId, f, alt as string|null, neu, geaendertVon);
         }
       }
       setMsg({ok:true,text:"Gespeichert ✓"});
@@ -371,16 +417,6 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
     }
     setSaving(false);
   }
-
-  const PFLICHT_FELDER=[
-    {k:"geburtsdatum",l:"Geburtsdatum",type:"date"},
-    {k:"nationalitaet",l:"Nationalität",type:"text"},
-    {k:"strasse",l:"Strasse",type:"text"},
-    {k:"plz",l:"PLZ",type:"text"},
-    {k:"ort",l:"Ort",type:"text"},
-    {k:"telefon",l:"Telefon",type:"tel"},
-    {k:"email",l:"E-Mail",type:"email"},
-  ];
 
   return(
     <div>
@@ -404,7 +440,7 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
             {l:"Name",    v:dbUser?.name||account?.name||"-"},
             {l:"E-Mail",  v:dbUser?.email||"-"},
             {l:"Telefon", v:dbUser?.telefon||"-"},
-          ].map((x,i,arr)=>(
+          ].map((x,i)=>(
             <div key={i} className="cc-info-row">
               <span className="cc-info-key">{x.l}</span>
               <span className="cc-info-val">{x.v}</span>
@@ -419,7 +455,7 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
         {kinder.map((k)=>{
           const isEditing=kindEdit===k.id;
           const form=getKindForm(k);
-          const fehlend=PFLICHT_FELDER.filter(f=>!k[f.k]);
+          const fehlend=PFLICHT_FELDER.filter(f=>!(k as unknown as Record<string,unknown>)[f.k]);
           const vollstaendig=fehlend.length===0;
           return(
             <Card key={k.id}>
@@ -466,10 +502,10 @@ function ProfileView({role,myRosterId,account,sb,dbUser,dbMitglieder=[],onReload
                 </>
               ):(
                 <div>
-                  {PFLICHT_FELDER.map(({k:fk,l},i)=>(
+                  {PFLICHT_FELDER.map(({k:fk,l})=>(
                     <div key={fk} className="cc-info-row">
                       <span className="cc-info-key">{l}</span>
-                      <span className={k[fk]?"cc-info-val":"cc-info-val-empty"}>{k[fk]||"—"}</span>
+                      <span className={(k as unknown as Record<string,unknown>)[fk]?"cc-info-val":"cc-info-val-empty"}>{String((k as unknown as Record<string,unknown>)[fk]||"—")}</span>
                     </div>
                   ))}
                 </div>
@@ -556,23 +592,19 @@ function DataCheckView(){
   );
 }
 
+/* Vereinsfunktion mit optionalen Teams (aus portal_funktionen/-gruppen) */
+interface FunktionMitTeams {
+  aktiv?: boolean | null;
+  teams?: string[] | null;
+}
 
-/* ==========================================
-   PROFIL MODAL
-========================================== */
-/* ── DARK MODE ROW (für) ── */
-
-function getTeamsFromFunktionen(funktionen=[]){
-  const all=new Set();
+function getTeamsFromFunktionen(funktionen: FunktionMitTeams[]=[]): string[]{
+  const all=new Set<string>();
   funktionen.filter(f=>f?.aktiv!==false).forEach(f=>(f.teams||[]).forEach(t=>all.add(t)));
   return [...all];
 }
 
 /* Rückwärtskompatibilität */
+function getTeamsFromGruppen(gruppen: FunktionMitTeams[]=[]): string[]{ return getTeamsFromFunktionen(gruppen); }
 
-function getTeamsFromGruppen(gruppen=[]){ return getTeamsFromFunktionen(gruppen); }
-
-/* ==========================================
-   APP ROOT
-========================================== */
 export { AttendanceCentral, BusesView, DarkModeRow, DataCheckView, DocsView, LockersView, MaterialView, MediaView, NewsView, ProfileView, WikiView, getTeamsFromFunktionen, getTeamsFromGruppen };
