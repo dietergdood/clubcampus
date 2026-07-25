@@ -1,84 +1,118 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus PortalverwaltungModul — PortalverwaltungModul.jsx
+   ClubCampus — PortalverwaltungModul.tsx
    Portalverwaltung: Module, Berechtigungen, Benutzer, Aussehen
+   State-Container + zweistufige Navigation; die einzelnen Tabs liegen
+   unter modules/portal/.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.ts";
+import { BK, GN, R, RL } from "../constants.ts";
 import { TI } from "../icons.tsx";
-import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile, avColor, useConfirm, ConfirmDialog } from "../theme.ts";
+import { Chip, H1, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile, useConfirm } from "../theme.ts";
 import { ModuleRechteTab } from "./portal/ModuleRechteTab.tsx";
 import { GruppenTab } from "./portal/GruppenTab.tsx";
+import type { Gruppe, Funktion, GruppeFormular, FunktionFormular } from "./portal/GruppenTab.tsx";
 import { TeamModuleTab } from "./portal/TeamModuleTab.tsx";
 import { FeldvisTab } from "./portal/FeldvisTab.tsx";
+import type { FeldSichtbarkeit } from "./portal/FeldvisTab.tsx";
 import { UsersTab } from "./portal/UsersTab.tsx";
+import type { BenutzerZeile, BenutzerFunktion } from "./portal/UsersTab.tsx";
 import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.tsx";
+import type { MitgliedtypZeile, MitgliedtypFormular, RollePflichtfeld, MitgliedtypPflichtfeld } from "./portal/MitgliederKonfigTab.tsx";
 import { RollenTab } from "./portal/RollenTab.tsx";
+import type { RollenFormular } from "./portal/RollenTab.tsx";
 import { KaderRollenTab } from "./portal/KaderRollenTab.tsx";
+import type { KaderRolleZeile, KaderRolleFormular } from "./portal/KaderRollenTab.tsx";
 import { AussehenTab } from "./portal/AussehenTab.tsx";
 import { ApiTab } from "./portal/ApiTab.tsx";
+import type { ApiVerbindung } from "./portal/ApiTab.tsx";
 import { AuditTab } from "./portal/AuditTab.tsx";
+import type { SyncLog } from "./portal/AuditTab.tsx";
 import { DesignSystemTab } from "./portal/DesignSystemTab.tsx";
-import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ZUGRIFF_DEFAULT, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, KATEGORIEN, API_INFOS } from "./portal/portalUtils.ts";
+import { ZUGRIFF_ORDER, ZUGRIFF_DEFAULT, ROLLEN_MODULE_DEFAULT } from "./portal/portalUtils.ts";
+import type { ZugriffDefaultMap } from "./portal/portalUtils.ts";
+import type { AppTheme, ModuleAktiv, ModuleRechte, PortalRolle, Sb, SetState, Zugriffstufe } from "../types.ts";
+import type { KaderRolleDb } from "../domains/roles/roleUtils.ts";
 
-/* ── Geteilte Konstanten ── */
-const ROLES = {
-  administrator: {
-    label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
-    desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",
-    level:7
-  },
-  administration: {
-    label:"Administration", color:"var(--text)", bg:"#F5F5F5", icon:"briefcase",
-    desc:"Vereinsbüro: Stammdaten, Mitglieder, alle Teams, Exporte — kein System",
-    level:5
-  },
-  funktionaer: {
-    label:"Funktionär", color:"var(--text)", bg:"#F5F5F5", icon:"heart-handshake",
-    desc:"Module + Teams gemäss zugewiesener Gruppe/Funktion",
-    level:4
-  },
-  trainer: {
-    label:"Trainer", color:"var(--text)", bg:"#F5F5F5", icon:"ball-football",
-    desc:"Eigene Teams: Kader, Trainings, Anwesenheiten",
-    level:3
-  },
-  spieler: {
-    label:"Spieler", color:"var(--text)", bg:"#F5F5F5", icon:"target",
-    desc:"Eigenes Team lesen: Spielplan, Termine, Helfereinsätze",
-    level:2
-  },
-  eltern: {
-    label:"Eltern", color:"var(--text)", bg:"#F5F5F5", icon:"user",
-    desc:"Nur eigene Kinder: Termine, Anwesenheit, Abstimmungen",
-    level:1
-  },
-};
-const STUFE_RANG={lesen:1,schreiben:2,verwalten:3};
+type ZugriffStufenMap = Record<string, Record<string, Zugriffstufe>>;
 
-function PortalverwaltungView(props){
-  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen} = props;
+/* Zeile aus feldsichtbarkeit — feld_label liefert das Anzeige-Label */
+interface Feld {
+  feld_key: string;
+  feld_label?: string | null;
+  role: string;
+  sichtbar: boolean | null;
+}
+
+interface PvTeam {
+  id: number;
+  name: string;
+  kurzname?: string | null;
+}
+
+interface GruppeTeam {
+  gruppe_id: number | null;
+  team_id: number | null;
+}
+
+/* Ein Unter-Tab innerhalb einer Navigationskategorie */
+interface KatTab {
+  key: string;
+  label: string;
+  icon: string;
+}
+
+interface KatNav {
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+  bg: string;
+  tabs: KatTab[];
+}
+
+interface PortalverwaltungViewProps {
+  initialTab?: string;
+  moduleAktiv?: ModuleAktiv;
+  setModuleAktiv?: SetState<ModuleAktiv>;
+  moduleRechte?: ModuleRechte | null;
+  setModuleRechte?: SetState<ModuleRechte | null>;
+  sb?: Sb;
+  appTheme?: AppTheme | null;
+  setAppTheme: SetState<AppTheme>;
+  applyThemeCss?: ((theme: AppTheme) => void) | null;
+  vereinId?: string | null;
+  dbPortalRollen?: PortalRolle[];
+  onReloadRollen?: (() => void) | null;
+  dbKaderRollen?: KaderRolleDb[];
+  onReloadKaderRollen?: (() => void) | null;
+}
+
+function PortalverwaltungView(props: PortalverwaltungViewProps){
+  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase=null,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen} = props;
   const [confirm,confirmDialog]=useConfirm();
   const [tab,setTab]=useState(initialTab);
-  const [dbPortalRollen,setDbPortalRollen]=useState(externalRollen);
+  const [dbPortalRollen,setDbPortalRollen]=useState<PortalRolle[]>(externalRollen);
   useEffect(()=>{if(externalRollen.length>0)setDbPortalRollen(externalRollen);},[externalRollen]);
-  const [dbKaderRollen,setDbKaderRollen]=useState(externalKaderRollen);
-  useEffect(()=>{if(externalKaderRollen.length>0)setDbKaderRollen(externalKaderRollen);},[externalKaderRollen]);
-  const [kaderRolleForm,setKaderRolleForm]=useState({name:"",ist_trainer:false,sort_order:50});
-  const [editKaderRolle,setEditKaderRolle]=useState(null);
+  /* externalKaderRollen ist KaderRolleDb[] (Rollen-Ableitung, ohne id); die
+     kader_rollen-Zeilen tragen aber id, und die Tabelle wird beim Laden mit
+     genau diesen überschrieben. Deshalb intern als KaderRolleZeile geführt. */
+  const [dbKaderRollen,setDbKaderRollen]=useState<KaderRolleZeile[]>(externalKaderRollen as unknown as KaderRolleZeile[]);
+  useEffect(()=>{if(externalKaderRollen.length>0)setDbKaderRollen(externalKaderRollen as unknown as KaderRolleZeile[]);},[externalKaderRollen]);
+  const [kaderRolleForm,setKaderRolleForm]=useState<KaderRolleFormular>({name:"",ist_trainer:false,sort_order:50});
+  const [editKaderRolle,setEditKaderRolle]=useState<KaderRolleZeile|null>(null);
   const [showKaderRolleForm,setShowKaderRolleForm]=useState(false);
-  const [rollenForm,setRollenForm]=useState({name:"",label:"",prioritaet:50});
-  const [editRolle,setEditRolle]=useState(null);
+  const [rollenForm,setRollenForm]=useState<RollenFormular>({name:"",label:"",prioritaet:50});
+  const [editRolle,setEditRolle]=useState<PortalRolle|null>(null);
   const [showRolleForm,setShowRolleForm]=useState(false);
-  const [module,setModule]=useState([]);
 
   async function saveKaderRolle(){
     if(!kaderRolleForm.name.trim()) return;
-    const payload={name:kaderRolleForm.name.trim(),ist_trainer:!!kaderRolleForm.ist_trainer,sort_order:parseInt(kaderRolleForm.sort_order)||50,aktiv:true};
+    const payload={name:kaderRolleForm.name.trim(),ist_trainer:!!kaderRolleForm.ist_trainer,sort_order:Number(kaderRolleForm.sort_order)||50,aktiv:true};
     if(supabase){
       if(editKaderRolle?.id){
         await supabase.from("kader_rollen").update(payload).eq("id",editKaderRolle.id);
-      } else {
-        await supabase.from("kader_rollen").insert(payload);
+      } else if(vereinId){
+        await supabase.from("kader_rollen").insert({...payload,verein_id:vereinId});
       }
       const{data}=await supabase.from("kader_rollen").select("*").eq("aktiv",true).order("sort_order");
       if(data){setDbKaderRollen(data);if(onReloadKaderRollen)onReloadKaderRollen();}
@@ -86,7 +120,7 @@ function PortalverwaltungView(props){
     setShowKaderRolleForm(false);setEditKaderRolle(null);setKaderRolleForm({name:"",ist_trainer:false,sort_order:50});
   }
 
-  async function deleteKaderRolle(id){
+  async function deleteKaderRolle(id: number){
     const ok=await confirm({title:"Kader-Rolle löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
     if(!supabase||!ok) return;
     await supabase.from("kader_rollen").update({aktiv:false}).eq("id",id);
@@ -96,12 +130,12 @@ function PortalverwaltungView(props){
 
   async function saveRolle(){
     if(!rollenForm.name.trim()||!rollenForm.label.trim()) return;
-    const payload={name:rollenForm.name.trim(),label:rollenForm.label.trim(),prioritaet:parseInt(rollenForm.prioritaet)||50,aktiv:true};
+    const payload={name:rollenForm.name.trim(),label:rollenForm.label.trim(),prioritaet:Number(rollenForm.prioritaet)||50,aktiv:true};
     if(supabase){
       if(editRolle?.id){
         await supabase.from("portal_rollen").update(payload).eq("id",editRolle.id);
-      } else {
-        await supabase.from("portal_rollen").insert(payload);
+      } else if(vereinId){
+        await supabase.from("portal_rollen").insert({...payload,verein_id:vereinId});
       }
       const{data}=await supabase.from("portal_rollen").select("*").eq("aktiv",true).order("prioritaet");
       if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
@@ -109,7 +143,7 @@ function PortalverwaltungView(props){
     setShowRolleForm(false);setEditRolle(null);setRollenForm({name:"",label:"",prioritaet:50});
   }
 
-  async function deleteRolle(id){
+  async function deleteRolle(id: number){
     const ok=await confirm({title:"Rolle löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
     if(!supabase||!ok) return;
     await supabase.from("portal_rollen").update({aktiv:false}).eq("id",id);
@@ -117,37 +151,31 @@ function PortalverwaltungView(props){
     if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
   }
 
-  /* saveMitgliedtyp/deleteMitgliedtyp lagen frueher auch hier und wurden an
-     MitgliederKonfigTab gereicht — dort aber von gleichnamigen lokalen
-     Funktionen ueberschattet. Die Logik (inkl. verein_id-Fix) lebt jetzt im
-     Tab, die toten Parent-Kopien sind entfernt. */
-  const [moduleConfig,setModuleConfig]=useState({});
-  const [moduleBerechtigungen,setModuleBerechtigungen]=useState({});
-  const [felder,setFelder]=useState([]);
-  const [apiVerbindungen,setApiVerbindungen]=useState([]);
-  const [auditLogs,setAuditLogs]=useState([]);
+  const [felder,setFelder]=useState<Feld[]>([]);
+  const [apiVerbindungen,setApiVerbindungen]=useState<ApiVerbindung[]>([]);
+  const [auditLogs,setAuditLogs]=useState<SyncLog[]>([]);
   const [loading,setLoading]=useState(true);
   const [saveMsg,setSaveMsg]=useState("");
-  const [expandedModul,setExpandedModul]=useState(null);
-  const [benutzerListe,setBenutzerListe]=useState([]);
+  const [expandedModul,setExpandedModul]=useState<string|null>(null);
+  const [benutzerListe,setBenutzerListe]=useState<BenutzerZeile[]>([]);
   /* Gruppen & Funktionen */
-  const [gruppen,setGruppen]=useState([]);
-  const [funktionen,setFunktionen]=useState([]);
-  const [pvTeams,setPvTeams]=useState([]);
-  const [gruppenTeams,setGruppenTeams]=useState([]);
-  const [rollePflichtfelder,setRollePflichtfelder]=useState([]);
-  const [mitgliedtypPflichtfelder,setMitgliedtypPflichtfelder]=useState([]);
-  const [dbMitgliedtypen,setDbMitgliedtypen]=useState([]);
+  const [gruppen,setGruppen]=useState<Gruppe[]>([]);
+  const [funktionen,setFunktionen]=useState<Funktion[]>([]);
+  const [pvTeams,setPvTeams]=useState<PvTeam[]>([]);
+  const [gruppenTeams,setGruppenTeams]=useState<GruppeTeam[]>([]);
+  const [rollePflichtfelder,setRollePflichtfelder]=useState<RollePflichtfeld[]>([]);
+  const [mitgliedtypPflichtfelder,setMitgliedtypPflichtfelder]=useState<MitgliedtypPflichtfeld[]>([]);
+  const [dbMitgliedtypen,setDbMitgliedtypen]=useState<MitgliedtypZeile[]>([]);
   const [showMitgliedtypForm,setShowMitgliedtypForm]=useState(false);
-  const [editMitgliedtyp,setEditMitgliedtyp]=useState(null);
-  const [mitgliedtypForm,setMitgliedtypForm]=useState({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""}); // portal_gruppen_teams
-  const [selectedGruppe,setSelectedGruppe]=useState(null);
+  const [editMitgliedtyp,setEditMitgliedtyp]=useState<MitgliedtypZeile|null>(null);
+  const [mitgliedtypForm,setMitgliedtypForm]=useState<MitgliedtypFormular>({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""});
+  const [selectedGruppe,setSelectedGruppe]=useState<Gruppe|null>(null);
   const [showGruppeForm,setShowGruppeForm]=useState(false);
   const [showFunktionForm,setShowFunktionForm]=useState(false);
-  const [editGruppe,setEditGruppe]=useState(null);
-  const [editFunktion,setEditFunktion]=useState(null);
-  const [gruppeForm,setGruppeForm]=useState({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{},teams:[]});
-  const [funktionForm,setFunktionForm]=useState({name:"",beschreibung:"",gruppe_id:"",module_override:[],teams:[],filter:{},stufe_override:{}});
+  const [editGruppe,setEditGruppe]=useState<Gruppe|null>(null);
+  const [editFunktion,setEditFunktion]=useState<Funktion|null>(null);
+  const [gruppeForm,setGruppeForm]=useState<GruppeFormular>({name:"",beschreibung:"",module:[],farbe:"#8B5CF6",modul_stufen:{},teams:[]});
+  const [funktionForm,setFunktionForm]=useState<FunktionFormular>({name:"",beschreibung:"",gruppe_id:"",module_override:[],teams:[],filter:{},stufe_override:{}});
   /* Module & Rechte View-Toggle */
   const [moduleViewMode,setModuleViewMode]=useState("modul");
   const [moduleDirty,setModuleDirty]=useState(false);
@@ -156,13 +184,9 @@ function PortalverwaltungView(props){
   const theme=appTheme||THEME_DEFAULT_STATIC;
   const themeRef=useRef(theme);
   themeRef.current=theme;
-  const setTheme=(updater)=>{
-    const newTheme=typeof updater==="function"?updater(theme):updater;
-    setAppTheme(newTheme);
-  };
   const [themeDirty,setThemeDirty]=useState(false);
 
-  function updateTheme(key,val){
+  function updateTheme(key: keyof AppTheme,val: string|null){
     const updated={...themeRef.current,[key]:val};
     themeRef.current=updated;
     setAppTheme(updated);
@@ -213,13 +237,13 @@ function PortalverwaltungView(props){
       setThemeDirty(false);
     }catch(err){
       console.error("[saveTheme]",err);
-      setSaveMsg("Fehler: "+err.message);
+      setSaveMsg("Fehler: "+(err instanceof Error?err.message:String(err)));
       setTimeout(()=>setSaveMsg(""),4000);
     }
   }
   /* moduleAktiv + moduleRechte kommen als Props von App */
 
-  const KATEGORIEN_NAV=[
+  const KATEGORIEN_NAV: KatNav[]=[
     {
       key:"berechtigungen", label:"Berechtigungen", icon:"shield-lock", color:"#3B82F6", bg:"#EFF6FF",
       tabs:[
@@ -254,36 +278,36 @@ function PortalverwaltungView(props){
     },
   ];
   /* Aktive Kategorie aus Tab ableiten */
-  const getKatForTab=(t)=>KATEGORIEN_NAV.find(k=>k.tabs.some(x=>x.key===t))||KATEGORIEN_NAV[0];
+  const getKatForTab=(t: string)=>KATEGORIEN_NAV.find(k=>k.tabs.some(x=>x.key===t))||KATEGORIEN_NAV[0];
   const [aktiveKat, setAktiveKat]=useState(()=>getKatForTab(initialTab).key);
-  const [mobileKachel, setMobileKachel]=useState(null); // null = Landingseite
+  const [mobileKachel, setMobileKachel]=useState<string|null>(null); // null = Landingseite
   const isMobile=useIsMobile();
 
   const ROLLEN=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["administrator","administration","funktionaer","trainer","spieler","eltern","mitglied","supporter"];
-  const ROLLEN_LABELS={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"};
+  const ROLLEN_LABELS: Record<string,string>={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"};
 
 
   /* Effektive Zugriffsstufe: custom oder Default */
-  const [zugriffStufen,setZugriffStufen]=useState(()=>{
+  const [zugriffStufen,setZugriffStufen]=useState<ZugriffStufenMap|null>(()=>{
     try{const s=localStorage.getItem("fch-zugriff-stufen");return s?JSON.parse(s):null;}catch{return null;}
   });
-  const effZugriff=zugriffStufen||ZUGRIFF_DEFAULT;
+  const effZugriff: Record<string, ZugriffDefaultMap>=zugriffStufen||ZUGRIFF_DEFAULT;
 
-  function getZugriff(rolle,modulKey){
+  function getZugriff(rolle: string,modulKey: string): Zugriffstufe|null {
     if(!effRechte[rolle]?.includes(modulKey)) return null;
-    return effZugriff[rolle]?.[modulKey]||effZugriff[rolle]?._all||"lesen";
+    return (effZugriff[rolle]?.[modulKey]||effZugriff[rolle]?._all||"lesen") as Zugriffstufe;
   }
 
-  function setZugriffStufe(rolle,modulKey,stufe){
+  function setZugriffStufe(rolle: string,modulKey: string,stufe: Zugriffstufe){
     setZugriffStufen(prev=>{
       const base=prev||ZUGRIFF_DEFAULT;
-      const neu={...base,[rolle]:{...(base[rolle]||{}),[modulKey]:stufe}};
+      const neu: ZugriffStufenMap={...base,[rolle]:{...(base[rolle]||{}),[modulKey]:stufe}};
       try{localStorage.setItem("fch-zugriff-stufen",JSON.stringify(neu));}catch{}
       return neu;
     });
   }
 
-  function cycleZugriff(rolle,modulKey){
+  function cycleZugriff(rolle: string,modulKey: string){
     const cur=getZugriff(rolle,modulKey)||"lesen";
     const idx=ZUGRIFF_ORDER.indexOf(cur);
     if(idx===ZUGRIFF_ORDER.length-1){
@@ -333,7 +357,7 @@ function PortalverwaltungView(props){
             /* Funktionen separat laden */
             const{data:bfData}=await supabase.from("benutzer_funktionen")
               .select("benutzer_id, portal_funktionen(id,name,portal_gruppen(name,farbe))");
-            const bfMap={};
+            const bfMap: Record<string, BenutzerFunktion[]>={};
             (bfData||[]).forEach(bf=>{
               if(!bfMap[bf.benutzer_id]) bfMap[bf.benutzer_id]=[];
               if(bf.portal_funktionen) bfMap[bf.benutzer_id].push(bf.portal_funktionen);
@@ -342,8 +366,8 @@ function PortalverwaltungView(props){
           } else if(benuR.error){
             console.warn("[FCH] benutzer laden:", benuR.error.message);
           }
-          if(gruppenR.data) setGruppen(gruppenR.data);
-          if(funktionenR.data) setFunktionen(funktionenR.data);
+          if(gruppenR.data) setGruppen(gruppenR.data as unknown as Gruppe[]);
+          if(funktionenR.data) setFunktionen(funktionenR.data as unknown as Funktion[]);
           if(teamsR.data) setPvTeams(teamsR.data);
           if(gtR.data) setGruppenTeams(gtR.data);
           // Pflichtfelder laden
@@ -357,22 +381,22 @@ function PortalverwaltungView(props){
           if(mtData) setDbMitgliedtypen(mtData);
           /* module_config → moduleAktiv State */
           if(mcR.data&&mcR.data.length>0&&setModuleAktiv){
-            const ma={};
+            const ma: ModuleAktiv={};
             mcR.data.forEach(r=>{ma[r.modul]=r.aktiv!==false;});
             setModuleAktiv(ma);
             try{localStorage.setItem("fch-module-aktiv",JSON.stringify(ma));}catch{}
           }
           /* modul_rechte → moduleRechte State */
           if(mrR.data&&mrR.data.length>0&&setModuleRechte){
-            const mr={};
-            const zs={};
+            const mr: ModuleRechte={};
+            const zs: ZugriffStufenMap={};
             mrR.data.forEach(r=>{
               if(!mr[r.rolle]) mr[r.rolle]=[];
               if(r.hat_zugriff){
                 mr[r.rolle].push(r.modul);
                 if(r.stufe&&r.stufe!=="lesen"){
                   if(!zs[r.rolle]) zs[r.rolle]={};
-                  zs[r.rolle][r.modul]=r.stufe;
+                  zs[r.rolle][r.modul]=r.stufe as Zugriffstufe;
                 }
               }
             });
@@ -384,65 +408,51 @@ function PortalverwaltungView(props){
             }
           }
         }
-      }catch(e){console.warn("[FCH] Portalverwaltung laden:",e.message);}
+      }catch(e){console.warn("[FCH] Portalverwaltung laden:",e instanceof Error?e.message:e);}
       setLoading(false);
     })();
   },[]);
 
-  async function toggleModulAktiv(modulId,aktiv){
-    if(!supabase) return;
-    await supabase.from("module_config").upsert({modul_id:modulId,active,updated_by:supabase.auth.getUser?.()?.id});
-    setModuleConfig(prev=>({...prev,[modulId]:{...prev[modulId],aktiv}}));
-    setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
-  }
-
-  async function toggleBerechtigung(modulId,rolle,feld,wert){
-    if(!supabase) return;
-    const curr=moduleBerechtigungen[modulId]?.[rolle]||{};
-    const update={modul_id:modulId,rolle,...curr,[feld]:wert};
-    await supabase.from("module_berechtigungen").upsert(update);
-    setModuleBerechtigungen(prev=>({
-      ...prev,
-      [modulId]:{...prev[modulId],[rolle]:{...curr,[feld]:wert}}
-    }));
-    setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
-  }
-
-  async function toggleFeld(feldKey,rolle,sichtbar){
-    if(!supabase) return;
-    /* Die Kurzschreibweise `role` griff auf einen Bezeichner zu, den es hier
-       nicht gibt — der Parameter heisst `rolle`. Das Umschalten der
-       Feldsichtbarkeit lief dadurch in einen ReferenceError. */
-    await supabase.from("feldsichtbarkeit").upsert({feld_key:feldKey,role:rolle,sichtbar},{onConflict:"feld_key,role"});
+  async function toggleFeld(feldKey: string,rolle: string,sichtbar: boolean){
+    /* verein_id ist in feldsichtbarkeit NOT NULL, feld_label ebenso — beides
+       fehlte hier. (feldsichtbarkeit wird aktuell nie geladen, felder bleibt
+       leer, daher ist die Toggle-UI ohnehin unerreichbar — aber der Pfad ist
+       jetzt wenigstens korrekt.)
+       Zudem: die Kurzschreibweise `role` griff früher auf einen Bezeichner
+       zu, den es hier nicht gibt — der Parameter heisst `rolle`. */
+    if(!supabase||!vereinId) return;
+    const feldLabel=felder.find(f=>f.feld_key===feldKey)?.feld_label||feldKey;
+    await supabase.from("feldsichtbarkeit").upsert({feld_key:feldKey,role:rolle,sichtbar,feld_label:feldLabel,verein_id:vereinId},{onConflict:"feld_key,role"});
     setFelder(prev=>prev.map(f=>f.feld_key===feldKey&&f.role===rolle?{...f,sichtbar}:f));
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
 
-  async function updateBenutzerRolle(id,role){
+  async function updateBenutzerRolle(id: string,role: string){
     if(!supabase) return;
     await supabase.from("benutzer").update({role}).eq("id",id);
     // mitglieder.rolle synchron halten
     const {data:b}=await supabase.from("benutzer").select("mitglied_id").eq("id",id).maybeSingle();
     if(b?.mitglied_id) await supabase.from("mitglieder").update({rolle:role}).eq("id",b.mitglied_id);
-    setBenutzerListe(prev=>prev.map(b=>b.id===id?{...b,role}:b));
+    setBenutzerListe(prev=>prev.map(u=>u.id===id?{...u,role}:u));
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
 
-  function toggleModulGlobal(key){
+  function toggleModulGlobal(key: string){
     if(!setModuleAktiv) return;
     setModuleAktiv(prev=>{
       const neu={...prev,[key]:prev[key]===false?true:false};
       try{localStorage.setItem("fch-module-aktiv",JSON.stringify(neu));}catch{}
-      /* In Supabase speichern */
-      if(supabase) supabase.from("module_config")
-        .upsert({modul:key,aktiv:neu[key]!==false},{onConflict:"modul"})
+      /* In Supabase speichern — verein_id ist in module_config NOT NULL und
+         fehlte hier, das Upsert-Insert fiel durch. */
+      if(supabase&&vereinId) supabase.from("module_config")
+        .upsert({modul:key,aktiv:neu[key]!==false,verein_id:vereinId},{onConflict:"modul"})
         .then(({error})=>{ if(error) console.warn("[FCH] module_config:", error.message); });
       return neu;
     });
     setModuleDirty(true); setSaveMsg("Ungespeichert");
   }
 
-  function toggleModulRolle(modulKey, rolle){
+  function toggleModulRolle(modulKey: string, rolle: string){
     if(!setModuleRechte) return;
     setModuleRechte(prev=>{
       const base=prev||ROLLEN_MODULE_DEFAULT;
@@ -456,17 +466,12 @@ function PortalverwaltungView(props){
   }
 
   /* Effektive Rechte: editierte oder Default */
-  const effRechte=moduleRechte||ROLLEN_MODULE_DEFAULT;
+  const effRechte: Record<string,string[]>=moduleRechte||ROLLEN_MODULE_DEFAULT;
 
-  const moduleNachKat=KATEGORIEN.reduce(function(acc,k){
-    acc[k]=module.filter(m=>m.category===k);
-    return acc;
-  },{});
-
-  const felderNachKey={};
+  const felderNachKey: Record<string, FeldSichtbarkeit>={};
   felder.forEach(f=>{
     if(!felderNachKey[f.feld_key]) felderNachKey[f.feld_key]={label:f.feld_label||f.feld_key,rollen:{}};
-    felderNachKey[f.feld_key].rollen[f.role]=f.sichtbar;
+    felderNachKey[f.feld_key].rollen[f.role]=!!f.sichtbar;
   });
 
   return(
@@ -572,23 +577,21 @@ function PortalverwaltungView(props){
 
       {loading&&(!isMobile||mobileKachel!==null)&&<div style={{padding:40,textAlign:"center",color:"var(--sub)",fontSize:14}}>Wird geladen…</div>}
 
-      {/* ── TAB: MODULE & RECHTE ── */}
-
       {/* ── TAB COMPONENTS ── */}
       <ModuleRechteTab
           supabase={supabase} loading={loading} setSaveMsg={setSaveMsg}
           isMobile={isMobile} mobileKachel={mobileKachel}
           moduleAktiv={moduleAktiv}
-          moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}
+          moduleRechte={moduleRechte??null} setModuleRechte={setModuleRechte??(()=>{})}
           expandedModul={expandedModul} setExpandedModul={setExpandedModul}
           moduleViewMode={moduleViewMode} setModuleViewMode={setModuleViewMode}
           moduleDirty={moduleDirty} setModuleDirty={setModuleDirty}
           effRechte={effRechte}
           getZugriff={getZugriff} cycleZugriff={cycleZugriff}
-          toggleModulGlobal={toggleModulGlobal} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} gruppen={gruppen} zugriffStufen={zugriffStufen} setZugriffStufen={setZugriffStufen} effZugriff={effZugriff} toggleModulRolle={toggleModulRolle} tab={tab} vereinId={vereinId}
+          toggleModulGlobal={toggleModulGlobal} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} gruppen={gruppen} zugriffStufen={zugriffStufen} setZugriffStufen={setZugriffStufen} effZugriff={effZugriff} toggleModulRolle={toggleModulRolle} tab={tab} vereinId={vereinId??null}
         />
       <GruppenTab
-          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} vereinId={vereinId}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} vereinId={vereinId??null}
           isMobile={isMobile} mobileKachel={mobileKachel}
           gruppen={gruppen} setGruppen={setGruppen} funktionen={funktionen} setFunktionen={setFunktionen}
           pvTeams={pvTeams} gruppenTeams={gruppenTeams} setGruppenTeams={setGruppenTeams}
@@ -601,7 +604,7 @@ function PortalverwaltungView(props){
           funktionForm={funktionForm} setFunktionForm={setFunktionForm} tab={tab}
         />
       <TeamModuleTab
-          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab} vereinId={vereinId}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab} vereinId={vereinId??null}
         />
       <FeldvisTab
           loading={loading}
@@ -612,7 +615,7 @@ function PortalverwaltungView(props){
           isMobile={isMobile} mobileKachel={mobileKachel}
           benutzerListe={benutzerListe} setBenutzerListe={setBenutzerListe}
           updateBenutzerRolle={updateBenutzerRolle} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} funktionen={funktionen} tab={tab}
-          vereinId={vereinId}
+          vereinId={vereinId??null}
         />
       <MitgliederKonfigTab
           supabase={supabase} loading={loading}
@@ -624,7 +627,7 @@ function PortalverwaltungView(props){
           showMitgliedtypForm={showMitgliedtypForm} setShowMitgliedtypForm={setShowMitgliedtypForm}
           editMitgliedtyp={editMitgliedtyp} setEditMitgliedtyp={setEditMitgliedtyp}
           mitgliedtypForm={mitgliedtypForm} setMitgliedtypForm={setMitgliedtypForm}
-          tab={tab} vereinId={vereinId}
+          tab={tab} vereinId={vereinId??null}
         />
       <RollenTab
           loading={loading}
@@ -647,7 +650,7 @@ function PortalverwaltungView(props){
           isMobile={isMobile} mobileKachel={mobileKachel}
           theme={theme} updateTheme={updateTheme} saveTheme={saveTheme}
           setThemeDirty={setThemeDirty} setAppTheme={setAppTheme}
-          vereinId={vereinId} applyTheme={applyTheme} tab={tab}
+          vereinId={vereinId??null} applyTheme={applyTheme} tab={tab}
         />
       <ApiTab
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}
@@ -662,9 +665,6 @@ function PortalverwaltungView(props){
           tab={tab}
         />
 
-      {/* ── DESIGN TOKENS TABS (inline) ── */}
-
-      {/* ── TAB: DESIGN-SYSTEM ── */}
       {confirmDialog}
     </div>
   );

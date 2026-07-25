@@ -683,7 +683,7 @@ function FieldVisView(){
    Tabs: Module & Rechte | Benutzer & Rollen | Feldsichtbarkeit |
          API-Verbindungen | Audit-Logs
    ══════════════════════════════════════════════════════════════════ */
-/* PortalverwaltungModul via ./PortalverwaltungModul.jsx */
+/* PortalverwaltungModul via ./PortalverwaltungModul.tsx */
 
 function ProfileView({role,myRosterId,account}){
   const isEltern=role==="eltern";
