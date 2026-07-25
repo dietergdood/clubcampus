@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { Btn, Card, Chip, Col, H1, H2, InfoBox, Input, LOGO_B64, ModalOrSheet, ModalTitle, Row, STitle, SectionLabel, Select, Stat, Sub, Av, Tabs, Label, THEME_DEFAULT_STATIC, darkenHex, hexToRgba, useIsMobile, avColor, useConfirm, ConfirmDialog } from "../theme.ts";
-import { ModuleRechteTab } from "./portal/ModuleRechteTab.jsx";
+import { ModuleRechteTab } from "./portal/ModuleRechteTab.tsx";
 import { GruppenTab } from "./portal/GruppenTab.jsx";
 import { TeamModuleTab } from "./portal/TeamModuleTab.tsx";
 import { FeldvisTab } from "./portal/FeldvisTab.tsx";
@@ -576,17 +576,16 @@ function PortalverwaltungView(props){
 
       {/* ── TAB COMPONENTS ── */}
       <ModuleRechteTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg}
           isMobile={isMobile} mobileKachel={mobileKachel}
-          module={module} moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv}
+          moduleAktiv={moduleAktiv}
           moduleRechte={moduleRechte} setModuleRechte={setModuleRechte}
-          moduleConfig={moduleConfig} moduleBerechtigungen={moduleBerechtigungen}
           expandedModul={expandedModul} setExpandedModul={setExpandedModul}
           moduleViewMode={moduleViewMode} setModuleViewMode={setModuleViewMode}
           moduleDirty={moduleDirty} setModuleDirty={setModuleDirty}
-          ALLE_MODULE={ALLE_MODULE} effRechte={effRechte}
-          getZugriff={getZugriff} setZugriffStufe={setZugriffStufe} cycleZugriff={cycleZugriff}
-          toggleModulGlobal={toggleModulGlobal} toggleBerechtigung={toggleBerechtigung} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} gruppen={gruppen} zugriffStufen={zugriffStufen} setZugriffStufen={setZugriffStufen} effZugriff={effZugriff} toggleModulRolle={toggleModulRolle} tab={tab}
+          effRechte={effRechte}
+          getZugriff={getZugriff} cycleZugriff={cycleZugriff}
+          toggleModulGlobal={toggleModulGlobal} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} gruppen={gruppen} zugriffStufen={zugriffStufen} setZugriffStufen={setZugriffStufen} effZugriff={effZugriff} toggleModulRolle={toggleModulRolle} tab={tab} vereinId={vereinId}
         />
       <GruppenTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
