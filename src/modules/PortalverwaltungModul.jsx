@@ -11,7 +11,7 @@ import { GruppenTab } from "./portal/GruppenTab.jsx";
 import { TeamModuleTab } from "./portal/TeamModuleTab.tsx";
 import { FeldvisTab } from "./portal/FeldvisTab.tsx";
 import { UsersTab } from "./portal/UsersTab.tsx";
-import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.jsx";
+import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.tsx";
 import { RollenTab } from "./portal/RollenTab.tsx";
 import { KaderRollenTab } from "./portal/KaderRollenTab.tsx";
 import { AussehenTab } from "./portal/AussehenTab.tsx";
@@ -117,30 +117,10 @@ function PortalverwaltungView(props){
     if(data){setDbPortalRollen(data);if(onReloadRollen)onReloadRollen();}
   }
 
-  async function saveMitgliedtyp(){
-    if(!mitgliedtypForm.name.trim()) return;
-    const payload={name:mitgliedtypForm.name.trim(),beitragsinfo:mitgliedtypForm.beitragsinfo||"",hauptkontakt_pflicht:!!mitgliedtypForm.hauptkontakt_pflicht,standard_rolle:mitgliedtypForm.standard_rolle||null,aktiv:true};
-    if(supabase){
-      if(editMitgliedtyp?.id){
-        await supabase.from("mitgliedtypen").update(payload).eq("id",editMitgliedtyp.id);
-      } else {
-        const maxSort=Math.max(0,...dbMitgliedtypen.map(t=>t.sort_order||0));
-        await supabase.from("mitgliedtypen").insert({...payload,sort_order:maxSort+1});
-      }
-      const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
-      if(data) setDbMitgliedtypen(data);
-    }
-    setShowMitgliedtypForm(false); setEditMitgliedtyp(null);
-    setMitgliedtypForm({name:"",beitragsinfo:"",hauptkontakt_pflicht:false,standard_rolle:""});
-  }
-
-  async function deleteMitgliedtyp(id){
-    const ok=await confirm({title:"Mitgliedtyp löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
-    if(!supabase||!ok) return;
-    await supabase.from("mitgliedtypen").update({aktiv:false}).eq("id",id);
-    const{data}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
-    if(data) setDbMitgliedtypen(data);
-  }
+  /* saveMitgliedtyp/deleteMitgliedtyp lagen frueher auch hier und wurden an
+     MitgliederKonfigTab gereicht — dort aber von gleichnamigen lokalen
+     Funktionen ueberschattet. Die Logik (inkl. verein_id-Fix) lebt jetzt im
+     Tab, die toten Parent-Kopien sind entfernt. */
   const [moduleConfig,setModuleConfig]=useState({});
   const [moduleBerechtigungen,setModuleBerechtigungen]=useState({});
   const [felder,setFelder]=useState([]);
@@ -636,16 +616,16 @@ function PortalverwaltungView(props){
           vereinId={vereinId}
         />
       <MitgliederKonfigTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
-          isMobile={isMobile} mobileKachel={mobileKachel} confirm={confirm}
+          supabase={supabase} loading={loading}
+          isMobile={isMobile} mobileKachel={mobileKachel}
           dbMitgliedtypen={dbMitgliedtypen} setDbMitgliedtypen={setDbMitgliedtypen}
-          dbPortalRollen={dbPortalRollen} funktionen={funktionen}
+          dbPortalRollen={dbPortalRollen}
           rollePflichtfelder={rollePflichtfelder} setRollePflichtfelder={setRollePflichtfelder}
           mitgliedtypPflichtfelder={mitgliedtypPflichtfelder} setMitgliedtypPflichtfelder={setMitgliedtypPflichtfelder}
           showMitgliedtypForm={showMitgliedtypForm} setShowMitgliedtypForm={setShowMitgliedtypForm}
           editMitgliedtyp={editMitgliedtyp} setEditMitgliedtyp={setEditMitgliedtyp}
           mitgliedtypForm={mitgliedtypForm} setMitgliedtypForm={setMitgliedtypForm}
-          saveMitgliedtyp={saveMitgliedtyp} deleteMitgliedtyp={deleteMitgliedtyp} tab={tab}
+          tab={tab} vereinId={vereinId}
         />
       <RollenTab
           loading={loading}
