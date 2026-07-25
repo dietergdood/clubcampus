@@ -1,14 +1,46 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/UsersTab.jsx
+   ClubCampus — modules/portal/UsersTab.tsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
-import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate } from "../../theme.ts";
-import { TI } from "../../icons.tsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor } from "../../theme.ts";
+import { Btn, Card, Chip } from "../../theme.ts";
+import { GN, R, RL, FONT } from "../../constants.ts";
 import { ROLES } from "./portalUtils.ts";
+import type { Sb, SetState } from "../../types.ts";
 
-export function UsersTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,benutzerListe,setBenutzerListe,dbPortalRollen,updateBenutzerRolle,tab,ROLLEN,ROLLEN_LABELS,funktionen}) {
+/* Vereinsfunktion, wie sie an Benutzer gehängt wird */
+export interface BenutzerFunktion {
+  id: number;
+  name: string;
+  portal_gruppen?: { name?: string | null } | null;
+}
+
+/* Zeile aus benutzer, angereichert um die zugewiesenen Funktionen */
+export interface BenutzerZeile {
+  id: string;
+  name?: string | null;
+  email: string;
+  role?: string | null;
+  aktiv?: boolean | null;
+  funktionen?: BenutzerFunktion[];
+}
+
+interface UsersTabProps {
+  supabase: Sb;
+  loading: boolean;
+  isMobile: boolean;
+  /* null = Kachel-Landingseite auf Mobile */
+  mobileKachel: string | null;
+  tab: string;
+  setSaveMsg: (msg: string) => void;
+  benutzerListe: BenutzerZeile[];
+  setBenutzerListe: SetState<BenutzerZeile[]>;
+  updateBenutzerRolle: (id: string, role: string) => void;
+  ROLLEN: string[];
+  ROLLEN_LABELS: Record<string, string>;
+  funktionen: BenutzerFunktion[];
+  vereinId: string | null;
+}
+
+export function UsersTab({supabase,loading,isMobile,mobileKachel,tab,setSaveMsg,benutzerListe,setBenutzerListe,updateBenutzerRolle,ROLLEN,ROLLEN_LABELS,funktionen,vereinId}: UsersTabProps) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="users"&&(
@@ -32,13 +64,13 @@ export function UsersTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKac
                 {benutzerListe.length===0&&(
                   <tr className="cc-tr"><td colSpan={5} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14}}>Keine Benutzer gefunden</td></tr>
                 )}
-                {benutzerListe.map((b,i)=>(
+                {benutzerListe.map(b=>(
                   <tr key={b.id} style={{borderTop:"0.5px solid var(--border)"}}>
                     <td style={{padding:"9px 13px",fontWeight:600,color:"var(--text)"}}>{b.name||"—"}</td>
                     <td style={{padding:"9px 13px",color:"var(--sub)",fontSize:12}}>{b.email}</td>
                     <td style={{padding:"9px 13px"}}>
                       <select value={b.role||"spieler"} onChange={e=>updateBenutzerRolle(b.id,e.target.value)}
-                        style={{padding:"5px 8px",border:"1px solid var(--border)",borderRadius:7,fontSize:12,background:"var(--surface)",color:ROLES[b.role]?.color||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
+                        style={{padding:"5px 8px",border:"1px solid var(--border)",borderRadius:7,fontSize:12,background:"var(--surface)",color:(b.role?ROLES[b.role]?.color:null)||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
                         {ROLLEN.map(r=><option key={r} value={r}>{ROLLEN_LABELS[r]}</option>)}
                       </select>
                     </td>
@@ -67,7 +99,10 @@ export function UsersTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKac
                             const fn=funktionen.find(f=>f.id===fid);
                             if(!fn) return;
                             if(supabase){
-                              const{error}=await supabase.from("benutzer_funktionen").upsert({benutzer_id:b.id,funktion_id:fid},{onConflict:"benutzer_id,funktion_id"});
+                              /* verein_id ist in benutzer_funktionen NOT NULL und fehlte
+                                 hier — die Zuweisung schlug dadurch immer fehl. */
+                              if(!vereinId){setSaveMsg("Fehler: Verein nicht geladen");setTimeout(()=>setSaveMsg(""),3000);return;}
+                              const{error}=await supabase.from("benutzer_funktionen").upsert({benutzer_id:b.id,funktion_id:fid,verein_id:vereinId},{onConflict:"benutzer_id,funktion_id"});
                               if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                             }
                             setBenutzerListe(prev=>prev.map(u=>u.id===b.id?{...u,funktionen:[...(u.funktionen||[]),fn]}:u));

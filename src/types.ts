@@ -128,6 +128,8 @@ export interface MitgliedtypPflichtfeld {
 
 // ── Portal-Rollen ────────────────────────────────────────────────
 export interface PortalRolle {
+  /* Primärschlüssel aus portal_rollen — RollenTab bearbeitet darüber */
+  id: number;
   name: string;
   label: string;
   aktiv: boolean;

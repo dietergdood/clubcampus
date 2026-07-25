@@ -10,10 +10,10 @@ import { ModuleRechteTab } from "./portal/ModuleRechteTab.jsx";
 import { GruppenTab } from "./portal/GruppenTab.jsx";
 import { TeamModuleTab } from "./portal/TeamModuleTab.tsx";
 import { FeldvisTab } from "./portal/FeldvisTab.tsx";
-import { UsersTab } from "./portal/UsersTab.jsx";
+import { UsersTab } from "./portal/UsersTab.tsx";
 import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.jsx";
-import { RollenTab } from "./portal/RollenTab.jsx";
-import { KaderRollenTab } from "./portal/KaderRollenTab.jsx";
+import { RollenTab } from "./portal/RollenTab.tsx";
+import { KaderRollenTab } from "./portal/KaderRollenTab.tsx";
 import { AussehenTab } from "./portal/AussehenTab.jsx";
 import { ApiTab } from "./portal/ApiTab.tsx";
 import { AuditTab } from "./portal/AuditTab.tsx";
@@ -336,7 +336,11 @@ function PortalverwaltungView(props){
           const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR,teamsR,gtR]=await Promise.all([
             supabase.from("api_verbindungen").select("*").order("sort_order"),
             supabase.from("api_sync_log").select("*,api_verbindungen(label)").order("gestartet_am",{ascending:false}).limit(50),
-            supabase.from("benutzer").select("id,name,email,role").order("name"),
+            /* aktiv fehlte in der Auswahl — die Status-Spalte im Benutzer-Tab
+               las ein Feld, das nie geladen wurde, und stand daher immer
+               auf "Aktiv". Die App pflegt aktiv (siehe updatePortalZugang),
+               die gleichnamige Spalte active ist Altlast. */
+            supabase.from("benutzer").select("id,name,email,role,aktiv").order("name"),
             supabase.from("portal_gruppen").select("*").order("name"),
             supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe,module,modul_stufen), stufe_override").order("name"),
             supabase.from("module_config").select("*"),
@@ -626,10 +630,11 @@ function PortalverwaltungView(props){
           isMobile={isMobile} mobileKachel={mobileKachel} toggleFeld={toggleFeld} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} felderNachKey={felderNachKey} tab={tab}
         />
       <UsersTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg}
           isMobile={isMobile} mobileKachel={mobileKachel}
           benutzerListe={benutzerListe} setBenutzerListe={setBenutzerListe}
-          dbPortalRollen={dbPortalRollen} updateBenutzerRolle={updateBenutzerRolle} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} funktionen={funktionen} tab={tab}
+          updateBenutzerRolle={updateBenutzerRolle} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} funktionen={funktionen} tab={tab}
+          vereinId={vereinId}
         />
       <MitgliederKonfigTab
           supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
@@ -644,16 +649,16 @@ function PortalverwaltungView(props){
           saveMitgliedtyp={saveMitgliedtyp} deleteMitgliedtyp={deleteMitgliedtyp} tab={tab}
         />
       <RollenTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
-          isMobile={isMobile} mobileKachel={mobileKachel} confirm={confirm}
+          loading={loading}
+          isMobile={isMobile} mobileKachel={mobileKachel}
           dbPortalRollen={dbPortalRollen} rollenForm={rollenForm} setRollenForm={setRollenForm}
           editRolle={editRolle} setEditRolle={setEditRolle}
           showRolleForm={showRolleForm} setShowRolleForm={setShowRolleForm}
           saveRolle={saveRolle} deleteRolle={deleteRolle} tab={tab}
         />
       <KaderRollenTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
-          isMobile={isMobile} mobileKachel={mobileKachel} confirm={confirm}
+          loading={loading}
+          isMobile={isMobile} mobileKachel={mobileKachel}
           dbKaderRollen={dbKaderRollen} kaderRolleForm={kaderRolleForm} setKaderRolleForm={setKaderRolleForm}
           editKaderRolle={editKaderRolle} setEditKaderRolle={setEditKaderRolle}
           showKaderRolleForm={showKaderRolleForm} setShowKaderRolleForm={setShowKaderRolleForm}
