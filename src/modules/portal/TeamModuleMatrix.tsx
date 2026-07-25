@@ -1,40 +1,60 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/TeamModuleMatrix.jsx
+   ClubCampus — modules/portal/TeamModuleMatrix.tsx
    Team-Modul-Matrix Komponente
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Btn, Card, Chip, useIsMobile, InfoBox, Col, Row, Stat} from "../../theme.ts";
+import type { ReactElement } from "react";
+import { Card, useIsMobile, InfoBox, Row } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { GN, BL, GB, BK, FONT} from "../../constants.ts";
+import { GN, BL, BK, FONT } from "../../constants.ts";
+import type { Sb } from "../../types.ts";
 
-function maxStufe(a, b){
-  if(!a) return b; if(!b) return a;
-  return STUFE_RANG[a]>STUFE_RANG[b]?a:b;
+/* Team-Zeile, wie sie TeamModuleMatrix aus teams selektiert */
+interface MatrixTeam {
+  id: number;
+  name: string;
+  hauptbereich: string | null;
+  kurzname: string | null;
 }
-function TeamModuleMatrix({supabase,setSaveMsg}){
-  const sb=supabase||window.__sb;
-  const [teams,setTeams]=useState([]);
-  const [moduleMap,setModuleMap]=useState({}); // {team_id: [modul,...]}
+
+interface TeamMod {
+  key: string;
+  label: string;
+  icon: string;
+}
+
+const TEAM_MODS: TeamMod[]=[
+  {key:"roster",            label:"Kader",       icon:"users"},
+  {key:"training",          label:"Training",    icon:"clock"},
+  {key:"spielplan",         label:"Spielplan",   icon:"flag"},
+  {key:"events",            label:"Termine",     icon:"calendar"},
+  {key:"attendance_central",label:"Anwesenheit", icon:"chart-bar"},
+  {key:"helpers",           label:"Helfer",      icon:"heart-handshake"},
+  {key:"polls",             label:"Abstimmungen",icon:"speakerphone"},
+  {key:"stats",             label:"Statistik",   icon:"chart-line"},
+  {key:"media",             label:"Medien",      icon:"photo"},
+  {key:"news",              label:"News",        icon:"news"},
+  {key:"wiki",              label:"Wiki",        icon:"book"},
+  {key:"docs",              label:"Dokumente",   icon:"file-text"},
+];
+
+const HB_COLORS: Record<string,string>={"Aktivfussball":"#3B82F6","Juniorenfussball":"#22C55E","Mädchenfussball":"#EC4899","Senioren":"#F97316","Freizeitfussball":"#8B5CF6"};
+
+interface TeamModuleMatrixProps {
+  supabase: Sb;
+  setSaveMsg: (msg: string) => void;
+  vereinId: string | null;
+}
+
+function TeamModuleMatrix({supabase,setSaveMsg,vereinId}: TeamModuleMatrixProps){
+  const sb=supabase;
+  const [teams,setTeams]=useState<MatrixTeam[]>([]);
+  const [moduleMap,setModuleMap]=useState<Record<number,string[]>>({}); // {team_id: [modul,...]}
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
   const [filterHaupt,setFilterHaupt]=useState("alle");
-  const [expandedTeam,setExpandedTeam]=useState(null);
+  const [expandedTeam,setExpandedTeam]=useState<number|null>(null);
   const isMob=useIsMobile();
-
-  const TEAM_MODS=[
-    {key:"roster",            label:"Kader",       icon:"users"},
-    {key:"training",          label:"Training",    icon:"clock"},
-    {key:"spielplan",         label:"Spielplan",   icon:"flag"},
-    {key:"events",            label:"Termine",     icon:"calendar"},
-    {key:"attendance_central",label:"Anwesenheit", icon:"chart-bar"},
-    {key:"helpers",           label:"Helfer",      icon:"heart-handshake"},
-    {key:"polls",             label:"Abstimmungen",icon:"speakerphone"},
-    {key:"stats",             label:"Statistik",   icon:"chart-line"},
-    {key:"media",             label:"Medien",      icon:"photo"},
-    {key:"news",              label:"News",        icon:"news"},
-    {key:"wiki",              label:"Wiki",        icon:"book"},
-    {key:"docs",              label:"Dokumente",   icon:"file-text"},
-  ];
 
   useEffect(()=>{
     (async()=>{
@@ -47,7 +67,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
           ]);
           if(tR.data) setTeams(tR.data);
           if(tmR.data){
-            const m={};
+            const m: Record<number,string[]>={};
             tmR.data.forEach(r=>{
               if(!m[r.team_id]) m[r.team_id]=[];
               if(r.aktiv!==false) m[r.team_id].push(r.modul);
@@ -55,26 +75,28 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
             setModuleMap(m);
           }
         }
-      }catch(e){ console.warn("[FCH] TeamModuleMatrix:", e.message); }
+      }catch(e){ console.warn("[FCH] TeamModuleMatrix:", e instanceof Error?e.message:e); }
       setLoading(false);
     })();
   },[]);
 
-  async function toggleTeamModul(teamId, modul, forceAktiv=null){
+  async function toggleTeamModul(teamId: number, modul: string, forceAktiv: boolean|null=null){
     const cur=moduleMap[teamId]||TEAM_MODS.map(m=>m.key);
     const isOn=cur.includes(modul);
     const nextOn=forceAktiv!==null?forceAktiv:!isOn;
     const neu={...moduleMap,[teamId]:nextOn?[...new Set([...cur,modul])]:cur.filter(m=>m!==modul)};
     setModuleMap(neu);
-    if(sb){
-      await sb.from("team_module").upsert({team_id:teamId,modul,aktiv:nextOn},{onConflict:"team_id,modul"});
+    /* verein_id ist in team_module NOT NULL — ohne fiel das Upsert-Insert
+       durch, das Umschalten wurde nie persistiert. */
+    if(sb&&vereinId){
+      await sb.from("team_module").upsert({team_id:teamId,modul,aktiv:nextOn,verein_id:vereinId},{onConflict:"team_id,modul"});
     }
   }
 
-  async function applyToAll(modul, aktiv){
-    if(!sb) return;
+  async function applyToAll(modul: string, aktiv: boolean){
+    if(!sb||!vereinId) return;
     setSaving(true);
-    const rows=teams.map(t=>({team_id:t.id,modul,aktiv}));
+    const rows=teams.map(t=>({team_id:t.id,modul,aktiv,verein_id:vereinId}));
     await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
     const neu={...moduleMap};
     teams.forEach(t=>{
@@ -89,9 +111,8 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
 
   if(loading) return <div style={{padding:20,color:"var(--sub)",fontSize:14}}>Lade Team-Module…</div>;
 
-  const hauptbereiche=["alle",...[...new Set(teams.map(t=>t.hauptbereich).filter(Boolean))]];
+  const hauptbereiche=["alle",...[...new Set(teams.map(t=>t.hauptbereich).filter((h): h is string => Boolean(h)))]];
   const filtered=filterHaupt==="alle"?teams:teams.filter(t=>t.hauptbereich===filterHaupt);
-  const HB_COLORS={"Aktivfussball":"#3B82F6","Juniorenfussball":"#22C55E","Mädchenfussball":"#EC4899","Senioren":"#F97316","Freizeitfussball":"#8B5CF6"};
 
   /* ── Filter-Chips (beide Views) ── */
   const FilterChips=()=>(
@@ -125,7 +146,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
             const aktive=moduleMap[t.id]||TEAM_MODS.map(m=>m.key);
             const isOpen=expandedTeam===t.id;
             const activeCount=TEAM_MODS.filter(m=>aktive.includes(m.key)).length;
-            const col=HB_COLORS[t.hauptbereich]||"var(--border)";
+            const col=(t.hauptbereich&&HB_COLORS[t.hauptbereich])||"var(--border)";
             return(
               <div key={t.id} style={{borderRadius:10,border:`1px solid ${isOpen?col:"var(--border)"}`,overflow:"hidden",background:"var(--surface)"}}>
                 {/* Header */}
@@ -190,12 +211,12 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
             </thead>
             <tbody>
               {(()=>{
-                const rows=[];
-                let lastHB=null;
+                const rows: ReactElement[]=[];
+                let lastHB: string|null=null;
                 filtered.forEach((t,i)=>{
                   if(filterHaupt==="alle"&&t.hauptbereich!==lastHB){
                     lastHB=t.hauptbereich;
-                    const col=HB_COLORS[t.hauptbereich]||"var(--sub)";
+                    const col=(t.hauptbereich&&HB_COLORS[t.hauptbereich])||"var(--sub)";
                     rows.push(
                       <tr key={`hb-${t.hauptbereich}`}>
                         <td colSpan={TEAM_MODS.length+1} style={{padding:"6px 16px 4px",fontSize:10,fontWeight:700,color:col,textTransform:"uppercase",letterSpacing:0.8,background:"var(--surface2)",borderTop:i>0?"1px solid var(--border)":"none"}}>
@@ -212,7 +233,7 @@ function TeamModuleMatrix({supabase,setSaveMsg}){
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <td style={{padding:"8px 16px",fontWeight:500,color:"var(--text)",position:"sticky",left:0,background:"var(--surface)",fontSize:14,zIndex:1}}>
                         <Row>
-                          <div style={{width:3,height:20,borderRadius:2,background:HB_COLORS[t.hauptbereich]||"var(--border)",flexShrink:0}}/>
+                          <div style={{width:3,height:20,borderRadius:2,background:(t.hauptbereich&&HB_COLORS[t.hauptbereich])||"var(--border)",flexShrink:0}}/>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontWeight:600,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
                             {t.kurzname&&t.kurzname!==t.name&&<div style={{fontSize:10,color:"var(--sub)"}}>{t.kurzname}</div>}

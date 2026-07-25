@@ -14,11 +14,10 @@ import { UsersTab } from "./portal/UsersTab.tsx";
 import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.jsx";
 import { RollenTab } from "./portal/RollenTab.tsx";
 import { KaderRollenTab } from "./portal/KaderRollenTab.tsx";
-import { AussehenTab } from "./portal/AussehenTab.jsx";
+import { AussehenTab } from "./portal/AussehenTab.tsx";
 import { ApiTab } from "./portal/ApiTab.tsx";
 import { AuditTab } from "./portal/AuditTab.tsx";
 import { DesignSystemTab } from "./portal/DesignSystemTab.jsx";
-import { TeamModuleMatrix } from "./portal/TeamModuleMatrix.jsx";
 import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ZUGRIFF_DEFAULT, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, KATEGORIEN, API_INFOS } from "./portal/portalUtils.ts";
 
 /* ── Geteilte Konstanten ── */
@@ -623,7 +622,7 @@ function PortalverwaltungView(props){
           funktionForm={funktionForm} setFunktionForm={setFunktionForm} tab={tab}
         />
       <TeamModuleTab
-          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg} isMobile={isMobile} mobileKachel={mobileKachel} tab={tab} vereinId={vereinId}
         />
       <FeldvisTab
           loading={loading}
@@ -665,10 +664,10 @@ function PortalverwaltungView(props){
           saveKaderRolle={saveKaderRolle} deleteKaderRolle={deleteKaderRolle} tab={tab}
         />
       <AussehenTab
-          supabase={supabase} loading={loading} saveMsg={saveMsg} setSaveMsg={setSaveMsg}
+          supabase={supabase} loading={loading} setSaveMsg={setSaveMsg}
           isMobile={isMobile} mobileKachel={mobileKachel}
           theme={theme} updateTheme={updateTheme} saveTheme={saveTheme}
-          themeDirty={themeDirty} setThemeDirty={setThemeDirty}
+          setThemeDirty={setThemeDirty} setAppTheme={setAppTheme}
           vereinId={vereinId} applyTheme={applyTheme} tab={tab}
         />
       <ApiTab
@@ -692,4 +691,4 @@ function PortalverwaltungView(props){
   );
 }
 
-export { TeamModuleMatrix, PortalverwaltungView };
+export { PortalverwaltungView };

@@ -1,13 +1,46 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/AussehenTab.jsx
+   ClubCampus — modules/portal/AussehenTab.tsx
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, Fragment } from "react";
-import { Btn, Card, Col, Input, ModalOrSheet, ModalTitle, Row, Select, Av, Chip, useIsMobile, DropMenu, LandSelect, FunktionenMultiSelect, Toolbar, useConfirm, ConfirmDialog, StatusTile, STitle, SectionLabel, Empty, Label, Sub, Stat, BulkBar, SortHeader, Between, H1, H2, Truncate, InfoBox} from "../../theme.ts";
+import { Btn, Card, Row, InfoBox, THEME_DEFAULT_STATIC, LOGO_B64 } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, FONT } from "../../constants.ts";
-import { hexToRgba, darkenHex, THEME_DEFAULT_STATIC, contrastColor, LOGO_B64 } from "../../theme.ts";
+import { BL, FONT } from "../../constants.ts";
+import type { AppTheme, Sb, SetState } from "../../types.ts";
 
-export function AussehenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobileKachel,theme,updateTheme,saveTheme,themeDirty,setThemeDirty,vereinId,applyTheme,tab}) {
+/* Farbfelder — alle Schlüssel sind Theme-Eigenschaften */
+const FARB_FELDER: { key: keyof AppTheme; label: string; hint: string }[] = [
+  {key:"vereinsfarbe1",  label:"Vereinsfarbe",              hint:"Hauptfarbe des Vereins — für Badges, Highlights, aktive Elemente"},
+  {key:"vereinsfarbe2",  label:"Text auf Vereinsfarbe",    hint:"Muss auf der Vereinsfarbe gut lesbar sein"},
+  {key:"navBg",          label:"Menü Hintergrund",          hint:"Hintergrundfarbe der Navigationsleiste"},
+  {key:"navText",        label:"Menü Text",                 hint:"Farbe der inaktiven Menüpunkte"},
+  {key:"navHover",       label:"Menü Hover",                hint:"Farbe beim Überfahren eines Menüpunkts"},
+  {key:"navAccent",      label:"Menü Aktiv Hintergrund",    hint:"Standard: Vereinsfarbe — bei Bedarf anpassen"},
+  {key:"navAccentText",  label:"Menü Aktiv Text",           hint:"Standard: Text auf Vereinsfarbe — bei Bedarf anpassen"},
+  {key:"avatarBg",       label:"Avatar Hintergrund",        hint:"Standard: Vereinsfarbe"},
+  {key:"avatarText",     label:"Avatar Text",               hint:"Standard: Text auf Vereinsfarbe"},
+  {key:"btnPrimary",     label:"Button Hintergrund",        hint:"Hintergrundfarbe für Haupt-Buttons"},
+  {key:"btnPrimaryText", label:"Button Text",               hint:"Textfarbe für Haupt-Buttons"},
+];
+
+const AUTO_KEYS: (keyof AppTheme)[] = ["navAccent","navAccentText","avatarBg","avatarText"];
+
+interface AussehenTabProps {
+  supabase: Sb;
+  loading: boolean;
+  isMobile: boolean;
+  /* null = Kachel-Landingseite auf Mobile */
+  mobileKachel: string | null;
+  tab: string;
+  setSaveMsg: (msg: string) => void;
+  theme: AppTheme;
+  updateTheme: (key: keyof AppTheme, val: string | null) => void;
+  saveTheme: () => void;
+  setThemeDirty: SetState<boolean>;
+  setAppTheme: SetState<AppTheme>;
+  vereinId: string | null;
+  applyTheme?: ((theme: AppTheme) => void) | null;
+}
+
+export function AussehenTab({supabase,loading,isMobile,mobileKachel,tab,setSaveMsg,theme,updateTheme,saveTheme,setThemeDirty,setAppTheme,vereinId,applyTheme}: AussehenTabProps) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="aussehen"&&(
@@ -77,7 +110,7 @@ export function AussehenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobile
                       const file=e.target.files?.[0];
                       if(!file) return;
                       const reader=new FileReader();
-                      reader.onload=ev=>{updateTheme("logo",ev.target.result);};
+                      reader.onload=ev=>{updateTheme("logo",typeof ev.target?.result==="string"?ev.target.result:null);};
                       reader.readAsDataURL(file);
                     }}/>
                   </label>
@@ -93,22 +126,7 @@ export function AussehenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobile
 
           {/* Farb-Einstellungen */}
           <Card style={{marginTop:12,padding:0,overflow:"hidden"}}>
-            {[
-              {key:"vereinsfarbe1",  label:"Vereinsfarbe",              hint:"Hauptfarbe des Vereins — für Badges, Highlights, aktive Elemente"},
-              {key:"vereinsfarbe2",  label:"Text auf Vereinsfarbe",    hint:"Muss auf der Vereinsfarbe gut lesbar sein"},
-
-              {key:"navBg",          label:"Menü Hintergrund",          hint:"Hintergrundfarbe der Navigationsleiste"},
-              {key:"navText",        label:"Menü Text",                 hint:"Farbe der inaktiven Menüpunkte"},
-              {key:"navHover",       label:"Menü Hover",                hint:"Farbe beim Überfahren eines Menüpunkts"},
-              {key:"navAccent",      label:"Menü Aktiv Hintergrund",    hint:"Standard: Vereinsfarbe — bei Bedarf anpassen"},
-              {key:"navAccentText",  label:"Menü Aktiv Text",           hint:"Standard: Text auf Vereinsfarbe — bei Bedarf anpassen"},
-
-              {key:"avatarBg",       label:"Avatar Hintergrund",        hint:"Standard: Vereinsfarbe"},
-              {key:"avatarText",     label:"Avatar Text",               hint:"Standard: Text auf Vereinsfarbe"},
-
-              {key:"btnPrimary",     label:"Button Hintergrund",        hint:"Hintergrundfarbe für Haupt-Buttons"},
-              {key:"btnPrimaryText", label:"Button Text",               hint:"Textfarbe für Haupt-Buttons"},
-            ].map((item,i)=>(
+            {FARB_FELDER.map((item,i)=>(
               <div key={item.key} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",borderTop:i>0?"0.5px solid var(--border)":"none"}}>
                 <input type="color" value={theme[item.key]||(item.key==="navAccent"||item.key==="avatarBg"?theme.vereinsfarbe1:item.key==="navAccentText"||item.key==="avatarText"?theme.vereinsfarbe2||"#000000":"#000000")||"#000000"} onChange={e=>updateTheme(item.key,e.target.value)}
                   style={{width:36,height:36,borderRadius:8,border:"0.5px solid var(--border)",padding:2,cursor:"pointer",background:"none"}}/>
@@ -116,11 +134,12 @@ export function AussehenTab({supabase,loading,saveMsg,setSaveMsg,isMobile,mobile
                   <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{item.label}</div>
                   <div style={{fontSize:11,color:"var(--sub)",marginTop:1}}>{item.hint}</div>
                 </div>
-                <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]||(["navAccent","navAccentText","avatarBg","avatarText"].includes(item.key)?"auto":"")}</code>
+                <code style={{fontSize:11,color:"var(--sub)",background:"var(--surface2)",padding:"2px 7px",borderRadius:5}}>{theme[item.key]||(AUTO_KEYS.includes(item.key)?"auto":"")}</code>
+                {/* Btn unterstützt kein title — das Attribut wurde schon in
+                    der JS-Version verworfen, daher hier weggelassen. */}
                 <Btn variant="ghost" onClick={()=>{
-                  const autoKeys=["navAccent","navAccentText","avatarBg","avatarText"];
-                  updateTheme(item.key, autoKeys.includes(item.key)?null:(THEME_DEFAULT_STATIC[item.key]??null));
-                }} title="Zurücksetzen" style={{padding:4}}>
+                  updateTheme(item.key, AUTO_KEYS.includes(item.key)?null:(THEME_DEFAULT_STATIC[item.key]??null));
+                }} style={{padding:4}}>
                   <TI n="refresh" size={14}/>
                 </Btn>
               </div>
