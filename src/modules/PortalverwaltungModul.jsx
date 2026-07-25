@@ -17,7 +17,7 @@ import { KaderRollenTab } from "./portal/KaderRollenTab.tsx";
 import { AussehenTab } from "./portal/AussehenTab.tsx";
 import { ApiTab } from "./portal/ApiTab.tsx";
 import { AuditTab } from "./portal/AuditTab.tsx";
-import { DesignSystemTab } from "./portal/DesignSystemTab.jsx";
+import { DesignSystemTab } from "./portal/DesignSystemTab.tsx";
 import { ZUGRIFF_ORDER, ZUGRIFF_LABELS, ZUGRIFF_COLORS, ZUGRIFF_ICONS, ZUGRIFF_DEFAULT, ALLE_MODULE, ROLLEN_MODULE_DEFAULT, MODUL_AKTIONEN, KAT_LABELS, KATEGORIEN, API_INFOS } from "./portal/portalUtils.ts";
 
 /* ── Geteilte Konstanten ── */

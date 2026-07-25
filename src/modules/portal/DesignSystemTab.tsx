@@ -1,21 +1,39 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — modules/portal/DesignSystemTab.jsx
+   ClubCampus — modules/portal/DesignSystemTab.tsx
    Living Style Guide — alle UI-Komponenten mit echtem Theme
+
+   ⚠ Beim Migrieren wurden etliche veraltete Props korrigiert, die die
+   heutigen Komponenten nicht mehr kennen (als JS wurden sie stillschweigend
+   verworfen und die Vorschauen waren teils kaputt): Btn.textColor,
+   DropMenu.trigger, Input.icon, Tabs.onChange→setActive,
+   SortHeader.sortKey/currentSort/dir→col/sortCol/sortDir,
+   ColMenuButton.allCols/onChangeVisible→colGroups/onVisibleColsChange,
+   BulkBar.onClear→onCancel, Toolbar.groupOptions {key}→{val}.
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Btn, Card, Chip, Stat, Av, Tabs, STitle, Row, Col, Between, Sub, Label,
          H1, H2, Input, Select, Textarea, SectionLabel, Empty, DropMenu,
          Toolbar, ColMenuButton, BulkBar, SortHeader, InfoBox, ModalOrSheet,
-         ModalTitle, useConfirm, ConfirmDialog, StatusTile,
+         ModalTitle, useConfirm, StatusTile,
          COMPONENT_REGISTRY } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { GN, R, RL, BL, AM, BK, GB } from "../../constants.ts";
+import { GN, R, BL, AM } from "../../constants.ts";
+import type { FilterVals } from "../../shared/list/types.ts";
 
-function cssVar(name) {
+type SortDir = "asc" | "desc";
+
+function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function TokenRow({ name, desc, tick }) {
+interface TokenRowProps {
+  name: string;
+  desc?: string;
+  tick: number;
+}
+
+function TokenRow({ name, desc, tick }: TokenRowProps) {
   const [val, setVal] = useState(() => cssVar(name));
   useEffect(() => { setVal(cssVar(name)); }, [name, tick]);
   const isColor = val.startsWith("#") || val.startsWith("rgb");
@@ -31,7 +49,13 @@ function TokenRow({ name, desc, tick }) {
   );
 }
 
-function Sec({title, children, action}) {
+interface SecProps {
+  title: string;
+  children: ReactNode;
+  action?: ReactElement;
+}
+
+function Sec({title, children, action}: SecProps) {
   return (
     <div style={{marginBottom:28}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,paddingBottom:6,borderBottom:"0.5px solid var(--border)"}}>
@@ -43,7 +67,19 @@ function Sec({title, children, action}) {
   );
 }
 
-const DEMO_MEMBERS = [
+interface TableMember {
+  id: number;
+  name: string;
+  rolle: string;
+  aktiv: boolean;
+  team: string;
+}
+
+/* Für die grosse Tabellen-Demo — mit aktiv+team, passend zu ALL_COLS.
+   Früher hiess diese Liste ebenfalls DEMO_MEMBERS und wurde von der
+   gleichnamigen Liste in der Komponente verdeckt, wodurch die Tabelle nur
+   drei Zeilen (alle "Inaktiv") zeigte. Eindeutiger Name behebt das. */
+const TABLE_MEMBERS: TableMember[] = [
   {id:1, name:"Adrian Bürgi",   rolle:"Trainer/in",  aktiv:true,  team:"FCH 1"},
   {id:2, name:"Anna Koch",      rolle:"Spieler/in",  aktiv:true,  team:"FCH 2"},
   {id:3, name:"Beat Müller",    rolle:"Elternteil",  aktiv:false, team:"Ba"},
@@ -58,23 +94,31 @@ const ALL_COLS = [
   {key:"aktiv", label:"Status"},
 ];
 
-export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
+interface DesignSystemTabProps {
+  loading: boolean;
+  isMobile: boolean;
+  /* null = Kachel-Landingseite auf Mobile */
+  mobileKachel: string | null;
+  tab: string;
+}
+
+export function DesignSystemTab({loading, isMobile, mobileKachel, tab}: DesignSystemTabProps) {
   const [tick, setTick] = useState(0);
   const [search, setSearch] = useState("");
   const [visibleCols, setVisibleCols] = useState(["name","rolle","team","aktiv"]);
   const [sortKey, setSortKey] = useState("name");
-  const [sortDir, setSortDir] = useState("asc");
-  const [selected, setSelected] = useState([]);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [selected, setSelected] = useState<number[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("liste");
   const [confirm, confirmDialog] = useConfirm();
-  const [openPreviews, setOpenPreviews] = useState({});
+  const [openPreviews, setOpenPreviews] = useState<Record<string, boolean>>({});
   const [demoSearch, setDemoSearch] = useState("");
-  const [demoFilter, setDemoFilter] = useState({});
+  const [demoFilter, setDemoFilter] = useState<FilterVals>({});
   const [demoGroup, setDemoGroup] = useState("none");
   const [demoCols, setDemoCols] = useState(["name","rolle","team"]);
   const [demoModal, setDemoModal] = useState(false);
-  const [demoSort, setDemoSort] = useState({col:"name",dir:"asc"});
+  const [demoSort, setDemoSort] = useState<{col:string;dir:SortDir}>({col:"name",dir:"asc"});
   const [demoTabActive, setDemoTabActive] = useState("liste");
 
   const DEMO_COLS = [{key:"name",label:"Name"},{key:"rolle",label:"Rolle"},{key:"team",label:"Team"}];
@@ -84,22 +128,22 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
     {id:3,name:"Beat Müller",rolle:"Elternteil",team:"Ba"},
   ];
 
-  const DEMO_MAP = {
+  const DEMO_MAP: Record<string, () => ReactElement> = {
     "Toolbar": ()=>(
       <Toolbar search={demoSearch} onSearch={setDemoSearch}
         filterDefs={[{key:"rolle",label:"Rolle",vals:["Trainer/in","Spieler/in"]},{key:"team",label:"Team",vals:["FCH 1","FCH 2"]}]}
-        filterVals={demoFilter} onFilterChange={(k,v)=>setDemoFilter(p=>({...p,[k]:v}))}
-        groupOptions={[{key:"none",label:"Keine"},{key:"rolle",label:"Nach Rolle"},{key:"team",label:"Nach Team"}]}
-        groupBy={demoGroup} onGroupChange={setDemoGroup}
-        colMenu={<ColMenuButton allCols={DEMO_COLS} visibleCols={demoCols} onChangeVisible={setDemoCols}/>}
+        filterVals={demoFilter} onFilterChange={(k,v)=>setDemoFilter(p=>({...p,[k]:Array.isArray(v)?v:v==null?undefined:[String(v)]}))}
+        groupOptions={[{val:"none",label:"Keine"},{val:"rolle",label:"Nach Rolle"},{val:"team",label:"Nach Team"}]}
+        groupBy={demoGroup} onGroupChange={g=>setDemoGroup(Array.isArray(g)?g[0]||"none":g)}
+        colMenu={<ColMenuButton colGroups={[{group:"Demo",cols:DEMO_COLS}]} visibleCols={demoCols} onVisibleColsChange={setDemoCols}/>}
         moreItems={[{icon:"download",label:"CSV exportieren",onClick:()=>{}}]}
       />
     ),
     "ColMenuButton": ()=>(
-      <Row gap={8}><ColMenuButton allCols={DEMO_COLS} visibleCols={demoCols} onChangeVisible={setDemoCols}/><Sub>Spalten ein-/ausblenden + sortieren</Sub></Row>
+      <Row gap={8}><ColMenuButton colGroups={[{group:"Demo",cols:DEMO_COLS}]} visibleCols={demoCols} onVisibleColsChange={setDemoCols}/><Sub>Spalten ein-/ausblenden + sortieren</Sub></Row>
     ),
     "BulkBar": ()=>(
-      <BulkBar count={2} onClear={()=>{}} actions={[{icon:"archive",label:"Archivieren",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}}]}/>
+      <BulkBar count={2} onCancel={()=>{}} actions={[{icon:"archive",label:"Archivieren",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}}]}/>
     ),
     "SortHeader": ()=>(
       <div style={{border:"0.5px solid var(--border)",borderRadius:8,overflow:"hidden"}}>
@@ -113,8 +157,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
     ),
     "DropMenu": ()=>(
       <Row gap={12}>
-        <DropMenu trigger={<button className="cc-btn-outline"><TI n="dots-vertical" size={14}/> Aktionen</button>}
-          items={[{icon:"edit",label:"Bearbeiten",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}},"sep",{icon:"trash",label:"Löschen",onClick:()=>{},danger:true}]}/>
+        <DropMenu items={[{icon:"edit",label:"Bearbeiten",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}},"sep",{icon:"trash",label:"Löschen",onClick:()=>{},danger:true}]}/>
         <Sub>Auf Mobile → Bottom Sheet</Sub>
       </Row>
     ),
@@ -131,7 +174,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
     "ModalOrSheet": ()=>(
       <Row gap={8}>
         <Btn onClick={()=>setDemoModal(true)}>Modal öffnen</Btn>
-        <ModalOrSheet open={demoModal} onClose={()=>setDemoModal(false)} title="Beispiel">
+        <ModalOrSheet open={demoModal} onClose={()=>setDemoModal(false)}>
           <ModalTitle>Beispiel-Modal</ModalTitle>
           <Col gap={12} style={{padding:"16px 20px"}}>
             <Input placeholder="Name…"/>
@@ -152,7 +195,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       </Col>
     ),
     "StatusTile": ()=>(
-      <Row gap={8} style={{flexWrap:"wrap"}}>
+      <Row gap={8} wrap>
         <StatusTile label="Aktiv" value="Ja" icon="check" semantic="ok"/>
         <StatusTile label="Portal" value="Verknüpft" icon="link" semantic="ok"/>
         <StatusTile label="Rolle" value="Trainer" icon="ball-football" semantic="neutral"/>
@@ -164,11 +207,11 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       <Empty icon="users" text="Keine Mitglieder gefunden" sub="Passe den Suchbegriff an."/>
     ),
     "Btn": ()=>(
-      <Row gap={8} style={{flexWrap:"wrap"}}>
+      <Row gap={8} wrap>
         <Btn>Primär</Btn>
         <Btn color="var(--surface2)" style={{border:"0.5px solid var(--border)"}}>Sekundär</Btn>
-        <Btn color="#E24B4A" textColor="#fff">Gefahr</Btn>
-        <Btn color="#22C55E" textColor="#fff">Erfolg</Btn>
+        <Btn color="#E24B4A">Gefahr</Btn>
+        <Btn color="#22C55E">Erfolg</Btn>
         <button className="cc-btn-outline"><TI n="download" size={13}/> Export</button>
         <button className="cc-icon-btn"><TI n="settings" size={14}/></button>
         <button className="cc-icon-btn"><TI n="edit" size={14}/></button>
@@ -181,7 +224,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       </Card>
     ),
     "Chip": ()=>(
-      <Row gap={6} style={{flexWrap:"wrap"}}>
+      <Row gap={6} wrap>
         <Chip text="Aktiv" color="#15803D" bg="#ECFDF5"/>
         <Chip text="Inaktiv" color="#C8102E" bg="#FEF2F2"/>
         <Chip text="Warnung" color="#B45309" bg="#FEF3C7"/>
@@ -192,7 +235,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       </Row>
     ),
     "Stat": ()=>(
-      <Row gap={8} style={{flexWrap:"wrap"}}>
+      <Row gap={8} wrap>
         <Stat label="Mitglieder" value={142}/>
         <Stat label="Teams" value={8}/>
         <Stat label="Aktiv" value={134} color="#22C55E"/>
@@ -200,7 +243,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       </Row>
     ),
     "Av": ()=>(
-      <Row gap={16} style={{alignItems:"flex-end",flexWrap:"wrap"}}>
+      <Row gap={16} align="flex-end" wrap>
         {[24,32,40,52].map(s=>(
           <Col key={s} gap={4} style={{alignItems:"center"}}>
             <Av name="Adrian Bürgi" size={s}/>
@@ -208,7 +251,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
           </Col>
         ))}
         <Col gap={4} style={{alignItems:"center"}}>
-          <Av name="Anna Koch" size={40} style={{border:"2px solid var(--cc-accent)"}}/>
+          <div style={{borderRadius:"50%",border:"2px solid var(--cc-accent)",display:"inline-flex"}}><Av name="Anna Koch" size={40}/></div>
           <Sub>Border</Sub>
         </Col>
       </Row>
@@ -243,7 +286,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
     "Input / Select / Textarea": ()=>(
       <Col gap={8} style={{maxWidth:340}}>
         <Input placeholder="Text-Input…"/>
-        <Input placeholder="Mit Icon…" icon={<TI n="search" size={14}/>}/>
+        <Input placeholder="Mit Suche…"/>
         <Select><option>Option 1</option><option>Option 2</option></Select>
         <Textarea placeholder="Mehrzeiliger Text…" rows={2}/>
       </Col>
@@ -265,11 +308,15 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
 
   if (loading || (isMobile && mobileKachel === null) || tab !== "designsystem") return null;
 
-  const filtered = DEMO_MEMBERS
+  const filtered = TABLE_MEMBERS
     .filter(m => m.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b) => sortDir==="asc" ? a[sortKey]?.localeCompare?.(b[sortKey])||0 : b[sortKey]?.localeCompare?.(a[sortKey])||0);
+    .sort((a,b) => {
+      const av = String(a[sortKey as keyof TableMember] ?? "");
+      const bv = String(b[sortKey as keyof TableMember] ?? "");
+      return sortDir==="asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
 
-  function toggleSort(key) {
+  function toggleSort(key: string) {
     if (sortKey === key) setSortDir(d => d==="asc"?"desc":"asc");
     else { setSortKey(key); setSortDir("asc"); }
   }
@@ -294,7 +341,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
             {name:"--text",         desc:"Haupttext"},
             {name:"--sub",          desc:"Sekundärtext"},
             {name:"--border",       desc:"Trennlinie"},
-          ].map(t => <TokenRow key={t.name} {...t} tick={tick}/>)}
+          ].map(t => <TokenRow key={t.name} name={t.name} desc={t.desc} tick={tick}/>)}
         </div>
       </Sec>
 
@@ -313,11 +360,11 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
 
       {/* Buttons */}
       <Sec title="Buttons">
-        <Row gap={8} style={{flexWrap:"wrap",alignItems:"center"}}>
+        <Row gap={8} wrap>
           <Btn>Primär</Btn>
-          <Btn color="var(--surface2)" textColor="var(--text)" style={{border:"0.5px solid var(--border)"}}>Sekundär</Btn>
-          <Btn color={R} textColor="#fff">Gefahr</Btn>
-          <Btn color={GN} textColor="#fff">Erfolg</Btn>
+          <Btn color="var(--surface2)" style={{border:"0.5px solid var(--border)"}}>Sekundär</Btn>
+          <Btn color={R}>Gefahr</Btn>
+          <Btn color={GN}>Erfolg</Btn>
           <button className="cc-btn-outline"><TI n="download" size={13}/> Export</button>
           <button className="cc-icon-btn"><TI n="settings" size={14}/></button>
           <button className="cc-icon-btn"><TI n="edit" size={14}/></button>
@@ -327,7 +374,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
 
       {/* Chips & Badges */}
       <Sec title="Chips und Badges">
-        <Row gap={8} style={{flexWrap:"wrap",alignItems:"center"}}>
+        <Row gap={8} wrap>
           <span className="cc-chip-toggle cc-chip-active">Aktiv</span>
           <span className="cc-chip-toggle">Inaktiv</span>
           <Chip text="Aktiv" color={GN} bg="#ECFDF5"/>
@@ -340,9 +387,8 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
 
       {/* DropMenu */}
       <Sec title="DropMenu">
-        <Row gap={12} style={{alignItems:"flex-start"}}>
+        <Row gap={12} align="flex-start">
           <DropMenu
-            trigger={<button className="cc-btn-outline"><TI n="dots-vertical" size={14}/> Aktionen</button>}
             items={[
               {icon:"edit", label:"Bearbeiten", onClick:()=>{}},
               {icon:"download", label:"Exportieren", onClick:()=>{}},
@@ -360,7 +406,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
           <Tabs
             tabs={[{key:"liste",label:"Liste"},{key:"kacheln",label:"Kacheln"},{key:"export",label:"Export"}]}
             active={activeTab}
-            onChange={setActiveTab}
+            setActive={setActiveTab}
           />
           <div className="cc-seg" style={{maxWidth:300}}>
             <button className="cc-seg-item cc-seg-active">Aktiv</button>
@@ -374,7 +420,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       <Sec title="Inputs">
         <Col gap={8} style={{maxWidth:400}}>
           <Input placeholder="Text-Input…"/>
-          <Input placeholder="Suchen…" icon={<TI n="search" size={14}/>}/>
+          <Input placeholder="Suchen…"/>
           <Select>
             <option>Option 1</option>
             <option>Option 2</option>
@@ -397,17 +443,17 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
           filterVals={{}}
           onFilterChange={()=>{}}
           groupOptions={[
-            {key:"none",  label:"Keine Gruppierung"},
-            {key:"rolle", label:"Nach Rolle"},
-            {key:"team",  label:"Nach Team"},
+            {val:"none",  label:"Keine Gruppierung"},
+            {val:"rolle", label:"Nach Rolle"},
+            {val:"team",  label:"Nach Team"},
           ]}
           groupBy="none"
           onGroupChange={()=>{}}
           colMenu={
             <ColMenuButton
-              allCols={ALL_COLS}
+              colGroups={[{group:"Mitglieder",cols:ALL_COLS}]}
               visibleCols={visibleCols}
-              onChangeVisible={setVisibleCols}
+              onVisibleColsChange={setVisibleCols}
             />
           }
           moreItems={[
@@ -421,7 +467,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       <Sec title="BulkBar (Mehrfachauswahl)">
         <BulkBar
           count={3}
-          onClear={()=>setSelected([])}
+          onCancel={()=>setSelected([])}
           actions={[
             {icon:"archive", label:"Archivieren", onClick:()=>{}},
             {icon:"download", label:"Exportieren", onClick:()=>{}},
@@ -439,7 +485,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
                   <input type="checkbox" onChange={e=>setSelected(e.target.checked?filtered.map(m=>m.id):[])} checked={selected.length===filtered.length&&filtered.length>0}/>
                 </th>
                 {ALL_COLS.filter(c=>visibleCols.includes(c.key)).map(c=>(
-                  <SortHeader key={c.key} label={c.label} sortKey={c.key} currentSort={sortKey} dir={sortDir} onSort={toggleSort}/>
+                  <SortHeader key={c.key} label={c.label} col={c.key} sortCol={sortKey} sortDir={sortDir} onSort={toggleSort}/>
                 ))}
               </tr>
             </thead>
@@ -447,7 +493,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
               {filtered.map(m=>(
                 <tr key={m.id} className="cc-tr" onClick={()=>setSelected(s=>s.includes(m.id)?s.filter(x=>x!==m.id):[...s,m.id])} style={{background:selected.includes(m.id)?"var(--cc-hover)":undefined}}>
                   <td className="cc-td"><input type="checkbox" checked={selected.includes(m.id)} onChange={()=>{}}/></td>
-                  {visibleCols.includes("name") && <td className="cc-td"><Row gap={8} style={{alignItems:"center"}}><Av name={m.name} size={26}/><span style={{fontWeight:500}}>{m.name}</span></Row></td>}
+                  {visibleCols.includes("name") && <td className="cc-td"><Row gap={8}><Av name={m.name} size={26}/><span style={{fontWeight:500}}>{m.name}</span></Row></td>}
                   {visibleCols.includes("rolle") && <td className="cc-td"><Sub>{m.rolle}</Sub></td>}
                   {visibleCols.includes("team") && <td className="cc-td"><Chip text={m.team} color={BL} bg="#EFF6FF"/></td>}
                   {visibleCols.includes("aktiv") && <td className="cc-td"><Chip text={m.aktiv?"Aktiv":"Inaktiv"} color={m.aktiv?GN:R} bg={m.aktiv?"#ECFDF5":"#FEF2F2"}/></td>}
@@ -456,12 +502,12 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
             </tbody>
           </table>
         </div>
-        {selected.length>0&&<div style={{marginTop:8}}><BulkBar count={selected.length} onClear={()=>setSelected([])} actions={[{icon:"archive",label:"Archivieren",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}}]}/></div>}
+        {selected.length>0&&<div style={{marginTop:8}}><BulkBar count={selected.length} onCancel={()=>setSelected([])} actions={[{icon:"archive",label:"Archivieren",onClick:()=>{}},{icon:"download",label:"Exportieren",onClick:()=>{}}]}/></div>}
       </Sec>
 
       {/* Cards & Stats */}
       <Sec title="Cards und Stats">
-        <Row gap={10} style={{flexWrap:"wrap"}}>
+        <Row gap={10} wrap>
           <Stat label="Mitglieder" value={142}/>
           <Stat label="Teams" value={8}/>
           <Stat label="Aktiv" value={134} color={GN}/>
@@ -480,7 +526,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
 
       {/* StatusTile */}
       <Sec title="Status-Tiles">
-        <Row gap={8} style={{flexWrap:"wrap"}}>
+        <Row gap={8} wrap>
           <StatusTile label="Aktiv" value="Ja" icon="check" semantic="ok"/>
           <StatusTile label="Portal" value="Verknüpft" icon="link" semantic="ok"/>
           <StatusTile label="Rolle" value="Trainer" icon="ball-football" semantic="neutral"/>
@@ -491,7 +537,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
 
       {/* Avatar */}
       <Sec title="Avatare">
-        <Row gap={16} style={{alignItems:"flex-end",flexWrap:"wrap"}}>
+        <Row gap={16} align="flex-end" wrap>
           {[24,32,40,52].map(s=>(
             <Col key={s} gap={6} style={{alignItems:"center"}}>
               <Av name="Adrian Bürgi" size={s}/>
@@ -499,7 +545,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
             </Col>
           ))}
           <Col gap={6} style={{alignItems:"center"}}>
-            <Av name="Anna Koch" size={40} style={{border:"2px solid var(--cc-accent)"}}/>
+            <div style={{borderRadius:"50%",border:"2px solid var(--cc-accent)",display:"inline-flex"}}><Av name="Anna Koch" size={40}/></div>
             <Sub>mit Border</Sub>
           </Col>
         </Row>
@@ -511,7 +557,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
           <Btn onClick={()=>setShowModal(true)}>Modal öffnen</Btn>
           <InfoBox text="Auf Mobile wird automatisch ein Bottom Sheet angezeigt." color={BL}/>
         </Row>
-        <ModalOrSheet open={showModal} onClose={()=>setShowModal(false)} title="Beispiel-Modal">
+        <ModalOrSheet open={showModal} onClose={()=>setShowModal(false)}>
           <ModalTitle>Beispiel-Modal</ModalTitle>
           <Col gap={12} style={{padding:"16px 20px"}}>
             <Input placeholder="Name…"/>
@@ -527,7 +573,7 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}) {
       {/* ConfirmDialog */}
       <Sec title="ConfirmDialog">
         <Row gap={8}>
-          <Btn color={R} textColor="#fff" onClick={async()=>{
+          <Btn color={R} onClick={async()=>{
             const ok=await confirm({title:"Wirklich löschen?",message:"Diese Aktion kann nicht rückgängig gemacht werden.",confirmLabel:"Löschen"});
             if(ok) alert("Gelöscht!");
           }}>Löschen mit Bestätigung</Btn>
