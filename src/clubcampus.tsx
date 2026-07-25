@@ -15,7 +15,7 @@ import { useAppData, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
 import { usePermissions } from "./domains/app/usePermissions.ts";
 import { useProfilCheck } from "./domains/app/useProfilCheck.ts";
 import { NAV_TARGET } from "./modules/appConstants.js";
-import { SideNav as SideNavJs, TopBar as TopBarJs, MobileNav as MobileNavJs, getNavForRole, ProfileModal as ProfileModalJs, getVereinsnameStatic } from "./modules/NavigationModul.jsx";
+import { SideNav, TopBar, MobileNav, getNavForRole, ProfileModal, getVereinsnameStatic } from "./modules/NavigationModul.tsx";
 import { Dashboard as DashboardJs } from "./modules/DashboardModul.jsx";
 import { TeamView as TeamViewJs } from "./modules/TeamModul.jsx";
 import { TermineModul as TermineModulJs, SpielplanModul as SpielplanModulJs, TableTab } from "./modules/TermineModul.jsx";
@@ -43,10 +43,6 @@ import type {
    MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
 type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
-const SideNav               = SideNavJs               as unknown as JsComponent;
-const TopBar                = TopBarJs                as unknown as JsComponent;
-const MobileNav             = MobileNavJs             as unknown as JsComponent;
-const ProfileModal          = ProfileModalJs          as unknown as JsComponent;
 const Dashboard             = DashboardJs             as unknown as JsComponent;
 const TeamView              = TeamViewJs              as unknown as JsComponent;
 const TermineModul          = TermineModulJs          as unknown as JsComponent;
@@ -363,7 +359,7 @@ function Portal({supabaseClient}: PortalProps){
   };
 
   const effectiveNav = getNavForRole(role, dbFunktionen)
-    .filter((n: {key: string})=>isModuleVisible(n.key));
+    .filter(n=>!!n.key&&isModuleVisible(n.key));
 
   /* ── App-Level Zugriffstufen-Hilfsfunktionen ── */
   const { kannSchreiben, kannVerwalten } = usePermissions({

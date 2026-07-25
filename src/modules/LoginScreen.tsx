@@ -10,7 +10,7 @@ import { TI } from "../icons.tsx";
 /* getVereinsnameStatic wurde bisher genutzt, aber nie importiert — der
    Fallback-Vereinsname lief in einen ReferenceError, sobald appTheme keinen
    Namen trug. */
-import { getVereinsnameStatic } from "./NavigationModul.jsx";
+import { getVereinsnameStatic } from "./NavigationModul.tsx";
 import type { AppTheme, SbClient } from "../types.ts";
 
 interface LoginScreenProps {

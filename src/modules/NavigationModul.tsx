@@ -2,14 +2,65 @@
    ClubCampus NavigationModul — NavigationModul.jsx
    SideNav, TopBar, MobileNav, RoleSwitcher
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GB } from "../constants.ts";
-import { TI, TI_PATHS } from "../icons.tsx";
-import { LOGO_B64, useIsMobile, ModalOrSheet, InfoBox, Btn, Card, Chip, Stat, Av, Tabs , useTheme, Between, Col, H1, Row, avColor} from "../theme.ts";
-import { USER_ACCOUNTS } from "../demoData.js";
+import { useState, useRef } from "react";
+import type { CSSProperties, FormEvent } from "react";
+import { FONT, BTN_COLOR as BTN, ACCENT, ACCENT20, GN, R, RL, GB } from "../constants.ts";
+import { TI } from "../icons.tsx";
+import { LOGO_B64, useIsMobile, ModalOrSheet, Btn, Chip, Av, Tabs, useTheme, Between, Col, Row } from "../theme.ts";
+import { USER_ACCOUNTS as USER_ACCOUNTS_RAW } from "../demoData.js";
+import type { AppTheme, Sb, Zugriffstufe } from "../types.ts";
+
+/* Ein Navigationseintrag oder ein Gruppen-Trenner ({group}) */
+interface NavItem {
+  key?: string;
+  icon?: string;
+  label?: string;
+  group?: string;
+}
+
+interface MobileNavDef {
+  tabs: NavItem[];
+  mehr: NavItem[];
+}
+
+interface RoleInfo {
+  label: string;
+  color: string;
+  bg: string;
+  icon: string;
+  desc: string;
+  level: number;
+}
+
+/* Account, wie ihn die Navigation liest — deckt sowohl den DB-Account als
+   auch die Demo-Konten (mit trainerTeams/team) ab. */
+interface NavAccount {
+  name: string;
+  rollen: string[];
+  primaryRole: string;
+  kinder: { name?: string; team?: string }[];
+  id?: string | null;
+  email?: string;
+  trainerTeams?: string[];
+  team?: string | null;
+}
+
+/* Vereinsfunktion für die Navigations-/Stufenlogik — defensiv, da manche
+   Felder (portal_gruppen.default_stufe, f.modul_stufen, f.gruppe) je nach
+   Quelle fehlen. */
+interface NavFunktion {
+  aktiv?: boolean | null;
+  module_override?: string[] | null;
+  modul_stufen?: Record<string, string> | null;
+  stufe_override?: Record<string, string> | null;
+  gruppe?: { module?: string[] | null } | null;
+  portal_gruppen?: { module?: string[] | null; modul_stufen?: Record<string, string> | null; default_stufe?: string } | null;
+}
+
+const USER_ACCOUNTS = USER_ACCOUNTS_RAW as unknown as Record<string, NavAccount>;
 
 /* ── Navigationsdaten & Hilfsfunktionen ── */
-const NAV_BY_ROLE = {
+const NAV_BY_ROLE: Record<string, NavItem[]> = {
   administrator: [
     {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
     {group:"Verein"},
@@ -120,7 +171,7 @@ const NAV_BY_ROLE = {
   ],
 };
 
-const MOBILE_NAV_BY_ROLE = {
+const MOBILE_NAV_BY_ROLE: Record<string, MobileNavDef> = {
   administrator: {
     tabs: [
       {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
@@ -254,7 +305,7 @@ const MOBILE_NAV_BY_ROLE = {
   },
 };
 
-const ROLES = {
+const ROLES: Record<string, RoleInfo> = {
   administrator: {
     label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings",
     desc:"Vollzugriff: alle Module, Systemeinstellungen, Benutzerverwaltung",
@@ -287,7 +338,7 @@ const ROLES = {
   },
 };
 
-const ALL_NAV_ITEMS=[
+const ALL_NAV_ITEMS: NavItem[]=[
   {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
   {key:"members",            icon:"users",            label:"Mitglieder"},
   {key:"team",               icon:"ball-football",    label:"Meine Stufe"},
@@ -306,7 +357,7 @@ const ALL_NAV_ITEMS=[
   {key:"portal",             icon:"settings",         label:"Portalverwaltung"},
 ];
 
-function getRole(role){
+function getRole(role: string|null|undefined): RoleInfo{
   const norm=(role||"spieler").toLowerCase()
     .replace("ä","ae").replace("ö","oe").replace("ü","ue")
     .replace("funktionär","funktionaer");
@@ -317,11 +368,18 @@ function getVereinsnameStatic(){
   try{const t=localStorage.getItem("cc-theme");return t?(JSON.parse(t).vereinsname||"ClubCampus"):"ClubCampus";}catch{return "ClubCampus";}
 }
 
-function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
+interface RoleSwitcherProps {
+  account: NavAccount;
+  activeSubRole?: string | null;
+  setActiveSubRole: (r: string | null) => void;
+  onRoleChange: (key: string) => void;
+}
+
+function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}: RoleSwitcherProps){
   const isMobile=useIsMobile();
   const [open,setOpen]=useState(false);
   const currentRole=activeSubRole||account.primaryRole;
-  const cur=ROLES[currentRole];
+  const cur=ROLES[currentRole]||ROLES.spieler;
   const hasMultiRoles=account.rollen.length>1;
   return(
     <>
@@ -413,7 +471,18 @@ function RoleSwitcher({account,activeSubRole,setActiveSubRole,onRoleChange}){
 /* ==========================================
    LAYOUT
 ========================================== */
-function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appTheme}){
+interface SideNavProps {
+  role: string;
+  active: string;
+  setActive: (key: string) => void;
+  account?: NavAccount | null;
+  sb?: Sb;
+  onNameUpdated?: ((name: string) => void) | null;
+  onLogout?: (() => void) | null;
+  appTheme?: AppTheme | null;
+}
+
+function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appTheme}: SideNavProps){
   const nav=NAV_BY_ROLE[role]||[];
   const rc=getRole(role).color;
   const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
@@ -440,7 +509,7 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
         {nav.map((n,i)=>(
           n.group
           ?(!collapsed&&<div key={`g${i}`} style={{fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--nav-t)",opacity:0.35,padding:"14px 12px 4px",userSelect:"none"}}>{n.group}</div>)
-          :<button key={n.key} onClick={()=>setActive(n.key)} title={collapsed?n.label:undefined}
+          :<button key={n.key} onClick={()=>setActive(n.key!)} title={collapsed?n.label:undefined}
             className={`cc-nav-item${active===n.key?" cc-nav-active":""}`}
             style={{
             width:"100%",display:"flex",alignItems:"center",gap:collapsed?0:11,
@@ -497,8 +566,23 @@ function SideNav({role,active,setActive,account,sb,onNameUpdated,onLogout,appThe
   );
 }
 
-function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setActiveSubRole,onLogout,isMobile,onOpenProfile,onBack,appTheme}){
-  const acc=account||USER_ACCOUNTS[role]||{name:getRole(role).label,rollen:[role],primaryRole:role,kinder:[]};
+interface TopBarProps {
+  role: string;
+  active: string;
+  setActive: (key: string) => void;
+  onRoleChange?: (key: string) => void;
+  account?: NavAccount | null;
+  activeSubRole?: string | null;
+  setActiveSubRole?: (r: string | null) => void;
+  onLogout?: (() => void) | null;
+  isMobile?: boolean;
+  onOpenProfile?: () => void;
+  onBack?: (() => void) | null;
+  appTheme?: AppTheme | null;
+}
+
+function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setActiveSubRole,onLogout,isMobile,onOpenProfile,onBack,appTheme}: TopBarProps){
+  const acc: NavAccount=account||USER_ACCOUNTS[role]||{name:getRole(role).label,rollen:[role],primaryRole:role,kinder:[]};
   const {dark,toggle}=useTheme();
   const initials=(acc.name||"U").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
   const nav=NAV_BY_ROLE[role]||[];
@@ -535,7 +619,7 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
         {!isMobile&&(
           <Btn onClick={toggle}><div style={{width:22,height:22,borderRadius:"50%",background:dark?"#111":"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.25s",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}> <TI n={dark?"sun":"moon"} size={12} style={{color:dark?ACCENT:"var(--sub)"}}/> </div> <span style={{fontSize:14,fontWeight:600,color:dark?"#111":"var(--sub)",whiteSpace:"nowrap",fontFamily:FONT}}>{dark?"Hell":"Dunkel"}</span></Btn>
         )}
-        {!isMobile&&!onLogout&&<RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||((r)=>{})} onRoleChange={onRoleChange}/>}
+        {!isMobile&&!onLogout&&<RoleSwitcher account={acc} activeSubRole={activeSubRole} setActiveSubRole={setActiveSubRole||(()=>{})} onRoleChange={onRoleChange||(()=>{})}/>}
         {!isMobile&&!onLogout&&<Chip text="DEMO" color="#999" bg="var(--surface2)"/>}
         {!isMobile&&onLogout&&<Btn onClick={onLogout}>Abmelden</Btn>}
       </div>
@@ -560,20 +644,31 @@ function TopBar({role,active,setActive,onRoleChange,account,activeSubRole,setAct
 
 /* DashboardEltern via ./DashboardModul.jsx */
 
-function getNavForRole(role, funktionen=[]){
+function getNavForRole(role: string, funktionen: NavFunktion[]=[]): NavItem[]{
   if(role!=="funktionaer") return NAV_BY_ROLE[role]||NAV_BY_ROLE.spieler;
   /* Vereinte Module aus allen zugewiesenen Funktionen (via Gruppe + override) */
   const allModule=new Set(["dashboard"]);
   funktionen.filter(f=>f?.aktiv!==false).forEach(f=>{
     const gruppe=f.portal_gruppen||f.gruppe||{};
-    const baseModule=f.module_override?.length>0 ? f.module_override : (gruppe.module||[]);
+    const baseModule=(f.module_override?.length||0)>0 ? f.module_override! : (gruppe.module||[]);
     baseModule.forEach(m=>allModule.add(m));
   });
-  return ALL_NAV_ITEMS.filter(n=>allModule.has(n.key));
+  return ALL_NAV_ITEMS.filter(n=>!!n.key&&allModule.has(n.key));
 }
 
 /* Vereinte Teams aus allen Funktionen */
-function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effectiveNav}){
+interface MobileNavProps {
+  role: string;
+  active: string;
+  setActive: (key: string) => void;
+  account?: NavAccount | null;
+  sb?: Sb;
+  onNameUpdated?: ((name: string) => void) | null;
+  onLogout?: (() => void) | null;
+  effectiveNav?: NavItem[];
+}
+
+function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effectiveNav}: MobileNavProps){
   const mobileNav=MOBILE_NAV_BY_ROLE[role]||{tabs:[],mehr:[]};
   const rc=getRole(role).color;
   const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"U";
@@ -601,7 +696,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
             <div style={{width:40,height:4,borderRadius:2,background:"var(--border)",margin:"4px auto 12px"}}/>
             <div style={{padding:"0 8px 4px",fontSize:11,fontWeight:700,color:"var(--sub)",textTransform:"uppercase",letterSpacing:0.5}}>Weitere Module</div>
             {mehr.map(m=>(
-              <button key={m.key} onClick={()=>{setActive(m.key);setShowMehr(false);}}
+              <button key={m.key} onClick={()=>{setActive(m.key!);setShowMehr(false);}}
                 style={{display:"flex",alignItems:"center",gap:14,width:"100%",padding:"12px 16px",
                   background:active===m.key?ACCENT20:"none",border:"none",cursor:"pointer",
                   fontFamily:"inherit",textAlign:"left"}}>
@@ -635,7 +730,7 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
       <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"var(--nav)",borderTop:"1px solid var(--nav-b)",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)",boxShadow:"0 -2px 16px rgba(0,0,0,0.25)"}}>
         <div style={{display:"flex"}}>
           {tabs.map(n=>(
-            <button key={n.key} onClick={()=>{setActive(n.key);setShowMehr(false);}} style={{
+            <button key={n.key} onClick={()=>{setActive(n.key!);setShowMehr(false);}} style={{
               flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
               padding:"6px 0 4px",background:"none",border:"none",cursor:"pointer",
               minHeight:56,WebkitTapHighlightColor:"transparent",position:"relative",gap:0
@@ -669,7 +764,19 @@ function MobileNav({role,active,setActive,account,sb,onNameUpdated,onLogout,effe
 }
 
 
-function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
+type ProfileStatus = "loading" | "ok" | "error" | null;
+
+interface ProfileModalProps {
+  open: boolean;
+  onClose: () => void;
+  account?: NavAccount | null;
+  role: string;
+  sb?: Sb;
+  onNameUpdated?: ((name: string) => void) | null;
+  onLogout?: (() => void) | null;
+}
+
+function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}: ProfileModalProps){
   const rc=getRole(role).color;
   const userName=account?.name||USER_ACCOUNTS[role]?.name||getRole(role)?.label||"Benutzer";
   const userEmail=account?.email||"demo@fcherrliberg.ch";
@@ -680,11 +787,11 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
   // Konto-Bearbeitung
   const [editName,setEditName]=useState(false);
   const [nameDraft,setNameDraft]=useState(userName);
-  const [nameStatus,setNameStatus]=useState(null); // null | "loading" | "ok" | "error"
+  const [nameStatus,setNameStatus]=useState<ProfileStatus>(null); // null | "loading" | "ok" | "error"
   const [nameMsg,setNameMsg]=useState("");
   // Passwort
   const [pwForm,setPwForm]=useState({current:"",next:"",repeat:""});
-  const [pwStatus,setPwStatus]=useState(null);
+  const [pwStatus,setPwStatus]=useState<ProfileStatus>(null);
   const [pwMsg,setPwMsg]=useState("");
 
   if(!open) return null;
@@ -706,12 +813,12 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
       if(onNameUpdated) onNameUpdated(n);
       setTimeout(()=>setNameStatus(null),2500);
     }catch(err){
-      setNameStatus("error");setNameMsg(err.message||"Fehler beim Speichern.");
+      setNameStatus("error");setNameMsg(err instanceof Error?err.message:"Fehler beim Speichern.");
     }
   }
 
   /* ── Passwort ändern ──────────────────────────── */
-  async function handlePwChange(e){
+  async function handlePwChange(e: FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(pwForm.next.length<8){setPwStatus("error");setPwMsg("Mindestens 8 Zeichen.");return;}
     if(pwForm.next!==pwForm.repeat){setPwStatus("error");setPwMsg("Passwörter stimmen nicht überein.");return;}
@@ -724,15 +831,15 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
       setPwStatus("ok");setPwMsg("Passwort erfolgreich geändert.");
       setPwForm({current:"",next:"",repeat:""});
     }catch(err){
-      setPwStatus("error");setPwMsg(err.message||"Fehler beim Ändern.");
+      setPwStatus("error");setPwMsg(err instanceof Error?err.message:"Fehler beim Ändern.");
     }
   }
 
-  const inputStyle={width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:9,
+  const inputStyle: CSSProperties={width:"100%",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:9,
     fontSize:14,fontFamily:FONT,background:"var(--surface2)",color:"var(--text)",
     boxSizing:"border-box",outline:"none"};
 
-  const StatusBox=({status,msg})=>status==="ok"?(
+  const StatusBox=({status,msg}: {status: ProfileStatus; msg: string})=>status==="ok"?(
     <div style={{padding:"10px 14px",background:"var(--surface)",border:"1px solid "+GN,borderRadius:9,fontSize:14,color:GN,fontWeight:600,marginTop:4}}>{msg}</div>
   ):status==="error"?(
     <div style={{padding:"10px 14px",background:RL,border:"1px solid "+R,borderRadius:9,fontSize:14,color:R,fontWeight:600,marginTop:4}}>{msg}</div>
@@ -856,32 +963,32 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}){
    Bestimmt welche Felder in der Mitgliederliste sichtbar sind.
 ──────────────────────────────────────────────────────────── */
 
-const STUFE_RANG={lesen:1,schreiben:2,verwalten:3};
+const STUFE_RANG: Record<string,number>={lesen:1,schreiben:2,verwalten:3};
 
-function maxStufe(a, b){
+function maxStufe(a: Zugriffstufe|null, b: Zugriffstufe|null): Zugriffstufe|null{
   if(!a) return b; if(!b) return a;
   return STUFE_RANG[a]>=STUFE_RANG[b]?a:b;
 }
 
-function getEffektiveStufeForFunktionaer(dbFunktionen, modulKey){
+function getEffektiveStufeForFunktionaer(dbFunktionen: NavFunktion[], modulKey: string): Zugriffstufe|null{
   if(!dbFunktionen||dbFunktionen.length===0) return null;
-  let best=null;
+  let best: Zugriffstufe|null=null;
   dbFunktionen.forEach(f=>{
     const override=f.stufe_override?.[modulKey];
     const gruppenStufe=f.portal_gruppen?.modul_stufen?.[modulKey]||f.modul_stufen?.[modulKey];
-    const module=f.module_override?.length>0?f.module_override:(f.portal_gruppen?.module||[]);
+    const module=(f.module_override?.length||0)>0?f.module_override!:(f.portal_gruppen?.module||[]);
     if(module.includes(modulKey)){
-      const stufe=override||gruppenStufe||f.portal_gruppen?.default_stufe||"lesen";
+      const stufe=(override||gruppenStufe||f.portal_gruppen?.default_stufe||"lesen") as Zugriffstufe;
       best=maxStufe(best,stufe);
     }
   });
   return best;
 }
 
-function getModuleForFunktionaer(dbFunktionen){
-  const all=new Set();
+function getModuleForFunktionaer(dbFunktionen: NavFunktion[]): string[]{
+  const all=new Set<string>();
   (dbFunktionen||[]).forEach(f=>{
-    const mods=f.module_override?.length>0?f.module_override:(f.portal_gruppen?.module||[]);
+    const mods=(f.module_override?.length||0)>0?f.module_override!:(f.portal_gruppen?.module||[]);
     mods.forEach(m=>all.add(m));
   });
   return [...all];
