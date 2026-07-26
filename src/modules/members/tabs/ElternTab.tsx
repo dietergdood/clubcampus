@@ -277,6 +277,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
         open={showSuche}
         onClose={()=>setShowSuche(false)}
         raw={raw} sb={sb} vereinId={vereinId}
+        geaendertVon={geaendertVon}
         onVerknuepft={(mode)=>{
           setShowSuche(false);
           if(mode==="neu") setEditEltern({mode:"neu",data:{mitglied_id:raw.id}});

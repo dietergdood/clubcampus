@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Btn, ModalOrSheet } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { sucheElternkontakte, linkKind } from "../../domains/members/memberService.ts";
+import { sucheElternkontakte, linkKind, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import { vollname } from "../../domains/person/personUtils.ts";
 import { elternAvColor } from "./tabs/ElternTab.tsx";
 import type { Sb } from "../../types.ts";
@@ -18,10 +18,11 @@ interface ElternSucheModalProps {
   raw: { id: number };
   sb: Sb;
   vereinId: string | null;
+  geaendertVon: string;
   onVerknuepft: (mode?: "neu") => void;
 }
 
-export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepft }: ElternSucheModalProps) {
+export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVon, onVerknuepft }: ElternSucheModalProps) {
   const [tab, setTab] = useState<"suche"|"neu">("suche");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ElternTreffer[]>([]);
@@ -54,6 +55,8 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
     const treffer = results.filter(e => selected.has(e.id));
     for (const e of treffer) {
       await linkKind(sb, e.id, raw.id, vereinId, false);
+      const name = vollname(e);
+      logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
     }
     setSaving(false);
     onVerknuepft();
