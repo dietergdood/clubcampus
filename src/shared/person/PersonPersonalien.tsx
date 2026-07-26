@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { Card, InlineField } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { getLandName, LAENDER } from "../../domains/person/personUtils.ts";
+import { getLandName, LAENDER, formatDatum } from "../../domains/person/personUtils.ts";
 import { useInlineEdit } from "../../domains/members/useInlineEdit.ts";
 import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
 import type { Account, Mitglied, Sb } from "../../types.ts";
@@ -54,7 +54,7 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
   const nat1Name = raw.nationalitaet ? getLandName(raw.nationalitaet) || raw.nationalitaet : null;
   const nat2Name = raw.nationalitaet2 ? getLandName(raw.nationalitaet2) || raw.nationalitaet2 : null;
   const geschlechtLabel = raw.geschlecht === "m" ? "Männlich" : raw.geschlecht === "w" ? "Weiblich" : raw.geschlecht || null;
-  const gebdatLabel = raw.geburtsdatum ? new Date(raw.geburtsdatum).toLocaleDateString("de-CH") : null;
+  const gebdatLabel = raw.geburtsdatum ? formatDatum(raw.geburtsdatum) : null;
 
   const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editMode };
 

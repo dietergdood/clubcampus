@@ -13,6 +13,7 @@ import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
+import { formatDatum } from "../../../domains/person/personUtils.ts";
 import type { Account, Mitglied, Mitgliedtyp, Sb } from "../../../types.ts";
 import type { FieldVisibility } from "../../../shared/person/types.ts";
 
@@ -144,7 +145,7 @@ function InfoTab({
             <div className="cc-info-row">
               <span className="cc-info-key">Eintritt</span>
               <span className={eintrittsdatum?"cc-info-val":"cc-info-val-empty"}>
-                {eintrittsdatum?new Date(eintrittsdatum).toLocaleDateString("de-CH"):"—"}
+                {formatDatum(eintrittsdatum)}
               </span>
             </div>
           </div>

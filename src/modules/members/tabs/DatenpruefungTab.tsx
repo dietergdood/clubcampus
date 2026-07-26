@@ -6,6 +6,7 @@ import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, AM } from "../../../constants.ts";
 import { updateMitglied } from "../../../domains/members/memberService.ts";
+import { formatDatum } from "../../../domains/person/personUtils.ts";
 import type { Mitglied, Sb } from "../../../types.ts";
 
 /* Rückmeldung unterhalb der Karte — geteilt mit PortalTab, das denselben
@@ -49,7 +50,7 @@ function DatenpruefungTab({ raw, sb, portalMsg, setPortalMsg, onReload }: Datenp
             <div className="cc-text-bold cc-text-lg">Profil-Status</div>
             <div className="cc-text-sm cc-mt-4">
               {raw.profil_geprueft_at
-                ? `Zuletzt geprüft am ${new Date(raw.profil_geprueft_at).toLocaleDateString("de-CH")}`
+                ? `Zuletzt geprüft am ${formatDatum(raw.profil_geprueft_at)}`
                 : "Noch nie geprüft"}
             </div>
           </div>

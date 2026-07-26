@@ -7,6 +7,7 @@ import { TI } from "../../icons.tsx";
 import { reaktiviereMitglied, deleteMitglied, fetchArchiv } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
+import { formatDatum } from "../../domains/person/personUtils.ts";
 import type { ColDef, ColGroup, GroupOption, ListGroup, ListRow, RowId } from "../../shared/list/types.ts";
 import type { Sb, SetState } from "../../types.ts";
 
@@ -36,7 +37,7 @@ function mapArchivRow(m: ArchivMitglied) {
     name:               `${m.vorname||""} ${m.nachname||""}`.trim(),
     mitgliedtyp:        m.mitgliedtyp||"—",
     deaktiviert_am:     m.deaktiviert_am ? String(new Date(m.deaktiviert_am).getFullYear()) : "—",
-    deaktiviert_am_fmt: m.deaktiviert_am ? new Date(m.deaktiviert_am).toLocaleDateString("de-CH") : "—",
+    deaktiviert_am_fmt: formatDatum(m.deaktiviert_am),
     deaktiviert_von:    m.deaktiviert_von||"—",
     _raw:               m,
   };

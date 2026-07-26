@@ -10,6 +10,7 @@
 import * as XLSX from "xlsx";
 import { csvDownload } from "../../shared/list/exportUtils.ts";
 import { memberFeld } from "./memberMapper.ts";
+import { formatDatum } from "../../domains/person/personUtils.ts";
 import type { MemberRow } from "./memberMapper.ts";
 import type { ColDef, ExportFormat, GroupContext } from "../../shared/list/types.ts";
 import type { MemberGroup } from "./memberGrouping.ts";
@@ -54,7 +55,7 @@ function exportCellValue(k: string, m: MemberRow, groupContext: GroupContext = {
   }
   if(k==="nationalitaet") return m.nationalitaet&&m.nationalitaet!=="-"?m.nationalitaet:"";
   if(k==="nationalitaet2") return m.nationalitaet2||"";
-  if(k==="eintritt") return m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"";
+  if(k==="eintritt") return m.eintritt?formatDatum(m.eintritt):"";
   if(k==="portal") return m.hat_portal_zugang?"Aktiv":"Kein Zugang";
   if(k==="datenpruefung") return m.profil_geprueft_at?"Geprüft":"Ausstehend";
   const v=memberFeld(m,k);
