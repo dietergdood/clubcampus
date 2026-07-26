@@ -3,7 +3,6 @@
    Root-Komponente, Datenlader und Router in einem
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import type { ReactElement } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { FONT } from "./constants.ts";
 import { ThemeCtx, THEME_DEFAULT_STATIC, useBreakpoint } from "./theme.ts";

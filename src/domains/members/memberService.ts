@@ -4,7 +4,7 @@
    Kader, Benutzer (Portal-Zugang), Ansichten
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { Ansicht, SbClient, Tables, TablesInsert, TablesUpdate } from "../../types.ts";
+import type { Ansicht, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* ── Fehler-Vertrag der Write-Funktionen ──────────────────────────
    Reine Schreiboperationen (insert/update/delete/upsert ohne Rückgabe-

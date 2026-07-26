@@ -11,10 +11,10 @@ jobs:
     name: Typecheck, Tests & Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # 22 LTS: deckt die engines-Anforderungen von rolldown/oxc (>=20.19 / 22.12)
           # ab und vermeidet die Node-20-Deprecation der Runner-Actions.
