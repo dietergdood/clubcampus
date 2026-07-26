@@ -70,7 +70,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
       {tab==="suche" ? (
         <div className="cc-modal-body">
           <div className="cc-relative">
-            <TI n="search" size={14} style={{position:"absolute",left:10,top:10,color:"var(--sub)"}}/>
+            <TI n="search" size={14} className="cc-search-icon-abs"/>
             <input className="cc-input cc-search-input" placeholder="Name oder E-Mail suchen…"
               value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}} autoFocus/>
           </div>
@@ -97,7 +97,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
                         </div>
                       ))}
                     </div>
-                    {isSel&&<TI n="check" size={16} style={{color:"#16a34a",flexShrink:0}}/>}
+                    {isSel&&<TI n="check" size={16} className="cc-check-icon"/>}
                   </div>
                 );
               })}
