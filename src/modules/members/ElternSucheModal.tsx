@@ -10,17 +10,14 @@ import { vollname } from "../../domains/person/personUtils.ts";
 import { elternAvColor } from "./tabs/ElternTab.tsx";
 import type { Sb } from "../../types.ts";
 
-/* Direkt aus der Service-Rückgabe abgeleitet */
 type ElternTreffer = Awaited<ReturnType<typeof sucheElternkontakte>>[number];
 
 interface ElternSucheModalProps {
   open: boolean;
   onClose: () => void;
-  /* Das Kind, mit dem verknüpft wird — gebraucht wird nur die ID */
   raw: { id: number };
   sb: Sb;
   vereinId: string | null;
-  /* "neu" signalisiert dem Aufrufer, das Erfassungsformular zu öffnen */
   onVerknuepft: (mode?: "neu") => void;
 }
 
@@ -28,7 +25,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
   const [tab, setTab] = useState<"suche"|"neu">("suche");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ElternTreffer[]>([]);
-  const [selected, setSelected] = useState<ElternTreffer|null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -43,12 +40,21 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
     return () => clearTimeout(timerRef.current);
   }, [query]);
 
+  function toggleSelected(e: ElternTreffer) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(e.id) ? next.delete(e.id) : next.add(e.id);
+      return next;
+    });
+  }
+
   async function verknuepfen() {
-    /* eltern_kinder.verein_id ist NOT NULL — ohne sb/vereinId würde das
-       Insert ohnehin scheitern, deshalb hier schon abbrechen. */
-    if (!selected || !sb || !vereinId) return;
+    if (!selected.size || !sb || !vereinId) return;
     setSaving(true);
-    await linkKind(sb, selected.id, raw.id, vereinId, false);
+    const treffer = results.filter(e => selected.has(e.id));
+    for (const e of treffer) {
+      await linkKind(sb, e.id, raw.id, vereinId, false);
+    }
     setSaving(false);
     onVerknuepft();
     onClose();
@@ -72,7 +78,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
           <div className="cc-relative">
             <TI n="search" size={14} className="cc-search-icon-abs"/>
             <input className="cc-input cc-search-input" placeholder="Name oder E-Mail suchen…"
-              value={query} onChange={e=>{setQuery(e.target.value);setSelected(null);}} autoFocus/>
+              value={query} onChange={e=>{setQuery(e.target.value);setSelected(new Set());}} autoFocus/>
           </div>
 
           {results.length > 0 && (
@@ -82,11 +88,11 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
                 const initials = name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
                 const ac = elternAvColor(e.beziehung);
                 const kinder = e.eltern_kinder||[];
-                const isSel = selected?.id === e.id;
+                const isSel = selected.has(e.id);
                 return (
                   <div key={e.id}
                     className={`cc-eltern-result${isSel?" cc-eltern-result-active":""}`}
-                    onClick={()=>setSelected(isSel?null:e)}>
+                    onClick={()=>toggleSelected(e)}>
                     <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>{initials}</div>
                     <div className="cc-flex-1 cc-col cc-gap-3">
                       <div className="cc-text-bold cc-text-sm">{name}</div>
@@ -119,8 +125,8 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
       <div className="cc-modal-ftr">
         <Btn onClick={onClose}>Abbrechen</Btn>
         {tab==="suche" ? (
-          <Btn variant="primary" onClick={verknuepfen} disabled={!selected||saving}>
-            {saving?"Verknüpft…":"Verknüpfen"}
+          <Btn variant="primary" onClick={verknuepfen} disabled={!selected.size||saving}>
+            {saving?"Verknüpft…":selected.size>1?`${selected.size} verknüpfen`:"Verknüpfen"}
           </Btn>
         ) : (
           <Btn variant="primary" onClick={()=>{ onClose(); if(onVerknuepft) onVerknuepft("neu"); }}>Weiter</Btn>
