@@ -409,14 +409,16 @@ CREATE TABLE IF NOT EXISTS "public"."benutzer" (
     "name" "text",
     "role" "text" DEFAULT 'spieler'::"text" NOT NULL,
     "teams" "text"[] DEFAULT '{}'::"text"[],
-    "active" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "teams_kontext" "jsonb" DEFAULT '[]'::"jsonb",
     "rollen" "text"[] DEFAULT '{}'::"text"[],
     "profil_geprueft_at" timestamp with time zone,
     "aktiv" boolean DEFAULT true,
     "verein_id" "uuid" NOT NULL,
-    "last_sign_in_at" timestamp with time zone
+    "last_sign_in_at" timestamp with time zone,
+    "vorname" "text",
+    "nachname" "text",
+    "telefon" "text"
 );
 
 
@@ -495,6 +497,30 @@ CREATE TABLE IF NOT EXISTS "public"."dokumente" (
 ALTER TABLE "public"."dokumente" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."eltern_kinder" (
+    "id" bigint NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "eltern_id" "uuid" NOT NULL,
+    "mitglied_id" bigint NOT NULL,
+    "hauptkontakt" boolean DEFAULT false NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."eltern_kinder" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."eltern_kinder" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME "public"."eltern_kinder_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."elternkontakte" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "mitglied_id" bigint NOT NULL,
@@ -508,7 +534,8 @@ CREATE TABLE IF NOT EXISTS "public"."elternkontakte" (
     "nachname" "text",
     "telefon" "text",
     "hauptkontakt" boolean DEFAULT false,
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "supporter" boolean DEFAULT false
 );
 
 
@@ -797,7 +824,8 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder" (
     "deaktiviert_am" timestamp with time zone,
     "deaktiviert_von" "text",
     "nationalitaet2" "text",
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "eintrittsdatum" "date"
 );
 
 
@@ -1777,6 +1805,16 @@ ALTER TABLE ONLY "public"."dokumente"
 
 
 
+ALTER TABLE ONLY "public"."eltern_kinder"
+    ADD CONSTRAINT "eltern_kinder_eltern_id_mitglied_id_verein_id_key" UNIQUE ("eltern_id", "mitglied_id", "verein_id");
+
+
+
+ALTER TABLE ONLY "public"."eltern_kinder"
+    ADD CONSTRAINT "eltern_kinder_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."elternkontakte"
     ADD CONSTRAINT "elternkontakte_mitglied_email_unique" UNIQUE ("mitglied_id", "email");
 
@@ -2570,6 +2608,21 @@ ALTER TABLE ONLY "public"."dokumente"
 
 
 
+ALTER TABLE ONLY "public"."eltern_kinder"
+    ADD CONSTRAINT "eltern_kinder_eltern_id_fkey" FOREIGN KEY ("eltern_id") REFERENCES "public"."elternkontakte"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."eltern_kinder"
+    ADD CONSTRAINT "eltern_kinder_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."eltern_kinder"
+    ADD CONSTRAINT "eltern_kinder_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."elternkontakte"
     ADD CONSTRAINT "elternkontakte_benutzer_id_fkey" FOREIGN KEY ("benutzer_id") REFERENCES "public"."benutzer"("id");
 
@@ -3343,6 +3396,13 @@ CREATE POLICY "dokumente_write" ON "public"."dokumente" USING ((("verein_id" = "
 
 
 
+ALTER TABLE "public"."eltern_kinder" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "eltern_kinder_verein" ON "public"."eltern_kinder" USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
 ALTER TABLE "public"."elternkontakte" ENABLE ROW LEVEL SECURITY;
 
 
@@ -3794,6 +3854,10 @@ CREATE POLICY "portal_rollen_select" ON "public"."portal_rollen" FOR SELECT USIN
 
 
 CREATE POLICY "portal_rollen_write" ON "public"."portal_rollen" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+CREATE POLICY "public read vereine" ON "public"."vereine" FOR SELECT TO "authenticated", "anon" USING (true);
 
 
 
@@ -4322,6 +4386,18 @@ GRANT ALL ON TABLE "public"."busse" TO "service_role";
 GRANT ALL ON TABLE "public"."dokumente" TO "anon";
 GRANT ALL ON TABLE "public"."dokumente" TO "authenticated";
 GRANT ALL ON TABLE "public"."dokumente" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."eltern_kinder" TO "anon";
+GRANT ALL ON TABLE "public"."eltern_kinder" TO "authenticated";
+GRANT ALL ON TABLE "public"."eltern_kinder" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."eltern_kinder_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."eltern_kinder_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."eltern_kinder_id_seq" TO "service_role";
 
 
 
