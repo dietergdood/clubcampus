@@ -120,12 +120,12 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
 ## Bekannte Defekte
 
-- **Beitrittsdatum** — seit der SQL-Migration vom 26.07.2026 gibt es die Spalte `mitglieder.eintrittsdatum`; `InfoTab`/`memberMapper` lesen sie korrekt. ⚠ `database.types.ts` wurde noch **nicht** neu generiert — die Spalte hängt aktuell an einem Bridge-Typ in `types.ts` (`Mitglied.eintrittsdatum`). Nach `supabase gen types typescript` diese Bridge-Zeile entfernen. Dasselbe gilt für die übrigen Änderungen jener Migration (supporter, `active` entfernt, `benutzer.vorname/nachname/telefon`).
-- **Supporter-Logik läuft ins Leere.** `elternkontakte` hat keine Spalte `supporter`. `ElternTab` schreibt sie beim Entknüpfen des letzten Kindes trotzdem (siehe `ELTERN_LOGIK.md`); das Update scheitert still, der Fehler wird nicht ausgewertet.
 - `Mitgliedtyp` in `types.ts` bildet `mitgliedtypen` nur teilweise ab — es fehlen `id`, `hauptkontakt_pflicht`, `standard_rolle` und `beitragsinfo`. `MitgliederModul` ergänzt `hauptkontakt_pflicht` lokal.
 - Vier fast gleiche Kaderrollen-Typen nebeneinander: `KaderRolle` (`types.ts`), `KaderRolleDb` (`roleUtils`), `KaderRolleOption` (`useMemberMeta`), `RolleOption` (`RollenAuswahlListe`).
 
 Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `clubcampus` (ReferenceError statt Login-Screen, sobald die Env-Variablen fehlten), das undefinierte `vereinId` an `ProfileView`, sowie das Phantomfeld `geprueft` in `MemberHero` und `InfoTab` (Datenprüfungs-Status stand konstant auf „offen"/„Ausstehend").
+
+Behoben mit der SQL-Migration vom 26.07.2026 + Typ-Regenerierung: `mitglieder.eintrittsdatum`, `elternkontakte.supporter` und `benutzer.vorname/nachname/telefon` sind jetzt echte Spalten. `database.types.ts` wurde neu generiert; die früheren Bridge-/Extension-Typen in `types.ts` (Elternkontakt-`supporter`, DbUser-`vorname/nachname/telefon`, Mitglied-`eintrittsdatum`) sind entfernt. Damit greifen die früher stillen Schreibpfade (u. a. die Supporter-Logik beim Entknüpfen des letzten Kindes).
 
 Behoben beim Abschluss der Modul-Migration (Sport-Module):
 - **Acht tote `verein_id`-Schreibpfade** — die DB lehnt Zeilen ohne `verein_id` still ab (siehe verein_id-Regel oben): `KaderModul` (Kader-Upsert), `TrainingsplanModul` (`trainingsplaetze`, `trainings`, `trainingsplan_vorlagen`/`_slots`/`_ausnahmen`), `TeamsVerwaltungModul` (`teams`-Insert via `toDbData`, `team_module`-Upsert). `vereinId` wird jetzt via Prop durchgereicht (clubcampus → TeamView/TeamsVerwaltung → Modul), Guards ergänzt.

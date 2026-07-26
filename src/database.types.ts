@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -474,52 +474,58 @@ export type Database = {
       }
       benutzer: {
         Row: {
-          active: boolean | null
           aktiv: boolean | null
           created_at: string | null
           email: string
           id: string
           last_sign_in_at: string | null
           mitglied_id: number | null
+          nachname: string | null
           name: string | null
           profil_geprueft_at: string | null
           role: string
           rollen: string[] | null
           teams: string[] | null
           teams_kontext: Json | null
+          telefon: string | null
           verein_id: string
+          vorname: string | null
         }
         Insert: {
-          active?: boolean | null
           aktiv?: boolean | null
           created_at?: string | null
           email: string
           id: string
           last_sign_in_at?: string | null
           mitglied_id?: number | null
+          nachname?: string | null
           name?: string | null
           profil_geprueft_at?: string | null
           role?: string
           rollen?: string[] | null
           teams?: string[] | null
           teams_kontext?: Json | null
+          telefon?: string | null
           verein_id: string
+          vorname?: string | null
         }
         Update: {
-          active?: boolean | null
           aktiv?: boolean | null
           created_at?: string | null
           email?: string
           id?: string
           last_sign_in_at?: string | null
           mitglied_id?: number | null
+          nachname?: string | null
           name?: string | null
           profil_geprueft_at?: string | null
           role?: string
           rollen?: string[] | null
           teams?: string[] | null
           teams_kontext?: Json | null
+          telefon?: string | null
           verein_id?: string
+          vorname?: string | null
         }
         Relationships: [
           {
@@ -850,6 +856,7 @@ export type Database = {
           mitglied_id: number
           nachname: string | null
           name: string
+          supporter: boolean | null
           tel: string | null
           telefon: string | null
           verein_id: string
@@ -865,6 +872,7 @@ export type Database = {
           mitglied_id: number
           nachname?: string | null
           name: string
+          supporter?: boolean | null
           tel?: string | null
           telefon?: string | null
           verein_id: string
@@ -880,6 +888,7 @@ export type Database = {
           mitglied_id?: number
           nachname?: string | null
           name?: string
+          supporter?: boolean | null
           tel?: string | null
           telefon?: string | null
           verein_id?: string
@@ -1603,6 +1612,7 @@ export type Database = {
           datenstatus: string | null
           deaktiviert_am: string | null
           deaktiviert_von: string | null
+          eintrittsdatum: string | null
           eltern: Json | null
           email: string | null
           fairgate_id: string | null
@@ -1642,6 +1652,7 @@ export type Database = {
           datenstatus?: string | null
           deaktiviert_am?: string | null
           deaktiviert_von?: string | null
+          eintrittsdatum?: string | null
           eltern?: Json | null
           email?: string | null
           fairgate_id?: string | null
@@ -1681,6 +1692,7 @@ export type Database = {
           datenstatus?: string | null
           deaktiviert_am?: string | null
           deaktiviert_von?: string | null
+          eintrittsdatum?: string | null
           eltern?: Json | null
           email?: string | null
           fairgate_id?: string | null
