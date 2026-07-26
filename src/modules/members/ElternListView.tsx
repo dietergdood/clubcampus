@@ -102,9 +102,10 @@ function buildElternGroups(rows: ElternRow[], groupBy: string[] | string): ListG
 interface ElternRenderCellDeps {
   expandedKinder: Set<string>;
   setExpandedKinder: SetState<Set<string>>;
+  onNavToMember?: ((id: number) => void) | null;
 }
 
-function makeElternRenderCell({ expandedKinder, setExpandedKinder }: ElternRenderCellDeps) {
+function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember }: ElternRenderCellDeps) {
   return function renderElternCell(col: ColDef, e: ElternRow) {
     switch(col.key) {
       case "name":
@@ -129,7 +130,10 @@ function makeElternRenderCell({ expandedKinder, setExpandedKinder }: ElternRende
           <div className="cc-col cc-gap-4">
             {visible.map((k,i) => (
               <div key={i} className="cc-teams-rollen-row">
-                <span className="cc-teams-rollen-team">{k.name}</span>
+                {onNavToMember
+                  ? <button className="cc-eltern-kind-link" onClick={ev=>{ev.stopPropagation();onNavToMember(k.mitglied_id);}}>{k.name}</button>
+                  : <span className="cc-teams-rollen-team">{k.name}</span>
+                }
                 {k.teams.length>0&&<>
                   <span className="cc-teams-rollen-sep">·</span>
                   <span className="cc-teams-rollen-rolle">{k.teams.join(", ")}</span>
@@ -161,9 +165,10 @@ interface ElternListViewProps {
   vereinId: string | null;
   account?: Account | null;
   isAdmin?: boolean;
+  onNavToMember?: ((id: number) => void) | null;
 }
 
-export function ElternListView({ sb, vereinId, account, isAdmin = false }: ElternListViewProps) {
+export function ElternListView({ sb, vereinId, account, isAdmin = false, onNavToMember = null }: ElternListViewProps) {
   const [rows, setRows] = useState<ElternRow[]>([]);
   const [confirm, confirmDialog] = useConfirm();
   const [expandedKinder, setExpandedKinder] = useState<Set<string>>(new Set());
@@ -173,12 +178,32 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }: Elter
     fetchAlleElternkontakte(sb, vereinId).then(data => setRows(mapEltern(data)));
   }, [sb, vereinId]);
 
+  /* Alle Teams aus Kinder-Verknüpfungen für Filter-Dropdown */
+  const alleTeams = [...new Set(rows.flatMap(r => r.teams))].sort();
+
   const filterDefs = buildFilterDefs(rows, [
     { key:"beziehung", label:"Beziehung" },
     { key:"portal",    label:"Portal", vals:["Aktiv","Kein Zugang"] },
+    { key:"teams",     label:"Team",   vals:alleTeams },
   ]);
 
-  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder });
+  /* Volltext-Suche: Name, E-Mail, Telefon, Kind-Namen, Teams */
+  function filterEltern(elternRows: ElternRow[], search: string): ElternRow[] {
+    if (!search) return elternRows;
+    const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
+    return elternRows.filter(e => {
+      const haystack = [
+        e.name, e.vorname, e.nachname,
+        e.email, e.telefon, e.beziehung,
+        e.kind_name,
+        ...e.kinder.map(k => k.name),
+        ...e.teams,
+      ].join(" ").toLowerCase();
+      return terms.every(t => haystack.includes(t));
+    });
+  }
+
+  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember });
 
   async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
@@ -197,6 +222,16 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false }: Elter
         emptyTitle="Noch keine Elternkontakte"
         emptySubtitle="Elternkontakte werden beim Mitglied erfasst."
         rows={rows}
+        filterFn={(elternRows, search, filterVals) => {
+          /* Volltext-Suche */
+          let result = filterEltern(elternRows, search);
+          /* Team-Filter */
+          const teamVals: string[] = Array.isArray(filterVals["teams"]) ? filterVals["teams"] : [];
+          if (teamVals.length > 0) {
+            result = result.filter(r => r.teams.some(t => teamVals.includes(t)));
+          }
+          return result;
+        }}
         colDefs={COL_DEFS}
         colGroups={COL_GROUPS}
         filterDefs={filterDefs}

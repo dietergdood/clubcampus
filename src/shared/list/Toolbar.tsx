@@ -243,9 +243,12 @@ export function Toolbar({
       <div className="cc-ml-toolbar">
         {/* Suche */}
         {onSearch!==null&&(
-          <div className="cc-ml-srch">
-            <TI n="search" size={15} className="cc-input-icon"/>
-            <input value={search} onChange={e=>onSearch(e.target.value)} placeholder="Suchen…"/>
+          <div>
+            <div className="cc-ml-srch">
+              <TI n="search" size={15} className="cc-input-icon"/>
+              <input value={search} onChange={e=>onSearch(e.target.value)} placeholder="Suchen…"/>
+            </div>
+            {search&&<div className="cc-search-hint">Suche über alle Felder — auch ausgeblendete Spalten</div>}
           </div>
         )}
 

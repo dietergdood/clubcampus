@@ -54,11 +54,26 @@ export function filterMembers(
     if(search){
       const terms=search.toLowerCase().split(/\s+/).filter(Boolean);
       const haystack=[
-        m.name, m.mitgliedschaft,
+        m.name, m.vorname, m.nachname,
+        m.mitgliedschaft,
         ...(m.rollen||[]),
         ...(m.teams||[]).map(t=>teamName(t)),
         ...(m.teams||[]).map(t=>(typeof t==="string"?"":t?.kurz||"")),
         m.email||"",
+        m.telefon||"",
+        m.strasse||"",
+        m.plz||"",
+        m.ort||"",
+        m.wohnort||"",
+        m.heimatort||"",
+        m.nationalitaet||"",
+        m.nationalitaet2||"",
+        m.position||"",
+        m.fairgate_id||"",
+        m.js_nr||"",
+        m.spielerpass||"",
+        ...(m.funktionen||[]),
+        ...(m.funktionsgruppen||[]),
       ].join(" ").toLowerCase();
       if(!terms.every(t=>haystack.includes(t))) return false;
     }
