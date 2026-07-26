@@ -150,10 +150,10 @@ function InfoTab({
         </Card>
 
         {/* PersonTeams und PersonFunktionen verlangen einen echten Client.
-            InfoTab wird nur innerhalb einer angemeldeten Session gerendert,
-            in der sb gesetzt ist. */}
-        <PersonTeams
-          raw={raw} sb={sb!} canEdit={canEdit}
+            Statt einer sb!-Assertion nur rendern, wenn sb gesetzt ist —
+            das narrowt sb auf SbClient und faellt ohne Client sicher weg. */}
+        {sb && <PersonTeams
+          raw={raw} sb={sb} canEdit={canEdit}
           dbKaderRollen={dbKaderRollen}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
           allTeams={allTeams} setAllTeams={setAllTeams}
@@ -161,14 +161,14 @@ function InfoTab({
           onNavToTeam={onNavToTeam}
           onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}} ableitRolle={ableitRolle}
           vereinId={vereinId} account={account}
-        />
+        />}
 
-        <PersonFunktionen
-          raw={raw} sb={sb!} canEdit={canEdit} canDelete={canDelete}
+        {sb && <PersonFunktionen
+          raw={raw} sb={sb} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
           onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}}
           vereinId={vereinId} account={account}
-        />
+        />}
 
         {/* Notizen */}
         {fv.showNotizen && (
