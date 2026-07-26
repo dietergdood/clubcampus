@@ -75,5 +75,3 @@ export function PersonSelector({
     </div>
   );
 }
-
-export default PersonSelector;

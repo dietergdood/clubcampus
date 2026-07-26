@@ -359,5 +359,3 @@ function MemberDetail({
 }
 
 export { MemberDetail };
-export const MembersView = MemberDetail;
-export default MemberDetail;

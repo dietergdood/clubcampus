@@ -4,10 +4,6 @@
    ═══════════════════════════════════════════════════════════════ */
 import type { FieldVisibility } from "../../shared/person/types.ts";
 
-// Re-exports für Rückwärtskompatibilität
-export { LAENDER, getLandName } from "../../domains/person/personUtils.ts";
-export { RolleChip } from "../../shared/person/RolleChip.tsx";
-
 interface RoleInfo {
   label: string;
   level: number;
