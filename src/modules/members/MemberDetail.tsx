@@ -81,10 +81,13 @@ function MemberDetail({
   vereinId = null,
 }: MemberDetailProps) {
   const dbRaw: Partial<Mitglied> = dbMitglieder.find(d => d.id === m.id) || {};
-  /* m überschreibt die DB-Zeile dort, wo es einen Wert mitbringt. Das Ergebnis
-     wird als Mitglied an die Tabs gereicht — bei Navigations- und Archiv-
-     objekten ist es nur teilweise gefüllt, die Tabs lesen aber ausschliesslich
-     Felder, die dbRaw liefert. */
+  /* m überschreibt die DB-Zeile dort, wo es einen Wert mitbringt. Bei
+     Navigations-/Archivobjekten ist dbRaw leer und das Ergebnis nur teilweise
+     gefüllt; die Tabs lesen solche Felder aber defensiv (|| "—" etc.).
+     `as Mitglied` ist ein bewusster Boundary-Cast: die 11 abnehmenden Tabs
+     erwarten `Mitglied` (u. a. ~70 `raw.id`-Zugriffe als `number`), ein
+     `Partial<Mitglied>` würde dort ueberall Guards erzwingen — unverhaeltnis-
+     maessig fuer den seltenen Teil-Fall. */
   const raw = {
     ...dbRaw,
     ...Object.fromEntries(
@@ -153,9 +156,12 @@ function MemberDetail({
   async function ableitRolle() {
     if (!sb || !raw.id) return;
     const neueRolle = await ableitUndSaveRolle(sb, raw.id, dbKaderRollen, raw.mitgliedtyp, raw.funktionen ?? []);
-    /* Ohne bestehenden Benutzer entsteht hier ein Platzhalter, der nur die
-       Rolle trägt — vollständig wird er erst beim nächsten Laden. */
-    setBenutzer(prev => prev ? { ...prev, role: neueRolle } : { role: neueRolle } as PortalBenutzer);
+    /* Optimistisch nur die Rolle aktualisieren, wenn bereits ein Benutzer
+       geladen ist. Ohne Benutzer gab es hier frueher einen als PortalBenutzer
+       gecasteten Platzhalter mit lauter undefined-Feldern — der wurde beim
+       gleich folgenden onReload() ohnehin durch die echte (ggf. leere) Zeile
+       ersetzt. */
+    setBenutzer(prev => prev ? { ...prev, role: neueRolle } : prev);
     if (onReload) onReload();
   }
 
