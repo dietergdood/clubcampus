@@ -33,10 +33,10 @@ function getKinderMitTeams(alleKinder: KindVerknuepfung[]): KindMitTeams[] {
     const name = m ? `${m.vorname||""} ${m.nachname||""}`.trim() : "?";
     const kaderArr = Array.isArray(m?.kader) ? m.kader : (m?.kader ? [m.kader] : []);
     const teamRollen: KindTeamRolle[] = kaderArr
-      .filter((ka: {aktiv?: boolean}) => ka.aktiv)
-      .map((ka: {teams?: unknown; rollen?: unknown}) => {
+      .filter(ka => ka.aktiv === true)
+      .map(ka => {
         const tArr = Array.isArray(ka.teams) ? ka.teams : (ka.teams ? [ka.teams] : []);
-        const t = tArr[0] as {kurzname?: string; name?: string} | undefined;
+        const t = tArr[0] as {kurzname?: string | null; name?: string} | undefined;
         const team = t?.kurzname || t?.name || "";
         const rollen = Array.isArray(ka.rollen) ? ka.rollen as string[] : (ka.rollen ? [String(ka.rollen)] : []);
         const rolle = rollen[0] || "";
