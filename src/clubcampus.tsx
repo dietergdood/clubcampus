@@ -265,7 +265,7 @@ function Portal({supabaseClient, slug}: PortalProps){
 
   // Login-Screen wenn nicht eingeloggt (oder kein Supabase)
   if(sb && !session){
-    return <LoginScreen sb={sb} onLogin={(s: Session)=>setSession(s)} appTheme={appTheme}/>;
+    return <LoginScreen sb={sb} onLogin={(s: Session)=>setSession(s)} appTheme={appTheme} vereinId={tenant?.id||null}/>;
   }
 
   // Kein Portal-Zugang

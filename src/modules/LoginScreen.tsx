@@ -17,11 +17,12 @@ interface LoginScreenProps {
   onLogin: (session: Session) => void;
   sb: SbClient;
   appTheme?: AppTheme | null;
+  vereinId?: string | null;
 }
 
 type Mode = "login" | "register" | "reset";
 
-function LoginScreen({onLogin, sb, appTheme}: LoginScreenProps){
+function LoginScreen({onLogin, sb, appTheme, vereinId}: LoginScreenProps){
   const [email,setEmail]=useState("");
   const [pw,setPw]=useState("");
   const [pw2,setPw2]=useState("");
@@ -52,32 +53,33 @@ function LoginScreen({onLogin, sb, appTheme}: LoginScreenProps){
     if(pw.length<6){ setError("Passwort muss mindestens 6 Zeichen haben."); return; }
     setLoading(true); setError("");
     try{
-      const [{data:m, error:mErr},{data:ek, error:ekErr}] = await Promise.all([
-        sb.from("mitglieder").select("id,vorname,nachname").eq("email",email).eq("aktiv",true).limit(1),
-        sb.from("elternkontakte").select("id,name").eq("email",email).limit(1),
-      ]);
-      if(mErr||ekErr) console.error("[FCH] Registrierungs-Lookup fehlgeschlagen:", mErr, ekErr);
-      const istBekannt = (m&&m.length>0) || (ek&&ek.length>0);
+      /* RPC mit SECURITY DEFINER — funktioniert auch für nicht-eingeloggte User */
+      const { data: istBekannt, error: rpcErr } = await sb.rpc("check_email_bekannt", {
+        p_email: email,
+        p_verein_id: vereinId || "00000000-0000-0000-0000-000000000001",
+      });
+      if(rpcErr) console.error("[CC] check_email_bekannt fehlgeschlagen:", rpcErr);
       if(!istBekannt){
         setError("Diese E-Mail ist nicht im System hinterlegt. Bitte wende dich an deinen Verein.");
         setLoading(false);
         return;
       }
+      /* Name für Supabase Auth aus mitglieder/elternkontakte laden */
+      const [{data:m},{data:ek}] = await Promise.all([
+        sb.from("mitglieder").select("id,vorname,nachname").eq("email",email).eq("aktiv",true).limit(1),
+        sb.from("elternkontakte").select("id,name").eq("email",email).limit(1),
+      ]);
       const dbName = m?.[0] ? `${m[0].vorname} ${m[0].nachname}`.trim()
         : ek?.[0] ? ek[0].name||email.split("@")[0]
         : email.split("@")[0];
       const {data,error:err}=await sb.auth.signUp({email, password:pw, options:{data:{name:dbName}}});
       if(err) throw err;
-      // Auto-Verknüpfung nach Registrierung
       if(data.user){
         const uid=data.user.id;
-        // Benutzer-Eintrag kurz warten (Trigger braucht einen Moment)
         await new Promise(r=>setTimeout(r,1000));
         const {data:bu}=await sb.from("benutzer").select("id").eq("id",uid).maybeSingle();
         if(bu){
-          // Mitglied verknüpfen
           if(m?.[0]) await sb.from("benutzer").update({mitglied_id:m[0].id}).eq("id",uid);
-          // Elternkontakt verknüpfen
           if(ek?.[0]) await sb.from("elternkontakte").update({benutzer_id:uid}).eq("id",ek[0].id);
         }
       }
