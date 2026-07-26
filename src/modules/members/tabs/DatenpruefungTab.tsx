@@ -117,7 +117,7 @@ function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, el
         <div className="cc-text-sm cc-mb-12">
           Das Mitglied wird beim nächsten Login aufgefordert, seine Daten zu prüfen und zu bestätigen.
         </div>
-        <button className="cc-btn-ghost cc-w-full" onClick={anfordern}>
+        <button className="cc-btn-outline cc-w-full" onClick={anfordern}>
           <TI n="refresh"/> Datenprüfung anfordern
         </button>
         {portalMsg && (
