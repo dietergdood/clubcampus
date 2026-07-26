@@ -78,6 +78,10 @@ export interface Account {
    befüllt das Feld aber aus elternkontakte/eltern_kinder. */
 export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'> {
   eltern?: Elternkontakt[];
+  /* Echte Spalte seit der SQL-Migration vom 26.07.2026, aber noch nicht
+     in database.types.ts — dort ergaenzen, sobald `supabase gen types`
+     neu laeuft, und diese Zeile dann entfernen. */
+  eintrittsdatum?: string | null;
   // Von der App berechnet, nicht in der Tabelle
   kader_rollen?: string[];
   kader_teams?: { name: string; kurz: string }[];

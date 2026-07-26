@@ -9,7 +9,6 @@ import type { Mitglied, PortalRolle } from "../../types.ts";
    keine der von loadDbMitglieder ergänzten Felder. Der Code unten liest sie
    trotzdem; sie sind zur Laufzeit immer undefined. Siehe offene Punkte. */
 interface MitgliedRoh extends Mitglied {
-  eintrittsdatum?: string | null;
   teams?: string[];
 }
 

@@ -120,7 +120,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
 ## Bekannte Defekte
 
-- **Kein Beitrittsdatum.** `mitglieder` hat keine Spalte dafür; `InfoTab` und `memberMapper` lesen ein `eintrittsdatum`, das es nicht gibt. Die Zeile „Eintritt" im Profil und die Spalte in der Liste bleiben konstant leer. `created_at` ist das Anlagedatum des Datensatzes und kein Ersatz.
+- **Beitrittsdatum** — seit der SQL-Migration vom 26.07.2026 gibt es die Spalte `mitglieder.eintrittsdatum`; `InfoTab`/`memberMapper` lesen sie korrekt. ⚠ `database.types.ts` wurde noch **nicht** neu generiert — die Spalte hängt aktuell an einem Bridge-Typ in `types.ts` (`Mitglied.eintrittsdatum`). Nach `supabase gen types typescript` diese Bridge-Zeile entfernen. Dasselbe gilt für die übrigen Änderungen jener Migration (supporter, `active` entfernt, `benutzer.vorname/nachname/telefon`).
 - **Supporter-Logik läuft ins Leere.** `elternkontakte` hat keine Spalte `supporter`. `ElternTab` schreibt sie beim Entknüpfen des letzten Kindes trotzdem (siehe `ELTERN_LOGIK.md`); das Update scheitert still, der Fehler wird nicht ausgewertet.
 - `Mitgliedtyp` in `types.ts` bildet `mitgliedtypen` nur teilweise ab — es fehlen `id`, `hauptkontakt_pflicht`, `standard_rolle` und `beitragsinfo`. `MitgliederModul` ergänzt `hauptkontakt_pflicht` lokal.
 - Vier fast gleiche Kaderrollen-Typen nebeneinander: `KaderRolle` (`types.ts`), `KaderRolleDb` (`roleUtils`), `KaderRolleOption` (`useMemberMeta`), `RolleOption` (`RollenAuswahlListe`).
