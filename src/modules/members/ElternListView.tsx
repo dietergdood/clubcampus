@@ -8,7 +8,7 @@ import { TI } from "../../icons.tsx";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
-import type { ColDef, ColGroup, GroupOption, ListGroup, ListRow, RowId } from "../../shared/list/types.ts";
+import type { ColDef, ColGroup, GroupContext, GroupOption, ListGroup, ListRow, RowId } from "../../shared/list/types.ts";
 import type { Account, Sb, SetState } from "../../types.ts";
 
 /* Direkt aus der Service-Rückgabe abgeleitet */
@@ -109,7 +109,7 @@ interface ElternRenderCellDeps {
 }
 
 function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember }: ElternRenderCellDeps) {
-  return function renderElternCell(col: ColDef, e: ElternRow) {
+  return function renderElternCell(col: ColDef, e: ElternRow, groupCtx?: GroupContext) {
     switch(col.key) {
       case "name":
         return <td key="name" className="cc-members-td">
@@ -126,23 +126,32 @@ function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember
           }
         </td>;
       case "kind_name": {
+        /* Bei Team-Gruppierung: nur Kinder die zum aktuellen Team gehören,
+           und nur dieses Team anzeigen */
+        const teamGruppe = groupCtx?.type === "team" ? groupCtx.key : null;
+        const kinder = teamGruppe
+          ? e.kinder.filter(k => k.teams.includes(teamGruppe))
+          : e.kinder;
         const isExp = expandedKinder.has(e.id);
-        const visible = isExp ? e.kinder : e.kinder.slice(0, 2);
-        const rest = e.kinder.length - 2;
+        const visible = isExp ? kinder : kinder.slice(0, 2);
+        const rest = kinder.length - 2;
         return <td key="kind_name" className="cc-members-td" onClick={ev=>ev.stopPropagation()}>
           <div className="cc-col cc-gap-4">
-            {visible.map((k,i) => (
-              <div key={i} className="cc-teams-rollen-row">
-                {onNavToMember
-                  ? <button className="cc-eltern-kind-link" onClick={ev=>{ev.stopPropagation();onNavToMember(k.mitglied_id);}}>{k.name}</button>
-                  : <span className="cc-teams-rollen-team">{k.name}</span>
-                }
-                {k.teams.length>0&&<>
-                  <span className="cc-teams-rollen-sep">·</span>
-                  <span className="cc-teams-rollen-rolle">{k.teams.join(", ")}</span>
-                </>}
-              </div>
-            ))}
+            {visible.map((k,i) => {
+              const teams = teamGruppe ? [teamGruppe] : k.teams;
+              return (
+                <div key={i} className="cc-teams-rollen-row">
+                  {onNavToMember
+                    ? <button className="cc-eltern-kind-link" onClick={ev=>{ev.stopPropagation();onNavToMember(k.mitglied_id);}}>{k.name}</button>
+                    : <span className="cc-teams-rollen-team">{k.name}</span>
+                  }
+                  {teams.length>0&&<>
+                    <span className="cc-teams-rollen-sep">·</span>
+                    <span className="cc-teams-rollen-rolle">{teams.join(", ")}</span>
+                  </>}
+                </div>
+              );
+            })}
             {rest>0&&(
               <button className="cc-teams-rollen-more" onClick={ev=>{
                 ev.stopPropagation();
