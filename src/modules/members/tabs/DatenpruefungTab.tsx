@@ -1,16 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/tabs/DatenpruefungTab.tsx
-   Datenprüfung Tab: Profil-Status, Felder-Checkliste, Anfordern
+   Router: Admin-Sicht / Spieler Self-Service / Eltern Self-Service
    ═══════════════════════════════════════════════════════════════ */
 import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, AM } from "../../../constants.ts";
 import { updateMitglied } from "../../../domains/members/memberService.ts";
 import { formatDatum } from "../../../domains/person/personUtils.ts";
+import { DatenpruefungMitglied } from "./DatenpruefungMitglied.tsx";
+import { DatenpruefungEltern } from "./DatenpruefungEltern.tsx";
 import type { Mitglied, Sb } from "../../../types.ts";
 
-/* Rückmeldung unterhalb der Karte — geteilt mit PortalTab, das denselben
-   State von MemberDetail bekommt. */
 export interface StatusMeldung {
   ok: boolean;
   text: string;
@@ -19,12 +19,51 @@ export interface StatusMeldung {
 interface DatenpruefungTabProps {
   raw: Mitglied;
   sb: Sb;
+  role?: string;
   portalMsg?: StatusMeldung | null;
   setPortalMsg: (msg: StatusMeldung | null) => void;
   onReload?: (() => void) | null;
+  /* Eltern-Sicht: eigener Elternkontakt + verknüpfte Kinder */
+  elternkontakt?: {
+    id: string;
+    vorname?: string | null;
+    nachname?: string | null;
+    name?: string | null;
+    email?: string | null;
+    telefon?: string | null;
+    beziehung?: string | null;
+    profil_geprueft_at?: string | null;
+  } | null;
+  kinder?: Mitglied[];
 }
 
-function DatenpruefungTab({ raw, sb, portalMsg, setPortalMsg, onReload }: DatenpruefungTabProps) {
+function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, elternkontakt, kinder }: DatenpruefungTabProps) {
+
+  /* Eltern Self-Service */
+  if (role === "eltern" && elternkontakt) {
+    return (
+      <DatenpruefungEltern
+        raw={raw} sb={sb}
+        elternkontakt={elternkontakt}
+        kinder={kinder || []}
+        setPortalMsg={setPortalMsg}
+        onReload={onReload}
+      />
+    );
+  }
+
+  /* Mitglied Self-Service (Spieler, Trainer, Funktionär etc.) */
+  if (role === "spieler" || role === "trainer" || role === "funktionaer" || role === "funktionär") {
+    return (
+      <DatenpruefungMitglied
+        raw={raw} sb={sb}
+        setPortalMsg={setPortalMsg}
+        onReload={onReload}
+      />
+    );
+  }
+
+  /* Admin-Sicht (default) */
   const felder = [
     { l: "Vorname",      ok: !!raw.vorname },
     { l: "Nachname",     ok: !!raw.nachname },

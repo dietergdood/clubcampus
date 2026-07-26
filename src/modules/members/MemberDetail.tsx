@@ -271,8 +271,11 @@ function MemberDetail({
       {tab === "datenpruefung" && (
         <DatenpruefungTab
           raw={raw} sb={sb}
+          role={role}
           portalMsg={portalMsg} setPortalMsg={setPortalMsg}
           onReload={onReload}
+          elternkontakt={role === "eltern" ? eltern?.[0] || null : null}
+          kinder={role === "eltern" ? (raw.eltern_kinder_mitglieder || []) : []}
         />
       )}
 
