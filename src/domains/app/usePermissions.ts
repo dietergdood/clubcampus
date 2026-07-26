@@ -2,7 +2,7 @@
    ClubCampus — domains/app/usePermissions.ts
    App-Level Zugriffstufen-Hilfsfunktionen
    ═══════════════════════════════════════════════════════════════ */
-import { getEffektiveStufeForFunktionaer } from '../../modules/NavigationModul.tsx';
+import { getEffektiveStufeForFunktionaer } from '../permissions/funktionaerStufen.js';
 import type { Rolle, Zugriffstufe, PortalFunktion, ModuleRechte } from '../../types.js';
 
 type ZugriffMap = Record<string, Zugriffstufe | 'none'> & { _all?: Zugriffstufe | 'none' };
