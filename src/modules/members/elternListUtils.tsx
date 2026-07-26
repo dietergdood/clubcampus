@@ -81,19 +81,27 @@ export type ElternRow = ListRow & ReturnType<typeof mapEltern>[number];
 /* ── Gruppierung ── */
 export function buildElternGroups(rows: ElternRow[], groupBy: string[] | string, groupOrder: Record<string, string[]>): ListGroup<ElternRow>[] {
   const levels = Array.isArray(groupBy) ? groupBy : [groupBy];
-  return buildElternLevel(rows, levels, groupOrder);
+  return buildElternLevel(rows, levels, groupOrder, null);
 }
 
-function buildElternLevel(rows: ElternRow[], levels: string[], groupOrder: Record<string, string[]>): ListGroup<ElternRow>[] {
+function buildElternLevel(
+  rows: ElternRow[],
+  levels: string[],
+  groupOrder: Record<string, string[]>,
+  parentCtx: { type: string; key: string } | null
+): ListGroup<ElternRow>[] {
   const firstLevel = levels[0];
   const restLevels = levels.slice(1);
   if(!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
 
-  /* Kind-Gruppierung: nach mitglied_id aufteilen */
+  /* Kind-Gruppierung: nach mitglied_id aufteilen, bei Team-Kontext nur passende Kinder */
   if(firstLevel === "kind_name") {
     const map: Record<string, ElternRow[]> = {};
     rows.forEach(r => {
-      r.kinder.forEach(k => {
+      const kinder = parentCtx?.type === "team"
+        ? r.kinder.filter(k => k.teams.includes(parentCtx.key))
+        : r.kinder;
+      kinder.forEach(k => {
         const key = String(k.mitglied_id);
         if(!map[key]) map[key] = [];
         if(!map[key].find(x => x.id === r.id)) map[key].push(r);
@@ -111,15 +119,16 @@ function buildElternLevel(rows: ElternRow[], levels: string[], groupOrder: Recor
     return orderedKeys.map(key => {
       const kindName = allKinder.find(k=>String(k.mitglied_id)===key)?.name||key;
       const members = map[key];
+      const ctx = { type: "kind", key };
       return {
         key, label:kindName, type:"kind",
         members: restLevels.length > 0 && restLevels[0] !== "none" ? null : members,
-        children: restLevels.length > 0 && restLevels[0] !== "none" ? buildElternLevel(members, restLevels, groupOrder) : null,
+        children: restLevels.length > 0 && restLevels[0] !== "none" ? buildElternLevel(members, restLevels, groupOrder, ctx) : null,
       };
     });
   }
 
-  /* Standard-Gruppierung: nach Feld-Wert aufteilen */
+  /* Standard-Gruppierung */
   const map: Record<string, ElternRow[]> = {};
   rows.forEach(r => {
     const val = r[firstLevel];
@@ -138,10 +147,11 @@ function buildElternLevel(rows: ElternRow[], levels: string[], groupOrder: Recor
 
   return orderedKeys.map(k => {
     const members = map[k];
+    const ctx = { type: groupType, key: k };
     return {
       key:k, label:k, type:groupType,
       members: restLevels.length > 0 && restLevels[0] !== "none" ? null : members,
-      children: restLevels.length > 0 && restLevels[0] !== "none" ? buildElternLevel(members, restLevels, groupOrder) : null,
+      children: restLevels.length > 0 && restLevels[0] !== "none" ? buildElternLevel(members, restLevels, groupOrder, ctx) : null,
     };
   });
 }
