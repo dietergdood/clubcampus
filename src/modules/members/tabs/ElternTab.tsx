@@ -21,7 +21,7 @@ import {
 } from "../../../domains/members/memberService.ts";
 import { vollname } from "../../../domains/person/personUtils.ts";
 import type { ElternkontaktMitLink } from "../../../domains/members/elternService.ts";
-import type { Account, Mitglied, Sb, SetState, TablesUpdate } from "../../../types.ts";
+import type { Account, Mitglied, Sb, SetState } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
 /* Formularzustand des Bearbeiten-/Anlegen-Modals. Beim Anlegen sind nur
@@ -235,7 +235,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
            der Rückgabefehler wird bewusst nicht ausgewertet, damit das
            Entknüpfen selbst durchläuft. Solange die Spalte fehlt, wird aus
            dem Elternteil kein Supporter. */
-        await updateElternkontakt(sb, e.id, { supporter: true } as TablesUpdate<"elternkontakte">);
+        await updateElternkontakt(sb, e.id, { supporter: true });
         // Benutzer-Rolle zu "supporter" ändern falls Portal-Zugang vorhanden
         if(e.benutzer_id){
           await updateBenutzerRolle(sb, e.benutzer_id, "supporter");
