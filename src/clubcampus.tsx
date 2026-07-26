@@ -17,7 +17,7 @@ import { useProfilCheck } from "./domains/app/useProfilCheck.ts";
 import { NAV_TARGET } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, getNavForRole, ProfileModal, getVereinsnameStatic } from "./modules/NavigationModul.tsx";
 import { Dashboard } from "./modules/DashboardModul.tsx";
-import { TeamView as TeamViewJs } from "./modules/TeamModul.jsx";
+import { TeamView } from "./modules/TeamModul.tsx";
 import { TermineModul as TermineModulJs, SpielplanModul as SpielplanModulJs, TableTab } from "./modules/TermineModul.jsx";
 import { TrainingsplanModul as TrainingsplanModulJs } from "./modules/TrainingsplanModul.jsx";
 import { TeamsVerwaltungModul as TeamsVerwaltungModulJs } from "./modules/TeamsVerwaltungModul.jsx";
@@ -43,7 +43,6 @@ import type {
    MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
 type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
-const TeamView              = TeamViewJs              as unknown as JsComponent;
 const TermineModul          = TermineModulJs          as unknown as JsComponent;
 const SpielplanModul        = SpielplanModulJs        as unknown as JsComponent;
 const TrainingsplanModul    = TrainingsplanModulJs    as unknown as JsComponent;
@@ -334,8 +333,8 @@ function Portal({supabaseClient}: PortalProps){
   // Teams aus Kader ableiten
   const meineTeamIds = Object.keys(teamRollen).map(Number);
   const trainerTeamIds = meineTeamIds.filter(id=>["trainer"].includes(teamRollen[id]));
-  const trainerTeams = trainerTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter(Boolean);
-  const spielerTeam = meineTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter(Boolean);
+  const trainerTeams = trainerTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter((n): n is string => !!n);
+  const spielerTeam = meineTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter((n): n is string => !!n);
   const meineTeams = role==="administrator"||role==="administration"
     ? dbTeams.map(t=>t.name)
     : role==="trainer"

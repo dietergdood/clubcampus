@@ -2,36 +2,93 @@
    ClubCampus TeamModul — TeamModul.jsx
    Team-Ansicht: Übersicht, Kader, Training, Spielplan etc.
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
-import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR } from "../constants.ts";
+import { useState, useEffect } from "react";
+import type { ComponentType } from "react";
+import { ACCENT, AM, BK, BL, GB, GN, GR, R, RL, STATUS_BG } from "../constants.ts";
 import { TI } from "../icons.tsx";
-import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, avColor, Stat} from "../theme.ts";
-import { ATT_EVENTS, ATT_INITIAL, EVENTS, NEWS, POLLS, ROSTER, TABLES } from "../demoData.js";
+import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, Stat} from "../theme.ts";
+import { ATT_EVENTS, ATT_INITIAL, EVENTS, POLLS, ROSTER, TABLES } from "../demoData.js";
+import type { Sb } from "../types.ts";
+
+/* ── Typen ── */
+type Cmp = ComponentType<any>;
+
+/* Aufbereitete Spielerzeile (DB-Map oder ROSTER-Fallback) */
+interface TeamPlayer {
+  id?: number; name?: string; firstName?: string; lastName?: string;
+  pos?: string; rueckennr?: string|number|null; dob?: string; nat?: string;
+  pass?: string; js?: string; teams?: string[]; role?: string; email?: string;
+  tel?: string; eltern?: unknown[]; fairgate?: string; ahv?: string;
+  street?: string; plz?: string; city?: string;
+}
+
+/* dbTeams-Zeile (nur die hier gelesenen Felder) — strukturkompatibel zu Team */
+interface TeamRow { id?: number|null; name?: string|null; liga?: string|null; saison?: string|null; module_aktiv?: string[]|null; }
+/* Mitglied inkl. Phantomfelder (teams/funktion/rueckennr existieren als DB-Spalte nicht) */
+interface TeamMitglied {
+  id?: number; vorname?: string|null; nachname?: string|null; aktiv?: boolean|null;
+  teams?: string[]|null; position?: string|null; rueckennr?: string|number|null;
+  geburtsdatum?: string|null; nationalitaet?: string|null; spielerpass?: string|null;
+  js_nr?: string|null; funktion?: string|null; email?: string|null; telefon?: string|null;
+  eltern?: unknown[]|null; fairgate_id?: string|null; ahv_nr?: string|null;
+  strasse?: string|null; plz?: string|null; ort?: string|null;
+}
+interface Kind { name: string; team?: string; rosterId?: number|null; }
+interface TeamAccount { name?: string; kinder?: Kind[]; }
+interface TabDef { key: string; label: string; short: string; icon: string; modul?: string; teamOnly?: boolean; }
 
 /* ── Hilfsfunktionen ── */
 /* STitle via ./theme.ts */
 
-function kannHelferEinsatzErstellen(role, typ, team, meineTeams=[]){
+function kannHelferEinsatzErstellen(role: string, typ: string, team: string|null, meineTeams: string[]=[]){
   if(role==="administrator"||role==="administration"||role==="funktionaer") return true;
-  if(role==="trainer") return typ==="team"&&(meineTeams||[]).includes(team);
+  if(role==="trainer") return typ==="team"&&(meineTeams||[]).includes(team||"");
   return false;
 }
 
-const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
+/* Demo-Eventdatum "Sa 07.06." → ISO. ATT_EVENTS ist leer, daher aktuell nie aufgerufen. */
+function parseEvDate(d?: string|null): string {
+  if(!d) return "";
+  const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
+  const parts=clean.split(".");
+  if(parts.length>=2) return `2026-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+  return "";
+}
 
-function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null,navToTeam=null,onNavToTeamDone=null,vereinId=null}){
+const NAV_TARGET: {tab: string|null; filter: string[]|null; kindTeam: string|null; openEvId: number|null; selectedSpiel: unknown}
+  = {tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
+
+interface TeamViewProps {
+  role: string;
+  trainerTeams?: string[];
+  teamRollen?: Record<string, string>;
+  setActive?: (v: string)=>void;
+  myRosterId?: number|null;
+  account?: TeamAccount|null;
+  dbTeams?: TeamRow[];
+  isModuleVisible?: ((m: string)=>boolean)|null;
+  dbMitglieder?: TeamMitglied[];
+  sb?: Sb;
+  KaderModul: Cmp; TrainingsplanModul: Cmp; TermineModul: Cmp; SpielplanModul: Cmp; TableTab: Cmp; HelferModul: Cmp;
+  onSelectMember?: ((m: any)=>void)|null;
+  navToTeam?: number|null;
+  onNavToTeamDone?: (()=>void)|null;
+  vereinId?: string|null;
+}
+
+function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null,navToTeam=null,onNavToTeamDone=null,vereinId=null}: TeamViewProps){
   const isMobile=useIsMobile();
-  const moduleOk=(modul)=>!isModuleVisible||isModuleVisible(modul)||!modul;
+  const moduleOk=(modul?: string)=>!isModuleVisible||(!!modul&&isModuleVisible(modul))||!modul;
 
   // Berechtigung pro Team prüfen
-  const getRoleForTeam=(teamId)=>{
+  const getRoleForTeam=(teamId: number|null|undefined)=>{
     if(role==="administrator"||role==="administration") return "administrator";
-    return teamRollen[teamId]||null;
+    return (teamId!=null?teamRollen[teamId]:null)||null;
   };
-  const kannBearbeitenInTeam=(teamId)=>["trainer","administrator","administration"].includes(getRoleForTeam(teamId)||role);
+  const kannBearbeitenInTeam=(teamId: number|null|undefined)=>["trainer","administrator","administration"].includes(getRoleForTeam(teamId)||role);
 
   /* Mitglieder für ein Team: aus DB wenn vorhanden, sonst ROSTER Fallback */
-  const getMitgliederForTeam=(teamName)=>{
+  const getMitgliederForTeam=(teamName: string): TeamPlayer[]=>{
     if(dbMitglieder.length>0){
       return dbMitglieder
         .filter(m=>(m.teams||[]).includes(teamName)&&m.aktiv!==false)
@@ -58,16 +115,16 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
           city:      m.ort||"",
         }));
     }
-    return ROSTER.filter(p=>(p.teams||[]).includes(teamName));
+    return (ROSTER as any[]).filter((p)=>(p.teams||[]).includes(teamName));
   };
-  const [responses,setResponses]=useState(ATT_INITIAL);
+  const [responses,setResponses]=useState<Record<string, any>>(ATT_INITIAL);
   useEffect(()=>{
     (async()=>{
       try{
-        const r=await window.storage.get("att_responses");
+        const r=await (window as unknown as {storage:{get(k:string):Promise<{value:string}|null>}}).storage.get("att_responses");
         if(r){
           const stored=JSON.parse(r.value);
-          const merged={...ATT_INITIAL};
+          const merged: Record<string, any>={...ATT_INITIAL};
           Object.keys(stored).forEach(evId=>{
             merged[evId]={...ATT_INITIAL[evId],...stored[evId]};
           });
@@ -100,8 +157,8 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
     "C-Juniorinnen":         {count:14,liga:"U13 Mädchen",  season:"2024/25"},
   };
   /* dbTeams Array → Lookup-Objekt {name: {liga, saison, count}} */
-  const TEAMS_DATA=dbTeams.length>0
-    ? Object.fromEntries(dbTeams.map(t=>([t.name,{liga:t.liga||"",season:t.saison||"2024/25",count:dbMitglieder.length>0?dbMitglieder.filter(m=>(m.teams||[]).includes(t.name)&&m.aktiv!==false).length:(ROSTER.filter(p=>(p.teams||[]).includes(t.name)).length||0)}])))
+  const TEAMS_DATA: Record<string, {count?: number; liga?: string; season?: string}> = dbTeams.length>0
+    ? Object.fromEntries(dbTeams.map(t=>([t.name||"",{liga:t.liga||"",season:t.saison||"2024/25",count:dbMitglieder.length>0?dbMitglieder.filter(m=>(m.teams||[]).includes(t.name||"")&&m.aktiv!==false).length:((ROSTER as any[]).filter((p)=>(p.teams||[]).includes(t.name||"")).length||0)}])))
     : TEAMS_DATA_FALLBACK;
 
   const kinder=account?.kinder||[];
@@ -116,12 +173,12 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
   useEffect(()=>{
     if(navToTeam&&dbTeams.length>0){
       const team=dbTeams.find(t=>t.id===navToTeam);
-      if(team){setActiveTeam(team.name);if(onNavToTeamDone)onNavToTeamDone();}
+      if(team){setActiveTeam(team.name||"");if(onNavToTeamDone)onNavToTeamDone();}
     }
   },[navToTeam,dbTeams]);
 
   /* When eltern switches child, update activeTeam too */
-  const handleKindSwitch=(kind)=>{
+  const handleKindSwitch=(kind: Kind)=>{
     setActiveKind(kind);
     if(kind.team) setActiveTeam(kind.team);
     setTab("overview");
@@ -129,13 +186,13 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
 
   const playerName=myRosterId?ROSTER.find(p=>p.id===myRosterId)?.firstName||"Spieler":"Spieler";
   const kinderNames=activeKind?activeKind.name.split(" ")[0]:(kinder.map(k=>k.name.split(" ")[0]).join(" & ")||playerName);
-  const [selectedSpiel,setSelectedSpiel]=useState(null);
+  const [selectedSpiel,setSelectedSpiel]=useState<any>(null);
   const teamInfo=TEAMS_DATA[activeTeam]||{count:0,liga:"",season:"2024/25"};
   const actualCount=dbMitglieder.length>0
     ? dbMitglieder.filter(p=>(p.teams||[]).includes(activeTeam)&&p.aktiv!==false).length
     : ROSTER.filter(p=>(p.teams||[]).includes(activeTeam)).length||teamInfo.count;
 
-  const TABS_ALL=[
+  const TABS_ALL: TabDef[]=[
     {key:"overview",  label:"Übersicht",    short:"Übersicht", icon:"layout-dashboard"},
     {key:"roster",    label:"Kader",        short:"Kader",     icon:"users",            modul:"roster",   teamOnly:true},
     {key:"attendance",label:"Termine",      short:"Termine",   icon:"calendar",         modul:"events"},
@@ -145,7 +202,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
     {key:"helpers",   label:"Helfereinsätze",short:"Helfer",   icon:"heart-handshake",  modul:"helpers"},
     {key:"stats",     label:"Statistik",    short:"Stats",     icon:"chart-bar",        modul:"stats",    teamOnly:true},
   ];
-  const TABS_LIMITED=[
+  const TABS_LIMITED: TabDef[]=[
     {key:"overview",  label:"Übersicht",    short:"Übersicht", icon:"layout-dashboard"},
     {key:"roster",    label:"Kader",        short:"Kader",     icon:"users",            modul:"roster",   teamOnly:true},
     {key:"attendance",label:"Termine",      short:"Termine",   icon:"calendar",         modul:"events"},
@@ -161,7 +218,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
   /* Tabs filtern:
      - teamOnly=true → nur team_module prüfen (nicht modul_rechte)
      - teamOnly=false/undefined → portal-Modul: moduleOk + team_module */
-  const filterTabs=(tabList)=>tabList.filter(t=>{
+  const filterTabs=(tabList: TabDef[])=>tabList.filter(t=>{
     if(!t.modul) return true;
     const inTeamModule=!teamModuleAktiv||teamModuleAktiv.includes(t.modul);
     if(t.teamOnly) return inTeamModule;
@@ -171,18 +228,18 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
   const [tab,setTab]=useState(()=>{const t=NAV_TARGET.tab||"overview";NAV_TARGET.tab=null;return t;});
   const [showMehrTab,setShowMehrTab]=useState(false);
   const [attFilter,setAttFilter]=useState(()=>{const f=NAV_TARGET.filter||[];NAV_TARGET.filter=null;return f;});
-  const [rosterInitial,setRosterInitial]=useState(null);
+  const [rosterInitial,setRosterInitial]=useState<number|null>(null);
   /* If NAV_TARGET specified a kindTeam, set activeKind accordingly */
   useEffect(()=>{
     if(NAV_TARGET.kindTeam){
       const kt=NAV_TARGET.kindTeam;NAV_TARGET.kindTeam=null;
       const k=kinder.find(c=>c.team===kt);
-      if(k){setActiveKind(k);setActiveTeam(k.team);}
+      if(k?.team){setActiveKind(k);setActiveTeam(k.team);}
     }
   },[]);
 
   /* Reset tab when switching teams */
-  const handleTeamSwitch=(team)=>{
+  const handleTeamSwitch=(team: string)=>{
     setActiveTeam(team);
     setTab("overview");
   };
@@ -213,8 +270,8 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
           <span className="cc-section-hdr" style={{marginRight:4,borderBottom:"none",padding:0}}>Kind:</span>
           {kinder.map((k,i)=>{
             const active=activeKind?.name===k.name;
-            const cnt=dbMitglieder.length>0?getMitgliederForTeam(k.team).filter(p=>!p.role).length:ROSTER.filter(p=>(p.teams||[]).includes(k.team)&&!p.role).length;
-            const info=TEAMS_DATA[k.team]||{liga:"",season:""};
+            const cnt=dbMitglieder.length>0?getMitgliederForTeam(k.team||"").filter(p=>!p.role).length:(ROSTER as any[]).filter((p)=>(p.teams||[]).includes(k.team||"")&&!p.role).length;
+            const info=TEAMS_DATA[k.team||""]||{liga:"",season:""};
             return(
               <Btn onClick={()=>handleKindSwitch(k)}><div style={{width:22,height:22,borderRadius:"50%",background:active?"rgba(0,0,0,0.1)":GR,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"var(--text)",flexShrink:0}}> {k.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} </div> <div style={{textAlign:"left"}}> <div style={{fontSize:14,fontWeight:700,color:"var(--text)",whiteSpace:"nowrap"}}>{k.name.split(" ")[0]}</div> <div style={{fontSize:14,color:"rgba(0,0,0,0.5)"}}>{k.team} · {info.liga}</div> </div></Btn>
             );
@@ -242,7 +299,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
       {/* ── TAB-BAR: Desktop = scroll, Mobile = 4 Icons + Mehr ── */}
       {isMobile?(()=>{
         /* Primär-Tabs pro Rolle */
-        const PRIMARY_KEYS={
+        const PRIMARY_KEYS: Record<string, string[]>={
           spieler:       ["overview","roster","attendance","spielplan"],
           eltern:        ["overview","roster","attendance","spielplan"],
           trainer:       ["overview","roster","attendance","spielplan"],
@@ -303,12 +360,12 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
           </div>
         </div>
       )}
-      {tab==="attendance"&&<TermineModulProp role={role} team={activeTeam} setActive={setActive} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r)=>{
-        const merged={...responses};
+      {tab==="attendance"&&<TermineModulProp role={role} team={activeTeam} setActive={setActive} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel: any)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r: any)=>{
+        const merged: Record<string, any>={...responses};
         Object.keys(r).forEach(evId=>{merged[evId]={...responses[evId],...r[evId]};});
         setResponses(merged);
         /* Save only delta */
-        const delta={};
+        const delta: Record<string, any>={};
         Object.keys(merged).forEach(evId=>{
           Object.keys(merged[evId]||{}).forEach(pid=>{
             const cur=merged[evId]?.[pid]?.status;
@@ -316,7 +373,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
             if(cur!==init){if(!delta[evId])delta[evId]={};delta[evId][pid]=merged[evId][pid];}
           });
         });
-        window.storage.set("att_responses",JSON.stringify(delta)).catch(()=>{});
+        (window as unknown as {storage:{set(k:string,v:string):Promise<void>}}).storage.set("att_responses",JSON.stringify(delta)).catch(()=>{});
       }}/>}
       {tab==="events"&&<EventsList teamOnly role={role}/>}
       {tab==="polls"&&<PollsTab role={role}/>}
@@ -326,12 +383,22 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
   );
 }
 
-function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial,dbMitglieder=[]}){
+interface TeamOverviewProps {
+  role: string;
+  team?: string;
+  setTab?: (v: string)=>void;
+  setAttFilter?: (f: string[])=>void;
+  responses?: Record<string, any>;
+  setRosterInitial?: (id: number)=>void;
+  dbMitglieder?: TeamMitglied[];
+}
+
+function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial,dbMitglieder=[]}: TeamOverviewProps){
   const isMobile=useIsMobile();
   const isEltern=role==="eltern";
   const today=new Date().toISOString().split("T")[0];
 
-  const getMitgliederForTeam=(teamName)=>{
+  const getMitgliederForTeam=(teamName: string): TeamPlayer[]=>{
     if(dbMitglieder.length>0){
       return dbMitglieder
         .filter(m=>(m.teams||[]).includes(teamName)&&m.aktiv!==false)
@@ -342,7 +409,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           teams:m.teams||[], rueckennr:m.rueckennr||"",
         }));
     }
-    return ROSTER.filter(p=>(p.teams||[]).includes(teamName));
+    return (ROSTER as any[]).filter((p)=>(p.teams||[]).includes(teamName));
   };
   const myTeam=team||"Cc-Junioren";
   const upcoming=ATT_EVENTS
@@ -359,7 +426,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
     .filter(e=>parseEvDate(e.date)>=today)
     .sort((a,b)=>parseEvDate(a.date).localeCompare(parseEvDate(b.date)))
     .slice(0,4);
-  const accentFor=(e)=>e.type==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.type==="Veranstaltung"?AM:GN;
+  const accentFor=(e: any)=>e.type==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.type==="Veranstaltung"?AM:GN;
 
   const termine=allTermine;
 
@@ -373,8 +440,8 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const spieler=allM.filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="");
           const trainer=allM.filter(p=>p.role&&p.role.toLowerCase()!=="spieler"&&p.role!=="");
           const pos=[...new Set(spieler.map(p=>p.pos).filter(Boolean))];
-          const tableData=TABLES[myTeam]||[];
-          const myRow=tableData.find(r=>r.me);
+          const tableData: any[]=(TABLES as Record<string, any[]>)[myTeam]||[];
+          const myRow=tableData.find((r)=>r.me);
           return(
             <div>
               <div className="cc-grid-stats-sm" style={{marginBottom:14}}>
@@ -385,7 +452,6 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                     value={myRow.rank+"."}
                     sub={tableData.length+" Teams · "+myRow.pts+" Punkte"}
                     semantic="neutral"
-                    style={{cursor:setTab?"pointer":"default"}}
                     onClick={setTab?()=>setTab("spielplan"):undefined}
                   />
                 )}
@@ -395,7 +461,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
                   <div className="cc-section-hdr">Trainer &amp; Staff</div>
                   <div className="cc-list">
                     {trainer.map((t,i)=>(
-                      <div key={i} onClick={setTab&&setRosterInitial?()=>{setRosterInitial(t.id);setTab("roster");}:undefined}
+                      <div key={i} onClick={setTab&&setRosterInitial?()=>{if(t.id!=null)setRosterInitial(t.id);setTab("roster");}:undefined}
                         className="cc-list-row" style={{cursor:setTab?"pointer":"default"}}>
                         <Av name={`${t.firstName} ${t.lastName}`} size="sm"/>
                         <div>
@@ -421,9 +487,9 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const trainEvs=pastEvs.filter(e=>e.type==="Training");
           const spielEvs=pastEvs.filter(e=>e.type==="Spiel");
           /* Use same player slice as ATT_INITIAL */
-          const pids=getMitgliederForTeam(myTeam).filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="").map(p=>p.id).slice(0,12);
+          const pids=getMitgliederForTeam(myTeam).filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="").map(p=>p.id).filter((id): id is number => id!=null).slice(0,12);
           /* Only count "zu", "ab", "unentschuldigt" - null/fraglich excluded */
-          const calcPct=(evs)=>{
+          const calcPct=(evs: any[]): number|null=>{
             if(!evs.length) return null;
             if(!pids.length){
               /* No roster: use seed-based synthetic data */
@@ -442,8 +508,8 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
             const total=zu+ab;
             return total?Math.round(zu/total*100):null;
           };
-          const col=(v)=>v===null?"#aaa":v>=80?GN:v>=60?AM:R;
-          const fmt=(v)=>v===null?"-":v+"%";
+          const col=(v: number|null)=>v===null?"#aaa":v>=80?GN:v>=60?AM:R;
+          const fmt=(v: number|null)=>v===null?"-":v+"%";
           return(
             <div className="cc-grid-stats-sm">
               {[
@@ -525,7 +591,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
               "C-Juniorinnen":      "Trainingslager geplant für Juli - Details folgen. Neues Tenü ab Di im Materialraum. Turnier am 14.06.",
               "A-Junioren":         "Konditionstraining ab nächster Woche. Neue Taktikbesprechung Mi 28.05. nach Training. Auswärtsspiel Sa 31.05.",
             };
-            const text=NEWS[myTeam]||"Keine aktuellen Teamnews.";
+            const text=(NEWS as Record<string, string>)[myTeam]||"Keine aktuellen Teamnews.";
             return <p style={{margin:0,color:"var(--text)",lineHeight:1.65}}>{text}</p>;
           })()}
         </Card>
@@ -539,9 +605,9 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
 
 /* KaderModul via ./KaderModul.jsx */
 
-function PollsTab({role}){
+function PollsTab({role}: {role: string}){
   const canCreate=role==="trainer"||role==="administrator"||role==="administration";
-  const [votes,setVotes]=useState({});
+  const [votes,setVotes]=useState<Record<number, number>>({});
   return(
     <div>
       {canCreate&&(
@@ -584,12 +650,12 @@ function PollsTab({role}){
   );
 }
 
-function StatsTab({team="Cc-Junioren", dbMitglieder=[]}){
-  const seed=(str)=>str.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
-  const rnd=(n,min,max)=>{let s=seed(n+team);s=((s*1664525+1013904223)&0xFFFFFFFF)>>>0;return min+Math.floor((s/0xFFFFFFFF)*(max-min+1));};
+function StatsTab({team="Cc-Junioren", dbMitglieder=[]}: {team?: string; dbMitglieder?: TeamMitglied[]}){
+  const seed=(str: string)=>str.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
+  const rnd=(n: string,min: number,max: number)=>{let s=seed(n+team);s=((s*1664525+1013904223)&0xFFFFFFFF)>>>0;return min+Math.floor((s/0xFFFFFFFF)*(max-min+1));};
   const players=dbMitglieder.length>0
     ? dbMitglieder.filter(p=>(p.teams||[]).includes(team)&&p.aktiv!==false).map(p=>({firstName:p.vorname,lastName:p.nachname,pos:p.position||""}))
-    : ROSTER.filter(p=>(p.teams||[]).includes(team)&&!p.role);
+    : (ROSTER as any[]).filter((p)=>(p.teams||[]).includes(team)&&!p.role);
   const stats=players.map(p=>{
     const nm=`${p.firstName} ${p.lastName}`;
     return{name:nm,sp:rnd(nm+"sp",6,14),tore:rnd(nm+"t",0,9),assists:rnd(nm+"a",0,7),gelb:rnd(nm+"g",0,3),rot:rnd(nm+"r",0,1)};
@@ -623,60 +689,6 @@ function StatsTab({team="Cc-Junioren", dbMitglieder=[]}){
   );
 }
 
-/* ==========================================
-   ADMIN-EXKLUSIVE VIEWS
-========================================== */
-/* Vereinsfunktion → farbiger Chip */
-function FieldVisView(){
-  const fields=[
-    {name:"Profilbild",       spieler:"✓",eltern:"✓",trainer:"✓",funktionaer:"✓",administration:"✓",administrator:"✓"},
-    {name:"Name / Vorname",   spieler:"✓",eltern:"✓",trainer:"✓",funktionaer:"✓",administration:"✓",administrator:"✓"},
-    {name:"Geburtsdatum",     spieler:"✓",eltern:"✓",trainer:"✓",funktionaer:"✓",administration:"✓",administrator:"✓"},
-    {name:"Adresse",          spieler:"✓",eltern:"✓",trainer:"✓",funktionaer:"Je nach Recht",administration:"✓",administrator:"✓"},
-    {name:"E-Mail / Telefon", spieler:"✓",eltern:"✓",trainer:"✓",funktionaer:"Je nach Recht",administration:"✓",administrator:"✓"},
-    {name:"Spielerpass",      spieler:"✓",eltern:"✓",trainer:"✓",funktionaer:"Je nach Recht",administration:"✓",administrator:"✓"},
-    {name:"Nationalität",     spieler:"-", eltern:"-", trainer:"✓",funktionaer:"Je nach Recht",administration:"✓",administrator:"✓"},
-    {name:"Elternkontakte",   spieler:"-", eltern:"Eigene Kinder",trainer:"✓",funktionaer:"Je nach Recht",administration:"✓",administrator:"✓"},
-    {name:"J+S Nummer",       spieler:"-", eltern:"-", trainer:"Je nach Recht",funktionaer:"Je nach Recht",administration:"✓",administrator:"✓"},
-    {name:"AHV-Nummer",       spieler:"-", eltern:"-", trainer:"-",funktionaer:"Je nach Recht",administration:"✓",administrator:"✓"},
-    {name:"Fairgate-ID/Sync", spieler:"-", eltern:"-", trainer:"-",funktionaer:"-",administration:"✓",administrator:"✓"},
-  ];
-  const rc=c=>{
-    if(c==="✓") return{color:GN,bg:"#ECFDF5"};
-    if(c==="-") return{color:"var(--sub)",bg:"#fafafa"};
-    return{color:AM,bg:"#FFFBEB"};
-  };
-  return(
-    <div>
-      <H1 mb={8}>Feldsichtbarkeit</H1>
-      <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:18}}>Konfigurierbar pro Rolle (Kap. 6.1)</p>
-      <Card style={{padding:0,overflowX:"auto"}}>
-        <div className="cc-table-wrap"><table className="cc-table">
-          <thead>
-            <tr className="cc-tr" style={{background:"var(--bg)"}}>
-              <th className="cc-th">Feld</th>
-              {["Spieler","Eltern","Trainer","Funktionäre","Administration","Administrator"].map((h,i)=>(
-                <th key={i} className="cc-th cc-th-center">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {fields.map((f,i)=>(
-              <tr key={i} className="cc-tr">
-                <td className="cc-td" style={{fontWeight:600}}>{f.name}</td>
-                {["spieler","eltern","trainer","funktionaer","administration","administrator"].map((r,j)=>{
-                  const v=f[r];const s=rc(v);
-                  return <td key={j} className="cc-td" style={{textAlign:"center"}}><Chip text={v} color={s.color} bg={s.bg}/></td>;
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      </Card>
-    </div>
-  );
-}
-
 
 /* ══════════════════════════════════════════════════════════════════
    PORTALVERWALTUNG — Zentrales Admin-Cockpit
@@ -685,89 +697,22 @@ function FieldVisView(){
    ══════════════════════════════════════════════════════════════════ */
 /* PortalverwaltungModul via ./PortalverwaltungModul.tsx */
 
-function ProfileView({role,myRosterId,account}){
-  const isEltern=role==="eltern";
-  const player=ROSTER.find(p=>p.id===(myRosterId||1))||ROSTER.find(p=>p.id===1);
-  const name=isEltern?(account?.name||"Anna Meier"):(player?`${player.firstName} ${player.lastName}`:"Luca Meier");
-  const kinder=account?.kinder||[];
-  return(
-    <div>
-      <H1 mb={18}>{isEltern?"Profil / Daten prüfen":"Mein Profil"}</H1>
-      <Col gap={16}>
-        <Card>
-          <STitle>Persönliche Daten</STitle>
-          {[
-            {l:"Name",v:name},
-            {l:"Geburtsdatum",v:player?.dob||"-"},
-            {l:"Adresse",v:player?.address||"-"},
-            {l:"E-Mail",v:player?.email||"-"},
-            {l:"Telefon",v:player?.tel||"-"},
-          ].map((x,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<4?`0.5px solid ${GB}`:"none"}}>
-              <span style={{color:"var(--sub)"}}>{x.l}</span>
-              <span className="cc-list-name">{x.v}</span>
-            </div>
-          ))}
-          <div className="cc-mt-12"><Btn variant="primary" color="#F3F4F6">Daten aktualisieren</Btn></div>
-        </Card>
-        {isEltern&&kinder.map((kind,ki)=>{
-          const kindPlayer=ROSTER.find(p=>p.name===kind.name||p.id===kind.rosterId);
-          const kp=kindPlayer||{};
-          const rows=[
-            {l:"Name",              v:`${kp.firstName||""} ${kp.lastName||""}`.trim()||kind.name,     ok:!!(kp.firstName&&kp.lastName)},
-            {l:"Team",              v:kind.team,                                                        ok:true},
-            {l:"Geburtsdatum",      v:kp.dob||"-",                                                     ok:!!kp.dob},
-            {l:"Nationalität",      v:kp.nat||"-",                                                     ok:!!kp.nat},
-            {l:"AHV-Nummer",        v:kp.ahv||"-",                                                     ok:!!kp.ahv},
-            {l:"Spielerpass",       v:kp.pass||"-",                                                    ok:!!kp.pass},
-            {l:"Strasse",           v:kp.street||"-",                                                  ok:!!kp.street},
-            {l:"PLZ / Ort",         v:kp.plz&&kp.city?`${kp.plz} ${kp.city}`:"-",                   ok:!!(kp.plz&&kp.city)},
-            {l:"E-Mail",            v:kp.email||"-",                                                   ok:!!kp.email},
-            {l:"Telefon",           v:kp.tel||"-",                                                     ok:!!kp.tel},
-            {l:"Elternteil 1",      v:kp.p1First?`${kp.p1First} ${kp.p1Last}`:"-",                  ok:!!(kp.p1First&&kp.p1Last)},
-            {l:"E-Mail Elternteil 1",v:kp.p1Email||"-",                                               ok:!!kp.p1Email},
-            {l:"Tel. Elternteil 1", v:kp.p1Tel||"-",                                                  ok:!!kp.p1Tel},
-            {l:"Elternteil 2",      v:kp.p2First?`${kp.p2First} ${kp.p2Last}`:"-",                  ok:!!(kp.p2First&&kp.p2Last)},
-            {l:"E-Mail Elternteil 2",v:kp.p2Email||"-",                                               ok:!!kp.p2Email},
-            {l:"Tel. Elternteil 2", v:kp.p2Tel||"-",                                                  ok:!!kp.p2Tel},
-          ];
-          const allOk=rows.every(r=>r.ok);
-          return(
-            <Card key={ki}>
-              <STitle action={<Chip text={allOk?"✓ Vollständig":"Prüfung fällig"} color={allOk?GN:AM} bg={allOk?"#ECFDF5":"#FFFBEB"}/>}>
-                {kind.name.split(" ")[0]} - Daten prüfen
-              </STitle>
-              {!allOk&&<InfoBox text="Halbjährliche Datenprüfung fällig. Bitte alle Felder bestätigen oder korrigieren." color={AM}/>}
-              <div style={{marginTop:8}}>
-                {rows.map((x,i)=>(
-                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:i<rows.length-1?`0.5px solid ${GB}`:"none"}}>
-                    <div style={{minWidth:140}}>
-                      <div style={{color:"var(--sub)"}}>{x.l}</div>
-                      <div style={{fontSize:14,fontWeight:600,color:"var(--text)",marginTop:1,wordBreak:"break-all"}}>{x.v}</div>
-                    </div>
-                    <Chip text={x.ok?"✓ OK":"Prüfen"} color={x.ok?GN:R} bg={x.ok?"#ECFDF5":RL}/>
-                  </div>
-                ))}
-              </div>
-              <div style={{marginTop:14}}><Btn variant="primary" color={GN}>Daten bestätigen</Btn></div>
-            </Card>
-          );
-        })}
-      </Col>
-    </div>
-  );
-}
-
 /* -- Geteilte Views -- */
-function EventsList({teamOnly,role}){
-  const isAdmin=["administrator","administration","funktionaer"].includes(role);
+interface EventsListProps {
+  teamOnly?: boolean;
+  role: string;
+  /* Optional durchgereicht; ohne fällt EventsList auf die statische Regel zurück. */
+  kannVerwalten?: ((modul: string)=>boolean)|null;
+  meineTeams?: string[];
+}
+function EventsList({teamOnly,role,kannVerwalten=null,meineTeams=[]}: EventsListProps){
   const isTrainer=role==="trainer";
   const canCreate=kannVerwalten?kannVerwalten("helpers"):kannHelferEinsatzErstellen(role,"team",null,meineTeams||[]);
   const [showForm,setShowForm]=useState(false);
   const [newEvent,setNewEvent]=useState({title:"",type:isTrainer?"Team-Event":"Team-Event",date:"",time:"",loc:"",rsvp:true});
 
   /* Trainer sieht nur Team-Events bei teamOnly */
-  const list=teamOnly?EVENTS.filter(e=>e.type==="Team-Event"):isTrainer?EVENTS:EVENTS;
+  const list: any[]=teamOnly?(EVENTS as any[]).filter((e)=>e.type==="Team-Event"):EVENTS;
 
   const typeOptions=isTrainer?["Team-Event"]:["Team-Event","Vereinsanlass"];
 
