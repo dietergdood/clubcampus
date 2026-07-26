@@ -93,25 +93,27 @@ const GROUP_OPTIONS: GroupOption[] = [
   { val:"portal",    label:"Portal"     },
 ];
 
-function buildElternGroups(rows: ElternRow[], groupBy: string[] | string): ListGroup<ElternRow>[] {
+function buildElternGroups(rows: ElternRow[], groupBy: string[] | string, groupOrder: Record<string, string[]>): ListGroup<ElternRow>[] {
   const firstLevel = Array.isArray(groupBy) ? groupBy[0] : groupBy;
   if(!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
 
   const map: Record<string, ElternRow[]> = {};
   rows.forEach(r => {
-    // Bei Array-Feldern (teams) → Zeile in mehrere Gruppen
     const val = r[firstLevel];
     const keys = Array.isArray(val) && val.length > 0 ? val.map(v => String(v)) : [String(val ?? "—")];
     keys.forEach(k => {
       if(!map[k]) map[k] = [];
-      // Duplikate vermeiden
       if(!map[k].find(x => x.id === r.id)) map[k].push(r);
     });
   });
 
-  return Object.entries(map)
-    .sort(([a],[b]) => String(a).localeCompare(String(b), "de"))
-    .map(([k, members]) => ({ key:k, label:k, type: firstLevel === "teams" ? "team" : "none", members, children:null }));
+  const groupType = firstLevel === "teams" ? "team" : "none";
+  const allKeys = Object.keys(map).sort((a,b) => String(a).localeCompare(String(b), "de"));
+  const orderedKeys = groupOrder[firstLevel]
+    ? [...groupOrder[firstLevel].filter(k => allKeys.includes(k)), ...allKeys.filter(k => !groupOrder[firstLevel].includes(k))]
+    : allKeys;
+
+  return orderedKeys.map(k => ({ key:k, label:k, type:groupType, members:map[k], children:null }));
 }
 
 interface ElternRenderCellDeps {
