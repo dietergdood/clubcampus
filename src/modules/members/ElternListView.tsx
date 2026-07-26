@@ -15,9 +15,15 @@ import type { Account, Sb, SetState } from "../../types.ts";
 type ElternkontaktRoh = Awaited<ReturnType<typeof fetchAlleElternkontakte>>[number];
 type KindVerknuepfung = ElternkontaktRoh["_alle_kinder"][number];
 
+interface KindTeamRolle {
+  team: string;
+  rolle: string;
+}
+
 interface KindMitTeams {
   name: string;
   teams: string[];
+  teamRollen: KindTeamRolle[];
   mitglied_id: number;
 }
 
@@ -25,14 +31,20 @@ function getKinderMitTeams(alleKinder: KindVerknuepfung[]): KindMitTeams[] {
   return (alleKinder||[]).map(k => {
     const m = k.mitglieder;
     const name = m ? `${m.vorname||""} ${m.nachname||""}`.trim() : "?";
-    const teams = (m?.kader||[])
-      .filter(ka => ka.aktiv)
-      .map(ka => {
-        const t = Array.isArray(ka.teams) ? ka.teams[0] : ka.teams;
-        return t?.kurzname || t?.name || "";
+    const kaderArr = Array.isArray(m?.kader) ? m.kader : (m?.kader ? [m.kader] : []);
+    const teamRollen: KindTeamRolle[] = kaderArr
+      .filter((ka: {aktiv?: boolean}) => ka.aktiv)
+      .map((ka: {teams?: unknown; rollen?: unknown}) => {
+        const tArr = Array.isArray(ka.teams) ? ka.teams : (ka.teams ? [ka.teams] : []);
+        const t = tArr[0] as {kurzname?: string; name?: string} | undefined;
+        const team = t?.kurzname || t?.name || "";
+        const rollen = Array.isArray(ka.rollen) ? ka.rollen as string[] : (ka.rollen ? [String(ka.rollen)] : []);
+        const rolle = rollen[0] || "";
+        return { team, rolle };
       })
-      .filter(Boolean);
-    return { name, teams, mitglied_id: k.mitglied_id };
+      .filter((tr: KindTeamRolle) => Boolean(tr.team));
+    const teams = teamRollen.map(tr => tr.team);
+    return { name, teams, teamRollen, mitglied_id: k.mitglied_id };
   });
 }
 
@@ -99,7 +111,7 @@ function buildElternGroups(rows: ElternRow[], groupBy: string[] | string): ListG
 
   return Object.entries(map)
     .sort(([a],[b]) => String(a).localeCompare(String(b), "de"))
-    .map(([k, members]) => ({ key:k, label:k, type:"none", members, children:null }));
+    .map(([k, members]) => ({ key:k, label:k, type: firstLevel === "teams" ? "team" : "none", members, children:null }));
 }
 
 interface ElternRenderCellDeps {
@@ -126,8 +138,6 @@ function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember
           }
         </td>;
       case "kind_name": {
-        /* Bei Team-Gruppierung: nur Kinder die zum aktuellen Team gehören,
-           und nur dieses Team anzeigen */
         const teamGruppe = groupCtx?.type === "team" ? groupCtx.key : null;
         const kinder = teamGruppe
           ? e.kinder.filter(k => k.teams.includes(teamGruppe))
@@ -138,17 +148,23 @@ function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember
         return <td key="kind_name" className="cc-members-td" onClick={ev=>ev.stopPropagation()}>
           <div className="cc-col cc-gap-4">
             {visible.map((k,i) => {
-              const teams = teamGruppe ? [teamGruppe] : k.teams;
+              const teamRollen = teamGruppe
+                ? k.teamRollen.filter(tr => tr.team === teamGruppe)
+                : k.teamRollen;
               return (
                 <div key={i} className="cc-teams-rollen-row">
                   {onNavToMember
                     ? <button className="cc-eltern-kind-link" onClick={ev=>{ev.stopPropagation();onNavToMember(k.mitglied_id);}}>{k.name}</button>
                     : <span className="cc-teams-rollen-team">{k.name}</span>
                   }
-                  {teams.length>0&&<>
-                    <span className="cc-teams-rollen-sep">·</span>
-                    <span className="cc-teams-rollen-rolle">{teams.join(", ")}</span>
-                  </>}
+                  {teamRollen.map((tr, j) => (
+                    <span key={j}>
+                      <span className="cc-teams-rollen-sep">·</span>
+                      <span className="cc-teams-rollen-rolle">
+                        {tr.team}{tr.rolle && <span className="cc-teams-rollen-klammer"> ({tr.rolle})</span>}
+                      </span>
+                    </span>
+                  ))}
                 </div>
               );
             })}
