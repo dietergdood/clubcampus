@@ -8,7 +8,7 @@ import { FONT, BTN_COLOR as BTN, ACCENT, ACCENT20, GN, R, RL, GB } from "../cons
 import { TI } from "../icons.tsx";
 import { LOGO_B64, useIsMobile, ModalOrSheet, Btn, Chip, Av, Tabs, useTheme, Between, Col, Row } from "../theme.ts";
 import { USER_ACCOUNTS as USER_ACCOUNTS_RAW } from "../demoData.js";
-import type { AppTheme, Sb, Zugriffstufe } from "../types.ts";
+import type { AppTheme, Sb } from "../types.ts";
 
 /* Ein Navigationseintrag oder ein Gruppen-Trenner ({group}) */
 interface NavItem {
@@ -963,28 +963,6 @@ function ProfileModal({open,onClose,account,role,sb,onNameUpdated,onLogout}: Pro
    Bestimmt welche Felder in der Mitgliederliste sichtbar sind.
 ──────────────────────────────────────────────────────────── */
 
-const STUFE_RANG: Record<string,number>={lesen:1,schreiben:2,verwalten:3};
-
-function maxStufe(a: Zugriffstufe|null, b: Zugriffstufe|null): Zugriffstufe|null{
-  if(!a) return b; if(!b) return a;
-  return STUFE_RANG[a]>=STUFE_RANG[b]?a:b;
-}
-
-function getEffektiveStufeForFunktionaer(dbFunktionen: NavFunktion[], modulKey: string): Zugriffstufe|null{
-  if(!dbFunktionen||dbFunktionen.length===0) return null;
-  let best: Zugriffstufe|null=null;
-  dbFunktionen.forEach(f=>{
-    const override=f.stufe_override?.[modulKey];
-    const gruppenStufe=f.portal_gruppen?.modul_stufen?.[modulKey]||f.modul_stufen?.[modulKey];
-    const module=(f.module_override?.length||0)>0?f.module_override!:(f.portal_gruppen?.module||[]);
-    if(module.includes(modulKey)){
-      const stufe=(override||gruppenStufe||f.portal_gruppen?.default_stufe||"lesen") as Zugriffstufe;
-      best=maxStufe(best,stufe);
-    }
-  });
-  return best;
-}
-
 function getModuleForFunktionaer(dbFunktionen: NavFunktion[]): string[]{
   const all=new Set<string>();
   (dbFunktionen||[]).forEach(f=>{
@@ -1010,4 +988,4 @@ function DarkModeRow(){
     </Between>
   );
 }
-export { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, maxStufe, getEffektiveStufeForFunktionaer, getModuleForFunktionaer };
+export { SideNav, TopBar, MobileNav, RoleSwitcher, getNavForRole, getRole, NAV_BY_ROLE, ProfileModal, getVereinsnameStatic, getModuleForFunktionaer };

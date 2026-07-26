@@ -12,8 +12,8 @@ import { ROLLE_PRIORITAET } from "./domains/roles/roleUtils.ts";
 import type { KaderRolleDb } from "./domains/roles/roleUtils.ts";
 import { LoginScreen } from "./modules/LoginScreen.tsx";
 import { useAppData, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
-import { usePermissions } from "./domains/app/usePermissions.ts";
-import { useProfilCheck } from "./domains/app/useProfilCheck.ts";
+import { getPermissions } from "./domains/app/getPermissions.ts";
+import { getProfilCheck } from "./domains/app/getProfilCheck.ts";
 import { NAV_TARGET } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, getNavForRole, ProfileModal, getVereinsnameStatic } from "./modules/NavigationModul.tsx";
 import { Dashboard } from "./modules/DashboardModul.tsx";
@@ -342,7 +342,7 @@ function Portal({supabaseClient}: PortalProps){
     .filter(n=>!!n.key&&isModuleVisible(n.key));
 
   /* ── App-Level Zugriffstufen-Hilfsfunktionen ── */
-  const { kannSchreiben, kannVerwalten } = usePermissions({
+  const { kannSchreiben, kannVerwalten } = getPermissions({
     role, moduleRechte, zugriffStufen: null, dbFunktionen,
   });
 
@@ -386,7 +386,7 @@ function Portal({supabaseClient}: PortalProps){
     }
   };
 
-  const { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft } = useProfilCheck({
+  const { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft } = getProfilCheck({
     sb, dbUser, role, dbMitglieder, setDbUser,
   });
 

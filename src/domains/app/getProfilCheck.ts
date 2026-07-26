@@ -1,10 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — domains/app/useProfilCheck.ts
-   Profil-Vollständigkeit und Prüfung
+   ClubCampus — domains/app/getProfilCheck.ts
+   Profil-Vollständigkeit und Prüfung. Kein React-Hook (ruft intern
+   keine Hooks) — bewusst ohne use-Präfix.
    ═══════════════════════════════════════════════════════════════ */
 import type { Sb, DbUser, Mitglied, Rolle, SetState } from '../../types.js';
 
-interface UseProfilCheckProps {
+interface GetProfilCheckProps {
   sb: Sb;
   dbUser: DbUser | null;
   role: Rolle;
@@ -12,7 +13,7 @@ interface UseProfilCheckProps {
   setDbUser: SetState<DbUser | null>;
 }
 
-export function useProfilCheck({ sb, dbUser, role, dbMitglieder, setDbUser }: UseProfilCheckProps) {
+export function getProfilCheck({ sb, dbUser, role, dbMitglieder, setDbUser }: GetProfilCheckProps) {
 
   function getProfilFehlend(): string[] {
     if (!dbUser) return [];
