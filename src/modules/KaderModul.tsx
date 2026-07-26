@@ -1,14 +1,83 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus KaderModul — Supabase-Version
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
-import { GN, R, BL } from "../constants.ts";
+import { useState, useEffect } from "react";
+import { BL } from "../constants.ts";
 import { TI } from "../icons.tsx";
-import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, Card, DropMenu } from "../theme.ts";
+import { useIsMobile, Av, Row, Between, Col, Btn, Input, ModalOrSheet, ModalTitle, DropMenu } from "../theme.ts";
+import type { DropMenuEntry } from "../shared/ui/DropMenu.tsx";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
+import type { KaderRolleDb } from "../domains/roles/roleUtils.ts";
 import { currentSeason } from "../domains/season/seasonUtils.ts";
+import type { Sb } from "../types.ts";
 
-const FIELD_VIS = {
+/* Mitglied-Join in der Kaderabfrage */
+interface KaderMitglied {
+  id: number;
+  vorname?: string | null;
+  nachname?: string | null;
+  geburtsdatum?: string | null;
+  nationalitaet?: string | null;
+  heimatort?: string | null;
+  ahv_nr?: string | null;
+  telefon?: string | null;
+  email?: string | null;
+  strasse?: string | null;
+  plz?: string | null;
+  ort?: string | null;
+  kanton?: string | null;
+  spielerpass?: string | null;
+  js_nr?: string | null;
+  fairgate_id?: string | null;
+  mitgliedtyp?: string | null;
+  funktionen?: string[] | null;
+}
+
+/* Zeile aus kader inkl. Mitglied-Join */
+interface KaderZeile {
+  id: number;
+  team_id?: number | null;
+  mitglied_id?: number | null;
+  rollen?: string[] | null;
+  rueckennr?: string | number | null;
+  position?: string | null;
+  saison?: string | null;
+  aktiv?: boolean | null;
+  mitglieder?: KaderMitglied | null;
+}
+
+/* Auswählbares Mitglied für "zum Kader hinzufügen" */
+interface AddMitglied {
+  id: number;
+  vorname?: string | null;
+  nachname?: string | null;
+  mitgliedtyp?: string | null;
+}
+
+interface EditForm {
+  funktionen: string[];
+  rueckennr: string;
+  position: string;
+}
+interface AddForm {
+  mitglied_id: number | null;
+  rueckennr: string;
+  position: string;
+  funktionen: string[];
+}
+
+/* team kommt entweder als Objekt {id,name} oder als blosser Name */
+type TeamProp = string | { id?: number | null; name?: string | null } | null;
+
+interface KaderModulProps {
+  role: string;
+  team: TeamProp;
+  sb?: Sb;
+  onSelectMember?: ((m: KaderMitglied & { name: string }) => void) | null;
+  vereinId?: string | null;
+}
+
+const FIELD_VIS: Record<string, string[]> = {
   administrator: ["dob","nat","heimatort","ahv","pass","street","plz","city","canton","email","tel","js","fairgate"],
   administration:["dob","nat","heimatort","ahv","pass","street","plz","city","canton","email","tel","js","fairgate"],
   funktionaer:   ["dob","pass","street","plz","city","email","tel"],
@@ -39,38 +108,36 @@ const COL_DEF_ALL = [
   {key:"fairgate", label:"Fairgate-ID",    field:"fairgate"},
 ];
 
-function KaderModul({role, team, sb=null, onSelectMember=null}){
+function KaderModul({role, team, sb=null, onSelectMember=null, vereinId=null}: KaderModulProps){
   const isMobile = useIsMobile();
   const vis = FIELD_VIS[role]||[];
   const canEdit = ["trainer","administrator","administration"].includes(role);
   const canExport = ["trainer","funktionaer","administration","administrator"].includes(role);
 
-  const [kader,       setKader]       = useState([]);
+  const [kader,       setKader]       = useState<KaderZeile[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [selected,    setSelected]    = useState(null);
+  const [selected,    setSelected]    = useState<KaderZeile|null>(null);
   const [search,      setSearch]      = useState("");
   const [groupBy,     setGroupBy]     = useState(true);
   const [showExport,  setShowExport]  = useState(false);
   const [showAdd,     setShowAdd]     = useState(false);
-  const [exportFields,setExportFields]= useState(["name","funktion","pos","nr"]);
-  const [editingPos,  setEditingPos]  = useState(null);
-  const [editingNr,   setEditingNr]   = useState(null);
-  const [editKader,   setEditKader]   = useState(null); // Kader-Eintrag bearbeiten
-  const [editForm,    setEditForm]    = useState({funktionen:[],rueckennr:"",position:""});
+  const [exportFields,setExportFields]= useState<string[]>(["name","funktion","pos","nr"]);
+  const [editKader,   setEditKader]   = useState<KaderZeile|null>(null); // Kader-Eintrag bearbeiten
+  const [editForm,    setEditForm]    = useState<EditForm>({funktionen:[],rueckennr:"",position:""});
   const [editSaving,  setEditSaving]  = useState(false);
   const [editFunkOpen,setEditFunkOpen]= useState(false);
-  const [sheetKader,  setSheetKader]  = useState(null); // Mobile Bottom Sheet
+  const [sheetKader,  setSheetKader]  = useState<KaderZeile|null>(null); // Mobile Bottom Sheet
 
   // Mitglied hinzufügen
   const [addSearch,   setAddSearch]   = useState("");
-  const [allMitglieder, setAllMitglieder] = useState([]);
-  const [addForm,     setAddForm]     = useState({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]});
+  const [allMitglieder, setAllMitglieder] = useState<AddMitglied[]>([]);
+  const [addForm,     setAddForm]     = useState<AddForm>({mitglied_id:null,rueckennr:"",position:"",funktionen:["Spieler/in"]});
   const [addFunkOpen, setAddFunkOpen]  = useState(false);
   const [addSaving,   setAddSaving]   = useState(false);
 
   const teamObj = typeof team === "object" ? team : null;
   const teamId  = teamObj?.id || null;
-  const teamName= teamObj?.name || team || "";
+  const teamName= teamObj?.name || (typeof team==="string"?team:"") || "";
   const saison  = currentSeason();
 
   // Kader laden
@@ -94,28 +161,17 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     }
   },[showAdd]);
 
-  // Kader-Eintrag updaten (Nr oder Position)
-  async function updateKaderField(kaderId, field, value){
-    if(!sb) return;
-    await sb.from("kader").update({[field]:value}).eq("id",kaderId);
-    setKader(prev=>prev.map(k=>k.id===kaderId?{...k,[field]:value}:k));
-  }
-
-  const ROLLE_MAP={"Spieler/in":"spieler","Trainer/in":"trainer","Co-Trainer/in":"trainer","Goalietrainer/in":"trainer","Assistenz":"funktionaer","Masseur/in":"funktionaer"};
-  const [dbRollenPrio,setDbRollenPrio]=useState([]);
-  const [dbKaderRollenData,setDbKaderRollenData]=useState([]);
+  const [dbKaderRollenData,setDbKaderRollenData]=useState<KaderRolleDb[]>([]);
   useEffect(()=>{
     if(sb){
-      sb.from("portal_rollen").select("name,prioritaet").eq("aktiv",true).order("prioritaet")
-        .then(({data})=>{if(data)setDbRollenPrio(data.map(r=>r.name));});
       sb.from("kader_rollen").select("*").eq("aktiv",true).order("sort_order")
         .then(({data})=>{if(data)setDbKaderRollenData(data);});
     }
   },[]);
-  async function updateBenutzerRolle(mitgliedId){
+  async function updateBenutzerRolle(mitgliedId: number|null|undefined){
     if(!sb||!mitgliedId) return;
     const {data:mitglied}=await sb.from("mitglieder").select("funktionen,mitgliedtyp").eq("id",mitgliedId).maybeSingle();
-    await ableitUndSaveRolle(sb,mitgliedId,dbKaderRollenData||[],mitglied?.mitgliedtyp,mitglied?.funktionen);
+    await ableitUndSaveRolle(sb,mitgliedId,dbKaderRollenData||[],mitglied?.mitgliedtyp??null,mitglied?.funktionen??[]);
   }
 
   // Kader-Eintrag bearbeiten
@@ -135,13 +191,13 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     setEditSaving(false);
   }
 
-  function openEdit(k){
-    setEditForm({funktionen:k.rollen||[],rueckennr:k.rueckennr||"",position:k.position||""});
+  function openEdit(k: KaderZeile){
+    setEditForm({funktionen:k.rollen||[],rueckennr:String(k.rueckennr||""),position:k.position||""});
     setEditKader(k);
   }
 
   // Mitglied entfernen
-  async function removeMitglied(kaderId){
+  async function removeMitglied(kaderId: number){
     if(!sb||!window.confirm("Mitglied aus dem Kader entfernen?")) return;
     const kaderEintrag=kader.find(k=>k.id===kaderId);
     await sb.from("kader").update({aktiv:false}).eq("id",kaderId);
@@ -152,7 +208,10 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
 
   // Mitglied hinzufügen
   async function addMitglied(){
-    if(!sb||!addForm.mitglied_id||!teamId) return;
+    /* verein_id ist in kader NOT NULL — ohne fiel das Upsert-Insert durch,
+       das Hinzufügen zum Kader schlug fehl. vereinId muss vom Parent
+       (TeamView/TeamsVerwaltungModul) durchgereicht werden. */
+    if(!sb||!addForm.mitglied_id||!teamId||!vereinId) return;
     setAddSaving(true);
     const {error}=await sb.from("kader").upsert({
       team_id:teamId,
@@ -162,6 +221,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       rollen:addForm.funktionen||["Spieler/in"],
       aktiv:true,
       saison,
+      verein_id:vereinId,
     },{onConflict:"team_id,mitglied_id,saison"});
     if(!error){
       await loadKader();
@@ -189,7 +249,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   });
 
   const grouped = groupBy
-    ? Object.entries(filtered.reduce((acc,k)=>{
+    ? Object.entries(filtered.reduce<Record<string, KaderZeile[]>>((acc,k)=>{
         const key=(k.rollen&&k.rollen.length>0)?k.rollen[0]:"Spieler/in";
         if(!acc[key]) acc[key]=[];
         acc[key].push(k); return acc;
@@ -202,7 +262,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
     const fields=COL_DEF_ALL.filter(c=>exportFields.includes(c.key));
     const header=fields.map(c=>c.label).join(";");
     const rows=filtered.map(k=>{
-      const m=k.mitglieder||{};
+      const m=k.mitglieder||({} as KaderMitglied);
       return fields.map(c=>{
         if(c.key==="name") return `${m.nachname||""} ${m.vorname||""}`.trim();
         if(c.key==="nr")   return k.rueckennr||"-";
@@ -227,14 +287,14 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
   };
 
   /* ── Kader Row ── */
-  const KaderRow=({k})=>{
-    const m=k.mitglieder||{};
+  const KaderRow=({k}: {k: KaderZeile})=>{
+    const m=k.mitglieder||({} as KaderMitglied);
     const name=`${m.nachname||""} ${m.vorname||""}`.trim()||"?";
     const handleRowClick=()=>{
       if(isMobile) setSheetKader(k);
       else onSelectMember?onSelectMember({...m,name:`${m.vorname||""} ${m.nachname||""}`.trim(),id:m.id}):setSelected(k);
     };
-    const menuItems=[
+    const menuItems: DropMenuEntry[]=[
       {label:"Spieler-Detail anzeigen", icon:"user", onClick:()=>onSelectMember?onSelectMember({...m,name:`${m.vorname||""} ${m.nachname||""}`.trim(),id:m.id}):setSelected(k)},
       {label:"Kader-Eintrag bearbeiten", icon:"edit", onClick:()=>openEdit(k)},
       "sep",
@@ -269,7 +329,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       {/* Edit Kader Modal */}
       <ModalOrSheet open={!!editKader} onClose={()=>setEditKader(null)} maxWidth={400}>
         {editKader&&(()=>{
-          const m=editKader.mitglieder||{};
+          const m=editKader.mitglieder||({} as KaderMitglied);
           const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
           return(
             <>
@@ -356,7 +416,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       {/* Mobile Bottom Sheet */}
       <ModalOrSheet open={!!sheetKader} onClose={()=>setSheetKader(null)} maxWidth={400}>
         {sheetKader&&(()=>{
-          const m=sheetKader.mitglieder||{};
+          const m=sheetKader.mitglieder||({} as KaderMitglied);
           const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
           return(
             <>
@@ -386,7 +446,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null}){
       </ModalOrSheet>
       <ModalOrSheet open={!!selected} onClose={()=>setSelected(null)} maxWidth={540}>
         {selected&&(()=>{
-          const m=selected.mitglieder||{};
+          const m=selected.mitglieder||({} as KaderMitglied);
           const name=`${m.vorname||""} ${m.nachname||""}`.trim()||"?";
           return(
             <>
