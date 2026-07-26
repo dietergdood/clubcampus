@@ -123,11 +123,15 @@ function MemberDetail({
   }, [mehrOpen]);
 
   /* ── Daten laden ── */
+  /* Benutzer: einmal beim Öffnen (fuer Hero + Tab-Zaehler) und erneut beim
+     Wechsel auf den Portal-Tab (mit Ladeindikator, um Aenderungen zu sehen).
+     Frueher zwei getrennte Effekte -> beim Direkteinstieg auf "portal"
+     ein doppelter Request. */
   useEffect(() => {
-    if (tab === "portal" && sb && raw.id) {
-      setPortalLoading(true);
-      fetchBenutzerFuerMitglied(sb, raw.id).then(data => { setBenutzer(data); setPortalLoading(false); });
-    }
+    if (!sb || !raw.id) return;
+    if (benutzer !== null && tab !== "portal") return;
+    if (tab === "portal") setPortalLoading(true);
+    fetchBenutzerFuerMitglied(sb, raw.id).then(data => { setBenutzer(data); setPortalLoading(false); });
   }, [tab, raw.id]);
 
   useEffect(() => {
@@ -148,11 +152,6 @@ function MemberDetail({
     }
   }, [raw.id]);
 
-  useEffect(() => {
-    if (sb && raw.id && benutzer === null) {
-      fetchBenutzerFuerMitglied(sb, raw.id).then(data => setBenutzer(data));
-    }
-  }, [raw.id]);
 
   /* ── Aktionen ── */
   /* ── Portal-Zugang Logik ─────────────────────────────────────
