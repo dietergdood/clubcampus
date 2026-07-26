@@ -34,7 +34,7 @@ interface KindForm {
   plz: string;
   ort: string;
   kanton: string;
-  ahv_nr: string | null;
+  ahv_nr: string | undefined;
   ahvVisible: boolean;
 }
 
@@ -66,7 +66,7 @@ export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalM
       plz:           k.plz           || "",
       ort:           k.ort           || "",
       kanton:        k.kanton        || "",
-      ahv_nr:        k.ahv_nr        || null,
+      ahv_nr:        k.ahv_nr        ?? undefined,
       ahvVisible:    false,
     }))
   );
@@ -86,7 +86,8 @@ export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalM
       vorname:  elternForm.vorname  || null,
       nachname: elternForm.nachname || null,
       telefon:  elternForm.telefon  || null,
-      profil_geprueft_at: new Date().toISOString(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      profil_geprueft_at: new Date().toISOString() as any,
     });
 
     /* Kinder-Daten speichern + profil_geprueft_at setzen */
@@ -176,7 +177,10 @@ interface KindCardProps {
 
 function KindCard({ kf, idx, setKindField }: KindCardProps) {
   const addrSuggestions = useAddrSearch(kf.strasse, kf.plz);
-  const plzResult = usePlzLookup(kf.plz);
+  usePlzLookup(kf.plz, (r) => {
+    setKindField(idx, "ort", r.ort);
+    setKindField(idx, "kanton", r.kanton || "");
+  });
 
   function applyAddr(s: { strasse: string; plz: string; ort: string; kanton: string }) {
     setKindField(idx, "strasse", s.strasse);
@@ -229,13 +233,7 @@ function KindCard({ kf, idx, setKindField }: KindCardProps) {
         <div>
           <label className="cc-label">PLZ</label>
           <input className="cc-input" value={kf.plz}
-            onChange={e => {
-              setKindField(idx, "plz", e.target.value);
-              if (plzResult) {
-                setKindField(idx, "ort", plzResult.ort);
-                setKindField(idx, "kanton", plzResult.kanton);
-              }
-            }}/>
+            onChange={e => setKindField(idx, "plz", e.target.value)}/>
         </div>
         <div>
           <label className="cc-label">Ort</label>

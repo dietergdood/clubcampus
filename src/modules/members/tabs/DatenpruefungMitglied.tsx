@@ -38,7 +38,7 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
 
   /* Adress-Autocomplete */
   const addrSuggestions = useAddrSearch(form.strasse, form.plz);
-  const plzResult = usePlzLookup(form.plz);
+  usePlzLookup(form.plz, (r) => setForm(p => ({ ...p, ort: r.ort, kanton: r.kanton || p.kanton })));
 
   function applyAddrSuggestion(s: { strasse: string; plz: string; ort: string; kanton: string }) {
     setForm(p => ({ ...p, strasse: s.strasse, plz: s.plz, ort: s.ort, kanton: s.kanton }));
@@ -130,10 +130,7 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
           <div>
             <label className="cc-label">PLZ</label>
             <input className="cc-input" value={form.plz}
-              onChange={e => {
-                set("plz", e.target.value);
-                if (plzResult) setForm(p => ({ ...p, ort: plzResult.ort, kanton: plzResult.kanton }));
-              }}/>
+              onChange={e => set("plz", e.target.value)}/>
           </div>
           <div>
             <label className="cc-label">Ort</label>

@@ -274,8 +274,17 @@ function MemberDetail({
           role={role}
           portalMsg={portalMsg} setPortalMsg={setPortalMsg}
           onReload={onReload}
-          elternkontakt={role === "eltern" ? eltern?.[0] || null : null}
-          kinder={role === "eltern" ? (raw.eltern_kinder_mitglieder || []) : []}
+          elternkontakt={role === "eltern" ? (eltern?.[0] ? {
+            id: eltern[0].id,
+            vorname: eltern[0].vorname,
+            nachname: eltern[0].nachname,
+            name: eltern[0].name,
+            email: eltern[0].email,
+            telefon: eltern[0].telefon,
+            beziehung: eltern[0].beziehung,
+            profil_geprueft_at: eltern[0].profil_geprueft_at ?? null,
+          } : null) : null}
+          kinder={[]}
         />
       )}
 
