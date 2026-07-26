@@ -16,6 +16,7 @@ import {
   fetchPortalFunktionen,
   logAktivitaet, AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
+import { fetchKinderVollstaendigFuerElternteil } from "../../domains/members/elternService.ts";
 import { MemberHero } from "./MemberHero.tsx";
 import { MemberTabBar } from "./MemberTabBar.tsx";
 import { ElternTab } from "./tabs/ElternTab.tsx";
@@ -109,6 +110,7 @@ function MemberDetail({
   const [notizenCount, setNotizenCount] = useState<number | null>(null);
   const [elternLoaded, setElternLoaded] = useState<Elternkontakt[] | null>(null);
   const eltern = elternLoaded !== null ? elternLoaded : (raw.eltern || []);
+  const [kinderFuerPruefung, setKinderFuerPruefung] = useState<Mitglied[]>([]);
   const [teamDetails, setTeamDetails] = useState<KaderDetail[] | null>(null);
   const [allTeams, setAllTeams] = useState<TeamOption>([]);
   const [assignFunktionen, setAssignFunktionen] = useState<FunktionMitGruppe[]>([]);
@@ -132,6 +134,13 @@ function MemberDetail({
       fetchElternkontakte(sb, raw.id).then(data => setElternLoaded(data));
     }
   }, [tab, raw.id]);
+
+  /* Kinder für Datenprüfung (Eltern-Sicht) */
+  useEffect(() => {
+    if (tab === "datenpruefung" && role === "eltern" && sb && eltern?.[0]?.id && kinderFuerPruefung.length === 0) {
+      fetchKinderVollstaendigFuerElternteil(sb, eltern[0].id).then(data => setKinderFuerPruefung(data as Mitglied[]));
+    }
+  }, [tab, role, eltern]);
 
   useEffect(() => {
     if (sb && raw.id) {
@@ -284,7 +293,7 @@ function MemberDetail({
             beziehung: eltern[0].beziehung,
             profil_geprueft_at: eltern[0].profil_geprueft_at ?? null,
           } : null) : null}
-          kinder={[]}
+          kinder={role === "eltern" ? kinderFuerPruefung : []}
         />
       )}
 

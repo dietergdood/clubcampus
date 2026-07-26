@@ -56,6 +56,16 @@ export async function fetchKinderFuerElternteil(sb: SbClient, elternId: string) 
   return data || [];
 }
 
+export async function fetchKinderVollstaendigFuerElternteil(sb: SbClient, elternId: string) {
+  const { data } = await sb.from("eltern_kinder")
+    .select(`mitglied_id, mitglieder:mitglied_id(
+      id, vorname, nachname, name, geburtsdatum, nationalitaet, nationalitaet2,
+      strasse, plz, ort, kanton, email, telefon, ahv_nr, profil_geprueft_at
+    )`)
+    .eq("eltern_id", elternId);
+  return (data || []).map(r => r.mitglieder).filter(Boolean);
+}
+
 export async function sucheElternkontakte(sb: SbClient, vereinId: string, query: string) {
   const q = (query||"").trim().toLowerCase();
   if(!q) return [];
