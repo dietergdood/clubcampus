@@ -21,8 +21,14 @@ jobs:
           node-version: 22
           cache: npm
 
+      # `npm ci` scheitert hier am bekannten npm-Cross-Platform-Bug: die
+      # package-lock.json wurde unter Windows erzeugt, und npms strikte
+      # Prüfung der optionalen Native-Bindings (esbuild/rolldown/rollup)
+      # schlägt beim Install auf Linux fehl. `npm install` installiert
+      # dieselbe Lockfile deterministisch (Vercel baut so denselben Commit
+      # auf Linux erfolgreich). `--no-save` verhindert Lockfile-Drift.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-save --no-audit --no-fund
 
       # Kernschritt: haelt die TypeScript-Typsicherheit gruen.
       - name: Typecheck
