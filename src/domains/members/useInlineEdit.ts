@@ -91,3 +91,7 @@ export function useInlineEdit({ sb, mitgliedId, onReload, vereinId=null, account
 
   return { editing, startEdit, saveEdit, cancelEdit, editVal, setEditVal, saving, feedback, handleKey };
 }
+
+/* Rückgabe-API des Hooks — damit Consumer sie als Prop annehmen koennen,
+   ohne den Hook selbst (Runtime) importieren zu muessen. */
+export type UseInlineEditApi = ReturnType<typeof useInlineEdit>;

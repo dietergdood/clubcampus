@@ -10,9 +10,9 @@ import { useState } from "react";
 import { Card, InlineField } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { getLandName, LAENDER, formatDatum } from "../../domains/person/personUtils.ts";
-import { useInlineEdit } from "../../domains/members/useInlineEdit.ts";
+import type { UseInlineEditApi } from "../../domains/members/useInlineEdit.ts";
 import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
-import type { Account, Mitglied, Sb } from "../../types.ts";
+import type { Mitglied } from "../../types.ts";
 import type { FieldVisibility } from "./types.ts";
 
 const GESCHLECHT_OPTS: InlineFieldOption[] = [
@@ -33,19 +33,17 @@ interface PersonPersonalienProps {
   raw: Mitglied;
   fv: FieldVisibility;
   canEdit?: boolean;
-  sb: Sb;
-  onReload?: (() => void) | null;
-  vereinId?: string | null;
-  account?: Account | null;
+  /* Inline-Edit-API wird vom Parent (InfoTab) injiziert — die Komponente
+     importiert den members-Hook nicht selbst (Schichtentrennung). */
+  ie: UseInlineEditApi;
 }
 
-function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null }: PersonPersonalienProps) {
+function PersonPersonalien({ raw, fv, canEdit, ie }: PersonPersonalienProps) {
   const [ahvVisible, setAhvVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [natEditing, setNatEditing] = useState(false);
   const [nat1Val, setNat1Val] = useState("");
   const [nat2Val, setNat2Val] = useState("");
-  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload, vereinId, account, rawData: raw });
 
   const age = raw.geburtsdatum
     ? Math.floor((Date.now() - new Date(raw.geburtsdatum).getTime()) / 31557600000)
@@ -67,12 +65,11 @@ function PersonPersonalien({ raw, fv, canEdit, sb, onReload, vereinId=null, acco
 
   async function saveNat() {
     setNatEditing(false);
-    if (!sb || !raw.id) return;
+    if (!raw.id) return;
     await ie.saveEdit("nationalitaet", nat1Val);
-    // nat2 direkt speichern ohne useInlineEdit (eigener Aufruf)
-    const { updateMitglied } = await import("../../domains/members/memberService.ts");
-    await updateMitglied(sb, raw.id, { nationalitaet2: nat2Val || null });
-    if (onReload) onReload();
+    /* nat2 ueber dieselbe Inline-Edit-API — persistiert und loggt wie nat1,
+       ohne direkten Service-Import. */
+    await ie.saveEdit("nationalitaet2", nat2Val || "");
   }
 
   function cancelNat() { setNatEditing(false); }

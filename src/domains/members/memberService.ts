@@ -3,7 +3,15 @@
    Alle Supabase-Calls für Mitglieder, Notizen, Elternkontakte,
    Kader, Benutzer (Portal-Zugang), Ansichten
    ═══════════════════════════════════════════════════════════════ */
+import type { PostgrestError } from "@supabase/supabase-js";
 import type { Ansicht, SbClient, Tables, TablesInsert, TablesUpdate } from "../../types.ts";
+
+/* ── Fehler-Vertrag der Write-Funktionen ──────────────────────────
+   Reine Schreiboperationen (insert/update/delete/upsert ohne Rückgabe-
+   daten) geben einheitlich `PostgrestError | null` zurück: null = ok,
+   sonst der Fehler. Aufrufer koennen so konsistent `if (await fn())`
+   pruefen (wie in elternService). Funktionen, die Daten zurueckgeben
+   (fetch*, insertMitglied, insertAnsicht …), behalten ihren Rückgabetyp. */
 
 /* ── Mitglieder ── */
 
@@ -12,24 +20,27 @@ export async function fetchMitglied(sb: SbClient, id: number) {
   return data;
 }
 
-export async function deleteMitglied(sb: SbClient, id: number) {
-  return sb.from("mitglieder").delete().eq("id", id);
+export async function deleteMitglied(sb: SbClient, id: number): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder").delete().eq("id", id);
+  return error;
 }
 
-export async function archiviereMitglied(sb: SbClient, id: number | number[], deaktiviertVon: string | null) {
-  return sb.from("mitglieder").update({
+export async function archiviereMitglied(sb: SbClient, id: number | number[], deaktiviertVon: string | null): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder").update({
     aktiv: false,
     deaktiviert_am: new Date().toISOString(),
     deaktiviert_von: deaktiviertVon,
   }).in("id", Array.isArray(id) ? id : [id]);
+  return error;
 }
 
-export async function reaktiviereMitglied(sb: SbClient, id: number) {
-  return sb.from("mitglieder").update({
+export async function reaktiviereMitglied(sb: SbClient, id: number): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder").update({
     aktiv: true,
     deaktiviert_am: null,
     deaktiviert_von: null,
   }).eq("id", id);
+  return error;
 }
 
 export async function fetchArchiv(sb: SbClient) {
@@ -64,8 +75,9 @@ export async function insertAnsicht(sb: SbClient, ansicht: TablesInsert<"mitglie
   return (data as Ansicht | null) ?? null;
 }
 
-export async function deleteAnsicht(sb: SbClient, id: string) {
-  return sb.from("mitglieder_ansichten").delete().eq("id", id);
+export async function deleteAnsicht(sb: SbClient, id: string): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder_ansichten").delete().eq("id", id);
+  return error;
 }
 
 /* ── Notizen ── */
@@ -78,19 +90,22 @@ export async function fetchNotizen(sb: SbClient, mitgliedId: number) {
   return data || [];
 }
 
-export async function insertNotiz(sb: SbClient, notiz: TablesInsert<"mitglieder_notizen">) {
-  return sb.from("mitglieder_notizen").insert(notiz);
+export async function insertNotiz(sb: SbClient, notiz: TablesInsert<"mitglieder_notizen">): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder_notizen").insert(notiz);
+  return error;
 }
 
-export async function updateNotiz(sb: SbClient, id: number, text: string) {
-  return sb.from("mitglieder_notizen").update({
+export async function updateNotiz(sb: SbClient, id: number, text: string): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder_notizen").update({
     text,
     updated_at: new Date().toISOString(),
   }).eq("id", id);
+  return error;
 }
 
-export async function deleteNotiz(sb: SbClient, id: number) {
-  return sb.from("mitglieder_notizen").delete().eq("id", id);
+export async function deleteNotiz(sb: SbClient, id: number): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder_notizen").delete().eq("id", id);
+  return error;
 }
 
 /* ── Elternkontakte ── */
@@ -116,16 +131,19 @@ export async function fetchKaderEintraege(sb: SbClient, mitgliedId: number) {
   return data || [];
 }
 
-export async function upsertKader(sb: SbClient, eintrag: TablesInsert<"kader">) {
-  return sb.from("kader").upsert(eintrag, { onConflict: "mitglied_id,team_id,saison" });
+export async function upsertKader(sb: SbClient, eintrag: TablesInsert<"kader">): Promise<PostgrestError | null> {
+  const { error } = await sb.from("kader").upsert(eintrag, { onConflict: "mitglied_id,team_id,saison" });
+  return error;
 }
 
-export async function updateKader(sb: SbClient, id: number, fields: TablesUpdate<"kader">) {
-  return sb.from("kader").update(fields).eq("id", id);
+export async function updateKader(sb: SbClient, id: number, fields: TablesUpdate<"kader">): Promise<PostgrestError | null> {
+  const { error } = await sb.from("kader").update(fields).eq("id", id);
+  return error;
 }
 
-export async function deaktiviereKader(sb: SbClient, id: number) {
-  return sb.from("kader").update({ aktiv: false }).eq("id", id);
+export async function deaktiviereKader(sb: SbClient, id: number): Promise<PostgrestError | null> {
+  const { error } = await sb.from("kader").update({ aktiv: false }).eq("id", id);
+  return error;
 }
 
 /* ── Benutzer (Portal-Zugang) ── */
@@ -146,18 +164,23 @@ export async function fetchBenutzerByEmail(sb: SbClient, email: string) {
   return data;
 }
 
-export async function updateBenutzer(sb: SbClient, id: string, fields: TablesUpdate<"benutzer">) {
-  return sb.from("benutzer").update(fields).eq("id", id);
+export async function updateBenutzer(sb: SbClient, id: string, fields: TablesUpdate<"benutzer">): Promise<PostgrestError | null> {
+  const { error } = await sb.from("benutzer").update(fields).eq("id", id);
+  return error;
 }
 
-export async function portalZugangAktivieren(sb: SbClient, mitgliedId: number, benutzerId: string, neueRolle: string) {
-  await sb.from("mitglieder").update({ hat_portal_zugang: true }).eq("id", mitgliedId);
-  await sb.from("benutzer").update({ mitglied_id: mitgliedId, role: neueRolle }).eq("id", benutzerId);
+export async function portalZugangAktivieren(sb: SbClient, mitgliedId: number, benutzerId: string, neueRolle: string): Promise<PostgrestError | null> {
+  const { error: e1 } = await sb.from("mitglieder").update({ hat_portal_zugang: true }).eq("id", mitgliedId);
+  if (e1) return e1;
+  const { error: e2 } = await sb.from("benutzer").update({ mitglied_id: mitgliedId, role: neueRolle }).eq("id", benutzerId);
+  return e2;
 }
 
-export async function portalZugangDeaktivieren(sb: SbClient, mitgliedId: number) {
-  await sb.from("mitglieder").update({ hat_portal_zugang: false }).eq("id", mitgliedId);
-  await sb.from("benutzer").update({ mitglied_id: null }).eq("mitglied_id", mitgliedId);
+export async function portalZugangDeaktivieren(sb: SbClient, mitgliedId: number): Promise<PostgrestError | null> {
+  const { error: e1 } = await sb.from("mitglieder").update({ hat_portal_zugang: false }).eq("id", mitgliedId);
+  if (e1) return e1;
+  const { error: e2 } = await sb.from("benutzer").update({ mitglied_id: null }).eq("mitglied_id", mitgliedId);
+  return e2;
 }
 
 /* ── Portal Funktionen ── */

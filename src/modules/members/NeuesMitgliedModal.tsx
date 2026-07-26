@@ -154,6 +154,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
   const [form, setForm] = useState<MitgliedFormular>({ mitgliedtyp: "" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<StatusMeldung | null>(null);
+  const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /* Erfolgs-Timer bei Unmount abbrechen (sonst setState nach Unmount) */
+  useEffect(() => () => clearTimeout(successTimer.current), []);
 
   const mitgliedtypen = dbMitgliedtypen && dbMitgliedtypen.length > 0
     ? dbMitgliedtypen.map(t => t.name)
@@ -225,7 +228,8 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     const von = account?.name || account?.email || "Administrator";
     logAktivitaet(sb, id, vereinId, AKTIVITAET_TYP.ANGELEGT, "Mitglied angelegt", null, null, von);
     setMsg({ ok: true, text: "Mitglied angelegt ✓" });
-    setTimeout(() => {
+    clearTimeout(successTimer.current);
+    successTimer.current = setTimeout(() => {
       setForm({ mitgliedtyp: "" });
       setMsg(null);
       onClose();

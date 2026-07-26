@@ -13,9 +13,22 @@ import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
+import {
+  updateMitglied, logAenderung, logAktivitaet, AKTIVITAET_TYP,
+  fetchKaderFuerMitglied, fetchAktiveTeams, fetchPortalFunktionenMitGruppe,
+  upsertKader, updateKader, deaktiviereKader,
+} from "../../../domains/members/memberService.ts";
 import { formatDatum } from "../../../domains/person/personUtils.ts";
+import type { PersonTeamsService } from "../../../shared/person/PersonTeams.tsx";
 import type { Account, Mitglied, Mitgliedtyp, Sb } from "../../../types.ts";
 import type { FieldVisibility } from "../../../shared/person/types.ts";
+
+/* Service-Buendel fuer PersonTeams — hier (modules -> domains erlaubt)
+   gebuendelt und der shared-Komponente injiziert. */
+const personTeamsSvc: PersonTeamsService = {
+  fetchKaderFuerMitglied, fetchAktiveTeams, fetchPortalFunktionenMitGruppe,
+  upsertKader, updateKader, deaktiviereKader, logAenderung, logAktivitaet, AKTIVITAET_TYP,
+};
 
 /* Die Teams-/Funktionen-Karten sind reines Durchreichen — ihre Formen
    direkt von den Kindern ableiten, statt sie hier zu wiederholen. */
@@ -63,9 +76,30 @@ function InfoTab({
 }: InfoTabProps) {
   const isMobile = useIsMobile();
   const notizAddRef = useRef<(() => void) | null>(null);
-  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload: ()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); } });
+  const reloadMemberFull = ()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); };
+  /* ie: Vereinsdaten-Felder (kein Aenderungslog). iePerson: Personalien/
+     Kontakt — mit vereinId/account/rawData fuer die Aenderungshistorie. Beide
+     hier erzeugt (modules -> domains erlaubt) und den shared-Komponenten
+     als Prop injiziert, damit diese den Hook nicht selbst importieren. */
+  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload: reloadMemberFull });
+  const iePerson = useInlineEdit({ sb, mitgliedId: raw.id, onReload: reloadMemberFull, vereinId, account, rawData: raw });
   const [editModeVerein, setEditModeVerein] = useState(false);
   const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editModeVerein };
+
+  /* Persistenz + Aenderungslog fuer PersonFunktionen (frueher in der shared-
+     Komponente). */
+  async function onSaveFunktionen(funktionen: string[]) {
+    if (!sb) return;
+    await updateMitglied(sb, raw.id, { funktionen });
+    if (vereinId) {
+      const alt = new Set(raw.funktionen || []);
+      const neu = new Set(funktionen);
+      const von = account?.name||account?.email||"Administrator";
+      for (const f of funktionen.filter(f=>!alt.has(f))) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion hinzugefügt: ${f}`, "funktionen", f, von);
+      for (const f of (raw.funktionen||[]).filter(f=>!neu.has(f))) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion entfernt: ${f}`, "funktionen", f, von);
+    }
+    reloadMemberFull();
+  }
 
   const MITGLIEDTYP_OPTS = (dbMitgliedtypen||[]).map(t=>({v:t.name,l:t.name}));
   const eintrittsdatum = raw.eintrittsdatum;
@@ -108,10 +142,10 @@ function InfoTab({
 
       {/* Grid: Personalien + Kontakt + Vereinsdaten + Teams + Funktionen + Notizen */}
       <div className="cc-grid-2">
-        <PersonPersonalien raw={raw} fv={fv} canEdit={canEdit} sb={sb} vereinId={vereinId} account={account} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}/>
+        <PersonPersonalien raw={raw} fv={fv} canEdit={canEdit} ie={iePerson}/>
 
         <PersonKontakt
-          raw={raw} fv={fv} canEdit={canEdit} sb={sb} vereinId={vereinId} account={account} onReload={()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); }}
+          raw={raw} fv={fv} canEdit={canEdit} ie={iePerson}
           eltern={eltern} brauchtEltern={brauchtEltern} setTab={setTab}
         />
 
@@ -150,10 +184,10 @@ function InfoTab({
         </Card>
 
         {/* PersonTeams und PersonFunktionen verlangen einen echten Client.
-            InfoTab wird nur innerhalb einer angemeldeten Session gerendert,
-            in der sb gesetzt ist. */}
-        <PersonTeams
-          raw={raw} sb={sb!} canEdit={canEdit}
+            Statt einer sb!-Assertion nur rendern, wenn sb gesetzt ist —
+            das narrowt sb auf SbClient und faellt ohne Client sicher weg. */}
+        {sb && <PersonTeams
+          raw={raw} sb={sb} svc={personTeamsSvc} canEdit={canEdit}
           dbKaderRollen={dbKaderRollen}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
           allTeams={allTeams} setAllTeams={setAllTeams}
@@ -161,14 +195,13 @@ function InfoTab({
           onNavToTeam={onNavToTeam}
           onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}} ableitRolle={ableitRolle}
           vereinId={vereinId} account={account}
-        />
+        />}
 
-        <PersonFunktionen
-          raw={raw} sb={sb!} canEdit={canEdit} canDelete={canDelete}
+        {sb && <PersonFunktionen
+          raw={raw} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
-          onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}}
-          vereinId={vereinId} account={account}
-        />
+          onSaveFunktionen={onSaveFunktionen}
+        />}
 
         {/* Notizen */}
         {fv.showNotizen && (

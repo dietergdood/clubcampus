@@ -43,16 +43,17 @@ const ASSIGN_FUNKTIONEN = [
   { id: 'f4', name: 'Torhüter',   portal_gruppen: { name: 'Sport',    farbe: '#654321' } },
 ];
 
+/* Persistenz/Logging liegen seit der Schichtentrennung im Parent (InfoTab);
+   die Komponente meldet nur noch die neue Funktionsliste via onSaveFunktionen. */
+const onSaveFunktionen = vi.fn().mockResolvedValue(undefined);
+
 function renderComp(props = {}) {
   return render(<PersonFunktionen
     raw={RAW}
-    sb={{}}
     canEdit={true}
     canDelete={true}
     assignFunktionen={ASSIGN_FUNKTIONEN}
-    onReload={vi.fn()}
-    vereinId="verein-123"
-    account={{ name: 'Dieter Good' }}
+    onSaveFunktionen={onSaveFunktionen}
     {...props}
   />);
 }
@@ -113,47 +114,26 @@ describe('PersonFunktionen', () => {
   });
 
   describe('Funktion hinzufügen', () => {
-    it('ruft updateMitglied auf beim Speichern', async () => {
+    it('meldet die neue Liste inkl. hinzugefügter Funktion via onSaveFunktionen', async () => {
       renderComp();
       fireEvent.click(screen.getByText('Hinzufügen'));
       fireEvent.click(screen.getByText('Trainer'));
       fireEvent.click(screen.getByText('Speichern'));
-      await waitFor(() => expect(updateMitglied).toHaveBeenCalledWith(
-        expect.anything(), 1,
-        expect.objectContaining({ funktionen: expect.arrayContaining(['Trainer']) })
-      ));
-    });
-
-    it('loggt Aktivität beim Hinzufügen', async () => {
-      renderComp();
-      fireEvent.click(screen.getByText('Hinzufügen'));
-      fireEvent.click(screen.getByText('Trainer'));
-      fireEvent.click(screen.getByText('Speichern'));
-      await waitFor(() => expect(logAktivitaet).toHaveBeenCalledWith(
-        expect.anything(), 1, 'verein-123', 'funktion_geaendert',
-        'Vereinsfunktion hinzugefügt: Trainer',
-        expect.anything(), expect.anything(), expect.anything()
+      await waitFor(() => expect(onSaveFunktionen).toHaveBeenCalledWith(
+        expect.arrayContaining(['Präsident', 'Kassier', 'Trainer'])
       ));
     });
   });
 
   describe('Funktion entfernen via DropMenu', () => {
-    it('ruft updateMitglied auf beim Entfernen', async () => {
+    it('meldet die Liste ohne die entfernte Funktion via onSaveFunktionen', async () => {
       renderComp();
       const entfernenBtns = screen.getAllByTestId('menu-Entfernen');
       fireEvent.click(entfernenBtns[0]);
-      await waitFor(() => expect(updateMitglied).toHaveBeenCalled());
-    });
-
-    it('loggt Aktivität beim Entfernen', async () => {
-      renderComp();
-      const entfernenBtns = screen.getAllByTestId('menu-Entfernen');
-      fireEvent.click(entfernenBtns[0]);
-      await waitFor(() => expect(logAktivitaet).toHaveBeenCalledWith(
-        expect.anything(), 1, 'verein-123', 'funktion_geaendert',
-        expect.stringContaining('entfernt'),
-        expect.anything(), expect.anything(), expect.anything()
-      ));
+      await waitFor(() => expect(onSaveFunktionen).toHaveBeenCalled());
+      // erste Funktion (Präsident) entfernt -> nicht mehr in der gemeldeten Liste
+      const gemeldet = onSaveFunktionen.mock.calls[0][0];
+      expect(gemeldet).not.toContain('Präsident');
     });
   });
 });

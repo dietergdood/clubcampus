@@ -10,7 +10,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ElternSucheModal } from "../ElternSucheModal.tsx";
 import {
   insertElternkontakt, updateElternkontakt, deleteElternkontakt,
@@ -21,7 +21,7 @@ import {
 } from "../../../domains/members/memberService.ts";
 import { vollname } from "../../../domains/person/personUtils.ts";
 import type { ElternkontaktMitLink } from "../../../domains/members/elternService.ts";
-import type { Account, Mitglied, Sb, SetState, TablesUpdate } from "../../../types.ts";
+import type { Account, Mitglied, Sb, SetState } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
 /* Formularzustand des Bearbeiten-/Anlegen-Modals. Beim Anlegen sind nur
@@ -142,6 +142,9 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
   const [elternMsg, setElternMsg] = useState<StatusMeldung | null>(null);
   const [elternSaving, setElternSaving] = useState(false);
   const [showSuche, setShowSuche] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /* Erfolgs-Timer bei Unmount abbrechen (sonst setState nach Unmount) */
+  useEffect(() => () => clearTimeout(saveTimer.current), []);
   const geaendertVon = account?.name||account?.email||"Administrator";
 
   async function reload(){
@@ -203,7 +206,8 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
           logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Elternkontakt bearbeitet: ${name}`,"elternkontakte",name,geaendertVon);
       }
       setElternMsg({ok:true,text:"Gespeichert ✓"});
-      setTimeout(()=>{ setEditEltern(null); setElternMsg(null); reload(); },800);
+      clearTimeout(saveTimer.current);
+      saveTimer.current=setTimeout(()=>{ setEditEltern(null); setElternMsg(null); reload(); },800);
     }catch(e){ setElternMsg({ok:false,text:e instanceof Error?e.message:String(e)}); }
     setElternSaving(false);
   }
@@ -231,7 +235,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
            der Rückgabefehler wird bewusst nicht ausgewertet, damit das
            Entknüpfen selbst durchläuft. Solange die Spalte fehlt, wird aus
            dem Elternteil kein Supporter. */
-        await updateElternkontakt(sb, e.id, { supporter: true } as TablesUpdate<"elternkontakte">);
+        await updateElternkontakt(sb, e.id, { supporter: true });
         // Benutzer-Rolle zu "supporter" ändern falls Portal-Zugang vorhanden
         if(e.benutzer_id){
           await updateBenutzerRolle(sb, e.benutzer_id, "supporter");
