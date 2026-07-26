@@ -23,7 +23,7 @@ import { TrainingsplanModul } from "./modules/TrainingsplanModul.tsx";
 import { TeamsVerwaltungModul } from "./modules/TeamsVerwaltungModul.tsx";
 import { MembersView } from "./modules/MitgliederModul.tsx";
 import KaderModul from "./modules/KaderModul.tsx";
-import { HelferModul, HelpersList as HelpersListJs } from "./modules/HelferModul.jsx";
+import { HelferModul, HelpersList } from "./modules/HelferModul.tsx";
 import NachrichtenModul from "./modules/NachrichtenModul.tsx";
 import { PortalverwaltungView } from "./modules/PortalverwaltungModul.tsx";
 import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView } from "./modules/PlatzhalterModul.tsx";
@@ -31,19 +31,6 @@ import type {
   Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
 } from "./types.ts";
-
-/* ── Brücke zu den noch nicht migrierten JS-Modulen ───────────────
-   TypeScript leitet die Prop-Typen von JavaScript-Komponenten aus deren
-   Default-Werten ab: `sb=null` wird zu Typ `null`, `dbTeams=[]` zu
-   `never[]`. Korrekte Werte werden dadurch abgelehnt, und Parameter ohne
-   Default gelten als Pflichtprops. Bis die Module migriert sind, werden
-   sie hier als Komponenten mit freien Props geführt — das entspricht dem
-   heutigen Stand, denn geprüft wurden ihre Props als JS ohnehin nie.
-   Jede Zeile verschwindet mit der Migration des jeweiligen Moduls.
-   MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
-type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
-
-const HelpersList           = HelpersListJs           as unknown as JsComponent;
 
 /* Ebenfalls noch JS: TS liest die Initialwerte (null) als Typ. */
 const navTarget = NAV_TARGET as { tab: string|null; selectedSpiel: unknown };

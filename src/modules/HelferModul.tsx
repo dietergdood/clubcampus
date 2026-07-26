@@ -6,10 +6,21 @@ import { useState, useEffect, useRef } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK, GR, GB } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { Av, Between, Btn, Card, Chip, Col, H1, InfoBox, Input, Row, Stat, useIsMobile , avColor} from "../theme.ts";
-import { HELPER_GRUPPEN, HELPER_EVENTS, HELPERS } from "../demoData.js";
+import { HELPER_GRUPPEN as HELPER_GRUPPEN_SRC, HELPER_EVENTS as HELPER_EVENTS_SRC, HELPERS as HELPERS_SRC } from "../demoData.js";
+
+/* demoData ist untypisiertes JS — als any geführt, damit die Legacy-Zugriffe
+   (Phantomfelder, dynamische Keys) erhalten bleiben. */
+const HELPER_GRUPPEN: any[] = HELPER_GRUPPEN_SRC;
+const HELPER_EVENTS: any[] = HELPER_EVENTS_SRC;
+const HELPERS: any[] = HELPERS_SRC;
+
+/* winStorage.storage ist eine App-eigene Bridge (kein Standard-Window-Feld). */
+const winStorage = window as unknown as {
+  storage: { get(k: string): Promise<{value: string}|null>; set(k: string, v: string): Promise<void> };
+};
 
 /* ── Hilfsfunktionen ── */
-function Tabs({tabs,active,setActive}){
+function Tabs({tabs,active,setActive}: {tabs: any[]; active: string; setActive: (k: string)=>void}){
   const isMobile=useIsMobile();
   return(
     <div style={{display:"flex",gap:4,background:"var(--surface2)",borderRadius:10,padding:3,marginBottom:18,overflowX:"auto",flexWrap:"nowrap",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
@@ -20,7 +31,26 @@ function Tabs({tabs,active,setActive}){
   );
 }
 
-function getHelperName(role,account){
+interface HelferProps {
+  teamOnly?: boolean;
+  role: string;
+  meineTeams?: string[];
+  account?: any;
+  kannSchreiben?: ((m: string)=>boolean)|null;
+  kannVerwalten?: ((m: string)=>boolean)|null;
+}
+interface SchichtKarteProps {
+  schicht: any; einsatz?: any; meinName: string; canEdit?: boolean; canFreigeben?: boolean;
+  canZuteilen?: boolean; teamMitglieder?: any[]; schichtenState: Record<string, any>;
+  onEintragen?: (...a: any[])=>void; onFreigeben?: (...a: any[])=>void; onÜbertragen?: (...a: any[])=>void;
+  freigabeAnfragen?: Record<string, any>; notes?: string; onSaveBemerkung?: (...a: any[])=>void;
+}
+interface MeinSchichtEintragProps {
+  schicht: any; anfragePending?: boolean; anfrageData?: any; meinName: string;
+  onÜbertragen?: (...a: any[])=>void; onFreigeben?: (...a: any[])=>void;
+}
+
+function getHelperName(role: string,account?: any){
   if(account?.name) return account.name;
   if(role==="spieler") return "Luca Meier";
   if(role==="eltern")  return "Anna Meier";
@@ -29,9 +59,9 @@ function getHelperName(role,account){
 }
 
 /* Alle möglichen Übergabe-Empfänger (alle Helfer ausser dem aktuellen) */
-const ALLE_HELFER_NAMEN = (HELPERS||[]).map(h=>h.name);
+const ALLE_HELFER_NAMEN = (HELPERS||[]).map((h: any)=>h.name);
 
-function BemerkungEdit({notes,onSave}){
+function BemerkungEdit({notes,onSave}: {notes?: string; onSave: (v: string)=>void}){
   const [editing,setEditing]=useState(false);
   const [draft,setDraft]=useState(notes||"");
   if(editing) return(
@@ -46,7 +76,7 @@ function BemerkungEdit({notes,onSave}){
   return <Btn variant="ghost" onClick={e=>{e.stopPropagation();setEditing(true);setDraft(notes||"");}}><TI n="edit" style={{marginRight:3}}/> Bemerkung</Btn>;
 }
 
-function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen,teamMitglieder,schichtenState,onEintragen,onFreigeben,onÜbertragen,freigabeAnfragen,notes,onSaveBemerkung}){
+function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen,teamMitglieder,schichtenState,onEintragen,onFreigeben,onÜbertragen,freigabeAnfragen,notes,onSaveBemerkung}: SchichtKarteProps){
   const helfer=schichtenState[schicht.id]??schicht.helfer;
   const filled=helfer.length, max=schicht.max;
   const pct=Math.round(filled/max*100);
@@ -72,14 +102,14 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 
   const handleÜbertragen=()=>{
     if(!transferTarget) return;
-    onÜbertragen(schicht.id, meinName, transferTarget);
+    onÜbertragen?.(schicht.id, meinName, transferTarget);
     setShowTransfer(false);
     setTransferTarget("");
   };
 
   const handleAnfrageSenden=()=>{
     if(!anfrageBegruendung.trim()) return;
-    onFreigeben(schicht.id, meinName, anfrageBegruendung.trim());
+    onFreigeben?.(schicht.id, meinName, anfrageBegruendung.trim());
     setShowAnfrageForm(false);
     setAnfrageBegruendung("");
     setShowAnfrageOk(true);
@@ -88,7 +118,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 
   const handleZuteilen=()=>{
     if(!zuteilTarget) return;
-    onEintragen(schicht.id,zuteilTarget);
+    onEintragen?.(schicht.id,zuteilTarget);
     setShowZuteilen(false);
     setZuteilTarget("");
     setZuteilSearch("");
@@ -133,7 +163,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 
         {showHelfer&&(
           <div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:4}}>
-            {helfer.map((h,i)=>(
+            {helfer.map((h: any,i: number)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:h===meinName?"#DCFCE7":"#F3F4F6",borderRadius:6,padding:"4px 8px"}}>
                 <Av name={h} size={16} bg={h===meinName?GN:"#9CA3AF"}/>
                 <span style={{fontSize:14,fontWeight:h===meinName?700:500,color:h===meinName?GN:"#374151",flex:1}}>{h}</span>
@@ -239,7 +269,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
           )}
           {/* Standard Eintragen für alle anderen */}
           {!canZuteilen&&(
-            <Btn small onClick={()=>onEintragen(schicht.id,meinName)}>✓ Eintragen</Btn>
+            <Btn small onClick={()=>onEintragen?.(schicht.id,meinName)}>✓ Eintragen</Btn>
           )}
           {/* Zuteilungs-Formular */}
           {canZuteilen&&showZuteilen&&(
@@ -293,15 +323,15 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
               <div style={{fontSize:14,color:AM,fontWeight:700,marginBottom:2}}>Freigabe-Anfrage von {anfrageData?.name}</div>
               <div className="cc-text-sm">Begründung: <em>{"\"" + (anfrageData?.begruendung||"") + "\""}</em></div>
             </div>
-            <Btn variant="primary" color={AM} small onClick={()=>onFreigeben(schicht.id,null)}>Freigeben ✓</Btn>
+            <Btn variant="primary" color={AM} small onClick={()=>onFreigeben?.(schicht.id,null)}>Freigeben ✓</Btn>
           </div>
         </div>
       )}
       {/* Admin/Funktionär: jemanden direkt austragen */}
       {canFreigeben&&!ichDrin&&helfer.length>0&&(
         <div style={{marginTop:6,display:"flex",gap:4,flexWrap:"wrap"}}>
-          {helfer.map((h,i)=>(
-            <Btn small onClick={()=>onFreigeben(schicht.id,h)}>{h} ✕</Btn>
+          {helfer.map((h: any,i: number)=>(
+            <Btn small onClick={()=>onFreigeben?.(schicht.id,h)}>{h} ✕</Btn>
           ))}
         </div>
       )}
@@ -311,7 +341,7 @@ function SchichtKarte({schicht,einsatz,meinName,canEdit,canFreigeben,canZuteilen
 }
 
 /* Einzelne Schicht-Zeile im "Mein Einsatz"-Tab - mit eigenem Freigabe-Formular */
-function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜbertragen,onFreigeben}){
+function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜbertragen,onFreigeben}: MeinSchichtEintragProps){
   const [showAnfrageForm,setShowAnfrageForm]=useState(false);
   const [begruendung,setBegruendung]=useState("");
   const [showTransfer,setShowTransfer]=useState(false);
@@ -320,7 +350,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
 
   const handleSenden=()=>{
     if(!begruendung.trim()) return;
-    onFreigeben(schicht.id,meinName,begruendung.trim());
+    onFreigeben?.(schicht.id,meinName,begruendung.trim());
     setShowAnfrageForm(false);
     setBegruendung("");
     setSent(true);
@@ -329,7 +359,7 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
 
   const handleÜbertragen=()=>{
     if(!transferTarget.trim()) return;
-    onÜbertragen(schicht.id,meinName,transferTarget.trim());
+    onÜbertragen?.(schicht.id,meinName,transferTarget.trim());
     setShowTransfer(false);
     setTransferTarget("");
   };
@@ -423,65 +453,65 @@ function MeinSchichtEintrag({schicht,anfragePending,anfrageData,meinName,onÜber
   );
 }
 
-function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerwalten}){
+function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerwalten}: HelferProps){
   const isMobile=useIsMobile();
   const [helperTab,setHelperTab]=useState(teamOnly?"team":"browse");
-  const [selectedEvent,setSelectedEvent]=useState(null);
+  const [selectedEvent,setSelectedEvent]=useState<any>(null);
   const [filterOffen,setFilterOffen]=useState(false);
   const [browseSearch,setBrowseSearch]=useState("");
-  const [schichtenState,setSchichtenState]=useState({});
-  const [collapsedTeamEvents,setCollapsedTeamEvents]=useState({});
-  const toggleTeamCollapse=(id)=>setCollapsedTeamEvents(prev=>({...prev,[id]:!prev[id]}));
-  const [collapsedEvents,setCollapsedEvents]=useState(()=>Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true])));
-  const toggleCollapse=(id)=>setCollapsedEvents(prev=>{
+  const [schichtenState,setSchichtenState]=useState<Record<string, any>>({});
+  const [collapsedTeamEvents,setCollapsedTeamEvents]=useState<Record<string, boolean>>({});
+  const toggleTeamCollapse=(id: any)=>setCollapsedTeamEvents((prev: any)=>({...prev,[id]:!prev[id]}));
+  const [collapsedEvents,setCollapsedEvents]=useState<Record<string, boolean>>(()=>Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true])));
+  const toggleCollapse=(id: any)=>setCollapsedEvents((prev: any)=>{
     const allCollapsed=Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true]));
     return prev[id]?{...allCollapsed,[id]:false}:{...allCollapsed};
   });
-  const [collapsedEinsaetze,setCollapsedEinsaetze]=useState({});
-  const toggleEinsatz=(id)=>setCollapsedEinsaetze(prev=>({...prev,[id]:!prev[id]}));
-  const [bemerkungState,setBemerkungState]=useState({}); /* einsatzId/schichtId → text */
-  const [editingBemerkung,setEditingBemerkung]=useState(null);
+  const [collapsedEinsaetze,setCollapsedEinsaetze]=useState<Record<string, boolean>>({});
+  const toggleEinsatz=(id: any)=>setCollapsedEinsaetze((prev: any)=>({...prev,[id]:!prev[id]}));
+  const [bemerkungState,setBemerkungState]=useState<Record<string, string>>({}); /* einsatzId/schichtId → text */
+  const [editingBemerkung,setEditingBemerkung]=useState<any>(null);
   const [bemerkungDraft,setBemerkungDraft]=useState("");
   useEffect(()=>{
-    (async()=>{try{const r=await window.storage.get("helfer_notes");if(r)setBemerkungState(JSON.parse(r.value));}catch(e){}})();
+    (async()=>{try{const r=await winStorage.storage.get("helfer_notes");if(r)setBemerkungState(JSON.parse(r.value));}catch(e){}})();
   },[]);
-  const saveBemerkung=(id,text)=>{
+  const saveBemerkung=(id: any,text: string)=>{
     const next={...bemerkungState,[id]:text};
     setBemerkungState(next);
-    window.storage.set("helfer_notes",JSON.stringify(next));
+    winStorage.storage.set("helfer_notes",JSON.stringify(next));
     setEditingBemerkung(null);
   };
-  const schichtenRef=useRef({});
+  const schichtenRef=useRef<Record<string, any>>({});
 
 
   /* Load from storage on mount */
   useEffect(()=>{
     (async()=>{
       try{
-        const res=await window.storage.get("helfer_schichten");
+        const res=await winStorage.storage.get("helfer_schichten");
         if(res){const d=JSON.parse(res.value);setSchichtenState(d);schichtenRef.current=d;}
       }catch(e){}
       try{
-        const res=await window.storage.get("helfer_freigabe");
+        const res=await winStorage.storage.get("helfer_freigabe");
         if(res) setFreigabeAnfragen(JSON.parse(res.value));
       }catch(e){}
     })();
   },[]);
 
-  const saveSchichten=(updater)=>{
-    setSchichtenState(prev=>{
+  const saveSchichten=(updater: any)=>{
+    setSchichtenState((prev: any)=>{
       const next=typeof updater==="function"?updater(prev):updater;
       schichtenRef.current=next;
-      window.storage.set("helfer_schichten",JSON.stringify(next)).catch(()=>{});
+      winStorage.storage.set("helfer_schichten",JSON.stringify(next)).catch(()=>{});
       return next;
     });
   };
-  const [expandedMember,setExpandedMember]=useState(null);
+  const [expandedMember,setExpandedMember]=useState<any>(null);
   const [filterStatus,setFilterStatus]=useState("alle");
   const [search,setSearch]=useState("");
   const [showNewForm,setShowNewForm]=useState(false);
-  const [gruppenState,setGruppenState]=useState({}); /* einsatzId → gruppen[] override */
-  const [editingGruppen,setEditingGruppen]=useState(null); /* einsatzId being edited */
+  const [gruppenState,setGruppenState]=useState<Record<string, any>>({}); /* einsatzId → gruppen[] override */
+  const [editingGruppen,setEditingGruppen]=useState<any>(null); /* einsatzId being edited */
   const [newEinsatzGruppen,setNewEinsatzGruppen]=useState(["Alle"]);
 
   const canEdit=["administrator","administration","funktionaer","trainer"].includes(role);
@@ -495,34 +525,34 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   const meinName=getHelperName(role,account);
   /* Eltern können sich selbst oder ihre Kinder eintragen */
   const elternPersonen=role==="eltern"&&account?.kinder?.length>0
-    ? [meinName,...(account.kinder.map(k=>k.name))]
+    ? [meinName,...(account.kinder.map((k: any)=>k.name))]
     : null;
   const [aktivePerson,setAktivePerson]=useState(meinName);
   const aktiverName=elternPersonen?aktivePerson:meinName;
 
-  const teamMitglieder=[meinName,...HELPERS.filter(h=>h.gruppe===meinTeam||h.gruppe.includes(meinTeam)).map(h=>h.name)];
+  const teamMitglieder=[meinName,...HELPERS.filter((h: any)=>h.gruppe===meinTeam||h.gruppe.includes(meinTeam)).map((h: any)=>h.name)];
 
-  const [freigabeAnfragen,setFreigabeAnfragen]=useState({});
+  const [freigabeAnfragen,setFreigabeAnfragen]=useState<Record<string, any>>({});
 
-  const saveFreigabe=(fn)=>{
-    setFreigabeAnfragen(prev=>{
+  const saveFreigabe=(fn: any)=>{
+    setFreigabeAnfragen((prev: any)=>{
       const next=typeof fn==="function"?fn(prev):fn;
-      window.storage.set("helfer_freigabe",JSON.stringify(next)).catch(()=>{});
+      winStorage.storage.set("helfer_freigabe",JSON.stringify(next)).catch(()=>{});
       return next;
     });
   };
 
-  const getBase=(prev,sid)=>{
+  const getBase=(prev: any,sid: any)=>{
     for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
-      const s=e.schichten.find(s=>s.id===sid);
+      const s=e.schichten.find((s: any)=>s.id===sid);
       if(s) return prev[sid]??[...s.helfer];
     }
     return [];
   };
 
-  const onEintragen=(sid,person)=>{
+  const onEintragen=(sid: any,person: any)=>{
     const target=person||meinName;
-    saveSchichten(prev=>{
+    saveSchichten((prev: any)=>{
       const base=getBase(prev,sid);
       if(base.includes(target)) return prev;
       return{...prev,[sid]:[...base,target]};
@@ -530,34 +560,34 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   };
 
   /* Freigabe: canFreigeben=direkt austragen, sonst Anfrage mit Begründung stellen */
-  const onFreigeben=(sid,person,begruendung)=>{
+  const onFreigeben=(sid: any,person: any,begruendung: any)=>{
     if(canFreigeben){
       /* Funktionär/Admin trägt direkt aus */
       const target=person||meinName;
-      saveSchichten(prev=>({...prev,[sid]:getBase(prev,sid).filter(h=>h!==target)}));
-      saveFreigabe(prev=>{const n={...prev};delete n[sid];return n;});
+      saveSchichten((prev: any)=>({...prev,[sid]:getBase(prev,sid).filter((h: any)=>h!==target)}));
+      saveFreigabe((prev: any)=>{const n={...prev};delete n[sid];return n;});
     } else {
       /* Andere Rollen: Anfrage mit Begründung speichern */
-      saveFreigabe(prev=>({...prev,[sid]:{name:meinName,begruendung:begruendung||""}}));
+      saveFreigabe((prev: any)=>({...prev,[sid]:{name:meinName,begruendung:begruendung||""}}));
     }
   };
 
   /* Übertragen: alten Helfer raus, neuen rein */
-  const onÜbertragen=(sid,von,an)=>{
-    saveSchichten(prev=>{
+  const onÜbertragen=(sid: any,von: any,an: any)=>{
+    saveSchichten((prev: any)=>{
       const base=getBase(prev,sid);
-      return{...prev,[sid]:[...base.filter(h=>h!==von),an]};
+      return{...prev,[sid]:[...base.filter((h: any)=>h!==von),an]};
     });
-    saveFreigabe(prev=>{const n={...prev};delete n[sid];return n;});
+    saveFreigabe((prev: any)=>{const n={...prev};delete n[sid];return n;});
   };
 
   /* Controlling-Berechnungen */
   const mitgliederCalc=HELPERS.map(m=>{
-    const geplant=m.schichten.filter(sid=>{
+    const geplant=m.schichten.filter((sid: any)=>{
       const h=schichtenState[sid];
       if(h) return h.includes(m.name);
       for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
-        const s=e.schichten.find(s=>s.id===sid);
+        const s=e.schichten.find((s: any)=>s.id===sid);
         if(s) return s.helfer.includes(m.name);
       }
       return false;
@@ -572,8 +602,8 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   });
 
   /* Statistiken über alle Events */
-  const allSchichten=HELPER_EVENTS.flatMap(ev=>ev.einsaetze.flatMap(e=>e.schichten));
-  const totalBelegt=allSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+  const allSchichten=HELPER_EVENTS.flatMap(ev=>ev.einsaetze.flatMap((e: any)=>e.schichten));
+  const totalBelegt=allSchichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
   const totalOffen=allSchichten.length-totalBelegt;
 
   /* Gruppen/Teams der aktuellen Rolle - unterstützt mehrere Teams (Eltern mit 2 Kindern) */
@@ -606,7 +636,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   const mich=mitgliederCalc.find(m=>m.name===aktiverName)||{soll:2,geleistet:1,geplant:meineSchichten.length,offen:0,status:"Geplant erfüllt"};
 
   /* Status-Farben */
-  const SC={
+  const SC: Record<string, {c: string; bg: string}>={
     "Erfüllt":        {c:GN, bg:"#ECFDF5"},
     "Geplant erfüllt":{c:AM, bg:"#FFFBEB"},
     "Offen":          {c:R,  bg:RL},
@@ -691,28 +721,28 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               const q=browseSearch.toLowerCase();
 
               /* Einsätze filtern: Suche in Event-Name, Einsatz-Name, Ort, Schicht-Label */
-              const einsaetzeVisible=ev.einsaetze.map(e=>({
+              const einsaetzeVisible=ev.einsaetze.map((e: any)=>({
                 ...e,
-                schichtenVisible: e.schichten.filter(s=>{
+                schichtenVisible: e.schichten.filter((s: any)=>{
                   const matchSearch=!q
                     ||ev.name.toLowerCase().includes(q)
                     ||e.name.toLowerCase().includes(q)
                     ||e.location.toLowerCase().includes(q)
                     ||s.label.toLowerCase().includes(q)
-                    ||s.helfer.some(h=>h.toLowerCase().includes(q));
+                    ||s.helfer.some((h: any)=>h.toLowerCase().includes(q));
                   const matchOffen=!filterOffen||(schichtenState[s.id]??s.helfer).length<s.max;
                   return matchSearch&&matchOffen;
                 }),
-              })).filter(e=>e.schichtenVisible.length>0);
+              })).filter((e: any)=>e.schichtenVisible.length>0);
 
               /* Event ausblenden wenn Suche nichts trifft */
               if(q&&!ev.name.toLowerCase().includes(q)&&einsaetzeVisible.length===0) return null;
 
               /* Statistik für dieses Event */
-              const evSchichten=ev.einsaetze.flatMap(e=>e.schichten);
-              const evBelegt=evSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+              const evSchichten=ev.einsaetze.flatMap((e: any)=>e.schichten);
+              const evBelegt=evSchichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
               const evOffen=evSchichten.length-evBelegt;
-              const evHelfer=[...new Set(evSchichten.flatMap(s=>schichtenState[s.id]??s.helfer))].length;
+              const evHelfer=[...new Set(evSchichten.flatMap((s: any)=>schichtenState[s.id]??s.helfer))].length;
 
               const isCollapsed=!!collapsedEvents[ev.id];
               return(
@@ -732,8 +762,8 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                     </div>
                     <Row align="flex-start">
                       {(()=>{
-                        const totalPlätze=evSchichten.reduce((s,sc)=>s+sc.max,0);
-                        const belegtPlätze=evSchichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                        const totalPlätze=evSchichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                        const belegtPlätze=evSchichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                         const offenPlätze=totalPlätze-belegtPlätze;
                         return[
                           {l:"Schichten total",v:totalPlätze,bg:"rgba(255,255,255,0.6)",border:"rgba(0,0,0,0.08)",tc:BK},
@@ -752,10 +782,10 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   {!isCollapsed&&<div style={{background:"var(--surface)"}}>
                     {einsaetzeVisible.length===0?(
                       <div style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14,background:"var(--surface2)"}}>Keine offenen Schichten in diesem Event.</div>
-                    ):einsaetzeVisible.map((einsatz,ei)=>{
-                      const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                    ):einsaetzeVisible.map((einsatz: any,ei: any)=>{
+                      const eBelegt=einsatz.schichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                       const eOffen=einsatz.schichten.length-eBelegt;
-                      const eTotalHelfer=einsatz.schichten.reduce((sum,s)=>(schichtenState[s.id]??s.helfer).length+sum,0);
+                      const eTotalHelfer=einsatz.schichten.reduce((sum: any,s: any)=>(schichtenState[s.id]??s.helfer).length+sum,0);
                       const eBarColor=eOffen===0?GN:eTotalHelfer===0?R:AM;
                       return(
                         <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
@@ -784,12 +814,12 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                               {/* Gruppen - editierbar für Admin/Funktionär */}
                               {editingGruppen===einsatz.id?(
                                 <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
-                                  {HELPER_GRUPPEN.map(g=>{
+                                  {HELPER_GRUPPEN.map((g: any)=>{
                                     const cur=gruppenState[einsatz.id]||einsatz.gruppen;
                                     const checked=cur.includes(g);
                                     return(
                                       <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:14,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
-                                        <input type="checkbox" checked={checked} onChange={()=>setGruppenState(prev=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter(x=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
+                                        <input type="checkbox" checked={checked} onChange={()=>setGruppenState((prev: any)=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter((x: any)=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
                                         {g}
                                       </label>
                                     );
@@ -798,7 +828,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 </div>
                               ):(
                                 <>
-                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280"/>)}
+                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g: any,gi: any)=><Chip key={gi} text={g} color="#6B7280"/>)}
                                   {canEdit&&<Btn onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}}><TI n="edit"/></Btn>}
                                 </>
                               )}
@@ -815,8 +845,8 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 <Btn onClick={e=>{e.stopPropagation();setEditingBemerkung(`e${einsatz.id}`);setBemerkungDraft(bemerkungState[`e${einsatz.id}`]||"");}}><TI n="edit"/></Btn>
                               ))}
                               {(()=>{
-                                const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
-                                const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                                const totalPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                                const belegtPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                 const offenPlätze=totalPlätze-belegtPlätze;
                                 return(
                                   <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
@@ -828,7 +858,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           </div>
                           {/* Schichten-Grid */}
                           {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
-                            {einsatz.schichtenVisible.map(s=>(
+                            {einsatz.schichtenVisible.map((s: any)=>(
                               <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                             ))}
                           </div>}
@@ -843,10 +873,10 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             {browseSearch&&HELPER_EVENTS.filter(ev=>!selectedEvent||ev.id===selectedEvent).every(ev=>{
               const q=browseSearch.toLowerCase();
               if(ev.name.toLowerCase().includes(q)) return false;
-              return ev.einsaetze.every(e=>
+              return ev.einsaetze.every((e: any)=>
                 !e.name.toLowerCase().includes(q)&&
                 !e.location.toLowerCase().includes(q)&&
-                e.schichten.every(s=>!s.label.toLowerCase().includes(q)&&!s.helfer.some(h=>h.toLowerCase().includes(q)))
+                e.schichten.every((s: any)=>!s.label.toLowerCase().includes(q)&&!s.helfer.some((h: any)=>h.toLowerCase().includes(q)))
               );
             })&&(
               <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)"}}>
@@ -881,15 +911,15 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           </div>
           {(()=>{
             const today="2026-05-23";
-            const parseDate=(d)=>{
+            const parseDate=(d: any)=>{
               if(!d) return "";
               const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
               const parts=clean.split(".");
               if(parts.length===3) return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
               return "";
             };
-            const geleistet=meineSchichten.filter(s=>parseDate(s.einsatzDate)<today&&parseDate(s.einsatzDate)!=="");
-            const geplant=meineSchichten.filter(s=>parseDate(s.einsatzDate)>=today||parseDate(s.einsatzDate)==="");
+            const geleistet=meineSchichten.filter((s: any)=>parseDate(s.einsatzDate)<today&&parseDate(s.einsatzDate)!=="");
+            const geplant=meineSchichten.filter((s: any)=>parseDate(s.einsatzDate)>=today||parseDate(s.einsatzDate)==="");
             return(
               <>
                 {geplant.length>0&&(
@@ -957,8 +987,8 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               /* Alle Einsätze sammeln die für meinGruppe oder "Alle" freigegeben sind */
               const teamEinsaetze=[];
               for(const ev of HELPER_EVENTS){
-                const passende=ev.einsaetze.filter(e=>
-                  meineGruppen.some(g=>e.gruppen.includes(g))&&!e.gruppen.includes("Alle")
+                const passende=ev.einsaetze.filter((e: any)=>
+                  meineGruppen.some((g: any)=>e.gruppen.includes(g))&&!e.gruppen.includes("Alle")
                 );
                 if(passende.length>0) teamEinsaetze.push({...ev,einsaetze:passende});
               }
@@ -970,10 +1000,10 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               );
 
               return teamEinsaetze.map(ev=>{
-                const evSchichten=ev.einsaetze.flatMap(e=>e.schichten);
-                const evBelegt=evSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                const evSchichten=ev.einsaetze.flatMap((e: any)=>e.schichten);
+                const evBelegt=evSchichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                 const evOffen=evSchichten.length-evBelegt;
-                const evHelfer=[...new Set(evSchichten.flatMap(s=>schichtenState[s.id]??s.helfer))].length;
+                const evHelfer=[...new Set(evSchichten.flatMap((s: any)=>schichtenState[s.id]??s.helfer))].length;
                 const isTeamCollapsed=!!collapsedTeamEvents[ev.id];
                 return(
                   <div key={ev.id} style={{borderRadius:14,overflow:"hidden",border:"0.5px solid var(--border)",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
@@ -992,8 +1022,8 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                       </div>
                       <Row align="flex-start">
                         {(()=>{
-                          const totalPlätze=evSchichten.reduce((s,sc)=>s+sc.max,0);
-                          const belegtPlätze=evSchichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                          const totalPlätze=evSchichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                          const belegtPlätze=evSchichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                           const offenPlätze=totalPlätze-belegtPlätze;
                           return[
                             {l:"Schichten total",v:totalPlätze,bg:"rgba(255,255,255,0.6)",border:"rgba(0,0,0,0.08)",tc:BK},
@@ -1010,10 +1040,10 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
                     {/* Einsätze */}
                     {!isTeamCollapsed&&<div style={{borderTop:"0.5px solid var(--border)",overflow:"hidden"}}>
-                      {ev.einsaetze.map((einsatz,ei)=>{
-                        const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                      {ev.einsaetze.map((einsatz: any,ei: any)=>{
+                        const eBelegt=einsatz.schichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                         const eOffen=einsatz.schichten.length-eBelegt;
-                        const eTotalHelfer=einsatz.schichten.reduce((sum,s)=>(schichtenState[s.id]??s.helfer).length+sum,0);
+                        const eTotalHelfer=einsatz.schichten.reduce((sum: any,s: any)=>(schichtenState[s.id]??s.helfer).length+sum,0);
                         const eBarColor=eOffen===0?GN:eTotalHelfer===0?R:AM;
                         return(
                           <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
@@ -1033,12 +1063,12 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 </div>
                               </Row>
                               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-                                {einsatz.gruppen.map((g,gi)=>(
+                                {einsatz.gruppen.map((g: any,gi: any)=>(
                                   <Chip key={gi} text={g} color={g===meinGruppe?ev.color:"var(--sub)"} bg={g===meinGruppe?ev.color+"18":"#F3F4F6"}/>
                                 ))}
                                 {(()=>{
-                                  const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
-                                  const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                                  const totalPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                                  const belegtPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                   const offenPlätze=totalPlätze-belegtPlätze;
                                   return(
                                     <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
@@ -1049,7 +1079,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                               </div>
                             </div>
                             {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
-                              {einsatz.schichten.map(s=>(
+                              {einsatz.schichten.map((s: any)=>(
                                 <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                               ))}
                             </div>}
@@ -1120,7 +1150,7 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             <div className="cc-table-wrap"><table className="cc-table">
               <thead>
                 <tr style={{background:"var(--surface2)"}}>
-                  {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h,i)=>(
+                  {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h: any,i: number)=>(
                     <th className="cc-th" key={i}>{h}</th>
                   ))}
                 </tr>
@@ -1156,10 +1186,10 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                             <span className="cc-text-sm">Keine Schichten übernommen.</span>
                           ):(
                             <div className="cc-grid-cards cc-mb-20" style={{gap:8,marginBottom:10}}>
-                              {m.schichten.map((sid,si)=>{
+                              {m.schichten.map((sid: any,si: number)=>{
                                 const anfrage=freigabeAnfragen[sid];
                                 for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
-                                  const s=e.schichten.find(s=>s.id===sid);
+                                  const s=e.schichten.find((s: any)=>s.id===sid);
                                   if(s){
                                     const d=e.date||"";
                                     const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
@@ -1233,11 +1263,11 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                 <label style={{fontSize:14,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
                 {f.type==="gruppen"?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>
-                    {HELPER_GRUPPEN.map(g=>{
+                    {HELPER_GRUPPEN.map((g: any)=>{
                       const checked=newEinsatzGruppen.includes(g);
                       return(
                         <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
-                          <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen(prev=>checked?prev.filter(x=>x!==g):[...prev,g])} style={{display:"none"}}/>
+                          <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen((prev: any)=>checked?prev.filter((x: any)=>x!==g):[...prev,g])} style={{display:"none"}}/>
                           {g}
                         </label>
                       );
@@ -1274,65 +1304,65 @@ function HelferModul({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   );
 }
 
-function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerwalten}){
+function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerwalten}: HelferProps){
   const isMobile=useIsMobile();
   const [helperTab,setHelperTab]=useState(teamOnly?"team":"browse");
-  const [selectedEvent,setSelectedEvent]=useState(null);
+  const [selectedEvent,setSelectedEvent]=useState<any>(null);
   const [filterOffen,setFilterOffen]=useState(false);
   const [browseSearch,setBrowseSearch]=useState("");
-  const [schichtenState,setSchichtenState]=useState({});
-  const [collapsedTeamEvents,setCollapsedTeamEvents]=useState({});
-  const toggleTeamCollapse=(id)=>setCollapsedTeamEvents(prev=>({...prev,[id]:!prev[id]}));
-  const [collapsedEvents,setCollapsedEvents]=useState(()=>Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true])));
-  const toggleCollapse=(id)=>setCollapsedEvents(prev=>{
+  const [schichtenState,setSchichtenState]=useState<Record<string, any>>({});
+  const [collapsedTeamEvents,setCollapsedTeamEvents]=useState<Record<string, boolean>>({});
+  const toggleTeamCollapse=(id: any)=>setCollapsedTeamEvents((prev: any)=>({...prev,[id]:!prev[id]}));
+  const [collapsedEvents,setCollapsedEvents]=useState<Record<string, boolean>>(()=>Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true])));
+  const toggleCollapse=(id: any)=>setCollapsedEvents((prev: any)=>{
     const allCollapsed=Object.fromEntries(HELPER_EVENTS.map(ev=>[ev.id,true]));
     return prev[id]?{...allCollapsed,[id]:false}:{...allCollapsed};
   });
-  const [collapsedEinsaetze,setCollapsedEinsaetze]=useState({});
-  const toggleEinsatz=(id)=>setCollapsedEinsaetze(prev=>({...prev,[id]:!prev[id]}));
-  const [bemerkungState,setBemerkungState]=useState({}); /* einsatzId/schichtId → text */
-  const [editingBemerkung,setEditingBemerkung]=useState(null);
+  const [collapsedEinsaetze,setCollapsedEinsaetze]=useState<Record<string, boolean>>({});
+  const toggleEinsatz=(id: any)=>setCollapsedEinsaetze((prev: any)=>({...prev,[id]:!prev[id]}));
+  const [bemerkungState,setBemerkungState]=useState<Record<string, string>>({}); /* einsatzId/schichtId → text */
+  const [editingBemerkung,setEditingBemerkung]=useState<any>(null);
   const [bemerkungDraft,setBemerkungDraft]=useState("");
   useEffect(()=>{
-    (async()=>{try{const r=await window.storage.get("helfer_notes");if(r)setBemerkungState(JSON.parse(r.value));}catch(e){}})();
+    (async()=>{try{const r=await winStorage.storage.get("helfer_notes");if(r)setBemerkungState(JSON.parse(r.value));}catch(e){}})();
   },[]);
-  const saveBemerkung=(id,text)=>{
+  const saveBemerkung=(id: any,text: string)=>{
     const next={...bemerkungState,[id]:text};
     setBemerkungState(next);
-    window.storage.set("helfer_notes",JSON.stringify(next));
+    winStorage.storage.set("helfer_notes",JSON.stringify(next));
     setEditingBemerkung(null);
   };
-  const schichtenRef=useRef({});
+  const schichtenRef=useRef<Record<string, any>>({});
 
 
   /* Load from storage on mount */
   useEffect(()=>{
     (async()=>{
       try{
-        const res=await window.storage.get("helfer_schichten");
+        const res=await winStorage.storage.get("helfer_schichten");
         if(res){const d=JSON.parse(res.value);setSchichtenState(d);schichtenRef.current=d;}
       }catch(e){}
       try{
-        const res=await window.storage.get("helfer_freigabe");
+        const res=await winStorage.storage.get("helfer_freigabe");
         if(res) setFreigabeAnfragen(JSON.parse(res.value));
       }catch(e){}
     })();
   },[]);
 
-  const saveSchichten=(updater)=>{
-    setSchichtenState(prev=>{
+  const saveSchichten=(updater: any)=>{
+    setSchichtenState((prev: any)=>{
       const next=typeof updater==="function"?updater(prev):updater;
       schichtenRef.current=next;
-      window.storage.set("helfer_schichten",JSON.stringify(next)).catch(()=>{});
+      winStorage.storage.set("helfer_schichten",JSON.stringify(next)).catch(()=>{});
       return next;
     });
   };
-  const [expandedMember,setExpandedMember]=useState(null);
+  const [expandedMember,setExpandedMember]=useState<any>(null);
   const [filterStatus,setFilterStatus]=useState("alle");
   const [search,setSearch]=useState("");
   const [showNewForm,setShowNewForm]=useState(false);
-  const [gruppenState,setGruppenState]=useState({}); /* einsatzId → gruppen[] override */
-  const [editingGruppen,setEditingGruppen]=useState(null); /* einsatzId being edited */
+  const [gruppenState,setGruppenState]=useState<Record<string, any>>({}); /* einsatzId → gruppen[] override */
+  const [editingGruppen,setEditingGruppen]=useState<any>(null); /* einsatzId being edited */
   const [newEinsatzGruppen,setNewEinsatzGruppen]=useState(["Alle"]);
 
   const canEdit=["administrator","administration","funktionaer","trainer"].includes(role);
@@ -1346,34 +1376,34 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   const meinName=getHelperName(role,account);
   /* Eltern können sich selbst oder ihre Kinder eintragen */
   const elternPersonen=role==="eltern"&&account?.kinder?.length>0
-    ? [meinName,...(account.kinder.map(k=>k.name))]
+    ? [meinName,...(account.kinder.map((k: any)=>k.name))]
     : null;
   const [aktivePerson,setAktivePerson]=useState(meinName);
   const aktiverName=elternPersonen?aktivePerson:meinName;
 
-  const teamMitglieder=[meinName,...HELPERS.filter(h=>h.gruppe===meinTeam||h.gruppe.includes(meinTeam)).map(h=>h.name)];
+  const teamMitglieder=[meinName,...HELPERS.filter((h: any)=>h.gruppe===meinTeam||h.gruppe.includes(meinTeam)).map((h: any)=>h.name)];
 
-  const [freigabeAnfragen,setFreigabeAnfragen]=useState({});
+  const [freigabeAnfragen,setFreigabeAnfragen]=useState<Record<string, any>>({});
 
-  const saveFreigabe=(fn)=>{
-    setFreigabeAnfragen(prev=>{
+  const saveFreigabe=(fn: any)=>{
+    setFreigabeAnfragen((prev: any)=>{
       const next=typeof fn==="function"?fn(prev):fn;
-      window.storage.set("helfer_freigabe",JSON.stringify(next)).catch(()=>{});
+      winStorage.storage.set("helfer_freigabe",JSON.stringify(next)).catch(()=>{});
       return next;
     });
   };
 
-  const getBase=(prev,sid)=>{
+  const getBase=(prev: any,sid: any)=>{
     for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
-      const s=e.schichten.find(s=>s.id===sid);
+      const s=e.schichten.find((s: any)=>s.id===sid);
       if(s) return prev[sid]??[...s.helfer];
     }
     return [];
   };
 
-  const onEintragen=(sid,person)=>{
+  const onEintragen=(sid: any,person: any)=>{
     const target=person||meinName;
-    saveSchichten(prev=>{
+    saveSchichten((prev: any)=>{
       const base=getBase(prev,sid);
       if(base.includes(target)) return prev;
       return{...prev,[sid]:[...base,target]};
@@ -1381,34 +1411,34 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   };
 
   /* Freigabe: canFreigeben=direkt austragen, sonst Anfrage mit Begründung stellen */
-  const onFreigeben=(sid,person,begruendung)=>{
+  const onFreigeben=(sid: any,person: any,begruendung: any)=>{
     if(canFreigeben){
       /* Funktionär/Admin trägt direkt aus */
       const target=person||meinName;
-      saveSchichten(prev=>({...prev,[sid]:getBase(prev,sid).filter(h=>h!==target)}));
-      saveFreigabe(prev=>{const n={...prev};delete n[sid];return n;});
+      saveSchichten((prev: any)=>({...prev,[sid]:getBase(prev,sid).filter((h: any)=>h!==target)}));
+      saveFreigabe((prev: any)=>{const n={...prev};delete n[sid];return n;});
     } else {
       /* Andere Rollen: Anfrage mit Begründung speichern */
-      saveFreigabe(prev=>({...prev,[sid]:{name:meinName,begruendung:begruendung||""}}));
+      saveFreigabe((prev: any)=>({...prev,[sid]:{name:meinName,begruendung:begruendung||""}}));
     }
   };
 
   /* Übertragen: alten Helfer raus, neuen rein */
-  const onÜbertragen=(sid,von,an)=>{
-    saveSchichten(prev=>{
+  const onÜbertragen=(sid: any,von: any,an: any)=>{
+    saveSchichten((prev: any)=>{
       const base=getBase(prev,sid);
-      return{...prev,[sid]:[...base.filter(h=>h!==von),an]};
+      return{...prev,[sid]:[...base.filter((h: any)=>h!==von),an]};
     });
-    saveFreigabe(prev=>{const n={...prev};delete n[sid];return n;});
+    saveFreigabe((prev: any)=>{const n={...prev};delete n[sid];return n;});
   };
 
   /* Controlling-Berechnungen */
   const mitgliederCalc=HELPERS.map(m=>{
-    const geplant=m.schichten.filter(sid=>{
+    const geplant=m.schichten.filter((sid: any)=>{
       const h=schichtenState[sid];
       if(h) return h.includes(m.name);
       for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
-        const s=e.schichten.find(s=>s.id===sid);
+        const s=e.schichten.find((s: any)=>s.id===sid);
         if(s) return s.helfer.includes(m.name);
       }
       return false;
@@ -1423,8 +1453,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   });
 
   /* Statistiken über alle Events */
-  const allSchichten=HELPER_EVENTS.flatMap(ev=>ev.einsaetze.flatMap(e=>e.schichten));
-  const totalBelegt=allSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+  const allSchichten=HELPER_EVENTS.flatMap(ev=>ev.einsaetze.flatMap((e: any)=>e.schichten));
+  const totalBelegt=allSchichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
   const totalOffen=allSchichten.length-totalBelegt;
 
   /* Gruppen/Teams der aktuellen Rolle - unterstützt mehrere Teams (Eltern mit 2 Kindern) */
@@ -1457,7 +1487,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   const mich=mitgliederCalc.find(m=>m.name===aktiverName)||{soll:2,geleistet:1,geplant:meineSchichten.length,offen:0,status:"Geplant erfüllt"};
 
   /* Status-Farben */
-  const SC={
+  const SC: Record<string, {c: string; bg: string}>={
     "Erfüllt":        {c:GN, bg:"#ECFDF5"},
     "Geplant erfüllt":{c:AM, bg:"#FFFBEB"},
     "Offen":          {c:R,  bg:RL},
@@ -1545,28 +1575,28 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               const q=browseSearch.toLowerCase();
 
               /* Einsätze filtern: Suche in Event-Name, Einsatz-Name, Ort, Schicht-Label */
-              const einsaetzeVisible=ev.einsaetze.map(e=>({
+              const einsaetzeVisible=ev.einsaetze.map((e: any)=>({
                 ...e,
-                schichtenVisible: e.schichten.filter(s=>{
+                schichtenVisible: e.schichten.filter((s: any)=>{
                   const matchSearch=!q
                     ||ev.name.toLowerCase().includes(q)
                     ||e.name.toLowerCase().includes(q)
                     ||e.location.toLowerCase().includes(q)
                     ||s.label.toLowerCase().includes(q)
-                    ||s.helfer.some(h=>h.toLowerCase().includes(q));
+                    ||s.helfer.some((h: any)=>h.toLowerCase().includes(q));
                   const matchOffen=!filterOffen||(schichtenState[s.id]??s.helfer).length<s.max;
                   return matchSearch&&matchOffen;
                 }),
-              })).filter(e=>e.schichtenVisible.length>0);
+              })).filter((e: any)=>e.schichtenVisible.length>0);
 
               /* Event ausblenden wenn Suche nichts trifft */
               if(q&&!ev.name.toLowerCase().includes(q)&&einsaetzeVisible.length===0) return null;
 
               /* Statistik für dieses Event */
-              const evSchichten=ev.einsaetze.flatMap(e=>e.schichten);
-              const evBelegt=evSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+              const evSchichten=ev.einsaetze.flatMap((e: any)=>e.schichten);
+              const evBelegt=evSchichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
               const evOffen=evSchichten.length-evBelegt;
-              const evHelfer=[...new Set(evSchichten.flatMap(s=>schichtenState[s.id]??s.helfer))].length;
+              const evHelfer=[...new Set(evSchichten.flatMap((s: any)=>schichtenState[s.id]??s.helfer))].length;
 
               const isCollapsed=!!collapsedEvents[ev.id];
               return(
@@ -1586,8 +1616,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                     </div>
                     <div style={{display:"flex",gap:8}}>
                       {(()=>{
-                        const totalPlätze=evSchichten.reduce((s,sc)=>s+sc.max,0);
-                        const belegtPlätze=evSchichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                        const totalPlätze=evSchichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                        const belegtPlätze=evSchichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                         const offenPlätze=totalPlätze-belegtPlätze;
                         return[
                           {l:"Schichten total",v:totalPlätze,bg:"rgba(255,255,255,0.6)",border:"rgba(0,0,0,0.08)",tc:BK},
@@ -1606,10 +1636,10 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                   {!isCollapsed&&<div style={{background:"var(--surface)"}}>
                     {einsaetzeVisible.length===0?(
                       <div style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14,background:"var(--surface2)"}}>Keine offenen Schichten in diesem Event.</div>
-                    ):einsaetzeVisible.map((einsatz,ei)=>{
-                      const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                    ):einsaetzeVisible.map((einsatz: any,ei: any)=>{
+                      const eBelegt=einsatz.schichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                       const eOffen=einsatz.schichten.length-eBelegt;
-                      const eTotalHelfer=einsatz.schichten.reduce((sum,s)=>(schichtenState[s.id]??s.helfer).length+sum,0);
+                      const eTotalHelfer=einsatz.schichten.reduce((sum: any,s: any)=>(schichtenState[s.id]??s.helfer).length+sum,0);
                       const eBarColor=eOffen===0?GN:eTotalHelfer===0?R:AM;
                       return(
                         <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
@@ -1638,12 +1668,12 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                               {/* Gruppen - editierbar für Admin/Funktionär */}
                               {editingGruppen===einsatz.id?(
                                 <div style={{display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}}>
-                                  {HELPER_GRUPPEN.map(g=>{
+                                  {HELPER_GRUPPEN.map((g: any)=>{
                                     const cur=gruppenState[einsatz.id]||einsatz.gruppen;
                                     const checked=cur.includes(g);
                                     return(
                                       <label key={g} onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",fontSize:14,padding:"5px 12px",borderRadius:20,background:checked?"var(--cc-hover)":"#fff",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
-                                        <input type="checkbox" checked={checked} onChange={()=>setGruppenState(prev=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter(x=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
+                                        <input type="checkbox" checked={checked} onChange={()=>setGruppenState((prev: any)=>{const cur=prev[einsatz.id]||einsatz.gruppen;return {...prev,[einsatz.id]:checked?cur.filter((x: any)=>x!==g):[...cur,g]};})} style={{display:"none"}}/>
                                         {g}
                                       </label>
                                     );
@@ -1652,7 +1682,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 </div>
                               ):(
                                 <>
-                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g,gi)=><Chip key={gi} text={g} color="#6B7280"/>)}
+                                  {(gruppenState[einsatz.id]||einsatz.gruppen).map((g: any,gi: any)=><Chip key={gi} text={g} color="#6B7280"/>)}
                                   {canEdit&&<button onClick={e=>{e.stopPropagation();setEditingGruppen(einsatz.id);}} style={{padding:"5px 12px",borderRadius:20,fontSize:14,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>}
                                 </>
                               )}
@@ -1670,8 +1700,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                   style={{padding:"5px 12px",borderRadius:20,fontSize:14,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",cursor:"pointer"}}><TI n="edit"/></button>
                               ))}
                               {(()=>{
-                                const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
-                                const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                                const totalPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                                const belegtPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                 const offenPlätze=totalPlätze-belegtPlätze;
                                 return(
                                   <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
@@ -1683,7 +1713,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                           </div>
                           {/* Schichten-Grid */}
                           {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
-                            {einsatz.schichtenVisible.map(s=>(
+                            {einsatz.schichtenVisible.map((s: any)=>(
                               <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                             ))}
                           </div>}
@@ -1698,10 +1728,10 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             {browseSearch&&HELPER_EVENTS.filter(ev=>!selectedEvent||ev.id===selectedEvent).every(ev=>{
               const q=browseSearch.toLowerCase();
               if(ev.name.toLowerCase().includes(q)) return false;
-              return ev.einsaetze.every(e=>
+              return ev.einsaetze.every((e: any)=>
                 !e.name.toLowerCase().includes(q)&&
                 !e.location.toLowerCase().includes(q)&&
-                e.schichten.every(s=>!s.label.toLowerCase().includes(q)&&!s.helfer.some(h=>h.toLowerCase().includes(q)))
+                e.schichten.every((s: any)=>!s.label.toLowerCase().includes(q)&&!s.helfer.some((h: any)=>h.toLowerCase().includes(q)))
               );
             })&&(
               <div style={{textAlign:"center",padding:"40px 20px",color:"var(--sub)",fontSize:14,background:"var(--surface)",borderRadius:12,border:"0.5px solid var(--border)"}}>
@@ -1736,15 +1766,15 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
           </div>
           {(()=>{
             const today="2026-05-23";
-            const parseDate=(d)=>{
+            const parseDate=(d: any)=>{
               if(!d) return "";
               const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
               const parts=clean.split(".");
               if(parts.length===3) return `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
               return "";
             };
-            const geleistet=meineSchichten.filter(s=>parseDate(s.einsatzDate)<today&&parseDate(s.einsatzDate)!=="");
-            const geplant=meineSchichten.filter(s=>parseDate(s.einsatzDate)>=today||parseDate(s.einsatzDate)==="");
+            const geleistet=meineSchichten.filter((s: any)=>parseDate(s.einsatzDate)<today&&parseDate(s.einsatzDate)!=="");
+            const geplant=meineSchichten.filter((s: any)=>parseDate(s.einsatzDate)>=today||parseDate(s.einsatzDate)==="");
             return(
               <>
                 {geplant.length>0&&(
@@ -1812,8 +1842,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               /* Alle Einsätze sammeln die für meinGruppe oder "Alle" freigegeben sind */
               const teamEinsaetze=[];
               for(const ev of HELPER_EVENTS){
-                const passende=ev.einsaetze.filter(e=>
-                  meineGruppen.some(g=>e.gruppen.includes(g))&&!e.gruppen.includes("Alle")
+                const passende=ev.einsaetze.filter((e: any)=>
+                  meineGruppen.some((g: any)=>e.gruppen.includes(g))&&!e.gruppen.includes("Alle")
                 );
                 if(passende.length>0) teamEinsaetze.push({...ev,einsaetze:passende});
               }
@@ -1825,10 +1855,10 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
               );
 
               return teamEinsaetze.map(ev=>{
-                const evSchichten=ev.einsaetze.flatMap(e=>e.schichten);
-                const evBelegt=evSchichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                const evSchichten=ev.einsaetze.flatMap((e: any)=>e.schichten);
+                const evBelegt=evSchichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                 const evOffen=evSchichten.length-evBelegt;
-                const evHelfer=[...new Set(evSchichten.flatMap(s=>schichtenState[s.id]??s.helfer))].length;
+                const evHelfer=[...new Set(evSchichten.flatMap((s: any)=>schichtenState[s.id]??s.helfer))].length;
                 const isTeamCollapsed=!!collapsedTeamEvents[ev.id];
                 return(
                   <div key={ev.id} style={{borderRadius:14,overflow:"hidden",border:"0.5px solid var(--border)",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
@@ -1847,8 +1877,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                       </div>
                       <div style={{display:"flex",gap:8}}>
                         {(()=>{
-                          const totalPlätze=evSchichten.reduce((s,sc)=>s+sc.max,0);
-                          const belegtPlätze=evSchichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                          const totalPlätze=evSchichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                          const belegtPlätze=evSchichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                           const offenPlätze=totalPlätze-belegtPlätze;
                           return[
                             {l:"Schichten total",v:totalPlätze,bg:"rgba(255,255,255,0.6)",border:"rgba(0,0,0,0.08)",tc:BK},
@@ -1865,10 +1895,10 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
 
                     {/* Einsätze */}
                     {!isTeamCollapsed&&<div style={{borderTop:"0.5px solid var(--border)",overflow:"hidden"}}>
-                      {ev.einsaetze.map((einsatz,ei)=>{
-                        const eBelegt=einsatz.schichten.filter(s=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
+                      {ev.einsaetze.map((einsatz: any,ei: any)=>{
+                        const eBelegt=einsatz.schichten.filter((s: any)=>(schichtenState[s.id]??s.helfer).length>=s.max).length;
                         const eOffen=einsatz.schichten.length-eBelegt;
-                        const eTotalHelfer=einsatz.schichten.reduce((sum,s)=>(schichtenState[s.id]??s.helfer).length+sum,0);
+                        const eTotalHelfer=einsatz.schichten.reduce((sum: any,s: any)=>(schichtenState[s.id]??s.helfer).length+sum,0);
                         const eBarColor=eOffen===0?GN:eTotalHelfer===0?R:AM;
                         return(
                           <div key={einsatz.id} style={{borderTop:ei>0?`0.5px solid ${GB}`:"none"}}>
@@ -1888,12 +1918,12 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                                 </div>
                               </div>
                               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-                                {einsatz.gruppen.map((g,gi)=>(
+                                {einsatz.gruppen.map((g: any,gi: any)=>(
                                   <Chip key={gi} text={g} color={g===meinGruppe?ev.color:"var(--sub)"} bg={g===meinGruppe?ev.color+"18":"#F3F4F6"}/>
                                 ))}
                                 {(()=>{
-                                  const totalPlätze=einsatz.schichten.reduce((s,sc)=>s+sc.max,0);
-                                  const belegtPlätze=einsatz.schichten.reduce((s,sc)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
+                                  const totalPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+sc.max,0);
+                                  const belegtPlätze=einsatz.schichten.reduce((s: any,sc: any)=>s+(schichtenState[sc.id]??sc.helfer).length,0);
                                   const offenPlätze=totalPlätze-belegtPlätze;
                                   return(
                                     <span style={{fontSize:14,fontWeight:700,padding:"2px 9px",borderRadius:20,background:offenPlätze===0?"#ECFDF5":belegtPlätze===0?RL:"#FFFBEB",color:offenPlätze===0?GN:belegtPlätze===0?R:AM}}>
@@ -1904,7 +1934,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                               </div>
                             </div>
                             {!collapsedEinsaetze[einsatz.id]&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,280px),1fr))",gap:16,padding:"16px",background:"var(--surface)"}}>
-                              {einsatz.schichten.map(s=>(
+                              {einsatz.schichten.map((s: any)=>(
                                 <SchichtKarte key={s.id} schicht={s} einsatz={einsatz} meinName={aktiverName} canEdit={canEdit} canFreigeben={canFreigeben} canZuteilen={canZuteilen} teamMitglieder={teamMitglieder} schichtenState={schichtenState} onEintragen={onEintragen} onFreigeben={onFreigeben} onÜbertragen={onÜbertragen} freigabeAnfragen={freigabeAnfragen} notes={bemerkungState[`s${s.id}`]} onSaveBemerkung={(txt)=>saveBemerkung(`s${s.id}`,txt)}/>
                               ))}
                             </div>}
@@ -1975,7 +2005,7 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
             <div className="cc-table-wrap"><table className="cc-table">
               <thead>
                 <tr style={{background:"var(--surface2)"}}>
-                  {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h,i)=>(
+                  {["Mitglied","Gruppe","Soll","Geleistet","Geplant","Offen","Status",""].map((h: any,i: number)=>(
                     <th className="cc-th" key={i}>{h}</th>
                   ))}
                 </tr>
@@ -2011,10 +2041,10 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                             <span className="cc-text-sm">Keine Schichten übernommen.</span>
                           ):(
                             <div className="cc-grid-cards cc-mb-20" style={{gap:8,marginBottom:10}}>
-                              {m.schichten.map((sid,si)=>{
+                              {m.schichten.map((sid: any,si: number)=>{
                                 const anfrage=freigabeAnfragen[sid];
                                 for(const ev of HELPER_EVENTS) for(const e of ev.einsaetze){
-                                  const s=e.schichten.find(s=>s.id===sid);
+                                  const s=e.schichten.find((s: any)=>s.id===sid);
                                   if(s){
                                     const d=e.date||"";
                                     const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
@@ -2088,11 +2118,11 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
                 <label style={{fontSize:14,color:"var(--sub)",display:"block",marginBottom:4}}>{f.l}</label>
                 {f.type==="gruppen"?(
                   <div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"8px 10px",border:"0.5px solid var(--border)",borderRadius:8,background:"var(--surface)"}}>
-                    {HELPER_GRUPPEN.map(g=>{
+                    {HELPER_GRUPPEN.map((g: any)=>{
                       const checked=newEinsatzGruppen.includes(g);
                       return(
                         <label key={g} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,padding:"3px 8px",borderRadius:20,background:checked?"var(--cc-hover)":"#F3F4F6",border:`0.5px solid ${checked?ACCENT:GB}`,fontWeight:checked?700:400}}>
-                          <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen(prev=>checked?prev.filter(x=>x!==g):[...prev,g])} style={{display:"none"}}/>
+                          <input type="checkbox" checked={checked} onChange={()=>setNewEinsatzGruppen((prev: any)=>checked?prev.filter((x: any)=>x!==g):[...prev,g])} style={{display:"none"}}/>
                           {g}
                         </label>
                       );
@@ -2129,8 +2159,8 @@ function HelpersList({teamOnly,role,meineTeams=[],account,kannSchreiben,kannVerw
   );
 }
 
-function RolleChip({rolle}){
-  const colors={
+function RolleChip({rolle}: {rolle?: string}){
+  const colors: Record<string, {c: string; bg: string}>={
     "Spieler":     {c:"#22C55E",bg:"#F0FDF4"},
     "Trainer":     {c:"#F97316",bg:"#FFF7ED"},
     "Assistent/in":{c:"#F97316",bg:"#FFF7ED"},
@@ -2145,7 +2175,7 @@ function RolleChip({rolle}){
     "Passivmitglied":{c:"#9CA3AF",bg:"#F9FAFB"},
     "Gönner":      {c:"#9CA3AF",bg:"#F9FAFB"},
   };
-  const s=colors[rolle]||{c:"#9CA3AF",bg:"#F9FAFB"};
+  const s=colors[rolle||""]||{c:"#9CA3AF",bg:"#F9FAFB"};
   return <Chip text={rolle||"-"} color={s.c} bg={s.bg}/>;
 }
 
@@ -2155,9 +2185,9 @@ function RolleChip({rolle}){
 
 
 /* Alle möglichen Übergabe-Empfänger (alle Helfer ausser dem aktuellen) */
-function kannHelferEinsatzErstellen(role, typ, team, meineTeams=[]){
+function kannHelferEinsatzErstellen(role: string, typ: string, team: string|null, meineTeams: string[]=[]){
   if(role==="administrator"||role==="administration"||role==="funktionaer") return true;
-  if(role==="trainer") return typ==="team"&&(meineTeams||[]).includes(team);
+  if(role==="trainer") return typ==="team"&&(meineTeams||[]).includes(team||"");
   return false;
 }
 
