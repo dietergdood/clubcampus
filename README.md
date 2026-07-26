@@ -185,11 +185,11 @@ INSERT INTO vereine (name, theme) VALUES ('Vereinsname', '{}');
 2. In `benutzer` Tabelle: `verein_id` und `role = 'administrator'` setzen
 3. Admin loggt sich ein → Portalverwaltung → Branding und Module einrichten
 
-**3. Subdomain (optional):**
+**3. URL:**
 ```
-Vercel → Settings → Domains → vereinsname.clubcampus.app
-DNS: CNAME vereinsname → cname.vercel-dns.com
+https://clubcampus.app/fcherrliberg
 ```
+Der Vereins-Slug wird automatisch aus dem URL-Pfad gelesen und lädt das Branding und die Daten des entsprechenden Vereins.
 
 ---
 

@@ -4,14 +4,19 @@
    ═══════════════════════════════════════════════════════════════ */
 import { THEME_DEFAULT_STATIC, hexToRgba, darkenHex, contrastColor } from "../../theme.ts";
 
-export function useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
+export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
   setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
   setSession, setDbUser, setTenant }) {
 
   async function loadTenant() {
     if (!sb) return;
     try {
-      const { data, error } = await sb.from("vereine").select("id,name,theme").single();
+      /* Slug aus URL → gezielt einen Verein laden.
+         Kein Slug → .single() als Fallback (funktioniert solange nur 1 Verein existiert). */
+      const query = sb.from("vereine").select("id,slug,name,theme");
+      const { data, error } = slug
+        ? await query.eq("slug", slug).single()
+        : await query.single();
       if (error || !data) return;
       if (setTenant) setTenant(data);
       const t = { ...THEME_DEFAULT_STATIC, ...(data.theme || {}) };
@@ -216,11 +221,14 @@ export function useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, s
   };
 }
 
-export function useTenant({ sb, setTenant, setAppTheme, applyThemeCss, THEME_DEFAULT_STATIC }) {
+export function useTenant({ sb, slug, setTenant, setAppTheme, applyThemeCss, THEME_DEFAULT_STATIC }) {
   async function loadTenant() {
     if (!sb) return;
     try {
-      const { data, error } = await sb.from("vereine").select("id,name,theme").single();
+      const query = sb.from("vereine").select("id,slug,name,theme");
+      const { data, error } = slug
+        ? await query.eq("slug", slug).single()
+        : await query.single();
       if (error || !data) return;
       setTenant(data);
       const t = { ...THEME_DEFAULT_STATIC, ...(data.theme || {}) };

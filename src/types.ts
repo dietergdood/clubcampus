@@ -39,6 +39,7 @@ export type Zugriffstufe = 'lesen' | 'schreiben' | 'verwalten';
 // ── Tenant / Verein ───────────────────────────────────────────────
 export interface Tenant {
   id: string;
+  slug: string;
   name: string;
   theme: Record<string, unknown> | null;
 }
