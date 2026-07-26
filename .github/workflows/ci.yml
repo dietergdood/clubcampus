@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, ts-migration]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Typecheck, Tests & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Kernschritt: haelt die TypeScript-Typsicherheit gruen.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Fehlende Konstanten-Imports pruefen
+        run: npm run check:imports
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
