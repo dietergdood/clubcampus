@@ -84,7 +84,15 @@ function LoginScreen({onLogin, sb, appTheme, vereinId}: LoginScreenProps){
         }
       }
       if(data.session){ onLogin(data.session); } else { setRegDone(true); }
-    }catch(err){ setError(err instanceof Error?err.message:"Fehler bei der Registrierung."); }
+    }catch(err){
+      const msg = err instanceof Error ? err.message : "";
+      const deutsch = msg === "User already registered"
+        ? "Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an."
+        : msg === "Password should be at least 6 characters"
+        ? "Passwort muss mindestens 6 Zeichen haben."
+        : msg || "Fehler bei der Registrierung.";
+      setError(deutsch);
+    }
     setLoading(false);
   }
 
