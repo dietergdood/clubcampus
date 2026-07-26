@@ -92,9 +92,11 @@ Inline-Editing läuft über `domains/members/useInlineEdit.js` + `InlineField`; 
 
 Nicht alle Module hängen an Supabase. `src/demoData.js` ist temporär und wird noch importiert von: `DashboardModul`, `TermineModul`, `TrainingsplanModul`, `HelferModul`, `TeamModul`, `PlatzhalterModul`, `NavigationModul` (`USER_ACCOUNTS`), `appConstants.js` und `clubcampus.tsx` (nur noch `USER_ACCOUNTS`). Neue Features nie gegen `demoData` bauen — Service + Supabase.
 
-TypeScript-Migration läuft schrittweise. Fertig: `domains/`, `shared/`, `src/modules/members/` samt `MitgliederModul`, sowie `clubcampus.tsx`. Offen: die übrigen `src/modules/*.jsx` (Dashboard, Termine, Trainingsplan, Helfer, Team, Kader, Nachrichten, Platzhalter, Navigation, LoginScreen) und `modules/portal/`. `tsconfig` ist `strict`, aber `checkJs: false` und es gibt keine CI-Typprüfung.
+TypeScript-Migration **abgeschlossen**: `domains/`, `shared/`, alle `src/modules/*` (inkl. `modules/portal/`, `modules/members/`), `clubcampus.tsx` sowie `App.tsx`/`main.tsx` sind `.tsx`. Übrig als `.jsx` sind nur noch die Test-Dateien unter `src/modules/members/__tests__/`. `tsconfig` ist `strict`, aber `checkJs: false` und es gibt keine CI-Typprüfung — deshalb vor jeder Lieferung `npm run typecheck` laufen lassen.
 
-**Migriert man eine Komponente, die von `clubcampus.tsx` gerendert wird**, dann die zugehörige Zeile aus dem `JsComponent`-Block oben in `clubcampus.tsx` entfernen — dieser Block umgeht die Prop-Prüfung für die noch nicht migrierten Module. Grund: TypeScript leitet Prop-Typen von JS-Komponenten aus deren Default-Werten ab (`sb=null` ⇒ Typ `null`, `dbTeams=[]` ⇒ `never[]`) und lehnt damit korrekte Werte ab.
+Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-Prüfung noch nicht migrierter JS-Komponenten) ist entfernt; alle von `clubcampus.tsx` gerenderten Module werden jetzt regulär typgeprüft.
+
+**Muster aus der Migration** (falls ein Legacy-`.jsx` neu dazukommt): demoData-Importe (`ROSTER`, `SCHEDULE`, `TABLES`, `ATT_EVENTS`, `HELPERS`, …) sind stark inferiert und tragen Phantomfelder — beim Zugriff als `any` aliasieren (`import { ROSTER as ROSTER_SRC } …; const ROSTER: any[] = ROSTER_SRC;`). `window.storage` ist eine App-Bridge, kein Standard-Window-Feld → über einen lokalen `winStorage`-Cast kapseln. State-Objekte **nie** als `useState<any>(null)`/`useState({})` typisieren (dann kollabiert `SetStateAction<any>` und der Updater-Param wird implizit-`any`) — konkret als `useState<Record<string, any>>({})` o.ä.
 
 ## Konventionen
 
@@ -124,3 +126,13 @@ TypeScript-Migration läuft schrittweise. Fertig: `domains/`, `shared/`, `src/mo
 - Vier fast gleiche Kaderrollen-Typen nebeneinander: `KaderRolle` (`types.ts`), `KaderRolleDb` (`roleUtils`), `KaderRolleOption` (`useMemberMeta`), `RolleOption` (`RollenAuswahlListe`).
 
 Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `clubcampus` (ReferenceError statt Login-Screen, sobald die Env-Variablen fehlten), das undefinierte `vereinId` an `ProfileView`, sowie das Phantomfeld `geprueft` in `MemberHero` und `InfoTab` (Datenprüfungs-Status stand konstant auf „offen"/„Ausstehend").
+
+Behoben beim Abschluss der Modul-Migration (Sport-Module):
+- **Acht tote `verein_id`-Schreibpfade** — die DB lehnt Zeilen ohne `verein_id` still ab (siehe verein_id-Regel oben): `KaderModul` (Kader-Upsert), `TrainingsplanModul` (`trainingsplaetze`, `trainings`, `trainingsplan_vorlagen`/`_slots`/`_ausnahmen`), `TeamsVerwaltungModul` (`teams`-Insert via `toDbData`, `team_module`-Upsert). `vereinId` wird jetzt via Prop durchgereicht (clubcampus → TeamView/TeamsVerwaltung → Modul), Guards ergänzt.
+- **`TrainingsplanModul`**: der Slot-Upsert schrieb in die nicht existierende Spalte `end_haelfte` statt `end_half` → der ganze Slot-Upsert scheiterte, `end_half` wurde nie persistiert.
+- **`TrainingsplanModul` / `TermineModul`**: KW-Berechnung rechnete `Date − Date` statt `getTime() − getTime()`.
+- **`TermineModul`**: `toggleCancel` referenzierte das nicht existierende `week_nrAusnahmen` (statt `kwAusnahmen`) → ReferenceError beim Absagen eines Trainings (folgenlos nur, weil `ATT_EVENTS`/`window.storage` im Demo leer liefen).
+- **`TeamModul`**: `parseEvDate` war gar nicht definiert (nur lokal in `TermineModul`) und `EventsList` las die nirgends definierten `kannVerwalten`/`meineTeams` → latente ReferenceErrors, bislang folgenlos weil `ATT_EVENTS` leer ist bzw. der Code-Pfad tot war. Helper ergänzt bzw. als Props geführt.
+- **`DashboardModul`**: Eltern-Dashboard warf `ReferenceError` durch undefinierte `kannSchreiben`/`kannVerwalten`/`isTrainer`/`isAdmin`.
+- **`TeamsVerwaltungModul`**: der exportierte, aber nirgends gerenderte `TeamsAdminView` las `navToTeam`/`onNavToTeamDone`, die nicht in seiner Prop-Liste standen.
+- Diverse zur Laufzeit wirkungslose Props (nicht durchgereicht/gespreadet) bereinigt: `mb`/`title`/`className` auf `Row`/`Btn`/`PersonPicker`, tote `window.storage`-/`ROLLE_MAP`-Reste.
