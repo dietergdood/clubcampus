@@ -7,8 +7,8 @@ import { useConfirm } from "../../theme.ts";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
-import type { ColDef, ColGroup, GroupOption } from "../../shared/list/types.ts";
-import type { Account, Sb, RowId } from "../../types.ts";
+import type { ColDef, ColGroup, GroupOption, RowId } from "../../shared/list/types.ts";
+import type { Account, Sb } from "../../types.ts";
 import { mapEltern, buildElternGroups, makeElternRenderCell } from "./elternListUtils.tsx";
 import type { ElternRow } from "./elternListUtils.tsx";
 
