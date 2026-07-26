@@ -52,12 +52,11 @@ function LoginScreen({onLogin, sb, appTheme}: LoginScreenProps){
     if(pw.length<6){ setError("Passwort muss mindestens 6 Zeichen haben."); return; }
     setLoading(true); setError("");
     try{
-      console.log("[FCH] Registrierung prüfe E-Mail:", email, "sb:", !!sb);
       const [{data:m, error:mErr},{data:ek, error:ekErr}] = await Promise.all([
         sb.from("mitglieder").select("id,vorname,nachname").eq("email",email).eq("aktiv",true).limit(1),
         sb.from("elternkontakte").select("id,name").eq("email",email).limit(1),
       ]);
-      console.log("[FCH] mitglieder:", m, mErr, "elternkontakte:", ek, ekErr);
+      if(mErr||ekErr) console.error("[FCH] Registrierungs-Lookup fehlgeschlagen:", mErr, ekErr);
       const istBekannt = (m&&m.length>0) || (ek&&ek.length>0);
       if(!istBekannt){
         setError("Diese E-Mail ist nicht im System hinterlegt. Bitte wende dich an deinen Verein.");
@@ -68,7 +67,6 @@ function LoginScreen({onLogin, sb, appTheme}: LoginScreenProps){
         : ek?.[0] ? ek[0].name||email.split("@")[0]
         : email.split("@")[0];
       const {data,error:err}=await sb.auth.signUp({email, password:pw, options:{data:{name:dbName}}});
-      console.log("[FCH] signUp result:", data, err);
       if(err) throw err;
       // Auto-Verknüpfung nach Registrierung
       if(data.user){
