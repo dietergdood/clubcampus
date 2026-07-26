@@ -2,7 +2,7 @@
    ClubCampus — modules/members/FotoUpload.tsx
    Foto-Upload Komponente für Mitglieder-Personalien
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Btn } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { updateMitgliedFoto, deleteMitgliedFoto } from "../../domains/members/memberService.ts";
@@ -25,6 +25,9 @@ export function FotoUpload({ raw, canUpload, sb, onReload }: FotoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<UploadMeldung | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const msgTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /* Erfolgs-Timer bei Unmount abbrechen (sonst setState nach Unmount) */
+  useEffect(() => () => clearTimeout(msgTimer.current), []);
 
   async function handleUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -34,7 +37,8 @@ export function FotoUpload({ raw, canUpload, sb, onReload }: FotoUploadProps) {
     try {
       await updateMitgliedFoto(sb, raw.id, file);
       setMsg({ok:true, text:"Foto gespeichert ✓"});
-      setTimeout(() => { setMsg(null); if (onReload) onReload(); }, 800);
+      clearTimeout(msgTimer.current);
+      msgTimer.current = setTimeout(() => { setMsg(null); if (onReload) onReload(); }, 800);
     } catch(e) { setMsg({ok:false, text: e instanceof Error ? e.message : "Upload fehlgeschlagen"}); }
     setUploading(false);
   }
