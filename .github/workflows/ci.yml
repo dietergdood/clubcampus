@@ -16,7 +16,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22 LTS: deckt die engines-Anforderungen von rolldown/oxc (>=20.19 / 22.12)
+          # ab und vermeidet die Node-20-Deprecation der Runner-Actions.
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
