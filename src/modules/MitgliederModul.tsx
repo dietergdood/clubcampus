@@ -93,10 +93,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const canExport=role==="administrator"||role==="administration";
 
   const { ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap } = useMemberMeta(dbPortalRollen, dbKaderRollen, portalFunktionen);
-  const allMembers: MemberRow[]=mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen).map(m=>({
+  /* Memoized: allMembers ist Dependency mehrerer useMemos (FILTER_DEFS,
+     JAHRGANG/ALTER). Ohne useMemo entstuende bei jedem Render ein neues
+     Array -> alle abhaengigen useMemos wuerden jedes Mal neu rechnen. */
+  const allMembers: MemberRow[]=useMemo(()=>mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen).map(m=>({
     ...m,
     funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter((g): g is string => Boolean(g)))],
-  }));
+  })),[dbMitglieder,dbPortalRollen,dbKaderRollen,funktionenGruppenMap]);
 
   const filterRef = useRef<((vals: FilterVals) => void) | null>(null);
   function exportData(rows: MemberRow[], cols: ColDef[], groups: MemberGroup[], format: ExportFormat){ exportDataUtil(rows, cols, format, groups); }

@@ -22,7 +22,10 @@ const ROLES: Record<string, RoleInfo> = {
 export function getFieldVisibility(role: string): FieldVisibility {
   const lvl = ROLES[role]?.level || 0;
   return {
-    showAhv:        lvl >= 5 && role === "administration" || role === "administrator",
+    /* AHV nur fuer die Verwaltungsrollen. (Frueher `lvl>=5 && role===
+       "administration" || role==="administrator"` — der lvl-Teil war
+       redundant, da nur administration lvl 5 hat; Ergebnis unveraendert.) */
+    showAhv:        role === "administration" || role === "administrator",
     showGebdat:     lvl >= 3,
     showAdresse:    lvl >= 5,
     showTelefon:    lvl >= 3,
