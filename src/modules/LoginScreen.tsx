@@ -54,7 +54,7 @@ function LoginScreen({onLogin, sb, appTheme, vereinId}: LoginScreenProps){
     setLoading(true); setError("");
     try{
       /* RPC mit SECURITY DEFINER — funktioniert auch für nicht-eingeloggte User */
-      const { data: istBekannt, error: rpcErr } = await sb.rpc("check_email_bekannt", {
+      const { data: istBekannt, error: rpcErr } = await (sb as any).rpc("check_email_bekannt", {
         p_email: email,
         p_verein_id: vereinId || "00000000-0000-0000-0000-000000000001",
       });
