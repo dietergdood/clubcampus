@@ -34,6 +34,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # ESLint blockt nur bei error-Level-Regeln (rules-of-hooks +
+      # Import-Richtung). Die ~750 warn-Level-Meldungen (any, unused,
+      # exhaustive-deps, max-lines) lassen `eslint .` mit Exit 0 durch
+      # und werden schrittweise abgebaut.
+      - name: Lint
+        run: npm run lint
+
       - name: Fehlende Konstanten-Imports pruefen
         run: npm run check:imports
 
