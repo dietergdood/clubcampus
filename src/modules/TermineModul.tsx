@@ -2,24 +2,35 @@
    ClubCampus TermineModul — TermineModul.jsx
    An-/Abmeldung für Trainings, Spiele und Vereinsanlässe
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import type { ReactNode, CSSProperties } from "react";
 import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR  } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { useIsMobile, ModalOrSheet, Card, Chip , Stat, Av, Col, Row, SectionLabel, Btn, avColor} from "../theme.ts";
-import { ATT_EVENTS, ATT_INITIAL, GANTT, ROSTER, SCHEDULE, TABLES, TRAININGSPLAETZE_DEFAULT } from "../demoData.js";
+import { ATT_EVENTS as ATT_EVENTS_SRC, ATT_INITIAL, GANTT, ROSTER as ROSTER_SRC, SCHEDULE as SCHEDULE_SRC, TABLES as TABLES_SRC, TRAININGSPLAETZE_DEFAULT } from "../demoData.js";
+/* demoData ist untypisiertes JS mit Phantomfeldern (role/name/rueckennr auf
+   ROSTER etc.) — als any geführt, damit die Legacy-Zugriffe erhalten bleiben. */
+const ROSTER: any[] = ROSTER_SRC;
+const SCHEDULE: any[] = SCHEDULE_SRC;
+const ATT_EVENTS: any[] = ATT_EVENTS_SRC;
+const TABLES: Record<string, any[]> = TABLES_SRC as unknown as Record<string, any[]>;
 import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.jsx";
 
+/* winStorage.storage ist eine App-eigene Bridge (kein Standard-Window-Feld). */
+const winStorage = window as unknown as {
+  storage: { get(k: string): Promise<{value: string}|null>; set(k: string, v: string): Promise<void> };
+};
 
 /* ── Style-Konstanten ── */
-const S_FIELD_LABEL={fontSize:11,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"};
-const S_SUB={fontSize:14,color:"var(--sub)",marginBottom:4};
-const S_INPUT={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",boxSizing:"border-box",background:"var(--surface)",color:"var(--text)"};
-const S_SELECT={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",background:"var(--surface)",color:"var(--text)"};
-const S_LIST_ITEM={padding:"10px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"};
-const S_06={fontSize:14,fontWeight:600,color:"var(--text)"};
-const S_07={display:"flex",gap:8,flexWrap:"wrap"};
-const S_08={display:"flex",gap:12};
-const S_10={display:"flex",flexDirection:"column",gap:8};
+const S_FIELD_LABEL: CSSProperties={fontSize:11,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"};
+const S_SUB: CSSProperties={fontSize:14,color:"var(--sub)",marginBottom:4};
+const S_INPUT: CSSProperties={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",boxSizing:"border-box",background:"var(--surface)",color:"var(--text)"};
+const S_SELECT: CSSProperties={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",background:"var(--surface)",color:"var(--text)"};
+const S_LIST_ITEM: CSSProperties={padding:"10px 14px",borderBottom:"0.5px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"};
+const S_06: CSSProperties={fontSize:14,fontWeight:600,color:"var(--text)"};
+const S_07: CSSProperties={display:"flex",gap:8,flexWrap:"wrap"};
+const S_08: CSSProperties={display:"flex",gap:12};
+const S_10: CSSProperties={display:"flex",flexDirection:"column",gap:8};
 
 /* ── Hilfsfunktionen ── */
 const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
@@ -31,33 +42,67 @@ try{const s=localStorage.getItem("rueckennrn");if(s){const d=JSON.parse(s);Objec
 
 function getVereinsnameStatic(){try{const t=localStorage.getItem("cc-theme");return t?(JSON.parse(t).vereinsname||"ClubCampus"):"ClubCampus";}catch{return "ClubCampus";}}
 
-function getNr(id){return NR_CACHE.data[id]||"";}
+function getNr(id: number){return NR_CACHE.data[id]||"";}
 
 /* Hex → rgba() für Hover-Farben */
 
-function kannTerminAbsagen(role, typ, team, meineTeams=[]){
+function kannTerminAbsagen(role: string, typ: string, team: string|null, meineTeams: string[]=[]){
   return kannTerminErstellen(role, typ, team, meineTeams);
 }
 
-function kannTerminBearbeiten(role, typ, team, meineTeams=[]){
+function kannTerminBearbeiten(role: string, typ: string, team: string|null, meineTeams: string[]=[]){
   return kannTerminErstellen(role, typ, team, meineTeams);
 }
 
-function kannTerminErstellen(role, typ, team, meineTeams=[]){
+function kannTerminErstellen(role: string, typ: string, team: string|null, meineTeams: string[]=[]){
   if(role==="administrator"||role==="administration") return true;
   if(role==="funktionaer") return typ==="vereinsanlass";
   if(role==="trainer"){
     if(typ==="team_event") return !team||(meineTeams||[]).includes(team);
-    if(typ==="spiel")      return (meineTeams||[]).includes(team); // Treffpunkt etc.
+    if(typ==="spiel")      return (meineTeams||[]).includes(team||""); // Treffpunkt etc.
     return false; // Trainer kann keine Vereinsanlässe erstellen
   }
   return false;
 }
 
+/* ── Prop-Typen (spiel/event stammen aus demoData → any) ── */
+interface SpielStats {
+  kader: number[];
+  ersatz?: number[];
+  tore: Array<{spieler: string; min: string; eigentor?: boolean}>;
+  assists: Array<{spieler: string; min: string}>;
+  karten: Array<{spieler: string; min: string; type: string}>;
+  wechsel: Array<{raus: string; rein: string; min: string}>;
+}
+interface SpielDetailProps {
+  spiel: any;
+  onClose: ()=>void;
+  canEdit?: boolean;
+  motmAll?: any;
+  setMotmAll?: any;
+}
+interface SpielplanModulProps { role: string; team?: string|null; initialSelected?: any; }
+interface TableTabProps { team?: string|null; }
+interface TermineAccount { kinder?: Array<{name: string; team?: string; rosterId?: number|null}>; }
+interface TermineModulProps {
+  role: string;
+  team?: string|null;
+  setActive?: (v: string)=>void;
+  onNavigateToSpiel?: ((spiel: any)=>void)|null;
+  myRosterId?: number|null;
+  initialFilter?: string|string[];
+  responses?: Record<string, any>|null;
+  onResponseChange?: ((r: any)=>void)|null;
+  allTeams?: string[]|null;
+  account?: TermineAccount|null;
+  kannSchreiben?: ((modul: string)=>boolean)|null;
+  kannVerwalten?: ((modul: string)=>boolean)|null;
+}
+
 
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
-function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMotmAllProp}){
+function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMotmAllProp}: SpielDetailProps){
   const isMobile=useIsMobile();
   const played=!!spiel.result;
   const [activeTab,setActiveTab]=useState("info");
@@ -68,15 +113,15 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
   const myVoterKey="current_user";
   const myVotes=new Set(Object.entries(motmAll[spiel?.id]||{}).filter(([k,v])=>k===myVoterKey).map(([k,v])=>v));
   const myVote=null; /* kept for compat */
-  const voteCounts=(roster)=>{
+  const voteCounts=(roster: any[])=>{
     const gameVotes=motmAll[spiel?.id]||{};
-    return roster.reduce((acc,p)=>{
-      acc[p.id]=Object.values(gameVotes).filter(v=>v===p.id).length;
+    return roster.reduce((acc: Record<number, number>,p: any)=>{
+      acc[p.id]=Object.values(gameVotes).filter((v)=>v===p.id).length;
       return acc;
-    },{});
+    },{} as Record<number, number>);
   };
-  const castVote=(pid)=>{
-    setMotmAll(prev=>{
+  const castVote=(pid: number)=>{
+    setMotmAll((prev: any)=>{
       const gameVotes={...(prev[spiel.id]||{})};
       /* Each voter gets a unique key per voted player */
       const voteKey=myVoterKey+"_"+pid;
@@ -85,11 +130,11 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
       return {...prev,[spiel.id]:gameVotes};
     });
   };
-  const isVotedFor=(pid)=>{
+  const isVotedFor=(pid: number)=>{
     const gameVotes=motmAll[spiel?.id]||{};
     return !!gameVotes[myVoterKey+"_"+pid];
   };
-  const [stats,setStats]=useState(()=>{
+  const [stats,setStats]=useState<SpielStats>(()=>{
     const base=spiel.stats||{kader:[],tore:[],assists:[],karten:[],wechsel:[]};
     return base;
   });
@@ -99,13 +144,13 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
     if(stats.kader.length>0) return;
     (async()=>{
       try{
-        const r=await window.storage.get("aufgebot_state");
+        const r=await winStorage.storage.get("aufgebot_state");
         if(r){
           const aufgebotState=JSON.parse(r.value);
           const attEv=ATT_EVENTS.find(e=>e.date===spiel.date&&e.type==="Spiel"&&
             (e.opponent===spiel.opponent||e.team===spiel.team));
           if(attEv){
-            const aufgebotIds=(aufgebotState[attEv.id]||[]).filter(id=>
+            const aufgebotIds=(aufgebotState[attEv.id]||[]).filter((id: any)=>
               ROSTER.find(p=>p.id===id&&(p.teams||[]).includes(spiel.team||"")&&!p.role)
             );
             if(aufgebotIds.length>0) setStats(s=>({...s,kader:aufgebotIds}));
@@ -124,15 +169,15 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
   const spielerNamen=teamRosterNames.length>0?teamRosterNames:ROSTER.map(p=>p.name);
   const kaderNamen=stats.kader.map(id=>ROSTER.find(p=>p.id===id)?.name).filter(Boolean);
 
-  const KARTEN_STYLE={
+  const KARTEN_STYLE: Record<string, {bg: string; color: string; label: string}>={
     "gelb":     {bg:"#FCD34D",color:"#78350F",label:"Gelb"},
     "gelb-rot": {bg:"#F97316",color:"#fff",  label:"Gelb-Rot"},
     "rot":      {bg:"#C8102E",color:"#fff",  label:"Rot"},
   };
 
-  const ST=({children})=>(<SectionLabel>{children}</SectionLabel>);
-  const IR=({label,value})=>(<div style={{display:"flex",justifyContent:"space-between",padding:"8px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}><span style={{fontSize:14,color:"var(--sub)",flexShrink:0,minWidth:130}}>{label}</span><span style={{fontSize:14,fontWeight:600,textAlign:"right"}}>{value||"-"}</span></div>);
-  const EZ=({icon,text,min,onDelete})=>(
+  const ST=({children}: {children?: ReactNode})=>(<SectionLabel>{children}</SectionLabel>);
+  const IR=({label,value}: {label?: ReactNode; value?: ReactNode})=>(<div style={{display:"flex",justifyContent:"space-between",padding:"8px 14px",borderBottom:"0.5px solid var(--border)",gap:12}}><span style={{fontSize:14,color:"var(--sub)",flexShrink:0,minWidth:130}}>{label}</span><span style={{fontSize:14,fontWeight:600,textAlign:"right"}}>{value||"-"}</span></div>);
+  const EZ=({icon,text,min,onDelete}: {icon?: ReactNode; text?: ReactNode; min?: string|number; onDelete?: ()=>void})=>(
     <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"0.5px solid var(--border)"}}>
       <span style={{fontSize:14,color:"var(--sub)",minWidth:28,fontWeight:600,flexShrink:0}}>{icon}</span>
       <span style={{flex:1,fontSize:14}}>{text}</span>
@@ -140,9 +185,9 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
       {editMode&&onDelete&&<Btn variant="ghost" onClick={onDelete} style={{color:"var(--sub)"}}>{"x"}</Btn>}
     </div>
   );
-  const AR=({children,onAdd})=>(<div style={{display:"flex",gap:8,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"4px 10px",borderRadius:6,fontSize:14,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
-  const SS=({value,onChange,options,placeholder,style={}})=>(<select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none",...style}}><option value="">{placeholder||"-"}</option>{options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>);
-  const MI=({value,onChange})=>(<input type="number" min="1" max="90" placeholder="Min" value={value} onChange={e=>onChange(e.target.value)} style={{width:46,padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none"}}/>);
+  const AR=({children,onAdd}: {children?: ReactNode; onAdd?: ()=>void})=>(<div style={{display:"flex",gap:8,marginTop:7,flexWrap:"wrap",alignItems:"center"}}>{children}<button onClick={onAdd} style={{padding:"4px 10px",borderRadius:6,fontSize:14,fontWeight:700,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer"}}>+ Add</button></div>);
+  const SS=({value,onChange,options,placeholder,style={}}: {value?: string; onChange: (v: string)=>void; options: any[]; placeholder?: string; style?: CSSProperties})=>(<select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none",...style}}><option value="">{placeholder||"-"}</option>{options.map((o: any)=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>);
+  const MI=({value,onChange}: {value?: string; onChange: (v: string)=>void})=>(<input type="number" min="1" max="90" placeholder="Min" value={value} onChange={e=>onChange(e.target.value)} style={{width:46,padding:"3px 6px",border:"0.5px solid var(--border)",borderRadius:6,fontSize:14,outline:"none"}}/>);
 
   return(
     <div onClick={onClose} style={isMobile?{position:"fixed",inset:0,zIndex:2000,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.5)"}:{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(6px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -441,11 +486,11 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
 
 
 
-function SpielplanModul({role,team,initialSelected}){
+function SpielplanModul({role,team,initialSelected}: SpielplanModulProps){
   const isMobile=useIsMobile();
   const [selected,setSelected]=useState(initialSelected||null);
   const canEdit=["trainer","administrator","administration"].includes(role);
-  const parseGDate=(d)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";}
+  const parseGDate=(d?: string|null)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";}
   useEffect(()=>{
     if(NAV_TARGET.selectedSpiel){
       setSelected(NAV_TARGET.selectedSpiel);
@@ -496,8 +541,8 @@ function SpielplanModul({role,team,initialSelected}){
   );
 }
 
-function TableTab({team}){
-  const rows=TABLES[team]||[];
+function TableTab({team}: TableTabProps){
+  const rows=TABLES[team||""]||[];
 
   return(
     <div>
@@ -532,7 +577,7 @@ function TableTab({team}){
   );
 }
 
-function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRosterIdProp,initialFilter="alle",responses:responsesProp,onResponseChange,allTeams,account,kannSchreiben,kannVerwalten}){
+function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRosterIdProp,initialFilter="alle",responses:responsesProp,onResponseChange,allTeams,account,kannSchreiben,kannVerwalten}: TermineModulProps){
   const isMobile=useIsMobile();
   const isTrainer=["trainer"].includes(role);
   const isAdmin=["administrator","administration","funktionaer"].includes(role);
@@ -572,7 +617,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
 
   const [responsesLocal,setResponsesLocal]=useState(ATT_INITIAL);
   const responses=responsesProp||responsesLocal;
-  const setResponses=(r)=>{
+  const setResponses=(r: any)=>{
     if(onResponseChange) onResponseChange(r);
     else setResponsesLocal(r);
   };
@@ -589,7 +634,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     if(Array.isArray(initialFilter)) setActiveFilters(new Set(initialFilter));
     else setActiveFilters(new Set(initialFilter==="alle"||!initialFilter?[]:[ initialFilter]));
   },[initialFilter]);
-  const toggleFilter=(f)=>{
+  const toggleFilter=(f: string)=>{
     if(f==="alle"){setActiveFilters(new Set());return;}
     setActiveFilters(prev=>{
       const next=new Set(prev);
@@ -597,34 +642,34 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
       return next;
     });
   };
-  const isFilterActive=(f)=>f==="alle"?activeFilters.size===0:activeFilters.has(f);
+  const isFilterActive=(f: string)=>f==="alle"?activeFilters.size===0:activeFilters.has(f);
   const [timeFilter,setTimeFilter]=useState("kommend");
   const [showMoreEvents,setShowMoreEvents]=useState(false);
-  const [cancelledEvents,setCancelledEvents]=useState({});
-  const [aufgebotState,setAufgebotState]=useState({});
+  const [cancelledEvents,setCancelledEvents]=useState<Record<string, boolean>>({});
+  const [aufgebotState,setAufgebotState]=useState<Record<string, number[]>>({});
   useEffect(()=>{
     (async()=>{
-      try{const r=await window.storage.get("aufgebot_state");if(r)setAufgebotState(JSON.parse(r.value));}catch(e){}
+      try{const r=await winStorage.storage.get("aufgebot_state");if(r)setAufgebotState(JSON.parse(r.value));}catch(e){}
     })();
   },[]);
-  const toggleAufgebot=(evId,pid)=>{
+  const toggleAufgebot=(evId: any,pid: number)=>{
     setAufgebotState(prev=>{
       const evList=prev[evId]||[];
       const next=evList.includes(pid)?evList.filter(x=>x!==pid):[...evList,pid];
       const updated={...prev,[evId]:next};
-      window.storage.set("aufgebot_state",JSON.stringify(updated)).catch(()=>{});
+      winStorage.storage.set("aufgebot_state",JSON.stringify(updated)).catch(()=>{});
       return updated;
     });
   };
-  const isInAufgebot=(evId,pid)=>(aufgebotState[evId]||[]).includes(pid);
+  const isInAufgebot=(evId: any,pid: any)=>(aufgebotState[evId]||[]).includes(pid);
   useEffect(()=>{
-    (async()=>{try{const r=await window.storage.get("cancelled_events");if(r)setCancelledEvents(JSON.parse(r.value));}catch(e){}}
+    (async()=>{try{const r=await winStorage.storage.get("cancelled_events");if(r)setCancelledEvents(JSON.parse(r.value));}catch(e){}}
     )();
   },[]);
-  const toggleCancel=(evId)=>{
+  const toggleCancel=(evId: any)=>{
     setCancelledEvents(prev=>{
       const next={...prev,[evId]:!prev[evId]};
-      window.storage.set("cancelled_events",JSON.stringify(next)).catch(()=>{});
+      winStorage.storage.set("cancelled_events",JSON.stringify(next)).catch(()=>{});
 
       // Sync mit GANTT: Training-Event → Ausnahme in trainingsAusnahmen schreiben
       const ev=ATT_EVENTS.find(e=>e.id===evId&&e.type==="Training");
@@ -636,21 +681,21 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
             const [day,mon,yr]=(dm||ev.date).split(".").map(Number);
             const evDate=new Date(yr||2026,mon-1,day);
             const jan4=new Date(evDate.getFullYear(),0,4);
-            const kw=Math.ceil(((evDate-jan4)/86400000+jan4.getDay()+1)/7);
+            const kw=Math.ceil(((evDate.getTime()-jan4.getTime())/86400000+jan4.getDay()+1)/7);
             const kwKey=`${evDate.getFullYear()}_${kw}`;
 
             // Passenden GANTT-Slot finden
             const WOCHENTAGE=["So","Mo","Di","Mi","Do","Fr","Sa"];
             const weekday=WOCHENTAGE[evDate.getDay()];
-            const r=await window.storage.get("trainingsPlaene");
+            const r=await winStorage.storage.get("trainingsPlaene");
             if(r){
               const plaene=JSON.parse(r.value);
-              const aktiverPlan=plaene.find(p=>p.active)||plaene[0];
-              const matchSlot=aktiverPlan?.slots?.find(s=>
+              const aktiverPlan=plaene.find((p: any)=>p.active)||plaene[0];
+              const matchSlot=aktiverPlan?.slots?.find((s: any)=>
                 s.weekday===weekday&&s.team===ev.team
               );
               if(matchSlot){
-                const ar=await window.storage.get("trainingsAusnahmen");
+                const ar=await winStorage.storage.get("trainingsAusnahmen");
                 const ausnahmen=ar?JSON.parse(ar.value):{};
                 const kwAusnahmen=ausnahmen[kwKey]||[];
                 const isCancelling=!prev[evId]; // next state
@@ -658,18 +703,18 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                 if(isCancelling){
                   // Absage hinzufügen
                   newKwAusnahmen=[
-                    ...week_nrAusnahmen.filter(a=>!(a.slot_id===matchSlot.id&&a.type==="absage")),
+                    ...kwAusnahmen.filter((a: any)=>!(a.slot_id===matchSlot.id&&a.type==="absage")),
                     {type:"absage",slot_id:matchSlot.id,weekday,team:ev.team,evId,von_termin:true}
                   ];
                 } else {
                   // Absage rückgängig
-                  newKwAusnahmen=kwAusnahmen.filter(a=>!(a.slot_id===matchSlot.id&&a.type==="absage"&&a.von_termin));
+                  newKwAusnahmen=kwAusnahmen.filter((a: any)=>!(a.slot_id===matchSlot.id&&a.type==="absage"&&a.von_termin));
                 }
-                await window.storage.set("trainingsAusnahmen",JSON.stringify({...ausnahmen,[kwKey]:newKwAusnahmen}));
+                await winStorage.storage.set("trainingsAusnahmen",JSON.stringify({...ausnahmen,[kwKey]:newKwAusnahmen}));
 
                 // Benachrichtigung für Administration
                 if(isCancelling){
-                  const nr=await window.storage.get("admin_benachrichtigungen");
+                  const nr=await winStorage.storage.get("admin_benachrichtigungen");
                   const bestehende=nr?JSON.parse(nr.value):[];
                   const neue=[...bestehende,{
                     id:Date.now(),
@@ -681,7 +726,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
                     gelesen:false,
                     created_at:new Date().toISOString(),
                   }];
-                  await window.storage.set("admin_benachrichtigungen",JSON.stringify(neue));
+                  await winStorage.storage.set("admin_benachrichtigungen",JSON.stringify(neue));
                 }
               }
             }
@@ -691,7 +736,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
       return next;
     });
   };
-  const [showNoteFor,setShowNoteFor]=useState(null);
+  const [showNoteFor,setShowNoteFor]=useState<any>(null);
   const [attLoaded,setAttLoaded]=useState(false);
 
   /* Load persisted responses on mount */
@@ -699,7 +744,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     setAttLoaded(true);
     (async()=>{
       try{
-        const res=await window.storage.get("att_responses");
+        const res=await winStorage.storage.get("att_responses");
         if(res){
           const stored=JSON.parse(res.value);
           const merged={...ATT_INITIAL};
@@ -710,10 +755,10 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     })();
   }
 
-  const saveResp=(newResp)=>{
+  const saveResp=(newResp: any)=>{
     setResponses(newResp);
     /* Only persist user-changed entries (delta vs ATT_INITIAL) */
-    const delta={};
+    const delta: Record<string, any>={};
     Object.keys(newResp).forEach(evId=>{
       Object.keys(newResp[evId]||{}).forEach(pid=>{
         const cur=newResp[evId]?.[pid]?.status;
@@ -724,19 +769,19 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
         }
       });
     });
-    window.storage.set("att_responses",JSON.stringify(delta)).catch(()=>{});
+    winStorage.storage.set("att_responses",JSON.stringify(delta)).catch(()=>{});
   };
 
-  const parseEvDate2=(d)=>{
+  const parseEvDate2=(d?: string|null)=>{
     if(!d) return "";
     const c=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
     const p=c.split(".");
     return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";
   };
   const TODAY="2026-05-23";
-  const isPast=(ev)=>parseEvDate2(ev.date)<TODAY;
+  const isPast=(ev: any)=>parseEvDate2(ev.date)<TODAY;
 
-  const getResp=(evId,pid)=>{
+  const getResp=(evId: any,pid: any)=>{
     const stored=responses[evId]?.[pid];
     if(stored?.status) return stored;
     const ev=ATT_EVENTS.find(e=>e.id===evId);
@@ -744,7 +789,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     return {status:null,note:""};
   };
 
-  const setResp=(evId,pid,status,note)=>{
+  const setResp=(evId: any,pid: any,status: string|null,note?: string)=>{
     const updated={
       ...responses,
       [evId]:{...responses[evId],[pid]:{status,note:note!==undefined?note:(responses[evId]?.[pid]?.note||"")}}
@@ -752,7 +797,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     saveResp(updated);
   };
 
-  const evCounts=(ev)=>{
+  const evCounts=(ev: any)=>{
     const pids=teamRoster.map(p=>p.id);
     return{
       zu:      pids.filter(id=>getResp(ev.id,id).status==="zu").length,
@@ -765,7 +810,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     };
   };
 
-  const STATUS_CFG={
+  const STATUS_CFG: Record<string, {label: string; color: string; bg: string; icon: string}>={
     "zu":             {label:"Zusage",        color:GN,    bg:"#ECFDF5", icon:"✓"},
     "ab":             {label:"Absage",         color:R,     bg:RL,        icon:"✕"},
     "unentschuldigt": {label:"Unentschuldigt", color:AM, bg:"#FFF7ED", icon:"!"},
@@ -774,7 +819,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     null:             {label:"Ausstehend",     color:"var(--sub)",bg:"#f5f5f5", icon:"-"},
   };
 
-  const parseEvDate=(d)=>{
+  const parseEvDate=(d?: string|null)=>{
     if(!d) return "";
     const clean=d.replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();
     const parts=clean.split(".");
@@ -799,9 +844,9 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
 
   /* Modal state - shared between trainer and spieler/eltern views */
   const [editingDeadline,setEditingDeadline]=useState(false);
-  const [deadlines,setDeadlines]=useState(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,e.deadline||""])));
-  const [autoReminder,setAutoReminder]=useState(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,true])));
-  const [reminderTimes,setReminderTimes]=useState(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,"3h"])));
+  const [deadlines,setDeadlines]=useState<Record<string, string>>(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,e.deadline||""])));
+  const [autoReminder,setAutoReminder]=useState<Record<string, boolean>>(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,true])));
+  const [reminderTimes,setReminderTimes]=useState<Record<string, string>>(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,"3h"])));
   const REMINDER_OPTIONS=[
     {v:"30m",l:"30 Min. vorher"},
     {v:"1h", l:"1 Std. vorher"},
@@ -813,7 +858,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     {v:"48h",l:"2 Tage vorher"},
   ];
 
-  const getReminderTime=(dl)=>{
+  const getReminderTime=(dl?: string|null)=>{
     if(!dl) return null;
     try{
       const parts=dl.split(",");
@@ -828,49 +873,49 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
     }catch(e){return null;}
   };
 
-  const openEvent=(id)=>{setSelEvent(id);setModalOpen(true);setEditingDeadline(false);};
+  const openEvent=(id: any)=>{setSelEvent(id);setModalOpen(true);setEditingDeadline(false);};
 
   /* Trainer notes per event */
-  const [trainerNotes,setTrainerNotes]=useState({});
+  const [trainerNotes,setTrainerNotes]=useState<Record<string, string>>({});
   const [editingNote,setEditingNote]=useState(false);
-  const [besammlungen,setBesammlungen]=useState(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,
+  const [besammlungen,setBesammlungen]=useState<Record<string, {date?: string; time?: string; ort?: string; location?: string}>>(()=>Object.fromEntries(ATT_EVENTS.map(e=>[e.id,
     e.treffpunkt?{date:e.date||"",time:(e.treffpunkt.match(/^\d{2}:\d{2}/)||[""])[0],ort:e.treffpunkt.replace(/^\d{2}:\d{2}\s*/,"")}:
     {date:"",time:"",ort:""}
   ])));
   const [editingBesammlung,setEditingBesammlung]=useState(false);
   useEffect(()=>{
     (async()=>{
-      try{const r=await window.storage.get("trainer_notes");if(r)setTrainerNotes(JSON.parse(r.value));}catch(e){}
-      try{const r=await window.storage.get("besammlungen");if(r)setBesammlungen(prev=>({...prev,...JSON.parse(r.value)}));}catch(e){}
+      try{const r=await winStorage.storage.get("trainer_notes");if(r)setTrainerNotes(JSON.parse(r.value));}catch(e){}
+      try{const r=await winStorage.storage.get("besammlungen");if(r)setBesammlungen(prev=>({...prev,...JSON.parse(r.value)}));}catch(e){}
     })();
   },[]);
-  const saveTrainerNote=(evId,text)=>{
+  const saveTrainerNote=(evId: any,text: string)=>{
     const updated={...trainerNotes,[evId]:text};
     setTrainerNotes(updated);
-    window.storage.set("trainer_notes",JSON.stringify(updated)).catch(()=>{});
+    winStorage.storage.set("trainer_notes",JSON.stringify(updated)).catch(()=>{});
   };
-  const saveBesammlung=(evId,field,value)=>{
+  const saveBesammlung=(evId: any,field: string,value: string)=>{
     const updated={...besammlungen,[evId]:{...(besammlungen[evId]||{}),date:"",time:"",ort:"",...besammlungen[evId],[field]:value}};
     setBesammlungen(updated);
-    window.storage.set("besammlungen",JSON.stringify(updated)).catch(()=>{});
+    winStorage.storage.set("besammlungen",JSON.stringify(updated)).catch(()=>{});
   };
 
-  const canEditEvent=(ev)=>{
+  const canEditEvent=(ev: any)=>{
     if(!ev) return false;
     /* Stufe aus Portalverwaltung prüfen falls verfügbar */
     if(kannVerwalten&&!kannVerwalten("events")) return false;
     const typ=ev.subtype==="Vereinsanlass"?"vereinsanlass":ev.subtype==="Team-Event"?"team_event":ev.type==="Spiel"?"spiel":"training";
-    return kannTerminBearbeiten(role, typ, ev.team, allTeams||[team]);
+    return kannTerminBearbeiten(role, typ, ev.team, allTeams||[team||""]);
   };
 
-  const canCreateEvent=(typ="team_event")=>{
-    return kannTerminErstellen(role, typ, null, allTeams||[team]);
+  const canCreateEvent=(typ: string="team_event")=>{
+    return kannTerminErstellen(role, typ, null, allTeams||[team||""]);
   };
 
-  const canDeleteEvent=(ev)=>{
+  const canDeleteEvent=(ev: any)=>{
     if(!ev) return false;
     const typ=ev.subtype==="Vereinsanlass"?"vereinsanlass":ev.subtype==="Team-Event"?"team_event":ev.type==="Spiel"?"spiel":"training";
-    return kannTerminAbsagen(role, typ, ev.team, allTeams||[team]);
+    return kannTerminAbsagen(role, typ, ev.team, allTeams||[team||""]);
   };
 
   /* Spieler/Eltern: gleiche Kartenansicht wie Trainer */
@@ -1028,8 +1073,8 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
             const pastSpieleZu=pastSpiele.filter(e=>getResp(e.id,myId).status==="zu").length;
             const spielPct=pastSpiele.length?Math.round(pastSpieleZu/pastSpiele.length*100):null;
 
-            const fmt=(pct,zu,total,label)=>pct!==null?[pct+"%",zu+"/"+total+" "+label]:["-","Noch keine "+label];
-            const col=(pct)=>pct===null?"#aaa":pct>=80?GN:pct>=60?AM:R;
+            const fmt=(pct: number|null,zu: number,total: number,label: string)=>pct!==null?[pct+"%",zu+"/"+total+" "+label]:["-","Noch keine "+label];
+            const col=(pct: number|null)=>pct===null?"#aaa":pct>=80?GN:pct>=60?AM:R;
 
             const [tv,ts]=fmt(pastPct,pastZu,pastST.length,"Spiele & Trainings");
             const [trv,trs]=fmt(trainPct,pastTrainZu,pastTrain.length,"Trainings");
@@ -1046,7 +1091,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
         {hasMultiTeams&&(
           <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             <span style={{fontSize:14,color:"var(--sub)",fontWeight:600,alignSelf:"center",marginRight:2}}>{isEltern?"Kind:":"Team:"}</span>
-            {["alle",...allTeams].map(t=>{
+            {["alle",...(allTeams||[])].map(t=>{
               const active=selectedTeam===t;
               const kind=isEltern?kinder.find(k=>k.team===t):null;
               const label=t==="alle"?(isEltern?"Alle Kinder":"Alle Teams"):kind?`${kind.name.split(" ")[0]} · ${t}`:t;
@@ -1617,14 +1662,14 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
   );
 }
 
-function kannTerminLesen(role){ return true; }
+function kannTerminLesen(_role: string){ return true; }
 
-function kannTerminAnmelden(role){
+function kannTerminAnmelden(role: string){
   return ["spieler","eltern","trainer","administrator","administration","vorstand","funktionaer"].includes(role);
 }
 
-function getTerminTypLabel(typ){
-  const map={training:"Training",spiel:"Spiel",vereinsanlass:"Vereinsanlass","team-event":"Team-Event",aufgebot:"Aufgebot"};
+function getTerminTypLabel(typ: string){
+  const map: Record<string, string>={training:"Training",spiel:"Spiel",vereinsanlass:"Vereinsanlass","team-event":"Team-Event",aufgebot:"Aufgebot"};
   return map[typ]||typ||"Termin";
 }
 

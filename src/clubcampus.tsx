@@ -18,7 +18,7 @@ import { NAV_TARGET } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, getNavForRole, ProfileModal, getVereinsnameStatic } from "./modules/NavigationModul.tsx";
 import { Dashboard } from "./modules/DashboardModul.tsx";
 import { TeamView } from "./modules/TeamModul.tsx";
-import { TermineModul as TermineModulJs, SpielplanModul as SpielplanModulJs, TableTab } from "./modules/TermineModul.jsx";
+import { TermineModul, SpielplanModul, TableTab } from "./modules/TermineModul.tsx";
 import { TrainingsplanModul as TrainingsplanModulJs } from "./modules/TrainingsplanModul.jsx";
 import { TeamsVerwaltungModul as TeamsVerwaltungModulJs } from "./modules/TeamsVerwaltungModul.jsx";
 import { MembersView } from "./modules/MitgliederModul.tsx";
@@ -43,8 +43,6 @@ import type {
    MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
 type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
-const TermineModul          = TermineModulJs          as unknown as JsComponent;
-const SpielplanModul        = SpielplanModulJs        as unknown as JsComponent;
 const TrainingsplanModul    = TrainingsplanModulJs    as unknown as JsComponent;
 const TeamsVerwaltungModul  = TeamsVerwaltungModulJs  as unknown as JsComponent;
 const HelpersList           = HelpersListJs           as unknown as JsComponent;
@@ -336,10 +334,10 @@ function Portal({supabaseClient}: PortalProps){
   const trainerTeams = trainerTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter((n): n is string => !!n);
   const spielerTeam = meineTeamIds.map(id=>dbTeams.find(t=>t.id===id)?.name).filter((n): n is string => !!n);
   const meineTeams = role==="administrator"||role==="administration"
-    ? dbTeams.map(t=>t.name)
+    ? dbTeams.map(t=>t.name).filter((n): n is string => !!n)
     : role==="trainer"
       ? trainerTeams.length>0 ? trainerTeams : spielerTeam
-      : kinder.length>0 ? [...new Set(kinder.map(k=>k.team))]
+      : kinder.length>0 ? [...new Set(kinder.map(k=>k.team).filter((t): t is string => !!t))]
       : spielerTeam;
   const myRosterId = account.rosterId||(role==="spieler"?1:role==="eltern"?1:role==="trainer"?200:null);
   /* Dynamische Navigation (funktionaer/stufenleitung aus Gruppen) */
