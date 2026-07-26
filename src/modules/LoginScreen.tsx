@@ -53,36 +53,19 @@ function LoginScreen({onLogin, sb, appTheme, vereinId}: LoginScreenProps){
     if(pw.length<6){ setError("Passwort muss mindestens 6 Zeichen haben."); return; }
     setLoading(true); setError("");
     try{
-      /* RPC mit SECURITY DEFINER — funktioniert auch für nicht-eingeloggte User */
-      const { data: istBekannt, error: rpcErr } = await (sb as any).rpc("check_email_bekannt", {
+      const { data: rpcResult, error: rpcErr } = await (sb as any).rpc("check_email_bekannt", {
         p_email: email,
         p_verein_id: vereinId || "00000000-0000-0000-0000-000000000001",
       });
       if(rpcErr) console.error("[CC] check_email_bekannt fehlgeschlagen:", rpcErr);
-      if(!istBekannt){
+      if(!rpcResult?.bekannt){
         setError("Diese E-Mail ist nicht im System hinterlegt. Bitte wende dich an deinen Verein.");
         setLoading(false);
         return;
       }
-      /* Name für Supabase Auth aus mitglieder/elternkontakte laden */
-      const [{data:m},{data:ek}] = await Promise.all([
-        sb.from("mitglieder").select("id,vorname,nachname").eq("email",email).eq("aktiv",true).limit(1),
-        sb.from("elternkontakte").select("id,name").eq("email",email).limit(1),
-      ]);
-      const dbName = m?.[0] ? `${m[0].vorname} ${m[0].nachname}`.trim()
-        : ek?.[0] ? ek[0].name||email.split("@")[0]
-        : email.split("@")[0];
+      const dbName = rpcResult.name || email.split("@")[0];
       const {data,error:err}=await sb.auth.signUp({email, password:pw, options:{data:{name:dbName}}});
       if(err) throw err;
-      if(data.user){
-        const uid=data.user.id;
-        await new Promise(r=>setTimeout(r,1000));
-        const {data:bu}=await sb.from("benutzer").select("id").eq("id",uid).maybeSingle();
-        if(bu){
-          if(m?.[0]) await sb.from("benutzer").update({mitglied_id:m[0].id}).eq("id",uid);
-          if(ek?.[0]) await sb.from("elternkontakte").update({benutzer_id:uid}).eq("id",ek[0].id);
-        }
-      }
       if(data.session){ onLogin(data.session); } else { setRegDone(true); }
     }catch(err){
       const msg = err instanceof Error ? err.message : "";
