@@ -129,15 +129,18 @@ const TABLES={
 ]};
 /* Fallback for routes without team context */
 
+/** @type {any[]} */
 const ATT_EVENTS=[];
 /* Initial Zusagen/Absagen pro Ereignis und Spieler-ID
    status: "zu"|"ab"|"fraglich"|null  */
 
+/** @type {Record<string, any>} */
 const ATT_INITIAL=(()=>{
   const init = {};
   return init;
 })();
 
+/** @type {any[]} */
 const ATT_LOG=[];
 
 const GANTT=[];

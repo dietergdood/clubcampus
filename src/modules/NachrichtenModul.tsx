@@ -3,27 +3,76 @@
    Broadcast & Diskussions-Modul
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, GN, BL, R, RL } from "../constants.ts";
+import type { CSSProperties } from "react";
+import { FONT, ACCENT, ACCENT2, R } from "../constants.ts";
 import { TI } from "../icons.tsx";
-import { ModalOrSheet, ModalTitle, Row, useIsMobile, Btn } from "../theme.ts";
+import { ModalOrSheet, ModalTitle, useIsMobile, Btn } from "../theme.ts";
+import type { Sb } from "../types.ts";
 
-const S_LABEL={fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5};
+const S_LABEL: CSSProperties={fontSize:12,fontWeight:600,color:"var(--sub)",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5};
 
-function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,kannSchreiben=false,kannVerwalten=false}){
+/* Zeile aus nachrichten */
+interface Nachricht {
+  id: string;
+  titel: string;
+  inhalt: string;
+  typ: string;
+  autor_name?: string | null;
+  autor_id?: string | null;
+  erstellt_am?: string | null;
+  empfaenger_rolle?: string | null;
+  empfaenger_team?: string | null;
+  empfaenger_gruppe_id?: number | null;
+}
+interface Antwort {
+  id: string;
+  nachricht_id: string | null;
+  inhalt: string;
+  autor_name?: string | null;
+  erstellt_am?: string | null;
+}
+interface Datei {
+  id: string;
+  datei_url?: string | null;
+  datei_name?: string | null;
+}
+interface NeuForm {
+  titel: string;
+  inhalt: string;
+  typ: string;
+  empfaenger_typ: string;
+  empfaenger_rolle: string;
+  empfaenger_gruppe_id: number | null;
+  empfaenger_team: string;
+}
+
+interface NachrichtenModulProps {
+  sb?: Sb;
+  role?: string;
+  account?: { id?: string | null; name?: string | null } | null;
+  dbTeams?: { id?: number | null; name: string }[];
+  gruppen?: { id?: number | null; name?: string | null }[];
+  teamFilter?: string | null;
+  kannSchreiben?: boolean;
+  kannVerwalten?: boolean;
+  vereinId?: string | null;
+}
+
+function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null,kannSchreiben=false,kannVerwalten=false,vereinId=null}: NachrichtenModulProps){
   const isMobile=useIsMobile();
-  const [nachrichten,setNachrichten]=useState([]);
-  const [selected,setSelected]=useState(null);
-  const [antworten,setAntworten]=useState([]);
-  const [dateien,setDateien]=useState([]);
+  const [nachrichten,setNachrichten]=useState<Nachricht[]>([]);
+  const [selected,setSelected]=useState<Nachricht|null>(null);
+  const [antworten,setAntworten]=useState<Antwort[]>([]);
+  const [dateien,setDateien]=useState<Datei[]>([]);
   const [loading,setLoading]=useState(true);
   const [antwortText,setAntwortText]=useState("");
   const [sending,setSending]=useState(false);
   const [showNeu,setShowNeu]=useState(false);
   const [tab,setTab]=useState("alle");
-  const [filter,setFilter]=useState(null);
+  const [filter,setFilter]=useState<string|null>(null);
   const [showThread,setShowThread]=useState(false);
-  const [ungelesen,setUngelesen]=useState({});
-  const [neuForm,setNeuForm]=useState({titel:"",inhalt:"",typ:"broadcast",empfaenger_typ:"rolle",empfaenger_rolle:"",empfaenger_gruppe_id:null,empfaenger_team:""});
+  const [ungelesen,setUngelesen]=useState<Record<string, boolean>>({});
+  const [neuForm,setNeuForm]=useState<NeuForm>({titel:"",inhalt:"",typ:"broadcast",empfaenger_typ:"rolle",empfaenger_rolle:"",empfaenger_gruppe_id:null,empfaenger_team:""});
 
   const ROLLEN_OPTS=[
     {value:"alle",label:"Alle Mitglieder"},
@@ -46,30 +95,32 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
       const{data}=await q;
       if(data) setNachrichten(data);
       const{data:gel}=await sb.from("nachrichten_gelesen").select("nachricht_id").eq("user_id",account?.id||"");
-      if(gel){const g={};gel.forEach(r=>{g[r.nachricht_id]=true;});setUngelesen(g);}
+      if(gel){const g: Record<string, boolean>={};gel.forEach(r=>{g[r.nachricht_id]=true;});setUngelesen(g);}
     }catch(e){console.warn(e);}
     setLoading(false);
   }
 
-  async function loadAntworten(id){
+  async function loadAntworten(id: string){
     if(!sb) return;
     try{
       const{data}=await sb.from("nachrichten_antworten").select("*").eq("nachricht_id",id).order("erstellt_am");
       if(data) setAntworten(data);
       const{data:df}=await sb.from("nachrichten_dateien").select("*").eq("nachricht_id",id);
       if(df) setDateien(df);
-      await sb.from("nachrichten_gelesen").upsert({nachricht_id:id,user_id:account?.id||""},{onConflict:"nachricht_id,user_id"});
+      /* verein_id ist in nachrichten_gelesen NOT NULL — ohne fiel das Upsert
+         durch, "als gelesen" wurde nie gespeichert. */
+      if(vereinId) await sb.from("nachrichten_gelesen").upsert({nachricht_id:id,user_id:account?.id||"",verein_id:vereinId},{onConflict:"nachricht_id,user_id"});
       setUngelesen(prev=>({...prev,[id]:true}));
     }catch(e){console.warn(e);}
   }
 
   async function sendAntwort(){
-    if(!antwortText.trim()) return;
+    if(!antwortText.trim()||!selected) return;
     setSending(true);
     try{
-      const row={nachricht_id:selected.id,inhalt:antwortText,autor_name:account?.name||role,autor_id:account?.id||""};
-      if(sb){const{data}=await sb.from("nachrichten_antworten").insert(row).select().single();if(data)setAntworten(a=>[...a,data]);}
-      else setAntworten(a=>[...a,{...row,id:Date.now(),erstellt_am:new Date().toISOString()}]);
+      /* verein_id ist in nachrichten_antworten NOT NULL. */
+      if(sb&&vereinId){const{data}=await sb.from("nachrichten_antworten").insert({nachricht_id:selected.id,inhalt:antwortText,autor_name:account?.name||role,autor_id:account?.id||"",verein_id:vereinId}).select().single();if(data)setAntworten(a=>[...a,data]);}
+      else setAntworten(a=>[...a,{id:String(Date.now()),nachricht_id:selected.id,inhalt:antwortText,autor_name:account?.name||role,erstellt_am:new Date().toISOString()}]);
       setAntwortText("");
     }catch(e){console.warn(e);}
     setSending(false);
@@ -79,9 +130,10 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
     if(!neuForm.titel.trim()||!neuForm.inhalt.trim()) return;
     setSending(true);
     try{
-      const row={...neuForm,autor_name:account?.name||role,autor_id:account?.id||"",erstellt_am:new Date().toISOString()};
-      if(sb){const{data}=await sb.from("nachrichten").insert(row).select().single();if(data)setNachrichten(n=>[data,...n]);}
-      else setNachrichten(n=>[{...row,id:Date.now()},...n]);
+      /* verein_id ist in nachrichten NOT NULL — ohne konnte keine Nachricht
+         gesendet werden. */
+      if(sb&&vereinId){const{data}=await sb.from("nachrichten").insert({...neuForm,autor_name:account?.name||role,autor_id:account?.id||"",erstellt_am:new Date().toISOString(),verein_id:vereinId}).select().single();if(data)setNachrichten(n=>[data,...n]);}
+      else setNachrichten(n=>[{...neuForm,id:String(Date.now()),autor_name:account?.name||role,autor_id:account?.id||"",erstellt_am:new Date().toISOString()},...n]);
       setShowNeu(false);
       setNeuForm({titel:"",inhalt:"",typ:"broadcast",empfaenger_typ:"rolle",empfaenger_rolle:"",empfaenger_gruppe_id:null,empfaenger_team:""});
     }catch(e){console.warn(e);}
@@ -90,24 +142,24 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
 
   useEffect(()=>{loadNachrichten();},[sb,teamFilter]);
 
-  function getEmpfLabel(n){
+  function getEmpfLabel(n: Nachricht){
     if(n.empfaenger_rolle) return ROLLEN_OPTS.find(r=>r.value===n.empfaenger_rolle)?.label||n.empfaenger_rolle;
     if(n.empfaenger_team) return n.empfaenger_team;
     if(n.empfaenger_gruppe_id) return gruppen.find(g=>g.id===n.empfaenger_gruppe_id)?.name||"Gruppe";
     return "Alle";
   }
 
-  function fmtTime(ts){
+  function fmtTime(ts: string|null|undefined){
     if(!ts) return "";
     const d=new Date(ts);const h=new Date();
     if(d.toDateString()===h.toDateString()) return d.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
     return d.toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"});
   }
 
-  function initials(name){return (name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();}
+  function initials(name: string|null|undefined){return (name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();}
   const AV_COLORS=["#E1F5EE","#EEEDFE","#E6F1FB","#FAEEDA","#EAF3DE"];
   const AV_TEXT=["#085041","#3C3489","#0C447C","#633806","#27500A"];
-  function avC(name){const i=(name||"").charCodeAt(0)%5;return{bg:AV_COLORS[i],txt:AV_TEXT[i]};}
+  function avC(name: string|null|undefined){const i=(name||"").charCodeAt(0)%5;return{bg:AV_COLORS[i],txt:AV_TEXT[i]};}
 
   const filtered=nachrichten.filter(n=>{
     if(tab==="gesendet"&&n.autor_id!==account?.id) return false;
@@ -160,7 +212,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
               </div>
             </div>
             {kannVerwalten&&(
-              <button onClick={async()=>{if(!window.confirm("Nachricht löschen?"))return;await sb.from("nachrichten").delete().eq("id",selected.id);setSelected(null);setAntworten([]);loadNachrichten();}}
+              <button onClick={async()=>{if(!window.confirm("Nachricht löschen?")||!sb)return;await sb.from("nachrichten").delete().eq("id",selected.id);setSelected(null);setAntworten([]);loadNachrichten();}}
                 className="cc-icon-btn" style={{flexShrink:0}}>
                 <TI n="trash" size={14} style={{color:R}}/>
               </button>
@@ -173,7 +225,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
           {dateien.length>0&&(
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
               {dateien.map(d=>(
-                <a key={d.id} href={d.datei_url} target="_blank" rel="noreferrer"
+                <a key={d.id} href={d.datei_url||undefined} target="_blank" rel="noreferrer"
                   style={{padding:"7px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:14,color:"var(--sub)",display:"flex",alignItems:"center",gap:8,textDecoration:"none",background:"var(--surface2)"}}>
                   <TI n="paperclip" size={13}/>{d.datei_name}
                 </a>
@@ -199,7 +251,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
                         <span style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{a.autor_name}</span>
                         <span style={{fontSize:11,color:"var(--sub)"}}>{fmtTime(a.erstellt_am)}</span>
                         {kannVerwalten&&(
-                          <button onClick={async()=>{await sb.from("nachrichten_antworten").delete().eq("id",a.id);loadAntworten(selected.id);}}
+                          <button onClick={async()=>{if(!sb)return;await sb.from("nachrichten_antworten").delete().eq("id",a.id);loadAntworten(selected.id);}}
                             className="cc-icon-btn" style={{width:22,height:22,marginLeft:"auto"}}>
                             <TI n="trash" size={11} style={{color:"var(--sub)"}}/>
                           </button>
@@ -372,7 +424,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
               <select value={neuForm.empfaenger_gruppe_id||""} onChange={e=>setNeuForm(f=>({...f,empfaenger_gruppe_id:e.target.value?parseInt(e.target.value):null}))}
                 style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"0.5px solid var(--border)",background:"var(--surface2)",color:"var(--text)",fontSize:14,fontFamily:FONT,outline:"none"}}>
                 <option value="">Gruppe wählen…</option>
-                {gruppen.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+                {gruppen.map(g=><option key={g.id??g.name} value={g.id??""}>{g.name}</option>)}
               </select>
             )}
             {neuForm.empfaenger_typ==="team"&&(

@@ -3,13 +3,32 @@
    Dashboard-Ansichten für alle Rollen
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { FONT, BTN_COLOR as BTN, BTN_TXT, GN, R, RL, BL, AM, BK, GB, ACCENT} from "../constants.ts";
+import { GN, R, RL, BL, AM, GB, ACCENT} from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { Card, Chip, H1, InfoBox, Row, Between, STitle, Stat, useIsMobile, Btn, H2, Col } from "../theme.ts";
-import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS, POLLS, ROSTER, TABLES } from "../demoData.js";
+import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS, ROSTER, TABLES } from "../demoData.js";
+import type { Account } from "../types.ts";
 
-/* ── Shared navigation target ── */
-const NAV_TARGET={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
+/* Merkt sich das Navigationsziel für den Wechsel in die Team-Ansicht.
+   Modul-lokal, nicht zu verwechseln mit NAV_TARGET aus appConstants. */
+interface DashNavTarget {
+  tab: string | null;
+  filter: string[] | null;
+  kindTeam: string | null;
+  openEvId: number | string | null;
+  selectedSpiel: unknown;
+}
+const NAV_TARGET: DashNavTarget={tab:null,filter:null,kindTeam:null,openEvId:null,selectedSpiel:null};
+
+/* Alle Dashboards teilen dieselben schlanken Props */
+interface DashProps {
+  role?: string;
+  setActive?: (key: string) => void;
+  account?: Account | null;
+  meineTeams?: (string | undefined)[];
+  trainerTeams?: (string | undefined)[];
+  myRosterId?: number | null;
+}
 
 function getGreeting(){
   const h=new Date().getHours();
@@ -23,7 +42,7 @@ function getDate(){
   return new Date().toLocaleDateString("de-CH",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 }
 
-function Dashboard({role,setActive,account,meineTeams,myRosterId}){
+function Dashboard({role,setActive,account,meineTeams,myRosterId}: DashProps){
   if(role==="administrator")  return <DashboardAdmin setActive={setActive} account={account}/>;
   if(role==="administration") return <DashboardAdministration setActive={setActive} account={account}/>;
   if(role==="funktionaer")    return <DashboardFunktionaer setActive={setActive} account={account}/>;
@@ -33,7 +52,7 @@ function Dashboard({role,setActive,account,meineTeams,myRosterId}){
   return null;
 }
 
-function DashboardAdmin({setActive,account}){
+function DashboardAdmin({setActive,account}: DashProps){
   const isMobile=useIsMobile();
   const vorname=(account?.name||"Administrator").split(" ")[0];
   return(
@@ -90,7 +109,7 @@ function DashboardAdmin({setActive,account}){
               <div className="cc-text-sm">{c.conflict}</div>
             </div>
           ))}
-          <InfoBox text="2 Konflikte müssen manuell aufgelöst werden." semantic="danger"/>
+          <InfoBox text="2 Konflikte müssen manuell aufgelöst werden." color={R}/>
         </Card>
         <Card>
           <STitle>Letzte Audit-Einträge</STitle>
@@ -110,7 +129,7 @@ function DashboardAdmin({setActive,account}){
   );
 }
 
-function DashboardAdministration({setActive,account}){
+function DashboardAdministration({setActive,account}: DashProps){
   const isMobile=useIsMobile();
   return(
     <div>
@@ -128,7 +147,7 @@ function DashboardAdministration({setActive,account}){
       </div>
       <div className="cc-grid-cards cc-mb-20">
         <Card>
-          <STitle action={<Btn variant="ghost" onClick={()=>setActive("members")}>Alle →</Btn>}>Datenprüfstatus</STitle>
+          <STitle action={<Btn variant="ghost" onClick={()=>setActive?.("members")}>Alle →</Btn>}>Datenprüfstatus</STitle>
           {[{label:"Vollständig",n:162,c:GN},{label:"Prüfung fällig",n:12,c:AM},{label:"Unvollständig",n:8,c:R},{label:"Sync-Fehler",n:5,c:"#888"}].map((x,i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<3?`0.5px solid ${GB}`:"none"}}>
               <span style={{fontSize:14}}>{x.label}</span>
@@ -144,7 +163,7 @@ function DashboardAdministration({setActive,account}){
               <Chip text={x.ok?"OK":x.last} color={x.ok?GN:R} bg={x.ok?"#ECFDF5":RL}/>
             </div>
           ))}
-          <InfoBox text="FVRZ-Sync: Verbindungsfehler. Manuelle Überprüfung erforderlich." semantic="danger"/>
+          <InfoBox text="FVRZ-Sync: Verbindungsfehler. Manuelle Überprüfung erforderlich." color={R}/>
         </Card>
         <Card>
           <STitle>Zentrale Anwesenheitsstatistik</STitle>
@@ -178,7 +197,7 @@ function DashboardAdministration({setActive,account}){
   );
 }
 
-function DashboardFunktionaer({setActive,account}){
+function DashboardFunktionaer({setActive,account}: DashProps){
   const isMobile=useIsMobile();
   return(
     <div>
@@ -253,13 +272,13 @@ function DashboardFunktionaer({setActive,account}){
   );
 }
 
-function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
+function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}: DashProps){
   const isMobile=useIsMobile();
   const trainer=ROSTER.find(p=>p.id===(myRosterId||200))||ROSTER.find(p=>p.id===200);
   const firstName=trainer?.firstName||account?.name?.split(" ")[0]||"Trainer";
   const team=trainerTeams[0]||"Cc-Junioren";
   const today="2026-05-23";
-  const parseD=(d)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";};
+  const parseD=(d: string)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";};
 
   /* Nächstes Training und Spiel */
   const upcoming=ATT_EVENTS.filter(e=>e.team===team&&parseD(e.date)>=today).sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)));
@@ -267,7 +286,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
   const nextSpiel=upcoming.find(e=>e.type==="Spiel");
 
   /* Tabellenrang */
-  const tableData=TABLES[team]||[];
+  const tableData=(TABLES as Record<string, any[]>)[team]||[];
   const myRow=tableData.find(r=>r.me);
 
   return(
@@ -281,7 +300,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
         <Stat label="Nächstes Training" value={nextTrain?nextTrain.date.replace(/^\w+\s/,""):"-"} sub={nextTrain?`${nextTrain.time} Uhr · ${nextTrain.location}`:"Kein Training"} semantic="success"/>
         <Stat label="Nächstes Spiel"    value={nextSpiel?nextSpiel.date.replace(/^\w+\s/,""):"-"} sub={nextSpiel?`${nextSpiel.time} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel"} semantic="info"/>
         <Stat label="Ø Anwesenheit"     value="77%"      sub="letzte 5 Trainings"   semantic="success"/>
-        <Stat label="Tabellenrang"      value={myRow?myRow.rank+".":"-"} sub={myRow?TABLES[team]?.length+" Teams · "+myRow.pts+" Punkte":"Keine Tabelle"} semantic="info"/>
+        <Stat label="Tabellenrang"      value={myRow?myRow.rank+".":"-"} sub={myRow?(TABLES as Record<string, any[]>)[team]?.length+" Teams · "+myRow.pts+" Punkte":"Keine Tabelle"} semantic="info"/>
       </div>
       <div className="cc-grid-cards cc-mb-20">
 
@@ -289,7 +308,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
           <STitle>Anwesenheit letzte Anlässe</STitle>
           {ATT_LOG.slice(0,3).map((a,i)=>(
             <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
-              <Between mb={3}>
+              <Between>
                 <span className="cc-list-name">{a.date} <Chip text={a.type} color={a.type==="Spiel"?BL:GN}/></span>
                 <span style={{fontSize:14,fontWeight:800,color:R}}>{Math.round(a.present.length/(a.present.length+a.absent.length)*100)}%</span>
               </Between>
@@ -305,7 +324,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
             const s=e.schichten[0]; const filled=s.helfer.length, max=s.max;
             return(
               <div key={i} style={{marginBottom:i<2?10:0}}>
-                <Between mb={3}>
+                <Between>
                   <span className="cc-list-name">{e.name} <span className="cc-text-sub">{e.time+" Uhr"}</span></span>
                   <span style={{color:filled<max?R:GN,fontWeight:700}}>{filled}/{max}</span>
                 </Between>
@@ -322,22 +341,22 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}){
   );
 }
 
-function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
+function DashboardSpieler({account,meineTeams,myRosterId,setActive}: DashProps){
   const isMobile=useIsMobile();
   const player=ROSTER.find(p=>p.id===(myRosterId||1))||ROSTER.find(p=>p.id===1);
   const firstName=player?.firstName||account?.name?.split(" ")[0]||"Spieler";
   const team=meineTeams?.[0]||player?.teams?.[0]||"Cc-Junioren";
   const today="2026-05-23";
-  const parseD=(d)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";};
-  const parseDate2=(d)=>{const m=(d||"").match(/(\d{2})\.(\d{2})\.(\d{4})/);return m?`${m[3]}-${m[2]}-${m[1]}`:"";};
+  const parseD=(d: string)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";};
+  const parseDate2=(d: string)=>{const m=(d||"").match(/(\d{2})\.(\d{2})\.(\d{4})/);return m?`${m[3]}-${m[2]}-${m[1]}`:"";};
 
   /* Load persisted schichtenState */
-  const [schichtenState,setSchichtenState]=useState({});
-  const [aufgebotState,setAufgebotState]=useState({});
+  const [schichtenState,setSchichtenState]=useState<Record<string, string[]>>({});
+  const [aufgebotState,setAufgebotState]=useState<Record<string, number[]>>({});
   useEffect(()=>{
     (async()=>{
-      try{const res=await window.storage.get("helfer_schichten");if(res)setSchichtenState(JSON.parse(res.value));}catch(e){}
-      try{const res=await window.storage.get("aufgebot_state");if(res)setAufgebotState(JSON.parse(res.value));}catch(e){}
+      try{const res=await (window as unknown as {storage:{get(k:string):Promise<{value:string}|null>}}).storage.get("helfer_schichten");if(res)setSchichtenState(JSON.parse(res.value));}catch(e){}
+      try{const res=await (window as unknown as {storage:{get(k:string):Promise<{value:string}|null>}}).storage.get("aufgebot_state");if(res)setAufgebotState(JSON.parse(res.value));}catch(e){}
     })();
   },[]);
 
@@ -362,7 +381,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
       (e.schichten||[]).filter(s=>{
         const helfer=schichtenState[s.id]??s.helfer;
         return helfer.includes(meinName);
-      }).map(s=>({...s,einsatzDate:e.date||"",einsatzName:ev.name||"",ort:e.location||""}))
+      }).map(s=>({...s,einsatzDate:e.date||"",einsatzName:ev.name||"",ort:(e as {location?:string}).location||""}))
     )
   );
   const helferSoll=helperRecord?.soll??meineSchichtenMitDatum.length;
@@ -411,7 +430,7 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
             <div className="cc-detail-label" style={{marginTop:2}}>
               {`vs. ${nextAufgebot.opponent} · ${nextAufgebot.date} · ${nextAufgebot.time} Uhr`}
             </div>
-            {nextAufgebot.treffpunkt&&<Row gap={4} mt={3}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebot.treffpunkt}</Row>}
+            {nextAufgebot.treffpunkt&&<Row gap={4}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebot.treffpunkt}</Row>}
           </Col>
           <Chip text="Aufgebot" color="#4F46E5"/>
         </div>
@@ -441,18 +460,16 @@ function DashboardSpieler({account,meineTeams,myRosterId,setActive}){
   );
 }
 
-function DashboardEltern({account,meineTeams,setActive}){
+function DashboardEltern({account,meineTeams,setActive}: DashProps){
   const isMobile=useIsMobile();
   const parentName=account?.name?.split(" ")[0]||"Elternteil";
   /* Stufen-Checks */
-  const darfAnmelden=kannSchreiben?kannSchreiben("events"):true;
-  const darfVerwalten=kannVerwalten?kannVerwalten("events"):isTrainer||isAdmin;
   const kinder=account?.kinder||[];
   const today="2026-05-23";
-  const parseD=(d)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:""};
-  const [aufgebotState,setAufgebotState]=useState({});
+  const parseD=(d: string)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:""};
+  const [aufgebotState,setAufgebotState]=useState<Record<string, number[]>>({});
   useEffect(()=>{
-    (async()=>{try{const r=await window.storage.get("aufgebot_state");if(r)setAufgebotState(JSON.parse(r.value));}catch(e){}})();
+    (async()=>{try{const r=await (window as unknown as {storage:{get(k:string):Promise<{value:string}|null>}}).storage.get("aufgebot_state");if(r)setAufgebotState(JSON.parse(r.value));}catch(e){}})();
   },[]);
 
   return(
@@ -465,7 +482,7 @@ function DashboardEltern({account,meineTeams,setActive}){
 
       {kinder.map((kind,ki)=>{
         const team=kind.team||"Cc-Junioren";
-        const rosterId=kind.rosterId||1;
+        const rosterId=(kind as {rosterId?:number}).rosterId||1;
         const vorname=kind.name.split(" ")[0];
 
         /* Anwesenheit - nur Trainings */
@@ -492,12 +509,12 @@ function DashboardEltern({account,meineTeams,setActive}){
           .filter(e=>e.team===team&&e.type==="Spiel"&&parseD(e.date)>=today&&(aufgebotState[e.id]||[]).includes(rosterId))
           .sort((a,b)=>parseD(a.date).localeCompare(parseD(b.date)))[0];
 
-        const accentFor=(e)=>e.type==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.type==="Veranstaltung"?AM:GN;
+        const accentFor=(e: {type?:string;subtype?:string})=>e.type==="Spiel"?BL:e.subtype==="Vereinsanlass"?"#7C3AED":e.type==="Veranstaltung"?AM:GN;
 
         return(
-          <Col key={ki} mb={24}>
+          <Col key={ki}>
             {/* Kind-Header */}
-            <Row gap={8} mb={12}>
+            <Row gap={8}>
               <div style={{width:6,height:28,borderRadius:4,background:ACCENT,flexShrink:0}}/>
               <H2>{vorname} <span style={{fontSize:14,color:"var(--sub)",fontWeight:600}}>· {team}</span></H2>
             </Row>
@@ -534,7 +551,7 @@ function DashboardEltern({account,meineTeams,setActive}){
                   <div className="cc-detail-label" style={{marginTop:2}}>
                     {`vs. ${nextAufgebotSpiel.opponent} · ${nextAufgebotSpiel.date} · ${nextAufgebotSpiel.time} Uhr`}
                   </div>
-                  {nextAufgebotSpiel.treffpunkt&&<Row gap={4} mt={3}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebotSpiel.treffpunkt}</Row>}
+                  {nextAufgebotSpiel.treffpunkt&&<Row gap={4}><TI n="target" style={{marginRight:3}}/> Treffpunkt: {nextAufgebotSpiel.treffpunkt}</Row>}
                 </Col>
                 <div style={{background:"#4F46E5",color:"#fff",fontSize:14,fontWeight:700,padding:"3px 9px",borderRadius:20}}>Aufgebot</div>
               </div>

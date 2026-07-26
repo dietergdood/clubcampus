@@ -16,7 +16,7 @@ import { usePermissions } from "./domains/app/usePermissions.ts";
 import { useProfilCheck } from "./domains/app/useProfilCheck.ts";
 import { NAV_TARGET } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, getNavForRole, ProfileModal, getVereinsnameStatic } from "./modules/NavigationModul.tsx";
-import { Dashboard as DashboardJs } from "./modules/DashboardModul.jsx";
+import { Dashboard } from "./modules/DashboardModul.tsx";
 import { TeamView as TeamViewJs } from "./modules/TeamModul.jsx";
 import { TermineModul as TermineModulJs, SpielplanModul as SpielplanModulJs, TableTab } from "./modules/TermineModul.jsx";
 import { TrainingsplanModul as TrainingsplanModulJs } from "./modules/TrainingsplanModul.jsx";
@@ -24,7 +24,7 @@ import { TeamsVerwaltungModul as TeamsVerwaltungModulJs } from "./modules/TeamsV
 import { MembersView } from "./modules/MitgliederModul.tsx";
 import KaderModul from "./modules/KaderModul.jsx";
 import { HelferModul, HelpersList as HelpersListJs } from "./modules/HelferModul.jsx";
-import NachrichtenModulJs from "./modules/NachrichtenModul.jsx";
+import NachrichtenModul from "./modules/NachrichtenModul.tsx";
 import { PortalverwaltungView } from "./modules/PortalverwaltungModul.tsx";
 import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView } from "./modules/PlatzhalterModul.tsx";
 import type {
@@ -43,14 +43,12 @@ import type {
    MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
 type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
-const Dashboard             = DashboardJs             as unknown as JsComponent;
 const TeamView              = TeamViewJs              as unknown as JsComponent;
 const TermineModul          = TermineModulJs          as unknown as JsComponent;
 const SpielplanModul        = SpielplanModulJs        as unknown as JsComponent;
 const TrainingsplanModul    = TrainingsplanModulJs    as unknown as JsComponent;
 const TeamsVerwaltungModul  = TeamsVerwaltungModulJs  as unknown as JsComponent;
 const HelpersList           = HelpersListJs           as unknown as JsComponent;
-const NachrichtenModul      = NachrichtenModulJs      as unknown as JsComponent;
 
 /* Ebenfalls noch JS: TS liest die Initialwerte (null) als Typ. */
 const navTarget = NAV_TARGET as { tab: string|null; selectedSpiel: unknown };
@@ -391,7 +389,7 @@ function Portal({supabaseClient}: PortalProps){
       case "material":          return <MaterialView/>;
       case "lockers":           return <LockersView/>;
       case "media":             return <MediaView/>;
-      case "nachrichten":       return <NachrichtenModul sb={sb} role={role} account={account} dbTeams={dbTeams} gruppen={dbFunktionen.map(f=>f.portal_gruppen).filter(Boolean)} kannSchreiben={kannSchreiben("nachrichten")} kannVerwalten={kannVerwalten("nachrichten")}/>;
+      case "nachrichten":       return <NachrichtenModul sb={sb} role={role} account={account} dbTeams={dbTeams} gruppen={dbFunktionen.map(f=>f.portal_gruppen).filter((g): g is NonNullable<typeof g> => !!g)} kannSchreiben={kannSchreiben("nachrichten")} kannVerwalten={kannVerwalten("nachrichten")} vereinId={tenant?.id}/>;
       case "news":              return <NewsView role={role} meineTeams={meineTeams}/>;
       case "wiki":              return <WikiView/>;
       case "docs":              return <DocsView/>;
