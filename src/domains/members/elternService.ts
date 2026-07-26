@@ -60,7 +60,7 @@ export async function fetchKinderFuerElternteil(sb: SbClient, elternId: string) 
 export async function fetchKinderVollstaendigFuerElternteil(sb: SbClient, elternId: string) {
   const { data } = await sb.from("eltern_kinder")
     .select(`mitglied_id, mitglieder:mitglied_id(
-      id, vorname, nachname, name, geburtsdatum, nationalitaet, nationalitaet2,
+      id, vorname, nachname, geburtsdatum, nationalitaet, nationalitaet2,
       strasse, plz, ort, kanton, email, telefon, ahv_nr, profil_geprueft_at
     )`)
     .eq("eltern_id", elternId);

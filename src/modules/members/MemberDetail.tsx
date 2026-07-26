@@ -139,7 +139,7 @@ function MemberDetail({
   /* Kinder für Datenprüfung (Eltern-Sicht) */
   useEffect(() => {
     if (tab === "datenpruefung" && role === "eltern" && sb && eltern?.[0]?.id && kinderFuerPruefung.length === 0) {
-      fetchKinderVollstaendigFuerElternteil(sb, eltern[0].id).then(data => setKinderFuerPruefung(data as Mitglied[]));
+      fetchKinderVollstaendigFuerElternteil(sb, eltern[0].id).then(data => setKinderFuerPruefung(data as unknown as Mitglied[]));
     }
   }, [tab, role, eltern]);
 
