@@ -318,7 +318,7 @@ export function ListView<T extends ListRow = ListRow>({
         ) : isMobile && renderMobile ? (
           <div>{groups.map(({ key, label, members }) => (
             <div key={key}>
-              {hasGroup && label && <div className="cc-members-list-group-hdr">{label} <span className="cc-text-muted">{members.length}</span></div>}
+              {hasGroup && label && <div className="cc-members-list-group-hdr">{label} <span className="cc-text-muted">{(members||[]).length}</span></div>}
               {(members || []).map(row => renderMobile(row))}
             </div>
           ))}</div>

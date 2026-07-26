@@ -109,7 +109,7 @@ export function exportData(
         if(children) addGroups(children);
         else {
           const gc: GroupContext=type!=="none"?{type,key}:{type:"none",key:null};
-          members.forEach(m=>allRows.push(getExportRows(m,COLS,gc)));
+          members?.forEach(m=>allRows.push(getExportRows(m,COLS,gc)));
         }
         allRows.push(new Array<string>(headers.length).fill(""));
       });
@@ -130,7 +130,7 @@ export function exportData(
         grps.forEach(({key,label,type,members,children})=>{
           if(children){ addSheets(children); return; }
           const gc: GroupContext=type!=="none"?{type,key}:{type:"none",key:null};
-          const rows=members.map(m=>getExportRows(m,flatCols,gc));
+          const rows=(members||[]).map(m=>getExportRows(m,flatCols,gc));
           const sheetName=(label||key||"Gruppe").slice(0,31).replace(/[\/\*\?\[\]\:]/g,"");
           const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
           XLSX.utils.book_append_sheet(wb,ws,sheetName);

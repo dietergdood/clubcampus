@@ -111,7 +111,7 @@ export function exportListData<T extends ListRow = ListRow>(
         if (children) addGroups(children);
         else {
           const gc: GroupContext = type !== "none" ? { type, key } : { type: "none", key: null };
-          members.forEach(r => allRows.push(getRow(r, gc)));
+          members?.forEach(r => allRows.push(getRow(r, gc)));
         }
         allRows.push(new Array<string>(headers.length).fill(""));
       });
@@ -130,7 +130,7 @@ export function exportListData<T extends ListRow = ListRow>(
         grps.forEach(({ key, label, type, members, children }) => {
           if (children) { addSheets(children); return; }
           const gc: GroupContext = type !== "none" ? { type, key } : { type: "none", key: null };
-          const sheetRows = members.map(r => getRow(r, gc));
+          const sheetRows = (members||[]).map(r => getRow(r, gc));
           const name = (label || key || "Gruppe").slice(0, 31).replace(/[\/\*\?\[\]\:]/g, "");
           const ws = XLSX.utils.aoa_to_sheet([headers, ...sheetRows]);
           XLSX.utils.book_append_sheet(wb, ws, name);
