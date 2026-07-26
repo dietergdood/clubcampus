@@ -837,7 +837,6 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-kpi-breakdown-label{flex:1}
 .cc-kpi-breakdown-value{font-weight:500}
 .cc-teams-rollen-team{font-weight:600}
-.cc-teams-rollen-klammer{font-weight:400;color:var(--sub)}
 .cc-teams-rollen-sep{color:var(--sub);margin:0 4px}
 .cc-teams-rollen-rolle{color:var(--text-secondary,#555)}
 .cc-teams-rollen-more{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:3px;font-family:inherit;background:none;border:none;cursor:pointer;padding:0}.cc-teams-rollen-more:hover{color:var(--text)}
