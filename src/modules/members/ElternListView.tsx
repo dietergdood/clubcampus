@@ -27,8 +27,11 @@ function getKinderMitTeams(alleKinder: KindVerknuepfung[]): KindMitTeams[] {
     const name = m ? `${m.vorname||""} ${m.nachname||""}`.trim() : "?";
     const teams = (m?.kader||[])
       .filter(ka => ka.aktiv)
-      .map(ka => ka.teams?.kurzname||ka.teams?.name)
-      .filter((t): t is string => Boolean(t));
+      .map(ka => {
+        const t = Array.isArray(ka.teams) ? ka.teams[0] : ka.teams;
+        return t?.kurzname || t?.name || "";
+      })
+      .filter(Boolean);
     return { name, teams, mitglied_id: k.mitglied_id };
   });
 }
