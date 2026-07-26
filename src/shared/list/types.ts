@@ -68,7 +68,7 @@ export interface ListGroup<T extends ListRow = ListRow> {
   key: string;
   label: string;
   type: string;
-  members: T[];
+  members: T[] | null;
   children: ListGroup<T>[] | null;
 }
 
