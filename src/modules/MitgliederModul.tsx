@@ -121,7 +121,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     /* Pro Zeile Fehler auswerten — Löschen kann an FK-Verknüpfungen (Kader/
        Eltern) oder RLS scheitern; sonst meldete die UI faelschlich Erfolg. */
     const results=await Promise.allSettled(ids.map(id=>deleteMitglied(sb,id)));
-    const failed=results.filter(r=>r.status==="rejected"||r.value?.error).length;
+    const failed=results.filter(r=>r.status==="rejected"||r.value!==null).length;
     if(onReload) onReload();
     if(failed>0) await confirm({title:"Nicht alle gelöscht",message:`${failed} von ${ids.length} Mitgliedern konnten nicht gelöscht werden — vermutlich bestehende Verknüpfungen (Kader/Eltern) oder fehlende Rechte.`,confirmLabel:"OK"});
   }
@@ -130,7 +130,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok) return;
     const ids=[...selected].map(Number);
     const deaktiviertVon=account?.name||account?.email||"Administrator";
-    const { error }=await archiviereMitglied(sb,ids,deaktiviertVon);
+    const error=await archiviereMitglied(sb,ids,deaktiviertVon);
     if(error){
       await confirm({title:"Archivierung fehlgeschlagen",message:"Die ausgewählten Mitglieder konnten nicht archiviert werden — bitte erneut versuchen.",confirmLabel:"OK"});
       return;
