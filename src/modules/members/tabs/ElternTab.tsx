@@ -8,7 +8,7 @@
    - Entknüpfen des letzten Kindes → deleteElternkontakt
    - E-Mail Pflichtfeld
    ═══════════════════════════════════════════════════════════════ */
-import { Btn, Card, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.ts";
+import { Btn, Card, ModalOrSheet, DropMenu, EmptyState, useConfirm, PhoneInput } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { useState, useRef, useEffect } from "react";
 import { ElternSucheModal } from "../ElternSucheModal.tsx";
@@ -286,94 +286,82 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       {eltern.length===0&&<EmptyState icon="heart" title="Keine Elternkontakte" subtitle="Noch kein Elternkontakt für dieses Mitglied erfasst."/>}
       {eltern.map((e,i)=>{
         const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
+        /* elternkontakte hat historisch beide Spalten: telefon und tel */
         const tel = e.telefon||e.tel;
         const ac = elternAvColor(e.beziehung);
-        const isEditing = editEltern?.mode==="edit" && editEltern?.data?.id===e.id;
         return(
           <Card key={e.id||i}>
-            {/* Ansicht */}
-            {!isEditing&&(
-              <div className="cc-row cc-gap-12 cc-items-center">
-                <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
-                  {(name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
-                </div>
-                <div className="cc-flex-1 cc-col cc-gap-5">
-                  <div className="cc-text-bold cc-text-lg">{name}</div>
-                  <div className="cc-row cc-gap-8 cc-flex-wrap">
-                    {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
-                    {e.benutzer_id
-                      ?<span className="cc-status-active">Portal: Aktiv</span>
-                      :<span className="cc-status-inactive">Portal: Inaktiv</span>
-                    }
-                    {e.hauptkontakt&&<span className="cc-status-hauptkontakt">★ Hauptkontakt</span>}
-                  </div>
-                  {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{e.email}</a>}
-                  {tel&&<a href={`tel:${tel}`} className="cc-contact-link-plain"><TI n="phone" size={12}/>{tel}</a>}
-                </div>
-                {canEdit&&(
-                  <div className="cc-row cc-gap-4">
-                    <button
-                      className="cc-card-edit-btn"
-                      title="Bearbeiten"
-                      onClick={()=>setEditEltern({mode:"edit",data:{...e}})}
-                    ><TI n="pencil" size={13}/></button>
-                    <DropMenu items={[
-                      {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"star", onClick:()=>handleHauptkontakt(e)},
-                      "sep",
-                      {label:"Entknüpfen", icon:"unlink", danger:true, onClick:()=>handleEntknuepfen(e)},
-                    ]}/>
-                  </div>
-                )}
+            <div className="cc-row cc-gap-12 cc-items-center">
+              <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
+                {(name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
               </div>
-            )}
-            {/* Inline Edit */}
-            {isEditing&&(
-              <div className="cc-col cc-gap-10">
-                <div className="cc-row cc-gap-8 cc-items-center">
-                  <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
-                    {(name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
-                  </div>
-                  <div className="cc-text-bold cc-text-sm cc-flex-1">Elternkontakt bearbeiten</div>
-                  <button className="cc-card-edit-btn cc-card-edit-btn-active" onClick={()=>setEditEltern(null)}><TI n="x" size={13}/></button>
+              <div className="cc-flex-1 cc-col cc-gap-5">
+                <div className="cc-text-bold cc-text-lg">{name}</div>
+                <div className="cc-row cc-gap-8 cc-flex-wrap">
+                  {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
+                  {e.benutzer_id
+                    ?<span className="cc-status-active">Portal: Aktiv</span>
+                    :<span className="cc-status-inactive">Portal: Inaktiv</span>
+                  }
+                  {e.hauptkontakt&&<span className="cc-status-hauptkontakt">★ Hauptkontakt</span>}
                 </div>
-                <div className="cc-form-row">
-                  {([
-                    {k:"vorname",   l:"Vorname",   req:true},
-                    {k:"nachname",  l:"Nachname",  req:true},
-                    {k:"beziehung", l:"Beziehung", opts:["Mutter","Vater","Elternteil","Grossmutter","Grossvater","Vormund"]},
-                    {k:"email",     l:"E-Mail",    type:"email", req:true, full:true},
-                  ] as const).map(({k,l,type="text",opts,req,full}: {k:keyof ElternFormular;l:string;type?:string;opts?:readonly string[];req?:boolean;full?:boolean})=>(
-                    <div key={k} className={full?"cc-form-full":""}>
-                      <label className="cc-label">{l}{req&&<span className="cc-label-req"> *</span>}</label>
-                      {opts
-                        ?<select className="cc-input" value={String(editEltern!.data[k]||"")} onChange={ev=>setEditEltern(p=>p?{...p,data:{...p.data,[k]:ev.target.value}}:p)}>
-                          <option value="">– wählen –</option>
-                          {opts.map(o=><option key={o}>{o}</option>)}
-                        </select>
-                        :<input className="cc-input" type={type} value={String(editEltern!.data[k]||"")} onChange={ev=>setEditEltern(p=>p?{...p,data:{...p.data,[k]:ev.target.value}}:p)} placeholder={l}/>
-                      }
-                    </div>
-                  ))}
-                  <div className="cc-form-full">
-                    <label className="cc-label">Telefon</label>
-                    <PhoneInput value={editEltern!.data.telefon||""} onChange={v=>setEditEltern(p=>p?{...p,data:{...p.data,telefon:v}}:p)} showHint={false}/>
-                  </div>
-                </div>
-                <ElternPortalSection e={editEltern!.data} sb={sb} onReload={onReload}/>
-                {elternMsg&&<div className={`cc-badge ${elternMsg.ok?"cc-badge-success":"cc-badge-danger"}`}>{elternMsg.text}</div>}
-                <div className="cc-row cc-gap-8 cc-justify-end">
-                  <Btn onClick={()=>{setEditEltern(null);setElternMsg(null);}}>Abbrechen</Btn>
-                  <Btn variant="primary" onClick={saveEltern} disabled={elternSaving}>
-                    {elternSaving?"Speichert…":"Speichern"}
-                  </Btn>
-                </div>
+                {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{e.email}</a>}
+                {tel&&<a href={`tel:${tel}`} className="cc-contact-link-plain"><TI n="phone" size={12}/>{tel}</a>}
               </div>
-            )}
+              {canEdit&&(
+                <DropMenu items={[
+                  {label:"Bearbeiten", icon:"edit", onClick:()=>setEditEltern({mode:"edit",data:{...e}})},
+                  {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"star", onClick:()=>handleHauptkontakt(e)},
+                  "sep",
+                  {label:"Entknüpfen", icon:"unlink", danger:true, onClick:()=>handleEntknuepfen(e)},
+                ]}/>
+              )}
+            </div>
           </Card>
         );
       })}
 
-
+      {editEltern&&(
+        <ModalOrSheet open={true} onClose={()=>{setEditEltern(null);setElternMsg(null);}} maxWidth={480}>
+          <div className="cc-modal-hdr">
+            <div className="cc-modal-title">{editEltern.mode==="neu"?"Neuer Elternkontakt":"Elternkontakt bearbeiten"}</div>
+            <Btn variant="ghost" small onClick={()=>setEditEltern(null)}><TI n="x" size={14}/></Btn>
+          </div>
+          <div className="cc-modal-body">
+            <div className="cc-form-row">
+              {([
+                {k:"vorname",   l:"Vorname",    req:true},
+                {k:"nachname",  l:"Nachname",   req:true},
+                {k:"beziehung", l:"Beziehung",  opts:["Mutter","Vater","Elternteil","Grossmutter","Grossvater","Vormund"]},
+                {k:"email",     l:"E-Mail",     type:"email", req:true, full:true},
+              ] as const).map(({k,l,type="text",opts,req,full}: {k:keyof ElternFormular;l:string;type?:string;opts?:readonly string[];req?:boolean;full?:boolean})=>(
+                <div key={k} className={full?"cc-form-full":""}>
+                  <label className="cc-label">{l}{req&&<span className="cc-label-req"> *</span>}</label>
+                  {opts
+                    ?<select className="cc-input" value={String(editEltern.data[k]||"")} onChange={ev=>setEditEltern(p=>p?{...p,data:{...p.data,[k]:ev.target.value}}:p)}>
+                      <option value="">– wählen –</option>
+                      {opts.map(o=><option key={o}>{o}</option>)}
+                    </select>
+                    :<input className="cc-input" type={type} value={String(editEltern.data[k]||"")} onChange={ev=>setEditEltern(p=>p?{...p,data:{...p.data,[k]:ev.target.value}}:p)} placeholder={l}/>
+                  }
+                </div>
+              ))}
+              <div className="cc-form-full">
+                <label className="cc-label">Telefon</label>
+                <PhoneInput value={editEltern.data.telefon||""} onChange={v=>setEditEltern(p=>p?{...p,data:{...p.data,telefon:v}}:p)} showHint={false}/>
+              </div>
+            </div>
+            {editEltern.mode==="edit"&&<ElternPortalSection e={editEltern.data} sb={sb} onReload={onReload}/>}
+            {elternMsg&&<div className={`cc-badge ${elternMsg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{elternMsg.text}</div>}
+          </div>
+          <div className="cc-modal-ftr">
+            <Btn onClick={()=>setEditEltern(null)}>Abbrechen</Btn>
+            <Btn variant="primary" onClick={saveEltern} disabled={elternSaving}>
+              {elternSaving?"Speichert…":"Speichern"}
+            </Btn>
+          </div>
+        </ModalOrSheet>
+      )}
       {confirmDialog}
     </div>
   );
