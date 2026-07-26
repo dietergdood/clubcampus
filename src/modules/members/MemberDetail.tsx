@@ -8,6 +8,7 @@ import { useIsMobile, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import type { KaderRolleDb } from "../../domains/roles/roleUtils.ts";
+import { initials as computeInitials } from "../../domains/person/personUtils.ts";
 import {
   fetchBenutzerFuerMitglied, fetchBenutzerByEmail,
   portalZugangAktivieren, portalZugangDeaktivieren,
@@ -94,7 +95,7 @@ function MemberDetail({
   const setTab = (t: string) => setSelectedMember(prev => prev ? { ...prev, _tab: t } : prev);
   const canEdit = kannVerwalten("members") && !m._readonly;
   const canDelete = kannVerwalten("members");
-  const initials = (m.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const initials = computeInitials(m);
   const isMobile = useIsMobile();
 
   /* ── State ── */

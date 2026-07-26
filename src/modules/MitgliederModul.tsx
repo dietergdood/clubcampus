@@ -22,6 +22,7 @@ import type { ColDef, ExportFormat, FilterDef, FilterVals, RowId } from "../shar
 import type { MemberGroup } from "./members/memberGrouping.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../types.ts";
 import type { KaderRolleDb } from "../domains/roles/roleUtils.ts";
+import { vollname } from "../domains/person/personUtils.ts";
 
 /* Vereinsfunktionen mit Gruppe und Farbe — dieselbe Auswahl, die
    MemberListCell für die Funktionsgruppen-Badges braucht. */
@@ -75,7 +76,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       const m=dbMitglieder.find(x=>x.id===navToMember);
       if(m) setSelectedMember({
         id:m.id,
-        name:(`${m.vorname||""} ${m.nachname||""}`).trim()||"?",
+        name:vollname(m),
         role:m.rolle||"-",
         type:m.mitgliedtyp||"-",
         status:m.datenstatus||"-",
@@ -256,7 +257,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           const data=await fetchMitglied(sb,m.id);
-          if(data) setSelectedMember({...data,name:`${data.vorname||""} ${data.nachname||""}`.trim()||"?",_tab:"info",_readonly:true});
+          if(data) setSelectedMember({...data,name:vollname(data),_tab:"info",_readonly:true});
         }}/>
       ):(
       <>

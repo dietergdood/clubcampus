@@ -2,6 +2,7 @@
    ClubCampus — modules/members/memberMapper.ts
    Rohe DB-Mitglieder in UI-Objekte transformieren
    ═══════════════════════════════════════════════════════════════ */
+import { vollname, age } from "../../domains/person/personUtils.ts";
 import type { Mitglied, PortalRolle } from "../../types.ts";
 
 /* ⚠ eintrittsdatum und teams haben KEINE Spalte in mitglieder und sind auch
@@ -41,7 +42,7 @@ export function mapMembers(
     const dpStatus=m.profil_geprueft_at?"Geprueft":"Ausstehend";
     return {
       id:m.id,
-      name:(`${m.vorname||""} ${m.nachname||""}`).trim()||"?",
+      name:vollname(m),
       vorname:m.vorname, nachname:m.nachname,
       mitgliedschaft:m.mitgliedtyp||"-", type:m.mitgliedtyp||"-",
       rollen:[...rollenSet], kader_rollen_raw:m.kader_rollen||[], kader_eintraege:m.kader_eintraege||[],
@@ -55,7 +56,7 @@ export function mapMembers(
       ort:m.ort||"-", location:m.ort||"-", plz:m.plz||null,
       wohnort:m.plz&&m.ort?`${m.plz} ${m.ort}`:(m.ort||null),
       email:m.email, telefon:m.telefon, geburtsdatum:m.geburtsdatum,
-      alter:m.geburtsdatum?Math.floor((Date.now()-new Date(m.geburtsdatum).getTime())/(365.25*24*3600*1000)):null,
+      alter:age(m.geburtsdatum),
       geschlecht:m.geschlecht||null,
       nationalitaet:m.nationalitaet||"-", nationalitaet2:m.nationalitaet2||null,
       position:m.position, fairgate_id:m.fairgate_id, js_nr:m.js_nr,
