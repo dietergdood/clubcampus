@@ -83,6 +83,30 @@ export function buildElternGroups(rows: ElternRow[], groupBy: string[] | string,
   const firstLevel = Array.isArray(groupBy) ? groupBy[0] : groupBy;
   if(!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
 
+  /* Kind-Gruppierung: jedes Kind = eine Gruppe, Elternteil in mehreren möglich */
+  if(firstLevel === "kind_name") {
+    const map: Record<string, ElternRow[]> = {};
+    rows.forEach(r => {
+      r.kinder.forEach(k => {
+        const key = `${k.mitglied_id}`;
+        if(!map[key]) map[key] = [];
+        if(!map[key].find(x => x.id === r.id)) map[key].push(r);
+      });
+    });
+    const allKeys = Object.keys(map).sort((a,b) => {
+      const na = rows.flatMap(r=>r.kinder).find(k=>String(k.mitglied_id)===a)?.name||"";
+      const nb = rows.flatMap(r=>r.kinder).find(k=>String(k.mitglied_id)===b)?.name||"";
+      return na.localeCompare(nb, "de");
+    });
+    const orderedKeys = groupOrder[firstLevel]
+      ? [...groupOrder[firstLevel].filter(k => allKeys.includes(k)), ...allKeys.filter(k => !groupOrder[firstLevel].includes(k))]
+      : allKeys;
+    return orderedKeys.map(key => {
+      const kindName = rows.flatMap(r=>r.kinder).find(k=>String(k.mitglied_id)===key)?.name||key;
+      return { key, label:kindName, type:"kind", members:map[key], children:null };
+    });
+  }
+
   const map: Record<string, ElternRow[]> = {};
   rows.forEach(r => {
     const val = r[firstLevel];
@@ -122,9 +146,12 @@ export function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavT
         </td>;
       case "kind_name": {
         const teamGruppe = groupCtx?.type === "team" ? groupCtx.key : null;
-        const kinder = teamGruppe
-          ? e.kinder.filter(k => k.teams.includes(teamGruppe))
-          : e.kinder;
+        const kindGruppe = groupCtx?.type === "kind" ? groupCtx.key : null;
+        const kinder = kindGruppe
+          ? e.kinder.filter(k => String(k.mitglied_id) === kindGruppe)
+          : teamGruppe
+            ? e.kinder.filter(k => k.teams.includes(teamGruppe))
+            : e.kinder;
         const isExp = expandedKinder.has(e.id);
         const visible = isExp ? kinder : kinder.slice(0, 2);
         const rest = kinder.length - 2;

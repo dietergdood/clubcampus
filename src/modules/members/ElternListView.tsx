@@ -24,6 +24,7 @@ const COL_DEFS: ColDef[] = [
 const COL_GROUPS: ColGroup[] = [{ group:"Elternkontakt", cols:COL_DEFS }];
 
 const GROUP_OPTIONS: GroupOption[] = [
+  { val:"kind_name", label:"Kind"       },
   { val:"teams",     label:"Team"       },
   { val:"beziehung", label:"Beziehung"  },
   { val:"portal",    label:"Portal"     },
