@@ -19,6 +19,7 @@ import {
   updateBenutzerRolle, clearHauptkontaktFuerKind,
   logAenderung, logAktivitaet, AKTIVITAET_TYP
 } from "../../../domains/members/memberService.ts";
+import { vollname } from "../../../domains/person/personUtils.ts";
 import type { ElternkontaktMitLink } from "../../../domains/members/elternService.ts";
 import type { Account, Mitglied, Sb, SetState, TablesUpdate } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
@@ -246,7 +247,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
 
   async function handleHauptkontakt(e: ElternkontaktMitLink){
     if(!sb||!e.id) return;
-    const name = `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
+    const name = vollname(e);
     if(!e.hauptkontakt){
       await setHauptkontakt(sb, raw.id, e.id, vereinId);
       if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);

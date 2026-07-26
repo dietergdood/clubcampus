@@ -7,6 +7,7 @@ import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, R, RL } from "../../../constants.ts";
 import { updateMitgliedRolle, logAenderung, fetchBenutzerFuerMitglied } from "../../../domains/members/memberService.ts";
+import { formatDatum, formatDatumZeit } from "../../../domains/person/personUtils.ts";
 import type { Account, Mitglied, Sb } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
@@ -122,11 +123,11 @@ function PortalTab({
               </div>
               <div className="cc-info-row">
                 <span className="cc-info-key">Erstellt</span>
-                <span className="cc-info-val">{benutzer.created_at ? new Date(benutzer.created_at).toLocaleDateString("de-CH") : "—"}</span>
+                <span className="cc-info-val">{formatDatum(benutzer.created_at)}</span>
               </div>
               <div className="cc-info-row">
                 <span className="cc-info-key">Letztes Login</span>
-                <span className="cc-info-val">{benutzer.last_sign_in_at ? new Date(benutzer.last_sign_in_at).toLocaleString("de-CH",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Noch nie"}</span>
+                <span className="cc-info-val">{benutzer.last_sign_in_at ? formatDatumZeit(benutzer.last_sign_in_at) : "Noch nie"}</span>
               </div>
             </div>
             <button className="cc-btn-danger cc-w-full" onClick={handleUnlink} disabled={portalLoading}>
@@ -149,7 +150,7 @@ function PortalTab({
               </div>
               <div className="cc-info-row">
                 <span className="cc-info-key">Letztes Login</span>
-                <span className="cc-info-val">{benutzer.last_sign_in_at ? new Date(benutzer.last_sign_in_at).toLocaleString("de-CH",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Noch nie"}</span>
+                <span className="cc-info-val">{benutzer.last_sign_in_at ? formatDatumZeit(benutzer.last_sign_in_at) : "Noch nie"}</span>
               </div>
             </div>
             <button className="cc-btn-success cc-w-full" onClick={handleReactivate} disabled={portalLoading}>

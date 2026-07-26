@@ -48,13 +48,8 @@ export interface DbUser extends Omit<Tables<'benutzer'>, 'role'> {
   /* '__kein_zugang' setzt useDbUser, wenn zur Auth-ID keine Zeile in
      benutzer existiert — das ist kein Wert aus der Datenbank. */
   role: Rolle | '__kein_zugang';
-
-  /* ⚠ Diese drei Felder haben KEINE Spalte in der Tabelle benutzer.
-     useProfilCheck liest sie für Eltern-Konten, sie sind dort immer
-     undefined. Siehe offener Punkt in der Migration. */
-  vorname?: string;
-  nachname?: string;
-  telefon?: string | null;
+  /* vorname/nachname/telefon sind seit der SQL-Migration echte Spalten
+     in benutzer und kommen aus Tables<'benutzer'>. */
 }
 
 // ── Account (für Navigation/Rollenswitch) ────────────────────────
@@ -98,12 +93,9 @@ export interface Team extends Tables<'teams'> {
 }
 
 // ── Elternkontakt ────────────────────────────────────────────────
-export interface Elternkontakt extends Tables<'elternkontakte'> {
-  /* ⚠ Keine Spalte in elternkontakte. ElternTab schreibt supporter:true,
-     wenn das letzte Kind entknüpft wird (siehe ELTERN_LOGIK.md) — das
-     Update läuft heute ins Leere. Siehe offener Punkt in der Migration. */
-  supporter?: boolean;
-}
+/* supporter ist seit der SQL-Migration eine echte Spalte in
+   elternkontakte und kommt aus Tables<'elternkontakte'>. */
+export type Elternkontakt = Tables<'elternkontakte'>;
 
 // ── Kind ─────────────────────────────────────────────────────────
 export interface Kind {

@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { Btn, ModalOrSheet } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { sucheElternkontakte, linkKind } from "../../domains/members/memberService.ts";
+import { vollname } from "../../domains/person/personUtils.ts";
 import { elternAvColor } from "./tabs/ElternTab.tsx";
 import type { Sb } from "../../types.ts";
 
@@ -77,7 +78,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, onVerknuepf
           {results.length > 0 && (
             <div className="cc-col cc-gap-6 cc-mt-8">
               {results.map(e => {
-                const name = `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"?";
+                const name = vollname(e);
                 const initials = name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
                 const ac = elternAvColor(e.beziehung);
                 const kinder = e.eltern_kinder||[];

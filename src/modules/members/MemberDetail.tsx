@@ -2,12 +2,13 @@
    ClubCampus — modules/members/MemberDetail.tsx
    State-Verwaltung, Tab-Bar, Tab-Routing
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { ComponentProps } from "react";
-import { useIsMobile, useConfirm } from "../../theme.ts";
+import { useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import type { KaderRolleDb } from "../../domains/roles/roleUtils.ts";
+import { initials as computeInitials } from "../../domains/person/personUtils.ts";
 import {
   fetchBenutzerFuerMitglied, fetchBenutzerByEmail,
   portalZugangAktivieren, portalZugangDeaktivieren,
@@ -16,6 +17,7 @@ import {
   logAktivitaet, AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
 import { MemberHero } from "./MemberHero.tsx";
+import { MemberTabBar } from "./MemberTabBar.tsx";
 import { ElternTab } from "./tabs/ElternTab.tsx";
 import { InfoTab } from "./tabs/InfoTab.tsx";
 import { PortalTab } from "./tabs/PortalTab.tsx";
@@ -94,8 +96,7 @@ function MemberDetail({
   const setTab = (t: string) => setSelectedMember(prev => prev ? { ...prev, _tab: t } : prev);
   const canEdit = kannVerwalten("members") && !m._readonly;
   const canDelete = kannVerwalten("members");
-  const initials = (m.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  const isMobile = useIsMobile();
+  const initials = computeInitials(m);
 
   /* ── State ── */
   const [benutzer, setBenutzer] = useState<PortalBenutzer | null>(null);
@@ -108,25 +109,19 @@ function MemberDetail({
   const [teamDetails, setTeamDetails] = useState<KaderDetail[] | null>(null);
   const [allTeams, setAllTeams] = useState<TeamOption>([]);
   const [assignFunktionen, setAssignFunktionen] = useState<FunktionMitGruppe[]>([]);
-  const [mehrOpen, setMehrOpen] = useState(false);
-  const mehrRef = useRef<HTMLDivElement>(null);
 
   const [confirm, confirmDialog] = useConfirm();
 
-  /* ── Mehr-Menü schliessen bei Klick aussen ── */
-  useEffect(() => {
-    if (!mehrOpen) return;
-    const handler = (e: MouseEvent) => { if (mehrRef.current && e.target instanceof Node && !mehrRef.current.contains(e.target)) setMehrOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [mehrOpen]);
-
   /* ── Daten laden ── */
+  /* Benutzer: einmal beim Öffnen (fuer Hero + Tab-Zaehler) und erneut beim
+     Wechsel auf den Portal-Tab (mit Ladeindikator, um Aenderungen zu sehen).
+     Frueher zwei getrennte Effekte -> beim Direkteinstieg auf "portal"
+     ein doppelter Request. */
   useEffect(() => {
-    if (tab === "portal" && sb && raw.id) {
-      setPortalLoading(true);
-      fetchBenutzerFuerMitglied(sb, raw.id).then(data => { setBenutzer(data); setPortalLoading(false); });
-    }
+    if (!sb || !raw.id) return;
+    if (benutzer !== null && tab !== "portal") return;
+    if (tab === "portal") setPortalLoading(true);
+    fetchBenutzerFuerMitglied(sb, raw.id).then(data => { setBenutzer(data); setPortalLoading(false); });
   }, [tab, raw.id]);
 
   useEffect(() => {
@@ -147,11 +142,6 @@ function MemberDetail({
     }
   }, [raw.id]);
 
-  useEffect(() => {
-    if (sb && raw.id && benutzer === null) {
-      fetchBenutzerFuerMitglied(sb, raw.id).then(data => setBenutzer(data));
-    }
-  }, [raw.id]);
 
   /* ── Aktionen ── */
   /* ── Portal-Zugang Logik ─────────────────────────────────────
@@ -216,11 +206,6 @@ function MemberDetail({
     { key: "datenpruefung", label: "Datenprüfung",   icon: "shield-check" },
     { key: "verlauf",       label: "Verlauf",         icon: "history" },
   ];
-  const MOBILE_VISIBLE = 3;
-  const visibleTabs = isMobile ? allTabs.slice(0, MOBILE_VISIBLE) : allTabs;
-  const moreTabs = isMobile ? allTabs.slice(MOBILE_VISIBLE) : [];
-  const moreActive = moreTabs.some(t => t.key === tab);
-
   return (
     <>{confirmDialog}
     <div className="cc-col cc-gap-12 cc-member-detail-wrap">
@@ -237,63 +222,7 @@ function MemberDetail({
       />
 
       {/* Tab-Bar */}
-      <div className="cc-member-tabs">
-        {visibleTabs.map(t => (
-          <button
-            key={t.key}
-            className={`cc-member-tab${tab === t.key ? " cc-member-tab-active" : ""}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.icon && <TI n={t.icon} size={13}/>}
-            {t.label}
-          </button>
-        ))}
-        {moreTabs.length > 0 && (
-          <>
-            <div ref={mehrRef} className="cc-mehr-btn-wrap">
-              <button
-                className={`cc-member-tab${moreActive ? " cc-member-tab-active" : ""}`}
-                onClick={() => setMehrOpen(o => !o)}
-              >
-                <TI n="dots" size={13}/> Mehr
-              </button>
-              {mehrOpen && !isMobile && (
-                <div className="cc-mehr-dropdown">
-                  {moreTabs.map(t => (
-                    <button
-                      key={t.key}
-                      className={`cc-mehr-item${tab === t.key ? " cc-mehr-item-active" : ""}`}
-                      onClick={() => { setTab(t.key); setMehrOpen(false); }}
-                    >
-                      {t.icon && <TI n={t.icon} size={14}/>}
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {isMobile && mehrOpen && (
-              <div className="cc-mehr-sheet-overlay">
-                <div className="cc-mehr-sheet-backdrop" onMouseDown={() => setMehrOpen(false)}/>
-                <div className="cc-mehr-sheet-box">
-                  <div className="cc-mehr-sheet-handle"/>
-                  <div className="cc-mehr-sheet-title">Weitere Tabs</div>
-                  {moreTabs.map(t => (
-                    <button
-                      key={t.key}
-                      className={`cc-mehr-sheet-item${tab === t.key ? " cc-mehr-sheet-item-active" : ""}`}
-                      onMouseDown={e => { e.stopPropagation(); setTab(t.key); setMehrOpen(false); }}
-                    >
-                      {t.icon && <TI n={t.icon} size={18}/>}
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      <MemberTabBar tabs={allTabs} activeTab={tab} onTabChange={setTab}/>
 
       {/* Tab-Routing */}
       {tab === "info" && (
@@ -358,5 +287,3 @@ function MemberDetail({
 }
 
 export { MemberDetail };
-export const MembersView = MemberDetail;
-export default MemberDetail;

@@ -39,5 +39,3 @@ export function PersonAvatar({ person, size = 40, canEdit = false, onClick, clas
     </div>
   );
 }
-
-export default PersonAvatar;

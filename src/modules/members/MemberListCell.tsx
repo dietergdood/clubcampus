@@ -29,6 +29,7 @@
 import { TI } from "../../icons.tsx";
 import { Av, PortalBadge, DpBadge } from "../../theme.ts";
 import { memberFeld } from "./memberMapper.ts";
+import { formatDatum } from "../../domains/person/personUtils.ts";
 import type { MemberRow } from "./memberMapper.ts";
 import type { fetchPortalFunktionen } from "../../domains/members/memberService.ts";
 import { alsListe } from "./memberFilter.ts";
@@ -85,7 +86,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       case "portal": return <td key="portal" className="cc-members-td"><PortalBadge val={m.portal}/></td>;
       case "email": return <td key="email" className="cc-members-td cc-members-td-sub">{m.email||"—"}</td>;
       case "telefon": return <td key="telefon" className="cc-members-td cc-members-td-sub">{m.telefon||"—"}</td>;
-      case "geburtsdatum": return <td key="geburtsdatum" className="cc-members-td cc-members-td-sub">{m.geburtsdatum?new Date(m.geburtsdatum).toLocaleDateString("de-CH"):"—"}</td>;
+      case "geburtsdatum": return <td key="geburtsdatum" className="cc-members-td cc-members-td-sub">{formatDatum(m.geburtsdatum)}</td>;
       case "alter": return <td key="alter" className="cc-members-td cc-members-td-sub">{m.alter||"—"}</td>;
       case "geschlecht": return <td key="geschlecht" className="cc-members-td cc-members-td-sub">{m.geschlecht==="m"?"Männlich":m.geschlecht==="w"?"Weiblich":m.geschlecht||"—"}</td>;
       case "nationalitaet": return <td key="nationalitaet" className="cc-members-td cc-members-td-sub">{m.nationalitaet||"—"}</td>;
@@ -94,7 +95,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       case "spielerpass": return <td key="spielerpass" className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>;
       case "fairgate_id": return <td key="fairgate_id" className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>;
       case "js_nr": return <td key="js_nr" className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>;
-      case "eintritt": return <td key="eintritt" className="cc-members-td cc-members-td-sub">{m.eintritt?new Date(m.eintritt).toLocaleDateString("de-CH"):"—"}</td>;
+      case "eintritt": return <td key="eintritt" className="cc-members-td cc-members-td-sub">{formatDatum(m.eintritt)}</td>;
       case "nachname": return <td key="nachname" className="cc-members-td cc-members-td-sub">{m.nachname||"—"}</td>;
       case "vorname": return <td key="vorname" className="cc-members-td cc-members-td-sub">{m.vorname||"—"}</td>;
       case "heimatort": return <td key="heimatort" className="cc-members-td cc-members-td-sub">{m.heimatort||"—"}</td>;

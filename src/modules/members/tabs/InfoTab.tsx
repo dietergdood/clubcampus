@@ -13,6 +13,7 @@ import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
+import { formatDatum } from "../../../domains/person/personUtils.ts";
 import type { Account, Mitglied, Mitgliedtyp, Sb } from "../../../types.ts";
 import type { FieldVisibility } from "../../../shared/person/types.ts";
 
@@ -67,7 +68,7 @@ function InfoTab({
   const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editModeVerein };
 
   const MITGLIEDTYP_OPTS = (dbMitgliedtypen||[]).map(t=>({v:t.name,l:t.name}));
-  const eintrittsdatum = (raw as { eintrittsdatum?: string | null }).eintrittsdatum;
+  const eintrittsdatum = raw.eintrittsdatum;
 
   return (
     <div className="cc-col cc-gap-12">
@@ -137,14 +138,12 @@ function InfoTab({
             {fv.showFairgateId&&(
               <InlineField label="Fairgate-ID" field="fairgate_id" value={raw.fairgate_id||null} {...ieProps}/>
             )}
-            {/* ⚠ eintrittsdatum hat keine Spalte in mitglieder (siehe MitgliedRoh
-                in memberMapper) — die Zeile zeigt konstant "—". Bewusst so
-                belassen: es gibt kein Beitrittsdatum, das man stattdessen
-                lesen könnte; created_at ist das Anlagedatum des Datensatzes. */}
+            {/* eintrittsdatum ist seit der SQL-Migration vom 26.07.2026 eine
+                echte Spalte (siehe Bridge-Typ in types.ts). */}
             <div className="cc-info-row">
               <span className="cc-info-key">Eintritt</span>
               <span className={eintrittsdatum?"cc-info-val":"cc-info-val-empty"}>
-                {eintrittsdatum?new Date(eintrittsdatum).toLocaleDateString("de-CH"):"—"}
+                {formatDatum(eintrittsdatum)}
               </span>
             </div>
           </div>
