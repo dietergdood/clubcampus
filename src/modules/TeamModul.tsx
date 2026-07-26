@@ -347,7 +347,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
       )}
       {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial} dbMitglieder={dbMitglieder}/>}
       {tab==="roster"&&<KaderModulProp role={kannBearbeitenInTeam(activeTeamObj?.id)?"trainer":role} team={activeTeamObj||activeTeam} sb={sb} onSelectMember={onSelectMember} vereinId={vereinId}/>}
-      {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb} dbTeams={dbTeams}/>}
+      {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb} dbTeams={dbTeams} vereinId={vereinId}/>}
       {tab==="spielplan"&&(
         <div className="cc-flex-center" style={{flexDirection:"column",gap:20,alignItems:"stretch"}}>
           <div>

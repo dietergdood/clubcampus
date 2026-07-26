@@ -14,7 +14,7 @@ const ROSTER: any[] = ROSTER_SRC;
 const SCHEDULE: any[] = SCHEDULE_SRC;
 const ATT_EVENTS: any[] = ATT_EVENTS_SRC;
 const TABLES: Record<string, any[]> = TABLES_SRC as unknown as Record<string, any[]>;
-import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.jsx";
+import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.tsx";
 
 /* winStorage.storage ist eine App-eigene Bridge (kein Standard-Window-Feld). */
 const winStorage = window as unknown as {

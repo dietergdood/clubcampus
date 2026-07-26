@@ -19,7 +19,7 @@ import { SideNav, TopBar, MobileNav, getNavForRole, ProfileModal, getVereinsname
 import { Dashboard } from "./modules/DashboardModul.tsx";
 import { TeamView } from "./modules/TeamModul.tsx";
 import { TermineModul, SpielplanModul, TableTab } from "./modules/TermineModul.tsx";
-import { TrainingsplanModul as TrainingsplanModulJs } from "./modules/TrainingsplanModul.jsx";
+import { TrainingsplanModul } from "./modules/TrainingsplanModul.tsx";
 import { TeamsVerwaltungModul as TeamsVerwaltungModulJs } from "./modules/TeamsVerwaltungModul.jsx";
 import { MembersView } from "./modules/MitgliederModul.tsx";
 import KaderModul from "./modules/KaderModul.tsx";
@@ -43,7 +43,6 @@ import type {
    MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
 type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
-const TrainingsplanModul    = TrainingsplanModulJs    as unknown as JsComponent;
 const TeamsVerwaltungModul  = TeamsVerwaltungModulJs  as unknown as JsComponent;
 const HelpersList           = HelpersListJs           as unknown as JsComponent;
 
@@ -377,7 +376,7 @@ function Portal({supabaseClient}: PortalProps){
       case "mitglieder_config": return <PortalverwaltungView initialTab="mitglieder_config" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "fieldvis":          return <PortalverwaltungView initialTab="feldvis" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       case "portal":            return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id} dbPortalRollen={dbPortalRollen} onReloadRollen={loadDbPortalRollen} dbKaderRollen={dbKaderRollen} onReloadKaderRollen={loadDbKaderRollen}/>;
-      case "training":          return <TrainingsplanModul role={role} team={role==="trainer"?meineTeams?.[0]:undefined} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} dbTeams={dbTeams}/>;
+      case "training":          return <TrainingsplanModul role={role} team={role==="trainer"?meineTeams?.[0]:undefined} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} dbTeams={dbTeams} vereinId={tenant?.id}/>;
       case "schedule":          return <SpielplanModul role={role}/>;
       case "attendance_central":return <AttendanceCentral/>;
       case "events":            return <div style={{maxWidth:900}}><h1 style={{fontSize:21,fontWeight:800,margin:"0 0 6px"}}>Termine</h1><p style={{fontSize:14,color:"var(--sub)",margin:"0 0 18px"}}>Bitte alle notwendigen Termine zu- oder absagen.</p><TermineModul role={role} team={meineTeams?.[0]||"Cc-Junioren"} allTeams={meineTeams} myRosterId={myRosterId} account={account} setActive={setActive} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} onNavigateToSpiel={(spiel: unknown)=>{navTarget.tab="spielplan";navTarget.selectedSpiel=spiel;setActive("team");}}/></div>;

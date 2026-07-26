@@ -3,13 +3,26 @@
    Trainingsplan mit Gantt-Ansicht und Platzverwaltung
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
+import type { ReactNode, CSSProperties } from "react";
 import { ACCENT, ACCENT2, ACCENT20, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR  } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { useIsMobile, ModalOrSheet, Col, Row, H1, Btn, SectionLabel, Empty, Input, useConfirm, ConfirmDialog } from "../theme.ts";
-import { ATT_EVENTS, GANTT, INITIAL_PLAENE, TRAININGSPLAETZE_DEFAULT } from "../demoData.js";
+import type { Sb } from "../types.ts";
+import { ATT_EVENTS as ATT_EVENTS_SRC, GANTT, INITIAL_PLAENE as INITIAL_PLAENE_SRC, TRAININGSPLAETZE_DEFAULT } from "../demoData.js";
+
+/* demoData ist untypisiertes JS — als any geführt, damit die Legacy-Zugriffe
+   (Phantomfelder, dynamische Keys) erhalten bleiben. */
+const ATT_EVENTS: any[] = ATT_EVENTS_SRC;
+const INITIAL_PLAENE: any[] = INITIAL_PLAENE_SRC;
+
+/* winStorage.storage ist eine App-eigene Bridge (kein Standard-Window-Feld). */
+const winStorage = window as unknown as {
+  storage: { get(k: string): Promise<{value: string}|null>; set(k: string, v: string): Promise<void> };
+};
 
 /* Mutable reference — wird von PlaetzeView befüllt */
-const TRAININGSPLAETZE = TRAININGSPLAETZE_DEFAULT.map(p=>({...p}));
+interface Platz { id: number|string; name: string; active: boolean|null; halfn: string[]; }
+const TRAININGSPLAETZE: Platz[] = TRAININGSPLAETZE_DEFAULT.map((p: any)=>({...p}));
 
 /* ── Style-Konstanten ── */
 const S_SUB={fontSize:14,color:"var(--sub)"};
@@ -20,10 +33,27 @@ const S_BOLD={fontSize:14,fontWeight:600,color:"var(--text)"};
 
 /* ── Hilfskonstanten ── */
 
+/* ── Prop-Typen (slot/plan/event stammen aus demoData bzw. DB → any) ── */
+interface PlatzGanttProps {
+  plan?: any; wochenSlots: any[]; dayDates: any[]; DAYS: string[]; dagIndexes?: number[]|null; today?: any;
+  displayStart: number; displayEnd: number; teamFilter: string; TEAM_COLORS: Record<string, string>;
+  canEdit: boolean; onClickSlot?: (...args: any[])=>void; onNewSlot?: (...args: any[])=>void;
+  GB: string; GR: string; BK: string; BL: string;
+}
+interface TrainingsplanModulProps {
+  team?: string|null; role: string; kannSchreiben?: ((m: string)=>boolean)|null;
+  kannVerwalten?: ((m: string)=>boolean)|null; sb?: Sb; dbTeams?: any[]; vereinId?: string|null;
+}
+interface SlotModalProps {
+  slot: any; prefill?: any; plan?: any; teams?: any[]; kwKey?: string; kw?: number; monday?: any;
+  ausnahmen?: any; onSave?: ((...a: any[])=>void)|null; onDelete?: ((...a: any[])=>void)|null;
+  onAusnahme?: ((...a: any[])=>void)|null; onClose?: ((...a: any[])=>void)|null;
+}
+interface PlanEditorModalProps { plan?: any; plaene?: any[]; onSave?: ((...a: any[])=>void)|null; onClose?: ((...a: any[])=>void)|null; }
 
-function PlaetzeView({sb}){
-  const [plaetze, setPlaetze] = useState([]);
-  const [editId, setEditId] = useState(null);
+function PlaetzeView({sb, vereinId}: {sb?: Sb; vereinId?: string|null}){
+  const [plaetze, setPlaetze] = useState<Platz[]>([]);
+  const [editId, setEditId] = useState<number|string|null>(null);
   const [editName, setEditName] = useState("");
   const [editHaelften, setEditHaelften] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -36,9 +66,9 @@ function PlaetzeView({sb}){
         if(sb){
           const {data} = await sb.from("trainingsplaetze").select("*").order("sort_order").order("name");
           if(data&&data.length>0){
-            const mapped = data.map(function(p){ return {id:p.id, name:p.name, active:p.active, halfn:p.haelften||[]}; });
+            const mapped = data.map(function(p: any){ return {id:p.id, name:p.name, active:p.active, halfn:p.haelften||[]}; });
             setPlaetze(mapped);
-            TRAININGSPLAETZE.length=0; mapped.forEach(function(x){ TRAININGSPLAETZE.push(x); });
+            TRAININGSPLAETZE.length=0; mapped.forEach(function(x: any){ TRAININGSPLAETZE.push(x); });
             return;
           }
         }
@@ -46,35 +76,38 @@ function PlaetzeView({sb}){
         const r=localStorage.getItem("trainingsplaetze_custom");
         const loaded = r?JSON.parse(r):TRAININGSPLAETZE_DEFAULT.map(p=>Object.assign({},p));
         setPlaetze(loaded);
-        TRAININGSPLAETZE.length=0; loaded.forEach(function(x){ TRAININGSPLAETZE.push(x); });
+        TRAININGSPLAETZE.length=0; loaded.forEach(function(x: any){ TRAININGSPLAETZE.push(x); });
       }catch(e){}
     })();
   },[]);
 
-  async function save(p){
+  async function save(p: Platz[]){
     setPlaetze(p);
-    TRAININGSPLAETZE.length=0; p.forEach(function(x){ TRAININGSPLAETZE.push(x); });
-    if(sb){
+    TRAININGSPLAETZE.length=0; p.forEach(function(x: any){ TRAININGSPLAETZE.push(x); });
+    if(sb&&vereinId){
       try{
         // Upsert alle aktiven + inaktiven Plätze
         for(let i=0;i<p.length;i++){
           const platz=p[i];
+          /* verein_id ist in trainingsplaetze NOT NULL — ohne fiel das Insert
+             durch (verein_id-Regel); vereinId wird vom Parent durchgereicht. */
           await sb.from("trainingsplaetze").upsert({
-            id: typeof platz.id==="string"&&platz.id.startsWith("platz_")?undefined:platz.id,
+            id: (typeof platz.id==="string"&&platz.id.startsWith("platz_")?undefined:platz.id) as string|undefined,
             name: platz.name,
             haelften: platz.halfn||[],
             active: platz.active,
             sort_order: i,
+            verein_id: vereinId,
           });
         }
-      }catch(e){ console.warn("[FCH] savePlaetze:", e.message); }
-    } else {
+      }catch(e){ console.warn("[FCH] savePlaetze:", e instanceof Error ? e.message : e); }
+    } else if(!sb){
       try{localStorage.setItem("trainingsplaetze_custom", JSON.stringify(p));}catch(e){}
     }
   }
 
-  function parseHaelften(str){
-    return str.split(",").map(function(s){ return s.trim(); }).filter(Boolean);
+  function parseHaelften(str: string){
+    return str.split(",").map(function(s: any){ return s.trim(); }).filter(Boolean);
   }
 
   function handleAdd(){
@@ -84,30 +117,30 @@ function PlaetzeView({sb}){
     setNewName(""); setNewHaelften(""); setShowAdd(false);
   }
 
-  function handleRename(id){
+  function handleRename(id: number|string){
     if(!editName.trim()) return;
     const h = parseHaelften(editHaelften);
-    save(plaetze.map(function(p){ return p.id===id?Object.assign({},p,{name:editName.trim(),halfn:h}):p; }));
+    save(plaetze.map(function(p: any){ return p.id===id?Object.assign({},p,{name:editName.trim(),halfn:h}):p; }));
     setEditId(null); setEditName(""); setEditHaelften("");
   }
 
-  function handleToggle(id){
-    save(plaetze.map(function(p){ return p.id===id?Object.assign({},p,{active:!p.active}):p; }));
+  function handleToggle(id: number|string){
+    save(plaetze.map(function(p: any){ return p.id===id?Object.assign({},p,{active:!p.active}):p; }));
   }
 
-  function handleDelete(id){
+  function handleDelete(id: number|string){
     if(!window.confirm("Platz wirklich löschen?")) return;
-    save(plaetze.filter(function(p){ return p.id!==id; }));
+    save(plaetze.filter(function(p: any){ return p.id!==id; }));
   }
 
-  function moveUp(i){
+  function moveUp(i: number){
     if(i===0) return;
     const next=plaetze.slice();
     const tmp=next[i-1]; next[i-1]=next[i]; next[i]=tmp;
     save(next);
   }
 
-  function moveDown(i){
+  function moveDown(i: number){
     if(i===plaetze.length-1) return;
     const next=plaetze.slice();
     const tmp=next[i]; next[i]=next[i+1]; next[i+1]=tmp;
@@ -116,7 +149,7 @@ function PlaetzeView({sb}){
 
   return(
     <div style={{maxWidth:560}}>
-      <Row justify="space-between" align="center" mb={20}>
+      <Row justify="space-between" align="center" style={{marginBottom:20}}>
         <div>
           <H1 mb={4}>Trainingsplätze</H1>
           <p style={{fontSize:14,color:"var(--sub)",margin:0}}>Plätze verwalten, Hälften konfigurieren, aktivieren/deaktivieren</p>
@@ -127,7 +160,7 @@ function PlaetzeView({sb}){
       {/* Aktiv */}
       <div className="cc-label" style={{marginBottom:6,paddingLeft:2}}>Aktive Plätze</div>
       <div style={{background:"var(--surface)",border:"0.5px solid "+GB,borderRadius:12,overflow:"hidden",marginBottom:16}}>
-        {plaetze.filter(function(p){return p.active;}).length===0&&(
+        {plaetze.filter(function(p: any){return p.active;}).length===0&&(
           <div className="cc-empty">Keine aktiven Plätze</div>
         )}
         {plaetze.map(function(p,i){
@@ -142,16 +175,16 @@ function PlaetzeView({sb}){
                     <Input value={editHaelften} onChange={function(e){setEditHaelften(e.target.value);}} placeholder="leer = keine Hälften" style={{width:"100%",boxSizing:"border-box"}}/>
                   </div>
                   <Row gap={8}>
-                    <Btn className="cc-flex-1" onClick={function(){handleRename(p.id);}}>Speichern</Btn>
+                    <Btn style={{flex:1}} onClick={function(){handleRename(p.id);}}>Speichern</Btn>
                     <Btn variant="ghost" onClick={function(){setEditId(null);setEditName("");setEditHaelften("");}}>Abbrechen</Btn>
                   </Row>
                 </Col>
               ) : (
                 <Row gap={12} style={{padding:"11px 14px"}}>
                   <Col gap={4} className="cc-shrink-0">
-                    <button onClick={function(){moveUp(i);}} disabled={plaetze.filter(function(x){return x.active;}).indexOf(p)===0}
+                    <button onClick={function(){moveUp(i);}} disabled={plaetze.filter(function(x: any){return x.active;}).indexOf(p)===0}
                       style={{width:18,height:18,border:"0.5px solid "+GB,borderRadius:4,background:"var(--surface)",cursor:"pointer",fontSize:12,color:"var(--sub)",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>▲</button>
-                    <button onClick={function(){moveDown(i);}} disabled={plaetze.filter(function(x){return x.active;}).indexOf(p)===plaetze.filter(function(x){return x.active;}).length-1}
+                    <button onClick={function(){moveDown(i);}} disabled={plaetze.filter(function(x: any){return x.active;}).indexOf(p)===plaetze.filter(function(x: any){return x.active;}).length-1}
                       style={{width:18,height:18,border:"0.5px solid "+GB,borderRadius:4,background:"var(--surface)",cursor:"pointer",fontSize:12,color:"var(--sub)",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>▼</button>
                   </Col>
                   <div style={{width:10,height:10,borderRadius:"50%",background:GN,flexShrink:0,marginTop:2}}/>
@@ -181,7 +214,7 @@ function PlaetzeView({sb}){
       </div>
 
       {/* Inaktiv */}
-      {plaetze.some(function(p){return !p.active;})&&(
+      {plaetze.some(function(p: any){return !p.active;})&&(
         <>
           <div className="cc-label" style={{marginBottom:6,paddingLeft:2}}>Inaktive Plätze</div>
           <div style={{background:"var(--surface)",border:"0.5px solid "+GB,borderRadius:12,overflow:"hidden",marginBottom:16,opacity:0.7}}>
@@ -216,7 +249,7 @@ function PlaetzeView({sb}){
             <Input value={newHaelften} onChange={function(e){setNewHaelften(e.target.value);}} placeholder="z.B. Nordseite, Südseite" style={{width:"100%",boxSizing:"border-box"}}/>
           </div>
           <Row gap={8}>
-            <Btn className="cc-flex-1" onClick={handleAdd}>Hinzufügen</Btn>
+            <Btn style={{flex:1}} onClick={handleAdd}>Hinzufügen</Btn>
             <Btn variant="ghost" onClick={function(){setShowAdd(false);setNewName("");setNewHaelften("");}}>Abbrechen</Btn>
           </Row>
         </div>
@@ -229,10 +262,10 @@ function PlaetzeView({sb}){
   );
 }
 
-function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStart,displayEnd,teamFilter,TEAM_COLORS,canEdit,onClickSlot,onNewSlot,GB,GR,BK,BL}){
-  const aktivePlaetze = TRAININGSPLAETZE.filter(function(p){return p.active;});
+function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStart,displayEnd,teamFilter,TEAM_COLORS,canEdit,onClickSlot,onNewSlot,GB,GR,BK,BL}: PlatzGanttProps){
+  const aktivePlaetze = TRAININGSPLAETZE.filter(function(p: any){return p.active;});
   const idxMap = dagIndexes || DAYS.map(function(_,i){return i;});
-  const alleCols = aktivePlaetze.reduce(function(acc,p){
+  const alleCols = aktivePlaetze.reduce(function(acc: Array<{platz: Platz; half: string|null; key: string|number}>,p){
     const halfn = p.halfn||[];
     if(halfn.length > 0){
       halfn.forEach(function(h){ acc.push({platz:p, half:h, key:p.id+"_"+h}); });
@@ -240,7 +273,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
       acc.push({platz:p, half:null, key:p.id});
     }
     return acc;
-  },[]);
+  },[] as Array<{platz: Platz; half: string|null; key: string|number}>);
 
   const totalCols = alleCols.length;
   // In Tagesansicht breitere Spalten
@@ -250,7 +283,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
   const minColW = DAYS.length === 1 ? 100 : 52;
   const maxColW = DAYS.length === 1 ? 200 : 120;
   const [containerW, setContainerW] = useState(800);
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   useEffect(function(){
     function measure(){
       if(containerRef.current){
@@ -266,18 +299,18 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
   const dayW = totalCols * colW;
   const H15 = 18;
 
-  const slots15 = [];
+  const slots15: number[] = [];
   for(let h=displayStart; h<displayEnd; h++){
     slots15.push(h, h+0.25, h+0.5, h+0.75);
   }
 
-  function fmtT15(v){
+  function fmtT15(v: number){
     const hh = String(Math.floor(v)).padStart(2,"0");
     const mm = String(Math.round((v%1)*60)).padStart(2,"0");
     return hh+":"+mm;
   }
 
-  function fmtDate(d){
+  function fmtDate(d: Date){
     return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0");
   }
 
@@ -361,7 +394,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
           {DAYS.map(function(day,di){
             const realDi = idxMap[di];
             const isToday = dayDates[realDi].toDateString()===today.toDateString();
-            const daySlots = (wochenSlots[realDi]||[]).filter(function(s){ return teamFilter==="alle"||s.team===teamFilter; });
+            const daySlots = (wochenSlots[realDi]||[]).filter(function(s: any){ return teamFilter==="alle"||s.team===teamFilter; });
             const totalH = H15*slots15.length;
 
             return (
@@ -372,7 +405,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
                   const isFirstHaelfte = hasHaelften && col.half===platzHaelften[0];
                   const numHaelften = platzHaelften.length||1;
 
-                  const colSlots = daySlots.filter(function(s){
+                  const colSlots = daySlots.filter(function(s: any){
                     if(!hasHaelften){
                       return s.location===col.platz.name || (s.end_ort&&s.end_ort===col.platz.name);
                     }
@@ -400,7 +433,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
                         var rawTime = displayStart + relY / (H15*4);
                         var snapped = Math.round(rawTime*4)/4;
                         snapped = Math.max(displayStart, Math.min(displayEnd-1, snapped));
-                        onNewSlot({
+                        onNewSlot?.({
                           weekday: DAYS[di],
                           start: snapped,
                           end: Math.min(snapped+1.5, displayEnd),
@@ -415,7 +448,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
                           <div key={t} style={{position:"absolute", top:i*H15, left:0, right:0, height:H15, borderTop:i>0?"0.5px solid "+(isHour?"#D1CFC8":isHalf?"#E8E6DF":"#F2F1ED"):"none", pointerEvents:"none"}}/>
                         );
                       })}
-                      {colSlots.map(function(s,si){
+                      {colSlots.map(function(s: any,si: number){
                         const col2 = s.color||TEAM_COLORS[s.team]||BL;
                         var blocks = [];
                         if(!s.wechsel_zeit){
@@ -453,7 +486,7 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
                           var top = (b.start-displayStart)*H15*4;
                           var h = (b.end-b.start)*H15*4-2;
                           return (
-                            <div key={si+"_"+bi} onClick={function(){onClickSlot(s);}} title={s.team+" "+fmtT15(b.start)+"-"+fmtT15(b.end)}
+                            <div key={si+"_"+bi} onClick={function(){onClickSlot?.(s);}} title={s.team+" "+fmtT15(b.start)+"-"+fmtT15(b.end)}
                               style={{
                                 position:"absolute", top:top+1, left:2, right:b.right<1?b.right:2,
                                 height:Math.max(h,14),
@@ -485,29 +518,29 @@ function PlatzGantt({plan,wochenSlots,dayDates,DAYS,dagIndexes,today,displayStar
     </div>
   );
 }
-function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten, sb:supabase, dbTeams=[]}){
+function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten, sb:supabase, dbTeams=[], vereinId=null}: TrainingsplanModulProps){
   const START = 7, END = 22, H = 52;
   const isMobile = useIsMobile();
   const canEdit = role==="administrator"||role==="administration";
 
-  const [plaene, setPlaene] = useState([]);  // Leer starten — erst nach useEffect befüllen
+  const [plaene, setPlaene] = useState<any[]>([]);  // Leer starten — erst nach useEffect befüllen
   const [plaeneGeladen, setPlaeneGeladen] = useState(false);
-  const [aktiverPlan, setAktiverPlan] = useState("plan_1");
-  const [vorschauPlan, setVorschauPlan] = useState(null); // null = aktiver Plan, sonst Plan-ID
-  const [teamFilter, setTeamFilter] = useState(teamProp||"alle");
+  const [aktiverPlan, setAktiverPlan] = useState<string>("plan_1");
+  const [vorschauPlan, setVorschauPlan] = useState<string|null>(null); // null = aktiver Plan, sonst Plan-ID
+  const [teamFilter, setTeamFilter] = useState<string>(teamProp||"alle");
   const [kwOffset, setKwOffset] = useState(0);
-  const [ausnahmen, setAusnahmen] = useState({});
+  const [ausnahmen, setAusnahmen] = useState<Record<string, any[]>>({});
   const [ganttMode, setGanttMode] = useState("tag");
-  const [editSlot, setEditSlot] = useState(null);
+  const [editSlot, setEditSlot] = useState<any>(null);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [showAusnahmeModal, setShowAusnahmeModal] = useState(false);
   const [showPlanEditor, setShowPlanEditor] = useState(false);
-  const [editPlan, setEditPlan] = useState(null);
+  const [editPlan, setEditPlan] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteSlot, setDeleteSlot] = useState(null);
-  const [trainerNachrichten, setTrainerNachrichten] = useState([]);
-  const [dragState, setDragState] = useState(null);
-  const [newSlotPrefill, setNewSlotPrefill] = useState(null);
+  const [deleteSlot, setDeleteSlot] = useState<any>(null);
+  const [trainerNachrichten, setTrainerNachrichten] = useState<any[]>([]);
+  const [dragState, setDragState] = useState<any>(null);
+  const [newSlotPrefill, setNewSlotPrefill] = useState<any>(null);
   const [showPlanVerwaltung, setShowPlanVerwaltung] = useState(false);
   const [trainingsTab, setTrainungsTab] = useState("gantt");
   const [ansicht, setAnsicht] = useState("woche"); // "woche" | "tag"
@@ -524,10 +557,10 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
             // Slots pro Plan laden
             const {data: slotsData} = await supabase.from("trainingsplan_slots").select("*");
             const slots = slotsData || [];
-            const plaeneMitSlots = plaeneData.map(function(p){
+            const plaeneMitSlots = plaeneData.map(function(p: any){
               return {
                 ...p,
-                slots: slots.filter(function(s){ return s.template_id === p.id; }).map(function(s){
+                slots: slots.filter(function(s: any){ return s.template_id === p.id; }).map(function(s: any){
                   return {
                     id: s.id,
                     weekday: s.weekday,
@@ -546,7 +579,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
             });
             setPlaene(plaeneMitSlots);
             // Aktiven Plan setzen
-            const aktiver = plaeneMitSlots.find(function(p){ return p.active; });
+            const aktiver = plaeneMitSlots.find(function(p: any){ return p.active; });
             if(aktiver) setAktiverPlan(aktiver.id);
           } else {
             // Supabase leer — mit leerer Liste starten
@@ -555,8 +588,8 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
           // Ausnahmen laden
           const {data: ausnahmenData} = await supabase.from("trainingsplan_ausnahmen").select("*");
           if(ausnahmenData){
-            const ausnahmenMap = {};
-            ausnahmenData.forEach(function(a){
+            const ausnahmenMap: Record<string, any[]> = {};
+            ausnahmenData.forEach(function(a: any){
               // DB speichert year + week_nr separat → zu kwKey "2026_21" zusammensetzen
               const key = a.year+"_"+a.week_nr;
               if(!ausnahmenMap[key]) ausnahmenMap[key] = [];
@@ -586,23 +619,25 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
           }
         } else {
           // Kein Supabase — localStorage
-          const r = await window.storage.get("trainingsPlaene");
+          const r = await winStorage.storage.get("trainingsPlaene");
           if(r) setPlaene(JSON.parse(r.value));
           else setPlaene(INITIAL_PLAENE);  // Nur wenn gar keine Daten vorhanden
-          const a = await window.storage.get("trainingsAusnahmen");
+          const a = await winStorage.storage.get("trainingsAusnahmen");
           if(a) setAusnahmen(JSON.parse(a.value));
         }
-        const tn = await window.storage.get("trainer_benachrichtigungen");
-        if(tn){ const alle=JSON.parse(tn.value); setTrainerNachrichten(alle.filter(function(n){return !n.gelesen;})); }
-      }catch(e){ console.warn("[FCH] Trainingsplan laden Fehler:", e.message); }
+        const tn = await winStorage.storage.get("trainer_benachrichtigungen");
+        if(tn){ const alle=JSON.parse(tn.value); setTrainerNachrichten(alle.filter(function(n: any){return !n.gelesen;})); }
+      }catch(e){ console.warn("[FCH] Trainingsplan laden Fehler:", e instanceof Error ? e.message : e); }
     })();
   },[]);
 
   // Wochentag-String → JS getDay() Zahl (Mo=1...So=0)
-  const WEEKDAY_MAP = {"Mo":1,"Di":2,"Mi":3,"Do":4,"Fr":5,"Sa":6,"So":0};
+  const WEEKDAY_MAP: Record<string, number> = {"Mo":1,"Di":2,"Mi":3,"Do":4,"Fr":5,"Sa":6,"So":0};
 
-  async function syncTrainingsFromSlot(slotId, slot, plan){
-    if(!supabase||!slotId||!plan?.valid_from) return;
+  async function syncTrainingsFromSlot(slotId: any, slot: any, plan: any){
+    /* verein_id ist in trainings NOT NULL (verein_id-Regel) — ohne vereinId
+       kein Insert. */
+    if(!supabase||!slotId||!plan?.valid_from||!vereinId) return;
     try{
       // 1. Bestehende Trainings für diesen Slot löschen
       await supabase.from("trainings").delete().eq("trainingsplan_slot_id", slotId);
@@ -613,7 +648,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       const targetDay = WEEKDAY_MAP[slot.weekday];
       if(targetDay === undefined) return;
 
-      const trainingsToInsert = [];
+      const trainingsToInsert: any[] = [];
       const cur = new Date(from);
       // Zum ersten passenden Wochentag springen
       while(cur.getDay() !== targetDay) cur.setDate(cur.getDate()+1);
@@ -631,6 +666,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
           end_ort: slot.end_ort||null,
           abgesagt: false,
           trainingsplan_slot_id: slotId,
+          verein_id: vereinId,
         });
         cur.setDate(cur.getDate()+7);
       }
@@ -639,14 +675,15 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       for(let i=0; i<trainingsToInsert.length; i+=50){
         await supabase.from("trainings").insert(trainingsToInsert.slice(i,i+50));
       }
-    }catch(e){ console.warn("[FCH] syncTrainingsFromSlot Fehler:", e.message); }
+    }catch(e){ console.warn("[FCH] syncTrainingsFromSlot Fehler:", e instanceof Error ? e.message : e); }
   }
 
-  async function savePlaene(p){
+  async function savePlaene(p: any[]){
     setPlaene(p);
-    if(supabase){
+    /* verein_id ist in trainingsplan_vorlagen/_slots NOT NULL (verein_id-Regel). */
+    if(supabase&&vereinId){
       try{
-        const pMitEchtenIds = [];
+        const pMitEchtenIds: any[] = [];
         for(const plan of p){
           const planId = plan.id && !plan.id.startsWith("plan_") ? plan.id : crypto.randomUUID();
           await supabase.from("trainingsplan_vorlagen").upsert({
@@ -655,8 +692,9 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
             valid_from: plan.valid_from,
             valid_until: plan.valid_until,
             active: plan.active,
+            verein_id: vereinId,
           });
-          const slotsMitEchtenIds = [];
+          const slotsMitEchtenIds: any[] = [];
           if(plan.slots){
             for(const s of plan.slots){
               const slotId = s.id && !s.id.startsWith("slot_") ? s.id : crypto.randomUUID();
@@ -670,12 +708,13 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
                 location: s.location||null,
                 end_ort: s.end_ort||null,
                 half: s.half||null,
-                end_haelfte: s.end_half||null,
+                end_half: s.end_half||null,
                 wechsel_zeit: s.wechsel_zeit||null,
                 color: s.color||null,
                 valid_from_week: s.valid_from_week||null,
                 valid_from_week_year: s.valid_from_week ? parseInt(s.valid_from_week.split("_")[0]) : null,
                 valid_from_week_nr: s.valid_from_week ? parseInt(s.valid_from_week.split("_")[1]) : null,
+                verein_id: vereinId,
               });
               await syncTrainingsFromSlot(slotId, s, {...plan, id: planId});
               slotsMitEchtenIds.push({...s, id: slotId, template_id: planId});
@@ -685,27 +724,29 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
         }
         // State mit echten UUIDs aktualisieren
         setPlaene(pMitEchtenIds);
-        const aktiver = pMitEchtenIds.find(function(pl){ return pl.active; });
+        const aktiver = pMitEchtenIds.find(function(pl: any){ return pl.active; });
         if(aktiver) setAktiverPlan(aktiver.id);
-      }catch(e){ console.warn("[FCH] savePlaene Fehler:", e.message); }
-    } else {
-      try{ await window.storage.set("trainingsPlaene", JSON.stringify(p)); }catch(e){ localStorage.setItem("trainingsPlaene", JSON.stringify(p)); }
+      }catch(e){ console.warn("[FCH] savePlaene Fehler:", e instanceof Error ? e.message : e); }
+    } else if(!supabase){
+      try{ await winStorage.storage.set("trainingsPlaene", JSON.stringify(p)); }catch(e){ localStorage.setItem("trainingsPlaene", JSON.stringify(p)); }
     }
   }
 
-  async function saveAusnahmen(a){
+  async function saveAusnahmen(a: Record<string, any[]>){
     setAusnahmen(a);
-    if(supabase){
+    /* verein_id ist in trainingsplan_ausnahmen NOT NULL (verein_id-Regel). */
+    if(supabase&&vereinId){
       try{
         const alle = Object.entries(a).flatMap(function([kwKey, list]){
           const parts = kwKey.split("_");
           const year = parseInt(parts[0]);
           const week_nr = parseInt(parts[1]);
-          return list.map(function(ausnahme){ return {...ausnahme, year, week_nr}; });
+          return list.map(function(ausnahme: any){ return {...ausnahme, year, week_nr}; });
         });
         for(const ausnahme of alle){
           await supabase.from("trainingsplan_ausnahmen").upsert({
             id: ausnahme.id||undefined,
+            verein_id: vereinId,
             slot_id: ausnahme.slot_id||null,
             type: ausnahme.type,
             week_nr: ausnahme.week_nr,
@@ -724,25 +765,25 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
             zusatz_farbe: ausnahme.color||null,
           });
         }
-      }catch(e){ console.warn("[FCH] saveAusnahmen Fehler:", e.message); }
-    } else {
-      try{ await window.storage.set("trainingsAusnahmen", JSON.stringify(a)); }catch(e){}
+      }catch(e){ console.warn("[FCH] saveAusnahmen Fehler:", e instanceof Error ? e.message : e); }
+    } else if(!supabase){
+      try{ await winStorage.storage.set("trainingsAusnahmen", JSON.stringify(a)); }catch(e){}
     }
   }
 
   const today = new Date(2026,4,24);
-  function getMonday(d){ const day=d.getDay(); const diff=d.getDate()-day+(day===0?-6:1); return new Date(new Date(d).setDate(diff)); }
+  function getMonday(d: Date){ const day=d.getDay(); const diff=d.getDate()-day+(day===0?-6:1); return new Date(new Date(d).setDate(diff)); }
   const monday = new Date(getMonday(new Date(today)));
   monday.setDate(monday.getDate() + kwOffset*7);
   const DAYS = ["Mo","Di","Mi","Do","Fr","Sa","So"];
   const dayDates = DAYS.map(function(_,i){ const d=new Date(monday); d.setDate(d.getDate()+i); return d; });
-  function getKW(d){ const jan4=new Date(d.getFullYear(),0,4); const diff=d-jan4; return Math.ceil((diff/86400000+jan4.getDay()+1)/7); }
+  function getKW(d: Date){ const jan4=new Date(d.getFullYear(),0,4); const diff=d.getTime()-jan4.getTime(); return Math.ceil((diff/86400000+jan4.getDay()+1)/7); }
   const kw = getKW(monday);
-  function fmtDate(d){ return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0"); }
-  function fmtTime(v){ return String(Math.floor(v)).padStart(2,"0")+":"+(v%1===0?"00":"30"); }
+  function fmtDate(d: Date){ return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0"); }
+  function fmtTime(v: number){ return String(Math.floor(v)).padStart(2,"0")+":"+(v%1===0?"00":"30"); }
 
   const angezeigterPlanId = vorschauPlan || aktiverPlan;
-  const plan = plaene.find(function(p){return p.id===angezeigterPlanId;})||plaene[0];
+  const plan = plaene.find(function(p: any){return p.id===angezeigterPlanId;})||plaene[0];
   const isVorschau = vorschauPlan && vorschauPlan!==aktiverPlan;
   const kwKey = monday.getFullYear()+"_"+kw;
   const kwAusnahmen = ausnahmen[kwKey]||[];
@@ -756,10 +797,10 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
        "Frauen","Mädchen"];
   const alleTeams = Array.from(new Set([
     ...FCH_TEAMS,
-    ...(plan?.slots||[]).map(function(s){return s.team;})
+    ...(plan?.slots||[]).map(function(s: any){return s.team;})
   ])).sort();
-  const TEAM_COLORS = {};
-  (plan?.slots||[]).forEach(function(s){ TEAM_COLORS[s.team]=s.color; });
+  const TEAM_COLORS: Record<string, string> = {};
+  (plan?.slots||[]).forEach(function(s: any){ TEAM_COLORS[s.team]=s.color; });
 
   // Prüfe ob die aktuelle Woche innerhalb der Plan-Gültigkeit liegt
   const wocheStart = monday;
@@ -774,41 +815,41 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
   const wochenSlots = DAYS.map(function(day){
     if(!planGueltigDieseWoche) return [];
     const basis = (plan?.slots||[])
-      .filter(function(s){ return s.weekday===day; })
-      .filter(function(s){
+      .filter(function(s: any){ return s.weekday===day; })
+      .filter(function(s: any){
         // Gilt dieser Slot ab dieser KW?
         if(!s.valid_from_week) return true;
         const [cy,ck] = kwKey.split("_").map(Number);
         const [gy,gk] = s.valid_from_week.split("_").map(Number);
         return cy>gy || (cy===gy && ck>=gk);
       })
-      .filter(function(s){ return !kwAusnahmen.some(function(a){ return a.type==="absage"&&a.slot_id===s.id; }); })
-      .map(function(s){
-        const va = kwAusnahmen.find(function(a){ return a.type==="verschiebung"&&a.slot_id===s.id; });
-        const oa = kwAusnahmen.find(function(a){ return a.type==="location"&&a.slot_id===s.id; });
+      .filter(function(s: any){ return !kwAusnahmen.some(function(a: any){ return a.type==="absage"&&a.slot_id===s.id; }); })
+      .map(function(s: any){
+        const va = kwAusnahmen.find(function(a: any){ return a.type==="verschiebung"&&a.slot_id===s.id; });
+        const oa = kwAusnahmen.find(function(a: any){ return a.type==="location"&&a.slot_id===s.id; });
         if(va) return Object.assign({},s,{start:va.neue_start,end:va.neue_end,isVerschoben:true});
         if(oa) return Object.assign({},s,{location:oa.neuer_ort,isOrtGeaendert:true});
         return s;
       });
     const zusatz = kwAusnahmen
-      .filter(function(a){ return a.type==="zusatz"&&a.weekday===day; })
-      .map(function(a){ return Object.assign({},a,{isZusatz:true}); });
+      .filter(function(a: any){ return a.type==="zusatz"&&a.weekday===day; })
+      .map(function(a: any){ return Object.assign({},a,{isZusatz:true}); });
     return basis.concat(zusatz);
   });
 
   const DEFAULT_START = 14.5; // 14:30 Uhr
   const DEFAULT_END   = 22;   // 22:00 Uhr
-  const allStarts = wochenSlots.reduce(function(acc,ss){ return acc.concat(ss.map(function(s){return s.start;})); },[]);
-  const allEnds   = wochenSlots.reduce(function(acc,ss){ return acc.concat(ss.map(function(s){return s.end;})); },[]);
+  const allStarts = wochenSlots.reduce(function(acc,ss){ return acc.concat(ss.map(function(s: any){return s.start;})); },[]);
+  const allEnds   = wochenSlots.reduce(function(acc,ss){ return acc.concat(ss.map(function(s: any){return s.end;})); },[]);
   const minStart  = allStarts.length ? Math.min.apply(null,allStarts) : DEFAULT_START;
   const maxEnd    = allEnds.length   ? Math.max.apply(null,allEnds)   : DEFAULT_END;
   // Nur früher als Standard wenn ein Slot wirklich früher startet
   const displayStart = minStart < DEFAULT_START ? Math.max(7, Math.floor(minStart)) : DEFAULT_START;
   // Mindestens bis DEFAULT_END, sonst bis zum Ende des letzten Slots (aufgerundet)
   const displayEnd = Math.max(DEFAULT_END, Math.ceil(maxEnd));
-  const trainerAbsagen = kwAusnahmen.filter(function(a){ return a.type==="absage"&&a.von_termin; });
+  const trainerAbsagen = kwAusnahmen.filter(function(a: any){ return a.type==="absage"&&a.von_termin; });
 
-  function handleSlotSave(slot){
+  function handleSlotSave(slot: any){
     const cleanSlot = Object.assign({},slot);
     delete cleanSlot.nurDieseWoche;
 
@@ -827,7 +868,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
         };
         const next = Object.assign({},ausnahmen);
         next[kwKey] = (ausnahmen[kwKey]||[])
-          .filter(function(a){ return !(a.slot_id===editSlot.id&&a.type==="verschiebung"); })
+          .filter(function(a: any){ return !(a.slot_id===editSlot.id&&a.type==="verschiebung"); })
           .concat([ausnahme]);
         saveAusnahmen(next);
       } else {
@@ -847,10 +888,10 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       // Save permanently — ab der gewählten KW (valid_from)
       delete cleanSlot.selectedKwKey;
       const gueltigAb = slot.selectedKwKey || null; // kwKey format: "2026_21"
-      const updated = plaene.map(function(p){
+      const updated = plaene.map(function(p: any){
         if(p.id!==angezeigterPlanId) return p;
         return Object.assign({},p,{slots: editSlot&&editSlot.id
-          ? p.slots.map(function(s){ return s.id===editSlot.id?Object.assign({},s,cleanSlot):s; })
+          ? p.slots.map(function(s: any){ return s.id===editSlot.id?Object.assign({},s,cleanSlot):s; })
           : p.slots.concat([Object.assign({},cleanSlot,{id:"slot_"+Date.now(), valid_from_week:gueltigAb})])
         });
       });
@@ -860,8 +901,8 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     setEditSlot(null);
   }
 
-  function handleSlotDeleteInit(slotId){
-    const slot = (plan?.slots||[]).find(function(s){ return s.id===slotId; });
+  function handleSlotDeleteInit(slotId: any){
+    const slot = (plan?.slots||[]).find(function(s: any){ return s.id===slotId; });
     if(!slot) return;
     const td = new Date(2026,4,24);
     const zukunftigeEvents = ATT_EVENTS.filter(function(e){
@@ -877,10 +918,10 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     setShowSlotModal(false);
   }
 
-  async function handleSlotDeleteConfirm(slot, selectedEvIds){
-    const updated = plaene.map(function(p){
+  async function handleSlotDeleteConfirm(slot: any, selectedEvIds: any){
+    const updated = plaene.map(function(p: any){
       if(p.id!==angezeigterPlanId) return p;
-      return Object.assign({},p,{slots:p.slots.filter(function(s){ return s.id!==slot.id; })});
+      return Object.assign({},p,{slots:p.slots.filter(function(s: any){ return s.id!==slot.id; })});
     });
     savePlaene(updated);
     // Slot aus Supabase löschen
@@ -888,14 +929,14 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       try{
         await supabase.from("trainings").delete().eq("trainingsplan_slot_id", slot.id);
         await supabase.from("trainingsplan_slots").delete().eq("id", slot.id);
-      }catch(e){ console.warn("[FCH] Slot löschen Fehler:", e.message); }
+      }catch(e){ console.warn("[FCH] Slot löschen Fehler:", e instanceof Error ? e.message : e); }
     }
     if(selectedEvIds.size>0){
       try{
-        const cr = await window.storage.get("cancelled_events");
+        const cr = await winStorage.storage.get("cancelled_events");
         const cancelled = cr?JSON.parse(cr.value):{};
-        selectedEvIds.forEach(function(id){ cancelled[id]=true; });
-        await window.storage.set("cancelled_events",JSON.stringify(cancelled));
+        selectedEvIds.forEach(function(id: any){ cancelled[id]=true; });
+        await winStorage.storage.set("cancelled_events",JSON.stringify(cancelled));
       }catch(e){}
     }
     setShowDeleteDialog(false);
@@ -903,25 +944,25 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     setEditSlot(null);
   }
 
-  function handleAusnahmeSave(ausnahme, fuerAlleWochen){
+  function handleAusnahmeSave(ausnahme: any, fuerAlleWochen: any){
     if(fuerAlleWochen){
       if(ausnahme.type==="absage"){ handleSlotDeleteInit(ausnahme.slot_id); }
       else if(ausnahme.type==="verschiebung"){
-        const updated = plaene.map(function(p){
+        const updated = plaene.map(function(p: any){
           if(p.id!==angezeigterPlanId) return p;
-          return Object.assign({},p,{slots:p.slots.map(function(s){ return s.id===ausnahme.slot_id?Object.assign({},s,{start:ausnahme.neue_start,end:ausnahme.neue_end}):s; })});
+          return Object.assign({},p,{slots:p.slots.map(function(s: any){ return s.id===ausnahme.slot_id?Object.assign({},s,{start:ausnahme.neue_start,end:ausnahme.neue_end}):s; })});
         });
         savePlaene(updated);
       } else if(ausnahme.type==="location"){
-        const updated = plaene.map(function(p){
+        const updated = plaene.map(function(p: any){
           if(p.id!==angezeigterPlanId) return p;
-          return Object.assign({},p,{slots:p.slots.map(function(s){ return s.id===ausnahme.slot_id?Object.assign({},s,{ort:ausnahme.neuer_ort}):s; })});
+          return Object.assign({},p,{slots:p.slots.map(function(s: any){ return s.id===ausnahme.slot_id?Object.assign({},s,{ort:ausnahme.neuer_ort}):s; })});
         });
         savePlaene(updated);
       }
     } else {
       const next = Object.assign({},ausnahmen);
-      next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a){ return !(a.slot_id===ausnahme.slot_id&&a.type===ausnahme.type); }).concat([ausnahme]);
+      next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a: any){ return !(a.slot_id===ausnahme.slot_id&&a.type===ausnahme.type); }).concat([ausnahme]);
       saveAusnahmen(next);
       // Bei Absage: trainings-Eintrag auf abgesagt=true setzen
       if(ausnahme.type==="absage" && supabase && ausnahme.slot_id){
@@ -942,9 +983,9 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     setShowAusnahmeModal(false);
   }
 
-  function handleAusnahmeRemove(ausnahme){
+  function handleAusnahmeRemove(ausnahme: any){
     const next = Object.assign({},ausnahmen);
-    next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a){ return a!==ausnahme; });
+    next[kwKey] = (ausnahmen[kwKey]||[]).filter(function(a: any){ return a!==ausnahme; });
     saveAusnahmen(next);
     // Bei Absage-Rücknahme: trainings-Eintrag wieder auf abgesagt=false setzen
     if(ausnahme.type==="absage" && supabase && ausnahme.slot_id){
@@ -959,9 +1000,9 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     }
   }
 
-  function handlePlanSave(planData){
+  function handlePlanSave(planData: any){
     if(editPlan&&editPlan.id){
-      savePlaene(plaene.map(function(p){ return p.id===editPlan.id?Object.assign({},p,planData):p; }));
+      savePlaene(plaene.map(function(p: any){ return p.id===editPlan.id?Object.assign({},p,planData):p; }));
     } else {
       const newPlan = Object.assign({},planData,{id:"plan_"+Date.now(),slots:[]});
       savePlaene(plaene.concat([newPlan]));
@@ -971,29 +1012,29 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     setEditPlan(null);
   }
 
-  function handlePlanDuplizieren(plan){
+  function handlePlanDuplizieren(plan: any){
     const copy = Object.assign({},plan,{
       id:"plan_"+Date.now(),
       name:plan.name+" (Kopie)",
       active:false,
-      slots:(plan.slots||[]).map(function(s){ return Object.assign({},s,{id:"slot_"+Date.now()+Math.random()}); }),
+      slots:(plan.slots||[]).map(function(s: any){ return Object.assign({},s,{id:"slot_"+Date.now()+Math.random()}); }),
     });
     savePlaene(plaene.concat([copy]));
   }
 
-  function handlePlanAktivieren(id){
-    savePlaene(plaene.map(function(p){ return Object.assign({},p,{active:p.id===id}); }));
+  function handlePlanAktivieren(id: any){
+    savePlaene(plaene.map(function(p: any){ return Object.assign({},p,{active:p.id===id}); }));
     setAktiverPlan(id);
   }
 
-  function handlePlanLoeschen(id){
+  function handlePlanLoeschen(id: any){
     if(plaene.length<=1){ alert("Mindestens ein Plan muss vorhanden sein."); return; }
-    const next = plaene.filter(function(p){ return p.id!==id; });
+    const next = plaene.filter(function(p: any){ return p.id!==id; });
     savePlaene(next);
     if(aktiverPlan===id) setAktiverPlan(next[0].id);
   }
 
-  function handleDragStart(e, s){
+  function handleDragStart(e: any, s: any){
     if(!canEdit) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setDragState({slotId:s.id, duration:s.end-s.start, offsetY:e.clientY-rect.top});
@@ -1001,26 +1042,26 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
     e.dataTransfer.setData("slotId", s.id);
   }
 
-  function handleDrop(e, day){
+  function handleDrop(e: any, day: any){
     e.preventDefault();
     if(!dragState) return;
     const slotId = e.dataTransfer.getData("slotId");
-    const s = (plan?.slots||[]).find(function(x){ return x.id===slotId; });
+    const s = (plan?.slots||[]).find(function(x: any){ return x.id===slotId; });
     if(!s) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const relY = e.clientY - rect.top - dragState.offsetY;
     const rawTime = displayStart + relY / H;
     const newStart = Math.max(displayStart, Math.min(displayEnd-dragState.duration, Math.round(rawTime*4)/4));
     const newEnd = newStart + dragState.duration;
-    const updated = plaene.map(function(p){
+    const updated = plaene.map(function(p: any){
       if(p.id!==angezeigterPlanId) return p;
-      return Object.assign({},p,{slots:p.slots.map(function(x){ return x.id===slotId?Object.assign({},x,{weekday:day,start:newStart,end:newEnd}):x; })});
+      return Object.assign({},p,{slots:p.slots.map(function(x: any){ return x.id===slotId?Object.assign({},x,{weekday:day,start:newStart,end:newEnd}):x; })});
     });
     savePlaene(updated);
     setDragState(null);
   }
 
-  function Btn2({children, onClick, active, small, danger}){
+  function Btn2({children, onClick, active, small, danger}: {children?: ReactNode; onClick?: ()=>void; active?: boolean; small?: boolean; danger?: boolean}){
     return (
       <button onClick={onClick} style={{padding:small?"4px 10px":"6px 14px", borderRadius:20, border:"1px solid "+(danger?R:active?BK:GB), background:danger?RL:active?BK:"#fff", color:danger?R:active?"#fff":"#555", fontSize:14, fontWeight:active?600:400, cursor:"pointer", whiteSpace:"nowrap"}}>{children}</button>
     );
@@ -1038,7 +1079,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
             </div>
             <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:12}}>
               <div style={{fontSize:14,color:"var(--sub)",marginBottom:4}}>Aktiviere einen Plan um ihn im GANTT anzuzeigen. Dupliziere einen Plan als Vorlage fur eine neue Version.</div>
-              {plaene.map(function(p){
+              {plaene.map(function(p: any){
                 const isAktiv = p.id===aktiverPlan;
                 const slotCount = (p.slots||[]).length;
                 return(
@@ -1089,7 +1130,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       {/* === Tab-Navigation === */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",background:"var(--surface2)",borderRadius:10,padding:3,gap:4}}>
-          {[{v:"gantt",l:"GANTT"},{v:"plaetze",l:"Plätze",adminOnly:true},{v:"plaene",l:"Pläne",adminOnly:true}].map(function(t){
+          {[{v:"gantt",l:"GANTT"},{v:"plaetze",l:"Plätze",adminOnly:true},{v:"plaene",l:"Pläne",adminOnly:true}].map(function(t: any){
             if(t.adminOnly&&!canEdit) return null;
             var isActive = trainingsTab===t.v;
             return(
@@ -1112,7 +1153,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       {trainingsTab==="plaene"&&(
         <Col gap={12}>
           <div style={{fontSize:14,color:"var(--sub)",marginBottom:4}}>Aktiviere einen Plan um ihn im GANTT anzuzeigen. Dupliziere ihn als Vorlage fur eine neue Version.</div>
-          {plaene.map(function(p){
+          {plaene.map(function(p: any){
             const isAktiv = p.id===aktiverPlan;
             const slotCount = (p.slots||[]).length;
             return(
@@ -1153,7 +1194,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       )}
 
       {/* === Tab: Platze === */}
-      {trainingsTab==="plaetze"&&<PlaetzeView sb={supabase}/>}
+      {trainingsTab==="plaetze"&&<PlaetzeView sb={supabase} vereinId={vereinId}/>}
 
       {/* === Tab: GANTT === */}
       {trainingsTab==="gantt"&&(
@@ -1210,7 +1251,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
         <div className="cc-row">
           <Row>
             <button onClick={function(){
-              if(ansicht==="tag"){ setSelectedDay(function(d){return d===0?6:d-1;}); }
+              if(ansicht==="tag"){ setSelectedDay(function(d: any){return d===0?6:d-1;}); }
               else { setKwOffset(function(o){return o-1;}); }
             }} style={{width:28,height:28,borderRadius:"50%",border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14}}>&#8249;</button>
             <div style={{textAlign:"center",minWidth:130}}>
@@ -1227,7 +1268,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
               )}
             </div>
             <button onClick={function(){
-              if(ansicht==="tag"){ setSelectedDay(function(d){return d===6?0:d+1;}); }
+              if(ansicht==="tag"){ setSelectedDay(function(d: any){return d===6?0:d+1;}); }
               else { setKwOffset(function(o){return o+1;}); }
             }} style={{width:28,height:28,borderRadius:"50%",border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer",fontSize:14}}>&#8250;</button>
             {kwOffset!==0 && <button onClick={function(){setKwOffset(0);setSelectedDay(0);}} style={{padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",color:"var(--sub)",fontSize:14,cursor:"pointer"}}>Heute</button>}
@@ -1255,14 +1296,14 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
           <select value={teamFilter} onChange={function(e){setTeamFilter(e.target.value);}}
             style={{padding:"8px 14px",borderRadius:8,border:"1px solid "+GB,background:"var(--surface)",fontSize:14,outline:"none",cursor:"pointer",maxWidth:180}}>
             <option value="alle">Alle Mannschaften</option>
-            {alleTeams.map(function(t){
+            {alleTeams.map(function(t: any){
               return <option key={t} value={t}>{t}</option>;
             })}
           </select>
           <div className="cc-flex-1"/>
           {/* Ansicht-Toggle */}
           <div style={{display:"flex",background:"var(--surface2)",borderRadius:20,padding:3,gap:4}}>
-            {[{v:"woche",l:"Woche"},{v:"tag",l:"Tag"}].map(function(a){
+            {[{v:"woche",l:"Woche"},{v:"tag",l:"Tag"}].map(function(a: any){
               return(
                 <button key={a.v} onClick={function(){setAnsicht(a.v);}}
                   style={{padding:"5px 12px",borderRadius:20,border:"none",background:ansicht===a.v?"#fff":"transparent",color:ansicht===a.v?BK:"#999",fontWeight:ansicht===a.v?600:400,fontSize:14,cursor:"pointer",boxShadow:ansicht===a.v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>
@@ -1287,7 +1328,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
             teamFilter={teamFilter}
             TEAM_COLORS={TEAM_COLORS}
             canEdit={canEdit}
-            onClickSlot={function(s){ if(canEdit){setEditSlot(s);setShowSlotModal(true);}}}
+            onClickSlot={function(s: any){ if(canEdit){setEditSlot(s);setShowSlotModal(true);}}}
             onNewSlot={canEdit ? function(prefill){
               setEditSlot(null);
               setNewSlotPrefill(prefill);
@@ -1299,7 +1340,7 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
 
       {/* Legende */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
-        {alleTeams.filter(function(t){return teamFilter==="alle"||t===teamFilter;}).map(function(t){
+        {alleTeams.filter(function(t: any){return teamFilter==="alle"||t===teamFilter;}).map(function(t: any){
           return (
             <div key={t} style={{display:"flex",alignItems:"center",gap:4,fontSize:14,color:"var(--sub)"}}>
               <div style={{width:10,height:10,borderRadius:4,background:TEAM_COLORS[t]||BL}}/>
@@ -1310,14 +1351,14 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
       </div>
 
       {/* Trainer-Benachrichtigungen */}
-      {trainerNachrichten.filter(function(n){return n.type==="training_geloescht";}).length>0 && (
+      {trainerNachrichten.filter(function(n: any){return n.type==="training_geloescht";}).length>0 && (
         <div style={{marginTop:12,border:"1px solid #2563EB40",borderRadius:12,overflow:"hidden"}}>
           <div style={{background:"var(--surface)",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
             <span style={{fontSize:14,fontWeight:700,color:BL}}>Training dauerhaft aus dem Plan entfernt</span>
             <button onClick={async function(){
               try{
-                const nr = await window.storage.get("trainer_benachrichtigungen");
-                if(nr){ const alle=JSON.parse(nr.value).map(function(n){return Object.assign({},n,{gelesen:true});}); await window.storage.set("trainer_benachrichtigungen",JSON.stringify(alle)); setTrainerNachrichten([]); }
+                const nr = await winStorage.storage.get("trainer_benachrichtigungen");
+                if(nr){ const alle=JSON.parse(nr.value).map(function(n: any){return Object.assign({},n,{gelesen:true});}); await winStorage.storage.set("trainer_benachrichtigungen",JSON.stringify(alle)); setTrainerNachrichten([]); }
               }catch(e){}
             }} style={{fontSize:14,padding:"5px 12px",borderRadius:20,border:"1px solid #2563EB40",background:"var(--surface)",color:BL,cursor:"pointer"}}>Gelesen</button>
           </div>
@@ -1330,8 +1371,8 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
           <div style={{background:RL,padding:"10px 14px",borderBottom:"1px solid "+R+"20"}}>
             <span style={{fontSize:14,fontWeight:700,color:R}}>{trainerAbsagen.length} Training{trainerAbsagen.length>1?"s":""} diese Woche vom Trainer abgesagt</span>
           </div>
-          {trainerAbsagen.map(function(a,i){
-            const slot=(plan?plan.slots||[]:[]||[]).find(function(s){return s.id===a.slot_id;});
+          {trainerAbsagen.map(function(a: any,i: number){
+            const slot=(plan?plan.slots||[]:[]).find(function(s: any){return s.id===a.slot_id;});
             return (
               <div key={i} style={{padding:"9px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:i<trainerAbsagen.length-1?"0.5px solid "+GB:"none",background:"var(--surface)"}}>
                 <div>
@@ -1365,14 +1406,14 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
                 <div>
                   <div style={{fontSize:14,fontWeight:600,color:"var(--sub)",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Welche Termine absagen?</div>
                   <div style={{display:"flex",gap:8,marginBottom:10}}>
-                    <button onClick={function(){setDeleteSlot(function(s){return Object.assign({},s,{selectedEvIds:new Set(s.zukunftigeEvents.map(function(e){return e.id;}))});});}} style={{fontSize:14,padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Alle</button>
-                    <button onClick={function(){setDeleteSlot(function(s){return Object.assign({},s,{selectedEvIds:new Set()});});}} style={{fontSize:14,padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Keine</button>
+                    <button onClick={function(){setDeleteSlot(function(s: any){return Object.assign({},s,{selectedEvIds:new Set(s.zukunftigeEvents.map(function(e: any){return e.id;}))});});}} style={{fontSize:14,padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Alle</button>
+                    <button onClick={function(){setDeleteSlot(function(s: any){return Object.assign({},s,{selectedEvIds:new Set()});});}} style={{fontSize:14,padding:"5px 12px",borderRadius:20,border:"1px solid "+GB,background:"var(--surface)",cursor:"pointer"}}>Keine</button>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:200,overflowY:"auto"}}>
-                    {deleteSlot.zukunftigeEvents.map(function(e){
+                    {deleteSlot.zukunftigeEvents.map(function(e: any){
                       const selected = deleteSlot.selectedEvIds.has(e.id);
                       return (
-                        <div key={e.id} onClick={function(){setDeleteSlot(function(s){const next=new Set(s.selectedEvIds);selected?next.delete(e.id):next.add(e.id);return Object.assign({},s,{selectedEvIds:next});});}} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",borderRadius:8,border:"1px solid "+(selected?R:GB),background:selected?RL:"#fff",cursor:"pointer"}}>
+                        <div key={e.id} onClick={function(){setDeleteSlot(function(s: any){const next=new Set(s.selectedEvIds);selected?next.delete(e.id):next.add(e.id);return Object.assign({},s,{selectedEvIds:next});});}} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",borderRadius:8,border:"1px solid "+(selected?R:GB),background:selected?RL:"#fff",cursor:"pointer"}}>
                           <div style={{width:16,height:16,borderRadius:4,border:"1.5px solid "+(selected?R:"#ccc"),background:selected?R:"#fff",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                             {selected && <span style={{color:"#fff",fontSize:14,fontWeight:700}}>v</span>}
                           </div>
@@ -1436,17 +1477,17 @@ function TrainingsplanModul({team: teamProp, role, kannSchreiben, kannVerwalten,
 
 /* ── SlotModal & PlanEditorModal — hier definiert, von TermineModul importiert ── */
 
-const S_FIELD_LABEL={fontSize:11,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"};
-const S_INPUT_MODAL={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",boxSizing:"border-box",background:"var(--surface)",color:"var(--text)"};
-const S_SELECT_MODAL={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",background:"var(--surface)",color:"var(--text)"};
-const S_07_MODAL={display:"flex",gap:8,flexWrap:"wrap"};
-const S_08_MODAL={display:"flex",gap:12};
-const S_SUB_MODAL={fontSize:14,color:"var(--sub)",marginBottom:4};
+const S_FIELD_LABEL: CSSProperties={fontSize:11,fontWeight:600,color:"var(--sub)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"};
+const S_INPUT_MODAL: CSSProperties={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",boxSizing:"border-box",background:"var(--surface)",color:"var(--text)"};
+const S_SELECT_MODAL: CSSProperties={width:"100%",padding:"10px 12px",border:"0.5px solid var(--border)",borderRadius:8,fontSize:16,outline:"none",background:"var(--surface)",color:"var(--text)"};
+const S_07_MODAL: CSSProperties={display:"flex",gap:8,flexWrap:"wrap"};
+const S_08_MODAL: CSSProperties={display:"flex",gap:12};
+const S_SUB_MODAL: CSSProperties={fontSize:14,color:"var(--sub)",marginBottom:4};
 
-function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, onSave, onDelete, onAusnahme, onClose}){
+function SlotModal({slot, prefill, plan, teams=[], kwKey, kw, monday, ausnahmen, onSave, onDelete, onAusnahme, onClose}: SlotModalProps){
   const DAYS=["Mo","Di","Mi","Do","Fr","Sa","So"];
-  const TEAM_COLORS_MAP={};
-  (plan?.slots||[]).forEach(s=>{TEAM_COLORS_MAP[s.team]=s.color;});
+  const TEAM_COLORS_MAP: Record<string, string>={};
+  (plan?.slots||[]).forEach((s: any)=>{TEAM_COLORS_MAP[s.team]=s.color;});
   const isEdit=!!slot?.id;
   const isZusatz=slot?.isZusatz;
 
@@ -1459,10 +1500,10 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
   })();
 
   const baseMonday = monday ? new Date(monday) : new Date();
-  function getKWLabel(offset){
+  function getKWLabel(offset: number){
     const d = new Date(baseMonday);
     d.setDate(d.getDate() + offset*7);
-    function getKW(dt){ const j=new Date(dt.getFullYear(),0,4); return Math.ceil(((dt-j)/86400000+j.getDay()+1)/7); }
+    function getKW(dt: Date){ const j=new Date(dt.getFullYear(),0,4); return Math.ceil(((dt.getTime()-j.getTime())/86400000+j.getDay()+1)/7); }
     const kwNum = getKW(d);
     const dd = String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0");
     const de = new Date(d); de.setDate(de.getDate()+6);
@@ -1495,15 +1536,15 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
   const [verschiebungGrund, setVerschiebungGrund] = useState("");
 
   const TIMES = Array.from({length:(22-7)*2+1},(_,i)=>7+i*0.5);
-  const fmtT = v=>`${Math.floor(v).toString().padStart(2,"0")}:${v%1===0?"00":"30"}`;
+  const fmtT = (v: number)=>`${Math.floor(v).toString().padStart(2,"0")}:${v%1===0?"00":"30"}`;
   const COLORS = ["#C8102E","#2563EB","#059669","#7C3AED","#0891B2","#D97706","#64748B","#DB2777"];
 
   return(
-    <ModalOrSheet open onClose={onClose} maxWidth={480}>
+    <ModalOrSheet open onClose={onClose||undefined} maxWidth={480}>
       <div style={{padding:"0 0 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid var(--border)"}}>
           <div style={{fontWeight:700,fontSize:14}}>{isEdit?(isZusatz?"Zusatztraining":"Training bearbeiten"):"Training hinzufügen"}</div>
-          <Btn variant="ghost" onClick={onClose} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
+          <Btn variant="ghost" onClick={onClose||undefined} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
         </div>
         <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
           {!ausnahmeMode?(
@@ -1560,12 +1601,12 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                     <select value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value,half:""}))}
                       style={{...S_SELECT_MODAL,border:`1.5px solid ${form.location?GB:R+"80"}`}}>
                       <option value="" disabled>– Platz wählen –</option>
-                      {PLAETZE_LIVE.filter(p=>p.active).map(p=>(
+                      {PLAETZE_LIVE.filter((p: any)=>p.active).map((p: any)=>(
                         <option key={p.id} value={p.name}>{p.name}</option>
                       ))}
                     </select>
                   </div>
-                  {form.location&&(PLAETZE_LIVE.find(p=>p.name===form.location)?.halfn||[]).length>0&&(
+                  {form.location&&(PLAETZE_LIVE.find((p: any)=>p.name===form.location)?.halfn||[]).length>0&&(
                     <div>
                       <div style={S_SUB_MODAL}>Seite</div>
                       <div style={S_07_MODAL}>
@@ -1573,7 +1614,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                           style={{padding:"8px 14px",minHeight:40,borderRadius:8,border:`1.5px solid ${!form.half?BK:GB}`,background:!form.half?BK:"var(--surface)",color:!form.half?"#fff":"var(--sub)",fontSize:15,cursor:"pointer"}}>
                           Ganzer Platz
                         </button>
-                        {(PLAETZE_LIVE.find(p=>p.name===form.location)?.halfn||[]).map(h=>(
+                        {(PLAETZE_LIVE.find((p: any)=>p.name===form.location)?.halfn||[]).map((h: any)=>(
                           <button key={h} onClick={()=>setForm(f=>({...f,half:h}))}
                             style={{padding:"8px 14px",minHeight:40,borderRadius:8,border:`1.5px solid ${form.half===h?BL:GB}`,background:form.half===h?BL:"var(--surface)",color:form.half===h?"#fff":"var(--sub)",fontSize:15,cursor:"pointer"}}>
                             {h}
@@ -1604,12 +1645,12 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                       <div style={S_SUB_MODAL}>Platz</div>
                       <select value={form.end_ort} onChange={e=>setForm(f=>({...f,end_ort:e.target.value,end_half:""}))} style={S_SELECT_MODAL}>
                         <option value="">– gleich wie Phase 1 ({form.location}) –</option>
-                        {PLAETZE_LIVE.filter(p=>p.active).map(p=>(
+                        {PLAETZE_LIVE.filter((p: any)=>p.active).map((p: any)=>(
                           <option key={p.id} value={p.name}>{p.name}</option>
                         ))}
                       </select>
                     </div>
-                    {(PLAETZE_LIVE.find(p=>p.name===(form.end_ort||form.location))?.halfn||[]).length>0&&(
+                    {(PLAETZE_LIVE.find((p: any)=>p.name===(form.end_ort||form.location))?.halfn||[]).length>0&&(
                       <div>
                         <div style={S_SUB_MODAL}>Seite</div>
                         <div style={S_07_MODAL}>
@@ -1617,7 +1658,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                             style={{padding:"8px 14px",minHeight:40,borderRadius:8,border:`1.5px solid ${!form.end_half?BK:GB}`,background:!form.end_half?BK:"var(--surface)",color:!form.end_half?"#fff":"var(--sub)",fontSize:15,cursor:"pointer"}}>
                             Ganzer Platz
                           </button>
-                          {(PLAETZE_LIVE.find(p=>p.name===(form.end_ort||form.location))?.halfn||[]).map(h=>(
+                          {(PLAETZE_LIVE.find((p: any)=>p.name===(form.end_ort||form.location))?.halfn||[]).map((h: any)=>(
                             <button key={h} onClick={()=>setForm(f=>({...f,end_half:h}))}
                               style={{padding:"8px 14px",minHeight:40,borderRadius:8,border:`1.5px solid ${form.end_half===h?BL:GB}`,background:form.end_half===h?BL:"var(--surface)",color:form.end_half===h?"#fff":"var(--sub)",fontSize:15,cursor:"pointer"}}>
                               {h}
@@ -1647,12 +1688,12 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
               {showSaveDialog ? (
                 <div style={{background:"var(--surface2)",borderRadius:10,padding:"14px",display:"flex",flexDirection:"column",gap:12}}>
                   <div style={{fontSize:14,fontWeight:600,color:"var(--text)",marginBottom:2}}>{isEdit?"Änderung übernehmen für:":"Training gilt:"}</div>
-                  <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:true, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
+                  <button onClick={()=>{ onSave?.(Object.assign({},form,{nurDieseWoche:true, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
                     style={{padding:"8px 14px",borderRadius:10,border:`1.5px solid ${BL}`,background:"var(--surface)",color:BL,fontSize:14,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
                     <div style={{fontWeight:700}}>Nur diese Woche</div>
                     <div style={{fontSize:13,fontWeight:400,color:"var(--sub)",marginTop:2}}>{isEdit?"Wird als Ausnahme gespeichert":"Einmaliger Zusatztermin"}</div>
                   </button>
-                  <button onClick={()=>{ onSave(Object.assign({},form,{nurDieseWoche:false, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
+                  <button onClick={()=>{ onSave?.(Object.assign({},form,{nurDieseWoche:false, selectedKwKey:selectedKw.key})); setShowSaveDialog(false); }}
                     style={{padding:"10px 18px",borderRadius:10,border:`1.5px solid ${BK}`,background:BTN,color:BTN_TXT,fontSize:14,fontWeight:600,cursor:"pointer",textAlign:"left"}}>
                     <div style={{fontWeight:700}}>Dauerhaft (neuer Standard)</div>
                     <div style={{fontSize:13,fontWeight:400,color:"rgba(255,255,255,0.7)",marginTop:2}}>
@@ -1676,7 +1717,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                     style={{flex:1,padding:"9px",borderRadius:10,border:"0.5px solid var(--border)",background:"var(--surface)",color:"var(--sub)",fontSize:14,cursor:"pointer"}}>
                     <TI n="bolt"/> Ausnahme diese Woche
                   </button>
-                  <button onClick={onDelete}
+                  <button onClick={onDelete||undefined}
                     style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${R}`,background:RL,color:R,fontSize:14,cursor:"pointer"}}>
                     Löschen
                   </button>
@@ -1720,7 +1761,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                   <div style={S_FIELD_LABEL}>Neuer Platz</div>
                   <select value={verschiebungOrt} onChange={e=>setVerschiebungOrt(e.target.value)} style={S_INPUT_MODAL}>
                     <option value="" disabled>– Platz wählen –</option>
-                    {PLAETZE_LIVE.filter(p=>p.active).map(p=>(
+                    {PLAETZE_LIVE.filter((p: any)=>p.active).map((p: any)=>(
                       <option key={p.id} value={p.name}>{p.name}</option>
                     ))}
                   </select>
@@ -1736,7 +1777,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
                 <label htmlFor="fuerAlle" style={{fontSize:14,cursor:"pointer"}}>Als neuer Standard (alle zukünftigen Wochen)</label>
               </div>
               <Row align="flex-start" gap={8}>
-                <button onClick={()=>onAusnahme({
+                <button onClick={()=>onAusnahme?.({
                   type:ausnahmeTyp, slot_id:slot.id, weekday:slot.weekday, team:slot.team,
                   ...(ausnahmeTyp==="verschiebung"?{neue_start:verschiebungStart,neue_end:verschiebungEnd}:{}),
                   ...(ausnahmeTyp==="location"?{neuer_ort:verschiebungOrt}:{}),
@@ -1758,7 +1799,7 @@ function SlotModal({slot, prefill, plan, teams, kwKey, kw, monday, ausnahmen, on
   );
 }
 
-function PlanEditorModal({plan, plaene, onSave, onClose}){
+function PlanEditorModal({plan, plaene, onSave, onClose}: PlanEditorModalProps){
   const [form, setForm] = useState({
     name: plan?.name||"Neuer Trainingsplan",
     valid_from: plan?.valid_from||new Date().toISOString().split("T")[0],
@@ -1766,11 +1807,11 @@ function PlanEditorModal({plan, plaene, onSave, onClose}){
     active: plan?.active??true,
   });
   return(
-    <ModalOrSheet open onClose={onClose} maxWidth={480}>
+    <ModalOrSheet open onClose={onClose||undefined} maxWidth={480}>
       <div style={{padding:"0 0 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px 12px",borderBottom:"0.5px solid var(--border)"}}>
           <div style={{fontWeight:700,fontSize:14}}>{plan?.id?"Plan bearbeiten":"Neuer Plan"}</div>
-          <Btn variant="ghost" onClick={onClose} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
+          <Btn variant="ghost" onClick={onClose||undefined} style={{fontSize:20,padding:"4px 6px",color:"var(--sub)"}}>×</Btn>
         </div>
         <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
           <div>
@@ -1791,7 +1832,7 @@ function PlanEditorModal({plan, plaene, onSave, onClose}){
             <input type="checkbox" id="planAktiv" checked={form.active} onChange={e=>setForm(f=>({...f,active:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
             <label htmlFor="planAktiv" style={{fontSize:14,cursor:"pointer"}}>Plan aktiv (erscheint bei Teams als Termine)</label>
           </div>
-          <button onClick={()=>onSave(form)}
+          <button onClick={()=>onSave?.(form)}
             style={{width:"100%",padding:"14px",borderRadius:10,border:"none",background:BTN,color:BTN_TXT,fontSize:15,fontWeight:600,cursor:"pointer"}}>
             Speichern
           </button>
