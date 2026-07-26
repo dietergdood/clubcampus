@@ -4,9 +4,9 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PersonTeams } from '../../../shared/person/PersonTeams.jsx';
+import { PersonTeams } from '../../../shared/person/PersonTeams.tsx';
 
-vi.mock('../../../theme.jsx', () => ({
+vi.mock('../../../theme.ts', () => ({
   Btn: ({ children, onClick, disabled }) => <button onClick={onClick} disabled={disabled}>{children}</button>,
   Card: ({ children }) => <div>{children}</div>,
   ModalOrSheet: ({ open, children }) => open ? <div data-testid="modal">{children}</div> : null,
@@ -21,9 +21,12 @@ vi.mock('../../../theme.jsx', () => ({
   useConfirm: () => [vi.fn().mockResolvedValue(true), <div key="cd"/>],
   ConfirmDialog: () => null,
   useIsMobile: () => false,
+  /* Rendert bewusst nichts: die Rollennamen kaemen sonst doppelt vor
+     (einmal als Chip, einmal in der Auswahlliste) und getByText waere mehrdeutig. */
+  RollenAuswahlListe: () => null,
 }));
 
-vi.mock('../../../icons.jsx', () => ({
+vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 
@@ -31,7 +34,7 @@ vi.mock('../../../domains/season/seasonUtils.js', () => ({
   currentSeason: () => '2026',
 }));
 
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   fetchKaderFuerMitglied: vi.fn().mockResolvedValue([]),
   fetchAktiveTeams: vi.fn().mockResolvedValue([]),
   fetchPortalFunktionenMitGruppe: vi.fn().mockResolvedValue([]),
@@ -47,7 +50,7 @@ vi.mock('../../../domains/members/memberService.js', () => ({
   },
 }));
 
-import { upsertKader, deaktiviereKader, logAktivitaet } from '../../../domains/members/memberService.js';
+import { upsertKader, deaktiviereKader, logAktivitaet } from '../../../domains/members/memberService.ts';
 
 const RAW = { id: 1 };
 

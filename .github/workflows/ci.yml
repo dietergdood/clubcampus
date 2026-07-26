@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, ts-migration]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Typecheck, Tests & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # 22 LTS: deckt die engines-Anforderungen von rolldown/oxc (>=20.19 / 22.12)
+          # ab und vermeidet die Node-20-Deprecation der Runner-Actions.
+          node-version: 22
+          cache: npm
+
+      # `npm ci` scheitert hier am bekannten npm-Cross-Platform-Bug: die
+      # package-lock.json wurde unter Windows erzeugt, und npms strikte
+      # Prüfung der optionalen Native-Bindings (esbuild/rolldown/rollup)
+      # schlägt beim Install auf Linux fehl. `npm install` installiert
+      # dieselbe Lockfile deterministisch (Vercel baut so denselben Commit
+      # auf Linux erfolgreich). `--no-save` verhindert Lockfile-Drift.
+      - name: Install dependencies
+        run: npm install --no-save --no-audit --no-fund
+
+      # Kernschritt: haelt die TypeScript-Typsicherheit gruen.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Fehlende Konstanten-Imports pruefen
+        run: npm run check:imports
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

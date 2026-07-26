@@ -3,7 +3,7 @@
    Unit-Tests für mapMembers
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from 'vitest';
-import { mapMembers } from '../memberMapper.js';
+import { mapMembers } from '../memberMapper.ts';
 
 const DB_PORTAL_ROLLEN = [
   { name: 'trainer', label: 'Trainer/in' },
@@ -22,7 +22,7 @@ const dbMitglied = {
   kader_teams: [{ name: '1. Mannschaft', kurz: 'FCH 1' }],
   teams: [],
   hat_portal_zugang: true, hat_benutzer: true,
-  datenstatus: 'geprüft', geprueft: true,
+  datenstatus: 'geprüft', profil_geprueft_at: '2026-07-01T10:00:00Z',
   email: 'adrian@fch.ch', telefon: '079 123 45 67',
   geburtsdatum: '1985-03-15',
   geschlecht: 'm',
@@ -101,19 +101,29 @@ describe('mapMembers', () => {
   });
 
   describe('Datenprüfungs-Status', () => {
-    it('setzt Geprueft wenn geprueft=true', () => {
+    /* Quelle ist profil_geprueft_at (seit Session 17). Das frühere Feld
+       "geprueft" gibt es in mitglieder nicht — die alte Fixture hat es
+       erfunden, wodurch dieser Test grün war, obwohl die Spalte in der App
+       für jedes Mitglied "Ausstehend" zeigte. datenstatus ist veraltet. */
+    it('setzt Geprueft wenn profil_geprueft_at gesetzt ist', () => {
       const [m] = mapMembers([dbMitglied], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
       expect(m.datenpruefung).toBe('Geprueft');
     });
 
-    it('setzt Ausstehend wenn geprueft=false', () => {
-      const [m] = mapMembers([{ ...dbMitglied, geprueft: false }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
+    it('setzt Ausstehend wenn profil_geprueft_at null ist', () => {
+      const [m] = mapMembers([{ ...dbMitglied, profil_geprueft_at: null }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
       expect(m.datenpruefung).toBe('Ausstehend');
     });
 
-    it('setzt Ausstehend wenn geprueft=null', () => {
-      const [m] = mapMembers([{ ...dbMitglied, geprueft: null }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
+    it('setzt Ausstehend wenn profil_geprueft_at fehlt', () => {
+      const { profil_geprueft_at, ...ohne } = dbMitglied;
+      const [m] = mapMembers([ohne], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
       expect(m.datenpruefung).toBe('Ausstehend');
+    });
+
+    it('ignoriert das veraltete datenstatus-Feld', () => {
+      const [m] = mapMembers([{ ...dbMitglied, datenstatus: 'Unvollstaendig' }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
+      expect(m.datenpruefung).toBe('Geprueft');
     });
   });
 

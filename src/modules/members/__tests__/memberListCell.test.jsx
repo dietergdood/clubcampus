@@ -5,13 +5,13 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { makeMemberRenderCell } from '../MemberListCell.jsx';
+import { makeMemberRenderCell } from '../MemberListCell.tsx';
 
 // ── Mocks ────────────────────────────────────────────────────────
-vi.mock('../../../icons.jsx', () => ({
+vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n} />,
 }));
-vi.mock('../../../theme.jsx', () => ({
+vi.mock('../../../theme.ts', () => ({
   Av: ({ name }) => <span data-av={name}>{name?.slice(0,2)}</span>,
   PortalBadge: ({ val }) => <span data-portal={val}>{val}</span>,
   DpBadge: ({ val }) => <span data-dp={val}>{val}</span>,

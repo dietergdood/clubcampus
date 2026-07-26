@@ -3,7 +3,7 @@
    Unit-Tests für filterMembers und sortMembers
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from 'vitest';
-import { filterMembers, sortMembers } from '../memberFilter.js';
+import { filterMembers, sortMembers } from '../memberFilter.ts';
 
 // ── Testdaten ────────────────────────────────────────────────────
 const ROLLE_LABEL = {

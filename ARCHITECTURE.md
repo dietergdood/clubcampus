@@ -612,12 +612,13 @@ Nach **jedem** grossen Refactoring (Auslagern von Komponenten, Hooks, Dateien ve
 
 ```bash
 # 1. Fehlende Konstanten-Imports prüfen
-python3 scripts/check_imports.py
+npm run check:imports
 
 # 2. Automatisch fixen
-python3 scripts/check_imports_fix.py
+node scripts/check-imports.mjs --fix
 
-# 3. Build verifizieren
+# 3. Typen und Build verifizieren
+npm run typecheck
 npm run build
 ```
 
@@ -625,6 +626,10 @@ npm run build
 durch `clubcampus.jsx` geerbt. Seit dem Refactoring ist jedes Modul eigenständig und muss
 Konstanten explizit importieren. Das Skript findet fehlende Imports automatisch.
 
-**Scripts:** `scripts/check_imports.py` (prüfen) und `scripts/check_imports_fix.py` (auto-fix)
+**Script:** `scripts/check-imports.mjs` (prüfen, mit `--fix` auto-fix). Ersetzt die
+früheren Python-Skripte — die lasen noch `src/constants.js` und setzten eine
+Python-Installation voraus. Für `.ts`/`.tsx`-Dateien findet `npm run typecheck`
+dasselbe Problem zuverlässiger; das Skript deckt die noch nicht migrierten
+`.js`/`.jsx`-Dateien ab.
 
 **Claude macht dies automatisch** am Ende jeder Session die ein Refactoring enthält.

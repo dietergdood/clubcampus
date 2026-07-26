@@ -4,13 +4,13 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useInlineEdit } from '../../../domains/members/useInlineEdit.js';
+import { useInlineEdit } from '../../../domains/members/useInlineEdit.ts';
 
 // ── Mock updateMitglied ──────────────────────────────────────────
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   updateMitglied: vi.fn().mockResolvedValue(true),
 }));
-import { updateMitglied } from '../../../domains/members/memberService.js';
+import { updateMitglied } from '../../../domains/members/memberService.ts';
 
 const sb = {};
 const mitgliedId = 'test-id-123';

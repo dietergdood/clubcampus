@@ -1,0 +1,23 @@
+# ClubCampus — Zeilenenden und Binärdateien
+#
+# Alles wird im Repository mit LF gespeichert UND mit LF ausgecheckt.
+# Ohne eol=lf würde Git auf Windows (core.autocrlf=true) beim Checkout auf
+# CRLF umstellen und bei jedem Commit "LF will be replaced by CRLF" melden.
+# Deployment läuft über Vercel/Linux, deshalb ist LF durchgehend richtig.
+* text=auto eol=lf
+
+# Binärdateien nie anfassen
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.eot   binary
+*.pdf   binary
+
+# Lockfile im Diff zusammenklappen — wird von npm generiert
+package-lock.json linguist-generated=true -diff

@@ -1,0 +1,275 @@
+/* ═══════════════════════════════════════════════════════════════
+   ClubCampus — shared/person/PersonTeams.tsx
+   Teams-Card + Team zuweisen / bearbeiten / entfernen Modals
+   Wiederverwendbar in: MitgliederModul, KaderModul, Aufgebote etc.
+   ═══════════════════════════════════════════════════════════════ */
+import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMobile, RollenAuswahlListe } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
+import { DropMenu } from "../../theme.ts";
+import { currentSeason } from "../../domains/season/seasonUtils.ts";
+import {
+  fetchKaderFuerMitglied,
+  fetchAktiveTeams,
+  fetchPortalFunktionenMitGruppe,
+  upsertKader,
+  updateKader,
+  deaktiviereKader,
+  logAenderung,
+  logAktivitaet,
+  AKTIVITAET_TYP,
+} from "../../domains/members/memberService.ts";
+import type { Account, Mitglied, SbClient } from "../../types.ts";
+import type { RolleOption } from "../forms/RollenAuswahlListe.tsx";
+/* Gemeinsame Form fuer Vereinsfunktionen — der Besitzer-State wird aus
+   fetchPortalFunktionen befuellt (mit farbe), diese Komponente schreibt
+   aus fetchPortalFunktionenMitGruppe (ohne farbe) zurueck. */
+import type { FunktionMitGruppe } from "./types.ts";
+
+/* Direkt aus den Service-Rückgaben abgeleitet — so bleiben die Formen
+   automatisch deckungsgleich mit den Supabase-Abfragen. */
+type KaderDetail = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
+type TeamOption = Awaited<ReturnType<typeof fetchAktiveTeams>>[number];
+type FunktionOption = Awaited<ReturnType<typeof fetchPortalFunktionenMitGruppe>>[number];
+
+interface PersonTeamsProps {
+  raw: Mitglied;
+  sb: SbClient;
+  canEdit?: boolean;
+  vereinId?: string | null;
+  account?: Account | null;
+  dbKaderRollen?: RolleOption[];
+  /* Kader-Einträge des Mitglieds inkl. Team — von fetchKaderFuerMitglied */
+  teamDetails?: KaderDetail[] | null;
+  /* Der Besitzer-State ist bis zum ersten Laden null — der Updater muss
+     damit umgehen können. */
+  setTeamDetails: Dispatch<SetStateAction<KaderDetail[] | null>>;
+  allTeams?: TeamOption[] | null;
+  setAllTeams: (teams: TeamOption[]) => void;
+  assignFunktionen?: FunktionMitGruppe[] | null;
+  setAssignFunktionen: (funktionen: FunktionMitGruppe[]) => void;
+  onNavToTeam?: ((teamId: number) => void) | null;
+  onReload?: (() => void) | null;
+  /* Leitet die Portalrolle neu ab, nachdem sich die Kaderzugehörigkeit ändert */
+  ableitRolle: () => Promise<void> | void;
+}
+
+function PersonTeams({
+  raw,
+  sb,
+  canEdit,
+  vereinId,
+  account = null,
+  dbKaderRollen = [],
+  teamDetails,
+  setTeamDetails,
+  allTeams,
+  setAllTeams,
+  assignFunktionen,
+  setAssignFunktionen,
+  onNavToTeam = null,
+  onReload,
+  ableitRolle,
+}: PersonTeamsProps) {
+  const isMobile = useIsMobile();
+  const [confirm, confirmDialog] = useConfirm();
+  const [showTeamAssign, setShowTeamAssign] = useState(false);
+  const [teamAssignForm, setTeamAssignForm] = useState({ team_id: "", funktionen: ["Spieler/in"], rueckennr: "", position: "" });
+  const [teamAssignRolleSearch, setTeamAssignRolleSearch] = useState("");
+  const [teamAssignSaving, setTeamAssignSaving] = useState(false);
+  const [editTeam, setEditTeam] = useState<KaderDetail | null>(null);
+  const [editTeamForm, setEditTeamForm] = useState<{funktionen: string[]; rueckennr: string; position: string}>({ funktionen: [], rueckennr: "", position: "" });
+  const [editTeamRolleSearch, setEditTeamRolleSearch] = useState("");
+  const [editTeamSaving, setEditTeamSaving] = useState(false);
+  const [editTeamFunkOpen, setEditTeamFunkOpen] = useState(false);
+
+  async function openTeamAssign() {
+    if ((allTeams || []).length === 0)
+      fetchAktiveTeams(sb).then(data => setAllTeams(data));
+    if ((assignFunktionen || []).length === 0)
+      fetchPortalFunktionenMitGruppe(sb).then(data => setAssignFunktionen(data));
+    setShowTeamAssign(true);
+  }
+
+  async function assignTeam() {
+    /* verein_id ist in kader NOT NULL — ohne vereinId wuerde der Upsert
+       zwangslaeufig scheitern, deshalb hier schon abbrechen. */
+    if (!sb || !teamAssignForm.team_id || !vereinId) return;
+    setTeamAssignSaving(true);
+    const teamName = allTeams?.find(t => String(t.id) === String(teamAssignForm.team_id))?.name || teamAssignForm.team_id;
+    await upsertKader(sb, {
+      team_id: parseInt(teamAssignForm.team_id),
+      mitglied_id: raw.id,
+      verein_id: vereinId,
+      rollen: teamAssignForm.funktionen || ["Spieler/in"],
+      rueckennr: teamAssignForm.rueckennr || null,
+      position: teamAssignForm.position || null,
+      aktiv: true,
+      saison: currentSeason(),
+    });
+    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    const data = await fetchKaderFuerMitglied(sb, raw.id);
+    setTeamDetails(data);
+    await ableitRolle();
+    setShowTeamAssign(false);
+    setTeamAssignForm({ team_id: "", funktionen: ["Spieler/in"], rueckennr: "", position: "" });
+    setTeamAssignSaving(false);
+    if (onReload) onReload();
+  }
+
+  async function removeFromTeam(kaderId: number) {
+    const ok = await confirm({ title: "Aus Team entfernen?", danger: true, confirmLabel: "Entfernen" });
+    if (!sb || !ok) return;
+    const kader = teamDetails?.find(k => k.id === kaderId);
+    const teamName = kader?.teams?.name || String(kaderId);
+    await deaktiviereKader(sb, kaderId);
+    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    setTeamDetails(prev => (prev || []).filter(k => k.id !== kaderId));
+    await ableitRolle();
+  }
+
+  async function saveEditTeam() {
+    if (!sb || !editTeam) return;
+    setEditTeamSaving(true);
+    const alterRollen = (editTeam.rollen || []).join(", ");
+    const neueRollen = (editTeamForm.funktionen || []).join(", ");
+    await updateKader(sb, editTeam.id, {
+      rollen: editTeamForm.funktionen || [],
+      rueckennr: editTeamForm.rueckennr || null,
+      position: editTeamForm.position || null,
+    });
+    if (vereinId && alterRollen !== neueRollen) {
+      const teamName = editTeam.teams?.name || "Team";
+      logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
+    }
+    setTeamDetails(prev => (prev || []).map(k => k.id === editTeam.id
+      ? { ...k, rollen: editTeamForm.funktionen, rueckennr: editTeamForm.rueckennr, position: editTeamForm.position }
+      : k
+    ));
+    await ableitRolle();
+    setEditTeam(null);
+    setEditTeamFunkOpen(false);
+    setEditTeamSaving(false);
+    if (onReload) onReload();
+  }
+
+  return (
+    <>
+      {confirmDialog}
+      <Card>
+        <div className="cc-section-title cc-between">
+          <span className="cc-row cc-gap-6"><TI n="users" size={14}/> Teams</span>
+          {canEdit && <button className="cc-btn-ghost" onClick={openTeamAssign}><TI n="plus" size={13}/> Zuweisen</button>}
+        </div>
+        {(teamDetails ?? null) === null && <div className="cc-text-sm cc-text-sub">Lade…</div>}
+        {teamDetails != null && teamDetails.length === 0 && (
+          <div className="cc-text-sm cc-text-sub">Keinem Team zugewiesen.</div>
+        )}
+        {(teamDetails || []).map((k, i) => (
+          <div
+            key={i}
+            className={`cc-team-position-row${isMobile && onNavToTeam ? " cc-team-position-row-mobile" : ""}`}
+            onClick={isMobile && onNavToTeam ? () => k.team_id != null && onNavToTeam(k.team_id) : undefined}
+          >
+            <div className="cc-list-item-icon"><TI n="ball-football" size={13}/></div>
+            <div className="cc-team-position-body">
+              {!isMobile && onNavToTeam
+                ? <span className="cc-team-position-name-link" onClick={e => { e.stopPropagation(); k.team_id != null && onNavToTeam(k.team_id); }}>{k.teams?.name || "—"}</span>
+                : <div className="cc-team-position-name">{k.teams?.name || "—"}</div>
+              }
+              {(k.rollen || ["Spieler/in"]).length > 0 && (
+                <div className="cc-team-role-chips">
+                  {[...(k.rollen || ["Spieler/in"])].sort((a, b) => {
+                    const aT = dbKaderRollen.some(kr => kr.name === a && kr.ist_trainer);
+                    const bT = dbKaderRollen.some(kr => kr.name === b && kr.ist_trainer);
+                    return aT === bT ? 0 : aT ? -1 : 1;
+                  }).map((r, ri) => {
+                    const isTrainer = dbKaderRollen.some(kr => kr.name === r && kr.ist_trainer);
+                    return <span key={ri} className={isTrainer ? "cc-role-chip cc-role-chip-trainer" : "cc-role-chip"}>{r}</span>;
+                  })}
+                </div>
+              )}
+            </div>
+            <DropMenu items={[
+              ...(canEdit ? [
+                { label: "Bearbeiten", icon: "edit", onClick: () => { setEditTeamForm({ funktionen: k.rollen || [], rueckennr: k.rueckennr || "", position: k.position || "" }); setEditTeam(k); } },
+                "sep" as const,
+                { label: "Entfernen", icon: "trash", danger: true, onClick: () => removeFromTeam(k.id) },
+              ] : []),
+            ]}/>
+          </div>
+        ))}
+
+      </Card>
+
+      {/* Team zuweisen Modal */}
+      <ModalOrSheet open={showTeamAssign} onClose={() => setShowTeamAssign(false)} maxWidth={560}>
+        <div className="cc-modal-hdr">
+          <ModalTitle>Team zuweisen</ModalTitle>
+          <button className="cc-icon-btn" onClick={() => setShowTeamAssign(false)}><TI n="x" size={14}/></button>
+        </div>
+        <div className="cc-modal-body cc-col">
+          <div>
+            <label className="cc-label">Team</label>
+            <select className="cc-input" value={teamAssignForm.team_id} onChange={e => setTeamAssignForm(p => ({ ...p, team_id: e.target.value }))}>
+              <option value="">– wählen –</option>
+              {(allTeams||[]).filter(t=>!(teamDetails||[]).some(k=>k.team_id===t.id)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="cc-label">Rolle im Team</label>
+            <RollenAuswahlListe
+              rollen={dbKaderRollen}
+              selected={teamAssignForm.funktionen||[]}
+              onChange={f=>setTeamAssignForm(p=>({...p,funktionen:f}))}
+              search={teamAssignRolleSearch||""}
+              onSearchChange={setTeamAssignRolleSearch}
+            />
+          </div>
+        </div>
+        <div className="cc-modal-ftr">
+          <Btn onClick={() => setShowTeamAssign(false)}>Abbrechen</Btn>
+          <Btn variant="primary" onClick={assignTeam} disabled={!teamAssignForm.team_id || teamAssignSaving}>
+            {teamAssignSaving ? "Wird zugewiesen…" : "Zuweisen"}
+          </Btn>
+        </div>
+      </ModalOrSheet>
+
+      {/* Team bearbeiten Modal */}
+      <ModalOrSheet open={!!editTeam} onClose={() => { setEditTeam(null); setEditTeamFunkOpen(false); }} maxWidth={560}>
+        {editTeam && (
+          <>
+            <div className="cc-modal-hdr">
+              <div>
+                <ModalTitle>{editTeam.teams?.name || "Team"} bearbeiten</ModalTitle>
+                <div className="cc-text-sm cc-text-sub">Saison {currentSeason()}</div>
+              </div>
+              <button className="cc-icon-btn" onClick={() => { setEditTeam(null); setEditTeamFunkOpen(false); }}><TI n="x" size={14}/></button>
+            </div>
+            <div className="cc-modal-body cc-col">
+              <div>
+                <label className="cc-label">Rolle im Team</label>
+                <RollenAuswahlListe
+                  rollen={dbKaderRollen}
+                  selected={editTeamForm.funktionen||[]}
+                  onChange={f=>setEditTeamForm(p=>({...p,funktionen:f}))}
+                  search={editTeamRolleSearch||""}
+                  onSearchChange={setEditTeamRolleSearch}
+                />
+              </div>
+            </div>
+            <div className="cc-modal-ftr">
+              <Btn onClick={() => { setEditTeam(null); setEditTeamFunkOpen(false); }}>Abbrechen</Btn>
+              <Btn variant="primary" onClick={saveEditTeam} disabled={editTeamSaving}>
+                {editTeamSaving ? "Speichert…" : "Speichern"}
+              </Btn>
+            </div>
+          </>
+        )}
+      </ModalOrSheet>
+    </>
+  );
+}
+
+export { PersonTeams };

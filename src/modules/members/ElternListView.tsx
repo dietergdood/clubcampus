@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════════════
+   ClubCampus — modules/members/ElternListView.tsx
+   Eltern-Liste mit Kind+Team Anzeige, Fold-out, Filter, Gruppierung
+   ═══════════════════════════════════════════════════════════════ */
+import { useState, useEffect } from "react";
+import { Av, useConfirm } from "../../theme.ts";
+import { TI } from "../../icons.tsx";
+import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.ts";
+import { ListView } from "../../shared/list/ListView.tsx";
+import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
+import type { ColDef, ColGroup, GroupOption, ListGroup, ListRow, RowId } from "../../shared/list/types.ts";
+import type { Account, Sb, SetState } from "../../types.ts";
+
+/* Direkt aus der Service-Rückgabe abgeleitet */
+type ElternkontaktRoh = Awaited<ReturnType<typeof fetchAlleElternkontakte>>[number];
+type KindVerknuepfung = ElternkontaktRoh["_alle_kinder"][number];
+
+interface KindMitTeams {
+  name: string;
+  teams: string[];
+  mitglied_id: number;
+}
+
+function getKinderMitTeams(alleKinder: KindVerknuepfung[]): KindMitTeams[] {
+  return (alleKinder||[]).map(k => {
+    const m = k.mitglieder;
+    const name = m ? `${m.vorname||""} ${m.nachname||""}`.trim() : "?";
+    const teams = (m?.kader||[])
+      .filter(ka => ka.aktiv)
+      .map(ka => ka.teams?.kurzname||ka.teams?.name)
+      .filter((t): t is string => Boolean(t));
+    return { name, teams, mitglied_id: k.mitglied_id };
+  });
+}
+
+function mapEltern(raw: ElternkontaktRoh[] | null | undefined) {
+  return (raw||[]).map(e => {
+    const kinder = getKinderMitTeams(e._alle_kinder||[]);
+    const alleTeams = [...new Set(kinder.flatMap(k => k.teams))];
+    return {
+      id:          e.id,
+      mitglied_id: e.mitglied_id,
+      name:        `${e.vorname||""} ${e.nachname||""}`.trim()||e.name||"—",
+      vorname:     e.vorname||"",
+      nachname:    e.nachname||"",
+      email:       e.email||"",
+      telefon:     e.telefon||"",
+      beziehung:   e.beziehung||"",
+      portal:      e.benutzer_id?"Aktiv":"Kein Zugang",
+      benutzer_id: e.benutzer_id||null,
+      hauptkontakt:e.hauptkontakt||false,
+      kind_id:     kinder[0]?.mitglied_id||null,
+      kind_name:   kinder.map(k=>k.name).join(", ")||"—",
+      kinder,
+      teams:       alleTeams,
+    };
+  });
+}
+
+/* Schnitt mit ListRow liefert die Index-Signatur, die ListView
+   (T extends ListRow) verlangt und renderCell für e[col.key] braucht. */
+type ElternRow = ListRow & ReturnType<typeof mapEltern>[number];
+
+const COL_DEFS: ColDef[] = [
+  { key:"name",      label:"Name",      default:true, alwaysOn:true },
+  { key:"beziehung", label:"Beziehung", default:true },
+  { key:"email",     label:"E-Mail",    default:true },
+  { key:"telefon",   label:"Telefon",   default:true },
+  { key:"kind_name", label:"Kind",      default:true },
+  { key:"portal",    label:"Portal",    default:true },
+];
+
+const COL_GROUPS: ColGroup[] = [{ group:"Elternkontakt", cols:COL_DEFS }];
+
+const GROUP_OPTIONS: GroupOption[] = [
+  { val:"teams",     label:"Team"       },
+  { val:"beziehung", label:"Beziehung"  },
+  { val:"portal",    label:"Portal"     },
+];
+
+function buildElternGroups(rows: ElternRow[], groupBy: string[] | string): ListGroup<ElternRow>[] {
+  const firstLevel = Array.isArray(groupBy) ? groupBy[0] : groupBy;
+  if(!firstLevel || firstLevel === "none") return [{ key:"__all", label:"", type:"none", members:rows, children:null }];
+
+  const map: Record<string, ElternRow[]> = {};
+  rows.forEach(r => {
+    // Bei Array-Feldern (teams) → Zeile in mehrere Gruppen
+    const val = r[firstLevel];
+    const keys = Array.isArray(val) && val.length > 0 ? val.map(v => String(v)) : [String(val ?? "—")];
+    keys.forEach(k => {
+      if(!map[k]) map[k] = [];
+      // Duplikate vermeiden
+      if(!map[k].find(x => x.id === r.id)) map[k].push(r);
+    });
+  });
+
+  return Object.entries(map)
+    .sort(([a],[b]) => String(a).localeCompare(String(b), "de"))
+    .map(([k, members]) => ({ key:k, label:k, type:"none", members, children:null }));
+}
+
+interface ElternRenderCellDeps {
+  expandedKinder: Set<string>;
+  setExpandedKinder: SetState<Set<string>>;
+}
+
+function makeElternRenderCell({ expandedKinder, setExpandedKinder }: ElternRenderCellDeps) {
+  return function renderElternCell(col: ColDef, e: ElternRow) {
+    switch(col.key) {
+      case "name":
+        return <td key="name" className="cc-members-td">
+          <div className="cc-row cc-gap-8">
+            <Av name={e.name||"?"} size={26}/>
+            <span className="cc-text-bold">{e.name}</span>
+          </div>
+        </td>;
+      case "portal":
+        return <td key="portal" className="cc-members-td">
+          {e.benutzer_id
+            ?<span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>
+            :<span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>
+          }
+        </td>;
+      case "kind_name": {
+        const isExp = expandedKinder.has(e.id);
+        const visible = isExp ? e.kinder : e.kinder.slice(0, 2);
+        const rest = e.kinder.length - 2;
+        return <td key="kind_name" className="cc-members-td" onClick={ev=>ev.stopPropagation()}>
+          <div className="cc-col cc-gap-4">
+            {visible.map((k,i) => (
+              <div key={i} className="cc-teams-rollen-row">
+                <span className="cc-teams-rollen-team">{k.name}</span>
+                {k.teams.length>0&&<>
+                  <span className="cc-teams-rollen-sep">·</span>
+                  <span className="cc-teams-rollen-rolle">{k.teams.join(", ")}</span>
+                </>}
+              </div>
+            ))}
+            {rest>0&&(
+              <button className="cc-teams-rollen-more" onClick={ev=>{
+                ev.stopPropagation();
+                setExpandedKinder(prev=>{const n=new Set(prev);n.has(e.id)?n.delete(e.id):n.add(e.id);return n;});
+              }}>
+                {isExp
+                  ?<><TI n="chevron-up" size={10}/>weniger</>
+                  :<><TI n="chevron-down" size={10}/>+{rest} weitere</>
+                }
+              </button>
+            )}
+          </div>
+        </td>;
+      }
+      default:
+        return <td key={col.key} className="cc-members-td cc-members-td-sub">{String(e[col.key]||"—")}</td>;
+    }
+  };
+}
+
+interface ElternListViewProps {
+  sb: Sb;
+  vereinId: string | null;
+  account?: Account | null;
+  isAdmin?: boolean;
+}
+
+export function ElternListView({ sb, vereinId, account, isAdmin = false }: ElternListViewProps) {
+  const [rows, setRows] = useState<ElternRow[]>([]);
+  const [confirm, confirmDialog] = useConfirm();
+  const [expandedKinder, setExpandedKinder] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!sb || !vereinId) return;
+    fetchAlleElternkontakte(sb, vereinId).then(data => setRows(mapEltern(data)));
+  }, [sb, vereinId]);
+
+  const filterDefs = buildFilterDefs(rows, [
+    { key:"beziehung", label:"Beziehung" },
+    { key:"portal",    label:"Portal", vals:["Aktiv","Kein Zugang"] },
+  ]);
+
+  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder });
+
+  async function loeschen(selected: Set<RowId>) {
+    if (!selected?.size) return;
+    const namen = [...selected].map(id => rows.find(r => r.id === id)?.name).filter(Boolean);
+    const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:`Gelöscht werden: ${namen.join(", ")}`, danger:true, confirmLabel:"Löschen" });
+    if (!sb || !ok) return;
+    for (const id of selected) await deleteElternkontakt(sb, String(id));
+    setRows(prev => prev.filter(r => !selected.has(r.id)));
+  }
+
+  return (
+    <>
+      {confirmDialog}
+      <ListView<ElternRow>
+        emptyIcon="heart"
+        emptyTitle="Noch keine Elternkontakte"
+        emptySubtitle="Elternkontakte werden beim Mitglied erfasst."
+        rows={rows}
+        colDefs={COL_DEFS}
+        colGroups={COL_GROUPS}
+        filterDefs={filterDefs}
+        groupOptions={GROUP_OPTIONS}
+        buildGroupsFn={buildElternGroups}
+        renderCell={renderCell}
+        sb={sb}
+        account={account}
+        vereinId={vereinId}
+        viewTyp="eltern"
+        isAdmin={isAdmin}
+        selectable
+        bulkActions={[
+          { icon:"trash", label:"Löschen", danger:true, requiresSelection:true, onClick:loeschen },
+        ]}
+        footerLabel={(f,t) => `${f} von ${t} Elternkontakten`}
+        exportFn={(rows,cols,groups,format) => exportListData(rows,cols,groups,format,{filename:"eltern",sheetName:"Eltern"})}
+        exportFormats={[
+          {label:"E-Mail-Liste als CSV (flach)",        format:"csv"},
+          {label:"E-Mail-Liste als CSV (mit Gruppen)",  format:"csv-gruppen"},
+          {label:"Excel (pro Gruppe ein Sheet)",         format:"excel-sheets", icon:"table"},
+        ]}
+      />
+    </>
+  );
+}

@@ -2,7 +2,7 @@
    ClubCampus — domains/app/useAppData.js
    Supabase Lade-Funktionen für App-Level Daten
    ═══════════════════════════════════════════════════════════════ */
-import { THEME_DEFAULT_STATIC, hexToRgba, darkenHex, contrastColor } from "../../theme.jsx";
+import { THEME_DEFAULT_STATIC, hexToRgba, darkenHex, contrastColor } from "../../theme.ts";
 
 export function useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
   setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,

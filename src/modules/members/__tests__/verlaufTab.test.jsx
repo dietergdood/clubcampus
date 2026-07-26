@@ -4,18 +4,18 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { VerlaufTab } from '../tabs/VerlaufTab.jsx';
+import { VerlaufTab } from '../tabs/VerlaufTab.tsx';
 
-vi.mock('../../../theme.jsx', () => ({
+vi.mock('../../../theme.ts', () => ({
   Card: ({ children }) => <div>{children}</div>,
   EmptyState: ({ title }) => <div data-testid="empty">{title}</div>,
 }));
 
-vi.mock('../../../icons.jsx', () => ({
+vi.mock('../../../icons.tsx', () => ({
   TI: ({ n }) => <span data-icon={n}/>,
 }));
 
-vi.mock('../../../domains/members/memberService.js', () => ({
+vi.mock('../../../domains/members/memberService.ts', () => ({
   fetchAenderungen: vi.fn(),
   fetchAktivitaeten: vi.fn(),
   FELD_LABEL: {
@@ -32,7 +32,7 @@ vi.mock('../../../domains/members/memberService.js', () => ({
   },
 }));
 
-import { fetchAenderungen, fetchAktivitaeten } from '../../../domains/members/memberService.js';
+import { fetchAenderungen, fetchAktivitaeten } from '../../../domains/members/memberService.ts';
 
 const RAW = { id: 1 };
 const SB = {};
@@ -74,10 +74,23 @@ describe('VerlaufTab', () => {
   });
 
   describe('Änderungen anzeigen', () => {
+    /* Adressfelder (strasse/plz/ort/kanton) werden unter der Gruppe "Adresse"
+       zusammengefasst, der Feldname erscheint dort als Unter-Label mit Doppelpunkt. */
     it('zeigt Feldname einer Änderung', async () => {
       fetchAenderungen.mockResolvedValue([AENDERUNG]);
       render(<VerlaufTab raw={RAW} sb={SB}/>);
-      await waitFor(() => expect(screen.getByText('Strasse')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText('Adresse')).toBeTruthy());
+      expect(screen.getByText('Strasse:')).toBeTruthy();
+    });
+
+    it('zeigt Nicht-Adressfelder ohne Gruppierung', async () => {
+      fetchAenderungen.mockResolvedValue([{
+        ...AENDERUNG, feld: 'email',
+        alter_wert: 'alt@test.ch', neuer_wert: 'neu@test.ch',
+      }]);
+      render(<VerlaufTab raw={RAW} sb={SB}/>);
+      await waitFor(() => expect(screen.getByText('E-Mail')).toBeTruthy());
+      expect(screen.queryByText('Adresse')).toBeNull();
     });
 
     it('zeigt alten und neuen Wert', async () => {
@@ -163,7 +176,7 @@ describe('VerlaufTab', () => {
       fetchAktivitaeten.mockResolvedValue([AKTIVITAET]);
       render(<VerlaufTab raw={RAW} sb={SB}/>);
       await waitFor(() => {
-        expect(screen.getByText('Strasse')).toBeTruthy();
+        expect(screen.getByText('Strasse:')).toBeTruthy();
         expect(screen.getByText('Team zugewiesen: 1. Mannschaft')).toBeTruthy();
       });
     });

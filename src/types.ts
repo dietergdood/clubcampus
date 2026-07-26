@@ -3,9 +3,26 @@
    Globale Typen für das gesamte Projekt
    ═══════════════════════════════════════════════════════════════ */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from './database.types.ts';
 
 // ── Supabase ─────────────────────────────────────────────────────
-export type Sb = SupabaseClient | null;
+/* database.types.ts wird generiert:
+     npx supabase gen types typescript --project-id <ref> > src/database.types.ts
+   Nach jeder Schema-Änderung neu erzeugen. */
+/* Verbundener Client. Services verlangen diesen Typ — die Aufrufer
+   prüfen vorher auf null. */
+export type SbClient = SupabaseClient<Database>;
+/* Wie er in der App herumgereicht wird: vor dem Login noch nicht da. */
+export type Sb = SbClient | null;
+
+/* Zeilen-, Insert- und Update-Typen einer Tabelle bequem abgreifen:
+     type Mitglied = Tables<'mitglieder'>  */
+export type Tables<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Row'];
+export type TablesInsert<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Insert'];
+export type TablesUpdate<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Update'];
 
 // ── Rollen ───────────────────────────────────────────────────────
 export type Rolle =
@@ -27,18 +44,17 @@ export interface Tenant {
 }
 
 // ── Benutzer ─────────────────────────────────────────────────────
-export interface DbUser {
-  id: string;
-  email: string;
-  name?: string;
+export interface DbUser extends Omit<Tables<'benutzer'>, 'role'> {
+  /* '__kein_zugang' setzt useDbUser, wenn zur Auth-ID keine Zeile in
+     benutzer existiert — das ist kein Wert aus der Datenbank. */
+  role: Rolle | '__kein_zugang';
+
+  /* ⚠ Diese drei Felder haben KEINE Spalte in der Tabelle benutzer.
+     useProfilCheck liest sie für Eltern-Konten, sie sind dort immer
+     undefined. Siehe offener Punkt in der Migration. */
   vorname?: string;
   nachname?: string;
-  role: Rolle | '__kein_zugang';
-  mitglied_id?: number | null;
-  aktiv?: boolean;
-  profil_geprueft_at?: string | null;
   telefon?: string | null;
-  teams?: string[];
 }
 
 // ── Account (für Navigation/Rollenswitch) ────────────────────────
@@ -54,35 +70,20 @@ export interface Account {
 }
 
 // ── Mitglied ─────────────────────────────────────────────────────
-export interface Mitglied {
-  id: number;
-  vorname: string;
-  nachname: string;
-  mitgliedtyp: string;
-  email?: string | null;
-  telefon?: string | null;
-  strasse?: string | null;
-  plz?: string | null;
-  ort?: string | null;
-  kanton?: string | null;
-  land?: string | null;
-  geburtsdatum?: string | null;
-  geschlecht?: 'm' | 'w' | 'd' | null;
-  nationalitaet?: string | null;
-  heimatort?: string | null;
-  ahv_nr?: string | null;
-  aktiv: boolean;
-  verein_id: string;
-  created_at?: string;
-  updated_at?: string;
-  // Computed
+/* Basis kommt aus dem generierten Schema — so kann der Typ nicht mehr von
+   der Datenbank abdriften. Ergänzt werden nur Felder, die die App beim
+   Laden dazurechnet (siehe loadDbMitglieder in domains/app/useAppData).
+
+   eltern wird überschrieben: die gleichnamige DB-Spalte ist Json, die App
+   befüllt das Feld aber aus elternkontakte/eltern_kinder. */
+export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'> {
+  eltern?: Elternkontakt[];
+  // Von der App berechnet, nicht in der Tabelle
   kader_rollen?: string[];
   kader_teams?: { name: string; kurz: string }[];
   kader_eintraege?: KaderEintrag[];
   hat_benutzer?: boolean;
   benutzer_deaktiviert?: boolean;
-  profil_geprueft_at?: string | null;
-  eltern?: Elternkontakt[];
 }
 
 export interface KaderEintrag {
@@ -91,29 +92,17 @@ export interface KaderEintrag {
 }
 
 // ── Team ─────────────────────────────────────────────────────────
-export interface Team {
-  id: number;
-  name: string;
-  kurzname?: string | null;
-  hauptbereich?: string | null;
-  aktiv: boolean;
-  verein_id: string;
+export interface Team extends Tables<'teams'> {
+  /* Von loadDbTeams aus team_module zusammengesetzt, keine Tabellenspalte */
   module_aktiv?: string[];
 }
 
 // ── Elternkontakt ────────────────────────────────────────────────
-export interface Elternkontakt {
-  id: string;
-  vorname?: string | null;
-  nachname?: string | null;
-  name?: string | null;
-  email?: string | null;
-  telefon?: string | null;
-  tel?: string | null;
-  beziehung?: string | null;
-  hauptkontakt: boolean;
-  benutzer_id?: string | null;
-  verein_id?: string;
+export interface Elternkontakt extends Tables<'elternkontakte'> {
+  /* ⚠ Keine Spalte in elternkontakte. ElternTab schreibt supporter:true,
+     wenn das letzte Kind entknüpft wird (siehe ELTERN_LOGIK.md) — das
+     Update läuft heute ins Leere. Siehe offener Punkt in der Migration. */
+  supporter?: boolean;
 }
 
 // ── Kind ─────────────────────────────────────────────────────────
@@ -133,11 +122,14 @@ export interface Mitgliedtyp {
 export interface MitgliedtypPflichtfeld {
   mitgliedtyp: string;
   feld: string;
-  pflicht: boolean;
+  /* Nullable in mitgliedtyp_pflichtfelder — Leser prüfen auf truthy */
+  pflicht: boolean | null;
 }
 
 // ── Portal-Rollen ────────────────────────────────────────────────
 export interface PortalRolle {
+  /* Primärschlüssel aus portal_rollen — RollenTab bearbeitet darüber */
+  id: number;
   name: string;
   label: string;
   aktiv: boolean;
@@ -149,6 +141,9 @@ export interface KaderRolle {
   label?: string;
   aktiv: boolean;
   sort_order?: number;
+  /* Unterscheidet Trainer- von Spielerrollen (Spalte in kader_rollen).
+     Fehlte hier, obwohl roleUtils und useMemberMeta darauf aufbauen. */
+  ist_trainer: boolean;
 }
 
 // ── Theme ────────────────────────────────────────────────────────
@@ -169,17 +164,27 @@ export interface AppTheme {
 }
 
 // ── Funktion ─────────────────────────────────────────────────────
+/* Beide Formen sind an portal_funktionen/portal_gruppen ausgerichtet.
+   Vorher standen hier id: string (beide Spalten sind bigint) sowie modul und
+   stufe — Felder, die es nicht gibt. Gelesen werden von
+   getEffektiveStufeForFunktionaer (NavigationModul) die Override-Felder der
+   Funktion und module/modul_stufen der Gruppe. */
 export interface PortalFunktion {
-  id: string;
+  id: number;
   name: string;
+  /* Übersteuern die Angaben der Gruppe, wenn gesetzt */
+  module_override?: string[] | null;
+  stufe_override?: Record<string, string> | null;
   portal_gruppen?: PortalGruppe | null;
 }
 
 export interface PortalGruppe {
-  id: string;
+  id: number;
   name: string;
-  modul?: string | null;
-  stufe?: string | null;
+  farbe?: string | null;
+  /* Module, die die Gruppe freischaltet, und die Zugriffstufe je Modul */
+  module?: string[] | null;
+  modul_stufen?: Record<string, string> | null;
 }
 
 // ── Änderungshistorie ────────────────────────────────────────────
@@ -205,18 +210,18 @@ export interface Aktivitaet {
 }
 
 // ── Ansicht (gespeicherte ListView-Konfiguration) ─────────────────
-export interface Ansicht {
-  id: string;
-  benutzer_id: string;
-  verein_id: string;
-  name: string;
-  spalten: string[];
-  filter: Record<string, unknown>;
-  gruppierung: string[];
-  gruppenreihenfolge: Record<string, string[]>;
-  zeilenreihenfolge: Record<string, number[]>;
-  typ: string;
-  geteilt: boolean;
+/* Basis aus dem Schema. filter, gruppierung, gruppenreihenfolge und
+   zeilenreihenfolge sind dort jsonb; die App legt eine engere Struktur
+   hinein, die hier beschrieben wird. */
+export interface Ansicht extends Omit<
+  Tables<'mitglieder_ansichten'>,
+  'filter' | 'gruppierung' | 'gruppenreihenfolge' | 'zeilenreihenfolge'
+> {
+  /* Strukturgleich zu FilterVals aus shared/list: Auswahlliste oder Bereich */
+  filter: Record<string, string[] | { von?: number | null; bis?: number | null }> | null;
+  gruppierung: string[] | null;
+  gruppenreihenfolge: Record<string, string[]> | null;
+  zeilenreihenfolge: Record<string, (string | number)[]> | null;
 }
 
 // ── Kader ────────────────────────────────────────────────────────
