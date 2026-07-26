@@ -50,7 +50,18 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
   },
 }));
 
-import { upsertKader, deaktiviereKader, logAktivitaet } from '../../../domains/members/memberService.ts';
+import {
+  fetchKaderFuerMitglied, fetchAktiveTeams, fetchPortalFunktionenMitGruppe,
+  upsertKader, updateKader, deaktiviereKader, logAenderung, logAktivitaet, AKTIVITAET_TYP,
+} from '../../../domains/members/memberService.ts';
+
+/* PersonTeams bekommt den Service seit der Schichtentrennung als `svc`-Prop
+   injiziert — hier aus denselben gemockten Funktionen gebuendelt, damit die
+   Assertions unveraendert greifen. */
+const svc = {
+  fetchKaderFuerMitglied, fetchAktiveTeams, fetchPortalFunktionenMitGruppe,
+  upsertKader, updateKader, deaktiviereKader, logAenderung, logAktivitaet, AKTIVITAET_TYP,
+};
 
 const RAW = { id: 1 };
 
@@ -74,6 +85,7 @@ function renderComp(props = {}) {
   return render(<PersonTeams
     raw={RAW}
     sb={{}}
+    svc={svc}
     canEdit={true}
     vereinId="verein-123"
     account={{ name: 'Dieter Good' }}

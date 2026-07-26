@@ -9,7 +9,10 @@ import { Btn, Card, ModalOrSheet, ModalTitle, useConfirm, ConfirmDialog, useIsMo
 import { TI } from "../../icons.tsx";
 import { DropMenu } from "../../theme.ts";
 import { currentSeason } from "../../domains/season/seasonUtils.ts";
-import {
+/* Nur Typ-Import (erased) — die Runtime-Funktionen kommen als `svc`-Prop
+   vom Parent (InfoTab). So haengt diese shared-Komponente nicht zur
+   Laufzeit am members-Service (Schichtentrennung). */
+import type {
   fetchKaderFuerMitglied,
   fetchAktiveTeams,
   fetchPortalFunktionenMitGruppe,
@@ -21,6 +24,20 @@ import {
   AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, SbClient } from "../../types.ts";
+
+/* Vom Parent injiziertes Service-Buendel (echte memberService-Signaturen
+   via typeof, damit die Typen deckungsgleich bleiben). */
+export interface PersonTeamsService {
+  fetchKaderFuerMitglied: typeof fetchKaderFuerMitglied;
+  fetchAktiveTeams: typeof fetchAktiveTeams;
+  fetchPortalFunktionenMitGruppe: typeof fetchPortalFunktionenMitGruppe;
+  upsertKader: typeof upsertKader;
+  updateKader: typeof updateKader;
+  deaktiviereKader: typeof deaktiviereKader;
+  logAenderung: typeof logAenderung;
+  logAktivitaet: typeof logAktivitaet;
+  AKTIVITAET_TYP: typeof AKTIVITAET_TYP;
+}
 import type { RolleOption } from "../forms/RollenAuswahlListe.tsx";
 /* Gemeinsame Form fuer Vereinsfunktionen — der Besitzer-State wird aus
    fetchPortalFunktionen befuellt (mit farbe), diese Komponente schreibt
@@ -36,6 +53,7 @@ type FunktionOption = Awaited<ReturnType<typeof fetchPortalFunktionenMitGruppe>>
 interface PersonTeamsProps {
   raw: Mitglied;
   sb: SbClient;
+  svc: PersonTeamsService;
   canEdit?: boolean;
   vereinId?: string | null;
   account?: Account | null;
@@ -58,6 +76,7 @@ interface PersonTeamsProps {
 function PersonTeams({
   raw,
   sb,
+  svc,
   canEdit,
   vereinId,
   account = null,
@@ -86,9 +105,9 @@ function PersonTeams({
 
   async function openTeamAssign() {
     if ((allTeams || []).length === 0)
-      fetchAktiveTeams(sb).then(data => setAllTeams(data));
+      svc.fetchAktiveTeams(sb).then(data => setAllTeams(data));
     if ((assignFunktionen || []).length === 0)
-      fetchPortalFunktionenMitGruppe(sb).then(data => setAssignFunktionen(data));
+      svc.fetchPortalFunktionenMitGruppe(sb).then(data => setAssignFunktionen(data));
     setShowTeamAssign(true);
   }
 
@@ -98,7 +117,7 @@ function PersonTeams({
     if (!sb || !teamAssignForm.team_id || !vereinId) return;
     setTeamAssignSaving(true);
     const teamName = allTeams?.find(t => String(t.id) === String(teamAssignForm.team_id))?.name || teamAssignForm.team_id;
-    await upsertKader(sb, {
+    await svc.upsertKader(sb, {
       team_id: parseInt(teamAssignForm.team_id),
       mitglied_id: raw.id,
       verein_id: vereinId,
@@ -108,8 +127,8 @@ function PersonTeams({
       aktiv: true,
       saison: currentSeason(),
     });
-    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
-    const data = await fetchKaderFuerMitglied(sb, raw.id);
+    if (vereinId) svc.logAktivitaet(sb, raw.id, vereinId, svc.AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    const data = await svc.fetchKaderFuerMitglied(sb, raw.id);
     setTeamDetails(data);
     await ableitRolle();
     setShowTeamAssign(false);
@@ -123,8 +142,8 @@ function PersonTeams({
     if (!sb || !ok) return;
     const kader = teamDetails?.find(k => k.id === kaderId);
     const teamName = kader?.teams?.name || String(kaderId);
-    await deaktiviereKader(sb, kaderId);
-    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    await svc.deaktiviereKader(sb, kaderId);
+    if (vereinId) svc.logAktivitaet(sb, raw.id, vereinId, svc.AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     setTeamDetails(prev => (prev || []).filter(k => k.id !== kaderId));
     await ableitRolle();
   }
@@ -134,14 +153,14 @@ function PersonTeams({
     setEditTeamSaving(true);
     const alterRollen = (editTeam.rollen || []).join(", ");
     const neueRollen = (editTeamForm.funktionen || []).join(", ");
-    await updateKader(sb, editTeam.id, {
+    await svc.updateKader(sb, editTeam.id, {
       rollen: editTeamForm.funktionen || [],
       rueckennr: editTeamForm.rueckennr || null,
       position: editTeamForm.position || null,
     });
     if (vereinId && alterRollen !== neueRollen) {
       const teamName = editTeam.teams?.name || "Team";
-      logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
+      svc.logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
     }
     setTeamDetails(prev => (prev || []).map(k => k.id === editTeam.id
       ? { ...k, rollen: editTeamForm.funktionen, rueckennr: editTeamForm.rueckennr, position: editTeamForm.position }

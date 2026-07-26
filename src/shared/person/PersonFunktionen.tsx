@@ -6,22 +6,20 @@
 import { useState } from "react";
 import { Btn, Card, ModalOrSheet, ModalTitle, DropMenu } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { updateMitglied, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
-import type { Account, Mitglied, SbClient } from "../../types.ts";
+import type { Mitglied } from "../../types.ts";
 import type { FunktionMitGruppe } from "./types.ts";
 
 interface PersonFunktionenProps {
   raw: Mitglied;
-  sb: SbClient;
   canEdit?: boolean;
   canDelete?: boolean;
   assignFunktionen: FunktionMitGruppe[];
-  onReload?: (() => void) | null;
-  vereinId?: string | null;
-  account?: Account | null;
+  /* Persistenz + Änderungslog + Reload liegen beim Parent (InfoTab); die
+     Komponente meldet nur die neue Funktionsliste (Schichtentrennung). */
+  onSaveFunktionen: (funktionen: string[]) => Promise<void>;
 }
 
-function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onReload, vereinId=null, account=null }: PersonFunktionenProps) {
+function PersonFunktionen({ raw, canEdit, canDelete, assignFunktionen, onSaveFunktionen }: PersonFunktionenProps) {
   const [showFunkAssign, setShowFunkAssign] = useState(false);
   const [funkSearch, setFunkSearch] = useState("");
   const [funkSelected, setFunkSelected] = useState<string[]>([]);
@@ -33,19 +31,8 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
   }
 
   async function saveFunktionen() {
-    if (!sb) return;
-    await updateMitglied(sb, raw.id, { funktionen: funkSelected });
-    if (vereinId) {
-      const alterSet = new Set(raw.funktionen || []);
-      const neuerSet = new Set(funkSelected);
-      const hinzugefuegt = funkSelected.filter(f => !alterSet.has(f));
-      const entfernt = (raw.funktionen || []).filter(f => !neuerSet.has(f));
-      const von = account?.name||account?.email||"Administrator";
-      for (const f of hinzugefuegt) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion hinzugefügt: ${f}`, "funktionen", f, von);
-      for (const f of entfernt)      logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion entfernt: ${f}`, "funktionen", f, von);
-    }
+    await onSaveFunktionen(funkSelected);
     setShowFunkAssign(false);
-    if (onReload) onReload();
   }
 
   const filtered = assignFunktionen.filter(f =>
@@ -90,10 +77,7 @@ function PersonFunktionen({ raw, sb, canEdit, canDelete, assignFunktionen, onRel
               {canEdit && (
                 <DropMenu items={[
                   {label:"Entfernen", icon:"trash", danger:true, hidden:!canDelete, onClick:async()=>{
-                    const next=(raw.funktionen||[]).filter(x=>x!==f);
-                    await updateMitglied(sb,raw.id,{funktionen:next});
-                    if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.FUNKTION_GEAENDERT,`Vereinsfunktion entfernt: ${f}`,"funktionen",f,account?.name||account?.email||"Administrator");
-                    if(onReload) onReload();
+                    await onSaveFunktionen((raw.funktionen||[]).filter(x=>x!==f));
                   }},
                 ]}/>
               )}

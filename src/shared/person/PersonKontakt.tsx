@@ -6,34 +6,31 @@
 import { useState, useRef, useEffect } from "react";
 import { Av, Card, InlineField, useAddrSearch, usePlzLookup } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { useInlineEdit } from "../../domains/members/useInlineEdit.ts";
+import type { UseInlineEditApi } from "../../domains/members/useInlineEdit.ts";
 import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
 import type { AddressSuggestion } from "../../shared/forms/AddressInput.tsx";
-import type { Account, Mitglied, Sb } from "../../types.ts";
+import type { Mitglied } from "../../types.ts";
 import type { ElternkontaktMitLink } from "../../domains/members/elternService.ts";
 import type { FieldVisibility } from "./types.ts";
 
 const KANTON_OPTS: InlineFieldOption[] = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"].map(k=>({v:k,l:k}));
 
 /* Die von useInlineEdit gelieferten Felder, die an InlineField gereicht werden */
-type InlineEdit = ReturnType<typeof useInlineEdit>;
+type InlineEdit = UseInlineEditApi;
 
 interface PersonKontaktProps {
   raw: Mitglied;
   fv: FieldVisibility;
   canEdit?: boolean;
-  sb: Sb;
-  onReload?: (() => void) | null;
-  vereinId?: string | null;
-  account?: Account | null;
+  /* Inline-Edit-API wird vom Parent (InfoTab) injiziert. */
+  ie: UseInlineEditApi;
   eltern?: ElternkontaktMitLink[] | null;
   /* Entscheidet anhand des Mitgliedtyps, ob ein Elternkontakt nötig ist */
   brauchtEltern: (mitgliedtyp: string | null | undefined) => boolean;
   setTab: (tab: string) => void;
 }
 
-function PersonKontakt({ raw, fv, canEdit, sb, onReload, vereinId=null, account=null, eltern, brauchtEltern, setTab }: PersonKontaktProps) {
-  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload, vereinId, account, rawData: raw });
+function PersonKontakt({ raw, fv, canEdit, ie, eltern, brauchtEltern, setTab }: PersonKontaktProps) {
   const [editMode, setEditMode] = useState(false);
 
   if (!fv.showEmail && !fv.showTelefon && !fv.showAdresse) return null;
