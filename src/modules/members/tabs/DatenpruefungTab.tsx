@@ -72,6 +72,7 @@ function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, el
     { l: "Adresse",      ok: !!(raw.strasse && raw.plz && raw.ort) },
     { l: "E-Mail",       ok: !!raw.email },
     { l: "Telefon",      ok: !!raw.telefon },
+    { l: "AHV-Nummer",   ok: !!raw.ahv_nr },
   ];
 
   async function anfordern() {
