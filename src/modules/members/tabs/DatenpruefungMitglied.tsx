@@ -48,16 +48,16 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
     if (!sb) return;
     setSaving(true);
     const err = await updateMitglied(sb, raw.id, {
-      vorname:       form.vorname       || null,
-      nachname:      form.nachname      || null,
-      geburtsdatum:  form.geburtsdatum  || null,
-      nationalitaet: form.nationalitaet || null,
-      nationalitaet2:form.nationalitaet2|| null,
-      strasse:       form.strasse       || null,
-      plz:           form.plz           || null,
-      ort:           form.ort           || null,
-      kanton:        form.kanton        || null,
-      telefon:       form.telefon       || null,
+      vorname:       form.vorname       || undefined,
+      nachname:      form.nachname      || undefined,
+      geburtsdatum:  form.geburtsdatum  || undefined,
+      nationalitaet: form.nationalitaet || undefined,
+      nationalitaet2:form.nationalitaet2|| undefined,
+      strasse:       form.strasse       || undefined,
+      plz:           form.plz           || undefined,
+      ort:           form.ort           || undefined,
+      kanton:        form.kanton        || undefined,
+      telefon:       form.telefon       || undefined,
       profil_geprueft_at: new Date().toISOString(),
     });
     setSaving(false);

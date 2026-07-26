@@ -8,6 +8,7 @@ import type { Elternkontakt, SbClient, TablesInsert, TablesUpdate } from "../../
 /* Elternkontakt inklusive der Angaben aus der Verknüpfungstabelle */
 export interface ElternkontaktMitLink extends Partial<Elternkontakt> {
   hauptkontakt: boolean | null;
+  profil_geprueft_at?: string | null;
 }
 
 export async function fetchElternkontakte(sb: SbClient, mitgliedId: number): Promise<ElternkontaktMitLink[]> {

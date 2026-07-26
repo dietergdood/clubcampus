@@ -82,25 +82,25 @@ export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalM
     setSaving(true);
 
     /* Eigene Kontaktdaten speichern */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await updateElternkontakt(sb, elternkontakt.id, {
       vorname:  elternForm.vorname  || null,
       nachname: elternForm.nachname || null,
       telefon:  elternForm.telefon  || null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      profil_geprueft_at: new Date().toISOString() as any,
-    });
+      profil_geprueft_at: new Date().toISOString(),
+    } as any);
 
     /* Kinder-Daten speichern + profil_geprueft_at setzen */
     for (const kf of kinderForms) {
       await updateMitglied(sb, kf.mitglied_id, {
-        vorname:       kf.vorname       || null,
-        nachname:      kf.nachname      || null,
-        geburtsdatum:  kf.geburtsdatum  || null,
-        nationalitaet: kf.nationalitaet || null,
-        strasse:       kf.strasse       || null,
-        plz:           kf.plz           || null,
-        ort:           kf.ort           || null,
-        kanton:        kf.kanton        || null,
+        vorname:       kf.vorname       || undefined,
+        nachname:      kf.nachname      || undefined,
+        geburtsdatum:  kf.geburtsdatum  || undefined,
+        nationalitaet: kf.nationalitaet || undefined,
+        strasse:       kf.strasse       || undefined,
+        plz:           kf.plz           || undefined,
+        ort:           kf.ort           || undefined,
+        kanton:        kf.kanton        || undefined,
         profil_geprueft_at: new Date().toISOString(),
       });
     }
