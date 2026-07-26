@@ -3,34 +3,38 @@
    Team-Verwaltung für Administratoren
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
+import type { ReactNode, CSSProperties, ComponentType } from "react";
 import { FONT, BTN_COLOR as BTN, BTN_TXT, ACCENT, ACCENT2, ACCENT20, GN, R, RL, BL, AM, BK } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { useIsMobile, ModalOrSheet, Btn, Chip, Av, Stat, Col, Row, ModalTitle, avColor, InfoBox } from "../theme.ts";
 import { currentSeason } from "../domains/season/seasonUtils.ts";
+import type { Sb } from "../types.ts";
+
+type Cmp = ComponentType<any>;
 
 /* ── Hilfsfunktionen & Konstanten ── */
-const Skel=({h=12,w="100%",br=6,mb=0})=>(
+const Skel=({h=12,w="100%",br=6,mb=0}: {h?: number; w?: number|string; br?: number; mb?: number})=>(
   <div style={{height:h,width:w,borderRadius:br,marginBottom:mb,
     background:"var(--surface2)",animation:"cc-shimmer 1.2s ease-in-out infinite"}}/>
 );
 
-function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}){
+function PersonPicker({value,onChange,placeholder="Person suchen…",style={}}: {value?: string; onChange: (v: string)=>void; placeholder?: string; style?: CSSProperties}){
   const [q,setQ]=useState(value||"");
   const [open,setOpen]=useState(false);
-  const ref=useRef(null);
+  const ref=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{ setQ(value||""); },[value]);
   useEffect(()=>{
-    const fn=(e)=>{ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); };
+    const fn=(e: MouseEvent)=>{ if(ref.current&&!ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown",fn);
     return()=>document.removeEventListener("mousedown",fn);
   },[]);
 
-  const suggestions=q.length>0
+  const suggestions: any[]=q.length>0
     ? []
     : [];
 
-  function select(name){ setQ(name); onChange(name); setOpen(false); }
+  function select(name: string){ setQ(name); onChange(name); setOpen(false); }
 
   return(
     <div ref={ref} style={{position:"relative",...style}}>
@@ -64,7 +68,7 @@ function SkelCard(){
   );
 }
 
-const TEAM_HIERARCHY={
+const TEAM_HIERARCHY: Record<string, Record<string, string[]>>={
   "Aktivfussball":{
     "Aktive Herren":  ["Aktive Herren"],
     "Aktive Frauen":  ["Aktive Frauen"],
@@ -98,8 +102,28 @@ const TEAM_HIERARCHY={
   },
 };
 
+interface TeamsVerwaltungProps {
+  sb?: Sb;
+  dbTeams?: any[];
+  setDbTeams?: (t: any)=>void;
+  dbStufen?: any[];
+  setDbStufen?: (s: any)=>void;
+  setCustomBack?: ((fn: any)=>void)|null;
+  dbMitglieder?: any[];
+  TeamViewComponent?: Cmp|null;
+  KaderModulComponent?: Cmp|null;
+  TrainingsplanModulComponent?: Cmp|null;
+  TermineModulComponent?: Cmp|null;
+  SpielplanModulComponent?: Cmp|null;
+  TableTabComponent?: Cmp|null;
+  HelferModulComponent?: Cmp|null;
+  navToTeam?: number|null;
+  onNavToTeamDone?: (()=>void)|null;
+  vereinId?: string|null;
+}
+
 /* Nur echte teams-Spalten extrahieren — keine form-internen Felder */
-function toDbData(form){
+function toDbData(form: any){
   return {
     name: form.name,
     kategorie: form.kategorie||form.hauptbereich||"",
@@ -121,7 +145,7 @@ function toDbData(form){
   };
 }
 
-function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null,navToTeam=null,onNavToTeamDone=null,vereinId=null}){
+function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null,navToTeam=null,onNavToTeamDone=null,vereinId=null}: TeamsVerwaltungProps){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -174,10 +198,10 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
     {id:41,hauptbereich:"Seniorenfussball",       vereinsstufe:"Senioren 50+",         verbandskategorie:"Senioren 50+",        name:"Senioren 50+",     kurzname:"50+",      stufenleitung:"Stufenleitung Senioren",        liga:"Senioren",          saison:"2024/25",haupttrainer:[],             co_trainers:[],staff:[],aktiv:true},
     {id:42,hauptbereich:"Seniorenfussball",       vereinsstufe:"Senioren 60+",         verbandskategorie:"Senioren 60+",        name:"Senioren 60+",     kurzname:"60+",      stufenleitung:"Stufenleitung Senioren",        liga:"Senioren",          saison:"2024/25",haupttrainer:[],             co_trainers:[],staff:[],aktiv:true},
   ];
-  const [localTeams,setLocalTeams]=useState(FALLBACK);
+  const [localTeams,setLocalTeams]=useState<any[]>(FALLBACK);
   /* Nutze dbTeams wenn geladen, sonst localTeams */
   const teams = dbTeams.length>0 ? dbTeams : localTeams;
-  const setTeams = dbTeams.length>0
+  const setTeams: (fn: any)=>void = dbTeams.length>0
     ? (fn)=>{ const next=typeof fn==="function"?fn(dbTeams):fn; if(setDbTeams) setDbTeams(next); }
     : setLocalTeams;
 
@@ -185,10 +209,10 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   const stufen1 = dbStufen.length>0
     ? dbStufen.filter(s=>s.ebene===1).sort((a,b)=>a.sortorder-b.sortorder)
     : Object.keys(TEAM_HIERARCHY).map((n,i)=>({id:n,name:n,ebene:1,sortorder:i}));
-  const getStufen2=(e1id)=> dbStufen.length>0
+  const getStufen2=(e1id: string)=> dbStufen.length>0
     ? dbStufen.filter(s=>s.ebene===2&&s.parent_id===e1id).sort((a,b)=>a.sortorder-b.sortorder)
     : Object.keys(TEAM_HIERARCHY[e1id]||{}).map((n,i)=>({id:n,name:n,ebene:2,sortorder:i,stufenleitung:""}));
-  const getStufen3=(e2id)=> dbStufen.length>0
+  const getStufen3=(e2id: string)=> dbStufen.length>0
     ? dbStufen.filter(s=>s.ebene===3&&s.parent_id===e2id).sort((a,b)=>a.sortorder-b.sortorder)
     : (()=>{
         for(const [hb,vs] of Object.entries(TEAM_HIERARCHY)){
@@ -199,7 +223,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
         return [];
       })();
   /* Stufe-ID → Pfad-Objekte {e1,e2,e3} */
-  function getStufePath(team){
+  function getStufePath(team: any){
     if(dbStufen.length>0 && team.stufe_id){
       const e3=dbStufen.find(s=>s.id===team.stufe_id);
       const e2=e3?dbStufen.find(s=>s.id===e3.parent_id):null;
@@ -213,23 +237,23 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   const getE2fromForm=()=>form.stufe_ebene2||(dbStufen.length===0?form.vereinsstufe:"");
   const [loading,setLoading]=useState(false);
   const [search,setSearch]=useState("");
-  const [filterVals,setFilterVals]=useState([]);
+  const [filterVals,setFilterVals]=useState<any[]>([]);
   const [sortCol,setSortCol]=useState("hauptbereich");
   const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("hauptbereich");
   const [viewMode,setViewMode]=useState("grid");
-  const [openMenuId,setOpenMenuId]=useState(null);
+  const [openMenuId,setOpenMenuId]=useState<number|string|null>(null);
   const isMobile=useIsMobile();
   const [formTab,setFormTab]=useState("info");
   const [showForm,setShowForm]=useState(false);
-  const [editTeam,setEditTeam]=useState(null);
-  const [form,setForm]=useState(EMPTY);
+  const [editTeam,setEditTeam]=useState<Record<string, any>|null>(null);
+  const [form,setForm]=useState<Record<string, any>>(EMPTY);
   const [saving,setSaving]=useState(false);
-  const [msg,setMsg]=useState(null);
-  const [deleteConfirm,setDeleteConfirm]=useState(null);
+  const [msg,setMsg]=useState<{type: string; text: string}|null>(null);
+  const [deleteConfirm,setDeleteConfirm]=useState<any>(null);
   const [showSaison,setShowSaison]=useState(false);
   const [saisonDraft,setSaisonDraft]=useState("2025/26");
-  const [selectedTeam,setSelectedTeam]=useState(null);
+  const [selectedTeam,setSelectedTeam]=useState<any>(null);
 
   /* navToTeam: direkte Navigation zu einem Team via ID */
   useEffect(()=>{
@@ -248,7 +272,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
           <span style={{fontWeight:800,fontSize:18,color:"var(--text)",letterSpacing:-0.3}}>{selectedTeam.name}</span>
           {selectedTeam.kategorie&&<Chip text={selectedTeam.kategorie} color={BL}/>}
         </div>
-        <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} sb={sb} dbTeams={dbTeams} dbMitglieder={dbMitglieder} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent} vereinId={vereinId}/>
+        {TeamViewComponent && <TeamViewComponent role="trainer" trainerTeams={[selectedTeam.name]} setActive={()=>{}} myRosterId={null} account={null} sb={sb} dbTeams={dbTeams} dbMitglieder={dbMitglieder} KaderModul={KaderModulComponent} TrainingsplanModul={TrainingsplanModulComponent} TermineModul={TermineModulComponent} SpielplanModul={SpielplanModulComponent} TableTab={TableTabComponent} HelferModul={HelferModulComponent} vereinId={vereinId}/>}
       </div>
     );
   }
@@ -258,70 +282,72 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
     if(!form.name.trim()){setMsg({type:"error",text:"Name ist Pflichtfeld."});return;}
     setSaving(true); setMsg(null);
     try{
-      if(sb){
+      /* verein_id ist in teams/team_module NOT NULL (verein_id-Regel) —
+         ohne vereinId schreibt die DB nicht, daher lokaler Fallback. */
+      if(sb&&vereinId){
         if(editTeam){
           const saveData=toDbData(form);const{error}=await sb.from("teams").update({...saveData,updated_at:new Date().toISOString()}).eq("id",editTeam.id);
           if(error) throw error;
-          setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
+          setTeams((ts: any[])=>ts.map((t: any)=>t.id===editTeam.id?{...t,...form}:t));
           /* team_module speichern falls geändert */
           if(form.module_aktiv&&editTeam.id){
             const ALL_MODS=["team","training","events","spielplan","attendance_central","helpers","roster","polls","stats","media","news","wiki","docs"];
-            const rows=ALL_MODS.map(m=>({team_id:editTeam.id,modul:m,aktiv:(form.module_aktiv||[]).includes(m)}));
+            const rows=ALL_MODS.map(m=>({team_id:editTeam.id,modul:m,aktiv:(form.module_aktiv||[]).includes(m),verein_id:vereinId!}));
             await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
           }
         }else{
-          const saveData=toDbData(form);const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString()}).select().single();
+          const saveData=toDbData(form);const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString(),verein_id:vereinId!}).select().single();
           if(error) throw error;
-          setTeams(ts=>[...ts,data]);
+          setTeams((ts: any[])=>[...ts,data]);
           /* team_module für neues Team */
           if(data?.id){
             const ALL_MODS=["team","training","events","spielplan","attendance_central","helpers","roster","polls","stats","media","news","wiki","docs"];
-            const rows=ALL_MODS.map(m=>({team_id:data.id,modul:m,aktiv:(form.module_aktiv||ALL_MODS).includes(m)}));
+            const rows=ALL_MODS.map(m=>({team_id:data.id,modul:m,aktiv:(form.module_aktiv||ALL_MODS).includes(m),verein_id:vereinId!}));
             await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
           }
         }
       }else{
         if(editTeam){
-          setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
+          setTeams((ts: any[])=>ts.map((t: any)=>t.id===editTeam.id?{...t,...form}:t));
         }else{
-          setTeams(ts=>[...ts,{...form,id:Date.now()}]);
+          setTeams((ts: any[])=>[...ts,{...form,id:Date.now()}]);
         }
       }
       setMsg({type:"ok",text:editTeam?"Team gespeichert.":"Team erstellt."});
       setTimeout(()=>{setShowForm(false);setMsg(null);},900);
     }catch(e){
-      setMsg({type:"error",text:e.message||"Fehler beim Speichern."});
+      setMsg({type:"error",text:(e instanceof Error?e.message:"")||"Fehler beim Speichern."});
     }
     setSaving(false);
   }
 
   /* Supabase: Löschen */
-  async function handleDelete(team){
+  async function handleDelete(team: any){
     setSaving(true);
     try{
       if(sb){
         const{error}=await sb.from("teams").delete().eq("id",team.id);
         if(error) throw error;
       }
-      setTeams(ts=>ts.filter(t=>t.id!==team.id));
+      setTeams((ts: any[])=>ts.filter((t: any)=>t.id!==team.id));
       setDeleteConfirm(null);
     }catch(e){
-      setMsg({type:"error",text:e.message||"Fehler beim Löschen."});
+      setMsg({type:"error",text:(e instanceof Error?e.message:"")||"Fehler beim Löschen."});
     }
     setSaving(false);
   }
 
   /* Aktiv/Inaktiv toggeln */
-  async function toggleAktiv(team){
+  async function toggleAktiv(team: any){
     const neu=!team.aktiv;
     try{
       if(sb) await sb.from("teams").update({aktiv:neu}).eq("id",team.id);
-      setTeams(ts=>ts.map(t=>t.id===team.id?{...t,aktiv:neu}:t));
+      setTeams((ts: any[])=>ts.map((t: any)=>t.id===team.id?{...t,aktiv:neu}:t));
     }catch(e){}
   }
 
   function openNeu(){setForm(EMPTY);setEditTeam(null);setMsg(null);setShowForm(true);}
-  function openEdit(t){
+  function openEdit(t: any){
     const ht=t.haupttrainer||(t.trainer?[t.trainer]:[]);
     const co=t.co_trainers||(t.trainer2?[t.trainer2]:[]);
     const path=getStufePath(t);
@@ -350,10 +376,10 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
         const{error}=await sb.from("teams").update({saison:s,updated_at:new Date().toISOString()}).neq("id",0);
         if(error) throw error;
       }
-      setTeams(ts=>ts.map(t=>({...t,saison:s})));
+      setTeams((ts: any[])=>ts.map((t: any)=>({...t,saison:s})));
       setShowSaison(false);
     }catch(e){
-      setMsg({type:"error",text:e.message||"Fehler."});
+      setMsg({type:"error",text:(e instanceof Error?e.message:"")||"Fehler."});
     }
     setSaving(false);
   }
@@ -394,17 +420,17 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   const groupedTeams=groupBy==="none"
     ?[{key:"",items:sorted}]
     :Object.entries(
-        sorted.reduce((acc,t)=>{
+        sorted.reduce((acc: Record<string, any[]>,t: any)=>{
           const k=t[groupBy]||"-";
           if(!acc[k]) acc[k]=[];
           acc[k].push(t);
           return acc;
-        },{})
+        },{} as Record<string, any[]>)
       ).sort(([a],[b])=>String(a||'').localeCompare(String(b||''))).map(([key,items])=>({key,items}));
 
   /* inputStyle → className="cc-input", labelStyle → className="cc-label" */
 
-  const KAT_COLORS={"Aktivfussball":BL,"Juniorenfussball":R,"Kinderfussball Junioren":"#F97316","Juniorinnenfussball":"#EC4899","Kinderfussball Juniorinnen":"#DB2777","Seniorenfussball":AM};
+  const KAT_COLORS: Record<string, string>={"Aktivfussball":BL,"Juniorenfussball":R,"Kinderfussball Junioren":"#F97316","Juniorinnenfussball":"#EC4899","Kinderfussball Juniorinnen":"#DB2777","Seniorenfussball":AM};
 
   return(
     <div>
@@ -603,8 +629,8 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                     ):(
                       <div style={{display:"flex",gap:8,flexShrink:0}}>
 
-                        <Btn onClick={()=>openEdit(team)} title="Bearbeiten" style={{ width:32,height:32 }}><TI n="edit" size={14}/></Btn>
-                        <Btn variant="primary" color={RL} onClick={()=>setDeleteConfirm(team)} title="Löschen" style={{ width:32,height:32 }}><TI n="trash" size={14}/></Btn>
+                        <Btn onClick={()=>openEdit(team)} style={{ width:32,height:32 }}><TI n="edit" size={14}/></Btn>
+                        <Btn variant="primary" color={RL} onClick={()=>setDeleteConfirm(team)} style={{ width:32,height:32 }}><TI n="trash" size={14}/></Btn>
                       </div>
                     )}
                   </Row>
@@ -730,14 +756,14 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
             <div key={key}>
               <label className="cc-label">{label}</label>
               <Col>
-                {(form[key]||[]).map((val,i)=>(
+                {(form[key]||[]).map((val: any,i: number)=>(
                   <div key={i} style={{display:"flex",gap:8}}>
                     <PersonPicker
                       value={val}
-                      onChange={v=>setForm(p=>({...p,[key]:p[key].map((x,j)=>j===i?v:x)}))}
+                      onChange={v=>setForm(p=>({...p,[key]:p[key].map((x: any,j: number)=>j===i?v:x)}))}
                       placeholder={placeholder}
-                      className="cc-flex-1"/>
-                    <Btn onClick={()=>setForm(p=>({...p,[key]:p[key].filter((_,j)=>j!==i)}))} style={{ width:36,height:38 }}>×</Btn>
+                      style={{flex:1}}/>
+                    <Btn onClick={()=>setForm(p=>({...p,[key]:p[key].filter((_: any,j: number)=>j!==i)}))} style={{ width:36,height:38 }}>×</Btn>
                   </div>
                 ))}
                 <Btn variant="ghost" onClick={()=>setForm(p=>({...p,[key]:[...(p[key]||[]),""]}))}>+ {label} hinzufügen</Btn>
@@ -780,7 +806,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
                 return(
                   <div key={mod.key} onClick={()=>setForm(p=>{
                     const cur=p.module_aktiv||editTeam.module_aktiv||[];
-                    return{...p,module_aktiv:isActive?cur.filter(m=>m!==mod.key):[...cur,mod.key]};
+                    return{...p,module_aktiv:isActive?cur.filter((m: any)=>m!==mod.key):[...cur,mod.key]};
                   })} className="cc-input">
                     <span style={{fontSize:14,color:"var(--text)"}}>{mod.label}</span>
                     <div style={{
@@ -827,7 +853,7 @@ function TeamsVerwaltungModul({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,
   );
 }
 
-function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null,vereinId=null}){
+function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCustomBack,dbMitglieder=[],TeamViewComponent=null,KaderModulComponent=null,TrainingsplanModulComponent=null,TermineModulComponent=null,SpielplanModulComponent=null,TableTabComponent=null,HelferModulComponent=null,navToTeam=null,onNavToTeamDone=null,vereinId=null}: TeamsVerwaltungProps){
   const EMPTY={stufe_id:null,stufe_ebene1:"",stufe_ebene2:"",stufe_ebene3_id:null,hauptbereich:"Juniorenfussball",vereinsstufe:"Junioren C",verbandskategorie:"",name:"",kurzname:"",stufenleitung:"",liga:"",saison:"2024/25",haupttrainer:[],co_trainers:[],staff:[],aktiv:true,beschreibung:""};
   const FALLBACK=[
     /* Aktivfussball – Aktive Herren */
@@ -880,10 +906,10 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
     {id:41,hauptbereich:"Seniorenfussball",       vereinsstufe:"Senioren 50+",         verbandskategorie:"Senioren 50+",        name:"Senioren 50+",     kurzname:"50+",      stufenleitung:"Stufenleitung Senioren",        liga:"Senioren",          saison:"2024/25",haupttrainer:[],             co_trainers:[],staff:[],aktiv:true},
     {id:42,hauptbereich:"Seniorenfussball",       vereinsstufe:"Senioren 60+",         verbandskategorie:"Senioren 60+",        name:"Senioren 60+",     kurzname:"60+",      stufenleitung:"Stufenleitung Senioren",        liga:"Senioren",          saison:"2024/25",haupttrainer:[],             co_trainers:[],staff:[],aktiv:true},
   ];
-  const [localTeams,setLocalTeams]=useState(FALLBACK);
+  const [localTeams,setLocalTeams]=useState<any[]>(FALLBACK);
   /* Nutze dbTeams wenn geladen, sonst localTeams */
   const teams = dbTeams.length>0 ? dbTeams : localTeams;
-  const setTeams = dbTeams.length>0
+  const setTeams: (fn: any)=>void = dbTeams.length>0
     ? (fn)=>{ const next=typeof fn==="function"?fn(dbTeams):fn; if(setDbTeams) setDbTeams(next); }
     : setLocalTeams;
 
@@ -891,10 +917,10 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   const stufen1 = dbStufen.length>0
     ? dbStufen.filter(s=>s.ebene===1).sort((a,b)=>a.sortorder-b.sortorder)
     : Object.keys(TEAM_HIERARCHY).map((n,i)=>({id:n,name:n,ebene:1,sortorder:i}));
-  const getStufen2=(e1id)=> dbStufen.length>0
+  const getStufen2=(e1id: string)=> dbStufen.length>0
     ? dbStufen.filter(s=>s.ebene===2&&s.parent_id===e1id).sort((a,b)=>a.sortorder-b.sortorder)
     : Object.keys(TEAM_HIERARCHY[e1id]||{}).map((n,i)=>({id:n,name:n,ebene:2,sortorder:i,stufenleitung:""}));
-  const getStufen3=(e2id)=> dbStufen.length>0
+  const getStufen3=(e2id: string)=> dbStufen.length>0
     ? dbStufen.filter(s=>s.ebene===3&&s.parent_id===e2id).sort((a,b)=>a.sortorder-b.sortorder)
     : (()=>{
         for(const [hb,vs] of Object.entries(TEAM_HIERARCHY)){
@@ -905,7 +931,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
         return [];
       })();
   /* Stufe-ID → Pfad-Objekte {e1,e2,e3} */
-  function getStufePath(team){
+  function getStufePath(team: any){
     if(dbStufen.length>0 && team.stufe_id){
       const e3=dbStufen.find(s=>s.id===team.stufe_id);
       const e2=e3?dbStufen.find(s=>s.id===e3.parent_id):null;
@@ -919,23 +945,23 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   const getE2fromForm=()=>form.stufe_ebene2||(dbStufen.length===0?form.vereinsstufe:"");
   const [loading,setLoading]=useState(false);
   const [search,setSearch]=useState("");
-  const [filterVals,setFilterVals]=useState([]);
+  const [filterVals,setFilterVals]=useState<any[]>([]);
   const [sortCol,setSortCol]=useState("hauptbereich");
   const [sortDir,setSortDir]=useState("asc");
   const [groupBy,setGroupBy]=useState("hauptbereich");
   const [viewMode,setViewMode]=useState("grid");
-  const [openMenuId,setOpenMenuId]=useState(null);
+  const [openMenuId,setOpenMenuId]=useState<number|string|null>(null);
   const isMobile=useIsMobile();
   const [formTab,setFormTab]=useState("info");
   const [showForm,setShowForm]=useState(false);
-  const [editTeam,setEditTeam]=useState(null);
-  const [form,setForm]=useState(EMPTY);
+  const [editTeam,setEditTeam]=useState<Record<string, any>|null>(null);
+  const [form,setForm]=useState<Record<string, any>>(EMPTY);
   const [saving,setSaving]=useState(false);
-  const [msg,setMsg]=useState(null);
-  const [deleteConfirm,setDeleteConfirm]=useState(null);
+  const [msg,setMsg]=useState<{type: string; text: string}|null>(null);
+  const [deleteConfirm,setDeleteConfirm]=useState<any>(null);
   const [showSaison,setShowSaison]=useState(false);
   const [saisonDraft,setSaisonDraft]=useState("2025/26");
-  const [selectedTeam,setSelectedTeam]=useState(null);
+  const [selectedTeam,setSelectedTeam]=useState<any>(null);
 
   /* navToTeam: direkte Navigation zu einem Team via ID */
   useEffect(()=>{
@@ -964,70 +990,72 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
     if(!form.name.trim()){setMsg({type:"error",text:"Name ist Pflichtfeld."});return;}
     setSaving(true); setMsg(null);
     try{
-      if(sb){
+      /* verein_id ist in teams/team_module NOT NULL (verein_id-Regel) —
+         ohne vereinId schreibt die DB nicht, daher lokaler Fallback. */
+      if(sb&&vereinId){
         if(editTeam){
           const saveData=toDbData(form);const{error}=await sb.from("teams").update({...saveData,updated_at:new Date().toISOString()}).eq("id",editTeam.id);
           if(error) throw error;
-          setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
+          setTeams((ts: any[])=>ts.map((t: any)=>t.id===editTeam.id?{...t,...form}:t));
           /* team_module speichern falls geändert */
           if(form.module_aktiv&&editTeam.id){
             const ALL_MODS=["team","training","events","spielplan","attendance_central","helpers","roster","polls","stats","media","news","wiki","docs"];
-            const rows=ALL_MODS.map(m=>({team_id:editTeam.id,modul:m,aktiv:(form.module_aktiv||[]).includes(m)}));
+            const rows=ALL_MODS.map(m=>({team_id:editTeam.id,modul:m,aktiv:(form.module_aktiv||[]).includes(m),verein_id:vereinId!}));
             await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
           }
         }else{
-          const saveData=toDbData(form);const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString()}).select().single();
+          const saveData=toDbData(form);const{data,error}=await sb.from("teams").insert({...saveData,created_at:new Date().toISOString(),verein_id:vereinId!}).select().single();
           if(error) throw error;
-          setTeams(ts=>[...ts,data]);
+          setTeams((ts: any[])=>[...ts,data]);
           /* team_module für neues Team */
           if(data?.id){
             const ALL_MODS=["team","training","events","spielplan","attendance_central","helpers","roster","polls","stats","media","news","wiki","docs"];
-            const rows=ALL_MODS.map(m=>({team_id:data.id,modul:m,aktiv:(form.module_aktiv||ALL_MODS).includes(m)}));
+            const rows=ALL_MODS.map(m=>({team_id:data.id,modul:m,aktiv:(form.module_aktiv||ALL_MODS).includes(m),verein_id:vereinId!}));
             await sb.from("team_module").upsert(rows,{onConflict:"team_id,modul"});
           }
         }
       }else{
         if(editTeam){
-          setTeams(ts=>ts.map(t=>t.id===editTeam.id?{...t,...form}:t));
+          setTeams((ts: any[])=>ts.map((t: any)=>t.id===editTeam.id?{...t,...form}:t));
         }else{
-          setTeams(ts=>[...ts,{...form,id:Date.now()}]);
+          setTeams((ts: any[])=>[...ts,{...form,id:Date.now()}]);
         }
       }
       setMsg({type:"ok",text:editTeam?"Team gespeichert.":"Team erstellt."});
       setTimeout(()=>{setShowForm(false);setMsg(null);},900);
     }catch(e){
-      setMsg({type:"error",text:e.message||"Fehler beim Speichern."});
+      setMsg({type:"error",text:(e instanceof Error?e.message:"")||"Fehler beim Speichern."});
     }
     setSaving(false);
   }
 
   /* Supabase: Löschen */
-  async function handleDelete(team){
+  async function handleDelete(team: any){
     setSaving(true);
     try{
       if(sb){
         const{error}=await sb.from("teams").delete().eq("id",team.id);
         if(error) throw error;
       }
-      setTeams(ts=>ts.filter(t=>t.id!==team.id));
+      setTeams((ts: any[])=>ts.filter((t: any)=>t.id!==team.id));
       setDeleteConfirm(null);
     }catch(e){
-      setMsg({type:"error",text:e.message||"Fehler beim Löschen."});
+      setMsg({type:"error",text:(e instanceof Error?e.message:"")||"Fehler beim Löschen."});
     }
     setSaving(false);
   }
 
   /* Aktiv/Inaktiv toggeln */
-  async function toggleAktiv(team){
+  async function toggleAktiv(team: any){
     const neu=!team.aktiv;
     try{
       if(sb) await sb.from("teams").update({aktiv:neu}).eq("id",team.id);
-      setTeams(ts=>ts.map(t=>t.id===team.id?{...t,aktiv:neu}:t));
+      setTeams((ts: any[])=>ts.map((t: any)=>t.id===team.id?{...t,aktiv:neu}:t));
     }catch(e){}
   }
 
   function openNeu(){setForm(EMPTY);setEditTeam(null);setMsg(null);setShowForm(true);}
-  function openEdit(t){
+  function openEdit(t: any){
     const ht=t.haupttrainer||(t.trainer?[t.trainer]:[]);
     const co=t.co_trainers||(t.trainer2?[t.trainer2]:[]);
     const path=getStufePath(t);
@@ -1056,10 +1084,10 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
         const{error}=await sb.from("teams").update({saison:s,updated_at:new Date().toISOString()}).neq("id",0);
         if(error) throw error;
       }
-      setTeams(ts=>ts.map(t=>({...t,saison:s})));
+      setTeams((ts: any[])=>ts.map((t: any)=>({...t,saison:s})));
       setShowSaison(false);
     }catch(e){
-      setMsg({type:"error",text:e.message||"Fehler."});
+      setMsg({type:"error",text:(e instanceof Error?e.message:"")||"Fehler."});
     }
     setSaving(false);
   }
@@ -1100,17 +1128,17 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
   const groupedTeams=groupBy==="none"
     ?[{key:"",items:sorted}]
     :Object.entries(
-        sorted.reduce((acc,t)=>{
+        sorted.reduce((acc: Record<string, any[]>,t: any)=>{
           const k=t[groupBy]||"-";
           if(!acc[k]) acc[k]=[];
           acc[k].push(t);
           return acc;
-        },{})
+        },{} as Record<string, any[]>)
       ).sort(([a],[b])=>String(a||'').localeCompare(String(b||''))).map(([key,items])=>({key,items}));
 
   /* inputStyle → className="cc-input", labelStyle → className="cc-label" */
 
-  const KAT_COLORS={"Aktivfussball":BL,"Juniorenfussball":R,"Kinderfussball Junioren":"#F97316","Juniorinnenfussball":"#EC4899","Kinderfussball Juniorinnen":"#DB2777","Seniorenfussball":AM};
+  const KAT_COLORS: Record<string, string>={"Aktivfussball":BL,"Juniorenfussball":R,"Kinderfussball Junioren":"#F97316","Juniorinnenfussball":"#EC4899","Kinderfussball Juniorinnen":"#DB2777","Seniorenfussball":AM};
 
   return(
     <div>
@@ -1366,11 +1394,11 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                     ):(
                       <div style={{display:"flex",gap:8,flexShrink:0}}>
 
-                        <button onClick={()=>openEdit(team)} title="Bearbeiten"
+                        <button onClick={()=>openEdit(team)}
                           style={{width:32,height:32,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--sub)"}}>
                           <TI n="edit" size={14}/>
                         </button>
-                        <button onClick={()=>setDeleteConfirm(team)} title="Löschen"
+                        <button onClick={()=>setDeleteConfirm(team)}
                           style={{width:32,height:32,borderRadius:8,border:"1px solid "+R+"40",background:RL,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:R}}>
                           <TI n="trash" size={14}/>
                         </button>
@@ -1506,14 +1534,14 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
             <div key={key}>
               <label className="cc-label">{label}</label>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {(form[key]||[]).map((val,i)=>(
+                {(form[key]||[]).map((val: any,i: number)=>(
                   <div key={i} style={{display:"flex",gap:8}}>
                     <PersonPicker
                       value={val}
-                      onChange={v=>setForm(p=>({...p,[key]:p[key].map((x,j)=>j===i?v:x)}))}
+                      onChange={v=>setForm(p=>({...p,[key]:p[key].map((x: any,j: number)=>j===i?v:x)}))}
                       placeholder={placeholder}
-                      className="cc-flex-1"/>
-                    <button onClick={()=>setForm(p=>({...p,[key]:p[key].filter((_,j)=>j!==i)}))}
+                      style={{flex:1}}/>
+                    <button onClick={()=>setForm(p=>({...p,[key]:p[key].filter((_: any,j: number)=>j!==i)}))}
                       style={{width:36,height:38,borderRadius:8,border:"1px solid var(--border)",background:"var(--surface2)",cursor:"pointer",color:R,flexShrink:0,fontSize:16}}>×</button>
                   </div>
                 ))}
@@ -1560,7 +1588,7 @@ function TeamsAdminView({sb,dbTeams=[],setDbTeams,dbStufen=[],setDbStufen,setCus
                 return(
                   <div key={mod.key} onClick={()=>setForm(p=>{
                     const cur=p.module_aktiv||editTeam.module_aktiv||[];
-                    return{...p,module_aktiv:isActive?cur.filter(m=>m!==mod.key):[...cur,mod.key]};
+                    return{...p,module_aktiv:isActive?cur.filter((m: any)=>m!==mod.key):[...cur,mod.key]};
                   })} className="cc-input">
                     <span style={{fontSize:14,color:"var(--text)"}}>{mod.label}</span>
                     <div style={{

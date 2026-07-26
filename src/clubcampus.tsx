@@ -20,7 +20,7 @@ import { Dashboard } from "./modules/DashboardModul.tsx";
 import { TeamView } from "./modules/TeamModul.tsx";
 import { TermineModul, SpielplanModul, TableTab } from "./modules/TermineModul.tsx";
 import { TrainingsplanModul } from "./modules/TrainingsplanModul.tsx";
-import { TeamsVerwaltungModul as TeamsVerwaltungModulJs } from "./modules/TeamsVerwaltungModul.jsx";
+import { TeamsVerwaltungModul } from "./modules/TeamsVerwaltungModul.tsx";
 import { MembersView } from "./modules/MitgliederModul.tsx";
 import KaderModul from "./modules/KaderModul.tsx";
 import { HelferModul, HelpersList as HelpersListJs } from "./modules/HelferModul.jsx";
@@ -43,7 +43,6 @@ import type {
    MembersView fehlt bewusst: es ist bereits TypeScript und wird geprüft. */
 type JsComponent = (props: Record<string, unknown>) => ReactElement | null;
 
-const TeamsVerwaltungModul  = TeamsVerwaltungModulJs  as unknown as JsComponent;
 const HelpersList           = HelpersListJs           as unknown as JsComponent;
 
 /* Ebenfalls noch JS: TS liest die Initialwerte (null) als Typ. */
