@@ -10,7 +10,7 @@ import { BUSES, MATERIAL, LOCKERS, MEDIA, WIKI, NEWS } from "../demoData.js";
 import { logAenderung } from "../domains/members/memberService.ts";
 import type { Account, DbUser, Mitglied, Sb } from "../types.ts";
 
-/* Berechtigungsprädikate, wie sie usePermissions liefert */
+/* Berechtigungsprädikate, wie sie getPermissions liefert */
 type KannFn = (modul: string) => boolean;
 
 interface BusesViewProps {

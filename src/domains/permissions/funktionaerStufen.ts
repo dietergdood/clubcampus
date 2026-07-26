@@ -3,7 +3,7 @@
    Effektive Zugriffstufe eines Funktionärs pro Modul.
 
    Reine Logik ohne UI/React — lag früher in modules/NavigationModul,
-   wurde aber von domains/app/usePermissions genutzt (Schichten-
+   wurde aber von domains/app/getPermissions genutzt (Schichten-
    Inversion domains -> modules). Hier in die Domain-Schicht gezogen;
    NavigationModul re-importiert bei Bedarf von hier (Modul -> Domain
    ist erlaubt).

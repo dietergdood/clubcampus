@@ -1,6 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — domains/app/usePermissions.ts
-   App-Level Zugriffstufen-Hilfsfunktionen
+   ClubCampus — domains/app/getPermissions.ts
+   App-Level Zugriffstufen-Hilfsfunktionen. Kein React-Hook (ruft
+   intern keine Hooks) — bewusst ohne use-Präfix, damit die
+   rules-of-hooks-Regel nicht fälschlich anschlägt.
    ═══════════════════════════════════════════════════════════════ */
 import { getEffektiveStufeForFunktionaer } from '../permissions/funktionaerStufen.js';
 import type { Rolle, Zugriffstufe, PortalFunktion, ModuleRechte } from '../../types.js';
@@ -18,14 +20,14 @@ const APP_ZUGRIFF_DEFAULT: AppZugriffDefault = {
   supporter:      { _all: 'lesen', helpers: 'schreiben' },
 };
 
-interface UsePermissionsProps {
+interface GetPermissionsProps {
   role: Rolle;
   moduleRechte: ModuleRechte | null;
   zugriffStufen: Record<string, Record<string, Zugriffstufe>> | null;
   dbFunktionen: PortalFunktion[];
 }
 
-export function usePermissions({ role, moduleRechte, zugriffStufen, dbFunktionen }: UsePermissionsProps) {
+export function getPermissions({ role, moduleRechte, zugriffStufen, dbFunktionen }: GetPermissionsProps) {
   function getZugriff(modulKey: string): Zugriffstufe | null {
     if (role === 'funktionaer') {
       return getEffektiveStufeForFunktionaer(dbFunktionen, modulKey);
