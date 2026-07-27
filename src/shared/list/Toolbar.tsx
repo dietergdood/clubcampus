@@ -40,6 +40,10 @@ export interface ToolbarProps {
   onExternalGroupClose?: (() => void) | null;
   /* Mehr-Menu */
   moreItems?: MoreEntry[];
+  /* Kartenmodus: schmaler Viewport UND die Liste rendert Karten statt
+     Tabelle. Nur dann schrumpft die Toolbar auf Suche + ···; eine
+     Tabelle auf schmalem Viewport behaelt alle Buttons (nur Icons). */
+  kartenModus?: boolean;
   /* Spalten — Desktop-Button */
   colMenu?: ReactNode;
   /* Spalten — Inhalt fuer das Mobile-Sheet (ColMenuButton inline) */
@@ -63,6 +67,8 @@ export function Toolbar({
   externalGroupOpen=0, onExternalGroupClose=null,
   /* Mehr-Menu */
   moreItems=[],
+  /* Darstellung */
+  kartenModus=false,
   /* Spalten */
   colMenu=null, colPanel=null, colCount=0,
   /* Rechter Slot */
@@ -134,7 +140,7 @@ export function Toolbar({
      Gruppieren, Sortieren und Spalten sind ueber das Sheet erreichbar.
      Badge nur, wenn etwas vom Normalzustand abweicht — eine einzelne
      Sortierebene ist der Normalfall und bekommt keins. */
-  const panelNav: MoreSheetNav[] = !isMobile ? [] : [
+  const panelNav: MoreSheetNav[] = !kartenModus ? [] : [
     ...(filterDefs.length>0 ? [{ key:"filter" as const, label:"Filter", icon:"filter", badge:hasActiveFilter?activeFilterCount:undefined }] : []),
     ...(groupOptions.length>0 ? [{ key:"group" as const, label:"Gruppieren", icon:"layout-rows", badge:isGrouped?groupByArr.filter(g=>g&&g!=="none").length:undefined }] : []),
     ...(sort ? [{ key:"sort" as const, label:"Sortieren", icon:"arrows-sort", badge:istMehrstufig?sortEbenen.length:undefined }] : []),
@@ -146,7 +152,7 @@ export function Toolbar({
       <div className="cc-ml-toolbar">
         {/* Suche */}
         {onSearch!==null&&(
-          <div className="cc-ml-srch-wrap">
+          <div className={`cc-ml-srch-wrap${kartenModus?" cc-ml-srch-wrap-voll":""}`}>
             <div className="cc-ml-srch">
               <TI n="search" size={15} className="cc-input-icon"/>
               <input value={search} onChange={e=>onSearch(e.target.value)} placeholder="Suchen…"/>
@@ -155,15 +161,15 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Filter — auf Mobile im ···-Sheet statt in der Toolbar */}
-        {!isMobile&&filterDefs.length>0&&(
+        {/* Filter — im Kartenmodus stattdessen im ···-Sheet */}
+        {!kartenModus&&filterDefs.length>0&&(
           <div ref={filterRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={hasActiveFilter?accentStyle:{}}
               onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false);setSortOpen(false);setMoreOpen(false);}}>
               <TI n="filter" size={15}/>
-              Filter
+              {!isMobile&&"Filter"}
               {hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}
             </button>
             {filterOpen&&(
@@ -178,15 +184,15 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Gruppieren — auf Mobile im ···-Sheet */}
-        {!isMobile&&groupOptions.length>0&&(
+        {/* Gruppieren — im Kartenmodus im ···-Sheet */}
+        {!kartenModus&&groupOptions.length>0&&(
           <div ref={groupRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={isGrouped?accentStyle:{}}
               onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false);setSortOpen(false);setMoreOpen(false);}}>
               <TI n="layout-rows" size={15}/>
-              Gruppieren
+              {!isMobile&&"Gruppieren"}
               {isGrouped&&<span className="cc-ml-filter-badge">{groupByArr.filter(g=>g&&g!=="none").length}</span>}
             </button>
             {groupOpen&&(
@@ -208,15 +214,15 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Sortieren — auf Mobile im ···-Sheet */}
-        {!isMobile&&sort&&(
+        {/* Sortieren — im Kartenmodus im ···-Sheet */}
+        {!kartenModus&&sort&&(
           <div ref={sortRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={istMehrstufig?accentStyle:{}}
               onClick={()=>{setSortOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setMoreOpen(false);}}>
               <TI n="arrows-sort" size={15}/>
-              Sortieren
+              {!isMobile&&"Sortieren"}
               {istMehrstufig&&<span className="cc-ml-filter-badge">{sortEbenen.length}</span>}
             </button>
             {sortOpen&&(

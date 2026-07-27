@@ -105,6 +105,10 @@ export function ListView<T extends ListRow = ListRow>({
   emptySubtitle = "Füge den ersten Eintrag hinzu, um loszulegen.",
 }: ListViewProps<T>) {
   const isMobile = useIsMobile();
+  /* Kartenmodus statt Tabelle — nur dann schrumpft die Toolbar auf
+     Suche + ···. Eine Liste ohne renderMobile (Eltern, Archiv) zeigt
+     auch auf schmalem Viewport die Tabelle und braucht ihre Buttons. */
+  const kartenModus = isMobile && !!renderMobile;
 
   const {
     visibleCols, setVisibleCols,
@@ -313,8 +317,9 @@ export function ListView<T extends ListRow = ListRow>({
         sort={sortControls}
         externalFilterOpen={mobileFilterOpen}
         externalGroupOpen={mobileGroupOpen}
-        colMenu={!isMobile && <ColMenuButton {...colMenuProps} />}
-        colPanel={isMobile ? <ColMenuButton {...colMenuProps} inline /> : null}
+        kartenModus={kartenModus}
+        colMenu={!kartenModus && <ColMenuButton {...colMenuProps} />}
+        colPanel={kartenModus ? <ColMenuButton {...colMenuProps} inline /> : null}
         colCount={visibleCols.length}
         moreItems={moreItems}
       />
@@ -338,7 +343,7 @@ export function ListView<T extends ListRow = ListRow>({
           <EmptyState icon={emptyIcon} title={emptyTitle} subtitle={emptySubtitle}/>
         ) : filtered.length === 0 ? (
           <EmptyState icon="filter-off" title="Keine Einträge gefunden" subtitle="Passe die Filter an oder setze sie zurück." action="Filter zurücksetzen" onAction={() => setFilterVals({})}/>
-        ) : isMobile && renderMobile ? (
+        ) : kartenModus && renderMobile ? (
           <div>{groups.map(({ key, label, members }) => (
             <div key={key}>
               {hasGroup && label && <div className="cc-members-list-group-hdr">{label} <span className="cc-text-muted">{(members||[]).length}</span></div>}
