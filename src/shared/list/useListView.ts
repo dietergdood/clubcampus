@@ -110,6 +110,26 @@ export function useListView<T extends ListRow = ListRow>({
     if (externalSetFilter) externalSetFilter.current = (vals) => setFilterVals(prev => ({...prev, ...vals}));
   }, [externalSetFilter]);
 
+  // ── Sortierte/gruppierte Spalten sichtbar machen ─────────────
+  /* Nach einer Spalte zu sortieren oder zu gruppieren, die man nicht
+     sieht, ist nicht nachvollziehbar — die Liste ordnet sich dann nach
+     einem unsichtbaren Kriterium. Fehlende Spalten werden deshalb
+     hinten angehaengt. Gruppierschluessel ohne eigene Spalte
+     (z.B. __teams_funktionen) werden uebersprungen, ebenso hidden-
+     Spalten, die sich gar nicht einblenden lassen. */
+  useEffect(() => {
+    const gebraucht = [
+      ...sortDefs.map(d => d.key),
+      ...(Array.isArray(groupBy) ? groupBy : [groupBy]),
+    ].filter(k => k && k !== "none" && colDefs.some(c => c.key === k && !c.hidden));
+    if (gebraucht.length === 0) return;
+    setVisibleCols(prev => {
+      const fehlend = gebraucht.filter(k => !prev.includes(k));
+      /* prev unveraendert zurueckgeben, sonst rendert der Effekt endlos */
+      return fehlend.length > 0 ? [...prev, ...fehlend] : prev;
+    });
+  }, [sortDefs, groupBy, colDefs]);
+
   // ── Ansichten anwenden ───────────────────────────────────────
   function applyStandardView(key: string) {
     if (!savedViews?.[key]) return;

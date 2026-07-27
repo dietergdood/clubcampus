@@ -153,9 +153,9 @@ export function ListView<T extends ListRow = ListRow>({
      Spalten-Header auslöst — nur explizit bedienbar (Mobile hat kein Shift). */
   const sortControls = {
     sortDefs,
-    /* Alle echten Spalten, nicht nur die sichtbaren — so bleibt das Label
-       einer Ebene lesbar, wenn ihre Spalte ausgeblendet wird, und man kann
-       (wie bei der Suche) auch nach Ausgeblendetem sortieren. */
+    /* Alle echten Spalten, nicht nur die sichtbaren — eine ausgeblendete
+       Spalte laesst sich so als Ebene waehlen und wird dann von
+       useListView automatisch eingeblendet. */
     colDefs: colDefs.filter(c => !c.hidden),
     /* Kategorien für die Hinzufügen-Liste, wie im Spalten-Panel */
     colGroups,

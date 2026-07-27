@@ -191,3 +191,36 @@ describe('sortMembers', () => {
     expect(result[result.length - 1].id).toBe('3');
   });
 });
+
+// ── Status-Spalten: fachliche statt alphabetischer Reihenfolge ────
+describe('sortMembers — Status-Spalten', () => {
+  const stati = [
+    { id: 'a', datenpruefung: 'Ausstehend', portal: 'Kein Zugang' },
+    { id: 'b', datenpruefung: 'Geprueft',   portal: 'Aktiv' },
+    { id: 'c', datenpruefung: 'Ausstehend', portal: 'Deaktiviert' },
+  ];
+
+  it('Datenprüfung: Geprüft vor Ausstehend (nicht alphabetisch)', () => {
+    // Alphabetisch käme "Ausstehend" zuerst — fachlich gehört "Geprueft" nach vorn
+    const result = sortMembers(stati, 'datenpruefung', 'asc');
+    expect(result[0].datenpruefung).toBe('Geprueft');
+    expect(result[result.length - 1].datenpruefung).toBe('Ausstehend');
+  });
+
+  it('Datenprüfung absteigend dreht die Reihenfolge um', () => {
+    const result = sortMembers(stati, 'datenpruefung', 'desc');
+    expect(result[0].datenpruefung).toBe('Ausstehend');
+    expect(result[result.length - 1].datenpruefung).toBe('Geprueft');
+  });
+
+  it('Portal-Zugang: Aktiv → Deaktiviert → Kein Zugang', () => {
+    const result = sortMembers(stati, 'portal', 'asc');
+    expect(result.map(m => m.portal)).toEqual(['Aktiv', 'Deaktiviert', 'Kein Zugang']);
+  });
+
+  it('unbekannter Status landet am Ende, nicht bei den Leerwerten', () => {
+    const mitUnbekannt = [...stati, { id: 'd', datenpruefung: 'Irgendwas' }];
+    const result = sortMembers(mitUnbekannt, 'datenpruefung', 'asc');
+    expect(result[result.length - 1].id).toBe('d');
+  });
+});

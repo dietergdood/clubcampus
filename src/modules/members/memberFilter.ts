@@ -152,6 +152,17 @@ export function filterMembers(
   });
 }
 
+/* Status-Spalten haben eine fachliche Reihenfolge, die nicht der
+   alphabetischen entspricht: "Geprueft" gehoert vor "Ausstehend", nicht
+   dahinter. Der Rang wird dem Wert als Praefix vorangestellt
+   ("0_geprueft" < "1_ausstehend"), damit der normale localeCompare
+   greift. Werte ausserhalb der Tabelle bekommen Rang 9 und landen am
+   Ende — aber vor dem Leerwert-Handling, weil sie nicht leer sind. */
+const STATUS_RANG: Record<string, Record<string, number>> = {
+  datenpruefung: { "Geprueft": 0, "Ausstehend": 1 },
+  portal:        { "Aktiv": 0, "Deaktiviert": 1, "Kein Zugang": 2 },
+};
+
 export function sortMembers(
   filtered: MemberRow[],
   sortCol: string,
@@ -170,6 +181,12 @@ export function sortMembers(
 
   return [...filtered].sort((a,b)=>{
     const getVal=(m: MemberRow): string=>{
+      // Status-Spalten: fachliche statt alphabetischer Reihenfolge
+      const rangTabelle=STATUS_RANG[sortCol];
+      if(rangTabelle){
+        const roh=String(memberFeld(m,sortCol)??"");
+        return `${rangTabelle[roh]??9}_${roh.toLowerCase()}`;
+      }
       // Spezielle Sortierschlüssel für zusammengesetzte Spalten
       if(sortCol==="name") return `${m.vorname||""} ${m.nachname||""}`.trim().toLowerCase();
       if(sortCol==="teams_rollen"||sortCol==="teams"){
