@@ -856,6 +856,7 @@ export type Database = {
           mitglied_id: number
           nachname: string | null
           name: string
+          profil_geprueft_at: string | null
           supporter: boolean | null
           tel: string | null
           telefon: string | null
@@ -872,6 +873,7 @@ export type Database = {
           mitglied_id: number
           nachname?: string | null
           name: string
+          profil_geprueft_at?: string | null
           supporter?: boolean | null
           tel?: string | null
           telefon?: string | null
@@ -888,6 +890,7 @@ export type Database = {
           mitglied_id?: number
           nachname?: string | null
           name?: string
+          profil_geprueft_at?: string | null
           supporter?: boolean | null
           tel?: string | null
           telefon?: string | null
@@ -3864,6 +3867,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          slug: string | null
           theme: Json | null
           updated_at: string | null
         }
@@ -3871,6 +3875,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          slug?: string | null
           theme?: Json | null
           updated_at?: string | null
         }
@@ -3878,6 +3883,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          slug?: string | null
           theme?: Json | null
           updated_at?: string | null
         }
@@ -3939,6 +3945,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_email_bekannt: {
+        Args: { p_email: string; p_verein_id: string }
+        Returns: Json
+      }
       get_my_mitglied_id: { Args: never; Returns: number }
       get_my_role: { Args: never; Returns: string }
       get_my_verein_id: { Args: never; Returns: string }
