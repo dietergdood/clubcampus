@@ -596,6 +596,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-sheet-nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 20px;border:none;border-bottom:0.5px solid var(--border);background:transparent;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;text-align:left}
 .cc-sheet-nav-item:active{background:var(--cc-hover)}
 .cc-sheet-nav-left{display:flex;align-items:center;gap:12px}
+/* Badge + Chevron am rechten Rand einer Sheet-Navigationszeile */
+.cc-sheet-nav-right{display:flex;align-items:center;gap:8px;color:var(--sub)}
 .cc-sheet-subhdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 8px}
 /* Platzhalter statt "Fertig", damit der Titel mittig bleibt */
 .cc-sheet-subhdr-spacer{width:32px}

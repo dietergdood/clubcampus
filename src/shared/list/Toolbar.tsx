@@ -12,7 +12,7 @@ import { FilterPanel, aktiveSektionen, hatAktivenFilter, anzahlAktiverFilter } f
 import { FilterChips } from "./FilterChips.tsx";
 import { MoreMenu } from "./MoreMenu.tsx";
 import { MoreSheet } from "./MoreSheet.tsx";
-import type { MobileSubMenu } from "./MoreSheet.tsx";
+import type { MobileSubMenu, MoreSheetNav } from "./MoreSheet.tsx";
 import type { FilterChangeHandler, FilterDef, FilterVals, GroupOption, MoreEntry, SortControls } from "./types.ts";
 
 export type { FilterChangeHandler };
@@ -40,8 +40,12 @@ export interface ToolbarProps {
   onExternalGroupClose?: (() => void) | null;
   /* Mehr-Menu */
   moreItems?: MoreEntry[];
-  /* Spalten */
+  /* Spalten — Desktop-Button */
   colMenu?: ReactNode;
+  /* Spalten — Inhalt fuer das Mobile-Sheet (ColMenuButton inline) */
+  colPanel?: ReactNode;
+  /* Anzahl sichtbarer Spalten, fuer das Badge im Sheet */
+  colCount?: number;
   /* Rechter Slot */
   right?: ReactNode;
 }
@@ -60,7 +64,7 @@ export function Toolbar({
   /* Mehr-Menu */
   moreItems=[],
   /* Spalten */
-  colMenu=null,
+  colMenu=null, colPanel=null, colCount=0,
   /* Rechter Slot */
   right=null,
 }: ToolbarProps){
@@ -126,6 +130,17 @@ export function Toolbar({
 
   function closeSheet(){ setMoreOpen(false); setMobileSubMenu(null); }
 
+  /* Auf schmalen Viewports zeigt die Toolbar nur Suche und ···; Filter,
+     Gruppieren, Sortieren und Spalten sind ueber das Sheet erreichbar.
+     Badge nur, wenn etwas vom Normalzustand abweicht — eine einzelne
+     Sortierebene ist der Normalfall und bekommt keins. */
+  const panelNav: MoreSheetNav[] = !isMobile ? [] : [
+    ...(filterDefs.length>0 ? [{ key:"filter" as const, label:"Filter", icon:"filter", badge:hasActiveFilter?activeFilterCount:undefined }] : []),
+    ...(groupOptions.length>0 ? [{ key:"group" as const, label:"Gruppieren", icon:"layout-rows", badge:isGrouped?groupByArr.filter(g=>g&&g!=="none").length:undefined }] : []),
+    ...(sort ? [{ key:"sort" as const, label:"Sortieren", icon:"arrows-sort", badge:istMehrstufig?sortEbenen.length:undefined }] : []),
+    ...(colPanel ? [{ key:"cols" as const, label:"Spalten", icon:"table", badge:colCount||undefined }] : []),
+  ];
+
   return(
     <div>
       <div className="cc-ml-toolbar">
@@ -140,21 +155,18 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Filter */}
-        {filterDefs.length>0&&(
+        {/* Filter — auf Mobile im ···-Sheet statt in der Toolbar */}
+        {!isMobile&&filterDefs.length>0&&(
           <div ref={filterRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={hasActiveFilter?accentStyle:{}}
-              onClick={()=>{
-                if(isMobile){setFilterSearch("");setOpenSecs(aktiveSektionen(filterDefs,filterVals));setMoreOpen(true);setMobileSubMenu("filter");}
-                else{setFilterOpen(o=>!o);setGroupOpen(false);setSortOpen(false);setMoreOpen(false);}
-              }}>
+              onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false);setSortOpen(false);setMoreOpen(false);}}>
               <TI n="filter" size={15}/>
-              {!isMobile&&"Filter"}
+              Filter
               {hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}
             </button>
-            {filterOpen&&!isMobile&&(
+            {filterOpen&&(
                 <div className="cc-ml-dropdown cc-ml-filter-dropdown">
                   <div className="cc-filter-footer">
                     <button className="cc-ml-dropdown-clear" onClick={()=>onFilterChange&&onFilterChange("__reset")}>Zurücksetzen</button>
@@ -166,19 +178,16 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Gruppieren */}
-        {groupOptions.length>0&&(
+        {/* Gruppieren — auf Mobile im ···-Sheet */}
+        {!isMobile&&groupOptions.length>0&&(
           <div ref={groupRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={isGrouped?accentStyle:{}}
-              onClick={()=>{
-                if(isMobile){setMoreOpen(true);setMobileSubMenu("group");}
-                else{setGroupOpen(o=>!o);setFilterOpen(false);setSortOpen(false);setMoreOpen(false);}
-              }}>
+              onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false);setSortOpen(false);setMoreOpen(false);}}>
               <TI n="layout-rows" size={15}/>
-              {!isMobile&&"Gruppieren"}
-              {isGrouped&&!isMobile&&<span className="cc-ml-filter-badge">{groupByArr.filter(g=>g&&g!=="none").length}</span>}
+              Gruppieren
+              {isGrouped&&<span className="cc-ml-filter-badge">{groupByArr.filter(g=>g&&g!=="none").length}</span>}
             </button>
             {groupOpen&&(
               isMobile?(
@@ -199,21 +208,18 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Sortieren */}
-        {sort&&(
+        {/* Sortieren — auf Mobile im ···-Sheet */}
+        {!isMobile&&sort&&(
           <div ref={sortRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={istMehrstufig?accentStyle:{}}
-              onClick={()=>{
-                if(isMobile){setMoreOpen(true);setMobileSubMenu("sort");}
-                else{setSortOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setMoreOpen(false);}
-              }}>
+              onClick={()=>{setSortOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setMoreOpen(false);}}>
               <TI n="arrows-sort" size={15}/>
-              {!isMobile&&"Sortieren"}
-              {istMehrstufig&&!isMobile&&<span className="cc-ml-filter-badge">{sortEbenen.length}</span>}
+              Sortieren
+              {istMehrstufig&&<span className="cc-ml-filter-badge">{sortEbenen.length}</span>}
             </button>
-            {sortOpen&&!isMobile&&(
+            {sortOpen&&(
               <div className="cc-ml-dropdown cc-ml-group-dropdown" style={{minWidth:260}}>
                 <SortPanel {...sort} onDone={()=>setSortOpen(false)}/>
               </div>
@@ -253,8 +259,10 @@ export function Toolbar({
                       </>
                     ),
                     sort: sort?<SortPanel {...sort} mobile onDone={closeSheet}/>:undefined,
-                    group:<GroupPanel {...groupPanelProps} mobile onDone={closeSheet}/>,
+                    group: groupOptions.length>0?<GroupPanel {...groupPanelProps} mobile onDone={closeSheet}/>:undefined,
+                    cols: colPanel??undefined,
                   }}
+                  panelNav={panelNav}
                 />
               ):(
                 <MoreMenu

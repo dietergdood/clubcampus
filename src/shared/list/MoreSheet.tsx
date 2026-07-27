@@ -14,14 +14,25 @@ import type { ReactNode } from "react";
 import { TI } from "../../icons.tsx";
 import type { MoreEntry } from "./types.ts";
 
-export type MobileSubMenu = "filter" | "group" | "sort" | "views" | "export" | null;
+export type MobileSubMenu = "filter" | "group" | "sort" | "cols" | "views" | "export" | null;
 
 /* Unterseiten mit eigenem Panel — sie bekommen einen "Fertig"-Knopf,
    die reinen Listen dagegen nicht. */
-const PANEL_TITEL: Record<string, string> = { filter: "Filter", sort: "Sortieren", group: "Gruppieren" };
+const PANEL_TITEL: Record<string, string> = { filter: "Filter", sort: "Sortieren", group: "Gruppieren", cols: "Spalten" };
 const LISTEN_TITEL: Record<string, string> = { views: "Ansichten", export: "Exportieren" };
 /* Abschnittsüberschrift in moreItems je Unterseite */
 const LISTEN_ABSCHNITT: Record<string, string> = { views: "Ansichten", export: "Export" };
+
+/* Einstieg in eine Panel-Unterseite, im Hauptmenü als Zeile gerendert.
+   Auf schmalen Viewports wandern Filter, Gruppieren, Sortieren und
+   Spalten hierher, weil die Toolbar dort nur Suche und ··· zeigt. */
+export interface MoreSheetNav {
+  key: Exclude<MobileSubMenu, null>;
+  label: string;
+  icon: string;
+  /* Zahl neben dem Eintrag; undefined = kein Badge */
+  badge?: number;
+}
 
 export interface MoreSheetProps {
   moreItems: MoreEntry[];
@@ -30,10 +41,12 @@ export interface MoreSheetProps {
   /* Schliesst das ganze Sheet inklusive Unterseite */
   onClose: () => void;
   /* Fertig gerenderte Panels — null blendet die Unterseite aus */
-  panels: { filter?: ReactNode; sort?: ReactNode; group?: ReactNode };
+  panels: { filter?: ReactNode; sort?: ReactNode; group?: ReactNode; cols?: ReactNode };
+  /* Einstiege ins Hauptmenü; leer = keine (Desktop-Sheet) */
+  panelNav?: MoreSheetNav[];
 }
 
-export function MoreSheet({ moreItems, subMenu, setSubMenu, onClose, panels }: MoreSheetProps) {
+export function MoreSheet({ moreItems, subMenu, setSubMenu, onClose, panels, panelNav = [] }: MoreSheetProps) {
   const hatAbschnitt = (label: string) =>
     moreItems.some(item => item !== "sep" && item.header && item.label === label);
 
@@ -63,6 +76,17 @@ export function MoreSheet({ moreItems, subMenu, setSubMenu, onClose, panels }: M
                 );
               });
             })()}
+
+            {panelNav.map(n => (
+              <button key={n.key} className="cc-sheet-nav-item"
+                onMouseDown={e => { e.stopPropagation(); setSubMenu(n.key); }}>
+                <span className="cc-sheet-nav-left"><TI n={n.icon} size={18}/>{n.label}</span>
+                <span className="cc-sheet-nav-right">
+                  {n.badge != null && <span className="cc-ml-filter-badge">{n.badge}</span>}
+                  <TI n="chevron-right" size={14}/>
+                </span>
+              </button>
+            ))}
 
             {hatAbschnitt("Ansichten") && (
               <button className="cc-sheet-nav-item"

@@ -149,6 +149,20 @@ export function ListView<T extends ListRow = ListRow>({
     isAdmin, isMobile, externalSetFilter,
   });
 
+  /* Spaltenauswahl — Desktop als Dropdown-Button, Mobile als Inhalt im
+     ···-Sheet. Beide bekommen dieselben Props. */
+  const colMenuProps = {
+    colGroups,
+    visibleCols,
+    onVisibleColsChange: setVisibleCols,
+    dragCol,
+    dragOverCol,
+    onDragStart: (k: string) => setDragCol(k),
+    onDragOver: (k: string) => setDragOverCol(k),
+    onDrop: handleColDrop,
+    onDragEnd: () => { setDragCol(null); setDragOverCol(null); },
+  };
+
   /* Sortier-Panel: dieselben Aktionen, die auch Shift+Klick auf einen
      Spalten-Header auslöst — nur explizit bedienbar (Mobile hat kein Shift). */
   const sortControls = {
@@ -299,19 +313,9 @@ export function ListView<T extends ListRow = ListRow>({
         sort={sortControls}
         externalFilterOpen={mobileFilterOpen}
         externalGroupOpen={mobileGroupOpen}
-        colMenu={!isMobile && (
-          <ColMenuButton
-            colGroups={colGroups}
-            visibleCols={visibleCols}
-            onVisibleColsChange={setVisibleCols}
-            dragCol={dragCol}
-            dragOverCol={dragOverCol}
-            onDragStart={k => setDragCol(k)}
-            onDragOver={k => setDragOverCol(k)}
-            onDrop={handleColDrop}
-            onDragEnd={() => { setDragCol(null); setDragOverCol(null); }}
-          />
-        )}
+        colMenu={!isMobile && <ColMenuButton {...colMenuProps} />}
+        colPanel={isMobile ? <ColMenuButton {...colMenuProps} inline /> : null}
+        colCount={visibleCols.length}
         moreItems={moreItems}
       />
 
