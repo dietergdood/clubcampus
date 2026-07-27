@@ -3,6 +3,7 @@
    Root-Komponente, Datenlader und Router in einem
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
+import type { ReactElement } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { FONT } from "./constants.ts";
 import { ThemeCtx, THEME_DEFAULT_STATIC, useBreakpoint } from "./theme.ts";
@@ -26,6 +27,7 @@ import { HelferModul, HelpersList } from "./modules/HelferModul.tsx";
 import NachrichtenModul from "./modules/NachrichtenModul.tsx";
 import { PortalverwaltungView } from "./modules/PortalverwaltungModul.tsx";
 import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView } from "./modules/PlatzhalterModul.tsx";
+import { DatenpruefungMitglied } from "./modules/members/tabs/DatenpruefungMitglied.tsx";
 import type {
   Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
@@ -49,12 +51,10 @@ interface Stufe {
 interface PortalProps {
   /* Von App.jsx erzeugt; null, wenn die Env-Variablen fehlen */
   supabaseClient: Sb;
-  /* Vereins-Slug aus der URL: /fcherrliberg → "fcherrliberg" */
-  slug: string | null;
 }
 
 /* ── APP ROOT ── */
-function Portal({supabaseClient, slug}: PortalProps){
+function Portal({supabaseClient}: PortalProps){
   /* Früher stand hier `supabaseClient||supabase||null`. Ein globales
      `supabase` gibt es nicht — sobald supabaseClient null war (fehlende
      Env-Variablen), lief die Zeile in einen ReferenceError statt den
@@ -225,7 +225,7 @@ function Portal({supabaseClient, slug}: PortalProps){
     loadDbMitglieder, loadDbMitgliedtypen,
     loadDbPortalRollen, loadDbKaderRollen,
     handleLogout: _handleLogout,
-  } = useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
+  } = useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
     setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
     setSession, setDbUser, setTenant });
 
@@ -398,60 +398,22 @@ function Portal({supabaseClient, slug}: PortalProps){
         {(()=>{
           if(!session||role==="administrator"||role==="administration") return null;
           if(!sollProfilPruefen()||profilOverlayDismissed) return null;
-          const fehlend=getProfilFehlend();
-          const LABELS: Record<string,string>={"vorname":"Vorname","nachname":"Nachname","geburtsdatum":"Geburtsdatum","telefon":"Handynummer","email":"E-Mail"};
+          const meinMitglied = dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
+          if (!meinMitglied) return null;
           return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-              <div style={{background:"var(--surface)",borderRadius:16,padding:32,maxWidth:480,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-                <div style={{textAlign:"center",marginBottom:12}}>
-                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="26" cy="26" r="26" fill="var(--cc-accent,#FEC604)" fillOpacity="0.15"/>
-                    <path d="M18 16h4.5a3.5 3.5 0 0 1 7 0H34a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V18a2 2 0 0 1 2-2z" stroke="var(--cc-accent,#FEC604)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                    <path d="M22 16a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1H22v-1z" fill="var(--cc-accent,#FEC604)" fillOpacity="0.5"/>
-                    <path d="M21 25h10M21 30h7" stroke="var(--cc-accent,#FEC604)" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </div>
-                {fehlend.length>0?(
-                  <>
-                    <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 8px",textAlign:"center"}}>Profil vervollständigen</h2>
-                    <p style={{fontSize:14,color:"var(--sub)",textAlign:"center",marginBottom:20,lineHeight:1.6}}>
-                      Bitte fülle die fehlenden Pflichtfelder aus bevor du das Portal nutzen kannst.
-                    </p>
-                    <div style={{background:"var(--surface2)",borderRadius:10,padding:"12px 16px",marginBottom:20}}>
-                      <div className="cc-label" style={{marginBottom:8}}>Fehlende Angaben</div>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                        {fehlend.map(f=>(
-                          <span key={f} style={{fontSize:13,padding:"3px 10px",borderRadius:20,background:"#FEF3C7",color:"#92400E",fontWeight:500}}>
-                            {LABELS[f]||f}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <button onClick={()=>{setProfilOverlayDismissed(true);setActivePersist("profile");}}
-                      style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FEC604)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
-                      Jetzt ausfüllen →
-                    </button>
-                  </>
-                ):(
-                  <>
-                    <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 8px",textAlign:"center"}}>Daten prüfen</h2>
-                    <p style={{fontSize:14,color:"var(--sub)",textAlign:"center",marginBottom:20,lineHeight:1.6}}>
-                      {!dbUser?.profil_geprueft_at
-                        ?"Bitte prüfe deine Daten beim ersten Login einmal kurz."
-                        :"Es ist Zeit deine Daten zu prüfen (alle 6 Monate)."}
-                    </p>
-                    <button onClick={()=>setActivePersist("profile")}
-                      style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"var(--cc-accent,#FEC604)",color:"var(--text)",fontWeight:700,fontSize:15,cursor:"pointer"}}>
-                      Daten jetzt prüfen →
-                    </button>
-                    <button onClick={markiereProfilGeprueft}
-                      style={{width:"100%",marginTop:10,padding:"10px",borderRadius:10,border:"0.5px solid var(--border)",background:"none",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
-                      Alles korrekt — weiter
-                    </button>
-                  </>
-                )}
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:20,overflowY:"auto"}}>
+              <div style={{background:"var(--surface)",borderRadius:16,padding:24,maxWidth:560,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",margin:"auto"}}>
+                <DatenpruefungMitglied
+                  raw={meinMitglied}
+                  sb={sb}
+                  setPortalMsg={()=>{}}
+                  onReload={()=>{
+                    setProfilOverlayDismissed(true);
+                    loadDbMitglieder();
+                  }}
+                />
                 <button onClick={handleLogout}
-                  style={{width:"100%",marginTop:10,padding:"10px",borderRadius:10,border:"0.5px solid var(--border)",background:"none",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
+                  style={{width:"100%",marginTop:12,padding:"10px",borderRadius:10,border:"0.5px solid var(--border)",background:"none",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
                   Abmelden
                 </button>
               </div>
