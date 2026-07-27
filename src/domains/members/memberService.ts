@@ -4,7 +4,7 @@
    Kader, Benutzer (Portal-Zugang), Ansichten
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { Ansicht, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
+import type { Ansicht, AnsichtSortDef, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* ── Fehler-Vertrag der Write-Funktionen ──────────────────────────
    Reine Schreiboperationen (insert/update/delete/upsert ohne Rückgabe-
@@ -72,7 +72,13 @@ export async function fetchAnsichten(sb: SbClient, benutzerId: string, typ = "mi
   return (data || []) as Ansicht[];
 }
 
-export async function insertAnsicht(sb: SbClient, ansicht: TablesInsert<"mitglieder_ansichten">): Promise<Ansicht | null> {
+/* sortierung liegt in der DB als jsonb — hier eng typisiert, damit die
+   Aufrufer keine beliebige Json-Struktur hineinschreiben. */
+export type AnsichtInsert = Omit<TablesInsert<"mitglieder_ansichten">, "sortierung"> & {
+  sortierung?: AnsichtSortDef[];
+};
+
+export async function insertAnsicht(sb: SbClient, ansicht: AnsichtInsert): Promise<Ansicht | null> {
   const { data, error } = await sb.from("mitglieder_ansichten").insert(ansicht).select().single();
   if (error) console.error("insertAnsicht error:", error);
   return (data as Ansicht | null) ?? null;

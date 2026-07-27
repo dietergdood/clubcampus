@@ -208,14 +208,28 @@ export interface Aktivitaet {
    hinein, die hier beschrieben wird. */
 export interface Ansicht extends Omit<
   Tables<'mitglieder_ansichten'>,
-  'filter' | 'gruppierung' | 'gruppenreihenfolge' | 'zeilenreihenfolge'
+  'filter' | 'gruppierung' | 'gruppenreihenfolge' | 'zeilenreihenfolge' | 'sortierung'
 > {
   /* Strukturgleich zu FilterVals aus shared/list: Auswahlliste oder Bereich */
   filter: Record<string, string[] | { von?: number | null; bis?: number | null }> | null;
   gruppierung: string[] | null;
   gruppenreihenfolge: Record<string, string[]> | null;
   zeilenreihenfolge: Record<string, (string | number)[]> | null;
+  /* Mehrstufige Sortierung, [{key,dir}, …]. Ansichten aus der Zeit vor
+     der Migration vom 27.07.2026 haben hier null. */
+  sortierung: AnsichtSortDef[] | null;
 }
+
+/* Eine Sortierebene, wie sie in mitglieder_ansichten.sortierung liegt.
+   Strukturgleich zu SortDef aus shared/list/types.ts — hier eigenständig,
+   damit types.ts nichts aus shared/ importieren muss.
+   Bewusst ein type-Alias und kein interface: nur Aliase bekommen von TS
+   eine implizite Index-Signatur und sind damit dem jsonb-Typ Json
+   zuweisbar (Interfaces nicht). */
+export type AnsichtSortDef = {
+  key: string;
+  dir: 'asc' | 'desc';
+};
 
 // ── Kader ────────────────────────────────────────────────────────
 export interface KaderEintragDb {

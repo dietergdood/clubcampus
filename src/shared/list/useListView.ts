@@ -4,10 +4,12 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo } from "react";
 import { fetchAnsichten, insertAnsicht, deleteAnsicht } from "../../domains/members/memberService.ts";
+import { sortiereMehrstufig } from "./sortUtils.ts";
 import type { Account, Ansicht, Sb } from "../../types.ts";
 import type {
   ColDef, ExportFormat, ExportFormatOption, FilterDef, FilterVals, FilterValue,
   GetRowId, GroupOption, ListGroup, ListRow, MoreEntry, RowId, SavedViews,
+  SortDef, SortDir,
 } from "./types.ts";
 import type { RangeFilterPayload } from "./RangeFilter.tsx";
 
@@ -67,13 +69,15 @@ export function useListView<T extends ListRow = ListRow>({
   externalSetFilter,
 }: UseListViewProps<T>) {
   const initialCols = defaultCols || colDefs.filter(c => c.default).map(c => c.key);
+  /* Ausgangssortierung: erste Spalte aufsteigend — wie vor der
+     Mehrstufigkeit, nur als einelementige Ebenenliste. */
+  const initialSortDefs = (): SortDef[] => [{ key: colDefs[0]?.key || "", dir: "asc" }];
 
   // ── State ────────────────────────────────────────────────────
   const [visibleCols,      setVisibleCols]      = useState<string[]>(initialCols);
   const [search,           setSearch]           = useState("");
   const [filterVals,       setFilterVals]       = useState<FilterVals>({});
-  const [sortCol,          setSortCol]          = useState(colDefs[0]?.key || "");
-  const [sortDir,          setSortDir]          = useState<"asc" | "desc">("asc");
+  const [sortDefs,         setSortDefs]         = useState<SortDef[]>([{ key: colDefs[0]?.key || "", dir: "asc" }]);
   const [groupBy,          setGroupBy]          = useState<string[]>(["none"]);
   const [groupOrder,       setGroupOrder]       = useState<Record<string, string[]>>({});
   const [manualOrder,      setManualOrder]      = useState<Record<string, RowId[]>>({});
@@ -115,6 +119,7 @@ export function useListView<T extends ListRow = ListRow>({
     setGroupBy(["none"]);
     setGroupOrder({});
     setManualOrder({});
+    setSortDefs(initialSortDefs());
   }
 
   function applyCustomView(v: Ansicht) {
@@ -124,6 +129,9 @@ export function useListView<T extends ListRow = ListRow>({
     setGroupBy(Array.isArray(v.gruppierung) ? v.gruppierung : [v.gruppierung || "none"]);
     setGroupOrder(v.gruppenreihenfolge || {});
     setManualOrder(v.zeilenreihenfolge || {});
+    /* Ansichten aus der Zeit vor der Spalte sortierung haben null/[] —
+       dann bleibt es bei der Ausgangssortierung. */
+    setSortDefs(v.sortierung?.length ? v.sortierung : initialSortDefs());
   }
 
   async function saveView() {
@@ -138,6 +146,7 @@ export function useListView<T extends ListRow = ListRow>({
       gruppierung:        Array.isArray(groupBy) ? groupBy : [groupBy],
       gruppenreihenfolge: groupOrder,
       zeilenreihenfolge:  manualOrder,
+      sortierung:         sortDefs,
       typ:                viewTyp,
       geteilt:            saveGeteilt,
     });
@@ -157,14 +166,67 @@ export function useListView<T extends ListRow = ListRow>({
       setGroupBy(["none"]);
       setGroupOrder({});
       setManualOrder({});
+      setSortDefs(initialSortDefs());
     }
   }
 
   // ── Sort ─────────────────────────────────────────────────────
-  function handleSort(key: string) {
+  /* Erste Ebene — was der Rest der App (SortIcon, Export, Legacy-Props)
+     als "die" Sortierung sieht. */
+  const sortCol = sortDefs[0]?.key ?? "";
+  const sortDir: SortDir = sortDefs[0]?.dir ?? "asc";
+
+  /* Klick auf einen Spalten-Header.
+       ohne Shift → einstufig sortieren; nochmal dieselbe Spalte kippt die Richtung
+       mit Shift  → Spalte als weitere Ebene anhaengen bzw. deren Richtung kippen */
+  function handleSort(key: string, addLevel = false) {
     setManualOrder({});
-    if (sortCol === key) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortCol(key); setSortDir("asc"); }
+    setSortDefs(prev => {
+      if (!addLevel) {
+        const istPrimaer = prev.length === 1 && prev[0]?.key === key;
+        return [{ key, dir: istPrimaer && prev[0].dir === "asc" ? "desc" : "asc" }];
+      }
+      const idx = prev.findIndex(d => d.key === key);
+      if (idx === -1) return [...prev, { key, dir: "asc" }];
+      return prev.map((d, i) => i === idx ? { ...d, dir: d.dir === "asc" ? "desc" : "asc" } : d);
+    });
+  }
+
+  /* Ebene entfernen. Die letzte Ebene faellt auf die Ausgangssortierung
+     zurueck — eine Liste ganz ohne Ordnung waere fuer den Nutzer nur
+     verwirrend (die Zeilen behielten die Reihenfolge des Filters). */
+  function removeSortLevel(key: string) {
+    setManualOrder({});
+    setSortDefs(prev => {
+      const next = prev.filter(d => d.key !== key);
+      return next.length > 0 ? next : initialSortDefs();
+    });
+  }
+
+  function setSortLevelDir(key: string, dir: SortDir) {
+    setManualOrder({});
+    setSortDefs(prev => prev.map(d => d.key === key ? { ...d, dir } : d));
+  }
+
+  /* Ebene verschieben — Desktop per Drag&Drop, Mobile per ↑/↓.
+     Ueber Keys statt Indizes, damit das Panel keine Positionen aus einer
+     gefilterten Liste zurueckrechnen muss. */
+  function moveSortLevel(fromKey: string, toKey: string) {
+    setManualOrder({});
+    setSortDefs(prev => {
+      const from = prev.findIndex(d => d.key === fromKey);
+      const to = prev.findIndex(d => d.key === toKey);
+      if (from === -1 || to === -1 || from === to) return prev;
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
+
+  function resetSort() {
+    setManualOrder({});
+    setSortDefs(initialSortDefs());
   }
 
   // ── Filter ───────────────────────────────────────────────────
@@ -228,14 +290,10 @@ export function useListView<T extends ListRow = ListRow>({
     });
   }, [rows, search, filterVals, filterFn]);
 
-  const sorted = useMemo(() => {
-    if (sortFn) return sortFn(filtered, sortCol, sortDir);
-    return [...filtered].sort((a, b) => {
-      const av = String(a[sortCol] ?? "");
-      const bv = String(b[sortCol] ?? "");
-      return sortDir === "asc" ? av.localeCompare(bv, "de") : bv.localeCompare(av, "de");
-    });
-  }, [filtered, sortCol, sortDir, sortFn]);
+  const sorted = useMemo(
+    () => sortiereMehrstufig(filtered, sortDefs, sortFn),
+    [filtered, sortDefs, sortFn],
+  );
 
   const hasGroup = Array.isArray(groupBy) ? groupBy.some(g => g && g !== "none") : groupBy !== "none";
 
@@ -316,6 +374,7 @@ export function useListView<T extends ListRow = ListRow>({
     visibleCols, setVisibleCols,
     search, setSearch,
     filterVals, setFilterVals,
+    sortDefs, setSortDefs,
     sortCol, sortDir,
     groupBy, setGroupBy,
     groupOrder, setGroupOrder,
@@ -341,6 +400,10 @@ export function useListView<T extends ListRow = ListRow>({
     filtered, sorted, groups, hasGroup, COLS, moreItems,
     // Handlers
     handleSort,
+    removeSortLevel,
+    setSortLevelDir,
+    moveSortLevel,
+    resetSort,
     handleFilterChange,
     handleColDrop,
     toggleSelectRow,

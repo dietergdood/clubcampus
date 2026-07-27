@@ -7,6 +7,7 @@ import { Fragment } from "react";
 import { Card, Toolbar, ColMenuButton, BulkBar, useIsMobile, ModalOrSheet, ModalTitle, Btn, EmptyState } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { useListView } from "./useListView.ts";
+import { SortBadge } from "./SortHeader.tsx";
 import type { Account, Sb } from "../../types.ts";
 import type {
   ColDef, ColGroup, ExportFormat, ExportFormatOption, FilterDef, FilterVals,
@@ -109,7 +110,7 @@ export function ListView<T extends ListRow = ListRow>({
     visibleCols, setVisibleCols,
     search, setSearch,
     filterVals, setFilterVals,
-    sortCol, sortDir,
+    sortDefs,
     groupBy, setGroupBy,
     groupOrder, setGroupOrder,
     manualOrder, setManualOrder,
@@ -130,6 +131,10 @@ export function ListView<T extends ListRow = ListRow>({
     mobileGroupOpen,
     filtered, sorted, groups, hasGroup, COLS, moreItems,
     handleSort,
+    removeSortLevel,
+    setSortLevelDir,
+    moveSortLevel,
+    resetSort,
     handleFilterChange,
     handleColDrop,
     toggleSelectRow,
@@ -144,9 +149,20 @@ export function ListView<T extends ListRow = ListRow>({
     isAdmin, isMobile, externalSetFilter,
   });
 
-  const SortIcon = ({ col }: { col: string }) => sortCol === col
-    ? <span className="cc-sort-arrow">{sortDir === "asc" ? "▲" : "▼"}</span>
-    : <span className="cc-sort-hover-icon">↕</span>;
+  /* Sortier-Panel: dieselben Aktionen, die auch Shift+Klick auf einen
+     Spalten-Header auslöst — nur explizit bedienbar (Mobile hat kein Shift). */
+  const sortControls = {
+    sortDefs,
+    /* Alle echten Spalten, nicht nur die sichtbaren — so bleibt das Label
+       einer Ebene lesbar, wenn ihre Spalte ausgeblendet wird, und man kann
+       (wie bei der Suche) auch nach Ausgeblendetem sortieren. */
+    colDefs: colDefs.filter(c => !c.hidden),
+    onAddLevel:    (key: string) => handleSort(key, true),
+    onRemoveLevel: removeSortLevel,
+    onDirChange:   setSortLevelDir,
+    onMoveLevel:   moveSortLevel,
+    onReset:       resetSort,
+  };
 
   // ── Gruppen Tabelle rendern ───────────────────────────────────
   function renderGroupsTable(groups: ListGroup<T>[], depth = 0, levelKey: string | null = null, parentCtx: GroupContext = {type:"none",key:null}) {
@@ -278,6 +294,7 @@ export function ListView<T extends ListRow = ListRow>({
         groupBy={groupBy}
         onGroupChange={g => setGroupBy(Array.isArray(g) ? g : [g])}
         multiGroup={multiGroup}
+        sort={sortControls}
         externalFilterOpen={mobileFilterOpen}
         externalGroupOpen={mobileGroupOpen}
         colMenu={!isMobile && (
@@ -333,9 +350,12 @@ export function ListView<T extends ListRow = ListRow>({
                     </div>
                   </th>}
                   {COLS.map(col => (
-                    <th key={col.key} className="cc-members-th" onClick={() => handleSort(col.key)}>
+                    <th key={col.key}
+                      className={`cc-members-th${sortDefs.some(d => d.key === col.key) ? " cc-members-th-sorted" : ""}`}
+                      title="Klick sortiert, Shift+Klick fügt eine Sortierebene hinzu"
+                      onClick={e => handleSort(col.key, e.shiftKey)}>
                       <span className="cc-members-th-inner">
-                        <span>{col.label}<SortIcon col={col.key} /></span>
+                        <span>{col.label}<SortBadge col={col.key} sortDefs={sortDefs} onRemove={removeSortLevel} /></span>
                       </span>
                     </th>
                   ))}

@@ -1845,6 +1845,7 @@ export type Database = {
           id: string
           ist_standard: boolean | null
           name: string
+          sortierung: Json | null
           spalten: string[]
           typ: string | null
           updated_at: string | null
@@ -1861,6 +1862,7 @@ export type Database = {
           id?: string
           ist_standard?: boolean | null
           name: string
+          sortierung?: Json | null
           spalten?: string[]
           typ?: string | null
           updated_at?: string | null
@@ -1877,6 +1879,7 @@ export type Database = {
           id?: string
           ist_standard?: boolean | null
           name?: string
+          sortierung?: Json | null
           spalten?: string[]
           typ?: string | null
           updated_at?: string | null
