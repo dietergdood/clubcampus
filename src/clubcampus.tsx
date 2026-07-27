@@ -243,7 +243,7 @@ function Portal({supabaseClient, slug}: PortalProps){
   useEffect(()=>{
     if(!sb||!dbUser||dbUser.role!=="eltern"||elternDaten) return;
     (async()=>{
-      const { data } = await sb.from("elternkontakte")
+      const { data } = await (sb.from("elternkontakte") as any)
         .select("id,vorname,nachname,name,email,telefon,beziehung,profil_geprueft_at")
         .eq("benutzer_id", dbUser.id)
         .single();
