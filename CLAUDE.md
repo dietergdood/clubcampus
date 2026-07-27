@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 27.07.2026: 247 grün, 2 skipped, 0 rot.
+Stand 27.07.2026: 251 grün, 2 skipped, 0 rot.
 
 **Häufigste Testfalle:** Die Tests mocken `theme.jsx` mit einer Factory, die die benötigten Exporte einzeln auflistet. Nutzt eine Komponente eine weitere Komponente aus `theme.jsx`, wirft Vitest bereits bei der blossen Referenz (`No "X" export is defined on the mock`) — und zwar für die ganze Testdatei, nicht nur den betroffenen Fall. Wer einen Import in einer getesteten Komponente ergänzt, ergänzt den Mock mit.
 
@@ -116,7 +116,13 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
 ## Datenbank-Workflow
 
-`supabase/schema.sql` ist ein manuell gepflegter Schema-Dump (Tabellen, Policies, RLS, Funktionen — keine Nutzdaten) und beim Nachschlagen von Spalten/Policies die verlässlichste Quelle — **sofern er aktuell ist**. Stand 27.07.2026 fehlen ihm drei Objekte, die eine Regenerierung von `database.types.ts` zutage gefördert hat: `elternkontakte.profil_geprueft_at`, `vereine.slug` und die Funktion `check_email_bekannt(p_email, p_verein_id)`. Im Zweifel gegen `database.types.ts` gegenprüfen, das aus der DB generiert wird. Nach DB-Änderungen neu dumpen und committen (Kommando in `ARCHITECTURE.md` → Session-Abschluss Routine). Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
+`supabase/schema.sql` ist der Schema-Dump (Tabellen, Policies, RLS, Funktionen — keine Nutzdaten) und beim Nachschlagen von Spalten/Policies die verlässlichste Quelle. Nach DB-Änderungen neu dumpen und committen — das Projekt ist verlinkt, es genügt:
+
+```bash
+npx supabase db dump --linked -f supabase/schema.sql
+```
+
+Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verliert: Zahl der `CREATE TABLE`, `CREATE POLICY`, `CREATE INDEX` und `ADD CONSTRAINT` gegen die alte Fassung vergleichen — ein abgebrochener Dump fällt sonst erst auf, wenn jemand das Schema nachbaut. Wird der Dump länger nicht gepflegt, läuft er auseinander: am 27.07.2026 fehlten ihm `elternkontakte.profil_geprueft_at`, `vereine.slug` samt `vereine_slug_unique` und die Funktion `check_email_bekannt()` — alle drei erst durch eine Regenerierung von `database.types.ts` aufgefallen. Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
 
 ## Weitere Dokumente
 
