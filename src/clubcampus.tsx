@@ -51,12 +51,12 @@ interface Stufe {
 }
 
 interface PortalProps {
-  /* Von App.jsx erzeugt; null, wenn die Env-Variablen fehlen */
   supabaseClient: Sb;
+  slug: string | null;
 }
 
 /* ── APP ROOT ── */
-function Portal({supabaseClient}: PortalProps){
+function Portal({supabaseClient, slug}: PortalProps){
   /* Früher stand hier `supabaseClient||supabase||null`. Ein globales
      `supabase` gibt es nicht — sobald supabaseClient null war (fehlende
      Env-Variablen), lief die Zeile in einen ReferenceError statt den
@@ -228,7 +228,7 @@ function Portal({supabaseClient}: PortalProps){
     loadDbMitglieder, loadDbMitgliedtypen,
     loadDbPortalRollen, loadDbKaderRollen,
     handleLogout: _handleLogout,
-  } = useAppData({ sb, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
+  } = useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
     setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
     setSession, setDbUser, setTenant });
 
