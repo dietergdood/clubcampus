@@ -214,13 +214,16 @@ function MemberDetail({
   }
 
   /* ── Tab-Definitionen ── */
+  const elternCount = elternLoaded !== null
+    ? elternLoaded.length
+    : (raw as any).eltern_kinder?.length ?? (eltern || []).length;
   const allTabs = [
-    { key: "info",          label: "Profil",         icon: "user" },
-    { key: "eltern",        label: `Eltern (${(eltern || []).length})`, icon: "heart" },
-    { key: "stats",         label: "Statistik",      icon: "chart-bar" },
-    { key: "portal",        label: "Portal-Zugang",  icon: "key" },
-    { key: "datenpruefung", label: "Datenprüfung",   icon: "shield-check" },
-    { key: "verlauf",       label: "Verlauf",         icon: "history" },
+    { key: "info",          label: "Profil",                    icon: "user" },
+    { key: "eltern",        label: `Eltern (${elternCount})`,   icon: "heart" },
+    { key: "stats",         label: "Statistik",                 icon: "chart-bar" },
+    { key: "portal",        label: "Portal-Zugang",             icon: "key" },
+    { key: "datenpruefung", label: "Datenprüfung",              icon: "shield-check" },
+    { key: "verlauf",       label: "Verlauf",                    icon: "history" },
   ];
   return (
     <>{confirmDialog}

@@ -2,7 +2,7 @@
    ClubCampus — modules/members/tabs/DatenpruefungMitglied.tsx
    Self-Service Datenprüfung für Mitglieder (Spieler, Trainer, Funktionäre etc.)
    ═══════════════════════════════════════════════════════════════ */
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Btn, Card, PhoneInput, useAddrSearch, usePlzLookup } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { updateMitglied } from "../../../domains/members/memberService.ts";
@@ -10,6 +10,58 @@ import { formatDatum } from "../../../domains/person/personUtils.ts";
 import { KANTON_OPTS } from "./datenpruefungUtils.ts";
 import type { Mitglied, Sb } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
+import type { AddressSuggestion } from "../../../shared/forms/AddressInput.tsx";
+
+/* ── Addr Dropdown mit position:fixed ── */
+interface AddrDropdownProps {
+  suggestions: AddressSuggestion[];
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onSelect: (s: AddressSuggestion) => void;
+  onClose: () => void;
+}
+
+function AddrDropdown({ suggestions, inputRef, onSelect, onClose }: AddrDropdownProps) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    if (inputRef.current) setRect(inputRef.current.getBoundingClientRect());
+  }, [suggestions]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!(e.target as HTMLElement).closest(".cc-addr-dropdown-fixed")) onClose();
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  if (!rect || suggestions.length === 0) return null;
+
+  return (
+    <div
+      className="cc-addr-dropdown-fixed"
+      style={{
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 99999,
+        background: "var(--surface)",
+        border: "0.5px solid var(--border)",
+        borderRadius: 10,
+        overflow: "hidden",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+      }}
+    >
+      {suggestions.map((s, i) => (
+        <div key={i} className="cc-addr-option"
+          onMouseDown={e => { e.preventDefault(); onSelect(s); onClose(); }}>
+          {s.strasse}, {s.plz} {s.ort}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface DatenpruefungMitgliedProps {
   raw: Mitglied;
@@ -34,6 +86,8 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
   });
   const [ahvVisible, setAhvVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const strasseRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof typeof form, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -41,8 +95,9 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
   const addrSuggestions = useAddrSearch(form.strasse, form.plz);
   usePlzLookup(form.plz, (r) => setForm(p => ({ ...p, ort: r.ort, kanton: r.kanton || p.kanton })));
 
-  function applyAddrSuggestion(s: { strasse: string; plz: string; ort: string; kanton: string }) {
+  function applyAddrSuggestion(s: AddressSuggestion) {
     setForm(p => ({ ...p, strasse: s.strasse, plz: s.plz, ort: s.ort, kanton: s.kanton }));
+    setShowSuggestions(false);
   }
 
   async function speichernUndBestaetigen() {
@@ -114,19 +169,23 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
           </div>
 
           {/* Adresse mit Autocomplete */}
-          <div className="cc-form-full cc-relative">
+          <div className="cc-form-full">
             <label className="cc-label">Strasse</label>
-            <input className="cc-input" value={form.strasse}
-              onChange={e => set("strasse", e.target.value)}
-              placeholder="Strasse suchen…"/>
-            {addrSuggestions.length > 0 && (
-              <div className="cc-addr-dropdown">
-                {addrSuggestions.map((s, i) => (
-                  <div key={i} className="cc-addr-option" onClick={() => applyAddrSuggestion(s)}>
-                    {s.strasse}, {s.plz} {s.ort}
-                  </div>
-                ))}
-              </div>
+            <input
+              ref={strasseRef}
+              className="cc-input"
+              value={form.strasse}
+              onChange={e => { set("strasse", e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              placeholder="Strasse suchen…"
+            />
+            {showSuggestions && addrSuggestions.length > 0 && (
+              <AddrDropdown
+                suggestions={addrSuggestions}
+                inputRef={strasseRef}
+                onSelect={applyAddrSuggestion}
+                onClose={() => setShowSuggestions(false)}
+              />
             )}
           </div>
           <div>

@@ -16,7 +16,10 @@ import type { Ansicht, SbClient, TablesInsert, TablesUpdate } from "../../types.
 /* ── Mitglieder ── */
 
 export async function fetchMitglied(sb: SbClient, id: number) {
-  const { data } = await sb.from("mitglieder").select("*").eq("id", id).single();
+  const { data } = await sb.from("mitglieder")
+    .select("*, eltern_kinder(id)")
+    .eq("id", id)
+    .single();
   return data;
 }
 
