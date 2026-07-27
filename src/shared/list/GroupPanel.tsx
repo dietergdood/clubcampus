@@ -20,10 +20,6 @@ export interface GroupPanelProps {
   mobile?: boolean;
 }
 
-/* Auf Mobile war die Ebenenzahl schon immer gedeckelt, auf Desktop nicht —
-   Verhalten unverändert übernommen. */
-const MAX_EBENEN_MOBILE = 3;
-
 /* Erklärt eine Option, die zwei Personenkreise zusammenzieht und deshalb
    nicht selbsterklärend ist. */
 const INFO_OPTION = "__teams_funktionen";
@@ -43,6 +39,9 @@ export function GroupPanel({
   const optionFuer = (val: string) => alleOptionen.find(o => o.val === val);
   const istAktiv = (val: string) => groupByArr.includes(val);
   const vorschau = aktive.map(v => optionFuer(v)?.label).filter(Boolean).join(" › ");
+  /* Keine feste Obergrenze — es geht so lange, wie es noch freie
+     Kriterien gibt. Gleiches Verhalten wie im Sortier-Panel. */
+  const kannHinzufuegen = alleOptionen.some(o => !istAktiv(o.val));
 
   function toggleGroup(val: string) {
     if (!onGroupChange) return;
@@ -80,7 +79,7 @@ export function GroupPanel({
           );
         })}
 
-        {aktive.length < MAX_EBENEN_MOBILE && (
+        {kannHinzufuegen && (
           <div className="cc-group-mobile-level" style={{ opacity: 0.5 }}
             onMouseDown={e => { e.stopPropagation(); setPicker(aktive.length); }}>
             <div className="cc-group-mobile-dot-empty"><TI n="plus" size={10} /></div>
@@ -180,7 +179,7 @@ export function GroupPanel({
         </>
       )}
 
-      <div className="cc-ml-dropdown-section-lbl">Hinzufügen</div>
+      {kannHinzufuegen && <div className="cc-ml-dropdown-section-lbl">Hinzufügen</div>}
       {inaktivHaupt.map(o => (
         <div key={o.val} className="cc-group-inactive-item" onClick={() => toggleGroup(o.val)}>
           <TI n="plus" size={12} />
