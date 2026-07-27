@@ -68,6 +68,29 @@ $$;
 ALTER FUNCTION "public"."add_eltern_rolle"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") RETURNS json
+    LANGUAGE "sql" SECURITY DEFINER
+    AS $$
+  SELECT json_build_object(
+    'bekannt', EXISTS (
+      SELECT 1 FROM mitglieder WHERE email = p_email AND verein_id = p_verein_id AND aktiv = true
+      UNION
+      SELECT 1 FROM elternkontakte WHERE email = p_email AND verein_id = p_verein_id
+    ),
+    'name', COALESCE(
+      (SELECT vorname || ' ' || nachname FROM mitglieder WHERE email = p_email AND verein_id = p_verein_id AND aktiv = true LIMIT 1),
+      (SELECT name FROM elternkontakte WHERE email = p_email AND verein_id = p_verein_id LIMIT 1),
+      split_part(p_email, '@', 1)
+    ),
+    'mitglied_id', (SELECT id FROM mitglieder WHERE email = p_email AND verein_id = p_verein_id AND aktiv = true LIMIT 1),
+    'eltern_id', (SELECT id FROM elternkontakte WHERE email = p_email AND verein_id = p_verein_id LIMIT 1)
+  );
+$$;
+
+
+ALTER FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_my_mitglied_id"() RETURNS bigint
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
@@ -104,34 +127,50 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
 DECLARE
   v_mitglied_id bigint;
   v_verein_id   uuid;
+  v_vorname     text;
+  v_nachname    text;
+  v_telefon     text;
   v_name        text;
 BEGIN
-  -- Mitglied anhand E-Mail finden
-  SELECT id, verein_id INTO v_mitglied_id, v_verein_id
+  SELECT id, verein_id, vorname, nachname, telefon 
+  INTO v_mitglied_id, v_verein_id, v_vorname, v_nachname, v_telefon
   FROM public.mitglieder
   WHERE email = NEW.email AND aktiv = true
   LIMIT 1;
 
+  IF v_verein_id IS NULL THEN
+    SELECT verein_id INTO v_verein_id
+    FROM public.elternkontakte
+    WHERE email = NEW.email
+    LIMIT 1;
+  END IF;
+
+  IF v_verein_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
   v_name := COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email,'@',1));
 
-  -- benutzer Eintrag erstellen (bestehende Logik)
-  INSERT INTO public.benutzer (id, email, name, role, active)
-  VALUES (NEW.id, NEW.email, v_name, 'mitglied', true)
-  ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.benutzer (id, email, name, role, aktiv, verein_id, vorname, nachname, telefon, mitglied_id)
+  VALUES (NEW.id, NEW.email, v_name, 'mitglied', true, v_verein_id, v_vorname, v_nachname, v_telefon, v_mitglied_id)
+  ON CONFLICT (id) DO UPDATE SET
+    mitglied_id = COALESCE(EXCLUDED.mitglied_id, benutzer.mitglied_id),
+    vorname     = COALESCE(EXCLUDED.vorname, benutzer.vorname),
+    nachname    = COALESCE(EXCLUDED.nachname, benutzer.nachname),
+    telefon     = COALESCE(EXCLUDED.telefon, benutzer.telefon);
 
-  -- mitglieder verknüpfen
   IF v_mitglied_id IS NOT NULL THEN
     UPDATE public.mitglieder
       SET hat_portal_zugang = true, updated_at = now()
       WHERE id = v_mitglied_id;
-
-    -- Portal-Aktivierung loggen
     INSERT INTO public.mitglieder_aktivitaeten
       (mitglied_id, verein_id, typ, beschreibung, geaendert_von)
     VALUES
       (v_mitglied_id, v_verein_id, 'portal_aktiviert', 'Portal-Zugang aktiviert', v_name);
   END IF;
 
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
   RETURN NEW;
 END;
 $$;
@@ -535,7 +574,8 @@ CREATE TABLE IF NOT EXISTS "public"."elternkontakte" (
     "telefon" "text",
     "hauptkontakt" boolean DEFAULT false,
     "verein_id" "uuid" NOT NULL,
-    "supporter" boolean DEFAULT false
+    "supporter" boolean DEFAULT false,
+    "profil_geprueft_at" timestamp with time zone
 );
 
 
@@ -887,6 +927,10 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder_ansichten" (
 
 
 ALTER TABLE "public"."mitglieder_ansichten" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."mitglieder_ansichten"."sortierung" IS 'Sortierebenen der Ansicht: [{"key":"name","dir":"asc"}, …]. sortDefs[0] ist die primaere Ebene. Leeres Array/NULL = Ausgangssortierung der Liste.';
+
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."mitglieder_id_seq"
@@ -1647,7 +1691,8 @@ CREATE TABLE IF NOT EXISTS "public"."vereine" (
     "name" "text" NOT NULL,
     "theme" "jsonb" DEFAULT '{}'::"jsonb",
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "slug" "text"
 );
 
 
@@ -2228,6 +2273,11 @@ ALTER TABLE ONLY "public"."trainingsplan_vorlagen"
 
 ALTER TABLE ONLY "public"."vereine"
     ADD CONSTRAINT "vereine_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."vereine"
+    ADD CONSTRAINT "vereine_slug_unique" UNIQUE ("slug");
 
 
 
@@ -4216,6 +4266,12 @@ GRANT ALL ON SCHEMA "public" TO PUBLIC;
 GRANT ALL ON FUNCTION "public"."add_eltern_rolle"() TO "anon";
 GRANT ALL ON FUNCTION "public"."add_eltern_rolle"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."add_eltern_rolle"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") TO "service_role";
 
 
 
