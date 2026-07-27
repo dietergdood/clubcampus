@@ -595,7 +595,7 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-addr-suggestion:last-child{border-bottom:none}
 .cc-addr-suggestion-main{font-weight:500}
 .cc-addr-suggestion-sub{font-size:11px;color:var(--sub)}
-.cc-addr-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto}
+.cc-addr-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:10000;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto}
 .cc-phone-sep{height:0.5px;background:var(--border);margin:2px 0}
 .cc-card-edit-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:var(--sub);cursor:pointer;font-family:inherit;flex-shrink:0;transition:background 0.1s,color 0.1s}
 .cc-card-edit-btn:hover{background:var(--surface2);color:var(--text)}

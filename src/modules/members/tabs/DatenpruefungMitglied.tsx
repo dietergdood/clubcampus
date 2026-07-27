@@ -30,6 +30,7 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
     ort:          raw.ort          || "",
     kanton:       raw.kanton       || "",
     telefon:      raw.telefon      || "",
+    ahv_nr:       raw.ahv_nr       || "",
   });
   const [ahvVisible, setAhvVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,6 +59,7 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
       ort:           form.ort           || undefined,
       kanton:        form.kanton        || undefined,
       telefon:       form.telefon       || undefined,
+      ahv_nr:        form.ahv_nr        || undefined,
       profil_geprueft_at: new Date().toISOString(),
     });
     setSaving(false);
@@ -158,18 +160,27 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
             {telefonFehlt && <div className="cc-text-xs cc-text-warning cc-mt-4">Pflichtfeld — bitte ergänze deine Nummer</div>}
           </div>
 
-          {/* AHV read-only mit Auge */}
+          {/* AHV-Nummer editierbar mit Sichtbarkeits-Toggle */}
           <div className="cc-form-full">
             <label className="cc-label">AHV-Nummer</label>
-            <div className="cc-row cc-gap-8 cc-items-center cc-input" style={{opacity:0.8}}>
-              <span className="cc-flex-1" style={{letterSpacing:"0.08em"}}>
-                {ahvVisible ? (raw.ahv_nr || "—") : "• • • • • • • • •"}
-              </span>
-              <button className="cc-btn-ghost cc-text-xs" onClick={() => setAhvVisible(v => !v)}>
+            <div className="cc-relative">
+              <input
+                className="cc-input"
+                type={ahvVisible ? "text" : "password"}
+                value={form.ahv_nr}
+                onChange={e => set("ahv_nr", e.target.value)}
+                placeholder="756.XXXX.XXXX.XX"
+                style={{paddingRight: 80}}
+              />
+              <button
+                className="cc-btn-ghost cc-text-xs"
+                style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)"}}
+                onClick={() => setAhvVisible(v => !v)}
+                type="button"
+              >
                 <TI n={ahvVisible ? "eye-off" : "eye"} size={14}/> {ahvVisible ? "ausblenden" : "anzeigen"}
               </button>
             </div>
-            <div className="cc-text-xs cc-text-sub cc-mt-4">Nur lesbar — Änderungen durch den Administrator</div>
           </div>
         </div>
 
