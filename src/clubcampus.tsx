@@ -232,7 +232,7 @@ function Portal({supabaseClient, slug}: PortalProps){
     handleLogout: _handleLogout,
   } = useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
     setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
-    setSession, setDbUser, setTenant });
+    setSession, setDbUser, setTenant, setError });
 
   async function handleLogout(){
     await _handleLogout();

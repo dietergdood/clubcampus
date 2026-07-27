@@ -6,18 +6,28 @@ import { THEME_DEFAULT_STATIC, hexToRgba, darkenHex, contrastColor } from "../..
 
 export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
   setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
-  setSession, setDbUser, setTenant }) {
+  setSession, setDbUser, setTenant, setError }) {
 
+  /* Laedt den Verein aus dem Slug der URL (siehe getSlugFromPath in
+     App.tsx). Ohne Slug wird bewusst keiner geraten: hier stand frueher
+     ein .single() ohne Filter, das nur zufaellig richtig lag, solange
+     genau ein Verein in der DB war — ab dem zweiten haette es einen
+     beliebigen geliefert, samt fremdem Branding und fremder verein_id. */
   async function loadTenant() {
     if (!sb) return;
+    if (!slug) {
+      if (setError) setError("Kein Verein in der Adresse. Bitte rufe das Portal mit dem Vereinskürzel auf, zum Beispiel /fcherrliberg.");
+      return;
+    }
     try {
-      /* Slug aus URL → gezielt einen Verein laden.
-         Kein Slug → .single() als Fallback (funktioniert solange nur 1 Verein existiert). */
-      const query = sb.from("vereine").select("id,slug,name,theme");
-      const { data, error } = slug
-        ? await query.eq("slug", slug).single()
-        : await query.single();
-      if (error || !data) return;
+      const { data, error } = await sb.from("vereine")
+        .select("id,slug,name,theme")
+        .eq("slug", slug)
+        .single();
+      if (error || !data) {
+        if (setError) setError(`Kein Verein mit dem Kürzel „${slug}“ gefunden. Bitte prüfe die Adresse.`);
+        return;
+      }
       if (setTenant) setTenant(data);
       const t = { ...THEME_DEFAULT_STATIC, ...(data.theme || {}) };
       setAppTheme(t);
@@ -219,25 +229,6 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
     loadDbPortalRollen, loadDbKaderRollen,
     handleLogout,
   };
-}
-
-export function useTenant({ sb, slug, setTenant, setAppTheme, applyThemeCss, THEME_DEFAULT_STATIC }) {
-  async function loadTenant() {
-    if (!sb) return;
-    try {
-      const query = sb.from("vereine").select("id,slug,name,theme");
-      const { data, error } = slug
-        ? await query.eq("slug", slug).single()
-        : await query.single();
-      if (error || !data) return;
-      setTenant(data);
-      const t = { ...THEME_DEFAULT_STATIC, ...(data.theme || {}) };
-      setAppTheme(t);
-      applyThemeCss(t);
-      try { localStorage.setItem("cc-theme", JSON.stringify(t)); } catch {}
-    } catch (e) { console.warn("[CC] loadTenant:", e.message); }
-  }
-  return { loadTenant };
 }
 
 export function useDbUser({ sb, setDbUser, setTeamRollen, setError, ROLLE_PRIORITAET }) {
