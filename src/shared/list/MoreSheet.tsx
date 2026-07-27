@@ -14,19 +14,20 @@ import type { ReactNode } from "react";
 import { TI } from "../../icons.tsx";
 import type { MoreEntry } from "./types.ts";
 
-export type MobileSubMenu = "filter" | "group" | "sort" | "views" | "export" | null;
+export type MobileSubMenu = "filter" | "group" | "sort" | "cols" | "views" | "export" | null;
 
 /* Unterseiten mit eigenem Panel — sie bekommen einen "Fertig"-Knopf,
    die reinen Listen dagegen nicht. */
-const PANEL_TITEL: Record<string, string> = { filter: "Filter", sort: "Sortieren", group: "Gruppieren" };
+const PANEL_TITEL: Record<string, string> = { filter: "Filter", sort: "Sortieren", group: "Gruppieren", cols: "Spalten" };
 const LISTEN_TITEL: Record<string, string> = { views: "Ansichten", export: "Exportieren" };
 /* Abschnittsüberschrift in moreItems je Unterseite */
 const LISTEN_ABSCHNITT: Record<string, string> = { views: "Ansichten", export: "Export" };
 
 /* Einstieg in eine Panel-Unterseite, im Hauptmenü als Zeile gerendert.
-   Im Kartenmodus wandern Filter, Gruppieren und Sortieren hierher, weil
-   die Toolbar dort nur Suche und ··· zeigt. Die Spaltenauswahl nicht —
-   Karten rendern über renderMobile und ignorieren die Spaltenwahl. */
+   Auf Mobile zeigt die Toolbar nur Suche und ···, alles andere wandert
+   hierher. Welche Einstiege es gibt, entscheidet der Aufrufer — die
+   Spaltenauswahl etwa entfaellt im Kartenmodus, weil die Karten aus
+   renderMobile kommen und die Spaltenwahl ignorieren. */
 export interface MoreSheetNav {
   key: Exclude<MobileSubMenu, null>;
   label: string;
@@ -42,7 +43,7 @@ export interface MoreSheetProps {
   /* Schliesst das ganze Sheet inklusive Unterseite */
   onClose: () => void;
   /* Fertig gerenderte Panels — null blendet die Unterseite aus */
-  panels: { filter?: ReactNode; sort?: ReactNode; group?: ReactNode };
+  panels: { filter?: ReactNode; sort?: ReactNode; group?: ReactNode; cols?: ReactNode };
   /* Einstiege ins Hauptmenü; leer = keine (Desktop-Sheet) */
   panelNav?: MoreSheetNav[];
 }

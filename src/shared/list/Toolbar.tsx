@@ -40,12 +40,13 @@ export interface ToolbarProps {
   onExternalGroupClose?: (() => void) | null;
   /* Mehr-Menu */
   moreItems?: MoreEntry[];
-  /* Kartenmodus: schmaler Viewport UND die Liste rendert Karten statt
-     Tabelle. Nur dann schrumpft die Toolbar auf Suche + ···; eine
-     Tabelle auf schmalem Viewport behaelt alle Buttons (nur Icons). */
-  kartenModus?: boolean;
-  /* Spalten-Button (Desktop und schmaler Tabellenmodus) */
+  /* Spalten — Desktop-Button */
   colMenu?: ReactNode;
+  /* Spalten — Inhalt fuer das Mobile-Sheet (ColMenuButton inline).
+     Nur setzen, wo die Auswahl auch wirkt: im Kartenmodus nicht. */
+  colPanel?: ReactNode;
+  /* Anzahl sichtbarer Spalten, fuer das Badge im Sheet */
+  colCount?: number;
   /* Rechter Slot */
   right?: ReactNode;
 }
@@ -63,10 +64,8 @@ export function Toolbar({
   externalGroupOpen=0, onExternalGroupClose=null,
   /* Mehr-Menu */
   moreItems=[],
-  /* Darstellung */
-  kartenModus=false,
   /* Spalten */
-  colMenu=null,
+  colMenu=null, colPanel=null, colCount=0,
   /* Rechter Slot */
   right=null,
 }: ToolbarProps){
@@ -136,10 +135,11 @@ export function Toolbar({
      Gruppieren, Sortieren und Spalten sind ueber das Sheet erreichbar.
      Badge nur, wenn etwas vom Normalzustand abweicht — eine einzelne
      Sortierebene ist der Normalfall und bekommt keins. */
-  const panelNav: MoreSheetNav[] = !kartenModus ? [] : [
+  const panelNav: MoreSheetNav[] = !isMobile ? [] : [
     ...(filterDefs.length>0 ? [{ key:"filter" as const, label:"Filter", icon:"filter", badge:hasActiveFilter?activeFilterCount:undefined }] : []),
     ...(groupOptions.length>0 ? [{ key:"group" as const, label:"Gruppieren", icon:"layout-rows", badge:isGrouped?groupByArr.filter(g=>g&&g!=="none").length:undefined }] : []),
     ...(sort ? [{ key:"sort" as const, label:"Sortieren", icon:"arrows-sort", badge:istMehrstufig?sortEbenen.length:undefined }] : []),
+    ...(colPanel ? [{ key:"cols" as const, label:"Spalten", icon:"table", badge:colCount||undefined }] : []),
   ];
 
   return(
@@ -147,7 +147,7 @@ export function Toolbar({
       <div className="cc-ml-toolbar">
         {/* Suche */}
         {onSearch!==null&&(
-          <div className={`cc-ml-srch-wrap${kartenModus?" cc-ml-srch-wrap-voll":""}`}>
+          <div className={`cc-ml-srch-wrap${isMobile?" cc-ml-srch-wrap-voll":""}`}>
             <div className="cc-ml-srch">
               <TI n="search" size={15} className="cc-input-icon"/>
               <input value={search} onChange={e=>onSearch(e.target.value)} placeholder="Suchen…"/>
@@ -156,15 +156,15 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Filter — im Kartenmodus stattdessen im ···-Sheet */}
-        {!kartenModus&&filterDefs.length>0&&(
+        {/* Filter — auf Mobile stattdessen im ···-Sheet */}
+        {!isMobile&&filterDefs.length>0&&(
           <div ref={filterRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={hasActiveFilter?accentStyle:{}}
               onClick={()=>{setFilterOpen(o=>!o);setGroupOpen(false);setSortOpen(false);setMoreOpen(false);}}>
               <TI n="filter" size={15}/>
-              {!isMobile&&"Filter"}
+              Filter
               {hasActiveFilter&&<span className="cc-ml-filter-badge">{activeFilterCount}</span>}
             </button>
             {filterOpen&&(
@@ -179,15 +179,15 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Gruppieren — im Kartenmodus im ···-Sheet */}
-        {!kartenModus&&groupOptions.length>0&&(
+        {/* Gruppieren — auf Mobile im ···-Sheet */}
+        {!isMobile&&groupOptions.length>0&&(
           <div ref={groupRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={isGrouped?accentStyle:{}}
               onClick={()=>{setGroupOpen(o=>!o);setFilterOpen(false);setSortOpen(false);setMoreOpen(false);}}>
               <TI n="layout-rows" size={15}/>
-              {!isMobile&&"Gruppieren"}
+              Gruppieren
               {isGrouped&&<span className="cc-ml-filter-badge">{groupByArr.filter(g=>g&&g!=="none").length}</span>}
             </button>
             {groupOpen&&(
@@ -209,15 +209,15 @@ export function Toolbar({
           </div>
         )}
 
-        {/* Sortieren — im Kartenmodus im ···-Sheet */}
-        {!kartenModus&&sort&&(
+        {/* Sortieren — auf Mobile im ···-Sheet */}
+        {!isMobile&&sort&&(
           <div ref={sortRef} className="cc-ml-dropdown-wrap">
             <button
               className="cc-ml-btn"
               style={istMehrstufig?accentStyle:{}}
               onClick={()=>{setSortOpen(o=>!o);setFilterOpen(false);setGroupOpen(false);setMoreOpen(false);}}>
               <TI n="arrows-sort" size={15}/>
-              {!isMobile&&"Sortieren"}
+              Sortieren
               {istMehrstufig&&<span className="cc-ml-filter-badge">{sortEbenen.length}</span>}
             </button>
             {sortOpen&&(
@@ -261,6 +261,7 @@ export function Toolbar({
                     ),
                     sort: sort?<SortPanel {...sort} mobile onDone={closeSheet}/>:undefined,
                     group: groupOptions.length>0?<GroupPanel {...groupPanelProps} mobile onDone={closeSheet}/>:undefined,
+                    cols: colPanel??undefined,
                   }}
                   panelNav={panelNav}
                 />

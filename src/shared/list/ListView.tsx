@@ -105,9 +105,10 @@ export function ListView<T extends ListRow = ListRow>({
   emptySubtitle = "Füge den ersten Eintrag hinzu, um loszulegen.",
 }: ListViewProps<T>) {
   const isMobile = useIsMobile();
-  /* Kartenmodus statt Tabelle — nur dann schrumpft die Toolbar auf
-     Suche + ···. Eine Liste ohne renderMobile (Eltern, Archiv) zeigt
-     auch auf schmalem Viewport die Tabelle und braucht ihre Buttons. */
+  /* Karten statt Tabelle. Auf die Toolbar wirkt das nicht — die zeigt
+     auf Mobile immer nur Suche + ···. Es entscheidet nur, ob die
+     Spaltenauswahl im Sheet angeboten wird: Listen ohne renderMobile
+     (Eltern, Archiv) zeigen auch schmal die Tabelle, dort wirkt sie. */
   const kartenModus = isMobile && !!renderMobile;
 
   const {
@@ -153,9 +154,9 @@ export function ListView<T extends ListRow = ListRow>({
     isAdmin, isMobile, externalSetFilter,
   });
 
-  /* Spaltenauswahl — Dropdown-Button, überall ausser im Kartenmodus.
-     Dort ergibt sie keinen Sinn: die Karten kommen aus renderMobile und
-     zeigen die Spaltenwahl nicht. */
+  /* Spaltenauswahl — auf Desktop als Dropdown-Button, auf Mobile im
+     ···-Sheet, aber nur im Tabellenmodus. Im Kartenmodus entfaellt sie:
+     die Karten kommen aus renderMobile und ignorieren die Spaltenwahl. */
   const colMenuProps = {
     colGroups,
     visibleCols,
@@ -318,8 +319,9 @@ export function ListView<T extends ListRow = ListRow>({
         sort={sortControls}
         externalFilterOpen={mobileFilterOpen}
         externalGroupOpen={mobileGroupOpen}
-        kartenModus={kartenModus}
-        colMenu={!kartenModus && <ColMenuButton {...colMenuProps} />}
+        colMenu={!isMobile && <ColMenuButton {...colMenuProps} />}
+        colPanel={isMobile && !kartenModus ? <ColMenuButton {...colMenuProps} inline /> : null}
+        colCount={visibleCols.length}
         moreItems={moreItems}
       />
 
