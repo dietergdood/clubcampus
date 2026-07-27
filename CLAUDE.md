@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 26.07.2026: 238 grün, 2 skipped, 0 rot.
+Stand 27.07.2026: 247 grün, 2 skipped, 0 rot.
 
 **Häufigste Testfalle:** Die Tests mocken `theme.jsx` mit einer Factory, die die benötigten Exporte einzeln auflistet. Nutzt eine Komponente eine weitere Komponente aus `theme.jsx`, wirft Vitest bereits bei der blossen Referenz (`No "X" export is defined on the mock`) — und zwar für die ganze Testdatei, nicht nur den betroffenen Fall. Wer einen Import in einer getesteten Komponente ergänzt, ergänzt den Mock mit.
 
@@ -35,14 +35,16 @@ VITE_SUPABASE_ANON_KEY=…
 
 ## Architektur — Gesamtbild
 
-**Kein Router.** `src/clubcampus.tsx` (`Portal`) ist Root-Komponente, Datenlader und Router in einem:
+**Kein Router.** `src/clubcampus.tsx` (`Portal`) ist Root-Komponente, Datenlader und Router in einem. Das Pfadsegment wird davon nicht berührt — es wählt nur den Verein (siehe Slug-Routing unten), die Navigation innerhalb der App läuft weiterhin über den Hash:
 
 - `active` (String-Key) steuert die Ansicht über einen `switch` in `getView()`; persistiert in `window.location.hash` + `sessionStorage`, `popstate` für Browser-Zurück. Sub-Navigation (z.B. Team-Detail) registriert einen `customBack`-Callback.
 - Alle App-Daten (`dbUser`, `dbTeams`, `dbMitglieder`, `dbStufen`, `dbMitgliedtypen`, `dbPortalRollen`, `dbKaderRollen`, `dbFunktionen`, `tenant`) werden nach Login in `Portal` geladen und per **Prop-Drilling** in die Module gereicht — inklusive des Supabase-Clients `sb`.
 - Ladefunktionen liegen in `src/domains/app/useAppData.js` (`loadDbMitglieder` reichert Mitglieder z.B. mit `kader_eintraege`, `hat_benutzer`, `benutzer_deaktiviert` an). `useDbUser` leitet zusätzlich aus `kader.rollen` die höchste Portalrolle ab und **schreibt sie in `benutzer.role` zurück**.
 - Module importieren sich nie gegenseitig. Wo ein Modul ein anderes rendern muss, übergibt `Portal` es als Prop (`TeamViewComponent`, `KaderModulComponent`, …).
 
-**Mandantenfähigkeit.** Alle Vereine teilen eine Supabase-DB; Trennung über `verein_id` + RLS. Der Verein wird aktuell mit `.single()` aus `vereine` geladen — **kein Slug-/Pfad-Routing**, ein Deployment sieht genau einen Verein. Jede neue Tabelle braucht zwingend `verein_id`, Index, RLS und Policies; jedes `insert()` braucht `verein_id: tenant.id`. DB-Helper: `get_my_verein_id()`, `get_my_role()`, `is_admin()`, `is_trainer()`. Policy-Vorlagen: `ARCHITECTURE.md` → Datenbankregeln.
+**Mandantenfähigkeit.** Alle Vereine teilen eine Supabase-DB; Trennung über `verein_id` + RLS. Jede neue Tabelle braucht zwingend `verein_id`, Index, RLS und Policies; jedes `insert()` braucht `verein_id: tenant.id`. DB-Helper: `get_my_verein_id()`, `get_my_role()`, `is_admin()`, `is_trainer()`. Policy-Vorlagen: `ARCHITECTURE.md` → Datenbankregeln.
+
+**Slug-Routing** (Session 21). Der Verein kommt aus dem ersten Pfadsegment: `/fcherrliberg` → `slug = "fcherrliberg"`. `getSlugFromPath()` in `src/App.tsx` liest ihn und reicht ihn als Prop an `Portal` → `useAppData({sb, slug, …})`. `loadTenant()` lädt damit gezielt: `slug ? .eq("slug", slug).single() : .single()` — **ohne** Slug bleibt der alte `.single()`-Fallback, der nur trägt, solange genau ein Verein in der DB steht. Quelle ist die Spalte `vereine.slug`. Damit ein Deep-Link wie `/fcherrliberg/…` nicht im 404 landet, schreibt `vercel.json` alle Pfade auf `/index.html` um.
 
 > **`verein_id`-Regel (häufigster Defekt).** Fast jede Tabelle hat `verein_id NOT NULL` **ohne** DB-Default. Jedes `insert()`/`upsert()` muss `verein_id: tenant.id` (Komponenten: die `vereinId`/`tenant?.id`-Prop) mitgeben — sonst lehnt die DB die Zeile ab und die Aktion scheitert still (Fehler landet höchstens in einer `saveMsg`). `update()` ist nicht betroffen (die Spalte ist schon gesetzt). Bei `upsert()` gilt es trotzdem, weil der Insert-Zweig greifen kann. Die TS-Migration von `modules/portal/` (Session 18) hat so sechs tote Schreibpfade aufgedeckt (Users↔Funktionen, Team-Module, Mitgliedtyp + zwei Pflichtfeld-Matrizen, Modul-Rechte, Gruppen/Funktionen/Team-Zuordnung) — alle als JS unsichtbar. Wer einen Schreibpfad anfasst: `verein_id` prüfen.
 
@@ -71,7 +73,11 @@ Modul     importiert Modul              verboten
 
 ### Listen: ListView
 
-Jede tabellarische Liste läuft über `shared/list/ListView.jsx` (State/Logik in `useListView.js`): Suche, Filter, Mehrfach-Gruppierung, Spaltenauswahl mit Drag&Drop, Sortierung, Bulk-Aktionen, gespeicherte Ansichten (`mitglieder_ansichten`, teilbar via `geteilt`), Export über `exportUtils.js`. Nicht neu bauen — `colDefs`, `filterDefs`, `groupOptions`, `renderCell` übergeben.
+Jede tabellarische Liste läuft über `shared/list/ListView.tsx` (State/Logik in `useListView.ts`): Suche, Filter, Mehrfach-Gruppierung, Spaltenauswahl mit Drag&Drop, Stufensortierung, Bulk-Aktionen, gespeicherte Ansichten (`mitglieder_ansichten`, teilbar via `geteilt`), Export über `exportUtils.ts`. Nicht neu bauen — `colDefs`, `filterDefs`, `groupOptions`, `renderCell` übergeben.
+
+`Toolbar.tsx` hält nur noch Buttons und Öffnen/Schliessen-State; die Panel-Inhalte liegen daneben und bedienen Desktop wie Mobile über ein `mobile`-Flag: `SortPanel`, `GroupPanel`, `FilterPanel`, `FilterChips`, `MoreMenu`, `MoreSheet`. `MoreSheet` bekommt die drei Panels als fertig gerenderte Slots (`panels={{filter,sort,group}}`) und weiss dadurch nichts über Filter, Sortierung oder Gruppierung.
+
+**Stufensortierung** (Session 21). `sortDefs: SortDef[]` statt `sortCol`/`sortDir` — beide bleiben als abgeleitete Werte erhalten. Desktop: Klick sortiert einstufig, Shift+Klick hängt eine Ebene an. Mobile: eigenes Panel im Bottom Sheet, Reihenfolge über ↑/↓ (HTML5-`draggable` greift auf Touch nicht). Der Kern steht in `sortUtils.ts`: `Array.prototype.sort` ist stabil, deshalb ergibt das Anwenden der Ebenen **von hinten nach vorne** die mehrstufige Ordnung — die modulspezifische `sortFn` behält ihren einstufigen Vertrag `(rows, key, dir)` und muss für neue Ebenen nicht angefasst werden. Persistiert in `mitglieder_ansichten.sortierung` (jsonb, `[{key,dir}, …]`); Ansichten mit `null` fallen auf die Ausgangssortierung zurück.
 
 Fallstricke bei rekursiver Gruppierung: `effectiveCtx`/`parentCtx` müssen durch **alle** Ebenen von `renderGroupsTable` propagiert werden, `filterVals` an `buildGroups` und `renderCell` weiterreichen; `__parentTeam`, `__parentGruppe`, `__portalFunktionen` sind interne Kontextschlüssel.
 
@@ -110,7 +116,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
 ## Datenbank-Workflow
 
-`supabase/schema.sql` ist ein manuell gepflegter Schema-Dump (Tabellen, Policies, RLS, Funktionen — keine Nutzdaten) und beim Nachschlagen von Spalten/Policies die verlässlichste Quelle. Nach DB-Änderungen neu dumpen und committen (Kommando in `ARCHITECTURE.md` → Session-Abschluss Routine). Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
+`supabase/schema.sql` ist ein manuell gepflegter Schema-Dump (Tabellen, Policies, RLS, Funktionen — keine Nutzdaten) und beim Nachschlagen von Spalten/Policies die verlässlichste Quelle — **sofern er aktuell ist**. Stand 27.07.2026 fehlen ihm drei Objekte, die eine Regenerierung von `database.types.ts` zutage gefördert hat: `elternkontakte.profil_geprueft_at`, `vereine.slug` und die Funktion `check_email_bekannt(p_email, p_verein_id)`. Im Zweifel gegen `database.types.ts` gegenprüfen, das aus der DB generiert wird. Nach DB-Änderungen neu dumpen und committen (Kommando in `ARCHITECTURE.md` → Session-Abschluss Routine). Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
 
 ## Weitere Dokumente
 
