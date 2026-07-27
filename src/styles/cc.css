@@ -479,8 +479,8 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-badge-accent{background:var(--cc-accent-20,rgba(254,198,4,0.15));color:var(--cc-accent,#FEC604);border:1px solid var(--cc-accent-20,rgba(254,198,4,0.3))}
 
 /* ── Forms ── */
-.cc-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.cc-form-full{grid-column:1/-1}
+.cc-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;overflow:visible}
+.cc-form-full{grid-column:1/-1;overflow:visible}
 .cc-textarea{resize:vertical;min-height:80px}
 .cc-form-section-title{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:8px 0 2px}
 .cc-form-section-title::before{content:attr(data-label);font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap}
