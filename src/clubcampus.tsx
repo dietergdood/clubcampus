@@ -30,6 +30,7 @@ import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, Ne
 import { DatenpruefungMitglied } from "./modules/members/tabs/DatenpruefungMitglied.tsx";
 import { DatenpruefungEltern } from "./modules/members/tabs/DatenpruefungEltern.tsx";
 import { fetchKinderVollstaendigFuerElternteil } from "./domains/members/elternService.ts";
+import { fetchMitglied } from "./domains/members/memberService.ts";
 import type {
   Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
@@ -103,6 +104,7 @@ function Portal({supabaseClient, slug}: PortalProps){
   const [profilOverlayDismissed,setProfilOverlayDismissed]=useState(false);
   const [customBack,setCustomBack]=useState<(()=>void)|null>(null);
   const [elternDaten,setElternDaten]=useState<{elternkontakt:any;kinder:Mitglied[]}|null>(null);
+  const [meinMitgliedDaten,setMeinMitgliedDaten]=useState<Mitglied|null>(null);
   const customBackRef=useRef<(()=>void)|null>(null);
   const setCustomBackAndRef=(fn: (()=>void)|null)=>{customBackRef.current=fn||null;setCustomBack(fn);};
 
@@ -250,6 +252,14 @@ function Portal({supabaseClient, slug}: PortalProps){
       setElternDaten({ elternkontakt: data, kinder: kinder as unknown as Mitglied[] });
     })();
   },[dbUser?.id, dbUser?.role]);
+
+  /* Eigenes Mitglied laden (für Spieler/Trainer — RLS erlaubt select_self) */
+  useEffect(()=>{
+    if(!sb||!dbUser?.mitglied_id||meinMitgliedDaten) return;
+    fetchMitglied(sb, dbUser.mitglied_id).then(data => {
+      if(data) setMeinMitgliedDaten(data as unknown as Mitglied);
+    });
+  },[dbUser?.mitglied_id]);
 
 
   // Fehler-Screen (z.B. deaktivierter Benutzer)
@@ -402,17 +412,17 @@ function Portal({supabaseClient, slug}: PortalProps){
       case "profile": {
         if(role === "eltern" && elternDaten) {
           return <DatenpruefungEltern
-            raw={dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || dbMitglieder[0]}
+            raw={meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || dbMitglieder[0]}
             sb={sb}
             elternkontakt={elternDaten.elternkontakt}
             kinder={elternDaten.kinder}
             setPortalMsg={()=>{}}
-            onReload={()=>{ setElternDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
+            onReload={()=>{ setElternDaten(null); setMeinMitgliedDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
           />;
         }
-        const meinMitglied = dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
-        if (!meinMitglied) return null;
-        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} setPortalMsg={()=>{}} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
+        const meinMitglied = meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
+        if (!meinMitglied) return <div className="cc-empty-state"><div className="cc-text-sub">Profil wird geladen…</div></div>;
+        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
       }
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
@@ -429,9 +439,9 @@ function Portal({supabaseClient, slug}: PortalProps){
         {(()=>{
           if(!session||role==="administrator"||role==="administration") return null;
           if(!sollProfilPruefen()||profilOverlayDismissed) return null;
-          const meinMitglied = dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
+          const meinMitglied = meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
           if (!meinMitglied) return null;
-          const onReload = () => { setProfilOverlayDismissed(true); setElternDaten(null); loadDbMitglieder(); };
+          const onReload = () => { setProfilOverlayDismissed(true); setElternDaten(null); setMeinMitgliedDaten(null); loadDbMitglieder(); };
           return(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:20,overflowY:"auto"}}>
               <div style={{background:"var(--surface)",borderRadius:16,padding:24,maxWidth:560,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",margin:"auto"}}>
