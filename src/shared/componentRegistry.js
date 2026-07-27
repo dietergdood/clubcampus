@@ -50,10 +50,10 @@ export const COMPONENT_REGISTRY = [
   },
   {
     name: "SortPanel",
-    desc: "Panel für die Stufensortierung. Desktop mit Drag&Drop, Mobile mit ↑/↓ im Bottom Sheet.",
+    desc: "Panel für die Stufensortierung. Desktop mit Drag&Drop, Mobile mit ↑/↓ im Bottom Sheet. Hinzufügen-Liste nach Kategorien aufklappbar wie im Spalten-Panel.",
     category: "Listen",
     usedIn: ["Toolbar"],
-    props: ["sortDefs[]", "colDefs[]", "onAddLevel", "onRemoveLevel", "onDirChange", "onMoveLevel", "onReset", "onDone", "mobile"],
+    props: ["sortDefs[]", "colDefs[]", "colGroups[]", "onAddLevel", "onRemoveLevel", "onDirChange", "onMoveLevel", "onReset", "onDone", "mobile"],
   },
   {
     name: "GroupPanel",

@@ -67,8 +67,11 @@ export interface SortDef {
    Toolbar nicht sieben Einzel-Props durchreichen muss. */
 export interface SortControls {
   sortDefs: SortDef[];
-  /* Spalten, die als Ebene angeboten werden */
+  /* Flach — löst die Labels der aktiven Ebenen auf */
   colDefs: ColDef[];
+  /* Kategorisiert — strukturiert die Hinzufügen-Liste in aufklappbare
+     Sektionen, wie im Spalten-Panel. Leer → eine implizite Gruppe. */
+  colGroups: ColGroup[];
   onAddLevel: (key: string) => void;
   onRemoveLevel: (key: string) => void;
   onDirChange: (key: string, dir: SortDir) => void;

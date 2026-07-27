@@ -258,8 +258,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-sort-move-btn{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:6px;background:none;color:var(--sub);cursor:pointer}
 .cc-sort-move-btn:disabled{opacity:0.25;cursor:default}
 .cc-sort-move-btn:not(:disabled):hover{background:var(--surface2);color:var(--text)}
-.cc-sort-add-list{max-height:200px;overflow-y:auto}
 .cc-sort-hint{margin-top:4px;font-size:10px;opacity:0.8}
+/* Aufklappbare Kategorie im mobilen Ebenen-Picker */
+.cc-level-kat{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
 /* Gemeinsam von SortPanel und GroupPanel — beide zeigen nummerierte
    Ebenen mit Entfernen-Knopf, Picker und Vorschau. */
 .cc-level-remove-btn{flex-shrink:0;padding:0 2px;border:none;background:none;color:var(--sub);font-size:15px;line-height:1;cursor:pointer}

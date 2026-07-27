@@ -157,6 +157,8 @@ export function ListView<T extends ListRow = ListRow>({
        einer Ebene lesbar, wenn ihre Spalte ausgeblendet wird, und man kann
        (wie bei der Suche) auch nach Ausgeblendetem sortieren. */
     colDefs: colDefs.filter(c => !c.hidden),
+    /* Kategorien für die Hinzufügen-Liste, wie im Spalten-Panel */
+    colGroups,
     onAddLevel:    (key: string) => handleSort(key, true),
     onRemoveLevel: removeSortLevel,
     onDirChange:   setSortLevelDir,
