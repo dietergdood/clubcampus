@@ -16,24 +16,22 @@ export interface SortPanelProps extends SortControls {
   mobile?: boolean;
 }
 
-/* Mehr Ebenen sind technisch möglich, werden aber unübersichtlich —
-   dieselbe Grenze wie bei der Gruppierung. */
-const MAX_EBENEN = 3;
-
 function labelFuer(colDefs: ColDef[], key: string): string {
   return colDefs.find(c => c.key === key)?.label || key;
 }
 
 /* Die noch wählbaren Spalten nach Kategorie gruppiert — leere Kategorien
    fallen weg. Ohne colGroups eine einzige implizite Gruppe, damit das
-   Panel auch für Listen ohne Kategorien funktioniert. */
-function offeneGruppen(colGroups: ColGroup[], colDefs: ColDef[], belegt: Set<string>): ColGroup[] {
+   Panel auch für Listen ohne Kategorien funktioniert. suche filtert nach
+   Label; leer = alles. */
+function offeneGruppen(colGroups: ColGroup[], colDefs: ColDef[], belegt: Set<string>, suche = ""): ColGroup[] {
+  const q = suche.trim().toLowerCase();
   const quelle: ColGroup[] = colGroups.length > 0 ? colGroups : [{ group: "Spalten", cols: colDefs }];
   return quelle
     .map(g => ({
       group: g.group,
       cols: g.cols
-        .filter(c => !c.hidden && !belegt.has(c.key))
+        .filter(c => !c.hidden && !belegt.has(c.key) && (!q || c.label.toLowerCase().includes(q)))
         .sort((a, b) => a.label.localeCompare(b.label, "de")),
     }))
     .filter(g => g.cols.length > 0);
@@ -71,14 +69,40 @@ export function SortPanel({
   const [pickerOffen, setPickerOffen] = useState(false);
   /* Kategorien starten zugeklappt — wie im Spalten-Panel */
   const [offeneKategorien, setOffeneKategorien] = useState<Set<string>>(new Set());
+  const [suche, setSuche] = useState("");
 
   const toggleKategorie = (g: string) =>
     setOffeneKategorien(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n; });
 
   const aktive = sortDefs.filter(d => d.key);
   const belegt = new Set(aktive.map(d => d.key));
-  const gruppen = offeneGruppen(colGroups, colDefs, belegt);
-  const kannHinzufuegen = aktive.length < MAX_EBENEN && gruppen.length > 0;
+  /* Ungefiltert entscheidet, ob es ueberhaupt noch etwas hinzuzufuegen
+     gibt — sonst wuerde eine Suche ohne Treffer das Suchfeld gleich mit
+     ausblenden und man kaeme nicht mehr heraus. */
+  const gruppenGesamt = offeneGruppen(colGroups, colDefs, belegt);
+  const gruppen = offeneGruppen(colGroups, colDefs, belegt, suche);
+  const kannHinzufuegen = gruppenGesamt.length > 0;
+  /* Bei aktiver Suche alles aufklappen, damit Treffer sichtbar sind */
+  const istOffen = (g: string) => suche.trim() !== "" || offeneKategorien.has(g);
+
+  function schliessePicker() { setPickerOffen(false); setSuche(""); }
+
+  /* Suchfeld — Markup identisch zum Spalten-Panel (ColMenuContent) */
+  const Suchfeld = (
+    <div className="cc-col-search-wrap">
+      <TI n="search" size={13} className="cc-col-search-icon" />
+      <input className="cc-col-search-input" value={suche}
+        onChange={e => setSuche(e.target.value)}
+        onMouseDown={e => e.stopPropagation()}
+        placeholder="Spalte suchen…" />
+      {suche && (
+        <button className="cc-col-search-clear"
+          onMouseDown={e => { e.stopPropagation(); e.preventDefault(); setSuche(""); }}>
+          <TI n="x" size={11} />
+        </button>
+      )}
+    </div>
+  );
 
   /* ── Mobile ─────────────────────────────────────────────────── */
   if (mobile) {
@@ -112,7 +136,7 @@ export function SortPanel({
 
         {kannHinzufuegen && (
           <div className="cc-group-mobile-level" style={{ opacity: 0.5 }}
-            onMouseDown={e => { e.stopPropagation(); setPickerOffen(o => !o); }}>
+            onMouseDown={e => { e.stopPropagation(); pickerOffen ? schliessePicker() : setPickerOffen(true); }}>
             <div className="cc-group-mobile-dot-empty"><TI n="plus" size={10} /></div>
             <span className="cc-group-mobile-lbl-empty">Ebene hinzufügen</span>
             <TI n={pickerOffen ? "chevron-down" : "chevron-right"} size={14} style={{ color: "var(--sub)" }} />
@@ -122,8 +146,11 @@ export function SortPanel({
         {pickerOffen && kannHinzufuegen && (
           <div className="cc-level-picker">
             <div className="cc-level-picker-hdr">Ebene {aktive.length + 1} wählen</div>
-            {gruppen.map(g => {
-              const offen = offeneKategorien.has(g.group);
+            {Suchfeld}
+            {gruppen.length === 0 ? (
+              <div className="cc-col-search-empty">Keine Spalte gefunden</div>
+            ) : gruppen.map(g => {
+              const offen = istOffen(g.group);
               return (
                 <div key={g.group}>
                   <div className="cc-filter-mobile-sec cc-level-kat"
@@ -133,7 +160,7 @@ export function SortPanel({
                   </div>
                   {offen && g.cols.map(c => (
                     <div key={c.key} className="cc-filter-mobile-item"
-                      onMouseDown={e => { e.stopPropagation(); onAddLevel(c.key); setPickerOffen(false); }}>
+                      onMouseDown={e => { e.stopPropagation(); onAddLevel(c.key); schliessePicker(); }}>
                       <span style={{ flex: 1 }}>{c.label}</span>
                       <TI n="chevron-right" size={13} style={{ color: "var(--sub)" }} />
                     </div>
@@ -143,7 +170,7 @@ export function SortPanel({
             })}
             <div className="cc-filter-mobile-footer">
               <button className="cc-ml-dropdown-clear"
-                onMouseDown={e => { e.stopPropagation(); setPickerOffen(false); }}>Abbrechen</button>
+                onMouseDown={e => { e.stopPropagation(); schliessePicker(); }}>Abbrechen</button>
             </div>
           </div>
         )}
@@ -198,8 +225,11 @@ export function SortPanel({
       {kannHinzufuegen && (
         <>
           <div className="cc-ml-dropdown-section-lbl">Hinzufügen</div>
-          {gruppen.map(g => {
-            const offen = offeneKategorien.has(g.group);
+          {Suchfeld}
+          {gruppen.length === 0 ? (
+            <div className="cc-col-search-empty">Keine Spalte gefunden</div>
+          ) : gruppen.map(g => {
+            const offen = istOffen(g.group);
             return (
               <div key={g.group}>
                 <div className="cc-ml-dropdown-section-lbl cc-between cc-clickable-plain"
