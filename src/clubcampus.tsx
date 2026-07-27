@@ -26,8 +26,10 @@ import KaderModul from "./modules/KaderModul.tsx";
 import { HelferModul, HelpersList } from "./modules/HelferModul.tsx";
 import NachrichtenModul from "./modules/NachrichtenModul.tsx";
 import { PortalverwaltungView } from "./modules/PortalverwaltungModul.tsx";
-import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral, ProfileView } from "./modules/PlatzhalterModul.tsx";
+import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, NewsView, AttendanceCentral } from "./modules/PlatzhalterModul.tsx";
 import { DatenpruefungMitglied } from "./modules/members/tabs/DatenpruefungMitglied.tsx";
+import { DatenpruefungEltern } from "./modules/members/tabs/DatenpruefungEltern.tsx";
+import { fetchKinderVollstaendigFuerElternteil } from "./domains/members/elternService.ts";
 import type {
   Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
@@ -100,6 +102,7 @@ function Portal({supabaseClient}: PortalProps){
   const [mobileProfileOpen,setMobileProfileOpen]=useState(false);
   const [profilOverlayDismissed,setProfilOverlayDismissed]=useState(false);
   const [customBack,setCustomBack]=useState<(()=>void)|null>(null);
+  const [elternDaten,setElternDaten]=useState<{elternkontakt:any;kinder:Mitglied[]}|null>(null);
   const customBackRef=useRef<(()=>void)|null>(null);
   const setCustomBackAndRef=(fn: (()=>void)|null)=>{customBackRef.current=fn||null;setCustomBack(fn);};
 
@@ -233,6 +236,20 @@ function Portal({supabaseClient}: PortalProps){
     await _handleLogout();
     setActive("dashboard");
   }
+
+  /* Eltern-Daten für DatenpruefungEltern laden */
+  useEffect(()=>{
+    if(!sb||!dbUser||dbUser.role!=="eltern"||elternDaten) return;
+    (async()=>{
+      const { data } = await sb.from("elternkontakte")
+        .select("id,vorname,nachname,name,email,telefon,beziehung,profil_geprueft_at")
+        .eq("benutzer_id", dbUser.id)
+        .single();
+      if(!data) return;
+      const kinder = await fetchKinderVollstaendigFuerElternteil(sb, data.id);
+      setElternDaten({ elternkontakt: data, kinder: kinder as unknown as Mitglied[] });
+    })();
+  },[dbUser?.id, dbUser?.role]);
 
 
   // Fehler-Screen (z.B. deaktivierter Benutzer)
@@ -382,7 +399,21 @@ function Portal({supabaseClient}: PortalProps){
       case "datacheck":         return <PortalverwaltungView initialTab="module" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id}/>;
       /* vereinId war hier ein undefinierter Bezeichner und lief zur Laufzeit
          in einen ReferenceError, sobald der Profil-Tab geöffnet wurde. */
-      case "profile":           return <ProfileView role={role} myRosterId={myRosterId} account={account} sb={sb} dbUser={dbUser} dbMitglieder={dbMitglieder} vereinId={tenant?.id} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}} onProfilGeprueft={markiereProfilGeprueft}/>;
+      case "profile": {
+        if(role === "eltern" && elternDaten) {
+          return <DatenpruefungEltern
+            raw={dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || dbMitglieder[0]}
+            sb={sb}
+            elternkontakt={elternDaten.elternkontakt}
+            kinder={elternDaten.kinder}
+            setPortalMsg={()=>{}}
+            onReload={()=>{ setElternDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
+          />;
+        }
+        const meinMitglied = dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
+        if (!meinMitglied) return null;
+        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} setPortalMsg={()=>{}} onReload={()=>{loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
+      }
       default:                  return <Dashboard role={role} setActive={setActive}/>;
     }
   };
@@ -400,18 +431,26 @@ function Portal({supabaseClient}: PortalProps){
           if(!sollProfilPruefen()||profilOverlayDismissed) return null;
           const meinMitglied = dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
           if (!meinMitglied) return null;
+          const onReload = () => { setProfilOverlayDismissed(true); setElternDaten(null); loadDbMitglieder(); };
           return(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:20,overflowY:"auto"}}>
               <div style={{background:"var(--surface)",borderRadius:16,padding:24,maxWidth:560,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",margin:"auto"}}>
-                <DatenpruefungMitglied
-                  raw={meinMitglied}
-                  sb={sb}
-                  setPortalMsg={()=>{}}
-                  onReload={()=>{
-                    setProfilOverlayDismissed(true);
-                    loadDbMitglieder();
-                  }}
-                />
+                {role === "eltern" && elternDaten
+                  ? <DatenpruefungEltern
+                      raw={meinMitglied}
+                      sb={sb}
+                      elternkontakt={elternDaten.elternkontakt}
+                      kinder={elternDaten.kinder}
+                      setPortalMsg={()=>{}}
+                      onReload={onReload}
+                    />
+                  : <DatenpruefungMitglied
+                      raw={meinMitglied}
+                      sb={sb}
+                      setPortalMsg={()=>{}}
+                      onReload={onReload}
+                    />
+                }
                 <button onClick={handleLogout}
                   style={{width:"100%",marginTop:12,padding:"10px",borderRadius:10,border:"0.5px solid var(--border)",background:"none",color:"var(--sub)",fontSize:13,cursor:"pointer"}}>
                   Abmelden
