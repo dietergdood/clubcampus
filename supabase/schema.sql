@@ -881,7 +881,8 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder_ansichten" (
     "zeilenreihenfolge" "jsonb" DEFAULT '{}'::"jsonb",
     "typ" "text" DEFAULT 'mitglieder'::"text",
     "geteilt" boolean DEFAULT false,
-    "gruppenreihenfolge" "jsonb" DEFAULT '{}'::"jsonb"
+    "gruppenreihenfolge" "jsonb" DEFAULT '{}'::"jsonb",
+    "sortierung" "jsonb" DEFAULT '[]'::"jsonb"
 );
 
 
