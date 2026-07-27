@@ -187,9 +187,13 @@ INSERT INTO vereine (name, theme) VALUES ('Vereinsname', '{}');
 
 **3. URL:**
 ```
-https://clubcampus.app/fcherrliberg
+https://clubcampus-fcherrliberg.vercel.app/<slug>
 ```
-Der Vereins-Slug wird automatisch aus dem URL-Pfad gelesen und lädt das Branding und die Daten des entsprechenden Vereins.
+Der Vereins-Slug wird automatisch aus dem ersten URL-Pfadsegment gelesen und lädt das Branding und die Daten des entsprechenden Vereins. Er muss in `vereine.slug` eingetragen sein — ohne Slug in der Adresse lädt das Portal keinen Verein, sondern zeigt eine Meldung.
+
+Die blosse Wurzel wird per `vercel.json` auf `/fcherrliberg` umgeleitet. Ein neu eingerichteter Verein ist also nur über seinen eigenen Slug erreichbar, nicht über die Wurzel.
+
+> **Domains.** `clubcampus.app` und `clubcampus.ch` zeigen aktuell **nicht** auf dieses Deployment (Stand 27.07.2026: `clubcampus.app` liefert eine fremde Apache-Seite mit ungültigem Zertifikat, `clubcampus.ch` löst nicht auf). Bis die Domains im Vercel-Projekt verbunden und die DNS umgezogen ist, gilt die `vercel.app`-Adresse.
 
 ---
 
