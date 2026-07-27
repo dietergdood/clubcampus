@@ -44,12 +44,8 @@ export interface ToolbarProps {
      Tabelle. Nur dann schrumpft die Toolbar auf Suche + ···; eine
      Tabelle auf schmalem Viewport behaelt alle Buttons (nur Icons). */
   kartenModus?: boolean;
-  /* Spalten — Desktop-Button */
+  /* Spalten-Button (Desktop und schmaler Tabellenmodus) */
   colMenu?: ReactNode;
-  /* Spalten — Inhalt fuer das Mobile-Sheet (ColMenuButton inline) */
-  colPanel?: ReactNode;
-  /* Anzahl sichtbarer Spalten, fuer das Badge im Sheet */
-  colCount?: number;
   /* Rechter Slot */
   right?: ReactNode;
 }
@@ -70,7 +66,7 @@ export function Toolbar({
   /* Darstellung */
   kartenModus=false,
   /* Spalten */
-  colMenu=null, colPanel=null, colCount=0,
+  colMenu=null,
   /* Rechter Slot */
   right=null,
 }: ToolbarProps){
@@ -144,7 +140,6 @@ export function Toolbar({
     ...(filterDefs.length>0 ? [{ key:"filter" as const, label:"Filter", icon:"filter", badge:hasActiveFilter?activeFilterCount:undefined }] : []),
     ...(groupOptions.length>0 ? [{ key:"group" as const, label:"Gruppieren", icon:"layout-rows", badge:isGrouped?groupByArr.filter(g=>g&&g!=="none").length:undefined }] : []),
     ...(sort ? [{ key:"sort" as const, label:"Sortieren", icon:"arrows-sort", badge:istMehrstufig?sortEbenen.length:undefined }] : []),
-    ...(colPanel ? [{ key:"cols" as const, label:"Spalten", icon:"table", badge:colCount||undefined }] : []),
   ];
 
   return(
@@ -266,7 +261,6 @@ export function Toolbar({
                     ),
                     sort: sort?<SortPanel {...sort} mobile onDone={closeSheet}/>:undefined,
                     group: groupOptions.length>0?<GroupPanel {...groupPanelProps} mobile onDone={closeSheet}/>:undefined,
-                    cols: colPanel??undefined,
                   }}
                   panelNav={panelNav}
                 />

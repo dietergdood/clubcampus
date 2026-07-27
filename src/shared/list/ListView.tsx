@@ -153,8 +153,9 @@ export function ListView<T extends ListRow = ListRow>({
     isAdmin, isMobile, externalSetFilter,
   });
 
-  /* Spaltenauswahl — Desktop als Dropdown-Button, Mobile als Inhalt im
-     ···-Sheet. Beide bekommen dieselben Props. */
+  /* Spaltenauswahl — Dropdown-Button, überall ausser im Kartenmodus.
+     Dort ergibt sie keinen Sinn: die Karten kommen aus renderMobile und
+     zeigen die Spaltenwahl nicht. */
   const colMenuProps = {
     colGroups,
     visibleCols,
@@ -319,8 +320,6 @@ export function ListView<T extends ListRow = ListRow>({
         externalGroupOpen={mobileGroupOpen}
         kartenModus={kartenModus}
         colMenu={!kartenModus && <ColMenuButton {...colMenuProps} />}
-        colPanel={kartenModus ? <ColMenuButton {...colMenuProps} inline /> : null}
-        colCount={visibleCols.length}
         moreItems={moreItems}
       />
 
