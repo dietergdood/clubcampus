@@ -54,9 +54,10 @@ function AddrDropdown({ suggestions, inputRef, onSelect, onClose }: AddrDropdown
       }}
     >
       {suggestions.map((s, i) => (
-        <div key={i} className="cc-addr-option"
+        <div key={i} className="cc-addr-suggestion"
           onMouseDown={e => { e.preventDefault(); onSelect(s); onClose(); }}>
-          {s.strasse}, {s.plz} {s.ort}
+          <span className="cc-addr-suggestion-main">{s.strasse}</span>
+          <span className="cc-addr-suggestion-sub">{s.plz} {s.ort}</span>
         </div>
       ))}
     </div>
