@@ -142,10 +142,10 @@ export function ElternListView({
         vereinId={vereinId}
         viewTyp="eltern"
         isAdmin={isAdmin}
-        selectable
-        bulkActions={[
+        selectable={isAdmin}
+        bulkActions={isAdmin ? [
           { icon:"trash", label:"Löschen", danger:true, requiresSelection:true, onClick:loeschen },
-        ]}
+        ] : []}
         footerLabel={(f,t) => `${f} von ${t} Elternkontakten`}
         exportFn={(rows,cols,groups,format) => exportListData(rows,cols,groups,format,{filename:"eltern",sheetName:"Eltern"})}
         exportFormats={[
@@ -159,6 +159,7 @@ export function ElternListView({
         <ElternkontaktModal
           mode="edit"
           data={edit}
+          canEdit={isAdmin}
           sb={sb}
           vereinId={vereinId}
           geaendertVon={geaendertVon}

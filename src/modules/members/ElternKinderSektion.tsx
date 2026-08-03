@@ -30,6 +30,9 @@ interface ElternKinderSektionProps {
   vereinId: string | null;
   geaendertVon: string;
   /* Auswahl eines Kindes zum Verknüpfen — öffnet den Dialog im Parent */
+  /* Ohne Bearbeitungsrecht nur anzeigen — kein Verknuepfen, kein Stern,
+     kein Entknuepfen. */
+  canEdit?: boolean;
   onKindHinzufuegen?: (() => void) | null;
   /* Vom Parent gesetzt, nachdem dort ein Kind ausgewählt wurde. Die Sektion
      verknüpft es und meldet über onKindVerknuepft, dass sie fertig ist. */
@@ -41,7 +44,7 @@ interface ElternKinderSektionProps {
 
 export function ElternKinderSektion({
   elternId, benutzerId, sb, vereinId, geaendertVon,
-  onKindHinzufuegen = null, neuesKind = null, onKindVerknuepft = null, onChanged = null,
+  canEdit = true, onKindHinzufuegen = null, neuesKind = null, onKindVerknuepft = null, onChanged = null,
 }: ElternKinderSektionProps) {
   const [kinder, setKinder] = useState<KindZeile[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -131,7 +134,7 @@ export function ElternKinderSektion({
       {confirmDialog}
       <div className="cc-section-title cc-between">
         <span className="cc-row cc-gap-6"><TI n="users" size={14}/> Verknüpfte Kinder</span>
-        {onKindHinzufuegen && (
+        {canEdit && onKindHinzufuegen && (
           <Btn small onClick={onKindHinzufuegen} disabled={busy}>
             <TI n="plus" size={12}/> Kind hinzufügen
           </Btn>
@@ -154,17 +157,24 @@ export function ElternKinderSektion({
               </div>
               {k.teams.length > 0 && <div className="cc-text-xs cc-text-sub">{k.teams.join(", ")}</div>}
             </div>
-            <button
-              className={`cc-star-btn${k.hauptkontakt ? " cc-star-btn-on" : ""}`}
-              onClick={() => toggleHauptkontakt(k)}
-              disabled={busy}
-              title={k.hauptkontakt ? "Hauptkontakt entfernen" : "Als Hauptkontakt setzen"}
-            >
-              <TI n="star" size={16}/>
-            </button>
-            <button className="cc-icon-btn-danger" onClick={() => entkoppeln(k)} disabled={busy} title="Kind entknüpfen">
-              <TI n="unlink" size={15}/>
-            </button>
+            {canEdit ? (
+              <>
+                <button
+                  className={`cc-star-btn${k.hauptkontakt ? " cc-star-btn-on" : ""}`}
+                  onClick={() => toggleHauptkontakt(k)}
+                  disabled={busy}
+                  title={k.hauptkontakt ? "Hauptkontakt entfernen" : "Als Hauptkontakt setzen"}
+                >
+                  <TI n="star" size={16}/>
+                </button>
+                <button className="cc-icon-btn-danger" onClick={() => entkoppeln(k)} disabled={busy} title="Kind entknüpfen">
+                  <TI n="unlink" size={15}/>
+                </button>
+              </>
+            ) : k.hauptkontakt && (
+              /* Ohne Recht bleibt der Stern als reine Anzeige */
+              <span className="cc-star-btn cc-star-btn-on" title="Hauptkontakt"><TI n="star" size={16}/></span>
+            )}
           </div>
         ))}
       </div>

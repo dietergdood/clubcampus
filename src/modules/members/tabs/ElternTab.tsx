@@ -161,6 +161,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
           mode="edit"
           data={editEltern}
           mitgliedId={raw.id}
+          canEdit={canEdit}
           sb={sb}
           vereinId={vereinId}
           geaendertVon={geaendertVon}

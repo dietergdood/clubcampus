@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/ElternkontaktModal.tsx
    Bearbeiten/Anlegen eines Elternkontakts.
-
    Aufrufer: ElternTab (Mitglied-Detail) und Elternliste. Beide sehen
    dasselbe — auch die verknuepften Kinder. Der Hauptkontakt gilt pro Kind,
    und eine Aenderung an den Kontaktdaten betrifft alle verknuepften Kinder;
@@ -11,9 +10,9 @@ import { useState, useRef, useEffect } from "react";
 import { Btn, ModalOrSheet, PhoneInput, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { ElternKinderSektion } from "./ElternKinderSektion.tsx";
+import { ElternPortalSection } from "./ElternPortalSection.tsx";
 import {
   insertElternkontakt, updateElternkontakt, deleteElternkontakt, logFuerAlleKinder,
-  unlinkElternBenutzer,
 } from "../../domains/members/elternService.ts";
 import { logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import type { Sb } from "../../types.ts";
@@ -28,52 +27,6 @@ export interface ElternFormular {
   telefon?: string | null;
   beziehung?: string | null;
   benutzer_id?: string | null;
-}
-
-interface ElternPortalSectionProps {
-  e: ElternFormular;
-  sb: Sb;
-  onReload?: (() => void) | null;
-}
-
-export function ElternPortalSection({ e, sb, onReload }: ElternPortalSectionProps) {
-  const [loading, setLoading] = useState(false);
-  async function unlink() {
-    if (!sb || !e.id) return;
-    setLoading(true);
-    await unlinkElternBenutzer(sb, e.id);
-    setLoading(false);
-    if (onReload) onReload();
-  }
-  /* Aufbau wie die Kinder-Sektion darunter: Trennlinie, Ueberschrift mit
-     Aktion rechts, Inhalt darunter. Kein Warn-Kasten mehr — ein fehlender
-     Zugang ist der Normalfall, keine Auffaelligkeit. Einrichten kann der
-     Admin nicht: das Elternteil registriert sich selbst. */
-  return (
-    <>
-      <div className="cc-divider cc-mt-12"/>
-      <div className="cc-mt-12">
-        <div className="cc-section-title cc-between">
-          <span className="cc-row cc-gap-6"><TI n="key" size={14}/> Portal-Zugang</span>
-          {e.benutzer_id && (
-            <button className="cc-btn-danger" onClick={unlink} disabled={loading}>
-              {loading ? "…" : "Deaktivieren"}
-            </button>
-          )}
-        </div>
-        <div className="cc-mt-4">
-          {e.benutzer_id
-            ? <span className="cc-status-active">Aktiv</span>
-            : <span className="cc-text-sm cc-text-sub">
-                {e.email
-                  ? `Kein Zugang — Registrierung mit ${e.email} möglich`
-                  : "Kein Zugang — keine E-Mail hinterlegt"}
-              </span>
-          }
-        </div>
-      </div>
-    </>
-  );
 }
 
 const FELDER = [
@@ -124,11 +77,47 @@ export function ElternFelder({ form, onChange }: { form: ElternFormular; onChang
   );
 }
 
+/* Kontaktdaten zum Nachschauen — ohne Bearbeitungsrecht. Telefon und
+   E-Mail sind Links, weil genau das der Zweck ist: anrufen oder schreiben. */
+function ElternLeseAnsicht({ form }: { form: ElternFormular }) {
+  const name = [form.vorname, form.nachname].filter(Boolean).join(" ") || "—";
+  return (
+    <div className="cc-info-grid">
+      <div className="cc-info-row">
+        <span className="cc-info-key">Name</span>
+        <span className="cc-info-val">{name}</span>
+      </div>
+      <div className="cc-info-row">
+        <span className="cc-info-key">Beziehung</span>
+        <span className={form.beziehung ? "cc-info-val" : "cc-info-val-empty"}>
+          {form.beziehung || "—"}
+        </span>
+      </div>
+      <div className="cc-info-row">
+        <span className="cc-info-key">E-Mail</span>
+        {form.email
+          ? <a href={`mailto:${form.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{form.email}</a>
+          : <span className="cc-info-val-empty">—</span>}
+      </div>
+      <div className="cc-info-row">
+        <span className="cc-info-key">Telefon</span>
+        {form.telefon
+          ? <a href={`tel:${form.telefon}`} className="cc-contact-link"><TI n="phone" size={12}/>{form.telefon}</a>
+          : <span className="cc-info-val-empty">—</span>}
+      </div>
+    </div>
+  );
+}
+
 interface ElternkontaktModalProps {
   /* "neu" braucht mitgliedId — ein Kontakt ohne Kind haengt im Nichts */
   mode: "neu" | "edit";
   data: ElternFormular;
   mitgliedId?: number | null;
+  /* Ohne Bearbeitungsrecht zeigt das Modal eine Lese-Ansicht: Trainer
+     schauen Kontaktdaten nach, Admins korrigieren sie. Ein Formular voller
+     Eingabefelder waere fuer den Lesefall das falsche Werkzeug. */
+  canEdit?: boolean;
   sb: Sb;
   vereinId: string | null;
   geaendertVon: string;
@@ -141,7 +130,7 @@ interface ElternkontaktModalProps {
 }
 
 export function ElternkontaktModal({
-  mode, data, mitgliedId = null, sb, vereinId, geaendertVon,
+  mode, data, mitgliedId = null, canEdit = true, sb, vereinId, geaendertVon,
   onKindHinzufuegen = null, neuesKind = null,
   onKindVerknuepft = null, onClose, onSaved,
 }: ElternkontaktModalProps) {
@@ -151,14 +140,11 @@ export function ElternkontaktModal({
   const [confirm, confirmDialog] = useConfirm();
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(saveTimer.current), []);
-
   const set = (k: keyof ElternFormular, v: string) => setForm(p => ({ ...p, [k]: v }));
-
   async function speichern() {
     if (!sb || !vereinId) return;
     const err = validateElternkontakt(form);
     if (err) { setMsg({ ok: false, text: err }); return; }
-
     setSaving(true); setMsg(null);
     try {
       const name = [form.vorname, form.nachname].filter(Boolean).join(" ");
@@ -170,7 +156,6 @@ export function ElternkontaktModal({
         telefon:   form.telefon   || null,
         beziehung: form.beziehung || null,
       };
-
       if (mode === "neu") {
         if (!mitgliedId) throw new Error("Kein Kind angegeben");
         const error = await insertElternkontakt(sb, { mitglied_id: mitgliedId, ...felder }, vereinId);
@@ -198,7 +183,6 @@ export function ElternkontaktModal({
     }
     setSaving(false);
   }
-
   async function loeschen() {
     if (!sb || !form.id) return;
     const name = [form.vorname, form.nachname].filter(Boolean).join(" ") || "Dieser Kontakt";
@@ -220,20 +204,18 @@ export function ElternkontaktModal({
     onSaved();
     onClose();
   }
-
   return (
     <ModalOrSheet open={true} onClose={onClose} maxWidth={480}>
       {confirmDialog}
       <div className="cc-modal-hdr">
-        <div className="cc-modal-title">{mode === "neu" ? "Neuer Elternkontakt" : "Elternkontakt bearbeiten"}</div>
+        <div className="cc-modal-title">
+          {mode === "neu" ? "Neuer Elternkontakt" : canEdit ? "Elternkontakt bearbeiten" : "Elternkontakt"}
+        </div>
         <Btn variant="ghost" small onClick={onClose}><TI n="x" size={14}/></Btn>
       </div>
-
       <div className="cc-modal-body">
-        <ElternFelder form={form} onChange={set}/>
-
-        {mode === "edit" && <ElternPortalSection e={form} sb={sb} onReload={onSaved}/>}
-
+        {canEdit ? <ElternFelder form={form} onChange={set}/> : <ElternLeseAnsicht form={form}/>}
+        {mode === "edit" && <ElternPortalSection e={form} sb={sb} onReload={onSaved} canEdit={canEdit}/>}
         {mode === "edit" && form.id && (
           <ElternKinderSektion
             elternId={form.id}
@@ -241,26 +223,27 @@ export function ElternkontaktModal({
             sb={sb}
             vereinId={vereinId}
             geaendertVon={geaendertVon}
+            canEdit={canEdit}
             onKindHinzufuegen={onKindHinzufuegen}
             neuesKind={neuesKind}
             onKindVerknuepft={onKindVerknuepft}
             onChanged={onSaved}
           />
         )}
-
         {msg && <div className={`cc-badge ${msg.ok ? "cc-badge-success" : "cc-badge-danger"} cc-mt-8`}>{msg.text}</div>}
       </div>
-
       <div className="cc-modal-ftr cc-between">
-        {mode === "edit"
+        {canEdit && mode === "edit"
           ? <Btn variant="danger" onClick={loeschen}><TI n="trash" size={14}/> Löschen</Btn>
           : <span/>
         }
         <div className="cc-row cc-gap-8">
-          <Btn onClick={onClose}>Abbrechen</Btn>
-          <Btn variant="primary" onClick={speichern} disabled={saving}>
-            {saving ? "Speichert…" : "Speichern"}
-          </Btn>
+          <Btn onClick={onClose}>{canEdit ? "Abbrechen" : "Schliessen"}</Btn>
+          {canEdit && (
+            <Btn variant="primary" onClick={speichern} disabled={saving}>
+              {saving ? "Speichert…" : "Speichern"}
+            </Btn>
+          )}
         </div>
       </div>
     </ModalOrSheet>
