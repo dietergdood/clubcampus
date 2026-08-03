@@ -68,10 +68,6 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 
 /* ── Label ── */
 .cc-label{font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px;display:block;letter-spacing:0.01em}
-/* Ueberschrift eines Modal-Abschnitts (Portal-Zugang, Verknuepfte Kinder).
-   Dunkler als cc-label, damit sie nicht wie eine Feldbeschriftung wirkt,
-   deren Wert darunter steht. */
-.cc-section-label{font-size:12px;font-weight:600;color:var(--text);letter-spacing:0.02em}
 
 /* ── Toggle ── */
 .cc-toggle{width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;background:var(--border);position:relative;flex-shrink:0;transition:background 0.15s;padding:0;outline:none}

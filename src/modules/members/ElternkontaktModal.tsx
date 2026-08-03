@@ -53,8 +53,8 @@ export function ElternPortalSection({ e, sb, onReload }: ElternPortalSectionProp
     <>
       <div className="cc-divider cc-mt-12"/>
       <div className="cc-mt-12">
-        <div className="cc-between cc-items-center">
-          <span className="cc-section-label">Portal-Zugang</span>
+        <div className="cc-section-title cc-between">
+          <span className="cc-row cc-gap-6"><TI n="key" size={14}/> Portal-Zugang</span>
           {e.benutzer_id && (
             <button className="cc-btn-danger" onClick={unlink} disabled={loading}>
               {loading ? "…" : "Deaktivieren"}

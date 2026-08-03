@@ -129,8 +129,8 @@ export function ElternKinderSektion({
       <div className="cc-divider cc-mt-12"/>
       <div className="cc-mt-12">
       {confirmDialog}
-      <div className="cc-between cc-mb-8">
-        <span className="cc-section-label">Verknüpfte Kinder</span>
+      <div className="cc-section-title cc-between">
+        <span className="cc-row cc-gap-6"><TI n="users" size={14}/> Verknüpfte Kinder</span>
         {onKindHinzufuegen && (
           <Btn small onClick={onKindHinzufuegen} disabled={busy}>
             <TI n="plus" size={12}/> Kind hinzufügen
