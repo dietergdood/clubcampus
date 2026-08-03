@@ -38,7 +38,7 @@ export interface PersonTeamsService {
   logAktivitaet: typeof logAktivitaet;
   AKTIVITAET_TYP: typeof AKTIVITAET_TYP;
 }
-import type { RolleOption } from "../forms/RollenAuswahlListe.tsx";
+import type { KaderRolleAuswahl } from "../forms/RollenAuswahlListe.tsx";
 /* Gemeinsame Form fuer Vereinsfunktionen — der Besitzer-State wird aus
    fetchPortalFunktionen befuellt (mit farbe), diese Komponente schreibt
    aus fetchPortalFunktionenMitGruppe (ohne farbe) zurueck. */
@@ -57,7 +57,7 @@ interface PersonTeamsProps {
   canEdit?: boolean;
   vereinId?: string | null;
   account?: Account | null;
-  dbKaderRollen?: RolleOption[];
+  dbKaderRollen?: KaderRolleAuswahl[];
   /* Kader-Einträge des Mitglieds inkl. Team — von fetchKaderFuerMitglied */
   teamDetails?: KaderDetail[] | null;
   /* Der Besitzer-State ist bis zum ersten Laden null — der Updater muss

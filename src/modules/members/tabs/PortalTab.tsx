@@ -9,22 +9,18 @@ import { GN, R, RL } from "../../../constants.ts";
 import { updateMitgliedRolle, logAenderung, fetchBenutzerFuerMitglied } from "../../../domains/members/memberService.ts";
 import { formatDatum, formatDatumZeit } from "../../../domains/person/personUtils.ts";
 import type { Account, Mitglied, Sb } from "../../../types.ts";
+import type { PortalRolleOption } from "../../../domains/members/useMemberMeta.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
 /* Aus der Service-Rückgabe abgeleitet — dieselben Felder, die
    fetchBenutzerFuerMitglied selektiert. */
 export type PortalBenutzer = NonNullable<Awaited<ReturnType<typeof fetchBenutzerFuerMitglied>>>;
 
-interface RolleOption {
-  name: string;
-  label: string;
-}
-
 interface PortalTabProps {
   raw: Mitglied;
   benutzer?: PortalBenutzer | null;
   sb: Sb;
-  dbPortalRollen?: RolleOption[] | null;
+  dbPortalRollen?: PortalRolleOption[] | null;
   portalMsg?: StatusMeldung | null;
   portalLoading?: boolean;
   handleUnlink: () => void;
@@ -47,7 +43,7 @@ function PortalTab({
   const [rolleVal, setRolleVal] = useState("");
   const [rolleSaving, setRolleSaving] = useState(false);
 
-  const portalRollen: RolleOption[] = dbPortalRollen && dbPortalRollen.length > 0
+  const portalRollen: PortalRolleOption[] = dbPortalRollen && dbPortalRollen.length > 0
     ? dbPortalRollen
     : [
         { name: "administrator",  label: "Administrator" },

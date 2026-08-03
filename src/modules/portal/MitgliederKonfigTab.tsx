@@ -4,7 +4,7 @@
 import { Btn, Card, ModalOrSheet, ModalTitle, InfoBox, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { BTN_COLOR as BTN, BTN_TXT, BL, FONT } from "../../constants.ts";
-import type { PortalRolle, Sb, SetState } from "../../types.ts";
+import type { MitgliedtypPflichtfeld, PortalRolle, Sb, SetState } from "../../types.ts";
 
 /* Zeile aus mitgliedtypen */
 export interface MitgliedtypZeile {
@@ -31,11 +31,9 @@ export interface RollePflichtfeld {
   feld: string;
   pflicht: boolean | null;
 }
-export interface MitgliedtypPflichtfeld {
-  mitgliedtyp: string;
-  feld: string;
-  pflicht: boolean | null;
-}
+/* Wortgleich mit der Definition in types.ts — hier nur re-exportiert,
+   damit bestehende Importe aus dieser Datei weiter funktionieren. */
+export type { MitgliedtypPflichtfeld };
 
 const MITGLIEDTYPEN_PF=["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
 const MITGLIEDTYPEN_SHORT: Record<string,string>={Aktivmitglied:"Aktivmitglied",Juniormitglied:"Juniormitglied",Funktionär:"Funktionär",Passivmitglied:"Passivmitglied",Ehrenmitglied:"Ehrenmitglied",Freimitglied:"Freimitglied"};

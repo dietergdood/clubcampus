@@ -5,20 +5,22 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useMemo } from "react";
 import type { FunktionMitGruppe } from "../../shared/person/types.ts";
+import type { KaderRolle, PortalRolle } from "../../types.ts";
 
-export interface PortalRolleOption {
-  name: string;
-  label: string;
-}
+/* Verengung von PortalRolle — Name und Beschriftung, mehr braucht die UI
+   nicht. Nicht mit den Kaderrollen verwechseln (KaderRolleMitTrainerFlag). */
+export type PortalRolleOption = Pick<PortalRolle, "name" | "label">;
 
-export interface KaderRolleOption {
-  name: string;
+/* Verengung von KaderRolle: hier zaehlt nur, ob es eine Trainerrolle ist.
+   Eigener Name, weil memberMapper eine andere Verengung derselben Tabelle
+   fuehrt (mit label statt ist_trainer) — gleiche Namen waeren verwechselbar. */
+export type KaderRolleMitTrainerFlag = Pick<KaderRolle, "name"> & {
   ist_trainer?: boolean | null;
-}
+};
 
 export function useMemberMeta(
   dbPortalRollen: PortalRolleOption[] = [],
-  dbKaderRollen: KaderRolleOption[] = [],
+  dbKaderRollen: KaderRolleMitTrainerFlag[] = [],
   portalFunktionen: FunktionMitGruppe[] = [],
 ) {
   const ROLLE_LABEL = useMemo<Record<string, string>>(() => Object.fromEntries([

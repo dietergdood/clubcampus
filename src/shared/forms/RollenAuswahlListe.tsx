@@ -3,14 +3,17 @@
    Shared Rollenauswahl mit Suche + Checkboxen
    ═══════════════════════════════════════════════════════════════ */
 import { TI } from "../../icons.tsx";
+import type { KaderRolle } from "../../types.ts";
 
-export interface RolleOption {
-  name: string;
+/* Verengung von KaderRolle fuer die Auswahlliste. Eigener Name, weil
+   PortalTab eine gleichnamige Struktur fuer Portalrollen hatte — zwei
+   verschiedene Tabellen unter einem Namen ist verwechselbar. */
+export type KaderRolleAuswahl = Pick<KaderRolle, "name"> & {
   ist_trainer?: boolean;
-}
+};
 
 interface RollenAuswahlListeProps {
-  rollen?: RolleOption[];
+  rollen?: KaderRolleAuswahl[];
   selected?: string[];
   onChange: (rollen: string[]) => void;
   search?: string;

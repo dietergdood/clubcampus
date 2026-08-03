@@ -31,15 +31,11 @@ type Pflichtfeld = Awaited<ReturnType<typeof fetchMitgliedtypPflichtfelder>>[num
 
 /* mitgliedtypen.hauptkontakt_pflicht steuert, ob ein Elternkontakt nötig
    ist. Mitgliedtyp aus types.ts kennt die Spalte nicht. */
-interface MitgliedtypMitPflicht extends Mitgliedtyp {
-  hauptkontakt_pflicht?: boolean | null;
-}
-
 interface MitgliederModulProps {
   role: string;
   account?: Account | null;
   dbMitglieder?: Mitglied[];
-  dbMitgliedtypen?: MitgliedtypMitPflicht[];
+  dbMitgliedtypen?: Mitgliedtyp[];
   dbPortalRollen?: PortalRolle[];
   dbKaderRollen?: KaderRolleDb[];
   kannSchreiben?: (modul: string) => boolean;
@@ -215,7 +211,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       kannVerwalten={kannVerwalten} onReload={onReload} onUpdatePortalZugang={onUpdatePortalZugang}
       setSelectedMember={setSelectedMember} selectedMember={selectedMember}
       reloadMember={reloadMember} refreshArchivCount={refreshArchivCount} brauchtEltern={brauchtEltern}
-      pflichtTypen={pflichtTypen}
       vereinId={vereinId}
     />
   );

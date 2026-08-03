@@ -3,7 +3,7 @@
    Rohe DB-Mitglieder in UI-Objekte transformieren
    ═══════════════════════════════════════════════════════════════ */
 import { vollname, age } from "../../domains/person/personUtils.ts";
-import type { Mitglied, PortalRolle } from "../../types.ts";
+import type { KaderRolle, Mitglied, PortalRolle } from "../../types.ts";
 
 /* ⚠ eintrittsdatum und teams haben KEINE Spalte in mitglieder und sind auch
    keine der von loadDbMitglieder ergänzten Felder. Der Code unten liest sie
@@ -12,15 +12,16 @@ interface MitgliedRoh extends Mitglied {
   teams?: string[];
 }
 
-export interface KaderRolleOption {
-  name: string;
+/* Verengung von KaderRolle fuer die Anzeige: Name und Beschriftung.
+   Siehe KaderRolleMitTrainerFlag in useMemberMeta fuer die andere Sicht. */
+export type KaderRolleMitLabel = Pick<KaderRolle, "name"> & {
   label?: string | null;
-}
+};
 
 export function mapMembers(
   dbMitglieder: MitgliedRoh[],
   dbPortalRollen: Pick<PortalRolle, "name" | "label">[],
-  _dbKaderRollen?: KaderRolleOption[],
+  _dbKaderRollen?: KaderRolleMitLabel[],
 ) {
   const ROLLE_LABEL: Record<string, string> = Object.fromEntries([
     ...dbPortalRollen.map(r=>[r.name,r.label]),

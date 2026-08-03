@@ -106,10 +106,16 @@ export interface Kind {
 }
 
 // ── Mitgliedtyp ──────────────────────────────────────────────────
+/* Verengte Sicht auf die Tabelle mitgliedtypen — nur die Felder, die im
+   Portal ausserhalb der Verwaltung gebraucht werden. Wer weniger braucht,
+   leitet mit Pick<> ab statt neu zu deklarieren; die Portalverwaltung nutzt
+   MitgliedtypZeile mit allen Spalten. */
 export interface Mitgliedtyp {
   name: string;
   aktiv: boolean;
   sort_order?: number;
+  /* Steuert, ob dieser Typ einen Elternkontakt verlangt (brauchtEltern) */
+  hauptkontakt_pflicht?: boolean | null;
 }
 
 export interface MitgliedtypPflichtfeld {

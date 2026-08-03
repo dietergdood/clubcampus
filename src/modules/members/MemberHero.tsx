@@ -10,9 +10,9 @@ import { TI } from "../../icons.tsx";
 import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../../types.ts";
 /* Nicht KaderRolle aus types.ts: dort ist aktiv Pflicht, MemberDetail reicht
-   aber KaderRolleDb durch. KaderRolleOption verlangt nur, was hier gelesen
+   aber KaderRolleDb durch. KaderRolleMitTrainerFlag verlangt nur, was hier gelesen
    wird, und ist schon von useMemberMeta belegt. */
-import type { KaderRolleOption } from "../../domains/members/useMemberMeta.ts";
+import type { KaderRolleMitTrainerFlag } from "../../domains/members/useMemberMeta.ts";
 
 /* Kader-Einträge des Mitglieds inkl. Team — von fetchKaderFuerMitglied */
 type KaderDetail = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
@@ -34,7 +34,7 @@ interface MemberHeroProps {
   onUpdatePortalZugang?: ((mitgliedId: number, aktiv: boolean) => Promise<void> | void) | null;
   dbMitgliedtypen?: Mitgliedtyp[];
   dbPortalRollen?: PortalRolle[];
-  dbKaderRollen?: KaderRolleOption[];
+  dbKaderRollen?: KaderRolleMitTrainerFlag[];
   /* Der Portal-Benutzer des Mitglieds; gelesen wird nur die Rolle */
   benutzer?: { role?: string | null } | null;
   teamDetails?: KaderDetail[] | null;

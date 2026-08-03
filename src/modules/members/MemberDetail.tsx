@@ -69,8 +69,6 @@ interface MemberDetailProps {
   reloadMember: (id: number) => void;
   refreshArchivCount: () => void;
   brauchtEltern: (mitgliedtyp: string | null | undefined) => boolean;
-  /* Mitgliedtypen mit hauptkontakt_pflicht — fuer die Kind-Auswahl im Eltern-Tab */
-  pflichtTypen?: string[];
   onProfilGeprueft?: (() => void) | null;
   vereinId?: string | null;
 }
@@ -81,7 +79,7 @@ function MemberDetail({
   dbMitglieder = [], dbMitgliedtypen = [], dbPortalRollen = [], dbKaderRollen = [],
   kannVerwalten, onReload, onUpdatePortalZugang = null,
   setSelectedMember, selectedMember,
-  reloadMember, refreshArchivCount, brauchtEltern, pflichtTypen = [], onProfilGeprueft = null,
+  reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft = null,
   vereinId = null,
 }: MemberDetailProps) {
   const dbRaw: Partial<Mitglied> = dbMitglieder.find(d => d.id === m.id) || {};
@@ -268,7 +266,7 @@ function MemberDetail({
           onReload={() => { if (reloadMember) reloadMember(raw.id); if (onReload) onReload(); }}
           setElternLoaded={setElternLoaded}
           vereinId={vereinId} account={account}
-          pflichtTypen={pflichtTypen}
+          pflichtTypen={(dbMitgliedtypen||[]).filter(t=>t.hauptkontakt_pflicht).map(t=>t.name)}
         />
       )}
 

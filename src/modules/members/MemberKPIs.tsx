@@ -7,10 +7,11 @@ import { Stat, useIsMobile } from "../../theme.ts";
 import { GN, AM, BL } from "../../constants.ts";
 import type { MemberRow } from "./memberMapper.ts";
 import type { FilterVals } from "../../shared/list/types.ts";
+import type { Mitgliedtyp } from "../../types.ts";
 
-interface MitgliedtypOption {
-  name: string;
-}
+/* Nur der Name wird gebraucht — als Verengung von Mitgliedtyp deklariert,
+   damit Schema-Aenderungen an einer Stelle auffallen. */
+type MitgliedtypOption = Pick<Mitgliedtyp, "name">;
 
 interface MemberKPIsProps {
   allMembers: MemberRow[];
