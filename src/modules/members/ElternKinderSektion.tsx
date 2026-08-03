@@ -130,7 +130,7 @@ export function ElternKinderSektion({
       <div className="cc-mt-12">
       {confirmDialog}
       <div className="cc-between cc-mb-8">
-        <span className="cc-label">Verknüpfte Kinder</span>
+        <span className="cc-section-label">Verknüpfte Kinder</span>
         {onKindHinzufuegen && (
           <Btn small onClick={onKindHinzufuegen} disabled={busy}>
             <TI n="plus" size={12}/> Kind hinzufügen
