@@ -160,23 +160,28 @@ export async function setHauptkontakt(sb: SbClient, mitgliedId: number, elternId
 }
 
 /* Sucht Mitglieder, die als Kind eines Elternkontakts in Frage kommen.
-   Massgeblich ist mitgliedtypen.hauptkontakt_pflicht — dieselbe Regel, nach
-   der das Portal sonst entscheidet, wer einen Elternkontakt braucht.
-   Die Typen kommen vom Aufrufer, der sie ohnehin geladen hat. */
+   Massgeblich ist normalerweise mitgliedtypen.hauptkontakt_pflicht — dieselbe
+   Regel, nach der das Portal sonst entscheidet, wer einen Elternkontakt
+   braucht. Fuer den Ausnahmefall laesst sich der Filter weglassen: ein
+   Elternkontakt ist bei jedem Mitgliedtyp erlaubt, nur nicht ueberall
+   erforderlich. */
 export async function sucheKinder(
   sb: SbClient,
   vereinId: string,
   query: string,
-  pflichtTypen: string[],
+  pflichtTypen: string[] | null,
 ) {
-  if (pflichtTypen.length === 0) return [];
   const suche = query.trim();
   if (!suche) return [];
-  const { data } = await sb.from("mitglieder")
+  let q = sb.from("mitglieder")
     .select("id, vorname, nachname, mitgliedtyp")
     .eq("verein_id", vereinId)
-    .eq("aktiv", true)
-    .in("mitgliedtyp", pflichtTypen)
+    .eq("aktiv", true);
+  if (pflichtTypen) {
+    if (pflichtTypen.length === 0) return [];
+    q = q.in("mitgliedtyp", pflichtTypen);
+  }
+  const { data } = await q
     .or(`vorname.ilike.%${suche}%,nachname.ilike.%${suche}%`)
     .order("nachname")
     .limit(20);

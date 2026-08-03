@@ -33,6 +33,7 @@ export function KindSucheModal({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<KindTreffer[]>([]);
   const [suchend, setSuchend] = useState(false);
+  const [alleTypen, setAlleTypen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -41,12 +42,12 @@ export function KindSucheModal({
     setSuchend(true);
     timerRef.current = setTimeout(async () => {
       if (!sb || !vereinId) { setSuchend(false); return; }
-      const data = await sucheKinder(sb, vereinId, query, pflichtTypen);
+      const data = await sucheKinder(sb, vereinId, query, alleTypen ? null : pflichtTypen);
       setResults(data.filter(k => !bereitsVerknuepft.includes(k.id)));
       setSuchend(false);
     }, 300);
     return () => clearTimeout(timerRef.current);
-  }, [query]);
+  }, [query, alleTypen]);
 
   if (!open) return null;
 
@@ -64,10 +65,15 @@ export function KindSucheModal({
             value={query} onChange={e => setQuery(e.target.value)} autoFocus/>
         </div>
 
-        {pflichtTypen.length === 0 && (
+        <label className="cc-row cc-gap-6 cc-items-center cc-mt-8 cc-text-sm cc-text-sub cc-cursor-pointer">
+          <input type="checkbox" checked={alleTypen} onChange={e => setAlleTypen(e.target.checked)}/>
+          Alle Mitgliedtypen anzeigen
+        </label>
+
+        {!alleTypen && pflichtTypen.length === 0 && (
           <div className="cc-text-sm cc-text-sub cc-mt-8">
             Kein Mitgliedtyp verlangt einen Elternkontakt. In der Portalverwaltung
-            unter Mitgliedtypen einstellen.
+            unter Mitgliedtypen einstellen — oder oben alle Typen anzeigen.
           </div>
         )}
 
@@ -88,12 +94,14 @@ export function KindSucheModal({
           </div>
         )}
 
-        {!suchend && query.trim() && results.length === 0 && pflichtTypen.length > 0 && (
+        {!suchend && query.trim() && results.length === 0 && (alleTypen || pflichtTypen.length > 0) && (
           <div className="cc-text-sm cc-text-sub cc-mt-8 cc-text-center">
-            Keine passenden Mitglieder gefunden.
+            {alleTypen
+              ? "Keine Mitglieder gefunden."
+              : "Keine passenden Mitglieder gefunden — mit allen Mitgliedtypen suchen?"}
           </div>
         )}
-        {!query.trim() && pflichtTypen.length > 0 && (
+        {!query.trim() && (alleTypen || pflichtTypen.length > 0) && (
           <div className="cc-text-sm cc-text-sub cc-mt-8 cc-text-center">
             Name eingeben…
           </div>
