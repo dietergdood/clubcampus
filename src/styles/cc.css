@@ -416,6 +416,9 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-search-hint{font-size:11px;color:var(--sub);margin-top:3px;padding-left:2px}
 .cc-eltern-kind-link{background:none;border:none;padding:0;font-size:inherit;font-family:inherit;color:var(--text);cursor:pointer;font-weight:600;text-align:left}
 .cc-eltern-kind-link:hover{text-decoration:underline}
+.cc-link-btn{background:none;border:none;padding:0;font-size:inherit;font-family:inherit;color:inherit;cursor:pointer;text-align:left}
+.cc-link-btn:hover{text-decoration:underline}
+.cc-link-btn:disabled{cursor:default;opacity:0.5;text-decoration:none}
 .cc-ml-srch input{border:none;outline:none;background:transparent;font-size:14px;color:var(--text);flex:1;font-family:inherit}
 .cc-ml-srch input::placeholder{color:var(--sub)}
 @media(max-width:680px){.cc-ml-srch-wrap{max-width:60%}}

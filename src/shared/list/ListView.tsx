@@ -35,6 +35,9 @@ export interface ListViewProps<T extends ListRow = ListRow> {
   renderCell?: RenderCell<T>;
   renderMobile?: RenderMobile<T>;
   getRowId?: GetRowId<T>;
+  /* Klick auf eine Datenzeile. Ohne die Prop bleibt die Zeile passiv —
+     Zellen mit eigenen Klicks rufen stopPropagation und sind nicht betroffen. */
+  onRowClick?: (row: T) => void;
   // Supabase / Ansichten
   sb?: Sb;
   account?: Account | null;
@@ -79,6 +82,7 @@ export function ListView<T extends ListRow = ListRow>({
   // Render
   renderCell,
   renderMobile,
+  onRowClick,
   getRowId = (r) => { const id = r.id; return typeof id === "number" ? id : String(id); },
   // Supabase / Ansichten
   sb,
@@ -249,7 +253,8 @@ export function ListView<T extends ListRow = ListRow>({
                 const id = getRowId(row);
                 return (
                   <tr key={String(id)}
-                    className={`cc-members-tr${selected.has(id) ? " cc-members-tr-selected" : ""}${hasGroup && dragOverRow === id ? " cc-group-drag-over" : ""}${hasGroup ? " cc-members-tr-draggable" : ""}`}
+                    className={`cc-members-tr${selected.has(id) ? " cc-members-tr-selected" : ""}${hasGroup && dragOverRow === id ? " cc-group-drag-over" : ""}${hasGroup ? " cc-members-tr-draggable" : ""}${onRowClick ? " cc-cursor-pointer" : ""}`}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
                     draggable={hasGroup}
                     onDragStart={hasGroup ? e => { e.stopPropagation(); setDragRow({ id, groupKey: key }); } : undefined}
                     onDragOver={hasGroup ? e => { e.preventDefault(); e.stopPropagation(); setDragOverRow(id); } : undefined}

@@ -159,6 +159,78 @@ export async function setHauptkontakt(sb: SbClient, mitgliedId: number, elternId
     .eq("mitglied_id", mitgliedId);
 }
 
+/* Sucht Mitglieder, die als Kind eines Elternkontakts in Frage kommen.
+   Massgeblich ist mitgliedtypen.hauptkontakt_pflicht — dieselbe Regel, nach
+   der das Portal sonst entscheidet, wer einen Elternkontakt braucht.
+   Die Typen kommen vom Aufrufer, der sie ohnehin geladen hat. */
+export async function sucheKinder(
+  sb: SbClient,
+  vereinId: string,
+  query: string,
+  pflichtTypen: string[],
+) {
+  if (pflichtTypen.length === 0) return [];
+  const suche = query.trim();
+  if (!suche) return [];
+  const { data } = await sb.from("mitglieder")
+    .select("id, vorname, nachname, mitgliedtyp")
+    .eq("verein_id", vereinId)
+    .eq("aktiv", true)
+    .in("mitgliedtyp", pflichtTypen)
+    .or(`vorname.ilike.%${suche}%,nachname.ilike.%${suche}%`)
+    .order("nachname")
+    .limit(20);
+  return data || [];
+}
+
+/* Was nach dem Entkoppeln mit dem Elternkontakt geschehen ist. */
+export type EntkoppelFolge = "verknuepft" | "supporter" | "geloescht";
+
+/* Aenderungen an einem Elternkontakt betreffen alle verknuepften Kinder.
+   mitglieder_aktivitaeten haengt an einer mitglied_id — deshalb wird der
+   Eintrag in jeden betroffenen Verlauf geschrieben. Wer Adrians Verlauf
+   liest, sieht so auch, dass die Nummer seiner Mutter korrigiert wurde. */
+export async function logFuerAlleKinder(
+  sb: SbClient,
+  elternId: string,
+  vereinId: string,
+  schreibe: (mitgliedId: number) => void | Promise<void>,
+): Promise<void> {
+  void vereinId;
+  const { data } = await sb.from("eltern_kinder")
+    .select("mitglied_id")
+    .eq("eltern_id", elternId);
+  for (const zeile of data || []) {
+    await schreibe(zeile.mitglied_id);
+  }
+}
+
+/* unlinkKind samt Nachbehandlung: war es das letzte Kind, wird der Kontakt
+   je nach Zustand des Kindes zum Supporter oder geloescht. Die Logik lag
+   bisher in ElternTab und wird von Elternliste und Tab gleichermassen
+   gebraucht — deshalb hier, nicht in der Komponente. */
+export async function entkoppleKind(
+  sb: SbClient,
+  elternId: string,
+  mitgliedId: number,
+  benutzerId?: string | null,
+): Promise<EntkoppelFolge> {
+  const { verbleibendeKinder, kindNochAktiv } = await unlinkKind(sb, elternId, mitgliedId);
+  if (verbleibendeKinder > 0) return "verknuepft";
+
+  if (kindNochAktiv) {
+    /* Kind noch im Verein (z.B. Junioren → Aktiv) → Elternteil wird Supporter.
+       ⚠ supporter hat keine Spalte in elternkontakte — das Update scheitert
+       still, der Fehler wird bewusst nicht ausgewertet. */
+    await updateElternkontakt(sb, elternId, { supporter: true } as TablesUpdate<"elternkontakte">);
+    if (benutzerId) await updateBenutzerRolle(sb, benutzerId, "supporter");
+    return "supporter";
+  }
+
+  await deleteElternkontakt(sb, elternId);
+  return "geloescht";
+}
+
 export async function updateBenutzerRolle(sb: SbClient, benutzerId: string, rolle: string) {
   return sb.from("benutzer").update({ role: rolle }).eq("id", benutzerId);
 }

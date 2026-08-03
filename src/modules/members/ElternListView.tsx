@@ -7,6 +7,9 @@ import { useConfirm } from "../../theme.ts";
 import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
+import { ElternkontaktModal } from "./ElternkontaktModal.tsx";
+import { KindSucheModal } from "./KindSucheModal.tsx";
+import type { ElternFormular } from "./ElternkontaktModal.tsx";
 import type { ColDef, ColGroup, GroupOption, RowId } from "../../shared/list/types.ts";
 import type { Account, Sb } from "../../types.ts";
 import { mapEltern, buildElternGroups, makeElternRenderCell } from "./elternListUtils.tsx";
@@ -36,12 +39,28 @@ interface ElternListViewProps {
   account?: Account | null;
   isAdmin?: boolean;
   onNavToMember?: ((id: number) => void) | null;
+  /* Mitgliedtypen mit hauptkontakt_pflicht — bestimmen, wer als Kind
+     verknuepft werden kann. Kommt aus der Portalverwaltung. */
+  pflichtTypen?: string[];
 }
 
-export function ElternListView({ sb, vereinId, account, isAdmin = false, onNavToMember = null }: ElternListViewProps) {
+export function ElternListView({
+  sb, vereinId, account, isAdmin = false,
+  onNavToMember = null, pflichtTypen = [],
+}: ElternListViewProps) {
   const [rows, setRows] = useState<ElternRow[]>([]);
   const [confirm, confirmDialog] = useConfirm();
   const [expandedKinder, setExpandedKinder] = useState<Set<string>>(new Set());
+  const [edit, setEdit] = useState<ElternFormular | null>(null);
+  const [kindSuche, setKindSuche] = useState(false);
+  const [neuesKind, setNeuesKind] = useState<number | null>(null);
+  const geaendertVon = account?.name || account?.email || "Administrator";
+
+  async function reload() {
+    if (!sb || !vereinId) return;
+    const data = await fetchAlleElternkontakte(sb, vereinId);
+    setRows(mapEltern(data));
+  }
 
   useEffect(() => {
     if (!sb || !vereinId) return;
@@ -104,6 +123,15 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false, onNavTo
         groupOptions={GROUP_OPTIONS}
         buildGroupsFn={buildElternGroups}
         renderCell={renderCell}
+        onRowClick={row => setEdit({
+          id:          String(row.id),
+          vorname:     row.vorname,
+          nachname:    row.nachname,
+          email:       row.email,
+          telefon:     row.telefon,
+          beziehung:   row.beziehung,
+          benutzer_id: row.benutzer_id,
+        })}
         sb={sb}
         account={account}
         vereinId={vereinId}
@@ -121,6 +149,34 @@ export function ElternListView({ sb, vereinId, account, isAdmin = false, onNavTo
           {label:"Excel (pro Gruppe ein Sheet)",         format:"excel-sheets", icon:"table"},
         ]}
       />
+
+      {edit && (
+        <ElternkontaktModal
+          mode="edit"
+          data={edit}
+          sb={sb}
+          vereinId={vereinId}
+          geaendertVon={geaendertVon}
+          zeigeKinder
+          onKindHinzufuegen={() => setKindSuche(true)}
+          neuesKind={neuesKind}
+          onKindVerknuepft={() => setNeuesKind(null)}
+          onClose={() => { setEdit(null); setNeuesKind(null); }}
+          onSaved={reload}
+        />
+      )}
+
+      {kindSuche && (
+        <KindSucheModal
+          open={kindSuche}
+          onClose={() => setKindSuche(false)}
+          sb={sb}
+          vereinId={vereinId}
+          pflichtTypen={pflichtTypen}
+          bereitsVerknuepft={edit?.id ? (rows.find(r => String(r.id) === edit.id)?.kinder || []).map(k => k.mitglied_id) : []}
+          onGewaehlt={id => setNeuesKind(id)}
+        />
+      )}
     </>
   );
 }

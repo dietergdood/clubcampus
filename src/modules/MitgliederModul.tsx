@@ -200,6 +200,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const brauchtEltern=(mitgliedtyp: string|null|undefined)=>
     dbMitgliedtypen.some(t=>t.name===mitgliedtyp&&t.hauptkontakt_pflicht);
 
+  /* Dieselbe Regel als Liste — fuer die Kind-Auswahl in der Elternliste. */
+  const pflichtTypen = dbMitgliedtypen.filter(t=>t.hauptkontakt_pflicht).map(t=>t.name);
+
 
 
   if(selectedMember) return (
@@ -264,6 +267,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       {elternTab?(
         <ElternListView sb={sb} vereinId={vereinId} account={account} isAdmin={role==="administrator"||role==="administration"}
+          pflichtTypen={pflichtTypen}
           onNavToMember={id=>{
             setElternTab(false);
             const m=dbMitglieder.find(x=>x.id===id);
