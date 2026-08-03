@@ -147,9 +147,21 @@ interface TIProps {
   className?: string;
 }
 
+/* Bereits gemeldete Namen — sonst warnt eine Liste mit 500 Zeilen 500-mal. */
+const gemeldet = new Set<string>();
+
 function TI({n, size=16, style={}, className}: TIProps){
   const p = PATHS[n];
-  if(!p) return <span className={className} style={{display:"inline-block",width:size,height:size,...style}}/>;
+  if(!p){
+    /* Der leere Platzhalter ist Absicht (siehe TIProps), verbirgt aber Tippfehler:
+       er hat die richtige Groesse, das Layout bleibt heil, man sieht nichts.
+       Im Build entfernt Vite diesen Block. */
+    if(import.meta.env.DEV && !gemeldet.has(n)){
+      gemeldet.add(n);
+      console.warn(`[CC] Icon "${n}" gibt es nicht — TI rendert einen leeren Platzhalter. In src/icons.tsx ergaenzen oder den Namen korrigieren.`);
+    }
+    return <span className={className} style={{display:"inline-block",width:size,height:size,...style}}/>;
+  }
   return(
     <svg
       xmlns="http://www.w3.org/2000/svg"

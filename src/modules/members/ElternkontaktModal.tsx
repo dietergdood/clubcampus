@@ -246,7 +246,7 @@ export function ElternkontaktModal({
 
       <div className="cc-modal-ftr cc-between">
         {mode === "edit"
-          ? <Btn variant="ghost" onClick={loeschen}><TI n="trash" size={13}/> Löschen</Btn>
+          ? <Btn variant="danger" onClick={loeschen}><TI n="trash" size={14}/> Löschen</Btn>
           : <span/>
         }
         <div className="cc-row cc-gap-8">
