@@ -128,6 +128,13 @@ npx supabase db dump --linked -f supabase/schema.sql
 
 Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verliert: Zahl der `CREATE TABLE`, `CREATE POLICY`, `CREATE INDEX` und `ADD CONSTRAINT` gegen die alte Fassung vergleichen — ein abgebrochener Dump fällt sonst erst auf, wenn jemand das Schema nachbaut. Wird der Dump länger nicht gepflegt, läuft er auseinander: am 27.07.2026 fehlten ihm `elternkontakte.profil_geprueft_at`, `vereine.slug` samt `vereine_slug_unique` und die Funktion `check_email_bekannt()` — alle drei erst durch eine Regenerierung von `database.types.ts` aufgefallen. Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
 
+**`supabase/schema.sql` deckt nur das Schema `public` ab.** Zwei Dinge stehen deshalb nicht darin und gehen beim Nachbauen verloren, wenn man sie nicht kennt:
+
+- **Trigger auf `auth.users`** → `supabase/auth_triggers.sql`. Dort liegen `on_auth_user_created` (ruft `handle_new_user`) und `on_auth_user_login` (ruft `handle_user_login`). In `schema.sql` stehen nur die Funktionen, ohne jeden Aufrufer — ohne diese Datei kann sich nach einem Nachbau niemand registrieren. Nach `schema.sql` einspielen.
+- **Extensions und die Realtime-Publication.** `CREATE EXTENSION` liegt in den Schemas `extensions`/`vault`, `ALTER PUBLICATION "supabase_realtime" ADD TABLE …` (für `nachrichten` und `nachrichten_antworten`) ist global. `supabase db dump` nimmt beides mit, ein blosses `pg_dump --schema=public` **nicht** — wer ohne Docker dumpt, verliert diese sieben Zeilen still und damit die Live-Zustellung der Nachrichten.
+
+Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt über den Session-Pooler mit lokalem `pg_dump`; die Verbindungsdaten stehen in `supabase/.temp/pooler-url`. Das Ergebnis ist dann aber um die oben genannten sieben Zeilen ärmer und in der Schreibweise abweichend (kein `IF NOT EXISTS`/`OR REPLACE`) — als Ersatz für den regulären Dump nur mit Gegenprüfung verwenden.
+
 ## Weitere Dokumente
 
 - `ARCHITECTURE.md` — Regeln, Checklisten, Session-Historie, Bewertungsrahmen. **Teils veraltet**: `domains/teams/` liegt heute unter `src/modules/teams/`, `theme.jsx` ist nur noch Barrel (Komponenten in `shared/`), `COMPONENT_REGISTRY` in `shared/componentRegistry.js`, CSS in `src/styles/cc.css`. Bei Widerspruch gilt der Code.
