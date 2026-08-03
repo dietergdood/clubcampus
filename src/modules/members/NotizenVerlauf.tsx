@@ -53,7 +53,7 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAd
     if(!newText.trim()||!sb||!vereinId) return;
     setAdding(true);
     const autorName=dbUser?.name||dbUser?.email||"Unbekannt";
-    await insertNotiz(sb,{mitglied_id:mitgliedId,verein_id:vereinId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName});
+    await insertNotiz(sb,{mitglied_id:mitgliedId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName},vereinId);
     const d=await fetchNotizen(sb,mitgliedId);
     setNotizen(d);if(onCount)onCount(d.length);
     setNewText(""); setAdding(false);

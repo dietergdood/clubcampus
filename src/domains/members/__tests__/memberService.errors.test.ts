@@ -26,7 +26,7 @@ const CONTRACT: Array<{ name: string; table: string; op: SbOp; call: (sb: MockSb
   { name: "updateKader",        table: "kader",                op: "update", call: sb => updateKader(sb as any, 1, { rollen: ["x"] } as any) },
   { name: "deaktiviereKader",   table: "kader",                op: "update", call: sb => deaktiviereKader(sb as any, 1) },
   { name: "updateBenutzer",     table: "benutzer",             op: "update", call: sb => updateBenutzer(sb as any, "u1", { role: "trainer" } as any) },
-  { name: "insertNotiz",        table: "mitglieder_notizen",   op: "insert", call: sb => insertNotiz(sb as any, { mitglied_id: 1, verein_id: "v", text: "x" } as any) },
+  { name: "insertNotiz",        table: "mitglieder_notizen",   op: "insert", call: sb => insertNotiz(sb as any, { mitglied_id: 1, text: "x" } as any, "v") },
   { name: "updateNotiz",        table: "mitglieder_notizen",   op: "update", call: sb => updateNotiz(sb as any, 1, "neu") },
   { name: "deleteNotiz",        table: "mitglieder_notizen",   op: "delete", call: sb => deleteNotiz(sb as any, 1) },
   { name: "deleteAnsicht",      table: "mitglieder_ansichten", op: "delete", call: sb => deleteAnsicht(sb as any, "a1") },

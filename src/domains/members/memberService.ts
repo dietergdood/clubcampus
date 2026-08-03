@@ -73,13 +73,17 @@ export async function fetchAnsichten(sb: SbClient, benutzerId: string, typ = "mi
 }
 
 /* sortierung liegt in der DB als jsonb — hier eng typisiert, damit die
-   Aufrufer keine beliebige Json-Struktur hineinschreiben. */
-export type AnsichtInsert = Omit<TablesInsert<"mitglieder_ansichten">, "sortierung"> & {
+   Aufrufer keine beliebige Json-Struktur hineinschreiben.
+   verein_id ist bewusst ausgeschlossen: es kommt als eigener Pflichtparameter,
+   damit der Aufrufer es nicht vergessen kann (siehe insertMitglied). */
+export type AnsichtInsert = Omit<TablesInsert<"mitglieder_ansichten">, "sortierung" | "verein_id"> & {
   sortierung?: AnsichtSortDef[];
 };
 
-export async function insertAnsicht(sb: SbClient, ansicht: AnsichtInsert): Promise<Ansicht | null> {
-  const { data, error } = await sb.from("mitglieder_ansichten").insert(ansicht).select().single();
+export async function insertAnsicht(sb: SbClient, ansicht: AnsichtInsert, vereinId: string): Promise<Ansicht | null> {
+  const { data, error } = await sb.from("mitglieder_ansichten")
+    .insert({ ...ansicht, verein_id: vereinId })
+    .select().single();
   if (error) console.error("insertAnsicht error:", error);
   return (data as Ansicht | null) ?? null;
 }
@@ -99,8 +103,14 @@ export async function fetchNotizen(sb: SbClient, mitgliedId: number) {
   return data || [];
 }
 
-export async function insertNotiz(sb: SbClient, notiz: TablesInsert<"mitglieder_notizen">): Promise<PostgrestError | null> {
-  const { error } = await sb.from("mitglieder_notizen").insert(notiz);
+/* verein_id als Pflichtparameter statt Feld im Objekt — siehe insertAnsicht. */
+export async function insertNotiz(
+  sb: SbClient,
+  notiz: Omit<TablesInsert<"mitglieder_notizen">, "verein_id">,
+  vereinId: string,
+): Promise<PostgrestError | null> {
+  const { error } = await sb.from("mitglieder_notizen")
+    .insert({ ...notiz, verein_id: vereinId });
   return error;
 }
 

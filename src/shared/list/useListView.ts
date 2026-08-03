@@ -155,11 +155,12 @@ export function useListView<T extends ListRow = ListRow>({
   }
 
   async function saveView() {
-    if (!saveName.trim() || !sb || !account?.id) return;
+    /* vereinId gehoert in den Guard: mitglieder_ansichten.verein_id ist NOT NULL,
+       ohne den Wert wuerde das Insert erst in der DB scheitern. */
+    if (!saveName.trim() || !sb || !account?.id || !vereinId) return;
     setSaving(true);
     const data = await insertAnsicht(sb, {
       benutzer_id:        account.id,
-      verein_id:          vereinId,
       name:               saveName.trim(),
       spalten:            visibleCols,
       filter:             filterVals,
@@ -169,7 +170,7 @@ export function useListView<T extends ListRow = ListRow>({
       sortierung:         sortDefs,
       typ:                viewTyp,
       geteilt:            saveGeteilt,
-    });
+    }, vereinId);
     if (data) setCustomViews(prev => [...prev, data]);
     setSaveName(""); setSaveGeteilt(false); setSaveOpen(false); setSaving(false);
   }
