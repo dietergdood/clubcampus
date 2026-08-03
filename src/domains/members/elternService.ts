@@ -52,7 +52,7 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
 
 export async function fetchKinderFuerElternteil(sb: SbClient, elternId: string) {
   const { data } = await sb.from("eltern_kinder")
-    .select("mitglied_id, hauptkontakt, mitglieder:mitglied_id(id, vorname, nachname, aktiv, mitgliedtyp)")
+    .select("mitglied_id, hauptkontakt, mitglieder:mitglied_id(id, vorname, nachname, aktiv, mitgliedtyp, kader(aktiv, teams(name, kurzname)))")
     .eq("eltern_id", elternId);
   return data || [];
 }

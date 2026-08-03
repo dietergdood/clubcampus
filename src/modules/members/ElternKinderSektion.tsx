@@ -7,7 +7,7 @@
    Im ElternTab steht man bereits beim Kind — dort ausgeblendet.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
-import { Btn, useConfirm } from "../../theme.ts";
+import { Av, Btn, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import {
   fetchKinderFuerElternteil, linkKind, setHauptkontakt,
@@ -19,6 +19,7 @@ import type { Sb } from "../../types.ts";
 export interface KindZeile {
   mitglied_id: number;
   name: string;
+  teams: string[];
   hauptkontakt: boolean;
 }
 
@@ -49,11 +50,24 @@ export function ElternKinderSektion({
   async function load() {
     if (!sb) return;
     const roh = await fetchKinderFuerElternteil(sb, elternId);
-    setKinder(roh.map(k => ({
-      mitglied_id:  k.mitglied_id,
-      name:         `${k.mitglieder?.vorname || ""} ${k.mitglieder?.nachname || ""}`.trim() || "?",
-      hauptkontakt: k.hauptkontakt === true,
-    })));
+    setKinder(roh.map(k => {
+      const m = k.mitglieder;
+      /* kader kann je nach Supabase-Antwort Objekt oder Array sein */
+      const kaderArr = Array.isArray(m?.kader) ? m.kader : (m?.kader ? [m.kader] : []);
+      const teams = kaderArr
+        .filter(ka => ka.aktiv === true)
+        .map(ka => {
+          const t = Array.isArray(ka.teams) ? ka.teams[0] : ka.teams;
+          return t?.kurzname || t?.name || "";
+        })
+        .filter(Boolean);
+      return {
+        mitglied_id:  k.mitglied_id,
+        name:         `${m?.vorname || ""} ${m?.nachname || ""}`.trim() || "?",
+        teams,
+        hauptkontakt: k.hauptkontakt === true,
+      };
+    }));
   }
 
   useEffect(() => { load(); }, [elternId]);
@@ -129,14 +143,24 @@ export function ElternKinderSektion({
 
       <div className="cc-col cc-gap-6">
         {(kinder || []).map(k => (
-          <div key={k.mitglied_id} className="cc-row cc-gap-8 cc-items-center">
-            <span className="cc-flex-1 cc-text-sm">{k.name}</span>
-            {k.hauptkontakt && <span className="cc-status-hauptkontakt">★ Hauptkontakt</span>}
-            <button className="cc-link-btn cc-text-sm cc-text-sub" onClick={() => toggleHauptkontakt(k)} disabled={busy}>
-              {k.hauptkontakt ? "entfernen" : "Als Hauptkontakt"}
+          <div key={k.mitglied_id} className={`cc-kind-row${k.hauptkontakt ? " cc-kind-row-haupt" : ""}`}>
+            <Av name={k.name} size={28}/>
+            <div className="cc-flex-1">
+              <div className="cc-text-sm">{k.name}</div>
+              <div className="cc-text-xs cc-text-sub">
+                {[k.teams.join(", "), k.hauptkontakt ? "Hauptkontakt" : ""].filter(Boolean).join(" · ") || "—"}
+              </div>
+            </div>
+            <button
+              className={`cc-star-btn${k.hauptkontakt ? " cc-star-btn-on" : ""}`}
+              onClick={() => toggleHauptkontakt(k)}
+              disabled={busy}
+              title={k.hauptkontakt ? "Hauptkontakt entfernen" : "Als Hauptkontakt setzen"}
+            >
+              <TI n="star" size={16}/>
             </button>
-            <button className="cc-btn-ghost cc-text-danger" onClick={() => entkoppeln(k)} disabled={busy} title="Kind entknüpfen">
-              <TI n="unlink" size={14}/>
+            <button className="cc-icon-btn-danger" onClick={() => entkoppeln(k)} disabled={busy} title="Kind entknüpfen">
+              <TI n="unlink" size={15}/>
             </button>
           </div>
         ))}
