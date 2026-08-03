@@ -17,6 +17,10 @@ type ArchivMitglied = Awaited<ReturnType<typeof fetchArchiv>>[number];
 
 const COL_DEFS: ColDef[] = [
   { key:"name",           label:"Name",          default:true, alwaysOn:true },
+  /* Standardmässig aus — "Name" fasst beide zusammen. Einblendbar für
+     Sortierung nach Nachname und für den Export. */
+  { key:"vorname",        label:"Vorname",       default:false },
+  { key:"nachname",       label:"Nachname",      default:false },
   { key:"mitgliedtyp",    label:"Mitgliedschaft", default:true },
   { key:"deaktiviert_am", label:"Archiviert am",  default:true },
   { key:"deaktiviert_von",label:"Archiviert von", default:true },
@@ -35,6 +39,10 @@ function mapArchivRow(m: ArchivMitglied) {
   return {
     id:                 m.id,
     name:               `${m.vorname||""} ${m.nachname||""}`.trim(),
+    /* Einzeln mitgeführt, damit nach Nachname sortiert und gefiltert
+       werden kann — "name" beginnt mit dem Vornamen. */
+    vorname:            m.vorname||"",
+    nachname:           m.nachname||"",
     mitgliedtyp:        m.mitgliedtyp||"—",
     deaktiviert_am:     m.deaktiviert_am ? String(new Date(m.deaktiviert_am).getFullYear()) : "—",
     deaktiviert_am_fmt: formatDatum(m.deaktiviert_am),

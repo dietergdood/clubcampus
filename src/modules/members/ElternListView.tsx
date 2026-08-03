@@ -17,6 +17,10 @@ import type { ElternRow } from "./elternListUtils.tsx";
 
 const COL_DEFS: ColDef[] = [
   { key:"name",      label:"Name",      default:true, alwaysOn:true },
+  /* Getrennte Namensfelder — standardmässig aus, weil "Name" sie zusammenfasst.
+     Für Sortierung und Export nach Nachname trotzdem nützlich. */
+  { key:"vorname",   label:"Vorname",   default:false },
+  { key:"nachname",  label:"Nachname",  default:false },
   { key:"beziehung", label:"Beziehung", default:true },
   { key:"email",     label:"E-Mail",    default:true },
   { key:"telefon",   label:"Telefon",   default:true },
