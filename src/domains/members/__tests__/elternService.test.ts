@@ -9,12 +9,12 @@ import {
   insertElternkontakt, linkKind, unlinkKind, setHauptkontakt,
 } from "../elternService.ts";
 
-const BASIS = { vorname: "Erika", nachname: "Kontakt", name: "Erika Kontakt", email: "e@k.ch", verein_id: "verein-1" };
+const BASIS = { vorname: "Erika", nachname: "Kontakt", name: "Erika Kontakt", email: "e@k.ch" };
 
 describe("insertElternkontakt", () => {
   it("schreibt mitglied_id und verein_id in den elternkontakte-Insert (hauptkontakt entfernt)", async () => {
     const sb = makeSb({ "elternkontakte.insert": { data: { id: "ek-1" }, error: null } });
-    await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7, hauptkontakt: true } as any);
+    await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7, hauptkontakt: true } as any, "verein-1");
 
     const rec = sb.find("elternkontakte", "insert")!;
     expect(rec.payload).toEqual(expect.objectContaining({ vorname: "Erika", verein_id: "verein-1", mitglied_id: 7 }));
@@ -24,7 +24,7 @@ describe("insertElternkontakt", () => {
 
   it("verknüpft via eltern_kinder mit verein_id, eltern_id (=Insert-id), mitglied_id und hauptkontakt; gibt null zurück", async () => {
     const sb = makeSb({ "elternkontakte.insert": { data: { id: "ek-1" }, error: null } });
-    const res = await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7, hauptkontakt: true } as any);
+    const res = await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7, hauptkontakt: true } as any, "verein-1");
 
     expect(res).toBeNull();
     expect(sb.find("eltern_kinder", "insert")!.payload).toEqual({
@@ -34,14 +34,14 @@ describe("insertElternkontakt", () => {
 
   it("hauptkontakt fällt auf false zurück, wenn nicht gesetzt", async () => {
     const sb = makeSb({ "elternkontakte.insert": { data: { id: "ek-1" }, error: null } });
-    await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7 } as any);
+    await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7 } as any, "verein-1");
     expect(sb.find("eltern_kinder", "insert")!.payload.hauptkontakt).toBe(false);
   });
 
   it("bei Fehler im elternkontakte-Insert: gibt Fehler zurück, kein Link-Insert", async () => {
     const err = pgError("insert fail");
     const sb = makeSb({ "elternkontakte.insert": { data: null, error: err } });
-    const res = await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7 } as any);
+    const res = await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7 } as any, "verein-1");
     expect(res).toBe(err);
     expect(sb.opsOn("eltern_kinder")).toHaveLength(0);
   });
@@ -52,12 +52,12 @@ describe("insertElternkontakt", () => {
       "elternkontakte.insert": { data: { id: "ek-1" }, error: null },
       "eltern_kinder.insert": { error: linkErr },
     });
-    expect(await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7 } as any)).toBe(linkErr);
+    expect(await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 7 } as any, "verein-1")).toBe(linkErr);
   });
 
   it("ohne mitglied_id (0) kein Link, gibt null zurück", async () => {
     const sb = makeSb({ "elternkontakte.insert": { data: { id: "ek-1" }, error: null } });
-    const res = await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 0 } as any);
+    const res = await insertElternkontakt(sb as any, { ...BASIS, mitglied_id: 0 } as any, "verein-1");
     expect(res).toBeNull();
     expect(sb.opsOn("eltern_kinder")).toHaveLength(0);
   });

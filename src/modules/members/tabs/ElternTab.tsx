@@ -178,14 +178,13 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       if(editEltern.mode==="neu"){
         const error = await insertElternkontakt(sb,{
           mitglied_id: raw.id,
-          verein_id: vereinId,
           vorname: d.vorname||null,
           nachname: d.nachname||null,
           name,
           email: d.email||null,
           telefon: d.telefon||null,
           beziehung: d.beziehung||null,
-        });
+        }, vereinId);
         if(error) throw error;
         logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,`Elternkontakt hinzugefügt: ${name}`,"elternkontakte",name,geaendertVon);
       } else if(d.id) {

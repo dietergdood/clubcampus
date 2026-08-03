@@ -79,8 +79,10 @@ export async function sucheElternkontakte(sb: SbClient, vereinId: string, query:
 }
 
 /* Eingabe von insertElternkontakt: Kontaktfelder plus die Verknüpfung,
-   die anschliessend in eltern_kinder geschrieben wird. */
-export interface NeuerElternkontakt extends Omit<TablesInsert<"elternkontakte">, "hauptkontakt"> {
+   die anschliessend in eltern_kinder geschrieben wird.
+   verein_id ist bewusst ausgeschlossen: es kommt als eigener Pflichtparameter,
+   damit der Aufrufer es nicht vergessen kann (siehe insertMitglied). */
+export interface NeuerElternkontakt extends Omit<TablesInsert<"elternkontakte">, "hauptkontakt" | "verein_id"> {
   /* Kind, mit dem der neue Kontakt verknüpft wird. Die Spalte ist laut
      ELTERN_LOGIK.md deprecated (verknüpft wird über eltern_kinder), in der
      Datenbank aber weiterhin NOT NULL — daher Pflichtfeld. */
@@ -89,20 +91,22 @@ export interface NeuerElternkontakt extends Omit<TablesInsert<"elternkontakte">,
   hauptkontakt?: boolean;
 }
 
-export async function insertElternkontakt(sb: SbClient, kontakt: NeuerElternkontakt): Promise<PostgrestError | null> {
+export async function insertElternkontakt(sb: SbClient, kontakt: NeuerElternkontakt, vereinId: string): Promise<PostgrestError | null> {
   const { hauptkontakt=false, ...elternFelder } = kontakt;
   const mitglied_id = elternFelder.mitglied_id;
   /* ⚠ elternkontakte.mitglied_id ist bigint NOT NULL ohne Default. Bisher
      wurde die Spalte beim Insert herausdestrukturiert und damit weggelassen —
      jeder neue Elternkontakt scheiterte an der NOT-NULL-Verletzung. Sie wird
      jetzt mitgeschrieben, bis die Spalte laut ELTERN_LOGIK.md entfällt. */
-  const { data, error } = await sb.from("elternkontakte").insert(elternFelder).select().single();
+  const { data, error } = await sb.from("elternkontakte")
+    .insert({ ...elternFelder, verein_id: vereinId })
+    .select().single();
   if (error) return error;
   if (mitglied_id) {
     const { error: linkError } = await sb.from("eltern_kinder").insert({
       eltern_id: data.id,
       mitglied_id,
-      verein_id: elternFelder.verein_id,
+      verein_id: vereinId,
       hauptkontakt,
     });
     if (linkError) return linkError;
