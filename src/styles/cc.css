@@ -339,7 +339,6 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-status-active::before{content:"";width:7px;height:7px;border-radius:50%;background:#16A34A;flex-shrink:0;display:inline-block}
 .cc-status-inactive{font-size:12px;color:#DC2626;font-weight:600;display:flex;align-items:center;gap:4px}
 .cc-status-inactive::before{content:"";width:7px;height:7px;border-radius:50%;background:#DC2626;flex-shrink:0;display:inline-block}
-.cc-status-hauptkontakt{font-size:12px;color:#c2410c;font-weight:600}
 .cc-ml-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:0;padding:7px 12px;border-bottom:0.5px solid var(--border);background:var(--surface);border:0.5px solid var(--border);border-radius:12px 12px 0 0;border-bottom:0.5px solid var(--border)}
 .cc-ml-dropdown-wrap{position:relative;flex-shrink:0;z-index:300}
 .cc-ml-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);overflow:visible;z-index:200}
@@ -418,6 +417,12 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-eltern-kind-link:hover{text-decoration:underline}
 .cc-kind-row{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--surface2);border-radius:8px;min-width:0}
 .cc-badge-haupt{font-size:10px;padding:1px 6px;border-radius:20px;background:#FDF6D9;color:#5C4A00;white-space:nowrap}
+/* Hauptkontakt-Karte im Eltern-Tab: gelber Balken links, gleiche Sprache
+   wie die Hauptkontakt-Kachel im Mitglied-Profil. */
+.cc-eltern-card-haupt{border-left:3px solid #E0A800!important}
+/* Portal-Zugang steht abgesetzt unter den Kontaktdaten — Systemzustand,
+   kein Kontaktdatum. */
+.cc-kontakt-fuss{border-top:0.5px solid var(--border);margin-top:10px;padding-top:8px}
 .cc-star-btn{background:none;border:none;padding:4px 5px;border-radius:6px;color:var(--sub);cursor:pointer;display:flex;align-items:center;line-height:1}
 .cc-star-btn:hover:not(:disabled){background:var(--surface)}
 .cc-star-btn-on{color:#B8860B}

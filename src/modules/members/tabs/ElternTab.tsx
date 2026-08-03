@@ -117,21 +117,17 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
         const tel = e.telefon||e.tel;
         const ac = elternAvColor(e.beziehung);
         return(
-          <Card key={e.id||i}>
+          <Card key={e.id||i} className={e.hauptkontakt?"cc-eltern-card-haupt":""}>
             <div className="cc-row cc-gap-12 cc-items-center">
               <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>
                 {(name||"?").split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
               </div>
               <div className="cc-flex-1 cc-col cc-gap-5">
-                <div className="cc-text-bold cc-text-lg">{name}</div>
-                <div className="cc-row cc-gap-8 cc-flex-wrap">
-                  {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
-                  {e.benutzer_id
-                    ?<span className="cc-status-active">Portal: Aktiv</span>
-                    :<span className="cc-status-inactive">Portal: Inaktiv</span>
-                  }
-                  {e.hauptkontakt&&<span className="cc-status-hauptkontakt">★ Hauptkontakt</span>}
+                <div className="cc-row cc-gap-8 cc-items-center cc-flex-wrap">
+                  <span className="cc-text-bold cc-text-lg">{name}</span>
+                  {e.hauptkontakt&&<span className="cc-badge-haupt">Hauptkontakt</span>}
                 </div>
+                {e.beziehung&&<span className="cc-text-sm">{e.beziehung}</span>}
                 {e.email&&<a href={`mailto:${e.email}`} className="cc-contact-link"><TI n="mail" size={12}/>{e.email}</a>}
                 {tel&&<a href={`tel:${tel}`} className="cc-contact-link-plain"><TI n="phone" size={12}/>{tel}</a>}
               </div>
@@ -143,6 +139,18 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
                   {label:"Entknüpfen", icon:"unlink", danger:true, onClick:()=>handleEntknuepfen(e)},
                 ]}/>
               )}
+            </div>
+            {/* Portal-Zugang ist Systemzustand, kein Kontaktdatum — deshalb
+                abgesetzt in einer eigenen Zeile. Einrichten kann der Admin
+                nicht: das Elternteil registriert sich selbst mit seiner
+                hinterlegten E-Mail. */}
+            <div className="cc-kontakt-fuss">
+              {e.benutzer_id
+                ? <span className="cc-status-active">Portal-Zugang aktiv</span>
+                : e.email
+                  ? <span className="cc-text-xs cc-text-sub">Kein Portal-Zugang — Registrierung mit {e.email} möglich</span>
+                  : <span className="cc-text-xs cc-text-sub">Kein Portal-Zugang — keine E-Mail hinterlegt</span>
+              }
             </div>
           </Card>
         );
