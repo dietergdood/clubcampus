@@ -215,6 +215,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       kannVerwalten={kannVerwalten} onReload={onReload} onUpdatePortalZugang={onUpdatePortalZugang}
       setSelectedMember={setSelectedMember} selectedMember={selectedMember}
       reloadMember={reloadMember} refreshArchivCount={refreshArchivCount} brauchtEltern={brauchtEltern}
+      pflichtTypen={pflichtTypen}
       vereinId={vereinId}
     />
   );

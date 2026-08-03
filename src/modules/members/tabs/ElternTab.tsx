@@ -16,6 +16,7 @@ import { Btn, Card, DropMenu, EmptyState, useConfirm } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { ElternSucheModal } from "../ElternSucheModal.tsx";
 import { ElternkontaktModal } from "../ElternkontaktModal.tsx";
+import { KindSucheModal } from "../KindSucheModal.tsx";
 import type { ElternFormular } from "../ElternkontaktModal.tsx";
 import {
   entkoppleKind, setHauptkontakt, clearHauptkontaktFuerKind, fetchElternkontakte,
@@ -41,12 +42,16 @@ interface ElternTabProps {
   setElternLoaded: SetState<ElternkontaktMitLink[] | null>;
   vereinId?: string | null;
   account?: Account | null;
+  /* Mitgliedtypen mit hauptkontakt_pflicht — fuer die Kind-Auswahl im Modal */
+  pflichtTypen?: string[];
 }
 
-function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null}: ElternTabProps){
+function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null, pflichtTypen=[]}: ElternTabProps){
   const [confirm, confirmDialog] = useConfirm();
   const [editEltern, setEditEltern] = useState<ElternFormular | null>(null);
   const [showSuche, setShowSuche] = useState(false);
+  const [kindSuche, setKindSuche] = useState(false);
+  const [neuesKind, setNeuesKind] = useState<number | null>(null);
   const geaendertVon = account?.name||account?.email||"Administrator";
 
   async function reload(){
@@ -151,8 +156,22 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
           sb={sb}
           vereinId={vereinId}
           geaendertVon={geaendertVon}
-          onClose={()=>setEditEltern(null)}
+          onKindHinzufuegen={()=>setKindSuche(true)}
+          neuesKind={neuesKind}
+          onKindVerknuepft={()=>setNeuesKind(null)}
+          onClose={()=>{setEditEltern(null);setNeuesKind(null);}}
           onSaved={reload}
+        />
+      )}
+
+      {kindSuche&&(
+        <KindSucheModal
+          open={kindSuche}
+          onClose={()=>setKindSuche(false)}
+          sb={sb}
+          vereinId={vereinId}
+          pflichtTypen={pflichtTypen}
+          onGewaehlt={id=>setNeuesKind(id)}
         />
       )}
       {confirmDialog}

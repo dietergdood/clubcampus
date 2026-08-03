@@ -2,11 +2,10 @@
    ClubCampus — modules/members/ElternkontaktModal.tsx
    Bearbeiten/Anlegen eines Elternkontakts.
 
-   Zwei Aufrufer mit unterschiedlichem Bedarf:
-   - ElternTab (Mitglied-Detail): man steht beim Kind, die Kinder-Sektion
-     ist dort Beiwerk → zeigeKinder={false}
-   - Elternliste: man steht beim Elternteil, die Verknüpfungen sind der
-     Grund fuer das Modal → zeigeKinder={true}
+   Aufrufer: ElternTab (Mitglied-Detail) und Elternliste. Beide sehen
+   dasselbe — auch die verknuepften Kinder. Der Hauptkontakt gilt pro Kind,
+   und eine Aenderung an den Kontaktdaten betrifft alle verknuepften Kinder;
+   beides ist auch im Tab die relevante Information.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useRef, useEffect } from "react";
 import { Btn, ModalOrSheet, PhoneInput, useConfirm } from "../../theme.ts";
@@ -124,7 +123,6 @@ interface ElternkontaktModalProps {
   sb: Sb;
   vereinId: string | null;
   geaendertVon: string;
-  zeigeKinder?: boolean;
   /* Kind-Auswahl fuer die Kinder-Sektion — vom Aufrufer bereitgestellt */
   onKindHinzufuegen?: (() => void) | null;
   neuesKind?: number | null;
@@ -135,7 +133,7 @@ interface ElternkontaktModalProps {
 
 export function ElternkontaktModal({
   mode, data, mitgliedId = null, sb, vereinId, geaendertVon,
-  zeigeKinder = false, onKindHinzufuegen = null, neuesKind = null,
+  onKindHinzufuegen = null, neuesKind = null,
   onKindVerknuepft = null, onClose, onSaved,
 }: ElternkontaktModalProps) {
   const [form, setForm] = useState<ElternFormular>({ ...data });
@@ -227,18 +225,21 @@ export function ElternkontaktModal({
 
         {mode === "edit" && <ElternPortalSection e={form} sb={sb} onReload={onSaved}/>}
 
-        {mode === "edit" && zeigeKinder && form.id && (
-          <ElternKinderSektion
-            elternId={form.id}
-            benutzerId={form.benutzer_id}
-            sb={sb}
-            vereinId={vereinId}
-            geaendertVon={geaendertVon}
-            onKindHinzufuegen={onKindHinzufuegen}
-            neuesKind={neuesKind}
-            onKindVerknuepft={onKindVerknuepft}
-            onChanged={onSaved}
-          />
+        {mode === "edit" && form.id && (
+          <>
+            <div className="cc-divider cc-mt-12"/>
+            <ElternKinderSektion
+              elternId={form.id}
+              benutzerId={form.benutzer_id}
+              sb={sb}
+              vereinId={vereinId}
+              geaendertVon={geaendertVon}
+              onKindHinzufuegen={onKindHinzufuegen}
+              neuesKind={neuesKind}
+              onKindVerknuepft={onKindVerknuepft}
+              onChanged={onSaved}
+            />
+          </>
         )}
 
         {msg && <div className={`cc-badge ${msg.ok ? "cc-badge-success" : "cc-badge-danger"} cc-mt-8`}>{msg.text}</div>}

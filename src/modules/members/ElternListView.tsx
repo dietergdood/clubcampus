@@ -158,7 +158,6 @@ export function ElternListView({
           sb={sb}
           vereinId={vereinId}
           geaendertVon={geaendertVon}
-          zeigeKinder
           onKindHinzufuegen={() => setKindSuche(true)}
           neuesKind={neuesKind}
           onKindVerknuepft={() => setNeuesKind(null)}
