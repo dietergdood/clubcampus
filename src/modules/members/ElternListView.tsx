@@ -90,7 +90,17 @@ export function ElternListView({
     });
   }
 
-  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember });
+  const oeffneKontakt = (row: ElternRow) => setEdit({
+    id:          String(row.id),
+    vorname:     row.vorname,
+    nachname:    row.nachname,
+    email:       row.email,
+    telefon:     row.telefon,
+    beziehung:   row.beziehung,
+    benutzer_id: row.benutzer_id,
+  });
+
+  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember, onEditKontakt: oeffneKontakt });
 
   async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
@@ -123,15 +133,6 @@ export function ElternListView({
         groupOptions={GROUP_OPTIONS}
         buildGroupsFn={buildElternGroups}
         renderCell={renderCell}
-        onRowClick={row => setEdit({
-          id:          String(row.id),
-          vorname:     row.vorname,
-          nachname:    row.nachname,
-          email:       row.email,
-          telefon:     row.telefon,
-          beziehung:   row.beziehung,
-          benutzer_id: row.benutzer_id,
-        })}
         sb={sb}
         account={account}
         vereinId={vereinId}
