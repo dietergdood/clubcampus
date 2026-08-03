@@ -143,13 +143,14 @@ export function ElternKinderSektion({
 
       <div className="cc-col cc-gap-6">
         {(kinder || []).map(k => (
-          <div key={k.mitglied_id} className={`cc-kind-row${k.hauptkontakt ? " cc-kind-row-haupt" : ""}`}>
+          <div key={k.mitglied_id} className="cc-kind-row">
             <Av name={k.name} size={28}/>
             <div className="cc-flex-1">
-              <div className="cc-text-sm">{k.name}</div>
-              <div className="cc-text-xs cc-text-sub">
-                {[k.teams.join(", "), k.hauptkontakt ? "Hauptkontakt" : ""].filter(Boolean).join(" · ") || "—"}
+              <div className="cc-row cc-gap-6 cc-items-center">
+                <span className="cc-text-sm">{k.name}</span>
+                {k.hauptkontakt && <span className="cc-badge-haupt">Hauptkontakt</span>}
               </div>
+              <div className="cc-text-xs cc-text-sub">{k.teams.join(", ") || "—"}</div>
             </div>
             <button
               className={`cc-star-btn${k.hauptkontakt ? " cc-star-btn-on" : ""}`}
