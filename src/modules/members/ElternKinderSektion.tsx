@@ -125,7 +125,9 @@ export function ElternKinderSektion({
   }, [neuesKind]);
 
   return (
-    <div className="cc-mt-12">
+    <>
+      <div className="cc-divider cc-mt-12"/>
+      <div className="cc-mt-12">
       {confirmDialog}
       <div className="cc-between cc-mb-8">
         <span className="cc-label">Verknüpfte Kinder</span>
@@ -150,7 +152,7 @@ export function ElternKinderSektion({
                 <span className="cc-text-sm">{k.name}</span>
                 {k.hauptkontakt && <span className="cc-badge-haupt">Hauptkontakt</span>}
               </div>
-              <div className="cc-text-xs cc-text-sub">{k.teams.join(", ") || "—"}</div>
+              {k.teams.length > 0 && <div className="cc-text-xs cc-text-sub">{k.teams.join(", ")}</div>}
             </div>
             <button
               className={`cc-star-btn${k.hauptkontakt ? " cc-star-btn-on" : ""}`}
@@ -166,6 +168,7 @@ export function ElternKinderSektion({
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

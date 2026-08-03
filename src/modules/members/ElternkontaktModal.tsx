@@ -45,25 +45,34 @@ export function ElternPortalSection({ e, sb, onReload }: ElternPortalSectionProp
     setLoading(false);
     if (onReload) onReload();
   }
+  /* Aufbau wie die Kinder-Sektion darunter: Trennlinie, Ueberschrift mit
+     Aktion rechts, Inhalt darunter. Kein Warn-Kasten mehr — ein fehlender
+     Zugang ist der Normalfall, keine Auffaelligkeit. Einrichten kann der
+     Admin nicht: das Elternteil registriert sich selbst. */
   return (
-    <div className="cc-eltern-portal-row">
-      <div>
-        <div className="cc-text-bold cc-text-sm">Portal-Zugang</div>
-        <div className={e.benutzer_id ? "cc-status-active" : "cc-status-inactive"}>
-          {e.benutzer_id ? "Aktiv" : "Kein Zugang"}
+    <>
+      <div className="cc-divider cc-mt-12"/>
+      <div className="cc-mt-12">
+        <div className="cc-between cc-items-center">
+          <span className="cc-label">Portal-Zugang</span>
+          {e.benutzer_id && (
+            <button className="cc-btn-danger" onClick={unlink} disabled={loading}>
+              {loading ? "…" : "Deaktivieren"}
+            </button>
+          )}
+        </div>
+        <div className="cc-mt-4">
+          {e.benutzer_id
+            ? <span className="cc-status-active">Aktiv</span>
+            : <span className="cc-text-sm cc-text-sub">
+                {e.email
+                  ? `Kein Zugang — Registrierung mit ${e.email} möglich`
+                  : "Kein Zugang — keine E-Mail hinterlegt"}
+              </span>
+          }
         </div>
       </div>
-      <div className="cc-col cc-gap-6 cc-items-end">
-        {e.benutzer_id
-          ? <button className="cc-btn-danger" onClick={unlink} disabled={loading}>
-              {loading ? "…" : "Zugang deaktivieren"}
-            </button>
-          : e.email
-            ? <span className="cc-warn-box">Registrierung mit <strong>{e.email}</strong></span>
-            : <span className="cc-warn-box">Keine E-Mail hinterlegt</span>
-        }
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -226,20 +235,17 @@ export function ElternkontaktModal({
         {mode === "edit" && <ElternPortalSection e={form} sb={sb} onReload={onSaved}/>}
 
         {mode === "edit" && form.id && (
-          <>
-            <div className="cc-divider cc-mt-12"/>
-            <ElternKinderSektion
-              elternId={form.id}
-              benutzerId={form.benutzer_id}
-              sb={sb}
-              vereinId={vereinId}
-              geaendertVon={geaendertVon}
-              onKindHinzufuegen={onKindHinzufuegen}
-              neuesKind={neuesKind}
-              onKindVerknuepft={onKindVerknuepft}
-              onChanged={onSaved}
-            />
-          </>
+          <ElternKinderSektion
+            elternId={form.id}
+            benutzerId={form.benutzer_id}
+            sb={sb}
+            vereinId={vereinId}
+            geaendertVon={geaendertVon}
+            onKindHinzufuegen={onKindHinzufuegen}
+            neuesKind={neuesKind}
+            onKindVerknuepft={onKindVerknuepft}
+            onChanged={onSaved}
+          />
         )}
 
         {msg && <div className={`cc-badge ${msg.ok ? "cc-badge-success" : "cc-badge-danger"} cc-mt-8`}>{msg.text}</div>}
