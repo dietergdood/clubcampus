@@ -5,9 +5,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Btn, ModalOrSheet } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { sucheElternkontakte, linkKind, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
+import { sucheElternkontakte, linkKind, insertElternkontakt, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import { vollname } from "../../domains/person/personUtils.ts";
 import { elternAvColor } from "./tabs/ElternTab.tsx";
+import { ElternFelder, validateElternkontakt } from "./ElternkontaktModal.tsx";
+import type { ElternFormular } from "./ElternkontaktModal.tsx";
 import type { Sb } from "../../types.ts";
 
 type ElternTreffer = Awaited<ReturnType<typeof sucheElternkontakte>>[number];
@@ -19,7 +21,7 @@ interface ElternSucheModalProps {
   sb: Sb;
   vereinId: string | null;
   geaendertVon: string;
-  onVerknuepft: (mode?: "neu") => void;
+  onVerknuepft: () => void;
 }
 
 export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVon, onVerknuepft }: ElternSucheModalProps) {
@@ -28,6 +30,8 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
   const [results, setResults] = useState<ElternTreffer[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [neuForm, setNeuForm] = useState<ElternFormular>({});
+  const [neuFehler, setNeuFehler] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -59,6 +63,29 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
       logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
     }
     setSaving(false);
+    onVerknuepft();
+    onClose();
+  }
+
+  async function anlegen() {
+    if (!sb || !vereinId) return;
+    const fehler = validateElternkontakt(neuForm);
+    if (fehler) { setNeuFehler(fehler); return; }
+    setNeuFehler(null);
+    setSaving(true);
+    const name = [neuForm.vorname, neuForm.nachname].filter(Boolean).join(" ");
+    const error = await insertElternkontakt(sb, {
+      mitglied_id: raw.id,
+      vorname:   neuForm.vorname   || null,
+      nachname:  neuForm.nachname  || null,
+      name,
+      email:     neuForm.email     || null,
+      telefon:   neuForm.telefon   || null,
+      beziehung: neuForm.beziehung || null,
+    }, vereinId);
+    setSaving(false);
+    if (error) { setNeuFehler(error.message); return; }
+    logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
     onVerknuepft();
     onClose();
   }
@@ -121,7 +148,9 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
         </div>
       ) : (
         <div className="cc-modal-body">
-          <div className="cc-text-sm cc-text-sub">Neuen Elternkontakt anlegen und mit diesem Kind verknüpfen.</div>
+          <div className="cc-text-sm cc-text-sub cc-mb-8">Neuen Elternkontakt anlegen und mit diesem Kind verknüpfen.</div>
+          <ElternFelder form={neuForm} onChange={(k, v) => { setNeuForm(p => ({ ...p, [k]: v })); setNeuFehler(null); }}/>
+          {neuFehler && <div className="cc-badge cc-badge-danger cc-mt-8">{neuFehler}</div>}
         </div>
       )}
 
@@ -132,7 +161,9 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
             {saving?"Verknüpft…":selected.size>1?`${selected.size} verknüpfen`:"Verknüpfen"}
           </Btn>
         ) : (
-          <Btn variant="primary" onClick={()=>{ onClose(); if(onVerknuepft) onVerknuepft("neu"); }}>Weiter</Btn>
+          <Btn variant="primary" onClick={anlegen} disabled={saving}>
+            {saving ? "Legt an…" : "Anlegen und verknüpfen"}
+          </Btn>
         )}
       </div>
     </ModalOrSheet>

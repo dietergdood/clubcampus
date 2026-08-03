@@ -32,11 +32,6 @@ export function elternAvColor(beziehung: string | null | undefined){
   return {bg:"var(--surface2)",text:"var(--sub)"};
 }
 
-interface EditState {
-  mode: "neu" | "edit";
-  data: ElternFormular;
-}
-
 interface ElternTabProps {
   eltern: ElternkontaktMitLink[];
   canEdit?: boolean;
@@ -50,7 +45,7 @@ interface ElternTabProps {
 
 function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null}: ElternTabProps){
   const [confirm, confirmDialog] = useConfirm();
-  const [editEltern, setEditEltern] = useState<EditState | null>(null);
+  const [editEltern, setEditEltern] = useState<ElternFormular | null>(null);
   const [showSuche, setShowSuche] = useState(false);
   const geaendertVon = account?.name||account?.email||"Administrator";
 
@@ -105,10 +100,9 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
         onClose={()=>setShowSuche(false)}
         raw={raw} sb={sb} vereinId={vereinId}
         geaendertVon={geaendertVon}
-        onVerknuepft={(mode)=>{
+        onVerknuepft={()=>{
           setShowSuche(false);
-          if(mode==="neu") setEditEltern({mode:"neu",data:{mitglied_id:raw.id}});
-          else reload();
+          reload();
         }}
       />
       {eltern.length===0&&<EmptyState icon="heart" title="Keine Elternkontakte" subtitle="Noch kein Elternkontakt für dieses Mitglied erfasst."/>}
@@ -138,7 +132,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
               </div>
               {canEdit&&(
                 <DropMenu items={[
-                  {label:"Bearbeiten", icon:"edit", onClick:()=>setEditEltern({mode:"edit",data:{...e}})},
+                  {label:"Bearbeiten", icon:"edit", onClick:()=>setEditEltern({...e})},
                   {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"star", onClick:()=>handleHauptkontakt(e)},
                   "sep",
                   {label:"Entknüpfen", icon:"unlink", danger:true, onClick:()=>handleEntknuepfen(e)},
@@ -151,8 +145,8 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
 
       {editEltern&&(
         <ElternkontaktModal
-          mode={editEltern.mode}
-          data={editEltern.data}
+          mode="edit"
+          data={editEltern}
           mitgliedId={raw.id}
           sb={sb}
           vereinId={vereinId}

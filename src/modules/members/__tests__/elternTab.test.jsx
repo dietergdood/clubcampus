@@ -74,16 +74,13 @@ vi.mock('../../../domains/members/elternService.ts', () => ({
   sucheKinder: vi.fn().mockResolvedValue([]),
 }));
 
-import { logAktivitaet, entkoppleKind } from '../../../domains/members/memberService.ts';
-/* Das Modal ruft insertElternkontakt direkt ueber elternService auf */
-import { insertElternkontakt } from '../../../domains/members/elternService.ts';
+import { logAktivitaet, entkoppleKind, insertElternkontakt } from '../../../domains/members/memberService.ts';
 
-/* "Hinzufügen" öffnet seit dem n:m-Umbau zuerst die Suche.
-   Der Weg zum Neu-Formular: Hinzufügen → Tab "Neu erfassen" → Weiter. */
+/* "Hinzufügen" öffnet die Suche; das Neu-Formular steht direkt im Tab
+   "Neu erfassen" — kein zweites Modal mehr dazwischen. */
 function oeffneNeuFormular() {
   fireEvent.click(screen.getByText('Hinzufügen'));
   fireEvent.click(screen.getByText('Neu erfassen'));
-  fireEvent.click(screen.getByText('Weiter'));
 }
 
 const RAW = { id: 1, mitgliedtyp: 'Juniormitglied' };
@@ -163,7 +160,7 @@ describe('ElternTab', () => {
       fireEvent.change(screen.getByPlaceholderText('Vorname'), { target: { value: 'Lisa' } });
       fireEvent.change(screen.getByPlaceholderText('Nachname'), { target: { value: 'Bürgi' } });
       fireEvent.change(screen.getByPlaceholderText('E-Mail'), { target: { value: 'lisa@test.ch' } });
-      fireEvent.click(screen.getByText('Speichern'));
+      fireEvent.click(screen.getByText('Anlegen und verknüpfen'));
       await waitFor(() => expect(insertElternkontakt).toHaveBeenCalled());
     });
 
@@ -172,7 +169,7 @@ describe('ElternTab', () => {
       oeffneNeuFormular();
       fireEvent.change(screen.getByPlaceholderText('Vorname'), { target: { value: 'Lisa' } });
       fireEvent.change(screen.getByPlaceholderText('Nachname'), { target: { value: 'Bürgi' } });
-      fireEvent.click(screen.getByText('Speichern'));
+      fireEvent.click(screen.getByText('Anlegen und verknüpfen'));
       await waitFor(() => expect(screen.getByText('E-Mail ist Pflichtfeld')).toBeTruthy());
       expect(insertElternkontakt).not.toHaveBeenCalled();
     });
@@ -183,7 +180,7 @@ describe('ElternTab', () => {
       fireEvent.change(screen.getByPlaceholderText('Vorname'), { target: { value: 'Lisa' } });
       fireEvent.change(screen.getByPlaceholderText('Nachname'), { target: { value: 'Bürgi' } });
       fireEvent.change(screen.getByPlaceholderText('E-Mail'), { target: { value: 'lisa@test.ch' } });
-      fireEvent.click(screen.getByText('Speichern'));
+      fireEvent.click(screen.getByText('Anlegen und verknüpfen'));
       await waitFor(() => expect(logAktivitaet).toHaveBeenCalledWith(
         expect.anything(), 1, 'verein-123', 'eltern_hinzugefuegt',
         expect.stringContaining('Lisa Bürgi'),

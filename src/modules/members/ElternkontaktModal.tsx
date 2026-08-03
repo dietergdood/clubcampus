@@ -84,6 +84,38 @@ export function validateElternkontakt(d: ElternFormular) {
   return null;
 }
 
+/* Die Eingabefelder allein — damit sie auch im Suche-Modal unter
+   "Neu erfassen" stehen koennen, ohne ein zweites Modal zu oeffnen. */
+export function ElternFelder({ form, onChange }: { form: ElternFormular; onChange: (k: keyof ElternFormular, v: string) => void }) {
+  return (
+    <div className="cc-form-row">
+      {FELDER.map(f => {
+        const req  = "req"  in f ? f.req  : false;
+        const opts = "opts" in f ? f.opts : undefined;
+        const type = "type" in f ? f.type : "text";
+        const full = "full" in f ? f.full : false;
+        const k = f.k;
+        return (
+          <div key={k} className={full ? "cc-form-full" : ""}>
+            <label className="cc-label">{f.l}{req && <span className="cc-label-req"> *</span>}</label>
+            {opts
+              ? <select className="cc-input" value={String(form[k] || "")} onChange={ev => onChange(k, ev.target.value)}>
+                  <option value="">– wählen –</option>
+                  {opts.map(o => <option key={o}>{o}</option>)}
+                </select>
+              : <input className="cc-input" type={type} value={String(form[k] || "")} onChange={ev => onChange(k, ev.target.value)} placeholder={f.l}/>
+            }
+          </div>
+        );
+      })}
+      <div className="cc-form-full">
+        <label className="cc-label">Telefon</label>
+        <PhoneInput value={form.telefon || ""} onChange={v => onChange("telefon", v)} showHint={false}/>
+      </div>
+    </div>
+  );
+}
+
 interface ElternkontaktModalProps {
   /* "neu" braucht mitgliedId — ein Kontakt ohne Kind haengt im Nichts */
   mode: "neu" | "edit";
@@ -191,31 +223,7 @@ export function ElternkontaktModal({
       </div>
 
       <div className="cc-modal-body">
-        <div className="cc-form-row">
-          {FELDER.map(f => {
-            const req  = "req"  in f ? f.req  : false;
-            const opts = "opts" in f ? f.opts : undefined;
-            const type = "type" in f ? f.type : "text";
-            const full = "full" in f ? f.full : false;
-            const k = f.k;
-            return (
-              <div key={k} className={full ? "cc-form-full" : ""}>
-                <label className="cc-label">{f.l}{req && <span className="cc-label-req"> *</span>}</label>
-                {opts
-                  ? <select className="cc-input" value={String(form[k] || "")} onChange={ev => set(k, ev.target.value)}>
-                      <option value="">– wählen –</option>
-                      {opts.map(o => <option key={o}>{o}</option>)}
-                    </select>
-                  : <input className="cc-input" type={type} value={String(form[k] || "")} onChange={ev => set(k, ev.target.value)} placeholder={f.l}/>
-                }
-              </div>
-            );
-          })}
-          <div className="cc-form-full">
-            <label className="cc-label">Telefon</label>
-            <PhoneInput value={form.telefon || ""} onChange={v => set("telefon", v)} showHint={false}/>
-          </div>
-        </div>
+        <ElternFelder form={form} onChange={set}/>
 
         {mode === "edit" && <ElternPortalSection e={form} sb={sb} onReload={onSaved}/>}
 
