@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { makeSb, pgError } from "./_mockSb.ts";
 import {
-  insertElternkontakt, linkKind, unlinkKind, setHauptkontakt,
+  insertElternkontakt, linkKind, unlinkKind, setHauptkontakt, entkoppleKind,
 } from "../elternService.ts";
 
 const BASIS = { vorname: "Erika", nachname: "Kontakt", name: "Erika Kontakt", email: "e@k.ch" };
@@ -115,6 +115,48 @@ describe("unlinkKind", () => {
       "mitglieder.select": { data: null },
     });
     expect(await unlinkKind(sb as any, "e1", 7)).toEqual({ verbleibendeKinder: 0, kindNochAktiv: false });
+  });
+});
+
+describe("entkoppleKind", () => {
+  it("bei weiteren verknüpften Kindern bleibt der Kontakt unangetastet", async () => {
+    const sb = makeSb({
+      "eltern_kinder.select": { count: 1 },
+      "mitglieder.select": { data: { aktiv: true } },
+    });
+    expect(await entkoppleKind(sb as any, "e1", 7)).toBe("verknuepft");
+    expect(sb.find("elternkontakte", "delete")).toBeUndefined();
+    expect(sb.find("elternkontakte", "update")).toBeUndefined();
+  });
+
+  it("letztes Kind noch im Verein -> Elternteil wird Supporter, kein Löschen", async () => {
+    const sb = makeSb({
+      "eltern_kinder.select": { count: 0 },
+      "mitglieder.select": { data: { aktiv: true } },
+    });
+    expect(await entkoppleKind(sb as any, "e1", 7)).toBe("supporter");
+    expect(sb.find("elternkontakte", "update")!.payload).toEqual({ supporter: true });
+    expect(sb.find("elternkontakte", "delete")).toBeUndefined();
+  });
+
+  it("letztes Kind hat den Verein verlassen -> Kontakt wird gelöscht", async () => {
+    const sb = makeSb({
+      "eltern_kinder.select": { count: 0 },
+      "mitglieder.select": { data: { aktiv: false } },
+    });
+    expect(await entkoppleKind(sb as any, "e1", 7)).toBe("geloescht");
+    expect(sb.find("elternkontakte", "delete")!.filters).toEqual([
+      { method: "eq", args: ["id", "e1"] },
+    ]);
+  });
+
+  it("mit benutzer_id wird die Portal-Rolle auf supporter gesetzt", async () => {
+    const sb = makeSb({
+      "eltern_kinder.select": { count: 0 },
+      "mitglieder.select": { data: { aktiv: true } },
+    });
+    await entkoppleKind(sb as any, "e1", 7, "user-1");
+    expect(sb.find("benutzer", "update")!.payload).toEqual({ role: "supporter" });
   });
 });
 

@@ -42,6 +42,9 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
   /* n:m-Modell (siehe ELTERN_LOGIK.md): Entknüpfen läuft über eltern_kinder.
      Default: noch ein weiteres Kind vorhanden → kein Löschen des Kontakts. */
   unlinkKind: vi.fn().mockResolvedValue({ verbleibendeKinder: 1, kindNochAktiv: true }),
+  /* Kapselt unlinkKind samt Supporter-oder-Loeschen-Entscheidung.
+     Die Verzweigung selbst ist in elternService.test.ts geprueft. */
+  entkoppleKind: vi.fn().mockResolvedValue("verknuepft"),
   fetchKinderFuerElternteil: vi.fn().mockResolvedValue([]),
   updateBenutzerRolle: vi.fn().mockResolvedValue(null),
   clearHauptkontaktFuerKind: vi.fn().mockResolvedValue(null),
@@ -55,7 +58,25 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
   },
 }));
 
-import { insertElternkontakt, updateElternkontakt, deleteElternkontakt, unlinkKind, logAktivitaet } from '../../../domains/members/memberService.ts';
+/* ElternkontaktModal importiert direkt aus elternService — dieser Pfad
+   muss ebenfalls gemockt sein, sonst landet der Test auf echtem Supabase. */
+vi.mock('../../../domains/members/elternService.ts', () => ({
+  insertElternkontakt: vi.fn().mockResolvedValue(null),
+  updateElternkontakt: vi.fn().mockResolvedValue(null),
+  deleteElternkontakt: vi.fn().mockResolvedValue(null),
+  unlinkElternBenutzer: vi.fn().mockResolvedValue(null),
+  logFuerAlleKinder: vi.fn().mockResolvedValue(undefined),
+  entkoppleKind: vi.fn().mockResolvedValue("verknuepft"),
+  setHauptkontakt: vi.fn().mockResolvedValue(null),
+  clearHauptkontaktFuerKind: vi.fn().mockResolvedValue(null),
+  fetchKinderFuerElternteil: vi.fn().mockResolvedValue([]),
+  linkKind: vi.fn().mockResolvedValue(null),
+  sucheKinder: vi.fn().mockResolvedValue([]),
+}));
+
+import { logAktivitaet, entkoppleKind } from '../../../domains/members/memberService.ts';
+/* Das Modal ruft insertElternkontakt direkt ueber elternService auf */
+import { insertElternkontakt } from '../../../domains/members/elternService.ts';
 
 /* "Hinzufügen" öffnet seit dem n:m-Umbau zuerst die Suche.
    Der Weg zum Neu-Formular: Hinzufügen → Tab "Neu erfassen" → Weiter. */
@@ -172,32 +193,13 @@ describe('ElternTab', () => {
   });
 
   describe('Entknüpfen', () => {
-    it('ruft unlinkKind auf', async () => {
+    /* Die Entscheidung, ob der Kontakt beim letzten Kind zum Supporter wird
+       oder geloescht, liegt in entkoppleKind und ist in elternService.test.ts
+       geprueft. Hier zaehlt nur, dass der Tab korrekt delegiert. */
+    it('ruft entkoppleKind mit Elternkontakt und Kind auf', async () => {
       renderTab();
       fireEvent.click(screen.getAllByTestId('menu-Entknüpfen')[0]);
-      await waitFor(() => expect(unlinkKind).toHaveBeenCalledWith({}, 'e1', 1));
-    });
-
-    it('behält den Kontakt wenn noch weitere Kinder verknüpft sind', async () => {
-      renderTab();
-      fireEvent.click(screen.getAllByTestId('menu-Entknüpfen')[0]);
-      await waitFor(() => expect(unlinkKind).toHaveBeenCalled());
-      expect(deleteElternkontakt).not.toHaveBeenCalled();
-    });
-
-    it('macht den Elternteil zum Supporter wenn das Kind im Verein bleibt', async () => {
-      unlinkKind.mockResolvedValueOnce({ verbleibendeKinder: 0, kindNochAktiv: true });
-      renderTab();
-      fireEvent.click(screen.getAllByTestId('menu-Entknüpfen')[0]);
-      await waitFor(() => expect(updateElternkontakt).toHaveBeenCalledWith({}, 'e1', { supporter: true }));
-      expect(deleteElternkontakt).not.toHaveBeenCalled();
-    });
-
-    it('löscht den Kontakt wenn das letzte Kind den Verein verlassen hat', async () => {
-      unlinkKind.mockResolvedValueOnce({ verbleibendeKinder: 0, kindNochAktiv: false });
-      renderTab();
-      fireEvent.click(screen.getAllByTestId('menu-Entknüpfen')[0]);
-      await waitFor(() => expect(deleteElternkontakt).toHaveBeenCalledWith({}, 'e1'));
+      await waitFor(() => expect(entkoppleKind).toHaveBeenCalledWith({}, 'e1', 1, undefined));
     });
 
     it('loggt Aktivität beim Entknüpfen', async () => {

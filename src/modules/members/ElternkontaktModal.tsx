@@ -11,10 +11,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Btn, ModalOrSheet, PhoneInput, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { ElternPortalSection } from "./tabs/ElternTab.tsx";
 import { ElternKinderSektion } from "./ElternKinderSektion.tsx";
 import {
   insertElternkontakt, updateElternkontakt, deleteElternkontakt, logFuerAlleKinder,
+  unlinkElternBenutzer,
 } from "../../domains/members/elternService.ts";
 import { logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import type { Sb } from "../../types.ts";
@@ -29,6 +29,43 @@ export interface ElternFormular {
   telefon?: string | null;
   beziehung?: string | null;
   benutzer_id?: string | null;
+}
+
+interface ElternPortalSectionProps {
+  e: ElternFormular;
+  sb: Sb;
+  onReload?: (() => void) | null;
+}
+
+export function ElternPortalSection({ e, sb, onReload }: ElternPortalSectionProps) {
+  const [loading, setLoading] = useState(false);
+  async function unlink() {
+    if (!sb || !e.id) return;
+    setLoading(true);
+    await unlinkElternBenutzer(sb, e.id);
+    setLoading(false);
+    if (onReload) onReload();
+  }
+  return (
+    <div className="cc-eltern-portal-row">
+      <div>
+        <div className="cc-text-bold cc-text-sm">Portal-Zugang</div>
+        <div className={e.benutzer_id ? "cc-status-active" : "cc-status-inactive"}>
+          {e.benutzer_id ? "Aktiv" : "Kein Zugang"}
+        </div>
+      </div>
+      <div className="cc-col cc-gap-6 cc-items-end">
+        {e.benutzer_id
+          ? <button className="cc-btn-danger" onClick={unlink} disabled={loading}>
+              {loading ? "…" : "Zugang deaktivieren"}
+            </button>
+          : e.email
+            ? <span className="cc-warn-box">Registrierung mit <strong>{e.email}</strong></span>
+            : <span className="cc-warn-box">Keine E-Mail hinterlegt</span>
+        }
+      </div>
+    </div>
+  );
 }
 
 const FELDER = [
