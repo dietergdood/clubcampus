@@ -78,22 +78,26 @@ Jeder Verein richtet sein Branding direkt in der App ein — Änderungen werden 
 ```
 src/
   domains/          # Business-Logik, Services, Hooks
-    app/            # Theme, Permissions, AppData
-    members/        # memberService, elternService, useInlineEdit
+    app/            # getPermissions (Modul-Zugriffstufen), getProfilCheck, useAppData
+    members/        # memberService, elternService, useInlineEdit, useMemberMeta
     person/         # personUtils, personTypes
     roles/          # roleUtils, Rollenhierarchie
     season/         # seasonUtils
-    permissions/    # getPermissions, Stufenlogik
+    permissions/    # permissions.js (Prädikate je Fachbereich), funktionaerStufen
   shared/           # Wiederverwendbare UI-Bausteine
     ui/             # Btn, Card, Modal, Tabs, Av, DropMenu, ...
     forms/          # PhoneInput, AddressInput, InlineField, ...
     list/           # Toolbar, ListView, useListView, ColMenu, ...
     person/         # PersonPersonalien, PersonKontakt, PersonTeams, ...
+    utils/          # colorUtils
+    componentRegistry.js  # Quelle des Design-System-Tabs
   modules/          # Alle Feature-Module
     members/        # MemberDetail, MemberHero, MemberListCell, Tabs, ...
     portal/         # PortalverwaltungModul (1 Tab = 1 Datei)
+    teams/          # teamService, useTeams
   styles/
     cc.css          # Design System (cc-* Klassen)
+  theme.ts          # Barrel: re-exportiert shared/ui, shared/forms, shared/list
   types.ts          # Globale TypeScript-Typen
   constants.ts      # Farben, Breakpoints, globale Konstanten
   database.types.ts # Generierte Supabase-Typen
@@ -104,7 +108,7 @@ src/
 ```
 modules → domains → shared
 ```
-Module dürfen nie von anderen Modulen importieren. Shared ist die unterste Schicht.
+Module dürfen nie von anderen Modulen importieren. Shared ist die unterste Schicht. Auf `shared/` greifen Module über die Barrel-Datei `theme.ts` zu, nicht direkt.
 
 ### Multi-Tenancy
 
@@ -175,14 +179,22 @@ TypeScript → ESLint → check:imports → Tests → Build
 
 Alle Vereine laufen auf derselben Infrastruktur — ein neuer Verein braucht nur einen DB-Eintrag und einen Admin-User.
 
-**1. Verein anlegen** (Supabase SQL Editor):
+**1. Verein anlegen** (Supabase SQL Editor). Der `slug` ist Pflicht — ohne ihn ist der Verein nicht erreichbar, weil das Portal den Verein ausschliesslich über das erste URL-Pfadsegment lädt:
 ```sql
-INSERT INTO vereine (name, theme) VALUES ('Vereinsname', '{}');
+INSERT INTO vereine (name, slug, theme)
+VALUES ('Vereinsname', 'vereinsslug', '{}')
+RETURNING id;
 ```
 
 **2. Admin-User erstellen:**
 1. Supabase → Authentication → Users → **Invite User**
-2. In `benutzer` Tabelle: `verein_id` und `role = 'administrator'` setzen
+2. `benutzer`-Zeile anlegen. **Sie entsteht bei einem neuen Verein nicht von selbst:** der Trigger `on_auth_user_created` sucht die E-Mail in `mitglieder` und `elternkontakte` und bricht ab, wenn er sie nirgends findet — bei einem leeren Verein also immer. Deshalb von Hand:
+   ```sql
+   INSERT INTO benutzer (id, email, name, role, aktiv, verein_id)
+   SELECT u.id, u.email, 'Admin', 'administrator', true, '<verein-id aus Schritt 1>'
+     FROM auth.users u WHERE u.email = 'admin@verein.ch';
+   ```
+   Ab dem zweiten Benutzer greift der Trigger normal, sobald die Person in `mitglieder` steht.
 3. Admin loggt sich ein → Portalverwaltung → Branding und Module einrichten
 
 **3. URL:**
