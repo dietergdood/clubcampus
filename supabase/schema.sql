@@ -21,32 +21,13 @@ ALTER SCHEMA "public" OWNER TO "postgres";
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
-
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
-
-
-
-
-
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
 
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
 
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
-
-
-
 
 
 
@@ -99,6 +80,17 @@ $$;
 
 
 ALTER FUNCTION "public"."get_my_mitglied_id"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_my_person_id"() RETURNS "uuid"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select person_id from public.benutzer where id = auth.uid() limit 1;
+$$;
+
+
+ALTER FUNCTION "public"."get_my_person_id"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_my_role"() RETURNS "text"
@@ -240,6 +232,23 @@ $$;
 
 
 ALTER FUNCTION "public"."pe_updated_at"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."person_ist_mein_kind"("p_person_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  select exists (
+    select 1
+    from public.eltern_kinder ek
+    join public.mitglieder    m on m.id = ek.mitglied_id
+    where m.person_id  = p_person_id
+      and ek.person_id = public.get_my_person_id()
+  );
+$$;
+
+
+ALTER FUNCTION "public"."person_ist_mein_kind"("p_person_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."rls_auto_enable"() RETURNS "event_trigger"
@@ -457,7 +466,8 @@ CREATE TABLE IF NOT EXISTS "public"."benutzer" (
     "last_sign_in_at" timestamp with time zone,
     "vorname" "text",
     "nachname" "text",
-    "telefon" "text"
+    "telefon" "text",
+    "person_id" "uuid"
 );
 
 
@@ -542,11 +552,17 @@ CREATE TABLE IF NOT EXISTS "public"."eltern_kinder" (
     "eltern_id" "uuid" NOT NULL,
     "mitglied_id" bigint NOT NULL,
     "hauptkontakt" boolean DEFAULT false NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "person_id" "uuid",
+    "beziehung" "text"
 );
 
 
 ALTER TABLE "public"."eltern_kinder" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."eltern_kinder"."beziehung" IS 'Mutter/Vater/Vormund … — Eigenschaft der Verknuepfung, nicht der Person.';
+
 
 
 ALTER TABLE "public"."eltern_kinder" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (
@@ -865,7 +881,8 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder" (
     "deaktiviert_von" "text",
     "nationalitaet2" "text",
     "verein_id" "uuid" NOT NULL,
-    "eintrittsdatum" "date"
+    "eintrittsdatum" "date",
+    "person_id" "uuid"
 );
 
 
@@ -1246,6 +1263,51 @@ CREATE TABLE IF NOT EXISTS "public"."news_lesestatus" (
 
 
 ALTER TABLE "public"."news_lesestatus" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."personen" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "vorname" "text" NOT NULL,
+    "nachname" "text" NOT NULL,
+    "email" "text",
+    "telefon" "text",
+    "strasse" "text",
+    "plz" "text",
+    "ort" "text",
+    "kanton" "text",
+    "land" "text" DEFAULT 'Schweiz'::"text",
+    "geburtsdatum" "date",
+    "geschlecht" "text",
+    "nationalitaet" "text" DEFAULT 'CH'::"text",
+    "nationalitaet2" "text",
+    "heimatort" "text",
+    "ahv_nr" "text",
+    "foto_url" "text",
+    "funktionen" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "profil_geprueft_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."personen" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."personen" IS 'Ein Mensch, einmal pro Verein. mitglieder ist die Mitgliedschaft dieser Person.';
+
+
+
+COMMENT ON COLUMN "public"."personen"."strasse" IS 'Adresse an der Person: getrennte Eltern und Kind koennen drei verschiedene Adressen haben.';
+
+
+
+COMMENT ON COLUMN "public"."personen"."funktionen" IS 'Vereinsfunktionen. An der Person, nicht an der Mitgliedschaft: ein Materialwart muss kein Mitglied sein.';
+
+
+
+COMMENT ON COLUMN "public"."personen"."profil_geprueft_at" IS 'Datenpruefung der Person. Loest die drei parallelen Felder in mitglieder, elternkontakte und benutzer ab.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."portal_einstellungen" (
@@ -2131,6 +2193,11 @@ ALTER TABLE ONLY "public"."news"
 
 
 
+ALTER TABLE ONLY "public"."personen"
+    ADD CONSTRAINT "personen_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."portal_einstellungen"
     ADD CONSTRAINT "portal_einstellungen_pkey" PRIMARY KEY ("schluessel");
 
@@ -2283,6 +2350,18 @@ ALTER TABLE ONLY "public"."vereine"
 
 ALTER TABLE ONLY "public"."wiki_artikel"
     ADD CONSTRAINT "wiki_artikel_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "benutzer_person_idx" ON "public"."benutzer" USING "btree" ("person_id");
+
+
+
+CREATE UNIQUE INDEX "eltern_kinder_ein_hauptkontakt" ON "public"."eltern_kinder" USING "btree" ("mitglied_id") WHERE "hauptkontakt";
+
+
+
+CREATE INDEX "eltern_kinder_person_idx" ON "public"."eltern_kinder" USING "btree" ("person_id");
 
 
 
@@ -2466,6 +2545,26 @@ CREATE INDEX "mitglieder_aktivitaeten_mitglied_idx" ON "public"."mitglieder_akti
 
 
 
+CREATE INDEX "mitglieder_person_idx" ON "public"."mitglieder" USING "btree" ("person_id");
+
+
+
+CREATE INDEX "personen_email_idx" ON "public"."personen" USING "btree" ("verein_id", "lower"("email"));
+
+
+
+CREATE INDEX "personen_geprueft_idx" ON "public"."personen" USING "btree" ("profil_geprueft_at");
+
+
+
+CREATE INDEX "personen_nachname_idx" ON "public"."personen" USING "btree" ("verein_id", "nachname");
+
+
+
+CREATE INDEX "personen_verein_idx" ON "public"."personen" USING "btree" ("verein_id");
+
+
+
 CREATE OR REPLACE TRIGGER "mc_updated_at" BEFORE UPDATE ON "public"."module_config" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
 
 
@@ -2479,6 +2578,10 @@ CREATE OR REPLACE TRIGGER "mr_updated_at" BEFORE UPDATE ON "public"."modul_recht
 
 
 CREATE OR REPLACE TRIGGER "pe_ts" BEFORE UPDATE ON "public"."portal_einstellungen" FOR EACH ROW EXECUTE FUNCTION "public"."pe_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "personen_updated_at" BEFORE UPDATE ON "public"."personen" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at"();
 
 
 
@@ -2599,6 +2702,11 @@ ALTER TABLE ONLY "public"."benutzer"
 
 
 
+ALTER TABLE ONLY "public"."benutzer"
+    ADD CONSTRAINT "benutzer_person_id_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id");
+
+
+
 ALTER TABLE ONLY "public"."benutzer_teams"
     ADD CONSTRAINT "benutzer_teams_benutzer_id_fkey" FOREIGN KEY ("benutzer_id") REFERENCES "public"."benutzer"("id") ON DELETE CASCADE;
 
@@ -2666,6 +2774,11 @@ ALTER TABLE ONLY "public"."eltern_kinder"
 
 ALTER TABLE ONLY "public"."eltern_kinder"
     ADD CONSTRAINT "eltern_kinder_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."eltern_kinder"
+    ADD CONSTRAINT "eltern_kinder_person_id_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id");
 
 
 
@@ -2879,6 +2992,11 @@ ALTER TABLE ONLY "public"."mitglieder_notizen"
 
 
 
+ALTER TABLE ONLY "public"."mitglieder"
+    ADD CONSTRAINT "mitglieder_person_id_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id");
+
+
+
 ALTER TABLE ONLY "public"."mitglieder_team_details"
     ADD CONSTRAINT "mitglieder_team_details_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
 
@@ -3071,6 +3189,11 @@ ALTER TABLE ONLY "public"."news_lesestatus"
 
 ALTER TABLE ONLY "public"."news"
     ADD CONSTRAINT "news_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."personen"
+    ADD CONSTRAINT "personen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
 
 
@@ -3853,6 +3976,37 @@ CREATE POLICY "notizen_write" ON "public"."mitglieder_notizen" USING ((("verein_
 
 
 
+ALTER TABLE "public"."personen" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "personen_delete_admin" ON "public"."personen" FOR DELETE USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+CREATE POLICY "personen_insert_admin" ON "public"."personen" FOR INSERT WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+CREATE POLICY "personen_select_kind" ON "public"."personen" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."person_ist_mein_kind"("id")));
+
+
+
+CREATE POLICY "personen_select_priv" ON "public"."personen" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND ("public"."get_my_role"() = ANY (ARRAY['administrator'::"text", 'administration'::"text", 'trainer'::"text", 'funktionaer'::"text"]))));
+
+
+
+CREATE POLICY "personen_select_self" ON "public"."personen" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND ("id" = "public"."get_my_person_id"())));
+
+
+
+CREATE POLICY "personen_update_admin" ON "public"."personen" FOR UPDATE USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+CREATE POLICY "personen_update_self" ON "public"."personen" FOR UPDATE USING ((("verein_id" = "public"."get_my_verein_id"()) AND ("id" = "public"."get_my_person_id"())));
+
+
+
 ALTER TABLE "public"."portal_einstellungen" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4091,175 +4245,11 @@ CREATE POLICY "wiki_artikel_write" ON "public"."wiki_artikel" USING ((("verein_i
 
 
 
-
-
-ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
-
-
-
-
-
-
-ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."nachrichten";
-
-
-
-ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."nachrichten_antworten";
-
-
-
 REVOKE USAGE ON SCHEMA "public" FROM PUBLIC;
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 GRANT ALL ON SCHEMA "public" TO PUBLIC;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -4278,6 +4268,12 @@ GRANT ALL ON FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein
 GRANT ALL ON FUNCTION "public"."get_my_mitglied_id"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_my_mitglied_id"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_my_mitglied_id"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_my_person_id"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_my_person_id"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_my_person_id"() TO "service_role";
 
 
 
@@ -4329,6 +4325,12 @@ GRANT ALL ON FUNCTION "public"."pe_updated_at"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."person_ist_mein_kind"("p_person_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."person_ist_mein_kind"("p_person_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."person_ist_mein_kind"("p_person_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."rls_auto_enable"() TO "anon";
 GRANT ALL ON FUNCTION "public"."rls_auto_enable"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rls_auto_enable"() TO "service_role";
@@ -4344,21 +4346,6 @@ GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -4710,6 +4697,12 @@ GRANT ALL ON TABLE "public"."news_lesestatus" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."personen" TO "anon";
+GRANT ALL ON TABLE "public"."personen" TO "authenticated";
+GRANT ALL ON TABLE "public"."personen" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."portal_einstellungen" TO "anon";
 GRANT ALL ON TABLE "public"."portal_einstellungen" TO "authenticated";
 GRANT ALL ON TABLE "public"."portal_einstellungen" TO "service_role";
@@ -4872,12 +4865,6 @@ GRANT ALL ON TABLE "public"."wiki_artikel" TO "service_role";
 
 
 
-
-
-
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
@@ -4912,29 +4899,9 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
+ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."nachrichten";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."nachrichten_antworten";
 
