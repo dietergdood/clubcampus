@@ -502,11 +502,12 @@ Zusammengeführt wird **ausschliesslich über E-Mail-Gleichheit**. Nicht über N
 
 ## Session-Abschluss Routine
 
-1. Schema, Policies und Rollen vom Zürich-Projekt dumpen (keine Daten):
+1. Schema, Policies und Rollen dumpen (keine Daten). **`--linked` benutzen, nie `--db-url` mit Passwort** — das Projekt ist verlinkt, die Zugangsdaten stehen unter `supabase/.temp/` (gitignored) und haben im Repo nichts verloren:
 ```bash
-npx supabase db dump --db-url "postgresql://postgres.otiyvvxoqghtkcgsjmrv:PASSWORT@aws-1-eu-central-2.pooler.supabase.com:5432/postgres" > supabase/schema.sql
+npx supabase db dump --linked -f supabase/schema.sql
 ```
-2. `supabase/schema.sql` auf GitHub committen (enthält: Tabellen, Policies, RLS, Funktionen, Rollen — keine Nutzdaten)
+2. Vor dem Committen gegenprüfen, dass der Dump nichts verloren hat — Vorgehen und die beiden blinden Flecken der Zählprüfung stehen in `CLAUDE.md` → Datenbank-Workflow.
+3. `supabase/schema.sql` committen (enthält: Tabellen, Policies, RLS, Funktionen, Rollen — keine Nutzdaten). Die Trigger auf `auth.users` liegen separat in `supabase/auth_triggers.sql`, weil kein `public`-Dump sie erfasst.
 
 
 ## Datenbankregeln (Supabase)
