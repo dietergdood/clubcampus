@@ -33,9 +33,9 @@
 -- AUSFUEHRUNGSREIHENFOLGE  (blockweise in den Supabase-SQL-Editor kopieren)
 --
 --   A   Tabelle personen
+--   D   Additive Spalten             <- VOR B, siehe Hinweis unten
 --   B   Hilfsfunktionen
 --   C   Policies
---   D   Additive Spalten
 --   E   Backfill                     <- 1. Durchlauf
 --   F   Verifikation                 <- 1. Durchlauf, erwartet 898 Personen
 --   G   Seed
@@ -44,6 +44,13 @@
 --   G2  Adressen der getrennten Eltern
 --   H   Portal-Zugang fuer einen Elternteil (mit einem Schritt im Dashboard)
 --   I   Dublettenbericht
+--
+--   Die Buchstaben sind absichtlich nicht alphabetisch: D muss vor B laufen.
+--   LANGUAGE-sql-Funktionen werden bei CREATE geparst und validiert
+--   (check_function_bodies ist an), und beide Funktionen aus B greifen auf
+--   person_id zu — eine Spalte, die erst D anlegt. In alphabetischer Folge
+--   scheitert Block B mit »column person_id does not exist«. C wiederum
+--   braucht die Funktionen aus B, steht also danach.
 --
 --   Jeder Block ist idempotent — bei einem Abbruch nachbessern und den Block
 --   erneut laufen lassen. Der Seed (G) ist ein einzelner DO-Block und damit
@@ -108,7 +115,38 @@ create trigger personen_updated_at before update on public.personen
 
 
 -- ╔═════════════════════════════════════════════════════════════════════════╗
+-- ║ BLOCK D — Additive Spalten                                              ║
+-- ║           Laeuft VOR B: die Funktionen in B greifen auf person_id zu.   ║
+-- ╚═════════════════════════════════════════════════════════════════════════╝
+
+alter table public.mitglieder    add column if not exists person_id uuid references public.personen(id);
+alter table public.benutzer      add column if not exists person_id uuid references public.personen(id);
+alter table public.eltern_kinder add column if not exists person_id uuid references public.personen(id);
+
+-- beziehung wandert von elternkontakte hierher: "Mutter/Vater/Vormund" ist
+-- eine Eigenschaft der Verknuepfung, nicht der Person. Dieselbe Person kann
+-- Mutter von Kind A und Vormund von Kind B sein.
+alter table public.eltern_kinder add column if not exists beziehung text;
+
+comment on column public.eltern_kinder.beziehung is
+  'Mutter/Vater/Vormund … — Eigenschaft der Verknuepfung, nicht der Person.';
+
+create index if not exists mitglieder_person_idx    on public.mitglieder    (person_id);
+create index if not exists benutzer_person_idx      on public.benutzer      (person_id);
+create index if not exists eltern_kinder_person_idx on public.eltern_kinder (person_id);
+
+-- Hoechstens ein Hauptkontakt pro Kind. Bisher erzwang das nichts:
+-- setHauptkontakt() macht zwei UPDATEs ohne Transaktion. Fuer eine
+-- Rechnungsadresse zu wenig. Aktuell 0 Verstoesse — greift also sofort.
+create unique index if not exists eltern_kinder_ein_hauptkontakt
+  on public.eltern_kinder (mitglied_id) where hauptkontakt;
+
+
+-- ╔═════════════════════════════════════════════════════════════════════════╗
 -- ║ BLOCK B — Hilfsfunktionen                                               ║
+-- ║           Laeuft NACH D. LANGUAGE-sql-Funktionen werden bei CREATE      ║
+-- ║           geparst und validiert (check_function_bodies ist an) — vor D  ║
+-- ║           scheitern beide an der noch fehlenden Spalte person_id.       ║
 -- ╚═════════════════════════════════════════════════════════════════════════╝
 
 -- Pendant zu get_my_mitglied_id(). Liefert NULL, solange benutzer.person_id
@@ -192,33 +230,6 @@ create policy personen_delete_admin on public.personen for delete
 alter table public.personen owner to postgres;
 grant select, insert, update, delete on public.personen to authenticated;
 grant all on public.personen to service_role;
-
-
--- ╔═════════════════════════════════════════════════════════════════════════╗
--- ║ BLOCK D — Additive Spalten                                              ║
--- ╚═════════════════════════════════════════════════════════════════════════╝
-
-alter table public.mitglieder    add column if not exists person_id uuid references public.personen(id);
-alter table public.benutzer      add column if not exists person_id uuid references public.personen(id);
-alter table public.eltern_kinder add column if not exists person_id uuid references public.personen(id);
-
--- beziehung wandert von elternkontakte hierher: "Mutter/Vater/Vormund" ist
--- eine Eigenschaft der Verknuepfung, nicht der Person. Dieselbe Person kann
--- Mutter von Kind A und Vormund von Kind B sein.
-alter table public.eltern_kinder add column if not exists beziehung text;
-
-comment on column public.eltern_kinder.beziehung is
-  'Mutter/Vater/Vormund … — Eigenschaft der Verknuepfung, nicht der Person.';
-
-create index if not exists mitglieder_person_idx    on public.mitglieder    (person_id);
-create index if not exists benutzer_person_idx      on public.benutzer      (person_id);
-create index if not exists eltern_kinder_person_idx on public.eltern_kinder (person_id);
-
--- Hoechstens ein Hauptkontakt pro Kind. Bisher erzwang das nichts:
--- setHauptkontakt() macht zwei UPDATEs ohne Transaktion. Fuer eine
--- Rechnungsadresse zu wenig. Aktuell 0 Verstoesse — greift also sofort.
-create unique index if not exists eltern_kinder_ein_hauptkontakt
-  on public.eltern_kinder (mitglied_id) where hauptkontakt;
 
 
 -- ╔═════════════════════════════════════════════════════════════════════════╗
