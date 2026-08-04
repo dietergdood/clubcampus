@@ -28,7 +28,7 @@ Stand 04.08.2026: 254 grün, 2 skipped, 0 rot (18 Testdateien).
 
 > **`npm install` auf Windows verändert `package-lock.json`.** Es entfernt die plattformfremden esbuild-Binärpakete (`@esbuild/linux-x64`, `darwin-arm64`, …) aus dem Lockfile — zuletzt 27 Einträge. Deployment läuft auf Vercel/Linux und braucht genau die. Die Änderung **nicht** committen (`git checkout -- package-lock.json`), oder gleich `npm ci` benutzen: das installiert aus dem Lockfile, ohne es zu schreiben.
 
-**Häufigste Testfalle:** Die Tests mocken `theme.jsx` mit einer Factory, die die benötigten Exporte einzeln auflistet. Nutzt eine Komponente eine weitere Komponente aus `theme.jsx`, wirft Vitest bereits bei der blossen Referenz (`No "X" export is defined on the mock`) — und zwar für die ganze Testdatei, nicht nur den betroffenen Fall. Wer einen Import in einer getesteten Komponente ergänzt, ergänzt den Mock mit.
+**Häufigste Testfalle:** Die Tests mocken `theme.ts` mit einer Factory, die die benötigten Exporte einzeln auflistet. Nutzt eine Komponente eine weitere Komponente aus `theme.ts`, wirft Vitest bereits bei der blossen Referenz (`No "X" export is defined on the mock`) — und zwar für die ganze Testdatei, nicht nur den betroffenen Fall. Wer einen Import in einer getesteten Komponente ergänzt, ergänzt den Mock mit.
 
 **Env-Variablen** (`.env`, gitignored) sind Pflicht — ohne sie bleibt `supabaseClient` `null` und die App zeigt nur den Login-Screen:
 
@@ -75,7 +75,7 @@ Modul     importiert Modul              verboten
 
 - `src/domains/` — Services (`sb` als erstes Argument: `updateMitglied(sb, id, fields)`) und Hooks.
 - `src/shared/` — wiederverwendbare UI: `ui/`, `forms/`, `list/`, `person/`.
-- `src/theme.jsx` — **Barrel-Datei**, die fast alles aus `shared/` re-exportiert (`Btn`, `Card`, `Modal`, `Toolbar`, `InlineField`, `useConfirm`, `COMPONENT_REGISTRY`, …). Neue Komponenten als eigene Datei unter `shared/` anlegen **und** in `theme.jsx` re-exportieren; Module importieren aus `theme.jsx`.
+- `src/theme.ts` — **Barrel-Datei**, die fast alles aus `shared/` re-exportiert (`Btn`, `Card`, `Modal`, `Toolbar`, `InlineField`, `useConfirm`, `COMPONENT_REGISTRY`, …). Neue Komponenten als eigene Datei unter `shared/` anlegen **und** in `theme.ts` re-exportieren; Module importieren aus `theme.ts`.
 - `src/styles/cc.css` — das komplette Design-System als `cc-*`-Klassen (eingebunden über `styles/index.css`).
 - `src/constants.ts` — Design-Tokens (`FONT`, `TEXT`, `SPACE`, `RADIUS`, Farben). Module erben nichts implizit: fehlende Konstanten explizit importieren.
 
@@ -115,7 +115,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 ## Konventionen
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
-- Kein `window.confirm` → `useConfirm` aus `theme.jsx`.
+- Kein `window.confirm` → `useConfirm` aus `theme.ts`.
 - Kein Inline-CSS, wenn eine `cc-*`-Klasse existiert. Neue CSS-Klassen nur mit `cc-`-Prefix in `cc.css` — und laut `ARCHITECTURE.md` nur nach Rücksprache mit Dieter. **Zwei Prüfungen vorher, in dieser Reihenfolge** — siehe unten.
 - Saison nie hardcoden → `currentSeason()` aus `domains/season/seasonUtils.ts`.
 - Rollenableitung nie duplizieren → `ableitRolle()` / `ROLLE_PRIORITAET` aus `domains/roles/roleUtils.ts`.
@@ -163,7 +163,7 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 
 ## Weitere Dokumente
 
-- `ARCHITECTURE.md` — Regeln, Checklisten, Session-Historie, Bewertungsrahmen. **Teils veraltet**: `domains/teams/` liegt heute unter `src/modules/teams/`, `theme.jsx` ist nur noch Barrel (Komponenten in `shared/`), `COMPONENT_REGISTRY` in `shared/componentRegistry.js`, CSS in `src/styles/cc.css`. Bei Widerspruch gilt der Code.
+- `ARCHITECTURE.md` — Regeln, Checklisten, das **Personen-Modell** (Anlass, Zielstruktur, Zuordnungsentscheidungen, sechs Etappen), Datenbankregeln, Session-Historie. Ordnerstruktur und Regeln sind am 04.08.2026 auf den Ist-Stand gebracht worden. Die **Session-Abschnitte ab „Session 17" sind Archiv**: sie beschreiben Stände von damals (noch `.jsx`, `theme.jsx` als Design-System) und werden bewusst nicht rückwirkend korrigiert. Bei Widerspruch gilt der Code.
 - `ELTERN_LOGIK.md` — n:m-Modell `elternkontakte`/`eltern_kinder` und die Entknüpfungs-/Supporter-Logik (teilweise noch nicht implementiert). **Wird vom Personen-Umbau abgelöst** — siehe `ARCHITECTURE.md` → Personen-Modell.
 - `supabase/etappe1_personen.sql` — Etappe 1 des Personen-Umbaus, blockweise ausführbar. Die Blockfolge ist absichtlich **nicht** alphabetisch (A → D → B → C): `LANGUAGE sql`-Funktionen werden bei `CREATE` validiert, und die Funktionen aus B greifen auf `person_id` zu, das erst D anlegt.
 - `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.

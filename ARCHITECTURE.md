@@ -6,41 +6,64 @@ Keine Isolation — Verbindung über Services und Hooks.
 
 ## Aktuelle Ordnerstruktur
 
+> Stand 04.08.2026. Die TypeScript-Migration ist abgeschlossen — ausser den
+> Komponententests unter `modules/members/__tests__/` ist alles `.ts`/`.tsx`.
+
 ```
 src/
   domains/                          ← Business-Logik, Services, Hooks
+    app/
+      getPermissions.ts             ← Zugriffstufen lesen|schreiben|verwalten pro Modul-Key
+      getProfilCheck.ts             ← Profil-Vollständigkeit + Datenprüfung (kein Hook)
+      useAppData.js                 ← loadTenant, loadDbMitglieder, loadDbUser, updatePortalZugang
     members/
-      memberService.js              ← fetchMitglieder, updateMitglied, logAenderung, logAktivitaet, fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP, insertMitglied etc.
-      useMemberMeta.js              ← Hook: ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
-      useInlineEdit.js              ← Hook für Inline Cell Editing (startEdit, saveEdit, cancelEdit, handleKey, feedback)
+      memberService.ts              ← Mitglieder, Notizen, Kader, Benutzer, Ansichten, logAenderung/logAktivitaet
+      elternService.ts              ← Elternkontakte + eltern_kinder (per `export *` aus memberService mitgereicht)
+      useMemberMeta.ts              ← Hook: ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
+      useInlineEdit.ts              ← Hook für Inline Cell Editing
     permissions/
       permissions.js                ← canEdit/canDelete/canExport pro Modul
+      funktionaerStufen.ts          ← Stufe für Rolle `funktionaer` aus portal_funktionen/-gruppen
     person/
-      personTypes.js                ← toPerson() Normalisierer
-      personUtils.js                ← vollname(), initials(), age(), formatDatum(), LAENDER, getLandName
+      personTypes.ts                ← toPerson() Normalisierer
+      personUtils.ts                ← vollname(), initials(), age(), formatDatum(), LAENDER, getLandName
     roles/
-      roleUtils.js                  ← ableitRolle(), ROLLE_PRIORITAET, ROLLE_LABEL
+      roleUtils.ts                  ← ableitRolle(), ROLLE_PRIORITAET, saveRolle()
     season/
-      seasonUtils.js                ← currentSeason(), formatSaison()
-    teams/
-      teamService.js                ← fetchTeams(), createTeam(), updateTeam()
-      useTeams.js                   ← Hook: teams, loading, reload
+      seasonUtils.ts                ← currentSeason(), formatSaison()
 
   shared/                           ← Wiederverwendbare UI-Bausteine
+    componentRegistry.js            ← COMPONENT_REGISTRY (Quelle des Design-System-Tabs)
+    ui/                             ← Av, Btn, ConfirmDialog, DropMenu, Modal, Skeleton, Stat,
+                                       Tabs, hooks.ts, primitives.tsx (Card, Chip, Row, Input …)
+    forms/                          ← AddressInput, FunktionenMultiSelect, InlineField,
+                                       LandSelect, PhoneInput, RollenAuswahlListe
     list/
-      ListView.jsx                  ← Zentrale Listenkomponente (Filter, Gruppierung, Ansichten, Export)
-      exportUtils.js                ← exportListData(), buildFilterDefs(), csvDownload()
+      ListView.tsx                  ← Zentrale Listenkomponente (Filter, Gruppierung, Ansichten, Export)
+      useListView.ts                ← State und Logik dazu
+      Toolbar.tsx                   ← nur Buttons + Öffnen/Schliessen-State
+      FilterPanel/SortPanel/GroupPanel/FilterChips/MoreMenu/MoreSheet.tsx
+      BulkBar, ColMenu, PortalBadge, RangeFilter, SortHeader
+      exportUtils.ts                ← exportListData(), buildFilterDefs(), csvDownload()
+      sortUtils.ts                  ← mehrstufige Sortierung (sortDefs)
     person/
-      PersonAvatar.jsx              ← Av + Kamera-Overlay
-      PersonFunktionen.jsx          ← Vereinsfunktionen-Ansicht
-      PersonKontakt.jsx             ← Kontaktdaten-Ansicht
-      PersonPersonalien.jsx         ← Personalien-Ansicht
-      PersonSelector.jsx            ← Suche + Auswahl
-      PersonSummary.jsx             ← Name + Subtitle + Right-Slot
-      PersonTeams.jsx               ← Teams-Ansicht
-      RolleChip.jsx                 ← Rollen-Badge (wiederverwendbar in allen Modulen)
+      PersonAvatar.tsx              ← Av + Kamera-Overlay
+      PersonFunktionen.tsx          ← Vereinsfunktionen-Ansicht
+      PersonKontakt.tsx             ← Kontaktdaten-Ansicht
+      PersonPersonalien.tsx         ← Personalien-Ansicht
+      PersonSummary.tsx             ← Name + Subtitle + Right-Slot
+      PersonTeams.tsx               ← Teams-Ansicht
+    utils/
+      colorUtils.ts                 ← resolveColor, hexToRgba, darkenHex, contrastColor
+
+  styles/
+    cc.css                          ← das komplette Design-System als cc-*-Klassen
+    index.css                       ← bindet cc.css ein
 
   modules/                          ← Alle Modul-Dateien
+    teams/                          ← lag früher unter domains/teams/
+      teamService.js                ← fetchTeams(), createTeam(), updateTeam()
+      useTeams.js                   ← Hook: teams, loading, reload
     members/                        ← MitgliederModul aufgeteilt
       ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen) — nutzt ListView
       ElternListView.jsx            ← Eltern-Tab (Liste) — nutzt ListView
@@ -52,103 +75,98 @@ src/
       ElternSucheModal.tsx          ← bestehenden Elternkontakt suchen und mit einem Kind verknüpfen
       KindSucheModal.tsx            ← Gegenrichtung: Kind suchen, gefiltert nach den Mitgliedtypen
                                        mit hauptkontakt_pflicht
-      FotoUpload.jsx                ← Foto-Upload Komponente (ausgelagert aus MemberHero)
-      MemberDetail.jsx              ← Detailansicht mit allen Tabs
-      MemberHero.jsx                ← Hero-Banner mit Avatar + FotoUpload
-      MemberKPIs.jsx                ← KPI-Cards + Aufschlüsselung
-      MemberListCell.jsx            ← makeMemberRenderCell() Factory für ListView
-      NeuesMitgliedModal.jsx        ← Neues Mitglied anlegen (Mitgliedtyp → Pflichtfelder)
-      NotizenVerlauf.jsx            ← Notizen-Komponente
-      memberConstants.js            ← COL_GROUPS, SAVED_VIEWS, GROUP_OPTIONS, GROUP_OPTIONS_MORE
-      memberDataUtils.js            ← Re-Exports (mapMembers, filterMembers etc.)
-      memberMapper.js               ← DB→UI Transformation
-      memberFilter.js               ← Filter + Sort mit UND/ODER-Logik
-      memberGrouping.js             ← Gruppierungslogik
-      memberExportUtils.js          ← mitglieder-spezifischer Export
-      memberUtils.jsx               ← getFieldVisibility; re-exportiert LAENDER, getLandName, RolleChip
+      FotoUpload.tsx                ← Foto-Upload Komponente (ausgelagert aus MemberHero)
+      MemberDetail.tsx              ← Detailansicht mit allen Tabs
+      MemberHero.tsx                ← Hero-Banner mit Avatar + FotoUpload
+      MemberKPIs.tsx                ← KPI-Cards + Aufschlüsselung
+      MemberListCell.tsx            ← makeMemberRenderCell() Factory für ListView
+      MemberTabBar.tsx              ← Tab-Leiste der Detailansicht
+      NeuesMitgliedModal.tsx        ← Neues Mitglied anlegen (Mitgliedtyp → Pflichtfelder)
+      NotizenVerlauf.tsx            ← Notizen-Komponente
+      elternListUtils.tsx           ← mapEltern + Gruppierung/Zellen der Elternliste
+      memberConstants.ts            ← COL_GROUPS, SAVED_VIEWS, GROUP_OPTIONS, GROUP_OPTIONS_MORE
+      memberDataUtils.ts            ← Re-Exports (mapMembers, filterMembers etc.)
+      memberMapper.ts               ← DB→UI Transformation
+      memberFilter.ts               ← Filter + Sort mit UND/ODER-Logik
+      memberGrouping.ts             ← Gruppierungslogik
+      memberExportUtils.ts          ← mitglieder-spezifischer Export
+      memberUtils.tsx               ← getFieldVisibility; re-exportiert LAENDER, getLandName
       tabs/
-        DatenpruefungTab.jsx
-        ElternTab.jsx
-        InfoTab.jsx
-        PortalTab.jsx               ← Portalrolle inline editierbar
-        VerlaufTab.jsx              ← Änderungshistorie (aenderungen + aktivitaeten kombiniert)
-      __tests__/
-        memberFilter.test.js (18)
-        memberGrouping.test.js (18)
-        memberMapper.test.js (23)
-        memberListCell.test.jsx (21)
-        useInlineEdit.test.jsx (18)
-        neuesMitgliedModal.test.jsx (13)
-        verlaufTab.test.jsx (12)
-        elternTab.test.jsx (11)
-        portalTab.test.jsx (13, 2 skip)
-        personFunktionen.test.jsx (12)
-        personTeams.test.jsx (8)
+        DatenpruefungTab.tsx        ← Router: Admin / Spieler / Eltern
+        DatenpruefungMitglied.tsx
+        DatenpruefungEltern.tsx
+        datenpruefungUtils.ts
+        ElternTab.tsx
+        InfoTab.tsx
+        PortalTab.tsx               ← Portalrolle inline editierbar
+        VerlaufTab.tsx              ← Änderungshistorie (aenderungen + aktivitaeten kombiniert)
+      __tests__/                    ← Komponententests, bleiben .jsx (checkJs:false → nicht typgeprüft)
+        elternTab, memberDetail, memberFilter, memberGrouping, memberListCell,
+        memberMapper, mitgliederBulk, neuesMitgliedModal, personFunktionen,
+        personTeams, portalTab, useInlineEdit, verlaufTab
     portal/                         ← PortalverwaltungModul aufgeteilt (1 Tab = 1 Datei)
-      ApiTab.jsx
-      AuditTab.jsx
-      AussehenTab.jsx
-      DesignSystemTab.jsx           ← Living Style Guide (auto aus COMPONENT_REGISTRY)
-      FeldvisTab.jsx
-      GruppenTab.jsx
-      KaderRollenTab.jsx
-      MitgliederKonfigTab.jsx
-      ModuleRechteTab.jsx
-      RollenTab.jsx
-      TeamModuleMatrix.jsx
-      TeamModuleTab.jsx
-      UsersTab.jsx
-      portalUtils.js                ← ZUGRIFF_*, ALLE_MODULE, ROLES, KAT_LABELS etc.
-    DashboardModul.jsx
-    HelferModul.jsx                 ← ⚠️ Phase 4: noch demoData (2164Z), RolleChip dupliziert → shared nutzen
-    KaderModul.jsx                  ← ⚠️ Phase 4: Supabase-Migration offen
-    MitgliederModul.jsx             ← State + Koordination (305Z)
-    NachrichtenModul.jsx
-    NavigationModul.jsx
-    PlatzhalterModul.jsx
-    PortalverwaltungModul.jsx       ← State + Tab-Routing
-    TeamModul.jsx                   ← ⚠️ Phase 4: noch demoData
-    TeamsVerwaltungModul.jsx        ← ⚠️ Phase 4: noch demoData; verein_id bei INSERT fehlt (Zeilen 273+979)
-    TermineModul.jsx                ← ⚠️ Phase 4: noch demoData
-    TrainingsplanModul.jsx          ← ⚠️ Phase 4: noch demoData
+      ApiTab · AuditTab · AussehenTab · FeldvisTab · GruppenTab · KaderRollenTab
+      MitgliederKonfigTab · ModuleRechteTab · RollenTab · TeamModuleMatrix
+      TeamModuleTab · UsersTab                                    (alle .tsx)
+      DesignSystemTab.tsx           ← Living Style Guide (auto aus COMPONENT_REGISTRY)
+      portalUtils.ts                ← ZUGRIFF_*, ALLE_MODULE, ROLES, KAT_LABELS etc.
+    DashboardModul.tsx              ← ⚠️ noch demoData
+    HelferModul.tsx                 ← ⚠️ noch demoData
+    KaderModul.tsx
+    LoginScreen.tsx                 ← Login/Registrierung, ruft check_email_bekannt
+    MitgliederModul.tsx             ← State + Koordination
+    NachrichtenModul.tsx
+    NavigationModul.tsx             ← ⚠️ noch demoData (USER_ACCOUNTS)
+    PlatzhalterModul.tsx            ← ⚠️ noch demoData
+    PortalverwaltungModul.tsx       ← State + Tab-Routing
+    TeamModul.tsx                   ← ⚠️ noch demoData
+    TeamsVerwaltungModul.tsx
+    TermineModul.tsx                ← ⚠️ noch demoData
+    TrainingsplanModul.tsx
+    appConstants.js                 ← ⚠️ noch demoData
 
-  App.jsx
-  clubcampus.jsx                    ← Haupt-Entry
-  constants.js
-  demoData.js                       ← ⚠️ TEMPORÄR — löschen wenn Phase 4 fertig
-  icons.jsx
-  main.jsx
+  App.tsx                           ← liest den Verein-Slug aus dem Pfad
+  clubcampus.tsx                    ← Haupt-Entry: Root-Komponente, Datenlader und Router in einem
+  constants.ts                      ← Design-Tokens (FONT, TEXT, SPACE, RADIUS, Farben)
+  database.types.ts                 ← generiert: npx supabase gen types typescript --linked
+  demoData.js                       ← ⚠️ TEMPORÄR — löschen wenn die Sport-Module auf Supabase sind
+  icons.tsx
+  main.tsx
   supabase.js
-  theme.jsx                         ← Design-System + COMPONENT_REGISTRY + PortalBadge + DpBadge
+  theme.ts                          ← Barrel: re-exportiert shared/ui, shared/forms, shared/list.
+                                       Enthält kein JSX und kein CSS mehr — CSS liegt in
+                                       styles/cc.css, COMPONENT_REGISTRY in shared/componentRegistry.js
+  types.ts                          ← App-Typen auf Basis von database.types.ts
 ```
 
 ## Prinzip: Auslagern und Wiederverwenden
 
 **Vor jedem neuen Feature oder Komponente:**
-1. Prüfen ob etwas Ähnliches bereits in `shared/`, `domains/` oder `theme.jsx` existiert
-2. Prüfen ob bestehende Logik in `memberService.js`, `exportUtils.js`, `personUtils.js` etc. genutzt werden kann
+1. Prüfen ob etwas Ähnliches bereits in `shared/`, `domains/` oder `theme.ts` existiert
+2. Prüfen ob bestehende Logik in `memberService.ts`, `exportUtils.ts`, `personUtils.ts` etc. genutzt werden kann
 3. Nie duplizieren — lieber zentralisieren und importieren
 
 **Wann auslagern?**
 - Komponente ist >80 Zeilen und hat einen klar abgrenzbaren Zweck → eigene Datei
+- Ab 300 Zeilen aufteilen (Formulare bis 400)
 - Logik wird in mehr als einem Modul genutzt oder könnte genutzt werden → `shared/` oder `domains/`
-- Service-Calls (`sb.from()`) in einer Komponente → in `memberService.js` (oder jeweiligen Service)
+- Service-Calls (`sb.from()`) in einer Komponente → in `memberService.ts` (oder jeweiligen Service)
 - Render-Logik mischt sich mit State-Logik → trennen
 
 **Konkrete Checkliste beim Bauen:**
-- [ ] Gibt es bereits eine `cc-*` CSS-Klasse für dieses Styling? → nutzen, nicht inline
-- [ ] Gibt es bereits eine Komponente in `theme.jsx`? → importieren
-- [ ] Gibt es bereits eine Komponente in `shared/`? → importieren
-- [ ] Gibt es bereits eine Service-Funktion in `memberService.js`? → nutzen
+- [ ] Stellt das Portal irgendwo schon dasselbe dar? → erst nach dem Muster suchen, dann nach dem Namen (siehe `CLAUDE.md` → Bevor eine neue CSS-Klasse entsteht)
+- [ ] Gibt es bereits eine `cc-*` Klasse in `styles/cc.css`? → nutzen, nicht inline
+- [ ] Gibt es bereits eine Komponente in `shared/ui`, `shared/forms` oder `shared/list`? → über `theme.ts` importieren
+- [ ] Gibt es bereits eine Service-Funktion in `memberService.ts`? → nutzen
 - [ ] Gibt es bereits einen Hook in `domains/`? → nutzen
 - [ ] Ist diese Logik auch für KaderModul / HelferModul nützlich? → in `shared/` oder `domains/`
 
 **Bekannte wiederverwendbare Bausteine:**
-- `ListView.jsx` — für jede tabellarische Liste mit Filter/Gruppierung/Export
+- `ListView.tsx` — für jede tabellarische Liste mit Filter/Gruppierung/Sortierung/Export
 - `exportListData()` — für generischen CSV/Excel Export
 - `buildFilterDefs()` — für automatische Filter-Definitionen aus Daten
-- `PortalBadge`, `DpBadge` — Portal-Zugang und Datenprüfungs-Status
-- `RolleChip` — Rollen-Badge
+- `PortalBadge` — Portal-Zugang
+- `InlineField` + `useInlineEdit` — Inline-Editing von Stammdaten
 - `useMemberMeta()` — ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap
 - `LAENDER`, `getLandName` — Länderliste und Ländername
 - `PersonPersonalien`, `PersonKontakt`, `PersonTeams`, `PersonFunktionen` — Detail-Ansichten
@@ -162,9 +180,9 @@ Shared  →  kennt keine Module             ✗
 Module  →  importieren sich nie gegenseitig ✗
 ```
 
-## Checkliste für neue theme.jsx Komponenten
+## Checkliste für neue shared-Komponenten
 
-Neue UI-Komponenten IMMER in COMPONENT_REGISTRY eintragen (theme.jsx, vor dem export):
+Neue Komponente als eigene Datei unter `shared/ui`, `shared/forms` oder `shared/list` anlegen, in `theme.ts` re-exportieren (Module importieren aus `theme.ts`, nicht direkt aus `shared/`) — und IMMER in COMPONENT_REGISTRY eintragen (`shared/componentRegistry.js`):
 
 ```js
 {
@@ -182,26 +200,29 @@ Neue UI-Komponenten IMMER in COMPONENT_REGISTRY eintragen (theme.jsx, vor dem ex
 
 Vor jedem neuen Modul:
 
-- [ ] Service in `domains/[modul]/[modul]Service.js` erstellen
-- [ ] Hook in `domains/[modul]/use[Modul].js` erstellen (wenn State nötig)
+- [ ] Service in `domains/[modul]/[modul]Service.ts` erstellen — `sb` als erstes Argument
+- [ ] Hook in `domains/[modul]/use[Modul].ts` erstellen (wenn State nötig)
 - [ ] Permissions in `domains/permissions/permissions.js` ergänzen
-- [ ] `PersonSummary`/`PersonAvatar` aus `shared/person/` nutzen — Inline CSS dort zuerst bereinigen (6 Stellen PersonSelector, 4 PersonSummary, 2 PersonAvatar)
-- [ ] `ableitRolle` aus `domains/roles/roleUtils.js` nutzen
-- [ ] `currentSeason()` aus `domains/season/seasonUtils.js` nutzen
-- [ ] Kein `window.confirm` → `useConfirm` aus `theme.jsx`
+- [ ] `PersonSummary`/`PersonAvatar` aus `shared/person/` nutzen
+- [ ] `ableitRolle` aus `domains/roles/roleUtils.ts` nutzen
+- [ ] `currentSeason()` aus `domains/season/seasonUtils.ts` nutzen
+- [ ] `verein_id` bei jedem `insert()`/`upsert()` — als eigener Pflichtparameter der Service-Funktion, nicht als optionales Objektfeld
+- [ ] Kein `window.confirm` → `useConfirm` aus `theme.ts`
 - [ ] Kein `demoData` Import
 - [ ] Kein `sb.from()` direkt in Komponenten → Service nutzen
 - [ ] Modul-Datei in `src/modules/` ablegen
 
 ## Pflege dieser Datei
 
-Diese Datei wird automatisch aktualisiert wenn:
-- Neue Dateien erstellt oder verschoben werden
-- Phase-Status sich ändert (z.B. Modul auf Supabase migriert)
-- Neue Komponenten in COMPONENT_REGISTRY eingetragen werden
-- Eine Session abgeschlossen wird
+Diese Datei ist **nicht** selbstpflegend. Der Anspruch „Claude hält sie aktuell" stand hier bis 04.08.2026 — tatsächlich beschrieb die Ordnerstruktur zu diesem Zeitpunkt einen Stand von vor der TypeScript-Migration, mit `domains/teams/` an einer Stelle, an der es seit Monaten nicht mehr liegt, und `theme.jsx` als Design-System, das längst nur noch eine Barrel-Datei ist.
 
-**Manuell nie nötig** — Claude hält sie aktuell.
+Nachzuführen ist sie deshalb bewusst, beim Session-Abschluss:
+- Neue Dateien erstellt, verschoben oder umbenannt
+- Ein Modul von `demoData` auf Supabase migriert
+- Neue Komponenten in COMPONENT_REGISTRY
+- Architekturentscheidungen, die künftige Arbeit binden
+
+**Bei Widerspruch zwischen dieser Datei und dem Code gilt der Code.** Wer eine überholte Aussage findet, korrigiert sie — oder meldet sie, wenn ein ganzer Abschnitt betroffen ist.
 
 ## Arbeitsweise
 
@@ -227,12 +248,17 @@ Diese Datei wird automatisch aktualisiert wenn:
 
 ## CSS-Regeln
 
+**Das komplette Design-System liegt in `src/styles/cc.css`** (eingebunden über `styles/index.css`). In `theme.ts` steht kein CSS mehr — die Datei ist nur noch eine Barrel-Datei.
+
 **Vor jedem Styling:**
-1. Zuerst bestehende `cc-*` Klassen in `theme.jsx` prüfen
+1. **Nach dem Muster suchen, nicht nach dem Namen**: stellt das Portal irgendwo schon dasselbe dar? → `grep -rn "cc-<bereich>" src --include=*.tsx`
 2. Bestehende Klasse verwenden wenn vorhanden
 3. Kein Inline-CSS wenn eine `cc-*` Klasse existiert
 4. Neue CSS-Klassen nur mit Rücksprache mit Didi
-5. Falls neue Klasse nötig: in `theme.jsx` mit `cc-` Prefix, nie inline
+5. Falls neue Klasse nötig: prüfen ob der Name frei ist — `grep -n "^\.cc-<name>{" src/styles/cc.css`. CSS warnt bei einer Kollision **nicht**; die spätere Definition überschreibt die frühere lautlos, und der Fehler erscheint an einer Stelle, die niemand angefasst hat.
+6. Dann in `src/styles/cc.css` mit `cc-` Prefix, nie inline
+
+Ausführliche Begründung beider Prüfungen: `CLAUDE.md` → „Bevor eine neue CSS-Klasse entsteht".
 
 ```jsx
 // ✗ FALSCH — Inline-CSS obwohl cc-Klasse existiert
@@ -244,8 +270,12 @@ Diese Datei wird automatisch aktualisiert wenn:
 // ✗ FALSCH — neue Klasse ohne Rücksprache
 .meine-neue-klasse { ... }
 
-// ✓ RICHTIG — erst fragen, dann in theme.jsx mit cc- Prefix
-// → Rücksprache mit Didi → dann: .cc-meine-klasse { ... } in theme.jsx
+// ✗ FALSCH — Klasse neu erfunden, obwohl es sie gibt
+.cc-section-label { ... }        // cc-section-title existiert seit langem
+
+// ✓ RICHTIG — erst Muster suchen, dann Namen prüfen, dann fragen
+// → grep -rn "cc-section" src → grep -n "^\.cc-meine-klasse{" src/styles/cc.css
+// → Rücksprache mit Didi → dann: .cc-meine-klasse { ... } in src/styles/cc.css
 ```
 
 ## Verbotene Patterns
@@ -359,6 +389,24 @@ Wer die Fassade aufbricht, muss `mitglieder_ansichten` migrieren. Das ist der Pr
 | 6 | Altlasten droppen, FK `mitglieder.mitgliedtyp → mitgliedtypen.name` | ⏳ Offen |
 
 Nach **jeder** Etappe müssen `npm run typecheck`, `npm run build` und `npm test` grün sein. Etappe 1 war vollständig additiv und hat die Testzahl nicht verändert.
+
+### Blocker vor dem zweiten Pilotverein: `mitgliedtypen_name_key`
+
+`mitgliedtypen` hat `UNIQUE (name)` — **global über alle Vereine**, nicht pro Verein. Solange nur FC Herrliberg im System ist, fällt das nicht auf. Beim zweiten Verein schon: der kann keinen eigenen Mitgliedtyp „Aktivmitglied" anlegen, weil der Name bereits vergeben ist. Umzustellen auf:
+
+```sql
+alter table mitgliedtypen drop constraint mitgliedtypen_name_key;
+alter table mitgliedtypen add constraint mitgliedtypen_verein_name_key unique (verein_id, name);
+```
+
+**Das betrifft den FK aus Etappe 6 direkt.** `mitglieder.mitgliedtyp` ist heute freier Text ohne Fremdschlüssel — genau deshalb konnten 481 Zeilen auf dem nicht existierenden Typ „Spieler" stehen, und eine Zeile steht bis heute auf `Funktionär` statt `Funktionär/in`. Der geplante FK
+
+```sql
+alter table mitglieder add constraint mitglieder_mitgliedtyp_fkey
+  foreign key (mitgliedtyp) references mitgliedtypen (name);
+```
+
+funktioniert nur gegen den **globalen** Unique-Key. Wird der auf `(verein_id, name)` umgestellt, muss der FK beide Spalten führen — `mitglieder.verein_id` existiert dafür bereits. Reihenfolge also: erst die Altzeile korrigieren, dann entscheiden, ob der zweite Verein absehbar ist, und den FK gleich in der passenden Form setzen. Einen FK auf den globalen Key zu setzen und ihn später umzubauen, ist der teurere Weg.
 
 ### Merge-Regel
 
