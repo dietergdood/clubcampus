@@ -44,6 +44,14 @@ src/
     members/                        ← MitgliederModul aufgeteilt
       ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen) — nutzt ListView
       ElternListView.jsx            ← Eltern-Tab (Liste) — nutzt ListView
+      ElternkontaktModal.tsx        ← Elternkontakt anlegen/bearbeiten/löschen; ElternFelder +
+                                       validateElternkontakt werden von ElternSucheModal mitbenutzt
+      ElternKinderSektion.tsx       ← verknüpfte Kinder eines Elternteils: anzeigen, hinzufügen,
+                                       entkoppeln, Hauptkontakt setzen. Im Modal aus der Elternliste
+      ElternPortalSection.tsx       ← Portal-Zugang eines Elternkontakts anzeigen/lösen
+      ElternSucheModal.tsx          ← bestehenden Elternkontakt suchen und mit einem Kind verknüpfen
+      KindSucheModal.tsx            ← Gegenrichtung: Kind suchen, gefiltert nach den Mitgliedtypen
+                                       mit hauptkontakt_pflicht
       FotoUpload.jsx                ← Foto-Upload Komponente (ausgelagert aus MemberHero)
       MemberDetail.jsx              ← Detailansicht mit allen Tabs
       MemberHero.jsx                ← Hero-Banner mit Avatar + FotoUpload
@@ -280,6 +288,81 @@ import { MemberDetail } from "../MitgliederModul";
 // ✓ RICHTIG — shared Komponente nutzen
 import { PersonSummary } from "../../shared/person/PersonSummary";
 ```
+
+## Personen-Modell (laufendes Vorhaben, Stand 04.08.2026)
+
+### Anlass
+
+Personen stehen doppelt im System. Ein Vater, der selbst Aktivmitglied ist und dessen Sohn Junior ist, hat eine Zeile in `mitglieder` **und** eine in `elternkontakte`. Bei FCH ist das häufig. Folgen:
+
+- Adressänderungen greifen nur an einer der beiden Stellen.
+- Die Datenprüfung zählt zweimal — `profil_geprueft_at` existiert dreifach: in `mitglieder`, `elternkontakte` und `benutzer`.
+- Beim Anschreiben erscheint die Person doppelt.
+
+### Zielstruktur
+
+```
+personen        alle Menschen, einmal pro Verein
+mitglieder      wird zur Mitgliedschaft, verweist per person_id auf personen
+                id bleibt bigint und behaelt ihren Wert
+eltern_kinder   eltern_id -> personen.id, mitglied_id -> mitglieder.id,
+                hauptkontakt, beziehung
+benutzer        person_id (neu), verliert vorname/nachname/telefon
+elternkontakte  entfaellt — ihre Zeilen werden Personen
+```
+
+### Zuordnungsentscheidungen und ihre Begründung
+
+| Feld | Wohin | Warum |
+|------|-------|-------|
+| `ahv_nr` | **Person** | Gilt lebenslang, unabhängig von jeder Mitgliedschaft. |
+| Adresse (`strasse`, `plz`, `ort`, `kanton`, `land`) | **Person** | Getrennte Eltern: Mutter, Vater und Kind können drei verschiedene Adressen haben. Im alten Modell unmöglich — `elternkontakte` hat gar keine Adressspalten. |
+| `spielerpass`, `js_nr` | **Mitgliedschaft** | Passivmitglieder haben keine. Sie hängen am Mitgliedsein, nicht am Menschen. |
+| `beziehung` | **`eltern_kinder`** | „Mutter/Vater/Vormund" ist eine Eigenschaft der *Verknüpfung*. Dieselbe Person kann Mutter von Kind A und Vormund von Kind B sein — an der Person wäre nur einer der beiden Werte speicherbar. |
+| `funktionen` | **Person** | Ein Materialwart muss kein Mitglied sein. |
+| `foto_url`, `profil_geprueft_at`, `land` | **Person** | Gesicht, Datenprüfung und Adresse gehören zum Menschen. `profil_geprueft_at` löst die drei parallelen Felder ab. |
+| `position`, `rueckennr` | **`kader`** | Weder Person noch Mitgliedschaft: ein Spieler hat in zwei Teams zwei Nummern. Lagen bisher dreifach (`mitglieder`, `kader`, `mitglieder_team_details`). |
+| `datenstatus`, `notizen`, `fairgate_sync_at`, `hat_portal_zugang`, `eltern` (jsonb), `rolle` | **entfallen** | Veraltet, leer oder ableitbar. `hat_portal_zugang` folgt aus `benutzer`. `eltern` war ein Denormalisierungs-Schnappschuss ohne `benutzer_id`, den niemand pflegte — deshalb lief die Eltern-Datenprüfung ins Leere. |
+
+**Angeschrieben werden alle verknüpften Personen, die Rechnung geht an den Hauptkontakt.** `eltern_kinder.hauptkontakt` bestimmt die Postadresse; ein partieller Unique-Index erzwingt höchstens einen Hauptkontakt pro Kind.
+
+### Supporter ist ein Mitgliedtyp, kein Flag
+
+Ein boolesches `supporter` an der Person kann der Struktur widersprechen — jemand wäre gleichzeitig Supporter und Aktivmitglied. Als `mitgliedtyp` ist der Zustand strukturell ausgedrückt, und Beiträge, Pflichtfelder und Rollenableitung greifen automatisch, weil sie ohnehin an `mitgliedtyp` hängen. Erzwungen wird die Ausschliesslichkeit in der Datenbank, nicht im Code:
+
+```sql
+create unique index mitglieder_eine_aktive_mitgliedschaft
+  on mitglieder (person_id) where aktiv;
+```
+
+Bei FCH ist niemand zweifach Mitglied (keine Sektionen), deshalb ist der allgemeine Satz „eine Person hat höchstens eine aktive Mitgliedschaft" richtig — und „Supporter schliesst Aktivmitgliedschaft aus" fällt als Nebeneffekt heraus. `entkoppleKind()` muss dadurch erst die alte Mitgliedschaft beenden und dann die neue anlegen; die Reihenfolge kann nicht mehr vergessen werden.
+
+### Die Fassaden-Regel (Etappe 2b)
+
+**Services lesen per Join über `mitglieder` und `personen`, liefern aber weiterhin eine flache Zeile** (`{...person, ...mitgliedschaft}`). Das ist keine Bequemlichkeit, sondern der Grund, warum der Umbau in Etappen möglich ist:
+
+- `memberMapper`, `memberFilter`, `memberGrouping`, `memberExportUtils`, `MemberListCell` bleiben unberührt.
+- **Die gespeicherten Ansichten in `mitglieder_ansichten` bleiben gültig.** Deren `spalten`, `filter`, `gruppierung` und `sortierung` sind JSONB mit Feld-Keys — und **Nutzerdaten**. Eine verschachtelte Rückgabe (`{person: {...}}`) oder umbenannte Keys würden sie still brechen: kein Fehler, nur eine plötzlich leere Spalte.
+
+Wer die Fassade aufbricht, muss `mitglieder_ansichten` migrieren. Das ist der Preis, und er ist hoch.
+
+### Etappen
+
+| # | Inhalt | Status |
+|---|--------|--------|
+| 1 | `personen` additiv anlegen, `person_id` nullable ergänzen, Backfill, Seed | ✅ **Fertig** — 908 Personen (513 Mitgliedschaften + 395 Elternkontakte), `supabase/etappe1_personen.sql` |
+| 2a | Merge über E-Mail-Gleichheit | ⏳ Offen |
+| 2b | Lesepfad hinter die flache Fassade | ⏳ Offen |
+| 3 | Schreibpfad splitten (Feld-Routing Person/Mitgliedschaft) | ⏳ Offen |
+| 4 | Eltern-Umbau, `elternkontakte` verliert die Führung | ⏳ Offen |
+| 5 | Auth-Pfad: `get_my_person_id()`, RLS, `benutzer.person_id`, Unique-Index | ⏳ Offen |
+| 6 | Altlasten droppen, FK `mitglieder.mitgliedtyp → mitgliedtypen.name` | ⏳ Offen |
+
+Nach **jeder** Etappe müssen `npm run typecheck`, `npm run build` und `npm test` grün sein. Etappe 1 war vollständig additiv und hat die Testzahl nicht verändert.
+
+### Merge-Regel
+
+Zusammengeführt wird **ausschliesslich über E-Mail-Gleichheit**. Nicht über Namen: der Bestand enthält 55 Namenskollisionen eines Zufallsgenerators, drei Zeilen für dieselbe Person sogar mit identischer Adresse — auch Name + Adresse trägt also nicht. Fälle mit gleichem Namen und abweichender E-Mail bleiben offen und werden per SQL gesichtet; eine Oberfläche zum manuellen Zusammenführen kommt mit dem Fairgate-Import, wenn echte Daten dahinterstehen.
 
 ## Aktueller Stand
 

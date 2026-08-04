@@ -22,7 +22,11 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 27.07.2026: 251 grün, 2 skipped, 0 rot.
+Stand 04.08.2026: 254 grün, 2 skipped, 0 rot (18 Testdateien).
+
+**`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
+
+> **`npm install` auf Windows verändert `package-lock.json`.** Es entfernt die plattformfremden esbuild-Binärpakete (`@esbuild/linux-x64`, `darwin-arm64`, …) aus dem Lockfile — zuletzt 27 Einträge. Deployment läuft auf Vercel/Linux und braucht genau die. Die Änderung **nicht** committen (`git checkout -- package-lock.json`), oder gleich `npm ci` benutzen: das installiert aus dem Lockfile, ohne es zu schreiben.
 
 **Häufigste Testfalle:** Die Tests mocken `theme.jsx` mit einer Factory, die die benötigten Exporte einzeln auflistet. Nutzt eine Komponente eine weitere Komponente aus `theme.jsx`, wirft Vitest bereits bei der blossen Referenz (`No "X" export is defined on the mock`) — und zwar für die ganze Testdatei, nicht nur den betroffenen Fall. Wer einen Import in einer getesteten Komponente ergänzt, ergänzt den Mock mit.
 
@@ -112,11 +116,27 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
 - Kein `window.confirm` → `useConfirm` aus `theme.jsx`.
-- Kein Inline-CSS, wenn eine `cc-*`-Klasse existiert. Neue CSS-Klassen nur mit `cc-`-Prefix in `cc.css` — und laut `ARCHITECTURE.md` nur nach Rücksprache mit Dieter.
+- Kein Inline-CSS, wenn eine `cc-*`-Klasse existiert. Neue CSS-Klassen nur mit `cc-`-Prefix in `cc.css` — und laut `ARCHITECTURE.md` nur nach Rücksprache mit Dieter. **Zwei Prüfungen vorher, in dieser Reihenfolge** — siehe unten.
 - Saison nie hardcoden → `currentSeason()` aus `domains/season/seasonUtils.ts`.
 - Rollenableitung nie duplizieren → `ableitRolle()` / `ROLLE_PRIORITAET` aus `domains/roles/roleUtils.ts`.
+- **Verengungen als `Pick<Basistyp, "feld">`**, nicht als eigenes Interface. Ein handgeschriebenes Interface mit denselben Feldern läuft still auseinander, sobald der Basistyp sich ändert. Der Name muss den Inhalt tragen: `KaderRolleMitLabel` sagt, was drin ist — `RolleOption` sagt es nicht. (Die vier fast gleichen Kaderrollen-Typen unter „Bekannte Defekte" sind genau dieser Fehler, viermal.)
+- **`verein_id` bei Service-Inserts als eigener Pflichtparameter**, nicht als optionales Feld im Objekt: `insertMitglied(sb, fields, vereinId)`, wobei `fields` den Typ `Omit<TablesInsert<"mitglieder">, "verein_id">` hat. Als Objektfeld ist es vergessbar, und die DB lehnt die Zeile dann still ab (siehe verein_id-Regel oben). Als Parameter kann der Compiler es erzwingen. So gebaut: `insertMitglied`, `insertAnsicht`, `insertNotiz`, `insertElternkontakt`.
 - Neue UI-Komponenten in `COMPONENT_REGISTRY` (`src/shared/componentRegistry.js`) eintragen — daraus generiert sich der Design-System-Tab in der Portalverwaltung.
 - Nach dem Auslagern einer Komponente: alle Props gegen den Parent prüfen und Factory-Funktionen (`makeXxx`) auf `return` kontrollieren — der Build findet fehlende Runtime-Props nicht.
+
+### Bevor eine neue CSS-Klasse entsteht
+
+Zwei Prüfungen, in dieser Reihenfolge. Beide Fehler sind am 04.08.2026 an einem Tag passiert.
+
+**1. Nach dem Muster suchen, nicht nach dem Namen.** Die Frage ist nicht „gibt es `cc-section-label`?", sondern „stellt das Portal irgendwo schon dasselbe dar?". Konkret: eine Abschnittsüberschrift wurde als `cc-section-label` neu erfunden, obwohl `cc-section-title` seit langem existiert und an einem Dutzend Stellen benutzt wird (`InfoTab`, `VerlaufTab`, `KaderRollenTab`, `MitgliederKonfigTab`, `ElternKinderSektion`, `ElternPortalSection`). Ergebnis: zwei Klassen für dasselbe, die auseinanderdriften. Also erst im Code nach der Darstellung suchen — `grep -rn "cc-section" src --include=*.tsx` —, dann entscheiden.
+
+**2. Erst dann prüfen, ob der Name frei ist:**
+
+```bash
+grep -n "^\.cc-<name>{" src/styles/cc.css
+```
+
+CSS hat keine Kollisionswarnung: ist der Name schon vergeben, **überschreibt die spätere Definition die frühere lautlos**. Kein Fehler, kein Hinweis im Build — nur ein Element, das anderswo plötzlich anders aussieht. Der Bug erscheint dann an einer Stelle, die niemand angefasst hat.
 
 ## Datenbank-Workflow
 
@@ -138,7 +158,9 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 ## Weitere Dokumente
 
 - `ARCHITECTURE.md` — Regeln, Checklisten, Session-Historie, Bewertungsrahmen. **Teils veraltet**: `domains/teams/` liegt heute unter `src/modules/teams/`, `theme.jsx` ist nur noch Barrel (Komponenten in `shared/`), `COMPONENT_REGISTRY` in `shared/componentRegistry.js`, CSS in `src/styles/cc.css`. Bei Widerspruch gilt der Code.
-- `ELTERN_LOGIK.md` — n:m-Modell `elternkontakte`/`eltern_kinder` und die Entknüpfungs-/Supporter-Logik (teilweise noch nicht implementiert).
+- `ELTERN_LOGIK.md` — n:m-Modell `elternkontakte`/`eltern_kinder` und die Entknüpfungs-/Supporter-Logik (teilweise noch nicht implementiert). **Wird vom Personen-Umbau abgelöst** — siehe `ARCHITECTURE.md` → Personen-Modell.
+- `supabase/etappe1_personen.sql` — Etappe 1 des Personen-Umbaus, blockweise ausführbar. Die Blockfolge ist absichtlich **nicht** alphabetisch (A → D → B → C): `LANGUAGE sql`-Funktionen werden bei `CREATE` validiert, und die Funktionen aus B greifen auf `person_id` zu, das erst D anlegt.
+- `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.
 - `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
 
 ## Bekannte Defekte
