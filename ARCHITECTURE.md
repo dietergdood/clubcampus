@@ -381,7 +381,7 @@ Wer die Fassade aufbricht, muss `mitglieder_ansichten` migrieren. Das ist der Pr
 | # | Inhalt | Status |
 |---|--------|--------|
 | 1 | `personen` additiv anlegen, `person_id` nullable ergänzen, Backfill, Seed | ✅ **Fertig** — 908 Personen (513 Mitgliedschaften + 395 Elternkontakte), `supabase/etappe1_personen.sql` |
-| 2a | Merge über E-Mail-Gleichheit | ⏳ Offen |
+| 2a | Merge über E-Mail-Gleichheit | ✅ **Fertig** (05.08.2026) — 908 → 905 Personen, 1 Paar zusammengeführt, 0 Feldkonflikte, `supabase/etappe2a_merge.sql` |
 | 2b | Lesepfad hinter die flache Fassade | ⏳ Offen |
 | 3 | Schreibpfad splitten (Feld-Routing Person/Mitgliedschaft) | ⏳ Offen |
 | 4 | Eltern-Umbau, `elternkontakte` verliert die Führung | ⏳ Offen |
@@ -389,6 +389,30 @@ Wer die Fassade aufbricht, muss `mitglieder_ansichten` migrieren. Das ist der Pr
 | 6 | Altlasten droppen, FK `mitglieder.mitgliedtyp → mitgliedtypen.name` | ⏳ Offen |
 
 Nach **jeder** Etappe müssen `npm run typecheck`, `npm run build` und `npm test` grün sein. Etappe 1 war vollständig additiv und hat die Testzahl nicht verändert.
+
+### Die E-Mail ist der Login-Name und pro Verein eindeutig
+
+Eine E-Mail gehört zu genau einer Person. Wer keine eigene hat — typischerweise Junioren — lässt das Feld **leer** und kann sich nicht selbst anmelden; den Zugang übernimmt ein Elternteil. Beide Eltern können je einen eigenen Zugang haben, dann aber mit je eigener Adresse. Eine Familienadresse wird bei genau einer Person hinterlegt.
+
+Erzwungen wird das seit 05.08.2026 in der Datenbank:
+
+```sql
+create unique index personen_email_pro_verein
+  on public.personen (verein_id, lower(btrim(email)))
+  where email is not null and btrim(email) <> '';
+```
+
+Drei Eigenschaften, jede mit Grund:
+
+- **Pro Verein, nicht global.** Dieselbe Person kann bei FCH und beim FC Küsnacht stehen — das sind zwei `personen`-Zeilen mit derselben Adresse. Global wäre derselbe Fehler wie bei `mitgliedtypen_name_key` (siehe unten).
+- **Partiell.** Ohne die `WHERE`-Bedingung könnte nur *ein* Kind das Feld leer lassen. `NULL` kollidiert in Postgres ohnehin nie, die leere Zeichenkette dagegen schon — deshalb schliesst die Bedingung beides aus.
+- **Über `lower(btrim(email))`.** `check_email_bekannt()` und der 2a-Merge vergleichen ebenso; der Index muss demselben Massstab folgen, sonst prüft er etwas anderes als der Code.
+
+**Daraus folgt eine Regel für allen künftigen Code:** Jeder Vergleich auf `personen.email` läuft über `lower(btrim(email))`. Postgres nutzt einen Ausdrucks-Index nur bei exakt demselben Ausdruck — eine Abfrage mit `lower(email)` läuft am Index vorbei. Der frühere `personen_email_idx` aus Etappe 1 (`verein_id, lower(email)`) ist deshalb gelöscht worden; zwei Indizes auf faktisch derselben Spalte kosten bei jedem Schreibvorgang doppelt.
+
+**Was der Index noch nicht leistet:** Die App schreibt heute nach `mitglieder`, nicht nach `personen` — der Doppelklick beim Anlegen eines Mitglieds wird also weiterhin nicht abgefangen (siehe `CLAUDE.md` → Bekannte Defekte). Ab Etappe 3 greift er, und dann muss `23505` in eine lesbare Meldung übersetzt werden.
+
+**Offene Lücke im Testbestand:** Alle 905 Personen haben eine E-Mail — der Zufallsgenerator hat jedem eine vergeben. Der Normalfall „Junior ohne eigene Adresse" kommt also nicht vor, obwohl er bei FCH häufig sein dürfte. Dieselbe Art Lücke wie in Etappe 1, wo es null gemeinsame E-Mails gab und deshalb ein Seed nötig war. Vor Etappe 4 sollten ein paar Junioren ihre Adresse verlieren.
 
 ### Blocker vor dem zweiten Pilotverein: `mitgliedtypen_name_key`
 
@@ -411,6 +435,16 @@ funktioniert nur gegen den **globalen** Unique-Key. Wird der auf `(verein_id, na
 ### Merge-Regel
 
 Zusammengeführt wird **ausschliesslich über E-Mail-Gleichheit**. Nicht über Namen: der Bestand enthält 55 Namenskollisionen eines Zufallsgenerators, drei Zeilen für dieselbe Person sogar mit identischer Adresse — auch Name + Adresse trägt also nicht. Fälle mit gleichem Namen und abweichender E-Mail bleiben offen und werden per SQL gesichtet; eine Oberfläche zum manuellen Zusammenführen kommt mit dem Fairgate-Import, wenn echte Daten dahinterstehen.
+
+Bei Feldkonflikten gilt: **nur leere Felder werden aufgefüllt, abweichende Werte bleiben stehen.** Die Mitgliedschafts-Person überlebt, die Eltern-Person wird gelöscht. Praktisch ist die Konfliktfläche winzig, und zwar strukturell: `elternkontakte` hat nur fünf Datenspalten (`vorname`, `nachname`, `email`, `telefon`/`tel`, `profil_geprueft_at`). Mehr konnte Etappe 1 gar nicht in eine Eltern-Person schreiben — Adresse, Geburtsdatum, AHV, Funktionen und Foto existieren dort nicht. Übernommen werden deshalb nur `telefon` (falls leer) und das spätere `profil_geprueft_at`; Namensabweichungen erscheinen im Konfliktbericht, werden aber nie überschrieben.
+
+### Nach 2a: `personen.id = elternkontakte.id` gilt nicht mehr
+
+Etappe 1 hat jede Eltern-Person mit **derselben `id`** wie ihre `elternkontakte`-Zeile angelegt, damit der spätere Wechsel `eltern_id → person_id` eine reine Umbenennung wird. Der Merge bricht diese Gleichheit für die zusammengeführten Fälle: die Eltern-Person ist gelöscht, `eltern_kinder.person_id` zeigt jetzt auf die Mitgliedschafts-Person, während `elternkontakte.id` unverändert bleibt.
+
+**Die Verknüpfung Person ↔ Kind läuft ab jetzt ausschliesslich über `eltern_kinder.person_id`.** Ein Join `elternkontakte e on e.id = p.id` findet zusammengeführte Personen nicht mehr — das betrifft auch die Kontrollabfrage I1 in `etappe1_personen.sql`, die nach dem Merge bewusst leer läuft.
+
+`eltern_kinder.eltern_id` bleibt unangetastet und zeigt weiter auf `elternkontakte`; deshalb bricht in Etappe 2a kein Anwendungscode. Aufgelöst wird `eltern_id` erst in Etappe 4 — **die dort auf `person_id` aufsetzen muss, nicht auf der id-Gleichheit.**
 
 ## Aktueller Stand
 
