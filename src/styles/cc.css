@@ -167,6 +167,11 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 /* ── Formulare ── */
 .cc-field{display:flex;flex-direction:column;gap:5px}
 .cc-input-error{border-color:#C8102E!important;box-shadow:0 0 0 3px rgba(200,16,46,0.1)!important}
+/* Lenkt den Blick auf das Feld, das zuerst ausgefuellt werden muss (z.B. der
+   Mitgliedtyp, von dem die uebrigen Pflichtfelder abhaengen). Bewusst OHNE
+   !important: .cc-input:focus hat hoehere Spezifitaet und soll gewinnen,
+   sobald jemand das Feld anfasst. */
+.cc-input-hervorgehoben{border-color:var(--cc-accent,#FEC604)}
 .cc-error-msg{font-size:11px;color:#C8102E;display:flex;align-items:center;gap:4px;margin-top:3px}
 
 /* ── Section Header ── */

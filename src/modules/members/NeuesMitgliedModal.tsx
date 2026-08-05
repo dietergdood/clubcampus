@@ -229,8 +229,8 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             <label className="cc-label">
               Mitgliedtyp <span className="cc-label-req">*</span>
             </label>
-            <select className="cc-input" value={form.mitgliedtyp} onChange={e => set("mitgliedtyp", e.target.value)}
-              style={!form.mitgliedtyp ? {borderColor:"var(--cc-accent,#FEC604)"} : {}}>
+            <select className={`cc-input${!form.mitgliedtyp ? " cc-input-hervorgehoben" : ""}`}
+              value={form.mitgliedtyp} onChange={e => set("mitgliedtyp", e.target.value)}>
               <option value="">— zuerst wählen —</option>
               {mitgliedtypen.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
