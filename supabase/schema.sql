@@ -421,6 +421,18 @@ CREATE TABLE IF NOT EXISTS "public"."_etappe6_altspalten_mitglieder" (
 ALTER TABLE "public"."_etappe6_altspalten_mitglieder" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."_etappe6b_position_mitglieder" (
+    "id" bigint,
+    "person_id" "uuid",
+    "position" "text",
+    "rueckennr" "text",
+    "gesichert_am" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."_etappe6b_position_mitglieder" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."abstimmung_antworten" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "abstimmung_id" "uuid" NOT NULL,
@@ -964,7 +976,6 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder" (
     "id" bigint NOT NULL,
     "mitgliedtyp" "text" DEFAULT 'Aktivmitglied'::"text",
     "rolle" "text",
-    "position" "text",
     "aktiv" boolean DEFAULT true,
     "spielerpass" "text",
     "js_nr" "text",
@@ -976,7 +987,6 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "fairgate_sync_at" timestamp with time zone,
-    "rueckennr" "text",
     "deaktiviert_am" timestamp with time zone,
     "deaktiviert_von" "text",
     "verein_id" "uuid" NOT NULL,
@@ -3512,6 +3522,9 @@ ALTER TABLE ONLY "public"."wiki_artikel"
 ALTER TABLE "public"."_etappe6_altspalten_mitglieder" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."_etappe6b_position_mitglieder" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."abstimmung_antworten" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4657,6 +4670,12 @@ GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "service_role";
 GRANT ALL ON TABLE "public"."_etappe6_altspalten_mitglieder" TO "anon";
 GRANT ALL ON TABLE "public"."_etappe6_altspalten_mitglieder" TO "authenticated";
 GRANT ALL ON TABLE "public"."_etappe6_altspalten_mitglieder" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."_etappe6b_position_mitglieder" TO "anon";
+GRANT ALL ON TABLE "public"."_etappe6b_position_mitglieder" TO "authenticated";
+GRANT ALL ON TABLE "public"."_etappe6b_position_mitglieder" TO "service_role";
 
 
 

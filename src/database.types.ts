@@ -86,6 +86,30 @@ export type Database = {
         }
         Relationships: []
       }
+      _etappe6b_position_mitglieder: {
+        Row: {
+          gesichert_am: string | null
+          id: number | null
+          person_id: string | null
+          position: string | null
+          rueckennr: string | null
+        }
+        Insert: {
+          gesichert_am?: string | null
+          id?: number | null
+          person_id?: string | null
+          position?: string | null
+          rueckennr?: string | null
+        }
+        Update: {
+          gesichert_am?: string | null
+          id?: number | null
+          person_id?: string | null
+          position?: string | null
+          rueckennr?: string | null
+        }
+        Relationships: []
+      }
       abstimmung_antworten: {
         Row: {
           abstimmung_id: string
@@ -1713,9 +1737,7 @@ export type Database = {
           mitgliedtyp: string | null
           notizen: string | null
           person_id: string
-          position: string | null
           rolle: string | null
-          rueckennr: string | null
           spielerpass: string | null
           updated_at: string | null
           verein_id: string
@@ -1736,9 +1758,7 @@ export type Database = {
           mitgliedtyp?: string | null
           notizen?: string | null
           person_id: string
-          position?: string | null
           rolle?: string | null
-          rueckennr?: string | null
           spielerpass?: string | null
           updated_at?: string | null
           verein_id: string
@@ -1759,9 +1779,7 @@ export type Database = {
           mitgliedtyp?: string | null
           notizen?: string | null
           person_id?: string
-          position?: string | null
           rolle?: string | null
-          rueckennr?: string | null
           spielerpass?: string | null
           updated_at?: string | null
           verein_id?: string

@@ -59,8 +59,12 @@ export function mapMembers(
       alter:age(m.geburtsdatum),
       geschlecht:m.geschlecht||null,
       nationalitaet:m.nationalitaet||"-", nationalitaet2:m.nationalitaet2||null,
-      position:m.position, fairgate_id:m.fairgate_id, js_nr:m.js_nr,
-      spielerpass:m.spielerpass, eintritt:m.eintrittsdatum, rueckennr:m.rueckennr,
+      /* position und rueckennr hingen bis Etappe 6b am Mitglied und galten
+         damit fuer ALLE Teams — ein Spieler in zwei Mannschaften hatte
+         zwangslaeufig dieselbe Position. Sie stehen jetzt an der Kaderzeile
+         (`kader.position`, `kader.rueckennr`), pro Team und Saison. */
+      fairgate_id:m.fairgate_id, js_nr:m.js_nr,
+      spielerpass:m.spielerpass, eintritt:m.eintrittsdatum,
       foto_url:m.foto_url||null, funktionen:m.funktionen||[],
       strasse:m.strasse, heimatort:m.heimatort, ahv_nr:m.ahv_nr,
     };

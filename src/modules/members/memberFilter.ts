@@ -68,7 +68,6 @@ export function filterMembers(
         m.heimatort||"",
         m.nationalitaet||"",
         m.nationalitaet2||"",
-        m.position||"",
         m.fairgate_id||"",
         m.js_nr||"",
         m.spielerpass||"",

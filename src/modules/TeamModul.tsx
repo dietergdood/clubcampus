@@ -97,7 +97,10 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
           name:      `${m.vorname} ${m.nachname}`,
           firstName: m.vorname||"",
           lastName:  m.nachname||"",
-          pos:       m.position||"-",
+          /* Position und Nummer stehen seit Etappe 6b an der Kaderzeile,
+             nicht mehr am Mitglied. Bis TeamModul auf Supabase umgestellt
+             ist, bleiben sie hier leer. */
+          pos:       "-",
           rueckennr: "",
           dob:       m.geburtsdatum||"",
           nat:       m.nationalitaet||"CH",
@@ -405,8 +408,8 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
         .map(m=>({
           id:m.id, name:`${m.vorname} ${m.nachname}`,
           firstName:m.vorname||"", lastName:m.nachname||"",
-          role:m.funktion||"", pos:m.position||"",
-          teams:m.teams||[], rueckennr:m.rueckennr||"",
+          role:m.funktion||"", pos:"",
+          teams:m.teams||[], rueckennr:"",
         }));
     }
     return (ROSTER as any[]).filter((p)=>(p.teams||[]).includes(teamName));
