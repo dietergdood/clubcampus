@@ -18,9 +18,11 @@
    ═══════════════════════════════════════════════════════════════ */
 import { ListView } from "../../shared/list/ListView.tsx";
 import { ALL_COLS } from "./memberConstants.ts";
+import { filterMembers, sortMembers } from "./memberFilter.ts";
+import { buildGroups } from "./memberGrouping.ts";
 import { exportData } from "./memberExportUtils.ts";
 import type { MemberRow } from "./memberMapper.ts";
-import type { ColDef, FilterDef, GroupOption, ListGroup, RenderCell } from "../../shared/list/types.ts";
+import type { ColDef, FilterDef, GroupOption, RenderCell } from "../../shared/list/types.ts";
 import type { Account, Sb } from "../../types.ts";
 
 /* Aus ALL_COLS gezogen statt neu deklariert: gleiche Keys, gleiche
@@ -34,19 +36,22 @@ const COL_DEFS: ColDef[] = SUPPORTER_KEYS
 
 const COL_GROUPS = [{ group: "Supporter", cols: COL_DEFS }];
 
+/* Nur die Filter und Gruppierungen, die bei einem Goenner etwas bedeuten:
+   Mitgliedtyp ist fuer alle derselbe, Teams und Kaderrollen gibt es nicht. */
 const FILTER_DEFS: FilterDef[] = [
   { key: "portal", label: "Portal-Zugang", vals: ["Aktiv", "Kein Zugang"] },
 ];
 
 const GROUP_OPTIONS: GroupOption[] = [
-  { val: "", label: "Keine" },
   { val: "portal", label: "Portal-Zugang" },
-  { val: "ort", label: "Ort" },
+  { val: "ort",    label: "Wohnort" },
 ];
 
 interface SupporterListViewProps {
   supporter: MemberRow[];
   renderCell: RenderCell<MemberRow>;
+  /** Beschriftungen der Portalrollen — dieselben wie in der Mitgliederliste. */
+  rolleLabel: Record<string, string>;
   renderMobile?: (row: MemberRow) => React.ReactNode;
   sb?: Sb;
   account?: Account | null;
@@ -56,7 +61,7 @@ interface SupporterListViewProps {
 }
 
 function SupporterListView({
-  supporter, renderCell, renderMobile, sb, account = null, vereinId = null,
+  supporter, renderCell, rolleLabel, renderMobile, sb, account = null, vereinId = null,
   isAdmin = false, onOpen = null,
 }: SupporterListViewProps) {
   return (
@@ -65,29 +70,14 @@ function SupporterListView({
       emptyTitle="Noch keine Supporter"
       emptySubtitle="Ein Supporter entsteht, wenn ein Elternteil sein letztes Kind verliert und der Verein den Kontakt behalten will."
       rows={supporter}
-      filterFn={(rows, search, filterVals) => {
-        const q = (search || "").trim().toLowerCase();
-        let result = q
-          ? rows.filter(r => [r.name, r.email, r.telefon, r.ort]
-              .some(v => String(v ?? "").toLowerCase().includes(q)))
-          : rows;
-        const portalVals = Array.isArray(filterVals["portal"]) ? filterVals["portal"] : [];
-        if (portalVals.length > 0) result = result.filter(r => portalVals.includes(String(r.portal)));
-        return result;
-      }}
-      buildGroupsFn={(rows, groupBy) => {
-        const key = groupBy?.[0];
-        if (!key) return [] as ListGroup<MemberRow>[];
-        const map = new Map<string, MemberRow[]>();
-        for (const r of rows) {
-          const k = String((r as unknown as Record<string, unknown>)[key] ?? "—") || "—";
-          if (!map.has(k)) map.set(k, []);
-          map.get(k)!.push(r);
-        }
-        return [...map.entries()]
-          .sort((a, b) => a[0].localeCompare(b[0], "de"))
-          .map(([label, members]) => ({ key: label, label, type: key, members, children: null }));
-      }}
+      /* Dieselben Funktionen wie die Mitgliederliste — ein Supporter IST eine
+         MemberRow. Eigene Nachbauten waeren ein zweiter Ort, an dem Suche,
+         Sortierung und Gruppierung auseinanderlaufen koennen. */
+      filterFn={(rows, search, filterVals) => filterMembers(rows, search, filterVals, rolleLabel)}
+      sortFn={sortMembers}
+      buildGroupsFn={(rows, groupBy, groupOrder, filterVals) =>
+        buildGroups(rows, groupBy, rolleLabel, filterVals, null, groupOrder)}
+      multiGroup
       colDefs={COL_DEFS}
       colGroups={COL_GROUPS}
       defaultCols={SUPPORTER_KEYS}
