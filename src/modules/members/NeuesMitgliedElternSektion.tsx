@@ -187,21 +187,12 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
                   {e.form?.beziehung ? ` · ${e.form.beziehung}` : ""}
                 </div>
               </div>
-              {/* Bei einem einzigen Elternteil gibt es nichts zu wählen — er
-                  ist zwangsläufig Hauptkontakt. Der Stern bleibt dann reine
-                  Anzeige, sonst wäre es ein Knopf, der nichts tut. */}
-              {eintraege.length > 1 ? (
-                <button
-                  className={`cc-star-btn${e.hauptkontakt ? " cc-star-btn-on" : ""}`}
-                  onClick={() => setzeHaupt(e.key)}
-                  title={e.hauptkontakt ? "Hauptkontakt" : "Als Hauptkontakt setzen"}>
-                  <TI n="star" size={16}/>
-                </button>
-              ) : (
-                <span className="cc-star-btn cc-star-btn-on" title="Hauptkontakt">
-                  <TI n="star" size={16}/>
-                </span>
-              )}
+              <button
+                className={`cc-star-btn${e.hauptkontakt ? " cc-star-btn-on" : ""}`}
+                onClick={() => setzeHaupt(e.key)}
+                title={e.hauptkontakt ? "Hauptkontakt" : "Als Hauptkontakt setzen"}>
+                <TI n="star" size={16}/>
+              </button>
               <button className="cc-icon-btn-danger" onClick={() => entferne(e.key)} title="Entfernen">
                 <TI n="x" size={15}/>
               </button>
@@ -209,7 +200,7 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
           ))}
         </div>
 
-        {eintraege.length > 1 && modus === "" && (
+        {eintraege.length > 0 && modus === "" && (
           <div className="cc-text-xs cc-text-sub cc-mt-8">
             Der Hauptkontakt bekommt Post und Rechnung. Angeschrieben werden alle.
           </div>
