@@ -191,9 +191,6 @@ BEGIN
 
   IF v_mitglied_id IS NOT NULL THEN
     BEGIN
-      UPDATE public.mitglieder
-         SET hat_portal_zugang = true, updated_at = now()
-       WHERE id = v_mitglied_id;
       INSERT INTO public.mitglieder_aktivitaeten
         (mitglied_id, verein_id, typ, beschreibung, geaendert_von)
       VALUES
@@ -431,6 +428,21 @@ CREATE TABLE IF NOT EXISTS "public"."_etappe6b_position_mitglieder" (
 
 
 ALTER TABLE "public"."_etappe6b_position_mitglieder" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."_etappe6c_altspalten_mitglieder" (
+    "id" bigint,
+    "person_id" "uuid",
+    "hat_portal_zugang" boolean,
+    "eltern" "jsonb",
+    "datenstatus" "text",
+    "notizen" "text",
+    "fairgate_sync_at" timestamp with time zone,
+    "gesichert_am" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."_etappe6c_altspalten_mitglieder" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."abstimmung_antworten" (
@@ -980,13 +992,8 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder" (
     "spielerpass" "text",
     "js_nr" "text",
     "fairgate_id" "text",
-    "eltern" "jsonb" DEFAULT '[]'::"jsonb",
-    "hat_portal_zugang" boolean DEFAULT false,
-    "datenstatus" "text" DEFAULT 'Vollständig'::"text",
-    "notizen" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "fairgate_sync_at" timestamp with time zone,
     "deaktiviert_am" timestamp with time zone,
     "deaktiviert_von" "text",
     "verein_id" "uuid" NOT NULL,
@@ -2560,10 +2567,6 @@ CREATE INDEX "idx_mitglieder_fairgate" ON "public"."mitglieder" USING "btree" ("
 
 
 
-CREATE INDEX "idx_mitglieder_portal" ON "public"."mitglieder" USING "btree" ("hat_portal_zugang");
-
-
-
 CREATE INDEX "idx_mitglieder_rolle" ON "public"."mitglieder" USING "btree" ("rolle");
 
 
@@ -3523,6 +3526,9 @@ ALTER TABLE "public"."_etappe6_altspalten_mitglieder" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."_etappe6b_position_mitglieder" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."_etappe6c_altspalten_mitglieder" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."abstimmung_antworten" ENABLE ROW LEVEL SECURITY;
@@ -4676,6 +4682,12 @@ GRANT ALL ON TABLE "public"."_etappe6_altspalten_mitglieder" TO "service_role";
 GRANT ALL ON TABLE "public"."_etappe6b_position_mitglieder" TO "anon";
 GRANT ALL ON TABLE "public"."_etappe6b_position_mitglieder" TO "authenticated";
 GRANT ALL ON TABLE "public"."_etappe6b_position_mitglieder" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."_etappe6c_altspalten_mitglieder" TO "anon";
+GRANT ALL ON TABLE "public"."_etappe6c_altspalten_mitglieder" TO "authenticated";
+GRANT ALL ON TABLE "public"."_etappe6c_altspalten_mitglieder" TO "service_role";
 
 
 

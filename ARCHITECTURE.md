@@ -527,6 +527,34 @@ Vier Codestellen nannten sie trotzdem noch. Die heikelste war `.order("nachname"
 
 `datenstatus`, `notizen`, `fairgate_sync_at`, `hat_portal_zugang` und `eltern` — ungeprüft. `hat_portal_zugang` wird an 13 Stellen geschrieben, unter anderem vom Registrierungs-Trigger. `eltern` ist die alte JSONB-Momentaufnahme der Elternkontakte, die nie gepflegt wurde (deshalb lief die Eltern-Datenprüfung ins Leere) und seit Etappe 3 doppelt tot ist.
 
+### Etappe 6b: Position und Nummer gehören ans Team (05.08.2026)
+
+Beide hingen am Mitglied und galten damit für **alle** Teams. Im Bestand war das sichtbar: Adrian Bürgi steht in der 1. und der 2. Mannschaft und war zwangsläufig in beiden „Linksverteidiger". Dasselbe bei Adrian Kern, Adrian Vogel und Heinz Berger.
+
+`kader` hatte beide Spalten bereits, und `KaderModul` wie `PersonTeams` schrieben längst dorthin — pro Team **und** Saison. Die Spalten in `mitglieder` waren Überbleibsel.
+
+**Warum das ohne Migration ging:** 484 Mitglieder trugen eine Position, aber nur 34 standen überhaupt in einem Kader — `KaderModul` läuft noch auf `demoData`. Ein Umzug hätte 450 Werte verloren. Da es Testdaten sind, die der Fairgate-Import ersetzt, fielen die Spalten ohne Übernahme; die 34 vorhandenen Kaderzeilen bekamen ihre Position noch.
+
+**Bei einem Verein mit echten Daten wäre das anders:** Dort muss zuerst die Kader-Migration laufen, damit jede Zuweisung existiert, und erst dann die Position pro Kaderzeile übernommen werden.
+
+### Etappe 6c: die letzten fünf (05.08.2026)
+
+| Spalte | Warum sie ging |
+|---|---|
+| `hat_portal_zugang` | Kopie derselben Aussage wie `benutzer.mitglied_id` — konnte veralten |
+| `eltern` (jsonb) | Momentaufnahme der Elternkontakte, seit Etappe 3 doppelt tot |
+| `datenstatus` | ersetzt durch `profil_geprueft_at` |
+| `notizen` | ersetzt durch die Tabelle `mitglieder_notizen` |
+| `fairgate_sync_at` | null Fundstellen; der Fairgate-Umzug ist ein einmaliger CSV-Import |
+
+**`hat_portal_zugang` war der einzige mit Gewicht.** Ein Kennzeichen am Mitglied, das dieselbe Frage beantwortete wie der Join auf `benutzer` — und veralten konnte: Wurde ein Konto ausserhalb des Portals gelöscht, blieb es auf `true` stehen. Der Portal-Status kommt jetzt aus dem Join, den `useAppData` ohnehin macht (`hat_benutzer` / `benutzer_deaktiviert`). `portalZugangAktivieren()` und `-Deaktivieren()` schreiben nur noch an `benutzer`, und `handle_new_user()` setzt es nicht mehr.
+
+**`eltern` enthielt 391 gefüllte Zeilen** — anders als vermutet nicht leer, aber mit dem falschen Inhalt: Name, E-Mail, Telefon und Beziehung, **kein `benutzer_id`**. Der Filter `(m.eltern||[]).some(e => e.benutzer_id === dbUser.id)` konnte deshalb nie einen Treffer haben. Ergebnis dasselbe wie bei einer leeren Spalte: Eltern bekamen nie einen Datenprüfungs-Hinweis für ihre Kinder.
+
+**Diese Lücke bleibt bewusst offen.** Sie steht jetzt als `kinderVonElternteil()` an **einer** Stelle in `getProfilCheck` statt an dreien und liefert eine leere Liste, mit Begründung im Kommentar. Sie über `eltern_kinder` richtig zu lesen ist eine Verhaltensänderung — Eltern sähen plötzlich Hinweise, die sie nie gesehen haben — und deshalb ein eigener Schritt.
+
+`datenstatus` war auch inhaltlich kaputt: drei Werte in uneinheitlicher Schreibweise („geprüft" 316×, „ausstehend" 183×, „Vollständig" 17×), ohne feste Werteliste.
+
 ### Die Sicht `portal_zugang` — die eine Ausnahme
 
 Die Portal-Spalte der Elternliste kam bis Etappe 3 aus `elternkontakte.benutzer_id`, wo nur eine `verein_id`-Policy liegt — jeder Eingeloggte konnte sie lesen. Seit Etappe 3 kommt sie aus `benutzer`, wo `benutzer_select_admin`/`_self` gelten: Ein Trainer bekommt beim Join eine leere Menge und die Liste zeigt ihm für **alle** „Kein Zugang" — ohne Fehler, ohne Meldung.
@@ -578,8 +606,10 @@ Sobald serverseitig seitenweise geladen wird — bei 900 Mitgliedern unnötig, b
 | 4 | `benutzer` an die Person, Registrierung repariert | ✅ **Fertig** (05.08.2026) — `supabase/etappe4_benutzer.sql` |
 | 5 | Supporter als Mitgliedtyp, eine aktive Mitgliedschaft pro Person | ✅ **Fertig** (05.08.2026) — `supabase/etappe5_supporter.sql` |
 | 6a | Personenfelder aus `mitglieder` streichen | ✅ **Fertig** (05.08.2026) — 18 Spalten, `supabase/etappe6a_altspalten_mitglieder.sql` |
-| 6b | `position` und `rueckennr` nach `kader` | ⏳ Offen — 146 Fundstellen, eigener Schritt |
-| 6c | `datenstatus`, `notizen`, `fairgate_sync_at`, `hat_portal_zugang`, `eltern` | ⏳ Offen |
+| 6b | `position` und `rueckennr` nach `kader` | ✅ **Fertig** (05.08.2026) — `supabase/etappe6b_position_rueckennr.sql` |
+| 6c | `hat_portal_zugang`, `eltern`, `datenstatus`, `notizen`, `fairgate_sync_at` | ✅ **Fertig** (05.08.2026) — `supabase/etappe6c_restliche_altspalten.sql` |
+
+**Damit ist der Personen-Umbau abgeschlossen.** `mitglieder` ist von 39 auf 14 Spalten geschrumpft und beschreibt nur noch eine Mitgliedschaft: `person_id`, `mitgliedtyp`, `rolle`, `aktiv`, `spielerpass`, `js_nr`, `fairgate_id`, `eintrittsdatum`, `deaktiviert_am`/`_von`, `verein_id` und die Zeitstempel. `person_id` ist `NOT NULL`.
 
 Nach **jeder** Etappe müssen `npm run typecheck`, `npm run build` und `npm test` grün sein. Etappe 1 war vollständig additiv und hat die Testzahl nicht verändert.
 

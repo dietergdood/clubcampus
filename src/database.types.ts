@@ -110,6 +110,39 @@ export type Database = {
         }
         Relationships: []
       }
+      _etappe6c_altspalten_mitglieder: {
+        Row: {
+          datenstatus: string | null
+          eltern: Json | null
+          fairgate_sync_at: string | null
+          gesichert_am: string | null
+          hat_portal_zugang: boolean | null
+          id: number | null
+          notizen: string | null
+          person_id: string | null
+        }
+        Insert: {
+          datenstatus?: string | null
+          eltern?: Json | null
+          fairgate_sync_at?: string | null
+          gesichert_am?: string | null
+          hat_portal_zugang?: boolean | null
+          id?: number | null
+          notizen?: string | null
+          person_id?: string | null
+        }
+        Update: {
+          datenstatus?: string | null
+          eltern?: Json | null
+          fairgate_sync_at?: string | null
+          gesichert_am?: string | null
+          hat_portal_zugang?: boolean | null
+          id?: number | null
+          notizen?: string | null
+          person_id?: string | null
+        }
+        Relationships: []
+      }
       abstimmung_antworten: {
         Row: {
           abstimmung_id: string
@@ -1724,18 +1757,13 @@ export type Database = {
         Row: {
           aktiv: boolean | null
           created_at: string | null
-          datenstatus: string | null
           deaktiviert_am: string | null
           deaktiviert_von: string | null
           eintrittsdatum: string | null
-          eltern: Json | null
           fairgate_id: string | null
-          fairgate_sync_at: string | null
-          hat_portal_zugang: boolean | null
           id: number
           js_nr: string | null
           mitgliedtyp: string | null
-          notizen: string | null
           person_id: string
           rolle: string | null
           spielerpass: string | null
@@ -1745,18 +1773,13 @@ export type Database = {
         Insert: {
           aktiv?: boolean | null
           created_at?: string | null
-          datenstatus?: string | null
           deaktiviert_am?: string | null
           deaktiviert_von?: string | null
           eintrittsdatum?: string | null
-          eltern?: Json | null
           fairgate_id?: string | null
-          fairgate_sync_at?: string | null
-          hat_portal_zugang?: boolean | null
           id?: number
           js_nr?: string | null
           mitgliedtyp?: string | null
-          notizen?: string | null
           person_id: string
           rolle?: string | null
           spielerpass?: string | null
@@ -1766,18 +1789,13 @@ export type Database = {
         Update: {
           aktiv?: boolean | null
           created_at?: string | null
-          datenstatus?: string | null
           deaktiviert_am?: string | null
           deaktiviert_von?: string | null
           eintrittsdatum?: string | null
-          eltern?: Json | null
           fairgate_id?: string | null
-          fairgate_sync_at?: string | null
-          hat_portal_zugang?: boolean | null
           id?: number
           js_nr?: string | null
           mitgliedtyp?: string | null
-          notizen?: string | null
           person_id?: string
           rolle?: string | null
           spielerpass?: string | null
