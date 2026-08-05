@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 05.08.2026: 280 grün, 2 skipped, 0 rot (21 Testdateien).
+Stand 05.08.2026: 286 grün, 2 skipped, 0 rot (22 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -123,6 +123,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 - Rollenableitung nie duplizieren → `ableitRolle()` / `ROLLE_PRIORITAET` aus `domains/roles/roleUtils.ts`.
 - **Verengungen als `Pick<Basistyp, "feld">`**, nicht als eigenes Interface. Ein handgeschriebenes Interface mit denselben Feldern läuft still auseinander, sobald der Basistyp sich ändert. Der Name muss den Inhalt tragen: `KaderRolleMitLabel` sagt, was drin ist — `RolleOption` sagt es nicht. (Die vier fast gleichen Kaderrollen-Typen unter „Bekannte Defekte" sind genau dieser Fehler, viermal.)
 - **`verein_id` bei Service-Inserts als eigener Pflichtparameter**, nicht als optionales Feld im Objekt: `insertMitglied(sb, fields, vereinId)`, wobei `fields` den Typ `Omit<TablesInsert<"mitglieder">, "verein_id">` hat. Als Objektfeld ist es vergessbar, und die DB lehnt die Zeile dann still ab (siehe verein_id-Regel oben). Als Parameter kann der Compiler es erzwingen. So gebaut: `insertMitglied`, `insertAnsicht`, `insertNotiz`, `insertElternkontakt`.
+- **Modale schliessen nicht mehr beim Klick daneben, sobald etwas eingegeben wurde.** `ModalOrSheet` merkt sich das selbst über `input`/`change`-Ereignisse, die bis zum Container blubbern — kein Modal muss etwas melden, und bei einem neuen kann es niemand vergessen. Ein reines Anzeige-Modal löst nie ein solches Ereignis aus und schliesst weiterhin. `immerSchliessbar` hebt die Sperre auf, wird im Normalfall nicht gebraucht.
 - Neue UI-Komponenten in `COMPONENT_REGISTRY` (`src/shared/componentRegistry.js`) eintragen — daraus generiert sich der Design-System-Tab in der Portalverwaltung.
 - Nach dem Auslagern einer Komponente: alle Props gegen den Parent prüfen und Factory-Funktionen (`makeXxx`) auf `return` kontrollieren — der Build findet fehlende Runtime-Props nicht.
 
