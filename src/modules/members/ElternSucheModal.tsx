@@ -39,7 +39,8 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       if (!sb || !vereinId) return;
-      const data = await sucheElternkontakte(sb, vereinId, query);
+      /* raw.id: das Kind selbst und alle, die bereits Kind sind, fallen raus. */
+      const data = await sucheElternkontakte(sb, vereinId, query, raw?.id ?? null);
       setResults(data);
     }, 300);
     return () => clearTimeout(timerRef.current);
@@ -127,7 +128,12 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
                     <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>{initials}</div>
                     <div className="cc-flex-1 cc-col cc-gap-4">
                       <div className="cc-text-bold cc-text-sm">{name}</div>
-                      {e.beziehung&&<div className="cc-text-sm cc-text-sub">{e.beziehung}{e.email?` · ${e.email}`:""}</div>}
+                      {/* E-Mail steht auf einer eigenen Zeile: haengte sie an der
+                          Beziehung, verschwaende sie bei jeder Person, die noch
+                          kein Elternteil ist — also genau bei denen, die man hier
+                          sucht. */}
+                      {e.beziehung&&<div className="cc-text-sm cc-text-sub">{e.beziehung}</div>}
+                      <div className="cc-text-sm cc-text-sub">{e.email||"Keine E-Mail"}</div>
                       {kinder.map((k,i)=>(
                         <div key={i} className="cc-text-sm cc-text-sub">
                           <TI n="users" size={12}/> {k.mitglieder?.vorname} {k.mitglieder?.nachname}

@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 05.08.2026 (nach Etappe 6): 362 grün, 2 skipped, 0 rot (25 Testdateien).
+Stand 05.08.2026 (nach Session 23): 371 grün, 2 skipped, 0 rot (27 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -251,6 +251,28 @@ Der Tab steht (`SupporterListView`), aber Spalten, Filter und gespeicherte Ansic
 - **`savedViews`**: bewusst weggelassen — die Vorlagen „Standard" und „Verwaltung" bestehen aus Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen). Eigene Ansichten speichern funktioniert, `ListView` legt sie unter `viewTyp="supporter"` ab. Eigene Vorlagen fehlen.
 
 Filter, Sortierung und Gruppierung laufen über dieselben Funktionen wie die Mitgliederliste (`filterMembers`, `sortMembers`, `buildGroups`) — ein Supporter **ist** eine `MemberRow`. Das soll so bleiben; zu überarbeiten ist die Auswahl, nicht die Mechanik.
+
+### `mitglieder_fairgate_id_key` ist global unique
+
+Fairgate-Nummern werden **pro Verein** vergeben. Der Schlüssel steht aber auf
+`UNIQUE (fairgate_id)` — beim zweiten Verein kollidieren `FG-00001` und
+`FG-00001`. Gehört zu den dreizehn Schlüsseln, die am 05.08.2026 auf
+`(verein_id, …)` umgestellt wurden, und ist durchgerutscht.
+
+Umstellen auf `(verein_id, fairgate_id)`, bevor ein zweiter Verein dazukommt.
+Beim Durchsehen der übrigen `UNIQUE`-Constraints war es der einzige echte Fall;
+`api_verbindungen_key_key` ist absichtlich global (ein API-Schlüssel ist ein
+Geheimnis und muss projektweit eindeutig sein).
+
+### Von Hand gesetzte Rollen werden still überschrieben
+
+Der Portal-Tab erlaubt, die Rolle direkt zu setzen — `updateMitgliedRolle()`
+schreibt sie ohne Ableitung. Läuft danach `ableitUndSaveRolle()` (Kader-, Team-
+oder Funktionsänderung), ist die Einstellung weg, ohne dass es jemand merkt.
+
+Zu entscheiden: Gewinnt die Ableitung immer? Dann gehört das im Portal so
+beschriftet — „gilt bis zur nächsten Änderung". Oder bleibt eine manuell
+gesetzte Rolle? Dann braucht es ein Kennzeichen dafür.
 
 ### ⚠ Zu Ende denken: Was ist ein Supporter?
 

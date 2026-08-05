@@ -223,17 +223,56 @@ export async function fetchKinderVollstaendigFuerElternteil(sb: SbClient, person
    vorhandene Kinder: wer heute Aktivmitglied ist und morgen als Vater
    eines Juniors dazukommt, ist dieselbe Person und soll gefunden werden.
    Genau dafuer wurden die Personen in Etappe 2a zusammengefuehrt. */
-export async function sucheElternkontakte(sb: SbClient, vereinId: string, query: string) {
+export async function sucheElternkontakte(
+  sb: SbClient,
+  vereinId: string,
+  query: string,
+  /** Das Kind, fuer das gesucht wird. Es selbst darf nicht als sein eigener
+      Elternteil erscheinen, und wer bereits ein Kind IST, ebenso wenig. */
+  fuerMitgliedId?: number | null,
+) {
   const q = (query || "").trim();
   if (!q) return [];
-  const { data, error } = await sb.from("personen")
+
+  /* Mehrere Woerter: jedes muss irgendwo treffen, die Reihenfolge ist egal.
+     „adrian kaiser" und „kaiser adrian" finden dieselbe Person.
+     Technisch: mehrere .or()-Aufrufe werden von PostgREST UND-verknuepft,
+     innerhalb eines Aufrufs gilt ODER. */
+  const woerter = q.split(/\s+/).filter(Boolean).slice(0, 4);
+
+  let abfrage = sb.from("personen")
     .select("id, vorname, nachname, email, eltern_kinder(mitglied_id, beziehung, mitglieder:mitglied_id(id, personen(vorname, nachname)))")
-    .eq("verein_id", vereinId)
-    .or(`vorname.ilike.%${q}%,nachname.ilike.%${q}%,email.ilike.%${q}%`)
+    .eq("verein_id", vereinId);
+  for (const w of woerter) {
+    abfrage = abfrage.or(`vorname.ilike.%${w}%,nachname.ilike.%${w}%,email.ilike.%${w}%`);
+  }
+
+  const { data, error } = await abfrage
     .order("nachname", { ascending: true })
-    .limit(10);
+    .limit(20);
   if (error) console.error("sucheElternkontakte error:", error);
-  return (data || []).map(p => ({
+
+  /* Wer selbst ein Kind ist, kommt als Elternteil nicht in Frage — sonst
+     liesse sich Otto Kaiser als Elternteil seines eigenen Vaters eintragen.
+     Und das Kind, fuer das gerade gesucht wird, erst recht nicht. */
+  let eigenePersonId: string | null = null;
+  if (fuerMitgliedId) {
+    const { data: kind } = await sb.from("mitglieder")
+      .select("person_id").eq("id", fuerMitgliedId).maybeSingle();
+    eigenePersonId = kind?.person_id ?? null;
+  }
+  const { data: kinderZeilen } = await sb.from("eltern_kinder")
+    .select("mitglieder:mitglied_id(person_id)");
+  const istKind = new Set(
+    (kinderZeilen || [])
+      .map(z => (z.mitglieder as { person_id?: string | null } | null)?.person_id)
+      .filter((v): v is string => Boolean(v)),
+  );
+
+  return (data || [])
+    .filter(p => p.id !== eigenePersonId && !istKind.has(p.id))
+    .slice(0, 10)
+    .map(p => ({
     id:        p.id,
     vorname:   p.vorname,
     nachname:  p.nachname,
