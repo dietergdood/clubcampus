@@ -357,9 +357,14 @@ import { MemberDetail } from "../MitgliederModul";
 import { PersonSummary } from "../../shared/person/PersonSummary";
 ```
 
-## Personen-Modell (laufendes Vorhaben, Stand 04.08.2026)
+## Personen-Modell (abgeschlossen 05.08.2026)
 
-### Anlass
+> Alle sechs Etappen sind fertig. Der Abschnitt beschreibt weiterhin die
+> Ausgangslage im Präsens — so ist nachvollziehbar, wogegen der Umbau
+> gebaut wurde. Was heute gilt, steht in den Etappen-Abschnitten darunter
+> und in `docs/session23_abschluss.md`.
+
+### Anlass (Stand vor dem Umbau)
 
 Personen stehen doppelt im System. Ein Vater, der selbst Aktivmitglied ist und dessen Sohn Junior ist, hat eine Zeile in `mitglieder` **und** eine in `elternkontakte`. Bei FCH ist das häufig. Folgen:
 
@@ -981,7 +986,7 @@ Fokus: [optional]
 
 ---
 
-## Session 17 — 23.07.2026
+## Session 17 (Fortsetzung) — 23.07.2026
 
 ### Abgeschlossene Arbeiten
 

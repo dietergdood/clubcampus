@@ -132,5 +132,5 @@ Stufe 4 räumt das Frontend auf: `administration` und `vorstand` aus `APP_ZUGRIF
 Siehe `CLAUDE.md`. Für diesen Auftrag besonders:
 
 - Analysieren, Plan zeigen, auf Freigabe warten, dann umsetzen.
-- Keine Datei ohne `npm run typecheck` (0 neue Fehler), `npm run build` (grün), `npm test` (359 grün).
+- Keine Datei ohne `npm run typecheck` (0 neue Fehler), `npm run build` (grün), `npm test` (371 grün).
 - Deutsch (Schweiz) in Kommentaren, kein ß.

@@ -1,3 +1,6 @@
+> **ERLEDIGT am 05.08.2026.** Dieser Auftrag ist abgearbeitet — SQL ausgeführt,
+> Code umgestellt, im Browser geprüft. Bleibt als Beleg stehen.
+
 # Auftrag für Claude Code — Etappe 3: Elternkontakte auf `personen` umstellen
 
 ## Ausgangslage
@@ -113,6 +116,6 @@ npx supabase gen types typescript --linked > src/database.types.ts
 `CLAUDE.md`. Für diesen Auftrag besonders:
 
 - Analysieren, Plan zeigen, auf Freigabe warten, dann umsetzen.
-- Keine Datei ohne `npm run typecheck` (0 neue Fehler), `npm run build` (grün), `npm test` (315 grün).
+- Keine Datei ohne `npm run typecheck` (0 neue Fehler), `npm run build` (grün), `npm test` (371 grün).
 - Nach der Strukturänderung: Dump **und** Typen nachziehen. `database.types.ts` lief am 05.08. dreimal hinterher.
 - Deutsch (Schweiz) in Kommentaren, kein ß.
