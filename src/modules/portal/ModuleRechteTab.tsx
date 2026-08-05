@@ -105,7 +105,7 @@ export function ModuleRechteTab({supabase,loading,isMobile,mobileKachel,tab,vere
                         rows.push({modul:m.key,rolle,hat_zugriff:hatZugriff,stufe,verein_id:vereinId});
                       });
                     });
-                    const{error}=await supabase.from("modul_rechte").upsert(rows,{onConflict:"modul,rolle"});
+                    const{error}=await supabase.from("modul_rechte").upsert(rows,{onConflict:"verein_id,modul,rolle"});
                     if(error){setSaveMsg("Fehler: "+error.message);setTimeout(()=>setSaveMsg(""),3000);return;}
                   }
                   try{localStorage.setItem("fch-module-rechte",JSON.stringify(moduleRechte));

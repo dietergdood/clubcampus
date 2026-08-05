@@ -422,7 +422,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
        zu, den es hier nicht gibt — der Parameter heisst `rolle`. */
     if(!supabase||!vereinId) return;
     const feldLabel=felder.find(f=>f.feld_key===feldKey)?.feld_label||feldKey;
-    await supabase.from("feldsichtbarkeit").upsert({feld_key:feldKey,role:rolle,sichtbar,feld_label:feldLabel,verein_id:vereinId},{onConflict:"feld_key,role"});
+    await supabase.from("feldsichtbarkeit").upsert({feld_key:feldKey,role:rolle,sichtbar,feld_label:feldLabel,verein_id:vereinId},{onConflict:"verein_id,feld_key,role"});
     setFelder(prev=>prev.map(f=>f.feld_key===feldKey&&f.role===rolle?{...f,sichtbar}:f));
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
@@ -445,7 +445,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
       /* In Supabase speichern — verein_id ist in module_config NOT NULL und
          fehlte hier, das Upsert-Insert fiel durch. */
       if(supabase&&vereinId) supabase.from("module_config")
-        .upsert({modul:key,aktiv:neu[key]!==false,verein_id:vereinId},{onConflict:"modul"})
+        .upsert({modul:key,aktiv:neu[key]!==false,verein_id:vereinId},{onConflict:"verein_id,modul"})
         .then(({error})=>{ if(error) console.warn("[FCH] module_config:", error.message); });
       return neu;
     });

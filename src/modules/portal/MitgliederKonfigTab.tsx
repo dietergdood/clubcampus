@@ -81,7 +81,7 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
        Upsert-Insert schlug fehl und die Matrix liess sich nicht ändern. */
     if(!supabase||!vereinId) return;
     const neu=!aktuell;
-    await supabase.from("rolle_pflichtfelder").upsert({rolle,feld,pflicht:neu,verein_id:vereinId},{onConflict:"rolle,feld"});
+    await supabase.from("rolle_pflichtfelder").upsert({rolle,feld,pflicht:neu,verein_id:vereinId},{onConflict:"verein_id,rolle,feld"});
     const{data}=await supabase.from("rolle_pflichtfelder").select("*");
     if(data) setRollePflichtfelder(data);
   }
@@ -90,7 +90,7 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
     /* verein_id ist in mitgliedtyp_pflichtfelder NOT NULL — siehe toggleRolle. */
     if(!supabase||!vereinId) return;
     const neu=!aktuell;
-    await supabase.from("mitgliedtyp_pflichtfelder").upsert({mitgliedtyp,feld,pflicht:neu,verein_id:vereinId},{onConflict:"mitgliedtyp,feld"});
+    await supabase.from("mitgliedtyp_pflichtfelder").upsert({mitgliedtyp,feld,pflicht:neu,verein_id:vereinId},{onConflict:"verein_id,mitgliedtyp,feld"});
     const{data}=await supabase.from("mitgliedtyp_pflichtfelder").select("*");
     if(data) setMitgliedtypPflichtfelder(data);
   }
