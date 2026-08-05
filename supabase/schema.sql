@@ -208,7 +208,7 @@ ALTER FUNCTION "public"."handle_user_login"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
-  SELECT COALESCE(role IN ('administrator','administration'), false)
+  SELECT COALESCE(ist_admin OR role = 'administration', false)
   FROM benutzer WHERE id = auth.uid() LIMIT 1;
 $$;
 
@@ -220,7 +220,7 @@ CREATE OR REPLACE FUNCTION "public"."is_admin_or_above"() RETURNS boolean
     LANGUAGE "sql" STABLE
     AS $$
   select coalesce(
-    (select role in ('administrator','administration') from benutzer where id = auth.uid()),
+    (select ist_admin or role = 'administration' from benutzer where id = auth.uid()),
     false
   )
 $$;
@@ -486,11 +486,16 @@ CREATE TABLE IF NOT EXISTS "public"."benutzer" (
     "vorname" "text",
     "nachname" "text",
     "telefon" "text",
-    "person_id" "uuid"
+    "person_id" "uuid",
+    "ist_admin" boolean DEFAULT false NOT NULL
 );
 
 
 ALTER TABLE "public"."benutzer" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."benutzer"."ist_admin" IS 'Systemzugang (Portalverwaltung, Rechte, Vereinsdaten). Wird NIE von ableitUndSaveRolle() ueberschrieben — anders als role, das ein berechneter Wert ist.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."benutzer_funktionen" (
@@ -2369,6 +2374,10 @@ ALTER TABLE ONLY "public"."vereine"
 
 ALTER TABLE ONLY "public"."wiki_artikel"
     ADD CONSTRAINT "wiki_artikel_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "benutzer_ist_admin_idx" ON "public"."benutzer" USING "btree" ("verein_id") WHERE "ist_admin";
 
 
 
