@@ -67,31 +67,33 @@ export interface Account {
 }
 
 // ── Mitglied ─────────────────────────────────────────────────────
-/* Basis kommt aus dem generierten Schema — so kann der Typ nicht mehr von
-   der Datenbank abdriften. Ergänzt werden nur Felder, die die App beim
-   Laden dazurechnet (siehe loadDbMitglieder in domains/app/useAppData).
+/* Die Personenfelder, wie `flacheZeile()` sie in die Mitgliederzeile
+   hineinschreibt (PERSON_FELDER in domains/person/personService).
 
-   eltern überschreibt die gleichnamige Json-Spalte. ⚠ Das Feld wird von
-   `loadDbMitglieder()` NIE befüllt — die Leser in getProfilCheck,
-   PlatzhalterModul und TeamModul laufen deshalb immer ins Leere. Das ist
-   ein eigener Schritt nach Etappe 3, nicht Teil des Eltern-Umbaus;
-   bis dahin bleibt der Typ auf das reduziert, was gelesen wird. */
-/* Die FLACHE Mitgliederzeile, wie sie aus der Fassade kommt — Mitgliedschaft
-   plus Personenfelder in einem Objekt (domains/person/personService).
+   Einzeln aufgezaehlt statt die beiden Tabellentypen zu verschneiden:
+   `id`, `verein_id` und `created_at` gibt es in BEIDEN, und im Schnitt
+   wird aus `id?: never` (mitglieder) und `id?: string` (personen) ein
+   `never` — jedes Objekt waere dann unzuweisbar. */
+type PersonenFelder = Partial<Pick<Tables<'personen'>,
+  'vorname' | 'nachname' | 'email' | 'telefon' |
+  'strasse' | 'plz' | 'ort' | 'kanton' | 'land' |
+  'geburtsdatum' | 'geschlecht' |
+  'nationalitaet' | 'nationalitaet2' | 'heimatort' |
+  'ahv_nr' | 'foto_url' | 'funktionen' | 'profil_geprueft_at'>>;
+
+/* Die FLACHE Mitgliederzeile, wie sie aus der Fassade kommt: Mitgliedschaft
+   plus Personenfelder in einem Objekt.
 
    Seit Etappe 6a (05.08.2026) stehen die Personenfelder NICHT mehr in
-   `mitglieder`; `Tables<'mitglieder'>` allein trifft die Form also nicht
-   mehr. Sie kommen hier aus `Tables<'personen'>` dazu — dieselbe Quelle,
-   aus der `flacheZeile()` sie liest, damit Typ und Laufzeit nicht
-   auseinanderlaufen. */
-export interface Mitglied
-  extends Omit<Tables<'mitglieder'>, 'eltern'>,
-          Partial<Pick<Tables<'personen'>,
-            'vorname' | 'nachname' | 'email' | 'telefon' |
-            'strasse' | 'plz' | 'ort' | 'kanton' | 'land' |
-            'geburtsdatum' | 'geschlecht' |
-            'nationalitaet' | 'nationalitaet2' | 'heimatort' |
-            'ahv_nr' | 'foto_url' | 'funktionen' | 'profil_geprueft_at'>> {
+   `mitglieder` — `Tables<'mitglieder'>` allein trifft die Form also nicht
+   mehr.
+
+   `eltern` ueberschreibt die gleichnamige Json-Spalte. ⚠ Das Feld wird von
+   `loadDbMitglieder()` NIE befuellt — die Leser in getProfilCheck,
+   PlatzhalterModul und TeamModul laufen deshalb ins Leere. Eigener Schritt
+   (Etappe 6c); bis dahin bleibt der Typ auf das reduziert, was gelesen
+   wird. */
+export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'>, PersonenFelder {
   eltern?: { benutzer_id?: string | null }[];
   // Von der App berechnet, nicht in der Tabelle
   kader_rollen?: string[];
@@ -104,8 +106,8 @@ export interface Mitglied
 /* Aenderungs- und Einfuege-Objekte fuer ein Mitglied — FLACH, wie die
    Formulare sie liefern. `verteileFelder()` in personService teilt sie auf
    `personen` und `mitglieder` auf; die Aufrufer sollen davon nichts wissen. */
-export type MitgliedUpdate = TablesUpdate<'mitglieder'> & Partial<TablesUpdate<'personen'>>;
-export type MitgliedInsert = Omit<TablesInsert<'mitglieder'>, 'verein_id'> & Partial<TablesInsert<'personen'>>;
+export type MitgliedUpdate = TablesUpdate<'mitglieder'> & PersonenFelder;
+export type MitgliedInsert = Omit<TablesInsert<'mitglieder'>, 'verein_id'> & PersonenFelder;
 
 export interface KaderEintrag {
   team: { name: string | null; kurz: string | null };
