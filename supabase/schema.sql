@@ -1953,12 +1953,12 @@ ALTER TABLE ONLY "public"."elternkontakte"
 
 
 ALTER TABLE ONLY "public"."feldsichtbarkeit"
-    ADD CONSTRAINT "feldsichtbarkeit_feld_key_role_key" UNIQUE ("feld_key", "role");
+    ADD CONSTRAINT "feldsichtbarkeit_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."feldsichtbarkeit"
-    ADD CONSTRAINT "feldsichtbarkeit_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "feldsichtbarkeit_verein_key" UNIQUE ("verein_id", "feld_key", "role");
 
 
 
@@ -2008,12 +2008,12 @@ ALTER TABLE ONLY "public"."kader"
 
 
 ALTER TABLE ONLY "public"."kader_rollen"
-    ADD CONSTRAINT "kader_rollen_name_key" UNIQUE ("name");
+    ADD CONSTRAINT "kader_rollen_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."kader_rollen"
-    ADD CONSTRAINT "kader_rollen_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "kader_rollen_verein_name_key" UNIQUE ("verein_id", "name");
 
 
 
@@ -2093,22 +2093,22 @@ ALTER TABLE ONLY "public"."mitglieder_team_details"
 
 
 ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
-    ADD CONSTRAINT "mitgliedtyp_pflichtfelder_mitgliedtyp_feld_key" UNIQUE ("mitgliedtyp", "feld");
-
-
-
-ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
     ADD CONSTRAINT "mitgliedtyp_pflichtfelder_pkey" PRIMARY KEY ("id");
 
 
 
-ALTER TABLE ONLY "public"."mitgliedtypen"
-    ADD CONSTRAINT "mitgliedtypen_name_key" UNIQUE ("name");
+ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
+    ADD CONSTRAINT "mitgliedtyp_pflichtfelder_verein_key" UNIQUE ("verein_id", "mitgliedtyp", "feld");
 
 
 
 ALTER TABLE ONLY "public"."mitgliedtypen"
     ADD CONSTRAINT "mitgliedtypen_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."mitgliedtypen"
+    ADD CONSTRAINT "mitgliedtypen_verein_name_key" UNIQUE ("verein_id", "name");
 
 
 
@@ -2123,7 +2123,7 @@ ALTER TABLE ONLY "public"."modul_benutzer"
 
 
 ALTER TABLE ONLY "public"."modul_rechte"
-    ADD CONSTRAINT "modul_rechte_pkey" PRIMARY KEY ("modul", "rolle");
+    ADD CONSTRAINT "modul_rechte_pkey" PRIMARY KEY ("verein_id", "modul", "rolle");
 
 
 
@@ -2148,7 +2148,7 @@ ALTER TABLE ONLY "public"."module_berechtigungen"
 
 
 ALTER TABLE ONLY "public"."module_config"
-    ADD CONSTRAINT "module_config_pkey" PRIMARY KEY ("modul");
+    ADD CONSTRAINT "module_config_pkey" PRIMARY KEY ("verein_id", "modul");
 
 
 
@@ -2163,12 +2163,12 @@ ALTER TABLE ONLY "public"."module_delegationen"
 
 
 ALTER TABLE ONLY "public"."module"
-    ADD CONSTRAINT "module_key_key" UNIQUE ("key");
+    ADD CONSTRAINT "module_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."module"
-    ADD CONSTRAINT "module_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "module_verein_key_key" UNIQUE ("verein_id", "key");
 
 
 
@@ -2218,7 +2218,7 @@ ALTER TABLE ONLY "public"."personen"
 
 
 ALTER TABLE ONLY "public"."portal_einstellungen"
-    ADD CONSTRAINT "portal_einstellungen_pkey" PRIMARY KEY ("schluessel");
+    ADD CONSTRAINT "portal_einstellungen_pkey" PRIMARY KEY ("verein_id", "schluessel");
 
 
 
@@ -2229,11 +2229,6 @@ ALTER TABLE ONLY "public"."portal_funktionen"
 
 ALTER TABLE ONLY "public"."portal_funktionen"
     ADD CONSTRAINT "portal_funktionen_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."portal_gruppen"
-    ADD CONSTRAINT "portal_gruppen_name_key" UNIQUE ("name");
 
 
 
@@ -2252,13 +2247,18 @@ ALTER TABLE ONLY "public"."portal_gruppen_teams"
 
 
 
-ALTER TABLE ONLY "public"."portal_rollen"
-    ADD CONSTRAINT "portal_rollen_name_key" UNIQUE ("name");
+ALTER TABLE ONLY "public"."portal_gruppen"
+    ADD CONSTRAINT "portal_gruppen_verein_name_key" UNIQUE ("verein_id", "name");
 
 
 
 ALTER TABLE ONLY "public"."portal_rollen"
     ADD CONSTRAINT "portal_rollen_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."portal_rollen"
+    ADD CONSTRAINT "portal_rollen_verein_name_key" UNIQUE ("verein_id", "name");
 
 
 
@@ -2273,17 +2273,17 @@ ALTER TABLE ONLY "public"."rolle_pflichtfelder"
 
 
 ALTER TABLE ONLY "public"."rolle_pflichtfelder"
-    ADD CONSTRAINT "rolle_pflichtfelder_rolle_feld_key" UNIQUE ("rolle", "feld");
-
-
-
-ALTER TABLE ONLY "public"."rollen"
-    ADD CONSTRAINT "rollen_name_key" UNIQUE ("name");
+    ADD CONSTRAINT "rolle_pflichtfelder_verein_key" UNIQUE ("verein_id", "rolle", "feld");
 
 
 
 ALTER TABLE ONLY "public"."rollen"
     ADD CONSTRAINT "rollen_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."rollen"
+    ADD CONSTRAINT "rollen_verein_name_key" UNIQUE ("verein_id", "name");
 
 
 
@@ -2333,12 +2333,12 @@ ALTER TABLE ONLY "public"."trainings"
 
 
 ALTER TABLE ONLY "public"."trainingsplaetze"
-    ADD CONSTRAINT "trainingsplaetze_name_key" UNIQUE ("name");
+    ADD CONSTRAINT "trainingsplaetze_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."trainingsplaetze"
-    ADD CONSTRAINT "trainingsplaetze_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "trainingsplaetze_verein_name_key" UNIQUE ("verein_id", "name");
 
 
 
