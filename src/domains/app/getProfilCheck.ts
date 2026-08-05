@@ -26,6 +26,9 @@ interface GetProfilCheckProps {
   role: Rolle;
   dbMitglieder: Mitglied[];
   setDbUser: SetState<DbUser | null>;
+  /** Die eigene Person. Seit Etappe 4 stehen Vorname, Nachname und Telefon
+      dort und nicht mehr an `benutzer` — die Spalten sind gestrichen. */
+  eigenePerson?: { vorname?: string | null; nachname?: string | null; telefon?: string | null } | null;
   /** Matrix aus der Portalverwaltung. Fehlt sie, wird nichts verlangt —
       bewusst: ein leerer Ladezustand darf keinen Hinweis auslösen. */
   typMatrix?: MitgliedtypPflichtfeld[];
@@ -44,7 +47,7 @@ function istLeer(raw: Partial<Mitglied>, feld: string): boolean {
 
 export function getProfilCheck({
   sb, dbUser, role, dbMitglieder, setDbUser,
-  typMatrix = [], rolleMatrix = [],
+  eigenePerson = null, typMatrix = [], rolleMatrix = [],
 }: GetProfilCheckProps) {
 
   /* Fehlende Pflichtfelder eines Mitglieds, als Feld-Labels. */
@@ -73,12 +76,18 @@ export function getProfilCheck({
 
     if (isEltern) {
       /* Der Elternteil selbst hat keine Mitgliedschaft und damit keinen
-         Mitgliedtyp — für ihn gibt es keine Matrix. Bis der Personen-Umbau
-         (Etappe 4) die Elternkontakte ablöst, bleibt es beim festen Satz. */
+         Mitgliedtyp — für ihn gibt es keine Matrix, deshalb ein fester Satz.
+
+         Gelesen wird seit Etappe 4 die PERSON: `benutzer.vorname`,
+         `nachname` und `telefon` sind gestrichen, die Angaben stehen an
+         `personen`. Fehlt die Person (Ladezustand), wird nichts verlangt —
+         ein leerer Zustand darf keinen Hinweis auslösen. */
       const fehlend: string[] = [];
-      if (!dbUser.vorname)  fehlend.push(FELD_LABEL.vorname);
-      if (!dbUser.nachname) fehlend.push(FELD_LABEL.nachname);
-      if (!dbUser.telefon)  fehlend.push(FELD_LABEL.telefon);
+      if (eigenePerson) {
+        if (!eigenePerson.vorname?.trim())  fehlend.push(FELD_LABEL.vorname);
+        if (!eigenePerson.nachname?.trim()) fehlend.push(FELD_LABEL.nachname);
+        if (!eigenePerson.telefon?.trim())  fehlend.push(FELD_LABEL.telefon);
+      }
 
       const kinder = dbMitglieder.filter(m =>
         (m.eltern || []).some(e => e.benutzer_id === dbUser.id)

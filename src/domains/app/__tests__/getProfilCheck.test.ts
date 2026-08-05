@@ -26,6 +26,43 @@ function baue(mitglied: Record<string, unknown>, opts: Record<string, unknown> =
   });
 }
 
+/* Elternteil: keine Mitgliedschaft, also kein Mitgliedtyp und keine Matrix.
+   Seine eigenen Angaben stehen seit Etappe 4 an der PERSON — benutzer hat
+   keine vorname/nachname/telefon mehr. */
+function baueEltern(person: Record<string, unknown> | null) {
+  const dbUser = { id: "u1", mitglied_id: null, person_id: "p1" } as never;
+  return getProfilCheck({
+    sb, setDbUser, dbUser, role: "eltern" as never,
+    dbMitglieder: [] as never,
+    eigenePerson: person as never,
+    typMatrix, rolleMatrix,
+  });
+}
+
+describe("Elternteil ohne Mitgliedschaft", () => {
+  it("meldet die fehlenden Angaben der Person", () => {
+    const { getProfilFehlend } = baueEltern({ vorname: "Petra", nachname: null, telefon: null });
+    expect(getProfilFehlend()).toEqual(["Nachname", "Telefon"]);
+  });
+
+  it("meldet nichts, wenn die Person vollständig ist", () => {
+    const { getProfilFehlend } = baueEltern({ vorname: "Petra", nachname: "Brunner", telefon: "079" });
+    expect(getProfilFehlend()).toEqual([]);
+  });
+
+  it("verlangt nichts, solange die Person nicht geladen ist", () => {
+    /* Ladezustand: ein leerer Zustand darf keinen Hinweis auslösen — sonst
+       sieht jeder Elternteil beim Aufbau kurz drei Fehlermeldungen. */
+    const { getProfilFehlend } = baueEltern(null);
+    expect(getProfilFehlend()).toEqual([]);
+  });
+
+  it("behandelt Leerzeichen als leer", () => {
+    const { getProfilFehlend } = baueEltern({ vorname: "  ", nachname: "Brunner", telefon: "079" });
+    expect(getProfilFehlend()).toEqual(["Vorname"]);
+  });
+});
+
 describe("getProfilFehlend", () => {
   it("meldet nichts, wenn alle Pflichtfelder gefüllt sind", () => {
     const { getProfilFehlend } = baue({

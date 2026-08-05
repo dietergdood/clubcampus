@@ -81,6 +81,10 @@ function Portal({supabaseClient, slug}: PortalProps){
      (Ladezustand), verlangt getProfilCheck nichts. */
   const [dbTypPflichtfelder,setDbTypPflichtfelder]=useState<MitgliedtypPflichtfeld[]>([]);
   const [dbRollePflichtfelder,setDbRollePflichtfelder]=useState<RollePflichtfeld[]>([]);
+  /* Die eigene Person. Seit Etappe 4 stehen Vorname, Nachname und Telefon
+     dort und nicht mehr an `benutzer`. Wird für die Datenprüfung eines
+     Elternteils gebraucht, der keine Mitgliedschaft hat. */
+  const [eigenePerson,setEigenePerson]=useState<{vorname:string|null;nachname:string|null;telefon:string|null}|null>(null);
   /* Globale Modul-Konfiguration (aus Portalverwaltung) */
   const [moduleAktiv,setModuleAktiv]=useState<ModuleAktiv>(()=>{
     try{const s=localStorage.getItem("cc-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
@@ -251,6 +255,16 @@ function Portal({supabaseClient, slug}: PortalProps){
     setDbTypPflichtfelder(typ as MitgliedtypPflichtfeld[]);
     setDbRollePflichtfelder(rolle as RollePflichtfeld[]);
   }
+
+  /* Eigene Person nachladen, sobald der Benutzer bekannt ist. */
+  useEffect(()=>{
+    const pid=dbUser?.person_id;
+    if(!sb||!pid){ setEigenePerson(null); return; }
+    let abgebrochen=false;
+    sb.from("personen").select("vorname,nachname,telefon").eq("id",pid).maybeSingle()
+      .then(({data})=>{ if(!abgebrochen) setEigenePerson(data ?? null); });
+    return ()=>{ abgebrochen=true; };
+  },[sb,dbUser?.person_id]);
 
   async function handleLogout(){
     await _handleLogout();
@@ -449,7 +463,7 @@ function Portal({supabaseClient, slug}: PortalProps){
   };
 
   const { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft } = getProfilCheck({
-    sb, dbUser, role, dbMitglieder, setDbUser,
+    sb, dbUser, role, dbMitglieder, setDbUser, eigenePerson,
     typMatrix: dbTypPflichtfelder, rolleMatrix: dbRollePflichtfelder,
   });
 
