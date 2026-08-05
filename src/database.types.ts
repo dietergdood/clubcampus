@@ -4061,7 +4061,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      portal_zugang: {
+        Row: {
+          hat_zugang: boolean | null
+          person_id: string | null
+        }
+        Insert: {
+          hat_zugang?: never
+          person_id?: string | null
+        }
+        Update: {
+          hat_zugang?: never
+          person_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benutzer_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_email_bekannt: {
