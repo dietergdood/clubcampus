@@ -228,7 +228,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         onClose={()=>setShowNeuesMitglied(false)}
         sb={sb}
         dbMitgliedtypen={dbMitgliedtypen}
-        dbPortalRollen={dbPortalRollen}
         dbPflichtfelder={dbPflichtfelder}
         vereinId={vereinId}
         account={account}

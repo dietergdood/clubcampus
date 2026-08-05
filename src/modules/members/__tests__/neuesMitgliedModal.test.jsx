@@ -41,6 +41,13 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
 }));
 import { insertMitglied } from '../../../domains/members/memberService.ts';
 
+/* Die Portalrolle wird nicht mehr im Formular gewählt, sondern nach dem
+   Anlegen abgeleitet (Kader → mitgliedtypen.standard_rolle → Funktionen). */
+vi.mock('../../../domains/roles/roleUtils.ts', () => ({
+  ableitUndSaveRolle: vi.fn().mockResolvedValue('spieler'),
+}));
+import { ableitUndSaveRolle } from '../../../domains/roles/roleUtils.ts';
+
 const DB_MITGLIEDTYPEN = [
   { name: 'Aktivmitglied', standard_rolle: 'spieler' },
   { name: 'Juniormitglied' },
@@ -122,66 +129,15 @@ describe('NeuesMitgliedModal', () => {
       expect(screen.getByPlaceholderText('adrian@example.ch')).toBeTruthy();
     });
 
-    /* Früher blendete das Modal die E-Mail bei Passiv-, Ehren- und
-       Freimitgliedern aus, während die Pflichtfeld-Matrix sie verlangte.
-       Die Prüfung schlug an, das Feld zum Ausfüllen fehlte — diese drei
-       Mitgliedtypen liessen sich dadurch gar nicht anlegen. Die E-Mail ist
-       jetzt immer sichtbar; ob sie Pflicht ist, entscheidet allein die
-       Matrix. */
-    it('zeigt E-Mail auch bei Passivmitglied', () => {
-      renderModal();
-      const select = screen.getAllByRole('combobox')[0];
-      fireEvent.change(select, { target: { value: 'Passivmitglied' } });
-      expect(screen.getByPlaceholderText('adrian@example.ch')).toBeTruthy();
-    });
 
-    it('zeigt keine Adressfelder, wenn die Matrix für den Typ nichts vorgibt', () => {
-      renderModal();
-      const select = screen.getAllByRole('combobox')[0];
-      fireEvent.change(select, { target: { value: 'Passivmitglied' } });
-      /* Ohne Eintrag in dbPflichtfelder ist nichts Pflicht — früher griff
-         hier eine fest verdrahtete Rückfallliste. */
-      expect(screen.queryByLabelText(/Strasse/)).toBeNull();
-    });
-  });
 
-  describe('Validierung', () => {
-    it('Button ist disabled wenn kein Mitgliedtyp', () => {
-      renderModal();
-      const btn = screen.getByText('Mitglied anlegen');
-      expect(btn.disabled).toBe(true);
-    });
 
-    /* Früher meldete validate() nur das ERSTE fehlende Feld. Bei neun
-       Pflichtfeldern hiess das: ausfüllen, klicken, nächste Meldung. Jetzt
-       kommen alle auf einmal. */
-    it('übernimmt die Standardrolle des Mitgliedtyps', () => {
-      /* mitgliedtypen.standard_rolle war bis 05.08.2026 in der
-         Portalverwaltung pflegbar, wurde aber von niemandem gelesen. */
-      renderModal();
-      const select = screen.getAllByRole('combobox')[0];
-      fireEvent.change(select, { target: { value: 'Aktivmitglied' } });
-      const rolle = screen.getAllByRole('combobox').at(-1);
-      expect(rolle.value).toBe('spieler');
-    });
-
-    it('lässt die Rolle von Hand übersteuern', () => {
+    it('bietet keine Portalrolle zur Auswahl an', () => {
+      /* Sie ist ein berechneter Wert, kein Eingabewert — eine hier gewählte
+         Rolle würde beim ersten ableitUndSaveRolle() überschrieben. */
       renderModal();
       fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Aktivmitglied' } });
-      const rolle = screen.getAllByRole('combobox').at(-1);
-      fireEvent.change(rolle, { target: { value: 'trainer' } });
-      expect(screen.getAllByRole('combobox').at(-1).value).toBe('trainer');
-    });
-
-    it('setzt beim Wechsel des Mitgliedtyps wieder auf dessen Standard', () => {
-      /* Passivmitglied hat keinen Standard — die zuvor gewählte Rolle darf
-         nicht hängenbleiben, sonst bekäme ein Passivmitglied still die
-         Spielerrolle. */
-      renderModal();
-      fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Aktivmitglied' } });
-      fireEvent.change(screen.getAllByRole('combobox').at(-1), { target: { value: 'trainer' } });
-      fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Passivmitglied' } });
-      expect(screen.getAllByRole('combobox').at(-1).value).toBe('');
+      expect(screen.queryByText('Portalrolle')).toBeNull();
     });
 
     it('nennt alle fehlenden Pflichtfelder auf einmal', async () => {
@@ -270,6 +226,14 @@ describe('NeuesMitgliedModal', () => {
       fireEvent.click(screen.getByText('Mitglied anlegen'));
       await waitFor(() => expect(insertMitglied).toHaveBeenCalled());
       await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('new-id-123'));
+      /* Rolle direkt nach dem Anlegen ableiten — sonst zeigt die
+         Mitgliederliste "-", bis die erste Kader- oder Funktionsänderung
+         sie berechnet. */
+      expect(ableitUndSaveRolle).toHaveBeenCalledWith(
+        expect.anything(), 'new-id-123', [], 'Passivmitglied', [],
+      );
+      /* Und rolle wird beim Insert nicht mehr mitgeschrieben. */
+      expect(insertMitglied.mock.calls[0][1]).not.toHaveProperty('rolle');
     });
   });
 

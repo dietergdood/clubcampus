@@ -9,6 +9,16 @@
    Die Logik dazu liegt in domains/members/pflichtfelder.ts — es gibt
    KEINE Rückfallliste mehr.
 
+   KEINE PORTALROLLE. Sie ist kein Eingabewert, sondern ein berechneter:
+   ableitRolle() bestimmt sie aus den Kader-Rollen, ersatzweise aus
+   mitgliedtypen.standard_rolle, dann aus den Funktionen. Geschrieben wird
+   sie von ableitUndSaveRolle() — bei jeder Kader-Zuweisung, bei jeder
+   Änderung an Teams oder Funktionen, und beim Login setzt useDbUser sie
+   ohnehin neu. Eine hier von Hand gewählte Rolle hielte also nur bis zum
+   ersten dieser Ereignisse. Wo sie doch von Hand gesetzt werden muss,
+   gehört das ins Profil (PortalTab) — dort sieht man, was die Ableitung
+   ergeben hat.
+
    Immer sichtbar: mitgliedtyp*, vorname*, nachname*
    Alles Weitere erscheint, sobald es für den gewählten Typ konfiguriert
    ist. Ein Feld, das Pflicht ist, muss auch ausfüllbar sein: früher
@@ -21,8 +31,9 @@ import { Btn, ModalOrSheet, PhoneInput } from "../../theme.ts";
 import { AdresseFormular } from "./AdresseFormular.tsx";
 import { TI } from "../../icons.tsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
-import type { Account, Mitgliedtyp, MitgliedtypPflichtfeld, PortalRolle, Sb } from "../../types.ts";
+import type { Account, Mitgliedtyp, MitgliedtypPflichtfeld, Sb } from "../../types.ts";
 import { getEffektivePflichtfelder, IMMER_PFLICHT } from "../../domains/members/pflichtfelder.ts";
+import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import { NeuesMitgliedElternSektion, speichereEltern } from "./NeuesMitgliedElternSektion.tsx";
 import type { ElternEintrag } from "./NeuesMitgliedElternSektion.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
@@ -44,7 +55,6 @@ interface MitgliedFormular {
   ahv_nr?: string;
   nationalitaet?: string;
   heimatort?: string;
-  rolle?: string;
 }
 
 
@@ -60,14 +70,13 @@ interface NeuesMitgliedModalProps {
   onClose: () => void;
   sb: Sb;
   dbMitgliedtypen?: Mitgliedtyp[] | null;
-  dbPortalRollen?: Pick<PortalRolle, "name" | "label">[] | null;
   dbPflichtfelder?: MitgliedtypPflichtfeld[];
   vereinId: string | null;
   onSuccess?: ((id: number) => void) | null;
   account?: Account | null;
 }
 
-export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPortalRollen, dbPflichtfelder=[], vereinId, onSuccess, account=null }: NeuesMitgliedModalProps) {
+export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflichtfelder=[], vereinId, onSuccess, account=null }: NeuesMitgliedModalProps) {
   const [form, setForm] = useState<MitgliedFormular>({ mitgliedtyp: "" });
   const [elternEintraege, setElternEintraege] = useState<ElternEintrag[]>([]);
   /* Gesetzt, sobald das Kind in der Datenbank steht. Scheitert danach das
@@ -88,15 +97,6 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     ? dbMitgliedtypen.map(t => t.name)
     : ["Aktivmitglied", "Juniormitglied", "Passivmitglied", "Ehrenmitglied"];
 
-  const portalRollen = dbPortalRollen && dbPortalRollen.length > 0
-    ? dbPortalRollen
-    : [
-        { name: "trainer",     label: "Trainer/in" },
-        { name: "spieler",     label: "Spieler/in" },
-        { name: "funktionaer", label: "Funktionär" },
-        { name: "eltern",      label: "Elternteil" },
-        { name: "mitglied",    label: "Mitglied" },
-      ];
 
   /* Nur die Mitgliedtyp-Matrix — die Rollen-Zusatzfelder greifen erst in
      der Datenprüfung, weil beim Anlegen die sportliche Rolle noch nicht
@@ -115,23 +115,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
   const hauptkontaktPflicht = (dbMitgliedtypen || [])
     .some(t => t.name === form.mitgliedtyp && t.hauptkontakt_pflicht);
 
-  /* Standardrolle des gewählten Mitgliedtyps, gesetzt in Portalverwaltung →
-     Mitglieder-Konfiguration. */
-  const standardRolle = (dbMitgliedtypen || [])
-    .find(t => t.name === form.mitgliedtyp)?.standard_rolle || "";
 
   function set(key: keyof MitgliedFormular, val: string) {
-    setForm(f => {
-      /* Beim Wechsel des Mitgliedtyps die Portalrolle auf dessen Standard
-         setzen. Bewusst bei JEDEM Wechsel, auch wenn vorher von Hand etwas
-         anderes gewählt war: eine Regel, die man in einem Satz sagen kann,
-         statt eines Verhaltens, das mal überschreibt und mal nicht. */
-      if (key === "mitgliedtyp") {
-        const std = (dbMitgliedtypen || []).find(t => t.name === val)?.standard_rolle || "";
-        return { ...f, mitgliedtyp: val, rolle: std };
-      }
-      return { ...f, [key]: val };
-    });
+    setForm(f => ({ ...f, [key]: val }));
     setMsg(null);
     /* Sobald etwas drinsteht, verschwindet die Markierung — nicht erst beim
        nächsten Klick auf Speichern. */
@@ -212,11 +198,17 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
       nationalitaet: form.nationalitaet?.trim() || null,
       heimatort:     form.heimatort?.trim() || null,
       mitgliedtyp:  form.mitgliedtyp || null,
-      rolle:        form.rolle || null,
     }, vereinId);
     if (!id) { setSaving(false); setMsg({ ok: false, text: "Fehler beim Speichern." }); return; }
 
     logAktivitaet(sb, id, vereinId, AKTIVITAET_TYP.ANGELEGT, "Mitglied angelegt", null, null, von);
+
+    /* Rolle sofort ableiten, sonst zeigt die Mitgliederliste "-", bis die
+       erste Kader- oder Funktionsänderung sie berechnet. dbKaderRollen ist
+       hier leer und darf es sein: ein eben angelegtes Mitglied steht in
+       keinem Kader, die Ableitung fällt also ohnehin auf
+       mitgliedtypen.standard_rolle zurück. */
+    await ableitUndSaveRolle(sb, id, [], form.mitgliedtyp || null, []);
 
     /* Erst jetzt die Elternteile: eltern_kinder braucht die mitglied_id, und
        elternkontakte.mitglied_id ist NOT NULL. Scheitert es hier, bleibt das
@@ -389,21 +381,6 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               </div>
             </>)}
 
-            {/* Portalrolle — optional, unabhängig vom Mitgliedtyp */}
-            <div className="cc-form-full">
-              <label className="cc-label">Portalrolle</label>
-              <select className="cc-input" value={form.rolle||""} onChange={e=>set("rolle",e.target.value)}>
-                <option value="">— keine —</option>
-                {portalRollen.map(r=><option key={r.name} value={r.name}>{r.label}</option>)}
-              </select>
-              {standardRolle && (
-                <div className="cc-hint-sub">
-                  {form.rolle === standardRolle
-                    ? `Standard für ${form.mitgliedtyp} — hier änderbar`
-                    : `Abweichend vom Standard für ${form.mitgliedtyp}`}
-                </div>
-              )}
-            </div>
 
             <div className="cc-form-full">
               <div className="cc-info-hint">
