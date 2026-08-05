@@ -349,6 +349,12 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               </select>
             </div>
 
+            <div className="cc-form-full">
+              <div className="cc-info-hint">
+                <TI n="info-circle" size={13}/> Alle weiteren Angaben (Spielerpass, J+S-Nr. etc.) können danach im Profil ergänzt werden.
+              </div>
+            </div>
+
             {hauptkontaktPflicht && (
               <NeuesMitgliedElternSektion
                 sb={sb}
@@ -358,11 +364,6 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               />
             )}
 
-            <div className="cc-form-full">
-              <div className="cc-info-hint">
-                <TI n="info-circle" size={13}/> Alle weiteren Angaben (Spielerpass, J+S-Nr. etc.) können danach im Profil ergänzt werden.
-              </div>
-            </div>
 
           </>)}
 

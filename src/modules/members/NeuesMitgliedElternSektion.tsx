@@ -187,12 +187,21 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
                   {e.form?.beziehung ? ` · ${e.form.beziehung}` : ""}
                 </div>
               </div>
-              <button
-                className={`cc-star-btn${e.hauptkontakt ? " cc-star-btn-on" : ""}`}
-                onClick={() => setzeHaupt(e.key)}
-                title={e.hauptkontakt ? "Hauptkontakt" : "Als Hauptkontakt setzen"}>
-                <TI n="star" size={16}/>
-              </button>
+              {/* Bei einem einzigen Elternteil gibt es nichts zu wählen — er
+                  ist zwangsläufig Hauptkontakt. Der Stern bleibt dann reine
+                  Anzeige, sonst wäre es ein Knopf, der nichts tut. */}
+              {eintraege.length > 1 ? (
+                <button
+                  className={`cc-star-btn${e.hauptkontakt ? " cc-star-btn-on" : ""}`}
+                  onClick={() => setzeHaupt(e.key)}
+                  title={e.hauptkontakt ? "Hauptkontakt" : "Als Hauptkontakt setzen"}>
+                  <TI n="star" size={16}/>
+                </button>
+              ) : (
+                <span className="cc-star-btn cc-star-btn-on" title="Hauptkontakt">
+                  <TI n="star" size={16}/>
+                </span>
+              )}
               <button className="cc-icon-btn-danger" onClick={() => entferne(e.key)} title="Entfernen">
                 <TI n="x" size={15}/>
               </button>
@@ -200,7 +209,7 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
           ))}
         </div>
 
-        {eintraege.length > 0 && modus === "" && (
+        {eintraege.length > 1 && modus === "" && (
           <div className="cc-text-xs cc-text-sub cc-mt-8">
             Der Hauptkontakt bekommt Post und Rechnung. Angeschrieben werden alle.
           </div>
@@ -255,15 +264,17 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
             {modus === "neu" && (
               <div className="cc-mt-8">
                 <ElternFelder form={neuForm} onChange={(k, v) => { setNeuForm(f => ({ ...f, [k]: v })); setFehler(null); }}/>
-                <div className="cc-row cc-gap-8 cc-mt-8">
-                  <Btn small variant="primary" onClick={uebernehmeNeu}>Übernehmen</Btn>
-                </div>
               </div>
             )}
 
+            {/* Eine Zeile, nicht zwei. Und nur EIN „Abbrechen" — es stand
+                zuvor direkt über dem „Abbrechen" der Modal-Fussleiste, wo man
+                zwangsläufig danebengreift. Dieses hier heisst deshalb
+                „Zurück": es schliesst nur das Elternformular. */}
             <div className="cc-row cc-gap-8 cc-mt-8">
+              {modus === "neu" && <Btn small variant="primary" onClick={uebernehmeNeu}>Übernehmen</Btn>}
               <Btn small variant="ghost" onClick={() => { setModus(""); setQuery(""); setTreffer([]); setNeuForm({}); setFehler(null); }}>
-                Abbrechen
+                Zurück
               </Btn>
             </div>
           </div>

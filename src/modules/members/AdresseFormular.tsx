@@ -71,22 +71,27 @@ export function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,on
           </div>
         )}
       </div>
-      <div>
-        <label className="cc-label">PLZ {pflichtPlz&&<span className="cc-label-req">*</span>}</label>
-        <input className="cc-input" type="text" value={plz} maxLength={4}
-          onChange={e=>onPlz(e.target.value)} placeholder="8704"/>
-      </div>
-      <div>
-        <label className="cc-label">Ort {pflichtOrt&&<span className="cc-label-req">*</span>}</label>
-        <input className="cc-input" type="text" value={ort}
-          onChange={e=>onOrt(e.target.value)} placeholder="Herrliberg"/>
-      </div>
-      <div>
-        <label className="cc-label">Kanton</label>
-        <select className="cc-input" value={kanton} onChange={e=>onKanton(e.target.value)}>
-          <option value="">— wählen —</option>
-          {KANTON_OPTS_M.map(k=><option key={k} value={k}>{k}</option>)}
-        </select>
+      {/* PLZ, Ort und Kanton in einer Zeile — in der Reihenfolge, in der man
+          eine Schweizer Adresse liest. Im zweispaltigen cc-form-row stand der
+          Kanton sonst allein auf halber Breite, mit Leerraum daneben. */}
+      <div className="cc-form-full cc-grid-3">
+        <div>
+          <label className="cc-label">PLZ {pflichtPlz&&<span className="cc-label-req">*</span>}</label>
+          <input className="cc-input" type="text" value={plz} maxLength={4}
+            onChange={e=>onPlz(e.target.value)} placeholder="8704"/>
+        </div>
+        <div>
+          <label className="cc-label">Ort {pflichtOrt&&<span className="cc-label-req">*</span>}</label>
+          <input className="cc-input" type="text" value={ort}
+            onChange={e=>onOrt(e.target.value)} placeholder="Herrliberg"/>
+        </div>
+        <div>
+          <label className="cc-label">Kanton</label>
+          <select className="cc-input" value={kanton} onChange={e=>onKanton(e.target.value)}>
+            <option value="">— wählen —</option>
+            {KANTON_OPTS_M.map(k=><option key={k} value={k}>{k}</option>)}
+          </select>
+        </div>
       </div>
     </>
   );
