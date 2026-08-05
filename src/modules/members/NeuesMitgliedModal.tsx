@@ -74,6 +74,10 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
      Anlegen der Elternteile, bleibt das Modal offen und ein zweiter Versuch
      schreibt nur noch die Eltern — die Eingabe geht nicht verloren. */
   const [angelegtesKind, setAngelegtesKind] = useState<number | null>(null);
+  /* Welche Felder bei der letzten Prüfung leer waren — sie werden rot
+     umrandet. Ohne das steht die Meldung unten und man sucht bei acht
+     fehlenden Feldern von Hand nach oben. */
+  const [fehlerFelder, setFehlerFelder] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<StatusMeldung | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -114,19 +118,27 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
   function set(key: keyof MitgliedFormular, val: string) {
     setForm(f => ({ ...f, [key]: val }));
     setMsg(null);
+    /* Sobald etwas drinsteht, verschwindet die Markierung — nicht erst beim
+       nächsten Klick auf Speichern. */
+    if (val.trim()) setFehlerFelder(prev => prev.filter(f => f !== key));
   }
+
+  /* Rote Umrandung für ein Pflichtfeld, das leer geblieben ist. */
+  const feldCls = (feld: string, basis = "cc-input") =>
+    fehlerFelder.includes(feld) ? `${basis} cc-input-error` : basis;
 
   /* Sammelt ALLE fehlenden Pflichtfelder. Vorher wurde beim ersten Treffer
      abgebrochen — bei neun Pflichtfeldern hiess das: ausfüllen, klicken,
      nächste Meldung, wieder klicken. */
   function validate() {
-    if (!form.mitgliedtyp) return "Bitte Mitgliedtyp wählen.";
+    if (!form.mitgliedtyp) return { text: "Bitte Mitgliedtyp wählen.", felder: ["mitgliedtyp"] };
 
     const BEKANNTE_FELDER = ["geburtsdatum","geschlecht","strasse","plz","ort","telefon","email","ahv_nr","nationalitaet","heimatort"] as const;
     const fehlend: string[] = [];
+    const fehlendKeys: string[] = [];
 
     for (const feld of IMMER_PFLICHT) {
-      if (!form[feld]?.trim()) fehlend.push(FELD_LABEL[feld] || feld);
+      if (!form[feld]?.trim()) { fehlend.push(FELD_LABEL[feld] || feld); fehlendKeys.push(feld); }
     }
     for (const feld of pflichtfelder) {
       /* unbekannte Felder überspringen — mitgliedtyp_pflichtfelder kann
@@ -134,12 +146,17 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
       if (!(BEKANNTE_FELDER as readonly string[]).includes(feld)) continue;
       if (!form[feld as (typeof BEKANNTE_FELDER)[number]]?.trim()) {
         fehlend.push(FELD_LABEL[feld] || feld);
+        fehlendKeys.push(feld);
       }
     }
 
-    if (!fehlend.length) return null;
-    if (fehlend.length === 1) return `${fehlend[0]} ist Pflicht.`;
-    return `Es fehlt noch: ${fehlend.join(", ")}.`;
+    if (!fehlendKeys.length) return null;
+    return {
+      felder: fehlendKeys,
+      text: fehlend.length === 1
+        ? `${fehlend[0]} ist Pflicht.`
+        : `Es fehlt noch: ${fehlend.join(", ")}.`,
+    };
   }
 
   async function handleSave() {
@@ -158,7 +175,8 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     }
 
     const err = validate();
-    if (err) { setMsg({ ok: false, text: err }); return; }
+    if (err) { setMsg({ ok: false, text: err.text }); setFehlerFelder(err.felder); return; }
+    setFehlerFelder([]);
     setSaving(true); setMsg(null);
     const id = await insertMitglied(sb, {
       /* vorname und nachname sind in mitglieder NOT NULL; validate() oben
@@ -205,6 +223,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     successTimer.current = setTimeout(() => {
       setForm({ mitgliedtyp: "" });
       setElternEintraege([]);
+      setFehlerFelder([]);
       setAngelegtesKind(null);
       setMsg(null);
       onClose();
@@ -215,6 +234,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
   function handleClose() {
     setForm({ mitgliedtyp: "" });
     setElternEintraege([]);
+    setFehlerFelder([]);
     /* Wurde das Kind schon angelegt, muss die Liste sich aktualisieren —
        sonst fehlt es dort, obwohl es in der Datenbank steht. */
     const id = angelegtesKind;
@@ -257,11 +277,11 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             {/* Vorname / Nachname */}
             <div>
               <label className="cc-label">Vorname <span className="cc-label-req">*</span></label>
-              <input className="cc-input" type="text" value={form.vorname||""} onChange={e=>set("vorname",e.target.value)} placeholder="Adrian"/>
+              <input className={feldCls("vorname")} type="text" value={form.vorname||""} onChange={e=>set("vorname",e.target.value)} placeholder="Adrian"/>
             </div>
             <div>
               <label className="cc-label">Nachname <span className="cc-label-req">*</span></label>
-              <input className="cc-input" type="text" value={form.nachname||""} onChange={e=>set("nachname",e.target.value)} placeholder="Bürgi"/>
+              <input className={feldCls("nachname")} type="text" value={form.nachname||""} onChange={e=>set("nachname",e.target.value)} placeholder="Bürgi"/>
             </div>
 
             {/* Geburtsdatum / Geschlecht */}
@@ -270,13 +290,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
                 <label className="cc-label">
                   Geburtsdatum {istPflicht("geburtsdatum")&&<span className="cc-label-req">*</span>}
                 </label>
-                <input className="cc-input" type="date" value={form.geburtsdatum||""} onChange={e=>set("geburtsdatum",e.target.value)}/>
+                <input className={feldCls("geburtsdatum")} type="date" value={form.geburtsdatum||""} onChange={e=>set("geburtsdatum",e.target.value)}/>
               </div>
               <div>
                 <label className="cc-label">
                   Geschlecht {istPflicht("geschlecht")&&<span className="cc-label-req">*</span>}
                 </label>
-                <select className="cc-input" value={form.geschlecht||""} onChange={e=>set("geschlecht",e.target.value)}>
+                <select className={feldCls("geschlecht")} value={form.geschlecht||""} onChange={e=>set("geschlecht",e.target.value)}>
                   <option value="">— wählen —</option>
                   {GESCHLECHT_OPTS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                 </select>
@@ -297,6 +317,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
                 pflichtStrasse={istPflicht("strasse")}
                 pflichtPlz={istPflicht("plz")}
                 pflichtOrt={istPflicht("ort")}
+                fehlerStrasse={fehlerFelder.includes("strasse")}
+                fehlerPlz={fehlerFelder.includes("plz")}
+                fehlerOrt={fehlerFelder.includes("ort")}
               />
             )}
 
@@ -304,7 +327,8 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             {istPflicht("telefon") && (
               <div className="cc-form-full">
                 <label className="cc-label">Telefon <span className="cc-label-req">*</span></label>
-                <PhoneInput value={form.telefon||""} onChange={v=>set("telefon",v)} showHint={false}/>
+                <PhoneInput value={form.telefon||""} onChange={v=>set("telefon",v)} showHint={false}
+                  className={fehlerFelder.includes("telefon") ? "cc-phone-wrap-err" : ""}/>
               </div>
             )}
 
@@ -317,7 +341,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               <label className="cc-label">
                 E-Mail {istPflicht("email")&&<span className="cc-label-req">*</span>}
               </label>
-              <input className="cc-input" type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} placeholder="adrian@example.ch"/>
+              <input className={feldCls("email")} type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} placeholder="adrian@example.ch"/>
               <div className="cc-hint-sub">
                 {istPflicht("email")
                   ? "Wird zum Login-Namen für das Portal"
@@ -332,7 +356,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
             {istPflicht("ahv_nr") && (
               <div className="cc-form-full">
                 <label className="cc-label">AHV-Nr. <span className="cc-label-req">*</span></label>
-                <input className="cc-input" type="text" value={form.ahv_nr||""} onChange={e=>set("ahv_nr",e.target.value)} placeholder="756.1234.5678.90"/>
+                <input className={feldCls("ahv_nr")} type="text" value={form.ahv_nr||""} onChange={e=>set("ahv_nr",e.target.value)} placeholder="756.1234.5678.90"/>
               </div>
             )}
             {(istPflicht("nationalitaet")||istPflicht("heimatort")) && (<>
@@ -340,13 +364,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
                 <label className="cc-label">
                   Nationalität {istPflicht("nationalitaet")&&<span className="cc-label-req">*</span>}
                 </label>
-                <input className="cc-input" type="text" value={form.nationalitaet||""} onChange={e=>set("nationalitaet",e.target.value)} placeholder="CH"/>
+                <input className={feldCls("nationalitaet")} type="text" value={form.nationalitaet||""} onChange={e=>set("nationalitaet",e.target.value)} placeholder="CH"/>
               </div>
               <div>
                 <label className="cc-label">
                   Heimatort {istPflicht("heimatort")&&<span className="cc-label-req">*</span>}
                 </label>
-                <input className="cc-input" type="text" value={form.heimatort||""} onChange={e=>set("heimatort",e.target.value)} placeholder="Herrliberg ZH"/>
+                <input className={feldCls("heimatort")} type="text" value={form.heimatort||""} onChange={e=>set("heimatort",e.target.value)} placeholder="Herrliberg ZH"/>
               </div>
             </>)}
 

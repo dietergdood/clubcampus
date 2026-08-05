@@ -25,9 +25,14 @@ interface AdresseFormularProps {
   pflichtStrasse?: boolean;
   pflichtPlz?: boolean;
   pflichtOrt?: boolean;
+  /* Rote Umrandung, wenn das Pflichtfeld bei der Prüfung leer war. */
+  fehlerStrasse?: boolean;
+  fehlerPlz?: boolean;
+  fehlerOrt?: boolean;
 }
 
-export function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,pflichtStrasse,pflichtPlz,pflichtOrt}: AdresseFormularProps){
+export function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,pflichtStrasse,pflichtPlz,pflichtOrt,fehlerStrasse,fehlerPlz,fehlerOrt}: AdresseFormularProps){
+  const cls=(fehler?: boolean)=>fehler?"cc-input cc-input-error":"cc-input";
   const [showSug,setShowSug]=useState(false);
   const wrapRef=useRef<HTMLDivElement>(null);
   const suggestions=useAddrSearch(strasse,plz);
@@ -55,7 +60,7 @@ export function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,on
     <>
       <div className="cc-form-full cc-relative" ref={wrapRef}>
         <label className="cc-label">Strasse {pflichtStrasse&&<span className="cc-label-req">*</span>}</label>
-        <input className="cc-input" type="text" value={strasse}
+        <input className={cls(fehlerStrasse)} type="text" value={strasse}
           onChange={e=>{onStrasse(e.target.value);setShowSug(true);}}
           onFocus={()=>setShowSug(true)}
           onBlur={()=>setTimeout(()=>setShowSug(false),150)}
@@ -77,12 +82,12 @@ export function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,on
       <div className="cc-form-full cc-grid-3">
         <div>
           <label className="cc-label">PLZ {pflichtPlz&&<span className="cc-label-req">*</span>}</label>
-          <input className="cc-input" type="text" value={plz} maxLength={4}
+          <input className={cls(fehlerPlz)} type="text" value={plz} maxLength={4}
             onChange={e=>onPlz(e.target.value)} placeholder="8704"/>
         </div>
         <div>
           <label className="cc-label">Ort {pflichtOrt&&<span className="cc-label-req">*</span>}</label>
-          <input className="cc-input" type="text" value={ort}
+          <input className={cls(fehlerOrt)} type="text" value={ort}
             onChange={e=>onOrt(e.target.value)} placeholder="Herrliberg"/>
         </div>
         <div>

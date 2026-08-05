@@ -169,6 +169,32 @@ describe('NeuesMitgliedModal', () => {
       });
     });
 
+    it('umrandet die fehlenden Felder rot', async () => {
+      /* Die Meldung steht unten am Formular — ohne Markierung müsste man
+         bei acht fehlenden Feldern von Hand nach oben suchen. */
+      renderModal();
+      const select = screen.getAllByRole('combobox')[0];
+      fireEvent.change(select, { target: { value: 'Aktivmitglied' } });
+      fireEvent.click(screen.getByText('Mitglied anlegen'));
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Adrian').className).toContain('cc-input-error');
+        expect(screen.getByPlaceholderText('Bürgi').className).toContain('cc-input-error');
+        expect(screen.getByPlaceholderText('Seestrasse 1').className).toContain('cc-input-error');
+      });
+    });
+
+    it('nimmt die Markierung weg, sobald das Feld gefüllt wird', async () => {
+      renderModal();
+      const select = screen.getAllByRole('combobox')[0];
+      fireEvent.change(select, { target: { value: 'Aktivmitglied' } });
+      fireEvent.click(screen.getByText('Mitglied anlegen'));
+      await waitFor(() => expect(screen.getByPlaceholderText('Adrian').className).toContain('cc-input-error'));
+      fireEvent.change(screen.getByPlaceholderText('Adrian'), { target: { value: 'Adrian' } });
+      expect(screen.getByPlaceholderText('Adrian').className).not.toContain('cc-input-error');
+      /* Die übrigen bleiben markiert */
+      expect(screen.getByPlaceholderText('Bürgi').className).toContain('cc-input-error');
+    });
+
     it('bleibt beim kurzen Satz, wenn nur ein Feld fehlt', async () => {
       renderModal();
       const select = screen.getAllByRole('combobox')[0];
