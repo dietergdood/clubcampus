@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 05.08.2026 (nach Etappe 3): 340 grün, 2 skipped, 0 rot (24 Testdateien).
+Stand 05.08.2026 (nach Etappe 5): 359 grün, 2 skipped, 0 rot (25 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -116,6 +116,8 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
 - **Nach jeder Strukturänderung gehören Dump UND Typen nachgezogen** — `npx supabase db dump --linked -f supabase/schema.sql` *und* `npx supabase gen types typescript --linked > src/database.types.ts`. Am 05.08.2026 fehlten in `database.types.ts` gleich drei Dinge aus vorherigen Etappen: die ganze Tabelle `personen`, `mitglieder.person_id` und die Fremdschlüsselbeziehung, ohne die PostgREST den Join nicht typisiert. Der Dump allein reicht nicht.
+- **Chips im Profilkopf nie selbst zusammenbauen** → `heroChips()` aus `domains/roles/roleUtils.ts`. Die Regel unterscheidet Rolle (was jemand tut) von Mitgliedtyp (wie er eingestuft ist) und ist mit 13 Tests abgesichert.
+- **`mitglieder.funktionen` enthält Vereinsfunktionen, keine Kaderrollen.** Am 05.08.2026 stand dort bei 487 Mitgliedern „Spieler" — `ableitRolle()` prüft nur `funktionen.length > 0` und machte damit jeden ohne Kadereintrag zum Funktionär. Wer dort schreibt, prüft zweimal.
 - **Personendaten nie direkt aus `mitglieder` lesen oder schreiben** → `domains/person/personService.ts`. Lesen per Join (`select("*, personen(*)")`) und durch `flacheZeile()`; Schreiben durch `verteileFelder()`. `personen` ist die Wahrheit, die gleichnamigen Spalten in `mitglieder` sind seit Etappe 2b Altlast und verschwinden in Etappe 6.
 - **Pflichtfelder nie selbst herleiten** → `getEffektivePflichtfelder()` aus `domains/members/pflichtfelder.ts`. Es gibt keine Rückfallliste: was in der Matrix steht, gilt. `vorname`/`nachname` stehen nicht darin (`IMMER_PFLICHT`), weil sie in `mitglieder` NOT NULL sind. Und: **ein Feld, das Pflicht sein kann, braucht ein Eingabefeld** — sonst blockiert die Prüfung ein Formular, das den Wert gar nicht erfassen kann.
 - **Unique-/Primärschlüssel auf Vereinsdaten immer mit `verein_id`** — sonst nimmt der erste Verein dem zweiten den Namen weg (siehe `ARCHITECTURE.md` → Mandantenfähigkeit). Wird ein Schlüssel geändert, müssen die `onConflict`-Angaben der `upsert()`-Aufrufe mit.
@@ -177,6 +179,8 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 - `supabase/migration_mandant_schluessel.sql` — 13 Tabellen von global auf `(verein_id, …)` umgestellt, ausgeführt am 05.08.2026. **Enthält den Hinweis, dass fünf `onConflict`-Zeilen im Code mitgeändert werden mussten** — ohne sie schlägt jedes Speichern fehl.
 - `supabase/migration_pflichtfelder_fein.sql` — Pflichtfeld-Matrizen auf feine Feldnamen (`adresse` → `strasse`/`plz`/`ort`), `vorname_nachname` entfernt, Mitgliedtypen ohne Einträge befüllt. Ausgeführt am 05.08.2026.
 - `supabase/migration_ist_admin.sql` — Adminstatus als Kennzeichen `benutzer.ist_admin` statt als Rollenwert, ausgeführt am 05.08.2026. Stellt auch `is_admin()` und `is_admin_or_above()` um. `database.types.ts` wurde dabei von Hand nachgezogen (`ist_admin`, und `person_id` aus Etappe 1, das ebenfalls fehlte) — das nächste `supabase gen types` erzeugt dieselben Zeilen, es ist also kein Sonderweg, sondern ein Vorziehen.
+- `supabase/etappe4_vorbereitung.sql` / `etappe4_benutzer.sql` — Etappe 4: `benutzer` an die Person, Registrierung auf `personen` umgestellt, harter Riegel gegen verwaiste Auth-Konten.
+- `supabase/etappe5_supporter.sql` — Etappe 5: Supporter als Mitgliedtyp, Portalrolle `mitglied` aktiviert, partieller Index `mitglieder_eine_aktive_mitgliedschaft`.
 - `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.
 - `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
 
@@ -189,6 +193,12 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `clubcampus` (ReferenceError statt Login-Screen, sobald die Env-Variablen fehlten), das undefinierte `vereinId` an `ProfileView`, sowie das Phantomfeld `geprueft` in `MemberHero` und `InfoTab` (Datenprüfungs-Status stand konstant auf „offen"/„Ausstehend").
 
 Behoben mit der SQL-Migration vom 26.07.2026 + Typ-Regenerierung: `mitglieder.eintrittsdatum`, `elternkontakte.supporter` und `benutzer.vorname/nachname/telefon` sind jetzt echte Spalten. `database.types.ts` wurde neu generiert; die früheren Bridge-/Extension-Typen in `types.ts` (Elternkontakt-`supporter`, DbUser-`vorname/nachname/telefon`, Mitglied-`eintrittsdatum`) sind entfernt. Damit greifen die früher stillen Schreibpfade (u. a. die Supporter-Logik beim Entknüpfen des letzten Kindes).
+
+Behoben am 05.08.2026 (Etappe 4 und 5):
+- **Der Registrierungsablauf war seit Etappe 3 kaputt.** `handle_new_user()` und `check_email_bekannt()` suchten in `mitglieder.email` (seit Etappe 2b eine Altspalte) und ersatzweise in `elternkontakte` (seit Etappe 3 abgelöst). Ein neuer Elternteil konnte sich nicht registrieren, und wer seine Adresse im Portal geändert hatte, wurde nicht gefunden. Beide suchen jetzt in `personen`.
+- **Verwaiste Auth-Konten entstanden lautlos.** Bei unbekannter E-Mail brach der Trigger still ab; die `auth.users`-Zeile blieb stehen. Jetzt wirft er, und Supabase rollt mit zurück.
+- **`role = 'mitglied'` wurde gesetzt, ohne dass die Rolle aktiv war.** Sie stand in `portal_rollen` mit `aktiv = false` und fehlte in `types.ts`, `getPermissions` und `NAV_BY_ROLE`.
+- **487 Kaderrollen im Funktionenfeld** — siehe Konventionen oben.
 
 Behoben am 05.08.2026 (Adminstatus):
 - **`ableitUndSaveRolle()` degradierte Administratoren stillschweigend.** `benutzer.role` ist ein berechneter Wert, und `ableitRolle()` kennt `administrator` gar nicht — ein Admin, der auch Juniorentrainer ist, wurde beim nächsten Kader-Eintrag zum Trainer. Dasselbe beim Login über `useDbUser`. Der Adminstatus liegt jetzt in `benutzer.ist_admin` und wird von der Ableitung nicht mehr angefasst; `role` bleibt der berechnete Wert und ist `administrator`, solange das Kennzeichen gesetzt ist. Alle Vergleiche auf `role === "administrator"` funktionieren dadurch unverändert.

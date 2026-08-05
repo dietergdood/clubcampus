@@ -452,6 +452,65 @@ Der dritte Test ist der Kern des ganzen Umbaus: Ueli Jakob ist Aktivmitglied **u
 
 **Offen bis Etappe 5:** Wer keine Verknüpfung mehr hat, erscheint nicht in der Elternliste — `fetchAlleElternkontakte` steigt über `eltern_kinder!inner` ein. Die Person bleibt bestehen, ist aber bis zum Mitgliedtyp „Supporter" nirgends sichtbar.
 
+### Etappe 4: der Benutzer hängt an der Person (05.08.2026)
+
+`benutzer` verliert `vorname`, `nachname` und `telefon` — die stehen an der Person. Drei Codestellen lasen sie, alle in `getProfilCheck` und `PlatzhalterModul`.
+
+**Der grössere Teil war der Registrierungsablauf**, und der war seit Etappe 3 kaputt, ohne dass es jemandem aufgefallen wäre. Beide beteiligten Datenbankfunktionen suchten an stillgelegten Orten:
+
+| | |
+|---|---|
+| `mitglieder.email` | seit Etappe 2b eine **Altspalte**. Wer seine Adresse im Portal änderte, wurde bei der Registrierung nicht mehr gefunden. |
+| `elternkontakte` | seit Etappe 3 abgelöst. Neue Elternteile konnten sich nicht anmelden. |
+
+Dazu setzte `handle_new_user()` `role = 'mitglied'` — einen Wert, den es in `portal_rollen` zwar gab, aber deaktiviert, und den weder `getPermissions` noch `NAV_BY_ROLE` kannten.
+
+Beide Funktionen suchen jetzt in `personen`. Die Rolle folgt derselben Kette wie `ableitRolle()`: Standardrolle des Mitgliedtyps, sonst `eltern` bei verknüpftem Kind, sonst `supporter`.
+
+**Der harte Riegel.** Bei unbekannter E-Mail bricht `handle_new_user()` nicht mehr still ab, sondern **wirft** — Supabase rollt die `auth.users`-Zeile dann mit zurück. Vorher blieb ein Anmeldekonto ohne Portal-Zeile stehen, das nirgends auftauchte: die verwaisten Auth-User aus der TODO-Liste.
+
+Das wirkt auch, wenn jemand am Formular vorbei direkt gegen `/auth/v1/signup` registriert — der `anon`-Schlüssel steht im ausgelieferten JavaScript und ist öffentlich gedacht. Das Formular blockt zusätzlich freundlich über `check_email_bekannt()`. Zwei Riegel: einer erklärt, einer hält.
+
+Dafür musste das frühere `EXCEPTION WHEN OTHERS THEN RETURN NEW` weichen — es hätte die neue Ausnahme gleich wieder verschluckt. Nur der Verlaufseintrag am Schluss bleibt gekapselt: der darf keine Registrierung scheitern lassen.
+
+**Zwei Policies wurden dadurch zum ersten Mal wirksam.** `personen_select_self` und `personen_update_self` hängen an `get_my_person_id()`, das `benutzer.person_id` liest — die Spalte war bei einem einzigen Konto gefüllt. Vorher liefen beide ins Leere.
+
+**Vorarbeit war nötig:** Neun von zehn Konten hatten weder Person noch Mitgliedschaft — acht Testkonten vom 28.05. und der eigene Zugang. Sechs Testkonten wurden gelöscht, Trainer und Funktionär behalten (beide werden zum Prüfen gebraucht), und alle drei verbliebenen bekamen eine Person. `supabase/etappe4_vorbereitung.sql`.
+
+### Etappe 5: Supporter ist ein Mitgliedtyp (05.08.2026)
+
+„Supporter" war ein Kennzeichen an `elternkontakte` und damit an die Elternrolle gebunden — dabei ist ein Supporter jemand, der den Verein unterstützt, **ohne** Mitglied oder Elternteil zu sein.
+
+Das löste zugleich den offenen Punkt aus Etappe 3: `fetchAlleElternkontakte` steigt über `eltern_kinder!inner` ein, wer keine Verknüpfung mehr hat, verschwindet aus der Elternliste. Mit einer Mitgliedschaft vom Typ „Supporter" erscheint die Person wieder — in der Mitgliederliste.
+
+**Die Regel:** Aktivmitglied und Supporter schliessen sich aus. Erzwungen durch den partiellen Index `mitglieder_eine_aktive_mitgliedschaft` auf `(person_id) where aktiv`. Archivierte Mitgliedschaften sind beliebig viele — sie sind die Historie.
+
+`entkoppleKind()` legt seither eine Supporter-Mitgliedschaft an (`macheZumSupporter()`), wenn ein Elternteil sein letztes Kind verliert und das Kind noch im Verein ist. Wer bereits eine aktive Mitgliedschaft hat, bekommt keine zweite: Der Index liesse sie nicht zu, und Aktivmitglied wiegt schwerer als Supporter.
+
+### Die Rolle `mitglied` — Vereinsmitglied ist nicht Gönner (05.08.2026)
+
+Drei Mitgliedtypen tragen `standard_rolle = 'mitglied'`: Passiv-, Ehren- und Freimitglied. Die Rolle existierte in `portal_rollen`, war aber **deaktiviert** und in `types.ts`, `getPermissions` und `NAV_BY_ROLE` gar nicht vorhanden.
+
+Sie durch `supporter` zu ersetzen wäre bequem und falsch gewesen: **Ein Passiv-, Ehren- oder Freimitglied ist Mitglied des Vereins mit Stimmrecht an der GV, ein Supporter ist Gönner von aussen.** Deshalb eine eigene Rolle.
+
+Unterschied im Portal: Ein Vereinsmitglied sieht zusätzlich Spielplan, Dokumente und Wiki — Vereinsunterlagen gehören den Mitgliedern. Das sind Voreinstellungen; sobald in Portalverwaltung → Module & Rechte einmal gespeichert wird, gilt was dort steht.
+
+### Chips im Profilkopf: Rolle oder Mitgliedtyp
+
+Die Regel liegt als `heroChips()` in `domains/roles/roleUtils.ts` — nicht im JSX, damit sie prüfbar ist (13 Tests).
+
+Gold ist die höchste Berechtigung, weitere Rollen stehen grau daneben. Dazu eine Unterscheidung, die im Portal leicht verschwimmt: **Die Rolle sagt, was jemand darf und tut. Der Mitgliedtyp sagt, wie er im Verein eingestuft ist** — das ist eine Beitragskategorie, keine Tätigkeit.
+
+Steht jemand weder in einem Kader noch hat er eine Vereinsfunktion, ist seine Portalrolle **nur aus `mitgliedtypen.standard_rolle` abgeleitet** — sie behauptet dann eine Tätigkeit, die es nicht gibt. Häufigster Fall: der neu erfasste Junior, noch keinem Team zugeteilt; dort stand bisher „Spieler/in". In diesem Fall trägt der goldene Chip den **Mitgliedtyp**.
+
+Ausgenommen sind `administrator` und `administration`: die kommen aus `benutzer.ist_admin` und nicht aus dem Mitgliedtyp.
+
+Ein Pausenmitglied, das als Aushilfe spielt, hat einen Kadereintrag und zeigt deshalb „Spieler/in" — die Regel unterscheidet über den Kader, nicht über den Mitgliedtyp.
+
+**Neu ist auch der Funktionär-Chip.** Vorher zeigte der Kopf nur die Portalrolle und die Kaderrollen; wer eine Vereinsfunktion hatte und eine andere Portalrolle, sah sie nirgends.
+
+**Voraussetzung dafür war eine Datenbereinigung.** In `mitglieder.funktionen` — dem Feld für Vereinsfunktionen — stand bei **487 Mitgliedern „Spieler"**. Das ist eine Kaderrolle, keine Funktion. Folge: `ableitRolle()` prüft nur `funktionen.length > 0` und machte damit jeden zum **Funktionär**, der gerade in keinem Kader stand — verletzt, pausierend, zwischen zwei Saisons. Am 05.08.2026 entfernt; übrig blieben acht echte Einträge auf sechs Ämter.
+
 ### Die Sicht `portal_zugang` — die eine Ausnahme
 
 Die Portal-Spalte der Elternliste kam bis Etappe 3 aus `elternkontakte.benutzer_id`, wo nur eine `verein_id`-Policy liegt — jeder Eingeloggte konnte sie lesen. Seit Etappe 3 kommt sie aus `benutzer`, wo `benutzer_select_admin`/`_self` gelten: Ein Trainer bekommt beim Join eine leere Menge und die Liste zeigt ihm für **alle** „Kein Zugang" — ohne Fehler, ohne Meldung.
@@ -497,12 +556,10 @@ Sobald serverseitig seitenweise geladen wird — bei 900 Mitgliedern unnötig, b
 | 1 | `personen` additiv anlegen, `person_id` nullable ergänzen, Backfill, Seed | ✅ **Fertig** — 908 Personen (513 Mitgliedschaften + 395 Elternkontakte), `supabase/etappe1_personen.sql` |
 | 2a | Merge über E-Mail-Gleichheit | ✅ **Fertig** (05.08.2026) — 908 → 905 Personen, 1 Paar zusammengeführt, 0 Feldkonflikte, `supabase/etappe2a_merge.sql` |
 | 2b | Flache Fassade | ✅ **Fertig** (05.08.2026) — `domains/person/personService.ts`, Lesen per Join, Schreiben aufgeteilt, 16 Tests |
-| 3 | Elternkontakte auf `personen` | ✅ **Fertig** (05.08.2026) — `supabase/etappe3_eltern.sql`, Code auf `feat/etappe3-eltern`, 340 Tests |
-| 2b | Lesepfad hinter die flache Fassade | ⏳ Offen |
-| 3 | Schreibpfad splitten (Feld-Routing Person/Mitgliedschaft) | ⏳ Offen |
-| 4 | Eltern-Umbau, `elternkontakte` verliert die Führung | ⏳ Offen |
-| 5 | Auth-Pfad: `get_my_person_id()`, RLS, `benutzer.person_id`, Unique-Index | ⏳ Offen |
-| 6 | Altlasten droppen, FK `mitglieder.mitgliedtyp → mitgliedtypen.name` | ⏳ Offen |
+| 3 | Elternkontakte auf `personen` | ✅ **Fertig** (05.08.2026) — `supabase/etappe3_eltern.sql`, 398 Elternkontakte auf 396 Personen |
+| 4 | `benutzer` an die Person, Registrierung repariert | ✅ **Fertig** (05.08.2026) — `supabase/etappe4_benutzer.sql` |
+| 5 | Supporter als Mitgliedtyp, eine aktive Mitgliedschaft pro Person | ✅ **Fertig** (05.08.2026) — `supabase/etappe5_supporter.sql` |
+| 6 | Altspalten streichen, FK `mitglieder.mitgliedtyp → mitgliedtypen (verein_id, name)` | ⏳ Offen |
 
 Nach **jeder** Etappe müssen `npm run typecheck`, `npm run build` und `npm test` grün sein. Etappe 1 war vollständig additiv und hat die Testzahl nicht verändert.
 
