@@ -422,6 +422,53 @@ Wer die Fassade aufbricht, muss `mitglieder_ansichten` migrieren. Das ist der Pr
 - **`id` bleibt die Mitglieds-Id.** Daran hängen `kader.mitglied_id`, `eltern_kinder.mitglied_id`, `benutzer.mitglied_id`, Notizen und Verlauf. Die Personen-Id kommt zusätzlich als `person_id`.
 - **Ohne Person greifen die Altspalten.** Mitglieder, die zwischen Etappe 1 und 2b entstanden sind, haben `person_id = null` — `NeuesMitgliedModal` legte damals keine Person an. Sie sollen nicht still aus der Liste fallen. Etappe 3 trägt die Personen nach.
 
+### Etappe 3: der Elternteil ist eine Person (05.08.2026)
+
+**Was das Problem war.** `elternkontakte.mitglied_id` ist `NOT NULL` — der Elternteil hing an **einem** Kind. Ein Vater mit zwei Kindern hatte zwei Zeilen und war damit zweimal derselbe Mensch.
+
+**Zielmodell:** Der Elternteil ist eine Zeile in `personen`, die Verknüpfung eine Zeile in `eltern_kinder`. `beziehung` und `hauptkontakt` liegen **an der Verknüpfung**, nicht an der Person: dieselbe Person kann Mutter des einen und Stiefmutter des anderen Kindes sein.
+
+**Der entscheidende Schritt war Block F** der Migration: `eltern_kinder.eltern_id` wurde nullable, `person_id` NOT NULL. Solange `eltern_id` Pflicht war, brauchte jede neue Verknüpfung zwingend eine `elternkontakte`-Zeile — der Umbau wäre folgenlos geblieben.
+
+Ergebnis: 398 Elternkontakte auf 396 Personen, 910 Personen gesamt, 401 Verknüpfungen.
+
+**Am echten Bestand geprüft**, nicht nur gegen Attrappen:
+
+| Test | Ergebnis |
+|---|---|
+| Geschwister | Stefan Odermatt steht einmal mit zwei Kindern statt zweimal |
+| Beziehung ändern | landet in `eltern_kinder`, keine neue Person |
+| Neuer Elternteil mit bekannter E-Mail | **keine neue Person** — die bestehende wird verknüpft |
+| Entfernen bei Mitglied + Elternteil | Verknüpfung weg, Person und Mitgliedschaft bleiben |
+
+Der dritte Test ist der Kern des ganzen Umbaus: Ueli Jakob ist Aktivmitglied **und** Vater, und steht einmal im System.
+
+**Vier Entscheidungen, die dabei getroffen wurden:**
+
+- **Beziehung bei mehreren Kindern kommagetrennt.** Preis: „Mutter, Stiefmutter" ist für Filter und Gruppierung ein dritter Wert und fällt weder unter „Mutter" noch unter „Stiefmutter".
+- **Eine Person wird nie gelöscht.** `deleteElternkontakt()` heisst jetzt `entferneElternVerknuepfung()`. Seit Etappe 2a kann hinter einer Elternzeile ein Aktivmitglied stehen — ein Bulk-Löschen in der Elternliste hätte dessen Mitgliedschaft mitgerissen. Gelöscht wird höchstens eine Person ohne Mitgliedschaft, ohne Verknüpfung und ohne Konto; im Zweifel gar nicht.
+- **Supporter-Kennzeichen wird nicht mehr nach `elternkontakte` geschrieben.** In eine Tabelle zu schreiben, die niemand mehr liest, sieht nach Funktion aus und ist keine. Wirksam bleibt `updateBenutzerRolle(…, "supporter")`; der Mitgliedtyp kommt in Etappe 5.
+- **RLS unangetastet.** Dass ein Elternteil den zweiten Elternteil desselben Kindes nicht mehr sieht, ist eine fachliche Änderung und gehört zum Berechtigungs-Umbau, nicht nebenbei entschieden. Vermerkt in `docs/auftrag_rls_gruppenrechte.md`.
+
+**Offen bis Etappe 5:** Wer keine Verknüpfung mehr hat, erscheint nicht in der Elternliste — `fetchAlleElternkontakte` steigt über `eltern_kinder!inner` ein. Die Person bleibt bestehen, ist aber bis zum Mitgliedtyp „Supporter" nirgends sichtbar.
+
+### Die Sicht `portal_zugang` — die eine Ausnahme
+
+Die Portal-Spalte der Elternliste kam bis Etappe 3 aus `elternkontakte.benutzer_id`, wo nur eine `verein_id`-Policy liegt — jeder Eingeloggte konnte sie lesen. Seit Etappe 3 kommt sie aus `benutzer`, wo `benutzer_select_admin`/`_self` gelten: Ein Trainer bekommt beim Join eine leere Menge und die Liste zeigt ihm für **alle** „Kein Zugang" — ohne Fehler, ohne Meldung.
+
+```sql
+create or replace view public.portal_zugang
+  with (security_invoker = false) as
+select b.person_id, coalesce(b.aktiv, true) as hat_zugang
+  from public.benutzer b where b.person_id is not null;
+```
+
+**`security_invoker = false` ist hier der Zweck, nicht ein Versehen.** Mit `true` würde die Sicht die RLS von `benutzer` anwenden und dem Trainer wieder nichts liefern. Für **jede andere** Sicht in ClubCampus gilt das Gegenteil: ohne `security_invoker = true` umgeht eine Sicht die RLS vollständig.
+
+Preisgegeben wird ausschliesslich „diese Person hat einen Zugang, ja oder nein". Kein Name, keine E-Mail, kein `ist_admin` — und damit nicht mehr als vor Etappe 3.
+
+**Regel:** An dieser Sicht wird nie eine Spalte ergänzt, ohne dass jemand über die Rechte nachdenkt. Wer hier `email` oder `role` dazunimmt, gibt sie allen frei.
+
 ### Der Testbestand kennt die schwierigen Fälle nicht
 
 Vier Prüfungen am 05.08.2026 ergaben dasselbe: Der Zufallsgenerator hat einen Bestand erzeugt, in dem genau die Fälle fehlen, für die der Umbau gemacht wird.
@@ -432,6 +479,8 @@ Vier Prüfungen am 05.08.2026 ergaben dasselbe: Der Zufallsgenerator hat einen B
 | Personen ohne E-Mail | 0 von 905 — kein Junior ohne |
 | Elternteil mit mehreren Kindern | 0 — keine Geschwister |
 | Elternkontakte ohne E-Mail | 0 von 395 |
+
+Ein Nachtrag zur dritten Zeile: Geschwister **gab** es — drei Elternteile mit zwei Kindern (Bea Bürgi, Marco Berger, Tobias Nussbaum). Sie standen nur korrekt in `eltern_kinder` und tauchten deshalb in einer Prüfung auf mehrfache E-Mails in `elternkontakte` nicht auf. Der Seed prüfte die **andere** Variante: derselbe Mensch als zwei `elternkontakte`-Zeilen. Beide kommen vor, und Etappe 3 muss beide auflösen.
 
 Ein Umbau, der gegen diesen Bestand läuft, prüft nichts: Der Merge-Schritt für Geschwister liefe durch, ohne je einen Treffer zu haben — und beim Fairgate-Import zum ersten Mal scharf.
 
@@ -448,7 +497,7 @@ Sobald serverseitig seitenweise geladen wird — bei 900 Mitgliedern unnötig, b
 | 1 | `personen` additiv anlegen, `person_id` nullable ergänzen, Backfill, Seed | ✅ **Fertig** — 908 Personen (513 Mitgliedschaften + 395 Elternkontakte), `supabase/etappe1_personen.sql` |
 | 2a | Merge über E-Mail-Gleichheit | ✅ **Fertig** (05.08.2026) — 908 → 905 Personen, 1 Paar zusammengeführt, 0 Feldkonflikte, `supabase/etappe2a_merge.sql` |
 | 2b | Flache Fassade | ✅ **Fertig** (05.08.2026) — `domains/person/personService.ts`, Lesen per Join, Schreiben aufgeteilt, 16 Tests |
-| 3 | Elternkontakte auf `personen` | ⏳ Auftrag liegt bereit: `docs/auftrag_etappe3_eltern.md`, Seed gesetzt |
+| 3 | Elternkontakte auf `personen` | ✅ **Fertig** (05.08.2026) — `supabase/etappe3_eltern.sql`, Code auf `feat/etappe3-eltern`, 340 Tests |
 | 2b | Lesepfad hinter die flache Fassade | ⏳ Offen |
 | 3 | Schreibpfad splitten (Feld-Routing Person/Mitgliedschaft) | ⏳ Offen |
 | 4 | Eltern-Umbau, `elternkontakte` verliert die Führung | ⏳ Offen |
