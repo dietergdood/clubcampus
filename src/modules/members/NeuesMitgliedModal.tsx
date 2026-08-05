@@ -210,10 +210,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
        mitgliedtypen.standard_rolle zurück. */
     await ableitUndSaveRolle(sb, id, [], form.mitgliedtyp || null, []);
 
-    /* Erst jetzt die Elternteile: eltern_kinder braucht die mitglied_id, und
-       elternkontakte.mitglied_id ist NOT NULL. Scheitert es hier, bleibt das
-       Kind stehen — es ist gültig, nur ohne Hauptkontakt. Ein Zurückrollen
-       würde die ganze Eingabe vernichten. */
+    /* Erst jetzt die Elternteile: eltern_kinder braucht die mitglied_id.
+       Scheitert es hier, bleibt das Kind stehen — es ist gültig, nur ohne
+       Hauptkontakt. Ein Zurückrollen würde die ganze Eingabe vernichten. */
     const elternFehler = await speichereEltern(sb, vereinId, id, elternEintraege, von);
     setSaving(false);
     if (elternFehler) {

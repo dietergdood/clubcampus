@@ -139,14 +139,21 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
   async function updatePortalZugang(mitgliedId, aktiv) {
     if (!sb) return;
     try {
-      const { data: bu } = await sb.from("benutzer").select("id").eq("mitglied_id", mitgliedId).maybeSingle();
+      const { data: bu } = await sb.from("benutzer").select("id,person_id").eq("mitglied_id", mitgliedId).maybeSingle();
       if (!bu) return;
       if (aktiv) {
         await sb.from("benutzer").update({ aktiv: true }).eq("id", bu.id);
       } else {
-        const { data: elternLinks } = await sb.from("elternkontakte")
-          .select("id,mitglied_id,mitglieder(aktiv)")
-          .eq("benutzer_id", bu.id);
+        /* Das Konto bleibt aktiv, solange noch ein anderes Kind dieses
+           Elternteils im Verein ist. Die Verknüpfungen stehen seit
+           Etappe 3 in eltern_kinder.person_id — elternkontakte wird
+           nicht mehr gelesen. Ohne person_id gibt es keine Kinder, an
+           denen das Konto hängen könnte. */
+        const { data: elternLinks } = bu.person_id
+          ? await sb.from("eltern_kinder")
+              .select("mitglied_id,mitglieder(aktiv)")
+              .eq("person_id", bu.person_id)
+          : { data: [] };
         const hatAndereAktiveKinder = (elternLinks || []).some(e =>
           e.mitglied_id !== mitgliedId && e.mitglieder?.aktiv === true
         );

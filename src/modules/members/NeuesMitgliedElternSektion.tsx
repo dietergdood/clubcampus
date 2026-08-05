@@ -16,10 +16,13 @@
    Oberfläche bei.
 
    NICHTS WIRD HIER GESPEICHERT. Die Einträge liegen im State des
-   Formulars, bis das Kind existiert — `elternkontakte.mitglied_id` ist
-   NOT NULL, ein neuer Elternteil kann also gar nicht vor dem Kind
-   entstehen. Das Schreiben erledigt `speichereEltern()` weiter unten,
-   aufgerufen von NeuesMitgliedModal nach dem Insert.
+   Formulars, bis das Kind existiert: `eltern_kinder` braucht die
+   `mitglied_id`, die es vor dem Insert des Kindes noch nicht gibt.
+   (Seit Etappe 3 könnte die Person selbst schon vorher entstehen —
+   eine halb angelegte Person ohne Verknüpfung wäre aber genau der
+   Datenmüll, den der Umbau beseitigen soll.) Das Schreiben erledigt
+   `speichereEltern()` weiter unten, aufgerufen von NeuesMitgliedModal
+   nach dem Insert.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { Av, Btn } from "../../theme.ts";
@@ -72,10 +75,15 @@ export async function speichereEltern(
       logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,
         `Elternkontakt hinzugefügt: ${e.anzeigename}`, "elternkontakte", e.anzeigename, geaendertVon);
     } else if (e.form) {
+      /* vorname/nachname sind in `personen` NOT NULL — uebernehmeNeu()
+         laesst nur validierte Formulare in die Liste. */
       const err = await insertElternkontakt(sb, {
-        ...e.form,
-        name: `${e.form.vorname ?? ""} ${e.form.nachname ?? ""}`.trim(),
-        mitglied_id: mitgliedId,
+        vorname:      (e.form.vorname  || "").trim(),
+        nachname:     (e.form.nachname || "").trim(),
+        email:        e.form.email?.trim() || null,
+        telefon:      e.form.telefon   || null,
+        beziehung:    e.form.beziehung || null,
+        mitglied_id:  mitgliedId,
         hauptkontakt: e.hauptkontakt,
       }, vereinId);
       if (err) { fehler.push(`${e.anzeigename}: ${err.message}`); continue; }

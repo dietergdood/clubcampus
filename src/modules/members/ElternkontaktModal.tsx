@@ -12,7 +12,7 @@ import { TI } from "../../icons.tsx";
 import { ElternKinderSektion } from "./ElternKinderSektion.tsx";
 import { ElternPortalSection } from "./ElternPortalSection.tsx";
 import {
-  insertElternkontakt, updateElternkontakt, deleteElternkontakt, logFuerAlleKinder,
+  insertElternkontakt, updateElternkontakt, entferneElternVerknuepfung, logFuerAlleKinder,
 } from "../../domains/members/elternService.ts";
 import { logAenderung, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import type { Sb } from "../../types.ts";
@@ -148,21 +148,34 @@ export function ElternkontaktModal({
     setSaving(true); setMsg(null);
     try {
       const name = [form.vorname, form.nachname].filter(Boolean).join(" ");
+      /* vorname/nachname sind in `personen` NOT NULL; validateElternkontakt()
+         oben hat schon abgebrochen, wenn eines leer ist. */
       const felder = {
-        vorname:   form.vorname   || null,
-        nachname:  form.nachname  || null,
-        name,
-        email:     form.email     || null,
+        vorname:   (form.vorname  || "").trim(),
+        nachname:  (form.nachname || "").trim(),
+        email:     form.email?.trim() || null,
         telefon:   form.telefon   || null,
-        beziehung: form.beziehung || null,
       };
       if (mode === "neu") {
         if (!mitgliedId) throw new Error("Kein Kind angegeben");
-        const error = await insertElternkontakt(sb, { mitglied_id: mitgliedId, ...felder }, vereinId);
+        const error = await insertElternkontakt(
+          sb, { mitglied_id: mitgliedId, beziehung: form.beziehung || null, ...felder }, vereinId,
+        );
         if (error) throw error;
         logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
       } else if (form.id) {
-        const error = await updateElternkontakt(sb, form.id, felder);
+        /* `beziehung` haengt an der Verknuepfung und wird nur mitgeschickt,
+           wenn sie sich geaendert hat. Sonst wuerde ein Speichern aus der
+           Elternliste — wo alle Kinder in einer Zeile stehen — den
+           zusammengefassten Wert („Mutter, Stiefmutter") auf alle
+           Verknuepfungen zurueckschreiben und die Unterscheidung
+           einebnen. `mitgliedId` ist dort null, im ElternTab gesetzt. */
+        const beziehungGeaendert = (form.beziehung || null) !== (data.beziehung || null);
+        const error = await updateElternkontakt(
+          sb, form.id,
+          beziehungGeaendert ? { ...felder, beziehung: form.beziehung || null } : felder,
+          mitgliedId,
+        );
         if (error) throw error;
         const alterName = [data.vorname, data.nachname].filter(Boolean).join(" ");
         const kontaktId = form.id;
@@ -187,20 +200,20 @@ export function ElternkontaktModal({
     if (!sb || !form.id) return;
     const name = [form.vorname, form.nachname].filter(Boolean).join(" ") || "Dieser Kontakt";
     const ok = await confirm({
-      title: `${name} löschen?`,
-      message: "Die Person wird aus dem System entfernt, samt allen Verknüpfungen zu Kindern. Zum Trennen einer einzelnen Verknüpfung stattdessen das Kind entknüpfen.",
+      title: `${name} als Elternkontakt entfernen?`,
+      message: "Alle Verknüpfungen zu Kindern werden getrennt. Die Person selbst bleibt bestehen — sie ist womöglich auch Mitglied. Zum Trennen einer einzelnen Verknüpfung stattdessen das Kind entknüpfen.",
       danger: true,
-      confirmLabel: "Löschen",
+      confirmLabel: "Entfernen",
     });
     if (!ok) return;
     /* Reihenfolge: erst loggen, dann loeschen — danach gibt es die
        Verknuepfungen nicht mehr, aus denen die Kinder abgeleitet werden. */
     if (vereinId) {
       await logFuerAlleKinder(sb, form.id, vereinId, (kindId) => {
-        logAktivitaet(sb, kindId, vereinId, AKTIVITAET_TYP.ELTERN_ENTFERNT, `Elternkontakt gelöscht: ${name}`, "elternkontakte", name, geaendertVon);
+        logAktivitaet(sb, kindId, vereinId, AKTIVITAET_TYP.ELTERN_ENTFERNT, `Elternkontakt entfernt: ${name}`, "elternkontakte", name, geaendertVon);
       });
     }
-    await deleteElternkontakt(sb, form.id);
+    await entferneElternVerknuepfung(sb, form.id);
     onSaved();
     onClose();
   }
@@ -218,7 +231,7 @@ export function ElternkontaktModal({
         {mode === "edit" && <ElternPortalSection e={form} sb={sb} onReload={onSaved} canEdit={canEdit}/>}
         {mode === "edit" && form.id && (
           <ElternKinderSektion
-            elternId={form.id}
+            personId={form.id}
             benutzerId={form.benutzer_id}
             sb={sb}
             vereinId={vereinId}
@@ -234,7 +247,7 @@ export function ElternkontaktModal({
       </div>
       <div className="cc-modal-ftr cc-between">
         {canEdit && mode === "edit"
-          ? <Btn variant="danger" onClick={loeschen}><TI n="trash" size={14}/> Löschen</Btn>
+          ? <Btn variant="danger" onClick={loeschen}><TI n="unlink" size={14}/> Entfernen</Btn>
           : <span/>
         }
         <div className="cc-row cc-gap-8">

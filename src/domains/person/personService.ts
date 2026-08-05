@@ -34,6 +34,8 @@
    sitzt, ist der Wechsel dann billig.
    ═══════════════════════════════════════════════════════════════ */
 
+import type { SbClient } from '../../types.ts';
+
 /* Felder, die an der Person hängen. Massgeblich für Lesen UND
    Schreiben — verteileFelder() richtet sich nach derselben Liste. */
 export const PERSON_FELDER = [
@@ -119,4 +121,18 @@ export function verteileFelder(fields: Zeile): VerteilteFelder {
 /** Trägt das Objekt überhaupt Personenfelder? */
 export function hatPersonFelder(fields: Zeile): boolean {
   return Object.keys(fields).some(k => PERSON_FELDER_SET.has(k));
+}
+
+/* Eine Person direkt lesen — ohne Mitgliedschaft.
+
+   Gebraucht seit Etappe 3 fuer Elternteile: sie haben ein Konto
+   (`benutzer.person_id`), aber nicht zwingend eine Mitgliedschaft, und
+   fallen deshalb durch jeden Lesepfad, der ueber `mitglieder` geht. */
+export async function fetchPerson(sb: SbClient, personId: string) {
+  const { data, error } = await sb.from('personen')
+    .select('*')
+    .eq('id', personId)
+    .maybeSingle();
+  if (error) console.error('fetchPerson error:', error);
+  return data;
 }

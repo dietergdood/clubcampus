@@ -113,8 +113,9 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       {eltern.length===0&&<EmptyState icon="heart" title="Keine Elternkontakte" subtitle="Noch kein Elternkontakt für dieses Mitglied erfasst."/>}
       {eltern.map((e,i)=>{
         const name = e.name||`${e.vorname||""} ${e.nachname||""}`.trim()||"?";
-        /* elternkontakte hat historisch beide Spalten: telefon und tel */
-        const tel = e.telefon||e.tel;
+        /* Nur noch `telefon`: die zweite Spalte `tel` gab es allein in
+           `elternkontakte` und ist mit Etappe 3 weggefallen. */
+        const tel = e.telefon;
         const ac = elternAvColor(e.beziehung);
         return(
           <Card key={e.id||i} className={e.hauptkontakt?"cc-eltern-card-haupt":""}>

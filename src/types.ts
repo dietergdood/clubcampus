@@ -70,10 +70,13 @@ export interface Account {
    der Datenbank abdriften. Ergänzt werden nur Felder, die die App beim
    Laden dazurechnet (siehe loadDbMitglieder in domains/app/useAppData).
 
-   eltern wird überschrieben: die gleichnamige DB-Spalte ist Json, die App
-   befüllt das Feld aber aus elternkontakte/eltern_kinder. */
+   eltern überschreibt die gleichnamige Json-Spalte. ⚠ Das Feld wird von
+   `loadDbMitglieder()` NIE befüllt — die Leser in getProfilCheck,
+   PlatzhalterModul und TeamModul laufen deshalb immer ins Leere. Das ist
+   ein eigener Schritt nach Etappe 3, nicht Teil des Eltern-Umbaus;
+   bis dahin bleibt der Typ auf das reduziert, was gelesen wird. */
 export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'> {
-  eltern?: Elternkontakt[];
+  eltern?: { benutzer_id?: string | null }[];
   // Von der App berechnet, nicht in der Tabelle
   kader_rollen?: string[];
   kader_teams?: { name: string; kurz: string }[];
@@ -94,9 +97,13 @@ export interface Team extends Tables<'teams'> {
 }
 
 // ── Elternkontakt ────────────────────────────────────────────────
-/* supporter ist seit der SQL-Migration eine echte Spalte in
-   elternkontakte und kommt aus Tables<'elternkontakte'>. */
-export type Elternkontakt = Tables<'elternkontakte'>;
+/* Der frühere Alias `Elternkontakt = Tables<'elternkontakte'>` ist mit
+   Etappe 3 entfallen: ein Elternkontakt ist jetzt eine Person mit einer
+   Verknüpfung in `eltern_kinder`. Die massgebliche Form ist
+   `ElternkontaktMitLink` in domains/members/elternService.ts — dort, wo
+   auch `beziehung` und `hauptkontakt` aus der Verknüpfung herkommen.
+   Hier steht bewusst keine Kopie: ein zweiter Typ mit denselben Feldern
+   liefe still auseinander (CLAUDE.md → Konventionen). */
 
 // ── Kind ─────────────────────────────────────────────────────────
 export interface Kind {

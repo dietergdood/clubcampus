@@ -75,6 +75,14 @@ Grund: `benutzer` trägt `ist_admin`, und über `portal_gruppen` liesse sich jed
 
 `trainingsplaetze` steht bewusst bei `training` und nicht in der Sperrliste — es sind Stammdaten des Trainingsbetriebs, keine Rechtevergabe.
 
+## Offene Punkte aus Etappe 3 (Eltern-Umbau), hier zu entscheiden
+
+Der Eltern-Umbau hat den Lesepfad von `elternkontakte` auf `personen` und `benutzer` verlegt. Beide Tabellen sind enger geschützt als die alte — die Policies wurden dabei bewusst **nicht** angefasst. Zwei Sichtbarkeiten haben sich dadurch verändert, beide gehören in diesen Auftrag:
+
+**1. Eltern sehen den zweiten Elternteil desselben Kindes nicht mehr.** `elternkontakte` trug neben den engeren Policies noch `elternkontakte_verein` — eine reine `verein_id`-Regel ohne `FOR`-Klausel. Da Policies desselben Kommandos mit ODER verknüpft werden, konnte faktisch jeder Eingeloggte des Vereins jede Elternzeile lesen. `personen` hat keine solche Regel: `personen_select_priv` (administrator/administration/trainer/funktionaer), `personen_select_self` und `personen_select_kind` (nur die eigenen Kinder). Ein Elternteil sieht damit sich selbst und seine Kinder, aber nicht mehr die Mutter oder den Vater desselben Kindes. Im heutigen Portal wird das nirgends gerendert — die Frage ist, ob es das künftig soll (Kontaktdaten des anderen Elternteils im Eltern-Dashboard).
+
+**2. Trainer sehen den Portal-Zugang in der Elternliste nicht mehr.** Die Spalte „Portal" der Elternliste kam aus `elternkontakte.benutzer_id` und war für Trainer lesbar. Seit Block D steht die Information in `benutzer.person_id`, und `benutzer` hat nur `benutzer_select_admin` und `benutzer_select_self`. Der eingebettete Join liefert Trainern deshalb eine leere Menge — die Liste zeigt für alle „Kein Zugang", ohne Fehler. Zu entscheiden: braucht ein Trainer diese Spalte überhaupt? Wenn ja, genügt eine schmale SELECT-Policy auf `benutzer` für `hat_modul_recht('members','lesen')`, beschränkt auf `id`/`person_id` — die Sperrliste oben verbietet `hat_modul_recht` auf `benutzer` allerdings ausdrücklich, weil dort `ist_admin` steht. Der saubere Weg wäre dann eine Sicht (`security_invoker`) statt einer Policy-Lockerung.
+
 ## Vorgehen
 
 1. Alle Policies auflisten und nach Tabelle gruppieren. Zeig mir die Liste, **bevor** du etwas änderst.

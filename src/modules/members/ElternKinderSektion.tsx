@@ -24,7 +24,7 @@ export interface KindZeile {
 }
 
 interface ElternKinderSektionProps {
-  elternId: string;
+  personId: string;
   benutzerId?: string | null;
   sb: Sb;
   vereinId: string | null;
@@ -43,7 +43,7 @@ interface ElternKinderSektionProps {
 }
 
 export function ElternKinderSektion({
-  elternId, benutzerId, sb, vereinId, geaendertVon,
+  personId, benutzerId, sb, vereinId, geaendertVon,
   canEdit = true, onKindHinzufuegen = null, neuesKind = null, onKindVerknuepft = null, onChanged = null,
 }: ElternKinderSektionProps) {
   const [kinder, setKinder] = useState<KindZeile[] | null>(null);
@@ -52,7 +52,7 @@ export function ElternKinderSektion({
 
   async function load() {
     if (!sb) return;
-    const roh = await fetchKinderFuerElternteil(sb, elternId);
+    const roh = await fetchKinderFuerElternteil(sb, personId);
     setKinder(roh.map(k => {
       const m = k.mitglieder;
       /* kader kann je nach Supabase-Antwort Objekt oder Array sein */
@@ -73,16 +73,16 @@ export function ElternKinderSektion({
     }));
   }
 
-  useEffect(() => { load(); }, [elternId]);
+  useEffect(() => { load(); }, [personId]);
 
   async function toggleHauptkontakt(k: KindZeile) {
     if (!sb || busy) return;
     setBusy(true);
     if (k.hauptkontakt) {
-      await clearHauptkontaktFuerKind(sb, elternId, k.mitglied_id);
+      await clearHauptkontaktFuerKind(sb, personId, k.mitglied_id);
       if (vereinId) logAktivitaet(sb, k.mitglied_id, vereinId, AKTIVITAET_TYP.ELTERN_GEAENDERT, `Hauptkontakt entfernt: ${k.name}`, "elternkontakte", k.name, geaendertVon);
     } else {
-      await setHauptkontakt(sb, k.mitglied_id, elternId, vereinId);
+      await setHauptkontakt(sb, k.mitglied_id, personId, vereinId);
       if (vereinId) logAktivitaet(sb, k.mitglied_id, vereinId, AKTIVITAET_TYP.ELTERN_GEAENDERT, `Hauptkontakt gesetzt: ${k.name}`, "elternkontakte", k.name, geaendertVon);
     }
     await load();
@@ -96,7 +96,7 @@ export function ElternKinderSektion({
     const ok = await confirm({
       title: `${k.name} entknüpfen?`,
       message: letztes
-        ? "Das ist das letzte verknüpfte Kind. Der Elternkontakt wird danach zum Supporter oder entfernt."
+        ? "Das ist das letzte verknüpfte Kind. Der Elternteil wird danach zum Supporter; die Person bleibt bestehen."
         : "Die Verknüpfung zu diesem Kind wird getrennt.",
       danger: true,
       confirmLabel: "Entknüpfen",
@@ -104,7 +104,7 @@ export function ElternKinderSektion({
     if (!ok) return;
 
     setBusy(true);
-    await entkoppleKind(sb, elternId, k.mitglied_id, benutzerId);
+    await entkoppleKind(sb, personId, k.mitglied_id, benutzerId);
     if (vereinId) logAktivitaet(sb, k.mitglied_id, vereinId, AKTIVITAET_TYP.ELTERN_ENTFERNT, `Elternkontakt entknüpft: ${k.name}`, "elternkontakte", k.name, geaendertVon);
     await load();
     setBusy(false);
@@ -117,7 +117,7 @@ export function ElternKinderSektion({
     let abgebrochen = false;
     (async () => {
       setBusy(true);
-      await linkKind(sb, elternId, neuesKind, vereinId, false);
+      await linkKind(sb, personId, neuesKind, vereinId, false);
       if (abgebrochen) return;
       await load();
       setBusy(false);

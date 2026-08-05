@@ -37,7 +37,9 @@ function PersonKontakt({ raw, fv, canEdit, ie, eltern, brauchtEltern, setTab }: 
 
   const hk = brauchtEltern(raw.mitgliedtyp) ? (eltern || []).find(e => e.hauptkontakt) : null;
   const hkName = hk ? (hk.name || `${hk.vorname||""} ${hk.nachname||""}`.trim() || "?") : null;
-  const hkTel = hk ? (hk.telefon || hk.tel) : null;
+  /* `personen` hat nur `telefon`. Die zweite Spalte `tel` gab es allein
+     in `elternkontakte` und ist mit Etappe 3 weggefallen. */
+  const hkTel = hk?.telefon || null;
 
   const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editMode };
 

@@ -535,6 +535,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "benutzer_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "benutzer_verein_id_fkey"
             columns: ["verein_id"]
             isOneToOne: false
@@ -804,27 +811,33 @@ export type Database = {
       }
       eltern_kinder: {
         Row: {
+          beziehung: string | null
           created_at: string
-          eltern_id: string
+          eltern_id: string | null
           hauptkontakt: boolean
           id: number
           mitglied_id: number
+          person_id: string
           verein_id: string
         }
         Insert: {
+          beziehung?: string | null
           created_at?: string
-          eltern_id: string
+          eltern_id?: string | null
           hauptkontakt?: boolean
           id?: never
           mitglied_id: number
+          person_id: string
           verein_id: string
         }
         Update: {
+          beziehung?: string | null
           created_at?: string
-          eltern_id?: string
+          eltern_id?: string | null
           hauptkontakt?: boolean
           id?: never
           mitglied_id?: number
+          person_id?: string
           verein_id?: string
         }
         Relationships: [
@@ -840,6 +853,13 @@ export type Database = {
             columns: ["mitglied_id"]
             isOneToOne: false
             referencedRelation: "mitglieder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eltern_kinder_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
             referencedColumns: ["id"]
           },
           {
@@ -4049,11 +4069,17 @@ export type Database = {
         Returns: Json
       }
       get_my_mitglied_id: { Args: never; Returns: number }
+      get_my_person_id: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
       get_my_verein_id: { Args: never; Returns: string }
+      hat_modul_recht: {
+        Args: { p_min_stufe?: string; p_modul: string }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_above: { Args: never; Returns: boolean }
       is_trainer_or_above: { Args: never; Returns: boolean }
+      person_ist_mein_kind: { Args: { p_person_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
