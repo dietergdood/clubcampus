@@ -14,9 +14,22 @@
    daneben. Es gibt also nichts, was man bei einem neuen Modal
    vergessen könnte — anders als bei einem Prop, das jedes Modal
    selbst setzen müsste.
+
+   ESCAPE folgt derselben Regel: es schliesst, solange nichts
+   eingegeben wurde. So bleibt der schnelle Weg hinaus erhalten,
+   ohne dass ein halb ausgefülltes Formular verloren geht.
+
+   Bei mehreren offenen Modalen reagiert nur das oberste. Dafür führt
+   das Modul einen Stapel: jedes offene Modal trägt sich beim Öffnen
+   ein und beim Schliessen wieder aus, und Escape wirkt nur auf den
+   letzten Eintrag. Ohne das würden bei einem Modal im Modal beide
+   zugehen und die darunterliegende Eingabe wäre weg.
    ═══════════════════════════════════════════════════════════════ */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useIsMobile } from "./hooks.ts";
+
+/* Stapel der offenen Modale — nur das oberste reagiert auf Escape. */
+const offeneModale: symbol[] = [];
 
 interface ModalOrSheetProps {
   open: boolean;
@@ -31,10 +44,31 @@ interface ModalOrSheetProps {
 export function ModalOrSheet({open,onClose,children,maxWidth=660,immerSchliessbar=false}: ModalOrSheetProps){
   const isMobile=useIsMobile();
   const [bearbeitet,setBearbeitet]=useState(false);
+  const idRef=useRef<symbol>(undefined);
+  if(!idRef.current) idRef.current=Symbol("modal");
 
   /* Beim Öffnen zurücksetzen — dieselbe Modal-Instanz wird für den
      nächsten Datensatz wiederverwendet. */
   useEffect(()=>{ if(open) setBearbeitet(false); },[open]);
+
+  useEffect(()=>{
+    if(!open) return;
+    const id=idRef.current!;
+    offeneModale.push(id);
+    const onKey=(e: KeyboardEvent)=>{
+      if(e.key!=="Escape") return;
+      /* Nur das oberste Modal reagiert. */
+      if(offeneModale[offeneModale.length-1]!==id) return;
+      if(bearbeitet&&!immerSchliessbar) return;
+      onClose?.();
+    };
+    window.addEventListener("keydown",onKey);
+    return ()=>{
+      window.removeEventListener("keydown",onKey);
+      const i=offeneModale.lastIndexOf(id);
+      if(i>=0) offeneModale.splice(i,1);
+    };
+  },[open,bearbeitet,immerSchliessbar,onClose]);
 
   if(!open) return null;
 

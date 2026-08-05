@@ -13,6 +13,73 @@ function backdrop() {
   return el;
 }
 
+describe("ModalOrSheet — Escape", () => {
+  function escape() {
+    fireEvent.keyDown(window, { key: "Escape" });
+  }
+
+  it("schliesst, solange nichts eingegeben wurde", () => {
+    const onClose = vi.fn();
+    render(<ModalOrSheet open onClose={onClose}><div>Nur Text</div></ModalOrSheet>);
+    escape();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("schliesst NICHT, sobald getippt wurde", () => {
+    const onClose = vi.fn();
+    render(
+      <ModalOrSheet open onClose={onClose}>
+        <input aria-label="Vorname" defaultValue=""/>
+      </ModalOrSheet>,
+    );
+    fireEvent.input(screen.getByLabelText("Vorname"), { target: { value: "Adrian" } });
+    escape();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("reagiert nicht auf andere Tasten", () => {
+    const onClose = vi.fn();
+    render(<ModalOrSheet open onClose={onClose}><div>Text</div></ModalOrSheet>);
+    fireEvent.keyDown(window, { key: "Enter" });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("bei zwei offenen Modalen schliesst nur das obere", () => {
+    /* Modal im Modal: ohne Stapel gingen beide zu und die Eingabe im
+       unteren wäre weg. */
+    const unten = vi.fn();
+    const oben  = vi.fn();
+    render(
+      <>
+        <ModalOrSheet open onClose={unten}><div>Unten</div></ModalOrSheet>
+        <ModalOrSheet open onClose={oben}><div>Oben</div></ModalOrSheet>
+      </>,
+    );
+    escape();
+    expect(oben).toHaveBeenCalledTimes(1);
+    expect(unten).not.toHaveBeenCalled();
+  });
+
+  it("nach dem Schliessen des oberen reagiert wieder das untere", () => {
+    const unten = vi.fn();
+    const oben  = vi.fn();
+    const { rerender } = render(
+      <>
+        <ModalOrSheet open onClose={unten}><div>Unten</div></ModalOrSheet>
+        <ModalOrSheet open onClose={oben}><div>Oben</div></ModalOrSheet>
+      </>,
+    );
+    rerender(
+      <>
+        <ModalOrSheet open onClose={unten}><div>Unten</div></ModalOrSheet>
+        <ModalOrSheet open={false} onClose={oben}><div>Oben</div></ModalOrSheet>
+      </>,
+    );
+    escape();
+    expect(unten).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("ModalOrSheet — Klick neben das Modal", () => {
   it("schliesst, solange nichts eingegeben wurde", () => {
     const onClose = vi.fn();
