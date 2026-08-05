@@ -452,6 +452,33 @@ Drei Eigenschaften, jede mit Grund:
 
 **Offene Lücke im Testbestand:** Alle 905 Personen haben eine E-Mail — der Zufallsgenerator hat jedem eine vergeben. Der Normalfall „Junior ohne eigene Adresse" kommt also nicht vor, obwohl er bei FCH häufig sein dürfte. Dieselbe Art Lücke wie in Etappe 1, wo es null gemeinsame E-Mails gab und deshalb ein Seed nötig war. Vor Etappe 4 sollten ein paar Junioren ihre Adresse verlieren.
 
+### Berechtigungen: eine Mechanik statt einer Rollenleiter (im Umbau, ab 05.08.2026)
+
+**Das Problem.** ClubCampus hatte zwei Rechtesysteme nebeneinander. Die feste Rollenleiter (`administrator`, `administration`, `vorstand`, `funktionaer`, `trainer`, `spieler`, `eltern`) kennt die Datenbank; die Gruppen mit Modulrechten (`portal_gruppen` → `portal_funktionen` → `benutzer_funktionen`) kennt nur das Frontend. Ein Funktionär mit weiten Gruppenrechten sah im Portal alles und bekam beim Speichern eine Absage.
+
+**Das Zielbild.** Eine Mechanik: Rechte pro Modul über Gruppen. Genau **ein** Sonderfall daneben — der Hauptadministrator (`benutzer.ist_admin`).
+
+So arbeiten die verbreiteten Systeme auch. Fairgate kennt Hauptadministratoren, die alles dürfen und nirgends sonst Rechte brauchen, darunter einzeln vergebene Administrationsbereiche; „Rolle" ist dort ausdrücklich **kein** Recht, sondern ein Etikett zur Gruppierung. ClubDesk liefert Rollen als Vorlagen mit (Gast, Standard, Funktionär, Vorstand), die der Verein frei anpasst und um eigene ergänzt — der Zugriff wird pro Rolle und Modul konfiguriert. Niemand baut eine feste Leiter.
+
+**Was bei uns dazukommt und dort fehlt:** Spieler, Trainer und Eltern bleiben **abgeleitet** (`ableitRolle()` aus Kader und Elternverknüpfung). Das ist der sportspezifische Teil — niemand pflegt Rechte von Hand nach, wenn ein Junior das Team wechselt. Ämter dagegen — Geschäftsstelle, Vorstand, Kassier, Stufenleitung — ergeben sich aus nichts und gehören in Gruppen.
+
+**Die harte Grenze.** Alles, womit man Rechte vergibt, bleibt beim Hauptadministrator: `benutzer` (trägt `ist_admin`), `portal_gruppen`, `portal_funktionen`, `benutzer_funktionen`, `modul_rechte`, `module*`, `feldsichtbarkeit`, `rollen`, `mitgliedtypen` und die Konfigurationstabellen. Käme eine Gruppe dort hin, könnte sie sich selbst zum Administrator machen. Die vollständige Liste steht in `docs/auftrag_rls_gruppenrechte.md`.
+
+**Stufen**
+
+| | | |
+|---|---|---|
+| 1 | `benutzer.ist_admin`, `is_admin()` umgestellt | ✅ 05.08.2026 — `supabase/migration_ist_admin.sql` |
+| 1b | `hat_modul_recht(modul, stufe)` in SQL, gegen die Frontend-Logik geprüft | ✅ 05.08.2026 — `supabase/migration_hat_modul_recht.sql` |
+| 2 | ~50 RLS-Policies auf `is_admin() OR hat_modul_recht(...)` | ⏳ Auftrag liegt bereit |
+| 3 | `administration` und `vorstand` aus dem Frontend | ⏳ Offen |
+
+Kein additiver Zwischenschritt: Der Verein ist im Aufbau, es gibt keine laufenden Benutzer, die eine Umstellung aussperren könnte. Bei einem Verein im Betrieb müsste vor Stufe 2 geprüft werden, ob jemand `administration` trägt — und wenn ja, vorher eine Gruppe „Geschäftsstelle" eingerichtet und zugewiesen werden.
+
+**Entschieden am 05.08.2026:** `members: verwalten` ist an eine Gruppe delegierbar. Mitglieder anlegen und löschen bleibt also nicht zwingend beim Hauptadministrator. Heute steht `members` in keiner Gruppe auf `verwalten` — auch der Vorstand hat nur `schreiben`.
+
+**Zwei Phantomfelder** sind dabei aufgefallen: `getEffektiveStufeForFunktionaer()` liest `portal_gruppen.default_stufe` und `portal_funktionen.modul_stufen` — beide Spalten existieren nicht. Wirksam sind nur `portal_funktionen.stufe_override`, `portal_gruppen.modul_stufen` und sonst `lesen`. `hat_modul_recht()` bildet bewusst das ab, was **tatsächlich** wirkt; würde jemand die Spalten später ergänzen, liefen Datenbank und Portal auseinander.
+
 ### Mandantenfähigkeit: keine globalen Schlüssel (erledigt 05.08.2026)
 
 **Grundsatz.** Was einem Verein gehört, darf nicht global eindeutig sein. Sonst nimmt der erste Verein dem zweiten den Namen weg — und bei Konfigurationstabellen teilen sich beide sogar eine Zeile.
