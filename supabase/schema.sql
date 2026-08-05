@@ -70,20 +70,24 @@ ALTER FUNCTION "public"."add_eltern_rolle"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") RETURNS json
     LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-  SELECT json_build_object(
-    'bekannt', EXISTS (
-      SELECT 1 FROM mitglieder WHERE email = p_email AND verein_id = p_verein_id AND aktiv = true
-      UNION
-      SELECT 1 FROM elternkontakte WHERE email = p_email AND verein_id = p_verein_id
-    ),
-    'name', COALESCE(
-      (SELECT vorname || ' ' || nachname FROM mitglieder WHERE email = p_email AND verein_id = p_verein_id AND aktiv = true LIMIT 1),
-      (SELECT name FROM elternkontakte WHERE email = p_email AND verein_id = p_verein_id LIMIT 1),
-      split_part(p_email, '@', 1)
-    ),
-    'mitglied_id', (SELECT id FROM mitglieder WHERE email = p_email AND verein_id = p_verein_id AND aktiv = true LIMIT 1),
-    'eltern_id', (SELECT id FROM elternkontakte WHERE email = p_email AND verein_id = p_verein_id LIMIT 1)
+  with p as (
+    select id, vorname, nachname
+      from public.personen
+     where verein_id = p_verein_id
+       and lower(btrim(email)) = lower(btrim(p_email))
+     limit 1
+  )
+  select json_build_object(
+    'bekannt',     exists (select 1 from p),
+    'name',        coalesce((select vorname || ' ' || nachname from p),
+                            split_part(p_email, '@', 1)),
+    'person_id',   (select id from p),
+    'mitglied_id', (select m.id from public.mitglieder m
+                     where m.person_id = (select id from p)
+                       and m.aktiv limit 1),
+    'eltern_id',   (select id from p)
   );
 $$;
 
@@ -134,54 +138,71 @@ ALTER FUNCTION "public"."get_my_verein_id"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 DECLARE
-  v_mitglied_id bigint;
+  v_person_id   uuid;
   v_verein_id   uuid;
-  v_vorname     text;
-  v_nachname    text;
-  v_telefon     text;
+  v_mitglied_id bigint;
+  v_mitgliedtyp text;
+  v_rolle       text;
   v_name        text;
+  v_hat_kind    boolean;
 BEGIN
-  SELECT id, verein_id, vorname, nachname, telefon 
-  INTO v_mitglied_id, v_verein_id, v_vorname, v_nachname, v_telefon
-  FROM public.mitglieder
-  WHERE email = NEW.email AND aktiv = true
-  LIMIT 1;
+  SELECT id, verein_id INTO v_person_id, v_verein_id
+    FROM public.personen
+   WHERE lower(btrim(email)) = lower(btrim(NEW.email))
+   LIMIT 1;
 
-  IF v_verein_id IS NULL THEN
-    SELECT verein_id INTO v_verein_id
-    FROM public.elternkontakte
-    WHERE email = NEW.email
-    LIMIT 1;
+  IF v_person_id IS NULL THEN
+    RAISE EXCEPTION
+      'Diese E-Mail ist dem Verein nicht bekannt. Bitte wende dich an die Administration.'
+      USING ERRCODE = 'P0001';
   END IF;
 
-  IF v_verein_id IS NULL THEN
-    RETURN NEW;
-  END IF;
+  SELECT m.id, m.mitgliedtyp INTO v_mitglied_id, v_mitgliedtyp
+    FROM public.mitglieder m
+   WHERE m.person_id = v_person_id AND m.aktiv
+   LIMIT 1;
 
-  v_name := COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email,'@',1));
-
-  INSERT INTO public.benutzer (id, email, name, role, aktiv, verein_id, vorname, nachname, telefon, mitglied_id)
-  VALUES (NEW.id, NEW.email, v_name, 'mitglied', true, v_verein_id, v_vorname, v_nachname, v_telefon, v_mitglied_id)
-  ON CONFLICT (id) DO UPDATE SET
-    mitglied_id = COALESCE(EXCLUDED.mitglied_id, benutzer.mitglied_id),
-    vorname     = COALESCE(EXCLUDED.vorname, benutzer.vorname),
-    nachname    = COALESCE(EXCLUDED.nachname, benutzer.nachname),
-    telefon     = COALESCE(EXCLUDED.telefon, benutzer.telefon);
+  SELECT exists(SELECT 1 FROM public.eltern_kinder ek WHERE ek.person_id = v_person_id)
+    INTO v_hat_kind;
 
   IF v_mitglied_id IS NOT NULL THEN
-    UPDATE public.mitglieder
-      SET hat_portal_zugang = true, updated_at = now()
-      WHERE id = v_mitglied_id;
-    INSERT INTO public.mitglieder_aktivitaeten
-      (mitglied_id, verein_id, typ, beschreibung, geaendert_von)
-    VALUES
-      (v_mitglied_id, v_verein_id, 'portal_aktiviert', 'Portal-Zugang aktiviert', v_name);
+    SELECT mt.standard_rolle INTO v_rolle
+      FROM public.mitgliedtypen mt
+     WHERE mt.verein_id = v_verein_id AND mt.name = v_mitgliedtyp
+     LIMIT 1;
   END IF;
 
-  RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
+  v_rolle := coalesce(v_rolle, CASE WHEN v_hat_kind THEN 'eltern' ELSE 'supporter' END);
+
+  v_name := COALESCE(
+    NEW.raw_user_meta_data->>'name',
+    (SELECT p.vorname || ' ' || p.nachname FROM public.personen p WHERE p.id = v_person_id),
+    split_part(NEW.email, '@', 1)
+  );
+
+  INSERT INTO public.benutzer (id, email, name, role, aktiv, verein_id, person_id, mitglied_id)
+  VALUES (NEW.id, NEW.email, v_name, v_rolle, true, v_verein_id, v_person_id, v_mitglied_id)
+  ON CONFLICT (id) DO UPDATE SET
+    person_id   = COALESCE(EXCLUDED.person_id,   benutzer.person_id),
+    mitglied_id = COALESCE(EXCLUDED.mitglied_id, benutzer.mitglied_id);
+
+  IF v_mitglied_id IS NOT NULL THEN
+    BEGIN
+      UPDATE public.mitglieder
+         SET hat_portal_zugang = true, updated_at = now()
+       WHERE id = v_mitglied_id;
+      INSERT INTO public.mitglieder_aktivitaeten
+        (mitglied_id, verein_id, typ, beschreibung, geaendert_von)
+      VALUES
+        (v_mitglied_id, v_verein_id, 'portal_aktiviert', 'Portal-Zugang aktiviert', v_name);
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -526,9 +547,6 @@ CREATE TABLE IF NOT EXISTS "public"."benutzer" (
     "aktiv" boolean DEFAULT true,
     "verein_id" "uuid" NOT NULL,
     "last_sign_in_at" timestamp with time zone,
-    "vorname" "text",
-    "nachname" "text",
-    "telefon" "text",
     "person_id" "uuid",
     "ist_admin" boolean DEFAULT false NOT NULL
 );

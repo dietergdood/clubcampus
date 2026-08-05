@@ -481,7 +481,6 @@ export type Database = {
           ist_admin: boolean
           last_sign_in_at: string | null
           mitglied_id: number | null
-          nachname: string | null
           name: string | null
           person_id: string | null
           profil_geprueft_at: string | null
@@ -489,9 +488,7 @@ export type Database = {
           rollen: string[] | null
           teams: string[] | null
           teams_kontext: Json | null
-          telefon: string | null
           verein_id: string
-          vorname: string | null
         }
         Insert: {
           aktiv?: boolean | null
@@ -501,7 +498,6 @@ export type Database = {
           ist_admin?: boolean
           last_sign_in_at?: string | null
           mitglied_id?: number | null
-          nachname?: string | null
           name?: string | null
           person_id?: string | null
           profil_geprueft_at?: string | null
@@ -509,9 +505,7 @@ export type Database = {
           rollen?: string[] | null
           teams?: string[] | null
           teams_kontext?: Json | null
-          telefon?: string | null
           verein_id: string
-          vorname?: string | null
         }
         Update: {
           aktiv?: boolean | null
@@ -521,7 +515,6 @@ export type Database = {
           ist_admin?: boolean
           last_sign_in_at?: string | null
           mitglied_id?: number | null
-          nachname?: string | null
           name?: string | null
           person_id?: string | null
           profil_geprueft_at?: string | null
@@ -529,9 +522,7 @@ export type Database = {
           rollen?: string[] | null
           teams?: string[] | null
           teams_kontext?: Json | null
-          telefon?: string | null
           verein_id?: string
-          vorname?: string | null
         }
         Relationships: [
           {
