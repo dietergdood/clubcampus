@@ -7,6 +7,7 @@ import { useState, useRef } from "react";
 import type { ChangeEvent } from "react";
 import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
+import { heroChips } from "../../domains/roles/roleUtils.ts";
 import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../../types.ts";
 /* Nicht KaderRolle aus types.ts: dort ist aktiv Pflicht, MemberDetail reicht
@@ -115,12 +116,18 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                 const TRAINER_ROLLEN=dbKaderRollen.filter(r=>r.ist_trainer).map(r=>r.name);
                 const hatTrainerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>TRAINER_ROLLEN.includes(r)));
                 const hatSpielerKader=teamDetails&&teamDetails.some(k=>(k.rollen||[]).some(r=>!TRAINER_ROLLEN.includes(r)));
-                const portalRolle=(benutzer?.role||raw.rolle||null);
-                const portalRolleClean=portalRolle&&portalRolle!=="-"?portalRolle:null;
-                const chips: {label:string;type:string}[]=[];
-                if(portalRolleClean) chips.push({label:ROLLE_LABEL[portalRolleClean]||portalRolleClean,type:"portal"});
-                if(hatTrainerKader&&portalRolleClean!=="trainer") chips.push({label:ROLLE_LABEL["trainer"]||"Trainer",type:"kader"});
-                if(hatSpielerKader&&portalRolleClean!=="spieler") chips.push({label:ROLLE_LABEL["spieler"]||"Spieler/in",type:"kader"});
+                /* Die Regel steht in domains/roles/roleUtils — dort ist sie
+                   geprueft. Vereinsfunktionen kommen aus mitglieder.funktionen;
+                   dort stand bis 05.08.2026 bei 487 Mitgliedern "Spieler", eine
+                   Kaderrolle im Funktionenfeld. Bereinigt. */
+                const chips=heroChips({
+                  portalRolle: benutzer?.role||raw.rolle||null,
+                  mitgliedtyp: raw.mitgliedtyp||null,
+                  hatTrainerKader: !!hatTrainerKader,
+                  hatSpielerKader: !!hatSpielerKader,
+                  hatFunktion: (raw.funktionen||[]).length>0,
+                  rolleLabel: ROLLE_LABEL,
+                });
                 const MAX=isMobile?2:(chips||[]).length;
                 const visible=chips.slice(0,MAX);
                 const hidden=(chips||[]).length-MAX;

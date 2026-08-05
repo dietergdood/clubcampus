@@ -20,6 +20,10 @@ export const ROLLE_PRIORITAET: Rolle[] = [
   'trainer',
   'spieler',
   'eltern',
+  /* Vereinsmitglied ohne sportliche Funktion — Passiv-, Ehren-, Freimitglied.
+     Steht ueber supporter: es ist Mitglied des Vereins mit Stimmrecht an der
+     GV, ein Supporter ist Goenner von aussen. */
+  'mitglied',
   'supporter',
 ];
 
@@ -31,6 +35,7 @@ export const ROLLE_LABEL: Record<Rolle, string> = {
   trainer:        'Trainer/in',
   spieler:        'Spieler/in',
   eltern:         'Elternteil',
+  mitglied:       'Mitglied',
   supporter:      'Unterstützer',
 };
 
@@ -127,4 +132,61 @@ export async function ableitUndSaveRolle(
   const neueRolle = await ableitRolle(sb, mitgliedId, dbKaderRollen, mitgliedtyp, funktionen);
   await saveRolle(sb, mitgliedId, neueRolle);
   return neueRolle;
+}
+
+/* ── Chips im Profilkopf ──────────────────────────────────────────
+   Welche Chips zeigt der Kopf eines Mitgliedprofils?
+
+   Gold ist die höchste Berechtigung, die weiteren Chips stehen grau
+   daneben. Die Regel dahinter ist eine Unterscheidung, die im Portal
+   leicht verschwimmt:
+
+     Die ROLLE sagt, was jemand darf und tut.
+     Der MITGLIEDTYP sagt, wie er im Verein eingestuft ist.
+
+   Steht jemand weder in einem Kader noch hat er eine Vereinsfunktion,
+   ist seine Portalrolle nur aus `mitgliedtypen.standard_rolle`
+   abgeleitet — sie behauptet dann eine Tätigkeit, die es nicht gibt.
+   Häufigster Fall: der neu erfasste Junior, noch keinem Team
+   zugeteilt. Dort stand bisher „Spieler/in".
+
+   In diesem Fall trägt der goldene Chip den Mitgliedtyp.
+
+   AUSGENOMMEN administrator und administration: die kommen aus
+   `benutzer.ist_admin` und nicht aus dem Mitgliedtyp — sie dürfen
+   nicht durch „Aktivmitglied" ersetzt werden.                      */
+
+export interface HeroChip {
+  label: string;
+  /** portal = golden, alles andere grau */
+  type: "portal" | "kader" | "funktion";
+}
+
+export interface HeroChipOptionen {
+  portalRolle: string | null | undefined;
+  mitgliedtyp: string | null | undefined;
+  hatTrainerKader: boolean;
+  hatSpielerKader: boolean;
+  hatFunktion: boolean;
+  /** Beschriftungen aus portal_rollen; fehlt eine, wird der Wert gezeigt. */
+  rolleLabel: Record<string, string>;
+}
+
+export function heroChips({
+  portalRolle, mitgliedtyp, hatTrainerKader, hatSpielerKader, hatFunktion, rolleLabel,
+}: HeroChipOptionen): HeroChip[] {
+  const rolle = portalRolle && portalRolle !== "-" ? portalRolle : null;
+  const hatTaetigkeit = hatTrainerKader || hatSpielerKader || hatFunktion;
+  const istSystemrolle = rolle === "administrator" || rolle === "administration";
+
+  const goldLabel = (!hatTaetigkeit && mitgliedtyp && !istSystemrolle)
+    ? mitgliedtyp
+    : (rolle ? rolleLabel[rolle] || rolle : null);
+
+  const chips: HeroChip[] = [];
+  if (goldLabel) chips.push({ label: goldLabel, type: "portal" });
+  if (hatTrainerKader && rolle !== "trainer") chips.push({ label: rolleLabel.trainer || "Trainer", type: "kader" });
+  if (hatSpielerKader && rolle !== "spieler") chips.push({ label: rolleLabel.spieler || "Spieler/in", type: "kader" });
+  if (hatFunktion && rolle !== "funktionaer") chips.push({ label: rolleLabel.funktionaer || "Funktionär", type: "funktion" });
+  return chips;
 }
