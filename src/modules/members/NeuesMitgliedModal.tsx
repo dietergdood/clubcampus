@@ -335,7 +335,10 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
               <div className="cc-form-full">
                 <label className="cc-label">Telefon <span className="cc-label-req">*</span></label>
                 <PhoneInput value={form.telefon||""} onChange={v=>set("telefon",v)} showHint={false}
-                  className={fehlerFelder.includes("telefon") ? "cc-phone-wrap-err" : ""}/>
+                  /* cc-input-error statt cc-phone-wrap-err: letzteres färbt nur
+                     den 0.5px-Rahmen und ist neben dem Ring der übrigen Felder
+                     kaum zu sehen. cc-input-error bringt beides mit. */
+                  className={fehlerFelder.includes("telefon") ? "cc-input-error" : ""}/>
               </div>
             )}
 
@@ -403,7 +406,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
         </div>
 
         {msg && (
-          <div className={`cc-badge ${msg.ok?"cc-badge-success":"cc-badge-danger"} cc-mt-8`}>{msg.text}</div>
+          /* Nur die Erfolgsmeldung ist ein Badge — sie ist kurz. Die
+             Fehlermeldung zählt alle fehlenden Felder auf und würde in einem
+             cc-badge wegen white-space:nowrap einen waagrechten Rollbalken
+             erzeugen. cc-error-msg ist die Formular-Fehlermeldung. */
+          msg.ok
+            ? <div className="cc-badge cc-badge-success cc-mt-8">{msg.text}</div>
+            : <div className="cc-error-msg cc-mt-8"><TI n="alert-triangle" size={13}/> {msg.text}</div>
         )}
       </div>
 
