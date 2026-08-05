@@ -1505,6 +1505,20 @@ ALTER SEQUENCE "public"."portal_rollen_id_seq" OWNED BY "public"."portal_rollen"
 
 
 
+CREATE OR REPLACE VIEW "public"."portal_zugang" WITH ("security_invoker"='false') AS
+ SELECT "person_id",
+    COALESCE("aktiv", true) AS "hat_zugang"
+   FROM "public"."benutzer" "b"
+  WHERE ("person_id" IS NOT NULL);
+
+
+ALTER VIEW "public"."portal_zugang" OWNER TO "postgres";
+
+
+COMMENT ON VIEW "public"."portal_zugang" IS 'Nur: hat diese Person einen Portal-Zugang? Laeuft bewusst OHNE security_invoker, damit auch Trainer die Spalte in der Elternliste sehen — wie vor Etappe 3 ueber elternkontakte.benutzer_id. Keine weiteren Spalten ergaenzen.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."push_subscriptions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "benutzer_id" "uuid",
@@ -5012,6 +5026,12 @@ GRANT ALL ON TABLE "public"."portal_rollen" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."portal_rollen_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."portal_rollen_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."portal_rollen_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."portal_zugang" TO "anon";
+GRANT ALL ON TABLE "public"."portal_zugang" TO "authenticated";
+GRANT ALL ON TABLE "public"."portal_zugang" TO "service_role";
 
 
 
