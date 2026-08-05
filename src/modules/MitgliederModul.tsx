@@ -14,6 +14,7 @@ import { MemberKPIs } from "./members/MemberKPIs.tsx";
 import { makeMemberRenderCell } from "./members/MemberListCell.tsx";
 import { useMemberMeta } from "../domains/members/useMemberMeta.ts";
 import { ElternListView } from "./members/ElternListView.tsx";
+import { SupporterListView } from "./members/SupporterListView.tsx";
 import { ListView } from "../shared/list/ListView.tsx";
 import { MemberDetail } from "./members/MemberDetail.tsx";
 import type { SelectedMember } from "./members/MemberDetail.tsx";
@@ -59,8 +60,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [dbPflichtfelder,setDbPflichtfelder]=useState<Pflichtfeld[]>([]);
 
 
+  /* Der Mitgliedtyp, der einen Goenner von einem Mitglied trennt. */
+  const SUPPORTER_TYP="Supporter";
   const [archivTab,setArchivTab]=useState(false);
   const [elternTab,setElternTab]=useState(false);
+  const [supporterTab,setSupporterTab]=useState(false);
   const [archivData,setArchivData]=useState<Awaited<ReturnType<typeof fetchArchiv>>>([]);
   const [archivLoaded,setArchivLoaded]=useState(false);
   const [archivCount,setArchivCount]=useState<number|null>(null);
@@ -90,10 +94,21 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   /* Memoized: allMembers ist Dependency mehrerer useMemos (FILTER_DEFS,
      JAHRGANG/ALTER). Ohne useMemo entstuende bei jedem Render ein neues
      Array -> alle abhaengigen useMemos wuerden jedes Mal neu rechnen. */
-  const allMembers: MemberRow[]=useMemo(()=>mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen).map(m=>({
+  const alleZeilen: MemberRow[]=useMemo(()=>mapMembers(dbMitglieder,dbPortalRollen,dbKaderRollen).map(m=>({
     ...m,
     funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter((g): g is string => Boolean(g)))],
   })),[dbMitglieder,dbPortalRollen,dbKaderRollen,funktionenGruppenMap]);
+
+  /* Supporter sind KEINE Mitglieder: kein Beitrag, kein Stimmrecht an der GV,
+     kein Spielbetrieb. Sie stehen technisch in `mitglieder` (Etappe 5, damit
+     sie ueberhaupt auffindbar sind), gehoeren aber nicht in die
+     Mitgliederliste — sonst stimmt der Zaehler nicht, Auswertungen zaehlen
+     sie mit, und beim Anschreiben landen sie in Gruppen, in die sie nicht
+     gehoeren. Eigener Tab. */
+  const allMembers: MemberRow[]=useMemo(
+    ()=>alleZeilen.filter(m=>m.mitgliedschaft!==SUPPORTER_TYP),[alleZeilen]);
+  const supporter: MemberRow[]=useMemo(
+    ()=>alleZeilen.filter(m=>m.mitgliedschaft===SUPPORTER_TYP),[alleZeilen]);
 
   const filterRef = useRef<((vals: FilterVals) => void) | null>(null);
   function exportData(rows: MemberRow[], cols: ColDef[], groups: MemberGroup[], format: ExportFormat){ exportDataUtil(rows, cols, format, groups); }
@@ -238,27 +253,41 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           <h1 className="cc-page-title cc-page-title-mr">Mitglieder</h1>
           {(role==="administrator"||role==="administration")&&(
             <div className="cc-ml-tabs-bar">
-              <button className={`cc-ml-tab${!archivTab&&!elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setArchivTab(false);setElternTab(false);}}>
+              <button className={`cc-ml-tab${!archivTab&&!elternTab&&!supporterTab?" cc-ml-tab-active":""}`} onClick={()=>{setArchivTab(false);setElternTab(false);setSupporterTab(false);}}>
                 Aktive <span className="cc-ml-tab-count">{(allMembers||[]).length}</span>
               </button>
               <button className={`cc-ml-tab${archivTab?" cc-ml-tab-active":""}`} onClick={()=>{
-                setArchivTab(true);setElternTab(false);
+                setArchivTab(true);setElternTab(false);setSupporterTab(false);
                 if(!archivLoaded&&sb){
                   fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
                 }
               }}>
                 Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
               </button>
-              <button className={`cc-ml-tab${elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setElternTab(true);setArchivTab(false);}}>
+              <button className={`cc-ml-tab${elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setElternTab(true);setArchivTab(false);setSupporterTab(false);}}>
                 Eltern {elternCount!==null&&<span className="cc-ml-tab-count">{elternCount}</span>}
               </button>
+              {supporter.length>0&&(
+                <button className={`cc-ml-tab${supporterTab?" cc-ml-tab-active":""}`} onClick={()=>{setSupporterTab(true);setArchivTab(false);setElternTab(false);}}>
+                  Supporter <span className="cc-ml-tab-count">{supporter.length}</span>
+                </button>
+              )}
             </div>
           )}
         </div>
 
       </div>
 
-      {elternTab?(
+      {supporterTab?(
+        <SupporterListView supporter={supporter} sb={sb} account={account} vereinId={vereinId}
+          isAdmin={role==="administrator"||role==="administration"}
+          onOpen={row=>{
+            setSupporterTab(false);
+            const m=dbMitglieder.find(x=>x.id===row.id);
+            if(m) setSelectedMember({id:m.id,name:vollname(m),role:m.rolle||"-",type:m.mitgliedtyp||"-",team:"-",_tab:"info"});
+          }}
+        />
+      ):elternTab?(
         <ElternListView sb={sb} vereinId={vereinId} account={account} isAdmin={role==="administrator"||role==="administration"}
           pflichtTypen={pflichtTypen}
           onNavToMember={id=>{
