@@ -2656,6 +2656,14 @@ CREATE INDEX "mitglieder_aktivitaeten_mitglied_idx" ON "public"."mitglieder_akti
 
 
 
+CREATE UNIQUE INDEX "mitglieder_eine_aktive_mitgliedschaft" ON "public"."mitglieder" USING "btree" ("person_id") WHERE "aktiv";
+
+
+
+COMMENT ON INDEX "public"."mitglieder_eine_aktive_mitgliedschaft" IS 'Eine aktive Mitgliedschaft pro Person. Aktivmitglied und Supporter schliessen sich aus; beim Wechsel muss die alte auf aktiv = false. Archivierte Mitgliedschaften sind beliebig viele — sie sind die Historie.';
+
+
+
 CREATE INDEX "mitglieder_person_idx" ON "public"."mitglieder" USING "btree" ("person_id");
 
 
