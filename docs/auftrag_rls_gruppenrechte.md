@@ -83,6 +83,39 @@ Der Eltern-Umbau hat den Lesepfad von `elternkontakte` auf `personen` und `benut
 
 **2. Trainer sehen den Portal-Zugang in der Elternliste nicht mehr.** Die Spalte „Portal" der Elternliste kam aus `elternkontakte.benutzer_id` und war für Trainer lesbar. Seit Block D steht die Information in `benutzer.person_id`, und `benutzer` hat nur `benutzer_select_admin` und `benutzer_select_self`. Der eingebettete Join liefert Trainern deshalb eine leere Menge — die Liste zeigt für alle „Kein Zugang", ohne Fehler. Zu entscheiden: braucht ein Trainer diese Spalte überhaupt? Wenn ja, genügt eine schmale SELECT-Policy auf `benutzer` für `hat_modul_recht('members','lesen')`, beschränkt auf `id`/`person_id` — die Sperrliste oben verbietet `hat_modul_recht` auf `benutzer` allerdings ausdrücklich, weil dort `ist_admin` steht. Der saubere Weg wäre dann eine Sicht (`security_invoker`) statt einer Policy-Lockerung.
 
+## Der Grund, warum die Rolle `funktionaer` schief liegt
+
+Beim Aufräumen am 05.08.2026 kam ein Fall hoch, den dieser Umbau mitlösen muss.
+
+`ableitRolle()` bestimmt die Portalrolle in dieser Reihenfolge:
+
+```
+1. Trainer-Kaderrolle             → trainer
+2. andere Kaderrolle              → höchste nach Priorität
+3. standard_rolle spieler/trainer → diese
+4. Vereinsfunktionen vorhanden    → funktionaer
+5. andere standard_rolle          → diese
+6. sonst                          → supporter
+```
+
+**Schritt 3 vor Schritt 4 ist Absicht.** Wer im Grümpi-OK mithilft, ist deswegen kein Funktionär — ein Junior mit `standard_rolle = spieler` bleibt Spieler, auch wenn er an einem Anlass mitarbeitet. Ohne diese Reihenfolge bekäme jeder OK-Helfer Funktionärsrechte auf Mitgliederdaten.
+
+**Der Preis ist der umgekehrte Fall.** Ein Juniorenmitglied, das Kassier wird, bekommt trotzdem `spieler` — das echte Amt bleibt folgenlos, weil der Rückfallwert aus dem Mitgliedtyp vorher greift.
+
+Beides zeigt dasselbe: **Nicht jede Funktion ist gleich viel wert, und `funktionaer` als eine Rolle kann das nicht abbilden.**
+
+Die Struktur dafür existiert bereits. Jede Funktion hängt an einer Gruppe:
+
+| Gruppe | Funktionen | Gewicht |
+|---|---|---|
+| Vorstand | Präsident, Kassier | Zugriff auf Mitglieder, Teams, Finanzen |
+| Vereinsleben & Events | Grümpi-OK, Chef Anlässe, Award-Night-OK | Termine und Helfer, Mitglieder nur lesend |
+| Betrieb & Infrastruktur | Materialwart | Material, Garderoben |
+
+**Die Gruppe sagt bereits, wie viel eine Funktion wert ist** — mit `module` und `modul_stufen`. Sobald `hat_modul_recht()` in den Policies steht, braucht es die Rolle `funktionaer` als Zwischenschritt nicht mehr: Der Kassier bekommt seine Rechte aus der Gruppe „Vorstand", der OK-Helfer aus „Vereinsleben & Events", und niemand muss über eine Reihenfolge in `ableitRolle()` entscheiden.
+
+**Für diesen Auftrag heisst das:** `ableitRolle()` bleibt vorerst unverändert — die Reihenfolge ist bewusst gewählt. Aber die Policies dürfen sich **nicht** darauf stützen, dass jemand die Rolle `funktionaer` trägt. Wo heute `get_my_role() = 'funktionaer'` steht, gehört `hat_modul_recht('<modul>', '<stufe>')` hin. Sonst hängt der Zugriff weiterhin an einer Rolle, die den Unterschied zwischen Kassier und OK-Helfer gar nicht kennt.
+
 ## Vorgehen
 
 1. Alle Policies auflisten und nach Tabelle gruppieren. Zeig mir die Liste, **bevor** du etwas änderst.
@@ -99,5 +132,5 @@ Stufe 4 räumt das Frontend auf: `administration` und `vorstand` aus `APP_ZUGRIF
 Siehe `CLAUDE.md`. Für diesen Auftrag besonders:
 
 - Analysieren, Plan zeigen, auf Freigabe warten, dann umsetzen.
-- Keine Datei ohne `npm run typecheck` (0 neue Fehler), `npm run build` (grün), `npm test` (298 grün).
+- Keine Datei ohne `npm run typecheck` (0 neue Fehler), `npm run build` (grün), `npm test` (359 grün).
 - Deutsch (Schweiz) in Kommentaren, kein ß.
