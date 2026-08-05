@@ -29,6 +29,15 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
   insertMitglied: vi.fn().mockResolvedValue('new-id-123'),
   logAktivitaet: vi.fn().mockResolvedValue(undefined),
   AKTIVITAET_TYP: { ANGELEGT: "angelegt" },
+  /* Die Attrappe listet die Exporte einzeln — fehlt einer, wirft Vitest
+     schon bei der blossen Referenz. FELD_LABEL wird seit der
+     Sammel-Fehlermeldung in validate() gebraucht. */
+  FELD_LABEL: {
+    vorname: "Vorname", nachname: "Nachname", email: "E-Mail", telefon: "Telefon",
+    geburtsdatum: "Geburtsdatum", geschlecht: "Geschlecht", strasse: "Strasse",
+    plz: "PLZ", ort: "Ort", ahv_nr: "AHV-Nr.", nationalitaet: "Nationalität 1",
+    heimatort: "Heimatort",
+  },
 }));
 import { insertMitglied } from '../../../domains/members/memberService.ts';
 
@@ -143,21 +152,34 @@ describe('NeuesMitgliedModal', () => {
       expect(btn.disabled).toBe(true);
     });
 
-    it('zeigt Fehler wenn Vorname fehlt', async () => {
+    /* Früher meldete validate() nur das ERSTE fehlende Feld. Bei neun
+       Pflichtfeldern hiess das: ausfüllen, klicken, nächste Meldung. Jetzt
+       kommen alle auf einmal. */
+    it('nennt alle fehlenden Pflichtfelder auf einmal', async () => {
       renderModal();
       const select = screen.getAllByRole('combobox')[0];
       fireEvent.change(select, { target: { value: 'Aktivmitglied' } });
       fireEvent.click(screen.getByText('Mitglied anlegen'));
-      await waitFor(() => expect(screen.getByText('Vorname ist Pflicht.')).toBeTruthy());
+      await waitFor(() => {
+        const meldung = screen.getByText(/Es fehlt noch:/);
+        expect(meldung.textContent).toContain('Vorname');
+        expect(meldung.textContent).toContain('Nachname');
+        expect(meldung.textContent).toContain('Geburtsdatum');
+        expect(meldung.textContent).toContain('Telefon');
+      });
     });
 
-    it('zeigt Fehler wenn Nachname fehlt', async () => {
+    it('bleibt beim kurzen Satz, wenn nur ein Feld fehlt', async () => {
       renderModal();
       const select = screen.getAllByRole('combobox')[0];
-      fireEvent.change(select, { target: { value: 'Aktivmitglied' } });
+      fireEvent.change(select, { target: { value: 'Passivmitglied' } });
       fireEvent.change(screen.getByPlaceholderText('Adrian'), { target: { value: 'Adrian' } });
+      fireEvent.change(screen.getByPlaceholderText('Bürgi'), { target: { value: 'Bürgi' } });
+      /* Die Labels im Formular sind nicht per htmlFor mit den Feldern
+         verknüpft — deshalb über den Feldtyp statt über das Label. */
+      fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '2000-01-01' } });
       fireEvent.click(screen.getByText('Mitglied anlegen'));
-      await waitFor(() => expect(screen.getByText('Nachname ist Pflicht.')).toBeTruthy());
+      await waitFor(() => expect(screen.getByText('Telefon ist Pflicht.')).toBeTruthy());
     });
   });
 

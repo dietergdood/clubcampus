@@ -22,7 +22,7 @@ import { AdresseFormular } from "./AdresseFormular.tsx";
 import { TI } from "../../icons.tsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
 import type { Account, Mitgliedtyp, MitgliedtypPflichtfeld, PortalRolle, Sb } from "../../types.ts";
-import { getEffektivePflichtfelder } from "../../domains/members/pflichtfelder.ts";
+import { getEffektivePflichtfelder, IMMER_PFLICHT } from "../../domains/members/pflichtfelder.ts";
 import { NeuesMitgliedElternSektion, speichereEltern } from "./NeuesMitgliedElternSektion.tsx";
 import type { ElternEintrag } from "./NeuesMitgliedElternSektion.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
@@ -116,20 +116,30 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
     setMsg(null);
   }
 
+  /* Sammelt ALLE fehlenden Pflichtfelder. Vorher wurde beim ersten Treffer
+     abgebrochen — bei neun Pflichtfeldern hiess das: ausfüllen, klicken,
+     nächste Meldung, wieder klicken. */
   function validate() {
     if (!form.mitgliedtyp) return "Bitte Mitgliedtyp wählen.";
-    if (!form.vorname?.trim()) return "Vorname ist Pflicht.";
-    if (!form.nachname?.trim()) return "Nachname ist Pflicht.";
+
     const BEKANNTE_FELDER = ["geburtsdatum","geschlecht","strasse","plz","ort","telefon","email","ahv_nr","nationalitaet","heimatort"] as const;
+    const fehlend: string[] = [];
+
+    for (const feld of IMMER_PFLICHT) {
+      if (!form[feld]?.trim()) fehlend.push(FELD_LABEL[feld] || feld);
+    }
     for (const feld of pflichtfelder) {
       /* unbekannte Felder überspringen — mitgliedtyp_pflichtfelder kann
          Felder enthalten, die dieses Formular nicht anbietet */
       if (!(BEKANNTE_FELDER as readonly string[]).includes(feld)) continue;
       if (!form[feld as (typeof BEKANNTE_FELDER)[number]]?.trim()) {
-        return `${FELD_LABEL[feld] || feld} ist Pflicht.`;
+        fehlend.push(FELD_LABEL[feld] || feld);
       }
     }
-    return null;
+
+    if (!fehlend.length) return null;
+    if (fehlend.length === 1) return `${fehlend[0]} ist Pflicht.`;
+    return `Es fehlt noch: ${fehlend.join(", ")}.`;
   }
 
   async function handleSave() {
