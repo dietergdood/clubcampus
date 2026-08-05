@@ -107,7 +107,11 @@ export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'>, Personen
    Formulare sie liefern. `verteileFelder()` in personService teilt sie auf
    `personen` und `mitglieder` auf; die Aufrufer sollen davon nichts wissen. */
 export type MitgliedUpdate = TablesUpdate<'mitglieder'> & PersonenFelder;
-export type MitgliedInsert = Omit<TablesInsert<'mitglieder'>, 'verein_id'> & PersonenFelder;
+/* `verein_id` und `person_id` sind ausgenommen: beide setzt insertMitglied()
+   selbst — verein_id als eigener Pflichtparameter, person_id erst, nachdem
+   die Person angelegt ist. Die Formulare kennen weder das eine noch das
+   andere. */
+export type MitgliedInsert = Omit<TablesInsert<'mitglieder'>, 'verein_id' | 'person_id'> & PersonenFelder;
 
 export interface KaderEintrag {
   team: { name: string | null; kurz: string | null };
