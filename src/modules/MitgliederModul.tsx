@@ -279,7 +279,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {supporterTab?(
-        <SupporterListView supporter={supporter} sb={sb} account={account} vereinId={vereinId}
+        <SupporterListView supporter={supporter} renderCell={renderCell}
+          renderMobile={m=>(
+            <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
+              {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
+              <div className="cc-members-item-body">
+                <div className="cc-members-item-name">{m.name}</div>
+                <div className="cc-members-item-sub">{m.email||m.telefon||""}</div>
+              </div>
+              <div className="cc-members-item-right"><TI n="chevron-right" size={14} className="cc-members-item-chevron"/></div>
+            </div>
+          )}
+          sb={sb} account={account} vereinId={vereinId}
           isAdmin={role==="administrator"||role==="administration"}
           onOpen={row=>{
             setSupporterTab(false);
