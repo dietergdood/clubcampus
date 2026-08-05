@@ -5,7 +5,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
 import { flacheZeile, flacheZeilen, verteileFelder } from "../person/personService.ts";
-import type { Ansicht, AnsichtSortDef, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
+import type { Ansicht, AnsichtSortDef, MitgliedInsert, MitgliedUpdate, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* ── Fehler-Vertrag der Write-Funktionen ──────────────────────────
    Reine Schreiboperationen (insert/update/delete/upsert ohne Rückgabe-
@@ -258,7 +258,7 @@ export async function fetchAktiveTeams(sb: SbClient) {
  * NICHT mehr mitgeschrieben. Zwei Wahrheiten laufen sonst auseinander,
  * und man sucht den Fehler dort, wo er nicht ist.
  */
-export async function updateMitglied(sb: SbClient, id: number, fields: TablesUpdate<"mitglieder">): Promise<boolean> {
+export async function updateMitglied(sb: SbClient, id: number, fields: MitgliedUpdate): Promise<boolean> {
   const { person, mitgliedschaft } = verteileFelder(fields as Record<string, unknown>);
   const jetzt = new Date().toISOString();
 
@@ -303,15 +303,16 @@ export async function updateMitgliedFoto(sb: SbClient, id: number, file: File): 
   const { error: upErr } = await sb.storage.from("mitglieder-fotos").upload(path, file, { upsert: true });
   if (upErr) throw upErr;
   const { data } = sb.storage.from("mitglieder-fotos").getPublicUrl(path);
-  const { error: dbErr } = await sb.from("mitglieder").update({ foto_url: data.publicUrl + "?t=" + Date.now() }).eq("id", id);
-  if (dbErr) throw dbErr;
+  /* foto_url gehoert zur Person (PERSON_FELDER) — seit Etappe 6a gibt es die
+     Spalte in `mitglieder` nicht mehr. Ueber updateMitglied(), damit die
+     Aufteilung an einer Stelle bleibt. */
+  const ok = await updateMitglied(sb, id, { foto_url: data.publicUrl + "?t=" + Date.now() });
+  if (!ok) throw new Error("Foto konnte nicht gespeichert werden.");
   return data.publicUrl;
 }
 
 export async function deleteMitgliedFoto(sb: SbClient, id: number): Promise<boolean> {
-  const { error } = await sb.from("mitglieder").update({ foto_url: null }).eq("id", id);
-  if (error) console.error("deleteMitgliedFoto error:", error);
-  return !error;
+  return updateMitglied(sb, id, { foto_url: null });
 }
 
 export async function fetchBenutzerByMitglied(sb: SbClient, mitgliedId: number) {
@@ -332,7 +333,7 @@ export async function fetchBenutzerByMitglied(sb: SbClient, mitgliedId: number) 
  */
 export async function insertMitglied(
   sb: SbClient,
-  fields: Omit<TablesInsert<"mitglieder">, "verein_id">,
+  fields: MitgliedInsert,
   vereinId: string,
 ): Promise<number | null> {
   const jetzt = new Date().toISOString();

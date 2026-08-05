@@ -17,7 +17,7 @@ import {
   getEffektivePflichtfelder,
   type RollePflichtfeld,
 } from '../members/pflichtfelder.ts';
-import { FELD_LABEL } from '../members/memberService.ts';
+import { FELD_LABEL, updateMitglied } from '../members/memberService.ts';
 import type { Sb, DbUser, Mitglied, MitgliedtypPflichtfeld, Rolle, SetState } from '../../types.js';
 
 interface GetProfilCheckProps {
@@ -136,8 +136,11 @@ export function getProfilCheck({
       const kinder = dbMitglieder.filter(m =>
         (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
       );
+      /* profil_geprueft_at gehoert zur Person (PERSON_FELDER) — seit
+         Etappe 6a gibt es die Spalte in `mitglieder` nicht mehr. Ueber
+         updateMitglied(), damit die Aufteilung an einer Stelle bleibt. */
       for (const kind of kinder) {
-        await sb.from('mitglieder').update({ profil_geprueft_at: now }).eq('id', kind.id);
+        await updateMitglied(sb as never, kind.id, { profil_geprueft_at: now });
       }
     }
     setDbUser(u => u ? { ...u, profil_geprueft_at: now } : u);

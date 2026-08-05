@@ -273,7 +273,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           const data=await fetchMitglied(sb,m.id);
-          if(data) setSelectedMember({...data,name:vollname(data),_tab:"info",_readonly:true});
+          /* fetchMitglied liefert die flache Zeile (Fassade); der aus der
+             Abfrage abgeleitete Typ kennt die Personenfelder nicht. */
+          if(data) setSelectedMember({...data,name:vollname(data as never),_tab:"info",_readonly:true} as never);
         }}/>
       ):(
       <>

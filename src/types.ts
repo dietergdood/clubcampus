@@ -76,7 +76,22 @@ export interface Account {
    PlatzhalterModul und TeamModul laufen deshalb immer ins Leere. Das ist
    ein eigener Schritt nach Etappe 3, nicht Teil des Eltern-Umbaus;
    bis dahin bleibt der Typ auf das reduziert, was gelesen wird. */
-export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'> {
+/* Die FLACHE Mitgliederzeile, wie sie aus der Fassade kommt — Mitgliedschaft
+   plus Personenfelder in einem Objekt (domains/person/personService).
+
+   Seit Etappe 6a (05.08.2026) stehen die Personenfelder NICHT mehr in
+   `mitglieder`; `Tables<'mitglieder'>` allein trifft die Form also nicht
+   mehr. Sie kommen hier aus `Tables<'personen'>` dazu — dieselbe Quelle,
+   aus der `flacheZeile()` sie liest, damit Typ und Laufzeit nicht
+   auseinanderlaufen. */
+export interface Mitglied
+  extends Omit<Tables<'mitglieder'>, 'eltern'>,
+          Partial<Pick<Tables<'personen'>,
+            'vorname' | 'nachname' | 'email' | 'telefon' |
+            'strasse' | 'plz' | 'ort' | 'kanton' | 'land' |
+            'geburtsdatum' | 'geschlecht' |
+            'nationalitaet' | 'nationalitaet2' | 'heimatort' |
+            'ahv_nr' | 'foto_url' | 'funktionen' | 'profil_geprueft_at'>> {
   eltern?: { benutzer_id?: string | null }[];
   // Von der App berechnet, nicht in der Tabelle
   kader_rollen?: string[];
@@ -85,6 +100,12 @@ export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'> {
   hat_benutzer?: boolean;
   benutzer_deaktiviert?: boolean;
 }
+
+/* Aenderungs- und Einfuege-Objekte fuer ein Mitglied — FLACH, wie die
+   Formulare sie liefern. `verteileFelder()` in personService teilt sie auf
+   `personen` und `mitglieder` auf; die Aufrufer sollen davon nichts wissen. */
+export type MitgliedUpdate = TablesUpdate<'mitglieder'> & Partial<TablesUpdate<'personen'>>;
+export type MitgliedInsert = Omit<TablesInsert<'mitglieder'>, 'verein_id'> & Partial<TablesInsert<'personen'>>;
 
 export interface KaderEintrag {
   team: { name: string | null; kurz: string | null };

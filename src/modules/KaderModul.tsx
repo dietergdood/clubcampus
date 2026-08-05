@@ -146,9 +146,13 @@ function KaderModul({role, team, sb=null, onSelectMember=null, vereinId=null}: K
     if(!sb||!teamId){ setLoading(false); return; }
     setLoading(true);
     const {data}=await sb.from("kader")
-      .select("*, mitglieder(id,vorname,nachname,geburtsdatum,nationalitaet,heimatort,ahv_nr,telefon,email,strasse,plz,ort,kanton,spielerpass,js_nr,fairgate_id)")
+      /* Personendaten kommen ueber mitglieder.personen — seit Etappe 6a
+         stehen sie nicht mehr in `mitglieder`. flacheZeile() macht die
+         verschachtelte Mitglieder-Zeile wieder flach, damit die Kaderliste
+         weiter `k.mitglieder.vorname` liest. */
+      .select("*, mitglieder(id,spielerpass,js_nr,fairgate_id,personen(vorname,nachname,geburtsdatum,nationalitaet,heimatort,ahv_nr,telefon,email,strasse,plz,ort,kanton))")
       .eq("team_id",teamId).eq("aktiv",true).eq("saison",saison).order("rueckennr");
-    if(data) setKader(data);
+    if(data) setKader(data.map(k=>({...k, mitglieder: flacheZeile(k.mitglieder as never)})) as never);
     setLoading(false);
   }
 
