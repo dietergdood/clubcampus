@@ -57,12 +57,17 @@ interface SupporterListViewProps {
   account?: Account | null;
   vereinId?: string | null;
   isAdmin?: boolean;
+  canExport?: boolean;
   onOpen?: ((row: MemberRow) => void) | null;
+  /** Archivieren und Löschen — dieselben Aktionen wie in der Mitgliederliste. */
+  onArchivieren?: ((selected: Set<string | number>) => void) | null;
+  onLoeschen?: ((selected: Set<string | number>) => void) | null;
 }
 
 function SupporterListView({
   supporter, renderCell, rolleLabel, renderMobile, sb, account = null, vereinId = null,
-  isAdmin = false, onOpen = null,
+  isAdmin = false, canExport = false, onOpen = null,
+  onArchivieren = null, onLoeschen = null,
 }: SupporterListViewProps) {
   return (
     <ListView<MemberRow>
@@ -91,8 +96,25 @@ function SupporterListView({
       vereinId={vereinId}
       viewTyp="supporter"
       isAdmin={isAdmin}
+      /* Auswahl und Sammelaktionen wie bei den Mitgliedern. Kein
+         `savedViews`: die Vorlagen „Standard" und „Verwaltung" bestehen aus
+         Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen).
+         Eigene Ansichten speichern geht trotzdem — ListView legt sie unter
+         viewTyp="supporter" ab. */
+      selectable={isAdmin}
+      bulkActions={isAdmin ? [
+        ...(onArchivieren ? [{ icon: "archive", label: "Archivieren", onClick: onArchivieren }] : []),
+        ...(onLoeschen ? [{ icon: "trash", label: "Löschen (DSGVO)", onClick: onLoeschen, danger: true, requiresSelection: true }] : []),
+      ] : []}
       footerLabel={(f, t) => `${f} von ${t} Supportern`}
-      exportFn={(rows, cols, groups, format) => exportData(rows, cols, format, groups)}
+      /* Ohne exportFormats blendet ListView den Knopf aus — exportFn allein
+         genuegt nicht. Dieselben drei Formate wie in der Mitgliederliste. */
+      exportFn={canExport ? ((rows, cols, groups, format) => exportData(rows, cols, format, groups)) : undefined}
+      exportFormats={canExport ? [
+        { label: "Liste als CSV (flach)",                 format: "csv" },
+        { label: "Liste als CSV (mit Gruppen)",           format: "csv-gruppen" },
+        { label: "Liste als Excel (pro Gruppe ein Sheet)", format: "excel-sheets", icon: "table" },
+      ] : []}
     />
   );
 }

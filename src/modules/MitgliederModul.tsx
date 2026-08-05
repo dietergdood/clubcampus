@@ -279,7 +279,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       </div>
 
       {supporterTab?(
-        <SupporterListView supporter={supporter} renderCell={renderCell} rolleLabel={ROLLE_LABEL}
+        <SupporterListView supporter={supporter} renderCell={renderCell} rolleLabel={ROLLE_LABEL} canExport={canExport}
+          onArchivieren={handleBulkDeactivate} onLoeschen={handleBulkDelete}
           renderMobile={m=>(
             <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
               {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
