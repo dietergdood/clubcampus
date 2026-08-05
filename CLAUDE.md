@@ -230,3 +230,50 @@ Behoben beim Abschluss der Modul-Migration (Sport-Module):
 - **`DashboardModul`**: Eltern-Dashboard warf `ReferenceError` durch undefinierte `kannSchreiben`/`kannVerwalten`/`isTrainer`/`isAdmin`.
 - **`TeamsVerwaltungModul`**: der exportierte, aber nirgends gerenderte `TeamsAdminView` las `navToTeam`/`onNavToTeamDone`, die nicht in seiner Prop-Liste standen.
 - Diverse zur Laufzeit wirkungslose Props (nicht durchgereicht/gespreadet) bereinigt: `mb`/`title`/`className` auf `Row`/`Btn`/`PersonPicker`, tote `window.storage`-/`ROLLE_MAP`-Reste.
+
+## Offene Punkte aus Session 23 (05.08.2026)
+
+### Personenseite statt Modal
+
+Elternteil und Supporter werden heute in einem Modal gezeigt. Das reicht nicht mehr: An einem Elternteil hängen Kinder, **Helfereinsätze**, Portal-Zugang und Verlauf; an einem Supporter dasselbe ohne Kinder. Ein Modal kann das nicht tragen.
+
+Der Personen-Umbau macht die Lösung erst möglich: Mitglied, Elternteil und Supporter sind seit heute **dieselbe Person** — eine Seite im Stil des Mitglied-Profils (Hero, Tabs, `cc-section-title`-Karten) kann alle drei zeigen, der Unterschied liegt nur darin, welche Tabs erscheinen.
+
+Voraussetzung laut `ARCHITECTURE.md`: `MemberHero` und `MemberDetail` nach `src/shared/person/` verschieben.
+
+### Supporter-Liste überarbeiten
+
+Der Tab steht (`SupporterListView`), aber Spalten, Filter und gespeicherte Ansichten sind nur das Nötigste:
+
+- **Spalten**: heute Name, E-Mail, Telefon, PLZ/Ort, Eintritt, Portal-Zugang — aus `ALL_COLS` gezogen. Was ein Gönner sonst braucht (seit wann, wie erreichbar, welche Anlässe, Beitrag?) ist nicht durchdacht.
+- **Filter**: nur Portal-Zugang.
+- **Gruppierung**: nur Portal-Zugang und Wohnort.
+- **`savedViews`**: bewusst weggelassen — die Vorlagen „Standard" und „Verwaltung" bestehen aus Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen). Eigene Ansichten speichern funktioniert, `ListView` legt sie unter `viewTyp="supporter"` ab. Eigene Vorlagen fehlen.
+
+Filter, Sortierung und Gruppierung laufen über dieselben Funktionen wie die Mitgliederliste (`filterMembers`, `sortMembers`, `buildGroups`) — ein Supporter **ist** eine `MemberRow`. Das soll so bleiben; zu überarbeiten ist die Auswahl, nicht die Mechanik.
+
+### ⚠ Zu Ende denken: Was ist ein Supporter?
+
+**Etappe 5 hat eine Entscheidung getroffen, die vermutlich falsch ist.** Sie steht so in der Datenbank und muss besprochen werden, bevor externe Vereine dazukommen.
+
+**Gebaut wurde:** Supporter ist ein **Mitgliedtyp**. `macheZumSupporter()` legt eine Zeile in `mitglieder` mit `mitgliedtyp = 'Supporter'` an, wenn ein Elternteil sein letztes Kind verliert. Begründung damals: Ohne Mitgliedschaft wäre die Person nirgends auffindbar — `fetchAlleElternkontakte` steigt über `eltern_kinder!inner` ein.
+
+**Der Einwand (Didi, 05.08.2026):** *Ein Supporter hat KEINE Mitgliedschaft.* Er zahlt keinen Beitrag, hat kein Stimmrecht an der GV, ist nicht Mitglied des Vereins. Ihm eine Zeile in `mitglieder` zu geben, verpasst ihm etwas, das er nicht hat. Das Symptom war der Supporter-Tab in der Mitgliederliste — die Ursache ist das Datenmodell.
+
+**Wie es vermutlich richtig wäre:** Ein Supporter ist eine **Person ohne Mitgliedschaft**, mit Portal-Zugang. Die Liste käme dann aus `personen` — alle ohne Mitgliedschaft und ohne Kindverknüpfung.
+
+Das löst nebenbei eine Frage, die heute offen blieb: **Wie wird ein Supporter wieder Elternteil?** Nach dem heutigen Modell bliebe seine Supporter-Mitgliedschaft aktiv, er stünde weiter im Supporter-Tab. Ohne Mitgliedschaft gäbe es nichts aufzuräumen — er ist eine Person, die wieder ein Kind hat.
+
+**Was ein Rückbau kostet:**
+
+- Mitgliedtyp „Supporter" entfällt, die angelegten Mitgliedschaften werden gelöscht (bei FCH drei: Philippe Kern, Heidi Studer, Werner Ulrich)
+- `macheZumSupporter()` fällt weg, `entkoppleKind()` setzt nur noch die Benutzerrolle
+- `SupporterListView` liest aus `personen` statt aus `mitglieder` — dann funktionieren `filterMembers`/`sortMembers`/`buildGroups` nicht mehr direkt, weil die Zeile keine `MemberRow` mehr ist
+- die Portalrolle `supporter` bleibt (sie ist eine Berechtigung, keine Mitgliedschaft)
+
+**Offene Fragen für die Diskussion:**
+
+1. Wie wird ein Supporter überhaupt erfasst — nur automatisch beim Entknüpfen, oder auch von Hand?
+2. Soll er in der Kommunikation erscheinen (Helferanfragen, News)? Dann braucht er einen Ort in den Empfängerlisten.
+3. Was unterscheidet ihn von einer Person, die einfach nur in der Datenbank steht — reicht „hat Portal-Zugang, aber keine Mitgliedschaft" als Definition?
+4. Braucht es ein Eintrittsdatum, einen Vermerk, wer ihn geworben hat?
