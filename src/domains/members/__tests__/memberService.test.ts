@@ -18,24 +18,49 @@ afterEach(() => { errSpy.mockRestore(); });
 describe("memberService — verein_id-Injektion", () => {
 
   describe("insertMitglied", () => {
-    it("schreibt verein_id, aktiv:true und Timestamps in den Insert", async () => {
-      const sb = makeSb({ "mitglieder.insert": { data: { id: 42 }, error: null } });
+    /* Seit Etappe 2b entstehen zwei Zeilen: erst die Person, dann die
+       Mitgliedschaft mit ihrer person_id. Der Name gehört zur Person. */
+    it("legt die Person an und verknüpft die Mitgliedschaft damit", async () => {
+      const sb = makeSb({
+        "personen.insert":   { data: { id: "p-7" }, error: null },
+        "mitglieder.insert": { data: { id: 42 },   error: null },
+      });
       await insertMitglied(sb as any, { vorname: "Max", nachname: "Muster" } as any, "verein-1");
+
+      const person = sb.find("personen", "insert");
+      expect(person).toBeTruthy();
+      expect(person!.payload).toEqual(expect.objectContaining({
+        vorname: "Max", nachname: "Muster", verein_id: "verein-1",
+      }));
 
       const rec = sb.find("mitglieder", "insert");
       expect(rec).toBeTruthy();
       expect(rec!.payload).toEqual(expect.objectContaining({
-        vorname: "Max",
-        nachname: "Muster",
+        person_id: "p-7",
         verein_id: "verein-1",
         aktiv: true,
       }));
+      /* Der Name darf NICHT mehr in mitglieder mitgeschrieben werden —
+         zwei Wahrheiten laufen sonst auseinander. */
+      expect(rec!.payload.vorname).toBeUndefined();
       expect(rec!.payload.created_at).toEqual(expect.any(String));
       expect(rec!.payload.updated_at).toEqual(expect.any(String));
     });
 
+    it("legt keine Mitgliedschaft an, wenn die Person scheitert", async () => {
+      const sb = makeSb({
+        "personen.insert": { data: null, error: { message: "kaputt" } },
+      });
+      const id = await insertMitglied(sb as any, { vorname: "Max" } as any, "verein-1");
+      expect(id).toBeNull();
+      expect(sb.find("mitglieder", "insert")).toBeFalsy();
+    });
+
     it("gibt die neue id zurück", async () => {
-      const sb = makeSb({ "mitglieder.insert": { data: { id: 99 }, error: null } });
+      const sb = makeSb({
+        "personen.insert":   { data: { id: "p-9" }, error: null },
+        "mitglieder.insert": { data: { id: 99 },   error: null },
+      });
       const id = await insertMitglied(sb as any, { vorname: "A" } as any, "verein-1");
       expect(id).toBe(99);
     });

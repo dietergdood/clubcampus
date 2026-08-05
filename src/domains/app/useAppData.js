@@ -3,6 +3,7 @@
    Supabase Lade-Funktionen für App-Level Daten
    ═══════════════════════════════════════════════════════════════ */
 import { THEME_DEFAULT_STATIC, hexToRgba, darkenHex, contrastColor } from "../../theme.ts";
+import { flacheZeilen } from "../person/personService.ts";
 
 export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
   setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
@@ -160,10 +161,16 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
     if (!sb) return;
     try {
       const [mitgliederRes, kaderRes, benutzerRes] = await Promise.all([
-        sb.from("mitglieder").select("*").eq("aktiv", true).order("nachname").order("vorname"),
+        /* Seit Etappe 2b per Join über personen — personService.flacheZeilen()
+           macht daraus wieder flache Zeilen, damit memberMapper, memberFilter
+           und die gespeicherten Ansichten unberührt bleiben.
+           Sortiert wird ohnehin im Browser (memberFilter); das .order() hier
+           ist nur eine Vorsortierung und darf auf den Altspalten bleiben. */
+        sb.from("mitglieder").select("*, personen(*)").eq("aktiv", true).order("nachname").order("vorname"),
         sb.from("kader").select("mitglied_id,rollen,teams(id,name,kurzname)").eq("aktiv", true),
         sb.from("benutzer").select("mitglied_id,aktiv"),
       ]);
+      const mitgliederFlach = flacheZeilen(mitgliederRes.data);
       const benutzerMap = {};
       (benutzerRes.data || []).forEach(b => {
         if (b.mitglied_id) benutzerMap[b.mitglied_id] = { exists: true, aktiv: b.aktiv !== false };
@@ -181,7 +188,7 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
           rollen: k.rollen || []
         });
       });
-      const data = (mitgliederRes.data || []).map(m => ({
+      const data = mitgliederFlach.map(m => ({
         ...m,
         kader_rollen: kaderMap[m.id]?.rollen || [],
         kader_teams: kaderMap[m.id]?.teams || [],

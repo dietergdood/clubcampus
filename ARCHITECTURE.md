@@ -414,12 +414,25 @@ Bei FCH ist niemand zweifach Mitglied (keine Sektionen), deshalb ist der allgeme
 
 Wer die Fassade aufbricht, muss `mitglieder_ansichten` migrieren. Das ist der Preis, und er ist hoch.
 
+**Umgesetzt am 05.08.2026** in `src/domains/person/personService.ts`:
+
+- `flacheZeile()` / `flacheZeilen()` machen aus der Join-Zeile wieder eine flache. Reihenfolge zählt: erst die Mitgliedschaft, dann die Personenfelder darüber — `personen` ist die Wahrheit und überschreibt die Altspalten.
+- `verteileFelder()` teilt ein flaches Änderungsobjekt auf beide Tabellen auf. Die fünf Oberflächen (InfoTab, Datenprüfung, Inline-Bearbeitung) kennen weiterhin nur flache Felder.
+- `PERSON_FELDER` ist die einzige Liste, die sagt, was an der Person hängt — für Lesen und Schreiben dieselbe.
+- **`id` bleibt die Mitglieds-Id.** Daran hängen `kader.mitglied_id`, `eltern_kinder.mitglied_id`, `benutzer.mitglied_id`, Notizen und Verlauf. Die Personen-Id kommt zusätzlich als `person_id`.
+- **Ohne Person greifen die Altspalten.** Mitglieder, die zwischen Etappe 1 und 2b entstanden sind, haben `person_id = null` — `NeuesMitgliedModal` legte damals keine Person an. Sie sollen nicht still aus der Liste fallen. Etappe 3 trägt die Personen nach.
+
+**Warum in TypeScript und nicht als SQL-Sicht:** Sortiert und gefiltert wird im Browser (`memberFilter`), nicht in der Datenbank — die Abfrage lädt alle aktiven Mitglieder, es gibt kein `.range()`. Es genügt deshalb, einmal an dieser Stelle flach zu machen. Eine Sicht wäre eine zweite Definition derselben Form in SQL und brächte das `security_invoker`-Risiko mit: ohne diese Angabe umgeht eine Sicht die RLS vollständig.
+
+Sobald serverseitig seitenweise geladen wird — bei 900 Mitgliedern unnötig, bei 5000 nicht —, müsste die Datenbank sortieren und eine Sicht wäre klar besser. Weil die Fassade an genau einer Stelle sitzt, ist der Wechsel dann billig.
+
 ### Etappen
 
 | # | Inhalt | Status |
 |---|--------|--------|
 | 1 | `personen` additiv anlegen, `person_id` nullable ergänzen, Backfill, Seed | ✅ **Fertig** — 908 Personen (513 Mitgliedschaften + 395 Elternkontakte), `supabase/etappe1_personen.sql` |
 | 2a | Merge über E-Mail-Gleichheit | ✅ **Fertig** (05.08.2026) — 908 → 905 Personen, 1 Paar zusammengeführt, 0 Feldkonflikte, `supabase/etappe2a_merge.sql` |
+| 2b | Flache Fassade | ✅ **Fertig** (05.08.2026) — `domains/person/personService.ts`, Lesen per Join, Schreiben aufgeteilt, 16 Tests |
 | 2b | Lesepfad hinter die flache Fassade | ⏳ Offen |
 | 3 | Schreibpfad splitten (Feld-Routing Person/Mitgliedschaft) | ⏳ Offen |
 | 4 | Eltern-Umbau, `elternkontakte` verliert die Führung | ⏳ Offen |

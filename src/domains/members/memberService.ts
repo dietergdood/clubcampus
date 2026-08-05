@@ -4,6 +4,7 @@
    Kader, Benutzer (Portal-Zugang), Ansichten
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
+import { flacheZeile, flacheZeilen, verteileFelder } from "../person/personService.ts";
 import type { Ansicht, AnsichtSortDef, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* ── Fehler-Vertrag der Write-Funktionen ──────────────────────────
@@ -13,14 +14,21 @@ import type { Ansicht, AnsichtSortDef, SbClient, TablesInsert, TablesUpdate } fr
    pruefen (wie in elternService). Funktionen, die Daten zurueckgeben
    (fetch*, insertMitglied, insertAnsicht …), behalten ihren Rückgabetyp. */
 
-/* ── Mitglieder ── */
+/* ── Mitglieder ──
+   Gelesen wird seit Etappe 2b per Join über `personen`, zurückgegeben
+   wird weiterhin eine flache Zeile (siehe domains/person/personService).
+   `personen` ist die Wahrheit; die gleichnamigen Spalten in `mitglieder`
+   sind Altlast und verschwinden in Etappe 6. */
 
 export async function fetchMitglied(sb: SbClient, id: number) {
   const { data } = await sb.from("mitglieder")
-    .select("*, eltern_kinder(id)")
+    /* MITGLIED_SELECT als Literal, nicht als Konstante: der Typparser von
+       PostgREST liest den Select-Ausdruck zur Übersetzungszeit und kann mit
+       einem Template-Literal nichts anfangen. */
+    .select("*, personen(*), eltern_kinder(id)")
     .eq("id", id)
     .single();
-  return data;
+  return flacheZeile(data as never) as typeof data;
 }
 
 export async function deleteMitglied(sb: SbClient, id: number): Promise<PostgrestError | null> {
@@ -48,10 +56,10 @@ export async function reaktiviereMitglied(sb: SbClient, id: number): Promise<Pos
 
 export async function fetchArchiv(sb: SbClient) {
   const { data } = await sb.from("mitglieder")
-    .select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von")
+    .select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von,personen(id,vorname,nachname)")
     .eq("aktiv", false)
     .order("deaktiviert_am", { ascending: false });
-  return data || [];
+  return flacheZeilen(data as never) as unknown as NonNullable<typeof data>;
 }
 
 export async function fetchArchivCount(sb: SbClient): Promise<number> {
@@ -228,10 +236,43 @@ export async function fetchAktiveTeams(sb: SbClient) {
   return data || [];
 }
 
+/**
+ * Ändert ein Mitglied. Die Aufrufer (InfoTab, Datenprüfung,
+ * Inline-Bearbeitung) übergeben flache Felder; die Zuordnung auf
+ * `personen` und `mitglieder` passiert hier.
+ *
+ * Personenfelder gehen ausschliesslich nach `personen` — die
+ * gleichnamigen Spalten in `mitglieder` werden ab Etappe 2b bewusst
+ * NICHT mehr mitgeschrieben. Zwei Wahrheiten laufen sonst auseinander,
+ * und man sucht den Fehler dort, wo er nicht ist.
+ */
 export async function updateMitglied(sb: SbClient, id: number, fields: TablesUpdate<"mitglieder">): Promise<boolean> {
+  const { person, mitgliedschaft } = verteileFelder(fields as Record<string, unknown>);
+  const jetzt = new Date().toISOString();
+
+  if (Object.keys(person).length > 0) {
+    const { data: zeile } = await sb.from("mitglieder")
+      .select("person_id").eq("id", id).maybeSingle();
+    const personId = zeile?.person_id;
+    if (!personId) {
+      /* Mitglied ohne Person — angelegt zwischen Etappe 1 und 2b. Der
+         Änderung darf das nicht im Weg stehen, deshalb geht sie in die
+         Altspalten. Etappe 3 legt für diese Fälle Personen nach. */
+      console.warn("updateMitglied: Mitglied", id, "hat keine person_id — schreibe in die Altspalten");
+      Object.assign(mitgliedschaft, person);
+    } else {
+      const { error } = await sb.from("personen")
+        .update({ ...person, updated_at: jetzt })
+        .eq("id", personId);
+      if (error) { console.error("updateMitglied (personen) error:", error); return false; }
+    }
+  }
+
+  if (Object.keys(mitgliedschaft).length === 0) return true;
+
   const { error } = await sb.from("mitglieder").update({
-    ...fields,
-    updated_at: new Date().toISOString(),
+    ...mitgliedschaft,
+    updated_at: jetzt,
   }).eq("id", id);
   if (error) console.error("updateMitglied error:", error);
   return !error;
@@ -266,18 +307,41 @@ export async function fetchBenutzerByMitglied(sb: SbClient, mitgliedId: number) 
   return data;
 }
 
+/**
+ * Legt Person UND Mitgliedschaft an. Zwei Schreibvorgänge, feste
+ * Reihenfolge: erst die Person, dann die Mitgliedschaft mit ihrer
+ * `person_id`.
+ *
+ * Scheitert der zweite Schritt, bleibt eine Person ohne Mitgliedschaft
+ * zurück. Das ist die harmlosere Hälfte — sie taucht nirgends auf und
+ * lässt sich beim nächsten Anlegen derselben E-Mail wiederverwenden.
+ * Umgekehrt wäre eine Mitgliedschaft ohne Person ein Datensatz, der
+ * durch die Fassade fällt.
+ */
 export async function insertMitglied(
   sb: SbClient,
   fields: Omit<TablesInsert<"mitglieder">, "verein_id">,
   vereinId: string,
 ): Promise<number | null> {
+  const jetzt = new Date().toISOString();
+  const { person, mitgliedschaft } = verteileFelder(fields as Record<string, unknown>);
+
+  const { data: neuePerson, error: personErr } = await sb.from("personen").insert({
+    ...person,
+    verein_id: vereinId,
+    created_at: jetzt,
+    updated_at: jetzt,
+  } as never).select("id").single();
+  if (personErr) { console.error("insertMitglied (personen) error:", personErr); return null; }
+
   const { data, error } = await sb.from("mitglieder").insert({
-    ...fields,
+    ...mitgliedschaft,
+    person_id: neuePerson?.id,
     verein_id: vereinId,
     aktiv: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).select("id").single();
+    created_at: jetzt,
+    updated_at: jetzt,
+  } as never).select("id").single();
   if (error) { console.error("insertMitglied error:", error); return null; }
   return data?.id ?? null;
 }

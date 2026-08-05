@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 05.08.2026: 298 grün, 2 skipped, 0 rot (23 Testdateien).
+Stand 05.08.2026: 315 grün, 2 skipped, 0 rot (24 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -115,6 +115,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 ## Konventionen
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
+- **Personendaten nie direkt aus `mitglieder` lesen oder schreiben** → `domains/person/personService.ts`. Lesen per Join (`select("*, personen(*)")`) und durch `flacheZeile()`; Schreiben durch `verteileFelder()`. `personen` ist die Wahrheit, die gleichnamigen Spalten in `mitglieder` sind seit Etappe 2b Altlast und verschwinden in Etappe 6.
 - **Pflichtfelder nie selbst herleiten** → `getEffektivePflichtfelder()` aus `domains/members/pflichtfelder.ts`. Es gibt keine Rückfallliste: was in der Matrix steht, gilt. `vorname`/`nachname` stehen nicht darin (`IMMER_PFLICHT`), weil sie in `mitglieder` NOT NULL sind. Und: **ein Feld, das Pflicht sein kann, braucht ein Eingabefeld** — sonst blockiert die Prüfung ein Formular, das den Wert gar nicht erfassen kann.
 - **Unique-/Primärschlüssel auf Vereinsdaten immer mit `verein_id`** — sonst nimmt der erste Verein dem zweiten den Namen weg (siehe `ARCHITECTURE.md` → Mandantenfähigkeit). Wird ein Schlüssel geändert, müssen die `onConflict`-Angaben der `upsert()`-Aufrufe mit.
 - Kein `window.confirm` → `useConfirm` aus `theme.ts`.

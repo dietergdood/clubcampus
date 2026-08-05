@@ -1642,6 +1642,7 @@ export type Database = {
           nationalitaet2: string | null
           notizen: string | null
           ort: string | null
+          person_id: string | null
           plz: string | null
           position: string | null
           profil_geprueft_at: string | null
@@ -1682,6 +1683,7 @@ export type Database = {
           nationalitaet2?: string | null
           notizen?: string | null
           ort?: string | null
+          person_id?: string | null
           plz?: string | null
           position?: string | null
           profil_geprueft_at?: string | null
@@ -1722,6 +1724,7 @@ export type Database = {
           nationalitaet2?: string | null
           notizen?: string | null
           ort?: string | null
+          person_id?: string | null
           plz?: string | null
           position?: string | null
           profil_geprueft_at?: string | null
@@ -1735,6 +1738,13 @@ export type Database = {
           vorname?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "mitglieder_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mitglieder_verein_id_fkey"
             columns: ["verein_id"]
@@ -2766,6 +2776,89 @@ export type Database = {
           },
           {
             foreignKeyName: "news_lesestatus_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personen: {
+        Row: {
+          ahv_nr: string | null
+          created_at: string
+          email: string | null
+          foto_url: string | null
+          funktionen: string[]
+          geburtsdatum: string | null
+          geschlecht: string | null
+          heimatort: string | null
+          id: string
+          kanton: string | null
+          land: string | null
+          nachname: string
+          nationalitaet: string | null
+          nationalitaet2: string | null
+          ort: string | null
+          plz: string | null
+          profil_geprueft_at: string | null
+          strasse: string | null
+          telefon: string | null
+          updated_at: string
+          verein_id: string
+          vorname: string
+        }
+        Insert: {
+          ahv_nr?: string | null
+          created_at?: string
+          email?: string | null
+          foto_url?: string | null
+          funktionen?: string[]
+          geburtsdatum?: string | null
+          geschlecht?: string | null
+          heimatort?: string | null
+          id?: string
+          kanton?: string | null
+          land?: string | null
+          nachname: string
+          nationalitaet?: string | null
+          nationalitaet2?: string | null
+          ort?: string | null
+          plz?: string | null
+          profil_geprueft_at?: string | null
+          strasse?: string | null
+          telefon?: string | null
+          updated_at?: string
+          verein_id: string
+          vorname: string
+        }
+        Update: {
+          ahv_nr?: string | null
+          created_at?: string
+          email?: string | null
+          foto_url?: string | null
+          funktionen?: string[]
+          geburtsdatum?: string | null
+          geschlecht?: string | null
+          heimatort?: string | null
+          id?: string
+          kanton?: string | null
+          land?: string | null
+          nachname?: string
+          nationalitaet?: string | null
+          nationalitaet2?: string | null
+          ort?: string | null
+          plz?: string | null
+          profil_geprueft_at?: string | null
+          strasse?: string | null
+          telefon?: string | null
+          updated_at?: string
+          verein_id?: string
+          vorname?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personen_verein_id_fkey"
             columns: ["verein_id"]
             isOneToOne: false
             referencedRelation: "vereine"
