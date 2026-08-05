@@ -54,12 +54,24 @@ export async function reaktiviereMitglied(sb: SbClient, id: number): Promise<Pos
   return error;
 }
 
-export async function fetchArchiv(sb: SbClient) {
+/* Eine Zeile der Archivliste. Explizit deklariert, weil die Abfrage die
+   Namen verschachtelt liefert (personen(...)) und flacheZeilen() sie flach
+   macht — der aus der Abfrage abgeleitete Typ träfe also nicht zu. */
+export interface ArchivZeile {
+  id: number;
+  mitgliedtyp: string | null;
+  deaktiviert_am: string | null;
+  deaktiviert_von: string | null;
+  vorname: string | null;
+  nachname: string | null;
+}
+
+export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[]> {
   const { data } = await sb.from("mitglieder")
-    .select("id,vorname,nachname,mitgliedtyp,deaktiviert_am,deaktiviert_von,personen(id,vorname,nachname)")
+    .select("id,mitgliedtyp,deaktiviert_am,deaktiviert_von,personen(id,vorname,nachname)")
     .eq("aktiv", false)
     .order("deaktiviert_am", { ascending: false });
-  return flacheZeilen(data as never) as unknown as NonNullable<typeof data>;
+  return flacheZeilen(data as never) as unknown as ArchivZeile[];
 }
 
 export async function fetchArchivCount(sb: SbClient): Promise<number> {

@@ -600,7 +600,7 @@ export async function macheZumSupporter(
   vereinId?: string | null,
 ): Promise<PostgrestError | null> {
   const { data: person } = await sb.from("personen")
-    .select("verein_id, vorname, nachname, email")
+    .select("verein_id")
     .eq("id", personId)
     .maybeSingle();
   const verein = vereinId ?? person?.verein_id;
@@ -617,11 +617,6 @@ export async function macheZumSupporter(
     verein_id: verein,
     mitgliedtyp: "Supporter",
     aktiv: true,
-    /* Altspalten bis Etappe 6 mitschreiben, damit Listen, die noch darauf
-       zugreifen, keinen leeren Namen zeigen. */
-    vorname: person?.vorname ?? null,
-    nachname: person?.nachname ?? null,
-    email: person?.email ?? null,
   } as never);
   return error;
 }

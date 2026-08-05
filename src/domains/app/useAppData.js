@@ -173,7 +173,10 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
            und die gespeicherten Ansichten unberührt bleiben.
            Sortiert wird ohnehin im Browser (memberFilter); das .order() hier
            ist nur eine Vorsortierung und darf auf den Altspalten bleiben. */
-        sb.from("mitglieder").select("*, personen(*)").eq("aktiv", true).order("nachname").order("vorname"),
+        /* Ohne .order(): sortiert wird im Browser (memberFilter), und die
+           Spalten nachname/vorname sind mit Etappe 6 aus `mitglieder`
+           verschwunden — ein .order() darauf braeche die Abfrage. */
+        sb.from("mitglieder").select("*, personen(*)").eq("aktiv", true),
         sb.from("kader").select("mitglied_id,rollen,teams(id,name,kurzname)").eq("aktiv", true),
         sb.from("benutzer").select("mitglied_id,aktiv"),
       ]);

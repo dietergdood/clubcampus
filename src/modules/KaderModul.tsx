@@ -159,7 +159,7 @@ function KaderModul({role, team, sb=null, onSelectMember=null, vereinId=null}: K
     if(showAdd&&sb&&allMitglieder.length===0){
       /* Namen kommen seit Etappe 2b aus personen — direkt aus mitglieder
          gelesen wären sie der Stand vor dem Umbau. */
-      sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp,personen(vorname,nachname)").eq("aktiv",true).order("nachname")
+      sb.from("mitglieder").select("id,mitgliedtyp,personen(vorname,nachname)").eq("aktiv",true)
         .then(({data})=>setAllMitglieder(flacheZeilen(data as never) as never));
     }
   },[showAdd]);
