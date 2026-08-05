@@ -113,11 +113,26 @@ describe('NeuesMitgliedModal', () => {
       expect(screen.getByPlaceholderText('adrian@example.ch')).toBeTruthy();
     });
 
-    it('zeigt keine E-Mail bei Passivmitglied', () => {
+    /* Früher blendete das Modal die E-Mail bei Passiv-, Ehren- und
+       Freimitgliedern aus, während die Pflichtfeld-Matrix sie verlangte.
+       Die Prüfung schlug an, das Feld zum Ausfüllen fehlte — diese drei
+       Mitgliedtypen liessen sich dadurch gar nicht anlegen. Die E-Mail ist
+       jetzt immer sichtbar; ob sie Pflicht ist, entscheidet allein die
+       Matrix. */
+    it('zeigt E-Mail auch bei Passivmitglied', () => {
       renderModal();
       const select = screen.getAllByRole('combobox')[0];
       fireEvent.change(select, { target: { value: 'Passivmitglied' } });
-      expect(screen.queryByPlaceholderText('adrian@example.ch')).toBeNull();
+      expect(screen.getByPlaceholderText('adrian@example.ch')).toBeTruthy();
+    });
+
+    it('zeigt keine Adressfelder, wenn die Matrix für den Typ nichts vorgibt', () => {
+      renderModal();
+      const select = screen.getAllByRole('combobox')[0];
+      fireEvent.change(select, { target: { value: 'Passivmitglied' } });
+      /* Ohne Eintrag in dbPflichtfelder ist nichts Pflicht — früher griff
+         hier eine fest verdrahtete Rückfallliste. */
+      expect(screen.queryByLabelText(/Strasse/)).toBeNull();
     });
   });
 

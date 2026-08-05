@@ -3,22 +3,26 @@
    Modal zum Anlegen eines neuen Mitglieds.
 
    Mitgliedtyp zuerst wählen → dynamische Pflichtfelder erscheinen.
-   Pflichtfelder kommen aus mitgliedtyp_pflichtfelder (DB) oder
-   Fallback-Logik wenn Tabelle leer.
 
-   Felder:
-     Immer:       mitgliedtyp*, vorname*, nachname*
-     Aktivtypen:  geburtsdatum*, geschlecht*, strasse*, plz*, ort*, telefon*, email, portalrolle
-     Passivtypen: geburtsdatum*, geschlecht*, strasse*, plz*, ort*, telefon*
+   Welche Felder Pflicht sind, steht ausschliesslich in der Matrix
+   `mitgliedtyp_pflichtfelder` (Portalverwaltung → Mitglieder-Konfiguration).
+   Die Logik dazu liegt in domains/members/pflichtfelder.ts — es gibt
+   KEINE Rückfallliste mehr.
+
+   Immer sichtbar: mitgliedtyp*, vorname*, nachname*
+   Alles Weitere erscheint, sobald es für den gewählten Typ konfiguriert
+   ist. Ein Feld, das Pflicht ist, muss auch ausfüllbar sein: früher
+   verlangte die Prüfung bei Passiv-, Ehren- und Freimitgliedern eine
+   E-Mail, während das Formular das Feld ausblendete — diese drei Typen
+   liessen sich dadurch gar nicht anlegen.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
 import { Btn, ModalOrSheet, PhoneInput, useAddrSearch, usePlzLookup } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
 import type { Account, Mitgliedtyp, MitgliedtypPflichtfeld, PortalRolle, Sb } from "../../types.ts";
+import { getEffektivePflichtfelder } from "../../domains/members/pflichtfelder.ts";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
-
-const PASSIV_TYPEN = ["Passivmitglied", "Ehrenmitglied", "Gönner", "Freimitglied"];
 
 /* Eingabefelder des Formulars — alle optional, validate() prüft die
    Pflichtfelder je Mitgliedtyp. */
@@ -40,16 +44,6 @@ interface MitgliedFormular {
   rolle?: string;
 }
 
-function getPflichtfelder(mitgliedtyp: string, dbPflichtfelder: MitgliedtypPflichtfeld[]): string[] {
-  // DB-Konfiguration nutzen wenn vorhanden
-  const dbFelder = dbPflichtfelder.filter(p => p.mitgliedtyp === mitgliedtyp && p.pflicht);
-  if (dbFelder.length > 0) return dbFelder.map(p => p.feld);
-
-  // Fallback-Logik
-  const basis = ["vorname", "nachname", "geburtsdatum", "geschlecht", "strasse", "plz", "ort", "telefon"];
-  if (PASSIV_TYPEN.includes(mitgliedtyp)) return basis;
-  return basis; // Aktivmitglieder gleiche Basis
-}
 
 const GESCHLECHT_OPTS = [
   { v: "m", l: "Männlich" },
@@ -172,12 +166,15 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
         { name: "mitglied",    label: "Mitglied" },
       ];
 
-  const pflichtfelder = form.mitgliedtyp
-    ? getPflichtfelder(form.mitgliedtyp, dbPflichtfelder)
-    : [];
+  /* Nur die Mitgliedtyp-Matrix — die Rollen-Zusatzfelder greifen erst in
+     der Datenprüfung, weil beim Anlegen die sportliche Rolle noch nicht
+     feststeht (sie kommt übers Kader). */
+  const pflichtfelder = getEffektivePflichtfelder({
+    mitgliedtyp: form.mitgliedtyp,
+    typMatrix: dbPflichtfelder,
+  });
 
   const istPflicht = (feld: string) => pflichtfelder.includes(feld);
-  const istPassiv = PASSIV_TYPEN.includes(form.mitgliedtyp);
 
   function set(key: keyof MitgliedFormular, val: string) {
     setForm(f => ({ ...f, [key]: val }));
@@ -218,7 +215,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
       plz:          form.plz?.trim() || null,
       ort:          form.ort?.trim() || null,
       telefon:      form.telefon?.trim() || null,
+      /* Leer als null, nicht als "" — sonst stehen zwei Schreibweisen für
+         dasselbe in der Datenbank, und der partielle Unique-Index auf der
+         E-Mail greift bei "" nicht. */
       email:        form.email?.trim() || null,
+      ahv_nr:        form.ahv_nr?.trim() || null,
+      nationalitaet: form.nationalitaet?.trim() || null,
+      heimatort:     form.heimatort?.trim() || null,
       mitgliedtyp:  form.mitgliedtyp || null,
       rolle:        form.rolle || null,
     }, vereinId);
@@ -327,29 +330,60 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               </div>
             )}
 
-            {/* E-Mail — immer optional */}
-            {!istPassiv && (
-              <div className="cc-form-full">
-                <label className="cc-label">E-Mail</label>
-                <input className="cc-input" type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} placeholder="adrian@example.ch"/>
-                <div className="cc-hint-sub">Optional — wird für Portal-Einladung benötigt</div>
+            {/* E-Mail — immer sichtbar. Sie ist der Login-Name und darf pro
+                Verein nur einmal vorkommen (Index personen_email_pro_verein).
+                Früher hing die Sichtbarkeit an einer Liste von Passivtypen;
+                verlangte die Matrix dort eine E-Mail, war das Formular nicht
+                mehr absendbar. */}
+            <div className="cc-form-full">
+              <label className="cc-label">
+                E-Mail {istPflicht("email")&&<span className="cc-label-req">*</span>}
+              </label>
+              <input className="cc-input" type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} placeholder="adrian@example.ch"/>
+              <div className="cc-hint-sub">
+                {istPflicht("email")
+                  ? "Wird zum Login-Namen für das Portal"
+                  : "Optional — ohne E-Mail kein eigener Portal-Zugang"}
               </div>
-            )}
+            </div>
 
-            {/* Portalrolle — nur für Aktive */}
-            {!istPassiv && (
+            {/* AHV-Nr. / Nationalität / Heimatort — nur wenn konfiguriert.
+                Sie standen bisher in der Prüfliste, hatten aber kein
+                Eingabefeld: sobald jemand sie in der Matrix ankreuzte, war
+                das Formular nicht mehr absendbar. */}
+            {istPflicht("ahv_nr") && (
               <div className="cc-form-full">
-                <label className="cc-label">Portalrolle</label>
-                <select className="cc-input" value={form.rolle||""} onChange={e=>set("rolle",e.target.value)}>
-                  <option value="">— keine —</option>
-                  {portalRollen.map(r=><option key={r.name} value={r.name}>{r.label}</option>)}
-                </select>
+                <label className="cc-label">AHV-Nr. <span className="cc-label-req">*</span></label>
+                <input className="cc-input" type="text" value={form.ahv_nr||""} onChange={e=>set("ahv_nr",e.target.value)} placeholder="756.1234.5678.90"/>
               </div>
             )}
+            {(istPflicht("nationalitaet")||istPflicht("heimatort")) && (<>
+              <div>
+                <label className="cc-label">
+                  Nationalität {istPflicht("nationalitaet")&&<span className="cc-label-req">*</span>}
+                </label>
+                <input className="cc-input" type="text" value={form.nationalitaet||""} onChange={e=>set("nationalitaet",e.target.value)} placeholder="CH"/>
+              </div>
+              <div>
+                <label className="cc-label">
+                  Heimatort {istPflicht("heimatort")&&<span className="cc-label-req">*</span>}
+                </label>
+                <input className="cc-input" type="text" value={form.heimatort||""} onChange={e=>set("heimatort",e.target.value)} placeholder="Herrliberg ZH"/>
+              </div>
+            </>)}
+
+            {/* Portalrolle — optional, unabhängig vom Mitgliedtyp */}
+            <div className="cc-form-full">
+              <label className="cc-label">Portalrolle</label>
+              <select className="cc-input" value={form.rolle||""} onChange={e=>set("rolle",e.target.value)}>
+                <option value="">— keine —</option>
+                {portalRollen.map(r=><option key={r.name} value={r.name}>{r.label}</option>)}
+              </select>
+            </div>
 
             <div className="cc-form-full">
               <div className="cc-info-hint">
-                <TI n="info-circle" size={13}/> Alle weiteren Angaben (AHV-Nr., Nationalität, Spielerpass etc.) können danach im Profil ergänzt werden.
+                <TI n="info-circle" size={13}/> Alle weiteren Angaben (Spielerpass, J+S-Nr. etc.) können danach im Profil ergänzt werden.
               </div>
             </div>
 

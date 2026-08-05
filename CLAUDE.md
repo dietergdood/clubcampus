@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 04.08.2026: 254 grün, 2 skipped, 0 rot (18 Testdateien).
+Stand 05.08.2026: 267 grün, 2 skipped, 0 rot (19 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -115,6 +115,8 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 ## Konventionen
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
+- **Pflichtfelder nie selbst herleiten** → `getEffektivePflichtfelder()` aus `domains/members/pflichtfelder.ts`. Es gibt keine Rückfallliste: was in der Matrix steht, gilt. `vorname`/`nachname` stehen nicht darin (`IMMER_PFLICHT`), weil sie in `mitglieder` NOT NULL sind. Und: **ein Feld, das Pflicht sein kann, braucht ein Eingabefeld** — sonst blockiert die Prüfung ein Formular, das den Wert gar nicht erfassen kann.
+- **Unique-/Primärschlüssel auf Vereinsdaten immer mit `verein_id`** — sonst nimmt der erste Verein dem zweiten den Namen weg (siehe `ARCHITECTURE.md` → Mandantenfähigkeit). Wird ein Schlüssel geändert, müssen die `onConflict`-Angaben der `upsert()`-Aufrufe mit.
 - Kein `window.confirm` → `useConfirm` aus `theme.ts`.
 - Kein Inline-CSS, wenn eine `cc-*`-Klasse existiert. Neue CSS-Klassen nur mit `cc-`-Prefix in `cc.css` — und laut `ARCHITECTURE.md` nur nach Rücksprache mit Dieter. **Zwei Prüfungen vorher, in dieser Reihenfolge** — siehe unten.
 - Saison nie hardcoden → `currentSeason()` aus `domains/season/seasonUtils.ts`.
@@ -167,6 +169,8 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 - `ELTERN_LOGIK.md` — n:m-Modell `elternkontakte`/`eltern_kinder` und die Entknüpfungs-/Supporter-Logik (teilweise noch nicht implementiert). **Wird vom Personen-Umbau abgelöst** — siehe `ARCHITECTURE.md` → Personen-Modell.
 - `supabase/etappe1_personen.sql` — Etappe 1 des Personen-Umbaus, blockweise ausführbar. Die Blockfolge ist absichtlich **nicht** alphabetisch (A → D → B → C): `LANGUAGE sql`-Funktionen werden bei `CREATE` validiert, und die Funktionen aus B greifen auf `person_id` zu, das erst D anlegt.
 - `supabase/etappe2a_merge.sql` — Etappe 2a (Merge über E-Mail-Gleichheit), ausgeführt am 05.08.2026. Reihenfolge `0 → A → B → C → D`; Block C schreibt und löscht, ein Rückbau wie in Etappe 1 ist **nicht** möglich. Enthält die Sperrabfrage 2a-0, die vor jedem künftigen Merge (Fairgate-Import) erneut leer sein muss.
+- `supabase/migration_mandant_schluessel.sql` — 13 Tabellen von global auf `(verein_id, …)` umgestellt, ausgeführt am 05.08.2026. **Enthält den Hinweis, dass fünf `onConflict`-Zeilen im Code mitgeändert werden mussten** — ohne sie schlägt jedes Speichern fehl.
+- `supabase/migration_pflichtfelder_fein.sql` — Pflichtfeld-Matrizen auf feine Feldnamen (`adresse` → `strasse`/`plz`/`ort`), `vorname_nachname` entfernt, Mitgliedtypen ohne Einträge befüllt. Ausgeführt am 05.08.2026.
 - `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.
 - `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
 
@@ -179,6 +183,12 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `clubcampus` (ReferenceError statt Login-Screen, sobald die Env-Variablen fehlten), das undefinierte `vereinId` an `ProfileView`, sowie das Phantomfeld `geprueft` in `MemberHero` und `InfoTab` (Datenprüfungs-Status stand konstant auf „offen"/„Ausstehend").
 
 Behoben mit der SQL-Migration vom 26.07.2026 + Typ-Regenerierung: `mitglieder.eintrittsdatum`, `elternkontakte.supporter` und `benutzer.vorname/nachname/telefon` sind jetzt echte Spalten. `database.types.ts` wurde neu generiert; die früheren Bridge-/Extension-Typen in `types.ts` (Elternkontakt-`supporter`, DbUser-`vorname/nachname/telefon`, Mitglied-`eintrittsdatum`) sind entfernt. Damit greifen die früher stillen Schreibpfade (u. a. die Supporter-Logik beim Entknüpfen des letzten Kindes).
+
+Behoben am 05.08.2026 (Pflichtfelder):
+- **Drei Mitgliedtypen liessen sich nicht anlegen** — bei Passiv-, Ehren- und Freimitglied verlangte die Matrix `email`, während `NeuesMitgliedModal` das Feld über eine `PASSIV_TYPEN`-Liste ausblendete. Die Prüfung schlug an, das Feld fehlte.
+- **Die Spaltenköpfe der Pflichtfeld-Matrix waren fest verdrahtet** (`Juniormitglied`, `Funktionär`). Die echten Typen heissen `Juniorenmitglied` und `Funktionär/in` — Häkchen schrieben Zeilen für nicht existierende Typen, `Pausenmitglied` und `Supporter` hatten keine Spalte. Deshalb stand bei Juniorenmitglied nichts in der Matrix: es liess sich nicht ankreuzen. Quelle sind jetzt `dbMitgliedtypen`.
+- **`adresse` wirkte nirgends** — die Matrix schrieb `adresse`, das Formular fragte `strasse`/`plz`/`ort`; unbekannte Feldnamen wurden still übersprungen, der Adressblock erschien gar nicht.
+- **`ahv_nr`, `nationalitaet`, `heimatort`** standen in der Prüfliste ohne Eingabefeld. Sie werden jetzt gerendert und gespeichert.
 
 Behoben beim Abschluss der Modul-Migration (Sport-Module):
 - **Acht tote `verein_id`-Schreibpfade** — die DB lehnt Zeilen ohne `verein_id` still ab (siehe verein_id-Regel oben): `KaderModul` (Kader-Upsert), `TrainingsplanModul` (`trainingsplaetze`, `trainings`, `trainingsplan_vorlagen`/`_slots`/`_ausnahmen`), `TeamsVerwaltungModul` (`teams`-Insert via `toDbData`, `team_module`-Upsert). `vereinId` wird jetzt via Prop durchgereicht (clubcampus → TeamView/TeamsVerwaltung → Modul), Guards ergänzt.

@@ -414,23 +414,49 @@ Drei Eigenschaften, jede mit Grund:
 
 **Offene Lücke im Testbestand:** Alle 905 Personen haben eine E-Mail — der Zufallsgenerator hat jedem eine vergeben. Der Normalfall „Junior ohne eigene Adresse" kommt also nicht vor, obwohl er bei FCH häufig sein dürfte. Dieselbe Art Lücke wie in Etappe 1, wo es null gemeinsame E-Mails gab und deshalb ein Seed nötig war. Vor Etappe 4 sollten ein paar Junioren ihre Adresse verlieren.
 
-### Blocker vor dem zweiten Pilotverein: `mitgliedtypen_name_key`
+### Mandantenfähigkeit: keine globalen Schlüssel (erledigt 05.08.2026)
 
-`mitgliedtypen` hat `UNIQUE (name)` — **global über alle Vereine**, nicht pro Verein. Solange nur FC Herrliberg im System ist, fällt das nicht auf. Beim zweiten Verein schon: der kann keinen eigenen Mitgliedtyp „Aktivmitglied" anlegen, weil der Name bereits vergeben ist. Umzustellen auf:
+**Grundsatz.** Was einem Verein gehört, darf nicht global eindeutig sein. Sonst nimmt der erste Verein dem zweiten den Namen weg — und bei Konfigurationstabellen teilen sich beide sogar eine Zeile.
 
-```sql
-alter table mitgliedtypen drop constraint mitgliedtypen_name_key;
-alter table mitgliedtypen add constraint mitgliedtypen_verein_name_key unique (verein_id, name);
-```
+Bei einem Mandanten fällt das nie auf: ein globaler Schlüssel verhält sich dann genau wie ein vereinsbezogener. Derselbe Fehlertyp wie das frühere `.single()` ohne Slug-Filter in `loadTenant()`.
 
-**Das betrifft den FK aus Etappe 6 direkt.** `mitglieder.mitgliedtyp` ist heute freier Text ohne Fremdschlüssel — genau deshalb konnten 481 Zeilen auf dem nicht existierenden Typ „Spieler" stehen, und eine Zeile steht bis heute auf `Funktionär` statt `Funktionär/in`. Der geplante FK
+Am 05.08.2026 auf `(verein_id, …)` umgestellt — `supabase/migration_mandant_schluessel.sql`:
+
+| | Tabellen |
+|---|---|
+| UNIQUE | `mitgliedtypen`, `mitgliedtyp_pflichtfelder`, `rolle_pflichtfelder`, `kader_rollen`, `portal_rollen`, `portal_gruppen`, `rollen`, `trainingsplaetze`, `feldsichtbarkeit`, `module` |
+| PRIMARY KEY | `modul_rechte`, `module_config`, `portal_einstellungen` |
+
+Die drei Primärschlüssel wären am schlimmsten gewesen: `modul_rechte (modul, rolle)` ist die Rechte-Matrix. Zwei Vereine hätten sich **dieselbe** geteilt — Verein B setzt ein Häkchen, Verein A bekommt es mit.
+
+**Codeänderung gehört dazu.** Fünf `upsert()`-Aufrufe nennen den Schlüssel explizit (`onConflict`). Wird der Constraint geändert und die Zeile nicht, schlägt jedes Speichern fehl:
+`MitgliederKonfigTab` (2×), `PortalverwaltungModul` (2×), `ModuleRechteTab` (1×).
+
+**Bewusst global geblieben:** `api_verbindungen.key` (API-Schlüssel sollen eindeutig sein) und `mitglieder.fairgate_id` (Fremdsystem-ID). Unkritisch sind Schlüssel, deren erste Spalte über einen Fremdschlüssel schon mandantengebunden ist — `mitglied_id`, `team_id`, `gruppe_id`, `modul_id`.
+
+**Folge für Etappe 6.** Der geplante Fremdschlüssel braucht jetzt beide Spalten:
 
 ```sql
 alter table mitglieder add constraint mitglieder_mitgliedtyp_fkey
-  foreign key (mitgliedtyp) references mitgliedtypen (name);
+  foreign key (verein_id, mitgliedtyp) references mitgliedtypen (verein_id, name);
 ```
 
-funktioniert nur gegen den **globalen** Unique-Key. Wird der auf `(verein_id, name)` umgestellt, muss der FK beide Spalten führen — `mitglieder.verein_id` existiert dafür bereits. Reihenfolge also: erst die Altzeile korrigieren, dann entscheiden, ob der zweite Verein absehbar ist, und den FK gleich in der passenden Form setzen. Einen FK auf den globalen Key zu setzen und ihn später umzubauen, ist der teurere Weg.
+`mitglieder.verein_id` existiert dafür bereits. Vorher die Altzeile korrigieren, die auf `Funktionär` statt `Funktionär/in` steht.
+
+**Noch nicht durchsucht:** RLS-Policies und Abfragen ohne `verein_id`-Filter. Vor dem zweiten Pilotverein einmal systematisch prüfen — der Befund oben betraf nur Schlüssel.
+
+### Pflichtfelder (Stand 05.08.2026)
+
+**Eine Quelle:** `domains/members/pflichtfelder.ts`. Vorher stand „welche Felder sind Pflicht" an drei Stellen mit drei Vokabularen — DB-Matrizen (`adresse`, `vorname_nachname`), `NeuesMitgliedModal` (`strasse`/`plz`/`ort` plus Rückfallliste) und `getProfilCheck` (komplett fest verdrahtet). Ein Mitglied konnte dadurch beim Anlegen gültig sein und in der Datenprüfung sofort unvollständig.
+
+Beide Matrizen führen seit `supabase/migration_pflichtfelder_fein.sql` dieselben feinen Feldnamen wie das Formular. Es gibt keine Übersetzung.
+
+- **Keine Rückfallliste.** Was in der Matrix steht, gilt. Früher galt: kein Häkchen → feste Basisliste. Damit liess sich „nichts ist Pflicht" nicht ausdrücken, und alle Häkchen wegzunehmen verlangte *mehr* als vorher. Typen ohne Konfiguration werden in der Portalverwaltung mit „nichts gesetzt" markiert.
+- **`vorname`/`nachname` stehen nicht in der Matrix** (`IMMER_PFLICHT`). Sie sind in `mitglieder` NOT NULL — ein Häkchen, das sich nicht abwählen lässt, wäre eine Lüge in der Oberfläche.
+- **Die Rollen-Matrix greift nur in der Datenprüfung**, nicht beim Anlegen: dort steht erst die Portalrolle fest, die sportliche Rolle kommt übers Kader.
+- **Was Pflicht ist, muss ausfüllbar sein.** Drei Fehler dieser Art sind am 05.08.2026 aufgefallen: die Spaltenköpfe der Matrix waren fest verdrahtet (`Juniormitglied` statt `Juniorenmitglied`, `Funktionär` statt `Funktionär/in`) — Häkchen schrieben Zeilen für nicht existierende Typen, Pausenmitglied und Supporter hatten gar keine Spalte; die E-Mail war bei Passiv-, Ehren- und Freimitgliedern ausgeblendet, aber Pflicht, wodurch sich diese drei Typen **nicht anlegen liessen**; und `ahv_nr`/`nationalitaet`/`heimatort` standen in der Prüfliste ohne Eingabefeld.
+
+**Offen:** `getProfilCheck` prüft weiterhin fest verdrahtet. Um es auf `getEffektivePflichtfelder()` zu heben, müssen beide Matrizen in `clubcampus.tsx` geladen werden.
 
 ### Merge-Regel
 

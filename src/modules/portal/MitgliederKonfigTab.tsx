@@ -4,6 +4,8 @@
 import { Btn, Card, ModalOrSheet, ModalTitle, InfoBox, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { BTN_COLOR as BTN, BTN_TXT, BL, FONT } from "../../constants.ts";
+import { FELDER_ROLLE as FELDER_ROLLE_DOMAIN, FELDER_TYP as FELDER_TYP_DOMAIN, IMMER_PFLICHT, istMatrixLeer } from "../../domains/members/pflichtfelder.ts";
+import { FELD_LABEL } from "../../domains/members/memberService.ts";
 import type { MitgliedtypPflichtfeld, PortalRolle, Sb, SetState } from "../../types.ts";
 
 /* Zeile aus mitgliedtypen */
@@ -35,12 +37,19 @@ export interface RollePflichtfeld {
    damit bestehende Importe aus dieser Datei weiter funktionieren. */
 export type { MitgliedtypPflichtfeld };
 
-const MITGLIEDTYPEN_PF=["Aktivmitglied","Juniormitglied","Funktionär","Passivmitglied","Ehrenmitglied","Freimitglied"];
-const MITGLIEDTYPEN_SHORT: Record<string,string>={Aktivmitglied:"Aktivmitglied",Juniormitglied:"Juniormitglied",Funktionär:"Funktionär",Passivmitglied:"Passivmitglied",Ehrenmitglied:"Ehrenmitglied",Freimitglied:"Freimitglied"};
-const FELDER_ROLLE=["geburtsdatum","adresse","telefon","ahv_nr","spielerpass","js_nr","fairgate_id"];
-const FELDER_ROLLE_LABELS: Record<string,string>={geburtsdatum:"Geburtsdatum",adresse:"Adresse",telefon:"Telefon",ahv_nr:"AHV-Nr.",spielerpass:"Spielerpass",js_nr:"J+S Nr.",fairgate_id:"Fairgate-ID"};
-const FELDER_TYP=["vorname_nachname","geburtsdatum","adresse","telefon","email"];
-const FELDER_TYP_LABELS: Record<string,string>={vorname_nachname:"Vorname / Name",geburtsdatum:"Geburtsdatum",adresse:"Adresse",telefon:"Telefon",email:"E-Mail"};
+/* Die Spalten kamen früher aus einer festen Liste ("Juniormitglied",
+   "Funktionär"). Die tatsächlichen Typen heissen bei FCH aber
+   "Juniorenmitglied" und "Funktionär/in" — ein Häkchen schrieb also Zeilen
+   für Mitgliedtypen, die es gar nicht gibt, und Pausenmitglied wie
+   Supporter hatten überhaupt keine Spalte. Quelle sind jetzt die Typen aus
+   der Datenbank. */
+/* Feldlisten und Labels kommen aus der Domain — dieselbe Quelle, aus der
+   NeuesMitgliedModal seine Pflichtfelder liest. Beide Matrizen führen seit
+   dem 05.08.2026 die feinen Feldnamen (strasse/plz/ort statt adresse);
+   `vorname_nachname` ist entfallen, weil vorname/nachname in `mitglieder`
+   NOT NULL sind und sich gar nicht abwählen liessen. */
+const FELDER_ROLLE=[...FELDER_ROLLE_DOMAIN];
+const FELDER_TYP=[...FELDER_TYP_DOMAIN];
 
 const STANDARD_ROLLE_OPTS=[{v:"administrator",l:"Administrator"},{v:"administration",l:"Verwaltung"},{v:"funktionaer",l:"Funktionär"},{v:"trainer",l:"Trainer"},{v:"spieler",l:"Spieler"},{v:"eltern",l:"Eltern"},{v:"mitglied",l:"Mitglied"},{v:"supporter",l:"Supporter"}];
 
@@ -72,6 +81,10 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
 
   const ROLLEN_PF=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["spieler","trainer","funktionaer","eltern"];
   const ROLLEN_PF_LABELS: Record<string,string>=dbPortalRollen.length>0?Object.fromEntries(dbPortalRollen.map(r=>[r.name,r.label])):{spieler:"Spieler",trainer:"Trainer",funktionaer:"Funktionär",eltern:"Eltern"};
+
+  /* Spalten der Mitgliedtyp-Matrix — echte Typen aus der DB, in ihrer
+     Sortierreihenfolge. */
+  const mitgliedtypenPf=(dbMitgliedtypen||[]).map(t=>t.name);
 
   const isPflichtRolle=(rolle: string,feld: string)=>rollePflichtfelder.some(r=>r.rolle===rolle&&r.feld===feld&&r.pflicht);
   const isPflichtTyp=(typ: string,feld: string)=>mitgliedtypPflichtfelder.some(r=>r.mitgliedtyp===typ&&r.feld===feld&&r.pflicht);
@@ -228,7 +241,7 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
             <div>
               <div style={{fontWeight:600,marginBottom:6}}>Wie funktioniert die Pflichtfelder-Logik?</div>
               <div style={{fontSize:12,lineHeight:1.6}}>
-                Der <strong>Mitgliedtyp</strong> definiert die Basis-Pflichtfelder und ob ein Hauptkontakt erforderlich ist. Hat ein Mitglied zusätzlich eine <strong>Rolle</strong> (Spieler, Trainer…), werden die Felder der Rollen-Matrix ergänzt.
+                Der <strong>Mitgliedtyp</strong> bestimmt, was beim <strong>Anlegen</strong> eines Mitglieds verlangt wird. Die Zusatzfelder einer <strong>Rolle</strong> (Spieler, Trainer…) kommen erst bei der <strong>Datenprüfung</strong> dazu — beim Anlegen steht die sportliche Rolle noch nicht fest, sie ergibt sich später aus dem Kader.
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
                 <span style={{padding:"3px 10px",borderRadius:6,border:"0.5px solid var(--cc-accent,#FEC604)",fontSize:11}}>Mitgliedtyp-Matrix</span>
@@ -243,18 +256,29 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
           {/* Matrix 1: Mitgliedtyp */}
           <Card>
             <div className="cc-section-title"><TI n="id-badge" size={14}/> Pflichtfelder nach Mitgliedtyp</div>
-            <div style={{fontSize:12,color:"var(--sub)",marginBottom:12}}>Basis-Pflichtfelder — gelten immer, unabhängig von der Rolle</div>
+            <div style={{fontSize:12,color:"var(--sub)",marginBottom:12}}>
+              Gelten beim Anlegen. <strong>{IMMER_PFLICHT.map(f=>FELD_LABEL[f]||f).join(" und ")}</strong> sind immer Pflicht und stehen deshalb nicht in der Tabelle.
+            </div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr>
                   <th className="cc-th" style={{textAlign:"left",minWidth:160}}>Feld</th>
-                  {MITGLIEDTYPEN_PF.map(t=><th key={t} className="cc-th cc-th-center">{MITGLIEDTYPEN_SHORT[t]}</th>)}
+                  {mitgliedtypenPf.map(t=>(
+                    <th key={t} className="cc-th cc-th-center">
+                      {t}
+                      {istMatrixLeer(t,mitgliedtypPflichtfelder)&&(
+                        <div style={{fontSize:10,fontWeight:400,color:"#b45309"}} title="Für diesen Mitgliedtyp ist nichts konfiguriert — beim Anlegen wird nur Vor- und Nachname verlangt.">
+                          nichts gesetzt
+                        </div>
+                      )}
+                    </th>
+                  ))}
                 </tr></thead>
                 <tbody>
                   {FELDER_TYP.map(feld=>(
                     <tr key={feld} className="cc-tr">
-                      <td className="cc-td">{FELDER_TYP_LABELS[feld]}</td>
-                      {MITGLIEDTYPEN_PF.map(typ=>{
+                      <td className="cc-td">{FELD_LABEL[feld]||feld}</td>
+                      {mitgliedtypenPf.map(typ=>{
                         const on=isPflichtTyp(typ,feld);
                         return(
                           <td key={typ} className="cc-td" style={{textAlign:"center"}}>
@@ -285,7 +309,7 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
                 <tbody>
                   {FELDER_ROLLE.map(feld=>(
                     <tr key={feld} className="cc-tr">
-                      <td className="cc-td">{FELDER_ROLLE_LABELS[feld]}</td>
+                      <td className="cc-td">{FELD_LABEL[feld]||feld}</td>
                       {ROLLEN_PF.map(rolle=>{
                         const on=isPflichtRolle(rolle,feld);
                         return(
