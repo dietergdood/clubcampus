@@ -205,6 +205,49 @@ $$;
 ALTER FUNCTION "public"."handle_user_login"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."hat_modul_recht"("p_modul" "text", "p_min_stufe" "text" DEFAULT 'lesen'::"text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  with rang as (
+    select case p_min_stufe when 'verwalten' then 3 when 'schreiben' then 2 else 1 end as noetig
+  ),
+  meine as (
+    select coalesce(
+             nullif(f.stufe_override ->> p_modul, ''),
+             nullif(g.modul_stufen  ->> p_modul, ''),
+             'lesen'
+           ) as stufe
+      from public.benutzer_funktionen bf
+      join public.portal_funktionen f
+        on f.id = bf.funktion_id and coalesce(f.aktiv, true)
+      join public.portal_gruppen g
+        on g.id = f.gruppe_id and coalesce(g.aktiv, true)
+     where bf.benutzer_id = auth.uid()
+       and f.verein_id = public.get_my_verein_id()
+       /* module_override der Funktion schlägt die Modulliste der Gruppe —
+          leeres Array heisst „keine Einschränkung", nicht „nichts". */
+       and p_modul = any(
+             case when coalesce(array_length(f.module_override, 1), 0) > 0
+                  then f.module_override
+                  else coalesce(g.module, '{}')
+             end)
+  )
+  select coalesce(bool_or(
+           case m.stufe when 'verwalten' then 3 when 'schreiben' then 2 else 1 end
+           >= (select noetig from rang)
+         ), false)
+    from meine m;
+$$;
+
+
+ALTER FUNCTION "public"."hat_modul_recht"("p_modul" "text", "p_min_stufe" "text") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."hat_modul_recht"("p_modul" "text", "p_min_stufe" "text") IS 'Hat der angemeldete Benutzer über seine Gruppen mindestens die verlangte Stufe im Modul? Gegenstueck zu getEffektiveStufeForFunktionaer() im Frontend. Ab Stufe 2 in den RLS-Policies verwendet.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
@@ -4490,6 +4533,12 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."handle_user_login"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_user_login"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_user_login"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."hat_modul_recht"("p_modul" "text", "p_min_stufe" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."hat_modul_recht"("p_modul" "text", "p_min_stufe" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."hat_modul_recht"("p_modul" "text", "p_min_stufe" "text") TO "service_role";
 
 
 
