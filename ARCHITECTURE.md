@@ -265,6 +265,39 @@ Nachzuführen ist sie deshalb bewusst, beim Session-Abschluss:
 
 Ausführliche Begründung beider Prüfungen: `CLAUDE.md` → „Bevor eine neue CSS-Klasse entsteht".
 
+### Offen: cc.css-Runde
+
+Drei Aufräumarbeiten, gesammelt für einen Durchgang. Sie hängen nicht an den Modul-Migrationen und sind jederzeit machbar; nur das Entfernen toter Klassen wartet auf deren Abschluss.
+
+**1. Zehn doppelt definierte Klassen.** Welche Fassung wirkt, entscheidet allein die Zeilennummer — die spätere gewinnt, ohne Warnung. Pro Klasse einzeln entscheiden:
+
+`cc-btn-danger` · `cc-btn-ghost` · `cc-btn-success` · `cc-check-icon` · `cc-hero-back` · `cc-mb-4` · `cc-ml-toolbar` · `cc-ml-view-custom` · `cc-role-chip-trainer` · `cc-table-wrap-inner`
+
+`cc-btn-danger` ist der Löschen-Knopf, `cc-ml-toolbar` die Listen-Toolbar — beides prominent.
+
+**2. Sieben Klassen, die benutzt, aber nie definiert wurden** (Stand 05.08.2026). Sie wirken heute schlicht nicht, die Elemente stehen ohne die gedachte Formatierung da:
+
+| Klasse | Fundstellen | Art |
+|---|---|---|
+| `cc-mt-4` | 8 | Skalenlücke — `mt` beginnt bei 8 |
+| `cc-gap-0` | 1 | Skalenlücke — `gap` beginnt bei 4 |
+| `cc-nat-edit-wrap` | 3 | fehlende Klasse |
+| `cc-addr-dropdown-fixed` | 2 | fehlende Klasse |
+| `cc-addr-option` | 1 | fehlende Klasse |
+| `cc-multiselect-group-label` | 1 | fehlende Klasse |
+| `cc-teams-rollen-klammer` | 1 | fehlende Klasse |
+
+Bei den **Skalenlücken** die Fundstellen auf vorhandene Werte umstellen, nicht die Skala erweitern — so ist `cc-gap-3` am 05.08.2026 aufgelöst worden (zwei Fundstellen auf `cc-gap-4`). Abstufungen, die man nicht unterscheiden kann, laden zum Wildwuchs ein. Bei den **fehlenden Klassen** braucht es je einen Blick, was gemeint war.
+
+Zum Nachprüfen:
+
+```bash
+# doppelt definiert
+grep -o "^\.cc-[a-zA-Z0-9_-]*{" src/styles/cc.css | sort | uniq -d
+```
+
+**3. Tote Klassen entfernen** — erst sinnvoll, wenn alle Module migriert sind.
+
 ```jsx
 // ✗ FALSCH — Inline-CSS obwohl cc-Klasse existiert
 <div style={{display:"flex",gap:8,alignItems:"center"}}>
