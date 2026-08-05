@@ -9,13 +9,14 @@
 -- Die Mitgliedschafts-Person ueberlebt. Die Eltern-Person wird geloescht,
 -- nachdem ihre Verknuepfungen umgehaengt sind.
 --
--- REIHENFOLGE:  0 (optional) -> A -> B -> C -> D
+-- REIHENFOLGE:  0 (optional) -> A -> B -> C -> D -> E
 --
 -- BLOCK 0  Aufraeumen: zwei Test-Zeilen aus dem Registrierungstest
 -- BLOCK A  Sperrabfrage — muss leer sein, sonst ist der Merge mehrdeutig
 -- BLOCK B  Konfliktbericht — beide Seiten gefuellt, Werte weichen ab
 -- BLOCK C  Merge (schreibt, in einer Transaktion)
 -- BLOCK D  Verifikation
+-- BLOCK E  Unique-Index auf die E-Mail (Struktur — danach Schema dumpen)
 --
 -- ─── WAS UEBERNOMMEN WIRD ──────────────────────────────────────────────────
 -- elternkontakte hat nur fuenf Datenfelder: vorname, nachname, email,
@@ -304,7 +305,7 @@ union all select 'benutzer mit toter person_id',
          where b.person_id is not null
            and not exists (select 1 from public.personen p where p.id = b.person_id))::text, '0'
 union all select 'personen gesamt',
-       (select count(*) from public.personen)::text, '908 minus zusammengefuehrte'
+       (select count(*) from public.personen)::text, '905 (908 - 2 Test - 1 gemergt)'
 union all select 'doppelte Kind-Verknuepfung nach Merge',
        (select count(*) from (
           select person_id, mitglied_id from public.eltern_kinder
@@ -322,6 +323,55 @@ select p.id, p.vorname, p.nachname, p.email, p.telefon,
  order by p.created_at;
 
 
+-- ╔═════════════════════════════════════════════════════════════════════════╗
+-- ║ BLOCK E — E-Mail eindeutig pro Verein          >>> SCHREIBT <<<         ║
+-- ║           Nachgezogen am 05.08.2026, nach Block D.                      ║
+-- ║                                                                         ║
+-- ║           Der Merge in Block C setzt voraus, dass eine E-Mail zu genau  ║
+-- ║           einer Person gehoert — sonst waere die Paarung mehrdeutig.    ║
+-- ║           Dasselbe gilt fuer check_email_bekannt() bei der              ║
+-- ║           Registrierung. Die Annahme steckte bis hierher ueberall im    ║
+-- ║           System, war aber nirgends erzwungen.                          ║
+-- ╚═════════════════════════════════════════════════════════════════════════╝
+
+-- E1: Vorpruefung — muss leer sein, sonst scheitert E2.
+select verein_id, lower(btrim(email)) as mail, count(*) as anzahl,
+       array_agg(vorname || ' ' || nachname order by created_at) as personen
+  from public.personen
+ where email is not null and btrim(email) <> ''
+ group by verein_id, lower(btrim(email))
+having count(*) > 1
+ order by anzahl desc, mail;
+
+-- E2: Der Index.
+--     PRO VEREIN, nicht global — dieselbe Person kann bei zwei Vereinen
+--       stehen. Global waere derselbe Fehler wie mitgliedtypen_name_key.
+--     PARTIELL — Junioren ohne eigene Adresse lassen das Feld leer. NULL
+--       kollidiert in Postgres nie, die leere Zeichenkette dagegen schon;
+--       die WHERE-Bedingung schliesst beides aus.
+--     lower(btrim(email)) — denselben Massstab legen check_email_bekannt()
+--       und der Merge in Block C an.
+create unique index personen_email_pro_verein
+  on public.personen (verein_id, lower(btrim(email)))
+  where email is not null and btrim(email) <> '';
+
+-- E3: Der alte Index aus Etappe 1 wird dadurch ueberfluessig.
+--     ACHTUNG, daran haengt eine Regel: Postgres nutzt einen Ausdrucks-Index
+--     nur bei EXAKT demselben Ausdruck. Eine Abfrage mit lower(email) laeuft
+--     am neuen Index vorbei. Ab hier gilt deshalb: jeder Vergleich auf
+--     personen.email geht ueber lower(btrim(email)).
+drop index if exists public.personen_email_idx;
+
+-- E4: Gegenprobe — muss mit 23505 scheitern.
+begin;
+insert into public.personen (verein_id, vorname, nachname, email)
+select verein_id, 'Dublette', 'Test', email
+  from public.personen
+ where email is not null
+ limit 1;
+rollback;
+
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- DANACH
 --
@@ -332,12 +382,21 @@ select p.id, p.vorname, p.nachname, p.email, p.telefon,
 --
 --   Schema neu dumpen (CLAUDE.md -> Datenbank-Workflow):
 --       npx supabase db dump --linked -f supabase/schema.sql
---   2a aendert keine Struktur, nur Daten — ein Dump ist streng genommen
---   nicht noetig. Block 0 aendert auch keine.
+--
+--   Block 0 bis D aendern nur Daten, Block E aendert die Struktur — der Dump
+--   ist also noetig. Bei der Zaehlpruefung faellt CREATE INDEX um 1, weil E2
+--   als CREATE UNIQUE INDEX zaehlt und E3 einen gewoehnlichen loescht.
+--   Alle uebrigen Zahlen bleiben gleich, ALTER PUBLICATION muss bei 3 stehen.
+--   Ausgefuehrt am 05.08.2026: 76 / 157 / 51 / 267 / 3.
 --
 -- OFFEN, unabhaengig vom Umbau
 --
 --   Mitglied anlegen hat keine Dublettenpruefung. Zweimal abgeschickt heisst
---   zweimal in der Datenbank (siehe Block 0). Bei Testdaten egal, bei der
---   geplanten Online-Anmeldung nicht.
+--   zweimal in der Datenbank (siehe Block 0). Der Index aus Block E fangt das
+--   NICHT ab: die App schreibt nach mitglieder, nicht nach personen. Erst ab
+--   Etappe 3 greift er — und dann muss der Service den Fehlercode 23505
+--   abfangen und uebersetzen, sonst sieht der Benutzer nichts.
+--
+--   Alle 905 Personen haben eine E-Mail. Der Normalfall "Junior ohne eigene
+--   Adresse" kommt im Testbestand nicht vor. Vor Etappe 4 seeden.
 -- ═══════════════════════════════════════════════════════════════════════════
