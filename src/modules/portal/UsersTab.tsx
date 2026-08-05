@@ -20,6 +20,10 @@ export interface BenutzerZeile {
   email: string;
   role?: string | null;
   aktiv?: boolean | null;
+  /* Systemzugang: Portalverwaltung, Rechte, Vereinsdaten. Kennzeichen und
+     kein Rollenwert — role wird von ableitUndSaveRolle() überschrieben,
+     ist_admin nicht. */
+  ist_admin?: boolean | null;
   funktionen?: BenutzerFunktion[];
 }
 
@@ -34,13 +38,14 @@ interface UsersTabProps {
   benutzerListe: BenutzerZeile[];
   setBenutzerListe: SetState<BenutzerZeile[]>;
   updateBenutzerRolle: (id: string, role: string) => void;
+  toggleAdmin: (id: string, next: boolean) => void;
   ROLLEN: string[];
   ROLLEN_LABELS: Record<string, string>;
   funktionen: BenutzerFunktion[];
   vereinId: string | null;
 }
 
-export function UsersTab({supabase,loading,isMobile,mobileKachel,tab,setSaveMsg,benutzerListe,setBenutzerListe,updateBenutzerRolle,ROLLEN,ROLLEN_LABELS,funktionen,vereinId}: UsersTabProps) {
+export function UsersTab({supabase,loading,isMobile,mobileKachel,tab,setSaveMsg,benutzerListe,setBenutzerListe,updateBenutzerRolle,toggleAdmin,ROLLEN,ROLLEN_LABELS,funktionen,vereinId}: UsersTabProps) {
   return (
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="users"&&(
@@ -56,13 +61,14 @@ export function UsersTab({supabase,loading,isMobile,mobileKachel,tab,setSaveMsg,
                   <th className="cc-th">Name</th>
                   <th className="cc-th">E-Mail</th>
                   <th className="cc-th">Portal-Rolle</th>
+                  <th className="cc-th">Admin</th>
                   <th className="cc-th">Funktionen</th>
                   <th className="cc-th">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {benutzerListe.length===0&&(
-                  <tr className="cc-tr"><td colSpan={5} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14}}>Keine Benutzer gefunden</td></tr>
+                  <tr className="cc-tr"><td colSpan={6} style={{padding:"20px",textAlign:"center",color:"var(--sub)",fontSize:14}}>Keine Benutzer gefunden</td></tr>
                 )}
                 {benutzerListe.map(b=>(
                   <tr key={b.id} style={{borderTop:"0.5px solid var(--border)"}}>
@@ -73,6 +79,18 @@ export function UsersTab({supabase,loading,isMobile,mobileKachel,tab,setSaveMsg,
                         style={{padding:"5px 8px",border:"1px solid var(--border)",borderRadius:7,fontSize:12,background:"var(--surface)",color:(b.role?ROLES[b.role]?.color:null)||"var(--text)",fontFamily:FONT,cursor:"pointer"}}>
                         {ROLLEN.map(r=><option key={r} value={r}>{ROLLEN_LABELS[r]}</option>)}
                       </select>
+                    </td>
+                    <td style={{padding:"9px 13px"}}>
+                      {/* Systemzugang. Eigener Schalter statt eines Werts im
+                          Rollen-Ausklappfeld: die Rolle wird abgeleitet und
+                          überschrieben, dieses Kennzeichen nicht. */}
+                      <label className="cc-row cc-gap-6 cc-items-center" style={{cursor:"pointer"}}>
+                        <input type="checkbox" checked={!!b.ist_admin}
+                          onChange={e=>toggleAdmin(b.id,e.target.checked)}/>
+                        <span className="cc-text-xs cc-text-sub">
+                          {b.ist_admin?"Administrator":"—"}
+                        </span>
+                      </label>
                     </td>
                     <td style={{padding:"9px 13px"}}>
                       {/* Funktionen anzeigen + zuweisen */}

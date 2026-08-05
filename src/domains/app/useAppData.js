@@ -261,7 +261,11 @@ export function useDbUser({ sb, setDbUser, setTeamRollen, setError, ROLLE_PRIORI
             setTeamRollen(map);
             const alleRollen = Object.values(map);
             const hoechsteGlobal = ROLLE_PRIORITAET.find(p => alleRollen.includes(p));
-            if (hoechsteGlobal && hoechsteGlobal !== data.role) {
+            /* Der Adminstatus ist ein Kennzeichen, kein abgeleiteter Wert.
+               Ohne diese Bedingung degradierte der Login jeden Admin, der
+               auch im Kader steht, still zum Trainer — dieselbe Ursache wie
+               in saveRolle(). */
+            if (hoechsteGlobal && hoechsteGlobal !== data.role && !data.ist_admin) {
               await sb.from("benutzer").update({ role: hoechsteGlobal }).eq("id", uid);
               setDbUser(prev => ({ ...prev, role: hoechsteGlobal }));
             }

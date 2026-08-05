@@ -478,10 +478,12 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          ist_admin: boolean
           last_sign_in_at: string | null
           mitglied_id: number | null
           nachname: string | null
           name: string | null
+          person_id: string | null
           profil_geprueft_at: string | null
           role: string
           rollen: string[] | null
@@ -496,10 +498,12 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          ist_admin?: boolean
           last_sign_in_at?: string | null
           mitglied_id?: number | null
           nachname?: string | null
           name?: string | null
+          person_id?: string | null
           profil_geprueft_at?: string | null
           role?: string
           rollen?: string[] | null
@@ -514,10 +518,12 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          ist_admin?: boolean
           last_sign_in_at?: string | null
           mitglied_id?: number | null
           nachname?: string | null
           name?: string | null
+          person_id?: string | null
           profil_geprueft_at?: string | null
           role?: string
           rollen?: string[] | null

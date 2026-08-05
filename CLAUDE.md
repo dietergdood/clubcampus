@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 05.08.2026: 291 grün, 2 skipped, 0 rot (22 Testdateien).
+Stand 05.08.2026: 298 grün, 2 skipped, 0 rot (23 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -172,6 +172,7 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 - `supabase/etappe2a_merge.sql` — Etappe 2a (Merge über E-Mail-Gleichheit), ausgeführt am 05.08.2026. Reihenfolge `0 → A → B → C → D`; Block C schreibt und löscht, ein Rückbau wie in Etappe 1 ist **nicht** möglich. Enthält die Sperrabfrage 2a-0, die vor jedem künftigen Merge (Fairgate-Import) erneut leer sein muss.
 - `supabase/migration_mandant_schluessel.sql` — 13 Tabellen von global auf `(verein_id, …)` umgestellt, ausgeführt am 05.08.2026. **Enthält den Hinweis, dass fünf `onConflict`-Zeilen im Code mitgeändert werden mussten** — ohne sie schlägt jedes Speichern fehl.
 - `supabase/migration_pflichtfelder_fein.sql` — Pflichtfeld-Matrizen auf feine Feldnamen (`adresse` → `strasse`/`plz`/`ort`), `vorname_nachname` entfernt, Mitgliedtypen ohne Einträge befüllt. Ausgeführt am 05.08.2026.
+- `supabase/migration_ist_admin.sql` — Adminstatus als Kennzeichen `benutzer.ist_admin` statt als Rollenwert, ausgeführt am 05.08.2026. Stellt auch `is_admin()` und `is_admin_or_above()` um. `database.types.ts` wurde dabei von Hand nachgezogen (`ist_admin`, und `person_id` aus Etappe 1, das ebenfalls fehlte) — das nächste `supabase gen types` erzeugt dieselben Zeilen, es ist also kein Sonderweg, sondern ein Vorziehen.
 - `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.
 - `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
 
@@ -183,6 +184,9 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `clubcampus` (ReferenceError statt Login-Screen, sobald die Env-Variablen fehlten), das undefinierte `vereinId` an `ProfileView`, sowie das Phantomfeld `geprueft` in `MemberHero` und `InfoTab` (Datenprüfungs-Status stand konstant auf „offen"/„Ausstehend").
 
 Behoben mit der SQL-Migration vom 26.07.2026 + Typ-Regenerierung: `mitglieder.eintrittsdatum`, `elternkontakte.supporter` und `benutzer.vorname/nachname/telefon` sind jetzt echte Spalten. `database.types.ts` wurde neu generiert; die früheren Bridge-/Extension-Typen in `types.ts` (Elternkontakt-`supporter`, DbUser-`vorname/nachname/telefon`, Mitglied-`eintrittsdatum`) sind entfernt. Damit greifen die früher stillen Schreibpfade (u. a. die Supporter-Logik beim Entknüpfen des letzten Kindes).
+
+Behoben am 05.08.2026 (Adminstatus):
+- **`ableitUndSaveRolle()` degradierte Administratoren stillschweigend.** `benutzer.role` ist ein berechneter Wert, und `ableitRolle()` kennt `administrator` gar nicht — ein Admin, der auch Juniorentrainer ist, wurde beim nächsten Kader-Eintrag zum Trainer. Dasselbe beim Login über `useDbUser`. Der Adminstatus liegt jetzt in `benutzer.ist_admin` und wird von der Ableitung nicht mehr angefasst; `role` bleibt der berechnete Wert und ist `administrator`, solange das Kennzeichen gesetzt ist. Alle Vergleiche auf `role === "administrator"` funktionieren dadurch unverändert.
 
 Behoben am 05.08.2026 (Pflichtfelder):
 - **Die Portalrolle war beim Anlegen wählbar, obwohl sie ein berechneter Wert ist.** `ableitRolle()` bestimmt sie aus den Kader-Rollen, ersatzweise aus `mitgliedtypen.standard_rolle`, dann aus den Funktionen; `ableitUndSaveRolle()` schreibt sie nach `mitglieder.rolle` **und** `benutzer.role` — bei jeder Kader-Zuweisung, jeder Änderung an Teams oder Funktionen, und beim Login nochmals über `useDbUser`. Eine im Modal gewählte Rolle hielt also nur bis zum ersten dieser Ereignisse. Das Feld ist entfernt; stattdessen wird die Rolle direkt nach dem Anlegen abgeleitet, sonst zeigte die Liste `-`. Von Hand setzen geht im Profil (`PortalTab`), wo man sieht, was die Ableitung ergeben hat.

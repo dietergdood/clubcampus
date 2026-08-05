@@ -94,12 +94,27 @@ export async function saveRolle(sb: Sb, mitgliedId: number, neueRolle: Rolle): P
   await sb.from('mitglieder').update({ rolle: neueRolle }).eq('id', mitgliedId);
   const { data: benutzer } = await sb
     .from('benutzer')
-    .select('id')
+    .select('id, ist_admin, rollen')
     .eq('mitglied_id', mitgliedId)
     .maybeSingle();
-  if (benutzer?.id) {
-    await sb.from('benutzer').update({ role: neueRolle }).eq('id', benutzer.id);
-  }
+  if (!benutzer?.id) return;
+
+  /* Der Adminstatus ist ein Kennzeichen und kein abgeleiteter Wert. Vorher
+     überschrieb diese Zeile ihn: ein Admin, der auch Juniorentrainer ist,
+     wurde beim nächsten Kader-Eintrag stillschweigend zum Trainer. */
+  const istAdmin = Boolean(benutzer.ist_admin);
+  const primaer: Rolle = istAdmin ? 'administrator' : neueRolle;
+
+  /* rollen[] trägt beides — der Rollenwechsler soll dem Admin, der auch
+     Trainer ist, weiterhin beide anbieten. */
+  const rollen = new Set<string>(benutzer.rollen ?? []);
+  rollen.delete(neueRolle);
+  rollen.add(neueRolle);
+  if (istAdmin) rollen.add('administrator'); else rollen.delete('administrator');
+
+  await sb.from('benutzer')
+    .update({ role: primaer, rollen: [...rollen] })
+    .eq('id', benutzer.id);
 }
 
 export async function ableitUndSaveRolle(

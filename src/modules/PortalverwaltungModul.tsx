@@ -343,7 +343,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
                las ein Feld, das nie geladen wurde, und stand daher immer
                auf "Aktiv". Die App pflegt aktiv (siehe updatePortalZugang),
                die gleichnamige Spalte active ist Altlast. */
-            supabase.from("benutzer").select("id,name,email,role,aktiv").order("name"),
+            supabase.from("benutzer").select("id,name,email,role,aktiv,ist_admin").order("name"),
             supabase.from("portal_gruppen").select("*").order("name"),
             supabase.from("portal_funktionen").select("*, portal_gruppen(name,farbe,module,modul_stufen), stufe_override").order("name"),
             supabase.from("module_config").select("*"),
@@ -434,6 +434,38 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
     const {data:b}=await supabase.from("benutzer").select("mitglied_id").eq("id",id).maybeSingle();
     if(b?.mitglied_id) await supabase.from("mitglieder").update({rolle:role}).eq("id",b.mitglied_id);
     setBenutzerListe(prev=>prev.map(u=>u.id===id?{...u,role}:u));
+    setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
+  }
+
+  /* Adminstatus setzen oder entziehen. Er ist ein Kennzeichen und kein
+     Rollenwert — deshalb eine eigene Funktion und nicht updateBenutzerRolle.
+
+     Zwei Sperren, weil sich ein Verein sonst aussperrt und niemand mehr in
+     die Portalverwaltung kommt:
+       (1) Man kann sich den eigenen Status nicht wegnehmen.
+       (2) Der letzte Admin eines Vereins bleibt. */
+  async function toggleAdmin(id: string, next: boolean){
+    if(!supabase) return;
+    if(!next){
+      const {data:{user}}=await supabase.auth.getUser();
+      if(user?.id===id){
+        setSaveMsg("Du kannst dir den Adminstatus nicht selbst entziehen");
+        setTimeout(()=>setSaveMsg(""),3000); return;
+      }
+      const andere=benutzerListe.filter(u=>u.ist_admin&&u.id!==id).length;
+      if(andere===0){
+        setSaveMsg("Das ist der letzte Administrator — er kann nicht entfernt werden");
+        setTimeout(()=>setSaveMsg(""),3000); return;
+      }
+      const ok=await confirm({
+        title:"Adminstatus entziehen?",
+        message:"Die Person verliert den Zugang zur Portalverwaltung. Ihre übrigen Rollen bleiben bestehen.",
+        confirmLabel:"Entziehen",
+      });
+      if(!ok) return;
+    }
+    await supabase.from("benutzer").update({ ist_admin: next }).eq("id",id);
+    setBenutzerListe(prev=>prev.map(u=>u.id===id?{...u,ist_admin:next}:u));
     setSaveMsg("Gespeichert"); setTimeout(()=>setSaveMsg(""),2000);
   }
 
@@ -614,7 +646,8 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           supabase={supabase} loading={loading} setSaveMsg={setSaveMsg}
           isMobile={isMobile} mobileKachel={mobileKachel}
           benutzerListe={benutzerListe} setBenutzerListe={setBenutzerListe}
-          updateBenutzerRolle={updateBenutzerRolle} ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} funktionen={funktionen} tab={tab}
+          updateBenutzerRolle={updateBenutzerRolle} toggleAdmin={toggleAdmin}
+          ROLLEN={ROLLEN} ROLLEN_LABELS={ROLLEN_LABELS} funktionen={funktionen} tab={tab}
           vereinId={vereinId??null}
         />
       <MitgliederKonfigTab
