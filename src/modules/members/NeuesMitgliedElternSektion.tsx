@@ -31,7 +31,6 @@ import {
 } from "../../domains/members/elternService.ts";
 import { logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import { vollname } from "../../domains/person/personUtils.ts";
-import { elternAvColor } from "./tabs/ElternTab.tsx";
 import type { Sb } from "../../types.ts";
 
 /* Ein vorgemerkter Elternteil — entweder ein bestehender Kontakt
@@ -228,14 +227,16 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
                   <div className="cc-col cc-gap-6 cc-mt-8">
                     {treffer.map(t => {
                       const name = vollname(t);
-                      const ac = elternAvColor(t.beziehung);
                       return (
                         <div key={t.id} className="cc-eltern-result" onClick={() => uebernehmeTreffer(t)}>
-                          <div className="cc-eltern-av" style={{background: ac.bg, color: ac.text}}>
-                            {name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                          </div>
+                          {/* Av statt des farbigen Kürzel-Feldes aus ElternSucheModal:
+                              dessen Farbe kommt aus elternAvColor() und liesse sich nur
+                              per style= setzen. Av ist die gemeinsame Komponente und
+                              braucht weder Inline-CSS noch eine neue Klasse. */}
+                          <Av name={name} size={32}/>
                           <div className="cc-flex-1 cc-col cc-gap-4">
                             <div className="cc-text-bold cc-text-sm">{name}</div>
+                            {t.beziehung && <div className="cc-text-sm cc-text-sub">{t.beziehung}</div>}
                             {t.email && <div className="cc-text-sm cc-text-sub">{t.email}</div>}
                           </div>
                         </div>
