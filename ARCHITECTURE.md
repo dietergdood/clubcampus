@@ -456,7 +456,14 @@ Beide Matrizen führen seit `supabase/migration_pflichtfelder_fein.sql` dieselbe
 - **Die Rollen-Matrix greift nur in der Datenprüfung**, nicht beim Anlegen: dort steht erst die Portalrolle fest, die sportliche Rolle kommt übers Kader.
 - **Was Pflicht ist, muss ausfüllbar sein.** Drei Fehler dieser Art sind am 05.08.2026 aufgefallen: die Spaltenköpfe der Matrix waren fest verdrahtet (`Juniormitglied` statt `Juniorenmitglied`, `Funktionär` statt `Funktionär/in`) — Häkchen schrieben Zeilen für nicht existierende Typen, Pausenmitglied und Supporter hatten gar keine Spalte; die E-Mail war bei Passiv-, Ehren- und Freimitgliedern ausgeblendet, aber Pflicht, wodurch sich diese drei Typen **nicht anlegen liessen**; und `ahv_nr`/`nationalitaet`/`heimatort` standen in der Prüfliste ohne Eingabefeld.
 
-**Offen:** `getProfilCheck` prüft weiterhin fest verdrahtet. Um es auf `getEffektivePflichtfelder()` zu heben, müssen beide Matrizen in `clubcampus.tsx` geladen werden.
+**Die Datenprüfung liest dieselbe Quelle** (seit 05.08.2026). `clubcampus.tsx` lädt beide Matrizen und reicht sie an `getProfilCheck` durch. Zwei Verhaltensänderungen, die daraus folgen und beabsichtigt sind:
+
+- **Die Adresse wird endlich geprüft.** Vorher fragte `getProfilFehlend()` bei Mitgliedern nur Vorname, Nachname, Geburtsdatum und „Telefon *oder* E-Mail" — eine als Pflicht konfigurierte Adresse hatte nirgends eine Wirkung.
+- **Telefon und E-Mail zählen getrennt.** Früher genügte eines von beiden. Jetzt gilt, was angekreuzt ist.
+
+Dadurch sehen spürbar mehr Mitglieder beim nächsten Login den Datenprüfungs-Hinweis. Das ist der Zweck der Konfiguration, aber es fällt auf.
+
+**Beim Elternteil selbst greift die Matrix nicht**: er hat keine Mitgliedschaft und damit keinen Mitgliedtyp. Für ihn bleibt es bei Vorname, Nachname, Telefon, bis Etappe 4 die Elternkontakte ablöst. Für seine **Kinder** greift sie, weil sie Mitglieder sind.
 
 ### Merge-Regel
 

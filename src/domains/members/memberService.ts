@@ -287,6 +287,13 @@ export async function fetchMitgliedtypPflichtfelder(sb: SbClient) {
   return data || [];
 }
 
+/* Zusatzfelder pro Rolle. Greifen nur in der Datenprüfung — beim Anlegen
+   steht die sportliche Rolle noch nicht fest (sie kommt übers Kader). */
+export async function fetchRollePflichtfelder(sb: SbClient) {
+  const { data } = await sb.from("rolle_pflichtfelder").select("*");
+  return data || [];
+}
+
 export const FELD_LABEL: Record<string, string> = {
   vorname: "Vorname", nachname: "Nachname", email: "E-Mail",
   telefon: "Telefon", geburtsdatum: "Geburtsdatum", geschlecht: "Geschlecht",

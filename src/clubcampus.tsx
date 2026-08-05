@@ -30,9 +30,10 @@ import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, Ne
 import { DatenpruefungMitglied } from "./modules/members/tabs/DatenpruefungMitglied.tsx";
 import { DatenpruefungEltern } from "./modules/members/tabs/DatenpruefungEltern.tsx";
 import { fetchKinderVollstaendigFuerElternteil } from "./domains/members/elternService.ts";
-import { fetchMitglied } from "./domains/members/memberService.ts";
+import { fetchMitglied, fetchMitgliedtypPflichtfelder, fetchRollePflichtfelder } from "./domains/members/memberService.ts";
+import type { RollePflichtfeld } from "./domains/members/pflichtfelder.ts";
 import type {
-  Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
+  Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, MitgliedtypPflichtfeld, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
 } from "./types.ts";
 
@@ -75,6 +76,10 @@ function Portal({supabaseClient, slug}: PortalProps){
   const [dbMitgliedtypen,setDbMitgliedtypen]=useState<Mitgliedtyp[]>([]);
   const [dbPortalRollen,setDbPortalRollen]=useState<PortalRolle[]>([]);
   const [dbKaderRollen,setDbKaderRollen]=useState<KaderRolleDb[]>([]);
+  /* Pflichtfeld-Matrizen — Quelle der Datenprüfung. Solange sie leer sind
+     (Ladezustand), verlangt getProfilCheck nichts. */
+  const [dbTypPflichtfelder,setDbTypPflichtfelder]=useState<MitgliedtypPflichtfeld[]>([]);
+  const [dbRollePflichtfelder,setDbRollePflichtfelder]=useState<RollePflichtfeld[]>([]);
   /* Globale Modul-Konfiguration (aus Portalverwaltung) */
   const [moduleAktiv,setModuleAktiv]=useState<ModuleAktiv>(()=>{
     try{const s=localStorage.getItem("cc-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
@@ -191,11 +196,11 @@ function Portal({supabaseClient, slug}: PortalProps){
     if(!sb){ setSession(null); return; }
     sb.auth.getSession().then(({data:{session}})=>{
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbMitgliedtypen(); loadDbPortalRollen(); loadDbKaderRollen(); loadDbFunktionen(session?.user?.id); loadModuleConfig(); loadTheme(); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbMitgliedtypen(); loadDbPortalRollen(); loadDbKaderRollen(); loadDbFunktionen(session?.user?.id); loadModuleConfig(); loadPflichtfelder(); loadTheme(); }
     });
     const {data:{subscription}}=sb.auth.onAuthStateChange(function(_,session){
       setSession(session||null);
-      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbMitgliedtypen(); loadDbPortalRollen(); loadDbKaderRollen(); loadTheme(); }
+      if(session){ loadDbUser(session.user.id, session.user.email); loadDbTeams(); loadDbStufen(); loadDbMitglieder(); loadDbMitgliedtypen(); loadDbPortalRollen(); loadDbKaderRollen(); loadPflichtfelder(); loadTheme(); }
       else setDbUser(null);
     });
 
@@ -233,6 +238,18 @@ function Portal({supabaseClient, slug}: PortalProps){
   } = useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRechte, setDbStufen,
     setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
     setSession, setDbUser, setTenant, setError });
+
+  /* Pflichtfeld-Matrizen. Bewusst hier und nicht in useAppData: sie werden
+     nur von der Datenprüfung gelesen, nicht von den Modulen. */
+  async function loadPflichtfelder(){
+    if(!sb) return;
+    const [typ, rolle] = await Promise.all([
+      fetchMitgliedtypPflichtfelder(sb),
+      fetchRollePflichtfelder(sb),
+    ]);
+    setDbTypPflichtfelder(typ as MitgliedtypPflichtfeld[]);
+    setDbRollePflichtfelder(rolle as RollePflichtfeld[]);
+  }
 
   async function handleLogout(){
     await _handleLogout();
@@ -430,6 +447,7 @@ function Portal({supabaseClient, slug}: PortalProps){
 
   const { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft } = getProfilCheck({
     sb, dbUser, role, dbMitglieder, setDbUser,
+    typMatrix: dbTypPflichtfelder, rolleMatrix: dbRollePflichtfelder,
   });
 
   return(

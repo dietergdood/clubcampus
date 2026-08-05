@@ -2,8 +2,23 @@
    ClubCampus — domains/app/getProfilCheck.ts
    Profil-Vollständigkeit und Prüfung. Kein React-Hook (ruft intern
    keine Hooks) — bewusst ohne use-Präfix.
+
+   Was fehlt, entscheidet seit 05.08.2026 die Pflichtfeld-Matrix aus
+   der Portalverwaltung, nicht mehr eine hier verdrahtete Liste. Vorher
+   prüfte diese Datei Vorname, Nachname, Geburtsdatum und „Telefon oder
+   E-Mail" — die Adresse gar nicht. Ein Verein konnte sie also als
+   Pflicht konfigurieren, ohne dass es je eine Wirkung hatte.
+
+   Anders als beim Anlegen zählen hier AUCH die Zusatzfelder der Rolle:
+   der Spieler steht inzwischen im Kader, seine Rolle ist bekannt.
    ═══════════════════════════════════════════════════════════════ */
-import type { Sb, DbUser, Mitglied, Rolle, SetState } from '../../types.js';
+import {
+  IMMER_PFLICHT,
+  getEffektivePflichtfelder,
+  type RollePflichtfeld,
+} from '../members/pflichtfelder.ts';
+import { FELD_LABEL } from '../members/memberService.ts';
+import type { Sb, DbUser, Mitglied, MitgliedtypPflichtfeld, Rolle, SetState } from '../../types.js';
 
 interface GetProfilCheckProps {
   sb: Sb;
@@ -11,36 +26,77 @@ interface GetProfilCheckProps {
   role: Rolle;
   dbMitglieder: Mitglied[];
   setDbUser: SetState<DbUser | null>;
+  /** Matrix aus der Portalverwaltung. Fehlt sie, wird nichts verlangt —
+      bewusst: ein leerer Ladezustand darf keinen Hinweis auslösen. */
+  typMatrix?: MitgliedtypPflichtfeld[];
+  rolleMatrix?: RollePflichtfeld[];
 }
 
-export function getProfilCheck({ sb, dbUser, role, dbMitglieder, setDbUser }: GetProfilCheckProps) {
+/* Feldwert eines Mitglieds — leer zählt als fehlend. `Mitglied` ist breit
+   typisiert, der Zugriff über einen Schlüssel deshalb bewusst nachsichtig. */
+function istLeer(raw: Partial<Mitglied>, feld: string): boolean {
+  const wert = (raw as Record<string, unknown>)[feld];
+  if (wert === null || wert === undefined) return true;
+  if (typeof wert === 'string') return wert.trim() === '';
+  if (Array.isArray(wert)) return wert.length === 0;
+  return false;
+}
+
+export function getProfilCheck({
+  sb, dbUser, role, dbMitglieder, setDbUser,
+  typMatrix = [], rolleMatrix = [],
+}: GetProfilCheckProps) {
+
+  /* Fehlende Pflichtfelder eines Mitglieds, als Feld-Labels. */
+  function fehlendeFelder(raw: Partial<Mitglied>): string[] {
+    const fehlend: string[] = [];
+
+    for (const feld of IMMER_PFLICHT) {
+      if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
+    }
+
+    const pflicht = getEffektivePflichtfelder({
+      mitgliedtyp: raw.mitgliedtyp,
+      rolle: raw.rolle,
+      typMatrix,
+      rolleMatrix,
+    });
+    for (const feld of pflicht) {
+      if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
+    }
+    return fehlend;
+  }
 
   function getProfilFehlend(): string[] {
     if (!dbUser) return [];
     const isEltern = role === 'eltern' && !dbMitglieder.find(m => m.id === dbUser.mitglied_id);
+
     if (isEltern) {
+      /* Der Elternteil selbst hat keine Mitgliedschaft und damit keinen
+         Mitgliedtyp — für ihn gibt es keine Matrix. Bis der Personen-Umbau
+         (Etappe 4) die Elternkontakte ablöst, bleibt es beim festen Satz. */
       const fehlend: string[] = [];
-      if (!dbUser.vorname)  fehlend.push('vorname');
-      if (!dbUser.nachname) fehlend.push('nachname');
-      if (!dbUser.telefon)  fehlend.push('telefon');
+      if (!dbUser.vorname)  fehlend.push(FELD_LABEL.vorname);
+      if (!dbUser.nachname) fehlend.push(FELD_LABEL.nachname);
+      if (!dbUser.telefon)  fehlend.push(FELD_LABEL.telefon);
+
       const kinder = dbMitglieder.filter(m =>
         (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
       );
+      /* Die Kinder sind Mitglieder — für sie greift die Matrix ihres
+         Mitgliedtyps, statt wie früher pauschal Geburtsdatum,
+         Nationalität und Adresse zu verlangen. */
       kinder.forEach(kind => {
-        if (!kind.geburtsdatum) fehlend.push(`${kind.vorname}: Geburtsdatum`);
-        if (!kind.nationalitaet) fehlend.push(`${kind.vorname}: Nationalität`);
-        if (!kind.strasse) fehlend.push(`${kind.vorname}: Adresse`);
+        for (const label of fehlendeFelder(kind)) {
+          fehlend.push(`${kind.vorname}: ${label}`);
+        }
       });
       return fehlend;
     }
-    const raw = dbMitglieder.find(m => m.id === dbUser.mitglied_id) || {} as Partial<Mitglied>;
-    const isPassiv = ['Passivmitglied', 'Ehrenmitglied', 'Gönner'].includes(raw.mitgliedtyp ?? '');
-    const fehlend: string[] = [];
-    if (!raw.vorname)  fehlend.push('vorname');
-    if (!raw.nachname) fehlend.push('nachname');
-    if (!isPassiv && !raw.geburtsdatum) fehlend.push('geburtsdatum');
-    if (!raw.telefon && !raw.email) fehlend.push('telefon');
-    return fehlend;
+
+    const raw = dbMitglieder.find(m => m.id === dbUser.mitglied_id);
+    if (!raw) return [];
+    return fehlendeFelder(raw);
   }
 
   function sollProfilPruefen(): boolean {
