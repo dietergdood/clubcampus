@@ -616,16 +616,20 @@ ALTER TABLE "public"."dokumente" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."eltern_kinder" (
     "id" bigint NOT NULL,
     "verein_id" "uuid" NOT NULL,
-    "eltern_id" "uuid" NOT NULL,
+    "eltern_id" "uuid",
     "mitglied_id" bigint NOT NULL,
     "hauptkontakt" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "person_id" "uuid",
+    "person_id" "uuid" NOT NULL,
     "beziehung" "text"
 );
 
 
 ALTER TABLE "public"."eltern_kinder" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."eltern_kinder"."eltern_id" IS 'Altlast: zeigt auf elternkontakte. Seit Etappe 3 (05.08.2026) nullable und nicht mehr massgeblich — die Verknuepfung laeuft ueber person_id. Entfaellt mit elternkontakte in Etappe 6.';
+
 
 
 COMMENT ON COLUMN "public"."eltern_kinder"."beziehung" IS 'Mutter/Vater/Vormund … — Eigenschaft der Verknuepfung, nicht der Person.';
@@ -2433,6 +2437,10 @@ CREATE UNIQUE INDEX "eltern_kinder_ein_hauptkontakt" ON "public"."eltern_kinder"
 
 
 CREATE INDEX "eltern_kinder_person_idx" ON "public"."eltern_kinder" USING "btree" ("person_id");
+
+
+
+CREATE UNIQUE INDEX "eltern_kinder_person_mitglied_key" ON "public"."eltern_kinder" USING "btree" ("verein_id", "person_id", "mitglied_id");
 
 
 
