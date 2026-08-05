@@ -24,13 +24,19 @@ interface TeamPlayer {
 
 /* dbTeams-Zeile (nur die hier gelesenen Felder) — strukturkompatibel zu Team */
 interface TeamRow { id?: number|null; name?: string|null; liga?: string|null; saison?: string|null; module_aktiv?: string[]|null; }
-/* Mitglied inkl. Phantomfelder (teams/funktion/rueckennr existieren als DB-Spalte nicht) */
+/* Mitglied, wie TeamModul es liest. `teams` und `funktion` sind
+   Phantomfelder aus demoData und existieren als DB-Spalte nicht.
+
+   position, rueckennr und eltern stehen NICHT mehr hier: die ersten beiden
+   haengen seit Etappe 6b an der Kaderzeile, `eltern` ist mit 6c gefallen.
+   TeamModul liest sie nicht mehr — das Feld hier zu behalten waere nur eine
+   Einladung, es wieder zu tun. */
 interface TeamMitglied {
   id?: number; vorname?: string|null; nachname?: string|null; aktiv?: boolean|null;
-  teams?: string[]|null; position?: string|null; rueckennr?: string|number|null;
+  teams?: string[]|null;
   geburtsdatum?: string|null; nationalitaet?: string|null; spielerpass?: string|null;
   js_nr?: string|null; funktion?: string|null; email?: string|null; telefon?: string|null;
-  eltern?: unknown[]|null; fairgate_id?: string|null; ahv_nr?: string|null;
+  fairgate_id?: string|null; ahv_nr?: string|null;
   strasse?: string|null; plz?: string|null; ort?: string|null;
 }
 interface Kind { name: string; team?: string; rosterId?: number|null; }
@@ -657,7 +663,7 @@ function StatsTab({team="Cc-Junioren", dbMitglieder=[]}: {team?: string; dbMitgl
   const seed=(str: string)=>str.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
   const rnd=(n: string,min: number,max: number)=>{let s=seed(n+team);s=((s*1664525+1013904223)&0xFFFFFFFF)>>>0;return min+Math.floor((s/0xFFFFFFFF)*(max-min+1));};
   const players=dbMitglieder.length>0
-    ? dbMitglieder.filter(p=>(p.teams||[]).includes(team)&&p.aktiv!==false).map(p=>({firstName:p.vorname,lastName:p.nachname,pos:p.position||""}))
+    ? dbMitglieder.filter(p=>(p.teams||[]).includes(team)&&p.aktiv!==false).map(p=>({firstName:p.vorname,lastName:p.nachname,pos:""}))
     : (ROSTER as any[]).filter((p)=>(p.teams||[]).includes(team)&&!p.role);
   const stats=players.map(p=>{
     const nm=`${p.firstName} ${p.lastName}`;
