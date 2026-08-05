@@ -22,7 +22,7 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 05.08.2026: 293 grün, 2 skipped, 0 rot (22 Testdateien).
+Stand 05.08.2026: 296 grün, 2 skipped, 0 rot (22 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -177,7 +177,6 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 
 ## Bekannte Defekte
 
-- `Mitgliedtyp` in `types.ts` bildet `mitgliedtypen` nur teilweise ab — es fehlen `id`, `hauptkontakt_pflicht`, `standard_rolle` und `beitragsinfo`. `MitgliederModul` ergänzt `hauptkontakt_pflicht` lokal.
 - Vier fast gleiche Kaderrollen-Typen nebeneinander: `KaderRolle` (`types.ts`), `KaderRolleDb` (`roleUtils`), `KaderRolleOption` (`useMemberMeta`), `RolleOption` (`RollenAuswahlListe`).
 - **Mitglied anlegen prüft nicht auf Dubletten.** `NeuesMitgliedModal` → `insertMitglied()` schreibt ohne Abgleich gegen den Bestand; zweimal abgeschickt heisst zweimal in der Datenbank. Nachweis: zwei Zeilen „Test User" <test@fch-test.ch>, angelegt am 26.07.2026 fünf Sekunden auseinander, in Etappe 2a entfernt. Der Unique-Index `personen_email_pro_verein` fängt das **noch nicht** ab — die App schreibt nach `mitglieder`, nicht nach `personen`. Erst ab Etappe 3, wenn der Schreibpfad über die Person läuft, greift er. Dann muss der Service zusätzlich den Postgres-Fehlercode `23505` abfangen und in „Diese E-Mail ist bereits vergeben" übersetzen; roh durchgereicht landet er höchstens in einer `saveMsg` und der Benutzer sieht nichts. Bis dahin bleibt ein Doppelklick-Schutz im Formular offen.
 
@@ -186,6 +185,8 @@ Behoben in der TS-Migration (Session 18): das nicht importierte `supabase` in `c
 Behoben mit der SQL-Migration vom 26.07.2026 + Typ-Regenerierung: `mitglieder.eintrittsdatum`, `elternkontakte.supporter` und `benutzer.vorname/nachname/telefon` sind jetzt echte Spalten. `database.types.ts` wurde neu generiert; die früheren Bridge-/Extension-Typen in `types.ts` (Elternkontakt-`supporter`, DbUser-`vorname/nachname/telefon`, Mitglied-`eintrittsdatum`) sind entfernt. Damit greifen die früher stillen Schreibpfade (u. a. die Supporter-Logik beim Entknüpfen des letzten Kindes).
 
 Behoben am 05.08.2026 (Pflichtfelder):
+- **`mitgliedtypen.standard_rolle` wurde gepflegt, aber von niemandem gelesen.** In der Portalverwaltung pro Mitgliedtyp setzbar, ohne jede Wirkung — die Portalrolle blieb beim Anlegen immer leer. `NeuesMitgliedModal` belegt sie jetzt vor, bei jedem Wechsel des Mitgliedtyps neu; von Hand übersteuerbar. Die Regel ist bewusst einfach gehalten: Wer eine einmal manuell gewählte Rolle schützen wollte, müsste sich merken, ob der Benutzer das Feld angefasst hat — dann überschriebe es mal und mal nicht.
+- **`Mitgliedtyp` in `types.ts` war unvollständig** — `id`, `standard_rolle` und `beitragsinfo` fehlten. Ergänzt; der Eintrag unter „Bekannte Defekte" entfällt damit.
 - **Drei Mitgliedtypen liessen sich nicht anlegen** — bei Passiv-, Ehren- und Freimitglied verlangte die Matrix `email`, während `NeuesMitgliedModal` das Feld über eine `PASSIV_TYPEN`-Liste ausblendete. Die Prüfung schlug an, das Feld fehlte.
 - **Die Spaltenköpfe der Pflichtfeld-Matrix waren fest verdrahtet** (`Juniormitglied`, `Funktionär`). Die echten Typen heissen `Juniorenmitglied` und `Funktionär/in` — Häkchen schrieben Zeilen für nicht existierende Typen, `Pausenmitglied` und `Supporter` hatten keine Spalte. Deshalb stand bei Juniorenmitglied nichts in der Matrix: es liess sich nicht ankreuzen. Quelle sind jetzt `dbMitgliedtypen`.
 - **`adresse` wirkte nirgends** — die Matrix schrieb `adresse`, das Formular fragte `strasse`/`plz`/`ort`; unbekannte Feldnamen wurden still übersprungen, der Adressblock erschien gar nicht.

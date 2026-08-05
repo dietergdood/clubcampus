@@ -111,11 +111,17 @@ export interface Kind {
    leitet mit Pick<> ab statt neu zu deklarieren; die Portalverwaltung nutzt
    MitgliedtypZeile mit allen Spalten. */
 export interface Mitgliedtyp {
+  id?: string;
   name: string;
   aktiv: boolean;
   sort_order?: number;
   /* Steuert, ob dieser Typ einen Elternkontakt verlangt (brauchtEltern) */
   hauptkontakt_pflicht?: boolean | null;
+  /* Portalrolle, die beim Anlegen eines Mitglieds vorbelegt wird. In der
+     Portalverwaltung pro Mitgliedtyp setzbar — bis 05.08.2026 gepflegt,
+     aber von niemandem gelesen. */
+  standard_rolle?: string | null;
+  beitragsinfo?: string | null;
 }
 
 export interface MitgliedtypPflichtfeld {

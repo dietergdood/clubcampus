@@ -115,8 +115,23 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
   const hauptkontaktPflicht = (dbMitgliedtypen || [])
     .some(t => t.name === form.mitgliedtyp && t.hauptkontakt_pflicht);
 
+  /* Standardrolle des gewählten Mitgliedtyps, gesetzt in Portalverwaltung →
+     Mitglieder-Konfiguration. */
+  const standardRolle = (dbMitgliedtypen || [])
+    .find(t => t.name === form.mitgliedtyp)?.standard_rolle || "";
+
   function set(key: keyof MitgliedFormular, val: string) {
-    setForm(f => ({ ...f, [key]: val }));
+    setForm(f => {
+      /* Beim Wechsel des Mitgliedtyps die Portalrolle auf dessen Standard
+         setzen. Bewusst bei JEDEM Wechsel, auch wenn vorher von Hand etwas
+         anderes gewählt war: eine Regel, die man in einem Satz sagen kann,
+         statt eines Verhaltens, das mal überschreibt und mal nicht. */
+      if (key === "mitgliedtyp") {
+        const std = (dbMitgliedtypen || []).find(t => t.name === val)?.standard_rolle || "";
+        return { ...f, mitgliedtyp: val, rolle: std };
+      }
+      return { ...f, [key]: val };
+    });
     setMsg(null);
     /* Sobald etwas drinsteht, verschwindet die Markierung — nicht erst beim
        nächsten Klick auf Speichern. */
@@ -381,6 +396,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
                 <option value="">— keine —</option>
                 {portalRollen.map(r=><option key={r.name} value={r.name}>{r.label}</option>)}
               </select>
+              {standardRolle && (
+                <div className="cc-hint-sub">
+                  {form.rolle === standardRolle
+                    ? `Standard für ${form.mitgliedtyp} — hier änderbar`
+                    : `Abweichend vom Standard für ${form.mitgliedtyp}`}
+                </div>
+              )}
             </div>
 
             <div className="cc-form-full">

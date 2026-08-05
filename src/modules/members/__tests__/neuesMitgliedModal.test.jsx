@@ -42,7 +42,7 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
 import { insertMitglied } from '../../../domains/members/memberService.ts';
 
 const DB_MITGLIEDTYPEN = [
-  { name: 'Aktivmitglied' },
+  { name: 'Aktivmitglied', standard_rolle: 'spieler' },
   { name: 'Juniormitglied' },
   { name: 'Passivmitglied' },
 ];
@@ -155,6 +155,35 @@ describe('NeuesMitgliedModal', () => {
     /* Früher meldete validate() nur das ERSTE fehlende Feld. Bei neun
        Pflichtfeldern hiess das: ausfüllen, klicken, nächste Meldung. Jetzt
        kommen alle auf einmal. */
+    it('übernimmt die Standardrolle des Mitgliedtyps', () => {
+      /* mitgliedtypen.standard_rolle war bis 05.08.2026 in der
+         Portalverwaltung pflegbar, wurde aber von niemandem gelesen. */
+      renderModal();
+      const select = screen.getAllByRole('combobox')[0];
+      fireEvent.change(select, { target: { value: 'Aktivmitglied' } });
+      const rolle = screen.getAllByRole('combobox').at(-1);
+      expect(rolle.value).toBe('spieler');
+    });
+
+    it('lässt die Rolle von Hand übersteuern', () => {
+      renderModal();
+      fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Aktivmitglied' } });
+      const rolle = screen.getAllByRole('combobox').at(-1);
+      fireEvent.change(rolle, { target: { value: 'trainer' } });
+      expect(screen.getAllByRole('combobox').at(-1).value).toBe('trainer');
+    });
+
+    it('setzt beim Wechsel des Mitgliedtyps wieder auf dessen Standard', () => {
+      /* Passivmitglied hat keinen Standard — die zuvor gewählte Rolle darf
+         nicht hängenbleiben, sonst bekäme ein Passivmitglied still die
+         Spielerrolle. */
+      renderModal();
+      fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Aktivmitglied' } });
+      fireEvent.change(screen.getAllByRole('combobox').at(-1), { target: { value: 'trainer' } });
+      fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Passivmitglied' } });
+      expect(screen.getAllByRole('combobox').at(-1).value).toBe('');
+    });
+
     it('nennt alle fehlenden Pflichtfelder auf einmal', async () => {
       renderModal();
       const select = screen.getAllByRole('combobox')[0];
