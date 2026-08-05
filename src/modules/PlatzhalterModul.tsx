@@ -3,7 +3,7 @@
    Placeholder-Ansichten (werden durch echte Module ersetzt)
    ═══════════════════════════════════════════════════════════════ */
 import { updateMitglied } from "../domains/members/memberService.ts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GN, R, RL, BL, AM, BK, GB } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { useTheme, InfoBox, Btn, Card, Chip, Stat, STitle, Between, H1, Select } from "../theme.ts";
@@ -355,6 +355,18 @@ interface ProfileViewProps {
 
 function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGeprueft,vereinId=null}: ProfileViewProps){
   const isEltern=role==="eltern";
+  /* Telefon steht seit Etappe 4 an der Person — benutzer.telefon ist
+     gestrichen. Hier direkt geladen statt als Prop durchgereicht: die
+     Ansicht braucht sonst nichts von der Person. */
+  const [eigenePerson,setEigenePerson]=useState<{telefon:string|null}|null>(null);
+  useEffect(()=>{
+    const pid=dbUser?.person_id;
+    if(!sb||!pid){ setEigenePerson(null); return; }
+    let abgebrochen=false;
+    sb.from("personen").select("telefon").eq("id",pid).maybeSingle()
+      .then(({data})=>{ if(!abgebrochen) setEigenePerson(data??null); });
+    return ()=>{ abgebrochen=true; };
+  },[sb,dbUser?.person_id]);
   const [saving,setSaving]=useState(false);
   const [msg,setMsg]=useState<{ok:boolean;text:string}|null>(null);
 
@@ -443,7 +455,7 @@ function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGe
           {[
             {l:"Name",    v:dbUser?.name||account?.name||"-"},
             {l:"E-Mail",  v:dbUser?.email||"-"},
-            {l:"Telefon", v:dbUser?.telefon||"-"},
+            {l:"Telefon", v:eigenePerson?.telefon||"-"},
           ].map((x,i)=>(
             <div key={i} className="cc-info-row">
               <span className="cc-info-key">{x.l}</span>

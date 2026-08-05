@@ -53,6 +53,7 @@ function PortalTab({
         { name: "spieler",       label: "Spieler/in" },
         { name: "eltern",        label: "Elternteil" },
         { name: "mitglied",      label: "Mitglied" },
+        { name: "mitglied",      label: "Mitglied" },
         { name: "supporter",     label: "Supporter" },
       ];
 

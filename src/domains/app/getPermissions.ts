@@ -17,6 +17,10 @@ const APP_ZUGRIFF_DEFAULT: AppZugriffDefault = {
   trainer:        { _all: 'lesen', team: 'verwalten', training: 'verwalten', events: 'verwalten', attendance_central: 'schreiben', helpers: 'verwalten', buses: 'schreiben', material: 'schreiben', media: 'schreiben', wiki: 'schreiben', members: 'schreiben', schedule: 'lesen' },
   spieler:        { _all: 'lesen', events: 'schreiben', helpers: 'schreiben', buses: 'schreiben' },
   eltern:         { _all: 'lesen', events: 'schreiben', helpers: 'schreiben', schedule: 'lesen' },
+  /* Vereinsmitglied ohne sportliche Funktion. Wie supporter, aber mit
+     Vereinsunterlagen und Spielplan — wer im Verein ist, bekommt Statuten
+     und GV-Papiere, ein Goenner von aussen nicht. */
+  mitglied:       { _all: 'lesen', helpers: 'schreiben' },
   supporter:      { _all: 'lesen', helpers: 'schreiben' },
 };
 

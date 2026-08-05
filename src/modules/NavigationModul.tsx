@@ -161,6 +161,20 @@ const NAV_BY_ROLE: Record<string, NavItem[]> = {
     {key:"docs",               icon:"file-text",        label:"Dokumente"},
     {key:"profile",            icon:"user",             label:"Profil / Daten prüfen"},
   ],
+  /* Vereinsmitglied ohne sportliche Funktion (Passiv-, Ehren-, Freimitglied).
+     Wie supporter, dazu Spielplan, Dokumente und Wiki — Vereinsunterlagen
+     gehoeren den Mitgliedern, nicht den Goennern von aussen. */
+  mitglied: [
+    {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
+    {key:"news",               icon:"news",             label:"News"},
+    {key:"events",             icon:"calendar-event",   label:"Termine"},
+    {key:"schedule",           icon:"flag",             label:"Spielplan"},
+    {key:"helpers",            icon:"heart-handshake",  label:"Helfereinsätze"},
+    {key:"docs",               icon:"file-text",        label:"Dokumente"},
+    {key:"wiki",               icon:"book",             label:"Wiki"},
+    {key:"nachrichten",        icon:"message",          label:"Nachrichten"},
+    {key:"profile",            icon:"user",             label:"Mein Profil"},
+  ],
   supporter: [
     {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
     {key:"news",               icon:"news",             label:"News"},
@@ -292,6 +306,19 @@ const MOBILE_NAV_BY_ROLE: Record<string, MobileNavDef> = {
       {key:"news",               icon:"news",             label:"News"},
       {key:"wiki",               icon:"book",             label:"Wiki"},
       {key:"docs",               icon:"file-text",        label:"Dokumente"},
+    ],
+  },
+  mitglied: {
+    tabs: [
+      {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
+      {key:"events",             icon:"calendar-event",   label:"Termine"},
+      {key:"schedule",           icon:"flag",             label:"Spielplan"},
+      {key:"news",               icon:"news",             label:"News"},
+    ],
+    mehr: [
+      {key:"helpers",            icon:"heart-handshake",  label:"Helfereinsätze"},
+      {key:"docs",               icon:"file-text",        label:"Dokumente"},
+      {key:"wiki",               icon:"book",             label:"Wiki"},
     ],
   },
   supporter: {

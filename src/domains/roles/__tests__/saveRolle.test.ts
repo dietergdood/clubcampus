@@ -86,3 +86,19 @@ describe("saveRolle", () => {
     expect(letzterAn(updates, "benutzer")).toBeUndefined();
   });
 });
+
+describe("Rollenliste", () => {
+  it("kennt die Vereinsmitglieder-Rolle und stellt sie über supporter", async () => {
+    /* Passiv-, Ehren- und Freimitglied tragen standard_rolle = 'mitglied'.
+       Den Wert gab es bis 05.08.2026 nirgends — wer sich so registriert
+       hätte, wäre mit einer Rolle dagestanden, die das Portal nicht kennt.
+
+       Und er ist NICHT durch supporter zu ersetzen: Ein Vereinsmitglied hat
+       Stimmrecht an der GV, ein Supporter ist Gönner von aussen. */
+    const { ROLLE_PRIORITAET, ROLLE_LABEL } = await import("../roleUtils.ts");
+    expect(ROLLE_PRIORITAET).toContain("mitglied");
+    expect(ROLLE_LABEL.mitglied).toBe("Mitglied");
+    expect(ROLLE_PRIORITAET.indexOf("mitglied"))
+      .toBeLessThan(ROLLE_PRIORITAET.indexOf("supporter"));
+  });
+});

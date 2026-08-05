@@ -32,6 +32,7 @@ export type Rolle =
   | 'trainer'
   | 'spieler'
   | 'eltern'
+  | 'mitglied'
   | 'supporter';
 
 export type Zugriffstufe = 'lesen' | 'schreiben' | 'verwalten';

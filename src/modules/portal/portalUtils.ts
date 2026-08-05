@@ -63,6 +63,7 @@ export const ROLLEN_MODULE_DEFAULT: Record<string,string[]>={
     trainer:         ["dashboard","team","training","events","helpers","buses","material","lockers","news","wiki","docs"],
     spieler:         ["dashboard","team","events","helpers","docs","news"],
     eltern:          ["dashboard","team","events","helpers","docs","news"],
+    mitglied:        ["dashboard","events","helpers","news","schedule","docs","wiki"],
     supporter:       ["dashboard","events","helpers","news"],
   };
 

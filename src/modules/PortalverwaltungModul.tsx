@@ -284,7 +284,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
   const isMobile=useIsMobile();
 
   const ROLLEN=dbPortalRollen.length>0?dbPortalRollen.map(r=>r.name):["administrator","administration","funktionaer","trainer","spieler","eltern","mitglied","supporter"];
-  const ROLLEN_LABELS: Record<string,string>={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",supporter:"Supporter"};
+  const ROLLEN_LABELS: Record<string,string>={administrator:"Admin",administration:"Verwaltung",funktionaer:"Funktionär",trainer:"Trainer",spieler:"Spieler",eltern:"Eltern",mitglied:"Mitglied",supporter:"Supporter"};
 
 
   /* Effektive Zugriffsstufe: custom oder Default */
