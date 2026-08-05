@@ -74,12 +74,13 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
     setNeuFehler(null);
     setSaving(true);
     const name = [neuForm.vorname, neuForm.nachname].filter(Boolean).join(" ");
+    /* vorname/nachname sind in `personen` NOT NULL — validateElternkontakt()
+       oben hat schon abgebrochen, wenn eines leer ist. */
     const error = await insertElternkontakt(sb, {
       mitglied_id: raw.id,
-      vorname:   neuForm.vorname   || null,
-      nachname:  neuForm.nachname  || null,
-      name,
-      email:     neuForm.email     || null,
+      vorname:   (neuForm.vorname  || "").trim(),
+      nachname:  (neuForm.nachname || "").trim(),
+      email:     neuForm.email?.trim() || null,
       telefon:   neuForm.telefon   || null,
       beziehung: neuForm.beziehung || null,
     }, vereinId);

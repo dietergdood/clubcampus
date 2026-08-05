@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 import { useConfirm } from "../../theme.ts";
-import { fetchAlleElternkontakte, deleteElternkontakt } from "../../domains/members/memberService.ts";
+import { fetchAlleElternkontakte, entferneElternVerknuepfung } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
 import { ElternkontaktModal } from "./ElternkontaktModal.tsx";
@@ -109,9 +109,13 @@ export function ElternListView({
   async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
     const namen = [...selected].map(id => rows.find(r => r.id === id)?.name).filter(Boolean);
-    const ok = await confirm({ title:`${selected.size} Elternkontakte löschen?`, message:`Gelöscht werden: ${namen.join(", ")}`, danger:true, confirmLabel:"Löschen" });
+    const ok = await confirm({
+      title: `${selected.size} Elternkontakte entfernen?`,
+      message: `Die Verknüpfungen zu allen Kindern werden getrennt: ${namen.join(", ")}. Die Personen selbst bleiben bestehen — sie sind womöglich auch Mitglieder.`,
+      danger: true, confirmLabel: "Entfernen",
+    });
     if (!sb || !ok) return;
-    for (const id of selected) await deleteElternkontakt(sb, String(id));
+    for (const id of selected) await entferneElternVerknuepfung(sb, String(id));
     setRows(prev => prev.filter(r => !selected.has(r.id)));
   }
 
@@ -144,7 +148,7 @@ export function ElternListView({
         isAdmin={isAdmin}
         selectable={isAdmin}
         bulkActions={isAdmin ? [
-          { icon:"trash", label:"Löschen", danger:true, requiresSelection:true, onClick:loeschen },
+          { icon:"unlink", label:"Entfernen", danger:true, requiresSelection:true, onClick:loeschen },
         ] : []}
         footerLabel={(f,t) => `${f} von ${t} Elternkontakten`}
         exportFn={(rows,cols,groups,format) => exportListData(rows,cols,groups,format,{filename:"eltern",sheetName:"Eltern"})}

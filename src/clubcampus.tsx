@@ -30,6 +30,7 @@ import { BusesView, MaterialView, LockersView, MediaView, WikiView, DocsView, Ne
 import { DatenpruefungMitglied } from "./modules/members/tabs/DatenpruefungMitglied.tsx";
 import { DatenpruefungEltern } from "./modules/members/tabs/DatenpruefungEltern.tsx";
 import { fetchKinderVollstaendigFuerElternteil } from "./domains/members/elternService.ts";
+import { fetchPerson } from "./domains/person/personService.ts";
 import { fetchMitglied, fetchMitgliedtypPflichtfelder, fetchRollePflichtfelder } from "./domains/members/memberService.ts";
 import type { RollePflichtfeld } from "./domains/members/pflichtfelder.ts";
 import type {
@@ -256,19 +257,21 @@ function Portal({supabaseClient, slug}: PortalProps){
     setActive("dashboard");
   }
 
-  /* Eltern-Daten für DatenpruefungEltern laden */
+  /* Eltern-Daten für DatenpruefungEltern laden.
+     Seit Etappe 3 haengt der Portal-Zugang an `benutzer.person_id`, und
+     die Kontaktdaten stehen in `personen` — nicht mehr in
+     `elternkontakte.benutzer_id`. Ohne person_id gibt es nichts zu
+     laden (Konto ohne zugeordnete Person). */
   useEffect(()=>{
     if(!sb||!dbUser||dbUser.role!=="eltern"||elternDaten) return;
+    if(!dbUser.person_id) return;
     (async()=>{
-      const { data } = await (sb.from("elternkontakte") as any)
-        .select("id,vorname,nachname,name,email,telefon,beziehung,profil_geprueft_at")
-        .eq("benutzer_id", dbUser.id)
-        .single();
-      if(!data) return;
-      const kinder = await fetchKinderVollstaendigFuerElternteil(sb, data.id);
-      setElternDaten({ elternkontakt: data, kinder: kinder as unknown as Mitglied[] });
+      const person = await fetchPerson(sb, dbUser.person_id!);
+      if(!person) return;
+      const kinder = await fetchKinderVollstaendigFuerElternteil(sb, person.id);
+      setElternDaten({ elternkontakt: person, kinder: kinder as unknown as Mitglied[] });
     })();
-  },[dbUser?.id, dbUser?.role]);
+  },[dbUser?.id, dbUser?.role, dbUser?.person_id]);
 
   /* Eigenes Mitglied laden (für Spieler/Trainer — RLS erlaubt select_self) */
   useEffect(()=>{

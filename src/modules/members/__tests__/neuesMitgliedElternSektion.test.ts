@@ -4,11 +4,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
    Reihenfolge, Hauptkontakt und das Verhalten bei Teilfehlern. */
 type Fehler = { message: string } | null;
 const linkKind = vi.fn(
-  async (_sb: unknown, _elternId: string, _mitgliedId: number, _vereinId: string, _haupt: boolean): Promise<Fehler> => null);
+  async (_sb: unknown, _personId: string, _mitgliedId: number, _vereinId: string, _haupt: boolean): Promise<Fehler> => null);
 const insertElternkontakt = vi.fn(
   async (_sb: unknown, _kontakt: Record<string, unknown>, _vereinId: string): Promise<Fehler> => null);
 const setHauptkontakt = vi.fn(
-  async (_sb: unknown, _mitgliedId: number, _elternId: string): Promise<void> => undefined);
+  async (_sb: unknown, _mitgliedId: number, _personId: string): Promise<void> => undefined);
 
 vi.mock("../../../domains/members/elternService.ts", () => ({
   linkKind, insertElternkontakt, setHauptkontakt,
@@ -53,16 +53,20 @@ describe("speichereEltern", () => {
     expect(insertElternkontakt).toHaveBeenCalledTimes(1);
   });
 
-  it("schreibt mitglied_id an den neuen Elternkontakt", async () => {
-    /* elternkontakte.mitglied_id ist NOT NULL — fehlt sie, scheitert der
-       Insert. Deshalb kann der Elternteil auch nicht vor dem Kind entstehen. */
+  it("schreibt mitglied_id und die Personenfelder an den neuen Elternkontakt", async () => {
+    /* Die Verknüpfung braucht die mitglied_id — deshalb läuft der Schritt
+       nach dem Anlegen des Kindes. `name` wird nicht mehr mitgegeben:
+       `personen` hat keine solche Spalte (Etappe 3). */
     await speichereEltern(sb, VEREIN, 42, [
       { key: "b", form: { vorname: "Reto", nachname: "Brunner", email: "r@b.ch" }, anzeigename: "Reto Brunner", hauptkontakt: true },
     ], "Admin");
     const arg = insertElternkontakt.mock.calls[0][1];
     expect(arg.mitglied_id).toBe(42);
     expect(arg.hauptkontakt).toBe(true);
-    expect(arg.name).toBe("Reto Brunner");
+    expect(arg.vorname).toBe("Reto");
+    expect(arg.nachname).toBe("Brunner");
+    expect(arg.email).toBe("r@b.ch");
+    expect(arg).not.toHaveProperty("name");
   });
 
   it("setzt den Hauptkontakt erst am Schluss", async () => {

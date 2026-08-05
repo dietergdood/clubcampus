@@ -1,136 +1,439 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — domains/members/elternService.ts
-   Alle Elternkontakt-Funktionen (n:m via eltern_kinder)
+   Elternkontakte, seit Etappe 3 auf `personen` statt `elternkontakte`.
+
+   BEZUGSPUNKT IST `eltern_kinder.person_id`. Die Altspalte `eltern_id`
+   zeigt weiterhin auf `elternkontakte`, ist seit Etappe 3 nullable und
+   wird NICHT MEHR GESCHRIEBEN; sie entfaellt mit `elternkontakte` in
+   Etappe 6. `elternkontakte` wird hier weder gelesen noch geschrieben.
+
+   `beziehung` und `hauptkontakt` haengen an der VERKNUEPFUNG, nicht an
+   der Person: dieselbe Person kann Mutter des einen und Stiefmutter des
+   anderen Kindes sein. Hauptkontakt ist genau einer pro Kind, erzwungen
+   durch den partiellen Index `eltern_kinder_ein_hauptkontakt`.
+
+   FASSADEN-REGEL (ARCHITECTURE.md): gelesen wird per Join, zurueck
+   kommen FLACHE Zeilen. Die Feld-Keys, die `mapEltern()` daraus baut,
+   stehen als Nutzerdaten in `mitglieder_ansichten` — sie duerfen sich
+   nicht aendern, sonst bleiben gespeicherte Ansichten still leer.
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
-import { flacheZeilen } from "../person/personService.ts";
-import type { Elternkontakt, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
+import { flacheZeile, verteileFelder } from "../person/personService.ts";
+import type { SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
-/* Elternkontakt inklusive der Angaben aus der Verknüpfungstabelle */
-export interface ElternkontaktMitLink extends Partial<Elternkontakt> {
+/* Ein Elternkontakt, wie die Oberflaeche ihn sieht: die Person flach,
+   dazu die Angaben aus der Verknuepfung.
+
+   `id` ist die PERSONEN-Id. Sie hat die fruehere elternkontakte-Id
+   abgeloest und ist ueberall der Bezugspunkt — linkKind, unlinkKind,
+   setHauptkontakt, entkoppleKind erwarten sie. */
+export interface ElternkontaktMitLink {
+  id: string;
+  vorname: string | null;
+  nachname: string | null;
+  /* `personen` hat keine `name`-Spalte (anders als `elternkontakte`).
+     Hier zusammengesetzt, damit die Oberflaechen `e.name` behalten. */
+  name: string;
+  email: string | null;
+  telefon: string | null;
+  profil_geprueft_at: string | null;
+  /* aus eltern_kinder — pro Verknuepfung, nicht pro Person */
+  beziehung: string | null;
   hauptkontakt: boolean | null;
-  profil_geprueft_at?: string | null;
+  /* aus benutzer.person_id: der Portal-Zugang sitzt seit Etappe 3 dort
+     und nicht mehr in `elternkontakte.benutzer_id` (Block D). */
+  benutzer_id: string | null;
 }
 
+type Zeile = Record<string, unknown>;
+
+function nameAus(p: { vorname?: string | null; nachname?: string | null }): string {
+  return `${p.vorname || ""} ${p.nachname || ""}`.trim();
+}
+
+/* Ein Kind, nachdem flacheZeile() die Personenfelder heraufgezogen hat.
+   Explizit deklariert, weil flacheZeile() `Record<string, unknown>`
+   liefert — ohne diesen Typ waeren `vorname` und `kader` in
+   elternListUtils `unknown` und die Auswertung dort ungeprueft. */
+export interface KindZeileFlach {
+  id: number;
+  vorname: string | null;
+  nachname: string | null;
+  aktiv?: boolean | null;
+  mitgliedtyp?: string | null;
+  kader?: {
+    rollen?: string[] | null;
+    aktiv: boolean | null;
+    teams: { id?: number; name: string; kurzname: string | null }
+         | { id?: number; name: string; kurzname: string | null }[]
+         | null;
+  }[] | null;
+}
+
+/* Beziehungen mehrerer Verknuepfungen zu EINEM Anzeigewert.
+
+   Eine Person steht in der Elternliste ab Etappe 3 nur noch in EINER
+   Zeile, kann aber je Kind eine andere Beziehung haben. Mehrere Werte
+   werden deshalb kommagetrennt zusammengefasst.
+
+   ⚠ Fuer Filter und Gruppierung entsteht dadurch ein EIGENER Wert:
+   „Mutter, Stiefmutter" ist ein dritter Eintrag neben „Mutter" und
+   „Stiefmutter" und faellt weder unter den einen noch den anderen
+   Filter. Bei FCH ist das der Ausnahmefall (Stand 05.08.2026 hat kein
+   Elternteil abweichende Beziehungen), fuer den Fairgate-Import aber
+   im Blick zu behalten. */
+export function fasseBeziehungZusammen(werte: (string | null | undefined)[]): string | null {
+  const eindeutig = [...new Set(werte.filter((w): w is string => Boolean(w && w.trim())))];
+  return eindeutig.length ? eindeutig.join(", ") : null;
+}
+
+/* ── Lesen ──────────────────────────────────────────────────────── */
+
+/* Elternkontakte EINES Kindes — fuer den ElternTab im Mitglied-Detail.
+   `beziehung` und `hauptkontakt` sind hier eindeutig: es geht um genau
+   eine Verknuepfung. */
 export async function fetchElternkontakte(sb: SbClient, mitgliedId: number): Promise<ElternkontaktMitLink[]> {
-  const { data } = await sb.from("eltern_kinder")
-    .select("hauptkontakt, elternkontakte(*)")
+  const { data, error } = await sb.from("eltern_kinder")
+    .select("hauptkontakt, beziehung, personen(*, benutzer(id))")
     .eq("mitglied_id", mitgliedId);
+  if (error) console.error("fetchElternkontakte error:", error);
   if (!data) return [];
-  return data.map(row => ({
-    ...row.elternkontakte,
-    hauptkontakt: row.hauptkontakt,
-  }));
+  return data.map(zeile => {
+    const person = (zeile.personen || {}) as Zeile & { benutzer?: { id: string }[] | null };
+    const flach = (flacheZeile({ personen: person }) || {}) as Zeile;
+    return {
+      id:                 String(person.id ?? ""),
+      vorname:            (flach.vorname as string) ?? null,
+      nachname:           (flach.nachname as string) ?? null,
+      name:               nameAus(flach as { vorname?: string | null; nachname?: string | null }),
+      email:              (flach.email as string) ?? null,
+      telefon:            (flach.telefon as string) ?? null,
+      profil_geprueft_at: (flach.profil_geprueft_at as string) ?? null,
+      beziehung:          zeile.beziehung,
+      hauptkontakt:       zeile.hauptkontakt,
+      benutzer_id:        person.benutzer?.[0]?.id ?? null,
+    };
+  });
 }
 
+/* Alle Elternkontakte des Vereins — Grundlage der Elternliste.
+
+   Einstieg ist `personen` mit `eltern_kinder!inner`: gelistet wird, wer
+   mindestens ein Kind verknuepft hat. Damit steht eine Person, die zwei
+   Kinder im Verein hat, nur noch EINMAL in der Liste — vor Etappe 3
+   waren das zwei `elternkontakte`-Zeilen und damit zwei Listenzeilen.
+
+   ⚠ Wer keine Verknuepfung mehr hat, faellt aus der Liste. Das trifft
+   Supporter (letztes Kind entknuepft, Kind noch im Verein): die Person
+   bleibt bestehen, ist hier aber nicht mehr zu sehen, bis Etappe 5 den
+   Mitgliedtyp „Supporter" bringt.
+
+   Die Kindernamen kommen aus `mitglieder.personen`, nicht aus den
+   Altspalten von `mitglieder`; `flacheZeile()` macht sie wieder flach,
+   damit `getKinderMitTeams()` in elternListUtils unveraendert bleibt. */
 export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
-  const { data, error } = await sb.from("elternkontakte")
+  const { data, error } = await sb.from("personen")
     .select(`
-      id, vorname, nachname, name, email, telefon, beziehung,
-      benutzer_id,
-      eltern_kinder(
-        mitglied_id, hauptkontakt,
+      id, vorname, nachname, email, telefon,
+      benutzer(id),
+      eltern_kinder!inner(
+        mitglied_id, hauptkontakt, beziehung,
         mitglieder:mitglied_id(
-          id, vorname, nachname,
+          id,
+          personen(vorname, nachname),
           kader(rollen, aktiv, teams(id, name, kurzname))
         )
       )
     `)
     .eq("verein_id", vereinId)
     .order("nachname", { ascending: true });
-  if(error) console.error("fetchAlleElternkontakte error:", error);
-  return (data||[]).map(e => {
-    const erstesKind = e.eltern_kinder?.[0];
+  if (error) console.error("fetchAlleElternkontakte error:", error);
+  return (data || []).map(p => {
+    const links = p.eltern_kinder || [];
+    /* Kind-Zeilen flach machen, damit elternListUtils weiter `m.vorname`
+       liest und nichts von `personen` wissen muss. */
+    const kinder = links.map(l => ({
+      mitglied_id:  l.mitglied_id,
+      hauptkontakt: l.hauptkontakt,
+      beziehung:    l.beziehung,
+      mitglieder:   flacheZeile(l.mitglieder as never) as KindZeileFlach | null,
+    }));
+    const erstes = kinder[0];
     return {
-      ...e,
-      mitglied_id: erstesKind?.mitglied_id || null,
-      hauptkontakt: erstesKind?.hauptkontakt || false,
-      mitglieder: erstesKind?.mitglieder || null,
-      _alle_kinder: e.eltern_kinder || [],
+      id:          p.id,
+      vorname:     p.vorname,
+      nachname:    p.nachname,
+      name:        nameAus(p),
+      email:       p.email,
+      telefon:     p.telefon,
+      beziehung:   fasseBeziehungZusammen(links.map(l => l.beziehung)),
+      benutzer_id: p.benutzer?.[0]?.id ?? null,
+      mitglied_id: erstes?.mitglied_id || null,
+      hauptkontakt: erstes?.hauptkontakt || false,
+      mitglieder:  erstes?.mitglieder || null,
+      _alle_kinder: kinder,
     };
   });
 }
 
-export async function fetchKinderFuerElternteil(sb: SbClient, elternId: string) {
+export async function fetchKinderFuerElternteil(sb: SbClient, personId: string) {
   const { data } = await sb.from("eltern_kinder")
-    .select("mitglied_id, hauptkontakt, mitglieder:mitglied_id(id, vorname, nachname, aktiv, mitgliedtyp, kader(aktiv, teams(name, kurzname)))")
-    .eq("eltern_id", elternId);
-  return data || [];
+    .select("mitglied_id, hauptkontakt, mitglieder:mitglied_id(id, aktiv, mitgliedtyp, personen(vorname, nachname), kader(aktiv, teams(name, kurzname)))")
+    .eq("person_id", personId);
+  return (data || []).map(zeile => ({
+    mitglied_id:  zeile.mitglied_id,
+    hauptkontakt: zeile.hauptkontakt,
+    mitglieder:   flacheZeile(zeile.mitglieder as never) as KindZeileFlach | null,
+  }));
 }
 
-export async function fetchKinderVollstaendigFuerElternteil(sb: SbClient, elternId: string) {
+export async function fetchKinderVollstaendigFuerElternteil(sb: SbClient, personId: string) {
   const { data } = await sb.from("eltern_kinder")
     .select(`mitglied_id, mitglieder:mitglied_id(
-      id, vorname, nachname, geburtsdatum, nationalitaet, nationalitaet2,
-      strasse, plz, ort, kanton, email, telefon, ahv_nr, profil_geprueft_at
+      id, mitgliedtyp, rolle, profil_geprueft_at,
+      personen(*)
     )`)
-    .eq("eltern_id", elternId);
-  return (data || []).map(r => r.mitglieder).filter(Boolean);
+    .eq("person_id", personId);
+  return (data || [])
+    .map(zeile => flacheZeile(zeile.mitglieder as never))
+    .filter(Boolean);
 }
 
+/* Suche fuer „bestehenden Elternteil verknuepfen".
+
+   Gesucht wird in `personen` — nicht mehr in `elternkontakte` und auch
+   nicht in den Altspalten von `mitglieder`. Absichtlich OHNE Filter auf
+   vorhandene Kinder: wer heute Aktivmitglied ist und morgen als Vater
+   eines Juniors dazukommt, ist dieselbe Person und soll gefunden werden.
+   Genau dafuer wurden die Personen in Etappe 2a zusammengefuehrt. */
 export async function sucheElternkontakte(sb: SbClient, vereinId: string, query: string) {
-  const q = (query||"").trim().toLowerCase();
-  if(!q) return [];
-  const { data } = await sb.from("elternkontakte")
-    .select("id, vorname, nachname, name, email, beziehung, eltern_kinder(mitglied_id, mitglieder:mitglied_id(id, vorname, nachname))")
+  const q = (query || "").trim();
+  if (!q) return [];
+  const { data, error } = await sb.from("personen")
+    .select("id, vorname, nachname, email, eltern_kinder(mitglied_id, beziehung, mitglieder:mitglied_id(id, personen(vorname, nachname)))")
     .eq("verein_id", vereinId)
     .or(`vorname.ilike.%${q}%,nachname.ilike.%${q}%,email.ilike.%${q}%`)
+    .order("nachname", { ascending: true })
     .limit(10);
-  return data || [];
+  if (error) console.error("sucheElternkontakte error:", error);
+  return (data || []).map(p => ({
+    id:        p.id,
+    vorname:   p.vorname,
+    nachname:  p.nachname,
+    name:      nameAus(p),
+    email:     p.email,
+    beziehung: fasseBeziehungZusammen((p.eltern_kinder || []).map(l => l.beziehung)),
+    eltern_kinder: (p.eltern_kinder || []).map(l => ({
+      mitglied_id: l.mitglied_id,
+      mitglieder:  flacheZeile(l.mitglieder as never) as { id: number; vorname?: string | null; nachname?: string | null } | null,
+    })),
+  }));
 }
 
-/* Eingabe von insertElternkontakt: Kontaktfelder plus die Verknüpfung,
-   die anschliessend in eltern_kinder geschrieben wird.
-   verein_id ist bewusst ausgeschlossen: es kommt als eigener Pflichtparameter,
-   damit der Aufrufer es nicht vergessen kann (siehe insertMitglied). */
-export interface NeuerElternkontakt extends Omit<TablesInsert<"elternkontakte">, "hauptkontakt" | "verein_id"> {
-  /* Kind, mit dem der neue Kontakt verknüpft wird. Die Spalte ist laut
-     ELTERN_LOGIK.md deprecated (verknüpft wird über eltern_kinder), in der
-     Datenbank aber weiterhin NOT NULL — daher Pflichtfeld. */
+/* ── Person finden oder anlegen ─────────────────────────────────── */
+
+/* Uebersetzt die Unique-Verletzung des Index `personen_email_pro_verein`
+   in eine Meldung, die im Formular etwas aussagt. Roh durchgereicht
+   landet sie hoechstens in einer saveMsg und der Benutzer sieht nichts
+   (siehe CLAUDE.md → Bekannte Defekte). */
+function alsEmailVergeben(err: PostgrestError): PostgrestError {
+  /* Nur die Meldung ersetzen — code, details und hint bleiben fuer die
+     Fehlersuche stehen. Object.assign statt Objektliteral, weil
+     PostgrestError eine Klasse ist (toJSON ginge sonst verloren). */
+  return Object.assign(err, { message: "Diese E-Mail ist bereits vergeben." });
+}
+
+async function findePersonPerEmail(sb: SbClient, vereinId: string, email: string) {
+  const { data } = await sb.from("personen")
+    .select("id")
+    .eq("verein_id", vereinId)
+    .ilike("email", email)
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+export interface PersonErgebnis {
+  personId: string | null;
+  error: PostgrestError | null;
+}
+
+/* Findet die Person ueber die E-Mail oder legt sie an.
+
+   ZUSAMMENGEFUEHRT WIRD NUR UEBER DIE E-MAIL — dieselbe Regel wie in
+   Etappe 2a (`supabase/etappe2a_merge.sql`). Nicht ueber den Namen: der
+   Bestand enthaelt Namenskollisionen, teils mit identischer Adresse.
+
+   OHNE E-MAIL wird IMMER neu angelegt. Ein Leerwert darf nicht
+   zusammenfuehren, sonst wuerden alle Elternteile ohne E-Mail zu einer
+   Person verschmelzen (Rosmarie Steiner, Grossmutter, nur telefonisch
+   erreichbar). Der Unique-Index klammert leere E-Mails deshalb aus.
+
+   BESTEHENDE PERSONEN WERDEN NICHT UEBERSCHRIEBEN. Wird ein Vater
+   gefunden, der bereits Aktivmitglied ist, gewinnen seine gepflegten
+   Daten gegen das, was gerade im Elternformular steht. */
+export async function findeOderLegePersonAn(
+  sb: SbClient,
+  felder: Record<string, unknown>,
+  vereinId: string,
+): Promise<PersonErgebnis> {
+  const { person } = verteileFelder(felder);
+  const email = typeof person.email === "string" ? person.email.trim() : "";
+  person.email = email || null;
+
+  if (email) {
+    const treffer = await findePersonPerEmail(sb, vereinId, email);
+    if (treffer) return { personId: treffer, error: null };
+  }
+
+  const { data, error } = await sb.from("personen")
+    .insert({ ...person, verein_id: vereinId } as TablesInsert<"personen">)
+    .select("id").single();
+
+  if (error) {
+    /* 23505: zwischen Suche und Insert ist jemand zuvorgekommen, oder
+       die gespeicherte E-Mail weicht in Gross-/Kleinschreibung bzw.
+       Leerzeichen ab (der Index normalisiert ueber lower(btrim())).
+       Nochmal suchen, bevor der Fehler nach oben geht. */
+    if (error.code === "23505" && email) {
+      const treffer = await findePersonPerEmail(sb, vereinId, email);
+      if (treffer) return { personId: treffer, error: null };
+      return { personId: null, error: alsEmailVergeben(error) };
+    }
+    return { personId: null, error };
+  }
+  return { personId: data.id, error: null };
+}
+
+/* ── Schreiben ──────────────────────────────────────────────────── */
+
+/* Eingabe von insertElternkontakt: Personenfelder plus die Angaben, die
+   an die Verknuepfung gehen. `verein_id` kommt als eigener Pflicht-
+   parameter, damit der Aufrufer es nicht vergessen kann (siehe
+   insertMitglied in CLAUDE.md → Konventionen). */
+export interface NeuerElternkontakt extends Omit<TablesInsert<"personen">, "verein_id" | "id"> {
+  /* Kind, mit dem verknuepft wird. Seit Etappe 3 koennte eine Person
+     auch ohne Kind entstehen — die Oberflaechen erfassen Elternteile
+     aber weiterhin beim Kind, deshalb Pflichtfeld. */
   mitglied_id: number;
-  /* Nur für den eltern_kinder-Eintrag, keine Spalte in elternkontakte */
+  /* Gehoeren zu eltern_kinder, nicht zu personen */
+  beziehung?: string | null;
   hauptkontakt?: boolean;
 }
 
-export async function insertElternkontakt(sb: SbClient, kontakt: NeuerElternkontakt, vereinId: string): Promise<PostgrestError | null> {
-  const { hauptkontakt=false, ...elternFelder } = kontakt;
-  const mitglied_id = elternFelder.mitglied_id;
-  /* ⚠ elternkontakte.mitglied_id ist bigint NOT NULL ohne Default. Bisher
-     wurde die Spalte beim Insert herausdestrukturiert und damit weggelassen —
-     jeder neue Elternkontakt scheiterte an der NOT-NULL-Verletzung. Sie wird
-     jetzt mitgeschrieben, bis die Spalte laut ELTERN_LOGIK.md entfällt. */
-  const { data, error } = await sb.from("elternkontakte")
-    .insert({ ...elternFelder, verein_id: vereinId })
-    .select().single();
+/* Legt den Elternkontakt an: Person finden oder anlegen, dann mit dem
+   Kind verknuepfen. Vor Etappe 3 entstand hier eine `elternkontakte`-
+   Zeile pro Eltern-Kind-Paar — derselbe Mensch mit zwei Kindern war
+   zweimal erfasst. */
+export async function insertElternkontakt(
+  sb: SbClient, kontakt: NeuerElternkontakt, vereinId: string,
+): Promise<PostgrestError | null> {
+  const { mitglied_id, hauptkontakt = false, beziehung = null, ...personFelder } = kontakt;
+
+  const { personId, error } = await findeOderLegePersonAn(sb, personFelder, vereinId);
   if (error) return error;
-  if (mitglied_id) {
-    const { error: linkError } = await sb.from("eltern_kinder").insert({
-      eltern_id: data.id,
-      mitglied_id,
-      verein_id: vereinId,
-      hauptkontakt,
-    });
-    if (linkError) return linkError;
+  if (!personId) return null;
+  if (!mitglied_id) return null;
+
+  const { error: linkError } = await sb.from("eltern_kinder").insert({
+    person_id: personId,
+    mitglied_id,
+    verein_id: vereinId,
+    hauptkontakt,
+    beziehung,
+  });
+  return linkError;
+}
+
+/* Aendert einen Elternkontakt.
+
+   Personenfelder gehen nach `personen`, `beziehung` an die Verknuepfung.
+   `mitgliedId` sagt, WELCHE Verknuepfung gemeint ist: aus dem ElternTab
+   steht man bei einem bestimmten Kind, aus der Elternliste nicht. Ohne
+   `mitgliedId` gilt die Beziehung fuer alle Kinder dieser Person — das
+   ist die einzige Lesart, die zu der einen Zeile passt, die man dort
+   vor sich hat. Die Oberflaeche schickt `beziehung` deshalb nur mit,
+   wenn sie tatsaechlich geaendert wurde. */
+export async function updateElternkontakt(
+  sb: SbClient,
+  personId: string,
+  fields: Record<string, unknown>,
+  mitgliedId?: number | null,
+): Promise<PostgrestError | null> {
+  const { beziehung, ...rest } = fields;
+  const { person } = verteileFelder(rest);
+
+  if (Object.keys(person).length > 0) {
+    const { error } = await sb.from("personen")
+      .update(person as TablesUpdate<"personen">).eq("id", personId);
+    if (error) return error.code === "23505" ? alsEmailVergeben(error) : error;
+  }
+
+  if ("beziehung" in fields) {
+    let q = sb.from("eltern_kinder").update({ beziehung: (beziehung as string) ?? null })
+      .eq("person_id", personId);
+    if (mitgliedId) q = q.eq("mitglied_id", mitgliedId);
+    const { error } = await q;
+    if (error) return error;
   }
   return null;
 }
 
-export async function updateElternkontakt(sb: SbClient, id: string, fields: TablesUpdate<"elternkontakte">): Promise<PostgrestError | null> {
-  const { error } = await sb.from("elternkontakte").update(fields).eq("id", id);
-  return error;
+/* Loescht die Person NUR, wenn nichts mehr an ihr haengt: keine
+   Mitgliedschaft, keine Eltern-Verknuepfung, kein Benutzerkonto.
+
+   Ohne diese Pruefung wuerde das Loeschen eines Elternkontakts die
+   Identitaet eines aktiven Mitglieds mitreissen — seit Etappe 2a ist
+   der Vater, der selbst Aktivmitglied ist, DIESELBE Zeile in
+   `personen`. Im Zweifel bleibt die Person stehen: eine verwaiste
+   Person kostet nichts, eine geloeschte ist nicht zurueckzuholen. */
+export async function loeschePersonWennVerwaist(sb: SbClient, personId: string): Promise<boolean> {
+  const zaehle = async (tabelle: "mitglieder" | "eltern_kinder" | "benutzer") => {
+    const { count, error } = await sb.from(tabelle)
+      .select("id", { count: "exact", head: true })
+      .eq("person_id", personId);
+    /* Fehler (etwa fehlendes Leserecht) zaehlt als „haengt dran" —
+       lieber stehen lassen als blind loeschen. */
+    if (error) return 1;
+    return count || 0;
+  };
+  if (await zaehle("mitglieder")) return false;
+  if (await zaehle("eltern_kinder")) return false;
+  if (await zaehle("benutzer")) return false;
+
+  const { error } = await sb.from("personen").delete().eq("id", personId);
+  return !error;
 }
 
-export async function deleteElternkontakt(sb: SbClient, id: string) {
-  return sb.from("elternkontakte").delete().eq("id", id);
+/* Entfernt die Verknuepfung zwischen Elternteil und Kind — ohne
+   `mitgliedId` alle Verknuepfungen dieser Person.
+
+   Hiess bis Etappe 3 `deleteElternkontakt()` und loeschte eine Zeile in
+   `elternkontakte`. Die Person selbst wird NIE geloescht; nur wenn
+   danach gar nichts mehr an ihr haengt, raeumt
+   `loeschePersonWennVerwaist()` sie weg. */
+export async function entferneElternVerknuepfung(
+  sb: SbClient, personId: string, mitgliedId?: number | null,
+): Promise<PostgrestError | null> {
+  let q = sb.from("eltern_kinder").delete().eq("person_id", personId);
+  if (mitgliedId) q = q.eq("mitglied_id", mitgliedId);
+  const { error } = await q;
+  if (error) return error;
+  await loeschePersonWennVerwaist(sb, personId);
+  return null;
 }
 
-export async function linkKind(sb: SbClient, elternId: string, mitgliedId: number, vereinId: string, hauptkontakt = false): Promise<PostgrestError | null> {
+export async function linkKind(sb: SbClient, personId: string, mitgliedId: number, vereinId: string, hauptkontakt = false, beziehung: string | null = null): Promise<PostgrestError | null> {
+  /* onConflict folgt dem Unique-Index eltern_kinder_person_mitglied_key
+     (verein_id, person_id, mitglied_id). Stimmt die Spaltenliste nicht
+     mit dem Index ueberein, scheitert jeder Upsert. */
   const { error } = await sb.from("eltern_kinder").upsert({
-    eltern_id: elternId,
+    person_id: personId,
     mitglied_id: mitgliedId,
     verein_id: vereinId,
     hauptkontakt,
-  }, { onConflict: "eltern_id,mitglied_id,verein_id" });
+    beziehung,
+  }, { onConflict: "verein_id,person_id,mitglied_id" });
   return error;
 }
 
@@ -139,13 +442,13 @@ export interface UnlinkErgebnis {
   kindNochAktiv: boolean;
 }
 
-export async function unlinkKind(sb: SbClient, elternId: string, mitgliedId: number): Promise<UnlinkErgebnis> {
+export async function unlinkKind(sb: SbClient, personId: string, mitgliedId: number): Promise<UnlinkErgebnis> {
   await sb.from("eltern_kinder").delete()
-    .eq("eltern_id", elternId)
+    .eq("person_id", personId)
     .eq("mitglied_id", mitgliedId);
   const { count } = await sb.from("eltern_kinder")
     .select("id", { count: "exact", head: true })
-    .eq("eltern_id", elternId);
+    .eq("person_id", personId);
   const { data: kind } = await sb.from("mitglieder")
     .select("aktiv")
     .eq("id", mitgliedId)
@@ -153,11 +456,17 @@ export async function unlinkKind(sb: SbClient, elternId: string, mitgliedId: num
   return { verbleibendeKinder: count || 0, kindNochAktiv: kind?.aktiv === true };
 }
 
-export async function setHauptkontakt(sb: SbClient, mitgliedId: number, elternId: string, _vereinId?: string | null) {
+export async function setHauptkontakt(sb: SbClient, mitgliedId: number, personId: string, _vereinId?: string | null) {
+  void _vereinId;
   await sb.from("eltern_kinder").update({ hauptkontakt: false }).eq("mitglied_id", mitgliedId);
   await sb.from("eltern_kinder").update({ hauptkontakt: true })
-    .eq("eltern_id", elternId)
+    .eq("person_id", personId)
     .eq("mitglied_id", mitgliedId);
+}
+
+export async function clearHauptkontaktFuerKind(sb: SbClient, personId: string, mitgliedId: number) {
+  return sb.from("eltern_kinder").update({ hauptkontakt: false })
+    .eq("person_id", personId).eq("mitglied_id", mitgliedId);
 }
 
 /* Sucht Mitglieder, die als Kind eines Elternkontakts in Frage kommen.
@@ -200,7 +509,9 @@ export async function sucheKinder(
     .or(`vorname.ilike.%${suche}%,nachname.ilike.%${suche}%`, { referencedTable: "personen" })
     .order("nachname", { referencedTable: "personen" })
     .limit(20);
-  return flacheZeilen(data as never) as unknown as KindTreffer[];
+  return (data || [])
+    .map(z => flacheZeile(z as never))
+    .filter(Boolean) as unknown as KindTreffer[];
 }
 
 /* Was nach dem Entkoppeln mit dem Elternkontakt geschehen ist. */
@@ -212,42 +523,48 @@ export type EntkoppelFolge = "verknuepft" | "supporter" | "geloescht";
    liest, sieht so auch, dass die Nummer seiner Mutter korrigiert wurde. */
 export async function logFuerAlleKinder(
   sb: SbClient,
-  elternId: string,
+  personId: string,
   vereinId: string,
   schreibe: (mitgliedId: number) => void | Promise<void>,
 ): Promise<void> {
   void vereinId;
   const { data } = await sb.from("eltern_kinder")
     .select("mitglied_id")
-    .eq("eltern_id", elternId);
+    .eq("person_id", personId);
   for (const zeile of data || []) {
     await schreibe(zeile.mitglied_id);
   }
 }
 
-/* unlinkKind samt Nachbehandlung: war es das letzte Kind, wird der Kontakt
-   je nach Zustand des Kindes zum Supporter oder geloescht. Die Logik lag
-   bisher in ElternTab und wird von Elternliste und Tab gleichermassen
-   gebraucht — deshalb hier, nicht in der Komponente. */
+/* unlinkKind samt Nachbehandlung: war es das letzte Kind, wird der
+   Elternteil je nach Zustand des Kindes zum Supporter oder die Person
+   entfaellt. Die Logik lag bisher in ElternTab und wird von Elternliste
+   und Tab gleichermassen gebraucht — deshalb hier, nicht in der
+   Komponente. */
 export async function entkoppleKind(
   sb: SbClient,
-  elternId: string,
+  personId: string,
   mitgliedId: number,
   benutzerId?: string | null,
 ): Promise<EntkoppelFolge> {
-  const { verbleibendeKinder, kindNochAktiv } = await unlinkKind(sb, elternId, mitgliedId);
+  const { verbleibendeKinder, kindNochAktiv } = await unlinkKind(sb, personId, mitgliedId);
   if (verbleibendeKinder > 0) return "verknuepft";
 
   if (kindNochAktiv) {
-    /* Kind noch im Verein (z.B. Junioren → Aktiv) → Elternteil wird Supporter.
-       ⚠ supporter hat keine Spalte in elternkontakte — das Update scheitert
-       still, der Fehler wird bewusst nicht ausgewertet. */
-    await updateElternkontakt(sb, elternId, { supporter: true } as TablesUpdate<"elternkontakte">);
+    /* Kind noch im Verein (z.B. Junioren → Aktiv) → Elternteil wird
+       Supporter. Der Supporter-Status haengt seit Etappe 3 nur noch am
+       Benutzerkonto; das frühere `elternkontakte.supporter` wird nicht
+       mehr geschrieben. Ein Mitgliedtyp „Supporter" kommt in Etappe 5.
+
+       ⚠ Bis dahin hat die Person keine Verknuepfung mehr und erscheint
+       damit nicht mehr in der Elternliste. Geloescht wird sie NICHT. */
     if (benutzerId) await updateBenutzerRolle(sb, benutzerId, "supporter");
     return "supporter";
   }
 
-  await deleteElternkontakt(sb, elternId);
+  /* Kind hat den Verein verlassen: die Person bleibt, solange noch
+     irgendetwas an ihr haengt (Mitgliedschaft, anderes Kind, Konto). */
+  await loeschePersonWennVerwaist(sb, personId);
   return "geloescht";
 }
 
@@ -255,15 +572,15 @@ export async function updateBenutzerRolle(sb: SbClient, benutzerId: string, roll
   return sb.from("benutzer").update({ role: rolle }).eq("id", benutzerId);
 }
 
-export async function clearHauptkontaktFuerKind(sb: SbClient, elternId: string, mitgliedId: number) {
-  return sb.from("eltern_kinder").update({ hauptkontakt: false })
-    .eq("eltern_id", elternId).eq("mitglied_id", mitgliedId);
+/* Portal-Zugang eines Elternteils.
+
+   Der Zugang haengt seit Block D an `benutzer.person_id`, nicht mehr an
+   `elternkontakte.benutzer_id`. „Deaktivieren" trennt weiterhin nur die
+   Zuordnung; das Konto selbst bleibt bestehen, wie bisher. */
+export async function unlinkElternBenutzer(sb: SbClient, personId: string) {
+  return sb.from("benutzer").update({ person_id: null }).eq("person_id", personId);
 }
 
-export async function unlinkElternBenutzer(sb: SbClient, kontaktId: string) {
-  return sb.from("elternkontakte").update({ benutzer_id: null }).eq("id", kontaktId);
-}
-
-export async function linkElternBenutzer(sb: SbClient, kontaktId: string, benutzerId: string) {
-  return sb.from("elternkontakte").update({ benutzer_id: benutzerId }).eq("id", kontaktId);
+export async function linkElternBenutzer(sb: SbClient, personId: string, benutzerId: string) {
+  return sb.from("benutzer").update({ person_id: personId }).eq("id", benutzerId);
 }

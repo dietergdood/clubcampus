@@ -110,7 +110,10 @@ function MemberDetail({
   const [linkEmail, setLinkEmail] = useState(raw.email || "");
   const [notizenCount, setNotizenCount] = useState<number | null>(null);
   const [elternLoaded, setElternLoaded] = useState<Elternkontakt[] | null>(null);
-  const eltern = elternLoaded !== null ? elternLoaded : (raw.eltern || []);
+  /* Kein Rueckfall mehr auf `raw.eltern`: die Json-Altspalte wird von
+     loadDbMitglieder() nie befuellt, der Zweig war immer leer. Geladen
+     wird ausschliesslich ueber fetchElternkontakte() weiter unten. */
+  const eltern = elternLoaded ?? [];
   const [kinderFuerPruefung, setKinderFuerPruefung] = useState<Mitglied[]>([]);
   const [teamDetails, setTeamDetails] = useState<KaderDetail[] | null>(null);
   const [allTeams, setAllTeams] = useState<TeamOption>([]);

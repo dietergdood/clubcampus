@@ -33,14 +33,14 @@ vi.mock('../../../icons.tsx', () => ({
 vi.mock('../../../domains/members/memberService.ts', () => ({
   insertElternkontakt: vi.fn().mockResolvedValue(null),
   updateElternkontakt: vi.fn().mockResolvedValue(null),
-  deleteElternkontakt: vi.fn().mockResolvedValue(null),
+  entferneElternVerknuepfung: vi.fn().mockResolvedValue(null),
   setHauptkontakt: vi.fn().mockResolvedValue(null),
   unlinkElternBenutzer: vi.fn().mockResolvedValue(null),
   fetchElternkontakte: vi.fn().mockResolvedValue([]),
   logAenderung: vi.fn().mockResolvedValue(undefined),
   logAktivitaet: vi.fn().mockResolvedValue(undefined),
-  /* n:m-Modell (siehe ELTERN_LOGIK.md): Entknüpfen läuft über eltern_kinder.
-     Default: noch ein weiteres Kind vorhanden → kein Löschen des Kontakts. */
+  /* n:m-Modell: Entknüpfen läuft über eltern_kinder.person_id (Etappe 3).
+     Default: noch ein weiteres Kind vorhanden → der Kontakt bleibt. */
   unlinkKind: vi.fn().mockResolvedValue({ verbleibendeKinder: 1, kindNochAktiv: true }),
   /* Kapselt unlinkKind samt Supporter-oder-Loeschen-Entscheidung.
      Die Verzweigung selbst ist in elternService.test.ts geprueft. */
@@ -63,7 +63,7 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
 vi.mock('../../../domains/members/elternService.ts', () => ({
   insertElternkontakt: vi.fn().mockResolvedValue(null),
   updateElternkontakt: vi.fn().mockResolvedValue(null),
-  deleteElternkontakt: vi.fn().mockResolvedValue(null),
+  entferneElternVerknuepfung: vi.fn().mockResolvedValue(null),
   unlinkElternBenutzer: vi.fn().mockResolvedValue(null),
   logFuerAlleKinder: vi.fn().mockResolvedValue(undefined),
   entkoppleKind: vi.fn().mockResolvedValue("verknuepft"),

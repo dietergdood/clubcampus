@@ -81,14 +81,17 @@ export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalM
     if (!sb) return;
     setSaving(true);
 
-    /* Eigene Kontaktdaten speichern */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    /* Eigene Kontaktdaten speichern. Seit Etappe 3 landen sie in
+       `personen`; die RLS-Regel `personen_update_self` erlaubt genau das
+       (benutzer.person_id === personen.id). `beziehung` steht hier
+       bewusst nicht: sie haengt an der Verknuepfung zum Kind und ist
+       nichts, was der Elternteil ueber sich selbst pflegt. */
     await updateElternkontakt(sb, elternkontakt.id, {
       vorname:  elternForm.vorname  || null,
       nachname: elternForm.nachname || null,
       telefon:  elternForm.telefon  || null,
       profil_geprueft_at: new Date().toISOString(),
-    } as any);
+    });
 
     /* Kinder-Daten speichern + profil_geprueft_at setzen */
     for (const kf of kinderForms) {
