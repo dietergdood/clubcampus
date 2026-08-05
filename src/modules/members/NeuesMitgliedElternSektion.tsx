@@ -22,7 +22,7 @@
    aufgerufen von NeuesMitgliedModal nach dem Insert.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { Btn } from "../../theme.ts";
+import { Av, Btn } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { ElternFelder, validateElternkontakt } from "./ElternkontaktModal.tsx";
 import type { ElternFormular } from "./ElternkontaktModal.tsx";
@@ -31,6 +31,7 @@ import {
 } from "../../domains/members/elternService.ts";
 import { logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import { vollname } from "../../domains/person/personUtils.ts";
+import { elternAvColor } from "./tabs/ElternTab.tsx";
 import type { Sb } from "../../types.ts";
 
 /* Ein vorgemerkter Elternteil — entweder ein bestehender Kontakt
@@ -150,77 +151,125 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
 
   return (
     <div className="cc-form-full">
-      <div className="cc-section-title">
-        <TI n="users" size={14}/> Elternteile
-      </div>
+      {/* Aufbau gespiegelt von ElternKinderSektion — dieselbe Darstellung
+          (Trennlinie, Abschnittstitel mit Aktion rechts, Zeilen mit Avatar,
+          Hauptkontakt-Stern und Entfernen-Knopf), damit der Abschnitt nicht
+          nach einem Fremdkörper im Formular aussieht. */}
+      <div className="cc-divider cc-mt-12"/>
+      <div className="cc-mt-12">
 
-      <div className="cc-hint-sub">
-        {eintraege.length === 0
-          ? "Für diesen Mitgliedtyp ist ein Hauptkontakt vorgesehen. Du kannst ihn hier gleich erfassen oder später im Profil nachtragen."
-          : "Der Hauptkontakt bekommt die Post und die Rechnung. Angeschrieben werden alle verknüpften Elternteile."}
-      </div>
-
-      {eintraege.map(e => (
-        <div key={e.key} className="cc-list-row">
-          <div>
-            <div>{e.anzeigename}</div>
-            <div className="cc-hint-sub">
-              {e.id ? "bestehender Kontakt" : "wird neu angelegt"}
-              {e.form?.beziehung ? ` · ${e.form.beziehung}` : ""}
-            </div>
-          </div>
-          <div className="cc-row cc-gap-8">
-            <Btn small variant={e.hauptkontakt ? "primary" : "ghost"}
-              onClick={() => setzeHaupt(e.key)}>
-              Hauptkontakt
+        <div className="cc-section-title cc-between">
+          <span className="cc-row cc-gap-6"><TI n="users" size={14}/> Elternteile</span>
+          {modus === "" && (
+            <Btn small onClick={() => { setModus("suche"); setFehler(null); }}>
+              <TI n="plus" size={12}/> Elternteil hinzufügen
             </Btn>
-            <Btn small variant="ghost" onClick={() => entferne(e.key)}>
-              <TI n="x" size={13}/>
-            </Btn>
+          )}
+        </div>
+
+        {eintraege.length === 0 && modus === "" && (
+          <div className="cc-text-sm cc-text-sub">
+            Für diesen Mitgliedtyp ist ein Hauptkontakt vorgesehen — hier gleich
+            erfassen oder später im Profil nachtragen.
           </div>
-        </div>
-      ))}
+        )}
 
-      {modus === "" && (
-        <div className="cc-row cc-gap-8">
-          <Btn small onClick={() => { setModus("suche"); setFehler(null); }}>
-            <TI n="search" size={13}/> Bestehenden suchen
-          </Btn>
-          <Btn small onClick={() => { setModus("neu"); setFehler(null); }}>
-            <TI n="plus" size={13}/> Neu erfassen
-          </Btn>
-        </div>
-      )}
-
-      {modus === "suche" && (
-        <div>
-          <input className="cc-input" autoFocus value={query}
-            onChange={ev => setQuery(ev.target.value)}
-            placeholder="Name oder E-Mail"/>
-          {treffer.map(t => (
-            <div key={t.id} className="cc-eltern-result" onClick={() => uebernehmeTreffer(t)}>
-              <div>{vollname(t)}</div>
-              <div className="cc-hint-sub">{t.email}</div>
+        <div className="cc-col cc-gap-6">
+          {eintraege.map(e => (
+            <div key={e.key} className="cc-kind-row">
+              <Av name={e.anzeigename} size={28}/>
+              <div className="cc-flex-1">
+                <div className="cc-row cc-gap-6 cc-items-center">
+                  <span className="cc-text-sm">{e.anzeigename}</span>
+                  {e.hauptkontakt && <span className="cc-badge-haupt">Hauptkontakt</span>}
+                </div>
+                <div className="cc-text-xs cc-text-sub">
+                  {e.id ? "bestehender Kontakt" : "wird neu angelegt"}
+                  {e.form?.beziehung ? ` · ${e.form.beziehung}` : ""}
+                </div>
+              </div>
+              <button
+                className={`cc-star-btn${e.hauptkontakt ? " cc-star-btn-on" : ""}`}
+                onClick={() => setzeHaupt(e.key)}
+                title={e.hauptkontakt ? "Hauptkontakt" : "Als Hauptkontakt setzen"}>
+                <TI n="star" size={16}/>
+              </button>
+              <button className="cc-icon-btn-danger" onClick={() => entferne(e.key)} title="Entfernen">
+                <TI n="x" size={15}/>
+              </button>
             </div>
           ))}
-          {query.trim() && treffer.length === 0 && (
-            <div className="cc-hint-sub">Kein Treffer — über „Neu erfassen" anlegen.</div>
-          )}
-          <Btn small variant="ghost" onClick={() => { setModus(""); setQuery(""); }}>Abbrechen</Btn>
         </div>
-      )}
 
-      {modus === "neu" && (
-        <div>
-          <ElternFelder form={neuForm} onChange={(k, v) => { setNeuForm(f => ({ ...f, [k]: v })); setFehler(null); }}/>
-          <div className="cc-row cc-gap-8">
-            <Btn small variant="primary" onClick={uebernehmeNeu}>Übernehmen</Btn>
-            <Btn small variant="ghost" onClick={() => { setModus(""); setNeuForm({}); }}>Abbrechen</Btn>
+        {eintraege.length > 0 && modus === "" && (
+          <div className="cc-text-xs cc-text-sub cc-mt-8">
+            Der Hauptkontakt bekommt Post und Rechnung. Angeschrieben werden alle.
           </div>
-        </div>
-      )}
+        )}
 
-      {fehler && <div className="cc-badge cc-badge-danger cc-mt-8">{fehler}</div>}
+        {modus !== "" && (
+          <div className="cc-mt-8">
+            <div className="cc-tab-row">
+              <button className={`cc-tab-btn${modus === "suche" ? " cc-tab-btn-active" : ""}`}
+                onClick={() => { setModus("suche"); setFehler(null); }}>Bestehenden suchen</button>
+              <button className={`cc-tab-btn${modus === "neu" ? " cc-tab-btn-active" : ""}`}
+                onClick={() => { setModus("neu"); setFehler(null); }}>Neu erfassen</button>
+            </div>
+
+            {modus === "suche" && (
+              <div className="cc-mt-8">
+                <div className="cc-relative">
+                  <TI n="search" size={14} className="cc-search-icon-abs"/>
+                  <input className="cc-input cc-search-input" autoFocus value={query}
+                    onChange={ev => setQuery(ev.target.value)}
+                    placeholder="Name oder E-Mail suchen…"/>
+                </div>
+                {treffer.length > 0 && (
+                  <div className="cc-col cc-gap-6 cc-mt-8">
+                    {treffer.map(t => {
+                      const name = vollname(t);
+                      const ac = elternAvColor(t.beziehung);
+                      return (
+                        <div key={t.id} className="cc-eltern-result" onClick={() => uebernehmeTreffer(t)}>
+                          <div className="cc-eltern-av" style={{background: ac.bg, color: ac.text}}>
+                            {name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="cc-flex-1 cc-col cc-gap-4">
+                            <div className="cc-text-bold cc-text-sm">{name}</div>
+                            {t.email && <div className="cc-text-sm cc-text-sub">{t.email}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {query.trim() && treffer.length === 0 && (
+                  <div className="cc-text-sm cc-text-sub cc-mt-8">
+                    Kein Treffer — über „Neu erfassen" anlegen.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {modus === "neu" && (
+              <div className="cc-mt-8">
+                <ElternFelder form={neuForm} onChange={(k, v) => { setNeuForm(f => ({ ...f, [k]: v })); setFehler(null); }}/>
+                <div className="cc-row cc-gap-8 cc-mt-8">
+                  <Btn small variant="primary" onClick={uebernehmeNeu}>Übernehmen</Btn>
+                </div>
+              </div>
+            )}
+
+            <div className="cc-row cc-gap-8 cc-mt-8">
+              <Btn small variant="ghost" onClick={() => { setModus(""); setQuery(""); setTreffer([]); setNeuForm({}); setFehler(null); }}>
+                Abbrechen
+              </Btn>
+            </div>
+          </div>
+        )}
+
+        {fehler && <div className="cc-badge cc-badge-danger cc-mt-8">{fehler}</div>}
+      </div>
     </div>
   );
 }
