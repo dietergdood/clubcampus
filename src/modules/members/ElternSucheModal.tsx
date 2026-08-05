@@ -124,7 +124,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
                     className={`cc-eltern-result${isSel?" cc-eltern-result-active":""}`}
                     onClick={()=>toggleSelected(e)}>
                     <div className="cc-eltern-av" style={{background:ac.bg,color:ac.text}}>{initials}</div>
-                    <div className="cc-flex-1 cc-col cc-gap-3">
+                    <div className="cc-flex-1 cc-col cc-gap-4">
                       <div className="cc-text-bold cc-text-sm">{name}</div>
                       {e.beziehung&&<div className="cc-text-sm cc-text-sub">{e.beziehung}{e.email?` · ${e.email}`:""}</div>}
                       {kinder.map((k,i)=>(

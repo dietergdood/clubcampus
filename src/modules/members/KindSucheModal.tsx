@@ -83,7 +83,7 @@ export function KindSucheModal({
               const name = `${k.vorname || ""} ${k.nachname || ""}`.trim() || "?";
               return (
                 <div key={k.id} className="cc-eltern-result" onClick={() => { onGewaehlt(k.id); onClose(); }}>
-                  <div className="cc-flex-1 cc-col cc-gap-3">
+                  <div className="cc-flex-1 cc-col cc-gap-4">
                     <div className="cc-text-bold cc-text-sm">{name}</div>
                     {k.mitgliedtyp && <div className="cc-text-sm cc-text-sub">{k.mitgliedtyp}</div>}
                   </div>
