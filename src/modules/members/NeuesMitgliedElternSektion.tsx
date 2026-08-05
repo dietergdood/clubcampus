@@ -43,6 +43,9 @@ export interface ElternEintrag {
   /** Gesetzt, wenn der Elternteil neu angelegt werden soll. */
   form?: ElternFormular;
   anzeigename: string;
+  /** Zweite Zeile in der Liste. Die E-Mail unterscheidet zwei gleichnamige
+      Personen — „bestehender Kontakt" tat das nicht. */
+  email?: string | null;
   hauptkontakt: boolean;
 }
 
@@ -138,14 +141,14 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
 
   function uebernehmeTreffer(t: ElternTreffer) {
     if (eintraege.some(e => e.id === t.id)) { setFehler("Dieser Elternteil ist bereits erfasst."); return; }
-    ergaenze({ key: t.id, id: t.id, anzeigename: vollname(t) });
+    ergaenze({ key: t.id, id: t.id, anzeigename: vollname(t), email: t.email });
   }
 
   function uebernehmeNeu() {
     const err = validateElternkontakt(neuForm);
     if (err) { setFehler(err); return; }
     const name = `${neuForm.vorname ?? ""} ${neuForm.nachname ?? ""}`.trim();
-    ergaenze({ key: `neu-${Date.now()}`, form: { ...neuForm }, anzeigename: name });
+    ergaenze({ key: `neu-${Date.now()}`, form: { ...neuForm }, anzeigename: name, email: neuForm.email });
   }
 
   return (
@@ -182,9 +185,11 @@ export function NeuesMitgliedElternSektion({ sb, vereinId, eintraege, setEintrae
                   <span className="cc-text-sm">{e.anzeigename}</span>
                   {e.hauptkontakt && <span className="cc-badge-haupt">Hauptkontakt</span>}
                 </div>
+                {/* Bei einem bestehenden Kontakt steht keine Beziehung dabei:
+                    die hängt an eltern_kinder, gilt also pro Verknüpfung und
+                    existiert für dieses Kind noch gar nicht. */}
                 <div className="cc-text-xs cc-text-sub">
-                  {e.id ? "bestehender Kontakt" : "wird neu angelegt"}
-                  {e.form?.beziehung ? ` · ${e.form.beziehung}` : ""}
+                  {[e.email, e.form?.beziehung].filter(Boolean).join(" · ")}
                 </div>
               </div>
               <button
