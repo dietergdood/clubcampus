@@ -393,6 +393,34 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."_etappe6_altspalten_mitglieder" (
+    "id" bigint,
+    "person_id" "uuid",
+    "vorname" "text",
+    "nachname" "text",
+    "email" "text",
+    "telefon" "text",
+    "strasse" "text",
+    "plz" "text",
+    "ort" "text",
+    "kanton" "text",
+    "land" "text",
+    "geburtsdatum" "date",
+    "geschlecht" "text",
+    "nationalitaet" "text",
+    "nationalitaet2" "text",
+    "heimatort" "text",
+    "ahv_nr" "text",
+    "foto_url" "text",
+    "funktionen" "text"[],
+    "profil_geprueft_at" timestamp with time zone,
+    "gesichert_am" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."_etappe6_altspalten_mitglieder" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."abstimmung_antworten" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "abstimmung_id" "uuid" NOT NULL,
@@ -934,25 +962,11 @@ ALTER TABLE "public"."medien" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."mitglieder" (
     "id" bigint NOT NULL,
-    "vorname" "text" NOT NULL,
-    "nachname" "text" NOT NULL,
-    "geburtsdatum" "date",
-    "nationalitaet" "text" DEFAULT 'CH'::"text",
-    "heimatort" "text",
-    "geschlecht" "text",
-    "strasse" "text",
-    "plz" "text",
-    "ort" "text",
-    "kanton" "text",
-    "land" "text" DEFAULT 'Schweiz'::"text",
-    "email" "text",
-    "telefon" "text",
     "mitgliedtyp" "text" DEFAULT 'Aktivmitglied'::"text",
     "rolle" "text",
     "position" "text",
     "aktiv" boolean DEFAULT true,
     "spielerpass" "text",
-    "ahv_nr" "text",
     "js_nr" "text",
     "fairgate_id" "text",
     "eltern" "jsonb" DEFAULT '[]'::"jsonb",
@@ -962,16 +976,12 @@ CREATE TABLE IF NOT EXISTS "public"."mitglieder" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "fairgate_sync_at" timestamp with time zone,
-    "profil_geprueft_at" timestamp with time zone,
-    "foto_url" "text",
     "rueckennr" "text",
-    "funktionen" "text"[] DEFAULT '{}'::"text"[],
     "deaktiviert_am" timestamp with time zone,
     "deaktiviert_von" "text",
-    "nationalitaet2" "text",
     "verein_id" "uuid" NOT NULL,
     "eintrittsdatum" "date",
-    "person_id" "uuid"
+    "person_id" "uuid" NOT NULL
 );
 
 
@@ -2536,23 +2546,11 @@ CREATE INDEX "idx_mitglieder_ansichten_verein" ON "public"."mitglieder_ansichten
 
 
 
-CREATE INDEX "idx_mitglieder_email" ON "public"."mitglieder" USING "btree" ("email");
-
-
-
 CREATE INDEX "idx_mitglieder_fairgate" ON "public"."mitglieder" USING "btree" ("fairgate_id");
 
 
 
-CREATE INDEX "idx_mitglieder_nachname" ON "public"."mitglieder" USING "btree" ("nachname");
-
-
-
 CREATE INDEX "idx_mitglieder_portal" ON "public"."mitglieder" USING "btree" ("hat_portal_zugang");
-
-
-
-CREATE INDEX "idx_mitglieder_profil_geprueft" ON "public"."mitglieder" USING "btree" ("profil_geprueft_at");
 
 
 
@@ -3509,6 +3507,9 @@ ALTER TABLE ONLY "public"."wiki_artikel"
 ALTER TABLE ONLY "public"."wiki_artikel"
     ADD CONSTRAINT "wiki_artikel_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
+
+
+ALTER TABLE "public"."_etappe6_altspalten_mitglieder" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."abstimmung_antworten" ENABLE ROW LEVEL SECURITY;
@@ -4650,6 +4651,12 @@ GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "service_role";
 
 
 
+
+
+
+GRANT ALL ON TABLE "public"."_etappe6_altspalten_mitglieder" TO "anon";
+GRANT ALL ON TABLE "public"."_etappe6_altspalten_mitglieder" TO "authenticated";
+GRANT ALL ON TABLE "public"."_etappe6_altspalten_mitglieder" TO "service_role";
 
 
 

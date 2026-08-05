@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      _etappe6_altspalten_mitglieder: {
+        Row: {
+          ahv_nr: string | null
+          email: string | null
+          foto_url: string | null
+          funktionen: string[] | null
+          geburtsdatum: string | null
+          geschlecht: string | null
+          gesichert_am: string | null
+          heimatort: string | null
+          id: number | null
+          kanton: string | null
+          land: string | null
+          nachname: string | null
+          nationalitaet: string | null
+          nationalitaet2: string | null
+          ort: string | null
+          person_id: string | null
+          plz: string | null
+          profil_geprueft_at: string | null
+          strasse: string | null
+          telefon: string | null
+          vorname: string | null
+        }
+        Insert: {
+          ahv_nr?: string | null
+          email?: string | null
+          foto_url?: string | null
+          funktionen?: string[] | null
+          geburtsdatum?: string | null
+          geschlecht?: string | null
+          gesichert_am?: string | null
+          heimatort?: string | null
+          id?: number | null
+          kanton?: string | null
+          land?: string | null
+          nachname?: string | null
+          nationalitaet?: string | null
+          nationalitaet2?: string | null
+          ort?: string | null
+          person_id?: string | null
+          plz?: string | null
+          profil_geprueft_at?: string | null
+          strasse?: string | null
+          telefon?: string | null
+          vorname?: string | null
+        }
+        Update: {
+          ahv_nr?: string | null
+          email?: string | null
+          foto_url?: string | null
+          funktionen?: string[] | null
+          geburtsdatum?: string | null
+          geschlecht?: string | null
+          gesichert_am?: string | null
+          heimatort?: string | null
+          id?: number | null
+          kanton?: string | null
+          land?: string | null
+          nachname?: string | null
+          nationalitaet?: string | null
+          nationalitaet2?: string | null
+          ort?: string | null
+          person_id?: string | null
+          plz?: string | null
+          profil_geprueft_at?: string | null
+          strasse?: string | null
+          telefon?: string | null
+          vorname?: string | null
+        }
+        Relationships: []
+      }
       abstimmung_antworten: {
         Row: {
           abstimmung_id: string
@@ -1626,7 +1698,6 @@ export type Database = {
       }
       mitglieder: {
         Row: {
-          ahv_nr: string | null
           aktiv: boolean | null
           created_at: string | null
           datenstatus: string | null
@@ -1634,40 +1705,22 @@ export type Database = {
           deaktiviert_von: string | null
           eintrittsdatum: string | null
           eltern: Json | null
-          email: string | null
           fairgate_id: string | null
           fairgate_sync_at: string | null
-          foto_url: string | null
-          funktionen: string[] | null
-          geburtsdatum: string | null
-          geschlecht: string | null
           hat_portal_zugang: boolean | null
-          heimatort: string | null
           id: number
           js_nr: string | null
-          kanton: string | null
-          land: string | null
           mitgliedtyp: string | null
-          nachname: string
-          nationalitaet: string | null
-          nationalitaet2: string | null
           notizen: string | null
-          ort: string | null
-          person_id: string | null
-          plz: string | null
+          person_id: string
           position: string | null
-          profil_geprueft_at: string | null
           rolle: string | null
           rueckennr: string | null
           spielerpass: string | null
-          strasse: string | null
-          telefon: string | null
           updated_at: string | null
           verein_id: string
-          vorname: string
         }
         Insert: {
-          ahv_nr?: string | null
           aktiv?: boolean | null
           created_at?: string | null
           datenstatus?: string | null
@@ -1675,40 +1728,22 @@ export type Database = {
           deaktiviert_von?: string | null
           eintrittsdatum?: string | null
           eltern?: Json | null
-          email?: string | null
           fairgate_id?: string | null
           fairgate_sync_at?: string | null
-          foto_url?: string | null
-          funktionen?: string[] | null
-          geburtsdatum?: string | null
-          geschlecht?: string | null
           hat_portal_zugang?: boolean | null
-          heimatort?: string | null
           id?: number
           js_nr?: string | null
-          kanton?: string | null
-          land?: string | null
           mitgliedtyp?: string | null
-          nachname: string
-          nationalitaet?: string | null
-          nationalitaet2?: string | null
           notizen?: string | null
-          ort?: string | null
-          person_id?: string | null
-          plz?: string | null
+          person_id: string
           position?: string | null
-          profil_geprueft_at?: string | null
           rolle?: string | null
           rueckennr?: string | null
           spielerpass?: string | null
-          strasse?: string | null
-          telefon?: string | null
           updated_at?: string | null
           verein_id: string
-          vorname: string
         }
         Update: {
-          ahv_nr?: string | null
           aktiv?: boolean | null
           created_at?: string | null
           datenstatus?: string | null
@@ -1716,37 +1751,20 @@ export type Database = {
           deaktiviert_von?: string | null
           eintrittsdatum?: string | null
           eltern?: Json | null
-          email?: string | null
           fairgate_id?: string | null
           fairgate_sync_at?: string | null
-          foto_url?: string | null
-          funktionen?: string[] | null
-          geburtsdatum?: string | null
-          geschlecht?: string | null
           hat_portal_zugang?: boolean | null
-          heimatort?: string | null
           id?: number
           js_nr?: string | null
-          kanton?: string | null
-          land?: string | null
           mitgliedtyp?: string | null
-          nachname?: string
-          nationalitaet?: string | null
-          nationalitaet2?: string | null
           notizen?: string | null
-          ort?: string | null
-          person_id?: string | null
-          plz?: string | null
+          person_id?: string
           position?: string | null
-          profil_geprueft_at?: string | null
           rolle?: string | null
           rueckennr?: string | null
           spielerpass?: string | null
-          strasse?: string | null
-          telefon?: string | null
           updated_at?: string | null
           verein_id?: string
-          vorname?: string
         }
         Relationships: [
           {

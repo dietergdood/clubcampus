@@ -511,6 +511,22 @@ Ein Pausenmitglied, das als Aushilfe spielt, hat einen Kadereintrag und zeigt de
 
 **Voraussetzung dafür war eine Datenbereinigung.** In `mitglieder.funktionen` — dem Feld für Vereinsfunktionen — stand bei **487 Mitgliedern „Spieler"**. Das ist eine Kaderrolle, keine Funktion. Folge: `ableitRolle()` prüft nur `funktionen.length > 0` und machte damit jeden zum **Funktionär**, der gerade in keinem Kader stand — verletzt, pausierend, zwischen zwei Saisons. Am 05.08.2026 entfernt; übrig blieben acht echte Einträge auf sechs Ämter.
 
+### Etappe 6a: die Altspalten fallen (05.08.2026)
+
+Achtzehn Personenfelder sind aus `mitglieder` verschwunden — `vorname`, `nachname`, `email`, `telefon`, die Adresse, `geburtsdatum`, `geschlecht`, Nationalität, `heimatort`, `ahv_nr`, `foto_url`, `funktionen`, `profil_geprueft_at`. Seit Etappe 2b las sie niemand mehr: `flacheZeile()` überschreibt jedes Feld aus `PERSON_FELDER` mit dem Wert der Person. Von 39 Spalten auf 21.
+
+Vier Codestellen nannten sie trotzdem noch. Die heikelste war `.order("nachname").order("vorname")` im Hauptladepfad — das hätte die Abfrage gebrochen, und zwar erst zur Laufzeit. Sortiert wird ohnehin im Browser.
+
+**Eine Sicherheitskopie liegt in `_etappe6_altspalten_mitglieder`.** Vor dem Streichen wichen Altspalte und Person genau **einmal** voneinander ab (eine Telefonnummer) — bei 515 Zeilen. Löschen, wenn ein paar Wochen nichts auffällt.
+
+**Was bewusst stehenbleibt:**
+
+`rolle` — entschieden am 05.08.2026. Die Spalte „Portalrolle" sagt, welche **Berechtigung** jemand hat; „Portal-Zugang" daneben sagt, ob er sie **nutzen** kann. Zwei Hälften einer Aussage, keine Doppelung: Man sieht damit, dass ein Trainer noch kein Konto hat und eine Einladung lohnt. Ausserdem hängen Gruppierung, Filter und die gespeicherten Ansichten in `mitglieder_ansichten` an diesem Feld-Key — fiele er weg, brächen sie still.
+
+`position` und `rueckennr` — sollen nach `kader`, weil ein Spieler in zwei Teams zwei Nummern haben kann. 146 Fundstellen plus Datenmigration, eigener Schritt.
+
+`datenstatus`, `notizen`, `fairgate_sync_at`, `hat_portal_zugang` und `eltern` — ungeprüft. `hat_portal_zugang` wird an 13 Stellen geschrieben, unter anderem vom Registrierungs-Trigger. `eltern` ist die alte JSONB-Momentaufnahme der Elternkontakte, die nie gepflegt wurde (deshalb lief die Eltern-Datenprüfung ins Leere) und seit Etappe 3 doppelt tot ist.
+
 ### Die Sicht `portal_zugang` — die eine Ausnahme
 
 Die Portal-Spalte der Elternliste kam bis Etappe 3 aus `elternkontakte.benutzer_id`, wo nur eine `verein_id`-Policy liegt — jeder Eingeloggte konnte sie lesen. Seit Etappe 3 kommt sie aus `benutzer`, wo `benutzer_select_admin`/`_self` gelten: Ein Trainer bekommt beim Join eine leere Menge und die Liste zeigt ihm für **alle** „Kein Zugang" — ohne Fehler, ohne Meldung.
@@ -561,7 +577,9 @@ Sobald serverseitig seitenweise geladen wird — bei 900 Mitgliedern unnötig, b
 | 3 | Elternkontakte auf `personen` | ✅ **Fertig** (05.08.2026) — `supabase/etappe3_eltern.sql`, 398 Elternkontakte auf 396 Personen |
 | 4 | `benutzer` an die Person, Registrierung repariert | ✅ **Fertig** (05.08.2026) — `supabase/etappe4_benutzer.sql` |
 | 5 | Supporter als Mitgliedtyp, eine aktive Mitgliedschaft pro Person | ✅ **Fertig** (05.08.2026) — `supabase/etappe5_supporter.sql` |
-| 6 | Altspalten streichen, FK `mitglieder.mitgliedtyp → mitgliedtypen (verein_id, name)` | ⏳ Offen |
+| 6a | Personenfelder aus `mitglieder` streichen | ✅ **Fertig** (05.08.2026) — 18 Spalten, `supabase/etappe6a_altspalten_mitglieder.sql` |
+| 6b | `position` und `rueckennr` nach `kader` | ⏳ Offen — 146 Fundstellen, eigener Schritt |
+| 6c | `datenstatus`, `notizen`, `fairgate_sync_at`, `hat_portal_zugang`, `eltern` | ⏳ Offen |
 
 Nach **jeder** Etappe müssen `npm run typecheck`, `npm run build` und `npm test` grün sein. Etappe 1 war vollständig additiv und hat die Testzahl nicht verändert.
 
