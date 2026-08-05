@@ -12,7 +12,7 @@ import { makeSb, pgError } from "./_mockSb.ts";
 import {
   insertElternkontakt, updateElternkontakt, linkKind, unlinkKind, setHauptkontakt,
   entkoppleKind, entferneElternVerknuepfung, loeschePersonWennVerwaist,
-  fasseBeziehungZusammen,
+  fasseBeziehungZusammen, fetchAlleElternkontakte,
 } from "../elternService.ts";
 
 const BASIS = { vorname: "Erika", nachname: "Kontakt", email: "e@k.ch" };
@@ -313,6 +313,48 @@ describe("entferneElternVerknuepfung", () => {
   });
 });
 
+describe("fetchAlleElternkontakte — Portal-Spalte", () => {
+  const person = {
+    id: "p-1", vorname: "Petra", nachname: "Brunner",
+    email: "p@b.ch", telefon: "079",
+    benutzer: [],   /* leer, wie ein Trainer es sieht */
+    eltern_kinder: [{ mitglied_id: 7, hauptkontakt: true, beziehung: "Mutter", mitglieder: null }],
+  };
+
+  it("liest den Zugang aus portal_zugang, nicht aus benutzer", async () => {
+    /* Auf `benutzer` liegen nur benutzer_select_admin und _self — ein Trainer
+       bekommt dort eine leere Menge, und die Spalte zeigte ihm fuer ALLE
+       „Kein Zugang", ohne Fehler. Die Sicht portal_zugang ist auch fuer ihn
+       lesbar. */
+    const sb = makeSb({
+      "personen.select":      { data: [person] },
+      "portal_zugang.select": { data: [{ person_id: "p-1", hat_zugang: true }] },
+    });
+    const [zeile] = await fetchAlleElternkontakte(sb as never, "v-1");
+    expect(zeile.hat_zugang).toBe(true);
+    /* benutzer_id bleibt daneben stehen — es wird fuer Aktionen gebraucht. */
+    expect(zeile.benutzer_id).toBeNull();
+  });
+
+  it("ohne Eintrag in der Sicht: kein Zugang", async () => {
+    const sb = makeSb({
+      "personen.select":      { data: [person] },
+      "portal_zugang.select": { data: [] },
+    });
+    const [zeile] = await fetchAlleElternkontakte(sb as never, "v-1");
+    expect(zeile.hat_zugang).toBe(false);
+  });
+
+  it("deaktiviertes Konto zaehlt als kein Zugang", async () => {
+    const sb = makeSb({
+      "personen.select":      { data: [person] },
+      "portal_zugang.select": { data: [{ person_id: "p-1", hat_zugang: false }] },
+    });
+    const [zeile] = await fetchAlleElternkontakte(sb as never, "v-1");
+    expect(zeile.hat_zugang).toBe(false);
+  });
+});
+
 describe("entkoppleKind", () => {
   it("bei weiteren Kindern bleibt alles stehen", async () => {
     const sb = makeSb({
@@ -323,25 +365,44 @@ describe("entkoppleKind", () => {
     expect(sb.find("personen", "delete")).toBeUndefined();
   });
 
-  it("letztes Kind noch im Verein -> Supporter, ohne Schreiben nach elternkontakte", async () => {
-    /* Der Supporter-Status haengt seit Etappe 3 nur noch am Konto;
-       ein Mitgliedtyp dafuer kommt in Etappe 5. */
+  it("letztes Kind noch im Verein -> Supporter-Mitgliedschaft statt Kennzeichen", async () => {
+    /* Seit Etappe 5 ist Supporter ein Mitgliedtyp. Ohne Mitgliedschaft haette
+       die Person keine Verknuepfung mehr und erschiene in keiner Liste. */
     const sb = makeSb({
       "eltern_kinder.select": { count: 0 },
-      "mitglieder.select": { data: { aktiv: true } },
+      "mitglieder.select": { data: { aktiv: true }, count: 0 },
+      "personen.select": { data: { verein_id: "v-1", vorname: "Petra", nachname: "Brunner", email: "p@b.ch" } },
     });
-    expect(await entkoppleKind(sb as any, "p-1", 7, "user-1")).toBe("supporter");
+    expect(await entkoppleKind(sb as any, "p-1", 7, "user-1", "v-1")).toBe("supporter");
+    const neu = sb.find("mitglieder", "insert");
+    expect(neu!.payload).toEqual(expect.objectContaining({
+      person_id: "p-1", verein_id: "v-1", mitgliedtyp: "Supporter", aktiv: true,
+    }));
+    /* Nach elternkontakte wird nichts mehr geschrieben (seit Etappe 3). */
     expect(sb.opsOn("elternkontakte")).toHaveLength(0);
     expect(sb.find("benutzer", "update")!.payload).toEqual({ role: "supporter" });
     expect(sb.find("personen", "delete")).toBeUndefined();
   });
 
+  it("wer schon eine aktive Mitgliedschaft hat, bekommt keine zweite", async () => {
+    /* Der partielle Index mitglieder_eine_aktive_mitgliedschaft laesst nur
+       eine zu — und Aktivmitglied wiegt schwerer als Supporter. */
+    const sb = makeSb({
+      "eltern_kinder.select": { count: 0 },
+      "mitglieder.select": { data: { aktiv: true }, count: 1 },
+      "personen.select": { data: { verein_id: "v-1", vorname: "Ueli", nachname: "Jakob", email: "u@j.ch" } },
+    });
+    expect(await entkoppleKind(sb as any, "p-1", 7, null, "v-1")).toBe("supporter");
+    expect(sb.find("mitglieder", "insert")).toBeUndefined();
+  });
+
   it("Supporter ohne Konto: die Person bleibt trotzdem stehen", async () => {
     const sb = makeSb({
       "eltern_kinder.select": { count: 0 },
-      "mitglieder.select": { data: { aktiv: true } },
+      "mitglieder.select": { data: { aktiv: true }, count: 0 },
+      "personen.select": { data: { verein_id: "v-1", vorname: "A", nachname: "B", email: null } },
     });
-    expect(await entkoppleKind(sb as any, "p-1", 7)).toBe("supporter");
+    expect(await entkoppleKind(sb as any, "p-1", 7, null, "v-1")).toBe("supporter");
     expect(sb.find("personen", "delete")).toBeUndefined();
     expect(sb.find("benutzer", "update")).toBeUndefined();
   });

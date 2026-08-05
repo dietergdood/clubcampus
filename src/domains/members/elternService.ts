@@ -148,6 +148,22 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
     .eq("verein_id", vereinId)
     .order("nachname", { ascending: true });
   if (error) console.error("fetchAlleElternkontakte error:", error);
+
+  /* Portal-Zugang fuer die ANZEIGE aus der Sicht `portal_zugang`, nicht aus
+     dem eingebetteten benutzer(id) oben. Auf `benutzer` liegen nur
+     benutzer_select_admin und _self — ein Trainer bekommt dort eine leere
+     Menge, und die Spalte zeigte ihm fuer ALLE "Kein Zugang", ohne Fehler.
+     Die Sicht laeuft bewusst ohne security_invoker und liefert nur
+     (person_id, hat_zugang); siehe supabase/migration_portal_zugang.sql.
+
+     `benutzer_id` bleibt daneben stehen: es wird fuer AKTIONEN gebraucht
+     (entkoppleKind setzt die Benutzerrolle), und wer die ausfuehren darf,
+     sieht die Tabelle ohnehin. */
+  const { data: zugaenge } = await sb.from("portal_zugang").select("person_id, hat_zugang");
+  const zugangMap = new Map<string, boolean>(
+    (zugaenge || []).map(z => [z.person_id as string, z.hat_zugang !== false]),
+  );
+
   return (data || []).map(p => {
     const links = p.eltern_kinder || [];
     /* Kind-Zeilen flach machen, damit elternListUtils weiter `m.vorname`
@@ -168,6 +184,7 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
       telefon:     p.telefon,
       beziehung:   fasseBeziehungZusammen(links.map(l => l.beziehung)),
       benutzer_id: p.benutzer?.[0]?.id ?? null,
+      hat_zugang:  zugangMap.get(p.id) ?? false,
       mitglied_id: erstes?.mitglied_id || null,
       hauptkontakt: erstes?.hauptkontakt || false,
       mitglieder:  erstes?.mitglieder || null,
@@ -546,18 +563,18 @@ export async function entkoppleKind(
   personId: string,
   mitgliedId: number,
   benutzerId?: string | null,
+  vereinId?: string | null,
 ): Promise<EntkoppelFolge> {
   const { verbleibendeKinder, kindNochAktiv } = await unlinkKind(sb, personId, mitgliedId);
   if (verbleibendeKinder > 0) return "verknuepft";
 
   if (kindNochAktiv) {
-    /* Kind noch im Verein (z.B. Junioren → Aktiv) → Elternteil wird
-       Supporter. Der Supporter-Status haengt seit Etappe 3 nur noch am
-       Benutzerkonto; das frühere `elternkontakte.supporter` wird nicht
-       mehr geschrieben. Ein Mitgliedtyp „Supporter" kommt in Etappe 5.
-
-       ⚠ Bis dahin hat die Person keine Verknuepfung mehr und erscheint
-       damit nicht mehr in der Elternliste. Geloescht wird sie NICHT. */
+    /* Kind noch im Verein (z.B. Junioren → Aktiv) → der Elternteil wird
+       Supporter. Seit Etappe 5 ist das ein MITGLIEDTYP und kein Kennzeichen:
+       ohne Mitgliedschaft haette die Person keine Verknuepfung mehr und
+       erschiene in keiner Liste — weder bei den Eltern (dort steigt die
+       Abfrage ueber eltern_kinder ein) noch bei den Mitgliedern. */
+    await macheZumSupporter(sb, personId, vereinId);
     if (benutzerId) await updateBenutzerRolle(sb, benutzerId, "supporter");
     return "supporter";
   }
@@ -566,6 +583,47 @@ export async function entkoppleKind(
      irgendetwas an ihr haengt (Mitgliedschaft, anderes Kind, Konto). */
   await loeschePersonWennVerwaist(sb, personId);
   return "geloescht";
+}
+
+/**
+ * Legt fuer eine Person eine aktive Mitgliedschaft vom Typ „Supporter" an.
+ *
+ * Tut nichts, wenn die Person bereits eine aktive Mitgliedschaft hat: Der
+ * partielle Index `mitglieder_eine_aktive_mitgliedschaft` laesst nur eine
+ * zu, und Aktivmitglied wiegt schwerer als Supporter. Wer beides sein will,
+ * muss die alte zuerst archivieren — das ist die Regel aus Etappe 5, nicht
+ * ein Sonderfall hier.
+ */
+export async function macheZumSupporter(
+  sb: SbClient,
+  personId: string,
+  vereinId?: string | null,
+): Promise<PostgrestError | null> {
+  const { data: person } = await sb.from("personen")
+    .select("verein_id, vorname, nachname, email")
+    .eq("id", personId)
+    .maybeSingle();
+  const verein = vereinId ?? person?.verein_id;
+  if (!verein) return null;
+
+  const { count } = await sb.from("mitglieder")
+    .select("id", { count: "exact", head: true })
+    .eq("person_id", personId)
+    .eq("aktiv", true);
+  if ((count || 0) > 0) return null;
+
+  const { error } = await sb.from("mitglieder").insert({
+    person_id: personId,
+    verein_id: verein,
+    mitgliedtyp: "Supporter",
+    aktiv: true,
+    /* Altspalten bis Etappe 6 mitschreiben, damit Listen, die noch darauf
+       zugreifen, keinen leeren Namen zeigen. */
+    vorname: person?.vorname ?? null,
+    nachname: person?.nachname ?? null,
+    email: person?.email ?? null,
+  } as never);
+  return error;
 }
 
 export async function updateBenutzerRolle(sb: SbClient, benutzerId: string, rolle: string) {

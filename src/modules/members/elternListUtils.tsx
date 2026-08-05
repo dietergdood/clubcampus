@@ -68,7 +68,9 @@ export function mapEltern(raw: ElternkontaktRoh[] | null | undefined) {
       email:       e.email||"",
       telefon:     e.telefon||"",
       beziehung:   e.beziehung||"",
-      portal:      e.benutzer_id?"Aktiv":"Kein Zugang",
+      /* hat_zugang statt benutzer_id: die Sicht portal_zugang ist auch fuer
+         Trainer lesbar, die Tabelle benutzer nicht. */
+      portal:      e.hat_zugang?"Aktiv":"Kein Zugang",
       benutzer_id: e.benutzer_id||null,
       hauptkontakt:e.hauptkontakt||false,
       kind_id:     kinder[0]?.mitglied_id||null,
@@ -176,7 +178,7 @@ export function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavT
         </td>;
       case "portal":
         return <td key="portal" className="cc-members-td">
-          {e.benutzer_id
+          {e.hat_zugang
             ?<span className="cc-portal-status cc-portal-status-aktiv"><span className="cc-portal-dot"/> Aktiv</span>
             :<span className="cc-portal-status cc-portal-status-kein"><span className="cc-portal-dot"/> Kein Zugang</span>
           }

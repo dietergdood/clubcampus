@@ -528,6 +528,8 @@ Preisgegeben wird ausschliesslich „diese Person hat einen Zugang, ja oder nein
 
 **Regel:** An dieser Sicht wird nie eine Spalte ergänzt, ohne dass jemand über die Rechte nachdenkt. Wer hier `email` oder `role` dazunimmt, gibt sie allen frei.
 
+**Im Code benutzt seit 05.08.2026.** `fetchAlleElternkontakte` liest den Zugang für die **Anzeige** aus der Sicht (`hat_zugang`), behält daneben aber `benutzer_id` für **Aktionen** — `entkoppleKind()` setzt damit die Benutzerrolle. Wer die ausführen darf, sieht `benutzer` ohnehin; wer nur liest, bekommt die Spalte trotzdem korrekt.
+
 ### Der Testbestand kennt die schwierigen Fälle nicht
 
 Vier Prüfungen am 05.08.2026 ergaben dasselbe: Der Zufallsgenerator hat einen Bestand erzeugt, in dem genau die Fälle fehlen, für die der Umbau gemacht wird.
