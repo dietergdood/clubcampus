@@ -81,7 +81,12 @@ src/
       MemberKPIs.tsx                ← KPI-Cards + Aufschlüsselung
       MemberListCell.tsx            ← makeMemberRenderCell() Factory für ListView
       MemberTabBar.tsx              ← Tab-Leiste der Detailansicht
+      AdresseFormular.tsx           ← Strasse/PLZ/Ort/Kanton mit Adresssuche, aus
+                                       NeuesMitgliedModal ausgelagert
       NeuesMitgliedModal.tsx        ← Neues Mitglied anlegen (Mitgliedtyp → Pflichtfelder)
+      NeuesMitgliedElternSektion.tsx ← Elternteile im gleichen Ablauf erfassen, wenn der
+                                       Mitgliedtyp hauptkontakt_pflicht trägt. Enthält
+                                       speichereEltern(), das NACH dem Kind läuft
       NotizenVerlauf.tsx            ← Notizen-Komponente
       elternListUtils.tsx           ← mapEltern + Gruppierung/Zellen der Elternliste
       memberConstants.ts            ← COL_GROUPS, SAVED_VIEWS, GROUP_OPTIONS, GROUP_OPTIONS_MORE
@@ -462,6 +467,17 @@ Beide Matrizen führen seit `supabase/migration_pflichtfelder_fein.sql` dieselbe
 - **Telefon und E-Mail zählen getrennt.** Früher genügte eines von beiden. Jetzt gilt, was angekreuzt ist.
 
 Dadurch sehen spürbar mehr Mitglieder beim nächsten Login den Datenprüfungs-Hinweis. Das ist der Zweck der Konfiguration, aber es fällt auf.
+
+### Elternteile beim Anlegen (05.08.2026)
+
+Trägt der Mitgliedtyp `hauptkontakt_pflicht` (bei FCH: Juniorenmitglied), erscheint im Anlegen-Modal ein Elternabschnitt: bestehende Kontakte suchen oder neue erfassen, mehrere möglich, genau einer ist Hauptkontakt.
+
+- **Überspringbar.** Das Anlegen scheitert nicht ohne Elternteil — wer die Daten nicht zur Hand hat, soll nicht blockiert sein. Das Kind erscheint dann in der Datenprüfung.
+- **Reihenfolge ist erzwungen, nicht gewählt.** `elternkontakte.mitglied_id` ist NOT NULL: ein neuer Elternteil kann gar nicht vor dem Kind entstehen. Die Einträge liegen deshalb im State, bis das Kind existiert; `speichereEltern()` schreibt danach.
+- **Kein Zurückrollen bei Teilfehlern.** Scheitert ein Elternteil, bleibt das Kind stehen — es ist gültig, nur ohne Hauptkontakt. Das Modal bleibt offen und ein zweiter Klick schreibt nur noch die Eltern. Ein Rückbau würde die ganze Eingabe vernichten. Sauber wäre eine `SECURITY DEFINER`-Funktion, die Kind, Elternteil und Verknüpfung in einer Transaktion anlegt — offen, bis der Fall in der Praxis auftritt.
+- **`setHauptkontakt()` läuft zuletzt.** Es setzt zuerst alle anderen auf false; mitten in der Schleife würde es zuvor gesetzte wieder löschen. Bestehende Kontakte werden deshalb ohne Flag verknüpft und der Hauptkontakt am Schluss bestimmt.
+
+Die Datenbank erzwingt über `eltern_kinder_ein_hauptkontakt` (partieller Index) nur „höchstens einer". „Genau einer" steuert die Oberfläche bei: der erste Hinzugefügte wird es automatisch, und beim Entfernen rückt der nächste nach.
 
 **Beim Elternteil selbst greift die Matrix nicht**: er hat keine Mitgliedschaft und damit keinen Mitgliedtyp. Für ihn bleibt es bei Vorname, Nachname, Telefon, bis Etappe 4 die Elternkontakte ablöst. Für seine **Kinder** greift sie, weil sie Mitglieder sind.
 

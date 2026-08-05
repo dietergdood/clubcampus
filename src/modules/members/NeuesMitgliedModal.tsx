@@ -17,11 +17,14 @@
    liessen sich dadurch gar nicht anlegen.
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useRef } from "react";
-import { Btn, ModalOrSheet, PhoneInput, useAddrSearch, usePlzLookup } from "../../theme.ts";
+import { Btn, ModalOrSheet, PhoneInput } from "../../theme.ts";
+import { AdresseFormular } from "./AdresseFormular.tsx";
 import { TI } from "../../icons.tsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
 import type { Account, Mitgliedtyp, MitgliedtypPflichtfeld, PortalRolle, Sb } from "../../types.ts";
 import { getEffektivePflichtfelder } from "../../domains/members/pflichtfelder.ts";
+import { NeuesMitgliedElternSektion, speichereEltern } from "./NeuesMitgliedElternSektion.tsx";
+import type { ElternEintrag } from "./NeuesMitgliedElternSektion.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
 
 /* Eingabefelder des Formulars — alle optional, validate() prüft die
@@ -51,86 +54,6 @@ const GESCHLECHT_OPTS = [
   { v: "d", l: "Divers" },
 ];
 
-const KANTON_OPTS_M = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"];
-
-interface AdresseFormularProps {
-  strasse: string;
-  plz: string;
-  ort: string;
-  kanton: string;
-  onStrasse: (v: string) => void;
-  onPlz: (v: string) => void;
-  onOrt: (v: string) => void;
-  onKanton: (v: string) => void;
-  pflichtStrasse?: boolean;
-  pflichtPlz?: boolean;
-  pflichtOrt?: boolean;
-}
-
-function AdresseFormular({strasse,plz,ort,kanton,onStrasse,onPlz,onOrt,onKanton,pflichtStrasse,pflichtPlz,pflichtOrt}: AdresseFormularProps){
-  const [showSug,setShowSug]=useState(false);
-  const wrapRef=useRef<HTMLDivElement>(null);
-  const suggestions=useAddrSearch(strasse,plz);
-
-  usePlzLookup(plz,({ort:o,kanton:k})=>{
-    if(o) onOrt(o);
-    if(k) onKanton(k);
-  });
-
-  useEffect(()=>{
-    const h=(e: MouseEvent)=>{if(wrapRef.current&&e.target instanceof Node&&!wrapRef.current.contains(e.target)) setShowSug(false);};
-    document.addEventListener("mousedown",h);
-    return()=>document.removeEventListener("mousedown",h);
-  },[]);
-
-  function apply(s: (typeof suggestions)[number]){
-    onStrasse(s.strasse);
-    if(s.plz) onPlz(s.plz);
-    if(s.ort) onOrt(s.ort);
-    if(s.kanton) onKanton(s.kanton);
-    setShowSug(false);
-  }
-
-  return(
-    <>
-      <div className="cc-form-full cc-relative" ref={wrapRef}>
-        <label className="cc-label">Strasse {pflichtStrasse&&<span className="cc-label-req">*</span>}</label>
-        <input className="cc-input" type="text" value={strasse}
-          onChange={e=>{onStrasse(e.target.value);setShowSug(true);}}
-          onFocus={()=>setShowSug(true)}
-          onBlur={()=>setTimeout(()=>setShowSug(false),150)}
-          placeholder="Seestrasse 1"/>
-        {showSug&&suggestions.length>0&&(
-          <div className="cc-addr-dropdown">
-            {suggestions.map((s,i)=>(
-              <div key={i} className="cc-addr-suggestion" onMouseDown={()=>apply(s)}>
-                <span className="cc-addr-suggestion-main">{s.strasse}</span>
-                {s.plz&&<span className="cc-addr-suggestion-sub">{s.plz} {s.ort}</span>}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      <div>
-        <label className="cc-label">PLZ {pflichtPlz&&<span className="cc-label-req">*</span>}</label>
-        <input className="cc-input" type="text" value={plz} maxLength={4}
-          onChange={e=>onPlz(e.target.value)} placeholder="8704"/>
-      </div>
-      <div>
-        <label className="cc-label">Ort {pflichtOrt&&<span className="cc-label-req">*</span>}</label>
-        <input className="cc-input" type="text" value={ort}
-          onChange={e=>onOrt(e.target.value)} placeholder="Herrliberg"/>
-      </div>
-      <div>
-        <label className="cc-label">Kanton</label>
-        <select className="cc-input" value={kanton} onChange={e=>onKanton(e.target.value)}>
-          <option value="">— wählen —</option>
-          {KANTON_OPTS_M.map(k=><option key={k} value={k}>{k}</option>)}
-        </select>
-      </div>
-    </>
-  );
-}
 
 interface NeuesMitgliedModalProps {
   open: boolean;
@@ -146,6 +69,11 @@ interface NeuesMitgliedModalProps {
 
 export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPortalRollen, dbPflichtfelder=[], vereinId, onSuccess, account=null }: NeuesMitgliedModalProps) {
   const [form, setForm] = useState<MitgliedFormular>({ mitgliedtyp: "" });
+  const [elternEintraege, setElternEintraege] = useState<ElternEintrag[]>([]);
+  /* Gesetzt, sobald das Kind in der Datenbank steht. Scheitert danach das
+     Anlegen der Elternteile, bleibt das Modal offen und ein zweiter Versuch
+     schreibt nur noch die Eltern — die Eingabe geht nicht verloren. */
+  const [angelegtesKind, setAngelegtesKind] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<StatusMeldung | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -176,6 +104,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
 
   const istPflicht = (feld: string) => pflichtfelder.includes(feld);
 
+  /* Bei diesen Mitgliedtypen ist ein Hauptkontakt vorgesehen — der
+     Elternabschnitt erscheint dann im gleichen Ablauf. Erzwungen wird er
+     nicht: wer die Elterndaten nicht zur Hand hat, soll nicht blockiert
+     sein, das Kind erscheint dann in der Datenprüfung. */
+  const hauptkontaktPflicht = (dbMitgliedtypen || [])
+    .some(t => t.name === form.mitgliedtyp && t.hauptkontakt_pflicht);
+
   function set(key: keyof MitgliedFormular, val: string) {
     setForm(f => ({ ...f, [key]: val }));
     setMsg(null);
@@ -198,11 +133,22 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
   }
 
   async function handleSave() {
+    if (!sb || !vereinId) return;
+    const von = account?.name || account?.email || "Administrator";
+
+    /* Zweiter Anlauf: das Kind steht bereits, nur die Elternteile fehlen
+       noch. Dann nicht nochmals anlegen — sonst entstünde eine Dublette. */
+    if (angelegtesKind !== null) {
+      setSaving(true); setMsg(null);
+      const elternFehler = await speichereEltern(sb, vereinId, angelegtesKind, elternEintraege, von);
+      setSaving(false);
+      if (elternFehler) { setMsg({ ok: false, text: `Elternteil nicht gespeichert: ${elternFehler}` }); return; }
+      abschliessen(angelegtesKind);
+      return;
+    }
+
     const err = validate();
     if (err) { setMsg({ ok: false, text: err }); return; }
-    /* verein_id ist in mitglieder NOT NULL — ohne vereinId würde das Insert
-       zwangsläufig scheitern. */
-    if (!sb || !vereinId) return;
     setSaving(true); setMsg(null);
     const id = await insertMitglied(sb, {
       /* vorname und nachname sind in mitglieder NOT NULL; validate() oben
@@ -225,15 +171,31 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
       mitgliedtyp:  form.mitgliedtyp || null,
       rolle:        form.rolle || null,
     }, vereinId);
-    setSaving(false);
-    if (!id) { setMsg({ ok: false, text: "Fehler beim Speichern." }); return; }
-    // Aktivität "angelegt" loggen
-    const von = account?.name || account?.email || "Administrator";
+    if (!id) { setSaving(false); setMsg({ ok: false, text: "Fehler beim Speichern." }); return; }
+
     logAktivitaet(sb, id, vereinId, AKTIVITAET_TYP.ANGELEGT, "Mitglied angelegt", null, null, von);
+
+    /* Erst jetzt die Elternteile: eltern_kinder braucht die mitglied_id, und
+       elternkontakte.mitglied_id ist NOT NULL. Scheitert es hier, bleibt das
+       Kind stehen — es ist gültig, nur ohne Hauptkontakt. Ein Zurückrollen
+       würde die ganze Eingabe vernichten. */
+    const elternFehler = await speichereEltern(sb, vereinId, id, elternEintraege, von);
+    setSaving(false);
+    if (elternFehler) {
+      setAngelegtesKind(id);
+      setMsg({ ok: false, text: `Mitglied angelegt — Elternteil nicht gespeichert: ${elternFehler}` });
+      return;
+    }
+    abschliessen(id);
+  }
+
+  function abschliessen(id: number) {
     setMsg({ ok: true, text: "Mitglied angelegt ✓" });
     clearTimeout(successTimer.current);
     successTimer.current = setTimeout(() => {
       setForm({ mitgliedtyp: "" });
+      setElternEintraege([]);
+      setAngelegtesKind(null);
       setMsg(null);
       onClose();
       if (onSuccess) onSuccess(id);
@@ -242,8 +204,14 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
 
   function handleClose() {
     setForm({ mitgliedtyp: "" });
+    setElternEintraege([]);
+    /* Wurde das Kind schon angelegt, muss die Liste sich aktualisieren —
+       sonst fehlt es dort, obwohl es in der Datenbank steht. */
+    const id = angelegtesKind;
+    setAngelegtesKind(null);
     setMsg(null);
     onClose();
+    if (id !== null && onSuccess) onSuccess(id);
   }
 
   return (
@@ -381,6 +349,15 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
               </select>
             </div>
 
+            {hauptkontaktPflicht && (
+              <NeuesMitgliedElternSektion
+                sb={sb}
+                vereinId={vereinId}
+                eintraege={elternEintraege}
+                setEintraege={fn => setElternEintraege(fn)}
+              />
+            )}
+
             <div className="cc-form-full">
               <div className="cc-info-hint">
                 <TI n="info-circle" size={13}/> Alle weiteren Angaben (Spielerpass, J+S-Nr. etc.) können danach im Profil ergänzt werden.
@@ -397,9 +374,11 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPorta
       </div>
 
       <div className="cc-modal-ftr">
-        <Btn onClick={handleClose}>Abbrechen</Btn>
+        <Btn onClick={handleClose}>{angelegtesKind !== null ? "Schliessen" : "Abbrechen"}</Btn>
         <Btn variant="primary" onClick={handleSave} disabled={saving || !form.mitgliedtyp}>
-          {saving ? "Wird gespeichert…" : "Mitglied anlegen"}
+          {saving ? "Wird gespeichert…"
+            : angelegtesKind !== null ? "Elternteile erneut speichern"
+            : "Mitglied anlegen"}
         </Btn>
       </div>
     </ModalOrSheet>
