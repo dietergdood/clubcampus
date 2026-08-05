@@ -2,6 +2,7 @@
    ClubCampus PlatzhalterModul — PlatzhalterModul.tsx
    Placeholder-Ansichten (werden durch echte Module ersetzt)
    ═══════════════════════════════════════════════════════════════ */
+import { updateMitglied } from "../domains/members/memberService.ts";
 import { useState } from "react";
 import { GN, R, RL, BL, AM, BK, GB } from "../constants.ts";
 import { TI } from "../icons.tsx";
@@ -387,7 +388,11 @@ function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGe
     const form: Partial<KindForm>=kindForms[kindId]||{};
     const now=new Date().toISOString();
     const kind=dbMitglieder.find(m=>m.id===kindId);
-    const {error}=await sb.from("mitglieder").update({
+    /* Über updateMitglied statt direkt: seit Etappe 2b liegen
+       geburtsdatum, nationalitaet, Adresse, telefon, email und
+       profil_geprueft_at an der Person. Direkt geschrieben landeten sie
+       in den Altspalten und wären beim nächsten Laden wieder weg. */
+    const ok=await updateMitglied(sb,kindId,{
       geburtsdatum:form.geburtsdatum||null,
       nationalitaet:form.nationalitaet||null,
       strasse:form.strasse||null,
@@ -397,9 +402,8 @@ function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGe
       email:form.email||null,
       datenstatus:"Geprüft",
       profil_geprueft_at:now,
-      updated_at:now,
-    }).eq("id",kindId);
-    if(error){ setMsg({ok:false,text:error.message}); }
+    });
+    if(!ok){ setMsg({ok:false,text:"Speichern fehlgeschlagen."}); }
     else {
       // Felder loggen die sich geändert haben
       if(vereinId && kind) {

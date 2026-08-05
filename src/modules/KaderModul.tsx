@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus KaderModul — Supabase-Version
    ═══════════════════════════════════════════════════════════════ */
+import { flacheZeile, flacheZeilen } from "../domains/person/personService.ts";
 import { useState, useEffect } from "react";
 import { BL } from "../constants.ts";
 import { TI } from "../icons.tsx";
@@ -156,8 +157,10 @@ function KaderModul({role, team, sb=null, onSelectMember=null, vereinId=null}: K
   // Alle Mitglieder für Hinzufügen laden
   useEffect(()=>{
     if(showAdd&&sb&&allMitglieder.length===0){
-      sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp").eq("aktiv",true).order("nachname")
-        .then(({data})=>setAllMitglieder(data||[]));
+      /* Namen kommen seit Etappe 2b aus personen — direkt aus mitglieder
+         gelesen wären sie der Stand vor dem Umbau. */
+      sb.from("mitglieder").select("id,vorname,nachname,mitgliedtyp,personen(vorname,nachname)").eq("aktiv",true).order("nachname")
+        .then(({data})=>setAllMitglieder(flacheZeilen(data as never) as never));
     }
   },[showAdd]);
 
@@ -170,7 +173,10 @@ function KaderModul({role, team, sb=null, onSelectMember=null, vereinId=null}: K
   },[]);
   async function updateBenutzerRolle(mitgliedId: number|null|undefined){
     if(!sb||!mitgliedId) return;
-    const {data:mitglied}=await sb.from("mitglieder").select("funktionen,mitgliedtyp").eq("id",mitgliedId).maybeSingle();
+    /* funktionen hängt seit Etappe 2b an der Person, mitgliedtyp an der
+       Mitgliedschaft — die Rollenableitung braucht beides. */
+    const {data:zeile}=await sb.from("mitglieder").select("mitgliedtyp,personen(funktionen)").eq("id",mitgliedId).maybeSingle();
+    const mitglied=flacheZeile(zeile as never) as {mitgliedtyp?:string|null;funktionen?:string[]|null}|null;
     await ableitUndSaveRolle(sb,mitgliedId,dbKaderRollenData||[],mitglied?.mitgliedtyp??null,mitglied?.funktionen??[]);
   }
 

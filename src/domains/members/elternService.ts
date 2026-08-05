@@ -3,6 +3,7 @@
    Alle Elternkontakt-Funktionen (n:m via eltern_kinder)
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
+import { flacheZeilen } from "../person/personService.ts";
 import type { Elternkontakt, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* Elternkontakt inklusive der Angaben aus der Verknüpfungstabelle */
@@ -165,6 +166,16 @@ export async function setHauptkontakt(sb: SbClient, mitgliedId: number, elternId
    braucht. Fuer den Ausnahmefall laesst sich der Filter weglassen: ein
    Elternkontakt ist bei jedem Mitgliedtyp erlaubt, nur nicht ueberall
    erforderlich. */
+/* Rückgabe der Kindersuche. Explizit deklariert, weil die Abfrage die Namen
+   verschachtelt liefert (personen(...)) und flacheZeilen() sie flach macht —
+   der aus der Abfrage abgeleitete Typ träfe also nicht zu. */
+export interface KindTreffer {
+  id: number;
+  mitgliedtyp: string | null;
+  vorname: string | null;
+  nachname: string | null;
+}
+
 export async function sucheKinder(
   sb: SbClient,
   vereinId: string,
@@ -173,8 +184,12 @@ export async function sucheKinder(
 ) {
   const suche = query.trim();
   if (!suche) return [];
+  /* Gesucht wird in `personen`, nicht in den Altspalten von `mitglieder` —
+     sonst fände die Suche nach einer Namenskorrektur noch den alten Wert.
+     `!inner` ist dafür nötig; es setzt voraus, dass jede Mitgliedschaft eine
+     Person hat (supabase/etappe2b_backfill_person_id.sql). */
   let q = sb.from("mitglieder")
-    .select("id, vorname, nachname, mitgliedtyp")
+    .select("id, mitgliedtyp, personen!inner(id,vorname,nachname)")
     .eq("verein_id", vereinId)
     .eq("aktiv", true);
   if (pflichtTypen) {
@@ -182,10 +197,10 @@ export async function sucheKinder(
     q = q.in("mitgliedtyp", pflichtTypen);
   }
   const { data } = await q
-    .or(`vorname.ilike.%${suche}%,nachname.ilike.%${suche}%`)
-    .order("nachname")
+    .or(`vorname.ilike.%${suche}%,nachname.ilike.%${suche}%`, { referencedTable: "personen" })
+    .order("nachname", { referencedTable: "personen" })
     .limit(20);
-  return data || [];
+  return flacheZeilen(data as never) as unknown as KindTreffer[];
 }
 
 /* Was nach dem Entkoppeln mit dem Elternkontakt geschehen ist. */
