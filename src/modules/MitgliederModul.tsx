@@ -75,12 +75,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         name:vollname(m),
         role:m.rolle||"-",
         type:m.mitgliedtyp||"-",
-        status:m.datenstatus||"-",
         /* ⚠ mitglieder hat keine Spalte teams (siehe MitgliedRoh in
            memberMapper), der frühere Zugriff ergab immer "-". MemberDetail
            liest das Feld ohnehin nicht. */
         team:"-",
-        hat_portal_zugang:m.hat_portal_zugang,
         _tab:"info",
       });
       if(onNavToMemberDone) onNavToMemberDone();
@@ -266,7 +264,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           onNavToMember={id=>{
             setElternTab(false);
             const m=dbMitglieder.find(x=>x.id===id);
-            if(m) setSelectedMember({id:m.id,name:vollname(m),role:m.rolle||"-",type:m.mitgliedtyp||"-",status:m.datenstatus||"-",team:"-",hat_portal_zugang:m.hat_portal_zugang,_tab:"info"});
+            if(m) setSelectedMember({id:m.id,name:vollname(m),role:m.rolle||"-",type:m.mitgliedtyp||"-",team:"-",_tab:"info"});
           }}
         />
       ):archivTab?(

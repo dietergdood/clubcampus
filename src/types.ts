@@ -88,13 +88,12 @@ type PersonenFelder = Partial<Pick<Tables<'personen'>,
    `mitglieder` — `Tables<'mitglieder'>` allein trifft die Form also nicht
    mehr.
 
-   `eltern` ueberschreibt die gleichnamige Json-Spalte. ⚠ Das Feld wird von
-   `loadDbMitglieder()` NIE befuellt — die Leser in getProfilCheck,
-   PlatzhalterModul und TeamModul laufen deshalb ins Leere. Eigener Schritt
-   (Etappe 6c); bis dahin bleibt der Typ auf das reduziert, was gelesen
-   wird. */
-export interface Mitglied extends Omit<Tables<'mitglieder'>, 'eltern'>, PersonenFelder {
-  eltern?: { benutzer_id?: string | null }[];
+   Die Json-Altspalte `eltern` ist mit Etappe 6c verschwunden. Sie wurde nie
+   befuellt — die Leser in getProfilCheck, PlatzhalterModul und TeamModul
+   liefen ins Leere, und deshalb bekamen Eltern nie einen Datenpruefungs-
+   Hinweis fuer ihre Kinder. Die Kinder stehen in `eltern_kinder`; sie dort
+   zu lesen ist eine Verhaltensaenderung und ein eigener Schritt. */
+export interface Mitglied extends Tables<'mitglieder'>, PersonenFelder {
   // Von der App berechnet, nicht in der Tabelle
   kader_rollen?: string[];
   kader_teams?: { name: string; kurz: string }[];

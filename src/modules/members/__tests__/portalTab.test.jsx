@@ -33,9 +33,12 @@ const DB_PORTAL_ROLLEN = [
   { name: 'mitglied', label: 'Mitglied' },
 ];
 
-const RAW_AKTIV = { id: 1, hat_portal_zugang: true, rolle: 'spieler' };
-const RAW_KEIN  = { id: 1, hat_portal_zugang: false, rolle: null };
-const RAW_DEAK  = { id: 1, hat_portal_zugang: false, rolle: 'spieler' };
+/* Seit Etappe 6c entscheidet allein das KONTO, ob ein Zugang aktiv ist —
+   nicht mehr ein Kennzeichen am Mitglied. Der Unterschied zwischen „Aktiv"
+   und „Deaktiviert" steckt deshalb in `benutzer.aktiv`, nicht in `raw`. */
+const RAW_AKTIV = { id: 1, rolle: 'spieler' };
+const RAW_KEIN  = { id: 1, rolle: null };
+const RAW_DEAK  = { id: 1, rolle: 'spieler' };
 
 const BENUTZER = {
   id: 'b1', email: 'adrian@test.ch', role: 'spieler',
@@ -76,7 +79,7 @@ describe('PortalTab', () => {
     });
 
     it('zeigt Deaktiviert wenn benutzer vorhanden aber kein Zugang', () => {
-      renderTab({ raw: RAW_DEAK, benutzer: BENUTZER });
+      renderTab({ raw: RAW_DEAK, benutzer: { ...BENUTZER, aktiv: false } });
       expect(screen.getByText('Deaktiviert')).toBeTruthy();
     });
 
@@ -140,13 +143,13 @@ describe('PortalTab', () => {
     });
 
     it('zeigt Reaktivieren-Button wenn deaktiviert', () => {
-      renderTab({ raw: RAW_DEAK, benutzer: BENUTZER });
+      renderTab({ raw: RAW_DEAK, benutzer: { ...BENUTZER, aktiv: false } });
       expect(screen.getByText('Zugang reaktivieren')).toBeTruthy();
     });
 
     it('ruft handleReactivate auf bei Klick', () => {
       const handleReactivate = vi.fn();
-      renderTab({ raw: RAW_DEAK, benutzer: BENUTZER, handleReactivate });
+      renderTab({ raw: RAW_DEAK, benutzer: { ...BENUTZER, aktiv: false }, handleReactivate });
       fireEvent.click(screen.getByText('Zugang reaktivieren'));
       expect(handleReactivate).toHaveBeenCalled();
     });

@@ -45,6 +45,9 @@ interface InfoTabProps {
   dbKaderRollen?: TeamsProps["dbKaderRollen"];
   dbMitgliedtypen?: Mitgliedtyp[];
   eltern?: KontaktProps["eltern"];
+  /* Ob ein Portal-Konto existiert und aktiv ist. Kommt aus `benutzer`, nicht
+     mehr aus dem Kennzeichen mitglieder.hat_portal_zugang (Etappe 6c). */
+  hatPortalZugang?: boolean;
   brauchtEltern: KontaktProps["brauchtEltern"];
   setTab: (tab: string) => void;
   teamDetails?: TeamsProps["teamDetails"];
@@ -65,7 +68,7 @@ interface InfoTabProps {
 function InfoTab({
   raw, fv, canEdit, canDelete, sb, account,
   dbKaderRollen, dbMitgliedtypen,
-  eltern, brauchtEltern, setTab,
+  eltern, brauchtEltern, setTab, hatPortalZugang = false,
   teamDetails, setTeamDetails,
   allTeams, setAllTeams,
   assignFunktionen, setAssignFunktionen,
@@ -127,10 +130,10 @@ function InfoTab({
         />
         <StatusTile
           label="Portal-Zugang"
-          value={raw.hat_portal_zugang ? (isMobile ? "OK" : "Eingerichtet") : (isMobile ? "Fehlt" : "Nicht eingerichtet")}
+          value={hatPortalZugang ? (isMobile ? "OK" : "Eingerichtet") : (isMobile ? "Fehlt" : "Nicht eingerichtet")}
           icon="key"
-          semantic={raw.hat_portal_zugang ? "ok" : "warn"}
-          action={!raw.hat_portal_zugang && canEdit ? { label: "Zugang erstellen", onClick: () => setTab("portal") } : null}
+          semantic={hatPortalZugang ? "ok" : "warn"}
+          action={!hatPortalZugang && canEdit ? { label: "Zugang erstellen", onClick: () => setTab("portal") } : null}
         />
         <StatusTile
           label="Fairgate"

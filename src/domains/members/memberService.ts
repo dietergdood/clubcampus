@@ -208,18 +208,18 @@ export async function updateBenutzer(sb: SbClient, id: string, fields: TablesUpd
   return error;
 }
 
+/* Der Portal-Zugang haengt allein an der Verknuepfung `benutzer.mitglied_id`.
+   Das fruehere Kennzeichen `mitglieder.hat_portal_zugang` war eine Kopie
+   derselben Aussage und konnte veralten — wurde ein Konto ausserhalb des
+   Portals geloescht, blieb es auf true stehen. Gestrichen in Etappe 6c. */
 export async function portalZugangAktivieren(sb: SbClient, mitgliedId: number, benutzerId: string, neueRolle: string): Promise<PostgrestError | null> {
-  const { error: e1 } = await sb.from("mitglieder").update({ hat_portal_zugang: true }).eq("id", mitgliedId);
-  if (e1) return e1;
-  const { error: e2 } = await sb.from("benutzer").update({ mitglied_id: mitgliedId, role: neueRolle }).eq("id", benutzerId);
-  return e2;
+  const { error } = await sb.from("benutzer").update({ mitglied_id: mitgliedId, role: neueRolle }).eq("id", benutzerId);
+  return error;
 }
 
 export async function portalZugangDeaktivieren(sb: SbClient, mitgliedId: number): Promise<PostgrestError | null> {
-  const { error: e1 } = await sb.from("mitglieder").update({ hat_portal_zugang: false }).eq("id", mitgliedId);
-  if (e1) return e1;
-  const { error: e2 } = await sb.from("benutzer").update({ mitglied_id: null }).eq("mitglied_id", mitgliedId);
-  return e2;
+  const { error } = await sb.from("benutzer").update({ mitglied_id: null }).eq("mitglied_id", mitgliedId);
+  return error;
 }
 
 /* ── Portal Funktionen ── */

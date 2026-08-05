@@ -252,6 +252,7 @@ function MemberDetail({
           raw={raw} fv={fv} canEdit={canEdit} canDelete={canDelete}
           sb={sb} account={account}
           dbKaderRollen={dbKaderRollen} dbMitgliedtypen={dbMitgliedtypen}
+          hatPortalZugang={!!benutzer && benutzer.aktiv !== false}
           eltern={eltern} brauchtEltern={brauchtEltern} setTab={setTab}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
           allTeams={allTeams} setAllTeams={setAllTeams}

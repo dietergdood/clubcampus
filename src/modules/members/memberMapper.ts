@@ -34,7 +34,14 @@ export function mapMembers(
     const rollenSet=new Set<string>();
     (m.kader_rollen||[]).forEach(r=>rollenSet.add(ROLLE_LABEL[r]||r));
     if(rollenSet.size===0&&m.rolle&&m.rolle!=="-") rollenSet.add(ROLLE_LABEL[m.rolle]||m.rolle);
-    const portalStatus=m.hat_portal_zugang?"Aktiv":(m.hat_benutzer?"Deaktiviert":"Kein Zugang");
+    /* Der Portal-Status kommt aus dem Join auf `benutzer`, den useAppData
+       ohnehin macht — nicht mehr aus dem Kennzeichen mitglieder.hat_portal_zugang
+       (gestrichen in Etappe 6c). Das Kennzeichen war eine Kopie derselben
+       Aussage und konnte veralten: Wurde ein Konto ausserhalb des Portals
+       geloescht, blieb es auf true stehen. Der Join kann das nicht. */
+    const portalStatus=m.hat_benutzer
+      ?(m.benutzer_deaktiviert?"Deaktiviert":"Aktiv")
+      :"Kein Zugang";
     /* Datenprüfung hängt an profil_geprueft_at (seit Session 17). Die alte
        Bedingung prüfte ein Feld `geprueft`, das es in mitglieder nicht gibt —
        dadurch stand hier für jedes Mitglied konstant "Ausstehend".
@@ -49,10 +56,10 @@ export function mapMembers(
       role:m.rolle||"-",
       teams:m.kader_teams&&m.kader_teams.length>0?m.kader_teams.map(t=>typeof t==="object"?t:{name:t,kurz:t}):(m.teams||[]).map(t=>({name:t,kurz:t})),
       team:(m.teams||[]).join(", ")||"-",
-      datenpruefung:dpStatus, status:m.datenstatus||"Ausstehend",
+      datenpruefung:dpStatus,
       /* Wird vom Export gelesen und fehlte bisher im UI-Objekt */
       profil_geprueft_at:m.profil_geprueft_at||null,
-      portal:portalStatus, hat_portal_zugang:m.hat_portal_zugang, hat_benutzer:m.hat_benutzer,
+      portal:portalStatus, hat_portal_zugang:m.hat_benutzer&&!m.benutzer_deaktiviert, hat_benutzer:m.hat_benutzer,
       ort:m.ort||"-", location:m.ort||"-", plz:m.plz||null,
       wohnort:m.plz&&m.ort?`${m.plz} ${m.ort}`:(m.ort||null),
       email:m.email, telefon:m.telefon, geburtsdatum:m.geburtsdatum,

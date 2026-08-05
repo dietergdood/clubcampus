@@ -21,8 +21,12 @@ const dbMitglied = {
   kader_eintraege: [{ team: { name: '1. Mannschaft', kurz: 'FCH 1' }, rollen: ['Trainer/in'] }],
   kader_teams: [{ name: '1. Mannschaft', kurz: 'FCH 1' }],
   teams: [],
-  hat_portal_zugang: true, hat_benutzer: true,
-  datenstatus: 'geprüft', profil_geprueft_at: '2026-07-01T10:00:00Z',
+  /* Der Portal-Status kommt seit Etappe 6c aus dem Join auf `benutzer`
+     (hat_benutzer / benutzer_deaktiviert), nicht mehr aus dem Kennzeichen
+     mitglieder.hat_portal_zugang — das war eine Kopie derselben Aussage und
+     konnte veralten. */
+  hat_benutzer: true, benutzer_deaktiviert: false,
+  profil_geprueft_at: '2026-07-01T10:00:00Z',
   email: 'adrian@fch.ch', telefon: '079 123 45 67',
   geburtsdatum: '1985-03-15',
   geschlecht: 'm',
@@ -89,13 +93,13 @@ describe('mapMembers', () => {
       expect(m.portal).toBe('Aktiv');
     });
 
-    it('setzt Deaktiviert wenn hat_benutzer aber kein Zugang', () => {
-      const [m] = mapMembers([{ ...dbMitglied, hat_portal_zugang: false, hat_benutzer: true }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
+    it('setzt Deaktiviert wenn das Konto deaktiviert ist', () => {
+      const [m] = mapMembers([{ ...dbMitglied, hat_benutzer: true, benutzer_deaktiviert: true }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
       expect(m.portal).toBe('Deaktiviert');
     });
 
     it('setzt Kein Zugang wenn kein Benutzer', () => {
-      const [m] = mapMembers([{ ...dbMitglied, hat_portal_zugang: false, hat_benutzer: false }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
+      const [m] = mapMembers([{ ...dbMitglied, hat_benutzer: false }], DB_PORTAL_ROLLEN, DB_KADER_ROLLEN);
       expect(m.portal).toBe('Kein Zugang');
     });
   });

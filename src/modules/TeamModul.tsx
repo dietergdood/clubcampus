@@ -110,7 +110,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
           role:      m.funktion||"",
           email:     m.email||"",
           tel:       m.telefon||"",
-          eltern:    m.eltern||[],
+          eltern:    [],
           fairgate:  m.fairgate_id||"",
           ahv:       m.ahv_nr||"",
           street:    m.strasse||"",

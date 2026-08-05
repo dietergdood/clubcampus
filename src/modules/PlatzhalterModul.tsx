@@ -375,7 +375,7 @@ function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGe
 
   // Kinder (bei Eltern): alle Mitglieder wo ich als Elternteil verknüpft bin
   const kinder: MitgliedAnzeige[]=isEltern
-    ?dbMitglieder.filter(m=>(m.eltern||[]).some(e=>e.benutzer_id===dbUser?.id))
+    ?[] /* siehe getProfilCheck.kinderVonElternteil: eltern-Altspalte ist weg */
     :[];
 
   // Formular-State für Kinder-Bearbeitung
@@ -412,7 +412,6 @@ function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGe
       ort:form.ort||null,
       telefon:form.telefon||null,
       email:form.email||null,
-      datenstatus:"Geprüft",
       profil_geprueft_at:now,
     });
     if(!ok){ setMsg({ok:false,text:"Speichern fehlgeschlagen."}); }

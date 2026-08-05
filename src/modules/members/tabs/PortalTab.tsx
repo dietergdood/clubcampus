@@ -37,8 +37,10 @@ function PortalTab({
   handleUnlink, handleReactivate, onReload, setBenutzer,
   vereinId=null, account=null,
 }: PortalTabProps) {
-  const aktiv = raw.hat_portal_zugang && benutzer;
-  const deaktiviert = !raw.hat_portal_zugang && benutzer;
+  /* Der Zustand kommt aus dem Konto selbst, nicht aus einem Kennzeichen am
+     Mitglied (gestrichen in Etappe 6c). */
+  const aktiv = !!benutzer && benutzer.aktiv !== false;
+  const deaktiviert = !!benutzer && benutzer.aktiv === false;
   const [rolleEditing, setRolleEditing] = useState(false);
   const [rolleVal, setRolleVal] = useState("");
   const [rolleSaving, setRolleSaving] = useState(false);

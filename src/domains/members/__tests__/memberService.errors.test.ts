@@ -70,43 +70,42 @@ describe("memberService — Payload-Details", () => {
   });
 });
 
-describe("portalZugangAktivieren — zweistufig", () => {
-  it("bricht bei Fehler im ersten Update ab (Benutzer-Update wird nicht aufgerufen)", async () => {
-    const e1 = pgError("mitglieder");
-    const sb = makeSb({ "mitglieder.update": { error: e1 } });
-    const res = await portalZugangAktivieren(sb as any, 1, "u1", "trainer");
-    expect(res).toBe(e1);
-    expect(sb.opsOn("benutzer")).toHaveLength(0);
+describe("portalZugangAktivieren", () => {
+  it("fasst `mitglieder` nicht mehr an", async () => {
+    /* Der Zugang haengt seit Etappe 6c allein an benutzer.mitglied_id; das
+       Kennzeichen mitglieder.hat_portal_zugang war eine Kopie derselben
+       Aussage und konnte veralten. */
+    const sb = makeSb();
+    await portalZugangAktivieren(sb as any, 1, "u1", "trainer");
+    expect(sb.opsOn("mitglieder")).toHaveLength(0);
   });
 
-  it("gibt den Fehler des zweiten Updates zurück", async () => {
+  it("gibt den Fehler des Updates zurück", async () => {
     const e2 = pgError("benutzer");
     const sb = makeSb({ "benutzer.update": { error: e2 } });
     expect(await portalZugangAktivieren(sb as any, 1, "u1", "trainer")).toBe(e2);
   });
 
-  it("schreibt hat_portal_zugang:true sowie mitglied_id+role und gibt null zurück", async () => {
+  it("verknüpft Konto und Mitglied und setzt die Rolle", async () => {
     const sb = makeSb();
     const res = await portalZugangAktivieren(sb as any, 5, "u1", "trainer");
     expect(res).toBeNull();
-    expect(sb.find("mitglieder", "update")!.payload).toEqual({ hat_portal_zugang: true });
     expect(sb.find("benutzer", "update")!.payload).toEqual({ mitglied_id: 5, role: "trainer" });
   });
 });
 
-describe("portalZugangDeaktivieren — zweistufig", () => {
-  it("bricht bei Fehler im ersten Update ab", async () => {
+describe("portalZugangDeaktivieren", () => {
+  it("gibt den Fehler zurück und fasst `mitglieder` nicht an", async () => {
     const e1 = pgError();
-    const sb = makeSb({ "mitglieder.update": { error: e1 } });
+    const sb = makeSb({ "benutzer.update": { error: e1 } });
     expect(await portalZugangDeaktivieren(sb as any, 1)).toBe(e1);
-    expect(sb.opsOn("benutzer")).toHaveLength(0);
+    expect(sb.opsOn("mitglieder")).toHaveLength(0);
   });
 
-  it("schreibt hat_portal_zugang:false und setzt benutzer.mitglied_id auf null", async () => {
+  it("löst die Verknüpfung am Konto", async () => {
     const sb = makeSb();
     const res = await portalZugangDeaktivieren(sb as any, 5);
     expect(res).toBeNull();
-    expect(sb.find("mitglieder", "update")!.payload).toEqual({ hat_portal_zugang: false });
     expect(sb.find("benutzer", "update")!.payload).toEqual({ mitglied_id: null });
     const eq = sb.find("benutzer", "update")!.filters.find(f => f.method === "eq");
     expect(eq!.args).toEqual(["mitglied_id", 5]);

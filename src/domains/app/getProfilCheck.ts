@@ -70,6 +70,20 @@ export function getProfilCheck({
     return fehlend;
   }
 
+  /* Die Kinder eines angemeldeten Elternteils.
+     ⚠ LIEFERT DERZEIT IMMER EINE LEERE LISTE. Gelesen wurde bis Etappe 6c
+     die Json-Altspalte `mitglieder.eltern` — sie wurde von
+     `loadDbMitglieder()` NIE befuellt, der Filter lief also seit jeher ins
+     Leere. Eltern bekamen deshalb nie einen Datenpruefungs-Hinweis fuer
+     ihre Kinder.
+     Die Verknuepfung steht in `eltern_kinder`. Sie hier zu lesen ist eine
+     VERHALTENSAENDERUNG — Eltern saehen plötzlich Hinweise, die sie nie
+     gesehen haben — und deshalb ein eigener Schritt. Bis dahin steht die
+     Luecke an einer Stelle statt an dreien. */
+  function kinderVonElternteil(): typeof dbMitglieder {
+    return [];
+  }
+
   function getProfilFehlend(): string[] {
     if (!dbUser) return [];
     const isEltern = role === 'eltern' && !dbMitglieder.find(m => m.id === dbUser.mitglied_id);
@@ -89,9 +103,7 @@ export function getProfilCheck({
         if (!eigenePerson.telefon?.trim())  fehlend.push(FELD_LABEL.telefon);
       }
 
-      const kinder = dbMitglieder.filter(m =>
-        (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
-      );
+      const kinder = kinderVonElternteil();
       /* Die Kinder sind Mitglieder — für sie greift die Matrix ihres
          Mitgliedtyps, statt wie früher pauschal Geburtsdatum,
          Nationalität und Adresse zu verlangen. */
@@ -117,9 +129,7 @@ export function getProfilCheck({
     if (!eigenesGeprueft) return true;
     if (new Date(eigenesGeprueft) < sechsMonate) return true;
     if (role === 'eltern') {
-      const kinder = dbMitglieder.filter(m =>
-        (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
-      );
+      const kinder = kinderVonElternteil();
       for (const kind of kinder) {
         if (!kind.profil_geprueft_at) return true;
         if (new Date(kind.profil_geprueft_at) < sechsMonate) return true;
@@ -133,9 +143,7 @@ export function getProfilCheck({
     const now = new Date().toISOString();
     await sb.from('benutzer').update({ profil_geprueft_at: now }).eq('id', dbUser.id);
     if (role === 'eltern') {
-      const kinder = dbMitglieder.filter(m =>
-        (m.eltern || []).some(e => e.benutzer_id === dbUser.id)
-      );
+      const kinder = kinderVonElternteil();
       /* profil_geprueft_at gehoert zur Person (PERSON_FELDER) — seit
          Etappe 6a gibt es die Spalte in `mitglieder` nicht mehr. Ueber
          updateMitglied(), damit die Aufteilung an einer Stelle bleibt. */
