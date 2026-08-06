@@ -4,6 +4,11 @@
 Module sind fachlich getrennt, aber über gemeinsame Domains verbunden.
 Keine Isolation — Verbindung über Services und Hooks.
 
+**Der obere Teil bis „Post-Refactoring Pflicht-Workflow" ist normativ — Regeln,
+die gelten. Alles unter „Archiv" ist Historie und beschreibt Stände von vor
+mehreren Refactorings. Bei Widerspruch gilt der obere Teil, und über beidem
+gilt der Code.**
+
 ## Aktuelle Ordnerstruktur
 
 > Stand 04.08.2026. Die TypeScript-Migration ist abgeschlossen — ausser den
@@ -226,6 +231,10 @@ Vor jedem neuen Modul:
 Diese Datei ist **nicht** selbstpflegend. Der Anspruch „Claude hält sie aktuell" stand hier bis 04.08.2026 — tatsächlich beschrieb die Ordnerstruktur zu diesem Zeitpunkt einen Stand von vor der TypeScript-Migration, mit `domains/teams/` an einer Stelle, an der es seit Monaten nicht mehr liegt, und `theme.jsx` als Design-System, das längst nur noch eine Barrel-Datei ist.
 
 Nachzuführen ist sie deshalb bewusst, beim Session-Abschluss:
+- **Die Ordnerstruktur oben** — sie war am 04.08.2026 auf einem Stand von vor der
+  TypeScript-Migration und am 05.08.2026 erneut überholt (`personService.ts` und
+  `SupporterListView.tsx` fehlten, 32 Dateien standen als `.jsx` drin, obwohl es
+  ausserhalb der Tests keine einzige mehr gibt)
 - Neue Dateien erstellt, verschoben oder umbenannt
 - Ein Modul von `demoData` auf Supabase migriert
 - Neue Komponenten in COMPONENT_REGISTRY
@@ -359,6 +368,29 @@ import { MemberDetail } from "../MitgliederModul";
 
 // ✓ RICHTIG — shared Komponente nutzen
 import { PersonSummary } from "../../shared/person/PersonSummary";
+
+// ✗ FALSCH — Personendaten aus `mitglieder` (die Spalten gibt es seit
+//            Etappe 6a nicht mehr; ein .order() darauf bricht erst zur Laufzeit)
+await sb.from("mitglieder").select("id,vorname,nachname").order("nachname");
+
+// ✓ RICHTIG — per Join, dann durch die Fassade
+const { data } = await sb.from("mitglieder").select("*, personen(*)");
+return flacheZeilen(data);
+
+// ✗ FALSCH — Personenfeld nach `mitglieder` schreiben
+await sb.from("mitglieder").update({ foto_url: url }).eq("id", id);
+
+// ✓ RICHTIG — updateMitglied verteilt selbst
+await updateMitglied(sb, id, { foto_url: url });
+
+// ✗ FALSCH — eigene Liste nachbauen
+const COLS = [{ key: "name", label: "Name" }, ...];
+const gruppiere = (rows, key) => { ... };
+
+// ✓ RICHTIG — dieselben Bausteine wie die Mitgliederliste
+import { ALL_COLS } from "./memberConstants.ts";
+import { filterMembers, sortMembers } from "./memberFilter.ts";
+import { buildGroups } from "./memberGrouping.ts";
 ```
 
 ## Personen-Modell (abgeschlossen 05.08.2026)
@@ -783,7 +815,141 @@ Etappe 1 hat jede Eltern-Person mit **derselben `id`** wie ihre `elternkontakte`
 | 1 | Foundation (domains/person, domains/roles, domains/permissions, shared/person) | ✅ Fertig |
 | 2 | MitgliederModul + KaderModul aufteilen | ✅ Fertig |
 | 3 | Teams Domain erstellt, PortalverwaltungModul State zu verflochten → Phase 4 | ✅ Fertig |
-| 4 | Termine + Helfer + Dashboard → Supabase, demoData.js löschen | ⏳ Offen |
+| 4 | Kader + Termine + Helfer + Dashboard → Supabase, `demoData.js` löschen | ⏳ **Offen — der nächste Schritt** |
+| — | TypeScript-Migration (123 Dateien, strict, kein `any`) | ✅ Fertig (Session 20) |
+| — | Personen-Modell, Etappen 1–6 | ✅ Fertig (05.08.2026) |
+| — | Berechtigungen: `hat_modul_recht()` als Unterbau | ✅ Fertig — Policies folgen |
+
+**Phase 4 blockiert mehr als sich selbst:** ohne sie keine Demo-Daten weg, kein
+externer Pilotverein, und Etappe 6b bleibt halb — Position und Rückennummer
+stehen jetzt an der Kaderzeile, aber es gibt nur 34 davon.
+
+## Refactoring-Regeln
+
+**Vor jedem Refactoring einer bestehenden Komponente:**
+1. Alle bestehenden Features dokumentieren — was macht die Komponente, welche Edge Cases sind implementiert
+2. Besonders kritisch: Filter-Kontext, Gruppen-Kontext, `effectiveGc`/`parentContext` Propagierung bei rekursiven Strukturen
+3. Nach dem Refactoring jeden Feature-Punkt einzeln verifizieren — Build grün ≠ Feature funktioniert
+4. Konkret testen: alle Gruppierungsoptionen × alle Filterkombinationen
+5. Nie annehmen dass eine vereinfachte Version dasselbe tut wie die Original-Implementation
+
+**Bekannte Fallgruben bei MitgliederModul:**
+- `effectiveCtx` / `parentContext` muss durch alle Rekursionsebenen von `renderGroupsTable` propagiert werden — Zeilen bekommen sonst falschen Gruppenkontext
+- `getGroupKey` für Teams muss `kaderrollen` Filter berücksichtigen — sonst erscheinen Mitglieder in Teams ohne die gefilterte Rolle
+- `filterVals` muss an `buildGroups` und `renderCell` weitergegeben werden — Kontext-sensitives Rendering funktioniert sonst nicht
+- `__portalFunktionen` und `__parentGruppe` in `filterVals` sind spezielle interne Schlüssel für rekursive Gruppierung
+
+
+
+1. ZIP des aktuellen Repos hochladen
+2. Diese ARCHITECTURE.md erwähnen
+3. Claude kennt damit sofort die Regeln und den aktuellen Stand
+
+## Session-Abschluss Routine
+
+1. Schema, Policies und Rollen dumpen (keine Daten). **`--linked` benutzen, nie `--db-url` mit Passwort** — das Projekt ist verlinkt, die Zugangsdaten stehen unter `supabase/.temp/` (gitignored) und haben im Repo nichts verloren:
+```bash
+npx supabase db dump --linked -f supabase/schema.sql
+```
+**Und im selben Zug die Typen** — der Dump allein reicht nicht. Am 05.08.2026 lief `database.types.ts` dreimal hinterher und meldete Spalten als vorhanden, die es nicht mehr gab:
+```bash
+npx supabase gen types typescript --linked > src/database.types.ts
+```
+2. Vor dem Committen gegenprüfen, dass der Dump nichts verloren hat — Vorgehen und die beiden blinden Flecken der Zählprüfung stehen in `CLAUDE.md` → Datenbank-Workflow.
+3. `supabase/schema.sql` committen (enthält: Tabellen, Policies, RLS, Funktionen, Rollen — keine Nutzdaten).
+4. **Diese Datei nachführen** — vor allem die Ordnerstruktur, siehe „Pflege dieser Datei".
+5. `npm run typecheck` · `npm run build` · `npm test` — alle drei grün, sonst ist die Session nicht abgeschlossen. Die Trigger auf `auth.users` liegen separat in `supabase/auth_triggers.sql`, weil kein `public`-Dump sie erfasst.
+
+
+## Datenbankregeln (Supabase)
+
+### Pflicht für jede neue Tabelle
+
+```sql
+CREATE TABLE neue_tabelle (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  verein_id   uuid NOT NULL REFERENCES vereine(id),  -- IMMER
+  -- ... Felder ...
+  created_at  timestamptz DEFAULT now()
+);
+
+CREATE INDEX ON neue_tabelle(verein_id);              -- IMMER
+ALTER TABLE neue_tabelle ENABLE ROW LEVEL SECURITY;   -- IMMER
+
+-- Minimale Policies (anpassen je nach Tabelle):
+CREATE POLICY "neue_tabelle_select" ON neue_tabelle
+  FOR SELECT USING (verein_id = get_my_verein_id());
+
+CREATE POLICY "neue_tabelle_write_admin" ON neue_tabelle
+  FOR ALL USING (verein_id = get_my_verein_id() AND is_admin());
+```
+
+### Pflicht beim INSERT in der App
+
+```javascript
+await sb.from("neue_tabelle").insert({
+  verein_id: tenant.id,  // IMMER mitgeben
+  // ... Felder ...
+});
+```
+
+### Hilfsfunktionen (bereits in DB definiert)
+
+- `get_my_verein_id()` — gibt verein_id des eingeloggten Users zurück
+- `get_my_role()` — gibt Rolle des eingeloggten Users zurück
+- `is_admin()` — true wenn administrator oder administration
+- `is_trainer()` — true wenn trainer
+
+### Policy-Muster nach Zugriffstyp
+
+| Typ | SELECT | INSERT/UPDATE/DELETE |
+|-----|--------|----------------------|
+| Vereinskonfiguration | alle im Verein | nur is_admin() |
+| Mitgliederdaten | admin/trainer/funktionaer | nur is_admin() |
+| Persönliche Daten | benutzer_id = auth.uid() | benutzer_id = auth.uid() |
+| Veranstaltungen | alle im Verein | admin/trainer/funktionaer |
+| Audit/Log | nur is_admin() | System (kein Check) |
+
+
+
+## Post-Refactoring Pflicht-Workflow
+
+Nach **jedem** grossen Refactoring (Auslagern von Komponenten, Hooks, Dateien verschieben):
+
+```bash
+# 1. Fehlende Konstanten-Imports prüfen
+npm run check:imports
+
+# 2. Automatisch fixen
+node scripts/check-imports.mjs --fix
+
+# 3. Typen und Build verifizieren
+npm run typecheck
+npm run build
+```
+
+**Warum:** Konstanten aus `constants.js` (GB, ACCENT, FONT, R, etc.) wurden früher implizit
+durch `clubcampus.jsx` geerbt. Seit dem Refactoring ist jedes Modul eigenständig und muss
+Konstanten explizit importieren. Das Skript findet fehlende Imports automatisch.
+
+**Script:** `scripts/check-imports.mjs` (prüfen, mit `--fix` auto-fix). Ersetzt die
+früheren Python-Skripte — die lasen noch `src/constants.js` und setzten eine
+Python-Installation voraus. Für `.ts`/`.tsx`-Dateien findet `npm run typecheck`
+dasselbe Problem zuverlässiger; das Skript deckt die noch nicht migrierten
+`.js`/`.jsx`-Dateien ab.
+
+**Claude macht dies automatisch** am Ende jeder Session die ein Refactoring enthält.
+
+---
+
+# Archiv
+
+> Alles ab hier ist **Historie**, keine Regel. Es beschreibt Stände von vor
+> mehreren Refactorings — `.jsx`-Namen, Zeilenzahl-Tabellen, Modulaufteilungen,
+> die es so nicht mehr gibt. Nützlich, um zu verstehen, warum etwas so
+> geworden ist; unbrauchbar als Anleitung.
+>
+> **Bei Widerspruch gilt der obere Teil und der Code.**
 
 ## Session 17 — ListView-Zentralisierung + MitgliederModul Refactoring (23.07.2026)
 
@@ -890,87 +1056,6 @@ Etappe 1 hat jede Eltern-Person mit **derselben `id`** wie ihre `elternkontakte`
 - Portalrollenfarben konsequent im ganzen Portal (NavigationModul, PortalTab etc.)
 - Funktionär Rollenname in DB evtl. anpassen
 - `@tanstack/react-virtual` installiert aber nicht implementiert (Infinite Scroll als Lösung)
-
-## Refactoring-Regeln
-
-**Vor jedem Refactoring einer bestehenden Komponente:**
-1. Alle bestehenden Features dokumentieren — was macht die Komponente, welche Edge Cases sind implementiert
-2. Besonders kritisch: Filter-Kontext, Gruppen-Kontext, `effectiveGc`/`parentContext` Propagierung bei rekursiven Strukturen
-3. Nach dem Refactoring jeden Feature-Punkt einzeln verifizieren — Build grün ≠ Feature funktioniert
-4. Konkret testen: alle Gruppierungsoptionen × alle Filterkombinationen
-5. Nie annehmen dass eine vereinfachte Version dasselbe tut wie die Original-Implementation
-
-**Bekannte Fallgruben bei MitgliederModul:**
-- `effectiveCtx` / `parentContext` muss durch alle Rekursionsebenen von `renderGroupsTable` propagiert werden — Zeilen bekommen sonst falschen Gruppenkontext
-- `getGroupKey` für Teams muss `kaderrollen` Filter berücksichtigen — sonst erscheinen Mitglieder in Teams ohne die gefilterte Rolle
-- `filterVals` muss an `buildGroups` und `renderCell` weitergegeben werden — Kontext-sensitives Rendering funktioniert sonst nicht
-- `__portalFunktionen` und `__parentGruppe` in `filterVals` sind spezielle interne Schlüssel für rekursive Gruppierung
-
-
-
-1. ZIP des aktuellen Repos hochladen
-2. Diese ARCHITECTURE.md erwähnen
-3. Claude kennt damit sofort die Regeln und den aktuellen Stand
-
-## Session-Abschluss Routine
-
-1. Schema, Policies und Rollen dumpen (keine Daten). **`--linked` benutzen, nie `--db-url` mit Passwort** — das Projekt ist verlinkt, die Zugangsdaten stehen unter `supabase/.temp/` (gitignored) und haben im Repo nichts verloren:
-```bash
-npx supabase db dump --linked -f supabase/schema.sql
-```
-2. Vor dem Committen gegenprüfen, dass der Dump nichts verloren hat — Vorgehen und die beiden blinden Flecken der Zählprüfung stehen in `CLAUDE.md` → Datenbank-Workflow.
-3. `supabase/schema.sql` committen (enthält: Tabellen, Policies, RLS, Funktionen, Rollen — keine Nutzdaten). Die Trigger auf `auth.users` liegen separat in `supabase/auth_triggers.sql`, weil kein `public`-Dump sie erfasst.
-
-
-## Datenbankregeln (Supabase)
-
-### Pflicht für jede neue Tabelle
-
-```sql
-CREATE TABLE neue_tabelle (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  verein_id   uuid NOT NULL REFERENCES vereine(id),  -- IMMER
-  -- ... Felder ...
-  created_at  timestamptz DEFAULT now()
-);
-
-CREATE INDEX ON neue_tabelle(verein_id);              -- IMMER
-ALTER TABLE neue_tabelle ENABLE ROW LEVEL SECURITY;   -- IMMER
-
--- Minimale Policies (anpassen je nach Tabelle):
-CREATE POLICY "neue_tabelle_select" ON neue_tabelle
-  FOR SELECT USING (verein_id = get_my_verein_id());
-
-CREATE POLICY "neue_tabelle_write_admin" ON neue_tabelle
-  FOR ALL USING (verein_id = get_my_verein_id() AND is_admin());
-```
-
-### Pflicht beim INSERT in der App
-
-```javascript
-await sb.from("neue_tabelle").insert({
-  verein_id: tenant.id,  // IMMER mitgeben
-  // ... Felder ...
-});
-```
-
-### Hilfsfunktionen (bereits in DB definiert)
-
-- `get_my_verein_id()` — gibt verein_id des eingeloggten Users zurück
-- `get_my_role()` — gibt Rolle des eingeloggten Users zurück
-- `is_admin()` — true wenn administrator oder administration
-- `is_trainer()` — true wenn trainer
-
-### Policy-Muster nach Zugriffstyp
-
-| Typ | SELECT | INSERT/UPDATE/DELETE |
-|-----|--------|----------------------|
-| Vereinskonfiguration | alle im Verein | nur is_admin() |
-| Mitgliederdaten | admin/trainer/funktionaer | nur is_admin() |
-| Persönliche Daten | benutzer_id = auth.uid() | benutzer_id = auth.uid() |
-| Veranstaltungen | alle im Verein | admin/trainer/funktionaer |
-| Audit/Log | nur is_admin() | System (kein Check) |
-
 
 ## Bewertungs-Prompt
 
@@ -1101,31 +1186,3 @@ Fokus: [optional]
 - Demo-Daten entfernen aus `portal_pwa.jsx`/`demoData.js`
 - ARCHITECTURE.md Phase 1 (Foundation/domains refactor) nicht gestartet
 - Portalverwaltung Mitglieder-Konfiguration Tab (CRUD + Matrizen)
-
-## Post-Refactoring Pflicht-Workflow
-
-Nach **jedem** grossen Refactoring (Auslagern von Komponenten, Hooks, Dateien verschieben):
-
-```bash
-# 1. Fehlende Konstanten-Imports prüfen
-npm run check:imports
-
-# 2. Automatisch fixen
-node scripts/check-imports.mjs --fix
-
-# 3. Typen und Build verifizieren
-npm run typecheck
-npm run build
-```
-
-**Warum:** Konstanten aus `constants.js` (GB, ACCENT, FONT, R, etc.) wurden früher implizit
-durch `clubcampus.jsx` geerbt. Seit dem Refactoring ist jedes Modul eigenständig und muss
-Konstanten explizit importieren. Das Skript findet fehlende Imports automatisch.
-
-**Script:** `scripts/check-imports.mjs` (prüfen, mit `--fix` auto-fix). Ersetzt die
-früheren Python-Skripte — die lasen noch `src/constants.js` und setzten eine
-Python-Installation voraus. Für `.ts`/`.tsx`-Dateien findet `npm run typecheck`
-dasselbe Problem zuverlässiger; das Skript deckt die noch nicht migrierten
-`.js`/`.jsx`-Dateien ab.
-
-**Claude macht dies automatisch** am Ende jeder Session die ein Refactoring enthält.
