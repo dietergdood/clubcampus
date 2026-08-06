@@ -25,6 +25,8 @@ src/
       permissions.js                ← canEdit/canDelete/canExport pro Modul
       funktionaerStufen.ts          ← Stufe für Rolle `funktionaer` aus portal_funktionen/-gruppen
     person/
+      personService.ts              ← FLACHE FASSADE: flacheZeile/flacheZeilen/verteileFelder,
+                                       PERSON_FELDER. Personendaten NIE direkt aus `mitglieder`
       personTypes.ts                ← toPerson() Normalisierer
       personUtils.ts                ← vollname(), initials(), age(), formatDatum(), LAENDER, getLandName
     roles/
@@ -65,8 +67,10 @@ src/
       teamService.js                ← fetchTeams(), createTeam(), updateTeam()
       useTeams.js                   ← Hook: teams, loading, reload
     members/                        ← MitgliederModul aufgeteilt
-      ArchivView.jsx                ← Archiv-Tab (reaktivieren, löschen) — nutzt ListView
-      ElternListView.jsx            ← Eltern-Tab (Liste) — nutzt ListView
+      ArchivView.tsx                ← Archiv-Tab (reaktivieren, löschen) — nutzt ListView
+      ElternListView.tsx            ← Eltern-Tab (Liste) — nutzt ListView
+      SupporterListView.tsx         ← Supporter-Tab — dieselben Bausteine wie die Mitgliederliste
+                                       (ALL_COLS, makeMemberRenderCell, filterMembers, sortMembers)
       ElternkontaktModal.tsx        ← Elternkontakt anlegen/bearbeiten/löschen; ElternFelder +
                                        validateElternkontakt werden von ElternSucheModal mitbenutzt
       ElternKinderSektion.tsx       ← verknüpfte Kinder eines Elternteils: anzeigen, hinzufügen,
@@ -559,6 +563,33 @@ Beide hingen am Mitglied und galten damit für **alle** Teams. Im Bestand war da
 **Diese Lücke bleibt bewusst offen.** Sie steht jetzt als `kinderVonElternteil()` an **einer** Stelle in `getProfilCheck` statt an dreien und liefert eine leere Liste, mit Begründung im Kommentar. Sie über `eltern_kinder` richtig zu lesen ist eine Verhaltensänderung — Eltern sähen plötzlich Hinweise, die sie nie gesehen haben — und deshalb ein eigener Schritt.
 
 `datenstatus` war auch inhaltlich kaputt: drei Werte in uneinheitlicher Schreibweise („geprüft" 316×, „ausstehend" 183×, „Vollständig" 17×), ohne feste Werteliste.
+
+### Supporter gehören nicht in die Mitgliederliste (05.08.2026)
+
+Etappe 5 hat Supporter eine Zeile in `mitglieder` gegeben, damit sie überhaupt auffindbar sind. Damit erschienen sie in der Mitgliederliste — der Zähler „Aktive" stimmte nicht mehr, Auswertungen zählten sie mit, und beim Anschreiben landeten sie in Gruppen, in die sie nicht gehören.
+
+`MitgliederModul` trennt jetzt nach `mitgliedschaft !== "Supporter"`, und ein vierter Tab (`SupporterListView`) zeigt sie eigens. Er erscheint nur, wenn es welche gibt.
+
+**Dieselben Bausteine wie die Mitgliederliste**, nicht nachgebaut: `ALL_COLS` für die Spalten, `makeMemberRenderCell` für die Zellen, `filterMembers`, `sortMembers`, `buildGroups`. Ein Supporter **ist** eine `MemberRow`. Eigene Nachbauten wären ein zweiter Ort, an dem Suche, Sortierung und Gruppierung auseinanderlaufen können — der erste Anlauf hatte genau das, und es kostete drei Korrekturrunden.
+
+Anders ist nur die **Auswahl**: keine `savedViews` (die Vorlagen bestehen aus Spalten, die es hier nicht gibt), keine `groupOptionsMore` (Datenprüfung, Geschlecht, Nationalität hat ein Gönner nicht).
+
+⚠ **Das ist ein Symptom, keine Lösung.** Ob ein Supporter überhaupt eine Mitgliedschaft haben soll, ist offen — siehe `CLAUDE.md`, Abschnitt „Was ist ein Supporter?".
+
+### Elternteil verknüpfen: die Suche
+
+`sucheElternkontakte()` durchsucht seit Etappe 3 **alle Personen des Vereins**, nicht nur die bereits verknüpften Elternteile. Damit findet man ein Aktivmitglied, das Vater wird, und muss es nicht ein zweites Mal erfassen — genau die Dublette, die Etappe 2a auflösen musste.
+
+**Mehrere Wörter** wirken in beliebiger Reihenfolge: ein `.or()` pro Wort, und PostgREST verknüpft mehrere `.or()`-Aufrufe mit UND. „kaiser adrian" und „adrian kaiser" finden dasselbe.
+
+**Zwei Ausschlüsse, und nur diese zwei:**
+
+1. Das Kind selbst — niemand ist sein eigener Elternteil.
+2. Der Zirkel — ist das Kind bereits Elternteil dieser Person, darf sie nicht umgekehrt sein Elternteil werden.
+
+⚠ **Nicht ausgeschlossen wird, wer irgendwo sonst als Kind eingetragen ist.** Ein erwachsenes Mitglied, dessen Eltern ebenfalls im Verein sind, ist selbst ein Kind — und trotzdem Vater seiner eigenen Kinder. Ein solcher Filter war am 05.08.2026 kurz drin und liess den gesuchten Adrian Kaiser verschwinden.
+
+Die E-Mail steht im Modal auf einer **eigenen Zeile**. Hing sie an der Beziehung, fehlte sie bei jeder Person, die noch kein Elternteil ist — also genau bei denen, die man hier sucht.
 
 ### Die Sicht `portal_zugang` — die eine Ausnahme
 

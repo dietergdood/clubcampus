@@ -4,7 +4,7 @@ Der Personen-Umbau, vollständig. Dazu ein gutes Dutzend stiller Fehler, die
 niemand gemeldet hatte, weil sie nichts kaputtmachten — sondern nur das
 Falsche taten.
 
-**Tests: 254 → 371.**
+**Tests: 254 → 372.**
 
 ---
 
