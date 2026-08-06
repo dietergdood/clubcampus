@@ -252,25 +252,38 @@ export async function sucheElternkontakte(
     .limit(20);
   if (error) console.error("sucheElternkontakte error:", error);
 
-  /* Wer selbst ein Kind ist, kommt als Elternteil nicht in Frage — sonst
-     liesse sich Otto Kaiser als Elternteil seines eigenen Vaters eintragen.
-     Und das Kind, fuer das gerade gesucht wird, erst recht nicht. */
+  /* Zwei Ausschluesse, und nur diese zwei:
+
+     1. Das Kind selbst — niemand ist sein eigener Elternteil.
+     2. Zirkel: Ist das Kind bereits Elternteil DIESER Person, darf sie nicht
+        umgekehrt sein Elternteil werden.
+
+     ⚠ NICHT ausgeschlossen wird, wer irgendwo sonst als Kind eingetragen ist.
+     Ein erwachsenes Mitglied, dessen Eltern ebenfalls im Verein sind, ist
+     selbst ein Kind — und trotzdem Vater seiner eigenen Kinder. Ein solcher
+     Filter liess am 05.08.2026 den gesuchten Adrian Kaiser verschwinden. */
   let eigenePersonId: string | null = null;
+  const zirkel = new Set<string>();
   if (fuerMitgliedId) {
     const { data: kind } = await sb.from("mitglieder")
       .select("person_id").eq("id", fuerMitgliedId).maybeSingle();
     eigenePersonId = kind?.person_id ?? null;
+
+    if (eigenePersonId) {
+      /* Wessen Elternteil ist dieses Kind bereits? Deren Personen duerfen
+         nicht ihrerseits sein Elternteil werden. */
+      const { data: umgekehrt } = await sb.from("eltern_kinder")
+        .select("mitglieder:mitglied_id(person_id)")
+        .eq("person_id", eigenePersonId);
+      for (const z of umgekehrt || []) {
+        const pid = (z.mitglieder as { person_id?: string | null } | null)?.person_id;
+        if (pid) zirkel.add(pid);
+      }
+    }
   }
-  const { data: kinderZeilen } = await sb.from("eltern_kinder")
-    .select("mitglieder:mitglied_id(person_id)");
-  const istKind = new Set(
-    (kinderZeilen || [])
-      .map(z => (z.mitglieder as { person_id?: string | null } | null)?.person_id)
-      .filter((v): v is string => Boolean(v)),
-  );
 
   return (data || [])
-    .filter(p => p.id !== eigenePersonId && !istKind.has(p.id))
+    .filter(p => p.id !== eigenePersonId && !zirkel.has(p.id))
     .slice(0, 10)
     .map(p => ({
     id:        p.id,

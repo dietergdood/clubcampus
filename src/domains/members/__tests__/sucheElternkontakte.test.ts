@@ -46,12 +46,26 @@ describe("sucheElternkontakte", () => {
     expect(treffer.map(t => t.id)).toEqual(["p2"]);
   });
 
-  it("schliesst aus, wer bereits Kind ist", async () => {
-    /* Otto Kaiser ist das Kind seines Vaters — er kommt als Elternteil nicht
-       in Frage, auch nicht bei einem anderen Kind. */
+  it("schliesst NICHT aus, wer anderswo als Kind eingetragen ist", async () => {
+    /* Ein erwachsenes Mitglied, dessen Eltern ebenfalls im Verein sind, ist
+       selbst ein Kind — und trotzdem Vater seiner eigenen Kinder. Ein
+       Filter darauf liess am 05.08.2026 den gesuchten Adrian Kaiser
+       verschwinden. */
     const sb = makeSb({
       "personen.select":      { data: [person("p1", "Adrian", "Kaiser"), person("p2", "Otto", "Kaiser")] },
-      "mitglieder.select":    { data: { person_id: null } },
+      "mitglieder.select":    { data: { person_id: "p9" } },
+      "eltern_kinder.select": { data: [] },
+    });
+    const treffer = await sucheElternkontakte(sb as never, "v-1", "kaiser", 42);
+    expect(treffer.map(t => t.id)).toEqual(["p1", "p2"]);
+  });
+
+  it("schliesst den Zirkel aus", async () => {
+    /* Ist das Kind bereits Elternteil von Otto, darf Otto nicht umgekehrt
+       sein Elternteil werden. */
+    const sb = makeSb({
+      "personen.select":      { data: [person("p1", "Adrian", "Kaiser"), person("p2", "Otto", "Kaiser")] },
+      "mitglieder.select":    { data: { person_id: "p9" } },
       "eltern_kinder.select": { data: [{ mitglieder: { person_id: "p2" } }] },
     });
     const treffer = await sucheElternkontakte(sb as never, "v-1", "kaiser", 42);
