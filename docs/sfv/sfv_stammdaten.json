@@ -1,0 +1,2897 @@
+{
+ "Saison": [
+  {
+   "sSaisonID": "2025",
+   "sdtDatumVon": "2024-07-01 00:00:00",
+   "sdtDatumBis": "2025-06-30 23:59:00"
+  }
+ ],
+ "Liga": [
+  {
+   "sLigaID": "1",
+   "strLigabezeichnung": " ",
+   "strLigaAbkuerzung": "-"
+  },
+  {
+   "sLigaID": "1000",
+   "strLigabezeichnung": "A-Team",
+   "strLigaAbkuerzung": "A"
+  },
+  {
+   "sLigaID": "1020",
+   "strLigabezeichnung": "B-Team",
+   "strLigaAbkuerzung": "B"
+  },
+  {
+   "sLigaID": "1050",
+   "strLigabezeichnung": "Olympic-Team",
+   "strLigaAbkuerzung": "Olymp"
+  },
+  {
+   "sLigaID": "2000",
+   "strLigabezeichnung": "u-21-Team",
+   "strLigaAbkuerzung": "u-21"
+  },
+  {
+   "sLigaID": "2010",
+   "strLigabezeichnung": "u-20-Team",
+   "strLigaAbkuerzung": "u-20"
+  },
+  {
+   "sLigaID": "2020",
+   "strLigabezeichnung": "u-19-Team",
+   "strLigaAbkuerzung": "u-19"
+  },
+  {
+   "sLigaID": "2030",
+   "strLigabezeichnung": "u-18-Team",
+   "strLigaAbkuerzung": "u-18"
+  },
+  {
+   "sLigaID": "2040",
+   "strLigabezeichnung": "u-17-Team",
+   "strLigaAbkuerzung": "u-17"
+  },
+  {
+   "sLigaID": "2050",
+   "strLigabezeichnung": "u-16-Team",
+   "strLigaAbkuerzung": "u-16"
+  },
+  {
+   "sLigaID": "2060",
+   "strLigabezeichnung": "u-15-Team",
+   "strLigaAbkuerzung": "u-15"
+  },
+  {
+   "sLigaID": "3000",
+   "strLigabezeichnung": "A-Team (Frauen)",
+   "strLigaAbkuerzung": "A (F)"
+  },
+  {
+   "sLigaID": "3005",
+   "strLigabezeichnung": "u-23-Team (Frauen)",
+   "strLigaAbkuerzung": "u-23 (F)"
+  },
+  {
+   "sLigaID": "3010",
+   "strLigabezeichnung": "u-20-Team (Frauen)",
+   "strLigaAbkuerzung": "u-20 (F)"
+  },
+  {
+   "sLigaID": "3020",
+   "strLigabezeichnung": "u-19-Team (Frauen)",
+   "strLigaAbkuerzung": "u-19 (F)"
+  },
+  {
+   "sLigaID": "3030",
+   "strLigabezeichnung": "u-18-Team (Frauen)",
+   "strLigaAbkuerzung": "u-18 (F)"
+  },
+  {
+   "sLigaID": "3040",
+   "strLigabezeichnung": "u-17-Team (Frauen)",
+   "strLigaAbkuerzung": "u-17 (F)"
+  },
+  {
+   "sLigaID": "3050",
+   "strLigabezeichnung": "u-16-Team (Frauen)",
+   "strLigaAbkuerzung": "u-16 (F)"
+  },
+  {
+   "sLigaID": "3060",
+   "strLigabezeichnung": "u-15-Team (Frauen)",
+   "strLigaAbkuerzung": "u-15 (F)"
+  },
+  {
+   "sLigaID": "3070",
+   "strLigabezeichnung": "u-14-Team (Frauen)",
+   "strLigaAbkuerzung": "u-14 (F)"
+  },
+  {
+   "sLigaID": "4000",
+   "strLigabezeichnung": "Futsal A-Team",
+   "strLigaAbkuerzung": "Futsal A"
+  },
+  {
+   "sLigaID": "4100",
+   "strLigabezeichnung": "Beach Soccer A-Team",
+   "strLigaAbkuerzung": "SBSAT"
+  },
+  {
+   "sLigaID": "5110",
+   "strLigabezeichnung": "Champions League",
+   "strLigaAbkuerzung": "UEFA-CL"
+  },
+  {
+   "sLigaID": "5210",
+   "strLigabezeichnung": "Cup der Cup-Sieger",
+   "strLigaAbkuerzung": "UEFA-CCS"
+  },
+  {
+   "sLigaID": "5310",
+   "strLigabezeichnung": "UEFA-Cup",
+   "strLigaAbkuerzung": "UEFA-C"
+  },
+  {
+   "sLigaID": "5410",
+   "strLigabezeichnung": "UEFA-Intertoto-Cup",
+   "strLigaAbkuerzung": "UIC"
+  },
+  {
+   "sLigaID": "6100",
+   "strLigabezeichnung": "efootball",
+   "strLigaAbkuerzung": "efootball"
+  },
+  {
+   "sLigaID": "11010",
+   "strLigabezeichnung": "Nationalliga A",
+   "strLigaAbkuerzung": "NLA"
+  },
+  {
+   "sLigaID": "11011",
+   "strLigabezeichnung": "Super League",
+   "strLigaAbkuerzung": "SL"
+  },
+  {
+   "sLigaID": "11015",
+   "strLigabezeichnung": "Nationalliga A/B",
+   "strLigaAbkuerzung": "NL A/B"
+  },
+  {
+   "sLigaID": "11016",
+   "strLigabezeichnung": "Challenge League",
+   "strLigaAbkuerzung": "ChL"
+  },
+  {
+   "sLigaID": "11020",
+   "strLigabezeichnung": "Nationalliga B",
+   "strLigaAbkuerzung": "NLB"
+  },
+  {
+   "sLigaID": "12005",
+   "strLigabezeichnung": "Promotion League",
+   "strLigaAbkuerzung": "PL"
+  },
+  {
+   "sLigaID": "12010",
+   "strLigabezeichnung": "1. Liga",
+   "strLigaAbkuerzung": "1"
+  },
+  {
+   "sLigaID": "13000",
+   "strLigabezeichnung": "2. Liga interregional",
+   "strLigaAbkuerzung": "2. Int."
+  },
+  {
+   "sLigaID": "13010",
+   "strLigabezeichnung": "2. Liga",
+   "strLigaAbkuerzung": "2"
+  },
+  {
+   "sLigaID": "13011",
+   "strLigabezeichnung": "2. Liga",
+   "strLigaAbkuerzung": "2"
+  },
+  {
+   "sLigaID": "13012",
+   "strLigabezeichnung": "2. Liga",
+   "strLigaAbkuerzung": "2"
+  },
+  {
+   "sLigaID": "13013",
+   "strLigabezeichnung": "2. Liga (FAEW)",
+   "strLigaAbkuerzung": "2. (FAEW)"
+  },
+  {
+   "sLigaID": "13020",
+   "strLigabezeichnung": "3. Liga",
+   "strLigaAbkuerzung": "3"
+  },
+  {
+   "sLigaID": "13021",
+   "strLigabezeichnung": "3. Liga 1. Stärkeklasse",
+   "strLigaAbkuerzung": "3. 1/S"
+  },
+  {
+   "sLigaID": "13022",
+   "strLigabezeichnung": "3. Liga 2. Stärkeklasse",
+   "strLigaAbkuerzung": "3. 2/S"
+  },
+  {
+   "sLigaID": "13029",
+   "strLigabezeichnung": "3. Liga",
+   "strLigaAbkuerzung": "3"
+  },
+  {
+   "sLigaID": "13030",
+   "strLigabezeichnung": "4. Liga",
+   "strLigaAbkuerzung": "4"
+  },
+  {
+   "sLigaID": "13040",
+   "strLigabezeichnung": "5. Liga",
+   "strLigaAbkuerzung": "5"
+  },
+  {
+   "sLigaID": "14000",
+   "strLigabezeichnung": "ICE-Cup",
+   "strLigaAbkuerzung": "ICE-C"
+  },
+  {
+   "sLigaID": "14001",
+   "strLigabezeichnung": "Cup AJF (2./3. Liga)",
+   "strLigaAbkuerzung": "C/AJF 2/3"
+  },
+  {
+   "sLigaID": "14002",
+   "strLigabezeichnung": "Cup AJF (4./5. Liga)",
+   "strLigaAbkuerzung": "C/AJF 4/5"
+  },
+  {
+   "sLigaID": "14010",
+   "strLigabezeichnung": "viva care cup attivi (4./5. Liga)",
+   "strLigaAbkuerzung": "C/FTC 4/5"
+  },
+  {
+   "sLigaID": "14100",
+   "strLigabezeichnung": "Schaffhauser Cup",
+   "strLigaAbkuerzung": "SH Cup"
+  },
+  {
+   "sLigaID": "14800",
+   "strLigabezeichnung": "Jugendliga",
+   "strLigaAbkuerzung": "JL"
+  },
+  {
+   "sLigaID": "14850",
+   "strLigabezeichnung": "Junioren A+",
+   "strLigaAbkuerzung": "Jun.A+"
+  },
+  {
+   "sLigaID": "14900",
+   "strLigabezeichnung": "Kleinfeldfussball",
+   "strLigaAbkuerzung": "F6-7"
+  },
+  {
+   "sLigaID": "15010",
+   "strLigabezeichnung": "U-23",
+   "strLigaAbkuerzung": "U-23"
+  },
+  {
+   "sLigaID": "15030",
+   "strLigabezeichnung": "U-20",
+   "strLigaAbkuerzung": "U-20"
+  },
+  {
+   "sLigaID": "15040",
+   "strLigabezeichnung": "U-19",
+   "strLigaAbkuerzung": "U-19"
+  },
+  {
+   "sLigaID": "15041",
+   "strLigabezeichnung": "U-19 Elite",
+   "strLigaAbkuerzung": "U-19 E"
+  },
+  {
+   "sLigaID": "15045",
+   "strLigabezeichnung": "U-19/U-18",
+   "strLigaAbkuerzung": "U-19/18"
+  },
+  {
+   "sLigaID": "15050",
+   "strLigabezeichnung": "U-18",
+   "strLigaAbkuerzung": "U-18"
+  },
+  {
+   "sLigaID": "15052",
+   "strLigabezeichnung": "Schweizer Cup U-18",
+   "strLigaAbkuerzung": "SC U-18"
+  },
+  {
+   "sLigaID": "15054",
+   "strLigabezeichnung": "U-18 Winter Cup",
+   "strLigaAbkuerzung": "U-18 WC"
+  },
+  {
+   "sLigaID": "15060",
+   "strLigabezeichnung": "U-17",
+   "strLigaAbkuerzung": "U-17"
+  },
+  {
+   "sLigaID": "15061",
+   "strLigabezeichnung": "U-17 Elite",
+   "strLigaAbkuerzung": "U-17 E"
+  },
+  {
+   "sLigaID": "15065",
+   "strLigabezeichnung": "U-16 Elite",
+   "strLigaAbkuerzung": "U-16 E"
+  },
+  {
+   "sLigaID": "15070",
+   "strLigabezeichnung": "U-16",
+   "strLigaAbkuerzung": "U-16"
+  },
+  {
+   "sLigaID": "15072",
+   "strLigabezeichnung": "Schweizer Cup U-16",
+   "strLigaAbkuerzung": "SC U-16"
+  },
+  {
+   "sLigaID": "15079",
+   "strLigabezeichnung": "FE-14 (Partnerschaften)",
+   "strLigaAbkuerzung": "FE-14/P"
+  },
+  {
+   "sLigaID": "15080",
+   "strLigabezeichnung": "U-15",
+   "strLigaAbkuerzung": "U-15"
+  },
+  {
+   "sLigaID": "15081",
+   "strLigabezeichnung": "FE-14 (11/11)",
+   "strLigaAbkuerzung": "FE-14/11"
+  },
+  {
+   "sLigaID": "15082",
+   "strLigabezeichnung": "U-14",
+   "strLigaAbkuerzung": "U-14"
+  },
+  {
+   "sLigaID": "15083",
+   "strLigabezeichnung": "FE-14 (9/9)",
+   "strLigaAbkuerzung": "FE-14/9"
+  },
+  {
+   "sLigaID": "15084",
+   "strLigabezeichnung": "U-13",
+   "strLigaAbkuerzung": "U-13"
+  },
+  {
+   "sLigaID": "15085",
+   "strLigabezeichnung": "FE-13",
+   "strLigaAbkuerzung": "FE-13"
+  },
+  {
+   "sLigaID": "15086",
+   "strLigabezeichnung": "FE-13 (Partnerschaften)",
+   "strLigaAbkuerzung": "FE-13/P"
+  },
+  {
+   "sLigaID": "15087",
+   "strLigabezeichnung": "FE-13",
+   "strLigaAbkuerzung": "FE-13"
+  },
+  {
+   "sLigaID": "15088",
+   "strLigabezeichnung": "U-15 (Partnerschaftsspiele)",
+   "strLigaAbkuerzung": "U-15 P"
+  },
+  {
+   "sLigaID": "15089",
+   "strLigabezeichnung": "NIKE-Premier-Cup",
+   "strLigaAbkuerzung": "NIKE-P-C"
+  },
+  {
+   "sLigaID": "15090",
+   "strLigabezeichnung": "U-14 (RA)",
+   "strLigaAbkuerzung": "U-14/RA"
+  },
+  {
+   "sLigaID": "15091",
+   "strLigabezeichnung": "FE-13 (Partnerschaften)",
+   "strLigaAbkuerzung": "FE-13/P"
+  },
+  {
+   "sLigaID": "15093",
+   "strLigabezeichnung": "FE-13 (RA)",
+   "strLigaAbkuerzung": "FE-13/RA"
+  },
+  {
+   "sLigaID": "15094",
+   "strLigabezeichnung": "U-13 (RA)",
+   "strLigaAbkuerzung": "U-13/RA"
+  },
+  {
+   "sLigaID": "15095",
+   "strLigabezeichnung": "U-13 (RA) Talente",
+   "strLigaAbkuerzung": "U-13/RA T"
+  },
+  {
+   "sLigaID": "15096",
+   "strLigabezeichnung": "U-12 (RA)",
+   "strLigaAbkuerzung": "U-12/RA"
+  },
+  {
+   "sLigaID": "15097",
+   "strLigabezeichnung": "U-12 (RA) Talente",
+   "strLigaAbkuerzung": "U-12/RA T"
+  },
+  {
+   "sLigaID": "15098",
+   "strLigabezeichnung": "U-15 (Niveauspiele)",
+   "strLigaAbkuerzung": "U-15 N"
+  },
+  {
+   "sLigaID": "15180",
+   "strLigabezeichnung": "Cup AJF (Junioren A)",
+   "strLigaAbkuerzung": "C/JA-AJF"
+  },
+  {
+   "sLigaID": "15191",
+   "strLigabezeichnung": "Junioren A-Cup SEFV (1. Phase)",
+   "strLigaAbkuerzung": "C/JA-SEFV"
+  },
+  {
+   "sLigaID": "15203",
+   "strLigabezeichnung": "Youth League A",
+   "strLigaAbkuerzung": "YL A"
+  },
+  {
+   "sLigaID": "15204",
+   "strLigabezeichnung": "Junior League A",
+   "strLigaAbkuerzung": "JL A"
+  },
+  {
+   "sLigaID": "15205",
+   "strLigabezeichnung": "Junioren A Meister",
+   "strLigaAbkuerzung": "Jun.A M"
+  },
+  {
+   "sLigaID": "15208",
+   "strLigabezeichnung": "Junioren A Promotion",
+   "strLigaAbkuerzung": "Jun.A P"
+  },
+  {
+   "sLigaID": "15209",
+   "strLigabezeichnung": "Youth League A - Futsal Cup",
+   "strLigaAbkuerzung": "YL A (FuC)"
+  },
+  {
+   "sLigaID": "15210",
+   "strLigabezeichnung": "Junioren A",
+   "strLigaAbkuerzung": "Jun.A"
+  },
+  {
+   "sLigaID": "15211",
+   "strLigabezeichnung": "Junioren A 1. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.A 1/S"
+  },
+  {
+   "sLigaID": "15212",
+   "strLigabezeichnung": "Junioren A 2. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.A 2/S"
+  },
+  {
+   "sLigaID": "15213",
+   "strLigabezeichnung": "Junioren A 3. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.A 3/S"
+  },
+  {
+   "sLigaID": "15280",
+   "strLigabezeichnung": "Cup AJF (Junioren B)",
+   "strLigaAbkuerzung": "C/JB-AJF"
+  },
+  {
+   "sLigaID": "15291",
+   "strLigabezeichnung": "Junioren B-Cup SEFV (1. Phase)",
+   "strLigaAbkuerzung": "C/JB-SEFV"
+  },
+  {
+   "sLigaID": "15303",
+   "strLigabezeichnung": "Youth League B",
+   "strLigaAbkuerzung": "YL B"
+  },
+  {
+   "sLigaID": "15304",
+   "strLigabezeichnung": "Junior League B",
+   "strLigaAbkuerzung": "JL B"
+  },
+  {
+   "sLigaID": "15305",
+   "strLigabezeichnung": "Junioren B Meister",
+   "strLigaAbkuerzung": "Jun.B M"
+  },
+  {
+   "sLigaID": "15308",
+   "strLigabezeichnung": "Junioren B Promotion",
+   "strLigaAbkuerzung": "Jun.B P"
+  },
+  {
+   "sLigaID": "15309",
+   "strLigabezeichnung": "Youth League B - Futsal Cup",
+   "strLigaAbkuerzung": "YL B (FuC)"
+  },
+  {
+   "sLigaID": "15310",
+   "strLigabezeichnung": "Junioren B",
+   "strLigaAbkuerzung": "Jun.B"
+  },
+  {
+   "sLigaID": "15311",
+   "strLigabezeichnung": "Junioren B 1. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.B 1/S"
+  },
+  {
+   "sLigaID": "15312",
+   "strLigabezeichnung": "Junioren B 2. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.B 2/S"
+  },
+  {
+   "sLigaID": "15313",
+   "strLigabezeichnung": "Junioren B 3. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.B 3/S"
+  },
+  {
+   "sLigaID": "15315",
+   "strLigabezeichnung": "Junioren B+",
+   "strLigaAbkuerzung": "Jun.B+"
+  },
+  {
+   "sLigaID": "15380",
+   "strLigabezeichnung": "Cup AJF (Junioren C)",
+   "strLigaAbkuerzung": "C/JC-AJF"
+  },
+  {
+   "sLigaID": "15390",
+   "strLigabezeichnung": "Junioren C-Cup FVBO (1. Phase)",
+   "strLigaAbkuerzung": "C/JC-FVBO"
+  },
+  {
+   "sLigaID": "15391",
+   "strLigabezeichnung": "Junioren C-Cup SEFV (1. Phase)",
+   "strLigaAbkuerzung": "C/JC-SEFV"
+  },
+  {
+   "sLigaID": "15403",
+   "strLigabezeichnung": "Youth League C",
+   "strLigaAbkuerzung": "YL C"
+  },
+  {
+   "sLigaID": "15404",
+   "strLigabezeichnung": "Junior League C",
+   "strLigaAbkuerzung": "JL C"
+  },
+  {
+   "sLigaID": "15405",
+   "strLigabezeichnung": "Junioren C Meister",
+   "strLigaAbkuerzung": "Jun.C M"
+  },
+  {
+   "sLigaID": "15408",
+   "strLigabezeichnung": "Junioren C Promotion",
+   "strLigaAbkuerzung": "Jun.C P"
+  },
+  {
+   "sLigaID": "15409",
+   "strLigabezeichnung": "Youth League C - Futsal Cup",
+   "strLigaAbkuerzung": "YL C (FuC)"
+  },
+  {
+   "sLigaID": "15410",
+   "strLigabezeichnung": "Junioren C",
+   "strLigaAbkuerzung": "Jun.C"
+  },
+  {
+   "sLigaID": "15411",
+   "strLigabezeichnung": "Junioren C 1. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.C 1/S"
+  },
+  {
+   "sLigaID": "15412",
+   "strLigabezeichnung": "Junioren C 2. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.C 2/S"
+  },
+  {
+   "sLigaID": "15413",
+   "strLigabezeichnung": "Junioren C 3. Stärkeklasse",
+   "strLigaAbkuerzung": "Jun.C3/S"
+  },
+  {
+   "sLigaID": "15415",
+   "strLigabezeichnung": "Junioren C/9",
+   "strLigaAbkuerzung": "J/9er"
+  },
+  {
+   "sLigaID": "15480",
+   "strLigabezeichnung": "Cup AJF (Junioren D)",
+   "strLigaAbkuerzung": "C/JD-AJF"
+  },
+  {
+   "sLigaID": "15481",
+   "strLigabezeichnung": "Cup AJF (Junioren D/9)",
+   "strLigaAbkuerzung": "C/JD/9-AJF"
+  },
+  {
+   "sLigaID": "15482",
+   "strLigabezeichnung": "Cup AJF (Junioren D/7)",
+   "strLigaAbkuerzung": "C/JD/-AJF"
+  },
+  {
+   "sLigaID": "15490",
+   "strLigabezeichnung": "U-13 Region",
+   "strLigaAbkuerzung": "U-13 (R)"
+  },
+  {
+   "sLigaID": "15492",
+   "strLigabezeichnung": "U-13 Talentmeisterschaft",
+   "strLigaAbkuerzung": "U-13 (TM)"
+  },
+  {
+   "sLigaID": "15509",
+   "strLigabezeichnung": "Junioren D/9 Kicker Talents",
+   "strLigaAbkuerzung": "Jun.D/9 KT"
+  },
+  {
+   "sLigaID": "15510",
+   "strLigabezeichnung": "Junioren D",
+   "strLigaAbkuerzung": "Jun.D"
+  },
+  {
+   "sLigaID": "15511",
+   "strLigabezeichnung": "Junioren D/9 Promotion",
+   "strLigaAbkuerzung": "Jun.D/9 P"
+  },
+  {
+   "sLigaID": "15512",
+   "strLigabezeichnung": "Junioren D/9",
+   "strLigaAbkuerzung": "Jun.D/9"
+  },
+  {
+   "sLigaID": "15513",
+   "strLigabezeichnung": "Junioren D/9 Formation",
+   "strLigaAbkuerzung": "Jun.D/9 F"
+  },
+  {
+   "sLigaID": "15514",
+   "strLigabezeichnung": "Junioren D/7",
+   "strLigaAbkuerzung": "Jun.D/7"
+  },
+  {
+   "sLigaID": "15515",
+   "strLigabezeichnung": "Junioren D/11 Promotion",
+   "strLigaAbkuerzung": "Jun.D/11 P"
+  },
+  {
+   "sLigaID": "15516",
+   "strLigabezeichnung": "D9 Élite Régionale",
+   "strLigaAbkuerzung": "D/9 ER"
+  },
+  {
+   "sLigaID": "15517",
+   "strLigabezeichnung": "Junioren D/9 Footeco",
+   "strLigaAbkuerzung": "Jun.D/9 FE"
+  },
+  {
+   "sLigaID": "15518",
+   "strLigabezeichnung": "FRI - Talents AFF",
+   "strLigaAbkuerzung": "FRI-T-AFF"
+  },
+  {
+   "sLigaID": "15519",
+   "strLigabezeichnung": "Junioren D/9 Talente",
+   "strLigaAbkuerzung": "Jun.D/9 T"
+  },
+  {
+   "sLigaID": "15520",
+   "strLigabezeichnung": "Junioren D/9 (Spielzeit 3/3)",
+   "strLigaAbkuerzung": "J D/9 3/3"
+  },
+  {
+   "sLigaID": "15521",
+   "strLigabezeichnung": "Footeco meet Junioren D",
+   "strLigaAbkuerzung": "Footeco/D9"
+  },
+  {
+   "sLigaID": "15523",
+   "strLigabezeichnung": "Junioren D/9",
+   "strLigaAbkuerzung": "Jun.D/9"
+  },
+  {
+   "sLigaID": "15524",
+   "strLigabezeichnung": "Junioren D/7",
+   "strLigaAbkuerzung": "Jun.D/7"
+  },
+  {
+   "sLigaID": "15580",
+   "strLigabezeichnung": "FE-12",
+   "strLigaAbkuerzung": "FE-12"
+  },
+  {
+   "sLigaID": "15581",
+   "strLigabezeichnung": "FE-12",
+   "strLigaAbkuerzung": "FE-12"
+  },
+  {
+   "sLigaID": "15585",
+   "strLigabezeichnung": "FE-12 (Stützpunkte)",
+   "strLigaAbkuerzung": "FE-12/SP"
+  },
+  {
+   "sLigaID": "15588",
+   "strLigabezeichnung": "FE-12 (Stützpunkte)",
+   "strLigaAbkuerzung": "FE-12/SP"
+  },
+  {
+   "sLigaID": "15605",
+   "strLigabezeichnung": "Junioren E-11 (9/9)",
+   "strLigaAbkuerzung": "E-11(9:9)"
+  },
+  {
+   "sLigaID": "15606",
+   "strLigabezeichnung": "Junioren E-11 (7/7)",
+   "strLigaAbkuerzung": "E-11(7:7)"
+  },
+  {
+   "sLigaID": "15610",
+   "strLigabezeichnung": "Junioren E",
+   "strLigaAbkuerzung": "Jun.E"
+  },
+  {
+   "sLigaID": "15611",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie E",
+   "strLigaAbkuerzung": "BRACK-CH PmF Kat E"
+  },
+  {
+   "sLigaID": "15620",
+   "strLigabezeichnung": "Junioren E (Spielzeit 3/3)",
+   "strLigaAbkuerzung": "Jun.E 3/3"
+  },
+  {
+   "sLigaID": "15710",
+   "strLigabezeichnung": "Junioren F",
+   "strLigaAbkuerzung": "Jun.F"
+  },
+  {
+   "sLigaID": "15711",
+   "strLigabezeichnung": "Junioren F/7",
+   "strLigaAbkuerzung": "Jun.F/7"
+  },
+  {
+   "sLigaID": "15712",
+   "strLigabezeichnung": "Junioren F/5",
+   "strLigaAbkuerzung": "Jun.F/5"
+  },
+  {
+   "sLigaID": "15713",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie F",
+   "strLigaAbkuerzung": "BRACK.CH PmF Kat F "
+  },
+  {
+   "sLigaID": "15810",
+   "strLigabezeichnung": "Piccolos",
+   "strLigaAbkuerzung": "J-P"
+  },
+  {
+   "sLigaID": "15820",
+   "strLigabezeichnung": "Junioren G",
+   "strLigaAbkuerzung": "Jun.G"
+  },
+  {
+   "sLigaID": "15821",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie G ",
+   "strLigaAbkuerzung": "BRACK.CH PmF Kat G "
+  },
+  {
+   "sLigaID": "17007",
+   "strLigabezeichnung": "Cup AJF (Senioren)",
+   "strLigaAbkuerzung": "-"
+  },
+  {
+   "sLigaID": "17010",
+   "strLigabezeichnung": "Senioren",
+   "strLigaAbkuerzung": "Sen"
+  },
+  {
+   "sLigaID": "17012",
+   "strLigabezeichnung": "Senioren Meister",
+   "strLigaAbkuerzung": "Sen.M"
+  },
+  {
+   "sLigaID": "17013",
+   "strLigabezeichnung": "Senioren Elite",
+   "strLigaAbkuerzung": "Sen.E"
+  },
+  {
+   "sLigaID": "17014",
+   "strLigabezeichnung": "Senioren Promotion",
+   "strLigaAbkuerzung": "Sen.P"
+  },
+  {
+   "sLigaID": "17015",
+   "strLigabezeichnung": "Senioren Zwischenklasse",
+   "strLigaAbkuerzung": "Sen.Z"
+  },
+  {
+   "sLigaID": "17016",
+   "strLigabezeichnung": "Senioren Regional",
+   "strLigaAbkuerzung": "Sen.R"
+  },
+  {
+   "sLigaID": "17017",
+   "strLigabezeichnung": "Senioren 1. Stärkeklasse",
+   "strLigaAbkuerzung": "Sen.1/S"
+  },
+  {
+   "sLigaID": "17018",
+   "strLigabezeichnung": "Senioren 2. Stärkeklasse",
+   "strLigaAbkuerzung": "Sen.2/S"
+  },
+  {
+   "sLigaID": "17030",
+   "strLigabezeichnung": "Senioren 30+",
+   "strLigaAbkuerzung": "Sen.30+"
+  },
+  {
+   "sLigaID": "17031",
+   "strLigabezeichnung": "Senioren 30+ Meister",
+   "strLigaAbkuerzung": "Sen.30+/M"
+  },
+  {
+   "sLigaID": "17032",
+   "strLigabezeichnung": "Senioren 30+ Elite",
+   "strLigaAbkuerzung": "Sen.30+/E"
+  },
+  {
+   "sLigaID": "17033",
+   "strLigabezeichnung": "Senioren 30+ Promotion",
+   "strLigaAbkuerzung": "Sen.30+/P"
+  },
+  {
+   "sLigaID": "17034",
+   "strLigabezeichnung": "Senioren 30+ Regional",
+   "strLigaAbkuerzung": "Sen.30+/R"
+  },
+  {
+   "sLigaID": "17110",
+   "strLigabezeichnung": "Veteranen",
+   "strLigaAbkuerzung": "Vet."
+  },
+  {
+   "sLigaID": "17112",
+   "strLigabezeichnung": "Veteranen Meister",
+   "strLigaAbkuerzung": "Vet.M"
+  },
+  {
+   "sLigaID": "17114",
+   "strLigabezeichnung": "Veteranen Promotion",
+   "strLigaAbkuerzung": "Vet.P"
+  },
+  {
+   "sLigaID": "17115",
+   "strLigabezeichnung": "Veteranen 1. Stärkeklasse",
+   "strLigaAbkuerzung": "Vet.1/S"
+  },
+  {
+   "sLigaID": "17116",
+   "strLigabezeichnung": "Veteranen Regional",
+   "strLigaAbkuerzung": "Vet.R"
+  },
+  {
+   "sLigaID": "17117",
+   "strLigabezeichnung": "Veteranen 2. Stärkeklasse",
+   "strLigaAbkuerzung": "Vet.2/S"
+  },
+  {
+   "sLigaID": "17118",
+   "strLigabezeichnung": "Veteranen II",
+   "strLigaAbkuerzung": "Vet.II"
+  },
+  {
+   "sLigaID": "17130",
+   "strLigabezeichnung": "Senioren 40+",
+   "strLigaAbkuerzung": "Sen.40+"
+  },
+  {
+   "sLigaID": "17131",
+   "strLigabezeichnung": "Senioren 40+ Meister",
+   "strLigaAbkuerzung": "Sen.40+/M"
+  },
+  {
+   "sLigaID": "17132",
+   "strLigabezeichnung": "Senioren 40+ Promotion",
+   "strLigaAbkuerzung": "Sen.40+/P"
+  },
+  {
+   "sLigaID": "17133",
+   "strLigabezeichnung": "Senioren 40+ 1. Stärkeklasse",
+   "strLigaAbkuerzung": "Sen.40+1/S"
+  },
+  {
+   "sLigaID": "17134",
+   "strLigabezeichnung": "Senioren 40+ Regional",
+   "strLigaAbkuerzung": "Sen.40+/R"
+  },
+  {
+   "sLigaID": "17135",
+   "strLigabezeichnung": "Senioren 40+ 2. Stärkeklasse",
+   "strLigaAbkuerzung": "Sen.40+2/S"
+  },
+  {
+   "sLigaID": "17139",
+   "strLigabezeichnung": "Senioren 40+ (9/9)",
+   "strLigaAbkuerzung": "Sen.40+/9"
+  },
+  {
+   "sLigaID": "17140",
+   "strLigabezeichnung": "Senioren 40+ (7/7)",
+   "strLigaAbkuerzung": "Sen.40+/7"
+  },
+  {
+   "sLigaID": "17141",
+   "strLigabezeichnung": "Senioren 40+ (7/7 - Ohne SR)",
+   "strLigaAbkuerzung": "Sen.40+/7*"
+  },
+  {
+   "sLigaID": "17150",
+   "strLigabezeichnung": "Veteranen II 7/er (FVRZ)",
+   "strLigaAbkuerzung": "Vet.7er ZH"
+  },
+  {
+   "sLigaID": "17160",
+   "strLigabezeichnung": "Senioren 50+/11",
+   "strLigaAbkuerzung": "Sen.50+/11"
+  },
+  {
+   "sLigaID": "17161",
+   "strLigabezeichnung": "Senioren 50+/7",
+   "strLigaAbkuerzung": "Sen.50+/7"
+  },
+  {
+   "sLigaID": "17170",
+   "strLigabezeichnung": "Senioren 50+ (7/7)",
+   "strLigaAbkuerzung": "Sen.50+/7"
+  },
+  {
+   "sLigaID": "17171",
+   "strLigabezeichnung": "Walking Football Senioren +60",
+   "strLigaAbkuerzung": "Sen.60+ Walking"
+  },
+  {
+   "sLigaID": "17210",
+   "strLigabezeichnung": "Super-Veteranen",
+   "strLigaAbkuerzung": "S-Vet."
+  },
+  {
+   "sLigaID": "17212",
+   "strLigabezeichnung": "Veteranen II 7/er",
+   "strLigaAbkuerzung": "Vet.7er"
+  },
+  {
+   "sLigaID": "17230",
+   "strLigabezeichnung": "Senioren 50+",
+   "strLigaAbkuerzung": "Sen.50+"
+  },
+  {
+   "sLigaID": "17231",
+   "strLigabezeichnung": "Senioren 50+ II",
+   "strLigaAbkuerzung": "Sen.50+ II"
+  },
+  {
+   "sLigaID": "21010",
+   "strLigabezeichnung": "Nationalliga A (Frauen)",
+   "strLigaAbkuerzung": "NLA (F)"
+  },
+  {
+   "sLigaID": "21011",
+   "strLigabezeichnung": "Women’s Super League",
+   "strLigaAbkuerzung": "AWSL"
+  },
+  {
+   "sLigaID": "21014",
+   "strLigabezeichnung": "Sommer-Challenge (Frauen)",
+   "strLigaAbkuerzung": "S-Chal (F)"
+  },
+  {
+   "sLigaID": "21015",
+   "strLigabezeichnung": "Winter-Challenge (Frauen)",
+   "strLigaAbkuerzung": "W-Chal (F)"
+  },
+  {
+   "sLigaID": "21020",
+   "strLigabezeichnung": "Nationalliga B (Frauen)",
+   "strLigaAbkuerzung": "NLB (F)"
+  },
+  {
+   "sLigaID": "21090",
+   "strLigabezeichnung": "Liga-Cup (Frauen)",
+   "strLigaAbkuerzung": "LC (F)"
+  },
+  {
+   "sLigaID": "22010",
+   "strLigabezeichnung": "Frauen 1. Liga",
+   "strLigaAbkuerzung": "1.L (F)"
+  },
+  {
+   "sLigaID": "22500",
+   "strLigabezeichnung": "Frauen 2. Liga interregional",
+   "strLigaAbkuerzung": "2.L(F)int."
+  },
+  {
+   "sLigaID": "23010",
+   "strLigabezeichnung": "Frauen 2. Liga",
+   "strLigaAbkuerzung": "2.L(F)"
+  },
+  {
+   "sLigaID": "23011",
+   "strLigabezeichnung": "Frauen 2. Liga 1. Stärkeklasse",
+   "strLigaAbkuerzung": "2.L/1(F)"
+  },
+  {
+   "sLigaID": "23012",
+   "strLigabezeichnung": "Frauen 2. Liga 2. Stärkeklasse",
+   "strLigaAbkuerzung": "2.L/2 (F)"
+  },
+  {
+   "sLigaID": "23020",
+   "strLigabezeichnung": "Frauen 3. Liga",
+   "strLigaAbkuerzung": "3.L(F)"
+  },
+  {
+   "sLigaID": "23021",
+   "strLigabezeichnung": "Frauen 3. Liga 1. Stärkeklasse",
+   "strLigaAbkuerzung": "3.L/1(F)"
+  },
+  {
+   "sLigaID": "23022",
+   "strLigabezeichnung": "Frauen 3. Liga 2. Stärkeklasse",
+   "strLigaAbkuerzung": "3e L/2(F)"
+  },
+  {
+   "sLigaID": "23030",
+   "strLigabezeichnung": "Frauen 4. Liga",
+   "strLigaAbkuerzung": "4.L(F)"
+  },
+  {
+   "sLigaID": "24010",
+   "strLigabezeichnung": "Freiburger-Cup Frauen",
+   "strLigaAbkuerzung": "FCF"
+  },
+  {
+   "sLigaID": "24011",
+   "strLigabezeichnung": "Coupe neuchâteloise féminines",
+   "strLigaAbkuerzung": "cnf"
+  },
+  {
+   "sLigaID": "24012",
+   "strLigabezeichnung": "Cup AJF (Frauen)",
+   "strLigaAbkuerzung": "C/AJF F"
+  },
+  {
+   "sLigaID": "25098",
+   "strLigabezeichnung": "U-20 (Frauen)",
+   "strLigaAbkuerzung": "U-20 (F)"
+  },
+  {
+   "sLigaID": "25099",
+   "strLigabezeichnung": "U-19 (Frauen)",
+   "strLigaAbkuerzung": "U-19(F)"
+  },
+  {
+   "sLigaID": "25100",
+   "strLigabezeichnung": "U-18 (Frauen)",
+   "strLigaAbkuerzung": "U-18(F)"
+  },
+  {
+   "sLigaID": "25101",
+   "strLigabezeichnung": "U-17 (Frauen)",
+   "strLigaAbkuerzung": "U-17(F)"
+  },
+  {
+   "sLigaID": "25102",
+   "strLigabezeichnung": "U-18 (Frauen)",
+   "strLigaAbkuerzung": "U-18(F)"
+  },
+  {
+   "sLigaID": "25103",
+   "strLigabezeichnung": "U-18 Women's Cup",
+   "strLigaAbkuerzung": "U-18(WC)"
+  },
+  {
+   "sLigaID": "25106",
+   "strLigabezeichnung": "U-17 (Frauen - RA)",
+   "strLigaAbkuerzung": "U-17(F) RA"
+  },
+  {
+   "sLigaID": "25107",
+   "strLigabezeichnung": "U-16 (Frauen - RA)",
+   "strLigaAbkuerzung": "U-16(F) RA"
+  },
+  {
+   "sLigaID": "25108",
+   "strLigabezeichnung": "U-15 (Frauen - RA)",
+   "strLigaAbkuerzung": "U-15(F) RA"
+  },
+  {
+   "sLigaID": "25109",
+   "strLigabezeichnung": "U-14 (Frauen - RA)",
+   "strLigaAbkuerzung": "U-14(F) RA"
+  },
+  {
+   "sLigaID": "25110",
+   "strLigabezeichnung": "U-13 (Frauen - RA)",
+   "strLigaAbkuerzung": "U-13(F) RA"
+  },
+  {
+   "sLigaID": "25111",
+   "strLigabezeichnung": "U-15 Partnerschaftsturnier",
+   "strLigaAbkuerzung": "U-15 PT(F)"
+  },
+  {
+   "sLigaID": "25112",
+   "strLigabezeichnung": "FE-13 (Frauen - RA)",
+   "strLigaAbkuerzung": "FE-13(RAF)"
+  },
+  {
+   "sLigaID": "25113",
+   "strLigabezeichnung": "RA-13 (Frauen - RA)",
+   "strLigaAbkuerzung": "RA-13(RAF)"
+  },
+  {
+   "sLigaID": "25200",
+   "strLigabezeichnung": "Juniorinnen U-23",
+   "strLigaAbkuerzung": "U-23(F)"
+  },
+  {
+   "sLigaID": "25201",
+   "strLigabezeichnung": "Juniorinnen A+",
+   "strLigaAbkuerzung": "J-A+ (F)"
+  },
+  {
+   "sLigaID": "25202",
+   "strLigabezeichnung": "Frauen / 20",
+   "strLigaAbkuerzung": "F(20)"
+  },
+  {
+   "sLigaID": "25205",
+   "strLigabezeichnung": "Juniorinnen",
+   "strLigaAbkuerzung": "Jun.(F)"
+  },
+  {
+   "sLigaID": "25210",
+   "strLigabezeichnung": "Juniorinnen A",
+   "strLigaAbkuerzung": "J-A (F)"
+  },
+  {
+   "sLigaID": "25211",
+   "strLigabezeichnung": "Juniorinnen A/9",
+   "strLigaAbkuerzung": "J-A/9 (F)"
+  },
+  {
+   "sLigaID": "25212",
+   "strLigabezeichnung": "Juniorinnen A/7",
+   "strLigaAbkuerzung": "J-A/7 (F)"
+  },
+  {
+   "sLigaID": "25215",
+   "strLigabezeichnung": "Juniorinnen A/B",
+   "strLigaAbkuerzung": "J-A/B (F)"
+  },
+  {
+   "sLigaID": "25216",
+   "strLigabezeichnung": "Juniorinnen FF-19",
+   "strLigaAbkuerzung": "FF-19"
+  },
+  {
+   "sLigaID": "25218",
+   "strLigabezeichnung": "Schweizer Cup Juniorinnen FF-19",
+   "strLigaAbkuerzung": "SC J FF-19"
+  },
+  {
+   "sLigaID": "25219",
+   "strLigabezeichnung": "Schweizer Cup Juniorinnen B",
+   "strLigaAbkuerzung": "SC JB (F)"
+  },
+  {
+   "sLigaID": "25220",
+   "strLigabezeichnung": "Juniorinnen B/11",
+   "strLigaAbkuerzung": "J-B/11 (F)"
+  },
+  {
+   "sLigaID": "25221",
+   "strLigabezeichnung": "Juniorinnen B/9",
+   "strLigaAbkuerzung": "J-B/9 (F)"
+  },
+  {
+   "sLigaID": "25222",
+   "strLigabezeichnung": "Juniorinnen B/7",
+   "strLigaAbkuerzung": "J-B/7 (F)"
+  },
+  {
+   "sLigaID": "25223",
+   "strLigabezeichnung": "Juniorinnen C",
+   "strLigaAbkuerzung": "J-C (F)"
+  },
+  {
+   "sLigaID": "25224",
+   "strLigabezeichnung": "Juniorinnen C/7",
+   "strLigaAbkuerzung": "J-C/7 (F)"
+  },
+  {
+   "sLigaID": "25225",
+   "strLigabezeichnung": "Juniorinnen D",
+   "strLigaAbkuerzung": "J-D (F)"
+  },
+  {
+   "sLigaID": "25226",
+   "strLigabezeichnung": "Juniorinnen C/9",
+   "strLigaAbkuerzung": "J-C/9 (F)"
+  },
+  {
+   "sLigaID": "25227",
+   "strLigabezeichnung": "Juniorinnen D/9 (Spielzeit 3/3)",
+   "strLigaAbkuerzung": "J-D/9 (F)"
+  },
+  {
+   "sLigaID": "25228",
+   "strLigabezeichnung": "Juniorinnen 14",
+   "strLigaAbkuerzung": "J/14 (F)"
+  },
+  {
+   "sLigaID": "25229",
+   "strLigabezeichnung": "Cup AJF (Mädchen)",
+   "strLigaAbkuerzung": "C/AJF M"
+  },
+  {
+   "sLigaID": "25230",
+   "strLigabezeichnung": "Juniorinnen 7er Fussball",
+   "strLigaAbkuerzung": "J/7er"
+  },
+  {
+   "sLigaID": "25231",
+   "strLigabezeichnung": "Juniorinnen E / FF-12",
+   "strLigaAbkuerzung": "JE/FF-12"
+  },
+  {
+   "sLigaID": "25232",
+   "strLigabezeichnung": "Juniorinnen C9/D9",
+   "strLigaAbkuerzung": "J-C9/D9(F)"
+  },
+  {
+   "sLigaID": "25233",
+   "strLigabezeichnung": "Juniorinnen D/7 (Spielzeit 3/3)",
+   "strLigaAbkuerzung": "J-D/7 F3/3"
+  },
+  {
+   "sLigaID": "25234",
+   "strLigabezeichnung": "Juniorinnen E/7 (Spielzeit 3/3)",
+   "strLigaAbkuerzung": "J-E/7 F3/3"
+  },
+  {
+   "sLigaID": "25235",
+   "strLigabezeichnung": "Juniorinnen FF-15",
+   "strLigaAbkuerzung": "FF-15"
+  },
+  {
+   "sLigaID": "25236",
+   "strLigabezeichnung": "Juniorinnen FF-12",
+   "strLigaAbkuerzung": "FF-12"
+  },
+  {
+   "sLigaID": "25237",
+   "strLigabezeichnung": "Cup AJF (FF-19)",
+   "strLigaAbkuerzung": "CAJFFF19"
+  },
+  {
+   "sLigaID": "25238",
+   "strLigabezeichnung": "Schweizer Cup Juniorinnen FF-15",
+   "strLigaAbkuerzung": "SC J FF-15"
+  },
+  {
+   "sLigaID": "25239",
+   "strLigabezeichnung": "Juniorinnen FF-19 (Cup)",
+   "strLigaAbkuerzung": "FF-19 (C)"
+  },
+  {
+   "sLigaID": "25240",
+   "strLigabezeichnung": "Juniorinnen F / FF-9",
+   "strLigaAbkuerzung": "JF/FF-9(F)"
+  },
+  {
+   "sLigaID": "25241",
+   "strLigabezeichnung": "Cup AJF (FF-15)",
+   "strLigaAbkuerzung": "CAJFFF15"
+  },
+  {
+   "sLigaID": "25242",
+   "strLigabezeichnung": "Juniorinnen FF-17",
+   "strLigaAbkuerzung": "FF-17"
+  },
+  {
+   "sLigaID": "25243",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie FF-12",
+   "strLigaAbkuerzung": "BRACK.CH PmF Kat FF-12"
+  },
+  {
+   "sLigaID": "25244",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie E Mädchen",
+   "strLigaAbkuerzung": "BRACK.CH PmF Kat E (M)"
+  },
+  {
+   "sLigaID": "25245",
+   "strLigabezeichnung": "Juniorinnen G / FF-7",
+   "strLigaAbkuerzung": "JG/FF-7"
+  },
+  {
+   "sLigaID": "25246",
+   "strLigabezeichnung": "Juniorinnen C/11",
+   "strLigaAbkuerzung": "J-C/11 (F)"
+  },
+  {
+   "sLigaID": "25247",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie F Mädchen",
+   "strLigaAbkuerzung": "BRACK.CH PmF Kat F (M)"
+  },
+  {
+   "sLigaID": "25248",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie FF-9",
+   "strLigaAbkuerzung": "BRACK.CH PmF Kat FF-9"
+  },
+  {
+   "sLigaID": "25249",
+   "strLigabezeichnung": "BRACK.CH play more football Kategorie G Mädchen",
+   "strLigaAbkuerzung": "BRACK.CH PmF Kat G (M)"
+  },
+  {
+   "sLigaID": "25250",
+   "strLigabezeichnung": "Freiburger-Cup Juniorinnen",
+   "strLigaAbkuerzung": "FCJ"
+  },
+  {
+   "sLigaID": "25251",
+   "strLigabezeichnung": "Juniorinnen D/9 ",
+   "strLigaAbkuerzung": "J-D/9 (F)"
+  },
+  {
+   "sLigaID": "25252",
+   "strLigabezeichnung": "Juniorinnen D/7",
+   "strLigaAbkuerzung": "J-D/7 (F)"
+  },
+  {
+   "sLigaID": "25290",
+   "strLigabezeichnung": "FE-13 (Frauen-RA) Hallenturnier",
+   "strLigaAbkuerzung": "FE-13(f) H"
+  },
+  {
+   "sLigaID": "25291",
+   "strLigabezeichnung": "RA-13 (Frauen-RA) Hallenturnier",
+   "strLigaAbkuerzung": "RA-13(f) H"
+  },
+  {
+   "sLigaID": "25299",
+   "strLigabezeichnung": "UEFA Playmakers",
+   "strLigaAbkuerzung": "PM (F)"
+  },
+  {
+   "sLigaID": "26001",
+   "strLigabezeichnung": "Seniorinnen (7/7)",
+   "strLigaAbkuerzung": "Sen.(F)/7"
+  },
+  {
+   "sLigaID": "27008",
+   "strLigabezeichnung": "Swiss Futsal Premier League",
+   "strLigaAbkuerzung": "SFPL"
+  },
+  {
+   "sLigaID": "27010",
+   "strLigabezeichnung": "Nationalliga A (Futsal)",
+   "strLigaAbkuerzung": "NLA Futsal"
+  },
+  {
+   "sLigaID": "27011",
+   "strLigabezeichnung": "Swiss Futsal Second League",
+   "strLigaAbkuerzung": "SFSL"
+  },
+  {
+   "sLigaID": "27012",
+   "strLigabezeichnung": "Futsal Masters League",
+   "strLigaAbkuerzung": "FML"
+  },
+  {
+   "sLigaID": "27020",
+   "strLigabezeichnung": "Nationalliga B (Futsal)",
+   "strLigaAbkuerzung": "NLB Futsal"
+  },
+  {
+   "sLigaID": "27030",
+   "strLigabezeichnung": "1. Liga (Futsal)",
+   "strLigaAbkuerzung": "1.L Futsal"
+  },
+  {
+   "sLigaID": "27031",
+   "strLigabezeichnung": "2. Liga (Futsal)",
+   "strLigaAbkuerzung": "2LF"
+  },
+  {
+   "sLigaID": "27045",
+   "strLigabezeichnung": "Swiss Futsal Women League",
+   "strLigaAbkuerzung": "SFWL"
+  },
+  {
+   "sLigaID": "27046",
+   "strLigabezeichnung": "Swiss Futsal Women Second League",
+   "strLigaAbkuerzung": "SFWSL"
+  },
+  {
+   "sLigaID": "27050",
+   "strLigabezeichnung": "1. Liga (Futsal Frauen)",
+   "strLigaAbkuerzung": "1.L Fut F"
+  },
+  {
+   "sLigaID": "27110",
+   "strLigabezeichnung": "Youth League Futsal Cup A",
+   "strLigaAbkuerzung": "YLA Futsal"
+  },
+  {
+   "sLigaID": "27111",
+   "strLigabezeichnung": "Junioren A (Futsal)",
+   "strLigaAbkuerzung": "A Futsal"
+  },
+  {
+   "sLigaID": "27120",
+   "strLigabezeichnung": "Youth League Futsal Cup B",
+   "strLigaAbkuerzung": "YLB Futsal"
+  },
+  {
+   "sLigaID": "27121",
+   "strLigabezeichnung": "Junioren B (Futsal)",
+   "strLigaAbkuerzung": "B Futsal"
+  },
+  {
+   "sLigaID": "27130",
+   "strLigabezeichnung": "Youth League Futsal Cup C",
+   "strLigaAbkuerzung": "YLC Futsal"
+  },
+  {
+   "sLigaID": "27131",
+   "strLigabezeichnung": "Junioren C (Futsal)",
+   "strLigaAbkuerzung": "C Futsal"
+  },
+  {
+   "sLigaID": "27151",
+   "strLigabezeichnung": "Junioren D Elite (Futsal)",
+   "strLigaAbkuerzung": "D/E Futsal"
+  },
+  {
+   "sLigaID": "27152",
+   "strLigabezeichnung": "Junioren D 1. Stkl. (Futsal)",
+   "strLigaAbkuerzung": "D/1 Futsal"
+  },
+  {
+   "sLigaID": "27153",
+   "strLigabezeichnung": "Junioren D (Futsal)",
+   "strLigaAbkuerzung": "D Futsal"
+  },
+  {
+   "sLigaID": "27161",
+   "strLigabezeichnung": "Junioren E (Futsal)",
+   "strLigaAbkuerzung": "E Futsal"
+  },
+  {
+   "sLigaID": "27171",
+   "strLigabezeichnung": "Junioren F (Futsal)",
+   "strLigaAbkuerzung": "F Futsal"
+  },
+  {
+   "sLigaID": "27181",
+   "strLigabezeichnung": "Junioren G (Futsal)",
+   "strLigaAbkuerzung": "G Futsal"
+  },
+  {
+   "sLigaID": "27210",
+   "strLigabezeichnung": "Youth League Futsal Cup FF-19",
+   "strLigaAbkuerzung": "YLFF19 FS"
+  },
+  {
+   "sLigaID": "27220",
+   "strLigabezeichnung": "Youth League Futsal Cup FF-15",
+   "strLigaAbkuerzung": "YLFF15 FS"
+  },
+  {
+   "sLigaID": "27230",
+   "strLigabezeichnung": "Juniorinnen FF-12 (Futsal)",
+   "strLigaAbkuerzung": "FF12 FS"
+  },
+  {
+   "sLigaID": "27240",
+   "strLigabezeichnung": "Juniorinnen D (Futsal)",
+   "strLigaAbkuerzung": "D Futsal f"
+  },
+  {
+   "sLigaID": "27241",
+   "strLigabezeichnung": "Juniorinnen E (Futsal)",
+   "strLigaAbkuerzung": "E Futsal f"
+  },
+  {
+   "sLigaID": "27242",
+   "strLigabezeichnung": "Juniorinnen F (Futsal)",
+   "strLigaAbkuerzung": "F Futsal f"
+  },
+  {
+   "sLigaID": "27243",
+   "strLigabezeichnung": "Juniorinnen G (Futsal)",
+   "strLigaAbkuerzung": "G Futsal f"
+  },
+  {
+   "sLigaID": "29110",
+   "strLigabezeichnung": "16+ Männer",
+   "strLigaAbkuerzung": "16+ H"
+  },
+  {
+   "sLigaID": "29120",
+   "strLigabezeichnung": "9. Klasse Knaben",
+   "strLigaAbkuerzung": "9. Kl. K"
+  },
+  {
+   "sLigaID": "29130",
+   "strLigabezeichnung": "8. Klasse Knaben",
+   "strLigaAbkuerzung": "8. Kl. K"
+  },
+  {
+   "sLigaID": "29140",
+   "strLigabezeichnung": "7. Klasse Knaben",
+   "strLigaAbkuerzung": "7. Kl. K"
+  },
+  {
+   "sLigaID": "29150",
+   "strLigabezeichnung": "6. Klasse Knaben",
+   "strLigaAbkuerzung": "6. Kl. K"
+  },
+  {
+   "sLigaID": "29160",
+   "strLigabezeichnung": "5. Klasse Knaben",
+   "strLigaAbkuerzung": "5e cl. g"
+  },
+  {
+   "sLigaID": "29170",
+   "strLigabezeichnung": "4. Klasse Knaben",
+   "strLigaAbkuerzung": "4. Kl. K"
+  },
+  {
+   "sLigaID": "29200",
+   "strLigabezeichnung": "4-United",
+   "strLigaAbkuerzung": "4-United"
+  },
+  {
+   "sLigaID": "29210",
+   "strLigabezeichnung": "16+ Frauen",
+   "strLigaAbkuerzung": "16+ F"
+  },
+  {
+   "sLigaID": "29220",
+   "strLigabezeichnung": "9. Klasse Mädchen",
+   "strLigaAbkuerzung": "9. Kl. M"
+  },
+  {
+   "sLigaID": "29230",
+   "strLigabezeichnung": "8. Klasse Mädchen",
+   "strLigaAbkuerzung": "8. Kl. M"
+  },
+  {
+   "sLigaID": "29240",
+   "strLigabezeichnung": "7. Klasse Mädchen",
+   "strLigaAbkuerzung": "7. Kl. M"
+  },
+  {
+   "sLigaID": "29250",
+   "strLigabezeichnung": "6. Klasse Mädchen",
+   "strLigaAbkuerzung": "6. Kl. M"
+  },
+  {
+   "sLigaID": "29260",
+   "strLigabezeichnung": "5. Klasse Mädchen",
+   "strLigaAbkuerzung": "5. Kl. M"
+  },
+  {
+   "sLigaID": "29270",
+   "strLigabezeichnung": "4. Klasse Mädchen",
+   "strLigaAbkuerzung": "4. Kl. M"
+  },
+  {
+   "sLigaID": "30010",
+   "strLigabezeichnung": "SFFS Serie A",
+   "strLigaAbkuerzung": "SFFS S-A"
+  },
+  {
+   "sLigaID": "30015",
+   "strLigabezeichnung": "SFFS Promotion",
+   "strLigaAbkuerzung": "SFFS Prom."
+  },
+  {
+   "sLigaID": "30018",
+   "strLigabezeichnung": "SFFS Qualifikation",
+   "strLigaAbkuerzung": "SFFS Quali"
+  },
+  {
+   "sLigaID": "30020",
+   "strLigabezeichnung": "SFFS Serie B",
+   "strLigaAbkuerzung": "SFFS S-B"
+  },
+  {
+   "sLigaID": "30030",
+   "strLigabezeichnung": "SFFS Serie C",
+   "strLigaAbkuerzung": "SFFS S-C"
+  },
+  {
+   "sLigaID": "30050",
+   "strLigabezeichnung": "SFFS Cup Vorrunde",
+   "strLigaAbkuerzung": "SFFS C/VR"
+  },
+  {
+   "sLigaID": "30089",
+   "strLigabezeichnung": "SFFS Senioren 30+",
+   "strLigaAbkuerzung": "SFFS 30+"
+  },
+  {
+   "sLigaID": "30090",
+   "strLigabezeichnung": "SFFS Senioren",
+   "strLigaAbkuerzung": "SFFS Sen."
+  },
+  {
+   "sLigaID": "30091",
+   "strLigabezeichnung": "SFFS Senioren A",
+   "strLigaAbkuerzung": "SFFS Sen.A"
+  },
+  {
+   "sLigaID": "30092",
+   "strLigabezeichnung": "SFFS Senioren B",
+   "strLigaAbkuerzung": "SFFS Sen.B"
+  },
+  {
+   "sLigaID": "30094",
+   "strLigabezeichnung": "SFFS Senioren 40+",
+   "strLigaAbkuerzung": "SFFS 40+"
+  },
+  {
+   "sLigaID": "30095",
+   "strLigabezeichnung": "SFFS Veteranen",
+   "strLigaAbkuerzung": "SFFS Vet."
+  },
+  {
+   "sLigaID": "30096",
+   "strLigabezeichnung": "SFFS Veteranen II",
+   "strLigaAbkuerzung": "SFFS Vet.2"
+  },
+  {
+   "sLigaID": "30097",
+   "strLigabezeichnung": "SFFS Senioren 40+ (7/7)",
+   "strLigaAbkuerzung": "SFFS 40+7"
+  },
+  {
+   "sLigaID": "30100",
+   "strLigabezeichnung": "Firmenmeisterschaft Seeland",
+   "strLigaAbkuerzung": "FM Seeland"
+  },
+  {
+   "sLigaID": "30200",
+   "strLigabezeichnung": "SFFS Frauen (7/7)",
+   "strLigaAbkuerzung": "SFFS F/7"
+  },
+  {
+   "sLigaID": "30210",
+   "strLigabezeichnung": "SFFS Frauen (7/7) - Cup",
+   "strLigaAbkuerzung": "SFFS F/7 C"
+  },
+  {
+   "sLigaID": "31001",
+   "strLigabezeichnung": "SWISS BEACH SOCCER Men",
+   "strLigaAbkuerzung": "SBSM"
+  },
+  {
+   "sLigaID": "31010",
+   "strLigabezeichnung": "Swiss Beach Soccer League A",
+   "strLigaAbkuerzung": "SBSL A"
+  },
+  {
+   "sLigaID": "31011",
+   "strLigabezeichnung": "Suzuki Swiss Beach Soccer League",
+   "strLigaAbkuerzung": "SSBSL"
+  },
+  {
+   "sLigaID": "31012",
+   "strLigabezeichnung": "Suzuki Beachsoccer Premier-League",
+   "strLigaAbkuerzung": "SBSPL"
+  },
+  {
+   "sLigaID": "31020",
+   "strLigabezeichnung": "Swiss Beach Soccer League B",
+   "strLigaAbkuerzung": "SBSL B"
+  },
+  {
+   "sLigaID": "31021",
+   "strLigabezeichnung": "Suzuki Beachsoccer Challenge-League",
+   "strLigaAbkuerzung": "SBSCHL"
+  },
+  {
+   "sLigaID": "31050",
+   "strLigabezeichnung": "Swiss Beach Soccer Summer League",
+   "strLigaAbkuerzung": "SBSSL"
+  },
+  {
+   "sLigaID": "31101",
+   "strLigabezeichnung": "SWISS BEACH SOCCER Women",
+   "strLigaAbkuerzung": "SBSW"
+  },
+  {
+   "sLigaID": "31110",
+   "strLigabezeichnung": "Swiss Beach Soccer League A (F)",
+   "strLigaAbkuerzung": "SBSL A (F)"
+  },
+  {
+   "sLigaID": "31111",
+   "strLigabezeichnung": "Suzuki Beachsoccer Woman-League",
+   "strLigaAbkuerzung": "SBSWL"
+  },
+  {
+   "sLigaID": "31120",
+   "strLigabezeichnung": "Swiss Beach Soccer League B (F)",
+   "strLigaAbkuerzung": "SBSL B (F)"
+  },
+  {
+   "sLigaID": "31150",
+   "strLigabezeichnung": "Swiss Beach Soccer Summer League(F)",
+   "strLigaAbkuerzung": "SBSSL (F)"
+  },
+  {
+   "sLigaID": "31210",
+   "strLigabezeichnung": "Suzuki Beachsoccer U17-League",
+   "strLigaAbkuerzung": "SBSU17"
+  },
+  {
+   "sLigaID": "31999",
+   "strLigabezeichnung": "-",
+   "strLigaAbkuerzung": "-"
+  },
+  {
+   "sLigaID": "32000",
+   "strLigabezeichnung": "-",
+   "strLigaAbkuerzung": "-"
+  }
+ ],
+ "Organisation": [
+  {
+   "lOrganisationsID": "1",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Schweizerischer Fussballverband",
+   "strKurzbezeichnung": "SFV"
+  },
+  {
+   "lOrganisationsID": "2",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Swiss Football League",
+   "strKurzbezeichnung": "SFL"
+  },
+  {
+   "lOrganisationsID": "3",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Erste Liga",
+   "strKurzbezeichnung": "EL"
+  },
+  {
+   "lOrganisationsID": "4",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Amateur Liga",
+   "strKurzbezeichnung": "AL"
+  },
+  {
+   "lOrganisationsID": "5",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Aargauer Fussballverband",
+   "strKurzbezeichnung": "AFV"
+  },
+  {
+   "lOrganisationsID": "6",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Fussballverband Bern/Jura",
+   "strKurzbezeichnung": "FVBJ"
+  },
+  {
+   "lOrganisationsID": "7",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Innerschweizerischer Fussballverband",
+   "strKurzbezeichnung": "IFV"
+  },
+  {
+   "lOrganisationsID": "8",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Fussballverband Nordwestschweiz",
+   "strKurzbezeichnung": "FVNWS"
+  },
+  {
+   "lOrganisationsID": "9",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Ostschweizer Fussballverband",
+   "strKurzbezeichnung": "OFV"
+  },
+  {
+   "lOrganisationsID": "10",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Solothurner Fussballverband",
+   "strKurzbezeichnung": "SOFV"
+  },
+  {
+   "lOrganisationsID": "11",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Fussballverband Region Zürich",
+   "strKurzbezeichnung": "FVRZ"
+  },
+  {
+   "lOrganisationsID": "12",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Federazione ticinese di calcio",
+   "strKurzbezeichnung": "FTC"
+  },
+  {
+   "lOrganisationsID": "13",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Freiburger Fussballverband",
+   "strKurzbezeichnung": "AFF"
+  },
+  {
+   "lOrganisationsID": "14",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Association cantonale genevoise de football",
+   "strKurzbezeichnung": "ACGF"
+  },
+  {
+   "lOrganisationsID": "15",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Association neuchâteloise de football",
+   "strKurzbezeichnung": "ANF"
+  },
+  {
+   "lOrganisationsID": "16",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Association cantonale vaudoise de football",
+   "strKurzbezeichnung": "ACVF"
+  },
+  {
+   "lOrganisationsID": "17",
+   "sSprache": "1",
+   "strOrganisationsbezeichnung": "Walliser Fussballverband",
+   "strKurzbezeichnung": "WFV"
+  }
+ ],
+ "Spieltyp": [
+  {
+   "sSpieltypID": "1",
+   "strSpieltyp": "Meisterschaft"
+  },
+  {
+   "sSpieltypID": "2",
+   "strSpieltyp": "Cup"
+  },
+  {
+   "sSpieltypID": "3",
+   "strSpieltyp": "Trainingsspiele"
+  },
+  {
+   "sSpieltypID": "5",
+   "strSpieltyp": "Firmensportspiele"
+  },
+  {
+   "sSpieltypID": "6",
+   "strSpieltyp": "Turnier"
+  },
+  {
+   "sSpieltypID": "7",
+   "strSpieltyp": "Hallenturnier"
+  },
+  {
+   "sSpieltypID": "8",
+   "strSpieltyp": "Mini-Turniere"
+  },
+  {
+   "sSpieltypID": "9",
+   "strSpieltyp": "Schweizer-Cup"
+  },
+  {
+   "sSpieltypID": "10",
+   "strSpieltyp": "Entscheidungsspiele (Meisters. Modus)"
+  },
+  {
+   "sSpieltypID": "11",
+   "strSpieltyp": "Entscheidungsspiele (Cup Modus)"
+  },
+  {
+   "sSpieltypID": "20",
+   "strSpieltyp": "LS (Einzelspiele)"
+  },
+  {
+   "sSpieltypID": "21",
+   "strSpieltyp": "LS Qualifikation (Meisterschafts-Modus)"
+  },
+  {
+   "sSpieltypID": "22",
+   "strSpieltyp": "LS Qualifikation (Cup-Modus)"
+  },
+  {
+   "sSpieltypID": "23",
+   "strSpieltyp": "LS Endrunde (Meisterschafts-Modus)"
+  },
+  {
+   "sSpieltypID": "24",
+   "strSpieltyp": "LS Endrunde (Cup-Modus)"
+  }
+ ],
+ "Resultattyp": [
+  {
+   "sResultattypID": "0",
+   "strResultattyp": "-",
+   "strAbkuerzung": null
+  },
+  {
+   "sResultattypID": "1",
+   "strResultattyp": "Halbzeit",
+   "strAbkuerzung": null
+  },
+  {
+   "sResultattypID": "2",
+   "strResultattyp": "Stand nach regulärer Spielzeit",
+   "strAbkuerzung": null
+  },
+  {
+   "sResultattypID": "4",
+   "strResultattyp": "Stand nach Halbzeit der Verlängerung",
+   "strAbkuerzung": null
+  },
+  {
+   "sResultattypID": "5",
+   "strResultattyp": "Stand nach Verlängerung",
+   "strAbkuerzung": "n.V."
+  },
+  {
+   "sResultattypID": "6",
+   "strResultattyp": "Stand nach Elfmeterschiessen",
+   "strAbkuerzung": "n.E."
+  },
+  {
+   "sResultattypID": "7",
+   "strResultattyp": "Drittelspause 1",
+   "strAbkuerzung": " "
+  },
+  {
+   "sResultattypID": "8",
+   "strResultattyp": "Drittelspause 2",
+   "strAbkuerzung": " "
+  },
+  {
+   "sResultattypID": "9",
+   "strResultattyp": "Viertelspause 1",
+   "strAbkuerzung": " "
+  },
+  {
+   "sResultattypID": "10",
+   "strResultattyp": "Viertelspause 2",
+   "strAbkuerzung": " "
+  },
+  {
+   "sResultattypID": "11",
+   "strResultattyp": "Viertelspause 3",
+   "strAbkuerzung": " "
+  }
+ ],
+ "Spielstatus": [
+  {
+   "sSpielstatusID": "1",
+   "strSpielstatus": "noch nicht ausgetragen"
+  },
+  {
+   "sSpielstatusID": "2",
+   "strSpielstatus": "ausgetragen"
+  },
+  {
+   "sSpielstatusID": "3",
+   "strSpielstatus": "forfait"
+  },
+  {
+   "sSpielstatusID": "4",
+   "strSpielstatus": "Null zu Null - Null Punkte"
+  },
+  {
+   "sSpielstatusID": "5",
+   "strSpielstatus": "abgebrochen"
+  },
+  {
+   "sSpielstatusID": "6",
+   "strSpielstatus": "verschoben"
+  },
+  {
+   "sSpielstatusID": "7",
+   "strSpielstatus": "neu angesetzt"
+  },
+  {
+   "sSpielstatusID": "8",
+   "strSpielstatus": "nicht gespielt (SR)"
+  },
+  {
+   "sSpielstatusID": "9",
+   "strSpielstatus": "nicht gespielt (Gegner)"
+  },
+  {
+   "sSpielstatusID": "10",
+   "strSpielstatus": "Spiel findet nicht statt (keine Neuansetzung)"
+  },
+  {
+   "sSpielstatusID": "11",
+   "strSpielstatus": "Abbruch der Saison"
+  },
+  {
+   "sSpielstatusID": "12",
+   "strSpielstatus": "Spiel ohne Austragung (keine Publikation)"
+  }
+ ],
+ "Spielerposition": [
+  {
+   "sPositionId": "10",
+   "strSpielPosition": "Torhüter",
+   "strAbkuerzung": "TH"
+  },
+  {
+   "sPositionId": "20",
+   "strSpielPosition": "Libero",
+   "strAbkuerzung": "LIB"
+  },
+  {
+   "sPositionId": "21",
+   "strSpielPosition": "Rechter Verteidiger",
+   "strAbkuerzung": "RV"
+  },
+  {
+   "sPositionId": "22",
+   "strSpielPosition": "Vorderer Verteidiger",
+   "strAbkuerzung": "VV"
+  },
+  {
+   "sPositionId": "23",
+   "strSpielPosition": "Linker Verteidiger",
+   "strAbkuerzung": "LV"
+  },
+  {
+   "sPositionId": "24",
+   "strSpielPosition": "Rechter Aussenverteidiger",
+   "strAbkuerzung": "RAV"
+  },
+  {
+   "sPositionId": "25",
+   "strSpielPosition": "Rechter Innenverteidiger",
+   "strAbkuerzung": "RIV"
+  },
+  {
+   "sPositionId": "26",
+   "strSpielPosition": "Linker Innenverteidiger",
+   "strAbkuerzung": "LIV"
+  },
+  {
+   "sPositionId": "27",
+   "strSpielPosition": "Linker Aussenverteidiger",
+   "strAbkuerzung": "LAV"
+  },
+  {
+   "sPositionId": "40",
+   "strSpielPosition": "MF-Spieler (Defensiv)",
+   "strAbkuerzung": "MFD"
+  },
+  {
+   "sPositionId": "41",
+   "strSpielPosition": "Rechter MF-Spieler (Defensiv)",
+   "strAbkuerzung": "RMFD"
+  },
+  {
+   "sPositionId": "42",
+   "strSpielPosition": "Linker MF-Spieler (Defensiv)",
+   "strAbkuerzung": "LMFSD"
+  },
+  {
+   "sPositionId": "43",
+   "strSpielPosition": "Rechter MF-Spieler",
+   "strAbkuerzung": "RMFS"
+  },
+  {
+   "sPositionId": "44",
+   "strSpielPosition": "MF-Spieler",
+   "strAbkuerzung": "MFS"
+  },
+  {
+   "sPositionId": "45",
+   "strSpielPosition": "Linker MF-Spieler",
+   "strAbkuerzung": "LMFS"
+  },
+  {
+   "sPositionId": "46",
+   "strSpielPosition": "Rechter Aussen-MF-Spieler",
+   "strAbkuerzung": "RAMFS"
+  },
+  {
+   "sPositionId": "47",
+   "strSpielPosition": "Rechter Innen-MF-Spieler",
+   "strAbkuerzung": "RIMFS"
+  },
+  {
+   "sPositionId": "48",
+   "strSpielPosition": "Linker Innen-MF-Spieler",
+   "strAbkuerzung": "LIMFS"
+  },
+  {
+   "sPositionId": "49",
+   "strSpielPosition": "Linker Aussen-MF-Spieler",
+   "strAbkuerzung": "LAMFS"
+  },
+  {
+   "sPositionId": "50",
+   "strSpielPosition": "Rechter Aussenläufer",
+   "strAbkuerzung": "RAL"
+  },
+  {
+   "sPositionId": "51",
+   "strSpielPosition": "Linker Aussenläufer",
+   "strAbkuerzung": "LAL"
+  },
+  {
+   "sPositionId": "70",
+   "strSpielPosition": "Rechte hängende Spitze",
+   "strAbkuerzung": "RHS"
+  },
+  {
+   "sPositionId": "71",
+   "strSpielPosition": "Linke hängende Spitze",
+   "strAbkuerzung": "LHS"
+  },
+  {
+   "sPositionId": "72",
+   "strSpielPosition": "Hängende Spitze",
+   "strAbkuerzung": "HS"
+  },
+  {
+   "sPositionId": "73",
+   "strSpielPosition": "Rechter Flügel",
+   "strAbkuerzung": "RF"
+  },
+  {
+   "sPositionId": "74",
+   "strSpielPosition": "Mittelstürmer",
+   "strAbkuerzung": "MS"
+  },
+  {
+   "sPositionId": "75",
+   "strSpielPosition": "Linker Flügel",
+   "strAbkuerzung": "LF"
+  },
+  {
+   "sPositionId": "76",
+   "strSpielPosition": "Rechte Sturmspitze",
+   "strAbkuerzung": "RS"
+  },
+  {
+   "sPositionId": "77",
+   "strSpielPosition": "Linke Sturmspitze",
+   "strAbkuerzung": "LS"
+  },
+  {
+   "sPositionId": "78",
+   "strSpielPosition": "Sturmspitze",
+   "strAbkuerzung": "SS"
+  },
+  {
+   "sPositionId": "90",
+   "strSpielPosition": "Auswechsel-Torhüter",
+   "strAbkuerzung": "ATW"
+  },
+  {
+   "sPositionId": "91",
+   "strSpielPosition": "Auswechsel-Feldspiel",
+   "strAbkuerzung": "AF"
+  },
+  {
+   "sPositionId": "99",
+   "strSpielPosition": "?",
+   "strAbkuerzung": "NULL"
+  },
+  {
+   "sPositionId": "0",
+   "strSpielPosition": "?",
+   "strAbkuerzung": "NULL"
+  },
+  {
+   "sPositionId": "28",
+   "strSpielPosition": "Mittelverteidiger",
+   "strAbkuerzung": "MV"
+  }
+ ],
+ "Rollenkategorie": [
+  {
+   "sKategorieId": "1",
+   "strRolleKategorie": "Spieler",
+   "strAbkuerzung": "S"
+  },
+  {
+   "sKategorieId": "2",
+   "strRolleKategorie": "Schiedsrichter",
+   "strAbkuerzung": "SR"
+  },
+  {
+   "sKategorieId": "3",
+   "strRolleKategorie": "Trainer",
+   "strAbkuerzung": "T"
+  },
+  {
+   "sKategorieId": "4",
+   "strRolleKategorie": "Funktionär",
+   "strAbkuerzung": "F"
+  },
+  {
+   "sKategorieId": "5",
+   "strRolleKategorie": "Auswahlspieler",
+   "strAbkuerzung": "AS"
+  },
+  {
+   "sKategorieId": "6",
+   "strRolleKategorie": "Kursorganisatoren",
+   "strAbkuerzung": "KO"
+  },
+  {
+   "sKategorieId": "9",
+   "strRolleKategorie": "Betreuer",
+   "strAbkuerzung": "B"
+  },
+  {
+   "sKategorieId": "10",
+   "strRolleKategorie": "Verein",
+   "strAbkuerzung": "V"
+  },
+  {
+   "sKategorieId": "11",
+   "strRolleKategorie": "Medien",
+   "strAbkuerzung": "Me"
+  },
+  {
+   "sKategorieId": "12",
+   "strRolleKategorie": "Lieferant",
+   "strAbkuerzung": "L"
+  },
+  {
+   "sKategorieId": "13",
+   "strRolleKategorie": "Sponsor juristisch",
+   "strAbkuerzung": "Sj"
+  },
+  {
+   "sKategorieId": "14",
+   "strRolleKategorie": "Sponsor natürlich",
+   "strAbkuerzung": "Sn"
+  },
+  {
+   "sKategorieId": "15",
+   "strRolleKategorie": "Sportanlage",
+   "strAbkuerzung": "SA"
+  },
+  {
+   "sKategorieId": "16",
+   "strRolleKategorie": "Verband",
+   "strAbkuerzung": "VB"
+  },
+  {
+   "sKategorieId": "17",
+   "strRolleKategorie": "Kommission",
+   "strAbkuerzung": "Km"
+  },
+  {
+   "sKategorieId": "18",
+   "strRolleKategorie": "Sportanlagebesitzer juristisch",
+   "strAbkuerzung": "SAj"
+  },
+  {
+   "sKategorieId": "19",
+   "strRolleKategorie": "Kreisverband",
+   "strAbkuerzung": "KV"
+  },
+  {
+   "sKategorieId": "20",
+   "strRolleKategorie": "Sportanlagebesitzer natürlich",
+   "strAbkuerzung": "SAn"
+  },
+  {
+   "sKategorieId": "21",
+   "strRolleKategorie": "Medien natürlich",
+   "strAbkuerzung": "MeN"
+  },
+  {
+   "sKategorieId": "22",
+   "strRolleKategorie": "Mitglied natürlich",
+   "strAbkuerzung": "Mn"
+  },
+  {
+   "sKategorieId": "23",
+   "strRolleKategorie": "Ticketing natürlich",
+   "strAbkuerzung": "TKn"
+  },
+  {
+   "sKategorieId": "24",
+   "strRolleKategorie": "Ticketing juristisch",
+   "strAbkuerzung": "TKj"
+  },
+  {
+   "sKategorieId": "25",
+   "strRolleKategorie": "Community Member",
+   "strAbkuerzung": "CM"
+  },
+  {
+   "sKategorieId": "26",
+   "strRolleKategorie": "Sporthalle",
+   "strAbkuerzung": "SH"
+  },
+  {
+   "sKategorieId": "27",
+   "strRolleKategorie": "Mitglied juristisch",
+   "strAbkuerzung": "Mj"
+  },
+  {
+   "sKategorieId": "28",
+   "strRolleKategorie": "Scout",
+   "strAbkuerzung": "Sc"
+  },
+  {
+   "sKategorieId": "98",
+   "strRolleKategorie": "Diverse natürliche Personen",
+   "strAbkuerzung": "DnP"
+  },
+  {
+   "sKategorieId": "99",
+   "strRolleKategorie": "Diverse juristische Personen",
+   "strAbkuerzung": "DjP"
+  }
+ ],
+ "RollenUkategorie": [
+  {
+   "sUKategorieId": "0",
+   "strUnterKategorie": "-"
+  },
+  {
+   "sUKategorieId": "1",
+   "strUnterKategorie": "Assistent"
+  }
+ ],
+ "Ereignistyp": [
+  {
+   "sEreignistypID": "0",
+   "strEreignistyp": "-"
+  },
+  {
+   "sEreignistypID": "1",
+   "strEreignistyp": "Tor"
+  },
+  {
+   "sEreignistypID": "2",
+   "strEreignistyp": "Aus-/Einwechslung"
+  },
+  {
+   "sEreignistypID": "3",
+   "strEreignistyp": "Verwarnung"
+  },
+  {
+   "sEreignistypID": "4",
+   "strEreignistyp": "Ausschluss"
+  },
+  {
+   "sEreignistypID": "5",
+   "strEreignistyp": "Torchance"
+  },
+  {
+   "sEreignistypID": "6",
+   "strEreignistyp": "Freistoss"
+  },
+  {
+   "sEreignistypID": "7",
+   "strEreignistyp": "Eckball"
+  },
+  {
+   "sEreignistypID": "8",
+   "strEreignistyp": "Abwesend"
+  },
+  {
+   "sEreignistypID": "9",
+   "strEreignistyp": "Assist"
+  },
+  {
+   "sEreignistypID": "10",
+   "strEreignistyp": "Bemerkungen"
+  },
+  {
+   "sEreignistypID": "11",
+   "strEreignistyp": "Torschuss"
+  },
+  {
+   "sEreignistypID": "12",
+   "strEreignistyp": "Elfmeterschiessen"
+  },
+  {
+   "sEreignistypID": "13",
+   "strEreignistyp": "Spielinformationen"
+  },
+  {
+   "sEreignistypID": "14",
+   "strEreignistyp": "Spielerbank"
+  },
+  {
+   "sEreignistypID": "15",
+   "strEreignistyp": "Strafen (Trainer, Funktionäre, Zuschauer)"
+  },
+  {
+   "sEreignistypID": "16",
+   "strEreignistyp": "Offside"
+  },
+  {
+   "sEreignistypID": "17",
+   "strEreignistyp": "Abstoss"
+  },
+  {
+   "sEreignistypID": "18",
+   "strEreignistyp": "Einwurf"
+  },
+  {
+   "sEreignistypID": "19",
+   "strEreignistyp": "Flachschuss"
+  },
+  {
+   "sEreignistypID": "20",
+   "strEreignistyp": "Parade"
+  },
+  {
+   "sEreignistypID": "21",
+   "strEreignistyp": "Rettung auf der Torlinie"
+  },
+  {
+   "sEreignistypID": "22",
+   "strEreignistyp": "Torchance vorbereitet"
+  },
+  {
+   "sEreignistypID": "23",
+   "strEreignistyp": "Unfallmeldung"
+  },
+  {
+   "sEreignistypID": "24",
+   "strEreignistyp": "Zeitstrafen"
+  },
+  {
+   "sEreignistypID": "25",
+   "strEreignistyp": "Strafen sonstige"
+  },
+  {
+   "sEreignistypID": "101",
+   "strEreignistyp": "Chance"
+  },
+  {
+   "sEreignistypID": "102",
+   "strEreignistyp": "Special"
+  },
+  {
+   "sEreignistypID": "998",
+   "strEreignistyp": "Auswechslung"
+  },
+  {
+   "sEreignistypID": "999",
+   "strEreignistyp": "Einwechslung"
+  }
+ ],
+ "Ereignissubtyp": [
+  {
+   "sEreignissubtypID": "0",
+   "strEreignissubtyp": "-"
+  },
+  {
+   "sEreignissubtypID": "1",
+   "strEreignissubtyp": "Kopftor"
+  },
+  {
+   "sEreignissubtypID": "2",
+   "strEreignissubtyp": "Eigentor"
+  },
+  {
+   "sEreignissubtypID": "3",
+   "strEreignissubtyp": "Freistosstor"
+  },
+  {
+   "sEreignissubtypID": "4",
+   "strEreignissubtyp": "Penalty"
+  },
+  {
+   "sEreignissubtypID": "11",
+   "strEreignissubtyp": "Reklamieren"
+  },
+  {
+   "sEreignissubtypID": "12",
+   "strEreignissubtyp": "Grobes Spiel"
+  },
+  {
+   "sEreignissubtypID": "13",
+   "strEreignissubtyp": "Unsportliches Verhalten"
+  },
+  {
+   "sEreignissubtypID": "14",
+   "strEreignissubtyp": "Kopf"
+  },
+  {
+   "sEreignissubtypID": "15",
+   "strEreignissubtyp": "Unsportliches Betragen"
+  },
+  {
+   "sEreignissubtypID": "20",
+   "strEreignissubtyp": "2. Verwarnung"
+  },
+  {
+   "sEreignissubtypID": "21",
+   "strEreignissubtyp": "Tätlichkeit"
+  },
+  {
+   "sEreignissubtypID": "22",
+   "strEreignissubtyp": "Notbremse"
+  },
+  {
+   "sEreignissubtypID": "23",
+   "strEreignissubtyp": "Verhindern eines Tors oder Vereiteln einer offensichtlichen Torchance"
+  },
+  {
+   "sEreignissubtypID": "39",
+   "strEreignissubtyp": "Penalty gehalten"
+  },
+  {
+   "sEreignissubtypID": "40",
+   "strEreignissubtyp": "Verschossener Penalty"
+  },
+  {
+   "sEreignissubtypID": "41",
+   "strEreignissubtyp": "rechts"
+  },
+  {
+   "sEreignissubtypID": "42",
+   "strEreignissubtyp": "links"
+  },
+  {
+   "sEreignissubtypID": "43",
+   "strEreignissubtyp": "mitte"
+  },
+  {
+   "sEreignissubtypID": "44",
+   "strEreignissubtyp": "Eigene Platzhälfte - rechts"
+  },
+  {
+   "sEreignissubtypID": "45",
+   "strEreignissubtyp": "Eigene Platzhälfte - links"
+  },
+  {
+   "sEreignissubtypID": "46",
+   "strEreignissubtyp": "Platzhälfte Gegner - rechts"
+  },
+  {
+   "sEreignissubtypID": "47",
+   "strEreignissubtyp": "Platzhälfte Gegner - links"
+  },
+  {
+   "sEreignissubtypID": "48",
+   "strEreignissubtyp": "Platzmitte"
+  },
+  {
+   "sEreignissubtypID": "50",
+   "strEreignissubtyp": "Verletzt"
+  },
+  {
+   "sEreignissubtypID": "51",
+   "strEreignissubtyp": "Ferien"
+  },
+  {
+   "sEreignissubtypID": "52",
+   "strEreignissubtyp": "Beruf"
+  },
+  {
+   "sEreignissubtypID": "53",
+   "strEreignissubtyp": "Schule/Ausbildung"
+  },
+  {
+   "sEreignissubtypID": "54",
+   "strEreignissubtyp": "Krank"
+  },
+  {
+   "sEreignissubtypID": "55",
+   "strEreignissubtyp": "Training"
+  },
+  {
+   "sEreignissubtypID": "56",
+   "strEreignissubtyp": "Nicht im Aufgebot"
+  },
+  {
+   "sEreignissubtypID": "57",
+   "strEreignissubtyp": "Gesperrt"
+  },
+  {
+   "sEreignissubtypID": "58",
+   "strEreignissubtyp": "Nicht qualifiziert"
+  },
+  {
+   "sEreignissubtypID": "59",
+   "strEreignissubtyp": "Aufbautraining"
+  },
+  {
+   "sEreignissubtypID": "60",
+   "strEreignissubtyp": "Familie"
+  },
+  {
+   "sEreignissubtypID": "61",
+   "strEreignissubtyp": "Ausland"
+  },
+  {
+   "sEreignissubtypID": "62",
+   "strEreignissubtyp": "Überzählig"
+  },
+  {
+   "sEreignissubtypID": "63",
+   "strEreignissubtyp": "Privat"
+  },
+  {
+   "sEreignissubtypID": "64",
+   "strEreignissubtyp": "Kurs"
+  },
+  {
+   "sEreignissubtypID": "65",
+   "strEreignissubtyp": "Rekonvaleszent"
+  },
+  {
+   "sEreignissubtypID": "66",
+   "strEreignissubtyp": "Militär"
+  },
+  {
+   "sEreignissubtypID": "67",
+   "strEreignissubtyp": "Zivilschutz"
+  },
+  {
+   "sEreignissubtypID": "68",
+   "strEreignissubtyp": "Zivildienst"
+  },
+  {
+   "sEreignissubtypID": "69",
+   "strEreignissubtyp": "Feuerwehr"
+  },
+  {
+   "sEreignissubtypID": "70",
+   "strEreignissubtyp": "? - Zu-/Absage ausstehend"
+  },
+  {
+   "sEreignissubtypID": "71",
+   "strEreignissubtyp": "Schiedsrichter-Einsatz"
+  },
+  {
+   "sEreignissubtypID": "72",
+   "strEreignissubtyp": "Aufgebot anderes Team"
+  },
+  {
+   "sEreignissubtypID": "81",
+   "strEreignissubtyp": "Pfostenschuss"
+  },
+  {
+   "sEreignissubtypID": "82",
+   "strEreignissubtyp": "Lattenschuss"
+  },
+  {
+   "sEreignissubtypID": "83",
+   "strEreignissubtyp": "Offside-Tor"
+  },
+  {
+   "sEreignissubtypID": "84",
+   "strEreignissubtyp": "Schuss ans Lattenkreuz"
+  },
+  {
+   "sEreignissubtypID": "85",
+   "strEreignissubtyp": "Kopfball an die Latte"
+  },
+  {
+   "sEreignissubtypID": "86",
+   "strEreignissubtyp": "Kopfball an den Pfosten"
+  },
+  {
+   "sEreignissubtypID": "87",
+   "strEreignissubtyp": "Kopfball ans Lattenkreuz"
+  },
+  {
+   "sEreignissubtypID": "88",
+   "strEreignissubtyp": "Tor aberkannt (Foul)"
+  },
+  {
+   "sEreignissubtypID": "90",
+   "strEreignissubtyp": "Tor"
+  },
+  {
+   "sEreignissubtypID": "91",
+   "strEreignissubtyp": "Kein Tor"
+  },
+  {
+   "sEreignissubtypID": "100",
+   "strEreignissubtyp": "Spiel angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "101",
+   "strEreignissubtyp": "Schiedsrichter beendet die 1. Halbzeit zur Pause"
+  },
+  {
+   "sEreignissubtypID": "102",
+   "strEreignissubtyp": "2. Halbzeit angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "103",
+   "strEreignissubtyp": "Schiedsrichter beendet die Partie"
+  },
+  {
+   "sEreignissubtypID": "104",
+   "strEreignissubtyp": "Schiedsrichter beendet die reguläre Spielzeit"
+  },
+  {
+   "sEreignissubtypID": "105",
+   "strEreignissubtyp": "Verlängerung angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "106",
+   "strEreignissubtyp": "Ende der 1. Halbzeit der Verlängerung - Pause"
+  },
+  {
+   "sEreignissubtypID": "107",
+   "strEreignissubtyp": "2. Halbzeit der Verlängerung angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "108",
+   "strEreignissubtyp": "Schiedsrichter beendet die Verlängerung"
+  },
+  {
+   "sEreignissubtypID": "109",
+   "strEreignissubtyp": "Es kommt zum Elfmeterschiessen"
+  },
+  {
+   "sEreignissubtypID": "110",
+   "strEreignissubtyp": "Das Elfmeterschiessen beginnt"
+  },
+  {
+   "sEreignissubtypID": "111",
+   "strEreignissubtyp": "Das Elfmeterschiessen ist beendet"
+  },
+  {
+   "sEreignissubtypID": "112",
+   "strEreignissubtyp": "Spielunterbruch"
+  },
+  {
+   "sEreignissubtypID": "113",
+   "strEreignissubtyp": "Spielwiederaufnahme nach Unterbruch"
+  },
+  {
+   "sEreignissubtypID": "114",
+   "strEreignissubtyp": "Spielabbruch"
+  },
+  {
+   "sEreignissubtypID": "115",
+   "strEreignissubtyp": "Schiedsrichter beendet 1. Drittel zur Pause"
+  },
+  {
+   "sEreignissubtypID": "116",
+   "strEreignissubtyp": "2. Drittel angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "117",
+   "strEreignissubtyp": "Schiedsrichter beendet 2. Drittel zur Pause"
+  },
+  {
+   "sEreignissubtypID": "118",
+   "strEreignissubtyp": "3. Drittel angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "119",
+   "strEreignissubtyp": "Schiedsrichter beendet 1. Viertel zur Pause"
+  },
+  {
+   "sEreignissubtypID": "120",
+   "strEreignissubtyp": "2. Viertel angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "121",
+   "strEreignissubtyp": "Schiedsrichter beendet 2. Viertel zur Pause"
+  },
+  {
+   "sEreignissubtypID": "122",
+   "strEreignissubtyp": "3. Viertel angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "123",
+   "strEreignissubtyp": "Schiedsrichter beendet 3. Viertel zur Pause"
+  },
+  {
+   "sEreignissubtypID": "124",
+   "strEreignissubtyp": "4. Viertel angepfiffen"
+  },
+  {
+   "sEreignissubtypID": "200",
+   "strEreignissubtyp": "Trainer"
+  },
+  {
+   "sEreignissubtypID": "201",
+   "strEreignissubtyp": "Assistent"
+  },
+  {
+   "sEreignissubtypID": "202",
+   "strEreignissubtyp": "Torhütertrainer"
+  },
+  {
+   "sEreignissubtypID": "203",
+   "strEreignissubtyp": "Coach"
+  },
+  {
+   "sEreignissubtypID": "204",
+   "strEreignissubtyp": "Konditionstrainer"
+  },
+  {
+   "sEreignissubtypID": "210",
+   "strEreignissubtyp": "Präsident"
+  },
+  {
+   "sEreignissubtypID": "211",
+   "strEreignissubtyp": "Vize-Präsident"
+  },
+  {
+   "sEreignissubtypID": "212",
+   "strEreignissubtyp": "Vorstandsmitglied"
+  },
+  {
+   "sEreignissubtypID": "220",
+   "strEreignissubtyp": "Sportchef"
+  },
+  {
+   "sEreignissubtypID": "221",
+   "strEreignissubtyp": "Technischer Leiter"
+  },
+  {
+   "sEreignissubtypID": "230",
+   "strEreignissubtyp": "Arzt"
+  },
+  {
+   "sEreignissubtypID": "231",
+   "strEreignissubtyp": "Physiotherapeut"
+  },
+  {
+   "sEreignissubtypID": "232",
+   "strEreignissubtyp": "Masseur"
+  },
+  {
+   "sEreignissubtypID": "233",
+   "strEreignissubtyp": "Pfleger"
+  },
+  {
+   "sEreignissubtypID": "234",
+   "strEreignissubtyp": "Teammanager"
+  },
+  {
+   "sEreignissubtypID": "235",
+   "strEreignissubtyp": "Medienverantwortlicher"
+  },
+  {
+   "sEreignissubtypID": "236",
+   "strEreignissubtyp": "Verantwortlicher Material"
+  },
+  {
+   "sEreignissubtypID": "240",
+   "strEreignissubtyp": "Vereinsmitglied"
+  }
+ ]
+}
