@@ -30,7 +30,7 @@ import type { SyncLog } from "./portal/AuditTab.tsx";
 import { DesignSystemTab } from "./portal/DesignSystemTab.tsx";
 import { ZUGRIFF_ORDER, ZUGRIFF_DEFAULT, ROLLEN_MODULE_DEFAULT } from "./portal/portalUtils.ts";
 import type { ZugriffDefaultMap } from "./portal/portalUtils.ts";
-import type { AppTheme, ModuleAktiv, ModuleRechte, PortalRolle, Sb, SetState, Zugriffstufe } from "../types.ts";
+import type { AppTheme, ModuleAktiv, ModuleRechte, PortalRolle, Sb, SetState, Team, Zugriffstufe } from "../types.ts";
 import type { KaderRolleDb } from "../domains/roles/roleUtils.ts";
 
 type ZugriffStufenMap = Record<string, Record<string, Zugriffstufe>>;
@@ -85,10 +85,14 @@ interface PortalverwaltungViewProps {
   onReloadRollen?: (() => void) | null;
   dbKaderRollen?: KaderRolleDb[];
   onReloadKaderRollen?: (() => void) | null;
+  /* Nur für die SFV-Team-Zuordnung im API-Tab. Kommt aus clubcampus,
+     damit modules/portal nicht auf modules/teams zugreifen muss. */
+  dbTeams?: Team[];
+  setDbTeams?: ((f: (prev: Team[]) => Team[]) => void) | null;
 }
 
 function PortalverwaltungView(props: PortalverwaltungViewProps){
-  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase=null,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen} = props;
+  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase=null,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen,dbTeams=[],setDbTeams} = props;
   const [confirm,confirmDialog]=useConfirm();
   const [tab,setTab]=useState(initialTab);
   const [dbPortalRollen,setDbPortalRollen]=useState<PortalRolle[]>(externalRollen);
@@ -688,6 +692,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
       <ApiTab
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}
           apiVerbindungen={apiVerbindungen} tab={tab}
+          sb={supabase} dbTeams={dbTeams} setDbTeams={setDbTeams}
         />
       <AuditTab
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}

@@ -863,6 +863,19 @@ npx supabase gen types typescript --linked > src/database.types.ts
 
 ## Datenbankregeln (Supabase)
 
+### Es gibt keine Basis-Migration
+
+**Die Migrationsdateien unter `supabase/` ergeben zusammen NICHT die Datenbank.** Das Grundschema ist vor der Versionierung entstanden; die Dateien sind Deltas darauf. Wer die Datenbank nachbaut — zweiter Verein, neues Projekt, Wiederherstellung — nimmt **`supabase/schema.sql`**, nicht die Migrationen.
+
+Die Zahlen dazu, Stand 14.08.2026: von 592 Objekten im Dump kommen 108 in einer Migrationsdatei vor. Die übrigen 484 — 33 Tabellen, 251 Constraints, 145 Policies, 41 Indizes, 6 Trigger, 4 Funktionen — stehen ausschliesslich im Dump. Das ist kein Defekt, sondern die Bauweise: `schema.sql` ist vollständig und ist die Quelle fürs Nachbauen, die Migrationen sind das Protokoll der Änderungen.
+
+Zwei Folgerungen:
+
+- **Der Dump ist kein Nebenprodukt.** Geht er verloren oder läuft er der Datenbank hinterher, ist das Grundschema nirgends mehr vollständig beschrieben. Deshalb die Regel „nach jeder Strukturänderung Dump und Typen nachziehen" — sie sichert nicht die Bequemlichkeit, sondern die einzige vollständige Quelle.
+- **Nach `schema.sql` kommt `auth_triggers.sql`.** Der Dump deckt nur `public` ab; die zwei Trigger auf `auth.users` fehlen darin, und ohne sie kann sich nach einem Nachbau niemand registrieren.
+
+Eine nachträglich erzeugte Basis-Migration würde daran nichts verbessern — sie wäre eine zweite Fassung desselben Inhalts und liefe der ersten irgendwann hinterher.
+
 ### Pflicht für jede neue Tabelle
 
 ```sql

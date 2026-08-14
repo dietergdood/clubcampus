@@ -1,10 +1,13 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/portal/ApiTab.tsx
    ═══════════════════════════════════════════════════════════════ */
+import { useState } from "react";
 import { Btn, Card, Chip, Row, InfoBox } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
 import { API_INFOS } from "./portalUtils.ts";
+import { SfvZuordnung } from "./SfvZuordnung.tsx";
+import type { Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
    API_INFOS Platzhalter derselben Form. */
@@ -24,12 +27,23 @@ interface ApiTabProps {
   mobileKachel: string | null;
   apiVerbindungen: ApiVerbindung[];
   tab: string;
+  sb?: Sb;
+  dbTeams?: Team[];
+  setDbTeams?: ((f: (prev: Team[]) => Team[]) => void) | null;
 }
 
-export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab}: ApiTabProps) {
+export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=null,dbTeams=[],setDbTeams}: ApiTabProps) {
+  /* Welcher Anschluss ist gerade aufgeklappt. Nur Anzeigezustand, deshalb
+     hier und nicht im Modul. */
+  const [offen,setOffen]=useState<string|null>(null);
+
   return (
     <div style={{display:'contents'}}>
-      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&(
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen==="football_ch"&&(
+        <SfvZuordnung sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} onZurueck={()=>setOffen(null)}/>
+      )}
+
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen===null&&(
         <div>
           <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
           <div style={{height:16}}/>
@@ -65,7 +79,9 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab}: ApiT
                   )}
                   <Row align="flex-start">
                     {api.active&&<Btn small variant="primary" color={BL} onClick={()=>{}}>Sync starten</Btn>}
-                    <Btn small variant="outline" color="#888" onClick={()=>{}}>Konfigurieren</Btn>
+                    {api.key==="football_ch"
+                      ?<Btn small variant="outline" color="#888" onClick={()=>setOffen("football_ch")}>Teams zuordnen</Btn>
+                      :<Btn small variant="outline" color="#888" onClick={()=>{}}>Konfigurieren</Btn>}
                   </Row>
                 </Card>
               );
