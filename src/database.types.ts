@@ -3187,6 +3187,92 @@ export type Database = {
           },
         ]
       }
+      ranglisten: {
+        Row: {
+          anzahl_spiele: number | null
+          club_nummer: number | null
+          created_at: string | null
+          fairplay_punkte: number | null
+          gegentore: number | null
+          id: string
+          niederlagen: number | null
+          position: number | null
+          punkte: number | null
+          sfv_division_id: number
+          sfv_division_name: string | null
+          sfv_gruppe: string | null
+          sfv_gruppe_id: number
+          sfv_liga_id: number
+          sfv_liga_name: string | null
+          sfv_saison_id: number
+          sfv_team_id: number
+          siege: number | null
+          stand_vom: string | null
+          team_name: string | null
+          tore: number | null
+          unentschieden: number | null
+          verein_id: string
+        }
+        Insert: {
+          anzahl_spiele?: number | null
+          club_nummer?: number | null
+          created_at?: string | null
+          fairplay_punkte?: number | null
+          gegentore?: number | null
+          id?: string
+          niederlagen?: number | null
+          position?: number | null
+          punkte?: number | null
+          sfv_division_id?: number
+          sfv_division_name?: string | null
+          sfv_gruppe?: string | null
+          sfv_gruppe_id?: number
+          sfv_liga_id: number
+          sfv_liga_name?: string | null
+          sfv_saison_id: number
+          sfv_team_id: number
+          siege?: number | null
+          stand_vom?: string | null
+          team_name?: string | null
+          tore?: number | null
+          unentschieden?: number | null
+          verein_id: string
+        }
+        Update: {
+          anzahl_spiele?: number | null
+          club_nummer?: number | null
+          created_at?: string | null
+          fairplay_punkte?: number | null
+          gegentore?: number | null
+          id?: string
+          niederlagen?: number | null
+          position?: number | null
+          punkte?: number | null
+          sfv_division_id?: number
+          sfv_division_name?: string | null
+          sfv_gruppe?: string | null
+          sfv_gruppe_id?: number
+          sfv_liga_id?: number
+          sfv_liga_name?: string | null
+          sfv_saison_id?: number
+          sfv_team_id?: number
+          siege?: number | null
+          stand_vom?: string | null
+          team_name?: string | null
+          tore?: number | null
+          unentschieden?: number | null
+          verein_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranglisten_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rolle_pflichtfelder: {
         Row: {
           feld: string
@@ -3264,6 +3350,16 @@ export type Database = {
           notes: string | null
           resultat: string | null
           schiedsrichter: string | null
+          sfv_gegner_team_id: number | null
+          sfv_gruppe: string | null
+          sfv_gruppe_id: number | null
+          sfv_liga_id: number | null
+          sfv_match_id: number | null
+          sfv_saison_id: number | null
+          sfv_spiel_typ: number | null
+          sfv_stand: Json | null
+          sfv_status: number | null
+          sfv_team_id: number | null
           spiel_nr: string | null
           status: string | null
           team: string
@@ -3273,6 +3369,7 @@ export type Database = {
           verein_id: string
           wettbewerb: string | null
           zeit: string | null
+          zuletzt_synchronisiert: string | null
           zuschauer: number | null
         }
         Insert: {
@@ -3287,6 +3384,16 @@ export type Database = {
           notes?: string | null
           resultat?: string | null
           schiedsrichter?: string | null
+          sfv_gegner_team_id?: number | null
+          sfv_gruppe?: string | null
+          sfv_gruppe_id?: number | null
+          sfv_liga_id?: number | null
+          sfv_match_id?: number | null
+          sfv_saison_id?: number | null
+          sfv_spiel_typ?: number | null
+          sfv_stand?: Json | null
+          sfv_status?: number | null
+          sfv_team_id?: number | null
           spiel_nr?: string | null
           status?: string | null
           team: string
@@ -3296,6 +3403,7 @@ export type Database = {
           verein_id: string
           wettbewerb?: string | null
           zeit?: string | null
+          zuletzt_synchronisiert?: string | null
           zuschauer?: number | null
         }
         Update: {
@@ -3310,6 +3418,16 @@ export type Database = {
           notes?: string | null
           resultat?: string | null
           schiedsrichter?: string | null
+          sfv_gegner_team_id?: number | null
+          sfv_gruppe?: string | null
+          sfv_gruppe_id?: number | null
+          sfv_liga_id?: number | null
+          sfv_match_id?: number | null
+          sfv_saison_id?: number | null
+          sfv_spiel_typ?: number | null
+          sfv_stand?: Json | null
+          sfv_status?: number | null
+          sfv_team_id?: number | null
           spiel_nr?: string | null
           status?: string | null
           team?: string
@@ -3319,6 +3437,7 @@ export type Database = {
           verein_id?: string
           wettbewerb?: string | null
           zeit?: string | null
+          zuletzt_synchronisiert?: string | null
           zuschauer?: number | null
         }
         Relationships: [
@@ -3541,6 +3660,10 @@ export type Database = {
           liga: string | null
           name: string
           saison: string | null
+          sfv_division: string | null
+          sfv_liga_id: number | null
+          sfv_liga_name: string | null
+          sfv_team_id: number | null
           staff: string[] | null
           stufe_id: number | null
           stufenleitung: string | null
@@ -3564,6 +3687,10 @@ export type Database = {
           liga?: string | null
           name: string
           saison?: string | null
+          sfv_division?: string | null
+          sfv_liga_id?: number | null
+          sfv_liga_name?: string | null
+          sfv_team_id?: number | null
           staff?: string[] | null
           stufe_id?: number | null
           stufenleitung?: string | null
@@ -3587,6 +3714,10 @@ export type Database = {
           liga?: string | null
           name?: string
           saison?: string | null
+          sfv_division?: string | null
+          sfv_liga_id?: number | null
+          sfv_liga_name?: string | null
+          sfv_team_id?: number | null
           staff?: string[] | null
           stufe_id?: number | null
           stufenleitung?: string | null

@@ -537,6 +537,10 @@ CREATE TABLE IF NOT EXISTS "public"."api_verbindungen" (
 ALTER TABLE "public"."api_verbindungen" OWNER TO "postgres";
 
 
+COMMENT ON COLUMN "public"."api_verbindungen"."key" IS 'Name des Anschlusses (fairgate, football_ch, fvrz, clubdesk, sfa), kein Geheimnis. Eindeutig pro Verein, nicht global — Geheimnisse liegen in den Secrets der Edge Function.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."audit_log" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "benutzer_id" "uuid",
@@ -1578,6 +1582,52 @@ CREATE TABLE IF NOT EXISTS "public"."push_subscriptions" (
 ALTER TABLE "public"."push_subscriptions" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."ranglisten" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "sfv_saison_id" integer NOT NULL,
+    "sfv_liga_id" integer NOT NULL,
+    "sfv_liga_name" "text",
+    "sfv_division_id" integer DEFAULT 0 NOT NULL,
+    "sfv_division_name" "text",
+    "sfv_gruppe_id" integer DEFAULT 0 NOT NULL,
+    "sfv_gruppe" "text",
+    "sfv_team_id" bigint NOT NULL,
+    "team_name" "text",
+    "club_nummer" integer,
+    "position" integer,
+    "anzahl_spiele" integer,
+    "siege" integer,
+    "unentschieden" integer,
+    "niederlagen" integer,
+    "tore" integer,
+    "gegentore" integer,
+    "punkte" integer,
+    "fairplay_punkte" integer,
+    "stand_vom" timestamp with time zone DEFAULT "now"(),
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."ranglisten" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."ranglisten" IS 'Ranglisten vom SFV, eine Zeile je Team je Gruppe. Wird vom Sync vollstaendig bewirtschaftet.';
+
+
+
+COMMENT ON COLUMN "public"."ranglisten"."club_nummer" IS 'SFV clubNumber (FCH = 11057). NICHT die ClubId (1516) — in Ranglisten und Matchdaten steht ausschliesslich die clubNumber.';
+
+
+
+COMMENT ON COLUMN "public"."ranglisten"."fairplay_punkte" IS 'SFV penaltyPoints. KEIN Punktabzug: die Punkte sind ungekuerzt, FCH hatte 2025/2026 deren 76 auf Rang 2. Es ist die Fairplay-/Bussenwertung. Nie als Abzug anzeigen.';
+
+
+
+COMMENT ON COLUMN "public"."ranglisten"."stand_vom" IS 'Zeitpunkt des Abrufs, nicht des Spieltags.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."rolle_pflichtfelder" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "rolle" "text" NOT NULL,
@@ -1623,11 +1673,54 @@ CREATE TABLE IF NOT EXISTS "public"."spiele" (
     "delegierter" "text",
     "notes" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "sfv_match_id" bigint,
+    "sfv_saison_id" integer,
+    "sfv_team_id" bigint,
+    "sfv_gegner_team_id" bigint,
+    "sfv_liga_id" integer,
+    "sfv_gruppe_id" integer,
+    "sfv_gruppe" "text",
+    "sfv_spiel_typ" integer,
+    "sfv_status" integer,
+    "sfv_stand" "jsonb",
+    "zuletzt_synchronisiert" timestamp with time zone
 );
 
 
 ALTER TABLE "public"."spiele" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_match_id" IS 'SFV matchId — Schluessel des Sync. NULL = manuell erfasstes Spiel, der Sync fasst es nie an.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_saison_id" IS 'SFV seasonId, benannt nach dem Endjahr: 2027 = Saison 2026/2027.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_team_id" IS 'SFV teamId des eigenen Teams (teamAId oder teamBId, je nach Heimrecht).';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_gegner_team_id" IS 'SFV teamId des Gegners — fuer /api/team/picture/{teamId}.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_gruppe_id" IS 'SFV groupId; zusammen mit sfv_liga_id der Bezug zur Rangliste.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_spiel_typ" IS 'SFV matchType: 1 Meisterschaft, 2 Cup, 3 Trainingsspiel, 9 Schweizer-Cup. Zum Filtern in der Anzeige — der Klartext steht in wettbewerb.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_status" IS 'SFV matchState: 1 noch nicht ausgetragen, 2 ausgetragen, 6 verschoben, 7 neu angesetzt, 10 findet nicht statt. Zum Filtern — der Klartext steht in status.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_stand" IS 'Rohe Antwortzeile des SFV, unveraendert. Damit ist jede Abweichung nachvollziehbar und neue Felder brauchen keinen erneuten Abruf.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."team_helfer_zuteilungen" (
@@ -1726,11 +1819,27 @@ CREATE TABLE IF NOT EXISTS "public"."teams" (
     "vereinsstufe" "text",
     "verbandskategorie" "text",
     "stufenleitung" "text",
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "sfv_team_id" bigint,
+    "sfv_liga_id" integer,
+    "sfv_liga_name" "text",
+    "sfv_division" "text"
 );
 
 
 ALTER TABLE "public"."teams" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."teams"."sfv_team_id" IS 'SFV teamId. NULL = kein Pendant beim SFV (z.B. reine Trainingsgruppe). Von Hand zugeordnet, nie vom Sync geschrieben.';
+
+
+
+COMMENT ON COLUMN "public"."teams"."sfv_liga_id" IS 'SFV teamLeagueId, z.B. 13010 = 2. Liga.';
+
+
+
+COMMENT ON COLUMN "public"."teams"."sfv_division" IS 'SFV teamDivisionName, z.B. "Herbstrunde" oder "Staerkeklasse 2".';
+
 
 
 CREATE SEQUENCE IF NOT EXISTS "public"."teams_id_seq"
@@ -1974,12 +2083,12 @@ ALTER TABLE ONLY "public"."api_sync_log"
 
 
 ALTER TABLE ONLY "public"."api_verbindungen"
-    ADD CONSTRAINT "api_verbindungen_key_key" UNIQUE ("key");
+    ADD CONSTRAINT "api_verbindungen_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."api_verbindungen"
-    ADD CONSTRAINT "api_verbindungen_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "api_verbindungen_verein_key_key" UNIQUE ("verein_id", "key");
 
 
 
@@ -2378,6 +2487,16 @@ ALTER TABLE ONLY "public"."push_subscriptions"
 
 
 
+ALTER TABLE ONLY "public"."ranglisten"
+    ADD CONSTRAINT "ranglisten_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."ranglisten"
+    ADD CONSTRAINT "ranglisten_verein_zeile_key" UNIQUE ("verein_id", "sfv_saison_id", "sfv_liga_id", "sfv_division_id", "sfv_gruppe_id", "sfv_team_id");
+
+
+
 ALTER TABLE ONLY "public"."rolle_pflichtfelder"
     ADD CONSTRAINT "rolle_pflichtfelder_pkey" PRIMARY KEY ("id");
 
@@ -2400,6 +2519,11 @@ ALTER TABLE ONLY "public"."rollen"
 
 ALTER TABLE ONLY "public"."spiele"
     ADD CONSTRAINT "spiele_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."spiele"
+    ADD CONSTRAINT "spiele_verein_sfv_match_key" UNIQUE ("verein_id", "sfv_match_id");
 
 
 
@@ -2430,6 +2554,11 @@ ALTER TABLE ONLY "public"."team_stufen"
 
 ALTER TABLE ONLY "public"."teams"
     ADD CONSTRAINT "teams_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."teams"
+    ADD CONSTRAINT "teams_verein_sfv_team_key" UNIQUE ("verein_id", "sfv_team_id");
 
 
 
@@ -2595,6 +2724,14 @@ CREATE INDEX "idx_portal_einstellungen_verein" ON "public"."portal_einstellungen
 
 
 
+CREATE INDEX "idx_ranglisten_gruppe" ON "public"."ranglisten" USING "btree" ("verein_id", "sfv_saison_id", "sfv_liga_id", "sfv_gruppe_id");
+
+
+
+CREATE INDEX "idx_ranglisten_verein" ON "public"."ranglisten" USING "btree" ("verein_id");
+
+
+
 CREATE INDEX "idx_slots_gueltig_ab" ON "public"."trainingsplan_slots" USING "btree" ("valid_from_week_year", "valid_from_week_nr");
 
 
@@ -2608,6 +2745,14 @@ CREATE INDEX "idx_slots_wochentag" ON "public"."trainingsplan_slots" USING "btre
 
 
 CREATE INDEX "idx_spiele_datum" ON "public"."spiele" USING "btree" ("date");
+
+
+
+CREATE INDEX "idx_spiele_sfv_saison" ON "public"."spiele" USING "btree" ("verein_id", "sfv_saison_id");
+
+
+
+CREATE INDEX "idx_spiele_sfv_team" ON "public"."spiele" USING "btree" ("sfv_team_id");
 
 
 
@@ -3374,6 +3519,11 @@ ALTER TABLE ONLY "public"."push_subscriptions"
 
 ALTER TABLE ONLY "public"."push_subscriptions"
     ADD CONSTRAINT "push_subscriptions_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."ranglisten"
+    ADD CONSTRAINT "ranglisten_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
 
 
@@ -4210,6 +4360,17 @@ CREATE POLICY "push_own" ON "public"."push_subscriptions" USING ((("verein_id" =
 
 
 ALTER TABLE "public"."push_subscriptions" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."ranglisten" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "ranglisten_select" ON "public"."ranglisten" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "ranglisten_write" ON "public"."ranglisten" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
 
 
 ALTER TABLE "public"."rolle_pflichtfelder" ENABLE ROW LEVEL SECURITY;
@@ -5102,6 +5263,12 @@ GRANT ALL ON TABLE "public"."portal_zugang" TO "service_role";
 GRANT ALL ON TABLE "public"."push_subscriptions" TO "anon";
 GRANT ALL ON TABLE "public"."push_subscriptions" TO "authenticated";
 GRANT ALL ON TABLE "public"."push_subscriptions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."ranglisten" TO "anon";
+GRANT ALL ON TABLE "public"."ranglisten" TO "authenticated";
+GRANT ALL ON TABLE "public"."ranglisten" TO "service_role";
 
 
 
