@@ -260,9 +260,19 @@ Fairgate-Nummern werden **pro Verein** vergeben. Der Schlüssel steht aber auf
 `(verein_id, …)` umgestellt wurden, und ist durchgerutscht.
 
 Umstellen auf `(verein_id, fairgate_id)`, bevor ein zweiter Verein dazukommt.
-Beim Durchsehen der übrigen `UNIQUE`-Constraints war es der einzige echte Fall;
-`api_verbindungen_key_key` ist absichtlich global (ein API-Schlüssel ist ein
-Geheimnis und muss projektweit eindeutig sein).
+
+> **Korrigiert am 14.08.2026.** Hier stand, `api_verbindungen_key_key` sei
+> „absichtlich global (ein API-Schlüssel ist ein Geheimnis und muss projektweit
+> eindeutig sein)". Das war falsch: `api_verbindungen.key` ist kein Geheimnis,
+> sondern der Name des Anschlusses — `fairgate`, `football_ch`, `fvrz`,
+> `clubdesk`, `sfa`. Derselbe Wert wählt in `ApiTab` den Beschreibungstext aus
+> `API_INFOS`. In der ganzen Tabelle steht kein Geheimnis; der Hinweis im Tab
+> sagt es selbst („API-Keys werden aus Sicherheitsgründen nicht in der
+> Datenbank gespeichert"). Wirkung des Fehlers: der erste Verein, der einen
+> Anschluss anlegt, hätte ihn allen anderen weggenommen. Umgestellt auf
+> `(verein_id, key)` mit `supabase/migration_api_verbindungen_mandant.sql`.
+> Damit bleibt `mitglieder_fairgate_id_key` der letzte offene Fall —
+> `api_verbindungen_key_key` war es also nicht der einzige.
 
 ### Von Hand gesetzte Rollen werden still überschrieben
 

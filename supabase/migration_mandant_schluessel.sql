@@ -125,3 +125,20 @@ select c.conrelid::regclass::text as tabelle,
 --     foreign key (verein_id, mitgliedtyp) references mitgliedtypen (verein_id, name)
 --   mitglieder.verein_id existiert bereits.
 -- ═══════════════════════════════════════════════════════════════════════════
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- NACHTRAG 14.08.2026 — eine der Ausnahmen war keine
+--
+-- Oben unter "NICHT umgestellt, absichtlich" steht:
+--     api_verbindungen.key   API-Schluessel sollen global eindeutig sein
+--
+-- Die Begruendung war falsch. api_verbindungen.key ist kein Geheimnis, sondern
+-- der Name des Anschlusses ('fairgate', 'football_ch', 'fvrz', 'clubdesk',
+-- 'sfa'); in der Tabelle steht ueberhaupt kein Geheimnis. Damit haette der
+-- erste Verein, der einen Anschluss anlegt, ihn allen anderen weggenommen.
+--
+-- Nachgezogen mit supabase/migration_api_verbindungen_mandant.sql.
+-- Der Text oben bleibt unveraendert stehen — er ist das Protokoll dessen, was
+-- am 05.08.2026 entschieden wurde, nicht die heute geltende Regel.
+-- ═══════════════════════════════════════════════════════════════════════════
