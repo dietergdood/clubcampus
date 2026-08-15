@@ -16,7 +16,9 @@ const ATT_EVENTS: any[] = ATT_EVENTS_SRC;
    14.08.2026 aus der Datenbank (domains/spiele). demoData bleibt für Kader
    und Kalender — das ist Phase 4. */
 import { useSpiele, useRangliste } from "../domains/spiele/useSpiele.ts";
-import type { Sb, Team } from "../types.ts";
+import { sfvTeamIdFuer } from "../domains/spiele/spielMapper.ts";
+import type { TeamZuordnung } from "../domains/spiele/spielMapper.ts";
+import type { Sb } from "../types.ts";
 import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.tsx";
 
 /* winStorage.storage ist eine App-eigene Bridge (kein Standard-Window-Feld). */
@@ -85,7 +87,7 @@ interface SpielDetailProps {
   setMotmAll?: any;
 }
 interface SpielplanModulProps { role: string; team?: string|null; initialSelected?: any; sb?: Sb; vereinId?: string|null; }
-interface TableTabProps { team?: string|null; sb?: Sb; vereinId?: string|null; dbTeams?: Team[]; }
+interface TableTabProps { team?: string|null; sb?: Sb; vereinId?: string|null; dbTeams?: TeamZuordnung[]; }
 interface TermineAccount { kinder?: Array<{name: string; team?: string; rosterId?: number|null}>; }
 interface TermineModulProps {
   role: string;
@@ -568,7 +570,7 @@ function TableTab({team,sb=null,vereinId=null,dbTeams=[]}: TableTabProps){
   /* Die Gruppe kommt über die SFV-Zuordnung, nicht über den Namen: fünf
      SFV-Teams des FCH heissen "FC Herrliberg a". Ohne Zuordnung gibt es
      keine Tabelle — und das soll man sehen, nicht raten müssen. */
-  const sfvTeamId=dbTeams.find(t=>t.name===team)?.sfv_team_id??null;
+  const sfvTeamId=sfvTeamIdFuer(dbTeams,team);
   const {zeilen:rows,laedt}=useRangliste(sb,vereinId,sfvTeamId??null);
 
   if(!laedt&&sfvTeamId==null) return(

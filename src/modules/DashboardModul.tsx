@@ -6,8 +6,11 @@ import { useState, useEffect } from "react";
 import { GN, R, RL, BL, AM, GB, ACCENT} from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { Card, Chip, H1, InfoBox, Row, Between, STitle, Stat, useIsMobile, Btn, H2, Col } from "../theme.ts";
-import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS, ROSTER, TABLES } from "../demoData.js";
-import type { Account } from "../types.ts";
+import { ATT_EVENTS, ATT_INITIAL, ATT_LOG, BUSES, EVENTS, HELPERS, HELPER_EVENTS, ROSTER } from "../demoData.js";
+import { useRangliste } from "../domains/spiele/useSpiele.ts";
+import { sfvTeamIdFuer } from "../domains/spiele/spielMapper.ts";
+import type { TeamZuordnung } from "../domains/spiele/spielMapper.ts";
+import type { Account, Sb } from "../types.ts";
 
 /* Merkt sich das Navigationsziel für den Wechsel in die Team-Ansicht.
    Modul-lokal, nicht zu verwechseln mit NAV_TARGET aus appConstants. */
@@ -28,6 +31,9 @@ interface DashProps {
   meineTeams?: (string | undefined)[];
   trainerTeams?: (string | undefined)[];
   myRosterId?: number | null;
+  sb?: Sb;
+  vereinId?: string | null;
+  dbTeams?: TeamZuordnung[];
 }
 
 function getGreeting(){
@@ -42,11 +48,11 @@ function getDate(){
   return new Date().toLocaleDateString("de-CH",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 }
 
-function Dashboard({role,setActive,account,meineTeams,myRosterId}: DashProps){
+function Dashboard({role,setActive,account,meineTeams,myRosterId,sb=null,vereinId=null,dbTeams=[]}: DashProps){
   if(role==="administrator")  return <DashboardAdmin setActive={setActive} account={account}/>;
   if(role==="administration") return <DashboardAdministration setActive={setActive} account={account}/>;
   if(role==="funktionaer")    return <DashboardFunktionaer setActive={setActive} account={account}/>;
-  if(role==="trainer")        return <DashboardTrainer setActive={setActive} account={account} trainerTeams={meineTeams} myRosterId={myRosterId}/>;
+  if(role==="trainer")        return <DashboardTrainer setActive={setActive} account={account} trainerTeams={meineTeams} myRosterId={myRosterId} sb={sb} vereinId={vereinId} dbTeams={dbTeams}/>;
   if(role==="spieler")        return <DashboardSpieler account={account} meineTeams={meineTeams} myRosterId={myRosterId} setActive={setActive}/>;
   if(role==="eltern")         return <DashboardEltern account={account} meineTeams={meineTeams} setActive={setActive}/>;
   return null;
@@ -272,7 +278,7 @@ function DashboardFunktionaer({setActive,account}: DashProps){
   );
 }
 
-function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}: DashProps){
+function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId,sb=null,vereinId=null,dbTeams=[]}: DashProps){
   const isMobile=useIsMobile();
   const trainer=ROSTER.find(p=>p.id===(myRosterId||200))||ROSTER.find(p=>p.id===200);
   const firstName=trainer?.firstName||account?.name?.split(" ")[0]||"Trainer";
@@ -285,8 +291,10 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}: DashPr
   const nextTrain=upcoming.find(e=>e.type==="Training");
   const nextSpiel=upcoming.find(e=>e.type==="Spiel");
 
-  /* Tabellenrang */
-  const tableData=(TABLES as Record<string, any[]>)[team]||[];
+  /* Tabellenrang — dieselbe Quelle wie Spielplan und Tabelle im Team.
+     Vorher stand hier TABLES aus demoData: erfundene Zahlen neben echten. */
+  const sfvTeamId=sfvTeamIdFuer(dbTeams,team);
+  const {zeilen:tableData}=useRangliste(sb,vereinId,sfvTeamId??null);
   const myRow=tableData.find(r=>r.me);
 
   return(
@@ -300,7 +308,7 @@ function DashboardTrainer({setActive,account,trainerTeams=[],myRosterId}: DashPr
         <Stat label="Nächstes Training" value={nextTrain?nextTrain.date.replace(/^\w+\s/,""):"-"} sub={nextTrain?`${nextTrain.time} Uhr · ${nextTrain.location}`:"Kein Training"} semantic="success"/>
         <Stat label="Nächstes Spiel"    value={nextSpiel?nextSpiel.date.replace(/^\w+\s/,""):"-"} sub={nextSpiel?`${nextSpiel.time} Uhr · vs. ${nextSpiel.opponent}`:"Kein Spiel"} semantic="info"/>
         <Stat label="Ø Anwesenheit"     value="77%"      sub="letzte 5 Trainings"   semantic="success"/>
-        <Stat label="Tabellenrang"      value={myRow?myRow.rank+".":"-"} sub={myRow?(TABLES as Record<string, any[]>)[team]?.length+" Teams · "+myRow.pts+" Punkte":"Keine Tabelle"} semantic="info"/>
+        <Stat label="Tabellenrang"      value={myRow?myRow.rank+".":"-"} sub={myRow?tableData.length+" Teams · "+myRow.pts+" Punkte":"Keine Tabelle"} semantic="info"/>
       </div>
       <div className="cc-grid-cards cc-mb-20">
 

@@ -130,6 +130,22 @@ export interface TabellenZeile {
   me: boolean;
 }
 
+/* Was der Bezug zur Rangliste von einem Team braucht — mehr nicht.
+   Bewusst strukturell und locker gehalten: die Aufrufer reichen teils den
+   vollen `Team`-Typ, teils die schmale `TeamRow` aus TeamModul (Altbestand,
+   die dort noch von Hand geschrieben ist). Ein `Pick<Team, …>` würde die
+   zweite Form abweisen, ohne dass jemand etwas gewinnt. */
+export type TeamZuordnung = { name?: string | null; sfv_team_id?: number | null };
+
+/** Die SFV-Nummer eines Teams anhand seines Namens in ClubCampus.
+    An drei Stellen gebraucht (Spielplan-Tabelle, Team-Übersicht,
+    Trainer-Dashboard) — deshalb hier und nicht dreimal dort. */
+export function sfvTeamIdFuer(teams: TeamZuordnung[], teamName?: string | null): number | null {
+  if (!teamName) return null;
+  const treffer = teams.find((t) => t.name === teamName);
+  return treffer?.sfv_team_id != null ? Number(treffer.sfv_team_id) : null;
+}
+
 const gruppenSchluessel = (z: RanglisteZeile) =>
   `${z.sfv_liga_id}|${z.sfv_division_id}|${z.sfv_gruppe_id}`;
 

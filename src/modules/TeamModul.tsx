@@ -7,7 +7,10 @@ import type { ComponentType } from "react";
 import { ACCENT, AM, BK, BL, GB, GN, GR, R, RL, STATUS_BG } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, Stat} from "../theme.ts";
-import { ATT_EVENTS, ATT_INITIAL, EVENTS, POLLS, ROSTER, TABLES } from "../demoData.js";
+import { ATT_EVENTS, ATT_INITIAL, EVENTS, POLLS, ROSTER } from "../demoData.js";
+import { useRangliste } from "../domains/spiele/useSpiele.ts";
+import { sfvTeamIdFuer } from "../domains/spiele/spielMapper.ts";
+import type { TeamZuordnung } from "../domains/spiele/spielMapper.ts";
 import type { Sb } from "../types.ts";
 
 /* ── Typen ── */
@@ -23,7 +26,7 @@ interface TeamPlayer {
 }
 
 /* dbTeams-Zeile (nur die hier gelesenen Felder) — strukturkompatibel zu Team */
-interface TeamRow { id?: number|null; name?: string|null; liga?: string|null; saison?: string|null; module_aktiv?: string[]|null; }
+interface TeamRow { id?: number|null; name?: string|null; liga?: string|null; saison?: string|null; module_aktiv?: string[]|null; sfv_team_id?: number|null; }
 /* Mitglied, wie TeamModul es liest. `teams` und `funktion` sind
    Phantomfelder aus demoData und existieren als DB-Spalte nicht.
 
@@ -354,7 +357,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
       })():(
         <Tabs tabs={tabs} active={tab} setActive={setTab}/>
       )}
-      {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial} dbMitglieder={dbMitglieder}/>}
+      {tab==="overview"&&<TeamOverview role={role} team={activeTeam} setTab={setTab} setAttFilter={setAttFilter} responses={responses} setRosterInitial={setRosterInitial} dbMitglieder={dbMitglieder} sb={sb} vereinId={vereinId} dbTeams={dbTeams}/>}
       {tab==="roster"&&<KaderModulProp role={kannBearbeitenInTeam(activeTeamObj?.id)?"trainer":role} team={activeTeamObj||activeTeam} sb={sb} onSelectMember={onSelectMember} vereinId={vereinId}/>}
       {tab==="training"&&!limited&&<TrainingsplanModulProp team={activeTeam} sb={sb} dbTeams={dbTeams} vereinId={vereinId}/>}
       {tab==="spielplan"&&(
@@ -400,9 +403,15 @@ interface TeamOverviewProps {
   responses?: Record<string, any>;
   setRosterInitial?: (id: number)=>void;
   dbMitglieder?: TeamMitglied[];
+  sb?: Sb;
+  vereinId?: string|null;
+  dbTeams?: TeamZuordnung[];
 }
 
-function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial,dbMitglieder=[]}: TeamOverviewProps){
+function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRosterInitial,dbMitglieder=[],sb=null,vereinId=null,dbTeams=[]}: TeamOverviewProps){
+  /* Tabellenrang aus derselben Quelle wie Spielplan und Tabelle. */
+  const sfvTeamId=sfvTeamIdFuer(dbTeams,team);
+  const {zeilen:rangliste}=useRangliste(sb,vereinId,sfvTeamId??null);
   const isMobile=useIsMobile();
   const isEltern=role==="eltern";
   const today=new Date().toISOString().split("T")[0];
@@ -449,7 +458,7 @@ function TeamOverview({role,team,setTab,setAttFilter,responses=ATT_INITIAL,setRo
           const spieler=allM.filter(p=>!p.role||p.role.toLowerCase()==="spieler"||p.role==="");
           const trainer=allM.filter(p=>p.role&&p.role.toLowerCase()!=="spieler"&&p.role!=="");
           const pos=[...new Set(spieler.map(p=>p.pos).filter(Boolean))];
-          const tableData: any[]=(TABLES as Record<string, any[]>)[myTeam]||[];
+          const tableData=rangliste;
           const myRow=tableData.find((r)=>r.me);
           return(
             <div>

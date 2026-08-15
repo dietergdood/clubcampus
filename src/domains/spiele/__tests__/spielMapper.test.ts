@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import {
   aktuelleSfvSaison, saisonZeitraum, formatDatum, mapSpiel, sortiereSpiele,
-  gruppeFuerTeam, mapRangliste,
+  gruppeFuerTeam, mapRangliste, sfvTeamIdFuer,
 } from "../spielMapper.ts";
 import type { SpielZeile, RanglisteZeile } from "../spielMapper.ts";
 
@@ -110,6 +110,28 @@ describe("gruppeFuerTeam", () => {
 
   it("liefert nichts, wenn die Nummer in dieser Saison fehlt", () => {
     expect(gruppeFuerTeam(zeilen, 99999)).toEqual([]);
+  });
+});
+
+describe("sfvTeamIdFuer", () => {
+  const teams = [
+    { name: "1. Mannschaft", sfv_team_id: 38301 },
+    { name: "2. Mannschaft", sfv_team_id: 38302 },
+    { name: "Frauen 1", sfv_team_id: null },
+  ];
+
+  it("findet die SFV-Nummer über den ClubCampus-Namen", () => {
+    expect(sfvTeamIdFuer(teams, "2. Mannschaft")).toBe(38302);
+  });
+
+  it("liefert null für ein Team ohne Zuordnung", () => {
+    expect(sfvTeamIdFuer(teams, "Frauen 1")).toBeNull();
+  });
+
+  it("liefert null für ein unbekanntes oder fehlendes Team", () => {
+    expect(sfvTeamIdFuer(teams, "Senioren")).toBeNull();
+    expect(sfvTeamIdFuer(teams, null)).toBeNull();
+    expect(sfvTeamIdFuer([], "1. Mannschaft")).toBeNull();
   });
 });
 

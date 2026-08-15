@@ -159,9 +159,10 @@ npx supabase db dump --linked -f supabase/schema.sql
 
 Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verliert: Zahl der `CREATE TABLE`, `CREATE POLICY`, `CREATE INDEX` und `ADD CONSTRAINT` gegen die alte Fassung vergleichen — ein abgebrochener Dump fällt sonst erst auf, wenn jemand das Schema nachbaut.
 
-> **Die Zählprüfung hat zwei blinde Flecken.** Sie zählt nur Objekte in `public`, und genau zwei wichtige Dinge liegen woanders — beide fallen durch jede Zählung, weil sie in *keiner* der vier Kategorien vorkommen:
+> **Die Zählprüfung hat drei blinde Flecken.** Sie zählt nur Objekte in `public`, und drei wichtige Dinge liegen woanders — alle fallen durch jede Zählung, weil sie in *keiner* der vier Kategorien vorkommen:
 > - `ALTER PUBLICATION "supabase_realtime" ADD TABLE …` für `nachrichten` und `nachrichten_antworten`. Die Publication ist global, nicht schemagebunden. Ohne diese Zeilen bekommt ein nachgebautes Portal keine Live-Nachrichten — und weil nichts fehlschlägt, merkt es niemand.
 > - Die Trigger auf `auth.users` (`on_auth_user_created`, `on_auth_user_login`). Sie stehen in **keinem** `public`-Dump; `schema.sql` enthält nur die Funktionen `handle_new_user`/`handle_user_login`, ohne jeden Aufrufer. Deshalb liegen sie separat in **`supabase/auth_triggers.sql`** und müssen nach `schema.sql` eingespielt werden — sonst kann sich nach einem Nachbau niemand registrieren.
+> - **Der cron-Auftrag `sfv-sync-stuendlich`** (seit 15.08.2026). `cron.job` liegt im Schema `cron`. Ohne ihn läuft der SFV-Sync nie wieder, und auch das fällt nicht auf: die Anzeige zeigt schlicht den Stand vom Tag des Nachbaus. Liegt in **`supabase/cron_sfv_sync.sql`**.
 >
 > Beim regulären `supabase db dump --linked` sind die `ALTER PUBLICATION` enthalten; ein `pg_dump --schema=public` verliert sie. Die auth-Trigger fehlen in beiden Fällen. Wird der Dump länger nicht gepflegt, läuft er auseinander: am 27.07.2026 fehlten ihm `elternkontakte.profil_geprueft_at`, `vereine.slug` samt `vereine_slug_unique` und die Funktion `check_email_bekannt()` — alle drei erst durch eine Regenerierung von `database.types.ts` aufgefallen. Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
 
@@ -192,6 +193,8 @@ Ohne Docker (z.B. wenn Docker Desktop nicht läuft) geht ein Dump auch direkt ü
 - `supabase/etappe6b_position_rueckennr.sql` — `position` und `rueckennr` gehören an die Kaderzeile, nicht ans Mitglied.
 - `supabase/etappe6c_restliche_altspalten.sql` — `hat_portal_zugang`, `eltern`, `datenstatus`, `notizen`, `fairgate_sync_at`. Enthält auch die neue Fassung von `handle_new_user()`.
 - `supabase/auth_triggers.sql` — die zwei Trigger auf `auth.users`, die in keinem `public`-Dump stehen.
+- `supabase/cron_sfv_sync.sql` — der stündliche Zeitplan des SFV-Sync (pg_cron + pg_net, Ausweis aus dem Vault). Steht ebenfalls in keinem Dump, weil `cron.job` nicht im Schema `public` liegt. Enthält auch die zwei Abfragen zum Nachschauen: `cron.job_run_details` sagt, ob der Aufruf abgesetzt wurde, `api_sync_log` sagt, ob der Lauf gelang.
+- `supabase/migration_sfv_sync.sql` — Laufsperre (`api_verbindungen.sync_laeuft_seit`) und die Korrektur der Feldhoheit (`ht_resultat` gehört dem Verein, der Spielplan-Endpunkt liefert keine Halbzeit). Ausgeführt am 14.08.2026; enthält am Ende den Nachtrag über den ausgefallenen Block A.
 - `README.md` — Produktüberblick, Rollen, Einrichtung eines neuen Vereins.
 
 ## Bekannte Defekte

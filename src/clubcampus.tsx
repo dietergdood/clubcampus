@@ -415,9 +415,9 @@ function Portal({supabaseClient, slug}: PortalProps){
   };
 
   const getView=()=>{
-    if(!isModuleVisible(active)) return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
+    if(!isModuleVisible(active)) return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId} sb={sb} vereinId={tenant?.id} dbTeams={dbTeams}/>;
     switch(active){
-      case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId}/>;
+      case "dashboard":         return <Dashboard role={role} setActive={setActive} account={account} meineTeams={meineTeams} myRosterId={myRosterId} sb={sb} vereinId={tenant?.id} dbTeams={dbTeams}/>;
       case "team":              return role==="administrator"||role==="administration"?<TeamsVerwaltungModul sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} dbStufen={dbStufen} setDbStufen={setDbStufen} setCustomBack={setCustomBackAndRef} dbMitglieder={dbMitglieder} TeamViewComponent={TeamView} KaderModulComponent={KaderModul} TrainingsplanModulComponent={TrainingsplanModul} TermineModulComponent={TermineModul} SpielplanModulComponent={SpielplanModul} TableTabComponent={TableTab} HelferModulComponent={HelferModul} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)} vereinId={tenant?.id}/>:<TeamView role={role} trainerTeams={trainerTeams} teamRollen={teamRollen} setActive={setActive} myRosterId={myRosterId} account={account} sb={sb} dbTeams={dbTeams} isModuleVisible={isModuleVisible} dbMitglieder={dbMitglieder} KaderModul={KaderModul} TrainingsplanModul={TrainingsplanModul} TermineModul={TermineModul} SpielplanModul={SpielplanModul} TableTab={TableTab} HelferModul={HelferModul} onSelectMember={(m: {id?: number; mitglied_id?: number})=>{setNavToMember(m.id||m.mitglied_id||null);setActivePersist("members");}} navToTeam={navToTeam} onNavToTeamDone={()=>setNavToTeam(null)} vereinId={tenant?.id}/>;
       case "members":           return <MembersView role={role} account={account} dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen} kannSchreiben={kannSchreiben} kannVerwalten={kannVerwalten} sb={sb} onReload={loadDbMitglieder} onUpdatePortalZugang={updatePortalZugang} navToMember={navToMember} onNavToMemberDone={()=>setNavToMember(null)} onNavToTeam={teamId=>{setNavToTeam(teamId);setActivePersist("team");}} vereinId={tenant?.id}/>;
       case "users":             return <PortalverwaltungView initialTab="users" moduleAktiv={moduleAktiv} setModuleAktiv={setModuleAktiv} moduleRechte={moduleRechte} setModuleRechte={setModuleRechte} sb={sb} appTheme={appTheme} setAppTheme={setAppTheme} applyThemeCss={applyThemeCss} vereinId={tenant?.id} dbTeams={dbTeams} setDbTeams={setDbTeams}/>;
@@ -458,7 +458,7 @@ function Portal({supabaseClient, slug}: PortalProps){
         if (!meinMitglied) return <div className="cc-empty-state"><div className="cc-text-sub">Profil wird geladen…</div></div>;
         return <DatenpruefungMitglied raw={meinMitglied} sb={sb} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
       }
-      default:                  return <Dashboard role={role} setActive={setActive}/>;
+      default:                  return <Dashboard role={role} setActive={setActive} sb={sb} vereinId={tenant?.id} dbTeams={dbTeams}/>;
     }
   };
 
