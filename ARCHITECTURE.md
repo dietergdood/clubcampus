@@ -876,6 +876,47 @@ Zwei Folgerungen:
 
 Eine nachträglich erzeugte Basis-Migration würde daran nichts verbessern — sie wäre eine zweite Fassung desselben Inhalts und liefe der ersten irgendwann hinterher.
 
+### Migrationen prüfen sich selbst
+
+**Alles über drei Anweisungen kommt in einen `do $mig$ … $mig$;`-Block mit Prüfung am Ende.**
+
+**Warum.** Am 13. und 14.08.2026 ist beim Ausführen im SQL-Editor je ein zusammenhängendes Stück einer Migration verlorengegangen — **ohne Fehlermeldung**:
+
+| Datum | verloren | drumherum |
+|---|---|---|
+| 13.08. | 8 × `comment on column` und eine `alter table … add constraint` aus `migration_sfv_spielplan.sql`, Block A | das `add column` davor und die `create index` danach haben gewirkt |
+| 14.08. | ganzer Block A aus `migration_sfv_sync.sql` (`add column` + `comment on`) | Block B hat gewirkt |
+
+Beide Male hätte es niemand gemerkt: die fehlende Constraint hätte den stündlichen Sync jede Stunde 268 Spiele neu anlegen lassen statt sie zu aktualisieren, und die fehlenden Kommentare hätten die Begründungen verschluckt, die verhindern, dass jemand `fairplay_punkte` als Punktabzug anzeigt.
+
+**Die Ursache ist nicht bekannt.** Geprüft und widerlegt: Semikolon in Zeichenkette oder Kommentar (steht im ausgefallenen *und* im durchgelaufenen Block), und Sonderzeichen (in beiden dieselben). Ohne Ursache hilft nur eine Bauweise, die den Ausfall nicht still lässt.
+
+**Wie.**
+
+```sql
+do $mig$
+begin
+  alter table public.x add column if not exists y text;
+  execute 'comment on column public.x.y is ' || quote_literal('…');
+
+  -- Prüfung am Ende, im selben Block
+  if not exists (select 1 from information_schema.columns
+                  where table_schema='public' and table_name='x' and column_name='y')
+  then raise exception 'UNVOLLSTAENDIG: x.y fehlt'; end if;
+end $mig$;
+```
+
+Der Kern ist nicht das `raise`, sondern dass Änderung und Prüfung **eine einzige Anweisung** sind. Eine Prüfung als eigene Anweisung hilft nur, solange nicht sie das ausgefallene Stück ist — genau das war zweimal der Fall. Kommt der Text zerschnitten an, ist ein `do $mig$` ohne Ende ein Syntaxfehler: der Parser bricht laut ab, statt die Hälfte auszuführen.
+
+**Zwei Grenzen, die man kennen muss:**
+
+- **DDL, die auf ein im selben Block neu angelegtes Objekt zugreift, braucht `execute`.** plpgsql plant Anweisungen vorab; eine Spalte, die es beim Planen noch nicht gibt, führt zu `column does not exist`, obwohl sie zwei Zeilen weiter oben entsteht.
+- **Keine Transaktionssteuerung im Block.** `commit`/`rollback` sind in `do` nicht erlaubt; der Block ist atomar innerhalb der umgebenden Transaktion, mehr geht nicht. Migrationen, die bewusst in Etappen committen (wie `etappe3_eltern.sql`), lassen sich nicht als ein Block schreiben — dort gilt Ebene 1: `begin … prüfen … raise … commit` je Etappe.
+
+Die lesbare Prüftabelle (`nr / pruefung / erwartet / gefunden / status`) bleibt zusätzlich am Dateiende. Sie ist Bestätigung für den Menschen, nicht mehr die Absicherung.
+
+**Beim Übertragen:** `wc -c` der Datei gegen die Zeichenzahl im Editor vergleichen. Stimmen sie nicht, geht schon beim Einfügen etwas verloren; stimmen sie, verliert die Ausführung es.
+
 ### Pflicht für jede neue Tabelle
 
 ```sql

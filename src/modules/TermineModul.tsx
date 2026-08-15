@@ -7,13 +7,16 @@ import type { ReactNode, CSSProperties } from "react";
 import { ACCENT, ACCENT2, ACCENT20, AM, BK, BL, BTN_COLOR as BTN, BTN_TXT, FONT, GB, GN, GR, R, RL, STATUS_BG, STATUS_CLR  } from "../constants.ts";
 import { TI } from "../icons.tsx";
 import { useIsMobile, ModalOrSheet, Card, Chip , Stat, Av, Col, Row, SectionLabel, Btn, avColor} from "../theme.ts";
-import { ATT_EVENTS as ATT_EVENTS_SRC, ATT_INITIAL, GANTT, ROSTER as ROSTER_SRC, SCHEDULE as SCHEDULE_SRC, TABLES as TABLES_SRC, TRAININGSPLAETZE_DEFAULT } from "../demoData.js";
+import { ATT_EVENTS as ATT_EVENTS_SRC, ATT_INITIAL, GANTT, ROSTER as ROSTER_SRC, TRAININGSPLAETZE_DEFAULT } from "../demoData.js";
 /* demoData ist untypisiertes JS mit Phantomfeldern (role/name/rueckennr auf
    ROSTER etc.) — als any geführt, damit die Legacy-Zugriffe erhalten bleiben. */
 const ROSTER: any[] = ROSTER_SRC;
-const SCHEDULE: any[] = SCHEDULE_SRC;
 const ATT_EVENTS: any[] = ATT_EVENTS_SRC;
-const TABLES: Record<string, any[]> = TABLES_SRC as unknown as Record<string, any[]>;
+/* SCHEDULE und TABLES sind hier weg: Spielplan und Rangliste kommen seit
+   14.08.2026 aus der Datenbank (domains/spiele). demoData bleibt für Kader
+   und Kalender — das ist Phase 4. */
+import { useSpiele, useRangliste } from "../domains/spiele/useSpiele.ts";
+import type { Sb, Team } from "../types.ts";
 import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.tsx";
 
 /* winStorage.storage ist eine App-eigene Bridge (kein Standard-Window-Feld). */
@@ -81,8 +84,8 @@ interface SpielDetailProps {
   motmAll?: any;
   setMotmAll?: any;
 }
-interface SpielplanModulProps { role: string; team?: string|null; initialSelected?: any; }
-interface TableTabProps { team?: string|null; }
+interface SpielplanModulProps { role: string; team?: string|null; initialSelected?: any; sb?: Sb; vereinId?: string|null; }
+interface TableTabProps { team?: string|null; sb?: Sb; vereinId?: string|null; dbTeams?: Team[]; }
 interface TermineAccount { kinder?: Array<{name: string; team?: string; rosterId?: number|null}>; }
 interface TermineModulProps {
   role: string;
@@ -97,6 +100,8 @@ interface TermineModulProps {
   account?: TermineAccount|null;
   kannSchreiben?: ((modul: string)=>boolean)|null;
   kannVerwalten?: ((modul: string)=>boolean)|null;
+  sb?: Sb;
+  vereinId?: string|null;
 }
 
 
@@ -486,21 +491,20 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
 
 
 
-function SpielplanModul({role,team,initialSelected}: SpielplanModulProps){
+function SpielplanModul({role,team,initialSelected,sb=null,vereinId=null}: SpielplanModulProps){
   const isMobile=useIsMobile();
   const [selected,setSelected]=useState(initialSelected||null);
   const canEdit=["trainer","administrator","administration"].includes(role);
-  const parseGDate=(d?: string|null)=>{const c=(d||"").replace(/^[A-Za-zÄÖÜäöü]{2,3}\s+/,"").trim();const p=c.split(".");return p.length>=2?`2026-${p[1].padStart(2,"0")}-${p[0].padStart(2,"0")}`:"";}
+  /* Sortiert wird über das ISO-Datum aus dem Mapper. Früher stand hier ein
+     parseGDate, das den Anzeigetext ("Sa 24.05.") zurückrechnete und fest
+     "2026-" davorklebte — in der nächsten Saison hätte das falsch sortiert. */
+  const {spiele:games,laedt}=useSpiele(sb,vereinId,team??null);
   useEffect(()=>{
     if(NAV_TARGET.selectedSpiel){
       setSelected(NAV_TARGET.selectedSpiel);
       NAV_TARGET.selectedSpiel=null;
     }
   },[]);
-  const allGames=team ? SCHEDULE.filter(g=>g.team===team) : SCHEDULE;
-  const playedGames=allGames.filter(g=>g.result).sort((a,b)=>parseGDate(a.date).localeCompare(parseGDate(b.date)));
-  const upcomingGames=allGames.filter(g=>!g.result).sort((a,b)=>parseGDate(a.date).localeCompare(parseGDate(b.date)));
-  const games=[...playedGames,...upcomingGames];
   const [motmAll,setMotmAll]=useState({
     4:{"demo_voter1":1,"demo_voter2":2,"demo_voter3":2,"demo_voter4":5},
     5:{"demo_voter1":2,"demo_voter2":1,"demo_voter3":3},
@@ -523,10 +527,19 @@ function SpielplanModul({role,team,initialSelected}: SpielplanModulProps){
                 key={g.id}
                 onClick={()=>setSelected(g)}
                 className="hov-row"
-                style={{borderTop:"0.5px solid var(--border)",background:g.result?"var(--surface2)":"var(--surface)",cursor:"pointer",height:isMobile?52:40}}>
-                <td className="cc-td" style={{padding:"11px 13px",fontWeight:600,whiteSpace:"nowrap"}}>{g.date}</td>
+                style={{borderTop:"0.5px solid var(--border)",background:g.result?"var(--surface2)":"var(--surface)",cursor:"pointer",height:isMobile?52:40,
+                        /* Abgesagte bleiben stehen, durchgestrichen. Wer sich
+                           das Spiel gemerkt hat, faehrt sonst hin — eine
+                           Luecke in der Liste informiert niemanden. */
+                        opacity:g.abgesagt?0.55:1}}>
+                <td className="cc-td" style={{padding:"11px 13px",fontWeight:600,whiteSpace:"nowrap",textDecoration:g.abgesagt?"line-through":"none"}}>{g.date}</td>
                 {!isMobile&&<td className="cc-td" style={{padding:"9px 13px"}}>{g.time+" Uhr"}</td>}
-                <td className="cc-td" style={{padding:"9px 13px",fontWeight:600}}>{g.opponent}</td>
+                <td className="cc-td" style={{padding:"9px 13px",fontWeight:600,textDecoration:g.abgesagt?"line-through":"none"}}>
+                  {g.opponent}
+                  {g.trainingsspiel&&<Chip text="Test" color="#6B7280"/>}
+                  {g.abgesagt&&<Chip text="Abgesagt" color="#DC2626"/>}
+                  {g.verschoben&&!g.abgesagt&&<Chip text="Verschoben" color="#D97706"/>}
+                </td>
                 <td className="cc-td" style={{padding:"9px 13px"}}><Chip text={g.home?"H":"A"} color={g.home?"#16A34A":"#6B7280"}/></td>
                 {!isMobile&&<><td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:14}}>{g.venue.split(",")[0]}</td>
                 <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:14}}>{g.comp}</td></>}
@@ -534,6 +547,16 @@ function SpielplanModul({role,team,initialSelected}: SpielplanModulProps){
                 <td className="cc-td" style={{padding:"9px 13px",color:"var(--sub)",fontSize:14}}>›</td>
               </tr>
             ))}
+            {!laedt&&games.length===0&&(
+              <tr><td className="cc-td" colSpan={8}>
+                <div className="cc-empty">Für diese Saison sind keine Spiele erfasst.</div>
+              </td></tr>
+            )}
+            {laedt&&(
+              <tr><td className="cc-td" colSpan={8}>
+                <div className="cc-empty">Spielplan wird geladen …</div>
+              </td></tr>
+            )}
           </tbody>
         </table></div>
       </Card>
@@ -541,8 +564,21 @@ function SpielplanModul({role,team,initialSelected}: SpielplanModulProps){
   );
 }
 
-function TableTab({team}: TableTabProps){
-  const rows=TABLES[team||""]||[];
+function TableTab({team,sb=null,vereinId=null,dbTeams=[]}: TableTabProps){
+  /* Die Gruppe kommt über die SFV-Zuordnung, nicht über den Namen: fünf
+     SFV-Teams des FCH heissen "FC Herrliberg a". Ohne Zuordnung gibt es
+     keine Tabelle — und das soll man sehen, nicht raten müssen. */
+  const sfvTeamId=dbTeams.find(t=>t.name===team)?.sfv_team_id??null;
+  const {zeilen:rows,laedt}=useRangliste(sb,vereinId,sfvTeamId??null);
+
+  if(!laedt&&sfvTeamId==null) return(
+    <Card>
+      <div className="cc-empty">
+        Für dieses Team ist kein SFV-Team hinterlegt. Die Zuordnung steht in
+        Portalverwaltung → API → Teams zuordnen.
+      </div>
+    </Card>
+  );
 
   return(
     <div>
@@ -570,6 +606,11 @@ function TableTab({team}: TableTabProps){
                 <td className="cc-td" style={{padding:"9px 13px",textAlign:"center",fontWeight:800}}>{r.pts}</td>
               </tr>
             ))}
+            {!laedt&&rows.length===0&&(
+              <tr><td className="cc-td" colSpan={9}>
+                <div className="cc-empty">Für dieses Team liegt noch keine Rangliste vor.</div>
+              </td></tr>
+            )}
           </tbody>
         </table></div>
       </Card>
@@ -577,8 +618,11 @@ function TableTab({team}: TableTabProps){
   );
 }
 
-function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRosterIdProp,initialFilter="alle",responses:responsesProp,onResponseChange,allTeams,account,kannSchreiben,kannVerwalten}: TermineModulProps){
+function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRosterIdProp,initialFilter="alle",responses:responsesProp,onResponseChange,allTeams,account,kannSchreiben,kannVerwalten,sb=null,vereinId=null}: TermineModulProps){
   const isMobile=useIsMobile();
+  /* Fuer den Sprung aus einem Kalendereintrag ins Spiel. Dieselbe Quelle wie
+     SpielplanModul — sonst zeigte dieselbe Datei zwei verschiedene Spielplaene. */
+  const {spiele:spielplan}=useSpiele(sb,vereinId,null);
   const isTrainer=["trainer"].includes(role);
   const isAdmin=["administrator","administration","funktionaer"].includes(role);
   const isSpieler=role==="spieler";
@@ -985,7 +1029,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
               {selEv.type==="Spiel"&&onNavigateToSpiel&&(
                 <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{fontSize:14,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
-                  <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
+                  <button onClick={()=>{const match=spielplan.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
                     style={{fontSize:14,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                     Zum Spielplan →
                   </button>
@@ -1407,7 +1451,7 @@ function TermineModul({role,team,setActive,onNavigateToSpiel,myRosterId:myRoster
             {selEv.type==="Spiel"&&onNavigateToSpiel&&(
               <div style={{padding:"10px 20px",background:"var(--surface)",borderBottom:`0.5px solid #DBEAFE`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <span style={{fontSize:14,color:BL,fontWeight:600}}><TI n="ball-football" style={{marginRight:4}}/> Dieses Spiel im Spielplan ansehen</span>
-                <button onClick={()=>{const match=SCHEDULE.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
+                <button onClick={()=>{const match=spielplan.find(g=>g.date===selEv.date&&g.opponent===selEv.opponent);setModalOpen(false);if(match)onNavigateToSpiel(match);}}
                   style={{fontSize:14,fontWeight:700,color:BL,background:"var(--surface)",border:`1px solid ${BL}`,borderRadius:20,padding:"5px 12px",cursor:"pointer"}}>
                   Zum Spielplan →
                 </button>

@@ -530,7 +530,8 @@ CREATE TABLE IF NOT EXISTS "public"."api_verbindungen" (
     "sort_order" integer DEFAULT 0,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "sync_laeuft_seit" timestamp with time zone
 );
 
 
@@ -538,6 +539,10 @@ ALTER TABLE "public"."api_verbindungen" OWNER TO "postgres";
 
 
 COMMENT ON COLUMN "public"."api_verbindungen"."key" IS 'Name des Anschlusses (fairgate, football_ch, fvrz, clubdesk, sfa), kein Geheimnis. Eindeutig pro Verein, nicht global — Geheimnisse liegen in den Secrets der Edge Function.';
+
+
+
+COMMENT ON COLUMN "public"."api_verbindungen"."sync_laeuft_seit" IS 'Zeitpunkt, zu dem der laufende Sync die Sperre beansprucht hat. NULL = kein Lauf. Aeltere Eintraege als 15 Minuten gelten als abgestuerzt und werden ueberschrieben.';
 
 
 

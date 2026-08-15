@@ -153,3 +153,25 @@ select nr, pruefung, erwartet, gefunden,
 --   Das Secret fuer X-Sync-Key gehoert dann in supabase_vault, nicht in den
 --   cron-Befehl — der steht sonst im Klartext in cron.job.
 -- ═══════════════════════════════════════════════════════════════════════════
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- NACHTRAG 14.08.2026 — Block A ist beim Ausfuehren ausgefallen
+--
+-- Beim Lauf im SQL-Editor hat Block B gewirkt, Block A nicht — ohne
+-- Fehlermeldung. Die Spalte sync_laeuft_seit wurde danach von Hand angelegt,
+-- der Kommentar darauf mit einem do-Block nachgetragen.
+--
+-- Zweiter Fall dieser Art in zwei Tagen (der erste: migration_sfv_spielplan.sql
+-- am 13.08.). Ursache unbekannt; Semikolon in Zeichenketten und Sonderzeichen
+-- sind geprueft und ausgeschlossen — beides steht im ausgefallenen UND im
+-- durchgelaufenen Block.
+--
+-- KONSEQUENZ, ab sofort verbindlich: Migrationen ueber drei Anweisungen
+-- werden als EIN do $mig$-Block mit Pruefung am Ende geschrieben, damit ein
+-- Ausfall nicht still bleiben kann. Siehe ARCHITECTURE.md -> Datenbankregeln
+-- -> "Migrationen pruefen sich selbst".
+--
+-- Diese Datei bleibt sonst unveraendert. Sie ist das Protokoll dessen, was
+-- ausgefuehrt werden sollte.
+-- ═══════════════════════════════════════════════════════════════════════════

@@ -361,15 +361,15 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
         <div className="cc-flex-center" style={{flexDirection:"column",gap:20,alignItems:"stretch"}}>
           <div>
             <div className="cc-section-hdr">Spielplan</div>
-            <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel}/>
+            <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel} sb={sb} vereinId={vereinId}/>
           </div>
           <div>
             <div className="cc-section-hdr">Tabelle</div>
-            <TableTabProp team={activeTeam}/>
+            <TableTabProp team={activeTeam} sb={sb} vereinId={vereinId} dbTeams={dbTeams}/>
           </div>
         </div>
       )}
-      {tab==="attendance"&&<TermineModulProp role={role} team={activeTeam} setActive={setActive} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel: any)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r: any)=>{
+      {tab==="attendance"&&<TermineModulProp sb={sb} vereinId={vereinId} role={role} team={activeTeam} setActive={setActive} myRosterId={isEltern&&activeKind?.rosterId?activeKind.rosterId:myRosterId} onNavigateToSpiel={(spiel: any)=>{setSelectedSpiel(spiel);setTab("spielplan");}} initialFilter={attFilter} responses={responses} allTeams={trainerTeams.length>1?trainerTeams:undefined} onResponseChange={(r: any)=>{
         const merged: Record<string, any>={...responses};
         Object.keys(r).forEach(evId=>{merged[evId]={...responses[evId],...r[evId]};});
         setResponses(merged);

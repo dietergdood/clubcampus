@@ -392,6 +392,7 @@ export type Database = {
           sort_order: number | null
           sync_felder: Json | null
           sync_intervall: string | null
+          sync_laeuft_seit: string | null
           sync_meldung: string | null
           sync_status: string | null
           sync_uhrzeit: string | null
@@ -412,6 +413,7 @@ export type Database = {
           sort_order?: number | null
           sync_felder?: Json | null
           sync_intervall?: string | null
+          sync_laeuft_seit?: string | null
           sync_meldung?: string | null
           sync_status?: string | null
           sync_uhrzeit?: string | null
@@ -432,6 +434,7 @@ export type Database = {
           sort_order?: number | null
           sync_felder?: Json | null
           sync_intervall?: string | null
+          sync_laeuft_seit?: string | null
           sync_meldung?: string | null
           sync_status?: string | null
           sync_uhrzeit?: string | null
