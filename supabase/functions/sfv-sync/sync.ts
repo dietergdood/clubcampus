@@ -286,6 +286,7 @@ export async function laufeSync(
   const md = erg.matchdaten;
   if (md) {
     teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} Aufstellungs- und ${md.ereignisse_zeilen} Ereigniszeilen`);
+    if (md.paesse_geschrieben) teile.push(`${md.paesse_geschrieben} Spielerpass/-paesse vom Verband uebernommen`);
     if (md.nachzug_meldungen) teile.push(`${md.nachzug_meldungen} Korrektur(en) vom Verband eingeholt`);
     if (md.fehler) {
       /* Die Ursache gehoert in die Meldung, nicht nur die Zahl. */

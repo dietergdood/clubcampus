@@ -234,3 +234,91 @@ function gleich(a: unknown, b: unknown): boolean {
   if (typeof a === "number" || typeof b === "number") return Number(a) === Number(b);
   return String(a) === String(b);
 }
+
+/* ── Schiedsrichter ────────────────────────────────────────────────────────
+   Ein Schiedsrichter ist eine Amtsfunktion, keine Privatperson. Sein Name
+   steht auf jedem Spielbericht und ist der Zweck seiner Anwesenheit. Von
+   gegnerischen SPIELERN wird weiterhin nichts gespeichert — das ist keine
+   Aufweichung der Regel, sondern eine Unterscheidung zwischen Teilnehmer
+   und Amtstraeger.
+
+   ⚠ NUR DER NAME. Der Endpunkt liefert auch birthDate, gender, personId,
+   refereeId, clubNumber und clubName. Nichts davon wird gelesen — auch nicht
+   personId: bei Spielern haelt sie die Wiedererkennung ueber Saisons, hier
+   gaebe es keinen Zweck, und eine Kennung ohne Zweck ist eine zu viel. */
+
+/** Hauptschiedsrichter laut Probe vom 20.08.2026: 1 = Schiedsrichter,
+    2 = Assistent 1, 5 = Assistent 2. Einen Delegierten liefert der Endpunkt
+    in unseren Ligen nicht. */
+export const ROLLE_SCHIEDSRICHTER = 1;
+
+export function leseSchiedsrichter(eintraege: SfvRoh[]): string | null {
+  const haupt = eintraege.find((e) => zahl(e.refereeRoleId) === ROLLE_SCHIEDSRICHTER);
+  if (!haupt) return null;
+  /* firstname + name; secondName ist ein zweiter Vorname und gehoert nicht
+     in eine Anzeige, die neben dem Resultat steht. */
+  const name = [text(haupt.firstname), text(haupt.name)].filter(Boolean).join(" ").trim();
+  return name || null;
+}
+
+/* ── Spielerpass ───────────────────────────────────────────────────────────
+   ERSTES MAL, DASS EIN SYNC EIN MITGLIEDERFELD SCHREIBT. Deshalb drei
+   Regeln, und alle drei sind hier als reine Funktion nachpruefbar.
+
+   1. NUR EIGENE SPIELER. `passportNumber` steht auch an jedem gegnerischen
+      Eintrag — und wird dort nicht gelesen. Die Regel "von fremden Spielern
+      nichts" gilt unveraendert.
+
+   2. NIE MIT NULL UEBERSCHREIBEN. Der Sync sieht nur, wer gespielt hat. Ein
+      verletzter oder gesperrter Spieler taucht in keiner Aufstellung auf;
+      sein von Hand eingetragener Pass bliebe sonst beim naechsten Lauf leer.
+      Was der Verband nicht liefert, bleibt unangetastet.
+
+   3. EINE ABWEICHUNG WIRD FESTGEHALTEN, nicht still ersetzt. Der Verband
+      fuehrt den Pass, wir schreiben ihn ab — aber wenn sich der Wert
+      aendert, gehoert das Vorher in den Verlauf. Sonst faellt niemandem auf,
+      dass eine Nummer, die jemand von Hand eintrug, ueberschrieben wurde. */
+
+export interface PassAenderung {
+  mitglied_id: number;
+  alt: string | null;
+  neu: string;
+}
+
+/**
+ * Welche Mitglieder bekommen einen neuen Spielerpass?
+ *
+ * `aufstellung` sind die ROHEN Eintraege des SFV (nur die eigenen werden
+ * gelesen), `zuordnung` bildet sfv_person_id auf mitglied_id ab, `bestand`
+ * haelt den heutigen Wert je Mitglied.
+ *
+ * Zurueck kommt nur, was sich tatsaechlich aendert — gleiche Werte erzeugen
+ * kein Schreiben und keinen Verlaufseintrag.
+ */
+export function passAenderungen(
+  aufstellung: SfvRoh[],
+  unsere: number | null,
+  zuordnung: Map<number, number>,
+  bestand: Map<number, string | null>,
+): PassAenderung[] {
+  const raus = new Map<number, PassAenderung>();
+
+  for (const p of aufstellung) {
+    if (!istEigener(p.clubNumber, unsere)) continue;      // Regel 1
+    const personId = zahl(p.personId);
+    if (personId === null) continue;
+
+    const mitgliedId = zuordnung.get(personId);
+    if (mitgliedId === undefined) continue;                // noch nicht zugeordnet
+
+    const neu = text(p.passportNumber);
+    if (neu === null) continue;                            // Regel 2: nie null
+
+    const alt = bestand.get(mitgliedId) ?? null;
+    if (alt !== null && alt.trim() === neu) continue;      // unveraendert
+
+    raus.set(mitgliedId, { mitglied_id: mitgliedId, alt, neu });
+  }
+
+  return [...raus.values()];
+}

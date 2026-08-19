@@ -159,3 +159,13 @@ export async function holeTeamBild(
   if (!antwort.ok) throw new SfvFehler(`SFV antwortet mit HTTP ${antwort.status}`);
   return await antwort.text();
 }
+
+/* Schiedsrichter. Ausgenommen bis 20.08.2026 — jetzt aufgenommen, aber NUR
+   der Name des Hauptschiedsrichters. Was der Endpunkt sonst liefert
+   (Geburtsdatum, Geschlecht, personId, Verein), wird nicht gelesen. */
+export async function holeSchiedsrichter(
+  z: SfvZugang, token: string, matchId: number,
+): Promise<SfvMatch[]> {
+  const roh = await hole(z, token, `/api/match/${matchId}/referees?Language=1`);
+  return Array.isArray(roh) ? roh as SfvMatch[] : [];
+}

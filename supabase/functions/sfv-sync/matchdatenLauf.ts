@@ -21,8 +21,9 @@ import { holeMatch, holeAufstellung, holeEreignisse, holeTeamBild, SfvFehler } f
 import type { SfvZugang } from "./sfvApi.ts";
 import {
   bildeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
+  passAenderungen,
 } from "./matchdaten.ts";
-import type { KorrekturZeile, SpielKandidat } from "./matchdaten.ts";
+import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
 import type { LogoZeile } from "./logos.ts";
 
@@ -35,6 +36,9 @@ export interface MatchdatenErgebnis {
      Normalzustand vom Verdachtsfall: ohne eine einzige Zuordnung steht sie
      schlicht noch aus, das ist keine Auffaelligkeit. */
   zuordnungen_gesamt: number;
+  /* Spielerpaesse, die der Verband geliefert hat und die sich geaendert
+     haben. Jeder davon steht auch im Verlauf des Mitglieds. */
+  paesse_geschrieben: number;
   nachzug_meldungen: number;
   fehler: number;
   /* WARUM ein Spiel scheiterte, nicht nur DASS. Ohne diese Liste sah ein
@@ -64,7 +68,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, paesse_geschrieben: 0, nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -86,6 +90,9 @@ export async function laufeMatchdaten(
   );
 
   const jetzt = new Date().toISOString();
+  /* Die rohen Aufstellungen aller Spiele dieses Laufs — fuer die Paesse
+     danach, in EINEM Durchgang statt einmal pro Spiel. */
+  const alleRoh: SfvRoh[] = [];
 
   for (const spiel of kandidaten) {
     const matchId = spiel.sfv_match_id as number;
@@ -95,6 +102,7 @@ export async function laufeMatchdaten(
       await holeMatch(zugang, token, matchId);
       const rohAufstellung = await holeAufstellung(zugang, token, matchId);
       const rohEreignisse = await holeEreignisse(zugang, token, matchId);
+      alleRoh.push(...rohAufstellung);
 
       const aufstellung = rohAufstellung
         .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt))
@@ -144,6 +152,7 @@ export async function laufeMatchdaten(
     }
   }
 
+  erg.paesse_geschrieben = await schreibePaesse(db, v.verein_id, alleRoh, unsereClubNummer);
   erg.nachzug_meldungen = await pruefeNachzug(db, v.verein_id);
   const zaehlung = await zaehleUnzugeordnet(db, v.verein_id);
   erg.eigene_unzugeordnet = zaehlung.offen;
@@ -300,4 +309,65 @@ export async function laufeLogos(
   }
 
   return { geholt, fehlt };
+}
+
+
+/* ── Spielerpass ───────────────────────────────────────────────────────────
+   Der Verband fuehrt den Pass, wir schreiben ihn ab — wer von Hand tippt,
+   macht Fehler. Es ist das ERSTE MAL, dass ein Sync ein Mitgliederfeld
+   anfasst, deshalb steht die Entscheidung in migration_sfv_pass.sql und die
+   Regeln in passAenderungen().
+
+   ⚠ EINE ABWEICHUNG WIRD FESTGEHALTEN. `mitglieder.spielerpass` zu
+   ueberschreiben ist richtig — der Verband hat recht —, aber nicht still:
+   wer die Nummer von Hand eingetragen hatte, soll im Verlauf sehen, was
+   daraus wurde. Nach der Regel aus CLAUDE.md:
+     Wert A -> Wert B   mitglieder_aenderungen
+     null   -> Wert     mitglieder_aktivitaeten (FELD_ERFASST) */
+const PASS_URHEBER = "SFV-Sync";
+
+async function schreibePaesse(
+  db: SupabaseClient, vereinId: string, alleRoh: SfvRoh[], unsere: number | null,
+): Promise<number> {
+  if (!alleRoh.length || unsere === null) return 0;
+
+  const { data: zuordnungRoh } = await db
+    .from("sfv_zuordnung").select("sfv_person_id,mitglied_id").eq("verein_id", vereinId);
+  if (!zuordnungRoh?.length) return 0;
+  const zuordnung = new Map(
+    zuordnungRoh.map((z) => [Number(z.sfv_person_id), Number(z.mitglied_id)]));
+
+  const { data: mitglieder } = await db
+    .from("mitglieder").select("id,spielerpass")
+    .in("id", [...zuordnung.values()]);
+  const bestand = new Map(
+    (mitglieder ?? []).map((m) => [Number(m.id), (m.spielerpass as string | null) ?? null]));
+
+  const aenderungen = passAenderungen(alleRoh, unsere, zuordnung, bestand);
+  if (!aenderungen.length) return 0;
+
+  let geschrieben = 0;
+  for (const a of aenderungen) {
+    const { error } = await db.from("mitglieder")
+      .update({ spielerpass: a.neu }).eq("id", a.mitglied_id);
+    if (error) continue;
+
+    const jetzt = new Date().toISOString();
+    if (a.alt) {
+      await db.from("mitglieder_aenderungen").insert({
+        mitglied_id: a.mitglied_id, verein_id: vereinId, feld: "spielerpass",
+        alter_wert: a.alt, neuer_wert: a.neu,
+        geaendert_von: PASS_URHEBER, geaendert_at: jetzt,
+      });
+    } else {
+      await db.from("mitglieder_aktivitaeten").insert({
+        mitglied_id: a.mitglied_id, verein_id: vereinId, typ: "FELD_ERFASST",
+        beschreibung: `Spielerpass vom Verband uebernommen: ${a.neu}`,
+        feld: "spielerpass", wert: a.neu,
+        geaendert_von: PASS_URHEBER, geaendert_at: jetzt,
+      });
+    }
+    geschrieben += 1;
+  }
+  return geschrieben;
 }

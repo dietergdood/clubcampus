@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   ausBase64, erkenneBild, logoPfad, offeneLogos, LOGOS_PRO_LAUF, WIEDERHOLUNG_TAGE,
 } from "../../../../supabase/functions/sfv-sync/logos.ts";
+import { leseSchiedsrichter, passAenderungen } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
 const b = (...bytes: number[]) => new Uint8Array([...bytes, ...new Array(16).fill(0)]);
 
@@ -118,5 +119,93 @@ describe("Obergrenze pro Lauf", () => {
     const ersteRunde = offeneLogos(viele, [], jetzt);
     const abgelegt = ersteRunde.map(id => ({ sfv_team_id: id, pfad: `v/${id}.gif`, fehlt_seit: null }));
     expect(offeneLogos(viele, abgelegt, jetzt)).toHaveLength(40 - LOGOS_PRO_LAUF);
+  });
+});
+
+describe("leseSchiedsrichter", () => {
+  const e = (rolle: number, vorname: string, name: string) => ({
+    refereeRoleId: rolle, firstname: vorname, name,
+    /* Alles Weitere liefert der Endpunkt auch — und nichts davon darf
+       durchkommen. */
+    secondName: "Zweitname", birthDate: "1980-01-01", gender: 1,
+    personId: 1284326, refereeId: 1508886, clubNumber: 11048, clubName: "FC Thalwil",
+  });
+
+  it("nimmt den Hauptschiedsrichter, nicht die Assistenten", () => {
+    /* Rollen laut Probe: 1 Schiedsrichter, 2 Assistent 1, 5 Assistent 2. */
+    expect(leseSchiedsrichter([e(2, "A", "Assistent"), e(1, "M", "Meier"), e(5, "B", "Zwei")]))
+      .toBe("M Meier");
+  });
+
+  it("liefert nur Vor- und Nachname — sonst nichts", () => {
+    const name = leseSchiedsrichter([e(1, "Marco", "Meier")])!;
+    expect(name).toBe("Marco Meier");
+    for (const heikel of ["Zweitname", "1980-01-01", "1284326", "1508886", "11048", "FC Thalwil"]) {
+      expect(name).not.toContain(heikel);
+    }
+  });
+
+  it("liefert null, wenn nur Assistenten da sind", () => {
+    expect(leseSchiedsrichter([e(2, "A", "Assistent")])).toBeNull();
+  });
+
+  it("liefert null bei leerer Liste", () => {
+    /* Bei zwei von 21 Spielen kommt gar kein Eintrag. */
+    expect(leseSchiedsrichter([])).toBeNull();
+  });
+});
+
+describe("passAenderungen — der Sync schreibt ein Mitgliederfeld", () => {
+  const UNS = 11057, FREMD = 11030;
+  const p = (club: number, personId: number, pass: unknown) =>
+    ({ clubNumber: club, personId, passportNumber: pass });
+  const zuordnung = new Map([[111, 5], [222, 7]]);
+
+  it("schreibt den Pass eines zugeordneten eigenen Spielers", () => {
+    const raus = passAenderungen([p(UNS, 111, 987654)], UNS, zuordnung, new Map());
+    expect(raus).toEqual([{ mitglied_id: 5, alt: null, neu: "987654" }]);
+  });
+
+  it("liest von einem GEGNER nichts — auch nicht den Pass", () => {
+    /* passportNumber steht an jedem Eintrag, auch am gegnerischen. Die Regel
+       "von fremden Spielern nichts" gilt unverändert. */
+    expect(passAenderungen([p(FREMD, 111, 987654)], UNS, zuordnung, new Map())).toEqual([]);
+  });
+
+  it("überschreibt NIE mit null", () => {
+    /* Der Sync sieht nur, wer gespielt hat. Ein verletzter Spieler taucht in
+       keiner Aufstellung auf — und wenn der Verband nichts liefert, bleibt
+       der von Hand eingetragene Wert stehen. */
+    const bestand = new Map([[5, "111111"]]);
+    for (const leer of [null, undefined, ""]) {
+      expect(passAenderungen([p(UNS, 111, leer)], UNS, zuordnung, bestand)).toEqual([]);
+    }
+  });
+
+  it("schreibt nichts, solange der Spieler nicht zugeordnet ist", () => {
+    expect(passAenderungen([p(UNS, 999, 987654)], UNS, zuordnung, new Map())).toEqual([]);
+  });
+
+  it("schreibt nicht, wenn der Wert schon stimmt", () => {
+    const bestand = new Map([[5, "987654"]]);
+    expect(passAenderungen([p(UNS, 111, "987654")], UNS, zuordnung, bestand)).toEqual([]);
+    /* auch mit Leerzeichen drumherum */
+    expect(passAenderungen([p(UNS, 111, "987654")], UNS, new Map([[111, 5]]),
+      new Map([[5, " 987654 "]]))).toEqual([]);
+  });
+
+  it("hält bei einer Abweichung das Vorher fest", () => {
+    /* Das ist der Punkt: eine Nummer, die jemand von Hand eintrug, wird
+       überschrieben — aber nicht still. */
+    const bestand = new Map([[5, "111111"]]);
+    expect(passAenderungen([p(UNS, 111, "987654")], UNS, zuordnung, bestand))
+      .toEqual([{ mitglied_id: 5, alt: "111111", neu: "987654" }]);
+  });
+
+  it("meldet dasselbe Mitglied nur einmal", () => {
+    /* Ein Spieler steht in mehreren Spielen desselben Laufs. */
+    const raus = passAenderungen(
+      [p(UNS, 111, "987654"), p(UNS, 111, "987654")], UNS, zuordnung, new Map());
+    expect(raus).toHaveLength(1);
   });
 });
