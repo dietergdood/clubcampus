@@ -93,8 +93,13 @@ for (const path of files) {
 
      Beide Male haette `--fix` einen falschen Import ergaenzt. */
   const GRENZE = "[^\\p{L}\\p{N}_]";
+  /* Auch hier keine `\b` — sonst schlaegt der Fehler in die andere Richtung
+     zu: `const Rückennummer = …` liesse `\b…\s+R\b` anschlagen, R gaelte als
+     lokal deklariert, und ein ECHT fehlender Import bliebe unbemerkt. Beim
+     Durchsehen aller \b im Projekt am 19.08.2026 aufgefallen — in der
+     Korrektur, die genau diesen Fehler beheben sollte. */
   const lokalDeklariert = c =>
-    new RegExp(`\\b(?:const|let|var|function|class)\\s+${c}\\b`).test(code);
+    new RegExp(`(?<=^|${GRENZE})(?:const|let|var|function|class)\\s+${c}(?=$|${GRENZE})`, "u").test(code);
   const kommtVor = c =>
     new RegExp(`(?<=^|${GRENZE})${c}(?=$|${GRENZE})`, "u").test(code);
 
