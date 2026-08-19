@@ -11,6 +11,7 @@ import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.tsx"
 import { PersonKontakt } from "../../../shared/person/PersonKontakt.tsx";
 import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
+import { SUPPORTER_TYP } from "../memberConstants.ts";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
 import {
@@ -107,6 +108,15 @@ function InfoTab({
   const MITGLIEDTYP_OPTS = (dbMitgliedtypen||[]).map(t=>({v:t.name,l:t.name}));
   const eintrittsdatum = raw.eintrittsdatum;
 
+  /* Ein Supporter ist Goenner, nicht Mitglied im sportlichen Sinn: kein
+     Spielerpass, keine J+S-Nummer, kein Team, keine Vereinsfunktion. Die
+     drei Bereiche sind bei ihm nicht nur leer, sie bleiben es — und eine
+     leere Karte mit einem "Zuweisen"-Knopf lädt zu etwas ein, das nicht
+     vorgesehen ist.
+
+     Der Mitgliedtyp bleibt sichtbar: er steht in der Kachel oben. */
+  const istSupporter = raw.mitgliedtyp === SUPPORTER_TYP;
+
   return (
     <div className="cc-col cc-gap-12">
       {/* StatusTiles */}
@@ -152,8 +162,8 @@ function InfoTab({
           eltern={eltern} brauchtEltern={brauchtEltern} setTab={setTab}
         />
 
-        {/* Vereinsdaten */}
-        <Card className="cc-card-full">
+        {/* Vereinsdaten — bei einem Supporter ausgeblendet, siehe istSupporter */}
+        {!istSupporter && <Card className="cc-card-full">
           <div className="cc-section-title-row">
             <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
             {canEdit && (
@@ -184,12 +194,12 @@ function InfoTab({
               </span>
             </div>
           </div>
-        </Card>
+        </Card>}
 
         {/* PersonTeams und PersonFunktionen verlangen einen echten Client.
             Statt einer sb!-Assertion nur rendern, wenn sb gesetzt ist —
             das narrowt sb auf SbClient und faellt ohne Client sicher weg. */}
-        {sb && <PersonTeams
+        {sb && !istSupporter && <PersonTeams
           raw={raw} sb={sb} svc={personTeamsSvc} canEdit={canEdit}
           dbKaderRollen={dbKaderRollen}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
@@ -200,7 +210,7 @@ function InfoTab({
           vereinId={vereinId} account={account}
         />}
 
-        {sb && <PersonFunktionen
+        {sb && !istSupporter && <PersonFunktionen
           raw={raw} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
           onSaveFunktionen={onSaveFunktionen}

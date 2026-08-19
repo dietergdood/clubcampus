@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
 import { Av, useConfirm } from "../theme.ts";
 import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder, fetchPortalFunktionen } from "../domains/members/memberService.ts";
-import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
+import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE, SUPPORTER_TYP } from "./members/memberConstants.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
 import type { MemberRow } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.tsx";
@@ -60,8 +60,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [dbPflichtfelder,setDbPflichtfelder]=useState<Pflichtfeld[]>([]);
 
 
-  /* Der Mitgliedtyp, der einen Goenner von einem Mitglied trennt. */
-  const SUPPORTER_TYP="Supporter";
   const [archivTab,setArchivTab]=useState(false);
   const [elternTab,setElternTab]=useState(false);
   const [supporterTab,setSupporterTab]=useState(false);

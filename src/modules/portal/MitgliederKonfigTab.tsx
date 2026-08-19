@@ -51,7 +51,7 @@ export type { MitgliedtypPflichtfeld };
 const FELDER_ROLLE=[...FELDER_ROLLE_DOMAIN];
 const FELDER_TYP=[...FELDER_TYP_DOMAIN];
 
-const STANDARD_ROLLE_OPTS=[{v:"administrator",l:"Administrator"},{v:"administration",l:"Verwaltung"},{v:"funktionaer",l:"Funktionär"},{v:"trainer",l:"Trainer"},{v:"spieler",l:"Spieler"},{v:"eltern",l:"Eltern"},{v:"mitglied",l:"Mitglied"},{v:"mitglied",l:"Mitglied"},{v:"supporter",l:"Supporter"}];
+const STANDARD_ROLLE_OPTS=[{v:"administrator",l:"Administrator"},{v:"administration",l:"Verwaltung"},{v:"funktionaer",l:"Funktionär"},{v:"trainer",l:"Trainer"},{v:"spieler",l:"Spieler"},{v:"eltern",l:"Eltern"},{v:"mitglied",l:"Mitglied"},{v:"supporter",l:"Supporter"}];
 
 interface MitgliederKonfigTabProps {
   supabase: Sb;
