@@ -440,6 +440,60 @@ sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
 (Abschnitt darüber). Solange vier Typen zehn Pflichtfelder verlangen, käme
 danach kein Juniorenmitglied mehr durch die eigene Datenprüfung.
 
+### ⚠ `is_trainer_or_above()` prüft einen Rollennamen, den es nicht gibt
+
+Befund vom 19.08.2026.
+
+```sql
+select role in ('administrator','administration','funktionär','trainer')
+```
+
+**`funktionär` mit Umlaut** — die Rollen-Keys sind aber normalisiert
+(`funktionaer`, siehe `roleUtils.ts:19` und `portal_rollen`). Der Zweig
+trifft nie zu; ein Funktionär gilt für diese Funktion als nicht berechtigt.
+
+**Wirkt heute nicht.** Die Funktion ist definiert und an `anon`,
+`authenticated` und `service_role` freigegeben, steht aber **in keiner
+Policy**. Genau das macht sie gefährlich: ein Loch, das keine Fehlermeldung
+erzeugt: Wer sie das nächste Mal in einer Policy verwendet, bekommt eine
+Prüfung, die stiller strenger ist als gedacht — Funktionäre kommen nicht
+durch, und niemand sieht warum.
+
+**Reparieren oder streichen gehört zum Gruppenrechte-Auftrag**
+(`docs/auftrag_rls_gruppenrechte.md`), der die Rollenprüfungen ohnehin
+anfasst. Bis dahin: nicht verwenden. `migration_matchdaten.sql` umgeht sie
+bewusst und vermerkt den Grund.
+
+### ⚠ Übergang: `get_my_role() = 'trainer'` in `spiel_ereignisse_write`
+
+Eingebaut am 19.08.2026 mit `migration_matchdaten.sql`:
+
+```sql
+is_admin() or get_my_role() = 'trainer'
+          or hat_modul_recht('schedule','schreiben')
+```
+
+**Der mittlere Zweig ist genau das, was die Gruppenrechte abschaffen sollen:
+ein Rollenname, fest in einer Policy.** Er steht dort nicht aus Bequemlichkeit,
+sondern weil zwei Dinge zusammenkommen:
+
+1. `hat_modul_recht()` liest ausschliesslich `benutzer_funktionen →
+   portal_funktionen → portal_gruppen`. Die Rolle steht dort nicht drin — ein
+   Trainer ohne Gruppenzugehörigkeit bekommt für **jedes** Modul `false`.
+2. `schedule` ist ausgerechnet das Modul, auf dem der Trainer am wenigsten
+   hat: `APP_ZUGRIFF_DEFAULT` gibt ihm dort `lesen`, während er bei `team`,
+   `training` und `events` `verwalten` hat. Die Stufe kann „mindestens so viel
+   wie ein Trainer" nicht ausdrücken.
+
+**Er verschwindet mit dem Umbau.** Sobald die Gruppenrechte stehen und der
+Trainer seine Stufen über eine Gruppe bekommt statt über den Rollennamen,
+fällt der Zweig ersatzlos weg — die Policy ist dann `is_admin() or
+hat_modul_recht('schedule','schreiben')`.
+
+Bis dahin gilt: **kein Funktionär kann Matchdaten korrigieren**, solange
+seiner Gruppe nicht `schedule: schreiben` gesetzt wird. Das ist ein
+Konfigurationsschritt in der Portalverwaltung, kein Codewechsel.
+
 ### ⚠ `mitglied_id` ist in acht Tabellen der falsche Typ
 
 Befund vom 19.08.2026, beim Schreiben von `supabase/migration_matchdaten.sql`.
