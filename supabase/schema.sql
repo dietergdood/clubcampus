@@ -1702,6 +1702,93 @@ CREATE TABLE IF NOT EXISTS "public"."rollen" (
 ALTER TABLE "public"."rollen" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."sfv_zuordnung" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "sfv_person_id" integer NOT NULL,
+    "mitglied_id" bigint NOT NULL,
+    "zugeordnet_von" "uuid",
+    "zugeordnet_am" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "notiz" "text"
+);
+
+
+ALTER TABLE "public"."sfv_zuordnung" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."sfv_zuordnung" IS 'Welches Mitglied hinter einer SFV-personId steckt. Von Hand gesetzt. Mehrere sfv_person_id duerfen auf dasselbe Mitglied zeigen — falls der SFV die IDs zur neuen Saison wechselt, kommt eine dazu statt eine zu ersetzen.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."spiel_aufstellung" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "spiel_id" "uuid" NOT NULL,
+    "sfv_person_id" integer NOT NULL,
+    "sfv_team_id" integer,
+    "rueckennr" integer,
+    "position_id" integer,
+    "position_name" "text",
+    "von_minute" integer,
+    "bis_minute" integer,
+    "spielzeit" integer,
+    "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."spiel_aufstellung" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."spiel_aufstellung" IS 'Aufstellung EIGENER Spieler aus /api/match/{id}/players. Fremde Zeilen werden nicht gespeichert. Nicht zu verwechseln mit `aufgebote`: das Aufgebot steht vor dem Spiel und deckt sich nie ganz mit der Aufstellung danach.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "spiel_id" "uuid" NOT NULL,
+    "herkunft" "text" NOT NULL,
+    "sfv_event_id" integer,
+    "ersetzt_ereignis_id" "uuid",
+    "geaenderte_felder" "text"[],
+    "korrigiert_von" "uuid",
+    "korrigiert_am" timestamp with time zone,
+    "verworfen_am" timestamp with time zone,
+    "typ_id" integer NOT NULL,
+    "typ" "text",
+    "subtyp_id" integer,
+    "subtyp" "text",
+    "minute" integer,
+    "zusatzminute" integer,
+    "ist_eigener" boolean NOT NULL,
+    "sfv_team_id" integer,
+    "gegner_club_name" "text",
+    "sfv_person_id" integer,
+    "rueckennr" integer,
+    "ein_sfv_person_id" integer,
+    "ein_rueckennr" integer,
+    "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "spiel_ereignisse_fremde_anonym_check" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("rueckennr" IS NULL) AND ("ein_sfv_person_id" IS NULL) AND ("ein_rueckennr" IS NULL)))),
+    CONSTRAINT "spiel_ereignisse_herkunft_check" CHECK (("herkunft" = ANY (ARRAY['sfv'::"text", 'verein'::"text"]))),
+    CONSTRAINT "spiel_ereignisse_schicht_check" CHECK (((("herkunft" = 'sfv'::"text") AND ("sfv_event_id" IS NOT NULL) AND ("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL) AND ("korrigiert_von" IS NULL)) OR (("herkunft" = 'verein'::"text") AND ("sfv_event_id" IS NULL) AND ("korrigiert_von" IS NOT NULL) AND ((("ersetzt_ereignis_id" IS NOT NULL) AND ("array_length"("geaenderte_felder", 1) > 0)) OR (("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL))))))
+);
+
+
+ALTER TABLE "public"."spiel_ereignisse" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."spiel_ereignisse" IS 'Spielverlauf. herkunft=sfv wird bei jedem Lauf fortgeschrieben, herkunft=verein nie. Eine Vereins-Zeile verdeckt ueber ersetzt_ereignis_id eine SFV-Zeile (Korrektur) oder steht fuer sich (nachgetragener Assist). Von fremden Spielern bleibt nur gegner_club_name — erzwungen durch spiel_ereignisse_fremde_anonym_check.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_ereignisse"."geaenderte_felder" IS 'Welche Felder diese Korrektur setzt. Nur diese werden beim Nachzug-Vergleich gegen die SFV-Zeile geprueft: wer den Torschuetzen korrigiert, hat zur Minute nichts gesagt.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_ereignisse"."typ_id" IS 'SFV Ereignistyp: 1 Tor, 2 Aus-/Einwechslung, 3 Verwarnung, 4 Ausschluss, 9 Assist. Vollstaendig in docs/sfv/sfv_stammdaten.json. Assist ist ein SFV-Typ wie jeder andere — woher die Zeile stammt, sagt herkunft, nicht der Typ.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."spiele" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "team" "text" NOT NULL,
@@ -1734,7 +1821,8 @@ CREATE TABLE IF NOT EXISTS "public"."spiele" (
     "sfv_spiel_typ" integer,
     "sfv_status" integer,
     "sfv_stand" "jsonb",
-    "zuletzt_synchronisiert" timestamp with time zone
+    "zuletzt_synchronisiert" timestamp with time zone,
+    "matchdaten_geholt_am" timestamp with time zone
 );
 
 
@@ -1770,6 +1858,10 @@ COMMENT ON COLUMN "public"."spiele"."sfv_status" IS 'SFV matchState: 1 noch nich
 
 
 COMMENT ON COLUMN "public"."spiele"."sfv_stand" IS 'Rohe Antwortzeile des SFV, unveraendert. Damit ist jede Abweichung nachvollziehbar und neue Felder brauchen keinen erneuten Abruf.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."matchdaten_geholt_am" IS 'Letzter erfolgreicher Abruf von /api/match/{id}(+players,+events). NULL = noch nie. Der Sync holt zuerst die noch nie geholten, danach zum Nachziehen die aus der Woche nach dem Spiel.';
 
 
 
@@ -2043,11 +2135,16 @@ CREATE TABLE IF NOT EXISTS "public"."vereine" (
     "theme" "jsonb" DEFAULT '{}'::"jsonb",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "slug" "text"
+    "slug" "text",
+    "sfv_club_nummer" integer
 );
 
 
 ALTER TABLE "public"."vereine" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."vereine"."sfv_club_nummer" IS 'SFV clubNumber des Vereins (FCH = 11057). NICHT die ClubId (1516) — in Ranglisten und Matchdaten steht ausschliesslich die clubNumber. Der Matchdaten-Sync trennt daran eigene von fremden Spielern.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."wiki_artikel" (
@@ -2342,6 +2439,11 @@ ALTER TABLE ONLY "public"."mitglieder"
 
 
 
+ALTER TABLE ONLY "public"."mitglieder"
+    ADD CONSTRAINT "mitglieder_id_verein_key" UNIQUE ("id", "verein_id");
+
+
+
 ALTER TABLE ONLY "public"."mitglieder_notizen"
     ADD CONSTRAINT "mitglieder_notizen_pkey" PRIMARY KEY ("id");
 
@@ -2579,6 +2681,36 @@ ALTER TABLE ONLY "public"."rollen"
 
 ALTER TABLE ONLY "public"."rollen"
     ADD CONSTRAINT "rollen_verein_name_key" UNIQUE ("verein_id", "name");
+
+
+
+ALTER TABLE ONLY "public"."sfv_zuordnung"
+    ADD CONSTRAINT "sfv_zuordnung_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."sfv_zuordnung"
+    ADD CONSTRAINT "sfv_zuordnung_verein_key" UNIQUE ("verein_id", "sfv_person_id");
+
+
+
+ALTER TABLE ONLY "public"."spiel_aufstellung"
+    ADD CONSTRAINT "spiel_aufstellung_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."spiel_aufstellung"
+    ADD CONSTRAINT "spiel_aufstellung_verein_key" UNIQUE ("verein_id", "spiel_id", "sfv_person_id");
+
+
+
+ALTER TABLE ONLY "public"."spiel_ereignisse"
+    ADD CONSTRAINT "spiel_ereignisse_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."spiele"
+    ADD CONSTRAINT "spiele_id_verein_key" UNIQUE ("id", "verein_id");
 
 
 
@@ -2902,6 +3034,22 @@ CREATE INDEX "personen_nachname_idx" ON "public"."personen" USING "btree" ("vere
 
 
 CREATE INDEX "personen_verein_idx" ON "public"."personen" USING "btree" ("verein_id");
+
+
+
+CREATE INDEX "sfv_zuordnung_mitglied_idx" ON "public"."sfv_zuordnung" USING "btree" ("mitglied_id");
+
+
+
+CREATE INDEX "spiel_ereignisse_ersetzt_idx" ON "public"."spiel_ereignisse" USING "btree" ("ersetzt_ereignis_id") WHERE ("ersetzt_ereignis_id" IS NOT NULL);
+
+
+
+CREATE UNIQUE INDEX "spiel_ereignisse_sfv_event_key" ON "public"."spiel_ereignisse" USING "btree" ("verein_id", "sfv_event_id") WHERE ("herkunft" = 'sfv'::"text");
+
+
+
+CREATE INDEX "spiel_ereignisse_spiel_idx" ON "public"."spiel_ereignisse" USING "btree" ("verein_id", "spiel_id");
 
 
 
@@ -3609,6 +3757,51 @@ ALTER TABLE ONLY "public"."rolle_pflichtfelder"
 
 ALTER TABLE ONLY "public"."rollen"
     ADD CONSTRAINT "rollen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."sfv_zuordnung"
+    ADD CONSTRAINT "sfv_zuordnung_mitglied_fkey" FOREIGN KEY ("mitglied_id", "verein_id") REFERENCES "public"."mitglieder"("id", "verein_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."sfv_zuordnung"
+    ADD CONSTRAINT "sfv_zuordnung_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."sfv_zuordnung"
+    ADD CONSTRAINT "sfv_zuordnung_zugeordnet_von_fkey" FOREIGN KEY ("zugeordnet_von") REFERENCES "public"."benutzer"("id");
+
+
+
+ALTER TABLE ONLY "public"."spiel_aufstellung"
+    ADD CONSTRAINT "spiel_aufstellung_spiel_fkey" FOREIGN KEY ("spiel_id", "verein_id") REFERENCES "public"."spiele"("id", "verein_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."spiel_aufstellung"
+    ADD CONSTRAINT "spiel_aufstellung_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."spiel_ereignisse"
+    ADD CONSTRAINT "spiel_ereignisse_ersetzt_ereignis_id_fkey" FOREIGN KEY ("ersetzt_ereignis_id") REFERENCES "public"."spiel_ereignisse"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."spiel_ereignisse"
+    ADD CONSTRAINT "spiel_ereignisse_korrigiert_von_fkey" FOREIGN KEY ("korrigiert_von") REFERENCES "public"."benutzer"("id");
+
+
+
+ALTER TABLE ONLY "public"."spiel_ereignisse"
+    ADD CONSTRAINT "spiel_ereignisse_spiel_fkey" FOREIGN KEY ("spiel_id", "verein_id") REFERENCES "public"."spiele"("id", "verein_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."spiel_ereignisse"
+    ADD CONSTRAINT "spiel_ereignisse_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
 
 
@@ -4478,6 +4671,39 @@ CREATE POLICY "rollen_select" ON "public"."rollen" FOR SELECT USING (("verein_id
 
 
 CREATE POLICY "rollen_write" ON "public"."rollen" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+ALTER TABLE "public"."sfv_zuordnung" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "sfv_zuordnung_select" ON "public"."sfv_zuordnung" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "sfv_zuordnung_write" ON "public"."sfv_zuordnung" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+ALTER TABLE "public"."spiel_aufstellung" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "spiel_aufstellung_select" ON "public"."spiel_aufstellung" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "spiel_aufstellung_write" ON "public"."spiel_aufstellung" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+ALTER TABLE "public"."spiel_ereignisse" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "spiel_ereignisse_select" ON "public"."spiel_ereignisse" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "spiel_ereignisse_write" ON "public"."spiel_ereignisse" USING ((("verein_id" = "public"."get_my_verein_id"()) AND ("public"."is_admin"() OR ("public"."get_my_role"() = 'trainer'::"text") OR "public"."hat_modul_recht"('schedule'::"text", 'schreiben'::"text")))) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND ("public"."is_admin"() OR ("public"."get_my_role"() = 'trainer'::"text") OR "public"."hat_modul_recht"('schedule'::"text", 'schreiben'::"text"))));
 
 
 
@@ -5406,6 +5632,24 @@ GRANT ALL ON TABLE "public"."rolle_pflichtfelder" TO "service_role";
 GRANT ALL ON TABLE "public"."rollen" TO "anon";
 GRANT ALL ON TABLE "public"."rollen" TO "authenticated";
 GRANT ALL ON TABLE "public"."rollen" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."sfv_zuordnung" TO "anon";
+GRANT ALL ON TABLE "public"."sfv_zuordnung" TO "authenticated";
+GRANT ALL ON TABLE "public"."sfv_zuordnung" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."spiel_aufstellung" TO "anon";
+GRANT ALL ON TABLE "public"."spiel_aufstellung" TO "authenticated";
+GRANT ALL ON TABLE "public"."spiel_aufstellung" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."spiel_ereignisse" TO "anon";
+GRANT ALL ON TABLE "public"."spiel_ereignisse" TO "authenticated";
+GRANT ALL ON TABLE "public"."spiel_ereignisse" TO "service_role";
 
 
 

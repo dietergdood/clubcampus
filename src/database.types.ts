@@ -3385,6 +3385,228 @@ export type Database = {
           },
         ]
       }
+      sfv_zuordnung: {
+        Row: {
+          id: string
+          mitglied_id: number
+          notiz: string | null
+          sfv_person_id: number
+          verein_id: string
+          zugeordnet_am: string
+          zugeordnet_von: string | null
+        }
+        Insert: {
+          id?: string
+          mitglied_id: number
+          notiz?: string | null
+          sfv_person_id: number
+          verein_id: string
+          zugeordnet_am?: string
+          zugeordnet_von?: string | null
+        }
+        Update: {
+          id?: string
+          mitglied_id?: number
+          notiz?: string | null
+          sfv_person_id?: number
+          verein_id?: string
+          zugeordnet_am?: string
+          zugeordnet_von?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sfv_zuordnung_mitglied_fkey"
+            columns: ["mitglied_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "mitglieder"
+            referencedColumns: ["id", "verein_id"]
+          },
+          {
+            foreignKeyName: "sfv_zuordnung_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sfv_zuordnung_zugeordnet_von_fkey"
+            columns: ["zugeordnet_von"]
+            isOneToOne: false
+            referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spiel_aufstellung: {
+        Row: {
+          bis_minute: number | null
+          id: string
+          position_id: number | null
+          position_name: string | null
+          rueckennr: number | null
+          sfv_person_id: number
+          sfv_team_id: number | null
+          spiel_id: string
+          spielzeit: number | null
+          verein_id: string
+          von_minute: number | null
+          zuletzt_synchronisiert: string
+        }
+        Insert: {
+          bis_minute?: number | null
+          id?: string
+          position_id?: number | null
+          position_name?: string | null
+          rueckennr?: number | null
+          sfv_person_id: number
+          sfv_team_id?: number | null
+          spiel_id: string
+          spielzeit?: number | null
+          verein_id: string
+          von_minute?: number | null
+          zuletzt_synchronisiert?: string
+        }
+        Update: {
+          bis_minute?: number | null
+          id?: string
+          position_id?: number | null
+          position_name?: string | null
+          rueckennr?: number | null
+          sfv_person_id?: number
+          sfv_team_id?: number | null
+          spiel_id?: string
+          spielzeit?: number | null
+          verein_id?: string
+          von_minute?: number | null
+          zuletzt_synchronisiert?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spiel_aufstellung_spiel_fkey"
+            columns: ["spiel_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "spiele"
+            referencedColumns: ["id", "verein_id"]
+          },
+          {
+            foreignKeyName: "spiel_aufstellung_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spiel_ereignisse: {
+        Row: {
+          ein_rueckennr: number | null
+          ein_sfv_person_id: number | null
+          ersetzt_ereignis_id: string | null
+          geaenderte_felder: string[] | null
+          gegner_club_name: string | null
+          herkunft: string
+          id: string
+          ist_eigener: boolean
+          korrigiert_am: string | null
+          korrigiert_von: string | null
+          minute: number | null
+          rueckennr: number | null
+          sfv_event_id: number | null
+          sfv_person_id: number | null
+          sfv_team_id: number | null
+          spiel_id: string
+          subtyp: string | null
+          subtyp_id: number | null
+          typ: string | null
+          typ_id: number
+          verein_id: string
+          verworfen_am: string | null
+          zuletzt_synchronisiert: string
+          zusatzminute: number | null
+        }
+        Insert: {
+          ein_rueckennr?: number | null
+          ein_sfv_person_id?: number | null
+          ersetzt_ereignis_id?: string | null
+          geaenderte_felder?: string[] | null
+          gegner_club_name?: string | null
+          herkunft: string
+          id?: string
+          ist_eigener: boolean
+          korrigiert_am?: string | null
+          korrigiert_von?: string | null
+          minute?: number | null
+          rueckennr?: number | null
+          sfv_event_id?: number | null
+          sfv_person_id?: number | null
+          sfv_team_id?: number | null
+          spiel_id: string
+          subtyp?: string | null
+          subtyp_id?: number | null
+          typ?: string | null
+          typ_id: number
+          verein_id: string
+          verworfen_am?: string | null
+          zuletzt_synchronisiert?: string
+          zusatzminute?: number | null
+        }
+        Update: {
+          ein_rueckennr?: number | null
+          ein_sfv_person_id?: number | null
+          ersetzt_ereignis_id?: string | null
+          geaenderte_felder?: string[] | null
+          gegner_club_name?: string | null
+          herkunft?: string
+          id?: string
+          ist_eigener?: boolean
+          korrigiert_am?: string | null
+          korrigiert_von?: string | null
+          minute?: number | null
+          rueckennr?: number | null
+          sfv_event_id?: number | null
+          sfv_person_id?: number | null
+          sfv_team_id?: number | null
+          spiel_id?: string
+          subtyp?: string | null
+          subtyp_id?: number | null
+          typ?: string | null
+          typ_id?: number
+          verein_id?: string
+          verworfen_am?: string | null
+          zuletzt_synchronisiert?: string
+          zusatzminute?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spiel_ereignisse_ersetzt_ereignis_id_fkey"
+            columns: ["ersetzt_ereignis_id"]
+            isOneToOne: false
+            referencedRelation: "spiel_ereignisse"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiel_ereignisse_korrigiert_von_fkey"
+            columns: ["korrigiert_von"]
+            isOneToOne: false
+            referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiel_ereignisse_spiel_fkey"
+            columns: ["spiel_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "spiele"
+            referencedColumns: ["id", "verein_id"]
+          },
+          {
+            foreignKeyName: "spiel_ereignisse_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spiele: {
         Row: {
           created_at: string | null
@@ -3395,6 +3617,7 @@ export type Database = {
           ht_resultat: string | null
           id: string
           liga: string | null
+          matchdaten_geholt_am: string | null
           notes: string | null
           resultat: string | null
           schiedsrichter: string | null
@@ -3429,6 +3652,7 @@ export type Database = {
           ht_resultat?: string | null
           id?: string
           liga?: string | null
+          matchdaten_geholt_am?: string | null
           notes?: string | null
           resultat?: string | null
           schiedsrichter?: string | null
@@ -3463,6 +3687,7 @@ export type Database = {
           ht_resultat?: string | null
           id?: string
           liga?: string | null
+          matchdaten_geholt_am?: string | null
           notes?: string | null
           resultat?: string | null
           schiedsrichter?: string | null
@@ -4210,6 +4435,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          sfv_club_nummer: number | null
           slug: string | null
           theme: Json | null
           updated_at: string | null
@@ -4218,6 +4444,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          sfv_club_nummer?: number | null
           slug?: string | null
           theme?: Json | null
           updated_at?: string | null
@@ -4226,6 +4453,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          sfv_club_nummer?: number | null
           slug?: string | null
           theme?: Json | null
           updated_at?: string | null

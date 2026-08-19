@@ -506,15 +506,29 @@ select nr, pruefung, erwartet, gefunden,
 --     npx supabase db dump --linked -f supabase/schema.sql
 --     npx supabase gen types typescript --linked > src/database.types.ts
 --
---   Zaehlprobe gegen die alte Fassung:
---     CREATE TABLE     +3
---     CREATE POLICY    +6
---     CREATE INDEX     +4   (2 normale, 2 partielle unique)
---     ADD CONSTRAINT   +11  3 pkey, 2 unique, 4 fkey, 2 auf spiele/mitglieder
+--   Zaehlprobe gegen die alte Fassung — nachgemessen am 19.08.2026 nach dem
+--   Lauf, die Zahlen hier sind die tatsaechlichen:
+--     CREATE TABLE          +3
+--     CREATE POLICY         +6
+--     CREATE INDEX          +3
+--     CREATE UNIQUE INDEX   +1   (spiel_ereignisse_sfv_event_key, partiell)
+--     ADD CONSTRAINT       +16
 --
---   NICHT +14: die vier CHECK-Constraints (herkunft, schicht, fremde_anonym
---   und der impliziten) stehen im Dump INLINE im CREATE TABLE, nicht als
---   eigenes ADD CONSTRAINT — siehe CLAUDE.md, Datenbank-Workflow.
+--   ZWEI FALLEN, in die meine Vorhersage gelaufen ist:
+--
+--   1. Ein partieller UNIQUE-Index wird als CREATE UNIQUE INDEX gedumpt, nicht
+--      als CREATE INDEX. Wer nur nach "^CREATE INDEX" greppt, zaehlt ihn nicht
+--      mit und vermutet einen Verlust.
+--   2. Die drei CHECK-Constraints stehen INLINE im CREATE TABLE (siehe
+--      CLAUDE.md, Datenbank-Workflow) — und die Fremdschluessel sind mehr, als
+--      man beim Lesen des Skripts zaehlt: jede Tabelle bringt ihr eigenes
+--      verein_id_fkey mit, dazu zugeordnet_von_fkey, korrigiert_von_fkey und
+--      ersetzt_ereignis_id_fkey. Macht 3 pkey + 2 unique + 9 fkey + 2 auf
+--      spiele/mitglieder = 16.
+--
+--   Die Lehre fuer die naechste Zaehlprobe: die erwarteten Zahlen aus dem
+--   Dump ableiten, nicht aus dem Skript — im Skript stehen Constraints
+--   inline, die der Dump anders schreibt.
 --
 -- WAS DANACH KOMMT
 --   Schritt 3  sfvApi.ts um holeMatch/holeAufstellung/holeEreignisse,
