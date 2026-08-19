@@ -976,6 +976,31 @@ Zwei Folgerungen:
 
 Eine nachträglich erzeugte Basis-Migration würde daran nichts verbessern — sie wäre eine zweite Fassung desselben Inhalts und liefe der ersten irgendwann hinterher.
 
+### ⚠ `schema.sql` baut die Datenbank NICHT nach — vier Stücke liegen ausserhalb
+
+Der Dump deckt das Schema **`public`** ab. Vier Dinge tun das nicht, und alle vier sind einzeln entdeckt worden — beim vierten (20.08.2026, Storage-Bucket) war klar, dass es kein Einzelfall ist, sondern ein Muster. **Was nicht in `public` liegt, ist im Dump nicht drin, und keine Zählprobe zeigt es an**, weil es in keiner der vier gezählten Kategorien vorkommt.
+
+| Was | Wo es liegt | Woran man merkt, dass es fehlt |
+|---|---|---|
+| **Trigger auf `auth.users`** (`on_auth_user_created`, `on_auth_user_login`) | `supabase/auth_triggers.sql` | Niemand kann sich registrieren. `schema.sql` enthält nur die Funktionen `handle_new_user`/`handle_user_login` — **ohne jeden Aufrufer**. |
+| **Realtime-Publication** (`ALTER PUBLICATION supabase_realtime ADD TABLE nachrichten, nachrichten_antworten`) | im regulären `supabase db dump` enthalten — aber **nicht** in `pg_dump --schema=public` | Nachrichten kommen nicht live an. Nichts schlägt fehl, es passiert nur nichts. |
+| **cron-Auftrag** `sfv-sync-stuendlich` (`cron.job`, Schema `cron`) | `supabase/cron_sfv_sync.sql` | Der SFV-Sync läuft nie wieder. Die Anzeige zeigt schlicht den Stand vom Tag des Nachbaus. |
+| **Storage-Bucket** `sfv-logos` (`storage.buckets`) | `supabase/migration_sfv_logos.sql` | Vereinswappen erscheinen nicht, und der Sync legt sie ins Leere ab. |
+
+**Das gemeinsame Merkmal: keines davon bricht laut.** Registrierung, Live-Nachrichten, Sync, Wappen — alle vier hören einfach auf zu funktionieren, ohne Fehlermeldung. Deshalb fällt es beim Nachbauen nicht auf, sondern Wochen später.
+
+**Reihenfolge beim Nachbau:**
+
+```
+1. supabase/schema.sql              ← das Grundschema
+2. supabase/auth_triggers.sql       ← sonst keine Registrierung
+3. supabase/cron_sfv_sync.sql       ← sonst kein Sync
+4. supabase/migration_sfv_logos.sql ← Bucket (Block A daraus genügt)
+5. prüfen: ALTER PUBLICATION für nachrichten + nachrichten_antworten
+```
+
+**Und für die Zukunft:** wer etwas ausserhalb von `public` anlegt — ein Schema, einen Bucket, einen Job, eine Publication, einen Trigger auf einer Systemtabelle —, trägt es **hier** in die Tabelle ein. Eine Migrationsdatei allein genügt nicht: sie ist Protokoll, keine Quelle fürs Nachbauen, und niemand liest 30 Dateien durch, um herauszufinden, was fehlt.
+
 ### Migrationen prüfen sich selbst
 
 **Alles über drei Anweisungen kommt in einen `do $mig$ … $mig$;`-Block mit Prüfung am Ende.**
