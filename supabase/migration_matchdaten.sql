@@ -315,12 +315,40 @@ begin
   -- Schreiben:
   --   spiel_aufstellung  nur is_admin() — die Zeilen kommen vom Sync, von
   --                      Hand wird hier nichts gepflegt.
-  --   spiel_ereignisse   is_admin() ODER is_trainer() — Tore und Karten
-  --                      korrigiert, wer beim Spiel war.
   --   sfv_zuordnung      nur is_admin() — eine falsche Zuordnung verfaelscht
   --                      rueckwirkend jede Statistik.
+  --   spiel_ereignisse   is_admin() ODER Rolle 'trainer' ODER
+  --                      hat_modul_recht('schedule','schreiben').
   -- using UND with check: ohne with check liesse sich eine Zeile mit fremder
   -- verein_id einfuegen.
+  --
+  -- ⚠ WARUM DER TRAINER UEBER DIE ROLLE KOMMT UND NICHT UEBER DAS MODUL
+  -- hat_modul_recht() liest ausschliesslich benutzer_funktionen ->
+  -- portal_funktionen -> portal_gruppen. Die Rolle steht dort nicht drin: ein
+  -- Trainer ohne Gruppenzugehoerigkeit bekommt fuer JEDES Modul false. Und
+  -- 'schedule' ist ausgerechnet das Modul, auf dem der Trainer am wenigsten
+  -- hat — APP_ZUGRIFF_DEFAULT gibt ihm dort 'lesen', waehrend er bei team,
+  -- training und events 'verwalten' hat. 'schedule' kann "mindestens so viel
+  -- wie ein Trainer" also gar nicht ausdruecken.
+  --
+  -- Trotzdem 'schedule': es ist der Schluessel, der laut
+  -- docs/auftrag_rls_gruppenrechte.md zu `spiele` gehoert, und die
+  -- Ereignisse sind Kinder von `spiele`. 'team' oder 'events' zu nehmen
+  -- braeche die Tabelle-zu-Modul-Zuordnung, die der Gruppenrechte-Auftrag
+  -- spaeter auf `spiele` selbst anwendet — zwei Schluessel fuer dieselbe
+  -- Datenfamilie waeren ein Sonderfall, den spaeter niemand mehr erklaert.
+  --
+  -- ⚠ FOLGE AM ERSTEN TAG: ausser Trainer und Admin korrigiert niemand.
+  -- Kein Funktionaer hat heute schedule >= schreiben. Der Stufenleiter kommt
+  -- dazu, sobald jemand in der Portalverwaltung seiner Gruppe
+  -- schedule: schreiben setzt — ein Konfigurationsschritt, kein Codewechsel,
+  -- und ohne Aufzaehlung von Rollennamen. Genau dafuer sind die Gruppen da.
+  --
+  -- NICHT is_trainer_or_above(): sie prueft role in (…, 'funktionär', …) MIT
+  -- Umlaut, waehrend Rollen-Keys normalisiert werden ('funktionaer', siehe
+  -- roleUtils.ts). Ein Funktionaer trifft dort nie zu. Ausserdem waere sie zu
+  -- weit — sie liesse jeden Funktionaer korrigieren, nicht nur den mit
+  -- Trainer-Rechten.
 
   execute $q$alter table public.sfv_zuordnung    enable row level security$q$;
   execute $q$alter table public.spiel_aufstellung enable row level security$q$;
@@ -354,8 +382,14 @@ begin
   execute $q$drop policy if exists spiel_ereignisse_write on public.spiel_ereignisse$q$;
   execute $q$create policy spiel_ereignisse_write on public.spiel_ereignisse
               for all
-              using      (verein_id = public.get_my_verein_id() and (public.is_admin() or public.is_trainer()))
-              with check (verein_id = public.get_my_verein_id() and (public.is_admin() or public.is_trainer()))$q$;
+              using      (verein_id = public.get_my_verein_id()
+                          and (public.is_admin()
+                            or public.get_my_role() = 'trainer'
+                            or public.hat_modul_recht('schedule', 'schreiben')))
+              with check (verein_id = public.get_my_verein_id()
+                          and (public.is_admin()
+                            or public.get_my_role() = 'trainer'
+                            or public.hat_modul_recht('schedule', 'schreiben')))$q$;
 
 
   -- ─── G) Pruefung, im selben Block ────────────────────────────────────────
