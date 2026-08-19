@@ -450,6 +450,48 @@ sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
 (Abschnitt darüber). Solange vier Typen zehn Pflichtfelder verlangen, käme
 danach kein Juniorenmitglied mehr durch die eigene Datenprüfung.
 
+### ⚠ `api_verbindungen.active` und `auto_sync` — zwei Kennzeichen, zwei Leser
+
+Befund vom 20.08.2026, beim ersten Lauf von Hand aufgefallen.
+
+| Spalte | wer liest sie | wer nicht |
+|---|---|---|
+| `active` | **nur die Oberfläche** — Stecker-Symbol, Häkchenliste, der Knopf „Sync starten" in `ApiTab` | die Edge Function prüft sie **nirgends** |
+| `auto_sync` | **nur `sfv-sync/index.ts`**, und dort nur der Cron-Pfad (`if (perZeitplan)`) | die Oberfläche zeigt sie nicht an |
+
+**Was daraus folgte.** `migration_sfv_spielplan.sql` legt den Eintrag mit
+`active = false` an („bleibt false, bis die Edge Function steht") — und
+niemand hat ihn nachgezogen, als sie stand. Sechs Tage lang zeigte die Kachel
+einen grauen Stecker für einen Anschluss, der **stündlich lief**. Schlimmer:
+der Knopf `Sync starten` hängt an `active` und hat deshalb nie gerendert.
+Beim Abschalten von `auto_sync` für den ersten Lauf von Hand gab es damit
+überhaupt keinen Auslöser mehr — der Cron fand nichts, und von Hand ging es
+nicht.
+
+**Dasselbe Muster wie `hat_portal_zugang`** gegen den Join auf `benutzer`
+(in Etappe 6c aufgelöst): zwei Stellen behaupten dieselbe Sache, eine davon
+veraltet, und die Abweichung fällt erst auf, wenn jemand sich auf die falsche
+verlässt. Die Lehre ist dieselbe — **eine Aussage, ein Ort.**
+
+**Zu entscheiden, zusammen mit der API-Kachel insgesamt:**
+
+- `active` in der Edge Function mitprüfen — dann heisst es wirklich
+  „Anschluss aus" und schaltet auch den Cron ab. Dann braucht `auto_sync`
+  eine eigene, engere Bedeutung („stündlich statt nur von Hand") oder fällt weg.
+- Oder `active` auf reine Anzeige beschränken und im Tab so benennen, dass
+  niemand es für einen Schalter hält.
+
+Bis dahin: **nach jeder Änderung an der Edge Function prüfen, ob `active`
+noch stimmt.** Zum Nachsehen:
+
+```sql
+select key, active, konfiguriert, auto_sync, letzter_sync
+  from public.api_verbindungen where key = 'football_ch';
+```
+
+Steht dort ein frisches `letzter_sync` bei `active = false`, ist das der Beleg,
+dass die Spalte reine Anzeige ist.
+
 ### ⚠ `is_trainer_or_above()` prüft einen Rollennamen, den es nicht gibt
 
 Befund vom 19.08.2026.
