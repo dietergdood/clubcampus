@@ -31,8 +31,9 @@ import { Btn, ModalOrSheet, PhoneInput } from "../../theme.ts";
 import { AdresseFormular } from "./AdresseFormular.tsx";
 import { TI } from "../../icons.tsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
-import type { Account, Mitgliedtyp, MitgliedtypPflichtfeld, Sb } from "../../types.ts";
-import { getEffektivePflichtfelder, IMMER_PFLICHT } from "../../domains/members/pflichtfelder.ts";
+import type { Account, Mitgliedtyp, Sb } from "../../types.ts";
+import { getFeldkonfig, istPflicht as istPflichtKonfig, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
+import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import { NeuesMitgliedElternSektion, speichereEltern } from "./NeuesMitgliedElternSektion.tsx";
 import type { ElternEintrag } from "./NeuesMitgliedElternSektion.tsx";
@@ -70,13 +71,13 @@ interface NeuesMitgliedModalProps {
   onClose: () => void;
   sb: Sb;
   dbMitgliedtypen?: Mitgliedtyp[] | null;
-  dbPflichtfelder?: MitgliedtypPflichtfeld[];
+  feldkonfig?: FeldkonfigZeile[];
   vereinId: string | null;
   onSuccess?: ((id: number) => void) | null;
   account?: Account | null;
 }
 
-export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflichtfelder=[], vereinId, onSuccess, account=null }: NeuesMitgliedModalProps) {
+export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkonfig=[], vereinId, onSuccess, account=null }: NeuesMitgliedModalProps) {
   const [form, setForm] = useState<MitgliedFormular>({ mitgliedtyp: "" });
   const [elternEintraege, setElternEintraege] = useState<ElternEintrag[]>([]);
   /* Gesetzt, sobald das Kind in der Datenbank steht. Scheitert danach das
@@ -98,15 +99,18 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
     : ["Aktivmitglied", "Juniormitglied", "Passivmitglied", "Ehrenmitglied"];
 
 
-  /* Nur die Mitgliedtyp-Matrix — die Rollen-Zusatzfelder greifen erst in
-     der Datenprüfung, weil beim Anlegen die sportliche Rolle noch nicht
-     feststeht (sie kommt übers Kader). */
-  const pflichtfelder = getEffektivePflichtfelder({
-    mitgliedtyp: form.mitgliedtyp,
-    typMatrix: dbPflichtfelder,
-  });
+  /* Die Mitgliedtyp-Konfiguration entscheidet beides: ob es das Feld gibt
+     (`zeige`) und ob es ausgefüllt sein muss (`istPflicht`).
 
-  const istPflicht = (feld: string) => pflichtfelder.includes(feld);
+     Bis zum 19.08.2026 hing hier die SICHTBARKEIT am Pflicht-Häkchen: was
+     nicht Pflicht war, liess sich beim Anlegen gar nicht erfassen. Jetzt
+     ist ein freiwilliges Feld sichtbar und darf leer bleiben — nur "Gibt
+     es nicht" blendet es aus. */
+  const konfig = getFeldkonfig(form.mitgliedtyp, feldkonfig);
+  const pflichtfelder = pflichtfelderAus(konfig);
+
+  const istPflicht = (feld: string) => istPflichtKonfig(konfig, feld);
+  const zeige = (feld: string) => istSichtbar(konfig, feld);
 
   /* Bei diesen Mitgliedtypen ist ein Hauptkontakt vorgesehen — der
      Elternabschnitt erscheint dann im gleichen Ablauf. Erzwungen wird er
@@ -138,8 +142,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
     const fehlend: string[] = [];
     const fehlendKeys: string[] = [];
 
-    for (const feld of IMMER_PFLICHT) {
-      if (!form[feld]?.trim()) { fehlend.push(FELD_LABEL[feld] || feld); fehlendKeys.push(feld); }
+    for (const feld of IMMER_PFLICHT_KEYS) {
+      const wert = form[feld as keyof MitgliedFormular];
+      if (!wert?.trim()) { fehlend.push(FELD_LABEL[feld] || feld); fehlendKeys.push(feld); }
     }
     for (const feld of pflichtfelder) {
       /* unbekannte Felder überspringen — mitgliedtyp_pflichtfelder kann
@@ -291,13 +296,15 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
             </div>
 
             {/* Geburtsdatum / Geschlecht */}
-            {(istPflicht("geburtsdatum")||istPflicht("geschlecht")) && (<>
+            {zeige("geburtsdatum") && (
               <div>
                 <label className="cc-label">
                   Geburtsdatum {istPflicht("geburtsdatum")&&<span className="cc-label-req">*</span>}
                 </label>
                 <input className={feldCls("geburtsdatum")} type="date" value={form.geburtsdatum||""} onChange={e=>set("geburtsdatum",e.target.value)}/>
               </div>
+            )}
+            {zeige("geschlecht") && (
               <div>
                 <label className="cc-label">
                   Geschlecht {istPflicht("geschlecht")&&<span className="cc-label-req">*</span>}
@@ -307,10 +314,10 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
                   {GESCHLECHT_OPTS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                 </select>
               </div>
-            </>)}
+            )}
 
             {/* Adresse */}
-            {(istPflicht("strasse")||istPflicht("plz")||istPflicht("ort")) && (
+            {zeige("strasse") && (
               <AdresseFormular
                 strasse={form.strasse||""}
                 plz={form.plz||""}
@@ -330,9 +337,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
             )}
 
             {/* Telefon */}
-            {istPflicht("telefon") && (
+            {zeige("telefon") && (
               <div className="cc-form-full">
-                <label className="cc-label">Telefon <span className="cc-label-req">*</span></label>
+                <label className="cc-label">Telefon {istPflicht("telefon")&&<span className="cc-label-req">*</span>}</label>
                 <PhoneInput value={form.telefon||""} onChange={v=>set("telefon",v)} showHint={false}
                   /* cc-input-error statt cc-phone-wrap-err: letzteres färbt nur
                      den 0.5px-Rahmen und ist neben dem Ring der übrigen Felder
@@ -341,12 +348,13 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
               </div>
             )}
 
-            {/* E-Mail — immer sichtbar. Sie ist der Login-Name und darf pro
-                Verein nur einmal vorkommen (Index personen_email_pro_verein).
-                Früher hing die Sichtbarkeit an einer Liste von Passivtypen;
-                verlangte die Matrix dort eine E-Mail, war das Formular nicht
-                mehr absendbar. */}
-            <div className="cc-form-full">
+            {/* E-Mail — Login-Name, pro Verein nur einmal (Index
+                personen_email_pro_verein). Früher hing die Sichtbarkeit an
+                einer Liste von Passivtypen; verlangte die Matrix dort eine
+                E-Mail, war das Formular nicht mehr absendbar. Jetzt sagt es
+                die Konfiguration, und Pflicht und Sichtbarkeit können nicht
+                mehr auseinanderlaufen. */}
+            {zeige("email") && <div className="cc-form-full">
               <label className="cc-label">
                 E-Mail {istPflicht("email")&&<span className="cc-label-req">*</span>}
               </label>
@@ -356,32 +364,34 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, dbPflic
                   ? "Wird zum Login-Namen für das Portal"
                   : "Optional — ohne E-Mail kein eigener Portal-Zugang"}
               </div>
-            </div>
+            </div>}
 
             {/* AHV-Nr. / Nationalität / Heimatort — nur wenn konfiguriert.
                 Sie standen bisher in der Prüfliste, hatten aber kein
                 Eingabefeld: sobald jemand sie in der Matrix ankreuzte, war
                 das Formular nicht mehr absendbar. */}
-            {istPflicht("ahv_nr") && (
+            {zeige("ahv_nr") && (
               <div className="cc-form-full">
-                <label className="cc-label">AHV-Nr. <span className="cc-label-req">*</span></label>
+                <label className="cc-label">AHV-Nr. {istPflicht("ahv_nr")&&<span className="cc-label-req">*</span>}</label>
                 <input className={feldCls("ahv_nr")} type="text" value={form.ahv_nr||""} onChange={e=>set("ahv_nr",e.target.value)} placeholder="756.1234.5678.90"/>
               </div>
             )}
-            {(istPflicht("nationalitaet")||istPflicht("heimatort")) && (<>
+            {zeige("nationalitaet") && (
               <div>
                 <label className="cc-label">
                   Nationalität {istPflicht("nationalitaet")&&<span className="cc-label-req">*</span>}
                 </label>
                 <input className={feldCls("nationalitaet")} type="text" value={form.nationalitaet||""} onChange={e=>set("nationalitaet",e.target.value)} placeholder="CH"/>
               </div>
+            )}
+            {zeige("heimatort") && (
               <div>
                 <label className="cc-label">
                   Heimatort {istPflicht("heimatort")&&<span className="cc-label-req">*</span>}
                 </label>
                 <input className={feldCls("heimatort")} type="text" value={form.heimatort||""} onChange={e=>set("heimatort",e.target.value)} placeholder="Herrliberg ZH"/>
               </div>
-            </>)}
+            )}
 
 
             <div className="cc-form-full">

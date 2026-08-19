@@ -5,16 +5,12 @@ import { getProfilCheck } from "../getProfilCheck.ts";
 const sb = null as never;
 const setDbUser = (() => {}) as never;
 
-const typMatrix = [
-  { mitgliedtyp: "Aktivmitglied",    feld: "geburtsdatum", pflicht: true },
-  { mitgliedtyp: "Aktivmitglied",    feld: "strasse",      pflicht: true },
-  { mitgliedtyp: "Aktivmitglied",    feld: "telefon",      pflicht: true },
-  { mitgliedtyp: "Passivmitglied",   feld: "telefon",      pflicht: true },
-  { mitgliedtyp: "Juniorenmitglied", feld: "geburtsdatum", pflicht: true },
-] as never;
-
-const rolleMatrix = [
-  { rolle: "spieler", feld: "spielerpass", pflicht: true },
+const feldkonfig = [
+  { mitgliedtyp: "Aktivmitglied",    schluessel: "geburtsdatum", modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied",    schluessel: "strasse",      modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied",    schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp: "Passivmitglied",   schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp: "Juniorenmitglied", schluessel: "geburtsdatum", modus: "pflicht" },
 ] as never;
 
 function baue(mitglied: Record<string, unknown>, opts: Record<string, unknown> = {}) {
@@ -22,7 +18,7 @@ function baue(mitglied: Record<string, unknown>, opts: Record<string, unknown> =
   return getProfilCheck({
     sb, setDbUser, dbUser, role: "spieler" as never,
     dbMitglieder: [{ id: 1, ...mitglied }] as never,
-    typMatrix, rolleMatrix, ...opts,
+    feldkonfig, ...opts,
   });
 }
 
@@ -35,7 +31,7 @@ function baueEltern(person: Record<string, unknown> | null) {
     sb, setDbUser, dbUser, role: "eltern" as never,
     dbMitglieder: [] as never,
     eigenePerson: person as never,
-    typMatrix, rolleMatrix,
+    feldkonfig,
   });
 }
 
@@ -99,12 +95,29 @@ describe("getProfilFehlend", () => {
     expect(getProfilFehlend()).toEqual(["Telefon"]);
   });
 
-  it("zählt die Zusatzfelder der Rolle mit", () => {
+  it("zählt die Rolle NICHT mehr mit", () => {
+    /* Bis zum 19.08.2026 legte `rolle_pflichtfelder` einem Spieler zusätzlich
+       Spielerpass, J+S-Nr. und Fairgate-ID auf. Die Achse ist entfallen: sie
+       konnte nur addieren, nie wegnehmen, und `rolle` ist ein berechneter
+       Wert, den ableitUndSaveRolle() laufend neu schreibt. Was ein Verein
+       verlangt, steht jetzt am Mitgliedtyp. */
     const { getProfilFehlend } = baue({
       vorname: "A", nachname: "B", mitgliedtyp: "Aktivmitglied", rolle: "spieler",
       geburtsdatum: "2000-01-01", strasse: "Dorfstrasse 9", telefon: "+41 79 000 00 00",
     });
-    expect(getProfilFehlend()).toEqual(["Spielerpass"]);
+    expect(getProfilFehlend()).toEqual([]);
+  });
+
+  it("blendet ein Feld auf 'aus' aus der Prüfung aus", () => {
+    /* Der neue dritte Wert: was es nicht gibt, kann nicht fehlen. */
+    const { getProfilFehlend } = baue(
+      { vorname: "A", nachname: "B", mitgliedtyp: "Goenner" },
+      { feldkonfig: [
+        { mitgliedtyp: "Goenner", schluessel: "telefon",      modus: "pflicht" },
+        { mitgliedtyp: "Goenner", schluessel: "geburtsdatum", modus: "aus" },
+      ] as never },
+    );
+    expect(getProfilFehlend()).toEqual(["Telefon"]);
   });
 
   it("meldet Vorname und Nachname auch ohne Matrix-Eintrag", () => {
@@ -112,11 +125,11 @@ describe("getProfilFehlend", () => {
     expect(getProfilFehlend()).toEqual(["Vorname", "Nachname"]);
   });
 
-  it("verlangt nichts, solange die Matrix nicht geladen ist", () => {
-    /* Ladezustand: leere Matrix darf keinen Hinweis auslösen. */
+  it("verlangt nichts, solange die Konfiguration nicht geladen ist", () => {
+    /* Ladezustand: leere Konfiguration darf keinen Hinweis auslösen. */
     const { getProfilFehlend } = baue(
       { vorname: "A", nachname: "B", mitgliedtyp: "Aktivmitglied" },
-      { typMatrix: [], rolleMatrix: [] },
+      { feldkonfig: [] },
     );
     expect(getProfilFehlend()).toEqual([]);
   });

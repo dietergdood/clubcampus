@@ -9,16 +9,29 @@
    E-Mail" — die Adresse gar nicht. Ein Verein konnte sie also als
    Pflicht konfigurieren, ohne dass es je eine Wirkung hatte.
 
-   Anders als beim Anlegen zählen hier AUCH die Zusatzfelder der Rolle:
-   der Spieler steht inzwischen im Kader, seine Rolle ist bekannt.
+   Seit 19.08.2026 gilt hier dieselbe Quelle wie beim Anlegen: die
+   Mitgliedtyp-Konfiguration. Die frühere zweite Achse `rolle_pflichtfelder`
+   ist entfallen — sie konnte nur addieren, nie wegnehmen, ihre Achse war
+   ein berechneter Wert (`ableitUndSaveRolle` schreibt `rolle` bei jeder
+   Kader-, Team- und Funktionsänderung neu), und netto trug sie drei Felder
+   bei, die als pauschale Pflicht alle falsch waren: `fairgate_id` schreibt
+   der Sync, eine `js_nr` hat ein Juniorenspieler nicht, und `spielerpass`
+   galt auch für Trainer.
+
+   ⚠ Ausgewertet wird das hier derzeit NICHT: getProfilFehlend() wird in
+   clubcampus.tsx destrukturiert und nie aufgerufen, und die beiden
+   Datenprüfungs-Komponenten setzen profil_geprueft_at bedingungslos.
+   Anschliessen ist entschieden, siehe CLAUDE.md → "Die Pflichtfeld-Matrizen
+   wirken in der Datenprüfung gar nicht".
    ═══════════════════════════════════════════════════════════════ */
 import {
-  IMMER_PFLICHT,
-  getEffektivePflichtfelder,
-  type RollePflichtfeld,
-} from '../members/pflichtfelder.ts';
+  IMMER_PFLICHT_KEYS,
+  getFeldkonfig,
+  pflichtfelderAus,
+  type FeldkonfigZeile,
+} from '../members/feldkonfig.ts';
 import { FELD_LABEL, updateMitglied } from '../members/memberService.ts';
-import type { Sb, DbUser, Mitglied, MitgliedtypPflichtfeld, Rolle, SetState } from '../../types.js';
+import type { Sb, DbUser, Mitglied, Rolle, SetState } from '../../types.js';
 
 interface GetProfilCheckProps {
   sb: Sb;
@@ -29,10 +42,9 @@ interface GetProfilCheckProps {
   /** Die eigene Person. Seit Etappe 4 stehen Vorname, Nachname und Telefon
       dort und nicht mehr an `benutzer` — die Spalten sind gestrichen. */
   eigenePerson?: { vorname?: string | null; nachname?: string | null; telefon?: string | null } | null;
-  /** Matrix aus der Portalverwaltung. Fehlt sie, wird nichts verlangt —
-      bewusst: ein leerer Ladezustand darf keinen Hinweis auslösen. */
-  typMatrix?: MitgliedtypPflichtfeld[];
-  rolleMatrix?: RollePflichtfeld[];
+  /** Feldkonfiguration aus der Portalverwaltung. Fehlt sie, wird nichts
+      verlangt — bewusst: ein leerer Ladezustand darf keinen Hinweis auslösen. */
+  feldkonfig?: FeldkonfigZeile[];
 }
 
 /* Feldwert eines Mitglieds — leer zählt als fehlend. `Mitglied` ist breit
@@ -47,23 +59,18 @@ function istLeer(raw: Partial<Mitglied>, feld: string): boolean {
 
 export function getProfilCheck({
   sb, dbUser, role, dbMitglieder, setDbUser,
-  eigenePerson = null, typMatrix = [], rolleMatrix = [],
+  eigenePerson = null, feldkonfig = [],
 }: GetProfilCheckProps) {
 
   /* Fehlende Pflichtfelder eines Mitglieds, als Feld-Labels. */
   function fehlendeFelder(raw: Partial<Mitglied>): string[] {
     const fehlend: string[] = [];
 
-    for (const feld of IMMER_PFLICHT) {
+    for (const feld of IMMER_PFLICHT_KEYS) {
       if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
     }
 
-    const pflicht = getEffektivePflichtfelder({
-      mitgliedtyp: raw.mitgliedtyp,
-      rolle: raw.rolle,
-      typMatrix,
-      rolleMatrix,
-    });
+    const pflicht = pflichtfelderAus(getFeldkonfig(raw.mitgliedtyp, feldkonfig));
     for (const feld of pflicht) {
       if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
     }

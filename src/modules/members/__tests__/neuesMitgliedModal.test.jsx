@@ -59,15 +59,18 @@ const DB_PORTAL_ROLLEN = [
   { name: 'spieler', label: 'Spieler/in' },
 ];
 
-const DB_PFLICHTFELDER = [
-  { mitgliedtyp: 'Aktivmitglied', feld: 'geburtsdatum', pflicht: true },
-  { mitgliedtyp: 'Aktivmitglied', feld: 'geschlecht',   pflicht: true },
-  { mitgliedtyp: 'Aktivmitglied', feld: 'strasse',      pflicht: true },
-  { mitgliedtyp: 'Aktivmitglied', feld: 'plz',          pflicht: true },
-  { mitgliedtyp: 'Aktivmitglied', feld: 'ort',          pflicht: true },
-  { mitgliedtyp: 'Aktivmitglied', feld: 'telefon',      pflicht: true },
-  { mitgliedtyp: 'Passivmitglied', feld: 'geburtsdatum', pflicht: true },
-  { mitgliedtyp: 'Passivmitglied', feld: 'telefon',      pflicht: true },
+/* Seit dem 19.08.2026 kommt die Quelle aus mitgliedtyp_feldkonfig: drei Werte
+   statt eines Haekchens. Was hier nicht steht, ist "freiwillig" — sichtbar,
+   aber nicht verlangt. */
+const DB_FELDKONFIG = [
+  { mitgliedtyp: 'Aktivmitglied', schluessel: 'geburtsdatum', modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', schluessel: 'geschlecht',   modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', schluessel: 'strasse',      modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', schluessel: 'plz',          modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', schluessel: 'ort',          modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', schluessel: 'telefon',      modus: 'pflicht' },
+  { mitgliedtyp: 'Passivmitglied', schluessel: 'geburtsdatum', modus: 'pflicht' },
+  { mitgliedtyp: 'Passivmitglied', schluessel: 'telefon',      modus: 'pflicht' },
 ];
 
 function renderModal(props = {}) {
@@ -77,7 +80,7 @@ function renderModal(props = {}) {
     sb: {},
     dbMitgliedtypen: DB_MITGLIEDTYPEN,
     dbPortalRollen: DB_PORTAL_ROLLEN,
-    dbPflichtfelder: DB_PFLICHTFELDER,
+    feldkonfig: DB_FELDKONFIG,
     vereinId: 'verein-123',
     onSuccess: vi.fn(),
   };

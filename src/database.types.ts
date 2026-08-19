@@ -2097,6 +2097,48 @@ export type Database = {
           },
         ]
       }
+      mitgliedtyp_feldkonfig: {
+        Row: {
+          created_at: string | null
+          id: string
+          mitgliedtyp_id: string
+          modus: string
+          schluessel: string
+          verein_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          mitgliedtyp_id: string
+          modus: string
+          schluessel: string
+          verein_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          mitgliedtyp_id?: string
+          modus?: string
+          schluessel?: string
+          verein_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mitgliedtyp_feldkonfig_typ_fkey"
+            columns: ["mitgliedtyp_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "mitgliedtypen"
+            referencedColumns: ["id", "verein_id"]
+          },
+          {
+            foreignKeyName: "mitgliedtyp_feldkonfig_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mitgliedtyp_pflichtfelder: {
         Row: {
           feld: string
@@ -2139,6 +2181,7 @@ export type Database = {
           sort_order: number | null
           standard_rolle: string | null
           verein_id: string
+          zaehlt_als_mitgliedschaft: boolean
         }
         Insert: {
           aktiv?: boolean | null
@@ -2149,6 +2192,7 @@ export type Database = {
           sort_order?: number | null
           standard_rolle?: string | null
           verein_id: string
+          zaehlt_als_mitgliedschaft?: boolean
         }
         Update: {
           aktiv?: boolean | null
@@ -2159,6 +2203,7 @@ export type Database = {
           sort_order?: number | null
           standard_rolle?: string | null
           verein_id?: string
+          zaehlt_als_mitgliedschaft?: boolean
         }
         Relationships: [
           {

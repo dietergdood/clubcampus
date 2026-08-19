@@ -359,17 +359,9 @@ export async function insertMitglied(
   return data?.id ?? null;
 }
 
-export async function fetchMitgliedtypPflichtfelder(sb: SbClient) {
-  const { data } = await sb.from("mitgliedtyp_pflichtfelder").select("*");
-  return data || [];
-}
-
-/* Zusatzfelder pro Rolle. Greifen nur in der Datenprüfung — beim Anlegen
-   steht die sportliche Rolle noch nicht fest (sie kommt übers Kader). */
-export async function fetchRollePflichtfelder(sb: SbClient) {
-  const { data } = await sb.from("rolle_pflichtfelder").select("*");
-  return data || [];
-}
+/* fetchMitgliedtypPflichtfelder und fetchRollePflichtfelder standen hier bis
+   zum 19.08.2026. Beide Tabellen werden nicht mehr gelesen — die Quelle ist
+   `mitgliedtyp_feldkonfig` (domains/members/feldkonfigService.ts). */
 
 export const FELD_LABEL: Record<string, string> = {
   vorname: "Vorname", nachname: "Nachname", email: "E-Mail",
@@ -378,6 +370,11 @@ export const FELD_LABEL: Record<string, string> = {
   heimatort: "Heimatort", ahv_nr: "AHV-Nr.", strasse: "Strasse",
   plz: "PLZ", ort: "Ort", kanton: "Kanton",
   mitgliedtyp: "Mitgliedtyp", rolle: "Portalrolle",
+  /* Fehlte bis 19.08.2026: `eintrittsdatum` ist seit der Migration vom
+     26.07.2026 eine echte Spalte und im Profil bearbeitbar — in der
+     Aenderungshistorie stand deshalb der Spaltenname statt einer
+     Beschriftung. Aufgefallen ueber den Registry-Test in feldkonfig. */
+  eintrittsdatum: "Eintrittsdatum",
   spielerpass: "Spielerpass", js_nr: "J+S Nr.", fairgate_id: "Fairgate-ID",
   teams: "Teams", kaderrollen: "Kaderrollen",
   funktionen: "Vereinsfunktionen", elternkontakte: "Elternkontakte",

@@ -37,7 +37,14 @@ vi.mock('../tabs/InfoTab.tsx', () => ({ InfoTab: () => null }));
 vi.mock('../tabs/PortalTab.tsx', () => ({ PortalTab: () => null }));
 vi.mock('../tabs/DatenpruefungTab.tsx', () => ({ DatenpruefungTab: () => null }));
 vi.mock('../tabs/VerlaufTab.tsx', () => ({ VerlaufTab: () => null }));
-vi.mock('../memberUtils.tsx', () => ({ getFieldVisibility: () => ({}) }));
+/* Die Mock-Factory listet die benoetigten Exporte einzeln auf — fehlt einer,
+   wirft Vitest schon bei der blossen Referenz, und zwar fuer die ganze
+   Datei (CLAUDE.md, "Haeufigste Testfalle"). getSichtbarkeit ist seit dem
+   19.08.2026 dazugekommen. */
+vi.mock('../memberUtils.tsx', () => ({
+  getFieldVisibility: () => ({}),
+  getSichtbarkeit: () => ({}),
+}));
 
 import { MemberDetail } from '../MemberDetail.tsx';
 

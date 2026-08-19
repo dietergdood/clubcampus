@@ -17,7 +17,9 @@ import type { FeldSichtbarkeit } from "./portal/FeldvisTab.tsx";
 import { UsersTab } from "./portal/UsersTab.tsx";
 import type { BenutzerZeile, BenutzerFunktion } from "./portal/UsersTab.tsx";
 import { MitgliederKonfigTab } from "./portal/MitgliederKonfigTab.tsx";
-import type { MitgliedtypZeile, MitgliedtypFormular, RollePflichtfeld, MitgliedtypPflichtfeld } from "./portal/MitgliederKonfigTab.tsx";
+import type { MitgliedtypZeile, MitgliedtypFormular } from "./portal/MitgliederKonfigTab.tsx";
+import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
+import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
 import { RollenTab } from "./portal/RollenTab.tsx";
 import type { RollenFormular } from "./portal/RollenTab.tsx";
 import { KaderRollenTab } from "./portal/KaderRollenTab.tsx";
@@ -167,8 +169,9 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
   const [funktionen,setFunktionen]=useState<Funktion[]>([]);
   const [pvTeams,setPvTeams]=useState<PvTeam[]>([]);
   const [gruppenTeams,setGruppenTeams]=useState<GruppeTeam[]>([]);
-  const [rollePflichtfelder,setRollePflichtfelder]=useState<RollePflichtfeld[]>([]);
-  const [mitgliedtypPflichtfelder,setMitgliedtypPflichtfelder]=useState<MitgliedtypPflichtfeld[]>([]);
+  /* Die neue Feldkonfiguration (mitgliedtyp_feldkonfig). Steht neben den
+     beiden alten Matrizen, bis Schritt 4 des Auftrags sie abloest. */
+  const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
   const [dbMitgliedtypen,setDbMitgliedtypen]=useState<MitgliedtypZeile[]>([]);
   const [showMitgliedtypForm,setShowMitgliedtypForm]=useState(false);
   const [editMitgliedtyp,setEditMitgliedtyp]=useState<MitgliedtypZeile|null>(null);
@@ -374,13 +377,8 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           if(funktionenR.data) setFunktionen(funktionenR.data as unknown as Funktion[]);
           if(teamsR.data) setPvTeams(teamsR.data);
           if(gtR.data) setGruppenTeams(gtR.data);
-          // Pflichtfelder laden
-          const [rpfR,mtpfR]=await Promise.all([
-            supabase.from("rolle_pflichtfelder").select("*"),
-            supabase.from("mitgliedtyp_pflichtfelder").select("*"),
-          ]);
-          if(rpfR.data) setRollePflichtfelder(rpfR.data);
-          if(mtpfR.data) setMitgliedtypPflichtfelder(mtpfR.data);
+          // Feldkonfiguration laden
+          setFeldkonfig(await fetchFeldkonfig(supabase));
           const{data:mtData}=await supabase.from("mitgliedtypen").select("*").order("sort_order");
           if(mtData) setDbMitgliedtypen(mtData);
           /* module_config → moduleAktiv State */
@@ -658,9 +656,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           supabase={supabase} loading={loading}
           isMobile={isMobile} mobileKachel={mobileKachel}
           dbMitgliedtypen={dbMitgliedtypen} setDbMitgliedtypen={setDbMitgliedtypen}
-          dbPortalRollen={dbPortalRollen}
-          rollePflichtfelder={rollePflichtfelder} setRollePflichtfelder={setRollePflichtfelder}
-          mitgliedtypPflichtfelder={mitgliedtypPflichtfelder} setMitgliedtypPflichtfelder={setMitgliedtypPflichtfelder}
+          feldkonfig={feldkonfig} setFeldkonfig={setFeldkonfig}
           showMitgliedtypForm={showMitgliedtypForm} setShowMitgliedtypForm={setShowMitgliedtypForm}
           editMitgliedtyp={editMitgliedtyp} setEditMitgliedtyp={setEditMitgliedtyp}
           mitgliedtypForm={mitgliedtypForm} setMitgliedtypForm={setMitgliedtypForm}

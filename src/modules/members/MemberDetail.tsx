@@ -27,7 +27,9 @@ import type { PortalBenutzer } from "./tabs/PortalTab.tsx";
 import { DatenpruefungTab } from "./tabs/DatenpruefungTab.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
 import { VerlaufTab } from "./tabs/VerlaufTab.tsx";
-import { getFieldVisibility } from "./memberUtils.tsx";
+import { getSichtbarkeit } from "./memberUtils.tsx";
+import { getFeldkonfig, istSichtbar } from "../../domains/members/feldkonfig.ts";
+import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, SetState } from "../../types.ts";
 import type { FunktionMitGruppe } from "../../shared/person/types.ts";
 
@@ -56,6 +58,8 @@ interface MemberDetailProps {
   onReaktiviert?: ((id: number) => void) | null;
   sb: Sb;
   role: string;
+  /* Zeilen aus mitgliedtyp_feldkonfig, von Portal durchgereicht. */
+  feldkonfig?: FeldkonfigZeile[];
   account?: Account | null;
   dbMitglieder?: Mitglied[];
   dbMitgliedtypen?: Mitgliedtyp[];
@@ -75,7 +79,7 @@ interface MemberDetailProps {
 
 function MemberDetail({
   m, onClose, onNavToTeam = null, onReaktiviert = null,
-  sb, role, account,
+  sb, role, account, feldkonfig = [],
   dbMitglieder = [], dbMitgliedtypen = [], dbPortalRollen = [], dbKaderRollen = [],
   kannVerwalten, onReload, onUpdatePortalZugang = null,
   setSelectedMember, selectedMember,
@@ -96,7 +100,11 @@ function MemberDetail({
       Object.entries(m).filter(([k, v]) => v !== undefined && v !== null || !(dbRaw as Record<string, unknown>)[k])
     ),
   } as Mitglied;
-  const fv = getFieldVisibility(role);
+  /* Was es bei diesem Mitgliedtyp gibt (Konfiguration) UND wer es sehen
+     darf (Rolle des Betrachters). "Gibt es nicht" gewinnt — siehe
+     getSichtbarkeit in memberUtils. */
+  const konfig = getFeldkonfig(raw.mitgliedtyp, feldkonfig);
+  const fv = getSichtbarkeit(role, konfig);
   const tab = selectedMember?._tab || "info";
   const setTab = (t: string) => setSelectedMember(prev => prev ? { ...prev, _tab: t } : prev);
   const canEdit = kannVerwalten("members") && !m._readonly;
@@ -220,6 +228,8 @@ function MemberDetail({
   const elternCount = elternLoaded !== null
     ? elternLoaded.length
     : (raw as any).eltern_kinder?.length ?? (eltern || []).length;
+  /* "Profil" hat keinen Schalter — ohne ihn bliebe nichts. Die uebrigen
+     fuenf kommen aus der Mitgliedtyp-Konfiguration (tab_*). */
   const allTabs = [
     { key: "info",          label: "Profil",                    icon: "user" },
     { key: "eltern",        label: `Eltern (${elternCount})`,   icon: "heart" },
@@ -227,7 +237,13 @@ function MemberDetail({
     { key: "portal",        label: "Portal-Zugang",             icon: "key" },
     { key: "datenpruefung", label: "Datenprüfung",              icon: "shield-check" },
     { key: "verlauf",       label: "Verlauf",                    icon: "history" },
-  ];
+  ].filter(t => t.key === "info" || istSichtbar(konfig, `tab_${t.key}`));
+
+  /* Steht der gewaehlte Tab nicht mehr in der Liste — abgeschaltet, oder
+     ueber einen Direkteinstieg angesteuert —, dann auf "Profil" zurueck.
+     Ohne das bliebe die Tableiste leer und darunter der Inhalt eines Tabs,
+     den es fuer diesen Mitgliedtyp nicht gibt. */
+  const sichtbarerTab = allTabs.some(t => t.key === tab) ? tab : "info";
   return (
     <>{confirmDialog}
     <div className="cc-col cc-gap-12 cc-member-detail-wrap">
@@ -244,15 +260,16 @@ function MemberDetail({
       />
 
       {/* Tab-Bar */}
-      <MemberTabBar tabs={allTabs} activeTab={tab} onTabChange={setTab}/>
+      <MemberTabBar tabs={allTabs} activeTab={sichtbarerTab} onTabChange={setTab}/>
 
       {/* Tab-Routing */}
-      {tab === "info" && (
+      {sichtbarerTab === "info" && (
         <InfoTab
           raw={raw} fv={fv} canEdit={canEdit} canDelete={canDelete}
           sb={sb} account={account}
           dbKaderRollen={dbKaderRollen} dbMitgliedtypen={dbMitgliedtypen}
           hatPortalZugang={!!benutzer && benutzer.aktiv !== false}
+          konfig={konfig}
           eltern={eltern} brauchtEltern={brauchtEltern} setTab={setTab}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
           allTeams={allTeams} setAllTeams={setAllTeams}
@@ -264,7 +281,7 @@ function MemberDetail({
         />
       )}
 
-      {tab === "eltern" && (
+      {sichtbarerTab === "eltern" && (
         <ElternTab
           eltern={eltern} canEdit={canEdit} raw={raw} sb={sb}
           onReload={() => { if (reloadMember) reloadMember(raw.id); if (onReload) onReload(); }}
@@ -274,7 +291,7 @@ function MemberDetail({
         />
       )}
 
-      {tab === "portal" && (
+      {sichtbarerTab === "portal" && (
         <PortalTab
           raw={raw} benutzer={benutzer} sb={sb}
           dbPortalRollen={dbPortalRollen}
@@ -286,7 +303,7 @@ function MemberDetail({
         />
       )}
 
-      {tab === "datenpruefung" && (
+      {sichtbarerTab === "datenpruefung" && (
         <DatenpruefungTab
           raw={raw} sb={sb}
           role={role}
@@ -306,11 +323,11 @@ function MemberDetail({
         />
       )}
 
-      {tab === "verlauf" && (
+      {sichtbarerTab === "verlauf" && (
         <VerlaufTab raw={raw} sb={sb} key={`verlauf-${raw.id}-${raw.aktiv}-${raw.updated_at}`}/>
       )}
 
-      {(tab === "stats" || tab === "comments" || tab === "ratings") && (
+      {(sichtbarerTab === "stats" || sichtbarerTab === "comments" || sichtbarerTab === "ratings") && (
         <div className="cc-empty-state">
           <div className="cc-empty-icon"><TI n="chart-bar" size={32}/></div>
           <div>Kommt bald</div>

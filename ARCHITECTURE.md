@@ -908,9 +908,21 @@ end $mig$;
 
 Der Kern ist nicht das `raise`, sondern dass Änderung und Prüfung **eine einzige Anweisung** sind. Eine Prüfung als eigene Anweisung hilft nur, solange nicht sie das ausgefallene Stück ist — genau das war zweimal der Fall. Kommt der Text zerschnitten an, ist ein `do $mig$` ohne Ende ein Syntaxfehler: der Parser bricht laut ab, statt die Hälfte auszuführen.
 
-**Zwei Grenzen, die man kennen muss:**
+**Drei Grenzen, die man kennen muss:**
 
 - **DDL, die auf ein im selben Block neu angelegtes Objekt zugreift, braucht `execute`.** plpgsql plant Anweisungen vorab; eine Spalte, die es beim Planen noch nicht gibt, führt zu `column does not exist`, obwohl sie zwei Zeilen weiter oben entsteht.
+- **Auch die Prüfung selbst kann darüber stolpern — und das ist der unauffällige Teil.** `'public.neue_tabelle'::regclass` sieht aus wie ein Nachschlagen zur Laufzeit, ist aber ein Konstanten-Cast: Postgres löst ihn beim **Planen** auf, nicht beim Ausführen. Steht er in einer Prüfung auf eine Tabelle, die derselbe Block anlegt, bricht er ab, obwohl alles in Ordnung ist. Also über den Katalog gehen statt über `regclass`:
+
+  ```sql
+  -- statt:  from pg_class where oid = 'public.neue_tabelle'::regclass
+  select c.relrowsecurity into v_rls
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relname = 'neue_tabelle';
+  if v_rls is distinct from true then raise exception '…'; end if;
+  ```
+
+  Das `is distinct from true` gehört dazu: findet die Abfrage nichts, ist `v_rls` NULL, und `if not null` ist weder wahr noch falsch — die Prüfung ginge still durch. Katalogabfragen, die den Namen nur als **Zeichenkette** vergleichen (`information_schema.tables`, `pg_policies.tablename`, `pg_constraint.conname`), sind davon nicht betroffen; ein `::regclass` auf eine Tabelle, die es vorher schon gab, ebenso wenig. *(Gefunden am 19.08.2026 in `migration_mitgliedtyp_feldkonfig.sql`, vor dem Ausführen.)*
 - **Keine Transaktionssteuerung im Block.** `commit`/`rollback` sind in `do` nicht erlaubt; der Block ist atomar innerhalb der umgebenden Transaktion, mehr geht nicht. Migrationen, die bewusst in Etappen committen (wie `etappe3_eltern.sql`), lassen sich nicht als ein Block schreiben — dort gilt Ebene 1: `begin … prüfen … raise … commit` je Etappe.
 
 Die lesbare Prüftabelle (`nr / pruefung / erwartet / gefunden / status`) bleibt zusätzlich am Dateiende. Sie ist Bestätigung für den Menschen, nicht mehr die Absicherung.

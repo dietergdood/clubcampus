@@ -159,6 +159,8 @@ npx supabase db dump --linked -f supabase/schema.sql
 
 Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verliert: Zahl der `CREATE TABLE`, `CREATE POLICY`, `CREATE INDEX` und `ADD CONSTRAINT` gegen die alte Fassung vergleichen — ein abgebrochener Dump fällt sonst erst auf, wenn jemand das Schema nachbaut.
 
+> **Ein `CHECK` zählt dabei nicht mit.** `pg_dump` schreibt CHECK-Constraints **inline in das `CREATE TABLE`**, nicht als eigenes `ADD CONSTRAINT` — anders als Primär-, Fremd- und Unique-Schlüssel. Eine neue Tabelle mit einem CHECK ergibt deshalb ein `ADD CONSTRAINT` weniger, als man beim Zählen der Constraints im Skript erwartet. Wer das nicht weiss, vermutet einen Verlust, wo keiner ist. (Am 19.08.2026 bei `mitgliedtyp_feldkonfig` aufgelaufen: erwartet +6, gezählt +5, korrekt war +5 — der sechste ist `mitgliedtyp_feldkonfig_modus_check` und steht in Zeile 1174 mitten im `CREATE TABLE`.) Zum Gegenprüfen: `grep -c "CONSTRAINT .* CHECK" supabase/schema.sql`.
+
 > **Die Zählprüfung hat drei blinde Flecken.** Sie zählt nur Objekte in `public`, und drei wichtige Dinge liegen woanders — alle fallen durch jede Zählung, weil sie in *keiner* der vier Kategorien vorkommen:
 > - `ALTER PUBLICATION "supabase_realtime" ADD TABLE …` für `nachrichten` und `nachrichten_antworten`. Die Publication ist global, nicht schemagebunden. Ohne diese Zeilen bekommt ein nachgebautes Portal keine Live-Nachrichten — und weil nichts fehlschlägt, merkt es niemand.
 > - Die Trigger auf `auth.users` (`on_auth_user_created`, `on_auth_user_login`). Sie stehen in **keinem** `public`-Dump; `schema.sql` enthält nur die Funktionen `handle_new_user`/`handle_user_login`, ohne jeden Aufrufer. Deshalb liegen sie separat in **`supabase/auth_triggers.sql`** und müssen nach `schema.sql` eingespielt werden — sonst kann sich nach einem Nachbau niemand registrieren.
@@ -290,25 +292,150 @@ Zu entscheiden: Gewinnt die Ableitung immer? Dann gehört das im Portal so
 beschriftet — „gilt bis zur nächsten Änderung". Oder bleibt eine manuell
 gesetzte Rolle? Dann braucht es ein Kennzeichen dafür.
 
-### Was ein Mitgliedtyp hat — eine Stelle statt vier
+### ✅ Was ein Mitgliedtyp hat — erledigt am 19.08.2026
 
-Auftrag liegt bereit: `docs/auftrag_mitgliedtyp_konfig.md`.
+Auftrag: `docs/auftrag_mitgliedtyp_konfig.md`. Alle vier Schritte geliefert.
 
-Heute liegt an vier Stellen verstreut, was ein Mitgliedsprofil zeigt:
-`mitgliedtyp_pflichtfelder` (lebt), `rolle_pflichtfelder` (Zweck unklar),
-`getFieldVisibility()` in `memberUtils.tsx` (acht fest verdrahtete Zeilen über
-ein Rollen-Level) und `InfoTab.tsx` selbst (`fv.showPass`, `fv.showFairgateId`,
-`fv.showNotizen`, seit 17.08.2026 `istSupporter`).
+Was ein Mitgliedsprofil zeigt, lag an vier Stellen verstreut. Jetzt an einer:
+**`mitgliedtyp_feldkonfig`**, pro Mitgliedtyp und Schlüssel einer von drei
+Werten — **Pflicht · Freiwillig · Gibt es nicht**. Der dritte blendet aus,
+auch für die Verwaltung.
 
-Geplant: eine Seite in Portalverwaltung → Benutzer & Rollen →
-Mitgliedertyp-Konfiguration, wo jedes Feld pro Mitgliedtyp einen von drei Werten
-bekommt — **Pflicht · Freiwillig · Gibt es nicht**. Der dritte ist neu; er
-blendet das Feld überall aus, auch für die Verwaltung. Dazu Bereiche mit
-Sammelschalter und die Tabs des Profils.
+| war | ist |
+|---|---|
+| `mitgliedtyp_pflichtfelder` | `mitgliedtyp_feldkonfig` (`domains/members/feldkonfig.ts`) |
+| `rolle_pflichtfelder` | **entfallen** — konnte nur addieren, nie wegnehmen |
+| `getFieldVisibility()` | **bleibt** — sie meint die Rolle des *Betrachters* |
+| `istSupporter` in `InfoTab` | **entfallen** — `istBereichSichtbar()` |
+| `SUPPORTER_TYP` | **entfallen** — `mitgliedtypen.zaehlt_als_mitgliedschaft` |
 
-⚠ `SUPPORTER_TYP` in `memberConstants.ts` und `istSupporter` in `InfoTab` sind
-ein Vorgriff darauf (17.08.2026). Nach dem Umbau sollen beide entfallen — der
-Supporter bekommt seine drei Bereiche einfach auf „Gibt es nicht" gesetzt.
+**Eine fehlende Zeile bedeutet „freiwillig".** Gespeichert wird nur die
+Abweichung; ein neuer Mitgliedtyp braucht keine einzige Zeile und zeigt
+trotzdem ein vollständiges Profil. Das ist exakt das vorherige Verhalten —
+es gab nie eine Rückfallliste.
+
+**`getFieldVisibility` und die Konfiguration sind zwei Fragen**, nicht eine.
+Was es bei diesem Mitgliedtyp *gibt*, sagt die Konfiguration; wer es *sehen
+darf*, sagt die Rolle. `getSichtbarkeit()` in `memberUtils.tsx` verknüpft
+beides, und die Reihenfolge ist die Aussage: **„Gibt es nicht" gewinnt gegen
+jede Rolle.** Die Gegenrichtung bleibt — ein Trainer sieht die AHV-Nummer
+weiterhin nicht. Die Rollen-Seite („wer sieht was bei anderen") wartet
+unverändert auf die Gruppenrechte.
+
+Drei der acht `fv.*`-Schalter waren **doppelt belegt** (`showPass`,
+`showFairgateId`, `showNotizen`): sie regelten zugleich, wer etwas sehen darf
+UND ob es das Feld überhaupt gibt. Die zweite Bedeutung hat jetzt „Gibt es
+nicht". Ausserdem hingen Spielerpass und J+S-Nr. an *einem* Schalter — ein
+Junior hat einen Pass und keine J+S-Nummer, ein Trainer umgekehrt.
+
+**In der Neuanlage hing bis dahin die Sichtbarkeit am Pflicht-Häkchen**: was
+nicht Pflicht war, liess sich beim Anlegen gar nicht erfassen. Jetzt ist ein
+freiwilliges Feld sichtbar und darf leer bleiben.
+
+`mitgliedtyp_pflichtfelder` und `rolle_pflichtfelder` stehen noch in der
+Datenbank, werden aber von keiner Stelle mehr gelesen. Sie fallen in einer
+eigenen Migration, wie `elternkontakte`. **17 verwaiste Zeilen** der alten
+Tabelle (`Juniormitglied` 6, `Funktionär` 6, `Gönner` 5) sind bewusst nicht
+mitgewandert — Reste des am 05.08.2026 behobenen Spaltenkopf-Defekts. Der
+Fremdschlüssel auf `mitgliedtypen(id, verein_id)` verhindert beide Ursachen
+künftig.
+
+Migration: `supabase/migration_mitgliedtyp_feldkonfig.sql`.
+
+### ⚠ Die Pflichtfeld-Matrizen wirken in der Datenprüfung gar nicht
+
+Befund vom 19.08.2026, aus der Bestandsaufnahme zur Mitgliedtyp-Konfiguration.
+**Hängt nicht an jenem Umbau — gilt heute.**
+
+`getProfilCheck()` berechnet die fehlenden Pflichtfelder korrekt und vereinigt
+dafür beide Matrizen. Nur wertet das niemand aus:
+
+- `getProfilFehlend()` und `markiereProfilGeprueft()` werden in
+  `clubcampus.tsx:465` destrukturiert und **nie aufgerufen**. Von den drei
+  Rückgabewerten wirkt allein `sollProfilPruefen()` (`clubcampus.tsx:476`).
+- `sollProfilPruefen()` schaut ausschliesslich auf das Alter von
+  `profil_geprueft_at`, nie auf einen Feldinhalt.
+- `DatenpruefungMitglied` und `DatenpruefungEltern` prüfen nichts. Beide setzen
+  `profil_geprueft_at` bedingungslos; der Knopf ist nur während des Speicherns
+  gesperrt.
+
+**Zwei Folgen:**
+
+1. „Ausstehend" heisst **„noch nie bestätigt"**, nicht „unvollständig". Wer die
+   Zahl als Mass für Datenqualität liest, liest etwas anderes, als er denkt.
+2. Ein Mitglied kann seine Datenprüfung mit leeren Pflichtfeldern abschliessen.
+   Die Matrix-Mechanik ist an dieser Stelle wirkungslos.
+
+Wirksam ist die Typ-Matrix **allein in der Neuanlage** (`NeuesMitgliedModal` →
+`getEffektivePflichtfelder`, ohne die Rollen-Matrix).
+
+> **Hier korrigiert.** Der ursprüngliche Verdacht lautete: ein Juniorenmitglied
+> mit Rolle `spieler` könne seine Datenprüfung wegen 15 Pflichtfeldern nicht
+> abschliessen — zehn aus der Typ-Matrix, dazu `spielerpass`, `js_nr`,
+> `fairgate_id` aus der Rollen-Matrix und `vorname`/`nachname`. Die **Rechnung
+> stimmt**, die **Wirkung nicht**: sie wird nirgends ausgewertet. Und „493 von
+> 512 auf Ausstehend" misst deshalb nicht Vollständigkeit. Dieselbe Zahl steht
+> weiter unten für einen anderen, bereits behobenen Defekt (`mitglieder.rolle`
+> war leer) — vor jeder Schlussfolgerung neu zählen. `profil_geprueft_at` steht
+> an `personen`, nicht an `mitglieder` (`PERSON_FELDER`):
+>
+> ```sql
+> select count(*) from public.mitglieder m
+>   join public.personen p on p.id = m.person_id
+>  where m.aktiv and p.profil_geprueft_at is null;
+> ```
+
+**Entschieden am 19.08.2026 (Didi): anschliessen, nicht abbauen.** Eine Prüfung,
+die nichts prüft, ist schlimmer als eine zu strenge — sie erzeugt ein grünes
+Häkchen ohne Deckung.
+
+**Aber nicht vor der Feldkonfiguration.** `getProfilFehlend()` heute
+anzuschliessen hiesse, die Matrix in ihrem jetzigen Zustand scharf zu stellen:
+vier Mitgliedtypen mit zehn Pflichtfeldern (Befund darunter), dazu
+`fairgate_id` und `js_nr` aus der Rollen-Matrix. Ab dem Moment käme kein
+Juniorenmitglied mehr durch die eigene Datenprüfung. Reihenfolge deshalb:
+**Feldkonfiguration → Matrix in einem Durchgang lockern → dann anschliessen.**
+
+Anzuschliessen ist beides — `getProfilFehlend()` als Quelle der fehlenden
+Felder und `markiereProfilGeprueft()` statt der beiden Direktschreiber in
+`DatenpruefungMitglied` und `DatenpruefungEltern`, die `profil_geprueft_at`
+heute bedingungslos setzen.
+
+### Vier Mitgliedtypen verlangen alle zehn Felder
+
+Befund vom 19.08.2026, aus derselben Bestandsaufnahme. `FELDER_TYP` hat zehn
+Einträge; so ist `mitgliedtyp_pflichtfelder` gestellt:
+
+| Mitgliedtyp | Pflicht | Freiwillig | ohne Zeile |
+|---|---|---|---|
+| Juniorenmitglied | **10** | 0 | 0 |
+| Funktionär/in | **10** | 0 | 0 |
+| Ehrenmitglied | **10** | 0 | 0 |
+| Pausenmitglied | **10** | 0 | 0 |
+| Aktivmitglied | 9 | 1 | 0 |
+| Passivmitglied | 6 | 2 | 2 |
+| Supporter | 7 | 0 | 3 |
+| Freimitglied | 7 | 0 | 3 |
+
+Die vier oberen verlangen jedes einzelne Feld, einschliesslich AHV-Nummer,
+Nationalität, Heimatort und E-Mail. Ein Ehrenmitglied muss danach eine
+AHV-Nummer haben. Der Stand vom 05.08.2026 hatte diesen Typen sechs Felder
+gegeben (`migration_pflichtfelder_fein.sql`, Block B); seither ist erhöht
+worden.
+
+Wirksam ist das heute in der **Neuanlage**: ein Juniorenmitglied braucht zwölf
+ausgefüllte Felder, bevor das Formular abschickt (zehn aus der Matrix plus
+`vorname`/`nachname`).
+
+**Die Oberfläche steht seit dem 19.08.2026** (Portalverwaltung → Benutzer &
+Rollen → „Was ein Mitgliedtyp hat"). Die Migration hat die Zeilen wörtlich
+übernommen — verlustfrei und verhaltensneutral —, das Lockern bleibt ein
+Durchgang von Hand. „Gibt es nicht" hilft dabei nicht: zu viele Pflichtfelder
+sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
+
+⚠ **Das ist die Voraussetzung dafür, `getProfilFehlend()` anzuschliessen**
+(Abschnitt darüber). Solange vier Typen zehn Pflichtfelder verlangen, käme
+danach kein Juniorenmitglied mehr durch die eigene Datenprüfung.
 
 ### Wer sieht was bei anderen — wartet auf die Gruppenrechte
 
@@ -368,9 +495,16 @@ den Abschnitt „Ein Amt und ein Rechtebündel heissen beide Funktion".
 
 Das löst nebenbei eine Frage, die heute offen blieb: **Wie wird ein Supporter wieder Elternteil?** Nach dem heutigen Modell bliebe seine Supporter-Mitgliedschaft aktiv, er stünde weiter im Supporter-Tab. Ohne Mitgliedschaft gäbe es nichts aufzuräumen — er ist eine Person, die wieder ein Kind hat.
 
+> **Seit 19.08.2026 billiger geworden.** Die Listentrennung hängt nicht mehr
+> am Namen „Supporter", sondern an `mitgliedtypen.zaehlt_als_mitgliedschaft`,
+> und was sein Profil zeigt, steht in `mitgliedtyp_feldkonfig`. Ein Rückbau
+> muss also weder `SUPPORTER_TYP` noch `istSupporter` anfassen — beide gibt
+> es nicht mehr. Übrig bleibt die eigentliche Frage: gehört ihm eine Zeile in
+> `mitglieder`?
+
 **Was ein Rückbau kostet:**
 
-- Mitgliedtyp „Supporter" entfällt, die angelegten Mitgliedschaften werden gelöscht (bei FCH drei: Philippe Kern, Heidi Studer, Werner Ulrich)
+- Mitgliedtyp „Supporter" entfällt, die angelegten Mitgliedschaften werden gelöscht (bei FCH drei: Philippe Kern, Heidi Studer, Werner Ulrich) — mit ihnen fallen per `on delete cascade` auch seine zwölf Zeilen in `mitgliedtyp_feldkonfig`
 - `macheZumSupporter()` fällt weg, `entkoppleKind()` setzt nur noch die Benutzerrolle
 - `SupporterListView` liest aus `personen` statt aus `mitglieder` — dann funktionieren `filterMembers`/`sortMembers`/`buildGroups` nicht mehr direkt, weil die Zeile keine `MemberRow` mehr ist
 - die Portalrolle `supporter` bleibt (sie ist eine Berechtigung, keine Mitgliedschaft)

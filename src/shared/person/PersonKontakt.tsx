@@ -11,7 +11,7 @@ import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
 import type { AddressSuggestion } from "../../shared/forms/AddressInput.tsx";
 import type { Mitglied } from "../../types.ts";
 import type { ElternkontaktMitLink } from "../../domains/members/elternService.ts";
-import type { FieldVisibility } from "./types.ts";
+import type { Sichtbarkeit } from "./types.ts";
 
 const KANTON_OPTS: InlineFieldOption[] = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"].map(k=>({v:k,l:k}));
 
@@ -20,7 +20,7 @@ type InlineEdit = UseInlineEditApi;
 
 interface PersonKontaktProps {
   raw: Mitglied;
-  fv: FieldVisibility;
+  fv: Sichtbarkeit;
   canEdit?: boolean;
   /* Inline-Edit-API wird vom Parent (InfoTab) injiziert. */
   ie: UseInlineEditApi;
@@ -33,7 +33,7 @@ interface PersonKontaktProps {
 function PersonKontakt({ raw, fv, canEdit, ie, eltern, brauchtEltern, setTab }: PersonKontaktProps) {
   const [editMode, setEditMode] = useState(false);
 
-  if (!fv.showEmail && !fv.showTelefon && !fv.showAdresse) return null;
+  if (!fv.email && !fv.telefon && !fv.strasse) return null;
 
   const hk = brauchtEltern(raw.mitgliedtyp) ? (eltern || []).find(e => e.hauptkontakt) : null;
   const hkName = hk ? (hk.name || `${hk.vorname||""} ${hk.nachname||""}`.trim() || "?") : null;
@@ -55,7 +55,7 @@ function PersonKontakt({ raw, fv, canEdit, ie, eltern, brauchtEltern, setTab }: 
         )}
       </div>
       <div className="cc-info-grid">
-        {fv.showEmail && (editMode
+        {fv.email && (editMode
           ? <InlineField label="E-Mail" field="email" value={raw.email||null} type="email" {...ieProps}/>
           : <div className="cc-info-row">
               <span className="cc-info-key">E-Mail</span>
@@ -64,7 +64,7 @@ function PersonKontakt({ raw, fv, canEdit, ie, eltern, brauchtEltern, setTab }: 
                 : <span className="cc-info-val-empty">—</span>}
             </div>
         )}
-        {fv.showTelefon && (editMode
+        {fv.telefon && (editMode
           ? <InlineField label="Telefon" field="telefon" value={raw.telefon||null} type="phone" {...ieProps}/>
           : <div className="cc-info-row">
               <span className="cc-info-key">Telefon</span>
@@ -73,7 +73,7 @@ function PersonKontakt({ raw, fv, canEdit, ie, eltern, brauchtEltern, setTab }: 
                 : <span className="cc-info-val-empty">—</span>}
             </div>
         )}
-        {fv.showAdresse && <AdressFelder raw={raw} ie={ie} ieProps={ieProps} KANTON_OPTS={KANTON_OPTS}/>}
+        {fv.strasse && <AdressFelder raw={raw} ie={ie} ieProps={ieProps} KANTON_OPTS={KANTON_OPTS}/>}
       </div>
 
       {/* Hauptkontakt Mini-Karte */}

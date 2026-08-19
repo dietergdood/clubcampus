@@ -5,8 +5,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
 import { Av, useConfirm } from "../theme.ts";
-import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchMitgliedtypPflichtfelder, fetchPortalFunktionen } from "../domains/members/memberService.ts";
-import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE, SUPPORTER_TYP } from "./members/memberConstants.ts";
+import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen } from "../domains/members/memberService.ts";
+import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
+import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
+import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
 import type { MemberRow } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.tsx";
@@ -28,7 +30,6 @@ import { vollname } from "../domains/person/personUtils.ts";
 /* Vereinsfunktionen mit Gruppe und Farbe — dieselbe Auswahl, die
    MemberListCell für die Funktionsgruppen-Badges braucht. */
 type PortalFunktionMitFarbe = Awaited<ReturnType<typeof fetchPortalFunktionen>>[number];
-type Pflichtfeld = Awaited<ReturnType<typeof fetchMitgliedtypPflichtfelder>>[number];
 
 /* mitgliedtypen.hauptkontakt_pflicht steuert, ob ein Elternkontakt nötig
    ist. Mitgliedtyp aus types.ts kennt die Spalte nicht. */
@@ -57,7 +58,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [portalFunktionen,setPortalFunktionen]=useState<PortalFunktionMitFarbe[]>([]);
   const [selectedMember,setSelectedMember]=useState<SelectedMember|null>(null);
   const [showNeuesMitglied,setShowNeuesMitglied]=useState(false);
-  const [dbPflichtfelder,setDbPflichtfelder]=useState<Pflichtfeld[]>([]);
+  const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
 
 
   const [archivTab,setArchivTab]=useState(false);
@@ -97,16 +98,25 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter((g): g is string => Boolean(g)))],
   })),[dbMitglieder,dbPortalRollen,dbKaderRollen,funktionenGruppenMap]);
 
-  /* Supporter sind KEINE Mitglieder: kein Beitrag, kein Stimmrecht an der GV,
+  /* Goenner sind KEINE Mitglieder: kein Beitrag, kein Stimmrecht an der GV,
      kein Spielbetrieb. Sie stehen technisch in `mitglieder` (Etappe 5, damit
      sie ueberhaupt auffindbar sind), gehoeren aber nicht in die
      Mitgliederliste — sonst stimmt der Zaehler nicht, Auswertungen zaehlen
      sie mit, und beim Anschreiben landen sie in Gruppen, in die sie nicht
-     gehoeren. Eigener Tab. */
+     gehoeren. Eigener Tab.
+
+     Getrennt wird ueber `mitgliedtypen.zaehlt_als_mitgliedschaft`, seit
+     19.08.2026. Vorher stand hier ein Vergleich gegen den Namen "Supporter"
+     — der griff beim zweiten Verein nicht mehr, der seinen Typ anders nennt,
+     und es gab kein strukturelles Merkmal, an dem man es haette festmachen
+     koennen. */
+  const nichtMitgliedschaft=useMemo(
+    ()=>new Set((dbMitgliedtypen||[]).filter(t=>t.zaehlt_als_mitgliedschaft===false).map(t=>t.name)),
+    [dbMitgliedtypen]);
   const allMembers: MemberRow[]=useMemo(
-    ()=>alleZeilen.filter(m=>m.mitgliedschaft!==SUPPORTER_TYP),[alleZeilen]);
+    ()=>alleZeilen.filter(m=>!nichtMitgliedschaft.has(m.mitgliedschaft||"")),[alleZeilen,nichtMitgliedschaft]);
   const supporter: MemberRow[]=useMemo(
-    ()=>alleZeilen.filter(m=>m.mitgliedschaft===SUPPORTER_TYP),[alleZeilen]);
+    ()=>alleZeilen.filter(m=>nichtMitgliedschaft.has(m.mitgliedschaft||"")),[alleZeilen,nichtMitgliedschaft]);
 
   const filterRef = useRef<((vals: FilterVals) => void) | null>(null);
   function exportData(rows: MemberRow[], cols: ColDef[], groups: MemberGroup[], format: ExportFormat){ exportDataUtil(rows, cols, format, groups); }
@@ -117,7 +127,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(!sb||!account?.id) return;
     if(portalFunktionen.length===0)
       fetchPortalFunktionen(sb).then(data=>setPortalFunktionen(data));
-    fetchMitgliedtypPflichtfelder(sb).then(data=>setDbPflichtfelder(data));
+    fetchFeldkonfig(sb).then(data=>setFeldkonfig(data));
   },[account?.id]);
 
 
@@ -216,7 +226,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     <MemberDetail
       m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}
       onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
-      sb={sb} role={role} account={account}
+      sb={sb} role={role} account={account} feldkonfig={feldkonfig}
       dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen}
       dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
       kannVerwalten={kannVerwalten} onReload={onReload} onUpdatePortalZugang={onUpdatePortalZugang}
@@ -239,7 +249,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         onClose={()=>setShowNeuesMitglied(false)}
         sb={sb}
         dbMitgliedtypen={dbMitgliedtypen}
-        dbPflichtfelder={dbPflichtfelder}
+        feldkonfig={feldkonfig}
         vereinId={vereinId}
         account={account}
         onSuccess={()=>{ if(onReload) onReload(); }}

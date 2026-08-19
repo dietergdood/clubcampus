@@ -34,6 +34,13 @@ vi.mock('../../../theme.ts', () => ({
 }));
 vi.mock('../../../icons.tsx', () => ({ TI: () => null }));
 vi.mock('../../../domains/members/memberService.ts', () => svc);
+/* MitgliederModul laedt seit dem 19.08.2026 die Feldkonfiguration. Ohne
+   diesen Mock lief der echte Service gegen die sb-Attrappe und warf eine
+   unbehandelte Rejection — die Tests blieben gruen, Vitest meldete sie
+   aber als "unhandled error". */
+vi.mock('../../../domains/members/feldkonfigService.ts', () => ({
+  fetchFeldkonfig: vi.fn(async () => []),
+}));
 vi.mock('../../../domains/members/useMemberMeta.ts', () => ({
   useMemberMeta: () => ({ ROLLE_LABEL: {}, TRAINER_KEYS: [], funktionenGruppenMap: {} }),
 }));

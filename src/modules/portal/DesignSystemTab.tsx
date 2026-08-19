@@ -628,7 +628,9 @@ export function DesignSystemTab({loading, isMobile, mobileKachel, tab}: DesignSy
                         </Between>
                         <div style={{fontSize:12,color:"var(--sub)",marginTop:4,marginLeft:20}}>{c.desc}</div>
                         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6,marginLeft:20}}>
-                          {c.props.map(p=>(
+                          {/* `props` ist optional: die Registry führt auch
+                              reine Klassensätze (cc-toggle), die keine haben. */}
+                          {(c.props??[]).map(p=>(
                             <code key={p} style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"var(--cc-accent-5,rgba(255,191,0,0.05))",border:"0.5px solid var(--cc-accent-10,rgba(255,191,0,0.1))",color:"var(--text)"}}>{p}</code>
                           ))}
                         </div>

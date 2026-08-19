@@ -18,8 +18,21 @@ export interface PersonAnzeige {
   rolle?: string | null;
 }
 
-/* Sichtbarkeit einzelner Felder je nach Rolle —
-   erzeugt von getFieldVisibility (modules/members/memberUtils). */
+/* Endgültige Sichtbarkeit je Feld-Schlüssel: Mitgliedtyp-Konfiguration
+   UND Rolle des Betrachters, verknüpft von getSichtbarkeit()
+   (modules/members/memberUtils). Die Schlüssel sind die der Registry
+   in domains/members/feldkonfig.ts — `geburtsdatum`, `ahv_nr`, `teams`, …
+
+   Bewusst ein Record und keine Liste benannter Flags: die Registry wächst,
+   und ein zweites Vokabular (`showGebdat` neben `geburtsdatum`) hat sich
+   als Quelle von Missverständnissen erwiesen — drei der acht alten Flags
+   bedeuteten zwei verschiedene Dinge gleichzeitig. */
+export type Sichtbarkeit = Record<string, boolean>;
+
+/* Nur der Rollen-Anteil — erzeugt von getFieldVisibility. Beantwortet
+   "wer sieht was bei ANDEREN" und wird von getSichtbarkeit mit der
+   Mitgliedtyp-Konfiguration verknüpft. Nicht direkt in Komponenten
+   verwenden. */
 export interface FieldVisibility {
   showAhv: boolean;
   showGebdat: boolean;

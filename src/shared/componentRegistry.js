@@ -168,6 +168,16 @@ export const COMPONENT_REGISTRY = [
     props: ["tabs[] (key+label)", "active", "setActive", "mb"],
   },
   {
+    /* Keine React-Komponente, sondern ein Klassensatz — deshalb ohne props.
+       Stand seit langem in cc.css und war an drei Stellen im Einsatz, ohne
+       hier zu stehen; nachgetragen am 19.08.2026. */
+    name: "Toggle (cc-toggle)",
+    desc: "Schiebeschalter für an/aus. Button mit cc-toggle (+cc-toggle-on), darin ein div mit cc-toggle-knob (+cc-toggle-knob-on). cc-toggle-dark für die dunkle Variante. Für drei Werte statt zwei stattdessen cc-seg verwenden.",
+    category: "Formulare",
+    usedIn: ["NavigationModul", "TeamsVerwaltungModul", "MitgliedtypFelderSektion"],
+    css: ["cc-toggle", "cc-toggle-on", "cc-toggle-knob", "cc-toggle-knob-on", "cc-toggle-dark"],
+  },
+  {
     name: "Row / Col / Between",
     desc: "Layout-Helfer. Row=horizontal, Col=vertikal, Between=space-between.",
     category: "Layout",

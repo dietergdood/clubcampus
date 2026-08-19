@@ -156,6 +156,11 @@ export interface Mitgliedtyp {
      aber von niemandem gelesen. */
   standard_rolle?: string | null;
   beitragsinfo?: string | null;
+  /* False = keine Mitgliedschaft (Gönner/Supporter): kein Beitrag, kein
+     Stimmrecht an der GV, eigener Tab in der Mitgliederliste. Ersetzt seit
+     19.08.2026 den Namensvergleich `mitgliedtyp === "Supporter"`, der beim
+     zweiten Verein mit einem anders benannten Typ nicht mehr griff. */
+  zaehlt_als_mitgliedschaft?: boolean | null;
 }
 
 export interface MitgliedtypPflichtfeld {

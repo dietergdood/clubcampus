@@ -31,10 +31,11 @@ import { DatenpruefungMitglied } from "./modules/members/tabs/DatenpruefungMitgl
 import { DatenpruefungEltern } from "./modules/members/tabs/DatenpruefungEltern.tsx";
 import { fetchKinderVollstaendigFuerElternteil } from "./domains/members/elternService.ts";
 import { fetchPerson } from "./domains/person/personService.ts";
-import { fetchMitglied, fetchMitgliedtypPflichtfelder, fetchRollePflichtfelder } from "./domains/members/memberService.ts";
-import type { RollePflichtfeld } from "./domains/members/pflichtfelder.ts";
+import { fetchMitglied } from "./domains/members/memberService.ts";
+import { fetchFeldkonfig } from "./domains/members/feldkonfigService.ts";
+import type { FeldkonfigZeile } from "./domains/members/feldkonfig.ts";
 import type {
-  Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, MitgliedtypPflichtfeld, ModuleAktiv, ModuleRechte,
+  Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
 } from "./types.ts";
 
@@ -77,10 +78,9 @@ function Portal({supabaseClient, slug}: PortalProps){
   const [dbMitgliedtypen,setDbMitgliedtypen]=useState<Mitgliedtyp[]>([]);
   const [dbPortalRollen,setDbPortalRollen]=useState<PortalRolle[]>([]);
   const [dbKaderRollen,setDbKaderRollen]=useState<KaderRolleDb[]>([]);
-  /* Pflichtfeld-Matrizen — Quelle der Datenprüfung. Solange sie leer sind
+  /* Feldkonfiguration — Quelle der Datenprüfung. Solange sie leer ist
      (Ladezustand), verlangt getProfilCheck nichts. */
-  const [dbTypPflichtfelder,setDbTypPflichtfelder]=useState<MitgliedtypPflichtfeld[]>([]);
-  const [dbRollePflichtfelder,setDbRollePflichtfelder]=useState<RollePflichtfeld[]>([]);
+  const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
   /* Die eigene Person. Seit Etappe 4 stehen Vorname, Nachname und Telefon
      dort und nicht mehr an `benutzer`. Wird für die Datenprüfung eines
      Elternteils gebraucht, der keine Mitgliedschaft hat. */
@@ -244,16 +244,11 @@ function Portal({supabaseClient, slug}: PortalProps){
     setDbFunktionen, setDbMitglieder, setDbMitgliedtypen, setDbPortalRollen, setDbKaderRollen,
     setSession, setDbUser, setTenant, setError });
 
-  /* Pflichtfeld-Matrizen. Bewusst hier und nicht in useAppData: sie werden
-     nur von der Datenprüfung gelesen, nicht von den Modulen. */
+  /* Feldkonfiguration. Bewusst hier und nicht in useAppData: sie wird nur
+     von der Datenprüfung gelesen, nicht von den Modulen. */
   async function loadPflichtfelder(){
     if(!sb) return;
-    const [typ, rolle] = await Promise.all([
-      fetchMitgliedtypPflichtfelder(sb),
-      fetchRollePflichtfelder(sb),
-    ]);
-    setDbTypPflichtfelder(typ as MitgliedtypPflichtfeld[]);
-    setDbRollePflichtfelder(rolle as RollePflichtfeld[]);
+    setFeldkonfig(await fetchFeldkonfig(sb));
   }
 
   /* Eigene Person nachladen, sobald der Benutzer bekannt ist. */
@@ -463,8 +458,7 @@ function Portal({supabaseClient, slug}: PortalProps){
   };
 
   const { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft } = getProfilCheck({
-    sb, dbUser, role, dbMitglieder, setDbUser, eigenePerson,
-    typMatrix: dbTypPflichtfelder, rolleMatrix: dbRollePflichtfelder,
+    sb, dbUser, role, dbMitglieder, setDbUser, eigenePerson, feldkonfig,
   });
 
   return(

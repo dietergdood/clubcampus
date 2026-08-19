@@ -13,7 +13,7 @@ import { getLandName, LAENDER, formatDatum } from "../../domains/person/personUt
 import type { UseInlineEditApi } from "../../domains/members/useInlineEdit.ts";
 import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
 import type { Mitglied } from "../../types.ts";
-import type { FieldVisibility } from "./types.ts";
+import type { Sichtbarkeit } from "./types.ts";
 
 const GESCHLECHT_OPTS: InlineFieldOption[] = [
   { v: "m", l: "Männlich" },
@@ -31,7 +31,7 @@ function NatBadge({ code }: { code?: string | null }) {
 
 interface PersonPersonalienProps {
   raw: Mitglied;
-  fv: FieldVisibility;
+  fv: Sichtbarkeit;
   canEdit?: boolean;
   /* Inline-Edit-API wird vom Parent (InfoTab) injiziert — die Komponente
      importiert den members-Hook nicht selbst (Schichtentrennung). */
@@ -88,7 +88,7 @@ function PersonPersonalien({ raw, fv, canEdit, ie }: PersonPersonalienProps) {
       <div className="cc-info-grid">
         <InlineField label="Nachname"     field="nachname"     value={raw.nachname||null}  {...ieProps}/>
         <InlineField label="Vorname"      field="vorname"      value={raw.vorname||null}   {...ieProps}/>
-        {fv.showGebdat && (
+        {fv.geburtsdatum && (
           <InlineField label="Geburtsdatum" field="geburtsdatum" value={gebdatLabel} type="date"
             {...ieProps} startEdit={()=>ie.startEdit("geburtsdatum", raw.geburtsdatum||"")}/>
         )}
@@ -98,13 +98,17 @@ function PersonPersonalien({ raw, fv, canEdit, ie }: PersonPersonalienProps) {
             <span className="cc-info-val">{age} Jahre</span>
           </div>
         )}
-        <InlineField label="Geschlecht" field="geschlecht" value={geschlechtLabel}
-          opts={GESCHLECHT_OPTS} {...ieProps}
-          startEdit={()=>ie.startEdit("geschlecht", raw.geschlecht||"")}
-          saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
+        {fv.geschlecht && (
+          <InlineField label="Geschlecht" field="geschlecht" value={geschlechtLabel}
+            opts={GESCHLECHT_OPTS} {...ieProps}
+            startEdit={()=>ie.startEdit("geschlecht", raw.geschlecht||"")}
+            saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
+        )}
 
-        {/* Nationalität — eine halbe Zelle, beide Badges, zwei Dropdowns beim Edit */}
-        <div className="cc-info-row">
+        {/* Nationalität — eine halbe Zelle, beide Badges, zwei Dropdowns beim Edit.
+            Die zweite Nationalität hat einen eigenen Schlüssel: ein Verein, der
+            sie nicht führt, soll nicht das ganze Feld verlieren. */}
+        {fv.nationalitaet && <div className="cc-info-row">
           <span className="cc-info-key">Nationalität</span>
           {natEditing ? (
             <div className="cc-col cc-gap-6 cc-flex-1 cc-nat-edit-wrap">
@@ -118,7 +122,7 @@ function PersonPersonalien({ raw, fv, canEdit, ie }: PersonPersonalienProps) {
                   {LAENDER_OPTS.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                 </select>
               </div>
-              <div>
+              {fv.nationalitaet2 && <div>
                 <div className="cc-inline-hint">2</div>
                 <select className="cc-inline-select" value={nat2Val}
                   onChange={e=>setNat2Val(e.target.value)}
@@ -126,7 +130,7 @@ function PersonPersonalien({ raw, fv, canEdit, ie }: PersonPersonalienProps) {
                   onBlur={e=>{if(!e.currentTarget.closest('.cc-nat-edit-wrap')?.contains(e.relatedTarget))saveNat();}}>
                   {LAENDER_OPTS2.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
                 </select>
-              </div>
+              </div>}
               <div className="cc-inline-hint">Esc abbrechen</div>
             </div>
           ) : (
@@ -135,17 +139,19 @@ function PersonPersonalien({ raw, fv, canEdit, ie }: PersonPersonalienProps) {
               {nat1Name ? (
                 <span className="cc-row cc-gap-4">
                   <NatBadge code={raw.nationalitaet}/> {nat1Name}
-                  {nat2Name && <><span className="cc-text-sub">·</span><NatBadge code={raw.nationalitaet2}/> {nat2Name}</>}
+                  {fv.nationalitaet2 && nat2Name && <><span className="cc-text-sub">·</span><NatBadge code={raw.nationalitaet2}/> {nat2Name}</>}
                 </span>
               ) : <span className="cc-inline-empty">nicht erfasst</span>}
               {canEdit && editMode && <span className="cc-inline-pencil"><TI n="pencil" size={14}/></span>}
             </span>
           )}
-        </div>
+        </div>}
 
-        <InlineField label="Heimatort" field="heimatort" value={raw.heimatort||null} {...ieProps}/>
+        {fv.heimatort && (
+          <InlineField label="Heimatort" field="heimatort" value={raw.heimatort||null} {...ieProps}/>
+        )}
 
-        {fv.showAhv && (
+        {fv.ahv_nr && (
           <div className="cc-info-row">
             <span className="cc-info-key">AHV-Nr.</span>
             {ie.editing === "ahv_nr" ? (

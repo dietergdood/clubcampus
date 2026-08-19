@@ -3,16 +3,14 @@
    Konstanten für MitgliederModul
    ═══════════════════════════════════════════════════════════════ */
 
-/* Der Mitgliedtyp, der einen Goenner von einem Mitglied trennt.
-   An einer Stelle, weil er an mehreren gebraucht wird: MitgliederModul
-   trennt danach die Liste, InfoTab blendet danach die Bereiche aus, die
-   ein Goenner nicht hat.
+/* SUPPORTER_TYP stand hier bis zum 19.08.2026: ein Vergleich gegen den
+   Namen "Supporter", mit dem MitgliederModul die Liste trennte und InfoTab
+   drei Bereiche ausblendete. Der Name war der Schluessel — beim zweiten
+   Verein, der seinen Typ anders nennt, griff er nicht mehr.
 
-   ⚠ Der Name ist der Schluessel — es gibt kein strukturelles Merkmal
-   dafuer. Beim zweiten Verein, der seinen Typ anders nennt, greift das
-   nicht mehr. Haengt an der offenen Frage in CLAUDE.md, ob ein Supporter
-   ueberhaupt eine Mitgliedschaft haben soll. */
-export const SUPPORTER_TYP = "Supporter";
+   Ersetzt durch zwei strukturelle Merkmale: die Listentrennung laeuft ueber
+   `mitgliedtypen.zaehlt_als_mitgliedschaft`, die Bereiche im Profil ueber
+   die Mitgliedtyp-Konfiguration (domains/members/feldkonfig.ts). */
 
 export const ROLES = {
   administrator: { label:"Administrator", color:"var(--text)", bg:"#F5F5F5", icon:"settings", level:7 },

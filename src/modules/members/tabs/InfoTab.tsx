@@ -11,7 +11,6 @@ import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.tsx"
 import { PersonKontakt } from "../../../shared/person/PersonKontakt.tsx";
 import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
-import { SUPPORTER_TYP } from "../memberConstants.ts";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
 import {
@@ -22,7 +21,9 @@ import {
 import { formatDatum } from "../../../domains/person/personUtils.ts";
 import type { PersonTeamsService } from "../../../shared/person/PersonTeams.tsx";
 import type { Account, Mitglied, Mitgliedtyp, Sb } from "../../../types.ts";
-import type { FieldVisibility } from "../../../shared/person/types.ts";
+import type { Sichtbarkeit } from "../../../shared/person/types.ts";
+import { istBereichSichtbar } from "../../../domains/members/feldkonfig.ts";
+import type { FeldModus } from "../../../domains/members/feldkonfig.ts";
 
 /* Service-Buendel fuer PersonTeams — hier (modules -> domains erlaubt)
    gebuendelt und der shared-Komponente injiziert. */
@@ -38,7 +39,10 @@ type KontaktProps = ComponentProps<typeof PersonKontakt>;
 
 interface InfoTabProps {
   raw: Mitglied;
-  fv: FieldVisibility;
+  fv: Sichtbarkeit;
+  /* Modus je Schluessel fuer den Mitgliedtyp dieses Mitglieds —
+     entscheidet, welche Bereiche es ueberhaupt gibt. */
+  konfig: Record<string, FeldModus>;
   canEdit?: boolean;
   canDelete?: boolean;
   sb: Sb;
@@ -67,7 +71,7 @@ interface InfoTabProps {
 }
 
 function InfoTab({
-  raw, fv, canEdit, canDelete, sb, account,
+  raw, fv, konfig, canEdit, canDelete, sb, account,
   dbKaderRollen, dbMitgliedtypen,
   eltern, brauchtEltern, setTab, hatPortalZugang = false,
   teamDetails, setTeamDetails,
@@ -108,14 +112,20 @@ function InfoTab({
   const MITGLIEDTYP_OPTS = (dbMitgliedtypen||[]).map(t=>({v:t.name,l:t.name}));
   const eintrittsdatum = raw.eintrittsdatum;
 
-  /* Ein Supporter ist Goenner, nicht Mitglied im sportlichen Sinn: kein
-     Spielerpass, keine J+S-Nummer, kein Team, keine Vereinsfunktion. Die
-     drei Bereiche sind bei ihm nicht nur leer, sie bleiben es — und eine
-     leere Karte mit einem "Zuweisen"-Knopf lädt zu etwas ein, das nicht
-     vorgesehen ist.
+  /* Welche Bereiche es gibt, sagt die Mitgliedtyp-Konfiguration. Bis zum
+     19.08.2026 stand hier `raw.mitgliedtyp === "Supporter"` — ein
+     Namensvergleich, der beim zweiten Verein mit einem anders benannten
+     Typ nicht mehr griff und beim naechsten Sonderfall eine fuenfte Stelle
+     gebraucht haette, an der im Code ueber ein Profil entschieden wird.
 
-     Der Mitgliedtyp bleibt sichtbar: er steht in der Kachel oben. */
-  const istSupporter = raw.mitgliedtyp === SUPPORTER_TYP;
+     Eine Karte, deren Eintraege alle auf "Gibt es nicht" stehen, darf ihre
+     leere Huelle nicht rendern — sonst bliebe beim Goenner eine Karte mit
+     einem "Zuweisen"-Knopf stehen, der zu etwas einlaedt, das nicht
+     vorgesehen ist. Das entscheidet istBereichSichtbar(). */
+  const zeigeVereinsdaten = istBereichSichtbar(konfig, "vereinsdaten");
+  const zeigeTeams        = istBereichSichtbar(konfig, "teams");
+  const zeigeFunktionen   = istBereichSichtbar(konfig, "funktionen");
+  const zeigeNotizen      = istBereichSichtbar(konfig, "notizen") && fv.notizen;
 
   return (
     <div className="cc-col cc-gap-12">
@@ -162,8 +172,8 @@ function InfoTab({
           eltern={eltern} brauchtEltern={brauchtEltern} setTab={setTab}
         />
 
-        {/* Vereinsdaten — bei einem Supporter ausgeblendet, siehe istSupporter */}
-        {!istSupporter && <Card className="cc-card-full">
+        {/* Vereinsdaten */}
+        {zeigeVereinsdaten && <Card className="cc-card-full">
           <div className="cc-section-title-row">
             <div className="cc-section-title"><TI n="building-community" size={14}/> Vereinsdaten</div>
             {canEdit && (
@@ -174,32 +184,45 @@ function InfoTab({
             )}
           </div>
           <div className="cc-info-grid">
-            <InlineField label="Mitgliedtyp" field="mitgliedtyp" value={raw.mitgliedtyp||null}
-              opts={MITGLIEDTYP_OPTS} {...ieProps}
-              startEdit={()=>ie.startEdit("mitgliedtyp", raw.mitgliedtyp||"")}
-              saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
-            {fv.showPass&&<>
+            {/* Der Mitgliedtyp bleibt beim Goenner bewusst stehen: ein Typ,
+                den man im Profil nicht ändern kann, ist eine Sackgasse —
+                dasselbe Muster wie bei "Gibt es nicht", wo die Zeile
+                sichtbar bleiben muss, um sie zurückholen zu können. */}
+            {fv.mitgliedtyp&&(
+              <InlineField label="Mitgliedtyp" field="mitgliedtyp" value={raw.mitgliedtyp||null}
+                opts={MITGLIEDTYP_OPTS} {...ieProps}
+                startEdit={()=>ie.startEdit("mitgliedtyp", raw.mitgliedtyp||"")}
+                saveEdit={(f,v)=>ie.saveEdit(f,v)}/>
+            )}
+            {/* Spielerpass und J+S-Nr. hingen bis zum 19.08.2026 an EINEM
+                Schalter (fv.showPass). Sie sind zwei Angaben: ein Junior hat
+                einen Pass und keine J+S-Nummer, ein Trainer umgekehrt. */}
+            {fv.spielerpass&&(
               <InlineField label="Spielerpass" field="spielerpass" value={raw.spielerpass||null} {...ieProps}/>
+            )}
+            {fv.js_nr&&(
               <InlineField label="J+S Nr."     field="js_nr"       value={raw.js_nr||null}       {...ieProps}/>
-            </>}
-            {fv.showFairgateId&&(
+            )}
+            {fv.fairgate_id&&(
               <InlineField label="Fairgate-ID" field="fairgate_id" value={raw.fairgate_id||null} {...ieProps}/>
             )}
             {/* eintrittsdatum ist seit der SQL-Migration vom 26.07.2026 eine
                 echte Spalte (siehe Bridge-Typ in types.ts). */}
-            <div className="cc-info-row">
-              <span className="cc-info-key">Eintritt</span>
-              <span className={eintrittsdatum?"cc-info-val":"cc-info-val-empty"}>
-                {formatDatum(eintrittsdatum)}
-              </span>
-            </div>
+            {fv.eintrittsdatum&&(
+              <div className="cc-info-row">
+                <span className="cc-info-key">Eintritt</span>
+                <span className={eintrittsdatum?"cc-info-val":"cc-info-val-empty"}>
+                  {formatDatum(eintrittsdatum)}
+                </span>
+              </div>
+            )}
           </div>
         </Card>}
 
         {/* PersonTeams und PersonFunktionen verlangen einen echten Client.
             Statt einer sb!-Assertion nur rendern, wenn sb gesetzt ist —
             das narrowt sb auf SbClient und faellt ohne Client sicher weg. */}
-        {sb && !istSupporter && <PersonTeams
+        {sb && zeigeTeams && <PersonTeams
           raw={raw} sb={sb} svc={personTeamsSvc} canEdit={canEdit}
           dbKaderRollen={dbKaderRollen}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
@@ -210,14 +233,14 @@ function InfoTab({
           vereinId={vereinId} account={account}
         />}
 
-        {sb && !istSupporter && <PersonFunktionen
+        {sb && zeigeFunktionen && <PersonFunktionen
           raw={raw} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
           onSaveFunktionen={onSaveFunktionen}
         />}
 
         {/* Notizen */}
-        {fv.showNotizen && (
+        {zeigeNotizen && (
           <Card className="cc-card-full">
             <div className="cc-section-title cc-between">
               <span className="cc-row cc-gap-6">

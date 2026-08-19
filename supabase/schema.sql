@@ -13,6 +13,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "extensions";
+
+
+
+
+
+
 
 
 ALTER SCHEMA "public" OWNER TO "postgres";
@@ -1150,6 +1164,32 @@ ALTER SEQUENCE "public"."mitglieder_team_details_id_seq" OWNED BY "public"."mitg
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."mitgliedtyp_feldkonfig" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "mitgliedtyp_id" "uuid" NOT NULL,
+    "schluessel" "text" NOT NULL,
+    "modus" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "mitgliedtyp_feldkonfig_modus_check" CHECK (("modus" = ANY (ARRAY['pflicht'::"text", 'freiwillig'::"text", 'aus'::"text"])))
+);
+
+
+ALTER TABLE "public"."mitgliedtyp_feldkonfig" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."mitgliedtyp_feldkonfig" IS 'Was ein Mitgliedtyp hat: pro Schluessel einer von drei Werten — pflicht, freiwillig, aus ("gibt es nicht", auch fuer die Verwaltung). Fehlende Zeile bedeutet freiwillig; gespeichert wird nur die Abweichung. Loest mitgliedtyp_pflichtfelder und rolle_pflichtfelder ab.';
+
+
+
+COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."schluessel" IS 'Feld (geburtsdatum, ahv_nr, ...), Bereich (teams, funktionen, notizen) oder Profil-Tab (tab_eltern, ...). Die gueltige Liste steht in domains/members/feldkonfig.ts, nicht hier.';
+
+
+
+COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."modus" IS 'pflicht = wird gezeigt und verlangt; freiwillig = wird gezeigt, darf leer bleiben; aus = gibt es nicht, verschwindet aus Profil, Neuanlage und Datenpruefung.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."mitgliedtyp_pflichtfelder" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "mitgliedtyp" "text" NOT NULL,
@@ -1170,11 +1210,16 @@ CREATE TABLE IF NOT EXISTS "public"."mitgliedtypen" (
     "sort_order" integer DEFAULT 0,
     "aktiv" boolean DEFAULT true,
     "standard_rolle" "text",
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "zaehlt_als_mitgliedschaft" boolean DEFAULT true NOT NULL
 );
 
 
 ALTER TABLE "public"."mitgliedtypen" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."mitgliedtypen"."zaehlt_als_mitgliedschaft" IS 'False = dieser Typ ist keine Mitgliedschaft (Goenner/Supporter): kein Beitrag, kein Stimmrecht an der GV, kein Spielbetrieb, eigener Tab in der Mitgliederliste. Ersetzt den Namensvergleich auf "Supporter" im Frontend.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."modul_benutzer" (
@@ -2317,6 +2362,16 @@ ALTER TABLE ONLY "public"."mitglieder_team_details"
 
 
 
+ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
+    ADD CONSTRAINT "mitgliedtyp_feldkonfig_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
+    ADD CONSTRAINT "mitgliedtyp_feldkonfig_verein_key" UNIQUE ("verein_id", "mitgliedtyp_id", "schluessel");
+
+
+
 ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
     ADD CONSTRAINT "mitgliedtyp_pflichtfelder_pkey" PRIMARY KEY ("id");
 
@@ -2324,6 +2379,11 @@ ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
 
 ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
     ADD CONSTRAINT "mitgliedtyp_pflichtfelder_verein_key" UNIQUE ("verein_id", "mitgliedtyp", "feld");
+
+
+
+ALTER TABLE ONLY "public"."mitgliedtypen"
+    ADD CONSTRAINT "mitgliedtypen_id_verein_key" UNIQUE ("id", "verein_id");
 
 
 
@@ -3292,6 +3352,16 @@ ALTER TABLE ONLY "public"."mitglieder"
 
 
 
+ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
+    ADD CONSTRAINT "mitgliedtyp_feldkonfig_typ_fkey" FOREIGN KEY ("mitgliedtyp_id", "verein_id") REFERENCES "public"."mitgliedtypen"("id", "verein_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
+    ADD CONSTRAINT "mitgliedtyp_feldkonfig_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
 ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
     ADD CONSTRAINT "mitgliedtyp_pflichtfelder_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
@@ -4090,6 +4160,17 @@ CREATE POLICY "mitglieder_update_self" ON "public"."mitglieder" FOR UPDATE USING
 
 
 
+ALTER TABLE "public"."mitgliedtyp_feldkonfig" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "mitgliedtyp_feldkonfig_select" ON "public"."mitgliedtyp_feldkonfig" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "mitgliedtyp_feldkonfig_write" ON "public"."mitgliedtyp_feldkonfig" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
 ALTER TABLE "public"."mitgliedtyp_pflichtfelder" ENABLE ROW LEVEL SECURITY;
 
 
@@ -4567,11 +4648,38 @@ ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."nachrichten_antwo
 
 
 
+
+
+
+
+
+
 REVOKE USAGE ON SCHEMA "public" FROM PUBLIC;
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 GRANT ALL ON SCHEMA "public" TO PUBLIC;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4821,6 +4929,12 @@ GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_updated_at"() TO "service_role";
+
+
+
+
+
+
 
 
 
@@ -5106,6 +5220,12 @@ GRANT ALL ON TABLE "public"."mitglieder_team_details" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."mitglieder_team_details_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."mitglieder_team_details_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."mitglieder_team_details_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."mitgliedtyp_feldkonfig" TO "anon";
+GRANT ALL ON TABLE "public"."mitgliedtyp_feldkonfig" TO "authenticated";
+GRANT ALL ON TABLE "public"."mitgliedtyp_feldkonfig" TO "service_role";
 
 
 
