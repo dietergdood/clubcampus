@@ -69,6 +69,10 @@ const NAV_TARGET: {tab: string|null; filter: string[]|null; kindTeam: string|nul
 
 interface TeamViewProps {
   role: string;
+  /* Fuer den Spielbericht: canEdit spiegelt die RLS-Policy
+     spiel_ereignisse_write ueber darfMatchdatenKorrigieren(). */
+  kannSchreiben?: (m: string)=>boolean;
+  benutzerId?: string|null;
   trainerTeams?: string[];
   teamRollen?: Record<string, string>;
   setActive?: (v: string)=>void;
@@ -85,7 +89,7 @@ interface TeamViewProps {
   vereinId?: string|null;
 }
 
-function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null,navToTeam=null,onNavToTeamDone=null,vereinId=null}: TeamViewProps){
+function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myRosterId,account,dbTeams=[],isModuleVisible,dbMitglieder=[],sb=null,kannSchreiben,benutzerId=null,KaderModul:KaderModulProp,TrainingsplanModul:TrainingsplanModulProp,TermineModul:TermineModulProp,SpielplanModul:SpielplanModulProp,TableTab:TableTabProp,HelferModul:HelferModulProp,onSelectMember=null,navToTeam=null,onNavToTeamDone=null,vereinId=null}: TeamViewProps){
   const isMobile=useIsMobile();
   const moduleOk=(modul?: string)=>!isModuleVisible||(!!modul&&isModuleVisible(modul))||!modul;
 
@@ -364,7 +368,7 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
         <div className="cc-flex-center" style={{flexDirection:"column",gap:20,alignItems:"stretch"}}>
           <div>
             <div className="cc-section-hdr">Spielplan</div>
-            <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel} sb={sb} vereinId={vereinId}/>
+            <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel} sb={sb} vereinId={vereinId} kannSchreiben={kannSchreiben} benutzerId={benutzerId}/>
           </div>
           <div>
             <div className="cc-section-hdr">Tabelle</div>

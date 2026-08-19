@@ -32,7 +32,7 @@ import type { SyncLog } from "./portal/AuditTab.tsx";
 import { DesignSystemTab } from "./portal/DesignSystemTab.tsx";
 import { ZUGRIFF_ORDER, ZUGRIFF_DEFAULT, ROLLEN_MODULE_DEFAULT } from "./portal/portalUtils.ts";
 import type { ZugriffDefaultMap } from "./portal/portalUtils.ts";
-import type { AppTheme, ModuleAktiv, ModuleRechte, PortalRolle, Sb, SetState, Team, Zugriffstufe } from "../types.ts";
+import type { AppTheme, Mitglied, ModuleAktiv, ModuleRechte, PortalRolle, Sb, SetState, Team, Zugriffstufe } from "../types.ts";
 import type { KaderRolleDb } from "../domains/roles/roleUtils.ts";
 
 type ZugriffStufenMap = Record<string, Record<string, Zugriffstufe>>;
@@ -83,6 +83,9 @@ interface PortalverwaltungViewProps {
   setAppTheme: SetState<AppTheme>;
   applyThemeCss?: ((theme: AppTheme) => void) | null;
   vereinId?: string | null;
+  /* Fuer die SFV-Spieler-Warteschlange im API-Tab. */
+  dbMitglieder?: Mitglied[];
+  benutzerId?: string | null;
   dbPortalRollen?: PortalRolle[];
   onReloadRollen?: (() => void) | null;
   dbKaderRollen?: KaderRolleDb[];
@@ -94,7 +97,7 @@ interface PortalverwaltungViewProps {
 }
 
 function PortalverwaltungView(props: PortalverwaltungViewProps){
-  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase=null,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen,dbTeams=[],setDbTeams} = props;
+  const {initialTab="module",moduleAktiv={},setModuleAktiv,moduleRechte,setModuleRechte,sb:supabase=null,appTheme,setAppTheme,applyThemeCss:applyTheme,vereinId,dbMitglieder=[],benutzerId=null,dbPortalRollen:externalRollen=[],onReloadRollen,dbKaderRollen:externalKaderRollen=[],onReloadKaderRollen,dbTeams=[],setDbTeams} = props;
   const [confirm,confirmDialog]=useConfirm();
   const [tab,setTab]=useState(initialTab);
   const [dbPortalRollen,setDbPortalRollen]=useState<PortalRolle[]>(externalRollen);
@@ -689,6 +692,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}
           apiVerbindungen={apiVerbindungen} tab={tab}
           sb={supabase} dbTeams={dbTeams} setDbTeams={setDbTeams}
+          vereinId={vereinId ?? null} benutzerId={benutzerId} dbMitglieder={dbMitglieder}
         />
       <AuditTab
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}

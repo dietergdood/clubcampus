@@ -142,3 +142,40 @@ export async function fetchSpieleMitVerlauf(sb: Sb, vereinId: string | null): Pr
     .select("spiel_id").eq("verein_id", vereinId).eq("herkunft", "sfv");
   return new Set((data ?? []).map(z => z.spiel_id as string));
 }
+
+/**
+ * sfv_person_id → Anzeigename, für Spielbericht und Warteschlange.
+ *
+ * Zwei Abfragen statt eines Joins: die Namen stehen an `personen`, nicht
+ * an `mitglieder` (seit Etappe 6a), und der Weg dorthin führt über zwei
+ * Fremdschlüssel. In JS zusammenzusetzen ist hier billiger als eine
+ * verschachtelte Einbettung, die bei jeder Schemaänderung neu zu prüfen
+ * wäre.
+ *
+ * ⚠ Nur EIGENE Spieler. Von fremden gibt es keine sfv_person_id in
+ * unseren Tabellen — der CHECK-Constraint verhindert sie.
+ */
+export async function fetchSfvNamen(sb: Sb, vereinId: string | null): Promise<Map<number, string>> {
+  const raus = new Map<number, string>();
+  if (!sb || !vereinId) return raus;
+
+  const { data: zuordnung } = await sb.from("sfv_zuordnung")
+    .select("sfv_person_id, mitglied_id").eq("verein_id", vereinId);
+  if (!zuordnung?.length) return raus;
+
+  const { data: mitglieder } = await sb.from("mitglieder")
+    .select("id, personen(vorname, nachname)")
+    .in("id", zuordnung.map(z => z.mitglied_id as number));
+
+  const nameNachMitglied = new Map<number, string>();
+  for (const m of mitglieder ?? []) {
+    const p = (m as unknown as { personen?: { vorname?: string | null; nachname?: string | null } }).personen;
+    const name = `${p?.vorname ?? ""} ${p?.nachname ?? ""}`.trim();
+    if (name) nameNachMitglied.set(Number(m.id), name);
+  }
+  for (const z of zuordnung) {
+    const name = nameNachMitglied.get(Number(z.mitglied_id));
+    if (name) raus.set(Number(z.sfv_person_id), name);
+  }
+  return raus;
+}

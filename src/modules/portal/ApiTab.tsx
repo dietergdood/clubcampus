@@ -7,7 +7,8 @@ import { TI } from "../../icons.tsx";
 import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
 import { API_INFOS } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
-import type { Sb, Team } from "../../types.ts";
+import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
+import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
    API_INFOS Platzhalter derselben Form. */
@@ -30,9 +31,15 @@ interface ApiTabProps {
   sb?: Sb;
   dbTeams?: Team[];
   setDbTeams?: ((f: (prev: Team[]) => Team[]) => void) | null;
+  /* Fuer die Spieler-Warteschlange: welche SFV-personId gehoert zu welchem
+     Mitglied. Einrichtung, kein Tagesgeschaeft — deshalb hier neben der
+     Team-Zuordnung und nicht im Spielbetrieb. */
+  vereinId?: string | null;
+  benutzerId?: string | null;
+  dbMitglieder?: Mitglied[];
 }
 
-export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=null,dbTeams=[],setDbTeams}: ApiTabProps) {
+export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=null,dbTeams=[],setDbTeams,vereinId=null,benutzerId=null,dbMitglieder=[]}: ApiTabProps) {
   /* Welcher Anschluss ist gerade aufgeklappt. Nur Anzeigezustand, deshalb
      hier und nicht im Modul. */
   const [offen,setOffen]=useState<string|null>(null);
@@ -41,6 +48,11 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     <div style={{display:'contents'}}>
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen==="football_ch"&&(
         <SfvZuordnung sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} onZurueck={()=>setOffen(null)}/>
+      )}
+
+      {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen==="sfv_spieler"&&(
+        <SfvSpielerZuordnung sb={sb} vereinId={vereinId} benutzerId={benutzerId}
+          dbMitglieder={dbMitglieder} dbTeams={dbTeams} onZurueck={()=>setOffen(null)}/>
       )}
 
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen===null&&(
@@ -80,7 +92,13 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                   <Row align="flex-start">
                     {api.active&&<Btn small variant="primary" color={BL} onClick={()=>{}}>Sync starten</Btn>}
                     {api.key==="football_ch"
-                      ?<Btn small variant="outline" color="#888" onClick={()=>setOffen("football_ch")}>Teams zuordnen</Btn>
+                      ?<>
+                        <Btn small variant="outline" color="#888" onClick={()=>setOffen("football_ch")}>Teams zuordnen</Btn>
+                        {/* Zwei Zuordnungen, zwei Ebenen: Mannschaften einmal
+                            beim Einrichten, Spieler laufend beim ersten
+                            Einsatz. */}
+                        <Btn small variant="outline" color="#888" onClick={()=>setOffen("sfv_spieler")}>Spieler zuordnen</Btn>
+                      </>
                       :<Btn small variant="outline" color="#888" onClick={()=>{}}>Konfigurieren</Btn>}
                   </Row>
                 </Card>

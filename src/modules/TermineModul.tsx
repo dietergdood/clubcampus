@@ -17,6 +17,9 @@ const ATT_EVENTS: any[] = ATT_EVENTS_SRC;
    und Kalender — das ist Phase 4. */
 import { useSpiele, useRangliste } from "../domains/spiele/useSpiele.ts";
 import { sfvTeamIdFuer } from "../domains/spiele/spielMapper.ts";
+import { Spielbericht } from "./spiele/Spielbericht.tsx";
+import { darfMatchdatenKorrigieren } from "../domains/spiele/matchdatenRechte.ts";
+import { fetchSfvNamen } from "../domains/spiele/matchdatenService.ts";
 import type { TeamZuordnung } from "../domains/spiele/spielMapper.ts";
 import type { Sb } from "../types.ts";
 import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.tsx";
@@ -85,8 +88,15 @@ interface SpielDetailProps {
   canEdit?: boolean;
   motmAll?: any;
   setMotmAll?: any;
+  /* Fuer den echten Spielbericht aus den SFV-Matchdaten. Die Stats-Blocks
+     darueber laufen noch auf demoData (ATT_EVENTS) und werden mit dem
+     Termine-Umbau abgeloest — bis dahin steht beides nebeneinander. */
+  sb?: Sb;
+  vereinId?: string|null;
+  benutzerId?: string|null;
+  sfvNamen?: Map<number,string>;
 }
-interface SpielplanModulProps { role: string; team?: string|null; initialSelected?: any; sb?: Sb; vereinId?: string|null; }
+interface SpielplanModulProps { role: string; team?: string|null; initialSelected?: any; sb?: Sb; vereinId?: string|null; kannSchreiben?: (m: string)=>boolean; benutzerId?: string|null; }
 interface TableTabProps { team?: string|null; sb?: Sb; vereinId?: string|null; dbTeams?: TeamZuordnung[]; }
 interface TermineAccount { kinder?: Array<{name: string; team?: string; rosterId?: number|null}>; }
 interface TermineModulProps {
@@ -109,7 +119,7 @@ interface TermineModulProps {
 
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
-function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMotmAllProp}: SpielDetailProps){
+function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMotmAllProp,sb=null,vereinId=null,benutzerId=null,sfvNamen}: SpielDetailProps){
   const isMobile=useIsMobile();
   const played=!!spiel.result;
   const [activeTab,setActiveTab]=useState("info");
@@ -225,7 +235,13 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
           </div>
           {/* Tabs */}
           <div style={{display:"flex",gap:4,marginTop:-1}}>
-            {[{key:"info",label:"Spielinfo"},{key:"stats",label:played?"Statistik":"Startaufstellung"},...(played?[{key:"motm",label:"Player of the Match"}]:[])].map(t=>(
+            {[{key:"info",label:"Spielinfo"},
+              /* Der echte Spielbericht aus den SFV-Matchdaten. Nur bei
+                 gespielten Spielen und nur, wenn das Spiel aus der Datenbank
+                 kommt (spiel.id ist dann die uuid) — ein Demo-Spiel hat keine
+                 Matchdaten. */
+              ...(played&&sb&&spiel?.id?[{key:"bericht",label:"Spielbericht"}]:[]),
+              {key:"stats",label:played?"Statistik":"Startaufstellung"},...(played?[{key:"motm",label:"Player of the Match"}]:[])].map(t=>(
               <button key={t.key} onClick={()=>setActiveTab(t.key)}
                 style={{padding:"8px 14px",border:"none",borderRadius:"10px 10px 0 0",background:activeTab===t.key?"#fff":"transparent",color:activeTab===t.key?BK:"rgba(0,0,0,0.5)",fontWeight:activeTab===t.key?700:500,cursor:"pointer",fontSize:14,transition:"all 0.1s"}}>
                 {t.label}
@@ -235,6 +251,18 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
         </div>
 
         <div style={{padding:"18px 22px"}}>
+          {/* -- Spielbericht aus den SFV-Matchdaten -- */}
+          {activeTab==="bericht"&&sb&&spiel?.id&&(
+            <Spielbericht
+              sb={sb} spielId={String(spiel.id)}
+              resultat={spiel.resultat ?? spiel.result ?? null}
+              htResultat={spiel.ht_resultat ?? null}
+              namen={sfvNamen}
+              canEdit={canEdit} vereinId={vereinId} benutzerId={benutzerId}
+              gegnerName={spiel.opponent ?? spiel.gegner ?? null}
+            />
+          )}
+
           {/* -- Spielinfo -- */}
           {activeTab==="info"&&(
             <Col gap={12}>
@@ -493,10 +521,16 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
 
 
 
-function SpielplanModul({role,team,initialSelected,sb=null,vereinId=null}: SpielplanModulProps){
+function SpielplanModul({role,team,initialSelected,sb=null,vereinId=null,kannSchreiben,benutzerId=null}: SpielplanModulProps){
   const isMobile=useIsMobile();
   const [selected,setSelected]=useState(initialSelected||null);
-  const canEdit=["trainer","administrator","administration"].includes(role);
+  /* Dieselbe Regel wie die RLS-Policy spiel_ereignisse_write — EINE Stelle,
+     keine zweite Pruefung, die davon abweichen kann. Vorher stand hier eine
+     Rollenliste, die Funktionaere mit Gruppenrecht (Stufenleiter) ausschloss,
+     obwohl die Datenbank sie durchlaesst. */
+  const canEdit=darfMatchdatenKorrigieren(role, kannSchreiben ?? (()=>false));
+  const [sfvNamen,setSfvNamen]=useState<Map<number,string>>(new Map());
+  useEffect(()=>{ fetchSfvNamen(sb,vereinId).then(setSfvNamen); },[sb,vereinId]);
   /* Sortiert wird über das ISO-Datum aus dem Mapper. Früher stand hier ein
      parseGDate, das den Anzeigetext ("Sa 24.05.") zurückrechnete und fest
      "2026-" davorklebte — in der nächsten Saison hätte das falsch sortiert. */
@@ -513,7 +547,7 @@ function SpielplanModul({role,team,initialSelected,sb=null,vereinId=null}: Spiel
   });
   return(
     <>
-      {selected&&<SpielDetail spiel={selected} onClose={()=>setSelected(null)} canEdit={canEdit} motmAll={motmAll} setMotmAll={setMotmAll}/>}
+      {selected&&<SpielDetail spiel={selected} onClose={()=>setSelected(null)} canEdit={canEdit} motmAll={motmAll} setMotmAll={setMotmAll} sb={sb} vereinId={vereinId} benutzerId={benutzerId} sfvNamen={sfvNamen}/>}
       <Card style={{padding:0,overflowX:"auto"}}>
         <div className="cc-table-wrap"><table className="cc-table">
           <thead>
