@@ -440,6 +440,44 @@ sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
 (Abschnitt darüber). Solange vier Typen zehn Pflichtfelder verlangen, käme
 danach kein Juniorenmitglied mehr durch die eigene Datenprüfung.
 
+### ⚠ `mitglied_id` ist in acht Tabellen der falsche Typ
+
+Befund vom 19.08.2026, beim Schreiben von `supabase/migration_matchdaten.sql`.
+
+**`mitglieder.id` ist `bigint`.** In acht Tabellen steht `mitglied_id`
+trotzdem als `uuid` — ein Join auf `mitglieder` ist dort unmöglich:
+
+| Typ | Tabellen |
+|---|---|
+| **`uuid` (falsch)** | `aufgebote`, `anwesenheiten`, `abstimmung_antworten`, `bus_anmeldungen`, `helper_einsatz_pflicht_mitglied`, `helper_zuteilungen`, `material_ausleihen`, `team_helfer_zuteilungen` — dazu `news.mitglied_ids` als `uuid[]` |
+| `bigint` (richtig) | `benutzer`, `kader`, `eltern_kinder`, `elternkontakte`, `mitglieder_aenderungen`, `mitglieder_aktivitaeten`, `mitglieder_notizen`, `mitglieder_team_details` |
+
+**Keine der acht hat einen Fremdschlüssel auf `mitglieder`** — sonst wäre es
+beim Anlegen aufgefallen. Genau das ist die Lehre: ein fehlender
+Fremdschlüssel lässt einen Typfehler jahrelang unbemerkt stehen.
+
+**Wirkt heute nirgends.** Alle acht sind leer und warten auf Phase 4 (Kader,
+Termine, Helfer, Dashboard). Niemand schreibt hinein, also fällt nichts auf.
+
+**Aber `aufgebote` ist eine davon.** Der geplante Vergleich „wer war
+aufgeboten und hat nicht gespielt / wer hat gespielt ohne Aufgebot" braucht
+den Join Aufgebot ↔ Aufstellung über das Mitglied — und `uuid` gegen `bigint`
+geht nicht. Der Vergleich scheitert, bevor ihn jemand baut.
+
+**Vor Phase 4 nachziehen**, mit Fremdschlüssel auf `mitglieder(id, verein_id)`
+wie in `migration_matchdaten.sql` (dort ist `sfv_zuordnung.mitglied_id`
+richtig als `bigint` gebaut). Solange die Tabellen leer sind, ist die
+Umstellung ein `alter column … type bigint` ohne Datenverlust — mit Zeilen
+darin wäre es eine Migration mit Abbildung.
+
+Zum Nachzählen:
+
+```sql
+select table_name, data_type from information_schema.columns
+ where table_schema='public' and column_name='mitglied_id'
+ order by data_type, table_name;
+```
+
 ### Wer sieht was bei anderen — wartet auf die Gruppenrechte
 
 Die zweite Hälfte: eine Matrix Rolle × Feld, die festlegt, wer welches Feld bei
