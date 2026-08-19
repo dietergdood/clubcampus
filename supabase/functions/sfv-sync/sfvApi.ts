@@ -112,3 +112,31 @@ export async function holeRangliste(z: SfvZugang, token: string, saisonId: numbe
   if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Rangliste");
   return roh as SfvRangliste[];
 }
+
+/* ── Matchdaten ────────────────────────────────────────────────────────────
+   Drei Aufrufe pro Spiel. Nur fuer Spiele, die ausgetragen sind
+   (matchState 2) — die Endpunkte liefern nur die laufende Saison, aeltere
+   antworten mit 404.
+
+   Sie geben die Rohantwort zurueck und deuten nichts: was uebernommen wird,
+   entscheidet die Allowlist in matchdaten.ts. Diese Datei soll den SFV
+   kennen, nicht unsere Tabellen. */
+export type SfvMatch = Record<string, unknown>;
+
+export async function holeMatch(z: SfvZugang, token: string, matchId: number): Promise<SfvMatch> {
+  const roh = await hole(z, token, `/api/match/${matchId}?Language=1`);
+  if (!roh || typeof roh !== "object") throw new SfvFehler("SFV liefert kein Spiel");
+  return roh as SfvMatch;
+}
+
+export async function holeAufstellung(z: SfvZugang, token: string, matchId: number): Promise<SfvMatch[]> {
+  const roh = await hole(z, token, `/api/match/${matchId}/players?Language=1`);
+  if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Aufstellung");
+  return roh as SfvMatch[];
+}
+
+export async function holeEreignisse(z: SfvZugang, token: string, matchId: number): Promise<SfvMatch[]> {
+  const roh = await hole(z, token, `/api/match/${matchId}/events?Language=1`);
+  if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Ereignisse");
+  return roh as SfvMatch[];
+}

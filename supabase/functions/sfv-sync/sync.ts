@@ -15,6 +15,8 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   holeToken, holeSaison, holeTeams, holeSpielplan, holeRangliste, SfvFehler,
 } from "./sfvApi.ts";
+import { laufeMatchdaten, UNZUGEORDNET_WARNUNG } from "./matchdatenLauf.ts";
+import type { MatchdatenErgebnis } from "./matchdatenLauf.ts";
 import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
 export interface LaufErgebnis {
@@ -24,10 +26,17 @@ export interface LaufErgebnis {
   ranglisten: { geschrieben: number; entfernt: number; gruppen: number };
   verwaiste_zuordnungen: number;
   derbys: number;
+  matchdaten?: MatchdatenErgebnis;
   saison?: { id: number; name: string };
 }
 
 interface Verbindung { id: string; verein_id: string; api_url: string; sync_felder: Record<string, unknown> }
+
+/* Zehn Spiele pro Lauf: drei Aufrufe je Spiel, dazu die fuenf des
+   Spielplans — 35 statt 5. Bei 268 Spielen und stuendlichem Lauf waere
+   alles auf einmal nicht tragbar, zumal Rate Limits nicht dokumentiert
+   sind. Der Rueckstand ist in zehn Stunden aufgeholt. */
+const MATCHDATEN_PRO_LAUF = 10;
 
 /* ── Feldhoheit ───────────────────────────────────────────────────────────
    Die erlaubten Spalten stehen in sync_felder. Diese Funktion schneidet die
@@ -241,6 +250,18 @@ export async function laufeSync(
     }
   }
 
+  /* ── Matchdaten ── */
+  if (nur !== "rangliste" && nur !== "spielplan") {
+    const { data: verein } = await db
+      .from("vereine").select("sfv_club_nummer").eq("id", v.verein_id).single();
+
+    erg.matchdaten = await laufeMatchdaten(
+      db, v, zugang, token,
+      (verein?.sfv_club_nummer as number | null) ?? null,
+      MATCHDATEN_PRO_LAUF,
+    );
+  }
+
   const teile = [
     `Saison ${saison.name}`,
     `Spiele ${erg.spiele.neu} neu, ${erg.spiele.aktualisiert} aktualisiert`,
@@ -251,7 +272,25 @@ export async function laufeSync(
   if (erg.derbys) teile.push(`${erg.derbys} Spiel(e) zwischen zwei eigenen Teams — dem Heimteam zugeordnet`);
   if (erg.verwaiste_zuordnungen) teile.push(`${erg.verwaiste_zuordnungen} Team-Zuordnung(en) zeigen ins Leere`);
 
+  const md = erg.matchdaten;
+  if (md) {
+    teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} Aufstellungs- und ${md.ereignisse_zeilen} Ereigniszeilen`);
+    if (md.nachzug_meldungen) teile.push(`${md.nachzug_meldungen} Korrektur(en) vom Verband eingeholt`);
+    if (md.fehler) teile.push(`${md.fehler} Spiel(e) ohne Matchdaten`);
+    if (md.eigene_unzugeordnet) teile.push(`${md.eigene_unzugeordnet} eigene Spieler ohne Zuordnung`);
+  }
+
   if (erg.verwaiste_zuordnungen > 0 || erg.spiele.nicht_mehr_geliefert > 0) erg.status = "warnung";
+
+  /* Der Fruehwarner fuer den offenen Punkt "haelt personId ueber die
+     Saison?": springt der Anteil unzugeordneter eigener Spieler ueber die
+     Haelfte, hat der Verband vermutlich die IDs gewechselt. Sonst faellt es
+     erst auf, wenn jemand die leere Statistik bemerkt. */
+  if (md && md.aufstellung_zeilen > 0
+      && md.eigene_unzugeordnet / md.aufstellung_zeilen > UNZUGEORDNET_WARNUNG) {
+    erg.status = "warnung";
+    teile.push("auffaellig viele unzugeordnete Spieler — hat der SFV die personId gewechselt?");
+  }
   erg.meldung = teile.join(" · ");
   return erg;
 }
