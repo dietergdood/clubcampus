@@ -281,19 +281,29 @@ export async function laufeSync(
       teile.push(`${md.fehler} Spiel(e) ohne Matchdaten`
         + (md.fehlermeldungen.length ? ` — ${md.fehlermeldungen[0]}` : ""));
     }
-    if (md.eigene_unzugeordnet) teile.push(`${md.eigene_unzugeordnet} eigene Spieler ohne Zuordnung`);
   }
 
   if (erg.verwaiste_zuordnungen > 0 || erg.spiele.nicht_mehr_geliefert > 0) erg.status = "warnung";
 
-  /* Der Fruehwarner fuer den offenen Punkt "haelt personId ueber die
-     Saison?": springt der Anteil unzugeordneter eigener Spieler ueber die
-     Haelfte, hat der Verband vermutlich die IDs gewechselt. Sonst faellt es
-     erst auf, wenn jemand die leere Statistik bemerkt. */
-  if (md && md.aufstellung_zeilen > 0
-      && md.eigene_unzugeordnet / md.aufstellung_zeilen > UNZUGEORDNET_WARNUNG) {
-    erg.status = "warnung";
-    teile.push("auffaellig viele unzugeordnete Spieler — hat der SFV die personId gewechselt?");
+  /* ZWEI VERSCHIEDENE LAGEN, die vorher denselben Text bekamen.
+
+     Gibt es NOCH KEINE EINZIGE Zuordnung, ist alles unzugeordnet — das ist
+     der Normalzustand nach dem ersten Lauf und kein Verdachtsfall. Der Satz
+     "hat der SFV die personId gewechselt?" waere dort schlicht falsch und
+     schickt jemanden auf eine Suche, die es nicht gibt.
+
+     Gibt es Zuordnungen UND trotzdem viele Unbekannte, ist es der
+     Fruehwarner fuer den offenen Punkt "haelt personId ueber die Saison?"
+     (CLAUDE.md): wechselt der Verband die IDs zum 1. Juli, zeigen alle
+     Zuordnungen ins Leere — und zwar still. */
+  if (md && md.eigene_unzugeordnet > 0) {
+    if (md.zuordnungen_gesamt === 0) {
+      teile.push(`Zuordnung steht noch aus — ${md.eigene_unzugeordnet} Spieler warten`);
+    } else if (md.aufstellung_zeilen > 0
+        && md.eigene_unzugeordnet / md.aufstellung_zeilen > UNZUGEORDNET_WARNUNG) {
+      erg.status = "warnung";
+      teile.push(`auffaellig viele unzugeordnete Spieler trotz ${md.zuordnungen_gesamt} bestehender Zuordnungen — hat der SFV die personId gewechselt?`);
+    }
   }
   erg.meldung = teile.join(" · ");
   return erg;

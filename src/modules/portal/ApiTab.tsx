@@ -35,12 +35,17 @@ interface ApiTabProps {
   /* Fuer die Spieler-Warteschlange: welche SFV-personId gehoert zu welchem
      Mitglied. Einrichtung, kein Tagesgeschaeft — deshalb hier neben der
      Team-Zuordnung und nicht im Spielbetrieb. */
+  /* Nach einem Lauf von Hand muss die Kachel neu geladen werden — sonst
+     zeigt "Letzter Sync" weiter den Stand vom Oeffnen des Tabs. Die Zeile
+     wird von der Edge Function geschrieben (index.ts, beide Pfade), nicht
+     von hier; nur gelesen wird sie zu selten. */
+  onReload?: (() => void | Promise<void>) | null;
   vereinId?: string | null;
   benutzerId?: string | null;
   dbMitglieder?: Mitglied[];
 }
 
-export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=null,dbTeams=[],setDbTeams,vereinId=null,benutzerId=null,dbMitglieder=[]}: ApiTabProps) {
+export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=null,dbTeams=[],setDbTeams,onReload=null,vereinId=null,benutzerId=null,dbMitglieder=[]}: ApiTabProps) {
   /* Welcher Anschluss ist gerade aufgeklappt. Nur Anzeigezustand, deshalb
      hier und nicht im Modul. */
   const [offen,setOffen]=useState<string|null>(null);
@@ -59,6 +64,9 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     setLaeuft(false);
     if(fehler){ setErgebnis({ok:false,text:fehler}); return; }
     setErgebnis({ok:true,text:JSON.stringify(daten,null,2)});
+    /* Erst jetzt neu laden: letzter_sync, sync_status und sync_meldung
+       stehen danach in der Kachel, statt den Stand vom Oeffnen zu zeigen. */
+    if(onReload) await onReload();
   }
 
   return (
@@ -74,7 +82,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
 
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen===null&&(
         <div>
-          <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
+          <InfoBox text="Zugangsdaten stehen nicht in der Datenbank, sondern in den Supabase-Secrets der Edge Function (npx supabase secrets set). Die Adresse des Anschlusses steht in api_verbindungen.api_url." color={AM}/>
           {ergebnis&&(
             <>
               <div style={{height:12}}/>

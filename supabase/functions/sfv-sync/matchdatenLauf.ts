@@ -29,6 +29,10 @@ export interface MatchdatenErgebnis {
   aufstellung_zeilen: number;
   ereignisse_zeilen: number;
   eigene_unzugeordnet: number;
+  /* Wie viele Zuordnungen es ueberhaupt schon gibt. Trennt den
+     Normalzustand vom Verdachtsfall: ohne eine einzige Zuordnung steht sie
+     schlicht noch aus, das ist keine Auffaelligkeit. */
+  zuordnungen_gesamt: number;
   nachzug_meldungen: number;
   fehler: number;
   /* WARUM ein Spiel scheiterte, nicht nur DASS. Ohne diese Liste sah ein
@@ -58,7 +62,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -139,7 +143,9 @@ export async function laufeMatchdaten(
   }
 
   erg.nachzug_meldungen = await pruefeNachzug(db, v.verein_id);
-  erg.eigene_unzugeordnet = await zaehleUnzugeordnet(db, v.verein_id);
+  const zaehlung = await zaehleUnzugeordnet(db, v.verein_id);
+  erg.eigene_unzugeordnet = zaehlung.offen;
+  erg.zuordnungen_gesamt = zaehlung.bekannt;
 
   return erg;
 }
@@ -219,7 +225,9 @@ async function pruefeNachzug(db: SupabaseClient, vereinId: string): Promise<numb
    Wie viele eigene Aufstellungszeilen haben keine Zuordnung? Im Normalbetrieb
    null bis zwei — ein neuer Spieler beim ersten Einsatz. Springt die Zahl auf
    eine ganze Mannschaft, hat der SFV vermutlich die personId gewechselt. */
-async function zaehleUnzugeordnet(db: SupabaseClient, vereinId: string): Promise<number> {
+async function zaehleUnzugeordnet(
+  db: SupabaseClient, vereinId: string,
+): Promise<{ offen: number; bekannt: number }> {
   const { data: aufstellung } = await db
     .from("spiel_aufstellung").select("sfv_person_id").eq("verein_id", vereinId);
   const { data: zuordnung } = await db
@@ -229,5 +237,5 @@ async function zaehleUnzugeordnet(db: SupabaseClient, vereinId: string): Promise
   const alle = new Set((aufstellung ?? []).map((a) => Number(a.sfv_person_id)));
   let offen = 0;
   for (const p of alle) if (!bekannt.has(p)) offen += 1;
-  return offen;
+  return { offen, bekannt: bekannt.size };
 }

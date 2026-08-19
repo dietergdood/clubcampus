@@ -693,6 +693,11 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           apiVerbindungen={apiVerbindungen} tab={tab}
           sb={supabase} dbTeams={dbTeams} setDbTeams={setDbTeams}
           vereinId={vereinId ?? null} benutzerId={benutzerId} dbMitglieder={dbMitglieder}
+          onReload={async()=>{
+            if(!supabase) return;
+            const {data}=await supabase.from("api_verbindungen").select("*").order("sort_order");
+            if(data) setApiVerbindungen(data as unknown as ApiVerbindung[]);
+          }}
         />
       <AuditTab
           loading={loading} isMobile={isMobile} mobileKachel={mobileKachel}

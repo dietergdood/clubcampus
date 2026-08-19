@@ -271,14 +271,37 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
               {played&&(
                 <div style={{background:"linear-gradient(135deg,#3B82F6 0%,#60A5FA 100%)",borderRadius:14,padding:"16px 20px",display:"flex",alignItems:"center",gap:16}}>
                   <div className="cc-flex-1">
-                    <div style={{fontSize:14,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:4}}>Endergebnis</div>
-                    <div style={{fontSize:24,fontWeight:800,color:"#fff",letterSpacing:3,lineHeight:1}}>{spiel.result}</div>
-                    {spiel.htResult&&<div style={{fontSize:14,color:"rgba(255,255,255,0.4)",marginTop:4}}>Halbzeit: {spiel.htResult}</div>}
+                    {/* BEIDE Mannschaften um den Stand, wie beim SFV:
+                        "FC Oberland United 0:7 FC Herrliberg 1". `result`
+                        steht in SFV-Reihenfolge Heim:Auswaerts — daran
+                        richtet sich auch die Anordnung, sonst stuende der
+                        Stand verkehrt zum Namen.
+
+                        ⚠ KEINE BEWERTUNG mehr. Hier stand ein Abzeichen
+                        "Sieg"/"Niederlage", und es war doppelt falsch: Es
+                        verglich die Staende als TEXT (bei zweistelligen
+                        Zahlen schon daneben) und las den ersten Wert immer
+                        als unseren — bei einem Auswaertsspiel also den des
+                        Gegners. Ein 0:7-Sieg auswaerts erschien damit als
+                        Niederlage. Und selbst richtig gerechnet ist die
+                        Beschriftung heikel: die Zahl spricht fuer sich. */}
+                    <div style={{fontSize:14,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>Endergebnis</div>
+                    <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)",textAlign:"right",minWidth:0}}>
+                        {spiel.home?getVereinsnameStatic():spiel.opponent}
+                      </span>
+                      <span style={{fontSize:24,fontWeight:800,color:"#fff",letterSpacing:3,lineHeight:1,whiteSpace:"nowrap"}}>
+                        {spiel.result}
+                      </span>
+                      <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)",minWidth:0}}>
+                        {spiel.home?spiel.opponent:getVereinsnameStatic()}
+                      </span>
+                    </div>
+                    {spiel.htResult&&<div style={{fontSize:14,color:"rgba(255,255,255,0.4)",marginTop:6}}>Halbzeit: {spiel.htResult}</div>}
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:14,color:"rgba(255,255,255,0.4)",marginBottom:4}}>{spiel.home?"Heimspiel":"Auswärtsspiel"}</div>
                     {spiel.att&&<div style={{fontSize:14,color:"rgba(255,255,255,0.6)"}}><TI n="users" style={{marginRight:3}}/> {spiel.att} Spieler</div>}
-                    <div style={{marginTop:8}}><span style={{background:spiel.result?.split(":")[0]>spiel.result?.split(":")[1]?"#16A34A":spiel.result?.split(":")[0]===spiel.result?.split(":")[1]?"#F3F4F6":"#DC2626",color:"#fff",fontSize:14,fontWeight:700,padding:"3px 10px",borderRadius:20}}>{spiel.result?.split(":")[0]>spiel.result?.split(":")[1]?"Sieg":spiel.result?.split(":")[0]===spiel.result?.split(":")[1]?"Unentschieden":"Niederlage"}</span></div>
                   </div>
                 </div>
               )}
