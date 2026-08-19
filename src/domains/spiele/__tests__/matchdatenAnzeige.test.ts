@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   baueStatistik, gruppiereNachTeam, hatVerlauf, mischeEreignisse,
   offeneZuordnungen, TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
+  beschreibeEreignis, geaenderteFelder,
 } from "../matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../matchdatenAnzeige.ts";
 
@@ -171,5 +172,49 @@ describe("baueStatistik", () => {
       { ...e({ id: "1", ist_eigener: false, sfv_person_id: null, gegner_club_name: "FC Egg" }), spiel_id: "s1" },
     ], new Set(["s1"]));
     expect(s[0].tore).toBe(0);
+  });
+});
+
+describe("geaenderteFelder — was die Korrektur anfasst", () => {
+  const original = { typ_id: 1, minute: 34, ist_eigener: true, sfv_person_id: 111, rueckennr: 11, gegner_club_name: null };
+
+  it("nennt nur das geänderte Feld", () => {
+    /* Wer den Torschützen korrigiert, hat zur Minute nichts gesagt — genau
+       diese Liste entscheidet später den Nachzug-Vergleich. */
+    const neu = { ...original, sfv_person_id: 222, rueckennr: 11 };
+    expect(geaenderteFelder(original, neu)).toEqual(["sfv_person_id"]);
+  });
+
+  it("nennt mehrere, wenn mehrere abweichen", () => {
+    const neu = { ...original, sfv_person_id: 222, rueckennr: 7 };
+    expect(geaenderteFelder(original, neu).sort()).toEqual(["rueckennr", "sfv_person_id"]);
+  });
+
+  it("liefert leer, wenn nichts abweicht", () => {
+    /* Dann speichert die Maske nicht: eine Vereins-Zeile ohne Abweichung
+       verdeckte die SFV-Zeile, ohne etwas zu ändern. */
+    expect(geaenderteFelder(original, { ...original })).toEqual([]);
+  });
+
+  it("behandelt null und undefined gleich", () => {
+    expect(geaenderteFelder({ ...original, gegner_club_name: null }, { ...original })).toEqual([]);
+  });
+});
+
+describe("beschreibeEreignis — für den Verwerfen-Dialog", () => {
+  const sfv = e({ id: "s1", typ: "Tor", minute: 34, rueckennr: 11, sfv_person_id: 111 });
+
+  it("sagt, was nach dem Verwerfen wieder gilt", () => {
+    expect(beschreibeEreignis(sfv)).toBe("Tor, 34' · Nr. 11");
+  });
+
+  it("nimmt den Namen, sobald die Person zugeordnet ist", () => {
+    expect(beschreibeEreignis(sfv, new Map([[111, "A. Schmid"]]))).toBe("Tor, 34' · A. Schmid");
+  });
+
+  it("nennt beim Gegner den Verein", () => {
+    const fremd = e({ id: "s2", typ: "Verwarnung", minute: 57, ist_eigener: false,
+                      sfv_person_id: null, rueckennr: null, gegner_club_name: "FC Egg" });
+    expect(beschreibeEreignis(fremd)).toBe("Verwarnung, 57' · FC Egg");
   });
 });

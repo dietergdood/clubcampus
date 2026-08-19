@@ -243,3 +243,53 @@ export function baueStatistik(
 
   return [...proPerson.values()].sort((a, b) => b.einsaetze - a.einsaetze);
 }
+
+/* ── Korrektur ─────────────────────────────────────────────────────
+   Zwei Helfer, die die Maske braucht — als reine Funktionen, damit sie
+   ohne React prüfbar sind. */
+
+/** Wer hinter einem Ereignis steckt, in Worten.
+
+    Ohne Zuordnung bleibt die Rückennummer: der Name eines eigenen
+    Spielers steht nicht in unserer Datenbank, solange ihn niemand
+    zugeordnet hat, und der eines fremden nie. */
+export function beschreibeWer(
+  e: Pick<EreignisZeile, "ist_eigener" | "sfv_person_id" | "rueckennr" | "gegner_club_name">,
+  namen?: Map<number, string>,
+): string {
+  if (!e.ist_eigener) return e.gegner_club_name ?? "Gegner";
+  const name = e.sfv_person_id != null ? namen?.get(e.sfv_person_id) : null;
+  if (name) return name;
+  return e.rueckennr != null ? `Nr. ${e.rueckennr}` : "Unser Team";
+}
+
+/** Kurzform eines Ereignisses für Dialoge: „Tor, 34' · Nr. 11". */
+export function beschreibeEreignis(
+  e: Pick<EreignisZeile, "typ" | "minute" | "ist_eigener" | "sfv_person_id" | "rueckennr" | "gegner_club_name">,
+  namen?: Map<number, string>,
+): string {
+  const teile = [e.typ ?? "Ereignis"];
+  if (e.minute != null) teile.push(`${e.minute}'`);
+  return `${teile.join(", ")} · ${beschreibeWer(e, namen)}`;
+}
+
+/** Welche Felder weicht die Korrektur vom Original ab?
+
+    Genau diese Liste landet in `geaenderte_felder` und entscheidet später
+    den Nachzug-Vergleich: verglichen wird nur, was angefasst wurde. Ein
+    Vergleich der ganzen Zeile schlüge bei jeder Nebenänderung an.
+
+    Leere Liste heisst: es gibt nichts zu korrigieren. Die Maske speichert
+    dann nicht — eine Vereins-Zeile ohne Abweichung wäre eine Zeile, die
+    den Sync blockiert, ohne etwas zu ändern. */
+export const KORRIGIERBAR = ["typ_id", "minute", "ist_eigener", "sfv_person_id", "rueckennr", "gegner_club_name"] as const;
+export type KorrigierbaresFeld = (typeof KORRIGIERBAR)[number];
+
+export function geaenderteFelder(
+  original: Record<string, unknown>, neu: Record<string, unknown>,
+): KorrigierbaresFeld[] {
+  return KORRIGIERBAR.filter(f => {
+    const a = original[f] ?? null, b = neu[f] ?? null;
+    return String(a) !== String(b);
+  });
+}

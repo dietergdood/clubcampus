@@ -18,13 +18,15 @@
    erst gespeichert (siehe migration_matchdaten.sql).
    ═══════════════════════════════════════════════════════════════ */
 import { useEffect, useMemo, useState } from "react";
-import { Card } from "../../theme.ts";
+import { Btn, Card, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import {
-  hatVerlauf, mischeEreignisse, OHNE_VERLAUF_TEXT,
+  beschreibeEreignis, beschreibeWer, hatVerlauf, mischeEreignisse, OHNE_VERLAUF_TEXT,
   TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
 } from "../../domains/spiele/matchdatenAnzeige.ts";
-import { fetchSpielMatchdaten } from "../../domains/spiele/matchdatenService.ts";
+import type { AnzeigeEreignis } from "../../domains/spiele/matchdatenAnzeige.ts";
+import { fetchSpielMatchdaten, verwerfeKorrektur } from "../../domains/spiele/matchdatenService.ts";
+import { EreignisKorrektur } from "./EreignisKorrektur.tsx";
 import type { AufstellungMitZeit } from "../../domains/spiele/matchdatenService.ts";
 import type { EreignisZeile } from "../../domains/spiele/matchdatenAnzeige.ts";
 import type { Sb } from "../../types.ts";
@@ -37,6 +39,13 @@ interface Props {
   htResultat?: string | null;
   /** sfv_person_id → Anzeigename, aus sfv_zuordnung + mitglieder. */
   namen?: Map<number, string>;
+  /** Korrigieren dürfen Trainer, Admin und Funktionäre mit mindestens
+      Trainer-Rechten — dieselbe Bedingung wie in der RLS-Policy
+      spiel_ereignisse_write. */
+  canEdit?: boolean;
+  vereinId?: string | null;
+  benutzerId?: string | null;
+  gegnerName?: string | null;
 }
 
 /* Die Icon-Namen sind gegen src/icons.tsx geprueft — `square` und
@@ -51,39 +60,69 @@ const EREIGNIS_ICON: Record<number, string> = {
   9: "arrow-right",   // Assist
 };
 
-export function Spielbericht({ sb, spielId, resultat, htResultat, namen }: Props) {
+export function Spielbericht({
+  sb, spielId, resultat, htResultat, namen,
+  canEdit = false, vereinId = null, benutzerId = null, gegnerName = null,
+}: Props) {
+  const [confirm, confirmDialog] = useConfirm();
+  const [maske, setMaske] = useState<{ ereignis: AnzeigeEreignis | null } | null>(null);
   const [aufstellung, setAufstellung] = useState<AufstellungMitZeit[]>([]);
   const [roh, setRoh] = useState<EreignisZeile[]>([]);
   const [laedt, setLaedt] = useState(true);
 
-  useEffect(() => {
-    let abgebrochen = false;
+  async function laden() {
     setLaedt(true);
-    fetchSpielMatchdaten(sb, spielId).then(d => {
-      if (abgebrochen) return;
-      setAufstellung(d.aufstellung); setRoh(d.ereignisse); setLaedt(false);
+    const d = await fetchSpielMatchdaten(sb, spielId);
+    setAufstellung(d.aufstellung); setRoh(d.ereignisse); setLaedt(false);
+  }
+  useEffect(() => { laden(); }, [spielId]);
+
+  /* ⚠ Der Dialog sagt, WAS DANACH GILT. "Korrektur verwerfen?" allein
+     liesse offen, wohin man zurueckfaellt — und der SFV-Wert ist genau
+     das, was der Verein einmal fuer falsch gehalten hat. */
+  async function verwerfen(e: AnzeigeEreignis) {
+    const zurueck = e.original
+      ? `Es gilt wieder der SFV-Wert: ${beschreibeEreignis(e.original, namen)}`
+      : "Der Eintrag verschwindet aus dem Spielbericht. Der SFV hat dazu nichts geliefert.";
+    const ok = await confirm({
+      title: "Korrektur verwerfen?",
+      message: `${zurueck}
+
+Die Korrektur bleibt im Verlauf nachvollziehbar, wirkt aber nicht mehr.`,
+      confirmLabel: "Verwerfen",
+      danger: true,
     });
-    return () => { abgebrochen = true; };
-  }, [spielId]);
+    if (!ok) return;
+    await verwerfeKorrektur(sb, e.id);
+    await laden();
+  }
 
   const ereignisse = useMemo(() => mischeEreignisse(roh), [roh]);
   const verlaufDa = useMemo(() => hatVerlauf(roh), [roh]);
-
-  /* Wer hinter einer personId steckt, weiss nur die Zuordnung. Ohne sie
-     bleibt die Rückennummer — der Bericht bleibt lesbar, nur unpersönlich. */
-  const wer = (e: { ist_eigener: boolean; sfv_person_id: number | null; rueckennr: number | null; gegner_club_name: string | null }) => {
-    if (!e.ist_eigener) return e.gegner_club_name ?? "Gegner";
-    const name = e.sfv_person_id != null ? namen?.get(e.sfv_person_id) : null;
-    if (name) return name;
-    return e.rueckennr != null ? `Nr. ${e.rueckennr}` : "Unser Team";
-  };
 
   if (laedt) return <Card><div className="cc-text-sm cc-text-sub">Lädt…</div></Card>;
 
   return (
     <div className="cc-col cc-gap-12">
+      {confirmDialog}
+      {maske && vereinId && benutzerId && (
+        <EreignisKorrektur
+          sb={sb} vereinId={vereinId} benutzerId={benutzerId} spielId={spielId}
+          ereignis={maske.ereignis} aufstellung={aufstellung}
+          namen={namen} gegnerName={gegnerName}
+          onFertig={() => { setMaske(null); laden(); }}
+          onAbbrechen={() => setMaske(null)}
+        />
+      )}
       <Card>
-        <div className="cc-section-title"><TI n="ball-football" size={14}/> Spielverlauf</div>
+        <div className="cc-section-title-row">
+          <div className="cc-section-title"><TI n="ball-football" size={14}/> Spielverlauf</div>
+          {canEdit && (
+            <Btn onClick={() => setMaske({ ereignis: null })}>
+              <TI n="plus" size={13}/> Nachtragen
+            </Btn>
+          )}
+        </div>
 
         {/* Der Stand steht ueber dem Verlauf, damit klar ist, dass er nicht
             aus ihm stammt. */}
@@ -110,7 +149,7 @@ export function Spielbericht({ sb, spielId, resultat, htResultat, namen }: Props
               {e.subtyp && e.subtyp !== "-" && <span className="cc-text-sub">· {e.subtyp}</span>}
             </div>
             <div className="cc-row cc-gap-6">
-              <span className={e.ist_eigener ? undefined : "cc-text-sub"}>{wer(e)}</span>
+              <span className={e.ist_eigener ? undefined : "cc-text-sub"}>{beschreibeWer(e, namen)}</span>
               {/* Was der Verein geaendert hat, wird als solches gezeigt —
                   sonst sieht es aus, als haette der Verband es so erfasst. */}
               {e.vomVerein && (
@@ -119,6 +158,18 @@ export function Spielbericht({ sb, spielId, resultat, htResultat, namen }: Props
                              : "Vom Verein nachgetragen"}>
                   {e.original ? "korrigiert" : "nachgetragen"}
                 </span>
+              )}
+              {canEdit && (
+                <button className="cc-icon-btn" title="Korrigieren"
+                  onClick={() => setMaske({ ereignis: e })}>
+                  <TI n="pencil" size={13}/>
+                </button>
+              )}
+              {canEdit && e.vomVerein && (
+                <button className="cc-icon-btn-danger" title="Korrektur verwerfen"
+                  onClick={() => verwerfen(e)}>
+                  <TI n="x" size={13}/>
+                </button>
               )}
             </div>
           </div>
