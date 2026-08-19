@@ -132,7 +132,24 @@ export function MitgliedtypFelderSektion({
 
   /* ── Seite ── */
 
-  if (typen.length === 0) return null;
+  /* Kein `return null`. Eine Sektion, die still verschwindet, ist von einer
+     nicht gerenderten nicht zu unterscheiden — genau das hat am 19.08.2026
+     eine Stunde gekostet, als der Aufruf beim Entfernen der alten Matrizen
+     mit herausgeschnitten wurde und niemand sagen konnte, ob sie fehlt oder
+     leer ist. */
+  if (typen.length === 0) {
+    return (
+      <Card>
+        <div className="cc-section-title">
+          <TI n="id-badge" size={14}/> Was ein Mitgliedtyp hat
+        </div>
+        <div className="cc-text-sm cc-text-sub">
+          Noch kein aktiver Mitgliedtyp angelegt — oben anlegen, dann erscheint
+          hier seine Konfiguration.
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <>

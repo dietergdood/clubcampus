@@ -182,15 +182,20 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
             </div>
           </ModalOrSheet>
 
-          {/* Die beiden Matrizen "Pflichtfelder nach Mitgliedtyp" und
-              "Zusatzfelder nach Rolle" standen hier bis zum 19.08.2026.
-              Ersetzt durch MitgliedtypFelderSektion oben — drei Werte statt
-              eines Häkchens, und eine Achse statt zweier.
+          {/* Was ein Mitgliedtyp hat — drei Werte statt eines Häkchens.
+              Ersetzt die beiden Matrizen "Pflichtfelder nach Mitgliedtyp"
+              und "Zusatzfelder nach Rolle", die hier bis zum 19.08.2026
+              standen: eine Achse statt zweier.
 
               Die Tabellen `mitgliedtyp_pflichtfelder` und
               `rolle_pflichtfelder` stehen noch in der Datenbank, werden aber
               von keiner Stelle mehr gelesen. Sie fallen in einer eigenen
               Migration, wie `elternkontakte`. */}
+          <MitgliedtypFelderSektion
+            supabase={supabase} vereinId={vereinId}
+            dbMitgliedtypen={dbMitgliedtypen}
+            feldkonfig={feldkonfig} setFeldkonfig={setFeldkonfig}
+          />
         </div>
       )}
 
