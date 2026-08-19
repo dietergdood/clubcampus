@@ -15,8 +15,15 @@
    einzuschalten.
 
    Alle Klassen bestehen bereits (`cc-list-item-row`, `cc-between`,
-   `cc-text-muted`, `cc-seg`, `cc-toggle`, `cc-section-title`) — für
-   diese Seite ist keine neue CSS-Klasse entstanden.
+   `cc-text-muted`, `cc-text-danger`, `cc-seg`, `cc-toggle`, `cc-mt-8`,
+   `cc-section-title`) — für diese Seite ist keine neue CSS-Klasse
+   entstanden.
+
+   Ein einziges Inline-Style bleibt, mit Grund: `cc-input` ist
+   `width:100%`, der Mitgliedtyp-Wähler steht aber in einer
+   `cc-section-title-row` neben der Überschrift und darf sie nicht
+   verdrängen. Dafür gibt es keine Klasse, und eine neue anzulegen
+   wäre für einen Einzelfall zu viel.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
 import { Card, InfoBox } from "../../theme.ts";
@@ -179,12 +186,12 @@ export function MitgliedtypFelderSektion({
         </div>
 
         <InfoBox color={BL} text={
-          <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+          <div>
             <strong>Pflicht</strong> — wird gezeigt und verlangt.{" "}
             <strong>Freiwillig</strong> — wird gezeigt, darf leer bleiben.{" "}
             <strong>Gibt es nicht</strong> — verschwindet aus Profil, Neuanlage und
             Datenprüfung, auch für die Verwaltung.
-            <div style={{ marginTop: 6 }}>
+            <div className="cc-mt-8">
               Nicht Gesetztes gilt als <strong>freiwillig</strong>; gespeichert wird nur
               die Abweichung. Ein neuer Mitgliedtyp zeigt deshalb ein vollständiges Profil.
             </div>
@@ -192,7 +199,7 @@ export function MitgliedtypFelderSektion({
         }/>
 
         {fehler && (
-          <div className="cc-text-sm" style={{ color: "var(--danger,#ef4444)", marginTop: 8 }}>
+          <div className="cc-text-sm cc-text-danger cc-mt-8">
             Nicht gespeichert: {fehler}
           </div>
         )}
@@ -232,9 +239,9 @@ export function MitgliedtypFelderSektion({
                     PLZ-Lookup füllt Ort und Kanton, die Adresssuche alle
                     vier. Einzeln abschaltbar nähme das Formular sich selbst
                     die Eingabe — deshalb "Gibt es nicht" nur am Block. */}
-                <div className="cc-list-item-row cc-between" style={{ marginTop: 4 }}>
+                <div className="cc-list-item-row cc-between">
                   <div className={istSichtbar(konfig, "strasse") ? undefined : "cc-text-muted"}>
-                    <div style={{ fontWeight: 500 }}>Adresse</div>
+                    <div className="cc-text-bold">Adresse</div>
                     <div className="cc-inline-hint">
                       Vier Felder, ein Schalter — der PLZ-Lookup füllt Ort und Kanton
                       aus der PLZ.
