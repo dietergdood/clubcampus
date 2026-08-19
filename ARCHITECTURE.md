@@ -1029,6 +1029,32 @@ Die lesbare Prüftabelle (`nr / pruefung / erwartet / gefunden / status`) bleibt
 
 **Beim Übertragen:** `wc -c` der Datei gegen die Zeichenzahl im Editor vergleichen. Stimmen sie nicht, geht schon beim Einfügen etwas verloren; stimmen sie, verliert die Ausführung es.
 
+### Keine partiellen Unique-Indizes auf Spalten, gegen die geupsertet wird
+
+**`ON CONFLICT (spalten)` kann einen partiellen Index nicht ableiten.** Postgres verlangt dafür, dass die Anweisung dasselbe Prädikat mitbringt — `ON CONFLICT (a, b) WHERE …`. **PostgREST kann das nicht ausdrücken:** der Parameter `on_conflict` nimmt eine Spaltenliste, kein Prädikat. Jeder `upsert()` gegen einen partiellen Index endet deshalb in
+
+```
+42P10  there is no unique or exclusion constraint matching
+       the ON CONFLICT specification
+```
+
+**Und das Prädikat kauft meistens gar nichts.** Der übliche Gedanke ist: „nur Zeilen der einen Sorte tragen diesen Wert, nur sie müssen eindeutig sein". Das erledigt Postgres schon von selbst — **`NULL` gilt in einem Unique-Index als verschieden** (`NULLS DISTINCT` ist der Standard). Zeilen der anderen Sorte tragen dort `NULL` und kollidieren weder untereinander noch mit den übrigen. Der Index wird durch das Prädikat also nicht strenger, nur unbrauchbar für den Upsert.
+
+**Aufgelaufen am 20.08.2026** an `spiel_ereignisse`: der Schlüssel war als
+`unique index … (verein_id, sfv_event_id) where herkunft = 'sfv'` angelegt, damit Vereins-Zeilen (die keine `sfv_event_id` haben) nicht kollidieren. Jeder Matchdaten-Lauf schrieb dadurch die Aufstellungen und **kein einziges Ereignis** — und weil der Aufstellungs-Upsert davor lief und durchging, sah es aus, als hätte der Verband nichts geliefert. Behoben mit `migration_matchdaten_fix_upsert.sql`: normaler `unique (verein_id, sfv_event_id)`, Verhalten für die Daten identisch.
+
+Also:
+
+```sql
+-- ✗ FALSCH, sobald darauf geupsertet wird
+create unique index x_key on x (a, b) where art = 'sfv';
+
+-- ✓ RICHTIG — NULL in b trennt die Sorten schon
+alter table x add constraint x_key unique (a, b);
+```
+
+Partielle Indizes bleiben richtig, wo **nur gelesen** wird (Abfragebeschleunigung) oder wo eine Bedingung wirklich nötig ist, die `NULL` nicht abbildet — dann aber kein `upsert()` darauf, sondern lesen und danach `insert`/`update`.
+
 ### Pflicht für jede neue Tabelle
 
 ```sql

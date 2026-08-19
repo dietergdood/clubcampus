@@ -135,6 +135,18 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 - Neue UI-Komponenten in `COMPONENT_REGISTRY` (`src/shared/componentRegistry.js`) eintragen — daraus generiert sich der Design-System-Tab in der Portalverwaltung.
 - Nach dem Auslagern einer Komponente: alle Props gegen den Parent prüfen und Factory-Funktionen (`makeXxx`) auf `return` kontrollieren — der Build findet fehlende Runtime-Props nicht.
 - **Beim Entfernen eines Bereichs erst zeigen, was darin liegt, dann schneiden.** Wer per Regex oder Index von A bis B schneidet statt gezielt zu ersetzen, nimmt alles mit, was seit dem letzten Hinsehen dazugekommen ist. Am 19.08.2026 so passiert: beim Herausnehmen der zwei alten Pflichtfeld-Matrizen aus `MitgliederKonfigTab` lag die neu eingefügte `<MitgliedtypFelderSektion/>` mitten im Schnittbereich und verschwand mit. **Kein Werkzeug meldet das** — ein ungenutzter Import ist für TypeScript kein Fehler, `tsc`, Build und Tests liefen grün, und der Tab war im Deployment ohne beide Hälften. Bei jeder Entfernung deshalb den Schnittbereich vorher ausgeben und gegenlesen.
+- **Ein leerer `catch` macht aus einem Fehler eine Datenlage.** Das ist der Grund, warum er so gefährlich ist: er bricht nichts ab und meldet nichts, sondern lässt den Code weiterlaufen, als wäre schlicht nichts da gewesen. Am 20.08.2026 hat ein `catch {}` in `sfv-sync/matchdatenLauf.ts` ein **`42P10` der eigenen Datenbank** verschluckt (der Ereignis-Upsert traf einen partiellen Index, den `ON CONFLICT` nicht ableiten kann). Nach aussen sah das aus wie „der Verband hat zu diesem Spiel keinen Verlauf erfasst" — und darauf ist eine Produktentscheidung gebaut worden, samt Text in der Oberfläche und einem Nachtrag im Auftrag. Die Regel:
+
+  ```js
+  } catch (e) {                       // ✓ binden, auch wenn nur gezählt wird
+    erg.fehler += 1;
+    erg.fehlermeldungen.push(`Spiel ${id}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  ```
+
+  Leer bleiben darf er nur, wo das Scheitern **keine Aussage über die Daten** ist: `localStorage`/`sessionStorage` (Quota, privater Modus), `JSON.parse` eines gespeicherten Werts mit Rückfall, `history.pushState`. Dort ist er richtig und steht im Projekt rund vierzigmal.
+
+  ⚠ **Bei Supabase kommt der Fehler gar nicht als `throw`.** `sb.from(…).select()` liefert `{ data, error }` und wirft nur bei einem Netzwerkfehler. Ein `try { const { data } = await … } catch {}` fängt den Datenbankfehler deshalb **nicht** — er verschwindet schon davor, weil `error` niemand liest. Wer eine Abfrage schreibt, liest `error`; das `catch` ist dafür kein Ersatz.
 - **`\b` ist in dieser Codebasis unbrauchbar.** JavaScript zählt nur `[A-Za-z0-9_]` als Wortzeichen — `ä`, `ö`, `ü` gehören nicht dazu. Mitten in „Rückennummer" steht deshalb eine Wortgrenze hinter dem `R`, und `/\bR\b/.test("Rückennummer")` ist **`true`**. In einem Projekt, dessen Bezeichner, Kommentare und UI-Texte durchgehend deutsch sind, trifft das ständig. Wer nach Bezeichnern sucht, nimmt stattdessen:
 
   ```js
