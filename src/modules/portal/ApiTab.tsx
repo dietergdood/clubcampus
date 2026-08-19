@@ -8,6 +8,7 @@ import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
 import { API_INFOS } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
+import { starteSync } from "../../domains/sfv/sfvService.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -43,6 +44,22 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
   /* Welcher Anschluss ist gerade aufgeklappt. Nur Anzeigezustand, deshalb
      hier und nicht im Modul. */
   const [offen,setOffen]=useState<string|null>(null);
+  /* Der Knopf "Sync starten" tat bis zum 20.08.2026 nichts (onClick={()=>{}}).
+     Er laeuft ueber den Admin-JWT-Pfad der Edge Function: der ignoriert
+     auto_sync und bearbeitet genau den eigenen Verein — so laesst sich ein
+     Lauf gezielt ausloesen, waehrend der stuendliche Auftrag aus ist.
+     Die Antwort wird ANGEZEIGT, nicht nur nach api_sync_log geschrieben. */
+  const [laeuft,setLaeuft]=useState(false);
+  const [ergebnis,setErgebnis]=useState<{ok: boolean; text: string}|null>(null);
+
+  async function syncStarten(){
+    if(!sb||laeuft) return;
+    setLaeuft(true); setErgebnis(null);
+    const {daten,fehler}=await starteSync(sb);
+    setLaeuft(false);
+    if(fehler){ setErgebnis({ok:false,text:fehler}); return; }
+    setErgebnis({ok:true,text:JSON.stringify(daten,null,2)});
+  }
 
   return (
     <div style={{display:'contents'}}>
@@ -58,6 +75,20 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen===null&&(
         <div>
           <InfoBox text="API-Keys werden aus Sicherheitsgründen nicht in der Datenbank gespeichert. Sie werden als Vercel Environment Variables konfiguriert." color={AM}/>
+          {ergebnis&&(
+            <>
+              <div style={{height:12}}/>
+              <Card>
+                <div className="cc-section-title">
+                  <TI n={ergebnis.ok?"check":"alert-circle"} size={14}/> Ergebnis des Laufs
+                </div>
+                <pre style={{fontSize:12,whiteSpace:"pre-wrap",wordBreak:"break-word",margin:0,
+                             color:ergebnis.ok?"var(--text)":"var(--danger,#ef4444)"}}>
+                  {ergebnis.text}
+                </pre>
+              </Card>
+            </>
+          )}
           <div style={{height:16}}/>
           <div className="cc-grid-cards" style={{gap:14}}>
             {(apiVerbindungen.length>0?apiVerbindungen:Object.keys(API_INFOS).map((key): ApiVerbindung=>({key,label:key,active:false,konfiguriert:false,sync_status:"deaktiviert"}))).map(api=>{
@@ -90,7 +121,11 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                     </div>
                   )}
                   <Row align="flex-start">
-                    {api.active&&<Btn small variant="primary" color={BL} onClick={()=>{}}>Sync starten</Btn>}
+                    {api.active&&api.key==="football_ch"
+                      ?<Btn small variant="primary" color={BL} onClick={syncStarten} disabled={laeuft}>
+                         {laeuft?"Läuft…":"Sync starten"}
+                       </Btn>
+                      :api.active&&<Btn small variant="primary" color={BL} onClick={()=>{}}>Sync starten</Btn>}
                     {api.key==="football_ch"
                       ?<>
                         <Btn small variant="outline" color="#888" onClick={()=>setOffen("football_ch")}>Teams zuordnen</Btn>

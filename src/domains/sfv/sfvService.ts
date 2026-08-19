@@ -101,3 +101,34 @@ export async function setzeTeamZuordnung(sb: Sb, teamId: number, sfv: SfvTeam | 
   if (error.code === "23505") return "Dieses SFV-Team ist bereits einem anderen Team zugeordnet.";
   return error.message || "Speichern fehlgeschlagen";
 }
+
+/** Ergebnis eines Laufs, wie index.ts es zurückgibt. Bewusst locker
+    typisiert: die Zusammensetzung steht in sync.ts und wächst dort. */
+export interface SyncAntwort {
+  laeufe?: Array<Record<string, unknown>>;
+  hinweis?: string;
+  fehler?: string;
+}
+
+/**
+ * Einen Sync-Lauf von Hand anstossen.
+ *
+ * Läuft über den Admin-JWT-Pfad der Edge Function — der ignoriert
+ * `auto_sync` (das filtert nur den Zeitplan) und bearbeitet genau den
+ * eigenen Verein. So lässt sich ein Lauf gezielt auslösen, während der
+ * stündliche Auftrag abgeschaltet ist.
+ *
+ * ⚠ Die Antwort kommt direkt zurück, nicht nur nach `api_sync_log` — wer
+ * von Hand anstösst, will sehen, was herauskam, und nicht nachschlagen.
+ */
+export async function starteSync(
+  sb: Sb, nur?: "spielplan" | "rangliste",
+): Promise<{ daten: SyncAntwort | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("sfv-sync", {
+    body: nur ? { aktion: "sync", nur } : { aktion: "sync" },
+  });
+  if (error) return { daten: null, fehler: data?.fehler || error.message || "Lauf fehlgeschlagen" };
+  if (data?.fehler) return { daten: null, fehler: String(data.fehler) };
+  return { daten: data as SyncAntwort, fehler: null };
+}
