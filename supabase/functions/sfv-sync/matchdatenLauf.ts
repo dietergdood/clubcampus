@@ -31,6 +31,12 @@ export interface MatchdatenErgebnis {
   eigene_unzugeordnet: number;
   nachzug_meldungen: number;
   fehler: number;
+  /* WARUM ein Spiel scheiterte, nicht nur DASS. Ohne diese Liste sah ein
+     42P10 aus der Datenbank genauso aus wie ein 404 vom Verband — am
+     20.08.2026 hat das einen reproduzierbaren Fehler tagelang als
+     "der SFV hat nichts geliefert" getarnt. Auf die ersten fuenf begrenzt:
+     scheitern alle zehn, sagen fuenf Meldungen dasselbe wie zehn. */
+  fehlermeldungen: string[];
 }
 
 /* Ab diesem Anteil unzugeordneter eigener Spieler wird der Lauf zur Warnung.
@@ -52,7 +58,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, nachzug_meldungen: 0, fehler: 0,
+    eigene_unzugeordnet: 0, nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -113,11 +119,22 @@ export async function laufeMatchdaten(
         .eq("id", spiel.id);
 
       erg.spiele_geholt += 1;
-    } catch {
+    } catch (e) {
       /* Ein Spiel, das der SFV nicht liefert (404 bei aelteren Saisons),
          darf den Lauf nicht abbrechen. matchdaten_geholt_am bleibt leer,
-         damit es beim naechsten Mal wieder drankommt. */
+         damit es beim naechsten Mal wieder drankommt.
+
+         ⚠ ABER DIE URSACHE WIRD FESTGEHALTEN. Bis zum 20.08.2026 stand hier
+         ein `catch {}` ohne Bindung — und verschluckte damit ein 42P10 der
+         eigenen Datenbank (der Ereignis-Upsert traf einen partiellen Index,
+         den ON CONFLICT nicht ableiten kann). Von aussen sah das aus wie
+         "der Verband hat zu diesem Spiel nichts". Ein Fehler, der wie eine
+         Datenlage aussieht, ist schlimmer als einer, der abbricht. */
       erg.fehler += 1;
+      const text = e instanceof Error ? e.message : String(e);
+      if (erg.fehlermeldungen.length < 5) {
+        erg.fehlermeldungen.push(`Spiel ${matchId}: ${text}`);
+      }
     }
   }
 

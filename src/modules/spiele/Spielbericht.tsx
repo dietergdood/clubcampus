@@ -22,6 +22,7 @@ import { Btn, Card, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import {
   beschreibeEreignis, beschreibeWer, hatVerlauf, mischeEreignisse, OHNE_VERLAUF_TEXT,
+  unzugeordnetLabel,
   TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
 } from "../../domains/spiele/matchdatenAnzeige.ts";
 import type { AnzeigeEreignis } from "../../domains/spiele/matchdatenAnzeige.ts";
@@ -189,7 +190,15 @@ Die Korrektur bleibt im Verlauf nachvollziehbar, wirkt aber nicht mehr.`,
                 <span className="cc-text-sub" style={{ minWidth: 28, textAlign: "right" }}>
                   {a.rueckennr ?? "—"}
                 </span>
-                <span>{namen?.get(a.sfv_person_id) ?? `personId ${a.sfv_person_id}`}</span>
+                {/* Ohne Zuordnung ein Platzhalter, der sagt was fehlt — nicht
+                    die rohe personId. Die steht klein daneben, fuer den Fall,
+                    dass jemand sie beim Zuordnen braucht. */}
+                {namen?.get(a.sfv_person_id)
+                  ? <span>{namen.get(a.sfv_person_id)}</span>
+                  : <span className="cc-text-sub">
+                      {unzugeordnetLabel(a.rueckennr)}
+                      <span className="cc-inline-hint"> personId {a.sfv_person_id}</span>
+                    </span>}
               </div>
               <span className="cc-text-sm cc-text-sub">
                 {a.position_name ?? "—"}

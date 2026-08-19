@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   baueStatistik, gruppiereNachTeam, hatVerlauf, mischeEreignisse,
   offeneZuordnungen, TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
-  beschreibeEreignis, geaenderteFelder,
+  beschreibeEreignis, geaenderteFelder, unzugeordnetLabel,
 } from "../matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../matchdatenAnzeige.ts";
 
@@ -216,5 +216,23 @@ describe("beschreibeEreignis — für den Verwerfen-Dialog", () => {
     const fremd = e({ id: "s2", typ: "Verwarnung", minute: 57, ist_eigener: false,
                       sfv_person_id: null, rueckennr: null, gegner_club_name: "FC Egg" });
     expect(beschreibeEreignis(fremd)).toBe("Verwarnung, 57' · FC Egg");
+  });
+});
+
+describe("unzugeordnetLabel", () => {
+  it("nennt die Rückennummer und sagt, dass die Zuordnung fehlt", () => {
+    /* Eine rohe personId ist schlechter als ein Platzhalter: sie sagt dem
+       Leser nichts, sieht aber aus wie eine Auskunft — und verdeckt, dass
+       hier noch etwas zu tun ist. */
+    expect(unzugeordnetLabel(1)).toBe("Nr. 1 · nicht zugeordnet");
+    expect(unzugeordnetLabel(27)).toBe("Nr. 27 · nicht zugeordnet");
+  });
+
+  it("kommt ohne Rückennummer aus", () => {
+    expect(unzugeordnetLabel(null)).toBe("Nicht zugeordnet");
+  });
+
+  it("nennt nie eine personId", () => {
+    expect(unzugeordnetLabel(9)).not.toMatch(/personId|\d{5,}/);
   });
 });

@@ -276,7 +276,11 @@ export async function laufeSync(
   if (md) {
     teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} Aufstellungs- und ${md.ereignisse_zeilen} Ereigniszeilen`);
     if (md.nachzug_meldungen) teile.push(`${md.nachzug_meldungen} Korrektur(en) vom Verband eingeholt`);
-    if (md.fehler) teile.push(`${md.fehler} Spiel(e) ohne Matchdaten`);
+    if (md.fehler) {
+      /* Die Ursache gehoert in die Meldung, nicht nur die Zahl. */
+      teile.push(`${md.fehler} Spiel(e) ohne Matchdaten`
+        + (md.fehlermeldungen.length ? ` — ${md.fehlermeldungen[0]}` : ""));
+    }
     if (md.eigene_unzugeordnet) teile.push(`${md.eigene_unzugeordnet} eigene Spieler ohne Zuordnung`);
   }
 

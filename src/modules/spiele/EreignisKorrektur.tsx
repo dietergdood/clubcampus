@@ -23,7 +23,7 @@ import { useMemo, useState } from "react";
 import { Btn, ModalOrSheet, ModalTitle } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import {
-  beschreibeWer, geaenderteFelder,
+  beschreibeWer, geaenderteFelder, unzugeordnetLabel,
   TYP_AUSSCHLUSS, TYP_TOR, TYP_VERWARNUNG,
 } from "../../domains/spiele/matchdatenAnzeige.ts";
 import type { AnzeigeEreignis } from "../../domains/spiele/matchdatenAnzeige.ts";
@@ -83,8 +83,12 @@ export function EreignisKorrektur({
       .sort((a, b) => (a.rueckennr ?? 99) - (b.rueckennr ?? 99))
       .map(a => ({
         id: a.sfv_person_id,
-        label: `${a.rueckennr != null ? `Nr. ${a.rueckennr} · ` : ""}`
-             + (namen?.get(a.sfv_person_id) ?? `personId ${a.sfv_person_id}`),
+        /* Dieselbe Regel wie im Spielbericht: ohne Zuordnung ein
+           Platzhalter, keine rohe Id. Die Rueckennummer traegt die Zeile —
+           wer beim Spiel war, erkennt daran genug, um zu waehlen. */
+        label: namen?.get(a.sfv_person_id)
+          ? `${a.rueckennr != null ? `Nr. ${a.rueckennr} · ` : ""}${namen.get(a.sfv_person_id)}`
+          : unzugeordnetLabel(a.rueckennr),
       }));
   }, [aufstellung, namen]);
 

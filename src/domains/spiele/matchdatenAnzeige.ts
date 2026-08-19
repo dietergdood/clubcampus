@@ -253,6 +253,16 @@ export function baueStatistik(
     Ohne Zuordnung bleibt die Rückennummer: der Name eines eigenen
     Spielers steht nicht in unserer Datenbank, solange ihn niemand
     zugeordnet hat, und der eines fremden nie. */
+/** Text für einen eigenen Spieler ohne Zuordnung.
+
+    ⚠ NIE die rohe personId als Anzeige. Eine Zahl aus einem fremden
+    System sagt dem Leser nichts, sieht aber aus wie eine Auskunft — und
+    verdeckt, dass hier schlicht noch etwas zu tun ist. Die Rückennummer
+    kennt jeder, der beim Spiel war; die Id gehört daneben, klein. */
+export function unzugeordnetLabel(rueckennr: number | null): string {
+  return rueckennr != null ? `Nr. ${rueckennr} · nicht zugeordnet` : "Nicht zugeordnet";
+}
+
 export function beschreibeWer(
   e: Pick<EreignisZeile, "ist_eigener" | "sfv_person_id" | "rueckennr" | "gegner_club_name">,
   namen?: Map<number, string>,
