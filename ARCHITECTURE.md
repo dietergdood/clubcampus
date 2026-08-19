@@ -282,9 +282,26 @@ Ausführliche Begründung beider Prüfungen: `CLAUDE.md` → „Bevor eine neue 
 
 Drei Aufräumarbeiten, gesammelt für einen Durchgang. Sie hängen nicht an den Modul-Migrationen und sind jederzeit machbar; nur das Entfernen toter Klassen wartet auf deren Abschluss.
 
-**1. Zehn doppelt definierte Klassen.** Welche Fassung wirkt, entscheidet allein die Zeilennummer — die spätere gewinnt, ohne Warnung. Pro Klasse einzeln entscheiden:
+**1. Zehn doppelt definierte Klassen.** Welche Fassung wirkt, entscheidet allein die Zeilennummer — die spätere gewinnt, ohne Warnung. Pro Klasse einzeln entscheiden.
 
-`cc-btn-danger` · `cc-btn-ghost` · `cc-btn-success` · `cc-check-icon` · `cc-hero-back` · `cc-mb-4` · `cc-ml-toolbar` · `cc-ml-view-custom` · `cc-role-chip-trainer` · `cc-table-wrap-inner`
+Nachgetragen am 19.08.2026: **was sie unterscheidet.** Das ist die eigentliche Information — zwei identische Definitionen sind ein Schönheitsfehler, zwei verschiedene sind eine Falle. Die zweite Zeile gewinnt, die erste ist tot.
+
+| Klasse | Zeilen | Unterschied | Einstufung |
+|---|---|---|---|
+| **`cc-btn-ghost`** | 562 / 793 | **zwei verschiedene Knöpfe.** 562: gerahmt, `padding 8px 16px`, `font-size 14`, Rahmen + `--surface`. 793: randlos, `padding 5px 8px`, `font-size 12`, transparent, `color var(--sub)` | ⚠ **der gefährliche Fall** |
+| `cc-btn-danger` | 337 / 558 | `padding 5px 12px` → `8px 16px`, `color #991B1B` → `#DC2626`, Rahmenfarbe gleich | erste tot |
+| `cc-btn-success` | 335 / 560 | dasselbe Muster wie `-danger` | erste tot |
+| `cc-check-icon` | 313 / 677 | `color #16a34a` → `#15803d`; 313 hat zusätzlich `flex-shrink:0`, das **verlorengeht** | erste tot, Nebenwirkung |
+| `cc-role-chip-trainer` | 855 / 859 | `#92400E` → `#B45309`, Rahmen entsprechend | erste tot |
+| `cc-table-wrap-inner` | 156 / 157 | 157 wirft `max-height: calc(100vh - 268px)` und `overflow-y` **weg** | erste tot, Nebenwirkung |
+| `cc-ml-view-custom` | 721 / 722 | `display:flex; gap:2px` → `inline-flex` ohne `gap` | erste tot |
+| `cc-mb-4` | 154 / 226 | identisch bis auf `!important` in 226 | harmlos |
+| `cc-ml-toolbar` | 343 / 796 | 796 ergänzt nur (`flex-wrap`, `overflow`) und überschreibt nichts | harmlos |
+| `cc-hero-back` | 886 / 893 | identisch | harmlos |
+
+**`cc-btn-ghost` ist der einzige Fall, bei dem die Klasse zweimal etwas anderes *ist*.** Wer die Definition in Zeile 562 liest und danach baut, bekommt die in 793 — einen anderen Knopf, in anderer Grösse und Farbe. Die übrigen neun sind Varianten derselben Sache oder identisch; bei `cc-check-icon` und `cc-table-wrap-inner` geht durch die zweite Fassung je eine Eigenschaft still verloren (`flex-shrink`, `max-height`).
+
+Reihenfolge für den Durchgang: `cc-btn-ghost` zuerst und einzeln — beide Fassungen sind im Einsatz, die Fundstellen müssen auf zwei Namen aufgeteilt werden. Die drei harmlosen zum Schluss, sie sind reine Streichungen.
 
 `cc-btn-danger` ist der Löschen-Knopf, `cc-ml-toolbar` die Listen-Toolbar — beides prominent.
 
