@@ -298,7 +298,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                           ein leerer Fleck faellt weniger auf als ein graues
                           Kaestchen. */}
                       <span style={{display:"flex",alignItems:"center",gap:8,justifyContent:"flex-end",minWidth:0}}>
-                        <Wappen url={spiel.home?eigenesWappen:gegnerWappen?.get(Number(spiel.sfv_gegner_team_id))}
+                        <Wappen url={spiel.home?eigenesWappen:gegnerWappen?.get(Number(spiel.sfvGegnerTeamId))}
                                 name={spiel.home?getVereinsnameStatic():spiel.opponent}/>
                         <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)",textAlign:"right"}}>
                           {spiel.home?getVereinsnameStatic():spiel.opponent}
@@ -311,7 +311,7 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                         <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)"}}>
                           {spiel.home?spiel.opponent:getVereinsnameStatic()}
                         </span>
-                        <Wappen url={spiel.home?gegnerWappen?.get(Number(spiel.sfv_gegner_team_id)):eigenesWappen}
+                        <Wappen url={spiel.home?gegnerWappen?.get(Number(spiel.sfvGegnerTeamId)):eigenesWappen}
                                 name={spiel.home?spiel.opponent:getVereinsnameStatic()}/>
                       </span>
                     </div>
@@ -361,7 +361,15 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                 </div>
                 <div style={S_LIST_ITEM}>
                   <span style={S_SUB}>Heim / Gast</span>
-                  <span style={S_06}>{spiel.home?getVereinsnameStatic():getVereinsnameStatic()} <span style={{color:"var(--sub)",fontWeight:400}}>vs.</span> {spiel.opponent}</span>
+                  <span style={S_06}>
+                    {/* Beide Zweige lieferten bis zum 20.08.2026 denselben
+                        Wert — die Zeile zeigte immer "wir vs. Gegner", auch
+                        auswaerts. Jetzt in derselben Reihenfolge wie das
+                        Ergebnis-Banner darueber: Heim zuerst. */}
+                    {spiel.home?getVereinsnameStatic():spiel.opponent}
+                    {" "}<span style={{color:"var(--sub)",fontWeight:400}}>vs.</span>{" "}
+                    {spiel.home?spiel.opponent:getVereinsnameStatic()}
+                  </span>
                 </div>
                 <div style={{padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={S_SUB}>Status</span>

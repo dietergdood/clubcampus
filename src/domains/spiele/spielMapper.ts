@@ -32,6 +32,8 @@ export interface SpielUi {
   time: string;
   opponent: string;
   home: boolean;
+  /** SFV-Team-Id des Gegners — Schluessel fuer sein Wappen. */
+  sfvGegnerTeamId: number | null;
   venue: string;
   venueAddr: string;
   comp: string;
@@ -83,6 +85,11 @@ export function mapSpiel(z: SpielZeile): SpielUi {
     time: (z.zeit ?? "").slice(0, 5),
     opponent: z.gegner ?? "",
     home: z.heimspiel !== false,
+    /* Traegt das Wappen des Gegners: sfv_team_logos ist danach geschluesselt.
+       Fehlte bis zum 20.08.2026 in der Abbildung — die Anzeige suchte dann
+       mit `undefined` und zeigte beim Gegner nichts, waehrend unser eigenes
+       (aus vereine.theme) erschien. */
+    sfvGegnerTeamId: z.sfv_gegner_team_id ?? null,
     venue: z.venue ?? "",
     venueAddr: z.venue_addr ?? "",
     comp: z.wettbewerb ?? "",
