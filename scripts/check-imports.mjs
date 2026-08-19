@@ -76,7 +76,30 @@ for (const path of files) {
   const imported = new Set(match ? [...match[2].matchAll(/\b(\w+)\b/g)].map(m => m[1]) : []);
 
   const code = stripNonCode(content);
-  const missing = exported.filter(c => !imported.has(c) && new RegExp(`\\b${c}\\b`).test(code));
+
+  /* Wortgrenze inklusive Umlauten, und lokale Deklarationen ausnehmen.
+
+     `\b` allein ist in einer deutschen Codebasis unbrauchbar: JS zaehlt nur
+     [A-Za-z0-9_] als Wortzeichen, also steht mitten in „Rückennummer" eine
+     Wortgrenze hinter dem R. Da constants.ts ein `R` (Rot) exportiert,
+     meldete der Pruefer jede Datei, in der das Wort vorkommt.
+     /\bR\b/.test("Rückennummer") ist true — am 19.08.2026 an
+     SfvSpielerZuordnung.tsx aufgefallen.
+
+     Zweiter Fall: eine lokal deklarierte Konstante gleichen Namens (`const
+     ICON = …` neben dem exportierten ICON aus constants.ts). Das ist kein
+     fehlender Import, sondern hoechstens eine unglueckliche Namenswahl — ein
+     Import dazu waere eine Kollision.
+
+     Beide Male haette `--fix` einen falschen Import ergaenzt. */
+  const GRENZE = "[^\\p{L}\\p{N}_]";
+  const lokalDeklariert = c =>
+    new RegExp(`\\b(?:const|let|var|function|class)\\s+${c}\\b`).test(code);
+  const kommtVor = c =>
+    new RegExp(`(?<=^|${GRENZE})${c}(?=$|${GRENZE})`, "u").test(code);
+
+  const missing = exported.filter(
+    c => !imported.has(c) && !lokalDeklariert(c) && kommtVor(c));
   if (missing.length === 0) continue;
 
   const rel = relative(SRC, path).split(sep).join("/");

@@ -43,7 +43,7 @@ interface Props {
    `square-x` gibt es dort nicht, obwohl sie fuer Karten naheliegen. Statt
    eine neue Icon-Datei anzulegen die vorhandenen nehmen: flag fuer die
    Verwarnung, alert-triangle fuer den Ausschluss. */
-const ICON: Record<number, string> = {
+const EREIGNIS_ICON: Record<number, string> = {
   [TYP_TOR]: "ball-football",
   [TYP_VERWARNUNG]: "flag",
   [TYP_AUSSCHLUSS]: "alert-triangle",
@@ -105,7 +105,7 @@ export function Spielbericht({ sb, spielId, resultat, htResultat, namen }: Props
               <span className="cc-text-sub" style={{ minWidth: 34, textAlign: "right" }}>
                 {e.minute ?? "?"}{e.zusatzminute ? `+${e.zusatzminute}` : ""}'
               </span>
-              <TI n={ICON[e.typ_id] ?? "circle"} size={13}/>
+              <TI n={EREIGNIS_ICON[e.typ_id] ?? "circle"} size={13}/>
               <span>{e.typ ?? "Ereignis"}</span>
               {e.subtyp && e.subtyp !== "-" && <span className="cc-text-sub">· {e.subtyp}</span>}
             </div>
