@@ -73,6 +73,31 @@ Feldhoheit für dieses eine Feld neu entschieden werden. **Nicht eigenmächtig
 umstellen**, sondern im Bericht vorlegen: Wer trägt die Halbzeit ein, der SFV
 oder der Verein?
 
+> ### ⚠ Entschieden am 19.08.2026 — und anders, als dieser Abschnitt nahelegt
+>
+> **`ht_resultat` wird NICHT pauschal dem SFV gegeben.** Der Trockenlauf über
+> zehn Spiele hat gezeigt, warum: **bei vier von zehn liefert der Verband
+> überhaupt keine Ereignisse und kein `intermediateResults`** — auch nicht bei
+> Spielen mit sieben oder acht Toren. Die Feldhoheit umzustellen hiesse dort,
+> einen vorhandenen Vereinswert durch nichts zu ersetzen.
+>
+> Stattdessen: **übernehmen, wenn der SFV etwas liefert; sonst stehen lassen.**
+> Das ist keine Ausnahme, sondern die Regel, nach der die anderen Felder auch
+> behandelt werden.
+>
+> Dasselbe Loch betrifft den **Spielbericht** (siehe „Wozu das Ganze"): Wo
+> keine Ereignisse vorliegen, wird das gesagt — „Der SFV hat zu diesem Spiel
+> keinen Verlauf erfasst" — statt einen leeren Verlauf zu zeigen. Ein leerer
+> Verlauf bei einem 3:2 sieht aus wie ein Fehler in ClubCampus; dabei liegt es
+> am Verband, und wer das nicht weiss, sucht an der falschen Stelle.
+>
+> **Der Stand kommt aus `spiele.resultat`, nie aus den Ereignissen.**
+>
+> Für die **Einsatzstatistik** folgt daraus eine Ungleichheit, die an der
+> Anzeige stehen muss und nicht nur im Code: Minuten und Einsätze stammen aus
+> `/players` und sind verlässlich, Tore und Karten aus `/events` und sind es
+> nicht. Sonst wundert sich jemand, warum ein Spieler 14 Spiele und 0 Tore hat.
+
 ## Wie oft und wie viele Aufrufe
 
 Der Spielplan-Sync macht heute fünf Aufrufe pro Lauf. Matchdaten wären **drei
