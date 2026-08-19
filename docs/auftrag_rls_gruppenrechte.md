@@ -116,6 +116,37 @@ Die Struktur dafür existiert bereits. Jede Funktion hängt an einer Gruppe:
 
 **Für diesen Auftrag heisst das:** `ableitRolle()` bleibt vorerst unverändert — die Reihenfolge ist bewusst gewählt. Aber die Policies dürfen sich **nicht** darauf stützen, dass jemand die Rolle `funktionaer` trägt. Wo heute `get_my_role() = 'funktionaer'` steht, gehört `hat_modul_recht('<modul>', '<stufe>')` hin. Sonst hängt der Zugriff weiterhin an einer Rolle, die den Unterschied zwischen Kassier und OK-Helfer gar nicht kennt.
 
+## Ein Amt und ein Rechtebündel heissen beide „Funktion"
+
+Beim Ordnen der Portalverwaltung am 17.08.2026 aufgefallen, gehört hierher
+entschieden.
+
+`portal_funktionen` heisst „Funktion", meint aber ein **Rechtebündel**: Die
+Tabelle hält `module_override`, `teams`, `filter` und `stufe_override`, und
+`portal_gruppen` darüber `module` und `modul_stufen`. Ein Eintrag „Präsident"
+sagt dort nicht, dass jemand Präsident ist — er sagt, welche Module jemand
+sehen darf.
+
+**Dass jemand Präsident ist, steht woanders:** in `mitglieder.funktionen`, dem
+Textfeld, in dem bis zum 05.08.2026 bei 487 Mitgliedern „Spieler" stand.
+
+Damit gibt es das Amt zweimal, an zwei Orten, mit zwei Bedeutungen — dieselbe
+Doppelung, die der Personen-Umbau überall aufgelöst hat.
+
+**Zu entscheiden:**
+
+1. Sind es zwei Dinge (Amt bei den Mitgliedern, Rechte bei den
+   Berechtigungen) oder eines mit zwei Ansichten?
+2. Wenn zwei: Wie hängen sie zusammen? Über den Namen wäre dieselbe Falle wie
+   bei der Team-Zuordnung — „Kassier" gibt es womöglich zweimal.
+3. Was wird aus `mitglieder.funktionen`? Es ist ein Textfeld ohne Bezug zu
+   `portal_funktionen`. Acht Einträge auf sechs Ämter stehen darin, gepflegt
+   wird es von Hand.
+
+Solange das offen ist, bleibt „Gruppen & Funktionen" in der Portalverwaltung
+unter den Berechtigungen — dort wirkt es heute. Ob es später zu den Mitgliedern
+wandert oder sich in zwei Seiten teilt, entscheidet sich mit diesem Auftrag.
+
 ## Vorgehen
 
 1. Alle Policies auflisten und nach Tabelle gruppieren. Zeig mir die Liste, **bevor** du etwas änderst.

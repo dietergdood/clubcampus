@@ -290,6 +290,72 @@ Zu entscheiden: Gewinnt die Ableitung immer? Dann gehört das im Portal so
 beschriftet — „gilt bis zur nächsten Änderung". Oder bleibt eine manuell
 gesetzte Rolle? Dann braucht es ein Kennzeichen dafür.
 
+### Was ein Mitgliedtyp hat — eine Stelle statt vier
+
+Auftrag liegt bereit: `docs/auftrag_mitgliedtyp_konfig.md`.
+
+Heute liegt an vier Stellen verstreut, was ein Mitgliedsprofil zeigt:
+`mitgliedtyp_pflichtfelder` (lebt), `rolle_pflichtfelder` (Zweck unklar),
+`getFieldVisibility()` in `memberUtils.tsx` (acht fest verdrahtete Zeilen über
+ein Rollen-Level) und `InfoTab.tsx` selbst (`fv.showPass`, `fv.showFairgateId`,
+`fv.showNotizen`, seit 17.08.2026 `istSupporter`).
+
+Geplant: eine Seite in Portalverwaltung → Benutzer & Rollen →
+Mitgliedertyp-Konfiguration, wo jedes Feld pro Mitgliedtyp einen von drei Werten
+bekommt — **Pflicht · Freiwillig · Gibt es nicht**. Der dritte ist neu; er
+blendet das Feld überall aus, auch für die Verwaltung. Dazu Bereiche mit
+Sammelschalter und die Tabs des Profils.
+
+⚠ `SUPPORTER_TYP` in `memberConstants.ts` und `istSupporter` in `InfoTab` sind
+ein Vorgriff darauf (17.08.2026). Nach dem Umbau sollen beide entfallen — der
+Supporter bekommt seine drei Bereiche einfach auf „Gibt es nicht" gesetzt.
+
+### Wer sieht was bei anderen — wartet auf die Gruppenrechte
+
+Die zweite Hälfte: eine Matrix Rolle × Feld, die festlegt, wer welches Feld bei
+**anderen** Mitgliedern sieht. Die eigenen Daten sieht jeder vollständig.
+
+**Bewusst zurückgestellt.** Zwei Gründe:
+
+1. Solange die Rechte an Rollennamen hängen statt an Gruppen, würde die Seite
+   eine Rollenleiter zementieren — und eine Leiter passt nicht: Der Trainer
+   braucht die Handynummer seiner Junioren, der Kassier nicht, obwohl
+   „Funktionär" in `portal_rollen` über „Trainer" steht.
+2. Ohne Wirkung in der Datenbank wäre es ein Versprechen ohne Deckung — im
+   Portal ausgeblendet, über die API sichtbar. Postgres kann keine Spalten pro
+   Rolle ausblenden; es bräuchte Sichten.
+
+Reihenfolge deshalb: Mitgliedtyp-Konfiguration → Gruppenrechte
+(`docs/auftrag_rls_gruppenrechte.md`) → diese Seite, dann mit Wirkung in der
+Datenbank.
+
+`feldsichtbarkeit` hat bereits die richtige Form `(feld_key, role, sichtbar)`,
+wird aber **nie geladen** — der Tab „Feldsichtbarkeit" ist leer und der
+Umschalter unerreichbar. Nicht abbauen, anschliessen.
+
+### Die Portalverwaltung ist nach Technik geordnet, nicht nach Absicht
+
+Vier Kategorien, vierzehn Tabs. Wer einen Mitgliedtyp einrichtet, braucht drei
+Orte; wer einen Benutzer anlegt, zwei. Dazu heisst „Benutzer & Rollen" sowohl
+Kategorie als auch Tab darin, und Rollen liegen an vier Stellen (Portal-Rollen,
+Kader-Rollen, Mitglieder-Konfiguration, Module & Rechte).
+
+Vorschlag vom 17.08.2026 — vier Kategorien nach Absicht:
+
+| Kategorie | Tabs |
+|---|---|
+| Mitglieder | Mitgliedtypen · Kader-Rollen · Vereinsfunktionen |
+| Zugang | Konten · Portal-Rollen · Gruppen & Funktionen |
+| Was wer darf | Module & Rechte · Wer sieht was · Team-Module |
+| Verein | Aussehen · API-Verbindungen · Audit-Logs |
+
+Kader-Rollen wandern zu den Mitgliedern (Vereinsangabe, keine Berechtigung),
+„Design-System" fällt raus (Entwicklerseite). Ob „Gruppen & Funktionen" später
+zu den Mitgliedern gehört, entscheidet sich mit den Gruppenrechten — siehe dort
+den Abschnitt „Ein Amt und ein Rechtebündel heissen beide Funktion".
+
+**Unabhängig von allem anderen, jederzeit machbar.**
+
 ### ⚠ Zu Ende denken: Was ist ein Supporter?
 
 **Etappe 5 hat eine Entscheidung getroffen, die vermutlich falsch ist.** Sie steht so in der Datenbank und muss besprochen werden, bevor externe Vereine dazukommen.
