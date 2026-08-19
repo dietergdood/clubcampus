@@ -1702,6 +1702,32 @@ CREATE TABLE IF NOT EXISTS "public"."rollen" (
 ALTER TABLE "public"."rollen" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."sfv_team_logos" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "sfv_team_id" integer NOT NULL,
+    "pfad" "text",
+    "mime" "text",
+    "geholt_am" timestamp with time zone,
+    "fehlt_seit" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."sfv_team_logos" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."sfv_team_logos" IS 'Vereinswappen der Gegner, geholt ueber /api/team/picture/{teamId}. Geschluesselt nach sfv_team_id, obwohl das Bild dem VEREIN gehoert (alle Teams eines Vereins liefern dasselbe) — die teamId steht an spiele.sfv_gegner_team_id, die clubNumber nicht. Das eigene Wappen steht NICHT hier, sondern in vereine.theme.';
+
+
+
+COMMENT ON COLUMN "public"."sfv_team_logos"."mime" IS 'Aus den Magic Bytes bestimmt, NICHT angenommen: der SFV liefert durch, was der Verein hochgeladen hat — bei FCH ein GIF, bei FC Oberland United ein JPEG.';
+
+
+
+COMMENT ON COLUMN "public"."sfv_team_logos"."fehlt_seit" IS 'Seit wann der SFV kein Bild liefert (404). Der Sync fragt fruehestens 30 Tage danach erneut: kuerzer bringt nichts, das niemand bemerkt, und einmal pro Saison hiesse, dass ein im September nachgetragenes Wappen erst im Juli erscheint.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."sfv_zuordnung" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "verein_id" "uuid" NOT NULL,
@@ -2684,6 +2710,16 @@ ALTER TABLE ONLY "public"."rollen"
 
 
 
+ALTER TABLE ONLY "public"."sfv_team_logos"
+    ADD CONSTRAINT "sfv_team_logos_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."sfv_team_logos"
+    ADD CONSTRAINT "sfv_team_logos_verein_key" UNIQUE ("verein_id", "sfv_team_id");
+
+
+
 ALTER TABLE ONLY "public"."sfv_zuordnung"
     ADD CONSTRAINT "sfv_zuordnung_pkey" PRIMARY KEY ("id");
 
@@ -2706,6 +2742,15 @@ ALTER TABLE ONLY "public"."spiel_aufstellung"
 
 ALTER TABLE ONLY "public"."spiel_ereignisse"
     ADD CONSTRAINT "spiel_ereignisse_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."spiel_ereignisse"
+    ADD CONSTRAINT "spiel_ereignisse_sfv_event_key" UNIQUE ("verein_id", "sfv_event_id");
+
+
+
+COMMENT ON CONSTRAINT "spiel_ereignisse_sfv_event_key" ON "public"."spiel_ereignisse" IS 'Eine SFV-Zeile je Ereignis. BEWUSST NICHT partiell: ein partieller Index laesst sich von ON CONFLICT (spalten) nicht ableiten, und PostgREST kann das noetige Praedikat nicht mitgeben. Vereins-Zeilen tragen sfv_event_id = NULL und kollidieren nie, weil NULL in einem Unique-Index als verschieden gilt.';
 
 
 
@@ -3037,15 +3082,15 @@ CREATE INDEX "personen_verein_idx" ON "public"."personen" USING "btree" ("verein
 
 
 
+CREATE INDEX "sfv_team_logos_verein_idx" ON "public"."sfv_team_logos" USING "btree" ("verein_id");
+
+
+
 CREATE INDEX "sfv_zuordnung_mitglied_idx" ON "public"."sfv_zuordnung" USING "btree" ("mitglied_id");
 
 
 
 CREATE INDEX "spiel_ereignisse_ersetzt_idx" ON "public"."spiel_ereignisse" USING "btree" ("ersetzt_ereignis_id") WHERE ("ersetzt_ereignis_id" IS NOT NULL);
-
-
-
-CREATE UNIQUE INDEX "spiel_ereignisse_sfv_event_key" ON "public"."spiel_ereignisse" USING "btree" ("verein_id", "sfv_event_id") WHERE ("herkunft" = 'sfv'::"text");
 
 
 
@@ -3757,6 +3802,16 @@ ALTER TABLE ONLY "public"."rolle_pflichtfelder"
 
 ALTER TABLE ONLY "public"."rollen"
     ADD CONSTRAINT "rollen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."sfv_team_logos"
+    ADD CONSTRAINT "sfv_team_logos_verein_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."sfv_team_logos"
+    ADD CONSTRAINT "sfv_team_logos_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
 
 
@@ -4671,6 +4726,13 @@ CREATE POLICY "rollen_select" ON "public"."rollen" FOR SELECT USING (("verein_id
 
 
 CREATE POLICY "rollen_write" ON "public"."rollen" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+ALTER TABLE "public"."sfv_team_logos" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "sfv_team_logos_select" ON "public"."sfv_team_logos" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
 
 
 
@@ -5632,6 +5694,12 @@ GRANT ALL ON TABLE "public"."rolle_pflichtfelder" TO "service_role";
 GRANT ALL ON TABLE "public"."rollen" TO "anon";
 GRANT ALL ON TABLE "public"."rollen" TO "authenticated";
 GRANT ALL ON TABLE "public"."rollen" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."sfv_team_logos" TO "anon";
+GRANT ALL ON TABLE "public"."sfv_team_logos" TO "authenticated";
+GRANT ALL ON TABLE "public"."sfv_team_logos" TO "service_role";
 
 
 

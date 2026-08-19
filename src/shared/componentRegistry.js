@@ -168,6 +168,13 @@ export const COMPONENT_REGISTRY = [
     props: ["tabs[] (key+label)", "active", "setActive", "mb"],
   },
   {
+    name: "Wappen",
+    desc: "Vereinswappen neben einem Resultat. NUR im Spielbericht und Spielplan — fremde Wappen zu zeigen ist berichtende Verwendung, als Schmuck anderswo etwas anderes. Ohne url wird nichts gerendert: ein leerer Fleck faellt weniger auf als ein graues Kaestchen.",
+    category: "Basics",
+    usedIn: ["Spielbericht", "TermineModul"],
+    props: ["url", "name", "groesse"],
+  },
+  {
     /* Keine React-Komponente, sondern ein Klassensatz — deshalb ohne props.
        Stand seit langem in cc.css und war an drei Stellen im Einsatz, ohne
        hier zu stehen; nachgetragen am 19.08.2026. */

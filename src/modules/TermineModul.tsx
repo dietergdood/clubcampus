@@ -19,7 +19,8 @@ import { useSpiele, useRangliste } from "../domains/spiele/useSpiele.ts";
 import { sfvTeamIdFuer } from "../domains/spiele/spielMapper.ts";
 import { Spielbericht } from "./spiele/Spielbericht.tsx";
 import { darfMatchdatenKorrigieren } from "../domains/spiele/matchdatenRechte.ts";
-import { fetchSfvNamen } from "../domains/spiele/matchdatenService.ts";
+import { fetchSfvNamen, fetchGegnerWappen } from "../domains/spiele/matchdatenService.ts";
+import { Wappen } from "../theme.ts";
 import type { TeamZuordnung } from "../domains/spiele/spielMapper.ts";
 import type { Sb } from "../types.ts";
 import { SlotModal, PlanEditorModal } from "./TrainingsplanModul.tsx";
@@ -95,6 +96,10 @@ interface SpielDetailProps {
   vereinId?: string|null;
   benutzerId?: string|null;
   sfvNamen?: Map<number,string>;
+  /* sfv_team_id → oeffentliche Adresse im Bucket. NUR Gegner; unser
+     eigenes Wappen kommt aus vereine.theme. */
+  gegnerWappen?: Map<number,string>;
+  eigenesWappen?: string|null;
 }
 interface SpielplanModulProps { role: string; team?: string|null; initialSelected?: any; sb?: Sb; vereinId?: string|null; kannSchreiben?: (m: string)=>boolean; benutzerId?: string|null; }
 interface TableTabProps { team?: string|null; sb?: Sb; vereinId?: string|null; dbTeams?: TeamZuordnung[]; }
@@ -119,7 +124,7 @@ interface TermineModulProps {
 
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
 /* -- Spiel-Detailansicht Modal (FVRZ-Stil) -- */
-function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMotmAllProp,sb=null,vereinId=null,benutzerId=null,sfvNamen}: SpielDetailProps){
+function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMotmAllProp,sb=null,vereinId=null,benutzerId=null,sfvNamen,gegnerWappen,eigenesWappen}: SpielDetailProps){
   const isMobile=useIsMobile();
   const played=!!spiel.result;
   const [activeTab,setActiveTab]=useState("info");
@@ -287,14 +292,27 @@ function SpielDetail({spiel,onClose,canEdit,motmAll:motmAllProp,setMotmAll:setMo
                         Beschriftung heikel: die Zahl spricht fuer sich. */}
                     <div style={{fontSize:14,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>Endergebnis</div>
                     <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                      <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)",textAlign:"right",minWidth:0}}>
-                        {spiel.home?getVereinsnameStatic():spiel.opponent}
+                      {/* Wappen nur beim Gegner aus dem Bucket; unser eigenes
+                          kommt aus vereine.theme und ist dort besser als die
+                          80x80 vom Verband. Fehlt eines, steht dort nichts —
+                          ein leerer Fleck faellt weniger auf als ein graues
+                          Kaestchen. */}
+                      <span style={{display:"flex",alignItems:"center",gap:8,justifyContent:"flex-end",minWidth:0}}>
+                        <Wappen url={spiel.home?eigenesWappen:gegnerWappen?.get(Number(spiel.sfv_gegner_team_id))}
+                                name={spiel.home?getVereinsnameStatic():spiel.opponent}/>
+                        <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)",textAlign:"right"}}>
+                          {spiel.home?getVereinsnameStatic():spiel.opponent}
+                        </span>
                       </span>
                       <span style={{fontSize:24,fontWeight:800,color:"#fff",letterSpacing:3,lineHeight:1,whiteSpace:"nowrap"}}>
                         {spiel.result}
                       </span>
-                      <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)",minWidth:0}}>
-                        {spiel.home?spiel.opponent:getVereinsnameStatic()}
+                      <span style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+                        <span style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,0.85)"}}>
+                          {spiel.home?spiel.opponent:getVereinsnameStatic()}
+                        </span>
+                        <Wappen url={spiel.home?gegnerWappen?.get(Number(spiel.sfv_gegner_team_id)):eigenesWappen}
+                                name={spiel.home?spiel.opponent:getVereinsnameStatic()}/>
                       </span>
                     </div>
                     {spiel.htResult&&<div style={{fontSize:14,color:"rgba(255,255,255,0.4)",marginTop:6}}>Halbzeit: {spiel.htResult}</div>}
@@ -553,7 +571,13 @@ function SpielplanModul({role,team,initialSelected,sb=null,vereinId=null,kannSch
      obwohl die Datenbank sie durchlaesst. */
   const canEdit=darfMatchdatenKorrigieren(role, kannSchreiben ?? (()=>false));
   const [sfvNamen,setSfvNamen]=useState<Map<number,string>>(new Map());
-  useEffect(()=>{ fetchSfvNamen(sb,vereinId).then(setSfvNamen); },[sb,vereinId]);
+  const [gegnerWappen,setGegnerWappen]=useState<Map<number,string>>(new Map());
+  useEffect(()=>{
+    fetchSfvNamen(sb,vereinId).then(setSfvNamen);
+    fetchGegnerWappen(sb,vereinId).then(setGegnerWappen);
+  },[sb,vereinId]);
+  /* Das eigene Wappen steht im Verein, nicht beim Verband. */
+  const eigenesWappen=(()=>{try{const t=localStorage.getItem("cc-theme");return t?(JSON.parse(t).logo||null):null;}catch{return null;}})();
   /* Sortiert wird über das ISO-Datum aus dem Mapper. Früher stand hier ein
      parseGDate, das den Anzeigetext ("Sa 24.05.") zurückrechnete und fest
      "2026-" davorklebte — in der nächsten Saison hätte das falsch sortiert. */
@@ -570,7 +594,7 @@ function SpielplanModul({role,team,initialSelected,sb=null,vereinId=null,kannSch
   });
   return(
     <>
-      {selected&&<SpielDetail spiel={selected} onClose={()=>setSelected(null)} canEdit={canEdit} motmAll={motmAll} setMotmAll={setMotmAll} sb={sb} vereinId={vereinId} benutzerId={benutzerId} sfvNamen={sfvNamen}/>}
+      {selected&&<SpielDetail spiel={selected} onClose={()=>setSelected(null)} canEdit={canEdit} motmAll={motmAll} setMotmAll={setMotmAll} sb={sb} vereinId={vereinId} benutzerId={benutzerId} sfvNamen={sfvNamen} gegnerWappen={gegnerWappen} eigenesWappen={eigenesWappen}/>}
       <Card style={{padding:0,overflowX:"auto"}}>
         <div className="cc-table-wrap"><table className="cc-table">
           <thead>

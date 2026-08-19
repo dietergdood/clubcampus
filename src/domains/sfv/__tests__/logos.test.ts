@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  ausBase64, erkenneBild, logoPfad, offeneLogos, WIEDERHOLUNG_TAGE,
+  ausBase64, erkenneBild, logoPfad, offeneLogos, LOGOS_PRO_LAUF, WIEDERHOLUNG_TAGE,
 } from "../../../../supabase/functions/sfv-sync/logos.ts";
 
 const b = (...bytes: number[]) => new Uint8Array([...bytes, ...new Array(16).fill(0)]);
@@ -98,5 +98,25 @@ describe("logoPfad", () => {
     /* Sonst überschreibt ein Mandant dem anderen die Datei — womöglich mit
        einem anderen Format unter derselben Endung. */
     expect(logoPfad("v1", 78342, "jpg")).toBe("v1/78342.jpg");
+  });
+});
+
+describe("Obergrenze pro Lauf", () => {
+  const jetzt = new Date("2026-08-20T12:00:00Z");
+
+  it("holt höchstens LOGOS_PRO_LAUF auf einmal", () => {
+    /* Der erste Lauf am 20.08.2026 holte 217 Wappen in einem Zug: die
+       Kandidaten kommen aus ALLEN Spielen der Saison, nicht nur den
+       ausgetragenen. Richtig, aber ein Ausschlag — und Rate Limits sind
+       beim SFV nicht dokumentiert. */
+    const viele = Array.from({ length: 217 }, (_, i) => 1000 + i);
+    expect(offeneLogos(viele, [], jetzt)).toHaveLength(LOGOS_PRO_LAUF);
+  });
+
+  it("holt den Rest beim nächsten Lauf", () => {
+    const viele = Array.from({ length: 40 }, (_, i) => 1000 + i);
+    const ersteRunde = offeneLogos(viele, [], jetzt);
+    const abgelegt = ersteRunde.map(id => ({ sfv_team_id: id, pfad: `v/${id}.gif`, fehlt_seit: null }));
+    expect(offeneLogos(viele, abgelegt, jetzt)).toHaveLength(40 - LOGOS_PRO_LAUF);
   });
 });

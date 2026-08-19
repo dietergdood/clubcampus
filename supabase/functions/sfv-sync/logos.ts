@@ -18,6 +18,19 @@ export const LOGO_BUCKET = "sfv-logos";
    liesse ein im September nachgetragenes Wappen bis Juli verschwinden. */
 export const WIEDERHOLUNG_TAGE = 30;
 
+/* Obergrenze pro Lauf — dieselbe Bremse wie MATCHDATEN_PRO_LAUF, und aus
+   demselben Grund.
+
+   Der erste Lauf am 20.08.2026 hat 217 Wappen auf einmal geholt: die
+   Kandidaten kommen aus ALLEN Spielen der Saison, nicht nur den
+   ausgetragenen (der Spielplan zeigt auch kommende, und die brauchen ihr
+   Wappen). Das ist richtig so, aber 217 Aufrufe in einem Lauf sind ein
+   Ausschlag, und Rate Limits sind beim SFV nicht dokumentiert.
+
+   25 pro Lauf heisst: ein neuer Verein hat nach neun Stunden alle Wappen,
+   ohne dass eine Stunde aus der Reihe faellt. Danach kostet es null. */
+export const LOGOS_PRO_LAUF = 25;
+
 export interface LogoZeile {
   sfv_team_id: number;
   pfad: string | null;
@@ -32,6 +45,7 @@ export interface LogoZeile {
  */
 export function offeneLogos(
   gebraucht: number[], bekannt: LogoZeile[], jetzt: Date,
+  hoechstens: number = LOGOS_PRO_LAUF,
 ): number[] {
   const grenze = jetzt.getTime() - WIEDERHOLUNG_TAGE * 24 * 60 * 60 * 1000;
   const nachId = new Map(bekannt.map((z) => [Number(z.sfv_team_id), z]));
@@ -45,7 +59,7 @@ export function offeneLogos(
     if (!z.fehlt_seit) { raus.push(id); continue; }
     if (new Date(z.fehlt_seit).getTime() < grenze) raus.push(id);
   }
-  return raus;
+  return raus.slice(0, hoechstens);
 }
 
 /**

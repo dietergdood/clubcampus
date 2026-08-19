@@ -9,6 +9,7 @@ import { createContext, useContext } from "react";
 import type { AppTheme } from "./types.ts";
 export { Btn } from "./shared/ui/Btn.tsx";
 export { resolveColor, hexToRgba, darkenHex, contrastColor } from "./shared/utils/colorUtils.ts";
+export { Wappen } from "./shared/ui/Wappen.tsx";
 export { Card, Chip, StatusTile, STitle, Row, Col, Between, Sub, Label, H1, H2, PageHeader, Input, Select, Textarea, SectionLabel, Empty, ModalTitle, Truncate, EmptyState, InfoBox } from "./shared/ui/primitives.tsx";
 export { useBreakpoint, useIsMobile } from "./shared/ui/hooks.ts";
 export { PhoneInput } from "./shared/forms/PhoneInput.tsx";

@@ -90,7 +90,10 @@ begin
   execute $q$
     create table if not exists public.sfv_team_logos (
       id          uuid primary key default gen_random_uuid(),
-      verein_id   uuid    not null references public.vereine(id),
+      /* Der Fremdschluessel steht UNTEN als benannter Constraint. Hier
+         nur der Typ — `references` zusaetzlich anzugeben legte einen
+         zweiten, identischen an (Nachtrag am Dateiende). */
+      verein_id   uuid    not null,
       sfv_team_id integer not null,
 
       /* Pfad im Bucket, null solange kein Bild vorliegt. */
@@ -204,4 +207,41 @@ select nr, pruefung, erwartet, gefunden,
 --   Der Bucket steht im Schema `storage` und taucht im public-Dump NICHT auf
 --   — wie die auth-Trigger und der cron-Auftrag. Diese Datei ist die einzige
 --   Stelle, an der er festgehalten ist; beim Nachbauen zuerst hier nachsehen.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- NACHTRAG 20.08.2026 — ein Fremdschluessel zu viel
+--
+-- Die Spalte stand als `verein_id uuid not null references public.vereine(id)`
+-- UND unten nochmals als benannter `sfv_team_logos_verein_fkey`. Postgres legt
+-- daraufhin ZWEI identische Fremdschluessel an:
+--
+--   sfv_team_logos_verein_id_fkey   FOREIGN KEY (verein_id) -> vereine(id)
+--   sfv_team_logos_verein_fkey      FOREIGN KEY (verein_id) -> vereine(id)
+--
+-- Aufgefallen an der Zaehlprobe: ADD CONSTRAINT +5 statt der erwarteten +4.
+-- Folgenlos fuer die Daten, aber jede Einfuegung prueft zweimal dasselbe, und
+-- wer die Tabelle liest, sucht den Unterschied zwischen den beiden.
+--
+-- Der Block oben ist korrigiert (kein inline `references` mehr). Fuer eine
+-- Datenbank, in der die Tabelle schon steht, raeumt das hier auf:
+
+do $mig$
+declare v_fk int;
+begin
+  alter table public.sfv_team_logos drop constraint if exists sfv_team_logos_verein_id_fkey;
+
+  select count(*) into v_fk from pg_constraint
+   where conrelid = 'public.sfv_team_logos'::regclass and contype = 'f';
+  if v_fk <> 1
+  then raise exception 'UNVOLLSTAENDIG: % Fremdschluessel statt 1', v_fk; end if;
+
+  raise notice 'Fertig: ein Fremdschluessel auf verein_id, nicht zwei.';
+end $mig$;
+
+select conname, pg_get_constraintdef(oid)
+  from pg_constraint
+ where conrelid = 'public.sfv_team_logos'::regclass and contype = 'f';
+-- erwartet: genau eine Zeile, sfv_team_logos_verein_fkey
 -- ═══════════════════════════════════════════════════════════════════════════

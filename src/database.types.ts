@@ -3385,6 +3385,51 @@ export type Database = {
           },
         ]
       }
+      sfv_team_logos: {
+        Row: {
+          fehlt_seit: string | null
+          geholt_am: string | null
+          id: string
+          mime: string | null
+          pfad: string | null
+          sfv_team_id: number
+          verein_id: string
+        }
+        Insert: {
+          fehlt_seit?: string | null
+          geholt_am?: string | null
+          id?: string
+          mime?: string | null
+          pfad?: string | null
+          sfv_team_id: number
+          verein_id: string
+        }
+        Update: {
+          fehlt_seit?: string | null
+          geholt_am?: string | null
+          id?: string
+          mime?: string | null
+          pfad?: string | null
+          sfv_team_id?: number
+          verein_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sfv_team_logos_verein_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sfv_team_logos_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sfv_zuordnung: {
         Row: {
           id: string

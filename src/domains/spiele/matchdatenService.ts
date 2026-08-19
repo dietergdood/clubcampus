@@ -179,3 +179,25 @@ export async function fetchSfvNamen(sb: Sb, vereinId: string | null): Promise<Ma
   }
   return raus;
 }
+
+/**
+ * sfv_team_id → öffentliche Bild-Adresse des Vereinswappens.
+ *
+ * Der Bucket ist öffentlich lesbar, damit der Browser die Wappen wie jedes
+ * andere Bild cacht — das war der ganze Grund, sie nicht als Base64 in der
+ * Zeile mitzuschicken.
+ *
+ * ⚠ NUR GEGNER. Das eigene Wappen kommt aus `vereine.theme` und ist dort in
+ * besserer Qualität als die 80×80 vom Verband.
+ */
+export async function fetchGegnerWappen(sb: Sb, vereinId: string | null): Promise<Map<number, string>> {
+  const raus = new Map<number, string>();
+  if (!sb || !vereinId) return raus;
+  const { data } = await sb.from("sfv_team_logos")
+    .select("sfv_team_id,pfad").eq("verein_id", vereinId).not("pfad", "is", null);
+  for (const z of data ?? []) {
+    const { data: url } = sb.storage.from("sfv-logos").getPublicUrl(z.pfad as string);
+    if (url?.publicUrl) raus.set(Number(z.sfv_team_id), url.publicUrl);
+  }
+  return raus;
+}
