@@ -17,12 +17,14 @@
 //     vorbereitet und wird bewusst noch nicht aufgerufen.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { holeMatch, holeAufstellung, holeEreignisse, SfvFehler } from "./sfvApi.ts";
+import { holeMatch, holeAufstellung, holeEreignisse, holeTeamBild, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import {
   bildeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SpielKandidat } from "./matchdaten.ts";
+import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
+import type { LogoZeile } from "./logos.ts";
 
 export interface MatchdatenErgebnis {
   spiele_geholt: number;
@@ -238,4 +240,64 @@ async function zaehleUnzugeordnet(
   let offen = 0;
   for (const p of alle) if (!bekannt.has(p)) offen += 1;
   return { offen, bekannt: bekannt.size };
+}
+
+/* ── Vereinswappen ─────────────────────────────────────────────────────────
+   Einmal holen, im Bucket ablegen, danach nie wieder. Der Spielplan kennt
+   die Gegner ueber spiele.sfv_gegner_team_id; geholt wird nur, was fehlt.
+
+   ⚠ NUR GEGNER. Das eigene Wappen steht in vereine.theme, in besserer
+   Qualitaet als die 80x80 vom Verband. */
+export async function laufeLogos(
+  db: SupabaseClient, vereinId: string, zugang: SfvZugang, token: string,
+): Promise<{ geholt: number; fehlt: number }> {
+  const { data: spiele } = await db
+    .from("spiele").select("sfv_gegner_team_id")
+    .eq("verein_id", vereinId).not("sfv_gegner_team_id", "is", null);
+  const gebraucht = (spiele ?? []).map((s) => Number(s.sfv_gegner_team_id));
+  if (!gebraucht.length) return { geholt: 0, fehlt: 0 };
+
+  const { data: bekannt } = await db
+    .from("sfv_team_logos").select("sfv_team_id,pfad,fehlt_seit").eq("verein_id", vereinId);
+
+  const offen = offeneLogos(gebraucht, (bekannt ?? []) as unknown as LogoZeile[], new Date());
+  let geholt = 0, fehlt = 0;
+
+  for (const teamId of offen) {
+    const jetzt = new Date().toISOString();
+    let text: string | null = null;
+    try {
+      text = await holeTeamBild(zugang, token, teamId);
+    } catch {
+      /* Netzfehler: NICHT als "fehlt" vermerken, sonst schweigt der Sync
+         danach dreissig Tage ueber ein Wappen, das es gibt. Beim naechsten
+         Lauf wieder versuchen. */
+      continue;
+    }
+
+    const bytes = text === null ? null : ausBase64(text);
+    const art = bytes === null ? null : erkenneBild(bytes);
+
+    if (!bytes || !art) {
+      await db.from("sfv_team_logos").upsert({
+        verein_id: vereinId, sfv_team_id: teamId, pfad: null, mime: null,
+        fehlt_seit: jetzt,
+      }, { onConflict: "verein_id,sfv_team_id" });
+      fehlt += 1;
+      continue;
+    }
+
+    const pfad = logoPfad(vereinId, teamId, art.endung);
+    const { error: hochFehler } = await db.storage.from(LOGO_BUCKET)
+      .upload(pfad, bytes, { contentType: art.mime, upsert: true });
+    if (hochFehler) continue;   // beim naechsten Lauf erneut
+
+    await db.from("sfv_team_logos").upsert({
+      verein_id: vereinId, sfv_team_id: teamId,
+      pfad, mime: art.mime, geholt_am: jetzt, fehlt_seit: null,
+    }, { onConflict: "verein_id,sfv_team_id" });
+    geholt += 1;
+  }
+
+  return { geholt, fehlt };
 }

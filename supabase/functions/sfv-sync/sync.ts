@@ -15,7 +15,7 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   holeToken, holeSaison, holeTeams, holeSpielplan, holeRangliste, SfvFehler,
 } from "./sfvApi.ts";
-import { laufeMatchdaten, UNZUGEORDNET_WARNUNG } from "./matchdatenLauf.ts";
+import { laufeMatchdaten, laufeLogos, UNZUGEORDNET_WARNUNG } from "./matchdatenLauf.ts";
 import type { MatchdatenErgebnis } from "./matchdatenLauf.ts";
 import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
@@ -27,6 +27,7 @@ export interface LaufErgebnis {
   verwaiste_zuordnungen: number;
   derbys: number;
   matchdaten?: MatchdatenErgebnis;
+  logos?: { geholt: number; fehlt: number };
   saison?: { id: number; name: string };
 }
 
@@ -260,6 +261,11 @@ export async function laufeSync(
       (verein?.sfv_club_nummer as number | null) ?? null,
       MATCHDATEN_PRO_LAUF,
     );
+
+    /* Wappen der Gegner: einmal holen, danach nie wieder. Kostet nach dem
+       ersten Lauf null Aufrufe — geholt wird nur, was fehlt, und was der
+       Verband nicht hat, wird erst nach dreissig Tagen neu gefragt. */
+    erg.logos = await laufeLogos(db, v.verein_id, zugang, token);
   }
 
   const teile = [
@@ -271,6 +277,11 @@ export async function laufeSync(
   if (erg.spiele.nicht_mehr_geliefert) teile.push(`${erg.spiele.nicht_mehr_geliefert} Spiele nicht mehr geliefert (behalten)`);
   if (erg.derbys) teile.push(`${erg.derbys} Spiel(e) zwischen zwei eigenen Teams — dem Heimteam zugeordnet`);
   if (erg.verwaiste_zuordnungen) teile.push(`${erg.verwaiste_zuordnungen} Team-Zuordnung(en) zeigen ins Leere`);
+
+  if (erg.logos && (erg.logos.geholt || erg.logos.fehlt)) {
+    teile.push(`Wappen ${erg.logos.geholt} geholt`
+      + (erg.logos.fehlt ? `, ${erg.logos.fehlt} ohne Bild beim Verband` : ""));
+  }
 
   const md = erg.matchdaten;
   if (md) {

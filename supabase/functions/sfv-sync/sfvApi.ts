@@ -140,3 +140,22 @@ export async function holeEreignisse(z: SfvZugang, token: string, matchId: numbe
   if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Ereignisse");
   return roh as SfvMatch[];
 }
+
+/* Vereinswappen. Der Endpunkt liefert BASE64 als text/plain, nicht das Bild
+   — deshalb text() und keine Blob-Behandlung. 404 heisst: der Verein hat
+   keines hochgeladen; das ist kein Fehler und wird als solches gemeldet. */
+export async function holeTeamBild(
+  z: SfvZugang, token: string, teamId: number,
+): Promise<string | null> {
+  let antwort: Response;
+  try {
+    antwort = await fetch(`${z.basis}/api/team/picture/${teamId}`, {
+      headers: { "X-User-Token": token, "X-User-Language": "1" },
+    });
+  } catch {
+    throw new SfvFehler("SFV nicht erreichbar");
+  }
+  if (antwort.status === 404) return null;
+  if (!antwort.ok) throw new SfvFehler(`SFV antwortet mit HTTP ${antwort.status}`);
+  return await antwort.text();
+}
