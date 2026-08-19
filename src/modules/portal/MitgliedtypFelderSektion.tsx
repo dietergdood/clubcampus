@@ -99,6 +99,33 @@ export function MitgliedtypFelderSektion({
     );
   }
 
+  /* Ein Schalter für "gibt es / gibt es nicht". Nimmt eine Liste, weil er
+     drei Rollen bedient: Sammelschalter eines Bereichs, Adressblock (vier
+     Felder, ein Schalter) und einzelne Zeilen, bei denen es nichts
+     auszufüllen gibt. Eine Stelle statt dreier Kopien desselben Markups. */
+  function AnAusSchalter({ schluessel, titel }: { schluessel: readonly string[]; titel: string }) {
+    const an = schluessel.some(s => istSichtbar(konfig, s));
+    return (
+      <button
+        className={"cc-toggle" + (an ? " cc-toggle-on" : "")}
+        title={an ? `${titel} ausschalten` : `${titel} einschalten`}
+        onClick={() => aendern(schluessel, an ? "aus" : "freiwillig")}>
+        <div className={"cc-toggle-knob" + (an ? " cc-toggle-knob-on" : "")}/>
+      </button>
+    );
+  }
+
+  /* "Freiwillig" gegen "Gibt es nicht" ist keine Wahl zwischen drei Werten,
+     sondern an oder aus — für einen Profil-Tab und für den Mitgliedtyp gibt
+     es nichts auszufüllen. Ein Segment mit zwei Feldern würde einen dritten
+     Zustand suggerieren, den es nicht gibt.
+
+     Nicht dasselbe wie der Adressblock: dort bleiben zwei Werte übrig
+     (Pflicht/Freiwillig), und die gehören ins Segment — ein Schiebeschalter
+     liesse offen, welche Seite "Pflicht" ist. */
+  const istAnAus = (modi: readonly FeldModus[]) =>
+    modi.includes("aus") && !modi.includes("pflicht");
+
   function Zeile({ eintrag, nurAnAus = false }: { eintrag: RegistryEintrag; nurAnAus?: boolean }) {
     const aus = !istSichtbar(konfig, eintrag.schluessel);
     const fest = eintrag.modi.length === 0;
@@ -110,23 +137,10 @@ export function MitgliedtypFelderSektion({
         </div>
         {fest
           ? <span className="cc-text-sm cc-text-sub">Immer Pflicht</span>
-          : <ModusSchalter eintrag={eintrag} nurAnAus={nurAnAus}/>}
+          : istAnAus(eintrag.modi)
+            ? <AnAusSchalter schluessel={[eintrag.schluessel]} titel={labelFuer(eintrag.schluessel)}/>
+            : <ModusSchalter eintrag={eintrag} nurAnAus={nurAnAus}/>}
       </div>
-    );
-  }
-
-  /* `schluessel` ist vom Aufrufer bereits auf das gefiltert, was einen
-     "aus"-Wert kennt — vorname/nachname sind fest und bleiben vom
-     Sammelschalter unberührt. */
-  function BereichAusSchalter({ schluessel }: { schluessel: readonly string[] }) {
-    const an = schluessel.some(s => istSichtbar(konfig, s));
-    return (
-      <button
-        className={"cc-toggle" + (an ? " cc-toggle-on" : "")}
-        title={an ? "Bereich ausschalten" : "Bereich einschalten"}
-        onClick={() => aendern(schluessel, an ? "aus" : "freiwillig")}>
-        <div className={"cc-toggle-knob" + (an ? " cc-toggle-knob-on" : "")}/>
-      </button>
     );
   }
 
@@ -190,14 +204,27 @@ export function MitgliedtypFelderSektion({
         const adresse = eintraege.filter(e => e.adresse);
         const ohneAdresse = eintraege.filter(e => !e.adresse);
 
+        /* Teams, Vereinsfunktionen und Notizen bestehen aus genau einem
+           Eintrag, der den Bereich selbst meint. Dort wäre die Zeile darunter
+           eine zweite Bedienung derselben Entscheidung — und wenn beide
+           auseinanderliefen, wüsste niemand, was gilt. Nur der Schalter im
+           Kopf.
+
+           Erkannt am Schlüssel statt an einer Liste von Bereichsnamen: kommt
+           ein weiterer Ein-Eintrag-Bereich dazu, verhält er sich von selbst
+           richtig. */
+        const nurBereich = eintraege.length === 1 && eintraege[0].schluessel === b.key;
+
         return (
           <Card key={b.key}>
             <div className="cc-section-title-row">
               <div className="cc-section-title"><TI n={b.icon} size={14}/> {b.label}</div>
-              {schaltbar.length > 0 && <BereichAusSchalter schluessel={schaltbar}/>}
+              {schaltbar.length > 0 && (
+                <AnAusSchalter schluessel={schaltbar} titel={nurBereich ? b.label : "Bereich"}/>
+              )}
             </div>
 
-            {ohneAdresse.map(e => <Zeile key={e.schluessel} eintrag={e}/>)}
+            {!nurBereich && ohneAdresse.map(e => <Zeile key={e.schluessel} eintrag={e}/>)}
 
             {adresse.length > 0 && (
               <>
@@ -213,12 +240,7 @@ export function MitgliedtypFelderSektion({
                       aus der PLZ.
                     </div>
                   </div>
-                  <button
-                    className={"cc-toggle" + (istSichtbar(konfig, "strasse") ? " cc-toggle-on" : "")}
-                    title={istSichtbar(konfig, "strasse") ? "Adresse ausschalten" : "Adresse einschalten"}
-                    onClick={() => aendern(ADRESS_FELDER, istSichtbar(konfig, "strasse") ? "aus" : "freiwillig")}>
-                    <div className={"cc-toggle-knob" + (istSichtbar(konfig, "strasse") ? " cc-toggle-knob-on" : "")}/>
-                  </button>
+                  <AnAusSchalter schluessel={ADRESS_FELDER} titel="Adresse"/>
                 </div>
                 {istSichtbar(konfig, "strasse") &&
                   adresse.map(e => <Zeile key={e.schluessel} eintrag={e} nurAnAus/>)}

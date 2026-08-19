@@ -215,4 +215,31 @@ describe("Registry", () => {
   it("hat fuer jeden Bereich mindestens einen Eintrag", () => {
     for (const b of BEREICHE) expect(eintraegeFuerBereich(b.key).length).toBeGreaterThan(0);
   });
+
+  it("laesst Teams, Funktionen und Notizen aus genau einem Eintrag bestehen", () => {
+    /* Die Oberflaeche erkennt daran, dass sie dort nur den Schalter im Kopf
+       zeigt und keine Zeile darunter: zwei Bedienelemente fuer dieselbe
+       Entscheidung koennten auseinanderlaufen, und dann wuesste niemand,
+       was gilt. Erkannt wird es am Schluessel — kommt ein weiterer solcher
+       Bereich dazu, verhaelt er sich von selbst richtig. */
+    for (const key of ["teams", "funktionen", "notizen"]) {
+      const e = eintraegeFuerBereich(key);
+      expect(e).toHaveLength(1);
+      expect(e[0].schluessel).toBe(key);
+    }
+  });
+
+  it("gibt jedem Schluessel ohne auszufuellenden Wert genau an und aus", () => {
+    /* Bei einem Profil-Tab und beim Mitgliedtyp gibt es nichts einzutragen —
+       "Freiwillig" waere dort bedeutungslos. Solche Schluessel bekommen einen
+       Schiebeschalter statt eines Segments; ein Segment mit zwei Feldern
+       wuerde einen dritten Zustand suggerieren, den es nicht gibt. */
+    const anAus = FELD_REGISTRY.filter(e => e.modi.includes("aus") && !e.modi.includes("pflicht"));
+    expect(anAus.map(e => e.schluessel).sort()).toEqual([
+      "funktionen", "mitgliedtyp", "notizen",
+      "tab_datenpruefung", "tab_eltern", "tab_portal", "tab_stats", "tab_verlauf",
+      "teams",
+    ]);
+    for (const e of anAus) expect([...e.modi].sort()).toEqual(["aus", "freiwillig"]);
+  });
 });
