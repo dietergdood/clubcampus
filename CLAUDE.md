@@ -485,35 +485,33 @@ den Abschnitt „Ein Amt und ein Rechtebündel heissen beide Funktion".
 
 **Unabhängig von allem anderen, jederzeit machbar.**
 
-### ⚠ Zu Ende denken: Was ist ein Supporter?
+### Supporter: entschieden — Rückbau von Etappe 5 steht aus
 
-**Etappe 5 hat eine Entscheidung getroffen, die vermutlich falsch ist.** Sie steht so in der Datenbank und muss besprochen werden, bevor externe Vereine dazukommen.
+**Am 17.08.2026 entschieden**, durch die Vereinsstatuten: Supporter steht nicht
+in Artikel 6, ist also **keine Mitgliedschaft**. Herleitung in
+`ARCHITECTURE.md` unter „Supporter ist keine Mitgliedschaft" und „Was ein
+Mitglied ist — die Statuten des FCH".
 
-**Gebaut wurde:** Supporter ist ein **Mitgliedtyp**. `macheZumSupporter()` legt eine Zeile in `mitglieder` mit `mitgliedtyp = 'Supporter'` an, wenn ein Elternteil sein letztes Kind verliert. Begründung damals: Ohne Mitgliedschaft wäre die Person nirgends auffindbar — `fetchAlleElternkontakte` steigt über `eltern_kinder!inner` ein.
+Kurz: eine Person ohne Mitgliedschaft, die erreichbar bleibt, sich für
+Helferschichten einträgt und bestimmte News erhält. Er darf eine Vereinsfunktion
+haben, aber keine Funktionärsrechte auf Mitgliederdaten.
 
-**Der Einwand (Didi, 05.08.2026):** *Ein Supporter hat KEINE Mitgliedschaft.* Er zahlt keinen Beitrag, hat kein Stimmrecht an der GV, ist nicht Mitglied des Vereins. Ihm eine Zeile in `mitglieder` zu geben, verpasst ihm etwas, das er nicht hat. Das Symptom war der Supporter-Tab in der Mitgliederliste — die Ursache ist das Datenmodell.
+**Was noch zu tun ist:**
 
-**Wie es vermutlich richtig wäre:** Ein Supporter ist eine **Person ohne Mitgliedschaft**, mit Portal-Zugang. Die Liste käme dann aus `personen` — alle ohne Mitgliedschaft und ohne Kindverknüpfung.
+- `macheZumSupporter()` legt heute eine Mitgliedschaft an — das gehört
+  zurückgebaut. Die drei bestehenden (Philippe Kern, Heidi Studer, Werner
+  Ulrich) werden zu Personen ohne Mitgliedschaft.
+- `SupporterListView` liest dann aus `personen` statt aus `mitglieder` — dort
+  ist die Zeile keine `MemberRow` mehr, `filterMembers`/`sortMembers`/
+  `buildGroups` greifen nicht mehr direkt.
+- Der Mitgliedtyp „Supporter" entfällt.
+- Supporter brauchen einen Platz in den **Empfängerlisten** (News,
+  Helferanfragen) — getrennt von den Mitgliedern, sonst bekommt der Gönner die
+  GV-Einladung.
+- Entstehen soll er mit **Rückfrage**, nicht automatisch: beim Entkoppeln des
+  letzten Kindes und beim Funktionär, der sein Amt niederlegt. Beide Male sind
+  Ehrenmitglied, Aktivmitglied oder Archiv ebenso mögliche Antworten.
 
-Das löst nebenbei eine Frage, die heute offen blieb: **Wie wird ein Supporter wieder Elternteil?** Nach dem heutigen Modell bliebe seine Supporter-Mitgliedschaft aktiv, er stünde weiter im Supporter-Tab. Ohne Mitgliedschaft gäbe es nichts aufzuräumen — er ist eine Person, die wieder ein Kind hat.
+`mitgliedtypen.zaehlt_als_mitgliedschaft` (17.08.2026) ist die Vorarbeit: Die
+Listentrennung hängt nicht mehr am Namen „Supporter", sondern an einem Merkmal.
 
-> **Seit 19.08.2026 billiger geworden.** Die Listentrennung hängt nicht mehr
-> am Namen „Supporter", sondern an `mitgliedtypen.zaehlt_als_mitgliedschaft`,
-> und was sein Profil zeigt, steht in `mitgliedtyp_feldkonfig`. Ein Rückbau
-> muss also weder `SUPPORTER_TYP` noch `istSupporter` anfassen — beide gibt
-> es nicht mehr. Übrig bleibt die eigentliche Frage: gehört ihm eine Zeile in
-> `mitglieder`?
-
-**Was ein Rückbau kostet:**
-
-- Mitgliedtyp „Supporter" entfällt, die angelegten Mitgliedschaften werden gelöscht (bei FCH drei: Philippe Kern, Heidi Studer, Werner Ulrich) — mit ihnen fallen per `on delete cascade` auch seine zwölf Zeilen in `mitgliedtyp_feldkonfig`
-- `macheZumSupporter()` fällt weg, `entkoppleKind()` setzt nur noch die Benutzerrolle
-- `SupporterListView` liest aus `personen` statt aus `mitglieder` — dann funktionieren `filterMembers`/`sortMembers`/`buildGroups` nicht mehr direkt, weil die Zeile keine `MemberRow` mehr ist
-- die Portalrolle `supporter` bleibt (sie ist eine Berechtigung, keine Mitgliedschaft)
-
-**Offene Fragen für die Diskussion:**
-
-1. Wie wird ein Supporter überhaupt erfasst — nur automatisch beim Entknüpfen, oder auch von Hand?
-2. Soll er in der Kommunikation erscheinen (Helferanfragen, News)? Dann braucht er einen Ort in den Empfängerlisten.
-3. Was unterscheidet ihn von einer Person, die einfach nur in der Datenbank steht — reicht „hat Portal-Zugang, aber keine Mitgliedschaft" als Definition?
-4. Braucht es ein Eintrittsdatum, einen Vermerk, wer ihn geworben hat?

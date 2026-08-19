@@ -623,6 +623,89 @@ Anders ist nur die **Auswahl**: keine `savedViews` (die Vorlagen bestehen aus Sp
 
 Die E-Mail steht im Modal auf einer **eigenen Zeile**. Hing sie an der Beziehung, fehlte sie bei jeder Person, die noch kein Elternteil ist — also genau bei denen, die man hier sucht.
 
+### Was ein Mitglied ist — die Statuten des FCH
+
+Geklärt am 17.08.2026 anhand der Vereinsstatuten. Steht hier, weil es im Code
+nirgends steht und beim nächsten Zweifel sonst wieder von vorn diskutiert wird.
+
+**Artikel 6 kennt fünf Kategorien:** Aktivmitglieder, Junioren/-innen,
+Funktionäre, Ehren- und Freimitglieder, Passivmitglieder. Das sind die
+Mitgliedtypen — sie bilden die Statuten ab, nicht eine Beitragslogik.
+
+`Pausenmitglied` und `Supporter` stehen **nicht** in Artikel 6. Ersteres ist
+gelebte Praxis (Beitragsermässigung bei Militärdienst und Ähnlichem), Zweiteres
+gar keine Mitgliedschaft — siehe unten.
+
+**Artikel 8 sagt, wer Funktionär ist:** Vorstandsmitglieder, die
+hauptverantwortlichen Trainer sämtlicher Teams, sowie die beim FVRZ gemeldeten
+Schiedsrichter und Vereinsfunktionäre. Der Vorstand kann zusätzliche
+Funktionäre bestimmen.
+
+**Nicht jedes Amt macht zum Funktionär.** Die Grenze verläuft bei der
+Verantwortung:
+
+| Fall | Mitgliedtyp |
+|---|---|
+| Spieler, hilft im Grümpi-OK | **Aktivmitglied** — die Mitarbeit ändert nichts |
+| Stufenleiter | **Funktionär/in** — Leitungsaufgabe |
+| Hauptverantwortlicher Trainer | **Funktionär/in**, dazu Kaderrolle `Trainer/in` |
+| Co-Trainer | Artikel 8 sagt „hauptverantwortliche" — also nicht automatisch |
+| Hilft im Grümpi-OK, keine Mitgliedschaft | **Supporter** — das OK begründet keine Mitgliedschaft |
+
+**Trainer ist kein Mitgliedtyp.** Ein Trainer ist Funktionär (Artikel 8) mit
+der Kaderrolle Trainer. Zwei Achsen: der Typ sagt, was er im Verein ist, die
+Kaderrolle, was er tut.
+
+**Der Mitgliedtyp lässt sich nicht berechnen.** Er wird gesetzt, weil jemand es
+entschieden hat — bei „zusätzlichen Funktionären" ist es sogar ausdrücklich ein
+Vorstandsbeschluss. Die Software leitet ihn nirgends ab; abgeleitet wird nur
+die Portalrolle.
+
+**Artikel 8, zweiter Absatz**, hat eine Folge fürs Datenmodell: Die
+Funktionärsliste ist für die Vereinsmitgliedschaft massgebend, und bei
+Beendigung der Tätigkeit erfolgt sofortige Streichung. Wer sein Amt niederlegt,
+verliert also die Mitgliedschaft — er wird nicht auf Passiv umgestellt.
+Praktisch soll er dann **Supporter** werden, mit Rückfrage: Ehrenmitglied,
+Aktivmitglied oder Archiv sind ebenso mögliche Antworten, und das entscheidet
+der Vorstand, nicht die Software.
+
+**Artikel 9:** Ehren- und Freimitglieder sind von Beitrag und GV-Teilnahme
+befreit, geniessen aber die Rechte eines Aktivmitglieds. Die Ehrenmitgliedschaft
+kann auch an Nichtmitglieder verliehen werden.
+
+### Supporter ist keine Mitgliedschaft
+
+Entschieden am 17.08.2026 — und zwar durch die Statuten: **Supporter steht
+nicht in Artikel 6.**
+
+**Was ein Supporter ist:** eine Person ohne Mitgliedschaft, die
+
+- mit ihren Kontaktdaten erreichbar bleibt,
+- sich für **Helferschichten** eintragen kann,
+- bestimmte **News** erhält.
+
+Er zahlt keinen Beitrag, hat kein Stimmrecht, steht in keiner Mitgliederzählung.
+Er ist das Auffangbecken, damit der Verein den Kontakt behält.
+
+**Er darf eine Vereinsfunktion haben** — sonst könnte er nicht mithelfen. Was er
+nicht bekommen darf, sind Funktionärsrechte auf Mitgliederdaten. Das löst sich,
+sobald die Rechte aus der Gruppe kommen statt aus der Rolle `funktionaer`; siehe
+`docs/auftrag_rls_gruppenrechte.md`.
+
+**Daraus folgt der Rückbau von Etappe 5.** Sie hat dem Supporter eine
+Mitgliedschaft in `mitglieder` gegeben, damit er auffindbar ist. Das war
+Bequemlichkeit, nicht Modell. Richtig wäre: Person ohne Mitgliedschaft, die
+Supporter-Liste liest aus `personen`.
+
+Vorgearbeitet ist bereits `mitgliedtypen.zaehlt_als_mitgliedschaft`
+(17.08.2026): Die Listentrennung hängt nicht mehr am Namen „Supporter", sondern
+an einem Merkmal. Der Rückbau wird dadurch kleiner.
+
+**Wie ein Supporter entsteht:** heute automatisch beim Entkoppeln des letzten
+Kindes. Dazu kommt der Funktionär, der sein Amt niederlegt — beide **mit
+Rückfrage**, weil es mehrere richtige Antworten gibt. Und von Hand anlegen
+sollte man ihn auch können.
+
 ### Die Sicht `portal_zugang` — die eine Ausnahme
 
 Die Portal-Spalte der Elternliste kam bis Etappe 3 aus `elternkontakte.benutzer_id`, wo nur eine `verein_id`-Policy liegt — jeder Eingeloggte konnte sie lesen. Seit Etappe 3 kommt sie aus `benutzer`, wo `benutzer_select_admin`/`_self` gelten: Ein Trainer bekommt beim Join eine leere Menge und die Liste zeigt ihm für **alle** „Kein Zugang" — ohne Fehler, ohne Meldung.
