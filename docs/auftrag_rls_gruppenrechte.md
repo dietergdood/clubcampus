@@ -133,19 +133,48 @@ Textfeld, in dem bis zum 05.08.2026 bei 487 Mitgliedern „Spieler" stand.
 Damit gibt es das Amt zweimal, an zwei Orten, mit zwei Bedeutungen — dieselbe
 Doppelung, die der Personen-Umbau überall aufgelöst hat.
 
-**Zu entscheiden:**
+**Am 17.08.2026 anhand der Vereinsstatuten geklärt** (ausführlich in
+`ARCHITECTURE.md`, „Was ein Mitglied ist — die Statuten des FCH"):
 
-1. Sind es zwei Dinge (Amt bei den Mitgliedern, Rechte bei den
-   Berechtigungen) oder eines mit zwei Ansichten?
+Artikel 8 sagt, wer Funktionär ist — Vorstandsmitglieder, hauptverantwortliche
+Trainer, gemeldete Schiedsrichter. **Nicht jedes Amt macht zum Funktionär.**
+Ein Spieler, der im Grümpi-OK mithilft, bleibt Aktivmitglied. Ein Stufenleiter
+wird Funktionär.
+
+Daraus folgen zwei Dinge für diesen Auftrag:
+
+- **Der Mitgliedtyp ist nicht das Problem.** Er wird von Hand gesetzt, weil
+  jemand entschieden hat, und bildet Artikel 6 ab. Die Software leitet ihn
+  nirgends ab.
+- **Das Problem sind die Rechte.** Ein Supporter darf eine Vereinsfunktion
+  haben — sonst könnte er nicht im OK mithelfen. Was er nicht bekommen darf,
+  sind Funktionärsrechte auf Mitgliederdaten. Heute bekommt er sie, weil aus
+  jeder Funktion die Rolle `funktionaer` abgeleitet wird.
+
+**Der konkrete Fall, an dem sich der Umbau messen lassen muss:**
+
+> Jemand ohne Mitgliedschaft hilft im Grümpi-OK. Er ist Supporter. Er braucht
+> Zugriff auf Termine und Helfereinsätze — und darf die Mitgliederliste nicht
+> sehen. Heute bekommt er über die Funktion die Rolle `funktionaer` und damit
+> beides.
+
+Die Gruppe weiss das bereits: „Vereinsleben & Events" trägt in
+`portal_gruppen.module` andere Module als „Vorstand". Es wird nur nicht benutzt,
+weil die Rolle davorsteht.
+
+**Zu entscheiden bleibt:**
+
+1. Braucht es die Rolle `funktionaer` überhaupt noch, wenn die Rechte aus der
+   Gruppe kommen?
 2. Wenn zwei: Wie hängen sie zusammen? Über den Namen wäre dieselbe Falle wie
    bei der Team-Zuordnung — „Kassier" gibt es womöglich zweimal.
 3. Was wird aus `mitglieder.funktionen`? Es ist ein Textfeld ohne Bezug zu
    `portal_funktionen`. Acht Einträge auf sechs Ämter stehen darin, gepflegt
    wird es von Hand.
 
-Solange das offen ist, bleibt „Gruppen & Funktionen" in der Portalverwaltung
-unter den Berechtigungen — dort wirkt es heute. Ob es später zu den Mitgliedern
-wandert oder sich in zwei Seiten teilt, entscheidet sich mit diesem Auftrag.
+„Gruppen & Funktionen" bleibt in der Portalverwaltung unter den Berechtigungen
+— dort wirkt es. Das Amt selbst steht bei den Mitgliedern; die beiden
+auseinanderzuhalten ist Teil dieses Auftrags.
 
 ## Vorgehen
 
