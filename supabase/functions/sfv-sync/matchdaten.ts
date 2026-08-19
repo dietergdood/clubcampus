@@ -301,9 +301,13 @@ export function passAenderungen(
   zuordnung: Map<number, number>,
   bestand: Map<number, string | null>,
 ): PassAenderung[] {
+  /* Mitglieder mit widerspruechlicher Zuordnung bleiben aussen vor —
+     sonst pendelte ihr Pass bei jedem Lauf. Siehe passKonflikte(). */
+  const strittig = new Set(passKonflikte(aufstellung, unsere, zuordnung).map((k) => k.mitglied_id));
   const raus = new Map<number, PassAenderung>();
 
   for (const p of aufstellung) {
+    if (strittig.has(zuordnung.get(zahl(p.personId) ?? -1) ?? -1)) continue;
     if (!istEigener(p.clubNumber, unsere)) continue;      // Regel 1
     const personId = zahl(p.personId);
     if (personId === null) continue;
@@ -321,4 +325,51 @@ export function passAenderungen(
   }
 
   return [...raus.values()];
+}
+
+/**
+ * Mitglieder, denen ZWEI verschiedene SFV-Personen mit verschiedenen
+ * Passnummern zugeordnet sind.
+ *
+ * ⚠ DER FALL IST BAUART, NICHT ZUFALL. `sfv_zuordnung` hat bewusst keinen
+ * Unique auf mitglied_id: ein Mitglied darf mehrere sfv_person_id tragen,
+ * damit ein Saisonwechsel der IDs die Historie nicht zerreisst. Genau das
+ * erlaubt aber auch, zwei verschiedene Menschen versehentlich auf dasselbe
+ * Mitglied zu legen.
+ *
+ * Was dann ohne diese Pruefung geschaehe: der Pass wechselte bei JEDEM Lauf
+ * zwischen beiden Werten hin und her, und jeder Wechsel schriebe einen
+ * Verlaufseintrag. Ein Feld, das nie zur Ruhe kommt, und eine Historie
+ * voller Rauschen — beides ohne erkennbare Ursache.
+ *
+ * Deshalb: gar nicht schreiben und melden. Eine falsche Zuordnung ist von
+ * Hand zu klaeren, nicht vom Sync zu raten.
+ */
+export interface PassKonflikt {
+  mitglied_id: number;
+  werte: string[];
+}
+
+export function passKonflikte(
+  aufstellung: SfvRoh[], unsere: number | null, zuordnung: Map<number, number>,
+): PassKonflikt[] {
+  const proMitglied = new Map<number, Set<string>>();
+
+  for (const p of aufstellung) {
+    if (!istEigener(p.clubNumber, unsere)) continue;
+    const personId = zahl(p.personId);
+    if (personId === null) continue;
+    const mitgliedId = zuordnung.get(personId);
+    if (mitgliedId === undefined) continue;
+    const pass = text(p.passportNumber);
+    if (pass === null) continue;
+
+    let werte = proMitglied.get(mitgliedId);
+    if (!werte) { werte = new Set(); proMitglied.set(mitgliedId, werte); }
+    werte.add(pass);
+  }
+
+  return [...proMitglied.entries()]
+    .filter(([, werte]) => werte.size > 1)
+    .map(([mitglied_id, werte]) => ({ mitglied_id, werte: [...werte].sort() }));
 }

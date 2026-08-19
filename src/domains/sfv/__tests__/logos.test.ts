@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   ausBase64, erkenneBild, logoPfad, offeneLogos, LOGOS_PRO_LAUF, WIEDERHOLUNG_TAGE,
 } from "../../../../supabase/functions/sfv-sync/logos.ts";
-import { leseSchiedsrichter, passAenderungen } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
+import { leseSchiedsrichter, passAenderungen, passKonflikte } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
 const b = (...bytes: number[]) => new Uint8Array([...bytes, ...new Array(16).fill(0)]);
 
@@ -207,5 +207,39 @@ describe("passAenderungen — der Sync schreibt ein Mitgliederfeld", () => {
     const raus = passAenderungen(
       [p(UNS, 111, "987654"), p(UNS, 111, "987654")], UNS, zuordnung, new Map());
     expect(raus).toHaveLength(1);
+  });
+});
+
+describe("passKonflikte — zwei Personen auf einem Mitglied", () => {
+  const UNS = 11057;
+  const p = (personId: number, pass: string) =>
+    ({ clubNumber: UNS, personId, passportNumber: pass });
+  /* Beide SFV-Personen zeigen auf Mitglied 5 — erlaubt, weil
+     sfv_zuordnung bewusst keinen Unique auf mitglied_id hat. */
+  const doppelt = new Map([[111, 5], [222, 5]]);
+
+  it("erkennt widersprüchliche Passnummern", () => {
+    expect(passKonflikte([p(111, "111111"), p(222, "999999")], UNS, doppelt))
+      .toEqual([{ mitglied_id: 5, werte: ["111111", "999999"] }]);
+  });
+
+  it("meldet nichts, wenn beide dieselbe Nummer tragen", () => {
+    /* Derselbe Mensch unter zwei SFV-Ids — genau der Fall, für den
+       das fehlende Unique gebaut wurde. */
+    expect(passKonflikte([p(111, "111111"), p(222, "111111")], UNS, doppelt)).toEqual([]);
+  });
+
+  it("schreibt bei einem Konflikt GAR NICHTS für dieses Mitglied", () => {
+    /* Ohne diese Sperre pendelte der Wert bei jedem Lauf zwischen beiden
+       Nummern und schriebe jedes Mal einen Verlaufseintrag. */
+    expect(passAenderungen([p(111, "111111"), p(222, "999999")], UNS, doppelt, new Map()))
+      .toEqual([]);
+  });
+
+  it("lässt unbeteiligte Mitglieder in Ruhe", () => {
+    const gemischt = new Map([[111, 5], [222, 5], [333, 9]]);
+    const raus = passAenderungen(
+      [p(111, "111111"), p(222, "999999"), p(333, "777777")], UNS, gemischt, new Map());
+    expect(raus).toEqual([{ mitglied_id: 9, alt: null, neu: "777777" }]);
   });
 });

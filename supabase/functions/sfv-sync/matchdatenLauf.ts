@@ -21,7 +21,7 @@ import { holeMatch, holeAufstellung, holeEreignisse, holeTeamBild, SfvFehler } f
 import type { SfvZugang } from "./sfvApi.ts";
 import {
   bildeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
-  passAenderungen,
+  passAenderungen, passKonflikte,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
@@ -39,6 +39,10 @@ export interface MatchdatenErgebnis {
   /* Spielerpaesse, die der Verband geliefert hat und die sich geaendert
      haben. Jeder davon steht auch im Verlauf des Mitglieds. */
   paesse_geschrieben: number;
+  /* Mitglieder mit widerspruechlicher Zuordnung: zwei SFV-Personen, zwei
+     Passnummern. Fuer sie wird NICHTS geschrieben — der Wert pendelte sonst
+     bei jedem Lauf. Von Hand zu klaeren. */
+  pass_konflikte: string[];
   nachzug_meldungen: number;
   fehler: number;
   /* WARUM ein Spiel scheiterte, nicht nur DASS. Ohne diese Liste sah ein
@@ -68,7 +72,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, paesse_geschrieben: 0, nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -152,7 +156,9 @@ export async function laufeMatchdaten(
     }
   }
 
-  erg.paesse_geschrieben = await schreibePaesse(db, v.verein_id, alleRoh, unsereClubNummer);
+  const pass = await schreibePaesse(db, v.verein_id, alleRoh, unsereClubNummer);
+  erg.paesse_geschrieben = pass.geschrieben;
+  erg.pass_konflikte = pass.konflikte;
   erg.nachzug_meldungen = await pruefeNachzug(db, v.verein_id);
   const zaehlung = await zaehleUnzugeordnet(db, v.verein_id);
   erg.eigene_unzugeordnet = zaehlung.offen;
@@ -328,12 +334,12 @@ const PASS_URHEBER = "SFV-Sync";
 
 async function schreibePaesse(
   db: SupabaseClient, vereinId: string, alleRoh: SfvRoh[], unsere: number | null,
-): Promise<number> {
-  if (!alleRoh.length || unsere === null) return 0;
+): Promise<{ geschrieben: number; konflikte: string[] }> {
+  if (!alleRoh.length || unsere === null) return { geschrieben: 0, konflikte: [] };
 
   const { data: zuordnungRoh } = await db
     .from("sfv_zuordnung").select("sfv_person_id,mitglied_id").eq("verein_id", vereinId);
-  if (!zuordnungRoh?.length) return 0;
+  if (!zuordnungRoh?.length) return { geschrieben: 0, konflikte: [] };
   const zuordnung = new Map(
     zuordnungRoh.map((z) => [Number(z.sfv_person_id), Number(z.mitglied_id)]));
 
@@ -343,14 +349,25 @@ async function schreibePaesse(
   const bestand = new Map(
     (mitglieder ?? []).map((m) => [Number(m.id), (m.spielerpass as string | null) ?? null]));
 
+  const konflikte = passKonflikte(alleRoh, unsere, zuordnung)
+    .map((k) => `Mitglied ${k.mitglied_id}: zwei Passnummern (${k.werte.join(" / ")}) — Zuordnung pruefen`);
+
   const aenderungen = passAenderungen(alleRoh, unsere, zuordnung, bestand);
-  if (!aenderungen.length) return 0;
+  if (!aenderungen.length) return { geschrieben: 0, konflikte };
 
   let geschrieben = 0;
   for (const a of aenderungen) {
     const { error } = await db.from("mitglieder")
       .update({ spielerpass: a.neu }).eq("id", a.mitglied_id);
-    if (error) continue;
+    /* Die Meldung festhalten statt sie zu verschlucken — der Unique-Index
+       auf (verein_id, spielerpass) schlaegt hier zu, wenn zwei Mitglieder
+       dieselbe Nummer bekaemen. Ohne Text saehe das aus wie "der Verband
+       hat nichts geliefert" (CLAUDE.md: ein leerer catch macht aus einem
+       Fehler eine Datenlage). */
+    if (error) {
+      if (konflikte.length < 5) konflikte.push(`Mitglied ${a.mitglied_id}: ${error.message}`);
+      continue;
+    }
 
     const jetzt = new Date().toISOString();
     if (a.alt) {
@@ -369,5 +386,5 @@ async function schreibePaesse(
     }
     geschrieben += 1;
   }
-  return geschrieben;
+  return { geschrieben, konflikte };
 }

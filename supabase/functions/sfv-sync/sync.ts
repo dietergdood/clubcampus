@@ -287,6 +287,10 @@ export async function laufeSync(
   if (md) {
     teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} Aufstellungs- und ${md.ereignisse_zeilen} Ereigniszeilen`);
     if (md.paesse_geschrieben) teile.push(`${md.paesse_geschrieben} Spielerpass/-paesse vom Verband uebernommen`);
+    if (md.pass_konflikte.length) {
+      erg.status = "warnung";
+      teile.push(`${md.pass_konflikte.length} Spielerpass/-paesse NICHT geschrieben — ${md.pass_konflikte[0]}`);
+    }
     if (md.nachzug_meldungen) teile.push(`${md.nachzug_meldungen} Korrektur(en) vom Verband eingeholt`);
     if (md.fehler) {
       /* Die Ursache gehoert in die Meldung, nicht nur die Zahl. */
