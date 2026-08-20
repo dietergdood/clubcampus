@@ -8,36 +8,55 @@
 
    1. Die Felder kommen aus der KONFIGURATION, nicht aus einer
       Liste in dieser Datei. Für die eigene Person gilt die Achse
-      `ohne_mitgliedschaft`, für jedes Kind sein Mitgliedtyp. Was
-      dort auf „Gibt es nicht" steht, erscheint hier nicht — ohne
-      dass jemand diese Datei anfassen muss.
+      `ohne_mitgliedschaft`, für jedes Kind sein Mitgliedtyp.
 
-   2. Die AHV-Nummer ist schreibbar. Sie stand hier als reines
-      Lesefeld mit „Nur lesbar — Änderungen durch den
-      Administrator" — und genau daran hingen 372 Junioren fest:
-      die Nummer steht auf der Krankenkassenkarte des Kindes, der
-      Elternteil hat sie, die Verwaltung nicht. Der Weg dorthin
-      ist seit `migration_eltern_kind_rechte.sql` offen; hier wird
-      er benutzt.
+   2. Die AHV-Nummer ist schreibbar. Daran hingen 372 Junioren
+      fest: die Nummer steht auf der Krankenkassenkarte des
+      Kindes, der Elternteil hat sie, die Verwaltung nicht.
 
    3. Geschrieben wird über `updateEigenePerson` /
-      `updateKindDurchElternteil` — mit Allowlist. Vorher lief der
-      Kinder-Zweig über `updateMitglied()`, das jedes Feld aus
-      PERSON_FELDER durchreicht.
+      `updateKindDurchElternteil` — mit Allowlist.
 
-   4. Ein Fehlschlag wird GEMELDET. Vorher stand am Ende
-      bedingungslos „Alles bestätigt ✓", auch wenn RLS jede Zeile
-      abgewiesen hätte — eine Erfolgsmeldung ohne Deckung.
+   4. Ein Fehlschlag wird GEMELDET, nicht als Erfolg verkleidet.
 
-   ⚠ WAS SIE WEITERHIN NICHT TUT: sie hält niemanden auf, dessen
-   Pflichtfelder leer sind. Das ist der offene Punkt „Die
-   Pflichtfeld-Matrizen wirken in der Datenprüfung gar nicht"
-   (CLAUDE.md) und gehört an `getProfilFehlend()` angeschlossen —
-   an einer Stelle für Mitglied und Elternteil, nicht hier
-   nebenbei. Die Sternchen zeigen die Pflicht bereits an.
+   ⚠ WAS AM 20.08.2026 DAZUKAM: DIE SPERRE
+
+   Bis dahin liess sich „Alles geprüft und korrekt ✓" drücken,
+   während Pflichtfelder leer waren. Das Sternchen am Feld kam aus
+   `istPflicht()`, der Knopf war an nichts gebunden — eine Anzeige,
+   die eine Regel behauptet, die es nicht gibt.
+
+   Gerechnet wird gegen die FORMULARWERTE, nicht gegen die
+   DB-Zeile: sonst bliebe der Knopf gesperrt, bis jemand neu lädt.
+
+   Und in zwei Gruppen, wie in `DatenpruefungMitglied`:
+
+     selbst      Pflichtfeld, das dieses Formular erfasst → sperrt
+     Verwaltung  gesperrt (E-Mail) oder gar nicht darstellbar
+                 (Spielerpass, Fairgate-ID) → wird genannt, sperrt
+                 nicht
+
+   Jemanden für ein Feld zu sperren, das er nicht ändern kann, wäre
+   eine Sackgasse. Deshalb zählt auch die Pille im Kartenkopf NUR
+   die Gruppe „selbst" — sonst stünde dort eine Zahl, die sich nie
+   auf null bringen liesse.
+
+   ⚠ EINE RECHNUNG FÜR PILLE UND SPERRE. Zwei Zähler wären
+   derselbe Fehler wie zwei Pflichtfeldlisten: sie laufen
+   auseinander, und dann sperrt der Knopf, während die Karte
+   „Vollständig" sagt. `personenStand()` liefert beides.
+
+   ⚠ DER LETZTE REST DER KETTE BLEIBT LIEGEN: `getProfilFehlend()`
+   ist weiterhin nirgends aufgerufen. Diese Maske sperrt jetzt —
+   das Pflicht-Overlay beim Login nennt aber immer noch kein
+   einziges fehlendes Feld, es schaut nur auf das Alter von
+   `profil_geprueft_at`. Siehe CLAUDE.md, „Die Pflichtfeld-Matrizen
+   wirken in der Datenprüfung gar nicht".
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Btn, Card } from "../../../theme.ts";
+import { TI } from "../../../icons.tsx";
 import { updateEigenePerson, updateKindDurchElternteil, elternDuerfen } from "../../../domains/members/kindService.ts";
 import { vollname, formatDatum } from "../../../domains/person/personUtils.ts";
 import {
@@ -45,9 +64,9 @@ import {
 } from "../../../shared/person/PersonFelderFormular.tsx";
 import type { FelderWerte } from "../../../shared/person/PersonFelderFormular.tsx";
 import {
-  getFeldkonfig, fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT,
+  getFeldkonfig, fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT, pflichtfelderFuerZiel, labelFuer,
 } from "../../../domains/members/feldkonfig.ts";
-import type { FeldkonfigZeile } from "../../../domains/members/feldkonfig.ts";
+import type { FeldkonfigZeile, KonfigZiel } from "../../../domains/members/feldkonfig.ts";
 import type { Mitglied, Sb } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
@@ -64,10 +83,43 @@ export interface ElternteilPerson {
 
 /* Was die Selbstbedienung nicht schreiben darf, wird ANGEZEIGT und gesperrt —
    nicht weggelassen. Ein Feld, das verschwindet, ist von einem nicht
-   konfigurierten nicht zu unterscheiden; wer seine E-Mail sucht und sie
-   nirgends findet, meldet einen Fehler. Quelle ist die Allowlist im Service,
+   konfigurierten nicht zu unterscheiden. Quelle ist die Allowlist im Service,
    nicht eine zweite Liste hier. */
 const GESPERRT: ReadonlySet<string> = new Set(FORMULAR_FELDER.filter(k => !elternDuerfen(k)));
+const DARSTELLBAR: ReadonlySet<string> = new Set(FORMULAR_FELDER);
+
+/** Was eine Person zum Bestätigen noch braucht. */
+export interface Stand {
+  /** Pflichtfelder, die dieses Formular erfasst und die leer sind. Sperrt. */
+  selbst: string[];
+  /** Pflichtfelder, an die nur die Verwaltung kommt. Sperrt nicht. */
+  verwaltung: string[];
+}
+
+/**
+ * Die EINE Rechnung — für die Pille im Kartenkopf und für die Sperre.
+ *
+ * `werte` sind die Formularwerte (das, was auf dem Schirm steht), `zeile` die
+ * geladene DB-Zeile für alles, was das Formular gar nicht darstellt.
+ */
+export function personenStand(
+  ziel: KonfigZiel,
+  feldkonfig: readonly FeldkonfigZeile[],
+  werte: FelderWerte,
+  zeile: Record<string, unknown>,
+): Stand {
+  const selbst: string[] = [];
+  const verwaltung: string[] = [];
+
+  for (const key of pflichtfelderFuerZiel(ziel, feldkonfig)) {
+    const eigenhaendig = DARSTELLBAR.has(key) && !GESPERRT.has(key);
+    const wert = eigenhaendig ? werte[key] : zeile[key];
+    const leer = wert === null || wert === undefined || String(wert).trim() === "";
+    if (!leer) continue;
+    (eigenhaendig ? selbst : verwaltung).push(key);
+  }
+  return { selbst, verwaltung };
+}
 
 interface DatenpruefungElternProps {
   sb: Sb;
@@ -85,9 +137,7 @@ interface DatenpruefungElternProps {
    *
    * ⚠ „Keine Kinder verknüpft" und „die Liste konnte nicht geladen werden"
    * sehen von aussen gleich aus — beide Male steht nichts da. Am 20.08.2026
-   * hat die Maske das Erste behauptet, während das Zweite galt: die Abfrage
-   * lief in einen 400er, und `(data || [])` machte daraus eine leere Liste.
-   * Ein Satz, der das Falsche sagt, ist schlimmer als keiner.
+   * hat die Maske das Erste behauptet, während das Zweite galt.
    */
   kinderFehler?: string | null;
   /** Zeilen aus `mitgliedtyp_feldkonfig`, vom Portal durchgereicht. */
@@ -110,16 +160,35 @@ export function DatenpruefungEltern({
   const [saving, setSaving] = useState(false);
 
   /* Für die eigene Person gilt die Achse „ohne Mitgliedschaft" — 393 der 394
-     Elternteile haben keine. Wer daneben auch Mitglied ist, sieht seine
-     Vereinsdaten im Profil, nicht hier: diese Maske pflegt Personendaten. */
+     Elternteile haben keine. */
   const eigeneKonfig = getFeldkonfig(OHNE_MITGLIEDSCHAFT, feldkonfig);
+
+  const eigenerStand = personenStand(
+    OHNE_MITGLIEDSCHAFT, feldkonfig, eigen, elternteil as Record<string, unknown>);
+  const kinderStand = kinder.map(kind => personenStand(
+    fuerMitgliedtyp(kind.mitgliedtyp), feldkonfig,
+    kinderWerte[kind.id] ?? {}, kind as unknown as Record<string, unknown>));
+
+  /* Die Sperre. Dieselbe Rechnung wie die Pillen — nicht eine zweite. */
+  const offeneFelder = eigenerStand.selbst.length + kinderStand.reduce((n, s) => n + s.selbst.length, 0);
+  const kannBestaetigen = offeneFelder === 0;
+
+  /* Offen ist, was unvollständig ist. Einmal beim Aufbau bestimmt: sonst
+     klappte die Karte zu, sobald der Nutzer das letzte Feld ausfüllt — mitten
+     im Tippen. */
+  const [offen, setOffen] = useState<Record<string, boolean>>(() => {
+    const start: Record<string, boolean> = { eigen: eigenerStand.selbst.length > 0 };
+    kinder.forEach((kind, i) => { start[`kind-${kind.id}`] = kinderStand[i].selbst.length > 0; });
+    return start;
+  });
+  const klappe = (key: string) => setOffen(p => ({ ...p, [key]: !p[key] }));
 
   function setKindFeld(mitgliedId: number, schluessel: string, wert: string) {
     setKinderWerte(prev => ({ ...prev, [mitgliedId]: { ...prev[mitgliedId], [schluessel]: wert } }));
   }
 
   async function alleBestaetigen() {
-    if (!sb) return;
+    if (!sb || !kannBestaetigen) return;
     setSaving(true);
     setPortalMsg(null);
     const fehler: string[] = [];
@@ -145,8 +214,7 @@ export function DatenpruefungEltern({
     if (fehler.length > 0) {
       /* ⚠ Kein „Alles bestätigt ✓" über einem fehlgeschlagenen Schreibvorgang.
          Bei RLS gibt es keinen Fehler zu lesen — eine gesperrte Zeile wird
-         schlicht nicht getroffen —, deshalb liest der Service gegen und meldet
-         es hier zurück. */
+         schlicht nicht getroffen —, deshalb liest der Service gegen. */
       setPortalMsg({ ok: false, text: `Nicht alles konnte gespeichert werden. ${fehler.join(" ")}` });
       return;
     }
@@ -173,10 +241,12 @@ export function DatenpruefungEltern({
         </div>
       </Card>
 
-      {/* Eigene Kontaktdaten */}
-      <Card>
-        <div className="cc-text-bold cc-text-lg cc-mb-4">Meine Kontaktdaten</div>
-        <div className="cc-text-sm cc-text-sub cc-mb-16">Prüfe deine eigenen Angaben.</div>
+      <div className="cc-section-title">Meine Angaben</div>
+      <PersonKarte
+        offen={offen.eigen} onKlappe={() => klappe("eigen")}
+        name={vollname(elternteil as never) || "Ich"}
+        stand={eigenerStand}
+      >
         <PersonFelderFormular
           konfig={eigeneKonfig}
           werte={eigen}
@@ -184,15 +254,12 @@ export function DatenpruefungEltern({
           gesperrt={GESPERRT}
           gesperrtHinweis="E-Mail-Adresse nur durch den Administrator änderbar — sie ist zugleich der Login-Name."
         />
-      </Card>
+      </PersonKarte>
 
-      {/* Pro Kind eine Karte.
+      <div className="cc-section-title">Meine Kinder ({kinder.length})</div>
 
-          ⚠ Kein stilles Nichts bei leerer Liste. Ein Elternteil, dessen
-          Verknuepfung fehlt, saehe sonst nur seine eigene Karte — und haette
-          keinen Anhaltspunkt, dass hier etwas fehlt. „Keine Kinder" und „die
-          Kinder konnten nicht geladen werden" sehen von aussen gleich aus;
-          gesagt werden muss es trotzdem. */}
+      {/* ⚠ Kein stilles Nichts bei leerer Liste: „keine Kinder" und „konnte
+          nicht geladen werden" sehen von aussen gleich aus. */}
       {kinder.length === 0 && kinderFehler && (
         <Card>
           <div className="cc-text-bold cc-text-lg cc-mb-4">Die Kinder konnten nicht geladen werden</div>
@@ -213,14 +280,14 @@ export function DatenpruefungEltern({
           </div>
         </Card>
       )}
-      {kinder.map(kind => (
-        <Card key={kind.id}>
-          <div className="cc-row cc-gap-8 cc-items-center cc-mb-16">
-            <div className="cc-av cc-av-sm" style={{ background: "var(--cc-accent)", color: "#000", fontSize: 11, fontWeight: 700 }}>
-              {vollname(kind).split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-            </div>
-            <div className="cc-text-bold cc-text-lg">{vollname(kind)}</div>
-          </div>
+
+      {kinder.map((kind, i) => (
+        <PersonKarte
+          key={kind.id}
+          offen={offen[`kind-${kind.id}`]} onKlappe={() => klappe(`kind-${kind.id}`)}
+          name={vollname(kind)}
+          stand={kinderStand[i]}
+        >
           {/* Die Achse des Kindes ist sein Mitgliedtyp — ein Juniorenmitglied
               zeigt andere Felder als ein Aktivmitglied. */}
           <PersonFelderFormular
@@ -230,14 +297,71 @@ export function DatenpruefungEltern({
             gesperrt={GESPERRT}
             gesperrtHinweis="E-Mail-Adresse nur durch den Administrator änderbar."
           />
-        </Card>
+        </PersonKarte>
       ))}
 
-      <div className="cc-row cc-gap-8 cc-justify-end">
-        <Btn variant="primary" onClick={alleBestaetigen} disabled={saving}>
+      <div className="cc-row cc-gap-8 cc-justify-end cc-items-center">
+        {!kannBestaetigen && (
+          <span className="cc-text-sm cc-text-sub">
+            Noch {offeneFelder} {offeneFelder === 1 ? "Feld" : "Felder"} auszufüllen.
+          </span>
+        )}
+        <Btn variant="primary" onClick={alleBestaetigen} disabled={saving || !kannBestaetigen}>
           {saving ? "Speichert…" : "Alles geprüft und korrekt ✓"}
         </Btn>
       </div>
     </div>
+  );
+}
+
+/* ── Eine Klappkarte pro Person ──────────────────────────────────────────
+   Auch die eigenen Angaben sind eine: gleich gebaut heisst gleich zu lesen.
+
+   ⚠ Auf MODULEBENE, nicht innerhalb von DatenpruefungEltern. Eine Komponente,
+   die in einer anderen deklariert wird, entsteht bei jedem Render neu — React
+   hängt den Teilbaum ab und neu an, und jedes Eingabefeld darin verlöre bei
+   jedem Tastendruck den Fokus (CLAUDE.md). Genau das wäre hier fatal: in
+   diesen Karten wird getippt. */
+function PersonKarte({
+  offen, onKlappe, name, stand, children,
+}: {
+  offen: boolean;
+  onKlappe: () => void;
+  name: string;
+  stand: Stand;
+  children: ReactNode;
+}) {
+  const fehlt = stand.selbst.length;
+  const initialen = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?";
+  return (
+    <Card className={fehlt > 0 ? "cc-card-rahmen-akzent" : ""}>
+      <button type="button" className="cc-klappkarte-kopf" onClick={onKlappe} aria-expanded={offen}>
+        <TI n={offen ? "chevron-up" : "chevron-down"} size={16} className="cc-klappkarte-chevron"/>
+        <div className="cc-av cc-av-sm" style={{ background: "var(--cc-accent)", color: "#000", fontSize: 11, fontWeight: 700 }}>
+          {initialen}
+        </div>
+        <span className="cc-text-bold cc-text-lg cc-flex-1">{name}</span>
+        {/* Zählt NUR „selbst": was allein die Verwaltung ändern kann, liesse
+            sich nie auf null bringen und stünde für immer als Mangel da. */}
+        <span className={`cc-badge ${fehlt > 0 ? "cc-badge-warning" : "cc-badge-success"}`}>
+          {fehlt > 0 ? `${fehlt} fehlt` : "Vollständig"}
+        </span>
+      </button>
+
+      {offen && (
+        <div className="cc-mt-16">
+          {stand.verwaltung.length > 0 && (
+            /* Getrennt genannt, nicht mit dem Obigen vermischt: hier kann der
+               Nutzer nichts tun, und ein Hinweis, den man nicht befolgen kann,
+               gehört als solcher gekennzeichnet. */
+            <div className="cc-text-sm cc-text-sub cc-mb-16">
+              Nur durch die Vereinsverwaltung zu ergänzen:{" "}
+              {stand.verwaltung.map(k => labelFuer(k)).join(" · ")}
+            </div>
+          )}
+          {children}
+        </div>
+      )}
+    </Card>
   );
 }

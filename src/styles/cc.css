@@ -526,6 +526,20 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-text-success{color:#16A34A}.cc-text-danger{color:#DC2626}.cc-text-warning{color:#D97706}
 
 /* ── Card variants ── */
+/* Klappkarte: die anklickbare Kopfzeile. Ein <button>, damit Tastatur und
+   Screenreader sie erreichen — deshalb muessen Rahmen, Hintergrund und Schrift
+   erst zurueckgesetzt werden. Muster gab es nur tabellengebunden
+   (.cc-members-group-hdr). */
+.cc-klappkarte-kopf{display:flex;align-items:center;gap:10px;width:100%;padding:0;margin:0;background:none;border:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.cc-klappkarte-kopf:hover .cc-klappkarte-chevron{color:var(--text)}
+.cc-klappkarte-chevron{color:var(--sub);flex-shrink:0;transition:color .1s}
+
+/* Karte mit Akzentrahmen. Ueber box-shadow statt border, weil .cc-card
+   `border:none!important` setzt und ein Rahmen sonst die Hoehe verschoebe.
+   .cc-eltern-card-haupt macht dasselbe fuer den Hauptkontakt, benennt aber
+   die Bedeutung statt das Element und ist deshalb nicht wiederverwendbar. */
+.cc-card-rahmen-akzent{box-shadow:0 0 0 1.5px var(--cc-accent,#FEC604),0 1px 4px rgba(0,0,0,0.07)!important}
+
 .cc-card-flat{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:16px 20px}
 .cc-card-accent{background:var(--cc-accent-12,rgba(254,198,4,0.07));border:1px solid var(--cc-accent-20,rgba(254,198,4,0.2));border-radius:12px;padding:16px 20px}
 .cc-card-success{background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:16px 20px}

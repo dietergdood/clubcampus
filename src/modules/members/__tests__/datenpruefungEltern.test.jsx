@@ -73,6 +73,15 @@ function props(over = {}) {
   };
 }
 
+/* Seit dem 20.08.2026 sind die Karten Klappkarten, und was vollstaendig ist,
+   startet ZU. Der Weg zum Feld ist damit ein Klick laenger — die Aussage der
+   Tests darunter bleibt dieselbe. */
+function oeffne(name) {
+  const kopf = screen.getAllByRole('button').find(b => b.textContent.includes(name));
+  if (!kopf) throw new Error(`Keine Klappkarte fuer "${name}" gefunden`);
+  if (kopf.getAttribute('aria-expanded') === 'false') fireEvent.click(kopf);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   svc.updateEigenePerson.mockResolvedValue({ ok: true, abgewiesen: [], fehler: null });
@@ -86,6 +95,7 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
        der Krankenkassenkarte des Kindes. Der Elternteil hat sie, die
        Verwaltung nicht — 372 aktive Junioren ohne AHV-Nummer. */
     await act(async () => { render(<DatenpruefungEltern {...props()} />); });
+    oeffne('Tim Muster');
     const felder = screen.getAllByLabelText(/AHV-Nr\./);
     expect(felder.length).toBeGreaterThan(0);
     expect(felder.some(f => !f.disabled)).toBe(true);
@@ -101,6 +111,7 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
 
   it('die E-Mail ist gesperrt und sagt warum', () => {
     render(<DatenpruefungEltern {...props()} />);
+    oeffne('Anna Muster'); oeffne('Tim Muster');
     const mails = screen.getAllByLabelText(/E-Mail/);
     expect(mails.every(m => m.disabled)).toBe(true);
     /* Angezeigt und nicht weggelassen: ein Feld, das verschwindet, ist von
@@ -113,6 +124,7 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
        erscheint. Mit `aus` verschwindet es — und zwar ohne dass jemand diese
        Maske anfasst. Genau dafuer gibt es die Konfiguration. */
     const { unmount } = render(<DatenpruefungEltern {...props()} />);
+    oeffne('Anna Muster'); oeffne('Tim Muster');
     expect(screen.getAllByLabelText(/Heimatort/).length).toBeGreaterThan(0);
     unmount();
 
@@ -128,6 +140,7 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
         mitgliedtyp: 'Juniorenmitglied', schluessel: 'heimatort', modus: 'aus',
       }],
     })} />);
+    oeffne('Anna Muster'); oeffne('Tim Muster');
     /* Beim Elternteil (Achse ohne_mitgliedschaft) steht Heimatort weiterhin —
        die Zeile gilt nur fuer den Mitgliedtyp. Beim Kind ist sie weg. */
     expect(screen.queryAllByLabelText(/Heimatort/).length).toBe(1);
@@ -163,7 +176,7 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
   it('die eigenen Daten bleiben trotz Ladefehler prüfbar', () => {
     /* Der Kinderfehler kippt die Seite nicht: die eigene Haelfte ist geladen. */
     render(<DatenpruefungEltern {...props({ kinder: [], kinderFehler: 'irgendein Fehler' })} />);
-    expect(screen.getByText('Meine Kontaktdaten')).toBeTruthy();
+    expect(screen.getByText('Meine Angaben')).toBeTruthy();
     expect(screen.getByText(/Alles geprüft/)).toBeTruthy();
   });
 
@@ -205,6 +218,7 @@ describe('DatenpruefungEltern — was sie schreibt', () => {
 
     /* Das ZWEITE Feld ist das des Kindes — das erste gehoert dem Elternteil.
        Die Reihenfolge steht fest: eigene Karte, dann je eine pro Kind. */
+    oeffne('Anna Muster'); oeffne('Tim Muster');
     const ahvFelder = screen.getAllByLabelText(/AHV-Nr\./);
     expect(ahvFelder).toHaveLength(2);
     await act(async () => { fireEvent.change(ahvFelder[1], { target: { value: '756.9999.9999.99' } }); });
@@ -242,5 +256,124 @@ describe('DatenpruefungEltern — was sie schreibt', () => {
     const letzte = setPortalMsg.mock.calls.at(-1)[0];
     expect(letzte.ok).toBe(false);
     expect(letzte.text).toContain('keine Person verknüpft');
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Die Sperre (20.08.2026)
+
+   Bis dahin liess sich „Alles geprüft und korrekt ✓" druecken,
+   waehrend Pflichtfelder leer waren. Das Sternchen am Feld kam aus
+   istPflicht(), der Knopf war an nichts gebunden — eine Anzeige,
+   die eine Regel behauptet, die es nicht gibt.
+
+   Beim ersten echten Elternkonto ging genau das durch: Stefan
+   Wengers AHV-Nummer fehlte, bestaetigt wurde trotzdem.
+   ═══════════════════════════════════════════════════════════════ */
+const PFLICHT_AHV = [{
+  gilt_fuer: 'mitgliedtyp', mitgliedtyp_id: 'typ-1',
+  mitgliedtyp: 'Juniorenmitglied', schluessel: 'ahv_nr', modus: 'pflicht',
+}];
+
+const knopf = () => screen.getByText(/Alles geprüft/).closest('button');
+
+describe('DatenpruefungEltern — die Sperre', () => {
+  it('⚠ sperrt, wenn beim Kind ein Pflichtfeld leer ist', () => {
+    render(<DatenpruefungEltern {...props({
+      feldkonfig: PFLICHT_AHV,
+      kinder: [{ ...KIND, ahv_nr: null }],
+    })} />);
+    expect(knopf().disabled).toBe(true);
+    expect(screen.getByText(/Noch 1 Feld auszufüllen/)).toBeTruthy();
+  });
+
+  it('die Gegenprobe: mit ausgefülltem Feld ist der Knopf offen', () => {
+    render(<DatenpruefungEltern {...props({ feldkonfig: PFLICHT_AHV })} />);
+    expect(knopf().disabled).toBe(false);
+  });
+
+  it('⚠ ein leeres Feld auf der FALSCHEN Achse sperrt nicht', () => {
+    /* Geburtsdatum und Geschlecht sind auf `ohne_mitgliedschaft` nicht
+       Pflicht — beim ersten Test sahen sie leer aus und wurden fuer
+       Pflichtfelder gehalten. Wer hier pauschal sperrte, hielte ein
+       Elternteil fuer ein Feld auf, das seine Achse gar nicht verlangt. */
+    render(<DatenpruefungEltern {...props({
+      elternteil: { ...ELTERNTEIL, geburtsdatum: null, geschlecht: null },
+    })} />);
+    expect(knopf().disabled).toBe(false);
+  });
+
+  it('⚠ was nur die Verwaltung ändern kann, wird genannt und sperrt NICHT', () => {
+    /* Ein Mitglied fuer ein Feld zu sperren, das es nicht aendern kann, waere
+       eine Sackgasse. Die E-Mail ist gesperrt (Login-Name) — sie gehoert in
+       die Gruppe „Verwaltung". */
+    render(<DatenpruefungEltern {...props({
+      feldkonfig: [{ gilt_fuer: 'mitgliedtyp', mitgliedtyp_id: 'typ-1',
+        mitgliedtyp: 'Juniorenmitglied', schluessel: 'email', modus: 'pflicht' }],
+      kinder: [{ ...KIND, email: null }],
+    })} />);
+    expect(knopf().disabled).toBe(false);
+    oeffne('Tim Muster');
+    expect(screen.getByText(/Nur durch die Vereinsverwaltung zu ergänzen/)).toBeTruthy();
+  });
+
+  it('nach dem Ausfüllen geht der Knopf auf — ohne Neuladen', () => {
+    /* Gerechnet wird gegen die FORMULARWERTE. Gegen die DB-Zeile bliebe der
+       Knopf gesperrt, bis jemand die Seite neu laedt. */
+    render(<DatenpruefungEltern {...props({
+      feldkonfig: PFLICHT_AHV, kinder: [{ ...KIND, ahv_nr: null }],
+    })} />);
+    expect(knopf().disabled).toBe(true);
+    const ahv = screen.getAllByLabelText(/AHV-Nr\./).find(f => !f.disabled);
+    fireEvent.change(ahv, { target: { value: '756.9999.9999.99' } });
+    expect(knopf().disabled).toBe(false);
+  });
+
+  it('⚠ ein gesperrter Knopf schreibt auch dann nicht, wenn er gedrückt wird', () => {
+    /* `disabled` ist Anzeige. Die Sperre gehoert auch in den Handler — sonst
+       genuegte ein Klick per Tastatur oder ein zweiter Renderpfad. */
+    render(<DatenpruefungEltern {...props({
+      feldkonfig: PFLICHT_AHV, kinder: [{ ...KIND, ahv_nr: null }],
+    })} />);
+    fireEvent.click(knopf());
+    expect(updateEigenePerson).not.toHaveBeenCalled();
+    expect(updateKindDurchElternteil).not.toHaveBeenCalled();
+  });
+});
+
+describe('DatenpruefungEltern — Klappkarten', () => {
+  it('unvollständige Karte startet offen, vollständige zu', () => {
+    render(<DatenpruefungEltern {...props({
+      feldkonfig: PFLICHT_AHV, kinder: [{ ...KIND, ahv_nr: null }],
+    })} />);
+    const kopf = n => screen.getAllByRole('button').find(b => b.textContent.includes(n));
+    expect(kopf('Tim Muster').getAttribute('aria-expanded')).toBe('true');
+    expect(kopf('Anna Muster').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('⚠ Pille und Sperre kommen aus derselben Rechnung', () => {
+    /* Zwei Zaehler waeren derselbe Fehler wie zwei Pflichtfeldlisten: sie
+       laufen auseinander, und dann sperrt der Knopf, waehrend die Karte
+       „Vollständig" sagt. */
+    render(<DatenpruefungEltern {...props({
+      feldkonfig: PFLICHT_AHV, kinder: [{ ...KIND, ahv_nr: null }],
+    })} />);
+    expect(screen.getByText('1 fehlt')).toBeTruthy();
+    expect(knopf().disabled).toBe(true);
+
+    const ahv = screen.getAllByLabelText(/AHV-Nr\./).find(f => !f.disabled);
+    fireEvent.change(ahv, { target: { value: '756.1' } });
+    expect(screen.queryByText('1 fehlt')).toBeNull();
+    expect(screen.getAllByText('Vollständig').length).toBe(2);
+    expect(knopf().disabled).toBe(false);
+  });
+
+  it('die eigenen Angaben sind auch eine Klappkarte', () => {
+    render(<DatenpruefungEltern {...props()} />);
+    const kopf = screen.getAllByRole('button').find(b => b.textContent.includes('Anna Muster'));
+    expect(kopf).toBeTruthy();
+    expect(kopf.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(kopf);
+    expect(kopf.getAttribute('aria-expanded')).toBe('true');
   });
 });

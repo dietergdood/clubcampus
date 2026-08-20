@@ -291,6 +291,26 @@ export function getFeldkonfig(
   return konfig;
 }
 
+/**
+ * Die Pflichtfeld-SCHLUESSEL eines Ziels — die eine Quelle.
+ *
+ * ⚠ Es gab sie zweimal: `getProfilCheck.pflichtfelderFuer()` fuer die
+ * Mitglieder-Maske, und die Eltern-Maske haette sich am 20.08.2026 eine
+ * zweite gebaut. Zwei Listen, die dasselbe behaupten, laufen auseinander —
+ * und dann sperrt die Maske ein Feld, das der Hinweis nicht nennt. Dieselbe
+ * Lehre wie bei `rolle_pflichtfelder` und bei `hat_portal_zugang`: eine
+ * Aussage, ein Ort.
+ *
+ * `IMMER_PFLICHT_KEYS` steht mit drin, weil `vorname`/`nachname` in
+ * `mitglieder` NOT NULL sind und in keiner Matrix auftauchen.
+ */
+export function pflichtfelderFuerZiel(
+  ziel: KonfigZiel,
+  zeilen: readonly FeldkonfigZeile[],
+): string[] {
+  return [...IMMER_PFLICHT_KEYS, ...pflichtfelderAus(getFeldkonfig(ziel, zeilen))];
+}
+
 export function istSichtbar(konfig: Record<string, FeldModus>, schluessel: string): boolean {
   if (IMMER_PFLICHT_KEYS.includes(schluessel)) return true;
   return konfig[schluessel] !== "aus";

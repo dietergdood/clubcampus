@@ -36,7 +36,7 @@
    Nutzer ist.
    ═══════════════════════════════════════════════════════════════ */
 import {
-  IMMER_PFLICHT_KEYS,
+  pflichtfelderFuerZiel,
   getFeldkonfig,
   fuerMitgliedtyp,
   OHNE_MITGLIEDSCHAFT,
@@ -101,14 +101,10 @@ export function getProfilCheck({
      hatte der Elternteil einen fest verdrahteten Satz daneben, also einen
      zweiten Konfigurationsort. */
   function fehlendeFelder(raw: Partial<Mitglied>, ziel: KonfigZiel): string[] {
+    /* Dieselbe Quelle wie `pflichtfelderFuer()` und wie die Eltern-Maske —
+       hier stand die Rechnung ein zweites Mal ausgeschrieben. */
     const fehlend: string[] = [];
-
-    for (const feld of IMMER_PFLICHT_KEYS) {
-      if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
-    }
-
-    const pflicht = pflichtfelderAus(getFeldkonfig(ziel, feldkonfig));
-    for (const feld of pflicht) {
+    for (const feld of pflichtfelderFuerZiel(ziel, feldkonfig)) {
       if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
     }
     return fehlend;
@@ -248,10 +244,10 @@ export function getProfilCheck({
    * der Hinweis nicht nennt.
    */
   function pflichtfelderFuer(ziel: KonfigZiel): string[] {
-    return [
-      ...IMMER_PFLICHT_KEYS,
-      ...pflichtfelderAus(getFeldkonfig(ziel, feldkonfig)),
-    ];
+    /* Delegiert. Die Rechnung steht in feldkonfig.ts, weil die Eltern-Maske
+       sie ebenfalls braucht und `getProfilCheck` nicht importieren kann
+       (es ist eine Fabrik mit dbUser, sb und dbMitglieder darin). */
+    return pflichtfelderFuerZiel(ziel, feldkonfig);
   }
 
   return { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft, pflichtfelderFuer };
