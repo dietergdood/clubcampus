@@ -622,12 +622,23 @@ export async function entkoppleKind(
 
   if (kindNochAktiv) {
     /* Kind noch im Verein (z.B. Junioren → Aktiv) → der Elternteil wird
-       Supporter. Seit Etappe 5 ist das ein MITGLIEDTYP und kein Kennzeichen:
-       ohne Mitgliedschaft haette die Person keine Verknuepfung mehr und
-       erschiene in keiner Liste — weder bei den Eltern (dort steigt die
-       Abfrage ueber eltern_kinder ein) noch bei den Mitgliedern. */
-    await macheZumSupporter(sb, personId, vereinId);
+       Supporter: eine PERSON OHNE MITGLIEDSCHAFT, die erreichbar bleibt.
+
+       Bis zum 20.08.2026 legte `macheZumSupporter()` hier eine Mitgliedschaft
+       vom Typ „Supporter" an (Etappe 5) — weil die Person sonst in keiner
+       Liste erschienen waere: bei den Eltern steigt die Abfrage ueber
+       `eltern_kinder` ein, und die Verknuepfung ist gerade weggefallen.
+
+       Das war der falsche Weg herum: eine Abfrage hat das Datenmodell
+       bestimmt. Statuten Artikel 6 kennt den Supporter nicht, und ihm eine
+       Mitgliedschaft zu geben, verpasst ihm etwas, das er nicht hat.
+       Auffindbar ist er jetzt ueber `fetchSupporter` in supporterService.ts,
+       das genau diese Luecke liest: Person ohne Mitgliedschaft, ohne Kind.
+
+       ⚠ Es bleibt nur die Rolle zu setzen. Wer hier wieder etwas in
+       `mitglieder` schreibt, macht den Rueckbau rueckgaengig. */
     if (benutzerId) await updateBenutzerRolle(sb, benutzerId, "supporter");
+    void vereinId;
     return "supporter";
   }
 
@@ -637,41 +648,11 @@ export async function entkoppleKind(
   return "geloescht";
 }
 
-/**
- * Legt fuer eine Person eine aktive Mitgliedschaft vom Typ „Supporter" an.
- *
- * Tut nichts, wenn die Person bereits eine aktive Mitgliedschaft hat: Der
- * partielle Index `mitglieder_eine_aktive_mitgliedschaft` laesst nur eine
- * zu, und Aktivmitglied wiegt schwerer als Supporter. Wer beides sein will,
- * muss die alte zuerst archivieren — das ist die Regel aus Etappe 5, nicht
- * ein Sonderfall hier.
- */
-export async function macheZumSupporter(
-  sb: SbClient,
-  personId: string,
-  vereinId?: string | null,
-): Promise<PostgrestError | null> {
-  const { data: person } = await sb.from("personen")
-    .select("verein_id")
-    .eq("id", personId)
-    .maybeSingle();
-  const verein = vereinId ?? person?.verein_id;
-  if (!verein) return null;
-
-  const { count } = await sb.from("mitglieder")
-    .select("id", { count: "exact", head: true })
-    .eq("person_id", personId)
-    .eq("aktiv", true);
-  if ((count || 0) > 0) return null;
-
-  const { error } = await sb.from("mitglieder").insert({
-    person_id: personId,
-    verein_id: verein,
-    mitgliedtyp: "Supporter",
-    aktiv: true,
-  } as never);
-  return error;
-}
+/* `macheZumSupporter()` stand hier bis zum 20.08.2026. Sie legte eine
+   Mitgliedschaft vom Typ „Supporter" an — genau das, was der Rueckbau
+   beseitigt. Ersatzlos entfallen: ein Supporter entsteht dadurch, dass an
+   einer Person KEINE Mitgliedschaft und KEIN Kind mehr haengt, nicht durch
+   einen Schreibvorgang. Siehe supabase/migration_supporter_rueckbau.sql. */
 
 export async function updateBenutzerRolle(sb: SbClient, benutzerId: string, rolle: string) {
   return sb.from("benutzer").update({ role: rolle }).eq("id", benutzerId);

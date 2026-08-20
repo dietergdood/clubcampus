@@ -459,6 +459,80 @@ CREATE TABLE IF NOT EXISTS "public"."_etappe6c_altspalten_mitglieder" (
 ALTER TABLE "public"."_etappe6c_altspalten_mitglieder" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."_supporter_rueckbau_aenderungen" (
+    "id" "uuid",
+    "mitglied_id" bigint,
+    "verein_id" "uuid",
+    "feld" "text",
+    "alter_wert" "text",
+    "neuer_wert" "text",
+    "geaendert_von" "text",
+    "geaendert_at" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."_supporter_rueckbau_aenderungen" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."_supporter_rueckbau_aktivitaeten" (
+    "id" "uuid",
+    "mitglied_id" bigint,
+    "verein_id" "uuid",
+    "typ" "text",
+    "beschreibung" "text",
+    "feld" "text",
+    "wert" "text",
+    "geaendert_von" "text",
+    "geaendert_at" timestamp with time zone
+);
+
+
+ALTER TABLE "public"."_supporter_rueckbau_aktivitaeten" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."_supporter_rueckbau_mitglieder" (
+    "id" bigint,
+    "mitgliedtyp" "text",
+    "rolle" "text",
+    "aktiv" boolean,
+    "spielerpass" "text",
+    "js_nr" "text",
+    "fairgate_id" "text",
+    "created_at" timestamp with time zone,
+    "updated_at" timestamp with time zone,
+    "deaktiviert_am" timestamp with time zone,
+    "deaktiviert_von" "text",
+    "verein_id" "uuid",
+    "eintrittsdatum" "date",
+    "person_id" "uuid",
+    "vorname" "text",
+    "nachname" "text",
+    "email" "text"
+);
+
+
+ALTER TABLE "public"."_supporter_rueckbau_mitglieder" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."_supporter_rueckbau_mitglieder" IS 'Sicherheitskopie des Supporter-Rueckbaus vom 20.08.2026. Die Personen selbst stehen unveraendert in personen; hier liegt nur, was an der geloeschten Mitgliedschaft hing. Kann geloescht werden, sobald der Rueckbau eine Saison ueberstanden hat.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."_supporter_rueckbau_notizen" (
+    "id" integer,
+    "mitglied_id" bigint,
+    "text" "text",
+    "autor_id" "uuid",
+    "autor_name" "text",
+    "created_at" timestamp with time zone,
+    "updated_at" timestamp with time zone,
+    "verein_id" "uuid"
+);
+
+
+ALTER TABLE "public"."_supporter_rueckbau_notizen" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."abstimmung_antworten" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "abstimmung_id" "uuid" NOT NULL,
@@ -638,11 +712,16 @@ CREATE TABLE IF NOT EXISTS "public"."benutzer_funktionen" (
     "benutzer_id" "uuid" NOT NULL,
     "funktion_id" bigint NOT NULL,
     "seit" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "bis" "date"
 );
 
 
 ALTER TABLE "public"."benutzer_funktionen" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."benutzer_funktionen"."bis" IS 'Tag, an dem das Amt endet. NULL heisst laufend. Statuten Artikel 8 spricht vom Zeitpunkt des Austritts, nicht von einem Zeitraum — deshalb date. Ein Amt wird beendet, indem hier ein Datum steht, nicht durch Loeschen der Zeile: sonst waere es danach nicht mehr nachweisbar.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."benutzer_teams" (
@@ -1848,11 +1927,20 @@ CREATE TABLE IF NOT EXISTS "public"."spiele" (
     "sfv_status" integer,
     "sfv_stand" "jsonb",
     "zuletzt_synchronisiert" timestamp with time zone,
-    "matchdaten_geholt_am" timestamp with time zone
+    "matchdaten_geholt_am" timestamp with time zone,
+    "sfv_spiel_nr" "text"
 );
 
 
 ALTER TABLE "public"."spiele" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."spiele"."schiedsrichter" IS 'Name des Schiedsrichters (refereeRoleId 1) aus /api/match/{id}/referees. Nur der Name — kein Geburtsdatum, kein Geschlecht, keine personId, kein Verein. Ein Schiedsrichter ist eine Amtsfunktion, keine Privatperson; von gegnerischen SPIELERN wird weiterhin nichts gespeichert. Assistenten stehen nicht hier: ein Textfeld traegt keine Liste.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."delegierter" IS 'Gehoert dem Verein, wird von Hand gepflegt. Der SFV liefert in unseren Ligen keinen Delegierten — ueber alle 21 ausgetragenen Spiele der Saison 2026/27 kamen nur die Rollen Schiedsrichter, Assistent 1 und Assistent 2 vor (Probe 20.08.2026).';
+
 
 
 COMMENT ON COLUMN "public"."spiele"."sfv_match_id" IS 'SFV matchId — Schluessel des Sync. NULL = manuell erfasstes Spiel, der Sync fasst es nie an.';
@@ -1888,6 +1976,10 @@ COMMENT ON COLUMN "public"."spiele"."sfv_stand" IS 'Rohe Antwortzeile des SFV, u
 
 
 COMMENT ON COLUMN "public"."spiele"."matchdaten_geholt_am" IS 'Letzter erfolgreicher Abruf von /api/match/{id}(+players,+events). NULL = noch nie. Der Sync holt zuerst die noch nie geholten, danach zum Nachziehen die aus der Woche nach dem Spiel.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_spiel_nr" IS 'matchNumber des SFV. NICHT spiel_nr — die gehoert dem Verein und wird von Hand gepflegt (siehe migration_sfv_spielplan.sql). Die Anzeige zeigt spiel_nr, wenn gesetzt, sonst diese.';
 
 
 
@@ -3066,6 +3158,10 @@ CREATE INDEX "mitglieder_person_idx" ON "public"."mitglieder" USING "btree" ("pe
 
 
 
+CREATE UNIQUE INDEX "mitglieder_spielerpass_aktiv_key" ON "public"."mitglieder" USING "btree" ("verein_id", "spielerpass") WHERE ("aktiv" AND ("spielerpass" IS NOT NULL) AND ("btrim"("spielerpass") <> ''::"text"));
+
+
+
 CREATE UNIQUE INDEX "personen_email_pro_verein" ON "public"."personen" USING "btree" ("verein_id", "lower"("btrim"("email"))) WHERE (("email" IS NOT NULL) AND ("btrim"("email") <> ''::"text"));
 
 
@@ -3810,11 +3906,6 @@ ALTER TABLE ONLY "public"."sfv_team_logos"
 
 
 
-ALTER TABLE ONLY "public"."sfv_team_logos"
-    ADD CONSTRAINT "sfv_team_logos_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
-
-
-
 ALTER TABLE ONLY "public"."sfv_zuordnung"
     ADD CONSTRAINT "sfv_zuordnung_mitglied_fkey" FOREIGN KEY ("mitglied_id", "verein_id") REFERENCES "public"."mitglieder"("id", "verein_id") ON DELETE CASCADE;
 
@@ -4002,6 +4093,18 @@ ALTER TABLE "public"."_etappe6b_position_mitglieder" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."_etappe6c_altspalten_mitglieder" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."_supporter_rueckbau_aenderungen" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."_supporter_rueckbau_aktivitaeten" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."_supporter_rueckbau_mitglieder" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."_supporter_rueckbau_notizen" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."abstimmung_antworten" ENABLE ROW LEVEL SECURITY;
@@ -5256,6 +5359,30 @@ GRANT ALL ON TABLE "public"."_etappe6b_position_mitglieder" TO "service_role";
 GRANT ALL ON TABLE "public"."_etappe6c_altspalten_mitglieder" TO "anon";
 GRANT ALL ON TABLE "public"."_etappe6c_altspalten_mitglieder" TO "authenticated";
 GRANT ALL ON TABLE "public"."_etappe6c_altspalten_mitglieder" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_aenderungen" TO "anon";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_aenderungen" TO "authenticated";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_aenderungen" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_aktivitaeten" TO "anon";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_aktivitaeten" TO "authenticated";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_aktivitaeten" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_mitglieder" TO "anon";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_mitglieder" TO "authenticated";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_mitglieder" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_notizen" TO "anon";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_notizen" TO "authenticated";
+GRANT ALL ON TABLE "public"."_supporter_rueckbau_notizen" TO "service_role";
 
 
 

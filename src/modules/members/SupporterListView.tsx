@@ -1,19 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/SupporterListView.tsx
 
-   Supporter sind KEINE Mitglieder: kein Beitrag, kein Stimmrecht
-   an der GV, kein Spielbetrieb. Sie stehen technisch in
-   `mitglieder` mit `mitgliedtyp = 'Supporter'` (Etappe 5, damit
-   sie überhaupt auffindbar sind), gehören aber nicht in die
-   Mitgliederliste — sonst stimmt der Zähler nicht, Auswertungen
-   zählen sie mit, und beim Anschreiben landen sie in Gruppen, in
-   die sie nicht gehören.
+   Ein Supporter ist eine PERSON OHNE MITGLIEDSCHAFT: kein
+   Beitrag, kein Stimmrecht an der GV, kein Spielbetrieb, und in
+   Artikel 6 der Statuten kommt er nicht vor. Er bleibt erreichbar,
+   trägt sich für Helferschichten ein und bekommt bestimmte News.
 
-   Deshalb ein eigener Tab — aber DIESELBE Darstellung: Spalten,
-   Zellen und Mobilansicht kommen aus denselben Bausteinen wie die
-   Mitgliederliste (`ALL_COLS`, `makeMemberRenderCell`). Nur die
-   Auswahl der Spalten ist eine andere: Mitgliedtyp ist für alle
-   derselbe, Spielerpass, Teams und Kaderrollen gibt es bei einem
+   Bis zum 20.08.2026 stand er als Mitgliedtyp in `mitglieder`
+   (Etappe 5). Seither kommt die Liste aus `personen` — siehe
+   `fetchSupporter` und `migration_supporter_rueckbau.sql`.
+
+   Eigener Tab, aber DIESELBE Darstellung: Spalten, Zellen und
+   Mobilansicht kommen aus denselben Bausteinen wie die
+   Mitgliederliste (`ALL_COLS`, `makeMemberRenderCell`), und
+   gefiltert, sortiert und gruppiert wird mit denselben Funktionen.
+   Nur die Auswahl der Spalten ist eine andere: Mitgliedschaft,
+   Eintritt, Spielerpass, Teams und Kaderrollen gibt es bei einem
    Gönner nicht.
    ═══════════════════════════════════════════════════════════════ */
 import { ListView } from "../../shared/list/ListView.tsx";
@@ -26,8 +28,15 @@ import type { ColDef, FilterDef, GroupOption, RenderCell } from "../../shared/li
 import type { Account, Sb } from "../../types.ts";
 
 /* Aus ALL_COLS gezogen statt neu deklariert: gleiche Keys, gleiche
-   Beschriftungen, gleiche Zellen-Renderer wie in der Mitgliederliste. */
-const SUPPORTER_KEYS = ["name", "email", "telefon", "ort", "eintritt", "portal"];
+   Beschriftungen, gleiche Zellen-Renderer wie in der Mitgliederliste.
+
+   ⚠ `eintritt` ist hier entfallen. Es kommt aus `mitglieder.eintrittsdatum`
+   und ist bei einer Person ohne Mitgliedschaft strukturell leer — die Spalte
+   haette in JEDER Zeile "-" gezeigt und damit ausgesehen wie ein Datenloch,
+   das jemand fuellen koennte. Wenn ein Goenner ein "dabei seit" bekommen
+   soll, braucht das eine eigene Angabe; siehe den offenen Punkt
+   „Supporter-Liste ueberarbeiten". */
+const SUPPORTER_KEYS = ["name", "email", "telefon", "ort", "portal"];
 
 const COL_DEFS: ColDef[] = SUPPORTER_KEYS
   .map(k => ALL_COLS.find(c => c.key === k))
@@ -37,7 +46,7 @@ const COL_DEFS: ColDef[] = SUPPORTER_KEYS
 const COL_GROUPS = [{ group: "Supporter", cols: COL_DEFS }];
 
 /* Nur die Filter und Gruppierungen, die bei einem Goenner etwas bedeuten:
-   Mitgliedtyp ist fuer alle derselbe, Teams und Kaderrollen gibt es nicht. */
+   eine Mitgliedschaft hat er nicht, Teams und Kaderrollen ebenso wenig. */
 const FILTER_DEFS: FilterDef[] = [
   { key: "portal", label: "Portal-Zugang", vals: ["Aktiv", "Kein Zugang"] },
 ];
@@ -58,22 +67,22 @@ interface SupporterListViewProps {
   vereinId?: string | null;
   isAdmin?: boolean;
   canExport?: boolean;
-  onOpen?: ((row: MemberRow) => void) | null;
-  /** Archivieren und Löschen — dieselben Aktionen wie in der Mitgliederliste. */
-  onArchivieren?: ((selected: Set<string | number>) => void) | null;
-  onLoeschen?: ((selected: Set<string | number>) => void) | null;
+  /* ⚠ KEINE Sammelaktionen. Archivieren setzt eine Mitgliedschaft auf
+     inaktiv — ein Supporter hat keine, es gaebe nichts zu archivieren. Und
+     geloescht wird eine Person nie: sie ist der Bezugspunkt von Konto,
+     Helfereinsaetzen und Verlauf. An ihre Stelle tritt „Mitglied werden"
+     (Teil B des Auftrags). */
 }
 
 function SupporterListView({
   supporter, renderCell, rolleLabel, renderMobile, sb, account = null, vereinId = null,
-  isAdmin = false, canExport = false, onOpen = null,
-  onArchivieren = null, onLoeschen = null,
+  isAdmin = false, canExport = false,
 }: SupporterListViewProps) {
   return (
     <ListView<MemberRow>
       emptyIcon="heart-handshake"
       emptyTitle="Noch keine Supporter"
-      emptySubtitle="Ein Supporter entsteht, wenn ein Elternteil sein letztes Kind verliert und der Verein den Kontakt behalten will."
+      emptySubtitle="Ein Supporter ist eine Person ohne Mitgliedschaft, die erreichbar bleiben soll — etwa ein Elternteil, dessen letztes Kind den Verein verlassen hat."
       rows={supporter}
       /* Dieselben Funktionen wie die Mitgliederliste — ein Supporter IST eine
          MemberRow. Eigene Nachbauten waeren ein zweiter Ort, an dem Suche,
@@ -90,22 +99,18 @@ function SupporterListView({
       groupOptions={GROUP_OPTIONS}
       renderCell={renderCell}
       renderMobile={renderMobile}
-      onRowClick={onOpen ?? undefined}
       sb={sb}
       account={account}
       vereinId={vereinId}
       viewTyp="supporter"
       isAdmin={isAdmin}
-      /* Auswahl und Sammelaktionen wie bei den Mitgliedern. Kein
-         `savedViews`: die Vorlagen „Standard" und „Verwaltung" bestehen aus
-         Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen).
-         Eigene Ansichten speichern geht trotzdem — ListView legt sie unter
-         viewTyp="supporter" ab. */
-      selectable={isAdmin}
-      bulkActions={isAdmin ? [
-        ...(onArchivieren ? [{ icon: "archive", label: "Archivieren", onClick: onArchivieren }] : []),
-        ...(onLoeschen ? [{ icon: "trash", label: "Löschen (DSGVO)", onClick: onLoeschen, danger: true, requiresSelection: true }] : []),
-      ] : []}
+      /* Kein `savedViews`: die Vorlagen „Standard" und „Verwaltung" bestehen
+         aus Spalten, die es hier nicht gibt (Mitgliedschaft, Teams,
+         Kaderrollen). Eigene Ansichten speichern geht trotzdem — ListView
+         legt sie unter viewTyp="supporter" ab.
+
+         Auch keine Auswahl: ohne Sammelaktion waeren die Kaestchen ein
+         Bedienelement, das zu nichts fuehrt. */
       footerLabel={(f, t) => `${f} von ${t} Supportern`}
       /* Ohne exportFormats blendet ListView den Knopf aus — exportFn allein
          genuegt nicht. Dieselben drei Formate wie in der Mitgliederliste. */

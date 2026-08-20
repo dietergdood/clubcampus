@@ -22,7 +22,10 @@ npx vitest run -t "filtert nach Team"                               # ein Testfa
 
 ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 05.08.2026 (nach Session 23): 372 grün, 2 skipped, 0 rot (27 Testdateien).
+Stand 20.08.2026: 529 grün, 2 skipped, **1 absichtlich rot** (35 Testdateien).
+Der rote ist `supporterTrennung.test.js` → „portal_rollen gewinnt gegen die fest
+verdrahtete Beschriftung"; Begründung unter „Drei Nebenbefunde aus dem
+Supporter-Rückbau". Wer eine zweite rote Zeile sieht, hat etwas kaputtgemacht.
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -645,7 +648,9 @@ den Abschnitt „Ein Amt und ein Rechtebündel heissen beide Funktion".
 
 **Unabhängig von allem anderen, jederzeit machbar.**
 
-### Supporter: entschieden — Rückbau von Etappe 5 steht aus
+### Supporter: Teil A erledigt am 20.08.2026 — Teil B offen
+
+Auftrag: `docs/auftrag_supporter_rueckbau.md`.
 
 **Am 17.08.2026 entschieden**, durch die Vereinsstatuten: Supporter steht nicht
 in Artikel 6, ist also **keine Mitgliedschaft**. Herleitung in
@@ -656,22 +661,83 @@ Kurz: eine Person ohne Mitgliedschaft, die erreichbar bleibt, sich für
 Helferschichten einträgt und bestimmte News erhält. Er darf eine Vereinsfunktion
 haben, aber keine Funktionärsrechte auf Mitgliederdaten.
 
-**Was noch zu tun ist:**
+**Teil A ist gebaut** (`supabase/migration_supporter_rueckbau.sql`):
 
-- `macheZumSupporter()` legt heute eine Mitgliedschaft an — das gehört
-  zurückgebaut. Die drei bestehenden (Philippe Kern, Heidi Studer, Werner
-  Ulrich) werden zu Personen ohne Mitgliedschaft.
-- `SupporterListView` liest dann aus `personen` statt aus `mitglieder` — dort
-  ist die Zeile keine `MemberRow` mehr, `filterMembers`/`sortMembers`/
-  `buildGroups` greifen nicht mehr direkt.
-- Der Mitgliedtyp „Supporter" entfällt.
-- Supporter brauchen einen Platz in den **Empfängerlisten** (News,
-  Helferanfragen) — getrennt von den Mitgliedern, sonst bekommt der Gönner die
-  GV-Einladung.
-- Entstehen soll er mit **Rückfrage**, nicht automatisch: beim Entkoppeln des
-  letzten Kindes und beim Funktionär, der sein Amt niederlegt. Beide Male sind
-  Ehrenmitglied, Aktivmitglied oder Archiv ebenso mögliche Antworten.
+| war | ist |
+|---|---|
+| `macheZumSupporter()` legt eine Mitgliedschaft an | **entfallen** — ein Supporter entsteht durch das Fehlen, nicht durch einen Schreibvorgang |
+| `SupporterListView` filtert `mitglieder` | `fetchSupporter()` liest `personen` |
+| Mitgliedtyp „Supporter" | `aktiv = false` (nicht gelöscht: `mitgliedtyp_feldkonfig` hängt daran) |
+| `benutzer_funktionen` kennt nur `seit` | `bis date` dazu — Artikel 8 spricht von einem Zeitpunkt |
 
-`mitgliedtypen.zaehlt_als_mitgliedschaft` (17.08.2026) ist die Vorarbeit: Die
-Listentrennung hängt nicht mehr am Namen „Supporter", sondern an einem Merkmal.
+**Wer dazugehört, sind zwei Ausschlüsse**, keine Merkmale: eine Person ohne
+jede Zeile in `mitglieder` und ohne jede Zeile in `eltern_kinder`. Es gibt
+kein Kennzeichen „ist Supporter" und soll keines geben. Auch eine *beendete*
+Mitgliedschaft schliesst aus — sonst stünde dieselbe Person im Archiv und
+unter den Gönnern.
+
+**Was noch offen ist (Teil B):**
+
+- Das **schlanke Supporter-Modal**. Bis dahin ist die Zeile bewusst **nicht
+  anklickbar**: `MemberDetail` arbeitet mit einer Mitgliedschaft, die es hier
+  nicht gibt.
+- **„Mitglied werden"** und der Austritt in die Gegenrichtung, beide mit
+  **Rückfrage** — Supporter, Ehrenmitglied, Aktivmitglied oder Archiv sind
+  jedes Mal mögliche Antworten. Dieselbe Rückfrage beim Entkoppeln des letzten
+  Kindes und beim Funktionär, der sein Amt niederlegt.
+- **Personensuche in der Neuanlage**, nach dem Muster von `ElternSucheModal`
+  — schliesst zugleich „Mitglied anlegen prüft nicht auf Dubletten".
+- Helferanfragen als zweite Empfängerliste (News ist erledigt, siehe unten).
+
+### ⚠ Drei Nebenbefunde aus dem Supporter-Rückbau (20.08.2026)
+
+**1. `zaehlt_als_mitgliedschaft` hat keinen Leser mehr.** Die Spalte war die
+Vorarbeit vom 17.08.2026: die Listentrennung sollte nicht am Namen „Supporter"
+hängen, sondern an einem Merkmal. Mit dem Rückbau trennt nicht mehr ein Filter,
+sondern die **Tabelle** — in `mitglieder` steht nur noch, was eine
+Mitgliedschaft ist.
+
+Der Filter in `MitgliederModul` ist deshalb **entfernt und nicht als
+Sicherheitsnetz stehengeblieben**: eine Zeile, die er heute wegnähme, wäre
+nirgends mehr zu sehen — nicht in der Mitgliederliste und nicht im
+Supporter-Tab, der ja gar nicht mehr aus `mitglieder` liest. Sie verschwände,
+ohne dass etwas fehlschlägt.
+
+Damit ist die Spalte ein Schalter ohne Wirkung — dasselbe Muster wie
+`api_verbindungen.active`. Entweder bekommt sie einen Leser (Mitgliederzählung,
+Beitragslauf) oder sie fällt. Nicht liegen lassen.
+
+**2. `NachrichtenModul.tsx:77` steht im Code, nicht in der Datenbank.**
+`ROLLEN_OPTS` ist eine feste Liste; die Zeile `supporter` ist ergänzt, aber die
+Quelle bleibt falsch — eine neue Portalrolle erscheint dort nie. Und **„Alle
+Mitglieder" meint dort alle Empfänger**, nicht die Mitglieder im Sinne der
+Statuten. Nach dem Rückbau ist das eine Aussage, die stimmen muss: die beiden
+Begriffe gehören getrennt beschriftet („Alle Mitglieder" ≠ „alle Erreichbaren"),
+sonst bekommt der Gönner die GV-Einladung.
+
+**3. `rolleLabelMap` lässt die Konstanten gegen die Datenbank gewinnen.**
+In `memberMapper.ts` stehen die acht fest verdrahteten Beschriftungen
+**hinter** denen aus `portal_rollen`, und `Object.fromEntries` lässt den
+letzten Eintrag gewinnen. Sie sind also keine Rückfallwerte, sondern
+Überschreibungen: wer eine Rolle in `portal_rollen` umbenennt, sieht davon
+nichts. Betrifft `administrator`, `administration`, `funktionaer`, `trainer`,
+`spieler`, `eltern`, `mitglied`, `supporter` — also praktisch alle.
+
+**Dazu steht genau ein Test rot** (`supporterTrennung.test.js` →
+„portal_rollen gewinnt gegen die fest verdrahtete Beschriftung"). Das ist
+Absicht.
+
+> Zuerst hatte ich ihn andersherum geschrieben — er hielt den IST-Zustand fest
+> („Supporter" statt „Supporter/in") und war grün. **Didi am 20.08.2026:** ein
+> Test, der den Ist-Zustand festhält, obwohl der Ist-Zustand falsch ist,
+> zementiert den Fehler und fällt ausgerechnet dann um, wenn ihn jemand behebt.
+> Er findet nichts, er bewacht etwas Falsches.
+>
+> Die Regel daraus: **ein Test prüft den Soll-Zustand und ist rot, solange er
+> nicht gilt.** Rot ist eine Aussage; grün-auf-falschem-Wert ist keine.
+
+Behoben wird er, indem die zwei Blöcke in `rolleLabelMap` die Reihenfolge
+tauschen — erst die Konstanten, dann `dbPortalRollen`. Der Tausch ändert
+Beschriftungen, die Nutzer sehen, und ist deshalb eine eigene Entscheidung.
+
 

@@ -4,6 +4,9 @@
    ═══════════════════════════════════════════════════════════════ */
 import { vollname, age } from "../../domains/person/personUtils.ts";
 import type { KaderRolle, Mitglied, PortalRolle } from "../../types.ts";
+/* Die Rohform kommt aus dem Service — modules darf aus domains lesen,
+   umgekehrt nicht (Schichtenregel). Sie steht dort, wo sie entsteht. */
+import type { SupporterRoh } from "../../domains/members/supporterService.ts";
 
 /* ⚠ eintrittsdatum und teams haben KEINE Spalte in mitglieder und sind auch
    keine der von loadDbMitglieder ergänzten Felder. Der Code unten liest sie
@@ -18,18 +21,27 @@ export type KaderRolleMitLabel = Pick<KaderRolle, "name"> & {
   label?: string | null;
 };
 
-export function mapMembers(
-  dbMitglieder: MitgliedRoh[],
+/* Beschriftungen der Portalrollen. Steht hier, weil mapMembers und
+   mapSupporter dieselbe Zuordnung brauchen — zwei Kopien liefen auseinander,
+   sobald jemand eine Rolle ergaenzt. */
+function rolleLabelMap(
   dbPortalRollen: Pick<PortalRolle, "name" | "label">[],
-  _dbKaderRollen?: KaderRolleMitLabel[],
-) {
-  const ROLLE_LABEL: Record<string, string> = Object.fromEntries([
+): Record<string, string> {
+  return Object.fromEntries([
     ...dbPortalRollen.map(r=>[r.name,r.label]),
     ["administrator","Administrator"],["administration","Verwaltung"],
     ["funktionaer","Funktionär"],["trainer","Trainer/in"],
     ["spieler","Spieler/in"],["eltern","Elternteil"],
     ["mitglied","Mitglied"],["supporter","Supporter"],
   ]);
+}
+
+export function mapMembers(
+  dbMitglieder: MitgliedRoh[],
+  dbPortalRollen: Pick<PortalRolle, "name" | "label">[],
+  _dbKaderRollen?: KaderRolleMitLabel[],
+) {
+  const ROLLE_LABEL = rolleLabelMap(dbPortalRollen);
   return dbMitglieder.map(m => {
     const rollenSet=new Set<string>();
     (m.kader_rollen||[]).forEach(r=>rollenSet.add(ROLLE_LABEL[r]||r));
@@ -48,7 +60,17 @@ export function mapMembers(
        datenstatus ist veraltet und wird nicht mehr ausgewertet. */
     const dpStatus=m.profil_geprueft_at?"Geprueft":"Ausstehend";
     return {
+      /* ⚠ id ist der SCHLUESSEL DER ZEILE, nicht die Id der Mitgliedschaft.
+         Bis zum Supporter-Rueckbau (20.08.2026) war beides dasselbe, weil
+         jede Zeile aus `mitglieder` kam. Ein Supporter hat keine
+         Mitgliedschaft und traegt hier seine person_id — deshalb `string |
+         number` in MemberRow und deshalb `mitglied_id` daneben.
+         Wer eine Mitgliedschaft braucht, liest mitglied_id und prueft auf
+         null; der Compiler erzwingt es. Eine uuid, die still an eine Stelle
+         flieesst, die eine Zahl erwartet, wuerde niemand bemerken. */
       id:m.id,
+      mitglied_id:m.id as number|null,
+      person_id:m.person_id ?? null,
       name:vollname(m),
       vorname:m.vorname, nachname:m.nachname,
       mitgliedschaft:m.mitgliedtyp||"-", type:m.mitgliedtyp||"-",
@@ -85,10 +107,81 @@ export type MappedMember = ReturnType<typeof mapMembers>[number];
 /* Was MitgliederModul daraus macht: funktionsgruppen wird dort aus
    funktionen + funktionenGruppenMap nachgereicht. */
 /* Type-Alias statt Interface: nur so erfuellt der Typ die Constraint
-   T extends ListRow (Index-Signatur) von ListView. */
-export type MemberRow = MappedMember & {
+   T extends ListRow (Index-Signatur) von ListView.
+
+   `id` wird gegenueber MappedMember GEWEITET: mapMembers liefert immer eine
+   Zahl, mapSupporter eine uuid. ListView.getRowId vertraegt beides
+   (`typeof id === "number" ? id : String(id)`), braucht aber einen Wert —
+   eine Zeile ohne id verliert React-Key, Auswahl und Sammelaktionen. */
+export type MemberRow = Omit<MappedMember, "id"> & {
+  id: string | number;
   funktionsgruppen?: string[];
 };
+
+/* ── Supporter ────────────────────────────────────────────────────────────
+   Ein Supporter ist eine PERSON OHNE MITGLIEDSCHAFT (Statuten Artikel 6 —
+   siehe migration_supporter_rueckbau.sql). Er steht in `personen`, nicht in
+   `mitglieder`, und hat deshalb weder Mitgliedtyp noch Kader, Teams,
+   Spielerpass oder Eintrittsdatum.
+
+   Trotzdem eine MemberRow: Suche, Sortierung und Gruppierung laufen ueber
+   dieselben Funktionen wie in der Mitgliederliste (`filterMembers`,
+   `sortMembers`, `buildGroups`). Ein zweiter Satz waere ein zweiter Ort, an
+   dem dieselbe Mechanik auseinanderlaufen kann. Was ein Supporter nicht hat,
+   steht hier leer — nicht falsch. */
+export function mapSupporter(
+  rohe: SupporterRoh[],
+  dbPortalRollen: Pick<PortalRolle, "name" | "label">[],
+): MemberRow[] {
+  const ROLLE_LABEL = rolleLabelMap(dbPortalRollen);
+  return rohe.map(p => ({
+    /* Der Schluessel ist die person_id — und mitglied_id bleibt null, weil
+       es keine Mitgliedschaft gibt. Genau das ist die Aussage. */
+    id: p.id,
+    mitglied_id: null,
+    person_id: p.id,
+    name: vollname(p),
+    vorname: p.vorname,
+    nachname: p.nachname,
+    /* Kein Mitgliedtyp. "-" statt "Supporter": ein Supporter IST kein
+       Mitgliedtyp mehr, und ein erfundener Wert wuerde in Filter, Gruppierung
+       und Export wieder wie eine Mitgliedschaft aussehen. */
+    mitgliedschaft: "-",
+    type: "-",
+    rollen: p.rolle ? [ROLLE_LABEL[p.rolle] || p.rolle] : [],
+    kader_rollen_raw: [],
+    kader_eintraege: [],
+    role: p.rolle || "-",
+    teams: [],
+    team: "-",
+    datenpruefung: p.profil_geprueft_at ? "Geprueft" : "Ausstehend",
+    profil_geprueft_at: p.profil_geprueft_at || null,
+    portal: p.hat_benutzer ? (p.benutzer_deaktiviert ? "Deaktiviert" : "Aktiv") : "Kein Zugang",
+    hat_portal_zugang: Boolean(p.hat_benutzer && !p.benutzer_deaktiviert),
+    hat_benutzer: p.hat_benutzer,
+    ort: p.ort || "-",
+    location: p.ort || "-",
+    plz: p.plz || null,
+    wohnort: p.plz && p.ort ? `${p.plz} ${p.ort}` : (p.ort || null),
+    email: p.email,
+    telefon: p.telefon,
+    geburtsdatum: p.geburtsdatum,
+    alter: age(p.geburtsdatum),
+    geschlecht: p.geschlecht || null,
+    nationalitaet: p.nationalitaet || "-",
+    nationalitaet2: p.nationalitaet2 || null,
+    /* Gibt es bei einem Supporter nicht — sie haengen an der Mitgliedschaft. */
+    fairgate_id: null,
+    js_nr: null,
+    spielerpass: null,
+    eintritt: null,
+    foto_url: p.foto_url || null,
+    funktionen: p.funktionen || [],
+    strasse: p.strasse,
+    heimatort: p.heimatort,
+    ahv_nr: p.ahv_nr,
+  }));
+}
 
 /* Dynamischer Feldzugriff (Filter, Gruppierung, Export lesen Spalten über
    ihren Key). Über Object.entries statt Index-Zugriff, damit es ohne Cast

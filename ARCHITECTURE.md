@@ -1080,6 +1080,46 @@ alter table x add constraint x_key unique (a, b);
 
 Partielle Indizes bleiben richtig, wo **nur gelesen** wird (Abfragebeschleunigung) oder wo eine Bedingung wirklich nötig ist, die `NULL` nicht abbildet — dann aber kein `upsert()` darauf, sondern lesen und danach `insert`/`update`.
 
+### ⚠ Ohne RLS ist eine neue Tabelle öffentlich — auch die Wegwerftabelle
+
+Supabase gewährt `anon` und `authenticated` per `ALTER DEFAULT PRIVILEGES`
+**alle** Rechte auf **jede** neue Tabelle im Schema `public` (im Dump ab
+Zeile 5847). PostgREST stellt sie damit sofort als Endpunkt bereit. Eine
+Tabelle ohne `ENABLE ROW LEVEL SECURITY` ist also nicht „noch ungeschützt" —
+sie ist **von der ersten Sekunde an für jeden eingeloggten Benutzer lesbar
+und schreibbar**, quer über alle Mandanten.
+
+Nichts daran schlägt fehl. Kein Fehler im Build, keine Meldung im Log, keine
+Auffälligkeit in der Anwendung — die Tabelle tut genau das, wofür sie gebaut
+wurde, und ist nebenbei offen.
+
+**Das gilt besonders für Hilfs- und Sicherungstabellen.** Gerade sie enthalten
+Kopien von Daten, die anderswo geschützt sind — genau deshalb wurden sie ja
+angelegt. Und gerade bei ihnen liegt der Gedanke nahe, dass eine Tabelle,
+die in zwei Wochen wieder verschwindet, keine Policy braucht.
+
+**Regel: RLS an, immer.** Auch ohne eine einzige Policy — RLS ohne Policy
+heisst „niemand ausser `postgres` und `service_role`", und für eine
+Sicherungstabelle ist das die richtige Antwort. Der Aufwand ist eine Zeile.
+
+> **Beleg, 20.08.2026.** `migration_supporter_rueckbau.sql` legt vier
+> Sicherheitskopien an (`_supporter_rueckbau_mitglieder`, `_aktivitaeten`,
+> `_aenderungen`, `_notizen`), darunter Vorname, Nachname und E-Mail-Adresse
+> jeder betroffenen Person. Im ersten Entwurf ohne RLS — abgeschrieben von
+> nichts, schlicht nicht bedacht. Gefunden nur beim Nachsehen, wie es die
+> drei `_etappe6_*`-Kopien halten: die haben RLS an, ohne Policy.
+>
+> Die Migration prüft es seither selbst und bricht ab, wenn nicht alle vier
+> `pg_class.relrowsecurity` tragen.
+
+Zum Nachzählen, ob irgendwo eine Tabelle ohne RLS steht:
+
+```sql
+select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity
+ order by 1;
+```
+
 ### Pflicht für jede neue Tabelle
 
 ```sql

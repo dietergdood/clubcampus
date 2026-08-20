@@ -74,6 +74,9 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
   const [ungelesen,setUngelesen]=useState<Record<string, boolean>>({});
   const [neuForm,setNeuForm]=useState<NeuForm>({titel:"",inhalt:"",typ:"broadcast",empfaenger_typ:"rolle",empfaenger_rolle:"",empfaenger_gruppe_id:null,empfaenger_team:""});
 
+  /* ⚠ Fest verdrahtet statt aus `portal_rollen` — offener Punkt, siehe
+     CLAUDE.md. Ebenso ungeklaert: „Alle Mitglieder" meint hier alle
+     Empfaenger, nicht die Mitglieder im Sinne der Statuten. */
   const ROLLEN_OPTS=[
     {value:"alle",label:"Alle Mitglieder"},
     {value:"vorstand",label:"Vorstand"},
@@ -82,6 +85,11 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
     {value:"spieler",label:"Alle Spieler"},
     {value:"eltern",label:"Alle Eltern"},
     {value:"funktionaer",label:"Alle Funktionäre"},
+    /* Supporter sind keine Mitglieder (Statuten Artikel 6) und stehen
+       deshalb in keiner der Zeilen darueber. Ohne eigenen Eintrag waeren
+       sie ueberhaupt nicht erreichbar — und getrennt bleiben muessen sie,
+       damit der Goenner nicht die GV-Einladung bekommt. */
+    {value:"supporter",label:"Alle Supporter"},
   ];
 
   const kannSenden=kannSchreiben||kannVerwalten;

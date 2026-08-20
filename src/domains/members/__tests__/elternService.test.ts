@@ -365,35 +365,48 @@ describe("entkoppleKind", () => {
     expect(sb.find("personen", "delete")).toBeUndefined();
   });
 
-  it("letztes Kind noch im Verein -> Supporter-Mitgliedschaft statt Kennzeichen", async () => {
-    /* Seit Etappe 5 ist Supporter ein Mitgliedtyp. Ohne Mitgliedschaft haette
-       die Person keine Verknuepfung mehr und erschiene in keiner Liste. */
+  it("letztes Kind noch im Verein -> Supporter OHNE Mitgliedschaft", async () => {
+    /* ⚠ DIE PRUEFUNG DES RUECKBAUS (20.08.2026). Bis dahin legte
+       `macheZumSupporter()` hier eine Zeile in `mitglieder` an — Etappe 5,
+       weil die Person sonst in keiner Liste erschienen waere.
+
+       Statuten Artikel 6 kennt den Supporter nicht: er zahlt keinen Beitrag
+       und hat kein Stimmrecht. Ihm eine Mitgliedschaft zu geben, verpasst ihm
+       etwas, das er nicht hat, und verfaelscht jede Zaehlung von Mitgliedern.
+
+       Es darf hier deshalb NICHTS mehr nach `mitglieder` geschrieben werden.
+       Auffindbar ist er ueber `fetchSupporter`: Person ohne Mitgliedschaft,
+       ohne Kind. */
     const sb = makeSb({
       "eltern_kinder.select": { count: 0 },
       "mitglieder.select": { data: { aktiv: true }, count: 0 },
       "personen.select": { data: { verein_id: "v-1", vorname: "Petra", nachname: "Brunner", email: "p@b.ch" } },
     });
     expect(await entkoppleKind(sb as any, "p-1", 7, "user-1", "v-1")).toBe("supporter");
-    const neu = sb.find("mitglieder", "insert");
-    expect(neu!.payload).toEqual(expect.objectContaining({
-      person_id: "p-1", verein_id: "v-1", mitgliedtyp: "Supporter", aktiv: true,
-    }));
+    expect(sb.opsOn("mitglieder").filter(o => o.op === "insert")).toHaveLength(0);
     /* Nach elternkontakte wird nichts mehr geschrieben (seit Etappe 3). */
     expect(sb.opsOn("elternkontakte")).toHaveLength(0);
+    /* Die Rolle ist alles, was bleibt — sie ist eine Berechtigung, keine
+       Mitgliedschaft. */
     expect(sb.find("benutzer", "update")!.payload).toEqual({ role: "supporter" });
     expect(sb.find("personen", "delete")).toBeUndefined();
   });
 
-  it("wer schon eine aktive Mitgliedschaft hat, bekommt keine zweite", async () => {
-    /* Der partielle Index mitglieder_eine_aktive_mitgliedschaft laesst nur
-       eine zu — und Aktivmitglied wiegt schwerer als Supporter. */
+  it("wer schon eine Mitgliedschaft hat, behaelt sie unveraendert", async () => {
+    /* Frueher war das ein Sonderfall: `macheZumSupporter()` musste pruefen,
+       ob schon eine aktive Mitgliedschaft besteht, weil der partielle Index
+       `mitglieder_eine_aktive_mitgliedschaft` nur eine zulaesst. Seit dem
+       Rueckbau gibt es die Frage nicht mehr — es wird ohnehin nichts
+       angelegt. Der Fall bleibt als Test stehen, damit niemand die Sonderregel
+       versehentlich wieder einbaut. */
     const sb = makeSb({
       "eltern_kinder.select": { count: 0 },
       "mitglieder.select": { data: { aktiv: true }, count: 1 },
       "personen.select": { data: { verein_id: "v-1", vorname: "Ueli", nachname: "Jakob", email: "u@j.ch" } },
     });
     expect(await entkoppleKind(sb as any, "p-1", 7, null, "v-1")).toBe("supporter");
-    expect(sb.find("mitglieder", "insert")).toBeUndefined();
+    expect(sb.opsOn("mitglieder").filter(o => o.op === "insert")).toHaveLength(0);
+    expect(sb.opsOn("mitglieder").filter(o => o.op === "update")).toHaveLength(0);
   });
 
   it("Supporter ohne Konto: die Person bleibt trotzdem stehen", async () => {

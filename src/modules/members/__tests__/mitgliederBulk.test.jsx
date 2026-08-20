@@ -41,6 +41,11 @@ vi.mock('../../../domains/members/memberService.ts', () => svc);
 vi.mock('../../../domains/members/feldkonfigService.ts', () => ({
   fetchFeldkonfig: vi.fn(async () => []),
 }));
+/* Ebenso seit dem Supporter-Rueckbau (20.08.2026): die Supporter-Liste kommt
+   aus `personen` und wird beim Mounten geladen. */
+vi.mock('../../../domains/members/supporterService.ts', () => ({
+  fetchSupporter: vi.fn(async () => []),
+}));
 vi.mock('../../../domains/members/useMemberMeta.ts', () => ({
   useMemberMeta: () => ({ ROLLE_LABEL: {}, TRAINER_KEYS: [], funktionenGruppenMap: {} }),
 }));

@@ -10,6 +10,8 @@ import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } 
 import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
+import { mapSupporter } from "./members/memberMapper.ts";
+import { fetchSupporter } from "../domains/members/supporterService.ts";
 import type { MemberRow } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.tsx";
 import { MemberKPIs } from "./members/MemberKPIs.tsx";
@@ -59,6 +61,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [selectedMember,setSelectedMember]=useState<SelectedMember|null>(null);
   const [showNeuesMitglied,setShowNeuesMitglied]=useState(false);
   const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
+  const [supporterRoh,setSupporterRoh]=useState<Awaited<ReturnType<typeof fetchSupporter>>>([]);
 
 
   const [archivTab,setArchivTab]=useState(false);
@@ -98,25 +101,32 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter((g): g is string => Boolean(g)))],
   })),[dbMitglieder,dbPortalRollen,dbKaderRollen,funktionenGruppenMap]);
 
-  /* Goenner sind KEINE Mitglieder: kein Beitrag, kein Stimmrecht an der GV,
-     kein Spielbetrieb. Sie stehen technisch in `mitglieder` (Etappe 5, damit
-     sie ueberhaupt auffindbar sind), gehoeren aber nicht in die
-     Mitgliederliste — sonst stimmt der Zaehler nicht, Auswertungen zaehlen
-     sie mit, und beim Anschreiben landen sie in Gruppen, in die sie nicht
-     gehoeren. Eigener Tab.
+  /* Seit dem Supporter-Rueckbau (20.08.2026) steht in `mitglieder` NUR NOCH,
+     was eine Mitgliedschaft ist — jede Zeile zaehlt, es gibt nichts mehr
+     herauszufiltern.
 
-     Getrennt wird ueber `mitgliedtypen.zaehlt_als_mitgliedschaft`, seit
-     19.08.2026. Vorher stand hier ein Vergleich gegen den Namen "Supporter"
-     — der griff beim zweiten Verein nicht mehr, der seinen Typ anders nennt,
-     und es gab kein strukturelles Merkmal, an dem man es haette festmachen
-     koennen. */
-  const nichtMitgliedschaft=useMemo(
-    ()=>new Set((dbMitgliedtypen||[]).filter(t=>t.zaehlt_als_mitgliedschaft===false).map(t=>t.name)),
-    [dbMitgliedtypen]);
-  const allMembers: MemberRow[]=useMemo(
-    ()=>alleZeilen.filter(m=>!nichtMitgliedschaft.has(m.mitgliedschaft||"")),[alleZeilen,nichtMitgliedschaft]);
+     Vorher lief hier ein Filter ueber `mitgliedtypen.zaehlt_als_mitgliedschaft`
+     und davor ein Vergleich gegen den Namen "Supporter". Beides ist entfallen:
+     ein Supporter ist keine Mitgliedschaft (Statuten Artikel 6) und deshalb
+     auch keine Zeile in dieser Tabelle. Er kommt aus `personen` — siehe
+     `fetchSupporter` weiter unten.
+
+     Der Filter darf NICHT als Sicherheitsnetz stehenbleiben: eine Zeile, die
+     er wegnimmt, waere jetzt nirgends mehr zu sehen — nicht in der
+     Mitgliederliste und nicht im Supporter-Tab, der ja gar nicht mehr aus
+     `mitglieder` liest. Sie verschwaende, ohne dass etwas fehlschlaegt. */
+  const allMembers: MemberRow[]=alleZeilen;
+
+  /* Supporter kommen aus `personen`, nicht aus `mitglieder` — sie haben keine
+     Mitgliedschaft. mapSupporter macht daraus dieselbe MemberRow-Form, damit
+     Suche, Sortierung und Gruppierung dieselben Funktionen benutzen koennen.
+     Was ein Supporter nicht hat (Mitgliedtyp, Teams, Spielerpass, Eintritt),
+     steht dort leer. */
   const supporter: MemberRow[]=useMemo(
-    ()=>alleZeilen.filter(m=>nichtMitgliedschaft.has(m.mitgliedschaft||"")),[alleZeilen,nichtMitgliedschaft]);
+    ()=>mapSupporter(supporterRoh,dbPortalRollen).map(m=>({
+      ...m,
+      funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter((g): g is string => Boolean(g)))],
+    })),[supporterRoh,dbPortalRollen,funktionenGruppenMap]);
 
   const filterRef = useRef<((vals: FilterVals) => void) | null>(null);
   function exportData(rows: MemberRow[], cols: ColDef[], groups: MemberGroup[], format: ExportFormat){ exportDataUtil(rows, cols, format, groups); }
@@ -128,7 +138,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(portalFunktionen.length===0)
       fetchPortalFunktionen(sb).then(data=>setPortalFunktionen(data));
     fetchFeldkonfig(sb).then(data=>setFeldkonfig(data));
-  },[account?.id]);
+    /* Gleich mitladen, nicht erst beim Klick: an der Anzahl haengt, ob der
+       Tab ueberhaupt erscheint. */
+    if(vereinId) fetchSupporter(sb,vereinId).then(data=>setSupporterRoh(data));
+  },[account?.id,vereinId]);
 
 
   async function handleBulkDelete(selected: Set<RowId>){
@@ -239,8 +252,29 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
 
 
+  /* Eine Listenzeile im Detail oeffnen.
+
+     ⚠ MemberDetail arbeitet mit einer MITGLIEDSCHAFT: `SelectedMember.id` ist
+     die bigint aus `mitglieder`, und rund siebzig Zugriffe in den Tabs lesen
+     sie als Zahl. Eine MemberRow traegt dort seit dem Supporter-Rueckbau
+     (20.08.2026) den Schluessel der ZEILE — beim Mitglied dieselbe Zahl, beim
+     Supporter dessen person_id. Deshalb kommt die Id hier aus `mitglied_id`
+     und nicht aus `id`.
+
+     Der Supporter-Tab bietet diesen Weg gar nicht erst an (kein onRowClick).
+     Der Guard ist das Netz darunter — und er meldet sich, statt still nichts
+     zu tun: ein Klick, der wirkungslos verpufft, waere von einem kaputten
+     Detail nicht zu unterscheiden. */
+  function oeffneMitglied(row: MemberRow & { _tab?: string }){
+    if(row.mitglied_id==null){
+      console.warn("oeffneMitglied: Zeile ohne Mitgliedschaft — MemberDetail kann sie nicht zeigen.",{id:row.id,name:row.name});
+      return;
+    }
+    setSelectedMember({...row, id: row.mitglied_id});
+  }
+
   /* Portal-Zugang Zelle */
-  const renderCell = makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, expandedTeams, setExpandedTeams, setSelectedMember });
+  const renderCell = makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LABEL, expandedTeams, setExpandedTeams, setSelectedMember: oeffneMitglied });
 
   return(
     <>{confirmDialog}
@@ -288,24 +322,17 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       {supporterTab?(
         <SupporterListView supporter={supporter} renderCell={renderCell} rolleLabel={ROLLE_LABEL} canExport={canExport}
-          onArchivieren={handleBulkDeactivate} onLoeschen={handleBulkDelete}
           renderMobile={m=>(
-            <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
+            <div key={m.id} className="cc-members-item">
               {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
               <div className="cc-members-item-body">
                 <div className="cc-members-item-name">{m.name}</div>
                 <div className="cc-members-item-sub">{m.email||m.telefon||""}</div>
               </div>
-              <div className="cc-members-item-right"><TI n="chevron-right" size={14} className="cc-members-item-chevron"/></div>
             </div>
           )}
           sb={sb} account={account} vereinId={vereinId}
           isAdmin={role==="administrator"||role==="administration"}
-          onOpen={row=>{
-            setSupporterTab(false);
-            const m=dbMitglieder.find(x=>x.id===row.id);
-            if(m) setSelectedMember({id:m.id,name:vollname(m),role:m.rolle||"-",type:m.mitgliedtyp||"-",team:"-",_tab:"info"});
-          }}
         />
       ):elternTab?(
         <ElternListView sb={sb} vereinId={vereinId} account={account} isAdmin={role==="administrator"||role==="administration"}
@@ -349,7 +376,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         multiGroup
         renderCell={(col,m,gc,filterVals)=>renderCell(col,m,gc,filterVals)}
         renderMobile={m=>(
-          <div key={m.id} className="cc-members-item" onClick={()=>setSelectedMember({...m,_tab:"info"})}>
+          <div key={m.id} className="cc-members-item" onClick={()=>oeffneMitglied({...m,_tab:"info"})}>
             {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
             <div className="cc-members-item-body">
               <div className="cc-members-item-name">{m.name}</div>
