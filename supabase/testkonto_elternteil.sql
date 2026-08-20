@@ -34,7 +34,7 @@
 --
 -- ABLAUF
 --
---   1. Diesen Block ausfuehren, E-Mail unten eintragen.
+--   1. Diesen Block ausfuehren (die Adresse steht im Block).
 --   2. Ueber die normale Anmeldemaske registrieren. `handle_new_user()` findet
 --      die Person ueber die E-Mail und setzt die Rolle `eltern`, weil eine
 --      Zeile in `eltern_kinder` steht und keine Mitgliedschaft.
@@ -43,23 +43,35 @@
 --   4. Rueckbau am Ende dieser Datei.
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- ⚠ HIER DIE ADRESSE EINTRAGEN, bevor der Block laeuft.
-\set test_email 'HIER.EINTRAGEN@example.ch'
+-- ⚠ KEIN `\set` MEHR. Es ist eine Anweisung an das Programm psql, keine an
+--    die Datenbank — der SQL-Editor im Supabase-Dashboard kennt sie nicht und
+--    bricht daran ab. Die Adresse steht deshalb unten direkt im Block; sie zu
+--    aendern ist genau eine Zeile.
+--
+-- PROBELAUF vom 21.08.2026 (BEGIN … ROLLBACK ueber den Session-Pooler):
+--
+--   gewaehlter Junior   #633 Stefan Wenger
+--   AHV fehlt           ja  — der Nachweis beweist also etwas
+--   Elternteile am Kind 2 nach dem Lauf, hatte also schon einen: die Liste
+--                       der drei ohne Elternteil (665, 680, 936) bleibt bei 3
+--   Mitgliedschaften    0, Kinder 1 — handle_new_user() nimmt den `eltern`-
+--                       Zweig und nicht `mitgliedtypen.standard_rolle`
+--   388 / 372 / 3       unveraendert, gemessen NACH dem Insert
+--   nach dem ROLLBACK   nichts stehengeblieben
 
 
 do $mig$
 declare
   v_verein   uuid;
-  v_email    text := :'test_email';
+  -- ⚠ DIE ADRESSE. Sie muss ein Postfach sein, das erreichbar ist: die
+  --   Registrierung schickt eine Bestaetigungsmail, und ohne sie kommt der
+  --   Nachweis nicht ueber Schritt 2 hinaus.
+  v_email    text := 'dieter.good+fchtest@outlook.com';
   v_person   uuid;
   v_kind     bigint;
   v_kindname text;
   v_anz      int;
 begin
-
-  if v_email like 'HIER.EINTRAGEN%' then
-    raise exception 'ABBRUCH: oben die Test-Adresse eintragen. Ohne sie findet handle_new_user() die Person bei der Registrierung nicht.';
-  end if;
 
   select id into v_verein from public.vereine where slug = 'fcherrliberg';
   if v_verein is null then raise exception 'ABBRUCH: Verein fcherrliberg nicht gefunden'; end if;
