@@ -73,9 +73,14 @@ function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, pf
 
   async function anfordern() {
     if (!sb) return;
-    await updatePerson(sb as never, raw.person_id, { profil_geprueft_at: null });
-    setPortalMsg({ ok: true, text: "Datenprüfung angefordert ✓" });
-    if (onReload) setTimeout(onReload, 500);
+    /* ⚠ Der Rueckgabewert wurde nicht gelesen: die Meldung „angefordert ✓"
+       stand da, gleich ob geschrieben wurde oder nicht. Dieselbe Familie wie
+       der leere catch — ein Fehlschlag sah aus wie ein Erfolg. */
+    const ok = await updatePerson(sb as never, raw.person_id, { profil_geprueft_at: null });
+    setPortalMsg(ok
+      ? { ok: true, text: "Datenprüfung angefordert ✓" }
+      : { ok: false, text: "Die Anforderung konnte nicht gespeichert werden." });
+    if (ok && onReload) setTimeout(onReload, 500);
   }
 
   return (

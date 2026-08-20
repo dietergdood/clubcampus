@@ -117,6 +117,23 @@ function MemberDetail({
     ...Object.fromEntries(
       Object.entries(m.daten ?? {}).filter(([k, v]) => v !== undefined && v !== null || !(dbRaw as Record<string, unknown>)[k])
     ),
+    /* ⚠ DIE IDENTITAET KOMMT AUS DEM ZIEL, NICHT AUS DEN DATEN.
+       Acht Stellen lesen `raw.person_id` — das Inline-Bearbeiten des ganzen
+       Profils (InfoTab), der Foto-Upload, „Datenpruefung anfordern". Bei einer
+       Zeile aus `mitglieder` steht sie als Spalte darin; bei einer Zeile aus
+       `personen` NICHT: dort heisst die Id `id`, und `zielAusPerson` nimmt
+       sie bewusst heraus, damit sie nicht als zweite Wahrheit im Datenblob
+       landet.
+
+       Ohne diese Zeile ginge auf der Personenseite jeder Schreibvorgang an
+       `.eq("id", undefined)` — kein Absturz, keine Meldung, nur eine Eingabe,
+       die nicht ankommt. Aufgefallen beim Durchgehen der Tabs, die eine
+       Person seit Schritt 4 erreicht; ausgeliefert war es nie, weil
+       `zielAusPerson` bis dahin keinen Aufrufer hatte.
+
+       Sie steht NACH dem Spread und ueberschreibt damit auch einen Wert aus
+       `daten`. Das ist der Punkt: `m.personId` ist die Wahrheit. */
+    person_id: personId,
   } as PersonZeile;
   /* Was es bei diesem Mitgliedtyp gibt (Konfiguration) UND wer es sehen
      darf (Rolle des Betrachters). "Gibt es nicht" gewinnt — siehe

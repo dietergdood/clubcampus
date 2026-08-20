@@ -281,3 +281,40 @@ describe('MemberDetail — Portal-Zugang schalten', () => {
     expect(svc.portalZugangDeaktivieren).toHaveBeenCalledWith(sb, 'p-7');
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   Die Identität im `raw` (21.08.2026)
+
+   Acht Stellen lesen `raw.person_id` — das Inline-Bearbeiten des
+   ganzen Profils, der Foto-Upload, „Datenprüfung anfordern". Bei
+   einer Zeile aus `mitglieder` steht sie als Spalte darin; bei
+   einer aus `personen` heisst sie `id`, und `zielAusPerson` nimmt
+   sie heraus, damit sie nicht als zweite Wahrheit im Datenblob
+   landet.
+
+   Ohne Nachziehen ginge jeder Schreibvorgang auf der Personenseite
+   an `.eq("id", undefined)`: kein Absturz, keine Meldung, nur eine
+   Eingabe, die nicht ankommt.
+   ═══════════════════════════════════════════════════════════════ */
+describe('MemberDetail — person_id im raw', () => {
+  it('⚠ eine Person ohne Mitgliedschaft trägt ihre person_id', async () => {
+    const ohne = zielAusPerson({ id: 'p-9', vorname: 'Petra' }, 'Petra Muster');
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [] })} />); });
+    expect(h.heroRaw.person_id).toBe('p-9');
+  });
+
+  it('bei einem Mitglied unverändert', async () => {
+    const m = zielAusMitglied({ id: 7, person_id: 'p-7' }, 'Hans Beispiel');
+    await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [{ id: 7, person_id: 'p-7' }] })} />); });
+    expect(h.heroRaw.person_id).toBe('p-7');
+  });
+
+  it('⚠ das Ziel gewinnt gegen einen abweichenden Wert in den Daten', async () => {
+    /* `m.personId` ist die Wahrheit. Stuende in `daten` eine veraltete
+       person_id — etwa aus einer Listenzeile, die vor einem Merge geladen
+       wurde —, schriebe das Profil in die falsche Zeile. */
+    const m = { ...zielAusMitglied({ id: 7, person_id: 'p-alt' }, 'Hans Beispiel'), personId: 'p-7' };
+    await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [] })} />); });
+    expect(h.heroRaw.person_id).toBe('p-7');
+  });
+});
