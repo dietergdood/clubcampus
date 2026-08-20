@@ -26,7 +26,8 @@ import { DatenpruefungTab } from "./tabs/DatenpruefungTab.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
 import { VerlaufTab } from "./tabs/VerlaufTab.tsx";
 import { getSichtbarkeit } from "./memberUtils.tsx";
-import { getFeldkonfig, fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
+import { getFeldkonfig, fuerMitgliedtyp, fuerPersonenart, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
+import { bestimmendeArt } from "../../domains/person/personArtService.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, SetState , PersonZeile } from "../../types.ts";
 import type { FunktionMitGruppe } from "../../shared/person/types.ts";
@@ -149,8 +150,17 @@ function MemberDetail({
 
      Kein `if (istSupporter)` irgendwo auf dieser Seite: wo eine solche
      Abfrage nötig schiene, kennt die Konfiguration den Fall noch nicht. */
+  /* ⚠ Ohne Mitgliedschaft entscheidet die ART, nicht mehr ein einziger
+     Sammelwert. Seit dem 20.08.2026 gibt es eine pflegbare Liste: vom
+     Elternteil will der Verein mehr wissen als vom Goenner. Welche Art
+     gewinnt, sagt `bestimmendeArt()` — die mit der kleinsten sort_order,
+     NICHT die Vereinigung aller (siehe dort). Ohne jede Art bleibt der
+     strukturelle Standard. */
+  const arten = m.arten ?? [];
   const konfig = getFeldkonfig(
-    mitgliedId == null ? OHNE_MITGLIEDSCHAFT : fuerMitgliedtyp(raw.mitgliedtyp),
+    mitgliedId == null
+      ? fuerPersonenart(bestimmendeArt(arten)?.art_id ?? null)
+      : fuerMitgliedtyp(raw.mitgliedtyp),
     feldkonfig,
   );
   const fv = getSichtbarkeit(role, konfig);
@@ -296,7 +306,7 @@ function MemberDetail({
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         benutzer={benutzer} teamDetails={teamDetails}
         vereinId={vereinId} onAustritt={onAustritt}
-        mitgliedId={mitgliedId} konfig={konfig}
+        mitgliedId={mitgliedId} konfig={konfig} arten={arten}
         onMitgliedWerden={onMitgliedWerden ? (() => onMitgliedWerden(personId)) : null}
       />
 

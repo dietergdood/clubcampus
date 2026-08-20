@@ -16,6 +16,7 @@ import type { AustrittsZiel } from "../domains/members/supporterService.ts";
 import { AustrittModal } from "./members/AustrittModal.tsx";
 import type { SupporterRoh, PersonFuerMitgliedschaft } from "../domains/members/supporterService.ts";
 import { fetchPerson } from "../domains/person/personService.ts";
+import { fetchArten } from "../domains/person/personArtService.ts";
 import { zielAusMitglied, zielAusPerson } from "../shared/person/personZiel.ts";
 import { MitgliedWerdenModal } from "./members/MitgliedWerdenModal.tsx";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
@@ -173,7 +174,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       console.error("oeffnePerson: Person nicht gefunden oder nicht lesbar.",{personId,name,fehler});
       return;
     }
-    setSelectedMember(zielAusPerson(person, name, {_tab:"info"}));
+    /* Die Arten in derselben Runde — eine Abfrage, nicht eine je Zeile.
+       Sie bestimmen den Feldsatz und den Chip im Kopf. */
+    const arten=await fetchArten(sb,personId);
+    setSelectedMember(zielAusPerson(person, name, {_tab:"info", arten}));
   }
 
   /* Austritt — die Gegenrichtung. Die Rueckfrage stellt AustrittModal; hier

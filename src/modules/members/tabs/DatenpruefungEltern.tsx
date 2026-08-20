@@ -84,7 +84,7 @@ import {
 } from "../../../shared/person/PersonFelderFormular.tsx";
 import type { FelderWerte } from "../../../shared/person/PersonFelderFormular.tsx";
 import {
-  getFeldkonfig, fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT, pflichtfelderFuerZiel, labelFuer,
+  getFeldkonfig, fuerMitgliedtyp, fuerPersonenart, pflichtfelderFuerZiel, labelFuer,
 } from "../../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile, KonfigZiel } from "../../../domains/members/feldkonfig.ts";
 import type { Mitglied, Sb } from "../../../types.ts";
@@ -163,6 +163,12 @@ interface DatenpruefungElternProps {
   /** Zeilen aus `mitgliedtyp_feldkonfig`, vom Portal durchgereicht. */
   feldkonfig?: FeldkonfigZeile[];
   /**
+   * Die bestimmende Art des Elternteils — seit dem 20.08.2026 entscheidet
+   * sie den Feldsatz, nicht mehr ein Sammelwert fuer alle 401 Personen
+   * ohne Mitgliedschaft. `null` heisst „keine Art": struktureller Standard.
+   */
+  eigeneArtId?: string | null;
+  /**
    * Bittet der Verein gerade um eine Prüfung?
    *
    * ⚠ Quelle ist `sollProfilPruefen()` — die Sechs-Monats-Regel steht dort
@@ -175,8 +181,8 @@ interface DatenpruefungElternProps {
 }
 
 export function DatenpruefungEltern({
-  sb, elternteil, kinder, kinderFehler = null, feldkonfig = [], pruefungFaellig = false,
-  setPortalMsg, onReload,
+  sb, elternteil, kinder, kinderFehler = null, feldkonfig = [], eigeneArtId = null,
+  pruefungFaellig = false, setPortalMsg, onReload,
 }: DatenpruefungElternProps) {
   /* Ausgangswerte: gespeichert wird nur die Abweichung — und daran haengt
      auch, ob eine Karte „ungespeicherte Aenderungen" hat. Nach dem Speichern
@@ -193,10 +199,10 @@ export function DatenpruefungEltern({
 
   /* Für die eigene Person gilt die Achse „ohne Mitgliedschaft" — 393 der 394
      Elternteile haben keine. */
-  const eigeneKonfig = getFeldkonfig(OHNE_MITGLIEDSCHAFT, feldkonfig);
+  const eigeneKonfig = getFeldkonfig(fuerPersonenart(eigeneArtId), feldkonfig);
 
   const eigenerStand = personenStand(
-    OHNE_MITGLIEDSCHAFT, feldkonfig, eigen, elternteil as Record<string, unknown>);
+    fuerPersonenart(eigeneArtId), feldkonfig, eigen, elternteil as Record<string, unknown>);
   const kinderStand = kinder.map(kind => personenStand(
     fuerMitgliedtyp(kind.mitgliedtyp), feldkonfig,
     kinderWerte[kind.id] ?? {}, kind as unknown as Record<string, unknown>));

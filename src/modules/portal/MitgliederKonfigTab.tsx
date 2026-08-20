@@ -1,11 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/portal/MitgliederKonfigTab.tsx
    ═══════════════════════════════════════════════════════════════ */
+import { useState, useEffect } from "react";
 import { Btn, Card, ModalOrSheet, ModalTitle, InfoBox, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { BTN_COLOR as BTN, BTN_TXT, BL, FONT } from "../../constants.ts";
 import { MitgliedtypFelderSektion } from "./MitgliedtypFelderSektion.tsx";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
+import { fetchPersonenarten } from "../../domains/person/personArtService.ts";
+import type { PersonArt } from "../../domains/person/personArtService.ts";
 import type { Sb, SetState } from "../../types.ts";
 
 /* Zeile aus mitgliedtypen */
@@ -52,6 +55,17 @@ interface MitgliederKonfigTabProps {
 }
 
 export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,vereinId,dbMitgliedtypen,setDbMitgliedtypen,feldkonfig,setFeldkonfig,showMitgliedtypForm,setShowMitgliedtypForm,editMitgliedtyp,setEditMitgliedtyp,mitgliedtypForm,setMitgliedtypForm}: MitgliederKonfigTabProps) {
+
+  /* Die pflegbaren Arten ohne Mitgliedschaft. EINE Abfrage beim Aufbau des
+     Tabs — nicht eine je Spalte. Seit dem 20.08.2026 gibt es statt eines
+     Sammelwerts eine Liste (`personenarten`). */
+  const [personenarten, setPersonenarten] = useState<PersonArt[]>([]);
+  useEffect(() => {
+    if (!supabase) return;
+    let abgebrochen = false;
+    fetchPersonenarten(supabase).then(a => { if (!abgebrochen) setPersonenarten(a); });
+    return () => { abgebrochen = true; };
+  }, [supabase]);
   const [confirm,confirmDialog]=useConfirm();
 
   async function saveMitgliedtyp(){
@@ -195,6 +209,7 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
             supabase={supabase} vereinId={vereinId}
             dbMitgliedtypen={dbMitgliedtypen}
             feldkonfig={feldkonfig} setFeldkonfig={setFeldkonfig}
+            personenarten={personenarten}
           />
         </div>
       )}

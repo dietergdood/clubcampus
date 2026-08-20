@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -2269,8 +2269,8 @@ export type Database = {
       }
       mitgliedtyp_feldkonfig: {
         Row: {
+          art_id: string | null
           created_at: string | null
-          gilt_fuer: string
           id: string
           mitgliedtyp_id: string | null
           modus: string
@@ -2278,8 +2278,8 @@ export type Database = {
           verein_id: string
         }
         Insert: {
+          art_id?: string | null
           created_at?: string | null
-          gilt_fuer?: string
           id?: string
           mitgliedtyp_id?: string | null
           modus: string
@@ -2287,8 +2287,8 @@ export type Database = {
           verein_id: string
         }
         Update: {
+          art_id?: string | null
           created_at?: string | null
-          gilt_fuer?: string
           id?: string
           mitgliedtyp_id?: string | null
           modus?: string
@@ -2296,6 +2296,13 @@ export type Database = {
           verein_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "mitgliedtyp_feldkonfig_art_fkey"
+            columns: ["art_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "personenarten"
+            referencedColumns: ["id", "verein_id"]
+          },
           {
             foreignKeyName: "mitgliedtyp_feldkonfig_typ_fkey"
             columns: ["mitgliedtyp_id", "verein_id"]
@@ -3145,6 +3152,90 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "personen_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personenart_pro_person: {
+        Row: {
+          art_id: string
+          created_at: string | null
+          id: string
+          person_id: string
+          verein_id: string
+        }
+        Insert: {
+          art_id: string
+          created_at?: string | null
+          id?: string
+          person_id: string
+          verein_id: string
+        }
+        Update: {
+          art_id?: string
+          created_at?: string | null
+          id?: string
+          person_id?: string
+          verein_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personenart_pro_person_art_fkey"
+            columns: ["art_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "personenarten"
+            referencedColumns: ["id", "verein_id"]
+          },
+          {
+            foreignKeyName: "personenart_pro_person_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personenart_pro_person_verein_id_fkey"
+            columns: ["verein_id"]
+            isOneToOne: false
+            referencedRelation: "vereine"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personenarten: {
+        Row: {
+          ableitung: string | null
+          aktiv: boolean
+          created_at: string | null
+          id: string
+          name: string
+          sort_order: number
+          verein_id: string
+        }
+        Insert: {
+          ableitung?: string | null
+          aktiv?: boolean
+          created_at?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          verein_id: string
+        }
+        Update: {
+          ableitung?: string | null
+          aktiv?: boolean
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          verein_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personenarten_verein_id_fkey"
             columns: ["verein_id"]
             isOneToOne: false
             referencedRelation: "vereine"
@@ -4734,6 +4825,17 @@ export type Database = {
       }
     }
     Views: {
+      personenarten_effektiv: {
+        Row: {
+          ableitung: string | null
+          art_id: string | null
+          name: string | null
+          person_id: string | null
+          sort_order: number | null
+          verein_id: string | null
+        }
+        Relationships: []
+      }
       portal_zugang: {
         Row: {
           hat_zugang: boolean | null

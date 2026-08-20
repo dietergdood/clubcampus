@@ -32,6 +32,8 @@ import { DatenpruefungMitglied } from "./modules/members/tabs/DatenpruefungMitgl
 import { DatenpruefungEltern } from "./modules/members/tabs/DatenpruefungEltern.tsx";
 import { fetchKinderVollstaendigFuerElternteil } from "./domains/members/elternService.ts";
 import { fetchPerson } from "./domains/person/personService.ts";
+import { fetchArten, bestimmendeArt } from "./domains/person/personArtService.ts";
+import type { PersonArt } from "./domains/person/personArtService.ts";
 import { fetchMitglied } from "./domains/members/memberService.ts";
 import { fetchFeldkonfig } from "./domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "./domains/members/feldkonfig.ts";
@@ -142,7 +144,8 @@ function Portal({supabaseClient, slug}: PortalProps){
     | { status:"laedt" }
     | { status:"nichts"; text:string }
     | { status:"fehler"; text:string }
-    | { status:"da"; person:Tables<"personen">; kinder:Mitglied[]; kinderFehler:string|null };
+    | { status:"da"; person:Tables<"personen">; kinder:Mitglied[]; kinderFehler:string|null;
+        arten:PersonArt[] };
   const [elternLadung,setElternLadung]=useState<ElternLadung>({status:"laedt"});
   const elternDaten = elternLadung.status==="da" ? elternLadung : null;
   const [meinMitgliedDaten,setMeinMitgliedDaten]=useState<Mitglied|null>(null);
@@ -329,6 +332,11 @@ function Portal({supabaseClient, slug}: PortalProps){
         }
         const { kinder, fehler: kinderFehler } = await fetchKinderVollstaendigFuerElternteil(sb, person.id);
         if(abgebrochen) return;
+        /* Die eigenen Arten in derselben Runde. Seit dem 20.08.2026
+           bestimmt die Art den Feldsatz — fuer ein Elternteil ein anderer
+           als fuer einen Goenner. Eine Abfrage, nicht eine je Feld. */
+        const arten = await fetchArten(sb, person.id);
+        if(abgebrochen) return;
         /* ⚠ Hier stand `kinder as unknown as Mitglied[]`. Als die Funktion am
            20.08.2026 von einem Array auf `{kinder, fehler}` umgestellt wurde,
            blieb der Typecheck GRUEN — der Cast nimmt alles. Zur Laufzeit waere
@@ -340,7 +348,7 @@ function Portal({supabaseClient, slug}: PortalProps){
            gesagt, wo die Kinder stuenden — sonst waere die Maske ganz weg,
            obwohl die Haelfte funktioniert. */
         setElternLadung({status:"da", person,
-          kinder: kinder as unknown as Mitglied[], kinderFehler});
+          kinder: kinder as unknown as Mitglied[], kinderFehler, arten});
       }catch(e){
         /* Gebunden, nicht leer: sonst bliebe von einem geworfenen Fehler nur
            ein Bildschirm, der ewig laedt. */
@@ -523,6 +531,7 @@ function Portal({supabaseClient, slug}: PortalProps){
             kinder={elternDaten.kinder}
             kinderFehler={elternDaten.kinderFehler}
             feldkonfig={feldkonfig}
+            eigeneArtId={eigeneArtId}
             /* ⚠ Aus `sollProfilPruefen()`, nicht aus einer zweiten Rechnung:
                die Sechs-Monats-Regel steht dort. Ohne die Prop ist die Seite
                ein normales Profil — der Pruef-Balken erscheint nur, wenn der
@@ -543,9 +552,14 @@ function Portal({supabaseClient, slug}: PortalProps){
   /* `eigeneKinder` kommt aus demselben Ladevorgang wie die
      Datenpruefungs-Maske (elternDaten). Eine zweite Abfrage waere ein zweiter
      Ort, an dem dieselbe Liste auseinanderlaufen kann. */
+  /* Die bestimmende Art — kleinste sort_order, NICHT die Vereinigung aller
+     (siehe bestimmendeArt). Einmal abgeleitet und an beide Leser gegeben,
+     damit nicht zwei Stellen dieselbe Wahl treffen. */
+  const eigeneArtId = bestimmendeArt(elternDaten?.arten)?.art_id ?? null;
+
   const { sollProfilPruefen, pflichtfelderFuer } = getProfilCheck({
     sb, dbUser, role, dbMitglieder, setDbUser, eigenePerson, feldkonfig,
-    eigeneKinder: elternDaten?.kinder ?? [],
+    eigeneKinder: elternDaten?.kinder ?? [], eigeneArtId,
   });
 
   return(
@@ -582,6 +596,7 @@ function Portal({supabaseClient, slug}: PortalProps){
                       kinder={elternDaten.kinder}
                       kinderFehler={elternDaten.kinderFehler}
                       feldkonfig={feldkonfig}
+                      eigeneArtId={eigeneArtId}
                       /* Das Overlay erscheint nur, wenn sollProfilPruefen()
                          wahr ist — hier ist sie also immer faellig. */
                       pruefungFaellig

@@ -32,6 +32,7 @@
    nicht die Lösung.
    ═══════════════════════════════════════════════════════════════ */
 import type { PersonZeile } from "../../types.ts";
+import type { PersonArt } from "../../domains/person/personArtService.ts";
 
 /**
  * Wen die Seite zeigt — als POSITIVE Aussage.
@@ -42,6 +43,16 @@ import type { PersonZeile } from "../../types.ts";
  */
 export type PersonZiel =
   & { personId: string; name: string; daten?: Partial<PersonZeile>;
+      /**
+       * Die Arten der Person (Elternteil, Supporter, …) — vom Aufrufer
+       * geladen, NICHT hier abgeleitet.
+       *
+       * ⚠ 400 Personen. Eine Abfrage je Zeile waere ein N+1; der Aufrufer
+       * hat die Liste ohnehin in einer Runde. Und `role === 'eltern'` ist
+       * als Quelle zweimal falsch gewesen — ein Vater, der selbst spielt,
+       * bekommt `spieler`.
+       */
+      arten?: PersonArt[];
       /** Aktiver Tab, vom Aufrufer beim Öffnen gesetzt. */
       _tab?: string;
       /** Archiv öffnet schreibgeschützt. */
@@ -65,7 +76,7 @@ export function mitgliedIdVon(ziel: PersonZiel): number | null {
 export function zielAusMitglied(
   zeile: { id: number; person_id: string } & Partial<PersonZeile>,
   name: string,
-  extras: { _tab?: string; _readonly?: boolean } = {},
+  extras: { _tab?: string; _readonly?: boolean; arten?: PersonArt[] } = {},
 ): PersonZiel {
   /* ⚠ `id` wird HERAUSGENOMMEN. `PersonZeile` laesst es aus gutem Grund weg
      (siehe types.ts); bliebe es in `daten`, landete es ueber den Merge wieder
@@ -91,7 +102,7 @@ export function zielAusMitglied(
 export function zielAusPerson(
   zeile: { id: string } & Partial<PersonZeile>,
   name: string,
-  extras: { _tab?: string; _readonly?: boolean } = {},
+  extras: { _tab?: string; _readonly?: boolean; arten?: PersonArt[] } = {},
 ): PersonZiel {
   /* Auch hier ohne `id`: es ist die PERSONEN-Id und steht in `personId`.
      In `daten` waere sie eine zweite Wahrheit an falscher Stelle. */

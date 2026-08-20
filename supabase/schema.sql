@@ -1279,9 +1279,8 @@ CREATE TABLE IF NOT EXISTS "public"."mitgliedtyp_feldkonfig" (
     "schluessel" "text" NOT NULL,
     "modus" "text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "gilt_fuer" "text" DEFAULT 'mitgliedtyp'::"text" NOT NULL,
-    CONSTRAINT "mitgliedtyp_feldkonfig_achse_check" CHECK (((("gilt_fuer" = 'mitgliedtyp'::"text") AND ("mitgliedtyp_id" IS NOT NULL)) OR (("gilt_fuer" = 'ohne_mitgliedschaft'::"text") AND ("mitgliedtyp_id" IS NULL)))),
-    CONSTRAINT "mitgliedtyp_feldkonfig_gilt_fuer_check" CHECK (("gilt_fuer" = ANY (ARRAY['mitgliedtyp'::"text", 'ohne_mitgliedschaft'::"text"]))),
+    "art_id" "uuid",
+    CONSTRAINT "mitgliedtyp_feldkonfig_achse_check" CHECK (("num_nonnulls"("mitgliedtyp_id", "art_id") = 1)),
     CONSTRAINT "mitgliedtyp_feldkonfig_modus_check" CHECK (("modus" = ANY (ARRAY['pflicht'::"text", 'freiwillig'::"text", 'aus'::"text"])))
 );
 
@@ -1298,10 +1297,6 @@ COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."schluessel" IS 'Feld (gebur
 
 
 COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."modus" IS 'pflicht = wird gezeigt und verlangt; freiwillig = wird gezeigt, darf leer bleiben; aus = gibt es nicht, verschwindet aus Profil, Neuanlage und Datenpruefung.';
-
-
-
-COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."gilt_fuer" IS 'Fuer wen diese Zeile gilt: mitgliedtyp (dann mit mitgliedtyp_id) oder ohne_mitgliedschaft (dann ohne). Ein einziger Wert fuer Elternteil UND Supporter — die Alternative waere ein Wert elternteil, abgeleitet aus „hat Kinder", also eine BERECHNETE Achse, die kippt sobald ein Kind austritt. Derselbe Fehler, den rolle_pflichtfelder gekostet hat.';
 
 
 
@@ -1593,6 +1588,58 @@ COMMENT ON COLUMN "public"."personen"."funktionen" IS 'Vereinsfunktionen. An der
 
 COMMENT ON COLUMN "public"."personen"."profil_geprueft_at" IS 'Wann die Person ihre Daten zuletzt bestaetigt hat. DIE einzige Stelle — die Altspalte benutzer.profil_geprueft_at ist am 20.08.2026 gefallen. Sie war eine zweite Aussage ueber dieselbe Sache: wer ueber den Overlay bestaetigte, schrieb dorthin, die Mitgliederliste las hier, und der Rueckfall in sollProfilPruefen() verdeckte die Abweichung.';
 
+
+
+CREATE TABLE IF NOT EXISTS "public"."personenart_pro_person" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "person_id" "uuid" NOT NULL,
+    "art_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."personenart_pro_person" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."personenarten" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "verein_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "sort_order" integer DEFAULT 0 NOT NULL,
+    "aktiv" boolean DEFAULT true NOT NULL,
+    "ableitung" "text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "personenarten_ableitung_check" CHECK ((("ableitung" IS NULL) OR ("ableitung" = 'eltern_kinder'::"text")))
+);
+
+
+ALTER TABLE "public"."personenarten" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."personenarten_effektiv" WITH ("security_invoker"='true') AS
+ SELECT "z"."person_id",
+    "a"."id" AS "art_id",
+    "a"."verein_id",
+    "a"."name",
+    "a"."sort_order",
+    "a"."ableitung"
+   FROM ("public"."personenart_pro_person" "z"
+     JOIN "public"."personenarten" "a" ON (("a"."id" = "z"."art_id")))
+  WHERE "a"."aktiv"
+UNION
+ SELECT "k"."person_id",
+    "a"."id" AS "art_id",
+    "a"."verein_id",
+    "a"."name",
+    "a"."sort_order",
+    "a"."ableitung"
+   FROM ("public"."eltern_kinder" "k"
+     JOIN "public"."personenarten" "a" ON ((("a"."verein_id" = "k"."verein_id") AND ("a"."ableitung" = 'eltern_kinder'::"text"))))
+  WHERE "a"."aktiv";
+
+
+ALTER VIEW "public"."personenarten_effektiv" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."portal_einstellungen" (
@@ -2628,7 +2675,7 @@ ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
 
 
 ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
-    ADD CONSTRAINT "mitgliedtyp_feldkonfig_verein_key" UNIQUE NULLS NOT DISTINCT ("verein_id", "mitgliedtyp_id", "schluessel");
+    ADD CONSTRAINT "mitgliedtyp_feldkonfig_verein_key" UNIQUE NULLS NOT DISTINCT ("verein_id", "mitgliedtyp_id", "art_id", "schluessel");
 
 
 
@@ -2759,6 +2806,31 @@ ALTER TABLE ONLY "public"."news"
 
 ALTER TABLE ONLY "public"."personen"
     ADD CONSTRAINT "personen_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."personenart_pro_person"
+    ADD CONSTRAINT "personenart_pro_person_key" UNIQUE ("verein_id", "person_id", "art_id");
+
+
+
+ALTER TABLE ONLY "public"."personenart_pro_person"
+    ADD CONSTRAINT "personenart_pro_person_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."personenarten"
+    ADD CONSTRAINT "personenarten_id_verein_key" UNIQUE ("id", "verein_id");
+
+
+
+ALTER TABLE ONLY "public"."personenarten"
+    ADD CONSTRAINT "personenarten_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."personenarten"
+    ADD CONSTRAINT "personenarten_verein_name_key" UNIQUE ("verein_id", "name");
 
 
 
@@ -3206,6 +3278,10 @@ CREATE UNIQUE INDEX "mitglieder_spielerpass_aktiv_key" ON "public"."mitglieder" 
 
 
 
+CREATE INDEX "mitgliedtyp_feldkonfig_art_idx" ON "public"."mitgliedtyp_feldkonfig" USING "btree" ("art_id");
+
+
+
 CREATE UNIQUE INDEX "personen_email_pro_verein" ON "public"."personen" USING "btree" ("verein_id", "lower"("btrim"("email"))) WHERE (("email" IS NOT NULL) AND ("btrim"("email") <> ''::"text"));
 
 
@@ -3219,6 +3295,14 @@ CREATE INDEX "personen_nachname_idx" ON "public"."personen" USING "btree" ("vere
 
 
 CREATE INDEX "personen_verein_idx" ON "public"."personen" USING "btree" ("verein_id");
+
+
+
+CREATE INDEX "personenart_pro_person_art_idx" ON "public"."personenart_pro_person" USING "btree" ("art_id");
+
+
+
+CREATE INDEX "personenart_pro_person_person_idx" ON "public"."personenart_pro_person" USING "btree" ("person_id");
 
 
 
@@ -3696,6 +3780,11 @@ ALTER TABLE ONLY "public"."mitglieder"
 
 
 ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
+    ADD CONSTRAINT "mitgliedtyp_feldkonfig_art_fkey" FOREIGN KEY ("art_id", "verein_id") REFERENCES "public"."personenarten"("id", "verein_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
     ADD CONSTRAINT "mitgliedtyp_feldkonfig_typ_fkey" FOREIGN KEY ("mitgliedtyp_id", "verein_id") REFERENCES "public"."mitgliedtypen"("id", "verein_id") ON DELETE CASCADE;
 
 
@@ -3887,6 +3976,26 @@ ALTER TABLE ONLY "public"."news"
 
 ALTER TABLE ONLY "public"."personen"
     ADD CONSTRAINT "personen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."personenart_pro_person"
+    ADD CONSTRAINT "personenart_pro_person_art_fkey" FOREIGN KEY ("art_id", "verein_id") REFERENCES "public"."personenarten"("id", "verein_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."personenart_pro_person"
+    ADD CONSTRAINT "personenart_pro_person_person_id_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."personenart_pro_person"
+    ADD CONSTRAINT "personenart_pro_person_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."personenarten"
+    ADD CONSTRAINT "personenarten_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
 
 
@@ -4797,6 +4906,28 @@ CREATE POLICY "personen_update_kind" ON "public"."personen" FOR UPDATE USING (((
 
 
 CREATE POLICY "personen_update_self" ON "public"."personen" FOR UPDATE USING ((("verein_id" = "public"."get_my_verein_id"()) AND ("id" = "public"."get_my_person_id"())));
+
+
+
+ALTER TABLE "public"."personenart_pro_person" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "personenart_pro_person_select" ON "public"."personenart_pro_person" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "personenart_pro_person_write" ON "public"."personenart_pro_person" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+ALTER TABLE "public"."personenarten" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "personenarten_select" ON "public"."personenarten" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "personenarten_write" ON "public"."personenarten" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
 
 
 
@@ -5816,6 +5947,24 @@ GRANT ALL ON TABLE "public"."news_lesestatus" TO "service_role";
 GRANT ALL ON TABLE "public"."personen" TO "anon";
 GRANT ALL ON TABLE "public"."personen" TO "authenticated";
 GRANT ALL ON TABLE "public"."personen" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."personenart_pro_person" TO "anon";
+GRANT ALL ON TABLE "public"."personenart_pro_person" TO "authenticated";
+GRANT ALL ON TABLE "public"."personenart_pro_person" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."personenarten" TO "anon";
+GRANT ALL ON TABLE "public"."personenarten" TO "authenticated";
+GRANT ALL ON TABLE "public"."personenarten" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."personenarten_effektiv" TO "anon";
+GRANT ALL ON TABLE "public"."personenarten_effektiv" TO "authenticated";
+GRANT ALL ON TABLE "public"."personenarten_effektiv" TO "service_role";
 
 
 

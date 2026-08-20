@@ -51,62 +51,83 @@ export const MODUS_LABEL: Record<FeldModus, string> = {
     nicht mehr verwaisen lässt. Genau daran sind am 19.08.2026 siebzehn
     Zeilen der Vorgängertabelle hängengeblieben. */
 export interface FeldkonfigZeile {
-  /** NULL bei `gilt_fuer = "ohne_mitgliedschaft"` — dort gibt es keinen Typ. */
+  /** Gesetzt, wenn die Zeile einem MITGLIEDTYP gilt — sonst null. */
   mitgliedtyp_id: string | null;
-  /** Name des Mitgliedtyps, vom Service aus dem Join flachgezogen. Bei
-      `ohne_mitgliedschaft` leer; gefiltert wird dann ueber `gilt_fuer`. */
+  /** Name des Mitgliedtyps, vom Service aus dem Join flachgezogen. Leer,
+      wenn die Zeile einer Personenart gilt. */
   mitgliedtyp: string;
-  /** Fuer wen die Zeile gilt. ⚠ MUSS vom Ladepfad mitgebracht werden — sonst
-      fielen die `ohne_mitgliedschaft`-Zeilen lautlos durch den Namensfilter,
-      weil ihr `mitgliedtyp` leer ist und keinen Vergleich trifft. */
-  gilt_fuer: GiltFuer;
+  /** Gesetzt, wenn die Zeile einer PERSONENART gilt — sonst null.
+      Genau eines von beiden ist gesetzt (CHECK in der Datenbank). */
+  art_id: string | null;
+  /** Name der Personenart, aus dem Join. Leer bei einem Mitgliedtyp. */
+  art: string;
   schluessel: string;
   modus: FeldModus;
 }
 
 /* ─── Die Achse ─────────────────────────────────────────────────────────
-   `mitgliedtyp_feldkonfig.gilt_fuer` (Migration vom 21.08.2026). Ein
-   einziger Wert `ohne_mitgliedschaft` fuer Elternteil UND Supporter: die
-   Alternative waere ein Wert `elternteil`, abgeleitet aus „hat Kinder" —
-   eine BERECHNETE Achse, die kippt, sobald ein Kind austritt. Derselbe
-   Fehler, den `rolle_pflichtfelder` gekostet hat. */
-export type GiltFuer = "mitgliedtyp" | "ohne_mitgliedschaft";
+   Bis zum 21.08.2026 ein fester Wert `ohne_mitgliedschaft` — EIN Feldsatz
+   fuer 394 Elternteile und 7 Supporter. Vom Elternteil will der Verein aber
+   mehr wissen als vom Goenner.
+
+   Seit dem 20.08.2026 ist es ein Verweis in `personenarten` (Migration
+   `migration_personenarten.sql`). `gilt_fuer` ist ersatzlos gefallen: welche
+   Achse gilt, steht in den Daten selbst — genau eine der beiden Id-Spalten
+   ist gesetzt, und die Datenbank haelt das mit
+   `CHECK (num_nonnulls(mitgliedtyp_id, art_id) = 1)` fest. Eine dritte
+   Spalte waere dieselbe Aussage an einem zweiten Ort. */
 
 /**
  * Wofuer eine Konfiguration gelesen wird.
  *
- * ⚠ DREI FAELLE, NICHT ZWEI. `mitglieder.mitgliedtyp` ist nullable: eine
- * Mitgliedschaft OHNE Typ ist ein Datenloch und nicht dasselbe wie eine
- * Person ohne Mitgliedschaft. Wer beides zusammenlegt, blendet bei einem
- * Datenloch ploetzlich Felder aus. Das Datenloch faellt weiterhin auf
- * „alles freiwillig" zurueck — fuer einen unbekannten Typ das richtige
- * Verhalten.
+ * ⚠ VIER FAELLE, NICHT ZWEI.
+ *
+ *   mitgliedtyp mit Namen    der Normalfall
+ *   mitgliedtyp OHNE Namen   `mitglieder.mitgliedtyp` ist nullable — ein
+ *                            Datenloch, NICHT dasselbe wie „keine
+ *                            Mitgliedschaft". Faellt auf „alles freiwillig".
+ *   personenart mit Id       Elternteil, Supporter, Ehemalige …
+ *   personenart OHNE Id      eine Person ohne Mitgliedschaft und ohne Art.
+ *                            Bekommt den strukturellen Standard: die zehn
+ *                            `nur_mitgliedschaft`-Schluessel `aus`, sonst
+ *                            freiwillig.
  *
  * Ein blosser String ist damit ein Typfehler, und jede Aufrufstelle muss
  * sagen, welcher Fall bei ihr gilt.
  */
 export type KonfigZiel =
-  | { gilt_fuer: "mitgliedtyp"; mitgliedtyp: string | null }
-  | { gilt_fuer: "ohne_mitgliedschaft" };
+  | { achse: "mitgliedtyp"; mitgliedtyp: string | null }
+  | { achse: "personenart"; artId: string | null };
 
 /**
- * Wofuer geschrieben wird — braucht die Id, weil die Zeile ueber
- * `mitgliedtyp_id` haengt und ein Name beim Umbenennen verwaisen wuerde.
+ * Wofuer geschrieben wird — immer ueber die ID.
  *
  * Zwei fast gleiche Typen sind sonst ein Warnzeichen (CLAUDE.md, die vier
- * Kaderrollen-Typen). Hier tragen sie verschiedene Daten: gelesen wird ueber
- * den NAMEN, weil die Aufrufstellen nur ihn haben (`raw.mitgliedtyp`),
- * geschrieben ueber die ID.
+ * Kaderrollen-Typen). Hier tragen sie verschiedene Daten: beim Mitgliedtyp
+ * wird ueber den NAMEN gelesen, weil die Aufrufstellen nur ihn haben
+ * (`raw.mitgliedtyp` ist Text), und ueber die ID geschrieben. Bei der
+ * Personenart ist es beide Male die ID — die Aufrufstellen bekommen sie aus
+ * `personenarten_effektiv`, und ein Name als Schluessel verwaist beim
+ * Umbenennen.
  */
 export type KonfigZielSchreiben =
-  | { gilt_fuer: "mitgliedtyp"; mitgliedtypId: string }
-  | { gilt_fuer: "ohne_mitgliedschaft" };
-
-export const OHNE_MITGLIEDSCHAFT = { gilt_fuer: "ohne_mitgliedschaft" } as const;
+  | { achse: "mitgliedtyp"; mitgliedtypId: string }
+  | { achse: "personenart"; artId: string };
 
 /** Bequemer Weg zum haeufigen Fall. `null` bleibt `null` — siehe KonfigZiel. */
 export function fuerMitgliedtyp(name: string | null | undefined): KonfigZiel {
-  return { gilt_fuer: "mitgliedtyp", mitgliedtyp: name ?? null };
+  return { achse: "mitgliedtyp", mitgliedtyp: name ?? null };
+}
+
+/**
+ * Eine Person ohne Mitgliedschaft.
+ *
+ * ⚠ `null` ist ein gueltiges Argument und heisst „hat keine Art" — nicht
+ * „unbekannt". Das ersetzt die fruehere Konstante `OHNE_MITGLIEDSCHAFT`,
+ * die fuer alle 401 dasselbe bedeutete.
+ */
+export function fuerPersonenart(artId: string | null | undefined): KonfigZiel {
+  return { achse: "personenart", artId: artId ?? null };
 }
 
 /* ─── Bereiche ──────────────────────────────────────────────────── */
@@ -242,7 +263,7 @@ export const IMMER_PFLICHT_KEYS = FELD_REGISTRY
     fallen die Schlüssel weg, die an einer Mitgliedschaft hängen. Die
     Oberfläche filtert damit ihre Spalte. */
 export function giltFuerZiel(e: RegistryEintrag, ziel: KonfigZiel): boolean {
-  return !(ziel.gilt_fuer === "ohne_mitgliedschaft" && e.nur_mitgliedschaft);
+  return !(ziel.achse === "personenart" && e.nur_mitgliedschaft);
 }
 
 /**
@@ -264,7 +285,7 @@ export function getFeldkonfig(
   ziel: KonfigZiel,
   zeilen: readonly FeldkonfigZeile[],
 ): Record<string, FeldModus> {
-  const ohne = ziel.gilt_fuer === "ohne_mitgliedschaft";
+  const ohne = ziel.achse === "personenart";
 
   const konfig: Record<string, FeldModus> = {};
   for (const e of FELD_REGISTRY) {
@@ -274,10 +295,16 @@ export function getFeldkonfig(
     konfig[e.schluessel] = ohne && e.nur_mitgliedschaft ? "aus" : "freiwillig";
   }
 
-  if (!ohne && !ziel.mitgliedtyp) return konfig;
+  /* Ohne Kennung gibt es nichts zu suchen: ein Mitgliedtyp ohne Namen ist ein
+     Datenloch, eine Person ohne Art hat schlicht keine. Beide behalten den
+     strukturellen Standard von oben. */
+  if (ohne ? !ziel.artId : !ziel.mitgliedtyp) return konfig;
 
   for (const z of zeilen) {
-    if (z.gilt_fuer !== ziel.gilt_fuer) continue;
+    /* ⚠ ZUERST die Achse, dann die Kennung. Andersherum fielen die Zeilen
+       einer Personenart lautlos durch: ihr `mitgliedtyp` ist leer und traefe
+       keinen Namensvergleich. */
+    if (ohne ? z.art_id !== ziel.artId : z.mitgliedtyp_id === null) continue;
     if (!ohne && z.mitgliedtyp !== ziel.mitgliedtyp) continue;
     /* Ein Schlüssel, der an einer Mitgliedschaft hängt, bleibt auch dann
        `aus`, wenn eine Altzeile etwas anderes behauptet — die Registry ist

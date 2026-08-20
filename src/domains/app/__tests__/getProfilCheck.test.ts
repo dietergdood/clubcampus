@@ -11,24 +11,26 @@
    sank, obwohl zwoelf dazukamen. */
 import { describe, it, expect } from "vitest";
 import { getProfilCheck } from "../getProfilCheck.ts";
-import { fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT } from "../../members/feldkonfig.ts";
+import { fuerMitgliedtyp, fuerPersonenart } from "../../members/feldkonfig.ts";
+
+const ART_ID = "art-elternteil";
 
 /* Minimale Attrappen — getProfilCheck liest nur Felder, kein Verhalten. */
 const sb = null as never;
 const setDbUser = (() => {}) as never;
 
 const feldkonfig = [
-  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",    schluessel: "geburtsdatum", modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",    schluessel: "strasse",      modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",    schluessel: "telefon",      modus: "pflicht" },
-  { mitgliedtyp: "Passivmitglied", gilt_fuer: "mitgliedtyp",   schluessel: "telefon",      modus: "pflicht" },
-  { mitgliedtyp: "Juniorenmitglied", gilt_fuer: "mitgliedtyp", schluessel: "geburtsdatum", modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", art_id: null, art: "", schluessel: "geburtsdatum", modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", art_id: null, art: "", schluessel: "strasse",      modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", art_id: null, art: "", schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp: "Passivmitglied", art_id: null, art: "", schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp: "Juniorenmitglied", art_id: null, art: "", schluessel: "geburtsdatum", modus: "pflicht" },
 
   /* Die Achse fuer Personen ohne Mitgliedschaft (21.08.2026). Vorher stand
      hier nichts, und getProfilCheck hatte fuer den Elternteil einen fest
      verdrahteten Satz — Vorname, Nachname, Telefon. Jetzt kommt auch sein
      Pflichtfeld aus der Konfiguration. */
-  { mitgliedtyp: "", mitgliedtyp_id: null, gilt_fuer: "ohne_mitgliedschaft", schluessel: "telefon", modus: "pflicht" },
+  { mitgliedtyp: "", mitgliedtyp_id: null, art_id: ART_ID, art: "Elternteil", schluessel: "telefon", modus: "pflicht" },
 ] as never;
 
 function baue(mitglied: Record<string, unknown>, opts: Record<string, unknown> = {}) {
@@ -42,13 +44,20 @@ function baue(mitglied: Record<string, unknown>, opts: Record<string, unknown> =
 
 /* Elternteil: keine Mitgliedschaft, also kein Mitgliedtyp und keine Matrix.
    Seine eigenen Angaben stehen seit Etappe 4 an der PERSON — benutzer hat
-   keine vorname/nachname/telefon mehr. */
-function baueEltern(person: Record<string, unknown> | null) {
+   keine vorname/nachname/telefon mehr.
+
+   ⚠ `eigeneArtId` MUSS mit. Seit dem 20.08.2026 haengt der Feldsatz an der
+   ART (Elternteil, Supporter, …) statt an einem Sammelwert fuer alle 401
+   Personen ohne Mitgliedschaft. Ohne die Id traefe keine Konfigurationszeile,
+   und der Test pruefte eine leere Matrix — gruen aus dem falschen Grund.
+   Genau die Falle aus CLAUDE.md: eine Attrappe kennt kein Schema. */
+function baueEltern(person: Record<string, unknown> | null, artId: string | null = ART_ID) {
   const dbUser = { id: "u1", mitglied_id: null, person_id: "p1" } as never;
   return getProfilCheck({
     sb, setDbUser, dbUser, role: "eltern" as never,
     dbMitglieder: [] as never,
     eigenePerson: person as never,
+    eigeneArtId: artId,
     feldkonfig,
   });
 }
@@ -131,8 +140,8 @@ describe("getProfilFehlend", () => {
     const { getProfilFehlend } = baue(
       { vorname: "A", nachname: "B", mitgliedtyp: "Goenner" },
       { feldkonfig: [
-        { mitgliedtyp: "Goenner", gilt_fuer: "mitgliedtyp", schluessel: "telefon",      modus: "pflicht" },
-        { mitgliedtyp: "Goenner", gilt_fuer: "mitgliedtyp", schluessel: "geburtsdatum", modus: "aus" },
+        { mitgliedtyp: "Goenner", art_id: null, art: "", schluessel: "telefon",      modus: "pflicht" },
+        { mitgliedtyp: "Goenner", art_id: null, art: "", schluessel: "geburtsdatum", modus: "aus" },
       ] as never },
     );
     expect(getProfilFehlend()).toEqual(["Telefon"]);
@@ -172,10 +181,10 @@ describe("getProfilFehlend", () => {
    und nicht statt dessen — die bestehenden 13 Faelle sollen unveraendert
    bleiben. */
 const KONFIG = [
-  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",  schluessel: "telefon",   modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",  schluessel: "plz",       modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",  schluessel: "heimatort", modus: "freiwillig" },
-  { mitgliedtyp: "Passivmitglied", gilt_fuer: "mitgliedtyp", schluessel: "telefon",   modus: "aus" },
+  { mitgliedtyp: "Aktivmitglied", art_id: null, art: "", schluessel: "telefon",   modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", art_id: null, art: "", schluessel: "plz",       modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", art_id: null, art: "", schluessel: "heimatort", modus: "freiwillig" },
+  { mitgliedtyp: "Passivmitglied", art_id: null, art: "", schluessel: "telefon",   modus: "aus" },
 ] as never;
 
 const basis = (over: Record<string, unknown> = {}) => ({

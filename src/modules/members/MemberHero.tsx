@@ -9,6 +9,7 @@ import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
 import { istSichtbar } from "../../domains/members/feldkonfig.ts";
 import type { FeldModus } from "../../domains/members/feldkonfig.ts";
 import { TI } from "../../icons.tsx";
+import type { PersonArt } from "../../domains/person/personArtService.ts";
 import { heroChips } from "../../domains/roles/roleUtils.ts";
 import { updatePersonFoto, deletePersonFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, PersonZeile } from "../../types.ts";
@@ -35,6 +36,14 @@ interface MemberHeroProps {
   onRefreshCount?: (() => void) | null;
   account?: Account | null;
   onUpdatePortalZugang?: ((mitgliedId: number, aktiv: boolean) => Promise<void> | void) | null;
+  /**
+   * Die Arten einer Person ohne Mitgliedschaft — Elternteil, Supporter, …
+   *
+   * ⚠ Vom Aufrufer geladen, NICHT aus der Portalrolle abgeleitet.
+   * `role === 'eltern'` ist schon zweimal falsch gewesen: ein Vater, der
+   * selbst spielt, bekommt `spieler`.
+   */
+  arten?: PersonArt[];
   dbMitgliedtypen?: Mitgliedtyp[];
   dbPortalRollen?: PortalRolle[];
   dbKaderRollen?: KaderRolleMitTrainerFlag[];
@@ -68,7 +77,7 @@ interface MemberHeroProps {
   konfig: Record<string, FeldModus>;
 }
 
-function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig}: MemberHeroProps){
+function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
@@ -166,21 +175,36 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                   hatFunktion: (raw.funktionen||[]).length>0,
                   rolleLabel: ROLLE_LABEL,
                 })];
-                /* ⚠ „Ohne Mitgliedschaft" wird AUSGESCHRIEBEN, nicht
-                   weggelassen. `heroChips` liefert ohne Mitgliedtyp und ohne
-                   Kader nur noch die Portalrolle — eine Kopfzeile mit einem
-                   einzigen Chip ist von einer kaputten nicht zu unterscheiden.
+                /* ⚠ Hier stand bis zum 20.08.2026 pauschal „Ohne
+                   Mitgliedschaft" — fuer alle 401 dasselbe, obwohl 394 davon
+                   ELTERNTEILE sind und 7 Supporter. Seit der Migration
+                   `migration_personenarten.sql` steht dort die ART.
 
-                   ⚠ Der Text sagt, was ZUTRIFFT, und erklaert nicht. Ein Satz
-                   wie „Ein Supporter ist keine Mitgliedschaft…" waere hier bei
-                   den meisten falsch: von 400 Menschen ohne Mitgliedschaft sind
-                   393 ELTERNTEILE und 7 Supporter (gemessen am 21.08.2026).
-                   Die Unterscheidung haengt an `eltern_kinder` — nicht an der
-                   Rolle: `role === "eltern"` ist schon einmal falsch gewesen,
-                   ein Vater, der selbst spielt, bekommt `spieler`. Wer den
-                   Unterschied im Kopf zeigen will, laedt die Kinder; das ist
-                   eine eigene Entscheidung und steht hier nicht. */
-                if (mitgliedId == null) chips.unshift({ label: "Ohne Mitgliedschaft", type: "status" });
+                   ⚠ Aus `personenarten_effektiv`, also aus DERSELBEN Quelle
+                   wie die Feldkonfiguration — nicht aus der Portalrolle.
+                   `role === "eltern"` ist zweimal falsch gewesen: ein Vater,
+                   der selbst spielt, bekommt `spieler`.
+
+                   Alle Arten werden gezeigt, die bestimmende zuerst (kleinste
+                   sort_order). Ein Ehemaliger mit Kind im Verein IST beides;
+                   dass nur die erste den Feldsatz bestimmt, ist eine Regel
+                   der Konfiguration und keine Aussage ueber den Menschen.
+
+                   Wer keine Art hat, behaelt „Ohne Mitgliedschaft" — eine
+                   ehrliche Auskunft und kein Platzhalter. Weggelassen waere
+                   sie nicht: `heroChips` liefert ohne Mitgliedtyp und ohne
+                   Kader nur noch die Portalrolle, und eine Kopfzeile mit einem
+                   einzigen Chip ist von einer kaputten nicht zu
+                   unterscheiden. */
+                if (mitgliedId == null) {
+                  const nachRang = [...arten].sort((a,b)=>a.sort_order-b.sort_order);
+                  if (nachRang.length > 0) {
+                    nachRang.slice().reverse().forEach(a =>
+                      chips.unshift({ label: a.name, type: "status" }));
+                  } else {
+                    chips.unshift({ label: "Ohne Mitgliedschaft", type: "status" });
+                  }
+                }
                 const MAX=isMobile?2:(chips||[]).length;
                 const visible=chips.slice(0,MAX);
                 const hidden=(chips||[]).length-MAX;

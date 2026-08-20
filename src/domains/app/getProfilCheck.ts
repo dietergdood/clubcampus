@@ -39,7 +39,7 @@ import {
   pflichtfelderFuerZiel,
   getFeldkonfig,
   fuerMitgliedtyp,
-  OHNE_MITGLIEDSCHAFT,
+  fuerPersonenart,
   pflichtfelderAus,
   type FeldkonfigZeile,
   type KonfigZiel,
@@ -77,6 +77,15 @@ interface GetProfilCheckProps {
    * auseinanderlaufen kann.
    */
   eigeneKinder?: Mitglied[];
+  /**
+   * Die bestimmende Art des angemeldeten Elternteils.
+   *
+   * ⚠ Auch hereingereicht, aus demselben Grund wie `eigeneKinder`:
+   * `getProfilCheck` ist synchron, und `clubcampus` laedt die Arten ohnehin
+   * fuer die Datenpruefungs-Maske. Eine zweite Abfrage waere ein zweiter Ort,
+   * an dem dieselbe Aussage auseinanderlaufen kann.
+   */
+  eigeneArtId?: string | null;
 }
 
 /* Feldwert eines Mitglieds — leer zählt als fehlend. `Mitglied` ist breit
@@ -91,7 +100,7 @@ function istLeer(raw: Partial<Mitglied>, feld: string): boolean {
 
 export function getProfilCheck({
   sb, dbUser, role, dbMitglieder, setDbUser,
-  eigenePerson = null, feldkonfig = [], eigeneKinder = [],
+  eigenePerson = null, feldkonfig = [], eigeneKinder = [], eigeneArtId = null,
 }: GetProfilCheckProps) {
 
   /* Fehlende Pflichtfelder, als Feld-Labels.
@@ -149,7 +158,7 @@ export function getProfilCheck({
          `personen`. Fehlt die Person (Ladezustand), wird nichts verlangt —
          ein leerer Zustand darf keinen Hinweis ausloesen. */
       const fehlend: string[] = eigenePerson
-        ? fehlendeFelder(eigenePerson as Partial<Mitglied>, OHNE_MITGLIEDSCHAFT)
+        ? fehlendeFelder(eigenePerson as Partial<Mitglied>, fuerPersonenart(eigeneArtId))
         : [];
 
       const kinder = kinderVonElternteil();

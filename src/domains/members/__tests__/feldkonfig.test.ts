@@ -9,7 +9,7 @@ import {
   getFeldkonfig,
   fuerMitgliedtyp,
   giltFuerZiel,
-  OHNE_MITGLIEDSCHAFT,
+  fuerPersonenart,
   istBereichSichtbar,
   istPflicht,
   istSichtbar,
@@ -23,23 +23,23 @@ import type { FeldkonfigZeile } from "../feldkonfig.ts";
    der Goenner hat fuenf Pflichtfelder und sieben Schluessel auf "aus",
    ein Aktivmitglied hat Pflichtfelder und ein abgewaehltes Feld. */
 const zeilen: FeldkonfigZeile[] = [
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "geburtsdatum", modus: "pflicht" },
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "email",        modus: "pflicht" },
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "strasse",      modus: "pflicht" },
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "geschlecht",   modus: "freiwillig" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", art_id: null, art: "" as const, schluessel: "geburtsdatum", modus: "pflicht" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", art_id: null, art: "" as const, schluessel: "email",        modus: "pflicht" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", art_id: null, art: "" as const, schluessel: "strasse",      modus: "pflicht" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", art_id: null, art: "" as const, schluessel: "geschlecht",   modus: "freiwillig" },
 
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "email",        modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "strasse",      modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "plz",          modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "ort",          modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "telefon",      modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "geburtsdatum", modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "geschlecht",   modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "spielerpass",  modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "js_nr",        modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "fairgate_id",  modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "teams",        modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "funktionen",   modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "email",        modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "strasse",      modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "plz",          modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "ort",          modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "geburtsdatum", modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "geschlecht",   modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "spielerpass",  modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "js_nr",        modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "fairgate_id",  modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "teams",        modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "funktionen",   modus: "aus" },
 ];
 
 describe("getFeldkonfig", () => {
@@ -78,7 +78,7 @@ describe("getFeldkonfig", () => {
   it("verschluckt unbekannte Schluessel nicht", () => {
     const k = getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), [
       ...zeilen,
-      { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "erfunden", modus: "aus" },
+      { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", art_id: null, art: "" as const, schluessel: "erfunden", modus: "aus" },
     ]);
     expect(k.erfunden).toBe("aus");
   });
@@ -98,7 +98,7 @@ describe("istSichtbar / istPflicht", () => {
        anderes behauptet, darf daran nichts aendern. */
     const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), [
       ...zeilen,
-      { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "vorname", modus: "aus" },
+      { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", art_id: null, art: "" as const, schluessel: "vorname", modus: "aus" },
     ]);
     expect(istSichtbar(k, "vorname")).toBe(true);
     expect(istPflicht(k, "vorname")).toBe(true);
@@ -132,7 +132,7 @@ describe("istBereichSichtbar", () => {
   it("haelt Personalien wegen vorname/nachname immer sichtbar", () => {
     const alleAus = FELD_REGISTRY
       .filter(e => e.bereich === "personalien" && e.modi.length > 0)
-      .map(e => ({ mitgliedtyp_id: "t9", mitgliedtyp: "Leer", gilt_fuer: "mitgliedtyp" as const, schluessel: e.schluessel, modus: "aus" as const }));
+      .map(e => ({ mitgliedtyp_id: "t9", mitgliedtyp: "Leer", art_id: null, art: "" as const, schluessel: e.schluessel, modus: "aus" as const }));
     const k = getFeldkonfig(fuerMitgliedtyp("Leer"), alleAus);
     expect(istBereichSichtbar(k, "personalien")).toBe(true);
   });
@@ -257,15 +257,21 @@ describe("Registry", () => {
    zweiten Konfigurationsort.
    ═══════════════════════════════════════════════════════════════ */
 
+/* Die Achse traegt seit dem 20.08.2026 eine echte Id statt eines festen
+   Wortes: aus einem Sammelwert fuer 401 Personen ist eine pflegbare Liste
+   geworden (`personenarten`). */
+const ART_ID = "art-elternteil";
+const OHNE_ART = fuerPersonenart(ART_ID);
+
 const ohneZeilen: FeldkonfigZeile[] = [
-  { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "telefon", modus: "pflicht" },
-  { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "email",   modus: "pflicht" },
-  { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "ahv_nr",  modus: "aus" },
+  { mitgliedtyp_id: null, mitgliedtyp: "", art_id: ART_ID, art: "Elternteil", schluessel: "telefon", modus: "pflicht" },
+  { mitgliedtyp_id: null, mitgliedtyp: "", art_id: ART_ID, art: "Elternteil", schluessel: "email",   modus: "pflicht" },
+  { mitgliedtyp_id: null, mitgliedtyp: "", art_id: ART_ID, art: "Elternteil", schluessel: "ahv_nr",  modus: "aus" },
 ];
 
 describe("ohne Mitgliedschaft", () => {
   it("liest die Zeilen der neuen Achse", () => {
-    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, ohneZeilen);
+    const k = getFeldkonfig(OHNE_ART, ohneZeilen);
     expect(k.telefon).toBe("pflicht");
     expect(k.email).toBe("pflicht");
     expect(k.ahv_nr).toBe("aus");
@@ -275,7 +281,7 @@ describe("ohne Mitgliedschaft", () => {
     /* Das Registry-Merkmal wirkt in der AUSWERTUNG. Wirkte es nur in der
        Oberflaeche, braeuchten diese zehn je eine Zeile in der Datenbank —
        und ein Direktzugriff haette sie wieder sichtbar. */
-    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, ohneZeilen);
+    const k = getFeldkonfig(OHNE_ART, ohneZeilen);
     for (const s of ["mitgliedtyp","eintrittsdatum","spielerpass","js_nr","fairgate_id",
                      "teams","notizen","tab_stats","tab_verlauf","tab_eltern"]) {
       expect(k[s]).toBe("aus");
@@ -287,7 +293,7 @@ describe("ohne Mitgliedschaft", () => {
        (17.08.2026). Und die fuenf Personalien-Felder bleiben freiwillig statt
        `aus` — „aus" hiesse unsichtbar, nicht geloescht, und bei jedem Austritt
        entstuende ein Bestand an Personendaten, den niemand mehr sieht. */
-    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, ohneZeilen);
+    const k = getFeldkonfig(OHNE_ART, ohneZeilen);
     expect(k.funktionen).toBe("freiwillig");
     expect(k.tab_portal).toBe("freiwillig");
     expect(k.tab_datenpruefung).toBe("freiwillig");
@@ -299,9 +305,9 @@ describe("ohne Mitgliedschaft", () => {
   it("⚠ die Registry gewinnt gegen eine Altzeile", () => {
     /* Stellt jemand per Direktzugriff `teams` auf Pflicht, bleibt es `aus`:
        eine Anforderung, die niemand erfuellen kann, darf nicht entstehen. */
-    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, [
+    const k = getFeldkonfig(OHNE_ART, [
       ...ohneZeilen,
-      { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "teams", modus: "pflicht" },
+      { mitgliedtyp_id: null, mitgliedtyp: "", art_id: ART_ID, art: "Elternteil", schluessel: "teams", modus: "pflicht" },
     ]);
     expect(k.teams).toBe("aus");
   });
@@ -311,7 +317,7 @@ describe("ohne Mitgliedschaft", () => {
     /* Der Mitgliedtyp sieht die neue Zeile nicht … */
     expect(getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), gemischt).ahv_nr).toBe("freiwillig");
     /* … und die neue Achse nicht die des Mitgliedtyps. */
-    expect(getFeldkonfig(OHNE_MITGLIEDSCHAFT, gemischt).geburtsdatum).toBe("freiwillig");
+    expect(getFeldkonfig(OHNE_ART, gemischt).geburtsdatum).toBe("freiwillig");
   });
 
   it("⚠ ein Datenloch ist NICHT „ohne Mitgliedschaft“", () => {
@@ -326,9 +332,9 @@ describe("ohne Mitgliedschaft", () => {
   it("giltFuerZiel filtert die Spalte der Oberflaeche", () => {
     const teams = FELD_REGISTRY.find(e => e.schluessel === "teams")!;
     const telefon = FELD_REGISTRY.find(e => e.schluessel === "telefon")!;
-    expect(giltFuerZiel(teams, OHNE_MITGLIEDSCHAFT)).toBe(false);
+    expect(giltFuerZiel(teams, OHNE_ART)).toBe(false);
     expect(giltFuerZiel(teams, fuerMitgliedtyp("Aktivmitglied"))).toBe(true);
-    expect(giltFuerZiel(telefon, OHNE_MITGLIEDSCHAFT)).toBe(true);
+    expect(giltFuerZiel(telefon, OHNE_ART)).toBe(true);
   });
 
   it("genau zehn Schluessel haengen an einer Mitgliedschaft", () => {

@@ -32,12 +32,14 @@ import { BL } from "../../constants.ts";
 import {
   ADRESS_FELDER, BEREICHE, MODUS_LABEL,
   eintraegeFuerBereich, getFeldkonfig, giltFuerZiel, fuerMitgliedtyp,
-  OHNE_MITGLIEDSCHAFT, istSichtbar, labelFuer,
+  fuerPersonenart, istSichtbar, labelFuer,
 } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile, FeldModus, RegistryEintrag } from "../../domains/members/feldkonfig.ts";
 import { setzeModus, setzeModusMehrere } from "../../domains/members/feldkonfigService.ts";
 import type { Sb, SetState } from "../../types.ts";
 import type { MitgliedtypZeile } from "./MitgliederKonfigTab.tsx";
+import type { PersonArt } from "../../domains/person/personArtService.ts";
+import type { KonfigZielSchreiben } from "../../domains/members/feldkonfig.ts";
 
 interface Props {
   supabase: Sb;
@@ -45,43 +47,51 @@ interface Props {
   dbMitgliedtypen: MitgliedtypZeile[];
   feldkonfig: FeldkonfigZeile[];
   setFeldkonfig: SetState<FeldkonfigZeile[]>;
+  /** Die pflegbaren Arten ohne Mitgliedschaft — eine Spalte je Art. */
+  personenarten?: PersonArt[];
 }
 
 export function MitgliedtypFelderSektion({
-  supabase, vereinId, dbMitgliedtypen, feldkonfig, setFeldkonfig,
+  supabase, vereinId, dbMitgliedtypen, feldkonfig, setFeldkonfig, personenarten = [],
 }: Props) {
   const typen = (dbMitgliedtypen || []).filter(t => t.aktiv !== false);
-  /* Die Spalte „Ohne Mitgliedschaft" steht in derselben Auswahl wie die
-     Mitgliedtypen — eine Konfiguration, ein Ort. Als Sentinel und NICHT als
-     Zeile in `mitgliedtypen`: eine Zeile dort erschiene in jedem Dropdown und
-     in jeder Zaehlung und stellte die Falle wieder auf, die der
-     Supporter-Rueckbau am 20.08. abgebaut hat. */
-  const OHNE_KEY = "__ohne_mitgliedschaft__";
+  /* Mitgliedtypen und Arten ohne Mitgliedschaft stehen in DERSELBEN Auswahl —
+     eine Konfiguration, ein Ort. Die Arten sind seit dem 20.08.2026 eine
+     eigene Tabelle (`personenarten`) und NICHT Zeilen in `mitgliedtypen`:
+     dort erschienen sie in jedem Dropdown und in jeder Zaehlung und stellten
+     die Falle wieder auf, die der Supporter-Rueckbau am 20.08. abgebaut hat.
+
+     Der Schluessel im `<select>` traegt deshalb ein Praefix — ohne das waere
+     eine Art-Id von einer Mitgliedtyp-Id nicht zu unterscheiden, und ein
+     Klick landete auf der falschen Achse. */
+  const ART = "art:";
   const [gewaehlt, setGewaehlt] = useState<string>("");
   const [fehler, setFehler] = useState<string | null>(null);
 
   /* Erster Typ als Vorauswahl, sobald die Liste da ist. Als abgeleiteter
      Wert statt im Effekt — sonst flackert die Seite einmal leer. */
-  const istOhne = gewaehlt === OHNE_KEY;
+  const istOhne = gewaehlt.startsWith(ART);
+  const artId = istOhne ? gewaehlt.slice(ART.length) : null;
+  const art = istOhne ? (personenarten.find(a => a.art_id === artId) || null) : null;
   const typ = istOhne ? null : (typen.find(t => t.id === gewaehlt) || typen[0] || null);
 
-  const ziel = istOhne ? OHNE_MITGLIEDSCHAFT : fuerMitgliedtyp(typ?.name);
-  const zielSchreiben = istOhne
-    ? OHNE_MITGLIEDSCHAFT
-    : ({ gilt_fuer: "mitgliedtyp", mitgliedtypId: typ?.id ?? "" } as const);
+  const ziel = istOhne ? fuerPersonenart(artId) : fuerMitgliedtyp(typ?.name);
+  const zielSchreiben: KonfigZielSchreiben = istOhne
+    ? { achse: "personenart", artId: artId ?? "" }
+    : { achse: "mitgliedtyp", mitgliedtypId: typ?.id ?? "" };
   const konfig = getFeldkonfig(ziel, feldkonfig);
 
   /* Optimistisch im State nachziehen, damit der Schalter sofort
      umspringt; bei einem Fehler die Zeile zurückdrehen und melden.
      Ohne das wirkte ein fehlgeschlagenes Speichern wie ein Erfolg. */
   function lokalSetzen(schluessel: readonly string[], modus: FeldModus) {
-    if (!istOhne && !typ?.id) return;
+    if (istOhne ? !artId : !typ?.id) return;
     setFeldkonfig(prev => {
-      /* Ueber die Achse UND den Typ filtern: sonst raeumte ein Schalter in
-         der neuen Spalte die gleichnamige Zeile eines Mitgliedtyps weg. */
+      /* Ueber die KENNUNG filtern, nicht ueber eine Achsenspalte: sonst
+         raeumte ein Schalter bei „Elternteil" die gleichnamige Zeile von
+         „Supporter" mit weg — beide haben `mitgliedtyp_id === null`. */
       const rest = prev.filter(z => !(
-        z.gilt_fuer === ziel.gilt_fuer
-        && (istOhne || z.mitgliedtyp_id === typ!.id)
+        (istOhne ? z.art_id === artId : z.mitgliedtyp_id === typ!.id)
         && schluessel.includes(z.schluessel)));
       if (modus === "freiwillig") return rest;
       return [
@@ -89,7 +99,8 @@ export function MitgliedtypFelderSektion({
         ...schluessel.map(s => ({
           mitgliedtyp_id: istOhne ? null : typ!.id,
           mitgliedtyp: istOhne ? "" : typ!.name,
-          gilt_fuer: ziel.gilt_fuer,
+          art_id: istOhne ? artId : null,
+          art: istOhne ? (art?.name ?? "") : "",
           schluessel: s, modus,
         })),
       ];
@@ -97,7 +108,18 @@ export function MitgliedtypFelderSektion({
   }
 
   async function aendern(schluessel: readonly string[], modus: FeldModus) {
-    if (!supabase || !vereinId || !typ?.id) return;
+    /* ⚠ HIER STAND `!typ?.id` OHNE DEN istOhne-FALL — und damit war die
+       Spalte „Ohne Mitgliedschaft" seit ihrem ersten Tag (21.08.2026) TOT:
+       `typ` ist dort null, die Funktion kehrte um, kein Schalter bewegte
+       sich, nichts wurde gespeichert, nichts gemeldet. Aufgefallen ist es
+       nie, weil die drei Zeilen aus der Migration stammten — sie standen da,
+       bevor jemand den ersten Schalter drueckte.
+
+       `lokalSetzen()` hatte den Guard richtig. Zwei Bedingungen fuer
+       dieselbe Sache, eine davon falsch: genau die Sorte Abweichung, die man
+       nur findet, wenn ein Test sie festhaelt. Drei stehen jetzt unten. */
+    if (!supabase || !vereinId) return;
+    if (istOhne ? !artId : !typ?.id) return;
     const vorher = feldkonfig;
     setFehler(null);
     lokalSetzen(schluessel, modus);
@@ -183,7 +205,7 @@ export function MitgliedtypFelderSektion({
     return (
       <Card>
         <div className="cc-section-title">
-          <TI n="id-badge" size={14}/> Was ein Mitgliedtyp hat
+          <TI n="id-badge" size={14}/> Was ein Mitgliedtyp oder eine Art hat
         </div>
         <div className="cc-text-sm cc-text-sub">
           Noch kein aktiver Mitgliedtyp angelegt — oben anlegen, dann erscheint
@@ -200,10 +222,21 @@ export function MitgliedtypFelderSektion({
           <div className="cc-section-title">
             <TI n="id-badge" size={14}/> Was ein Mitgliedtyp hat
           </div>
-          <select className="cc-input" style={{ width: "auto", minWidth: 190 }}
-            value={istOhne ? OHNE_KEY : (typ?.id || "")} onChange={e => setGewaehlt(e.target.value)}>
-            {typen.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            <option value={OHNE_KEY}>Ohne Mitgliedschaft</option>
+          <select className="cc-input" style={{ width: "auto", minWidth: 220 }}
+            value={istOhne ? `${ART}${artId}` : (typ?.id || "")}
+            onChange={e => setGewaehlt(e.target.value)}>
+            <optgroup label="Mitgliedtypen">
+              {typen.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </optgroup>
+            {/* Kein `null` bei leerer Liste: eine Gruppe, die still
+                verschwindet, ist von einer nicht gerenderten nicht zu
+                unterscheiden (CLAUDE.md). */}
+            <optgroup label="Ohne Mitgliedschaft">
+              {personenarten.length > 0
+                ? personenarten.map(a => (
+                    <option key={a.art_id} value={`${ART}${a.art_id}`}>{a.name}</option>))
+                : <option disabled>— keine Arten angelegt —</option>}
+            </optgroup>
           </select>
         </div>
 
