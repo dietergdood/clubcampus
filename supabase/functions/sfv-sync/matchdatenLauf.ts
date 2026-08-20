@@ -345,17 +345,40 @@ async function schreibePaesse(
 ): Promise<{ geschrieben: number; konflikte: string[] }> {
   if (!alleRoh.length || unsere === null) return { geschrieben: 0, konflikte: [] };
 
-  const { data: zuordnungRoh } = await db
+  const { data: zuordnungRoh, error: zuordnungErr } = await db
     .from("sfv_zuordnung").select("sfv_person_id,mitglied_id").eq("verein_id", vereinId);
+  /* error lesen, nicht nur auf data pruefen: sb.from().select() wirft nicht.
+     Ohne das saehe ein 42501 aus wie „es gibt keine Zuordnungen". */
+  if (zuordnungErr) {
+    return { geschrieben: 0, konflikte: [`Zuordnungen nicht lesbar: ${zuordnungErr.message}`] };
+  }
   if (!zuordnungRoh?.length) return { geschrieben: 0, konflikte: [] };
   const zuordnung = new Map(
     zuordnungRoh.map((z) => [Number(z.sfv_person_id), Number(z.mitglied_id)]));
 
-  const { data: mitglieder } = await db
-    .from("mitglieder").select("id,spielerpass")
+  /* ⚠ `person_id` MUSS mit. Seit der Migration `migration_verlauf_person.sql`
+     haengen `mitglieder_aenderungen` und `mitglieder_aktivitaeten` an der
+     PERSON: der Verlauf gehoert ihr und ueberlebt Austritt und Rueckkehr.
+     `person_id` ist dort NOT NULL — ohne diesen Wert scheitert jeder
+     stuendliche Lauf mit 23502.
+
+     Absichtlich NOT NULL und nicht per Trigger nachgefuellt: ein
+     vergesslicher Schreibpfad soll LAUT scheitern und nicht still eine Zeile
+     ohne Bezug anlegen. */
+  const { data: mitglieder, error: mitgliederErr } = await db
+    .from("mitglieder").select("id,spielerpass,person_id")
     .in("id", [...zuordnung.values()]);
+  /* ⚠ Auch hier: bliebe der Fehler ungelesen, waere `bestand` leer, jede
+     Passnummer saehe neu aus, und der Lauf schriebe fuer JEDES Mitglied eine
+     „Spielerpass vom Verband uebernommen"-Aktivitaet. Ein Lesefehler wuerde
+     zu erfundener Geschichte. */
+  if (mitgliederErr) {
+    return { geschrieben: 0, konflikte: [`Mitglieder nicht lesbar: ${mitgliederErr.message}`] };
+  }
   const bestand = new Map(
     (mitglieder ?? []).map((m) => [Number(m.id), (m.spielerpass as string | null) ?? null]));
+  const personVon = new Map(
+    (mitglieder ?? []).map((m) => [Number(m.id), (m.person_id as string | null) ?? null]));
 
   const konflikte = passKonflikte(alleRoh, unsere, zuordnung)
     .map((k) => `Mitglied ${k.mitglied_id}: zwei Passnummern (${k.werte.join(" / ")}) — Zuordnung pruefen`);
@@ -378,19 +401,39 @@ async function schreibePaesse(
     }
 
     const jetzt = new Date().toISOString();
-    if (a.alt) {
-      await db.from("mitglieder_aenderungen").insert({
-        mitglied_id: a.mitglied_id, verein_id: vereinId, feld: "spielerpass",
-        alter_wert: a.alt, neuer_wert: a.neu,
-        geaendert_von: PASS_URHEBER, geaendert_at: jetzt,
-      });
-    } else {
-      await db.from("mitglieder_aktivitaeten").insert({
-        mitglied_id: a.mitglied_id, verein_id: vereinId, typ: "FELD_ERFASST",
-        beschreibung: `Spielerpass vom Verband uebernommen: ${a.neu}`,
-        feld: "spielerpass", wert: a.neu,
-        geaendert_von: PASS_URHEBER, geaendert_at: jetzt,
-      });
+    const personId = personVon.get(a.mitglied_id) ?? null;
+    /* Eine Mitgliedschaft ohne Person waere ein Datenloch aus der Zeit vor
+       Etappe 2b. Melden statt eine Zeile ohne Bezug zu schreiben — der
+       Spielerpass selbst ist oben bereits gespeichert, nur der Verlaufseintrag
+       entfaellt. */
+    if (!personId) {
+      if (konflikte.length < 5) {
+        konflikte.push(`Mitglied ${a.mitglied_id}: keine person_id — Verlaufseintrag uebersprungen`);
+      }
+      geschrieben += 1;
+      continue;
+    }
+    /* ⚠ Der Fehler wird GELESEN. Bis zum 21.08.2026 stand hier ein blosses
+       `await …insert(…)` ohne Rueckgabewert: ein fehlgeschlagener Eintrag
+       verschwand spurlos, und der Lauf meldete Erfolg. Genau in dem Fenster
+       zwischen Migration und Deploy waere das passiert — die eine Sorte
+       Verlust, die man hinterher nicht mehr findet. */
+    const { error: logErr } = a.alt
+      ? await db.from("mitglieder_aenderungen").insert({
+          mitglied_id: a.mitglied_id, person_id: personId,
+          verein_id: vereinId, feld: "spielerpass",
+          alter_wert: a.alt, neuer_wert: a.neu,
+          geaendert_von: PASS_URHEBER, geaendert_at: jetzt,
+        })
+      : await db.from("mitglieder_aktivitaeten").insert({
+          mitglied_id: a.mitglied_id, person_id: personId,
+          verein_id: vereinId, typ: "FELD_ERFASST",
+          beschreibung: `Spielerpass vom Verband uebernommen: ${a.neu}`,
+          feld: "spielerpass", wert: a.neu,
+          geaendert_von: PASS_URHEBER, geaendert_at: jetzt,
+        });
+    if (logErr && konflikte.length < 5) {
+      konflikte.push(`Mitglied ${a.mitglied_id}: Verlaufseintrag nicht geschrieben (${logErr.message})`);
     }
     geschrieben += 1;
   }

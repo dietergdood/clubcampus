@@ -864,6 +864,71 @@ Bis das echte Team hängt: entweder den Eintrag für `eltern` ausblenden oder
 den Fallback auf `ROSTER` durch eine Karte ersetzen, die sagt, dass die
 Anbindung fehlt. Ein Platzhalter, der wie eine Funktion aussieht, ist keine.
 
+### ⚠ Zwölf Klassen in `cc.css` sind doppelt definiert — `cc-btn-ghost` sind zwei verschiedene Knöpfe
+
+Befund vom 21.08.2026, beim Suchen nach einem Knopf für den Bereichskopf.
+Am 05.08.2026 standen zehn in den Notizen; es sind **zwölf**.
+
+CSS hat keine Kollisionswarnung: **die spätere Definition überschreibt die
+frühere lautlos.** Kein Fehler, kein Hinweis im Build — nur ein Element, das
+anderswo plötzlich anders aussieht.
+
+> **⚠ Das ist kein Aufräumen.** Bei `cc-btn-ghost` sind es **zwei
+> verschiedene Knöpfe**, nicht zwei Fassungen desselben:
+>
+> | Zeile | | |
+> |---|---|---|
+> | 576 | `padding:8px 16px · border:0.5px solid var(--border) · background:var(--surface) · 14px` | ein **gerahmter Sekundärknopf** |
+> | 807 | `border:none · background:transparent · 12px · display:flex · gap:4px` | ein **randloser Text-/Icon-Knopf** |
+>
+> Heute gewinnt 807 — für **alle acht Verwender**. Die Frage ist nicht,
+> welche Zeile weg soll, sondern **welcher der beiden Knöpfe an jeder der
+> acht Stellen gemeint war**. Wer nur die erste Definition löscht, ändert
+> nichts; wer die zweite löscht, ändert acht Stellen auf einmal.
+
+**⚠ Und es ist eine ganze Knopf-FAMILIE, die kollidiert** — dasselbe Muster
+dreimal, mit widersprüchlichem Ausgang:
+
+| Klasse | früh (klein, 12px) | spät (gerahmt, 14px) | es gewinnt |
+|---|---|---|---|
+| `cc-btn-success` | 335 | 574 | die **gerahmte** |
+| `cc-btn-danger` | 337 | 572 | die **gerahmte** |
+| `cc-btn-ghost` | **576 (gerahmt)** | **807 (klein)** | die **kleine** |
+
+Bei zwei von dreien gewinnt die gerahmte Fassung, beim dritten die kleine —
+weil `cc-btn-ghost` in der Reihenfolge vertauscht steht. Wer die drei für
+eine Familie hält, liegt bei einem davon falsch.
+
+**Die vollständige Liste** (Stand 21.08.2026, alle ausserhalb von `@media`):
+
+| Klasse | Zeilen | |
+|---|---|---|
+| `cc-btn-danger` | 337 · 572 | zwei Knopfgrössen |
+| `cc-btn-ghost` | 576 · 807 | **zwei verschiedene Knöpfe** |
+| `cc-btn-success` | 335 · 574 | zwei Knopfgrössen |
+| `cc-check-icon` | 313 · 691 | zwei Grüntöne (`#16a34a` / `#15803d`) |
+| `cc-hero-back` | 900 · 907 | **identisch** — reine Dublette, gefahrlos zu löschen |
+| `cc-mb-16` | 226 · 801 | mit und ohne `!important` |
+| `cc-mb-4` | 154 · 226 | dito |
+| `cc-mb-8` | 226 · 731 | dito |
+| `cc-ml-toolbar` | 343 · 810 | die zweite ergänzt nur `flex-wrap`/`overflow` — gehört zusammengelegt |
+| `cc-ml-view-custom` | 735 · 736 | zwei Zeilen direkt untereinander, `flex` gegen `inline-flex` |
+| `cc-role-chip-trainer` | 869 · 873 · **1005 · 1007** | **viermal**, zwei Braun-Töne |
+| `cc-table-wrap-inner` | 156 · 157 | untereinander, die zweite nimmt `max-height` weg |
+
+⚠ `cc-role-chip-trainer` steht **viermal**; 1005/1007 liegen im Dark-Mode-Teil
+und sind dort legitim. Die zwei bei 869/873 sind die Dublette.
+
+**Die drei `cc-mb-*` sind der harmloseste Fall und der lehrreichste:** Zeile
+226 setzt `!important`, die anderen nicht. Je nachdem, welche gewinnt, sticht
+die Utility-Klasse eine Komponentenregel — oder nicht. Genau die Sorte
+Unterschied, die man erst bemerkt, wenn ein Abstand irgendwo springt.
+
+**Vorgehen, wenn es drankommt:** zuerst `cc-hero-back` (identisch, ein
+Löschen), dann die `cc-mb-*` (eine Entscheidung über `!important`), dann die
+Knopf-Familie — und die erst, wenn für jede der acht `cc-btn-ghost`-Stellen
+entschieden ist, welcher Knopf gemeint war.
+
 ### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
 
 Befund vom 21.08.2026, beim Umstellen des Fotopfads auf `person_id`.
