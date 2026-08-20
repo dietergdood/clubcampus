@@ -17,6 +17,7 @@ import { AustrittModal } from "./members/AustrittModal.tsx";
 import type { SupporterRoh } from "../domains/members/supporterService.ts";
 import { updatePerson } from "../domains/person/personService.ts";
 import { SupporterModal } from "../shared/person/SupporterModal.tsx";
+import { zielAusMitglied } from "../shared/person/personZiel.ts";
 import { MitgliedWerdenModal } from "./members/MitgliedWerdenModal.tsx";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
 import type { MemberRow } from "./members/memberDataUtils.ts";
@@ -86,18 +87,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   useEffect(()=>{
     if(navToMember&&dbMitglieder.length>0){
       const m=dbMitglieder.find(x=>x.id===navToMember);
-      if(m) setSelectedMember({
-        mitgliedId:m.id,
-        personId:m.person_id,
-        name:vollname(m),
-        role:m.rolle||"-",
-        type:m.mitgliedtyp||"-",
-        /* ⚠ mitglieder hat keine Spalte teams (siehe MitgliedRoh in
-           memberMapper), der frühere Zugriff ergab immer "-". MemberDetail
-           liest das Feld ohnehin nicht. */
-        team:"-",
-        _tab:"info",
-      });
+      /* `role`, `type` und `team` sind hier ersatzlos entfallen: sie waren
+         Anzeigefelder, die nur dank der Index-Signatur ins Ziel passten und
+         von MemberDetail nie gelesen wurden. Die echten Werte stehen in
+         `daten`, das die Fabrik aus der Zeile nimmt. */
+      if(m) setSelectedMember(zielAusMitglied(m, vollname(m), {_tab:"info"}));
       if(onNavToMemberDone) onNavToMemberDone();
     }
   },[navToMember,dbMitglieder]);
@@ -366,7 +360,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       console.warn("oeffneMitglied: Zeile ohne Mitgliedschaft — die Personenseite kommt in Schritt 3.",{id:row.id,name:row.name});
       return;
     }
-    setSelectedMember({...row, mitgliedId: row.mitglied_id, personId: row.person_id ?? ""});
+    setSelectedMember(zielAusMitglied(
+      { ...row, id: row.mitglied_id, person_id: row.person_id ?? "" },
+      row.name, {_tab: "info"}));
   }
 
   /* Portal-Zugang Zelle */
@@ -468,7 +464,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           onNavToMember={id=>{
             setElternTab(false);
             const m=dbMitglieder.find(x=>x.id===id);
-            if(m) setSelectedMember({mitgliedId:m.id,personId:m.person_id,name:vollname(m),role:m.rolle||"-",type:m.mitgliedtyp||"-",team:"-",_tab:"info"});
+            if(m) setSelectedMember(zielAusMitglied(m, vollname(m), {_tab:"info"}));
           }}
         />
       ):archivTab?(
@@ -477,7 +473,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           const data=await fetchMitglied(sb,m.id);
           /* fetchMitglied liefert die flache Zeile (Fassade); der aus der
              Abfrage abgeleitete Typ kennt die Personenfelder nicht. */
-          if(data) setSelectedMember({...data,name:vollname(data as never),_tab:"info",_readonly:true} as never);
+          /* ⚠ HIER STAND `as never` — und der Cast hat am 21.08.2026 einen
+             echten Fehler verdeckt: seit die Seite `mitgliedId` und `personId`
+             verlangt, fehlten hier BEIDE. `mitgliedId` war damit `undefined`,
+             das las die Seite als „keine Mitgliedschaft", und ein archiviertes
+             Juniorenmitglied verlor Eltern-, Statistik- und Verlauf-Tab, die
+             Teams-Karte und die Vereinsdaten — waehrend der Kopf weiterhin
+             „Juniorenmitglied" zeigte. Die Seite widersprach sich selbst.
+
+             Ein fehlender Wert sah aus wie ein nicht vorhandener. Dieselbe
+             Familie wie `raw.aktiv !== false`. */
+          if(data) setSelectedMember(
+            zielAusMitglied(data, vollname(data as never), {_tab:"info", _readonly:true}));
         }}/>
       ):(
       <>

@@ -38,36 +38,19 @@ type KaderDetail  = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
 type Elternkontakt = Awaited<ReturnType<typeof fetchElternkontakte>>[number];
 type TeamOption   = NonNullable<ComponentProps<typeof InfoTab>["allTeams"]>;
 
-/* Die ausgewählte PERSON kommt je nach Einstieg in einer anderen Form:
-   als gemappte Listenzeile, als schlankes Navigationsobjekt aus dem
-   Kader-Modul, als Archivzeile — oder als Person ohne Mitgliedschaft.
-   Verlässlich sind nur `personId` und `name`.
+/* Der Typ ist am 21.08.2026 nach `shared/person/personZiel.ts` gezogen und
+   heisst dort `PersonZiel`. Der Grund steht in jener Datei: die Index-Signatur
+   nahm jedes Objekt an, ein `as never` am Archiv-Einstieg nahm den Rest, und
+   „keine Mitgliedschaft" wurde aus einem fehlenden Wert ABGELEITET.
 
-   ⚠ HIER STAND `id: number`, und das war die Wurzel des ganzen Umbaus.
-   Die Zahl meinte die MITGLIEDSCHAFT; rund 75 Stellen in dieser Datei, im
-   Hero und in den Tabs lasen sie so. Ein Supporter oder ein Elternteil hat
-   keine — deshalb hatte `oeffneMitglied()` einen Guard, der abbrach, und die
-   Supporterliste bot den Weg gar nicht erst an.
-
-   Zwei Felder statt einem, und `mitgliedId` NULLBAR: damit zeigt der Compiler
-   jede Stelle, die eine Mitgliedschaft voraussetzt. Dasselbe Mittel wie bei
-   `MemberRow` am 20.08. — eine uuid, die still an die Stelle einer Zahl
-   fliesst, würde niemand bemerken. */
-export interface SelectedMember {
-  /** Die PERSON. Immer da — sie ist der Bezugspunkt seit Etappe 4. */
-  personId: string;
-  /** Die MITGLIEDSCHAFT. `null` heisst: diese Person hat keine. */
-  mitgliedId: number | null;
-  name: string;
-  /* Aktiver Tab, von der Liste beim Öffnen gesetzt */
-  _tab?: string;
-  /* Archiv öffnet Mitglieder schreibgeschützt */
-  _readonly?: boolean;
-  [key: string]: unknown;
-}
+   Der Alias bleibt, damit die Aufrufer ihren Import nicht anfassen muessen —
+   er wandert mit der Seite nach shared/person/. */
+export type { PersonZiel as SelectedMember } from "../../shared/person/personZiel.ts";
+import type { PersonZiel } from "../../shared/person/personZiel.ts";
+import { mitgliedIdVon } from "../../shared/person/personZiel.ts";
 
 interface MemberDetailProps {
-  m: SelectedMember;
+  m: PersonZiel;
   onClose: () => void;
   onNavToTeam?: ((teamId: number) => void) | null;
   onReaktiviert?: ((id: number) => void) | null;
@@ -83,8 +66,8 @@ interface MemberDetailProps {
   kannVerwalten: (modul: string) => boolean;
   onReload: () => void;
   onUpdatePortalZugang?: ((mitgliedId: number, aktiv: boolean) => Promise<void> | void) | null;
-  setSelectedMember: SetState<SelectedMember | null>;
-  selectedMember: SelectedMember | null;
+  setSelectedMember: SetState<PersonZiel | null>;
+  selectedMember: PersonZiel | null;
   reloadMember: (id: number) => void;
   refreshArchivCount: () => void;
   brauchtEltern: (mitgliedtyp: string | null | undefined) => boolean;
@@ -107,7 +90,7 @@ function MemberDetail({
 }: MemberDetailProps) {
   /* Die beiden Identitäten, einmal ausgelesen. Ab hier steht im Code, welche
      gemeint ist — `raw.id` sagte das nicht. */
-  const mitgliedId: number | null = m.mitgliedId;
+  const mitgliedId: number | null = mitgliedIdVon(m);
   const personId: string = m.personId;
 
   const dbRaw: Partial<Mitglied> = (mitgliedId != null
@@ -122,10 +105,15 @@ function MemberDetail({
      bei einer Person ohne Mitgliedschaft waere sie `undefined` gewesen, ohne
      dass der Compiler ein Wort gesagt haette. `PersonZeile` laesst `id` weg;
      wer die Mitgliedschaft braucht, nimmt `mitgliedId`. */
+  /* ⚠ Gemischt wird `m.daten`, nicht `m` selbst. Vorher lief hier
+     `Object.entries(m)` ueber das ganze Ziel — moeglich nur, weil der Typ eine
+     Index-Signatur hatte. Damit landete alles im `raw`, was ein Aufrufer
+     mitgab, auch `_tab` und `_readonly`. Ein Objekt, das jedes Feld annimmt,
+     nimmt auch jedes Feld an, das jemand vergisst. */
   const raw = {
     ...dbRaw,
     ...Object.fromEntries(
-      Object.entries(m).filter(([k, v]) => v !== undefined && v !== null || !(dbRaw as Record<string, unknown>)[k])
+      Object.entries(m.daten ?? {}).filter(([k, v]) => v !== undefined && v !== null || !(dbRaw as Record<string, unknown>)[k])
     ),
   } as PersonZeile;
   /* Was es bei diesem Mitgliedtyp gibt (Konfiguration) UND wer es sehen
@@ -299,7 +287,7 @@ function MemberDetail({
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         benutzer={benutzer} teamDetails={teamDetails}
         vereinId={vereinId} onAustritt={onAustritt}
-        mitgliedId={mitgliedId}
+        mitgliedId={mitgliedId} konfig={konfig}
         onMitgliedWerden={onMitgliedWerden ? (() => onMitgliedWerden(personId)) : null}
       />
 

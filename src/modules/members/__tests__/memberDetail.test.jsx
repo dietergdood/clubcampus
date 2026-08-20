@@ -8,8 +8,13 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, waitFor, cleanup } from '@testing-library/react';
+/* ⚠ Die Testziele kommen aus DENSELBEN Fabriken wie im Betrieb. Vorher waren
+   es Objektliterale — moeglich nur, weil der Typ eine Index-Signatur hatte.
+   Ein Test, der sein Ziel anders baut als der Produktionscode, prueft eine
+   Form, die es nirgends gibt. */
+import { zielAusMitglied, zielAusPerson } from '../../../shared/person/personZiel.ts';
 
-const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, confirmMock: vi.fn() }));
+const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, heroName: null, confirmMock: vi.fn() }));
 const svc = vi.hoisted(() => ({
   fetchBenutzerFuerPerson: vi.fn(),
   fetchBenutzerByEmail: vi.fn(),
@@ -35,7 +40,7 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
   AKTIVITAET_TYP: { PORTAL_DEAKTIVIERT: 'portal_deaktiviert', PORTAL_REAKTIVIERT: 'portal_reaktiviert' },
 }));
 
-vi.mock('../MemberHero.tsx', () => ({ MemberHero: (props) => { h.heroRaw = props.raw; h.heroMitgliedId = props.mitgliedId; return null; } }));
+vi.mock('../MemberHero.tsx', () => ({ MemberHero: (props) => { h.heroRaw = props.raw; h.heroMitgliedId = props.mitgliedId; h.heroName = props.m?.name; return null; } }));
 vi.mock('../MemberTabBar.tsx', () => ({ MemberTabBar: () => null }));
 vi.mock('../tabs/ElternTab.tsx', () => ({ ElternTab: () => null }));
 vi.mock('../tabs/InfoTab.tsx', () => ({ InfoTab: () => null }));
@@ -83,6 +88,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.heroRaw = null;
   h.heroMitgliedId = null;
+  h.heroName = null;
   h.confirmMock.mockResolvedValue(true);
   svc.fetchBenutzerFuerPerson.mockResolvedValue({ id: 'u1', role: 'trainer' });
   svc.fetchElternkontakte.mockResolvedValue([]);
@@ -94,7 +100,7 @@ afterEach(cleanup);
 describe('MemberDetail — raw-Rekonstruktion', () => {
   it('m überschreibt dbRaw bei eigenem Wert, behält dbRaw bei null/fehlend', async () => {
     const dbMitglieder = [{ id: 1, vorname: 'DBVor', nachname: 'DBNach', email: 'db@x.ch' }];
-    const m = { mitgliedId: 1, personId: "p-1", name: 'X', vorname: 'MVor', email: null };
+    const m = zielAusMitglied({ id: 1, person_id: 'p-1', vorname: 'MVor', email: null }, 'X');
     await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder })} />); });
 
     expect(h.heroRaw.vorname).toBe('MVor');   // m gewinnt (eigener Wert)
@@ -103,7 +109,7 @@ describe('MemberDetail — raw-Rekonstruktion', () => {
   });
 
   it('rekonstruiert aus m, wenn keine DB-Zeile existiert (Navigationsobjekt)', async () => {
-    const m = { mitgliedId: 5, personId: "p-5", name: 'Nav', vorname: 'NV' };
+    const m = zielAusMitglied({ id: 5, person_id: 'p-5', vorname: 'NV' }, 'Nav');
     await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [] })} />); });
 
     /* ⚠ `raw.id` gibt es seit dem 21.08.2026 nicht mehr — `PersonZeile` laesst
@@ -114,7 +120,12 @@ describe('MemberDetail — raw-Rekonstruktion', () => {
     expect(h.heroRaw.id).toBeUndefined();
     expect(h.heroMitgliedId).toBe(5);
     expect(h.heroRaw.vorname).toBe('NV');
-    expect(h.heroRaw.name).toBe('Nav');
+    /* ⚠ `raw.name` gibt es NICHT mehr — und es hat nie eine Entsprechung
+       gehabt: `mitglieder` hat keine Spalte `name`. Das Feld stand nur im
+       `raw`, weil die Index-Signatur des alten Ziels jedes Feld durchliess.
+       Der Name kommt aus `m.name` und geht als eigene Prop an den Hero. */
+    expect(h.heroRaw.name).toBeUndefined();
+    expect(h.heroName).toBe('Nav');
   });
 });
 
@@ -156,7 +167,7 @@ describe('MemberDetail — Benutzer-Fetch', () => {
    `if (istSupporter)` irgendwo.
    ═══════════════════════════════════════════════════════════════ */
 describe('MemberDetail — ohne Mitgliedschaft', () => {
-  const ohne = { mitgliedId: null, personId: 'p-9', name: 'Petra Muster' };
+  const ohne = zielAusPerson({ id: 'p-9' }, 'Petra Muster');
 
   it('reicht mitgliedId=null an den Hero durch', async () => {
     await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [] })} />); });
@@ -181,8 +192,37 @@ describe('MemberDetail — ohne Mitgliedschaft', () => {
   it('bei einem Mitglied wird der Kader sehr wohl geladen', async () => {
     /* Die Gegenprobe: sonst koennte der Test oben auch gruen sein, weil
        gar nichts mehr geladen wird. */
-    const m = { mitgliedId: 1, personId: 'p-1', name: 'X' };
+    const m = zielAusMitglied({ id: 1, person_id: 'p-1' }, 'X');
     await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [{ id: 1 }] })} />); });
     await waitFor(() => expect(svc.fetchKaderFuerMitglied).toHaveBeenCalledWith(sb, 1));
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   ⚠ Ein fehlender Wert ist keine Aussage (21.08.2026)
+
+   Der Archiv-Einstieg baute sein Ziel mit `as never` und liess dabei
+   `mitgliedId` und `personId` weg. `mitgliedId === undefined` las die
+   Seite als „keine Mitgliedschaft": ein archiviertes Juniorenmitglied
+   verlor Eltern-, Statistik- und Verlauf-Tab, die Teams-Karte und die
+   Vereinsdaten — waehrend der Kopf weiterhin „Juniorenmitglied" zeigte.
+
+   Der Cast war das Loch. Diese Faelle halten fest, dass ein Mitglied
+   ein Mitglied bleibt, egal ueber welchen Einstieg es geoeffnet wird.
+   ═══════════════════════════════════════════════════════════════ */
+describe('MemberDetail — ein Mitglied bleibt ein Mitglied', () => {
+  it('mit mitgliedId gilt die Mitgliedtyp-Achse, nicht „ohne Mitgliedschaft“', async () => {
+    const m = zielAusMitglied({ id: 7, person_id: 'p-7', mitgliedtyp: 'Juniorenmitglied' }, 'Andrea Furrer');
+    await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [] })} />); });
+    /* Der Hero bekommt die Zahl — daran haengt die Achse der Konfiguration. */
+    expect(h.heroMitgliedId).toBe(7);
+  });
+
+  it('⚠ ohne mitgliedId waere es „ohne Mitgliedschaft“ — die Gegenprobe', async () => {
+    /* Ohne diesen Fall koennte der Test darueber auch gruen sein, wenn die
+       Unterscheidung gar nicht mehr stattfaende. */
+    const m = zielAusPerson({ id: 'p-7' }, 'Petra Muster');
+    await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [] })} />); });
+    expect(h.heroMitgliedId).toBeNull();
   });
 });

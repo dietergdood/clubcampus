@@ -6,6 +6,8 @@
 import { useState, useRef } from "react";
 import type { ChangeEvent } from "react";
 import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
+import { istSichtbar } from "../../domains/members/feldkonfig.ts";
+import type { FeldModus } from "../../domains/members/feldkonfig.ts";
 import { TI } from "../../icons.tsx";
 import { heroChips } from "../../domains/roles/roleUtils.ts";
 import { updatePersonFoto, deletePersonFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
@@ -54,9 +56,19 @@ interface MemberHeroProps {
    * kein Ziel. An ihre Stelle tritt „Mitglied werden" (Schritt 3).
    */
   mitgliedId: number | null;
+  /**
+   * Die Feldkonfiguration derselben Achse, die auch die Tabs und die Karten
+   * steuert.
+   *
+   * ⚠ Der Kopf las sie bis zum 21.08.2026 NICHT. `heroChips()` nahm
+   * `raw.mitgliedtyp` direkt — deshalb stand „Juniorenmitglied" neben „Ohne
+   * Mitgliedschaft", waehrend die Kachel „Mitgliedschaft" schon verschwunden
+   * war. Zwei Anzeigen derselben Sache aus zwei Quellen.
+   */
+  konfig: Record<string, FeldModus>;
 }
 
-function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId}: MemberHeroProps){
+function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
@@ -144,7 +156,11 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                    Kaderrolle im Funktionenfeld. Bereinigt. */
                 const chips=[...heroChips({
                   portalRolle: benutzer?.role||raw.rolle||null,
-                  mitgliedtyp: raw.mitgliedtyp||null,
+                  /* ⚠ Aus DERSELBEN Quelle wie die Kachel und die Tabs. Steht
+                     `mitgliedtyp` in der Konfiguration auf „Gibt es nicht",
+                     gibt es ihn auch im Kopf nicht — sonst widerspraeche sich
+                     die Seite. Nicht `raw.mitgliedtyp` direkt lesen. */
+                  mitgliedtyp: istSichtbar(konfig, "mitgliedtyp") ? (raw.mitgliedtyp||null) : null,
                   hatTrainerKader: !!hatTrainerKader,
                   hatSpielerKader: !!hatSpielerKader,
                   hatFunktion: (raw.funktionen||[]).length>0,

@@ -156,6 +156,16 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   **Wo es nicht geht, und warum:** die `results`-Map von `makeSb()` ist absichtlich `{ data?: any }`. Sie muss Join-Formen, `count`-Antworten und `PostgrestError` gleichermassen annehmen — ein Tabellentyp träfe darauf nicht zu. Ebenso ist `CallRecord.payload` untypisiert, weshalb `expect(rec.payload)` nichts erzwingt. **Die Prüfung greift also nur dort, wo der Test die Zeile selbst als Variable anlegt und annotiert.** Das ist der Ort, an dem die erfundene Spalte entsteht — für den Rest bleibt es beim Hinsehen.
 
 
+- **Zwei Anzeigen derselben Sache sind auch eine Gegenprobe — wer sie zusammenführt, verliert sie.**
+
+  Am 21.08.2026 zeigte die Profilseite eines archivierten Juniorenmitglieds gleichzeitig **„Ohne Mitgliedschaft"** (neuer Chip) und **„Juniorenmitglied"** (Mitgliedtyp-Chip). Ursache war ein `as never` am Archiv-Einstieg, das `mitgliedId` weggelassen hatte; die Seite las das Fehlen als „keine Mitgliedschaft" und schaltete alle zehn `nur_mitgliedschaft`-Schlüssel ab: Eltern-, Statistik- und Verlauf-Tab, Teams-Karte, Notizen und die ganze Vereinsdaten-Karte.
+
+  **Gemeldet hat den Fehler die Uneinigkeit**, nicht das Fehlen. `heroChips()` las `raw.mitgliedtyp` direkt, die Kachel las die Konfiguration — zwei Quellen, und deshalb ein sichtbarer Widerspruch. **Ein fehlender Tab fällt erst auf, wenn jemand ihn sucht; ein Widerspruch im Kopf fällt sofort auf.**
+
+  Beide auf dieselbe Quelle zu legen ist trotzdem richtig — eine Anzeige, die einer anderen widerspricht, ist kein Prüfmittel, sondern ein Fehler mit Zusatznutzen. **Aber der Verlust gehört benannt:** danach gibt es diese Warnung nicht mehr, und was übrig bleibt, ist ein Zustand, der still falsch sein kann. Wer zwei Anzeigen zusammenlegt, ersetzt die verlorene Gegenprobe durch einen Test.
+
+  Hier: `MemberHero` bekommt seither `konfig` und liest `mitgliedtyp` durch `istSichtbar()` — dazu zwei Fälle in `memberDetail.test.jsx`, die festhalten, dass ein Mitglied über **jeden** Einstieg ein Mitglied bleibt.
+
 - **Ein Werkzeug, das nach Text sucht, trifft was gleich AUSSIEHT, nicht was gleich GEMEINT ist.** `.eq("mitglied_id", …)` steht in `memberService.ts` achtmal und meint achtmal etwas anderes: Notizen, Kader, Team-Details, Anwesenheiten, das Konto. Wer ersetzt, **nennt vorher die Zielfunktion** und **liest hinterher jeden Treffer der Datei einzeln gegen** — auch die, die er nicht angefasst zu haben glaubt.
 
   Beleg vom 21.08.2026: eine Ersetzung sollte `fetchBenutzerFuerMitglied` auf `person_id` umstellen und traf die **erste** Fundstelle der Datei — `fetchNotizen`. Aus `.eq("mitglied_id", mitgliedId)` wurde dort `.eq("person_id", personId)`. `mitglieder_notizen.mitglied_id` ist `NOT NULL`; die Abfrage wäre **immer leer** zurückgekommen. Keine Notizen, kein Fehler — wieder ein Ausfall, der aussieht wie eine Datenlage.
