@@ -26,6 +26,13 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
 }));
 
 import { updateMitgliedRolle, logAenderung } from '../../../domains/members/memberService.ts';
+/* PortalTab schreibt seit dem 21.08.2026 ueber updateBenutzerRolle, wenn keine
+   Mitgliedschaft besteht — der Mock muss ihn kennen, sonst wirft Vitest schon
+   bei der blossen Referenz, und zwar fuer die ganze Datei. */
+vi.mock('../../../domains/members/elternService.ts', () => ({
+  updateBenutzerRolle: vi.fn().mockResolvedValue(undefined),
+}));
+import { updateBenutzerRolle } from '../../../domains/members/elternService.ts';
 
 const DB_PORTAL_ROLLEN = [
   { name: 'trainer',  label: 'Trainer/in' },
@@ -47,6 +54,8 @@ const BENUTZER = {
 
 function renderTab(props = {}) {
   return render(<PortalTab
+    mitgliedId={1}
+    konfig={{}}
     raw={RAW_AKTIV}
     benutzer={BENUTZER}
     sb={{}}
@@ -102,7 +111,7 @@ describe('PortalTab', () => {
     });
 
     // jsdom triggert onKeyDown auf Select nicht zuverlässig — manuell in Browser testen
-    it.skip('ruft updateMitgliedRolle auf beim Speichern via Enter', async () => {
+    it('ruft updateMitgliedRolle auf beim Speichern via Enter', async () => {
       renderTab();
       fireEvent.click(screen.getByText('Spieler/in'));
       const select = screen.getByRole('combobox');
@@ -111,7 +120,7 @@ describe('PortalTab', () => {
       await waitFor(() => expect(updateMitgliedRolle).toHaveBeenCalled(), { timeout: 2000 });
     });
 
-    it.skip('loggt Änderung beim Speichern', async () => {
+    it('loggt Änderung beim Speichern', async () => {
       renderTab();
       fireEvent.click(screen.getByText('Spieler/in'));
       const select = screen.getByRole('combobox');
@@ -165,5 +174,84 @@ describe('PortalTab', () => {
       renderTab({ raw: RAW_KEIN, benutzer: null });
       expect(screen.getByText(/Keine E-Mail/)).toBeTruthy();
     });
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Der Tab OHNE Mitgliedschaft (21.08.2026)
+
+   `tab_portal` traegt kein `nur_mitgliedschaft`: ein Supporter und
+   ein Elternteil haben einen Zugang, nur keine Mitgliedschaft. Der
+   Tab ist damit der einzige neben Profil und Datenpruefung, der in
+   beiden Faellen erscheint — und der einzige, in dem der Unterschied
+   im Code stehen muss.
+   ═══════════════════════════════════════════════════════════════ */
+describe('PortalTab — ohne Mitgliedschaft', () => {
+  const OHNE = { rolle: null, email: 'petra@test.ch' };
+
+  /* Ohne das schleppt „nicht aufgerufen" den Aufruf des vorigen Falls mit —
+     und die Gegenprobe waere wertlos. */
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  /* Die Rolle wird ueber ein Inline-Feld bearbeitet: erst der Stift, dann das
+     Auswahlfeld. `saveRolle` laeuft beim Verlassen (onBlur). */
+  async function rolleSetzen(container, wert) {
+    /* Gezielt ueber die Klasse: `getByText` traefe auch den Status-Chip, der
+       dieselbe Beschriftung tragen kann. */
+    const feld = container.querySelector('.cc-inline-field');
+    fireEvent.click(feld);
+    fireEvent.change(await screen.findByRole('combobox'), { target: { value: wert } });
+    /* ⚠ NEU SUCHEN statt die alte Referenz weiterzubenutzen. `RolleField` ist
+       INNERHALB von `PortalTab` definiert; jeder Re-Render erzeugt damit einen
+       neuen Komponententyp, und React haengt den Teilbaum ab und neu an. Das
+       alte `<select>` bleibt als losgeloester Knoten stehen und behaelt seinen
+       alten Wert — ein `blur` darauf erreicht niemanden.
+       (Deshalb steht der aeltere Test dieser Datei auf `it.skip`.) */
+    const frisch = await screen.findByRole('combobox');
+    await waitFor(() => expect(frisch.value).toBe(wert));
+    fireEvent.blur(frisch);
+  }
+
+  it('⚠ schreibt die Rolle NUR ans Konto', async () => {
+    /* updateMitgliedRolle() schriebe `mitglieder.rolle` UND `benutzer.role`.
+       Ohne Mitgliedschaft gibt es nur das zweite — der Aufruf haette kein
+       Ziel und waere still gescheitert. */
+    const { container } = renderTab({ mitgliedId: null, raw: OHNE });
+    await rolleSetzen(container, 'mitglied');
+    await waitFor(() => expect(updateBenutzerRolle).toHaveBeenCalledWith(expect.anything(), 'b1', 'mitglied'));
+    expect(updateMitgliedRolle).not.toHaveBeenCalled();
+  });
+
+  it('mit Mitgliedschaft geht es weiterhin ueber updateMitgliedRolle', async () => {
+    /* Die Gegenprobe: sonst waere der Fall oben auch gruen, wenn gar nichts
+       mehr geschrieben wuerde. */
+    const { container } = renderTab();
+    await rolleSetzen(container, 'trainer');
+    await waitFor(() => expect(updateMitgliedRolle).toHaveBeenCalled());
+    expect(updateBenutzerRolle).not.toHaveBeenCalled();
+  });
+
+  it('⚠ schreibt keinen Verlauf ohne Mitgliedschaft', async () => {
+    /* mitglieder_aenderungen fuehrt mitglied_id NOT NULL. Der Aufruf
+       ENTFAELLT, statt zu scheitern. */
+    const { container } = renderTab({ mitgliedId: null, raw: OHNE });
+    await rolleSetzen(container, 'mitglied');
+    await waitFor(() => expect(updateBenutzerRolle).toHaveBeenCalled());
+    expect(logAenderung).not.toHaveBeenCalled();
+  });
+
+  it('spricht von „dieser Person", nicht vom Mitglied', () => {
+    /* Bei 393 Elternteilen und 7 Supportern waere „Das Mitglied kann sich
+       registrieren" fuer die Mehrheit schlicht falsch. */
+    renderTab({ mitgliedId: null, raw: OHNE, benutzer: null });
+    expect(screen.getByText(/Diese Person kann sich/)).toBeTruthy();
+  });
+
+  it('⚠ verweist aufs Profil, nicht auf einen Kontakt-Tab', () => {
+    /* Einen Kontakt-Tab gibt es nicht — die Anleitung schickte den Nutzer
+       an einen Ort, den er nie findet. */
+    renderTab({ mitgliedId: null, raw: { rolle: null }, benutzer: null });
+    expect(screen.getByText(/im Profil erfassen/)).toBeTruthy();
+    expect(screen.queryByText(/Kontakt-Tab/)).toBeNull();
   });
 });

@@ -46,6 +46,54 @@ interface PortalTabProps {
   account?: Account | null;
 }
 
+/**
+ * Die Portalrolle als Inline-Feld.
+ *
+ * ⚠ STEHT AUSSERHALB VON `PortalTab`, und das ist kein Stil, sondern
+ * Funktion. Bis zum 21.08.2026 war sie darin deklariert: damit entstand bei
+ * JEDEM Render ein neuer Komponententyp, React hängte den Teilbaum ab und
+ * neu an, und das `<select>` verlor bei jedem Tastendruck den Fokus. Das
+ * fällt nirgends als Fehler auf — nur als Bedienung, die sich falsch anfühlt
+ * und die niemand meldet.
+ *
+ * Gefunden hat es ein Test: `it.skip('ruft updateMitgliedRolle auf beim
+ * Speichern via Enter')` stand seit damals übersprungen da, weil das
+ * `<select>` nach `fireEvent.change` ein anderer DOM-Knoten war.
+ */
+function RolleField({
+  currentRole, portalRollen, editing, wert,
+  onStart, onWert, onSpeichern, onAbbrechen,
+}: {
+  currentRole?: string | null;
+  portalRollen: { name: string; label: string }[];
+  editing: boolean;
+  wert: string;
+  onStart: (aktuell: string) => void;
+  onWert: (v: string) => void;
+  onSpeichern: () => void;
+  onAbbrechen: () => void;
+}) {
+  const label = portalRollen.find(r => r.name === currentRole)?.label || currentRole || "—";
+  if (!editing) return (
+    <span className="cc-inline-field cc-info-val" onClick={() => onStart(currentRole || "")}>
+      {label}
+      <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
+    </span>
+  );
+  return (
+    <div className="cc-col cc-flex-1">
+      <select className="cc-inline-select" value={wert} autoFocus
+        onChange={e => onWert(e.target.value)}
+        onBlur={onSpeichern}
+        onKeyDown={e => { if (e.key === "Escape") onAbbrechen(); if (e.key === "Enter") onSpeichern(); }}>
+        <option value="">— keine —</option>
+        {portalRollen.map(r => <option key={r.name} value={r.name}>{r.label}</option>)}
+      </select>
+      <div className="cc-inline-hint">Esc abbrechen</div>
+    </div>
+  );
+}
+
 function PortalTab({ mitgliedId,
   raw, benutzer, sb, dbPortalRollen,
   portalMsg, portalLoading,
@@ -77,7 +125,11 @@ function PortalTab({ mitgliedId,
   async function saveRolle() {
     if (!sb) return;
     setRolleSaving(true);
-    const alterRolle = benutzer?.role || raw.rolle || null;
+    /* ⚠ `benutzer.role` zuerst: `mitglieder.rolle` gibt es ohne Mitgliedschaft
+       nicht, und selbst mit einer ist sie nur ein abgeleiteter Zweitschlag
+       (ableitUndSaveRolle schreibt beides). Sie ganz aufzugeben ist die
+       Zielrichtung — siehe offener Punkt in CLAUDE.md. */
+    const alterRolle = benutzer?.role || (mitgliedId != null ? raw.rolle : null) || null;
     if (mitgliedId != null) {
       await updateMitgliedRolle(sb, mitgliedId, rolleVal, benutzer?.id);
     } else if (benutzer?.id) {
@@ -95,28 +147,6 @@ function PortalTab({ mitgliedId,
     setRolleEditing(false);
     if (setBenutzer) setBenutzer(prev => prev ? { ...prev, role: rolleVal } : prev);
     if (onReload) onReload();
-  }
-
-  function RolleField({ currentRole }: { currentRole?: string | null }) {
-    const label = portalRollen.find(r => r.name === currentRole)?.label || currentRole || "—";
-    if (!rolleEditing) return (
-      <span className="cc-inline-field cc-info-val" onClick={()=>{ setRolleVal(currentRole||""); setRolleEditing(true); }}>
-        {label}
-        <span className="cc-inline-pencil"><TI n="pencil" size={11}/></span>
-      </span>
-    );
-    return (
-      <div className="cc-col cc-flex-1">
-        <select className="cc-inline-select" value={rolleVal} autoFocus
-          onChange={e=>setRolleVal(e.target.value)}
-          onBlur={saveRolle}
-          onKeyDown={e=>{ if(e.key==="Escape"){ setRolleEditing(false); } if(e.key==="Enter") saveRolle(); }}>
-          <option value="">— keine —</option>
-          {portalRollen.map(r=><option key={r.name} value={r.name}>{r.label}</option>)}
-        </select>
-        <div className="cc-inline-hint">Esc abbrechen</div>
-      </div>
-    );
   }
 
   return (
@@ -141,7 +171,11 @@ function PortalTab({ mitgliedId,
               </div>
               <div className="cc-info-row">
                 <span className="cc-info-key">Rolle</span>
-                <RolleField currentRole={benutzer.role}/>
+                <RolleField currentRole={benutzer.role} portalRollen={portalRollen}
+                  editing={rolleEditing} wert={rolleVal}
+                  onStart={a => { setRolleVal(a); setRolleEditing(true); }}
+                  onWert={setRolleVal} onSpeichern={saveRolle}
+                  onAbbrechen={() => setRolleEditing(false)}/>
               </div>
               <div className="cc-info-row">
                 <span className="cc-info-key">Erstellt</span>
@@ -168,7 +202,11 @@ function PortalTab({ mitgliedId,
               </div>
               <div className="cc-info-row">
                 <span className="cc-info-key">Rolle</span>
-                <RolleField currentRole={benutzer.role}/>
+                <RolleField currentRole={benutzer.role} portalRollen={portalRollen}
+                  editing={rolleEditing} wert={rolleVal}
+                  onStart={a => { setRolleVal(a); setRolleEditing(true); }}
+                  onWert={setRolleVal} onSpeichern={saveRolle}
+                  onAbbrechen={() => setRolleEditing(false)}/>
               </div>
               <div className="cc-info-row">
                 <span className="cc-info-key">Letztes Login</span>
@@ -186,9 +224,19 @@ function PortalTab({ mitgliedId,
           <div className="cc-warn-box">
             <TI n="info-circle" size={14}/>
             <span>
+              {/* ⚠ „Diese Person" statt „Das Mitglied": der Tab erscheint seit
+                  dem 21.08.2026 auch ohne Mitgliedschaft — ein Supporter und
+                  ein Elternteil haben einen Zugang, aber keine Mitgliedschaft.
+                  `tab_portal` traegt deshalb kein `nur_mitgliedschaft`.
+
+                  ⚠ Und „im Profil" statt „im Kontakt-Tab": einen Kontakt-Tab
+                  gibt es nicht. Die Tabs heissen Profil, Eltern, Statistik,
+                  Portal-Zugang, Datenpruefung und Verlauf — die Kontaktfelder
+                  stehen im Profil. Die Anleitung schickte den Nutzer an einen
+                  Ort, den er nie findet. */}
               {raw.email
-                ? <>Das Mitglied kann sich mit <strong>{raw.email}</strong> unter "Registrieren" ein Konto erstellen. Die Verknüpfung erfolgt automatisch.</>
-                : <>Keine E-Mail-Adresse hinterlegt. Bitte zuerst eine E-Mail im Kontakt-Tab erfassen.</>
+                ? <>Diese Person kann sich mit <strong>{raw.email}</strong> unter "Registrieren" ein Konto erstellen. Die Verknüpfung erfolgt automatisch.</>
+                : <>Keine E-Mail-Adresse hinterlegt. Bitte zuerst eine E-Mail im Profil erfassen.</>
               }
             </span>
           </div>

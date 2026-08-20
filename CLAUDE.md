@@ -156,6 +156,39 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   **Wo es nicht geht, und warum:** die `results`-Map von `makeSb()` ist absichtlich `{ data?: any }`. Sie muss Join-Formen, `count`-Antworten und `PostgrestError` gleichermassen annehmen — ein Tabellentyp träfe darauf nicht zu. Ebenso ist `CallRecord.payload` untypisiert, weshalb `expect(rec.payload)` nichts erzwingt. **Die Prüfung greift also nur dort, wo der Test die Zeile selbst als Variable anlegt und annotiert.** Das ist der Ort, an dem die erfundene Spalte entsteht — für den Rest bleibt es beim Hinsehen.
 
 
+- **Wo ein Text einen Ort nennt, gehört ein Test dazu, der den Ort kennt.**
+
+  `PortalTab` sagte bis zum 21.08.2026: *„Keine E-Mail-Adresse hinterlegt. Bitte zuerst eine E-Mail im **Kontakt-Tab** erfassen."* Einen Kontakt-Tab gibt es nicht — die Tabs heissen Profil, Eltern, Statistik, Portal-Zugang, Datenprüfung und Verlauf; die Kontaktfelder stehen im Profil.
+
+  **Eine Anleitung, die auf einen Ort zeigt, den es nicht gibt, trifft genau die Nutzer, die sie brauchen.** Wer den Satz zu sehen bekommt, ist der, dem die E-Mail fehlt — also der, der Hilfe sucht. Wer sie nicht braucht, liest ihn nie und meldet ihn deshalb auch nicht.
+
+  Der Text ist Teil dessen, was ein Test absichern kann:
+
+  ```jsx
+  expect(screen.getByText(/im Profil erfassen/)).toBeTruthy();
+  expect(screen.queryByText(/Kontakt-Tab/)).toBeNull();   // ← die zweite Hälfte
+  ```
+
+  Die zweite Zeile ist die wichtigere: sie hält fest, dass der falsche Ort **nicht** zurückkommt. Dasselbe gilt für Beschriftungen, auf die sich ein Ablauf beruft — „Mitgliedschaft löschen" ist aus demselben Grund in `mitgliederBulk.test.jsx` festgehalten.
+
+- **Eine Komponente, die INNERHALB einer anderen deklariert wird, wird bei jedem Render neu erzeugt** — React hängt den Teilbaum ab und neu an. Zustand, Fokus und Auswahlposition gehen verloren.
+
+  **Es fällt nirgends als Fehler auf.** Kein Build, kein Typecheck, keine Konsole; nur eine Bedienung, die sich falsch anfühlt, und die niemand meldet. In `PortalTab` verlor das `<select>` der Portalrolle bei jedem Tastendruck den Fokus — **gefunden hat es ein Test**, der genau deshalb seit Monaten auf `it.skip` stand: nach `fireEvent.change` war das `<select>` ein anderer DOM-Knoten.
+
+  ⚠ **Nach dem Herausziehen liefen BEIDE übersprungenen Fälle UNVERÄNDERT grün.** Keine Zeile angepasst. Der Test hatte recht, die Komponente war falsch — er hielt `select` in einer Variablen fest und feuerte `keyDown` darauf, und dieser Knoten war zu dem Zeitpunkt bereits abgehängt.
+
+  **Daraus die Regel: wer einen roten Test anpasst, bis er grün ist, löscht die Meldung statt den Fehler.** Ein Test, der auf `skip` gesetzt wird, tut dasselbe — nur langsamer. Rot ist ein Zustand für Stunden, nicht für Wochen; für einen Skip gilt dasselbe.
+
+  Bekannte Fundstellen am 21.08.2026 (nur `RolleField` ist behoben):
+
+  | Stelle | Art |
+  |---|---|
+  | `PortalTab` → `RolleField` | ✅ herausgezogen — hielt einen fokussierten `<select>` |
+  | `MitgliedtypFelderSektion` → `ModusSchalter`, `AnAusSchalter`, `Zeile` | Schalter; Fokusverlust für Tastaturbedienung |
+  | `TrainingsplanModul` → `Btn2` | Knopf; geringste Wirkung |
+
+  `SortPanel` → `Suchfeld` ist **kein** Fall: es ist ein JSX-Wert, kein Komponententyp, und wird nicht neu montiert.
+
 - **Zwei Anzeigen derselben Sache sind auch eine Gegenprobe — wer sie zusammenführt, verliert sie.**
 
   Am 21.08.2026 zeigte die Profilseite eines archivierten Juniorenmitglieds gleichzeitig **„Ohne Mitgliedschaft"** (neuer Chip) und **„Juniorenmitglied"** (Mitgliedtyp-Chip). Ursache war ein `as never` am Archiv-Einstieg, das `mitgliedId` weggelassen hatte; die Seite las das Fehlen als „keine Mitgliedschaft" und schaltete alle zehn `nur_mitgliedschaft`-Schlüssel ab: Eltern-, Statistik- und Verlauf-Tab, Teams-Karte, Notizen und die ganze Vereinsdaten-Karte.
@@ -662,6 +695,25 @@ select key, active, konfiguriert, auto_sync, letzter_sync
 
 Steht dort ein frisches `letzter_sync` bei `active = false`, ist das der Beleg,
 dass die Spalte reine Anzeige ist.
+
+### Zwei Komponenten stehen noch innerhalb einer anderen
+
+Befund vom 21.08.2026, beim Herausziehen von `RolleField`. Die Regel dazu
+steht oben unter Konventionen; hier die zwei, die noch offen sind.
+
+**`MitgliedtypFelderSektion` — `ModusSchalter`, `AnAusSchalter`, `Zeile`.**
+Die relevantere der beiden: es ist die Oberfläche, mit der die
+Feldkonfiguration bedient wird — pro Mitgliedtyp und Schlüssel ein Dreifach-
+Schalter. Jeder Klick löst einen Render aus, und jeder Render montiert alle
+drei Komponenten neu. Für die Maus fällt das kaum auf; wer mit der Tastatur
+durch die Matrix geht, verliert nach jeder Änderung die Position.
+
+**`TrainingsplanModul` — `Btn2`.** Drei Verwendungen, ein Knopf, geringste
+Wirkung. Steht hier nur der Vollständigkeit halber.
+
+Beides ist ein kleiner Umbau: Komponente nach oben ziehen, die gelesenen
+Werte als Props durchreichen. Nicht dringend, aber billig — und `RolleField`
+hat gezeigt, dass dabei ein übersprungener Test zurückkommen kann.
 
 ### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
 
