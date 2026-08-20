@@ -113,6 +113,28 @@ begin
   raise notice 'Alle vier Tabellen leer — die Umstellung ist verlustfrei.';
 
 
+  -- ─── A2) Haengt eine Policy an den Spalten, die fallen sollen? ───────────
+  -- Eine Policy ist ein abhaengiges Objekt und BLOCKIERT `drop column` mit
+  -- 2BP01 — anders als ein Unique-Schluessel oder ein Index, die
+  -- stillschweigend mitfallen. Beim ersten Anlauf ist genau das passiert.
+  --
+  -- Bekannt sind die zwei auf `anwesenheiten`; Block E streicht und ersetzt
+  -- sie ausdruecklich. Kommt eine weitere dazu, soll hier ein Satz stehen und
+  -- nicht der Rohtext von Postgres.
+
+  select count(*) into v_anz
+    from pg_policies
+   where schemaname = 'public'
+     and tablename in ('helper_zuteilungen','team_helfer_zuteilungen',
+                       'helper_einsatz_pflicht_mitglied','anwesenheiten')
+     and (coalesce(qual,'') || ' ' || coalesce(with_check,'')) ~ '(mitglied_id|mitglied_name|benutzer_id)'
+     and policyname not in ('anwesenheiten_select','anwesenheiten_write');
+
+  if v_anz > 0 then
+    raise exception 'ABBRUCH: % Policy/Policies ausser den zwei bekannten nennen mitglied_id, mitglied_name oder benutzer_id. Sie wuerden das DROP mit 2BP01 blockieren. Sie gehoeren in diese Migration aufgenommen — nicht per CASCADE weggeraeumt, sonst verschwinden sie ungenannt.', v_anz;
+  end if;
+
+
   -- ─── B) helper_zuteilungen → person_id ───────────────────────────────────
   -- Wer eine Schicht uebernimmt, ist ein Mensch, keine Mitgliedschaft.
 
@@ -190,12 +212,37 @@ begin
 
 
   -- ─── E) anwesenheiten → mitglied_id bigint, benutzer_id weg ──────────────
+  --
+  -- ⚠ DIE REIHENFOLGE IST DER GANZE BLOCK.
+  --
+  -- Erster Anlauf am 20.08.2026 brach ab:
+  --
+  --   ERROR 2BP01: cannot drop column benutzer_id of table anwesenheiten
+  --   because other objects depend on it
+  --   DETAIL: policy anwesenheiten_select … policy anwesenheiten_write
+  --
+  -- Eine Policy ist ein abhaengiges Objekt und blockiert das DROP — anders
+  -- als ein Unique-Schluessel oder ein Index, die stillschweigend mitfallen.
+  -- Die drei Tabellen darueber haben deshalb kein Problem: ihre Policies
+  -- pruefen nur `verein_id` und `is_admin()`, nicht die Spalte.
+  --
+  -- ⚠ KEIN `drop column … cascade`. Es waere die kuerzere Zeile und der
+  -- falsche Weg: die Policies verschwaenden, ohne dass es im Migrationstext
+  -- steht — genau die stille Sorte Nebenwirkung, die man ein halbes Jahr
+  -- spaeter sucht. Sie werden ausdruecklich gestrichen und ausdruecklich neu
+  -- angelegt.
+  --
+  -- Reihenfolge deshalb:  Policies weg → Spalten weg → Spalte neu →
+  -- Schluessel → Policies neu. Dazwischen hat die Tabelle RLS ohne Policy,
+  -- ist also vollstaendig gesperrt und nicht offen — und weil alles in einem
+  -- Block laeuft, sieht diesen Zustand ohnehin niemand.
+
+  drop policy if exists anwesenheiten_select on public.anwesenheiten;
+  drop policy if exists anwesenheiten_write  on public.anwesenheiten;
 
   alter table public.anwesenheiten
     drop column if exists mitglied_id,
-    /* „hat ein Konto" ist nicht „war im Training". Die Policies darunter
-       bekommen deshalb einen neuen Traeger — ohne den saehe niemand mehr
-       seine eigene Anwesenheit. */
+    /* „hat ein Konto" ist nicht „war im Training". */
     drop column if exists benutzer_id;
 
   alter table public.anwesenheiten
@@ -214,11 +261,9 @@ begin
   execute $q$ comment on column public.anwesenheiten.mitglied_id is
     'Wer anwesend war — die Mitgliedschaft. Training und Spiel setzen einen Kadereintrag voraus, und der haengt am Mitglied. Die fruehere Spalte benutzer_id ist am 20.08.2026 entfallen: sie hiess „hat ein Portal-Konto", und wer keines hat, kann trotzdem anwesend sein.' $q$;
 
-  /* Die zwei Policies neu, mit get_my_mitglied_id() statt auth.uid().
-     Das Recht wird dadurch nicht weiter — es wird richtig ausgedrueckt. */
-  drop policy if exists anwesenheiten_select on public.anwesenheiten;
-  drop policy if exists anwesenheiten_write  on public.anwesenheiten;
-
+  /* Jetzt erst die Policies — vorher gaebe es die Spalte nicht, auf die sie
+     sich beziehen. get_my_mitglied_id() statt auth.uid(): das Recht wird
+     dadurch nicht weiter, es wird richtig ausgedrueckt. */
   create policy anwesenheiten_select on public.anwesenheiten for select
     using (verein_id = public.get_my_verein_id()
            and (mitglied_id = public.get_my_mitglied_id()

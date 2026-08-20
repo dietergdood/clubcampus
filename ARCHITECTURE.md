@@ -1120,6 +1120,45 @@ select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
  order by 1;
 ```
 
+### ⚠ Eine Policy blockiert `DROP COLUMN`, ein Index nicht
+
+Beim Umstellen von `anwesenheiten` am 20.08.2026 aufgelaufen:
+
+```
+ERROR 2BP01: cannot drop column benutzer_id of table anwesenheiten
+because other objects depend on it
+DETAIL: policy anwesenheiten_select … policy anwesenheiten_write
+```
+
+**Der Unterschied ist nicht offensichtlich.** Unique-Schlüssel, Indizes und
+Fremdschlüssel auf einer Spalte fallen beim `DROP COLUMN` **stillschweigend
+mit** — man merkt es erst, wenn sie nachher fehlen. Eine **Policy** dagegen
+ist ein abhängiges Objekt und **bricht ab**. Wer eine Spalte streicht, muss
+also zweierlei tun: die Policies vorher ausdrücklich behandeln, und die
+mitgefallenen Schlüssel hinterher neu anlegen.
+
+**Kein `DROP COLUMN … CASCADE`.** Es ist die kürzere Zeile und der falsche
+Weg: die Policies verschwinden, ohne dass es im Migrationstext steht — genau
+die stille Sorte Nebenwirkung, die man ein halbes Jahr später sucht. Statt-
+dessen `DROP POLICY` und `CREATE POLICY` ausschreiben.
+
+**Die Reihenfolge im Block:** Policies weg → Spalten weg → Spalte neu →
+Schlüssel und Indizes neu → Policies neu. Die neuen Policies können erst
+entstehen, wenn die Spalte da ist, auf die sie sich beziehen. Dazwischen hat
+die Tabelle RLS ohne Policy — also vollständig gesperrt und nicht offen; und
+weil alles in einem `do $mig$`-Block läuft, sieht diesen Zustand niemand.
+
+Zum Vorabprüfen, welche Policies an einer Spalte hängen:
+
+```sql
+select tablename, policyname from pg_policies
+ where schemaname = 'public'
+   and (coalesce(qual,'') || ' ' || coalesce(with_check,'')) ~ 'spaltenname';
+```
+
+`migration_helfer_person_id.sql` führt diese Abfrage als Block A2 selbst aus
+und bricht mit einem Satz ab, statt den Rohtext von Postgres zu zeigen.
+
 ### Zu jeder neuen Spalte gehört ihr Leser
 
 Die Regel steht ausführlich in `CLAUDE.md` → Konventionen, mit den vier
