@@ -185,6 +185,13 @@ export const COMPONENT_REGISTRY = [
     css: ["cc-toggle", "cc-toggle-on", "cc-toggle-knob", "cc-toggle-knob-on", "cc-toggle-dark"],
   },
   {
+    name: "Klappkarte (cc-klappkarte-kopf)",
+    desc: "Karte, deren Kopfzeile auf- und zuklappt: Chevron · Initialen · Name · Stand als Pille rechts. Der Kopf ist ein <button> (Tastatur, aria-expanded), deshalb setzt die Klasse Rahmen, Hintergrund und Schrift zurück. cc-card-rahmen-akzent hebt eine Karte hervor, die Aufmerksamkeit braucht — über box-shadow, weil .cc-card border:none!important setzt und ein echter Rahmen die Höhe verschöbe.",
+    category: "Layout",
+    usedIn: ["DatenpruefungEltern"],
+    css: ["cc-klappkarte-kopf", "cc-klappkarte-chevron", "cc-card-rahmen-akzent"],
+  },
+  {
     /* ⚠ Hier stand bis zum 21.08.2026 „SupporterModal". Es ist mit dem
        ElternkontaktModal weggefallen: MemberDetail traegt seit dem
        Personenseiten-Umbau auch eine Person OHNE Mitgliedschaft, und die
