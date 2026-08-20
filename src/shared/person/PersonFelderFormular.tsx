@@ -22,7 +22,7 @@
    Sie liegt unter `shared/person/`, weil die Personenseite ohnehin
    dorthin zieht.
    ═══════════════════════════════════════════════════════════════ */
-import { useState } from "react";
+import { useId, useState } from "react";
 import { PhoneInput, useAddrSearch, usePlzLookup } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { GESCHLECHT_OPTS, KANTONE } from "../../domains/person/personUtils.ts";
@@ -33,13 +33,46 @@ import {
 
 /** Nur Felder, die dieses Formular darstellen kann. Bereiche und Tabs
     (`teams`, `notizen`, `tab_*`) sind keine Eingaben. */
-const DARSTELLBAR = new Set([
+export const FORMULAR_FELDER = [
   "vorname", "nachname", "geburtsdatum", "geschlecht",
   "nationalitaet", "nationalitaet2", "heimatort", "ahv_nr",
   "email", "telefon", "strasse", "plz", "ort", "kanton",
-]);
+] as const;
+
+const DARSTELLBAR: ReadonlySet<string> = new Set(FORMULAR_FELDER);
 
 export type FelderWerte = Record<string, string>;
+
+/**
+ * Eine Datenbankzeile in Formularwerte übersetzen.
+ *
+ * ⚠ Immer ALLE darstellbaren Felder, nicht nur die sichtbaren: was die
+ * Konfiguration ausblendet, soll beim Speichern unverändert bleiben und nicht
+ * als "" ankommen. Der Vergleich gegen die Ausgangswerte (siehe `geaenderte`)
+ * findet dann von selbst nichts.
+ */
+export function werteAusZeile(zeile: Record<string, unknown> | null | undefined): FelderWerte {
+  const werte: FelderWerte = {};
+  for (const k of FORMULAR_FELDER) {
+    const v = zeile?.[k];
+    werte[k] = v == null ? "" : String(v);
+  }
+  return werte;
+}
+
+/**
+ * Nur was sich geändert hat — leere Eingaben als `null`.
+ *
+ * Ein `update` mit unveränderten Werten schriebe `updated_at` fort und sähe
+ * im Verlauf wie eine Bearbeitung aus, die nie stattgefunden hat.
+ */
+export function geaenderte(werte: FelderWerte, ausgang: FelderWerte): Record<string, string | null> {
+  const diff: Record<string, string | null> = {};
+  for (const k of FORMULAR_FELDER) {
+    if ((werte[k] ?? "") !== (ausgang[k] ?? "")) diff[k] = werte[k].trim() || null;
+  }
+  return diff;
+}
 
 export interface PersonFelderFormularProps {
   /** Modus je Schlüssel — aus `getFeldkonfig()`. */
@@ -70,6 +103,17 @@ export function PersonFelderFormular({
   const [ahvSichtbar, setAhvSichtbar] = useState(false);
   const [zeigeVorschlaege, setZeigeVorschlaege] = useState(false);
 
+  /* ⚠ Ein `<label>` ohne `htmlFor` ist nur Text daneben: der Klick setzt
+     keinen Fokus, und der Screenreader liest ein Feld ohne Namen vor. Bis zum
+     21.08.2026 stand es hier so — aufgefallen erst, als ein Test das Feld
+     ueber seine Beschriftung suchen wollte und es nicht fand.
+
+     `useId()` statt einer Prop, weil dasselbe Formular auf einer Seite
+     mehrfach steht (Elternteil + je ein Kind) und doppelte Ids die
+     Verknuepfung wieder zerstoerten. */
+  const uid = useId();
+  const feldId = (schluessel: string) => `${uid}-${schluessel}`;
+
   const vorschlaege = useAddrSearch(werte.strasse, werte.plz);
   /* PLZ füllt Ort und Kanton. Deshalb steht "Gibt es nicht" in der
      Konfiguration nur am Adressblock als Ganzem (ADRESS_FELDER) — einzeln
@@ -93,8 +137,8 @@ export function PersonFelderFormular({
 
     if (schluessel === "telefon") {
       return aus
-        ? <input className="cc-input" value={wert} disabled style={{ opacity: 0.6 }}/>
-        : <PhoneInput value={wert} onChange={setzen} showHint={false}/>;
+        ? <input id={feldId(schluessel)} className="cc-input" value={wert} disabled readOnly style={{ opacity: 0.6 }}/>
+        : <PhoneInput id={feldId(schluessel)} value={wert} onChange={setzen} showHint={false}/>;
     }
 
     if (schluessel === "geschlecht" || schluessel === "kanton") {
@@ -102,7 +146,7 @@ export function PersonFelderFormular({
         ? GESCHLECHT_OPTS.map(o => ({ v: o.v, l: o.l }))
         : KANTONE.map(k => ({ v: k, l: k }));
       return (
-        <select className="cc-input" value={wert} disabled={aus}
+        <select id={feldId(schluessel)} className="cc-input" value={wert} disabled={aus}
                 onChange={e => setzen(e.target.value)}>
           <option value="">– wählen –</option>
           {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
@@ -116,7 +160,7 @@ export function PersonFelderFormular({
          Verwaltung nicht. Ohne diesen Weg bleiben 372 Junioren gesperrt. */
       return (
         <div className="cc-row cc-gap-6">
-          <input className="cc-input" style={{ flex: 1 }}
+          <input id={feldId(schluessel)} className="cc-input" style={{ flex: 1 }}
                  type={ahvSichtbar ? "text" : "password"}
                  value={wert} disabled={aus}
                  onChange={e => setzen(e.target.value)}/>
@@ -131,7 +175,7 @@ export function PersonFelderFormular({
     if (schluessel === "strasse") {
       return (
         <div className="cc-relative">
-          <input className="cc-input" value={wert} disabled={aus}
+          <input id={feldId(schluessel)} className="cc-input" value={wert} disabled={aus}
                  placeholder="Strasse suchen…"
                  onChange={e => { setzen(e.target.value); setZeigeVorschlaege(true); }}
                  onFocus={() => setZeigeVorschlaege(true)}/>
@@ -158,7 +202,7 @@ export function PersonFelderFormular({
     }
 
     return (
-      <input className="cc-input"
+      <input id={feldId(schluessel)} className="cc-input"
              type={schluessel === "geburtsdatum" ? "date" : "text"}
              value={wert} disabled={aus}
              style={aus ? { opacity: 0.6 } : undefined}
@@ -172,7 +216,7 @@ export function PersonFelderFormular({
         const voll = e.schluessel === "strasse" || e.schluessel === "email";
         return (
           <div key={e.schluessel} className={voll ? "cc-form-full" : undefined}>
-            <label className="cc-label">
+            <label className="cc-label" htmlFor={feldId(e.schluessel)}>
               {labelFuer(e.schluessel)}
               {istPflicht(konfig, e.schluessel) && <span className="cc-label-req"> *</span>}
             </label>

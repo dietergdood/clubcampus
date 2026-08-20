@@ -1,114 +1,145 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/tabs/DatenpruefungEltern.tsx
-   Self-Service Datenprüfung für Elternkontakte
+
+   Die halbjährliche Datenprüfung eines Elternteils — für sich
+   selbst und für jedes verknüpfte Kind.
+
+   ⚠ WAS SICH AM 21.08.2026 GEÄNDERT HAT
+
+   1. Die Felder kommen aus der KONFIGURATION, nicht aus einer
+      Liste in dieser Datei. Für die eigene Person gilt die Achse
+      `ohne_mitgliedschaft`, für jedes Kind sein Mitgliedtyp. Was
+      dort auf „Gibt es nicht" steht, erscheint hier nicht — ohne
+      dass jemand diese Datei anfassen muss.
+
+   2. Die AHV-Nummer ist schreibbar. Sie stand hier als reines
+      Lesefeld mit „Nur lesbar — Änderungen durch den
+      Administrator" — und genau daran hingen 372 Junioren fest:
+      die Nummer steht auf der Krankenkassenkarte des Kindes, der
+      Elternteil hat sie, die Verwaltung nicht. Der Weg dorthin
+      ist seit `migration_eltern_kind_rechte.sql` offen; hier wird
+      er benutzt.
+
+   3. Geschrieben wird über `updateEigenePerson` /
+      `updateKindDurchElternteil` — mit Allowlist. Vorher lief der
+      Kinder-Zweig über `updateMitglied()`, das jedes Feld aus
+      PERSON_FELDER durchreicht.
+
+   4. Ein Fehlschlag wird GEMELDET. Vorher stand am Ende
+      bedingungslos „Alles bestätigt ✓", auch wenn RLS jede Zeile
+      abgewiesen hätte — eine Erfolgsmeldung ohne Deckung.
+
+   ⚠ WAS SIE WEITERHIN NICHT TUT: sie hält niemanden auf, dessen
+   Pflichtfelder leer sind. Das ist der offene Punkt „Die
+   Pflichtfeld-Matrizen wirken in der Datenprüfung gar nicht"
+   (CLAUDE.md) und gehört an `getProfilFehlend()` angeschlossen —
+   an einer Stelle für Mitglied und Elternteil, nicht hier
+   nebenbei. Die Sternchen zeigen die Pflicht bereits an.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, PhoneInput, useAddrSearch, usePlzLookup } from "../../../theme.ts";
-import { TI } from "../../../icons.tsx";
-import { updateMitglied } from "../../../domains/members/memberService.ts";
-import { updateElternkontakt } from "../../../domains/members/elternService.ts";
+import { Btn, Card } from "../../../theme.ts";
+import { updateEigenePerson, updateKindDurchElternteil, elternDuerfen } from "../../../domains/members/kindService.ts";
 import { vollname, formatDatum } from "../../../domains/person/personUtils.ts";
-import { KANTON_OPTS } from "./datenpruefungUtils.ts";
-import type { Mitglied, Sb, PersonZeile } from "../../../types.ts";
+import {
+  PersonFelderFormular, FORMULAR_FELDER, werteAusZeile, geaenderte,
+} from "../../../shared/person/PersonFelderFormular.tsx";
+import type { FelderWerte } from "../../../shared/person/PersonFelderFormular.tsx";
+import {
+  getFeldkonfig, fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT,
+} from "../../../domains/members/feldkonfig.ts";
+import type { FeldkonfigZeile } from "../../../domains/members/feldkonfig.ts";
+import type { Mitglied, Sb } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
-interface ElternkontaktMitKind {
+/** Die eigene Zeile aus `personen`. */
+export interface ElternteilPerson {
   id: string;
   vorname?: string | null;
   nachname?: string | null;
-  name?: string | null;
   email?: string | null;
   telefon?: string | null;
-  beziehung?: string | null;
   profil_geprueft_at?: string | null;
+  [feld: string]: unknown;
 }
 
-interface KindForm {
-  mitglied_id: number;
-  name: string;
-  vorname: string;
-  nachname: string;
-  geburtsdatum: string;
-  nationalitaet: string;
-  strasse: string;
-  plz: string;
-  ort: string;
-  kanton: string;
-  ahv_nr: string | undefined;
-  ahvVisible: boolean;
-}
+/* Was die Selbstbedienung nicht schreiben darf, wird ANGEZEIGT und gesperrt —
+   nicht weggelassen. Ein Feld, das verschwindet, ist von einem nicht
+   konfigurierten nicht zu unterscheiden; wer seine E-Mail sucht und sie
+   nirgends findet, meldet einen Fehler. Quelle ist die Allowlist im Service,
+   nicht eine zweite Liste hier. */
+const GESPERRT: ReadonlySet<string> = new Set(FORMULAR_FELDER.filter(k => !elternDuerfen(k)));
 
 interface DatenpruefungElternProps {
-  raw: PersonZeile;
   sb: Sb;
-  elternkontakt: ElternkontaktMitKind;
+  /**
+   * Das angemeldete Elternteil als Personenzeile.
+   *
+   * ⚠ Hiess bis zum 21.08.2026 `elternkontakt` — ein Name aus der Zeit vor
+   * dem Personen-Umbau. Die Tabelle `elternkontakte` wird seit Etappe 3
+   * weder gelesen noch geschrieben.
+   */
+  elternteil: ElternteilPerson;
   kinder: Mitglied[];
+  /** Zeilen aus `mitgliedtyp_feldkonfig`, vom Portal durchgereicht. */
+  feldkonfig?: FeldkonfigZeile[];
   setPortalMsg: (msg: StatusMeldung | null) => void;
   onReload?: (() => void) | null;
 }
 
-export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalMsg, onReload }: DatenpruefungElternProps) {
-  const [elternForm, setElternForm] = useState({
-    vorname:  elternkontakt.vorname  || "",
-    nachname: elternkontakt.nachname || "",
-    telefon:  elternkontakt.telefon  || "",
-  });
+export function DatenpruefungEltern({
+  sb, elternteil, kinder, feldkonfig = [], setPortalMsg, onReload,
+}: DatenpruefungElternProps) {
+  /* Ausgangswerte einmal festhalten: gespeichert wird nur die Abweichung. */
+  const [ausgangEigen] = useState<FelderWerte>(() => werteAusZeile(elternteil));
+  const [eigen, setEigen] = useState<FelderWerte>(ausgangEigen);
 
-  const [kinderForms, setKinderForms] = useState<KindForm[]>(
-    kinder.map(k => ({
-      mitglied_id:   k.id,
-      name:          vollname(k),
-      vorname:       k.vorname       || "",
-      nachname:      k.nachname      || "",
-      geburtsdatum:  k.geburtsdatum  || "",
-      nationalitaet: k.nationalitaet || "",
-      strasse:       k.strasse       || "",
-      plz:           k.plz           || "",
-      ort:           k.ort           || "",
-      kanton:        k.kanton        || "",
-      ahv_nr:        k.ahv_nr        ?? undefined,
-      ahvVisible:    false,
-    }))
-  );
+  const [ausgangKinder] = useState<Record<number, FelderWerte>>(
+    () => Object.fromEntries(kinder.map(k => [k.id, werteAusZeile(k as unknown as Record<string, unknown>)])));
+  const [kinderWerte, setKinderWerte] = useState<Record<number, FelderWerte>>(ausgangKinder);
 
   const [saving, setSaving] = useState(false);
 
-  function setKindField(idx: number, k: keyof KindForm, v: string | boolean) {
-    setKinderForms(prev => prev.map((f, i) => i === idx ? { ...f, [k]: v } : f));
+  /* Für die eigene Person gilt die Achse „ohne Mitgliedschaft" — 393 der 394
+     Elternteile haben keine. Wer daneben auch Mitglied ist, sieht seine
+     Vereinsdaten im Profil, nicht hier: diese Maske pflegt Personendaten. */
+  const eigeneKonfig = getFeldkonfig(OHNE_MITGLIEDSCHAFT, feldkonfig);
+
+  function setKindFeld(mitgliedId: number, schluessel: string, wert: string) {
+    setKinderWerte(prev => ({ ...prev, [mitgliedId]: { ...prev[mitgliedId], [schluessel]: wert } }));
   }
 
   async function alleBestaetigen() {
     if (!sb) return;
     setSaving(true);
+    setPortalMsg(null);
+    const fehler: string[] = [];
 
-    /* Eigene Kontaktdaten speichern. Seit Etappe 3 landen sie in
-       `personen`; die RLS-Regel `personen_update_self` erlaubt genau das
-       (benutzer.person_id === personen.id). `beziehung` steht hier
-       bewusst nicht: sie haengt an der Verknuepfung zum Kind und ist
-       nichts, was der Elternteil ueber sich selbst pflegt. */
-    await updateElternkontakt(sb, elternkontakt.id, {
-      vorname:  elternForm.vorname  || null,
-      nachname: elternForm.nachname || null,
-      telefon:  elternForm.telefon  || null,
-      profil_geprueft_at: new Date().toISOString(),
-    });
+    /* Die eigenen Kontaktdaten. `personen_update_self` trifft genau diese
+       Zeile; die Spaltensperre kommt aus der Allowlist im Service. */
+    const eigenErg = await updateEigenePerson(sb, elternteil.id, geaenderte(eigen, ausgangEigen), true);
+    if (!eigenErg.ok) fehler.push(`Eigene Daten: ${eigenErg.fehler ?? "unbekannter Fehler"}`);
 
-    /* Kinder-Daten speichern + profil_geprueft_at setzen */
-    for (const kf of kinderForms) {
-      await updateMitglied(sb, kf.mitglied_id, {
-        vorname:       kf.vorname       || undefined,
-        nachname:      kf.nachname      || undefined,
-        geburtsdatum:  kf.geburtsdatum  || undefined,
-        nationalitaet: kf.nationalitaet || undefined,
-        strasse:       kf.strasse       || undefined,
-        plz:           kf.plz           || undefined,
-        ort:           kf.ort           || undefined,
-        kanton:        kf.kanton        || undefined,
-        profil_geprueft_at: new Date().toISOString(),
-      });
+    for (const kind of kinder) {
+      const name = vollname(kind);
+      const personId = (kind as unknown as { person_id?: string }).person_id;
+      /* ⚠ Ohne `person_id` gibt es nichts zu schreiben — und das gehört
+         gemeldet. Stillschweigend übersprungen sähe es aus, als wären die
+         Daten des Kindes gespeichert worden. */
+      if (!personId) { fehler.push(`${name}: keine Person verknüpft.`); continue; }
+      const erg = await updateKindDurchElternteil(
+        sb, personId, geaenderte(kinderWerte[kind.id] ?? {}, ausgangKinder[kind.id] ?? {}), true);
+      if (!erg.ok) fehler.push(`${name}: ${erg.fehler ?? "unbekannter Fehler"}`);
     }
 
     setSaving(false);
+    if (fehler.length > 0) {
+      /* ⚠ Kein „Alles bestätigt ✓" über einem fehlgeschlagenen Schreibvorgang.
+         Bei RLS gibt es keinen Fehler zu lesen — eine gesperrte Zeile wird
+         schlicht nicht getroffen —, deshalb liest der Service gegen und meldet
+         es hier zurück. */
+      setPortalMsg({ ok: false, text: `Nicht alles konnte gespeichert werden. ${fehler.join(" ")}` });
+      return;
+    }
     setPortalMsg({ ok: true, text: "Alles bestätigt ✓" });
     if (onReload) setTimeout(onReload, 500);
   }
@@ -121,13 +152,13 @@ export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalM
           <div>
             <div className="cc-text-bold cc-text-lg">Profil-Status</div>
             <div className="cc-text-sm cc-mt-4">
-              {elternkontakt.profil_geprueft_at
-                ? `Zuletzt bestätigt am ${formatDatum(elternkontakt.profil_geprueft_at)}`
+              {elternteil.profil_geprueft_at
+                ? `Zuletzt bestätigt am ${formatDatum(elternteil.profil_geprueft_at)}`
                 : "Noch nie bestätigt"}
             </div>
           </div>
-          <span className={`cc-badge ${elternkontakt.profil_geprueft_at ? "cc-badge-success" : "cc-badge-warning"}`}>
-            {elternkontakt.profil_geprueft_at ? "Geprüft" : "Ausstehend"}
+          <span className={`cc-badge ${elternteil.profil_geprueft_at ? "cc-badge-success" : "cc-badge-warning"}`}>
+            {elternteil.profil_geprueft_at ? "Geprüft" : "Ausstehend"}
           </span>
         </div>
       </Card>
@@ -136,30 +167,34 @@ export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalM
       <Card>
         <div className="cc-text-bold cc-text-lg cc-mb-4">Meine Kontaktdaten</div>
         <div className="cc-text-sm cc-text-sub cc-mb-16">Prüfe deine eigenen Angaben.</div>
-        <div className="cc-form-row">
-          <div>
-            <label className="cc-label">Vorname</label>
-            <input className="cc-input" value={elternForm.vorname} onChange={e => setElternForm(p => ({ ...p, vorname: e.target.value }))}/>
-          </div>
-          <div>
-            <label className="cc-label">Nachname</label>
-            <input className="cc-input" value={elternForm.nachname} onChange={e => setElternForm(p => ({ ...p, nachname: e.target.value }))}/>
-          </div>
-          <div className="cc-form-full">
-            <label className="cc-label">E-Mail</label>
-            <input className="cc-input" value={elternkontakt.email || ""} disabled style={{opacity:0.6}}/>
-            <div className="cc-text-xs cc-text-sub cc-mt-4">E-Mail-Adresse nur durch den Administrator änderbar</div>
-          </div>
-          <div className="cc-form-full">
-            <label className="cc-label">Telefon</label>
-            <PhoneInput value={elternForm.telefon} onChange={v => setElternForm(p => ({ ...p, telefon: v }))} showHint={false}/>
-          </div>
-        </div>
+        <PersonFelderFormular
+          konfig={eigeneKonfig}
+          werte={eigen}
+          onChange={(k, v) => setEigen(prev => ({ ...prev, [k]: v }))}
+          gesperrt={GESPERRT}
+          gesperrtHinweis="E-Mail-Adresse nur durch den Administrator änderbar — sie ist zugleich der Login-Name."
+        />
       </Card>
 
-      {/* Pro Kind eine Card */}
-      {kinderForms.map((kf, idx) => (
-        <KindCard key={kf.mitglied_id} kf={kf} idx={idx} setKindField={setKindField}/>
+      {/* Pro Kind eine Karte */}
+      {kinder.map(kind => (
+        <Card key={kind.id}>
+          <div className="cc-row cc-gap-8 cc-items-center cc-mb-16">
+            <div className="cc-av cc-av-sm" style={{ background: "var(--cc-accent)", color: "#000", fontSize: 11, fontWeight: 700 }}>
+              {vollname(kind).split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+            </div>
+            <div className="cc-text-bold cc-text-lg">{vollname(kind)}</div>
+          </div>
+          {/* Die Achse des Kindes ist sein Mitgliedtyp — ein Juniorenmitglied
+              zeigt andere Felder als ein Aktivmitglied. */}
+          <PersonFelderFormular
+            konfig={getFeldkonfig(fuerMitgliedtyp(kind.mitgliedtyp), feldkonfig)}
+            werte={kinderWerte[kind.id] ?? {}}
+            onChange={(k, v) => setKindFeld(kind.id, k, v)}
+            gesperrt={GESPERRT}
+            gesperrtHinweis="E-Mail-Adresse nur durch den Administrator änderbar."
+          />
+        </Card>
       ))}
 
       <div className="cc-row cc-gap-8 cc-justify-end">
@@ -168,102 +203,5 @@ export function DatenpruefungEltern({ raw, sb, elternkontakt, kinder, setPortalM
         </Btn>
       </div>
     </div>
-  );
-}
-
-/* ── Kind-Card ── */
-interface KindCardProps {
-  kf: KindForm;
-  idx: number;
-  setKindField: (idx: number, k: keyof KindForm, v: string | boolean) => void;
-}
-
-function KindCard({ kf, idx, setKindField }: KindCardProps) {
-  const addrSuggestions = useAddrSearch(kf.strasse, kf.plz);
-  usePlzLookup(kf.plz, (r) => {
-    setKindField(idx, "ort", r.ort);
-    setKindField(idx, "kanton", r.kanton || "");
-  });
-
-  function applyAddr(s: { strasse: string; plz: string; ort: string; kanton: string }) {
-    setKindField(idx, "strasse", s.strasse);
-    setKindField(idx, "plz", s.plz);
-    setKindField(idx, "ort", s.ort);
-    setKindField(idx, "kanton", s.kanton);
-  }
-
-  return (
-    <Card>
-      <div className="cc-row cc-gap-8 cc-items-center cc-mb-16">
-        <div className="cc-av cc-av-sm" style={{background:"var(--cc-accent)",color:"#000",fontSize:11,fontWeight:700}}>
-          {kf.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}
-        </div>
-        <div className="cc-text-bold cc-text-lg">{kf.name}</div>
-      </div>
-      <div className="cc-form-row">
-        <div>
-          <label className="cc-label">Vorname</label>
-          <input className="cc-input" value={kf.vorname} onChange={e => setKindField(idx, "vorname", e.target.value)}/>
-        </div>
-        <div>
-          <label className="cc-label">Nachname</label>
-          <input className="cc-input" value={kf.nachname} onChange={e => setKindField(idx, "nachname", e.target.value)}/>
-        </div>
-        <div>
-          <label className="cc-label">Geburtsdatum</label>
-          <input className="cc-input" type="date" value={kf.geburtsdatum} onChange={e => setKindField(idx, "geburtsdatum", e.target.value)}/>
-        </div>
-        <div>
-          <label className="cc-label">Nationalität</label>
-          <input className="cc-input" value={kf.nationalitaet} onChange={e => setKindField(idx, "nationalitaet", e.target.value)} placeholder="z.B. Schweiz"/>
-        </div>
-
-        <div className="cc-form-full cc-relative">
-          <label className="cc-label">Strasse</label>
-          <input className="cc-input" value={kf.strasse}
-            onChange={e => setKindField(idx, "strasse", e.target.value)}
-            placeholder="Strasse suchen…"/>
-          {addrSuggestions.length > 0 && (
-            <div className="cc-addr-dropdown">
-              {addrSuggestions.map((s, i) => (
-                <div key={i} className="cc-addr-option" onClick={() => applyAddr(s)}>
-                  {s.strasse}, {s.plz} {s.ort}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div>
-          <label className="cc-label">PLZ</label>
-          <input className="cc-input" value={kf.plz}
-            onChange={e => setKindField(idx, "plz", e.target.value)}/>
-        </div>
-        <div>
-          <label className="cc-label">Ort</label>
-          <input className="cc-input" value={kf.ort} onChange={e => setKindField(idx, "ort", e.target.value)}/>
-        </div>
-        <div>
-          <label className="cc-label">Kanton</label>
-          <select className="cc-input" value={kf.kanton} onChange={e => setKindField(idx, "kanton", e.target.value)}>
-            <option value="">– wählen –</option>
-            {KANTON_OPTS.map(k => <option key={k} value={k}>{k}</option>)}
-          </select>
-        </div>
-
-        {/* AHV read-only */}
-        <div className="cc-form-full">
-          <label className="cc-label">AHV-Nummer</label>
-          <div className="cc-row cc-gap-8 cc-items-center cc-input" style={{opacity:0.8}}>
-            <span className="cc-flex-1" style={{letterSpacing:"0.08em"}}>
-              {kf.ahvVisible ? (kf.ahv_nr || "—") : "• • • • • • • • •"}
-            </span>
-            <button className="cc-btn-ghost cc-text-xs" onClick={() => setKindField(idx, "ahvVisible", !kf.ahvVisible)}>
-              <TI n={kf.ahvVisible ? "eye-off" : "eye"} size={14}/> {kf.ahvVisible ? "ausblenden" : "anzeigen"}
-            </button>
-          </div>
-          <div className="cc-text-xs cc-text-sub cc-mt-4">Nur lesbar — Änderungen durch den Administrator</div>
-        </div>
-      </div>
-    </Card>
   );
 }

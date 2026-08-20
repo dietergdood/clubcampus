@@ -7,17 +7,19 @@
    - hauptkontakt ist pro Kind in eltern_kinder gesetzt
    - Entknüpfen des letzten Kindes → Supporter oder Löschen (entkoppleKind)
 
-   Das Bearbeiten-Formular liegt in ElternkontaktModal und wird mit der
-   Elternliste geteilt. Hier ohne Kinder-Sektion: man steht bereits beim
-   Kind, die anderen Verknüpfungen gehören in die Elternliste.
+   ⚠ Bearbeitet wird hier nichts mehr. Bis zum 21.08.2026 öffnete
+   „Bearbeiten" ein `ElternkontaktModal` mit denselben Feldern, die die
+   Personenseite ohnehin zeigt — zwei Masken für dieselbe Zeile in
+   `personen`. Der Eintrag heisst jetzt „Profil öffnen" und führt dorthin.
+
+   Was hier bleibt, hängt an der VERKNÜPFUNG (`eltern_kinder`) und nicht an
+   der Person: Hauptkontakt, Entknüpfen, Hinzufügen. Deshalb steht es beim
+   Kind und nicht beim Elternteil.
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
 import { Btn, Card, DropMenu, EmptyState, useConfirm } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { ElternSucheModal } from "../ElternSucheModal.tsx";
-import { ElternkontaktModal } from "../ElternkontaktModal.tsx";
-import { KindSucheModal } from "../KindSucheModal.tsx";
-import type { ElternFormular } from "../ElternkontaktModal.tsx";
 import {
   entkoppleKind, setHauptkontakt, clearHauptkontaktFuerKind, fetchElternkontakte,
   updateBenutzerRolle, loeschePersonWennVerwaist,
@@ -26,7 +28,7 @@ import {
 import { vollname } from "../../../domains/person/personUtils.ts";
 import type { ElternkontaktMitLink, EntkoppelWunsch } from "../../../domains/members/elternService.ts";
 import { EntkopplungModal } from "../EntkopplungModal.tsx";
-import type { Account, Mitglied, Sb, SetState, PersonZeile } from "../../../types.ts";
+import type { Account, Sb, SetState } from "../../../types.ts";
 
 export function elternAvColor(beziehung: string | null | undefined){
   const b=(beziehung||"").toLowerCase();
@@ -38,7 +40,9 @@ export function elternAvColor(beziehung: string | null | undefined){
 interface ElternTabProps {
   eltern: ElternkontaktMitLink[];
   canEdit?: boolean;
-  raw: PersonZeile;
+  /* ⚠ `raw` stand hier und wurde NIE gelesen — schon vor dem 21.08.2026 nicht
+     (git show HEAD~1). Beim Aufraeumen der Modal-Reste mitgefallen: ein
+     Parameter, den niemand liest, ist eine Zusage, die niemand einloest. */
   /**
    * Die MITGLIEDSCHAFT, zu der die Elternkontakte gehören.
    *
@@ -55,15 +59,19 @@ interface ElternTabProps {
   vereinId?: string | null;
   account?: Account | null;
   /* Mitgliedtypen mit hauptkontakt_pflicht — fuer die Kind-Auswahl im Modal */
-  pflichtTypen?: string[];
+  /**
+   * Öffnet die Personenseite des Elternteils.
+   *
+   * ⚠ Die Seite ERSETZT den Aufruf, sie kommt nicht daneben: von hier führt
+   * kein Weg zurück zum Kind. Das ist der Preis dafür, dass eine Person eine
+   * Seite hat und nicht zwei Masken.
+   */
+  onOeffnePerson?: ((personId: string, name: string) => void) | null;
 }
 
-function ElternTab({ mitgliedId,eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null, pflichtTypen=[]}: ElternTabProps){
+function ElternTab({ mitgliedId,eltern, canEdit, sb, onReload, setElternLoaded, vereinId=null, account=null, onOeffnePerson=null}: ElternTabProps){
   const [confirm, confirmDialog] = useConfirm();
-  const [editEltern, setEditEltern] = useState<ElternFormular | null>(null);
   const [showSuche, setShowSuche] = useState(false);
-  const [kindSuche, setKindSuche] = useState(false);
-  const [neuesKind, setNeuesKind] = useState<number | null>(null);
   /* Offene Rueckfrage nach dem letzten Kind — null heisst: keine offen. */
   const [frage, setFrage] = useState<{personId:string; benutzerId:string|null; name:string}|null>(null);
   const geaendertVon = account?.name||account?.email||"Administrator";
@@ -171,7 +179,7 @@ function ElternTab({ mitgliedId,eltern, canEdit, raw, sb, onReload, setElternLoa
               </div>
               {canEdit&&(
                 <DropMenu items={[
-                  {label:"Bearbeiten", icon:"edit", onClick:()=>setEditEltern({...e})},
+                  ...(onOeffnePerson&&e.id?[{label:"Profil öffnen", icon:"user", onClick:()=>onOeffnePerson(e.id!, name)}]:[]),
                   {label:e.hauptkontakt?"Hauptkontakt entfernen":"Als Hauptkontakt setzen", icon:"star", onClick:()=>handleHauptkontakt(e)},
                   "sep",
                   {label:"Entknüpfen", icon:"unlink", danger:true, onClick:()=>handleEntknuepfen(e)},
@@ -194,33 +202,6 @@ function ElternTab({ mitgliedId,eltern, canEdit, raw, sb, onReload, setElternLoa
         );
       })}
 
-      {editEltern&&(
-        <ElternkontaktModal
-          mode="edit"
-          data={editEltern}
-          mitgliedId={mitgliedId}
-          canEdit={canEdit}
-          sb={sb}
-          vereinId={vereinId}
-          geaendertVon={geaendertVon}
-          onKindHinzufuegen={()=>setKindSuche(true)}
-          neuesKind={neuesKind}
-          onKindVerknuepft={()=>setNeuesKind(null)}
-          onClose={()=>{setEditEltern(null);setNeuesKind(null);}}
-          onSaved={reload}
-        />
-      )}
-
-      {kindSuche&&(
-        <KindSucheModal
-          open={kindSuche}
-          onClose={()=>setKindSuche(false)}
-          sb={sb}
-          vereinId={vereinId}
-          pflichtTypen={pflichtTypen}
-          onGewaehlt={id=>setNeuesKind(id)}
-        />
-      )}
       {confirmDialog}
     </div>
   );

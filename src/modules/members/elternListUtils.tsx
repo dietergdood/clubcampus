@@ -28,9 +28,9 @@ export interface ElternRenderCellDeps {
   expandedKinder: Set<string>;
   setExpandedKinder: SetState<Set<string>>;
   onNavToMember?: ((id: number) => void) | null;
-  /* Klick auf den Namen öffnet das Bearbeiten-Modal — gleiches Muster wie
-     im Archiv und beim Kind-Namen in derselben Liste. */
-  onEditKontakt?: ((row: ElternRow) => void) | null;
+  /** Klick auf den Namen — oeffnet die Personenseite. Hiess bis zum
+      21.08.2026 `onEditKontakt` und oeffnete ein Bearbeiten-Modal. */
+  onOeffnen?: ((row: ElternRow) => void) | null;
 }
 
 /* ── Mapping ── */
@@ -162,16 +162,16 @@ function buildElternLevel(
 }
 
 /* ── RenderCell ── */
-export function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember, onEditKontakt }: ElternRenderCellDeps) {
+export function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember, onOeffnen }: ElternRenderCellDeps) {
   return function renderElternCell(col: ColDef, e: ElternRow, groupCtx?: GroupContext) {
     switch(col.key) {
       case "name":
         return <td key="name" className="cc-members-td">
           <div className="cc-row cc-gap-8">
             <Av name={e.name||"?"} size={26}/>
-            {onEditKontakt
+            {onOeffnen
               ? <span className="cc-text-bold cc-members-name-link"
-                  onClick={ev=>{ev.stopPropagation();onEditKontakt(e);}}>{e.name}</span>
+                  onClick={ev=>{ev.stopPropagation();onOeffnen(e);}}>{e.name}</span>
               : <span className="cc-text-bold">{e.name}</span>
             }
           </div>

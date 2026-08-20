@@ -7,9 +7,6 @@ import { useConfirm } from "../../theme.ts";
 import { fetchAlleElternkontakte, entferneElternVerknuepfung } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
-import { ElternkontaktModal } from "./ElternkontaktModal.tsx";
-import { KindSucheModal } from "./KindSucheModal.tsx";
-import type { ElternFormular } from "./ElternkontaktModal.tsx";
 import type { ColDef, ColGroup, GroupOption, RowId } from "../../shared/list/types.ts";
 import type { Account, Sb } from "../../types.ts";
 import { mapEltern, buildElternGroups, makeElternRenderCell } from "./elternListUtils.tsx";
@@ -43,28 +40,30 @@ interface ElternListViewProps {
   account?: Account | null;
   isAdmin?: boolean;
   onNavToMember?: ((id: number) => void) | null;
-  /* Mitgliedtypen mit hauptkontakt_pflicht — bestimmen, wer als Kind
-     verknuepft werden kann. Kommt aus der Portalverwaltung. */
-  pflichtTypen?: string[];
+  /**
+   * Klick auf den Namen — oeffnet die Personenseite.
+   *
+   * ⚠ Bis zum 21.08.2026 stand hier ein `ElternkontaktModal`. Es zeigte
+   * Kontaktdaten, Portal-Zugang und die verknuepften Kinder — alles Dinge,
+   * die eine Person hat, nicht ein Kontakt. Ein Elternteil IST seit dem
+   * Personen-Umbau dieselbe Zeile wie ein Mitglied; deshalb dieselbe Seite.
+   */
+  onOeffnen?: ((row: ElternRow) => void) | null;
 }
 
 export function ElternListView({
   sb, vereinId, account, isAdmin = false,
-  onNavToMember = null, pflichtTypen = [],
+  onNavToMember = null, onOeffnen = null,
 }: ElternListViewProps) {
   const [rows, setRows] = useState<ElternRow[]>([]);
   const [confirm, confirmDialog] = useConfirm();
   const [expandedKinder, setExpandedKinder] = useState<Set<string>>(new Set());
-  const [edit, setEdit] = useState<ElternFormular | null>(null);
-  const [kindSuche, setKindSuche] = useState(false);
-  const [neuesKind, setNeuesKind] = useState<number | null>(null);
-  const geaendertVon = account?.name || account?.email || "Administrator";
 
-  async function reload() {
-    if (!sb || !vereinId) return;
-    const data = await fetchAlleElternkontakte(sb, vereinId);
-    setRows(mapEltern(data));
-  }
+  /* Kein `reload()` mehr: `MitgliederModul` gibt beim Oeffnen einer Person
+     die ganze Liste auf (fruehes `return <MemberDetail/>`), diese Komponente
+     wird abgehaengt und beim Zurueckkommen neu montiert — der useEffect
+     darunter laedt dann ohnehin. Eine zweite Ladefunktion waere ein zweiter
+     Ort, an dem dieselbe Liste auseinanderlaufen kann. */
 
   useEffect(() => {
     if (!sb || !vereinId) return;
@@ -94,17 +93,7 @@ export function ElternListView({
     });
   }
 
-  const oeffneKontakt = (row: ElternRow) => setEdit({
-    id:          String(row.id),
-    vorname:     row.vorname,
-    nachname:    row.nachname,
-    email:       row.email,
-    telefon:     row.telefon,
-    beziehung:   row.beziehung,
-    benutzer_id: row.benutzer_id,
-  });
-
-  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember, onEditKontakt: oeffneKontakt });
+  const renderCell = makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavToMember, onOeffnen });
 
   async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
@@ -159,33 +148,6 @@ export function ElternListView({
         ]}
       />
 
-      {edit && (
-        <ElternkontaktModal
-          mode="edit"
-          data={edit}
-          canEdit={isAdmin}
-          sb={sb}
-          vereinId={vereinId}
-          geaendertVon={geaendertVon}
-          onKindHinzufuegen={() => setKindSuche(true)}
-          neuesKind={neuesKind}
-          onKindVerknuepft={() => setNeuesKind(null)}
-          onClose={() => { setEdit(null); setNeuesKind(null); }}
-          onSaved={reload}
-        />
-      )}
-
-      {kindSuche && (
-        <KindSucheModal
-          open={kindSuche}
-          onClose={() => setKindSuche(false)}
-          sb={sb}
-          vereinId={vereinId}
-          pflichtTypen={pflichtTypen}
-          bereitsVerknuepft={edit?.id ? (rows.find(r => String(r.id) === edit.id)?.kinder || []).map(k => k.mitglied_id) : []}
-          onGewaehlt={id => setNeuesKind(id)}
-        />
-      )}
     </>
   );
 }

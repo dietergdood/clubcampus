@@ -544,44 +544,6 @@ export async function clearHauptkontaktFuerKind(sb: SbClient, personId: string, 
    braucht. Fuer den Ausnahmefall laesst sich der Filter weglassen: ein
    Elternkontakt ist bei jedem Mitgliedtyp erlaubt, nur nicht ueberall
    erforderlich. */
-/* Rückgabe der Kindersuche. Explizit deklariert, weil die Abfrage die Namen
-   verschachtelt liefert (personen(...)) und flacheZeilen() sie flach macht —
-   der aus der Abfrage abgeleitete Typ träfe also nicht zu. */
-export interface KindTreffer {
-  id: number;
-  mitgliedtyp: string | null;
-  vorname: string | null;
-  nachname: string | null;
-}
-
-export async function sucheKinder(
-  sb: SbClient,
-  vereinId: string,
-  query: string,
-  pflichtTypen: string[] | null,
-) {
-  const suche = query.trim();
-  if (!suche) return [];
-  /* Gesucht wird in `personen`, nicht in den Altspalten von `mitglieder` —
-     sonst fände die Suche nach einer Namenskorrektur noch den alten Wert.
-     `!inner` ist dafür nötig; es setzt voraus, dass jede Mitgliedschaft eine
-     Person hat (supabase/etappe2b_backfill_person_id.sql). */
-  let q = sb.from("mitglieder")
-    .select("id, mitgliedtyp, personen!inner(id,vorname,nachname)")
-    .eq("verein_id", vereinId)
-    .eq("aktiv", true);
-  if (pflichtTypen) {
-    if (pflichtTypen.length === 0) return [];
-    q = q.in("mitgliedtyp", pflichtTypen);
-  }
-  const { data } = await q
-    .or(`vorname.ilike.%${suche}%,nachname.ilike.%${suche}%`, { referencedTable: "personen" })
-    .order("nachname", { referencedTable: "personen" })
-    .limit(20);
-  return (data || [])
-    .map(z => flacheZeile(z as never))
-    .filter(Boolean) as unknown as KindTreffer[];
-}
 
 /* Was nach dem Entkoppeln mit dem Elternkontakt geschehen ist. */
 export type EntkoppelFolge = "verknuepft" | "supporter" | "geloescht" | "frage";

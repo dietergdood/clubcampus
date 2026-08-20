@@ -10,14 +10,12 @@ import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import type { KaderRolleDb } from "../../domains/roles/roleUtils.ts";
 import { initials as computeInitials } from "../../domains/person/personUtils.ts";
 import {
-  fetchBenutzerFuerPerson, fetchBenutzerByEmail,
-  portalZugangAktivieren, portalZugangDeaktivieren,
+  fetchBenutzerFuerPerson,
+  portalZugangReaktivieren, portalZugangDeaktivieren,
   fetchElternkontakte, fetchKaderFuerMitglied,
   fetchPortalFunktionen,
   logAktivitaet, AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
-import { fetchKinderVollstaendigFuerElternteil } from "../../domains/members/elternService.ts";
-import type { ElternkontaktMitLink } from "../../domains/members/elternService.ts";
 import { MemberHero } from "./MemberHero.tsx";
 import { MemberTabBar } from "./MemberTabBar.tsx";
 import { ElternTab } from "./tabs/ElternTab.tsx";
@@ -77,6 +75,10 @@ interface MemberDetailProps {
   onAustritt?: ((mitgliedId: number) => void) | null;
   /** Öffnet „Mitglied werden" für eine Person ohne Mitgliedschaft. */
   onMitgliedWerden?: ((personId: string) => void) | null;
+  /** Öffnet die Personenseite einer ANDEREN Person — heute nur der Weg vom
+      Kind zum Elternteil. Der Nachschlag in `personen` liegt beim Aufrufer,
+      damit es nur einen Ort gibt, an dem eine Person geladen wird. */
+  onOeffnePerson?: ((personId: string, name: string) => void) | null;
 }
 
 function MemberDetail({
@@ -86,7 +88,7 @@ function MemberDetail({
   kannVerwalten, onReload, onUpdatePortalZugang = null,
   setSelectedMember, selectedMember,
   reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft = null,
-  vereinId = null, onAustritt = null, onMitgliedWerden = null,
+  vereinId = null, onAustritt = null, onMitgliedWerden = null, onOeffnePerson = null,
 }: MemberDetailProps) {
   /* Die beiden Identitäten, einmal ausgelesen. Ab hier steht im Code, welche
      gemeint ist — `raw.id` sagte das nicht. */
@@ -145,14 +147,12 @@ function MemberDetail({
   const [benutzer, setBenutzer] = useState<PortalBenutzer | null>(null);
   const [portalMsg, setPortalMsg] = useState<StatusMeldung | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [linkEmail, setLinkEmail] = useState(raw.email || "");
   const [notizenCount, setNotizenCount] = useState<number | null>(null);
   const [elternLoaded, setElternLoaded] = useState<Elternkontakt[] | null>(null);
   /* Kein Rueckfall mehr auf `raw.eltern`: die Json-Altspalte wird von
      loadDbMitglieder() nie befuellt, der Zweig war immer leer. Geladen
      wird ausschliesslich ueber fetchElternkontakte() weiter unten. */
   const eltern = elternLoaded ?? [];
-  const [kinderFuerPruefung, setKinderFuerPruefung] = useState<Mitglied[]>([]);
   const [teamDetails, setTeamDetails] = useState<KaderDetail[] | null>(null);
   const [allTeams, setAllTeams] = useState<TeamOption>([]);
   const [assignFunktionen, setAssignFunktionen] = useState<FunktionMitGruppe[]>([]);
@@ -177,13 +177,6 @@ function MemberDetail({
     }
   }, [tab, mitgliedId]);
 
-  /* Kinder für Datenprüfung (Eltern-Sicht) */
-  useEffect(() => {
-    if (tab === "datenpruefung" && role === "eltern" && sb && eltern?.[0]?.id && kinderFuerPruefung.length === 0) {
-      fetchKinderVollstaendigFuerElternteil(sb, eltern[0].id).then(data => setKinderFuerPruefung(data as unknown as Mitglied[]));
-    }
-  }, [tab, role, eltern]);
-
   useEffect(() => {
     if (sb && mitgliedId != null) {
       fetchKaderFuerMitglied(sb, mitgliedId).then(data => setTeamDetails(data));
@@ -200,9 +193,16 @@ function MemberDetail({
   /* ── Aktionen ── */
   /* ── Portal-Zugang Logik ─────────────────────────────────────
      ableitRolle: leitet Portalrolle aus Kaderrolle/Mitgliedtyp ab
-     handleLink:  verknüpft Mitglied mit bestehendem Benutzer via E-Mail
-     handleUnlink: deaktiviert Portalzugang (Benutzer bleibt erhalten)
-     handleReactivate: reaktiviert deaktivierten Portalzugang
+     handleUnlink: schaltet den Zugang ab (benutzer.aktiv = false)
+     handleReactivate: schaltet ihn wieder an
+
+     ⚠ Hier stand bis zum 21.08.2026 ein drittes, `handleLink` — „verknuepft
+     Mitglied mit bestehendem Benutzer via E-Mail". Es wurde NIE gerendert:
+     PortalTab zeigt im Fall „kein Zugang" nur den Hinweis, dass die Person
+     sich selbst registriert und die Verknuepfung dabei automatisch entsteht
+     (handle_new_user). Die Funktion rief `ableitUndSaveRolle(sb, mitgliedId!,
+     …)` — mit einem Ausrufezeichen auf einem Wert, der bei einer Person ohne
+     Mitgliedschaft null ist. Ein toter Zweig mit einer Luege darin.
   ── */
   async function ableitRolle() {
     if (!sb || mitgliedId == null) return;
@@ -216,26 +216,15 @@ function MemberDetail({
     if (onReload) onReload();
   }
 
-  async function handleLink() {
-    if (!sb || !linkEmail) return;
-    setPortalLoading(true); setPortalMsg(null);
-    const existing = await fetchBenutzerByEmail(sb, linkEmail);
-    if (existing) {
-      const neueRolle = await ableitUndSaveRolle(sb, mitgliedId!, dbKaderRollen, raw.mitgliedtyp, raw.funktionen ?? []);
-      await portalZugangAktivieren(sb, mitgliedId, existing.id, neueRolle);
-      setPortalMsg({ ok: true, text: `Verknüpft ✓ — Rolle: ${neueRolle}` });
-      if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
-      else if (onReload) onReload();
-    } else {
-      setPortalMsg({ ok: false, text: "Kein Benutzer mit dieser E-Mail gefunden." });
-    }
-    setPortalLoading(false);
-  }
-
   async function handleUnlink() {
     if (!sb) return;
     setPortalLoading(true);
     await portalZugangDeaktivieren(sb, personId);
+    /* ⚠ Den Zustand mitfuehren. Der Tab laedt `benutzer` nur bei einem Wechsel
+       von Tab oder Person nach ([tab, personId]) — ohne das bliebe das Abzeichen
+       auf „Aktiv" stehen, waehrend darunter „Zugang deaktiviert" gemeldet wird.
+       Solange das Abschalten nichts bewirkte, fiel der Widerspruch nicht auf. */
+    setBenutzer((prev: PortalBenutzer | null) => prev ? { ...prev, aktiv: false } : prev);
     if (vereinId && mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.PORTAL_DEAKTIVIERT, "Portal-Zugang deaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang deaktiviert" });
     setPortalLoading(false);
@@ -246,7 +235,10 @@ function MemberDetail({
   async function handleReactivate() {
     if (!sb || !benutzer) return;
     setPortalLoading(true);
-    await portalZugangAktivieren(sb, mitgliedId, benutzer.id, benutzer.role);
+    /* Ueber die PERSON und nur `aktiv`. Die Rolle wurde beim Abschalten nicht
+       angefasst, also gibt es auch nichts wiederherzustellen. */
+    await portalZugangReaktivieren(sb, personId);
+    setBenutzer((prev: PortalBenutzer | null) => prev ? { ...prev, aktiv: true } : prev);
     if (vereinId && mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.PORTAL_REAKTIVIERT, "Portal-Zugang reaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang reaktiviert ✓" });
     setPortalLoading(false);
@@ -317,11 +309,11 @@ function MemberDetail({
       {sichtbarerTab === "eltern" && (
         <ElternTab
           mitgliedId={mitgliedId!}
-          eltern={eltern} canEdit={canEdit} raw={raw} sb={sb}
+          eltern={eltern} canEdit={canEdit} sb={sb}
           onReload={() => { if (reloadMember && mitgliedId != null) reloadMember(mitgliedId); if (onReload) onReload(); }}
           setElternLoaded={setElternLoaded}
           vereinId={vereinId} account={account}
-          pflichtTypen={(dbMitgliedtypen||[]).filter(t=>t.hauptkontakt_pflicht).map(t=>t.name)}
+          onOeffnePerson={onOeffnePerson}
         />
       )}
 
@@ -348,17 +340,6 @@ function MemberDetail({
           pflichtfelder={[...IMMER_PFLICHT_KEYS, ...pflichtfelderAus(konfig)]}
           portalMsg={portalMsg} setPortalMsg={setPortalMsg}
           onReload={onReload}
-          elternkontakt={role === "eltern" ? (eltern?.[0]?.id ? {
-            id: eltern[0].id,
-            vorname: eltern[0].vorname,
-            nachname: eltern[0].nachname,
-            name: eltern[0].name,
-            email: eltern[0].email,
-            telefon: eltern[0].telefon,
-            beziehung: eltern[0].beziehung,
-            profil_geprueft_at: (eltern[0] as ElternkontaktMitLink & { profil_geprueft_at?: string | null }).profil_geprueft_at ?? null,
-          } : null) : null}
-          kinder={role === "eltern" ? kinderFuerPruefung : []}
         />
       )}
 

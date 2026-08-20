@@ -21,7 +21,7 @@ vi.mock("../../../domains/members/memberService.ts", () => ({
 vi.mock("../../../domains/person/personUtils.ts", () => ({ vollname: () => "X" }));
 vi.mock("../../../theme.ts", () => ({ Btn: () => null }));
 vi.mock("../../../icons.tsx", () => ({ TI: () => null }));
-vi.mock("../ElternkontaktModal.tsx", () => ({
+vi.mock("../ElternFelder.tsx", () => ({
   ElternFelder: () => null,
   validateElternkontakt: () => null,
 }));

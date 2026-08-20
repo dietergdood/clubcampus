@@ -11,7 +11,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb, pgError } from "./_mockSb.ts";
-import { updateKindDurchElternteil, elternDuerfen, ELTERN_DUERFEN } from "../kindService.ts";
+import { updateKindDurchElternteil, updateEigenePerson, elternDuerfen, ELTERN_DUERFEN } from "../kindService.ts";
 import { PERSON_FELDER } from "../../person/personService.ts";
 
 afterEach(() => vi.restoreAllMocks());
@@ -119,5 +119,57 @@ describe("⚠ ein fehlgeschlagener Schreibvorgang meldet KEINEN Erfolg", () => {
     expect(erg.abgewiesen).toEqual(["funktionen"]);
     expect(sb.opsOn("personen")).toHaveLength(0);
     expect(spy).toHaveBeenCalled();
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Die eigene Person — dieselbe Allowlist (21.08.2026)
+
+   Was jemand an sich selbst pflegen darf, ist dasselbe wie das,
+   was ein Elternteil am Kind pflegt. Den Unterschied macht nicht
+   dieser Code, sondern die Policy: `personen_update_self` trifft
+   die eigene Zeile, `personen_update_kind` die des Kindes.
+
+   Zwei Funktionen mit einem Rumpf, damit an der Aufrufstelle
+   steht, WESSEN Zeile gemeint ist.
+   ═══════════════════════════════════════════════════════════════ */
+describe("updateEigenePerson", () => {
+  it("schreibt dieselben Felder und sperrt dieselben", async () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const sb = makeSb({ "personen.select": { data: { id: "p-1" } } });
+    const erg = await updateEigenePerson(sb as never, "p-1", {
+      telefon: "079 000 00 00", email: "neu@example.ch", funktionen: ["Kassier"],
+    });
+    expect(erg.ok).toBe(true);
+    expect(erg.abgewiesen.sort()).toEqual(["email", "funktionen"]);
+    const payload = sb.find("personen", "update")!.payload;
+    expect(payload.telefon).toBe("079 000 00 00");
+    expect(payload).not.toHaveProperty("email");
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it("`bestaetigen` setzt profil_geprueft_at — das Formular kann es nicht", async () => {
+    /* Es steht NICHT in der Allowlist: sonst waere die Bestaetigung ein Feld
+       unter Feldern, und wer das Formular um eine Zeile erweitert, koennte
+       sie versehentlich mitschreiben. */
+    const sb = makeSb({ "personen.select": { data: { id: "p-1" } } });
+    await updateEigenePerson(sb as never, "p-1", { telefon: "079" }, true);
+    expect(sb.find("personen", "update")!.payload).toHaveProperty("profil_geprueft_at");
+
+    const sb2 = makeSb({ "personen.select": { data: { id: "p-1" } } });
+    await updateEigenePerson(sb2 as never, "p-1", { profil_geprueft_at: "2026-01-01" });
+    expect(sb2.find("personen", "update")).toBeUndefined();
+  });
+
+  it("⚠ meldet einen anderen Ort als der Kind-Pfad", async () => {
+    /* Die Meldung ist das Einzige, was der Betroffene je zu sehen bekommt.
+       „Verknuepfung zum Kind" waere fuer die eigene Zeile die falsche
+       Auskunft und schickte ihn an einen Ort, den es hier nicht gibt —
+       derselbe Fehler wie der „Kontakt-Tab" im Portal-Tab. */
+    const sb = makeSb({ "personen.select": { data: null } });
+    const erg = await updateEigenePerson(sb as never, "fremd", { telefon: "079" });
+    expect(erg.ok).toBe(false);
+    expect(erg.fehler).toContain("deinem Konto");
+    expect(erg.fehler).not.toContain("Kind");
   });
 });

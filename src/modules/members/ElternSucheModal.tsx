@@ -8,8 +8,8 @@ import { TI } from "../../icons.tsx";
 import { sucheElternkontakte, linkKind, insertElternkontakt, logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
 import { vollname } from "../../domains/person/personUtils.ts";
 import { elternAvColor } from "./tabs/ElternTab.tsx";
-import { ElternFelder, validateElternkontakt } from "./ElternkontaktModal.tsx";
-import type { ElternFormular } from "./ElternkontaktModal.tsx";
+import { ElternFelder, validateElternkontakt } from "./ElternFelder.tsx";
+import type { ElternFormular } from "./ElternFelder.tsx";
 import type { Sb , PersonZeile } from "../../types.ts";
 
 type ElternTreffer = Awaited<ReturnType<typeof sucheElternkontakte>>[number];

@@ -415,26 +415,59 @@ Behoben beim Abschluss der Modul-Migration (Sport-Module):
 
 ## Offene Punkte aus Session 23 (05.08.2026)
 
-### Personenseite statt Modal — löst ZWEI Modale ab
+### ✅ Personenseite statt Modal — beide Modale gefallen am 21.08.2026
 
-Elternteil und Supporter werden heute je in einem Modal gezeigt. Das reicht für beide nicht: An einem Elternteil hängen Kinder, **Helfereinsätze**, Portal-Zugang und Verlauf; an einem Supporter dasselbe ohne Kinder. Ein Modal kann das nicht tragen.
+Auftrag: `docs/auftrag_personenseite.md`. Schritte 1–4 geliefert.
 
-**Betroffen sind `ElternkontaktModal` UND `SupporterModal`.** Letzteres ist am 20.08.2026 bewusst schlank gebaut worden — das Wenigste, was funktioniert — und liegt schon unter `src/shared/person/`, damit es als Ganzes umziehen kann statt umgeschrieben zu werden. Es ist kein Vorgriff auf die Seite, sondern ein Platzhalter mit Ablaufdatum.
+Mitglied, Elternteil und Supporter sind **dieselbe Person**, also dieselbe
+Seite. `MemberDetail` trägt seit Schritt 1 auch eine Person ohne
+Mitgliedschaft; **den Unterschied macht genau eine Zeile** — welche Achse der
+Feldkonfiguration gilt:
 
-Der Personen-Umbau macht die Lösung erst möglich: Mitglied, Elternteil und Supporter sind **dieselbe Person** — eine Seite im Stil des Mitglied-Profils (Hero, Tabs, `cc-section-title`-Karten) kann alle drei zeigen, der Unterschied liegt nur darin, welche Tabs erscheinen.
+```ts
+getFeldkonfig(mitgliedId == null ? OHNE_MITGLIEDSCHAFT : fuerMitgliedtyp(raw.mitgliedtyp), feldkonfig)
+```
 
-> **Ein Tab hat heute keinen Platz, an dem er hängen könnte: der Verlauf.**
-> `mitglieder_aenderungen` und `mitglieder_aktivitaeten` haben beide
-> `mitglied_id bigint NOT NULL` — der Verlauf gehört der MITGLIEDSCHAFT, nicht
-> der Person. Ein Supporter hat deshalb strukturell keinen, und
-> `SupporterModal` sagt das in einer Karte, statt die Sektion wegzulassen.
+Alles Weitere folgt daraus. Kein `if (istSupporter)` auf der Seite: wo eine
+solche Abfrage nötig schiene, kennt die Konfiguration den Fall noch nicht.
+
+| war | ist |
+|---|---|
+| `SupporterModal` (190 Z.) | Personenseite, Achse `ohne_mitgliedschaft` |
+| `ElternkontaktModal` (265 Z.) | dieselbe |
+| `ElternPortalSection` (63 Z.) | Portal-Tab |
+| `ElternKinderSektion` (215 Z.) + `KindSucheModal` | **ersatzlos** — siehe unten |
+| `ElternFelder` / `validateElternkontakt` | eigene Datei `ElternFelder.tsx` (sie ERFASSEN, das Modal ZEIGTE) |
+
+**Was ersatzlos weggefallen ist**, vollständig: Kinderliste am Elternteil,
+Hauptkontakt-Stern von dort, „Kind hinzufügen" von der Elternseite aus,
+„Entfernen" pro Elternteil. Die ersten drei gibt es weiter **vom Kind aus**
+(`ElternTab`), das vierte als Sammelaktion in der Elternliste. Keine Fähigkeit
+fällt weg, nur die Richtung.
+
+**Offen: der Kinder-Tab.** Dort gehören Beziehung und Hauptkontakt-Stern hin
+— beide hängen an `eltern_kinder`, nicht an der Person. Der fertige Inhalt
+dafür liegt im Git-Verlauf: `ElternKinderSektion.tsx`, `KindSucheModal.tsx`
+und `elternService.sucheKinder()`, gelöscht im Commit zu Schritt 4
+(21.08.2026). Nicht als tote Datei stehengelassen — eine Datei, die niemand
+rendert, läuft still am Schema vorbei.
+
+> **Der Verlauf hat weiterhin keinen Platz an einer Person.**
+> `mitglieder_aenderungen` und `mitglieder_aktivitaeten` führen beide
+> `mitglied_id bigint NOT NULL` — der Verlauf gehört der MITGLIEDSCHAFT.
+> Deshalb trägt `tab_verlauf` ein `nur_mitgliedschaft` und ist auf der Achse
+> `ohne_mitgliedschaft` strukturell `aus`; die Karte „gibt es noch nicht" aus
+> dem Supporter-Modal ist mit ihm gefallen.
 >
-> Mit der Personenseite wird daraus eine echte Frage: Bezugspunkt auf
-> `person_id` umstellen (dann überlebt der Verlauf einen Austritt und die
-> Rückkehr), oder beides nebeneinander führen. Das ist eine Migration und
-> gehört in den Auftrag, nicht in einen Nebensatz.
+> Die Frage bleibt offen: Bezugspunkt auf `person_id` umstellen (dann
+> überlebt der Verlauf einen Austritt und die Rückkehr), oder beides
+> nebeneinander führen. Das ist eine Migration und gehört in einen eigenen
+> Auftrag.
 
-Voraussetzung laut `ARCHITECTURE.md`: `MemberHero` und `MemberDetail` nach `src/shared/person/` verschieben.
+Ebenfalls offen: `MemberHero` und `MemberDetail` liegen weiterhin unter
+`modules/members/`. Der Umzug nach `src/shared/person/` (laut
+`ARCHITECTURE.md` die Voraussetzung) ist **nachträglich** zu machen — die
+Seite trägt beide Fälle bereits.
 
 ### Supporter-Liste überarbeiten
 
@@ -554,6 +587,20 @@ dafür beide Matrizen. Nur wertet das niemand aus:
   `profil_geprueft_at` bedingungslos; der Knopf ist nur während des Speicherns
   gesperrt.
 
+  > **Stand 21.08.2026:** `DatenpruefungEltern` rendert ihre Felder seit dem
+  > Umbau aus der Konfiguration und **zeigt die Pflicht als Sternchen an** —
+  > aufgehalten wird trotzdem niemand. Die Anzeige ist damit ehrlicher als
+  > vorher, die Prüfung weiterhin keine.
+
+- **⚠ Die Aufforderung erreichte kein einziges Elternteil** — behoben am
+  21.08.2026. In `clubcampus.tsx` stand `if (!meinMitglied) return null;`
+  **vor** dem Eltern-Zweig des Pflicht-Overlays. 393 der 394 Elternteile haben
+  keine Mitgliedschaft, `meinMitglied` blieb null, und der Riegel fiel, bevor
+  der Eltern-Fall geprüft wurde.
+  **Gemeldet hat es nie jemand, weil 0 von 394 Elternteilen ein Konto haben** —
+  die Maske hatte noch nie einen Betrachter. Ein Ausfall ohne Zeugen bleibt
+  ein Ausfall.
+
 **Zwei Folgen:**
 
 1. „Ausstehend" heisst **„noch nie bestätigt"**, nicht „unvollständig". Wer die
@@ -610,6 +657,14 @@ Anzuschliessen ist beides — `getProfilFehlend()` als Quelle der fehlenden
 Felder und `markiereProfilGeprueft()` statt der beiden Direktschreiber in
 `DatenpruefungMitglied` und `DatenpruefungEltern`, die `profil_geprueft_at`
 heute bedingungslos setzen.
+
+> **Für den Eltern-Zweig ist der Direktschreiber seit dem 21.08.2026 ein
+> Parameter.** `updateEigenePerson(…, bestaetigen)` und
+> `updateKindDurchElternteil(…, bestaetigen)` setzen `profil_geprueft_at`
+> über ein eigenes Argument; im Feldobjekt steht es **nicht**, und die
+> Allowlist würde es abweisen. Wer das Formular um eine Zeile erweitert, kann
+> die Bestätigung also nicht mehr versehentlich mitschreiben. Bedingungslos
+> ist sie trotzdem — an der Prüfung ändert das nichts, nur am Weg.
 
 ### ✅ Vier Mitgliedtypen verlangten alle zehn Felder — gelockert am 19.08.2026
 
@@ -714,6 +769,46 @@ Wirkung. Steht hier nur der Vollständigkeit halber.
 Beides ist ein kleiner Umbau: Komponente nach oben ziehen, die gelesenen
 Werte als Props durchreichen. Nicht dringend, aber billig — und `RolleField`
 hat gezeigt, dass dabei ein übersprungener Test zurückkommen kann.
+
+### ⚠ Der Portal-Zugang wird an drei Spalten gemessen — Rest von F2
+
+Befund vom 21.08.2026, beim Umbau der Personenseite. **Die Hälfte ist
+behoben, die andere steht.**
+
+Gesperrt wird der Login allein durch **`benutzer.aktiv`** — `useDbUser` meldet
+ab, wenn es `false` ist. Alles andere ist Verknüpfung, keine Sperre.
+
+**Behoben:** `portalZugangDeaktivieren()` setzte `mitglied_id = null` und
+filterte über `person_id`. Bei einer Person **ohne** Mitgliedschaft stand dort
+schon null — geschrieben wurde null über null, gelesen wird über `person_id`,
+und der Tab meldete „Zugang deaktiviert" und zeigte danach unverändert
+„Aktiv". Und beim Mitglied sperrte es den Login gar nicht. Beide Funktionen
+schalten jetzt `aktiv` und heissen `portalZugangDeaktivieren` /
+`portalZugangReaktivieren`; die Verknüpfung bleibt, wo sie ist. Ein Konto von
+seiner Person zu **trennen** wäre eine andere Aktion, und es gibt heute keine,
+die sie verlangt. *(Entschieden am 21.08.2026, Didi.)*
+
+**Offen bleibt die Anzeige.** `useAppData.loadDbMitglieder()` baut
+`hat_benutzer` und `benutzer_deaktiviert` über **`mitglied_id`** auf:
+
+```js
+(benutzerRes.data || []).forEach(b => {
+  if (b.mitglied_id) benutzerMap[b.mitglied_id] = { … };   // ← ohne Mitgliedschaft: nie
+});
+```
+
+Daraus folgen zwei Dinge:
+
+- Eine Person ohne Mitgliedschaft steht in dieser Liste ohnehin nicht; ihr
+  Portal-Status kommt aus `fetchSupporter`/`fetchAlleElternkontakte`, die über
+  `person_id` lesen. Zwei Wege zu derselben Aussage — dasselbe Muster wie
+  `hat_portal_zugang` gegen den Join (in Etappe 6c aufgelöst).
+- **`onUpdatePortalZugang(mitgliedId, aktiv)` erreicht sie nicht.** Es ist der
+  einzige Aufrufer, der `aktiv` beim Archivieren und Reaktivieren mitführt,
+  und seine Signatur beginnt mit einer Mitglieds-Id.
+
+Zusammenlegen, sobald jemand die Liste anfasst: eine Aussage, ein Ort — und
+das ist `benutzer.person_id`.
 
 ### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
 
@@ -919,9 +1014,10 @@ unter den Gönnern.
 
 **Was noch offen ist (Teil B):**
 
-- Das **schlanke Supporter-Modal**. Bis dahin ist die Zeile bewusst **nicht
-  anklickbar**: `MemberDetail` arbeitet mit einer Mitgliedschaft, die es hier
-  nicht gibt.
+- ~~Das **schlanke Supporter-Modal**.~~ ✅ Gebaut am 20.08.2026 und am
+  21.08.2026 wieder **gefallen**: `MemberDetail` trägt die Person ohne
+  Mitgliedschaft jetzt selbst. Es war als Platzhalter mit Ablaufdatum
+  angelegt, und das Datum ist eingetreten.
 - **„Mitglied werden"** und der Austritt in die Gegenrichtung, beide mit
   **Rückfrage** — Supporter, Ehrenmitglied, Aktivmitglied oder Archiv sind
   jedes Mal mögliche Antworten. Dieselbe Rückfrage beim Entkoppeln des letzten

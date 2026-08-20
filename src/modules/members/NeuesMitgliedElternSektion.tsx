@@ -27,8 +27,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Av, Btn } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { ElternFelder, validateElternkontakt } from "./ElternkontaktModal.tsx";
-import type { ElternFormular } from "./ElternkontaktModal.tsx";
+import { ElternFelder, validateElternkontakt } from "./ElternFelder.tsx";
+import type { ElternFormular } from "./ElternFelder.tsx";
 import {
   insertElternkontakt, linkKind, setHauptkontakt, sucheElternkontakte,
 } from "../../domains/members/elternService.ts";

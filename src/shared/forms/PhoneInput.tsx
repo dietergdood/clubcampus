@@ -156,9 +156,13 @@ interface PhoneInputProps {
   placeholder?: string;
   showHint?: boolean;
   className?: string;
+  /** Damit ein <label htmlFor> die Nummer treffen kann. Ohne das ist die
+      Beschriftung nur Text daneben: kein Fokus beim Klick, kein Name fuer
+      den Screenreader. */
+  id?: string;
 }
 
-export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHint=true,className=""}: PhoneInputProps){
+export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHint=true,className="",id}: PhoneInputProps){
   const [country,setCountry]=useState(()=>{
     if(value&&value.startsWith("+")){
       const m=PHONE_COUNTRIES.find(c=>value.startsWith(c.dial));
@@ -227,6 +231,7 @@ export function PhoneInput({value="",onChange,placeholder="79 123 45 67",showHin
           <TI n={ddOpen?"chevron-up":"chevron-down"} size={12} className="cc-phone-chev"/>
         </button>
         <input
+          id={id}
           type="tel"
           className="cc-phone-input"
           value={num}

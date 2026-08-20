@@ -73,11 +73,53 @@ export interface KindSchreibErgebnis {
  * `bestaetigen` — sonst wäre es ein Feld unter Feldern, und wer das Formular
  * um eine Zeile erweitert, könnte die Bestätigung versehentlich mitschreiben.
  */
-export async function updateKindDurchElternteil(
+export function updateKindDurchElternteil(
   sb: SbClient,
   personId: string,
   fields: Zeile,
   bestaetigen = false,
+): Promise<KindSchreibErgebnis> {
+  return schreibeMitAllowlist(sb, personId, fields, bestaetigen, "updateKindDurchElternteil",
+    "Die Änderung konnte nicht bestätigt werden — fehlt die Verknüpfung zum Kind?");
+}
+
+/**
+ * Die EIGENE Person durch den angemeldeten Benutzer schreiben.
+ *
+ * ⚠ DIESELBE ALLOWLIST, und das ist die Aussage: was jemand an sich selbst
+ * pflegen darf, ist dasselbe wie das, was ein Elternteil am Kind pflegen darf
+ * — Name, Adresse, Geburtsdatum, AHV-Nummer. Die E-Mail bleibt aussen vor,
+ * weil sie der Login-Name ist; `funktionen` sind Ämter, die niemand sich
+ * selbst gibt.
+ *
+ * Den Unterschied macht nicht dieser Code, sondern die POLICY: `personen_
+ * update_self` trifft die eigene Zeile, `personen_update_kind` die des
+ * Kindes. Zwei Funktionen mit einem Rumpf, damit an der Aufrufstelle steht,
+ * WESSEN Zeile gemeint ist — eine Verwechslung wäre sonst unsichtbar.
+ *
+ * Entschieden am 21.08.2026 (Didi).
+ */
+export function updateEigenePerson(
+  sb: SbClient,
+  personId: string,
+  fields: Zeile,
+  bestaetigen = false,
+): Promise<KindSchreibErgebnis> {
+  return schreibeMitAllowlist(sb, personId, fields, bestaetigen, "updateEigenePerson",
+    "Die Änderung konnte nicht bestätigt werden — gehört diese Person zu deinem Konto?");
+}
+
+async function schreibeMitAllowlist(
+  sb: SbClient,
+  personId: string,
+  fields: Zeile,
+  bestaetigen: boolean,
+  wer: string,
+  /* ⚠ Die Meldung gehoert zum Aufrufer, nicht zur Mechanik. Sie ist das
+     Einzige, was der Betroffene je zu sehen bekommt — „fehlt die Verknuepfung
+     zum Kind?" sagt ihm, wo er suchen soll; ein gemeinsamer Satz ueber beide
+     Faelle saegte genau die Auskunft ab. */
+  nichtGetroffen: string,
 ): Promise<KindSchreibErgebnis> {
   const erlaubt: Zeile = {};
   const abgewiesen: string[] = [];
@@ -92,7 +134,7 @@ export async function updateKindDurchElternteil(
        soll es in der Konsole sehen und nicht daran, dass der Wert nie
        ankommt. */
     console.warn(
-      `updateKindDurchElternteil: ${abgewiesen.join(", ")} sind für Eltern gesperrt und wurden nicht geschrieben.`);
+      `${wer}: ${abgewiesen.join(", ")} sind in der Selbstbedienung gesperrt und wurden nicht geschrieben.`);
   }
 
   if (bestaetigen) erlaubt.profil_geprueft_at = new Date().toISOString();
@@ -111,7 +153,7 @@ export async function updateKindDurchElternteil(
      ohne das stünde wieder eine Erfolgsmeldung ohne Deckung da, und genau
      davon hatte diese Kette schon fünf. */
   if (error) {
-    console.error("updateKindDurchElternteil error:", error);
+    console.error(`${wer} error:`, error);
     return { ok: false, abgewiesen, fehler: error.message };
   }
 
@@ -120,7 +162,7 @@ export async function updateKindDurchElternteil(
   if (leseFehler || !probe) {
     return {
       ok: false, abgewiesen,
-      fehler: "Die Änderung konnte nicht bestätigt werden — fehlt die Verknüpfung zum Kind?",
+      fehler: nichtGetroffen,
     };
   }
 

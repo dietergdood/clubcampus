@@ -5,12 +5,10 @@
 import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, AM } from "../../../constants.ts";
-import { updateMitglied } from "../../../domains/members/memberService.ts";
 import { updatePerson } from "../../../domains/person/personService.ts";
 import { formatDatum } from "../../../domains/person/personUtils.ts";
 import { DatenpruefungMitglied } from "./DatenpruefungMitglied.tsx";
-import { DatenpruefungEltern } from "./DatenpruefungEltern.tsx";
-import type { Mitglied, Sb, PersonZeile } from "../../../types.ts";
+import type { Sb, PersonZeile } from "../../../types.ts";
 
 export interface StatusMeldung {
   ok: boolean;
@@ -28,34 +26,26 @@ interface DatenpruefungTabProps {
       Ohne sie verhält sich die Maske wie vor dem 20.08.2026 und verlangt
       nichts (Ladezustand). */
   pflichtfelder?: string[];
-  /* Eltern-Sicht: eigener Elternkontakt + verknüpfte Kinder */
-  elternkontakt?: {
-    id: string;
-    vorname?: string | null;
-    nachname?: string | null;
-    name?: string | null;
-    email?: string | null;
-    telefon?: string | null;
-    beziehung?: string | null;
-    profil_geprueft_at?: string | null;
-  } | null;
-  kinder?: Mitglied[];
 }
 
-function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, pflichtfelder = [], elternkontakt, kinder }: DatenpruefungTabProps) {
+function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, pflichtfelder = [] }: DatenpruefungTabProps) {
 
-  /* Eltern Self-Service */
-  if (role === "eltern" && elternkontakt) {
-    return (
-      <DatenpruefungEltern
-        raw={raw} sb={sb}
-        elternkontakt={elternkontakt}
-        kinder={kinder || []}
-        setPortalMsg={setPortalMsg}
-        onReload={onReload}
-      />
-    );
-  }
+  /* ⚠ HIER STAND EIN ELTERN-ZWEIG, und er war zweifach falsch.
+
+     Unerreichbar: die Rolle `eltern` hat in NAV_BY_ROLE keinen Eintrag
+     `members` — ein Elternteil kommt gar nicht auf eine Mitgliederseite.
+     Die Datenpruefung des Elternteils laeuft ueber „Profil / Daten pruefen"
+     (clubcampus.tsx, case "profile") und ueber das Pflicht-Overlay.
+
+     Und mit dem falschen Datensatz: als „meine Kontaktdaten" reichte
+     MemberDetail `eltern[0]` durch — den ERSTEN Elternkontakt des gerade
+     angezeigten Kindes. Bei zwei Elternteilen waere das die Zeile des
+     anderen gewesen. Zusammengebaut aus sieben von Hand aufgezaehlten
+     Feldern; Adresse, Geburtsdatum und AHV-Nummer fehlten darin, waeren im
+     neuen, konfigurationsgesteuerten Formular aber erschienen — leer, und
+     von fehlenden Daten nicht zu unterscheiden.
+
+     Entfernt am 21.08.2026. `raw` bleibt: es ist der Mitglieds-Zweig. */
 
   /* Mitglied Self-Service (Spieler, Trainer, Funktionär etc.) */
   if (role === "spieler" || role === "trainer" || role === "funktionaer" || role === "funktionär") {

@@ -10,7 +10,7 @@ import {
   deleteMitglied, archiviereMitglied, reaktiviereMitglied,
   upsertKader, updateKader, deaktiviereKader,
   updateBenutzer, insertNotiz, updateNotiz, deleteNotiz, deleteAnsicht,
-  portalZugangAktivieren, portalZugangDeaktivieren, updateMitglied,
+  portalZugangReaktivieren, portalZugangDeaktivieren, updateMitglied,
 } from "../memberService.ts";
 
 let errSpy: ReturnType<typeof vi.spyOn>;
@@ -70,27 +70,33 @@ describe("memberService — Payload-Details", () => {
   });
 });
 
-describe("portalZugangAktivieren", () => {
-  it("fasst `mitglieder` nicht mehr an", async () => {
-    /* Der Zugang haengt seit Etappe 6c allein an benutzer.mitglied_id; das
-       Kennzeichen mitglieder.hat_portal_zugang war eine Kopie derselben
-       Aussage und konnte veralten. */
+describe("portalZugangReaktivieren", () => {
+  it("fasst `mitglieder` nicht an", async () => {
+    /* Der Zugang haengt seit Etappe 6c allein am Konto; das Kennzeichen
+       mitglieder.hat_portal_zugang war eine Kopie derselben Aussage. */
     const sb = makeSb();
-    await portalZugangAktivieren(sb as any, 1, "u1", "trainer");
+    await portalZugangReaktivieren(sb as any, "p-1");
     expect(sb.opsOn("mitglieder")).toHaveLength(0);
   });
 
   it("gibt den Fehler des Updates zurück", async () => {
     const e2 = pgError("benutzer");
     const sb = makeSb({ "benutzer.update": { error: e2 } });
-    expect(await portalZugangAktivieren(sb as any, 1, "u1", "trainer")).toBe(e2);
+    expect(await portalZugangReaktivieren(sb as any, "p-1")).toBe(e2);
   });
 
-  it("verknüpft Konto und Mitglied und setzt die Rolle", async () => {
+  it("schaltet `aktiv` an — und fasst weder Verknüpfung noch Rolle an", async () => {
     const sb = makeSb();
-    const res = await portalZugangAktivieren(sb as any, 5, "u1", "trainer");
+    const res = await portalZugangReaktivieren(sb as any, "p-5");
     expect(res).toBeNull();
-    expect(sb.find("benutzer", "update")!.payload).toEqual({ mitglied_id: 5, role: "trainer" });
+    /* toEqual, nicht toMatchObject: die Gegenprobe ist, dass NICHTS SONST
+       geschrieben wird. Das Abschalten hat weder `mitglied_id` noch `role`
+       angefasst, also gibt es hier nichts wiederherzustellen — ein
+       mitgeschriebenes `role` waere ein Wert aus der Oberflaeche, der eine
+       inzwischen abgeleitete Rolle ueberschreibt. */
+    expect(sb.find("benutzer", "update")!.payload).toEqual({ aktiv: true });
+    const eq = sb.find("benutzer", "update")!.filters.find(f => f.method === "eq");
+    expect(eq!.args).toEqual(["person_id", "p-5"]);
   });
 });
 
@@ -102,15 +108,19 @@ describe("portalZugangDeaktivieren", () => {
     expect(sb.opsOn("mitglieder")).toHaveLength(0);
   });
 
-  it("löst die Verknüpfung am Konto", async () => {
+  it("⚠ schaltet `aktiv` ab, statt die Verknüpfung zu lösen", async () => {
     const sb = makeSb();
     const res = await portalZugangDeaktivieren(sb as any, "p-5");
     expect(res).toBeNull();
-    expect(sb.find("benutzer", "update")!.payload).toEqual({ mitglied_id: null });
+    /* Bis zum 21.08.2026 stand hier `{ mitglied_id: null }`. Bei einer Person
+       OHNE Mitgliedschaft war das null ueber null — der Knopf meldete Erfolg
+       und aenderte nichts, weil der Status ueber `person_id` gelesen wird.
+       Und beim Mitglied sperrte es den Login nicht: das tut allein `aktiv`
+       (useDbUser). */
+    expect(sb.find("benutzer", "update")!.payload).toEqual({ aktiv: false });
+    expect(sb.find("benutzer", "update")!.payload).not.toHaveProperty("mitglied_id");
     const eq = sb.find("benutzer", "update")!.filters.find(f => f.method === "eq");
-    /* ⚠ Seit dem 21.08.2026 ueber person_id. Ueber `mitglied_id` traf die
-       Abfrage beim Supporter NICHTS: dort steht seit dem Rueckbau vom 20.08.
-       null, und der Portal-Tab zeigte „kein Zugang" — ohne Fehler. */
+    /* Ueber person_id: `mitglied_id` traefe beim Supporter nichts. */
     expect(eq!.args).toEqual(["person_id", "p-5"]);
   });
 });

@@ -14,11 +14,10 @@ import { render, act, waitFor, cleanup } from '@testing-library/react';
    Form, die es nirgends gibt. */
 import { zielAusMitglied, zielAusPerson } from '../../../shared/person/personZiel.ts';
 
-const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, heroName: null, confirmMock: vi.fn() }));
+const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, heroName: null, confirmMock: vi.fn(), portal: null }));
 const svc = vi.hoisted(() => ({
   fetchBenutzerFuerPerson: vi.fn(),
-  fetchBenutzerByEmail: vi.fn(),
-  portalZugangAktivieren: vi.fn(),
+  portalZugangReaktivieren: vi.fn(),
   portalZugangDeaktivieren: vi.fn(),
   fetchElternkontakte: vi.fn(),
   fetchKaderFuerMitglied: vi.fn(),
@@ -44,7 +43,10 @@ vi.mock('../MemberHero.tsx', () => ({ MemberHero: (props) => { h.heroRaw = props
 vi.mock('../MemberTabBar.tsx', () => ({ MemberTabBar: () => null }));
 vi.mock('../tabs/ElternTab.tsx', () => ({ ElternTab: () => null }));
 vi.mock('../tabs/InfoTab.tsx', () => ({ InfoTab: () => null }));
-vi.mock('../tabs/PortalTab.tsx', () => ({ PortalTab: () => null }));
+/* Nicht `() => null`: der Tab traegt die zwei Schalter, um die es unten
+   geht. Die Attrappe haelt seine Props fest, damit der Test sie aufrufen
+   und danach nachsehen kann, was der Tab zu sehen bekommt. */
+vi.mock('../tabs/PortalTab.tsx', () => ({ PortalTab: (props) => { h.portal = props; return null; } }));
 vi.mock('../tabs/DatenpruefungTab.tsx', () => ({ DatenpruefungTab: () => null }));
 vi.mock('../tabs/VerlaufTab.tsx', () => ({ VerlaufTab: () => null }));
 /* Die Mock-Factory listet die benoetigten Exporte einzeln auf — fehlt einer,
@@ -89,6 +91,7 @@ beforeEach(() => {
   h.heroRaw = null;
   h.heroMitgliedId = null;
   h.heroName = null;
+  h.portal = null;
   h.confirmMock.mockResolvedValue(true);
   svc.fetchBenutzerFuerPerson.mockResolvedValue({ id: 'u1', role: 'trainer' });
   svc.fetchElternkontakte.mockResolvedValue([]);
@@ -224,5 +227,57 @@ describe('MemberDetail — ein Mitglied bleibt ein Mitglied', () => {
     const m = zielAusPerson({ id: 'p-7' }, 'Petra Muster');
     await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [] })} />); });
     expect(h.heroMitgliedId).toBeNull();
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Portal-Zugang an- und abschalten (21.08.2026)
+
+   Bis hierher setzte „Zugang deaktivieren" `mitglied_id = null`.
+   Bei einer Person OHNE Mitgliedschaft stand dort schon null: der
+   Knopf schrieb null ueber null, meldete Erfolg und aenderte
+   nichts. Gelesen wird der Status ueber `person_id`.
+
+   Und beim Mitglied sperrte es den Login trotzdem nicht — das tut
+   allein `benutzer.aktiv` (useDbUser meldet ab, wenn es false ist).
+   ═══════════════════════════════════════════════════════════════ */
+describe('MemberDetail — Portal-Zugang schalten', () => {
+  const ohne = zielAusPerson({ id: 'p-9' }, 'Petra Muster');
+
+  it('⚠ deaktiviert ueber die PERSON — auch ohne Mitgliedschaft', async () => {
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, tab: 'portal', dbMitglieder: [] })} />); });
+    await waitFor(() => expect(h.portal).not.toBeNull());
+    await act(async () => { await h.portal.handleUnlink(); });
+    expect(svc.portalZugangDeaktivieren).toHaveBeenCalledWith(sb, 'p-9');
+  });
+
+  it('das Abzeichen folgt: der Tab sieht danach aktiv=false', async () => {
+    /* Der Tab laedt `benutzer` nur bei einem Wechsel von Tab oder Person.
+       Ohne das Mitfuehren stuende oben „Aktiv" und darunter „Zugang
+       deaktiviert" — ein Widerspruch, der bisher niemandem auffiel, weil
+       das Abschalten ohnehin nichts bewirkte. */
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, tab: 'portal', dbMitglieder: [] })} />); });
+    await waitFor(() => expect(h.portal.benutzer).toMatchObject({ id: 'u1' }));
+    await act(async () => { await h.portal.handleUnlink(); });
+    expect(h.portal.benutzer.aktiv).toBe(false);
+  });
+
+  it('reaktiviert ueber die PERSON und schaltet das Abzeichen zurueck', async () => {
+    svc.fetchBenutzerFuerPerson.mockResolvedValue({ id: 'u1', role: 'eltern', aktiv: false });
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, tab: 'portal', dbMitglieder: [] })} />); });
+    await waitFor(() => expect(h.portal.benutzer).not.toBeNull());
+    await act(async () => { await h.portal.handleReactivate(); });
+    expect(svc.portalZugangReaktivieren).toHaveBeenCalledWith(sb, 'p-9');
+    expect(h.portal.benutzer.aktiv).toBe(true);
+  });
+
+  it('⚠ bei einem Mitglied ebenfalls ueber die Person, nicht ueber die Id', async () => {
+    /* Die Gegenprobe. `mitgliedId` liegt vor und wird trotzdem nicht
+       verwendet: der Zugang haengt am Konto der Person. */
+    const m = zielAusMitglied({ id: 7, person_id: 'p-7' }, 'Hans Beispiel');
+    await act(async () => { render(<MemberDetail {...props({ m, tab: 'portal', dbMitglieder: [{ id: 7 }] })} />); });
+    await waitFor(() => expect(h.portal).not.toBeNull());
+    await act(async () => { await h.portal.handleUnlink(); });
+    expect(svc.portalZugangDeaktivieren).toHaveBeenCalledWith(sb, 'p-7');
   });
 });

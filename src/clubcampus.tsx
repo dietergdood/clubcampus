@@ -441,11 +441,16 @@ function Portal({supabaseClient, slug}: PortalProps){
          in einen ReferenceError, sobald der Profil-Tab geöffnet wurde. */
       case "profile": {
         if(role === "eltern" && elternDaten) {
+          /* ⚠ Hier stand `raw={… || dbMitglieder[0]}` — die Zeile eines
+             FREMDEN Mitglieds als Rueckfall, wenn das Elternteil keine eigene
+             Mitgliedschaft hat (also fast immer). Gelesen hat die Maske `raw`
+             nie; es war ein toter Parameter mit einem falschen Wert darin.
+             Beides ist weg. */
           return <DatenpruefungEltern
-            raw={meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || dbMitglieder[0]}
             sb={sb}
-            elternkontakt={elternDaten.elternkontakt}
+            elternteil={elternDaten.elternkontakt}
             kinder={elternDaten.kinder}
+            feldkonfig={feldkonfig}
             setPortalMsg={()=>{}}
             onReload={()=>{ setElternDaten(null); setMeinMitgliedDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
           />;
@@ -474,24 +479,38 @@ function Portal({supabaseClient, slug}: PortalProps){
           if(!session||role==="administrator"||role==="administration") return null;
           if(!sollProfilPruefen()||profilOverlayDismissed) return null;
           const meinMitglied = meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
-          if (!meinMitglied) return null;
+          const istEltern = role === "eltern" && elternDaten !== null;
+          /* ⚠ HIER STAND `if (!meinMitglied) return null;` — VOR dem
+             Eltern-Zweig. Damit erschien die halbjaehrliche Aufforderung fuer
+             393 der 394 Elternteile NIE: sie haben keine Mitgliedschaft,
+             `meinMitglied` blieb null, und der Riegel fiel, bevor der
+             Eltern-Fall ueberhaupt geprueft wurde.
+
+             Aufgefallen ist es nie, weil bis heute KEIN einziges Elternteil
+             ein Konto hat (0 von 394) — die Maske hatte noch nie einen
+             Betrachter. Ein Ausfall ohne Zeugen bleibt ein Ausfall.
+
+             Die Datenpruefung eines Elternteils braucht keine Mitgliedschaft;
+             sie pflegt Personendaten. Der Riegel gilt deshalb nur noch dem
+             Mitglieds-Zweig, der ohne `raw` nichts anzeigen koennte. */
+          if (!istEltern && !meinMitglied) return null;
           const onReload = () => { setProfilOverlayDismissed(true); setElternDaten(null); setMeinMitgliedDaten(null); loadDbMitglieder(); };
           return(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:20,overflowY:"auto"}}>
               <div style={{background:"var(--surface)",borderRadius:16,padding:24,maxWidth:560,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",margin:"auto"}}>
-                {role === "eltern" && elternDaten
+                {istEltern && elternDaten
                   ? <DatenpruefungEltern
-                      raw={meinMitglied}
                       sb={sb}
-                      elternkontakt={elternDaten.elternkontakt}
+                      elternteil={elternDaten.elternkontakt}
                       kinder={elternDaten.kinder}
+                      feldkonfig={feldkonfig}
                       setPortalMsg={()=>{}}
                       onReload={onReload}
                     />
                   : <DatenpruefungMitglied
-                      raw={meinMitglied}
+                      raw={meinMitglied!}
                       sb={sb}
-                      pflichtfelder={pflichtfelderFuer(fuerMitgliedtyp(meinMitglied.mitgliedtyp))}
+                      pflichtfelder={pflichtfelderFuer(fuerMitgliedtyp(meinMitglied!.mitgliedtyp))}
                       setPortalMsg={()=>{}}
                       onReload={onReload}
                     />

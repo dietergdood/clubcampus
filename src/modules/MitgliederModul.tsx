@@ -14,10 +14,9 @@ import { mapSupporter } from "./members/memberMapper.ts";
 import { fetchSupporter, macheZuMitglied, beendeMitgliedschaft } from "../domains/members/supporterService.ts";
 import type { AustrittsZiel } from "../domains/members/supporterService.ts";
 import { AustrittModal } from "./members/AustrittModal.tsx";
-import type { SupporterRoh } from "../domains/members/supporterService.ts";
-import { updatePerson } from "../domains/person/personService.ts";
-import { SupporterModal } from "../shared/person/SupporterModal.tsx";
-import { zielAusMitglied } from "../shared/person/personZiel.ts";
+import type { SupporterRoh, PersonFuerMitgliedschaft } from "../domains/members/supporterService.ts";
+import { fetchPerson } from "../domains/person/personService.ts";
+import { zielAusMitglied, zielAusPerson } from "../shared/person/personZiel.ts";
 import { MitgliedWerdenModal } from "./members/MitgliedWerdenModal.tsx";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
 import type { MemberRow } from "./members/memberDataUtils.ts";
@@ -70,8 +69,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [showNeuesMitglied,setShowNeuesMitglied]=useState(false);
   const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
   const [supporterRoh,setSupporterRoh]=useState<SupporterRoh[]>([]);
-  const [supporterOffen,setSupporterOffen]=useState<SupporterRoh|null>(null);
-  const [mitgliedWerdenFuer,setMitgliedWerdenFuer]=useState<SupporterRoh|null>(null);
+  const [mitgliedWerdenFuer,setMitgliedWerdenFuer]=useState<PersonFuerMitgliedschaft|null>(null);
   const [austrittFuer,setAustrittFuer]=useState<Mitglied|null>(null);
 
 
@@ -157,14 +155,25 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     setSupporterRoh(await fetchSupporter(sb,vereinId));
   }
 
-  /* Personenfelder eines Supporters schreiben.
-     ⚠ NICHT updateMitglied(): das findet die Person ueber mitglieder.person_id,
-     und genau die Zeile gibt es hier nicht. */
-  async function speichereSupporter(personId: string, felder: Record<string, unknown>){
-    if(!sb) return false;
-    const ok=await updatePerson(sb,personId,felder);
-    if(ok) await ladeSupporter();
-    return ok;
+  /* Eine Person OHNE Mitgliedschaft oeffnen — Supporter oder Elternteil.
+
+     ⚠ Immer frisch aus `personen` geladen, auch wenn die Listenzeile schon
+     etwas mitbringt. Die Elternliste fuehrt nur Name, E-Mail und Telefon; ohne
+     den Nachschlag stuenden Adresse, Geburtsdatum und Nationalitaet im Profil
+     leer da — und ein Feld, das nicht geladen wurde, ist von einem leeren
+     nicht zu unterscheiden. Derselbe Grund wie beim Archiv-Einstieg, der
+     `fetchMitglied` nachschlaegt.
+
+     Scheitert der Nachschlag, wird das GEMELDET statt nichts zu tun: ein Klick,
+     der wirkungslos verpufft, sieht aus wie eine kaputte Seite. */
+  async function oeffnePerson(personId: string, name: string){
+    if(!sb) return;
+    const p=await fetchPerson(sb,personId);
+    if(!p){
+      console.error("oeffnePerson: Person nicht gefunden oder nicht lesbar.",{personId,name});
+      return;
+    }
+    setSelectedMember(zielAusPerson(p, name, {_tab:"info"}));
   }
 
   /* Austritt — die Gegenrichtung. Die Rueckfrage stellt AustrittModal; hier
@@ -203,7 +212,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   /* Aus einem Supporter wird ein Mitglied. Die Person bleibt dieselbe. */
   async function supporterWirdMitglied(
-    person: SupporterRoh,
+    person: PersonFuerMitgliedschaft,
     felder: { mitgliedtyp: string; eintrittsdatum: string | null },
   ): Promise<string|null>{
     if(!sb||!vereinId) return "Keine Verbindung zur Datenbank.";
@@ -219,8 +228,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       null,null,account?.name||null);
 
     /* Beide Listen neu laden: die Person verlaesst den Supporter-Tab und
-       erscheint in der Mitgliederliste. Ohne das Erste stuende sie in beiden. */
-    setSupporterOffen(null);
+       erscheint in der Mitgliederliste. Ohne das Erste stuende sie in beiden.
+       Die offene Personenseite wird geschlossen — sie zeigte eine Person ohne
+       Mitgliedschaft, und genau das stimmt jetzt nicht mehr. */
+    setSelectedMember(null);
     await ladeSupporter();
     if(onReload) onReload();
     return null;
@@ -313,8 +324,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const brauchtEltern=(mitgliedtyp: string|null|undefined)=>
     dbMitgliedtypen.some(t=>t.name===mitgliedtyp&&t.hauptkontakt_pflicht);
 
-  /* Dieselbe Regel als Liste — fuer die Kind-Auswahl in der Elternliste. */
-  const pflichtTypen = dbMitgliedtypen.filter(t=>t.hauptkontakt_pflicht).map(t=>t.name);
 
 
 
@@ -322,8 +331,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     <MemberDetail
       m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}
       onAustritt={istVerwaltung?(id=>{const mm=dbMitglieder.find(x=>x.id===id);if(mm)setAustrittFuer(mm);}):null}
-      onMitgliedWerden={istVerwaltung?(pid=>{const p=supporterRoh.find(x=>x.id===pid);if(p)setMitgliedWerdenFuer(p);}):null}
+      /* ⚠ Ueber `personen`, nicht ueber `supporterRoh`: den Weg gibt es seit
+         dem 21.08.2026 auch fuer ein Elternteil, und das steht in der
+         Supporter-Liste per Definition nicht (sie zeigt Personen OHNE Kinder).
+         Der Eintrag haette dort still nichts getan. */
+      onMitgliedWerden={istVerwaltung?(async pid=>{
+        if(!sb) return;
+        const p=await fetchPerson(sb,pid);
+        if(p) setMitgliedWerdenFuer(p);
+        else console.error("onMitgliedWerden: Person nicht gefunden.",{pid});
+      }):null}
       onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
+      onOeffnePerson={oeffnePerson}
       sb={sb} role={role} account={account} feldkonfig={feldkonfig}
       dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen}
       dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
@@ -370,14 +389,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   return(
     <>{confirmDialog}
-      <SupporterModal
-        open={supporterOffen!==null}
-        onClose={()=>setSupporterOffen(null)}
-        supporter={supporterOffen}
-        canEdit={istVerwaltung}
-        onSpeichern={speichereSupporter}
-        onMitgliedWerden={istVerwaltung?(p=>setMitgliedWerdenFuer(p)):null}
-      />
       <AustrittModal
         open={austrittFuer!==null}
         onClose={()=>setAustrittFuer(null)}
@@ -438,10 +449,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {supporterTab?(
         <SupporterListView supporter={supporter} renderCell={renderCell} rolleLabel={ROLLE_LABEL} canExport={canExport}
           renderMobile={m=>(
-            <div key={m.id} className="cc-members-item" onClick={()=>{
-              const p=supporterRoh.find(x=>x.id===m.id);
-              if(p) setSupporterOffen(p);
-            }}>
+            <div key={m.id} className="cc-members-item" onClick={()=>oeffnePerson(String(m.id), m.name||"?")}>
               {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
               <div className="cc-members-item-body">
                 <div className="cc-members-item-name">{m.name}</div>
@@ -451,16 +459,17 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           )}
           sb={sb} account={account} vereinId={vereinId}
           isAdmin={istVerwaltung}
-          /* Oeffnet das schlanke Supporter-Modal, NICHT MemberDetail: das
-             arbeitet mit einer Mitgliedschaft, die es hier nicht gibt. */
-          onOeffnen={row=>{
-            const p=supporterRoh.find(x=>x.id===row.id);
-            if(p) setSupporterOffen(p);
-          }}
+          /* Oeffnet die Personenseite. Bis zum 21.08.2026 stand hier ein
+             eigenes, schlankes Supporter-Modal — MemberDetail arbeitete
+             damals durchgehend mit einer Mitgliedschaft. Seit Schritt 1 des
+             Personenseiten-Auftrags traegt es beide Faelle, und die
+             Feldkonfiguration entscheidet ueber die Achse
+             `ohne_mitgliedschaft`, was erscheint. */
+          onOeffnen={row=>oeffnePerson(String(row.id), row.name||"?")}
         />
       ):elternTab?(
         <ElternListView sb={sb} vereinId={vereinId} account={account} isAdmin={istVerwaltung}
-          pflichtTypen={pflichtTypen}
+          onOeffnen={row=>oeffnePerson(String(row.id), row.name||"?")}
           onNavToMember={id=>{
             setElternTab(false);
             const m=dbMitglieder.find(x=>x.id===id);

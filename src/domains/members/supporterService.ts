@@ -42,6 +42,21 @@ export interface SupporterRoh {
   benutzer_deaktiviert?: boolean;
 }
 
+/**
+ * Das Wenigste, was „Mitglied werden" braucht.
+ *
+ * ⚠ Als `Pick`, nicht als eigenes Interface (CLAUDE.md → Verengungen):
+ * seit dem 21.08.2026 kommt die Person hier nicht mehr nur aus dem
+ * Supporter-Tab, sondern auch aus der Elternliste — ein Elternteil kann
+ * Mitglied werden wie ein Gönner. Ein handgeschriebener Zwillingstyp liefe
+ * still auseinander, sobald `SupporterRoh` sich ändert.
+ *
+ * `funktionen` steht mit drin, weil `ableitRolle()` sie liest: wer ein Amt
+ * trägt, wird beim Anlegen der Mitgliedschaft nicht zum Spieler.
+ */
+export type PersonFuerMitgliedschaft =
+  Pick<SupporterRoh, "id" | "vorname" | "nachname" | "funktionen">;
+
 /* Genau die Felder, die mapSupporter liest. Nicht `*`: was die Liste nicht
    anzeigt, muss auch nicht ueber die Leitung — und eine neue Spalte in
    `personen` soll nicht ungefragt in einer Liste landen. */

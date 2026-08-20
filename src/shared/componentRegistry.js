@@ -185,11 +185,17 @@ export const COMPONENT_REGISTRY = [
     css: ["cc-toggle", "cc-toggle-on", "cc-toggle-knob", "cc-toggle-knob-on", "cc-toggle-dark"],
   },
   {
-    name: "SupporterModal",
-    desc: "Schlanke Ansicht für eine Person OHNE Mitgliedschaft: Kontakt, Portal-Zugang, Vereinsfunktionen, „Mitglied werden“. MemberDetail kann sie nicht zeigen — es arbeitet durchgehend mit einer Mitgliedschaft. Zieht später als Ganzes in die Personenseite um, deshalb liegt sie unter shared/person/.",
-    category: "Overlays",
-    usedIn: ["MitgliederModul"],
-    props: ["open", "onClose", "supporter", "onSpeichern", "onMitgliedWerden", "canEdit"],
+    /* ⚠ Hier stand bis zum 21.08.2026 „SupporterModal". Es ist mit dem
+       ElternkontaktModal weggefallen: MemberDetail traegt seit dem
+       Personenseiten-Umbau auch eine Person OHNE Mitgliedschaft, und die
+       Feldkonfiguration entscheidet ueber die Achse `ohne_mitgliedschaft`,
+       was erscheint. Der Registry-Eintrag muss mitfallen — sonst zeigt der
+       Design-System-Tab eine Komponente, die es nicht gibt. */
+    name: "PersonFelderFormular",
+    desc: "Die Personenfelder als Formular, gesteuert von der Feldkonfiguration (mitgliedtyp_feldkonfig). Bekommt konfig + werte und rendert daraus die sichtbaren Felder — kein Speichern, keine Bestätigung. Gemeinsame Felddarstellung für Datenprüfung (Mitglied wie Elternteil) und Personenseite.",
+    category: "Formulare",
+    usedIn: ["DatenpruefungEltern"],
+    props: ["konfig", "werte", "onChange", "gesperrt", "gesperrtHinweis", "canEdit"],
   },
   {
     name: "Row / Col / Between",

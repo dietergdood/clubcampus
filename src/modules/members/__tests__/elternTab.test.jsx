@@ -75,7 +75,7 @@ vi.mock('../../../domains/members/elternService.ts', () => ({
   clearHauptkontaktFuerKind: vi.fn().mockResolvedValue(null),
   fetchKinderFuerElternteil: vi.fn().mockResolvedValue([]),
   linkKind: vi.fn().mockResolvedValue(null),
-  sucheKinder: vi.fn().mockResolvedValue([]),
+
 }));
 
 import { logAktivitaet, entkoppleKind, insertElternkontakt } from '../../../domains/members/memberService.ts';
@@ -87,7 +87,6 @@ function oeffneNeuFormular() {
   fireEvent.click(screen.getByText('Neu erfassen'));
 }
 
-const RAW = { id: 1, mitgliedtyp: 'Juniormitglied' };
 const ELTERN = [
   { id: 'e1', vorname: 'Maria', nachname: 'Bürgi', email: 'maria@test.ch', telefon: '079 123 45 67', beziehung: 'Mutter', hauptkontakt: true },
   { id: 'e2', vorname: 'Hans', nachname: 'Bürgi', email: 'hans@test.ch', telefon: '079 987 65 43', beziehung: 'Vater', hauptkontakt: false },
@@ -97,7 +96,6 @@ function renderTab(props = {}) {
   return render(<ElternTab
 mitgliedId={1}     eltern={ELTERN}
     canEdit={true}
-    raw={RAW}
     sb={{}}
     onReload={vi.fn()}
     setElternLoaded={vi.fn()}
@@ -190,6 +188,38 @@ describe('ElternTab', () => {
         expect.stringContaining('Lisa Bürgi'),
         expect.anything(), expect.anything(), expect.anything()
       ));
+    });
+  });
+
+  /* ═══════════════════════════════════════════════════════════════
+     Vom Kind zum Elternteil (21.08.2026)
+
+     „Bearbeiten" oeffnete ein ElternkontaktModal mit denselben
+     Feldern, die die Personenseite ohnehin zeigt — zwei Masken
+     fuer dieselbe Zeile in `personen`. Der Eintrag heisst jetzt
+     „Profil oeffnen" und fuehrt dorthin.
+     ═══════════════════════════════════════════════════════════════ */
+  describe('Profil öffnen', () => {
+    it('reicht personId und Namen an den Aufrufer durch', () => {
+      const onOeffnePerson = vi.fn();
+      renderTab({ onOeffnePerson });
+      fireEvent.click(screen.getAllByTestId('menu-Profil öffnen')[0]);
+      expect(onOeffnePerson).toHaveBeenCalledWith('e1', 'Maria Bürgi');
+    });
+
+    it('⚠ „Bearbeiten" gibt es nicht mehr', () => {
+      /* Die zweite Haelfte: sie haelt fest, dass die zweite Maske nicht
+         zurueckkommt. Ohne sie waere der Test oben auch dann gruen, wenn
+         beide Eintraege nebeneinander stuenden. */
+      renderTab({ onOeffnePerson: vi.fn() });
+      expect(screen.queryByTestId('menu-Bearbeiten')).toBeNull();
+    });
+
+    it('ohne Aufrufer erscheint der Eintrag gar nicht — kein toter Knopf', () => {
+      renderTab();
+      expect(screen.queryByTestId('menu-Profil öffnen')).toBeNull();
+      /* Die Gegenprobe, dass das Menue ueberhaupt steht. */
+      expect(screen.getAllByTestId('menu-Entknüpfen').length).toBeGreaterThan(0);
     });
   });
 

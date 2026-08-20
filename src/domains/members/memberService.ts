@@ -206,14 +206,6 @@ export async function fetchBenutzerFuerPerson(sb: SbClient, personId: string) {
   return data;
 }
 
-export async function fetchBenutzerByEmail(sb: SbClient, email: string) {
-  const { data } = await sb.from("benutzer")
-    .select("id,email,role")
-    .eq("email", email)
-    .maybeSingle();
-  return data;
-}
-
 export async function updateBenutzer(sb: SbClient, id: string, fields: TablesUpdate<"benutzer">): Promise<PostgrestError | null> {
   const { error } = await sb.from("benutzer").update(fields).eq("id", id);
   return error;
@@ -226,15 +218,40 @@ export async function updateBenutzer(sb: SbClient, id: string, fields: TablesUpd
 /** ⚠ `mitglied_id` wird MITGESCHRIEBEN, wo es eine gibt — die Spalte ist
     Bequemlichkeit und kein Bezugspunkt, aber solange sie steht, soll sie
     stimmen. Ohne Mitgliedschaft bleibt sie null. */
-export async function portalZugangAktivieren(sb: SbClient, mitgliedId: number | null, benutzerId: string, neueRolle: string): Promise<PostgrestError | null> {
-  const { error } = await sb.from("benutzer").update({ mitglied_id: mitgliedId, role: neueRolle }).eq("id", benutzerId);
+/* ── Portal-Zugang an- und abschalten ────────────────────────────────────
+
+   ⚠ GESCHALTET WIRD `benutzer.aktiv`, NICHT DIE VERKNUEPFUNG.
+
+   Bis zum 21.08.2026 setzte das Deaktivieren `mitglied_id = null` — bei einer
+   Person OHNE Mitgliedschaft (Supporter, Elternteil) stand dort aber laengst
+   null. Geschrieben wurde null ueber null, gelesen wird der Status ueber
+   `person_id` (fetchBenutzerFuerPerson), und der Tab meldete „Zugang
+   deaktiviert" und zeigte danach unveraendert „Aktiv". Ein Knopf, der nichts
+   tut und Erfolg meldet.
+
+   Und selbst beim Mitglied traf es nicht, was das Wort sagt: gesperrt wird
+   der Login allein durch `benutzer.aktiv` (useDbUser prueft `aktiv === false`
+   und meldet ab). Das Loesen der Verknuepfung hat nur die Mitgliederliste
+   umgestellt — der Betroffene konnte sich weiter anmelden.
+
+   Deshalb jetzt: der Zustand wird geschaltet, die Verknuepfung bleibt. Ein
+   Konto von seiner Person zu TRENNEN ist eine andere Aktion, und es gibt
+   heute keine, die sie verlangt.
+
+   Entschieden am 21.08.2026 (Didi).
+
+   ⚠ Offen bleibt: die Mitgliederliste (`useAppData.loadDbMitglieder`) baut
+   `hat_benutzer`/`benutzer_deaktiviert` weiterhin ueber `mitglied_id` auf.
+   Eine Person ohne Mitgliedschaft steht dort gar nicht, `onUpdatePortalZugang`
+   erreicht sie nicht — siehe den offenen Punkt in CLAUDE.md. */
+
+export async function portalZugangDeaktivieren(sb: SbClient, personId: string): Promise<PostgrestError | null> {
+  const { error } = await sb.from("benutzer").update({ aktiv: false }).eq("person_id", personId);
   return error;
 }
 
-/** Ueber die PERSON, aus demselben Grund wie fetchBenutzerFuerPerson: beim
-    Supporter ist `mitglied_id` null und der Filter traefe nichts. */
-export async function portalZugangDeaktivieren(sb: SbClient, personId: string): Promise<PostgrestError | null> {
-  const { error } = await sb.from("benutzer").update({ mitglied_id: null }).eq("person_id", personId);
+export async function portalZugangReaktivieren(sb: SbClient, personId: string): Promise<PostgrestError | null> {
+  const { error } = await sb.from("benutzer").update({ aktiv: true }).eq("person_id", personId);
   return error;
 }
 

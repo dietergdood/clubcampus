@@ -20,16 +20,16 @@ import { ModalOrSheet, Btn, Select, Input, InfoBox, Col, Label } from "../../the
 import { TI } from "../../icons.tsx";
 import { BL, R, SPACE } from "../../constants.ts";
 import type { Mitgliedtyp } from "../../types.ts";
-import type { SupporterRoh } from "../../domains/members/supporterService.ts";
+import type { PersonFuerMitgliedschaft } from "../../domains/members/supporterService.ts";
 
 export interface MitgliedWerdenModalProps {
   open: boolean;
   onClose: () => void;
-  supporter: SupporterRoh | null;
+  supporter: PersonFuerMitgliedschaft | null;
   mitgliedtypen: Mitgliedtyp[];
   /** Legt die Mitgliedschaft an. Gibt eine Fehlermeldung zurück oder null. */
   onAnlegen: (
-    supporter: SupporterRoh,
+    supporter: PersonFuerMitgliedschaft,
     felder: { mitgliedtyp: string; eintrittsdatum: string | null },
   ) => Promise<string | null>;
 }
