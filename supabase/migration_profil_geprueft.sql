@@ -155,5 +155,5 @@ select count(*) as nie_bestaetigt
 --     select indexname from pg_indexes
 --      where schemaname='public' and tablename='<tabelle>' and indexdef ~ '<spalte>';
 --     select conname from pg_constraint c join pg_class t on t.oid=c.conrelid
---      where t.relname='<tabelle>' and pg_get_constraintdef(c) ~ '<spalte>';
+--      where t.relname='<tabelle>' and pg_get_constraintdef(c.oid) ~ '<spalte>';
 -- ═══════════════════════════════════════════════════════════════════════════

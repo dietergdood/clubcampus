@@ -14,6 +14,7 @@ import { LoginScreen } from "./modules/LoginScreen.tsx";
 import { useAppData, useDbUser, useDbTeams } from "./domains/app/useAppData.js";
 import { getPermissions } from "./domains/app/getPermissions.ts";
 import { getProfilCheck } from "./domains/app/getProfilCheck.ts";
+import { fuerMitgliedtyp } from "./domains/members/feldkonfig.ts";
 import { NAV_TARGET } from "./modules/appConstants.js";
 import { SideNav, TopBar, MobileNav, getNavForRole, ProfileModal, getVereinsnameStatic } from "./modules/NavigationModul.tsx";
 import { Dashboard } from "./modules/DashboardModul.tsx";
@@ -451,7 +452,7 @@ function Portal({supabaseClient, slug}: PortalProps){
         }
         const meinMitglied = meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
         if (!meinMitglied) return <div className="cc-empty-state"><div className="cc-text-sub">Profil wird geladen…</div></div>;
-        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} pflichtfelder={pflichtfelderFuer(meinMitglied.mitgliedtyp)} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
+        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} pflichtfelder={pflichtfelderFuer(fuerMitgliedtyp(meinMitglied.mitgliedtyp))} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
       }
       default:                  return <Dashboard role={role} setActive={setActive} sb={sb} vereinId={tenant?.id} dbTeams={dbTeams}/>;
     }
@@ -486,7 +487,7 @@ function Portal({supabaseClient, slug}: PortalProps){
                   : <DatenpruefungMitglied
                       raw={meinMitglied}
                       sb={sb}
-                      pflichtfelder={pflichtfelderFuer(meinMitglied.mitgliedtyp)}
+                      pflichtfelder={pflichtfelderFuer(fuerMitgliedtyp(meinMitglied.mitgliedtyp))}
                       setPortalMsg={()=>{}}
                       onReload={onReload}
                     />

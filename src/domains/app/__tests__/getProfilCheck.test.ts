@@ -11,17 +11,24 @@
    sank, obwohl zwoelf dazukamen. */
 import { describe, it, expect } from "vitest";
 import { getProfilCheck } from "../getProfilCheck.ts";
+import { fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT } from "../../members/feldkonfig.ts";
 
 /* Minimale Attrappen — getProfilCheck liest nur Felder, kein Verhalten. */
 const sb = null as never;
 const setDbUser = (() => {}) as never;
 
 const feldkonfig = [
-  { mitgliedtyp: "Aktivmitglied",    schluessel: "geburtsdatum", modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied",    schluessel: "strasse",      modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied",    schluessel: "telefon",      modus: "pflicht" },
-  { mitgliedtyp: "Passivmitglied",   schluessel: "telefon",      modus: "pflicht" },
-  { mitgliedtyp: "Juniorenmitglied", schluessel: "geburtsdatum", modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",    schluessel: "geburtsdatum", modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",    schluessel: "strasse",      modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",    schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp: "Passivmitglied", gilt_fuer: "mitgliedtyp",   schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp: "Juniorenmitglied", gilt_fuer: "mitgliedtyp", schluessel: "geburtsdatum", modus: "pflicht" },
+
+  /* Die Achse fuer Personen ohne Mitgliedschaft (21.08.2026). Vorher stand
+     hier nichts, und getProfilCheck hatte fuer den Elternteil einen fest
+     verdrahteten Satz — Vorname, Nachname, Telefon. Jetzt kommt auch sein
+     Pflichtfeld aus der Konfiguration. */
+  { mitgliedtyp: "", mitgliedtyp_id: null, gilt_fuer: "ohne_mitgliedschaft", schluessel: "telefon", modus: "pflicht" },
 ] as never;
 
 function baue(mitglied: Record<string, unknown>, opts: Record<string, unknown> = {}) {
@@ -124,8 +131,8 @@ describe("getProfilFehlend", () => {
     const { getProfilFehlend } = baue(
       { vorname: "A", nachname: "B", mitgliedtyp: "Goenner" },
       { feldkonfig: [
-        { mitgliedtyp: "Goenner", schluessel: "telefon",      modus: "pflicht" },
-        { mitgliedtyp: "Goenner", schluessel: "geburtsdatum", modus: "aus" },
+        { mitgliedtyp: "Goenner", gilt_fuer: "mitgliedtyp", schluessel: "telefon",      modus: "pflicht" },
+        { mitgliedtyp: "Goenner", gilt_fuer: "mitgliedtyp", schluessel: "geburtsdatum", modus: "aus" },
       ] as never },
     );
     expect(getProfilFehlend()).toEqual(["Telefon"]);
@@ -165,10 +172,10 @@ describe("getProfilFehlend", () => {
    und nicht statt dessen — die bestehenden 13 Faelle sollen unveraendert
    bleiben. */
 const KONFIG = [
-  { mitgliedtyp: "Aktivmitglied",  schluessel: "telefon",   modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied",  schluessel: "plz",       modus: "pflicht" },
-  { mitgliedtyp: "Aktivmitglied",  schluessel: "heimatort", modus: "freiwillig" },
-  { mitgliedtyp: "Passivmitglied", schluessel: "telefon",   modus: "aus" },
+  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",  schluessel: "telefon",   modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",  schluessel: "plz",       modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp",  schluessel: "heimatort", modus: "freiwillig" },
+  { mitgliedtyp: "Passivmitglied", gilt_fuer: "mitgliedtyp", schluessel: "telefon",   modus: "aus" },
 ] as never;
 
 const basis = (over: Record<string, unknown> = {}) => ({
@@ -187,25 +194,25 @@ describe("pflichtfelderFuer — dieselbe Quelle wie der Hinweis", () => {
        nicht. Zwei getrennte Listen wären der Fehler: dann sperrte die Maske
        ein Feld, das der Hinweis nicht nennt. */
     const { pflichtfelderFuer } = getProfilCheck(basis());
-    expect(pflichtfelderFuer("Aktivmitglied")).toEqual(
+    expect(pflichtfelderFuer(fuerMitgliedtyp("Aktivmitglied"))).toEqual(
       expect.arrayContaining(["vorname", "nachname", "telefon", "plz"]));
   });
 
   it("„freiwillig“ steht nicht drin", () => {
     const { pflichtfelderFuer } = getProfilCheck(basis());
-    expect(pflichtfelderFuer("Aktivmitglied")).not.toContain("heimatort");
+    expect(pflichtfelderFuer(fuerMitgliedtyp("Aktivmitglied"))).not.toContain("heimatort");
   });
 
   it("„aus“ ebenso wenig — was es nicht gibt, kann nicht Pflicht sein", () => {
     const { pflichtfelderFuer } = getProfilCheck(basis());
-    expect(pflichtfelderFuer("Passivmitglied")).not.toContain("telefon");
+    expect(pflichtfelderFuer(fuerMitgliedtyp("Passivmitglied"))).not.toContain("telefon");
   });
 
   it("vorname und nachname sind immer dabei", () => {
     /* Sie stehen in mitglieder NOT NULL und deshalb in IMMER_PFLICHT_KEYS,
        nicht in der Matrix. */
     const { pflichtfelderFuer } = getProfilCheck(basis());
-    expect(pflichtfelderFuer("Passivmitglied")).toEqual(
+    expect(pflichtfelderFuer(fuerMitgliedtyp("Passivmitglied"))).toEqual(
       expect.arrayContaining(["vorname", "nachname"]));
   });
 
@@ -214,7 +221,7 @@ describe("pflichtfelderFuer — dieselbe Quelle wie der Hinweis", () => {
        Konfiguration noch nicht hat, darf nichts verlangen — sonst blockiert
        ein leerer Zustand jede Bestätigung. */
     const { pflichtfelderFuer } = getProfilCheck(basis({ feldkonfig: [] }));
-    expect(pflichtfelderFuer("Aktivmitglied")).toEqual(["vorname", "nachname"]);
+    expect(pflichtfelderFuer(fuerMitgliedtyp("Aktivmitglied"))).toEqual(["vorname", "nachname"]);
   });
 });
 

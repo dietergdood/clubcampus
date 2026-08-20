@@ -62,15 +62,19 @@ const DB_PORTAL_ROLLEN = [
 /* Seit dem 19.08.2026 kommt die Quelle aus mitgliedtyp_feldkonfig: drei Werte
    statt eines Haekchens. Was hier nicht steht, ist "freiwillig" — sichtbar,
    aber nicht verlangt. */
+/* ⚠ `gilt_fuer` gehoert in jede Attrappe. Ohne die Spalte filtert
+   getFeldkonfig die Zeile weg — und dann prueft der Test nichts mehr,
+   ohne rot zu werden. Hier ist er rot geworden, weil die Erwartungen
+   die Feldnamen nennen; bei weicheren Erwartungen waere es durchgegangen. */
 const DB_FELDKONFIG = [
-  { mitgliedtyp: 'Aktivmitglied', schluessel: 'geburtsdatum', modus: 'pflicht' },
-  { mitgliedtyp: 'Aktivmitglied', schluessel: 'geschlecht',   modus: 'pflicht' },
-  { mitgliedtyp: 'Aktivmitglied', schluessel: 'strasse',      modus: 'pflicht' },
-  { mitgliedtyp: 'Aktivmitglied', schluessel: 'plz',          modus: 'pflicht' },
-  { mitgliedtyp: 'Aktivmitglied', schluessel: 'ort',          modus: 'pflicht' },
-  { mitgliedtyp: 'Aktivmitglied', schluessel: 'telefon',      modus: 'pflicht' },
-  { mitgliedtyp: 'Passivmitglied', schluessel: 'geburtsdatum', modus: 'pflicht' },
-  { mitgliedtyp: 'Passivmitglied', schluessel: 'telefon',      modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'geburtsdatum', modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'geschlecht',   modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'strasse',      modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'plz',          modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'ort',          modus: 'pflicht' },
+  { mitgliedtyp: 'Aktivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'telefon',      modus: 'pflicht' },
+  { mitgliedtyp: 'Passivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'geburtsdatum', modus: 'pflicht' },
+  { mitgliedtyp: 'Passivmitglied', gilt_fuer: 'mitgliedtyp', schluessel: 'telefon',      modus: 'pflicht' },
 ];
 
 function renderModal(props = {}) {

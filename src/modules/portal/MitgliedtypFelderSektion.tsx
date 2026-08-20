@@ -31,7 +31,8 @@ import { TI } from "../../icons.tsx";
 import { BL } from "../../constants.ts";
 import {
   ADRESS_FELDER, BEREICHE, MODUS_LABEL,
-  eintraegeFuerBereich, getFeldkonfig, istSichtbar, labelFuer,
+  eintraegeFuerBereich, getFeldkonfig, giltFuerZiel, fuerMitgliedtyp,
+  OHNE_MITGLIEDSCHAFT, istSichtbar, labelFuer,
 } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile, FeldModus, RegistryEintrag } from "../../domains/members/feldkonfig.ts";
 import { setzeModus, setzeModusMehrere } from "../../domains/members/feldkonfigService.ts";
@@ -50,26 +51,46 @@ export function MitgliedtypFelderSektion({
   supabase, vereinId, dbMitgliedtypen, feldkonfig, setFeldkonfig,
 }: Props) {
   const typen = (dbMitgliedtypen || []).filter(t => t.aktiv !== false);
+  /* Die Spalte „Ohne Mitgliedschaft" steht in derselben Auswahl wie die
+     Mitgliedtypen — eine Konfiguration, ein Ort. Als Sentinel und NICHT als
+     Zeile in `mitgliedtypen`: eine Zeile dort erschiene in jedem Dropdown und
+     in jeder Zaehlung und stellte die Falle wieder auf, die der
+     Supporter-Rueckbau am 20.08. abgebaut hat. */
+  const OHNE_KEY = "__ohne_mitgliedschaft__";
   const [gewaehlt, setGewaehlt] = useState<string>("");
   const [fehler, setFehler] = useState<string | null>(null);
 
   /* Erster Typ als Vorauswahl, sobald die Liste da ist. Als abgeleiteter
      Wert statt im Effekt — sonst flackert die Seite einmal leer. */
-  const typ = typen.find(t => t.id === gewaehlt) || typen[0] || null;
-  const konfig = getFeldkonfig(typ?.name, feldkonfig);
+  const istOhne = gewaehlt === OHNE_KEY;
+  const typ = istOhne ? null : (typen.find(t => t.id === gewaehlt) || typen[0] || null);
+
+  const ziel = istOhne ? OHNE_MITGLIEDSCHAFT : fuerMitgliedtyp(typ?.name);
+  const zielSchreiben = istOhne
+    ? OHNE_MITGLIEDSCHAFT
+    : ({ gilt_fuer: "mitgliedtyp", mitgliedtypId: typ?.id ?? "" } as const);
+  const konfig = getFeldkonfig(ziel, feldkonfig);
 
   /* Optimistisch im State nachziehen, damit der Schalter sofort
      umspringt; bei einem Fehler die Zeile zurückdrehen und melden.
      Ohne das wirkte ein fehlgeschlagenes Speichern wie ein Erfolg. */
   function lokalSetzen(schluessel: readonly string[], modus: FeldModus) {
-    if (!typ?.id) return;
+    if (!istOhne && !typ?.id) return;
     setFeldkonfig(prev => {
-      const ohne = prev.filter(z => !(z.mitgliedtyp_id === typ.id && schluessel.includes(z.schluessel)));
-      if (modus === "freiwillig") return ohne;
+      /* Ueber die Achse UND den Typ filtern: sonst raeumte ein Schalter in
+         der neuen Spalte die gleichnamige Zeile eines Mitgliedtyps weg. */
+      const rest = prev.filter(z => !(
+        z.gilt_fuer === ziel.gilt_fuer
+        && (istOhne || z.mitgliedtyp_id === typ!.id)
+        && schluessel.includes(z.schluessel)));
+      if (modus === "freiwillig") return rest;
       return [
-        ...ohne,
+        ...rest,
         ...schluessel.map(s => ({
-          mitgliedtyp_id: typ.id, mitgliedtyp: typ.name, schluessel: s, modus,
+          mitgliedtyp_id: istOhne ? null : typ!.id,
+          mitgliedtyp: istOhne ? "" : typ!.name,
+          gilt_fuer: ziel.gilt_fuer,
+          schluessel: s, modus,
         })),
       ];
     });
@@ -81,8 +102,8 @@ export function MitgliedtypFelderSektion({
     setFehler(null);
     lokalSetzen(schluessel, modus);
     const msg = schluessel.length === 1
-      ? await setzeModus(supabase, vereinId, typ.id, schluessel[0], modus)
-      : await setzeModusMehrere(supabase, vereinId, typ.id, schluessel, modus);
+      ? await setzeModus(supabase, vereinId, zielSchreiben, schluessel[0], modus)
+      : await setzeModusMehrere(supabase, vereinId, zielSchreiben, schluessel, modus);
     if (msg) { setFeldkonfig(vorher); setFehler(msg); }
   }
 
@@ -180,8 +201,9 @@ export function MitgliedtypFelderSektion({
             <TI n="id-badge" size={14}/> Was ein Mitgliedtyp hat
           </div>
           <select className="cc-input" style={{ width: "auto", minWidth: 190 }}
-            value={typ?.id || ""} onChange={e => setGewaehlt(e.target.value)}>
+            value={istOhne ? OHNE_KEY : (typ?.id || "")} onChange={e => setGewaehlt(e.target.value)}>
             {typen.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            <option value={OHNE_KEY}>Ohne Mitgliedschaft</option>
           </select>
         </div>
 
@@ -206,7 +228,11 @@ export function MitgliedtypFelderSektion({
       </Card>
 
       {BEREICHE.map(b => {
-        const eintraege = eintraegeFuerBereich(b.key);
+        /* Was an einer Mitgliedschaft haengt, erscheint in der Spalte „Ohne
+           Mitgliedschaft" gar nicht — als Schalter koennte die Verwaltung es
+           auf Pflicht stellen und erzeugte eine Anforderung, die niemand je
+           erfuellen kann. */
+        const eintraege = eintraegeFuerBereich(b.key).filter(e => giltFuerZiel(e, ziel));
         const schaltbar = eintraege.filter(e => e.modi.includes("aus")).map(e => e.schluessel);
         const adresse = eintraege.filter(e => e.adresse);
         const ohneAdresse = eintraege.filter(e => !e.adresse);

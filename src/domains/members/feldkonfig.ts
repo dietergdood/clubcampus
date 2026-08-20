@@ -51,11 +51,62 @@ export const MODUS_LABEL: Record<FeldModus, string> = {
     nicht mehr verwaisen lässt. Genau daran sind am 19.08.2026 siebzehn
     Zeilen der Vorgängertabelle hängengeblieben. */
 export interface FeldkonfigZeile {
-  mitgliedtyp_id: string;
-  /** Name des Mitgliedtyps, vom Service aus dem Join flachgezogen. */
+  /** NULL bei `gilt_fuer = "ohne_mitgliedschaft"` — dort gibt es keinen Typ. */
+  mitgliedtyp_id: string | null;
+  /** Name des Mitgliedtyps, vom Service aus dem Join flachgezogen. Bei
+      `ohne_mitgliedschaft` leer; gefiltert wird dann ueber `gilt_fuer`. */
   mitgliedtyp: string;
+  /** Fuer wen die Zeile gilt. ⚠ MUSS vom Ladepfad mitgebracht werden — sonst
+      fielen die `ohne_mitgliedschaft`-Zeilen lautlos durch den Namensfilter,
+      weil ihr `mitgliedtyp` leer ist und keinen Vergleich trifft. */
+  gilt_fuer: GiltFuer;
   schluessel: string;
   modus: FeldModus;
+}
+
+/* ─── Die Achse ─────────────────────────────────────────────────────────
+   `mitgliedtyp_feldkonfig.gilt_fuer` (Migration vom 21.08.2026). Ein
+   einziger Wert `ohne_mitgliedschaft` fuer Elternteil UND Supporter: die
+   Alternative waere ein Wert `elternteil`, abgeleitet aus „hat Kinder" —
+   eine BERECHNETE Achse, die kippt, sobald ein Kind austritt. Derselbe
+   Fehler, den `rolle_pflichtfelder` gekostet hat. */
+export type GiltFuer = "mitgliedtyp" | "ohne_mitgliedschaft";
+
+/**
+ * Wofuer eine Konfiguration gelesen wird.
+ *
+ * ⚠ DREI FAELLE, NICHT ZWEI. `mitglieder.mitgliedtyp` ist nullable: eine
+ * Mitgliedschaft OHNE Typ ist ein Datenloch und nicht dasselbe wie eine
+ * Person ohne Mitgliedschaft. Wer beides zusammenlegt, blendet bei einem
+ * Datenloch ploetzlich Felder aus. Das Datenloch faellt weiterhin auf
+ * „alles freiwillig" zurueck — fuer einen unbekannten Typ das richtige
+ * Verhalten.
+ *
+ * Ein blosser String ist damit ein Typfehler, und jede Aufrufstelle muss
+ * sagen, welcher Fall bei ihr gilt.
+ */
+export type KonfigZiel =
+  | { gilt_fuer: "mitgliedtyp"; mitgliedtyp: string | null }
+  | { gilt_fuer: "ohne_mitgliedschaft" };
+
+/**
+ * Wofuer geschrieben wird — braucht die Id, weil die Zeile ueber
+ * `mitgliedtyp_id` haengt und ein Name beim Umbenennen verwaisen wuerde.
+ *
+ * Zwei fast gleiche Typen sind sonst ein Warnzeichen (CLAUDE.md, die vier
+ * Kaderrollen-Typen). Hier tragen sie verschiedene Daten: gelesen wird ueber
+ * den NAMEN, weil die Aufrufstellen nur ihn haben (`raw.mitgliedtyp`),
+ * geschrieben ueber die ID.
+ */
+export type KonfigZielSchreiben =
+  | { gilt_fuer: "mitgliedtyp"; mitgliedtypId: string }
+  | { gilt_fuer: "ohne_mitgliedschaft" };
+
+export const OHNE_MITGLIEDSCHAFT = { gilt_fuer: "ohne_mitgliedschaft" } as const;
+
+/** Bequemer Weg zum haeufigen Fall. `null` bleibt `null` — siehe KonfigZiel. */
+export function fuerMitgliedtyp(name: string | null | undefined): KonfigZiel {
+  return { gilt_fuer: "mitgliedtyp", mitgliedtyp: name ?? null };
 }
 
 /* ─── Bereiche ──────────────────────────────────────────────────── */
@@ -88,6 +139,17 @@ export interface RegistryEintrag {
   modi: readonly FeldModus[];
   /** Teil des Adressblocks — siehe ADRESS_FELDER. */
   adresse?: boolean;
+  /**
+   * Haengt an einer Mitgliedschaft. Erscheint in der Spalte „Ohne
+   * Mitgliedschaft" gar nicht und ist dort strukturell `aus`.
+   *
+   * ⚠ Das Merkmal wirkt in der AUSWERTUNG (`getFeldkonfig`), nicht nur in der
+   * Oberflaeche. Nur so brauchen diese Schluessel keine Seed-Zeile und koennen
+   * nicht falsch gestellt werden — als Schalter koennte die Verwaltung sie auf
+   * „Pflicht" setzen und erzeugte eine Anforderung, die niemand je erfuellen
+   * kann. Genau der Fehler, den `rolle_pflichtfelder` gekostet hat.
+   */
+  nur_mitgliedschaft?: true;
   hinweis?: string;
 }
 
@@ -121,7 +183,8 @@ export const FELD_REGISTRY: readonly RegistryEintrag[] = [
   { schluessel: "nationalitaet",  bereich: "personalien",  modi: ALLE },
   { schluessel: "nationalitaet2", bereich: "personalien",  modi: ALLE },
   { schluessel: "heimatort",      bereich: "personalien",  modi: ALLE },
-  { schluessel: "ahv_nr",         bereich: "personalien",  modi: ALLE },
+  { schluessel: "ahv_nr",         bereich: "personalien",  modi: ALLE,
+    hinweis: "Wird für die J+S-Abrechnung gebraucht. Ohne Spielbetrieb gibt es keinen Zweck — bei Personen ohne Mitgliedschaft deshalb als Startwert auf Gibt-es-nicht. Der Hinweis informiert, er wirkt nicht: ein Klick dreht es um." },
 
   /* Kontakt */
   { schluessel: "email",          bereich: "kontakt",      modi: ALLE },
@@ -132,25 +195,25 @@ export const FELD_REGISTRY: readonly RegistryEintrag[] = [
   { schluessel: "kanton",         bereich: "kontakt",      modi: ALLE, adresse: true },
 
   /* Vereinsdaten */
-  { schluessel: "mitgliedtyp",    bereich: "vereinsdaten", modi: AN_AUS },
-  { schluessel: "eintrittsdatum", bereich: "vereinsdaten", modi: ALLE },
-  { schluessel: "spielerpass",    bereich: "vereinsdaten", modi: ALLE },
-  { schluessel: "js_nr",          bereich: "vereinsdaten", modi: ALLE },
-  { schluessel: "fairgate_id",    bereich: "vereinsdaten", modi: ALLE,
+  { schluessel: "mitgliedtyp",    bereich: "vereinsdaten", modi: AN_AUS, nur_mitgliedschaft: true },
+  { schluessel: "eintrittsdatum", bereich: "vereinsdaten", modi: ALLE, nur_mitgliedschaft: true },
+  { schluessel: "spielerpass",    bereich: "vereinsdaten", modi: ALLE, nur_mitgliedschaft: true },
+  { schluessel: "js_nr",          bereich: "vereinsdaten", modi: ALLE, nur_mitgliedschaft: true },
+  { schluessel: "fairgate_id",    bereich: "vereinsdaten", modi: ALLE, nur_mitgliedschaft: true,
     hinweis: "Schreibt der Fairgate-Sync, nicht der Mensch — als Pflicht nur sinnvoll, wenn jedes Mitglied synchronisiert ist." },
 
   /* Bereiche ohne Einzelfelder */
-  { schluessel: "teams",          bereich: "teams",        modi: AN_AUS },
+  { schluessel: "teams",          bereich: "teams",        modi: AN_AUS, nur_mitgliedschaft: true },
   { schluessel: "funktionen",     bereich: "funktionen",   modi: AN_AUS },
-  { schluessel: "notizen",        bereich: "notizen",      modi: AN_AUS,
+  { schluessel: "notizen",        bereich: "notizen",      modi: AN_AUS, nur_mitgliedschaft: true,
     label: "Notizen" },
 
   /* Profil-Tabs. "Profil" fehlt bewusst: ohne ihn bliebe nichts. */
-  { schluessel: "tab_eltern",        bereich: "tabs", modi: AN_AUS, label: "Eltern" },
-  { schluessel: "tab_stats",         bereich: "tabs", modi: AN_AUS, label: "Statistik" },
+  { schluessel: "tab_eltern",        bereich: "tabs", modi: AN_AUS, label: "Eltern", nur_mitgliedschaft: true },
+  { schluessel: "tab_stats",         bereich: "tabs", modi: AN_AUS, label: "Statistik", nur_mitgliedschaft: true },
   { schluessel: "tab_portal",        bereich: "tabs", modi: AN_AUS, label: "Portal-Zugang" },
   { schluessel: "tab_datenpruefung", bereich: "tabs", modi: AN_AUS, label: "Datenprüfung" },
-  { schluessel: "tab_verlauf",       bereich: "tabs", modi: AN_AUS, label: "Verlauf" },
+  { schluessel: "tab_verlauf",       bereich: "tabs", modi: AN_AUS, label: "Verlauf", nur_mitgliedschaft: true },
 ];
 
 /** Beschriftung eines Schlüssels. FELD_LABEL bleibt die Quelle für alles,
@@ -175,19 +238,51 @@ export const IMMER_PFLICHT_KEYS = FELD_REGISTRY
 
 /* ─── Auswertung ────────────────────────────────────────────────── */
 
-/** Modus je Schlüssel für einen Mitgliedtyp. Was nicht gespeichert ist,
-    ist "freiwillig" — siehe Dateikopf. Ohne Mitgliedtyp gilt dasselbe:
-    ein unbekannter Typ darf nichts ausblenden und nichts verlangen. */
+/** Gilt dieser Registry-Eintrag für dieses Ziel? Bei „ohne Mitgliedschaft"
+    fallen die Schlüssel weg, die an einer Mitgliedschaft hängen. Die
+    Oberfläche filtert damit ihre Spalte. */
+export function giltFuerZiel(e: RegistryEintrag, ziel: KonfigZiel): boolean {
+  return !(ziel.gilt_fuer === "ohne_mitgliedschaft" && e.nur_mitgliedschaft);
+}
+
+/**
+ * Modus je Schlüssel für ein Ziel. Was nicht gespeichert ist, ist
+ * "freiwillig" — siehe Dateikopf.
+ *
+ * Drei Verhalten, und die Unterscheidung ist der Zweck von `KonfigZiel`:
+ *
+ *   Mitgliedtyp bekannt   Zeilen dieses Typs gewinnen
+ *   Mitgliedtyp NULL      alles freiwillig — Datenloch, kein Sonderfall
+ *   ohne Mitgliedschaft   `nur_mitgliedschaft`-Schlüssel sind `aus`,
+ *                         dazu die Zeilen mit `gilt_fuer = ohne_mitgliedschaft`
+ *
+ * ⚠ Gefiltert wird ZUERST über `gilt_fuer`, dann über den Namen. Andersherum
+ * fielen die neuen Zeilen lautlos durch: ihr `mitgliedtyp` ist leer und
+ * trifft keinen Vergleich.
+ */
 export function getFeldkonfig(
-  mitgliedtyp: string | null | undefined,
+  ziel: KonfigZiel,
   zeilen: readonly FeldkonfigZeile[],
 ): Record<string, FeldModus> {
+  const ohne = ziel.gilt_fuer === "ohne_mitgliedschaft";
+
   const konfig: Record<string, FeldModus> = {};
-  for (const e of FELD_REGISTRY) konfig[e.schluessel] = "freiwillig";
-  if (!mitgliedtyp) return konfig;
+  for (const e of FELD_REGISTRY) {
+    /* Strukturell `aus` statt bloss unsichtbar in der Oberfläche: sonst
+       bräuchten die zehn eine Seed-Zeile, und ein Direktzugriff hätte sie
+       wieder sichtbar. */
+    konfig[e.schluessel] = ohne && e.nur_mitgliedschaft ? "aus" : "freiwillig";
+  }
+
+  if (!ohne && !ziel.mitgliedtyp) return konfig;
 
   for (const z of zeilen) {
-    if (z.mitgliedtyp !== mitgliedtyp) continue;
+    if (z.gilt_fuer !== ziel.gilt_fuer) continue;
+    if (!ohne && z.mitgliedtyp !== ziel.mitgliedtyp) continue;
+    /* Ein Schlüssel, der an einer Mitgliedschaft hängt, bleibt auch dann
+       `aus`, wenn eine Altzeile etwas anderes behauptet — die Registry ist
+       hier die Wahrheit, nicht die Datenbank. */
+    if (ohne && FELD_REGISTRY.find(e => e.schluessel === z.schluessel)?.nur_mitgliedschaft) continue;
     /* Unbekannte Schlüssel bewusst übernehmen statt verschlucken: sie
        fallen sonst erst auf, wenn jemand sie sucht. Die Oberfläche zeigt
        nur, was in der Registry steht — hier zählt die Wahrheit der DB. */

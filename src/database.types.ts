@@ -2270,24 +2270,27 @@ export type Database = {
       mitgliedtyp_feldkonfig: {
         Row: {
           created_at: string | null
+          gilt_fuer: string
           id: string
-          mitgliedtyp_id: string
+          mitgliedtyp_id: string | null
           modus: string
           schluessel: string
           verein_id: string
         }
         Insert: {
           created_at?: string | null
+          gilt_fuer?: string
           id?: string
-          mitgliedtyp_id: string
+          mitgliedtyp_id?: string | null
           modus: string
           schluessel: string
           verein_id: string
         }
         Update: {
           created_at?: string | null
+          gilt_fuer?: string
           id?: string
-          mitgliedtyp_id?: string
+          mitgliedtyp_id?: string | null
           modus?: string
           schluessel?: string
           verein_id?: string

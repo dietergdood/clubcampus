@@ -38,8 +38,11 @@
 import {
   IMMER_PFLICHT_KEYS,
   getFeldkonfig,
+  fuerMitgliedtyp,
+  OHNE_MITGLIEDSCHAFT,
   pflichtfelderAus,
   type FeldkonfigZeile,
+  type KonfigZiel,
 } from '../members/feldkonfig.ts';
 import { FELD_LABEL, updateMitglied } from '../members/memberService.ts';
 import { updatePerson } from '../person/personService.ts';
@@ -81,15 +84,20 @@ export function getProfilCheck({
   eigenePerson = null, feldkonfig = [],
 }: GetProfilCheckProps) {
 
-  /* Fehlende Pflichtfelder eines Mitglieds, als Feld-Labels. */
-  function fehlendeFelder(raw: Partial<Mitglied>): string[] {
+  /* Fehlende Pflichtfelder, als Feld-Labels.
+
+     `ziel` statt `raw.mitgliedtyp`: dieselbe Funktion traegt seit dem
+     21.08.2026 beide Faelle — die Mitgliedschaft und die Person ohne. Vorher
+     hatte der Elternteil einen fest verdrahteten Satz daneben, also einen
+     zweiten Konfigurationsort. */
+  function fehlendeFelder(raw: Partial<Mitglied>, ziel: KonfigZiel): string[] {
     const fehlend: string[] = [];
 
     for (const feld of IMMER_PFLICHT_KEYS) {
       if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
     }
 
-    const pflicht = pflichtfelderAus(getFeldkonfig(raw.mitgliedtyp, feldkonfig));
+    const pflicht = pflichtfelderAus(getFeldkonfig(ziel, feldkonfig));
     for (const feld of pflicht) {
       if (istLeer(raw, feld)) fehlend.push(FELD_LABEL[feld] || feld);
     }
@@ -115,26 +123,26 @@ export function getProfilCheck({
     const isEltern = role === 'eltern' && !dbMitglieder.find(m => m.id === dbUser.mitglied_id);
 
     if (isEltern) {
-      /* Der Elternteil selbst hat keine Mitgliedschaft und damit keinen
-         Mitgliedtyp — für ihn gibt es keine Matrix, deshalb ein fester Satz.
+      /* OHNE MITGLIEDSCHAFT. Hier stand bis zum 21.08.2026 ein fest
+         verdrahteter Satz — Vorname, Nachname, Telefon — mit der Begruendung
+         „hat keinen Mitgliedtyp, deshalb keine Matrix". Das war der zweite
+         Konfigurationsort, dessen Abbau seit dem 19.08. laeuft: derselbe
+         Grund, aus dem `rolle_pflichtfelder` entfallen ist.
 
          Gelesen wird seit Etappe 4 die PERSON: `benutzer.vorname`,
          `nachname` und `telefon` sind gestrichen, die Angaben stehen an
          `personen`. Fehlt die Person (Ladezustand), wird nichts verlangt —
-         ein leerer Zustand darf keinen Hinweis auslösen. */
-      const fehlend: string[] = [];
-      if (eigenePerson) {
-        if (!eigenePerson.vorname?.trim())  fehlend.push(FELD_LABEL.vorname);
-        if (!eigenePerson.nachname?.trim()) fehlend.push(FELD_LABEL.nachname);
-        if (!eigenePerson.telefon?.trim())  fehlend.push(FELD_LABEL.telefon);
-      }
+         ein leerer Zustand darf keinen Hinweis ausloesen. */
+      const fehlend: string[] = eigenePerson
+        ? fehlendeFelder(eigenePerson as Partial<Mitglied>, OHNE_MITGLIEDSCHAFT)
+        : [];
 
       const kinder = kinderVonElternteil();
       /* Die Kinder sind Mitglieder — für sie greift die Matrix ihres
          Mitgliedtyps, statt wie früher pauschal Geburtsdatum,
          Nationalität und Adresse zu verlangen. */
       kinder.forEach(kind => {
-        for (const label of fehlendeFelder(kind)) {
+        for (const label of fehlendeFelder(kind, fuerMitgliedtyp(kind.mitgliedtyp))) {
           fehlend.push(`${kind.vorname}: ${label}`);
         }
       });
@@ -143,7 +151,7 @@ export function getProfilCheck({
 
     const raw = dbMitglieder.find(m => m.id === dbUser.mitglied_id);
     if (!raw) return [];
-    return fehlendeFelder(raw);
+    return fehlendeFelder(raw, fuerMitgliedtyp(raw.mitgliedtyp));
   }
 
   function sollProfilPruefen(): boolean {
@@ -220,10 +228,10 @@ export function getProfilCheck({
    * behaupten, laufen auseinander — und dann sperrt die Maske ein Feld, das
    * der Hinweis nicht nennt.
    */
-  function pflichtfelderFuer(mitgliedtyp: string | null | undefined): string[] {
+  function pflichtfelderFuer(ziel: KonfigZiel): string[] {
     return [
       ...IMMER_PFLICHT_KEYS,
-      ...pflichtfelderAus(getFeldkonfig(mitgliedtyp, feldkonfig)),
+      ...pflichtfelderAus(getFeldkonfig(ziel, feldkonfig)),
     ];
   }
 

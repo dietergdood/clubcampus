@@ -28,7 +28,7 @@ import { DatenpruefungTab } from "./tabs/DatenpruefungTab.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
 import { VerlaufTab } from "./tabs/VerlaufTab.tsx";
 import { getSichtbarkeit } from "./memberUtils.tsx";
-import { getFeldkonfig, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
+import { getFeldkonfig, fuerMitgliedtyp, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, SetState } from "../../types.ts";
 import type { FunktionMitGruppe } from "../../shared/person/types.ts";
@@ -105,7 +105,10 @@ function MemberDetail({
   /* Was es bei diesem Mitgliedtyp gibt (Konfiguration) UND wer es sehen
      darf (Rolle des Betrachters). "Gibt es nicht" gewinnt — siehe
      getSichtbarkeit in memberUtils. */
-  const konfig = getFeldkonfig(raw.mitgliedtyp, feldkonfig);
+  /* MITGLIEDTYP: MemberDetail zeigt eine Mitgliedschaft. Die Fallunter-
+     scheidung fuer Personen ohne Mitgliedschaft kommt mit der Personenseite —
+     bis dahin erreicht diese Komponente niemanden ohne Mitgliedtyp. */
+  const konfig = getFeldkonfig(fuerMitgliedtyp(raw.mitgliedtyp), feldkonfig);
   const fv = getSichtbarkeit(role, konfig);
   const tab = selectedMember?._tab || "info";
   const setTab = (t: string) => setSelectedMember(prev => prev ? { ...prev, _tab: t } : prev);

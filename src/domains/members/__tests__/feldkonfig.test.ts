@@ -7,6 +7,9 @@ import {
   MODI,
   eintraegeFuerBereich,
   getFeldkonfig,
+  fuerMitgliedtyp,
+  giltFuerZiel,
+  OHNE_MITGLIEDSCHAFT,
   istBereichSichtbar,
   istPflicht,
   istSichtbar,
@@ -20,28 +23,28 @@ import type { FeldkonfigZeile } from "../feldkonfig.ts";
    der Goenner hat fuenf Pflichtfelder und sieben Schluessel auf "aus",
    ein Aktivmitglied hat Pflichtfelder und ein abgewaehltes Feld. */
 const zeilen: FeldkonfigZeile[] = [
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", schluessel: "geburtsdatum", modus: "pflicht" },
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", schluessel: "email",        modus: "pflicht" },
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", schluessel: "strasse",      modus: "pflicht" },
-  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", schluessel: "geschlecht",   modus: "freiwillig" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "geburtsdatum", modus: "pflicht" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "email",        modus: "pflicht" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "strasse",      modus: "pflicht" },
+  { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "geschlecht",   modus: "freiwillig" },
 
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "email",        modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "strasse",      modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "plz",          modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "ort",          modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "telefon",      modus: "pflicht" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "geburtsdatum", modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "geschlecht",   modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "spielerpass",  modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "js_nr",        modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "fairgate_id",  modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "teams",        modus: "aus" },
-  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "funktionen",   modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "email",        modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "strasse",      modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "plz",          modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "ort",          modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "telefon",      modus: "pflicht" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "geburtsdatum", modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "geschlecht",   modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "spielerpass",  modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "js_nr",        modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "fairgate_id",  modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "teams",        modus: "aus" },
+  { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "funktionen",   modus: "aus" },
 ];
 
 describe("getFeldkonfig", () => {
   it("liefert den gespeicherten Modus", () => {
-    const k = getFeldkonfig("Aktivmitglied", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), zeilen);
     expect(k.geburtsdatum).toBe("pflicht");
     expect(k.geschlecht).toBe("freiwillig");
   });
@@ -50,14 +53,14 @@ describe("getFeldkonfig", () => {
     /* Der Kern der Bauweise: gespeichert wird nur die Abweichung. Beim
        Aktivmitglied steht nichts zu heimatort — also freiwillig, nicht
        Pflicht und nicht versteckt. */
-    const k = getFeldkonfig("Aktivmitglied", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), zeilen);
     expect(k.heimatort).toBe("freiwillig");
     expect(k.notizen).toBe("freiwillig");
   });
 
   it("mischt Mitgliedtypen nicht", () => {
-    const aktiv = getFeldkonfig("Aktivmitglied", zeilen);
-    const supp  = getFeldkonfig("Supporter", zeilen);
+    const aktiv = getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), zeilen);
+    const supp  = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(aktiv.spielerpass).toBe("freiwillig");
     expect(supp.spielerpass).toBe("aus");
   });
@@ -66,16 +69,16 @@ describe("getFeldkonfig", () => {
     /* Ein Ladezustand darf weder ein Feld ausblenden noch ein Formular
        blockieren. */
     for (const m of [null, undefined, ""]) {
-      const k = getFeldkonfig(m, zeilen);
+      const k = getFeldkonfig(fuerMitgliedtyp(m), zeilen);
       expect(pflichtfelderAus(k)).toEqual([]);
       expect(istSichtbar(k, "spielerpass")).toBe(true);
     }
   });
 
   it("verschluckt unbekannte Schluessel nicht", () => {
-    const k = getFeldkonfig("Aktivmitglied", [
+    const k = getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), [
       ...zeilen,
-      { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", schluessel: "erfunden", modus: "aus" },
+      { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", gilt_fuer: "mitgliedtyp" as const, schluessel: "erfunden", modus: "aus" },
     ]);
     expect(k.erfunden).toBe("aus");
   });
@@ -83,7 +86,7 @@ describe("getFeldkonfig", () => {
 
 describe("istSichtbar / istPflicht", () => {
   it("blendet 'aus' aus und zeigt den Rest", () => {
-    const k = getFeldkonfig("Supporter", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(istSichtbar(k, "spielerpass")).toBe(false);
     expect(istSichtbar(k, "teams")).toBe(false);
     expect(istSichtbar(k, "email")).toBe(true);
@@ -93,9 +96,9 @@ describe("istSichtbar / istPflicht", () => {
   it("haelt vorname und nachname immer fuer Pflicht und sichtbar", () => {
     /* Beide sind in `mitglieder` NOT NULL. Auch eine Zeile, die etwas
        anderes behauptet, darf daran nichts aendern. */
-    const k = getFeldkonfig("Supporter", [
+    const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), [
       ...zeilen,
-      { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", schluessel: "vorname", modus: "aus" },
+      { mitgliedtyp_id: "t2", mitgliedtyp: "Supporter", gilt_fuer: "mitgliedtyp" as const, schluessel: "vorname", modus: "aus" },
     ]);
     expect(istSichtbar(k, "vorname")).toBe(true);
     expect(istPflicht(k, "vorname")).toBe(true);
@@ -103,7 +106,7 @@ describe("istSichtbar / istPflicht", () => {
   });
 
   it("zaehlt ein ausgeblendetes Feld nicht als Pflicht", () => {
-    const k = getFeldkonfig("Supporter", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(istPflicht(k, "geburtsdatum")).toBe(false);
   });
 });
@@ -112,7 +115,7 @@ describe("istBereichSichtbar", () => {
   it("blendet einen Bereich aus, dessen Eintraege alle 'aus' sind", () => {
     /* Sonst bliebe beim Goenner eine leere Karte "Teams" stehen — genau
        das, was istSupporter in InfoTab bisher von Hand verhindert hat. */
-    const k = getFeldkonfig("Supporter", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(istBereichSichtbar(k, "teams")).toBe(false);
     expect(istBereichSichtbar(k, "funktionen")).toBe(false);
   });
@@ -120,7 +123,7 @@ describe("istBereichSichtbar", () => {
   it("laesst einen Bereich stehen, solange ein Eintrag sichtbar ist", () => {
     /* Vereinsdaten: spielerpass/js_nr/fairgate_id sind aus, mitgliedtyp
        und eintrittsdatum bleiben — die Karte behaelt zwei Zeilen. */
-    const k = getFeldkonfig("Supporter", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(istBereichSichtbar(k, "vereinsdaten")).toBe(true);
     expect(istSichtbar(k, "mitgliedtyp")).toBe(true);
     expect(istSichtbar(k, "eintrittsdatum")).toBe(true);
@@ -129,8 +132,8 @@ describe("istBereichSichtbar", () => {
   it("haelt Personalien wegen vorname/nachname immer sichtbar", () => {
     const alleAus = FELD_REGISTRY
       .filter(e => e.bereich === "personalien" && e.modi.length > 0)
-      .map(e => ({ mitgliedtyp_id: "t9", mitgliedtyp: "Leer", schluessel: e.schluessel, modus: "aus" as const }));
-    const k = getFeldkonfig("Leer", alleAus);
+      .map(e => ({ mitgliedtyp_id: "t9", mitgliedtyp: "Leer", gilt_fuer: "mitgliedtyp" as const, schluessel: e.schluessel, modus: "aus" as const }));
+    const k = getFeldkonfig(fuerMitgliedtyp("Leer"), alleAus);
     expect(istBereichSichtbar(k, "personalien")).toBe(true);
   });
 });
@@ -139,12 +142,12 @@ describe("pflichtfelderAus", () => {
   it("liefert die Pflichtfelder in Registry-Reihenfolge", () => {
     /* Feste Reihenfolge, damit die Fehlermeldung im Formular nicht von
        der Zeilenreihenfolge der Datenbank abhaengt. */
-    const k = getFeldkonfig("Supporter", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(pflichtfelderAus(k)).toEqual(["email", "telefon", "strasse", "plz", "ort"]);
   });
 
   it("enthaelt vorname/nachname nicht", () => {
-    const k = getFeldkonfig("Aktivmitglied", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), zeilen);
     expect(pflichtfelderAus(k)).not.toContain("vorname");
     expect(pflichtfelderAus(k)).not.toContain("nachname");
   });
@@ -154,14 +157,14 @@ describe("kombiniereMitRolle", () => {
   it("laesst 'aus' gegen jede Rolle gewinnen", () => {
     /* Die Reihenfolge ist die Aussage: "Gibt es nicht" gilt auch fuer
        die Verwaltung, sonst waere der Wert nicht das, was sein Name sagt. */
-    const k = getFeldkonfig("Supporter", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(kombiniereMitRolle(k, true, "spielerpass")).toBe(false);
   });
 
   it("laesst die Rolle weiterhin ausblenden", () => {
     /* Die andere Richtung bleibt: ein Trainer sieht die AHV-Nummer nicht,
        auch wenn sie beim Mitgliedtyp freiwillig ist. */
-    const k = getFeldkonfig("Aktivmitglied", zeilen);
+    const k = getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), zeilen);
     expect(istSichtbar(k, "ahv_nr")).toBe(true);
     expect(kombiniereMitRolle(k, false, "ahv_nr")).toBe(false);
   });
@@ -241,5 +244,96 @@ describe("Registry", () => {
       "teams",
     ]);
     for (const e of anAus) expect([...e.modi].sort()).toEqual(["aus", "freiwillig"]);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Die Achse „ohne Mitgliedschaft" (21.08.2026)
+
+   Vorher hatte `getFeldkonfig(null, …)` ein `if (!mitgliedtyp)
+   return konfig;` und lieferte ALLES auf freiwillig — ein Gönner
+   bekam jede Karte und jeden Tab. Der Elternteil hatte daneben
+   einen fest verdrahteten Satz in getProfilCheck, also einen
+   zweiten Konfigurationsort.
+   ═══════════════════════════════════════════════════════════════ */
+
+const ohneZeilen: FeldkonfigZeile[] = [
+  { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "telefon", modus: "pflicht" },
+  { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "email",   modus: "pflicht" },
+  { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "ahv_nr",  modus: "aus" },
+];
+
+describe("ohne Mitgliedschaft", () => {
+  it("liest die Zeilen der neuen Achse", () => {
+    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, ohneZeilen);
+    expect(k.telefon).toBe("pflicht");
+    expect(k.email).toBe("pflicht");
+    expect(k.ahv_nr).toBe("aus");
+  });
+
+  it("⚠ blendet aus, was an einer Mitgliedschaft haengt — OHNE Seed-Zeile", () => {
+    /* Das Registry-Merkmal wirkt in der AUSWERTUNG. Wirkte es nur in der
+       Oberflaeche, braeuchten diese zehn je eine Zeile in der Datenbank —
+       und ein Direktzugriff haette sie wieder sichtbar. */
+    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, ohneZeilen);
+    for (const s of ["mitgliedtyp","eintrittsdatum","spielerpass","js_nr","fairgate_id",
+                     "teams","notizen","tab_stats","tab_verlauf","tab_eltern"]) {
+      expect(k[s]).toBe("aus");
+    }
+  });
+
+  it("laesst stehen, was auch ohne Mitgliedschaft Sinn hat", () => {
+    /* funktionen bleibt sichtbar: „Er darf eine Vereinsfunktion haben"
+       (17.08.2026). Und die fuenf Personalien-Felder bleiben freiwillig statt
+       `aus` — „aus" hiesse unsichtbar, nicht geloescht, und bei jedem Austritt
+       entstuende ein Bestand an Personendaten, den niemand mehr sieht. */
+    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, ohneZeilen);
+    expect(k.funktionen).toBe("freiwillig");
+    expect(k.tab_portal).toBe("freiwillig");
+    expect(k.tab_datenpruefung).toBe("freiwillig");
+    for (const s of ["geburtsdatum","geschlecht","nationalitaet","nationalitaet2","heimatort"]) {
+      expect(k[s]).toBe("freiwillig");
+    }
+  });
+
+  it("⚠ die Registry gewinnt gegen eine Altzeile", () => {
+    /* Stellt jemand per Direktzugriff `teams` auf Pflicht, bleibt es `aus`:
+       eine Anforderung, die niemand erfuellen kann, darf nicht entstehen. */
+    const k = getFeldkonfig(OHNE_MITGLIEDSCHAFT, [
+      ...ohneZeilen,
+      { mitgliedtyp_id: null, mitgliedtyp: "", gilt_fuer: "ohne_mitgliedschaft", schluessel: "teams", modus: "pflicht" },
+    ]);
+    expect(k.teams).toBe("aus");
+  });
+
+  it("mischt die beiden Achsen nicht", () => {
+    const gemischt = [...zeilen, ...ohneZeilen];
+    /* Der Mitgliedtyp sieht die neue Zeile nicht … */
+    expect(getFeldkonfig(fuerMitgliedtyp("Aktivmitglied"), gemischt).ahv_nr).toBe("freiwillig");
+    /* … und die neue Achse nicht die des Mitgliedtyps. */
+    expect(getFeldkonfig(OHNE_MITGLIEDSCHAFT, gemischt).geburtsdatum).toBe("freiwillig");
+  });
+
+  it("⚠ ein Datenloch ist NICHT „ohne Mitgliedschaft“", () => {
+    /* `mitglieder.mitgliedtyp` ist nullable. Eine Mitgliedschaft ohne Typ
+       faellt auf „alles freiwillig" zurueck — wer beide Faelle zusammenlegte,
+       blendete bei einem Datenloch ploetzlich Felder aus. */
+    const k = getFeldkonfig(fuerMitgliedtyp(null), zeilen);
+    expect(k.teams).toBe("freiwillig");
+    expect(k.spielerpass).toBe("freiwillig");
+  });
+
+  it("giltFuerZiel filtert die Spalte der Oberflaeche", () => {
+    const teams = FELD_REGISTRY.find(e => e.schluessel === "teams")!;
+    const telefon = FELD_REGISTRY.find(e => e.schluessel === "telefon")!;
+    expect(giltFuerZiel(teams, OHNE_MITGLIEDSCHAFT)).toBe(false);
+    expect(giltFuerZiel(teams, fuerMitgliedtyp("Aktivmitglied"))).toBe(true);
+    expect(giltFuerZiel(telefon, OHNE_MITGLIEDSCHAFT)).toBe(true);
+  });
+
+  it("genau zehn Schluessel haengen an einer Mitgliedschaft", () => {
+    /* Faellt die Zahl auseinander, hat jemand einen Eintrag ergaenzt, ohne
+       ueber die neue Spalte nachzudenken. */
+    expect(FELD_REGISTRY.filter(e => e.nur_mitgliedschaft).length).toBe(10);
   });
 });

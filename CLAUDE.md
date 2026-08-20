@@ -126,6 +126,12 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 ## Konventionen
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
+- **Ein Test, der nur Längen zählt, überlebt eine leere Konfiguration — Erwartungen nennen Feldnamen.** `expect(fehlend).toHaveLength(2)` besteht auch dann, wenn die zwei aus einem ganz anderen Grund entstehen. `expect(fehlend).toEqual(["Nachname", "Telefon"])` nicht.
+
+  Beleg vom 21.08.2026: `mitgliedtyp_feldkonfig` bekam die Spalte `gilt_fuer`, und drei Testdateien führten Attrappen **ohne** dieses Feld. Zur Laufzeit ist es dann `undefined`, der Filter `z.gilt_fuer !== ziel.gilt_fuer` trifft, und **jede Zeile wird übersprungen** — die Konfiguration war leer, die Prüfung damit gegenstandslos. Rot geworden sind die Tests **allein deshalb**, weil ihre Erwartungen die Feldnamen nennen; mit `toHaveLength` wären alle drei Dateien grün geblieben und hätten ab da nichts mehr geprüft.
+
+  Dasselbe gilt für den umgekehrten Fall: wer eine Attrappe um ein Pflichtfeld erweitert, prüft, ob die Testzahl steigt (`npx vitest list | sed 's/ > .*//' | sort | uniq -c`). Eine Attrappe ist Produktionscode für den Test — fehlt ihr eine Spalte, prüft er etwas anderes als das, was läuft.
+
 - **`cat > datei` truncatet ohne Rückfrage — für Dateien, die es vielleicht schon gibt, das Write-Werkzeug nehmen.** Es verweigert das Überschreiben einer ungelesenen Datei; die Shell tut es wortlos.
 
   Am 20.08.2026 so passiert: `src/domains/app/__tests__/getProfilCheck.test.ts` existierte mit **13 Fällen** und wurde von einer neuen Fassung mit 12 ersetzt. Build grün, Typecheck grün, alle 38 Testdateien grün — **nichts hat gemeldet, dass dreizehn Prüfungen verschwunden sind.**

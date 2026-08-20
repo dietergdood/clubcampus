@@ -32,7 +32,7 @@ import { AdresseFormular } from "./AdresseFormular.tsx";
 import { TI } from "../../icons.tsx";
 import { insertMitglied, logAktivitaet, AKTIVITAET_TYP, FELD_LABEL } from "../../domains/members/memberService.ts";
 import type { Account, Mitgliedtyp, Sb } from "../../types.ts";
-import { getFeldkonfig, istPflicht as istPflichtKonfig, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
+import { getFeldkonfig, fuerMitgliedtyp, istPflicht as istPflichtKonfig, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import { GESCHLECHT_OPTS } from "../../domains/person/personUtils.ts";
@@ -108,7 +108,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
      nicht Pflicht war, liess sich beim Anlegen gar nicht erfassen. Jetzt
      ist ein freiwilliges Feld sichtbar und darf leer bleiben — nur "Gibt
      es nicht" blendet es aus. */
-  const konfig = getFeldkonfig(form.mitgliedtyp, feldkonfig);
+  /* MITGLIEDTYP: beim Anlegen gibt es immer einen — das Formular verlangt
+     ihn als erstes Feld. */
+  const konfig = getFeldkonfig(fuerMitgliedtyp(form.mitgliedtyp), feldkonfig);
   const pflichtfelder = pflichtfelderAus(konfig);
 
   const istPflicht = (feld: string) => istPflichtKonfig(konfig, feld);

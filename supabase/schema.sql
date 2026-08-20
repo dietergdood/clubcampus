@@ -1255,10 +1255,13 @@ ALTER SEQUENCE "public"."mitglieder_team_details_id_seq" OWNED BY "public"."mitg
 CREATE TABLE IF NOT EXISTS "public"."mitgliedtyp_feldkonfig" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "verein_id" "uuid" NOT NULL,
-    "mitgliedtyp_id" "uuid" NOT NULL,
+    "mitgliedtyp_id" "uuid",
     "schluessel" "text" NOT NULL,
     "modus" "text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
+    "gilt_fuer" "text" DEFAULT 'mitgliedtyp'::"text" NOT NULL,
+    CONSTRAINT "mitgliedtyp_feldkonfig_achse_check" CHECK (((("gilt_fuer" = 'mitgliedtyp'::"text") AND ("mitgliedtyp_id" IS NOT NULL)) OR (("gilt_fuer" = 'ohne_mitgliedschaft'::"text") AND ("mitgliedtyp_id" IS NULL)))),
+    CONSTRAINT "mitgliedtyp_feldkonfig_gilt_fuer_check" CHECK (("gilt_fuer" = ANY (ARRAY['mitgliedtyp'::"text", 'ohne_mitgliedschaft'::"text"]))),
     CONSTRAINT "mitgliedtyp_feldkonfig_modus_check" CHECK (("modus" = ANY (ARRAY['pflicht'::"text", 'freiwillig'::"text", 'aus'::"text"])))
 );
 
@@ -1275,6 +1278,10 @@ COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."schluessel" IS 'Feld (gebur
 
 
 COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."modus" IS 'pflicht = wird gezeigt und verlangt; freiwillig = wird gezeigt, darf leer bleiben; aus = gibt es nicht, verschwindet aus Profil, Neuanlage und Datenpruefung.';
+
+
+
+COMMENT ON COLUMN "public"."mitgliedtyp_feldkonfig"."gilt_fuer" IS 'Fuer wen diese Zeile gilt: mitgliedtyp (dann mit mitgliedtyp_id) oder ohne_mitgliedschaft (dann ohne). Ein einziger Wert fuer Elternteil UND Supporter — die Alternative waere ein Wert elternteil, abgeleitet aus „hat Kinder", also eine BERECHNETE Achse, die kippt sobald ein Kind austritt. Derselbe Fehler, den rolle_pflichtfelder gekostet hat.';
 
 
 
@@ -2601,7 +2608,7 @@ ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
 
 
 ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
-    ADD CONSTRAINT "mitgliedtyp_feldkonfig_verein_key" UNIQUE ("verein_id", "mitgliedtyp_id", "schluessel");
+    ADD CONSTRAINT "mitgliedtyp_feldkonfig_verein_key" UNIQUE NULLS NOT DISTINCT ("verein_id", "mitgliedtyp_id", "schluessel");
 
 
 
