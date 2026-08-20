@@ -113,18 +113,48 @@ describe("portalZugangDeaktivieren", () => {
 });
 
 describe("updateMitglied — boolean-Vertrag", () => {
-  it("gibt true zurück und injiziert updated_at", async () => {
-    const sb = makeSb();
+  it("schreibt ein Personenfeld nach personen", async () => {
+    /* ⚠ Hier stand bis zum 21.08.2026 die Erwartung, `vorname` lande in
+       `mitglieder`. Das war der Altspalten-Ausweichpfad — und die Spalte gibt
+       es seit Etappe 6a nicht mehr. Gruen war der Test nur, weil die Attrappe
+       kein Schema kennt: sie nimmt jede Spalte entgegen, auch eine, die in
+       der Datenbank einen Laufzeitfehler ergaebe. */
+    const sb = makeSb({ "mitglieder.select": { data: { person_id: "p-1" } } });
     const ok = await updateMitglied(sb as any, 5, { vorname: "Neu" } as any);
     expect(ok).toBe(true);
-    const rec = sb.find("mitglieder", "update")!;
+    const rec = sb.find("personen", "update")!;
     expect(rec.payload).toEqual(expect.objectContaining({ vorname: "Neu" }));
     expect(rec.payload.updated_at).toEqual(expect.any(String));
+    /* Nach `mitglieder` geht dabei nichts — es war kein Mitgliedschaftsfeld dabei. */
+    expect(sb.opsOn("mitglieder").filter(o => o.op === "update")).toHaveLength(0);
+  });
+
+  it("schreibt ein Mitgliedschaftsfeld nach mitglieder", async () => {
+    const sb = makeSb();
+    const ok = await updateMitglied(sb as any, 5, { mitgliedtyp: "Aktivmitglied" } as any);
+    expect(ok).toBe(true);
+    const rec = sb.find("mitglieder", "update")!;
+    expect(rec.payload).toEqual(expect.objectContaining({ mitgliedtyp: "Aktivmitglied" }));
+  });
+
+  it("⚠ ist die Mitgliedschaft nicht lesbar, wird NICHTS geschrieben", async () => {
+    /* Der Fall entsteht unter RLS: ein Elternteil sah `mitglieder` bis zum
+       21.08.2026 gar nicht, und die Abfrage kam leer zurueck — OHNE Fehler.
+       Frueher schloss der Code daraus „Mitglied ohne Person" und schrieb in
+       die Altspalten. `mitglieder.person_id` ist aber NOT NULL, und in der
+       Datenbank steht keine einzige Zeile mit NULL: der Fall kann gar nicht
+       eintreten, die Diagnose war also immer falsch. */
+    const sb = makeSb();   // keine mitglieder.select-Antwort = nicht sichtbar
+    const ok = await updateMitglied(sb as any, 5, { vorname: "Neu" } as any);
+    expect(ok).toBe(false);
+    expect(sb.opsOn("personen")).toHaveLength(0);
+    expect(sb.opsOn("mitglieder").filter(o => o.op === "update")).toHaveLength(0);
+    expect(errSpy).toHaveBeenCalled();
   });
 
   it("gibt false zurück und loggt bei Fehler", async () => {
     const sb = makeSb({ "mitglieder.update": { error: pgError() } });
-    const ok = await updateMitglied(sb as any, 5, { vorname: "Neu" } as any);
+    const ok = await updateMitglied(sb as any, 5, { mitgliedtyp: "X" } as any);
     expect(ok).toBe(false);
     expect(errSpy).toHaveBeenCalled();
   });

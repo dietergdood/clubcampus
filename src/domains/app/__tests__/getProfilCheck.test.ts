@@ -274,3 +274,77 @@ describe("sollProfilPruefen — nur noch die Person", () => {
     expect(sollProfilPruefen()).toBe(false);
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   Der Elternteil sieht, was bei seinem Kind fehlt (21.08.2026)
+
+   `kinderVonElternteil()` gab bis heute eine feste leere Liste
+   zurück — der Auftrag nennt diesen Test „heute rot".
+
+   Vier Dinge mussten zusammenkommen, drei davon lautlos: die zwei
+   Policies, die Achse `ohne_mitgliedschaft`, und diese Liste.
+   ═══════════════════════════════════════════════════════════════ */
+describe("Kinder eines Elternteils", () => {
+  const kind = (over: Record<string, unknown> = {}) => ({
+    id: 501, mitgliedtyp: "Juniorenmitglied",
+    vorname: "Lena", nachname: "Muster",
+    geburtsdatum: "2013-05-04", ...over,
+  });
+
+  const elternMitKind = (kinder: Record<string, unknown>[]) => getProfilCheck({
+    sb: null as never,
+    dbUser: { id: "u1", mitglied_id: null, person_id: "p1" } as never,
+    role: "eltern" as never,
+    dbMitglieder: [] as never,
+    setDbUser: (() => {}) as never,
+    eigenePerson: { vorname: "Petra", nachname: "Muster", telefon: "+41 79 1" } as never,
+    eigeneKinder: kinder as never,
+    feldkonfig,
+  });
+
+  it("meldet ein fehlendes Pflichtfeld des Kindes mit Namen davor", () => {
+    /* Die Attrappe setzt geburtsdatum bei Juniorenmitglied auf Pflicht. */
+    const { getProfilFehlend } = elternMitKind([kind({ geburtsdatum: null })]);
+    expect(getProfilFehlend()).toContain("Lena: Geburtsdatum");
+  });
+
+  it("meldet nichts, wenn beim Kind alles steht", () => {
+    const { getProfilFehlend } = elternMitKind([kind()]);
+    expect(getProfilFehlend()).toEqual([]);
+  });
+
+  it("⚠ ohne Kinder bleibt es still — der Fall von vor dem 21.08.2026", () => {
+    /* Genau dieses Ergebnis lieferte die Funktion FRUEHER IMMER, auch wenn
+       Kinder verknuepft waren. Es war von „hat keine Kinder" nicht zu
+       unterscheiden — deshalb fiel es Monate nicht auf. */
+    const { getProfilFehlend } = elternMitKind([]);
+    expect(getProfilFehlend()).toEqual([]);
+  });
+
+  it("richtet sich nach dem Mitgliedtyp DES KINDES, nicht des Elternteils", () => {
+    /* Der Elternteil hat gar keinen — fuer ihn gilt ohne_mitgliedschaft. Das
+       Kind bringt seinen eigenen mit. */
+    const { getProfilFehlend } = elternMitKind([
+      kind({ id: 502, vorname: "Tim", mitgliedtyp: "Passivmitglied", geburtsdatum: null, telefon: null }),
+    ]);
+    /* Passivmitglied verlangt in der Attrappe telefon, nicht geburtsdatum. */
+    expect(getProfilFehlend()).toContain("Tim: Telefon");
+    expect(getProfilFehlend()).not.toContain("Tim: Geburtsdatum");
+  });
+
+  it("sollProfilPruefen sieht ein ungeprueftes Kind", () => {
+    const frisch = new Date().toISOString();
+    const { sollProfilPruefen } = getProfilCheck({
+      sb: null as never,
+      dbUser: { id: "u1", mitglied_id: null, person_id: "p1" } as never,
+      role: "eltern" as never,
+      dbMitglieder: [] as never,
+      setDbUser: (() => {}) as never,
+      eigenePerson: { profil_geprueft_at: frisch } as never,
+      eigeneKinder: [kind({ profil_geprueft_at: null })] as never,
+      feldkonfig,
+    });
+    /* Der Elternteil selbst ist frisch bestaetigt — das Kind nicht. */
+    expect(sollProfilPruefen()).toBe(true);
+  });
+});

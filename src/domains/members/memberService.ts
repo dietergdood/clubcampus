@@ -267,11 +267,25 @@ export async function updateMitglied(sb: SbClient, id: number, fields: MitgliedU
       .select("person_id").eq("id", id).maybeSingle();
     const personId = zeile?.person_id;
     if (!personId) {
-      /* Mitglied ohne Person — angelegt zwischen Etappe 1 und 2b. Der
-         Änderung darf das nicht im Weg stehen, deshalb geht sie in die
-         Altspalten. Etappe 3 legt für diese Fälle Personen nach. */
-      console.warn("updateMitglied: Mitglied", id, "hat keine person_id — schreibe in die Altspalten");
-      Object.assign(mitgliedschaft, person);
+      /* ⚠ HIER STAND EIN AUSWEICHPFAD: „Mitglied ohne Person — schreibe in
+         die Altspalten". Beides ist seit dem 21.08.2026 nachweislich falsch:
+
+         `mitglieder.person_id` ist NOT NULL (seit Etappe 2b), und in der
+         Datenbank steht keine einzige Zeile mit NULL. „Mitglied ohne Person"
+         KANN nicht mehr entstehen. Und die Altspalten, in die der Zweig
+         schrieb, gibt es seit Etappe 6a nicht mehr — der Schreibversuch wäre
+         ohnehin gescheitert.
+
+         Kommt hier nichts zurück, hat das genau zwei mögliche Gründe: die
+         Zeile ist für diesen Benutzer nicht sichtbar (RLS) oder es gibt sie
+         nicht. Beides ist ein Fehler und kein Grund für einen Umweg.
+
+         ⚠ Am `error` ist das nicht zu erkennen: RLS liefert keine Meldung,
+         sondern ein leeres Ergebnis. Die Unterscheidung ist auch nicht nötig
+         — in beiden Fällen darf nicht geschrieben werden. */
+      console.error(
+        `updateMitglied: Mitgliedschaft ${id} nicht lesbar — RLS oder gelöscht. Es wurde nichts geschrieben.`);
+      return false;
     } else {
       const { error } = await sb.from("personen")
         .update({ ...person, updated_at: jetzt })

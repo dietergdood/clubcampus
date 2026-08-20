@@ -318,6 +318,26 @@ $$;
 ALTER FUNCTION "public"."is_trainer_or_above"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."mitglied_ist_mein_kind"("p_mitglied_id" bigint) RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+    select exists (
+      select 1
+      from public.eltern_kinder ek
+      where ek.mitglied_id = p_mitglied_id
+        and ek.person_id   = public.get_my_person_id()
+    );
+  $$;
+
+
+ALTER FUNCTION "public"."mitglied_ist_mein_kind"("p_mitglied_id" bigint) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."mitglied_ist_mein_kind"("p_mitglied_id" bigint) IS 'Ist diese Mitgliedschaft die eines Kindes des angemeldeten Elternteils? Gegenstueck zu person_ist_mein_kind, nur ueber die Mitgliedschaft statt ueber die Person. Braucht SECURITY DEFINER, weil ein Elternteil eltern_kinder und mitglieder sonst nicht lesen darf — die Funktion soll die Frage beantworten, nicht selbst an ihr scheitern.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."pe_updated_at"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     AS $$
@@ -4523,6 +4543,10 @@ CREATE POLICY "mitglieder_insert_admin" ON "public"."mitglieder" FOR INSERT WITH
 ALTER TABLE "public"."mitglieder_notizen" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "mitglieder_select_kind" ON "public"."mitglieder" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."mitglied_ist_mein_kind"("id")));
+
+
+
 CREATE POLICY "mitglieder_select_priv" ON "public"."mitglieder" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND ("public"."get_my_role"() = ANY (ARRAY['administrator'::"text", 'administration'::"text", 'trainer'::"text", 'funktionaer'::"text"]))));
 
 
@@ -4765,6 +4789,10 @@ CREATE POLICY "personen_select_self" ON "public"."personen" FOR SELECT USING (((
 
 
 CREATE POLICY "personen_update_admin" ON "public"."personen" FOR UPDATE USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+CREATE POLICY "personen_update_kind" ON "public"."personen" FOR UPDATE USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."person_ist_mein_kind"("id"))) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."person_ist_mein_kind"("id")));
 
 
 
@@ -5329,6 +5357,12 @@ GRANT ALL ON FUNCTION "public"."is_admin_or_above"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."is_trainer_or_above"() TO "anon";
 GRANT ALL ON FUNCTION "public"."is_trainer_or_above"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_trainer_or_above"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."mitglied_ist_mein_kind"("p_mitglied_id" bigint) TO "anon";
+GRANT ALL ON FUNCTION "public"."mitglied_ist_mein_kind"("p_mitglied_id" bigint) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."mitglied_ist_mein_kind"("p_mitglied_id" bigint) TO "service_role";
 
 
 

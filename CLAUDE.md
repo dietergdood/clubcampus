@@ -131,6 +131,30 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   Beleg vom 21.08.2026: `mitgliedtyp_feldkonfig` bekam die Spalte `gilt_fuer`, und drei Testdateien führten Attrappen **ohne** dieses Feld. Zur Laufzeit ist es dann `undefined`, der Filter `z.gilt_fuer !== ziel.gilt_fuer` trifft, und **jede Zeile wird übersprungen** — die Konfiguration war leer, die Prüfung damit gegenstandslos. Rot geworden sind die Tests **allein deshalb**, weil ihre Erwartungen die Feldnamen nennen; mit `toHaveLength` wären alle drei Dateien grün geblieben und hätten ab da nichts mehr geprüft.
 
   Dasselbe gilt für den umgekehrten Fall: wer eine Attrappe um ein Pflichtfeld erweitert, prüft, ob die Testzahl steigt (`npx vitest list | sed 's/ > .*//' | sort | uniq -c`). Eine Attrappe ist Produktionscode für den Test — fehlt ihr eine Spalte, prüft er etwas anderes als das, was läuft.
+  **⚠ Eine Attrappe kennt kein Schema — und der Fehler geht in beide Richtungen.**
+
+  | | Beispiel | Folge |
+  |---|---|---|
+  | Ihr **fehlt** ein Feld, das es gibt | `gilt_fuer` (21.08.2026) | der Filter trifft, jede Zeile wird übersprungen — die Konfiguration ist leer |
+  | Sie **nimmt** eines an, das es nicht mehr gibt | `vorname` in `mitglieder` (seit Etappe 6a) | der Test prüft einen Schreibpfad, der in der Datenbank einen Laufzeitfehler ergäbe |
+
+  **Beide Male prüft der Test etwas anderes als das, was läuft. Und beide Male ist er grün.** Der zweite Fall stand ein halbes Jahr unbemerkt in `memberService.errors.test.ts` und schrieb den Altspalten-Ausweichpfad fest, den es längst nicht mehr gab.
+
+  **Woran man es merkt — zwei Dinge:**
+
+  1. **Erwartungen nennen Feldnamen statt Längen zu zählen** (siehe oben). Nur deshalb sind die `gilt_fuer`-Fälle rot geworden.
+  2. **Wo eine Attrappe eine Tabellenzeile nachbildet, gehört ihr Typ aus `database.types.ts`** — nicht von Hand gepflegt:
+
+     ```ts
+     import type { Tables } from "../../../types.ts";
+     const zeile: Partial<Tables<"mitglieder">> = { vorname: "Neu" };
+     //                                            ^^^^^^^ TS2353 — gibt es nicht
+     ```
+
+     Für Fassadenzeilen (`flacheZeile()` mischt `personen`-Felder auf `mitglieder`) gibt es `Mitglied` aus `types.ts`, das genau diese Mischung beschreibt.
+
+  **Wo es nicht geht, und warum:** die `results`-Map von `makeSb()` ist absichtlich `{ data?: any }`. Sie muss Join-Formen, `count`-Antworten und `PostgrestError` gleichermassen annehmen — ein Tabellentyp träfe darauf nicht zu. Ebenso ist `CallRecord.payload` untypisiert, weshalb `expect(rec.payload)` nichts erzwingt. **Die Prüfung greift also nur dort, wo der Test die Zeile selbst als Variable anlegt und annotiert.** Das ist der Ort, an dem die erfundene Spalte entsteht — für den Rest bleibt es beim Hinsehen.
+
 
 - **`cat > datei` truncatet ohne Rückfrage — für Dateien, die es vielleicht schon gibt, das Write-Werkzeug nehmen.** Es verweigert das Überschreiben einer ungelesenen Datei; die Shell tut es wortlos.
 

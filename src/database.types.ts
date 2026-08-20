@@ -4774,6 +4774,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_above: { Args: never; Returns: boolean }
       is_trainer_or_above: { Args: never; Returns: boolean }
+      mitglied_ist_mein_kind: {
+        Args: { p_mitglied_id: number }
+        Returns: boolean
+      }
       person_ist_mein_kind: { Args: { p_person_id: string }; Returns: boolean }
     }
     Enums: {

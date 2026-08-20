@@ -458,8 +458,12 @@ function Portal({supabaseClient, slug}: PortalProps){
     }
   };
 
+  /* `eigeneKinder` kommt aus demselben Ladevorgang wie die
+     Datenpruefungs-Maske (elternDaten). Eine zweite Abfrage waere ein zweiter
+     Ort, an dem dieselbe Liste auseinanderlaufen kann. */
   const { sollProfilPruefen, pflichtfelderFuer } = getProfilCheck({
     sb, dbUser, role, dbMitglieder, setDbUser, eigenePerson, feldkonfig,
+    eigeneKinder: elternDaten?.kinder ?? [],
   });
 
   return(

@@ -67,6 +67,16 @@ interface GetProfilCheckProps {
   /** Feldkonfiguration aus der Portalverwaltung. Fehlt sie, wird nichts
       verlangt — bewusst: ein leerer Ladezustand darf keinen Hinweis auslösen. */
   feldkonfig?: FeldkonfigZeile[];
+  /**
+   * Die verknüpften Kinder eines angemeldeten Elternteils, flach.
+   *
+   * ⚠ Wird HEREINGEREICHT, nicht hier geladen: `getProfilCheck` ist
+   * synchron. `clubcampus` holt sie ohnehin schon über
+   * `fetchKinderVollstaendigFuerElternteil()` für die Datenprüfungs-Maske —
+   * eine zweite Abfrage wäre ein zweiter Ort, an dem dieselbe Liste
+   * auseinanderlaufen kann.
+   */
+  eigeneKinder?: Mitglied[];
 }
 
 /* Feldwert eines Mitglieds — leer zählt als fehlend. `Mitglied` ist breit
@@ -81,7 +91,7 @@ function istLeer(raw: Partial<Mitglied>, feld: string): boolean {
 
 export function getProfilCheck({
   sb, dbUser, role, dbMitglieder, setDbUser,
-  eigenePerson = null, feldkonfig = [],
+  eigenePerson = null, feldkonfig = [], eigeneKinder = [],
 }: GetProfilCheckProps) {
 
   /* Fehlende Pflichtfelder, als Feld-Labels.
@@ -104,18 +114,27 @@ export function getProfilCheck({
     return fehlend;
   }
 
-  /* Die Kinder eines angemeldeten Elternteils.
-     ⚠ LIEFERT DERZEIT IMMER EINE LEERE LISTE. Gelesen wurde bis Etappe 6c
-     die Json-Altspalte `mitglieder.eltern` — sie wurde von
-     `loadDbMitglieder()` NIE befuellt, der Filter lief also seit jeher ins
-     Leere. Eltern bekamen deshalb nie einen Datenpruefungs-Hinweis fuer
-     ihre Kinder.
-     Die Verknuepfung steht in `eltern_kinder`. Sie hier zu lesen ist eine
-     VERHALTENSAENDERUNG — Eltern saehen plötzlich Hinweise, die sie nie
-     gesehen haben — und deshalb ein eigener Schritt. Bis dahin steht die
-     Luecke an einer Stelle statt an dreien. */
+  /**
+   * Die Kinder eines angemeldeten Elternteils.
+   *
+   * ✅ ANGESCHLOSSEN am 21.08.2026. Bis dahin gab die Funktion eine feste
+   * leere Liste zurück, und davor las sie die Json-Altspalte
+   * `mitglieder.eltern` — die `loadDbMitglieder()` NIE befüllt hat. Eltern
+   * bekamen deshalb seit jeher keinen Datenprüfungs-Hinweis für ihre Kinder,
+   * ohne dass irgendwo etwas fehlschlug.
+   *
+   * ⚠ Vier Dinge mussten dafür zusammenkommen, drei davon lautlos:
+   *   1. `mitglieder_select_kind` — vorher war das Lesen per RLS gesperrt
+   *      und lieferte eine leere Einbettung statt eines Fehlers
+   *   2. `personen_update_kind` — Schreiben war gesperrt
+   *   3. die Achse `ohne_mitgliedschaft` für den Elternteil selbst
+   *   4. diese Liste, hereingereicht statt hier geladen
+   *
+   * Die Verhaltensänderung ist gewollt: ein Elternteil sieht jetzt, was bei
+   * seinem Kind fehlt. Bei 372 Junioren ist das die AHV-Nummer.
+   */
   function kinderVonElternteil(): typeof dbMitglieder {
-    return [];
+    return eigeneKinder as typeof dbMitglieder;
   }
 
   function getProfilFehlend(): string[] {
