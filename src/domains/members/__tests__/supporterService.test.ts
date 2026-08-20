@@ -78,7 +78,7 @@ describe("fetchSupporter — das Konto", () => {
   });
 
   it("ein deaktiviertes Konto bleibt ein Konto", async () => {
-    /* „Deaktiviert" und „Kein Zugang" sind zwei verschiedene Aussagen —
+    /* „Deaktiviert“ und „Kein Zugang“ sind zwei verschiedene Aussagen —
        im ersten Fall gibt es ein Konto, das jemand wieder freischalten kann. */
     const sb = makeSb({ "personen.select": {
       data: [person({ benutzer: [{ id: "u-1", role: "supporter", aktiv: false }] })],
@@ -101,7 +101,7 @@ describe("fetchSupporter — ein Fehler ist keine Datenlage", () => {
   it("meldet den Datenbankfehler, statt ihn als leere Liste auszugeben", async () => {
     /* sb.from().select() WIRFT nicht — es liefert { data, error }. Wer
        `error` nicht liest, verwandelt jedes 42501 in „es gibt keine
-       Supporter". Genau das soll dieser Test verhindern. */
+       Supporter“. Genau das soll dieser Test verhindern. */
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const sb = makeSb({ "personen.select": { data: null, error: pgError("keine Rechte", "42501") } });
     expect(await fetchSupporter(sb as never, "v-1")).toEqual([]);

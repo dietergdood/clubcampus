@@ -106,7 +106,7 @@ Besonders zu beachten:
 **`database.types.ts` ist unvollständig.** `eltern_kinder.person_id`, `eltern_kinder.beziehung` und die Fremdschlüsselbeziehung `eltern_kinder.person_id → personen` fehlen. Ohne die Beziehung meldet PostgREST beim Join „could not find the relation between personen and eltern_kinder". Nach Block F also zuerst:
 
 ```
-npx supabase gen types typescript --linked > src/database.types.ts
+npm run gen:types
 ```
 
 **`benutzer_id` verschwindet aus der Elternliste.** `elternListUtils.tsx` liest heute `elternkontakte.benutzer_id`, um den Portal-Zugang anzuzeigen. Nach Block D steht diese Information in `benutzer.person_id` — die Elternliste muss von dort lesen, sonst zeigt sie für alle „kein Zugang".

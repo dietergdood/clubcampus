@@ -365,7 +365,24 @@ describe("entkoppleKind", () => {
     expect(sb.find("personen", "delete")).toBeUndefined();
   });
 
-  it("letztes Kind noch im Verein -> Supporter OHNE Mitgliedschaft", async () => {
+  it("⚠ ohne Wunsch entscheidet die Funktion NICHT mehr selbst", async () => {
+    /* Bis zum 20.08.2026 entschied entkoppleKind() am Zustand des Kindes, ob
+       der Verein den Kontakt behaelt — eine Frage mit Folgen, entschieden an
+       einem Nebenumstand, den niemand als Grund genannt haette.
+
+       "frage" heisst: die Verknuepfung ist geloest, an der Person ist nichts
+       geschehen. Der Aufrufer fragt. */
+    const sb = makeSb({
+      "eltern_kinder.select": { count: 0 },
+      "mitglieder.select": { data: { aktiv: true }, count: 0 },
+    });
+    expect(await entkoppleKind(sb as any, "p-1", 7, "user-1", "v-1")).toBe("frage");
+    expect(sb.find("benutzer", "update")).toBeUndefined();
+    expect(sb.find("personen", "delete")).toBeUndefined();
+    expect(sb.opsOn("mitglieder").filter(o => o.op === "insert")).toHaveLength(0);
+  });
+
+  it("Wunsch „supporter“: nur die Rolle, KEINE Mitgliedschaft", async () => {
     /* ⚠ DIE PRUEFUNG DES RUECKBAUS (20.08.2026). Bis dahin legte
        `macheZumSupporter()` hier eine Zeile in `mitglieder` an — Etappe 5,
        weil die Person sonst in keiner Liste erschienen waere.
@@ -382,7 +399,7 @@ describe("entkoppleKind", () => {
       "mitglieder.select": { data: { aktiv: true }, count: 0 },
       "personen.select": { data: { verein_id: "v-1", vorname: "Petra", nachname: "Brunner", email: "p@b.ch" } },
     });
-    expect(await entkoppleKind(sb as any, "p-1", 7, "user-1", "v-1")).toBe("supporter");
+    expect(await entkoppleKind(sb as any, "p-1", 7, "user-1", "v-1", "supporter")).toBe("supporter");
     expect(sb.opsOn("mitglieder").filter(o => o.op === "insert")).toHaveLength(0);
     /* Nach elternkontakte wird nichts mehr geschrieben (seit Etappe 3). */
     expect(sb.opsOn("elternkontakte")).toHaveLength(0);
@@ -404,7 +421,7 @@ describe("entkoppleKind", () => {
       "mitglieder.select": { data: { aktiv: true }, count: 1 },
       "personen.select": { data: { verein_id: "v-1", vorname: "Ueli", nachname: "Jakob", email: "u@j.ch" } },
     });
-    expect(await entkoppleKind(sb as any, "p-1", 7, null, "v-1")).toBe("supporter");
+    expect(await entkoppleKind(sb as any, "p-1", 7, null, "v-1", "supporter")).toBe("supporter");
     expect(sb.opsOn("mitglieder").filter(o => o.op === "insert")).toHaveLength(0);
     expect(sb.opsOn("mitglieder").filter(o => o.op === "update")).toHaveLength(0);
   });
@@ -415,26 +432,29 @@ describe("entkoppleKind", () => {
       "mitglieder.select": { data: { aktiv: true }, count: 0 },
       "personen.select": { data: { verein_id: "v-1", vorname: "A", nachname: "B", email: null } },
     });
-    expect(await entkoppleKind(sb as any, "p-1", 7, null, "v-1")).toBe("supporter");
+    expect(await entkoppleKind(sb as any, "p-1", 7, null, "v-1", "supporter")).toBe("supporter");
     expect(sb.find("personen", "delete")).toBeUndefined();
     expect(sb.find("benutzer", "update")).toBeUndefined();
   });
 
-  it("Kind hat den Verein verlassen -> verwaiste Person wird geloescht", async () => {
+  it("Wunsch „entfernen“: verwaiste Person wird geloescht", async () => {
     const sb = makeSb({
       "eltern_kinder.select": { count: 0 },
       "mitglieder.select": { data: { aktiv: false }, count: 0 },
     });
-    expect(await entkoppleKind(sb as any, "p-1", 7)).toBe("geloescht");
+    expect(await entkoppleKind(sb as any, "p-1", 7, null, null, "entfernen")).toBe("geloescht");
     expect(sb.find("personen", "delete")).toBeDefined();
   });
 
-  it("Kind hat den Verein verlassen, Elternteil ist selbst Mitglied -> Person bleibt", async () => {
+  it("Wunsch „entfernen“, aber die Person ist selbst Mitglied -> sie bleibt", async () => {
     const sb = makeSb({
       "eltern_kinder.select": { count: 0 },
       "mitglieder.select": { data: { aktiv: false }, count: 1 },
     });
-    expect(await entkoppleKind(sb as any, "p-1", 7)).toBe("geloescht");
+    /* „geloescht" ist der Name der ENTSCHEIDUNG, nicht ihres Ergebnisses:
+       loeschePersonWennVerwaist() prueft selbst, ob noch etwas an der Person
+       haengt, und laesst sie sonst stehen. */
+    expect(await entkoppleKind(sb as any, "p-1", 7, null, null, "entfernen")).toBe("geloescht");
     expect(sb.find("personen", "delete")).toBeUndefined();
   });
 });

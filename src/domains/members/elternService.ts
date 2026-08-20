@@ -584,7 +584,11 @@ export async function sucheKinder(
 }
 
 /* Was nach dem Entkoppeln mit dem Elternkontakt geschehen ist. */
-export type EntkoppelFolge = "verknuepft" | "supporter" | "geloescht";
+export type EntkoppelFolge = "verknuepft" | "supporter" | "geloescht" | "frage";
+
+/* Was mit der Person geschehen soll, wenn das letzte Kind wegfaellt.
+   Die Entscheidung gehoert dem Menschen, nicht dieser Funktion. */
+export type EntkoppelWunsch = "supporter" | "entfernen";
 
 /* Aenderungen an einem Elternkontakt betreffen alle verknuepften Kinder.
    mitglieder_aktivitaeten haengt an einer mitglied_id — deshalb wird der
@@ -616,11 +620,27 @@ export async function entkoppleKind(
   mitgliedId: number,
   benutzerId?: string | null,
   vereinId?: string | null,
+  wunsch?: EntkoppelWunsch | null,
 ): Promise<EntkoppelFolge> {
   const { verbleibendeKinder, kindNochAktiv } = await unlinkKind(sb, personId, mitgliedId);
   if (verbleibendeKinder > 0) return "verknuepft";
 
-  if (kindNochAktiv) {
+  /* ⚠ HIER WIRD NICHT MEHR GERATEN.
+
+     Bis zum 20.08.2026 entschied diese Funktion selbst: Kind noch im Verein →
+     Supporter, sonst Person weg. Das ist eine Frage mit Folgen — ob der
+     Verein den Kontakt behaelt —, und sie hing an einem Nebenumstand, den
+     niemand als Entscheidungsgrundlage benannt haette.
+
+     Ohne `wunsch` gibt sie deshalb "frage" zurueck: die Verknuepfung ist
+     geloest, die Person steht unveraendert da, und der Aufrufer fragt.
+
+     Wer nicht antwortet, hinterlaesst eine Person ohne Mitgliedschaft und
+     ohne Kind — also genau einen Supporter. Der Ausgang des Nichtstuns ist
+     damit der harmlose, nicht der unwiderrufliche. */
+  if (!wunsch) return "frage";
+
+  if (wunsch === "supporter") {
     /* Kind noch im Verein (z.B. Junioren → Aktiv) → der Elternteil wird
        Supporter: eine PERSON OHNE MITGLIEDSCHAFT, die erreichbar bleibt.
 
@@ -638,12 +658,12 @@ export async function entkoppleKind(
        ⚠ Es bleibt nur die Rolle zu setzen. Wer hier wieder etwas in
        `mitglieder` schreibt, macht den Rueckbau rueckgaengig. */
     if (benutzerId) await updateBenutzerRolle(sb, benutzerId, "supporter");
-    void vereinId;
+    void vereinId; void kindNochAktiv;
     return "supporter";
   }
 
-  /* Kind hat den Verein verlassen: die Person bleibt, solange noch
-     irgendetwas an ihr haengt (Mitgliedschaft, anderes Kind, Konto). */
+  /* Die Person bleibt, solange noch irgendetwas an ihr haengt (Mitgliedschaft,
+     anderes Kind, Konto) — `loeschePersonWennVerwaist` prueft das. */
   await loeschePersonWennVerwaist(sb, personId);
   return "geloescht";
 }

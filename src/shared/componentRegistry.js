@@ -185,6 +185,13 @@ export const COMPONENT_REGISTRY = [
     css: ["cc-toggle", "cc-toggle-on", "cc-toggle-knob", "cc-toggle-knob-on", "cc-toggle-dark"],
   },
   {
+    name: "SupporterModal",
+    desc: "Schlanke Ansicht für eine Person OHNE Mitgliedschaft: Kontakt, Portal-Zugang, Vereinsfunktionen, „Mitglied werden“. MemberDetail kann sie nicht zeigen — es arbeitet durchgehend mit einer Mitgliedschaft. Zieht später als Ganzes in die Personenseite um, deshalb liegt sie unter shared/person/.",
+    category: "Overlays",
+    usedIn: ["MitgliederModul"],
+    props: ["open", "onClose", "supporter", "onSpeichern", "onMitgliedWerden", "canEdit"],
+  },
+  {
     name: "Row / Col / Between",
     desc: "Layout-Helfer. Row=horizontal, Col=vertikal, Between=space-between.",
     category: "Layout",

@@ -67,16 +67,18 @@ interface SupporterListViewProps {
   vereinId?: string | null;
   isAdmin?: boolean;
   canExport?: boolean;
+  /** Klick auf eine Zeile — oeffnet das schlanke Supporter-Modal. */
+  onOeffnen?: ((row: MemberRow) => void) | null;
   /* ⚠ KEINE Sammelaktionen. Archivieren setzt eine Mitgliedschaft auf
      inaktiv — ein Supporter hat keine, es gaebe nichts zu archivieren. Und
      geloescht wird eine Person nie: sie ist der Bezugspunkt von Konto,
      Helfereinsaetzen und Verlauf. An ihre Stelle tritt „Mitglied werden"
-     (Teil B des Auftrags). */
+     im Modal. */
 }
 
 function SupporterListView({
   supporter, renderCell, rolleLabel, renderMobile, sb, account = null, vereinId = null,
-  isAdmin = false, canExport = false,
+  isAdmin = false, canExport = false, onOeffnen = null,
 }: SupporterListViewProps) {
   return (
     <ListView<MemberRow>
@@ -99,6 +101,7 @@ function SupporterListView({
       groupOptions={GROUP_OPTIONS}
       renderCell={renderCell}
       renderMobile={renderMobile}
+      onRowClick={onOeffnen ?? undefined}
       sb={sb}
       account={account}
       vereinId={vereinId}

@@ -20,12 +20,20 @@ npx vitest run src/modules/members/__tests__/memberFilter.test.js   # eine Datei
 npx vitest run -t "filtert nach Team"                               # ein Testfall
 ```
 
-ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`). Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
+ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt in CI nur bei error-Level: `react-hooks/rules-of-hooks` + `import/no-restricted-paths`).
 
-Stand 20.08.2026: 529 grün, 2 skipped, **1 absichtlich rot** (35 Testdateien).
-Der rote ist `supporterTrennung.test.js` → „portal_rollen gewinnt gegen die fest
-verdrahtete Beschriftung"; Begründung unter „Drei Nebenbefunde aus dem
-Supporter-Rückbau". Wer eine zweite rote Zeile sieht, hat etwas kaputtgemacht.
+> **⚠ Die 758 Warnungen sind selbst der Defekt.** Nicht weil Warnungen
+> schlimm wären, sondern weil echte Funde darin untergehen. Beleg vom
+> 20.08.2026: `getProfilFehlend` und `markiereProfilGeprueft` stehen seit
+> Monaten als `is assigned a value but never used` in der Ausgabe — genau der
+> tote Zweig der Datenprüfung, den eine eigene Analyse mühsam wieder gefunden
+> hat. Die Meldung war die ganze Zeit da, nur nicht zu sehen.
+>
+> Ein ungenutzter Rückgabewert ist fast immer eine Absicht, die nie
+> angeschlossen wurde. Wer die Liste einmal aufräumt, findet damit vermutlich
+> weitere. Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
+
+Stand 20.08.2026 (Supporter-Rückbau Teil A): 530 grün, 2 skipped, 0 rot (35 Testdateien).
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -118,7 +126,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 ## Konventionen
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
-- **Nach jeder Strukturänderung gehören Dump UND Typen nachgezogen** — `npx supabase db dump --linked -f supabase/schema.sql` *und* `npx supabase gen types typescript --linked > src/database.types.ts`. Am 05.08.2026 fehlten in `database.types.ts` gleich drei Dinge aus vorherigen Etappen: die ganze Tabelle `personen`, `mitglieder.person_id` und die Fremdschlüsselbeziehung, ohne die PostgREST den Join nicht typisiert. Der Dump allein reicht nicht.
+- **Nach jeder Strukturänderung gehören Dump UND Typen nachgezogen** — `npx supabase db dump --linked -f supabase/schema.sql` *und* `npm run gen:types`. Am 05.08.2026 fehlten in `database.types.ts` gleich drei Dinge aus vorherigen Etappen: die ganze Tabelle `personen`, `mitglieder.person_id` und die Fremdschlüsselbeziehung, ohne die PostgREST den Join nicht typisiert. Der Dump allein reicht nicht.
 - **Chips im Profilkopf nie selbst zusammenbauen** → `heroChips()` aus `domains/roles/roleUtils.ts`. Die Regel unterscheidet Rolle (was jemand tut) von Mitgliedtyp (wie er eingestuft ist) und ist mit 13 Tests abgesichert.
 - **Datenbereinigungen an Personenfeldern treffen `personen`, nicht `mitglieder`.** Die Fassade (`flacheZeile`) überschreibt jedes Feld aus `PERSON_FELDER` mit dem Wert der Person — die gleichnamige Spalte in `mitglieder` wird gar nicht mehr gelesen. Am 05.08.2026 selbst darauf reingefallen: Ein `update` auf `mitglieder.funktionen` sah in zwei Kontrollabfragen sauber aus und wirkte trotzdem nicht, weil die Liste `personen.funktionen` liest. Solange beide Spalten nebeneinander existieren (bis Etappe 6), gilt: erst `PERSON_FELDER` prüfen, dann die richtige Tabelle wählen.
 - **`mitglieder.funktionen` enthält Vereinsfunktionen, keine Kaderrollen.** Am 05.08.2026 stand dort bei 487 Mitgliedern „Spieler" — `ableitRolle()` prüft nur `funktionen.length > 0` und machte damit jeden ohne Kadereintrag zum Funktionär. Wer dort schreibt, prüft zweimal.
@@ -198,6 +206,32 @@ Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verlier
 > **Das gemeinsame Merkmal: keines der vier bricht laut.** Registrierung, Live-Nachrichten, Sync, Wappen — alle hören einfach auf zu funktionieren. Wer etwas ausserhalb von `public` anlegt, trägt es in die Tabelle in `ARCHITECTURE.md` ein; eine Migrationsdatei allein genügt nicht, sie ist Protokoll und keine Quelle fürs Nachbauen.
 >
 > Beim regulären `supabase db dump --linked` sind die `ALTER PUBLICATION` enthalten; ein `pg_dump --schema=public` verliert sie. Die auth-Trigger fehlen in beiden Fällen. Wird der Dump länger nicht gepflegt, läuft er auseinander: am 27.07.2026 fehlten ihm `elternkontakte.profil_geprueft_at`, `vereine.slug` samt `vereine_slug_unique` und die Funktion `check_email_bekannt()` — alle drei erst durch eine Regenerierung von `database.types.ts` aufgefallen. Edge Function `supabase/functions/invite-user` versendet Einladungs-Mails über die Auth-Admin-API.
+
+> **⚠ `>` in PowerShell 5.1 schreibt UTF-16LE.** Nicht nur bei `gen types` —
+> bei **jedem** Befehl. Am 20.08.2026 lag `src/database.types.ts` so mit
+> 300 KB statt 145 KB im Repository: Git hielt die Datei für binär
+> (`Bin 140356 -> 300554 bytes` — kein Zeilendiff, keine Review, keine
+> Konfliktauflösung), `grep` fand nichts darin, und Build wie Typecheck liefen
+> trotzdem durch, weil TypeScript das BOM versteht. Nichts schlug fehl, und
+> niemand sah es.
+>
+> **Deshalb gibt es `npm run gen:types`** (`scripts/gen-types.mjs`). Die
+> Supabase-CLI kann nur nach stdout schreiben — sie hat kein Flag für eine
+> Zieldatei —, also übernimmt das Skript die Umleitung und schreibt immer
+> UTF-8, gleich aus welcher Shell es gestartet wird. Es prüft ausserdem, dass
+> die Antwort `export type Database` enthält, bevor es die Datei überschreibt:
+> ohne das machte ein Netzwerkfehler aus einem gescheiterten Aufruf eine leere
+> Typdatei, und der nächste Typecheck meldete hunderte Fehler an Stellen, die
+> niemand angefasst hat.
+>
+> **Für alles andere gilt die Regel weiter.** Wer in PowerShell eine Datei
+> schreibt, die eingecheckt wird, nimmt `| Out-File -Encoding utf8` oder
+> `| Set-Content -Encoding utf8` — oder führt den Befehl über Git Bash aus.
+> Zum Nachsehen: `head -c 2 datei | od -c` → `FF FE` heisst falsch.
+>
+> Eine Regel, an die jemand denken muss, ist die schwächste Lösung. Wo ein
+> Befehl wiederholt vorkommt, gehört die Umleitung ins Skript statt in die
+> Anleitung.
 
 **`supabase/schema.sql` deckt nur das Schema `public` ab.** Zwei Dinge stehen deshalb nicht darin und gehen beim Nachbauen verloren, wenn man sie nicht kennt:
 
@@ -384,6 +418,14 @@ dafür beide Matrizen. Nur wertet das niemand aus:
 - `getProfilFehlend()` und `markiereProfilGeprueft()` werden in
   `clubcampus.tsx:465` destrukturiert und **nie aufgerufen**. Von den drei
   Rückgabewerten wirkt allein `sollProfilPruefen()` (`clubcampus.tsx:476`).
+
+  > **Unabhängig bestätigt am 20.08.2026:** `npm run lint` meldet für beide
+  > `is assigned a value but never used` — der Linter sagt seit jeher dasselbe
+  > wie diese Analyse, in zwei Zeilen unter 758 Warnungen. Das ist der Grund,
+  > warum es so lange stehen konnte: die Meldung war da, nur nicht zu sehen.
+  > Wer die Warnungen einmal aufräumt, findet damit vermutlich weitere tote
+  > Zweige — ein ungenutzter Rückgabewert ist fast immer eine Absicht, die
+  > nie angeschlossen wurde.
 - `sollProfilPruefen()` schaut ausschliesslich auf das Alter von
   `profil_geprueft_at`, nie auf einen Feldinhalt.
 - `DatenpruefungMitglied` und `DatenpruefungEltern` prüfen nichts. Beide setzen
@@ -715,29 +757,34 @@ Statuten. Nach dem Rückbau ist das eine Aussage, die stimmen muss: die beiden
 Begriffe gehören getrennt beschriftet („Alle Mitglieder" ≠ „alle Erreichbaren"),
 sonst bekommt der Gönner die GV-Einladung.
 
-**3. `rolleLabelMap` lässt die Konstanten gegen die Datenbank gewinnen.**
-In `memberMapper.ts` stehen die acht fest verdrahteten Beschriftungen
-**hinter** denen aus `portal_rollen`, und `Object.fromEntries` lässt den
-letzten Eintrag gewinnen. Sie sind also keine Rückfallwerte, sondern
-Überschreibungen: wer eine Rolle in `portal_rollen` umbenennt, sieht davon
-nichts. Betrifft `administrator`, `administration`, `funktionaer`, `trainer`,
-`spieler`, `eltern`, `mitglied`, `supporter` — also praktisch alle.
+**3. ✅ `rolleLabelMap` liess die Konstanten gegen die Datenbank gewinnen —
+behoben am 20.08.2026.** In `memberMapper.ts` standen die acht fest
+verdrahteten Beschriftungen **hinter** denen aus `portal_rollen`, und
+`Object.fromEntries` lässt den letzten Eintrag gewinnen. Sie waren also keine
+Rückfallwerte, sondern Überschreibungen — für `administrator`,
+`administration`, `funktionaer`, `trainer`, `spieler`, `eltern`, `mitglied`
+und `supporter`, also praktisch jede Rolle. Wer eine umbenannte, sah davon
+nichts. Die Reihenfolge ist getauscht: Konstanten vorne, `dbPortalRollen`
+dahinter.
 
-**Dazu steht genau ein Test rot** (`supporterTrennung.test.js` →
-„portal_rollen gewinnt gegen die fest verdrahtete Beschriftung"). Das ist
-Absicht.
+**Der Weg dorthin ist die eigentliche Lehre.** Ich hatte den Test zuerst
+andersherum geschrieben — er hielt den Ist-Zustand fest („Supporter" statt
+„Supporter/in") und war grün.
 
-> Zuerst hatte ich ihn andersherum geschrieben — er hielt den IST-Zustand fest
-> („Supporter" statt „Supporter/in") und war grün. **Didi am 20.08.2026:** ein
-> Test, der den Ist-Zustand festhält, obwohl der Ist-Zustand falsch ist,
-> zementiert den Fehler und fällt ausgerechnet dann um, wenn ihn jemand behebt.
-> Er findet nichts, er bewacht etwas Falsches.
->
-> Die Regel daraus: **ein Test prüft den Soll-Zustand und ist rot, solange er
-> nicht gilt.** Rot ist eine Aussage; grün-auf-falschem-Wert ist keine.
+> **Didi:** ein Test, der den Ist-Zustand festhält, obwohl der Ist-Zustand
+> falsch ist, zementiert den Fehler und fällt ausgerechnet dann um, wenn ihn
+> jemand behebt. Er findet nichts, er bewacht etwas Falsches.
 
-Behoben wird er, indem die zwei Blöcke in `rolleLabelMap` die Reihenfolge
-tauschen — erst die Konstanten, dann `dbPortalRollen`. Der Tausch ändert
-Beschriftungen, die Nutzer sehen, und ist deshalb eine eigene Entscheidung.
+Umgedreht war er rot — und blieb es genau eine Runde, bis die CI mit Exit-Code
+1 abbrach:
+
+> **Didi:** ein dauerhaft roter Test macht die Prüfkette wertlos — beim
+> nächsten echten Fehler schaut niemand mehr hin.
+
+**Beide Sätze zusammen ergeben die Regel:** ein Test prüft den Soll-Zustand,
+und rot ist ein Zustand für Stunden, nicht für Wochen. Wer den Soll-Zustand
+nicht sofort herstellen kann, markiert ihn `skip` mit Verweis auf die
+Entscheidung — aber lässt die Prüfkette nie dauerhaft rot stehen.
+
 
 

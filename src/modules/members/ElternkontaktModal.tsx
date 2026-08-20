@@ -233,6 +233,7 @@ export function ElternkontaktModal({
           <ElternKinderSektion
             personId={form.id}
             benutzerId={form.benutzer_id}
+            personName={`${form.vorname||""} ${form.nachname||""}`.trim()||null}
             sb={sb}
             vereinId={vereinId}
             geaendertVon={geaendertVon}

@@ -21,7 +21,12 @@ const svc = vi.hoisted(() => ({
   logAktivitaet: vi.fn(),
 }));
 
-vi.mock('../../../theme.ts', () => ({ useConfirm: () => [h.confirmMock, null] }));
+vi.mock('../../../theme.ts', () => ({
+  ModalOrSheet: ({children,open})=>open?<div>{children}</div>:null,
+  InfoBox: ({text})=><div>{text}</div>,
+  Col: ({children})=><div>{children}</div>,
+  Label: ({children})=><span>{children}</span>,
+  Input: (p)=><input {...p}/>, useConfirm: () => [h.confirmMock, null] }));
 vi.mock('../../../icons.tsx', () => ({ TI: () => null }));
 vi.mock('../../../domains/roles/roleUtils.ts', () => ({ ableitUndSaveRolle: vi.fn().mockResolvedValue('trainer') }));
 vi.mock('../../../domains/person/personUtils.ts', () => ({ initials: () => 'XX' }));

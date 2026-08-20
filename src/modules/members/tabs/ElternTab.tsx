@@ -20,10 +20,12 @@ import { KindSucheModal } from "../KindSucheModal.tsx";
 import type { ElternFormular } from "../ElternkontaktModal.tsx";
 import {
   entkoppleKind, setHauptkontakt, clearHauptkontaktFuerKind, fetchElternkontakte,
+  updateBenutzerRolle, loeschePersonWennVerwaist,
   logAktivitaet, AKTIVITAET_TYP,
 } from "../../../domains/members/memberService.ts";
 import { vollname } from "../../../domains/person/personUtils.ts";
-import type { ElternkontaktMitLink } from "../../../domains/members/elternService.ts";
+import type { ElternkontaktMitLink, EntkoppelWunsch } from "../../../domains/members/elternService.ts";
+import { EntkopplungModal } from "../EntkopplungModal.tsx";
 import type { Account, Mitglied, Sb, SetState } from "../../../types.ts";
 
 export function elternAvColor(beziehung: string | null | undefined){
@@ -52,6 +54,8 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
   const [showSuche, setShowSuche] = useState(false);
   const [kindSuche, setKindSuche] = useState(false);
   const [neuesKind, setNeuesKind] = useState<number | null>(null);
+  /* Offene Rueckfrage nach dem letzten Kind — null heisst: keine offen. */
+  const [frage, setFrage] = useState<{personId:string; benutzerId:string|null; name:string}|null>(null);
   const geaendertVon = account?.name||account?.email||"Administrator";
 
   async function reload(){
@@ -72,9 +76,26 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
     });
     if(!ok) return;
 
-    await entkoppleKind(sb, e.id, raw.id, e.benutzer_id);
+    const folge = await entkoppleKind(sb, e.id, raw.id, e.benutzer_id);
     if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entknüpft: ${name}`,"elternkontakte",name,geaendertVon);
     reload();
+    /* War es das letzte Kind dieses Elternteils, ist noch offen, ob der Verein
+       den Kontakt behaelt. entkoppleKind() entscheidet das seit dem
+       20.08.2026 nicht mehr selbst. */
+    if(folge==="frage") setFrage({personId:e.id, benutzerId:e.benutzer_id??null, name});
+  }
+
+  async function entscheideNachEntkopplung(wunsch: EntkoppelWunsch): Promise<string|null>{
+    if(!sb||!frage) return "Keine Verbindung zur Datenbank.";
+    if(wunsch==="supporter"){
+      if(frage.benutzerId) await updateBenutzerRolle(sb, frage.benutzerId, "supporter");
+      /* Ohne Konto ist nichts zu tun — die Person steht bereits ohne
+         Mitgliedschaft und ohne Kind da, und das IST ein Supporter. */
+    } else {
+      await loeschePersonWennVerwaist(sb, frage.personId);
+    }
+    reload();
+    return null;
   }
 
   async function handleHauptkontakt(e: ElternkontaktMitLink){
@@ -92,6 +113,12 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
 
   return(
     <div className="cc-col cc-gap-8">
+      <EntkopplungModal
+        open={frage!==null}
+        onClose={()=>setFrage(null)}
+        name={frage?.name||"Diese Person"}
+        onEntscheiden={entscheideNachEntkopplung}
+      />
       {canEdit&&(
         <div className="cc-between">
           <div className="cc-text-sm">{eltern.length} Elternkontakt{eltern.length!==1?"e":""}</div>

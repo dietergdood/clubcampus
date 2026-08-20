@@ -154,3 +154,30 @@ describe("mapRangliste", () => {
     expect(mapRangliste([rang({})], null)[0].me).toBe(false);
   });
 });
+
+/* Zwei Spalten fuer die Spielnummer, und das mit Absicht: `spiel_nr` gehoert
+   dem Verein und wird von Hand gepflegt, `sfv_spiel_nr` schreibt der Sync.
+   Eine Umwidmung der einen haette jede Handeingabe ueberschrieben.
+
+   Die Anzeige hat bis zum 20.08.2026 nur die eigene gelesen — die Nummer
+   blieb leer, obwohl die des Verbands danebenstand. Der Rueckfall stand im
+   Migrationskommentar, aber in keinem Code. */
+describe("Spielnummer — eigene vor Verband", () => {
+  it("zeigt die eigene, wenn es eine gibt", () => {
+    expect(mapSpiel(spiel({ spiel_nr: "H-12", sfv_spiel_nr: "511958" }) as never).spielNr).toBe("H-12");
+  });
+
+  it("faellt auf die des Verbands zurueck", () => {
+    expect(mapSpiel(spiel({ spiel_nr: null, sfv_spiel_nr: "511958" }) as never).spielNr).toBe("511958");
+  });
+
+  it("⚠ eine LEERE Handeingabe faellt ebenfalls durch", () => {
+    /* Deshalb `||` und nicht `??`: "" heisst „nicht gesetzt“. Mit `??` bliebe
+       die Anzeige leer, obwohl die Nummer in der Datenbank steht. */
+    expect(mapSpiel(spiel({ spiel_nr: "", sfv_spiel_nr: "511958" }) as never).spielNr).toBe("511958");
+  });
+
+  it("ohne beides bleibt sie leer", () => {
+    expect(mapSpiel(spiel({ spiel_nr: null, sfv_spiel_nr: null }) as never).spielNr).toBe("");
+  });
+});

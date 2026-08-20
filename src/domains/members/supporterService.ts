@@ -123,3 +123,233 @@ export async function fetchSupporter(
       };
     });
 }
+
+/* ── Statuswechsel ────────────────────────────────────────────────────────
+   Teil B des Rueckbaus: in beide Richtungen, und beide Male mit Rueckfrage.
+   Die Funktionen hier fuehren nur aus, was entschieden wurde. */
+
+/**
+ * Aus einem Supporter wird ein Mitglied.
+ *
+ * Die PERSON bleibt dieselbe — es entsteht nur eine Mitgliedschaft daneben.
+ * Genau das ist der Gewinn des Personen-Modells: kein Anlegen, kein
+ * Zusammenfuehren, keine zweite Zeile mit denselben Kontaktdaten.
+ *
+ * ⚠ NICHT ueber `insertMitglied()`. Die legt IMMER eine neue Person an
+ * (siehe memberService) — hier gaebe das eine Dublette derselben Person, und
+ * `personen_email_pro_verein` liesse sie nur durch, solange keine E-Mail
+ * hinterlegt ist. Der Fehler waere also je nach Datenlage mal sichtbar und
+ * mal nicht.
+ *
+ * Die Portalrolle wird NICHT hier gesetzt: sie ist ein abgeleiteter Wert
+ * (`ableitUndSaveRolle`), und der Aufrufer leitet sie ab, sobald die
+ * Mitgliedschaft steht. Sie hier zu raten hiesse, den berechneten Wert an
+ * zwei Orten zu bestimmen.
+ */
+export async function macheZuMitglied(
+  sb: SbClient,
+  personId: string,
+  vereinId: string,
+  felder: { mitgliedtyp: string; eintrittsdatum?: string | null },
+): Promise<{ mitgliedId: number | null; fehler: string | null }> {
+  /* Erst nachsehen, ob schon eine besteht. Der partielle Index
+     `mitglieder_eine_aktive_mitgliedschaft` laesst nur eine zu; ohne diese
+     Abfrage bekaeme der Nutzer eine 23505-Meldung aus der Datenbank statt
+     eines Satzes, den er versteht. */
+  const { data: bestehend, error: leseFehler } = await sb.from("mitglieder")
+    .select("id, mitgliedtyp")
+    .eq("person_id", personId)
+    .eq("aktiv", true);
+  if (leseFehler) {
+    console.error("macheZuMitglied (Vorabfrage) error:", leseFehler);
+    return { mitgliedId: null, fehler: "Die bestehenden Mitgliedschaften konnten nicht geprüft werden." };
+  }
+  if ((bestehend || []).length > 0) {
+    return {
+      mitgliedId: null,
+      fehler: `Diese Person ist bereits ${bestehend![0].mitgliedtyp || "Mitglied"}. `
+            + `Eine zweite aktive Mitgliedschaft ist nicht möglich.`,
+    };
+  }
+
+  const jetzt = new Date().toISOString();
+  const { data, error } = await sb.from("mitglieder").insert({
+    person_id:      personId,
+    verein_id:      vereinId,          // Pflicht — sonst lehnt die DB still ab
+    mitgliedtyp:    felder.mitgliedtyp,
+    eintrittsdatum: felder.eintrittsdatum || null,
+    aktiv:          true,
+    created_at:     jetzt,
+    updated_at:     jetzt,
+  } as never).select("id").single();
+
+  if (error) {
+    console.error("macheZuMitglied error:", error);
+    return { mitgliedId: null, fehler: error.message };
+  }
+  return { mitgliedId: data?.id ?? null, fehler: null };
+}
+
+/* ── Die Gegenrichtung: Austritt ──────────────────────────────────────────
+   Statuten Artikel 8: der Austritt ist ein ZEITPUNKT, kein Zustand. Was
+   danach mit der Person geschieht, ist eine eigene Frage — und sie wird
+   gestellt, nicht geraten. Vier Antworten sind moeglich, und drei davon
+   halten den Kontakt. */
+export type AustrittsZiel = "supporter" | "archiv" | "ehrenmitglied" | "aktivmitglied";
+
+export interface AustrittOptionen {
+  mitgliedId: number;
+  vereinId: string;
+  ziel: AustrittsZiel;
+  /** Konto der Person, falls vorhanden — für Rolle und Ämter. */
+  benutzerId?: string | null;
+  /** Tag des Austritts. Ohne Angabe: heute. */
+  am?: string | null;
+}
+
+/**
+ * Eine Mitgliedschaft beenden — oder in eine andere umwandeln.
+ *
+ * ⚠ ZWEI GRUNDVERSCHIEDENE FAELLE hinter einer Frage:
+ *
+ *   ehrenmitglied / aktivmitglied   die Mitgliedschaft BLEIBT, nur der Typ
+ *                                   wechselt. Kader und Aemter bleiben.
+ *   supporter / archiv              die Mitgliedschaft ENDET.
+ *
+ * Sie stehen zusammen, weil sie im Portal aus derselben Frage entstehen
+ * („diese Person tritt aus — was gilt danach?"). Der Unterschied steht im
+ * Code und nicht nur im Kopf des Aufrufers.
+ */
+export async function beendeMitgliedschaft(
+  sb: SbClient, o: AustrittOptionen,
+): Promise<{ ok: boolean; fehler: string | null; hinweise: string[] }> {
+  const hinweise: string[] = [];
+  const tag = o.am || new Date().toISOString().slice(0, 10);
+
+  /* ── Typwechsel: die Mitgliedschaft bleibt ── */
+  if (o.ziel === "ehrenmitglied" || o.ziel === "aktivmitglied") {
+    const typ = o.ziel === "ehrenmitglied" ? "Ehrenmitglied" : "Aktivmitglied";
+    const { error } = await sb.from("mitglieder")
+      .update({ mitgliedtyp: typ, updated_at: new Date().toISOString() })
+      .eq("id", o.mitgliedId);
+    if (error) { console.error("beendeMitgliedschaft (Typwechsel) error:", error); return { ok: false, fehler: error.message, hinweise }; }
+    hinweise.push(`Mitgliedschaft läuft weiter als ${typ}.`);
+    return { ok: true, fehler: null, hinweise };
+  }
+
+  /* ── Austritt: die Mitgliedschaft endet ── */
+  const { error: archErr } = await sb.from("mitglieder").update({
+    aktiv: false,
+    deaktiviert_am: new Date(tag).toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq("id", o.mitgliedId);
+  if (archErr) { console.error("beendeMitgliedschaft error:", archErr); return { ok: false, fehler: archErr.message, hinweise }; }
+
+  /* Kadereintraege beenden. Sie haengen am Mitglied und nicht an der Person —
+     ohne diesen Schritt stuende die Person weiter im Kader eines Teams,
+     obwohl sie nicht mehr Mitglied ist. */
+  const { data: kader, error: kaderErr } = await sb.from("kader")
+    .select("id").eq("mitglied_id", o.mitgliedId).eq("aktiv", true);
+  if (kaderErr) {
+    hinweise.push("Die Kadereinträge konnten nicht gelesen werden — bitte im Team prüfen.");
+  } else if ((kader || []).length > 0) {
+    const { error } = await sb.from("kader").update({ aktiv: false })
+      .in("id", (kader || []).map(k => k.id));
+    if (error) hinweise.push("Die Kadereinträge konnten nicht beendet werden — bitte im Team prüfen.");
+    else hinweise.push(`${kader!.length} Kadereintrag/-einträge beendet.`);
+  }
+
+  /* Aemter auf `bis` setzen statt sie zu loeschen: wer ein Amt hatte, HATTE
+     es — die Zeile ist der Nachweis. Die Spalte kam mit dem Supporter-Rueckbau
+     (migration_supporter_rueckbau.sql, Block F). */
+  if (o.benutzerId) {
+    const { error, count } = await sb.from("benutzer_funktionen")
+      .update({ bis: tag }, { count: "exact" })
+      .eq("benutzer_id", o.benutzerId).is("bis", null);
+    if (error) hinweise.push("Die Vereinsfunktionen konnten nicht beendet werden.");
+    else if (count) hinweise.push(`${count} Vereinsfunktion(en) auf ${tag} beendet.`);
+
+    /* Die Portalrolle: `supporter` haelt den Zugang, `mitglied` waere nach dem
+       Austritt falsch. Beim Archiv bleibt sie stehen — das Konto wird ohnehin
+       vom Aufrufer deaktiviert. */
+    if (o.ziel === "supporter") {
+      const { error: rolleErr } = await sb.from("benutzer")
+        .update({ role: "supporter", mitglied_id: null }).eq("id", o.benutzerId);
+      if (rolleErr) hinweise.push("Die Portalrolle konnte nicht auf Supporter gesetzt werden.");
+      else hinweise.push("Portal-Zugang bleibt bestehen, Rolle jetzt Supporter.");
+    }
+  } else if (o.ziel === "supporter") {
+    hinweise.push("Diese Person hat kein Portal-Konto — sie bleibt über E-Mail und Telefon erreichbar.");
+  }
+
+  return { ok: true, fehler: null, hinweise };
+}
+
+/* ── Dublettenprüfung bei der Neuanlage ───────────────────────────────────
+   „Mitglied anlegen prüft nicht auf Dubletten" stand seit Monaten unter den
+   bekannten Defekten: `insertMitglied()` schreibt ohne Abgleich gegen den
+   Bestand, zweimal abgeschickt heisst zweimal in der Datenbank. Nachweis
+   waren zwei Zeilen „Test User" mit fünf Sekunden Abstand.
+
+   Seit dem Personen-Modell ist die Antwort einfacher als ein Sperrmechanismus:
+   Wer schon als Person da ist — als Elternteil, als Supporter, als früheres
+   Mitglied —, bekommt eine Mitgliedschaft DAZU statt einer zweiten Person. */
+
+export interface PersonTreffer {
+  id: string;
+  vorname: string | null;
+  nachname: string | null;
+  email: string | null;
+  /** Aktive Mitgliedschaft, falls vorhanden — dann ist die Person kein
+      Kandidat mehr, sondern schon Mitglied. */
+  mitgliedtyp: string | null;
+  hatAktiveMitgliedschaft: boolean;
+  /** Elternteil von wie vielen Kindern. */
+  kinder: number;
+}
+
+/**
+ * Personen im Verein suchen, um bei der Neuanlage eine Dublette zu vermeiden.
+ *
+ * Gesucht wird über Vorname, Nachname und E-Mail; mehrere Wörter müssen ALLE
+ * treffen, die Reihenfolge ist egal — dasselbe Muster wie
+ * `sucheElternkontakte`, damit „kaiser adrian" und „adrian kaiser" dasselbe
+ * finden.
+ *
+ * ⚠ Es wird NICHTS ausgeschlossen. Auch wer schon Mitglied ist, erscheint —
+ * mit dem Hinweis, dass er es ist. Ein stiller Filter wäre hier der falsche
+ * Dienst: Wer seinen Treffer nicht sieht, legt ihn neu an, und genau das
+ * sollte die Suche verhindern. (Am 05.08.2026 liess ein solcher Filter in
+ * `sucheElternkontakte` den gesuchten Adrian Kaiser verschwinden.)
+ */
+export async function suchePersonen(
+  sb: SbClient, vereinId: string, query: string,
+): Promise<PersonTreffer[]> {
+  const q = (query || "").trim();
+  if (q.length < 2) return [];
+
+  const woerter = q.split(/\s+/).filter(Boolean).slice(0, 4);
+  let abfrage = sb.from("personen")
+    .select("id, vorname, nachname, email, mitglieder(id, aktiv, mitgliedtyp), eltern_kinder(mitglied_id)")
+    .eq("verein_id", vereinId);
+  /* Mehrere .or()-Aufrufe verknüpft PostgREST mit UND, innerhalb eines mit ODER. */
+  for (const w of woerter) {
+    abfrage = abfrage.or(`vorname.ilike.%${w}%,nachname.ilike.%${w}%,email.ilike.%${w}%`);
+  }
+
+  const { data, error } = await abfrage.order("nachname", { ascending: true }).limit(20);
+  if (error) { console.error("suchePersonen error:", error); return []; }
+
+  return (data || []).map(p => {
+    const aktiv = (p.mitglieder || []).find(m => m.aktiv);
+    return {
+      id: p.id,
+      vorname: p.vorname,
+      nachname: p.nachname,
+      email: p.email,
+      mitgliedtyp: aktiv?.mitgliedtyp ?? null,
+      hatAktiveMitgliedschaft: Boolean(aktiv),
+      kinder: (p.eltern_kinder || []).length,
+    };
+  });
+}

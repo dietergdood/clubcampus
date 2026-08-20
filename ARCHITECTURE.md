@@ -142,7 +142,7 @@ src/
   App.tsx                           ← liest den Verein-Slug aus dem Pfad
   clubcampus.tsx                    ← Haupt-Entry: Root-Komponente, Datenlader und Router in einem
   constants.ts                      ← Design-Tokens (FONT, TEXT, SPACE, RADIUS, Farben)
-  database.types.ts                 ← generiert: npx supabase gen types typescript --linked
+  database.types.ts                 ← generiert: npm run gen:types
   demoData.js                       ← ⚠️ TEMPORÄR — löschen wenn die Sport-Module auf Supabase sind
   icons.tsx
   main.tsx
@@ -953,7 +953,7 @@ npx supabase db dump --linked -f supabase/schema.sql
 ```
 **Und im selben Zug die Typen** — der Dump allein reicht nicht. Am 05.08.2026 lief `database.types.ts` dreimal hinterher und meldete Spalten als vorhanden, die es nicht mehr gab:
 ```bash
-npx supabase gen types typescript --linked > src/database.types.ts
+npm run gen:types      # NICHT `... --linked > datei` — siehe CLAUDE.md
 ```
 2. Vor dem Committen gegenprüfen, dass der Dump nichts verloren hat — Vorgehen und die beiden blinden Flecken der Zählprüfung stehen in `CLAUDE.md` → Datenbank-Workflow.
 3. `supabase/schema.sql` committen (enthält: Tabellen, Policies, RLS, Funktionen, Rollen — keine Nutzdaten).

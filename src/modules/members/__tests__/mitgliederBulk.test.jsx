@@ -31,6 +31,21 @@ vi.mock('../../../shared/list/ListView.tsx', () => ({
 vi.mock('../../../theme.ts', () => ({
   Av: () => null,
   useConfirm: () => [h.confirmMock, null],
+  /* Seit dem Supporter-Rueckbau rendert MitgliederModul drei Modale
+     (Supporter, Mitglied werden, Austritt). Sie sind hier ohne Belang, muessen
+     aber im Mock stehen: Vitest wirft schon bei der blossen Referenz — und
+     zwar fuer die ganze Datei. */
+  ModalOrSheet: ({ children, open }) => (open ? children : null),
+  Btn: ({ children }) => children,
+  Input: () => null,
+  Select: () => null,
+  InfoBox: () => null,
+  Col: ({ children }) => children,
+  Label: ({ children }) => children,
+  PhoneInput: () => null,
+  Card: ({ children }) => children,
+  Chip: () => null,
+  Row: ({ children }) => children,
 }));
 vi.mock('../../../icons.tsx', () => ({ TI: () => null }));
 vi.mock('../../../domains/members/memberService.ts', () => svc);

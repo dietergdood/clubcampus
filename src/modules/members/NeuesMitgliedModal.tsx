@@ -35,6 +35,8 @@ import type { Account, Mitgliedtyp, Sb } from "../../types.ts";
 import { getFeldkonfig, istPflicht as istPflichtKonfig, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
+import { suchePersonen, macheZuMitglied } from "../../domains/members/supporterService.ts";
+import type { PersonTreffer } from "../../domains/members/supporterService.ts";
 import { NeuesMitgliedElternSektion, speichereEltern } from "./NeuesMitgliedElternSektion.tsx";
 import type { ElternEintrag } from "./NeuesMitgliedElternSektion.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
@@ -89,6 +91,8 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
      fehlenden Feldern von Hand nach oben. */
   const [fehlerFelder, setFehlerFelder] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [treffer, setTreffer] = useState<PersonTreffer[]>([]);
+  const [bestehendePerson, setBestehendePerson] = useState<PersonTreffer | null>(null);
   const [msg, setMsg] = useState<StatusMeldung | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   /* Erfolgs-Timer bei Unmount abbrechen (sonst setState nach Unmount) */
@@ -165,6 +169,24 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
     };
   }
 
+  /* ── Dublettenprüfung ──────────────────────────────────────────────────
+     „Mitglied anlegen prüft nicht auf Dubletten" stand seit Monaten unter den
+     bekannten Defekten. Die Suche läuft mit, sobald ein Name getippt ist —
+     ohne eigenen Schritt und ohne Sperre: sie zeigt, was es schon gibt, und
+     überlässt die Entscheidung dem Menschen. */
+  useEffect(() => {
+    if (!sb || !vereinId) return;
+    const q = `${form.vorname || ""} ${form.nachname || ""}`.trim();
+    if (bestehendePerson || q.length < 3) { setTreffer([]); return; }
+    let abgebrochen = false;
+    /* Kurz warten: sonst eine Abfrage pro Tastendruck. */
+    const t = setTimeout(async () => {
+      const raus = await suchePersonen(sb, vereinId, q);
+      if (!abgebrochen) setTreffer(raus);
+    }, 350);
+    return () => { abgebrochen = true; clearTimeout(t); };
+  }, [form.vorname, form.nachname, bestehendePerson, sb, vereinId]);
+
   async function handleSave() {
     if (!sb || !vereinId) return;
     const von = account?.name || account?.email || "Administrator";
@@ -184,6 +206,28 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
     if (err) { setMsg({ ok: false, text: err.text }); setFehlerFelder(err.felder); return; }
     setFehlerFelder([]);
     setSaving(true); setMsg(null);
+
+    /* ⚠ Bestehende Person → Mitgliedschaft DAZU, keine zweite Person.
+       insertMitglied() legt immer eine neue an; hier wäre das genau die
+       Dublette, die die Suche darüber verhindern soll. */
+    if (bestehendePerson) {
+      const { mitgliedId, fehler } = await macheZuMitglied(sb, bestehendePerson.id, vereinId, {
+        mitgliedtyp: form.mitgliedtyp || "",
+        eintrittsdatum: null,
+      });
+      if (fehler || mitgliedId == null) {
+        setSaving(false);
+        setMsg({ ok: false, text: fehler ?? "Die Mitgliedschaft konnte nicht angelegt werden." });
+        return;
+      }
+      logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ANGELEGT,
+        "Mitgliedschaft angelegt für bestehende Person", null, null, von);
+      await ableitUndSaveRolle(sb, mitgliedId, [], form.mitgliedtyp || null, []);
+      setSaving(false);
+      abschliessen(mitgliedId);
+      return;
+    }
+
     const id = await insertMitglied(sb, {
       /* vorname und nachname sind in mitglieder NOT NULL; validate() oben
          hat beide bereits als nicht leer geprüft. */
@@ -263,6 +307,54 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
       </div>
 
       <div className="cc-modal-body">
+        {/* ⚠ Die Trefferliste SPERRT NICHTS. Sie zeigt, was es schon gibt, und
+            überlässt die Entscheidung — ein Namensgleichklang ist keine
+            Dublette, und eine Sperre auf Verdacht wäre schlimmer als der
+            Doppeleintrag, den sie verhindern soll. */}
+        {bestehendePerson ? (
+          <div className="cc-card cc-mb-12" style={{padding:"10px 14px"}}>
+            <div className="cc-between">
+              <div>
+                <div className="cc-text-bold">
+                  {`${bestehendePerson.vorname||""} ${bestehendePerson.nachname||""}`.trim()}
+                </div>
+                <div className="cc-text-sm">
+                  Bestehende Person — es entsteht nur die Mitgliedschaft dazu.
+                  Kontaktdaten, Portal-Zugang und Funktionen bleiben.
+                </div>
+              </div>
+              <Btn small onClick={()=>setBestehendePerson(null)}>Doch neu anlegen</Btn>
+            </div>
+          </div>
+        ) : treffer.length > 0 && (
+          <div className="cc-card cc-mb-12" style={{padding:"10px 14px"}}>
+            <div className="cc-text-sm cc-mb-8">
+              {treffer.length === 1 ? "Diese Person gibt es schon:" : `${treffer.length} Personen mit ähnlichem Namen:`}
+            </div>
+            <div className="cc-col cc-gap-6">
+              {treffer.map(t => (
+                <div key={t.id} className="cc-between">
+                  <div>
+                    <span className="cc-text-bold">{`${t.vorname||""} ${t.nachname||""}`.trim()}</span>
+                    <span className="cc-text-sm">
+                      {t.email ? ` · ${t.email}` : ""}
+                      {t.hatAktiveMitgliedschaft ? ` · bereits ${t.mitgliedtyp||"Mitglied"}`
+                        : t.kinder > 0 ? ` · Elternteil (${t.kinder})`
+                        : " · ohne Mitgliedschaft"}
+                    </span>
+                  </div>
+                  {/* Wer schon eine aktive Mitgliedschaft hat, ist kein
+                      Kandidat — er wird trotzdem GEZEIGT, sonst legt ihn
+                      jemand ein zweites Mal an. */}
+                  {!t.hatAktiveMitgliedschaft && (
+                    <Btn small onClick={()=>{setBestehendePerson(t);setTreffer([]);}}>Diese verwenden</Btn>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="cc-form-row">
 
           {/* Mitgliedtyp — immer zuerst */}

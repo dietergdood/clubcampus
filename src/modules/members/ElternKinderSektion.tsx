@@ -11,9 +11,11 @@ import { Av, Btn, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import {
   fetchKinderFuerElternteil, linkKind, setHauptkontakt,
-  clearHauptkontaktFuerKind, entkoppleKind,
+  clearHauptkontaktFuerKind, entkoppleKind, updateBenutzerRolle, loeschePersonWennVerwaist,
 } from "../../domains/members/elternService.ts";
 import { logAktivitaet, AKTIVITAET_TYP } from "../../domains/members/memberService.ts";
+import type { EntkoppelWunsch } from "../../domains/members/elternService.ts";
+import { EntkopplungModal } from "./EntkopplungModal.tsx";
 import type { Sb } from "../../types.ts";
 
 export interface KindZeile {
@@ -26,6 +28,9 @@ export interface KindZeile {
 interface ElternKinderSektionProps {
   personId: string;
   benutzerId?: string | null;
+  /** Name für die Rückfrage nach dem letzten Kind. Ohne Angabe steht dort
+      eine neutrale Formulierung — die Frage entfällt deswegen nicht. */
+  personName?: string | null;
   sb: Sb;
   vereinId: string | null;
   geaendertVon: string;
@@ -43,11 +48,12 @@ interface ElternKinderSektionProps {
 }
 
 export function ElternKinderSektion({
-  personId, benutzerId, sb, vereinId, geaendertVon,
+  personId, benutzerId, personName = null, sb, vereinId, geaendertVon,
   canEdit = true, onKindHinzufuegen = null, neuesKind = null, onKindVerknuepft = null, onChanged = null,
 }: ElternKinderSektionProps) {
   const [kinder, setKinder] = useState<KindZeile[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [frageOffen, setFrageOffen] = useState(false);
   const [confirm, confirmDialog] = useConfirm();
 
   async function load() {
@@ -96,7 +102,7 @@ export function ElternKinderSektion({
     const ok = await confirm({
       title: `${k.name} entknüpfen?`,
       message: letztes
-        ? "Das ist das letzte verknüpfte Kind. Der Elternteil wird danach zum Supporter; die Person bleibt bestehen."
+        ? "Das ist das letzte verknüpfte Kind. Anschliessend wird gefragt, ob der Verein den Kontakt behält."
         : "Die Verknüpfung zu diesem Kind wird getrennt.",
       danger: true,
       confirmLabel: "Entknüpfen",
@@ -104,11 +110,30 @@ export function ElternKinderSektion({
     if (!ok) return;
 
     setBusy(true);
-    await entkoppleKind(sb, personId, k.mitglied_id, benutzerId);
+    const folge = await entkoppleKind(sb, personId, k.mitglied_id, benutzerId);
     if (vereinId) logAktivitaet(sb, k.mitglied_id, vereinId, AKTIVITAET_TYP.ELTERN_ENTFERNT, `Elternkontakt entknüpft: ${k.name}`, "elternkontakte", k.name, geaendertVon);
     await load();
     setBusy(false);
+    /* "frage" heisst: die Verknuepfung ist geloest, aber was mit der Person
+       geschieht, hat noch niemand entschieden. Frueher entschied
+       entkoppleKind() selbst — an einem Nebenumstand. */
+    if (folge === "frage") setFrageOffen(true);
     if (onChanged) onChanged();
+  }
+
+  /* Die Antwort auf die Rueckfrage austragen. */
+  async function entscheideNachEntkopplung(wunsch: EntkoppelWunsch): Promise<string | null> {
+    if (!sb) return "Keine Verbindung zur Datenbank.";
+    if (wunsch === "supporter") {
+      if (benutzerId) await updateBenutzerRolle(sb, benutzerId, "supporter");
+      /* Ohne Konto ist nichts zu tun: die Person steht bereits ohne
+         Mitgliedschaft und ohne Kind da — das IST ein Supporter. */
+    } else {
+      await loeschePersonWennVerwaist(sb, personId);
+    }
+    await load();
+    if (onChanged) onChanged();
+    return null;
   }
 
   /* Kind verknüpfen, sobald der Parent eines ausgewählt hat */
@@ -132,6 +157,12 @@ export function ElternKinderSektion({
       <div className="cc-divider cc-mt-12"/>
       <div className="cc-mt-12">
       {confirmDialog}
+      <EntkopplungModal
+        open={frageOffen}
+        onClose={() => setFrageOffen(false)}
+        name={personName || "Diese Person"}
+        onEntscheiden={entscheideNachEntkopplung}
+      />
       <div className="cc-section-title cc-between">
         <span className="cc-row cc-gap-6"><TI n="users" size={14}/> Verknüpfte Kinder</span>
         {canEdit && onKindHinzufuegen && (

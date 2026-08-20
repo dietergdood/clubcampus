@@ -7,6 +7,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ElternTab } from '../tabs/ElternTab.tsx';
 
 vi.mock('../../../theme.ts', () => ({
+  InfoBox: ({text})=><div>{text}</div>,
+  Col: ({children})=><div>{children}</div>,
+  Label: ({children})=><span>{children}</span>,
+  Input: (p)=><input {...p}/>,
   Btn: ({ children, onClick, small }) => <button onClick={onClick}>{children}</button>,
   Card: ({ children }) => <div>{children}</div>,
   ModalOrSheet: ({ open, children }) => open ? <div>{children}</div> : null,

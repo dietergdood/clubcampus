@@ -75,6 +75,8 @@ interface MemberDetailProps {
   brauchtEltern: (mitgliedtyp: string | null | undefined) => boolean;
   onProfilGeprueft?: (() => void) | null;
   vereinId?: string | null;
+  /** Öffnet den Austritt — die Rückfrage, was nach dem Austritt gilt. */
+  onAustritt?: ((mitgliedId: number) => void) | null;
 }
 
 function MemberDetail({
@@ -84,7 +86,7 @@ function MemberDetail({
   kannVerwalten, onReload, onUpdatePortalZugang = null,
   setSelectedMember, selectedMember,
   reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft = null,
-  vereinId = null,
+  vereinId = null, onAustritt = null,
 }: MemberDetailProps) {
   const dbRaw: Partial<Mitglied> = dbMitglieder.find(d => d.id === m.id) || {};
   /* m überschreibt die DB-Zeile dort, wo es einen Wert mitbringt. Bei
@@ -256,7 +258,7 @@ function MemberDetail({
         account={account} onUpdatePortalZugang={onUpdatePortalZugang}
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         benutzer={benutzer} teamDetails={teamDetails}
-        vereinId={vereinId}
+        vereinId={vereinId} onAustritt={onAustritt}
       />
 
       {/* Tab-Bar */}

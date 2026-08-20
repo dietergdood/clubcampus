@@ -93,35 +93,17 @@ describe('ein Supporter hat nichts, was an der Mitgliedschaft haengt', () => {
     expect(s.rollen).toHaveLength(1);
   });
 
-  /* ⚠ DIESER TEST IST ROT — ABSICHTLICH.
+  /* Bis zum 20.08.2026 war dieser Test rot: `rolleLabelMap` setzte die acht
+     fest verdrahteten Beschriftungen HINTER die aus `portal_rollen`, und
+     `Object.fromEntries` laesst den letzten Eintrag gewinnen — die Konstanten
+     ueberschrieben also die Datenbank, statt sie aufzufangen.
 
-     `rolleLabelMap` in memberMapper.ts baut die Zuordnung so:
+     Er stand bewusst rot da und nicht andersherum: ein Test, der den
+     Ist-Zustand festhaelt, obwohl der falsch ist, zementiert den Fehler und
+     faellt ausgerechnet dann um, wenn ihn jemand behebt.
 
-         Object.fromEntries([
-           ...dbPortalRollen.map(r => [r.name, r.label]),   // aus der DB
-           ["supporter", "Supporter"], ...                  // fest verdrahtet
-         ])
-
-     `Object.fromEntries` laesst den LETZTEN Eintrag gewinnen. Die acht
-     Konstanten stehen hinten und ueberschreiben damit die Datenbank, statt
-     sie aufzufangen. Sie sind keine Rueckfallwerte — sie sind das Gegenteil.
-     Wer eine Rolle in `portal_rollen` umbenennt, sieht davon nichts.
-
-     Betroffen: administrator, administration, funktionaer, trainer, spieler,
-     eltern, mitglied, supporter — praktisch alle.
-
-     Hier stand zuerst ein Test, der den IST-Zustand festhielt ("Supporter"
-     statt "Supporter/in"). Das war der falsche Weg: er haette den Fehler
-     zementiert und waere ausgerechnet dann umgefallen, wenn ihn jemand
-     behebt. Ein Test soll den SOLL-Zustand pruefen und rot sein, solange er
-     nicht gilt.
-
-     BEHOBEN WIRD ER, indem die zwei Bloecke in `rolleLabelMap` die Reihenfolge
-     tauschen: erst die Konstanten, dann `dbPortalRollen`. Danach ist dieser
-     Test gruen und darf so stehenbleiben.
-
-     ⚠ Der Tausch aendert Beschriftungen, die Nutzer sehen — deshalb ist er
-     eine eigene Entscheidung und nicht Teil des Supporter-Rueckbaus. */
+     Die Reihenfolge ist jetzt getauscht. Bleibt er gruen, gewinnt
+     `portal_rollen`. */
   it('portal_rollen gewinnt gegen die fest verdrahtete Beschriftung', () => {
     const [m] = mapMembers([{ ...mitglied(1, 'Aktivmitglied'), rolle: 'supporter' }], DB_PORTAL_ROLLEN);
     /* mapSupporter und mapMembers teilen sich rolleLabelMap — dieselbe

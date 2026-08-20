@@ -136,3 +136,34 @@ export async function fetchPerson(sb: SbClient, personId: string) {
   if (error) console.error('fetchPerson error:', error);
   return data;
 }
+
+/* Eine Person direkt schreiben — ohne Mitgliedschaft.
+
+   `updateMitglied()` ist der Weg fuer alle, die eine haben: es nimmt flache
+   Felder entgegen, teilt sie mit `verteileFelder()` auf und findet die Person
+   ueber `mitglieder.person_id`. Ein Supporter hat diesen Einstieg nicht.
+
+   ⚠ Felder, die zur MITGLIEDSCHAFT gehoeren, werden hier nicht still
+   verschluckt, sondern gemeldet. Ohne diese Pruefung landete ein
+   `mitgliedtyp` im Aufruf als stiller Nulleffekt — dieselbe Sorte Fehler wie
+   ein leerer catch: es sieht aus, als sei nichts zu tun gewesen. */
+export async function updatePerson(
+  sb: SbClient, personId: string, fields: Zeile,
+): Promise<boolean> {
+  const { person, mitgliedschaft } = verteileFelder(fields);
+
+  const fremd = Object.keys(mitgliedschaft);
+  if (fremd.length > 0) {
+    console.error(
+      `updatePerson: ${fremd.join(', ')} gehören zur Mitgliedschaft, nicht zur Person. ` +
+      `Diese Person hat keine — der Aufruf wird nicht ausgeführt.`);
+    return false;
+  }
+  if (Object.keys(person).length === 0) return true;
+
+  const { error } = await sb.from('personen')
+    .update({ ...person, updated_at: new Date().toISOString() })
+    .eq('id', personId);
+  if (error) console.error('updatePerson error:', error);
+  return !error;
+}

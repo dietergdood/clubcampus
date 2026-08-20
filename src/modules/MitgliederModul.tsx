@@ -5,13 +5,20 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
 import { Av, useConfirm } from "../theme.ts";
-import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen } from "../domains/members/memberService.ts";
+import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen, logAktivitaet, AKTIVITAET_TYP } from "../domains/members/memberService.ts";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
 import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
 import { mapSupporter } from "./members/memberMapper.ts";
-import { fetchSupporter } from "../domains/members/supporterService.ts";
+import { fetchSupporter, macheZuMitglied, beendeMitgliedschaft } from "../domains/members/supporterService.ts";
+import type { AustrittsZiel } from "../domains/members/supporterService.ts";
+import { AustrittModal } from "./members/AustrittModal.tsx";
+import type { SupporterRoh } from "../domains/members/supporterService.ts";
+import { updatePerson } from "../domains/person/personService.ts";
+import { SupporterModal } from "../shared/person/SupporterModal.tsx";
+import { MitgliedWerdenModal } from "./members/MitgliedWerdenModal.tsx";
+import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
 import type { MemberRow } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.tsx";
 import { MemberKPIs } from "./members/MemberKPIs.tsx";
@@ -61,7 +68,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [selectedMember,setSelectedMember]=useState<SelectedMember|null>(null);
   const [showNeuesMitglied,setShowNeuesMitglied]=useState(false);
   const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
-  const [supporterRoh,setSupporterRoh]=useState<Awaited<ReturnType<typeof fetchSupporter>>>([]);
+  const [supporterRoh,setSupporterRoh]=useState<SupporterRoh[]>([]);
+  const [supporterOffen,setSupporterOffen]=useState<SupporterRoh|null>(null);
+  const [mitgliedWerdenFuer,setMitgliedWerdenFuer]=useState<SupporterRoh|null>(null);
+  const [austrittFuer,setAustrittFuer]=useState<Mitglied|null>(null);
 
 
   const [archivTab,setArchivTab]=useState(false);
@@ -91,6 +101,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     }
   },[navToMember,dbMitglieder]);
   const canExport=role==="administrator"||role==="administration";
+  /* Dieselbe Bedingung wie canExport, aber eine andere Aussage: „darf
+     verwalten" gegen „darf exportieren". Sie stehen getrennt, damit eine von
+     beiden sich aendern kann, ohne die andere mitzunehmen. */
+  const istVerwaltung=role==="administrator"||role==="administration";
 
   const { ROLLE_LABEL, TRAINER_KEYS, funktionenGruppenMap } = useMemberMeta(dbPortalRollen, dbKaderRollen, portalFunktionen);
   /* Memoized: allMembers ist Dependency mehrerer useMemos (FILTER_DEFS,
@@ -140,8 +154,82 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     fetchFeldkonfig(sb).then(data=>setFeldkonfig(data));
     /* Gleich mitladen, nicht erst beim Klick: an der Anzahl haengt, ob der
        Tab ueberhaupt erscheint. */
-    if(vereinId) fetchSupporter(sb,vereinId).then(data=>setSupporterRoh(data));
+    if(vereinId) ladeSupporter();
   },[account?.id,vereinId]);
+
+  async function ladeSupporter(){
+    if(!sb||!vereinId) return;
+    setSupporterRoh(await fetchSupporter(sb,vereinId));
+  }
+
+  /* Personenfelder eines Supporters schreiben.
+     ⚠ NICHT updateMitglied(): das findet die Person ueber mitglieder.person_id,
+     und genau die Zeile gibt es hier nicht. */
+  async function speichereSupporter(personId: string, felder: Record<string, unknown>){
+    if(!sb) return false;
+    const ok=await updatePerson(sb,personId,felder);
+    if(ok) await ladeSupporter();
+    return ok;
+  }
+
+  /* Austritt — die Gegenrichtung. Die Rueckfrage stellt AustrittModal; hier
+     wird nur ausgefuehrt und protokolliert. */
+  async function fuehreAustrittAus(ziel: AustrittsZiel, am: string){
+    if(!sb||!vereinId||!austrittFuer) return { fehler:"Keine Verbindung zur Datenbank.", hinweise:[] };
+    const benutzerId=await holeBenutzerId(austrittFuer.person_id);
+    const { ok, fehler, hinweise } = await beendeMitgliedschaft(sb,{
+      mitgliedId:austrittFuer.id, vereinId, ziel, benutzerId, am,
+    });
+    if(!ok||fehler) return { fehler: fehler ?? "Der Austritt konnte nicht eingetragen werden.", hinweise };
+
+    const wer=account?.name||account?.email||"Administrator";
+    const bleibt=ziel==="ehrenmitglied"||ziel==="aktivmitglied";
+    await logAktivitaet(sb,austrittFuer.id,vereinId,
+      bleibt?AKTIVITAET_TYP.ANGELEGT:AKTIVITAET_TYP.ARCHIVIERT,
+      bleibt?`Mitgliedtyp gewechselt auf ${ziel==="ehrenmitglied"?"Ehrenmitglied":"Aktivmitglied"}`
+            :`Austritt per ${am} — danach: ${ziel==="supporter"?"Supporter":"Archiv"}`,
+      null,null,wer);
+
+    /* Beide Listen: die Person verlaesst die Mitgliederliste und erscheint —
+       bei „Supporter" — im Goenner-Tab. */
+    await ladeSupporter();
+    if(onReload) onReload();
+    setSelectedMember(null);
+    return { fehler:null, hinweise };
+  }
+
+  /* Das Konto haengt an der PERSON (seit Etappe 4), nicht am Mitglied. */
+  async function holeBenutzerId(personId: string|null|undefined): Promise<string|null>{
+    if(!sb||!personId) return null;
+    const { data, error } = await sb.from("benutzer").select("id").eq("person_id",personId).maybeSingle();
+    if(error){ console.error("holeBenutzerId error:",error); return null; }
+    return data?.id ?? null;
+  }
+
+  /* Aus einem Supporter wird ein Mitglied. Die Person bleibt dieselbe. */
+  async function supporterWirdMitglied(
+    person: SupporterRoh,
+    felder: { mitgliedtyp: string; eintrittsdatum: string | null },
+  ): Promise<string|null>{
+    if(!sb||!vereinId) return "Keine Verbindung zur Datenbank.";
+    const { mitgliedId, fehler } = await macheZuMitglied(sb,person.id,vereinId,felder);
+    if(fehler||mitgliedId==null) return fehler ?? "Die Mitgliedschaft konnte nicht angelegt werden.";
+
+    /* Die Rolle wird ABGELEITET, nicht gewaehlt — sonst hielte sie nur bis zur
+       naechsten Kader- oder Funktionsaenderung. Ohne diesen Aufruf stuende in
+       der Liste ein "-", bis das erste Mal etwas anderes geaendert wird. */
+    await ableitUndSaveRolle(sb,mitgliedId,dbKaderRollen,felder.mitgliedtyp,person.funktionen||[]);
+    await logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ANGELEGT,
+      `Mitgliedschaft angelegt (${felder.mitgliedtyp}) — vorher Supporter`,
+      null,null,account?.name||null);
+
+    /* Beide Listen neu laden: die Person verlaesst den Supporter-Tab und
+       erscheint in der Mitgliederliste. Ohne das Erste stuende sie in beiden. */
+    setSupporterOffen(null);
+    await ladeSupporter();
+    if(onReload) onReload();
+    return null;
+  }
 
 
   async function handleBulkDelete(selected: Set<RowId>){
@@ -238,6 +326,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   if(selectedMember) return (
     <MemberDetail
       m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}
+      onAustritt={istVerwaltung?(id=>{const mm=dbMitglieder.find(x=>x.id===id);if(mm)setAustrittFuer(mm);}):null}
       onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
       sb={sb} role={role} account={account} feldkonfig={feldkonfig}
       dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen}
@@ -278,6 +367,29 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   return(
     <>{confirmDialog}
+      <SupporterModal
+        open={supporterOffen!==null}
+        onClose={()=>setSupporterOffen(null)}
+        supporter={supporterOffen}
+        canEdit={istVerwaltung}
+        onSpeichern={speichereSupporter}
+        onMitgliedWerden={istVerwaltung?(p=>setMitgliedWerdenFuer(p)):null}
+      />
+      <AustrittModal
+        open={austrittFuer!==null}
+        onClose={()=>setAustrittFuer(null)}
+        name={austrittFuer?vollname(austrittFuer):""}
+        mitgliedtyp={austrittFuer?.mitgliedtyp}
+        hatKonto={Boolean(austrittFuer?.hat_benutzer)}
+        onAustritt={fuehreAustrittAus}
+      />
+      <MitgliedWerdenModal
+        open={mitgliedWerdenFuer!==null}
+        onClose={()=>setMitgliedWerdenFuer(null)}
+        supporter={mitgliedWerdenFuer}
+        mitgliedtypen={dbMitgliedtypen}
+        onAnlegen={supporterWirdMitglied}
+      />
       <NeuesMitgliedModal
         open={showNeuesMitglied}
         onClose={()=>setShowNeuesMitglied(false)}
@@ -293,7 +405,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       <div className="cc-page-hdr">
         <div className="cc-row cc-gap-0">
           <h1 className="cc-page-title cc-page-title-mr">Mitglieder</h1>
-          {(role==="administrator"||role==="administration")&&(
+          {istVerwaltung&&(
             <div className="cc-ml-tabs-bar">
               <button className={`cc-ml-tab${!archivTab&&!elternTab&&!supporterTab?" cc-ml-tab-active":""}`} onClick={()=>{setArchivTab(false);setElternTab(false);setSupporterTab(false);}}>
                 Aktive <span className="cc-ml-tab-count">{(allMembers||[]).length}</span>
@@ -323,7 +435,10 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       {supporterTab?(
         <SupporterListView supporter={supporter} renderCell={renderCell} rolleLabel={ROLLE_LABEL} canExport={canExport}
           renderMobile={m=>(
-            <div key={m.id} className="cc-members-item">
+            <div key={m.id} className="cc-members-item" onClick={()=>{
+              const p=supporterRoh.find(x=>x.id===m.id);
+              if(p) setSupporterOffen(p);
+            }}>
               {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
               <div className="cc-members-item-body">
                 <div className="cc-members-item-name">{m.name}</div>
@@ -332,10 +447,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             </div>
           )}
           sb={sb} account={account} vereinId={vereinId}
-          isAdmin={role==="administrator"||role==="administration"}
+          isAdmin={istVerwaltung}
+          /* Oeffnet das schlanke Supporter-Modal, NICHT MemberDetail: das
+             arbeitet mit einer Mitgliedschaft, die es hier nicht gibt. */
+          onOeffnen={row=>{
+            const p=supporterRoh.find(x=>x.id===row.id);
+            if(p) setSupporterOffen(p);
+          }}
         />
       ):elternTab?(
-        <ElternListView sb={sb} vereinId={vereinId} account={account} isAdmin={role==="administrator"||role==="administration"}
+        <ElternListView sb={sb} vereinId={vereinId} account={account} isAdmin={istVerwaltung}
           pflichtTypen={pflichtTypen}
           onNavToMember={id=>{
             setElternTab(false);
@@ -389,7 +510,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         account={account}
         vereinId={vereinId}
         viewTyp="mitglieder"
-        isAdmin={role==="administrator"||role==="administration"}
+        isAdmin={istVerwaltung}
         selectable
         bulkActions={[
           {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},

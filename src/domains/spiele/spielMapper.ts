@@ -94,7 +94,17 @@ export function mapSpiel(z: SpielZeile): SpielUi {
     venueAddr: z.venue_addr ?? "",
     comp: z.wettbewerb ?? "",
     liga: z.liga ?? "",
-    spielNr: z.spiel_nr ?? "",
+    /* Die eigene Nummer gewinnt, die des Verbands faengt auf.
+       `spiel_nr` gehoert dem Verein und wird von Hand gepflegt; `sfv_spiel_nr`
+       ist die `matchNumber` des SFV und wird vom Sync geschrieben (siehe
+       migration_sfv_spielinfo.sql, dort steht auch, warum es zwei Spalten
+       sind: eine Umwidmung haette jede Handeingabe ueberschrieben).
+
+       ⚠ `||` und nicht `??`: eine leere Handeingabe ist „nicht gesetzt“ und
+       soll durchfallen. Mit `??` bliebe die Anzeige bei "" stehen — genau der
+       Zustand, in dem die Nummer bis zum 20.08.2026 leer blieb, obwohl sie
+       in der Datenbank stand. */
+    spielNr: z.spiel_nr || z.sfv_spiel_nr || "",
     status: z.status ?? "",
     /* resultat steht nur bei ausgetragenen Spielen; alle anderen führt der
        SFV auf 0:0. Der Sync schreibt deshalb NULL — hier wird nichts

@@ -23,16 +23,27 @@ export type KaderRolleMitLabel = Pick<KaderRolle, "name"> & {
 
 /* Beschriftungen der Portalrollen. Steht hier, weil mapMembers und
    mapSupporter dieselbe Zuordnung brauchen — zwei Kopien liefen auseinander,
-   sobald jemand eine Rolle ergaenzt. */
+   sobald jemand eine Rolle ergaenzt.
+
+   ⚠ DIE REIHENFOLGE IST DIE AUSSAGE. `Object.fromEntries` laesst den LETZTEN
+   Eintrag gewinnen, also stehen die fest verdrahteten Werte VORNE und
+   `dbPortalRollen` dahinter: die Datenbank gewinnt, die Konstanten fangen nur
+   auf, was dort fehlt.
+
+   Bis zum 20.08.2026 stand es umgekehrt. Die acht Konstanten ueberschrieben
+   damit `portal_rollen` — sie waren keine Rueckfallwerte, sondern das
+   Gegenteil, und zwar fuer praktisch jede Rolle. Wer eine Rolle umbenannte,
+   sah davon nichts; im Portal stand weiter der Wert aus dieser Datei.
+   Gefunden beim Supporter-Rueckbau ("Supporter" statt "Supporter/in"). */
 function rolleLabelMap(
   dbPortalRollen: Pick<PortalRolle, "name" | "label">[],
 ): Record<string, string> {
   return Object.fromEntries([
-    ...dbPortalRollen.map(r=>[r.name,r.label]),
     ["administrator","Administrator"],["administration","Verwaltung"],
     ["funktionaer","Funktionär"],["trainer","Trainer/in"],
     ["spieler","Spieler/in"],["eltern","Elternteil"],
     ["mitglied","Mitglied"],["supporter","Supporter"],
+    ...dbPortalRollen.map(r=>[r.name,r.label]),
   ]);
 }
 

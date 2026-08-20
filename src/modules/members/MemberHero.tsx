@@ -40,9 +40,12 @@ interface MemberHeroProps {
   benutzer?: { role?: string | null } | null;
   teamDetails?: KaderDetail[] | null;
   vereinId?: string | null;
+  /** Öffnet den Austritt (Rückfrage: was gilt danach?). Ohne Callback
+      erscheint der Eintrag nicht. */
+  onAustritt?: ((mitgliedId: number) => void) | null;
 }
 
-function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null}: MemberHeroProps){
+function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
@@ -153,7 +156,12 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
             </div>
             {(canEdit||canDelete)&&(
               <div className="cc-hero-menu-trigger"><DropMenu items={[
-                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
+                /* „Austritt" steht VOR „Archivieren" und ist der gemeinte Weg:
+                   er fragt, was danach gilt. Archivieren bleibt daneben, weil
+                   es etwas anderes ist — eine Mitgliedschaft stilllegen, ohne
+                   ueber den Kontakt zu entscheiden (Fehleintrag, Dublette). */
+                ...(canEdit&&raw.aktiv!==false&&onAustritt?[{icon:"door-exit",label:"Austritt…",onClick:()=>onAustritt(raw.id)}]:[]),
+                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Stillegen ohne Austritt — für Fehleinträge und Dubletten. Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
                 ...(raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
                 "sep" as const,
                 {icon:"trash",label:"Löschen",danger:true,onClick:handleLoeschen},
