@@ -322,11 +322,24 @@ Behoben beim Abschluss der Modul-Migration (Sport-Module):
 
 ## Offene Punkte aus Session 23 (05.08.2026)
 
-### Personenseite statt Modal
+### Personenseite statt Modal — löst ZWEI Modale ab
 
-Elternteil und Supporter werden heute in einem Modal gezeigt. Das reicht nicht mehr: An einem Elternteil hängen Kinder, **Helfereinsätze**, Portal-Zugang und Verlauf; an einem Supporter dasselbe ohne Kinder. Ein Modal kann das nicht tragen.
+Elternteil und Supporter werden heute je in einem Modal gezeigt. Das reicht für beide nicht: An einem Elternteil hängen Kinder, **Helfereinsätze**, Portal-Zugang und Verlauf; an einem Supporter dasselbe ohne Kinder. Ein Modal kann das nicht tragen.
 
-Der Personen-Umbau macht die Lösung erst möglich: Mitglied, Elternteil und Supporter sind seit heute **dieselbe Person** — eine Seite im Stil des Mitglied-Profils (Hero, Tabs, `cc-section-title`-Karten) kann alle drei zeigen, der Unterschied liegt nur darin, welche Tabs erscheinen.
+**Betroffen sind `ElternkontaktModal` UND `SupporterModal`.** Letzteres ist am 20.08.2026 bewusst schlank gebaut worden — das Wenigste, was funktioniert — und liegt schon unter `src/shared/person/`, damit es als Ganzes umziehen kann statt umgeschrieben zu werden. Es ist kein Vorgriff auf die Seite, sondern ein Platzhalter mit Ablaufdatum.
+
+Der Personen-Umbau macht die Lösung erst möglich: Mitglied, Elternteil und Supporter sind **dieselbe Person** — eine Seite im Stil des Mitglied-Profils (Hero, Tabs, `cc-section-title`-Karten) kann alle drei zeigen, der Unterschied liegt nur darin, welche Tabs erscheinen.
+
+> **Ein Tab hat heute keinen Platz, an dem er hängen könnte: der Verlauf.**
+> `mitglieder_aenderungen` und `mitglieder_aktivitaeten` haben beide
+> `mitglied_id bigint NOT NULL` — der Verlauf gehört der MITGLIEDSCHAFT, nicht
+> der Person. Ein Supporter hat deshalb strukturell keinen, und
+> `SupporterModal` sagt das in einer Karte, statt die Sektion wegzulassen.
+>
+> Mit der Personenseite wird daraus eine echte Frage: Bezugspunkt auf
+> `person_id` umstellen (dann überlebt der Verlauf einen Austritt und die
+> Rückkehr), oder beides nebeneinander führen. Das ist eine Migration und
+> gehört in den Auftrag, nicht in einen Nebensatz.
 
 Voraussetzung laut `ARCHITECTURE.md`: `MemberHero` und `MemberDetail` nach `src/shared/person/` verschieben.
 
@@ -334,12 +347,12 @@ Voraussetzung laut `ARCHITECTURE.md`: `MemberHero` und `MemberDetail` nach `src/
 
 Der Tab steht (`SupporterListView`), aber Spalten, Filter und gespeicherte Ansichten sind nur das Nötigste:
 
-- **Spalten**: heute Name, E-Mail, Telefon, PLZ/Ort, Eintritt, Portal-Zugang — aus `ALL_COLS` gezogen. Was ein Gönner sonst braucht (seit wann, wie erreichbar, welche Anlässe, Beitrag?) ist nicht durchdacht.
+- **Spalten**: heute Name, E-Mail, Telefon, PLZ/Ort, Portal-Zugang — aus `ALL_COLS` gezogen. `Eintritt` ist am 20.08.2026 entfallen: es kommt aus `mitglieder.eintrittsdatum` und ist bei einer Person ohne Mitgliedschaft strukturell leer, hätte also in **jeder** Zeile „-" gezeigt. Ein „dabei seit" für Gönner bräuchte eine eigene Angabe. Was sonst dazugehört (wie erreichbar, welche Anlässe, Beitrag?) ist nicht durchdacht.
 - **Filter**: nur Portal-Zugang.
 - **Gruppierung**: nur Portal-Zugang und Wohnort.
 - **`savedViews`**: bewusst weggelassen — die Vorlagen „Standard" und „Verwaltung" bestehen aus Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen). Eigene Ansichten speichern funktioniert, `ListView` legt sie unter `viewTyp="supporter"` ab. Eigene Vorlagen fehlen.
 
-Filter, Sortierung und Gruppierung laufen über dieselben Funktionen wie die Mitgliederliste (`filterMembers`, `sortMembers`, `buildGroups`) — ein Supporter **ist** eine `MemberRow`. Das soll so bleiben; zu überarbeiten ist die Auswahl, nicht die Mechanik.
+Filter, Sortierung und Gruppierung laufen über dieselben Funktionen wie die Mitgliederliste (`filterMembers`, `sortMembers`, `buildGroups`) — ein Supporter **ist** eine `MemberRow`, seit dem Rückbau über `mapSupporter()` statt über eine Zeile in `mitglieder`. Das soll so bleiben; zu überarbeiten ist die Auswahl, nicht die Mechanik.
 
 ### `mitglieder_fairgate_id_key` ist global unique
 
@@ -478,22 +491,43 @@ Wirksam ist die Typ-Matrix **allein in der Neuanlage** (`NeuesMitgliedModal` →
 die nichts prüft, ist schlimmer als eine zu strenge — sie erzeugt ein grünes
 Häkchen ohne Deckung.
 
-**Aber nicht vor der Feldkonfiguration.** `getProfilFehlend()` heute
-anzuschliessen hiesse, die Matrix in ihrem jetzigen Zustand scharf zu stellen:
-vier Mitgliedtypen mit zehn Pflichtfeldern (Befund darunter), dazu
-`fairgate_id` und `js_nr` aus der Rollen-Matrix. Ab dem Moment käme kein
-Juniorenmitglied mehr durch die eigene Datenprüfung. Reihenfolge deshalb:
-**Feldkonfiguration → Matrix in einem Durchgang lockern → dann anschliessen.**
+**✅ Die Blockade ist weg (Stand 20.08.2026).** Die Reihenfolge war
+*Feldkonfiguration → Matrix lockern → anschliessen*; die ersten beiden
+Schritte sind erledigt — die Konfiguration steht seit dem 19.08.2026, und
+**Didi hat die Matrix am 19.08.2026 von Hand gelockert.** `getProfilFehlend()`
+anzuschliessen ist damit der nächste sinnvolle Schritt.
+
+> ⚠ **Trotzdem vorher nachzählen.** Der Abschnitt darunter hielt bis heute
+> einen Stand fest, den es nicht mehr gibt — genau die Sorte Zahl, auf die
+> man sich nicht verlassen darf (siehe die Warnung zu „493 von 512" weiter
+> oben). Was scharf gestellt wird, ist die Matrix in ihrem Zustand am Tag des
+> Anschliessens:
+>
+> ```sql
+> select t.name, m.modus, count(*)
+>   from public.mitgliedtyp_feldkonfig m
+>   join public.mitgliedtypen t on t.id = m.mitgliedtyp_id
+>  group by 1,2 order by 1,2;
+> ```
+>
+> Eine fehlende Zeile heisst „freiwillig" — die Zählung sagt also nur, was
+> abweicht, nicht was gilt.
 
 Anzuschliessen ist beides — `getProfilFehlend()` als Quelle der fehlenden
 Felder und `markiereProfilGeprueft()` statt der beiden Direktschreiber in
 `DatenpruefungMitglied` und `DatenpruefungEltern`, die `profil_geprueft_at`
 heute bedingungslos setzen.
 
-### Vier Mitgliedtypen verlangen alle zehn Felder
+### ✅ Vier Mitgliedtypen verlangten alle zehn Felder — gelockert am 19.08.2026
+
+**Erledigt.** Didi hat die Matrix in der neuen Oberfläche (Portalverwaltung →
+Benutzer & Rollen → „Was ein Mitgliedtyp hat") von Hand durchgegangen. Der
+Befund darunter ist **Archiv** und beschreibt den Stand *vor* dem Durchgang;
+er steht hier, weil er erklärt, warum das Anschliessen von
+`getProfilFehlend()` so lange warten musste.
 
 Befund vom 19.08.2026, aus derselben Bestandsaufnahme. `FELDER_TYP` hat zehn
-Einträge; so ist `mitgliedtyp_pflichtfelder` gestellt:
+Einträge; so war `mitgliedtyp_pflichtfelder` gestellt:
 
 | Mitgliedtyp | Pflicht | Freiwillig | ohne Zeile |
 |---|---|---|---|
@@ -522,9 +556,10 @@ Rollen → „Was ein Mitgliedtyp hat"). Die Migration hat die Zeilen wörtlich
 Durchgang von Hand. „Gibt es nicht" hilft dabei nicht: zu viele Pflichtfelder
 sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
 
-⚠ **Das ist die Voraussetzung dafür, `getProfilFehlend()` anzuschliessen**
-(Abschnitt darüber). Solange vier Typen zehn Pflichtfelder verlangen, käme
-danach kein Juniorenmitglied mehr durch die eigene Datenprüfung.
+⚠ **Das war die Voraussetzung dafür, `getProfilFehlend()` anzuschliessen**
+(Abschnitt darüber) — solange vier Typen zehn Pflichtfelder verlangten, wäre
+danach kein Juniorenmitglied mehr durch die eigene Datenprüfung gekommen.
+Mit dem Durchgang vom 19.08.2026 ist die Blockade weg.
 
 ### ⚠ `api_verbindungen.active` und `auto_sync` — zwei Kennzeichen, zwei Leser
 
