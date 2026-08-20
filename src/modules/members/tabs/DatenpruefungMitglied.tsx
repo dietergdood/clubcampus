@@ -83,9 +83,18 @@ interface DatenpruefungMitgliedProps {
    * nicht hat, darf nichts verlangen.
    */
   pflichtfelder?: string[];
+  /**
+   * Bittet der Verein gerade um eine Prüfung?
+   *
+   * ⚠ Quelle ist `sollProfilPruefen()` — die Sechs-Monats-Regel steht dort
+   * und darf hier nicht ein zweites Mal stehen. Ohne die Prop erscheint der
+   * Prüf-Balken NICHT: den Rest des Jahres ist das hier eine normale
+   * Profilseite, auf der man seine Adresse ändert.
+   */
+  pruefungFaellig?: boolean;
 }
 
-export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflichtfelder = [] }: DatenpruefungMitgliedProps) {
+export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflichtfelder = [], pruefungFaellig = false }: DatenpruefungMitgliedProps) {
   const [form, setForm] = useState({
     vorname:      raw.vorname      || "",
     nachname:     raw.nachname     || "",
@@ -105,6 +114,12 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflicht
     telefon:      raw.telefon      || "",
     ahv_nr:       raw.ahv_nr       || "",
   });
+  /* Der Stand beim Aufbau — daran hängt „ist etwas ungespeichert?". Nach dem
+     Speichern nachgezogen, nicht neu geladen: ein Reload baute die Maske neu
+     auf und nähme dem Nutzer die Stelle, an der er gerade arbeitet. */
+  const [ausgang, setAusgang] = useState(form);
+  const geaendert = (Object.keys(form) as (keyof typeof form)[]).some(k => form[k] !== ausgang[k]);
+
   const [ahvVisible, setAhvVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -121,16 +136,24 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflicht
     setShowSuggestions(false);
   }
 
-  async function speichernUndBestaetigen() {
-    if (!sb) return;
-    /* Auch hier prüfen, nicht nur am Knopf: ein deaktivierter Knopf ist eine
-       Bequemlichkeit, keine Zusicherung. */
-    if (fehlendSelbst.length > 0) {
-      setPortalMsg({ ok: false, text: `Bitte zuerst ausfüllen: ${fehlendSelbst.map(k => FELD_LABEL[k] || k).join(", ")}` });
-      return;
-    }
-    setSaving(true);
-    const err = await updatePerson(sb as never, raw.person_id, {
+  /* ── Zwei Anlässe, zwei Knöpfe (20.08.2026) ───────────────────────────
+     Bis dahin machte ein Knopf beides: er schrieb die Feldwerte UND setzte
+     `profil_geprueft_at`. Wer im März seine Nummer korrigierte, verschob
+     damit den Prüftermin auf September — ohne dass jemand geprüft hätte.
+
+       Speichern  der Normalfall unter dem Jahr. Schreibt die Felder,
+                  RÜHRT DAS DATUM NICHT AN, und sperrt NICHT bei fehlenden
+                  Pflichtfeldern: wer seine Adresse korrigieren will, darf
+                  daran nicht scheitern, dass die AHV-Nummer leer ist.
+       Prüfen     kommt vom Verein, halbjährlich. Setzt NUR das Datum und
+                  verlangt Vollständigkeit.
+
+     Vollständigkeit ist die Forderung der Prüfung, nicht der Änderung. */
+
+  /** Die Formularwerte als Änderungsobjekt — leere Felder bleiben `undefined`,
+      damit ein nie ausgefülltes Feld nicht als Leerung geschrieben wird. */
+  function felderAusFormular() {
+    return {
       vorname:       form.vorname       || undefined,
       nachname:      form.nachname      || undefined,
       geburtsdatum:  form.geburtsdatum  || undefined,
@@ -144,11 +167,40 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflicht
       ahv_nr:        form.ahv_nr        || undefined,
       geschlecht:    form.geschlecht    || undefined,
       heimatort:     form.heimatort     || undefined,
+    };
+  }
+
+  async function speichern() {
+    if (!sb) return;
+    setSaving(true);
+    const err = await updatePerson(sb as never, raw.person_id, felderAusFormular());
+    setSaving(false);
+    if (err) { setPortalMsg({ ok: false, text: "Fehler beim Speichern" }); return; }
+    setAusgang(form);
+    setPortalMsg({ ok: true, text: "Gespeichert ✓" });
+  }
+
+  async function bestaetigen() {
+    if (!sb) return;
+    /* Auch hier prüfen, nicht nur am Knopf: ein deaktivierter Knopf ist eine
+       Bequemlichkeit, keine Zusicherung. */
+    if (fehlendSelbst.length > 0) {
+      setPortalMsg({ ok: false, text: `Bitte zuerst ausfüllen: ${fehlendSelbst.map(k => FELD_LABEL[k] || k).join(", ")}` });
+      return;
+    }
+    if (geaendert) {
+      setPortalMsg({ ok: false, text: "Es gibt ungespeicherte Änderungen — bitte zuerst speichern." });
+      return;
+    }
+    setSaving(true);
+    /* NUR das Datum. Die Felder sind gespeichert, sonst käme man hier nicht
+       vorbei — „geprüft" bezieht sich auf das, was in der Datenbank steht. */
+    const err = await updatePerson(sb as never, raw.person_id, {
       profil_geprueft_at: new Date().toISOString(),
     });
     setSaving(false);
     if (err) {
-      setPortalMsg({ ok: false, text: "Fehler beim Speichern" });
+      setPortalMsg({ ok: false, text: "Fehler beim Bestätigen" });
     } else {
       setPortalMsg({ ok: true, text: "Profil bestätigt ✓" });
       if (onReload) setTimeout(onReload, 500);
@@ -183,6 +235,34 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflicht
 
   return (
     <div className="cc-col cc-gap-16">
+      {/* ⚠ NUR wenn die Prüfung fällig ist. Den Rest des Jahres ist das hier
+          eine normale Profilseite ohne Prüf-Knopf — ein Aufruf, der immer
+          dasteht, wird zur Tapete und dann nicht mehr gelesen. */}
+      {pruefungFaellig && (
+        <Card className="cc-card-rahmen-akzent">
+          <div className="cc-between cc-items-center cc-gap-12">
+            <div>
+              <div className="cc-text-bold cc-text-lg">Der Verein bittet um Prüfung deiner Angaben</div>
+              <div className="cc-text-sm cc-text-sub cc-mt-4">
+                {kannBestaetigen
+                  ? geaendert
+                    ? "Es gibt ungespeicherte Änderungen — bitte zuerst speichern."
+                    : "Stimmt alles? Dann bestätige es hier."
+                  : "Bitte fülle zuerst die fehlenden Pflichtfelder aus."}
+              </div>
+            </div>
+            {/* ⚠ „Meine Angaben" statt „Alles": Pflichtfelder, an die nur die
+                Verwaltung kommt, sperren nicht — sonst sässe man in einer
+                Sackgasse. Dann darf die Zusage aber auch nicht mehr
+                behaupten, als sie deckt. */}
+            <Btn variant="primary" onClick={bestaetigen}
+                 disabled={saving || !kannBestaetigen || geaendert}>
+              Meine Angaben sind korrekt ✓
+            </Btn>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <div className="cc-between">
           <div>
@@ -326,8 +406,8 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflicht
         </div>
 
         <div className="cc-row cc-gap-8 cc-justify-end cc-mt-16">
-          <Btn variant="primary" onClick={speichernUndBestaetigen} disabled={saving || !kannBestaetigen}>
-            {saving ? "Speichert…" : "Speichern und bestätigen ✓"}
+          <Btn onClick={speichern} disabled={saving || !geaendert}>
+            {saving ? "Speichert…" : "Speichern"}
           </Btn>
         </div>
       </Card>

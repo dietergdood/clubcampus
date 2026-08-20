@@ -19,6 +19,26 @@
 
    4. Ein Fehlschlag wird GEMELDET, nicht als Erfolg verkleidet.
 
+   ⚠ ZWEI ANLÄSSE, ZWEI KNÖPFE (20.08.2026)
+
+   Bis dahin machte EIN Knopf beides: er schrieb die Feldwerte und
+   setzte `profil_geprueft_at`. Wer im März eine Nummer korrigierte,
+   verschob damit den Prüftermin auf September — ohne dass jemand
+   das Profil durchgesehen hätte.
+
+     Speichern  PRO KARTE, der Normalfall unter dem Jahr. Schreibt
+                nur diese eine Person, rührt das Datum NICHT an, und
+                sperrt NICHT bei fehlenden Pflichtfeldern: wer seine
+                Adresse korrigieren will, darf daran nicht scheitern,
+                dass die AHV-Nummer leer ist.
+     Prüfen     ein Balken oben, NUR wenn der Verein darum bittet.
+                Setzt nur das Datum, für alle Personen gemeinsam, und
+                verlangt Vollständigkeit.
+
+   Vollständigkeit ist die Forderung der Prüfung, nicht der Änderung.
+   Bei drei Kindern arbeitet man so eines nach dem anderen ab, statt
+   am Schluss alles gleichzeitig abzuschicken.
+
    ⚠ WAS AM 20.08.2026 DAZUKAM: DIE SPERRE
 
    Bis dahin liess sich „Alles geprüft und korrekt ✓" drücken,
@@ -142,18 +162,30 @@ interface DatenpruefungElternProps {
   kinderFehler?: string | null;
   /** Zeilen aus `mitgliedtyp_feldkonfig`, vom Portal durchgereicht. */
   feldkonfig?: FeldkonfigZeile[];
+  /**
+   * Bittet der Verein gerade um eine Prüfung?
+   *
+   * ⚠ Quelle ist `sollProfilPruefen()` — die Sechs-Monats-Regel steht dort
+   * und darf hier nicht ein zweites Mal stehen. Ohne die Prop erscheint der
+   * Balken NICHT: den Rest des Jahres ist das hier eine normale Profilseite.
+   */
+  pruefungFaellig?: boolean;
   setPortalMsg: (msg: StatusMeldung | null) => void;
   onReload?: (() => void) | null;
 }
 
 export function DatenpruefungEltern({
-  sb, elternteil, kinder, kinderFehler = null, feldkonfig = [], setPortalMsg, onReload,
+  sb, elternteil, kinder, kinderFehler = null, feldkonfig = [], pruefungFaellig = false,
+  setPortalMsg, onReload,
 }: DatenpruefungElternProps) {
-  /* Ausgangswerte einmal festhalten: gespeichert wird nur die Abweichung. */
-  const [ausgangEigen] = useState<FelderWerte>(() => werteAusZeile(elternteil));
+  /* Ausgangswerte: gespeichert wird nur die Abweichung — und daran haengt
+     auch, ob eine Karte „ungespeicherte Aenderungen" hat. Nach dem Speichern
+     werden sie nachgezogen, statt die Maske neu zu laden: ein Reload klappte
+     alle Karten zurueck, mitten in der Arbeit. */
+  const [ausgangEigen, setAusgangEigen] = useState<FelderWerte>(() => werteAusZeile(elternteil));
   const [eigen, setEigen] = useState<FelderWerte>(ausgangEigen);
 
-  const [ausgangKinder] = useState<Record<number, FelderWerte>>(
+  const [ausgangKinder, setAusgangKinder] = useState<Record<number, FelderWerte>>(
     () => Object.fromEntries(kinder.map(k => [k.id, werteAusZeile(k as unknown as Record<string, unknown>)])));
   const [kinderWerte, setKinderWerte] = useState<Record<number, FelderWerte>>(ausgangKinder);
 
@@ -187,43 +219,101 @@ export function DatenpruefungEltern({
     setKinderWerte(prev => ({ ...prev, [mitgliedId]: { ...prev[mitgliedId], [schluessel]: wert } }));
   }
 
-  async function alleBestaetigen() {
-    if (!sb || !kannBestaetigen) return;
+  /* Hat eine Karte ungespeicherte Aenderungen? */
+  const eigenGeaendert = Object.keys(geaenderte(eigen, ausgangEigen)).length > 0;
+  const kindGeaendert = (id: number) =>
+    Object.keys(geaenderte(kinderWerte[id] ?? {}, ausgangKinder[id] ?? {})).length > 0;
+  const etwasUngespeichert = eigenGeaendert || kinder.some(k => kindGeaendert(k.id));
+
+  /** Speichern einer EINZELNEN Person — ohne das Prüfdatum anzufassen. */
+  async function speichereEigen(): Promise<string | null> {
+    if (!sb) return "Keine Verbindung zur Datenbank.";
+    const erg = await updateEigenePerson(sb, elternteil.id, geaenderte(eigen, ausgangEigen), false);
+    if (!erg.ok) return erg.fehler ?? "unbekannter Fehler";
+    setAusgangEigen(eigen);
+    return null;
+  }
+
+  async function speichereKind(kind: Mitglied): Promise<string | null> {
+    if (!sb) return "Keine Verbindung zur Datenbank.";
+    const personId = (kind as unknown as { person_id?: string }).person_id;
+    /* ⚠ Ohne `person_id` gibt es nichts zu schreiben — und das gehoert
+       gemeldet. Stillschweigend uebersprungen saehe es aus, als waeren die
+       Daten des Kindes gespeichert worden. */
+    if (!personId) return "keine Person verknüpft.";
+    const erg = await updateKindDurchElternteil(
+      sb, personId, geaenderte(kinderWerte[kind.id] ?? {}, ausgangKinder[kind.id] ?? {}), false);
+    if (!erg.ok) return erg.fehler ?? "unbekannter Fehler";
+    setAusgangKinder(prev => ({ ...prev, [kind.id]: kinderWerte[kind.id] ?? {} }));
+    return null;
+  }
+
+  /**
+   * Die Prüfung — der andere Anlass.
+   *
+   * ⚠ Schreibt NUR das Datum, für alle Personen gemeinsam. Die Felder sind zu
+   * diesem Zeitpunkt gespeichert, sonst käme man hier nicht vorbei:
+   * ungespeicherte Änderungen sperren den Knopf. „Geprüft" bezieht sich auf
+   * das, was in der Datenbank steht — nicht auf das, was im Formular steht.
+   */
+  async function bestaetigen() {
+    if (!sb || !kannBestaetigen || etwasUngespeichert) return;
     setSaving(true);
     setPortalMsg(null);
     const fehler: string[] = [];
 
-    /* Die eigenen Kontaktdaten. `personen_update_self` trifft genau diese
-       Zeile; die Spaltensperre kommt aus der Allowlist im Service. */
-    const eigenErg = await updateEigenePerson(sb, elternteil.id, geaenderte(eigen, ausgangEigen), true);
+    const eigenErg = await updateEigenePerson(sb, elternteil.id, {}, true);
     if (!eigenErg.ok) fehler.push(`Eigene Daten: ${eigenErg.fehler ?? "unbekannter Fehler"}`);
 
     for (const kind of kinder) {
-      const name = vollname(kind);
       const personId = (kind as unknown as { person_id?: string }).person_id;
-      /* ⚠ Ohne `person_id` gibt es nichts zu schreiben — und das gehört
-         gemeldet. Stillschweigend übersprungen sähe es aus, als wären die
-         Daten des Kindes gespeichert worden. */
-      if (!personId) { fehler.push(`${name}: keine Person verknüpft.`); continue; }
-      const erg = await updateKindDurchElternteil(
-        sb, personId, geaenderte(kinderWerte[kind.id] ?? {}, ausgangKinder[kind.id] ?? {}), true);
-      if (!erg.ok) fehler.push(`${name}: ${erg.fehler ?? "unbekannter Fehler"}`);
+      if (!personId) { fehler.push(`${vollname(kind)}: keine Person verknüpft.`); continue; }
+      const erg = await updateKindDurchElternteil(sb, personId, {}, true);
+      if (!erg.ok) fehler.push(`${vollname(kind)}: ${erg.fehler ?? "unbekannter Fehler"}`);
     }
 
     setSaving(false);
     if (fehler.length > 0) {
-      /* ⚠ Kein „Alles bestätigt ✓" über einem fehlgeschlagenen Schreibvorgang.
-         Bei RLS gibt es keinen Fehler zu lesen — eine gesperrte Zeile wird
+      /* ⚠ Kein „bestätigt ✓" über einem fehlgeschlagenen Schreibvorgang. Bei
+         RLS gibt es keinen Fehler zu lesen — eine gesperrte Zeile wird
          schlicht nicht getroffen —, deshalb liest der Service gegen. */
-      setPortalMsg({ ok: false, text: `Nicht alles konnte gespeichert werden. ${fehler.join(" ")}` });
+      setPortalMsg({ ok: false, text: `Nicht alles konnte bestätigt werden. ${fehler.join(" ")}` });
       return;
     }
-    setPortalMsg({ ok: true, text: "Alles bestätigt ✓" });
+    setPortalMsg({ ok: true, text: "Angaben bestätigt ✓" });
     if (onReload) setTimeout(onReload, 500);
   }
 
   return (
     <div className="cc-col cc-gap-16">
+      {/* ⚠ NUR wenn die Prüfung fällig ist. Den Rest des Jahres ist das hier
+          eine Profilseite, auf der man seine Adresse ändert — ein Aufruf, der
+          immer dasteht, wird zur Tapete und dann nicht mehr gelesen. */}
+      {pruefungFaellig && (
+        <Card className="cc-card-rahmen-akzent">
+          <div className="cc-between cc-items-center cc-gap-12">
+            <div>
+              <div className="cc-text-bold cc-text-lg">Der Verein bittet um Prüfung deiner Angaben</div>
+              <div className="cc-text-sm cc-text-sub cc-mt-4">
+                {!kannBestaetigen
+                  ? `Noch ${offeneFelder} ${offeneFelder === 1 ? "Feld" : "Felder"} auszufüllen — die Karten mit Rahmen zeigen, wo.`
+                  : etwasUngespeichert
+                    ? "Es gibt ungespeicherte Änderungen — bitte zuerst speichern."
+                    : "Stimmt alles? Dann bestätige es hier."}
+              </div>
+            </div>
+            {/* ⚠ „Meine Angaben" statt „Alles": Pflichtfelder, an die nur die
+                Verwaltung kommt, sperren nicht — sonst sässe die Person in
+                einer Sackgasse. Dann darf die Zusage aber auch nicht mehr
+                behaupten, als sie deckt. Entschieden am 20.08.2026 (Didi). */}
+            <Btn variant="primary" onClick={bestaetigen}
+                 disabled={saving || !kannBestaetigen || etwasUngespeichert}>
+              {saving ? "Speichert…" : "Meine Angaben sind korrekt ✓"}
+            </Btn>
+          </div>
+        </Card>
+      )}
+
       {/* Profil-Status */}
       <Card>
         <div className="cc-between">
@@ -246,6 +336,8 @@ export function DatenpruefungEltern({
         offen={offen.eigen} onKlappe={() => klappe("eigen")}
         name={vollname(elternteil as never) || "Ich"}
         stand={eigenerStand}
+        geaendert={eigenGeaendert}
+        onSpeichern={speichereEigen}
       >
         <PersonFelderFormular
           konfig={eigeneKonfig}
@@ -287,6 +379,8 @@ export function DatenpruefungEltern({
           offen={offen[`kind-${kind.id}`]} onKlappe={() => klappe(`kind-${kind.id}`)}
           name={vollname(kind)}
           stand={kinderStand[i]}
+          geaendert={kindGeaendert(kind.id)}
+          onSpeichern={() => speichereKind(kind)}
         >
           {/* Die Achse des Kindes ist sein Mitgliedtyp — ein Juniorenmitglied
               zeigt andere Felder als ein Aktivmitglied. */}
@@ -300,16 +394,6 @@ export function DatenpruefungEltern({
         </PersonKarte>
       ))}
 
-      <div className="cc-row cc-gap-8 cc-justify-end cc-items-center">
-        {!kannBestaetigen && (
-          <span className="cc-text-sm cc-text-sub">
-            Noch {offeneFelder} {offeneFelder === 1 ? "Feld" : "Felder"} auszufüllen.
-          </span>
-        )}
-        <Btn variant="primary" onClick={alleBestaetigen} disabled={saving || !kannBestaetigen}>
-          {saving ? "Speichert…" : "Alles geprüft und korrekt ✓"}
-        </Btn>
-      </div>
     </div>
   );
 }
@@ -323,15 +407,32 @@ export function DatenpruefungEltern({
    jedem Tastendruck den Fokus (CLAUDE.md). Genau das wäre hier fatal: in
    diesen Karten wird getippt. */
 function PersonKarte({
-  offen, onKlappe, name, stand, children,
+  offen, onKlappe, name, stand, geaendert, onSpeichern, children,
 }: {
   offen: boolean;
   onKlappe: () => void;
   name: string;
   stand: Stand;
+  /** Ungespeicherte Änderungen in DIESER Karte. */
+  geaendert: boolean;
+  /** Speichert nur diese Person. Gibt die Fehlermeldung zurück, oder `null`. */
+  onSpeichern: () => Promise<string | null>;
   children: ReactNode;
 }) {
   const fehlt = stand.selbst.length;
+  /* Die Rueckmeldung steht IN der Karte, nicht als globale Meldung: bei drei
+     Kindern muss man sehen, welche gespeichert hat. */
+  const [speichert, setSpeichert] = useState(false);
+  const [meldung, setMeldung] = useState<StatusMeldung | null>(null);
+
+  async function speichern() {
+    setSpeichert(true);
+    setMeldung(null);
+    const fehler = await onSpeichern();
+    setSpeichert(false);
+    setMeldung(fehler ? { ok: false, text: fehler } : { ok: true, text: "Gespeichert ✓" });
+  }
+
   const initialen = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?";
   return (
     <Card className={fehlt > 0 ? "cc-card-rahmen-akzent" : ""}>
@@ -360,6 +461,23 @@ function PersonKarte({
             </div>
           )}
           {children}
+
+          {/* ⚠ Speichern sperrt NICHT bei fehlenden Pflichtfeldern. Wer seine
+              Adresse korrigieren will, darf daran nicht scheitern, dass die
+              AHV-Nummer leer ist — Vollstaendigkeit ist die Forderung der
+              PRUEFUNG, nicht der Aenderung. Und es setzt `profil_geprueft_at`
+              nicht: wer im Maerz eine Nummer aendert, hat nicht das ganze
+              Profil durchgesehen. */}
+          <div className="cc-row cc-gap-8 cc-justify-end cc-items-center cc-mt-16">
+            {meldung && (
+              <span className={meldung.ok ? "cc-text-sm cc-text-success" : "cc-text-sm cc-text-danger"}>
+                {meldung.text}
+              </span>
+            )}
+            <Btn onClick={speichern} disabled={speichert || !geaendert}>
+              {speichert ? "Speichert…" : "Speichern"}
+            </Btn>
+          </div>
         </div>
       )}
     </Card>

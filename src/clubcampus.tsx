@@ -523,13 +523,18 @@ function Portal({supabaseClient, slug}: PortalProps){
             kinder={elternDaten.kinder}
             kinderFehler={elternDaten.kinderFehler}
             feldkonfig={feldkonfig}
+            /* ⚠ Aus `sollProfilPruefen()`, nicht aus einer zweiten Rechnung:
+               die Sechs-Monats-Regel steht dort. Ohne die Prop ist die Seite
+               ein normales Profil — der Pruef-Balken erscheint nur, wenn der
+               Verein tatsaechlich darum bittet. */
+            pruefungFaellig={sollProfilPruefen()}
             setPortalMsg={()=>{}}
             onReload={()=>{ setElternLadung({status:"laedt"}); setMeinMitgliedDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
           />;
         }
         const meinMitglied = meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
         if (!meinMitglied) return <div className="cc-empty-state"><div className="cc-text-sub">Profil wird geladen…</div></div>;
-        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} pflichtfelder={pflichtfelderFuer(fuerMitgliedtyp(meinMitglied.mitgliedtyp))} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
+        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} pflichtfelder={pflichtfelderFuer(fuerMitgliedtyp(meinMitglied.mitgliedtyp))} pruefungFaellig={sollProfilPruefen()} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
       }
       default:                  return <Dashboard role={role} setActive={setActive} sb={sb} vereinId={tenant?.id} dbTeams={dbTeams}/>;
     }
@@ -577,6 +582,9 @@ function Portal({supabaseClient, slug}: PortalProps){
                       kinder={elternDaten.kinder}
                       kinderFehler={elternDaten.kinderFehler}
                       feldkonfig={feldkonfig}
+                      /* Das Overlay erscheint nur, wenn sollProfilPruefen()
+                         wahr ist — hier ist sie also immer faellig. */
+                      pruefungFaellig
                       setPortalMsg={()=>{}}
                       onReload={onReload}
                     />
@@ -584,6 +592,7 @@ function Portal({supabaseClient, slug}: PortalProps){
                       raw={meinMitglied!}
                       sb={sb}
                       pflichtfelder={pflichtfelderFuer(fuerMitgliedtyp(meinMitglied!.mitgliedtyp))}
+                      pruefungFaellig
                       setPortalMsg={()=>{}}
                       onReload={onReload}
                     />

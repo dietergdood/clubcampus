@@ -38,7 +38,11 @@ vi.mock('../../../domains/members/kindService.ts', async (orig) => ({
 vi.mock('../../../theme.ts', () => ({
   Btn: ({children,onClick,disabled}) => <button onClick={onClick} disabled={disabled}>{children}</button>,
   Card: ({children}) => <div>{children}</div>,
-  PhoneInput: ({value,onChange}) => <input aria-label="tel" value={value} onChange={e=>onChange(e.target.value)}/>,
+  /* ⚠ `id` MUSS durch: PersonFelderFormular verknuepft Label und Eingabe
+     ueber htmlFor/id. Eine Attrappe, die es verschluckt, macht das Feld
+     ueber seine Beschriftung unauffindbar — und der Test scheiterte an
+     der Attrappe statt an der Sache. */
+  PhoneInput: ({value,onChange,id}) => <input id={id} value={value} onChange={e=>onChange(e.target.value)}/>,
   useAddrSearch: () => [],
   usePlzLookup: () => {},
 }));
@@ -67,6 +71,9 @@ function props(over = {}) {
     elternteil: ELTERNTEIL,
     kinder: [KIND],
     feldkonfig: [],
+    /* Standardmaessig faellig: die meisten Faelle unten pruefen den
+       Pruef-Balken. Der Fall „nicht faellig" steht eigens weiter unten. */
+    pruefungFaellig: true,
     setPortalMsg: vi.fn(),
     onReload: null,
     ...over,
@@ -177,7 +184,7 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
     /* Der Kinderfehler kippt die Seite nicht: die eigene Haelfte ist geladen. */
     render(<DatenpruefungEltern {...props({ kinder: [], kinderFehler: 'irgendein Fehler' })} />);
     expect(screen.getByText('Meine Angaben')).toBeTruthy();
-    expect(screen.getByText(/Alles geprüft/)).toBeTruthy();
+    expect(screen.getByText(/Meine Angaben sind korrekt/)).toBeTruthy();
   });
 
   it('der Profil-Status kommt vom Elternteil, nicht von einem Mitglied', () => {
@@ -187,71 +194,165 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
   });
 });
 
-describe('DatenpruefungEltern — was sie schreibt', () => {
+/* ═══════════════════════════════════════════════════════════════
+   Zwei Anlaesse, zwei Knoepfe (20.08.2026)
+
+   Bis dahin machte EIN Knopf beides: er schrieb die Feldwerte und
+   setzte profil_geprueft_at. Wer im Maerz eine Nummer korrigierte,
+   verschob damit den Prueftermin auf September — ohne dass jemand
+   das Profil durchgesehen haette.
+
+     Speichern  pro Karte, schreibt die Felder, ruehrt das Datum
+                nicht an, sperrt nicht bei fehlenden Pflichtfeldern
+     Pruefen    ein Balken oben, nur wenn faellig, setzt NUR das
+                Datum und verlangt Vollstaendigkeit
+   ═══════════════════════════════════════════════════════════════ */
+const PFLICHT_AHV = [{
+  gilt_fuer: 'mitgliedtyp', mitgliedtyp_id: 'typ-1',
+  mitgliedtyp: 'Juniorenmitglied', schluessel: 'ahv_nr', modus: 'pflicht',
+}];
+
+describe('DatenpruefungEltern — Speichern (der Normalfall)', () => {
   it('⚠ nutzt die Allowlist-Services, nicht updateMitglied', async () => {
     render(<DatenpruefungEltern {...props()} />);
-    await act(async () => { fireEvent.click(screen.getByText(/Alles geprüft/)); });
+    const [eigenSpeichern] = speichernKnopf('Anna Muster');
+    fireEvent.change(screen.getAllByLabelText(/Telefon/)[0], { target: { value: '079 222 22 22' } });
+    await act(async () => { fireEvent.click(eigenSpeichern); });
     expect(updateEigenePerson).toHaveBeenCalledTimes(1);
-    expect(updateKindDurchElternteil).toHaveBeenCalledTimes(1);
-    /* Ueber die PERSON des Kindes, nicht ueber seine Mitglieds-Id: geschrieben
-       wird `personen`, und `personen_update_kind` filtert darauf. */
-    expect(updateKindDurchElternteil.mock.calls[0][1]).toBe('p-kind');
+    expect(updateKindDurchElternteil).not.toHaveBeenCalled();
   });
 
-  it('bestätigt über den eigenen Parameter, nicht als Feld', async () => {
+  it('⚠ setzt profil_geprueft_at NICHT', async () => {
+    /* Der Kern der Trennung. Wer im Maerz die Adresse aendert, hat nicht das
+       ganze Profil durchgesehen — sonst verschoebe sich der Prueftermin,
+       ohne dass jemand geprueft hat. */
     render(<DatenpruefungEltern {...props()} />);
-    await act(async () => { fireEvent.click(screen.getByText(/Alles geprüft/)); });
-    expect(updateEigenePerson.mock.calls[0][3]).toBe(true);
-    expect(updateKindDurchElternteil.mock.calls[0][3]).toBe(true);
-    /* profil_geprueft_at darf NICHT im Feldobjekt stehen — sonst waere die
-       Bestaetigung ein Feld unter Feldern. */
+    const [eigenSpeichern] = speichernKnopf('Anna Muster');
+    fireEvent.change(screen.getAllByLabelText(/Telefon/)[0], { target: { value: '079 222 22 22' } });
+    await act(async () => { fireEvent.click(eigenSpeichern); });
+    expect(updateEigenePerson.mock.calls[0][3]).toBe(false);
     expect(updateEigenePerson.mock.calls[0][2]).not.toHaveProperty('profil_geprueft_at');
+  });
+
+  it('schreibt nur DIESE Person, nicht alle', async () => {
+    render(<DatenpruefungEltern {...props()} />);
+    oeffne('Anna Muster'); oeffne('Tim Muster');
+    fireEvent.change(screen.getAllByLabelText(/AHV-Nr\./)[1], { target: { value: '756.9' } });
+    const knoepfe = screen.getAllByRole('button').filter(b => b.textContent === 'Speichern');
+    /* Zwei Karten, zwei Knoepfe. Der zweite gehoert dem Kind. */
+    expect(knoepfe).toHaveLength(2);
+    await act(async () => { fireEvent.click(knoepfe[1]); });
+    expect(updateKindDurchElternteil).toHaveBeenCalledTimes(1);
+    expect(updateKindDurchElternteil.mock.calls[0][1]).toBe('p-kind');
+    expect(updateEigenePerson).not.toHaveBeenCalled();
   });
 
   it('schickt nur, was sich geändert hat', async () => {
     render(<DatenpruefungEltern {...props()} />);
-    await act(async () => { fireEvent.click(screen.getByText(/Alles geprüft/)); });
-    /* Nichts angefasst: ein leeres Aenderungsobjekt. Ein update mit
-       unveraenderten Werten schriebe `updated_at` fort und saehe im Verlauf
-       wie eine Bearbeitung aus, die nie stattgefunden hat. */
-    expect(updateEigenePerson.mock.calls[0][2]).toEqual({});
-
-    /* Das ZWEITE Feld ist das des Kindes — das erste gehoert dem Elternteil.
-       Die Reihenfolge steht fest: eigene Karte, dann je eine pro Kind. */
     oeffne('Anna Muster'); oeffne('Tim Muster');
-    const ahvFelder = screen.getAllByLabelText(/AHV-Nr\./);
-    expect(ahvFelder).toHaveLength(2);
-    await act(async () => { fireEvent.change(ahvFelder[1], { target: { value: '756.9999.9999.99' } }); });
-    await act(async () => { fireEvent.click(screen.getByText(/Alles geprüft/)); });
-    expect(updateKindDurchElternteil.mock.calls[1][2]).toEqual({ ahv_nr: '756.9999.9999.99' });
-    /* Und die Gegenprobe: die eigene Zeile bleibt unberuehrt. */
-    expect(updateEigenePerson.mock.calls[1][2]).toEqual({});
+    fireEvent.change(screen.getAllByLabelText(/AHV-Nr\./)[1], { target: { value: '756.9999.9999.99' } });
+    const knoepfe = screen.getAllByRole('button').filter(b => b.textContent === 'Speichern');
+    await act(async () => { fireEvent.click(knoepfe[1]); });
+    /* Ein update mit unveraenderten Werten schriebe `updated_at` fort und
+       saehe im Verlauf wie eine Bearbeitung aus, die nie stattfand. */
+    expect(updateKindDurchElternteil.mock.calls[0][2]).toEqual({ ahv_nr: '756.9999.9999.99' });
+  });
+
+  it('⚠ speichert auch, wenn ein Pflichtfeld leer ist', async () => {
+    /* Wer seine Adresse korrigieren will, darf daran nicht scheitern, dass
+       die AHV-Nummer leer ist. Vollstaendigkeit ist die Forderung der
+       PRUEFUNG, nicht der Aenderung. */
+    render(<DatenpruefungEltern {...props({
+      feldkonfig: PFLICHT_AHV,
+      kinder: [{ ...KIND, ahv_nr: null }],
+    })} />);
+    oeffne('Tim Muster');
+    fireEvent.change(screen.getAllByLabelText(/Strasse/)[0], { target: { value: 'Neue Gasse 2' } });
+    const knoepfe = screen.getAllByRole('button').filter(b => b.textContent === 'Speichern');
+    const kindKnopf = knoepfe[knoepfe.length - 1];
+    expect(kindKnopf.disabled).toBe(false);
+    await act(async () => { fireEvent.click(kindKnopf); });
+    expect(updateKindDurchElternteil).toHaveBeenCalledTimes(1);
+  });
+
+  it('ohne Änderung ist der Knopf gesperrt', () => {
+    render(<DatenpruefungEltern {...props()} />);
+    const [eigenSpeichern] = speichernKnopf('Anna Muster');
+    expect(eigenSpeichern.disabled).toBe(true);
+  });
+
+  it('die Rückmeldung steht IN der Karte', async () => {
+    /* Bei drei Kindern muss man sehen, WELCHE gespeichert hat. */
+    render(<DatenpruefungEltern {...props()} />);
+    const [eigenSpeichern] = speichernKnopf('Anna Muster');
+    fireEvent.change(screen.getAllByLabelText(/Telefon/)[0], { target: { value: '079 222 22 22' } });
+    await act(async () => { fireEvent.click(eigenSpeichern); });
+    expect(screen.getByText('Gespeichert ✓')).toBeTruthy();
+  });
+});
+
+describe('DatenpruefungEltern — Prüfen (der Anlass des Vereins)', () => {
+  it('⚠ der Balken erscheint NUR, wenn die Prüfung fällig ist', () => {
+    /* Ein Aufruf, der immer dasteht, wird zur Tapete und dann nicht mehr
+       gelesen. Den Rest des Jahres ist das hier eine Profilseite. */
+    const { unmount } = render(<DatenpruefungEltern {...props({ pruefungFaellig: false })} />);
+    expect(screen.queryByText(/Der Verein bittet um Prüfung/)).toBeNull();
+    expect(screen.queryByText(/Meine Angaben sind korrekt/)).toBeNull();
+    unmount();
+
+    render(<DatenpruefungEltern {...props()} />);
+    expect(screen.getByText(/Der Verein bittet um Prüfung/)).toBeTruthy();
+  });
+
+  it('⚠ schreibt NUR das Datum, kein einziges Feld', async () => {
+    render(<DatenpruefungEltern {...props()} />);
+    await act(async () => { fireEvent.click(knopf()); });
+    expect(updateEigenePerson.mock.calls[0][2]).toEqual({});
+    expect(updateEigenePerson.mock.calls[0][3]).toBe(true);
+    expect(updateKindDurchElternteil.mock.calls[0][2]).toEqual({});
+    expect(updateKindDurchElternteil.mock.calls[0][3]).toBe(true);
+  });
+
+  it('setzt das Datum für alle Personen gemeinsam', async () => {
+    render(<DatenpruefungEltern {...props()} />);
+    await act(async () => { fireEvent.click(knopf()); });
+    expect(updateEigenePerson).toHaveBeenCalledTimes(1);
+    expect(updateKindDurchElternteil).toHaveBeenCalledTimes(1);
+  });
+
+  it('⚠ sperrt bei ungespeicherten Änderungen', async () => {
+    /* Sonst haette der Pruef-Knopf wieder zwei Wirkungen — genau das, was
+       getrennt werden sollte. „Geprueft" bezieht sich auf das, was in der
+       Datenbank steht. */
+    render(<DatenpruefungEltern {...props()} />);
+    oeffne('Anna Muster');
+    fireEvent.change(screen.getAllByLabelText(/Telefon/)[0], { target: { value: '079 222 22 22' } });
+    expect(knopf().disabled).toBe(true);
+    expect(screen.getByText(/bitte zuerst speichern/)).toBeTruthy();
+    await act(async () => { fireEvent.click(knopf()); });
+    expect(updateEigenePerson).not.toHaveBeenCalled();
   });
 
   it('⚠ ein abgewiesener Schreibvorgang meldet KEINEN Erfolg', async () => {
     /* Bei RLS gibt es keinen Fehler zu lesen — eine gesperrte Zeile wird
-       schlicht nicht getroffen. Vorher stand hier bedingungslos
-       „Alles bestätigt ✓": eine Erfolgsmeldung ohne Deckung. */
+       schlicht nicht getroffen. Vorher stand hier bedingungslos ein Haekchen. */
     svc.updateKindDurchElternteil.mockResolvedValue({
       ok: false, abgewiesen: [], fehler: 'fehlt die Verknüpfung zum Kind?',
     });
     const setPortalMsg = vi.fn();
     render(<DatenpruefungEltern {...props({ setPortalMsg })} />);
-    await act(async () => { fireEvent.click(screen.getByText(/Alles geprüft/)); });
+    await act(async () => { fireEvent.click(knopf()); });
     const letzte = setPortalMsg.mock.calls.at(-1)[0];
     expect(letzte.ok).toBe(false);
     expect(letzte.text).toContain('Tim Muster');
-    expect(letzte.text).not.toContain('Alles bestätigt');
+    expect(letzte.text).not.toContain('bestätigt ✓');
   });
 
   it('⚠ ein Kind ohne person_id wird gemeldet, nicht übersprungen', async () => {
-    /* Stillschweigend uebersprungen saehe es aus, als waeren die Daten des
-       Kindes gespeichert worden — ein Fehler, der wie eine Datenlage
-       aussieht. */
     const setPortalMsg = vi.fn();
     const { person_id: _weg, ...ohnePerson } = KIND;
     render(<DatenpruefungEltern {...props({ kinder: [ohnePerson], setPortalMsg })} />);
-    await act(async () => { fireEvent.click(screen.getByText(/Alles geprüft/)); });
+    await act(async () => { fireEvent.click(knopf()); });
     expect(updateKindDurchElternteil).not.toHaveBeenCalled();
     const letzte = setPortalMsg.mock.calls.at(-1)[0];
     expect(letzte.ok).toBe(false);
@@ -270,12 +371,18 @@ describe('DatenpruefungEltern — was sie schreibt', () => {
    Beim ersten echten Elternkonto ging genau das durch: Stefan
    Wengers AHV-Nummer fehlte, bestaetigt wurde trotzdem.
    ═══════════════════════════════════════════════════════════════ */
-const PFLICHT_AHV = [{
-  gilt_fuer: 'mitgliedtyp', mitgliedtyp_id: 'typ-1',
-  mitgliedtyp: 'Juniorenmitglied', schluessel: 'ahv_nr', modus: 'pflicht',
-}];
+/* Der PRUEF-Knopf im Balken. Er heisst seit dem 20.08.2026 „Meine Angaben"
+   und nicht mehr „Alles": Pflichtfelder, an die nur die Verwaltung kommt,
+   sperren nicht — dann darf die Zusage auch nicht mehr behaupten. */
+const knopf = () => screen.getByText(/Meine Angaben sind korrekt/).closest('button');
 
-const knopf = () => screen.getByText(/Alles geprüft/).closest('button');
+/* Der SPEICHERN-Knopf einer einzelnen Karte. Die Karte muss offen sein. */
+function speichernKnopf(name) {
+  oeffne(name);
+  const alle = screen.getAllByRole('button').filter(b => /^Speichert?…?$|^Speichern$/.test(b.textContent));
+  if (alle.length === 0) throw new Error(`Kein Speichern-Knopf in der Karte "${name}"`);
+  return alle;
+}
 
 describe('DatenpruefungEltern — die Sperre', () => {
   it('⚠ sperrt, wenn beim Kind ein Pflichtfeld leer ist', () => {
@@ -317,15 +424,27 @@ describe('DatenpruefungEltern — die Sperre', () => {
     expect(screen.getByText(/Nur durch die Vereinsverwaltung zu ergänzen/)).toBeTruthy();
   });
 
-  it('nach dem Ausfüllen geht der Knopf auf — ohne Neuladen', () => {
-    /* Gerechnet wird gegen die FORMULARWERTE. Gegen die DB-Zeile bliebe der
-       Knopf gesperrt, bis jemand die Seite neu laedt. */
+  it('⚠ nach dem Ausfüllen wechselt der GRUND der Sperre', async () => {
+    /* Gerechnet wird gegen die FORMULARWERTE — gegen die DB-Zeile bliebe die
+       Meldung „noch 1 Feld" stehen, bis jemand neu laedt.
+
+       Seit der Trennung vom 20.08.2026 geht der Pruef-Knopf danach aber NICHT
+       sofort auf: jetzt fehlt kein Feld mehr, dafuer ist etwas ungespeichert.
+       Der Satz darunter sagt, welcher der beiden Gruende gerade gilt. */
     render(<DatenpruefungEltern {...props({
       feldkonfig: PFLICHT_AHV, kinder: [{ ...KIND, ahv_nr: null }],
     })} />);
-    expect(knopf().disabled).toBe(true);
+    expect(screen.getByText(/Noch 1 Feld auszufüllen/)).toBeTruthy();
+
     const ahv = screen.getAllByLabelText(/AHV-Nr\./).find(f => !f.disabled);
     fireEvent.change(ahv, { target: { value: '756.9999.9999.99' } });
+    expect(screen.queryByText(/Noch 1 Feld auszufüllen/)).toBeNull();
+    expect(screen.getByText(/bitte zuerst speichern/)).toBeTruthy();
+    expect(knopf().disabled).toBe(true);
+
+    /* Und nach dem Speichern ist er offen. */
+    const knoepfe = screen.getAllByRole('button').filter(b => b.textContent === 'Speichern');
+    await act(async () => { fireEvent.click(knoepfe[knoepfe.length - 1]); });
     expect(knopf().disabled).toBe(false);
   });
 
@@ -365,7 +484,10 @@ describe('DatenpruefungEltern — Klappkarten', () => {
     fireEvent.change(ahv, { target: { value: '756.1' } });
     expect(screen.queryByText('1 fehlt')).toBeNull();
     expect(screen.getAllByText('Vollständig').length).toBe(2);
-    expect(knopf().disabled).toBe(false);
+    /* Die Pille folgt sofort — der Pruef-Knopf wartet noch aufs Speichern.
+       Das sind ZWEI Bedingungen, nicht zwei Rechnungen: `personenStand()`
+       sagt „nichts fehlt", und daneben steht „noch ungespeichert". */
+    expect(screen.getByText(/bitte zuerst speichern/)).toBeTruthy();
   });
 
   it('die eigenen Angaben sind auch eine Klappkarte', () => {
