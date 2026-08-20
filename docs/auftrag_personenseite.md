@@ -112,15 +112,47 @@ davon keinen Platz findet, nennst du, statt es zu verlieren.
 
 ## Vorgehen
 
-1. **Bestandsaufnahme und Plan.** Darin: die 75 Stellen nach den drei Gruppen,
-   der Vorschlag zur Identität, die Antwort zu `PersonFelderFormular`, und was
-   aus den beiden Modals umzieht. **Nichts bauen.**
-2. Umbau der Identität — dieser Schritt allein, mit grüner Prüfkette.
-3. Hero und Tabs für den Fall ohne Mitgliedschaft.
-4. Die Modals ablösen.
-5. Nachweis in der Oberfläche: einen Supporter und einen Elternteil öffnen,
-   in der Portalverwaltung ein Feld und einen Tab abschalten, nachsehen, dass
-   es verschwindet. Ein grüner Test zeigt das nicht.
+1. ✅ **Bestandsaufnahme und Plan.** *(21.08.2026)*
+2. ✅ **Umbau der Identität.** `PersonZiel` mit ausdrücklichem `art` statt
+   `SelectedMember` mit Index-Signatur; zwei Fabrikfunktionen als einziger
+   Weg. Dabei kam heraus, dass **alle vier Einstiege** Falsches mitgaben.
+3. ✅ **Hero und Tabs ohne Mitgliedschaft.** Dazu `RolleField` aus `PortalTab`
+   herausgezogen — zwei übersprungene Tests liefen danach unverändert grün.
+4. ✅ **Die Modals abgelöst.** Beide ersatzlos; `DatenpruefungEltern` auf
+   `PersonFelderFormular`, AHV-Nummer schreibbar. Nachtrag: `person_id` kommt
+   aus dem Ziel, nicht aus den Daten.
+5. **Nachweis in der Oberfläche** — offen, siehe Prüfliste unten.
+   Ein grüner Test zeigt das nicht.
+
+## Prüfliste für Schritt 5
+
+Ohne Konfigurationsänderung:
+
+| | erwartet |
+|---|---|
+| Supporter-Tab → Zeile anklicken | Personenseite statt Modal; Chip **„Ohne Mitgliedschaft"** |
+| dort die Tabreihe | nur **Profil · Portal-Zugang · Datenprüfung** — kein Eltern, Statistik, Verlauf |
+| dort das Profil | **keine AHV-Nummer** (Seed-Zeile `ahv_nr = aus` auf der Achse `ohne_mitgliedschaft`); Telefon und E-Mail mit `*` |
+| dort das Menü | **„Mitglied werden…"**; kein „Mitgliedschaft löschen", kein „Archivieren" |
+| dort Telefon inline ändern | speichert und bleibt nach dem Neuladen stehen |
+| Eltern-Tab → Namen anklicken | dieselbe Seite, **mit Adresse und Geburtsdatum** (die Liste führt sie nicht — sie werden nachgeschlagen) |
+| ein Mitglied öffnen | **unverändert wie vorher** — erscheint hier etwas Neues, ist etwas schiefgelaufen |
+| bei einem Kind: Eltern-Tab → Menü | **„Profil öffnen"** statt „Bearbeiten"; führt zum Elternteil |
+| bei einem Supporter mit Konto: „Zugang deaktivieren" | Abzeichen springt sofort auf **„Deaktiviert"** — vorher blieb es auf „Aktiv" stehen |
+
+Mit Konfigurationsänderung (Portalverwaltung → Benutzer & Rollen →
+„Was ein Mitgliedtyp hat"):
+
+| | erwartet |
+|---|---|
+| `heimatort` auf **Gibt es nicht**, Achse „ohne Mitgliedschaft" | verschwindet auf der Supporter-Seite, **bleibt** beim Mitglied |
+| `tab_datenpruefung` auf **aus**, dieselbe Achse | der Tab verschwindet; steht er gerade offen, springt die Seite auf Profil |
+
+⚠ **Was Schritt 5 NICHT abdeckt: die Datenprüfung des Elternteils selbst.**
+Sie braucht ein Konto, und **0 von 394 Elternteilen haben eines**. Dafür liegt
+`supabase/testkonto_elternteil.sql` bereit — es fehlt nur die E-Mail-Adresse.
+Bis dahin ist der Weg Login → `sollProfilPruefen()` → Overlay → Maske →
+`personen` nur gelesen, nicht gelaufen.
 
 ## Projektregeln
 
