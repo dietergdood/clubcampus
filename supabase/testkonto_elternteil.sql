@@ -66,7 +66,7 @@ declare
   -- ⚠ DIE ADRESSE. Sie muss ein Postfach sein, das erreichbar ist: die
   --   Registrierung schickt eine Bestaetigungsmail, und ohne sie kommt der
   --   Nachweis nicht ueber Schritt 2 hinaus.
-  v_email    text := 'dieter.good+fchtest@outlook.com';
+  v_email    text := 'dieter.good@gmail.com';
   v_person   uuid;
   v_kind     bigint;
   v_kindname text;
@@ -116,6 +116,41 @@ begin
   raise notice 'Zum Rueckbau die Person-Id notieren: %', v_person;
 
 end $mig$;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- AUSGEFUEHRT am 20.08.2026 — von Hand, nicht ueber diesen Block.
+--
+--   Person    c26bc2b8-0f17-4bc7-b34e-55a4d81476dd   Test Elternteil
+--   Konto     4ea12646-024b-4e2c-9357-2ea1689d1ac2   role = eltern, mitglied_id = NULL
+--   Kind      #633 Stefan Wenger (Juniorenmitglied), AHV fehlt, 2 Elternteile
+--   Zahlen    388 / 372 / 3 unveraendert
+--
+-- ⚠ Ein erneuter Lauf bricht jetzt korrekt ab („gehoert bereits einer
+--   Person"). Das ist kein Fehler, sondern der Waechter.
+--
+--
+-- DIE RLS-KETTE, gegen die Datenbank geprueft (BEGIN … ROLLBACK, als
+-- `authenticated` mit dem sub des Testkontos):
+--
+--   A  eigene Person lesen                        1 Zeile
+--   B  Mitgliedschaft des Kindes lesen            1 Zeile   mitglieder_select_kind
+--   C  Person des Kindes lesen                    1 Zeile
+--   D  AHV-Nummer des Kindes SCHREIBEN            UPDATE 1  personen_update_kind
+--   E  fremdes Kind (#665) schreiben              UPDATE 0  ← die Gegenprobe
+--   F  eltern_kinder lesen (Kinderliste)          1 Zeile
+--   G  eigenes profil_geprueft_at setzen          UPDATE 1  personen_update_self
+--   H  eigene E-Mail aendern                      UPDATE 1  ← ⚠ siehe unten
+--
+-- ⚠ E meldet KEINEN Fehler, es trifft nur nichts. Genau deshalb liest
+--   `updateKindDurchElternteil()` nach dem Schreiben gegen: ohne das stuende
+--   eine Erfolgsmeldung ueber einer Aenderung, die nie ankam.
+--
+-- ⚠ H ist der Beleg dafuer, dass RLS KEINE SPALTEN KENNT. Die Datenbank
+--   laesst das Elternteil seine eigene E-Mail — den Login-Namen — ueber-
+--   schreiben. Der einzige Schutz ist die Allowlist `ELTERN_DUERFEN` in
+--   `domains/members/kindService.ts`. Wer einen zweiten Schreibpfad auf
+--   `personen` baut, hat sie nicht automatisch.
 
 
 -- ─── Nach der Registrierung gegenlesen ─────────────────────────────────────
