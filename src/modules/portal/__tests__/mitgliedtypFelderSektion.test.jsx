@@ -139,3 +139,82 @@ describe('MitgliedtypFelderSektion — die Auswahl', () => {
     expect(screen.getByText(/keine Arten angelegt/)).toBeTruthy();
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   Was die Spalte zeigt (21.08.2026)
+
+   Zwei Funde aus dem Screenshot der Art-Spalte:
+
+     · Vereinsdaten, Teams und Notizen standen als leere
+       Ueberschrift ohne einen einzigen Schalter da. Alle ihre
+       Schluessel tragen `nur_mitgliedschaft`. Eine Ueberschrift
+       ohne Inhalt sieht aus wie etwas Kaputtes.
+
+     · Der Bereichskopf trug einen Schiebeschalter fuer bis zu
+       sechs Felder. Sein Zustand kam aus `some(sichtbar)` und
+       malte „gemischt" wie „alle an" — bei sechs Feldern ist
+       gemischt der Normalfall.
+   ═══════════════════════════════════════════════════════════════ */
+describe('MitgliedtypFelderSektion — leere Bereiche', () => {
+  it('⚠ auf der Art-Spalte fehlen Vereinsdaten, Teams und Notizen ganz', () => {
+    render(<MitgliedtypFelderSektion {...props()} />);
+    waehle('art:art-1');
+    for (const leer of ['Vereinsdaten', 'Teams', 'Notizen']) {
+      expect(screen.queryByText(leer)).toBeNull();
+    }
+  });
+
+  it('die Gegenprobe: beim Mitgliedtyp stehen sie', () => {
+    /* Ohne diesen Fall waere der Test oben auch gruen, wenn die Bereiche
+       ueberhaupt nicht mehr gerendert wuerden. */
+    render(<MitgliedtypFelderSektion {...props()} />);
+    for (const da of ['Vereinsdaten', 'Teams', 'Notizen']) {
+      expect(screen.getByText(da)).toBeTruthy();
+    }
+  });
+
+  it('Bereiche mit Inhalt bleiben auf beiden Achsen', () => {
+    render(<MitgliedtypFelderSektion {...props()} />);
+    expect(screen.getByText('Personalien')).toBeTruthy();
+    waehle('art:art-1');
+    expect(screen.getByText('Personalien')).toBeTruthy();
+    expect(screen.getByText('Kontakt')).toBeTruthy();
+  });
+});
+
+describe('MitgliedtypFelderSektion — der Bereichskopf ist eine Handlung', () => {
+  it('⚠ trägt einen Knopf mit Text, keinen Schiebeschalter', () => {
+    /* Ein Zustand fuer eine Sammlung kann nur luegen: drei Tatsachen
+       (alle an · gemischt · alle aus), zwei Schalterstellungen. */
+    render(<MitgliedtypFelderSektion {...props()} />);
+    expect(screen.getAllByText('Alle ausblenden').length).toBeGreaterThan(0);
+  });
+
+  it('schaltet alle Felder des Bereichs auf einmal', async () => {
+    render(<MitgliedtypFelderSektion {...props()} />);
+    await act(async () => { fireEvent.click(screen.getAllByText('Alle ausblenden')[0]); });
+    expect(svc.setzeModusMehrere).toHaveBeenCalled();
+    const [, , , schluessel, modus] = svc.setzeModusMehrere.mock.calls[0];
+    expect(modus).toBe('aus');
+    /* Personalien: geburtsdatum, geschlecht, nationalitaet, nationalitaet2,
+       heimatort, ahv_nr — vorname und nachname sind fest und nicht dabei. */
+    expect(schluessel).toContain('ahv_nr');
+    expect(schluessel).not.toContain('vorname');
+  });
+
+  it('⚠ ist alles aus, heisst der Knopf umgekehrt', () => {
+    const alleAus = ['geburtsdatum','geschlecht','nationalitaet','nationalitaet2','heimatort','ahv_nr']
+      .map(k => ({ mitgliedtyp_id: 'typ-1', mitgliedtyp: 'Aktivmitglied',
+                   art_id: null, art: '', schluessel: k, modus: 'aus' }));
+    render(<MitgliedtypFelderSektion {...props({ feldkonfig: alleAus })} />);
+    expect(screen.getAllByText('Alle einblenden').length).toBeGreaterThan(0);
+  });
+
+  it('ein Ein-Eintrag-Bereich behält den Schiebeschalter', () => {
+    /* Teams, Notizen, Vereinsfunktionen: ein Schluessel, zwei Zustaende —
+       dort ist er ehrlich. Geprueft am Titel des Knopfs. */
+    render(<MitgliedtypFelderSektion {...props()} />);
+    const titel = [...document.querySelectorAll('button[title]')].map(b => b.getAttribute('title'));
+    expect(titel.some(t => /^Teams (ein|aus)schalten$/.test(t))).toBe(true);
+  });
+});

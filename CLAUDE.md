@@ -172,6 +172,16 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Die zweite Zeile ist die wichtigere: sie hält fest, dass der falsche Ort **nicht** zurückkommt. Dasselbe gilt für Beschriftungen, auf die sich ein Ablauf beruft — „Mitgliedschaft löschen" ist aus demselben Grund in `mitgliederBulk.test.jsx` festgehalten.
 
+- **Zwei Zustände für EINEN Schlüssel sind ehrlich. Zwei Zustände für eine SAMMLUNG sind es nicht.**
+
+  Ein Schiebeschalter hat zwei Stellungen. Eine Sammlung hat drei Tatsachen: alles an · **gemischt** · alles aus. Wer sie über `some(...)` auf zwei abbildet, malt „gemischt" wie „alles an" — und bei mehr als zwei Elementen ist gemischt der Normalfall, der Schalter steht also meistens falsch.
+
+  Befund vom 21.08.2026: der Bereichskopf in `MitgliedtypFelderSektion` trug denselben `AnAusSchalter` wie eine einzelne Zeile, aber für bis zu sechs Felder. Er stand auf „aus", während die Felder darunter bedienbar waren — **und beides war richtig**: er meinte „gerade ist nichts sichtbar", nicht „gesperrt". Nur sagte die Bildsprache das Gegenteil, denn ein Schiebeschalter ist die Darstellung eines RIEGELS.
+
+  ⚠ **Ein dreiwertiger Schalter wäre die falsche Reparatur.** „Gemischt" ist kein Wert, den man *setzen* kann, nur einer, den man anzeigt. Die Lösung ist, aus dem Zustand eine **Handlung** zu machen: ein Knopf „Alle ausblenden" beschreibt, was er tut, und kann nichts Falsches behaupten.
+
+  An einer einzelnen Zeile bleibt der Schiebeschalter richtig — ein Schlüssel, zwei Zustände. Die Grenze verläuft bei der Anzahl, nicht beim Ort.
+
 - **Eine Komponente, die INNERHALB einer anderen deklariert wird, wird bei jedem Render neu erzeugt** — React hängt den Teilbaum ab und neu an. Zustand, Fokus und Auswahlposition gehen verloren.
 
   **Es fällt nirgends als Fehler auf.** Kein Build, kein Typecheck, keine Konsole; nur eine Bedienung, die sich falsch anfühlt, und die niemand meldet. In `PortalTab` verlor das `<select>` der Portalrolle bei jedem Tastendruck den Fokus — **gefunden hat es ein Test**, der genau deshalb seit Monaten auf `it.skip` stand: nach `fireEvent.change` war das `<select>` ein anderer DOM-Knoten.

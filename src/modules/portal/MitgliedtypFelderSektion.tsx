@@ -153,6 +153,31 @@ export function MitgliedtypFelderSektion({
      drei Rollen bedient: Sammelschalter eines Bereichs, Adressblock (vier
      Felder, ein Schalter) und einzelne Zeilen, bei denen es nichts
      auszufüllen gibt. Eine Stelle statt dreier Kopien desselben Markups. */
+  /**
+   * Ein Schiebeschalter für „gibt es / gibt es nicht" — für GENAU EINEN
+   * Schlüssel.
+   *
+   * ⚠ ZWEI ZUSTÄNDE FÜR EINEN SCHLÜSSEL SIND EHRLICH. ZWEI ZUSTÄNDE FÜR EINE
+   * SAMMLUNG SIND ES NICHT.
+   *
+   * Bis zum 21.08.2026 sass derselbe Schalter auch im Kopf eines BEREICHS und
+   * fasste dort bis zu sechs Felder zusammen. Sein Zustand kam aus
+   * `some(sichtbar)` — und malte damit „gemischt" wie „alle an". Bei sechs
+   * Feldern ist gemischt der Normalfall, der Schalter stand also meistens
+   * falsch. Dazu ist ein Schiebeschalter die Bildsprache eines RIEGELS: wer
+   * ihn aus sieht, erwartet, dass darunter nichts mehr geht — die Zeilen
+   * blieben aber bedienbar, und mussten es auch, sonst käme man an ein
+   * einzelnes Feld nie zurück.
+   *
+   * Der Bereichskopf trägt seither eine HANDLUNG („Alle ausblenden") statt
+   * eines Zustands. Eine Handlung kann nichts Falsches behaupten.
+   *
+   * Ein dreiwertiger Kopf wäre die falsche Reparatur gewesen: „gemischt" ist
+   * kein Wert, den man SETZEN kann, nur einer, den man anzeigt.
+   *
+   * Hier, an einer einzelnen Zeile (Teams, Notizen, Vereinsfunktionen, die
+   * Profil-Tabs), bleibt er richtig: ein Schlüssel, zwei Zustände.
+   */
   function AnAusSchalter({ schluessel, titel }: { schluessel: readonly string[]; titel: string }) {
     const an = schluessel.some(s => istSichtbar(konfig, s));
     return (
@@ -176,20 +201,57 @@ export function MitgliedtypFelderSektion({
   const istAnAus = (modi: readonly FeldModus[]) =>
     modi.includes("aus") && !modi.includes("pflicht");
 
+  /**
+   * Der Sammelschalter im Kopf eines Bereichs — eine HANDLUNG, kein Zustand.
+   *
+   * Siehe die Regel an `AnAusSchalter`: für eine Sammlung gibt es drei
+   * Tatsachen (alle an · gemischt · alle aus) und nur zwei Schalterstellungen.
+   * Ein Knopf beschreibt stattdessen, was er TUT — und liegt damit nie falsch.
+   *
+   * Die Beschriftung folgt trotzdem dem Bestand: solange irgendetwas sichtbar
+   * ist, ist „Alle ausblenden" die sinnvolle Handlung; ist alles aus, die
+   * umgekehrte.
+   */
+  function BereichSammelknopf({ schluessel, titel }: { schluessel: readonly string[]; titel: string }) {
+    const etwasSichtbar = schluessel.some(s => istSichtbar(konfig, s));
+    return (
+      <button className="cc-btn-ghost"
+        title={etwasSichtbar
+          ? `Alle Felder unter „${titel}" auf Gibt es nicht setzen`
+          : `Alle Felder unter „${titel}" wieder einblenden`}
+        onClick={() => aendern(schluessel, etwasSichtbar ? "aus" : "freiwillig")}>
+        {etwasSichtbar ? "Alle ausblenden" : "Alle einblenden"}
+      </button>
+    );
+  }
+
   function Zeile({ eintrag, nurAnAus = false }: { eintrag: RegistryEintrag; nurAnAus?: boolean }) {
     const aus = !istSichtbar(konfig, eintrag.schluessel);
     const fest = eintrag.modi.length === 0;
     return (
       <div className="cc-list-item-row cc-between">
-        <div className={aus ? "cc-text-muted" : undefined}>
+        {/* ⚠ `cc-flex-1` und `cc-shrink-0` sind hier keine Kosmetik.
+            `cc-between` traegt `flex-wrap: wrap`, und ohne `flex:1` nimmt die
+            linke Spalte ihre volle Inhaltsbreite. Der AHV-Hinweis ist 232
+            Zeichen lang — die drei Schalter fanden daneben keinen Platz,
+            brachen um und standen LINKSBUENDIG unter dem Text statt rechts im
+            Raster. Bei Vorname und Nachname faellt es nicht auf: kurzer
+            Hinweis, und rechts steht nur das Wort „Immer Pflicht".
+
+            Beide Klassen gibt es (cc.css:229); `cc-list-item-row` bleibt
+            unangetastet, weil sie auch SfvSpielerZuordnung und Spielbericht
+            bedient. */}
+        <div className={aus ? "cc-flex-1 cc-text-muted" : "cc-flex-1"}>
           <div>{labelFuer(eintrag.schluessel)}</div>
           {eintrag.hinweis && <div className="cc-inline-hint">{eintrag.hinweis}</div>}
         </div>
-        {fest
-          ? <span className="cc-text-sm cc-text-sub">Immer Pflicht</span>
-          : istAnAus(eintrag.modi)
-            ? <AnAusSchalter schluessel={[eintrag.schluessel]} titel={labelFuer(eintrag.schluessel)}/>
-            : <ModusSchalter eintrag={eintrag} nurAnAus={nurAnAus}/>}
+        <div className="cc-shrink-0">
+          {fest
+            ? <span className="cc-text-sm cc-text-sub">Immer Pflicht</span>
+            : istAnAus(eintrag.modi)
+              ? <AnAusSchalter schluessel={[eintrag.schluessel]} titel={labelFuer(eintrag.schluessel)}/>
+              : <ModusSchalter eintrag={eintrag} nurAnAus={nurAnAus}/>}
+        </div>
       </div>
     );
   }
@@ -281,12 +343,32 @@ export function MitgliedtypFelderSektion({
            richtig. */
         const nurBereich = eintraege.length === 1 && eintraege[0].schluessel === b.key;
 
+        /* ⚠ Ein Bereich ohne einen einzigen Eintrag erscheint GAR NICHT.
+           Auf der Art-Achse trifft das Vereinsdaten, Teams und Notizen: alle
+           ihre Schluessel tragen `nur_mitgliedschaft`. Uebrig blieb eine
+           Ueberschrift ohne Inhalt — und die sieht aus wie etwas Kaputtes.
+
+           Das ist die erlaubte Ausnahme von „keine Komponente, die `null`
+           zurueckgibt" (CLAUDE.md): eine bewusste SICHTBARKEITSREGEL, genau
+           wie ein Feld auf „Gibt es nicht". Der Fall, vor dem die Regel
+           warnt, ist ein Bereich, der wegen fehlender DATEN verschwindet —
+           hier fehlen keine Daten, hier gibt es strukturell nichts zu
+           konfigurieren. */
+        if (eintraege.length === 0) return null;
+
         return (
           <Card key={b.key}>
             <div className="cc-section-title-row">
               <div className="cc-section-title"><TI n={b.icon} size={14}/> {b.label}</div>
               {schaltbar.length > 0 && (
-                <AnAusSchalter schluessel={schaltbar} titel={nurBereich ? b.label : "Bereich"}/>
+                /* Ein einzelner Eintrag, der den Bereich selbst meint (Teams,
+                   Notizen, Vereinsfunktionen): dort ist der Schiebeschalter
+                   ehrlich — ein Schluessel, zwei Zustaende. Erst ab zwei
+                   Schluesseln wird daraus eine Sammlung, und dann gehoert
+                   eine Handlung hin. */
+                nurBereich
+                  ? <AnAusSchalter schluessel={schaltbar} titel={b.label}/>
+                  : <BereichSammelknopf schluessel={schaltbar} titel={b.label}/>
               )}
             </div>
 
