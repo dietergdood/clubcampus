@@ -98,17 +98,20 @@ describe("portalZugangDeaktivieren", () => {
   it("gibt den Fehler zurück und fasst `mitglieder` nicht an", async () => {
     const e1 = pgError();
     const sb = makeSb({ "benutzer.update": { error: e1 } });
-    expect(await portalZugangDeaktivieren(sb as any, 1)).toBe(e1);
+    expect(await portalZugangDeaktivieren(sb as any, "p-1")).toBe(e1);
     expect(sb.opsOn("mitglieder")).toHaveLength(0);
   });
 
   it("löst die Verknüpfung am Konto", async () => {
     const sb = makeSb();
-    const res = await portalZugangDeaktivieren(sb as any, 5);
+    const res = await portalZugangDeaktivieren(sb as any, "p-5");
     expect(res).toBeNull();
     expect(sb.find("benutzer", "update")!.payload).toEqual({ mitglied_id: null });
     const eq = sb.find("benutzer", "update")!.filters.find(f => f.method === "eq");
-    expect(eq!.args).toEqual(["mitglied_id", 5]);
+    /* ⚠ Seit dem 21.08.2026 ueber person_id. Ueber `mitglied_id` traf die
+       Abfrage beim Supporter NICHTS: dort steht seit dem Rueckbau vom 20.08.
+       null, und der Portal-Tab zeigte „kein Zugang" — ohne Fehler. */
+    expect(eq!.args).toEqual(["person_id", "p-5"]);
   });
 });
 

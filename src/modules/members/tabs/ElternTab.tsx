@@ -26,7 +26,7 @@ import {
 import { vollname } from "../../../domains/person/personUtils.ts";
 import type { ElternkontaktMitLink, EntkoppelWunsch } from "../../../domains/members/elternService.ts";
 import { EntkopplungModal } from "../EntkopplungModal.tsx";
-import type { Account, Mitglied, Sb, SetState } from "../../../types.ts";
+import type { Account, Mitglied, Sb, SetState, PersonZeile } from "../../../types.ts";
 
 export function elternAvColor(beziehung: string | null | undefined){
   const b=(beziehung||"").toLowerCase();
@@ -38,7 +38,17 @@ export function elternAvColor(beziehung: string | null | undefined){
 interface ElternTabProps {
   eltern: ElternkontaktMitLink[];
   canEdit?: boolean;
-  raw: Mitglied;
+  raw: PersonZeile;
+  /**
+   * Die MITGLIEDSCHAFT, zu der die Elternkontakte gehören.
+   *
+   * ⚠ Gruppe 2 durchgehend: `eltern_kinder.mitglied_id` ist NOT NULL — eine
+   * Elternverknüpfung hängt an einer Mitgliedschaft, nicht an einer Person.
+   * Der Tab erscheint für Personen ohne Mitgliedschaft ohnehin nicht
+   * (`tab_eltern` trägt `nur_mitgliedschaft`), die Prop ist deshalb nicht
+   * nullbar: wer ihn rendert, hat eine.
+   */
+  mitgliedId: number;
   sb: Sb;
   onReload?: (() => void) | null;
   setElternLoaded: SetState<ElternkontaktMitLink[] | null>;
@@ -48,7 +58,7 @@ interface ElternTabProps {
   pflichtTypen?: string[];
 }
 
-function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null, pflichtTypen=[]}: ElternTabProps){
+function ElternTab({ mitgliedId,eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinId=null, account=null, pflichtTypen=[]}: ElternTabProps){
   const [confirm, confirmDialog] = useConfirm();
   const [editEltern, setEditEltern] = useState<ElternFormular | null>(null);
   const [showSuche, setShowSuche] = useState(false);
@@ -60,7 +70,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
 
   async function reload(){
     if(!sb) return;
-    const data = await fetchElternkontakte(sb, raw.id);
+    const data = await fetchElternkontakte(sb, mitgliedId);
     setElternLoaded(data);
     if(onReload) onReload();
   }
@@ -76,8 +86,8 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
     });
     if(!ok) return;
 
-    const folge = await entkoppleKind(sb, e.id, raw.id, e.benutzer_id);
-    if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entknüpft: ${name}`,"elternkontakte",name,geaendertVon);
+    const folge = await entkoppleKind(sb, e.id, mitgliedId, e.benutzer_id);
+    if(vereinId) logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entknüpft: ${name}`,"elternkontakte",name,geaendertVon);
     reload();
     /* War es das letzte Kind dieses Elternteils, ist noch offen, ob der Verein
        den Kontakt behaelt. entkoppleKind() entscheidet das seit dem
@@ -102,11 +112,11 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
     if(!sb||!e.id) return;
     const name = vollname(e);
     if(!e.hauptkontakt){
-      await setHauptkontakt(sb, raw.id, e.id, vereinId);
-      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
+      await setHauptkontakt(sb, mitgliedId, e.id, vereinId);
+      if(vereinId) logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
     } else {
-      await clearHauptkontaktFuerKind(sb, e.id, raw.id);
-      if(vereinId) logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
+      await clearHauptkontaktFuerKind(sb, e.id, mitgliedId);
+      if(vereinId) logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
     }
     reload();
   }
@@ -130,7 +140,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
       <ElternSucheModal
         open={showSuche}
         onClose={()=>setShowSuche(false)}
-        raw={raw} sb={sb} vereinId={vereinId}
+        mitgliedId={mitgliedId} sb={sb} vereinId={vereinId}
         geaendertVon={geaendertVon}
         onVerknuepft={()=>{
           setShowSuche(false);
@@ -188,7 +198,7 @@ function ElternTab({eltern, canEdit, raw, sb, onReload, setElternLoaded, vereinI
         <ElternkontaktModal
           mode="edit"
           data={editEltern}
-          mitgliedId={raw.id}
+          mitgliedId={mitgliedId}
           canEdit={canEdit}
           sb={sb}
           vereinId={vereinId}

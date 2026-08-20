@@ -6,10 +6,11 @@ import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, AM } from "../../../constants.ts";
 import { updateMitglied } from "../../../domains/members/memberService.ts";
+import { updatePerson } from "../../../domains/person/personService.ts";
 import { formatDatum } from "../../../domains/person/personUtils.ts";
 import { DatenpruefungMitglied } from "./DatenpruefungMitglied.tsx";
 import { DatenpruefungEltern } from "./DatenpruefungEltern.tsx";
-import type { Mitglied, Sb } from "../../../types.ts";
+import type { Mitglied, Sb, PersonZeile } from "../../../types.ts";
 
 export interface StatusMeldung {
   ok: boolean;
@@ -17,7 +18,7 @@ export interface StatusMeldung {
 }
 
 interface DatenpruefungTabProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   sb: Sb;
   role?: string;
   portalMsg?: StatusMeldung | null;
@@ -82,7 +83,7 @@ function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, pf
 
   async function anfordern() {
     if (!sb) return;
-    await updateMitglied(sb, raw.id, { profil_geprueft_at: null });
+    await updatePerson(sb as never, raw.person_id, { profil_geprueft_at: null });
     setPortalMsg({ ok: true, text: "Datenprüfung angefordert ✓" });
     if (onReload) setTimeout(onReload, 500);
   }

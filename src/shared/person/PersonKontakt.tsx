@@ -9,7 +9,7 @@ import { TI } from "../../icons.tsx";
 import type { UseInlineEditApi } from "../../domains/members/useInlineEdit.ts";
 import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
 import type { AddressSuggestion } from "../../shared/forms/AddressInput.tsx";
-import type { Mitglied } from "../../types.ts";
+import type { Mitglied, PersonZeile } from "../../types.ts";
 import type { ElternkontaktMitLink } from "../../domains/members/elternService.ts";
 import type { Sichtbarkeit } from "./types.ts";
 
@@ -19,7 +19,7 @@ const KANTON_OPTS: InlineFieldOption[] = ["AG","AI","AR","BE","BL","BS","FR","GE
 type InlineEdit = UseInlineEditApi;
 
 interface PersonKontaktProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   fv: Sichtbarkeit;
   canEdit?: boolean;
   /* Inline-Edit-API wird vom Parent (InfoTab) injiziert. */
@@ -112,7 +112,7 @@ function PersonKontakt({ raw, fv, canEdit, ie, eltern, brauchtEltern, setTab }: 
 }
 
 interface AdressFelderProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   ie: InlineEdit;
   /* Die an InlineField durchgereichten Felder inkl. canEdit */
   ieProps: Pick<InlineEdit, "editing"|"editVal"|"setEditVal"|"startEdit"|"saveEdit"|"cancelEdit"|"handleKey"|"feedback"|"saving"> & { canEdit?: boolean };

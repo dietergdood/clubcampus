@@ -12,7 +12,7 @@ import { TI } from "../../icons.tsx";
 import { getLandName, LAENDER, formatDatum, GESCHLECHT_OPTS as GESCHLECHT_WERTE } from "../../domains/person/personUtils.ts";
 import type { UseInlineEditApi } from "../../domains/members/useInlineEdit.ts";
 import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
-import type { Mitglied } from "../../types.ts";
+import type { Mitglied, PersonZeile } from "../../types.ts";
 import type { Sichtbarkeit } from "./types.ts";
 
 /* Aus der kanonischen Liste, nur in die Form von InlineField gebracht. */
@@ -27,7 +27,7 @@ function NatBadge({ code }: { code?: string | null }) {
 }
 
 interface PersonPersonalienProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   fv: Sichtbarkeit;
   canEdit?: boolean;
   /* Inline-Edit-API wird vom Parent (InfoTab) injiziert — die Komponente
@@ -62,7 +62,9 @@ function PersonPersonalien({ raw, fv, canEdit, ie }: PersonPersonalienProps) {
 
   async function saveNat() {
     setNatEditing(false);
-    if (!raw.id) return;
+    /* Frueher `if (!raw.id)` — ein Guard auf die MITGLIEDSCHAFT, obwohl hier
+       ein Personenfeld gespeichert wird. Die Person ist der richtige Bezug. */
+    if (!raw.person_id) return;
     await ie.saveEdit("nationalitaet", nat1Val);
     /* nat2 ueber dieselbe Inline-Edit-API — persistiert und loggt wie nat1,
        ohne direkten Service-Import. */

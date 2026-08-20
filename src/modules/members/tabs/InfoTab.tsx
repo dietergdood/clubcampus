@@ -6,6 +6,7 @@
 import { useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import { Card, StatusTile, useIsMobile, InlineField } from "../../../theme.ts";
+import { updatePerson } from "../../../domains/person/personService.ts";
 import { TI } from "../../../icons.tsx";
 import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.tsx";
 import { PersonKontakt } from "../../../shared/person/PersonKontakt.tsx";
@@ -20,7 +21,7 @@ import {
 } from "../../../domains/members/memberService.ts";
 import { formatDatum } from "../../../domains/person/personUtils.ts";
 import type { PersonTeamsService } from "../../../shared/person/PersonTeams.tsx";
-import type { Account, Mitglied, Mitgliedtyp, Sb } from "../../../types.ts";
+import type { Account, Mitglied, Mitgliedtyp, Sb, PersonZeile } from "../../../types.ts";
 import type { Sichtbarkeit } from "../../../shared/person/types.ts";
 import { istBereichSichtbar } from "../../../domains/members/feldkonfig.ts";
 import type { FeldModus } from "../../../domains/members/feldkonfig.ts";
@@ -38,7 +39,15 @@ type TeamsProps   = ComponentProps<typeof PersonTeams>;
 type KontaktProps = ComponentProps<typeof PersonKontakt>;
 
 interface InfoTabProps {
-  raw: Mitglied;
+  raw: PersonZeile;
+  /**
+   * Die MITGLIEDSCHAFT, oder `null`.
+   *
+   * ⚠ Was daran haengt, ist Gruppe 2: Kaderzeilen (PersonTeams) und die
+   * Aenderungshistorie. Die Personenfelder selbst gehen ueber `personId` —
+   * `useInlineEdit` entscheidet nach dem FELD, nicht nach dem Aufrufer.
+   */
+  mitgliedId: number | null;
   fv: Sichtbarkeit;
   /* Modus je Schluessel fuer den Mitgliedtyp dieses Mitglieds —
      entscheidet, welche Bereiche es ueberhaupt gibt. */
@@ -70,7 +79,7 @@ interface InfoTabProps {
   vereinId?: string | null;
 }
 
-function InfoTab({
+function InfoTab({ mitgliedId,
   raw, fv, konfig, canEdit, canDelete, sb, account,
   dbKaderRollen, dbMitgliedtypen,
   eltern, brauchtEltern, setTab, hatPortalZugang = false,
@@ -84,13 +93,13 @@ function InfoTab({
 }: InfoTabProps) {
   const isMobile = useIsMobile();
   const notizAddRef = useRef<(() => void) | null>(null);
-  const reloadMemberFull = ()=>{ if(reloadMember)reloadMember(raw.id); if(onReload)onReload(); };
+  const reloadMemberFull = ()=>{ if(reloadMember&&mitgliedId!=null)reloadMember(mitgliedId); if(onReload)onReload(); };
   /* ie: Vereinsdaten-Felder (kein Aenderungslog). iePerson: Personalien/
      Kontakt — mit vereinId/account/rawData fuer die Aenderungshistorie. Beide
      hier erzeugt (modules -> domains erlaubt) und den shared-Komponenten
      als Prop injiziert, damit diese den Hook nicht selbst importieren. */
-  const ie = useInlineEdit({ sb, mitgliedId: raw.id, onReload: reloadMemberFull });
-  const iePerson = useInlineEdit({ sb, mitgliedId: raw.id, onReload: reloadMemberFull, vereinId, account, rawData: raw });
+  const ie = useInlineEdit({ sb, personId: raw.person_id, mitgliedId, onReload: reloadMemberFull });
+  const iePerson = useInlineEdit({ sb, personId: raw.person_id, mitgliedId, onReload: reloadMemberFull, vereinId, account, rawData: raw });
   const [editModeVerein, setEditModeVerein] = useState(false);
   const ieProps = { editing: ie.editing, editVal: ie.editVal, setEditVal: ie.setEditVal, startEdit: ie.startEdit, saveEdit: ie.saveEdit, cancelEdit: ie.cancelEdit, handleKey: ie.handleKey, feedback: ie.feedback, saving: ie.saving, canEdit: canEdit && editModeVerein };
 
@@ -98,13 +107,13 @@ function InfoTab({
      Komponente). */
   async function onSaveFunktionen(funktionen: string[]) {
     if (!sb) return;
-    await updateMitglied(sb, raw.id, { funktionen });
+    await updatePerson(sb as never, raw.person_id, { funktionen });
     if (vereinId) {
       const alt = new Set(raw.funktionen || []);
       const neu = new Set(funktionen);
       const von = account?.name||account?.email||"Administrator";
-      for (const f of funktionen.filter(f=>!alt.has(f))) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion hinzugefügt: ${f}`, "funktionen", f, von);
-      for (const f of (raw.funktionen||[]).filter(f=>!neu.has(f))) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion entfernt: ${f}`, "funktionen", f, von);
+      for (const f of funktionen.filter(f=>!alt.has(f))) if (mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion hinzugefügt: ${f}`, "funktionen", f, von);
+      for (const f of (raw.funktionen||[]).filter(f=>!neu.has(f))) if (mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion entfernt: ${f}`, "funktionen", f, von);
     }
     reloadMemberFull();
   }
@@ -223,13 +232,14 @@ function InfoTab({
             Statt einer sb!-Assertion nur rendern, wenn sb gesetzt ist —
             das narrowt sb auf SbClient und faellt ohne Client sicher weg. */}
         {sb && zeigeTeams && <PersonTeams
+          mitgliedId={mitgliedId}
           raw={raw} sb={sb} svc={personTeamsSvc} canEdit={canEdit}
           dbKaderRollen={dbKaderRollen}
           teamDetails={teamDetails} setTeamDetails={setTeamDetails}
           allTeams={allTeams} setAllTeams={setAllTeams}
           assignFunktionen={assignFunktionen} setAssignFunktionen={setAssignFunktionen}
           onNavToTeam={onNavToTeam}
-          onReload={()=>{if(reloadMember)reloadMember(raw.id);if(onReload)onReload();}} ableitRolle={ableitRolle}
+          onReload={()=>{if(reloadMember&&mitgliedId!=null)reloadMember(mitgliedId);if(onReload)onReload();}} ableitRolle={ableitRolle}
           vereinId={vereinId} account={account}
         />}
 
@@ -253,15 +263,18 @@ function InfoTab({
                 </button>
               )}
             </div>
-            <NotizenVerlauf
-              mitgliedId={raw.id}
+            {/* Notizen haengen am Mitglied (`mitglieder_notizen.mitglied_id`
+                NOT NULL). `notizen` traegt `nur_mitgliedschaft`, der Block
+                erscheint also ohne Mitgliedschaft gar nicht. */}
+            {mitgliedId != null && <NotizenVerlauf
+              mitgliedId={mitgliedId}
               canEdit={canEdit}
               sb={sb}
               dbUser={account}
               onCount={setNotizenCount}
               vereinId={vereinId}
               onAddRef={notizAddRef}
-            />
+            />}
           </Card>
         )}
       </div>

@@ -6,18 +6,33 @@ import { useState } from "react";
 import { Card, Chip } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { GN, R, RL } from "../../../constants.ts";
-import { updateMitgliedRolle, logAenderung, fetchBenutzerFuerMitglied } from "../../../domains/members/memberService.ts";
+import { updateBenutzerRolle } from "../../../domains/members/elternService.ts";
+import { updateMitgliedRolle, logAenderung, fetchBenutzerFuerPerson } from "../../../domains/members/memberService.ts";
 import { formatDatum, formatDatumZeit } from "../../../domains/person/personUtils.ts";
-import type { Account, Mitglied, Sb } from "../../../types.ts";
+import type { Account, Mitglied, Sb, PersonZeile } from "../../../types.ts";
 import type { PortalRolleOption } from "../../../domains/members/useMemberMeta.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
 /* Aus der Service-Rückgabe abgeleitet — dieselben Felder, die
-   fetchBenutzerFuerMitglied selektiert. */
-export type PortalBenutzer = NonNullable<Awaited<ReturnType<typeof fetchBenutzerFuerMitglied>>>;
+   fetchBenutzerFuerPerson selektiert. */
+export type PortalBenutzer = NonNullable<Awaited<ReturnType<typeof fetchBenutzerFuerPerson>>>;
 
 interface PortalTabProps {
-  raw: Mitglied;
+  raw: PersonZeile;
+  /**
+   * Die MITGLIEDSCHAFT, oder `null`.
+   *
+   * ⚠ Der Portal-Tab ist der einzige, der auch OHNE Mitgliedschaft erscheint
+   * — ein Supporter und ein Elternteil haben einen Zugang. Deshalb kein
+   * `nur_mitgliedschaft` an `tab_portal`.
+   *
+   * Für die Rolle heisst das: `updateMitgliedRolle()` schreibt heute
+   * `mitglieder.rolle` UND `benutzer.role`. Ohne Mitgliedschaft gibt es nur
+   * das zweite. Entschieden am 21.08.2026 (Didi): dann nur `benutzer.role`.
+   * `mitglieder.rolle` ganz aufzugeben wäre die saubere Zielrichtung — sie
+   * ist ohnehin ein abgeleiteter Wert —, aber ein eigener Umbau.
+   */
+  mitgliedId: number | null;
   benutzer?: PortalBenutzer | null;
   sb: Sb;
   dbPortalRollen?: PortalRolleOption[] | null;
@@ -31,7 +46,7 @@ interface PortalTabProps {
   account?: Account | null;
 }
 
-function PortalTab({
+function PortalTab({ mitgliedId,
   raw, benutzer, sb, dbPortalRollen,
   portalMsg, portalLoading,
   handleUnlink, handleReactivate, onReload, setBenutzer,
@@ -63,10 +78,18 @@ function PortalTab({
     if (!sb) return;
     setRolleSaving(true);
     const alterRolle = benutzer?.role || raw.rolle || null;
-    await updateMitgliedRolle(sb, raw.id, rolleVal, benutzer?.id);
+    if (mitgliedId != null) {
+      await updateMitgliedRolle(sb, mitgliedId, rolleVal, benutzer?.id);
+    } else if (benutzer?.id) {
+      /* Ohne Mitgliedschaft gibt es keine `mitglieder.rolle` — die Rolle
+         steht dann allein am Konto. */
+      await updateBenutzerRolle(sb, benutzer.id, rolleVal);
+    }
     if (vereinId) {
       const von = account?.name||account?.email||"Administrator";
-      logAenderung(sb, raw.id, vereinId, "rolle", alterRolle, rolleVal||null, von);
+      /* Kein Verlauf ohne Mitgliedschaft — mitglieder_aenderungen führt
+       mitglied_id NOT NULL. Entfällt, statt zu scheitern. */
+    if (mitgliedId != null) logAenderung(sb, mitgliedId, vereinId, "rolle", alterRolle, rolleVal||null, von);
     }
     setRolleSaving(false);
     setRolleEditing(false);

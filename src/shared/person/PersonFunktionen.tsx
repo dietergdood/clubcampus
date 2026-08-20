@@ -6,11 +6,11 @@
 import { useState } from "react";
 import { Btn, Card, ModalOrSheet, ModalTitle, DropMenu } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import type { Mitglied } from "../../types.ts";
+import type { Mitglied, PersonZeile } from "../../types.ts";
 import type { FunktionMitGruppe } from "./types.ts";
 
 interface PersonFunktionenProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   canEdit?: boolean;
   canDelete?: boolean;
   assignFunktionen: FunktionMitGruppe[];

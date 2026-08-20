@@ -5,12 +5,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Btn } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { updateMitgliedFoto, deleteMitgliedFoto } from "../../domains/members/memberService.ts";
+import { updatePersonFoto, deletePersonFoto } from "../../domains/members/memberService.ts";
 import type { ChangeEvent } from "react";
-import type { Mitglied, Sb } from "../../types.ts";
+import type { Mitglied, Sb, PersonZeile } from "../../types.ts";
 
 interface FotoUploadProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   canUpload?: boolean;
   sb: Sb;
   onReload?: (() => void) | null;
@@ -35,7 +35,7 @@ export function FotoUpload({ raw, canUpload, sb, onReload }: FotoUploadProps) {
     if (file.size > 2 * 1024 * 1024) { setMsg({ok:false, text:"Max. 2MB"}); return; }
     setUploading(true); setMsg(null);
     try {
-      await updateMitgliedFoto(sb, raw.id, file);
+      await updatePersonFoto(sb, raw.person_id, file);
       setMsg({ok:true, text:"Foto gespeichert ✓"});
       clearTimeout(msgTimer.current);
       msgTimer.current = setTimeout(() => { setMsg(null); if (onReload) onReload(); }, 800);
@@ -45,7 +45,7 @@ export function FotoUpload({ raw, canUpload, sb, onReload }: FotoUploadProps) {
 
   async function handleDelete() {
     if (!sb) return;
-    await deleteMitgliedFoto(sb, raw.id);
+    await deletePersonFoto(sb, raw.person_id);
     if (onReload) onReload();
   }
 

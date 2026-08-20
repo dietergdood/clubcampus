@@ -8,8 +8,8 @@ import type { ChangeEvent } from "react";
 import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { heroChips } from "../../domains/roles/roleUtils.ts";
-import { updateMitgliedFoto, deleteMitgliedFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
-import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb } from "../../types.ts";
+import { updatePersonFoto, deletePersonFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
+import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, PersonZeile } from "../../types.ts";
 /* Nicht KaderRolle aus types.ts: dort ist aktiv Pflicht, MemberDetail reicht
    aber KaderRolleDb durch. KaderRolleMitTrainerFlag verlangt nur, was hier gelesen
    wird, und ist schon von useMemberMeta belegt. */
@@ -21,7 +21,7 @@ type KaderDetail = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
 interface MemberHeroProps {
   /* Gemapptes Anzeigeobjekt — gebraucht wird nur der Name */
   m: { name: string };
-  raw: Mitglied;
+  raw: PersonZeile;
   initials: string;
   canEdit?: boolean;
   canDelete?: boolean;
@@ -43,9 +43,17 @@ interface MemberHeroProps {
   /** Öffnet den Austritt (Rückfrage: was gilt danach?). Ohne Callback
       erscheint der Eintrag nicht. */
   onAustritt?: ((mitgliedId: number) => void) | null;
+  /**
+   * Die MITGLIEDSCHAFT dieser Person, oder `null`.
+   *
+   * ⚠ Alles im Menü darunter — Austritt, Archivieren, Reaktivieren, Löschen —
+   * sind Mitgliedschaftssachen. Bei `null` erscheinen sie NICHT: sie hätten
+   * kein Ziel. An ihre Stelle tritt „Mitglied werden" (Schritt 3).
+   */
+  mitgliedId: number | null;
 }
 
-function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null}: MemberHeroProps){
+function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,mitgliedId}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
@@ -54,16 +62,21 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
   async function handleHeroFotoUpload(e: ChangeEvent<HTMLInputElement>){
     const file=e.target.files?.[0];
     if(!file||!sb) return;
-    await updateMitgliedFoto(sb, raw.id, file);
-    if(onReload) onReload(raw.id);
+    await updatePersonFoto(sb, raw.person_id, file);
+    if(onReload) onReload(mitgliedId ?? undefined);
   }
 
   async function handleLoeschen(){
+    /* ⚠ Loescht die MITGLIEDSCHAFT, nicht die Person — der Knopf heisst seit
+       jeher „Löschen" und tut genau das. Die Trennung von „Person löschen
+       (DSGVO)" ist ein eigenes Vorhaben. Ohne Mitgliedschaft gibt es hier
+       nichts zu loeschen, und der Eintrag erscheint gar nicht erst. */
+    if(mitgliedId==null) return;
     const ok=await confirm({title:`${m.name} löschen?`,message:"Diese Aktion kann nicht rückgängig gemacht werden.",danger:true,confirmLabel:"Löschen"});
     if(!sb||!ok) return;
-    await deleteMitglied(sb, raw.id);
+    await deleteMitglied(sb, mitgliedId);
     if(onClose) onClose();
-    if(onReload) onReload(raw.id);
+    if(onReload) onReload(mitgliedId);
   }
 
   return(
@@ -95,7 +108,7 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                     </Btn>
                     <Btn variant="danger" onClick={async()=>{
                       if(!sb) return;
-                      await deleteMitgliedFoto(sb, raw.id);
+                      await deletePersonFoto(sb, raw.person_id);
                       setFotoOverlay(false);
                       if(onReload) onReload();
                     }}>
@@ -160,9 +173,9 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                    er fragt, was danach gilt. Archivieren bleibt daneben, weil
                    es etwas anderes ist — eine Mitgliedschaft stilllegen, ohne
                    ueber den Kontakt zu entscheiden (Fehleintrag, Dublette). */
-                ...(canEdit&&raw.aktiv!==false&&onAustritt?[{icon:"door-exit",label:"Austritt…",onClick:()=>onAustritt(raw.id)}]:[]),
-                ...(canEdit&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Stillegen ohne Austritt — für Fehleinträge und Dubletten. Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [raw.id], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,false);if(onReload)onReload(raw.id);if(onRefreshCount)onRefreshCount();}}]:[]),
-                ...(raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,raw.id,vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, raw.id);if(onUpdatePortalZugang)await onUpdatePortalZugang(raw.id,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(raw.id);else if(onReload)onReload(raw.id);}}]:[]),
+                ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false&&onAustritt?[{icon:"door-exit",label:"Austritt…",onClick:()=>onAustritt(mitgliedId)}]:[]),
+                ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Stillegen ohne Austritt — für Fehleinträge und Dubletten. Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [mitgliedId], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,false);if(onReload)onReload(mitgliedId);if(onRefreshCount)onRefreshCount();}}]:[]),
+                ...(mitgliedId!=null&&raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, mitgliedId);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(mitgliedId);else if(onReload)onReload(mitgliedId);}}]:[]),
                 "sep" as const,
                 {icon:"trash",label:"Löschen",danger:true,onClick:handleLoeschen},
               ]}/></div>

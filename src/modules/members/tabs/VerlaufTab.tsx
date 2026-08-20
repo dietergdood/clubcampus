@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { Card, EmptyState } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
 import { fetchAenderungen, fetchAktivitaeten, FELD_LABEL, AKTIVITAET_TYP } from "../../../domains/members/memberService.ts";
-import type { Mitglied, Sb } from "../../../types.ts";
+import type { Mitglied, Sb, PersonZeile } from "../../../types.ts";
 
 /* Direkt aus den Service-Rückgaben abgeleitet. _typ unterscheidet die
    beiden Quellen, nachdem sie zu einer Liste zusammengeführt wurden. */
@@ -104,20 +104,30 @@ function gruppiereEintraege(eintraege: Eintrag[]): Gruppe[] {
 }
 
 interface VerlaufTabProps {
-  raw: Mitglied;
+  raw: PersonZeile;
+  /**
+   * Die MITGLIEDSCHAFT, deren Verlauf gezeigt wird.
+   *
+   * ⚠ Strukturell, nicht nach Vorliebe: `mitglieder_aenderungen` und
+   * `mitglieder_aktivitaeten` führen beide `mitglied_id bigint NOT NULL`.
+   * Für eine Person ohne Mitgliedschaft gibt es keinen Verlauf — deshalb
+   * trägt `tab_verlauf` das Merkmal `nur_mitgliedschaft`. Den Bezugspunkt
+   * auf `person_id` umzustellen ist eine eigene Migration mit Datenbestand.
+   */
+  mitgliedId: number;
   sb: Sb;
 }
 
-function VerlaufTab({ raw, sb }: VerlaufTabProps) {
+function VerlaufTab({ mitgliedId, raw, sb }: VerlaufTabProps) {
   const [eintraege, setEintraege] = useState<Eintrag[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!sb || !raw?.id) return;
+    if (!sb) return;
     setLoading(true);
     Promise.all([
-      fetchAenderungen(sb, raw.id),
-      fetchAktivitaeten(sb, raw.id),
+      fetchAenderungen(sb, mitgliedId),
+      fetchAktivitaeten(sb, mitgliedId),
     ]).then(([aenderungen, aktivitaeten]) => {
       const alle: Eintrag[] = [
         ...aenderungen.map(a => ({ ...a, _typ: "aenderung" as const })),
@@ -126,7 +136,7 @@ function VerlaufTab({ raw, sb }: VerlaufTabProps) {
       setEintraege(alle);
       setLoading(false);
     });
-  }, [raw?.id]);
+  }, [mitgliedId]);
 
   const gruppen = gruppiereEintraege(eintraege);
 

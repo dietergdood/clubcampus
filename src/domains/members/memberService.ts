@@ -4,7 +4,7 @@
    Kader, Benutzer (Portal-Zugang), Ansichten
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
-import { flacheZeile, flacheZeilen, verteileFelder } from "../person/personService.ts";
+import { flacheZeile, flacheZeilen, verteileFelder, updatePerson } from "../person/personService.ts";
 import type { Ansicht, AnsichtSortDef, MitgliedInsert, MitgliedUpdate, SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* ── Fehler-Vertrag der Write-Funktionen ──────────────────────────
@@ -187,10 +187,21 @@ export async function deaktiviereKader(sb: SbClient, id: number): Promise<Postgr
 
 /* ── Benutzer (Portal-Zugang) ── */
 
-export async function fetchBenutzerFuerMitglied(sb: SbClient, mitgliedId: number) {
+/**
+ * Das Portal-Konto einer PERSON.
+ *
+ * ⚠ Suchte bis zum 21.08.2026 ueber `benutzer.mitglied_id`. Beim Supporter
+ * steht dort seit dem Rueckbau vom 20.08. `null` — sein Konto wurde also
+ * NICHT gefunden, und der Portal-Tab zeigte bei ihm „kein Zugang", ohne dass
+ * irgendetwas fehlschlug. Wieder ein Ausfall, der wie eine Datenlage aussieht.
+ *
+ * Der Zugang haengt seit Etappe 4 an `benutzer.person_id`; `mitglied_id` ist
+ * nur noch Bequemlichkeit. Der alte Weg ist ERSETZT, nicht ergaenzt.
+ */
+export async function fetchBenutzerFuerPerson(sb: SbClient, personId: string) {
   const { data } = await sb.from("benutzer")
     .select("id,email,role,created_at,last_sign_in_at,aktiv")
-    .eq("mitglied_id", mitgliedId)
+    .eq("person_id", personId)
     .maybeSingle();
   return data;
 }
@@ -212,13 +223,18 @@ export async function updateBenutzer(sb: SbClient, id: string, fields: TablesUpd
    Das fruehere Kennzeichen `mitglieder.hat_portal_zugang` war eine Kopie
    derselben Aussage und konnte veralten — wurde ein Konto ausserhalb des
    Portals geloescht, blieb es auf true stehen. Gestrichen in Etappe 6c. */
-export async function portalZugangAktivieren(sb: SbClient, mitgliedId: number, benutzerId: string, neueRolle: string): Promise<PostgrestError | null> {
+/** ⚠ `mitglied_id` wird MITGESCHRIEBEN, wo es eine gibt — die Spalte ist
+    Bequemlichkeit und kein Bezugspunkt, aber solange sie steht, soll sie
+    stimmen. Ohne Mitgliedschaft bleibt sie null. */
+export async function portalZugangAktivieren(sb: SbClient, mitgliedId: number | null, benutzerId: string, neueRolle: string): Promise<PostgrestError | null> {
   const { error } = await sb.from("benutzer").update({ mitglied_id: mitgliedId, role: neueRolle }).eq("id", benutzerId);
   return error;
 }
 
-export async function portalZugangDeaktivieren(sb: SbClient, mitgliedId: number): Promise<PostgrestError | null> {
-  const { error } = await sb.from("benutzer").update({ mitglied_id: null }).eq("mitglied_id", mitgliedId);
+/** Ueber die PERSON, aus demselben Grund wie fetchBenutzerFuerPerson: beim
+    Supporter ist `mitglied_id` null und der Filter traefe nichts. */
+export async function portalZugangDeaktivieren(sb: SbClient, personId: string): Promise<PostgrestError | null> {
+  const { error } = await sb.from("benutzer").update({ mitglied_id: null }).eq("person_id", personId);
   return error;
 }
 
@@ -287,10 +303,12 @@ export async function updateMitglied(sb: SbClient, id: number, fields: MitgliedU
         `updateMitglied: Mitgliedschaft ${id} nicht lesbar — RLS oder gelöscht. Es wurde nichts geschrieben.`);
       return false;
     } else {
-      const { error } = await sb.from("personen")
-        .update({ ...person, updated_at: jetzt })
-        .eq("id", personId);
-      if (error) { console.error("updateMitglied (personen) error:", error); return false; }
+      /* ⚠ Ueber updatePerson() und nicht mit einem eigenen `update`: es soll
+         genau EINEN Schreiber fuer `personen` geben. Zwei Wege zu demselben
+         Feld sind das, was der Altspalten-Zweig hier schon einmal gekostet
+         hat — der eine schrieb, der andere diagnostizierte falsch. */
+      const ok = await updatePerson(sb, personId, person);
+      if (!ok) return false;
     }
   }
 
@@ -311,22 +329,39 @@ export async function updateMitgliedRolle(sb: SbClient, id: number, rolle: strin
   }
 }
 
-export async function updateMitgliedFoto(sb: SbClient, id: number, file: File): Promise<string> {
+/**
+ * Foto einer PERSON setzen.
+ *
+ * ⚠ Hiess bis zum 21.08.2026 `updateMitgliedFoto` und war auf die
+ * Mitgliedschaft geschluesselt — auch der Speicherpfad. `foto_url` gehoert
+ * aber zur Person (PERSON_FELDER); ein Supporter oder Elternteil hat kein
+ * Mitglied, an dem das Foto haengen koennte.
+ *
+ * ⚠ DER SPEICHERPFAD AENDERT SICH MIT: neue Bilder liegen unter
+ * `<person_id>/foto.<ext>` statt `<mitglied_id>/foto.<ext>`. Bestehende
+ * Bilder bleiben erreichbar, weil die vollstaendige URL in
+ * `personen.foto_url` steht und nicht aus der Id errechnet wird. Die
+ * Bucket-Policies pruefen nur `bucket_id`, nicht den Pfad (nachgesehen am
+ * 21.08.2026) — der Wechsel ist also erlaubt.
+ *
+ * Der alte Weg ist ERSETZT, nicht ergaenzt: zwei Schluessel fuer dasselbe
+ * Bild waeren zwei Orte, an denen es liegen kann.
+ */
+export async function updatePersonFoto(sb: SbClient, personId: string, file: File): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  const path = `${id}/foto.${ext}`;
+  const path = `${personId}/foto.${ext}`;
   const { error: upErr } = await sb.storage.from("mitglieder-fotos").upload(path, file, { upsert: true });
   if (upErr) throw upErr;
   const { data } = sb.storage.from("mitglieder-fotos").getPublicUrl(path);
-  /* foto_url gehoert zur Person (PERSON_FELDER) — seit Etappe 6a gibt es die
-     Spalte in `mitglieder` nicht mehr. Ueber updateMitglied(), damit die
-     Aufteilung an einer Stelle bleibt. */
-  const ok = await updateMitglied(sb, id, { foto_url: data.publicUrl + "?t=" + Date.now() });
+  const ok = await updatePerson(sb, personId, { foto_url: data.publicUrl + "?t=" + Date.now() });
   if (!ok) throw new Error("Foto konnte nicht gespeichert werden.");
   return data.publicUrl;
 }
 
-export async function deleteMitgliedFoto(sb: SbClient, id: number): Promise<boolean> {
-  return updateMitglied(sb, id, { foto_url: null });
+/** ⚠ Leert nur `foto_url`. Die Datei bleibt im Bucket liegen — das war schon
+    vorher so und gehoert zum DSGVO-Loeschen, nicht hierhin. */
+export async function deletePersonFoto(sb: SbClient, personId: string): Promise<boolean> {
+  return updatePerson(sb, personId, { foto_url: null });
 }
 
 export async function fetchBenutzerByMitglied(sb: SbClient, mitgliedId: number) {

@@ -95,7 +95,7 @@ const ELTERN = [
 
 function renderTab(props = {}) {
   return render(<ElternTab
-    eltern={ELTERN}
+mitgliedId={1}     eltern={ELTERN}
     canEdit={true}
     raw={RAW}
     sb={{}}

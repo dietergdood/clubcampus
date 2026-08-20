@@ -9,7 +9,7 @@ import { updateMitglied } from "../../../domains/members/memberService.ts";
 import { updateElternkontakt } from "../../../domains/members/elternService.ts";
 import { vollname, formatDatum } from "../../../domains/person/personUtils.ts";
 import { KANTON_OPTS } from "./datenpruefungUtils.ts";
-import type { Mitglied, Sb } from "../../../types.ts";
+import type { Mitglied, Sb, PersonZeile } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 
 interface ElternkontaktMitKind {
@@ -39,7 +39,7 @@ interface KindForm {
 }
 
 interface DatenpruefungElternProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   sb: Sb;
   elternkontakt: ElternkontaktMitKind;
   kinder: Mitglied[];

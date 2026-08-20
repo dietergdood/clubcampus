@@ -83,7 +83,7 @@ const DB_KADER_ROLLEN = [
 
 function renderComp(props = {}) {
   return render(<PersonTeams
-    raw={RAW}
+mitgliedId={1}     raw={RAW}
     sb={{}}
     svc={svc}
     canEdit={true}

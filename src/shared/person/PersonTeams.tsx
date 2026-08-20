@@ -23,7 +23,7 @@ import type {
   logAktivitaet,
   AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
-import type { Account, Mitglied, SbClient } from "../../types.ts";
+import type { Account, Mitglied, SbClient, PersonZeile } from "../../types.ts";
 
 /* Vom Parent injiziertes Service-Buendel (echte memberService-Signaturen
    via typeof, damit die Typen deckungsgleich bleiben). */
@@ -51,7 +51,23 @@ type TeamOption = Awaited<ReturnType<typeof fetchAktiveTeams>>[number];
 type FunktionOption = Awaited<ReturnType<typeof fetchPortalFunktionenMitGruppe>>[number];
 
 interface PersonTeamsProps {
-  raw: Mitglied;
+  raw: PersonZeile;
+  /**
+   * Die MITGLIEDSCHAFT. `null` bei einer Person ohne — dann rendert die
+   * Komponente nichts.
+   *
+   * ⚠ Das ist AUSNAHMSWEISE ein zulässiges `null`-Rendern, und zwar aus
+   * einem benannten Grund: `teams` trägt in der Feldkonfiguration
+   * `nur_mitgliedschaft: true`, ist für Personen ohne Mitgliedschaft also
+   * ausdrücklich auf „Gibt es nicht" gestellt. Es ist eine bewusste
+   * SICHTBARKEITSREGEL, kein Ausfall — und der Aufrufer rendert die
+   * Komponente in dem Fall ohnehin nicht (`istSichtbar(konfig, "teams")`).
+   * Der Guard hier ist das Netz darunter.
+   *
+   * Ohne diesen Satz sähe es aus wie die stillen `return null`, die
+   * CLAUDE.md verbietet.
+   */
+  mitgliedId: number | null;
   sb: SbClient;
   svc: PersonTeamsService;
   canEdit?: boolean;
@@ -73,7 +89,7 @@ interface PersonTeamsProps {
   ableitRolle: () => Promise<void> | void;
 }
 
-function PersonTeams({
+function PersonTeams({ mitgliedId,
   raw,
   sb,
   svc,
@@ -91,6 +107,17 @@ function PersonTeams({
   onReload,
   ableitRolle,
 }: PersonTeamsProps) {
+  /* ⚠ `mid` steht VOR den Hooks, der Guard DAHINTER — und das ist keine
+     Marotte: ein `return` vor einem Hook verletzt `rules-of-hooks`, und diese
+     Regel blockt in der CI. Beim ersten Anlauf am 21.08.2026 stand der Guard
+     oben und ergab elf Lint-Fehler.
+
+     TypeScript verengt einen destrukturierten PARAMETER nicht in
+     verschachtelte Funktionen hinein — er gilt als veraenderbar. Deshalb der
+     eigene `const`, sonst braeuchte jeder Handler ein `!`, und ein `!` ist
+     eine Behauptung ohne Beleg. */
+  const mid = mitgliedId as number;
+
   const isMobile = useIsMobile();
   const [confirm, confirmDialog] = useConfirm();
   const [showTeamAssign, setShowTeamAssign] = useState(false);
@@ -119,7 +146,7 @@ function PersonTeams({
     const teamName = allTeams?.find(t => String(t.id) === String(teamAssignForm.team_id))?.name || teamAssignForm.team_id;
     await svc.upsertKader(sb, {
       team_id: parseInt(teamAssignForm.team_id),
-      mitglied_id: raw.id,
+      mitglied_id: mid,
       verein_id: vereinId,
       rollen: teamAssignForm.funktionen || ["Spieler/in"],
       rueckennr: teamAssignForm.rueckennr || null,
@@ -127,8 +154,8 @@ function PersonTeams({
       aktiv: true,
       saison: currentSeason(),
     });
-    if (vereinId) svc.logAktivitaet(sb, raw.id, vereinId, svc.AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
-    const data = await svc.fetchKaderFuerMitglied(sb, raw.id);
+    if (vereinId) svc.logAktivitaet(sb, mid, vereinId, svc.AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    const data = await svc.fetchKaderFuerMitglied(sb, mid);
     setTeamDetails(data);
     await ableitRolle();
     setShowTeamAssign(false);
@@ -143,7 +170,7 @@ function PersonTeams({
     const kader = teamDetails?.find(k => k.id === kaderId);
     const teamName = kader?.teams?.name || String(kaderId);
     await svc.deaktiviereKader(sb, kaderId);
-    if (vereinId) svc.logAktivitaet(sb, raw.id, vereinId, svc.AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    if (vereinId) svc.logAktivitaet(sb, mid, vereinId, svc.AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     setTeamDetails(prev => (prev || []).filter(k => k.id !== kaderId));
     await ableitRolle();
   }
@@ -160,7 +187,7 @@ function PersonTeams({
     });
     if (vereinId && alterRollen !== neueRollen) {
       const teamName = editTeam.teams?.name || "Team";
-      svc.logAenderung(sb, raw.id, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
+      svc.logAenderung(sb, mid, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
     }
     setTeamDetails(prev => (prev || []).map(k => k.id === editTeam.id
       ? { ...k, rollen: editTeamForm.funktionen, rueckennr: editTeamForm.rueckennr, position: editTeamForm.position }
@@ -172,6 +199,19 @@ function PersonTeams({
     setEditTeamSaving(false);
     if (onReload) onReload();
   }
+
+
+  /* ⚠ Zulaessiges `null`-Rendern, mit benanntem Grund: `teams` traegt in der
+     Feldkonfiguration `nur_mitgliedschaft: true` und ist fuer Personen ohne
+     Mitgliedschaft ausdruecklich auf „Gibt es nicht" gestellt. Eine bewusste
+     SICHTBARKEITSREGEL, kein Ausfall — der Aufrufer rendert die Komponente in
+     dem Fall ohnehin nicht (`istSichtbar(konfig, "teams")`). Der Guard ist das
+     Netz darunter.
+
+     Er steht hier unten, weil ein `return` vor den Hooks `rules-of-hooks`
+     verletzt. Die Handler darueber laufen ohne Mitgliedschaft ohnehin nie:
+     sie haengen alle an Bedienelementen, die dieses `return` wegnimmt. */
+  if (mitgliedId == null) return null;
 
   return (
     <>

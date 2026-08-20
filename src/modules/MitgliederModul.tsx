@@ -87,7 +87,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(navToMember&&dbMitglieder.length>0){
       const m=dbMitglieder.find(x=>x.id===navToMember);
       if(m) setSelectedMember({
-        id:m.id,
+        mitgliedId:m.id,
+        personId:m.person_id,
         name:vollname(m),
         role:m.rolle||"-",
         type:m.mitgliedtyp||"-",
@@ -355,11 +356,16 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
      zu tun: ein Klick, der wirkungslos verpufft, waere von einem kaputten
      Detail nicht zu unterscheiden. */
   function oeffneMitglied(row: MemberRow & { _tab?: string }){
+    /* ⚠ Der Guard bleibt vorerst. Die Seite TRAEGT eine Person ohne
+       Mitgliedschaft seit Schritt 1 des Personenseiten-Auftrags, aber der Weg
+       dorthin — Hero, Tabs, „Mitglied werden" — kommt erst in Schritt 2/3.
+       Bis dahin waere es ein halbes Bild, und ein halbes Bild ist schlechter
+       als keines. Er faellt mit Schritt 3. */
     if(row.mitglied_id==null){
-      console.warn("oeffneMitglied: Zeile ohne Mitgliedschaft — MemberDetail kann sie nicht zeigen.",{id:row.id,name:row.name});
+      console.warn("oeffneMitglied: Zeile ohne Mitgliedschaft — die Personenseite kommt in Schritt 3.",{id:row.id,name:row.name});
       return;
     }
-    setSelectedMember({...row, id: row.mitglied_id});
+    setSelectedMember({...row, mitgliedId: row.mitglied_id, personId: row.person_id ?? ""});
   }
 
   /* Portal-Zugang Zelle */
@@ -461,7 +467,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           onNavToMember={id=>{
             setElternTab(false);
             const m=dbMitglieder.find(x=>x.id===id);
-            if(m) setSelectedMember({id:m.id,name:vollname(m),role:m.rolle||"-",type:m.mitgliedtyp||"-",team:"-",_tab:"info"});
+            if(m) setSelectedMember({mitgliedId:m.id,personId:m.person_id,name:vollname(m),role:m.rolle||"-",type:m.mitgliedtyp||"-",team:"-",_tab:"info"});
           }}
         />
       ):archivTab?(

@@ -5,10 +5,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Btn, Card, PhoneInput, useAddrSearch, usePlzLookup } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
+import { updatePerson } from "../../../domains/person/personService.ts";
 import { updateMitglied, FELD_LABEL } from "../../../domains/members/memberService.ts";
 import { formatDatum, GESCHLECHT_OPTS } from "../../../domains/person/personUtils.ts";
 import { KANTON_OPTS } from "./datenpruefungUtils.ts";
-import type { Mitglied, Sb } from "../../../types.ts";
+import type { Mitglied, Sb, PersonZeile } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
 import type { AddressSuggestion } from "../../../shared/forms/AddressInput.tsx";
 
@@ -65,7 +66,7 @@ function AddrDropdown({ suggestions, inputRef, onSelect, onClose }: AddrDropdown
 }
 
 interface DatenpruefungMitgliedProps {
-  raw: Mitglied;
+  raw: PersonZeile;
   sb: Sb;
   setPortalMsg: (msg: StatusMeldung | null) => void;
   onReload?: (() => void) | null;
@@ -129,7 +130,7 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflicht
       return;
     }
     setSaving(true);
-    const err = await updateMitglied(sb, raw.id, {
+    const err = await updatePerson(sb as never, raw.person_id, {
       vorname:       form.vorname       || undefined,
       nachname:      form.nachname      || undefined,
       geburtsdatum:  form.geburtsdatum  || undefined,

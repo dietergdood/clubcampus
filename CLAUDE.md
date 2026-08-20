@@ -156,6 +156,14 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   **Wo es nicht geht, und warum:** die `results`-Map von `makeSb()` ist absichtlich `{ data?: any }`. Sie muss Join-Formen, `count`-Antworten und `PostgrestError` gleichermassen annehmen — ein Tabellentyp träfe darauf nicht zu. Ebenso ist `CallRecord.payload` untypisiert, weshalb `expect(rec.payload)` nichts erzwingt. **Die Prüfung greift also nur dort, wo der Test die Zeile selbst als Variable anlegt und annotiert.** Das ist der Ort, an dem die erfundene Spalte entsteht — für den Rest bleibt es beim Hinsehen.
 
 
+- **Ein Werkzeug, das nach Text sucht, trifft was gleich AUSSIEHT, nicht was gleich GEMEINT ist.** `.eq("mitglied_id", …)` steht in `memberService.ts` achtmal und meint achtmal etwas anderes: Notizen, Kader, Team-Details, Anwesenheiten, das Konto. Wer ersetzt, **nennt vorher die Zielfunktion** und **liest hinterher jeden Treffer der Datei einzeln gegen** — auch die, die er nicht angefasst zu haben glaubt.
+
+  Beleg vom 21.08.2026: eine Ersetzung sollte `fetchBenutzerFuerMitglied` auf `person_id` umstellen und traf die **erste** Fundstelle der Datei — `fetchNotizen`. Aus `.eq("mitglied_id", mitgliedId)` wurde dort `.eq("person_id", personId)`. `mitglieder_notizen.mitglied_id` ist `NOT NULL`; die Abfrage wäre **immer leer** zurückgekommen. Keine Notizen, kein Fehler — wieder ein Ausfall, der aussieht wie eine Datenlage.
+
+  ⚠ **Was ihn gefangen hat, war ein Zufall der Benennung, keine Absicherung:** `personId` existierte in `fetchNotizen` gar nicht, also gab es einen Compilerfehler. **Hätte die Funktion beide Werte im Sichtfeld gehabt — etwa weil sie ohnehin eine `personId` führt —, wäre der Fehler kompiliert und stumm geblieben.** Auf den Compiler ist hier kein Verlass; er hat nur diesmal geholfen.
+
+  Dieselbe Familie wie der Regex-Schnitt vom 19.08. (der die neu eingefügte Sektion mitnahm) und wie `` in deutschen Bezeichnern. Gemeinsames Merkmal: das Werkzeug kennt die Bedeutung nicht, und das Ergebnis sieht richtig aus.
+
 - **`cat > datei` truncatet ohne Rückfrage — für Dateien, die es vielleicht schon gibt, das Write-Werkzeug nehmen.** Es verweigert das Überschreiben einer ungelesenen Datei; die Shell tut es wortlos.
 
   Am 20.08.2026 so passiert: `src/domains/app/__tests__/getProfilCheck.test.ts` existierte mit **13 Fällen** und wurde von einer neuen Fassung mit 12 ersetzt. Build grün, Typecheck grün, alle 38 Testdateien grün — **nichts hat gemeldet, dass dreizehn Prüfungen verschwunden sind.**
@@ -644,6 +652,42 @@ select key, active, konfiguriert, auto_sync, letzter_sync
 
 Steht dort ein frisches `letzter_sync` bei `active = false`, ist das der Beleg,
 dass die Spalte reine Anzeige ist.
+
+### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
+
+Befund vom 21.08.2026, beim Umstellen des Fotopfads auf `person_id`.
+
+```sql
+select policyname, cmd, qual from pg_policies
+ where schemaname='storage' and tablename='objects';
+```
+
+```
+mitglieder_fotos_select | SELECT | (bucket_id = 'mitglieder-fotos')
+mitglieder_fotos_update | UPDATE | (bucket_id = 'mitglieder-fotos')
+mitglieder_fotos_upload | INSERT |
+```
+
+**Die drei Policies prüfen nur den Bucket — weder den Pfad noch den Verein.**
+Jeder eingeloggte Benutzer kann damit **jedes Foto jedes Vereins** lesen,
+überschreiben und neue hochladen. Dieselbe Familie wie
+`mitglieder_select_priv`, nur ausserhalb von `public`.
+
+**Genau deshalb ist es so lange unbemerkt geblieben:** `storage.objects` liegt
+nicht in `public` und steht damit in **keinem** `schema.sql` — einer der vier
+blinden Flecken (siehe `ARCHITECTURE.md` → „`schema.sql` baut die Datenbank
+NICHT nach"). Wer die Rechte des Portals prüft, findet den Bucket nicht, weil
+er nirgends im Dump vorkommt.
+
+**Wirkt heute begrenzt, weil es nur einen Verein gibt.** Es blockiert aber —
+wie die Gruppenrechte — einen externen Pilotverein: ab dem zweiten Mandanten
+ist es eine echte Preisgabe. Gehört zu `docs/auftrag_rls_gruppenrechte.md`.
+
+> **Der neue Pfad macht die spätere Policy leichter.** Seit dem 21.08.2026
+> liegen Fotos unter `<person_id>/foto.<ext>` statt `<mitglied_id>/`. Eine
+> Policy kann damit über `personen.verein_id` filtern — ein direkter Weg vom
+> Pfadsegment zum Mandanten. Über `mitglied_id` wäre es ein Umweg über
+> `mitglieder`, und für Personen ohne Mitgliedschaft gäbe es gar keinen.
 
 ### ⚠ `is_trainer_or_above()` prüft einen Rollennamen, den es nicht gibt
 

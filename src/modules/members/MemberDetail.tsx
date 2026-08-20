@@ -10,7 +10,7 @@ import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
 import type { KaderRolleDb } from "../../domains/roles/roleUtils.ts";
 import { initials as computeInitials } from "../../domains/person/personUtils.ts";
 import {
-  fetchBenutzerFuerMitglied, fetchBenutzerByEmail,
+  fetchBenutzerFuerPerson, fetchBenutzerByEmail,
   portalZugangAktivieren, portalZugangDeaktivieren,
   fetchElternkontakte, fetchKaderFuerMitglied,
   fetchPortalFunktionen,
@@ -30,7 +30,7 @@ import { VerlaufTab } from "./tabs/VerlaufTab.tsx";
 import { getSichtbarkeit } from "./memberUtils.tsx";
 import { getFeldkonfig, fuerMitgliedtyp, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
-import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, SetState } from "../../types.ts";
+import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, SetState , PersonZeile } from "../../types.ts";
 import type { FunktionMitGruppe } from "../../shared/person/types.ts";
 
 /* Aus den Service-Rückgaben abgeleitet */
@@ -38,11 +38,26 @@ type KaderDetail  = Awaited<ReturnType<typeof fetchKaderFuerMitglied>>[number];
 type Elternkontakt = Awaited<ReturnType<typeof fetchElternkontakte>>[number];
 type TeamOption   = NonNullable<ComponentProps<typeof InfoTab>["allTeams"]>;
 
-/* Das ausgewählte Mitglied kommt je nach Einstieg in einer anderen Form:
+/* Die ausgewählte PERSON kommt je nach Einstieg in einer anderen Form:
    als gemappte Listenzeile, als schlankes Navigationsobjekt aus dem
-   Kader-Modul oder als Archivzeile. Verlässlich sind nur id und name. */
+   Kader-Modul, als Archivzeile — oder als Person ohne Mitgliedschaft.
+   Verlässlich sind nur `personId` und `name`.
+
+   ⚠ HIER STAND `id: number`, und das war die Wurzel des ganzen Umbaus.
+   Die Zahl meinte die MITGLIEDSCHAFT; rund 75 Stellen in dieser Datei, im
+   Hero und in den Tabs lasen sie so. Ein Supporter oder ein Elternteil hat
+   keine — deshalb hatte `oeffneMitglied()` einen Guard, der abbrach, und die
+   Supporterliste bot den Weg gar nicht erst an.
+
+   Zwei Felder statt einem, und `mitgliedId` NULLBAR: damit zeigt der Compiler
+   jede Stelle, die eine Mitgliedschaft voraussetzt. Dasselbe Mittel wie bei
+   `MemberRow` am 20.08. — eine uuid, die still an die Stelle einer Zahl
+   fliesst, würde niemand bemerken. */
 export interface SelectedMember {
-  id: number;
+  /** Die PERSON. Immer da — sie ist der Bezugspunkt seit Etappe 4. */
+  personId: string;
+  /** Die MITGLIEDSCHAFT. `null` heisst: diese Person hat keine. */
+  mitgliedId: number | null;
   name: string;
   /* Aktiver Tab, von der Liste beim Öffnen gesetzt */
   _tab?: string;
@@ -88,20 +103,29 @@ function MemberDetail({
   reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft = null,
   vereinId = null, onAustritt = null,
 }: MemberDetailProps) {
-  const dbRaw: Partial<Mitglied> = dbMitglieder.find(d => d.id === m.id) || {};
+  /* Die beiden Identitäten, einmal ausgelesen. Ab hier steht im Code, welche
+     gemeint ist — `raw.id` sagte das nicht. */
+  const mitgliedId: number | null = m.mitgliedId;
+  const personId: string = m.personId;
+
+  const dbRaw: Partial<Mitglied> = (mitgliedId != null
+    ? dbMitglieder.find(d => d.id === mitgliedId)
+    : undefined) || {};
   /* m überschreibt die DB-Zeile dort, wo es einen Wert mitbringt. Bei
      Navigations-/Archivobjekten ist dbRaw leer und das Ergebnis nur teilweise
      gefüllt; die Tabs lesen solche Felder aber defensiv (|| "—" etc.).
-     `as Mitglied` ist ein bewusster Boundary-Cast: die 11 abnehmenden Tabs
-     erwarten `Mitglied` (u. a. ~70 `raw.id`-Zugriffe als `number`), ein
-     `Partial<Mitglied>` würde dort ueberall Guards erzwingen — unverhaeltnis-
-     maessig fuer den seltenen Teil-Fall. */
+     `as PersonZeile` ist ein bewusster Boundary-Cast, aber ein ehrlicherer
+     als frueher: bis zum 21.08.2026 stand hier `as Mitglied`, und darin war
+     `id: number` enthalten. Damit las jede der ~75 Stellen `raw.id` als Zahl —
+     bei einer Person ohne Mitgliedschaft waere sie `undefined` gewesen, ohne
+     dass der Compiler ein Wort gesagt haette. `PersonZeile` laesst `id` weg;
+     wer die Mitgliedschaft braucht, nimmt `mitgliedId`. */
   const raw = {
     ...dbRaw,
     ...Object.fromEntries(
       Object.entries(m).filter(([k, v]) => v !== undefined && v !== null || !(dbRaw as Record<string, unknown>)[k])
     ),
-  } as Mitglied;
+  } as PersonZeile;
   /* Was es bei diesem Mitgliedtyp gibt (Konfiguration) UND wer es sehen
      darf (Rolle des Betrachters). "Gibt es nicht" gewinnt — siehe
      getSichtbarkeit in memberUtils. */
@@ -140,17 +164,17 @@ function MemberDetail({
      Frueher zwei getrennte Effekte -> beim Direkteinstieg auf "portal"
      ein doppelter Request. */
   useEffect(() => {
-    if (!sb || !raw.id) return;
+    if (!sb) return;
     if (benutzer !== null && tab !== "portal") return;
     if (tab === "portal") setPortalLoading(true);
-    fetchBenutzerFuerMitglied(sb, raw.id).then(data => { setBenutzer(data); setPortalLoading(false); });
-  }, [tab, raw.id]);
+    fetchBenutzerFuerPerson(sb, personId).then(data => { setBenutzer(data); setPortalLoading(false); });
+  }, [tab, personId]);
 
   useEffect(() => {
-    if ((tab === "eltern" || (tab === "info" && brauchtEltern(raw.mitgliedtyp))) && sb && raw.id && elternLoaded === null) {
-      fetchElternkontakte(sb, raw.id).then(data => setElternLoaded(data));
+    if ((tab === "eltern" || (tab === "info" && brauchtEltern(raw.mitgliedtyp))) && sb && mitgliedId != null && elternLoaded === null) {
+      fetchElternkontakte(sb, mitgliedId).then(data => setElternLoaded(data));
     }
-  }, [tab, raw.id]);
+  }, [tab, mitgliedId]);
 
   /* Kinder für Datenprüfung (Eltern-Sicht) */
   useEffect(() => {
@@ -160,16 +184,16 @@ function MemberDetail({
   }, [tab, role, eltern]);
 
   useEffect(() => {
-    if (sb && raw.id) {
-      fetchKaderFuerMitglied(sb, raw.id).then(data => setTeamDetails(data));
+    if (sb && mitgliedId != null) {
+      fetchKaderFuerMitglied(sb, mitgliedId).then(data => setTeamDetails(data));
     }
-  }, [raw.id]);
+  }, [mitgliedId]);
 
   useEffect(() => {
     if (sb && (assignFunktionen || []).length === 0) {
       fetchPortalFunktionen(sb).then(data => setAssignFunktionen(data));
     }
-  }, [raw.id]);
+  }, [mitgliedId]);
 
 
   /* ── Aktionen ── */
@@ -180,14 +204,14 @@ function MemberDetail({
      handleReactivate: reaktiviert deaktivierten Portalzugang
   ── */
   async function ableitRolle() {
-    if (!sb || !raw.id) return;
-    const neueRolle = await ableitUndSaveRolle(sb, raw.id, dbKaderRollen, raw.mitgliedtyp, raw.funktionen ?? []);
+    if (!sb || mitgliedId == null) return;
+    const neueRolle = await ableitUndSaveRolle(sb, mitgliedId, dbKaderRollen, raw.mitgliedtyp, raw.funktionen ?? []);
     /* Optimistisch nur die Rolle aktualisieren, wenn bereits ein Benutzer
        geladen ist. Ohne Benutzer gab es hier frueher einen als PortalBenutzer
        gecasteten Platzhalter mit lauter undefined-Feldern — der wurde beim
        gleich folgenden onReload() ohnehin durch die echte (ggf. leere) Zeile
        ersetzt. */
-    setBenutzer(prev => prev ? { ...prev, role: neueRolle } : prev);
+    setBenutzer((prev: PortalBenutzer | null) => prev ? { ...prev, role: neueRolle } : prev);
     if (onReload) onReload();
   }
 
@@ -196,10 +220,10 @@ function MemberDetail({
     setPortalLoading(true); setPortalMsg(null);
     const existing = await fetchBenutzerByEmail(sb, linkEmail);
     if (existing) {
-      const neueRolle = await ableitUndSaveRolle(sb, raw.id, dbKaderRollen, raw.mitgliedtyp, raw.funktionen ?? []);
-      await portalZugangAktivieren(sb, raw.id, existing.id, neueRolle);
+      const neueRolle = await ableitUndSaveRolle(sb, mitgliedId!, dbKaderRollen, raw.mitgliedtyp, raw.funktionen ?? []);
+      await portalZugangAktivieren(sb, mitgliedId, existing.id, neueRolle);
       setPortalMsg({ ok: true, text: `Verknüpft ✓ — Rolle: ${neueRolle}` });
-      if (reloadMember) reloadMember(raw.id);
+      if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
       else if (onReload) onReload();
     } else {
       setPortalMsg({ ok: false, text: "Kein Benutzer mit dieser E-Mail gefunden." });
@@ -210,22 +234,22 @@ function MemberDetail({
   async function handleUnlink() {
     if (!sb) return;
     setPortalLoading(true);
-    await portalZugangDeaktivieren(sb, raw.id);
-    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.PORTAL_DEAKTIVIERT, "Portal-Zugang deaktiviert", null, null, account?.name||account?.email||"Administrator");
+    await portalZugangDeaktivieren(sb, personId);
+    if (vereinId && mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.PORTAL_DEAKTIVIERT, "Portal-Zugang deaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang deaktiviert" });
     setPortalLoading(false);
-    if (reloadMember) reloadMember(raw.id);
+    if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
     else if (onReload) onReload();
   }
 
   async function handleReactivate() {
     if (!sb || !benutzer) return;
     setPortalLoading(true);
-    await portalZugangAktivieren(sb, raw.id, benutzer.id, benutzer.role);
-    if (vereinId) logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.PORTAL_REAKTIVIERT, "Portal-Zugang reaktiviert", null, null, account?.name||account?.email||"Administrator");
+    await portalZugangAktivieren(sb, mitgliedId, benutzer.id, benutzer.role);
+    if (vereinId && mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.PORTAL_REAKTIVIERT, "Portal-Zugang reaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang reaktiviert ✓" });
     setPortalLoading(false);
-    if (reloadMember) reloadMember(raw.id);
+    if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
     else if (onReload) onReload();
   }
 
@@ -262,6 +286,7 @@ function MemberDetail({
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
         benutzer={benutzer} teamDetails={teamDetails}
         vereinId={vereinId} onAustritt={onAustritt}
+        mitgliedId={mitgliedId}
       />
 
       {/* Tab-Bar */}
@@ -270,6 +295,7 @@ function MemberDetail({
       {/* Tab-Routing */}
       {sichtbarerTab === "info" && (
         <InfoTab
+          mitgliedId={mitgliedId}
           raw={raw} fv={fv} canEdit={canEdit} canDelete={canDelete}
           sb={sb} account={account}
           dbKaderRollen={dbKaderRollen} dbMitgliedtypen={dbMitgliedtypen}
@@ -288,8 +314,9 @@ function MemberDetail({
 
       {sichtbarerTab === "eltern" && (
         <ElternTab
+          mitgliedId={mitgliedId!}
           eltern={eltern} canEdit={canEdit} raw={raw} sb={sb}
-          onReload={() => { if (reloadMember) reloadMember(raw.id); if (onReload) onReload(); }}
+          onReload={() => { if (reloadMember && mitgliedId != null) reloadMember(mitgliedId); if (onReload) onReload(); }}
           setElternLoaded={setElternLoaded}
           vereinId={vereinId} account={account}
           pflichtTypen={(dbMitgliedtypen||[]).filter(t=>t.hauptkontakt_pflicht).map(t=>t.name)}
@@ -298,13 +325,14 @@ function MemberDetail({
 
       {sichtbarerTab === "portal" && (
         <PortalTab
+          mitgliedId={mitgliedId}
           raw={raw} benutzer={benutzer} sb={sb}
           dbPortalRollen={dbPortalRollen}
           portalMsg={portalMsg} portalLoading={portalLoading}
           handleUnlink={handleUnlink} handleReactivate={handleReactivate}
           setBenutzer={setBenutzer}
           vereinId={vereinId} account={account}
-          onReload={()=>{ if(reloadMember) reloadMember(raw.id); if(onReload) onReload(); }}
+          onReload={()=>{ if(reloadMember) if (mitgliedId != null) reloadMember(mitgliedId); if(onReload) onReload(); }}
         />
       )}
 
@@ -333,7 +361,7 @@ function MemberDetail({
       )}
 
       {sichtbarerTab === "verlauf" && (
-        <VerlaufTab raw={raw} sb={sb} key={`verlauf-${raw.id}-${raw.aktiv}-${raw.updated_at}`}/>
+        <VerlaufTab raw={raw} sb={sb} mitgliedId={mitgliedId!} key={`verlauf-${mitgliedId}-${raw.aktiv}-${raw.updated_at}`}/>
       )}
 
       {(sichtbarerTab === "stats" || sichtbarerTab === "comments" || sichtbarerTab === "ratings") && (

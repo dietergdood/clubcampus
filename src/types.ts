@@ -112,6 +112,21 @@ export type MitgliedUpdate = TablesUpdate<'mitglieder'> & PersonenFelder;
    andere. */
 export type MitgliedInsert = Omit<TablesInsert<'mitglieder'>, 'verein_id' | 'person_id'> & PersonenFelder;
 
+/**
+ * Die flache Zeile eines Menschen — mit ODER ohne Mitgliedschaft.
+ *
+ * ⚠ OHNE `id`, und das ist der Zweck. `Mitglied.id` ist die Id der
+ * MITGLIEDSCHAFT; eine Person ohne Mitgliedschaft hat keine. Rund 75 Stellen
+ * lasen `raw.id` als Zahl, und der Boundary-Cast `as Mitglied` in
+ * `MemberDetail` liess sie das ungestraft tun — zur Laufzeit wäre der Wert
+ * `undefined` gewesen, typisiert als `number`.
+ *
+ * Wer die Mitgliedschaft braucht, bekommt sie als eigenen Wert gereicht
+ * (`mitgliedId: number | null`); wer die Person braucht, `personId`. Welche
+ * gemeint ist, steht damit im Code statt in einer Annahme.
+ */
+export type PersonZeile = Omit<Mitglied, 'id'>;
+
 export interface KaderEintrag {
   team: { name: string | null; kurz: string | null };
   rollen: string[];

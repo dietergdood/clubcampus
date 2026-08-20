@@ -10,21 +10,22 @@ import { vollname } from "../../domains/person/personUtils.ts";
 import { elternAvColor } from "./tabs/ElternTab.tsx";
 import { ElternFelder, validateElternkontakt } from "./ElternkontaktModal.tsx";
 import type { ElternFormular } from "./ElternkontaktModal.tsx";
-import type { Sb } from "../../types.ts";
+import type { Sb , PersonZeile } from "../../types.ts";
 
 type ElternTreffer = Awaited<ReturnType<typeof sucheElternkontakte>>[number];
 
 interface ElternSucheModalProps {
   open: boolean;
   onClose: () => void;
-  raw: { id: number };
   sb: Sb;
   vereinId: string | null;
   geaendertVon: string;
   onVerknuepft: () => void;
+  /** Die MITGLIEDSCHAFT des Kindes — `eltern_kinder.mitglied_id` ist NOT NULL. */
+  mitgliedId: number;
 }
 
-export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVon, onVerknuepft }: ElternSucheModalProps) {
+export function ElternSucheModal({ mitgliedId, open, onClose, sb, vereinId, geaendertVon, onVerknuepft }: ElternSucheModalProps) {
   const [tab, setTab] = useState<"suche"|"neu">("suche");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ElternTreffer[]>([]);
@@ -39,8 +40,8 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       if (!sb || !vereinId) return;
-      /* raw.id: das Kind selbst und alle, die bereits Kind sind, fallen raus. */
-      const data = await sucheElternkontakte(sb, vereinId, query, raw?.id ?? null);
+      /* mitgliedId: das Kind selbst und alle, die bereits Kind sind, fallen raus. */
+      const data = await sucheElternkontakte(sb, vereinId, query, mitgliedId);
       setResults(data);
     }, 300);
     return () => clearTimeout(timerRef.current);
@@ -59,9 +60,9 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
     setSaving(true);
     const treffer = results.filter(e => selected.has(e.id));
     for (const e of treffer) {
-      await linkKind(sb, e.id, raw.id, vereinId, false);
+      await linkKind(sb, e.id, mitgliedId, vereinId, false);
       const name = vollname(e);
-      logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
+      logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
     }
     setSaving(false);
     onVerknuepft();
@@ -78,7 +79,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
     /* vorname/nachname sind in `personen` NOT NULL — validateElternkontakt()
        oben hat schon abgebrochen, wenn eines leer ist. */
     const error = await insertElternkontakt(sb, {
-      mitglied_id: raw.id,
+      mitglied_id: mitgliedId,
       vorname:   (neuForm.vorname  || "").trim(),
       nachname:  (neuForm.nachname || "").trim(),
       email:     neuForm.email?.trim() || null,
@@ -87,7 +88,7 @@ export function ElternSucheModal({ open, onClose, raw, sb, vereinId, geaendertVo
     }, vereinId);
     setSaving(false);
     if (error) { setNeuFehler(error.message); return; }
-    logAktivitaet(sb, raw.id, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
+    logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
     onVerknuepft();
     onClose();
   }
