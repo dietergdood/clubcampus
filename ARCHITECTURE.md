@@ -1148,6 +1148,20 @@ entstehen, wenn die Spalte da ist, auf die sie sich beziehen. Dazwischen hat
 die Tabelle RLS ohne Policy — also vollständig gesperrt und nicht offen; und
 weil alles in einem `do $mig$`-Block läuft, sieht diesen Zustand niemand.
 
+**Für die Zählprobe heisst das: von einer gestrichenen Spalte ihre Indizes und
+Fremdschlüssel abziehen.** Am 20.08.2026 dreimal daran vorbeigerechnet —
+`anwesenheiten_benutzer_id_fkey` (ADD CONSTRAINT +3 statt +4) und
+`idx_benutzer_profil_geprueft` (CREATE INDEX −1 statt ±0). Die Zahl war jedes
+Mal richtig, die Vorhersage falsch, und beide Male dauerte das Nachrechnen
+länger als das Nachsehen gedauert hätte:
+
+```sql
+select indexname from pg_indexes
+ where schemaname='public' and tablename='<tabelle>' and indexdef ~ '<spalte>';
+select conname from pg_constraint c join pg_class t on t.oid = c.conrelid
+ where t.relname='<tabelle>' and pg_get_constraintdef(c) ~ '<spalte>';
+```
+
 Zum Vorabprüfen, welche Policies an einer Spalte hängen:
 
 ```sql

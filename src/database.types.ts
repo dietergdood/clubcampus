@@ -774,7 +774,6 @@ export type Database = {
           mitglied_id: number | null
           name: string | null
           person_id: string | null
-          profil_geprueft_at: string | null
           role: string
           rollen: string[] | null
           teams: string[] | null
@@ -791,7 +790,6 @@ export type Database = {
           mitglied_id?: number | null
           name?: string | null
           person_id?: string | null
-          profil_geprueft_at?: string | null
           role?: string
           rollen?: string[] | null
           teams?: string[] | null
@@ -808,7 +806,6 @@ export type Database = {
           mitglied_id?: number | null
           name?: string | null
           person_id?: string | null
-          profil_geprueft_at?: string | null
           role?: string
           rollen?: string[] | null
           teams?: string[] | null

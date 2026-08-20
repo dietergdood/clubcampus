@@ -695,7 +695,6 @@ CREATE TABLE IF NOT EXISTS "public"."benutzer" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "teams_kontext" "jsonb" DEFAULT '[]'::"jsonb",
     "rollen" "text"[] DEFAULT '{}'::"text"[],
-    "profil_geprueft_at" timestamp with time zone,
     "aktiv" boolean DEFAULT true,
     "verein_id" "uuid" NOT NULL,
     "last_sign_in_at" timestamp with time zone,
@@ -1565,7 +1564,7 @@ COMMENT ON COLUMN "public"."personen"."funktionen" IS 'Vereinsfunktionen. An der
 
 
 
-COMMENT ON COLUMN "public"."personen"."profil_geprueft_at" IS 'Datenpruefung der Person. Loest die drei parallelen Felder in mitglieder, elternkontakte und benutzer ab.';
+COMMENT ON COLUMN "public"."personen"."profil_geprueft_at" IS 'Wann die Person ihre Daten zuletzt bestaetigt hat. DIE einzige Stelle — die Altspalte benutzer.profil_geprueft_at ist am 20.08.2026 gefallen. Sie war eine zweite Aussage ueber dieselbe Sache: wer ueber den Overlay bestaetigte, schrieb dorthin, die Mitgliederliste las hier, und der Rueckfall in sollProfilPruefen() verdeckte die Abweichung.';
 
 
 
@@ -3005,10 +3004,6 @@ CREATE INDEX "idx_benutzer_aktiv" ON "public"."benutzer" USING "btree" ("aktiv")
 
 
 CREATE INDEX "idx_benutzer_mitglied" ON "public"."benutzer" USING "btree" ("mitglied_id");
-
-
-
-CREATE INDEX "idx_benutzer_profil_geprueft" ON "public"."benutzer" USING "btree" ("profil_geprueft_at");
 
 
 

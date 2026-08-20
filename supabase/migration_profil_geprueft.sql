@@ -143,6 +143,17 @@ select count(*) as nie_bestaetigt
 -- ═══════════════════════════════════════════════════════════════════════════
 -- DANACH
 --   Dump und Typen nachziehen (`npm run gen:types`).
---   ZAEHLPROBE: alle vier Kategorien ±0 — es faellt nur eine Spalte, und
---   Spalten werden von keiner gezaehlt.
+--   ZAEHLPROBE (gemessen): CREATE INDEX **−1**, die anderen drei ±0.
+--
+--   ⚠ Vorhergesagt war ±0 in allen vier — falsch, und zwar zum dritten Mal
+--   am selben Tag aus demselben Grund: mit `benutzer.profil_geprueft_at`
+--   fiel `idx_benutzer_profil_geprueft` STILLSCHWEIGEND MIT.
+--
+--   Beim Vorhersagen einer Zaehlprobe fuer eine gestrichene Spalte gehoeren
+--   deshalb IHRE Indizes und Fremdschluessel abgezogen:
+--
+--     select indexname from pg_indexes
+--      where schemaname='public' and tablename='<tabelle>' and indexdef ~ '<spalte>';
+--     select conname from pg_constraint c join pg_class t on t.oid=c.conrelid
+--      where t.relname='<tabelle>' and pg_get_constraintdef(c) ~ '<spalte>';
 -- ═══════════════════════════════════════════════════════════════════════════
