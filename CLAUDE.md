@@ -336,6 +336,19 @@ Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verlier
 > - `ALTER PUBLICATION "supabase_realtime" ADD TABLE …` für `nachrichten` und `nachrichten_antworten`. Die Publication ist global, nicht schemagebunden. Ohne diese Zeilen bekommt ein nachgebautes Portal keine Live-Nachrichten — und weil nichts fehlschlägt, merkt es niemand.
 > - Die Trigger auf `auth.users` (`on_auth_user_created`, `on_auth_user_login`). Sie stehen in **keinem** `public`-Dump; `schema.sql` enthält nur die Funktionen `handle_new_user`/`handle_user_login`, ohne jeden Aufrufer. Deshalb liegen sie separat in **`supabase/auth_triggers.sql`** und müssen nach `schema.sql` eingespielt werden — sonst kann sich nach einem Nachbau niemand registrieren.
 > - **Der cron-Auftrag `sfv-sync-stuendlich`** (seit 15.08.2026). `cron.job` liegt im Schema `cron`. Ohne ihn läuft der SFV-Sync nie wieder, und auch das fällt nicht auf: die Anzeige zeigt schlicht den Stand vom Tag des Nachbaus. Liegt in **`supabase/cron_sfv_sync.sql`**.
+
+  > ⚠ **`cron.job_run_details.status = 'succeeded'` heisst NUR „abgesetzt".** Es ist das Ergebnis des `select net.http_post(…)` — also, dass die Anfrage in die Warteschlange gelegt wurde. Über die ANTWORT sagt es nichts. Die steht in **`net._http_response`**, und nur dort:
+  >
+  > ```sql
+  > select status_code, left(content,120), created at time zone 'Europe/Zurich'
+  >   from net._http_response order by created desc limit 5;
+  > ```
+  >
+  > Beleg vom 21.08.2026: der Job meldete stündlich `succeeded` mit `1 row`, während jeder Aufruf mit **401 UNAUTHORIZED_NO_AUTH_HEADER** zurückkam — der Befehl schickt `X-Sync-Key`, aber keinen `Authorization`-Header, und Supabase weist das am Gateway ab, bevor die Function startet. Der Sync stand 14 Stunden, und `job_run_details` sah die ganze Zeit grün aus.
+  >
+  > ⚠ **Und `net._http_response` reicht nur ein paar Stunden zurück** — pg_net räumt selbst auf; am 21.08.2026 lagen dort sechs Zeilen, die älteste fünf Stunden alt. Die Tabelle sagt, ob es JETZT klemmt, nie seit wann. Dafür sind `api_sync_log` und `api_verbindungen.letzter_sync` die Quelle.
+  >
+  > **Das Eigentliche daran: es gibt keinen Alarm.** Ein ausgefallener Lauf schreibt keine Zeile in `api_sync_log` — und „keine neue Zeile" sieht genauso aus wie „es gab nichts zu tun".
 > - **Der Storage-Bucket `sfv-logos`** (seit 20.08.2026). `storage.buckets` liegt im Schema `storage`. Ohne ihn erscheinen keine Vereinswappen, und der Sync legt sie ins Leere ab. Liegt in **`supabase/migration_sfv_logos.sql`**.
 >
 > **Das gemeinsame Merkmal: keines der vier bricht laut.** Registrierung, Live-Nachrichten, Sync, Wappen — alle hören einfach auf zu funktionieren. Wer etwas ausserhalb von `public` anlegt, trägt es in die Tabelle in `ARCHITECTURE.md` ein; eine Migrationsdatei allein genügt nicht, sie ist Protokoll und keine Quelle fürs Nachbauen.
