@@ -117,3 +117,15 @@ export const GESCHLECHT_OPTS = [
   { v: "w", l: "Weiblich" },
   { v: "d", l: "Divers" },
 ] as const;
+
+/* Die 26 Kantone. Lagen am 21.08.2026 an DREI Stellen: als Liste in
+   `modules/members/tabs/datenpruefungUtils.ts`, als eigene Kopie in
+   `shared/person/PersonKontakt.tsx`, und die Portalverwaltung hat wieder
+   eine eigene Form davon. Hier, weil `shared/` nicht aus `modules/`
+   importieren darf (Schichtenregel) und eine Liste an mehreren Orten
+   auseinanderlaeuft. */
+export const KANTONE = [
+  "AG","AI","AR","BE","BL","BS","FR","GE","GL","GR",
+  "JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG",
+  "TI","UR","VD","VS","ZG","ZH",
+] as const;
