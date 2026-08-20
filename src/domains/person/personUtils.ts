@@ -105,3 +105,15 @@ export function getLandName(code: string | null | undefined): string | null {
   if (!code) return null;
   return LAENDER.find(l => l.c === code.toUpperCase())?.n || code;
 }
+
+/* Die drei Geschlechts-Werte, wie sie in `personen.geschlecht` stehen.
+   ⚠ Sie lagen am 20.08.2026 an DREI Stellen als wortgleiche Kopie
+   (PersonPersonalien, NeuesMitgliedModal, und beinahe eine vierte in
+   DatenpruefungMitglied). Eine Liste, die an mehreren Orten steht, laeuft
+   auseinander — und hier haengt an den Kuerzeln auch die Anzeige
+   (MemberListCell, VerlaufTab uebersetzen "m"/"w" von Hand). */
+export const GESCHLECHT_OPTS = [
+  { v: "m", l: "Männlich" },
+  { v: "w", l: "Weiblich" },
+  { v: "d", l: "Divers" },
+] as const;

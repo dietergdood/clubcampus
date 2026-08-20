@@ -5,8 +5,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Btn, Card, PhoneInput, useAddrSearch, usePlzLookup } from "../../../theme.ts";
 import { TI } from "../../../icons.tsx";
-import { updateMitglied } from "../../../domains/members/memberService.ts";
-import { formatDatum } from "../../../domains/person/personUtils.ts";
+import { updateMitglied, FELD_LABEL } from "../../../domains/members/memberService.ts";
+import { formatDatum, GESCHLECHT_OPTS } from "../../../domains/person/personUtils.ts";
 import { KANTON_OPTS } from "./datenpruefungUtils.ts";
 import type { Mitglied, Sb } from "../../../types.ts";
 import type { StatusMeldung } from "./DatenpruefungTab.tsx";
@@ -69,15 +69,34 @@ interface DatenpruefungMitgliedProps {
   sb: Sb;
   setPortalMsg: (msg: StatusMeldung | null) => void;
   onReload?: (() => void) | null;
+  /**
+   * Pflichtfeld-SCHLUESSEL aus der Mitgliedtyp-Konfiguration (nicht Labels).
+   *
+   * Solange eines davon leer ist, das dieses Formular erfassen kann, bleibt
+   * „Bestätigen" gesperrt. Bis zum 20.08.2026 gab es diese Prüfung nicht:
+   * `profil_geprueft_at` wurde bedingungslos gesetzt, und die ganze Matrix
+   * war in der Datenprüfung wirkungslos — ein grünes Häkchen ohne Deckung.
+   *
+   * Leer gelassen (Standard) verhält sich die Komponente wie zuvor. Das ist
+   * kein Schlupfloch, sondern der Ladezustand: wer die Konfiguration noch
+   * nicht hat, darf nichts verlangen.
+   */
+  pflichtfelder?: string[];
 }
 
-export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: DatenpruefungMitgliedProps) {
+export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload, pflichtfelder = [] }: DatenpruefungMitgliedProps) {
   const [form, setForm] = useState({
     vorname:      raw.vorname      || "",
     nachname:     raw.nachname     || "",
     geburtsdatum: raw.geburtsdatum || "",
     nationalitaet:raw.nationalitaet|| "",
     nationalitaet2:raw.nationalitaet2||"",
+    /* Ergaenzt am 20.08.2026: beide sind in der Mitgliedtyp-Konfiguration
+       als Pflicht einstellbar, hatten hier aber kein Eingabefeld. Ein Feld,
+       das Pflicht sein kann, braucht eines — sonst blockiert die Pruefung
+       ein Formular, das den Wert gar nicht erfassen kann. */
+    geschlecht:   raw.geschlecht   || "",
+    heimatort:    raw.heimatort    || "",
     strasse:      raw.strasse      || "",
     plz:          raw.plz          || "",
     ort:          raw.ort          || "",
@@ -103,6 +122,12 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
 
   async function speichernUndBestaetigen() {
     if (!sb) return;
+    /* Auch hier prüfen, nicht nur am Knopf: ein deaktivierter Knopf ist eine
+       Bequemlichkeit, keine Zusicherung. */
+    if (fehlendSelbst.length > 0) {
+      setPortalMsg({ ok: false, text: `Bitte zuerst ausfüllen: ${fehlendSelbst.map(k => FELD_LABEL[k] || k).join(", ")}` });
+      return;
+    }
     setSaving(true);
     const err = await updateMitglied(sb, raw.id, {
       vorname:       form.vorname       || undefined,
@@ -116,6 +141,8 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
       kanton:        form.kanton        || undefined,
       telefon:       form.telefon       || undefined,
       ahv_nr:        form.ahv_nr        || undefined,
+      geschlecht:    form.geschlecht    || undefined,
+      heimatort:     form.heimatort     || undefined,
       profil_geprueft_at: new Date().toISOString(),
     });
     setSaving(false);
@@ -126,6 +153,30 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
       if (onReload) setTimeout(onReload, 500);
     }
   }
+
+  /* ── Was fehlt, und wer kann es füllen? ─────────────────────────────────
+     Getrennt nach ZUSTÄNDIGKEIT, nicht nach Bearbeitbarkeit:
+
+       selbst      Personendaten, die dieses Formular erfasst → sperren
+       Verwaltung  alles andere (E-Mail ist hier schreibgeschützt, Spielerpass
+                   und Fairgate-ID gehören ohnehin dem Verein) → nur nennen
+
+     Ein Mitglied für Felder zu sperren, die es gar nicht ändern kann, wäre
+     eine Sackgasse — und ein Feld, das Pflicht sein kann, braucht ein
+     Eingabefeld (CLAUDE.md). Deshalb wurden am 20.08.2026 Geschlecht und
+     Heimatort ergänzt; E-Mail bleibt bewusst schreibgeschützt, weil sie der
+     Login-Name ist.
+
+     Gerechnet wird gegen `form`, nicht gegen `raw`: sonst bliebe der Knopf
+     gesperrt, bis jemand neu lädt. */
+  const fehlendSelbst = pflichtfelder.filter(
+    k => k in form && !String((form as Record<string, string>)[k] ?? "").trim());
+  const fehlendVerwaltung = pflichtfelder.filter(k => {
+    if (k in form) return false;
+    const w = (raw as unknown as Record<string, unknown>)[k];
+    return w === null || w === undefined || (typeof w === "string" && !w.trim());
+  });
+  const kannBestaetigen = fehlendSelbst.length === 0;
 
   const telefonFehlt = !form.telefon;
 
@@ -151,6 +202,24 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
         <div className="cc-text-bold cc-text-lg cc-mb-4">Daten prüfen und bestätigen</div>
         <div className="cc-text-sm cc-text-sub cc-mb-16">Prüfe deine Angaben — korrigiere falls nötig, dann bestätige.</div>
 
+        {fehlendSelbst.length > 0 && (
+          <div className="cc-mb-16" style={{padding:"10px 14px",borderRadius:10,background:"var(--warn-bg,#FFFBEB)",border:"0.5px solid var(--border)"}}>
+            <div className="cc-text-sm cc-text-bold">Noch auszufüllen</div>
+            <div className="cc-text-sm">{fehlendSelbst.map(k => FELD_LABEL[k] || k).join(" · ")}</div>
+          </div>
+        )}
+
+        {/* Getrennt genannt, nicht mit dem Obigen vermischt: hier kann das
+            Mitglied nichts tun, und ein Hinweis, den man nicht befolgen kann,
+            gehoert als solcher gekennzeichnet. */}
+        {fehlendVerwaltung.length > 0 && (
+          <div className="cc-mb-16" style={{padding:"10px 14px",borderRadius:10,border:"0.5px solid var(--border)"}}>
+            <div className="cc-text-sm cc-text-bold">Fehlt noch, kann hier aber nicht geändert werden</div>
+            <div className="cc-text-sm">{fehlendVerwaltung.map(k => FELD_LABEL[k] || k).join(" · ")}</div>
+            <div className="cc-text-xs cc-text-sub cc-mt-4">Bitte die Vereinsverwaltung um Ergänzung bitten. Das Bestätigen ist trotzdem möglich.</div>
+          </div>
+        )}
+
         <div className="cc-form-row">
           <div>
             <label className="cc-label">Vorname <span className="cc-label-req">*</span></label>
@@ -167,6 +236,17 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
           <div>
             <label className="cc-label">Nationalität</label>
             <input className="cc-input" value={form.nationalitaet} onChange={e => set("nationalitaet", e.target.value)} placeholder="z.B. Schweiz"/>
+          </div>
+          <div>
+            <label className="cc-label">Geschlecht</label>
+            <select className="cc-input" value={form.geschlecht} onChange={e => set("geschlecht", e.target.value)}>
+              <option value="">– wählen –</option>
+              {GESCHLECHT_OPTS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="cc-label">Heimatort</label>
+            <input className="cc-input" value={form.heimatort} onChange={e => set("heimatort", e.target.value)} placeholder="z.B. Herrliberg ZH"/>
           </div>
 
           {/* Adresse mit Autocomplete */}
@@ -245,7 +325,7 @@ export function DatenpruefungMitglied({ raw, sb, setPortalMsg, onReload }: Daten
         </div>
 
         <div className="cc-row cc-gap-8 cc-justify-end cc-mt-16">
-          <Btn variant="primary" onClick={speichernUndBestaetigen} disabled={saving}>
+          <Btn variant="primary" onClick={speichernUndBestaetigen} disabled={saving || !kannBestaetigen}>
             {saving ? "Speichert…" : "Speichern und bestätigen ✓"}
           </Btn>
         </div>

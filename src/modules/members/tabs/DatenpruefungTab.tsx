@@ -23,6 +23,10 @@ interface DatenpruefungTabProps {
   portalMsg?: StatusMeldung | null;
   setPortalMsg: (msg: StatusMeldung | null) => void;
   onReload?: (() => void) | null;
+  /** Pflichtfeld-Schlüssel des Mitgliedtyps — vom Profil durchgereicht.
+      Ohne sie verhält sich die Maske wie vor dem 20.08.2026 und verlangt
+      nichts (Ladezustand). */
+  pflichtfelder?: string[];
   /* Eltern-Sicht: eigener Elternkontakt + verknüpfte Kinder */
   elternkontakt?: {
     id: string;
@@ -37,7 +41,7 @@ interface DatenpruefungTabProps {
   kinder?: Mitglied[];
 }
 
-function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, elternkontakt, kinder }: DatenpruefungTabProps) {
+function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, pflichtfelder = [], elternkontakt, kinder }: DatenpruefungTabProps) {
 
   /* Eltern Self-Service */
   if (role === "eltern" && elternkontakt) {
@@ -57,6 +61,7 @@ function DatenpruefungTab({ raw, sb, role, portalMsg, setPortalMsg, onReload, el
     return (
       <DatenpruefungMitglied
         raw={raw} sb={sb}
+        pflichtfelder={pflichtfelder}
         setPortalMsg={setPortalMsg}
         onReload={onReload}
       />

@@ -84,7 +84,7 @@ function Portal({supabaseClient, slug}: PortalProps){
   /* Die eigene Person. Seit Etappe 4 stehen Vorname, Nachname und Telefon
      dort und nicht mehr an `benutzer`. Wird für die Datenprüfung eines
      Elternteils gebraucht, der keine Mitgliedschaft hat. */
-  const [eigenePerson,setEigenePerson]=useState<{vorname:string|null;nachname:string|null;telefon:string|null}|null>(null);
+  const [eigenePerson,setEigenePerson]=useState<{vorname:string|null;nachname:string|null;telefon:string|null;profil_geprueft_at:string|null}|null>(null);
   /* Globale Modul-Konfiguration (aus Portalverwaltung) */
   const [moduleAktiv,setModuleAktiv]=useState<ModuleAktiv>(()=>{
     try{const s=localStorage.getItem("cc-module-aktiv");return s?JSON.parse(s):{};}catch{return {};}
@@ -256,7 +256,7 @@ function Portal({supabaseClient, slug}: PortalProps){
     const pid=dbUser?.person_id;
     if(!sb||!pid){ setEigenePerson(null); return; }
     let abgebrochen=false;
-    sb.from("personen").select("vorname,nachname,telefon").eq("id",pid).maybeSingle()
+    sb.from("personen").select("vorname,nachname,telefon,profil_geprueft_at").eq("id",pid).maybeSingle()
       .then(({data})=>{ if(!abgebrochen) setEigenePerson(data ?? null); });
     return ()=>{ abgebrochen=true; };
   },[sb,dbUser?.person_id]);
@@ -451,13 +451,13 @@ function Portal({supabaseClient, slug}: PortalProps){
         }
         const meinMitglied = meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
         if (!meinMitglied) return <div className="cc-empty-state"><div className="cc-text-sub">Profil wird geladen…</div></div>;
-        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
+        return <DatenpruefungMitglied raw={meinMitglied} sb={sb} pflichtfelder={pflichtfelderFuer(meinMitglied.mitgliedtyp)} setPortalMsg={()=>{}} onReload={()=>{setMeinMitgliedDaten(null);loadDbMitglieder();setProfilOverlayDismissed(false);}}/>;
       }
       default:                  return <Dashboard role={role} setActive={setActive} sb={sb} vereinId={tenant?.id} dbTeams={dbTeams}/>;
     }
   };
 
-  const { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft } = getProfilCheck({
+  const { sollProfilPruefen, pflichtfelderFuer } = getProfilCheck({
     sb, dbUser, role, dbMitglieder, setDbUser, eigenePerson, feldkonfig,
   });
 
@@ -486,6 +486,7 @@ function Portal({supabaseClient, slug}: PortalProps){
                   : <DatenpruefungMitglied
                       raw={meinMitglied}
                       sb={sb}
+                      pflichtfelder={pflichtfelderFuer(meinMitglied.mitgliedtyp)}
                       setPortalMsg={()=>{}}
                       onReload={onReload}
                     />

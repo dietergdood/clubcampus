@@ -9,17 +9,14 @@
 import { useState } from "react";
 import { Card, InlineField } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { getLandName, LAENDER, formatDatum } from "../../domains/person/personUtils.ts";
+import { getLandName, LAENDER, formatDatum, GESCHLECHT_OPTS as GESCHLECHT_WERTE } from "../../domains/person/personUtils.ts";
 import type { UseInlineEditApi } from "../../domains/members/useInlineEdit.ts";
 import type { InlineFieldOption } from "../../shared/forms/InlineField.tsx";
 import type { Mitglied } from "../../types.ts";
 import type { Sichtbarkeit } from "./types.ts";
 
-const GESCHLECHT_OPTS: InlineFieldOption[] = [
-  { v: "m", l: "Männlich" },
-  { v: "w", l: "Weiblich" },
-  { v: "d", l: "Divers" },
-];
+/* Aus der kanonischen Liste, nur in die Form von InlineField gebracht. */
+const GESCHLECHT_OPTS: InlineFieldOption[] = GESCHLECHT_WERTE.map(o => ({ v: o.v, l: o.l }));
 
 const LAENDER_OPTS = LAENDER.map(l => ({ v: l.c, l: `${l.c} · ${l.n}` }));
 const LAENDER_OPTS2 = [{ v: "", l: "— keine —" }, ...LAENDER_OPTS];

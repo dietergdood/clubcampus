@@ -126,6 +126,18 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 ## Konventionen
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
+- **`cat > datei` truncatet ohne Rückfrage — für Dateien, die es vielleicht schon gibt, das Write-Werkzeug nehmen.** Es verweigert das Überschreiben einer ungelesenen Datei; die Shell tut es wortlos.
+
+  Am 20.08.2026 so passiert: `src/domains/app/__tests__/getProfilCheck.test.ts` existierte mit **13 Fällen** und wurde von einer neuen Fassung mit 12 ersetzt. Build grün, Typecheck grün, alle 38 Testdateien grün — **nichts hat gemeldet, dass dreizehn Prüfungen verschwunden sind.**
+
+  Aufgefallen ist es allein daran, dass die **Gesamtzahl der Tests um eins sank, obwohl zwölf dazukamen**. Deshalb lohnt es, die Zahl nach jedem Zulauf gegen die Erwartung zu halten — genau wie die Zählprobe beim Schema-Dump. Zum Nachrechnen:
+
+  ```bash
+  npx vitest list | sed 's/ > .*//' | sort | uniq -c   # Fälle pro Datei
+  ```
+
+  Wiederherstellen ging über `git show HEAD:pfad`, weil die Datei eingecheckt war. Dieselbe Familie wie der Regex-Schnitt vom 19.08.2026: **erst nachsehen, was da liegt, dann schreiben.**
+
 - **Wer eine Spalte anlegt, nennt im selben Auftrag die Stelle, die sie liest.** Gibt es die noch nicht, steht das ausdrücklich dabei — als offener Punkt mit Datum, nicht als stille Lücke.
 
   **Warum das teuer ist: nach aussen sieht es aus wie fehlende Daten, nicht wie fehlender Code.** Man sucht in der Datenbank, im Sync, beim Verband — nur nicht dort, wo es liegt. Eine Spalte, die niemand ausliest, ist von einer Spalte, die niemand befüllt, an der Oberfläche nicht zu unterscheiden; beide zeigen ein leeres Feld.

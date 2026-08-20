@@ -1,3 +1,14 @@
+/* ⚠ Diese Datei wurde am 20.08.2026 versehentlich mit `cat >` ueberschrieben
+   und aus `git show HEAD:` wiederhergestellt. Die 13 bestehenden Faelle
+   stehen unveraendert darunter; die neuen zu `pflichtfelderFuer` und
+   `sollProfilPruefen` haengen am Ende.
+
+   Lehre: `cat > datei` truncatet ohne Rueckfrage. Fuer eine Datei, die es
+   vielleicht schon gibt, gehoert das Write-Werkzeug benutzt — es verweigert
+   das Ueberschreiben einer ungelesenen Datei. Dasselbe Muster wie der
+   Regex-Schnitt vom 19.08.2026: erst nachsehen, was da liegt, dann
+   schreiben. Aufgefallen ist es nur, weil die Gesamtzahl der Tests um EINS
+   sank, obwohl zwoelf dazukamen. */
 import { describe, it, expect } from "vitest";
 import { getProfilCheck } from "../getProfilCheck.ts";
 
@@ -139,5 +150,120 @@ describe("getProfilFehlend", () => {
       vorname: "A", nachname: "B", mitgliedtyp: "Passivmitglied", telefon: "   ",
     });
     expect(getProfilFehlend()).toEqual(["Telefon"]);
+  });
+});
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Angeschlossen am 20.08.2026 — bis dahin war die Mechanik hier
+   wirkungslos: getProfilFehlend() wurde nie aufgerufen, und die
+   Masken setzten profil_geprueft_at bedingungslos.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Eigene Attrappe: die Faelle darunter brauchen eine Konfiguration mit
+   „freiwillig“ und „aus“, die es oben nicht gibt. Bewusst neben `baue()`
+   und nicht statt dessen — die bestehenden 13 Faelle sollen unveraendert
+   bleiben. */
+const KONFIG = [
+  { mitgliedtyp: "Aktivmitglied",  schluessel: "telefon",   modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied",  schluessel: "plz",       modus: "pflicht" },
+  { mitgliedtyp: "Aktivmitglied",  schluessel: "heimatort", modus: "freiwillig" },
+  { mitgliedtyp: "Passivmitglied", schluessel: "telefon",   modus: "aus" },
+] as never;
+
+const basis = (over: Record<string, unknown> = {}) => ({
+  sb: null as never,
+  dbUser: { id: "u-1", mitglied_id: 7, person_id: "p-1" } as never,
+  role: "spieler" as never,
+  dbMitglieder: [{ id: 7, mitgliedtyp: "Aktivmitglied", vorname: "A", nachname: "B" }] as never,
+  setDbUser: (() => {}) as never,
+  feldkonfig: KONFIG,
+  ...over,
+});
+
+describe("pflichtfelderFuer — dieselbe Quelle wie der Hinweis", () => {
+  it("liefert Schlüssel, nicht Labels", () => {
+    /* Die Maske rechnet gegen ihr eigenes Formular; mit Labels ginge das
+       nicht. Zwei getrennte Listen wären der Fehler: dann sperrte die Maske
+       ein Feld, das der Hinweis nicht nennt. */
+    const { pflichtfelderFuer } = getProfilCheck(basis());
+    expect(pflichtfelderFuer("Aktivmitglied")).toEqual(
+      expect.arrayContaining(["vorname", "nachname", "telefon", "plz"]));
+  });
+
+  it("„freiwillig“ steht nicht drin", () => {
+    const { pflichtfelderFuer } = getProfilCheck(basis());
+    expect(pflichtfelderFuer("Aktivmitglied")).not.toContain("heimatort");
+  });
+
+  it("„aus“ ebenso wenig — was es nicht gibt, kann nicht Pflicht sein", () => {
+    const { pflichtfelderFuer } = getProfilCheck(basis());
+    expect(pflichtfelderFuer("Passivmitglied")).not.toContain("telefon");
+  });
+
+  it("vorname und nachname sind immer dabei", () => {
+    /* Sie stehen in mitglieder NOT NULL und deshalb in IMMER_PFLICHT_KEYS,
+       nicht in der Matrix. */
+    const { pflichtfelderFuer } = getProfilCheck(basis());
+    expect(pflichtfelderFuer("Passivmitglied")).toEqual(
+      expect.arrayContaining(["vorname", "nachname"]));
+  });
+
+  it("⚠ ohne Konfiguration wird NICHTS verlangt", () => {
+    /* Das ist kein Schlupfloch, sondern der Ladezustand: wer die
+       Konfiguration noch nicht hat, darf nichts verlangen — sonst blockiert
+       ein leerer Zustand jede Bestätigung. */
+    const { pflichtfelderFuer } = getProfilCheck(basis({ feldkonfig: [] }));
+    expect(pflichtfelderFuer("Aktivmitglied")).toEqual(["vorname", "nachname"]);
+  });
+});
+
+describe("getProfilFehlend — Labels für die Anzeige", () => {
+  it("nennt ein leeres Pflichtfeld", () => {
+    const { getProfilFehlend } = getProfilCheck(basis());
+    expect(getProfilFehlend()).toContain("Telefon");
+  });
+
+  it("nennt es nicht mehr, sobald es gefüllt ist", () => {
+    const { getProfilFehlend } = getProfilCheck(basis({
+      dbMitglieder: [{ id: 7, mitgliedtyp: "Aktivmitglied", vorname: "A", nachname: "B",
+                       telefon: "+41 79 000 00 00", plz: "8704" }] as never,
+    }));
+    expect(getProfilFehlend()).toEqual([]);
+  });
+
+  it("Leerzeichen zählen als leer", () => {
+    const { getProfilFehlend } = getProfilCheck(basis({
+      dbMitglieder: [{ id: 7, mitgliedtyp: "Aktivmitglied", vorname: "A", nachname: "B",
+                       telefon: "   ", plz: "8704" }] as never,
+    }));
+    expect(getProfilFehlend()).toContain("Telefon");
+  });
+});
+
+describe("sollProfilPruefen — nur noch die Person", () => {
+  it("nie bestätigt → prüfen", () => {
+    const { sollProfilPruefen } = getProfilCheck(basis());
+    expect(sollProfilPruefen()).toBe(true);
+  });
+
+  it("frisch bestätigt → nicht prüfen", () => {
+    const { sollProfilPruefen } = getProfilCheck(basis({
+      dbMitglieder: [{ id: 7, mitgliedtyp: "Aktivmitglied", profil_geprueft_at: new Date().toISOString() }] as never,
+    }));
+    expect(sollProfilPruefen()).toBe(false);
+  });
+
+  it("älter als sechs Monate → wieder prüfen", () => {
+    const alt = new Date(); alt.setMonth(alt.getMonth() - 7);
+    const { sollProfilPruefen } = getProfilCheck(basis({
+      dbMitglieder: [{ id: 7, mitgliedtyp: "Aktivmitglied", profil_geprueft_at: alt.toISOString() }] as never,
+    }));
+    expect(sollProfilPruefen()).toBe(true);
+  });
+
+  it("Verwaltung wird nicht gefragt", () => {
+    const { sollProfilPruefen } = getProfilCheck(basis({ role: "administrator" as never }));
+    expect(sollProfilPruefen()).toBe(false);
   });
 });

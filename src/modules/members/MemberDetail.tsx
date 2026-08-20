@@ -28,7 +28,7 @@ import { DatenpruefungTab } from "./tabs/DatenpruefungTab.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
 import { VerlaufTab } from "./tabs/VerlaufTab.tsx";
 import { getSichtbarkeit } from "./memberUtils.tsx";
-import { getFeldkonfig, istSichtbar } from "../../domains/members/feldkonfig.ts";
+import { getFeldkonfig, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, SetState } from "../../types.ts";
 import type { FunktionMitGruppe } from "../../shared/person/types.ts";
@@ -309,6 +309,10 @@ function MemberDetail({
         <DatenpruefungTab
           raw={raw} sb={sb}
           role={role}
+          /* Aus derselben Quelle wie der Hinweis im Portal: die
+             Mitgliedtyp-Konfiguration. `konfig` steht hier schon, weil die
+             Tab-Sichtbarkeit daran haengt. */
+          pflichtfelder={[...IMMER_PFLICHT_KEYS, ...pflichtfelderAus(konfig)]}
           portalMsg={portalMsg} setPortalMsg={setPortalMsg}
           onReload={onReload}
           elternkontakt={role === "eltern" ? (eltern?.[0]?.id ? {

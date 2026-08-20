@@ -35,6 +35,7 @@ import type { Account, Mitgliedtyp, Sb } from "../../types.ts";
 import { getFeldkonfig, istPflicht as istPflichtKonfig, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import { ableitUndSaveRolle } from "../../domains/roles/roleUtils.ts";
+import { GESCHLECHT_OPTS } from "../../domains/person/personUtils.ts";
 import { suchePersonen, macheZuMitglied } from "../../domains/members/supporterService.ts";
 import type { PersonTreffer } from "../../domains/members/supporterService.ts";
 import { NeuesMitgliedElternSektion, speichereEltern } from "./NeuesMitgliedElternSektion.tsx";
@@ -60,12 +61,6 @@ interface MitgliedFormular {
   heimatort?: string;
 }
 
-
-const GESCHLECHT_OPTS = [
-  { v: "m", l: "Männlich" },
-  { v: "w", l: "Weiblich" },
-  { v: "d", l: "Divers" },
-];
 
 
 interface NeuesMitgliedModalProps {

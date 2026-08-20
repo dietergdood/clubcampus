@@ -18,11 +18,22 @@
    der Sync, eine `js_nr` hat ein Juniorenspieler nicht, und `spielerpass`
    galt auch für Trainer.
 
-   ⚠ Ausgewertet wird das hier derzeit NICHT: getProfilFehlend() wird in
-   clubcampus.tsx destrukturiert und nie aufgerufen, und die beiden
-   Datenprüfungs-Komponenten setzen profil_geprueft_at bedingungslos.
-   Anschliessen ist entschieden, siehe CLAUDE.md → "Die Pflichtfeld-Matrizen
-   wirken in der Datenprüfung gar nicht".
+   ✅ ANGESCHLOSSEN am 20.08.2026. Bis dahin wurde nichts davon ausgewertet:
+   getProfilFehlend() war in clubcampus.tsx destrukturiert und nie
+   aufgerufen, und die Datenprüfungs-Masken setzten profil_geprueft_at
+   bedingungslos — ein grünes Häkchen ohne Deckung. „Ausstehend" hiess
+   „noch nie bestätigt", nicht „unvollständig".
+
+   Jetzt gilt: `pflichtfelderFuer()` reicht die Schlüssel an die Maske, die
+   gegen ihr eigenes Formular rechnet und den Bestätigen-Knopf sperrt,
+   solange etwas fehlt, das sie selbst erfassen kann. Was nur die Verwaltung
+   ändern kann (E-Mail, Spielerpass, Fairgate-ID), wird genannt und sperrt
+   nicht — sonst wäre es eine Sackgasse.
+
+   ⚠ NOCH OFFEN: die Elternseite. `kinderVonElternteil()` gibt weiterhin
+   eine leere Liste zurück (siehe dort), damit bleibt DatenpruefungEltern
+   ohne Prüfung. Eigener Schritt, weil es eine Verhaltensänderung für echte
+   Nutzer ist.
    ═══════════════════════════════════════════════════════════════ */
 import {
   IMMER_PFLICHT_KEYS,
@@ -31,6 +42,7 @@ import {
   type FeldkonfigZeile,
 } from '../members/feldkonfig.ts';
 import { FELD_LABEL, updateMitglied } from '../members/memberService.ts';
+import { updatePerson } from '../person/personService.ts';
 import type { Sb, DbUser, Mitglied, Rolle, SetState } from '../../types.js';
 
 interface GetProfilCheckProps {
@@ -40,8 +52,15 @@ interface GetProfilCheckProps {
   dbMitglieder: Mitglied[];
   setDbUser: SetState<DbUser | null>;
   /** Die eigene Person. Seit Etappe 4 stehen Vorname, Nachname und Telefon
-      dort und nicht mehr an `benutzer` — die Spalten sind gestrichen. */
-  eigenePerson?: { vorname?: string | null; nachname?: string | null; telefon?: string | null } | null;
+      dort und nicht mehr an `benutzer` — die Spalten sind gestrichen. Seit
+      20.08.2026 auch `profil_geprueft_at`: es gehoert zu PERSON_FELDER, und
+      die Altspalte an `benutzer` ist entfallen. */
+  eigenePerson?: {
+    vorname?: string | null;
+    nachname?: string | null;
+    telefon?: string | null;
+    profil_geprueft_at?: string | null;
+  } | null;
   /** Feldkonfiguration aus der Portalverwaltung. Fehlt sie, wird nichts
       verlangt — bewusst: ein leerer Ladezustand darf keinen Hinweis auslösen. */
   feldkonfig?: FeldkonfigZeile[];
@@ -132,7 +151,12 @@ export function getProfilCheck({
     const raw = dbMitglieder.find(m => m.id === dbUser.mitglied_id) || null;
     const sechsMonate = new Date();
     sechsMonate.setMonth(sechsMonate.getMonth() - 6);
-    const eigenesGeprueft = raw?.profil_geprueft_at || dbUser.profil_geprueft_at;
+    /* Nur noch die Person. Die Altspalte `benutzer.profil_geprueft_at` stand
+       hier als Rueckfall und verdeckte damit genau die Abweichung, die es
+       aufzudecken galt: wer ueber den Overlay bestaetigte, schrieb dorthin,
+       die Liste las `personen` — und sollProfilPruefen() sagte trotzdem
+       „geprueft". */
+    const eigenesGeprueft = raw?.profil_geprueft_at ?? eigenePerson?.profil_geprueft_at ?? null;
     if (!eigenesGeprueft) return true;
     if (new Date(eigenesGeprueft) < sechsMonate) return true;
     if (role === 'eltern') {
@@ -145,10 +169,32 @@ export function getProfilCheck({
     return false;
   }
 
+  /**
+   * Bestätigt die Datenprüfung — für die eigene Person und, bei Eltern, für
+   * die Kinder.
+   *
+   * ⚠ SCHRIEB BIS ZUM 20.08.2026 NACH `benutzer`. `profil_geprueft_at` gehört
+   * aber zur PERSON (`PERSON_FELDER`), und `DatenpruefungMitglied` schrieb
+   * über `updateMitglied()` längst dorthin. Zwei Schreiber, zwei Tabellen,
+   * dieselbe Aussage — und `sollProfilPruefen()` las beide mit Rückfall, was
+   * die Abweichung verdeckte.
+   *
+   * Wirkung des Fehlers: wer über den Overlay-Weg bestätigte, sah in der
+   * Mitgliederliste weiter „Ausstehend" — die liest `personen`. Dieselbe
+   * Doppelung wie `hat_portal_zugang`, in Etappe 6c durchgerutscht.
+   * `benutzer.profil_geprueft_at` fällt mit migration_profil_geprueft.sql.
+   */
   async function markiereProfilGeprueft(): Promise<void> {
     if (!sb || !dbUser) return;
     const now = new Date().toISOString();
-    await sb.from('benutzer').update({ profil_geprueft_at: now }).eq('id', dbUser.id);
+
+    /* Die eigene Person. Über updatePerson und nicht über updateMitglied:
+       ein Elternteil hat keine Mitgliedschaft, über die man sie fände. */
+    if (dbUser.person_id) {
+      await updatePerson(sb as never, dbUser.person_id, { profil_geprueft_at: now });
+    } else {
+      console.warn('markiereProfilGeprueft: benutzer ohne person_id — nichts geschrieben.', dbUser.id);
+    }
     if (role === 'eltern') {
       const kinder = kinderVonElternteil();
       /* profil_geprueft_at gehoert zur Person (PERSON_FELDER) — seit
@@ -161,5 +207,25 @@ export function getProfilCheck({
     setDbUser(u => u ? { ...u, profil_geprueft_at: now } : u);
   }
 
-  return { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft };
+  /**
+   * Pflichtfeld-SCHLUESSEL eines Mitglieds — dieselbe Quelle wie
+   * `getProfilFehlend()`, nur unausgewertet.
+   *
+   * `getProfilFehlend()` liefert Labels und rechnet gegen die geladene
+   * DB-Zeile; die Datenprüfungs-Maske braucht die Schlüssel, um gegen ihr
+   * eigenes Formular zu rechnen — sonst bliebe der Knopf gesperrt, bis
+   * jemand neu lädt.
+   *
+   * ⚠ Beide muessen aus derselben Quelle kommen. Zwei Listen, die dasselbe
+   * behaupten, laufen auseinander — und dann sperrt die Maske ein Feld, das
+   * der Hinweis nicht nennt.
+   */
+  function pflichtfelderFuer(mitgliedtyp: string | null | undefined): string[] {
+    return [
+      ...IMMER_PFLICHT_KEYS,
+      ...pflichtfelderAus(getFeldkonfig(mitgliedtyp, feldkonfig)),
+    ];
+  }
+
+  return { getProfilFehlend, sollProfilPruefen, markiereProfilGeprueft, pflichtfelderFuer };
 }
