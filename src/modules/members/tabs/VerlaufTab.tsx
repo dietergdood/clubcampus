@@ -114,11 +114,20 @@ interface VerlaufTabProps {
    * trägt `tab_verlauf` das Merkmal `nur_mitgliedschaft`. Den Bezugspunkt
    * auf `person_id` umzustellen ist eine eigene Migration mit Datenbestand.
    */
-  mitgliedId: number;
+  /**
+   * Die PERSON, nicht die Mitgliedschaft.
+   *
+   * ⚠ Seit `migration_verlauf_person.sql` (21.08.2026) haengt der Verlauf an
+   * der Person und ueberlebt Austritt und Rueckkehr. Gezeigt wird alles,
+   * ungefiltert ueber alle Mitgliedschaften — genau das ist der Zweck
+   * (Entscheidung Didi, 21.08.2026). Wer austritt und wiederkommt, sieht
+   * auch die Eintraege von davor.
+   */
+  personId: string;
   sb: Sb;
 }
 
-function VerlaufTab({ mitgliedId, raw, sb }: VerlaufTabProps) {
+function VerlaufTab({ personId, raw, sb }: VerlaufTabProps) {
   const [eintraege, setEintraege] = useState<Eintrag[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -126,8 +135,8 @@ function VerlaufTab({ mitgliedId, raw, sb }: VerlaufTabProps) {
     if (!sb) return;
     setLoading(true);
     Promise.all([
-      fetchAenderungen(sb, mitgliedId),
-      fetchAktivitaeten(sb, mitgliedId),
+      fetchAenderungen(sb, personId),
+      fetchAktivitaeten(sb, personId),
     ]).then(([aenderungen, aktivitaeten]) => {
       const alle: Eintrag[] = [
         ...aenderungen.map(a => ({ ...a, _typ: "aenderung" as const })),
@@ -136,7 +145,7 @@ function VerlaufTab({ mitgliedId, raw, sb }: VerlaufTabProps) {
       setEintraege(alle);
       setLoading(false);
     });
-  }, [mitgliedId]);
+  }, [personId]);
 
   const gruppen = gruppiereEintraege(eintraege);
 

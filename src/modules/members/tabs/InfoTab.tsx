@@ -112,8 +112,8 @@ function InfoTab({ mitgliedId,
       const alt = new Set(raw.funktionen || []);
       const neu = new Set(funktionen);
       const von = account?.name||account?.email||"Administrator";
-      for (const f of funktionen.filter(f=>!alt.has(f))) if (mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion hinzugefügt: ${f}`, "funktionen", f, von);
-      for (const f of (raw.funktionen||[]).filter(f=>!neu.has(f))) if (mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion entfernt: ${f}`, "funktionen", f, von);
+      for (const f of funktionen.filter(f=>!alt.has(f))) if (mitgliedId != null) logAktivitaet(sb, { personId: raw.person_id, mitgliedId }, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion hinzugefügt: ${f}`, "funktionen", f, von);
+      for (const f of (raw.funktionen||[]).filter(f=>!neu.has(f))) if (mitgliedId != null) logAktivitaet(sb, { personId: raw.person_id, mitgliedId }, vereinId, AKTIVITAET_TYP.FUNKTION_GEAENDERT, `Vereinsfunktion entfernt: ${f}`, "funktionen", f, von);
     }
     reloadMemberFull();
   }
@@ -263,10 +263,18 @@ function InfoTab({ mitgliedId,
                 </button>
               )}
             </div>
-            {/* Notizen haengen am Mitglied (`mitglieder_notizen.mitglied_id`
-                NOT NULL). `notizen` traegt `nur_mitgliedschaft`, der Block
-                erscheint also ohne Mitgliedschaft gar nicht. */}
-            {mitgliedId != null && <NotizenVerlauf
+            {/* ⚠ Notizen haengen seit dem 21.08.2026 an der PERSON, nicht
+                mehr an der Mitgliedschaft. Sie galten als
+                `nur_mitgliedschaft`, weil `mitglieder_notizen.mitglied_id`
+                NOT NULL war — eine technische Grenze, als fachliche Regel
+                behandelt. Ein Verein will ueber einen Supporter oder ein
+                Elternteil sehr wohl etwas notieren koennen.
+
+                Deshalb auch kein `mitgliedId != null` mehr davor: der Block
+                erscheint jetzt fuer jede Person, und ob es ihn gibt,
+                entscheidet allein die Feldkonfiguration. */}
+            <NotizenVerlauf
+              personId={raw.person_id}
               mitgliedId={mitgliedId}
               canEdit={canEdit}
               sb={sb}
@@ -274,7 +282,7 @@ function InfoTab({ mitgliedId,
               onCount={setNotizenCount}
               vereinId={vereinId}
               onAddRef={notizAddRef}
-            />}
+            />
           </Card>
         )}
       </div>

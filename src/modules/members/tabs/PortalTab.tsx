@@ -141,7 +141,7 @@ function PortalTab({ mitgliedId,
       const von = account?.name||account?.email||"Administrator";
       /* Kein Verlauf ohne Mitgliedschaft — mitglieder_aenderungen führt
        mitglied_id NOT NULL. Entfällt, statt zu scheitern. */
-    if (mitgliedId != null) logAenderung(sb, mitgliedId, vereinId, "rolle", alterRolle, rolleVal||null, von);
+    if (mitgliedId != null) logAenderung(sb, { personId: raw.person_id, mitgliedId }, vereinId, "rolle", alterRolle, rolleVal||null, von);
     }
     setRolleSaving(false);
     setRolleEditing(false);

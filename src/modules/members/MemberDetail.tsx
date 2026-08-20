@@ -252,7 +252,7 @@ function MemberDetail({
        auf „Aktiv" stehen, waehrend darunter „Zugang deaktiviert" gemeldet wird.
        Solange das Abschalten nichts bewirkte, fiel der Widerspruch nicht auf. */
     setBenutzer((prev: PortalBenutzer | null) => prev ? { ...prev, aktiv: false } : prev);
-    if (vereinId && mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.PORTAL_DEAKTIVIERT, "Portal-Zugang deaktiviert", null, null, account?.name||account?.email||"Administrator");
+    if (vereinId && mitgliedId != null) logAktivitaet(sb, { personId, mitgliedId }, vereinId, AKTIVITAET_TYP.PORTAL_DEAKTIVIERT, "Portal-Zugang deaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang deaktiviert" });
     setPortalLoading(false);
     if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
@@ -266,7 +266,7 @@ function MemberDetail({
        angefasst, also gibt es auch nichts wiederherzustellen. */
     await portalZugangReaktivieren(sb, personId);
     setBenutzer((prev: PortalBenutzer | null) => prev ? { ...prev, aktiv: true } : prev);
-    if (vereinId && mitgliedId != null) logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.PORTAL_REAKTIVIERT, "Portal-Zugang reaktiviert", null, null, account?.name||account?.email||"Administrator");
+    if (vereinId && mitgliedId != null) logAktivitaet(sb, { personId, mitgliedId }, vereinId, AKTIVITAET_TYP.PORTAL_REAKTIVIERT, "Portal-Zugang reaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang reaktiviert ✓" });
     setPortalLoading(false);
     if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
@@ -371,7 +371,7 @@ function MemberDetail({
       )}
 
       {sichtbarerTab === "verlauf" && (
-        <VerlaufTab raw={raw} sb={sb} mitgliedId={mitgliedId!} key={`verlauf-${mitgliedId}-${raw.aktiv}-${raw.updated_at}`}/>
+        <VerlaufTab raw={raw} sb={sb} personId={personId} key={`verlauf-${personId}-${raw.aktiv}-${raw.updated_at}`}/>
       )}
 
       {(sichtbarerTab === "stats" || sichtbarerTab === "comments" || sichtbarerTab === "ratings") && (

@@ -226,7 +226,11 @@ export const FELD_REGISTRY: readonly RegistryEintrag[] = [
   /* Bereiche ohne Einzelfelder */
   { schluessel: "teams",          bereich: "teams",        modi: AN_AUS, nur_mitgliedschaft: true },
   { schluessel: "funktionen",     bereich: "funktionen",   modi: AN_AUS },
-  { schluessel: "notizen",        bereich: "notizen",      modi: AN_AUS, nur_mitgliedschaft: true,
+  /* ⚠ Kein `nur_mitgliedschaft` mehr (21.08.2026). Notizen hingen daran, weil
+     `mitglieder_notizen.mitglied_id` NOT NULL war — eine technische Grenze,
+     als fachliche Regel behandelt. Seit `migration_verlauf_person.sql` haengt
+     die Notiz an der Person. */
+  { schluessel: "notizen",        bereich: "notizen",      modi: AN_AUS,
     label: "Notizen" },
 
   /* Profil-Tabs. "Profil" fehlt bewusst: ohne ihn bliebe nichts. */
@@ -234,7 +238,10 @@ export const FELD_REGISTRY: readonly RegistryEintrag[] = [
   { schluessel: "tab_stats",         bereich: "tabs", modi: AN_AUS, label: "Statistik", nur_mitgliedschaft: true },
   { schluessel: "tab_portal",        bereich: "tabs", modi: AN_AUS, label: "Portal-Zugang" },
   { schluessel: "tab_datenpruefung", bereich: "tabs", modi: AN_AUS, label: "Datenprüfung" },
-  { schluessel: "tab_verlauf",       bereich: "tabs", modi: AN_AUS, label: "Verlauf", nur_mitgliedschaft: true },
+  /* ⚠ Ebenfalls frei seit dem 21.08.2026. Notizen an der Person und den
+     Verlauf weiterhin an der Mitgliedschaft waere auf derselben Seite ein
+     Widerspruch. */
+  { schluessel: "tab_verlauf",       bereich: "tabs", modi: AN_AUS, label: "Verlauf" },
 ];
 
 /** Beschriftung eines Schlüssels. FELD_LABEL bleibt die Quelle für alles,

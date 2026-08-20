@@ -1999,8 +1999,9 @@ export type Database = {
           geaendert_at: string
           geaendert_von: string | null
           id: string
-          mitglied_id: number
+          mitglied_id: number | null
           neuer_wert: string | null
+          person_id: string
           verein_id: string
         }
         Insert: {
@@ -2009,8 +2010,9 @@ export type Database = {
           geaendert_at?: string
           geaendert_von?: string | null
           id?: string
-          mitglied_id: number
+          mitglied_id?: number | null
           neuer_wert?: string | null
+          person_id: string
           verein_id: string
         }
         Update: {
@@ -2019,8 +2021,9 @@ export type Database = {
           geaendert_at?: string
           geaendert_von?: string | null
           id?: string
-          mitglied_id?: number
+          mitglied_id?: number | null
           neuer_wert?: string | null
+          person_id?: string
           verein_id?: string
         }
         Relationships: [
@@ -2029,6 +2032,13 @@ export type Database = {
             columns: ["mitglied_id"]
             isOneToOne: false
             referencedRelation: "mitglieder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mitglieder_aenderungen_person_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
             referencedColumns: ["id"]
           },
           {
@@ -2047,7 +2057,8 @@ export type Database = {
           geaendert_at: string
           geaendert_von: string | null
           id: string
-          mitglied_id: number
+          mitglied_id: number | null
+          person_id: string
           typ: string
           verein_id: string
           wert: string | null
@@ -2058,7 +2069,8 @@ export type Database = {
           geaendert_at?: string
           geaendert_von?: string | null
           id?: string
-          mitglied_id: number
+          mitglied_id?: number | null
+          person_id: string
           typ: string
           verein_id: string
           wert?: string | null
@@ -2069,7 +2081,8 @@ export type Database = {
           geaendert_at?: string
           geaendert_von?: string | null
           id?: string
-          mitglied_id?: number
+          mitglied_id?: number | null
+          person_id?: string
           typ?: string
           verein_id?: string
           wert?: string | null
@@ -2080,6 +2093,13 @@ export type Database = {
             columns: ["mitglied_id"]
             isOneToOne: false
             referencedRelation: "mitglieder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mitglieder_aktivitaeten_person_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
             referencedColumns: ["id"]
           },
           {
@@ -2166,7 +2186,8 @@ export type Database = {
           autor_name: string | null
           created_at: string | null
           id: number
-          mitglied_id: number
+          mitglied_id: number | null
+          person_id: string
           text: string
           updated_at: string | null
           verein_id: string
@@ -2176,7 +2197,8 @@ export type Database = {
           autor_name?: string | null
           created_at?: string | null
           id?: number
-          mitglied_id: number
+          mitglied_id?: number | null
+          person_id: string
           text: string
           updated_at?: string | null
           verein_id: string
@@ -2186,7 +2208,8 @@ export type Database = {
           autor_name?: string | null
           created_at?: string | null
           id?: number
-          mitglied_id?: number
+          mitglied_id?: number | null
+          person_id?: string
           text?: string
           updated_at?: string | null
           verein_id?: string
@@ -2200,17 +2223,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "mitglieder_notizen_autor_id_fkey"
-            columns: ["autor_id"]
-            isOneToOne: false
-            referencedRelation: "benutzer"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "mitglieder_notizen_mitglied_id_fkey"
             columns: ["mitglied_id"]
             isOneToOne: false
             referencedRelation: "mitglieder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mitglieder_notizen_person_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
             referencedColumns: ["id"]
           },
           {

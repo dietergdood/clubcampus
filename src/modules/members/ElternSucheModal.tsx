@@ -62,7 +62,7 @@ export function ElternSucheModal({ mitgliedId, open, onClose, sb, vereinId, geae
     for (const e of treffer) {
       await linkKind(sb, e.id, mitgliedId, vereinId, false);
       const name = vollname(e);
-      logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
+      logAktivitaet(sb, { mitgliedId }, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
     }
     setSaving(false);
     onVerknuepft();
@@ -88,7 +88,7 @@ export function ElternSucheModal({ mitgliedId, open, onClose, sb, vereinId, geae
     }, vereinId);
     setSaving(false);
     if (error) { setNeuFehler(error.message); return; }
-    logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
+    logAktivitaet(sb, { mitgliedId }, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT, `Elternkontakt hinzugefügt: ${name}`, "elternkontakte", name, geaendertVon);
     onVerknuepft();
     onClose();
   }

@@ -156,7 +156,7 @@ describe('PersonTeams', () => {
       const entfernenBtns = screen.getAllByTestId('menu-Entfernen');
       fireEvent.click(entfernenBtns[0]);
       await waitFor(() => expect(logAktivitaet).toHaveBeenCalledWith(
-        expect.anything(), 1, 'verein-123', 'team_entfernt',
+        expect.anything(), expect.objectContaining({ mitgliedId: 1 }), 'verein-123', 'team_entfernt',
         expect.stringContaining('1. Mannschaft'),
         expect.anything(), expect.anything(), expect.anything()
       ));

@@ -422,7 +422,7 @@ function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGe
         for(const f of PFLICHT_FELDER.map(pf=>pf.k)) {
           const alt = (kind as unknown as Record<string, unknown>)[f] ?? null;
           const neu = form[f] || null;
-          if(alt !== neu) logAenderung(sb, kindId, vereinId, f, alt as string|null, neu, geaendertVon);
+          if(alt !== neu) logAenderung(sb, { mitgliedId: kindId }, vereinId, f, alt as string|null, neu, geaendertVon);
         }
       }
       setMsg({ok:true,text:"Gespeichert ✓"});

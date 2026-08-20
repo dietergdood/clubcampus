@@ -115,11 +115,20 @@ export async function deleteAnsicht(sb: SbClient, id: string): Promise<Postgrest
 
 /* ── Notizen ── */
 
-export async function fetchNotizen(sb: SbClient, mitgliedId: number) {
-  const { data } = await sb.from("mitglieder_notizen")
+/**
+ * Notizen einer PERSON — ueber alle Mitgliedschaften hinweg.
+ *
+ * ⚠ Nicht mehr `.eq("mitglied_id", …)`. Notizen galten bis zum 21.08.2026 als
+ * `nur_mitgliedschaft`, weil die Spalte NOT NULL war — eine technische Grenze,
+ * als fachliche Regel behandelt. Ein Verein will ueber einen Supporter oder
+ * ein Elternteil sehr wohl etwas notieren koennen.
+ */
+export async function fetchNotizen(sb: SbClient, personId: string) {
+  const { data, error } = await sb.from("mitglieder_notizen")
     .select("*")
-    .eq("mitglied_id", mitgliedId)
+    .eq("person_id", personId)
     .order("created_at", { ascending: false });
+  if (error) console.error("fetchNotizen error:", error);
   return data || [];
 }
 
@@ -450,9 +459,68 @@ export const FELD_LABEL: Record<string, string> = {
    oder Arrays weiter, deshalb bewusst weit gefasst. */
 export type LogWert = string | number | boolean | null | undefined;
 
+/**
+ * Woran ein Verlaufseintrag haengt.
+ *
+ * ⚠ DIE PERSON IST PFLICHT, DIE MITGLIEDSCHAFT IST KONTEXT.
+ *
+ * Seit `migration_verlauf_person.sql` (21.08.2026) fuehren
+ * `mitglieder_aenderungen` und `mitglieder_aktivitaeten` `person_id NOT NULL`
+ * und `mitglied_id` nullable mit `ON DELETE SET NULL`. Der Verlauf gehoert der
+ * PERSON und ueberlebt Austritt und Rueckkehr; die Mitgliedschaft sagt nur,
+ * in welchem Zusammenhang es passiert ist.
+ *
+ * Als eigener Typ und nicht als zwei Parameter: so kann keine Aufrufstelle
+ * die Person weglassen, ohne dass der Compiler es sagt. Ein `mitgliedId`
+ * allein war bis heute die Signatur — und genau deshalb hing der ganze
+ * Verlauf an einer Zeile, die beim Loeschen der Mitgliedschaft verschwand.
+ */
+export type LogBezug =
+  /** Der Normalfall: die Person ist bekannt, die Mitgliedschaft optional. */
+  | { personId: string; mitgliedId?: number | string | null }
+  /** Der Rueckfall: nur die Mitgliedschaft. Die Person wird nachgeschlagen. */
+  | { mitgliedId: number | string; personId?: undefined };
+
+/**
+ * Die zwei Bezugsspalten fuer einen Verlaufseintrag.
+ *
+ * ⚠ Wo `personId` fehlt, wird sie NACHGESCHLAGEN — sichtbar, an einer
+ * Stelle, mit Fehlerpfad. Das ist bewusst KEIN Datenbank-Trigger: der waere
+ * robuster und zugleich unsichtbar, und man saehe im Code nicht mehr, wer
+ * die Wahrheit setzt. Hier steht die Abfrage da, wo sie passiert.
+ *
+ * Aufrufstellen, die die Person ohnehin haben, geben sie mit und sparen die
+ * Abfrage. Das ist der Normalfall und die bessere Form.
+ *
+ * ⚠ Findet sich keine Person, wird NICHTS geschrieben und laut gemeldet. Eine
+ * Zeile ohne Bezug waere schlimmer als keine: `person_id` ist NOT NULL, der
+ * Insert schluege ohnehin fehl — nur eben ohne Erklaerung.
+ */
+async function bezugFelder(
+  sb: SbClient, bezug: LogBezug,
+): Promise<{ person_id: string; mitglied_id: number | null } | null> {
+  const roh = bezug.mitgliedId;
+  const mitgliedId = roh === null || roh === undefined || roh === "" ? null : parseInt(String(roh));
+
+  if (bezug.personId) return { person_id: bezug.personId, mitglied_id: mitgliedId };
+
+  if (mitgliedId == null) {
+    console.error("logEintrag: weder personId noch mitgliedId — nichts geschrieben.");
+    return null;
+  }
+  const { data, error } = await sb.from("mitglieder")
+    .select("person_id").eq("id", mitgliedId).maybeSingle();
+  if (error) { console.error("logEintrag: person_id nicht lesbar:", error); return null; }
+  if (!data?.person_id) {
+    console.error(`logEintrag: Mitgliedschaft ${mitgliedId} hat keine person_id — nichts geschrieben.`);
+    return null;
+  }
+  return { person_id: data.person_id, mitglied_id: mitgliedId };
+}
+
 export async function logAenderung(
   sb: SbClient,
-  mitgliedId: number | string,
+  bezug: LogBezug,
   vereinId: string,
   feld: string,
   alterWert: LogWert,
@@ -466,24 +534,29 @@ export async function logAenderung(
 
   if (alterWert && neuerWert) {
     // Echter Wechsel: Wert A → Wert B → in mitglieder_aenderungen
-    await sb.from("mitglieder_aenderungen").insert({
-      mitglied_id:   parseInt(String(mitgliedId)),
+    const felder = await bezugFelder(sb, bezug);
+    if (!felder) return;
+    const { error } = await sb.from("mitglieder_aenderungen").insert({
+      ...felder,
       verein_id:     vereinId,
       feld,
       alter_wert:    String(alterWert),
       neuer_wert:    String(neuerWert),
       geaendert_von: von,
     });
+    /* ⚠ `error` lesen. Ein verlorener Verlaufseintrag faellt sonst nirgends
+       auf — er hinterlaesst keine Luecke, die jemand suchen wuerde. */
+    if (error) console.error("logAenderung error:", error);
   } else if (!alterWert && neuerWert) {
     // Erstmalig erfasst: null → Wert → in mitglieder_aktivitaeten
-    await logAktivitaet(sb, mitgliedId, vereinId,
+    await logAktivitaet(sb, bezug, vereinId,
       AKTIVITAET_TYP.FELD_ERFASST,
       `${feldLabel} erfasst`,
       feld, String(neuerWert), von
     );
   } else if (alterWert && !neuerWert) {
     // Geleert: Wert → null → in mitglieder_aktivitaeten
-    await logAktivitaet(sb, mitgliedId, vereinId,
+    await logAktivitaet(sb, bezug, vereinId,
       AKTIVITAET_TYP.FELD_GELEERT,
       `${feldLabel} geleert`,
       feld, String(alterWert), von
@@ -491,12 +564,20 @@ export async function logAenderung(
   }
 }
 
-export async function fetchAenderungen(sb: SbClient, mitgliedId: number) {
-  const { data } = await sb.from("mitglieder_aenderungen")
+/**
+ * Der Verlauf einer PERSON — ueber alle Mitgliedschaften hinweg, ungefiltert.
+ *
+ * ⚠ Das aendert, was auf dem Schirm steht: wer austritt und wiederkommt, sieht
+ * auch die Eintraege von davor. Genau das ist der Zweck (Entscheidung Didi,
+ * 21.08.2026) — der Verlauf gehoert der Person, nicht der Mitgliedschaft.
+ */
+export async function fetchAenderungen(sb: SbClient, personId: string) {
+  const { data, error } = await sb.from("mitglieder_aenderungen")
     .select("*")
-    .eq("mitglied_id", mitgliedId)
+    .eq("person_id", personId)
     .order("geaendert_at", { ascending: false })
     .limit(50);
+  if (error) console.error("fetchAenderungen error:", error);
   return data || [];
 }
 
@@ -523,7 +604,7 @@ export type AktivitaetTyp = typeof AKTIVITAET_TYP[keyof typeof AKTIVITAET_TYP];
 
 export async function logAktivitaet(
   sb: SbClient,
-  mitgliedId: number | string,
+  bezug: LogBezug,
   vereinId: string,
   typ: AktivitaetTyp,
   beschreibung: string,
@@ -531,8 +612,10 @@ export async function logAktivitaet(
   wert: LogWert = null,
   geaendertVon: string | null = null,
 ): Promise<void> {
-  await sb.from("mitglieder_aktivitaeten").insert({
-    mitglied_id:   parseInt(String(mitgliedId)),
+  const felder = await bezugFelder(sb, bezug);
+  if (!felder) return;
+  const { error } = await sb.from("mitglieder_aktivitaeten").insert({
+    ...felder,
     verein_id:     vereinId,
     typ,
     beschreibung,
@@ -540,13 +623,16 @@ export async function logAktivitaet(
     wert:          wert == null ? null : String(wert),
     geaendert_von: geaendertVon || null,
   });
+  if (error) console.error("logAktivitaet error:", error);
 }
 
-export async function fetchAktivitaeten(sb: SbClient, mitgliedId: number) {
-  const { data } = await sb.from("mitglieder_aktivitaeten")
+/** Aktivitaeten einer PERSON — siehe `fetchAenderungen`. */
+export async function fetchAktivitaeten(sb: SbClient, personId: string) {
+  const { data, error } = await sb.from("mitglieder_aktivitaeten")
     .select("*")
-    .eq("mitglied_id", mitgliedId)
+    .eq("person_id", personId)
     .order("geaendert_at", { ascending: false })
     .limit(100);
+  if (error) console.error("fetchAktivitaeten error:", error);
   return data || [];
 }

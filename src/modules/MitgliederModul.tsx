@@ -192,7 +192,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
     const wer=account?.name||account?.email||"Administrator";
     const bleibt=ziel==="ehrenmitglied"||ziel==="aktivmitglied";
-    await logAktivitaet(sb,austrittFuer.id,vereinId,
+    await logAktivitaet(sb,{ personId: austrittFuer.person_id, mitgliedId: austrittFuer.id },vereinId,
       bleibt?AKTIVITAET_TYP.ANGELEGT:AKTIVITAET_TYP.ARCHIVIERT,
       bleibt?`Mitgliedtyp gewechselt auf ${ziel==="ehrenmitglied"?"Ehrenmitglied":"Aktivmitglied"}`
             :`Austritt per ${am} — danach: ${ziel==="supporter"?"Supporter":"Archiv"}`,
@@ -227,7 +227,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
        naechsten Kader- oder Funktionsaenderung. Ohne diesen Aufruf stuende in
        der Liste ein "-", bis das erste Mal etwas anderes geaendert wird. */
     await ableitUndSaveRolle(sb,mitgliedId,dbKaderRollen,felder.mitgliedtyp,person.funktionen||[]);
-    await logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ANGELEGT,
+    await logAktivitaet(sb,{ mitgliedId },vereinId,AKTIVITAET_TYP.ANGELEGT,
       `Mitgliedschaft angelegt (${felder.mitgliedtyp}) — vorher Supporter`,
       null,null,account?.name||null);
 

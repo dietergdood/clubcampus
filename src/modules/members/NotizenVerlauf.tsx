@@ -20,7 +20,10 @@ interface NotizAutor {
 }
 
 interface NotizenVerlaufProps {
-  mitgliedId: number;
+  /** Die PERSON — Notizen haengen seit dem 21.08.2026 an ihr. */
+  personId: string;
+  /** Die Mitgliedschaft als Kontext, falls es eine gibt. */
+  mitgliedId?: number | null;
   canEdit?: boolean;
   sb: Sb;
   dbUser?: NotizAutor | null;
@@ -31,7 +34,7 @@ interface NotizenVerlaufProps {
   onAddRef?: MutableRefObject<(() => void) | null> | null;
 }
 
-function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}: NotizenVerlaufProps){
+function NotizenVerlauf({personId,mitgliedId=null,canEdit,sb,dbUser,onCount,vereinId=null,onAddRef=null}: NotizenVerlaufProps){
   const [confirm,confirmDialog]=useConfirm();
   // Exponiere "neue Notiz starten" nach aussen
   if(onAddRef) onAddRef.current=()=>setNewText(" ");
@@ -43,9 +46,9 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAd
   const [editSaving,setEditSaving]=useState(false);
 
   useEffect(()=>{
-    if(!sb||!mitgliedId) return;
-    fetchNotizen(sb,mitgliedId).then(d=>{setNotizen(d);if(onCount)onCount(d.length);});
-  },[mitgliedId]);
+    if(!sb||!personId) return;
+    fetchNotizen(sb,personId).then(d=>{setNotizen(d);if(onCount)onCount(d.length);});
+  },[personId]);
 
   async function addNotiz(){
     /* verein_id ist in mitglieder_notizen NOT NULL — ohne vereinId würde
@@ -53,8 +56,8 @@ function NotizenVerlauf({mitgliedId,canEdit,sb,dbUser,onCount,vereinId=null,onAd
     if(!newText.trim()||!sb||!vereinId) return;
     setAdding(true);
     const autorName=dbUser?.name||dbUser?.email||"Unbekannt";
-    await insertNotiz(sb,{mitglied_id:mitgliedId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName},vereinId);
-    const d=await fetchNotizen(sb,mitgliedId);
+    await insertNotiz(sb,{person_id:personId,mitglied_id:mitgliedId,text:newText.trim(),autor_id:dbUser?.id||null,autor_name:autorName},vereinId);
+    const d=await fetchNotizen(sb,personId);
     setNotizen(d);if(onCount)onCount(d.length);
     setNewText(""); setAdding(false);
   }

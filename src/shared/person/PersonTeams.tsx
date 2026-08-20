@@ -154,7 +154,7 @@ function PersonTeams({ mitgliedId,
       aktiv: true,
       saison: currentSeason(),
     });
-    if (vereinId) svc.logAktivitaet(sb, mid, vereinId, svc.AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    if (vereinId) svc.logAktivitaet(sb, { mitgliedId: mid }, vereinId, svc.AKTIVITAET_TYP.TEAM_HINZUGEFUEGT, `Team zugewiesen: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     const data = await svc.fetchKaderFuerMitglied(sb, mid);
     setTeamDetails(data);
     await ableitRolle();
@@ -170,7 +170,7 @@ function PersonTeams({ mitgliedId,
     const kader = teamDetails?.find(k => k.id === kaderId);
     const teamName = kader?.teams?.name || String(kaderId);
     await svc.deaktiviereKader(sb, kaderId);
-    if (vereinId) svc.logAktivitaet(sb, mid, vereinId, svc.AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
+    if (vereinId) svc.logAktivitaet(sb, { mitgliedId: mid }, vereinId, svc.AKTIVITAET_TYP.TEAM_ENTFERNT, `Aus Team entfernt: ${teamName}`, "teams", teamName, account?.name||account?.email||"Administrator");
     setTeamDetails(prev => (prev || []).filter(k => k.id !== kaderId));
     await ableitRolle();
   }
@@ -187,7 +187,7 @@ function PersonTeams({ mitgliedId,
     });
     if (vereinId && alterRollen !== neueRollen) {
       const teamName = editTeam.teams?.name || "Team";
-      svc.logAenderung(sb, mid, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
+      svc.logAenderung(sb, { mitgliedId: mid }, vereinId, "kaderrollen", `${teamName}: ${alterRollen}`, `${teamName}: ${neueRollen}`, account?.name||account?.email||"Administrator");
     }
     setTeamDetails(prev => (prev || []).map(k => k.id === editTeam.id
       ? { ...k, rollen: editTeamForm.funktionen, rueckennr: editTeamForm.rueckennr, position: editTeamForm.position }

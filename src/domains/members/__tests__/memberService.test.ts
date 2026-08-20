@@ -76,7 +76,7 @@ describe("memberService — verein_id-Injektion", () => {
   describe("logAktivitaet", () => {
     it("schreibt verein_id, typ und parseInt(mitglied_id) in mitglieder_aktivitaeten", async () => {
       const sb = makeSb();
-      await logAktivitaet(sb as any, "5", "verein-1", AKTIVITAET_TYP.TEAM_ENTFERNT, "Team X entfernt", "teams", "X", "Admin");
+      await logAktivitaet(sb as any, { personId: "p-1", mitgliedId: "5" }, "verein-1", AKTIVITAET_TYP.TEAM_ENTFERNT, "Team X entfernt", "teams", "X", "Admin");
 
       const rec = sb.find("mitglieder_aktivitaeten", "insert");
       expect(rec).toBeTruthy();
@@ -93,7 +93,7 @@ describe("memberService — verein_id-Injektion", () => {
 
     it("lässt wert null als null (statt 'null'-String)", async () => {
       const sb = makeSb();
-      await logAktivitaet(sb as any, 7, "verein-1", AKTIVITAET_TYP.ARCHIVIERT, "Archiviert");
+      await logAktivitaet(sb as any, { personId: "p-1", mitgliedId: 7 }, "verein-1", AKTIVITAET_TYP.ARCHIVIERT, "Archiviert");
       const rec = sb.find("mitglieder_aktivitaeten", "insert");
       expect(rec!.payload.wert).toBeNull();
       expect(rec!.payload.mitglied_id).toBe(7);
@@ -103,13 +103,13 @@ describe("memberService — verein_id-Injektion", () => {
   describe("logAenderung", () => {
     it("schreibt nichts, wenn alter === neuer Wert", async () => {
       const sb = makeSb();
-      await logAenderung(sb as any, 5, "verein-1", "vorname", "Max", "Max");
+      await logAenderung(sb as any, { personId: "p-1", mitgliedId: 5 }, "verein-1", "vorname", "Max", "Max");
       expect(sb.calls).toHaveLength(0);
     });
 
     it("A→B: Insert in mitglieder_aenderungen mit verein_id", async () => {
       const sb = makeSb();
-      await logAenderung(sb as any, 5, "verein-1", "vorname", "Max", "Moritz");
+      await logAenderung(sb as any, { personId: "p-1", mitgliedId: 5 }, "verein-1", "vorname", "Max", "Moritz");
 
       const rec = sb.find("mitglieder_aenderungen", "insert");
       expect(rec).toBeTruthy();
@@ -127,7 +127,7 @@ describe("memberService — verein_id-Injektion", () => {
 
     it("null→B: delegiert an logAktivitaet (FELD_ERFASST) mit verein_id", async () => {
       const sb = makeSb();
-      await logAenderung(sb as any, 5, "verein-1", "email", null, "a@b.ch");
+      await logAenderung(sb as any, { personId: "p-1", mitgliedId: 5 }, "verein-1", "email", null, "a@b.ch");
 
       const rec = sb.find("mitglieder_aktivitaeten", "insert");
       expect(rec).toBeTruthy();
@@ -142,7 +142,7 @@ describe("memberService — verein_id-Injektion", () => {
 
     it("A→null: delegiert an logAktivitaet (FELD_GELEERT)", async () => {
       const sb = makeSb();
-      await logAenderung(sb as any, 5, "verein-1", "email", "a@b.ch", null);
+      await logAenderung(sb as any, { personId: "p-1", mitgliedId: 5 }, "verein-1", "email", "a@b.ch", null);
 
       const rec = sb.find("mitglieder_aktivitaeten", "insert");
       expect(rec!.payload).toEqual(expect.objectContaining({

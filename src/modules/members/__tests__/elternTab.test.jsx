@@ -184,7 +184,7 @@ describe('ElternTab', () => {
       fireEvent.change(screen.getByPlaceholderText('E-Mail'), { target: { value: 'lisa@test.ch' } });
       fireEvent.click(screen.getByText('Anlegen und verknüpfen'));
       await waitFor(() => expect(logAktivitaet).toHaveBeenCalledWith(
-        expect.anything(), 1, 'verein-123', 'eltern_hinzugefuegt',
+        expect.anything(), expect.objectContaining({ mitgliedId: 1 }), 'verein-123', 'eltern_hinzugefuegt',
         expect.stringContaining('Lisa Bürgi'),
         expect.anything(), expect.anything(), expect.anything()
       ));
@@ -237,7 +237,7 @@ describe('ElternTab', () => {
       renderTab();
       fireEvent.click(screen.getAllByTestId('menu-Entknüpfen')[0]);
       await waitFor(() => expect(logAktivitaet).toHaveBeenCalledWith(
-        expect.anything(), 1, 'verein-123', 'eltern_entfernt',
+        expect.anything(), expect.objectContaining({ mitgliedId: 1 }), 'verein-123', 'eltern_entfernt',
         expect.stringContaining('Maria Bürgi'),
         expect.anything(), expect.anything(), expect.anything()
       ));

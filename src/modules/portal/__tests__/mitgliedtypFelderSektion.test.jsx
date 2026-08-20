@@ -156,15 +156,25 @@ describe('MitgliedtypFelderSektion — die Auswahl', () => {
        gemischt der Normalfall.
    ═══════════════════════════════════════════════════════════════ */
 describe('MitgliedtypFelderSektion — leere Bereiche', () => {
-  it('⚠ auf der Art-Spalte fehlen Vereinsdaten, Teams und Notizen ganz', () => {
+  it('⚠ auf der Art-Spalte fehlen Vereinsdaten und Teams ganz', () => {
     render(<MitgliedtypFelderSektion {...props()} />);
     waehle('art:art-1');
-    for (const leer of ['Vereinsdaten', 'Teams', 'Notizen']) {
+    for (const leer of ['Vereinsdaten', 'Teams']) {
       expect(screen.queryByText(leer)).toBeNull();
     }
   });
 
-  it('die Gegenprobe: beim Mitgliedtyp stehen sie', () => {
+  it('⚠ Notizen stehen dort seit dem 21.08.2026 wieder', () => {
+    /* Sie galten als `nur_mitgliedschaft`, weil
+       `mitglieder_notizen.mitglied_id` NOT NULL war — eine technische Grenze,
+       als fachliche Regel behandelt. Ein Verein will ueber einen Supporter
+       oder ein Elternteil sehr wohl etwas notieren koennen. */
+    render(<MitgliedtypFelderSektion {...props()} />);
+    waehle('art:art-1');
+    expect(screen.getByText('Notizen')).toBeTruthy();
+  });
+
+  it('die Gegenprobe: beim Mitgliedtyp stehen sie alle', () => {
     /* Ohne diesen Fall waere der Test oben auch gruen, wenn die Bereiche
        ueberhaupt nicht mehr gerendert wuerden. */
     render(<MitgliedtypFelderSektion {...props()} />);

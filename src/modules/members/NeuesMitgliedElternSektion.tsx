@@ -72,7 +72,7 @@ export async function speichereEltern(
       const err = await linkKind(sb, e.id, mitgliedId, vereinId, false);
       if (err) { fehler.push(`${e.anzeigename}: ${err.message}`); continue; }
       if (e.hauptkontakt) hauptId = e.id;
-      logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,
+      logAktivitaet(sb, { mitgliedId }, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,
         `Elternkontakt hinzugefügt: ${e.anzeigename}`, "elternkontakte", e.anzeigename, geaendertVon);
     } else if (e.form) {
       /* vorname/nachname sind in `personen` NOT NULL — uebernehmeNeu()
@@ -87,7 +87,7 @@ export async function speichereEltern(
         hauptkontakt: e.hauptkontakt,
       }, vereinId);
       if (err) { fehler.push(`${e.anzeigename}: ${err.message}`); continue; }
-      logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,
+      logAktivitaet(sb, { mitgliedId }, vereinId, AKTIVITAET_TYP.ELTERN_HINZUGEFUEGT,
         `Elternkontakt angelegt: ${e.anzeigename}`, "elternkontakte", e.anzeigename, geaendertVon);
     }
   }

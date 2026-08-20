@@ -283,9 +283,16 @@ describe("ohne Mitgliedschaft", () => {
        und ein Direktzugriff haette sie wieder sichtbar. */
     const k = getFeldkonfig(OHNE_ART, ohneZeilen);
     for (const s of ["mitgliedtyp","eintrittsdatum","spielerpass","js_nr","fairgate_id",
-                     "teams","notizen","tab_stats","tab_verlauf","tab_eltern"]) {
+                     "teams","tab_stats","tab_eltern"]) {
       expect(k[s]).toBe("aus");
     }
+    /* ⚠ `notizen` und `tab_verlauf` stehen hier seit dem 21.08.2026 NICHT
+       mehr. Sie hingen daran, dass `mitglieder_notizen.mitglied_id` und
+       `mitglieder_aenderungen.mitglied_id` NOT NULL waren — eine technische
+       Grenze, als fachliche Regel behandelt. Seit
+       `migration_verlauf_person.sql` haengen beide an der Person. */
+    expect(k.notizen).not.toBe("aus");
+    expect(k.tab_verlauf).not.toBe("aus");
   });
 
   it("laesst stehen, was auch ohne Mitgliedschaft Sinn hat", () => {
@@ -337,9 +344,17 @@ describe("ohne Mitgliedschaft", () => {
     expect(giltFuerZiel(telefon, OHNE_ART)).toBe(true);
   });
 
-  it("genau zehn Schluessel haengen an einer Mitgliedschaft", () => {
+  it("genau acht Schluessel haengen an einer Mitgliedschaft", () => {
     /* Faellt die Zahl auseinander, hat jemand einen Eintrag ergaenzt, ohne
-       ueber die neue Spalte nachzudenken. */
-    expect(FELD_REGISTRY.filter(e => e.nur_mitgliedschaft).length).toBe(10);
+       ueber die Achse nachzudenken.
+
+       ⚠ Waren zehn bis zum 21.08.2026. `notizen` und `tab_verlauf` sind
+       freigeworden — und die ZAHL hat es gemeldet, nicht ein Mensch. Genau
+       dafuer steht sie hier. */
+    expect(FELD_REGISTRY.filter(e => e.nur_mitgliedschaft).length).toBe(8);
+    /* Und die Namen dazu: eine Zahl allein sagte nicht, WELCHE. */
+    expect(FELD_REGISTRY.filter(e => e.nur_mitgliedschaft).map(e => e.schluessel).sort())
+      .toEqual(["eintrittsdatum","fairgate_id","js_nr","mitgliedtyp",
+                "spielerpass","tab_eltern","tab_stats","teams"]);
   });
 });

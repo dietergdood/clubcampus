@@ -222,7 +222,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
         setMsg({ ok: false, text: fehler ?? "Die Mitgliedschaft konnte nicht angelegt werden." });
         return;
       }
-      logAktivitaet(sb, mitgliedId, vereinId, AKTIVITAET_TYP.ANGELEGT,
+      logAktivitaet(sb, { mitgliedId }, vereinId, AKTIVITAET_TYP.ANGELEGT,
         "Mitgliedschaft angelegt für bestehende Person", null, null, von);
       await ableitUndSaveRolle(sb, mitgliedId, [], form.mitgliedtyp || null, []);
       setSaving(false);
@@ -252,7 +252,7 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
     }, vereinId);
     if (!id) { setSaving(false); setMsg({ ok: false, text: "Fehler beim Speichern." }); return; }
 
-    logAktivitaet(sb, id, vereinId, AKTIVITAET_TYP.ANGELEGT, "Mitglied angelegt", null, null, von);
+    logAktivitaet(sb, { mitgliedId: id }, vereinId, AKTIVITAET_TYP.ANGELEGT, "Mitglied angelegt", null, null, von);
 
     /* Rolle sofort ableiten, sonst zeigt die Mitgliederliste "-", bis die
        erste Kader- oder Funktionsänderung sie berechnet. dbKaderRollen ist

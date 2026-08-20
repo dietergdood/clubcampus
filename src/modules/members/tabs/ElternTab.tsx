@@ -95,7 +95,7 @@ function ElternTab({ mitgliedId,eltern, canEdit, sb, onReload, setElternLoaded, 
     if(!ok) return;
 
     const folge = await entkoppleKind(sb, e.id, mitgliedId, e.benutzer_id);
-    if(vereinId) logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entknüpft: ${name}`,"elternkontakte",name,geaendertVon);
+    if(vereinId) logAktivitaet(sb,{ mitgliedId },vereinId,AKTIVITAET_TYP.ELTERN_ENTFERNT,`Elternkontakt entknüpft: ${name}`,"elternkontakte",name,geaendertVon);
     reload();
     /* War es das letzte Kind dieses Elternteils, ist noch offen, ob der Verein
        den Kontakt behaelt. entkoppleKind() entscheidet das seit dem
@@ -121,10 +121,10 @@ function ElternTab({ mitgliedId,eltern, canEdit, sb, onReload, setElternLoaded, 
     const name = vollname(e);
     if(!e.hauptkontakt){
       await setHauptkontakt(sb, mitgliedId, e.id, vereinId);
-      if(vereinId) logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
+      if(vereinId) logAktivitaet(sb,{ mitgliedId },vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt gesetzt: ${name}`,"elternkontakte",name,geaendertVon);
     } else {
       await clearHauptkontaktFuerKind(sb, e.id, mitgliedId);
-      if(vereinId) logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
+      if(vereinId) logAktivitaet(sb,{ mitgliedId },vereinId,AKTIVITAET_TYP.ELTERN_GEAENDERT,`Hauptkontakt entfernt: ${name}`,"elternkontakte",name,geaendertVon);
     }
     reload();
   }

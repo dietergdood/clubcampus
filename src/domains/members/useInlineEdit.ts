@@ -111,7 +111,11 @@ export function useInlineEdit({ sb, personId=null, mitgliedId=null, onReload, ve
          angekommen, obwohl sie es ist. */
       if (vereinId && mitgliedId != null && alterWert !== (value || null)) {
         const geaendertVon = account?.name || account?.email || "Administrator";
-        logAenderung(sb, mitgliedId, vereinId, field, alterWert, value || null, geaendertVon);
+        /* `personId` ist hier `string | null`. Ohne sie schlaegt der Service
+            sie ueber die Mitgliedschaft nach — die Union laesst beide Formen
+            zu, und eine erfundene leere Id waere schlimmer als eine Abfrage. */
+        logAenderung(sb, personId ? { personId, mitgliedId } : { mitgliedId },
+          vereinId, field, alterWert, value || null, geaendertVon);
       }
       setFeedback({ field, ok: true });
       setTimeout(() => setFeedback(null), 1500);
