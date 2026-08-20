@@ -142,7 +142,7 @@ function Portal({supabaseClient, slug}: PortalProps){
     | { status:"laedt" }
     | { status:"nichts"; text:string }
     | { status:"fehler"; text:string }
-    | { status:"da"; person:Tables<"personen">; kinder:Mitglied[] };
+    | { status:"da"; person:Tables<"personen">; kinder:Mitglied[]; kinderFehler:string|null };
   const [elternLadung,setElternLadung]=useState<ElternLadung>({status:"laedt"});
   const elternDaten = elternLadung.status==="da" ? elternLadung : null;
   const [meinMitgliedDaten,setMeinMitgliedDaten]=useState<Mitglied|null>(null);
@@ -327,9 +327,20 @@ function Portal({supabaseClient, slug}: PortalProps){
             text:fehler ?? "Deine Personendaten konnten nicht gelesen werden."});
           return;
         }
-        const kinder = await fetchKinderVollstaendigFuerElternteil(sb, person.id);
+        const { kinder, fehler: kinderFehler } = await fetchKinderVollstaendigFuerElternteil(sb, person.id);
         if(abgebrochen) return;
-        setElternLadung({status:"da", person, kinder: kinder as unknown as Mitglied[]});
+        /* ⚠ Hier stand `kinder as unknown as Mitglied[]`. Als die Funktion am
+           20.08.2026 von einem Array auf `{kinder, fehler}` umgestellt wurde,
+           blieb der Typecheck GRUEN — der Cast nimmt alles. Zur Laufzeit waere
+           `.map` auf einem Objekt gelandet. Ein Cast ist kein Beweis, er ist
+           ein Versprechen.
+
+           Der Kinderfehler kippt die Seite NICHT: die eigenen Daten sind
+           geladen und lassen sich pruefen. Er wird mitgetragen und dort
+           gesagt, wo die Kinder stuenden — sonst waere die Maske ganz weg,
+           obwohl die Haelfte funktioniert. */
+        setElternLadung({status:"da", person,
+          kinder: kinder as unknown as Mitglied[], kinderFehler});
       }catch(e){
         /* Gebunden, nicht leer: sonst bliebe von einem geworfenen Fehler nur
            ein Bildschirm, der ewig laedt. */
@@ -510,6 +521,7 @@ function Portal({supabaseClient, slug}: PortalProps){
             sb={sb}
             elternteil={elternDaten.person}
             kinder={elternDaten.kinder}
+            kinderFehler={elternDaten.kinderFehler}
             feldkonfig={feldkonfig}
             setPortalMsg={()=>{}}
             onReload={()=>{ setElternLadung({status:"laedt"}); setMeinMitgliedDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
@@ -563,6 +575,7 @@ function Portal({supabaseClient, slug}: PortalProps){
                       sb={sb}
                       elternteil={elternDaten.person}
                       kinder={elternDaten.kinder}
+                      kinderFehler={elternDaten.kinderFehler}
                       feldkonfig={feldkonfig}
                       setPortalMsg={()=>{}}
                       onReload={onReload}

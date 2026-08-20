@@ -148,6 +148,25 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
     expect(screen.getByText('Tim Muster')).toBeTruthy();
   });
 
+  it('⚠ ein Ladefehler wird als Ladefehler gemeldet, nicht als „keine Kinder"', () => {
+    /* Am 20.08.2026 sagte die Maske „Keine Kinder verknuepft", waehrend die
+       Abfrage in einen 400er lief: `profil_geprueft_at` auf `mitglieder` gibt
+       es seit Etappe 6a nicht mehr, und `(data || [])` machte aus dem Fehler
+       eine leere Liste. Ein Satz, der das Falsche sagt, ist schlimmer als
+       keiner — er schickt die Suche in die Datenbank statt in den Code. */
+    render(<DatenpruefungEltern {...props({ kinder: [], kinderFehler: 'column mitglieder_1.profil_geprueft_at does not exist' })} />);
+    expect(screen.getByText(/konnten nicht geladen werden/)).toBeTruthy();
+    expect(screen.getByText(/profil_geprueft_at/)).toBeTruthy();
+    expect(screen.queryByText(/Keine Kinder verknüpft/)).toBeNull();
+  });
+
+  it('die eigenen Daten bleiben trotz Ladefehler prüfbar', () => {
+    /* Der Kinderfehler kippt die Seite nicht: die eigene Haelfte ist geladen. */
+    render(<DatenpruefungEltern {...props({ kinder: [], kinderFehler: 'irgendein Fehler' })} />);
+    expect(screen.getByText('Meine Kontaktdaten')).toBeTruthy();
+    expect(screen.getByText(/Alles geprüft/)).toBeTruthy();
+  });
+
   it('der Profil-Status kommt vom Elternteil, nicht von einem Mitglied', () => {
     render(<DatenpruefungEltern {...props({ elternteil: { ...ELTERNTEIL, profil_geprueft_at: '2026-02-01' } })} />);
     expect(screen.getByText('Geprüft')).toBeTruthy();

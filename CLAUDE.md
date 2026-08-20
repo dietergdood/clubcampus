@@ -15,6 +15,7 @@ npm run test:watch         # vitest watch
 
 npm run typecheck          # tsc --noEmit
 npm run check:imports      # fehlende Konstanten-Imports (--fix ergänzt sie)
+npm run check:selects      # Spalten in select()-Strings gegen database.types.ts
 
 npx vitest run src/modules/members/__tests__/memberFilter.test.js   # eine Datei
 npx vitest run -t "filtert nach Team"                               # ein Testfall
@@ -267,6 +268,21 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   Leer bleiben darf er nur, wo das Scheitern **keine Aussage über die Daten** ist: `localStorage`/`sessionStorage` (Quota, privater Modus), `JSON.parse` eines gespeicherten Werts mit Rückfall, `history.pushState`. Dort ist er richtig und steht im Projekt rund vierzigmal.
 
   ⚠ **Bei Supabase kommt der Fehler gar nicht als `throw`.** `sb.from(…).select()` liefert `{ data, error }` und wirft nur bei einem Netzwerkfehler. Ein `try { const { data } = await … } catch {}` fängt den Datenbankfehler deshalb **nicht** — er verschwindet schon davor, weil `error` niemand liest. Wer eine Abfrage schreibt, liest `error`; das `catch` ist dafür kein Ersatz.
+
+  **Beleg vom 20.08.2026, und er hat zwei Wochen gehalten.** `fetchKinderVollstaendigFuerElternteil()` selektierte `profil_geprueft_at` auf `mitglieder` — seit Etappe 6a (05.08.2026) eine tote Spalte, sie steht in `personen`. PostgREST antwortete mit `400 / 42703 column mitglieder_1.profil_geprueft_at does not exist`. Gelesen wurde nur `data`:
+
+  ```ts
+  const { data } = await sb.from("eltern_kinder").select(…);
+  return (data || []).map(…)          // aus 400 wird []
+  ```
+
+  Die Datenprüfung meldete daraufhin **„Keine Kinder verknüpft"** — bei einem Kind, das nachweislich verknüpft war. Ein Fehler, der wie eine Datenlage aussah, und die Suche ging in die Datenbank statt in den Code.
+
+  ⚠ **`(data || [])` ist dabei der eigentliche Übeltäter.** Es macht aus `null` eine leere Liste und löscht damit die letzte Spur. Wo ein Rückfall auf `[]` steht, gehört `error` unmittelbar daneben — sonst ist der Rückfall eine Behauptung.
+
+  Gegen die eine Hälfte läuft seither **`npm run check:selects`** (`scripts/check-selects.mjs`, in CI): es hält jede Spalte in einer `select()`-Zeichenkette gegen `database.types.ts`. Was es **nicht** findet, steht im Kopf des Skripts — dynamisch gebaute Selects, `rpc`, nicht auflösbare Embeds, und vor allem eine Spalte, die es GIBT, aber die falsche Bedeutung hat. Gegen die andere Hälfte hilft nichts als `error` zu lesen.
+
+  Stand 20.08.2026: **49 Destrukturierungen von `await sb…` lassen `error` weg**, 76 lesen ihn. Nicht alle sind gefährlich (ein `maybeSingle()` auf eine eigene Zeile verkraftet es), aber jede, die einen Rückfall auf `[]` oder `null` hat, ist ein Kandidat für denselben Ausfall.
 - **`\b` ist in dieser Codebasis unbrauchbar.** JavaScript zählt nur `[A-Za-z0-9_]` als Wortzeichen — `ä`, `ö`, `ü` gehören nicht dazu. Mitten in „Rückennummer" steht deshalb eine Wortgrenze hinter dem `R`, und `/\bR\b/.test("Rückennummer")` ist **`true`**. In einem Projekt, dessen Bezeichner, Kommentare und UI-Texte durchgehend deutsch sind, trifft das ständig. Wer nach Bezeichnern sucht, nimmt stattdessen:
 
   ```js
@@ -809,6 +825,34 @@ Daraus folgen zwei Dinge:
 
 Zusammenlegen, sobald jemand die Liste anfasst: eine Aussage, ein Ort — und
 das ist `benutzer.person_id`.
+
+### ⚠ „Mein Kind" zeigt einem Elternteil HEUTE Demodaten
+
+Befund vom 20.08.2026, beim ersten echten Elternkonto.
+
+```ts
+// clubcampus.tsx
+const myRosterId = account.rosterId || (role==="spieler"?1 : role==="eltern"?1 : …);
+```
+
+Für ein Elternteil ist das eine **fest verdrahtete 1** aus `demoData.js`.
+Dazu `meineTeams = []` — die Teams kommen aus `teamRollen`, und die füllt
+`useDbUser` nur bei gesetztem `mitglied_id`. `TeamView` fällt bei leerer Liste
+auf `ROSTER` und `trainerTeams = ["Cc-Junioren"]` zurück.
+
+**Der Menüeintrag heisst „Mein Kind" und zeigt ein fremdes.** Der Text ist ein
+statischer Eintrag in `NAV_BY_ROLE`; die App weiss vom echten Kind nichts.
+
+⚠ **Das ist schlimmer als ein fehlender Eintrag.** Wer eine leere Seite sieht,
+meldet sie. Wer eine gefüllte sieht, hält sie für richtig — und beim ersten
+Test hat sie genau deshalb den Verdacht in die falsche Richtung gelenkt: die
+Datenprüfung sagte „keine Kinder", „Mein Kind" zeigte eines, also schien der
+Fehler bei der Datenprüfung zu liegen. Beide fanden das Kind nicht; eines sah
+nur so aus.
+
+Bis das echte Team hängt: entweder den Eintrag für `eltern` ausblenden oder
+den Fallback auf `ROSTER` durch eine Karte ersetzen, die sagt, dass die
+Anbindung fehlt. Ein Platzhalter, der wie eine Funktion aussieht, ist keine.
 
 ### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
 

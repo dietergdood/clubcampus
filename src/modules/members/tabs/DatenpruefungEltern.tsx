@@ -80,6 +80,16 @@ interface DatenpruefungElternProps {
    */
   elternteil: ElternteilPerson;
   kinder: Mitglied[];
+  /**
+   * Warum die Kinderliste leer ist, falls sie es ist.
+   *
+   * ⚠ „Keine Kinder verknüpft" und „die Liste konnte nicht geladen werden"
+   * sehen von aussen gleich aus — beide Male steht nichts da. Am 20.08.2026
+   * hat die Maske das Erste behauptet, während das Zweite galt: die Abfrage
+   * lief in einen 400er, und `(data || [])` machte daraus eine leere Liste.
+   * Ein Satz, der das Falsche sagt, ist schlimmer als keiner.
+   */
+  kinderFehler?: string | null;
   /** Zeilen aus `mitgliedtyp_feldkonfig`, vom Portal durchgereicht. */
   feldkonfig?: FeldkonfigZeile[];
   setPortalMsg: (msg: StatusMeldung | null) => void;
@@ -87,7 +97,7 @@ interface DatenpruefungElternProps {
 }
 
 export function DatenpruefungEltern({
-  sb, elternteil, kinder, feldkonfig = [], setPortalMsg, onReload,
+  sb, elternteil, kinder, kinderFehler = null, feldkonfig = [], setPortalMsg, onReload,
 }: DatenpruefungElternProps) {
   /* Ausgangswerte einmal festhalten: gespeichert wird nur die Abweichung. */
   const [ausgangEigen] = useState<FelderWerte>(() => werteAusZeile(elternteil));
@@ -183,7 +193,17 @@ export function DatenpruefungEltern({
           keinen Anhaltspunkt, dass hier etwas fehlt. „Keine Kinder" und „die
           Kinder konnten nicht geladen werden" sehen von aussen gleich aus;
           gesagt werden muss es trotzdem. */}
-      {kinder.length === 0 && (
+      {kinder.length === 0 && kinderFehler && (
+        <Card>
+          <div className="cc-text-bold cc-text-lg cc-mb-4">Die Kinder konnten nicht geladen werden</div>
+          <div className="cc-text-sm cc-text-danger">{kinderFehler}</div>
+          <div className="cc-text-sm cc-text-sub cc-mt-4">
+            Deine eigenen Angaben lassen sich trotzdem prüfen und bestätigen.
+            Bitte melde den Fehler dem Vereinsadministrator.
+          </div>
+        </Card>
+      )}
+      {kinder.length === 0 && !kinderFehler && (
         <Card>
           <div className="cc-text-bold cc-text-lg cc-mb-4">Keine Kinder verknüpft</div>
           <div className="cc-text-sm cc-text-sub">

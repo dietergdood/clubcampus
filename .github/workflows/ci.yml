@@ -44,6 +44,15 @@ jobs:
       - name: Fehlende Konstanten-Imports pruefen
         run: npm run check:imports
 
+      # Spaltennamen in select()-Zeichenketten gegen database.types.ts.
+      # Findet, was Build und Typecheck nicht sehen koennen: die Select-Liste
+      # ist eine Zeichenkette. Am 20.08.2026 stand darin `profil_geprueft_at`
+      # auf `mitglieder` — seit Etappe 6a eine tote Spalte. PostgREST
+      # antwortete mit 400, der Aufrufer las nur `data`, und die
+      # Datenpruefung meldete „Keine Kinder verknuepft".
+      - name: Select-Spalten gegen die Typen pruefen
+        run: npm run check:selects
+
       - name: Tests
         run: npm test
 

@@ -194,9 +194,10 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
 }
 
 export async function fetchKinderFuerElternteil(sb: SbClient, personId: string) {
-  const { data } = await sb.from("eltern_kinder")
+  const { data, error } = await sb.from("eltern_kinder")
     .select("mitglied_id, hauptkontakt, mitglieder:mitglied_id(id, aktiv, mitgliedtyp, personen(vorname, nachname), kader(aktiv, teams(name, kurzname)))")
     .eq("person_id", personId);
+  if (error) console.error("fetchKinderFuerElternteil error:", error);
   return (data || []).map(zeile => ({
     mitglied_id:  zeile.mitglied_id,
     hauptkontakt: zeile.hauptkontakt,
@@ -204,16 +205,47 @@ export async function fetchKinderFuerElternteil(sb: SbClient, personId: string) 
   }));
 }
 
-export async function fetchKinderVollstaendigFuerElternteil(sb: SbClient, personId: string) {
-  const { data } = await sb.from("eltern_kinder")
+/**
+ * Die Kinder eines Elternteils, vollstaendig — fuer die Datenpruefung.
+ *
+ * ⚠ ZWEI FEHLER AN EINER STELLE, beide am 20.08.2026 aufgeflogen.
+ *
+ * 1. Der Select fragte `profil_geprueft_at` auf `mitglieder` ab. Die Spalte
+ *    steht dort seit Etappe 6a (05.08.2026) nicht mehr — sie gehoert zur
+ *    PERSON und kommt ueber `personen(*)` ohnehin mit, weil `flacheZeile()`
+ *    jedes Feld aus PERSON_FELDER auf die flache Zeile hebt.
+ *
+ * 2. Gelesen wurde nur `data`. PostgREST antwortete mit
+ *    `400 / 42703 column mitglieder_1.profil_geprueft_at does not exist`,
+ *    `data` war `null`, und `(data || [])` machte daraus eine leere Liste.
+ *    Die Datenpruefung sagte „Keine Kinder verknuepft" — ein Fehler, der wie
+ *    eine Datenlage aussah.
+ *
+ * Unbemerkt seit zwei Wochen, weil diese Funktion genau einen Aufrufer hat
+ * und bis heute kein Elternteil ein Konto besass. Gegen den ersten Fehler
+ * laeuft seither `npm run check:selects`; gegen den zweiten hilft nur, den
+ * Fehler zu lesen — deshalb gibt sie ihn jetzt zurueck statt ihn zu
+ * verschweigen.
+ */
+export async function fetchKinderVollstaendigFuerElternteil(
+  sb: SbClient, personId: string,
+): Promise<{ kinder: Zeile[]; fehler: string | null }> {
+  const { data, error } = await sb.from("eltern_kinder")
     .select(`mitglied_id, mitglieder:mitglied_id(
-      id, mitgliedtyp, rolle, profil_geprueft_at,
+      id, mitgliedtyp, rolle,
       personen(*)
     )`)
     .eq("person_id", personId);
-  return (data || [])
-    .map(zeile => flacheZeile(zeile.mitglieder as never))
-    .filter(Boolean);
+  if (error) {
+    console.error("fetchKinderVollstaendigFuerElternteil error:", error);
+    return { kinder: [], fehler: error.message };
+  }
+  return {
+    kinder: (data || [])
+      .map(zeile => flacheZeile(zeile.mitglieder as never))
+      .filter((z): z is Zeile => z !== null),
+    fehler: null,
+  };
 }
 
 /* Suche fuer „bestehenden Elternteil verknuepfen".
