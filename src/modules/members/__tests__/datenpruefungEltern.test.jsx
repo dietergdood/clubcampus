@@ -133,6 +133,21 @@ describe('DatenpruefungEltern — was die Maske zeigt', () => {
     expect(screen.queryAllByLabelText(/Heimatort/).length).toBe(1);
   });
 
+  it('⚠ ohne verknüpftes Kind sagt sie es, statt nichts zu zeigen', () => {
+    /* Ein Elternteil, dessen Verknuepfung fehlt, saehe sonst nur seine eigene
+       Karte. „Keine Kinder" und „konnte nicht geladen werden" sehen von aussen
+       gleich aus — gesagt werden muss es trotzdem. */
+    render(<DatenpruefungEltern {...props({ kinder: [] })} />);
+    expect(screen.getByText(/Keine Kinder verknüpft/)).toBeTruthy();
+    expect(screen.getByText(/melde es dem Vereinsadministrator/)).toBeTruthy();
+  });
+
+  it('mit Kind erscheint der Hinweis nicht — die Gegenprobe', () => {
+    render(<DatenpruefungEltern {...props()} />);
+    expect(screen.queryByText(/Keine Kinder verknüpft/)).toBeNull();
+    expect(screen.getByText('Tim Muster')).toBeTruthy();
+  });
+
   it('der Profil-Status kommt vom Elternteil, nicht von einem Mitglied', () => {
     render(<DatenpruefungEltern {...props({ elternteil: { ...ELTERNTEIL, profil_geprueft_at: '2026-02-01' } })} />);
     expect(screen.getByText('Geprüft')).toBeTruthy();

@@ -35,6 +35,7 @@ import { fetchPerson } from "./domains/person/personService.ts";
 import { fetchMitglied } from "./domains/members/memberService.ts";
 import { fetchFeldkonfig } from "./domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "./domains/members/feldkonfig.ts";
+import type { Tables } from "./database.types.ts";
 import type {
   Account, AppTheme, DbUser, Mitglied, Mitgliedtyp, ModuleAktiv, ModuleRechte,
   PortalFunktion, PortalRolle, Rolle, Sb, Team, TeamRollenMap, Tenant,
@@ -61,6 +62,21 @@ interface PortalProps {
 }
 
 /* ── APP ROOT ── */
+/**
+ * Ein Satz statt eines Bildschirms, der ewig laedt.
+ *
+ * ⚠ Steht ABSICHTLICH auf Modulebene und nicht in `Portal`: eine Komponente,
+ * die innerhalb einer anderen deklariert wird, entsteht bei jedem Render neu
+ * (CLAUDE.md). Hier waere die Wirkung gering, die Regel gilt trotzdem.
+ */
+function ProfilHinweis({ text, warnung = false }: { text: string; warnung?: boolean }) {
+  return (
+    <div className="cc-empty-state">
+      <div className={warnung ? "cc-text-danger" : "cc-text-sub"}>{text}</div>
+    </div>
+  );
+}
+
 function Portal({supabaseClient, slug}: PortalProps){
   /* Früher stand hier `supabaseClient||supabase||null`. Ein globales
      `supabase` gibt es nicht — sobald supabaseClient null war (fehlende
@@ -114,8 +130,25 @@ function Portal({supabaseClient, slug}: PortalProps){
   const [mobileProfileOpen,setMobileProfileOpen]=useState(false);
   const [profilOverlayDismissed,setProfilOverlayDismissed]=useState(false);
   const [customBack,setCustomBack]=useState<(()=>void)|null>(null);
-  const [elternDaten,setElternDaten]=useState<{elternkontakt:any;kinder:Mitglied[]}|null>(null);
+  /* ⚠ EIN `null` HIESS DREIERLEI: „laedt noch", „gibt es nicht" und „ist
+     fehlgeschlagen". Am 20.08.2026 hat das die Datenpruefung eines Elternteils
+     auf „Profil wird geladen…" stehenlassen — endlos, ohne Meldung. Ein
+     Ladezustand, der nie endet, ist von einem Ausfall nicht zu unterscheiden.
+
+     Deshalb ausgesprochen statt abgeleitet, wie bei `PersonZiel`. `nichts` ist
+     der Fall, den es vorher gar nicht gab: es ist NICHTS ZU LADEN, und das ist
+     kein Fehler, sondern eine Auskunft. */
+  type ElternLadung =
+    | { status:"laedt" }
+    | { status:"nichts"; text:string }
+    | { status:"fehler"; text:string }
+    | { status:"da"; person:Tables<"personen">; kinder:Mitglied[] };
+  const [elternLadung,setElternLadung]=useState<ElternLadung>({status:"laedt"});
+  const elternDaten = elternLadung.status==="da" ? elternLadung : null;
   const [meinMitgliedDaten,setMeinMitgliedDaten]=useState<Mitglied|null>(null);
+  /* Getrennt vom Wert: „geladen und nichts gefunden" ist etwas anderes als
+     „noch nicht geladen", und beides war vorher `null`. */
+  const [meinMitgliedGeladen,setMeinMitgliedGeladen]=useState(false);
   const customBackRef=useRef<(()=>void)|null>(null);
   const setCustomBackAndRef=(fn: (()=>void)|null)=>{customBackRef.current=fn||null;setCustomBack(fn);};
 
@@ -273,14 +306,38 @@ function Portal({supabaseClient, slug}: PortalProps){
      `elternkontakte.benutzer_id`. Ohne person_id gibt es nichts zu
      laden (Konto ohne zugeordnete Person). */
   useEffect(()=>{
-    if(!sb||!dbUser||dbUser.role!=="eltern"||elternDaten) return;
-    if(!dbUser.person_id) return;
+    if(!sb||!dbUser||dbUser.role!=="eltern"||elternLadung.status==="da") return;
+    /* Kein Konto-zu-Person-Bezug: nichts zu laden, und das ist eine Auskunft.
+       Frueher ein blosses `return` — die Seite blieb auf „laedt". */
+    if(!dbUser.person_id){
+      setElternLadung({status:"nichts",
+        text:"Dein Konto ist keiner Person zugeordnet. Ohne diese Zuordnung gibt es keine Daten zu prüfen — bitte beim Vereinsadministrator melden."});
+      return;
+    }
+    let abgebrochen=false;
     (async()=>{
-      const person = await fetchPerson(sb, dbUser.person_id!);
-      if(!person) return;
-      const kinder = await fetchKinderVollstaendigFuerElternteil(sb, person.id);
-      setElternDaten({ elternkontakt: person, kinder: kinder as unknown as Mitglied[] });
+      try{
+        const { person, fehler } = await fetchPerson(sb, dbUser.person_id!);
+        if(abgebrochen) return;
+        if(!person){
+          /* ⚠ `person_id` ist ein Fremdschluessel — die Zeile GIBT es. Kommt
+             sie trotzdem nicht an, hat RLS sie zurueckgehalten, und das ist
+             ein Fehler und keine Datenlage. */
+          setElternLadung({status:"fehler",
+            text:fehler ?? "Deine Personendaten konnten nicht gelesen werden."});
+          return;
+        }
+        const kinder = await fetchKinderVollstaendigFuerElternteil(sb, person.id);
+        if(abgebrochen) return;
+        setElternLadung({status:"da", person, kinder: kinder as unknown as Mitglied[]});
+      }catch(e){
+        /* Gebunden, nicht leer: sonst bliebe von einem geworfenen Fehler nur
+           ein Bildschirm, der ewig laedt. */
+        if(!abgebrochen) setElternLadung({status:"fehler",
+          text:e instanceof Error ? e.message : String(e)});
+      }
     })();
+    return ()=>{ abgebrochen=true; };
   },[dbUser?.id, dbUser?.role, dbUser?.person_id]);
 
   /* Eigenes Mitglied laden (für Spieler/Trainer — RLS erlaubt select_self) */
@@ -288,6 +345,9 @@ function Portal({supabaseClient, slug}: PortalProps){
     if(!sb||!dbUser?.mitglied_id||meinMitgliedDaten) return;
     fetchMitglied(sb, dbUser.mitglied_id).then(data => {
       if(data) setMeinMitgliedDaten(data as unknown as Mitglied);
+      /* Auch wenn nichts kam: der Versuch ist vorbei. Ohne diese Zeile
+         bliebe „nicht gefunden" von „laedt noch" ununterscheidbar. */
+      setMeinMitgliedGeladen(true);
     });
   },[dbUser?.mitglied_id]);
 
@@ -448,11 +508,11 @@ function Portal({supabaseClient, slug}: PortalProps){
              Beides ist weg. */
           return <DatenpruefungEltern
             sb={sb}
-            elternteil={elternDaten.elternkontakt}
+            elternteil={elternDaten.person}
             kinder={elternDaten.kinder}
             feldkonfig={feldkonfig}
             setPortalMsg={()=>{}}
-            onReload={()=>{ setElternDaten(null); setMeinMitgliedDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
+            onReload={()=>{ setElternLadung({status:"laedt"}); setMeinMitgliedDaten(null); loadDbMitglieder(); setProfilOverlayDismissed(false); }}
           />;
         }
         const meinMitglied = meinMitgliedDaten || dbMitglieder.find(m => m.id === dbUser?.mitglied_id) || null;
@@ -494,14 +554,14 @@ function Portal({supabaseClient, slug}: PortalProps){
              sie pflegt Personendaten. Der Riegel gilt deshalb nur noch dem
              Mitglieds-Zweig, der ohne `raw` nichts anzeigen koennte. */
           if (!istEltern && !meinMitglied) return null;
-          const onReload = () => { setProfilOverlayDismissed(true); setElternDaten(null); setMeinMitgliedDaten(null); loadDbMitglieder(); };
+          const onReload = () => { setProfilOverlayDismissed(true); setElternLadung({status:"laedt"}); setMeinMitgliedDaten(null); loadDbMitglieder(); };
           return(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:20,overflowY:"auto"}}>
               <div style={{background:"var(--surface)",borderRadius:16,padding:24,maxWidth:560,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",margin:"auto"}}>
                 {istEltern && elternDaten
                   ? <DatenpruefungEltern
                       sb={sb}
-                      elternteil={elternDaten.elternkontakt}
+                      elternteil={elternDaten.person}
                       kinder={elternDaten.kinder}
                       feldkonfig={feldkonfig}
                       setPortalMsg={()=>{}}

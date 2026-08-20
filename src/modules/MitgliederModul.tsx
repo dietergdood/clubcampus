@@ -168,12 +168,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
      der wirkungslos verpufft, sieht aus wie eine kaputte Seite. */
   async function oeffnePerson(personId: string, name: string){
     if(!sb) return;
-    const p=await fetchPerson(sb,personId);
-    if(!p){
-      console.error("oeffnePerson: Person nicht gefunden oder nicht lesbar.",{personId,name});
+    const { person, fehler }=await fetchPerson(sb,personId);
+    if(!person){
+      console.error("oeffnePerson: Person nicht gefunden oder nicht lesbar.",{personId,name,fehler});
       return;
     }
-    setSelectedMember(zielAusPerson(p, name, {_tab:"info"}));
+    setSelectedMember(zielAusPerson(person, name, {_tab:"info"}));
   }
 
   /* Austritt — die Gegenrichtung. Die Rueckfrage stellt AustrittModal; hier
@@ -337,9 +337,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
          Der Eintrag haette dort still nichts getan. */
       onMitgliedWerden={istVerwaltung?(async pid=>{
         if(!sb) return;
-        const p=await fetchPerson(sb,pid);
-        if(p) setMitgliedWerdenFuer(p);
-        else console.error("onMitgliedWerden: Person nicht gefunden.",{pid});
+        const { person, fehler }=await fetchPerson(sb,pid);
+        if(person) setMitgliedWerdenFuer(person);
+        else console.error("onMitgliedWerden: Person nicht gefunden.",{pid,fehler});
       }):null}
       onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
       onOeffnePerson={oeffnePerson}

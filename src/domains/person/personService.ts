@@ -35,6 +35,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import type { SbClient } from '../../types.ts';
+import type { Tables } from '../../database.types.ts';
 
 /* Felder, die an der Person hängen. Massgeblich für Lesen UND
    Schreiben — verteileFelder() richtet sich nach derselben Liste. */
@@ -128,13 +129,32 @@ export function hatPersonFelder(fields: Zeile): boolean {
    Gebraucht seit Etappe 3 fuer Elternteile: sie haben ein Konto
    (`benutzer.person_id`), aber nicht zwingend eine Mitgliedschaft, und
    fallen deshalb durch jeden Lesepfad, der ueber `mitglieder` geht. */
-export async function fetchPerson(sb: SbClient, personId: string) {
+/**
+ * Eine Person lesen.
+ *
+ * ⚠ GIBT DEN FEHLER MIT ZURUECK, und das ist der Punkt. Frueher lieferte sie
+ * bei einem Fehler dasselbe wie bei „nicht gefunden": `null`. Der Aufrufer in
+ * `clubcampus.tsx` hatte darauf ein `if (!person) return;` — und damit wurde
+ * aus einem gescheiterten Lesevorgang ein Ladezustand, der nie endet. Die
+ * Oberflaeche stand auf „Profil wird geladen…", ohne Meldung, ohne Ende.
+ *
+ * Bei RLS ist das der Normalfall und nicht die Ausnahme: eine gesperrte Zeile
+ * kommt als leeres Ergebnis, nicht als Fehler. „Nicht gefunden" und „nicht
+ * gezeigt" sehen von hier aus gleich aus — beides ist `person: null`, und der
+ * Aufrufer muss es aussprechen statt es zu verschweigen.
+ */
+export async function fetchPerson(
+  sb: SbClient, personId: string,
+): Promise<{ person: Tables<'personen'> | null; fehler: string | null }> {
   const { data, error } = await sb.from('personen')
     .select('*')
     .eq('id', personId)
     .maybeSingle();
-  if (error) console.error('fetchPerson error:', error);
-  return data;
+  if (error) {
+    console.error('fetchPerson error:', error);
+    return { person: null, fehler: error.message };
+  }
+  return { person: data, fehler: null };
 }
 
 /* Eine Person direkt schreiben — ohne Mitgliedschaft.

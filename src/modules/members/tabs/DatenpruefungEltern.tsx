@@ -176,7 +176,23 @@ export function DatenpruefungEltern({
         />
       </Card>
 
-      {/* Pro Kind eine Karte */}
+      {/* Pro Kind eine Karte.
+
+          ⚠ Kein stilles Nichts bei leerer Liste. Ein Elternteil, dessen
+          Verknuepfung fehlt, saehe sonst nur seine eigene Karte — und haette
+          keinen Anhaltspunkt, dass hier etwas fehlt. „Keine Kinder" und „die
+          Kinder konnten nicht geladen werden" sehen von aussen gleich aus;
+          gesagt werden muss es trotzdem. */}
+      {kinder.length === 0 && (
+        <Card>
+          <div className="cc-text-bold cc-text-lg cc-mb-4">Keine Kinder verknüpft</div>
+          <div className="cc-text-sm cc-text-sub">
+            Mit deinem Konto ist zurzeit kein Kind verknüpft. Wenn das nicht stimmt,
+            melde es dem Vereinsadministrator — er verknüpft es im Profil des Kindes
+            unter „Eltern".
+          </div>
+        </Card>
+      )}
       {kinder.map(kind => (
         <Card key={kind.id}>
           <div className="cc-row cc-gap-8 cc-items-center cc-mb-16">
