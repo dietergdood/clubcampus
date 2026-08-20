@@ -116,7 +116,14 @@ export function SupporterModal({
       <div className="cc-modal-body">
         {/* Was ein Supporter IST — der Satz steht hier, weil die Frage in
             jeder Sitzung wieder aufkommt. */}
-        <InfoBox color={BL} text="Ein Supporter ist keine Mitgliedschaft: kein Beitrag, kein Stimmrecht an der GV. Er bleibt erreichbar, kann Helferschichten übernehmen und eine Vereinsfunktion tragen." />
+        {/* ⚠ Hier stand bis zum 20.08.2026 „kann Helferschichten übernehmen".
+            Das Datenmodell kann das nicht einlösen: `helper_zuteilungen` und
+            `team_helfer_zuteilungen` führen `mitglied_id`, und ein Supporter
+            hat keine Mitgliedschaft. Ein Versprechen ohne Deckung wird später
+            als Fehler gemeldet — der Satz sagt jetzt, was heute stimmt.
+            Sobald die beiden Tabellen an `person_id` hängen, gehört der
+            Helferteil zurück. */}
+        <InfoBox color={BL} text="Ein Supporter ist keine Mitgliedschaft: kein Beitrag, kein Stimmrecht an der GV. Er bleibt für Nachrichten und Anfragen erreichbar und kann eine Vereinsfunktion tragen." />
 
         <div className="cc-section-title">Kontakt</div>
         <Col gap={SPACE[3]}>

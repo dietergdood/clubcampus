@@ -5,6 +5,8 @@
    Beitrag, kein Stimmrecht an der GV, kein Spielbetrieb, und in
    Artikel 6 der Statuten kommt er nicht vor. Er bleibt erreichbar,
    trägt sich für Helferschichten ein und bekommt bestimmte News.
+   ⚠ Der Helferteil ist ZIEL, nicht Ist-Stand: helper_zuteilungen führt
+   heute mitglied_id. Im Nutzertext steht er deshalb nicht.
 
    Bis zum 20.08.2026 stand er als Mitgliedtyp in `mitglieder`
    (Etappe 5). Seither kommt die Liste aus `personen` — siehe

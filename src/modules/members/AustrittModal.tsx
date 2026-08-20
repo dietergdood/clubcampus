@@ -28,7 +28,7 @@ interface ZielDef {
 const ZIELE: ZielDef[] = [
   { wert: "supporter", bleibt: false,
     titel: "Supporter",
-    text: "Die Mitgliedschaft endet, die Person bleibt erreichbar — für News und Helferschichten. Kein Beitrag, kein Stimmrecht." },
+    text: "Die Mitgliedschaft endet, die Person bleibt für Nachrichten und Anfragen erreichbar. Kein Beitrag, kein Stimmrecht." },
   { wert: "ehrenmitglied", bleibt: true,
     titel: "Ehrenmitglied",
     text: "Die Mitgliedschaft läuft weiter, nur der Typ wechselt. Kader und Ämter bleiben." },

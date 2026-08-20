@@ -23,7 +23,7 @@ import type { EntkoppelWunsch } from "../../domains/members/elternService.ts";
 const WAHL: { wert: EntkoppelWunsch; titel: string; text: string; gefahr: boolean }[] = [
   { wert: "supporter", gefahr: false,
     titel: "Als Supporter behalten",
-    text: "Die Person bleibt mit Kontaktdaten und Portal-Zugang bestehen und ist für News und Helferschichten erreichbar. Keine Mitgliedschaft, kein Beitrag." },
+    text: "Die Person bleibt mit Kontaktdaten und Portal-Zugang bestehen und ist für Nachrichten und Anfragen erreichbar. Keine Mitgliedschaft, kein Beitrag." },
   { wert: "entfernen", gefahr: true,
     titel: "Person entfernen",
     text: "Nur möglich, solange nichts mehr an ihr hängt — keine Mitgliedschaft, kein weiteres Kind, kein Konto. Hängt noch etwas daran, bleibt die Person stehen." },
