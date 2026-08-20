@@ -27,14 +27,18 @@
 // Werden sie vom SFV neu vergeben, ist das der einzige Ort, der zu aendern
 // ist. Die Adresse steht NICHT hier, sondern in api_verbindungen.api_url.
 //
-// NICHTS INS LOG. In diesem Ordner steht kein einziges console.*. Fehler
-// gehen als Text an den Aufrufer und in api_sync_log.meldung — ohne
-// Antwortkoerper des SFV und ohne Token.
+// NICHTS INS LOG AUSSER FEHLERN. Die Regel war gegen Zugangsdaten gerichtet
+// und hat dabei auch die Fehler verschluckt: am 20.08.2026 scheiterte ein
+// Lauf mit non-2xx, und die Logs zeigten nur "booted" und "shutdown".
+// Seither laeuft jede Ausgabe durch protokoll.ts, das Token,
+// Verbindungszeichenketten und Schluessel-Wert-Paare schwaerzt. Direktes
+// console.* bleibt in diesem Ordner verboten.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { holeToken, holeSaison, holeTeams } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync } from "./sync.ts";
+import { protokoll, protokollFehler } from "./protokoll.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -176,9 +180,14 @@ Deno.serve(async (req) => {
       await db.from("api_verbindungen").update({
         letzter_sync: new Date().toISOString(), sync_status: erg.status, sync_meldung: erg.meldung,
       }).eq("id", v.id);
+      /* Eine Zeile pro Lauf, auch wenn er gelingt: sonst sieht man in den
+         Logs nur "booted"/"shutdown" und weiss nicht, ob ueberhaupt etwas
+         passiert ist. Die Meldung enthaelt Zahlen und Feldnamen, keine
+         Zugangsdaten — und laeuft trotzdem durch die Schwaerzung. */
+      protokoll(`lauf/${v.verein_id}`, `${erg.status}: ${erg.meldung}`);
       laeufe.push({ verein_id: v.verein_id, ...erg });
     } catch (e) {
-      const meldung = e instanceof Error ? e.message : "Sync fehlgeschlagen";
+      const meldung = protokollFehler(`lauf/${v.verein_id}`, e);
       if (logZeile) {
         await db.from("api_sync_log").update({
           beendet_am: new Date().toISOString(), status: "fehler", meldung, datensaetze_fehler: 1,

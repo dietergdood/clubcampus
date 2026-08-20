@@ -128,7 +128,25 @@ export async function starteSync(
   const { data, error } = await sb.functions.invoke("sfv-sync", {
     body: nur ? { aktion: "sync", nur } : { aktion: "sync" },
   });
-  if (error) return { daten: null, fehler: data?.fehler || error.message || "Lauf fehlgeschlagen" };
+  if (error) {
+    /* ⚠ Bei non-2xx liefert functions.invoke `data = null` — der
+       Antwortkoerper mit der eigentlichen Meldung steckt in error.context,
+       einer Response. Ohne dieses Auslesen sah ein Fehler am 20.08.2026 nur
+       als "Edge Function returned a non-2xx status code" aus, waehrend der
+       Grund ungelesen daneben lag. */
+    let ausKoerper: string | null = null;
+    const ctx = (error as { context?: unknown }).context;
+    if (ctx instanceof Response) {
+      try {
+        const roh = await ctx.clone().text();
+        const j = JSON.parse(roh);
+        ausKoerper = j?.fehler
+          ?? (Array.isArray(j?.laeufe) ? j.laeufe.map((l: {meldung?: string}) => l?.meldung).filter(Boolean).join(" · ") : null)
+          ?? roh.slice(0, 500);
+      } catch { /* kein JSON — dann bleibt die Meldung des Clients */ }
+    }
+    return { daten: null, fehler: ausKoerper || data?.fehler || error.message || "Lauf fehlgeschlagen" };
+  }
   if (data?.fehler) return { daten: null, fehler: String(data.fehler) };
   return { daten: data as SyncAntwort, fehler: null };
 }

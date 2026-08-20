@@ -106,6 +106,10 @@ export function bildeSpiel(
       sfv_gruppe: (s.groupName as string) ?? null,
       sfv_spiel_typ: (s.matchType as number) ?? null,
       sfv_status: status ?? null,
+      /* Die Nummer, die der Verband auf dem Spielbericht fuehrt (511958).
+         NICHT spiel_nr — die gehoert dem Verein und wird von Hand
+         gepflegt (migration_sfv_spielplan.sql). */
+      sfv_spiel_nr: s.matchNumber != null ? String(s.matchNumber) : null,
       sfv_stand: s,
       zuletzt_synchronisiert: jetzt,
     },
@@ -176,6 +180,12 @@ export async function laufeSync(
   if (nur !== "rangliste") {
     const spiele = await holeSpielplan(zugang, token, saison.id);
 
+    /* NUR die Felder, die DIESER Durchgang berechnet. `sfv_matchdaten`
+       gehoert dem Matchdaten-Teil (schiedsrichter kommt aus /referees pro
+       Spiel, nicht aus dem Spielplan) und wird hier bewusst nicht geprueft
+       — sonst meldete die Zweiwege-Pruefung ein Feld als fehlend, das ein
+       anderer Durchgang schreibt. Genau daran ist der Lauf am 20.08.2026
+       gescheitert. */
     const erlaubt = [
       ...((v.sync_felder as any)?.spiele?.sfv ?? []),
       ...((v.sync_felder as any)?.spiele?.abgeleitet ?? []),

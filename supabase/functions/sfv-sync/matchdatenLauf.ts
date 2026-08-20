@@ -17,11 +17,11 @@
 //     vorbereitet und wird bewusst noch nicht aufgerufen.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { holeMatch, holeAufstellung, holeEreignisse, holeTeamBild, SfvFehler } from "./sfvApi.ts";
+import { holeMatch, holeAufstellung, holeEreignisse, holeSchiedsrichter, holeTeamBild, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import {
   bildeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
-  passAenderungen, passKonflikte,
+  passAenderungen, passKonflikte, leseSchiedsrichter,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
@@ -106,6 +106,7 @@ export async function laufeMatchdaten(
       await holeMatch(zugang, token, matchId);
       const rohAufstellung = await holeAufstellung(zugang, token, matchId);
       const rohEreignisse = await holeEreignisse(zugang, token, matchId);
+      const rohRefs = await holeSchiedsrichter(zugang, token, matchId);
       alleRoh.push(...rohAufstellung);
 
       const aufstellung = rohAufstellung
@@ -132,8 +133,15 @@ export async function laufeMatchdaten(
         erg.ereignisse_zeilen += ereignisse.length;
       }
 
+      /* schiedsrichter steht in sync_felder unter spiele.sfv_matchdaten —
+         es gehoert dem Verband, wird aber von DIESEM Durchgang geschrieben,
+         nicht vom Spielplan. Nie mit null ueberschreiben: bei zwei von 21
+         Spielen liefert der Verband keinen Eintrag, und ein von Hand
+         gepflegter Wert soll dann stehen bleiben. */
+      const schiri = leseSchiedsrichter(rohRefs);
       await db.from("spiele")
-        .update({ matchdaten_geholt_am: jetzt })
+        .update(schiri ? { matchdaten_geholt_am: jetzt, schiedsrichter: schiri }
+                       : { matchdaten_geholt_am: jetzt })
         .eq("id", spiel.id);
 
       erg.spiele_geholt += 1;
