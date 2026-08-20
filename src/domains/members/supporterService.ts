@@ -324,11 +324,36 @@ export interface PersonTreffer {
  * sollte die Suche verhindern. (Am 05.08.2026 liess ein solcher Filter in
  * `sucheElternkontakte` den gesuchten Adrian Kaiser verschwinden.)
  */
+export interface SucheErgebnis {
+  treffer: PersonTreffer[];
+  /**
+   * ⚠ `false` heisst „konnte nicht suchen", NICHT „nichts gefunden".
+   *
+   * Zwei Zustände, die an der Oberfläche identisch aussehen — eine leere
+   * Liste — und völlig Verschiedenes bedeuten. Beim Anlegen eines Mitglieds
+   * ist der Unterschied entscheidend: „nichts gefunden" heisst *leg an*,
+   * „konnte nicht suchen" heisst *du weisst es nicht*. Wer beides gleich
+   * behandelt, legt Dubletten an und hält es für geprüft.
+   *
+   * Dasselbe Muster wie ein leerer `catch`: ein Ausfall, der wie eine
+   * Datenlage aussieht.
+   */
+  verfuegbar: boolean;
+}
+
 export async function suchePersonen(
-  sb: SbClient, vereinId: string, query: string,
-): Promise<PersonTreffer[]> {
+  sb: SbClient | null | undefined, vereinId: string | null | undefined, query: string,
+): Promise<SucheErgebnis> {
+  /* ⚠ Nicht nur auf `sb` prüfen, sondern auf `sb.from`. Am 20.08.2026ergab
+     eine Attrappe `{_tag:"sb"}` ein wahrheitsgemässes `sb`, aber kein `from`
+     — der Aufruf warf in einem `setTimeout`, wo niemand ihn fing. Der Nutzer
+     hätte weitergetippt und eine leere Trefferliste gesehen. */
+  if (typeof sb?.from !== "function" || !vereinId) {
+    return { treffer: [], verfuegbar: false };
+  }
+
   const q = (query || "").trim();
-  if (q.length < 2) return [];
+  if (q.length < 2) return { treffer: [], verfuegbar: true };
 
   const woerter = q.split(/\s+/).filter(Boolean).slice(0, 4);
   let abfrage = sb.from("personen")
@@ -340,9 +365,11 @@ export async function suchePersonen(
   }
 
   const { data, error } = await abfrage.order("nachname", { ascending: true }).limit(20);
-  if (error) { console.error("suchePersonen error:", error); return []; }
+  /* Ein Datenbankfehler ist ebenfalls „konnte nicht suchen" und nicht
+     „nichts gefunden" — sb.from().select() wirft nicht, es liefert error. */
+  if (error) { console.error("suchePersonen error:", error); return { treffer: [], verfuegbar: false }; }
 
-  return (data || []).map(p => {
+  const treffer = (data || []).map(p => {
     const aktiv = (p.mitglieder || []).find(m => m.aktiv);
     return {
       id: p.id,
@@ -354,4 +381,5 @@ export async function suchePersonen(
       kinder: (p.eltern_kinder || []).length,
     };
   });
+  return { treffer, verfuegbar: true };
 }

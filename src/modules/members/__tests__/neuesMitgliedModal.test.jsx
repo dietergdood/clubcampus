@@ -77,7 +77,18 @@ function renderModal(props = {}) {
   const defaultProps = {
     open: true,
     onClose: vi.fn(),
-    sb: {},
+    /* ⚠ `{}` war hier die ganze Attrappe. Seit der Dublettenpruefung ruft
+       das Modal `suchePersonen(sb, …)` aus einem setTimeout — der Aufruf warf
+       dort `sb.from is not a function`, und weil er NACH dem Testfall lief,
+       meldete Vitest nur einen "Unhandled error" statt eines roten Falls.
+       `suchePersonen` prueft inzwischen selbst auf `sb.from`; die Attrappe
+       liefert trotzdem eine leere Antwort, damit der Suchpfad wirklich
+       durchlaeuft statt am Guard abzubiegen. */
+    sb: { from: () => ({
+      select: function(){ return this; }, eq: function(){ return this; },
+      or: function(){ return this; }, order: function(){ return this; },
+      limit: () => Promise.resolve({ data: [], error: null }),
+    }) },
     dbMitgliedtypen: DB_MITGLIEDTYPEN,
     dbPortalRollen: DB_PORTAL_ROLLEN,
     feldkonfig: DB_FELDKONFIG,

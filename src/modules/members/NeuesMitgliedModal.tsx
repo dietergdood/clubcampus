@@ -92,6 +92,9 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
   const [fehlerFelder, setFehlerFelder] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [treffer, setTreffer] = useState<PersonTreffer[]>([]);
+  /* null = noch nicht gesucht. Getrennt von `treffer`, weil eine leere Liste
+     zwei Dinge heissen kann (siehe SucheErgebnis in supporterService). */
+  const [sucheOk, setSucheOk] = useState<boolean | null>(null);
   const [bestehendePerson, setBestehendePerson] = useState<PersonTreffer | null>(null);
   const [msg, setMsg] = useState<StatusMeldung | null>(null);
   const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -177,12 +180,14 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
   useEffect(() => {
     if (!sb || !vereinId) return;
     const q = `${form.vorname || ""} ${form.nachname || ""}`.trim();
-    if (bestehendePerson || q.length < 3) { setTreffer([]); return; }
+    if (bestehendePerson || q.length < 3) { setTreffer([]); setSucheOk(null); return; }
     let abgebrochen = false;
     /* Kurz warten: sonst eine Abfrage pro Tastendruck. */
     const t = setTimeout(async () => {
-      const raus = await suchePersonen(sb, vereinId, q);
-      if (!abgebrochen) setTreffer(raus);
+      const { treffer: raus, verfuegbar } = await suchePersonen(sb, vereinId, q);
+      if (abgebrochen) return;
+      setTreffer(raus);
+      setSucheOk(verfuegbar);
     }, 350);
     return () => { abgebrochen = true; clearTimeout(t); };
   }, [form.vorname, form.nachname, bestehendePerson, sb, vereinId]);
@@ -324,6 +329,18 @@ export function NeuesMitgliedModal({ open, onClose, sb, dbMitgliedtypen, feldkon
                 </div>
               </div>
               <Btn small onClick={()=>setBestehendePerson(null)}>Doch neu anlegen</Btn>
+            </div>
+          </div>
+        ) : sucheOk === false ? (
+          /* ⚠ „Konnte nicht suchen" ist NICHT „nichts gefunden". Ohne diese
+             Zeile sähe der Nutzer eine leere Liste und legte guten Gewissens
+             an — womöglich eine Dublette. Bis zum 20.08.2026 warf die Suche
+             hier sogar, aber in einem setTimeout, wo es niemand sah. */
+          <div className="cc-card cc-mb-12" style={{padding:"10px 14px"}}>
+            <div className="cc-text-sm">
+              ⚠ Die Dublettenprüfung ist gerade nicht verfügbar. Es wurde
+              <strong> nicht </strong>geprüft, ob es diese Person schon gibt —
+              vor dem Anlegen bitte in der Mitgliederliste nachsehen.
             </div>
           </div>
         ) : treffer.length > 0 && (

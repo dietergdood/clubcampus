@@ -24,7 +24,7 @@ describe("suchePersonen", () => {
     const sb = makeSb({ "personen.select": { data: [
       person({ id: "p-1", mitglieder: [{ id: 1, aktiv: true, mitgliedtyp: "Aktivmitglied" }] }),
     ] } });
-    const [t] = await suchePersonen(sb as never, "v-1", "Kaiser");
+    const { treffer: [t] } = await suchePersonen(sb as never, "v-1", "Kaiser");
     expect(t.hatAktiveMitgliedschaft).toBe(true);
     expect(t.mitgliedtyp).toBe("Aktivmitglied");
   });
@@ -35,7 +35,7 @@ describe("suchePersonen", () => {
     const sb = makeSb({ "personen.select": { data: [
       person({ mitglieder: [{ id: 1, aktiv: false, mitgliedtyp: "Aktivmitglied" }] }),
     ] } });
-    const [t] = await suchePersonen(sb as never, "v-1", "Kaiser");
+    const { treffer: [t] } = await suchePersonen(sb as never, "v-1", "Kaiser");
     expect(t.hatAktiveMitgliedschaft).toBe(false);
     expect(t.mitgliedtyp).toBeNull();
   });
@@ -44,7 +44,7 @@ describe("suchePersonen", () => {
     const sb = makeSb({ "personen.select": { data: [
       person({ eltern_kinder: [{ mitglied_id: 1 }, { mitglied_id: 2 }] }),
     ] } });
-    const [t] = await suchePersonen(sb as never, "v-1", "Kaiser");
+    const { treffer: [t] } = await suchePersonen(sb as never, "v-1", "Kaiser");
     expect(t.kinder).toBe(2);
   });
 
@@ -61,14 +61,44 @@ describe("suchePersonen", () => {
 
   it("unter zwei Zeichen wird gar nicht gesucht", async () => {
     const sb = makeSb();
-    expect(await suchePersonen(sb as never, "v-1", "a")).toEqual([]);
+    expect(await suchePersonen(sb as never, "v-1", "a")).toEqual({ treffer: [], verfuegbar: true });
     expect(sb.opsOn("personen")).toHaveLength(0);
   });
 
   it("ein Fehler ist keine leere Trefferliste", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const sb = makeSb({ "personen.select": { data: null, error: pgError("boom", "42501") } });
-    expect(await suchePersonen(sb as never, "v-1", "Kaiser")).toEqual([]);
+    /* verfuegbar:false — der Fehler darf nicht als „nichts gefunden“ ankommen. */
+    expect(await suchePersonen(sb as never, "v-1", "Kaiser")).toEqual({ treffer: [], verfuegbar: false });
     expect(spy).toHaveBeenCalled();
+  });
+});
+
+describe("⚠ „nichts gefunden“ ist nicht „konnte nicht suchen“", () => {
+  /* Beide sehen an der Oberfläche gleich aus — eine leere Liste — und
+     bedeuten Verschiedenes. Beim Anlegen entscheidet der Unterschied, ob
+     jemand guten Gewissens ein Mitglied anlegt oder eine Dublette baut. */
+  it("ohne funktionsfähigen Client: verfuegbar = false", async () => {
+    /* Am 20.08.2026 warf `suchePersonen` hier — die Attrappe `{_tag:"sb"}`
+       ist wahrheitsgemäss, hat aber kein `from`. Der Aufruf lag in einem
+       setTimeout, wo niemand ihn fing: der Nutzer sah eine leere Liste. */
+    const kaputt = { _tag: "sb" };
+    expect(await suchePersonen(kaputt as never, "v-1", "Kaiser"))
+      .toEqual({ treffer: [], verfuegbar: false });
+    expect(await suchePersonen(null as never, "v-1", "Kaiser"))
+      .toEqual({ treffer: [], verfuegbar: false });
+  });
+
+  it("ohne verein_id ebenfalls", async () => {
+    const sb = makeSb();
+    expect(await suchePersonen(sb as never, null as never, "Kaiser"))
+      .toEqual({ treffer: [], verfuegbar: false });
+    expect(sb.opsOn("personen")).toHaveLength(0);
+  });
+
+  it("eine echte Suche ohne Treffer ist verfuegbar", async () => {
+    const sb = makeSb({ "personen.select": { data: [] } });
+    expect(await suchePersonen(sb as never, "v-1", "Niemand"))
+      .toEqual({ treffer: [], verfuegbar: true });
   });
 });
