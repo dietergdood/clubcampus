@@ -344,14 +344,21 @@ select table_name, data_type from information_schema.columns
 -- DANACH
 --   Dump und Typen nachziehen (`npm run gen:types`).
 --
---   ZAEHLPROBE:
---     CREATE TABLE   +0
---     CREATE POLICY  +0   zwei ersetzt, nicht ergaenzt
---     CREATE INDEX   ±0   idx_anwesenheiten_mitglied faellt mit der Spalte und
---                         entsteht neu; zwei kommen dazu (helper_*_person)
---                         → netto +2
---     ADD CONSTRAINT +4   die Fremdschluessel; die drei Unique-Schluessel
---                         fallen mit ihren Spalten und entstehen neu → ±0
+--   ZAEHLPROBE (gemessen am 20.08.2026):
+--     CREATE TABLE   ±0
+--     CREATE POLICY  ±0   zwei ersetzt, nicht ergaenzt
+--     CREATE INDEX   +2   idx_anwesenheiten_mitglied faellt mit der Spalte und
+--                         entsteht neu (±0); dazu die zwei helper_*_person
+--     ADD CONSTRAINT +3
+--
+--   ⚠ +3, nicht +4 — und der Grund ist die Regel aus ARCHITECTURE.md, die
+--   einen Commit zuvor entstanden ist: `anwesenheiten_benutzer_id_fkey` ist
+--   mit `benutzer_id` STILLSCHWEIGEND MITGEFALLEN. Vier neue Fremdschluessel
+--   minus dieser eine ergibt drei. Die vier Unique-Schluessel sind 1:1
+--   ersetzt worden und zaehlen nicht mit.
+--
+--   Wer eine Spalte streicht, streicht auch ihre Schluessel — beim Vorhersagen
+--   der Zahl genauso leicht vergessen wie beim Schreiben der Migration.
 --
 --   Der Satz „kann Helferschichten uebernehmen" darf danach zurueck in
 --   SupporterModal, AustrittModal und EntkopplungModal — aber erst, wenn das

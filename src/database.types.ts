@@ -413,36 +413,33 @@ export type Database = {
       }
       anwesenheiten: {
         Row: {
-          benutzer_id: string | null
           eingetragen_von: string | null
           event_id: string
           event_type: string
           id: string
-          mitglied_id: string | null
+          mitglied_id: number | null
           notes: string | null
           status: string
           updated_at: string | null
           verein_id: string
         }
         Insert: {
-          benutzer_id?: string | null
           eingetragen_von?: string | null
           event_id: string
           event_type: string
           id?: string
-          mitglied_id?: string | null
+          mitglied_id?: number | null
           notes?: string | null
           status: string
           updated_at?: string | null
           verein_id: string
         }
         Update: {
-          benutzer_id?: string | null
           eingetragen_von?: string | null
           event_id?: string
           event_type?: string
           id?: string
-          mitglied_id?: string | null
+          mitglied_id?: number | null
           notes?: string | null
           status?: string
           updated_at?: string | null
@@ -450,18 +447,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "anwesenheiten_benutzer_id_fkey"
-            columns: ["benutzer_id"]
-            isOneToOne: false
-            referencedRelation: "benutzer"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "anwesenheiten_eingetragen_von_fkey"
             columns: ["eingetragen_von"]
             isOneToOne: false
             referencedRelation: "benutzer"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anwesenheiten_mitglied_fkey"
+            columns: ["mitglied_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "mitglieder"
+            referencedColumns: ["id", "verein_id"]
           },
           {
             foreignKeyName: "anwesenheiten_verein_id_fkey"
@@ -1387,7 +1384,7 @@ export type Database = {
           gesetzt_von: string | null
           id: string
           min_einsaetze: number
-          mitglied_id: string
+          mitglied_id: number
           notes: string | null
           saison: string
           verein_id: string
@@ -1397,7 +1394,7 @@ export type Database = {
           gesetzt_von?: string | null
           id?: string
           min_einsaetze: number
-          mitglied_id: string
+          mitglied_id: number
           notes?: string | null
           saison: string
           verein_id: string
@@ -1407,7 +1404,7 @@ export type Database = {
           gesetzt_von?: string | null
           id?: string
           min_einsaetze?: number
-          mitglied_id?: string
+          mitglied_id?: number
           notes?: string | null
           saison?: string
           verein_id?: string
@@ -1426,6 +1423,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vereine"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helper_pflicht_m_mitglied_fkey"
+            columns: ["mitglied_id", "verein_id"]
+            isOneToOne: false
+            referencedRelation: "mitglieder"
+            referencedColumns: ["id", "verein_id"]
           },
         ]
       }
@@ -1519,8 +1523,7 @@ export type Database = {
           eingetragen_von: string | null
           freigabe_angefragt: boolean | null
           id: string
-          mitglied_id: string | null
-          mitglied_name: string | null
+          person_id: string | null
           schicht_id: string | null
           status: string | null
           verein_id: string
@@ -1531,8 +1534,7 @@ export type Database = {
           eingetragen_von?: string | null
           freigabe_angefragt?: boolean | null
           id?: string
-          mitglied_id?: string | null
-          mitglied_name?: string | null
+          person_id?: string | null
           schicht_id?: string | null
           status?: string | null
           verein_id: string
@@ -1543,8 +1545,7 @@ export type Database = {
           eingetragen_von?: string | null
           freigabe_angefragt?: boolean | null
           id?: string
-          mitglied_id?: string | null
-          mitglied_name?: string | null
+          person_id?: string | null
           schicht_id?: string | null
           status?: string | null
           verein_id?: string
@@ -1555,6 +1556,13 @@ export type Database = {
             columns: ["eingetragen_von"]
             isOneToOne: false
             referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helper_zuteilungen_person_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
             referencedColumns: ["id"]
           },
           {
@@ -3936,7 +3944,7 @@ export type Database = {
           created_at: string | null
           eingetragen_von: string | null
           id: string
-          mitglied_id: string | null
+          person_id: string | null
           status: string | null
           verein_id: string
         }
@@ -3946,7 +3954,7 @@ export type Database = {
           created_at?: string | null
           eingetragen_von?: string | null
           id?: string
-          mitglied_id?: string | null
+          person_id?: string | null
           status?: string | null
           verein_id: string
         }
@@ -3956,7 +3964,7 @@ export type Database = {
           created_at?: string | null
           eingetragen_von?: string | null
           id?: string
-          mitglied_id?: string | null
+          person_id?: string | null
           status?: string | null
           verein_id?: string
         }
@@ -3973,6 +3981,13 @@ export type Database = {
             columns: ["eingetragen_von"]
             isOneToOne: false
             referencedRelation: "benutzer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_helfer_zuteilungen_person_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "personen"
             referencedColumns: ["id"]
           },
           {

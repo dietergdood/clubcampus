@@ -566,19 +566,22 @@ ALTER TABLE "public"."abstimmungen" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."anwesenheiten" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "mitglied_id" "uuid",
-    "benutzer_id" "uuid",
     "eingetragen_von" "uuid",
     "event_type" "text" NOT NULL,
     "event_id" "uuid" NOT NULL,
     "status" "text" NOT NULL,
     "notes" "text",
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "mitglied_id" bigint
 );
 
 
 ALTER TABLE "public"."anwesenheiten" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."anwesenheiten"."mitglied_id" IS 'Wer anwesend war — die Mitgliedschaft. Training und Spiel setzen einen Kadereintrag voraus, und der haengt am Mitglied. Die fruehere Spalte benutzer_id ist am 20.08.2026 entfallen: sie hiess „hat ein Portal-Konto", und wer keines hat, kann trotzdem anwesend sein.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."api_sync_log" (
@@ -891,17 +894,21 @@ ALTER TABLE "public"."helper_einsatz_pflicht" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."helper_einsatz_pflicht_mitglied" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "mitglied_id" "uuid" NOT NULL,
     "saison" "text" NOT NULL,
     "min_einsaetze" integer NOT NULL,
     "notes" "text",
     "gesetzt_von" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "mitglied_id" bigint NOT NULL
 );
 
 
 ALTER TABLE "public"."helper_einsatz_pflicht_mitglied" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."helper_einsatz_pflicht_mitglied"."mitglied_id" IS 'Wer Einsaetze SCHULDET — die Mitgliedschaft, nicht die Person. Ein Supporter schuldet dem Verein nichts; wer mithelfen DARF, steht in helper_zuteilungen.person_id.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."helper_events" (
@@ -935,18 +942,21 @@ ALTER TABLE "public"."helper_schichten" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."helper_zuteilungen" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "schicht_id" "uuid",
-    "mitglied_id" "uuid",
-    "mitglied_name" "text",
     "eingetragen_von" "uuid",
     "als_stellvertreter" boolean DEFAULT false,
     "status" "text" DEFAULT 'eingetragen'::"text",
     "freigabe_angefragt" boolean DEFAULT false,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "person_id" "uuid"
 );
 
 
 ALTER TABLE "public"."helper_zuteilungen" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."helper_zuteilungen"."person_id" IS 'Wer die Schicht uebernimmt — eine PERSON, keine Mitgliedschaft. Eltern und Supporter helfen mit, ohne Mitglied zu sein. Die Pflicht zu Einsaetzen haengt dagegen an der Mitgliedschaft (helper_einsatz_pflicht_mitglied).';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."kader" (
@@ -1986,16 +1996,20 @@ COMMENT ON COLUMN "public"."spiele"."sfv_spiel_nr" IS 'matchNumber des SFV. NICH
 CREATE TABLE IF NOT EXISTS "public"."team_helfer_zuteilungen" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "aufgabe_id" "uuid" NOT NULL,
-    "mitglied_id" "uuid",
     "eingetragen_von" "uuid",
     "als_stellvertreter" boolean DEFAULT false,
     "status" "text" DEFAULT 'eingetragen'::"text",
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "person_id" "uuid"
 );
 
 
 ALTER TABLE "public"."team_helfer_zuteilungen" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."team_helfer_zuteilungen"."person_id" IS 'Wer die Teamaufgabe uebernimmt — eine PERSON. Gerade hier sind es ueberwiegend Eltern, die selbst keine Mitgliedschaft haben.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."team_helferaufgaben" (
@@ -2333,7 +2347,7 @@ ALTER TABLE ONLY "public"."abstimmungen"
 
 
 ALTER TABLE ONLY "public"."anwesenheiten"
-    ADD CONSTRAINT "anwesenheiten_mitglied_id_event_type_event_id_key" UNIQUE ("mitglied_id", "event_type", "event_id");
+    ADD CONSTRAINT "anwesenheiten_mitglied_event_key" UNIQUE ("mitglied_id", "event_type", "event_id");
 
 
 
@@ -2453,11 +2467,6 @@ ALTER TABLE ONLY "public"."helper_einsaetze"
 
 
 ALTER TABLE ONLY "public"."helper_einsatz_pflicht_mitglied"
-    ADD CONSTRAINT "helper_einsatz_pflicht_mitglied_mitglied_id_saison_key" UNIQUE ("mitglied_id", "saison");
-
-
-
-ALTER TABLE ONLY "public"."helper_einsatz_pflicht_mitglied"
     ADD CONSTRAINT "helper_einsatz_pflicht_mitglied_pkey" PRIMARY KEY ("id");
 
 
@@ -2472,6 +2481,11 @@ ALTER TABLE ONLY "public"."helper_events"
 
 
 
+ALTER TABLE ONLY "public"."helper_einsatz_pflicht_mitglied"
+    ADD CONSTRAINT "helper_pflicht_m_mitglied_saison_key" UNIQUE ("mitglied_id", "saison");
+
+
+
 ALTER TABLE ONLY "public"."helper_schichten"
     ADD CONSTRAINT "helper_schichten_pkey" PRIMARY KEY ("id");
 
@@ -2483,7 +2497,7 @@ ALTER TABLE ONLY "public"."helper_zuteilungen"
 
 
 ALTER TABLE ONLY "public"."helper_zuteilungen"
-    ADD CONSTRAINT "helper_zuteilungen_schicht_id_mitglied_id_key" UNIQUE ("schicht_id", "mitglied_id");
+    ADD CONSTRAINT "helper_zuteilungen_schicht_person_key" UNIQUE ("schicht_id", "person_id");
 
 
 
@@ -2862,7 +2876,7 @@ ALTER TABLE ONLY "public"."spiele"
 
 
 ALTER TABLE ONLY "public"."team_helfer_zuteilungen"
-    ADD CONSTRAINT "team_helfer_zuteilungen_aufgabe_id_mitglied_id_key" UNIQUE ("aufgabe_id", "mitglied_id");
+    ADD CONSTRAINT "team_helfer_zuteilungen_aufgabe_person_key" UNIQUE ("aufgabe_id", "person_id");
 
 
 
@@ -3010,6 +3024,10 @@ CREATE INDEX "idx_bf_fid" ON "public"."benutzer_funktionen" USING "btree" ("funk
 
 
 
+CREATE INDEX "idx_helper_zuteilungen_person" ON "public"."helper_zuteilungen" USING "btree" ("person_id");
+
+
+
 CREATE INDEX "idx_kader_verein" ON "public"."kader" USING "btree" ("verein_id");
 
 
@@ -3103,6 +3121,10 @@ CREATE INDEX "idx_stufen_ebene" ON "public"."team_stufen" USING "btree" ("ebene"
 
 
 CREATE INDEX "idx_stufen_parent" ON "public"."team_stufen" USING "btree" ("parent_id");
+
+
+
+CREATE INDEX "idx_team_helfer_zuteilungen_person" ON "public"."team_helfer_zuteilungen" USING "btree" ("person_id");
 
 
 
@@ -3252,12 +3274,12 @@ ALTER TABLE ONLY "public"."abstimmungen"
 
 
 ALTER TABLE ONLY "public"."anwesenheiten"
-    ADD CONSTRAINT "anwesenheiten_benutzer_id_fkey" FOREIGN KEY ("benutzer_id") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "anwesenheiten_eingetragen_von_fkey" FOREIGN KEY ("eingetragen_von") REFERENCES "public"."benutzer"("id");
 
 
 
 ALTER TABLE ONLY "public"."anwesenheiten"
-    ADD CONSTRAINT "anwesenheiten_eingetragen_von_fkey" FOREIGN KEY ("eingetragen_von") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "anwesenheiten_mitglied_fkey" FOREIGN KEY ("mitglied_id", "verein_id") REFERENCES "public"."mitglieder"("id", "verein_id") ON DELETE CASCADE;
 
 
 
@@ -3481,6 +3503,11 @@ ALTER TABLE ONLY "public"."helper_events"
 
 
 
+ALTER TABLE ONLY "public"."helper_einsatz_pflicht_mitglied"
+    ADD CONSTRAINT "helper_pflicht_m_mitglied_fkey" FOREIGN KEY ("mitglied_id", "verein_id") REFERENCES "public"."mitglieder"("id", "verein_id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."helper_schichten"
     ADD CONSTRAINT "helper_schichten_einsatz_id_fkey" FOREIGN KEY ("einsatz_id") REFERENCES "public"."helper_einsaetze"("id") ON DELETE CASCADE;
 
@@ -3493,6 +3520,11 @@ ALTER TABLE ONLY "public"."helper_schichten"
 
 ALTER TABLE ONLY "public"."helper_zuteilungen"
     ADD CONSTRAINT "helper_zuteilungen_eingetragen_von_fkey" FOREIGN KEY ("eingetragen_von") REFERENCES "public"."benutzer"("id");
+
+
+
+ALTER TABLE ONLY "public"."helper_zuteilungen"
+    ADD CONSTRAINT "helper_zuteilungen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
 
 
 
@@ -3967,6 +3999,11 @@ ALTER TABLE ONLY "public"."team_helfer_zuteilungen"
 
 
 ALTER TABLE ONLY "public"."team_helfer_zuteilungen"
+    ADD CONSTRAINT "team_helfer_zuteilungen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."team_helfer_zuteilungen"
     ADD CONSTRAINT "team_helfer_zuteilungen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
 
@@ -4148,11 +4185,11 @@ CREATE POLICY "ansichten_write" ON "public"."mitglieder_ansichten" USING ((("ver
 ALTER TABLE "public"."anwesenheiten" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "anwesenheiten_select" ON "public"."anwesenheiten" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND (("benutzer_id" = "auth"."uid"()) OR ("public"."get_my_role"() = ANY (ARRAY['administrator'::"text", 'administration'::"text", 'trainer'::"text", 'funktionaer'::"text"])))));
+CREATE POLICY "anwesenheiten_select" ON "public"."anwesenheiten" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND (("mitglied_id" = "public"."get_my_mitglied_id"()) OR ("public"."get_my_role"() = ANY (ARRAY['administrator'::"text", 'administration'::"text", 'trainer'::"text", 'funktionaer'::"text"])))));
 
 
 
-CREATE POLICY "anwesenheiten_write" ON "public"."anwesenheiten" USING ((("verein_id" = "public"."get_my_verein_id"()) AND (("benutzer_id" = "auth"."uid"()) OR ("public"."get_my_role"() = ANY (ARRAY['administrator'::"text", 'administration'::"text", 'trainer'::"text"])))));
+CREATE POLICY "anwesenheiten_write" ON "public"."anwesenheiten" USING ((("verein_id" = "public"."get_my_verein_id"()) AND (("mitglied_id" = "public"."get_my_mitglied_id"()) OR ("public"."get_my_role"() = ANY (ARRAY['administrator'::"text", 'administration'::"text", 'trainer'::"text"])))));
 
 
 
