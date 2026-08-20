@@ -28,7 +28,7 @@ import { DatenpruefungTab } from "./tabs/DatenpruefungTab.tsx";
 import type { StatusMeldung } from "./tabs/DatenpruefungTab.tsx";
 import { VerlaufTab } from "./tabs/VerlaufTab.tsx";
 import { getSichtbarkeit } from "./memberUtils.tsx";
-import { getFeldkonfig, fuerMitgliedtyp, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
+import { getFeldkonfig, fuerMitgliedtyp, OHNE_MITGLIEDSCHAFT, istSichtbar, pflichtfelderAus, IMMER_PFLICHT_KEYS } from "../../domains/members/feldkonfig.ts";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, SetState , PersonZeile } from "../../types.ts";
 import type { FunktionMitGruppe } from "../../shared/person/types.ts";
@@ -92,6 +92,8 @@ interface MemberDetailProps {
   vereinId?: string | null;
   /** Öffnet den Austritt — die Rückfrage, was nach dem Austritt gilt. */
   onAustritt?: ((mitgliedId: number) => void) | null;
+  /** Öffnet „Mitglied werden" für eine Person ohne Mitgliedschaft. */
+  onMitgliedWerden?: ((personId: string) => void) | null;
 }
 
 function MemberDetail({
@@ -101,7 +103,7 @@ function MemberDetail({
   kannVerwalten, onReload, onUpdatePortalZugang = null,
   setSelectedMember, selectedMember,
   reloadMember, refreshArchivCount, brauchtEltern, onProfilGeprueft = null,
-  vereinId = null, onAustritt = null,
+  vereinId = null, onAustritt = null, onMitgliedWerden = null,
 }: MemberDetailProps) {
   /* Die beiden Identitäten, einmal ausgelesen. Ab hier steht im Code, welche
      gemeint ist — `raw.id` sagte das nicht. */
@@ -132,7 +134,18 @@ function MemberDetail({
   /* MITGLIEDTYP: MemberDetail zeigt eine Mitgliedschaft. Die Fallunter-
      scheidung fuer Personen ohne Mitgliedschaft kommt mit der Personenseite —
      bis dahin erreicht diese Komponente niemanden ohne Mitgliedtyp. */
-  const konfig = getFeldkonfig(fuerMitgliedtyp(raw.mitgliedtyp), feldkonfig);
+  /* ⚠ DAS IST DER SCHALTER DER GANZEN SEITE.
+     Ohne Mitgliedschaft gilt die Achse `ohne_mitgliedschaft` (Migration vom
+     21.08.2026). Daraus folgt von selbst, welche Felder und welche TABS
+     erscheinen — `tab_stats`, `tab_verlauf` und `tab_eltern` tragen
+     `nur_mitgliedschaft` und sind dort `aus`.
+
+     Kein `if (istSupporter)` irgendwo auf dieser Seite: wo eine solche
+     Abfrage nötig schiene, kennt die Konfiguration den Fall noch nicht. */
+  const konfig = getFeldkonfig(
+    mitgliedId == null ? OHNE_MITGLIEDSCHAFT : fuerMitgliedtyp(raw.mitgliedtyp),
+    feldkonfig,
+  );
   const fv = getSichtbarkeit(role, konfig);
   const tab = selectedMember?._tab || "info";
   const setTab = (t: string) => setSelectedMember(prev => prev ? { ...prev, _tab: t } : prev);
@@ -287,6 +300,7 @@ function MemberDetail({
         benutzer={benutzer} teamDetails={teamDetails}
         vereinId={vereinId} onAustritt={onAustritt}
         mitgliedId={mitgliedId}
+        onMitgliedWerden={onMitgliedWerden ? (() => onMitgliedWerden(personId)) : null}
       />
 
       {/* Tab-Bar */}

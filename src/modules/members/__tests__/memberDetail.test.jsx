@@ -147,3 +147,42 @@ describe('MemberDetail — Benutzer-Fetch', () => {
     expect(svc.fetchBenutzerFuerPerson).toHaveBeenCalledTimes(1);
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   Eine Person OHNE Mitgliedschaft (21.08.2026)
+
+   Der Schalter der ganzen Seite ist EINE Zeile: welche Achse der
+   Feldkonfiguration gilt. Alles andere folgt daraus — kein
+   `if (istSupporter)` irgendwo.
+   ═══════════════════════════════════════════════════════════════ */
+describe('MemberDetail — ohne Mitgliedschaft', () => {
+  const ohne = { mitgliedId: null, personId: 'p-9', name: 'Petra Muster' };
+
+  it('reicht mitgliedId=null an den Hero durch', async () => {
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [] })} />); });
+    expect(h.heroMitgliedId).toBeNull();
+  });
+
+  it('⚠ sucht das Konto ueber die PERSON, nicht ueber die Mitgliedschaft', async () => {
+    /* Beim Supporter steht benutzer.mitglied_id seit dem Rueckbau vom
+       20.08. auf null — ueber sie waere das Konto nie gefunden worden. */
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [] })} />); });
+    await waitFor(() => expect(svc.fetchBenutzerFuerPerson).toHaveBeenCalledWith(sb, 'p-9'));
+  });
+
+  it('laedt weder Kader noch Elternkontakte', async () => {
+    /* Beides haengt an einer Mitgliedschaft. Frueher waere `raw.id`
+       undefined an die Services gegangen — als number typisiert. */
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [] })} />); });
+    expect(svc.fetchKaderFuerMitglied).not.toHaveBeenCalled();
+    expect(svc.fetchElternkontakte).not.toHaveBeenCalled();
+  });
+
+  it('bei einem Mitglied wird der Kader sehr wohl geladen', async () => {
+    /* Die Gegenprobe: sonst koennte der Test oben auch gruen sein, weil
+       gar nichts mehr geladen wird. */
+    const m = { mitgliedId: 1, personId: 'p-1', name: 'X' };
+    await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [{ id: 1 }] })} />); });
+    await waitFor(() => expect(svc.fetchKaderFuerMitglied).toHaveBeenCalledWith(sb, 1));
+  });
+});

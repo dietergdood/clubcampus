@@ -108,6 +108,10 @@ function renderModul(extra = {}) {
 }
 
 /** Holt einen Bulk-Callback aus den abgegriffenen ListView-Props. */
+/* ⚠ Die Beschriftung hiess bis zum 21.08.2026 „Löschen (DSGVO)" und
+   verspricht seither das, was sie tut: „Mitgliedschaft löschen". Der Text ist
+   Teil dessen, was dieser Test absichert — wer ihn wieder auf „Löschen"
+   verkürzt, soll hier rot werden, nicht erst bei einem Löschbegehren. */
 function bulkAction(labelPart) {
   const a = (h.listViewProps.bulkActions || []).find((x) => x.label.includes(labelPart));
   return a.onClick;
@@ -131,7 +135,7 @@ afterEach(cleanup);
 describe('MitgliederModul — handleBulkDelete (H1)', () => {
   it('löscht alle und meldet keinen Fehler, wenn nichts fehlschlägt', async () => {
     renderModul();
-    const del = bulkAction('Löschen');
+    const del = bulkAction('Mitgliedschaft löschen');
     await act(async () => { await del(new Set([1, 2, 3])); });
 
     expect(svc.deleteMitglied).toHaveBeenCalledTimes(3);
@@ -144,7 +148,7 @@ describe('MitgliederModul — handleBulkDelete (H1)', () => {
   it('meldet die Anzahl fehlgeschlagener Löschungen (deleteMitglied gibt Fehler zurück)', async () => {
     svc.deleteMitglied.mockImplementation((_sb, id) => Promise.resolve(id === 2 ? { message: 'FK' } : null));
     renderModul();
-    await act(async () => { await bulkAction('Löschen')(new Set([1, 2, 3])); });
+    await act(async () => { await bulkAction('Mitgliedschaft löschen')(new Set([1, 2, 3])); });
 
     expect(onReload).toHaveBeenCalled();
     expect(h.confirmMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -156,7 +160,7 @@ describe('MitgliederModul — handleBulkDelete (H1)', () => {
   it('zählt eine rejected Promise als fehlgeschlagen (allSettled)', async () => {
     svc.deleteMitglied.mockImplementation((_sb, id) => id === 2 ? Promise.reject(new Error('boom')) : Promise.resolve(null));
     renderModul();
-    await act(async () => { await bulkAction('Löschen')(new Set([1, 2, 3])); });
+    await act(async () => { await bulkAction('Mitgliedschaft löschen')(new Set([1, 2, 3])); });
 
     expect(h.confirmMock).toHaveBeenCalledWith(expect.objectContaining({
       message: expect.stringContaining('1 von 3'),
@@ -166,7 +170,7 @@ describe('MitgliederModul — handleBulkDelete (H1)', () => {
   it('tut nichts, wenn der Bestätigungsdialog abgebrochen wird', async () => {
     h.confirmMock.mockResolvedValueOnce(false);
     renderModul();
-    await act(async () => { await bulkAction('Löschen')(new Set([1])); });
+    await act(async () => { await bulkAction('Mitgliedschaft löschen')(new Set([1])); });
 
     expect(svc.deleteMitglied).not.toHaveBeenCalled();
     expect(onReload).not.toHaveBeenCalled();

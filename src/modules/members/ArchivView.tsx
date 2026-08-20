@@ -121,7 +121,7 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
 
   async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
-    const ok = await confirm({ title:`${selected.size} Mitglieder löschen?`, message:"Diese Aktion ist unwiderruflich (DSGVO).", danger:true, confirmLabel:"Löschen" });
+    const ok = await confirm({ title:`${selected.size} Mitgliedschaften löschen?`, message:"Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.", danger:true, confirmLabel:"Löschen" });
     if (!sb || !ok) return;
     for (const id of selected) await deleteMitglied(sb, Number(id));
     setArchivData(prev => prev.filter(m => !selected.has(m.id)));
@@ -177,7 +177,7 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
           selectable
           bulkActions={[
             { icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:reaktivieren },
-            { icon:"trash", label:"Löschen (DSGVO)", danger:true, requiresSelection:true, onClick:loeschen },
+            { icon:"trash", label:"Mitgliedschaft löschen", danger:true, requiresSelection:true, onClick:loeschen },
           ]}
           exportFn={(rows,cols,groups,format) => exportListData(rows,cols,groups,format,{
             filename:"archiv", sheetName:"Archiv",

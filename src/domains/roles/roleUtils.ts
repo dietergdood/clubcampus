@@ -159,7 +159,17 @@ export async function ableitUndSaveRolle(
 export interface HeroChip {
   label: string;
   /** portal = golden, alles andere grau */
-  type: "portal" | "kader" | "funktion";
+  /**
+   * Was der Chip IST, nicht wie er aussieht.
+   *
+   * `status` kam am 21.08.2026 dazu, fuer „Ohne Mitgliedschaft" im Kopf der
+   * Personenseite. Er beschreibt keine Rolle und keine Taetigkeit, sondern das
+   * Fehlen einer Mitgliedschaft — ihn als "funktion" auszugeben waere bequem
+   * und falsch. `heroChips()` erzeugt ihn nicht: die Funktion beantwortet
+   * „Rolle oder Mitgliedtyp", und das Fehlen von beidem ist keine Antwort
+   * darauf, sondern ihre Voraussetzung.
+   */
+  type: "portal" | "kader" | "funktion" | "status";
 }
 
 export interface HeroChipOptionen {

@@ -235,7 +235,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   async function handleBulkDelete(selected: Set<RowId>){
     if(!sb||!selected||selected.size===0) return;
-    const ok=await confirm({title:`${selected.size} Mitglieder löschen?`,message:"Diese Aktion kann nicht rükgängig gemacht werden (DSGVO).",danger:true,confirmLabel:"Löschen"});if(!ok) return;
+    const ok=await confirm({title:`${selected.size} Mitgliedschaften löschen?`,message:"Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.",danger:true,confirmLabel:"Löschen"});if(!ok) return;
     const ids=[...selected].map(Number);
     /* Pro Zeile Fehler auswerten — Löschen kann an FK-Verknüpfungen (Kader/
        Eltern) oder RLS scheitern; sonst meldete die UI faelschlich Erfolg. */
@@ -328,6 +328,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     <MemberDetail
       m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}
       onAustritt={istVerwaltung?(id=>{const mm=dbMitglieder.find(x=>x.id===id);if(mm)setAustrittFuer(mm);}):null}
+      onMitgliedWerden={istVerwaltung?(pid=>{const p=supporterRoh.find(x=>x.id===pid);if(p)setMitgliedWerdenFuer(p);}):null}
       onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
       sb={sb} role={role} account={account} feldkonfig={feldkonfig}
       dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen}
@@ -520,7 +521,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         selectable
         bulkActions={[
           {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
-          {icon:"trash",    label:"Löschen (DSGVO)", onClick:handleBulkDelete, danger:true, requiresSelection:true},
+          {icon:"trash",    label:"Mitgliedschaft löschen", onClick:handleBulkDelete, danger:true, requiresSelection:true},
         ]}
         exportFn={canExport ? exportData : undefined}
         exportFormats={canExport ? [

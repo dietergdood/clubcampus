@@ -43,6 +43,9 @@ interface MemberHeroProps {
   /** Öffnet den Austritt (Rückfrage: was gilt danach?). Ohne Callback
       erscheint der Eintrag nicht. */
   onAustritt?: ((mitgliedId: number) => void) | null;
+  /** Öffnet „Mitglied werden" — erscheint NUR ohne Mitgliedschaft, an der
+      Stelle von Austritt und Archivieren. */
+  onMitgliedWerden?: (() => void) | null;
   /**
    * Die MITGLIEDSCHAFT dieser Person, oder `null`.
    *
@@ -53,7 +56,7 @@ interface MemberHeroProps {
   mitgliedId: number | null;
 }
 
-function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,mitgliedId}: MemberHeroProps){
+function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
@@ -72,7 +75,10 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
        (DSGVO)" ist ein eigenes Vorhaben. Ohne Mitgliedschaft gibt es hier
        nichts zu loeschen, und der Eintrag erscheint gar nicht erst. */
     if(mitgliedId==null) return;
-    const ok=await confirm({title:`${m.name} löschen?`,message:"Diese Aktion kann nicht rückgängig gemacht werden.",danger:true,confirmLabel:"Löschen"});
+    const ok=await confirm({
+      title:`Mitgliedschaft von ${m.name} löschen?`,
+      message:"Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.",
+      danger:true, confirmLabel:"Mitgliedschaft löschen"});
     if(!sb||!ok) return;
     await deleteMitglied(sb, mitgliedId);
     if(onClose) onClose();
@@ -136,14 +142,29 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                    geprueft. Vereinsfunktionen kommen aus mitglieder.funktionen;
                    dort stand bis 05.08.2026 bei 487 Mitgliedern "Spieler", eine
                    Kaderrolle im Funktionenfeld. Bereinigt. */
-                const chips=heroChips({
+                const chips=[...heroChips({
                   portalRolle: benutzer?.role||raw.rolle||null,
                   mitgliedtyp: raw.mitgliedtyp||null,
                   hatTrainerKader: !!hatTrainerKader,
                   hatSpielerKader: !!hatSpielerKader,
                   hatFunktion: (raw.funktionen||[]).length>0,
                   rolleLabel: ROLLE_LABEL,
-                });
+                })];
+                /* ⚠ „Ohne Mitgliedschaft" wird AUSGESCHRIEBEN, nicht
+                   weggelassen. `heroChips` liefert ohne Mitgliedtyp und ohne
+                   Kader nur noch die Portalrolle — eine Kopfzeile mit einem
+                   einzigen Chip ist von einer kaputten nicht zu unterscheiden.
+
+                   ⚠ Der Text sagt, was ZUTRIFFT, und erklaert nicht. Ein Satz
+                   wie „Ein Supporter ist keine Mitgliedschaft…" waere hier bei
+                   den meisten falsch: von 400 Menschen ohne Mitgliedschaft sind
+                   393 ELTERNTEILE und 7 Supporter (gemessen am 21.08.2026).
+                   Die Unterscheidung haengt an `eltern_kinder` — nicht an der
+                   Rolle: `role === "eltern"` ist schon einmal falsch gewesen,
+                   ein Vater, der selbst spielt, bekommt `spieler`. Wer den
+                   Unterschied im Kopf zeigen will, laedt die Kinder; das ist
+                   eine eigene Entscheidung und steht hier nicht. */
+                if (mitgliedId == null) chips.unshift({ label: "Ohne Mitgliedschaft", type: "status" });
                 const MAX=isMobile?2:(chips||[]).length;
                 const visible=chips.slice(0,MAX);
                 const hidden=(chips||[]).length-MAX;
@@ -158,8 +179,12 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
           </div>
           <div className="cc-hero-banner-actions">
             <div className="cc-hero-status-strip">
-              {raw.aktiv!==false&&<span className="cc-hero-status-pill cc-hero-status-pill-ok"><TI n="circle-check" size={11}/>Aktiv</span>}
-              {raw.aktiv===false&&<span className="cc-hero-status-pill cc-hero-status-pill-err"><TI n="user-off" size={11}/>Inaktiv</span>}
+              {/* ⚠ `raw.aktiv!==false` ist bei `undefined` WAHR. Ohne die
+                  Mitgliedschafts-Bedingung behauptete die Kopfzeile bei einem
+                  Supporter „Aktiv" — fuer eine Mitgliedschaft, die es nicht
+                  gibt. Beide Pillen beschreiben `mitglieder.aktiv`. */}
+              {mitgliedId!=null&&raw.aktiv!==false&&<span className="cc-hero-status-pill cc-hero-status-pill-ok"><TI n="circle-check" size={11}/>Aktiv</span>}
+              {mitgliedId!=null&&raw.aktiv===false&&<span className="cc-hero-status-pill cc-hero-status-pill-err"><TI n="user-off" size={11}/>Inaktiv</span>}
               {raw.fairgate_id&&<span className="cc-hero-status-pill"><TI n="refresh" size={11}/>Fairgate OK</span>}
               {/* Datenprüfung hängt an profil_geprueft_at — das früher hier
                   gelesene Feld `geprueft` gibt es in mitglieder nicht, die
@@ -173,11 +198,23 @@ function MemberHero({m,raw,initials,canEdit,canDelete=false,sb,onReload,onClose,
                    er fragt, was danach gilt. Archivieren bleibt daneben, weil
                    es etwas anderes ist — eine Mitgliedschaft stilllegen, ohne
                    ueber den Kontakt zu entscheiden (Fehleintrag, Dublette). */
+                /* Ohne Mitgliedschaft steht hier der Weg hinein statt der
+                   Wege hinaus. Kein ausgegrauter Knopf: was es nicht gibt,
+                   erscheint nicht. */
+                ...(canEdit&&mitgliedId==null&&onMitgliedWerden?[{icon:"user-plus",label:"Mitglied werden…",onClick:onMitgliedWerden}]:[]),
                 ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false&&onAustritt?[{icon:"door-exit",label:"Austritt…",onClick:()=>onAustritt(mitgliedId)}]:[]),
                 ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Stillegen ohne Austritt — für Fehleinträge und Dubletten. Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [mitgliedId], n);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,false);if(onReload)onReload(mitgliedId);if(onRefreshCount)onRefreshCount();}}]:[]),
                 ...(mitgliedId!=null&&raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,mitgliedId,vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, mitgliedId);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(mitgliedId);else if(onReload)onReload(mitgliedId);}}]:[]),
                 "sep" as const,
-                {icon:"trash",label:"Löschen",danger:true,onClick:handleLoeschen},
+                /* ⚠ Hiess bis zum 21.08.2026 nur „Löschen" — und in den Sammelaktionen
+                   sogar „Löschen (DSGVO)". Beides versprach etwas, das nicht
+                   geschieht: `deleteMitglied()` entfernt die MITGLIEDSCHAFT, die
+                   Person bleibt vollständig stehen (Name, Adresse, Geburtsdatum,
+                   AHV-Nummer, Konto). Bei einem echten Löschbegehren ist das kein
+                   Schönheitsfehler — wer den Knopf benutzt hat, glaubt es erledigt.
+                   Nur der Text ist geändert; das echte Löschen ist ein eigenes
+                   Vorhaben mit Vorschau und Edge Function fuer auth.users. */
+                ...(mitgliedId!=null?[{icon:"trash",label:"Mitgliedschaft löschen",danger:true,onClick:handleLoeschen}]:[]),
               ]}/></div>
             )}
           </div>
