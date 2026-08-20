@@ -1120,6 +1120,24 @@ select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
  order by 1;
 ```
 
+### Zu jeder neuen Spalte gehört ihr Leser
+
+Die Regel steht ausführlich in `CLAUDE.md` → Konventionen, mit den vier
+Fällen vom 20.08.2026. Kurz: **wer eine Spalte anlegt, nennt im selben
+Auftrag die Stelle, die sie liest** — und wenn es die noch nicht gibt, steht
+das ausdrücklich dabei.
+
+Der Grund gehört auch hierher, weil er beim Schreiben einer Migration am
+leichtesten übersehen wird: **nach aussen sieht eine ungelesene Spalte aus wie
+fehlende Daten, nicht wie fehlender Code.** Man sucht in der Datenbank, im
+Sync, beim Verband — nur nicht dort, wo es liegt. Eine Spalte, die niemand
+ausliest, und eine, die niemand befüllt, zeigen an der Oberfläche dasselbe:
+ein leeres Feld.
+
+Eine Migration ist deshalb erst fertig, wenn sie beantwortet, wer den neuen
+Wert liest. Steht die Antwort noch aus, gehört sie in den Migrationskopf —
+dort, wo die nächste Person nachschaut.
+
 ### Pflicht für jede neue Tabelle
 
 ```sql

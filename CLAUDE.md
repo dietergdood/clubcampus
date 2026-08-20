@@ -126,6 +126,22 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 ## Konventionen
 
 - Kein `sb.from()` direkt in Komponenten → Service in `domains/`. (Legacy-Module verletzen das noch; neuer Code nicht.)
+- **Wer eine Spalte anlegt, nennt im selben Auftrag die Stelle, die sie liest.** Gibt es die noch nicht, steht das ausdrücklich dabei — als offener Punkt mit Datum, nicht als stille Lücke.
+
+  **Warum das teuer ist: nach aussen sieht es aus wie fehlende Daten, nicht wie fehlender Code.** Man sucht in der Datenbank, im Sync, beim Verband — nur nicht dort, wo es liegt. Eine Spalte, die niemand ausliest, ist von einer Spalte, die niemand befüllt, an der Oberfläche nicht zu unterscheiden; beide zeigen ein leeres Feld.
+
+  **Drei Fälle am 20.08.2026, und das ist kein Zufall:**
+
+  | Spalte | angelegt für | gelesen von |
+  |---|---|---|
+  | `spiele.sfv_spiel_nr` | die Spielnummer des Verbands | **niemandem** — `spielMapper` las nur `spiel_nr`. Die Rückfallregel stand im Kommentar von `migration_sfv_spielinfo.sql` |
+  | `mitgliedtypen.zaehlt_als_mitgliedschaft` | die Listentrennung | **niemandem mehr**, seit der Supporter-Rückbau nach Tabelle trennt statt nach Merkmal |
+  | `personen.profil_geprueft_at` + die Pflichtfeld-Matrix | der Datenprüfung | `getProfilFehlend()` **wird nie aufgerufen** (`clubcampus.tsx:465`) |
+
+  Dazu als viertes `api_verbindungen.active`: gelesen, aber nur von der Oberfläche, während die Edge Function es ignoriert — sechs Tage grauer Stecker für einen Anschluss, der stündlich lief.
+
+  Das gemeinsame Merkmal ist immer dasselbe: **es schlägt nichts fehl.** Kein Fehler im Build, keine Meldung im Log, kein roter Test. Deshalb hilft hier keine Prüfung, sondern nur die Frage beim Anlegen — *wer liest das?* Fällt die Antwort schwer, ist die Spalte entweder verfrüht oder der Auftrag unvollständig.
+
 - **Nach jeder Strukturänderung gehören Dump UND Typen nachgezogen** — `npx supabase db dump --linked -f supabase/schema.sql` *und* `npm run gen:types`. Am 05.08.2026 fehlten in `database.types.ts` gleich drei Dinge aus vorherigen Etappen: die ganze Tabelle `personen`, `mitglieder.person_id` und die Fremdschlüsselbeziehung, ohne die PostgREST den Join nicht typisiert. Der Dump allein reicht nicht.
 - **Chips im Profilkopf nie selbst zusammenbauen** → `heroChips()` aus `domains/roles/roleUtils.ts`. Die Regel unterscheidet Rolle (was jemand tut) von Mitgliedtyp (wie er eingestuft ist) und ist mit 13 Tests abgesichert.
 - **Datenbereinigungen an Personenfeldern treffen `personen`, nicht `mitglieder`.** Die Fassade (`flacheZeile`) überschreibt jedes Feld aus `PERSON_FELDER` mit dem Wert der Person — die gleichnamige Spalte in `mitglieder` wird gar nicht mehr gelesen. Am 05.08.2026 selbst darauf reingefallen: Ein `update` auf `mitglieder.funktionen` sah in zwei Kontrollabfragen sauber aus und wirkte trotzdem nicht, weil die Liste `personen.funktionen` liest. Solange beide Spalten nebeneinander existieren (bis Etappe 6), gilt: erst `PERSON_FELDER` prüfen, dann die richtige Tabelle wählen.
