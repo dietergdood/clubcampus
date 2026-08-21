@@ -10,6 +10,26 @@
    entschieden hätte.
 
    Drei der vier Antworten halten den Kontakt. Das ist der Punkt.
+
+   ⚠ ZWEI ACHSEN, SEIT 22.08.2026 AUCH IM TYP. „Ehrenmitglied" und
+   „Aktivmitglied" sind ein TYPWECHSEL — die Mitgliedschaft bleibt.
+   „Beenden" und „Archiv" sind ein ENDE. Vorher standen alle vier als
+   Zeichenketten in einer Reihe, und der Unterschied lebte nur im Kopf
+   des Aufrufers.
+
+   ⚠ UND DIE TYPEN KOMMEN AUS DER DATENBANK. Fest verdrahtet waren nur
+   „Ehrenmitglied" und „Aktivmitglied" — dieselbe Bauart wie die
+   Spaltenköpfe der Pflichtfeld-Matrix, die am 05.08.2026 auf nicht
+   existierende Typen zeigten. Gefehlt hat vor allem
+   **Pausenmitglied**: der Typ, der wörtlich „kommt vielleicht wieder"
+   bedeutet, war als Antwort nicht wählbar.
+
+   Gezeigt werden ALLE aktiven Typen, keine gepflegte Auswahl. Eine
+   zweite Liste, die jemand pflegen muss, veraltet — und
+   „Juniorenmitglied" beim Austritt eines Erwachsenen ist sichtbar
+   unsinnig, also wählt es niemand. Eine falsche Auswahl, die man
+   sieht, ist besser als eine richtige, die veraltet.
+   (Entscheidung Didi, 22.08.2026.)
    ═══════════════════════════════════════════════════════════════ */
 import { useState, useEffect } from "react";
 import { ModalOrSheet, Btn, Input, InfoBox, Col, Label } from "../../theme.ts";
@@ -17,28 +37,9 @@ import { TI } from "../../icons.tsx";
 import { AM, BL, R, SPACE, TEXT } from "../../constants.ts";
 import type { AustrittsZiel } from "../../domains/members/supporterService.ts";
 
-interface ZielDef {
-  wert: AustrittsZiel;
-  titel: string;
-  text: string;
-  /** Bleibt die Mitgliedschaft bestehen? */
-  bleibt: boolean;
-}
-
-const ZIELE: ZielDef[] = [
-  { wert: "supporter", bleibt: false,
-    titel: "Supporter",
-    text: "Die Mitgliedschaft endet, die Person bleibt für Nachrichten und Anfragen erreichbar. Kein Beitrag, kein Stimmrecht." },
-  { wert: "ehrenmitglied", bleibt: true,
-    titel: "Ehrenmitglied",
-    text: "Die Mitgliedschaft läuft weiter, nur der Typ wechselt. Kader und Ämter bleiben." },
-  { wert: "aktivmitglied", bleibt: true,
-    titel: "Aktivmitglied",
-    text: "Wechsel des Mitgliedtyps, etwa von Junioren- zu Aktivmitglied. Kein Austritt." },
-  { wert: "archiv", bleibt: false,
-    titel: "Archiv",
-    text: "Die Mitgliedschaft endet und der Kontakt wird nicht weitergeführt. Die Person bleibt im Archiv auffindbar." },
-];
+/** Die Auswahl im Modal — ein Schlüssel je Zeile, damit der Radio-Knopf
+    einen String hat und nicht ein Objekt. */
+type ZielKey = "beenden" | "archiv" | `typ:${string}`;
 
 export interface AustrittModalProps {
   open: boolean;
@@ -47,13 +48,21 @@ export interface AustrittModalProps {
   /** Aktueller Mitgliedtyp — wird als Hinweis gezeigt. */
   mitgliedtyp?: string | null;
   hatKonto?: boolean;
+  /** Alle aktiven Mitgliedtypen, für den Typwechsel. Aus `mitgliedtypen`,
+      nicht aus dem Code. */
+  mitgliedtypen?: { name: string }[];
+  /** Name der eingestellten Art nach dem Austritt (`vereine.austritt_art_id`
+      → `personenarten.name`). Fehlt sie, sagt das Modal das auch — es
+      behauptet nicht „Supporter". */
+  austrittsart?: string | null;
   onAustritt: (ziel: AustrittsZiel, am: string) => Promise<{ fehler: string | null; hinweise: string[] }>;
 }
 
 export function AustrittModal({
-  open, onClose, name, mitgliedtyp = null, hatKonto = false, onAustritt,
+  open, onClose, name, mitgliedtyp = null, hatKonto = false,
+  mitgliedtypen = [], austrittsart = null, onAustritt,
 }: AustrittModalProps) {
-  const [ziel, setZiel]       = useState<AustrittsZiel | "">("");
+  const [ziel, setZiel]       = useState<ZielKey | "">("");
   const [am, setAm]           = useState("");
   const [saving, setSaving]   = useState(false);
   const [fehler, setFehler]   = useState<string | null>(null);
@@ -67,13 +76,47 @@ export function AustrittModal({
     setHinweise([]);
   }, [open]);
 
+  /* Die Auswahl entsteht aus den Daten, nicht aus einer Konstante. Die
+     Reihenfolge ist die Aussage: erst die beiden Enden, dann die Wechsel. */
+  const ZIELE: { wert: ZielKey; titel: string; text: string; bleibt: boolean }[] = [
+    { wert: "beenden", bleibt: false,
+      titel: austrittsart || "Mitgliedschaft beenden, Kontakt bleibt",
+      text: austrittsart
+        ? `Die Mitgliedschaft endet, die Person gilt danach als ${austrittsart} und bleibt für Nachrichten und Anfragen erreichbar. Kein Beitrag, kein Stimmrecht.`
+        /* ⚠ Behauptet KEINE Ursache. „Keine Art eingestellt" wäre eine
+           Diagnose, die diese Komponente nicht stellen kann: die Art kann
+           fehlen ODER nicht geladen worden sein, und beides sieht von hier
+           gleich aus. Was tatsächlich geschieht, sagt der Hinweis nach dem
+           Ausführen — dort liest der Service die Einstellung selbst. */
+        : "Die Mitgliedschaft endet, die Person bleibt erreichbar. ⚠ Es ist keine Art nach dem Austritt bekannt — bitte in der Portalverwaltung unter Mitglieder-Konfiguration prüfen." },
+    { wert: "archiv", bleibt: false,
+      titel: "Archiv",
+      /* ⚠ Berichtigt am 22.08.2026. Hier stand „der Kontakt wird nicht
+         weitergeführt" — das war die alte Bedeutung. Archiv heisst
+         „ausgetreten, aber noch etwas offen": Beitrag, Rechnung, Material.
+         Ein Fehleintrag wird gelöscht, nicht archiviert. */
+      text: "Die Mitgliedschaft endet und es ist noch etwas offen — Beitrag, Rechnung, Material. Die Person bleibt im Archiv auffindbar, bis das erledigt ist." },
+    ...mitgliedtypen.map(t => ({
+      wert: `typ:${t.name}` as ZielKey, bleibt: true,
+      titel: t.name,
+      text: `Wechsel des Mitgliedtyps auf ${t.name}. Die Mitgliedschaft läuft weiter, Kader und Ämter bleiben. Kein Austritt.`,
+    })),
+  ];
+
   const gewaehlt = ZIELE.find(z => z.wert === ziel) || null;
+
+  /** Von der Auswahl im Modal zur Aussage im Service. */
+  function zumZiel(k: ZielKey): AustrittsZiel {
+    if (k === "beenden") return { art: "beenden" };
+    if (k === "archiv") return { art: "archiv" };
+    return { art: "typwechsel", mitgliedtyp: k.slice(4) };
+  }
 
   async function ausfuehren() {
     if (!ziel) return;
     setSaving(true);
     setFehler(null);
-    const { fehler: f, hinweise: h } = await onAustritt(ziel, am);
+    const { fehler: f, hinweise: h } = await onAustritt(zumZiel(ziel), am);
     setSaving(false);
     if (f) { setFehler(f); return; }
     /* Nicht sofort schliessen: die Hinweise sagen, was tatsächlich geschehen
@@ -134,11 +177,11 @@ export function AustrittModal({
             {gewaehlt && !gewaehlt.bleibt && (
               <InfoBox color={AM} text={
                 `Kadereinträge werden beendet${hatKonto ? ", laufende Vereinsfunktionen bekommen dieses Datum als Ende" : ""}. `
-                + (gewaehlt.wert === "supporter"
+                + (gewaehlt.wert === "beenden"
                     ? (hatKonto
-                        ? "Das Portal-Konto bleibt bestehen, die Rolle wechselt auf Supporter."
+                        ? `Das Portal-Konto bleibt bestehen${austrittsart ? `, die Rolle richtet sich nach der Art „${austrittsart}"` : ""}.`
                         : "Diese Person hat kein Portal-Konto — sie bleibt über E-Mail und Telefon erreichbar.")
-                    : "Der Kontakt wird nicht weitergeführt.")} />
+                    : "Die Person bleibt im Archiv auffindbar.")} />
             )}
 
             {fehler && <InfoBox color={R} text={fehler} />}

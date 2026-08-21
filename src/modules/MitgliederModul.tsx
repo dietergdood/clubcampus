@@ -13,6 +13,8 @@ import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as expo
 import { mapSupporter } from "./members/memberMapper.ts";
 import { fetchSupporter, macheZuMitglied, beendeMitgliedschaft } from "../domains/members/supporterService.ts";
 import type { AustrittsZiel } from "../domains/members/supporterService.ts";
+import { bleibtMitglied } from "../domains/members/supporterService.ts";
+import { fetchAustrittsziel, fetchPersonenarten } from "../domains/person/personArtService.ts";
 import { AustrittModal } from "./members/AustrittModal.tsx";
 import type { SupporterRoh, PersonFuerMitgliedschaft } from "../domains/members/supporterService.ts";
 import { fetchPerson } from "../domains/person/personService.ts";
@@ -72,6 +74,29 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [supporterRoh,setSupporterRoh]=useState<SupporterRoh[]>([]);
   const [mitgliedWerdenFuer,setMitgliedWerdenFuer]=useState<PersonFuerMitgliedschaft|null>(null);
   const [austrittFuer,setAustrittFuer]=useState<Mitglied|null>(null);
+  /* Der Name der eingestellten Austritts-Art. Einmal beim Aufbau geholt, nicht
+     beim Oeffnen des Modals — sonst zeigte es beim ersten Rendern noch nichts
+     und der Titel spraenge. Fehlt sie, sagt das Modal das ausdruecklich,
+     statt "Supporter" zu behaupten. */
+  const [austrittsart,setAustrittsart]=useState<string|null>(null);
+  useEffect(()=>{
+    if(!sb||!vereinId) return;
+    let abgebrochen=false;
+    (async()=>{
+      const zielId=await fetchAustrittsziel(sb,vereinId);
+      if(!zielId){ if(!abgebrochen) setAustrittsart(null); return; }
+      const arten=await fetchPersonenarten(sb,false);
+      const treffer=arten.find(a=>a.art_id===zielId);
+      if(!abgebrochen) setAustrittsart(treffer?.name??null);
+    })().catch(e=>{
+      /* Gebunden und gemeldet, nicht verschluckt: ein Promise ohne catch
+         wird zur unbehandelten Rejection, und der Name bliebe still leer.
+         Was der Nutzer davon sieht, sagt das Modal — es behauptet keine
+         Ursache, weil es sie hier nicht kennt. */
+      console.error("Austrittsart nicht ladbar:",e);
+    });
+    return ()=>{abgebrochen=true;};
+  },[sb,vereinId]);
 
 
   const [archivTab,setArchivTab]=useState(false);
@@ -187,15 +212,19 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const benutzerId=await holeBenutzerId(austrittFuer.person_id);
     const { ok, fehler, hinweise } = await beendeMitgliedschaft(sb,{
       mitgliedId:austrittFuer.id, vereinId, ziel, benutzerId, am,
+      /* Die Person mitgeben statt sie im Service nachschlagen zu lassen —
+         sie steht hier schon in der Zeile. */
+      personId: austrittFuer.person_id,
     });
     if(!ok||fehler) return { fehler: fehler ?? "Der Austritt konnte nicht eingetragen werden.", hinweise };
 
     const wer=account?.name||account?.email||"Administrator";
-    const bleibt=ziel==="ehrenmitglied"||ziel==="aktivmitglied";
+    const bleibt=bleibtMitglied(ziel);
     await logAktivitaet(sb,{ personId: austrittFuer.person_id, mitgliedId: austrittFuer.id },vereinId,
       bleibt?AKTIVITAET_TYP.ANGELEGT:AKTIVITAET_TYP.ARCHIVIERT,
-      bleibt?`Mitgliedtyp gewechselt auf ${ziel==="ehrenmitglied"?"Ehrenmitglied":"Aktivmitglied"}`
-            :`Austritt per ${am} — danach: ${ziel==="supporter"?"Supporter":"Archiv"}`,
+      ziel.art==="typwechsel" ? `Mitgliedtyp gewechselt auf ${ziel.mitgliedtyp}`
+        : ziel.art==="archiv" ? `Austritt per ${am} — ins Archiv`
+        : `Austritt per ${am} — danach: ${austrittsart||"keine Art eingestellt"}`,
       null,null,wer);
 
     /* Beide Listen: die Person verlaesst die Mitgliederliste und erscheint —
@@ -399,6 +428,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         name={austrittFuer?vollname(austrittFuer):""}
         mitgliedtyp={austrittFuer?.mitgliedtyp}
         hatKonto={Boolean(austrittFuer?.hat_benutzer)}
+        mitgliedtypen={dbMitgliedtypen.filter(t=>t.aktiv!==false).map(t=>({name:t.name}))}
+        austrittsart={austrittsart}
         onAustritt={fuehreAustrittAus}
       />
       <MitgliedWerdenModal

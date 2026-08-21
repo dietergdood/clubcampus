@@ -642,7 +642,9 @@ CREATE TABLE IF NOT EXISTS "public"."api_verbindungen" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "verein_id" "uuid" NOT NULL,
-    "sync_laeuft_seit" timestamp with time zone
+    "sync_laeuft_seit" timestamp with time zone,
+    "wache_zuletzt" timestamp with time zone,
+    "zuordnung_gemeldet_am" timestamp with time zone
 );
 
 
@@ -654,6 +656,14 @@ COMMENT ON COLUMN "public"."api_verbindungen"."key" IS 'Name des Anschlusses (fa
 
 
 COMMENT ON COLUMN "public"."api_verbindungen"."sync_laeuft_seit" IS 'Zeitpunkt, zu dem der laufende Sync die Sperre beansprucht hat. NULL = kein Lauf. Aeltere Eintraege als 15 Minuten gelten als abgestuerzt und werden ueberschrieben.';
+
+
+
+COMMENT ON COLUMN "public"."api_verbindungen"."wache_zuletzt" IS 'Wann der Sync-Waechter (cron: sync-waechter-stuendlich) zuletzt geprueft hat. Gelesen von ApiTab.';
+
+
+
+COMMENT ON COLUMN "public"."api_verbindungen"."zuordnung_gemeldet_am" IS 'Marke fuer die Meldung neuer unzugeordneter Spieler. Neu = fruehestes spiel_aufstellung.erstmals_gesehen liegt nach dieser Marke. Beim Anlegen auf now() gesetzt: der damalige Rueckstand bleibt dauerhaft stumm. Gelesen von sfv-sync (meldeNeueUnzugeordnete).';
 
 
 
@@ -1142,13 +1152,14 @@ COMMENT ON COLUMN "public"."mitglieder"."rolle" IS 'Veraltet – wird durch funk
 
 CREATE TABLE IF NOT EXISTS "public"."mitglieder_aenderungen" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "mitglied_id" bigint NOT NULL,
+    "mitglied_id" bigint,
     "verein_id" "uuid" NOT NULL,
     "feld" "text" NOT NULL,
     "alter_wert" "text",
     "neuer_wert" "text",
     "geaendert_von" "text",
-    "geaendert_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "geaendert_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "person_id" "uuid" NOT NULL
 );
 
 
@@ -1157,14 +1168,15 @@ ALTER TABLE "public"."mitglieder_aenderungen" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."mitglieder_aktivitaeten" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "mitglied_id" bigint NOT NULL,
+    "mitglied_id" bigint,
     "verein_id" "uuid" NOT NULL,
     "typ" "text" NOT NULL,
     "beschreibung" "text" NOT NULL,
     "feld" "text",
     "wert" "text",
     "geaendert_von" "text",
-    "geaendert_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "geaendert_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "person_id" "uuid" NOT NULL
 );
 
 
@@ -1214,13 +1226,14 @@ ALTER SEQUENCE "public"."mitglieder_id_seq" OWNED BY "public"."mitglieder"."id";
 
 CREATE TABLE IF NOT EXISTS "public"."mitglieder_notizen" (
     "id" integer NOT NULL,
-    "mitglied_id" bigint NOT NULL,
+    "mitglied_id" bigint,
     "text" "text" NOT NULL,
     "autor_id" "uuid",
     "autor_name" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "person_id" "uuid" NOT NULL
 );
 
 
@@ -1610,11 +1623,16 @@ CREATE TABLE IF NOT EXISTS "public"."personenarten" (
     "aktiv" boolean DEFAULT true NOT NULL,
     "ableitung" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
+    "standard_rolle" "text",
     CONSTRAINT "personenarten_ableitung_check" CHECK ((("ableitung" IS NULL) OR ("ableitung" = 'eltern_kinder'::"text")))
 );
 
 
 ALTER TABLE "public"."personenarten" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."personenarten"."standard_rolle" IS 'Portalrolle, die diese Art mitbringt. Vorbild mitgliedtypen.standard_rolle — nur mit Fremdschluessel, weil dessen Fehlen dort am 05.08.2026 zwei Zeilen mit einer unbekannten Rolle zugelassen hat.';
+
 
 
 CREATE OR REPLACE VIEW "public"."personenarten_effektiv" WITH ("security_invoker"='true') AS
@@ -1920,7 +1938,8 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_aufstellung" (
     "von_minute" integer,
     "bis_minute" integer,
     "spielzeit" integer,
-    "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL
+    "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "erstmals_gesehen" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -1928,6 +1947,10 @@ ALTER TABLE "public"."spiel_aufstellung" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."spiel_aufstellung" IS 'Aufstellung EIGENER Spieler aus /api/match/{id}/players. Fremde Zeilen werden nicht gespeichert. Nicht zu verwechseln mit `aufgebote`: das Aufgebot steht vor dem Spiel und deckt sich nie ganz mit der Aufstellung danach.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."erstmals_gesehen" IS 'Wann diese Zeile ENTSTANDEN ist. Steht bewusst nicht in der Upsert-Nutzlast von bildeAufstellung() — was nicht mitgeschickt wird, laesst ON CONFLICT DO UPDATE unberuehrt. Nicht zu verwechseln mit zuletzt_synchronisiert, das bei jedem Lauf neu gesetzt wird.';
 
 
 
@@ -2341,7 +2364,8 @@ CREATE TABLE IF NOT EXISTS "public"."vereine" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "slug" "text",
-    "sfv_club_nummer" integer
+    "sfv_club_nummer" integer,
+    "austritt_art_id" "uuid"
 );
 
 
@@ -2349,6 +2373,10 @@ ALTER TABLE "public"."vereine" OWNER TO "postgres";
 
 
 COMMENT ON COLUMN "public"."vereine"."sfv_club_nummer" IS 'SFV clubNumber des Vereins (FCH = 11057). NICHT die ClubId (1516) — in Ranglisten und Matchdaten steht ausschliesslich die clubNumber. Der Matchdaten-Sync trennt daran eigene von fremden Spielern.';
+
+
+
+COMMENT ON COLUMN "public"."vereine"."austritt_art_id" IS 'Personenart, zu der eine Person beim Austritt wird. Nur GESETZTE Arten (personenarten.ableitung IS NULL) sind zulaessig — geprueft in der Portalverwaltung, nicht per CHECK; Begruendung im Kopf von migration_austritt.sql.';
 
 
 
@@ -3258,7 +3286,15 @@ CREATE INDEX "mitglieder_aenderungen_mitglied_idx" ON "public"."mitglieder_aende
 
 
 
+CREATE INDEX "mitglieder_aenderungen_person_idx" ON "public"."mitglieder_aenderungen" USING "btree" ("person_id");
+
+
+
 CREATE INDEX "mitglieder_aktivitaeten_mitglied_idx" ON "public"."mitglieder_aktivitaeten" USING "btree" ("mitglied_id", "geaendert_at" DESC);
+
+
+
+CREATE INDEX "mitglieder_aktivitaeten_person_idx" ON "public"."mitglieder_aktivitaeten" USING "btree" ("person_id");
 
 
 
@@ -3267,6 +3303,10 @@ CREATE UNIQUE INDEX "mitglieder_eine_aktive_mitgliedschaft" ON "public"."mitglie
 
 
 COMMENT ON INDEX "public"."mitglieder_eine_aktive_mitgliedschaft" IS 'Eine aktive Mitgliedschaft pro Person. Aktivmitglied und Supporter schliessen sich aus; beim Wechsel muss die alte auf aktiv = false. Archivierte Mitgliedschaften sind beliebig viele — sie sind die Historie.';
+
+
+
+CREATE INDEX "mitglieder_notizen_person_idx" ON "public"."mitglieder_notizen" USING "btree" ("person_id");
 
 
 
@@ -3715,7 +3755,12 @@ ALTER TABLE ONLY "public"."medien"
 
 
 ALTER TABLE ONLY "public"."mitglieder_aenderungen"
-    ADD CONSTRAINT "mitglieder_aenderungen_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "mitglieder_aenderungen_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."mitglieder_aenderungen"
+    ADD CONSTRAINT "mitglieder_aenderungen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
 
 
 
@@ -3725,7 +3770,12 @@ ALTER TABLE ONLY "public"."mitglieder_aenderungen"
 
 
 ALTER TABLE ONLY "public"."mitglieder_aktivitaeten"
-    ADD CONSTRAINT "mitglieder_aktivitaeten_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "mitglieder_aktivitaeten_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."mitglieder_aktivitaeten"
+    ADD CONSTRAINT "mitglieder_aktivitaeten_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
 
 
 
@@ -3745,12 +3795,12 @@ ALTER TABLE ONLY "public"."mitglieder_ansichten"
 
 
 ALTER TABLE ONLY "public"."mitglieder_notizen"
-    ADD CONSTRAINT "mitglieder_notizen_autor_id_fkey" FOREIGN KEY ("autor_id") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "mitglieder_notizen_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE SET NULL;
 
 
 
 ALTER TABLE ONLY "public"."mitglieder_notizen"
-    ADD CONSTRAINT "mitglieder_notizen_mitglied_id_fkey" FOREIGN KEY ("mitglied_id") REFERENCES "public"."mitglieder"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "mitglieder_notizen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
 
 
 
@@ -3991,6 +4041,11 @@ ALTER TABLE ONLY "public"."personenart_pro_person"
 
 ALTER TABLE ONLY "public"."personenart_pro_person"
     ADD CONSTRAINT "personenart_pro_person_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."personenarten"
+    ADD CONSTRAINT "personenarten_standard_rolle_fkey" FOREIGN KEY ("verein_id", "standard_rolle") REFERENCES "public"."portal_rollen"("verein_id", "name") ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 
@@ -4241,6 +4296,11 @@ ALTER TABLE ONLY "public"."trainingsplan_vorlagen"
 
 ALTER TABLE ONLY "public"."trainingsplan_vorlagen"
     ADD CONSTRAINT "trainingsplan_vorlagen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."vereine"
+    ADD CONSTRAINT "vereine_austritt_art_fkey" FOREIGN KEY ("austritt_art_id", "id") REFERENCES "public"."personenarten"("id", "verein_id") ON DELETE SET NULL;
 
 
 

@@ -73,17 +73,26 @@ const PERSON_SELECT = `
 /**
  * Alle Supporter eines Vereins.
  *
- * WER DAZUGEHOERT: eine Person ohne jede Zeile in `mitglieder` und ohne
- * jede Zeile in `eltern_kinder`.
+ * WER DAZUGEHOERT — zwei Wege, und beide gelten:
  *
- * Beide Bedingungen sind Ausschluesse, keine Merkmale — es gibt kein
- * Kennzeichen „ist Supporter" und soll auch keines geben. Wer eine
- * Mitgliedschaft hat, steht in der Mitgliederliste oder im Archiv; wer ein
- * Kind hat, im Eltern-Tab. Uebrig bleibt, wer nur erreichbar ist.
+ *   1. eine Person ohne jede Zeile in `mitglieder` und ohne jede Zeile in
+ *      `eltern_kinder` — sie ist nichts anderes, also Goenner;
+ *   2. eine Person, die die eingestellte AUSTRITTS-ART traegt.
  *
- * ⚠ Auch eine BEENDETE Mitgliedschaft zaehlt. `mitglieder(id)` fragt nicht
- * nach `aktiv`: ein ausgetretenes Mitglied gehoert ins Archiv und nicht
- * unter die Goenner, sonst stuende dieselbe Person an zwei Orten.
+ * ⚠ DER ZWEITE WEG KAM AM 22.08.2026 DAZU, und er behebt einen Widerspruch.
+ * Bis dahin galt nur der erste, und „Supporter" beim Austritt machte
+ * NIEMANDEN zum Supporter: die beendete Mitgliedschaftszeile bleibt stehen
+ * und schloss die Person hier aus, waehrend `benutzer.role` „supporter"
+ * sagte und `personenarten_effektiv` gar nichts. Drei Stellen, drei
+ * Antworten.
+ *
+ * Jetzt schreibt der Austritt die Art (`beendeMitgliedschaft`), und diese
+ * Liste liest sie. Damit sagen alle drei dasselbe.
+ *
+ * ⚠ EINE BEENDETE MITGLIEDSCHAFT ALLEIN reicht weiterhin NICHT. Wer
+ * ausgetreten ist, ohne die Art zu bekommen — Archiv, oder es war keine
+ * eingestellt —, gehoert ins Archiv und nicht unter die Goenner. Sonst
+ * stuende dieselbe Person an zwei Orten.
  *
  * ⚠ Gefiltert wird in JavaScript, nicht in der Abfrage. PostgREST kann
  * „hat keine Zeile in einer eingebetteten Beziehung" nicht ausdruecken —
@@ -108,11 +117,30 @@ export async function fetchSupporter(
     return [];
   }
 
+  /* Die eingestellte Austritts-Art — der zweite Weg in diese Liste. Fehlt
+     sie, bleibt es beim doppelten Ausschluss; das ist der Zustand vor dem
+     22.08.2026 und kein Fehler. */
+  const { data: verein, error: vFehler } = await sb.from("vereine")
+    .select("austritt_art_id").eq("id", vereinId).maybeSingle();
+  if (vFehler) console.error("fetchSupporter (austrittsart) error:", vFehler);
+  const austrittArtId = (verein?.austritt_art_id as string | null) ?? null;
+
+  let mitArt = new Set<string>();
+  if (austrittArtId) {
+    const { data: zuw, error: zFehler } = await sb.from("personenart_pro_person")
+      .select("person_id").eq("verein_id", vereinId).eq("art_id", austrittArtId);
+    /* error lesen: ohne das saehe ein 42501 aus wie „niemand traegt die Art",
+       und die Ausgetretenen verschwaenden lautlos aus der Liste. */
+    if (zFehler) console.error("fetchSupporter (arten) error:", zFehler);
+    mitArt = new Set((zuw || []).map(z => z.person_id as string));
+  }
+
   return (data || [])
     .filter(p => {
-      const hatMitgliedschaft = (p.mitglieder || []).length > 0;
-      const hatKinder         = (p.eltern_kinder || []).length > 0;
-      return !hatMitgliedschaft && !hatKinder;
+      const hatKinder = (p.eltern_kinder || []).length > 0;
+      if (hatKinder) return false;          // steht im Eltern-Tab
+      if (mitArt.has(p.id)) return true;    // ausgetreten, Kontakt bleibt
+      return (p.mitglieder || []).length === 0;
     })
     .map(p => {
       const konto = (p.benutzer || [])[0] || null;
@@ -168,7 +196,7 @@ export async function macheZuMitglied(
   personId: string,
   vereinId: string,
   felder: { mitgliedtyp: string; eintrittsdatum?: string | null },
-): Promise<{ mitgliedId: number | null; fehler: string | null }> {
+): Promise<{ mitgliedId: number | null; fehler: string | null; hinweis?: string }> {
   /* Erst nachsehen, ob schon eine besteht. Der partielle Index
      `mitglieder_eine_aktive_mitgliedschaft` laesst nur eine zu; ohne diese
      Abfrage bekaeme der Nutzer eine 23505-Meldung aus der Datenbank statt
@@ -204,20 +232,64 @@ export async function macheZuMitglied(
     console.error("macheZuMitglied error:", error);
     return { mitgliedId: null, fehler: error.message };
   }
+
+  /* ⚠ DIE GEGENRICHTUNG. Ohne sie truege ein zurueckgekehrtes Mitglied fuer
+     immer „Ehemalige" — die Art wuerde beim Austritt gesetzt und nie wieder
+     entfernt. Ein Fehler hier bricht NICHT ab: die Mitgliedschaft steht
+     bereits, und sie deshalb zurueckzurollen waere schlimmer als eine Art
+     zu viel. Er wird gemeldet. */
+  const artFehler = await entferneAustrittsart(sb, personId, vereinId);
+  if (artFehler) {
+    return {
+      mitgliedId: data?.id ?? null,
+      fehler: null,
+      hinweis: "Die Mitgliedschaft steht. Die frühere Art konnte nicht entfernt werden — bitte im Profil prüfen.",
+    };
+  }
   return { mitgliedId: data?.id ?? null, fehler: null };
 }
 
 /* ── Die Gegenrichtung: Austritt ──────────────────────────────────────────
    Statuten Artikel 8: der Austritt ist ein ZEITPUNKT, kein Zustand. Was
    danach mit der Person geschieht, ist eine eigene Frage — und sie wird
-   gestellt, nicht geraten. Vier Antworten sind moeglich, und drei davon
-   halten den Kontakt. */
-export type AustrittsZiel = "supporter" | "archiv" | "ehrenmitglied" | "aktivmitglied";
+   gestellt, nicht geraten.
+
+   ⚠ ZWEI ACHSEN, UND DER TYP SAGT ES JETZT AUCH. Bis zum 22.08.2026 hiess
+   der Typ `"supporter" | "archiv" | "ehrenmitglied" | "aktivmitglied"` —
+   vier Zeichenketten in einer Reihe, obwohl zwei davon einen TYPWECHSEL
+   meinen (die Mitgliedschaft bleibt) und zwei ein ENDE. Der Code trennte
+   sie sauber, der Typ nicht, und ein Aufrufer musste die Regel im Kopf
+   haben.
+
+   Dazu kam, dass die beiden Mitgliedtypen als Zeichenketten festverdrahtet
+   waren — dieselbe Bauart wie die Spaltenkoepfe der Pflichtfeld-Matrix, die
+   am 05.08.2026 auf nicht existierende Typen zeigten. `Pausenmitglied`, der
+   Typ, der woertlich „kommt vielleicht wieder" bedeutet, liess sich gar
+   nicht waehlen. Jetzt kommt die Auswahl aus `mitgliedtypen`. */
+export type AustrittsZiel =
+  /** Die Mitgliedschaft ENDET. Die Person wird zur eingestellten Art
+      (`vereine.austritt_art_id`) und bleibt erreichbar. */
+  | { art: "beenden" }
+  /** Die Mitgliedschaft ENDET, ohne Weiterfuehrung des Kontakts.
+      ⚠ Archiv heisst „ausgetreten, aber noch etwas offen" — Beitrag,
+      Rechnung, Material. Ein Fehleintrag wird geloescht, nicht archiviert.
+      (Bedeutung geklaert am 21.08.2026, Didi.) */
+  | { art: "archiv" }
+  /** Die Mitgliedschaft BLEIBT, nur der Typ wechselt. Kader und Aemter
+      bleiben. Der Name kommt aus `mitgliedtypen`, nicht aus dem Code. */
+  | { art: "typwechsel"; mitgliedtyp: string };
+
+/** Bleibt die Mitgliedschaft bestehen? Die eine Frage, an der alles haengt. */
+export function bleibtMitglied(ziel: AustrittsZiel): boolean {
+  return ziel.art === "typwechsel";
+}
 
 export interface AustrittOptionen {
   mitgliedId: number;
   vereinId: string;
   ziel: AustrittsZiel;
+  /** Person hinter der Mitgliedschaft — fuer die Art nach dem Austritt. */
+  personId?: string | null;
   /** Konto der Person, falls vorhanden — für Rolle und Ämter. */
   benutzerId?: string | null;
   /** Tag des Austritts. Ohne Angabe: heute. */
@@ -244,8 +316,8 @@ export async function beendeMitgliedschaft(
   const tag = o.am || new Date().toISOString().slice(0, 10);
 
   /* ── Typwechsel: die Mitgliedschaft bleibt ── */
-  if (o.ziel === "ehrenmitglied" || o.ziel === "aktivmitglied") {
-    const typ = o.ziel === "ehrenmitglied" ? "Ehrenmitglied" : "Aktivmitglied";
+  if (o.ziel.art === "typwechsel") {
+    const typ = o.ziel.mitgliedtyp;
     const { error } = await sb.from("mitglieder")
       .update({ mitgliedtyp: typ, updated_at: new Date().toISOString() })
       .eq("id", o.mitgliedId);
@@ -254,7 +326,41 @@ export async function beendeMitgliedschaft(
     return { ok: true, fehler: null, hinweise };
   }
 
-  /* ── Austritt: die Mitgliedschaft endet ── */
+  /* ── Austritt: die Mitgliedschaft endet ──────────────────────────────
+     ⚠ HIER LAG DER EIGENTLICHE DEFEKT. „Supporter" beim Austritt machte
+     bis zum 22.08.2026 NIEMANDEN zum Supporter — drei Stellen beantworten
+     die Frage und sagten Verschiedenes:
+
+       fetchSupporter()          nein, die beendete Zeile schliesst aus
+       personenarten_effektiv    nein, die Zeile schrieb NIEMAND
+       benutzer.role             ja
+
+     Jetzt schreibt der Austritt die ART, und alle drei sagen dasselbe. */
+  let artNachher: { art_id: string; name: string; standard_rolle: string | null } | null = null;
+  if (o.ziel.art === "beenden") {
+    const { data: verein, error: vFehler } = await sb.from("vereine")
+      .select("austritt_art_id").eq("id", o.vereinId).maybeSingle();
+    if (vFehler) {
+      hinweise.push("Die eingestellte Art konnte nicht gelesen werden — bitte im Profil prüfen.");
+    } else if (!verein?.austritt_art_id) {
+      /* Kein Ziel eingestellt ist kein Fehler, aber es soll niemand später
+         suchen, warum die Person keine Art bekam. */
+      hinweise.push("Es ist keine Art für den Austritt eingestellt (Portalverwaltung → Mitglieder-Konfiguration).");
+    } else {
+      const { data: art, error: aFehler } = await sb.from("personenarten")
+        .select("id, name, standard_rolle").eq("id", verein.austritt_art_id).maybeSingle();
+      if (aFehler || !art) {
+        hinweise.push("Die eingestellte Art wurde nicht gefunden — bitte im Profil prüfen.");
+      } else {
+        artNachher = {
+          art_id: art.id as string,
+          name: (art.name as string) || "",
+          standard_rolle: (art.standard_rolle as string | null) ?? null,
+        };
+      }
+    }
+  }
+
   const { error: archErr } = await sb.from("mitglieder").update({
     aktiv: false,
     deaktiviert_am: new Date(tag).toISOString(),
@@ -286,20 +392,81 @@ export async function beendeMitgliedschaft(
     if (error) hinweise.push("Die Vereinsfunktionen konnten nicht beendet werden.");
     else if (count) hinweise.push(`${count} Vereinsfunktion(en) auf ${tag} beendet.`);
 
-    /* Die Portalrolle: `supporter` haelt den Zugang, `mitglied` waere nach dem
-       Austritt falsch. Beim Archiv bleibt sie stehen — das Konto wird ohnehin
-       vom Aufrufer deaktiviert. */
-    if (o.ziel === "supporter") {
+    /* Die Portalrolle kommt aus der ART, nicht aus einer Zeichenkette hier.
+       Bis zum 22.08.2026 stand hier fest `role: "supporter"` — richtig,
+       solange das Ziel Supporter hiess, und falsch in dem Moment, in dem
+       jemand „Ehemalige" einstellt. `personenarten.standard_rolle` haelt die
+       Antwort dort, wo die Art steht.
+
+       ⚠ OHNE `standard_rolle` BLEIBT DIE ROLLE STEHEN. Sie zu leeren waere
+       schlechter als eine ungenaue: `mitglied_id` faellt ohnehin weg, und
+       eine Person ohne Rolle kommt an gar nichts mehr. */
+    if (o.ziel.art === "beenden") {
+      const rolle = artNachher?.standard_rolle || null;
+      const felder: Record<string, unknown> = { mitglied_id: null };
+      if (rolle) felder.role = rolle;
       const { error: rolleErr } = await sb.from("benutzer")
-        .update({ role: "supporter", mitglied_id: null }).eq("id", o.benutzerId);
-      if (rolleErr) hinweise.push("Die Portalrolle konnte nicht auf Supporter gesetzt werden.");
-      else hinweise.push("Portal-Zugang bleibt bestehen, Rolle jetzt Supporter.");
+        .update(felder as never).eq("id", o.benutzerId);
+      if (rolleErr) hinweise.push("Die Portalrolle konnte nicht angepasst werden.");
+      else if (rolle) hinweise.push(`Portal-Zugang bleibt bestehen, Rolle jetzt ${rolle}.`);
+      else hinweise.push("Portal-Zugang bleibt bestehen, Rolle unverändert.");
     }
-  } else if (o.ziel === "supporter") {
+  } else if (o.ziel.art === "beenden") {
     hinweise.push("Diese Person hat kein Portal-Konto — sie bleibt über E-Mail und Telefon erreichbar.");
   }
 
+  /* Die Art setzen — nach dem Beenden, damit sie nicht steht, wenn der
+     Austritt selbst scheitert. `personId` ist optional, weil aeltere
+     Aufrufer sie nicht kennen; fehlt sie, wird sie nachgeschlagen statt
+     stillschweigend uebergangen. */
+  if (o.ziel.art === "beenden" && artNachher) {
+    let personId = o.personId ?? null;
+    if (!personId) {
+      const { data: m, error: mFehler } = await sb.from("mitglieder")
+        .select("person_id").eq("id", o.mitgliedId).maybeSingle();
+      if (mFehler) hinweise.push("Die Person konnte nicht ermittelt werden — die Art wurde nicht gesetzt.");
+      else personId = (m?.person_id as string | null) ?? null;
+    }
+    if (personId) {
+      /* upsert statt insert: wer zum zweiten Mal austritt, hat die Art
+         vielleicht schon. `ignoreDuplicates` waere hier falsch — es soll
+         auffallen, wenn der Schluessel nicht passt. */
+      const { error: artErr } = await sb.from("personenart_pro_person")
+        .upsert({ verein_id: o.vereinId, person_id: personId, art_id: artNachher.art_id } as never,
+                { onConflict: "verein_id,person_id,art_id" });
+      if (artErr) hinweise.push(`Die Art „${artNachher.name}" konnte nicht gesetzt werden.`);
+      else hinweise.push(`Gilt jetzt als ${artNachher.name}.`);
+    }
+  }
+
   return { ok: true, fehler: null, hinweise };
+}
+
+/**
+ * Die Austritts-Art einer Person wieder entfernen.
+ *
+ * ⚠ DIE GEGENRICHTUNG GEHOERT DAZU, sonst baue ich den naechsten toten
+ * Schalter: wer zurueckkommt, truege sonst fuer immer „Ehemalige" — eine
+ * Aussage, die niemand mehr aufraeumt und die dem Chip im Profil
+ * widerspricht. Wird von `macheZuMitglied()` aufgerufen.
+ *
+ * Entfernt wird NUR die eingestellte Austritts-Art. Andere gesetzte Arten
+ * bleiben: sie hat jemand von Hand vergeben, und eine neue Mitgliedschaft
+ * sagt darueber nichts.
+ */
+export async function entferneAustrittsart(
+  sb: SbClient, personId: string, vereinId: string,
+): Promise<string | null> {
+  const { data: verein, error: vFehler } = await sb.from("vereine")
+    .select("austritt_art_id").eq("id", vereinId).maybeSingle();
+  if (vFehler) { console.error("entferneAustrittsart (verein) error:", vFehler); return vFehler.message; }
+  if (!verein?.austritt_art_id) return null;
+
+  const { error } = await sb.from("personenart_pro_person").delete()
+    .eq("verein_id", vereinId).eq("person_id", personId)
+    .eq("art_id", verein.austritt_art_id);
+  if (error) { console.error("entferneAustrittsart error:", error); return error.message; }
+  return null;
 }
 
 /* ── Dublettenprüfung bei der Neuanlage ───────────────────────────────────

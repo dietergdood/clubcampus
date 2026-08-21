@@ -108,3 +108,43 @@ describe("fetchSupporter — ein Fehler ist keine Datenlage", () => {
     expect(spy).toHaveBeenCalled();
   });
 });
+
+/* ── Der zweite Weg in die Liste ──────────────────────────────────────────
+   ⚠ Bis zum 22.08.2026 galt NUR der doppelte Ausschluss, und deshalb machte
+   „Supporter" beim Austritt niemanden zum Supporter: die beendete
+   Mitgliedschaftszeile bleibt stehen und schloss die Person hier aus.
+   Seit dem Austritt die Art schreibt, liest diese Liste sie. */
+describe("fetchSupporter — die Austritts-Art", () => {
+  const mitArt = (personen: unknown[], artTraeger: string[] = []) => makeSb({
+    "personen.select": { data: personen },
+    "vereine.select": { data: { austritt_art_id: "art-1" } },
+    "personenart_pro_person.select": { data: artTraeger.map(id => ({ person_id: id })) },
+  });
+
+  it("⚠ nimmt eine AUSGETRETENE Person auf, wenn sie die Art trägt", async () => {
+    const sb = mitArt([person({ id: "p-1", mitglieder: [{ id: 42 }] })], ["p-1"]);
+    const raus = await fetchSupporter(sb as never, "v-1");
+    expect(raus.map(p => p.id)).toEqual(["p-1"]);
+  });
+
+  it("⚠ lässt eine ausgetretene Person OHNE die Art weg — sie gehört ins Archiv", async () => {
+    /* Sonst stünde dieselbe Person an zwei Orten. */
+    const sb = mitArt([person({ id: "p-1", mitglieder: [{ id: 42 }] })], []);
+    const raus = await fetchSupporter(sb as never, "v-1");
+    expect(raus).toEqual([]);
+  });
+
+  it("ein Elternteil bleibt aussen vor, auch mit der Art", async () => {
+    /* Die Kinder-Bedingung gewinnt: wer ein Kind hat, steht im Eltern-Tab. */
+    const sb = mitArt([person({ id: "p-1", eltern_kinder: [{ person_id: "p-1" }] })], ["p-1"]);
+    expect(await fetchSupporter(sb as never, "v-1")).toEqual([]);
+  });
+
+  it("ohne eingestellte Art bleibt es beim doppelten Ausschluss", async () => {
+    const sb = makeSb({
+      "personen.select": { data: [person({ id: "p-1", mitglieder: [{ id: 42 }] }), person({ id: "p-2" })] },
+      "vereine.select": { data: { austritt_art_id: null } },
+    });
+    expect((await fetchSupporter(sb as never, "v-1")).map(p => p.id)).toEqual(["p-2"]);
+  });
+});

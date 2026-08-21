@@ -6,6 +6,7 @@ import { Btn, Card, ModalOrSheet, ModalTitle, InfoBox, useConfirm } from "../../
 import { TI } from "../../icons.tsx";
 import { BTN_COLOR as BTN, BTN_TXT, BL, FONT } from "../../constants.ts";
 import { MitgliedtypFelderSektion } from "./MitgliedtypFelderSektion.tsx";
+import { PersonenartenSektion } from "./PersonenartenSektion.tsx";
 import type { FeldkonfigZeile } from "../../domains/members/feldkonfig.ts";
 import { fetchPersonenarten } from "../../domains/person/personArtService.ts";
 import type { PersonArt } from "../../domains/person/personArtService.ts";
@@ -60,12 +61,16 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
      Tabs — nicht eine je Spalte. Seit dem 20.08.2026 gibt es statt eines
      Sammelwerts eine Liste (`personenarten`). */
   const [personenarten, setPersonenarten] = useState<PersonArt[]>([]);
+  /* Zaehler statt eines Rueckrufs: die Sektion darunter aendert die Liste,
+     und die Feldkonfiguration hat eine Spalte je Art — ohne Neuladen fehlte
+     die neue Spalte, bis jemand den Tab wechselt. */
+  const [artenStand, setArtenStand] = useState(0);
   useEffect(() => {
     if (!supabase) return;
     let abgebrochen = false;
     fetchPersonenarten(supabase).then(a => { if (!abgebrochen) setPersonenarten(a); });
     return () => { abgebrochen = true; };
-  }, [supabase]);
+  }, [supabase, artenStand]);
   const [confirm,confirmDialog]=useConfirm();
 
   async function saveMitgliedtyp(){
@@ -195,6 +200,13 @@ export function MitgliederKonfigTab({supabase,loading,isMobile,mobileKachel,tab,
               </div>
             </div>
           </ModalOrSheet>
+
+          {/* Die Arten ohne Mitgliedschaft — Nachzug aus Etappe 1, gebaut
+              am 22.08.2026. Steht VOR der Feldmatrix, weil sie deren
+              Spalten liefert: wer eine Art anlegt, sieht sie unten sofort
+              als eigene Spalte. */}
+          <PersonenartenSektion supabase={supabase} vereinId={vereinId}
+            onArtenGeaendert={() => setArtenStand(n => n + 1)}/>
 
           {/* Was ein Mitgliedtyp hat — drei Werte statt eines Häkchens.
               Ersetzt die beiden Matrizen "Pflichtfelder nach Mitgliedtyp"

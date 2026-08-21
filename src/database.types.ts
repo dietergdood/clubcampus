@@ -557,6 +557,8 @@ export type Database = {
           sync_uhrzeit: string | null
           updated_at: string | null
           verein_id: string
+          wache_zuletzt: string | null
+          zuordnung_gemeldet_am: string | null
         }
         Insert: {
           active?: boolean | null
@@ -578,6 +580,8 @@ export type Database = {
           sync_uhrzeit?: string | null
           updated_at?: string | null
           verein_id: string
+          wache_zuletzt?: string | null
+          zuordnung_gemeldet_am?: string | null
         }
         Update: {
           active?: boolean | null
@@ -599,6 +603,8 @@ export type Database = {
           sync_uhrzeit?: string | null
           updated_at?: string | null
           verein_id?: string
+          wache_zuletzt?: string | null
+          zuordnung_gemeldet_am?: string | null
         }
         Relationships: [
           {
@@ -3236,6 +3242,7 @@ export type Database = {
           id: string
           name: string
           sort_order: number
+          standard_rolle: string | null
           verein_id: string
         }
         Insert: {
@@ -3245,6 +3252,7 @@ export type Database = {
           id?: string
           name: string
           sort_order?: number
+          standard_rolle?: string | null
           verein_id: string
         }
         Update: {
@@ -3254,9 +3262,17 @@ export type Database = {
           id?: string
           name?: string
           sort_order?: number
+          standard_rolle?: string | null
           verein_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "personenarten_standard_rolle_fkey"
+            columns: ["verein_id", "standard_rolle"]
+            isOneToOne: false
+            referencedRelation: "portal_rollen"
+            referencedColumns: ["verein_id", "name"]
+          },
           {
             foreignKeyName: "personenarten_verein_id_fkey"
             columns: ["verein_id"]
@@ -3765,6 +3781,7 @@ export type Database = {
       spiel_aufstellung: {
         Row: {
           bis_minute: number | null
+          erstmals_gesehen: string
           id: string
           position_id: number | null
           position_name: string | null
@@ -3779,6 +3796,7 @@ export type Database = {
         }
         Insert: {
           bis_minute?: number | null
+          erstmals_gesehen?: string
           id?: string
           position_id?: number | null
           position_name?: string | null
@@ -3793,6 +3811,7 @@ export type Database = {
         }
         Update: {
           bis_minute?: number | null
+          erstmals_gesehen?: string
           id?: string
           position_id?: number | null
           position_name?: string | null
@@ -4767,6 +4786,7 @@ export type Database = {
       }
       vereine: {
         Row: {
+          austritt_art_id: string | null
           created_at: string | null
           id: string
           name: string
@@ -4776,6 +4796,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          austritt_art_id?: string | null
           created_at?: string | null
           id?: string
           name: string
@@ -4785,6 +4806,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          austritt_art_id?: string | null
           created_at?: string | null
           id?: string
           name?: string
@@ -4793,7 +4815,15 @@ export type Database = {
           theme?: Json | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vereine_austritt_art_fkey"
+            columns: ["austritt_art_id", "id"]
+            isOneToOne: false
+            referencedRelation: "personenarten"
+            referencedColumns: ["id", "verein_id"]
+          },
+        ]
       }
       wiki_artikel: {
         Row: {
