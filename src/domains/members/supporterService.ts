@@ -16,6 +16,7 @@
    der das ersetzt.
    ═══════════════════════════════════════════════════════════════ */
 import type { SbClient } from "../../types.ts";
+import { beendeVerknuepfungen } from "./memberService.ts";
 
 export interface SupporterRoh {
   /** personen.id */
@@ -290,8 +291,13 @@ export interface AustrittOptionen {
   ziel: AustrittsZiel;
   /** Person hinter der Mitgliedschaft — fuer die Art nach dem Austritt. */
   personId?: string | null;
-  /** Konto der Person, falls vorhanden — für Rolle und Ämter. */
+  /** Konto der Person, falls vorhanden — für die Rolle. */
   benutzerId?: string | null;
+  /** Wer den Austritt eingetragen hat → `deaktiviert_von`. Wer eine
+      Mitgliedschaft beendet, gehört festgehalten, unabhängig vom Weg;
+      vorher hielt nur der Knopf „Archivieren" das fest.
+      (Entscheidung Didi, 22.08.2026.) */
+  deaktiviertVon?: string | null;
   /** Tag des Austritts. Ohne Angabe: heute. */
   am?: string | null;
 }
@@ -364,33 +370,49 @@ export async function beendeMitgliedschaft(
   const { error: archErr } = await sb.from("mitglieder").update({
     aktiv: false,
     deaktiviert_am: new Date(tag).toISOString(),
+    deaktiviert_von: o.deaktiviertVon ?? null,
     updated_at: new Date().toISOString(),
   }).eq("id", o.mitgliedId);
   if (archErr) { console.error("beendeMitgliedschaft error:", archErr); return { ok: false, fehler: archErr.message, hinweise }; }
 
-  /* Kadereintraege beenden. Sie haengen am Mitglied und nicht an der Person —
-     ohne diesen Schritt stuende die Person weiter im Kader eines Teams,
-     obwohl sie nicht mehr Mitglied ist. */
-  const { data: kader, error: kaderErr } = await sb.from("kader")
-    .select("id").eq("mitglied_id", o.mitgliedId).eq("aktiv", true);
-  if (kaderErr) {
-    hinweise.push("Die Kadereinträge konnten nicht gelesen werden — bitte im Team prüfen.");
-  } else if ((kader || []).length > 0) {
-    const { error } = await sb.from("kader").update({ aktiv: false })
-      .in("id", (kader || []).map(k => k.id));
-    if (error) hinweise.push("Die Kadereinträge konnten nicht beendet werden — bitte im Team prüfen.");
-    else hinweise.push(`${kader!.length} Kadereintrag/-einträge beendet.`);
+  /* ⚠ ARCHIV: EINE FUNKTION FUER BEIDE WEGE. Kadereintraege, Aemter und der
+     Portal-Zugang stehen in `beendeVerknuepfungen()` — derselben, die der
+     Knopf „Archivieren" ruft. Bis zum 22.08.2026 taten die zwei Wege fuenf
+     verschiedene Dinge; die Begruendung steht dort.
+
+     ⚠ NUR BEIM ARCHIV WIRD DAS KONTO DEAKTIVIERT. Beim Beenden mit
+     Weiterfuehrung ist das Gegenteil der Zweck: die Person bleibt
+     erreichbar und behaelt ihren Zugang, nur die Rolle wechselt. */
+  if (o.ziel.art === "archiv") {
+    hinweise.push(...await beendeVerknuepfungen(sb, [o.mitgliedId], tag));
+  } else {
+    /* Kadereintraege beenden. Sie haengen am Mitglied und nicht an der Person —
+       ohne diesen Schritt stuende die Person weiter im Kader eines Teams,
+       obwohl sie nicht mehr Mitglied ist. */
+    const { data: kader, error: kaderErr } = await sb.from("kader")
+      .select("id").eq("mitglied_id", o.mitgliedId).eq("aktiv", true);
+    if (kaderErr) {
+      hinweise.push("Die Kadereinträge konnten nicht gelesen werden — bitte im Team prüfen.");
+    } else if ((kader || []).length > 0) {
+      const { error } = await sb.from("kader").update({ aktiv: false })
+        .in("id", (kader || []).map(k => k.id));
+      if (error) hinweise.push("Die Kadereinträge konnten nicht beendet werden — bitte im Team prüfen.");
+      else hinweise.push(`${kader!.length} Kadereintrag/-einträge beendet.`);
+    }
   }
 
-  /* Aemter auf `bis` setzen statt sie zu loeschen: wer ein Amt hatte, HATTE
-     es — die Zeile ist der Nachweis. Die Spalte kam mit dem Supporter-Rueckbau
-     (migration_supporter_rueckbau.sql, Block F). */
   if (o.benutzerId) {
-    const { error, count } = await sb.from("benutzer_funktionen")
-      .update({ bis: tag }, { count: "exact" })
-      .eq("benutzer_id", o.benutzerId).is("bis", null);
-    if (error) hinweise.push("Die Vereinsfunktionen konnten nicht beendet werden.");
-    else if (count) hinweise.push(`${count} Vereinsfunktion(en) auf ${tag} beendet.`);
+    /* Aemter auf `bis` setzen statt sie zu loeschen: wer ein Amt hatte, HATTE
+       es — die Zeile ist der Nachweis. Die Spalte kam mit dem
+       Supporter-Rueckbau (migration_supporter_rueckbau.sql, Block F).
+       Beim Archiv erledigt das `beendeVerknuepfungen()`. */
+    if (o.ziel.art !== "archiv") {
+      const { error, count } = await sb.from("benutzer_funktionen")
+        .update({ bis: tag }, { count: "exact" })
+        .eq("benutzer_id", o.benutzerId).is("bis", null);
+      if (error) hinweise.push("Die Vereinsfunktionen konnten nicht beendet werden.");
+      else if (count) hinweise.push(`${count} Vereinsfunktion(en) auf ${tag} beendet.`);
+    }
 
     /* Die Portalrolle kommt aus der ART, nicht aus einer Zeichenkette hier.
        Bis zum 22.08.2026 stand hier fest `role: "supporter"` — richtig,
@@ -400,7 +422,17 @@ export async function beendeMitgliedschaft(
 
        ⚠ OHNE `standard_rolle` BLEIBT DIE ROLLE STEHEN. Sie zu leeren waere
        schlechter als eine ungenaue: `mitglied_id` faellt ohnehin weg, und
-       eine Person ohne Rolle kommt an gar nichts mehr. */
+       eine Person ohne Rolle kommt an gar nichts mehr.
+
+       ⚠ HIER STAND EIN FALSCHER KOMMENTAR, vom 20. bis 22.08.2026:
+       „Beim Archiv bleibt sie stehen — das Konto wird ohnehin vom Aufrufer
+       deaktiviert." Das Konto wurde vom Aufrufer NIE deaktiviert;
+       `fuehreAustrittAus` hat nie einen solchen Aufruf enthalten. Ein
+       ausgetretenes Mitglied blieb angemeldet, und wer den Satz las,
+       pruefte nicht nach — er sicherte etwas zu, wofuer eine andere Stelle
+       zustaendig sein sollte, die es nicht tat. Was tatsaechlich passiert,
+       steht oben: beim Archiv setzt `beendeVerknuepfungen()` `benutzer.aktiv`
+       auf false, beim Beenden mit Weiterfuehrung bleibt der Zugang. */
     if (o.ziel.art === "beenden") {
       const rolle = artNachher?.standard_rolle || null;
       const felder: Record<string, unknown> = { mitglied_id: null };

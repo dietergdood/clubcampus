@@ -36,13 +36,112 @@ export async function deleteMitglied(sb: SbClient, id: number): Promise<Postgres
   return error;
 }
 
+/* ── Was zu einer beendeten Mitgliedschaft dazugehoert ────────────────────
+   Kadereintraege, Aemter und der Portal-Zugang.
+
+   ⚠ EINE FUNKTION FUER BEIDE WEGE. Es gab bis zum 22.08.2026 zwei Wege ins
+   Archiv — den Knopf „Archivieren" und die Antwort „Archiv" im
+   Austrittsdialog —, und sie taten FUENF verschiedene Dinge:
+
+     | | Knopf | Austritt |
+     |---|---|---|
+     | Kadereintraege | blieben aktiv | wurden beendet |
+     | Aemter | blieben offen | bekamen ein Ende |
+     | Portal-Konto | wurde deaktiviert | blieb aktiv |
+
+   Nach der Klaerung vom 21.08.2026 („Archiv heisst: ausgetreten, aber noch
+   etwas offen") sind das nicht zwei Bedeutungen, sondern ein vollstaendiger
+   und ein unvollstaendiger Weg. Deshalb rufen jetzt beide DIESE Funktion —
+   dieselbe Wirkung an einem Ort, nicht zweimal derselbe Inhalt, der
+   auseinanderlaufen kann.
+
+   ⚠ DER ERNSTERE TEIL WAR DAS KONTO. Ein ausgetretenes Mitglied blieb
+   angemeldet; gesperrt wird der Login allein durch `benutzer.aktiv`. Dass
+   es niemanden getroffen hat, lag an der Datenlage — keines der drei
+   ausgetretenen Mitglieder hatte ein Konto. Das ist keine Absicherung. */
+export async function beendeVerknuepfungen(
+  sb: SbClient, mitgliedIds: number[], tag: string,
+): Promise<string[]> {
+  const hinweise: string[] = [];
+  if (mitgliedIds.length === 0) return hinweise;
+
+  /* Kadereintraege. Sie haengen am MITGLIED, nicht an der Person — ohne
+     diesen Schritt stuende ein Ausgetretener weiter in der Aufstellung
+     seines Teams. */
+  const { data: kader, error: kaderErr } = await sb.from("kader")
+    .select("id").in("mitglied_id", mitgliedIds).eq("aktiv", true);
+  if (kaderErr) {
+    hinweise.push("Die Kadereinträge konnten nicht gelesen werden — bitte im Team prüfen.");
+  } else if ((kader || []).length > 0) {
+    const { error } = await sb.from("kader").update({ aktiv: false })
+      .in("id", (kader || []).map(k => k.id));
+    if (error) hinweise.push("Die Kadereinträge konnten nicht beendet werden — bitte im Team prüfen.");
+    else hinweise.push(`${kader!.length} Kadereintrag/-einträge beendet.`);
+  }
+
+  /* Das Konto haengt an der PERSON (seit Etappe 4), nicht am Mitglied. */
+  const { data: personen, error: pErr } = await sb.from("mitglieder")
+    .select("person_id").in("id", mitgliedIds);
+  if (pErr) {
+    hinweise.push("Die Personen konnten nicht ermittelt werden — Portal-Zugang und Ämter bitte prüfen.");
+    return hinweise;
+  }
+  const personIds = (personen || []).map(m => m.person_id).filter(Boolean) as string[];
+  if (personIds.length === 0) return hinweise;
+
+  const { data: konten, error: kErr } = await sb.from("benutzer")
+    .select("id").in("person_id", personIds);
+  if (kErr) {
+    hinweise.push("Die Portal-Konten konnten nicht gelesen werden — bitte prüfen.");
+    return hinweise;
+  }
+  const kontoIds = (konten || []).map(b => b.id as string);
+  if (kontoIds.length === 0) return hinweise;
+
+  /* Aemter auf `bis` setzen statt sie zu loeschen: wer ein Amt hatte, HATTE
+     es — die Zeile ist der Nachweis. */
+  const { error: fErr, count } = await sb.from("benutzer_funktionen")
+    .update({ bis: tag }, { count: "exact" })
+    .in("benutzer_id", kontoIds).is("bis", null);
+  if (fErr) hinweise.push("Die Vereinsfunktionen konnten nicht beendet werden.");
+  else if (count) hinweise.push(`${count} Vereinsfunktion(en) auf ${tag} beendet.`);
+
+  /* ⚠ `aktiv`, nicht die Verknuepfung. Gesperrt wird der Login allein
+     dadurch — `useDbUser` meldet ab, wenn es false ist. `mitglied_id` auf
+     null zu setzen loeste die Verbindung, ohne irgendjemanden auszusperren
+     (Befund vom 21.08.2026). */
+  const { error: aErr } = await sb.from("benutzer")
+    .update({ aktiv: false }).in("id", kontoIds);
+  if (aErr) hinweise.push("Der Portal-Zugang konnte nicht deaktiviert werden.");
+  else hinweise.push(`${kontoIds.length} Portal-Zugang/-Zugänge deaktiviert.`);
+
+  return hinweise;
+}
+
+/**
+ * Eine Mitgliedschaft archivieren — die Abkuerzung.
+ *
+ * Tut dasselbe wie der Austritt mit dem Ziel „Archiv"; die zwei
+ * Unterschiede, die bleiben, sind gewollt: das Datum ist HEUTE statt
+ * waehlbar, und `deaktiviert_von` haelt fest, wer geklickt hat.
+ */
 export async function archiviereMitglied(sb: SbClient, id: number | number[], deaktiviertVon: string | null): Promise<PostgrestError | null> {
+  const ids = Array.isArray(id) ? id : [id];
   const { error } = await sb.from("mitglieder").update({
     aktiv: false,
     deaktiviert_am: new Date().toISOString(),
     deaktiviert_von: deaktiviertVon,
-  }).in("id", Array.isArray(id) ? id : [id]);
-  return error;
+  }).in("id", ids);
+  if (error) return error;
+
+  /* Erst nach dem Archivieren: schlaegt das fehl, soll nichts halb beendet
+     dastehen. Die Hinweise gehen hier ins Leere — der Knopf hat keine
+     Stelle, sie zu zeigen —, und das ist der Preis der Abkuerzung. Ein
+     Fehler wird trotzdem nicht verschluckt: er steht in der Konsole. */
+  const hinweise = await beendeVerknuepfungen(sb, ids, new Date().toISOString().slice(0, 10));
+  const probleme = hinweise.filter(h => h.includes("konnten nicht") || h.includes("konnte nicht"));
+  if (probleme.length) console.error("archiviereMitglied (Verknüpfungen):", probleme.join(" · "));
+  return null;
 }
 
 export async function reaktiviereMitglied(sb: SbClient, id: number): Promise<PostgrestError | null> {

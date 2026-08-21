@@ -16,6 +16,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb } from "./_mockSb.ts";
 import { beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
+import { archiviereMitglied } from "../memberService.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -181,5 +182,87 @@ describe("entferneAustrittsart — die Gegenrichtung", () => {
     const sb = makeSb({ "vereine.select": { data: { austritt_art_id: null } } });
     expect(await entferneAustrittsart(sb as never, "p-1", "v-1")).toBeNull();
     expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
+  });
+});
+
+/* ── Archiv: die zwei Wege tun dasselbe ───────────────────────────────────
+   ⚠ Bis zum 22.08.2026 taten sie FUENF verschiedene Dinge, und in zweien
+   war der haertere der mildere: der Knopf liess die Person im Kader, der
+   Austritt liess ihr Konto laufen. Entschieden am 22.08.2026 (Didi): der
+   Austritt ist der vollstaendige Weg, der Knopf bleibt als Abkuerzung —
+   aber er tut dasselbe. Uebrig bleiben zwei gewollte Unterschiede: das
+   Datum (Knopf heute, Austritt waehlbar) und wer geklickt hat. */
+describe("Archiv — Knopf und Austritt", () => {
+  /* Ein Verein, in dem Kader, Konto und Amt existieren. */
+  const MIT_ALLEM = {
+    "kader.select": { data: [{ id: "k-1" }] },
+    "mitglieder.select": { data: [{ person_id: "p-1" }] },
+    "benutzer.select": { data: [{ id: "b-1" }] },
+    "benutzer_funktionen.update": { count: 2 },
+  };
+
+  it("⚠ der KNOPF beendet jetzt auch die Kadereinträge", async () => {
+    /* Vorher blieben sie aktiv — ein archivierter Mensch stand weiter in
+       der Aufstellung seines Teams. */
+    const sb = makeSb(MIT_ALLEM);
+    await archiviereMitglied(sb as never, [42], "Admin");
+    expect(sb.find("kader", "update")!.payload).toEqual({ aktiv: false });
+  });
+
+  it("⚠ der KNOPF beendet jetzt auch die Ämter", async () => {
+    const sb = makeSb(MIT_ALLEM);
+    await archiviereMitglied(sb as never, [42], "Admin");
+    const rec = sb.find("benutzer_funktionen", "update")!;
+    expect(Object.keys(rec.payload)).toEqual(["bis"]);
+  });
+
+  it("⚠ der AUSTRITT ins Archiv deaktiviert jetzt das Konto", async () => {
+    /* DER ERNSTERE TEIL. Vorher blieb ein ausgetretenes Mitglied
+       angemeldet; gesperrt wird der Login allein durch `benutzer.aktiv`.
+       Dass es niemanden traf, lag an der Datenlage — keines der drei hatte
+       ein Konto. Das ist keine Absicherung. */
+    const sb = makeSb(MIT_ALLEM);
+    await beendeMitgliedschaft(sb as never, {
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "archiv" },
+      personId: "p-1", benutzerId: "b-1", am: "2026-08-22",
+    });
+    const konto = sb.opsOn("benutzer").find(r => r.op === "update");
+    expect(konto?.payload).toEqual({ aktiv: false });
+  });
+
+  it("⚠ beim Beenden MIT Weiterführung bleibt das Konto aktiv", async () => {
+    /* Die Gegenprobe, und sie ist die wichtigere: hier ist der Zugang der
+       Zweck. Ohne diesen Fall könnte jemand `beendeVerknuepfungen()` auf
+       beide Zweige legen und alle Gönner aussperren. */
+    const sb = makeSb({
+      ...MIT_ALLEM,
+      "vereine.select": { data: { austritt_art_id: "art-1" } },
+      "personenarten.select": { data: { id: "art-1", name: "Ehemalige", standard_rolle: "supporter" } },
+    });
+    await beendeMitgliedschaft(sb as never, {
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "beenden" },
+      personId: "p-1", benutzerId: "b-1",
+    });
+    const kontoUpdates = sb.opsOn("benutzer").filter(r => r.op === "update");
+    for (const rec of kontoUpdates) expect(rec.payload).not.toHaveProperty("aktiv");
+  });
+
+  it("⚠ hält fest, WER beendet hat — auf beiden Wegen", async () => {
+    const sb = makeSb(MIT_ALLEM);
+    await beendeMitgliedschaft(sb as never, {
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "archiv" },
+      personId: "p-1", am: "2026-08-22", deaktiviertVon: "Didi",
+    });
+    expect(sb.find("mitglieder", "update")!.payload).toEqual(
+      expect.objectContaining({ aktiv: false, deaktiviert_von: "Didi" }));
+  });
+
+  it("das Datum bleibt der Unterschied: der Austritt ist rückdatierbar", async () => {
+    const sb = makeSb(MIT_ALLEM);
+    await beendeMitgliedschaft(sb as never, {
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "archiv" },
+      personId: "p-1", am: "2026-07-01",
+    });
+    expect(String(sb.find("mitglieder", "update")!.payload.deaktiviert_am)).toContain("2026-07-01");
   });
 });

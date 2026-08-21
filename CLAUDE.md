@@ -1246,13 +1246,75 @@ unter den Gönnern.
   21.08.2026 wieder **gefallen**: `MemberDetail` trägt die Person ohne
   Mitgliedschaft jetzt selbst. Es war als Platzhalter mit Ablaufdatum
   angelegt, und das Datum ist eingetreten.
-- **„Mitglied werden"** und der Austritt in die Gegenrichtung, beide mit
-  **Rückfrage** — Supporter, Ehrenmitglied, Aktivmitglied oder Archiv sind
-  jedes Mal mögliche Antworten. Dieselbe Rückfrage beim Entkoppeln des letzten
-  Kindes und beim Funktionär, der sein Amt niederlegt.
+- ~~**„Mitglied werden"** und der Austritt in die Gegenrichtung, beide mit
+  **Rückfrage**.~~ ✅ Erledigt mit Etappe 2 (22.08.2026). Die Antworten kommen
+  jetzt aus der Datenbank statt aus dem Code: die Mitgliedtypen aus
+  `mitgliedtypen` (damit ist **Pausenmitglied** erstmals wählbar — der Typ, der
+  wörtlich „kommt vielleicht wieder" bedeutet), das Austrittsziel aus
+  `vereine.austritt_art_id`. Offen bleibt dieselbe Rückfrage beim Entkoppeln
+  des letzten Kindes und beim Funktionär, der sein Amt niederlegt.
 - **Personensuche in der Neuanlage**, nach dem Muster von `ElternSucheModal`
   — schliesst zugleich „Mitglied anlegen prüft nicht auf Dubletten".
 - Helferanfragen als zweite Empfängerliste (News ist erledigt, siehe unten).
+
+### ✅ Archiv: zwei Wege, fünf Unterschiede — vereinheitlicht am 22.08.2026
+
+Es gab zwei Wege ins Archiv, den Knopf „Archivieren" und die Antwort „Archiv"
+im Austrittsdialog. Sie taten **fünf verschiedene Dinge**, und in zweien war
+der härtere der mildere:
+
+| | Knopf | Austritt → Archiv |
+|---|---|---|
+| `deaktiviert_am` | jetzt | wählbarer Tag |
+| `deaktiviert_von` | gesetzt | **leer** |
+| Kadereinträge | **blieben aktiv** | wurden beendet |
+| Ämter (`bis`) | **blieben offen** | bekamen ein Ende |
+| Portal-Konto | deaktiviert | **blieb aktiv** |
+
+**Nur eines davon war je Absicht — und die Absicht war falsch.** Im Code stand
+seit dem 20.08.2026: *„Beim Archiv bleibt sie stehen — das Konto wird ohnehin
+vom Aufrufer deaktiviert."* Der Aufrufer hat es **nie** getan; `fuehreAustrittAus`
+enthielt keinen solchen Aufruf. Ein ausgetretenes Mitglied blieb angemeldet.
+
+⚠ **Ein Kommentar, der eine andere Stelle zusichert, ist eine Behauptung ohne
+Prüfung** — und wer ihn liest, prüft erst recht nicht nach. Dieselbe Familie
+wie „wer liest diese Spalte?": eine Hälfte gebaut, die andere angenommen.
+Aufgefallen ist es nur, weil jemand die zwei Wege nebeneinandergelegt hat.
+
+Beim Kader dagegen gibt es **keine Absicht** — `archiviereMitglied()` schrieb
+seit ihrer ersten Fassung drei Spalten und hat den Kader nie mitgedacht.
+
+**Entschieden (Didi, 22.08.2026): der Austritt ist der vollständige Weg, der
+Knopf bleibt als Abkürzung — aber er tut dasselbe.** Beide rufen jetzt
+`beendeVerknuepfungen()` in `memberService.ts`. Übrig bleiben zwei gewollte
+Unterschiede: das Datum (Knopf heute, Austritt rückdatierbar) und dass der
+Knopf festhält, wer geklickt hat — `deaktiviert_von` setzt seither **auch** der
+Austritt.
+
+⚠ **Dass es niemanden getroffen hat, lag an der Datenlage** — keines der drei
+ausgetretenen Mitglieder hatte ein Konto, und keine archivierte Person stand in
+einem aktiven Kader. Beides gemessen, nicht angenommen. Eine Datenlage ist
+keine Absicherung.
+
+### ⚠ `mitgliedtypen.standard_rolle` hat keinen Fremdschlüssel
+
+`personenarten.standard_rolle` hat seit dem 22.08.2026 einen auf
+`portal_rollen(verein_id, name)`; `mitgliedtypen.standard_rolle` nicht — und
+genau dieses Fehlen liess am 05.08.2026 zwei Zeilen mit `rolle = 'Spieler'`
+(grosses S) zu, einen Wert, den weder `getPermissions` noch `NAV_BY_ROLE`
+kennen. Der Schlüssel ist zu haben: `portal_rollen` trägt
+`UNIQUE (verein_id, name)`.
+
+Nachzuziehen mit einer kleinen Migration. Vorher prüfen, ob alle bestehenden
+Werte in `portal_rollen` vorkommen — sonst bricht das `ALTER`, und die Meldung
+von Postgres nennt die Zeile nicht:
+
+```sql
+select t.name, t.standard_rolle from public.mitgliedtypen t
+  left join public.portal_rollen r
+    on r.verein_id = t.verein_id and r.name = t.standard_rolle
+ where t.standard_rolle is not null and r.name is null;
+```
 
 ### ⚠ Drei Nebenbefunde aus dem Supporter-Rückbau (20.08.2026)
 

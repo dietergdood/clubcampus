@@ -212,6 +212,9 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const benutzerId=await holeBenutzerId(austrittFuer.person_id);
     const { ok, fehler, hinweise } = await beendeMitgliedschaft(sb,{
       mitgliedId:austrittFuer.id, vereinId, ziel, benutzerId, am,
+      /* Wer beendet, wird festgehalten — bis zum 22.08.2026 tat das nur der
+         Knopf „Archivieren", und beim Austritt blieb deaktiviert_von leer. */
+      deaktiviertVon: account?.name||account?.email||"Administrator",
       /* Die Person mitgeben statt sie im Service nachschlagen zu lassen —
          sie steht hier schon in der Zeile. */
       personId: austrittFuer.person_id,
