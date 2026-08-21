@@ -128,7 +128,17 @@ export interface SyncAntwort {
 export function leseOffeneNamen(daten: SyncAntwort | null): Record<number, string> {
   const raus: Record<number, string> = {};
   for (const lauf of daten?.laeufe ?? []) {
-    const liste = (lauf as { offene_namen?: unknown }).offene_namen;
+    /* ⚠ EINE EBENE TIEFER, und das war der Fehler vom 21.08.2026. `laeufe`
+       trägt das Ergebnis des GANZEN Laufs (`{verein_id, ...LaufErgebnis}`),
+       und die Matchdaten sind darin ein Unterobjekt. Gelesen wurde
+       `lauf.offene_namen` — immer undefined, der Knopf blieb stehen, und
+       nichts hat es gemeldet: der Test prüfte gegen eine Attrappe, in der
+       das Feld dort lag, wo ich es vermutet hatte.
+
+       Seither baut der Test sein Fixture als `LaufErgebnis` auf, damit die
+       Form von der Quelle kommt statt aus meinem Gedächtnis. */
+    const liste = (lauf as { matchdaten?: { offene_namen?: unknown } })
+      .matchdaten?.offene_namen;
     if (!Array.isArray(liste)) continue;
     for (const e of liste) {
       const id = Number((e as { sfv_person_id?: unknown })?.sfv_person_id);

@@ -10,6 +10,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
 import { baueZuordnung, auswahlFuer, leseOffeneNamen } from "../sfvService.ts";
+import type { SyncAntwort } from "../sfvService.ts";
+import type { LaufErgebnis } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
 import type { SfvTeam } from "../sfvService.ts";
 import type { Team } from "../../../types.ts";
 
@@ -79,34 +81,71 @@ describe("auswahlFuer", () => {
 });
 
 /* ── Die Allowlist der Namen ──────────────────────────────────────────────
-   Der Test nennt die Schlüssel, statt zu zählen: läse die Funktion künftig
-   `person_id` statt `sfv_person_id`, bliebe eine Längenprüfung grün. */
+   ⚠ DIE ANTWORT WIRD AUS `LaufErgebnis` GEBAUT, nicht abgeschrieben. Am
+   21.08.2026 las `leseOffeneNamen` eine Ebene zu hoch (`lauf.offene_namen`
+   statt `lauf.matchdaten.offene_namen`) — und der damalige Test war grün,
+   weil seine Attrappe dieselbe falsche Form hatte wie der Code. Eine
+   Attrappe, die die Form abschreibt, prüft die Abschrift.
+
+   Die echte Form: `index.ts` legt `{ verein_id, ...erg }` in `laeufe`. */
+const ERGEBNIS: LaufErgebnis = {
+  status: "ok",
+  meldung: "Matchdaten 10 Spiel(e)",
+  spiele: { neu: 0, aktualisiert: 0, ohne_team: 0, nicht_mehr_geliefert: 0 },
+  ranglisten: { geschrieben: 0, entfernt: 0, gruppen: 0 },
+  verwaiste_zuordnungen: 0,
+  derbys: 0,
+  matchdaten: {
+    spiele_geholt: 10, aufstellung_zeilen: 156, ereignisse_zeilen: 0,
+    eigene_unzugeordnet: 177, zuordnungen_gesamt: 0, paesse_geschrieben: 0,
+    pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    offene_namen: [
+      { sfv_person_id: 7, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309 },
+    ],
+  },
+};
+
+type OffeneNamen = NonNullable<LaufErgebnis["matchdaten"]>["offene_namen"];
+
+const antwortMit = (namen: OffeneNamen): SyncAntwort => ({
+  laeufe: [{ verein_id: "v1", ...ERGEBNIS,
+             matchdaten: { ...ERGEBNIS.matchdaten!, offene_namen: namen } }],
+});
+
 describe("leseOffeneNamen", () => {
-  it("liest sfv_person_id und name aus jedem Lauf", () => {
-    const antwort = { laeufe: [
-      { status: "ok", offene_namen: [{ sfv_person_id: 7, name: "Adrian Schmid" }] },
-      { status: "ok", offene_namen: [{ sfv_person_id: 9, name: "Lea Jenni" }] },
-    ] };
-    expect(leseOffeneNamen(antwort)).toEqual({ 7: "Adrian Schmid", 9: "Lea Jenni" });
+  it("findet die Namen dort, wo die Edge Function sie ablegt", () => {
+    expect(leseOffeneNamen({ laeufe: [{ verein_id: "v1", ...ERGEBNIS }] }))
+      .toEqual({ 7: "Adrian Schmid" });
   });
 
-  it("nimmt NUR name mit — ein neues Feld der Edge Function reist nicht still mit", () => {
-    const antwort = { laeufe: [{ offene_namen: [
-      { sfv_person_id: 7, name: "Adrian Schmid", geburtsdatum: "2001-03-04", pass: 987654 },
-    ] }] };
+  it("liest ueber mehrere Laeufe hinweg", () => {
+    const zweiter: LaufErgebnis = { ...ERGEBNIS, matchdaten: {
+      ...ERGEBNIS.matchdaten!,
+      offene_namen: [{ sfv_person_id: 9, name: "Lea Jenni", rueckennr: null, sfv_team_id: null }],
+    } };
+    expect(leseOffeneNamen({ laeufe: [
+      { verein_id: "v1", ...ERGEBNIS }, { verein_id: "v1", ...zweiter },
+    ] })).toEqual({ 7: "Adrian Schmid", 9: "Lea Jenni" });
+  });
+
+  it("nimmt NUR name mit — ein neues Feld reist nicht still mit", () => {
+    const mitExtra = antwortMit([{
+      sfv_person_id: 7, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309,
+    }]);
     /* toEqual auf einem String: alles andere fiele auf. */
-    expect(leseOffeneNamen(antwort)).toEqual({ 7: "Adrian Schmid" });
+    expect(leseOffeneNamen(mitExtra)).toEqual({ 7: "Adrian Schmid" });
   });
 
-  it("uebergeht Zeilen ohne Namen oder ohne Nummer, statt leere anzuzeigen", () => {
-    const antwort = { laeufe: [{ offene_namen: [
-      { sfv_person_id: 7, name: "  " }, { name: "Ohne Nummer" }, { sfv_person_id: 8, name: "Gut" },
-    ] }] };
-    expect(leseOffeneNamen(antwort)).toEqual({ 8: "Gut" });
+  it("uebergeht Zeilen ohne Namen, statt eine leere anzuzeigen", () => {
+    expect(leseOffeneNamen(antwortMit([
+      { sfv_person_id: 7, name: "  ", rueckennr: null, sfv_team_id: null },
+      { sfv_person_id: 8, name: "Gut", rueckennr: null, sfv_team_id: null },
+    ]))).toEqual({ 8: "Gut" });
   });
 
-  it("ohne Antwort und ohne Liste ist es leer, kein Fehler", () => {
+  it("ein Lauf OHNE Matchdaten ist leer, kein Fehler", () => {
+    const ohne: LaufErgebnis = { ...ERGEBNIS, matchdaten: undefined };
+    expect(leseOffeneNamen({ laeufe: [{ verein_id: "v1", ...ohne }] })).toEqual({});
     expect(leseOffeneNamen(null)).toEqual({});
-    expect(leseOffeneNamen({ laeufe: [{ status: "ok" }] })).toEqual({});
   });
 });
