@@ -9,7 +9,7 @@
    merken.
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
-import { baueZuordnung, auswahlFuer } from "../sfvService.ts";
+import { baueZuordnung, auswahlFuer, leseOffeneNamen } from "../sfvService.ts";
 import type { SfvTeam } from "../sfvService.ts";
 import type { Team } from "../../../types.ts";
 
@@ -75,5 +75,38 @@ describe("auswahlFuer", () => {
   it("hält ein veraltetes Team aus der Auswahl heraus", () => {
     const z = baueZuordnung([sfv(38301, "A")], [team(8, "Alte Garde", 99999)]);
     expect(auswahlFuer(z, 38301)).toHaveLength(0);
+  });
+});
+
+/* ── Die Allowlist der Namen ──────────────────────────────────────────────
+   Der Test nennt die Schlüssel, statt zu zählen: läse die Funktion künftig
+   `person_id` statt `sfv_person_id`, bliebe eine Längenprüfung grün. */
+describe("leseOffeneNamen", () => {
+  it("liest sfv_person_id und name aus jedem Lauf", () => {
+    const antwort = { laeufe: [
+      { status: "ok", offene_namen: [{ sfv_person_id: 7, name: "Adrian Schmid" }] },
+      { status: "ok", offene_namen: [{ sfv_person_id: 9, name: "Lea Jenni" }] },
+    ] };
+    expect(leseOffeneNamen(antwort)).toEqual({ 7: "Adrian Schmid", 9: "Lea Jenni" });
+  });
+
+  it("nimmt NUR name mit — ein neues Feld der Edge Function reist nicht still mit", () => {
+    const antwort = { laeufe: [{ offene_namen: [
+      { sfv_person_id: 7, name: "Adrian Schmid", geburtsdatum: "2001-03-04", pass: 987654 },
+    ] }] };
+    /* toEqual auf einem String: alles andere fiele auf. */
+    expect(leseOffeneNamen(antwort)).toEqual({ 7: "Adrian Schmid" });
+  });
+
+  it("uebergeht Zeilen ohne Namen oder ohne Nummer, statt leere anzuzeigen", () => {
+    const antwort = { laeufe: [{ offene_namen: [
+      { sfv_person_id: 7, name: "  " }, { name: "Ohne Nummer" }, { sfv_person_id: 8, name: "Gut" },
+    ] }] };
+    expect(leseOffeneNamen(antwort)).toEqual({ 8: "Gut" });
+  });
+
+  it("ohne Antwort und ohne Liste ist es leer, kein Fehler", () => {
+    expect(leseOffeneNamen(null)).toEqual({});
+    expect(leseOffeneNamen({ laeufe: [{ status: "ok" }] })).toEqual({});
   });
 });

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
-  leseHalbzeit, waehleKandidaten, NACHZUG_TAGE,
+  leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -274,5 +274,52 @@ describe("leseHalbzeit", () => {
   it("liefert null, wenn es keine Halbzeit gibt", () => {
     expect(leseHalbzeit({ intermediateResults: [] })).toBeNull();
     expect(leseHalbzeit({})).toBeNull();
+  });
+});
+
+/* ── Namen der offenen eigenen Spieler ────────────────────────────────────
+   Die Feldnamen sind hier die Prüfung: `firstname`/`name` heissen beim SFV
+   so, und `secondName` bleibt bewusst draussen. Ein Test, der nur zählt,
+   bliebe grün, wenn die Funktion den falschen Schlüssel läse. */
+describe("bildeOffeneNamen", () => {
+  const SPIELER = (ueber: Record<string, unknown>) => ({
+    clubNumber: UNSERE, personId: 500, firstname: "Adrian", name: "Schmid",
+    secondName: "Karl", jerseyNumber: 9, teamId: 38309, ...ueber,
+  });
+
+  it("nennt Vor- und Nachname des eigenen Spielers, ohne zweiten Vornamen", () => {
+    const r = bildeOffeneNamen([SPIELER({})], UNSERE, new Set());
+    expect(r).toEqual([{ sfv_person_id: 500, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309 }]);
+  });
+
+  it("laesst GEGNER weg — auch wenn der Verband ihren Namen mitliefert", () => {
+    const gegner = SPIELER({ clubNumber: FREMD, personId: 900, name: "Gegner" });
+    const r = bildeOffeneNamen([gegner], UNSERE, new Set());
+    expect(r).toEqual([]);
+  });
+
+  it("laesst bereits zugeordnete weg", () => {
+    expect(bildeOffeneNamen([SPIELER({})], UNSERE, new Set([500]))).toEqual([]);
+  });
+
+  it("nennt jeden Spieler einmal, auch bei mehreren Einsaetzen", () => {
+    const r = bildeOffeneNamen([SPIELER({}), SPIELER({ jerseyNumber: 11 })], UNSERE, new Set());
+    expect(r.map(x => x.name)).toEqual(["Adrian Schmid"]);
+  });
+
+  it("sortiert nach Name", () => {
+    const r = bildeOffeneNamen(
+      [SPIELER({ personId: 1, name: "Zwicky" }), SPIELER({ personId: 2, name: "Aebi" })],
+      UNSERE, new Set());
+    expect(r.map(x => x.name)).toEqual(["Adrian Aebi", "Adrian Zwicky"]);
+  });
+
+  it("laesst eine Zeile ohne Namen weg, statt eine leere anzuzeigen", () => {
+    const ohne = SPIELER({ firstname: null, name: null });
+    expect(bildeOffeneNamen([ohne], UNSERE, new Set())).toEqual([]);
+  });
+
+  it("ohne clubNumber gilt niemand als eigen — wie bei bildeAufstellung", () => {
+    expect(bildeOffeneNamen([SPIELER({})], null, new Set())).toEqual([]);
   });
 });

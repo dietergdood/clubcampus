@@ -111,6 +111,37 @@ export interface SyncAntwort {
 }
 
 /**
+ * Die Namen der noch nicht zugeordneten eigenen Spieler aus der Antwort
+ * eines Laufs.
+ *
+ * ⚠ NICHTS DAVON WIRD GESPEICHERT. Der Rückgabewert lebt im Zustand der
+ * Zuordnungsmaske und ist beim Neuladen weg — genau das ist der Zweck: ein
+ * Name, der nur so lange da ist, wie ihn jemand ansieht, muss später
+ * niemand löschen. Die Herleitung steht bei `bildeOffeneNamen` in
+ * `supabase/functions/sfv-sync/matchdaten.ts`.
+ *
+ * ⚠ ALLOWLIST, wie bei jeder Fremdantwort: gelesen werden `sfv_person_id`
+ * und `name`, sonst nichts. Rückennummer und Mannschaft stehen in unserer
+ * eigenen Datenbank und werden nicht von hier genommen — ein neues Feld der
+ * Edge Function reist damit nicht still mit.
+ */
+export function leseOffeneNamen(daten: SyncAntwort | null): Record<number, string> {
+  const raus: Record<number, string> = {};
+  for (const lauf of daten?.laeufe ?? []) {
+    const liste = (lauf as { offene_namen?: unknown }).offene_namen;
+    if (!Array.isArray(liste)) continue;
+    for (const e of liste) {
+      const id = Number((e as { sfv_person_id?: unknown })?.sfv_person_id);
+      const name = (e as { name?: unknown })?.name;
+      if (Number.isFinite(id) && typeof name === "string" && name.trim()) {
+        raus[id] = name.trim();
+      }
+    }
+  }
+  return raus;
+}
+
+/**
  * Einen Sync-Lauf von Hand anstossen.
  *
  * Läuft über den Admin-JWT-Pfad der Edge Function — der ignoriert

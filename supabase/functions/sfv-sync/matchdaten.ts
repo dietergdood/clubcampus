@@ -142,6 +142,64 @@ export function bildeEreignis(
   };
 }
 
+/* ── Namen der noch nicht zugeordneten eigenen Spieler ────────────────────
+
+   ⚠ SIE WERDEN NICHT GESPEICHERT. Sie reisen in der ANTWORT des Laufs mit,
+   die Zuordnungsmaske haelt sie im Speicher, und beim Neuladen sind sie weg.
+
+   Warum dieser Weg und kein anderer:
+
+     Speichern         eine Spalte an `spiel_aufstellung` liest JEDER — die
+                       Tabelle steht dem ganzen Verein offen, unabhaengig
+                       davon, wo die Maske steht. Und nach der Zuordnung ist
+                       der Name ueberfluessig: ein Bestand ohne Zweck, den
+                       jemand loeschen muesste und vergessen wuerde.
+     Eigener Abruf     scheidet aus: die API kennt pro Anwendung genau EIN
+                       gueltiges Token. Ein zweiter POST macht den ersten
+                       ungueltig, und der stuendliche Sync stirbt.
+     Dieser Weg        derselbe Lauf, dieselbe Antwort. Nichts zu loeschen,
+                       weil nichts gespeichert wird.
+
+   ⚠ NUR EIGENE SPIELER. `istEigener` filtert nach `clubNumber`. Vom Gegner
+   kommt der Name genauso mit — er wird hier nicht angefasst, und der
+   Constraint `spiel_ereignisse_fremde_anonym_check` bleibt unberuehrt.
+   Entscheidung Didi, 21.08.2026.
+
+   ⚠ `secondName` bleibt weg: ein zweiter Vorname hilft beim Wiedererkennen
+   nicht und macht die Zeile nur laenger. Dieselbe Regel wie beim
+   Schiedsrichter. */
+export interface OffenerName {
+  sfv_person_id: number;
+  name: string;
+  rueckennr: number | null;
+  sfv_team_id: number | null;
+}
+
+export function bildeOffeneNamen(
+  alleRoh: SfvRoh[],
+  unsere: number | null,
+  bereitsZugeordnet: ReadonlySet<number>,
+): OffenerName[] {
+  const nach = new Map<number, OffenerName>();
+  for (const p of alleRoh) {
+    if (!istEigener(p.clubNumber, unsere)) continue;
+    const id = zahl(p.personId);
+    if (id === null || bereitsZugeordnet.has(id)) continue;
+    /* Erster Treffer gewinnt: derselbe Spieler steht in mehreren Spielen,
+       und der Name ist ueberall derselbe. */
+    if (nach.has(id)) continue;
+    const name = [text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim();
+    if (!name) continue;
+    nach.set(id, {
+      sfv_person_id: id,
+      name,
+      rueckennr: zahl(p.jerseyNumber),
+      sfv_team_id: zahl(p.teamId),
+    });
+  }
+  return [...nach.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
 /* ── Halbzeitstand ─────────────────────────────────────────────────────────
    /api/match/{id} liefert intermediateResults[] mit resultTypeName. Der
    Spielplan-Endpunkt kennt keine Halbzeit — deshalb steht ht_resultat heute
