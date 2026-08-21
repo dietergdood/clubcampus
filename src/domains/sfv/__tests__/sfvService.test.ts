@@ -9,9 +9,8 @@
    merken.
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
-import { baueZuordnung, auswahlFuer, leseOffeneNamen } from "../sfvService.ts";
-import type { SyncAntwort } from "../sfvService.ts";
-import type { LaufErgebnis } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
+import { baueZuordnung, auswahlFuer, leseNamenAntwort } from "../sfvService.ts";
+import type { NamenAntwort } from "../sfvService.ts";
 import type { SfvTeam } from "../sfvService.ts";
 import type { Team } from "../../../types.ts";
 
@@ -81,71 +80,46 @@ describe("auswahlFuer", () => {
 });
 
 /* ── Die Allowlist der Namen ──────────────────────────────────────────────
-   ⚠ DIE ANTWORT WIRD AUS `LaufErgebnis` GEBAUT, nicht abgeschrieben. Am
-   21.08.2026 las `leseOffeneNamen` eine Ebene zu hoch (`lauf.offene_namen`
-   statt `lauf.matchdaten.offene_namen`) — und der damalige Test war grün,
-   weil seine Attrappe dieselbe falsche Form hatte wie der Code. Eine
-   Attrappe, die die Form abschreibt, prüft die Abschrift.
+   ⚠ ZWEI FEHLER AN EINEM ABEND, beide hier festgehalten:
 
-   Die echte Form: `index.ts` legt `{ verein_id, ...erg }` in `laeufe`. */
-const ERGEBNIS: LaufErgebnis = {
-  status: "ok",
-  meldung: "Matchdaten 10 Spiel(e)",
-  spiele: { neu: 0, aktualisiert: 0, ohne_team: 0, nicht_mehr_geliefert: 0 },
-  ranglisten: { geschrieben: 0, entfernt: 0, gruppen: 0 },
-  verwaiste_zuordnungen: 0,
-  derbys: 0,
-  matchdaten: {
-    spiele_geholt: 10, aufstellung_zeilen: 156, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 177, zuordnungen_gesamt: 0, paesse_geschrieben: 0,
-    pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
-    offene_namen: [
-      { sfv_person_id: 7, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309 },
+   1. `leseOffeneNamen` las eine Ebene zu hoch (`lauf.offene_namen` statt
+      `lauf.matchdaten.offene_namen`). Der damalige Test war gruen, weil
+      seine Attrappe dieselbe falsche Form hatte wie der Code.
+   2. Die Namen reisten ueberhaupt im Lauf-Ergebnis mit — und damit ueber
+      dessen zwei Ausgaenge nach `api_sync_log.details` und `pg_net`.
+
+   Beide sind weg: der Sync kennt keine Namen mehr, sie kommen aus der
+   eigenen Aktion `namen` mit eigener Antwortform. Geblieben ist die
+   Allowlist beim Lesen — sie schuetzt vor dem naechsten Feld. */
+describe("leseNamenAntwort", () => {
+  const ANTWORT: NamenAntwort = {
+    namen: [
+      { sfv_person_id: 7, name: "Adrian Schmid" },
+      { sfv_person_id: 9, name: "Lea Jenni" },
     ],
-  },
-};
+    spiele_abgefragt: 22, namen_gefunden: 2, offen_gesamt: 2, fehler: 0,
+  };
 
-type OffeneNamen = NonNullable<LaufErgebnis["matchdaten"]>["offene_namen"];
-
-const antwortMit = (namen: OffeneNamen): SyncAntwort => ({
-  laeufe: [{ verein_id: "v1", ...ERGEBNIS,
-             matchdaten: { ...ERGEBNIS.matchdaten!, offene_namen: namen } }],
-});
-
-describe("leseOffeneNamen", () => {
-  it("findet die Namen dort, wo die Edge Function sie ablegt", () => {
-    expect(leseOffeneNamen({ laeufe: [{ verein_id: "v1", ...ERGEBNIS }] }))
-      .toEqual({ 7: "Adrian Schmid" });
-  });
-
-  it("liest ueber mehrere Laeufe hinweg", () => {
-    const zweiter: LaufErgebnis = { ...ERGEBNIS, matchdaten: {
-      ...ERGEBNIS.matchdaten!,
-      offene_namen: [{ sfv_person_id: 9, name: "Lea Jenni", rueckennr: null, sfv_team_id: null }],
-    } };
-    expect(leseOffeneNamen({ laeufe: [
-      { verein_id: "v1", ...ERGEBNIS }, { verein_id: "v1", ...zweiter },
-    ] })).toEqual({ 7: "Adrian Schmid", 9: "Lea Jenni" });
+  it("liest sfv_person_id und name", () => {
+    expect(leseNamenAntwort(ANTWORT)).toEqual({ 7: "Adrian Schmid", 9: "Lea Jenni" });
   });
 
   it("nimmt NUR name mit — ein neues Feld reist nicht still mit", () => {
-    const mitExtra = antwortMit([{
-      sfv_person_id: 7, name: "Adrian Schmid", rueckennr: 9, sfv_team_id: 38309,
-    }]);
+    const mitExtra = { ...ANTWORT, namen: [
+      { sfv_person_id: 7, name: "Adrian Schmid", geburtsdatum: "2001-03-04", pass: 987654 },
+    ] } as unknown as NamenAntwort;
     /* toEqual auf einem String: alles andere fiele auf. */
-    expect(leseOffeneNamen(mitExtra)).toEqual({ 7: "Adrian Schmid" });
+    expect(leseNamenAntwort(mitExtra)).toEqual({ 7: "Adrian Schmid" });
   });
 
   it("uebergeht Zeilen ohne Namen, statt eine leere anzuzeigen", () => {
-    expect(leseOffeneNamen(antwortMit([
-      { sfv_person_id: 7, name: "  ", rueckennr: null, sfv_team_id: null },
-      { sfv_person_id: 8, name: "Gut", rueckennr: null, sfv_team_id: null },
-    ]))).toEqual({ 8: "Gut" });
+    const luecken = { ...ANTWORT, namen: [
+      { sfv_person_id: 7, name: "  " }, { sfv_person_id: 8, name: "Gut" },
+    ] };
+    expect(leseNamenAntwort(luecken)).toEqual({ 8: "Gut" });
   });
 
-  it("ein Lauf OHNE Matchdaten ist leer, kein Fehler", () => {
-    const ohne: LaufErgebnis = { ...ERGEBNIS, matchdaten: undefined };
-    expect(leseOffeneNamen({ laeufe: [{ verein_id: "v1", ...ohne }] })).toEqual({});
-    expect(leseOffeneNamen(null)).toEqual({});
+  it("ohne Antwort ist es leer, kein Fehler", () => {
+    expect(leseNamenAntwort(null)).toEqual({});
   });
 });

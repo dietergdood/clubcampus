@@ -21,12 +21,13 @@ import { holeMatch, holeAufstellung, holeEreignisse, holeSchiedsrichter, holeTea
 import type { SfvZugang } from "./sfvApi.ts";
 import {
   bildeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
-  passAenderungen, passKonflikte, leseSchiedsrichter, bildeOffeneNamen,
+  passAenderungen, passKonflikte, leseSchiedsrichter,
 } from "./matchdaten.ts";
-import type { KorrekturZeile, OffenerName, SfvRoh, SpielKandidat } from "./matchdaten.ts";
+import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
 import type { LogoZeile } from "./logos.ts";
 import type { MatchdatenErgebnis } from "./ergebnisTypen.ts";
+import { meldeNeueUnzugeordnete } from "./meldungZuordnung.ts";
 
 /* Die Form steht in ergebnisTypen.ts — dort, wo auch die Allowlist steht,
    die entscheidet, was davon die Function verlaesst. Hier re-exportiert,
@@ -51,7 +52,7 @@ export async function laufeMatchdaten(
   hoechstens: number,
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
-    spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0, offene_namen: [],
+    spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
@@ -148,12 +149,17 @@ export async function laufeMatchdaten(
   erg.paesse_geschrieben = pass.geschrieben;
   erg.pass_konflikte = pass.konflikte;
   erg.nachzug_meldungen = await pruefeNachzug(db, v.verein_id);
+
+  /* Meldung ueber NEUE unzugeordnete Spieler. Steht hier und nicht in der
+     Aktion `namen`: sie soll von selbst kommen, nicht erst, wenn jemand
+     ohnehin schon in der Zuordnungsmaske sitzt. Der Rueckgabewert wird
+     bewusst nicht ins Ergebnis geschrieben — die Zahl der Meldungen ist
+     keine Aussage ueber die Daten, und ein weiteres Feld waere ein
+     weiterer Ausgang. */
+  await meldeNeueUnzugeordnete(db, v.verein_id);
   const zaehlung = await zaehleUnzugeordnet(db, v.verein_id);
   erg.eigene_unzugeordnet = zaehlung.offen;
   erg.zuordnungen_gesamt = zaehlung.bekannt;
-  /* Die Namen aus denselben Rohdaten, die der Lauf ohnehin geholt hat —
-     kein zweiter Abruf, kein zweites Token. */
-  erg.offene_namen = bildeOffeneNamen(alleRoh, unsereClubNummer, zaehlung.zugeordnet);
 
   return erg;
 }
@@ -233,12 +239,9 @@ async function pruefeNachzug(db: SupabaseClient, vereinId: string): Promise<numb
    Wie viele eigene Aufstellungszeilen haben keine Zuordnung? Im Normalbetrieb
    null bis zwei — ein neuer Spieler beim ersten Einsatz. Springt die Zahl auf
    eine ganze Mannschaft, hat der SFV vermutlich die personId gewechselt. */
-/* Gibt die Menge der zugeordneten SFV-Personen mit zurueck: `bildeOffeneNamen`
-   braucht sie, und sie zweimal zu holen waere ein zweiter Ort, an dem
-   dieselbe Aussage auseinanderlaufen kann. */
 async function zaehleUnzugeordnet(
   db: SupabaseClient, vereinId: string,
-): Promise<{ offen: number; bekannt: number; zugeordnet: Set<number> }> {
+): Promise<{ offen: number; bekannt: number }> {
   const { data: aufstellung } = await db
     .from("spiel_aufstellung").select("sfv_person_id").eq("verein_id", vereinId);
   const { data: zuordnung } = await db
@@ -248,7 +251,7 @@ async function zaehleUnzugeordnet(
   const alle = new Set((aufstellung ?? []).map((a) => Number(a.sfv_person_id)));
   let offen = 0;
   for (const p of alle) if (!bekannt.has(p)) offen += 1;
-  return { offen, bekannt: bekannt.size, zugeordnet: bekannt };
+  return { offen, bekannt: bekannt.size };
 }
 
 /* ── Vereinswappen ─────────────────────────────────────────────────────────

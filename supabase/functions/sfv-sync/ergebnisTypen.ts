@@ -13,8 +13,6 @@
 // ABSCHREIBT, prueft die Abschrift. Hier steht die Form einmal, und der Test
 // annotiert sein Fixture damit — ein neues Feld faellt dort auf.
 
-import type { OffenerName } from "./matchdaten.ts";
-
 export interface MatchdatenErgebnis {
   spiele_geholt: number;
   aufstellung_zeilen: number;
@@ -32,17 +30,19 @@ export interface MatchdatenErgebnis {
      bei jedem Lauf. Von Hand zu klaeren. */
   pass_konflikte: string[];
   nachzug_meldungen: number;
-  /**
-   * Namen der noch nicht zugeordneten EIGENEN Spieler.
-   *
-   * ⚠ Sie werden NICHT gespeichert — sie reisen nur in dieser Antwort mit,
-   * damit die Zuordnungsmaske sie fuer diese Sitzung zeigen kann. Siehe
-   * `bildeOffeneNamen` in matchdaten.ts.
-   *
-   * ⚠ Nur beim Lauf von Hand nuetzlich: die Antwort des stuendlichen
-   * Zeitplans geht an pg_net, nicht an einen Browser.
-   */
-  offene_namen: OffenerName[];
+  /* ⚠ HIER STAND `offene_namen`, vom 21. bis 22.08.2026. Die Namen sind aus
+     dem Lauf-Ergebnis VERSCHWUNDEN, und das ist die eigentliche Lehre des
+     Vorfalls: sie hatten hier nie etwas zu suchen.
+
+     Der Sync konnte die Frage ohnehin nicht beantworten — er holt zehn
+     Spiele nach Zeitplan, und von 177 offenen Spielern waren darueber 48
+     GAR NICHT erreichbar. Die Antwort gibt jetzt die eigene Aktion
+     `namen` (namenLauf.ts), die die Spiele nach der Frage waehlt.
+
+     Damit traegt dieses Objekt keine Personendaten mehr — und die beiden
+     Ausgaenge (api_sync_log.details, pg_net) koennen gar nichts mehr
+     ausplaudern. Die Allowlists unten bleiben trotzdem: sie schuetzen vor
+     dem NAECHSTEN Feld, nicht vor diesem. */
   fehler: number;
   /* WARUM ein Spiel scheiterte, nicht nur DASS. Ohne diese Liste sah ein
      42P10 aus der Datenbank genauso aus wie ein 404 vom Verband — am

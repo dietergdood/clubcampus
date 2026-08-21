@@ -33,17 +33,22 @@ const LAUF: LaufErgebnis = {
     eigene_unzugeordnet: 177, zuordnungen_gesamt: 0, paesse_geschrieben: 0,
     pass_konflikte: ["Mitglied 633: zwei Passnummern"],
     nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
-    offene_namen: [{ sfv_person_id: 995639, name: "Abdulah Al Abbadie", rueckennr: 19, sfv_team_id: 38301 }],
   },
 };
 
 describe("fuersProtokoll", () => {
-  it("schreibt KEINE Namen ins Protokoll", () => {
+  it("nennt unter matchdaten genau die erlaubten Schluessel", () => {
+    /* ⚠ DIE DURABLE PROBE. `offene_namen` gibt es im Lauf-Ergebnis nicht
+       mehr — es zu verbieten waere jetzt eine Pruefung gegen etwas, das
+       nicht existiert. Was bleibt, ist die Frage, die den Vorfall
+       verhindert haette: kommt hier etwas an, das niemand aufgezaehlt hat?
+       Ein neues Feld in MatchdatenErgebnis macht diesen Fall rot. */
     const md = fuersProtokoll(LAUF).matchdaten as Record<string, unknown>;
-    expect(md).not.toHaveProperty("offene_namen");
-    /* Die zweite Haelfte: nicht nur der Schluessel fehlt, der Name steht
-       nirgends sonst in der Nutzlast — auch nicht in einer Meldung. */
-    expect(JSON.stringify(fuersProtokoll(LAUF))).not.toContain("Al Abbadie");
+    expect(Object.keys(md).sort()).toEqual([
+      "aufstellung_zeilen", "eigene_unzugeordnet", "ereignisse_zeilen", "fehler",
+      "fehlermeldungen", "nachzug_meldungen", "paesse_geschrieben", "pass_konflikte",
+      "spiele_geholt", "zuordnungen_gesamt",
+    ]);
   });
 
   it("behaelt die Zahlen, die das Protokoll braucht", () => {
@@ -73,7 +78,7 @@ describe("fuersProtokoll", () => {
 });
 
 describe("fuerZeitplanAntwort", () => {
-  it("gibt dem Zeitplan keine Namen — seine Antwort landet in net._http_response", () => {
-    expect(JSON.stringify(fuerZeitplanAntwort(LAUF))).not.toContain("Al Abbadie");
+  it("gibt dem Zeitplan dieselbe Auswahl — seine Antwort landet in net._http_response", () => {
+    expect(fuerZeitplanAntwort(LAUF)).toEqual(fuersProtokoll(LAUF));
   });
 });

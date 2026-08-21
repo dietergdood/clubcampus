@@ -39,6 +39,7 @@ import { holeToken, holeSaison, holeTeams } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync } from "./sync.ts";
 import { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
+import { laufeNamen, namenFuersProtokoll } from "./namenLauf.ts";
 import { protokoll, protokollFehler } from "./protokoll.ts";
 
 const corsHeaders = {
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
   } catch {
     return json({ fehler: "Ungueltiger Aufruf" }, 400);
   }
-  if (aktion !== "teams" && aktion !== "sync") return json({ fehler: `Unbekannte Aktion: ${aktion}` }, 400);
+  if (aktion !== "teams" && aktion !== "sync" && aktion !== "namen") return json({ fehler: `Unbekannte Aktion: ${aktion}` }, 400);
   if (nur && nur !== "spielplan" && nur !== "rangliste") return json({ fehler: `Unbekanntes nur: ${nur}` }, 400);
 
   const url = Deno.env.get("SUPABASE_URL") ?? "";
@@ -88,6 +89,11 @@ Deno.serve(async (req) => {
     if (!istAdmin) return json({ fehler: "Nur fuer Administratoren" }, 403);
   }
   if (perZeitplan && aktion === "teams") return json({ fehler: "teams nur mit Anmeldung" }, 403);
+  /* ⚠ `namen` NIE ueber den Zeitplan. Zwei Gruende, und beide zaehlen:
+     die Antwort traegt Klarnamen, und die Antwort eines Cron-Laufs legt
+     pg_net in `net._http_response.content` ab — ein Speicher, den niemand
+     im Blick hat. Ausserdem nuetzen Namen nur einem Browser. */
+  if (perZeitplan && aktion === "namen") return json({ fehler: "namen nur mit Anmeldung" }, 403);
 
   /* Schreiben laeuft ueber die Service Role: der Zeitplan hat keinen
      Benutzer, und RLS haette dabei niemanden zu pruefen. Der Verein kommt
@@ -142,6 +148,72 @@ Deno.serve(async (req) => {
       return json({ saison, teams });
     } catch (e) {
       return json({ fehler: e instanceof Error ? e.message : "SFV-Abfrage fehlgeschlagen" }, 502);
+    }
+  }
+
+  /* ── Aktion namen: Klarnamen der offenen Spieler nachtragen ──────────
+     Liest, schreibt nichts. Beansprucht trotzdem die Laufsperre — nicht
+     wegen der Daten, sondern wegen des TOKENS: die SFV-API kennt pro
+     Anwendung genau ein gueltiges, und ein gleichzeitiger Sync wuerde
+     unseres mitten in den Abrufen entwerten.
+
+     ⚠ NEBENWIRKUNG, die spaeter wie ein Fehler aussieht: solange diese
+     Aktion laeuft, ueberspringt der stuendliche Lauf sich selbst mit „Ein
+     Lauf ist bereits unterwegs" und holt eine Stunde spaeter nach. Das ist
+     der richtige Tausch — ein ausgefallener Lauf ist harmlos, ein
+     entwertetes Token nicht. */
+  if (aktion === "namen") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+
+    const grenzeN = new Date(Date.now() - SPERRE_MINUTEN * 60_000).toISOString();
+    const { data: beanspruchtN } = await db
+      .from("api_verbindungen")
+      .update({ sync_laeuft_seit: new Date().toISOString() })
+      .eq("id", v.id)
+      .or(`sync_laeuft_seit.is.null,sync_laeuft_seit.lt.${grenzeN}`)
+      .select("id");
+    if (!beanspruchtN?.length) {
+      return json({ fehler: "Ein Lauf ist bereits unterwegs — bitte in einer Minute erneut." }, 409);
+    }
+
+    try {
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+      const { data: verein } = await db.from("vereine")
+        .select("sfv_club_nummer").eq("id", v.verein_id).maybeSingle();
+      const erg = await laufeNamen(
+        db, v as never, zugang, token,
+        (verein?.sfv_club_nummer as number | null) ?? null,
+      );
+
+      /* ⚠ EIGENE ALLOWLIST, nicht `fuersProtokoll()`. Es ist ein anderes
+         Objekt, und genau diese Verwechslung hat am 21.08.2026 903
+         Klarnamen ins Protokoll geschrieben. Hier stehen drei Zahlen. */
+      await db.from("api_sync_log").insert({
+        verbindung_id: v.id, verein_id: v.verein_id,
+        status: erg.fehler ? "warnung" : "ok",
+        gestartet_am: new Date().toISOString(), beendet_am: new Date().toISOString(),
+        meldung: `Namen nachgetragen: ${erg.namen_gefunden} von ${erg.offen_gesamt} offenen Spielern aus ${erg.spiele_abgefragt} Spiel(en)`,
+        details: namenFuersProtokoll(erg),
+      });
+
+      /* ⚠ `letzter_sync` und `sync_meldung` bleiben unberuehrt. Das ist kein
+         Sync; die Kachel duerfte danach nicht behaupten, sie haette Daten
+         geholt. */
+      protokoll(`namen/${v.verein_id}`, `${erg.spiele_abgefragt} Spiel(e), ${erg.namen_gefunden} Name(n), ${erg.fehler} Fehler`);
+      return json({
+        namen: erg.namen,
+        spiele_abgefragt: erg.spiele_abgefragt,
+        namen_gefunden: erg.namen_gefunden,
+        offen_gesamt: erg.offen_gesamt,
+        fehler: erg.fehler,
+      });
+    } catch (e) {
+      const meldung = protokollFehler(`namen/${v.verein_id}`, e);
+      return json({ fehler: meldung }, 502);
+    } finally {
+      await db.from("api_verbindungen").update({ sync_laeuft_seit: null }).eq("id", v.id);
     }
   }
 

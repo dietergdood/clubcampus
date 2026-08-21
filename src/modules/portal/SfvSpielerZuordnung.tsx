@@ -12,16 +12,23 @@
    für eine Grenze hält, sucht die Lösung an der falschen Stelle.
 
    ⚠ SEIT 21.08.2026 IST DER NAME TROTZDEM ZU SEHEN — für EIGENE Spieler
-   und nur zur Zuordnung. Er reist in der ANTWORT eines Laufs mit
-   (`offene_namen`), die Maske hält ihn im Speicher, und beim Neuladen ist
-   er weg. Drei Wege standen zur Wahl; die beiden anderen sind verworfen:
+   und nur zur Zuordnung. Er wird über die Aktion `namen` geholt, hier im
+   Speicher gehalten, und beim Neuladen ist er weg. Gespeichert wird er
+   nicht: eine Spalte an `spiel_aufstellung` läse der ganze Verein, und
+   nach der Zuordnung wäre der Wert zwecklos — ein Bestand, den jemand
+   löschen müsste und vergässe.
 
-     speichern      eine Spalte an `spiel_aufstellung` liest der ganze
-                    Verein, und nach der Zuordnung ist der Wert zwecklos —
-                    ein Bestand, den jemand löschen müsste und vergässe.
-     eigener Abruf  die API kennt pro Anwendung genau EIN gültiges Token.
-                    Ein zweiter POST macht den ersten ungültig und der
-                    stündliche Sync stirbt.
+   ⚠ DIE AKTION IST NICHT DER SYNC, und das war der Fehler vom 21.08.: der
+   Knopf löste einen Sync-Lauf aus, und der holt zehn Spiele nach
+   Zeitplan. Von 177 offenen Spielern waren darüber **48 gar nicht
+   erreichbar** — ihre Spiele sind älter als sieben Tage und längst
+   geholt. Bei der 3. Mannschaft standen 15 offen und genau EINER mit
+   Namen, und nochmal drücken half nicht. Die Aktion `namen` wählt die
+   Spiele nach der FRAGE: genau die, in denen ein offener Spieler vorkommt.
+
+   ⚠ Ein Token, viele GETs — deshalb beansprucht die Aktion dieselbe
+   Laufsperre wie der Sync. Läuft sie, fällt der stündliche Lauf aus und
+   wird eine Stunde später nachgeholt. Absicht, kein Fehler.
 
    Gegner bleiben, wie sie sind: `bildeAufstellung()` verwirft ihren Namen
    weiterhin, und `spiel_ereignisse_fremde_anonym_check` steht unberührt.
@@ -41,6 +48,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { useEffect, useMemo, useState } from "react";
 import { Btn, Card, InfoBox } from "../../theme.ts";
+import { holeNamen, leseNamenAntwort } from "../../domains/sfv/sfvService.ts";
 import { TI } from "../../icons.tsx";
 import { BL } from "../../constants.ts";
 import {
@@ -59,18 +67,21 @@ interface Props {
   dbMitglieder: Mitglied[];
   dbTeams: Team[];
   onZurueck?: () => void;
-  /** sfv_person_id → Name, aus der Antwort des letzten Laufs DIESER
-      Sitzung. Leer ist der Normalfall beim Öffnen — siehe Kopf. */
-  namen?: Record<number, string>;
-  /** Läuft gerade ein Lauf? Der dauert rund eine Minute; solange bleibt
-      die Warteschlange bedienbar, nur der Knopf ist gesperrt. */
-  namenLaeuft?: boolean;
-  /** Stösst einen Lauf an. Fehlt der Rückruf, erscheint kein Knopf — die
-      Maske behauptet dann nicht, es ginge etwas, was nicht geht. */
-  onNamenHolen?: () => void | Promise<void>;
 }
 
-export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, dbTeams, onZurueck, namen = {}, namenLaeuft = false, onNamenHolen }: Props) {
+export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, dbTeams, onZurueck }: Props) {
+  /* sfv_person_id → Name, NUR für diese Sitzung. Nirgends abgelegt: nicht in
+     der Datenbank, nicht im localStorage. Wer den Tab schliesst, sieht
+     wieder Nummern — und die Maske sagt ihm, wie er sie zurückholt. Das ist
+     der Preis dafür, dass hinterher nichts aufzuräumen ist. */
+  const [namen, setNamen] = useState<Record<number, string>>({});
+  const [namenLaeuft, setNamenLaeuft] = useState(false);
+  const [namenFehler, setNamenFehler] = useState<string | null>(null);
+  const [ohneNamen, setOhneNamen] = useState(0);
+  /* Wurde in dieser Sitzung schon geholt? Nicht dasselbe wie „es gibt
+     Namen": ein Lauf, der nichts fand, hat trotzdem stattgefunden, und der
+     Knopf soll dann nicht aussehen, als wäre er nie gedrückt worden. */
+  const [geholt, setGeholt] = useState(false);
   const [aufstellung, setAufstellung] = useState<AufstellungMitZeit[]>([]);
   const [zuordnungen, setZuordnungen] = useState<ZuordnungZeile[]>([]);
   const [laedt, setLaedt] = useState(true);
@@ -108,6 +119,17 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
 
   const offenGesamt = gruppen.reduce((n, g) => n + g.offen.length, 0);
   const anzahlNamen = Object.keys(namen).length;
+
+  async function namenHolen() {
+    if (!sb || namenLaeuft) return;
+    setNamenLaeuft(true); setNamenFehler(null);
+    const { daten, fehler } = await holeNamen(sb);
+    setNamenLaeuft(false);
+    if (fehler) { setNamenFehler(fehler); return; }
+    setNamen(leseNamenAntwort(daten));
+    setOhneNamen(Math.max(0, (daten?.offen_gesamt ?? 0) - (daten?.namen_gefunden ?? 0)));
+    setGeholt(true);
+  }
 
   /* Mitglieder, die für eine Zuordnung in Frage kommen. Bereits
      zugeordnete bleiben wählbar: ein Mitglied darf mehrere personId
@@ -164,32 +186,48 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
           </div>
         }/>
 
-        {/* Die drei Zustände der Namen. Der mittlere ist der wichtigste:
-            ohne ihn sähe die Warteschlange beim zweiten Öffnen genauso aus
-            wie vor dem 21.08.2026 — Nummern, und niemand wüsste, dass es
-            auch anders geht. */}
-        {offenGesamt > 0 && onNamenHolen && (
+        {/* Die Zustände der Namen. Der Knopf sagt, was er tut, und die
+            Meldung danach sagt die WAHRHEIT — beide Zahlen, und ob noch
+            etwas zu holen ist.
+
+            ⚠ Bis zum 22.08.2026 stand hier „Namen holen (Sync-Lauf, ~1
+            Minute)" und danach „129 Namen aus dem letzten Lauf". Wahr und
+            trotzdem irreführend: 48 Spieler waren auf diesem Weg gar nicht
+            erreichbar, und nochmal drücken brachte exakt dieselben Namen.
+            Ein Text, der „weitere Läufe bringen mehr" verspricht, lässt
+            jemanden fünfmal drücken. */}
+        {offenGesamt > 0 && (
           namenLaeuft ? (
             <div className="cc-text-sm cc-mt-8 cc-text-sub">
-              Namen werden geholt — der Lauf dauert rund eine Minute. Zuordnen über
-              Nummer und Mannschaft geht in der Zwischenzeit weiter.
+              Namen werden geholt — der Verband wird zu jedem betroffenen Spiel einmal
+              gefragt. Zuordnen über Nummer und Mannschaft geht in der Zwischenzeit weiter.
             </div>
-          ) : anzahlNamen === 0 ? (
+          ) : !geholt ? (
             <div className="cc-mt-8">
-              <Btn small variant="outline" color={BL} onClick={onNamenHolen}>
-                Namen holen (Sync-Lauf, ~1 Minute)
+              <Btn small variant="outline" color={BL} onClick={namenHolen}>
+                Namen holen ({offenGesamt} offen)
               </Btn>
               <div className="cc-inline-hint">
-                Holt die Namen der offenen Spieler vom Verband. Sie werden nicht
+                Holt die Klarnamen der offenen Spieler beim Verband. Sie werden nicht
                 gespeichert und sind beim nächsten Öffnen wieder weg.
               </div>
             </div>
           ) : (
             <div className="cc-inline-hint cc-mt-8">
-              {anzahlNamen} Name{anzahlNamen === 1 ? "" : "n"} aus dem letzten Lauf —
-              nur für diese Sitzung, nicht gespeichert.
+              {anzahlNamen} von {anzahlNamen + ohneNamen} Namen geholt — nur für diese
+              Sitzung, nicht gespeichert.
+              {ohneNamen > 0 && (
+                <> Für {ohneNamen} Spieler liefert der Verband keinen Namen; ein weiterer
+                Lauf ändert daran nichts.</>
+              )}
             </div>
           )
+        )}
+
+        {namenFehler && (
+          <div className="cc-text-sm cc-text-danger cc-mt-8">
+            Namen nicht geholt: {namenFehler}
+          </div>
         )}
 
         {fehler && <div className="cc-text-sm cc-text-danger cc-mt-8">Nicht gespeichert: {fehler}</div>}

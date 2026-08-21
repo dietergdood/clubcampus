@@ -110,43 +110,63 @@ export interface SyncAntwort {
   fehler?: string;
 }
 
-/**
- * Die Namen der noch nicht zugeordneten eigenen Spieler aus der Antwort
- * eines Laufs.
- *
- * ⚠ NICHTS DAVON WIRD GESPEICHERT. Der Rückgabewert lebt im Zustand der
- * Zuordnungsmaske und ist beim Neuladen weg — genau das ist der Zweck: ein
- * Name, der nur so lange da ist, wie ihn jemand ansieht, muss später
- * niemand löschen. Die Herleitung steht bei `bildeOffeneNamen` in
- * `supabase/functions/sfv-sync/matchdaten.ts`.
- *
- * ⚠ ALLOWLIST, wie bei jeder Fremdantwort: gelesen werden `sfv_person_id`
- * und `name`, sonst nichts. Rückennummer und Mannschaft stehen in unserer
- * eigenen Datenbank und werden nicht von hier genommen — ein neues Feld der
- * Edge Function reist damit nicht still mit.
- */
-export function leseOffeneNamen(daten: SyncAntwort | null): Record<number, string> {
-  const raus: Record<number, string> = {};
-  for (const lauf of daten?.laeufe ?? []) {
-    /* ⚠ EINE EBENE TIEFER, und das war der Fehler vom 21.08.2026. `laeufe`
-       trägt das Ergebnis des GANZEN Laufs (`{verein_id, ...LaufErgebnis}`),
-       und die Matchdaten sind darin ein Unterobjekt. Gelesen wurde
-       `lauf.offene_namen` — immer undefined, der Knopf blieb stehen, und
-       nichts hat es gemeldet: der Test prüfte gegen eine Attrappe, in der
-       das Feld dort lag, wo ich es vermutet hatte.
+/** Antwort der Aktion `namen`. */
+export interface NamenAntwort {
+  namen: { sfv_person_id: number; name: string }[];
+  spiele_abgefragt: number;
+  namen_gefunden: number;
+  offen_gesamt: number;
+  fehler: number;
+}
 
-       Seither baut der Test sein Fixture als `LaufErgebnis` auf, damit die
-       Form von der Quelle kommt statt aus meinem Gedächtnis. */
-    const liste = (lauf as { matchdaten?: { offene_namen?: unknown } })
-      .matchdaten?.offene_namen;
-    if (!Array.isArray(liste)) continue;
-    for (const e of liste) {
-      const id = Number((e as { sfv_person_id?: unknown })?.sfv_person_id);
-      const name = (e as { name?: unknown })?.name;
-      if (Number.isFinite(id) && typeof name === "string" && name.trim()) {
-        raus[id] = name.trim();
-      }
+/**
+ * Die Klarnamen der noch nicht zugeordneten eigenen Spieler holen.
+ *
+ * ⚠ EIGENE AKTION, NICHT DER SYNC. Der stündliche Lauf holt zehn Spiele und
+ * bei leerem ersten Topf immer dieselben — am 22.08.2026 waren dadurch von
+ * 177 offenen Spielern **48 gar nicht erreichbar**. Diese Aktion wählt die
+ * Spiele nach der Frage statt nach dem Zeitplan.
+ *
+ * ⚠ Sie kann mit 409 antworten: solange ein Sync unterwegs ist, gibt es
+ * kein zweites gültiges Token. Das ist kein Fehler, sondern die Sperre —
+ * die Meldung sagt das auch so.
+ *
+ * ⚠ Nichts davon wird gespeichert. Der Rückgabewert lebt im Zustand der
+ * Maske; beim Neuladen ist er weg.
+ */
+export async function holeNamen(
+  sb: Sb,
+): Promise<{ daten: NamenAntwort | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("sfv-sync", { body: { aktion: "namen" } });
+  if (error) {
+    /* Wie bei starteSync: bei non-2xx liegt die Meldung in error.context,
+       nicht in data. Ohne dieses Auslesen steht dort nur „non-2xx status". */
+    let ausKoerper: string | null = null;
+    const ctx = (error as { context?: unknown }).context;
+    if (ctx instanceof Response) {
+      try {
+        const j = JSON.parse(await ctx.clone().text());
+        ausKoerper = j?.fehler ?? null;
+      } catch { /* kein JSON — dann bleibt die Meldung des Clients */ }
     }
+    return { daten: null, fehler: ausKoerper || error.message || "Namen konnten nicht geholt werden" };
+  }
+  if (data?.fehler) return { daten: null, fehler: String(data.fehler) };
+  return { daten: data as NamenAntwort, fehler: null };
+}
+
+/**
+ * Die Namen aus einer `namen`-Antwort — dieselbe Allowlist wie bei
+ * `leseOffeneNamen`, nur eine Ebene flacher, weil diese Aktion ein eigenes
+ * Ergebnis hat und nicht in `laeufe` steckt.
+ */
+export function leseNamenAntwort(daten: NamenAntwort | null): Record<number, string> {
+  const raus: Record<number, string> = {};
+  for (const e of daten?.namen ?? []) {
+    const id = Number(e?.sfv_person_id);
+    const name = e?.name;
+    if (Number.isFinite(id) && typeof name === "string" && name.trim()) raus[id] = name.trim();
   }
   return raus;
 }

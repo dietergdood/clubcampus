@@ -8,7 +8,7 @@ import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
 import { API_INFOS } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
-import { starteSync, leseOffeneNamen } from "../../domains/sfv/sfvService.ts";
+import { starteSync } from "../../domains/sfv/sfvService.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -66,13 +66,6 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      Die Antwort wird ANGEZEIGT, nicht nur nach api_sync_log geschrieben. */
   const [laeuft,setLaeuft]=useState(false);
   const [ergebnis,setErgebnis]=useState<{ok: boolean; text: string}|null>(null);
-  /* Die Namen der offenen Spieler — NUR fuer diese Sitzung.
-     Sie kommen mit der Antwort des Laufs und werden nirgends abgelegt:
-     nicht in der Datenbank, nicht im localStorage. Wer den Tab schliesst,
-     sieht danach wieder Nummern — und die Maske sagt ihm, wie er sie
-     zurueckholt. Das ist der Preis dafuer, dass hinterher nichts
-     aufzuraeumen ist. */
-  const [namen,setNamen]=useState<Record<number,string>>({});
 
   /** Was vom Lauf angezeigt wird — aufgezaehlt, nicht ausgeschlossen. */
   function fasseZusammen(daten: unknown): string {
@@ -93,20 +86,16 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     const {daten,fehler}=await starteSync(sb);
     setLaeuft(false);
     if(fehler){ setErgebnis({ok:false,text:fehler}); return; }
-    /* ⚠ KEIN rohes JSON.stringify mehr. Der Lauf soll kuenftig die Namen
-       der noch nicht zugeordneten eigenen Spieler in seiner Antwort
-       mitfuehren — in einem rohen Abzug stuenden sie damit auf dem Schirm
-       und in jedem Screenshot. Derselbe Weg, nur ohne Absicht.
+    /* ⚠ KEIN rohes JSON.stringify. Der Lauf trug vom 21. bis 22.08.2026
+       die Klarnamen offener Spieler in seiner Antwort — in einem rohen
+       Abzug stuenden sie damit auf dem Schirm und in jedem Screenshot.
+       Sie sind inzwischen ganz aus dem Lauf-Ergebnis verschwunden.
 
        Deshalb eine ALLOWLIST: aufgezaehlt wird, was angezeigt wird. Ein
        neues Feld der Antwort ist damit im Zweifel unsichtbar und faellt auf,
        statt still mitzureisen — dieselbe Regel wie bei der SFV-Schwaerzung
        (CLAUDE.md → Fremddaten). */
     setErgebnis({ok:true,text:fasseZusammen(daten)});
-    /* Bewusst ERSETZEN statt ergaenzen: was der Lauf nicht mehr nennt, ist
-       zugeordnet. Ein Restbestand aus dem vorherigen Lauf wuerde Namen zu
-       Zeilen zeigen, die es nicht mehr gibt. */
-    setNamen(leseOffeneNamen(daten));
     /* Erst jetzt neu laden: letzter_sync, sync_status und sync_meldung
        stehen danach in der Kachel, statt den Stand vom Oeffnen zu zeigen. */
     if(onReload) await onReload();
@@ -120,8 +109,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
 
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen==="sfv_spieler"&&(
         <SfvSpielerZuordnung sb={sb} vereinId={vereinId} benutzerId={benutzerId}
-          dbMitglieder={dbMitglieder} dbTeams={dbTeams} onZurueck={()=>setOffen(null)}
-          namen={namen} namenLaeuft={laeuft} onNamenHolen={syncStarten}/>
+          dbMitglieder={dbMitglieder} dbTeams={dbTeams} onZurueck={()=>setOffen(null)}/>
       )}
 
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen===null&&(
