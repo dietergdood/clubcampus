@@ -3,11 +3,17 @@
 
    Warteschlange: welcher SFV-Spieler ist welches Mitglied?
 
-   Der Verband liefert zu jedem Einsatz eine `personId`, aber keinen
-   Namen, den wir speichern dürften — und automatisch über den Namen
-   zuzuordnen scheidet ohnehin aus: der Verein hat zwei Adrian Schmid
-   und zwei Adrian Jenni. Also einmal von Hand, danach erkennt der Sync
-   die Person selbst wieder.
+   Der Verband liefert zu jedem Einsatz eine `personId` — und den Namen
+   gleich mit, in drei Feldern (`firstname`, `name`, `secondName`).
+   Gespeichert wird er nicht: `bildeAufstellung()` verwirft ihn, und im
+   ganzen Schema gibt es keine Spalte, die ihn aufnehmen könnte.
+
+   ⚠ Das ist eine ENTSCHEIDUNG, keine Grenze der Schnittstelle. Wer sie
+   für eine Grenze hält, sucht die Lösung an der falschen Stelle.
+
+   Automatisch über den Namen zuzuordnen schiede ohnehin aus: der Verein
+   hat zwei Adrian Schmid und zwei Adrian Jenni. Also einmal von Hand,
+   danach erkennt der Sync die Person selbst wieder.
 
    ⚠ NACH MANNSCHAFT GRUPPIERT. Beim ersten Lauf standen 129
    verschiedene Spieler in zehn Spielen; über die Saison werden es mehr.
@@ -15,9 +21,8 @@
    Mannschaft.
 
    Was hier fehlt, ist Absicht: der Name des Spielers. Er steht nicht in
-   unserer Datenbank und soll es nicht. Erkannt wird über Mannschaft,
-   Rückennummer und Zahl der Einsätze — das reicht, wer die Mannschaft
-   kennt.
+   unserer Datenbank. Erkannt wird über Mannschaft, Rückennummer und
+   Zahl der Einsätze — das reicht, wer die Mannschaft kennt.
    ═══════════════════════════════════════════════════════════════ */
 import { useEffect, useMemo, useState } from "react";
 import { Btn, Card, InfoBox } from "../../theme.ts";
@@ -116,8 +121,14 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
 
         <InfoBox color={BL} text={
           <div>
-            Der SFV kennt jeden Einsatz unter einer <strong>personId</strong>. Wer dahinter
-            steckt, sagt niemand — den Namen speichern wir nicht. Einmal zugeordnet,
+            {/* ⚠ Hier stand bis zum 21.08.2026 „Wer dahinter steckt, sagt
+                niemand". Das war falsch: der Verband liefert den Namen mit.
+                Wir speichern ihn nicht — das ist unsere Entscheidung, nicht
+                seine. Der Unterschied ist nicht kosmetisch: „der SFV weiss es
+                nicht" beendet jedes Gespraech, „wir speichern es bewusst
+                nicht" darf jemand hinterfragen. */}
+            Der SFV kennt jeden Einsatz unter einer <strong>personId</strong>. Den Namen
+            liefert er mit — <strong>wir speichern ihn nicht</strong>. Einmal zugeordnet,
             erkennt der Sync die Person in jedem weiteren Spiel selbst.
             <div className="cc-mt-8">
               Erkennbar an Mannschaft, Rückennummer und Zahl der Einsätze. Automatisch
