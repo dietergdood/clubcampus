@@ -20,6 +20,16 @@ export interface ApiVerbindung {
   konfiguriert?: boolean | null;
   sync_status?: string | null;
   letzter_sync?: string | null;
+  /**
+   * Wann der Sync-Waechter zuletzt geprueft hat (cron: sync-waechter-stuendlich).
+   *
+   * ⚠ Der Leser dieser Spalte — sie steht nur hier. Ein Waechter, der
+   * ausfaellt, schweigt, und Schweigen ist von Zufriedenheit nicht zu
+   * unterscheiden. Dieser Zeitstempel macht seinen Ausfall wenigstens
+   * SICHTBAR, sobald jemand hinschaut. Er loest es nicht — dafuer gibt es
+   * den Totmannschalter bei healthchecks.io (cron_sync_waechter.sql).
+   */
+  wache_zuletzt?: string | null;
 }
 
 interface ApiTabProps {
@@ -57,13 +67,35 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
   const [laeuft,setLaeuft]=useState(false);
   const [ergebnis,setErgebnis]=useState<{ok: boolean; text: string}|null>(null);
 
+  /** Was vom Lauf angezeigt wird — aufgezaehlt, nicht ausgeschlossen. */
+  function fasseZusammen(daten: unknown): string {
+    const laeufe = (daten as {laeufe?: Record<string, unknown>[]})?.laeufe;
+    if (!Array.isArray(laeufe)) return "Lauf beendet.";
+    const ERLAUBT = ["status", "meldung"] as const;
+    /* Mit " / " verbunden statt mit einem Zeilenumbruch: die Meldung steht
+       einzeilig unter der Kachel, und mehr als einen Lauf je Verein gibt es
+       ohnehin selten. */
+    return laeufe
+      .map(l => ERLAUBT.map(k => l[k]).filter(Boolean).join(" · ") || "Lauf beendet.")
+      .join(" / ");
+  }
+
   async function syncStarten(){
     if(!sb||laeuft) return;
     setLaeuft(true); setErgebnis(null);
     const {daten,fehler}=await starteSync(sb);
     setLaeuft(false);
     if(fehler){ setErgebnis({ok:false,text:fehler}); return; }
-    setErgebnis({ok:true,text:JSON.stringify(daten,null,2)});
+    /* ⚠ KEIN rohes JSON.stringify mehr. Der Lauf soll kuenftig die Namen
+       der noch nicht zugeordneten eigenen Spieler in seiner Antwort
+       mitfuehren — in einem rohen Abzug stuenden sie damit auf dem Schirm
+       und in jedem Screenshot. Derselbe Weg, nur ohne Absicht.
+
+       Deshalb eine ALLOWLIST: aufgezaehlt wird, was angezeigt wird. Ein
+       neues Feld der Antwort ist damit im Zweifel unsichtbar und faellt auf,
+       statt still mitzureisen — dieselbe Regel wie bei der SFV-Schwaerzung
+       (CLAUDE.md → Fremddaten). */
+    setErgebnis({ok:true,text:fasseZusammen(daten)});
     /* Erst jetzt neu laden: letzter_sync, sync_status und sync_meldung
        stehen danach in der Kachel, statt den Stand vom Oeffnen zu zeigen. */
     if(onReload) await onReload();
@@ -126,6 +158,20 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                   {api.letzter_sync&&(
                     <div style={{fontSize:14,color:"var(--sub)",marginBottom:10}}>
                       Letzter Sync: {new Date(api.letzter_sync).toLocaleString("de-CH")}
+                      {/* ⚠ „zuletzt FERTIG GEWORDEN", nicht „zuletzt gelungen":
+                          letzter_sync wird auch bei status='fehler' gesetzt.
+                          Deshalb steht der Status daneben und nicht dahinter
+                          versteckt. */}
+                    </div>
+                  )}
+                  {/* Der Waechter. Steht auch dann da, wenn er NICHT gelaufen
+                      ist — „—" ist die Auskunft, die zaehlt: ein stiller
+                      Waechter sieht sonst aus wie ein zufriedener. */}
+                  {api.active&&(
+                    <div style={{fontSize:14,color:"var(--sub)",marginBottom:10}}>
+                      Wächter: {api.wache_zuletzt
+                        ? new Date(api.wache_zuletzt).toLocaleString("de-CH")
+                        : "— noch nie gelaufen"}
                     </div>
                   )}
                   <Row align="flex-start">

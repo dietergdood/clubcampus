@@ -129,6 +129,13 @@ eintragen, mit diesem Grund.
 
 ## Die Mail
 
+⚠ **Hier kommt der Sync-Wächter mit hinein** (21.08.2026). Er meldet einen
+Sync-Ausfall über `benachrichtigungen` an die Administratoren — das erreicht
+aber nur, wer sich anmeldet. Liegt eine Woche niemand im Portal, liegt der
+Alarm eine Woche ungelesen. Sobald Resend steht, bekommt er eine Mail als
+zweiten Weg: **kein eigener Versandweg, sondern derselbe.** Ein zweiter wäre
+ein zweiter Ort zum Veralten.
+
 Über **Resend**, nicht über einen Mailserver des Vereins. Absenderadresse
 `@fcherrliberg.ch` über Domain-Verifizierung. Begründung, falls sie später
 jemand hinterfragt: ClubCampus ist mandantenfähig — kein Verein soll erst einen
