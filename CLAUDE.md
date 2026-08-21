@@ -337,6 +337,33 @@ Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verlier
 > - Die Trigger auf `auth.users` (`on_auth_user_created`, `on_auth_user_login`). Sie stehen in **keinem** `public`-Dump; `schema.sql` enthält nur die Funktionen `handle_new_user`/`handle_user_login`, ohne jeden Aufrufer. Deshalb liegen sie separat in **`supabase/auth_triggers.sql`** und müssen nach `schema.sql` eingespielt werden — sonst kann sich nach einem Nachbau niemand registrieren.
 > - **Der cron-Auftrag `sfv-sync-stuendlich`** (seit 15.08.2026). `cron.job` liegt im Schema `cron`. Ohne ihn läuft der SFV-Sync nie wieder, und auch das fällt nicht auf: die Anzeige zeigt schlicht den Stand vom Tag des Nachbaus. Liegt in **`supabase/cron_sfv_sync.sql`**.
 
+  > ⚠ **`cron.schedule` PRUEFT DEN BEFEHL NICHT.** Es speichert eine
+  > Zeichenkette. Der Einrichtungsblock kann fehlerfrei durchlaufen und einen
+  > Befehl hinterlegen, der jede Stunde scheitert — am 21.08.2026 zweimal
+  > hintereinander erlebt: eine Variable, die nur im äusseren Block deklariert
+  > war (`v_anz is not a known variable`), und danach ein `Content-Type:
+  > text/plain`, den `net.http_post` ablehnt. Beide Male meldete das
+  > Einrichten „Wächter steht".
+  >
+  > **Den gespeicherten Befehl deshalb einmal ausführen, bevor man ihm glaubt:**
+  >
+  > ```sql
+  > begin;
+  >   do $probe$ declare c text; begin
+  >     select command into c from cron.job where jobname = '…';
+  >     execute c;
+  >   end $probe$;
+  > rollback;
+  > ```
+  >
+  > `pg_net` stellt seine Anfragen transaktional in die Warteschlange — ein
+  > Rollback nimmt einen Ping also mit zurück, es geht nichts nach draussen.
+  >
+  > ⚠ **Und der Tag des äusseren Dollar-Quotings darf im Befehl nirgends
+  > vorkommen, auch nicht in einem Kommentar.** Ein `$waechter$` im Kommentartext
+  > beendet den Block mittendrin; der Fehler zeigt dann auf eine Stelle, die
+  > mit der Ursache nichts zu tun hat.
+
   > ⚠ **`cron.job_run_details.status = 'succeeded'` heisst NUR „abgesetzt".** Es ist das Ergebnis des `select net.http_post(…)` — also, dass die Anfrage in die Warteschlange gelegt wurde. Über die ANTWORT sagt es nichts. Die steht in **`net._http_response`**, und nur dort:
   >
   > ```sql

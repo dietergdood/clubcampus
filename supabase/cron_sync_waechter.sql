@@ -139,6 +139,22 @@ begin
       v_ausfaell text[] := '{}';
       v_grund    text;
       v_neu      int := 0;
+      /* ⚠ `v_anz` MUSS hier stehen. Sie war nur im aeusseren do-Block
+         deklariert — und der laeuft nur EINMAL, beim Einrichten. Der Cron
+         fuehrt diesen inneren Block allein aus, und dort war die Variable
+         unbekannt: „v_anz is not a known variable", jede Stunde.
+
+         ⚠ WARUM ES BEIM EINRICHTEN NICHT AUFFIEL: `cron.schedule` SPEICHERT
+         die Zeichenkette nur — es parst und prueft sie nicht. Der Block lief
+         ohne Abbruch durch und sagte damit NICHTS ueber den Befehl aus.
+         Dieselbe Verwechslung wie „job_run_details succeeded", eine Ebene
+         tiefer: abgesetzt ist nicht geprueft.
+
+         Gefunden hat es der Probelauf, der den gespeicherten Befehl
+         ausfuehrt (unten unter „Von Hand ausloesen"). Ohne ihn haette der
+         Totmannschalter Alarm geschlagen — richtig, aber ohne zu sagen,
+         warum. */
+      v_anz      int;
     begin
       /* ── Pruefen: das PAAR, nicht die eine Spalte ──────────────────── */
       for r in
@@ -192,13 +208,23 @@ begin
         from vault.decrypted_secrets where name = 'healthcheck_url';
 
       if v_url is not null then
+        /* ⚠ `application/json` ist Pflicht: `net.http_post` nimmt eine jsonb
+           und weist alles andere ab („Content-Type header must be
+           application/json"). Mit `text/plain` scheiterte der Ping — und
+           damit haette der Totmannschalter geschwiegen, obwohl der Waechter
+           lief. Der schlimmste denkbare Ausgang: healthchecks haette Alarm
+           geschlagen fuer einen Waechter, der seine Arbeit tat.
+
+           healthchecks.io nimmt jeden Rumpf und zeigt ihn im Protokoll —
+           ein kleines Objekt liest sich dort besser als eine Zeichenkette. */
         perform net.http_post(
           url     := case when array_length(v_ausfaell, 1) is null
                           then v_url else v_url || '/fail' end,
-          headers := jsonb_build_object('Content-Type', 'text/plain'),
-          body    := to_jsonb(case when array_length(v_ausfaell, 1) is null
-                                   then 'ok · ' || v_neu::text || ' neue Meldungen'
-                                   else array_to_string(v_ausfaell, ' | ') end),
+          headers := jsonb_build_object('Content-Type', 'application/json'),
+          body    := jsonb_build_object(
+                       'meldung', case when array_length(v_ausfaell, 1) is null
+                                       then 'ok' else array_to_string(v_ausfaell, ' | ') end,
+                       'neue_meldungen', v_neu),
           timeout_milliseconds := 10000);
       end if;
     end $lauf$;
