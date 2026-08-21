@@ -861,6 +861,50 @@ Beides ist ein kleiner Umbau: Komponente nach oben ziehen, die gelesenen
 Werte als Props durchreichen. Nicht dringend, aber billig — und `RolleField`
 hat gezeigt, dass dabei ein übersprungener Test zurückkommen kann.
 
+### ⚠ Zwei Tests entscheiden sich nach Rechnerlast, nicht nach Code
+
+Befund vom 22.08.2026, beim Abschluss der Namensanzeige.
+
+`datenpruefungEltern` („die AHV-Nummer des Kindes ist beschreibbar") und
+`datenpruefungMitglied` („sperrt bei einem leeren Pflichtfeld") laufen im
+vollen Durchgang in den **Timeout nach 5000 ms**. Keine Zusicherung schlägt
+fehl — die Tests werden schlicht nicht fertig. Einzeln gestartet sind beide
+Dateien grün (40 Fälle, 9 Sekunden zusammen).
+
+**Gemessen, nicht vermutet.** Der Verdacht lag zuerst auf der eigenen
+Änderung. `git stash -u`, derselbe Commit, derselbe Rechnerzustand — **der
+Ausfall trat ohne die Änderung genauso auf.** Umgekehrt war derselbe Commit
+zwei Stunden vorher 691/691 grün.
+
+Was sich veränderte, war die Maschine. Die `environment`-Zeit eines vollen
+Durchgangs im Verlauf eines Abends:
+
+| Uhrzeit | environment |
+|---|---|
+| 23:21 | 149 s |
+| 23:41 | 430 s |
+| 23:56 | 555 s |
+| 00:00 | **912 s** |
+
+Die zwei Fälle rendern die ganze Prüfmaske und liegen damit nahe genug an
+der Grenze, dass die Last darüber entscheidet.
+
+⚠ **Die Grenze hochzusetzen hiesse, die Meldung zu löschen statt den
+Fehler.** Dieselbe Regel wie beim roten Test, den jemand anpasst, bis er
+grün ist.
+
+⚠ **Und das ist der Grund, es nicht liegen zu lassen: ab jetzt heisst rot
+zwei Dinge.** Entweder ein Defekt im Code oder ein langsamer Rechner. Wer
+die beiden verwechselt, verliert eine davon — und zwar immer dieselbe: wenn
+rot manchmal folgenlos ist, wird neu gestartet, bis es grün ist. Damit
+verschwindet auch das echte Rot, nur langsamer und ohne dass es jemand
+entscheidet. **Ein Signal, das zwei Bedeutungen hat, ist keins mehr.**
+
+Zu klären ist deshalb die Ursache der 7 Sekunden, nicht die Grenze: was
+diese beiden Fälle so teuer macht (vollständiges Rendern gegen Attrappen,
+`waitFor` ohne Not, Mock-Aufbau je Fall) und ob es billiger geht. Erst wenn
+sie schnell sind, ist die Farbe wieder eindeutig.
+
 ### ⚠ Der Portal-Zugang wird an drei Spalten gemessen — Rest von F2
 
 Befund vom 21.08.2026, beim Umbau der Personenseite. **Die Hälfte ist
