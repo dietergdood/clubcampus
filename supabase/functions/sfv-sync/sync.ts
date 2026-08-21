@@ -16,20 +16,11 @@ import {
   holeToken, holeSaison, holeTeams, holeSpielplan, holeRangliste, SfvFehler,
 } from "./sfvApi.ts";
 import { laufeMatchdaten, laufeLogos, UNZUGEORDNET_WARNUNG } from "./matchdatenLauf.ts";
-import type { MatchdatenErgebnis } from "./matchdatenLauf.ts";
+import type { LaufErgebnis } from "./ergebnisTypen.ts";
 import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
-export interface LaufErgebnis {
-  status: "ok" | "warnung" | "fehler";
-  meldung: string;
-  spiele: { neu: number; aktualisiert: number; ohne_team: number; nicht_mehr_geliefert: number };
-  ranglisten: { geschrieben: number; entfernt: number; gruppen: number };
-  verwaiste_zuordnungen: number;
-  derbys: number;
-  matchdaten?: MatchdatenErgebnis;
-  logos?: { geholt: number; fehlt: number };
-  saison?: { id: number; name: string };
-}
+export type { LaufErgebnis } from "./ergebnisTypen.ts";
+export { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
 
 interface Verbindung { id: string; verein_id: string; api_url: string; sync_felder: Record<string, unknown> }
 

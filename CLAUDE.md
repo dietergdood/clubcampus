@@ -304,6 +304,31 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Unbedenklich bleibt `\b` dort, wo nur ASCII geprüft wird — etwa `/<(path|circle|rect)\b/` gegen SVG-Markup in `icons.test.ts`.
 - **Bei Fremddaten immer Allowlist, nie Denylist.** Wer aus einer fremden Antwort etwas herausfiltert — Personendaten schwärzen, Felder übernehmen, Nutzlast begrenzen —, listet auf, was **durchkommt**, nicht was fällt. Ein neues Feld der Gegenseite ist damit im Zweifel geschwärzt und fällt auf, statt still mitzureisen. Umgekehrt ist jede Denylist nur so gut wie die Fantasie dessen, der sie geschrieben hat. Beleg vom 19.08.2026: eine Regex-Denylist `/person|player|birth|passport|…/` gegen die SFV-Matchdaten war zugleich zu streng (schwärzte `personId`, `isPlayer`) und zu lasch — `players[]` führt den Namen in **drei** Feldern, `firstname`, `name` und `secondName`, von denen keines „person" oder „player" heisst. Die Klarnamen von 32 Spielern, überwiegend gegnerische, gingen durch. Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad geschrieben und dort gegengelesen wurde. Muster: `scripts/sfv-matchdaten-probe.mjs`, Konstante `ERLAUBT`.
+- **Ein neues Feld erbt JEDEN Ausgang des Objekts, an dem es hängt.** Wer einem bestehenden Objekt ein Feld hinzufügt, muss alle Wege kennen, die dieses Objekt schon nimmt — nicht nur den, für den das Feld gedacht war. Das Feld ist neu, die Ausgänge sind alt, und deshalb schlägt nichts fehl.
+
+  **Beleg vom 21.08.2026, selbst gebaut und am selben Abend aufgeflogen.** `MatchdatenErgebnis` bekam `offene_namen` — die Klarnamen eigener Spieler, ausdrücklich als Durchreiche an den Browser gedacht, mit einem langen Kommentar darüber, dass sie **nirgends gespeichert** werden. Gesichert war die Anzeige, mit einer Allowlist. Nur nahm das Objekt zwei weitere Wege, die seit Monaten bestanden:
+
+  | Ausgang | Folge |
+  |---|---|
+  | `details: erg` → `api_sync_log` | **903 Klarnamen in sieben Läufen**, dauerhaft, +129 pro Stunde durch den Zeitplan |
+  | Antwort des Cron-Laufs → `pg_net` | landet in `net._http_response.content` |
+
+  Dazu liest `PortalverwaltungModul` die Protokolltabelle mit `select("*")` — die Namen reisten in den Browser jedes Admins, der den Audit-Tab öffnete, ohne dort je gerendert zu werden.
+
+  ⚠ **Die Allowlist stand am falschen Ort.** Gesichert wurde der Weg, den der Autor im Blick hatte; hinaus ging es über den, den er nicht angesehen hat. Eine Allowlist schützt nur den Ausgang, an dem sie steht — die Frage ist nicht „ist dieses Feld gesichert?", sondern **„welche Ausgänge hat dieses Objekt?"**.
+
+  **Die Prüfung dazu ist mechanisch und dauert eine Minute:**
+
+  ```bash
+  grep -n "erg" supabase/functions/sfv-sync/index.ts   # jeder Ausgang des Objekts
+  ```
+
+  Jede Zeile einzeln lesen: geht das Objekt dort in eine Tabelle, in ein Log, über HTTP hinaus? Für jeden dieser Ausgänge eine eigene Allowlist — hier `fuersProtokoll()` und `fuerZeitplanAntwort()` in `ergebnisTypen.ts`.
+
+  **Dieselbe Familie wie der Regex-Schnitt und `.eq("mitglied_id", …)`:** das Werkzeug — hier das Spread `{...erg}` — kennt die Bedeutung nicht, und das Ergebnis sieht richtig aus.
+
+  ⚠ **Und die Tests waren grün.** Beide Enden waren geprüft, gegen selbst erfundene Attrappen, in denen das Feld dort lag, wo der Autor es vermutete. **Eine Attrappe, die die Form abschreibt, prüft die Abschrift.** Wo eine Testattrappe die Form eines echten Objekts nachbildet, gehört ihr dessen Typ — und wenn der in einer Deno-Datei steht, die `tsc` nicht lesen kann, gehört die Form in eine eigene Datei, die beide Welten lesen (`ergebnisTypen.ts`, ohne `esm.sh`-Import).
+
 - **Keine Komponente, die bei fehlenden Daten `null` zurückgibt.** Eine Sektion, die still verschwindet, ist von einer nicht gerenderten nicht zu unterscheiden — bei der Fehlersuche kostet genau diese Ununterscheidbarkeit die meiste Zeit. Stattdessen eine Karte mit einem Satz, der sagt, was fehlt und wo es herkommt. (`MitgliedtypFelderSektion` ohne Mitgliedtypen ist das Muster.) Gilt nicht für bewusste Sichtbarkeitsregeln — ein Feld auf „Gibt es nicht" verschwindet richtigerweise ganz.
 
 ### Bevor eine neue CSS-Klasse entsteht

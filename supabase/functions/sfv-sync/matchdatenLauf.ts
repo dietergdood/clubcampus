@@ -26,43 +26,12 @@ import {
 import type { KorrekturZeile, OffenerName, SfvRoh, SpielKandidat } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
 import type { LogoZeile } from "./logos.ts";
+import type { MatchdatenErgebnis } from "./ergebnisTypen.ts";
 
-export interface MatchdatenErgebnis {
-  spiele_geholt: number;
-  aufstellung_zeilen: number;
-  ereignisse_zeilen: number;
-  eigene_unzugeordnet: number;
-  /* Wie viele Zuordnungen es ueberhaupt schon gibt. Trennt den
-     Normalzustand vom Verdachtsfall: ohne eine einzige Zuordnung steht sie
-     schlicht noch aus, das ist keine Auffaelligkeit. */
-  zuordnungen_gesamt: number;
-  /* Spielerpaesse, die der Verband geliefert hat und die sich geaendert
-     haben. Jeder davon steht auch im Verlauf des Mitglieds. */
-  paesse_geschrieben: number;
-  /* Mitglieder mit widerspruechlicher Zuordnung: zwei SFV-Personen, zwei
-     Passnummern. Fuer sie wird NICHTS geschrieben — der Wert pendelte sonst
-     bei jedem Lauf. Von Hand zu klaeren. */
-  pass_konflikte: string[];
-  nachzug_meldungen: number;
-  /**
-   * Namen der noch nicht zugeordneten EIGENEN Spieler.
-   *
-   * ⚠ Sie werden NICHT gespeichert — sie reisen nur in dieser Antwort mit,
-   * damit die Zuordnungsmaske sie fuer diese Sitzung zeigen kann. Siehe
-   * `bildeOffeneNamen` in matchdaten.ts.
-   *
-   * ⚠ Nur beim Lauf von Hand nuetzlich: die Antwort des stuendlichen
-   * Zeitplans geht an pg_net, nicht an einen Browser.
-   */
-  offene_namen: OffenerName[];
-  fehler: number;
-  /* WARUM ein Spiel scheiterte, nicht nur DASS. Ohne diese Liste sah ein
-     42P10 aus der Datenbank genauso aus wie ein 404 vom Verband — am
-     20.08.2026 hat das einen reproduzierbaren Fehler tagelang als
-     "der SFV hat nichts geliefert" getarnt. Auf die ersten fuenf begrenzt:
-     scheitern alle zehn, sagen fuenf Meldungen dasselbe wie zehn. */
-  fehlermeldungen: string[];
-}
+/* Die Form steht in ergebnisTypen.ts — dort, wo auch die Allowlist steht,
+   die entscheidet, was davon die Function verlaesst. Hier re-exportiert,
+   damit bestehende Importe unveraendert bleiben. */
+export type { MatchdatenErgebnis } from "./ergebnisTypen.ts";
 
 /* Ab diesem Anteil unzugeordneter eigener Spieler wird der Lauf zur Warnung.
    Der Frühwarner fuer den offenen Punkt "haelt personId ueber die Saison?":

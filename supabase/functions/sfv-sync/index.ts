@@ -38,6 +38,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { holeToken, holeSaison, holeTeams } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync } from "./sync.ts";
+import { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
 import { protokoll, protokollFehler } from "./protokoll.ts";
 
 const corsHeaders = {
@@ -174,7 +175,7 @@ Deno.serve(async (req) => {
         await db.from("api_sync_log").update({
           beendet_am: new Date().toISOString(), status: erg.status, meldung: erg.meldung,
           datensaetze_neu: erg.spiele.neu, datensaetze_aktualisiert: erg.spiele.aktualisiert,
-          datensaetze_fehler: 0, details: erg as unknown as Record<string, unknown>,
+          datensaetze_fehler: 0, details: fuersProtokoll(erg),
         }).eq("id", logZeile.id);
       }
       await db.from("api_verbindungen").update({
@@ -185,7 +186,13 @@ Deno.serve(async (req) => {
          passiert ist. Die Meldung enthaelt Zahlen und Feldnamen, keine
          Zugangsdaten — und laeuft trotzdem durch die Schwaerzung. */
       protokoll(`lauf/${v.verein_id}`, `${erg.status}: ${erg.meldung}`);
-      laeufe.push({ verein_id: v.verein_id, ...erg });
+      /* ⚠ ZWEI EMPFAENGER, ZWEI FORMEN. Der Browser bekommt das ganze
+         Ergebnis samt `offene_namen`; der Zeitplan bekommt es ohne, weil
+         seine Antwort bei pg_net in `net._http_response` liegen bleibt.
+         Siehe fuerZeitplanAntwort() in sync.ts. */
+      laeufe.push(perZeitplan
+        ? { verein_id: v.verein_id, ...fuerZeitplanAntwort(erg) }
+        : { verein_id: v.verein_id, ...erg });
     } catch (e) {
       const meldung = protokollFehler(`lauf/${v.verein_id}`, e);
       if (logZeile) {
