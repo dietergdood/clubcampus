@@ -90,7 +90,7 @@ export async function beendeVerknuepfungen(
   if (personIds.length === 0) return hinweise;
 
   const { data: konten, error: kErr } = await sb.from("benutzer")
-    .select("id").in("person_id", personIds);
+    .select("id, person_id").in("person_id", personIds);
   if (kErr) {
     hinweise.push("Die Portal-Konten konnten nicht gelesen werden — bitte prüfen.");
     return hinweise;
@@ -109,11 +109,47 @@ export async function beendeVerknuepfungen(
   /* ⚠ `aktiv`, nicht die Verknuepfung. Gesperrt wird der Login allein
      dadurch — `useDbUser` meldet ab, wenn es false ist. `mitglied_id` auf
      null zu setzen loeste die Verbindung, ohne irgendjemanden auszusperren
-     (Befund vom 21.08.2026). */
+     (Befund vom 21.08.2026).
+
+     ⚠ ABER NICHT, WER NOCH EIN KIND IM VEREIN HAT. Diese Bedingung stand
+     seit Etappe 3 in `updatePortalZugang()`, und ich habe sie am 22.08.2026
+     beim Buendeln der zwei Archiv-Wege uebergangen — hier wurde
+     bedingungslos abgeschaltet. Wirkung: ein Elternteil, das SELBST Mitglied
+     ist, haette mit dem Ende seiner Mitgliedschaft auch den Zugang zu den
+     Daten seines noch aktiven Kindes verloren. Kein Fehler, keine Meldung —
+     nur ein Login, der nicht mehr geht.
+
+     Aufgefallen beim Zusammenlegen der zwei Wege in F2. Genau der Grund,
+     aus dem zwei Stellen mit derselben Aufgabe gefaehrlich sind: sie sind
+     nicht gleich, und beim Vereinheitlichen gewinnt die aermere. */
+  const { data: nochEltern, error: eErr } = await sb.from("eltern_kinder")
+    .select("person_id, mitglied_id, mitglieder(aktiv)")
+    .in("person_id", personIds);
+  if (eErr) {
+    hinweise.push("Die Elternverknüpfungen konnten nicht geprüft werden — Portal-Zugang unverändert.");
+    return hinweise;
+  }
+  /* Wer noch mindestens ein AKTIVES Kind hat, das nicht selbst gerade
+     beendet wird, behaelt seinen Zugang. */
+  const behalten = new Set(
+    (nochEltern || [])
+      .filter(e => !mitgliedIds.includes(Number(e.mitglied_id))
+                && (e.mitglieder as { aktiv?: boolean } | null)?.aktiv === true)
+      .map(e => e.person_id as string),
+  );
+  const abzuschalten = (konten || [])
+    .filter(b => !behalten.has(b.person_id as string))
+    .map(b => b.id as string);
+
+  if (behalten.size > 0) {
+    hinweise.push(`${behalten.size} Portal-Zugang/-Zugänge bleiben bestehen — noch ein Kind im Verein.`);
+  }
+  if (abzuschalten.length === 0) return hinweise;
+
   const { error: aErr } = await sb.from("benutzer")
-    .update({ aktiv: false }).in("id", kontoIds);
+    .update({ aktiv: false }).in("id", abzuschalten);
   if (aErr) hinweise.push("Der Portal-Zugang konnte nicht deaktiviert werden.");
-  else hinweise.push(`${kontoIds.length} Portal-Zugang/-Zugänge deaktiviert.`);
+  else hinweise.push(`${abzuschalten.length} Portal-Zugang/-Zugänge deaktiviert.`);
 
   return hinweise;
 }

@@ -139,7 +139,18 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
   async function updatePortalZugang(mitgliedId, aktiv) {
     if (!sb) return;
     try {
-      const { data: bu } = await sb.from("benutzer").select("id,person_id").eq("mitglied_id", mitgliedId).maybeSingle();
+      /* ⚠ UEBER DIE PERSON, nicht ueber `mitglied_id` (F2, 22.08.2026). Das
+         Konto haengt seit Etappe 4 an `benutzer.person_id`; `mitglied_id` ist
+         eine Verknuepfung, die `beendeMitgliedschaft` beim Austritt mit
+         Weiterfuehrung ausdruecklich auf null setzt. Wer danach archiviert
+         wurde, fand hier kein Konto — und die Funktion kehrte still zurueck.
+         Der Aufrufer bekommt weiterhin eine Mitglieds-Id, weil er eine
+         MITGLIEDSCHAFT archiviert; nachgeschlagen wird die Person. */
+      const { data: mitglied } = await sb.from("mitglieder")
+        .select("person_id").eq("id", mitgliedId).maybeSingle();
+      if (!mitglied?.person_id) return;
+      const { data: bu } = await sb.from("benutzer")
+        .select("id,person_id").eq("person_id", mitglied.person_id).maybeSingle();
       if (!bu) return;
       if (aktiv) {
         await sb.from("benutzer").update({ aktiv: true }).eq("id", bu.id);
@@ -178,12 +189,23 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
            verschwunden — ein .order() darauf braeche die Abfrage. */
         sb.from("mitglieder").select("*, personen(*)").eq("aktiv", true),
         sb.from("kader").select("mitglied_id,rollen,teams(id,name,kurzname)").eq("aktiv", true),
-        sb.from("benutzer").select("mitglied_id,aktiv"),
+        sb.from("benutzer").select("person_id,aktiv"),
       ]);
       const mitgliederFlach = flacheZeilen(mitgliederRes.data);
+      /* ⚠ UEBER `person_id`, NICHT `mitglied_id` (F2, behoben am 22.08.2026).
+         Das Konto haengt seit Etappe 4 an der PERSON. Der Schluessel hier war
+         die letzte Stelle, die es noch am Mitglied suchte — und damit gab es
+         zwei Wege zu derselben Aussage: diese Liste ueber `mitglied_id`,
+         `fetchSupporter`/`fetchAlleElternkontakte` ueber `person_id`.
+
+         Sichtbar wurde es nie, weil eine Person OHNE Mitgliedschaft in dieser
+         Liste ohnehin nicht steht. Falsch war es trotzdem: sobald ein Konto
+         seine `mitglied_id` verliert — was `beendeMitgliedschaft` beim
+         Austritt mit Weiterfuehrung ausdruecklich tut —, meldete diese Liste
+         „kein Portal-Zugang" fuer jemanden, der sich anmelden kann. */
       const benutzerMap = {};
       (benutzerRes.data || []).forEach(b => {
-        if (b.mitglied_id) benutzerMap[b.mitglied_id] = { exists: true, aktiv: b.aktiv !== false };
+        if (b.person_id) benutzerMap[b.person_id] = { exists: true, aktiv: b.aktiv !== false };
       });
       const kaderMap = {};
       (kaderRes.data || []).forEach(k => {
@@ -203,8 +225,8 @@ export function useAppData({ sb, slug, setAppTheme, setModuleAktiv, setModuleRec
         kader_rollen: kaderMap[m.id]?.rollen || [],
         kader_teams: kaderMap[m.id]?.teams || [],
         kader_eintraege: kaderMap[m.id]?.kader || [],
-        hat_benutzer: !!benutzerMap[m.id],
-        benutzer_deaktiviert: benutzerMap[m.id]?.exists && !benutzerMap[m.id]?.aktiv,
+        hat_benutzer: !!benutzerMap[m.person_id],
+        benutzer_deaktiviert: benutzerMap[m.person_id]?.exists && !benutzerMap[m.person_id]?.aktiv,
       }));
       if (data.length > 0) setDbMitglieder(data);
     } catch (e) { console.warn("[FCH] loadDbMitglieder:", e.message); }

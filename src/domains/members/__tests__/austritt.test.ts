@@ -16,7 +16,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb } from "./_mockSb.ts";
 import { beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
-import { archiviereMitglied } from "../memberService.ts";
+import { archiviereMitglied, beendeVerknuepfungen } from "../memberService.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -264,5 +264,61 @@ describe("Archiv — Knopf und Austritt", () => {
       personId: "p-1", am: "2026-07-01",
     });
     expect(String(sb.find("mitglieder", "update")!.payload.deaktiviert_am)).toContain("2026-07-01");
+  });
+});
+
+/* ── Wer noch ein Kind im Verein hat, behält seinen Zugang ────────────────
+   ⚠ EIN FEHLER, DEN ICH SELBST GEBAUT HABE. Diese Bedingung stand seit
+   Etappe 3 in `updatePortalZugang()`. Beim Bündeln der zwei Archiv-Wege am
+   22.08.2026 habe ich sie übergangen — `beendeVerknuepfungen()` schaltete
+   bedingungslos ab.
+
+   Wirkung: ein Elternteil, das SELBST Mitglied ist, hätte mit dem Ende
+   seiner Mitgliedschaft auch den Zugang zu den Daten seines noch aktiven
+   Kindes verloren. Kein Fehler, keine Meldung — nur ein Login, der nicht
+   mehr geht.
+
+   Das ist der Preis von zwei Stellen mit derselben Aufgabe: sie sind nicht
+   gleich, und beim Vereinheitlichen gewinnt die ärmere. */
+describe("beendeVerknuepfungen — der Portal-Zugang", () => {
+  const BASIS = {
+    "kader.select": { data: [] },
+    "mitglieder.select": { data: [{ person_id: "p-1" }] },
+    "benutzer.select": { data: [{ id: "b-1", person_id: "p-1" }] },
+  };
+
+  it("schaltet das Konto ab, wenn kein Kind mehr im Verein ist", async () => {
+    const sb = makeSb({ ...BASIS, "eltern_kinder.select": { data: [] } });
+    const hinweise = await beendeVerknuepfungen(sb as never, [42], "2026-08-22");
+    const upd = sb.opsOn("benutzer").find(r => r.op === "update");
+    expect(upd?.payload).toEqual({ aktiv: false });
+    expect(hinweise.join(" ")).toContain("deaktiviert");
+  });
+
+  it("⚠ lässt es AKTIV, wenn noch ein anderes Kind im Verein ist", async () => {
+    const sb = makeSb({ ...BASIS, "eltern_kinder.select": { data: [
+      { person_id: "p-1", mitglied_id: 99, mitglieder: { aktiv: true } },
+    ] } });
+    const hinweise = await beendeVerknuepfungen(sb as never, [42], "2026-08-22");
+    expect(sb.opsOn("benutzer").find(r => r.op === "update")).toBeUndefined();
+    expect(hinweise.join(" ")).toContain("bleiben bestehen");
+  });
+
+  it("⚠ das Kind, das GERADE beendet wird, zählt nicht als Grund zu bleiben", async () => {
+    /* Sonst behielte jedes Elternteil seinen Zugang, weil die eigene Zeile
+       noch als aktiv gelesen wird. */
+    const sb = makeSb({ ...BASIS, "eltern_kinder.select": { data: [
+      { person_id: "p-1", mitglied_id: 42, mitglieder: { aktiv: true } },
+    ] } });
+    await beendeVerknuepfungen(sb as never, [42], "2026-08-22");
+    expect(sb.opsOn("benutzer").find(r => r.op === "update")?.payload).toEqual({ aktiv: false });
+  });
+
+  it("ein Kind mit BEENDETER Mitgliedschaft ist kein Grund zu bleiben", async () => {
+    const sb = makeSb({ ...BASIS, "eltern_kinder.select": { data: [
+      { person_id: "p-1", mitglied_id: 99, mitglieder: { aktiv: false } },
+    ] } });
+    await beendeVerknuepfungen(sb as never, [42], "2026-08-22");
+    expect(sb.opsOn("benutzer").find(r => r.op === "update")?.payload).toEqual({ aktiv: false });
   });
 });
