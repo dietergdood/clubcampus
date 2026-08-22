@@ -127,14 +127,44 @@ eintragen, mit diesem Grund.
 
 # Etappe 3 · Mail und Löschen
 
-## Die Mail
+## ⚠ Zwei Auslöser, ein Ablauf
 
-⚠ **Hier kommt der Sync-Wächter mit hinein** (21.08.2026). Er meldet einen
-Sync-Ausfall über `benachrichtigungen` an die Administratoren — das erreicht
-aber nur, wer sich anmeldet. Liegt eine Woche niemand im Portal, liegt der
-Alarm eine Woche ungelesen. Sobald Resend steht, bekommt er eine Mail als
-zweiten Weg: **kein eigener Versandweg, sondern derselbe.** Ein zweiter wäre
-ein zweiter Ort zum Veralten.
+Derselbe Ablauf wird von **zwei** Ereignissen ausgelöst:
+
+**1 · Ein Mitglied tritt aus.** Es wird sofort zur eingestellten Art, die Mail
+fragt nach.
+
+**2 · Das letzte Kind eines Elternteils tritt aus** — und der Elternteil hat
+keine eigene Mitgliedschaft. Er verliert damit seine abgeleitete Art
+„Elternteil", weil die Ableitung in `eltern_kinder` keine Zeile mehr findet.
+
+Der zweite Fall ist heute eine **stille Lücke**: Der Elternteil bleibt als
+Person stehen — mit Adresse, Telefon und Portal-Zugang —, hat keine Art mehr,
+und niemand fragt ihn, ob er bleiben will. Es schlägt nichts fehl, es meldet
+sich niemand. Bei 394 Elternteilen und dem Saisonende im Sommer sind das jedes
+Jahr ein paar Dutzend Menschen, die im Bestand liegen bleiben, ohne dass jemand
+eine Entscheidung getroffen hat.
+
+`ELTERN_LOGIK.md` beschreibt den Fall bereits — gebaut ist er nicht.
+
+**Was zu klären ist, bevor du baust:**
+
+- **Woran hängt der Auslöser?** Der Austritt des Kindes beendet dessen
+  Mitgliedschaft; die Zeile in `eltern_kinder` bleibt bestehen. Die Ableitung
+  fragt also nicht „hat Kinder", sondern muss „hat Kinder mit **aktiver**
+  Mitgliedschaft" beantworten — prüf, was `personenarten_effektiv` heute
+  tatsächlich tut, und ob der Elternteil seine Art überhaupt verliert.
+  **Nicht annehmen, messen.** Wenn er sie behält, ist die Lücke eine andere als
+  beschrieben.
+- **Wer löst aus?** `beendeMitgliedschaft()` weiss nichts von den Eltern des
+  Kindes. Der Auslöser muss dort hinein, und er betrifft möglicherweise
+  **zwei** Elternteile gleichzeitig.
+- **Und wenn ein Elternteil selbst Mitglied ist?** Dann passiert gar nichts —
+  er ist weiterhin Mitglied. Heute betrifft das genau eine Person.
+- **Geschwister:** Tritt ein Kind von dreien aus, ändert sich nichts. Der
+  Auslöser feuert nur beim **letzten**.
+
+## Die Mail
 
 Über **Resend**, nicht über einen Mailserver des Vereins. Absenderadresse
 `@fcherrliberg.ch` über Domain-Verifizierung. Begründung, falls sie später

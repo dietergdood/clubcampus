@@ -1074,6 +1074,53 @@ ist es eine echte Preisgabe. Gehört zu `docs/auftrag_rls_gruppenrechte.md`.
 > Pfadsegment zum Mandanten. Über `mitglied_id` wäre es ein Umweg über
 > `mitglieder`, und für Personen ohne Mitgliedschaft gäbe es gar keinen.
 
+### ⚠ Ein Trainer kann 914 Adressen und AHV-Nummern exportieren
+
+Befund vom 22.08.2026, beim Messen für den Listen-Auftrag. **Der bisher
+schärfste Beleg für `docs/auftrag_rls_gruppenrechte.md`** — drei Schichten,
+die einander schützen sollten, und keine tut es.
+
+**1 · Die Datenbank gibt alles frei.**
+
+```
+personen_select_priv | SELECT | verein_id = get_my_verein_id()
+                     |        | AND get_my_role() IN ('administrator','administration','trainer','funktionaer')
+```
+
+Jede Zeile, jede Spalte. Nicht die Eltern der eigenen Junioren — **alle 914
+Personen des Vereins**, mit Adresse, Geburtsdatum, AHV-Nummer, Nationalität
+und Heimatort. Die zwei engen Policies daneben (`personen_select_self`,
+`personen_select_kind`) schränken nichts ein: RLS ist **additiv**.
+
+**2 · Die Feldsichtbarkeit erreicht keine Liste.** `getFieldVisibility()` —
+die Funktion mit `showAdresse: lvl >= 5`, `showGebdat: lvl >= 3`, `showAhv`
+nur Verwaltung — wird an **genau einer Stelle** aufgerufen:
+`MemberDetail.tsx:188`, also auf der Profilseite. In `MitgliederModul`,
+`ElternListView`, `SupporterListView` und `ArchivView` kommt kein einziges
+`fv.` vor. **Die Mitgliederliste führt AHV-Nummer, Geburtsdatum und Adresse
+als Spalten — ohne jede Rollenprüfung.**
+
+**3 · ⚠ Und deshalb beruhigt der Export-Satz nicht.** „Der Export nimmt genau
+die sichtbaren Spalten mit" stimmt — `exportListData(rows, cols, …)` bekommt
+`cols` aus der Ansicht. Aber der Satz schützt nur, solange die **Anzeige**
+gefiltert ist, und sie ist es nicht. Wer an eine Liste kommt, exportiert
+**914 Adressen und AHV-Nummern in eine Datei** — CSV oder Excel, drei Klicks,
+kein Protokolleintrag.
+
+Heute hält allein die Oberfläche: der Eltern-Tab hängt an
+`istVerwaltung = role === "administrator" || role === "administration"`, ein
+Trainer sieht ihn nicht. **Das ist eine Sichtbarkeitsregel im Frontend, keine
+Rechteprüfung.** Über die API steht ihm dieselbe Menge offen, und in der
+Mitgliederliste, die er sehr wohl erreicht, hält ihn ohnehin nichts auf.
+
+Zu tun ist beides, und in dieser Reihenfolge: `personen_select_priv` auf das
+einengen, was eine Rolle wirklich braucht (das ist der Gruppenrechte-Auftrag,
+weil eine Rollenleiter dafür nicht taugt — der Trainer braucht die Handynummer
+seiner Junioren, der Kassier nicht), und `getFieldVisibility` an die Listen
+anschliessen. Das Zweite allein wäre ein Versprechen ohne Deckung — im Portal
+ausgeblendet, über die API sichtbar. Genau der Grund, aus dem die Seite „Wer
+sieht was bei anderen" zurückgestellt wurde.
+
 ### ⚠ `is_trainer_or_above()` prüft einen Rollennamen, den es nicht gibt
 
 Befund vom 19.08.2026.
