@@ -329,6 +329,21 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Und die Tests waren grün.** Beide Enden waren geprüft, gegen selbst erfundene Attrappen, in denen das Feld dort lag, wo der Autor es vermutete. **Eine Attrappe, die die Form abschreibt, prüft die Abschrift.** Wo eine Testattrappe die Form eines echten Objekts nachbildet, gehört ihr dessen Typ — und wenn der in einer Deno-Datei steht, die `tsc` nicht lesen kann, gehört die Form in eine eigene Datei, die beide Welten lesen (`ergebnisTypen.ts`, ohne `esm.sh`-Import).
 
+- **Ein Filter auf einen NAMEN prüft eine Schreibweise. Ein Filter auf ein MERKMAL prüft die Sache.** Wo eine Regel lautet „alles ausser X", ist X fast nie ein Name — es ist eine Eigenschaft, die X zufällig auch hat. Der Namensfilter hält, solange es genau ein X gibt, und fällt beim zweiten.
+
+  **Beleg vom 22.08.2026, und er hätte nie auffallen können.** „Art ändern" darf nur **gesetzte** Personenarten vergeben; eine abgeleitete ergibt sich aus den Daten, und die Sicht überschriebe die Zusage im nächsten Moment. Bis zum Morgen desselben Tages gab es **genau eine** abgeleitete Art — „Elternteil". Ein Filter `name !== "Elternteil"` wäre also durch jeden Test gekommen, den man ihm gestellt hätte.
+
+  Am Vormittag kam „Ehemaliges Elternteil" dazu. Der Namensfilter hätte sie **durchgelassen**, die Zeile wäre in `personenart_pro_person` gelandet, und die Sicht hätte sie ignoriert — die Aktion hätte **scheinbar funktioniert**: kein Fehler, keine Meldung, nur eine Art, die nicht gilt. Richtig ist `ableitung === null`: das ist die Sache selbst.
+
+  | | prüft | hält bis |
+  |---|---|---|
+  | `name !== "Elternteil"` | eine **Schreibweise** | zur zweiten abgeleiteten Art |
+  | `ableitung === null` | das **Merkmal** | immer |
+
+  **Dieselbe Familie wie `ilike 'junior%'` gegen `mitgliedtypen.hauptkontakt_pflicht`:** die Regel „Minderjährige brauchen einen Hauptkontakt" nach dem Namen des Mitgliedtyps zu prüfen funktioniert, bis jemand „Juniorenmitglied" in „U18" umbenennt oder einen zweiten Jugendtyp anlegt. Und wie die Spaltenköpfe der Pflichtfeld-Matrix, die am 05.08.2026 auf `Juniormitglied` und `Funktionär` zeigten, während die Typen `Juniorenmitglied` und `Funktionär/in` heissen.
+
+  **Die Prüfung ist mechanisch:** wo ein Vergleich gegen eine Zeichenkette steht, die aus der Datenbank stammt, gehört die Frage dazu — *welche Eigenschaft meine ich eigentlich, und steht sie als Spalte da?* Steht sie nicht, ist das der eigentliche Befund.
+
 - **Keine Komponente, die bei fehlenden Daten `null` zurückgibt.** Eine Sektion, die still verschwindet, ist von einer nicht gerenderten nicht zu unterscheiden — bei der Fehlersuche kostet genau diese Ununterscheidbarkeit die meiste Zeit. Stattdessen eine Karte mit einem Satz, der sagt, was fehlt und wo es herkommt. (`MitgliedtypFelderSektion` ohne Mitgliedtypen ist das Muster.) Gilt nicht für bewusste Sichtbarkeitsregeln — ein Feld auf „Gibt es nicht" verschwindet richtigerweise ganz.
 
 ### Bevor eine neue CSS-Klasse entsteht
