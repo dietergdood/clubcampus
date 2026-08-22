@@ -1341,7 +1341,7 @@ CREATE TABLE IF NOT EXISTS "public"."mitgliedtypen" (
 ALTER TABLE "public"."mitgliedtypen" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."mitgliedtypen"."zaehlt_als_mitgliedschaft" IS 'False = dieser Typ ist keine Mitgliedschaft (Goenner/Supporter): kein Beitrag, kein Stimmrecht an der GV, kein Spielbetrieb, eigener Tab in der Mitgliederliste. Ersetzt den Namensvergleich auf "Supporter" im Frontend.';
+COMMENT ON COLUMN "public"."mitgliedtypen"."zaehlt_als_mitgliedschaft" IS 'False = dieser Typ ist keine Mitgliedschaft: kein Beitrag, kein Stimmrecht an der GV, kein Spielbetrieb, eigener Tab in der Mitgliederliste. Ersetzt den Namensvergleich auf "Supporter" im Frontend.';
 
 
 
