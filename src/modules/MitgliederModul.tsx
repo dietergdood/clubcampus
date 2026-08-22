@@ -484,7 +484,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           {istVerwaltung&&(
             <div className="cc-ml-tabs-bar">
               <button className={`cc-ml-tab${!archivTab&&!elternTab&&!supporterTab?" cc-ml-tab-active":""}`} onClick={()=>{setArchivTab(false);setElternTab(false);setSupporterTab(false);}}>
-                Aktive <span className="cc-ml-tab-count">{(allMembers||[]).length}</span>
+                Mitglieder <span className="cc-ml-tab-count">{(allMembers||[]).length}</span>
               </button>
               <button className={`cc-ml-tab${archivTab?" cc-ml-tab-active":""}`} onClick={()=>{
                 setArchivTab(true);setElternTab(false);setSupporterTab(false);
@@ -495,14 +495,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
               </button>
               <button className={`cc-ml-tab${elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setElternTab(true);setArchivTab(false);setSupporterTab(false);}}>
-                {/* ⚠ NICHT „Eltern". Der Tab zeigt seit dem 22.08.2026 auch
-                    Menschen, deren letztes Kind ausgetreten ist — die Art kippt,
-                    die Verknuepfung bleibt. „Elternkontakte" schied aus: das Wort
-                    meint in dieser Codebasis die PERSON (elternService: „Ein
-                    Elternkontakt, wie die Oberflaeche ihn sieht: die Person
-                    flach"), an zwanzig Stellen. Und blosses „Eltern" waere von
-                    der Art „Elternteil" nicht zu unterscheiden. */}
-                Eltern & Ehemalige {elternCount!==null&&<span className="cc-ml-tab-count">{elternCount}</span>}
+                {/* ⚠ „Eltern", und der Tab zeigt die VERKNUEPFUNG, nicht die
+                    Art. Zwei der 395 tragen „Supporter" statt „Elternteil" —
+                    ihr letztes Kind ist ausgetreten, die Zeile in
+                    `eltern_kinder` bleibt (sie ist die Historie, und ueber sie
+                    haengen die Rechte am Kind). Den Unterschied benennt die
+                    Art-Spalte; genau dafuer ist sie da.
+
+                    Hiess vom 22.08.2026 vormittags bis nachmittags „Eltern &
+                    Ehemalige" — das war die Zeit, in der es eine abgeleitete
+                    Art „Ehemaliges Elternteil" gab. Mit ihrem Rueckbau ist der
+                    Zusatz ueberholt. (Entscheidung Didi, 22.08.2026.) */}
+                Eltern {elternCount!==null&&<span className="cc-ml-tab-count">{elternCount}</span>}
               </button>
               {supporter.length>0&&(
                 <button className={`cc-ml-tab${supporterTab?" cc-ml-tab-active":""}`} onClick={()=>{setSupporterTab(true);setArchivTab(false);setElternTab(false);}}>
