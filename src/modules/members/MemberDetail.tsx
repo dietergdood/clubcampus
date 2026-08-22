@@ -13,9 +13,10 @@ import {
   fetchBenutzerFuerPerson,
   portalZugangReaktivieren, portalZugangDeaktivieren,
   fetchElternkontakte, fetchKaderFuerMitglied,
-  fetchPortalFunktionen,
+  fetchPortalFunktionen, fetchMitglied,
   logAktivitaet, AKTIVITAET_TYP,
 } from "../../domains/members/memberService.ts";
+import { fetchPerson } from "../../domains/person/personService.ts";
 import { MemberHero } from "./MemberHero.tsx";
 import { MemberTabBar } from "./MemberTabBar.tsx";
 import { ElternTab } from "./tabs/ElternTab.tsx";
@@ -112,12 +113,33 @@ function MemberDetail({
      `Object.entries(m)` ueber das ganze Ziel — moeglich nur, weil der Typ eine
      Index-Signatur hatte. Damit landete alles im `raw`, was ein Aufrufer
      mitgab, auch `_tab` und `_readonly`. Ein Objekt, das jedes Feld annimmt,
-     nimmt auch jedes Feld an, das jemand vergisst. */
+     nimmt auch jedes Feld an, das jemand vergisst.
+
+     ⚠ DIE REIHENFOLGE IST UMGEDREHT (22.08.2026), und das war ein Defekt.
+     Sie lautete `{...dbRaw, ...daten}` mit einem Filter, der jeden
+     NICHT-NULL-Wert aus `daten` gewinnen liess. Der Zweck der Regel steht im
+     Ursprungskommentar vom 08.07.2026: „m ueberschreibt die DB-Zeile dort, wo
+     es einen Wert mitbringt" — gemeint war, dass das Ziel FUELLT, was `dbRaw`
+     nicht hat (Navigations- und Archivobjekte, bei denen `dbRaw` leer ist).
+     Gebaut war das Gegenteil: das Ziel SCHLUG die DB-Zeile.
+
+     Solange `m` selbst frisch war, fiel das nicht auf. Seit dem
+     Identitaets-Umbau (beee9bb, 21.08.2026) ist `m.daten` eine
+     MOMENTAUFNAHME vom Oeffnen — und `reloadMember` legt die frischen Werte
+     auf die oberste Ebene des Ziels, wo sie niemand liest. Damit war jedes
+     Feld ab dem Oeffnen eingefroren. Gemeldet hat es niemand, weil nichts
+     fehlschlug: die Datenbank war korrekt, nur die offene Seite zeigte den
+     alten Stand. Aufgefallen an den Vereinsfunktionen, weil dort ein leeres
+     Array (`[]`) den frischen Wert schlug — `[]` ist nicht null.
+
+     Jetzt gewinnt `dbRaw`, WO ES DEN SCHLUESSEL HAT. Berechnete
+     Anzeigefelder (`teams`, `alter`, `portal`, `datenpruefung`) ueberleben,
+     weil `dbRaw` sie gar nicht fuehrt; bei Archivzeilen und Personen ohne
+     Mitgliedschaft ist `dbRaw` leer und die Regel wirkungslos — fuer die
+     sorgt `aktualisiere()`. */
   const raw = {
+    ...(m.daten ?? {}),
     ...dbRaw,
-    ...Object.fromEntries(
-      Object.entries(m.daten ?? {}).filter(([k, v]) => v !== undefined && v !== null || !(dbRaw as Record<string, unknown>)[k])
-    ),
     /* ⚠ DIE IDENTITAET KOMMT AUS DEM ZIEL, NICHT AUS DEN DATEN.
        Acht Stellen lesen `raw.person_id` — das Inline-Bearbeiten des ganzen
        Profils (InfoTab), der Foto-Upload, „Datenpruefung anfordern". Bei einer
@@ -216,6 +238,55 @@ function MemberDetail({
     }
   }, [mitgliedId]);
 
+  /**
+   * Die geoeffnete Zeile neu holen — und in `daten` schreiben, also DORT,
+   * WO DIE SEITE LIEST.
+   *
+   * ⚠ Das war die Luecke. `reloadMember` des Parents macht
+   * `setSelectedMember(prev => ({...prev, ...data}))` — das legt die frischen
+   * Werte auf die OBERSTE Ebene des Ziels, und die liest niemand; gelesen
+   * wird `m.daten`. Ausserdem laeuft es nur `if (mitgliedId != null)`, half
+   * einer Person ohne Mitgliedschaft also ohnehin nie.
+   *
+   * ⚠ ZWEI QUELLEN, EINE FRAGE: eine Mitgliedschaft kommt aus `fetchMitglied`
+   * (flache Fassade inkl. Personenfeldern), eine Person aus `fetchPerson`.
+   * Welche gilt, sagt `mitgliedId` — nicht der Aufrufer.
+   *
+   * `error` wird gelesen: ein fehlgeschlagenes Nachladen darf nicht aussehen
+   * wie „es hat sich nichts geaendert".
+   */
+  /**
+   * Der eine Nachladeweg der Seite: die Zeile selbst UND die Listen des
+   * Parents. Fuenf Stellen riefen vorher jeweils eine eigene Kombination —
+   * und keine davon frischte `daten` auf.
+   */
+  async function neuLaden() {
+    /* ⚠ DARF NIE ABLEHNEN. Die Funktion wird an mehreren Stellen ohne `await`
+       gerufen (`onReload={neuLaden}`, in Klick-Handlern) — ein Wurf darin
+       waere eine unbehandelte Rejection, und die Seite bliebe still auf dem
+       alten Stand. Gebunden und gemeldet statt verschluckt. */
+    try {
+      await aktualisiere();
+    } catch (e) {
+      console.error("neuLaden: Auffrischen fehlgeschlagen:", e);
+    }
+    if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
+    if (onReload) onReload();
+  }
+
+  async function aktualisiere() {
+    if (!sb) return;
+    if (mitgliedId != null) {
+      const frisch = await fetchMitglied(sb, mitgliedId);
+      if (!frisch) { console.error("aktualisiere: Mitglied nicht ladbar", mitgliedId); return; }
+      setSelectedMember(prev => prev ? { ...prev, daten: { ...prev.daten, ...frisch } } : prev);
+      return;
+    }
+    const { person, fehler } = await fetchPerson(sb, personId);
+    if (fehler || !person) { console.error("aktualisiere: Person nicht ladbar", personId, fehler); return; }
+    setSelectedMember(prev => prev ? { ...prev, daten: { ...prev.daten, ...person } } : prev);
+  }
+
 
   /* ── Aktionen ── */
   /* ── Portal-Zugang Logik ─────────────────────────────────────
@@ -255,8 +326,7 @@ function MemberDetail({
     if (vereinId && mitgliedId != null) logAktivitaet(sb, { personId, mitgliedId }, vereinId, AKTIVITAET_TYP.PORTAL_DEAKTIVIERT, "Portal-Zugang deaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang deaktiviert" });
     setPortalLoading(false);
-    if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
-    else if (onReload) onReload();
+    neuLaden();
   }
 
   async function handleReactivate() {
@@ -269,8 +339,7 @@ function MemberDetail({
     if (vereinId && mitgliedId != null) logAktivitaet(sb, { personId, mitgliedId }, vereinId, AKTIVITAET_TYP.PORTAL_REAKTIVIERT, "Portal-Zugang reaktiviert", null, null, account?.name||account?.email||"Administrator");
     setPortalMsg({ ok: true, text: "Zugang reaktiviert ✓" });
     setPortalLoading(false);
-    if (reloadMember && mitgliedId != null) reloadMember(mitgliedId);
-    else if (onReload) onReload();
+    neuLaden();
   }
 
   /* ── Tab-Definitionen ── */
@@ -300,7 +369,7 @@ function MemberDetail({
       {/* Hero */}
       <MemberHero
         m={m} raw={raw} initials={initials} canEdit={canEdit} canDelete={canDelete}
-        sb={sb} onReload={id => id ? reloadMember(id) : onReload()} onClose={onClose}
+        sb={sb} onReload={id => id ? neuLaden() : onReload()} onClose={onClose}
         onReaktiviert={onReaktiviert} onRefreshCount={refreshArchivCount}
         account={account} onUpdatePortalZugang={onUpdatePortalZugang}
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
@@ -337,7 +406,7 @@ function MemberDetail({
         <ElternTab
           mitgliedId={mitgliedId!}
           eltern={eltern} canEdit={canEdit} sb={sb}
-          onReload={() => { if (reloadMember && mitgliedId != null) reloadMember(mitgliedId); if (onReload) onReload(); }}
+          onReload={neuLaden}
           setElternLoaded={setElternLoaded}
           vereinId={vereinId} account={account}
           onOeffnePerson={onOeffnePerson}
@@ -353,7 +422,7 @@ function MemberDetail({
           handleUnlink={handleUnlink} handleReactivate={handleReactivate}
           setBenutzer={setBenutzer}
           vereinId={vereinId} account={account}
-          onReload={()=>{ if(reloadMember) if (mitgliedId != null) reloadMember(mitgliedId); if(onReload) onReload(); }}
+          onReload={neuLaden}
         />
       )}
 

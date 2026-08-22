@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/memberDetail.test.jsx
    Unit-Tests für den MemberDetail-Orchestrator:
-   - raw-Rekonstruktion (dbRaw + m, m gewinnt nur bei Non-null-Wert)
+   - raw-Rekonstruktion (dbRaw + m; die LEBENDE DB-Zeile gewinnt)
    - Benutzer-Fetch beim Öffnen + Dedup (kein Refetch bei Nicht-Portal-Tab)
 
    MemberHero wird gemockt, um das rekonstruierte raw abzugreifen.
@@ -22,6 +22,7 @@ const svc = vi.hoisted(() => ({
   fetchElternkontakte: vi.fn(),
   fetchKaderFuerMitglied: vi.fn(),
   fetchPortalFunktionen: vi.fn(),
+  fetchMitglied: vi.fn(),
   logAktivitaet: vi.fn(),
 }));
 
@@ -34,6 +35,14 @@ vi.mock('../../../theme.ts', () => ({
 vi.mock('../../../icons.tsx', () => ({ TI: () => null }));
 vi.mock('../../../domains/roles/roleUtils.ts', () => ({ ableitUndSaveRolle: vi.fn().mockResolvedValue('trainer') }));
 vi.mock('../../../domains/person/personUtils.ts', () => ({ initials: () => 'XX' }));
+/* ⚠ Die Attrappe liefert die ECHTE Form `{ person, fehler }`. `vi.fn()` ohne
+   Rueckgabe liefert `undefined`, und die Destrukturierung im Produktionscode
+   wirft — als unbehandelte Rejection, die keinen Test rot macht. Eine
+   Attrappe, die den Vertrag nicht kennt, prueft etwas anderes als das, was
+   laeuft. */
+vi.mock('../../../domains/person/personService.ts', () => ({
+  fetchPerson: vi.fn().mockResolvedValue({ person: null, fehler: null }),
+}));
 vi.mock('../../../domains/members/memberService.ts', () => ({
   ...svc,
   AKTIVITAET_TYP: { PORTAL_DEAKTIVIERT: 'portal_deaktiviert', PORTAL_REAKTIVIERT: 'portal_reaktiviert' },
@@ -101,14 +110,37 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('MemberDetail — raw-Rekonstruktion', () => {
-  it('m überschreibt dbRaw bei eigenem Wert, behält dbRaw bei null/fehlend', async () => {
+  /* ⚠ DIESER FALL IST AM 22.08.2026 UMGEDREHT WORDEN, und zwar bewusst.
+     Er hielt vorher fest: „m gewinnt bei eigenem Wert". Genau das WAR der
+     Defekt — seit dem Identitaets-Umbau (beee9bb, 21.08.2026) ist `m.daten`
+     eine Momentaufnahme vom Oeffnen, und sie schlug die laufend nachgeladene
+     DB-Zeile. Jedes Feld war ab dem Oeffnen eingefroren.
+
+     Der Test wird also nicht angepasst, bis er gruen ist — die REGEL hat sich
+     geaendert, und er haelt jetzt die neue fest. Der Zweck der Mischung steht
+     im Ursprungskommentar vom 08.07.2026: das Ziel FUELLT, was `dbRaw` nicht
+     hat. Gebaut war das Gegenteil. */
+  it('die lebende DB-Zeile gewinnt — das Ziel füllt nur, was ihr fehlt', async () => {
     const dbMitglieder = [{ id: 1, vorname: 'DBVor', nachname: 'DBNach', email: 'db@x.ch' }];
-    const m = zielAusMitglied({ id: 1, person_id: 'p-1', vorname: 'MVor', email: null }, 'X');
+    const m = zielAusMitglied({ id: 1, person_id: 'p-1', vorname: 'MVor', spitzname: 'Nur im Ziel' }, 'X');
     await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder })} />); });
 
-    expect(h.heroRaw.vorname).toBe('MVor');   // m gewinnt (eigener Wert)
-    expect(h.heroRaw.nachname).toBe('DBNach'); // m hat keinen -> dbRaw bleibt
-    expect(h.heroRaw.email).toBe('db@x.ch');   // m.email null -> dbRaw bleibt
+    expect(h.heroRaw.vorname).toBe('DBVor');        // dbRaw gewinnt
+    expect(h.heroRaw.nachname).toBe('DBNach');      // nur in dbRaw
+    expect(h.heroRaw.spitzname).toBe('Nur im Ziel'); // nur im Ziel -> bleibt
+  });
+
+  it('⚠ ein leeres Array im Ziel verdeckt den frischen Wert NICHT', async () => {
+    /* DER FALL, AN DEM ES AUFGEFALLEN IST. Wer keine Vereinsfunktion hat,
+       traegt `daten.funktionen = []` — und `[]` ist nicht null, kam also
+       durch den alten Filter und schlug die frisch geladene Liste. Deshalb
+       traf es ausgerechnet „erste Funktion hinzufuegen": geschrieben wurde
+       sie, die offene Seite zeigte sie nie. */
+    const dbMitglieder = [{ id: 1, funktionen: ['Kassier'] }];
+    const m = zielAusMitglied({ id: 1, person_id: 'p-1', funktionen: [] }, 'X');
+    await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder })} />); });
+
+    expect(h.heroRaw.funktionen).toEqual(['Kassier']);
   });
 
   it('rekonstruiert aus m, wenn keine DB-Zeile existiert (Navigationsobjekt)', async () => {

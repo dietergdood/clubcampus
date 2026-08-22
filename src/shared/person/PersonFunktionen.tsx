@@ -17,9 +17,12 @@ interface PersonFunktionenProps {
   /* Persistenz + Änderungslog + Reload liegen beim Parent (InfoTab); die
      Komponente meldet nur die neue Funktionsliste (Schichtentrennung). */
   onSaveFunktionen: (funktionen: string[]) => Promise<void>;
+  /** Meldung, wenn das Speichern scheiterte. Ohne sie sähe ein
+      fehlgeschlagener Schreibvorgang genauso aus wie ein gelungener. */
+  fehler?: string | null;
 }
 
-function PersonFunktionen({ raw, canEdit, canDelete, assignFunktionen, onSaveFunktionen }: PersonFunktionenProps) {
+function PersonFunktionen({ raw, canEdit, canDelete, assignFunktionen, onSaveFunktionen, fehler = null }: PersonFunktionenProps) {
   const [showFunkAssign, setShowFunkAssign] = useState(false);
   const [funkSearch, setFunkSearch] = useState("");
   const [funkSelected, setFunkSelected] = useState<string[]>([]);
@@ -50,6 +53,7 @@ function PersonFunktionen({ raw, canEdit, canDelete, assignFunktionen, onSaveFun
           <span className="cc-row cc-gap-6"><TI n="briefcase" size={14}/> Vereinsfunktionen</span>
           {canEdit && <button className="cc-btn-ghost" onClick={openFunkModal}><TI n="plus" size={13}/> Hinzufügen</button>}
         </div>
+        {fehler && <div className="cc-text-sm cc-text-danger">{fehler}</div>}
         {(raw.funktionen || []).length === 0 && (
           <div className="cc-text-sm cc-text-sub">Keine Vereinsfunktionen.</div>
         )}

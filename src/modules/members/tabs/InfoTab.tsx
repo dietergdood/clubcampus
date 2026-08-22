@@ -93,7 +93,13 @@ function InfoTab({ mitgliedId,
 }: InfoTabProps) {
   const isMobile = useIsMobile();
   const notizAddRef = useRef<(() => void) | null>(null);
-  const reloadMemberFull = ()=>{ if(reloadMember&&mitgliedId!=null)reloadMember(mitgliedId); if(onReload)onReload(); };
+  /* ⚠ `onReload` ist seit dem 22.08.2026 `neuLaden` aus MemberDetail: es
+     frischt `m.daten` auf — DORT, wo die Seite liest. Vorher lief hier nur
+     `reloadMember(mitgliedId)`, und das legte die frischen Werte auf die
+     oberste Ebene des Ziels, wo sie niemand las. Jedes Feld war damit ab dem
+     Oeffnen eingefroren; bei einer Person ohne Mitgliedschaft lief es wegen
+     `mitgliedId != null` ohnehin ins Leere. */
+  const reloadMemberFull = ()=>{ if(onReload)onReload(); };
   /* ie: Vereinsdaten-Felder (kein Aenderungslog). iePerson: Personalien/
      Kontakt — mit vereinId/account/rawData fuer die Aenderungshistorie. Beide
      hier erzeugt (modules -> domains erlaubt) und den shared-Komponenten
@@ -105,9 +111,22 @@ function InfoTab({ mitgliedId,
 
   /* Persistenz + Aenderungslog fuer PersonFunktionen (frueher in der shared-
      Komponente). */
+  const [funkFehler, setFunkFehler] = useState<string | null>(null);
+
   async function onSaveFunktionen(funktionen: string[]) {
     if (!sb) return;
-    await updatePerson(sb as never, raw.person_id, { funktionen });
+    /* ⚠ DER RUECKGABEWERT WIRD GELESEN. `updatePerson` liefert `boolean` und
+       meldet Fehler nur an `console.error`; bis zum 22.08.2026 warf diese
+       Stelle ihn weg. Heute scheitert hier nichts — aber wenn es scheiterte,
+       saehe der Bediener genau dasselbe wie bei Erfolg: das Modal geht zu,
+       die Karte bleibt, wie sie war. Ein Fehler ohne Meldung ist von einer
+       Datenlage nicht zu unterscheiden. */
+    const ok = await updatePerson(sb as never, raw.person_id, { funktionen });
+    if (!ok) {
+      setFunkFehler("Die Vereinsfunktionen konnten nicht gespeichert werden.");
+      return;
+    }
+    setFunkFehler(null);
     if (vereinId) {
       const alt = new Set(raw.funktionen || []);
       const neu = new Set(funktionen);
@@ -247,6 +266,7 @@ function InfoTab({ mitgliedId,
           raw={raw} canEdit={canEdit} canDelete={canDelete}
           assignFunktionen={assignFunktionen}
           onSaveFunktionen={onSaveFunktionen}
+          fehler={funkFehler}
         />}
 
         {/* Notizen */}
