@@ -164,6 +164,66 @@ eine Entscheidung getroffen hat.
 - **Geschwister:** Tritt ein Kind von dreien aus, ändert sich nichts. Der
   Auslöser feuert nur beim **letzten**.
 
+## ⚠ Der Austritt eines JUNIORS — entschieden am 22.08.2026
+
+Der Ablauf oben beschreibt einen Erwachsenen. Bei einem Kind trägt er nicht,
+und das ist bei **388 aktiven Junioren** nicht der Sonderfall, sondern der
+Normalfall: jeder Austritt eines Kindes erzeugte sonst einen minderjährigen
+„Supporter" — als eigenständiger Kontakt neben Erwachsenen, mit einer Art,
+die ihn in keinem Sinn beschreibt. **An wen ginge die Mail bei einem
+Zwölfjährigen?** Er hat keine eigene Adresse im Portal; erreichbar ist er
+über seine Eltern.
+
+**Entschieden (Didi, 22.08.2026) — die eigene E-Mail entscheidet:**
+
+| | |
+|---|---|
+| **Kind MIT eigener E-Mail** | → Supporter, wie ein Erwachsener. Die Mail geht an ihn, der Ablauf ist derselbe. |
+| **Kind OHNE eigene E-Mail** | → **folgt den Eltern.** Bleibt der Elternteil, bleibt das Kind **archiviert** (Wiedereintritt möglich). Geht der Elternteil, geht das Kind mit. |
+
+⚠ **Das ist kein Altersvergleich, sondern eine Erreichbarkeitsfrage.** Ein
+Sechzehnjähriger mit eigener Adresse wird wie ein Erwachsener behandelt, ein
+Erwachsener ohne Adresse nicht — die Regel fragt nach dem, was sie tatsächlich
+braucht. Ein Filter auf das Geburtsdatum wäre ein Filter auf ein Merkmal, das
+mit dem Zweck nur zufällig zusammenfällt (siehe `CLAUDE.md`, „Ein Filter auf
+einen NAMEN prüft eine Schreibweise").
+
+**Zu klären beim Bauen:** was heisst „geht der Elternteil"? Der Elternteil
+wird beim Löschen entfernt — das Kind mitzunehmen ist dann Teil derselben
+Aktion und gehört in dieselbe Rückfrage. Bei **mehreren** Elternteilen: erst
+wenn der letzte geht.
+
+## ⚠ Das Archiv braucht eine Aufbewahrungsfrist
+
+Heute liegt im Archiv alles **unbegrenzt** — Name, Adresse, Geburtsdatum,
+AHV-Nummer. Ohne Zweck und ohne Frist ist das ein Datenschutzproblem, und es
+wächst mit jedem Austritt.
+
+**Zu klären, NICHT hier zu entscheiden:**
+
+- **Ab wann läuft die Frist, und wie lang?** ⚠ Vereinsunterlagen haben
+  längere Aufbewahrungspflichten als Personendaten — Beitragsnachweise,
+  Buchhaltung und Statuten-Belege folgen anderen Regeln als eine
+  Wohnadresse. Das ist **eine Frage an die Datenschutzstelle**, nicht an die
+  Entwicklung. Möglich ist auch, dass die Frist **je Feld** verschieden ist:
+  die AHV-Nummer hat den engsten Zweck und wäre als erste fällig.
+
+- **Was passiert, wenn sie abläuft?** ⚠ **NICHT automatisch löschen.**
+  Ein Cron-Lauf, der Menschen entfernt, ist die gefährlichste Sorte stiller
+  Vorgang: er meldet nichts, wenn er läuft, und nichts, wenn er falsch läuft
+  — und was er entfernt hat, ist nicht zurückzuholen. Stattdessen **eine
+  Meldung an die Verwaltung**; das Löschen bleibt eine bewusste Handlung.
+  (Entscheidung Didi, 22.08.2026.)
+
+  Dieselbe Begründung wie beim Sync-Wächter: ein Vorgang ohne Zeugen ist von
+  einem ausgefallenen nicht zu unterscheiden. Nur ist der Einsatz hier höher
+  — dort fehlten Spielpläne, hier fehlten Menschen.
+
+**Was schon dafür spricht, dass es dringlicher wird:** die drei Austritte vom
+Juli 2026 liegen seit zwei Monaten im Archiv, mit vollständigen
+Personendaten, und niemand hat eine Frist im Kopf. Bei drei Zeilen fällt das
+nicht auf; bei den 388 Junioren, die über die Jahre austreten, schon.
+
 ## Die Mail
 
 Über **Resend**, nicht über einen Mailserver des Vereins. Absenderadresse
