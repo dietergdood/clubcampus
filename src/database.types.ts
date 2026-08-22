@@ -2416,6 +2416,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "mitgliedtypen_standard_rolle_fkey"
+            columns: ["verein_id", "standard_rolle"]
+            isOneToOne: false
+            referencedRelation: "portal_rollen"
+            referencedColumns: ["verein_id", "name"]
+          },
+          {
             foreignKeyName: "mitgliedtypen_verein_id_fkey"
             columns: ["verein_id"]
             isOneToOne: false

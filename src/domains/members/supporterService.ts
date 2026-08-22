@@ -143,8 +143,9 @@ export async function fetchSupporter(
   }
 
   /* ⚠ Die ARTEN in EINER Abfrage — dieselbe Quelle wie der Chip im Profil.
-     Ein Goenner kann seit dem 22.08.2026 auch „Ehemaliges Elternteil" sein;
-     die Liste rechnet das nicht selbst nach. */
+     Wer als Elternteil verknuepft ist, dessen letztes Kind aber ausgetreten
+     ist, traegt seit dem 22.08.2026 die Austritts-Art — GESETZT vom
+     Ausloeser, nicht abgeleitet. Die Liste rechnet das nicht selbst nach. */
   const artenMap = await fetchArtenFuerPersonen(sb, (data || []).map(p => p.id as string));
 
   return (data || [])

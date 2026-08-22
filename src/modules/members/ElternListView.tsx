@@ -104,8 +104,8 @@ export function ElternListView({
   const filterDefs = buildFilterDefs(rows, [
     /* ⚠ „Art" aus den DATEN, nicht als feste Liste: kommt eine Art dazu,
        steht sie hier von selbst. Eine aufgezaehlte Liste veraltete mit der
-       naechsten Migration — „Ehemaliges Elternteil" gibt es erst seit
-       heute. */
+       naechsten Migration — am 22.08.2026 kam eine Art dazu und verschwand
+       noch am selben Tag wieder. */
     { key:"art",       label:"Art" },
     { key:"beziehung", label:"Beziehung" },
     { key:"portal",    label:"Portal", vals:["Aktiv","Kein Zugang"] },

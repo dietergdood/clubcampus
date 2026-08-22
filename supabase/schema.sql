@@ -1624,7 +1624,7 @@ CREATE TABLE IF NOT EXISTS "public"."personenarten" (
     "ableitung" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "standard_rolle" "text",
-    CONSTRAINT "personenarten_ableitung_check" CHECK ((("ableitung" IS NULL) OR ("ableitung" = 'eltern_kinder'::"text") OR ("ableitung" = 'eltern_kinder_ehemalig'::"text")))
+    CONSTRAINT "personenarten_ableitung_check" CHECK ((("ableitung" IS NULL) OR ("ableitung" = 'eltern_kinder'::"text")))
 );
 
 
@@ -1655,20 +1655,7 @@ UNION
    FROM (("public"."eltern_kinder" "k"
      JOIN "public"."mitglieder" "m" ON ((("m"."id" = "k"."mitglied_id") AND ("m"."aktiv" IS TRUE))))
      JOIN "public"."personenarten" "a" ON ((("a"."verein_id" = "k"."verein_id") AND ("a"."ableitung" = 'eltern_kinder'::"text"))))
-  WHERE "a"."aktiv"
-UNION
- SELECT "k"."person_id",
-    "a"."id" AS "art_id",
-    "a"."verein_id",
-    "a"."name",
-    "a"."sort_order",
-    "a"."ableitung"
-   FROM ("public"."eltern_kinder" "k"
-     JOIN "public"."personenarten" "a" ON ((("a"."verein_id" = "k"."verein_id") AND ("a"."ableitung" = 'eltern_kinder_ehemalig'::"text"))))
-  WHERE ("a"."aktiv" AND (NOT (EXISTS ( SELECT 1
-           FROM ("public"."eltern_kinder" "k2"
-             JOIN "public"."mitglieder" "m2" ON (("m2"."id" = "k2"."mitglied_id")))
-          WHERE (("k2"."person_id" = "k"."person_id") AND ("m2"."aktiv" IS TRUE))))));
+  WHERE "a"."aktiv";
 
 
 ALTER VIEW "public"."personenarten_effektiv" OWNER TO "postgres";
@@ -3860,6 +3847,11 @@ ALTER TABLE ONLY "public"."mitgliedtyp_feldkonfig"
 
 ALTER TABLE ONLY "public"."mitgliedtyp_pflichtfelder"
     ADD CONSTRAINT "mitgliedtyp_pflichtfelder_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."mitgliedtypen"
+    ADD CONSTRAINT "mitgliedtypen_standard_rolle_fkey" FOREIGN KEY ("verein_id", "standard_rolle") REFERENCES "public"."portal_rollen"("verein_id", "name") ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 

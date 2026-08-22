@@ -2,14 +2,24 @@
    setzePersonart — „Art ändern" als Sammelaktion
 
    ⚠ DER FILTER STEHT AUF `ableitung IS NULL`, NICHT AUF EINEM NAMEN.
-   Seit dem 22.08.2026 gibt es ZWEI abgeleitete Arten — „Elternteil"
-   und „Ehemaliges Elternteil" —, und es können weitere dazukommen.
-   Eine Prüfung gegen `name !== "Elternteil"` wäre beim zweiten schon
-   falsch gewesen: sie hätte „Ehemaliges Elternteil" vergeben lassen,
-   die Sicht hätte die Zeile ignoriert, und die Aktion hätte
-   scheinbar funktioniert.
 
-   Die Fälle nennen deshalb die Ableitung, nicht den Namen.
+   ⚠ DAS BEISPIEL IST SEIT DEM 22.08.2026 HYPOTHETISCH — die Regel
+   nicht. An jenem Tag existierte für einen halben Tag eine zweite
+   abgeleitete Art („Ehemaliges Elternteil"); sie ist am selben Abend
+   zurückgebaut worden, weil der Austritt die Art SETZT statt sie
+   abzuleiten. Heute gibt es wieder genau eine.
+
+   Der Beleg steht trotzdem hier, und zwar absichtlich: ein Filter
+   `name !== "Elternteil"` hätte die zweite durchgelassen, die Zeile
+   wäre geschrieben worden, die Sicht hätte sie ignoriert — und die
+   Aktion hätte SCHEINBAR funktioniert. Kein Fehler, keine Meldung.
+
+   Ohne diesen Beleg wäre die Regel eine Vorsichtsmassnahme ohne
+   Anlass, und der Nächste hielte sie für Umständlichkeit und
+   vereinfachte sie weg. Der Fall `a-3` unten trägt deshalb einen
+   erfundenen Ableitungswert: er prüft, dass JEDE Ableitung abgewiesen
+   wird, nicht die eine, die es gerade gibt. Damit ist er strenger als
+   vorher.
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb } from "../../members/__tests__/_mockSb.ts";
@@ -19,7 +29,10 @@ afterEach(() => vi.restoreAllMocks());
 
 const GESETZT   = { id: "a-1", ableitung: null, aktiv: true };
 const ABGELEITET = { id: "a-2", ableitung: "eltern_kinder", aktiv: true };
-const EHEMALIG  = { id: "a-3", ableitung: "eltern_kinder_ehemalig", aktiv: true };
+/* ⚠ Erfunden, und das ist der Punkt: `ableitung` ist heute per CHECK auf
+   NULL oder 'eltern_kinder' begrenzt. Der Fall prüft die REGEL („jede
+   Ableitung wird abgewiesen"), nicht den einen Wert, den es gerade gibt. */
+const ANDERE_ABLEITUNG = { id: "a-3", ableitung: "irgendeine_kuenftige_regel", aktiv: true };
 
 describe("setzePersonart — nur gesetzte Arten", () => {
   it("setzt eine gesetzte Art für mehrere Personen", async () => {
@@ -42,9 +55,11 @@ describe("setzePersonart — nur gesetzte Arten", () => {
     expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
   });
 
-  it("⚠ weist 'Ehemaliges Elternteil' ebenso ab — die ZWEITE abgeleitete", async () => {
-    /* DER FALL, DEN EIN NAMENSFILTER DURCHGELASSEN HAETTE. */
-    const sb = makeSb({ "personenarten.select": { data: EHEMALIG } });
+  it("⚠ weist JEDE andere Ableitung ebenso ab — nicht nur die bekannte", async () => {
+    /* DER FALL, DEN EIN NAMENSFILTER DURCHGELASSEN HAETTE. Am 22.08.2026
+       gab es dafuer einen halben Tag lang ein echtes Beispiel; heute ist
+       der Wert erfunden, und der Fall damit strenger. */
+    const sb = makeSb({ "personenarten.select": { data: ANDERE_ABLEITUNG } });
     const fehler = await setzePersonart(sb as never, ["p-1"], "a-3", "v-1");
     expect(fehler).toContain("Abgeleitete");
     expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
@@ -77,14 +92,15 @@ describe("setzePersonart — nur gesetzte Arten", () => {
 
 describe("bestimmendeArt — die kleinste sort_order gewinnt", () => {
   it("⚠ eine Art gewinnt, nicht die Vereinigung aller", async () => {
-    /* Ein Gönner, dessen letztes Kind ausgetreten ist, trägt zwei Arten.
-       Geführt wird er als Gönner (20 < 30) — das ist die Aussage, mit der
-       der Verein etwas anfangen kann. */
+    /* Ein Gönner, der noch ein Kind im Verein hat, trägt zwei Arten:
+       „Supporter" gesetzt und „Elternteil" abgeleitet. Geführt wird er als
+       Elternteil (10 < 20) — das ist die Aussage, mit der der Verein etwas
+       anfangen kann, und sie kippt von selbst, wenn das Kind austritt. */
     const arten = [
-      { art_id: "a-3", name: "Ehemaliges Elternteil", sort_order: 30, ableitung: "eltern_kinder_ehemalig" },
+      { art_id: "a-2", name: "Elternteil", sort_order: 10, ableitung: "eltern_kinder" },
       { art_id: "a-1", name: "Supporter", sort_order: 20, ableitung: null },
     ];
-    expect(bestimmendeArt(arten)?.name).toBe("Supporter");
+    expect(bestimmendeArt(arten)?.name).toBe("Elternteil");
   });
 
   it("ohne Art ist es null — kein erfundener Ersatzwert", () => {

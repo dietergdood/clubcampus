@@ -207,12 +207,13 @@ export async function setzeAustrittsziel(
  * Die GESETZTE Art mehrerer Personen ändern.
  *
  * ⚠ NUR GESETZTE ARTEN, und der Filter steht auf `ableitung IS NULL` — NICHT
- * auf einem Namen. Seit dem 22.08.2026 gibt es ZWEI abgeleitete Arten
- * („Elternteil" und „Ehemaliges Elternteil"), und es können weitere
- * dazukommen; eine Prüfung gegen `name !== "Elternteil"` wäre beim zweiten
- * schon falsch gewesen. Eine abgeleitete Art zu vergeben wäre ohnehin
- * wirkungslos: sie steht in keiner Tabelle, sondern ergibt sich aus den
- * Daten, und die Sicht überschriebe die Zusage im nächsten Moment.
+ * auf einem Namen. Heute gibt es genau EINE abgeleitete Art („Elternteil"),
+ * und ein Filter `name !== "Elternteil"` täte dasselbe — solange es dabei
+ * bleibt. Am 22.08.2026 gab es für einen halben Tag eine zweite; ein
+ * Namensfilter hätte sie durchgelassen, ohne dass etwas fehlgeschlagen
+ * wäre. Eine abgeleitete Art zu vergeben ist ohnehin wirkungslos: sie steht
+ * in keiner Tabelle, sondern ergibt sich aus den Daten, und die Sicht
+ * überschriebe die Zusage im nächsten Moment.
  *
  * ⚠ ERSETZT, NICHT ERGÄNZT. „Ändern" heisst ändern: die bisherigen gesetzten
  * Arten fallen weg, die gewählte kommt. Abgeleitete bleiben unberührt — sie

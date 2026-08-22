@@ -79,8 +79,9 @@ export function mapEltern(raw: ElternkontaktRoh[] | null | undefined) {
       kinder,
       teams:       alleTeams,
       /* ⚠ DIE ART KOMMT AUS DER SICHT, nicht aus einer Rechnung hier.
-         Seit dem 22.08.2026 kippt „Elternteil" auf „Ehemaliges Elternteil",
-         sobald das letzte Kind austritt. Die Liste selbst nachrechnen zu
+         Seit dem 22.08.2026 faellt „Elternteil" weg, sobald das letzte Kind
+         austritt — die Sicht prueft `mitglieder.aktiv` —, und der Ausloeser
+         SETZT dafuer die Austritts-Art. Die Liste selbst nachrechnen zu
          lassen hiesse, in einem Monat eine Zeile auf „ehemalig" und einen
          Chip im Profil auf „Elternteil" zu haben — und niemand wuesste,
          welcher stimmt. Dieselbe Quelle wie `heroChips()`. */
@@ -264,9 +265,9 @@ export function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavT
         /* ⚠ KEINE NEUE CSS-KLASSE. `cc-role-chip` ist bereits das Muster
            „Statuschip in einer Listenzelle" (Portalrolle). Farblich getrennt
            wird NICHT: die Unterscheidung steht im Wort — „Elternteil" gegen
-           „Ehemaliges Elternteil" —, und eine zweite Farbe waere eine
-           Aussage, die dasselbe nochmal sagt. Ob es eine eigene Farbe geben
-           soll, entscheidet Didi; bis dahin traegt der Text sie. */
+           „Supporter" —, und eine zweite Farbe waere eine Aussage, die
+           dasselbe nochmal sagt. Entschieden am 22.08.2026 (Didi): keine
+           Farbe. Wer zwei Signale sieht, muss beide Bedeutungen lernen. */
         return <td key="art" className="cc-members-td">
           {e.art && e.art !== "—"
             ? <span className="cc-role-chip cc-role-chip-sm">{e.art}</span>

@@ -335,6 +335,8 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Am Vormittag kam „Ehemaliges Elternteil" dazu. Der Namensfilter hätte sie **durchgelassen**, die Zeile wäre in `personenart_pro_person` gelandet, und die Sicht hätte sie ignoriert — die Aktion hätte **scheinbar funktioniert**: kein Fehler, keine Meldung, nur eine Art, die nicht gilt. Richtig ist `ableitung === null`: das ist die Sache selbst.
 
+  ⚠ **Das Beispiel ist seit dem Abend desselben Tages hypothetisch — die Regel nicht.** „Ehemaliges Elternteil" ist zurückgebaut worden, weil der Austritt die Art SETZT statt sie abzuleiten; heute gibt es wieder genau eine abgeleitete. Der Beleg steht hier trotzdem, und zwar absichtlich: **ohne ihn wäre die Regel eine Vorsichtsmassnahme ohne Anlass**, und der Nächste hielte sie für Umständlichkeit und vereinfachte sie weg. Der zugehörige Testfall trägt seither einen **erfundenen** Ableitungswert — er prüft die Regel („jede Ableitung wird abgewiesen") statt den einen Wert, den es gerade gibt, und ist damit strenger als das echte Beispiel es war.
+
   | | prüft | hält bis |
   |---|---|---|
   | `name !== "Elternteil"` | eine **Schreibweise** | zur zweiten abgeleiteten Art |

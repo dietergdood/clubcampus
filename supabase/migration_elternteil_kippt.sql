@@ -1,4 +1,21 @@
 -- ═══════════════════════════════════════════════════════════════════════════
+-- ⚠ TEILWEISE ZURUECKGEBAUT AM SELBEN TAG — siehe migration_ehemalig_rueckbau.sql
+--
+--   Was BLEIBT:   `m.aktiv is true` im Elternteil-Zweig der Sicht. Ohne ihn
+--                 gewaenne die Ableitung „Elternteil" (sort_order 10) gegen
+--                 die vom Ausloeser gesetzte Art „Supporter" (20) — der
+--                 Ausloeser haette gearbeitet, und man saehe nichts davon.
+--   Was FIEL:     die dritte Art „Ehemaliges Elternteil", ihre Ableitung
+--                 `eltern_kinder_ehemalig`, der erweiterte CHECK und der
+--                 dritte Zweig der Sicht.
+--
+--   GRUND: der Ablauf ist einheitlich entschieden worden (Didi, 22.08.2026).
+--   Ein Austritt SETZT die Art, er leitet sie nicht ab — es gibt keinen
+--   Zwischenzustand, den eine eigene Art benennen muesste. Der Block unten
+--   ist damit Protokoll, keine geltende Beschreibung.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- DIE ART „ELTERNTEIL" KIPPT, WENN DAS LETZTE KIND AUSTRITT
 -- 22.08.2026
 --
