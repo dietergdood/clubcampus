@@ -21,12 +21,12 @@
    Gönner nicht.
    ═══════════════════════════════════════════════════════════════ */
 import { ListView } from "../../shared/list/ListView.tsx";
-import { ALL_COLS } from "./memberConstants.ts";
+import { spalte, spalten, personGruppe } from "../../shared/person/personSpalten.ts";
 import { filterMembers, sortMembers } from "./memberFilter.ts";
 import { buildGroups } from "./memberGrouping.ts";
 import { exportData } from "./memberExportUtils.ts";
 import type { MemberRow } from "./memberMapper.ts";
-import type { ColDef, FilterDef, GroupOption, RenderCell } from "../../shared/list/types.ts";
+import type { ColDef, ColGroup, FilterDef, GroupOption, RenderCell, RowId } from "../../shared/list/types.ts";
 import type { Account, Sb } from "../../types.ts";
 
 /* Aus ALL_COLS gezogen statt neu deklariert: gleiche Keys, gleiche
@@ -38,24 +38,50 @@ import type { Account, Sb } from "../../types.ts";
    das jemand fuellen koennte. Wenn ein Goenner ein "dabei seit" bekommen
    soll, braucht das eine eigene Angabe; siehe den offenen Punkt
    „Supporter-Liste ueberarbeiten". */
-const SUPPORTER_KEYS = ["name", "email", "telefon", "ort", "portal"];
+/* ⚠ ALLE ZWANZIG PERSONENSPALTEN, nicht mehr fuenf. Was einer Person
+   gehoert, gilt auch fuer einen Goenner — bis zum 22.08.2026 bot diese
+   Liste nur Name, E-Mail, Telefon, Ort und Portal an, und wer die Adresse
+   oder das Geburtsdatum brauchte, musste jedes Profil einzeln oeffnen.
 
-const COL_DEFS: ColDef[] = SUPPORTER_KEYS
-  .map(k => ALL_COLS.find(c => c.key === k))
-  .filter(Boolean)
-  .map(c => ({ ...(c as ColDef), default: true }));
+   Die acht Mitgliedschafts-Spalten fehlen weiterhin, und zwar strukturell:
+   ein Goenner hat keinen Mitgliedtyp, kein Eintrittsdatum, keinen Kader.
+   Sie waeren nicht leer, sondern gegenstandslos. */
+const STANDARD_KEYS = ["name", "art", "email", "telefon", "ort", "portal"];
 
-const COL_GROUPS = [{ group: "Supporter", cols: COL_DEFS }];
+const COL_GROUPS: ColGroup[] = [
+  { group: "Person", cols: [
+    spalte("name", { default: true, alwaysOn: true }),
+    /* „Art" ist bei einem Goenner die einzige Einteilung, die es gibt —
+       Goenner, Ehemaliger, spaeter externer Trainer. Deshalb vorgegeben. */
+    { key: "art", label: "Art", default: true },
+    ...spalten(["nachname", "vorname", "geburtsdatum", "alter", "geschlecht",
+                "nationalitaet", "nationalitaet2", "heimatort", "ahv_nr"]),
+  ]},
+  personGruppe("Kontakt", ["email", "telefon"], { default: true }),
+  personGruppe("Adresse", ["strasse", "ort"], {}, { ort: { default: true } }),
+  personGruppe("Portal", ["portal", "rollen", "datenpruefung"],
+    {}, { portal: { default: true } }),
+  personGruppe("Verein", ["funktionen", "funktionsgruppen"]),
+];
+
+const COL_DEFS: ColDef[] = COL_GROUPS.flatMap(g => g.cols);
 
 /* Nur die Filter und Gruppierungen, die bei einem Goenner etwas bedeuten:
    eine Mitgliedschaft hat er nicht, Teams und Kaderrollen ebenso wenig. */
 const FILTER_DEFS: FilterDef[] = [
+  { key: "art",    label: "Art" },
   { key: "portal", label: "Portal-Zugang", vals: ["Aktiv", "Kein Zugang"] },
+  { key: "wohnort", label: "Wohnort" },
+  { key: "geschlecht", label: "Geschlecht" },
+  { key: "funktionen", label: "Vereinsfunktion" },
 ];
 
 const GROUP_OPTIONS: GroupOption[] = [
+  { val: "art",    label: "Art" },
   { val: "portal", label: "Portal-Zugang" },
   { val: "ort",    label: "Wohnort" },
+  { val: "geschlecht", label: "Geschlecht" },
+  { val: "funktionen", label: "Vereinsfunktion" },
 ];
 
 interface SupporterListViewProps {
@@ -71,16 +97,21 @@ interface SupporterListViewProps {
   canExport?: boolean;
   /** Klick auf eine Zeile — oeffnet das schlanke Supporter-Modal. */
   onOeffnen?: ((row: MemberRow) => void) | null;
-  /* ⚠ KEINE Sammelaktionen. Archivieren setzt eine Mitgliedschaft auf
-     inaktiv — ein Supporter hat keine, es gaebe nichts zu archivieren. Und
-     geloescht wird eine Person nie: sie ist der Bezugspunkt von Konto,
-     Helfereinsaetzen und Verlauf. An ihre Stelle tritt „Mitglied werden"
-     im Modal. */
+  /* ⚠ ZWEI Sammelaktionen, und beide sind KEIN Loeschen. Archivieren setzt
+     eine Mitgliedschaft auf inaktiv — ein Goenner hat keine. Und geloescht
+     wird eine Person nie: sie ist der Bezugspunkt von Konto,
+     Helfereinsaetzen und Verlauf. Das Loeschen kommt mit Etappe 3, und ein
+     Knopf, der bis dahin „Loeschen" hiesse und die Person stehen liesse,
+     waere genau die Beschriftung, die am 22.08.2026 beim Archiv berichtigt
+     wurde. */
+  onMitgliedWerden?: ((personIds: string[]) => void) | null;
+  onArtAendern?: ((personIds: string[]) => void) | null;
 }
 
 function SupporterListView({
   supporter, renderCell, rolleLabel, renderMobile, sb, account = null, vereinId = null,
   isAdmin = false, canExport = false, onOeffnen = null,
+  onMitgliedWerden = null, onArtAendern = null,
 }: SupporterListViewProps) {
   return (
     <ListView<MemberRow>
@@ -98,7 +129,7 @@ function SupporterListView({
       multiGroup
       colDefs={COL_DEFS}
       colGroups={COL_GROUPS}
-      defaultCols={SUPPORTER_KEYS}
+      defaultCols={STANDARD_KEYS}
       filterDefs={FILTER_DEFS}
       groupOptions={GROUP_OPTIONS}
       renderCell={renderCell}
@@ -114,9 +145,18 @@ function SupporterListView({
          Kaderrollen). Eigene Ansichten speichern geht trotzdem — ListView
          legt sie unter viewTyp="supporter" ab.
 
-         Auch keine Auswahl: ohne Sammelaktion waeren die Kaestchen ein
-         Bedienelement, das zu nichts fuehrt. */
-      footerLabel={(f, t) => `${f} von ${t} Supportern`}
+         Die Auswahl gibt es seit dem 22.08.2026: mit „Mitglied werden" und
+         „Art aendern" fuehren die Kaestchen jetzt irgendwohin. */
+      selectable={isAdmin && Boolean(onMitgliedWerden || onArtAendern)}
+      bulkActions={[
+        { icon: "user-plus", label: "Mitglied werden", requiresSelection: true,
+          hidden: !onMitgliedWerden,
+          onClick: (sel: Set<RowId>) => onMitgliedWerden?.([...sel].map(String)) },
+        { icon: "bookmark", label: "Art ändern", requiresSelection: true,
+          hidden: !onArtAendern,
+          onClick: (sel: Set<RowId>) => onArtAendern?.([...sel].map(String)) },
+      ].filter(a => !a.hidden)}
+      footerLabel={(f, t) => `${f} von ${t} Personen`}
       /* Ohne exportFormats blendet ListView den Knopf aus — exportFn allein
          genuegt nicht. Dieselben drei Formate wie in der Mitgliederliste. */
       exportFn={canExport ? ((rows, cols, groups, format) => exportData(rows, cols, format, groups)) : undefined}

@@ -6,10 +6,11 @@ import { Btn, Av, useConfirm, EmptyState } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { reaktiviereMitglied, deleteMitglied, fetchArchiv } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
+import { sortMembers } from "./memberDataUtils.ts";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
 import { formatDatum } from "../../domains/person/personUtils.ts";
 import type { ColDef, ColGroup, GroupOption, ListGroup, ListRow, RowId } from "../../shared/list/types.ts";
-import type { Sb, SetState } from "../../types.ts";
+import type { Account, Sb, SetState } from "../../types.ts";
 
 /* Archivierte Mitglieder kommen aus fetchArchiv — nur eine Teilauswahl
    der Spalten, deshalb direkt vom Service abgeleitet. */
@@ -101,9 +102,16 @@ interface ArchivViewProps {
   onUpdatePortalZugang?: ((mitgliedId: number, aktiv: boolean) => Promise<void> | void) | null;
   onReload?: (() => void) | null;
   onOpenMember?: ((m: ArchivMitglied) => void) | null;
+  /* ⚠ Fuer gespeicherte Ansichten. Bis zum 22.08.2026 fehlten sie hier als
+     einziger der vier Listen — nicht aus einem Grund, sondern weil niemand
+     hinsah. Der Vorrat ist ueber `viewTyp` getrennt: eine Ansicht mit
+     „Archiviert am" ergibt in der Mitgliederliste nichts. */
+  account?: Account | null;
+  vereinId?: string | null;
+  isAdmin?: boolean;
 }
 
-export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpdatePortalZugang, onReload, onOpenMember }: ArchivViewProps) {
+export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpdatePortalZugang, onReload, onOpenMember, account = null, vereinId = null, isAdmin = false }: ArchivViewProps) {
   const [confirm, confirmDialog] = useConfirm();
   const rows: ArchivRow[] = (archivData || []).map(mapArchivRow);
 
@@ -174,6 +182,16 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
           filterDefs={filterDefs}
           groupOptions={GROUP_OPTIONS}
           renderCell={renderCell}
+          /* ⚠ Dieselbe Sortierung wie die anderen Listen. Ohne `sortFn` fiel
+             `sortiereMehrstufig` auf einen `localeCompare` des Rohwerts
+             zurueck — „Archiviert am" waere als Zeichenkette sortiert
+             worden, und das faellt bei ISO-Daten zufaellig richtig aus. */
+          sortFn={(rows, key, dir) => sortMembers(rows as never, key, dir) as never}
+          sb={sb}
+          account={account}
+          vereinId={vereinId}
+          viewTyp="archiv"
+          isAdmin={isAdmin}
           selectable
           bulkActions={[
             { icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:reaktivieren },

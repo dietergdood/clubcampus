@@ -6,6 +6,7 @@ import { Av } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { fetchAlleElternkontakte } from "../../domains/members/memberService.ts";
 import type { ColDef, GroupContext, ListGroup, ListRow } from "../../shared/list/types.ts";
+import { bestimmendeArt } from "../../domains/person/personArtService.ts";
 import type { SetState } from "../../types.ts";
 
 /* ── Typen ── */
@@ -77,6 +78,29 @@ export function mapEltern(raw: ElternkontaktRoh[] | null | undefined) {
       kind_name:   kinder.map(k=>k.name).join(", ")||"—",
       kinder,
       teams:       alleTeams,
+      /* ⚠ DIE ART KOMMT AUS DER SICHT, nicht aus einer Rechnung hier.
+         Seit dem 22.08.2026 kippt „Elternteil" auf „Ehemaliges Elternteil",
+         sobald das letzte Kind austritt. Die Liste selbst nachrechnen zu
+         lassen hiesse, in einem Monat eine Zeile auf „ehemalig" und einen
+         Chip im Profil auf „Elternteil" zu haben — und niemand wuesste,
+         welcher stimmt. Dieselbe Quelle wie `heroChips()`. */
+      arten:       e.arten || [],
+      art:         bestimmendeArt(e.arten || [])?.name || "—",
+      /* Die uebrigen Personenfelder — die Abfrage holt sie seit dem
+         22.08.2026 mit, vorher waren es nur Name, E-Mail und Telefon. */
+      strasse:     e.strasse||"",
+      plz:         e.plz||"",
+      ort:         [e.plz, e.ort].filter(Boolean).join(" ")||"",
+      wohnort:     e.ort||"",
+      geburtsdatum: e.geburtsdatum||null,
+      geschlecht:  e.geschlecht||"",
+      nationalitaet: e.nationalitaet||"",
+      nationalitaet2: e.nationalitaet2||"",
+      heimatort:   e.heimatort||"",
+      ahv_nr:      e.ahv_nr||"",
+      funktionen:  e.funktionen||[],
+      role:        e.rolle||null,
+      datenpruefung: e.profil_geprueft_at ? "Geprüft" : "Ausstehend",
     };
   });
 }
@@ -231,6 +255,32 @@ export function makeElternRenderCell({ expandedKinder, setExpandedKinder, onNavT
           </div>
         </td>;
       }
+      case "art": {
+        /* ⚠ AUS DER ART, NICHT AUS EINER RECHNUNG. `e.art` kommt aus
+           `personenarten_effektiv` — derselben Quelle wie der Chip im
+           Profil. Waere hier eine eigene Pruefung „hat das Kind noch eine
+           aktive Mitgliedschaft", stuenden Zeile und Chip irgendwann
+           auseinander, und niemand wuesste, welcher stimmt. */
+        /* ⚠ KEINE NEUE CSS-KLASSE. `cc-role-chip` ist bereits das Muster
+           „Statuschip in einer Listenzelle" (Portalrolle). Farblich getrennt
+           wird NICHT: die Unterscheidung steht im Wort — „Elternteil" gegen
+           „Ehemaliges Elternteil" —, und eine zweite Farbe waere eine
+           Aussage, die dasselbe nochmal sagt. Ob es eine eigene Farbe geben
+           soll, entscheidet Didi; bis dahin traegt der Text sie. */
+        return <td key="art" className="cc-members-td">
+          {e.art && e.art !== "—"
+            ? <span className="cc-role-chip cc-role-chip-sm">{e.art}</span>
+            : <span className="cc-members-td-sub">—</span>}
+        </td>;
+      }
+      case "funktionen":
+        return <td key="funktionen" className="cc-members-td cc-members-td-sub">
+          {(e.funktionen||[]).join(", ")||"—"}
+        </td>;
+      case "geburtsdatum":
+        return <td key="geburtsdatum" className="cc-members-td cc-members-td-sub">
+          {e.geburtsdatum ? new Date(String(e.geburtsdatum)).toLocaleDateString("de-CH") : "—"}
+        </td>;
       default:
         return <td key={col.key} className="cc-members-td cc-members-td-sub">{String(e[col.key]||"—")}</td>;
     }

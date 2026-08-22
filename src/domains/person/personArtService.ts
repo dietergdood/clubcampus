@@ -202,3 +202,55 @@ export async function setzeAustrittsziel(
   }
   return null;
 }
+
+/**
+ * Die GESETZTE Art mehrerer Personen ändern.
+ *
+ * ⚠ NUR GESETZTE ARTEN, und der Filter steht auf `ableitung IS NULL` — NICHT
+ * auf einem Namen. Seit dem 22.08.2026 gibt es ZWEI abgeleitete Arten
+ * („Elternteil" und „Ehemaliges Elternteil"), und es können weitere
+ * dazukommen; eine Prüfung gegen `name !== "Elternteil"` wäre beim zweiten
+ * schon falsch gewesen. Eine abgeleitete Art zu vergeben wäre ohnehin
+ * wirkungslos: sie steht in keiner Tabelle, sondern ergibt sich aus den
+ * Daten, und die Sicht überschriebe die Zusage im nächsten Moment.
+ *
+ * ⚠ ERSETZT, NICHT ERGÄNZT. „Ändern" heisst ändern: die bisherigen gesetzten
+ * Arten fallen weg, die gewählte kommt. Abgeleitete bleiben unberührt — sie
+ * sind keine Zeilen, es gibt nichts zu löschen.
+ */
+export async function setzePersonart(
+  sb: SbClient, personIds: readonly string[], artId: string, vereinId: string,
+): Promise<string | null> {
+  if (!sb || personIds.length === 0) return "Keine Auswahl";
+
+  /* Erst prüfen, ob die Art überhaupt gesetzt werden DARF — die Oberfläche
+     bietet nur gesetzte an, aber der Dienst ist der Ort, an dem es gilt. */
+  const { data: art, error: aFehler } = await sb.from("personenarten")
+    .select("id, ableitung, aktiv").eq("id", artId).maybeSingle();
+  if (aFehler) { console.error("setzePersonart (lesen) error:", aFehler); return aFehler.message; }
+  if (!art) return "Diese Art gibt es nicht.";
+  if (art.ableitung !== null) {
+    return "Abgeleitete Arten lassen sich nicht vergeben — sie ergeben sich aus den Daten.";
+  }
+  if (art.aktiv === false) return "Diese Art ist abgeschaltet.";
+
+  /* Die bisherigen Zuweisungen entfernen — ALLE, ohne Filter auf die Art.
+     ⚠ Das ist kein Grobschnitt: `personenart_pro_person` enthaelt per
+     Bauart NUR gesetzte Arten. Eine abgeleitete steht in keiner Zeile,
+     sondern ergibt sich in `personenarten_effektiv` aus den Daten — es
+     gibt dort also nichts, was dieser Aufruf versehentlich mitnehmen
+     koennte. Ein zusaetzlicher Filter waere eine Vorsichtsmassnahme gegen
+     einen Fall, den es nicht gibt, und haette eine zweite Abfrage auf
+     dieselbe Tabelle gekostet. */
+  const { error: delFehler } = await sb.from("personenart_pro_person").delete()
+    .eq("verein_id", vereinId)
+    .in("person_id", personIds as string[]);
+  if (delFehler) { console.error("setzePersonart (loeschen) error:", delFehler); return delFehler.message; }
+
+  const { error } = await sb.from("personenart_pro_person").upsert(
+    personIds.map(pid => ({ verein_id: vereinId, person_id: pid, art_id: artId })) as never,
+    { onConflict: "verein_id,person_id,art_id" },
+  );
+  if (error) { console.error("setzePersonart (setzen) error:", error); return error.message; }
+  return null;
+}

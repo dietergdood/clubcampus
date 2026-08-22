@@ -16,6 +16,8 @@
    der das ersetzt.
    ═══════════════════════════════════════════════════════════════ */
 import type { SbClient } from "../../types.ts";
+import { fetchArtenFuerPersonen } from "../person/personArtService.ts";
+import type { PersonArt } from "../person/personArtService.ts";
 import { beendeVerknuepfungen } from "./memberService.ts";
 
 export interface SupporterRoh {
@@ -40,6 +42,10 @@ export interface SupporterRoh {
   /** benutzer.role — die Portalrolle, meist `supporter`. */
   rolle?: string | null;
   hat_benutzer?: boolean;
+  /** Die Arten aus `personenarten_effektiv` — dieselbe Quelle wie der Chip
+      im Profil. Ein Goenner kann seit dem 22.08.2026 auch „Ehemaliges
+      Elternteil" sein. */
+  arten?: PersonArt[];
   benutzer_deaktiviert?: boolean;
 }
 
@@ -136,6 +142,11 @@ export async function fetchSupporter(
     mitArt = new Set((zuw || []).map(z => z.person_id as string));
   }
 
+  /* ⚠ Die ARTEN in EINER Abfrage — dieselbe Quelle wie der Chip im Profil.
+     Ein Goenner kann seit dem 22.08.2026 auch „Ehemaliges Elternteil" sein;
+     die Liste rechnet das nicht selbst nach. */
+  const artenMap = await fetchArtenFuerPersonen(sb, (data || []).map(p => p.id as string));
+
   return (data || [])
     .filter(p => {
       const hatKinder = (p.eltern_kinder || []).length > 0;
@@ -166,6 +177,7 @@ export async function fetchSupporter(
         rolle: konto?.role ?? null,
         hat_benutzer: Boolean(konto),
         benutzer_deaktiviert: Boolean(konto) && konto.aktiv === false,
+        arten: artenMap[p.id] || [],
       };
     });
 }

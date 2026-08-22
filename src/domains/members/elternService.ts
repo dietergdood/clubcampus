@@ -19,6 +19,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import type { PostgrestError } from "@supabase/supabase-js";
 import { flacheZeile, verteileFelder } from "../person/personService.ts";
+import { fetchArtenFuerPersonen } from "../person/personArtService.ts";
 import type { SbClient, TablesInsert, TablesUpdate } from "../../types.ts";
 
 /* Ein Elternkontakt, wie die Oberflaeche ihn sieht: die Person flach,
@@ -135,7 +136,10 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
   const { data, error } = await sb.from("personen")
     .select(`
       id, vorname, nachname, email, telefon,
-      benutzer(id),
+      strasse, plz, ort, geburtsdatum, geschlecht,
+      nationalitaet, nationalitaet2, heimatort, ahv_nr,
+      funktionen, profil_geprueft_at,
+      benutzer(id, role),
       eltern_kinder!inner(
         mitglied_id, hauptkontakt, beziehung,
         mitglieder:mitglied_id(
@@ -164,6 +168,18 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
     (zugaenge || []).map(z => [z.person_id as string, z.hat_zugang !== false]),
   );
 
+  /* ⚠ Die ARTEN in EINER Abfrage, nicht eine je Zeile — bei 395 Personen
+     waere das ein N+1. Sie sagen, ob jemand HEUTE Elternteil ist: seit dem
+     22.08.2026 kippt die Ableitung, wenn das letzte Kind austritt, und die
+     Person wird zum „Ehemaligen Elternteil".
+
+     ⚠ DIESELBE QUELLE WIE DER CHIP IM PROFIL. Die Liste rechnet NICHT selbst
+     nach, ob ein Kind noch aktiv ist — sonst stuende in einem Monat die
+     Zeile auf „ehemalig" und der Chip auf „Elternteil", und niemand wuesste,
+     welcher stimmt. Genau dieser Widerspruch ist am 21.08.2026 zwischen
+     Kopf und Kachel aufgetreten. */
+  const artenMap = await fetchArtenFuerPersonen(sb, (data || []).map(p => p.id as string));
+
   return (data || []).map(p => {
     const links = p.eltern_kinder || [];
     /* Kind-Zeilen flach machen, damit elternListUtils weiter `m.vorname`
@@ -189,6 +205,22 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
       hauptkontakt: erstes?.hauptkontakt || false,
       mitglieder:  erstes?.mitglieder || null,
       _alle_kinder: kinder,
+      /* Die Personenfelder — bis zum 22.08.2026 holte diese Abfrage nur
+         Name, E-Mail und Telefon. 15 der 20 Personenspalten liessen sich
+         deshalb in der Liste gar nicht fuellen. */
+      strasse:     p.strasse,
+      plz:         p.plz,
+      ort:         p.ort,
+      geburtsdatum: p.geburtsdatum,
+      geschlecht:  p.geschlecht,
+      nationalitaet: p.nationalitaet,
+      nationalitaet2: p.nationalitaet2,
+      heimatort:   p.heimatort,
+      ahv_nr:      p.ahv_nr,
+      funktionen:  p.funktionen || [],
+      profil_geprueft_at: p.profil_geprueft_at,
+      rolle:       p.benutzer?.[0]?.role ?? null,
+      arten:       artenMap[p.id as string] || [],
     };
   });
 }

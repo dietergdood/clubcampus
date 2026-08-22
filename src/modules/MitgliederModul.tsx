@@ -21,6 +21,9 @@ import { fetchPerson } from "../domains/person/personService.ts";
 import { fetchArten } from "../domains/person/personArtService.ts";
 import { zielAusMitglied, zielAusPerson } from "../shared/person/personZiel.ts";
 import { MitgliedWerdenModal } from "./members/MitgliedWerdenModal.tsx";
+import { ArtAendernModal } from "./members/ArtAendernModal.tsx";
+import { setzePersonart } from "../domains/person/personArtService.ts";
+import type { PersonArt } from "../domains/person/personArtService.ts";
 import { ableitUndSaveRolle } from "../domains/roles/roleUtils.ts";
 import type { MemberRow } from "./members/memberDataUtils.ts";
 import { ArchivView } from "./members/ArchivView.tsx";
@@ -79,6 +82,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
      und der Titel spraenge. Fehlt sie, sagt das Modal das ausdruecklich,
      statt "Supporter" zu behaupten. */
   const [austrittsart,setAustrittsart]=useState<string|null>(null);
+  /* Alle Arten des Vereins — fuer die Sammelaktion „Art aendern". Einmal
+     geladen, nicht je Oeffnen: sie aendern sich selten. */
+  const [alleArten,setAlleArten]=useState<PersonArt[]>([]);
+  /* Die Personen, deren Art gerade geaendert wird. Leeres Feld = Modal zu. */
+  const [artAendernFuer,setArtAendernFuer]=useState<string[]>([]);
   useEffect(()=>{
     if(!sb||!vereinId) return;
     let abgebrochen=false;
@@ -86,6 +94,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       const zielId=await fetchAustrittsziel(sb,vereinId);
       if(!zielId){ if(!abgebrochen) setAustrittsart(null); return; }
       const arten=await fetchPersonenarten(sb,false);
+      if(!abgebrochen) setAlleArten(arten);
       const treffer=arten.find(a=>a.art_id===zielId);
       if(!abgebrochen) setAustrittsart(treffer?.name??null);
     })().catch(e=>{
@@ -435,6 +444,21 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         austrittsart={austrittsart}
         onAustritt={fuehreAustrittAus}
       />
+      <ArtAendernModal
+        open={artAendernFuer.length>0}
+        onClose={()=>setArtAendernFuer([])}
+        anzahl={artAendernFuer.length}
+        arten={alleArten}
+        onSetzen={async artId=>{
+          if(!sb||!vereinId) return "Keine Verbindung zur Datenbank.";
+          const msg=await setzePersonart(sb,artAendernFuer,artId,vereinId);
+          if(msg) return msg;
+          /* Beide Listen neu laden: die Art steht in beiden. */
+          await ladeSupporter();
+          if(onReload) onReload();
+          return null;
+        }}
+      />
       <MitgliedWerdenModal
         open={mitgliedWerdenFuer!==null}
         onClose={()=>setMitgliedWerdenFuer(null)}
@@ -471,7 +495,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
               </button>
               <button className={`cc-ml-tab${elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setElternTab(true);setArchivTab(false);setSupporterTab(false);}}>
-                Eltern {elternCount!==null&&<span className="cc-ml-tab-count">{elternCount}</span>}
+                {/* ⚠ NICHT „Eltern". Der Tab zeigt seit dem 22.08.2026 auch
+                    Menschen, deren letztes Kind ausgetreten ist — die Art kippt,
+                    die Verknuepfung bleibt. „Elternkontakte" schied aus: das Wort
+                    meint in dieser Codebasis die PERSON (elternService: „Ein
+                    Elternkontakt, wie die Oberflaeche ihn sieht: die Person
+                    flach"), an zwanzig Stellen. Und blosses „Eltern" waere von
+                    der Art „Elternteil" nicht zu unterscheiden. */}
+                Eltern & Ehemalige {elternCount!==null&&<span className="cc-ml-tab-count">{elternCount}</span>}
               </button>
               {supporter.length>0&&(
                 <button className={`cc-ml-tab${supporterTab?" cc-ml-tab-active":""}`} onClick={()=>{setSupporterTab(true);setArchivTab(false);setElternTab(false);}}>
@@ -486,6 +517,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
       {supporterTab?(
         <SupporterListView supporter={supporter} renderCell={renderCell} rolleLabel={ROLLE_LABEL} canExport={canExport}
+          onMitgliedWerden={istVerwaltung?(async ids=>{
+            if(!sb||ids.length===0) return;
+            const { person }=await fetchPerson(sb,ids[0]);
+            if(person) setMitgliedWerdenFuer(person);
+          }):null}
+          onArtAendern={istVerwaltung?(ids=>setArtAendernFuer(ids)):null}
           renderMobile={m=>(
             <div key={m.id} className="cc-members-item" onClick={()=>oeffnePerson(String(m.id), m.name||"?")}>
               {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
@@ -513,9 +550,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             const m=dbMitglieder.find(x=>x.id===id);
             if(m) setSelectedMember(zielAusMitglied(m, vollname(m), {_tab:"info"}));
           }}
+          onMitgliedWerden={istVerwaltung?(async ids=>{
+            /* Eine Person je Modal — es fragt nach Mitgliedtyp und
+               Eintrittsdatum und nennt dabei den Namen. Bei mehreren stuende
+               ein Name und es geschaehe fuenfmal etwas. */
+            if(!sb||ids.length===0) return;
+            const { person }=await fetchPerson(sb,ids[0]);
+            if(person) setMitgliedWerdenFuer(person);
+          }):null}
+          onArtAendern={istVerwaltung?(ids=>setArtAendernFuer(ids)):null}
         />
       ):archivTab?(
-        <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
+        <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} account={account} vereinId={vereinId} isAdmin={istVerwaltung} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           const data=await fetchMitglied(sb,m.id);
           /* fetchMitglied liefert die flache Zeile (Fassade); der aus der

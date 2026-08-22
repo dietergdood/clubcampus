@@ -1,3 +1,5 @@
+import { spalte, personGruppe } from "../../shared/person/personSpalten.ts";
+import type { ColDef, ColGroup } from "../../shared/list/types.ts";
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — modules/members/memberConstants.ts
    Konstanten für MitgliederModul
@@ -36,45 +38,48 @@ export const SAVED_VIEWS = {
   administration:{ label:"Verwaltung", cols:["name","email","telefon","ort","mitgliedschaft","datenpruefung"] },
 };
 
-export const COL_GROUPS = [
-  {group:"Personendaten", cols:[
-    {key:"name",          label:"Name",           default:true,  alwaysOn:true},
-    {key:"nachname",      label:"Nachname",       default:false},
-    {key:"vorname",       label:"Vorname",        default:false},
-    {key:"geburtsdatum",  label:"Geburtsdatum",   default:false},
-    {key:"alter",         label:"Alter",          default:false},
-    {key:"geschlecht",    label:"Geschlecht",     default:false},
-    {key:"nationalitaet", label:"Nationalität",  default:false},
-    {key:"nationalitaet2",label:"Nationalität 2", default:false},
-    {key:"heimatort",     label:"Heimatort",      default:false},
-    {key:"ahv_nr",        label:"AHV-Nr.",        default:false},
-  ]},
-  {group:"Kontakt", cols:[
-    {key:"email",         label:"E-Mail",         default:false},
-    {key:"telefon",       label:"Telefon",        default:false},
-    {key:"strasse",       label:"Strasse",        default:false},
-    {key:"ort",           label:"PLZ/Ort",        default:false},
-  ]},
-  {group:"Verein", cols:[
-    {key:"mitgliedschaft",label:"Mitgliedschaft", default:true},
-    {key:"rollen",        label:"Portalrolle",    default:true},
+/* ⚠ DIE 20 PERSONENSPALTEN KOMMEN AUS `shared/person/personSpalten.ts`.
+   Dort stehen Schluessel und Beschriftung — die IDENTITAET —, damit die
+   Eltern-, Goenner- und Archivliste dieselben verwenden statt eigene zu
+   erfinden. Die VORGABEN (`default`, `hidden`, `alwaysOn`) bleiben hier:
+   sie sind je Liste verschieden.
 
-    {key:"eintritt",      label:"Eintritt",       default:false},
-    {key:"spielerpass",   label:"Spielerpass",    default:false},
-    {key:"fairgate_id",   label:"Fairgate-ID",    default:false},
-    {key:"js_nr",         label:"J+S Nr.",        default:false},
+   ⚠ DIE 8 UEBRIGEN HAENGEN AN EINER MITGLIEDSCHAFT und stehen deshalb hier
+   und nirgends sonst: mitgliedschaft, eintritt, spielerpass, fairgate_id
+   und js_nr direkt in `mitglieder`, teams_rollen/teams/kaderrollen ueber
+   `kader.mitglied_id`. Ein Goenner hat sie nicht — nicht leer, sondern gar
+   nicht.
+
+   ⚠ REIHENFOLGE UND SCHLUESSEL SIND UNVERAENDERT. `mitglieder_ansichten.
+   spalten` speichert die Schluessel als Text; ein umbenannter verschwindet
+   STILL aus jeder gespeicherten Ansicht. `memberConstants.test.ts` haelt
+   alle 28 namentlich fest. */
+const M = (key: string, label: string, flags: Partial<ColDef> = {}): ColDef =>
+  ({ key, label, ...flags });
+
+export const COL_GROUPS: ColGroup[] = [
+  personGruppe("Personendaten",
+    ["name","nachname","vorname","geburtsdatum","alter","geschlecht",
+     "nationalitaet","nationalitaet2","heimatort","ahv_nr"],
+    { default:false },
+    { name: { default:true, alwaysOn:true } }),
+  personGruppe("Kontakt", ["email","telefon","strasse","ort"], { default:false }),
+  {group:"Verein", cols:[
+    M("mitgliedschaft","Mitgliedschaft", {default:true}),
+    spalte("rollen", {default:true}),
+    M("eintritt","Eintritt",             {default:false}),
+    M("spielerpass","Spielerpass",       {default:false}),
+    M("fairgate_id","Fairgate-ID",       {default:false}),
+    M("js_nr","J+S Nr.",                 {default:false}),
   ]},
-  {group:"Portal", cols:[
-    {key:"portal",        label:"Portal-Zugang",  default:true},
-    {key:"datenpruefung", label:"Datenpruefung",  default:true},
-  ]},
+  personGruppe("Portal", ["portal","datenpruefung"], { default:true }),
   {group:"Sport", cols:[
-    {key:"teams_rollen",       label:"Teams & Kaderrollen", default:true},
-    {key:"funktionen_gruppen",  label:"Funktionen",          default:true},
-    {key:"teams",         label:"Teams",          default:false, hidden:true},
-    {key:"kaderrollen",   label:"Kaderrolle",     default:false, hidden:true},
-    {key:"funktionen",    label:"Vereinsfunktionen", default:false, hidden:true},
-    {key:"funktionsgruppen", label:"Funktionsgruppe", default:false, hidden:true},
+    M("teams_rollen","Teams & Kaderrollen", {default:true}),
+    spalte("funktionen_gruppen",            {default:true}),
+    M("teams","Teams",                      {default:false, hidden:true}),
+    M("kaderrollen","Kaderrolle",           {default:false, hidden:true}),
+    spalte("funktionen",                    {default:false, hidden:true}),
+    spalte("funktionsgruppen",              {default:false, hidden:true}),
   ]},
 ];
 

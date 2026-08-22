@@ -3,6 +3,7 @@
    Rohe DB-Mitglieder in UI-Objekte transformieren
    ═══════════════════════════════════════════════════════════════ */
 import { vollname, age } from "../../domains/person/personUtils.ts";
+import { bestimmendeArt } from "../../domains/person/personArtService.ts";
 import type { KaderRolle, Mitglied, PortalRolle } from "../../types.ts";
 /* Die Rohform kommt aus dem Service — modules darf aus domains lesen,
    umgekehrt nicht (Schichtenregel). Sie steht dort, wo sie entsteht. */
@@ -159,6 +160,11 @@ export function mapSupporter(
        und Export wieder wie eine Mitgliedschaft aussehen. */
     mitgliedschaft: "-",
     type: "-",
+    /* ⚠ AUS DER SICHT, nicht aus einer Rechnung hier. Dieselbe Quelle wie
+       `heroChips()` im Profil — sonst stuende die Zeile auf „Ehemaliges
+       Elternteil" und der Chip auf etwas anderem. */
+    arten: p.arten || [],
+    art: bestimmendeArt(p.arten || [])?.name || "-",
     rollen: p.rolle ? [ROLLE_LABEL[p.rolle] || p.rolle] : [],
     kader_rollen_raw: [],
     kader_eintraege: [],
