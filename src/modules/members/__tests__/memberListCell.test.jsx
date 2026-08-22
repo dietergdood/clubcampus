@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/memberListCell.test.jsx
    Unit-Tests für makeMemberRenderCell

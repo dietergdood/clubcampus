@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/elternTab.test.jsx
    Unit-Tests für ElternTab

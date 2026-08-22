@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    Die Feldkonfiguration bedienen (20.08.2026)
 

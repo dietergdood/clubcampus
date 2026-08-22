@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/personTeams.test.jsx
    Unit-Tests für PersonTeams

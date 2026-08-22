@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    Die Datenprüfung des Elternteils (21.08.2026)
 

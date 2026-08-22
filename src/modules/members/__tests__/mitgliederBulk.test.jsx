@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/mitgliederBulk.test.jsx
    Unit-Tests für die Bulk-Aktionen in MitgliederModul (Senior-Review H1):

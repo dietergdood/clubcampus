@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/portalTab.test.jsx
    Unit-Tests für PortalTab

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/personFunktionen.test.jsx
    Unit-Tests für PersonFunktionen

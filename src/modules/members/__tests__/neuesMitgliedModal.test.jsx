@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/neuesMitgliedModal.test.jsx
    Unit-Tests für NeuesMitgliedModal

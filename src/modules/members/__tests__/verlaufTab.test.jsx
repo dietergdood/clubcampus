@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/verlaufTab.test.jsx
    Unit-Tests für VerlaufTab

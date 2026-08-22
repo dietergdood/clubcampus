@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/memberDetail.test.jsx
    Unit-Tests für den MemberDetail-Orchestrator:

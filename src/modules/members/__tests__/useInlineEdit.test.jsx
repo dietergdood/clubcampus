@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — __tests__/useInlineEdit.test.jsx
    Unit-Tests für useInlineEdit Hook

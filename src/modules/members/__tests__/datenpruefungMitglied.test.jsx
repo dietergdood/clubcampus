@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /* ═══════════════════════════════════════════════════════════════
    Die Sperre beim MITGLIED — die Gegenprobe (20.08.2026)
 
