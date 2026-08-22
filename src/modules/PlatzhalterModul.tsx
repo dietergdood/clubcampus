@@ -509,7 +509,16 @@ function ProfileView({role,account,sb,dbUser,dbMitglieder=[],onReload,onProfilGe
                     ))}
                   </div>
                   <div className="cc-save-row">
-                    <button className="cc-btn-ghost" onClick={()=>setKindEdit(null)}>Abbrechen</button>
+                    {/* ⚠ `<Btn variant="outline">` statt `cc-btn-ghost`. Von acht
+                Verwendern dieser Klasse war dies der EINZIGE, der die gerahmte
+                Fassung wollte — ein Sekundaerknopf neben einem Primaerknopf im
+                Fussbereich. Die anderen sieben sitzen im Eingabefeld oder in
+                einer Abschnittsueberschrift und brauchen den randlosen.
+                Deshalb ist die gerahmte Definition am 22.08.2026 gefallen (sie
+                war ohnehin tot, die spaetere ueberschrieb sie fuer alle acht)
+                — und dieser eine Fall nimmt die Komponente, die es dafuer
+                laengst gibt. */}
+            <Btn onClick={()=>setKindEdit(null)}>Abbrechen</Btn>
                     <Btn variant="primary" onClick={()=>saveKind(k.id)} disabled={saving}>
                       {saving?"Speichert…":"Speichern & bestätigen"}
                     </Btn>
