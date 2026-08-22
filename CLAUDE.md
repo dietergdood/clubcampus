@@ -668,109 +668,78 @@ künftig.
 
 Migration: `supabase/migration_mitgliedtyp_feldkonfig.sql`.
 
-### ⚠ Die Pflichtfeld-Matrizen wirken in der Datenprüfung gar nicht
+### ✅ Die Pflichtfeld-Matrizen wirken — berichtigt am 22.08.2026
 
-Befund vom 19.08.2026, aus der Bestandsaufnahme zur Mitgliedtyp-Konfiguration.
-**Hängt nicht an jenem Umbau — gilt heute.**
+**Hier stand bis heute das Gegenteil der Wirklichkeit**, und das war
+gefährlicher als jeder tote Zweig: der Abschnitt behauptete, die Datenprüfung
+werte die Matrix nicht aus, und wer ihn las, hat danach nicht mehr
+nachgesehen. Der beschriebene Zustand endete mit dem 19.08.2026 — der Text
+blieb.
 
-`getProfilCheck()` berechnet die fehlenden Pflichtfelder korrekt und vereinigt
-dafür beide Matrizen. Nur wertet das niemand aus:
+**Was tatsächlich läuft.** `DatenpruefungMitglied` bekommt die Pflichtfelder
+aus der Matrix (`pflichtfelderFuer` → `pflichtfelderFuerZiel`), und zwar:
 
-- `getProfilFehlend()` und `markiereProfilGeprueft()` werden in
-  `clubcampus.tsx:465` destrukturiert und **nie aufgerufen**. Von den drei
-  Rückgabewerten wirkt allein `sollProfilPruefen()` (`clubcampus.tsx:476`).
+| | Zeile |
+|---|---|
+| nennt die fehlenden Felder **namentlich** | `DatenpruefungMitglied.tsx:286–289` |
+| trennt „kann ich selbst" von „nur die Verwaltung" | 296–299 |
+| **sperrt** den Bestätigen-Knopf, solange etwas Eigenes fehlt | 232, 259 |
+| Knopftext deckt nur, was er kann: „Meine Angaben sind korrekt ✓" | 261 |
 
-  > **Unabhängig bestätigt am 20.08.2026:** `npm run lint` meldet für beide
-  > `is assigned a value but never used` — der Linter sagt seit jeher dasselbe
-  > wie diese Analyse, in zwei Zeilen unter 758 Warnungen. Das ist der Grund,
-  > warum es so lange stehen konnte: die Meldung war da, nur nicht zu sehen.
-  > Wer die Warnungen einmal aufräumt, findet damit vermutlich weitere tote
-  > Zweige — ein ungenutzter Rückgabewert ist fast immer eine Absicht, die
-  > nie angeschlossen wurde.
-- `sollProfilPruefen()` schaut ausschliesslich auf das Alter von
-  `profil_geprueft_at`, nie auf einen Feldinhalt.
-- `DatenpruefungMitglied` und `DatenpruefungEltern` prüfen nichts. Beide setzen
-  `profil_geprueft_at` bedingungslos; der Knopf ist nur während des Speicherns
-  gesperrt.
+Die Elternseite seit dem 21.08.2026 genauso, über `personenStand()`.
 
-  > **Stand 21.08.2026:** `DatenpruefungEltern` rendert ihre Felder seit dem
-  > Umbau aus der Konfiguration und **zeigt die Pflicht als Sternchen an** —
-  > aufgehalten wird trotzdem niemand. Die Anzeige ist damit ehrlicher als
-  > vorher, die Prüfung weiterhin keine.
+⚠ **Und das Login-Overlay rendert genau diese Maske** — es ist keine dünne
+Aufforderung, sondern die vollständige Datenprüfung in einem Modal
+(`clubcampus.tsx`, Profil-Pflicht-Block). Die Felder sind darin ausfüllbar.
+Damit sperrt auch das Overlay; siehe „Die AHV-Pflicht sperrt 381 Mitglieder
+aus".
 
-- **⚠ Die Aufforderung erreichte kein einziges Elternteil** — behoben am
-  21.08.2026. In `clubcampus.tsx` stand `if (!meinMitglied) return null;`
-  **vor** dem Eltern-Zweig des Pflicht-Overlays. 393 der 394 Elternteile haben
-  keine Mitgliedschaft, `meinMitglied` blieb null, und der Riegel fiel, bevor
-  der Eltern-Fall geprüft wurde.
-  **Gemeldet hat es nie jemand, weil 0 von 394 Elternteilen ein Konto haben** —
-  die Maske hatte noch nie einen Betrachter. Ein Ausfall ohne Zeugen bleibt
-  ein Ausfall.
+**Was von der alten Beschreibung stimmt:** `getProfilFehlend()` und
+`markiereProfilGeprueft()` werden nach wie vor nirgends aufgerufen. Nur ist
+das nicht die fehlende Wirkung — die kommt über `pflichtfelderFuer()` —,
+sondern eine zweite, tote Rechnung daneben. Siehe den Punkt darunter.
 
-**Zwei Folgen:**
+### ⚠ Drei Rechnungen für dieselbe Frage — und 21 Tests hängen an der toten
 
-1. „Ausstehend" heisst **„noch nie bestätigt"**, nicht „unvollständig". Wer die
-   Zahl als Mass für Datenqualität liest, liest etwas anderes, als er denkt.
-2. Ein Mitglied kann seine Datenprüfung mit leeren Pflichtfeldern abschliessen.
-   Die Matrix-Mechanik ist an dieser Stelle wirkungslos.
+Befund vom 22.08.2026. „Welche Pflichtfelder sind leer, und welche davon kann
+die Person selbst füllen?" wird an **drei** Stellen beantwortet:
 
-Wirksam ist die Typ-Matrix **allein in der Neuanlage** (`NeuesMitgliedModal` →
-`getEffektivePflichtfelder`, ohne die Rollen-Matrix).
+| | wo | |
+|---|---|---|
+| `getProfilFehlend()` | `domains/app/getProfilCheck.ts:145` | **tot** — kein Aufrufer im ganzen Portal |
+| `fehlendSelbst` / `fehlendVerwaltung` | `DatenpruefungMitglied.tsx:225–231`, inline | lebendig |
+| `personenStand()` | `DatenpruefungEltern.tsx:125` | lebendig |
 
-> **Hier korrigiert.** Der ursprüngliche Verdacht lautete: ein Juniorenmitglied
-> mit Rolle `spieler` könne seine Datenprüfung wegen 15 Pflichtfeldern nicht
-> abschliessen — zehn aus der Typ-Matrix, dazu `spielerpass`, `js_nr`,
-> `fairgate_id` aus der Rollen-Matrix und `vorname`/`nachname`. Die **Rechnung
-> stimmt**, die **Wirkung nicht**: sie wird nirgends ausgewertet. Und „493 von
-> 512 auf Ausstehend" misst deshalb nicht Vollständigkeit. Dieselbe Zahl steht
-> weiter unten für einen anderen, bereits behobenen Defekt (`mitglieder.rolle`
-> war leer) — vor jeder Schlussfolgerung neu zählen. `profil_geprueft_at` steht
-> an `personen`, nicht an `mitglieder` (`PERSON_FELDER`):
->
-> ```sql
-> select count(*) from public.mitglieder m
->   join public.personen p on p.id = m.person_id
->  where m.aktiv and p.profil_geprueft_at is null;
-> ```
+Die beiden lebendigen trennen „selbst" von „Verwaltung" mit **verschiedener
+Mechanik**: `personenStand` über die Mengen `DARSTELLBAR`/`GESPERRT`,
+`DatenpruefungMitglied` über `k in form`. Zwei Wege zu derselben Aussage —
+dasselbe Muster wie `hat_portal_zugang` gegen den Join.
 
-**Entschieden am 19.08.2026 (Didi): anschliessen, nicht abbauen.** Eine Prüfung,
-die nichts prüft, ist schlimmer als eine zu strenge — sie erzeugt ein grünes
-Häkchen ohne Deckung.
+⚠ **LÖSCHEN IST HIER NICHT AUFRÄUMEN, SONDERN DECKUNG VERLIEREN.** An
+`getProfilFehlend()` hängen **21 von 30 Testfällen** in
+`getProfilCheck.test.ts`:
 
-**✅ Die Blockade ist weg (Stand 20.08.2026).** Die Reihenfolge war
-*Feldkonfiguration → Matrix lockern → anschliessen*; die ersten beiden
-Schritte sind erledigt — die Konfiguration steht seit dem 19.08.2026, und
-**Didi hat die Matrix am 19.08.2026 von Hand gelockert.** `getProfilFehlend()`
-anzuschliessen ist damit der nächste sinnvolle Schritt.
+| describe | Fälle |
+|---|---|
+| `getProfilFehlend` | 9 |
+| `getProfilFehlend — Labels für die Anzeige` | 3 |
+| `Elternteil ohne Mitgliedschaft` | 4 |
+| `Kinder eines Elternteils` | 5 |
 
-> ⚠ **Trotzdem vorher nachzählen.** Der Abschnitt darunter hielt bis heute
-> einen Stand fest, den es nicht mehr gibt — genau die Sorte Zahl, auf die
-> man sich nicht verlassen darf (siehe die Warnung zu „493 von 512" weiter
-> oben). Was scharf gestellt wird, ist die Matrix in ihrem Zustand am Tag des
-> Anschliessens:
->
-> ```sql
-> select t.name, m.modus, count(*)
->   from public.mitgliedtyp_feldkonfig m
->   join public.mitgliedtypen t on t.id = m.mitgliedtyp_id
->  group by 1,2 order by 1,2;
-> ```
->
-> Eine fehlende Zeile heisst „freiwillig" — die Zählung sagt also nur, was
-> abweicht, nicht was gilt.
+Sie prüfen Verhalten, das das Produkt **braucht** — „meldet ein fehlendes
+Pflichtfeld des Kindes mit Namen davor", „richtet sich nach dem Mitgliedtyp
+DES KINDES, nicht des Elternteils". Nur prüfen sie es an einer Funktion, die
+niemand ruft. Wer die Funktion mit dem Satz „ist ja tot" entfernt, nimmt 70 %
+der Datei mit und merkt es an keiner roten Zeile.
 
-Anzuschliessen ist beides — `getProfilFehlend()` als Quelle der fehlenden
-Felder und `markiereProfilGeprueft()` statt der beiden Direktschreiber in
-`DatenpruefungMitglied` und `DatenpruefungEltern`, die `profil_geprueft_at`
-heute bedingungslos setzen.
+**Der Weg ist deshalb UMDREHEN, nicht löschen:** `getProfilFehlend()` wird die
+eine Quelle, und die beiden Masken rufen sie. Dann sind die 21 Fälle wieder
+Tests von etwas Lebendigem, und aus drei Rechnungen wird eine.
 
-> **Für den Eltern-Zweig ist der Direktschreiber seit dem 21.08.2026 ein
-> Parameter.** `updateEigenePerson(…, bestaetigen)` und
-> `updateKindDurchElternteil(…, bestaetigen)` setzen `profil_geprueft_at`
-> über ein eigenes Argument; im Feldobjekt steht es **nicht**, und die
-> Allowlist würde es abweisen. Wer das Formular um eine Zeile erweitert, kann
-> die Bestätigung also nicht mehr versehentlich mitschreiben. Bedingungslos
-> ist sie trotzdem — an der Prüfung ändert das nichts, nur am Weg.
+⚠ **Nicht gleichzeitig mit einer Änderung an der Matrix** (Entscheidung Didi,
+22.08.2026): die Datenprüfung ist die Maske, die als nächstes 371 Familien
+betrifft. Sie in derselben Woche umzubauen, in der ihre Konfiguration
+geändert wird, macht jeden Fehler doppelt schwer zuzuordnen.
 
 ### ✅ Vier Mitgliedtypen verlangten alle zehn Felder — gelockert am 19.08.2026
 
@@ -814,6 +783,67 @@ sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
 (Abschnitt darüber) — solange vier Typen zehn Pflichtfelder verlangten, wäre
 danach kein Juniorenmitglied mehr durch die eigene Datenprüfung gekommen.
 Mit dem Durchgang vom 19.08.2026 ist die Blockade weg.
+
+### ⚠ Die AHV-Pflicht sperrt 381 Mitglieder aus — seit dem 19.08.2026, unbemerkt
+
+Befund vom 22.08.2026. **Nicht mehr „die Prüfung prüft nichts" — das Gegenteil.**
+
+Der Eintrag „Die Pflichtfeld-Matrizen wirken in der Datenprüfung gar nicht"
+beschreibt einen Zustand, den es nicht mehr gibt. `DatenpruefungMitglied`
+bekommt die Pflichtfelder seit dem 19.08.2026 aus der Matrix
+(`pflichtfelderFuer`), nennt die fehlenden **namentlich**, trennt sie nach
+„kann ich selbst" und „nur die Verwaltung", und **sperrt** den
+Bestätigen-Knopf, solange etwas Eigenes fehlt. Die Elternseite seit dem
+21.08. genauso (`personenStand()`).
+
+**Das Login-Overlay rendert genau diese Maske.** Es ist keine dünne
+Aufforderung, sondern die vollständige Datenprüfung in einem Modal — die
+Felder sind darin ausfüllbar.
+
+**Und damit sperrt es.** Wer ein Pflichtfeld nicht ausfüllen kann, kommt am
+Overlay nicht vorbei; es bleibt nur *Abmelden*.
+
+| Mitgliedtyp | AHV-Modus | aktiv | **ohne AHV** |
+|---|---|---|---|
+| **Juniorenmitglied** | **Pflicht** | 388 | **371** |
+| **Aktivmitglied** | **Pflicht** | 120 | **9** |
+| Passivmitglied | freiwillig | 1 | 1 |
+| Ehren-, Pausen-, Freimitglied, Funktionär/in | — | 2 | 0 |
+| | | **510** | **381** |
+
+⚠ **371 der 381 sind Junioren.** Es verteilt sich nicht — es hängt an EINEM
+Schalter: `Juniorenmitglied · ahv_nr`. Bei den Aktivmitgliedern fehlt sie 9
+von 120, dort hat die Pflicht Deckung.
+
+**Warum es niemand gemerkt hat:** es gibt **fünf** Portal-Konten. Die Maske
+hat kaum einen Betrachter, und keiner davon ist Junior. Beim Ausrollen von
+Konten stünden 371 Familien vor einer Wand — nicht als Fehler, sondern als
+Regel, die jemand so eingestellt hat.
+
+⚠ **DIE SPERRE WEGZUNEHMEN IST KEIN NEBENEFFEKT, SONDERN DER PREIS.** Heute
+bestätigt niemand etwas, das er nicht ausgefüllt hat — `profil_geprueft_at`
+ist eine Unterschrift mit Deckung. Ohne Sperre ist sie wieder eine ohne, und
+der Zustand vor dem 19.08.2026 ist hergestellt: ein grünes Häkchen, das
+nichts bedeutet. Das war der Grund, aus dem die Kette überhaupt angeschlossen
+wurde.
+
+**Die Entscheidung liegt deshalb in der MATRIX, nicht im Code** (Didi,
+22.08.2026): ob die AHV-Nummer für alle Mitgliedtypen Pflicht sein soll oder
+nur dort, wo der Spielbetrieb sie verlangt. Steht `Juniorenmitglied · ahv_nr`
+auf freiwillig, schrumpft das Problem von 381 auf 10 — eine Grösse, die die
+Verwaltung von Hand erledigt, und die Sperre darf bleiben, wie sie ist.
+
+Zum Nachzählen:
+
+```sql
+select t.name, coalesce(k.modus,'(freiwillig)') as ahv,
+       count(m.id) as aktiv, count(m.id) filter (where coalesce(p.ahv_nr,'')='') as ohne
+  from public.mitgliedtypen t
+  left join public.mitgliedtyp_feldkonfig k on k.mitgliedtyp_id=t.id and k.schluessel='ahv_nr'
+  left join public.mitglieder m on m.mitgliedtyp=t.name and m.aktiv
+  left join public.personen p on p.id=m.person_id
+ where t.aktiv group by 1,2 order by 4 desc;
+```
 
 ### ⚠ `api_verbindungen.active` und `auto_sync` — zwei Kennzeichen, zwei Leser
 
