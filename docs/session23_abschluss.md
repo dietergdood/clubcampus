@@ -85,8 +85,10 @@ kann. Zwei Hälften einer Aussage. Man sieht damit, dass ein Trainer noch kein
 Konto hat und eine Einladung lohnt.
 
 **Die Rolle `mitglied` ist nicht durch `supporter` zu ersetzen.** Ein Passiv-,
-Ehren- oder Freimitglied ist Mitglied des Vereins mit Stimmrecht an der GV, ein
-Supporter ist Gönner von aussen.
+Ehren- oder Freimitglied ist Mitglied des Vereins mit Stimmrecht an der GV; ein
+Supporter ist dem Verein verbunden, aber nicht Mitglied — kein Beitrag, kein
+Stimmrecht. (Formulierung berichtigt am 22.08.2026; hier stand „Gönner von
+aussen".)
 
 **Der Chip im Profilkopf zeigt den Mitgliedtyp**, wenn jemand weder im Kader
 steht noch eine Vereinsfunktion hat — dort war die Portalrolle nur aus

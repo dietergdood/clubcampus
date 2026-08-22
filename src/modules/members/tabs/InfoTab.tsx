@@ -147,7 +147,7 @@ function InfoTab({ mitgliedId,
      gebraucht haette, an der im Code ueber ein Profil entschieden wird.
 
      Eine Karte, deren Eintraege alle auf "Gibt es nicht" stehen, darf ihre
-     leere Huelle nicht rendern — sonst bliebe beim Goenner eine Karte mit
+     leere Huelle nicht rendern — sonst bliebe beim Supporter eine Karte mit
      einem "Zuweisen"-Knopf stehen, der zu etwas einlaedt, das nicht
      vorgesehen ist. Das entscheidet istBereichSichtbar(). */
   const zeigeVereinsdaten = istBereichSichtbar(konfig, "vereinsdaten");
@@ -212,7 +212,7 @@ function InfoTab({ mitgliedId,
             )}
           </div>
           <div className="cc-info-grid">
-            {/* Der Mitgliedtyp bleibt beim Goenner bewusst stehen: ein Typ,
+            {/* Der Mitgliedtyp bleibt beim Supporter bewusst stehen: ein Typ,
                 den man im Profil nicht ändern kann, ist eine Sackgasse —
                 dasselbe Muster wie bei "Gibt es nicht", wo die Zeile
                 sichtbar bleiben muss, um sie zurückholen zu können. */}

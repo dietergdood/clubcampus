@@ -68,7 +68,7 @@ export interface FeldkonfigZeile {
 /* ─── Die Achse ─────────────────────────────────────────────────────────
    Bis zum 21.08.2026 ein fester Wert `ohne_mitgliedschaft` — EIN Feldsatz
    fuer 394 Elternteile und 7 Supporter. Vom Elternteil will der Verein aber
-   mehr wissen als vom Goenner.
+   mehr wissen als vom Supporter.
 
    Seit dem 20.08.2026 ist es ein Verweis in `personenarten` (Migration
    `migration_personenarten.sql`). `gilt_fuer` ist ersatzlos gefallen: welche
@@ -357,7 +357,7 @@ export function istPflicht(konfig: Record<string, FeldModus>, schluessel: string
 
 /** True, solange mindestens ein Eintrag des Bereichs sichtbar ist. Eine
     Karte, deren Felder alle auf "aus" stehen, darf ihre leere Hülle nicht
-    rendern — sonst bliebe beim Gönner eine Karte "Vereinsdaten" stehen,
+    rendern — sonst bliebe beim Supporter eine Karte "Vereinsdaten" stehen,
     wo heute keine ist. */
 export function istBereichSichtbar(konfig: Record<string, FeldModus>, bereich: string): boolean {
   return eintraegeFuerBereich(bereich).some(e => istSichtbar(konfig, e.schluessel));

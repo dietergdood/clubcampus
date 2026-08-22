@@ -88,7 +88,7 @@ function NachrichtenModul({sb,role,account,dbTeams=[],gruppen=[],teamFilter=null
     /* Supporter sind keine Mitglieder (Statuten Artikel 6) und stehen
        deshalb in keiner der Zeilen darueber. Ohne eigenen Eintrag waeren
        sie ueberhaupt nicht erreichbar — und getrennt bleiben muessen sie,
-       damit der Goenner nicht die GV-Einladung bekommt. */
+       damit der Supporter nicht die GV-Einladung bekommt. */
     {value:"supporter",label:"Alle Supporter"},
   ];
 

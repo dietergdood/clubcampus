@@ -38,7 +38,7 @@ Vorarbeit: Die Listentrennung hängt nicht mehr am Namen, sondern an einem
 Merkmal.
 
 **Empfängerlisten:** Supporter brauchen einen Platz in News und
-Helferanfragen — getrennt von den Mitgliedern, sonst bekommt der Gönner die
+Helferanfragen — getrennt von den Mitgliedern, sonst bekommt der Supporter die
 GV-Einladung. Sag im Plan, wo das heute entschieden wird.
 
 ## Teil B — Statuswechsel in beide Richtungen

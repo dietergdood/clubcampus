@@ -37,7 +37,7 @@ describe("bleibtMitglied — die eine Frage, an der alles hängt", () => {
 
 describe("beendeMitgliedschaft — die Art nach dem Austritt", () => {
   it("⚠ schreibt die eingestellte Art nach personenart_pro_person", async () => {
-    /* DER FALL, DER GEFEHLT HAT. Ohne diese Zeile sagt der Gönner-Tab
+    /* DER FALL, DER GEFEHLT HAT. Ohne diese Zeile sagt der Supporter-Tab
        „kein Supporter", der Chip im Profil gar nichts und die Portalrolle
        „supporter" — drei Antworten auf eine Frage. */
     const sb = makeSb(MIT_ZIEL);
@@ -233,7 +233,7 @@ describe("Archiv — Knopf und Austritt", () => {
   it("⚠ beim Beenden MIT Weiterführung bleibt das Konto aktiv", async () => {
     /* Die Gegenprobe, und sie ist die wichtigere: hier ist der Zugang der
        Zweck. Ohne diesen Fall könnte jemand `beendeVerknuepfungen()` auf
-       beide Zweige legen und alle Gönner aussperren. */
+       beide Zweige legen und alle Supporter aussperren. */
     const sb = makeSb({
       ...MIT_ALLEM,
       "vereine.select": { data: { austritt_art_id: "art-1" } },

@@ -38,7 +38,7 @@ vi.mock('../../../theme.ts', () => ({
      zwar fuer die ganze Datei. */
   ModalOrSheet: ({ children, open }) => (open ? children : null),
   /* ⚠ Seit dem 22.08.2026 kommt `ArtAendernModal` dazu (Sammelaktion „Art
-     ändern" in Eltern- und Gönnerliste). Es nutzt `ModalTitle` — und der
+     ändern" in Eltern- und Supporterliste). Es nutzt `ModalTitle` — und der
      Mock zählt seine Exporte einzeln auf, also wirft Vitest schon bei der
      blossen Referenz, für die ganze Datei. */
   ModalTitle: ({ children }) => children,

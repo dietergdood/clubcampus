@@ -2,13 +2,13 @@
    ClubCampus — shared/person/personSpalten.ts
 
    Die Spalten, die einer PERSON gehören — für jede Liste, die
-   Personen zeigt: Mitglieder, Eltern & Ehemalige, Gönner, Archiv.
+   Personen zeigt: Mitglieder, Eltern, Supporter, Archiv.
 
    ⚠ WARUM ES DIESE DATEI GIBT. Von den 28 Spalten der Mitgliederliste
    hängen nur 8 an einer MITGLIEDSCHAFT (Mitgliedtyp, Eintritt,
    Spielerpass, Fairgate-ID, J+S-Nr. direkt in `mitglieder`; Teams,
    Kaderrolle und „Teams & Kaderrollen" über `kader.mitglied_id`).
-   Die anderen 20 gelten für JEDE Person — auch für einen Gönner, der
+   Die anderen 20 gelten für JEDE Person — auch für einen Supporter, der
    nie Mitglied war. Sie in jeder Liste neu zu deklarieren hiesse,
    dieselbe Sache dreimal zu pflegen; die Elternliste hat genau das
    getan und deshalb acht eigene Spalten statt zwanzig geerbter.
@@ -16,7 +16,7 @@
    ⚠ HIER STEHEN NUR SCHLUESSEL UND BESCHRIFTUNG — die IDENTITAET der
    Spalte. `default`, `hidden` und `alwaysOn` bleiben bei der Liste:
    „Mitgliedschaft" ist in der Mitgliederliste vorgegeben und im
-   Gönner-Tab gar nicht vorhanden, „Portal-Zugang" ist überall dabei.
+   Supporter-Tab gar nicht vorhanden, „Portal-Zugang" ist überall dabei.
    Wer die Vorgaben hierher zöge, müsste sie für den Sonderfall wieder
    überschreiben — und hätte zwei Orte statt einem.
 

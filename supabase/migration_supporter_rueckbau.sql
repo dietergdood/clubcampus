@@ -214,7 +214,7 @@ begin
 
     /* B-3  Keine der Personen hat noch eine ZWEITE Mitgliedschaft.
        Haette sie eine, waere sie nach dem Loeschen weiterhin Mitglied — dann
-       ist sie kein Goenner, und die Supporter-Zeile war ein Doppeleintrag mit
+       ist sie kein Supporter, und die Supporter-Zeile war ein Doppeleintrag mit
        eigener Vorgeschichte. Auch das gehoert angeschaut, nicht geloescht. */
     select count(*) into v_fremd
       from public.mitglieder m

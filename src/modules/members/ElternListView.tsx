@@ -72,7 +72,7 @@ interface ElternListViewProps {
    * Personen-Umbau dieselbe Zeile wie ein Mitglied; deshalb dieselbe Seite.
    */
   onOeffnen?: ((row: ElternRow) => void) | null;
-  /** „Mitglied werden" — dieselbe Aktion wie im Gönner-Tab. Die Person
+  /** „Mitglied werden" — dieselbe Aktion wie im Supporter-Tab. Die Person
       bleibt dieselbe, es entsteht nur eine Mitgliedschaft daneben. */
   onMitgliedWerden?: ((personIds: string[]) => void) | null;
   /** „Art ändern" — nur GESETZTE Arten sind wählbar. */

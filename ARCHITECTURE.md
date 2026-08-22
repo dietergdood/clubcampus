@@ -545,11 +545,13 @@ Das löste zugleich den offenen Punkt aus Etappe 3: `fetchAlleElternkontakte` st
 
 `entkoppleKind()` legt seither eine Supporter-Mitgliedschaft an (`macheZumSupporter()`), wenn ein Elternteil sein letztes Kind verliert und das Kind noch im Verein ist. Wer bereits eine aktive Mitgliedschaft hat, bekommt keine zweite: Der Index liesse sie nicht zu, und Aktivmitglied wiegt schwerer als Supporter.
 
-### Die Rolle `mitglied` — Vereinsmitglied ist nicht Gönner (05.08.2026)
+### Die Rolle `mitglied` — Vereinsmitglied ist nicht Supporter (05.08.2026)
 
 Drei Mitgliedtypen tragen `standard_rolle = 'mitglied'`: Passiv-, Ehren- und Freimitglied. Die Rolle existierte in `portal_rollen`, war aber **deaktiviert** und in `types.ts`, `getPermissions` und `NAV_BY_ROLE` gar nicht vorhanden.
 
-Sie durch `supporter` zu ersetzen wäre bequem und falsch gewesen: **Ein Passiv-, Ehren- oder Freimitglied ist Mitglied des Vereins mit Stimmrecht an der GV, ein Supporter ist Gönner von aussen.** Deshalb eine eigene Rolle.
+Sie durch `supporter` zu ersetzen wäre bequem und falsch gewesen: **Ein Passiv-, Ehren- oder Freimitglied ist Mitglied des Vereins mit Stimmrecht an der GV; ein Supporter ist dem Verein verbunden, aber nicht Mitglied — kein Beitrag, kein Stimmrecht.** Deshalb eine eigene Rolle.
+
+⚠ Hier stand bis zum 22.08.2026 „ein Supporter ist Gönner von aussen". Die Entscheidung war richtig, die Begründung nicht: der Unterschied ist die MITGLIEDSCHAFT (Statuten Artikel 6), nicht eine Innen-Aussen-Grenze. Siehe `CLAUDE.md`, Abschnitt „Was «Supporter» in diesem Verein heisst".
 
 Unterschied im Portal: Ein Vereinsmitglied sieht zusätzlich Spielplan, Dokumente und Wiki — Vereinsunterlagen gehören den Mitgliedern. Das sind Voreinstellungen; sobald in Portalverwaltung → Module & Rechte einmal gespeichert wird, gilt was dort steht.
 
@@ -621,7 +623,7 @@ Etappe 5 hat Supporter eine Zeile in `mitglieder` gegeben, damit sie überhaupt 
 
 **Dieselben Bausteine wie die Mitgliederliste**, nicht nachgebaut: `ALL_COLS` für die Spalten, `makeMemberRenderCell` für die Zellen, `filterMembers`, `sortMembers`, `buildGroups`. Ein Supporter **ist** eine `MemberRow`. Eigene Nachbauten wären ein zweiter Ort, an dem Suche, Sortierung und Gruppierung auseinanderlaufen können — der erste Anlauf hatte genau das, und es kostete drei Korrekturrunden.
 
-Anders ist nur die **Auswahl**: keine `savedViews` (die Vorlagen bestehen aus Spalten, die es hier nicht gibt), keine `groupOptionsMore` (Datenprüfung, Geschlecht, Nationalität hat ein Gönner nicht).
+Anders ist nur die **Auswahl**: keine `savedViews` (die Vorlagen bestehen aus Spalten, die es hier nicht gibt), keine `groupOptionsMore` (Datenprüfung, Geschlecht, Nationalität hat ein Supporter nicht).
 
 ⚠ **Das ist ein Symptom, keine Lösung.** Ob ein Supporter überhaupt eine Mitgliedschaft haben soll, ist offen — siehe `CLAUDE.md`, Abschnitt „Was ist ein Supporter?".
 

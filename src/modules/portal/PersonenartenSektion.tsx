@@ -190,7 +190,7 @@ export function PersonenartenSektion({ supabase, vereinId, onArtenGeaendert }: P
 
       <InfoBox color={BL} text={
         <div>
-          Wer keine Mitgliedschaft hat, ist trotzdem etwas: Elternteil, Gönner,
+          Wer keine Mitgliedschaft hat, ist trotzdem etwas: Elternteil, Supporter,
           Ehemaliger. Die Art bestimmt den <strong>Feldsatz</strong> im Profil und den
           Chip im Kopf.
           <div className="cc-mt-8">

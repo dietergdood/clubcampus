@@ -240,7 +240,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       null,null,wer);
 
     /* Beide Listen: die Person verlaesst die Mitgliederliste und erscheint —
-       bei „Supporter" — im Goenner-Tab. */
+       bei „Supporter" — im Supporter-Tab. */
     await ladeSupporter();
     if(onReload) onReload();
     setSelectedMember(null);

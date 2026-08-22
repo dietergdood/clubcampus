@@ -163,7 +163,7 @@ const NAV_BY_ROLE: Record<string, NavItem[]> = {
   ],
   /* Vereinsmitglied ohne sportliche Funktion (Passiv-, Ehren-, Freimitglied).
      Wie supporter, dazu Spielplan, Dokumente und Wiki — Vereinsunterlagen
-     gehoeren den Mitgliedern, nicht den Goennern von aussen. */
+     gehoeren den Mitgliedern, nicht den Supportern. */
   mitglied: [
     {key:"dashboard",          icon:"layout-dashboard", label:"Home"},
     {key:"news",               icon:"news",             label:"News"},

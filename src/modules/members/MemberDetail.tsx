@@ -174,7 +174,7 @@ function MemberDetail({
      Abfrage nötig schiene, kennt die Konfiguration den Fall noch nicht. */
   /* ⚠ Ohne Mitgliedschaft entscheidet die ART, nicht mehr ein einziger
      Sammelwert. Seit dem 20.08.2026 gibt es eine pflegbare Liste: vom
-     Elternteil will der Verein mehr wissen als vom Goenner. Welche Art
+     Elternteil will der Verein mehr wissen als vom Supporter. Welche Art
      gewinnt, sagt `bestimmendeArt()` — die mit der kleinsten sort_order,
      NICHT die Vereinigung aller (siehe dort). Ohne jede Art bleibt der
      strukturelle Standard. */

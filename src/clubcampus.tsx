@@ -334,7 +334,7 @@ function Portal({supabaseClient, slug}: PortalProps){
         if(abgebrochen) return;
         /* Die eigenen Arten in derselben Runde. Seit dem 20.08.2026
            bestimmt die Art den Feldsatz — fuer ein Elternteil ein anderer
-           als fuer einen Goenner. Eine Abfrage, nicht eine je Feld. */
+           als fuer einen Supporter. Eine Abfrage, nicht eine je Feld. */
         const arten = await fetchArten(sb, person.id);
         if(abgebrochen) return;
         /* ⚠ Hier stand `kinder as unknown as Mitglied[]`. Als die Funktion am

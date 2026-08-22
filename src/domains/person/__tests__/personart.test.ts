@@ -92,7 +92,7 @@ describe("setzePersonart — nur gesetzte Arten", () => {
 
 describe("bestimmendeArt — die kleinste sort_order gewinnt", () => {
   it("⚠ eine Art gewinnt, nicht die Vereinigung aller", async () => {
-    /* Ein Gönner, der noch ein Kind im Verein hat, trägt zwei Arten:
+    /* Ein Supporter, der noch ein Kind im Verein hat, trägt zwei Arten:
        „Supporter" gesetzt und „Elternteil" abgeleitet. Geführt wird er als
        Elternteil (10 < 20) — das ist die Aussage, mit der der Verein etwas
        anfangen kann, und sie kippt von selbst, wenn das Kind austritt. */

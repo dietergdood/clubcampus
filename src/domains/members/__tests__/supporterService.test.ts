@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   fetchSupporter — wer in der Goennerliste steht
+   fetchSupporter — wer in der Supporterliste steht
 
    Ein Supporter ist eine PERSON OHNE MITGLIEDSCHAFT (Statuten
    Artikel 6). Die Auswahl besteht aus zwei Ausschluessen, und
@@ -40,7 +40,7 @@ describe("fetchSupporter — die zwei Ausschluesse", () => {
 
   it("⚠ auch eine BEENDETE Mitgliedschaft schliesst aus", async () => {
     /* `mitglieder(id)` fragt bewusst nicht nach `aktiv`. Ein ausgetretenes
-       Mitglied gehoert ins Archiv, nicht unter die Goenner — sonst stuende
+       Mitglied gehoert ins Archiv, nicht unter die Supporter — sonst stuende
        dieselbe Person an zwei Orten, und niemand wuesste, welcher gilt.
        Die Einbettung liefert die Zeile unabhaengig von `aktiv`; ein Filter
        darauf waere genau der Fehler. */

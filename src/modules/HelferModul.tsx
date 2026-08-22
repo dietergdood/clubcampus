@@ -2173,7 +2173,12 @@ function RolleChip({rolle}: {rolle?: string}){
     "Elternteil":  {c:"#06B6D4",bg:"#ECFEFF"},
     "Ehrenmitglied":{c:"#f8de09",bg:"#FFFBEB"},
     "Passivmitglied":{c:"#9CA3AF",bg:"#F9FAFB"},
-    "Gönner":      {c:"#9CA3AF",bg:"#F9FAFB"},
+    /* ⚠ Hiess bis zum 22.08.2026 „Gönner" — ein Schlüssel, der NIE traf:
+       den Wert gibt es weder in `mitgliedtypen` noch in `personenarten`,
+       `portal_rollen` oder `mitglieder.mitgliedtyp` (gemessen). Rest
+       desselben Spaltenkopf-Defekts wie die 17 verwaisten Matrix-Zeilen
+       vom 05.08.2026. */
+    "Supporter":   {c:"#9CA3AF",bg:"#F9FAFB"},
   };
   const s=colors[rolle||""]||{c:"#9CA3AF",bg:"#F9FAFB"};
   return <Chip text={rolle||"-"} color={s.c} bg={s.bg}/>;

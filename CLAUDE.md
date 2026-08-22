@@ -247,6 +247,27 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   Das gemeinsame Merkmal ist immer dasselbe: **es schlägt nichts fehl.** Kein Fehler im Build, keine Meldung im Log, kein roter Test. Deshalb hilft hier keine Prüfung, sondern nur die Frage beim Anlegen — *wer liest das?* Fällt die Antwort schwer, ist die Spalte entweder verfrüht oder der Auftrag unvollständig.
 
 - **Nach jeder Strukturänderung gehören Dump UND Typen nachgezogen** — `npx supabase db dump --linked -f supabase/schema.sql` *und* `npm run gen:types`. Am 05.08.2026 fehlten in `database.types.ts` gleich drei Dinge aus vorherigen Etappen: die ganze Tabelle `personen`, `mitglieder.person_id` und die Fremdschlüsselbeziehung, ohne die PostgREST den Join nicht typisiert. Der Dump allein reicht nicht.
+- **Was „Supporter" in diesem Verein heisst — und was er NICHT heisst.** Ein Supporter ist jemand, der dem Verein **verbunden bleibt**: ehemalige Spieler, Eltern nach dem Austritt des Kindes, Leute die mithelfen. **Nicht finanziell.** „Gönner" ist ein Sponsoring-Begriff und meint etwas anderes; wenn Sponsoring einmal ein Thema wird, ist es ein eigenes Modul und darf das Wort behalten.
+
+  **Woher der Fehler kam:** Didi hat ihn am 22.08.2026 korrigiert, nachdem ich das Wort eine Woche lang benutzt hatte — 86 Fundstellen in 40 Dateien, in Kommentaren, Aufträgen, Migrationsköpfen und der Doku. ⚠ **Ein Begriff, den zwei Beteiligte verschieden verstehen, fällt in keiner Prüfkette auf.** Kein Test wird rot, kein Typ passt nicht, der Build läuft. Er zeigt sich erst in einer **Begründung, die danebenliegt** — und zwar an der Stelle, an der jemand sie das nächste Mal anwendet.
+
+  **Und genau das war der Fund.** Vier Stellen trugen denselben Satz, in `ARCHITECTURE.md`, `roleUtils.ts`, `getPermissions.ts` und der Session-Doku:
+
+  > *„Ein Passiv-, Ehren- oder Freimitglied ist Mitglied des Vereins mit Stimmrecht an der GV, ein Supporter ist **Gönner von aussen**."*
+
+  Er begründete, warum die Portalrolle `mitglied` nicht durch `supporter` ersetzt wurde. **Die Entscheidung ist richtig, die Begründung war es nicht.** Richtig ist der Unterschied **Mitgliedschaft ↔ keine Mitgliedschaft** (Statuten Artikel 6, Stimmrecht). Falsch ist „von aussen": ein Supporter ist das Gegenteil eines Aussenstehenden.
+
+  ⚠ **Die Gefahr lag in der Zukunft, nicht in der Vergangenheit.** Nachgeprüft: keine bestehende Entscheidung ist dadurch falsch geworden — `supporter` hat `helpers: 'schreiben'` wie ein Mitglied, und der Ausschluss von Statuten und GV-Papieren folgt aus der fehlenden Mitgliedschaft, nicht aus „aussen". **Aber ein Satz, der Supporter zu Aussenstehenden erklärt, hätte beim nächsten Mal begründet, sie aus Helferanfragen oder News herauszuhalten — und Mithelfen ist gerade das, was einen Supporter ausmacht.**
+
+  **Zwei Stellen bleiben absichtlich:**
+
+  | | |
+  |---|---|
+  | `CLAUDE.md`, die 17 verwaisten Matrix-Zeilen (`Gönner` 5) | ein protokollierter **Datenwert**, keine Bezeichnung — er stand so in der Tabelle. Ihn zu „berichtigen" hiesse, den Befund zu fälschen |
+  | `HelferModul` (bis 22.08.2026) | dort war `"Gönner"` ein Schlüssel in einer Farbtabelle, der **nie traf** — den Wert gibt es in keiner Tabelle. Rest desselben Spaltenkopf-Defekts; jetzt `"Supporter"` |
+
+  ⚠ **Und eine Falle beim Ersetzen selbst:** `supabase/schema.sql` ist **erzeugt**. Die Ersetzung traf ihn mit und machte aus „Goenner/Supporter" ein „Supporter/Supporter" — sinnlos und ausserdem wirkungslos, denn der Text lebt als `COMMENT ON COLUMN` in `pg_description`. Zurückgenommen mit `git checkout`; die Änderung gehört in eine Migration (`migration_begriff_supporter.sql`). **Wer einen Dump von Hand ändert, ändert nichts — und der nächste Dump nimmt es zurück.**
+
 - **Chips im Profilkopf nie selbst zusammenbauen** → `heroChips()` aus `domains/roles/roleUtils.ts`. Die Regel unterscheidet Rolle (was jemand tut) von Mitgliedtyp (wie er eingestuft ist) und ist mit 13 Tests abgesichert.
 - **Datenbereinigungen an Personenfeldern treffen `personen`, nicht `mitglieder`.** Die Fassade (`flacheZeile`) überschreibt jedes Feld aus `PERSON_FELDER` mit dem Wert der Person — die gleichnamige Spalte in `mitglieder` wird gar nicht mehr gelesen. Am 05.08.2026 selbst darauf reingefallen: Ein `update` auf `mitglieder.funktionen` sah in zwei Kontrollabfragen sauber aus und wirkte trotzdem nicht, weil die Liste `personen.funktionen` liest. Solange beide Spalten nebeneinander existieren (bis Etappe 6), gilt: erst `PERSON_FELDER` prüfen, dann die richtige Tabelle wählen.
 - **`mitglieder.funktionen` enthält Vereinsfunktionen, keine Kaderrollen.** Am 05.08.2026 stand dort bei 487 Mitgliedern „Spieler" — `ableitRolle()` prüft nur `funktionen.length > 0` und machte damit jeden ohne Kadereintrag zum Funktionär. Wer dort schreibt, prüft zweimal.
@@ -581,7 +602,7 @@ Seite trägt beide Fälle bereits.
 
 Der Tab steht (`SupporterListView`), aber Spalten, Filter und gespeicherte Ansichten sind nur das Nötigste:
 
-- **Spalten**: heute Name, E-Mail, Telefon, PLZ/Ort, Portal-Zugang — aus `ALL_COLS` gezogen. `Eintritt` ist am 20.08.2026 entfallen: es kommt aus `mitglieder.eintrittsdatum` und ist bei einer Person ohne Mitgliedschaft strukturell leer, hätte also in **jeder** Zeile „-" gezeigt. Ein „dabei seit" für Gönner bräuchte eine eigene Angabe. Was sonst dazugehört (wie erreichbar, welche Anlässe, Beitrag?) ist nicht durchdacht.
+- **Spalten**: heute Name, E-Mail, Telefon, PLZ/Ort, Portal-Zugang — aus `ALL_COLS` gezogen. `Eintritt` ist am 20.08.2026 entfallen: es kommt aus `mitglieder.eintrittsdatum` und ist bei einer Person ohne Mitgliedschaft strukturell leer, hätte also in **jeder** Zeile „-" gezeigt. Ein „dabei seit" für Supporter bräuchte eine eigene Angabe. Was sonst dazugehört (wie erreichbar, welche Anlässe, Beitrag?) ist nicht durchdacht.
 - **Filter**: nur Portal-Zugang.
 - **Gruppierung**: nur Portal-Zugang und Wohnort.
 - **`savedViews`**: bewusst weggelassen — die Vorlagen „Standard" und „Verwaltung" bestehen aus Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen). Eigene Ansichten speichern funktioniert, `ListView` legt sie unter `viewTyp="supporter"` ab. Eigene Vorlagen fehlen.
@@ -664,7 +685,12 @@ freiwilliges Feld sichtbar und darf leer bleiben.
 Datenbank, werden aber von keiner Stelle mehr gelesen. Sie fallen in einer
 eigenen Migration, wie `elternkontakte`. **17 verwaiste Zeilen** der alten
 Tabelle (`Juniormitglied` 6, `Funktionär` 6, `Gönner` 5) sind bewusst nicht
-mitgewandert — Reste des am 05.08.2026 behobenen Spaltenkopf-Defekts. Der
+mitgewandert — Reste des am 05.08.2026 behobenen Spaltenkopf-Defekts.
+
+> ⚠ **`Gönner` ist hier ein protokollierter DATENWERT, keine Bezeichnung.**
+> Er stand so in der Tabelle und bleibt so stehen; ihn zu „berichtigen" hiesse,
+> den Befund zu fälschen. Wie der Verein die Sache nennt, steht unter „Was
+> «Supporter» in diesem Verein heisst". Der
 Fremdschlüssel auf `mitgliedtypen(id, verein_id)` verhindert beide Ursachen
 künftig.
 
@@ -1335,7 +1361,7 @@ haben, aber keine Funktionärsrechte auf Mitgliederdaten.
 jede Zeile in `mitglieder` und ohne jede Zeile in `eltern_kinder`. Es gibt
 kein Kennzeichen „ist Supporter" und soll keines geben. Auch eine *beendete*
 Mitgliedschaft schliesst aus — sonst stünde dieselbe Person im Archiv und
-unter den Gönnern.
+unter den Supportern.
 
 **Was noch offen ist (Teil B):**
 
@@ -1437,7 +1463,7 @@ Quelle bleibt falsch — eine neue Portalrolle erscheint dort nie. Und **„Alle
 Mitglieder" meint dort alle Empfänger**, nicht die Mitglieder im Sinne der
 Statuten. Nach dem Rückbau ist das eine Aussage, die stimmen muss: die beiden
 Begriffe gehören getrennt beschriftet („Alle Mitglieder" ≠ „alle Erreichbaren"),
-sonst bekommt der Gönner die GV-Einladung.
+sonst bekommt der Supporter die GV-Einladung.
 
 **3. ✅ `rolleLabelMap` liess die Konstanten gegen die Datenbank gewinnen —
 behoben am 20.08.2026.** In `memberMapper.ts` standen die acht fest

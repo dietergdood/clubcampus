@@ -5,7 +5,7 @@
 -- Rund 400 von 914 Personen haben keine Mitgliedschaft: 394 Elternteile,
 -- 7 Supporter. Fuer sie gab es bisher EINEN Wert in der Feldkonfiguration
 -- (`gilt_fuer = 'ohne_mitgliedschaft'`) und damit zwangslaeufig DENSELBEN
--- Feldsatz. Vom Elternteil will der Verein aber mehr wissen als vom Goenner.
+-- Feldsatz. Vom Elternteil will der Verein aber mehr wissen als vom Supporter.
 --
 -- Aus dem einen Wert wird eine pflegbare Liste. Es kommen weitere dazu:
 -- Ehemalige, externe Trainer, Sponsoren als Person.
@@ -294,7 +294,7 @@ begin
                                        E-Mail ist zugleich der Login-Name.
        ahv_nr  aus     → beide         ohne Spielbetrieb kein Zweck.
 
-     Beim Supporter KEINE Pflichtfelder: ein Goenner, den man nicht per Mail
+     Beim Supporter KEINE Pflichtfelder: ein Supporter, den man nicht per Mail
      erreicht, ist kein Problem des Vereins, und ein Pflichtfeld, das niemand
      erzwingen kann, blockiert nur die Maske.
 

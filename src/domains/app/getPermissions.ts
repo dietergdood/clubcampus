@@ -18,8 +18,10 @@ const APP_ZUGRIFF_DEFAULT: AppZugriffDefault = {
   spieler:        { _all: 'lesen', events: 'schreiben', helpers: 'schreiben', buses: 'schreiben' },
   eltern:         { _all: 'lesen', events: 'schreiben', helpers: 'schreiben', schedule: 'lesen' },
   /* Vereinsmitglied ohne sportliche Funktion. Wie supporter, aber mit
-     Vereinsunterlagen und Spielplan — wer im Verein ist, bekommt Statuten
-     und GV-Papiere, ein Goenner von aussen nicht. */
+     Vereinsunterlagen und Spielplan: Statuten und GV-Papiere gehoeren den
+     MITGLIEDERN, und ein Supporter ist keines. Nicht weil er aussen stuende —
+     `helpers: 'schreiben'` hat er wie ein Mitglied, und Mithelfen ist gerade
+     das, was ihn ausmacht —, sondern weil ihm die Mitgliedschaft fehlt. */
   mitglied:       { _all: 'lesen', helpers: 'schreiben' },
   supporter:      { _all: 'lesen', helpers: 'schreiben' },
 };

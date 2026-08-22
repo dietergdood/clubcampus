@@ -138,10 +138,10 @@ describe("getProfilFehlend", () => {
   it("blendet ein Feld auf 'aus' aus der Prüfung aus", () => {
     /* Der neue dritte Wert: was es nicht gibt, kann nicht fehlen. */
     const { getProfilFehlend } = baue(
-      { vorname: "A", nachname: "B", mitgliedtyp: "Goenner" },
+      { vorname: "A", nachname: "B", mitgliedtyp: "Supporter" },
       { feldkonfig: [
-        { mitgliedtyp: "Goenner", art_id: null, art: "", schluessel: "telefon",      modus: "pflicht" },
-        { mitgliedtyp: "Goenner", art_id: null, art: "", schluessel: "geburtsdatum", modus: "aus" },
+        { mitgliedtyp: "Supporter", art_id: null, art: "", schluessel: "telefon",      modus: "pflicht" },
+        { mitgliedtyp: "Supporter", art_id: null, art: "", schluessel: "geburtsdatum", modus: "aus" },
       ] as never },
     );
     expect(getProfilFehlend()).toEqual(["Telefon"]);

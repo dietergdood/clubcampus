@@ -8,7 +8,7 @@
 -- falsch:
 --
 --   Supporter    getFeldkonfig(null, …) liefert ALLES auf freiwillig, also
---                sichtbar. Ein Goenner bekaeme jede Karte und jeden Tab.
+--                sichtbar. Ein Supporter bekaeme jede Karte und jeden Tab.
 --   Elternteil   getProfilCheck hat einen fest verdrahteten Satz (Vorname,
 --                Nachname, Telefon) — der zweite Konfigurationsort, dessen
 --                Abbau seit dem 19.08. laeuft.
@@ -50,7 +50,7 @@
 -- ⚠ FUENF PERSONALIEN-FELDER STEHEN AUSDRUECKLICH NICHT AUF `aus`
 --
 -- `geburtsdatum`, `geschlecht`, `nationalitaet`, `nationalitaet2` und
--- `heimatort` bleiben freiwillig, obwohl ein Goenner sie nicht braucht.
+-- `heimatort` bleiben freiwillig, obwohl ein Supporter sie nicht braucht.
 --
 -- „Aus" heisst unsichtbar, nicht geloescht. Ein Aktivmitglied mit
 -- Geburtsdatum, Nationalitaet und Heimatort tritt aus und wird Supporter —

@@ -31,7 +31,7 @@
 --   Die Regel steht in `docs/auftrag_arten_austritt_loeschen.md`, Etappe 3.
 --
 -- ⚠ WAS SICH DADURCH AENDERT — gemessen, nicht vermutet:
---   Hauser Andrea erscheint danach im GOENNER-Tab. Heute steht sie nur im
+--   Hauser Andrea erscheint danach im SUPPORTER-Tab. Heute steht sie nur im
 --   Archiv. `fetchSupporter()` nimmt sie ueber den zweiten Weg auf („traegt
 --   die Austritts-Art"), und die Kinder-Bedingung greift bei ihr nicht — sie
 --   ist Elternteil von niemandem.
@@ -39,7 +39,7 @@
 --   ⚠ Die Bedingung heisst „IST Elternteil", nicht „HAT ein Elternteil":
 --   die Einbettung `eltern_kinder(person_id)` folgt der Spalte `person_id`,
 --   und das ist der Elternteil. Fuer Frei und Furrer Andrea haette sie also
---   NICHT gegriffen — auch sie stuenden im Goenner-Tab, wenn sie die Art
+--   NICHT gegriffen — auch sie stuenden im Supporter-Tab, wenn sie die Art
 --   bekaemen. Genau deshalb bekommen sie sie nicht.
 --
 --   Im ARCHIV bleibt sie sichtbar: das haengt an der beendeten

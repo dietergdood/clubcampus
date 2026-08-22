@@ -10,7 +10,7 @@ die anderen erst auf Zuruf.
 Rund 400 von 910 Personen haben keine Mitgliedschaft: 393 Elternteile,
 7 Supporter. Für sie gibt es heute **einen** Wert in der Feldkonfiguration —
 `gilt_fuer = 'ohne_mitgliedschaft'` — und damit zwangsläufig **denselben
-Feldsatz**. Vom Elternteil will der Verein aber mehr wissen als vom Gönner.
+Feldsatz**. Vom Elternteil will der Verein aber mehr wissen als vom Supporter.
 
 Der Chip auf der Personenseite sagt aus demselben Grund „Ohne Mitgliedschaft"
 statt „Elternteil" oder „Supporter".

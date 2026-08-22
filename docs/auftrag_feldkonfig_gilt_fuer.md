@@ -8,7 +8,7 @@ keine Mitgliedschaft hat, fällt aus ihr heraus. Das trifft heute zwei Gruppen
 und zeigt sich in beide Richtungen falsch:
 
 - **Supporter:** `getFeldkonfig(null, …)` hat ein `if (!mitgliedtyp) return konfig;`
-  und liefert alles auf `freiwillig` — also sichtbar. Ein Gönner bekommt damit
+  und liefert alles auf `freiwillig` — also sichtbar. Ein Supporter bekommt damit
   jede Karte und jeden Tab, auch Statistik, Eltern und Datenprüfung.
 - **Elternteil:** `getProfilCheck.getProfilFehlend()` hat für ihn einen fest
   verdrahteten Satz — Vorname, Nachname, Telefon — mit der Begründung „hat
@@ -33,7 +33,7 @@ wieder.
 **Ein einziger Wert `ohne_mitgliedschaft`, nicht zwei.** Elternteil und
 Supporter bekommen damit denselben Feldsatz. Das ist bewusst in Kauf genommen:
 Telefon gehört für den Elternteil auf Pflicht — es ist die Nummer, unter der
-der Verein wegen des Kindes anruft —, und damit muss sie auch der Gönner
+der Verein wegen des Kindes anruft —, und damit muss sie auch der Supporter
 angeben. Die Alternative wäre ein Wert `elternteil`, abgeleitet aus „hat
 Kinder". Das wäre eine **berechnete Achse**, die kippt, sobald ein Kind
 austritt — derselbe Fehler, den `rolle_pflichtfelder` gekostet hat.

@@ -94,7 +94,7 @@ describe("Rollenliste", () => {
        hätte, wäre mit einer Rolle dagestanden, die das Portal nicht kennt.
 
        Und er ist NICHT durch supporter zu ersetzen: Ein Vereinsmitglied hat
-       Stimmrecht an der GV, ein Supporter ist Gönner von aussen. */
+       Stimmrecht an der GV, ein Supporter ist Supporter von aussen. */
     const { ROLLE_PRIORITAET, ROLLE_LABEL } = await import("../roleUtils.ts");
     expect(ROLLE_PRIORITAET).toContain("mitglied");
     expect(ROLLE_LABEL.mitglied).toBe("Mitglied");

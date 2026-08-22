@@ -40,14 +40,14 @@ export const SAVED_VIEWS = {
 
 /* ⚠ DIE 20 PERSONENSPALTEN KOMMEN AUS `shared/person/personSpalten.ts`.
    Dort stehen Schluessel und Beschriftung — die IDENTITAET —, damit die
-   Eltern-, Goenner- und Archivliste dieselben verwenden statt eigene zu
+   Eltern-, Supporter- und Archivliste dieselben verwenden statt eigene zu
    erfinden. Die VORGABEN (`default`, `hidden`, `alwaysOn`) bleiben hier:
    sie sind je Liste verschieden.
 
    ⚠ DIE 8 UEBRIGEN HAENGEN AN EINER MITGLIEDSCHAFT und stehen deshalb hier
    und nirgends sonst: mitgliedschaft, eintritt, spielerpass, fairgate_id
    und js_nr direkt in `mitglieder`, teams_rollen/teams/kaderrollen ueber
-   `kader.mitglied_id`. Ein Goenner hat sie nicht — nicht leer, sondern gar
+   `kader.mitglied_id`. Ein Supporter hat sie nicht — nicht leer, sondern gar
    nicht.
 
    ⚠ REIHENFOLGE UND SCHLUESSEL SIND UNVERAENDERT. `mitglieder_ansichten.

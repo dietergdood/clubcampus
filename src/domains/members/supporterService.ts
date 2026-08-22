@@ -43,7 +43,7 @@ export interface SupporterRoh {
   rolle?: string | null;
   hat_benutzer?: boolean;
   /** Die Arten aus `personenarten_effektiv` — dieselbe Quelle wie der Chip
-      im Profil. Ein Goenner kann seit dem 22.08.2026 auch „Ehemaliges
+      im Profil. Ein Supporter kann seit dem 22.08.2026 auch „Ehemaliges
       Elternteil" sein. */
   arten?: PersonArt[];
   benutzer_deaktiviert?: boolean;
@@ -55,7 +55,7 @@ export interface SupporterRoh {
  * ⚠ Als `Pick`, nicht als eigenes Interface (CLAUDE.md → Verengungen):
  * seit dem 21.08.2026 kommt die Person hier nicht mehr nur aus dem
  * Supporter-Tab, sondern auch aus der Elternliste — ein Elternteil kann
- * Mitglied werden wie ein Gönner. Ein handgeschriebener Zwillingstyp liefe
+ * Mitglied werden wie ein Supporter. Ein handgeschriebener Zwillingstyp liefe
  * still auseinander, sobald `SupporterRoh` sich ändert.
  *
  * `funktionen` steht mit drin, weil `ableitRolle()` sie liest: wer ein Amt
@@ -83,7 +83,7 @@ const PERSON_SELECT = `
  * WER DAZUGEHOERT — zwei Wege, und beide gelten:
  *
  *   1. eine Person ohne jede Zeile in `mitglieder` und ohne jede Zeile in
- *      `eltern_kinder` — sie ist nichts anderes, also Goenner;
+ *      `eltern_kinder` — sie ist nichts anderes, also Supporter;
  *   2. eine Person, die die eingestellte AUSTRITTS-ART traegt.
  *
  * ⚠ DER ZWEITE WEG KAM AM 22.08.2026 DAZU, und er behebt einen Widerspruch.
@@ -98,7 +98,7 @@ const PERSON_SELECT = `
  *
  * ⚠ EINE BEENDETE MITGLIEDSCHAFT ALLEIN reicht weiterhin NICHT. Wer
  * ausgetreten ist, ohne die Art zu bekommen — Archiv, oder es war keine
- * eingestellt —, gehoert ins Archiv und nicht unter die Goenner. Sonst
+ * eingestellt —, gehoert ins Archiv und nicht unter die Supporter. Sonst
  * stuende dieselbe Person an zwei Orten.
  *
  * ⚠ Gefiltert wird in JavaScript, nicht in der Abfrage. PostgREST kann

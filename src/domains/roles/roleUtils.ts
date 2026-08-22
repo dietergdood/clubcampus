@@ -22,7 +22,9 @@ export const ROLLE_PRIORITAET: Rolle[] = [
   'eltern',
   /* Vereinsmitglied ohne sportliche Funktion — Passiv-, Ehren-, Freimitglied.
      Steht ueber supporter: es ist Mitglied des Vereins mit Stimmrecht an der
-     GV, ein Supporter ist Goenner von aussen. */
+     GV; ein Supporter ist dem Verein VERBUNDEN, aber nicht Mitglied — kein
+     Beitrag, kein Stimmrecht. (Hier stand bis zum 22.08.2026 „Goenner von
+     aussen" — die Rangfolge stimmt, die Begruendung war falsch.) */
   'mitglied',
   'supporter',
 ];

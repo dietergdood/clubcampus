@@ -13,8 +13,8 @@
 --
 --   „Wer DARF mithelfen?"   → die PERSON. Der Elternteil, der die
 --                             Festwirtschaft macht, ist oft kein Mitglied;
---                             der Goenner, der beim Turnier hilft, auch nicht.
---   „Wer MUSS Einsaetze leisten?" → die MITGLIEDSCHAFT. Ein Goenner schuldet
+--                             der Supporter, der beim Turnier hilft, auch nicht.
+--   „Wer MUSS Einsaetze leisten?" → die MITGLIEDSCHAFT. Ein Supporter schuldet
 --                             dem Verein nichts.
 --
 -- Dieselbe Verwechslung wie Amt und Rechtebuendel unter einem Namen
@@ -77,7 +77,7 @@
 -- keine davon hier entschieden wurde:
 --
 --   aufgebote            vermutlich Mitgliedschaft (Aufgebot setzt Kader voraus)
---   bus_anmeldungen      vermutlich Person (Eltern und Goenner fahren mit)
+--   bus_anmeldungen      vermutlich Person (Eltern und Supporter fahren mit)
 --   abstimmung_antworten offen — haengt daran, ob eine Abstimmung ein
 --                        GV-Beschluss ist (Mitgliedschaft) oder eine Umfrage
 --                        (Person)

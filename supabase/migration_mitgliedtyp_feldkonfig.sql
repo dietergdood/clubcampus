@@ -29,7 +29,7 @@
 --
 --      Juniormitglied   6   fest verdrahteter Spaltenkopf, behoben 05.08.2026
 --      Funktionaer      6   derselbe Defekt
---      Goenner          5   vermutlich der Name vor Etappe 5
+--      Supporter          5   vermutlich der Name vor Etappe 5
 --
 --    Wirkung heute: keine, nichts trifft auf diese Namen zu. Sie kommen
 --    NICHT mit. Der Block zaehlt sie und nennt sie beim Namen, statt sie
@@ -69,12 +69,12 @@
 -- Damit ist die Uebernahme verlustfrei UND verhaltensneutral.
 --
 --
--- DIE EINE AUSNAHME: der Goenner
+-- DIE EINE AUSNAHME: der Supporter
 -- Sieben Schluessel gehen bei Typen, die keine Mitgliedschaft sind, auf
 -- 'aus'. Fuenf davon sind neu (spielerpass, js_nr, fairgate_id, teams,
 -- funktionen) und ersetzen die drei istSupporter-Abfragen in InfoTab.
 -- Zwei ueberschreiben die Uebernahme: geburtsdatum und geschlecht standen
--- beim Supporter auf Pflicht. Ein Goenner gibt sein Geburtsdatum nicht her,
+-- beim Supporter auf Pflicht. Ein Supporter gibt sein Geburtsdatum nicht her,
 -- und der Verein braucht es nicht.
 --
 -- strasse/plz/ort und telefon bleiben Pflicht: wer Bandenwerbung zahlt,
@@ -88,16 +88,16 @@
 -- Gesteuert wird das ueber zaehlt_als_mitgliedschaft, NICHT ueber den
 -- Namen 'Supporter'. Der Name faellt genau einmal, im update in Block A —
 -- das ist die einzige Stelle, an der die heutigen Daten benannt werden
--- muessen. Beim zweiten Verein, der seinen Typ 'Goenner' nennt, greift
+-- muessen. Beim zweiten Verein, der seinen Typ 'Supporter' nennt, greift
 -- alles Weitere trotzdem.
 --
 --
 -- ERWARTETE ZAHLEN (Stand der Abfragen vom 19.08.2026)
 --   uebernommen          72
 --   verwaist, bleibt     17
---   Goenner-Seed neu      5   (spielerpass, js_nr, fairgate_id,
+--   Supporter-Seed neu      5   (spielerpass, js_nr, fairgate_id,
 --                              teams, funktionen)
---   Goenner-Seed Update   2   (geburtsdatum, geschlecht: pflicht -> aus)
+--   Supporter-Seed Update   2   (geburtsdatum, geschlecht: pflicht -> aus)
 --   Zeilen danach        77
 --
 -- Der Block prueft die Beziehung (uebernommen + verwaist = alt), nicht die
@@ -140,7 +140,7 @@ begin
   -- Bereiche aus. Die zweite Stelle uebernimmt die Feldkonfiguration, die
   -- erste diese Spalte.
   --
-  -- Beruehrt NICHT die offene Frage, ob ein Goenner ueberhaupt eine Zeile in
+  -- Beruehrt NICHT die offene Frage, ob ein Supporter ueberhaupt eine Zeile in
   -- `mitglieder` haben soll (CLAUDE.md). Im Gegenteil: wird das je
   -- zurueckgebaut, haengt die Listentrennung dann nicht mehr am Namen.
 
@@ -151,7 +151,7 @@ begin
   -- noch nicht existiert (ARCHITECTURE.md -> Migrationen pruefen sich selbst).
   execute $q$
     comment on column public.mitgliedtypen.zaehlt_als_mitgliedschaft is
-      'False = dieser Typ ist keine Mitgliedschaft (Goenner/Supporter): kein Beitrag, kein Stimmrecht an der GV, kein Spielbetrieb, eigener Tab in der Mitgliederliste. Ersetzt den Namensvergleich auf "Supporter" im Frontend.'
+      'False = dieser Typ ist keine Mitgliedschaft (eine Person ohne Mitgliedschaft): kein Beitrag, kein Stimmrecht an der GV, kein Spielbetrieb, eigener Tab in der Mitgliederliste. Ersetzt den Namensvergleich auf "Supporter" im Frontend.'
   $q$;
 
   execute $q$
@@ -271,9 +271,9 @@ begin
   $q$;
 
 
-  -- ─── D) Goenner: sieben Schluessel auf 'aus' ─────────────────────────────
+  -- ─── D) Supporter: sieben Schluessel auf 'aus' ─────────────────────────────
   -- Ersetzt die drei istSupporter-Abfragen in InfoTab.tsx (Vereinsdaten,
-  -- PersonTeams, PersonFunktionen) plus die zwei Angaben, die ein Goenner
+  -- PersonTeams, PersonFunktionen) plus die zwei Angaben, die ein Supporter
   -- nicht hergibt. do update, weil geburtsdatum und geschlecht aus Block C
   -- bereits als 'pflicht' dastehen.
   --
@@ -347,7 +347,7 @@ begin
       v_migriert, v_verwaist, v_alt_gesamt;
   end if;
 
-  -- Der Goenner-Seed muss jemanden getroffen haben. Heisst der Typ anders
+  -- Der Supporter-Seed muss jemanden getroffen haben. Heisst der Typ anders
   -- als 'Supporter', laeuft Block A ins Leere und Block D ebenso — das darf
   -- nicht still bleiben.
   execute $q$
@@ -355,7 +355,7 @@ begin
   $q$ into v_nichtmitglied;
 
   if v_nichtmitglied = 0 then
-    raise exception 'UNVOLLSTAENDIG: kein Mitgliedtyp auf zaehlt_als_mitgliedschaft = false. Heisst der Goenner-Typ anders als "Supporter"?';
+    raise exception 'UNVOLLSTAENDIG: kein Mitgliedtyp auf zaehlt_als_mitgliedschaft = false. Heisst der Supporter-Typ anders als "Supporter"?';
   end if;
 
   execute $q$
@@ -370,7 +370,7 @@ begin
   $q$ into v_ohne_seed;
 
   if v_ohne_seed <> 0 then
-    raise exception 'UNVOLLSTAENDIG: % Typ(en) ohne vollstaendigen Goenner-Seed', v_ohne_seed;
+    raise exception 'UNVOLLSTAENDIG: % Typ(en) ohne vollstaendigen Supporter-Seed', v_ohne_seed;
   end if;
 
   execute $q$select count(*) from public.mitgliedtyp_feldkonfig$q$ into v_gesamt_neu;
@@ -418,7 +418,7 @@ select nr, pruefung, erwartet, gefunden,
   from p order by nr;
 
 
--- Der Goenner im Ergebnis — fuenf Pflicht, sieben aus, sonst nichts.
+-- Der Supporter im Ergebnis — fuenf Pflicht, sieben aus, sonst nichts.
 
 select mt.name, k.modus, array_agg(k.schluessel order by k.schluessel) as schluessel
   from public.mitgliedtypen mt

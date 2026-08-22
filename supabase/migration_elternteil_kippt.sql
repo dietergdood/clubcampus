@@ -97,8 +97,8 @@ begin
         or ableitung = 'eltern_kinder_ehemalig');
 
   -- ─── B · Die Art anlegen, je Verein ─────────────────────────────────────
-  /* Nach „Supporter" (20) einsortiert: wer Goenner UND ehemaliges Elternteil
-     ist, wird als Goenner gefuehrt — das ist die Aussage, mit der der Verein
+  /* Nach „Supporter" (20) einsortiert: wer Supporter UND ehemaliges Elternteil
+     ist, wird als Supporter gefuehrt — das ist die Aussage, mit der der Verein
      etwas anfangen kann. Die kleinste sort_order gewinnt (bestimmendeArt).
 
      `standard_rolle` bleibt leer: sie wird nur beim Austritt eines MITGLIEDS

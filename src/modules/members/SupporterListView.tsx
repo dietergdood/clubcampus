@@ -18,7 +18,7 @@
    gefiltert, sortiert und gruppiert wird mit denselben Funktionen.
    Nur die Auswahl der Spalten ist eine andere: Mitgliedschaft,
    Eintritt, Spielerpass, Teams und Kaderrollen gibt es bei einem
-   Gönner nicht.
+   Supporter nicht.
    ═══════════════════════════════════════════════════════════════ */
 import { ListView } from "../../shared/list/ListView.tsx";
 import { spalte, spalten, personGruppe } from "../../shared/person/personSpalten.ts";
@@ -35,24 +35,24 @@ import type { Account, Sb } from "../../types.ts";
    ⚠ `eintritt` ist hier entfallen. Es kommt aus `mitglieder.eintrittsdatum`
    und ist bei einer Person ohne Mitgliedschaft strukturell leer — die Spalte
    haette in JEDER Zeile "-" gezeigt und damit ausgesehen wie ein Datenloch,
-   das jemand fuellen koennte. Wenn ein Goenner ein "dabei seit" bekommen
+   das jemand fuellen koennte. Wenn ein Supporter ein "dabei seit" bekommen
    soll, braucht das eine eigene Angabe; siehe den offenen Punkt
    „Supporter-Liste ueberarbeiten". */
 /* ⚠ ALLE ZWANZIG PERSONENSPALTEN, nicht mehr fuenf. Was einer Person
-   gehoert, gilt auch fuer einen Goenner — bis zum 22.08.2026 bot diese
+   gehoert, gilt auch fuer einen Supporter — bis zum 22.08.2026 bot diese
    Liste nur Name, E-Mail, Telefon, Ort und Portal an, und wer die Adresse
    oder das Geburtsdatum brauchte, musste jedes Profil einzeln oeffnen.
 
    Die acht Mitgliedschafts-Spalten fehlen weiterhin, und zwar strukturell:
-   ein Goenner hat keinen Mitgliedtyp, kein Eintrittsdatum, keinen Kader.
+   ein Supporter hat keinen Mitgliedtyp, kein Eintrittsdatum, keinen Kader.
    Sie waeren nicht leer, sondern gegenstandslos. */
 const STANDARD_KEYS = ["name", "art", "email", "telefon", "ort", "portal"];
 
 const COL_GROUPS: ColGroup[] = [
   { group: "Person", cols: [
     spalte("name", { default: true, alwaysOn: true }),
-    /* „Art" ist bei einem Goenner die einzige Einteilung, die es gibt —
-       Goenner, Ehemaliger, spaeter externer Trainer. Deshalb vorgegeben. */
+    /* „Art" ist bei einem Supporter die einzige Einteilung, die es gibt —
+       Supporter, Ehemaliger, spaeter externer Trainer. Deshalb vorgegeben. */
     { key: "art", label: "Art", default: true },
     ...spalten(["nachname", "vorname", "geburtsdatum", "alter", "geschlecht",
                 "nationalitaet", "nationalitaet2", "heimatort", "ahv_nr"]),
@@ -66,7 +66,7 @@ const COL_GROUPS: ColGroup[] = [
 
 const COL_DEFS: ColDef[] = COL_GROUPS.flatMap(g => g.cols);
 
-/* Nur die Filter und Gruppierungen, die bei einem Goenner etwas bedeuten:
+/* Nur die Filter und Gruppierungen, die bei einem Supporter etwas bedeuten:
    eine Mitgliedschaft hat er nicht, Teams und Kaderrollen ebenso wenig. */
 const FILTER_DEFS: FilterDef[] = [
   { key: "art",    label: "Art" },
@@ -98,7 +98,7 @@ interface SupporterListViewProps {
   /** Klick auf eine Zeile — oeffnet das schlanke Supporter-Modal. */
   onOeffnen?: ((row: MemberRow) => void) | null;
   /* ⚠ ZWEI Sammelaktionen, und beide sind KEIN Loeschen. Archivieren setzt
-     eine Mitgliedschaft auf inaktiv — ein Goenner hat keine. Und geloescht
+     eine Mitgliedschaft auf inaktiv — ein Supporter hat keine. Und geloescht
      wird eine Person nie: sie ist der Bezugspunkt von Konto,
      Helfereinsaetzen und Verlauf. Das Loeschen kommt mit Etappe 3, und ein
      Knopf, der bis dahin „Loeschen" hiesse und die Person stehen liesse,

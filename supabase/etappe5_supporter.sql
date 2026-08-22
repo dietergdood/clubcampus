@@ -95,7 +95,7 @@ commit;
 -- ║                                                                         ║
 -- ║ Ein Vereinsmitglied ist NICHT dasselbe wie ein Supporter: Passiv-,      ║
 -- ║ Ehren- und Freimitglieder sind Mitglieder des Vereins mit Stimmrecht    ║
--- ║ an der GV, ein Supporter ist Goenner von aussen. Deshalb eine eigene    ║
+-- ║ an der GV, ein Supporter ist Supporter von aussen. Deshalb eine eigene    ║
 -- ║ Rolle und nicht der bequeme Ersatz durch supporter.                     ║
 -- ╚═════════════════════════════════════════════════════════════════════════╝
 

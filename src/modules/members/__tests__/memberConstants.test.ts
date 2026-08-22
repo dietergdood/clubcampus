@@ -3,7 +3,7 @@
 
    ⚠ WOZU DIESE DATEI. Am 22.08.2026 sind die 20 personengebundenen
    Spalten nach `shared/person/personSpalten.ts` gezogen, damit die
-   Eltern-, Gönner- und Archivliste dieselben verwenden. Beim Umzug
+   Eltern-, Supporter- und Archivliste dieselben verwenden. Beim Umzug
    darf die Mitgliederliste NICHTS verlieren — und ein Verlust wäre
    still:
 

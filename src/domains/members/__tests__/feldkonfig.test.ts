@@ -20,7 +20,7 @@ import {
 import type { FeldkonfigZeile } from "../feldkonfig.ts";
 
 /* So sieht der FCH-Bestand nach der Migration vom 19.08.2026 aus:
-   der Goenner hat fuenf Pflichtfelder und sieben Schluessel auf "aus",
+   der Supporter hat fuenf Pflichtfelder und sieben Schluessel auf "aus",
    ein Aktivmitglied hat Pflichtfelder und ein abgewaehltes Feld. */
 const zeilen: FeldkonfigZeile[] = [
   { mitgliedtyp_id: "t1", mitgliedtyp: "Aktivmitglied", art_id: null, art: "" as const, schluessel: "geburtsdatum", modus: "pflicht" },
@@ -113,7 +113,7 @@ describe("istSichtbar / istPflicht", () => {
 
 describe("istBereichSichtbar", () => {
   it("blendet einen Bereich aus, dessen Eintraege alle 'aus' sind", () => {
-    /* Sonst bliebe beim Goenner eine leere Karte "Teams" stehen — genau
+    /* Sonst bliebe beim Supporter eine leere Karte "Teams" stehen — genau
        das, was istSupporter in InfoTab bisher von Hand verhindert hat. */
     const k = getFeldkonfig(fuerMitgliedtyp("Supporter"), zeilen);
     expect(istBereichSichtbar(k, "teams")).toBe(false);
@@ -251,7 +251,7 @@ describe("Registry", () => {
    Die Achse „ohne Mitgliedschaft" (21.08.2026)
 
    Vorher hatte `getFeldkonfig(null, …)` ein `if (!mitgliedtyp)
-   return konfig;` und lieferte ALLES auf freiwillig — ein Gönner
+   return konfig;` und lieferte ALLES auf freiwillig — ein Supporter
    bekam jede Karte und jeden Tab. Der Elternteil hatte daneben
    einen fest verdrahteten Satz in getProfilCheck, also einen
    zweiten Konfigurationsort.
