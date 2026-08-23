@@ -62,8 +62,9 @@
 --
 --   1. Diesen Block ausfuehren.
 --   2. Ueber die normale Anmeldemaske registrieren (Adresse siehe unten).
---   3. Gegenpruefen: `benutzer.role` muss `trainer` sein — NICHT von Hand
---      setzen. Steht dort etwas anderes, ist die Kaderrolle das Problem.
+--   3. ⚠ ES STEHT `spieler`, NICHT `trainer` — UND DAS IST KEIN FEHLER DER
+--      DATEN, SONDERN ZWEI REGELN FUER DIESELBE FRAGE. Siehe den Abschnitt
+--      „Zwei Rechnungen fuer die Rolle" weiter unten.
 --   4. Rueckbau am Ende dieser Datei.
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -169,10 +170,36 @@ $mig$;
 --
 --   Erwartet: role = 'trainer', ist_admin = false.
 --
--- ⚠ Steht dort `spieler`, traegt die gewaehlte Kaderrolle kein `ist_trainer`.
---   Dann ist NICHT die Rolle von Hand zu setzen — sondern die Kaderrolle zu
---   berichtigen. Eine gesetzte Rolle ueberlebt den naechsten Kaderwechsel
---   nicht.
+-- ⚠ ZWEI RECHNUNGEN FUER DIE ROLLE — gemessen am 23.08.2026, nachdem dieser
+--   Block schon lief. Hier stand vorher „Erwartete Rolle: trainer". Das war
+--   falsch, und der Fehler war meiner: ich hatte aus `ableitRolle()` gelesen
+--   (Frontend) und nicht aus dem, was bei der Registrierung tatsaechlich
+--   laeuft.
+--
+--     handle_new_user()   liest NUR `mitgliedtypen.standard_rolle`
+--                         Aktivmitglied -> `spieler`
+--     ableitRolle()       liest ZUERST die Kaderrollen
+--                         Kadereintrag mit ist_trainer -> `trainer`
+--
+--   Beide beantworten „welche Portalrolle hat diese Person?" und geben fuer
+--   DIESELBE Person verschiedene Antworten. Der Trigger gewinnt bei der
+--   Registrierung, die Ableitung beim naechsten Kader-, Team- oder
+--   Funktionswechsel. Die Rolle kippt also irgendwann von selbst — nur weiss
+--   niemand, wann.
+--
+--   ⚠ DAS IST DIE DRITTE STELLE DIESER ART an einem Tag (nach den drei
+--   Rechnungen fuer die Pflichtfelder und den zwei fuer den Portal-Zugang).
+--   Gemeinsames Merkmal: keine Prueferkette wird rot, weil beide Antworten
+--   fuer sich genommen plausibel sind.
+--
+--   WAS ZU TUN IST — eine Entscheidung, kein Handgriff:
+--     (a) `handle_new_user()` die Kaderrollen mitlesen lassen. Dann stimmen
+--         beide ueberein. Es ist eine Migration am Registrierungspfad, der
+--         demnaechst 371 Familien traegt — nicht nebenbei.
+--     (b) Bis dahin: `benutzer.role` nach der Registrierung auf `trainer`
+--         setzen. ⚠ Das ist hier AUSNAHMSWEISE kein fragiles Ueberschreiben,
+--         weil `ableitRolle()` denselben Wert ergaebe — man nimmt die
+--         Ableitung nur vorweg.
 --
 --
 -- RUECKBAU (Person-Id aus der NOTICE einsetzen)

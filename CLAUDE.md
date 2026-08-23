@@ -790,6 +790,38 @@ aus".
 das nicht die fehlende Wirkung — die kommt über `pflichtfelderFuer()` —,
 sondern eine zweite, tote Rechnung daneben. Siehe den Punkt darunter.
 
+### ⚠ Zwei Rechnungen für die Portalrolle — `handle_new_user()` gegen `ableitRolle()`
+
+Befund vom 23.08.2026, beim Anlegen eines Trainer-Testzugangs.
+
+| | liest | ergibt für dieselbe Person |
+|---|---|---|
+| `handle_new_user()` (DB-Trigger, bei der **Registrierung**) | **nur** `mitgliedtypen.standard_rolle` | Aktivmitglied → **`spieler`** |
+| `ableitRolle()` (`roleUtils.ts`, bei jeder Kader-/Team-/Funktionsänderung) | **zuerst** die Kaderrollen | Kadereintrag mit `ist_trainer` → **`trainer`** |
+
+Beide beantworten dieselbe Frage und geben verschiedene Antworten. Der Trigger
+gewinnt bei der Registrierung, die Ableitung beim nächsten Kaderwechsel —
+**die Rolle kippt also irgendwann von selbst, und niemand weiss wann.**
+
+⚠ **Aufgefallen ist es nur, weil ich es falsch aufgeschrieben hatte.** In
+`testkonto_trainer.sql` stand „Erwartete Rolle: trainer"; ich hatte aus
+`ableitRolle()` gelesen und angenommen, das sei der Weg. Gemessen war es der
+Trigger, und der sagt `spieler`. **Ohne die Gegenprobe wäre der Zugang als
+„Trainer" in Betrieb gegangen und hätte Trainer-Rechte nie gehabt** — und
+jede Messung an ihm hätte etwas anderes geprüft als das, was drauf steht.
+Dieselbe Falle wie „Trainer Tester" mit der Rolle `supporter`, nur eine
+Ebene tiefer.
+
+**Das ist die dritte Stelle dieser Art**, nach den drei Rechnungen für die
+Pflichtfelder und den zwei für den Portal-Zugang. Gemeinsames Merkmal: keine
+Prüfkette wird rot, weil **beide Antworten für sich genommen plausibel sind**.
+
+**Zu entscheiden, nicht nebenbei zu machen:** `handle_new_user()` die
+Kaderrollen mitlesen lassen — das ist eine Migration am Registrierungspfad,
+der demnächst 371 Familien trägt. Bis dahin `benutzer.role` nach der
+Registrierung setzen; das ist hier ausnahmsweise **kein** fragiles
+Überschreiben, weil `ableitRolle()` denselben Wert ergäbe.
+
 ### ⚠ Drei Rechnungen für dieselbe Frage — und 21 Tests hängen an der toten
 
 Befund vom 22.08.2026. „Welche Pflichtfelder sind leer, und welche davon kann
