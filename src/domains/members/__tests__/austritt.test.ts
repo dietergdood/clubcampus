@@ -31,7 +31,6 @@ describe("bleibtMitglied — die eine Frage, an der alles hängt", () => {
   it("trennt Typwechsel von Austritt", () => {
     expect(bleibtMitglied({ art: "typwechsel", mitgliedtyp: "Ehrenmitglied" })).toBe(true);
     expect(bleibtMitglied({ art: "beenden" })).toBe(false);
-    expect(bleibtMitglied({ art: "archiv" })).toBe(false);
   });
 });
 
@@ -61,12 +60,25 @@ describe("beendeMitgliedschaft — die Art nach dem Austritt", () => {
     expect(hinweise.join(" ")).toContain("Ehemalige");
   });
 
-  it("⚠ schreibt KEINE Art beim Archiv — sonst stünde die Person an zwei Orten", async () => {
+  it("⚠ schreibt die Art AUCH, wenn der Zugang endet — umgedreht am 23.08.2026", async () => {
+    /* Hier stand das Gegenteil: „schreibt KEINE Art beim Archiv — sonst
+       stünde die Person an zwei Orten". Das war richtig, solange Archiv ein
+       ORT war: wer die Art bekam, stand bei den Supportern UND im Archiv.
+
+       Seit „ein Mensch, ein Ort" ist das Archiv eine MARKIERUNG. Wer
+       austritt, gehört in die Supporter-Liste — immer, unabhängig davon, ob
+       der Portal-Zugang endet. Ohne Art stünde er nach dem Umbau in KEINER
+       Liste, und das ist schlechter als in zweien.
+
+       ⚠ Der Fall wurde nicht angepasst, bis er grün war — er wurde
+       umgedreht, weil sich die REGEL geändert hat. Der Unterschied gehört
+       benannt, sonst liest ihn der Nächste als Reparatur. */
     const sb = makeSb(MIT_ZIEL);
     await beendeMitgliedschaft(sb as never, {
-      mitgliedId: 42, vereinId: "v-1", ziel: { art: "archiv" }, personId: "p-1",
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "beenden" }, personId: "p-1",
+      zugangBeenden: true,
     });
-    expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
+    expect(sb.find("personenart_pro_person", "upsert")).toBeTruthy();
   });
 
   it("ohne eingestelltes Ziel sagt es das, statt still nichts zu tun", async () => {
@@ -223,7 +235,7 @@ describe("Archiv — Knopf und Austritt", () => {
        ein Konto. Das ist keine Absicherung. */
     const sb = makeSb(MIT_ALLEM);
     await beendeMitgliedschaft(sb as never, {
-      mitgliedId: 42, vereinId: "v-1", ziel: { art: "archiv" },
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "beenden" }, zugangBeenden: true,
       personId: "p-1", benutzerId: "b-1", am: "2026-08-22",
     });
     const konto = sb.opsOn("benutzer").find(r => r.op === "update");
@@ -250,7 +262,7 @@ describe("Archiv — Knopf und Austritt", () => {
   it("⚠ hält fest, WER beendet hat — auf beiden Wegen", async () => {
     const sb = makeSb(MIT_ALLEM);
     await beendeMitgliedschaft(sb as never, {
-      mitgliedId: 42, vereinId: "v-1", ziel: { art: "archiv" },
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "beenden" }, zugangBeenden: true,
       personId: "p-1", am: "2026-08-22", deaktiviertVon: "Didi",
     });
     expect(sb.find("mitglieder", "update")!.payload).toEqual(
@@ -260,7 +272,7 @@ describe("Archiv — Knopf und Austritt", () => {
   it("das Datum bleibt der Unterschied: der Austritt ist rückdatierbar", async () => {
     const sb = makeSb(MIT_ALLEM);
     await beendeMitgliedschaft(sb as never, {
-      mitgliedId: 42, vereinId: "v-1", ziel: { art: "archiv" },
+      mitgliedId: 42, vereinId: "v-1", ziel: { art: "beenden" }, zugangBeenden: true,
       personId: "p-1", am: "2026-07-01",
     });
     expect(String(sb.find("mitglieder", "update")!.payload.deaktiviert_am)).toContain("2026-07-01");

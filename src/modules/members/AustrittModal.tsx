@@ -39,7 +39,7 @@ import type { AustrittsZiel } from "../../domains/members/supporterService.ts";
 
 /** Die Auswahl im Modal — ein Schlüssel je Zeile, damit der Radio-Knopf
     einen String hat und nicht ein Objekt. */
-type ZielKey = "beenden" | "archiv" | `typ:${string}`;
+type ZielKey = "beenden" | `typ:${string}`;
 
 export interface AustrittModalProps {
   open: boolean;
@@ -55,7 +55,11 @@ export interface AustrittModalProps {
       → `personenarten.name`). Fehlt sie, sagt das Modal das auch — es
       behauptet nicht „Supporter". */
   austrittsart?: string | null;
-  onAustritt: (ziel: AustrittsZiel, am: string) => Promise<{ fehler: string | null; hinweise: string[] }>;
+  onAustritt: (
+    ziel: AustrittsZiel,
+    am: string,
+    extras: { offenePunkte: string | null; zugangBeenden: boolean },
+  ) => Promise<{ fehler: string | null; hinweise: string[] }>;
 }
 
 export function AustrittModal({
@@ -64,6 +68,9 @@ export function AustrittModal({
 }: AustrittModalProps) {
   const [ziel, setZiel]       = useState<ZielKey | "">("");
   const [am, setAm]           = useState("");
+  /* ⚠ Zwei Fragen, zwei Zustaende — nicht ein Wort, das beides meint. */
+  const [offen, setOffen]     = useState("");
+  const [zugangWeg, setZugangWeg] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [fehler, setFehler]   = useState<string | null>(null);
   const [hinweise, setHinweise] = useState<string[]>([]);
@@ -72,6 +79,8 @@ export function AustrittModal({
     if (!open) return;
     setZiel("");
     setAm(new Date().toISOString().slice(0, 10));
+    setOffen("");
+    setZugangWeg(false);
     setFehler(null);
     setHinweise([]);
   }, [open]);
@@ -89,13 +98,14 @@ export function AustrittModal({
            gleich aus. Was tatsächlich geschieht, sagt der Hinweis nach dem
            Ausführen — dort liest der Service die Einstellung selbst. */
         : "Die Mitgliedschaft endet, die Person bleibt erreichbar. ⚠ Es ist keine Art nach dem Austritt bekannt — bitte in der Portalverwaltung unter Mitglieder-Konfiguration prüfen." },
-    { wert: "archiv", bleibt: false,
-      titel: "Archiv",
-      /* ⚠ Berichtigt am 22.08.2026. Hier stand „der Kontakt wird nicht
-         weitergeführt" — das war die alte Bedeutung. Archiv heisst
-         „ausgetreten, aber noch etwas offen": Beitrag, Rechnung, Material.
-         Ein Fehleintrag wird gelöscht, nicht archiviert. */
-      text: "Die Mitgliedschaft endet und es ist noch etwas offen — Beitrag, Rechnung, Material. Die Person bleibt im Archiv auffindbar, bis das erledigt ist." },
+    /* ⚠ „ARCHIV" IST SEIT DEM 23.08.2026 KEINE ANTWORT MEHR. Es war nie eine
+       Antwort auf „was gilt danach?", sondern drei Entscheidungen in einem
+       Wort: Mitgliedschaft beenden (wie „beenden"), Portal-Zugang abschalten
+       (das Einzige, was nur Archiv tat, und im Text stand kein Wort davon),
+       und auffindbar bleiben (jetzt die Markierung).
+
+       Die zwei Häkchen darunter machen daraus zwei sichtbare Fragen. Ein
+       Wort, das drei Dinge tut, kann keines davon benennen. */
     ...mitgliedtypen.map(t => ({
       wert: `typ:${t.name}` as ZielKey, bleibt: true,
       titel: t.name,
@@ -108,7 +118,6 @@ export function AustrittModal({
   /** Von der Auswahl im Modal zur Aussage im Service. */
   function zumZiel(k: ZielKey): AustrittsZiel {
     if (k === "beenden") return { art: "beenden" };
-    if (k === "archiv") return { art: "archiv" };
     return { art: "typwechsel", mitgliedtyp: k.slice(4) };
   }
 
@@ -116,7 +125,10 @@ export function AustrittModal({
     if (!ziel) return;
     setSaving(true);
     setFehler(null);
-    const { fehler: f, hinweise: h } = await onAustritt(zumZiel(ziel), am);
+    const { fehler: f, hinweise: h } = await onAustritt(zumZiel(ziel), am, {
+      offenePunkte: offen.trim() || null,
+      zugangBeenden: zugangWeg,
+    });
     setSaving(false);
     if (f) { setFehler(f); return; }
     /* Nicht sofort schliessen: die Hinweise sagen, was tatsächlich geschehen
@@ -173,15 +185,36 @@ export function AustrittModal({
               <Input type="date" value={am} onChange={e => setAm(e.target.value)} />
             </label>
 
+            {/* ⚠ ZWEI FRAGEN, DIE FRUEHER IN „ARCHIV" STECKTEN — jetzt einzeln
+                und beantwortbar. Sie gelten unabhaengig vom Ziel: auch ein
+                Typwechsel kann etwas offen lassen. */}
+            <div className="cc-section-title">Danach noch offen?</div>
+            <label className="cc-field">
+              <Label>Was ist offen? (leer = nichts)</Label>
+              <Input value={offen} onChange={e => setOffen(e.target.value)}
+                     placeholder="z.B. Beitrag 2026, Tenue nicht zurück" />
+            </label>
+            {offen.trim() !== "" && (
+              <InfoBox color={AM} text="Die Person erscheint im Archiv, bis der Vermerk entfernt wird." />
+            )}
+
+            {gewaehlt && !gewaehlt.bleibt && hatKonto && (
+              <label className="cc-row cc-gap-6" style={{ marginTop: 8, cursor: "pointer" }}>
+                <input type="checkbox" checked={zugangWeg}
+                       onChange={e => setZugangWeg(e.target.checked)} />
+                <span>Portal-Zugang beenden</span>
+              </label>
+            )}
+
             {/* Was der gewählte Weg konkret anfasst — vor dem Klick, nicht danach. */}
             {gewaehlt && !gewaehlt.bleibt && (
               <InfoBox color={AM} text={
                 `Kadereinträge werden beendet${hatKonto ? ", laufende Vereinsfunktionen bekommen dieses Datum als Ende" : ""}. `
-                + (gewaehlt.wert === "beenden"
-                    ? (hatKonto
-                        ? `Das Portal-Konto bleibt bestehen${austrittsart ? `, die Rolle richtet sich nach der Art „${austrittsart}"` : ""}.`
-                        : "Diese Person hat kein Portal-Konto — sie bleibt über E-Mail und Telefon erreichbar.")
-                    : "Die Person bleibt im Archiv auffindbar.")} />
+                + (!hatKonto
+                    ? "Diese Person hat kein Portal-Konto — sie bleibt über E-Mail und Telefon erreichbar."
+                    : zugangWeg
+                      ? "Das Portal-Konto wird deaktiviert — ausser die Person hat noch ein aktives Kind im Verein."
+                      : `Das Portal-Konto bleibt bestehen${austrittsart ? `, die Rolle richtet sich nach der Art „${austrittsart}"` : ""}.`)} />
             )}
 
             {fehler && <InfoBox color={R} text={fehler} />}

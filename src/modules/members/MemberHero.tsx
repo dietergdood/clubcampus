@@ -12,7 +12,7 @@ import { TI } from "../../icons.tsx";
 import { PersonLoeschenModal } from "./PersonLoeschenModal.tsx";
 import type { PersonArt } from "../../domains/person/personArtService.ts";
 import { heroChips } from "../../domains/roles/roleUtils.ts";
-import { updatePersonFoto, deletePersonFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
+import { updatePersonFoto, deletePersonFoto, deleteMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, PersonZeile } from "../../types.ts";
 /* Nicht KaderRolle aus types.ts: dort ist aktiv Pflicht, MemberDetail reicht
    aber KaderRolleDb durch. KaderRolleMitTrainerFlag verlangt nur, was hier gelesen
@@ -263,18 +263,32 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
             </div>
             {(canEdit||canDelete)&&(
               <div className="cc-hero-menu-trigger"><DropMenu items={[
-                /* „Austritt" steht VOR „Archivieren" und ist der gemeinte Weg:
-                   er fragt, was danach gilt. Archivieren bleibt daneben, weil
-                   es etwas anderes ist — eine Mitgliedschaft stilllegen, ohne
-                   ueber den Kontakt zu entscheiden (Fehleintrag, Dublette). */
+                /* „Austritt" ist der Weg hinaus, und seit dem 23.08.2026 der
+                   EINZIGE: er fragt, was danach gilt, was noch offen ist und
+                   ob der Zugang endet. „Mitgliedschaft löschen" daneben ist
+                   kein zweiter Austritt, sondern der Weg fuer einen
+                   Fehleintrag oder eine Dublette — da war nie jemand Mitglied.
+
+                   ⚠ Der Kommentar hier beschrieb bis heute „Archivieren", das
+                   es nicht mehr gibt. Ein Kommentar, der einen entfernten
+                   Knopf erklaert, ist schlimmer als keiner: er laesst den
+                   Leser suchen. */
                 /* Ohne Mitgliedschaft steht hier der Weg hinein statt der
                    Wege hinaus. Kein ausgegrauter Knopf: was es nicht gibt,
                    erscheint nicht. */
                 ...(canEdit&&mitgliedId==null&&onMitgliedWerden?[{icon:"user-plus",label:"Mitglied werden…",onClick:onMitgliedWerden}]:[]),
                 ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false&&onAustritt?[{icon:"door-exit",label:"Austritt…",onClick:()=>onAustritt(mitgliedId)}]:[]),
-                ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false?[{icon:"archive",label:"Archivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} archivieren?`,message:"Archiv heisst: ausgetreten, aber noch etwas offen — Beitrag, Rechnung, Material. Ein Fehleintrag wird gelöscht, nicht archiviert. Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok||!sb)return;if(!vereinId){console.error("Archivieren ohne vereinId — nichts getan.");return;}const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,{ personId: raw.person_id, mitgliedId },vereinId,AKTIVITAET_TYP.ARCHIVIERT,"Mitglied archiviert",null,null,n);await archiviereMitglied(sb, [mitgliedId], n, vereinId);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,false);if(onReload)onReload(mitgliedId);if(onRefreshCount)onRefreshCount();}}]:[]),
+                /* ⚠ „ARCHIVIEREN" IST AM 23.08.2026 WEGGEFALLEN. Es tat seit
+                   dem 22.08. dasselbe wie der Austritt — dieselbe Funktion
+                   `beendeVerknuepfungen()`, nur ohne waehlbares Datum und
+                   ohne die Frage, was danach gilt. Zwei Knoepfe fuer einen
+                   Vorgang, von denen einer weniger fragt, sind keine Wahl,
+                   sondern eine Falle: man klickt den kuerzeren.
+
+                   Was er allein konnte, ist in den Austritt gewandert: das
+                   Haekchen „Portal-Zugang beenden". Und was er BEDEUTETE —
+                   „noch etwas offen" — ist die Markierung. */
                 ...(mitgliedId!=null&&raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,{ personId: raw.person_id, mitgliedId },vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, mitgliedId);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(mitgliedId);else if(onReload)onReload(mitgliedId);}}]:[]),
-                "sep" as const,
                 /* ⚠ Hiess bis zum 21.08.2026 nur „Löschen" — und in den Sammelaktionen
                    sogar „Löschen (DSGVO)". Beides versprach etwas, das nicht
                    geschieht: `deleteMitglied()` entfernt die MITGLIEDSCHAFT, die
@@ -283,7 +297,13 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
                    Schönheitsfehler — wer den Knopf benutzt hat, glaubt es erledigt.
                    Nur der Text ist geändert; das echte Löschen ist ein eigenes
                    Vorhaben mit Vorschau und Edge Function fuer auth.users. */
-                ...(mitgliedId!=null?[{icon:"trash",label:"Mitgliedschaft löschen",danger:true,onClick:handleLoeschen}]:[]),
+                ...(mitgliedId!=null?["sep" as const,{icon:"trash",label:"Mitgliedschaft löschen",danger:true,onClick:handleLoeschen}]:[]),
+                /* ⚠ DER TRENNER GEHOERT ZWISCHEN DIE ZWEI LOESCHZEILEN, nicht
+                   davor. Sie unterscheiden sich nur im Substantiv, beide rot,
+                   beide mit Papierkorb — die Trennung muss aus dem ABSTAND
+                   kommen, nicht aus dem Lesen zweier aehnlicher Woerter.
+                   (Entscheidung Didi, 23.08.2026.) */
+                ...(mitgliedId!=null&&darfPersonLoeschen?["sep" as const]:[]),
                 /* ⚠ DIE ZWEITE, ECHTE LÖSCHAKTION — und sie steht bewusst
                    NEBEN der ersten, nicht statt ihr. „Mitgliedschaft löschen"
                    ist der Alltag (Fehleintrag, Dublette); dies hier ist das

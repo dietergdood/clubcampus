@@ -284,11 +284,21 @@ export type AustrittsZiel =
   /** Die Mitgliedschaft ENDET. Die Person wird zur eingestellten Art
       (`vereine.austritt_art_id`) und bleibt erreichbar. */
   | { art: "beenden" }
-  /** Die Mitgliedschaft ENDET, ohne Weiterfuehrung des Kontakts.
-      ⚠ Archiv heisst „ausgetreten, aber noch etwas offen" — Beitrag,
-      Rechnung, Material. Ein Fehleintrag wird geloescht, nicht archiviert.
-      (Bedeutung geklaert am 21.08.2026, Didi.) */
-  | { art: "archiv" }
+  /* ⚠ HIER STAND `{ art: "archiv" }`, BIS ZUM 23.08.2026.
+
+     „Archiv" war nie eine Antwort auf „was gilt danach?", sondern DREI
+     Entscheidungen in einem Wort:
+
+       1. die Mitgliedschaft endet        — dasselbe wie „beenden"
+       2. der Portal-Zugang wird beendet  — das Einzige, was NUR Archiv tat
+       3. die Person bleibt auffindbar    — jetzt die Markierung
+
+     Punkt 3 ist seit Schritt 2 `personen.offene_punkte`. Punkt 2 war die
+     stille Hälfte: wer „Archiv" wählte, sperrte nebenbei den Zugang aus, und
+     im Text des Modals stand davon kein Wort. Er ist jetzt ein eigenes
+     Häkchen — sichtbar statt mitgemeint.
+
+     ⚠ Ein Wort, das drei Dinge tut, kann keines davon benennen. */
   /** Die Mitgliedschaft BLEIBT, nur der Typ wechselt. Kader und Aemter
       bleiben. Der Name kommt aus `mitgliedtypen`, nicht aus dem Code. */
   | { art: "typwechsel"; mitgliedtyp: string };
@@ -313,6 +323,22 @@ export interface AustrittOptionen {
   deaktiviertVon?: string | null;
   /** Tag des Austritts. Ohne Angabe: heute. */
   am?: string | null;
+  /**
+   * Was bei dieser Person noch offen ist — Beitrag, Rechnung, Material.
+   *
+   * ⚠ NICHT LEER = die Person erscheint im Archiv. Das ist die Markierung,
+   * die den frueheren Ort ersetzt; sie haengt an der PERSON und wird von Hand
+   * gesetzt und entfernt.
+   */
+  offenePunkte?: string | null;
+  /**
+   * Den Portal-Zugang beenden.
+   *
+   * ⚠ DAS TAT FRUEHER „ARCHIV" NEBENBEI, ohne es zu sagen. Jetzt eine eigene
+   * Frage: wer austritt, muss den Zugang nicht verlieren — ein Supporter
+   * bleibt erreichbar und hilft weiter mit.
+   */
+  zugangBeenden?: boolean;
 }
 
 /**
@@ -396,7 +422,7 @@ export async function beendeMitgliedschaft(
      ⚠ NUR BEIM ARCHIV WIRD DAS KONTO DEAKTIVIERT. Beim Beenden mit
      Weiterfuehrung ist das Gegenteil der Zweck: die Person bleibt
      erreichbar und behaelt ihren Zugang, nur die Rolle wechselt. */
-  if (o.ziel.art === "archiv") {
+  if (o.zugangBeenden) {
     hinweise.push(...await beendeVerknuepfungen(sb, [o.mitgliedId], tag));
   } else {
     /* Kadereintraege beenden. Sie haengen am Mitglied und nicht an der Person —
@@ -419,7 +445,7 @@ export async function beendeMitgliedschaft(
        es — die Zeile ist der Nachweis. Die Spalte kam mit dem
        Supporter-Rueckbau (migration_supporter_rueckbau.sql, Block F).
        Beim Archiv erledigt das `beendeVerknuepfungen()`. */
-    if (o.ziel.art !== "archiv") {
+    if (!o.zugangBeenden) {
       const { error, count } = await sb.from("benutzer_funktionen")
         .update({ bis: tag }, { count: "exact" })
         .eq("benutzer_id", o.benutzerId).is("bis", null);
@@ -458,6 +484,32 @@ export async function beendeMitgliedschaft(
     }
   } else if (o.ziel.art === "beenden") {
     hinweise.push("Diese Person hat kein Portal-Konto — sie bleibt über E-Mail und Telefon erreichbar.");
+  }
+
+  /* Den Vermerk setzen — was noch offen ist. Steht VOR der Art, weil er
+     unabhaengig von ihr gilt: auch ein Typwechsel kann etwas offen lassen.
+
+     ⚠ GEZAEHLT, nicht nur `error` gelesen. Ein update ohne Treffer ist bei
+     PostgREST kein Fehler; ohne `.select("id")` stuende hier ein Hinweis
+     ueber einen Vermerk, den es nicht gibt. */
+  if (o.offenePunkte != null && o.offenePunkte.trim() !== "") {
+    let pid = o.personId ?? null;
+    if (!pid) {
+      const { data: m } = await sb.from("mitglieder")
+        .select("person_id").eq("id", o.mitgliedId).maybeSingle();
+      pid = (m?.person_id as string | null) ?? null;
+    }
+    if (!pid) {
+      hinweise.push("Der Vermerk konnte nicht gesetzt werden — die Person war nicht zu ermitteln.");
+    } else {
+      const { data, error } = await sb.from("personen")
+        .update({ offene_punkte: o.offenePunkte.trim() }).eq("id", pid).select("id");
+      if (error || !data || data.length === 0) {
+        hinweise.push("Der Vermerk konnte nicht gesetzt werden.");
+      } else {
+        hinweise.push("Im Archiv vermerkt: " + o.offenePunkte.trim());
+      }
+    }
   }
 
   /* Die Art setzen — nach dem Beenden, damit sie nicht steht, wenn der

@@ -269,6 +269,23 @@ export async function setzeArtFuerElternOhneKind(
  * Unterschiede, die bleiben, sind gewollt: das Datum ist HEUTE statt
  * waehlbar, und `deaktiviert_von` haelt fest, wer geklickt hat.
  */
+/**
+ * ⚠ SEIT DEM 23.08.2026 RUFT SIE NIEMAND MEHR.
+ *
+ * „Archivieren" ist als Knopf und als Sammelaktion weggefallen — es tat seit
+ * dem 22.08. dasselbe wie der Austritt, nur ohne waehlbares Datum und ohne
+ * die Frage, was danach gilt. Beide Wege gehen jetzt ueber
+ * `beendeMitgliedschaft()`.
+ *
+ * ⚠ SIE STEHT TROTZDEM NOCH HIER, und das ist eine Entscheidung, keine
+ * Nachlaessigkeit: sie ist der einzige Aufrufer von `beendeVerknuepfungen()`
+ * mit einer LISTE von Mitgliedschaften. Wer eines Tages einen Sammelvorgang
+ * ohne Dialog braucht, findet ihn hier statt ihn neu zu bauen.
+ *
+ * Wird sie in einem Monat immer noch von niemandem gerufen, gehoert sie
+ * geloescht — eine Funktion ohne Aufrufer ist sonst genau der tote Zweig, vor
+ * dem CLAUDE.md warnt.
+ */
 export async function archiviereMitglied(sb: SbClient, id: number | number[], deaktiviertVon: string | null, vereinId: string): Promise<PostgrestError | null> {
   const ids = Array.isArray(id) ? id : [id];
   const { error } = await sb.from("mitglieder").update({

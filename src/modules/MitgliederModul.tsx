@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
 import { Av, useConfirm } from "../theme.ts";
-import { archiviereMitglied, deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen, logAktivitaet, AKTIVITAET_TYP } from "../domains/members/memberService.ts";
+import { deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen, logAktivitaet, AKTIVITAET_TYP } from "../domains/members/memberService.ts";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
 import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
@@ -76,7 +76,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
   const [supporterRoh,setSupporterRoh]=useState<SupporterRoh[]>([]);
   const [mitgliedWerdenFuer,setMitgliedWerdenFuer]=useState<PersonFuerMitgliedschaft|null>(null);
-  const [austrittFuer,setAustrittFuer]=useState<Mitglied|null>(null);
+  /* ⚠ EINE LISTE, auch fuer einen. Zwei Zustaende — einer fuer die einzelne
+     Zeile, einer fuer die Auswahl — waeren zwei Wege zu demselben Dialog, und
+     beim naechsten Umbau gewinnt der aermere. (Dieselbe Lehre wie bei den
+     zwei Archiv-Wegen am 22.08.2026.) */
+  const [austrittFuer,setAustrittFuer]=useState<Mitglied[]|null>(null);
   /* Der Name der eingestellten Austritts-Art. Einmal beim Aufbau geholt, nicht
      beim Oeffnen des Modals — sonst zeigte es beim ersten Rendern noch nichts
      und der Titel spraenge. Fehlt sie, sagt das Modal das ausdruecklich,
@@ -216,11 +220,47 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   /* Austritt — die Gegenrichtung. Die Rueckfrage stellt AustrittModal; hier
      wird nur ausgefuehrt und protokolliert. */
-  async function fuehreAustrittAus(ziel: AustrittsZiel, am: string){
-    if(!sb||!vereinId||!austrittFuer) return { fehler:"Keine Verbindung zur Datenbank.", hinweise:[] };
+  /* ⚠ `extras` sind die zwei Fragen, die frueher im Wort „Archiv" steckten:
+     was ist noch offen, und soll der Zugang enden. Sie stehen getrennt, weil
+     sie unabhaengig sind — ein Typwechsel kann etwas offen lassen, und ein
+     Austritt muss den Zugang nicht kosten. */
+  async function fuehreAustrittAus(
+    ziel: AustrittsZiel, am: string,
+    extras?: { offenePunkte: string | null; zugangBeenden: boolean },
+  ){
+    if(!sb||!vereinId||!austrittFuer?.length) return { fehler:"Keine Verbindung zur Datenbank.", hinweise:[] };
+    /* ⚠ NACHEINANDER, nicht parallel: jeder Lauf liest die Austritts-Art und
+       kann den Ausloeser fuer die Eltern anstossen. Parallel liefen die
+       Aenderungen ineinander, und welche Zeile welchen Hinweis erzeugt hat,
+       waere nicht mehr zuzuordnen. */
+    const alleHinweise: string[] = [];
+    let gescheitert = 0;
+    for(const eintrag of austrittFuer){
+      const ergebnis = await einAustritt(eintrag, ziel, am, extras);
+      alleHinweise.push(...ergebnis.hinweise);
+      if(ergebnis.fehler){ gescheitert += 1; alleHinweise.push(`${eintrag.vorname} ${eintrag.nachname}: ${ergebnis.fehler}`); }
+    }
+    await ladeSupporter();
+    if(onReload) onReload();
+    setSelectedMember(null);
+    /* ⚠ Ein Fehlschlag bei einem von zwanzig ist kein Fehlschlag des Ganzen —
+       aber er wird GENANNT. Sonst sieht „erledigt" aus wie zwanzig. */
+    return gescheitert
+      ? { fehler:`${gescheitert} von ${austrittFuer.length} konnten nicht eingetragen werden.`, hinweise: alleHinweise }
+      : { fehler:null, hinweise: alleHinweise };
+  }
+
+  async function einAustritt(
+    eintrag: Mitglied, ziel: AustrittsZiel, am: string,
+    extras?: { offenePunkte: string | null; zugangBeenden: boolean },
+  ){
+    if(!sb||!vereinId) return { fehler:"Keine Verbindung zur Datenbank.", hinweise:[] as string[] };
+    const austrittFuer = eintrag;
     const benutzerId=await holeBenutzerId(austrittFuer.person_id);
     const { ok, fehler, hinweise } = await beendeMitgliedschaft(sb,{
       mitgliedId:austrittFuer.id, vereinId, ziel, benutzerId, am,
+      offenePunkte: extras?.offenePunkte ?? null,
+      zugangBeenden: extras?.zugangBeenden ?? false,
       /* Wer beendet, wird festgehalten — bis zum 22.08.2026 tat das nur der
          Knopf „Archivieren", und beim Austritt blieb deaktiviert_von leer. */
       deaktiviertVon: account?.name||account?.email||"Administrator",
@@ -235,15 +275,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     await logAktivitaet(sb,{ personId: austrittFuer.person_id, mitgliedId: austrittFuer.id },vereinId,
       bleibt?AKTIVITAET_TYP.ANGELEGT:AKTIVITAET_TYP.ARCHIVIERT,
       ziel.art==="typwechsel" ? `Mitgliedtyp gewechselt auf ${ziel.mitgliedtyp}`
-        : ziel.art==="archiv" ? `Austritt per ${am} — ins Archiv`
-        : `Austritt per ${am} — danach: ${austrittsart||"keine Art eingestellt"}`,
+        : `Austritt per ${am} — danach: ${austrittsart||"keine Art eingestellt"}`
+          + (extras?.zugangBeenden ? ", Portal-Zugang beendet" : "")
+          + (extras?.offenePunkte ? `, offen: ${extras.offenePunkte}` : ""),
       null,null,wer);
 
-    /* Beide Listen: die Person verlaesst die Mitgliederliste und erscheint —
-       bei „Supporter" — im Supporter-Tab. */
-    await ladeSupporter();
-    if(onReload) onReload();
-    setSelectedMember(null);
     return { fehler:null, hinweise };
   }
 
@@ -294,49 +330,24 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     if(onReload) onReload();
     if(failed>0) await confirm({title:"Nicht alle gelöscht",message:`${failed} von ${ids.length} Mitgliedern konnten nicht gelöscht werden — vermutlich bestehende Verknüpfungen (Kader/Eltern) oder fehlende Rechte.`,confirmLabel:"OK"});
   }
-  async function handleBulkDeactivate(selected: Set<RowId>){
-    if(!sb||!selected||selected.size===0) return;
-    const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok) return;
-    const ids=[...selected].map(Number);
-    const deaktiviertVon=account?.name||account?.email||"Administrator";
-    /* ⚠ Ohne `vereinId` waere die eingestellte Austritts-Art nicht lesbar —
-       das Archivieren liefe, der Ausloeser fuer die Eltern nicht. Ein halb
-       ausgefuehrter Vorgang ist schlechter als keiner. */
-    if(!vereinId){
-      await confirm({title:"Archivierung nicht möglich",message:"Der Verein ist nicht geladen — bitte die Seite neu laden.",confirmLabel:"OK"});
-      return;
-    }
-    const error=await archiviereMitglied(sb,ids,deaktiviertVon,vereinId);
-    if(error){
-      await confirm({title:"Archivierung fehlgeschlagen",message:"Die ausgewählten Mitglieder konnten nicht archiviert werden — bitte erneut versuchen.",confirmLabel:"OK"});
-      return;
-    }
-    if(onUpdatePortalZugang) await Promise.all(ids.map(id=>onUpdatePortalZugang(id,false)));
-    refreshArchivCount();
-    setArchivLoaded(false);
-    if(onReload) onReload();
+  /* ⚠ „ARCHIVIEREN" IST AM 23.08.2026 ZU „AUSTRITT…" GEWORDEN — und das ist
+     kein Umbenennen. Archivieren nahm zwanzig Zeilen ohne zu fragen, was
+     danach gilt; es setzte das heutige Datum und schaltete den Zugang ab.
+     Der Austritt fragt beides, fuer alle Ausgewaehlten gemeinsam: ein Datum,
+     ein Ziel, ein Haekchen.
+
+     ⚠ Und er ist kein Ersatz fuer zwanzig Einzeldialoge — genau das war der
+     Einwand. Wer zwanzig Junioren zum Saisonende austragen laesst, gibt EINE
+     Antwort, nicht zwanzig. */
+  function handleBulkAustritt(selected: Set<RowId>){
+    if(!selected||selected.size===0) return;
+    const ids=new Set([...selected].map(Number));
+    const treffer=dbMitglieder.filter(m=>ids.has(m.id));
+    /* ⚠ Findet die Liste weniger als ausgewaehlt, wird das GESAGT statt
+       stillschweigend weniger zu tun. */
+    if(treffer.length===0) return;
+    setAustrittFuer(treffer);
   }
-
-
-
-
-  useEffect(()=>{
-    if(!sb) return;
-    fetchArchivCount(sb).then(count=>setArchivCount(count));
-  },[sb,archivLoaded]);
-  useEffect(()=>{
-    if(!sb||!vereinId) return;
-    fetchAlleElternkontakte(sb,vereinId).then(data=>setElternCount(data.length));
-  },[sb,vereinId]);
-  useEffect(()=>{
-    if(!sb||!archivTab||archivLoaded) return;
-    fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
-  },[sb,archivTab,archivLoaded]);
-
-  /* Filter */
-  /* computed values are in MembersView */
-  /* ── Render ── */
-
   const JAHRGANG_MIN=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter((j): j is number => j!==null);return jgs.length?Math.min(...jgs):1940;},[allMembers]);
   const JAHRGANG_MAX=useMemo(()=>{const jgs=allMembers.map(m=>m.geburtsdatum?new Date(m.geburtsdatum).getFullYear():null).filter((j): j is number => j!==null);return jgs.length?Math.max(...jgs):new Date().getFullYear();},[allMembers]);
   const ALTER_MAX=useMemo(()=>{const alters=allMembers.map(m=>m.alter).filter((v): v is number => v!=null);return alters.length?Math.max(...alters):90;},[allMembers]);
@@ -382,7 +393,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   if(selectedMember) return (
     <MemberDetail
       m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}
-      onAustritt={istVerwaltung?(id=>{const mm=dbMitglieder.find(x=>x.id===id);if(mm)setAustrittFuer(mm);}):null}
+      onAustritt={istVerwaltung?(id=>{const mm=dbMitglieder.find(x=>x.id===id);if(mm)setAustrittFuer([mm]);}):null}
       /* ⚠ Ueber `personen`, nicht ueber `supporterRoh`: den Weg gibt es seit
          dem 21.08.2026 auch fuer ein Elternteil, und das steht in der
          Supporter-Liste per Definition nicht (sie zeigt Personen OHNE Kinder).
@@ -444,9 +455,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       <AustrittModal
         open={austrittFuer!==null}
         onClose={()=>setAustrittFuer(null)}
-        name={austrittFuer?vollname(austrittFuer):""}
-        mitgliedtyp={austrittFuer?.mitgliedtyp}
-        hatKonto={Boolean(austrittFuer?.hat_benutzer)}
+        /* ⚠ Bei mehreren steht die ZAHL statt eines Namens, und Mitgliedtyp
+           und Konto bleiben leer: sie waeren bei zwanzig Zeilen entweder
+           falsch oder eine Aufzaehlung, die niemand liest. Was der Dialog
+           dann NICHT sagen kann, sagt er auch nicht. */
+        name={!austrittFuer?.length ? "" : austrittFuer.length===1 ? vollname(austrittFuer[0]) : `${austrittFuer.length} Mitglieder`}
+        mitgliedtyp={austrittFuer?.length===1 ? austrittFuer[0].mitgliedtyp : null}
+        hatKonto={(austrittFuer||[]).some(a=>a.hat_benutzer)}
         mitgliedtypen={dbMitgliedtypen.filter(t=>t.aktiv!==false).map(t=>({name:t.name}))}
         austrittsart={austrittsart}
         onAustritt={fuehreAustrittAus}
@@ -638,7 +653,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         isAdmin={istVerwaltung}
         selectable
         bulkActions={[
-          {icon:"archive",  label:"Archivieren", onClick:handleBulkDeactivate},
+          {icon:"door-exit",label:"Austritt…",   onClick:handleBulkAustritt},
           {icon:"trash",    label:"Mitgliedschaft löschen", onClick:handleBulkDelete, danger:true, requiresSelection:true},
         ]}
         exportFn={canExport ? exportData : undefined}

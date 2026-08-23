@@ -183,34 +183,40 @@ describe('MitgliederModul — handleBulkDelete (H1)', () => {
   });
 });
 
-describe('MitgliederModul — handleBulkDeactivate (H1)', () => {
-  it('meldet Fehler und bricht ab, wenn archiviereMitglied einen Fehler liefert', async () => {
-    svc.archiviereMitglied.mockResolvedValue({ message: 'RLS' });
-    renderModul();
-    await act(async () => { await bulkAction('Archivieren')(new Set([1, 2])); });
+describe('⚠ Die Sammelaktion heisst „Austritt…" und SCHREIBT NICHTS', () => {
+  /* Bis zum 23.08.2026 hiess sie „Archivieren" und nahm n Zeilen ohne zu
+     fragen, was danach gilt: heutiges Datum, Zugang weg, fertig.
 
-    /* ⚠ `vereinId` ist seit dem 23.08.2026 PFLICHT: ohne sie liesse sich die
-       eingestellte Austritts-Art nicht lesen, und der Ausloeser fuer die
-       Eltern des archivierten Kindes liefe ins Leere. Der Fall nennt sie
-       deshalb ausdruecklich — ein `expect.anything()` haette den Wegfall
-       nicht bemerkt. */
-    expect(svc.archiviereMitglied).toHaveBeenCalledWith(sb, [1, 2], 'Test Admin', 'verein-1');
-    expect(h.confirmMock).toHaveBeenCalledWith(expect.objectContaining({ title: 'Archivierung fehlgeschlagen' }));
-    // Abbruch: kein Reload nach dem Fehler
+     ⚠ DIESE FAELLE WURDEN NICHT ANGEPASST, BIS SIE GRUEN WAREN — die REGEL
+     hat sich geaendert. Sie hielten fest, dass `archiviereMitglied` mit
+     genau diesen Argumenten laeuft; heute laeuft es dort gar nicht mehr,
+     weil die Aktion nur noch den Austrittsdialog OEFFNET. Der Unterschied
+     gehoert benannt, sonst liest ihn der Naechste als Reparatur.
+
+     Was bleibt, ist die schaerfere Zusage: die Sammelaktion darf fuer sich
+     genommen NICHTS schreiben. Wer zwanzig Zeilen auswaehlt und klickt, hat
+     noch nichts getan — er bekommt eine Frage. */
+  it('schreibt beim Klick nichts — sie öffnet nur den Dialog', async () => {
+    renderModul();
+    await act(async () => { await bulkAction('Austritt')(new Set([1, 2])); });
+
+    expect(svc.archiviereMitglied).not.toHaveBeenCalled();
+    expect(svc.deleteMitglied).not.toHaveBeenCalled();
     expect(onReload).not.toHaveBeenCalled();
+    /* ⚠ Und keine Rueckfrage: die Frage stellt der Dialog, nicht ein
+       confirm() davor. Zwei Rueckfragen hintereinander erzieht dazu, die
+       erste wegzuklicken. */
+    expect(h.confirmMock).not.toHaveBeenCalled();
   });
 
-  it('archiviert erfolgreich, meldet keinen Fehler und lädt neu', async () => {
+  it('⚠ es gibt keine Sammelaktion „Archivieren" mehr', () => {
+    /* Der Knopf tat seit dem 22.08.2026 dasselbe wie der Austritt, nur ohne
+       waehlbares Datum und ohne die Frage, was danach gilt. Zwei Knoepfe fuer
+       einen Vorgang, von denen einer weniger fragt, sind keine Wahl. */
     renderModul();
-    await act(async () => { await bulkAction('Archivieren')(new Set([1, 2])); });
-
-    /* ⚠ `vereinId` ist seit dem 23.08.2026 PFLICHT: ohne sie liesse sich die
-       eingestellte Austritts-Art nicht lesen, und der Ausloeser fuer die
-       Eltern des archivierten Kindes liefe ins Leere. Der Fall nennt sie
-       deshalb ausdruecklich — ein `expect.anything()` haette den Wegfall
-       nicht bemerkt. */
-    expect(svc.archiviereMitglied).toHaveBeenCalledWith(sb, [1, 2], 'Test Admin', 'verein-1');
-    expect(onReload).toHaveBeenCalled();
-    expect(h.confirmMock).toHaveBeenCalledTimes(1); // nur der initiale Dialog
+    const labels = (h.listViewProps.bulkActions || []).map(a => a.label);
+    expect(labels.some(l => /Archivieren/.test(l))).toBe(false);
+    expect(labels.some(l => /Austritt/.test(l))).toBe(true);
   });
 });
+
