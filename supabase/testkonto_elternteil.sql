@@ -60,6 +60,63 @@
 --   nach dem ROLLBACK   nichts stehengeblieben
 
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- DIE FUENF KONTEN — Bestandsaufnahme vom 23.08.2026
+--
+-- Gemessen, weil vor dem ersten scharfen Loeschlauf die Frage aufkam, welches
+-- Konto man dafuer ausgeben kann.
+--
+--   Person              Rolle           Mitgl.  Kinder  Kader
+--   Dieter Good         administrator     0       0       0    (ist_admin)
+--   Test Elternteil     eltern            0       1       0
+--   Funktionaer Tester  funktionaer       0       0       0
+--   Adrian Kaiser       spieler           1       0       7    echtes Mitglied
+--   Trainer Tester      supporter         0       0       0
+--
+-- ⚠ JEDES DER FUENF IST DAS EINZIGE SEINER ROLLE. Es gibt keinen zweiten
+--   Zugang, mit dem sich eine Rolle pruefen liesse — wer eines loescht, gibt
+--   die Pruefbarkeit dieser Rolle auf, bis es neu angelegt ist.
+--
+-- ⚠ UND „TRAINER TESTER" HAT DIE ROLLE `supporter`, NICHT `trainer`. Einen
+--   Trainer-Zugang gibt es ueberhaupt nicht. Der Name verspricht etwas, das
+--   die Rolle nicht haelt: wer damit Trainer-Verhalten prueft, prueft
+--   Supporter-Verhalten — und alles, was ein Trainer MEHR darf (`team`,
+--   `training`, `events` auf `verwalten`), faellt dabei nicht auf, weil es
+--   schlicht fehlt statt falsch zu sein.
+--
+--   Dieselbe Familie wie ein Filter auf einen Namen statt auf ein Merkmal:
+--   der Name steht in `personen`, die Rolle in `benutzer`, und niemand haelt
+--   sie gegeneinander.
+--
+-- ⚠ TEST ELTERNTEIL IST DER EINZIGE ELTERNTEIL MIT KONTO — 393 weitere
+--   Elternteile haben keines (gemessen 23.08.2026). Was ohne ihn nicht mehr
+--   von innen zu pruefen ist: `DatenpruefungEltern`, `personenStand()`, der
+--   „Mein Kind"-Befund und der Portal-Status einer Person ohne
+--   Mitgliedschaft. Alle vier stehen offen.
+--
+--
+-- LAEUFT DER BLOCK UNTEN NOCH? — Probelauf vom 23.08.2026
+--
+-- Gegen die laufende Datenbank, mit BEGIN … ROLLBACK und dem Zustand NACH
+-- einem Loeschen von Test Elternteil hergestellt:
+--
+--   Person angelegt      ja
+--   gewaehlter Junior    #634 Raphael Koch   ← NICHT mehr #633 Stefan Wenger
+--   Zahlen danach        388 / 371 / 3
+--
+-- ⚠ Dass ein ANDERER Junior gewaehlt wird, ist kein Fehler, sondern der
+--   Filter bei der Arbeit: Stefan Wenger hat inzwischen eine AHV-Nummer —
+--   erfasst beim Nachweis vom 20.08.2026 — und faellt damit aus
+--   `ahv_nr is null` heraus. Deshalb steht `ohne_ahv` jetzt bei 371 statt
+--   372. Der Block sucht sich das naechste Kind, dem der Nachweis noch etwas
+--   beweisen kann.
+--
+-- ⚠ WAS DER BLOCK NICHT TUT: das Anmeldekonto anlegen. Er legt die PERSON an;
+--   das Konto entsteht erst bei der Registrierung ueber die normale
+--   Anmeldemaske, und die verlangt die Bestaetigungsmail an die Adresse im
+--   Block. Nach einem Loeschen ist die Adresse in `auth.users` wieder frei.
+-- ═══════════════════════════════════════════════════════════════════════════
+
 do $mig$
 declare
   v_verein   uuid;
