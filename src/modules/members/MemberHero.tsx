@@ -41,15 +41,6 @@ interface MemberHeroProps {
   /** Läuft nach dem Löschen — die Person gibt es dann nicht mehr, der
       Aufrufer muss die Detailansicht schliessen und die Liste neu laden. */
   onPersonGeloescht?: (() => void) | null;
-  /**
-   * Öffnet die Rücknahme einer gerade angelegten Mitgliedschaft.
-   *
-   * ⚠ Ohne Callback erscheint der Eintrag nicht — und der Aufrufer setzt ihn
-   * nur, wo er einen Sinn hat: bei einer Person, die es schon VOR der
-   * Mitgliedschaft gab (Elternteil, Supporter). Wer als Mitglied angelegt
-   * wurde, gehört über „Person löschen" weg, nicht über die Rücknahme.
-   */
-  onRuecknahme?: ((mitgliedId: number) => void) | null;
   sb: Sb;
   /* Ohne ID lädt der Aufrufer die ganze Liste neu, mit ID nur das Mitglied */
   onReload?: ((id?: number) => void) | null;
@@ -99,7 +90,7 @@ interface MemberHeroProps {
   konfig: Record<string, FeldModus>;
 }
 
-function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig,darfPersonLoeschen=false,onPersonGeloescht=null,onRuecknahme=null}: MemberHeroProps){
+function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig,darfPersonLoeschen=false,onPersonGeloescht=null}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
@@ -257,6 +248,12 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
               {!raw.profil_geprueft_at&&<span className="cc-hero-status-pill cc-hero-status-pill-warn"><TI n="alert-triangle" size={11}/>Prüfung offen</span>}
             </div>
             {(canEdit||canDelete)&&(
+              /* ⚠ KEINE DREI PUNKTE MEHR, seit dem 24.08.2026. Sie sollten
+                 sagen „hier kommt ein Dialog" — nur oeffnet JEDER Eintrag hier
+                 einen, also unterschieden sie nichts. Und „Reaktivieren" trug
+                 sie nie, obwohl es ebenfalls fragt: es war keine Regel, nur
+                 eine Gewohnheit an vier von sechs Stellen. Eine Konvention,
+                 die an der Haelfte der Stellen gilt, ist keine. */
               <div className="cc-hero-menu-trigger"><DropMenu items={[
                 /* „Austritt" ist der Weg hinaus, und seit dem 23.08.2026 der
                    EINZIGE: er fragt, was danach gilt, was noch offen ist und
@@ -271,8 +268,14 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
                 /* Ohne Mitgliedschaft steht hier der Weg hinein statt der
                    Wege hinaus. Kein ausgegrauter Knopf: was es nicht gibt,
                    erscheint nicht. */
-                ...(canEdit&&mitgliedId==null&&onMitgliedWerden?[{icon:"user-plus",label:"Mitglied werden…",onClick:onMitgliedWerden}]:[]),
-                ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false&&onAustritt?[{icon:"door-exit",label:"Austritt…",onClick:()=>onAustritt(mitgliedId)}]:[]),
+                ...(canEdit&&mitgliedId==null&&onMitgliedWerden?[{icon:"user-plus",label:"Mitglied werden",onClick:onMitgliedWerden}]:[]),
+                /* ⚠ ZWEI EINTRAEGE, ZWEI UNTERTITEL. Seit dem 24.08.2026 hat das
+                   Menue genau zwei Wege hinaus, und beide heissen nach der
+                   HANDLUNG. Was sie unterscheidet, ist die FOLGE — und die
+                   stand nirgends. Bei zwei Eintraegen traegt der Untertitel
+                   erst recht: der Unterschied ist dann der einzige, den
+                   jemand verstehen muss. (Entscheidung Didi, 24.08.2026.) */
+                ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false&&onAustritt?[{icon:"door-exit",label:"Austritt",sub:"Er war Mitglied und geht jetzt. Bleibt als Ehemaliger im System.",onClick:()=>onAustritt(mitgliedId)}]:[]),
                 /* ⚠ „ARCHIVIEREN" IST AM 23.08.2026 WEGGEFALLEN. Es tat seit
                    dem 22.08. dasselbe wie der Austritt — dieselbe Funktion
                    `beendeVerknuepfungen()`, nur ohne waehlbares Datum und
@@ -284,23 +287,33 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
                    Haekchen „Portal-Zugang beenden". Und was er BEDEUTETE —
                    „noch etwas offen" — ist die Markierung. */
                 ...(mitgliedId!=null&&raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,{ personId: raw.person_id, mitgliedId },vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, mitgliedId);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(mitgliedId);else if(onReload)onReload(mitgliedId);}}]:[]),
-                /* ⚠ „MITGLIEDSCHAFT LÖSCHEN" IST AM 23.08.2026 GEFALLEN, und die
-                   Messung war eindeutig: 0 von 515 Personen haben mehr als eine
-                   Mitgliedschaft, und eine Dublette ist eine doppelt angelegte
-                   PERSON — dafür gibt es „Person löschen (DSGVO)".
+/* ⚠ ZWEI EINTRAEGE HABEN HIER GESTANDEN UND SIND BEIDE GEFALLEN.
 
-                   ⚠ Er löschte ausserdem per KASKADE statt per Entscheidung.
-                   Am schlimmsten `eltern_kinder`: 399 Zeilen hängen an 393
-                   Mitgliedschaften. Wer die Mitgliedschaft eines Juniors
-                   löschte, entfernte die Verknüpfungen zu seinen Eltern — und
-                   die stehen in keinem Verlauf.
+                   „Mitgliedschaft löschen" (23.08.2026): 0 von 515 Personen
+                   haben mehr als eine Mitgliedschaft, und eine Dublette ist
+                   eine doppelt angelegte PERSON. Er loeschte ausserdem per
+                   KASKADE statt per Entscheidung — am schlimmsten
+                   `eltern_kinder`, 399 Zeilen an 393 Mitgliedschaften: wer die
+                   Mitgliedschaft eines Juniors loeschte, entfernte die
+                   Verknuepfungen zu seinen Eltern, und die stehen in keinem
+                   Verlauf.
 
-                   Der EINE Fall, den er abdeckte, steht jetzt darunter: ein
-                   versehentliches „Mitglied werden" zurücknehmen. Es ist die
-                   Umkehrung dort, wo der Fehler entsteht, statt eines
-                   Löschknopfes am anderen Ende. */
-                ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false&&onRuecknahme
-                    ?["sep" as const,{icon:"arrow-left",label:"Mitgliedschaft zurücknehmen…",onClick:()=>onRuecknahme(mitgliedId)}]:[]),
+                   „Mitgliedschaft zurücknehmen" (24.08.2026) war sein Ersatz
+                   und deckte EINEN Fall ab: ein versehentliches „Mitglied
+                   werden" umkehren. ⚠ Er ist nicht gefallen, weil er falsch
+                   war — er tat genau das Richtige und weigerte sich, sobald
+                   etwas daranhing. Er ist gefallen, weil DREIMAL gefragt
+                   wurde, was ihn vom Austritt unterscheidet.
+
+                   Ein Menueeintrag, den man sich erklaeren lassen muss, kostet
+                   mehr als er einbringt. Was er verhinderte, ist eine
+                   Mitgliedschaft von zwei Minuten in der Historie — ein
+                   Schoenheitsfehler in einem Datensatz. Passiert es doch, wird
+                   die Zeile von Hand weggeraeumt. (Entscheidung Didi,
+                   24.08.2026.)
+
+                   Damit hat das Menue zwei Wege hinaus, und beide tragen
+                   ihre Folge als Untertitel. */
                 /* ⚠ DER TRENNER GEHOERT ZWISCHEN DIE ZWEI LOESCHZEILEN, nicht
                    davor. Sie unterscheiden sich nur im Substantiv, beide rot,
                    beide mit Papierkorb — die Trennung muss aus dem ABSTAND
@@ -314,7 +327,7 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
                    Anmeldekonto. Zwei Namen für zwei Vorgänge — bis zum
                    21.08.2026 hiess der obere „Löschen (DSGVO)" und tat das
                    Kleine unter dem Namen des Grossen. */
-                ...(darfPersonLoeschen?[{icon:"trash",label:"Person löschen (DSGVO)…",danger:true,onClick:()=>setLoeschenOffen(true)}]:[]),
+                ...(darfPersonLoeschen?[{icon:"trash",label:"Person löschen (DSGVO)",sub:"Alle Daten weg. Kein Zurück.",danger:true,onClick:()=>setLoeschenOffen(true)}]:[]),
               ]}/></div>
             )}
           </div>

@@ -102,3 +102,168 @@ export async function loeschePerson(
 export function istLoeschFehler(x: unknown): x is LoeschFehler {
   return istFehler(x);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MEHRERE PERSONEN — die Sammelaktion
+
+   ⚠ EIN FINGERABDRUCK PRO PERSON, KEIN GEMEINSAMER. Ein Abdruck über
+   den ganzen Stapel bräche bei zwanzig Personen fast sicher (jede
+   Änderung an einer trifft alle) und sagte nicht, WELCHE. Mit n
+   einzelnen fällt die geänderte heraus und die übrigen laufen — aber
+   nicht still: sie erscheint in der Ergebnisliste.
+
+   ⚠ UND DIE FOLGEN FÜR DIE KINDER WERDEN ÜBER DEN STAPEL GERECHNET,
+   nicht pro Person. Eine Einzelvorschau sagt `verbleibende_eltern: 1`
+   und meint „wenn NUR diese Person fällt". Fallen im selben Stapel
+   beide Elternteile, ist das Kind danach ohne — und keine der beiden
+   Vorschauen hat das gesehen. Gemessen am 24.08.2026: 389 von 393
+   Kindern haben ohnehin nur einen Elternteil, aber eine Datenlage ist
+   keine Absicherung.
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Eine Person im Stapel, mit dem Ergebnis ihrer eigenen Vorschau. */
+export interface StapelEintrag {
+  personId: string;
+  /** Aus der Liste — nur bis die Vorschau da ist; danach gilt der Name aus der DB. */
+  name: string;
+  vorschau?: Vorschau;
+  abdruck?: string;
+  /** Die Vorschau selbst ist fehlgeschlagen. Diese Person kommt nicht mit. */
+  fehler?: string;
+}
+
+/** Was aus einem Kind wird, wenn der GANZE Stapel fällt. */
+export interface StapelKind {
+  mitglied_id: number;
+  name: string;
+  /** Elternteile nach dem Lauf — Gesamtzahl minus die im Stapel. */
+  verbleibende_eltern: number;
+  /** Wie viele der Ausgewählten an diesem Kind hängen. */
+  im_stapel: number;
+  war_hauptkontakt: boolean;
+  /** Die Personen im Stapel, die an diesem Kind hängen. */
+  eltern: { personId: string; name: string }[];
+}
+
+export interface StapelBefund {
+  /** Kinder, an denen mindestens eine ausgewählte Person hängt. */
+  kinder: StapelKind[];
+  /** Personen, die nichts hindert. */
+  loeschbar: StapelEintrag[];
+  /** ⚠ Zurückgestellt statt blockiert — sie lassen sich einzeln dazunehmen. */
+  zurueckgestellt: { eintrag: StapelEintrag; grund: string }[];
+  /** Zeilen über alle löschbaren Personen. */
+  zeilen: number;
+}
+
+/**
+ * Vorschau für n Personen — nacheinander, mit Fortschritt.
+ *
+ * ⚠ NACHEINANDER, nicht parallel: zwanzig gleichzeitige Aufrufe derselben
+ * Edge Function sind ein selbstgebauter Lastversuch, und ein abgewiesener
+ * Aufruf sähe hier aus wie eine Person ohne Daten.
+ */
+export async function holeLoeschVorschauMehrere(
+  sb: Sb,
+  personen: { id: string; name: string }[],
+  aufFortschritt?: (fertig: number, gesamt: number) => void,
+): Promise<StapelEintrag[]> {
+  const raus: StapelEintrag[] = [];
+  for (const p of personen) {
+    const a = await holeLoeschVorschau(sb, p.id);
+    raus.push(istLoeschFehler(a)
+      ? { personId: p.id, name: p.name, fehler: a.fehler }
+      : { personId: p.id, name: p.name, vorschau: a.vorschau, abdruck: a.abdruck });
+    if (aufFortschritt) aufFortschritt(raus.length, personen.length);
+  }
+  return raus;
+}
+
+/**
+ * Was der Stapel als Ganzes bedeutet — und wer deshalb zurückgestellt wird.
+ *
+ * ⚠ ZURÜCKGESTELLT IST NICHT DASSELBE WIE BLOCKIERT. Blockiert heisst: die
+ * Function würde es ablehnen. Zurückgestellt heisst: sie täte es, aber
+ * jemand soll es einzeln entscheiden. Beide stehen in derselben Liste, mit
+ * verschiedenem Grund — und die zurückgestellten lassen sich dazunehmen.
+ */
+export function rechneStapel(
+  eintraege: StapelEintrag[],
+  dazugenommen: Set<string> = new Set(),
+): StapelBefund {
+  /* ── Kinder über den ganzen Stapel ──────────────────────────────── */
+  const proKind = new Map<number, StapelKind>();
+  for (const e of eintraege) {
+    if (!e.vorschau) continue;
+    for (const k of e.vorschau.kinder) {
+      /* `verbleibende_eltern` ist die Sicht der EINZELVORSCHAU: gesamt − 1.
+         Daraus die Gesamtzahl zurückrechnen und die Stapelgrösse abziehen. */
+      const vorhanden = proKind.get(k.mitglied_id);
+      if (vorhanden) {
+        vorhanden.im_stapel += 1;
+        vorhanden.verbleibende_eltern -= 1;
+        vorhanden.war_hauptkontakt = vorhanden.war_hauptkontakt || k.war_hauptkontakt;
+        vorhanden.eltern.push({ personId: e.personId, name: e.vorschau.person.name });
+      } else {
+        proKind.set(k.mitglied_id, {
+          mitglied_id: k.mitglied_id,
+          name: k.name,
+          verbleibende_eltern: k.verbleibende_eltern,
+          im_stapel: 1,
+          war_hauptkontakt: k.war_hauptkontakt,
+          eltern: [{ personId: e.personId, name: e.vorschau.person.name }],
+        });
+      }
+    }
+  }
+  const kinder = [...proKind.values()].sort((a, b) => a.verbleibende_eltern - b.verbleibende_eltern);
+
+  /* Personen, deren Löschung ein Kind ohne jeden Elternteil liesse. */
+  const heikel = new Map<string, string>();
+  for (const k of kinder) {
+    if (k.verbleibende_eltern > 0) continue;
+    for (const p of k.eltern) {
+      heikel.set(p.personId, `${k.name} bliebe danach ohne Elternteil`);
+    }
+  }
+
+  const loeschbar: StapelEintrag[] = [];
+  const zurueckgestellt: { eintrag: StapelEintrag; grund: string }[] = [];
+
+  for (const e of eintraege) {
+    if (e.fehler || !e.vorschau) {
+      zurueckgestellt.push({ eintrag: e, grund: e.fehler || "Vorschau nicht lesbar" });
+      continue;
+    }
+    /* ⚠ PUNKT 4: blockierte Personen fallen VOR dem Start heraus, benannt.
+       Ein Abbruch mitten im Lauf, den die Vorschau schon kannte, ist der
+       schlechteste von allen — vier sind dann weg, fünfzehn stehen, und der
+       Grund stand die ganze Zeit auf dem Schirm. */
+    if (e.vorschau.blockiert.length > 0) {
+      zurueckgestellt.push({
+        eintrag: e,
+        grund: "blockiert: " + e.vorschau.blockiert.map(b => `${b.tabelle} (${b.anzahl})`).join(", "),
+      });
+      continue;
+    }
+    const grund = heikel.get(e.personId);
+    if (grund && !dazugenommen.has(e.personId)) {
+      zurueckgestellt.push({ eintrag: e, grund });
+      continue;
+    }
+    loeschbar.push(e);
+  }
+
+  const zeilen = loeschbar.reduce(
+    (s, e) => s + (e.vorschau?.faellt.reduce((t, p) => t + p.anzahl, 0) ?? 0), 0);
+
+  return { kinder, loeschbar, zurueckgestellt, zeilen };
+}
+
+/** Wie ein einzelner Lauf im Stapel ausging. */
+export interface StapelErgebnis {
+  personId: string;
+  name: string;
+  stand: "geloescht" | "uebersprungen" | "fehlgeschlagen";
+  meldung?: string;
+}

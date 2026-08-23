@@ -420,6 +420,54 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Haltbar gemacht mit einem Fall je Kind (`memberDetail.test.jsx`): die Attrappe greift den Rückruf ab, ruft ihn, und prüft, dass **neu gelesen** wird. Gegengeprobt — mit der alten Verdrahtung sind sie rot.
 
+- **Wird eine Funktion entfernt, ersetzt die Zusage über das VERHALTEN ihre Tests — sonst verschwindet mit dem Code auch der Grund.**
+
+  Am 24.08.2026 fiel `nimmMitgliedschaftZurueck()`. Nicht weil sie falsch war — sie zählte fünf Tabellen vor und weigerte sich, sobald etwas daranhing —, sondern weil dreimal gefragt wurde, was sie vom Austritt unterscheidet. An ihr hingen **fünf Testfälle**.
+
+  ⚠ **Sie mitzulöschen wäre der Fehler gewesen, und zwar ein unsichtbarer.** Was sie festhielten, war nicht die Funktion, sondern ihr **Grund**: ein `delete` auf `mitglieder` reisst per CASCADE `eltern_kinder` mit — 399 Zeilen an 393 Mitgliedschaften —, und diese Verknüpfungen stehen in keinem Verlauf. Der wichtigste der fünf hiess „weigert sich, wenn Eltern-Verknüpfungen daranhängen".
+
+  **Diese Aussage überlebt die Funktion.** Sie steht seither als **eine** Strukturprüfung da, die den Quelltext liest:
+
+  ```ts
+  const MUSTER = /from\(\s*["'`]mitglieder["'`]\s*\)[\s\S]{0,80}?\.delete\(/;
+  // → erwartet: []
+  ```
+
+  | | prüft | hält |
+  |---|---|---|
+  | die fünf alten Fälle | dass **diese Funktion** richtig zählt | bis sie entfernt wird |
+  | die Strukturprüfung | dass **niemand** aus `mitglieder` löscht | über jeden Umbau |
+
+  ⚠ **UND SIE WAR IN DER MINUTE ROT, IN DER SIE ZUM ERSTEN MAL LIEF.** Drei lebende Wege löschten weiter aus `mitglieder` — alle drei im Archiv, alle drei mit der Kaskade, und alle drei am Tag zuvor für entfernt erklärt. Siehe den Eintrag darunter.
+
+  **Die Regel greift breiter als bei Löschpfaden.** Wo eine Funktion eine Zusage einlöst, die das Produkt braucht („niemand schreibt ohne `verein_id`", „kein Modal steht hinter dem frühen Return"), ist die Zusage der Test — nicht die Funktion. Die Prüfung nach dem Muster von `icons.test.ts` (Quelltext lesen, `node:fs`) kostet zehn Zeilen und ist an keinen Aufrufer gebunden.
+
+- **⚠ Eine Anweisung, die eine MENGE nennt, prüft niemand gegen die Wirklichkeit.**
+
+  Am 23.08.2026 lautete die Freigabe: *„Entfernen, mit deinem Ersatz. … Und die Sammelaktionen fallen mit, **in beiden Listen**."* Gemeint war „überall". Umgesetzt wurde, was im Blick lag.
+
+  **Einen Tag später standen drei Wege unverändert da**, alle im Archiv:
+
+  | Stelle | was |
+  |---|---|
+  | `ArchivView` bulkActions | Sammelaktion „Mitgliedschaft löschen", n Zeilen auf einmal |
+  | `ArchivView` Zeilenknopf | ein **unbeschrifteter roter Papierkorb** — kein Wort, nur das Symbol |
+  | `MitgliederModul` | `handleBulkDelete`, tot seit dem Vortag, kein Aufrufer |
+
+  ⚠ **Und die Kommentare daneben sagten das Gegenteil.** In `MemberHero`, `MitgliederModul` und `supporterService` stand jeweils ausführlich, „Mitgliedschaft löschen" sei am 23.08.2026 gefallen und warum. Wer das las, sah nicht nach — genau die Familie eine Zeile weiter unten.
+
+  **Warum es keine Prüfkette gemeldet hat:** Build grün, Typecheck grün, 807 Tests grün. Ein Knopf, der noch da ist, ist kein Fehler; er ist ein Knopf.
+
+  ⚠ **Die Sammelaktion zählte in ihrer Rückfrage auf: „Kadereinträge, Notizen und Verlauf".** Die Eltern nannte sie nicht — und das war die einzige der drei Folgen, die in keinem Verlauf steht.
+
+  **Woran es liegt:** „beide Listen", „alle Aufrufer", „überall" sind Mengen, die der Sprecher im Kopf hat und der Ausführende schätzt. Beide halten sie für dieselbe. **Die Gegenmassnahme ist nicht, sorgfältiger zu zählen, sondern die Menge vor dem Schneiden AUSZUGEBEN:**
+
+  ```bash
+  grep -rn "deleteMitglied\|Mitgliedschaft löschen" src/   # erst zeigen
+  ```
+
+  Dieselbe Regel wie „beim Entfernen eines Bereichs erst zeigen, was darin liegt" — nur eine Ebene höher: dort ist es der Schnittbereich, hier die Trefferliste. Und wo die Menge eine Zusage über das Produkt ist, gehört sie in einen Fall, der sie nachsieht (Eintrag darüber).
+
 - **Ein Kommentar, der eine ANDERE Stelle zusichert, ist eine Behauptung ohne Prüfung — und wer ihn liest, prüft erst recht nicht nach.** Am 23.08.2026 vier Fälle an einem Tag:
 
   | Stelle | behauptet | tatsächlich |

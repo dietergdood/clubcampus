@@ -15,7 +15,20 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb } from "./_mockSb.ts";
-import { nimmMitgliedschaftZurueck, beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
+import { beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+/** Alle .ts/.tsx unter einem Ordner, rekursiv. */
+function alleQuellDateien(ordner: string): string[] {
+  const raus: string[] = [];
+  for (const e of readdirSync(ordner, { withFileTypes: true })) {
+    const pfad = join(ordner, e.name);
+    if (e.isDirectory()) raus.push(...alleQuellDateien(pfad));
+    else if (/\.tsx?$/.test(e.name)) raus.push(pfad);
+  }
+  return raus;
+}
 import { archiviereMitglied, beendeVerknuepfungen, setzeArtFuerElternOhneKind } from "../memberService.ts";
 
 afterEach(() => vi.restoreAllMocks());
@@ -429,59 +442,44 @@ describe("setzeArtFuerElternOhneKind — der zweite Auslöser", () => {
   });
 });
 
-/* ═══════════════════════════════════════════════════════════════
-   ⚠ Die Rücknahme — der Ersatz für „Mitgliedschaft löschen"
+/* ═════════════════════════════════════════════════════════════
+   ⚠ KEIN WEG IM PORTAL LOESCHT AUS `mitglieder`.
 
-   Gemessen am 23.08.2026 hatte der alte Knopf genau EINEN Fall: ein
-   versehentliches „Mitglied werden" bei einer Person, die es schon
-   gab. Für alles andere war er falsch, und er löschte per KASKADE:
-   399 `eltern_kinder`-Zeilen hängen an 393 Mitgliedschaften.
+   Hier standen bis zum 24.08.2026 fuenf Faelle zu
+   `nimmMitgliedschaftZurueck` — der Umkehrung von „Mitglied werden".
+   Die Funktion ist gefallen (siehe Kopf von `supporterService.ts`),
+   die Faelle mit ihr.
 
-   Diese Fälle halten die Umkehrung fest: sie löst KEINE Kaskade aus.
-   ═══════════════════════════════════════════════════════════════ */
-describe("nimmMitgliedschaftZurueck", () => {
-  const LEER = {
-    "kader.select": { count: 0 }, "anwesenheiten.select": { count: 0 },
-    "mitglieder_team_details.select": { count: 0 }, "sfv_zuordnung.select": { count: 0 },
-    "eltern_kinder.select": { count: 0 },
-    "mitglieder.delete": { data: [{ id: 42 }] },
-  };
+   ⚠ SIE ERSATZLOS ZU STREICHEN WAERE DER FEHLER GEWESEN. Was sie
+   festhielten, war nicht die Funktion, sondern ihr GRUND: ein
+   `delete` auf `mitglieder` reisst per CASCADE `eltern_kinder` mit —
+   399 Zeilen an 393 Mitgliedschaften —, und diese Verknuepfungen
+   stehen in keinem Verlauf. Der wichtigste der fuenf Faelle hiess
+   „weigert sich, wenn Eltern-Verknuepfungen daranhaengen".
 
-  it("nimmt eine leere Mitgliedschaft zurück", async () => {
-    const sb = makeSb(LEER);
-    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
-    expect(erg.ok).toBe(true);
-    expect(sb.find("mitglieder", "delete")).toBeTruthy();
-  });
+   Diese Aussage ueberlebt die Funktion, und deshalb steht sie jetzt
+   als STRUKTURPRUEFUNG da: solange niemand aus `mitglieder` loescht,
+   kann die Kaskade nicht zuschlagen. Ein Fall, der das haelt, ist
+   staerker als fuenf, die eine Absicherung pruefen, die es nicht mehr
+   gibt.
 
-  it("⚠ weigert sich, wenn Eltern-Verknüpfungen daranhängen", async () => {
-    /* Der wichtigste Fall: die CASCADE haette sie entfernt, und sie stehen
-       in keinem Verlauf. */
-    const sb = makeSb({ ...LEER, "eltern_kinder.select": { count: 2 } });
-    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
-    expect(erg.ok).toBe(false);
-    expect(erg.haengtDran).toEqual(["Eltern-Verknüpfungen (2)"]);
-    expect(sb.opsOn("mitglieder").filter(r => r.op === "delete")).toHaveLength(0);
-  });
-
-  it("nennt ALLES, was aufhält — nicht nur das erste", async () => {
-    const sb = makeSb({ ...LEER, "kader.select": { count: 1 }, "eltern_kinder.select": { count: 3 } });
-    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
-    expect(erg.haengtDran).toEqual(["Kadereinträge (1)", "Eltern-Verknüpfungen (3)"]);
-  });
-
-  it("⚠ ein Lesefehler heisst nicht: nichts da — er hält auf", async () => {
-    /* Sonst löschte ein 42501 genau das, was er verbergen sollte. */
-    const sb = makeSb({ ...LEER, "kader.select": { error: { message: "keine Rechte" } } });
-    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
-    expect(erg.ok).toBe(false);
-    expect(sb.opsOn("mitglieder").filter(r => r.op === "delete")).toHaveLength(0);
-  });
-
-  it("⚠ meldet KEINEN Erfolg, wenn das delete keine Zeile trifft", async () => {
-    const sb = makeSb({ ...LEER, "mitglieder.delete": { data: [] } });
-    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
-    expect(erg.ok).toBe(false);
-    expect(erg.fehler).toContain("nicht entfernt");
+   ⚠ Die einzige erlaubte Stelle ist die Loeschkette in
+   `supabase/functions/person-loeschen` — sie zaehlt vorher und zeigt
+   das Ergebnis, bevor etwas geschieht.
+   ═════════════════════════════════════════════════════════════ */
+describe("⚠ Kein Weg in src/ loescht aus `mitglieder`", () => {
+  it("keine Datei ruft `.from(\"mitglieder\").delete()`", () => {
+    /* Beide Schreibweisen: der Aufruf steht mal in einer Zeile, mal ueber
+       zwei umgebrochen. */
+    const MUSTER = /from\(\s*["'`]mitglieder["'`]\s*\)[\s\S]{0,80}?\.delete\(/;
+    const treffer: string[] = [];
+    for (const datei of alleQuellDateien("src")) {
+      const inhalt = readFileSync(datei, "utf8");
+      if (MUSTER.test(inhalt)) {
+        treffer.push(datei.split("\\").join("/"));
+      }
+    }
+    expect(treffer, `Diese Dateien loeschen aus \`mitglieder\` und loesen damit `
+      + `die CASCADE auf \`eltern_kinder\` aus: ${treffer.join(", ")}`).toEqual([]);
   });
 });

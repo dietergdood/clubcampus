@@ -106,12 +106,15 @@ interface SupporterListViewProps {
      wurde. */
   onMitgliedWerden?: ((personIds: string[]) => void) | null;
   onArtAendern?: ((personIds: string[]) => void) | null;
+  /** ⚠ Sammelaktion „Person löschen (DSGVO)" — Id UND Name, weil das Modal
+      die Namen zeigt, bevor seine eigene Vorschau da ist. */
+  onLoeschen?: ((personen: { id: string; name: string }[]) => void) | null;
 }
 
 function SupporterListView({
   supporter, renderCell, rolleLabel, renderMobile, sb, account = null, vereinId = null,
   isAdmin = false, canExport = false, onOeffnen = null,
-  onMitgliedWerden = null, onArtAendern = null,
+  onMitgliedWerden = null, onArtAendern = null, onLoeschen = null,
 }: SupporterListViewProps) {
   return (
     <ListView<MemberRow>
@@ -147,7 +150,7 @@ function SupporterListView({
 
          Die Auswahl gibt es seit dem 22.08.2026: mit „Mitglied werden" und
          „Art aendern" fuehren die Kaestchen jetzt irgendwohin. */
-      selectable={isAdmin && Boolean(onMitgliedWerden || onArtAendern)}
+      selectable={isAdmin && Boolean(onMitgliedWerden || onArtAendern || onLoeschen)}
       bulkActions={[
         { icon: "user-plus", label: "Mitglied werden", requiresSelection: true,
           hidden: !onMitgliedWerden,
@@ -155,6 +158,15 @@ function SupporterListView({
         { icon: "bookmark", label: "Art ändern", requiresSelection: true,
           hidden: !onArtAendern,
           onClick: (sel: Set<RowId>) => onArtAendern?.([...sel].map(String)) },
+        /* ⚠ Die einzige unwiderrufliche Sammelaktion. Sie steht hier und in der
+           Elternliste, aber NICHT in der Mitgliederliste: dort ist die Antwort
+           der Austritt. */
+        { icon: "trash", label: "Person löschen (DSGVO)", danger: true, requiresSelection: true,
+          hidden: !onLoeschen,
+          onClick: (sel: Set<RowId>) => onLoeschen?.([...sel].map(id => ({
+            id: String(id),
+            name: supporter.find(s => String(s.id) === String(id))?.name || "?",
+          }))) },
       ].filter(a => !a.hidden)}
       footerLabel={(f, t) => `${f} von ${t} Personen`}
       /* Ohne exportFormats blendet ListView den Knopf aus — exportFn allein

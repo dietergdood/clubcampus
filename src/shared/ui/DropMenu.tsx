@@ -14,6 +14,18 @@ export interface DropMenuItem {
   onClick: () => void;
   danger?: boolean;
   hidden?: boolean;
+  /**
+   * Untertitel unter der Beschriftung — die FOLGE, nicht die Handlung.
+   *
+   * ⚠ Gedacht fuer Menues, in denen zwei Eintraege aehnlich heissen und
+   * verschieden wirken. „Austritt" und „Person löschen (DSGVO)" sind beides
+   * Wege hinaus; welcher etwas zurücklaesst, steht nicht im Namen. Ein
+   * Untertitel ist billiger als eine Rueckfrage und wird gelesen, BEVOR
+   * geklickt wird — eine Rueckfrage erst danach.
+   *
+   * Sparsam benutzen: stuende er ueberall, laese ihn niemand.
+   */
+  sub?: string;
 }
 
 /* Aufrufer mischen Einträge mit dem Literal "sep" für den Trenner. */
@@ -66,7 +78,12 @@ export function DropMenu({items}: DropMenuProps){
                   onMouseDown={e=>{e.stopPropagation();setOpen(false);item.onClick();}}
                 >
                   {item.icon&&<TI n={item.icon} size={16}/>}
-                  {item.label}
+                  {item.sub
+                    ?<span style={{display:"flex",flexDirection:"column",gap:1,textAlign:"left"}}>
+                       <span>{item.label}</span>
+                       <span className="cc-text-muted" style={{fontSize:12,lineHeight:1.3,fontWeight:400}}>{item.sub}</span>
+                     </span>
+                    :item.label}
                 </button>
               ))}
             </div>
@@ -83,7 +100,12 @@ export function DropMenu({items}: DropMenuProps){
                   onClick={()=>{setOpen(false);item.onClick();}}
                 >
                   {item.icon&&<TI n={item.icon} size={13}/>}
-                  {item.label}
+                  {item.sub
+                    ?<span style={{display:"flex",flexDirection:"column",gap:1,textAlign:"left"}}>
+                       <span>{item.label}</span>
+                       <span className="cc-text-muted" style={{fontSize:11,lineHeight:1.3,fontWeight:400}}>{item.sub}</span>
+                     </span>
+                    :item.label}
                 </button>
             )}
           </div>,

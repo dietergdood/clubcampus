@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { makeSb, pgError, type SbOp, type MockSb } from "./_mockSb.ts";
 import {
-  deleteMitglied, archiviereMitglied, reaktiviereMitglied,
+  archiviereMitglied, reaktiviereMitglied,
   upsertKader, updateKader, deaktiviereKader,
   updateBenutzer, insertNotiz, updateNotiz, deleteNotiz, deleteAnsicht,
   portalZugangReaktivieren, portalZugangDeaktivieren, updateMitglied,
@@ -19,7 +19,6 @@ afterEach(() => { errSpy.mockRestore(); });
 
 /* Write-Funktionen mit einheitlichem Vertrag PostgrestError | null. */
 const CONTRACT: Array<{ name: string; table: string; op: SbOp; call: (sb: MockSb) => Promise<unknown> }> = [
-  { name: "deleteMitglied",     table: "mitglieder",           op: "delete", call: sb => deleteMitglied(sb as any, 1) },
   { name: "archiviereMitglied", table: "mitglieder",           op: "update", call: sb => archiviereMitglied(sb as any, 1, "Admin", "v-1") },
   { name: "reaktiviereMitglied",table: "mitglieder",           op: "update", call: sb => reaktiviereMitglied(sb as any, 1) },
   { name: "upsertKader",        table: "kader",                op: "upsert", call: sb => upsertKader(sb as any, { mitglied_id: 1, team_id: 2, saison: "2026" } as any) },

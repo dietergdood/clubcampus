@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Btn, Av, useConfirm, EmptyState } from "../../theme.ts";
 import { setzeOffenePunkte } from "../../domains/person/offenePunkteService.ts";
 import { TI } from "../../icons.tsx";
-import { reaktiviereMitglied, deleteMitglied, fetchArchiv } from "../../domains/members/memberService.ts";
+import { reaktiviereMitglied, fetchArchiv } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
 import { sortMembers } from "./memberDataUtils.ts";
 import { exportListData, buildFilterDefs } from "../../shared/list/exportUtils.ts";
@@ -186,22 +186,25 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
     if (onReload) onReload();
   }
 
-  async function loeschen(selected: Set<RowId>) {
-    if (!selected?.size) return;
-    const { ids, ohne } = zuMitgliedschaften(selected);
-    if (!ids.length) {
-      await confirm({ title:"Nichts zu löschen",
-        message:"Keine der ausgewählten Personen hat eine beendete Mitgliedschaft.",
-        confirmLabel:"Verstanden" });
-      return;
-    }
-    const ok = await confirm({ title:`${ids.length} Mitgliedschaften löschen?`,
-      message:`Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.${ohne ? ` ${ohne} der ${selected.size} ausgewählten Personen haben keine beendete Mitgliedschaft und bleiben unverändert.` : ""}`,
-      danger:true, confirmLabel:"Löschen" });
-    if (!sb || !ok) return;
-    for (const mid of ids) await deleteMitglied(sb, mid);
-    if (onReload) onReload();
-  }
+  /* ⚠ „MITGLIEDSCHAFT LOESCHEN" HAT HIER BIS ZUM 24.08.2026 UEBERLEBT.
+
+     Am 23.08.2026 entschieden: der Knopf faellt, „und die Sammelaktionen
+     fallen mit, in beiden Listen". Aus der Mitgliederliste und dem
+     Profilmenue ist er verschwunden — HIER nicht. Ein Jahr Kommentare
+     darueber, dass es ihn nicht mehr gibt, und daneben lief er weiter.
+
+     ⚠ Gefunden hat ihn kein Mensch, sondern eine Strukturpruefung in
+     `austritt.test.ts` („Kein Weg in src/ loescht aus `mitglieder`"), und
+     zwar in der Minute, in der sie zum ersten Mal lief. Das ist der
+     Unterschied zwischen einem Kommentar, der eine ANDERE Stelle zusichert,
+     und einem Fall, der sie nachsieht.
+
+     Er loeste genau die Kaskade aus, vor der alle diese Kommentare warnen:
+     `eltern_kinder`, 399 Zeilen an 393 Mitgliedschaften, in keinem Verlauf.
+     Und er tat es fuer n Zeilen auf einmal, hinter einer Rueckfrage, die
+     „Kadereintraege, Notizen und Verlauf" aufzaehlte — die Eltern nannte
+     sie nicht. */
+
 
   const filterDefs = buildFilterDefs(rows, [
     { key:"mitgliedtyp",     label:"Mitgliedschaft" },
@@ -237,14 +240,19 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
                  onClick={()=>erledige(String(m.id), m.name)}>
               <TI n="check" size={13}/> {erledigtLaeuft===m.id ? "…" : "Erledigt"}
             </Btn>
-            {/* ⚠ Reaktivieren und Loeschen brauchen eine MITGLIEDSCHAFT. Wer
-                nie eine hatte — ein Supporter mit geliehenem Tenue — hat hier
-                nichts zu reaktivieren. Kein ausgegrauter Knopf: was es nicht
-                gibt, erscheint nicht. */}
-            {m.mitglied_id != null && <>
-              <Btn small onClick={()=>reaktivieren(new Set([m.id]))}><TI n="user-check" size={13}/> Reaktivieren</Btn>
-              <Btn small variant="danger" onClick={()=>loeschen(new Set([m.id]))}><TI n="trash" size={13}/></Btn>
-            </>}
+            {/* ⚠ Reaktivieren braucht eine MITGLIEDSCHAFT. Wer nie eine
+                hatte — ein Supporter mit geliehenem Tenue — hat hier nichts zu
+                reaktivieren. Kein ausgegrauter Knopf: was es nicht gibt,
+                erscheint nicht.
+
+                ⚠ DANEBEN STAND BIS ZUM 24.08.2026 EIN UNBESCHRIFTETER ROTER
+                PAPIERKORB. Er loeschte die Mitgliedschaft samt CASCADE auf
+                `eltern_kinder` — ohne Wort, ohne Rueckfrage im Knopf selbst,
+                die dritte ueberlebende Stelle von „Mitgliedschaft löschen".
+                Ein Symbol ohne Beschriftung sagt WAS es tut (loeschen), nie
+                WORAN — und hier waren es die Eltern eines Juniors. */}
+            {m.mitglied_id != null &&
+              <Btn small onClick={()=>reaktivieren(new Set([m.id]))}><TI n="user-check" size={13}/> Reaktivieren</Btn>}
           </div>
         </td>;
       default:
@@ -283,7 +291,6 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
           selectable
           bulkActions={[
             { icon:"user-check", label:"Reaktivieren", requiresSelection:true, onClick:reaktivieren },
-            { icon:"trash", label:"Mitgliedschaft löschen", danger:true, requiresSelection:true, onClick:loeschen },
           ]}
           exportFn={(rows,cols,groups,format) => exportListData(rows,cols,groups,format,{
             filename:"archiv", sheetName:"Archiv",

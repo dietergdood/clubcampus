@@ -31,10 +31,24 @@ export async function fetchMitglied(sb: SbClient, id: number) {
   return flacheZeile(data as never) as typeof data;
 }
 
-export async function deleteMitglied(sb: SbClient, id: number): Promise<PostgrestError | null> {
-  const { error } = await sb.from("mitglieder").delete().eq("id", id);
-  return error;
-}
+/* ⚠ `deleteMitglied()` IST AM 24.08.2026 GEFALLEN — die letzte Stelle in
+   `src/`, die aus `mitglieder` loeschte.
+
+   Sie war seit dem 23.08.2026 als „entfernt" beschrieben und hatte an
+   diesem Tag noch DREI lebende Aufrufer, alle im Archiv:
+   die Sammelaktion „Mitgliedschaft löschen", ein unbeschrifteter roter
+   Papierkorb pro Zeile, und ein toter `handleBulkDelete` in
+   `MitgliederModul`. Kein Werkzeug hat das gemeldet — die Kommentare
+   sagten das Gegenteil, und ein Kommentar prueft nichts.
+
+   ⚠ EIN `delete` AUF `mitglieder` REISST `eltern_kinder` MIT (CASCADE):
+   399 Zeilen an 393 Mitgliedschaften, gemessen 23.08.2026. Wer die
+   Mitgliedschaft eines Juniors loescht, entfernt die Verknuepfungen zu
+   seinen Eltern — und die stehen in keinem Verlauf.
+
+   Der einzige verbliebene Weg ist die Loeschkette in
+   `supabase/functions/person-loeschen`, und die zaehlt vorher. Gehalten
+   wird das von einer Strukturpruefung in `austritt.test.ts`. */
 
 /* ── Was zu einer beendeten Mitgliedschaft dazugehoert ────────────────────
    Kadereintraege, Aemter und der Portal-Zugang.

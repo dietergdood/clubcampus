@@ -85,47 +85,32 @@ export function AustrittModal({
     setHinweise([]);
   }, [open]);
 
-  /* Die Auswahl entsteht aus den Daten, nicht aus einer Konstante. Die
-     Reihenfolge ist die Aussage: erst die beiden Enden, dann die Wechsel. */
-  const ZIELE: { wert: ZielKey; titel: string; text: string; bleibt: boolean }[] = [
-    { wert: "beenden", bleibt: false,
-      titel: austrittsart || "Mitgliedschaft beenden, Kontakt bleibt",
-      text: austrittsart
-        ? `Die Mitgliedschaft endet, die Person gilt danach als ${austrittsart} und bleibt für Nachrichten und Anfragen erreichbar. Kein Beitrag, kein Stimmrecht.`
-        /* ⚠ Behauptet KEINE Ursache. „Keine Art eingestellt" wäre eine
-           Diagnose, die diese Komponente nicht stellen kann: die Art kann
-           fehlen ODER nicht geladen worden sein, und beides sieht von hier
-           gleich aus. Was tatsächlich geschieht, sagt der Hinweis nach dem
-           Ausführen — dort liest der Service die Einstellung selbst. */
-        : "Die Mitgliedschaft endet, die Person bleibt erreichbar. ⚠ Es ist keine Art nach dem Austritt bekannt — bitte in der Portalverwaltung unter Mitglieder-Konfiguration prüfen." },
-    /* ⚠ „ARCHIV" IST SEIT DEM 23.08.2026 KEINE ANTWORT MEHR. Es war nie eine
-       Antwort auf „was gilt danach?", sondern drei Entscheidungen in einem
-       Wort: Mitgliedschaft beenden (wie „beenden"), Portal-Zugang abschalten
-       (das Einzige, was nur Archiv tat, und im Text stand kein Wort davon),
-       und auffindbar bleiben (jetzt die Markierung).
+  /* ⚠ DIE SIEBEN MITGLIEDTYP-OPTIONEN SIND AM 24.08.2026 GEFALLEN — und der
+     Grund gehoert hierher, sonst baut sie jemand als Bequemlichkeit wieder
+     ein:
 
-       Die zwei Häkchen darunter machen daraus zwei sichtbare Fragen. Ein
-       Wort, das drei Dinge tut, kann keines davon benennen. */
-    ...mitgliedtypen.map(t => ({
-      wert: `typ:${t.name}` as ZielKey, bleibt: true,
-      titel: t.name,
-      text: `Wechsel des Mitgliedtyps auf ${t.name}. Die Mitgliedschaft läuft weiter, Kader und Ämter bleiben. Kein Austritt.`,
-    })),
-  ];
+       ES GIBT DEN WEG SCHON. `InfoTab` hat den Mitgliedtyp als
+       Inline-Auswahl in der Vereinsdaten-Karte. Der Dialog war nicht der
+       einzige Zugang — er war der ZWEITE.
 
-  const gewaehlt = ZIELE.find(z => z.wert === ziel) || null;
+       UND DER SCHLECHTERE. Das Inline-Feld schreibt ueber `useInlineEdit`
+       und protokolliert die Aenderung (`logAenderung`). Der Typwechsel hier
+       schrieb `mitgliedtyp` + `updated_at` und sonst nichts — kein Eintrag im
+       Verlauf. Wer den Typ ueber den Austrittsdialog wechselte, hinterliess
+       keine Spur.
 
-  /** Von der Auswahl im Modal zur Aussage im Service. */
-  function zumZiel(k: ZielKey): AustrittsZiel {
-    if (k === "beenden") return { art: "beenden" };
-    return { art: "typwechsel", mitgliedtyp: k.slice(4) };
-  }
+     Dazu kam die Benennung: acht Antworten auf „Was gilt danach?", sieben
+     davon mit dem Text „Kein Austritt" — ein Dialog fuer zwei verschiedene
+     Sachen, benannt nach einer davon.
+
+     Beim Austritt gibt es nur EINE Antwort: die Person wird zur eingestellten
+     Art. Deshalb steht hier kein Auswahlfeld mehr, sondern ein Satz. */
+
 
   async function ausfuehren() {
-    if (!ziel) return;
     setSaving(true);
     setFehler(null);
-    const { fehler: f, hinweise: h } = await onAustritt(zumZiel(ziel), am, {
+    const { fehler: f, hinweise: h } = await onAustritt({ art: "beenden" }, am, {
       offenePunkte: offen.trim() || null,
       zugangBeenden: zugangWeg,
     });
@@ -158,34 +143,27 @@ export function AustrittModal({
           </>
         ) : (
           <>
-            <InfoBox color={BL} text={`Heute ${mitgliedtyp || "Mitglied"}. Der Austritt ist ein Zeitpunkt — was danach gilt, entscheiden Sie hier.`} />
+            {/* ⚠ EIN SATZ, KEINE AUSWAHL. Beim Austritt gibt es nur eine
+                Antwort: die Person wird zur eingestellten Art. Hier standen
+                bis zum 24.08.2026 acht Optionen — sieben davon
+                Mitgliedtyp-Wechsel, jede mit dem Text „Kein Austritt".
 
-            <div className="cc-section-title">Was gilt danach?</div>
-            <Col gap={SPACE[2]}>
-              {ZIELE.map(z => (
-                <label key={z.wert} className="cc-card" style={{
-                  padding: "12px 14px", borderRadius: 10, cursor: "pointer",
-                  outline: ziel === z.wert ? "2px solid var(--cc-accent)" : "none",
-                }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <input type="radio" name="austritt-ziel" checked={ziel === z.wert}
-                           onChange={() => setZiel(z.wert)} style={{ marginTop: 3 }} />
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: TEXT.md }}>{z.titel}</div>
-                      <div style={{ fontSize: TEXT.sm, color: "var(--sub)" }}>{z.text}</div>
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </Col>
+                ⚠ Der Satz nennt die Art beim Namen, statt sie zu verschweigen.
+                Fehlt sie, sagt er DAS — und behauptet keine Ursache: sie kann
+                fehlen ODER nicht geladen sein, und beides sieht von hier gleich
+                aus. */}
+            <InfoBox color={BL} text={
+              austrittsart
+                ? `Die Mitgliedschaft endet${mitgliedtyp ? ` (heute ${mitgliedtyp})` : ""}. Die Person gilt danach als ${austrittsart} und bleibt für Nachrichten und Anfragen erreichbar — kein Beitrag, kein Stimmrecht.`
+                : `Die Mitgliedschaft endet${mitgliedtyp ? ` (heute ${mitgliedtyp})` : ""}. Die Person bleibt erreichbar. ⚠ Es ist keine Art nach dem Austritt bekannt — bitte in der Portalverwaltung unter Mitglieder-Konfiguration prüfen.`} />
 
-            <div className="cc-section-title">{gewaehlt?.bleibt ? "Datum" : "Austrittsdatum"}</div>
+            <div className="cc-section-title">Austrittsdatum</div>
             <label className="cc-field">
-              <Label>{gewaehlt?.bleibt ? "Gilt ab" : "Tag des Austritts"}</Label>
+              <Label>Tag des Austritts</Label>
               <Input type="date" value={am} onChange={e => setAm(e.target.value)} />
             </label>
 
-            {/* ⚠ ZWEI FRAGEN, DIE FRUEHER IN „ARCHIV" STECKTEN — jetzt einzeln
+          {/* ⚠ ZWEI FRAGEN, DIE FRUEHER IN „ARCHIV" STECKTEN — jetzt einzeln
                 und beantwortbar. Sie gelten unabhaengig vom Ziel: auch ein
                 Typwechsel kann etwas offen lassen. */}
             <div className="cc-section-title">Danach noch offen?</div>
@@ -198,7 +176,7 @@ export function AustrittModal({
               <InfoBox color={AM} text="Die Person erscheint im Archiv, bis der Vermerk entfernt wird." />
             )}
 
-            {gewaehlt && !gewaehlt.bleibt && hatKonto && (
+            {hatKonto && (
               <label className="cc-row cc-gap-6" style={{ marginTop: 8, cursor: "pointer" }}>
                 <input type="checkbox" checked={zugangWeg}
                        onChange={e => setZugangWeg(e.target.checked)} />
@@ -206,8 +184,8 @@ export function AustrittModal({
               </label>
             )}
 
-            {/* Was der gewählte Weg konkret anfasst — vor dem Klick, nicht danach. */}
-            {gewaehlt && !gewaehlt.bleibt && (
+            {/* Was der Austritt konkret anfasst — vor dem Klick, nicht danach. */}
+            {(
               <InfoBox color={AM} text={
                 `Kadereinträge werden beendet${hatKonto ? ", laufende Vereinsfunktionen bekommen dieses Datum als Ende" : ""}. `
                 + (!hatKonto
@@ -228,9 +206,8 @@ export function AustrittModal({
         ) : (
           <>
             <Btn onClick={onClose}>Abbrechen</Btn>
-            <Btn variant={gewaehlt?.bleibt ? "primary" : "danger"}
-                 onClick={ausfuehren} disabled={saving || !ziel}>
-              {saving ? "Wird ausgeführt …" : gewaehlt?.bleibt ? "Mitgliedtyp wechseln" : "Austritt eintragen"}
+            <Btn variant="danger" onClick={ausfuehren} disabled={saving}>
+              {saving ? "Wird ausgeführt …" : "Austritt eintragen"}
             </Btn>
           </>
         )}

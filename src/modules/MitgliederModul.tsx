@@ -5,13 +5,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
 import { Av, useConfirm } from "../theme.ts";
-import { deleteMitglied, fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen, logAktivitaet, AKTIVITAET_TYP } from "../domains/members/memberService.ts";
+import { fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen, logAktivitaet, AKTIVITAET_TYP } from "../domains/members/memberService.ts";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
 import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
 import { mapSupporter } from "./members/memberMapper.ts";
-import { nimmMitgliedschaftZurueck, fetchSupporter, macheZuMitglied, beendeMitgliedschaft } from "../domains/members/supporterService.ts";
+import { fetchSupporter, macheZuMitglied, beendeMitgliedschaft } from "../domains/members/supporterService.ts";
 import type { AustrittsZiel } from "../domains/members/supporterService.ts";
 import { bleibtMitglied } from "../domains/members/supporterService.ts";
 import { fetchAustrittsziel, fetchPersonenarten } from "../domains/person/personArtService.ts";
@@ -35,6 +35,7 @@ import { SupporterListView } from "./members/SupporterListView.tsx";
 import { ListView } from "../shared/list/ListView.tsx";
 import { MemberDetail } from "./members/MemberDetail.tsx";
 import type { SelectedMember } from "./members/MemberDetail.tsx";
+import { PersonenLoeschenModal } from "./members/PersonenLoeschenModal.tsx";
 import { NeuesMitgliedModal } from "./members/NeuesMitgliedModal.tsx";
 import type { ColDef, ExportFormat, FilterDef, FilterVals, RowId } from "../shared/list/types.ts";
 import type { MemberGroup } from "./members/memberGrouping.ts";
@@ -91,6 +92,18 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [alleArten,setAlleArten]=useState<PersonArt[]>([]);
   /* Die Personen, deren Art gerade geaendert wird. Leeres Feld = Modal zu. */
   const [artAendernFuer,setArtAendernFuer]=useState<string[]>([]);
+  /* ⚠ DIE EINZIGE UNWIDERRUFLICHE SAMMELAKTION DES PORTALS. Sie steht nur
+     in den Personenlisten (Eltern, Supporter) — in der MITGLIEDERLISTE gibt
+     es sie bewusst nicht: dort ist die Antwort der Austritt, nicht das
+     Loeschen. Gemessen am 24.08.2026: von 914 Personen haben 512 eine aktive
+     Mitgliedschaft, 394 sind nur Elternteil, 5 keins von beiden. Die
+     Sammelaktion trifft also genau die 399, fuer die es keinen Austritt gibt. */
+  const [loeschenFuer,setLoeschenFuer]=useState<{id:string;name:string}[]>([]);
+  /* ⚠ EINE ZAHL STATT FUENF LADEFUNKTIONEN. Die Elternliste laedt selbst und
+     wird beim Oeffnen einer Person abgehaengt — eine Sammelaktion IN ihr
+     haengt sie aber nicht ab. Statt eines zweiten Ladewegs aendert sich hier
+     eine Zahl, und wer sie liest, laedt neu. */
+  const [datenStand,setDatenStand]=useState(0);
   useEffect(()=>{
     if(!sb||!vereinId) return;
     let abgebrochen=false;
@@ -119,6 +132,31 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [archivLoaded,setArchivLoaded]=useState(false);
   const [archivCount,setArchivCount]=useState<number|null>(null);
   const [elternCount,setElternCount]=useState<number|null>(null);
+
+  /* ⚠ DIESE DREI EFFEKTE WAREN VOM 23. BIS 24.08.2026 WEG, und nichts hat es
+     gemeldet: Typecheck gruen, Build gruen, 807 Tests gruen. Sichtbar war nur,
+     dass zwei Tab-Zahlen fehlten und das Archiv sich nicht mehr nachlud.
+
+     Ursache: ein Regex-Schnitt beim Entfernen von `handleBulkDeactivate` — von
+     dort bis zum naechsten `function` oder `const`. Dazwischen lagen die
+     Effekte, weil `useEffect(` weder das eine noch das andere ist.
+
+     Dieselbe Familie wie der Schnitt vom 19.08.2026, der
+     `MitgliedtypFelderSektion` mitnahm. Die Regel steht in CLAUDE.md, und ich
+     habe sie nicht befolgt: erst zeigen, was im Schnittbereich liegt, dann
+     schneiden. */
+  useEffect(()=>{
+    if(!sb) return;
+    fetchArchivCount(sb).then(count=>setArchivCount(count));
+  },[sb,archivLoaded]);
+  useEffect(()=>{
+    if(!sb||!vereinId) return;
+    fetchAlleElternkontakte(sb,vereinId).then(data=>setElternCount(data.length));
+  },[sb,vereinId]);
+  useEffect(()=>{
+    if(!sb||!archivTab||archivLoaded) return;
+    fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
+  },[sb,archivTab,archivLoaded]);
 
   // Direkte Navigation vom Kader-Modul
   useEffect(()=>{
@@ -291,35 +329,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return data?.id ?? null;
   }
 
-  /* ⚠ DIE UMKEHRUNG VON „MITGLIED WERDEN", und sie ersetzt seit dem
-     23.08.2026 „Mitgliedschaft löschen". Sie loescht nur, wenn nichts
-     daranhaengt — der Service zaehlt vorher und nennt, was aufhaelt.
-
-     Die Rueckfrage steht HIER und nicht im Service: sie ist eine Frage an
-     den Menschen, das Zaehlen eine an die Datenbank. */
-  async function fuehreRuecknahmeAus(mitgliedId: number){
-    if(!sb) return;
-    const mm=dbMitglieder.find(x=>x.id===mitgliedId);
-    const ok=await confirm({
-      title:`Mitgliedschaft von ${mm?`${mm.vorname} ${mm.nachname}`:"dieser Person"} zurücknehmen?`,
-      message:"Die Mitgliedschaft wird entfernt, als hätte es sie nie gegeben. Die Person bleibt — mit Namen, Adresse, Konto, Notizen und Verlauf. "
-             +"Für ein Ende MIT Geschichte gibt es den Austritt.",
-      confirmLabel:"Zurücknehmen" });
-    if(!ok) return;
-    const { ok:erfolg, fehler, haengtDran } = await nimmMitgliedschaftZurueck(sb, mitgliedId);
-    if(!erfolg){
-      await confirm({
-        title:"Rücknahme nicht möglich",
-        /* ⚠ Der Grund wird GENANNT. „Ging nicht" erzieht dazu, es nochmal zu
-           versuchen; „daran hängen 3 Kadereinträge" sagt, was zu tun ist. */
-        message:(fehler||"Unbekannter Fehler") + (haengtDran.length?` — ${haengtDran.join(", ")}.`:""),
-        confirmLabel:"Verstanden" });
-      return;
-    }
-    setSelectedMember(null);
-    await ladeSupporter();
-    if(onReload) onReload();
-  }
 
   /* Aus einem Supporter wird ein Mitglied. Die Person bleibt dieselbe. */
   async function supporterWirdMitglied(
@@ -349,17 +358,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   }
 
 
-  async function handleBulkDelete(selected: Set<RowId>){
-    if(!sb||!selected||selected.size===0) return;
-    const ok=await confirm({title:`${selected.size} Mitgliedschaften löschen?`,message:"Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.",danger:true,confirmLabel:"Löschen"});if(!ok) return;
-    const ids=[...selected].map(Number);
-    /* Pro Zeile Fehler auswerten — Löschen kann an FK-Verknüpfungen (Kader/
-       Eltern) oder RLS scheitern; sonst meldete die UI faelschlich Erfolg. */
-    const results=await Promise.allSettled(ids.map(id=>deleteMitglied(sb,id)));
-    const failed=results.filter(r=>r.status==="rejected"||r.value!==null).length;
-    if(onReload) onReload();
-    if(failed>0) await confirm({title:"Nicht alle gelöscht",message:`${failed} von ${ids.length} Mitgliedern konnten nicht gelöscht werden — vermutlich bestehende Verknüpfungen (Kader/Eltern) oder fehlende Rechte.`,confirmLabel:"OK"});
-  }
+  /* ⚠ `handleBulkDelete` ist am 24.08.2026 gefallen — TOT seit dem
+     23.08.2026, als „Mitgliedschaft löschen" aus `bulkActions` verschwand.
+     Kein Aufrufer, keine Meldung: ein ungenutzter Funktionsname ist fuer
+     TypeScript kein Fehler, und `npm run lint` haette es unter 758 Warnungen
+     gesagt. Gefunden hat es die Strukturpruefung in `austritt.test.ts`. */
+
   /* ⚠ „ARCHIVIEREN" IST AM 23.08.2026 ZU „AUSTRITT…" GEWORDEN — und das ist
      kein Umbenennen. Archivieren nahm zwanzig Zeilen ohne zu fragen, was
      danach gilt; es setzte das heutige Datum und schaltete den Zugang ab.
@@ -420,7 +424,95 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
 
 
+  /* ⚠ DIE MODALE STEHEN VOR DEM FRUEHEN RETURN, und das ist der ganze Punkt.
+     Bis zum 24.08.2026 standen sie DANACH — im Listen-Zweig. Solange eine
+     Person geoeffnet war, rendete `MitgliederModul` ausschliesslich
+     `MemberDetail`, und alles darunter existierte nicht.
+
+     Wirkung: der Menueeintrag „Austritt" setzte `austrittFuer`, und NICHTS
+     rendete den Dialog. Es passierte sichtbar gar nichts. Wer danach auf den
+     Mitglieder-Tab klickte, schloss die Detailansicht — und der Dialog
+     erschien, weil der Zustand noch stand.
+
+     ⚠ ZWEI DER VIER WAREN BETROFFEN, und der zweite ist die eigentliche
+     Nachricht: „Mitglied werden…" aus dem Profil hat NIE funktioniert, und
+     niemand hat es gemeldet. Ein Weg, dessen Ausfall niemandem auffaellt,
+     ist ein Weg, den niemand geht.
+
+     `ArtAendernModal` und `NeuesMitgliedModal` werden nur aus den LISTEN
+     geoeffnet; sie waren nie betroffen. Sie stehen trotzdem hier, weil ein
+     Modal, das je nach Zweig existiert oder nicht, die naechste Falle ist. */
+  const modale = (
+    <>
+      <AustrittModal
+        open={austrittFuer!==null}
+        onClose={()=>setAustrittFuer(null)}
+        /* ⚠ Bei mehreren steht die ZAHL statt eines Namens, und Mitgliedtyp
+           und Konto bleiben leer: sie waeren bei zwanzig Zeilen entweder
+           falsch oder eine Aufzaehlung, die niemand liest. Was der Dialog
+           dann NICHT sagen kann, sagt er auch nicht. */
+        name={!austrittFuer?.length ? "" : austrittFuer.length===1 ? vollname(austrittFuer[0]) : `${austrittFuer.length} Mitglieder`}
+        mitgliedtyp={austrittFuer?.length===1 ? austrittFuer[0].mitgliedtyp : null}
+        hatKonto={(austrittFuer||[]).some(a=>a.hat_benutzer)}
+        mitgliedtypen={dbMitgliedtypen.filter(t=>t.aktiv!==false).map(t=>({name:t.name}))}
+        austrittsart={austrittsart}
+        onAustritt={fuehreAustrittAus}
+      />
+      <ArtAendernModal
+        open={artAendernFuer.length>0}
+        onClose={()=>setArtAendernFuer([])}
+        anzahl={artAendernFuer.length}
+        arten={alleArten}
+        onSetzen={async artId=>{
+          if(!sb||!vereinId) return "Keine Verbindung zur Datenbank.";
+          const msg=await setzePersonart(sb,artAendernFuer,artId,vereinId);
+          if(msg) return msg;
+          /* Beide Listen neu laden: die Art steht in beiden. */
+          await ladeSupporter();
+          if(onReload) onReload();
+          return null;
+        }}
+      />
+      <MitgliedWerdenModal
+        open={mitgliedWerdenFuer!==null}
+        onClose={()=>setMitgliedWerdenFuer(null)}
+        supporter={mitgliedWerdenFuer}
+        mitgliedtypen={dbMitgliedtypen}
+        onAnlegen={supporterWirdMitglied}
+      />
+      <PersonenLoeschenModal
+        open={loeschenFuer.length>0}
+        onClose={()=>setLoeschenFuer([])}
+        sb={sb}
+        personen={loeschenFuer}
+        onGeloescht={()=>{
+          /* ⚠ ALLE DREI LISTEN, nicht nur die eine. Eine geloeschte Person
+             stand am 23.08.2026 in der Supporter-Liste weiter, weil
+             `onReload` nur `dbMitglieder` laedt. Bei einem Teillauf ist das
+             besonders heikel: eine Anzeige, die stehenbleibt, ist von einer
+             Loeschung, die nicht stattfand, nicht zu unterscheiden. */
+          ladeSupporter();
+          setDatenStand(n=>n+1);
+          setArchivLoaded(false);
+          if(onReload) onReload();
+        }}
+      />
+      <NeuesMitgliedModal
+        open={showNeuesMitglied}
+        onClose={()=>setShowNeuesMitglied(false)}
+        sb={sb}
+        dbMitgliedtypen={dbMitgliedtypen}
+        feldkonfig={feldkonfig}
+        vereinId={vereinId}
+        account={account}
+        onSuccess={()=>{ if(onReload) onReload(); }}
+      />
+    </>
+  );
+
   if(selectedMember) return (
+    <>
+    {modale}
     <MemberDetail
       m={selectedMember} onClose={()=>setSelectedMember(null)} onNavToTeam={onNavToTeam}
       onAustritt={istVerwaltung?(id=>{const mm=dbMitglieder.find(x=>x.id===id);if(mm)setAustrittFuer([mm]);}):null}
@@ -439,7 +531,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
          Personenart. Wer als Mitglied angelegt wurde, gehoert ueber „Person
          löschen" weg. Gemessen am 23.08.2026 trifft das auf 1 von 512
          Mitgliedschaften zu. */
-      onRuecknahme={istVerwaltung?fuehreRuecknahmeAus:null}
       onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
       onOeffnePerson={oeffnePerson}
       sb={sb} role={role} account={account} feldkonfig={feldkonfig}
@@ -450,6 +541,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       reloadMember={reloadMember} refreshArchivCount={refreshArchivCount} brauchtEltern={brauchtEltern}
       vereinId={vereinId}
     />
+    </>
   );
 
 
@@ -488,52 +580,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
   return(
     <>{confirmDialog}
-      <AustrittModal
-        open={austrittFuer!==null}
-        onClose={()=>setAustrittFuer(null)}
-        /* ⚠ Bei mehreren steht die ZAHL statt eines Namens, und Mitgliedtyp
-           und Konto bleiben leer: sie waeren bei zwanzig Zeilen entweder
-           falsch oder eine Aufzaehlung, die niemand liest. Was der Dialog
-           dann NICHT sagen kann, sagt er auch nicht. */
-        name={!austrittFuer?.length ? "" : austrittFuer.length===1 ? vollname(austrittFuer[0]) : `${austrittFuer.length} Mitglieder`}
-        mitgliedtyp={austrittFuer?.length===1 ? austrittFuer[0].mitgliedtyp : null}
-        hatKonto={(austrittFuer||[]).some(a=>a.hat_benutzer)}
-        mitgliedtypen={dbMitgliedtypen.filter(t=>t.aktiv!==false).map(t=>({name:t.name}))}
-        austrittsart={austrittsart}
-        onAustritt={fuehreAustrittAus}
-      />
-      <ArtAendernModal
-        open={artAendernFuer.length>0}
-        onClose={()=>setArtAendernFuer([])}
-        anzahl={artAendernFuer.length}
-        arten={alleArten}
-        onSetzen={async artId=>{
-          if(!sb||!vereinId) return "Keine Verbindung zur Datenbank.";
-          const msg=await setzePersonart(sb,artAendernFuer,artId,vereinId);
-          if(msg) return msg;
-          /* Beide Listen neu laden: die Art steht in beiden. */
-          await ladeSupporter();
-          if(onReload) onReload();
-          return null;
-        }}
-      />
-      <MitgliedWerdenModal
-        open={mitgliedWerdenFuer!==null}
-        onClose={()=>setMitgliedWerdenFuer(null)}
-        supporter={mitgliedWerdenFuer}
-        mitgliedtypen={dbMitgliedtypen}
-        onAnlegen={supporterWirdMitglied}
-      />
-      <NeuesMitgliedModal
-        open={showNeuesMitglied}
-        onClose={()=>setShowNeuesMitglied(false)}
-        sb={sb}
-        dbMitgliedtypen={dbMitgliedtypen}
-        feldkonfig={feldkonfig}
-        vereinId={vereinId}
-        account={account}
-        onSuccess={()=>{ if(onReload) onReload(); }}
-      />
+    {modale}
     <div className="cc-page-wide">
       {/* Header + Tabs */}
       <div className="cc-page-hdr">
@@ -585,6 +632,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             if(person) setMitgliedWerdenFuer(person);
           }):null}
           onArtAendern={istVerwaltung?(ids=>setArtAendernFuer(ids)):null}
+          onLoeschen={istVerwaltung?(ps=>setLoeschenFuer(ps)):null}
           renderMobile={m=>(
             <div key={m.id} className="cc-members-item" onClick={()=>oeffnePerson(String(m.id), m.name||"?")}>
               {m.foto_url?<img src={m.foto_url} alt={m.name} className="cc-avatar-foto-lg"/>:<Av name={m.name||"?"} size={38}/>}
@@ -621,6 +669,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
             if(person) setMitgliedWerdenFuer(person);
           }):null}
           onArtAendern={istVerwaltung?(ids=>setArtAendernFuer(ids)):null}
+          onLoeschen={istVerwaltung?(ps=>setLoeschenFuer(ps)):null}
+          datenStand={datenStand}
         />
       ):archivTab?(
         <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} account={account} vereinId={vereinId} isAdmin={istVerwaltung} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
@@ -689,7 +739,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         isAdmin={istVerwaltung}
         selectable
         bulkActions={[
-          {icon:"door-exit",label:"Austritt…",   onClick:handleBulkAustritt},
+          {icon:"door-exit",label:"Austritt",     onClick:handleBulkAustritt},
           /* ⚠ „Mitgliedschaft löschen" ist am 23.08.2026 gefallen — als Knopf
              und als Sammelaktion. Sie loeschte per Kaskade, was niemand
              entschieden hatte (Kader, Anwesenheiten, Eltern-Verknuepfungen),

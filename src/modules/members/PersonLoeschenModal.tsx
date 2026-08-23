@@ -44,7 +44,7 @@ export interface PersonLoeschenModalProps {
 
 /** Eine Zeile der Aufstellung. Eingerückt, wenn sie an der Mitgliedschaft
     hängt statt an der Person — das erklärt, warum sie überhaupt dasteht. */
-function PostenZeile({ p }: { p: Posten }) {
+export function PostenZeile({ p }: { p: Posten }) {
   return (
     <div style={{
       display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -62,7 +62,7 @@ function PostenZeile({ p }: { p: Posten }) {
    ⚠ Was hier fehlt, erscheint als Tabellenname — sichtbar unschön, aber
    nicht falsch. Ein Rückfall auf „Sonstiges" würde verbergen, dass eine
    neue Tabelle in der Kette steht. */
-const LESBAR: Record<string, string> = {
+export const LESBAR: Record<string, string> = {
   mitglieder: "Mitgliedschaften",
   kader: "Kadereinträge",
   anwesenheiten: "Anwesenheiten",

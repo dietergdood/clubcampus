@@ -77,27 +77,39 @@ interface ElternListViewProps {
   onMitgliedWerden?: ((personIds: string[]) => void) | null;
   /** „Art ändern" — nur GESETZTE Arten sind wählbar. */
   onArtAendern?: ((personIds: string[]) => void) | null;
+  /** ⚠ Sammelaktion „Person löschen (DSGVO)". Bekommt Id UND Name, weil das
+      Modal die Namen zeigt, bevor seine eigene Vorschau da ist. */
+  onLoeschen?: ((personen: { id: string; name: string }[]) => void) | null;
+  /** Aendert sich, wenn von aussen etwas an den Daten geschah — die Liste
+      laedt dann neu, ohne dass es eine zweite Ladefunktion braucht. */
+  datenStand?: number;
 }
 
 export function ElternListView({
   sb, vereinId, account, isAdmin = false,
   onNavToMember = null, onOeffnen = null,
   onMitgliedWerden = null, onArtAendern = null,
+  onLoeschen = null, datenStand = 0,
 }: ElternListViewProps) {
   const [rows, setRows] = useState<ElternRow[]>([]);
   const [confirm, confirmDialog] = useConfirm();
   const [expandedKinder, setExpandedKinder] = useState<Set<string>>(new Set());
 
-  /* Kein `reload()` mehr: `MitgliederModul` gibt beim Oeffnen einer Person
-     die ganze Liste auf (fruehes `return <MemberDetail/>`), diese Komponente
-     wird abgehaengt und beim Zurueckkommen neu montiert — der useEffect
-     darunter laedt dann ohnehin. Eine zweite Ladefunktion waere ein zweiter
-     Ort, an dem dieselbe Liste auseinanderlaufen kann. */
+  /* Kein `reload()`: `MitgliederModul` gibt beim Oeffnen einer Person die
+     ganze Liste auf (fruehes `return <MemberDetail/>`), diese Komponente wird
+     abgehaengt und beim Zurueckkommen neu montiert — der useEffect darunter
+     laedt dann ohnehin. Eine zweite Ladefunktion waere ein zweiter Ort, an
+     dem dieselbe Liste auseinanderlaufen kann.
 
+     ⚠ EINE AUSNAHME, UND SIE IST DER GRUND FUER `datenStand`: eine
+     Sammelaktion IN dieser Liste haengt sie nicht ab. Nach dem Loeschen
+     stuenden die Geloeschten weiter da — und eine Anzeige, die stehenbleibt,
+     ist von einer Handlung, die nicht stattfand, nicht zu unterscheiden.
+     Deshalb kein zweiter Ladeweg, sondern eine Zahl, die sich aendert. */
   useEffect(() => {
     if (!sb || !vereinId) return;
     fetchAlleElternkontakte(sb, vereinId).then(data => setRows(mapEltern(data)));
-  }, [sb, vereinId]);
+  }, [sb, vereinId, datenStand]);
 
   const alleTeams = [...new Set(rows.flatMap(r => r.teams))].sort();
 
@@ -190,6 +202,16 @@ export function ElternListView({
             hidden: !onArtAendern,
             onClick: (sel: Set<RowId>) => onArtAendern?.([...sel].map(String)) },
           { icon:"unlink", label:"Entfernen", danger:true, requiresSelection:true, onClick:loeschen },
+          /* ⚠ „Entfernen" kappt die VERKNUEPFUNG, „Person löschen" entfernt den
+             MENSCHEN. Zwei Knoepfe nebeneinander, deren Namen sich aehneln und
+             deren Wirkung nicht — deshalb steht die Folge im Namen und nicht
+             nur im Symbol. */
+          { icon:"trash", label:"Person löschen (DSGVO)", danger:true, requiresSelection:true,
+            hidden: !onLoeschen,
+            onClick: (sel: Set<RowId>) => onLoeschen?.([...sel].map(id => ({
+              id: String(id),
+              name: rows.find(r => String(r.id) === String(id))?.name || "?",
+            }))) },
         ].filter(a => !a.hidden) : []}
         footerLabel={(f,t) => `${f} von ${t} Einträgen`}
         renderMobile={e => (

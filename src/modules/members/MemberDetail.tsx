@@ -54,9 +54,6 @@ interface MemberDetailProps {
   onClose: () => void;
   onNavToTeam?: ((teamId: number) => void) | null;
   onReaktiviert?: ((id: number) => void) | null;
-  /** Nimmt eine gerade angelegte Mitgliedschaft zurück — die Umkehrung von
-      „Mitglied werden". Ohne Callback erscheint der Eintrag nicht. */
-  onRuecknahme?: ((mitgliedId: number) => void) | null;
   sb: Sb;
   role: string;
   /* Zeilen aus mitgliedtyp_feldkonfig, von Portal durchgereicht. */
@@ -87,7 +84,7 @@ interface MemberDetailProps {
 }
 
 function MemberDetail({
-  m, onClose, onNavToTeam = null, onReaktiviert = null, onRuecknahme = null,
+  m, onClose, onNavToTeam = null, onReaktiviert = null,
   sb, role, account, feldkonfig = [],
   dbMitglieder = [], dbMitgliedtypen = [], dbPortalRollen = [], dbKaderRollen = [],
   kannVerwalten, onReload, onUpdatePortalZugang = null,
@@ -386,10 +383,6 @@ function MemberDetail({
         mitgliedId={mitgliedId} konfig={konfig} arten={arten}
         onMitgliedWerden={onMitgliedWerden ? (() => onMitgliedWerden(personId)) : null}
         darfPersonLoeschen={role === "administrator" || role === "administration"}
-        /* ⚠ Nur, wenn es die Person schon VOR der Mitgliedschaft gab — sonst
-           ist „Person löschen" der richtige Weg. `arten` und die Kinderzahl
-           sind hier schon geladen; eine zweite Abfrage braucht es nicht. */
-        onRuecknahme={(arten.length > 0 || elternCount > 0) ? onRuecknahme : null}
         onPersonGeloescht={() => { onClose(); onReload(); }}
       />
 
