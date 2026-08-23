@@ -95,6 +95,7 @@ export function makeMemberRenderCell({ portalFunktionen, TRAINER_KEYS, ROLLE_LAB
       case "spielerpass": return <td key="spielerpass" className="cc-members-td cc-members-td-sub">{m.spielerpass||"—"}</td>;
       case "fairgate_id": return <td key="fairgate_id" className="cc-members-td cc-members-td-sub">{m.fairgate_id||"—"}</td>;
       case "js_nr": return <td key="js_nr" className="cc-members-td cc-members-td-sub">{m.js_nr||"—"}</td>;
+      case "offene_punkte": return <td key="offene_punkte" className="cc-members-td cc-members-td-sub">{m.offene_punkte||"—"}</td>;
       case "eintritt": return <td key="eintritt" className="cc-members-td cc-members-td-sub">{formatDatum(m.eintritt)}</td>;
       case "nachname": return <td key="nachname" className="cc-members-td cc-members-td-sub">{m.nachname||"—"}</td>;
       case "vorname": return <td key="vorname" className="cc-members-td cc-members-td-sub">{m.vorname||"—"}</td>;

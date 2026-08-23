@@ -69,6 +69,8 @@ export interface PersonInput {
   spielerpass?: string | null;
   pass?: string | null;
   js_nr?: string | null;
+  /** Vermerk: was bei dieser Person noch offen ist. Nicht leer = im Archiv. */
+  offene_punkte?: string | null;
   js?: string | null;
   ahv_nr?: string | null;
   fairgate_id?: string | null;

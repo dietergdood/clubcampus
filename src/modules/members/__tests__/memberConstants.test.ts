@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ClubCampus — memberConstants: die 28 Spalten der Mitgliederliste
+   ClubCampus — memberConstants: die 29 Spalten der Mitgliederliste
 
    ⚠ WOZU DIESE DATEI. Am 22.08.2026 sind die 20 personengebundenen
    Spalten nach `shared/person/personSpalten.ts` gezogen, damit die
@@ -12,7 +12,7 @@
    kein Fehler, keine Meldung. Die gespeicherte Ansicht sieht danach
    aus, als hätte der Nutzer sie so angelegt.
 
-   ⚠ DIESER FALL ZAEHLT NICHT, ER NENNT. `toHaveLength(28)` bestünde
+   ⚠ DIESER FALL ZAEHLT NICHT, ER NENNT. `toHaveLength(29)` bestünde
    auch, wenn zwei Schlüssel vertauscht oder umbenannt wären. Die
    Tabelle unten ist aus dem Stand VOR dem Umzug erzeugt und hält
    Gruppe, Schlüssel, Beschriftung und Vorgaben fest.
@@ -42,6 +42,11 @@ const ERWARTET: string[][] = [
   ["Verein", "spielerpass", "Spielerpass", "-"],
   ["Verein", "fairgate_id", "Fairgate-ID", "-"],
   ["Verein", "js_nr", "J+S Nr.", "-"],
+  /* ⚠ 29. Spalte, ergaenzt am 23.08.2026. Sie ist ausgeblendet und trotzdem
+     noetig: das Archiv zeigt seit dem Umbau KEINE aktiven Mitglieder mehr,
+     und der Vermerk bleibt beim Wiedereintritt stehen. Ohne diese Spalte
+     waere ein offener Posten dann in keiner Liste auffindbar. */
+  ["Verein", "offene_punkte", "Offene Punkte", "hidden"],
   ["Portal", "portal", "Portal-Zugang", "default"],
   ["Portal", "datenpruefung", "Datenpruefung", "default"],
   ["Sport", "teams_rollen", "Teams & Kaderrollen", "default"],
@@ -59,7 +64,7 @@ const flach = () => COL_GROUPS.flatMap(g => g.cols.map(c => [
 ]));
 
 describe("Spaltenkatalog der Mitgliederliste", () => {
-  it("⚠ trägt genau die 28 Spalten von vor dem Umzug — Reihenfolge, Beschriftung, Vorgaben", () => {
+  it("⚠ trägt genau die 29 Spalten — Stand 23.08.2026 — Reihenfolge, Beschriftung, Vorgaben", () => {
     expect(flach()).toEqual(ERWARTET);
   });
 

@@ -11,7 +11,7 @@ import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
 import { mapMembers, filterMembers, sortMembers, buildGroups, exportData as exportDataUtil } from "./members/memberDataUtils.ts";
 import { mapSupporter } from "./members/memberMapper.ts";
-import { fetchSupporter, macheZuMitglied, beendeMitgliedschaft } from "../domains/members/supporterService.ts";
+import { nimmMitgliedschaftZurueck, fetchSupporter, macheZuMitglied, beendeMitgliedschaft } from "../domains/members/supporterService.ts";
 import type { AustrittsZiel } from "../domains/members/supporterService.ts";
 import { bleibtMitglied } from "../domains/members/supporterService.ts";
 import { fetchAustrittsziel, fetchPersonenarten } from "../domains/person/personArtService.ts";
@@ -291,6 +291,36 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     return data?.id ?? null;
   }
 
+  /* ⚠ DIE UMKEHRUNG VON „MITGLIED WERDEN", und sie ersetzt seit dem
+     23.08.2026 „Mitgliedschaft löschen". Sie loescht nur, wenn nichts
+     daranhaengt — der Service zaehlt vorher und nennt, was aufhaelt.
+
+     Die Rueckfrage steht HIER und nicht im Service: sie ist eine Frage an
+     den Menschen, das Zaehlen eine an die Datenbank. */
+  async function fuehreRuecknahmeAus(mitgliedId: number){
+    if(!sb) return;
+    const mm=dbMitglieder.find(x=>x.id===mitgliedId);
+    const ok=await confirm({
+      title:`Mitgliedschaft von ${mm?`${mm.vorname} ${mm.nachname}`:"dieser Person"} zurücknehmen?`,
+      message:"Die Mitgliedschaft wird entfernt, als hätte es sie nie gegeben. Die Person bleibt — mit Namen, Adresse, Konto, Notizen und Verlauf. "
+             +"Für ein Ende MIT Geschichte gibt es den Austritt.",
+      confirmLabel:"Zurücknehmen" });
+    if(!ok) return;
+    const { ok:erfolg, fehler, haengtDran } = await nimmMitgliedschaftZurueck(sb, mitgliedId);
+    if(!erfolg){
+      await confirm({
+        title:"Rücknahme nicht möglich",
+        /* ⚠ Der Grund wird GENANNT. „Ging nicht" erzieht dazu, es nochmal zu
+           versuchen; „daran hängen 3 Kadereinträge" sagt, was zu tun ist. */
+        message:(fehler||"Unbekannter Fehler") + (haengtDran.length?` — ${haengtDran.join(", ")}.`:""),
+        confirmLabel:"Verstanden" });
+      return;
+    }
+    setSelectedMember(null);
+    await ladeSupporter();
+    if(onReload) onReload();
+  }
+
   /* Aus einem Supporter wird ein Mitglied. Die Person bleibt dieselbe. */
   async function supporterWirdMitglied(
     person: PersonFuerMitgliedschaft,
@@ -404,6 +434,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         if(person) setMitgliedWerdenFuer(person);
         else console.error("onMitgliedWerden: Person nicht gefunden.",{pid,fehler});
       }):null}
+      /* ⚠ NUR, WO DIE RUECKNAHME EINEN SINN HAT: bei einer Person, die es
+         schon VOR der Mitgliedschaft gab — sie hat Kinder oder eine
+         Personenart. Wer als Mitglied angelegt wurde, gehoert ueber „Person
+         löschen" weg. Gemessen am 23.08.2026 trifft das auf 1 von 512
+         Mitgliedschaften zu. */
+      onRuecknahme={istVerwaltung?fuehreRuecknahmeAus:null}
       onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
       onOeffnePerson={oeffnePerson}
       sb={sb} role={role} account={account} feldkonfig={feldkonfig}
@@ -654,7 +690,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         selectable
         bulkActions={[
           {icon:"door-exit",label:"Austritt…",   onClick:handleBulkAustritt},
-          {icon:"trash",    label:"Mitgliedschaft löschen", onClick:handleBulkDelete, danger:true, requiresSelection:true},
+          /* ⚠ „Mitgliedschaft löschen" ist am 23.08.2026 gefallen — als Knopf
+             und als Sammelaktion. Sie loeschte per Kaskade, was niemand
+             entschieden hatte (Kader, Anwesenheiten, Eltern-Verknuepfungen),
+             und deckte einen Fall ab, den es nicht gibt: 0 von 515 Personen
+             haben mehr als eine Mitgliedschaft. */
         ]}
         exportFn={canExport ? exportData : undefined}
         exportFormats={canExport ? [

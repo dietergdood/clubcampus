@@ -15,7 +15,7 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb } from "./_mockSb.ts";
-import { beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
+import { nimmMitgliedschaftZurueck, beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
 import { archiviereMitglied, beendeVerknuepfungen, setzeArtFuerElternOhneKind } from "../memberService.ts";
 
 afterEach(() => vi.restoreAllMocks());
@@ -426,5 +426,62 @@ describe("setzeArtFuerElternOhneKind — der zweite Auslöser", () => {
     const sb = makeSb({});
     expect(await setzeArtFuerElternOhneKind(sb as never, [], "v-1")).toEqual([]);
     expect(sb.calls).toHaveLength(0);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   ⚠ Die Rücknahme — der Ersatz für „Mitgliedschaft löschen"
+
+   Gemessen am 23.08.2026 hatte der alte Knopf genau EINEN Fall: ein
+   versehentliches „Mitglied werden" bei einer Person, die es schon
+   gab. Für alles andere war er falsch, und er löschte per KASKADE:
+   399 `eltern_kinder`-Zeilen hängen an 393 Mitgliedschaften.
+
+   Diese Fälle halten die Umkehrung fest: sie löst KEINE Kaskade aus.
+   ═══════════════════════════════════════════════════════════════ */
+describe("nimmMitgliedschaftZurueck", () => {
+  const LEER = {
+    "kader.select": { count: 0 }, "anwesenheiten.select": { count: 0 },
+    "mitglieder_team_details.select": { count: 0 }, "sfv_zuordnung.select": { count: 0 },
+    "eltern_kinder.select": { count: 0 },
+    "mitglieder.delete": { data: [{ id: 42 }] },
+  };
+
+  it("nimmt eine leere Mitgliedschaft zurück", async () => {
+    const sb = makeSb(LEER);
+    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
+    expect(erg.ok).toBe(true);
+    expect(sb.find("mitglieder", "delete")).toBeTruthy();
+  });
+
+  it("⚠ weigert sich, wenn Eltern-Verknüpfungen daranhängen", async () => {
+    /* Der wichtigste Fall: die CASCADE haette sie entfernt, und sie stehen
+       in keinem Verlauf. */
+    const sb = makeSb({ ...LEER, "eltern_kinder.select": { count: 2 } });
+    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
+    expect(erg.ok).toBe(false);
+    expect(erg.haengtDran).toEqual(["Eltern-Verknüpfungen (2)"]);
+    expect(sb.opsOn("mitglieder").filter(r => r.op === "delete")).toHaveLength(0);
+  });
+
+  it("nennt ALLES, was aufhält — nicht nur das erste", async () => {
+    const sb = makeSb({ ...LEER, "kader.select": { count: 1 }, "eltern_kinder.select": { count: 3 } });
+    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
+    expect(erg.haengtDran).toEqual(["Kadereinträge (1)", "Eltern-Verknüpfungen (3)"]);
+  });
+
+  it("⚠ ein Lesefehler heisst nicht: nichts da — er hält auf", async () => {
+    /* Sonst löschte ein 42501 genau das, was er verbergen sollte. */
+    const sb = makeSb({ ...LEER, "kader.select": { error: { message: "keine Rechte" } } });
+    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
+    expect(erg.ok).toBe(false);
+    expect(sb.opsOn("mitglieder").filter(r => r.op === "delete")).toHaveLength(0);
+  });
+
+  it("⚠ meldet KEINEN Erfolg, wenn das delete keine Zeile trifft", async () => {
+    const sb = makeSb({ ...LEER, "mitglieder.delete": { data: [] } });
+    const erg = await nimmMitgliedschaftZurueck(sb as never, 42);
+    expect(erg.ok).toBe(false);
+    expect(erg.fehler).toContain("nicht entfernt");
   });
 });

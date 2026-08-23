@@ -12,7 +12,7 @@ import { TI } from "../../icons.tsx";
 import { PersonLoeschenModal } from "./PersonLoeschenModal.tsx";
 import type { PersonArt } from "../../domains/person/personArtService.ts";
 import { heroChips } from "../../domains/roles/roleUtils.ts";
-import { updatePersonFoto, deletePersonFoto, deleteMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
+import { updatePersonFoto, deletePersonFoto, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
 import type { Account, Mitglied, Mitgliedtyp, PortalRolle, Sb, PersonZeile } from "../../types.ts";
 /* Nicht KaderRolle aus types.ts: dort ist aktiv Pflicht, MemberDetail reicht
    aber KaderRolleDb durch. KaderRolleMitTrainerFlag verlangt nur, was hier gelesen
@@ -41,6 +41,15 @@ interface MemberHeroProps {
   /** Läuft nach dem Löschen — die Person gibt es dann nicht mehr, der
       Aufrufer muss die Detailansicht schliessen und die Liste neu laden. */
   onPersonGeloescht?: (() => void) | null;
+  /**
+   * Öffnet die Rücknahme einer gerade angelegten Mitgliedschaft.
+   *
+   * ⚠ Ohne Callback erscheint der Eintrag nicht — und der Aufrufer setzt ihn
+   * nur, wo er einen Sinn hat: bei einer Person, die es schon VOR der
+   * Mitgliedschaft gab (Elternteil, Supporter). Wer als Mitglied angelegt
+   * wurde, gehört über „Person löschen" weg, nicht über die Rücknahme.
+   */
+  onRuecknahme?: ((mitgliedId: number) => void) | null;
   sb: Sb;
   /* Ohne ID lädt der Aufrufer die ganze Liste neu, mit ID nur das Mitglied */
   onReload?: ((id?: number) => void) | null;
@@ -90,7 +99,7 @@ interface MemberHeroProps {
   konfig: Record<string, FeldModus>;
 }
 
-function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig,darfPersonLoeschen=false,onPersonGeloescht=null}: MemberHeroProps){
+function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig,darfPersonLoeschen=false,onPersonGeloescht=null,onRuecknahme=null}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
@@ -104,21 +113,7 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
     if(onReload) onReload(mitgliedId ?? undefined);
   }
 
-  async function handleLoeschen(){
-    /* ⚠ Loescht die MITGLIEDSCHAFT, nicht die Person — der Knopf heisst seit
-       jeher „Löschen" und tut genau das. Die Trennung von „Person löschen
-       (DSGVO)" ist ein eigenes Vorhaben. Ohne Mitgliedschaft gibt es hier
-       nichts zu loeschen, und der Eintrag erscheint gar nicht erst. */
-    if(mitgliedId==null) return;
-    const ok=await confirm({
-      title:`Mitgliedschaft von ${m.name} löschen?`,
-      message:"Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.",
-      danger:true, confirmLabel:"Mitgliedschaft löschen"});
-    if(!sb||!ok) return;
-    await deleteMitglied(sb, mitgliedId);
-    if(onClose) onClose();
-    if(onReload) onReload(mitgliedId);
-  }
+
 
   return(
     <>{confirmDialog}
@@ -289,15 +284,23 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
                    Haekchen „Portal-Zugang beenden". Und was er BEDEUTETE —
                    „noch etwas offen" — ist die Markierung. */
                 ...(mitgliedId!=null&&raw.aktiv===false?["sep" as const,{icon:"user-check",label:"Reaktivieren",onClick:async()=>{const ok=await confirm({title:`${m.name} reaktivieren?`,confirmLabel:"Reaktivieren"});if(!ok||!sb)return;const n=account?.name||account?.email||"Administrator";if(vereinId) await logAktivitaet(sb,{ personId: raw.person_id, mitgliedId },vereinId,AKTIVITAET_TYP.REAKTIVIERT,"Mitglied reaktiviert",null,null,n);await reaktiviereMitglied(sb, mitgliedId);if(onUpdatePortalZugang)await onUpdatePortalZugang(mitgliedId,true);if(onRefreshCount)onRefreshCount();if(onReaktiviert)onReaktiviert(mitgliedId);else if(onReload)onReload(mitgliedId);}}]:[]),
-                /* ⚠ Hiess bis zum 21.08.2026 nur „Löschen" — und in den Sammelaktionen
-                   sogar „Löschen (DSGVO)". Beides versprach etwas, das nicht
-                   geschieht: `deleteMitglied()` entfernt die MITGLIEDSCHAFT, die
-                   Person bleibt vollständig stehen (Name, Adresse, Geburtsdatum,
-                   AHV-Nummer, Konto). Bei einem echten Löschbegehren ist das kein
-                   Schönheitsfehler — wer den Knopf benutzt hat, glaubt es erledigt.
-                   Nur der Text ist geändert; das echte Löschen ist ein eigenes
-                   Vorhaben mit Vorschau und Edge Function fuer auth.users. */
-                ...(mitgliedId!=null?["sep" as const,{icon:"trash",label:"Mitgliedschaft löschen",danger:true,onClick:handleLoeschen}]:[]),
+                /* ⚠ „MITGLIEDSCHAFT LÖSCHEN" IST AM 23.08.2026 GEFALLEN, und die
+                   Messung war eindeutig: 0 von 515 Personen haben mehr als eine
+                   Mitgliedschaft, und eine Dublette ist eine doppelt angelegte
+                   PERSON — dafür gibt es „Person löschen (DSGVO)".
+
+                   ⚠ Er löschte ausserdem per KASKADE statt per Entscheidung.
+                   Am schlimmsten `eltern_kinder`: 399 Zeilen hängen an 393
+                   Mitgliedschaften. Wer die Mitgliedschaft eines Juniors
+                   löschte, entfernte die Verknüpfungen zu seinen Eltern — und
+                   die stehen in keinem Verlauf.
+
+                   Der EINE Fall, den er abdeckte, steht jetzt darunter: ein
+                   versehentliches „Mitglied werden" zurücknehmen. Es ist die
+                   Umkehrung dort, wo der Fehler entsteht, statt eines
+                   Löschknopfes am anderen Ende. */
+                ...(canEdit&&mitgliedId!=null&&raw.aktiv!==false&&onRuecknahme
+                    ?["sep" as const,{icon:"arrow-left",label:"Mitgliedschaft zurücknehmen…",onClick:()=>onRuecknahme(mitgliedId)}]:[]),
                 /* ⚠ DER TRENNER GEHOERT ZWISCHEN DIE ZWEI LOESCHZEILEN, nicht
                    davor. Sie unterscheiden sich nur im Substantiv, beide rot,
                    beide mit Papierkorb — die Trennung muss aus dem ABSTAND

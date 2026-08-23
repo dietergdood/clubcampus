@@ -39,6 +39,8 @@ export interface SupporterRoh {
   foto_url?: string | null;
   funktionen?: string[] | null;
   profil_geprueft_at?: string | null;
+  /** Vermerk: was noch offen ist. Nicht leer = im Archiv. */
+  offene_punkte?: string | null;
   /** benutzer.role — die Portalrolle, meist `supporter`. */
   rolle?: string | null;
   hat_benutzer?: boolean;
@@ -71,7 +73,7 @@ const PERSON_SELECT = `
   id, vorname, nachname, email, telefon,
   strasse, plz, ort, geburtsdatum, geschlecht,
   nationalitaet, nationalitaet2, heimatort, ahv_nr,
-  foto_url, funktionen, profil_geprueft_at,
+  foto_url, funktionen, profil_geprueft_at, offene_punkte,
   mitglieder(id),
   eltern_kinder(person_id),
   benutzer(id, role, aktiv)
@@ -175,12 +177,106 @@ export async function fetchSupporter(
         foto_url: p.foto_url,
         funktionen: p.funktionen,
         profil_geprueft_at: p.profil_geprueft_at,
+        /* ⚠ Mitgelesen, damit die Liste den Vermerk zeigen kann — sonst
+           waere er bei einem Supporter nur auf der Personenseite sichtbar. */
+        offene_punkte: p.offene_punkte,
         rolle: konto?.role ?? null,
         hat_benutzer: Boolean(konto),
         benutzer_deaktiviert: Boolean(konto) && konto.aktiv === false,
         arten: artenMap[p.id] || [],
       };
     });
+}
+
+/**
+ * Eine Mitgliedschaft ZURUECKNEHMEN — die Umkehrung von `macheZuMitglied`.
+ *
+ * ⚠ SIE ERSETZT „MITGLIEDSCHAFT LOESCHEN", das am 23.08.2026 gefallen ist.
+ * Gemessen hatte der Knopf genau EINEN Fall: ein versehentliches „Mitglied
+ * werden" bei einer Person, die es schon gab. Fuer alles andere ist er
+ * falsch — eine Dublette ist eine doppelt angelegte PERSON, und dafuer gibt
+ * es „Person loeschen (DSGVO)".
+ *
+ * ⚠ UND SIE LOESCHT NUR, WENN NICHTS DARANHAENGT. Der alte Knopf loeschte
+ * per KASKADE, nicht per Entscheidung:
+ *
+ *     CASCADE   kader · anwesenheiten · mitglieder_team_details
+ *               sfv_zuordnung · eltern_kinder · helper_einsatz_pflicht_mitglied
+ *     SET NULL  benutzer · mitglieder_notizen · mitglieder_aenderungen
+ *                        · mitglieder_aktivitaeten
+ *
+ * Der gefaehrlichste davon ist `eltern_kinder`: 399 Zeilen haengen an 393
+ * Mitgliedschaften (gemessen 23.08.2026). Wer die Mitgliedschaft eines
+ * Juniors loescht, entfernt damit die Verknuepfungen zu seinen Eltern — und
+ * die stehen in keinem Verlauf.
+ *
+ * Diese Funktion loest deshalb KEINE Kaskade aus: sie zaehlt vorher und
+ * weigert sich, wenn etwas da ist. Was sie nicht zuruecknehmen kann, gehoert
+ * ueber den Austritt beendet — der behaelt die Zeile und ihre Geschichte.
+ *
+ * ⚠ Notizen, Aenderungen und Aktivitaeten stehen NICHT in der Pruefliste:
+ * sie haengen an `person_id` und verlieren beim Loeschen nur die
+ * Mitgliedschaft. Sie bleiben lesbar — `fetchNotizen` liest ueber die Person.
+ */
+export interface RuecknahmeErgebnis {
+  ok: boolean;
+  fehler: string | null;
+  /** Was die Ruecknahme aufgehalten hat — leer, wenn sie lief. */
+  haengtDran: string[];
+}
+
+/* ⚠ `as const`, damit die Tabellennamen LITERALE bleiben. Als `string` nimmt
+   `sb.from()` sie nicht an — und das ist gut so: ein Tippfehler waere sonst
+   erst zur Laufzeit ein Fehler, und der Waechter haette eine Sperre weniger
+   geprueft, ohne es zu sagen. */
+const RUECKNAHME_SPERREN = [
+  { tabelle: "kader",                   text: "Kadereinträge" },
+  { tabelle: "anwesenheiten",           text: "Anwesenheiten" },
+  { tabelle: "mitglieder_team_details", text: "Team-Angaben" },
+  { tabelle: "sfv_zuordnung",           text: "SFV-Zuordnungen" },
+  /* ⚠ Der wichtigste Eintrag der Liste. */
+  { tabelle: "eltern_kinder",           text: "Eltern-Verknüpfungen" },
+] as const;
+
+export async function nimmMitgliedschaftZurueck(
+  sb: SbClient, mitgliedId: number,
+): Promise<RuecknahmeErgebnis> {
+  if (!sb) return { ok: false, fehler: "Keine Verbindung", haengtDran: [] };
+
+  const haengtDran: string[] = [];
+  for (const sperre of RUECKNAHME_SPERREN) {
+    const { count, error } = await sb.from(sperre.tabelle)
+      .select("*", { count: "exact", head: true })
+      .eq("mitglied_id", mitgliedId);
+    /* ⚠ Ein Lesefehler heisst NICHT „nichts da". Er haelt die Ruecknahme auf —
+       sonst loeschte ein 42501 genau das, was er verbergen sollte. */
+    if (error) {
+      return { ok: false, haengtDran: [],
+        fehler: `Es liess sich nicht prüfen, was an der Mitgliedschaft hängt (${sperre.tabelle}).` };
+    }
+    if ((count ?? 0) > 0) haengtDran.push(`${sperre.text} (${count})`);
+  }
+
+  if (haengtDran.length > 0) {
+    return { ok: false, haengtDran,
+      fehler: "Diese Mitgliedschaft lässt sich nicht zurücknehmen — daran hängt bereits etwas. "
+            + "Für ein Ende mit Geschichte gibt es den Austritt." };
+  }
+
+  /* ⚠ GEZAEHLT. Ein delete, das keine Zeile trifft, ist bei PostgREST kein
+     Fehler; ohne `.select("id")` meldete die Ruecknahme Erfolg, waehrend die
+     Mitgliedschaft stehen bliebe. */
+  const { data, error } = await sb.from("mitglieder")
+    .delete().eq("id", mitgliedId).select("id");
+  if (error) {
+    console.error("nimmMitgliedschaftZurueck error:", error);
+    return { ok: false, fehler: error.message, haengtDran: [] };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, haengtDran: [],
+      fehler: "Die Mitgliedschaft wurde nicht entfernt — fehlt die Berechtigung?" };
+  }
+  return { ok: true, fehler: null, haengtDran: [] };
 }
 
 /* ── Statuswechsel ────────────────────────────────────────────────────────

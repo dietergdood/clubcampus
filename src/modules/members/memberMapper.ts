@@ -105,6 +105,7 @@ export function mapMembers(
          zwangslaeufig dieselbe Position. Sie stehen jetzt an der Kaderzeile
          (`kader.position`, `kader.rueckennr`), pro Team und Saison. */
       fairgate_id:m.fairgate_id, js_nr:m.js_nr,
+      offene_punkte:m.offene_punkte||"",
       spielerpass:m.spielerpass, eintritt:m.eintrittsdatum,
       foto_url:m.foto_url||null, funktionen:m.funktionen||[],
       strasse:m.strasse, heimatort:m.heimatort, ahv_nr:m.ahv_nr,
@@ -190,6 +191,7 @@ export function mapSupporter(
     /* Gibt es bei einem Supporter nicht — sie haengen an der Mitgliedschaft. */
     fairgate_id: null,
     js_nr: null,
+    offene_punkte: p.offene_punkte || "",
     spielerpass: null,
     eintritt: null,
     foto_url: p.foto_url || null,

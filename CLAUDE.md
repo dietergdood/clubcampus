@@ -448,6 +448,17 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Und warum es so lange hält:** die Verdrahtung war für **Mitglieder** folgenlos, weil `dbRaw` aus der Liste kommt und in der Mischung gewinnt — der Listenreload frischte mit auf. Erst bei einer Person **ohne** Mitgliedschaft ist `dbRaw` leer, und dann frischt nichts auf. Ein Fehler, den die häufigere Hälfte der Daten verdeckt, wartet auf die seltenere.
 
+- **Deutsche Anführungszeichen zerstören jedes JS-Stringliteral, in dem sie stehen.** `"Der Vermerk „X" konnte nicht …"` — das `"` hinter `X` beendet den String, und der Rest wird als Code gelesen. Am 23.08.2026 **viermal** passiert (`ArchivView`, `supporterService`, `MemberHero`, `austritt.test.ts`), jedes Mal mit einem unverständlichen Parserfehler drei Zeilen weiter.
+
+  ⚠ **In Kommentaren sind sie richtig und erwünscht** — die ganze Codebasis benutzt sie dort. Nur **innerhalb eines Stringliterals** haben sie nichts zu suchen. Wer einen solchen Text braucht, schreibt ihn ohne:
+
+  ```ts
+  hinweise.push("Der Vermerk konnte nicht gesetzt werden.");   // statt „Vermerk"
+  it("ein Lesefehler heisst nicht: nichts da", …)              // statt „nichts da"
+  ```
+
+  Es fällt sofort auf (der Build bricht), kostet aber jedes Mal einen Durchgang. Dieselbe Familie wie `` gegen deutsche Bezeichner: ein Werkzeug, das die Schreibweise nicht kennt.
+
 - **Bei Fremddaten immer Allowlist, nie Denylist.** Wer aus einer fremden Antwort etwas herausfiltert — Personendaten schwärzen, Felder übernehmen, Nutzlast begrenzen —, listet auf, was **durchkommt**, nicht was fällt. Ein neues Feld der Gegenseite ist damit im Zweifel geschwärzt und fällt auf, statt still mitzureisen. Umgekehrt ist jede Denylist nur so gut wie die Fantasie dessen, der sie geschrieben hat. Beleg vom 19.08.2026: eine Regex-Denylist `/person|player|birth|passport|…/` gegen die SFV-Matchdaten war zugleich zu streng (schwärzte `personId`, `isPlayer`) und zu lasch — `players[]` führt den Namen in **drei** Feldern, `firstname`, `name` und `secondName`, von denen keines „person" oder „player" heisst. Die Klarnamen von 32 Spielern, überwiegend gegnerische, gingen durch. Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad geschrieben und dort gegengelesen wurde. Muster: `scripts/sfv-matchdaten-probe.mjs`, Konstante `ERLAUBT`.
 - **Ein neues Feld erbt JEDEN Ausgang des Objekts, an dem es hängt.** Wer einem bestehenden Objekt ein Feld hinzufügt, muss alle Wege kennen, die dieses Objekt schon nimmt — nicht nur den, für den das Feld gedacht war. Das Feld ist neu, die Ausgänge sind alt, und deshalb schlägt nichts fehl.
 

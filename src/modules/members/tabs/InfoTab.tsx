@@ -13,6 +13,7 @@ import { PersonKontakt } from "../../../shared/person/PersonKontakt.tsx";
 import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
 import { OffenePunkteKarte } from "../OffenePunkteKarte.tsx";
+import { hatOffenePunkte } from "../../../domains/person/offenePunkteService.ts";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
 import {
@@ -76,6 +77,9 @@ interface InfoTabProps {
   setNotizenCount: (anzahl: number) => void;
   /** Darf den Vermerk „Offene Punkte" setzen und entfernen — Verwaltung. */
   darfMarkieren?: boolean;
+  /** Hat die PERSON eine aktive Mitgliedschaft? Entscheidet, ob die Karte
+      „Offene Punkte" ueberhaupt erscheint. */
+  hatAktiveMitgliedschaft?: boolean;
   onReload?: (() => void) | null;
   reloadMember?: ((id: number) => void) | null;
   ableitRolle: () => Promise<void> | void;
@@ -92,6 +96,7 @@ function InfoTab({ mitgliedId,
   onNavToTeam,
   notizenCount, setNotizenCount,
   onReload, reloadMember=null, ableitRolle, darfMarkieren = false,
+  hatAktiveMitgliedschaft = false,
   vereinId,
 }: InfoTabProps) {
   const isMobile = useIsMobile();
@@ -285,13 +290,31 @@ function InfoTab({ mitgliedId,
         {/* ⚠ „Offene Punkte" — die Markierung, die das Archiv ersetzt.
             Steht VOR den Notizen: sie ist eine Aussage ueber den Stand,
             keine Aufzeichnung. */}
-        <OffenePunkteKarte
-          sb={sb}
-          personId={raw.person_id}
-          wert={raw.offene_punkte ?? null}
-          darfSetzen={darfMarkieren}
-          onGeaendert={() => { if (onReload) onReload(); }}
-        />
+        {/* ⚠ EIN ABWICKLUNGSVERMERK. Wer noch Mitglied ist, hat nichts
+            abzuwickeln — offene Beitraege eines aktiven Mitglieds sind ein
+            anderes Thema und gehoeren ins Finanzmodul. (Entscheidung Didi,
+            23.08.2026.)
+
+            ⚠ UND DER GRUND IST NICHT DIE OPTIK: das Archiv filtert auf den
+            Vermerk. Stuende er bei einem aktiven Mitglied, erschiene es im
+            Archiv-Tab — ein Tab namens „Archiv" mit aktiven Mitgliedern
+            darin ist genau die Verwirrung, die wir abbauen.
+
+            ⚠ DIE ZWEITE HAELFTE DER BEDINGUNG ist der Wiedereintritt: der
+            Vermerk bleibt beim Wiedereintritt stehen (von Hand gesetzt, von
+            Hand entfernt). Ohne `hatOffenePunkte` waere er danach
+            unerreichbar — sichtbar in keiner Liste und auf keiner Seite.
+            Deshalb: kein aktives Mitglied sieht die Karte, AUSSER es steht
+            noch etwas offen. */}
+        {(!hatAktiveMitgliedschaft || hatOffenePunkte(raw.offene_punkte)) && (
+          <OffenePunkteKarte
+            sb={sb}
+            personId={raw.person_id}
+            wert={raw.offene_punkte ?? null}
+            darfSetzen={darfMarkieren}
+            onGeaendert={() => { if (onReload) onReload(); }}
+          />
+        )}
 
         {/* Notizen */}
         {zeigeNotizen && (

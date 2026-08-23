@@ -54,6 +54,9 @@ interface MemberDetailProps {
   onClose: () => void;
   onNavToTeam?: ((teamId: number) => void) | null;
   onReaktiviert?: ((id: number) => void) | null;
+  /** Nimmt eine gerade angelegte Mitgliedschaft zurück — die Umkehrung von
+      „Mitglied werden". Ohne Callback erscheint der Eintrag nicht. */
+  onRuecknahme?: ((mitgliedId: number) => void) | null;
   sb: Sb;
   role: string;
   /* Zeilen aus mitgliedtyp_feldkonfig, von Portal durchgereicht. */
@@ -84,7 +87,7 @@ interface MemberDetailProps {
 }
 
 function MemberDetail({
-  m, onClose, onNavToTeam = null, onReaktiviert = null,
+  m, onClose, onNavToTeam = null, onReaktiviert = null, onRuecknahme = null,
   sb, role, account, feldkonfig = [],
   dbMitglieder = [], dbMitgliedtypen = [], dbPortalRollen = [], dbKaderRollen = [],
   kannVerwalten, onReload, onUpdatePortalZugang = null,
@@ -383,6 +386,10 @@ function MemberDetail({
         mitgliedId={mitgliedId} konfig={konfig} arten={arten}
         onMitgliedWerden={onMitgliedWerden ? (() => onMitgliedWerden(personId)) : null}
         darfPersonLoeschen={role === "administrator" || role === "administration"}
+        /* ⚠ Nur, wenn es die Person schon VOR der Mitgliedschaft gab — sonst
+           ist „Person löschen" der richtige Weg. `arten` und die Kinderzahl
+           sind hier schon geladen; eine zweite Abfrage braucht es nicht. */
+        onRuecknahme={(arten.length > 0 || elternCount > 0) ? onRuecknahme : null}
         onPersonGeloescht={() => { onClose(); onReload(); }}
       />
 
@@ -394,6 +401,21 @@ function MemberDetail({
         <InfoTab
           mitgliedId={mitgliedId}
           darfMarkieren={role === "administrator" || role === "administration"}
+          /* ⚠ WOHER DIE ANTWORT KOMMT: `dbMitglieder` ist die Liste der
+             AKTIVEN Mitgliedschaften (`loadDbMitglieder` selektiert
+             `.eq("aktiv", true)`). Wer dort mit seiner `person_id` nicht
+             vorkommt, hat keine — fuer eine Person OHNE Mitgliedschaft ist
+             genau das Fehlen die Antwort, und es braucht keine zweite
+             Abfrage.
+
+             ⚠ Der erste Zweig faengt den Fall ab, dass die Liste noch nicht
+             geladen ist: wer eine AKTIVE Mitgliedschaft offen hat, ist
+             aktiv — unabhaengig davon, was die Liste sagt. Sonst zeigte die
+             Karte fuer einen Augenblick bei jedem. */
+          hatAktiveMitgliedschaft={
+            (mitgliedId != null && raw.aktiv !== false)
+            || dbMitglieder.some(d => d.person_id === personId)
+          }
           raw={raw} fv={fv} canEdit={canEdit} canDelete={canDelete}
           sb={sb} account={account}
           dbKaderRollen={dbKaderRollen} dbMitgliedtypen={dbMitgliedtypen}

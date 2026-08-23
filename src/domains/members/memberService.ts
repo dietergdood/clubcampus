@@ -381,12 +381,24 @@ export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[]> {
 
   if (error) { console.error("fetchArchiv error:", error); return []; }
 
-  return (data || []).map(p => {
+  return (data || [])
+    /* ⚠ KEIN AKTIVES MITGLIED IM ARCHIV. Der Vermerk bleibt beim
+       Wiedereintritt stehen — er soll ja nicht verschwinden, nur weil jemand
+       zurueckkommt. Ohne diesen Filter stuende die Person dann im Archiv-Tab,
+       und ein Tab namens „Archiv" mit aktiven Mitgliedern darin ist genau die
+       Verwirrung, die der Umbau abbaut.
+
+       ⚠ Der Vermerk ist dadurch NICHT unsichtbar: er steht als (ausgeblendete)
+       Spalte in der Mitgliederliste und auf der Personenseite. Sonst suchte
+       jemand etwas, das er nicht finden kann. */
+    .filter(p => !((p.mitglieder || []) as MitgliedRoh[]).some(m => m.aktiv === true))
+    .map(p => {
     /* Die zuletzt BEENDETE Mitgliedschaft. Eine aktive gehoert nicht hierher:
        wer wieder Mitglied ist, steht in der Mitgliederliste — der Vermerk
        bleibt trotzdem, weil eine offene Rechnung nicht durch einen
        Wiedereintritt verschwindet. */
-    const beendet = ((p.mitglieder || []) as MitgliedRoh[])
+    const alleM = (p.mitglieder || []) as MitgliedRoh[];
+    const beendet = alleM
       .filter(m => m.aktiv === false)
       .sort((a, b) => String(b.deaktiviert_am || "").localeCompare(String(a.deaktiviert_am || "")))[0] || null;
     return {

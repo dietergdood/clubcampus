@@ -138,50 +138,38 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('MitgliederModul — handleBulkDelete (H1)', () => {
-  it('löscht alle und meldet keinen Fehler, wenn nichts fehlschlägt', async () => {
-    renderModul();
-    const del = bulkAction('Mitgliedschaft löschen');
-    await act(async () => { await del(new Set([1, 2, 3])); });
+describe('⚠ „Mitgliedschaft löschen" gibt es nicht mehr — auch nicht als Sammelaktion', () => {
+  /* Gemessen am 23.08.2026: 0 von 515 Personen haben mehr als eine
+     Mitgliedschaft, und eine Dublette ist eine doppelt angelegte PERSON —
+     dafuer gibt es „Person loeschen (DSGVO)".
 
-    expect(svc.deleteMitglied).toHaveBeenCalledTimes(3);
-    expect(svc.deleteMitglied).toHaveBeenCalledWith(sb, 1);
-    expect(onReload).toHaveBeenCalled();
-    // nur der initiale Bestätigungsdialog, kein Fehler-Dialog
-    expect(h.confirmMock).toHaveBeenCalledTimes(1);
+     ⚠ Schwerer wog, WIE er loeschte: per Kaskade statt per Entscheidung.
+     399 `eltern_kinder`-Zeilen haengen an 393 Mitgliedschaften. Wer die
+     Mitgliedschaft eines Juniors loeschte, entfernte die Verknuepfungen zu
+     seinen Eltern — und die stehen in keinem Verlauf.
+
+     ⚠ DIESE FAELLE WURDEN NICHT ANGEPASST, SONDERN ERSETZT. Sie hielten
+     fest, dass `deleteMitglied` pro Zeile ausgewertet wird; die Funktion
+     laeuft dort gar nicht mehr. Was bleibt, ist die Zusage, dass es den
+     Weg nicht mehr gibt — und die ist schaerfer als die alte. */
+  it('steht in keiner Sammelaktion mehr', () => {
+    renderModul();
+    const labels = (h.listViewProps.bulkActions || []).map(a => a.label);
+    expect(labels.some(l => /Mitgliedschaft löschen/.test(l))).toBe(false);
   });
 
-  it('meldet die Anzahl fehlgeschlagener Löschungen (deleteMitglied gibt Fehler zurück)', async () => {
-    svc.deleteMitglied.mockImplementation((_sb, id) => Promise.resolve(id === 2 ? { message: 'FK' } : null));
+  it('⚠ und keine Sammelaktion löscht überhaupt noch etwas', async () => {
+    /* Der Ersatz — „Mitgliedschaft zurücknehmen" — steht bewusst NICHT in
+       den Sammelaktionen: er ist die Umkehrung eines Einzelklicks und hat
+       keinen Sammelfall. */
     renderModul();
-    await act(async () => { await bulkAction('Mitgliedschaft löschen')(new Set([1, 2, 3])); });
-
-    expect(onReload).toHaveBeenCalled();
-    expect(h.confirmMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Nicht alle gelöscht',
-      message: expect.stringContaining('1 von 3'),
-    }));
-  });
-
-  it('zählt eine rejected Promise als fehlgeschlagen (allSettled)', async () => {
-    svc.deleteMitglied.mockImplementation((_sb, id) => id === 2 ? Promise.reject(new Error('boom')) : Promise.resolve(null));
-    renderModul();
-    await act(async () => { await bulkAction('Mitgliedschaft löschen')(new Set([1, 2, 3])); });
-
-    expect(h.confirmMock).toHaveBeenCalledWith(expect.objectContaining({
-      message: expect.stringContaining('1 von 3'),
-    }));
-  });
-
-  it('tut nichts, wenn der Bestätigungsdialog abgebrochen wird', async () => {
-    h.confirmMock.mockResolvedValueOnce(false);
-    renderModul();
-    await act(async () => { await bulkAction('Mitgliedschaft löschen')(new Set([1])); });
-
+    for (const aktion of h.listViewProps.bulkActions || []) {
+      await act(async () => { await aktion.onClick(new Set([1, 2])); });
+    }
     expect(svc.deleteMitglied).not.toHaveBeenCalled();
-    expect(onReload).not.toHaveBeenCalled();
   });
 });
+
 
 describe('⚠ Die Sammelaktion heisst „Austritt…" und SCHREIBT NICHTS', () => {
   /* Bis zum 23.08.2026 hiess sie „Archivieren" und nahm n Zeilen ohne zu

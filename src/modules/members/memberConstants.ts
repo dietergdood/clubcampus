@@ -71,6 +71,13 @@ export const COL_GROUPS: ColGroup[] = [
     M("spielerpass","Spielerpass",       {default:false}),
     M("fairgate_id","Fairgate-ID",       {default:false}),
     M("js_nr","J+S Nr.",                 {default:false}),
+    /* ⚠ AUSGEBLENDET, ABER DA. Der Vermerk „offene Punkte" bleibt beim
+       Wiedereintritt stehen, und das Archiv zeigt seither KEINE aktiven
+       Mitglieder mehr. Ohne diese Spalte waere ein offener Posten bei einem
+       Wiedereingetretenen in keiner Liste auffindbar — und dann sucht jemand
+       etwas, das er nicht finden kann. Zwei Zeilen fuer eine Luecke.
+       (Entscheidung Didi, 23.08.2026.) */
+    M("offene_punkte","Offene Punkte",   {default:false, hidden:true}),
   ]},
   personGruppe("Portal", ["portal","datenpruefung"], { default:true }),
   {group:"Sport", cols:[
