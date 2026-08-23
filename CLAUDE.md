@@ -405,6 +405,21 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Der Reflex, den beide Fälle verlangen, ist derselbe: **eine Zahl, die überrascht, zuerst gegen das Werkzeug prüfen, das sie erzeugt hat** — und erst dann gegen die Sache.
 
+- **Kein Kind von `MemberDetail` bekommt `onReload`. Nur `neuLaden`.** Am 23.08.2026 fünfmal derselbe Befund — Vereinsfunktionen, Inline-Felder, offene Punkte im Profil, „Mein Kind", die Archivliste. Immer: **geschrieben, aber die Anzeige weiss es nicht.**
+
+  | | tut |
+  |---|---|
+  | `onReload` | lädt die **Liste** (`loadDbMitglieder`) |
+  | `neuLaden` | frischt **`m.daten`** auf **und** ruft danach `onReload()` |
+
+  **`neuLaden` ist immer richtig, weil es beides tut.** Es geht nichts verloren; es kommt nur `aktualisiere()` davor.
+
+  ⚠ **Warum es fünfmal gefunden statt einmal gelöst wurde — das ist die eigentliche Erkenntnis, nicht die Umstellung:** die Wahl zwischen „Liste neu laden" und „Person neu laden" **sieht an jeder Aufrufstelle wie eine Ermessensfrage aus. Sie ist keine.** Erst wer die sechs Stellen nebeneinander sieht, erkennt das — einzeln betrachtet wirkt jede plausibel, und deshalb wurde sie sechsmal einzeln entschieden und dreimal gleich falsch.
+
+  ⚠ **Und der Fehler versteckt sich hinter der häufigeren Datenlage.** Bei einem MITGLIED kommt `dbRaw` aus der Liste und gewinnt in der Mischung — der Listen-Reload frischt mit auf, alles sieht richtig aus. Bei einer Person **ohne** Mitgliedschaft ist `dbRaw` leer, und dann frischt nichts auf. Ein Defekt, den die häufigere Hälfte der Daten deckt, wartet auf die seltenere.
+
+  Haltbar gemacht mit einem Fall je Kind (`memberDetail.test.jsx`): die Attrappe greift den Rückruf ab, ruft ihn, und prüft, dass **neu gelesen** wird. Gegengeprobt — mit der alten Verdrahtung sind sie rot.
+
 - **Ein Kommentar, der eine ANDERE Stelle zusichert, ist eine Behauptung ohne Prüfung — und wer ihn liest, prüft erst recht nicht nach.** Am 23.08.2026 vier Fälle an einem Tag:
 
   | Stelle | behauptet | tatsächlich |

@@ -15,7 +15,7 @@ import { render, act, waitFor, cleanup } from '@testing-library/react';
    Form, die es nirgends gibt. */
 import { zielAusMitglied, zielAusPerson } from '../../../shared/person/personZiel.ts';
 
-const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, heroName: null, confirmMock: vi.fn(), portal: null, infoOnReload: null }));
+const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, heroName: null, confirmMock: vi.fn(), portal: null, rueckruf: {} }));
 const svc = vi.hoisted(() => ({
   fetchBenutzerFuerPerson: vi.fn(),
   portalZugangReaktivieren: vi.fn(),
@@ -53,21 +53,21 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
   AKTIVITAET_TYP: { PORTAL_DEAKTIVIERT: 'portal_deaktiviert', PORTAL_REAKTIVIERT: 'portal_reaktiviert' },
 }));
 
-vi.mock('../MemberHero.tsx', () => ({ MemberHero: (props) => { h.heroRaw = props.raw; h.heroMitgliedId = props.mitgliedId; h.heroName = props.m?.name; return null; } }));
+vi.mock('../MemberHero.tsx', () => ({ MemberHero: (props) => { h.heroRaw = props.raw; h.heroMitgliedId = props.mitgliedId; h.heroName = props.m?.name; h.rueckruf.MemberHero = props.onReload; return null; } }));
 vi.mock('../MemberTabBar.tsx', () => ({ MemberTabBar: () => null }));
-vi.mock('../tabs/ElternTab.tsx', () => ({ ElternTab: () => null }));
+vi.mock('../tabs/ElternTab.tsx', () => ({ ElternTab: (props) => { h.rueckruf.ElternTab = props.onReload; return null; } }));
 /* ⚠ Die Attrappe greift `onReload` ab. Dass InfoTab den AUFFRISCHENDEN
    Rueckruf bekommt und nicht den Listen-Reload, war vom 22. bis 23.08.2026
    nur ein Kommentar — und der stand im Kopf von InfoTab, waehrend die
    Aufrufstelle etwas anderes uebergab. */
 vi.mock('../tabs/InfoTab.tsx', () => ({
-  InfoTab: (props) => { h.infoOnReload = props.onReload; return null; },
+  InfoTab: (props) => { h.rueckruf.InfoTab = props.onReload; return null; },
 }));
 /* Nicht `() => null`: der Tab traegt die zwei Schalter, um die es unten
    geht. Die Attrappe haelt seine Props fest, damit der Test sie aufrufen
    und danach nachsehen kann, was der Tab zu sehen bekommt. */
-vi.mock('../tabs/PortalTab.tsx', () => ({ PortalTab: (props) => { h.portal = props; return null; } }));
-vi.mock('../tabs/DatenpruefungTab.tsx', () => ({ DatenpruefungTab: () => null }));
+vi.mock('../tabs/PortalTab.tsx', () => ({ PortalTab: (props) => { h.portal = props; h.rueckruf.PortalTab = props.onReload; return null; } }));
+vi.mock('../tabs/DatenpruefungTab.tsx', () => ({ DatenpruefungTab: (props) => { h.rueckruf.DatenpruefungTab = props.onReload; return null; } }));
 vi.mock('../tabs/VerlaufTab.tsx', () => ({ VerlaufTab: () => null }));
 /* Die Mock-Factory listet die benoetigten Exporte einzeln auf — fehlt einer,
    wirft Vitest schon bei der blossen Referenz, und zwar fuer die ganze
@@ -377,26 +377,68 @@ describe('MemberDetail — person_id im raw', () => {
    ueber VERHALTEN zu uebersetzen: ruft man den Rueckruf, den InfoTab
    bekommt, muss die Person NEU GELESEN werden.
    ═══════════════════════════════════════════════════════════════ */
-describe('⚠ InfoTab bekommt den auffrischenden Rückruf, nicht den Listen-Reload', () => {
-  it('bei einer Person OHNE Mitgliedschaft wird die Person neu gelesen', async () => {
-    /* Der Fall, in dem es auffiel: `dbRaw` ist leer, also frischt der
-       Listen-Reload NICHTS auf — der gespeicherte Wert erschien erst beim
-       erneuten Oeffnen. */
-    svc.fetchPerson.mockResolvedValue({ person: { id: 'p-9', vorname: 'Petra' }, fehler: null });
-    const ohne = zielAusPerson({ id: 'p-9', vorname: 'Petra' }, 'Petra Muster');
-    await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [] })} />); });
-    svc.fetchPerson.mockClear();
+describe('⚠ KEIN Kind bekommt den blossen Listen-Reload — nur neuLaden', () => {
+  /* Am 23.08.2026 fuenfmal derselbe Befund: geschrieben, aber die Anzeige
+     weiss es nicht. Die Wahl zwischen „Liste neu laden" und „Person neu
+     laden" SIEHT an jeder Aufrufstelle wie eine Ermessensfrage aus — sie ist
+     keine: `neuLaden` ist immer richtig, weil es beides tut.
 
-    await act(async () => { await h.infoOnReload(); });
+     ⚠ Und der Fehler versteckt sich hinter der haeufigeren Datenlage: bei
+     einem MITGLIED kommt `dbRaw` aus der Liste und gewinnt in der Mischung,
+     der Listen-Reload frischt also mit auf. Nur bei einer Person OHNE
+     Mitgliedschaft ist `dbRaw` leer — und genau die traegt Vermerke, Arten
+     und die Datenpruefung als Elternteil.
+
+     Deshalb wird hier je Kind der Fall OHNE Mitgliedschaft geprueft: er ist
+     der einzige, in dem der Unterschied sichtbar wird. */
+  /* ⚠ Je Kind der Tab, auf dem es ueberhaupt gerendert wird — nur der aktive
+     Tab wird gebaut. Ohne diese Zuordnung waere der Rueckruf `undefined`, und
+     ein Fall, der das UEBERSPRINGT statt daran zu scheitern, prueft nichts. */
+  /* ⚠ Je Kind der Tab, auf dem es gerendert wird, UND das Szenario, in dem
+     der Unterschied sichtbar ist.
+
+     Ohne Mitgliedschaft ist `dbRaw` leer — nur dort faellt der blosse
+     Listen-Reload auf. `ElternTab` ist davon ausgenommen: er bekommt
+     `mitgliedId!` und ist strukturell ein MITGLIEDSCHAFTS-Tab; ihn ohne
+     Mitgliedschaft zu pruefen waere ein Fall, den es im Betrieb nicht gibt.
+     Er wird deshalb am Mitglied geprueft — der Rueckruf muss auch dort neu
+     LESEN und nicht nur die Liste laden. */
+  const OHNE = [
+    ['MemberHero',       'info'],
+    ['InfoTab',          'info'],
+    ['PortalTab',        'portal'],
+    ['DatenpruefungTab', 'datenpruefung'],
+  ];
+
+  it.each(OHNE)('%s: der Rückruf liest die Person neu (ohne Mitgliedschaft)', async (kind, tab) => {
+    svc.fetchPerson.mockResolvedValue({ person: { id: 'p-9', vorname: 'Petra' }, fehler: null });
+    const ohne = zielAusPerson({ id: 'p-9', vorname: 'Petra' }, 'Petra Muster', { _tab: tab });
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [], tab })} />); });
+
+    const rueckruf = h.rueckruf[kind];
+    /* ⚠ Nicht ueberspringen, wenn der Tab gerade nicht gerendert ist — dann
+       faende der Fall nichts und bliebe gruen. Er MUSS da sein. */
+    expect(typeof rueckruf).toBe('function');
+
+    svc.fetchPerson.mockClear();
+    await act(async () => { await rueckruf(); });
     expect(svc.fetchPerson).toHaveBeenCalledWith(expect.anything(), 'p-9');
+  });
+
+  it('ElternTab: der Rückruf liest die Mitgliedschaft neu', async () => {
+    const m = zielAusMitglied({ id: 7, person_id: 'p-7' }, 'Hans Beispiel', { _tab: 'eltern' });
+    await act(async () => { render(<MemberDetail {...props({ m, tab: 'eltern', dbMitglieder: [{ id: 7, person_id: 'p-7' }] })} />); });
+    expect(typeof h.rueckruf.ElternTab).toBe('function');
+    svc.fetchMitglied.mockClear();
+    await act(async () => { await h.rueckruf.ElternTab(); });
+    expect(svc.fetchMitglied).toHaveBeenCalledWith(expect.anything(), 7);
   });
 
   it('bei einem Mitglied wird die Mitgliedschaft neu gelesen', async () => {
     const m = zielAusMitglied({ id: 7, person_id: 'p-7' }, 'Hans Beispiel');
     await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [{ id: 7, person_id: 'p-7' }] })} />); });
     svc.fetchMitglied.mockClear();
-
-    await act(async () => { await h.infoOnReload(); });
+    await act(async () => { await h.rueckruf.InfoTab(); });
     expect(svc.fetchMitglied).toHaveBeenCalledWith(expect.anything(), 7);
   });
 });

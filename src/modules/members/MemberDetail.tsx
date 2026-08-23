@@ -369,7 +369,12 @@ function MemberDetail({
       {/* Hero */}
       <MemberHero
         m={m} raw={raw} initials={initials} canEdit={canEdit} canDelete={canDelete}
-        sb={sb} onReload={id => id ? neuLaden() : onReload()} onClose={onClose}
+        /* ⚠ `neuLaden`, ohne Fallunterscheidung. Hier stand
+           `id => id ? neuLaden() : onReload()` — und `id` ist bei einer
+           Person OHNE Mitgliedschaft `undefined`, also lief genau dort der
+           blosse Listen-Reload, wo `dbRaw` leer ist und nichts auffrischt.
+           Die Unterscheidung sah nach Ermessen aus und war keine. */
+        sb={sb} onReload={neuLaden} onClose={onClose}
         onReaktiviert={onReaktiviert} onRefreshCount={refreshArchivCount}
         account={account} onUpdatePortalZugang={onUpdatePortalZugang}
         dbMitgliedtypen={dbMitgliedtypen} dbPortalRollen={dbPortalRollen} dbKaderRollen={dbKaderRollen}
@@ -445,7 +450,12 @@ function MemberDetail({
              Tab-Sichtbarkeit daran haengt. */
           pflichtfelder={[...IMMER_PFLICHT_KEYS, ...pflichtfelderAus(konfig)]}
           portalMsg={portalMsg} setPortalMsg={setPortalMsg}
-          onReload={onReload}
+          /* ⚠ `neuLaden`, nicht `onReload`. Die Datenpruefung schreibt
+             `profil_geprueft_at` und Personenfelder; mit dem blossen
+             Listen-Reload frischte bei einer Person ohne Mitgliedschaft
+             nichts auf. Gefunden am 23.08.2026 beim AUSZAEHLEN der
+             Rueckrufe, nicht durch eine Meldung. */
+          onReload={neuLaden}
         />
       )}
 
