@@ -9,6 +9,7 @@ import { Btn, useIsMobile, DropMenu, useConfirm } from "../../theme.ts";
 import { istSichtbar } from "../../domains/members/feldkonfig.ts";
 import type { FeldModus } from "../../domains/members/feldkonfig.ts";
 import { TI } from "../../icons.tsx";
+import { PersonLoeschenModal } from "./PersonLoeschenModal.tsx";
 import type { PersonArt } from "../../domains/person/personArtService.ts";
 import { heroChips } from "../../domains/roles/roleUtils.ts";
 import { updatePersonFoto, deletePersonFoto, deleteMitglied, archiviereMitglied, reaktiviereMitglied, logAktivitaet, AKTIVITAET_TYP, fetchKaderFuerMitglied } from "../../domains/members/memberService.ts";
@@ -28,6 +29,18 @@ interface MemberHeroProps {
   initials: string;
   canEdit?: boolean;
   canDelete?: boolean;
+  /**
+   * Zeigt den Eintrag „Person löschen (DSGVO)".
+   *
+   * ⚠ DIES IST KEINE RECHTEPRÜFUNG, sondern Sichtbarkeit. Geprüft wird
+   * serverseitig in der Edge Function gegen `benutzer.ist_admin` und die
+   * `verein_id` der Zielperson. Wer den Eintrag nicht sieht, kommt trotzdem
+   * nicht durch — und wer ihn fälschlich sieht, auch nicht.
+   */
+  darfPersonLoeschen?: boolean;
+  /** Läuft nach dem Löschen — die Person gibt es dann nicht mehr, der
+      Aufrufer muss die Detailansicht schliessen und die Liste neu laden. */
+  onPersonGeloescht?: (() => void) | null;
   sb: Sb;
   /* Ohne ID lädt der Aufrufer die ganze Liste neu, mit ID nur das Mitglied */
   onReload?: ((id?: number) => void) | null;
@@ -77,11 +90,12 @@ interface MemberHeroProps {
   konfig: Record<string, FeldModus>;
 }
 
-function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig}: MemberHeroProps){
+function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload,onClose,onReaktiviert=null,onRefreshCount=null,account=null,onUpdatePortalZugang=null,dbMitgliedtypen=[],dbPortalRollen=[],dbKaderRollen=[],benutzer=null,teamDetails=null,vereinId=null,onAustritt=null,onMitgliedWerden=null,mitgliedId,konfig,darfPersonLoeschen=false,onPersonGeloescht=null}: MemberHeroProps){
   const [confirm,confirmDialog]=useConfirm();
   const isMobile=useIsMobile();
   const fotoInputRef=useRef<HTMLInputElement>(null);
   const [fotoOverlay,setFotoOverlay]=useState(false);
+  const [loeschenOffen,setLoeschenOffen]=useState(false);
 
   async function handleHeroFotoUpload(e: ChangeEvent<HTMLInputElement>){
     const file=e.target.files?.[0];
@@ -108,6 +122,21 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
 
   return(
     <>{confirmDialog}
+      {darfPersonLoeschen&&(
+        <PersonLoeschenModal
+          open={loeschenOffen}
+          onClose={()=>setLoeschenOffen(false)}
+          sb={sb}
+          personId={raw.person_id}
+          name={m.name}
+          onGeloescht={()=>{
+            /* Erst schliessen, dann melden: die Detailansicht zeigt sonst
+               eine Person, die es nicht mehr gibt. */
+            setLoeschenOffen(false);
+            if(onPersonGeloescht) onPersonGeloescht();
+            else if(onClose) onClose();
+          }}/>
+      )}
       <div className="cc-member-hero">
         <div className="cc-member-hero-banner">
           <button className="cc-hero-banner-btn" onClick={()=>onClose&&onClose()}><TI n="arrow-left" size={16}/></button>
@@ -255,6 +284,14 @@ function MemberHero({m,raw,initials,arten=[],canEdit,canDelete=false,sb,onReload
                    Nur der Text ist geändert; das echte Löschen ist ein eigenes
                    Vorhaben mit Vorschau und Edge Function fuer auth.users. */
                 ...(mitgliedId!=null?[{icon:"trash",label:"Mitgliedschaft löschen",danger:true,onClick:handleLoeschen}]:[]),
+                /* ⚠ DIE ZWEITE, ECHTE LÖSCHAKTION — und sie steht bewusst
+                   NEBEN der ersten, nicht statt ihr. „Mitgliedschaft löschen"
+                   ist der Alltag (Fehleintrag, Dublette); dies hier ist das
+                   Löschbegehren nach DSGVO und entfernt die Person samt
+                   Anmeldekonto. Zwei Namen für zwei Vorgänge — bis zum
+                   21.08.2026 hiess der obere „Löschen (DSGVO)" und tat das
+                   Kleine unter dem Namen des Grossen. */
+                ...(darfPersonLoeschen?[{icon:"trash",label:"Person löschen (DSGVO)…",danger:true,onClick:()=>setLoeschenOffen(true)}]:[]),
               ]}/></div>
             )}
           </div>

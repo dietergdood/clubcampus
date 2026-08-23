@@ -377,6 +377,8 @@ function MemberDetail({
         vereinId={vereinId} onAustritt={onAustritt}
         mitgliedId={mitgliedId} konfig={konfig} arten={arten}
         onMitgliedWerden={onMitgliedWerden ? (() => onMitgliedWerden(personId)) : null}
+        darfPersonLoeschen={role === "administrator" || role === "administration"}
+        onPersonGeloescht={() => { onClose(); onReload(); }}
       />
 
       {/* Tab-Bar */}
