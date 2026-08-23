@@ -20,7 +20,7 @@ afterEach(() => { errSpy.mockRestore(); });
 /* Write-Funktionen mit einheitlichem Vertrag PostgrestError | null. */
 const CONTRACT: Array<{ name: string; table: string; op: SbOp; call: (sb: MockSb) => Promise<unknown> }> = [
   { name: "deleteMitglied",     table: "mitglieder",           op: "delete", call: sb => deleteMitglied(sb as any, 1) },
-  { name: "archiviereMitglied", table: "mitglieder",           op: "update", call: sb => archiviereMitglied(sb as any, 1, "Admin") },
+  { name: "archiviereMitglied", table: "mitglieder",           op: "update", call: sb => archiviereMitglied(sb as any, 1, "Admin", "v-1") },
   { name: "reaktiviereMitglied",table: "mitglieder",           op: "update", call: sb => reaktiviereMitglied(sb as any, 1) },
   { name: "upsertKader",        table: "kader",                op: "upsert", call: sb => upsertKader(sb as any, { mitglied_id: 1, team_id: 2, saison: "2026" } as any) },
   { name: "updateKader",        table: "kader",                op: "update", call: sb => updateKader(sb as any, 1, { rollen: ["x"] } as any) },
@@ -48,7 +48,7 @@ describe("memberService — Write-Vertrag (PostgrestError | null)", () => {
 describe("memberService — Payload-Details", () => {
   it("archiviereMitglied schreibt aktiv:false + Deaktiviert-Felder, akzeptiert ein Array", async () => {
     const sb = makeSb();
-    await archiviereMitglied(sb as any, [1, 2, 3], "Admin");
+    await archiviereMitglied(sb as any, [1, 2, 3], "Admin", "v-1");
     const rec = sb.find("mitglieder", "update")!;
     expect(rec.payload).toEqual(expect.objectContaining({ aktiv: false, deaktiviert_von: "Admin" }));
     expect(rec.payload.deaktiviert_am).toEqual(expect.any(String));
@@ -58,7 +58,7 @@ describe("memberService — Payload-Details", () => {
 
   it("archiviereMitglied wandelt eine einzelne id in ein Array", async () => {
     const sb = makeSb();
-    await archiviereMitglied(sb as any, 7, null);
+    await archiviereMitglied(sb as any, 7, null, "v-1");
     const inFilter = sb.find("mitglieder", "update")!.filters.find(f => f.method === "in");
     expect(inFilter!.args).toEqual(["id", [7]]);
   });

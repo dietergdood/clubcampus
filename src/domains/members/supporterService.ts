@@ -18,7 +18,7 @@
 import type { SbClient } from "../../types.ts";
 import { fetchArtenFuerPersonen } from "../person/personArtService.ts";
 import type { PersonArt } from "../person/personArtService.ts";
-import { beendeVerknuepfungen } from "./memberService.ts";
+import { beendeVerknuepfungen, setzeArtFuerElternOhneKind } from "./memberService.ts";
 
 export interface SupporterRoh {
   /** personen.id */
@@ -483,6 +483,15 @@ export async function beendeMitgliedschaft(
       else hinweise.push(`Gilt jetzt als ${artNachher.name}.`);
     }
   }
+
+  /* ⚠ DER ZWEITE AUSLOESER. Das austretende Mitglied kann das letzte Kind
+     eines Elternteils sein — dann verliert dieser seine abgeleitete Art und
+     bekommt die eingestellte. Steht NACH dem Beenden, weil die Pruefung
+     „hat noch ein aktives Kind" sonst das gerade beendete mitzaehlte.
+
+     Gilt fuer BEIDE Zielarten: ob die Mitgliedschaft mit Weiterfuehrung
+     endet oder ins Archiv geht, aendert am Kind des Elternteils nichts. */
+  hinweise.push(...await setzeArtFuerElternOhneKind(sb, [o.mitgliedId], o.vereinId));
 
   return { ok: true, fehler: null, hinweise };
 }

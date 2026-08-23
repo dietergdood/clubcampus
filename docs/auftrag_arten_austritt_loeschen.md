@@ -135,30 +135,36 @@ Derselbe Ablauf wird von **zwei** Ereignissen ausgelöst:
 fragt nach.
 
 **2 · Das letzte Kind eines Elternteils tritt aus** — und der Elternteil hat
-keine eigene Mitgliedschaft. Er verliert damit seine abgeleitete Art
-„Elternteil", weil die Ableitung in `eltern_kinder` keine Zeile mehr findet.
+keine eigene Mitgliedschaft.
 
-Der zweite Fall ist heute eine **stille Lücke**: Der Elternteil bleibt als
-Person stehen — mit Adresse, Telefon und Portal-Zugang —, hat keine Art mehr,
-und niemand fragt ihn, ob er bleiben will. Es schlägt nichts fehl, es meldet
-sich niemand. Bei 394 Elternteilen und dem Saisonende im Sommer sind das jedes
-Jahr ein paar Dutzend Menschen, die im Bestand liegen bleiben, ohne dass jemand
-eine Entscheidung getroffen hat.
+> ⚠ **BERICHTIGT AM 23.08.2026.** Hier stand, der Fall sei eine „stille
+> Lücke": der Elternteil verliere seine Art und niemand frage nach. Der erste
+> Teil ist **erledigt**, der zweite gilt weiter — und die Frage, die der
+> Absatz stellte, ist **beantwortet**:
+>
+> - `personenarten_effektiv` prüft seit dem 22.08.2026 `mitglieder.aktiv`. Die
+>   Ableitung **kippt** also tatsächlich, wenn das letzte Kind austritt. Vorher
+>   tat sie es nicht — der Satz „abgeleitet heisst: es kippt" war bis dahin
+>   eine Behauptung ohne Deckung.
+> - Die zwei Personen, die es traf (Furrer Patrick, Frei Finn), sind am selben
+>   Tag rückwirkend auf die Austritts-Art gesetzt. Es liegt **niemand** mehr
+>   ohne Art im Bestand.
+> - Was fehlt, ist allein der **Auslöser**: heute setzt der Austritt eines
+>   Kindes die Art des Elternteils nicht. Beim nächsten Austritt entstünde der
+>   Zustand erneut.
+>
+> Wer diesen Absatz in einem Monat liest, sucht sonst eine Lücke, die es nicht
+> mehr gibt.
 
-`ELTERN_LOGIK.md` beschreibt den Fall bereits — gebaut ist er nicht.
+**Was noch zu klären ist:**
 
-**Was zu klären ist, bevor du baust:**
-
-- **Woran hängt der Auslöser?** Der Austritt des Kindes beendet dessen
-  Mitgliedschaft; die Zeile in `eltern_kinder` bleibt bestehen. Die Ableitung
-  fragt also nicht „hat Kinder", sondern muss „hat Kinder mit **aktiver**
-  Mitgliedschaft" beantworten — prüf, was `personenarten_effektiv` heute
-  tatsächlich tut, und ob der Elternteil seine Art überhaupt verliert.
-  **Nicht annehmen, messen.** Wenn er sie behält, ist die Lücke eine andere als
-  beschrieben.
 - **Wer löst aus?** `beendeMitgliedschaft()` weiss nichts von den Eltern des
-  Kindes. Der Auslöser muss dort hinein, und er betrifft möglicherweise
-  **zwei** Elternteile gleichzeitig.
+  Kindes. ⚠ Und es ist **nicht der einzige Weg**: eine Mitgliedschaft endet
+  auch über den Knopf „Archivieren" und dessen Sammelaktion. Beide treffen
+  sich seit dem 22.08.2026 in `beendeVerknuepfungen()` (`memberService.ts`) —
+  dort gehört der Auslöser hin, sonst hat ein archiviertes Kind denselben
+  stillen Ausfall wie bisher.
+- Er betrifft möglicherweise **zwei** Elternteile gleichzeitig.
 - **Und wenn ein Elternteil selbst Mitglied ist?** Dann passiert gar nichts —
   er ist weiterhin Mitglied. Heute betrifft das genau eine Person.
 - **Geschwister:** Tritt ein Kind von dreien aus, ändert sich nichts. Der
@@ -243,12 +249,53 @@ ob sie das bleiben will.
 Ein Link mit Token. Steht seit Wochen als offener Punkt in `ELTERN_LOGIK.md`,
 gebaut ist er nicht.
 
+### ⚠ DER LINK LÖST NICHTS AUS — er führt nur auf eine Seite
+
+**Entschieden am 23.08.2026 (Didi).** Der Link in der Mail öffnet eine Seite
+in ClubCampus. Erst ein **Knopf auf dieser Seite** handelt.
+
+**Der Grund ist kein Geschmack, sondern eine Tatsache über E-Mail:**
+Mailprogramme und Sicherheitsfilter **klicken Links automatisch an**, um sie
+zu prüfen — Outlook, Firewalls, Virenscanner, Link-Vorschauen. Ein Link, der
+beim Anklicken löscht, ist ein Löschknopf, den ein Virenscanner drücken kann.
+Die Person hätte die Mail nie geöffnet.
+
+⚠ **Und das gilt für BEIDE Antworten, nicht nur für „löschen".** Ein Link
+`…/bleiben` wäre genauso gefährlich: ein Scanner wählte „bleiben" für
+jemanden, der gehen wollte, und der Token wäre danach verbraucht. Die
+harmlose Antwort automatisch zu setzen ist kein kleinerer Fehler — sie ist
+nur einer, den niemand bemerkt.
+
+Technisch heisst das: **der Link ist ein `GET` und muss folgenlos sein.**
+Beide Antworten laufen über einen `POST`, den nur ein Mensch auslöst. Das ist
+die alte Regel „GET verändert nichts", und dies ist der Fall, für den sie
+erfunden wurde.
+
+**Die Seite zeigt vorher, was passiert:** welche Daten entfernt werden, was
+bleibt. **Dieselbe Vorschau wie für die Verwaltung, nur in Alltagssprache** —
+sie wird für 3b ohnehin gebaut und hat damit einen zweiten Leser. Zwei
+Darstellungen derselben Kette wären zwei Orte, die auseinanderlaufen.
+
 **⚠ Der Token braucht ein Ablaufdatum.** Wer nach zwei Jahren auf „löschen"
-klickt, ist vielleicht längst wieder Mitglied. Schlag eine Frist vor.
+klickt, ist vielleicht längst wieder Mitglied.
+
+**Entschieden am 22.08.2026 (Didi): 60 Tage, und einmalig.** Wer widersprechen
+will, tut das in Wochen, nicht in Jahren. ⚠ **Einmalig ist der wichtigere
+Teil:** ein Link, der nach dem Klick weiterlebt, liegt im Postfach und in
+jedem Backup — und jeder, der später an das Postfach kommt, hätte den Knopf.
 
 **⚠ Und das Löschen muss prüfen, was inzwischen gilt.** Ist die Person
 mittlerweile Elternteil eines Kindes oder wieder Mitglied, ist „löschen" nicht
-mehr die richtige Antwort, sondern eine Rückfrage an die Verwaltung.
+mehr die richtige Antwort.
+
+**Entschieden am 22.08.2026 (Didi): melden statt ausführen.** Geprüft werden
+drei Dinge — aktive Mitgliedschaft, Elternteil eines aktiven Kindes, aktives
+Konto. Bei einem Ja geht eine Meldung an die Verwaltung, und der Klickende
+bekommt eine ehrliche Seite („Ihre Anfrage ist eingegangen, wir melden uns").
+
+⚠ **Nicht kommentarlos ablehnen.** Er hat auf einen Knopf gedrückt, den wir
+ihm geschickt haben; eine Seite, die nichts sagt, ist die schlechteste
+Antwort.
 
 ## Das echte Löschen
 

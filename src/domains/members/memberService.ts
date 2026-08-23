@@ -154,6 +154,114 @@ export async function beendeVerknuepfungen(
   return hinweise;
 }
 
+/* ── Der zweite Ausloeser: das letzte Kind tritt aus ──────────────────────
+   Derselbe Ablauf, zwei Ereignisse (Auftrag Etappe 3):
+
+     1 · Ein Mitglied tritt aus            -> `beendeMitgliedschaft`
+     2 · Das LETZTE Kind eines Elternteils -> diese Funktion
+         tritt aus, und der Elternteil hat
+         keine eigene Mitgliedschaft
+
+   ⚠ SIE MUSS BEI JEDEM ENDE EINER MITGLIEDSCHAFT LAUFEN, nicht nur beim
+   Austrittsdialog. Eine Mitgliedschaft endet auf DREI Wegen:
+
+     beendeMitgliedschaft, ziel „beenden"   Kontakt bleibt
+     beendeMitgliedschaft, ziel „archiv"    noch etwas offen
+     archiviereMitglied                     der Knopf und die Sammelaktion
+
+   Laege der Ausloeser nur im ersten, haette ein archiviertes Kind denselben
+   stillen Ausfall, den Etappe 3 gerade beseitigt: der Elternteil bliebe als
+   Person stehen, ohne Art, und niemand fragte ihn.
+
+   ⚠ NUR WER KEINE EIGENE MITGLIEDSCHAFT HAT. Ein Elternteil, das selbst
+   Mitglied ist, bleibt Mitglied — heute betrifft das genau eine Person.
+
+   ⚠ NUR BEIM LETZTEN KIND. Tritt eines von dreien aus, aendert sich nichts.
+   Geprueft wird deshalb NACH dem Beenden: die Zeile des austretenden Kindes
+   steht dann schon auf `aktiv = false` und zaehlt nicht mehr mit.
+
+   ⚠ ZWEI ELTERNTEILE ZUGLEICH sind der Normalfall, nicht die Ausnahme —
+   deshalb eine Menge und keine einzelne Id.
+
+   ⚠ SIE STEHT HIER UND NICHT IN `supporterService`, obwohl sie fachlich
+   zum Austritt gehoert: `supporterService` importiert bereits
+   `beendeVerknuepfungen` von hier. Der umgekehrte Import waere ein
+   Zyklus — ES-Module verkraften ihn oft, aber „oft" ist keine Eigenschaft,
+   auf die man baut. */
+export async function setzeArtFuerElternOhneKind(
+  sb: SbClient, mitgliedIds: readonly number[], vereinId: string,
+): Promise<string[]> {
+  const hinweise: string[] = [];
+  if (mitgliedIds.length === 0) return hinweise;
+
+  /* Die eingestellte Art. Ohne sie passiert nichts — und das wird gesagt,
+     nicht verschwiegen: „keine Art eingestellt" ist eine Konfigurationslage,
+     kein Fehler, aber niemand soll spaeter suchen, warum nichts geschah. */
+  const { data: verein, error: vFehler } = await sb.from("vereine")
+    .select("austritt_art_id").eq("id", vereinId).maybeSingle();
+  if (vFehler) {
+    console.error("setzeArtFuerElternOhneKind (verein) error:", vFehler);
+    hinweise.push("Die eingestellte Art konnte nicht gelesen werden — Eltern bitte prüfen.");
+    return hinweise;
+  }
+  const artId = (verein?.austritt_art_id as string | null) ?? null;
+  if (!artId) return hinweise;
+
+  /* Wer sind die Eltern der gerade beendeten Mitgliedschaften? */
+  const { data: links, error: lFehler } = await sb.from("eltern_kinder")
+    .select("person_id").in("mitglied_id", mitgliedIds as number[]);
+  if (lFehler) {
+    console.error("setzeArtFuerElternOhneKind (eltern) error:", lFehler);
+    hinweise.push("Die Elternverknüpfungen konnten nicht gelesen werden.");
+    return hinweise;
+  }
+  const eltern = [...new Set((links ?? []).map(l => l.person_id as string))];
+  if (eltern.length === 0) return hinweise;
+
+  /* ⚠ Hat einer von ihnen noch ein AKTIVES Kind? Eine Abfrage fuer alle,
+     nicht eine je Elternteil — bei zwei Eltern und drei Geschwistern waeren
+     das sonst sechs Fahrten. */
+  const { data: aktiveKinder, error: kFehler } = await sb.from("eltern_kinder")
+    .select("person_id, mitglieder!inner(aktiv)")
+    .in("person_id", eltern)
+    .eq("mitglieder.aktiv", true);
+  if (kFehler) {
+    console.error("setzeArtFuerElternOhneKind (kinder) error:", kFehler);
+    hinweise.push("Die Kinder der Eltern konnten nicht geprüft werden — bitte prüfen.");
+    return hinweise;
+  }
+  const hatNochKind = new Set((aktiveKinder ?? []).map(k => k.person_id as string));
+
+  /* ⚠ Und eine EIGENE Mitgliedschaft? Wer selbst Mitglied ist, bleibt es. */
+  const { data: eigene, error: mFehler } = await sb.from("mitglieder")
+    .select("person_id").in("person_id", eltern).eq("aktiv", true);
+  if (mFehler) {
+    console.error("setzeArtFuerElternOhneKind (eigene) error:", mFehler);
+    hinweise.push("Die eigenen Mitgliedschaften der Eltern konnten nicht geprüft werden.");
+    return hinweise;
+  }
+  const istSelbstMitglied = new Set((eigene ?? []).map(m => m.person_id as string));
+
+  const betroffen = eltern.filter(
+    p => !hatNochKind.has(p) && !istSelbstMitglied.has(p));
+  if (betroffen.length === 0) return hinweise;
+
+  const { error } = await sb.from("personenart_pro_person").upsert(
+    betroffen.map(pid => ({ verein_id: vereinId, person_id: pid, art_id: artId })) as never,
+    { onConflict: "verein_id,person_id,art_id" },
+  );
+  if (error) {
+    console.error("setzeArtFuerElternOhneKind (setzen) error:", error);
+    hinweise.push("Die Art der Eltern konnte nicht gesetzt werden — bitte im Profil prüfen.");
+    return hinweise;
+  }
+
+  hinweise.push(betroffen.length === 1
+    ? "Ein Elternteil hat kein Kind mehr im Verein und wurde zur eingestellten Art."
+    : `${betroffen.length} Elternteile haben kein Kind mehr im Verein und wurden zur eingestellten Art.`);
+  return hinweise;
+}
+
 /**
  * Eine Mitgliedschaft archivieren — die Abkuerzung.
  *
@@ -161,7 +269,7 @@ export async function beendeVerknuepfungen(
  * Unterschiede, die bleiben, sind gewollt: das Datum ist HEUTE statt
  * waehlbar, und `deaktiviert_von` haelt fest, wer geklickt hat.
  */
-export async function archiviereMitglied(sb: SbClient, id: number | number[], deaktiviertVon: string | null): Promise<PostgrestError | null> {
+export async function archiviereMitglied(sb: SbClient, id: number | number[], deaktiviertVon: string | null, vereinId: string): Promise<PostgrestError | null> {
   const ids = Array.isArray(id) ? id : [id];
   const { error } = await sb.from("mitglieder").update({
     aktiv: false,
@@ -175,6 +283,18 @@ export async function archiviereMitglied(sb: SbClient, id: number | number[], de
      Stelle, sie zu zeigen —, und das ist der Preis der Abkuerzung. Ein
      Fehler wird trotzdem nicht verschluckt: er steht in der Konsole. */
   const hinweise = await beendeVerknuepfungen(sb, ids, new Date().toISOString().slice(0, 10));
+
+  /* ⚠ DER ZWEITE AUSLOESER, auch hier. Eine Mitgliedschaft endet auf drei
+     Wegen; laege er nur im Austrittsdialog, haette ein archiviertes Kind
+     denselben stillen Ausfall, den Etappe 3 beseitigt — der Elternteil
+     bliebe ohne Art stehen, und niemand fragte ihn.
+
+     `vereinId` ist dafuer neu und PFLICHT: ohne sie liesse sich die
+     eingestellte Art nicht lesen, und ein optionaler Parameter waere
+     vergessbar (dieselbe Ueberlegung wie bei den Service-Inserts, siehe
+     CLAUDE.md → verein_id als eigener Pflichtparameter). */
+  hinweise.push(...await setzeArtFuerElternOhneKind(sb, ids, vereinId));
+
   const probleme = hinweise.filter(h => h.includes("konnten nicht") || h.includes("konnte nicht"));
   if (probleme.length) console.error("archiviereMitglied (Verknüpfungen):", probleme.join(" · "));
   return null;

@@ -299,7 +299,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
     const ok=await confirm({title:`${selected.size} Mitglieder archivieren?`,message:"Kann jederzeit reaktiviert werden.",confirmLabel:"Archivieren"});if(!ok) return;
     const ids=[...selected].map(Number);
     const deaktiviertVon=account?.name||account?.email||"Administrator";
-    const error=await archiviereMitglied(sb,ids,deaktiviertVon);
+    /* ⚠ Ohne `vereinId` waere die eingestellte Austritts-Art nicht lesbar —
+       das Archivieren liefe, der Ausloeser fuer die Eltern nicht. Ein halb
+       ausgefuehrter Vorgang ist schlechter als keiner. */
+    if(!vereinId){
+      await confirm({title:"Archivierung nicht möglich",message:"Der Verein ist nicht geladen — bitte die Seite neu laden.",confirmLabel:"OK"});
+      return;
+    }
+    const error=await archiviereMitglied(sb,ids,deaktiviertVon,vereinId);
     if(error){
       await confirm({title:"Archivierung fehlgeschlagen",message:"Die ausgewählten Mitglieder konnten nicht archiviert werden — bitte erneut versuchen.",confirmLabel:"OK"});
       return;

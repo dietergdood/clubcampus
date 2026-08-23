@@ -189,7 +189,12 @@ describe('MitgliederModul — handleBulkDeactivate (H1)', () => {
     renderModul();
     await act(async () => { await bulkAction('Archivieren')(new Set([1, 2])); });
 
-    expect(svc.archiviereMitglied).toHaveBeenCalledWith(sb, [1, 2], 'Test Admin');
+    /* ⚠ `vereinId` ist seit dem 23.08.2026 PFLICHT: ohne sie liesse sich die
+       eingestellte Austritts-Art nicht lesen, und der Ausloeser fuer die
+       Eltern des archivierten Kindes liefe ins Leere. Der Fall nennt sie
+       deshalb ausdruecklich — ein `expect.anything()` haette den Wegfall
+       nicht bemerkt. */
+    expect(svc.archiviereMitglied).toHaveBeenCalledWith(sb, [1, 2], 'Test Admin', 'verein-1');
     expect(h.confirmMock).toHaveBeenCalledWith(expect.objectContaining({ title: 'Archivierung fehlgeschlagen' }));
     // Abbruch: kein Reload nach dem Fehler
     expect(onReload).not.toHaveBeenCalled();
@@ -199,7 +204,12 @@ describe('MitgliederModul — handleBulkDeactivate (H1)', () => {
     renderModul();
     await act(async () => { await bulkAction('Archivieren')(new Set([1, 2])); });
 
-    expect(svc.archiviereMitglied).toHaveBeenCalledWith(sb, [1, 2], 'Test Admin');
+    /* ⚠ `vereinId` ist seit dem 23.08.2026 PFLICHT: ohne sie liesse sich die
+       eingestellte Austritts-Art nicht lesen, und der Ausloeser fuer die
+       Eltern des archivierten Kindes liefe ins Leere. Der Fall nennt sie
+       deshalb ausdruecklich — ein `expect.anything()` haette den Wegfall
+       nicht bemerkt. */
+    expect(svc.archiviereMitglied).toHaveBeenCalledWith(sb, [1, 2], 'Test Admin', 'verein-1');
     expect(onReload).toHaveBeenCalled();
     expect(h.confirmMock).toHaveBeenCalledTimes(1); // nur der initiale Dialog
   });

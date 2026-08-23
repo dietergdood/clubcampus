@@ -49,17 +49,42 @@ export interface MockSb {
  *     "kader.upsert":      { error: pgError } }
  *   Fehlt ein Key, gilt der Default { data: null, error: null, count: 0 }.
  */
-export function makeSb(results: Record<string, OpResult> = {}): MockSb {
+export function makeSb(results: Record<string, OpResult | OpResult[]> = {}): MockSb {
   const calls: CallRecord[] = [];
   const def: OpResult = { data: null, error: null, count: 0 };
+
+  /* ⚠ AUSSERHALB von builder(): jeder `from()`-Aufruf erzeugt einen neuen
+     Builder. Stuende der Zaehler darin, finge jede Abfrage wieder bei 0 an
+     und ein Array haette keine Wirkung. */
+  const zaehler: Record<string, number> = {};
 
   function builder(table: string): any {
     const rec: CallRecord = { table, op: "select", filters: [] };
     let opLocked = false; // insert/update/upsert/delete gewinnt gegen select
     calls.push(rec);
 
+    /* ⚠ EIN ARRAY WIRD DER REIHE NACH VERBRAUCHT. Eine Funktion darf
+       dieselbe Tabelle zweimal mit VERSCHIEDENEN Fragen lesen — etwa „wer
+       sind die Eltern dieser Kinder?" und danach „hat einer von ihnen noch
+       ein aktives Kind?". Bis zum 23.08.2026 gab die Attrappe beide Male
+       dasselbe zurueck; ein Test darauf prueft eine Funktion, die es so
+       nicht gibt, und schlaegt fehl, obwohl der Code stimmt.
+
+       Ein einzelner Wert verhaelt sich unveraendert und gilt fuer jeden
+       Aufruf. Ist das Array erschoepft, gilt der letzte Eintrag weiter —
+       sonst muesste jeder Test die genaue Zahl der Aufrufe kennen, und
+       das waere eine Kopplung an die Umsetzung statt an das Verhalten. */
     const resolve = (): Promise<OpResult> => {
-      const hit = results[`${table}.${rec.op}`] ?? {};
+      const key = `${table}.${rec.op}`;
+      const roh = results[key];
+      let hit: OpResult;
+      if (Array.isArray(roh)) {
+        const i = zaehler[key] ?? 0;
+        zaehler[key] = i + 1;
+        hit = roh[Math.min(i, roh.length - 1)] ?? {};
+      } else {
+        hit = roh ?? {};
+      }
       return Promise.resolve({ ...def, ...hit });
     };
 

@@ -16,7 +16,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb } from "./_mockSb.ts";
 import { beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
-import { archiviereMitglied, beendeVerknuepfungen } from "../memberService.ts";
+import { archiviereMitglied, beendeVerknuepfungen, setzeArtFuerElternOhneKind } from "../memberService.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -205,13 +205,13 @@ describe("Archiv — Knopf und Austritt", () => {
     /* Vorher blieben sie aktiv — ein archivierter Mensch stand weiter in
        der Aufstellung seines Teams. */
     const sb = makeSb(MIT_ALLEM);
-    await archiviereMitglied(sb as never, [42], "Admin");
+    await archiviereMitglied(sb as never, [42], "Admin", "v-1");
     expect(sb.find("kader", "update")!.payload).toEqual({ aktiv: false });
   });
 
   it("⚠ der KNOPF beendet jetzt auch die Ämter", async () => {
     const sb = makeSb(MIT_ALLEM);
-    await archiviereMitglied(sb as never, [42], "Admin");
+    await archiviereMitglied(sb as never, [42], "Admin", "v-1");
     const rec = sb.find("benutzer_funktionen", "update")!;
     expect(Object.keys(rec.payload)).toEqual(["bis"]);
   });
@@ -320,5 +320,99 @@ describe("beendeVerknuepfungen — der Portal-Zugang", () => {
     ] } });
     await beendeVerknuepfungen(sb as never, [42], "2026-08-22");
     expect(sb.opsOn("benutzer").find(r => r.op === "update")?.payload).toEqual({ aktiv: false });
+  });
+});
+
+/* ── 3a · Der zweite Auslöser: das letzte Kind tritt aus ──────────────────
+   Bis zum 23.08.2026 war das eine stille Lücke: der Elternteil blieb als
+   Person stehen — mit Adresse, Telefon und Portal-Zugang —, verlor seine
+   abgeleitete Art, und niemand fragte ihn. Es schlug nichts fehl.
+
+   ⚠ Die Fälle prüfen die VIER Bedingungen einzeln, weil jede für sich
+   falsch sein kann und keine davon einen Fehler auslösen würde:
+     1. hat der Elternteil noch ein aktives Kind?
+     2. ist er selbst Mitglied?
+     3. zählt das gerade beendete Kind noch mit?
+     4. ist überhaupt eine Art eingestellt? */
+describe("setzeArtFuerElternOhneKind — der zweite Auslöser", () => {
+  const ZIEL = { "vereine.select": { data: { austritt_art_id: "art-1" } } };
+
+  it("setzt die Art, wenn das letzte Kind austritt", async () => {
+    /* ⚠ ZWEI Abfragen auf `eltern_kinder`, zwei verschiedene Fragen:
+       erst „wer sind die Eltern dieses Kindes?", dann „hat einer von ihnen
+       noch ein AKTIVES Kind?". Das Array liefert sie der Reihe nach. */
+    const sb = makeSb({
+      ...ZIEL,
+      "eltern_kinder.select": [
+        { data: [{ person_id: "p-mutter" }] },   // die Eltern
+        { data: [] },                             // kein aktives Kind mehr
+      ],
+      "mitglieder.select": { data: [] },
+    });
+    const hinweise = await setzeArtFuerElternOhneKind(sb as never, [42], "v-1");
+    expect(sb.find("personenart_pro_person", "upsert")!.payload).toEqual([
+      { verein_id: "v-1", person_id: "p-mutter", art_id: "art-1" },
+    ]);
+    expect(hinweise.join(" ")).toContain("kein Kind mehr im Verein");
+  });
+
+  it("⚠ zwei Elternteile zugleich sind der Normalfall", async () => {
+    const sb = makeSb({
+      ...ZIEL,
+      "eltern_kinder.select": [
+        { data: [{ person_id: "p-mutter" }, { person_id: "p-vater" }] },
+        { data: [] },
+      ],
+      "mitglieder.select": { data: [] },
+    });
+    await setzeArtFuerElternOhneKind(sb as never, [42], "v-1");
+    expect(sb.find("personenart_pro_person", "upsert")!.payload).toEqual([
+      { verein_id: "v-1", person_id: "p-mutter", art_id: "art-1" },
+      { verein_id: "v-1", person_id: "p-vater",  art_id: "art-1" },
+    ]);
+  });
+
+  it("⚠ ein Elternteil, das SELBST Mitglied ist, bleibt unberührt", async () => {
+    /* Heute betrifft das genau eine Person im Verein. */
+    const sb = makeSb({
+      ...ZIEL,
+      "eltern_kinder.select": [{ data: [{ person_id: "p-mutter" }] }, { data: [] }],
+      "mitglieder.select": { data: [{ person_id: "p-mutter" }] },
+    });
+    await setzeArtFuerElternOhneKind(sb as never, [42], "v-1");
+    expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
+  });
+
+  it("⚠ tut nichts, wenn noch ein anderes Kind im Verein ist", async () => {
+    /* Geschwister: tritt eines von dreien aus, ändert sich nichts. */
+    const sb = makeSb({
+      ...ZIEL,
+      "eltern_kinder.select": [
+        { data: [{ person_id: "p-mutter" }] },                              // die Eltern
+        { data: [{ person_id: "p-mutter", mitglieder: { aktiv: true } }] }, // noch ein aktives Kind
+      ],
+      "mitglieder.select": { data: [] },
+    });
+    await setzeArtFuerElternOhneKind(sb as never, [42], "v-1");
+    expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
+  });
+
+  it("⚠ tut nichts ohne eingestellte Art — und meldet auch nichts Falsches", async () => {
+    const sb = makeSb({ "vereine.select": { data: { austritt_art_id: null } } });
+    const hinweise = await setzeArtFuerElternOhneKind(sb as never, [42], "v-1");
+    expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
+    expect(hinweise).toEqual([]);
+  });
+
+  it("ohne Elternverknüpfung passiert nichts", async () => {
+    const sb = makeSb({ ...ZIEL, "eltern_kinder.select": { data: [] } });
+    expect(await setzeArtFuerElternOhneKind(sb as never, [42], "v-1")).toEqual([]);
+    expect(sb.opsOn("personenart_pro_person")).toHaveLength(0);
+  });
+
+  it("ohne Auswahl passiert nichts", async () => {
+    const sb = makeSb({});
+    expect(await setzeArtFuerElternOhneKind(sb as never, [], "v-1")).toEqual([]);
+    expect(sb.calls).toHaveLength(0);
   });
 });
