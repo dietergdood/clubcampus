@@ -56,7 +56,15 @@ const VORSCHAU = {
   blockiert: [],
   nicht_pruefbar: ['abstimmung_antworten', 'aufgebote', 'bus_anmeldungen', 'material_ausleihen'],
   geprueft_leer: 9,
+  kinder: [],
   zahlen: { mitglieder: 1, kader: 7, benutzer: 1 },
+};
+
+/* Der echte Fall vom 23.08.2026: Test Elternteil haengt an Stefan Wenger,
+   der zwei Elternteile hat. */
+const MIT_KIND = {
+  ...VORSCHAU,
+  kinder: [{ mitglied_id: 633, name: 'Stefan Wenger', verbleibende_eltern: 1, war_hauptkontakt: false }],
 };
 
 const zeige = (props = {}) => render(
@@ -94,6 +102,42 @@ describe('die Vorschau verschweigt nichts', () => {
   it('nennt das Portal-Konto samt Anmeldung — die Hälfte, die sonst stehenbliebe', async () => {
     zeige();
     expect(await screen.findByText(/Portal-Konto \(samt Anmeldung\)/)).toBeTruthy();
+  });
+});
+
+describe('⚠ was mit den Kindern geschieht', () => {
+  /* „Verknüpfungen zu Kindern 1" sagt NICHT, ob das Kind danach noch einen
+     Elternteil hat. Beide Fälle sehen in der Zahl gleich aus — und der
+     Unterschied ist der ganze Punkt. (Frage von Didi, 23.08.2026, vor dem
+     ersten scharfen Lauf.) */
+  it('sagt, dass das Kind einen Elternteil behält — nicht nur, dass eine Zeile fällt', async () => {
+    svc.holeLoeschVorschau.mockResolvedValue({ vorschau: MIT_KIND, abdruck: 'a.b', gueltig_bis: 'x' });
+    zeige();
+    expect(await screen.findByText(/behält 1 Elternteil/)).toBeTruthy();
+    expect(screen.getByText('Stefan Wenger')).toBeTruthy();
+  });
+
+  it('⚠ warnt, wenn ein Kind OHNE Elternteil zurückbleibt', async () => {
+    svc.holeLoeschVorschau.mockResolvedValue({
+      vorschau: { ...MIT_KIND, kinder: [{ ...MIT_KIND.kinder[0], verbleibende_eltern: 0 }] },
+      abdruck: 'a.b', gueltig_bis: 'x' });
+    zeige();
+    expect(await screen.findByText(/bleibt danach OHNE Elternteil/)).toBeTruthy();
+    expect(screen.getByText(/niemand ist danach für dieses Kind erreichbar/)).toBeTruthy();
+  });
+
+  it('nennt einen wegfallenden Hauptkontakt', async () => {
+    svc.holeLoeschVorschau.mockResolvedValue({
+      vorschau: { ...MIT_KIND, kinder: [{ ...MIT_KIND.kinder[0], war_hauptkontakt: true }] },
+      abdruck: 'a.b', gueltig_bis: 'x' });
+    zeige();
+    expect(await screen.findByText(/Dies war der Hauptkontakt/)).toBeTruthy();
+  });
+
+  it('ohne Kinder erscheint die Sektion gar nicht', async () => {
+    zeige();
+    await screen.findByText(/9 weitere/);
+    expect(screen.queryByText(/Was mit den Kindern geschieht/)).toBeNull();
   });
 });
 

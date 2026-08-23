@@ -83,6 +83,65 @@ Der Eltern-Umbau hat den Lesepfad von `elternkontakte` auf `personen` und `benut
 
 **2. Trainer sehen den Portal-Zugang in der Elternliste nicht mehr.** Die Spalte „Portal" der Elternliste kam aus `elternkontakte.benutzer_id` und war für Trainer lesbar. Seit Block D steht die Information in `benutzer.person_id`, und `benutzer` hat nur `benutzer_select_admin` und `benutzer_select_self`. Der eingebettete Join liefert Trainern deshalb eine leere Menge — die Liste zeigt für alle „Kein Zugang", ohne Fehler. Zu entscheiden: braucht ein Trainer diese Spalte überhaupt? Wenn ja, genügt eine schmale SELECT-Policy auf `benutzer` für `hat_modul_recht('members','lesen')`, beschränkt auf `id`/`person_id` — die Sperrliste oben verbietet `hat_modul_recht` auf `benutzer` allerdings ausdrücklich, weil dort `ist_admin` steht. Der saubere Weg wäre dann eine Sicht (`security_invoker`) statt einer Policy-Lockerung.
 
+## ⚠ RLS zu messen ist nicht dasselbe wie Erreichbarkeit zu messen
+
+Gelernt am 23.08.2026, an einem eigenen Fehlschluss — und die Lehre gehört
+hierher, weil dieser ganze Auftrag aus Policy-Messungen besteht.
+
+**Der Ablauf.** `ansichten_select` gab geteilte Ansichten nur bei
+`ist_standard = true` frei, während die Funktion `geteilt` heisst. Repariert,
+Probelauf gemacht, als echter Nicht-Autor gemessen:
+
+```
+vorher   sieht 0 Ansichten
+nachher  sieht 2
+```
+
+Daraus habe ich „behoben, wirkt" gemacht. **Falsch.** Der gemessene Benutzer
+war ein `funktionaer` — und `funktionaer` hat in `NAV_BY_ROLE` **keinen
+Eintrag `members`**. Es gibt keinen Bildschirm, der ihm diese Ansichten
+zeigt. `mitglieder_ansichten` wird ausschliesslich in `ListView` geladen, und
+`ListView` steht nur in vier Modulen, alle unter `members`.
+
+Nachgemessen, und erst das war die Antwort:
+
+| | `members` in der Navigation |
+|---|---|
+| administrator · administration | **ja** |
+| trainer · funktionaer · spieler · eltern · mitglied · supporter | **nein** |
+
+Und `is_admin()` ist `ist_admin OR role = 'administration'` — **beide Rollen,
+die eine Liste erreichen, waren also schon vorher abgedeckt.** Die Reparatur
+hat heute keinen einzigen Nutzniesser.
+
+**Die Regel daraus, und sie gilt für jede Policy in diesem Auftrag:**
+
+> Eine Policy-Messung beantwortet *„wer DARF?"*. Sie beantwortet nicht *„wer
+> KOMMT HIN?"*. Beides zusammen ergibt erst, wen eine Änderung betrifft — und
+> die zweite Hälfte steht nicht in der Datenbank, sondern in `NAV_BY_ROLE`,
+> `isModuleVisible()`, den Tab-Bedingungen (`istVerwaltung`) und den
+> Gruppenmodulen.
+
+⚠ **Der Fehler geht in beide Richtungen, und die zweite ist die gefährlichere:**
+
+| | Policy | Erreichbarkeit | Folge |
+|---|---|---|---|
+| **zu optimistisch** | erlaubt | niemand kommt hin | eine Reparatur, die nichts bewirkt — man hält ein Problem für gelöst |
+| **zu beruhigt** | erlaubt | jemand kommt hin, den man nicht bedacht hat | eine Preisgabe, die keine Messung zeigt, weil man nur die Policy gelesen hat |
+
+Die zweite ist genau der Trainer-Fund unter „Ein Trainer kann 914 Adressen
+und AHV-Nummern exportieren": dort hält heute allein die Oberfläche
+(`istVerwaltung`), und die Policy ist weit offen. Wer nur die Policy misst,
+sieht die Lücke; wer nur die Oberfläche prüft, hält sie für geschlossen.
+**Beide Messungen gehören in jeden Befund dieses Auftrags — als zwei Zeilen,
+nicht als eine.**
+
+**Praktisch heisst das:** zu jeder Policy, die dieser Auftrag anfasst, gehört
+die Frage *„über welchen Menüpunkt kommt jemand dorthin, und welche Rollen
+haben ihn?"*. Wo die Antwort „gar keine" lautet, ist die Policy trotzdem
+richtig zu stellen — aber der Befund heisst dann **„richtig, betrifft heute
+niemanden"** und nicht „behoben".
+
 ## ⚠ Vier Policies nennen Rollennamen — und drei davon weisen jemanden ab, der die Maske sieht
 
 Gemessen am 23.08.2026 bei einem Durchgang über **132 Schreibstellen in

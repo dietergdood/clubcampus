@@ -39,7 +39,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formeVorschau, fingerabdruckDaten, nenneUnterschiede, NICHT_PRUEFBAR } from "./vorschau.ts";
-import type { Vorschau } from "./vorschau.ts";
+import type { Vorschau, KindFolge } from "./vorschau.ts";
 import { holeAufrufer, pruefeAdmin, pruefeVerein, pruefeNichtSelbst } from "../_shared/aufrufer.ts";
 
 const cors = {
@@ -74,7 +74,7 @@ const UNTER: Record<string, string> = {
 };
 
 async function zaehle(db: SupabaseClient, personId: string): Promise<{
-  person: Vorschau["person"]; zahlen: Record<string, number>;
+  person: Vorschau["person"]; zahlen: Record<string, number>; kinder: KindFolge[];
 } | null> {
   const { data: p, error: pErr } = await db.from("personen")
     .select("id, vorname, nachname, email, verein_id").eq("id", personId).maybeSingle();
@@ -122,7 +122,53 @@ async function zaehle(db: SupabaseClient, personId: string): Promise<{
      faellt, und der Fingerabdruck deckte den Irrtum auch noch ab. */
   if (Object.values(zahlen).some(v => v < 0)) return null;
 
+  /* ── Was aus den Kindern wird ────────────────────────────────────────
+     ⚠ EINE ZAHL IST KEINE FOLGE. `eltern_kinder_als_elternteil = 1` sagt
+     nicht, ob das Kind danach noch einen Elternteil hat — und genau das ist
+     die Frage, die jemand vor dem Loeschen stellt.
+
+     Zwei Abfragen: erst die Verknuepfungen DIESER Person, dann alle
+     Verknuepfungen derselben Kinder. Der Rest ist Abziehen. */
+  const kinder: KindFolge[] = [];
+  {
+    const { data: meine, error: e1 } = await db.from("eltern_kinder")
+      .select("mitglied_id, hauptkontakt").eq("person_id", personId);
+    if (e1) { console.error("zaehle kinder:", e1.message); return null; }
+
+    const kindIds = (meine ?? []).map(k => k.mitglied_id as number);
+    if (kindIds.length) {
+      const { data: alle, error: e2 } = await db.from("eltern_kinder")
+        .select("mitglied_id, person_id").in("mitglied_id", kindIds);
+      if (e2) { console.error("zaehle kinder-eltern:", e2.message); return null; }
+
+      /* Namen der Kinder. ⚠ Ueber `mitglieder -> personen`, nicht ueber ein
+         Feld an `mitglieder`: die Personenfelder gibt es dort seit Etappe 6a
+         nicht mehr. */
+      const { data: namen, error: e3 } = await db.from("mitglieder")
+        .select("id, personen(vorname, nachname)").in("id", kindIds);
+      if (e3) { console.error("zaehle kinder-namen:", e3.message); return null; }
+      const nameVon = new Map<number, string>();
+      for (const m of namen ?? []) {
+        const pp = (m as { personen?: { vorname?: string; nachname?: string } | null }).personen;
+        nameVon.set(m.id as number, `${pp?.vorname ?? ""} ${pp?.nachname ?? ""}`.trim());
+      }
+
+      for (const k of meine ?? []) {
+        const id = k.mitglied_id as number;
+        const gesamt = (alle ?? []).filter(a => a.mitglied_id === id).length;
+        kinder.push({
+          mitglied_id: id,
+          name: nameVon.get(id) || `Mitglied ${id}`,
+          verbleibende_eltern: Math.max(0, gesamt - 1),
+          war_hauptkontakt: k.hauptkontakt === true,
+        });
+      }
+      kinder.sort((a, b) => a.mitglied_id - b.mitglied_id);
+    }
+  }
+
   return {
+    kinder,
     person: {
       id: p.id as string,
       name: `${p.vorname ?? ""} ${p.nachname ?? ""}`.trim(),
@@ -189,7 +235,7 @@ Deno.serve(async (req) => {
   if (fremd) return json({ fehler: fremd.fehler }, fremd.status);
 
   const vorschau = formeVorschau(gemessen.person, gemessen.zahlen,
-    { faellt: FAELLT, anonym: ANONYM, blockiert: [] }, UNTER);
+    { faellt: FAELLT, anonym: ANONYM, blockiert: [] }, UNTER, gemessen.kinder);
   const daten = fingerabdruckDaten(vorschau);
 
   // ── Vorschau ────────────────────────────────────────────────────────────

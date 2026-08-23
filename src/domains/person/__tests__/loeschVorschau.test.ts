@@ -74,13 +74,65 @@ describe("formeVorschau — was auf dem Schirm steht", () => {
   });
 });
 
+describe("⚠ Was mit den Kindern geschieht — eine Zahl ist keine Folge", () => {
+  /* `Verknüpfungen zu Kindern 1` sagt NICHT, ob das Kind danach noch einen
+     Elternteil hat. Beide Fälle sehen in der Zahl gleich aus, und der
+     Unterschied ist der ganze Punkt. Gefragt von Didi am 23.08.2026, bevor
+     der erste scharfe Lauf lief — die Vorschau konnte es bis dahin nicht
+     beantworten. */
+  const KIND = { mitglied_id: 633, name: "Stefan Wenger", verbleibende_eltern: 1, war_hauptkontakt: false };
+
+  it("reicht die Folgen durch, statt nur zu zählen", () => {
+    const v = formeVorschau(PERSON, { eltern_kinder_als_elternteil: 1 },
+      { faellt: ["eltern_kinder_als_elternteil"], anonym: [], blockiert: [] }, {}, [KIND]);
+    expect(v.kinder).toEqual([KIND]);
+    expect(v.faellt).toEqual([{ tabelle: "eltern_kinder_als_elternteil", anzahl: 1 }]);
+  });
+
+  it("ohne Kinder bleibt die Liste leer statt zu fehlen", () => {
+    const v = formeVorschau(PERSON, { mitglieder: 1 }, { faellt: ["mitglieder"], anonym: [], blockiert: [] });
+    expect(v.kinder).toEqual([]);
+  });
+
+  it("⚠ der Abdruck trägt die VERBLEIBENDEN Elternteile, nicht die Zahl der Kinder", () => {
+    /* Der Fall, auf den es ankommt: die Vorschau sagt „behält einen
+       Elternteil", und zwischen Vorschau und Löschen wird der andere
+       entfernt. Die ZAHL der Kinder ändert sich dabei nicht — die Folge
+       kippt von „eine von zwei" auf „bleibt ohne". */
+    const mitEinem = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {}, [KIND]);
+    const mitKeinem = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {},
+      [{ ...KIND, verbleibende_eltern: 0 }]);
+    expect(fingerabdruckDaten(mitEinem)).not.toBe(fingerabdruckDaten(mitKeinem));
+    expect(nenneUnterschiede(fingerabdruckDaten(mitEinem), fingerabdruckDaten(mitKeinem)))
+      .toEqual(["kinder: 633:1 → 633:0"]);
+  });
+
+  it("⚠ sortiert nach mitglied_id — sonst kippt der Abdruck mit der Lesereihenfolge", () => {
+    const a = { mitglied_id: 10, name: "A", verbleibende_eltern: 1, war_hauptkontakt: false };
+    const b = { mitglied_id: 2, name: "B", verbleibende_eltern: 0, war_hauptkontakt: true };
+    const eins = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {}, [a, b]);
+    const zwei = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {}, [b, a]);
+    expect(fingerabdruckDaten(eins)).toBe(fingerabdruckDaten(zwei));
+  });
+
+  it("der Hauptkontakt steht drin, geht aber NICHT in den Abdruck", () => {
+    /* Er ändert nichts an dem, was gelöscht wird — er ist ein Hinweis für
+       danach. Ihn zu signieren hiesse, eine Vorschau ungültig zu machen,
+       weil jemand anders einen Stern gesetzt hat. */
+    const ohne = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {}, [KIND]);
+    const mit = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {},
+      [{ ...KIND, war_hauptkontakt: true }]);
+    expect(fingerabdruckDaten(ohne)).toBe(fingerabdruckDaten(mit));
+  });
+});
+
 describe("fingerabdruckDaten — worüber signiert wird", () => {
   const basis = () => formeVorschau(PERSON, { mitglieder: 1, kader: 0 },
     { faellt: ["mitglieder", "kader"], anonym: [], blockiert: [] });
 
   it("nennt Person, Mitgliedschaften, Konto und jede Zahl", () => {
     expect(fingerabdruckDaten(basis()))
-      .toBe("person=p-1|mitgliedschaften=0|konto=0|kader=0;mitglieder=1");
+      .toBe("person=p-1|mitgliedschaften=0|konto=0|kinder=|kader=0;mitglieder=1");
   });
 
   it("⚠ sortiert die Schlüssel — sonst bräche eine Umstellung im Code jeden offenen Abdruck", () => {

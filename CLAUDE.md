@@ -1287,6 +1287,20 @@ anderen beides nicht. Aber `role` ist ein **berechneter** Wert
 am 05.08.2026 ausdrücklich getrennt. Läuft eines dem anderen davon, sieht ein
 Admin seine Maske und jeder Klick darin verpufft.
 
+⚠ **Und der Lese-Teil hatte heute keinen Nutzniesser** — nachgemessen, nachdem
+ich ihn als „behoben, wirkt" gemeldet hatte. Der gemessene Nicht-Autor war ein
+`funktionaer`, und `funktionaer` hat in `NAV_BY_ROLE` keinen Eintrag `members`;
+`mitglieder_ansichten` wird nur in `ListView` geladen, und die steht nur unter
+`members`. Beide Rollen, die dorthin kommen (`administrator`,
+`administration`), waren über `is_admin()` — das `ist_admin OR role =
+'administration'` prüft — ohnehin schon abgedeckt.
+
+**Eine Policy-Messung beantwortet „wer DARF?", nicht „wer KOMMT HIN?".** Die
+zweite Hälfte steht nicht in der Datenbank, sondern in `NAV_BY_ROLE`,
+`isModuleVisible()` und den Tab-Bedingungen. Die ausführliche Fassung samt
+beider Fehlerrichtungen steht in `docs/auftrag_rls_gruppenrechte.md` → „RLS zu
+messen ist nicht dasselbe wie Erreichbarkeit zu messen".
+
 **Die drei übrigen sind EIN Befund, nicht drei** — überall steht ein
 Rollenname fest in der Policy, während das Recht in der Oberfläche aus einer
 Gruppe kommt. Sie stehen deshalb seit dem 23.08.2026 in

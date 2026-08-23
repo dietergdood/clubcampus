@@ -193,6 +193,39 @@ export function PersonLoeschenModal({
               </div>
             </div>
 
+            {/* ⚠ EINE ZAHL IST KEINE FOLGE. „Verknüpfungen zu Kindern 1" sagt
+                nicht, ob das Kind danach noch einen Elternteil hat — und beide
+                Fälle sehen in der Zahl gleich aus. Gefragt am 23.08.2026 von
+                Didi vor dem ersten scharfen Lauf; die Vorschau konnte es bis
+                dahin nicht beantworten. */}
+            {vorschau.kinder.length > 0 && (
+              <>
+                <Label>Was mit den Kindern geschieht</Label>
+                <div style={{ marginBottom: SPACE[4] }}>
+                  {vorschau.kinder.map(k => (
+                    <div key={k.mitglied_id} style={{ padding: "3px 0", fontSize: TEXT.sm }}>
+                      <strong>{k.name}</strong>{" "}
+                      {k.verbleibende_eltern > 0
+                        ? `behält ${k.verbleibende_eltern} ${k.verbleibende_eltern === 1 ? "Elternteil" : "Elternteile"}.`
+                        : "bleibt danach OHNE Elternteil."}
+                      {k.war_hauptkontakt && " ⚠ Dies war der Hauptkontakt."}
+                    </div>
+                  ))}
+                </div>
+                {vorschau.kinder.some(k => k.verbleibende_eltern === 0) && (
+                  <InfoBox color={R} text={
+                    <>⚠ Mindestens ein Kind bleibt ohne Elternteil. Das Löschen wird
+                      dadurch nicht verhindert — aber niemand ist danach für dieses Kind
+                      erreichbar.</>} />
+                )}
+                {vorschau.kinder.some(k => k.war_hauptkontakt) && (
+                  <InfoBox color={AM} text={
+                    <>⚠ Ein Hauptkontakt fällt weg. Bitte danach beim Kind einen neuen
+                      setzen.</>} />
+                )}
+              </>
+            )}
+
             {vorschau.anonym.length > 0 && (
               <>
                 <Label>Bleibt, ohne Verweis auf die Person</Label>

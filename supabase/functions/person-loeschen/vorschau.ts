@@ -21,6 +21,27 @@ export interface Posten {
   unter?: string;
 }
 
+/**
+ * Was aus einem Kind wird, dessen Elternteil geloescht wird.
+ *
+ * ⚠ EINE ZAHL IST KEINE FOLGE. Die Aufstellung sagt
+ * `Verknuepfungen zu Kindern 1` — sie sagt NICHT, ob das Kind danach noch
+ * einen Elternteil hat. Beide Faelle sehen in der Zahl gleich aus, und der
+ * Unterschied ist der ganze Punkt: „eine von zwei Verknuepfungen faellt" ist
+ * Alltag, „das Kind bleibt ohne Elternteil" ist ein Grund, innezuhalten.
+ *
+ * Gefragt am 23.08.2026 von Didi, bevor der erste scharfe Lauf lief — und die
+ * Vorschau konnte es damals nicht beantworten.
+ */
+export interface KindFolge {
+  mitglied_id: number;
+  name: string;
+  /** Wie viele Elternteile das Kind NACH dem Loeschen noch hat. */
+  verbleibende_eltern: number;
+  /** War der fallende Eintrag der Hauptkontakt? Dann fehlt danach einer. */
+  war_hauptkontakt: boolean;
+}
+
 export interface Vorschau {
   person: {
     id: string;
@@ -50,6 +71,8 @@ export interface Vorschau {
   nicht_pruefbar: string[];
   /** Wie viele Tabellen geprueft wurden und leer waren. */
   geprueft_leer: number;
+  /** Was aus den Kindern wird. Leer, wenn die Person keine hat. */
+  kinder: KindFolge[];
   /** Zahl je Tabelle — die Grundlage des Fingerabdrucks. */
   zahlen: Record<string, number>;
 }
@@ -79,6 +102,7 @@ export function formeVorschau(
   zahlen: Record<string, number>,
   einteilung: { faellt: string[]; anonym: string[]; blockiert: string[] },
   unter: Record<string, string> = {},
+  kinder: KindFolge[] = [],
 ): Vorschau {
   const nimm = (keys: string[]): Posten[] =>
     keys
@@ -95,6 +119,7 @@ export function formeVorschau(
     blockiert: nimm(einteilung.blockiert),
     nicht_pruefbar: [...NICHT_PRUEFBAR],
     geprueft_leer: leer,
+    kinder,
     zahlen,
   };
 }
@@ -115,10 +140,21 @@ export function formeVorschau(
 export function fingerabdruckDaten(v: Vorschau): string {
   const zahlen = Object.keys(v.zahlen).sort()
     .map(k => `${k}=${v.zahlen[k]}`).join(";");
+  /* ⚠ DIE KINDER GEHOEREN IN DEN ABDRUCK, und zwar mit der Zahl der
+     VERBLEIBENDEN Elternteile — nicht bloss mit ihrer Anzahl. Der Fall, auf
+     den es ankommt: die Vorschau sagt „Stefan behaelt einen Elternteil", und
+     zwischen Vorschau und Loeschen wird der andere entfernt. Die Zahl der
+     Kinder aendert sich dabei NICHT; die Folge kippt von „eine von zwei" auf
+     „bleibt ohne". Ohne diese Zeile liefe der Loeschvorgang durch. */
+  const kinder = [...v.kinder]
+    .sort((a, b) => a.mitglied_id - b.mitglied_id)
+    .map(k => `${k.mitglied_id}:${k.verbleibende_eltern}`).join(",");
+
   return [
     `person=${v.person.id}`,
     `mitgliedschaften=${v.person.aktive_mitgliedschaften}`,
     `konto=${v.person.hat_konto ? 1 : 0}`,
+    `kinder=${kinder}`,
     zahlen,
   ].join("|");
 }
