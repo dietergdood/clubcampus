@@ -63,8 +63,20 @@ function LoginScreen({onLogin, sb, appTheme, vereinId}: LoginScreenProps){
         setLoading(false);
         return;
       }
-      const dbName = rpcResult.name || email.split("@")[0];
-      const {data,error:err}=await sb.auth.signUp({email, password:pw, options:{data:{name:dbName}}});
+      /* ⚠ KEIN NAME MEHR IM AUFRUF, und das ist keine Einbusse, sondern
+         eine Verbesserung. `check_email_bekannt` gibt seit dem 23.08.2026 nur
+         noch `{bekannt}` zurueck — sie ist fuer `anon` freigegeben und nannte
+         vorher Namen und `person_id` an jeden, der den oeffentlichen
+         Schluessel hat.
+
+         Ohne `options.data.name` greift in `handle_new_user()` der zweite
+         Zweig des COALESCE und nimmt `vorname || ' ' || nachname` aus
+         `personen` — den ECHTEN Namen. Der Rueckfall auf
+         `email.split("@")[0]` haette aus „Trainer Zugang" ein
+         „dieter.good+trainer" gemacht, weil der Trigger
+         `raw_user_meta_data->>'name'` ZUERST liest. Weniger mitschicken
+         ergibt hier das bessere Ergebnis. */
+      const {data,error:err}=await sb.auth.signUp({email, password:pw});
       if(err) throw err;
       if(data.session){ onLogin(data.session); } else { setRegDone(true); }
     }catch(err){

@@ -1,5 +1,51 @@
 # Auftrag für Claude Code — RLS auf Gruppenrechte umstellen
 
+## ⚠ ZUERST: wer eine Vereinsadresse kennt, bekommt das Konto dazu
+
+Befund vom 23.08.2026. **Grösser als alles andere in diesem Auftrag**, und
+anders als der Rest **keine Frage von Policies, sondern von zwei
+Einstellungen.** Er steht hier vorn, weil er den Trainer-Export erst gefährlich
+macht.
+
+**1 · Die Registrierung verlangt keinen Nachweis über das Postfach.** Gemessen
+an allen fünf Konten: `confirmation_sent_at` überall `NULL`,
+`email_confirmed_at = created_at`, sofortiger Login. „Confirm email" ist aus —
+es geht **keine** Mail hinaus.
+
+**2 · Ein öffentliches Orakel bestätigt die Adressen.** `check_email_bekannt`
+ist `SECURITY DEFINER` und für `anon` freigegeben. Gemessen gegen die laufende
+API, ohne Anmeldung, nur mit dem publishable key:
+
+```
+→ 200 {"bekannt":true,"name":"Andrea Hauser","person_id":"73c0837b-…"}
+```
+
+Es nennt **Namen und `person_id`**.
+
+**Die Kette:** Adresse kennen → das Orakel bestätigt sie und nennt die Person →
+damit registrieren → ein Konto **mit deren Rolle und deren Daten**, ohne je
+Zugriff auf das Postfach.
+
+| | |
+|---|---|
+| Personen mit E-Mail | **912 von 914** |
+| davon **ohne** Konto — übernehmbar | **907** |
+| Rollen dabei | `spieler` 506 · `eltern` 392 · `supporter` 7 |
+
+Der Admin ist nicht darunter: seine Adresse ist belegt. **Das ist heute die
+einzige Sperre, und sie ist zufällig** — sie gilt für jede vergebene Adresse
+und für keine andere.
+
+⚠ **Und hier hängt es mit diesem Auftrag zusammen:** ohne Mitgliederliste muss
+man Adressen raten. Mit ihr hat man alle 907 — und wie man an sie kommt, steht
+unter „Ein Trainer kann 914 Adressen und AHV-Nummern exportieren". Die zwei
+Befunde sind **ein** Angriffsweg, nicht zwei.
+
+**Stand:** `check_email_bekannt` ist auf `{"bekannt": true|false}` gekürzt
+(`supabase/migration_email_orakel.sql`, Entscheidung Didi 23.08.2026); das
+Orakel bleibt, nur ohne Namen. „Confirm email" wartet auf die Prüfung des
+Mail-Versands für 394 Elternteile.
+
 ## Ausgangslage
 
 ClubCampus hat zwei Rechtesysteme nebeneinander:
