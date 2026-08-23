@@ -354,6 +354,18 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Die zweite Hälfte hätte die `benutzer`-Zeile entfernt und das Anmeldekonto stehen gelassen: **die E-Mail-Adresse dauerhaft für jede erneute Registrierung blockiert**, mit einer Zeile in der Konsole als einzigem Zeichen. Nach aussen sähe das aus wie „diese Adresse ist schon vergeben" — wieder ein Ausfall in der Verkleidung einer Datenlage.
 
+  ⚠ **UND EIN AUTH-KONTO OHNE `auth.identities` IST FÜR DIE ADMIN-API NICHT LÖSCHBAR.** Gemessen am 23.08.2026 beim ersten scharfen Löschlauf: `auth.admin.deleteUser()` antwortete **„Database error loading user"**. Ursache war nicht der Code, sondern der Datensatz — das Konto war von Hand angelegt worden, hatte **null** Zeilen in `auth.identities` und ist für GoTrue damit unvollständig.
+
+  ```sql
+  select u.email, u.last_sign_in_at is not null as hat_login,
+         (select count(*) from auth.identities i where i.user_id = u.id) as identities
+    from auth.users u order by identities;
+  ```
+
+  **Zwei der sechs Konten hatten null** — `trainer@fch-test.ch` und `funktionaer@fch-test.ch`, beide am 28.05.2026 angelegt, beide nie angemeldet. **Sie waren nie anmeldefähig**; als Prüfmittel haben sie nur so ausgesehen. Ein Konto, das man nicht benutzen kann, fällt nicht auf, solange niemand es benutzt.
+
+  **Daraus die Reihenfolge in der Löschkette:** erst `auth.admin.deleteUser()`, dann die `benutzer`-Zeile. Scheitert der erste Schritt, ist **nichts** verloren; umgekehrt stünde die Waise da, vor der der Absatz oben warnt — und genau das ist beim ersten Lauf passiert.
+
   ⚠ **Die laute Hälfte ist kein Schutz für die stille.** Beide standen in derselben Datei, geschrieben in derselben Minute, aus derselben Annahme. Wäre die laute nicht dabei gewesen, hätte nichts gemeldet. Gefunden habe ich es beim Gegenlesen gegen das Schema und gegen `useDbUser` — nicht durch einen Lauf.
 
 - **Ein `Authorization`-Header ist keine Anmeldung — und `verify_jwt` ist keine Rechteprüfung.** Bei Supabase steht in diesem Header im Normalfall der **publishable key** (früher: anon key). Der liegt im JavaScript-Bündel jeder Seite; er ist öffentlich, das ist sein Zweck. Der Gateway-Schalter `verify_jwt` prüft, ob der Schlüssel **gültig** ist, nicht ob ein **Mensch** dahintersteht — und der publishable key ist gültig.

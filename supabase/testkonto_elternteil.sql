@@ -77,6 +77,21 @@
 --   Zugang, mit dem sich eine Rolle pruefen liesse — wer eines loescht, gibt
 --   die Pruefbarkeit dieser Rolle auf, bis es neu angelegt ist.
 --
+-- ⚠ BERICHTIGT AM 23.08.2026, NACH DEM ERSTEN SCHARFEN LOESCHLAUF: BEIDE
+--   TESTKONTEN WAREN NIE ANMELDEFAEHIG. `trainer@fch-test.ch` und
+--   `funktionaer@fch-test.ch` haben je NULL Zeilen in `auth.identities` —
+--   von Hand angelegt, nie angemeldet. Ohne Identity kann sich niemand
+--   anmelden, und `auth.admin.deleteUser` scheitert mit „Database error
+--   loading user".
+--
+--   Der Absatz darunter stimmt also nur zur Haelfte: es fehlt nicht nur der
+--   Trainer-ZUGANG, es fehlen BEIDE. Wer eines der zwei fuer eine Pruefung
+--   einplant, plant mit etwas, das es nicht gibt.
+--
+--   ⚠ Deshalb entstehen neue Testkonten NUR ueber die Anmeldemaske, nie per
+--   SQL-Insert in `auth.users`. Ein von Hand angelegter Eintrag sieht in
+--   jeder Tabelle richtig aus und ist trotzdem keiner.
+--
 -- ⚠ UND „TRAINER TESTER" HAT DIE ROLLE `supporter`, NICHT `trainer`. Einen
 --   Trainer-Zugang gibt es ueberhaupt nicht. Der Name verspricht etwas, das
 --   die Rolle nicht haelt: wer damit Trainer-Verhalten prueft, prueft

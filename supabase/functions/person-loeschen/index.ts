@@ -318,8 +318,6 @@ Deno.serve(async (req) => {
   const { data: konten } = await db.from("benutzer").select("id").eq("person_id", personId);
   for (const k of konten ?? []) {
     const kontoId = k.id as string;
-    const { error } = await db.from("benutzer").delete().eq("id", kontoId);
-    if (error) return json({ fehler: `Portal-Konto: ${error.message}` }, 500);
 
     /* ⚠ DIESELBE ID. `benutzer.id` ist die Auth-Id — kein zweiter Schluessel,
        kein Nachschlagen. Ich hatte hier zuerst ein `auth_user_id` angenommen;
@@ -329,12 +327,30 @@ Deno.serve(async (req) => {
        Konsole. Genau die Sorte Ausfall, die wie eine Datenlage aussieht. */
     const { error: aFehler } = await db.auth.admin.deleteUser(kontoId);
     if (aFehler) {
+      /* ⚠ NICHTS IST VERLOREN. Die `benutzer`-Zeile steht noch — genau
+         deshalb kommt das Anmeldekonto ZUERST. Umgekehrt (erst `benutzer`,
+         dann auth) hinterliesse ein Fehlschlag hier das Schlimmste von
+         beidem: die Zeile weg, das Anmeldekonto stehen, die Adresse
+         dauerhaft blockiert, und im Portal nichts mehr zu sehen.
+
+         Gemessen am 23.08.2026 beim ersten scharfen Lauf, und es ist keine
+         Theorie: `auth.admin.deleteUser` schlug mit „Database error loading
+         user" fehl, weil das Konto KEINE `auth.identities`-Zeile hatte —
+         von Hand angelegt, nie angemeldet, fuer GoTrue ein kaputter
+         Datensatz. In der alten Reihenfolge stand danach genau die Waise da,
+         vor der der Eintrag in CLAUDE.md warnt. */
       console.error("person-loeschen: auth.users:", aFehler.message);
       return json({
-        fehler: `Das Portal-Konto wurde entfernt, das Anmeldekonto NICHT (${aFehler.message}). `
-              + "Die E-Mail-Adresse bleibt blockiert — bitte im Supabase-Dashboard nachsehen.",
+        fehler: `Das Anmeldekonto liess sich nicht entfernen (${aFehler.message}). `
+              + "Es wurde NICHTS geloescht — die Person ist unveraendert. "
+              + "Ein Konto ohne `auth.identities` ist fuer die Admin-API nicht "
+              + "loeschbar; es muss im Supabase-Dashboard entfernt werden.",
       }, 500);
     }
+
+    /* Erst jetzt die Portal-Zeile. */
+    const { error } = await db.from("benutzer").delete().eq("id", kontoId);
+    if (error) return json({ fehler: `Portal-Konto: ${error.message}` }, 500);
   }
 
   {
