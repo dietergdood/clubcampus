@@ -83,6 +83,68 @@ Der Eltern-Umbau hat den Lesepfad von `elternkontakte` auf `personen` und `benut
 
 **2. Trainer sehen den Portal-Zugang in der Elternliste nicht mehr.** Die Spalte „Portal" der Elternliste kam aus `elternkontakte.benutzer_id` und war für Trainer lesbar. Seit Block D steht die Information in `benutzer.person_id`, und `benutzer` hat nur `benutzer_select_admin` und `benutzer_select_self`. Der eingebettete Join liefert Trainern deshalb eine leere Menge — die Liste zeigt für alle „Kein Zugang", ohne Fehler. Zu entscheiden: braucht ein Trainer diese Spalte überhaupt? Wenn ja, genügt eine schmale SELECT-Policy auf `benutzer` für `hat_modul_recht('members','lesen')`, beschränkt auf `id`/`person_id` — die Sperrliste oben verbietet `hat_modul_recht` auf `benutzer` allerdings ausdrücklich, weil dort `ist_admin` steht. Der saubere Weg wäre dann eine Sicht (`security_invoker`) statt einer Policy-Lockerung.
 
+## ⚠ Vier Policies nennen Rollennamen — und drei davon weisen jemanden ab, der die Maske sieht
+
+Gemessen am 23.08.2026 bei einem Durchgang über **132 Schreibstellen in
+`src/`**: 122 stehen unter einer Bedingung, die mehr verlangt als die
+Zugehörigkeit zum Verein, **84 davon zählen nach dem Schreiben nicht nach**.
+
+⚠ **Das sind keine 84 Defekte, und die Zahl so weiterzugeben machte die Liste
+wertlos.** Bei den meisten lautet die Bedingung `is_admin()`, und die Maske
+ist ohnehin nur für Admins erreichbar. **Die Frage ist nicht „prüft der Code
+nach?", sondern „kann jemand diese Maske erreichen, den die Policy abweist?"**
+
+Danach bleiben vier — und sie sind **ein** Befund, nicht vier: überall steht
+ein **Rollenname fest in der Policy**, während das Recht in der Oberfläche
+längst aus einer Gruppe kommt. Genau das löst dieser Auftrag auf.
+
+| | Policy | Bedingung | wer die Maske erreicht und abgewiesen wird |
+|---|---|---|---|
+| 1 | `spiel_ereignisse_write` | `is_admin() or get_my_role() = 'trainer' or hat_modul_recht('schedule','schreiben')` | **schon vermerkt** (19.08.2026) — ein Funktionär braucht `schedule: schreiben` in seiner Gruppe |
+| 2 | `kader_write` | `get_my_role() IN (administrator, administration, trainer)` | ein **Funktionär** mit `team: schreiben` aus den Gruppenrechten |
+| 3 | `ansichten_write` | `benutzer_id = auth.uid() OR is_admin()` | **jeder**, dem eine geteilte Ansicht angezeigt wird |
+| 4 | ≈60 Stellen | `is_admin()` | die UI prüft `role === "administrator"`, die Policy `benutzer.ist_admin` |
+
+**Zu 2 — und das ist der schärfste, weil daneben das Gegenbeispiel steht.**
+`trainings_write` führt `funktionaer` in seiner Liste, `kader_write` nicht.
+Ob das je entschieden wurde, steht nirgends; es sieht aus wie zwei Policies,
+die zu verschiedenen Zeiten geschrieben wurden. Der Funktionär kann die
+Kader-Maske über die Gruppenrechte bekommen — und dann tut jedes Speichern
+nichts, ohne Fehler.
+
+```sql
+-- die zwei nebeneinander
+select tablename, regexp_replace(coalesce(qual,with_check),'\s+',' ','g')
+  from pg_policies where schemaname='public' and tablename in ('kader','trainings')
+   and cmd in ('ALL','UPDATE','INSERT');
+```
+
+**Zu 3 — die Lese-Hälfte ist am 23.08.2026 repariert, die Schreib-Hälfte
+gehört hierher.** `ansichten_select` liess fremde Ansichten nur bei
+`ist_standard = true` durch, während die Funktion `geteilt` heisst; seit
+`migration_ansichten_geteilt.sql` sieht ein Nicht-Autor die geteilten
+Ansichten. **Ob er sie auch ändern oder löschen darf, ist eine
+Rechtefrage** — und zwar genau die, die dieser Auftrag beantwortet: „darf"
+soll aus der Gruppe kommen, nicht aus `benutzer_id = auth.uid() OR
+is_admin()`. Bis dahin ist das Verhalten wenigstens ehrlich: sehen ja,
+ändern nein.
+
+**Zu 4 — heute einig, und das ist keine Absicherung.** Gemessen: 5 Konten,
+das eine mit `ist_admin = true` hat auch `role = 'administrator'`, die vier
+anderen beides nicht. Aber `role` ist ein **berechneter** Wert
+(`ableitUndSaveRolle()`), `ist_admin` ein **gesetztes** Kennzeichen — am
+05.08.2026 ausdrücklich getrennt, damit die Ableitung einen Admin nicht mehr
+degradiert. Läuft eines dem anderen davon, sieht ein Admin seine Maske, und
+jeder Klick darin verpufft. **Solange zwei Quellen dieselbe Frage
+beantworten, gehört die Oberfläche auf dieselbe wie die Policy** — hier also
+`ist_admin`, nicht `role`.
+
+⚠ **Und für alle vier gilt dasselbe zweite Ende:** solange der Code nach dem
+Schreiben nicht zählt, meldet er in jedem dieser Fälle Erfolg. Ein `update`
+ohne Treffer ist bei PostgREST kein Fehler (`204`, `error === null`). Die
+Regel dazu steht in CLAUDE.md; wer eine dieser Policies anfasst, sieht sich
+die zugehörige Schreibstelle gleich mit an.
+
 ## Der Grund, warum die Rolle `funktionaer` schief liegt
 
 Beim Aufräumen am 05.08.2026 kam ein Fall hoch, den dieser Umbau mitlösen muss.

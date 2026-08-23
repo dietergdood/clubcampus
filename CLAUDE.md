@@ -1262,14 +1262,23 @@ schon vermerkte Übergang `get_my_role() = 'trainer'` in
 in der Oberfläche längst aus Gruppen kommen. Fällt mit den Gruppenrechten weg
 (`docs/auftrag_rls_gruppenrechte.md`).
 
-**Zu 2 — und dabei ist ein zweiter Fund aufgefallen, der nichts mit Schreiben
-zu tun hat.** `ansichten_select` gibt fremde Ansichten frei, wenn
-`ist_standard = true` — **die Spalte, die das Teilen steuert, heisst aber
-`geteilt`**. Gemessen: 3 Ansichten, davon **2 mit `geteilt = true`, keine mit
-`ist_standard = true`**. Die Policy nennt also eine andere Spalte als die
-Funktion. **„Teilen" hat heute keine Wirkung** — niemand ausser dem Autor und
-den Admins sieht eine geteilte Ansicht. Ein Filter auf die falsche Spalte,
-derselbe Fehler wie ein Filter auf einen Namen statt auf ein Merkmal.
+**✅ Zu 2 — der Lese-Teil ist repariert.** `ansichten_select` gab fremde
+Ansichten nur frei, wenn `ist_standard = true` — **die Spalte, die das Teilen
+steuert, heisst aber `geteilt`**. Die Liste FRAGT nach geteilten Ansichten
+(`memberService.ts:345`), und `useListView.ts:372` rendert eine eigene Gruppe
+„Geteilte Ansichten"; RLS filterte sie vorher weg. Kein Fehler, keine leere
+Meldung — nur eine Gruppe, die nie erschien.
+
+Gemessen im Probelauf, als Nicht-Autor: **vorher 0 sichtbare Ansichten,
+nachher 2** — und die private des Autors bleibt privat.
+`migration_ansichten_geteilt.sql`, 23.08.2026. `ist_standard` wurde dabei
+**ersetzt, nicht ergänzt**: die Spalte hat im ganzen Portal keinen Leser und
+keinen Schreiber, und eine Bedingung, die nie zutrifft, bleibt sonst als
+vermeintlicher Teilen-Schalter stehen.
+
+⚠ **Die Schreib-Hälfte bleibt offen und liegt bei den Gruppenrechten**: ob
+ein Nicht-Autor eine geteilte Ansicht auch ändern darf, ist eine Rechtefrage,
+keine Reparatur.
 
 **Zu 3 — heute einig, und das ist keine Absicherung.** Gemessen: 5 Konten, das
 eine mit `ist_admin = true` hat auch `role = 'administrator'`, die vier
@@ -1277,6 +1286,13 @@ anderen beides nicht. Aber `role` ist ein **berechneter** Wert
 (`ableitUndSaveRolle()`), `ist_admin` ein gesetztes Kennzeichen — sie wurden
 am 05.08.2026 ausdrücklich getrennt. Läuft eines dem anderen davon, sieht ein
 Admin seine Maske und jeder Klick darin verpufft.
+
+**Die drei übrigen sind EIN Befund, nicht drei** — überall steht ein
+Rollenname fest in der Policy, während das Recht in der Oberfläche aus einer
+Gruppe kommt. Sie stehen deshalb seit dem 23.08.2026 in
+`docs/auftrag_rls_gruppenrechte.md` → „Vier Policies nennen Rollennamen",
+zusammen mit dem schon vermerkten `spiel_ereignisse_write`. Hier nicht
+doppelt führen.
 
 **Der Durchgang zum Wiederholen** liegt nicht als Skript im Repo (er braucht
 eine Datenbankverbindung, die die Prüfkette nicht hat). Die beiden Abfragen
