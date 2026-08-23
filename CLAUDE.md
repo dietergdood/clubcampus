@@ -1329,6 +1329,28 @@ eine Datenbankverbindung, die die Prüfkette nicht hat). Die beiden Abfragen
 stehen im Eintrag darüber; der Rest ist ein Abgleich der Schreibstellen aus
 `src/` gegen `pg_policies`.
 
+### Die Supporter-Liste zeigt eine gelöschte Person weiter
+
+Befund vom 23.08.2026, beim ersten scharfen Löschlauf. Nach „Person löschen
+(DSGVO)" stand der Eintrag noch in der Liste — bis zum Neuladen, dann
+`7 von 7`.
+
+`onPersonGeloescht` in `MemberDetail` ruft `onClose(); onReload();`, und
+`onReload` lädt **`dbMitglieder`** neu. Die Supporter-Liste hat aber ihren
+eigenen Abruf (`fetchSupporter`), und der Eltern-Tab ebenso
+(`fetchAlleElternkontakte`). Beide bekommen davon nichts mit.
+
+⚠ **Es ist die harmlose Hälfte eines Musters, das schon zweimal teuer war:**
+eine Anzeige, die nach einer Handlung stehenbleibt, ist von einer Handlung,
+die nicht stattgefunden hat, nicht zu unterscheiden. Hier hat die Person
+tatsächlich aufgehört zu existieren — beim nächsten Mal könnte es umgekehrt
+sein.
+
+Zu tun: entweder bekommt `MitgliederModul` einen Auffrischer, der **alle
+drei** Listen kennt, oder die Listen laden bei einem Wechsel des Tabs neu.
+Die zweite Lösung ist billiger und deckt auch die Fälle ab, die niemand
+verdrahtet hat.
+
 ### ⚠ `redirect_to` kennt den Verein nicht — zwei von drei Wegen
 
 Befund vom 23.08.2026, beim Nachmessen der Redirect-Allowlist.

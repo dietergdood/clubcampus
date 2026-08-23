@@ -66,6 +66,27 @@ const ANONYM = [
   "helper_zuteilungen", "team_helfer_zuteilungen",
   "spiel_ereignisse_korrigiert_von", "audit_log_benutzer_id",
 ];
+/**
+ * ⚠ HAELT DAS LOESCHEN AUF — und zwar erst ganz am Ende, beim Auth-Konto.
+ *
+ * Drei Fremdschluessel zeigen mit `ON DELETE NO ACTION` auf `auth.users`:
+ * `nachrichten.autor_id`, `nachrichten_antworten.autor_id`,
+ * `nachrichten_gelesen.user_id`. Wer eine Nachricht geschrieben hat, laesst
+ * sich als Auth-Konto nicht entfernen — Postgres wirft `23503`.
+ *
+ * ⚠ SIE FEHLTEN IN DER VORSCHAU BIS ZUM 23.08.2026. Eine Person mit
+ * Nachrichten waere als loeschbar angezeigt worden und der Lauf haette
+ * abgebrochen — NACH dem Protokolleintrag. Gemessen beim Aufraeumen der
+ * verwaisten Anmeldekonten, nicht beim Bauen: alle drei Tabellen sind heute
+ * leer, der Fehler war also folgenlos und unsichtbar zugleich.
+ *
+ * Sie stehen als BLOCKIERT, nicht als „faellt mit": das Portal loescht keine
+ * Nachrichten, um eine Person zu entfernen. Wer das will, entscheidet es
+ * vorher und von Hand.
+ */
+const BLOCKIERT = [
+  "nachrichten_autor", "nachrichten_antworten_autor", "nachrichten_gelesen_user",
+];
 /** Haengt an der Mitgliedschaft, nicht an der Person — eingerueckt. */
 const UNTER: Record<string, string> = {
   kader: "mitglieder", anwesenheiten: "mitglieder",
@@ -115,6 +136,10 @@ async function zaehle(db: SupabaseClient, personId: string): Promise<{
     team_helfer_zuteilungen: await n("team_helfer_zuteilungen", "person_id", [personId]),
     spiel_ereignisse_korrigiert_von: await n("spiel_ereignisse", "korrigiert_von", kontoIds),
     audit_log_benutzer_id: await n("audit_log", "benutzer_id", kontoIds),
+    /* ⚠ Diese drei blockieren — siehe BLOCKIERT. */
+    nachrichten_autor: await n("nachrichten", "autor_id", kontoIds),
+    nachrichten_antworten_autor: await n("nachrichten_antworten", "autor_id", kontoIds),
+    nachrichten_gelesen_user: await n("nachrichten_gelesen", "user_id", kontoIds),
   };
 
   /* ⚠ `-1` heisst „nicht gezaehlt", nicht „null". Ein Lesefehler darf nicht
@@ -235,7 +260,7 @@ Deno.serve(async (req) => {
   if (fremd) return json({ fehler: fremd.fehler }, fremd.status);
 
   const vorschau = formeVorschau(gemessen.person, gemessen.zahlen,
-    { faellt: FAELLT, anonym: ANONYM, blockiert: [] }, UNTER, gemessen.kinder);
+    { faellt: FAELLT, anonym: ANONYM, blockiert: BLOCKIERT }, UNTER, gemessen.kinder);
   const daten = fingerabdruckDaten(vorschau);
 
   // ── Vorschau ────────────────────────────────────────────────────────────
@@ -272,6 +297,18 @@ Deno.serve(async (req) => {
     }, 409);
   }
 
+  /* ⚠ BLOCKIERT HEISST BLOCKIERT. Die Vorschau zeigt es, aber sie ist nur
+     die Anzeige — geprueft wird hier, unmittelbar vor der Handlung. Ohne
+     diese Zeile stuende die Warnung auf dem Schirm und der Lauf liefe
+     trotzdem los, bis Postgres ihn mit 23503 anhaelt: nach dem
+     Protokolleintrag und mitten in der Kette. */
+  if (vorschau.blockiert.length > 0) {
+    return json({
+      fehler: "Diese Person l\u00e4sst sich nicht l\u00f6schen, es h\u00e4ngt noch etwas daran: "
+            + vorschau.blockiert.map(b => `${b.tabelle} (${b.anzahl})`).join(", ") + ".",
+    }, 409);
+  }
+
   /* ⚠ DAS PROTOKOLL KOMMT VORHER. Danach gibt es niemanden mehr, ueber den
      man protokollieren koennte. Es geht nach `audit_log` — die Tabelle
      haengt nicht an `personen` und loescht sich nicht mit.
@@ -280,17 +317,23 @@ Deno.serve(async (req) => {
      Richtung, die sich umkehren laesst. Was der Verein damit NICHT kann —
      belegen, dass eine BESTIMMTE Loeschung ausgefuehrt wurde — steht im
      Auftrag als Frage an die Datenschutzstelle. */
-  const { error: logErr } = await db.from("audit_log").insert({
+  const { data: logZeile, error: logErr } = await db.from("audit_log").insert({
     verein_id: aufrufer.verein_id,
     benutzer_id: aufrufer.id,
     aktion: "person_geloescht",
     tabelle: "personen",
     vorher: { zahlen: vorschau.zahlen, anlass: String(body.anlass ?? "verwaltung") },
-  });
-  if (logErr) {
-    console.error("person-loeschen: Protokoll fehlgeschlagen:", logErr.message);
+  }).select("id");
+
+  /* ⚠ GEZAEHLT, NICHT NUR AUF `error` GEPRUEFT. Ein Insert, den RLS nicht
+     trifft, ist kein Fehler — PostgREST antwortet 201 mit leerer Liste. Ohne
+     `.select("id")` liefe die Loeschung ohne Protokoll weiter und meldete
+     Erfolg. (CLAUDE.md, 23.08.2026.) */
+  if (logErr || !logZeile || logZeile.length === 0) {
+    console.error("person-loeschen: Protokoll fehlgeschlagen:", logErr?.message ?? "0 Zeilen");
     return json({ fehler: "Das Protokoll konnte nicht geschrieben werden — es wurde NICHT gelöscht." }, 500);
   }
+  const logId = logZeile[0].id as string;
 
   /* ── Die Kette, in fester Reihenfolge ──────────────────────────────────
      Drei Fremdschluessel auf `personen` blockieren (benutzer, eltern_kinder,
@@ -358,8 +401,27 @@ Deno.serve(async (req) => {
     if (error) return json({ fehler: `Person: ${error.message}` }, 500);
   }
 
+  /* ⚠ DER ABSCHLUSS-VERMERK — AM BESTEHENDEN EINTRAG, NICHT ALS ZWEITER.
+     Zwei Eintraege pro Loeschung lassen sich auseinanderlesen; ein
+     unvollstaendiger nicht. Bricht die Function davor ab, steht ein Eintrag
+     OHNE `nachher` da — und das ist ehrlicher als „geloescht".
+
+     Der Anlass: beim ersten scharfen Lauf am 23.08.2026 brach die Kette am
+     Auth-Konto ab. Der Protokolleintrag hiess trotzdem `person_geloescht`,
+     obwohl die Person weiterlebte. Fuer eine Datenschutzstelle ist ein
+     Protokoll, das MEHR behauptet als geschehen ist, schlechter als eines,
+     das weniger sagt. (Entscheidung Didi, 23.08.2026.)
+
+     Ein Fehlschlag hier macht die Loeschung nicht rueckgaengig — sie ist
+     geschehen. Er wird gemeldet, nicht verschluckt. */
+  const { error: vermerkErr } = await db.from("audit_log")
+    .update({ nachher: { abgeschlossen: true, zahlen: vorschau.zahlen } })
+    .eq("id", logId);
+  if (vermerkErr) console.error("person-loeschen: Abschluss-Vermerk:", vermerkErr.message);
+
   return json({
     geloescht: true,
+    protokoll_abgeschlossen: !vermerkErr,
     zahlen: vorschau.zahlen,
     /* ⚠ Genannt, nicht verschwiegen: was die Vorschau nicht pruefen konnte,
        konnte auch dieser Lauf nicht aufraeumen. */

@@ -162,6 +162,42 @@ describe("fingerabdruckDaten — worüber signiert wird", () => {
   });
 });
 
+describe("⚠ blockierende Zeilen — die Vorschau muss sie NENNEN", () => {
+  /* Drei Fremdschlüssel zeigen mit `ON DELETE NO ACTION` auf `auth.users`:
+     `nachrichten.autor_id`, `nachrichten_antworten.autor_id`,
+     `nachrichten_gelesen.user_id`. Wer eine Nachricht geschrieben hat, lässt
+     sich als Auth-Konto nicht entfernen — Postgres wirft 23503.
+
+     ⚠ Sie fehlten bis zum 23.08.2026 in der Vorschau. Eine Person mit
+     Nachrichten wäre als löschbar angezeigt worden, und der Lauf wäre
+     abgebrochen — NACH dem Protokolleintrag. Alle drei sind heute leer, der
+     Fehler war also folgenlos und unsichtbar zugleich. */
+  const EINT = { faellt: ["mitglieder"], anonym: [],
+                 blockiert: ["nachrichten_autor", "nachrichten_gelesen_user"] };
+
+  it("führt eine blockierende Zeile getrennt von den fallenden", () => {
+    const v = formeVorschau(PERSON, { mitglieder: 1, nachrichten_autor: 3, nachrichten_gelesen_user: 0 }, EINT);
+    expect(v.blockiert).toEqual([{ tabelle: "nachrichten_autor", anzahl: 3 }]);
+    expect(v.faellt.map(p => p.tabelle)).toEqual(["mitglieder"]);
+  });
+
+  it("⚠ leer heisst löschbar — die Liste ist die Bedingung, nicht die Anzeige", () => {
+    const v = formeVorschau(PERSON, { mitglieder: 1, nachrichten_autor: 0, nachrichten_gelesen_user: 0 }, EINT);
+    expect(v.blockiert).toEqual([]);
+    expect(v.geprueft_leer).toBe(2);
+  });
+
+  it("die blockierenden Zahlen stehen im Abdruck", () => {
+    /* Sonst könnte zwischen Vorschau und Löschen eine Nachricht entstehen und
+       der Lauf liefe trotzdem los. */
+    const ohne = formeVorschau(PERSON, { mitglieder: 1, nachrichten_autor: 0 },
+      { faellt: ["mitglieder"], anonym: [], blockiert: ["nachrichten_autor"] });
+    const mit = formeVorschau(PERSON, { mitglieder: 1, nachrichten_autor: 1 },
+      { faellt: ["mitglieder"], anonym: [], blockiert: ["nachrichten_autor"] });
+    expect(fingerabdruckDaten(ohne)).not.toBe(fingerabdruckDaten(mit));
+  });
+});
+
 describe("nenneUnterschiede — die Abbruchmeldung", () => {
   it("⚠ sagt WAS sich geändert hat, nicht nur DASS", () => {
     /* „Hash stimmt nicht" erzieht dazu, auf Vorschau und wieder auf Löschen

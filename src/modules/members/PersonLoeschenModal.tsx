@@ -79,6 +79,9 @@ const LESBAR: Record<string, string> = {
   team_helfer_zuteilungen: "Helfereinsätze im Team",
   spiel_ereignisse_korrigiert_von: "Von ihr korrigierte Spielereignisse",
   audit_log_benutzer_id: "Protokolleinträge",
+  nachrichten_autor: "Von ihr verfasste Nachrichten",
+  nachrichten_antworten_autor: "Von ihr verfasste Antworten",
+  nachrichten_gelesen_user: "Lesebestätigungen",
 };
 
 export function PersonLoeschenModal({

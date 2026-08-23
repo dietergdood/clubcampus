@@ -147,6 +147,20 @@ $mig$;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- AUSGEFUEHRT am 23.08.2026
+--
+--   Person          84f0514a-080d-4a36-94c0-928b9743570d   Trainer Zugang
+--   Mitgliedschaft  3530   Aktivmitglied, aktiv
+--   Kader           Team 1 „1. Mannschaft" als Trainer/in
+--   Zaehlstand      personen 914, aktive Mitgliedschaften 511, auth.users 4
+--
+-- ⚠ Ein erneuter Lauf bricht jetzt ab („gehoert bereits einer Person"). Das
+--   ist kein Fehler, sondern der Waechter.
+--
+-- ⚠ OFFEN: die Registrierung. Ohne sie gibt es die Person, aber kein Konto —
+--   und damit weiterhin keinen Trainer-Zugang.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GEGENPROBE nach der Registrierung
 --
 --   select b.role, b.ist_admin, p.email
