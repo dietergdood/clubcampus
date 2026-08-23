@@ -790,6 +790,31 @@ aus".
 das nicht die fehlende Wirkung — die kommt über `pflichtfelderFuer()` —,
 sondern eine zweite, tote Rechnung daneben. Siehe den Punkt darunter.
 
+### Der Abschluss-Vermerk im Löschprotokoll — was `abgeschlossen = null` heisst
+
+Seit dem 23.08.2026 trägt jeder `person_geloescht`-Eintrag in `audit_log`
+zwei Hälften: `vorher` wird **vor** der Kette geschrieben, `nachher` mit
+`{abgeschlossen: true}` **danach**.
+
+⚠ **Ein Eintrag ohne `nachher` ist kein Formfehler, sondern die Aussage.** Er
+sagt: es wurde begonnen und nicht zu Ende geführt. Beim ersten scharfen Lauf
+brach die Kette am Auth-Konto ab, und der Eintrag hiess trotzdem
+`person_geloescht` — für eine Datenschutzstelle ist ein Protokoll, das **mehr**
+behauptet als geschehen ist, schlechter als eines, das weniger sagt.
+(Entscheidung Didi, 23.08.2026: als Ergänzung am bestehenden Eintrag, nicht
+als zweiter. Zwei Einträge pro Löschung liessen sich auseinanderlesen, ein
+unvollständiger nicht.)
+
+⚠ **Die ersten zwei Zeilen im Bestand haben `nachher = null`, obwohl der
+zweite Lauf gelang.** Sie stammen von vor dieser Änderung. Wer die Tabelle
+liest, darf sie nicht als abgebrochen zählen:
+
+| Zeit | `abgeschlossen` | tatsächlich |
+|---|---|---|
+| 17:42 | `null` | **abgebrochen** (Auth-Konto) |
+| 17:52 | `null` | gelungen — vor dem Vermerk |
+| 18:20 | `true` | gelungen |
+
 ### ⚠ Zwei Rechnungen für die Portalrolle — `handle_new_user()` gegen `ableitRolle()`
 
 Befund vom 23.08.2026, beim Anlegen eines Trainer-Testzugangs.
@@ -811,6 +836,28 @@ Trigger, und der sagt `spieler`. **Ohne die Gegenprobe wäre der Zugang als
 jede Messung an ihm hätte etwas anderes geprüft als das, was drauf steht.
 Dieselbe Falle wie „Trainer Tester" mit der Rolle `supporter`, nur eine
 Ebene tiefer.
+
+⚠ **WIE VIELE ES HEUTE TRÄFE — gemessen am 23.08.2026, beide Regeln
+nachgebaut und über alle aktiven Mitglieder gerechnet:**
+
+| Trigger sagt | Ableitung sagt | Personen |
+|---|---|---|
+| `spieler` | **`trainer`** | **8** |
+| `mitglied` | **`funktionaer`** | **1** |
+| | **zusammen** | **9 von 512** |
+
+**Die acht sind die Trainer des Vereins.** Registrieren sie sich, bekommen sie
+`spieler` — kein „Mein Team", keine Kader-Maske, keine Trainerrechte. Und es
+berichtigt sich irgendwann von selbst, sobald jemand ihren Kadereintrag
+anfasst. Zwei davon sind Juniorenmitglieder, die nebenbei Co-Trainer sind.
+
+Die Abweichung geht **immer in dieselbe Richtung**: der Trigger gibt weniger
+als die Ableitung. Das ist die harmlosere Richtung — aber es heisst, dass
+genau die neun, die am meisten mit dem Portal arbeiten sollen, es beim ersten
+Anmelden am wenigsten können.
+
+Zum Nachzählen: die Abfrage steht im Kopf von `supabase/testkonto_trainer.sql`
+unter „Zwei Rechnungen für die Rolle".
 
 **Das ist die dritte Stelle dieser Art**, nach den drei Rechnungen für die
 Pflichtfelder und den zwei für den Portal-Zugang. Gemeinsames Merkmal: keine

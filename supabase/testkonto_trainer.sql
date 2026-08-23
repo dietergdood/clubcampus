@@ -199,7 +199,43 @@ $mig$;
 --     (b) Bis dahin: `benutzer.role` nach der Registrierung auf `trainer`
 --         setzen. ⚠ Das ist hier AUSNAHMSWEISE kein fragiles Ueberschreiben,
 --         weil `ableitRolle()` denselben Wert ergaebe — man nimmt die
---         Ableitung nur vorweg.
+--         Ableitung nur vorweg. (Entscheidung Didi, 23.08.2026.)
+--
+--   ⚠ ES TRIFFT NICHT NUR TESTKONTEN. Gemessen am 23.08.2026 ueber alle
+--   aktiven Mitglieder: 9 von 512 bekaemen aus dem Trigger eine andere Rolle
+--   als aus der Ableitung — 8 davon `spieler` statt `trainer` (es sind die
+--   Trainer des Vereins), 1 `mitglied` statt `funktionaer`.
+--
+--   Zum Nachzaehlen:
+--
+--     with basis as (
+--       select m.id, p.id as person_id, m.mitgliedtyp, mt.standard_rolle,
+--              coalesce(array_length(p.funktionen,1),0) > 0 as hat_funktionen,
+--              exists (select 1 from public.eltern_kinder ek where ek.person_id=p.id) as hat_kind,
+--              coalesce((select bool_or(kr.ist_trainer)
+--                          from public.kader k
+--                          join public.kader_rollen kr
+--                            on kr.name = any(k.rollen) and kr.verein_id = m.verein_id
+--                         where k.mitglied_id = m.id and k.aktiv), false) as kader_trainer,
+--              exists (select 1 from public.kader k where k.mitglied_id=m.id and k.aktiv) as hat_kader
+--         from public.mitglieder m
+--         join public.personen p on p.id = m.person_id
+--         left join public.mitgliedtypen mt
+--                on mt.name = m.mitgliedtyp and mt.verein_id = m.verein_id
+--        where m.aktiv
+--     ), gerechnet as (
+--       select *,
+--         coalesce(standard_rolle, case when hat_kind then 'eltern' else 'supporter' end) as trigger_rolle,
+--         case when kader_trainer then 'trainer'
+--              when hat_kader     then 'spieler'
+--              when standard_rolle in ('spieler','trainer') then standard_rolle
+--              when hat_funktionen then 'funktionaer'
+--              else coalesce(standard_rolle,'supporter') end as ableitung
+--       from basis
+--     )
+--     select trigger_rolle, ableitung, count(*)
+--       from gerechnet where trigger_rolle is distinct from ableitung
+--      group by 1,2 order by 3 desc;
 --
 --
 -- RUECKBAU (Person-Id aus der NOTICE einsetzen)
