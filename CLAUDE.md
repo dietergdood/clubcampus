@@ -362,9 +362,13 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
     from auth.users u order by identities;
   ```
 
+  ⚠ **Und `aud` war ebenfalls `NULL`** — bei einem gültigen GoTrue-Konto steht dort `authenticated`. Zwei Merkmale, beide Kennzeichen eines von Hand eingefügten Datensatzes.
+
   **Zwei der sechs Konten hatten null** — `trainer@fch-test.ch` und `funktionaer@fch-test.ch`, beide am 28.05.2026 angelegt, beide nie angemeldet. **Sie waren nie anmeldefähig**; als Prüfmittel haben sie nur so ausgesehen. Ein Konto, das man nicht benutzen kann, fällt nicht auf, solange niemand es benutzt.
 
   **Daraus die Reihenfolge in der Löschkette:** erst `auth.admin.deleteUser()`, dann die `benutzer`-Zeile. Scheitert der erste Schritt, ist **nichts** verloren; umgekehrt stünde die Waise da, vor der der Absatz oben warnt — und genau das ist beim ersten Lauf passiert.
+
+  ⚠ **Ein solches Konto lässt sich auch im Dashboard nicht löschen** — es benutzt dieselbe Admin-API. Es geht nur mit SQL (`delete from auth.users`), und das ist ein Schreibvorgang im `auth`-Schema. **Wer per SQL ein Konto anlegt, baut eines, das nur aussieht wie eines** — und hinterlässt es dem Nächsten als etwas, das weder benutzbar noch abräumbar ist. Neue Testkonten entstehen deshalb ausschliesslich über die Anmeldemaske; das Muster liegt in `supabase/testkonto_trainer.sql`, das bewusst nur die **Person** anlegt.
 
   ⚠ **Die laute Hälfte ist kein Schutz für die stille.** Beide standen in derselben Datei, geschrieben in derselben Minute, aus derselben Annahme. Wäre die laute nicht dabei gewesen, hätte nichts gemeldet. Gefunden habe ich es beim Gegenlesen gegen das Schema und gegen `useDbUser` — nicht durch einen Lauf.
 
