@@ -96,12 +96,22 @@ function InfoTab({ mitgliedId,
 }: InfoTabProps) {
   const isMobile = useIsMobile();
   const notizAddRef = useRef<(() => void) | null>(null);
-  /* ⚠ `onReload` ist seit dem 22.08.2026 `neuLaden` aus MemberDetail: es
-     frischt `m.daten` auf — DORT, wo die Seite liest. Vorher lief hier nur
-     `reloadMember(mitgliedId)`, und das legte die frischen Werte auf die
-     oberste Ebene des Ziels, wo sie niemand las. Jedes Feld war damit ab dem
-     Oeffnen eingefroren; bei einer Person ohne Mitgliedschaft lief es wegen
-     `mitgliedId != null` ohnehin ins Leere. */
+  /* ⚠ `onReload` IST `neuLaden` aus MemberDetail: es frischt `m.daten` auf —
+     DORT, wo die Seite liest.
+
+     ⚠ DIESER SATZ STAND HIER SEIT DEM 22.08.2026 UND WAR FALSCH, bis zum
+     23.08.2026. Die Aufrufstelle uebergab das aeussere `onReload`, das nur
+     die Liste laedt. Warum es ein Vierteljahrhundert Klicks ueberlebt haette:
+
+       Mitglied            `dbRaw` kommt aus der Liste und GEWINNT in der
+                           Mischung — der Listenreload frischt also mit auf,
+                           und alles sah richtig aus.
+       ohne Mitgliedschaft `dbRaw` ist leer. Dann frischt NICHTS auf, und der
+                           Wert erscheint erst beim erneuten Oeffnen.
+
+     Aufgefallen ist es an den „offenen Punkten" — der ersten Sache in diesem
+     Tab, die eine Person OHNE Mitgliedschaft schreibt. Vorher las jeder
+     Schreibpfad hier ein Mitglied, und das verdeckte den Fehler. */
   const reloadMemberFull = ()=>{ if(onReload)onReload(); };
   /* ie: Vereinsdaten-Felder (kein Aenderungslog). iePerson: Personalien/
      Kontakt — mit vereinId/account/rawData fuer die Aenderungshistorie. Beide

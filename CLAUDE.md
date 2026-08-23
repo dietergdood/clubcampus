@@ -405,6 +405,34 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Der Reflex, den beide Fälle verlangen, ist derselbe: **eine Zahl, die überrascht, zuerst gegen das Werkzeug prüfen, das sie erzeugt hat** — und erst dann gegen die Sache.
 
+- **Ein Kommentar, der eine ANDERE Stelle zusichert, ist eine Behauptung ohne Prüfung — und wer ihn liest, prüft erst recht nicht nach.** Am 23.08.2026 vier Fälle an einem Tag:
+
+  | Stelle | behauptet | tatsächlich |
+  |---|---|---|
+  | `archiviereMitglied` | „das Konto wird ohnehin vom Aufrufer deaktiviert" | der Aufrufer tat es nie |
+  | `person-loeschen` | `benutzer.auth_user_id` | die Spalte gibt es nicht |
+  | `testkonto_elternteil.sql` | „die Registrierung schickt eine Bestätigungsmail" | „Confirm email" ist aus |
+  | `InfoTab` | „`onReload` ist seit dem 22.08. `neuLaden`" | die Aufrufstelle übergab das äussere `onReload` |
+
+  **Vier Mal dasselbe: eine Aussage über Code, den der Leser nicht vor sich hat.** Kein Werkzeug prüft sie — `tsc` nicht, ESLint nicht, kein Test. Und sie klingt geprüft, weil jemand sie aufgeschrieben hat.
+
+  ⚠ **Die Gegenmassnahme ist nicht, Kommentare zu pflegen.** Es ist, die Zusicherung an der Grenze zwischen zwei Bausteinen in eine Behauptung über **Verhalten** zu übersetzen, die ein Test hält:
+
+  ```jsx
+  vi.mock('../tabs/InfoTab.tsx', () => ({
+    InfoTab: (props) => { h.infoOnReload = props.onReload; return null; },
+  }));
+  // …
+  await act(async () => { await h.infoOnReload(); });
+  expect(svc.fetchPerson).toHaveBeenCalledWith(expect.anything(), 'p-9');
+  ```
+
+  Nicht „der Kommentar stimmt", sondern **„ruft man den Rückruf, den die Komponente bekommt, wird neu gelesen"**. Gegengeprobt: mit der alten Verdrahtung sind beide Fälle rot.
+
+  **Die Regel daraus:** wo ein Kommentar sagt „X bekommt Y" oder „der Aufrufer tut Z", gehört ein Fall dazu, der es an der Grenze festhält. Wo das zu teuer ist, gehört der Satz umgeschrieben — **von einer Zusicherung in eine Beobachtung** („Stand 23.08.2026: …"), damit der nächste Leser weiss, dass er nachsehen muss.
+
+  ⚠ **Und warum es so lange hält:** die Verdrahtung war für **Mitglieder** folgenlos, weil `dbRaw` aus der Liste kommt und in der Mischung gewinnt — der Listenreload frischte mit auf. Erst bei einer Person **ohne** Mitgliedschaft ist `dbRaw` leer, und dann frischt nichts auf. Ein Fehler, den die häufigere Hälfte der Daten verdeckt, wartet auf die seltenere.
+
 - **Bei Fremddaten immer Allowlist, nie Denylist.** Wer aus einer fremden Antwort etwas herausfiltert — Personendaten schwärzen, Felder übernehmen, Nutzlast begrenzen —, listet auf, was **durchkommt**, nicht was fällt. Ein neues Feld der Gegenseite ist damit im Zweifel geschwärzt und fällt auf, statt still mitzureisen. Umgekehrt ist jede Denylist nur so gut wie die Fantasie dessen, der sie geschrieben hat. Beleg vom 19.08.2026: eine Regex-Denylist `/person|player|birth|passport|…/` gegen die SFV-Matchdaten war zugleich zu streng (schwärzte `personId`, `isPlayer`) und zu lasch — `players[]` führt den Namen in **drei** Feldern, `firstname`, `name` und `secondName`, von denen keines „person" oder „player" heisst. Die Klarnamen von 32 Spielern, überwiegend gegnerische, gingen durch. Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad geschrieben und dort gegengelesen wurde. Muster: `scripts/sfv-matchdaten-probe.mjs`, Konstante `ERLAUBT`.
 - **Ein neues Feld erbt JEDEN Ausgang des Objekts, an dem es hängt.** Wer einem bestehenden Objekt ein Feld hinzufügt, muss alle Wege kennen, die dieses Objekt schon nimmt — nicht nur den, für den das Feld gedacht war. Das Feld ist neu, die Ausgänge sind alt, und deshalb schlägt nichts fehl.
 

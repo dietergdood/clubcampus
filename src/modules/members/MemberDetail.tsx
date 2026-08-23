@@ -400,7 +400,14 @@ function MemberDetail({
           assignFunktionen={assignFunktionen} setAssignFunktionen={setAssignFunktionen}
           onNavToTeam={onNavToTeam}
           notizenCount={notizenCount} setNotizenCount={setNotizenCount}
-          onReload={onReload} reloadMember={reloadMember} ableitRolle={ableitRolle}
+          /* ⚠ `neuLaden`, NICHT `onReload`. Berichtigt am 23.08.2026: der
+             Kopf von InfoTab behauptete seit dem 22.08., hier stehe
+             `neuLaden` — hier stand das aeussere `onReload`, das nur die
+             LISTE laedt. Fuer ein Mitglied fiel das nicht auf, weil `dbRaw`
+             aus der Liste kommt und in der Mischung gewinnt; fuer eine Person
+             OHNE Mitgliedschaft ist `dbRaw` leer, und dann frischt gar nichts
+             auf. Genau diese Gruppe traegt die „offenen Punkte". */
+          onReload={neuLaden} reloadMember={reloadMember} ableitRolle={ableitRolle}
           vereinId={vereinId}
         />
       )}

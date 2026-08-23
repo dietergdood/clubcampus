@@ -23,7 +23,7 @@
 import { useState, useEffect } from "react";
 import { ModalOrSheet, Btn, Input, InfoBox, Label } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { AM, BL, R, GN, GR, SPACE, TEXT } from "../../constants.ts";
+import { AM, BL, R, GN, GB, SPACE, TEXT } from "../../constants.ts";
 import {
   holeLoeschVorschau, loeschePerson, istLoeschFehler,
 } from "../../domains/person/loeschService.ts";
@@ -50,7 +50,7 @@ function PostenZeile({ p }: { p: Posten }) {
       display: "flex", justifyContent: "space-between", alignItems: "baseline",
       padding: "3px 0", paddingLeft: p.unter ? 18 : 0, fontSize: TEXT.sm,
     }}>
-      <span style={{ color: p.unter ? GR : undefined }}>
+      <span className={p.unter ? "cc-text-muted" : undefined}>
         {p.unter ? "↳ " : ""}{LESBAR[p.tabelle] ?? p.tabelle}
       </span>
       <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{p.anzahl}</span>
@@ -144,7 +144,7 @@ export function PersonLoeschenModal({
       </div>
 
       <div className="cc-modal-body">
-        {laedt && <div style={{ padding: SPACE[5], color: GR }}>Wird gemessen …</div>}
+        {laedt && <div className="cc-text-muted" style={{ padding: SPACE[5] }}>Wird gemessen …</div>}
 
         {!laedt && !vorschau && fehler && <InfoBox color={R} text={fehler} />}
 
@@ -166,7 +166,7 @@ export function PersonLoeschenModal({
           </>
         ) : vorschau && (
           <>
-            <div style={{ marginBottom: SPACE[4], fontSize: TEXT.sm, color: GR }}>
+            <div className="cc-text-muted" style={{ marginBottom: SPACE[4], fontSize: TEXT.sm }}>
               {vorschau.person.email || "keine E-Mail"}
               {" · "}
               {vorschau.person.aktive_mitgliedschaften > 0
@@ -184,11 +184,11 @@ export function PersonLoeschenModal({
             <Label>Wird unwiderruflich entfernt</Label>
             <div style={{ marginBottom: SPACE[4] }}>
               {vorschau.faellt.length === 0
-                ? <div style={{ fontSize: TEXT.sm, color: GR }}>Nur die Person selbst.</div>
+                ? <div className="cc-text-muted" style={{ fontSize: TEXT.sm }}>Nur die Person selbst.</div>
                 : vorschau.faellt.map(p => <PostenZeile key={p.tabelle} p={p} />)}
               <div style={{
                 display: "flex", justifyContent: "space-between",
-                borderTop: `1px solid ${GR}40`, marginTop: 6, paddingTop: 6,
+                borderTop: `1px solid ${GB}`, marginTop: 6, paddingTop: 6,
                 fontSize: TEXT.sm, fontWeight: 700,
               }}>
                 <span>Zeilen insgesamt</span>
@@ -241,7 +241,7 @@ export function PersonLoeschenModal({
             {/* ⚠ Die geprüften Leerzeilen werden GENANNT, nicht weggelassen.
                 Eine Aufstellung mit drei Zeilen sieht sonst aus wie eine, die
                 nur drei Tabellen kennt. */}
-            <div style={{ fontSize: TEXT.xs, color: GR, marginBottom: SPACE[2] }}>
+            <div className="cc-text-muted" style={{ fontSize: TEXT.xs, marginBottom: SPACE[2] }}>
               {vorschau.geprueft_leer} weitere Tabellen geprüft, alle leer.
             </div>
 

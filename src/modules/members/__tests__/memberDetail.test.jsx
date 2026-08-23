@@ -15,7 +15,7 @@ import { render, act, waitFor, cleanup } from '@testing-library/react';
    Form, die es nirgends gibt. */
 import { zielAusMitglied, zielAusPerson } from '../../../shared/person/personZiel.ts';
 
-const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, heroName: null, confirmMock: vi.fn(), portal: null }));
+const h = vi.hoisted(() => ({ heroRaw: null, heroMitgliedId: null, heroName: null, confirmMock: vi.fn(), portal: null, infoOnReload: null }));
 const svc = vi.hoisted(() => ({
   fetchBenutzerFuerPerson: vi.fn(),
   portalZugangReaktivieren: vi.fn(),
@@ -25,6 +25,10 @@ const svc = vi.hoisted(() => ({
   fetchPortalFunktionen: vi.fn(),
   fetchMitglied: vi.fn(),
   logAktivitaet: vi.fn(),
+  /* ⚠ Hier statt inline in der Factory: nur so kann ein Fall den Rueckgabewert
+     steuern und die Aufrufe zaehlen. Inline definiert ist die Attrappe zwar
+     wirksam, aber fuer den Test unerreichbar. */
+  fetchPerson: vi.fn(),
 }));
 
 vi.mock('../../../theme.ts', () => ({
@@ -42,7 +46,7 @@ vi.mock('../../../domains/person/personUtils.ts', () => ({ initials: () => 'XX' 
    Attrappe, die den Vertrag nicht kennt, prueft etwas anderes als das, was
    laeuft. */
 vi.mock('../../../domains/person/personService.ts', () => ({
-  fetchPerson: vi.fn().mockResolvedValue({ person: null, fehler: null }),
+  fetchPerson: svc.fetchPerson,
 }));
 vi.mock('../../../domains/members/memberService.ts', () => ({
   ...svc,
@@ -52,7 +56,13 @@ vi.mock('../../../domains/members/memberService.ts', () => ({
 vi.mock('../MemberHero.tsx', () => ({ MemberHero: (props) => { h.heroRaw = props.raw; h.heroMitgliedId = props.mitgliedId; h.heroName = props.m?.name; return null; } }));
 vi.mock('../MemberTabBar.tsx', () => ({ MemberTabBar: () => null }));
 vi.mock('../tabs/ElternTab.tsx', () => ({ ElternTab: () => null }));
-vi.mock('../tabs/InfoTab.tsx', () => ({ InfoTab: () => null }));
+/* ⚠ Die Attrappe greift `onReload` ab. Dass InfoTab den AUFFRISCHENDEN
+   Rueckruf bekommt und nicht den Listen-Reload, war vom 22. bis 23.08.2026
+   nur ein Kommentar — und der stand im Kopf von InfoTab, waehrend die
+   Aufrufstelle etwas anderes uebergab. */
+vi.mock('../tabs/InfoTab.tsx', () => ({
+  InfoTab: (props) => { h.infoOnReload = props.onReload; return null; },
+}));
 /* Nicht `() => null`: der Tab traegt die zwei Schalter, um die es unten
    geht. Die Attrappe haelt seine Props fest, damit der Test sie aufrufen
    und danach nachsehen kann, was der Tab zu sehen bekommt. */
@@ -98,6 +108,7 @@ function props(overrides = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  svc.fetchPerson.mockResolvedValue({ person: null, fehler: null });
   h.heroRaw = null;
   h.heroMitgliedId = null;
   h.heroName = null;
@@ -349,5 +360,43 @@ describe('MemberDetail — person_id im raw', () => {
     const m = { ...zielAusMitglied({ id: 7, person_id: 'p-alt' }, 'Hans Beispiel'), personId: 'p-7' };
     await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [] })} />); });
     expect(h.heroRaw.person_id).toBe('p-7');
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   ⚠ Ein Kommentar ist keine Zusicherung — das hier ist eine.
+
+   Im Kopf von InfoTab stand seit dem 22.08.2026, `onReload` sei
+   `neuLaden`. Die Aufrufstelle uebergab das aeussere `onReload`, das
+   nur die LISTE laedt. Vier solche Faelle an einem Tag (Archiv,
+   auth_user_id, testkonto-Mail, dieser) haben eines gemeinsam: eine
+   Behauptung ueber eine ANDERE Stelle, die niemand nachprueft.
+
+   Die Gegenmassnahme ist nicht, den Kommentar zu pflegen, sondern
+   ihn an der Grenze zwischen den Komponenten in eine Behauptung
+   ueber VERHALTEN zu uebersetzen: ruft man den Rueckruf, den InfoTab
+   bekommt, muss die Person NEU GELESEN werden.
+   ═══════════════════════════════════════════════════════════════ */
+describe('⚠ InfoTab bekommt den auffrischenden Rückruf, nicht den Listen-Reload', () => {
+  it('bei einer Person OHNE Mitgliedschaft wird die Person neu gelesen', async () => {
+    /* Der Fall, in dem es auffiel: `dbRaw` ist leer, also frischt der
+       Listen-Reload NICHTS auf — der gespeicherte Wert erschien erst beim
+       erneuten Oeffnen. */
+    svc.fetchPerson.mockResolvedValue({ person: { id: 'p-9', vorname: 'Petra' }, fehler: null });
+    const ohne = zielAusPerson({ id: 'p-9', vorname: 'Petra' }, 'Petra Muster');
+    await act(async () => { render(<MemberDetail {...props({ m: ohne, dbMitglieder: [] })} />); });
+    svc.fetchPerson.mockClear();
+
+    await act(async () => { await h.infoOnReload(); });
+    expect(svc.fetchPerson).toHaveBeenCalledWith(expect.anything(), 'p-9');
+  });
+
+  it('bei einem Mitglied wird die Mitgliedschaft neu gelesen', async () => {
+    const m = zielAusMitglied({ id: 7, person_id: 'p-7' }, 'Hans Beispiel');
+    await act(async () => { render(<MemberDetail {...props({ m, dbMitglieder: [{ id: 7, person_id: 'p-7' }] })} />); });
+    svc.fetchMitglied.mockClear();
+
+    await act(async () => { await h.infoOnReload(); });
+    expect(svc.fetchMitglied).toHaveBeenCalledWith(expect.anything(), 7);
   });
 });

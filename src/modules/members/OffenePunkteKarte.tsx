@@ -19,7 +19,7 @@
 import { useState } from "react";
 import { Card, Btn, Input, InfoBox } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
-import { AM, GR, R, SPACE, TEXT } from "../../constants.ts";
+import { AM, R, SPACE, TEXT } from "../../constants.ts";
 import { setzeOffenePunkte, hatOffenePunkte } from "../../domains/person/offenePunkteService.ts";
 import type { Sb } from "../../types.ts";
 
@@ -111,7 +111,7 @@ export function OffenePunkteKarte({
         </>
       ) : (
         <>
-          <div style={{ fontSize: TEXT.sm, color: GR, marginBottom: SPACE[3] }}>
+          <div className="cc-text-muted" style={{ fontSize: TEXT.sm, marginBottom: SPACE[3] }}>
             Nichts offen. Ein Vermerk hält fest, was vor dem endgültigen Abschluss
             noch zu erledigen ist — Beitrag, Rechnung, Material.
           </div>
