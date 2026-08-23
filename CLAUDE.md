@@ -387,6 +387,24 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Und der Aufrufer nennt seither eine PERSON, keine Adresse.** Eine mitgeschickte E-Mail lässt sich gegen keinen Verein halten — die Mandantenprüfung wäre Zierrat. Die Adresse kommt aus `personen`, das Ziel des Links aus `vereine.slug`. Erlaubtes aufzählen, nicht Verbotenes: dieselbe Regel wie unten bei Fremddaten, nur für den Rückweg.
 
+- **Eine Messung zählt leicht etwas anderes als gemeint — und im Gegensatz zu einer falschen Bedingung wird sie nie rot.** Ein Filter, der danebenliegt, fällt irgendwann jemandem auf. Eine Zahl, die danebenliegt, wird zitiert.
+
+  **Nach NAMEN gruppieren zählt Schreibweisen, nicht Menschen.** Beleg vom 23.08.2026: eine Auswertung der fehlenden Pflichtfelder meldete
+
+  ```
+  Adrian Schmid | Aktivmitglied | 3 | ahv_nr, ahv_nr, telefon
+  ```
+
+  Das doppelte `ahv_nr` war der einzige Hinweis. Es sind **zwei verschiedene Personen desselben Namens** mit einer und zwei Lücken — `group by name` hatte sie zu einer verschmolzen. Ohne die Doppelung hätte die Zeile völlig plausibel ausgesehen, und „ein Mitglied vermisst drei Felder" wäre in einen Bericht gewandert. **Wer Personen zählt, gruppiert über `id`.** Dieselbe Familie wie ein Filter auf einen Namen statt auf ein Merkmal — nur in einer Messung statt in einer Bedingung, und dort fällt es noch weniger auf, weil es keine zweite Anzeige gibt, die widerspricht.
+
+  ⚠ **Und `grep` auf eine laufende Ausgabe trifft Zwischenstände.** `npm test | grep -E "Tests |Test Files"` meldete am 23.08.2026 zweimal einen Einbruch (528 statt 742, dann 561 statt 790) — beide Male hatte der Filter eine Fortschrittszeile erwischt, die vitest während des Laufs druckt. Beim ersten Mal habe ich dem Alarm eine halbe Untersuchung gewidmet. **Für die Schlusszahl `tail` nehmen, nicht `grep`:**
+
+  ```bash
+  npm test 2>&1 | tail -8
+  ```
+
+  Der Reflex, den beide Fälle verlangen, ist derselbe: **eine Zahl, die überrascht, zuerst gegen das Werkzeug prüfen, das sie erzeugt hat** — und erst dann gegen die Sache.
+
 - **Bei Fremddaten immer Allowlist, nie Denylist.** Wer aus einer fremden Antwort etwas herausfiltert — Personendaten schwärzen, Felder übernehmen, Nutzlast begrenzen —, listet auf, was **durchkommt**, nicht was fällt. Ein neues Feld der Gegenseite ist damit im Zweifel geschwärzt und fällt auf, statt still mitzureisen. Umgekehrt ist jede Denylist nur so gut wie die Fantasie dessen, der sie geschrieben hat. Beleg vom 19.08.2026: eine Regex-Denylist `/person|player|birth|passport|…/` gegen die SFV-Matchdaten war zugleich zu streng (schwärzte `personId`, `isPlayer`) und zu lasch — `players[]` führt den Namen in **drei** Feldern, `firstname`, `name` und `secondName`, von denen keines „person" oder „player" heisst. Die Klarnamen von 32 Spielern, überwiegend gegnerische, gingen durch. Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad geschrieben und dort gegengelesen wurde. Muster: `scripts/sfv-matchdaten-probe.mjs`, Konstante `ERLAUBT`.
 - **Ein neues Feld erbt JEDEN Ausgang des Objekts, an dem es hängt.** Wer einem bestehenden Objekt ein Feld hinzufügt, muss alle Wege kennen, die dieses Objekt schon nimmt — nicht nur den, für den das Feld gedacht war. Das Feld ist neu, die Ausgänge sind alt, und deshalb schlägt nichts fehl.
 
@@ -898,14 +916,38 @@ unter „Zwei Rechnungen für die Rolle".
 Pflichtfelder und den zwei für den Portal-Zugang. Gemeinsames Merkmal: keine
 Prüfkette wird rot, weil **beide Antworten für sich genommen plausibel sind**.
 
-**Zu entscheiden, nicht nebenbei zu machen.** Die billigste echte Reparatur ist
-**nicht** der Trigger, sondern `ROLLE_MAP`: sie durch `kader_rollen.ist_trainer`
-zu ersetzen, kostet wenige Zeilen, braucht keine Migration und bringt zwei der
-drei Regeln zur Deckung. `handle_new_user()` die Kaderrollen mitlesen zu lassen
-ist die vollständige Lösung, aber eine Migration am Registrierungspfad, der
-demnächst 371 Familien trägt.
+### ✅ `ROLLE_MAP` ist ersetzt — und der Trigger ist kein eigener Punkt mehr
 
-⚠ **Solange drei Stellen dieselbe Frage beantworten, ist jede Reparatur an
+Repariert am 23.08.2026: `useDbUser` liest `kader_rollen.ist_trainer` statt
+einer Namensliste. Gemessen davor und danach, über alle 512 aktiven Mitglieder:
+
+| | weicht ab |
+|---|---|
+| beim Trigger (Registrierung) | **9** |
+| **nach dem ersten Login** | **1** |
+
+**Acht der neun sind damit erledigt** — sieben Trainer und Adrian Kern mit
+seinem „Team-Admin". Der Trigger schreibt zwar weiter `spieler`, aber
+`useDbUser` berichtigt es Sekunden später, und beide lesen jetzt dasselbe
+Merkmal.
+
+⚠ **Der eine Rest ist NICHT der Trigger, sondern der Zuschnitt von
+`useDbUser`.** Laura Imhof ist Passivmitglied (`standard_rolle = 'mitglied'`)
+mit Vereinsfunktionen; `ableitRolle()` macht daraus `funktionaer`. Die
+Rückschreibung in `useDbUser` läuft aber **nur, wenn es einen Kadereintrag
+gibt** — sie kennt Kaderrollen, keine Funktionen. Wer seine Rolle aus einem
+Amt bezieht, wird nie berichtigt.
+
+**Damit steht die Frage anders**, und das ist die Antwort auf „ist der Trigger
+noch ein eigener Punkt?": **nein.** Was bleibt, ist eine Person und eine
+strukturelle Lücke. Zwei Wege:
+
+| | |
+|---|---|
+| **hinnehmen** | eine Person heute; die Rolle stimmt, sobald jemand ihre Funktionen anfasst |
+| **`useDbUser` `ableitRolle()` aufrufen lassen** | statt die Ableitung ein drittes Mal nachzubauen. Braucht `mitgliedtyp` und `funktionen` an der Stelle — beides eine Abfrage. Dann gibt es **eine** Quelle, und dieser Abschnitt kann weg |
+
+⚠ **Solange mehrere Stellen dieselbe Frage beantworten, ist jede Reparatur an
 einer davon nur eine Verschiebung.** Das Ziel ist eine Quelle — und das ist
 `ableitRolle()`, weil sie als einzige das Merkmal liest statt eines Namens.
 

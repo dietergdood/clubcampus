@@ -287,13 +287,37 @@ export function useDbUser({ sb, setDbUser, setTeamRollen, setError, ROLLE_PRIORI
             .eq("mitglied_id", data.mitglied_id)
             .eq("aktiv", true);
           if (kaderData) {
-            const ROLLE_MAP = {
-              "Spieler/in": "spieler", "Trainer/in": "trainer", "Co-Trainer/in": "trainer",
-              "Goalietrainer/in": "trainer", "Assistenz": "funktionaer", "Masseur/in": "funktionaer",
-            };
+            /* ⚠ DAS MERKMAL, NICHT DER NAME. Hier stand bis zum 23.08.2026 eine
+               feste `ROLLE_MAP` mit sechs Kaderrollen-Namen. Gemessen gegen die
+               sechs, die es im Verein wirklich gibt, war sie an drei Stellen
+               falsch:
+
+                 Team-Admin   ist_trainer=true, FEHLTE in der Map  -> spieler
+                 Masseur/in   ist_trainer=true, stand als funktionaer
+                 Assistenz    stand in der Map, gibt es gar nicht
+
+               Adrian Kern hat nur „Team-Admin". `ableitRolle()` macht ihn zum
+               Trainer, die Map machte ihn beim Login zum Spieler — und weil
+               diese Stelle ZURUECKSCHREIBT, gewann die schlechtere Regel.
+
+               Jetzt lesen beide dasselbe: `kader_rollen.ist_trainer`. Wer
+               findet, ein Masseur sei kein Trainer, aendert das Kennzeichen an
+               der Kaderrolle — eine Entscheidung in der Portalverwaltung, kein
+               Codewechsel. */
+            const { data: rollenDefs, error: rollenFehler } = await sb
+              .from("kader_rollen").select("name, ist_trainer");
+            /* ⚠ Ohne die Definitionen wird NICHT geraten. Eine leere Liste
+               ergaebe „kein Trainer" und schriebe jeden Trainer beim Login zum
+               Spieler zurueck — ein Lesefehler duerfte nie eine Rolle
+               herabsetzen. */
+            if (rollenFehler || !rollenDefs) {
+              console.warn("[CC] kader_rollen nicht lesbar — Rolle bleibt unveraendert:", rollenFehler?.message);
+              return;
+            }
+            const TRAINER = new Set(rollenDefs.filter(r => r.ist_trainer).map(r => r.name));
             const map = {};
             kaderData.forEach(k => {
-              const portalRollen = (k.rollen || []).map(r => ROLLE_MAP[r]).filter(Boolean);
+              const portalRollen = (k.rollen || []).map(r => TRAINER.has(r) ? "trainer" : "spieler");
               const hoechste = ROLLE_PRIORITAET.find(p => portalRollen.includes(p)) || "spieler";
               map[k.team_id] = hoechste;
             });
