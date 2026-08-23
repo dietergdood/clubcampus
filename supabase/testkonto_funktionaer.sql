@@ -102,6 +102,27 @@ $mig$;
 --   funktioniert jetzt, weil kein kaputtes Anmeldekonto mehr daranhaengt.
 --
 -- ═══════════════════════════════════════════════════════════════════════════
+-- STAND 23.08.2026, 21:10 — SCHRITT 2 STEHT AUS
+--
+-- Die Person steht, das KONTO fehlt. Gemessen, damit niemand an der falschen
+-- Stelle sucht:
+--
+--   personen                    Zeile da, E-Mail exakt, ohne Leerzeichen (33)
+--   check_email_bekannt         {"bekannt":true,"name":"Funktionaer Zugang",
+--                                "mitglied_id":3532}
+--   handle_new_user() ergaebe   funktionaer  (Mitgliedtyp Funktionaer/in)
+--   auth.users                  KEINE Zeile mit dieser Adresse
+--
+-- ⚠ Es liegt also nicht am Portal und nicht an der Plus-Adresse — die
+--   Registrierung hat den Auth-Server nicht erreicht oder wurde davor
+--   abgewiesen. `auth.audit_log_entries` ist LEER (auch fuer die gelungene
+--   Trainer-Registrierung), das Protokoll hilft hier nicht weiter.
+--
+-- ⚠ SCHRITT 3 IST GEPRUEFT UND WARTET. Ausgefuehrt am 23.08.2026 lief er in
+--   seinen eigenen Waechter: `ABBRUCH: noch nicht registriert.` — genau
+--   richtig, und ein Beleg, dass der Block traegt.
+--
+-- ═══════════════════════════════════════════════════════════════════════════
 -- SCHRITT 3 — NACH der Registrierung: die Gruppe zuweisen
 --
 -- Ohne sie hat der Funktionaer keine Modulrechte: `getEffektiveStufeForFunktionaer`

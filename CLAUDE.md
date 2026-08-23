@@ -942,10 +942,15 @@ Amt bezieht, wird nie berichtigt.
 noch ein eigener Punkt?": **nein.** Was bleibt, ist eine Person und eine
 strukturelle Lücke. Zwei Wege:
 
-| | |
-|---|---|
-| **hinnehmen** | eine Person heute; die Rolle stimmt, sobald jemand ihre Funktionen anfasst |
-| **`useDbUser` `ableitRolle()` aufrufen lassen** | statt die Ableitung ein drittes Mal nachzubauen. Braucht `mitgliedtyp` und `funktionen` an der Stelle — beides eine Abfrage. Dann gibt es **eine** Quelle, und dieser Abschnitt kann weg |
+**Entschieden (Didi, 23.08.2026): `useDbUser` ruft `ableitRolle()`.** Eine
+Quelle statt drei, statt die Ableitung ein drittes Mal nachzubauen. Sie braucht
+`mitgliedtyp` und `funktionen` an dieser Stelle — beides eine Abfrage.
+
+⚠ **Aber nicht vor dem Funktionär-Zugang.** Sonst hängt der
+`kader_write`-Befund aus `docs/auftrag_rls_gruppenrechte.md` an einem Umbau,
+der gerade läuft — und wenn dann etwas nicht stimmt, ist nicht zu
+unterscheiden, ob es die Policy war oder die Ableitung. Erst das Prüfmittel,
+dann der Umbau daran.
 
 ⚠ **Solange mehrere Stellen dieselbe Frage beantworten, ist jede Reparatur an
 einer davon nur eine Verschiebung.** Das Ziel ist eine Quelle — und das ist
