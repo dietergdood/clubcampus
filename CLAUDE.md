@@ -1142,6 +1142,107 @@ print({k: v for k, v in vor.items() if v > 1} or "0 Dubletten")
 EOF
 ```
 
+### ⚠ Zwei Schreibwege der Portalverwaltung treffen null Zeilen und melden Erfolg
+
+Befund vom 23.08.2026, **gemessen gegen die laufende Datenbank**, als
+`authenticated` mit der Identität eines echten Admins, in einer
+zurückgerollten Transaktion.
+
+`vereine` hat RLS an und genau **zwei** Policies — beide `FOR SELECT`. Für
+UPDATE gibt es keine:
+
+```
+update vereine set theme = … where id = <eigener Verein>   →  0 Zeilen
+dieselbe Anweisung ohne where                              →  0 Zeilen
+```
+
+**PostgREST antwortet darauf `204 No Content` ohne Fehler.** Der Code liest
+`error` — vorbildlich — und `error` ist `null`. Also:
+
+| Stelle | zeigt | tut |
+|---|---|---|
+| `AussehenTab` → Speichern | **„Theme gespeichert ✓"** | nichts |
+| `AussehenTab` → Standard wiederherstellen | **„Standard gespeichert ✓"** | nichts |
+| `PersonenartenSektion` → Austrittsziel | kein Fehler | nichts |
+
+⚠ **`error` zu lesen genügt hier nicht.** Die Regel „wer eine Abfrage
+schreibt, liest `error`" ist richtig und hat hier nichts gefangen: eine
+Änderung, die niemanden trifft, ist für PostgREST kein Fehler. Wer wissen
+will, ob geschrieben wurde, muss **zählen** — `select: "id"` und die Länge der
+Antwort, oder `count: "exact"`. Ein `update()`, dessen Ergebnis niemand
+ansieht, ist eine Behauptung.
+
+⚠ **UND ES VERSCHWINDET SPURLOS.** Die Oberfläche zeigt den neuen Wert sofort
+aus dem React-State und legt ihn in `localStorage["cc-theme"]` ab; beim
+nächsten Laden wird er als Flicker-Schutz zuerst angewendet. Dann überschreibt
+`loadTenant()` ihn mit dem Wert aus der Datenbank — **und löscht die
+localStorage-Kopie gleich mit** (`useAppData.js:35`). Die Änderung ist also
+nicht nur ungespeichert; nach einem harten Neuladen ist auch die Kopie weg.
+
+**Deshalb ist die Realtime-Verteilung des Brandings nie ausgelöst worden.** Die
+Subscription auf `UPDATE vereine` steht und funktioniert — nur hat das Portal
+in dieser Tabelle noch nie eine Zeile geändert. Ein Mechanismus, der auf ein
+Ereignis wartet, das es nicht geben kann.
+
+**Der Durchgang über alle 34 aus `src/` beschriebenen Tabellen fand genau
+diesen einen Fall.** `vereine` ist die einzige. Zum Wiederholen:
+
+```sql
+select cl.relname,
+       count(*) filter (where p.cmd in ('INSERT','ALL')) as ins,
+       count(*) filter (where p.cmd in ('UPDATE','ALL')) as upd,
+       count(*) filter (where p.cmd in ('DELETE','ALL')) as del
+  from pg_class cl
+  join pg_namespace n on n.oid = cl.relnamespace and n.nspname='public'
+  left join pg_policies p on p.schemaname='public' and p.tablename = cl.relname
+ where cl.relkind='r' and cl.relrowsecurity
+ group by 1 order by 1;
+```
+
+**Bereit, nicht ausgeführt:** `supabase/migration_vereine_schreibrecht.sql`.
+Probelauf mit `rollback` gemacht — danach 1 Zeile statt 0, für beide Spalten.
+
+⚠ **Die Reparatur ist eine SPALTEN-Allowlist, kein Pauschalrecht.** Eine blosse
+UPDATE-Policy gäbe jedem Vereinsadmin auch `vereine.slug` — und der Slug ist
+seit dem 23.08.2026 die Quelle des Linkziels in der Einladungs-Mail
+(`invite-user`). Wer ihn setzen kann, bestimmt, wohin ein Anmeldelink führt.
+**Genau dieser Ausgang ist am selben Tag geschlossen worden; er darf nicht
+durch die Reparatur wieder aufgehen.** Die Migration entzieht deshalb UPDATE
+und vergibt es spaltenweise neu (`theme`, `austritt_art_id`); im Probelauf
+wurde ein `update … set slug` mit `42501 permission denied` abgewiesen.
+
+### ⚠ `redirect_to` kennt den Verein nicht — zwei von drei Wegen
+
+Befund vom 23.08.2026, beim Nachmessen der Redirect-Allowlist.
+
+| Vorgang | Ziel | Slug dabei? |
+|---|---|---|
+| Einladung (`invite-user`) | `https://www.clubcampus.app/<slug>` | **ja**, aus `vereine.slug` |
+| Passwort zurücksetzen (`LoginScreen.tsx:86`) | `window.location.origin` | **nein** |
+| Registrierung bestätigen (`LoginScreen.tsx:67`) | keins gesetzt → Site-URL | **nein** |
+
+Die blosse Wurzel wird per `vercel.json` auf `/fcherrliberg` umgeleitet. **Wer
+beim zweiten Verein sein Passwort zurücksetzt oder seine Registrierung
+bestätigt, landet also im FCH-Portal** — nicht als Fehler, sondern als 307.
+
+⚠ **Die Redirect-Allowlist bei Supabase fängt das nicht ab**, im Gegenteil:
+sie lässt beide Ziele durch, weil beide stimmen. Es ist kein
+Konfigurationsproblem, sondern eines im Code — und es trifft ab dem zweiten
+Verein sofort, ohne dass etwas fehlschlägt.
+
+Zu tun: beide Aufrufe bekommen den Slug mit, so wie `invite-user` ihn hat.
+Beim Zurücksetzen steht er im Pfad (`getSlugFromPath()`), bei der
+Registrierung ebenso — die Anmeldemaske läuft bereits unter `/<slug>`.
+
+⚠ **Und ein Ziel muss zusätzlich in der Supabase-Redirect-Allowlist stehen**
+(Auth → URL Configuration). Steht es nicht drin, verschickt Supabase die Mail
+**trotzdem** — nur mit der Site-URL statt des Ziels. Kein Fehler, keine
+Meldung. Eingetragen am 23.08.2026: `https://www.clubcampus.app` (die nackte
+Adresse, für das Zurücksetzen) und `https://www.clubcampus.app/*` (ein
+Pfadsegment, für die Einladung). Ein Platzhalter spannt über **Pfade, nie über
+Hosts** — `https://*.vercel.app` wäre eine Preisgabe, dort kann jeder
+deployen.
+
 ### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
 
 Befund vom 21.08.2026, beim Umstellen des Fotopfads auf `person_id`.
