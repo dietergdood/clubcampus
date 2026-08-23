@@ -16,8 +16,10 @@ import { PERSON_FELDER } from "../../person/personService.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
-/* Ein Schreibvorgang, der ankommt: das Gegenlesen findet die Zeile. */
-const sbOk = () => makeSb({ "personen.select": { data: { id: "k-1" } } });
+/* Ein Schreibvorgang, der ankommt: `update ... .select("id")` gibt die
+   geschriebene Zeile zurueck. Eine LEERE Liste heisst „RLS hat nicht
+   getroffen" — deshalb steht hier eine Liste und kein Objekt. */
+const sbOk = () => makeSb({ "personen.update": { data: [{ id: "k-1" }] } });
 
 describe("die Allowlist", () => {
   it("lässt durch, was der Elternteil pflegen soll", () => {
@@ -105,8 +107,26 @@ describe("⚠ ein fehlgeschlagener Schreibvorgang meldet KEINEN Erfolg", () => {
     /* Der gefährlichste Fall: RLS liefert KEINEN Fehler, sondern ein update
        über null Zeilen. Ohne Gegenlesen stünde hier ein „Alles bestätigt ✓"
        ohne Deckung — genau das, was diese Kette fünfmal hatte. */
-    const sb = makeSb({ "personen.select": { data: null } });
+    const sb = makeSb({ "personen.update": { data: [] } });
     const erg = await updateKindDurchElternteil(sb as never, "fremd", { ahv_nr: "756" });
+    expect(erg.ok).toBe(false);
+    expect(erg.fehler).toContain("Verknüpfung");
+  });
+
+  it("⚠ lesbar ist nicht schreibbar — der Fall, den die alte Pruefung durchliess", async () => {
+    /* Bis zum 23.08.2026 las diese Kette nach dem Schreiben mit einer ZWEITEN
+       Abfrage nach, ob die Zeile da ist. Lesen und Schreiben haengen aber an
+       verschiedenen Policies: `personen_select_priv` ist weit,
+       `personen_update_kind` eng. Eine Zeile, die man SEHEN aber nicht
+       AENDERN darf, kam damit als Erfolg zurueck.
+
+       Die Attrappe stellt genau das nach: das Gegenlesen wuerde die Zeile
+       finden (`personen.select`), das Schreiben hat aber keine getroffen. */
+    const sb = makeSb({
+      "personen.update": { data: [] },
+      "personen.select": { data: { id: "k-1" } },
+    });
+    const erg = await updateKindDurchElternteil(sb as never, "k-1", { ahv_nr: "756" });
     expect(erg.ok).toBe(false);
     expect(erg.fehler).toContain("Verknüpfung");
   });
@@ -136,7 +156,7 @@ describe("⚠ ein fehlgeschlagener Schreibvorgang meldet KEINEN Erfolg", () => {
 describe("updateEigenePerson", () => {
   it("schreibt dieselben Felder und sperrt dieselben", async () => {
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const sb = makeSb({ "personen.select": { data: { id: "p-1" } } });
+    const sb = makeSb({ "personen.update": { data: [{ id: "p-1" }] } });
     const erg = await updateEigenePerson(sb as never, "p-1", {
       telefon: "079 000 00 00", email: "neu@example.ch", funktionen: ["Kassier"],
     });
@@ -152,11 +172,11 @@ describe("updateEigenePerson", () => {
     /* Es steht NICHT in der Allowlist: sonst waere die Bestaetigung ein Feld
        unter Feldern, und wer das Formular um eine Zeile erweitert, koennte
        sie versehentlich mitschreiben. */
-    const sb = makeSb({ "personen.select": { data: { id: "p-1" } } });
+    const sb = makeSb({ "personen.update": { data: [{ id: "p-1" }] } });
     await updateEigenePerson(sb as never, "p-1", { telefon: "079" }, true);
     expect(sb.find("personen", "update")!.payload).toHaveProperty("profil_geprueft_at");
 
-    const sb2 = makeSb({ "personen.select": { data: { id: "p-1" } } });
+    const sb2 = makeSb({ "personen.update": { data: [{ id: "p-1" }] } });
     await updateEigenePerson(sb2 as never, "p-1", { profil_geprueft_at: "2026-01-01" });
     expect(sb2.find("personen", "update")).toBeUndefined();
   });
@@ -166,7 +186,7 @@ describe("updateEigenePerson", () => {
        „Verknuepfung zum Kind" waere fuer die eigene Zeile die falsche
        Auskunft und schickte ihn an einen Ort, den es hier nicht gibt —
        derselbe Fehler wie der „Kontakt-Tab" im Portal-Tab. */
-    const sb = makeSb({ "personen.select": { data: null } });
+    const sb = makeSb({ "personen.update": { data: [] } });
     const erg = await updateEigenePerson(sb as never, "fremd", { telefon: "079" });
     expect(erg.ok).toBe(false);
     expect(erg.fehler).toContain("deinem Konto");

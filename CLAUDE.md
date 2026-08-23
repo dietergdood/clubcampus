@@ -313,6 +313,25 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Gegen die eine Hälfte läuft seither **`npm run check:selects`** (`scripts/check-selects.mjs`, in CI): es hält jede Spalte in einer `select()`-Zeichenkette gegen `database.types.ts`. Was es **nicht** findet, steht im Kopf des Skripts — dynamisch gebaute Selects, `rpc`, nicht auflösbare Embeds, und vor allem eine Spalte, die es GIBT, aber die falsche Bedeutung hat. Gegen die andere Hälfte hilft nichts als `error` zu lesen.
 
+  ⚠ **UND BEIM SCHREIBEN REICHT `error` NICHT — das ist die andere Hälfte, und sie ist tückischer.** Ein `update`/`delete`, das **keine Zeile trifft**, ist kein Fehler: PostgREST antwortet `204 No Content`, `error` ist `null`. Wer die Regel oben befolgt und `error` liest, hat damit **nichts** gewonnen. RLS lehnt nicht ab — sie lässt die Zeile einfach nicht sehen.
+
+  ```ts
+  const { data, error } = await sb.from(t).update(felder).eq("id", id).select("id");
+  if (error) return { ok: false, fehler: error.message };
+  if (!data || data.length === 0) return { ok: false, fehler: "…nicht getroffen" };
+  ```
+
+  **`.select("id")` gehört an den Schreibvorgang selbst**, nicht als zweite Abfrage daneben. Der Unterschied ist die ganze Aussage:
+
+  | | fragt | fängt den Fall |
+  |---|---|---|
+  | `.update(…).select("id")` | wurde **geschrieben**? | ✅ |
+  | danach `select id where id = …` | ist **lesbar**? | ❌ |
+
+  Lesen und Schreiben hängen an **verschiedenen Policies**. Eine Zeile, die man sehen aber nicht ändern darf, besteht die zweite Prüfung und ist trotzdem nicht geschrieben. **In `kindService.ts` stand genau diese zweite Fassung** — als Gegenprobe gebaut, gegen den Fall wirkungslos, für den sie gebaut war; berichtigt am 23.08.2026 samt eigenem Testfall.
+
+  **Beleg vom 23.08.2026, gemessen:** `vereine` hatte RLS an und nur SELECT-Policies. `AussehenTab` meldete **„Theme gespeichert ✓"**, `setzeAustrittsziel()` gab `null` (= Erfolg) zurück — beide schrieben nichts. Der Code las `error` vorbildlich. Siehe „Zwei Schreibwege der Portalverwaltung treffen null Zeilen".
+
   Stand 20.08.2026: **49 Destrukturierungen von `await sb…` lassen `error` weg**, 76 lesen ihn. Nicht alle sind gefährlich (ein `maybeSingle()` auf eine eigene Zeile verkraftet es), aber jede, die einen Rückfall auf `[]` oder `null` hat, ist ein Kandidat für denselben Ausfall.
 - **`\b` ist in dieser Codebasis unbrauchbar.** JavaScript zählt nur `[A-Za-z0-9_]` als Wortzeichen — `ä`, `ö`, `ü` gehören nicht dazu. Mitten in „Rückennummer" steht deshalb eine Wortgrenze hinter dem `R`, und `/\bR\b/.test("Rückennummer")` ist **`true`**. In einem Projekt, dessen Bezeichner, Kommentare und UI-Texte durchgehend deutsch sind, trifft das ständig. Wer nach Bezeichnern sucht, nimmt stattdessen:
 
@@ -1210,6 +1229,59 @@ seit dem 23.08.2026 die Quelle des Linkziels in der Einladungs-Mail
 durch die Reparatur wieder aufgehen.** Die Migration entzieht deshalb UPDATE
 und vergibt es spaltenweise neu (`theme`, `austritt_art_id`); im Probelauf
 wurde ein `update … set slug` mit `42501 permission denied` abgewiesen.
+
+### ⚠ 84 Schreibstellen ohne Gegenprobe — die andere Richtung
+
+Befund vom 23.08.2026. Der erste Durchgang fragte: *wo fehlt die Policy ganz?*
+Antwort: einmal (`vereine`). Der zweite fragt das Schwierigere: **wo gibt es
+eine Policy, aber ihre Bedingung kann eine Zeile ausschliessen — und der Code
+merkt es nicht, weil er nur `error` liest?**
+
+**132 Schreibstellen in `src/`, 122 davon unter einer Bedingung, die mehr
+verlangt als die Zugehörigkeit zum Verein. 84 davon zählen nicht nach.**
+
+⚠ **Das sind KEINE 84 Defekte, und wer die Zahl so weitergibt, macht die
+Liste wertlos** — dieselbe Falle wie die 758 Lint-Warnungen. Bei den meisten
+lautet die Bedingung `is_admin()`, und die Maske ist ohnehin nur für Admins
+erreichbar; dort ist der fehlende Nachweis eine Vorsichtslücke, kein Ausfall.
+**Die Frage, die zählt, ist nicht „prüft der Code nach?", sondern „kann jemand
+diese Maske erreichen, den die Policy abweist?"** Danach sortiert:
+
+| | Bedingung | wer die Maske erreicht | |
+|---|---|---|---|
+| **1** | `kader_write`: `get_my_role() IN (administrator, administration, trainer)` | ein **Funktionär** mit `team: schreiben` aus den Gruppenrechten | ⚠ **wird abgewiesen** |
+| **2** | `ansichten_write`: `benutzer_id = auth.uid() OR is_admin()` | jeder, dem eine **geteilte** Ansicht angezeigt wird | ⚠ Löschen/Ändern läuft ins Leere |
+| **3** | `is_admin()` (≈60 Stellen) | die UI prüft `role === "administrator"`, die Policy `benutzer.ist_admin` | zwei Quellen, heute einig |
+
+**Zu 1 — und es ist kein Einzelfall, sondern ein Muster.** `trainings_write`
+führt `funktionaer` in seiner Liste, `kader_write` nicht. Ob das Absicht war,
+steht nirgends. Der Funktionär kann die Kader-Maske über die Gruppenrechte
+bekommen, und dann tut jedes Speichern nichts. **Dieselbe Familie wie der
+schon vermerkte Übergang `get_my_role() = 'trainer'` in
+`spiel_ereignisse_write`** — Rollennamen fest in Policies, während die Rechte
+in der Oberfläche längst aus Gruppen kommen. Fällt mit den Gruppenrechten weg
+(`docs/auftrag_rls_gruppenrechte.md`).
+
+**Zu 2 — und dabei ist ein zweiter Fund aufgefallen, der nichts mit Schreiben
+zu tun hat.** `ansichten_select` gibt fremde Ansichten frei, wenn
+`ist_standard = true` — **die Spalte, die das Teilen steuert, heisst aber
+`geteilt`**. Gemessen: 3 Ansichten, davon **2 mit `geteilt = true`, keine mit
+`ist_standard = true`**. Die Policy nennt also eine andere Spalte als die
+Funktion. **„Teilen" hat heute keine Wirkung** — niemand ausser dem Autor und
+den Admins sieht eine geteilte Ansicht. Ein Filter auf die falsche Spalte,
+derselbe Fehler wie ein Filter auf einen Namen statt auf ein Merkmal.
+
+**Zu 3 — heute einig, und das ist keine Absicherung.** Gemessen: 5 Konten, das
+eine mit `ist_admin = true` hat auch `role = 'administrator'`, die vier
+anderen beides nicht. Aber `role` ist ein **berechneter** Wert
+(`ableitUndSaveRolle()`), `ist_admin` ein gesetztes Kennzeichen — sie wurden
+am 05.08.2026 ausdrücklich getrennt. Läuft eines dem anderen davon, sieht ein
+Admin seine Maske und jeder Klick darin verpufft.
+
+**Der Durchgang zum Wiederholen** liegt nicht als Skript im Repo (er braucht
+eine Datenbankverbindung, die die Prüfkette nicht hat). Die beiden Abfragen
+stehen im Eintrag darüber; der Rest ist ein Abgleich der Schreibstellen aus
+`src/` gegen `pg_policies`.
 
 ### ⚠ `redirect_to` kennt den Verein nicht — zwei von drei Wegen
 

@@ -143,27 +143,31 @@ async function schreibeMitAllowlist(
     return { ok: true, abgewiesen, fehler: null };
   }
 
-  const { error } = await sb.from("personen")
-    .update({ ...erlaubt, updated_at: new Date().toISOString() })
-    .eq("id", personId);
+  /* ⚠ `.select("id")` AM SCHREIBVORGANG SELBST — nicht als zweite Abfrage.
+     Bei RLS gibt es keinen Fehler zu lesen: eine gesperrte Zeile wird
+     schlicht nicht getroffen, PostgREST antwortet `204 No Content`, und
+     `error` ist `null`. Mit `.select()` liefert es stattdessen die
+     GESCHRIEBENEN Zeilen, und deren Zahl ist die Antwort.
 
-  /* ⚠ Bei RLS gibt es keinen Fehler zu lesen — eine gesperrte Zeile wird
-     schlicht nicht getroffen, und `update` meldet Erfolg mit null Zeilen.
-     Deshalb zusätzlich gegenlesen, ob der Schreibvorgang angekommen ist:
-     ohne das stünde wieder eine Erfolgsmeldung ohne Deckung da, und genau
-     davon hatte diese Kette schon fünf. */
+     ⚠ HIER STAND BIS ZUM 23.08.2026 EINE ZWEITE ABFRAGE (`select id where
+     id = personId`), und die prüfte das Falsche: sie fragte, ob die Zeile
+     LESBAR ist, nicht ob sie GESCHRIEBEN wurde. Lesen und Schreiben hängen
+     an verschiedenen Policies — `personen_select_priv` ist weit,
+     `personen_update_kind` eng. Eine Zeile, die man sehen aber nicht
+     ändern darf, kam damit als Erfolg zurück. Genau der Fall, gegen den
+     die Prüfung gebaut war. */
+  const { data: getroffen, error } = await sb.from("personen")
+    .update({ ...erlaubt, updated_at: new Date().toISOString() })
+    .eq("id", personId)
+    .select("id");
+
   if (error) {
     console.error(`${wer} error:`, error);
     return { ok: false, abgewiesen, fehler: error.message };
   }
 
-  const { data: probe, error: leseFehler } = await sb.from("personen")
-    .select("id").eq("id", personId).maybeSingle();
-  if (leseFehler || !probe) {
-    return {
-      ok: false, abgewiesen,
-      fehler: nichtGetroffen,
-    };
+  if (!getroffen || getroffen.length === 0) {
+    return { ok: false, abgewiesen, fehler: nichtGetroffen };
   }
 
   return { ok: true, abgewiesen, fehler: null };

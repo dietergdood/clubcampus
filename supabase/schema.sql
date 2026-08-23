@@ -5275,6 +5275,10 @@ CREATE POLICY "vereine_select" ON "public"."vereine" FOR SELECT USING (("id" = "
 
 
 
+CREATE POLICY "vereine_update" ON "public"."vereine" FOR UPDATE TO "authenticated" USING ((("id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
 ALTER TABLE "public"."wiki_artikel" ENABLE ROW LEVEL SECURITY;
 
 
@@ -6220,9 +6224,17 @@ GRANT ALL ON TABLE "public"."trainingsplan_vorlagen" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."vereine" TO "anon";
-GRANT ALL ON TABLE "public"."vereine" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."vereine" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."vereine" TO "authenticated";
 GRANT ALL ON TABLE "public"."vereine" TO "service_role";
+
+
+
+GRANT UPDATE("theme") ON TABLE "public"."vereine" TO "authenticated";
+
+
+
+GRANT UPDATE("austritt_art_id") ON TABLE "public"."vereine" TO "authenticated";
 
 
 
