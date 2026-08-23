@@ -230,6 +230,47 @@ Juli 2026 liegen seit zwei Monaten im Archiv, mit vollständigen
 Personendaten, und niemand hat eine Frist im Kopf. Bei drei Zeilen fällt das
 nicht auf; bei den 388 Junioren, die über die Jahre austreten, schon.
 
+### ⚠ Dritte Frage an dieselbe Stelle: was steht im Löschprotokoll?
+
+Jedes Löschen einer Person schreibt **vorher** eine Zeile nach `audit_log` —
+vorher, weil es hinterher niemanden mehr gibt, über den man protokollieren
+könnte, und in `audit_log`, weil die Tabelle nicht an `personen` hängt und
+sich sonst selbst mitlöschte.
+
+**Gebaut wird ohne E-Mail-Adresse** (Entscheid Didi, 23.08.2026):
+
+| | |
+|---|---|
+| **drin** | Zeitpunkt · wer gelöscht hat · `verein_id` · die Zahlen je Tabelle · der Anlass (Selbstauskunft / Verwaltung) |
+| **nicht drin** | Name, Adresse, Geburtsdatum, AHV-Nummer, **E-Mail** |
+
+Begründung: das ist die Richtung, die sich **umkehren lässt**. Ein Feld
+später zu ergänzen ist möglich; was einmal protokolliert wurde, steht da.
+
+⚠ **UND DESHALB KANN DER VEREIN EINES NICHT — das gehört ausdrücklich
+gesagt, weil es eine bewusste Entscheidung sein muss und keine Nebenwirkung:**
+
+> **Er kann nicht belegen, dass eine bestimmte Löschung ausgeführt wurde.**
+>
+> Fragt jemand in zwei Jahren „habt ihr meine Daten gelöscht?", steht im
+> Protokoll eine Zeile **ohne Namen**. Der Verein kann sagen, dass an jenem
+> Tag eine Person gelöscht wurde — nicht, dass es diese war. Gegenüber einer
+> Aufsichtsstelle gilt dasselbe.
+
+Das kann die richtige Wahl sein: ein Protokoll, das dauerhaft die Namen aller
+Gelöschten führt, ist der Widerspruch zum Zweck der Übung. **Aber es ist eine
+Abwägung zwischen zwei Datenschutzzielen — Nachweisbarkeit gegen
+Datensparsamkeit —, und sie gehört an dieselbe Stelle wie die Fristen.**
+
+Ein Mittelweg, falls die Stelle Nachweisbarkeit verlangt: **ein Hash der
+E-Mail** statt der Adresse. Er beantwortet „war es diese Person?" für den,
+der die Adresse kennt, und sagt niemandem, wer gelöscht wurde. Ob das
+genügt, entscheidet nicht die Entwicklung.
+
+**Und dieselbe Frage wie beim Archiv gilt auch hier:** wie lange bleibt der
+Protokolleintrag? Ein Löschprotokoll ohne Frist ist derselbe Fehler wie ein
+Archiv ohne Frist, nur kleiner.
+
 ## Die Mail
 
 Über **Resend**, nicht über einen Mailserver des Vereins. Absenderadresse
@@ -364,3 +405,50 @@ Pflicht-Workflow"; alles unter „Archiv" ist Historie).
   `check:imports`, `check:selects`.
 - Nach jeder Strukturänderung Dump **und** `npm run gen:types`.
 - Deutsch (Schweiz) in Kommentaren, kein ß.
+
+---
+
+## Anhang · Das Geheimnis für den Fingerabdruck
+
+Der Fingerabdruck der Löschvorschau ist ein **HMAC**, kein blosser Hash. Ein
+Hash über öffentliche Daten liesse sich vom Aufrufer selbst berechnen — er
+wäre Zierrat, keine Absicherung.
+
+**Wo das Geheimnis liegt:** in den **Supabase Function Secrets**, gelesen mit
+`Deno.env.get("LOESCH_SIGNATUR_KEY")`. Dort liegen bereits
+`SFV_APPLICATION_KEY`, `SFV_APPLICATION_PASS` und `SFV_SYNC_KEY`.
+
+⚠ **NICHT im Vault.** Der Vault (`vault.secrets`) ist für Geheimnisse, die
+die **Datenbank** braucht — der stündliche Cron-Auftrag liest von dort seinen
+Sync-Schlüssel, weil er in Postgres läuft. Der Fingerabdruck wird
+ausschliesslich in der Edge Function gebildet und geprüft; ein Vault-Eintrag
+wäre ein zweiter Ort ohne Leser.
+
+**Wie es dorthin kommt** — Didi führt aus, der Wert entsteht dabei:
+
+```bash
+# Einen Schlüssel erzeugen (32 Byte, base64). Der Wert erscheint einmal
+# auf dem Bildschirm und geht danach direkt in das Secret.
+openssl rand -base64 32
+
+# Setzen (den erzeugten Wert einsetzen):
+npx supabase secrets set LOESCH_SIGNATUR_KEY=<der erzeugte Wert>
+
+# Nachsehen, dass er da ist — die CLI zeigt NUR den Namen und einen
+# Hash-Auszug, nie den Wert:
+npx supabase secrets list
+```
+
+⚠ **NICHT MIT DEM WERT EINCHECKEN.** Dieselbe Falle wie am 21.08.2026, als
+die echte healthchecks-URL im Klartext in `cron_sync_waechter.sql` stand —
+zwei Zeilen unter einer Warnung, die genau davor warnte. In dieser Datei und
+in jeder Migration steht der **Name** des Secrets, nie sein Inhalt.
+
+⚠ **Und er darf nie in eine Antwort geraten.** Der Fingerabdruck geht an den
+Browser, das Geheimnis nicht. Beim Bauen gilt dieselbe Allowlist-Regel wie
+für `api_sync_log.details`: aufzählen, was hinausgeht (siehe `CLAUDE.md`,
+„Ein neues Feld erbt jeden Ausgang des Objekts").
+
+**Wenn er verloren geht:** neu erzeugen und setzen. Es hängt kein Bestand
+daran — offene Vorschauen werden ungültig, mehr nicht. Das ist der Vorteil
+gegenüber einer Tabelle voller Token.
