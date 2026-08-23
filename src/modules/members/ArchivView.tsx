@@ -54,7 +54,9 @@ function mapArchivRow(m: ArchivMitglied) {
     deaktiviert_am:     m.deaktiviert_am ? String(new Date(m.deaktiviert_am).getFullYear()) : "—",
     deaktiviert_am_fmt: formatDatum(m.deaktiviert_am),
     deaktiviert_von:    m.deaktiviert_von||"—",
-    person_id:          m.person_id||"",
+    /* ⚠ `id` IST die person_id. Die Mitgliedschaft steht daneben und kann
+       fehlen — ein Vermerk haengt an der Person. */
+    mitglied_id:        m.mitglied_id,
     offene_punkte:      m.offene_punkte||"",
     _raw:               m,
   };
@@ -145,24 +147,59 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
     if (onReload) onReload();
   }
 
+  /* ⚠ Die Auswahl enthaelt PERSONEN, die Aktionen brauchen MITGLIEDSCHAFTEN.
+     Wer keine hat, wird uebersprungen — und das wird GESAGT, nicht still
+     getan: „3 ausgewaehlt, 2 reaktiviert" ist eine Aussage, drei ausgewaehlt
+     und zwei erledigt ohne Hinweis ist ein Ausfall in der Verkleidung eines
+     Erfolgs. */
+  function zuMitgliedschaften(selected: Set<RowId>) {
+    const ids: number[] = [];
+    let ohne = 0;
+    for (const id of selected) {
+      const zeile = (archivData || []).find(a => a.id === id);
+      if (zeile?.mitglied_id != null) ids.push(zeile.mitglied_id); else ohne += 1;
+    }
+    return { ids, ohne };
+  }
+
   async function reaktivieren(selected: Set<RowId>) {
     if (!selected?.size) return;
-    const ok = await confirm({ title:`${selected.size} Mitglieder reaktivieren?`, confirmLabel:"Reaktivieren" });
-    if (!sb || !ok) return;
-    for (const id of selected) {
-      await reaktiviereMitglied(sb, Number(id));
-      if (onUpdatePortalZugang) await onUpdatePortalZugang(Number(id), true);
+    const { ids, ohne } = zuMitgliedschaften(selected);
+    if (!ids.length) {
+      await confirm({ title:"Nichts zu reaktivieren",
+        message:"Keine der ausgewählten Personen hat eine beendete Mitgliedschaft.",
+        confirmLabel:"Verstanden" });
+      return;
     }
-    setArchivData(prev => prev.filter(m => !selected.has(m.id)));
+    const ok = await confirm({
+      title:`${ids.length} Mitglieder reaktivieren?`,
+      message: ohne ? `${ohne} der ${selected.size} ausgewählten Personen haben keine beendete Mitgliedschaft und bleiben unverändert.` : undefined,
+      confirmLabel:"Reaktivieren" });
+    if (!sb || !ok) return;
+    for (const mid of ids) {
+      await reaktiviereMitglied(sb, mid);
+      if (onUpdatePortalZugang) await onUpdatePortalZugang(mid, true);
+    }
+    /* ⚠ Die Zeile bleibt stehen: der Vermerk ist noch da, und das Archiv
+       zeigt jetzt Vermerke. Wer reaktiviert UND nichts mehr offen hat,
+       drueckt zusaetzlich „Erledigt". Zwei Aussagen, zwei Handlungen. */
     if (onReload) onReload();
   }
 
   async function loeschen(selected: Set<RowId>) {
     if (!selected?.size) return;
-    const ok = await confirm({ title:`${selected.size} Mitgliedschaften löschen?`, message:"Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.", danger:true, confirmLabel:"Löschen" });
+    const { ids, ohne } = zuMitgliedschaften(selected);
+    if (!ids.length) {
+      await confirm({ title:"Nichts zu löschen",
+        message:"Keine der ausgewählten Personen hat eine beendete Mitgliedschaft.",
+        confirmLabel:"Verstanden" });
+      return;
+    }
+    const ok = await confirm({ title:`${ids.length} Mitgliedschaften löschen?`,
+      message:`Die Mitgliedschaft samt Kadereinträgen, Notizen und Verlauf wird entfernt. Die Person bleibt mit Namen, Adresse und Konto bestehen — sie zu löschen ist eine eigene Aktion.${ohne ? ` ${ohne} der ${selected.size} ausgewählten Personen haben keine beendete Mitgliedschaft und bleiben unverändert.` : ""}`,
+      danger:true, confirmLabel:"Löschen" });
     if (!sb || !ok) return;
-    for (const id of selected) await deleteMitglied(sb, Number(id));
-    setArchivData(prev => prev.filter(m => !selected.has(m.id)));
+    for (const mid of ids) await deleteMitglied(sb, mid);
     if (onReload) onReload();
   }
 
@@ -196,14 +233,18 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
                 gebaut haben, waere doch wieder noetig. Setzen verlangt einen
                 Text und bleibt deshalb im Profil; ENTFERNEN braucht keinen
                 und kann hier stehen. (Didi, 23.08.2026.) */}
-            {m.offene_punkte && m.person_id && (
-              <Btn small disabled={erledigtLaeuft===m.person_id}
-                   onClick={()=>erledige(m.person_id, m.name)}>
-                <TI n="check" size={13}/> {erledigtLaeuft===m.person_id ? "…" : "Erledigt"}
-              </Btn>
-            )}
-            <Btn small onClick={()=>reaktivieren(new Set([m.id]))}><TI n="user-check" size={13}/> Reaktivieren</Btn>
-            <Btn small variant="danger" onClick={()=>loeschen(new Set([m.id]))}><TI n="trash" size={13}/></Btn>
+            <Btn small disabled={erledigtLaeuft===m.id}
+                 onClick={()=>erledige(String(m.id), m.name)}>
+              <TI n="check" size={13}/> {erledigtLaeuft===m.id ? "…" : "Erledigt"}
+            </Btn>
+            {/* ⚠ Reaktivieren und Loeschen brauchen eine MITGLIEDSCHAFT. Wer
+                nie eine hatte — ein Supporter mit geliehenem Tenue — hat hier
+                nichts zu reaktivieren. Kein ausgegrauter Knopf: was es nicht
+                gibt, erscheint nicht. */}
+            {m.mitglied_id != null && <>
+              <Btn small onClick={()=>reaktivieren(new Set([m.id]))}><TI n="user-check" size={13}/> Reaktivieren</Btn>
+              <Btn small variant="danger" onClick={()=>loeschen(new Set([m.id]))}><TI n="trash" size={13}/></Btn>
+            </>}
           </div>
         </td>;
       default:

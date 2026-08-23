@@ -312,34 +312,95 @@ export async function reaktiviereMitglied(sb: SbClient, id: number): Promise<Pos
 /* Eine Zeile der Archivliste. Explizit deklariert, weil die Abfrage die
    Namen verschachtelt liefert (personen(...)) und flacheZeilen() sie flach
    macht — der aus der Abfrage abgeleitete Typ träfe also nicht zu. */
+/**
+ * Eine Zeile im Archiv.
+ *
+ * ⚠ SEIT DEM 23.08.2026 IST DAS ARCHIV EINE PERSONENLISTE, keine Liste
+ * inaktiver Mitgliedschaften. Die Identitaet der Zeile ist deshalb die
+ * `person_id` — ein `string`, kein `number`.
+ *
+ * Vorher hiess Archiv „Mitgliedschaft inaktiv", und damit stand jeder
+ * Ausgetretene in ZWEI Listen: hier und bei den Supportern. Jetzt heisst es
+ * „bei dieser Person ist noch etwas offen", und das ist eine Markierung an
+ * der Person.
+ */
 export interface ArchivZeile {
-  id: number;
+  /** ⚠ Die PERSON-Id. Die Mitgliedschaft steht daneben und kann fehlen. */
+  id: string;
+  vorname: string | null;
+  nachname: string | null;
+  /** ⚠ Der Vermerk. NICHT LEER = im Archiv. */
+  offene_punkte: string | null;
+  /**
+   * Die zuletzt beendete Mitgliedschaft, falls es eine gibt.
+   *
+   * ⚠ KANN FEHLEN. Ein Vermerk haengt an der Person, nicht an einer
+   * Mitgliedschaft — jemand ohne jede Mitgliedschaft kann etwas offen haben
+   * (ein Supporter, der ein Tenue geliehen hat). Dann gibt es nichts zu
+   * reaktivieren und nichts zu loeschen, und die Knoepfe erscheinen nicht.
+   */
+  mitglied_id: number | null;
   mitgliedtyp: string | null;
   deaktiviert_am: string | null;
   deaktiviert_von: string | null;
-  vorname: string | null;
-  nachname: string | null;
-  /** Die Person hinter der Mitgliedschaft — der Vermerk haengt an ihr. */
-  person_id: string | null;
-  /** ⚠ Der Vermerk „was ist noch offen". NICHT LEER = markiert. */
-  offene_punkte: string | null;
 }
 
+/**
+ * Das Archiv: Personen mit einem Vermerk.
+ *
+ * ⚠ NICHT MEHR `mitglieder.aktiv = false`. Das war ein ORT; jetzt ist es eine
+ * MARKIERUNG. Wer austritt und nichts offen hat, steht bei den Supportern und
+ * sonst nirgends — statt in zwei Listen gleichzeitig.
+ *
+ * ⚠ `error` WIRD GELESEN. Ohne das saehe ein 42501 aus wie „niemand hat etwas
+ * offen", und das Archiv waere lautlos leer. Genau die Verwechslung, die
+ * dieses Projekt schon mehrfach Stunden gekostet hat.
+ */
 export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[]> {
-  const { data } = await sb.from("mitglieder")
-    /* ⚠ `offene_punkte` mitlesen: ohne das Feld kann die Liste den Vermerk
-       weder zeigen noch entfernen, und „Erledigt" waere wieder ein Weg ueber
-       das Profil — fuenf Zeilen, fuenf Profilaufrufe. (Didi, 23.08.2026.) */
-    .select("id,mitgliedtyp,deaktiviert_am,deaktiviert_von,personen(id,vorname,nachname,offene_punkte)")
-    .eq("aktiv", false)
-    .order("deaktiviert_am", { ascending: false });
-  return flacheZeilen(data as never) as unknown as ArchivZeile[];
+  const { data, error } = await sb.from("personen")
+    .select("id,vorname,nachname,offene_punkte,mitglieder(id,mitgliedtyp,aktiv,deaktiviert_am,deaktiviert_von)")
+    .not("offene_punkte", "is", null)
+    .order("nachname", { ascending: true });
+
+  if (error) { console.error("fetchArchiv error:", error); return []; }
+
+  return (data || []).map(p => {
+    /* Die zuletzt BEENDETE Mitgliedschaft. Eine aktive gehoert nicht hierher:
+       wer wieder Mitglied ist, steht in der Mitgliederliste — der Vermerk
+       bleibt trotzdem, weil eine offene Rechnung nicht durch einen
+       Wiedereintritt verschwindet. */
+    const beendet = ((p.mitglieder || []) as MitgliedRoh[])
+      .filter(m => m.aktiv === false)
+      .sort((a, b) => String(b.deaktiviert_am || "").localeCompare(String(a.deaktiviert_am || "")))[0] || null;
+    return {
+      id: p.id as string,
+      vorname: p.vorname as string | null,
+      nachname: p.nachname as string | null,
+      offene_punkte: p.offene_punkte as string | null,
+      mitglied_id: beendet ? (beendet.id as number) : null,
+      mitgliedtyp: beendet ? (beendet.mitgliedtyp ?? null) : null,
+      deaktiviert_am: beendet ? (beendet.deaktiviert_am ?? null) : null,
+      deaktiviert_von: beendet ? (beendet.deaktiviert_von ?? null) : null,
+    };
+  });
 }
 
+/** Die eingebettete Mitgliedschaftszeile aus `fetchArchiv`. */
+interface MitgliedRoh {
+  id: number;
+  mitgliedtyp: string | null;
+  aktiv: boolean | null;
+  deaktiviert_am: string | null;
+  deaktiviert_von: string | null;
+}
+
+/** ⚠ Dieselbe Bedingung wie `fetchArchiv`. Zwei Regeln fuer eine Zahl waeren
+    genau der Fehler, den dieses Projekt heute dreimal gefunden hat. */
 export async function fetchArchivCount(sb: SbClient): Promise<number> {
-  const { count } = await sb.from("mitglieder")
+  const { count, error } = await sb.from("personen")
     .select("id", { count: "exact", head: true })
-    .eq("aktiv", false);
+    .not("offene_punkte", "is", null);
+  if (error) { console.error("fetchArchivCount error:", error); return 0; }
   return count || 0;
 }
 

@@ -574,7 +574,14 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
       ):archivTab?(
         <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} account={account} vereinId={vereinId} isAdmin={istVerwaltung} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
-          const data=await fetchMitglied(sb,m.id);
+          /* ⚠ SEIT SCHRITT 2 IST `m.id` DIE PERSON, nicht die Mitgliedschaft
+             — das Archiv ist eine Personenliste. Wer eine beendete
+             Mitgliedschaft hat, wird ueber sie geoeffnet (damit Verlauf,
+             Teams und Vereinsdaten dranhaengen); wer keine hat, ueber die
+             Person. `oeffnePerson` kann beides und ist derselbe Weg wie aus
+             der Supporter-Liste. */
+          if(m.mitglied_id == null){ await oeffnePerson(String(m.id), `${m.vorname||""} ${m.nachname||""}`.trim() || "?"); return; }
+          const data=await fetchMitglied(sb, m.mitglied_id);
           /* fetchMitglied liefert die flache Zeile (Fassade); der aus der
              Abfrage abgeleitete Typ kennt die Personenfelder nicht. */
           /* ⚠ HIER STAND `as never` — und der Cast hat am 21.08.2026 einen
