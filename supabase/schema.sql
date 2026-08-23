@@ -3436,7 +3436,7 @@ ALTER TABLE ONLY "public"."anwesenheiten"
 
 
 ALTER TABLE ONLY "public"."api_sync_log"
-    ADD CONSTRAINT "api_sync_log_gestartet_von_fkey" FOREIGN KEY ("gestartet_von") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "api_sync_log_gestartet_von_fkey" FOREIGN KEY ("gestartet_von") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
@@ -3456,7 +3456,7 @@ ALTER TABLE ONLY "public"."api_verbindungen"
 
 
 ALTER TABLE ONLY "public"."audit_log"
-    ADD CONSTRAINT "audit_log_benutzer_id_fkey" FOREIGN KEY ("benutzer_id") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "audit_log_benutzer_id_fkey" FOREIGN KEY ("benutzer_id") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
@@ -3586,7 +3586,7 @@ ALTER TABLE ONLY "public"."eltern_kinder"
 
 
 ALTER TABLE ONLY "public"."elternkontakte"
-    ADD CONSTRAINT "elternkontakte_benutzer_id_fkey" FOREIGN KEY ("benutzer_id") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "elternkontakte_benutzer_id_fkey" FOREIGN KEY ("benutzer_id") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
@@ -3601,7 +3601,7 @@ ALTER TABLE ONLY "public"."elternkontakte"
 
 
 ALTER TABLE ONLY "public"."feldsichtbarkeit"
-    ADD CONSTRAINT "feldsichtbarkeit_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "feldsichtbarkeit_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
@@ -3666,12 +3666,12 @@ ALTER TABLE ONLY "public"."helper_schichten"
 
 
 ALTER TABLE ONLY "public"."helper_zuteilungen"
-    ADD CONSTRAINT "helper_zuteilungen_eingetragen_von_fkey" FOREIGN KEY ("eingetragen_von") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "helper_zuteilungen_eingetragen_von_fkey" FOREIGN KEY ("eingetragen_von") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
 ALTER TABLE ONLY "public"."helper_zuteilungen"
-    ADD CONSTRAINT "helper_zuteilungen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "helper_zuteilungen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE SET NULL;
 
 
 
@@ -3901,7 +3901,7 @@ ALTER TABLE ONLY "public"."module_berechtigungen"
 
 
 ALTER TABLE ONLY "public"."module_berechtigungen"
-    ADD CONSTRAINT "module_berechtigungen_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "module_berechtigungen_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
@@ -4161,7 +4161,7 @@ ALTER TABLE ONLY "public"."spiel_ereignisse"
 
 
 ALTER TABLE ONLY "public"."spiel_ereignisse"
-    ADD CONSTRAINT "spiel_ereignisse_korrigiert_von_fkey" FOREIGN KEY ("korrigiert_von") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "spiel_ereignisse_korrigiert_von_fkey" FOREIGN KEY ("korrigiert_von") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
@@ -4186,12 +4186,12 @@ ALTER TABLE ONLY "public"."team_helfer_zuteilungen"
 
 
 ALTER TABLE ONLY "public"."team_helfer_zuteilungen"
-    ADD CONSTRAINT "team_helfer_zuteilungen_eingetragen_von_fkey" FOREIGN KEY ("eingetragen_von") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "team_helfer_zuteilungen_eingetragen_von_fkey" FOREIGN KEY ("eingetragen_von") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 
 ALTER TABLE ONLY "public"."team_helfer_zuteilungen"
-    ADD CONSTRAINT "team_helfer_zuteilungen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "team_helfer_zuteilungen_person_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."personen"("id") ON DELETE SET NULL;
 
 
 
@@ -4296,7 +4296,7 @@ ALTER TABLE ONLY "public"."trainingsplan_slots"
 
 
 ALTER TABLE ONLY "public"."trainingsplan_vorlagen"
-    ADD CONSTRAINT "trainingsplan_vorlagen_erstellt_von_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."benutzer"("id");
+    ADD CONSTRAINT "trainingsplan_vorlagen_erstellt_von_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."benutzer"("id") ON DELETE SET NULL;
 
 
 

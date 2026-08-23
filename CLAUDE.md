@@ -1251,43 +1251,64 @@ Bis dahin gilt: **kein Funktionär kann Matchdaten korrigieren**, solange
 seiner Gruppe nicht `schedule: schreiben` gesetzt wird. Das ist ein
 Konfigurationsschritt in der Portalverwaltung, kein Codewechsel.
 
-### ⚠ `mitglied_id` ist in acht Tabellen der falsche Typ
+### ⚠ `mitglied_id` ist in VIER Tabellen der falsche Typ — und das ist auch ein Löschproblem
 
-Befund vom 19.08.2026, beim Schreiben von `supabase/migration_matchdaten.sql`.
+Befund vom 19.08.2026, **berichtigt und erweitert am 23.08.2026**.
 
-**`mitglieder.id` ist `bigint`.** In acht Tabellen steht `mitglied_id`
-trotzdem als `uuid` — ein Join auf `mitglieder` ist dort unmöglich:
+**`mitglieder.id` ist `bigint`.** Ursprünglich stand `mitglied_id` in **acht**
+Tabellen als `uuid` — ein Join auf `mitglieder` ist dort unmöglich. Vier davon
+sind inzwischen umgestellt und tragen einen Fremdschlüssel:
 
-| Typ | Tabellen |
+| | |
 |---|---|
-| **`uuid` (falsch)** | `aufgebote`, `anwesenheiten`, `abstimmung_antworten`, `bus_anmeldungen`, `helper_einsatz_pflicht_mitglied`, `helper_zuteilungen`, `material_ausleihen`, `team_helfer_zuteilungen` — dazu `news.mitglied_ids` als `uuid[]` |
-| `bigint` (richtig) | `benutzer`, `kader`, `eltern_kinder`, `elternkontakte`, `mitglieder_aenderungen`, `mitglieder_aktivitaeten`, `mitglieder_notizen`, `mitglieder_team_details` |
+| ✅ **behoben** (`bigint` + FK) | `anwesenheiten`, `helper_einsatz_pflicht_mitglied`, `helper_zuteilungen`, `team_helfer_zuteilungen` |
+| ⚠ **offen** (`uuid`, kein FK) | `abstimmung_antworten`, `aufgebote`, `bus_anmeldungen`, `material_ausleihen` |
 
-**Keine der acht hat einen Fremdschlüssel auf `mitglieder`** — sonst wäre es
-beim Anlegen aufgefallen. Genau das ist die Lehre: ein fehlender
-Fremdschlüssel lässt einen Typfehler jahrelang unbemerkt stehen.
+Dazu unverändert `news.mitglied_ids` als `uuid[]`.
 
-**Wirkt heute nirgends.** Alle acht sind leer und warten auf Phase 4 (Kader,
-Termine, Helfer, Dashboard). Niemand schreibt hinein, also fällt nichts auf.
-
-**Aber `aufgebote` ist eine davon.** Der geplante Vergleich „wer war
-aufgeboten und hat nicht gespielt / wer hat gespielt ohne Aufgebot" braucht
-den Join Aufgebot ↔ Aufstellung über das Mitglied — und `uuid` gegen `bigint`
-geht nicht. Der Vergleich scheitert, bevor ihn jemand baut.
-
-**Vor Phase 4 nachziehen**, mit Fremdschlüssel auf `mitglieder(id, verein_id)`
-wie in `migration_matchdaten.sql` (dort ist `sfv_zuordnung.mitglied_id`
-richtig als `bigint` gebaut). Solange die Tabellen leer sind, ist die
-Umstellung ein `alter column … type bigint` ohne Datenverlust — mit Zeilen
-darin wäre es eine Migration mit Abbildung.
-
-Zum Nachzählen:
+⚠ **Wer hier „acht" liest, plant eine Migration, die zur Hälfte schon gelaufen
+ist.** Deshalb steht die Zahl nicht mehr im Titel allein — nachzählen:
 
 ```sql
 select table_name, data_type from information_schema.columns
  where table_schema='public' and column_name='mitglied_id'
  order by data_type, table_name;
 ```
+
+**Keine der vier hat einen Fremdschlüssel auf `mitglieder`** — sonst wäre es
+beim Anlegen aufgefallen. Genau das ist die Lehre: ein fehlender
+Fremdschlüssel lässt einen Typfehler jahrelang unbemerkt stehen.
+
+### ⚠ Es ist nicht nur ein Typproblem, sondern ein LÖSCHPROBLEM
+
+Aufgefallen am 23.08.2026 beim Durchrechnen der Löschkette (Etappe 3b), und
+es steht sonst nirgends:
+
+**Die vier sind für das Löschen einer Person gerade deshalb gefährlich, WEIL
+sie keinen Fremdschlüssel haben.** Sie verweisen auf ein Mitglied über eine
+`uuid`, die eine `bigint`-Id gar nicht aufnehmen kann. Beim Löschen bliebe
+dort eine Waise stehen — und **nichts würde sich beschweren**: kein `23503`,
+keine Meldung, keine Kaskade. Ein Fremdschlüssel hätte den Löschvorgang
+entweder aufgehalten oder aufgeräumt; ohne ihn tut er beides nicht.
+
+⚠ **Und die Löschvorschau kann sie nicht prüfen.** Sie kann nicht zählen, was
+sie nicht joinen kann. Deshalb nennt die Vorschau sie **ausdrücklich als
+„nicht prüfbar"** statt sie zu übergehen — der einzige Punkt, an dem sie
+etwas NICHT weiss, gehört auf den Schirm und nicht in eine Fussnote.
+
+**Wirkt heute nirgends:** alle vier sind **leer** (gemessen 23.08.2026) und
+warten auf Phase 4 (Aufgebote, Termine, Bus, Material). Sobald sie Zeilen
+bekommen, entsteht mit jedem Löschen ein stiller Rest.
+
+**Vor Phase 4 nachziehen**, mit Fremdschlüssel auf `mitglieder(id, verein_id)`
+wie in `migration_matchdaten.sql`. Solange die Tabellen leer sind, ist es ein
+`alter column … type bigint` ohne Datenverlust — mit Zeilen darin wäre es eine
+Migration mit Abbildung.
+
+**Und `aufgebote` ist eine davon.** Der geplante Vergleich „wer war aufgeboten
+und hat nicht gespielt" braucht den Join Aufgebot ↔ Aufstellung über das
+Mitglied — `uuid` gegen `bigint` geht nicht. Der Vergleich scheitert, bevor
+ihn jemand baut.
 
 ### Wer sieht was bei anderen — wartet auf die Gruppenrechte
 
