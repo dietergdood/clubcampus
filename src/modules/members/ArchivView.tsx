@@ -2,7 +2,9 @@
    ClubCampus — modules/members/ArchivView.tsx
    Archiv-Tab — nutzt zentrale ListView
    ═══════════════════════════════════════════════════════════════ */
+import { useState } from "react";
 import { Btn, Av, useConfirm, EmptyState } from "../../theme.ts";
+import { setzeOffenePunkte } from "../../domains/person/offenePunkteService.ts";
 import { TI } from "../../icons.tsx";
 import { reaktiviereMitglied, deleteMitglied, fetchArchiv } from "../../domains/members/memberService.ts";
 import { ListView } from "../../shared/list/ListView.tsx";
@@ -25,6 +27,10 @@ const COL_DEFS: ColDef[] = [
   { key:"mitgliedtyp",    label:"Mitgliedschaft", default:true },
   { key:"deaktiviert_am", label:"Archiviert am",  default:true },
   { key:"deaktiviert_von",label:"Archiviert von", default:true },
+  /* ⚠ Der Vermerk steht als SPALTE, nicht nur im Profil. Wer die Liste
+     oeffnet, liest die Gruende, ohne zu fragen — das ist die Deckung dafuer,
+     dass ein Freitextfeld nicht zum toten Schalter wird. */
+  { key:"offene_punkte",  label:"Offene Punkte",  default:true },
   { key:"actions",        label:"",               default:true, alwaysOn:true },
 ];
 
@@ -48,6 +54,8 @@ function mapArchivRow(m: ArchivMitglied) {
     deaktiviert_am:     m.deaktiviert_am ? String(new Date(m.deaktiviert_am).getFullYear()) : "—",
     deaktiviert_am_fmt: formatDatum(m.deaktiviert_am),
     deaktiviert_von:    m.deaktiviert_von||"—",
+    person_id:          m.person_id||"",
+    offene_punkte:      m.offene_punkte||"",
     _raw:               m,
   };
 }
@@ -115,6 +123,28 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
   const [confirm, confirmDialog] = useConfirm();
   const rows: ArchivRow[] = (archivData || []).map(mapArchivRow);
 
+  /* ⚠ Nur ENTFERNEN, nicht setzen. Setzen verlangt einen Text und bleibt
+     deshalb im Profil; „Erledigt" braucht keinen und gehoert dorthin, wo man
+     die Liste durchgeht. Ohne diesen Knopf waeren fuenf abgehakte Punkte
+     fuenf Profilaufrufe. */
+  const [erledigtLaeuft, setErledigtLaeuft] = useState<string | null>(null);
+
+  async function erledige(personId: string, name: string) {
+    const ok = await confirm({
+      title: `Vermerk bei ${name} entfernen?`,
+      message: "Der Vermerk wird entfernt. Die Person bleibt, wo sie ist.",
+      confirmLabel: "Erledigt",
+    });
+    if (!ok || !sb) return;
+    setErledigtLaeuft(personId);
+    const { ok: erfolg, fehler } = await setzeOffenePunkte(sb, personId, null);
+    setErledigtLaeuft(null);
+    if (!erfolg) { console.error("erledige:", fehler); return; }
+    /* Die Zeile bleibt in der Liste, bis der Aufrufer neu laedt — sonst
+       verschwaende sie unter der Hand und man saehe nicht, was man getan hat. */
+    if (onReload) onReload();
+  }
+
   async function reaktivieren(selected: Set<RowId>) {
     if (!selected?.size) return;
     const ok = await confirm({ title:`${selected.size} Mitglieder reaktivieren?`, confirmLabel:"Reaktivieren" });
@@ -152,9 +182,26 @@ export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpda
         </td>;
       case "deaktiviert_am":
         return <td key="deaktiviert_am" className="cc-members-td cc-members-td-sub">{m.deaktiviert_am_fmt}</td>;
+      case "offene_punkte":
+        /* Ein leerer Vermerk ist kein Fehler — er heisst „nichts offen". */
+        return <td key="offene_punkte" className="cc-members-td">
+          {m.offene_punkte || <span className="cc-text-muted">—</span>}
+        </td>;
       case "actions":
         return <td key="actions" className="cc-members-td cc-text-right">
           <div className="cc-row cc-gap-6" onClick={e=>e.stopPropagation()}>
+            {/* ⚠ „Erledigt" GEHOERT IN DIE LISTE, nicht nur ins Profil.
+                Stuende es nur dort, waeren fuenf abgehakte Punkte fuenf
+                Profilaufrufe — und die Sammelaktion, die wir bewusst nicht
+                gebaut haben, waere doch wieder noetig. Setzen verlangt einen
+                Text und bleibt deshalb im Profil; ENTFERNEN braucht keinen
+                und kann hier stehen. (Didi, 23.08.2026.) */}
+            {m.offene_punkte && m.person_id && (
+              <Btn small disabled={erledigtLaeuft===m.person_id}
+                   onClick={()=>erledige(m.person_id, m.name)}>
+                <TI n="check" size={13}/> {erledigtLaeuft===m.person_id ? "…" : "Erledigt"}
+              </Btn>
+            )}
             <Btn small onClick={()=>reaktivieren(new Set([m.id]))}><TI n="user-check" size={13}/> Reaktivieren</Btn>
             <Btn small variant="danger" onClick={()=>loeschen(new Set([m.id]))}><TI n="trash" size={13}/></Btn>
           </div>

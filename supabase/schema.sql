@@ -86,24 +86,19 @@ CREATE OR REPLACE FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_v
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-  with p as (
-    select id, vorname, nachname
-      from public.personen
-     where verein_id = p_verein_id
-       and lower(btrim(email)) = lower(btrim(p_email))
-     limit 1
-  )
-  select json_build_object(
-    'bekannt',     exists (select 1 from p),
-    'name',        coalesce((select vorname || ' ' || nachname from p),
-                            split_part(p_email, '@', 1)),
-    'person_id',   (select id from p),
-    'mitglied_id', (select m.id from public.mitglieder m
-                     where m.person_id = (select id from p)
-                       and m.aktiv limit 1),
-    'eltern_id',   (select id from p)
-  );
-$$;
+    /* ⚠ NUR `bekannt`. Kein Name, keine `person_id`, keine `mitglied_id`.
+       Die Funktion ist fuer `anon` freigegeben; alles, was sie zurueckgibt,
+       gibt sie an jeden zurueck, der den oeffentlichen Schluessel hat — und
+       der steht im JavaScript-Buendel jeder Seite. */
+    select json_build_object(
+      'bekannt',
+      exists (
+        select 1 from public.personen
+         where verein_id = p_verein_id
+           and lower(btrim(email)) = lower(btrim(p_email))
+      )
+    );
+  $$;
 
 
 ALTER FUNCTION "public"."check_email_bekannt"("p_email" "text", "p_verein_id" "uuid") OWNER TO "postgres";
@@ -1580,7 +1575,9 @@ CREATE TABLE IF NOT EXISTS "public"."personen" (
     "funktionen" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
     "profil_geprueft_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "offene_punkte" "text",
+    CONSTRAINT "personen_offene_punkte_nicht_leer" CHECK ((("offene_punkte" IS NULL) OR ("btrim"("offene_punkte") <> ''::"text")))
 );
 
 
@@ -1600,6 +1597,10 @@ COMMENT ON COLUMN "public"."personen"."funktionen" IS 'Vereinsfunktionen. An der
 
 
 COMMENT ON COLUMN "public"."personen"."profil_geprueft_at" IS 'Wann die Person ihre Daten zuletzt bestaetigt hat. DIE einzige Stelle — die Altspalte benutzer.profil_geprueft_at ist am 20.08.2026 gefallen. Sie war eine zweite Aussage ueber dieselbe Sache: wer ueber den Overlay bestaetigte, schrieb dorthin, die Mitgliederliste las hier, und der Rueckfall in sollProfilPruefen() verdeckte die Abweichung.';
+
+
+
+COMMENT ON COLUMN "public"."personen"."offene_punkte" IS 'Von Hand gesetzte Markierung: was bei dieser Person noch offen ist (Beitrag, Rechnung, Material). NICHT LEER = markiert. Nie abgeleitet; der Archiv-Tab ist die gefilterte Ansicht darauf.';
 
 
 
@@ -4371,7 +4372,7 @@ CREATE POLICY "admin_all" ON "public"."mitglieder_aktivitaeten" TO "authenticate
 
 
 
-CREATE POLICY "ansichten_select" ON "public"."mitglieder_ansichten" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND (("benutzer_id" = "auth"."uid"()) OR ("ist_standard" = true) OR "public"."is_admin"())));
+CREATE POLICY "ansichten_select" ON "public"."mitglieder_ansichten" FOR SELECT USING ((("verein_id" = "public"."get_my_verein_id"()) AND (("benutzer_id" = "auth"."uid"()) OR ("geteilt" = true) OR "public"."is_admin"())));
 
 
 

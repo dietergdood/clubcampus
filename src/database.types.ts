@@ -3128,6 +3128,7 @@ export type Database = {
           nachname: string
           nationalitaet: string | null
           nationalitaet2: string | null
+          offene_punkte: string | null
           ort: string | null
           plz: string | null
           profil_geprueft_at: string | null
@@ -3152,6 +3153,7 @@ export type Database = {
           nachname: string
           nationalitaet?: string | null
           nationalitaet2?: string | null
+          offene_punkte?: string | null
           ort?: string | null
           plz?: string | null
           profil_geprueft_at?: string | null
@@ -3176,6 +3178,7 @@ export type Database = {
           nachname?: string
           nationalitaet?: string | null
           nationalitaet2?: string | null
+          offene_punkte?: string | null
           ort?: string | null
           plz?: string | null
           profil_geprueft_at?: string | null

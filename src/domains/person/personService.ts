@@ -45,6 +45,12 @@ export const PERSON_FELDER = [
   "geburtsdatum", "geschlecht",
   "nationalitaet", "nationalitaet2", "heimatort",
   "ahv_nr", "foto_url", "funktionen", "profil_geprueft_at",
+  /* ⚠ Muss hier stehen, sonst erreicht der Vermerk die Oberflaeche nie:
+     `flacheZeile()` kopiert NUR, was in dieser Liste steht — ein Feld, das
+     `personen(*)` zwar liefert, aber hier fehlt, kaeme in `raw` schlicht
+     nicht an. Kein Fehler, keine Meldung, nur ein Feld, das immer leer
+     aussieht. (23.08.2026.) */
+  "offene_punkte",
 ] as const;
 
 export type PersonFeld = (typeof PERSON_FELDER)[number];

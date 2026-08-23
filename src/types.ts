@@ -79,7 +79,7 @@ type PersonenFelder = Partial<Pick<Tables<'personen'>,
   'strasse' | 'plz' | 'ort' | 'kanton' | 'land' |
   'geburtsdatum' | 'geschlecht' |
   'nationalitaet' | 'nationalitaet2' | 'heimatort' |
-  'ahv_nr' | 'foto_url' | 'funktionen' | 'profil_geprueft_at'>>;
+  'ahv_nr' | 'foto_url' | 'funktionen' | 'profil_geprueft_at' | 'offene_punkte'>>;
 
 /* Die FLACHE Mitgliederzeile, wie sie aus der Fassade kommt: Mitgliedschaft
    plus Personenfelder in einem Objekt.

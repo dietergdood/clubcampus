@@ -388,6 +388,7 @@ function MemberDetail({
       {sichtbarerTab === "info" && (
         <InfoTab
           mitgliedId={mitgliedId}
+          darfMarkieren={role === "administrator" || role === "administration"}
           raw={raw} fv={fv} canEdit={canEdit} canDelete={canDelete}
           sb={sb} account={account}
           dbKaderRollen={dbKaderRollen} dbMitgliedtypen={dbMitgliedtypen}

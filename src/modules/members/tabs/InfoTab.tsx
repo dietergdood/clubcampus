@@ -12,6 +12,7 @@ import { PersonPersonalien } from "../../../shared/person/PersonPersonalien.tsx"
 import { PersonKontakt } from "../../../shared/person/PersonKontakt.tsx";
 import { PersonTeams } from "../../../shared/person/PersonTeams.tsx";
 import { PersonFunktionen } from "../../../shared/person/PersonFunktionen.tsx";
+import { OffenePunkteKarte } from "../OffenePunkteKarte.tsx";
 import { NotizenVerlauf } from "../NotizenVerlauf.tsx";
 import { useInlineEdit } from "../../../domains/members/useInlineEdit.ts";
 import {
@@ -73,6 +74,8 @@ interface InfoTabProps {
   onNavToTeam?: ((teamId: number) => void) | null;
   notizenCount?: number | null;
   setNotizenCount: (anzahl: number) => void;
+  /** Darf den Vermerk „Offene Punkte" setzen und entfernen — Verwaltung. */
+  darfMarkieren?: boolean;
   onReload?: (() => void) | null;
   reloadMember?: ((id: number) => void) | null;
   ableitRolle: () => Promise<void> | void;
@@ -88,7 +91,7 @@ function InfoTab({ mitgliedId,
   assignFunktionen, setAssignFunktionen,
   onNavToTeam,
   notizenCount, setNotizenCount,
-  onReload, reloadMember=null, ableitRolle,
+  onReload, reloadMember=null, ableitRolle, darfMarkieren = false,
   vereinId,
 }: InfoTabProps) {
   const isMobile = useIsMobile();
@@ -268,6 +271,17 @@ function InfoTab({ mitgliedId,
           onSaveFunktionen={onSaveFunktionen}
           fehler={funkFehler}
         />}
+
+        {/* ⚠ „Offene Punkte" — die Markierung, die das Archiv ersetzt.
+            Steht VOR den Notizen: sie ist eine Aussage ueber den Stand,
+            keine Aufzeichnung. */}
+        <OffenePunkteKarte
+          sb={sb}
+          personId={raw.person_id}
+          wert={raw.offene_punkte ?? null}
+          darfSetzen={darfMarkieren}
+          onGeaendert={() => { if (onReload) onReload(); }}
+        />
 
         {/* Notizen */}
         {zeigeNotizen && (

@@ -319,11 +319,18 @@ export interface ArchivZeile {
   deaktiviert_von: string | null;
   vorname: string | null;
   nachname: string | null;
+  /** Die Person hinter der Mitgliedschaft — der Vermerk haengt an ihr. */
+  person_id: string | null;
+  /** ⚠ Der Vermerk „was ist noch offen". NICHT LEER = markiert. */
+  offene_punkte: string | null;
 }
 
 export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[]> {
   const { data } = await sb.from("mitglieder")
-    .select("id,mitgliedtyp,deaktiviert_am,deaktiviert_von,personen(id,vorname,nachname)")
+    /* ⚠ `offene_punkte` mitlesen: ohne das Feld kann die Liste den Vermerk
+       weder zeigen noch entfernen, und „Erledigt" waere wieder ein Weg ueber
+       das Profil — fuenf Zeilen, fuenf Profilaufrufe. (Didi, 23.08.2026.) */
+    .select("id,mitgliedtyp,deaktiviert_am,deaktiviert_von,personen(id,vorname,nachname,offene_punkte)")
     .eq("aktiv", false)
     .order("deaktiviert_am", { ascending: false });
   return flacheZeilen(data as never) as unknown as ArchivZeile[];
