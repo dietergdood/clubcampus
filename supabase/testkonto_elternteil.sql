@@ -135,9 +135,16 @@
 do $mig$
 declare
   v_verein   uuid;
-  -- ⚠ DIE ADRESSE. Sie muss ein Postfach sein, das erreichbar ist: die
-  --   Registrierung schickt eine Bestaetigungsmail, und ohne sie kommt der
-  --   Nachweis nicht ueber Schritt 2 hinaus.
+  -- ⚠ DIE ADRESSE. BERICHTIGT AM 23.08.2026: hier stand, sie muesse ein
+  --   erreichbares Postfach sein, weil die Registrierung eine
+  --   Bestaetigungsmail schickt. TUT SIE NICHT — „Confirm email" ist aus.
+  --   Gemessen an allen fuenf Konten: confirmation_sent_at ist ueberall NULL,
+  --   email_confirmed_at gleich created_at, sofortiger Login.
+  --
+  --   Fuer den Nachweis heisst das: bequemer. Fuer den Verein heisst es, dass
+  --   JEDER, der eine bekannte Adresse kennt, sich damit anmelden kann —
+  --   siehe CLAUDE.md, „Wer eine Vereinsadresse kennt, bekommt das Konto
+  --   dazu".
   v_email    text := 'dieter.good@gmail.com';
   v_person   uuid;
   v_kind     bigint;

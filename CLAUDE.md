@@ -1600,6 +1600,72 @@ Pfadsegment, für die Einladung). Ein Platzhalter spannt über **Pfade, nie übe
 Hosts** — `https://*.vercel.app` wäre eine Preisgabe, dort kann jeder
 deployen.
 
+### ⚠ Wer eine Vereinsadresse kennt, bekommt das Konto dazu — ohne das Postfach
+
+Befund vom 23.08.2026, beim Nachgehen einer ganz anderen Frage (warum zwei
+Registrierungen zwei Anläufe brauchten). **Zwei Einstellungen, die einzeln
+vertretbar sind und zusammen eine Kette ergeben.**
+
+**1 · Die Registrierung verlangt keinen Nachweis über das Postfach.**
+Gemessen an allen fünf Konten:
+
+```
+confirmation_sent_at   NULL   bei allen
+email_confirmed_at     = created_at (0 Sekunden)
+last_sign_in_at        = created_at
+```
+
+„Confirm email" ist **aus**. Ein `signUp` legt das Konto an, bestätigt es
+sofort und meldet sofort an. Es geht **keine** Mail hinaus.
+
+⚠ **Damit ist der Satz in `testkonto_elternteil.sql` falsch**, der verlangt,
+die Adresse müsse ein erreichbares Postfach sein („die Registrierung schickt
+eine Bestätigungsmail"). Sie schickt keine. Der Satz ist dort berichtigt.
+
+**2 · Und es gibt ein öffentliches Orakel, das die Adressen bestätigt.**
+`check_email_bekannt` ist `SECURITY DEFINER` und für **`anon`** freigegeben.
+Gemessen gegen die laufende API, ohne jede Anmeldung, nur mit dem
+publishable key:
+
+```
+POST /rest/v1/rpc/check_email_bekannt   {"p_email":"…@outlook.com", "p_verein_id":"…"}
+→ 200 {"bekannt":true,"name":"Andrea Hauser","person_id":"73c0837b-…", …}
+```
+
+Es sagt nicht nur **ob**, sondern liefert **den Namen und die `person_id`**.
+
+**Die Kette:** eine Adresse kennen oder raten → das Orakel bestätigt sie und
+nennt die Person → damit registrieren → ein Konto **mit deren Rolle und deren
+Daten**, ohne je Zugriff auf das Postfach gehabt zu haben.
+
+| | |
+|---|---|
+| Personen mit E-Mail | **912 von 914** |
+| davon **ohne** Konto — also übernehmbar | **907** |
+| Rolle, die dabei herauskäme | `spieler` 506 · `eltern` 392 · `supporter` 7 · je 1 `mitglied`/`funktionaer` |
+
+⚠ **Der Admin ist nicht darunter** — seine Adresse hat bereits ein Konto und
+ist damit belegt. Das ist heute die einzige Sperre, und sie ist zufällig:
+sie gilt für jede Adresse, die schon vergeben ist, und für keine andere.
+
+⚠ **Und der Trainer-Export ist der Zünder.** Unter „Ein Trainer kann 914
+Adressen und AHV-Nummern exportieren" steht, wie man an die Liste kommt. Ohne
+Liste muss man Adressen raten; mit Liste hat man alle 907.
+
+**Zu entscheiden — beides sind Einstellungen, kein Code:**
+
+1. **„Confirm email" einschalten.** Die naheliegende Reparatur; sie bricht
+   die Kette an der entscheidenden Stelle. ⚠ Vorher prüfen, ob der
+   Mail-Versand für 394 Elternteile trägt — sonst wird aus einer Sperre eine
+   Wand beim Ausrollen.
+2. **`check_email_bekannt` für `anon` sperren** oder auf `{"bekannt": true|false}`
+   ohne Namen und ohne Id kürzen. Der Name wird im Formular nur als
+   Vorbelegung gebraucht; er lässt sich nach der Anmeldung setzen.
+
+**Beides zusammen, nicht eines davon.** Punkt 1 allein lässt das Orakel
+stehen (Namen zu fremden Adressen, unangemeldet); Punkt 2 allein lässt die
+Übernahme jeder bekannten Adresse offen.
+
 ### ⚠ Der Bucket `mitglieder-fotos` ist für jeden eingeloggten Benutzer offen
 
 Befund vom 21.08.2026, beim Umstellen des Fotopfads auf `person_id`.
