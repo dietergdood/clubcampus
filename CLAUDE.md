@@ -815,7 +815,7 @@ liest, darf sie nicht als abgebrochen zählen:
 | 17:52 | `null` | gelungen — vor dem Vermerk |
 | 18:20 | `true` | gelungen |
 
-### ⚠ Zwei Rechnungen für die Portalrolle — `handle_new_user()` gegen `ableitRolle()`
+### ⚠ DREI Rechnungen für die Portalrolle — und die dritte läuft bei jedem Login
 
 Befund vom 23.08.2026, beim Anlegen eines Trainer-Testzugangs.
 
@@ -824,9 +824,41 @@ Befund vom 23.08.2026, beim Anlegen eines Trainer-Testzugangs.
 | `handle_new_user()` (DB-Trigger, bei der **Registrierung**) | **nur** `mitgliedtypen.standard_rolle` | Aktivmitglied → **`spieler`** |
 | `ableitRolle()` (`roleUtils.ts`, bei jeder Kader-/Team-/Funktionsänderung) | **zuerst** die Kaderrollen | Kadereintrag mit `ist_trainer` → **`trainer`** |
 
-Beide beantworten dieselbe Frage und geben verschiedene Antworten. Der Trigger
-gewinnt bei der Registrierung, die Ableitung beim nächsten Kaderwechsel —
-**die Rolle kippt also irgendwann von selbst, und niemand weiss wann.**
+⚠ **BERICHTIGT AM 23.08.2026, NOCH AM SELBEN ABEND — ES SIND DREI, UND DIE
+DRITTE IST DIE, DIE TATSÄCHLICH LÄUFT.** Hier stand, die Rolle kippe
+„irgendwann von selbst, und niemand weiss wann". Gemessen an einer echten
+Registrierung: sie kippt **beim ersten Login**, und zwar durch eine dritte
+Regel, die ich beim ersten Durchgang übersehen hatte.
+
+`useDbUser` (`useAppData.js:283–308`) liest nach dem Anmelden die Kadereinträge
+und **schreibt die abgeleitete Rolle nach `benutzer.role` zurück**. Der
+Trainer-Testzugang bekam vom Trigger `spieler` und war nach dem ersten Login
+`trainer` — ohne dass jemand etwas angefasst hätte.
+
+| | wann | liest |
+|---|---|---|
+| `handle_new_user()` | Registrierung | `mitgliedtypen.standard_rolle` |
+| **`useDbUser`** | **jeder Login** | Kaderrollen über eine **feste Namensliste** im Code |
+| `ableitRolle()` | Kader-/Team-/Funktionsänderung | Kaderrollen über `kader_rollen.ist_trainer` |
+
+⚠ **Und die mittlere ist die schlechteste der drei.** `ROLLE_MAP` in
+`useDbUser` zählt sechs Kaderrollen **beim Namen** auf, statt `ist_trainer` zu
+lesen. Gemessen gegen die sechs Rollen, die es im Verein wirklich gibt:
+
+| Kaderrolle | `ist_trainer` | `ROLLE_MAP` | Personen |
+|---|---|---|---|
+| Trainer/in · Co-Trainer/in · Goalietrainer/in | true | `trainer` | 7 |
+| Spieler/in | false | `spieler` | 11 |
+| **Team-Admin** | **true** | **fehlt** → `spieler` | **1** |
+| Masseur/in | true | `funktionaer` ⚠ | 0 |
+| *Assistenz* | — | `funktionaer` | **gibt es nicht** |
+
+**Adrian Kern hat nur „Team-Admin"** — `ableitRolle()` macht ihn zum Trainer,
+`useDbUser` beim Login zum Spieler. Und weil `useDbUser` **zurückschreibt**,
+gewinnt beim Login die schlechtere Regel. Ein Filter auf Namen statt auf das
+Merkmal, genau wie unter „Ein Filter auf einen NAMEN prüft eine Schreibweise" —
+nur hier mit einem toten Schlüssel (`Assistenz`) und einer fehlenden Zeile
+(`Team-Admin`) zugleich.
 
 ⚠ **Aufgefallen ist es nur, weil ich es falsch aufgeschrieben hatte.** In
 `testkonto_trainer.sql` stand „Erwartete Rolle: trainer"; ich hatte aus
@@ -847,9 +879,12 @@ nachgebaut und über alle aktiven Mitglieder gerechnet:**
 | | **zusammen** | **9 von 512** |
 
 **Die acht sind die Trainer des Vereins.** Registrieren sie sich, bekommen sie
-`spieler` — kein „Mein Team", keine Kader-Maske, keine Trainerrechte. Und es
-berichtigt sich irgendwann von selbst, sobald jemand ihren Kadereintrag
-anfasst. Zwei davon sind Juniorenmitglieder, die nebenbei Co-Trainer sind.
+vom Trigger `spieler`. ⚠ **Sieben davon berichtigt `useDbUser` beim ersten
+Login** — das Fenster ist also Sekunden, nicht Wochen, und der Befund ist
+deutlich kleiner als er hier zuerst stand. **Der achte ist Adrian Kern**, und
+bei ihm berichtigt sich nichts: „Team-Admin" fehlt in `ROLLE_MAP`, also bleibt
+er `spieler`, bis jemand `ableitUndSaveRolle()` auslöst. Zwei der acht sind
+Juniorenmitglieder, die nebenbei Co-Trainer sind.
 
 Die Abweichung geht **immer in dieselbe Richtung**: der Trigger gibt weniger
 als die Ableitung. Das ist die harmlosere Richtung — aber es heisst, dass
@@ -863,11 +898,16 @@ unter „Zwei Rechnungen für die Rolle".
 Pflichtfelder und den zwei für den Portal-Zugang. Gemeinsames Merkmal: keine
 Prüfkette wird rot, weil **beide Antworten für sich genommen plausibel sind**.
 
-**Zu entscheiden, nicht nebenbei zu machen:** `handle_new_user()` die
-Kaderrollen mitlesen lassen — das ist eine Migration am Registrierungspfad,
-der demnächst 371 Familien trägt. Bis dahin `benutzer.role` nach der
-Registrierung setzen; das ist hier ausnahmsweise **kein** fragiles
-Überschreiben, weil `ableitRolle()` denselben Wert ergäbe.
+**Zu entscheiden, nicht nebenbei zu machen.** Die billigste echte Reparatur ist
+**nicht** der Trigger, sondern `ROLLE_MAP`: sie durch `kader_rollen.ist_trainer`
+zu ersetzen, kostet wenige Zeilen, braucht keine Migration und bringt zwei der
+drei Regeln zur Deckung. `handle_new_user()` die Kaderrollen mitlesen zu lassen
+ist die vollständige Lösung, aber eine Migration am Registrierungspfad, der
+demnächst 371 Familien trägt.
+
+⚠ **Solange drei Stellen dieselbe Frage beantworten, ist jede Reparatur an
+einer davon nur eine Verschiebung.** Das Ziel ist eine Quelle — und das ist
+`ableitRolle()`, weil sie als einzige das Merkmal liest statt eines Namens.
 
 ### ⚠ Drei Rechnungen für dieselbe Frage — und 21 Tests hängen an der toten
 
@@ -953,6 +993,57 @@ sind eine Pflicht/Freiwillig-Frage, keine Existenzfrage.
 (Abschnitt darüber) — solange vier Typen zehn Pflichtfelder verlangten, wäre
 danach kein Juniorenmitglied mehr durch die eigene Datenprüfung gekommen.
 Mit dem Durchgang vom 19.08.2026 ist die Blockade weg.
+
+### Wie viele Pflichtfelder fehlen — die Verteilung, gemessen am 23.08.2026
+
+Vor dem Ausrollen von Konten gemessen, über alle **512** aktiven Mitglieder,
+gegen die Matrix (`mitgliedtyp_feldkonfig`, `modus = 'pflicht'`):
+
+| fehlende Felder | Mitglieder | |
+|---|---|---|
+| **0** | **96** | 18.8 % |
+| **1** | **402** | 78.5 % |
+| 2 | 10 | |
+| 3 | 2 | |
+| 7 | 2 | ⚠ beide sind **Testpersonen von heute** |
+
+**Vier von fünf Mitgliedern fehlt genau ein Feld — und bei 381 der 416 ist es
+die AHV-Nummer.**
+
+| Feld | fehlt bei |
+|---|---|
+| `ahv_nr` | **381** |
+| `telefon` | 36 |
+| `heimatort` | 10 |
+| `strasse` | 5 |
+| `geburtsdatum` | 4 |
+| `plz` · `ort` · `geschlecht` | je 2 |
+
+⚠ **Was ein einziger Schalter bewirkt.** `Juniorenmitglied · ahv_nr` auf
+freiwillig:
+
+| | vollständig | mit Lücke |
+|---|---|---|
+| heute | 96 | **416** |
+| nach dem Schalter | **461** | **51** |
+| `ahv_nr` überall freiwillig | 465 | 47 |
+
+**Von 416 auf 51 — eine Grösse, die die Verwaltung von Hand erledigt.** Die
+zweite Zeile bringt fast nichts mehr dazu: die AHV-Nummer der Aktivmitglieder
+fehlt nur bei 9 von 121, dort hat die Pflicht Deckung.
+
+⚠ **Und das Overlay, das man beim Testen sieht, ist der Ausreisser.** Beide
+Personen mit sieben fehlenden Feldern sind die am 23.08.2026 angelegten
+Testzugänge — sie haben ausser Namen und E-Mail nichts. Wer daran die
+Zumutbarkeit beurteilt, beurteilt den schlimmsten denkbaren Fall. Die zwei
+echten Ausreisser (Daniel Vogel, Thomas Müller) vermissen **drei**.
+
+⚠ **Eine Warnung zur Messung selbst:** eine erste Fassung gruppierte die
+Ausreisser nach NAMEN und meldete „Adrian Schmid, 3 Felder, `ahv_nr, ahv_nr,
+telefon`". Die doppelte `ahv_nr` war der Hinweis — es sind **zwei
+verschiedene Personen gleichen Namens** mit je einer und zwei Lücken. Die
+Verteilung selbst gruppiert über `mitglieder.id` und ist davon nicht
+betroffen. Wer Personen zählt, zählt Ids.
 
 ### ⚠ Die AHV-Pflicht sperrt 381 Mitglieder aus — seit dem 19.08.2026, unbemerkt
 
