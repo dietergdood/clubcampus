@@ -357,10 +357,17 @@ entfernt das Auth-Konto nicht — E-Mail und Login bleiben in `auth.users`
 stehen und blockieren die Adresse für jede erneute Registrierung. Das braucht
 die Admin-API, also eine Edge Function.
 
-**⚠ Autorisierung nicht von `invite-user` abschreiben.** Die prüft nur, *dass*
-ein `Authorization`-Header da ist, nicht *wer* dahintersteht — jeder eingeloggte
-Benutzer kann sie heute aufrufen. Die neue Function prüft den Aufrufer gegen
-`benutzer.ist_admin` und dessen `verein_id` gegen die der Zielperson.
+**✅ Autorisierung: eine Stelle für beide Functions** (23.08.2026).
+`supabase/functions/_shared/aufrufer.ts` löst den Aufrufer auf und prüft ihn
+gegen `benutzer.ist_admin` und `verein_id`; die Regeln selbst stehen in
+`aufruferRegeln.ts` mit 11 Testfällen.
+
+⚠ **Der Satz hier hiess ursprünglich „Autorisierung nicht von `invite-user`
+abschreiben"** — die prüfte nur, *dass* ein `Authorization`-Header da ist.
+Gemessen war es **schlimmer als gedacht**: nicht „jeder eingeloggte Benutzer",
+sondern **jeder überhaupt**. In diesem Header steht im Normalfall der
+publishable key, und der liegt im JavaScript-Bündel jeder Seite. `invite-user`
+ist am 23.08.2026 repariert und läuft jetzt über dieselbe Stelle.
 
 ## Zwei getrennte Aktionen mit ehrlichen Namen
 

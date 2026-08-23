@@ -324,6 +324,34 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   Der Fehler geht in **beide** Richtungen und ist deshalb doppelt tückisch. Am 19.08.2026 in `scripts/check-imports.mjs` beide Male erlebt: erst meldete `\bR\b` jede Datei mit dem Wort „Rückennummer" als fehlenden Import von `R` (Rot) — `--fix` hätte ihn ergänzt. Nach der Korrektur stand in derselben Datei noch ein `\b` in der Prüfung auf lokale Deklarationen, wodurch ein `const Rückennummer = …` einen **echt** fehlenden Import von `R` verdeckt hätte. Ein Fehlalarm fällt auf, eine unterdrückte Meldung nicht.
 
   Unbedenklich bleibt `\b` dort, wo nur ASCII geprüft wird — etwa `/<(path|circle|rect)\b/` gegen SVG-Markup in `icons.test.ts`.
+- **`benutzer.id` IST die Auth-Id — es gibt keine Spalte `auth_user_id`.** `handle_new_user()` legt die Zeile mit der `auth.users`-Id als Primärschlüssel an; `useDbUser` liest sie mit `.eq("id", uid)` aus der Sitzung. Ein zweiter Schlüssel existiert nicht.
+
+  **Ich habe am 23.08.2026 `auth_user_id` angenommen** und in zwei Stellen der Löschkette geschrieben. Der Fehler ist die Sorte, die man nicht bemerkt, **weil die eine Hälfte laut scheitert und die andere still durchläuft:**
+
+  | Stelle | was passiert wäre |
+  |---|---|
+  | Aufrufer auflösen (`.eq("auth_user_id", …)`) | **laut** — PostgREST antwortet `42703 column does not exist`, 500 |
+  | Auth-Konto löschen (`deleteUser(zeile.auth_user_id)`) | **still** — `undefined`, der Aufruf wird übersprungen |
+
+  Die zweite Hälfte hätte die `benutzer`-Zeile entfernt und das Anmeldekonto stehen gelassen: **die E-Mail-Adresse dauerhaft für jede erneute Registrierung blockiert**, mit einer Zeile in der Konsole als einzigem Zeichen. Nach aussen sähe das aus wie „diese Adresse ist schon vergeben" — wieder ein Ausfall in der Verkleidung einer Datenlage.
+
+  ⚠ **Die laute Hälfte ist kein Schutz für die stille.** Beide standen in derselben Datei, geschrieben in derselben Minute, aus derselben Annahme. Wäre die laute nicht dabei gewesen, hätte nichts gemeldet. Gefunden habe ich es beim Gegenlesen gegen das Schema und gegen `useDbUser` — nicht durch einen Lauf.
+
+- **Ein `Authorization`-Header ist keine Anmeldung — und `verify_jwt` ist keine Rechteprüfung.** Bei Supabase steht in diesem Header im Normalfall der **publishable key** (früher: anon key). Der liegt im JavaScript-Bündel jeder Seite; er ist öffentlich, das ist sein Zweck. Der Gateway-Schalter `verify_jwt` prüft, ob der Schlüssel **gültig** ist, nicht ob ein **Mensch** dahintersteht — und der publishable key ist gültig.
+
+  Beleg vom 23.08.2026, gemessen gegen die laufende Function, nicht vermutet:
+
+  ```
+  POST /functions/v1/invite-user   Authorization: Bearer sb_publishable_…
+  → 400 {"error":"E-Mail fehlt"}      ← durch die Rechteprüfung, in der Rumpfprüfung
+  ```
+
+  `invite-user` prüfte `if (!authHeader) return 401`. Damit konnte **jeder, der die Seite aufruft**, Einladungs-E-Mails im Namen des Vereins an beliebige Adressen verschicken — abgeschickt vom Auth-Server des Projekts, mit Absender und Aussehen des Portals und einem gültigen Anmeldelink darin. Und `redirect_url` kam ebenfalls aus dem Aufruf, landete also als Link **in der Mail**.
+
+  **Richtig ist, den Token aufzulösen statt ihn zu zählen:** `db.auth.getUser(token)` gegen den Auth-Server, dann `benutzer` über die zurückgegebene Id, dann `ist_admin` und `verein_id`. Ein publishable key ergibt dabei keinen Benutzer. Steht seit dem 23.08.2026 an **einer** Stelle — `supabase/functions/_shared/aufrufer.ts` —, weil zwei getrennte Rechteprüfungen still auseinanderlaufen; die Regeln selbst liegen ohne `esm.sh`-Import in `aufruferRegeln.ts` und haben 11 Testfälle.
+
+  ⚠ **Und der Aufrufer nennt seither eine PERSON, keine Adresse.** Eine mitgeschickte E-Mail lässt sich gegen keinen Verein halten — die Mandantenprüfung wäre Zierrat. Die Adresse kommt aus `personen`, das Ziel des Links aus `vereine.slug`. Erlaubtes aufzählen, nicht Verbotenes: dieselbe Regel wie unten bei Fremddaten, nur für den Rückweg.
+
 - **Bei Fremddaten immer Allowlist, nie Denylist.** Wer aus einer fremden Antwort etwas herausfiltert — Personendaten schwärzen, Felder übernehmen, Nutzlast begrenzen —, listet auf, was **durchkommt**, nicht was fällt. Ein neues Feld der Gegenseite ist damit im Zweifel geschwärzt und fällt auf, statt still mitzureisen. Umgekehrt ist jede Denylist nur so gut wie die Fantasie dessen, der sie geschrieben hat. Beleg vom 19.08.2026: eine Regex-Denylist `/person|player|birth|passport|…/` gegen die SFV-Matchdaten war zugleich zu streng (schwärzte `personId`, `isPlayer`) und zu lasch — `players[]` führt den Namen in **drei** Feldern, `firstname`, `name` und `secondName`, von denen keines „person" oder „player" heisst. Die Klarnamen von 32 Spielern, überwiegend gegnerische, gingen durch. Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad geschrieben und dort gegengelesen wurde. Muster: `scripts/sfv-matchdaten-probe.mjs`, Konstante `ERLAUBT`.
 - **Ein neues Feld erbt JEDEN Ausgang des Objekts, an dem es hängt.** Wer einem bestehenden Objekt ein Feld hinzufügt, muss alle Wege kennen, die dieses Objekt schon nimmt — nicht nur den, für den das Feld gedacht war. Das Feld ist neu, die Ausgänge sind alt, und deshalb schlägt nichts fehl.
 

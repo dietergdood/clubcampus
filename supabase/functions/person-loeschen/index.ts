@@ -26,11 +26,12 @@
 //                         halben Kette
 //     gefaelschter Aufruf der Abdruck ist HMAC-signiert, nicht bloss gehasht
 //
-// ⚠ AUTORISIERUNG NICHT VON `invite-user` ABSCHREIBEN. Die prueft nur, DASS
-//   ein Authorization-Header da ist, nicht WER dahintersteht — jeder
-//   eingeloggte Benutzer kann sie heute aufrufen. Hier wird der Aufrufer
-//   aufgeloest, gegen `benutzer.ist_admin` geprueft und sein `verein_id`
-//   gegen den der Zielperson.
+// ⚠ DIE AUTORISIERUNG LIEGT IN `../_shared/aufrufer.ts` — EINE STELLE FUER
+//   BEIDE FUNCTIONS. `invite-user` prueft dieselbe Sache und hat sie bis zum
+//   23.08.2026 gar nicht geprueft: dort genuegte, DASS ein
+//   Authorization-Header da ist, und dort steht im Normalfall der oeffentliche
+//   publishable key. Zweimal geschriebene Rechtepruefungen laufen auseinander,
+//   und zwar still.
 //
 // ⚠ UND KEIN SELBSTLOESCHEN. Wer sich selbst entfernt, nimmt dabei sein
 //   eigenes Konto mit und kann den Vorgang nicht zu Ende protokollieren.
@@ -39,6 +40,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formeVorschau, fingerabdruckDaten, nenneUnterschiede, NICHT_PRUEFBAR } from "./vorschau.ts";
 import type { Vorschau } from "./vorschau.ts";
+import { holeAufrufer, pruefeAdmin, pruefeVerein, pruefeNichtSelbst } from "../_shared/aufrufer.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -150,29 +152,18 @@ Deno.serve(async (req) => {
   const geheim = Deno.env.get("LOESCH_SIGNATUR_KEY");
   if (!geheim) return json({ fehler: "LOESCH_SIGNATUR_KEY nicht gesetzt" }, 500);
 
-  const url = Deno.env.get("SUPABASE_URL") ?? "";
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return json({ fehler: "Nicht angemeldet" }, 401);
+  const db = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
 
-  /* ⚠ DER AUFRUFER WIRD AUFGELOEST, nicht nur sein Header gezaehlt. Genau
-     hier liegt der Unterschied zu `invite-user`. */
-  const alsAufrufer = createClient(url, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: auth, error: authErr } = await alsAufrufer.auth.getUser();
-  if (authErr || !auth?.user) return json({ fehler: "Nicht angemeldet" }, 401);
+  /* ⚠ DER AUFRUFER WIRD AUFGELOEST, nicht nur sein Header gezaehlt. */
+  const auf = await holeAufrufer(req, db);
+  if (!("aufrufer" in auf)) return json({ fehler: auf.fehler }, auf.status);
+  const aufrufer = auf.aufrufer;
 
-  const db = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
-
-  /* ⚠ `benutzer.id` IST die Auth-Id — es gibt keine Spalte `auth_user_id`.
-     Ich hatte sie angenommen; gemessen am 23.08.2026 gegen das Schema und
-     gegen `useDbUser`, das mit `.eq("id", uid)` aus der Sitzung liest. */
-  const { data: aufrufer, error: aErr } = await db.from("benutzer")
-    .select("id, person_id, verein_id, ist_admin, aktiv")
-    .eq("id", auth.user.id).maybeSingle();
-  if (aErr) return json({ fehler: "Aufrufer nicht lesbar" }, 500);
-  if (!aufrufer || aufrufer.aktiv === false) return json({ fehler: "Kein aktives Konto" }, 403);
-  if (aufrufer.ist_admin !== true) return json({ fehler: "Nur Administratoren" }, 403);
+  const nichtAdmin = pruefeAdmin(aufrufer);
+  if (nichtAdmin) return json({ fehler: nichtAdmin.fehler }, nichtAdmin.status);
 
   let body: { aktion?: string; person_id?: string; abdruck?: string; anlass?: string };
   try { body = await req.json(); } catch { return json({ fehler: "Kein gültiger Aufruf" }, 400); }
@@ -184,9 +175,8 @@ Deno.serve(async (req) => {
 
   /* ⚠ KEIN SELBSTLOESCHEN. Wer sich selbst entfernt, nimmt sein eigenes
      Konto mit und kann den Vorgang nicht zu Ende protokollieren. */
-  if (aufrufer.person_id === personId) {
-    return json({ fehler: "Das eigene Konto lässt sich hier nicht löschen." }, 400);
-  }
+  const selbst = pruefeNichtSelbst(aufrufer, personId, "löschen");
+  if (selbst) return json({ fehler: selbst.fehler }, selbst.status);
 
   const gemessen = await zaehle(db, personId);
   if (!gemessen) return json({ fehler: "Person nicht gefunden oder nicht vollständig lesbar" }, 404);
@@ -195,9 +185,8 @@ Deno.serve(async (req) => {
      Person des anderen loeschen — die Function laeuft mit `service_role` und
      kennt keine RLS. */
   const { data: ziel } = await db.from("personen").select("verein_id").eq("id", personId).maybeSingle();
-  if (!ziel || ziel.verein_id !== aufrufer.verein_id) {
-    return json({ fehler: "Diese Person gehört zu einem anderen Verein." }, 403);
-  }
+  const fremd = pruefeVerein(aufrufer, (ziel?.verein_id as string | null) ?? null);
+  if (fremd) return json({ fehler: fremd.fehler }, fremd.status);
 
   const vorschau = formeVorschau(gemessen.person, gemessen.zahlen,
     { faellt: FAELLT, anonym: ANONYM, blockiert: [] }, UNTER);

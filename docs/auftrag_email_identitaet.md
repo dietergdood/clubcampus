@@ -88,12 +88,15 @@ protokolliert statt unsichtbar und bequem.
 braucht den Service-Role-Key, der nicht ins Frontend gehört. Muster:
 `supabase/functions/invite-user`.
 
-**⚠ Kopier deren Autorisierung NICHT.** `invite-user` prüft nur, *dass* ein
-`Authorization`-Header da ist, nicht *wer* dahintersteht — jeder eingeloggte
-Benutzer kann sie heute aufrufen. Die neue Function prüft den Aufrufer gegen
-`benutzer.ist_admin` und dessen `verein_id` gegen die der Zielperson. Trag
-`invite-user` als eigenen Punkt auf die Liste offener Sicherheitsthemen; sie
-gehört gefixt, aber nicht in diesem Auftrag.
+**✅ Autorisierung: nimm `supabase/functions/_shared/aufrufer.ts`** — sie löst
+den Aufrufer auf und prüft `ist_admin` und `verein_id`. Nicht nachbauen.
+
+⚠ **Hier stand „Kopier deren Autorisierung NICHT"**, weil `invite-user` nur
+prüfte, *dass* ein `Authorization`-Header da ist. Gemessen am 23.08.2026 war
+die Lücke grösser als der Satz sagte: in diesem Header steht im Normalfall der
+publishable key aus dem JavaScript-Bündel — also **jeder**, nicht nur jeder
+Eingeloggte. Repariert am 23.08.2026; der Punkt auf der Liste offener
+Sicherheitsthemen entfällt.
 
 **Passwort-Rückfrage vor dem Absenden** in Fall B. Selbstbedienung bei der
 E-Mail heisst sonst: wer eine offene Sitzung übernimmt, übernimmt das Konto.

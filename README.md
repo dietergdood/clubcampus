@@ -199,13 +199,24 @@ RETURNING id;
 
 **3. URL:**
 ```
-https://clubcampus-fcherrliberg.vercel.app/<slug>
+https://www.clubcampus.app/<slug>
 ```
 Der Vereins-Slug wird automatisch aus dem ersten URL-Pfadsegment gelesen und lädt das Branding und die Daten des entsprechenden Vereins. Er muss in `vereine.slug` eingetragen sein — ohne Slug in der Adresse lädt das Portal keinen Verein, sondern zeigt eine Meldung.
 
 Die blosse Wurzel wird per `vercel.json` auf `/fcherrliberg` umgeleitet. Ein neu eingerichteter Verein ist also nur über seinen eigenen Slug erreichbar, nicht über die Wurzel.
 
-> **Domains.** `clubcampus.app` und `clubcampus.ch` zeigen aktuell **nicht** auf dieses Deployment (Stand 27.07.2026: `clubcampus.app` liefert eine fremde Apache-Seite mit ungültigem Zertifikat, `clubcampus.ch` löst nicht auf). Bis die Domains im Vercel-Projekt verbunden und die DNS umgezogen ist, gilt die `vercel.app`-Adresse.
+> **Domains — nachgemessen am 23.08.2026.** Der Absatz darüber war überholt und stand vier Wochen so da:
+>
+> | Adresse | Antwort |
+> |---|---|
+> | `www.clubcampus.app/<slug>` | **200, das Portal** — die gültige Adresse |
+> | `clubcampus.app` | 308 auf `www.` |
+> | `clubcampus-fcherrliberg.vercel.app` | **404** — die alte Adresse trägt nicht mehr |
+> | `clubcampus.ch` | löst weiterhin nicht auf |
+>
+> ⚠ **Das ist kein Schönheitsfehler.** `supabase/functions/invite-user` hatte `https://clubcampus.app` als Rückfallziel für den Link in der Einladungs-E-Mail — zum Zeitpunkt des Schreibens laut diesem Absatz eine fremde Apache-Seite. Eine Anleitung, die eine Adresse nennt, veraltet ohne jede Meldung; wer sie abschreibt, schreibt den alten Stand fest.
+>
+> ⚠ **Ein Ziel muss zusätzlich in der Supabase-Redirect-Allowlist stehen** (Auth → URL Configuration). Steht es nicht drin, verschickt Supabase die Einladung trotzdem — nur mit der Site-URL statt des Ziels. Kein Fehler, keine Meldung.
 
 ---
 
