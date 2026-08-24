@@ -958,6 +958,44 @@ aus".
 das nicht die fehlende Wirkung — die kommt über `pflichtfelderFuer()` —,
 sondern eine zweite, tote Rechnung daneben. Siehe den Punkt darunter.
 
+### ⚠ Die `auth.users`-Kette der Löschung ist ungeprüft — und warum niemand sie geprüft hat
+
+Stand 24.08.2026, nach dem ersten scharfen Lauf der **Sammellöschung**.
+
+Der Lauf hat funktioniert: zwei Personen (Heidi Studer, Peter Vogt), zwei
+Protokolleinträge zwei Sekunden auseinander, beide mit
+`abgeschlossen: true`, 914 → 912 Personen, die Liste sprang ohne Neuladen
+von 8 auf 6 Supporter.
+
+⚠ **Aber er hat den gefährlichsten Teil nicht berührt.** Keine der beiden
+Personen hatte ein Portal-Konto, also lief `auth.admin.deleteUser()` nicht.
+Genau dieser Aufruf ist am 23.08.2026 mit **„Database error loading user"**
+gescheitert, und genau er ist der Grund, warum die Reihenfolge in der Kette
+umgedreht wurde (erst Auth, dann `benutzer`).
+
+**Warum es niemand geprüft hat — und das ist keine Nachlässigkeit:**
+
+| | |
+|---|---|
+| Personen ohne Mitgliedschaft und ohne Kinder | 5 |
+| davon **mit** Konto | **1** |
+| und das ist | **das Administratorkonto des Auftraggebers** |
+
+`pruefeNichtSelbst` verhindert es ohnehin — und richtigerweise, denn wer sich
+selbst löscht, nimmt sein Konto mit und kann den Vorgang nicht zu Ende
+protokollieren. Die vier anderen Konten scheiden aus, weil sie an einer
+Mitgliedschaft oder an einem Kind hängen.
+
+⚠ **Ein Konto zu bauen, nur um es zu löschen, ist ausdrücklich abgelehnt**
+(Didi, 24.08.2026): die Adresse wäre danach verbrannt, und zwei sind schon
+so verloren gegangen. Der Preis ist höher als die Deckung.
+
+**Was das praktisch heisst:** die Löschkette ist bis `personen` belegt,
+darüber hinaus nur gelesen. Sobald ein echtes Konto ohne Mitgliedschaft und
+ohne Kinder entsteht — etwa ein ausgetretener Supporter mit Portal-Zugang —,
+ist das der erste Fall, an dem sich die Auth-Hälfte prüfen lässt. Bis dahin
+gilt sie als **ungeprüft**, nicht als funktionierend.
+
 ### Der Abschluss-Vermerk im Löschprotokoll — was `abgeschlossen = null` heisst
 
 Seit dem 23.08.2026 trägt jeder `person_geloescht`-Eintrag in `audit_log`
