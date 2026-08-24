@@ -10,7 +10,10 @@ import { bestimmendeArt } from "../../domains/person/personArtService.ts";
 import type { SetState } from "../../types.ts";
 
 /* ── Typen ── */
-type ElternkontaktRoh = Awaited<ReturnType<typeof fetchAlleElternkontakte>>[number];
+/* ⚠ `NonNullable`, seit die Ladefunktion bei einem Lesefehler `null` gibt
+   statt `[]`. Der Zeilentyp ist der der GELADENEN Liste; `null` ist kein
+   Zeilentyp, sondern die Aussage „nicht gelesen". */
+type ElternkontaktRoh = NonNullable<Awaited<ReturnType<typeof fetchAlleElternkontakte>>>[number];
 type KindVerknuepfung = ElternkontaktRoh["_alle_kinder"][number];
 
 export interface KindTeamRolle {

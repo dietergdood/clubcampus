@@ -387,13 +387,23 @@ export interface ArchivZeile {
  * offen", und das Archiv waere lautlos leer. Genau die Verwechslung, die
  * dieses Projekt schon mehrfach Stunden gekostet hat.
  */
-export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[]> {
+export async function fetchArchiv(sb: SbClient): Promise<ArchivZeile[] | null> {
   const { data, error } = await sb.from("personen")
     .select("id,vorname,nachname,offene_punkte,mitglieder(id,mitgliedtyp,aktiv,deaktiviert_am,deaktiviert_von)")
     .not("offene_punkte", "is", null)
     .order("nachname", { ascending: true });
 
-  if (error) { console.error("fetchArchiv error:", error); return []; }
+  /* ⚠ `null` BEI EINEM LESEFEHLER, NICHT `[]`. Der Unterschied ist der ganze
+     Punkt: `[]` heisst „nachgesehen, nichts da", `null` heisst „nicht
+     gelesen". Wer beides zu `[]` macht, verwandelt einen Fehler in eine
+     Datenlage — das teuerste Muster dieses Projekts.
+
+     ⚠ Und hier ist es besonders scharf: die Tab-Zahl ist die Laenge dieser
+     Liste. Bei `[]` stuende „0" da, als waere nachgesehen worden. Beim
+     Supporter-Tab ist es noch schaerfer — er rendert bei 0 GAR NICHT. Ein
+     einziger 42501 wuerde einen ganzen Bereich der Oberflaeche verschwinden
+     lassen, ohne dass es jemandem auffaellt. (Didi, 25.08.2026.) */
+  if (error) { console.error("fetchArchiv error:", error); return null; }
 
   return (data || [])
     /* ⚠ KEIN AKTIVES MITGLIED IM ARCHIV. Der Vermerk bleibt beim
@@ -437,15 +447,30 @@ interface MitgliedRoh {
   deaktiviert_von: string | null;
 }
 
-/** ⚠ Dieselbe Bedingung wie `fetchArchiv`. Zwei Regeln fuer eine Zahl waeren
-    genau der Fehler, den dieses Projekt heute dreimal gefunden hat. */
-export async function fetchArchivCount(sb: SbClient): Promise<number> {
-  const { count, error } = await sb.from("personen")
-    .select("id", { count: "exact", head: true })
-    .not("offene_punkte", "is", null);
-  if (error) { console.error("fetchArchivCount error:", error); return 0; }
-  return count || 0;
-}
+/* ⚠ `fetchArchivCount()` IST AM 25.08.2026 GEFALLEN — und der Grund steht
+   hier, weil er sich sonst wiederholt.
+
+   Sie zaehlte mit `count: "exact", head: true` und der Bedingung
+   `offene_punkte is not null`. Darueber stand woertlich der Kommentar
+   „Dieselbe Bedingung wie `fetchArchiv`. Zwei Regeln fuer eine Zahl waeren
+   genau der Fehler, den dieses Projekt heute dreimal gefunden hat."
+
+   ⚠ ES WAR NICHT DIESELBE BEDINGUNG. `fetchArchiv` nimmt zusaetzlich jede
+   Person heraus, die eine AKTIVE Mitgliedschaft hat (der Vermerk bleibt beim
+   Wiedereintritt absichtlich stehen). Die Zahl tat das nicht. Wer eine Person
+   mit stehendem Vermerk reaktivierte, sah danach dauerhaft „Archiv 1" ueber
+   einer leeren Liste.
+
+   Der Kommentar behauptete also genau das, was nicht galt — und wer ihn las,
+   sah nicht nach. Dieselbe Familie wie die vier Faelle vom 23.08.2026.
+
+   ⚠ DIE REPARATUR IST NICHT, DIE BEDINGUNG ZU KOPIEREN. Zwei Stellen, die
+   dieselbe Bedingung fuehren, laufen wieder auseinander — nur spaeter. Der
+   Aufrufer nimmt jetzt `fetchArchiv(sb).length`: eine Abfrage, eine Regel,
+   und die Zahl kann per Bauart nicht mehr von ihrer Liste abweichen.
+
+   Der Preis ist ehrlich: statt eines `head`-Zaehlers werden die Zeilen
+   geladen. Das Archiv hat heute EINE. */
 
 /* ── Mitglieder Ansichten ── */
 

@@ -27,6 +27,7 @@ describe("fetchSupporter — die zwei Ausschluesse", () => {
   it("nimmt eine Person ohne Mitgliedschaft und ohne Kind", async () => {
     const sb = makeSb({ "personen.select": { data: [person()] } });
     const raus = await fetchSupporter(sb as never, "v-1");
+    if (raus === null) throw new Error("fetchSupporter gab null — Lesefehler, nicht leer");
     expect(raus.map(p => p.id)).toEqual(["p-1"]);
   });
 
@@ -35,6 +36,7 @@ describe("fetchSupporter — die zwei Ausschluesse", () => {
       data: [person({ id: "p-1", mitglieder: [{ id: 42 }] }), person({ id: "p-2" })],
     } });
     const raus = await fetchSupporter(sb as never, "v-1");
+    if (raus === null) throw new Error("fetchSupporter gab null — Lesefehler, nicht leer");
     expect(raus.map(p => p.id)).toEqual(["p-2"]);
   });
 
@@ -55,6 +57,7 @@ describe("fetchSupporter — die zwei Ausschluesse", () => {
       data: [person({ id: "p-1", eltern_kinder: [{ person_id: "p-1" }] }), person({ id: "p-2" })],
     } });
     const raus = await fetchSupporter(sb as never, "v-1");
+    if (raus === null) throw new Error("fetchSupporter gab null — Lesefehler, nicht leer");
     expect(raus.map(p => p.id)).toEqual(["p-2"]);
   });
 
@@ -71,7 +74,7 @@ describe("fetchSupporter — das Konto", () => {
     const sb = makeSb({ "personen.select": {
       data: [person({ benutzer: [{ id: "u-1", role: "supporter", aktiv: true }] })],
     } });
-    const [p] = await fetchSupporter(sb as never, "v-1");
+    const [p] = (await fetchSupporter(sb as never, "v-1")) ?? [];
     expect(p.rolle).toBe("supporter");
     expect(p.hat_benutzer).toBe(true);
     expect(p.benutzer_deaktiviert).toBe(false);
@@ -83,14 +86,14 @@ describe("fetchSupporter — das Konto", () => {
     const sb = makeSb({ "personen.select": {
       data: [person({ benutzer: [{ id: "u-1", role: "supporter", aktiv: false }] })],
     } });
-    const [p] = await fetchSupporter(sb as never, "v-1");
+    const [p] = (await fetchSupporter(sb as never, "v-1")) ?? [];
     expect(p.hat_benutzer).toBe(true);
     expect(p.benutzer_deaktiviert).toBe(true);
   });
 
   it("ohne Konto: kein Zugang, keine Rolle", async () => {
     const sb = makeSb({ "personen.select": { data: [person()] } });
-    const [p] = await fetchSupporter(sb as never, "v-1");
+    const [p] = (await fetchSupporter(sb as never, "v-1")) ?? [];
     expect(p.hat_benutzer).toBe(false);
     expect(p.benutzer_deaktiviert).toBe(false);
     expect(p.rolle).toBeNull();
@@ -104,7 +107,20 @@ describe("fetchSupporter — ein Fehler ist keine Datenlage", () => {
        Supporter“. Genau das soll dieser Test verhindern. */
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const sb = makeSb({ "personen.select": { data: null, error: pgError("keine Rechte", "42501") } });
-    expect(await fetchSupporter(sb as never, "v-1")).toEqual([]);
+    /* ⚠ `null`, NICHT `[]` — und bis zum 25.08.2026 stand hier `[]`.
+       Der Testname sagte schon das Richtige („statt ihn als leere Liste
+       auszugeben"), die Erwartung sagte das Gegenteil: sie hielt genau die
+       leere Liste fest, die der Name ausschliessen wollte.
+
+       ⚠ Ein Test, der den IST-Zustand festhaelt, obwohl der Ist-Zustand
+       falsch ist, zementiert den Fehler und faellt ausgerechnet dann um,
+       wenn ihn jemand behebt. Genau das ist hier passiert. (Dieselbe Lehre
+       wie bei `rolleLabelMap` am 20.08.2026.)
+
+       Warum es hier besonders zaehlt: die Tab-Zahl ist die Laenge dieser
+       Liste, und der Supporter-Tab rendert bei 0 GAR NICHT. Ein `[]` bei
+       einem Lesefehler loeschte einen ganzen Bereich der Oberflaeche. */
+    expect(await fetchSupporter(sb as never, "v-1")).toBeNull();
     expect(spy).toHaveBeenCalled();
   });
 });
@@ -124,6 +140,7 @@ describe("fetchSupporter — die Austritts-Art", () => {
   it("⚠ nimmt eine AUSGETRETENE Person auf, wenn sie die Art trägt", async () => {
     const sb = mitArt([person({ id: "p-1", mitglieder: [{ id: 42 }] })], ["p-1"]);
     const raus = await fetchSupporter(sb as never, "v-1");
+    if (raus === null) throw new Error("fetchSupporter gab null — Lesefehler, nicht leer");
     expect(raus.map(p => p.id)).toEqual(["p-1"]);
   });
 
@@ -131,6 +148,7 @@ describe("fetchSupporter — die Austritts-Art", () => {
     /* Sonst stünde dieselbe Person an zwei Orten. */
     const sb = mitArt([person({ id: "p-1", mitglieder: [{ id: 42 }] })], []);
     const raus = await fetchSupporter(sb as never, "v-1");
+    if (raus === null) throw new Error("fetchSupporter gab null — Lesefehler, nicht leer");
     expect(raus).toEqual([]);
   });
 
@@ -145,6 +163,6 @@ describe("fetchSupporter — die Austritts-Art", () => {
       "personen.select": { data: [person({ id: "p-1", mitglieder: [{ id: 42 }] }), person({ id: "p-2" })] },
       "vereine.select": { data: { austritt_art_id: null } },
     });
-    expect((await fetchSupporter(sb as never, "v-1")).map(p => p.id)).toEqual(["p-2"]);
+    expect(((await fetchSupporter(sb as never, "v-1")) ?? []).map(p => p.id)).toEqual(["p-2"]);
   });
 });

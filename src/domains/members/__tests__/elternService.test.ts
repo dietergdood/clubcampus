@@ -330,7 +330,7 @@ describe("fetchAlleElternkontakte — Portal-Spalte", () => {
       "personen.select":      { data: [person] },
       "portal_zugang.select": { data: [{ person_id: "p-1", hat_zugang: true }] },
     });
-    const [zeile] = await fetchAlleElternkontakte(sb as never, "v-1");
+    const [zeile] = (await fetchAlleElternkontakte(sb as never, "v-1")) ?? [];
     expect(zeile.hat_zugang).toBe(true);
     /* benutzer_id bleibt daneben stehen — es wird fuer Aktionen gebraucht. */
     expect(zeile.benutzer_id).toBeNull();
@@ -341,7 +341,7 @@ describe("fetchAlleElternkontakte — Portal-Spalte", () => {
       "personen.select":      { data: [person] },
       "portal_zugang.select": { data: [] },
     });
-    const [zeile] = await fetchAlleElternkontakte(sb as never, "v-1");
+    const [zeile] = (await fetchAlleElternkontakte(sb as never, "v-1")) ?? [];
     expect(zeile.hat_zugang).toBe(false);
   });
 
@@ -350,7 +350,7 @@ describe("fetchAlleElternkontakte — Portal-Spalte", () => {
       "personen.select":      { data: [person] },
       "portal_zugang.select": { data: [{ person_id: "p-1", hat_zugang: false }] },
     });
-    const [zeile] = await fetchAlleElternkontakte(sb as never, "v-1");
+    const [zeile] = (await fetchAlleElternkontakte(sb as never, "v-1")) ?? [];
     expect(zeile.hat_zugang).toBe(false);
   });
 });

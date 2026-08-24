@@ -112,7 +112,7 @@ const PERSON_SELECT = `
 export async function fetchSupporter(
   sb: SbClient,
   vereinId: string,
-): Promise<SupporterRoh[]> {
+): Promise<SupporterRoh[] | null> {
   const { data, error } = await sb.from("personen")
     .select(PERSON_SELECT)
     .eq("verein_id", vereinId)
@@ -121,9 +121,19 @@ export async function fetchSupporter(
   /* error lesen, nicht nur try/catch: sb.from().select() wirft bei einem
      Datenbankfehler nicht, es liefert { data, error }. Ohne diese Zeile
      saehe ein 42501 aus wie „es gibt keine Supporter". */
+  /* ⚠ `null` BEI EINEM LESEFEHLER, NICHT `[]`. Der Unterschied ist der ganze
+     Punkt: `[]` heisst „nachgesehen, nichts da", `null` heisst „nicht
+     gelesen". Wer beides zu `[]` macht, verwandelt einen Fehler in eine
+     Datenlage — das teuerste Muster dieses Projekts.
+
+     ⚠ Und hier ist es besonders scharf: die Tab-Zahl ist die Laenge dieser
+     Liste. Bei `[]` stuende „0" da, als waere nachgesehen worden. Beim
+     Supporter-Tab ist es noch schaerfer — er rendert bei 0 GAR NICHT. Ein
+     einziger 42501 wuerde einen ganzen Bereich der Oberflaeche verschwinden
+     lassen, ohne dass es jemandem auffaellt. (Didi, 25.08.2026.) */
   if (error) {
     console.error("fetchSupporter error:", error);
-    return [];
+    return null;
   }
 
   /* Die eingestellte Austritts-Art — der zweite Weg in diese Liste. Fehlt

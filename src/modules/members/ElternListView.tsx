@@ -80,36 +80,31 @@ interface ElternListViewProps {
   /** ⚠ Sammelaktion „Person löschen (DSGVO)". Bekommt Id UND Name, weil das
       Modal die Namen zeigt, bevor seine eigene Vorschau da ist. */
   onLoeschen?: ((personen: { id: string; name: string }[]) => void) | null;
-  /** Aendert sich, wenn von aussen etwas an den Daten geschah — die Liste
-      laedt dann neu, ohne dass es eine zweite Ladefunktion braucht. */
-  datenStand?: number;
+  /**
+   * Die Zeilen — von `MitgliederModul` geladen, nicht hier.
+   *
+   * ⚠ SEIT DEM 25.08.2026 EINE QUELLE. Vorher holte diese Komponente die
+   * Liste selbst UND das Modul holte sie noch einmal fuer die Zahl im Tab.
+   * Zwei Abfragen ueber 395 Zeilen, zwei Staende — und sie liefen
+   * auseinander: „Entfernen" raeumte hier lokal auf und meldete nichts nach
+   * oben, also stand im Tab weiter 395, waehrend die Liste 393 zeigte.
+   *
+   * ⚠ Die Zahl MUSS im Modul liegen, nicht hier: der Tab zeigt sie, bevor er
+   * geoeffnet wird — dann gibt es diese Komponente noch gar nicht.
+   */
+  rows: ElternRow[];
+  /** Nach einer Aktion, die Zeilen entfernt: laesst das Modul neu laden. */
+  onNeuLaden?: (() => void) | null;
 }
 
 export function ElternListView({
   sb, vereinId, account, isAdmin = false,
   onNavToMember = null, onOeffnen = null,
   onMitgliedWerden = null, onArtAendern = null,
-  onLoeschen = null, datenStand = 0,
+  onLoeschen = null, rows, onNeuLaden = null,
 }: ElternListViewProps) {
-  const [rows, setRows] = useState<ElternRow[]>([]);
   const [confirm, confirmDialog] = useConfirm();
   const [expandedKinder, setExpandedKinder] = useState<Set<string>>(new Set());
-
-  /* Kein `reload()`: `MitgliederModul` gibt beim Oeffnen einer Person die
-     ganze Liste auf (fruehes `return <MemberDetail/>`), diese Komponente wird
-     abgehaengt und beim Zurueckkommen neu montiert — der useEffect darunter
-     laedt dann ohnehin. Eine zweite Ladefunktion waere ein zweiter Ort, an
-     dem dieselbe Liste auseinanderlaufen kann.
-
-     ⚠ EINE AUSNAHME, UND SIE IST DER GRUND FUER `datenStand`: eine
-     Sammelaktion IN dieser Liste haengt sie nicht ab. Nach dem Loeschen
-     stuenden die Geloeschten weiter da — und eine Anzeige, die stehenbleibt,
-     ist von einer Handlung, die nicht stattfand, nicht zu unterscheiden.
-     Deshalb kein zweiter Ladeweg, sondern eine Zahl, die sich aendert. */
-  useEffect(() => {
-    if (!sb || !vereinId) return;
-    fetchAlleElternkontakte(sb, vereinId).then(data => setRows(mapEltern(data)));
-  }, [sb, vereinId, datenStand]);
 
   const alleTeams = [...new Set(rows.flatMap(r => r.teams))].sort();
 
@@ -153,7 +148,11 @@ export function ElternListView({
     });
     if (!sb || !ok) return;
     for (const id of selected) await entferneElternVerknuepfung(sb, String(id));
-    setRows(prev => prev.filter(r => !selected.has(r.id)));
+    /* ⚠ NEU LADEN, NICHT LOKAL WEGRAEUMEN. Bis zum 25.08.2026 stand hier
+       `setRows(prev => prev.filter(...))`. Die Zeilen verschwanden dann aus
+       DIESER Liste, und die Zahl im Tab wusste nichts davon — 393 gegen 395.
+       Der Zustand liegt jetzt im Modul; wer ihn aendert, sagt es dorthin. */
+    if (onNeuLaden) onNeuLaden();
   }
 
   return (

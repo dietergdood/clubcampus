@@ -16,7 +16,7 @@ import type { Account, Sb, SetState } from "../../types.ts";
 
 /* Archivierte Mitglieder kommen aus fetchArchiv — nur eine Teilauswahl
    der Spalten, deshalb direkt vom Service abgeleitet. */
-type ArchivMitglied = Awaited<ReturnType<typeof fetchArchiv>>[number];
+type ArchivMitglied = NonNullable<Awaited<ReturnType<typeof fetchArchiv>>>[number];
 
 const COL_DEFS: ColDef[] = [
   { key:"name",           label:"Name",          default:true, alwaysOn:true },
@@ -105,7 +105,8 @@ function buildArchivGroups(
 
 interface ArchivViewProps {
   archivData: ArchivMitglied[];
-  setArchivData: SetState<ArchivMitglied[]>;
+  /** ⚠ `false` heisst „noch nicht gelesen ODER Lesefehler" — nicht „leer".
+      Das Modul leitet es aus `archivRows !== null` ab. */
   archivLoaded: boolean;
   sb: Sb;
   /* Setzt den Portal-Zugang beim Reaktivieren wieder aktiv */
@@ -121,7 +122,11 @@ interface ArchivViewProps {
   isAdmin?: boolean;
 }
 
-export function ArchivView({ archivData, setArchivData, archivLoaded, sb, onUpdatePortalZugang, onReload, onOpenMember, account = null, vereinId = null, isAdmin = false }: ArchivViewProps) {
+/* ⚠ `setArchivData` IST AM 25.08.2026 GEFALLEN. Die Prop wurde durchgereicht
+   und in dieser Datei NIE aufgerufen — ein Schreibweg, den es nur im Typ gab.
+   Die Zeilen gehoeren jetzt dem Modul; wer sie aendern will, laesst neu laden
+   (`onReload`). Damit koennen Tab-Zahl und Liste nicht auseinanderlaufen. */
+export function ArchivView({ archivData, archivLoaded, sb, onUpdatePortalZugang, onReload, onOpenMember, account = null, vereinId = null, isAdmin = false }: ArchivViewProps) {
   const [confirm, confirmDialog] = useConfirm();
   const rows: ArchivRow[] = (archivData || []).map(mapArchivRow);
 

@@ -5,7 +5,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TI } from "../icons.tsx";
 import { Av, useConfirm } from "../theme.ts";
-import { fetchArchiv, fetchArchivCount, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen, logAktivitaet, AKTIVITAET_TYP } from "../domains/members/memberService.ts";
+import { fetchArchiv, fetchMitglied, fetchAlleElternkontakte, fetchPortalFunktionen, logAktivitaet, AKTIVITAET_TYP } from "../domains/members/memberService.ts";
+import type { ArchivZeile } from "../domains/members/memberService.ts";
 import { SAVED_VIEWS, COL_GROUPS, ALL_COLS, GROUP_OPTIONS, GROUP_OPTIONS_MORE } from "./members/memberConstants.ts";
 import { fetchFeldkonfig } from "../domains/members/feldkonfigService.ts";
 import type { FeldkonfigZeile } from "../domains/members/feldkonfig.ts";
@@ -31,6 +32,8 @@ import { MemberKPIs } from "./members/MemberKPIs.tsx";
 import { makeMemberRenderCell } from "./members/MemberListCell.tsx";
 import { useMemberMeta } from "../domains/members/useMemberMeta.ts";
 import { ElternListView } from "./members/ElternListView.tsx";
+import { mapEltern } from "./members/elternListUtils.tsx";
+import type { ElternRow } from "./members/elternListUtils.tsx";
 import { SupporterListView } from "./members/SupporterListView.tsx";
 import { ListView } from "../shared/list/ListView.tsx";
 import { MemberDetail } from "./members/MemberDetail.tsx";
@@ -75,7 +78,12 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [selectedMember,setSelectedMember]=useState<SelectedMember|null>(null);
   const [showNeuesMitglied,setShowNeuesMitglied]=useState(false);
   const [feldkonfig,setFeldkonfig]=useState<FeldkonfigZeile[]>([]);
-  const [supporterRoh,setSupporterRoh]=useState<SupporterRoh[]>([]);
+  /* ⚠ `null` = noch nicht gelesen ODER Lesefehler, `[]` = keine Supporter.
+     Der Unterschied entscheidet, ob der Tab erscheint: bei `[]` erscheint er
+     nicht, und das ist richtig — bei `null` erscheint er ebenfalls nicht,
+     aber dann ist es eine Aussage ueber die Abfrage, nicht ueber den Verein.
+     Beides sieht gleich aus; der Unterschied steht in der Konsole. */
+  const [supporterRoh,setSupporterRoh]=useState<SupporterRoh[]|null>(null);
   const [mitgliedWerdenFuer,setMitgliedWerdenFuer]=useState<PersonFuerMitgliedschaft|null>(null);
   /* ⚠ EINE LISTE, auch fuer einen. Zwei Zustaende — einer fuer die einzelne
      Zeile, einer fuer die Auswahl — waeren zwei Wege zu demselben Dialog, und
@@ -128,10 +136,28 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
   const [archivTab,setArchivTab]=useState(false);
   const [elternTab,setElternTab]=useState(false);
   const [supporterTab,setSupporterTab]=useState(false);
-  const [archivData,setArchivData]=useState<Awaited<ReturnType<typeof fetchArchiv>>>([]);
-  const [archivLoaded,setArchivLoaded]=useState(false);
-  const [archivCount,setArchivCount]=useState<number|null>(null);
-  const [elternCount,setElternCount]=useState<number|null>(null);
+  /* ⚠ `archivData` und `archivLoaded` sind gefallen (25.08.2026): sie waren
+     ein zweiter Stand neben `archivRows`. `archivLoaded` ist jetzt schlicht
+     `archivRows !== null` — eine Aussage statt einer Flagge, die jemand
+     vergessen kann zu setzen. */
+  /* ⚠ KEINE EIGENEN ZAEHLER MEHR. Bis zum 25.08.2026 hielten `archivCount`
+     und `elternCount` je eine Zahl aus einer EIGENEN Abfrage, waehrend die
+     Listen ihre Zeilen woanders herholten — zwei Regeln fuer eine Zahl, und
+     beide sind auseinandergelaufen (Archiv dauerhaft durch verschiedene
+     Filter, Eltern nach jeder Aktion, die Zeilen entfernt).
+
+     Jetzt haelt das Modul die ZEILEN, und die Zahl ist ihre Laenge. Die
+     Mitglieder- und Supporter-Zahlen taten das immer schon; jetzt tun es
+     alle vier.
+
+     ⚠ `null` heisst „noch nicht geladen", `[]` heisst „nachgesehen, leer".
+     Der Unterschied ist die Antwort auf einen Lesefehler: die Ladefunktionen
+     geben bei einem Fehler `null` zurueck, nicht `[]`. Sonst sieht ein 42501
+     aus wie „nichts da" — und beim Supporter-Tab hiesse das, dass er GAR
+     NICHT ERSCHEINT. Ein Lesefehler wuerde einen ganzen Bereich der
+     Oberflaeche loeschen, ohne dass es jemandem auffaellt. */
+  const [archivRows,setArchivRows]=useState<ArchivZeile[]|null>(null);
+  const [elternRows,setElternRows]=useState<ElternRow[]|null>(null);
 
   /* ⚠ DIESE DREI EFFEKTE WAREN VOM 23. BIS 24.08.2026 WEG, und nichts hat es
      gemeldet: Typecheck gruen, Build gruen, 807 Tests gruen. Sichtbar war nur,
@@ -145,18 +171,19 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
      `MitgliedtypFelderSektion` mitnahm. Die Regel steht in CLAUDE.md, und ich
      habe sie nicht befolgt: erst zeigen, was im Schnittbereich liegt, dann
      schneiden. */
+  /* ⚠ EINE LADUNG JE LISTE, und die Tab-Zahl liest dasselbe Array.
+     `datenStand` ist der gemeinsame Anlass: wer irgendwo etwas entfernt,
+     erhoeht ihn, und alle vier frischen auf. Vorher hatte jede Zahl ihren
+     eigenen Ausloeser — `archivLoaded` fuer die eine, gar keinen fuer die
+     andere. */
   useEffect(()=>{
     if(!sb) return;
-    fetchArchivCount(sb).then(count=>setArchivCount(count));
-  },[sb,archivLoaded]);
+    fetchArchiv(sb).then(setArchivRows);
+  },[sb,datenStand]);
   useEffect(()=>{
     if(!sb||!vereinId) return;
-    fetchAlleElternkontakte(sb,vereinId).then(data=>setElternCount(data.length));
-  },[sb,vereinId]);
-  useEffect(()=>{
-    if(!sb||!archivTab||archivLoaded) return;
-    fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
-  },[sb,archivTab,archivLoaded]);
+    fetchAlleElternkontakte(sb,vereinId).then(d=>setElternRows(d===null?null:mapEltern(d)));
+  },[sb,vereinId,datenStand]);
 
   // Direkte Navigation vom Kader-Modul
   useEffect(()=>{
@@ -207,7 +234,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
      Was ein Supporter nicht hat (Mitgliedtyp, Teams, Spielerpass, Eintritt),
      steht dort leer. */
   const supporter: MemberRow[]=useMemo(
-    ()=>mapSupporter(supporterRoh,dbPortalRollen).map(m=>({
+    ()=>mapSupporter(supporterRoh||[],dbPortalRollen).map(m=>({
       ...m,
       funktionsgruppen:[...new Set((m.funktionen||[]).map(f=>funktionenGruppenMap[f]).filter((g): g is string => Boolean(g)))],
     })),[supporterRoh,dbPortalRollen,funktionenGruppenMap]);
@@ -406,9 +433,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
 
 
   /* ── Detail-Modal ── */
+  /* ⚠ Frischt die ZEILEN auf, nicht eine Zahl daneben. Die Tab-Zahl ist
+     ihre Laenge; damit kann sie nicht mehr abweichen. */
   async function refreshArchivCount(){
     if(!sb) return;
-    fetchArchivCount(sb).then(count=>setArchivCount(count));
+    fetchArchiv(sb).then(setArchivRows);
   }
 
   async function reloadMember(id: number){
@@ -495,7 +524,6 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
              Loeschung, die nicht stattfand, nicht zu unterscheiden. */
           ladeSupporter();
           setDatenStand(n=>n+1);
-          setArchivLoaded(false);
           if(onReload) onReload();
         }}
       />
@@ -533,7 +561,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
          Personenart. Wer als Mitglied angelegt wurde, gehoert ueber „Person
          löschen" weg. Gemessen am 23.08.2026 trifft das auf 1 von 512
          Mitgliedschaften zu. */
-      onReaktiviert={(id)=>{setArchivLoaded(false);if(id)reloadMember(id);}}
+      onReaktiviert={(id)=>{setDatenStand(n=>n+1);if(id)reloadMember(id);}}
       onOeffnePerson={oeffnePerson}
       sb={sb} role={role} account={account} feldkonfig={feldkonfig}
       dbMitglieder={dbMitglieder} dbMitgliedtypen={dbMitgliedtypen}
@@ -594,12 +622,13 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                 Mitglieder <span className="cc-ml-tab-count">{(allMembers||[]).length}</span>
               </button>
               <button className={`cc-ml-tab${archivTab?" cc-ml-tab-active":""}`} onClick={()=>{
+                /* ⚠ Kein Nachladen beim Klick mehr: die Zeilen sind schon da,
+                   weil die Tab-Zahl sie braucht. Vorher lud der Klick ein
+                   ZWEITES Mal — und das war der Ort, an dem Zahl und Liste
+                   auseinanderliefen. */
                 setArchivTab(true);setElternTab(false);setSupporterTab(false);
-                if(!archivLoaded&&sb){
-                  fetchArchiv(sb).then(data=>{setArchivData(data);setArchivLoaded(true);});
-                }
               }}>
-                Archiv {archivCount!==null&&<span className="cc-ml-tab-count">{archivCount}</span>}
+                Archiv {archivRows!==null&&<span className="cc-ml-tab-count">{archivRows.length}</span>}
               </button>
               <button className={`cc-ml-tab${elternTab?" cc-ml-tab-active":""}`} onClick={()=>{setElternTab(true);setArchivTab(false);setSupporterTab(false);}}>
                 {/* ⚠ „Eltern", und der Tab zeigt die VERKNUEPFUNG, nicht die
@@ -613,7 +642,7 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
                     Ehemalige" — das war die Zeit, in der es eine abgeleitete
                     Art „Ehemaliges Elternteil" gab. Mit ihrem Rueckbau ist der
                     Zusatz ueberholt. (Entscheidung Didi, 22.08.2026.) */}
-                Eltern {elternCount!==null&&<span className="cc-ml-tab-count">{elternCount}</span>}
+                Eltern {elternRows!==null&&<span className="cc-ml-tab-count">{elternRows.length}</span>}
               </button>
               {supporter.length>0&&(
                 <button className={`cc-ml-tab${supporterTab?" cc-ml-tab-active":""}`} onClick={()=>{setSupporterTab(true);setArchivTab(false);setElternTab(false);}}>
@@ -672,10 +701,11 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
           }):null}
           onArtAendern={istVerwaltung?(ids=>setArtAendernFuer(ids)):null}
           onLoeschen={istVerwaltung?(ps=>setLoeschenFuer(ps)):null}
-          datenStand={datenStand}
+          rows={elternRows||[]}
+          onNeuLaden={()=>setDatenStand(n=>n+1)}
         />
       ):archivTab?(
-        <ArchivView archivData={archivData} setArchivData={setArchivData} archivLoaded={archivLoaded} sb={sb} account={account} vereinId={vereinId} isAdmin={istVerwaltung} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setArchivLoaded(false);if(onReload)onReload();}} onOpenMember={async m=>{
+        <ArchivView archivData={archivRows||[]} archivLoaded={archivRows!==null} sb={sb} account={account} vereinId={vereinId} isAdmin={istVerwaltung} onUpdatePortalZugang={onUpdatePortalZugang} onReload={()=>{setDatenStand(n=>n+1);if(onReload)onReload();}} onOpenMember={async m=>{
           if(!sb) return;
           /* ⚠ SEIT SCHRITT 2 IST `m.id` DIE PERSON, nicht die Mitgliedschaft
              — das Archiv ist eine Personenliste. Wer eine beendete

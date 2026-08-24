@@ -238,13 +238,44 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   | Spalte | angelegt für | gelesen von |
   |---|---|---|
-  | `spiele.sfv_spiel_nr` | die Spielnummer des Verbands | **niemandem** — `spielMapper` las nur `spiel_nr`. Die Rückfallregel stand im Kommentar von `migration_sfv_spielinfo.sql` |
+  | ~~`spiele.sfv_spiel_nr`~~ | die Spielnummer des Verbands | ✅ **berichtigt am 25.08.2026** — sie wird seit dem 20.08.2026 gelesen (`spielMapper.ts:107`). Der Eintrag stand danach fünf Tage falsch da; siehe den Abschnitt darunter |
   | `mitgliedtypen.zaehlt_als_mitgliedschaft` | die Listentrennung | **niemandem mehr**, seit der Supporter-Rückbau nach Tabelle trennt statt nach Merkmal |
   | `personen.profil_geprueft_at` + die Pflichtfeld-Matrix | der Datenprüfung | `getProfilFehlend()` **wird nie aufgerufen** (`clubcampus.tsx:465`) |
 
   Dazu als viertes `api_verbindungen.active`: gelesen, aber nur von der Oberfläche, während die Edge Function es ignoriert — sechs Tage grauer Stecker für einen Anschluss, der stündlich lief.
 
   Das gemeinsame Merkmal ist immer dasselbe: **es schlägt nichts fehl.** Kein Fehler im Build, keine Meldung im Log, kein roter Test. Deshalb hilft hier keine Prüfung, sondern nur die Frage beim Anlegen — *wer liest das?* Fällt die Antwort schwer, ist die Spalte entweder verfrüht oder der Auftrag unvollständig.
+
+- **⚠ `spiele.spiel_nr` hat noch nie einen Wert getragen — und die Anzeige zeigt seit jeher den Rückfallzweig.**
+
+  Gemessen am 25.08.2026: **0 von 269** Spielen haben `spiel_nr` gesetzt. `sfv_spiel_nr` dagegen bei **269 von 269**.
+
+  ```ts
+  spielMapper.ts:107   spielNr: z.spiel_nr || z.sfv_spiel_nr || "",
+  ```
+
+  Der linke Zweig hat also **nie** getroffen. Was auf dem Schirm steht, ist immer die Nummer des Verbands.
+
+  ⚠ **Das ist die umgekehrte Richtung des „wer liest diese Spalte?"-Fehlers, und sie ist schwerer zu sehen.** Dort wird eine Spalte befüllt und von niemandem gelesen; hier wird eine gelesen, die niemand befüllt. Beide Male schlägt nichts fehl. Aber im zweiten Fall sieht es sogar richtig aus: die Anzeige zeigt eine plausible Nummer, nur eben aus einer anderen Quelle als gedacht.
+
+  `spiel_nr` ist als **vereinseigene** Nummer gedacht (`migration_sfv_spielplan.sql` führt sie unter der Feldhoheit des Vereins — der Sync fasst sie nicht an). Zu entscheiden ist also nicht, ob der Rückfall stimmt, sondern **ob die Spalte einen Zweck hat**: pflegt jemand eigene Nummern von Hand, oder ist sie ein Rest? Wenn Letzteres, fällt sie samt der `||`-Kette.
+
+  ⚠ **Bis dahin nicht "aufräumen".** Ein `||` mit totem linkem Zweig sieht nach Zierrat aus und ist der einzige Ort, an dem eine eigene Nummer je erscheinen könnte.
+
+- **⚠ Der Verweis auf den FVRZ-Spielbericht: `tg=` ist `spiele.sfv_match_id`.**
+
+  Direkt belegt am 25.08.2026, nicht hergeleitet — die Seite zeigte bei `tg=4393132` unser Spiel vom 23.08.2026 (FC Herrliberg 3 – FC Blau-Weiss Erlenbach 1, 3:3) samt Aufstellung, und die dort genannte „Spielnummer: 177238" ist genau unsere `sfv_spiel_nr`.
+
+  ```
+  https://matchcenter.fvrz.ch/default.aspx?lng=1&cxxlnus=1&v=253&a=tg&{ID}&bn=0
+                                                                    ↑ tg=sfv_match_id
+  ```
+
+  Nur `tg` wechselt; `v=253` ist die Ansicht „Spielbericht". Gefüllt bei **269 von 269** Spielen, in jedem Wettbewerb.
+
+  ⚠ **Die beiden Zahlen sind NICHT austauschbar.** `sfv_match_id` (7-stellig, ~4.3 Mio, aus `matchId`) gehört in die URL; `sfv_spiel_nr` (6-stellig, aus `matchNumber`) steht auf der Seite und funktioniert in `tg=` nicht. Innerhalb einer Gruppe laufen beide parallel hoch, mit einem gruppenspezifischen Versatz — deshalb sehen sie verwandt aus und sind es nicht.
+
+  ⚠ Und der Server antwortet auf `WebFetch` mit **403**. Ein Link aus dem Browser geht; ein serverseitiger Abruf nicht.
 
 - **Nach jeder Strukturänderung gehören Dump UND Typen nachgezogen** — `npx supabase db dump --linked -f supabase/schema.sql` *und* `npm run gen:types`. Am 05.08.2026 fehlten in `database.types.ts` gleich drei Dinge aus vorherigen Etappen: die ganze Tabelle `personen`, `mitglieder.person_id` und die Fremdschlüsselbeziehung, ohne die PostgREST den Join nicht typisiert. Der Dump allein reicht nicht.
 - **Was „Supporter" in diesem Verein heisst — und was er NICHT heisst.** Ein Supporter ist jemand, der dem Verein **verbunden bleibt**: ehemalige Spieler, Eltern nach dem Austritt des Kindes, Leute die mithelfen. **Nicht finanziell.** „Gönner" ist ein Sponsoring-Begriff und meint etwas anderes; wenn Sponsoring einmal ein Thema wird, ist es ein eigenes Modul und darf das Wort behalten.

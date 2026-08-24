@@ -151,7 +151,20 @@ export async function fetchAlleElternkontakte(sb: SbClient, vereinId: string) {
     `)
     .eq("verein_id", vereinId)
     .order("nachname", { ascending: true });
-  if (error) console.error("fetchAlleElternkontakte error:", error);
+  /* ⚠ `null` BEI EINEM LESEFEHLER, NICHT `[]`. Der Unterschied ist der ganze
+     Punkt: `[]` heisst „nachgesehen, nichts da", `null` heisst „nicht
+     gelesen". Wer beides zu `[]` macht, verwandelt einen Fehler in eine
+     Datenlage — das teuerste Muster dieses Projekts.
+
+     ⚠ Und hier ist es besonders scharf: die Tab-Zahl ist die Laenge dieser
+     Liste. Bei `[]` stuende „0" da, als waere nachgesehen worden. Beim
+     Supporter-Tab ist es noch schaerfer — er rendert bei 0 GAR NICHT. Ein
+     einziger 42501 wuerde einen ganzen Bereich der Oberflaeche verschwinden
+     lassen, ohne dass es jemandem auffaellt. (Didi, 25.08.2026.) */
+  if (error) {
+    console.error("fetchAlleElternkontakte error:", error);
+    return null;
+  }
 
   /* Portal-Zugang fuer die ANZEIGE aus der Sicht `portal_zugang`, nicht aus
      dem eingebetteten benutzer(id) oben. Auf `benutzer` liegen nur
