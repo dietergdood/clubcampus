@@ -49,7 +49,11 @@ body{font-size:14px;font-family:inherit;margin:0;padding:0}
 .cc-btn-group-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
 
 /* ── Segment ── */
-.cc-seg{display:flex;gap:2px;background:var(--surface2);border-radius:8px;padding:3px}
+/* ⚠ Dieselbe Reparatur wie bei `.cc-ml-tabs-bar`. Fuenf Verwender
+   (Nachrichten, Mitgliedtyp-Felder, Teams, Ereignis-Korrektur,
+   Design-System); `.cc-seg-item` hat `white-space:nowrap` schon. */
+.cc-seg{display:flex;gap:2px;background:var(--surface2);border-radius:8px;padding:3px;overflow-x:auto;min-width:0;scrollbar-width:none}
+.cc-seg::-webkit-scrollbar{display:none}
 .cc-seg-item{flex:1;padding:5px 10px;border-radius:6px;border:none;cursor:pointer;font-size:14px;font-weight:400;background:transparent;color:var(--sub);transition:all 0.1s;white-space:nowrap;font-family:inherit}
 .cc-seg-item:hover{color:var(--text)}
 .cc-seg-item:active{transform:scale(0.98)}
@@ -244,8 +248,6 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-card-table{padding:0;overflow:visible;border-radius:0 0 12px 12px;border-top:none}
 .cc-card-flush{padding:0;overflow:visible}
 .cc-clickable{cursor:pointer;user-select:none}
-.cc-chip-row{display:flex;flex-wrap:wrap;gap:6px}
-.cc-tabs-bar{border-top:0.5px solid var(--border);padding:0 20px;display:flex;gap:0;overflow-x:auto}
 .cc-sort-arrow{margin-left:4px;font-size:11px;opacity:1;color:var(--sub)}
 .cc-sort-hover-icon{margin-left:3px;font-size:9px;color:var(--sub);opacity:0;transition:opacity 0.15s}
 .cc-members-th:hover .cc-sort-hover-icon{opacity:0.4}
@@ -597,13 +599,19 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-hero-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .cc-hero-chip{font-size:12px;padding:3px 10px;border-radius:12px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.9);border:0.5px solid rgba(255,255,255,0.2);font-weight:500}
 .cc-hero-chip-primary{background:var(--cc-accent-20,rgba(254,198,4,0.2));color:var(--cc-accent,#FEC604);border-color:var(--cc-accent-35,rgba(254,198,4,0.35))}
-.cc-hero-tabs{display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.08);overflow-x:auto;scrollbar-width:none;background:var(--nav,#000000);padding:0 16px;border-radius:0}
-.cc-hero-tabs::-webkit-scrollbar{display:none}
-.cc-hero-tab{padding:10px 14px;font-size:13px;color:var(--nav-t,rgba(255,255,255,0.4));opacity:0.55;cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:6px;transition:color 0.15s,opacity 0.15s;WebkitTapHighlightColor:transparent}
-.cc-hero-tab:hover{opacity:0.85}
-.cc-hero-tab-active{color:var(--nav-a,var(--cc-accent,#FEC604))!important;border-bottom-color:var(--nav-a,var(--cc-accent,#FEC604))!important;opacity:1!important}
-.cc-hero-tab-soon{opacity:0.25!important;cursor:default}
-.cc-hero-tab-soon-badge{font-size:9px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.3);padding:1px 5px;border-radius:6px}
+/* ⚠ `.cc-hero-tabs` / `.cc-hero-tab` (+ -active, -soon, -soon-badge) SIND AM
+   25.08.2026 GEFALLEN. Sie waren eine vollstaendige, scrollende Tab-Leiste in
+   Klassenform — mit Unterstrich und Aktivmarkierung, also genau die Form von
+   `.cc-ml-tabs-bar` — und hatten im ganzen Repo KEINEN Verwender.
+
+   ⚠ Eine funktionsfaehige Klasse ohne Verwender ist eine Falle: der Naechste
+   haelt sie fuer die vorgesehene Loesung und wundert sich, warum die Farben
+   nicht passen. Sie waren auf den dunklen Hero-Hintergrund gestellt
+   (`var(--nav-t)`, `rgba(255,255,255,…)`). Sie umzufaerben waere ein Eingriff
+   fuer einen Bedarf, den niemand hat. (Entscheidung Didi, 25.08.2026.)
+
+   Was von ihnen gebraucht wurde, sind zwei Eigenschaften — `overflow-x:auto`
+   und `white-space:nowrap` —, und die stehen jetzt dort, wo sie wirken. */
 .cc-member-tabs{display:flex;gap:0;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:4px;overflow:visible;scrollbar-width:none;flex-shrink:0}
 .cc-member-tabs::-webkit-scrollbar{display:none}
 .cc-member-tab{padding:6px 12px;border-radius:7px;background:transparent;border:none;color:var(--sub);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:background 0.1s,color 0.1s;min-height:34px}
@@ -782,8 +790,30 @@ select.cc-input{appearance:none;-webkit-appearance:none;background-image:url("da
 .cc-col-search-empty{padding:10px 12px;font-size:12px;color:var(--sub);font-style:italic}
 .cc-members-cb-col{width:36px;padding:8px 12px}
 .cc-col-menu-item-active{background:var(--surface2);border-radius:6px;margin:1px 4px}
-.cc-ml-tabs-bar{display:flex;gap:0;border-bottom:0.5px solid var(--border);align-self:flex-end}
-.cc-ml-tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--sub);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;margin-bottom:-0.5px;font-family:inherit}
+/* ⚠ SCROLLEN STATT ABSCHNEIDEN (25.08.2026). Drei Eigenschaften, keine neue
+   Klasse, kein veraendertes Aussehen — genehmigt von Didi.
+
+   Warum es abschnitt: `clubcampus.tsx` setzt `overflowX:hidden` auf
+   `<main class="cc-page">`. Wer ueberlaeuft und keinen eigenen
+   Scrollcontainer hat, wird dort geclippt — es gibt KEINEN Seiten-Scroll als
+   Auffangnetz. „Laeuft ueber" heisst in diesem Portal darum immer
+   „abgeschnitten".
+
+   Gerechnet bei 390px Geraetebreite: H1 „Mitglieder" + Abstand ~142px, die
+   vier Tabs mit echten Zaehlwerten (Mitglieder 512 · Archiv 1 · Eltern 395 ·
+   Supporter 6) ~389px — zusammen ~531px in 366px nutzbarer Breite.
+
+   `min-width:0` ist der unauffaellige der drei: ohne ihn darf die Leiste im
+   umgebenden `cc-row` gar nicht schrumpfen und laeuft weiter ueber, statt
+   innen zu scrollen. `white-space:nowrap` am Kind erzeugt den Ueberlauf
+   ueberhaupt erst — sonst bricht der Text IM Knopf um.
+
+   ⚠ `flex-shrink:0` steht bewusst NICHT da: `min-width:auto` verhindert bei
+   `nowrap` schon von selbst, dass ein Flex-Item unter seine Textbreite
+   schrumpft. Gemessen an `shared/ui/Tabs.tsx`, das ohne scrollt. */
+.cc-ml-tabs-bar{display:flex;gap:0;border-bottom:0.5px solid var(--border);align-self:flex-end;overflow-x:auto;min-width:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cc-ml-tabs-bar::-webkit-scrollbar{display:none}
+.cc-ml-tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--sub);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;margin-bottom:-0.5px;font-family:inherit;white-space:nowrap}
 .cc-ml-tab:hover{color:var(--text)}
 .cc-ml-tab-active{color:var(--text)!important;border-bottom-color:var(--text)}
 .cc-ml-tab-count{font-size:11px;color:var(--sub);margin-left:5px}

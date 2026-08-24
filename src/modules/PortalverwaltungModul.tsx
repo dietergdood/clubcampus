@@ -551,7 +551,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
               <TI n="arrow-left" size={14}/>Übersicht
             </button>
             {kat.tabs.length>1&&(
-              <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:16}}>
+              <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:16,overflowX:"auto",minWidth:0,scrollbarWidth:"none" as const,WebkitOverflowScrolling:"touch" as const}}>
                 {kat.tabs.map(t=>(
                   <button key={t.key} onClick={()=>setTab(t.key)}
                     style={{padding:"7px 12px",background:"none",border:"none",
@@ -571,7 +571,11 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
       {!isMobile&&(
         <div style={{marginBottom:20}}>
           {/* Ebene 1: Hauptkategorien */}
-          <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:0}}>
+          {/* ⚠ Scrollen statt Abschneiden — siehe `.cc-ml-tabs-bar` in cc.css.
+              `overflowX` erzeugt den Scroll, `minWidth:0` erlaubt der Leiste
+              im Flex-Elternteil ueberhaupt erst zu schrumpfen. Die Kinder
+              tragen `whiteSpace:"nowrap"` schon. */}
+          <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:0,overflowX:"auto",minWidth:0,scrollbarWidth:"none" as const,WebkitOverflowScrolling:"touch" as const}}>
             {KATEGORIEN_NAV.map(k=>{
               const isAktiv=k.key===aktiveKat;
               return(
@@ -594,7 +598,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
             if(kat.tabs.length<=1) return null;
             return(
               <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",
-                paddingLeft:8,background:"var(--surface2)"}}>
+                paddingLeft:8,background:"var(--surface2)",overflowX:"auto",minWidth:0,scrollbarWidth:"none" as const,WebkitOverflowScrolling:"touch" as const}}>
                 {kat.tabs.map(t=>(
                   <button key={t.key} onClick={()=>setTab(t.key)}
                     style={{display:"flex",alignItems:"center",gap:5,padding:"7px 14px",
