@@ -48,6 +48,59 @@ fest verdrahtet. Und sie gehört zu den Feldern, die der Abgleich **nicht**
 überschreiben darf: sie ist eine Entscheidung des Vereins, kein Datum aus
 ClubCampus. Siehe „Die Zuordnung".
 
+## Der Verweis auf den FVRZ-Spielbericht
+
+Jedes Spiel auf der Website soll auf seinen Spielbericht beim Verband
+verweisen. **Die dafür nötige Kennung ist `spiele.sfv_match_id`** — sie wandert
+mit, auch wenn sie auf der Website selbst nie angezeigt wird.
+
+**⚠ Nicht zu verwechseln mit der Spielnummer.** Der FVRZ zeigt in der Anzeige
+„Spielnummer: 163640" (= `sfv_spiel_nr`), verwendet in der Adresse aber
+`tg=4379001` (= `sfv_match_id`). Zwei verschiedene Zahlen für dasselbe Spiel —
+wer die sichtbare nimmt, baut einen Link ins Leere.
+
+| | |
+|---|---|
+| `sfv_match_id` | die Kennung in der Adresse, bei 269 von 269 Spielen gefüllt |
+| `sfv_spiel_nr` | die angezeigte Spielnummer, ebenfalls vollständig |
+
+Belegt am 24.08.2026 über den Gruppenversatz (26 Spiele derselben Gruppe,
+identische Differenz zwischen beiden Zahlen) und direkt gegen die FVRZ-Seite
+geprüft.
+
+**⚠ Der Link gehört auf die WordPress-Seite, nicht in die Datenwanderung.** Die
+Form der Adresse kann sich ändern, wenn der Verband seine Seite umbaut — dann
+ist es eine Änderung an einer Vorlage statt an 269 gespeicherten Adressen.
+Wandern soll die Zahl, nicht die URL.
+
+### ⚠ Der Verband antwortet auf serverseitige Abrufe mit 403
+
+Gemessen am 25.08.2026: dieselbe Adresse, die im Browser den Spielbericht
+zeigt, gibt bei einem Abruf ohne Browser **HTTP 403 Forbidden** zurück — ohne
+Rumpf, ohne Erklärung.
+
+**Für den Link selbst ist das ohne Belang.** Er wird im Browser des Besuchers
+geöffnet, und dort funktioniert er.
+
+**⚠ Es ist die Grenze, die jemand später gegen sich selbst baut.** Alles
+Folgende scheitert, und zwar erst, wenn es schon gebaut ist:
+
+| naheliegende Idee | was passiert |
+|---|---|
+| eine **Vorschau** oder ein Kartenbild des Spielberichts erzeugen | 403 |
+| den **Seitentitel** holen, um den Link zu beschriften | 403 |
+| beim Export **prüfen, ob der Link lebt** | 403 für alle 269 |
+| die Aufstellung vom Spielbericht **nachladen** statt aus der API | 403 |
+
+Die Aufstellung gibt es ohnehin über die SFV Club API (`/api/match/{id}/players`)
+— das ist der Weg, den der Sync geht, und der richtige. Die FVRZ-Seite ist ein
+**Ziel für Menschen**, keine Datenquelle.
+
+**⚠ Und der 403 sieht aus wie ein kaputter Link.** Wer eine
+Verfügbarkeitsprüfung baut und 269 Fehlschläge bekommt, sucht den Fehler bei
+der Kennung — dabei ist sie richtig, und die Prüfung selbst ist der Fehler.
+Genau deshalb steht es hier und nicht erst im Fehlerprotokoll.
+
 ## Takt
 
 Stündlich. **⚠ Nicht gleichzeitig mit dem SFV-Sync (Minute 17) und nicht mit
