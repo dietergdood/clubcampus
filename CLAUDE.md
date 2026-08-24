@@ -387,6 +387,34 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Und der Aufrufer nennt seither eine PERSON, keine Adresse.** Eine mitgeschickte E-Mail lässt sich gegen keinen Verein halten — die Mandantenprüfung wäre Zierrat. Die Adresse kommt aus `personen`, das Ziel des Links aus `vereine.slug`. Erlaubtes aufzählen, nicht Verbotenes: dieselbe Regel wie unten bei Fremddaten, nur für den Rückweg.
 
+- **Eine grüne Prüfkette heisst „die Zahlen stimmen", nicht „die Entscheidung stimmt". Eine Schwelle ist nie durch einen Test gedeckt.**
+
+  Am 25.08.2026 zeigte die Löschvorschau für zwei Personen:
+
+  ```
+  WIRD GELÖSCHT (2)
+    ▸ 2 weitere, je 1–1 Zeilen        ← und kein einziger Name
+  ```
+
+  Typecheck grün, Build grün, 814 Tests grün. **Die Zahl stimmte, der Text stimmte, das Einklappen funktionierte genau wie gebaut** — nur war die Grenze, ab der eingeklappt wird, nie gegen einen echten Fall gehalten. Ein Bestätigungsdialog für die einzige unwiderrufliche Aktion des Portals, der die Betroffenen nicht nennt.
+
+  ⚠ **Und die Schwelle beantwortete die falsche Frage.** Sie fragte *„wie viele sind zu viel zum Anzeigen?"* — die Frage des Werkzeugs. Die Frage der Sache lautet *„welche muss ich gesehen haben, bevor ich drücke?"*, und die Antwort ist **immer alle**. (Didi, 25.08.2026.) Die Reparatur war deshalb nicht, die Schwelle zu verschieben, sondern sie **abzuschaffen**: nie einklappen, stattdessen scrollen. Bei zwanzig Personen ist eine scrollende Liste ehrlicher als eine zusammengefasste — man sieht, dass es zwanzig sind, und muss an ihnen vorbei; eingeklappt sieht man eine Zeile und drückt.
+
+  **Die Regel daraus, und sie reicht weit über diesen Fall:**
+
+  | | durch einen Test gedeckt |
+  |---|---|
+  | rechnet die Funktion richtig | ✅ |
+  | trifft die Bedingung zu | ✅ |
+  | ist **20** die richtige Grenze | ❌ **nie** |
+  | ist Einklappen hier überhaupt richtig | ❌ **nie** |
+
+  Ein Test hält fest, was jemand entschieden hat — er prüft nicht, ob die Entscheidung taugt. **Wo eine Zahl im Code steht, die niemand gemessen hat** (eine Schwelle, ein Grenzwert, ein Seitenumbruch, eine Kürzung, ein Timeout), **gehört sie gegen einen echten Fall gehalten, nicht gegen eine Erwartung.** Und der echte Fall ist oft der KLEINE: die Schwelle 20 war für den Stapel aus zwanzig gedacht und fiel beim Stapel aus zwei um.
+
+  ⚠ **Wenn die Grenze doch bleiben muss, gehört sie an die Stelle, an der es wirklich kippt.** Hier lag das nicht bei der Anzeige, sondern eine Stufe früher: die Vorschau ruft die Edge Function einmal pro Person auf, nacheinander. 395 Ausgewählte sind 395 Aufrufe. Die Grenze steht deshalb jetzt bei der Stapelgrösse (`HOECHSTENS = 25`) mit einer Ansage, die den Grund nennt — und nicht als stille Kürzung der Liste.
+
+  Dieselbe Familie wie „ein Test, der nur Längen zählt": beide sind grün und prüfen etwas anderes als das, worauf es ankommt.
+
 - **Eine Messung geht an einen Subagenten — die Deutung nicht. Und die Ausgangszahl gehört in den Auftrag, als BEHAUPTUNG, die er widerlegen darf.**
 
   Was delegiert wird: Fundstellen zählen, Tabellen gegen Policies halten, Bestandszahlen erheben — alles, dessen Rohausgabe niemand ein zweites Mal liest. Zurück kommt das Ergebnis, nicht der Weg dorthin.

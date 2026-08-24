@@ -105,13 +105,32 @@ function PersonZeile({ name, zeilen, warnung }: {
   );
 }
 
+/**
+ * Wie viele Personen ein Durchgang höchstens umfasst.
+ *
+ * ⚠ DIE GRENZE LIEGT NICHT BEI DER ANZEIGE, SONDERN EINE STUFE FRÜHER.
+ * Die Vorschau ruft die Edge Function EINMAL PRO PERSON auf, nacheinander
+ * (parallel wäre ein selbstgebauter Lastversuch). Wer in der Elternliste
+ * alle 395 auswählt, löst 395 Aufrufe aus und sieht minutenlang
+ * „Wird gemessen … 47 von 395".
+ *
+ * ⚠ Und dahinter steht die eigentliche Frage: ob ein Stapel dieser Grösse
+ * überhaupt in einem Dialog bestätigt werden sollte. Er sollte nicht — wer
+ * 395 Menschen auf einmal entfernt, trifft keine Entscheidung mehr, die ein
+ * Fenster tragen kann.
+ *
+ * Die Zahl ist eine Setzung, keine Messung: gross genug für einen
+ * Aufräumdurchgang, klein genug, um die Namen wirklich zu lesen. Sie darf
+ * sich ändern — dann aber als Entscheidung, nicht nebenbei.
+ */
+const HOECHSTENS = 25;
+
 export function PersonenLoeschenModal({
   open, onClose, sb, vereinId, geaendertVon, personen, onGeloescht,
 }: PersonenLoeschenModalProps) {
   const [laedt, setLaedt]             = useState(true);
   const [fortschritt, setFortschritt] = useState(0);
   const [eintraege, setEintraege]     = useState<StapelEintrag[]>([]);
-  const [alleZeigen, setAlleZeigen]   = useState(false);
   const [laeuft, setLaeuft]           = useState(false);
   const [ergebnis, setErgebnis]       = useState<StapelErgebnis[] | null>(null);
   const [offen, setOffen]             = useState<StapelEintrag[]>([]);
@@ -126,7 +145,10 @@ export function PersonenLoeschenModal({
 
   useEffect(() => {
     if (!open) return;
-    setAlleZeigen(false); setErgebnis(null); setOffen([]); setKontaktFuer(null);
+    setErgebnis(null); setOffen([]); setKontaktFuer(null);
+    /* ⚠ Bei zu vielen wird gar nicht erst gemessen — sonst liefen die
+       Aufrufe im Hintergrund, während der Dialog schon abwinkt. */
+    if (personen.length > HOECHSTENS) { setLaedt(false); return; }
     setLaedt(true); setFortschritt(0); setEintraege([]);
     let abgebrochen = false;
     holeLoeschVorschauMehrere(sb, personen, f => { if (!abgebrochen) setFortschritt(f); })
@@ -185,8 +207,9 @@ export function PersonenLoeschenModal({
         e, z: e.vorschau!.faellt.reduce((s, p) => s + p.anzahl, 0),
       })).sort((a, b) => b.z - a.z)
     : [];
-  const AUSREISSER = 20;   // ab hier gilt eine Person als hinsehenswert
-  const leicht = schwer.filter(x => x.z < AUSREISSER);
+  /* Ab hier wird eine Person hervorgehoben — sie faellt schwerer als der
+     Rest. Gemessen am 24.08.2026: Median 1 Zeile, p95 = 2, Maximum 103. */
+  const AUSREISSER = 20;
 
   return (
     <>
@@ -223,6 +246,18 @@ export function PersonenLoeschenModal({
       </div>
 
       <div className="cc-modal-body">
+        {personen.length > HOECHSTENS ? (
+          <>
+            <InfoBox color={AM} text={
+              <>⚠ <strong>{personen.length} Personen sind zu viele für einen Durchgang.</strong>{" "}
+                Höchstens {HOECHSTENS} auf einmal — nicht weil es technisch nicht ginge,
+                sondern weil in einem Fenster nur bestätigt werden sollte, was man
+                auch gelesen hat. Bitte in kleineren Gruppen.</>} />
+            <div className="cc-modal-ftr">
+              <Btn variant="primary" onClick={onClose}>Schliessen</Btn>
+            </div>
+          </>
+        ) : <>
         {laedt && (
           <div className="cc-text-muted" style={{ padding: SPACE[5] }}>
             Wird gemessen … {fortschritt} von {personen.length}
@@ -362,16 +397,34 @@ export function PersonenLoeschenModal({
                     Niemand — alle Ausgewählten sind gesperrt.
                   </div>
                 : <>
-                    {(alleZeigen ? schwer : schwer.filter(x => x.z >= AUSREISSER)).map(x => (
-                      <PersonZeile key={x.e.personId} name={x.e.vorschau!.person.name}
-                                   zeilen={x.z} warnung={x.z >= AUSREISSER} />
-                    ))}
-                    {!alleZeigen && leicht.length > 0 && (
-                      <Btn variant="ghost" small onClick={() => setAlleZeigen(true)}>
-                        ▸ {leicht.length} weitere, je {Math.min(...leicht.map(x => x.z))}–
-                        {Math.max(...leicht.map(x => x.z))} Zeilen
-                      </Btn>
-                    )}
+                    {/* ⚠ NIE EINKLAPPEN. SCROLLEN.
+                        Bis zum 25.08.2026 zeigte diese Liste nur Personen ab
+                        AUSREISSER Zeilen und fasste den Rest zu einer Zeile
+                        zusammen. Bei einem Stapel aus ZWEI stand da dann
+                        „▸ 2 weitere, je 1–1 Zeilen" — und kein einziger Name.
+
+                        ⚠ Die Schwelle beantwortete die falsche Frage. „Wie
+                        viele sind zu viel zum Anzeigen?" ist die Frage des
+                        Werkzeugs; die Frage der Sache ist „welche Personen
+                        muss ich gesehen haben, bevor ich drücke?", und die
+                        Antwort ist IMMER alle. Ein Bestätigungsdialog für
+                        eine unwiderrufliche Aktion, der die Betroffenen nicht
+                        zeigt, fragt „2 Personen?" und lässt offen, welche.
+
+                        Eine scrollende Liste ist bei zwanzig ehrlicher als
+                        eine zusammengefasste: man sieht, dass es zwanzig
+                        sind, und muss an ihnen vorbei. Eingeklappt sieht man
+                        eine Zeile und drückt. (Entscheidung Didi,
+                        25.08.2026.)
+
+                        `cc-list-scroll` gibt es bereits (max-height 320px);
+                        keine neue Klasse. */}
+                    <div className="cc-list-scroll">
+                      {schwer.map(x => (
+                        <PersonZeile key={x.e.personId} name={x.e.vorschau!.person.name}
+                                     zeilen={x.z} warnung={x.z >= AUSREISSER} />
+                      ))}
+                    </div>
                     <div style={{
                       display: "flex", justifyContent: "space-between",
                       borderTop: `1px solid ${GB}`, marginTop: 6, paddingTop: 6,
@@ -415,6 +468,7 @@ export function PersonenLoeschenModal({
             </div>
           </>
         )}
+        </>}
       </div>
     </ModalOrSheet>
     </>
