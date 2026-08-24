@@ -47,14 +47,51 @@ const defaultGetCellValue: GetCellValue = (col, row) => {
   return String(v);
 };
 
-export function csvDownload(data: (string | number)[][], filename: string): void {
-  const rows = data.map(r => r.map(v => '"' + String(v || "").replace(/"/g, '""') + '"').join(";"));
-  /* Führendes BOM, damit Excel die UTF-8-Umlaute korrekt liest */
-  const csv = "﻿" + rows.join("\r\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+/**
+ * Eine Textdatei im Browser erzeugen und herunterladen.
+ *
+ * ⚠ SIE ENTSTEHT IM BROWSER UND GEHT NIRGENDWO HIN. Kein Server sieht sie,
+ * nichts wird protokolliert. Das ist bei manchen Ausgaben nicht Beiwerk,
+ * sondern Bedingung — die WordPress-Spielerliste enthält Klarnamen, die
+ * ClubCampus bewusst nicht speichert (`domains/spiele/spielerAusgabe.ts`).
+ *
+ * Herausgezogen am 25.08.2026 aus `csvDownload`, das seither nur noch die
+ * CSV-Eigenheiten beisteuert (Semikolon, Anführungszeichen, BOM).
+ */
+export function dateiDownload(inhalt: string, filename: string, mime: string): void {
+  const blob = new Blob([inhalt], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
+}
+
+export function csvDownload(data: (string | number)[][], filename: string): void {
+  const rows = data.map(r => r.map(v => '"' + String(v || "").replace(/"/g, '""') + '"').join(";"));
+  /* Führendes BOM, damit Excel die UTF-8-Umlaute korrekt liest */
+  dateiDownload("﻿" + rows.join("\r\n"), filename, "text/csv;charset=utf-8;");
+}
+
+/**
+ * In die Zwischenablage, mit ehrlicher Rückmeldung.
+ *
+ * ⚠ `navigator.clipboard` kann fehlschlagen — fehlende Erlaubnis, kein
+ * sicherer Kontext, ein Browser ohne die API. Dann muss der Aufrufer etwas
+ * anderes anbieten (ein Textfeld zum Markieren), statt „kopiert ✓" zu melden
+ * und nichts getan zu haben. Deshalb `boolean` und kein `void`.
+ *
+ * Erster Verwender im Projekt (25.08.2026).
+ */
+export async function inZwischenablage(text: string): Promise<boolean> {
+  try {
+    if (!navigator.clipboard?.writeText) return false;
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    /* ⚠ Gebunden, nicht verschluckt: ein leerer catch macht aus einem Fehler
+       eine Datenlage — hier aus „nicht erlaubt" ein „hat nicht geklappt". */
+    console.error("inZwischenablage:", e instanceof Error ? e.message : String(e));
+    return false;
+  }
 }
 
 export interface ExportOptions<T extends ListRow = ListRow> {

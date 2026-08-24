@@ -50,6 +50,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Btn, Card, InfoBox } from "../../theme.ts";
 import { holeNamen, leseNamenAntwort } from "../../domains/sfv/sfvService.ts";
 import { TI } from "../../icons.tsx";
+import { baueSpielerZeilen, alsTextliste, alsWxr } from "../../domains/spiele/spielerAusgabe.ts";
+import { dateiDownload, inZwischenablage } from "../../shared/list/exportUtils.ts";
 import { BL } from "../../constants.ts";
 import {
   gruppiereNachTeam, offeneZuordnungen,
@@ -82,6 +84,9 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
      Namen": ein Lauf, der nichts fand, hat trotzdem stattgefunden, und der
      Knopf soll dann nicht aussehen, als wäre er nie gedrückt worden. */
   const [geholt, setGeholt] = useState(false);
+  /* Rückmeldung der Ausgabe — verschwindet nicht von selbst, weil sie eine
+     Zahl nennt („273 von 287"), die jemand lesen soll. */
+  const [ausgabeMeldung, setAusgabeMeldung] = useState<string | null>(null);
   const [aufstellung, setAufstellung] = useState<AufstellungMitZeit[]>([]);
   const [zuordnungen, setZuordnungen] = useState<ZuordnungZeile[]>([]);
   const [laedt, setLaedt] = useState(true);
@@ -129,6 +134,48 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
     setNamen(leseNamenAntwort(daten));
     setOhneNamen(Math.max(0, (daten?.offen_gesamt ?? 0) - (daten?.namen_gefunden ?? 0)));
     setGeholt(true);
+  }
+
+  /* ══ Ausgabe für WordPress ═══════════════════════════════════════
+     ⚠ BEIDE AUSGABEN ENTSTEHEN IM BROWSER und gehen nirgendwo hin. Sie bauen
+     auf `namen` — dem Zustand dieser Maske —, und der Name wird bewusst nicht
+     gespeichert. Kein Aufruf, kein Protokolleintrag, keine Datei auf dem
+     Server. (Bedingung Didi, 25.08.2026.)
+
+     ⚠ UND SIE MÜSSEN VOR DER ZUORDNUNGSARBEIT GEZOGEN WERDEN. Die Aktion
+     `namen` liefert nur die OFFENEN Spieler; mit jedem zugeordneten schrumpft
+     die Liste. Wer erst zuordnet und dann exportiert, bekommt eine kürzere
+     Liste und käme nicht darauf, dass die eigene Arbeit der Grund ist. */
+  const spielerZeilen = useMemo(
+    () => baueSpielerZeilen(aufstellung, namen, teamNamen),
+    [aufstellung, namen, teamNamen]);
+
+  async function listeKopieren() {
+    const text = alsTextliste(spielerZeilen);
+    const ok = await inZwischenablage(text);
+    setAusgabeMeldung(ok
+      ? `${spielerZeilen.length} Spieler in die Zwischenablage kopiert.`
+      /* ⚠ Kein „kopiert ✓", wenn nichts kopiert wurde. Die Zwischenablage
+         kann fehlschlagen (Erlaubnis, unsicherer Kontext) — dann bekommt der
+         Benutzer den anderen Weg genannt statt einer Behauptung. */
+      : "Die Zwischenablage ist nicht verfügbar. Bitte die Datei herunterladen.");
+  }
+
+  function listeHerunterladen() {
+    dateiDownload(alsTextliste(spielerZeilen), "spieler-zuordnung.txt", "text/plain;charset=utf-8");
+    setAusgabeMeldung(`${spielerZeilen.length} Spieler als Textdatei geladen.`);
+  }
+
+  function wxrHerunterladen() {
+    const { xml, aufgenommen, uebergangen } = alsWxr(spielerZeilen);
+    dateiDownload(xml, "clubcampus-spieler.xml", "application/xml;charset=utf-8");
+    /* ⚠ Die Übergangenen werden GENANNT. Ein Import mit 273 statt 287
+       Beiträgen, ohne dass jemand die Differenz erfährt, ist genau die stille
+       Sorte, die dieses Projekt abbaut. */
+    setAusgabeMeldung(uebergangen > 0
+      ? `${aufgenommen} Spieler in der Importdatei. ⚠ ${uebergangen} ohne Namen sind NICHT dabei — `
+        + "ein WordPress-Entwurf ohne Titel wäre unbrauchbar. Sie stehen in der Textliste."
+      : `${aufgenommen} Spieler in der Importdatei.`);
   }
 
   /* Mitglieder, die für eine Zuordnung in Frage kommen. Bereits
@@ -213,6 +260,7 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
               </div>
             </div>
           ) : (
+            <>
             <div className="cc-inline-hint cc-mt-8">
               {anzahlNamen} von {anzahlNamen + ohneNamen} Namen geholt — nur für diese
               Sitzung, nicht gespeichert.
@@ -221,6 +269,33 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
                 Lauf ändert daran nichts.</>
               )}
             </div>
+
+            {/* ⚠ Die Ausgabe für WordPress. Sie steht HIER, direkt unter der
+                Namensmeldung, und nicht an einer eigenen Stelle: sie ist nur
+                brauchbar, solange die Namen geholt sind, und sie verschwindet
+                mit ihnen beim nächsten Öffnen. */}
+            <div className="cc-row cc-gap-8 cc-mt-8" style={{flexWrap:"wrap"}}>
+              <Btn small variant="outline" onClick={listeKopieren}>
+                Liste kopieren
+              </Btn>
+              <Btn small variant="outline" onClick={listeHerunterladen}>
+                Liste als Textdatei
+              </Btn>
+              <Btn small variant="outline" onClick={wxrHerunterladen}>
+                WordPress-Importdatei (XML)
+              </Btn>
+            </div>
+            <div className="cc-inline-hint">
+              Nummer, Name, Mannschaft und Rückennummern der {spielerZeilen.length} Spieler
+              — zum Übertragen nach WordPress. Die Datei entsteht im Browser und wird
+              nirgends gespeichert.
+              {" "}⚠ Jetzt ziehen, nicht später: die Liste zeigt nur die noch nicht
+              zugeordneten Spieler und schrumpft mit jeder Zuordnung.
+            </div>
+            {ausgabeMeldung && (
+              <div className="cc-text-sm cc-mt-8">{ausgabeMeldung}</div>
+            )}
+            </>
           )
         )}
 

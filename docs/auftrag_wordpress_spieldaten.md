@@ -279,9 +279,56 @@ stillschweigend einen von beiden bedienen.
 `personen`.**
 
 Der Weg dorthin existiert bereits — `sfv_zuordnung` verbindet
-`sfv_person_id` mit `mitglied_id`, und seit dem 22.08. sind alle 177 offenen
-Spieler zugeordnet. ClubCampus weiss also längst, welche Person hinter
-`1339751` steckt; es wird nur nicht genutzt.
+`sfv_person_id` mit `mitglied_id`. **Genutzt wird er noch nicht: es ist bislang
+niemand zugeordnet.**
+
+> **⚠ BERICHTIGUNG VOM 25.08.2026.** Hier stand: *„seit dem 22.08. sind alle
+> 177 offenen Spieler zugeordnet. ClubCampus weiss also längst, welche Person
+> hinter `1339751` steckt."*
+>
+> **Beide Hälften trafen nicht zu.**
+>
+> | | behauptet | gemessen |
+> |---|---|---|
+> | zugeordnete Spieler | alle | **0** |
+> | offene Spieler | 177 | **287** |
+>
+> `public.sfv_zuordnung` hat **null Zeilen**. Die Zuordnungsarbeit ist nie
+> gemacht worden — der Satz beruhte auf einer Verwechslung mit einem anderen
+> Arbeitsschritt vom selben Tag. **Kein Defekt, ein Irrtum im Dokument.**
+>
+> Die **177** war ausserdem der Stand vom **21.08.**, eine Momentaufnahme:
+>
+> | Stand | offene Spieler |
+> |---|---|
+> | 21.08.2026 | 177 |
+> | 22.08.2026 | 265 |
+> | 23.08.2026 | **287** |
+>
+> ⚠ **Warum die Berichtigung deutlich ausfällt:** die Zahl stand als Tatsache
+> da und wurde weiterverwendet („der Umstieg ist kein Umbau, sondern ein
+> zusätzlicher Blick"). Diese Folgerung bleibt richtig — aber sie setzt
+> Zuordnungen voraus, die es nicht gibt. Wer den Abschnitt las, hielt eine
+> Vorarbeit für erledigt, die noch aussteht.
+
+### ⚠ Reihenfolge: die Spielerliste VOR der Zuordnungsarbeit ziehen
+
+Die `namen`-Aktion gibt strukturell nur die **offenen** Spieler zurück —
+`bildeOffeneNamen` überspringt jeden bereits Zugeordneten
+(`supabase/functions/sfv-sync/matchdaten.ts:187`), und `laufeNamen` fragt nur
+Spiele mit offenen Spielern beim Verband ab.
+
+**Solange nichts zugeordnet ist, liefert sie alle 287.** Mit jedem
+zugeordneten Spieler schrumpft sie.
+
+⚠ **Das ist die gefährliche Sorte Abhängigkeit, weil sie plausibel aussieht.**
+Wer erst zuordnet und dann exportiert, bekommt eine kürzere Liste — und käme
+nicht darauf, dass die eigene Arbeit der Grund ist. Es fehlt keine Meldung, es
+fehlt kein Spieler „im Fehler": die Liste ist einfach kleiner, und genau die
+Spieler fehlen, die man schon bearbeitet hat.
+
+**Also: erst die Liste ziehen, dann zuordnen.** Wird sie später erneut
+gebraucht, muss klar sein, dass sie dann nur noch die Restmenge zeigt.
 
 Der Umstieg ist deshalb kein Umbau, sondern ein zusätzlicher Blick: der
 Abgleich schaut nach, ob eine Zuordnung besteht. Wenn ja, kommt der Name aus
