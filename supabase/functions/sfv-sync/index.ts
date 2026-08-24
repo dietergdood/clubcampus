@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     aktion = String(body?.aktion || "");
     nur = body?.nur ? String(body.nur) : null;
   } catch {
-    return json({ fehler: "Ungueltiger Aufruf" }, 400);
+    return json({ fehler: "Ungültiger Aufruf" }, 400);
   }
   if (aktion !== "teams" && aktion !== "sync" && aktion !== "namen") return json({ fehler: `Unbekannte Aktion: ${aktion}` }, 400);
   if (nur && nur !== "spielplan" && nur !== "rangliste") return json({ fehler: `Unbekanntes nur: ${nur}` }, 400);
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     });
     const { data: istAdmin, error: rechteFehler } = await alsAufrufer.rpc("is_admin");
     if (rechteFehler) return json({ fehler: "Rechte nicht pruefbar" }, 403);
-    if (!istAdmin) return json({ fehler: "Nur fuer Administratoren" }, 403);
+    if (!istAdmin) return json({ fehler: "Nur für Administratoren" }, 403);
   }
   if (perZeitplan && aktion === "teams") return json({ fehler: "teams nur mit Anmeldung" }, 403);
   /* ⚠ `namen` NIE ueber den Zeitplan. Zwei Gruende, und beide zaehlen:
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     });
     const { data: meinVerein } = await alsAufrufer.rpc("get_my_verein_id");
     eigene = verbindungen.filter((v) => v.verein_id === meinVerein);
-    if (!eigene.length) return json({ fehler: "Kein Anschluss fuer diesen Verein" }, 404);
+    if (!eigene.length) return json({ fehler: "Kein Anschluss für diesen Verein" }, 404);
   }
 
   const zugangFuer = (api_url: string): SfvZugang => ({

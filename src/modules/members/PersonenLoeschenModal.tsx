@@ -217,7 +217,7 @@ export function PersonenLoeschenModal({
     <ModalOrSheet open={open} onClose={laeuft ? () => {} : onClose} maxWidth={620}>
       <div className="cc-modal-hdr">
         <div className="cc-modal-title">
-          {personen.length} {personen.length === 1 ? "Person" : "Personen"} loeschen
+          {personen.length} {personen.length === 1 ? "Person" : "Personen"} löschen
         </div>
         {!laeuft && <Btn variant="ghost" small onClick={onClose}><TI n="x" size={14} /></Btn>}
       </div>
@@ -241,8 +241,8 @@ export function PersonenLoeschenModal({
                 <>
                   <InfoBox color={f > 0 || offen.length > 0 ? R : GN} text={
                     <>
-                      <strong>geloescht: {g}</strong>
-                      {u > 0 && <> · uebersprungen: {u}</>}
+                      <strong>gelöscht: {g}</strong>
+                      {u > 0 && <> · übersprungen: {u}</>}
                       {f > 0 && <> · <strong>FEHLGESCHLAGEN: {f}</strong></>}
                       {/* ⚠ DIE ZEILE, DIE SONST FEHLEN WUERDE. Ein Lauf, der bei
                           5 von 20 anhaelt und Fertig meldet, ist genau das, was
@@ -254,7 +254,7 @@ export function PersonenLoeschenModal({
                   {offen.length > 0 && (
                     <InfoBox color={AM} text={
                       <>⚠ Der Lauf wurde nach dem Fehler angehalten. Diese {offen.length}{" "}
-                        {offen.length === 1 ? "Person ist" : "Personen sind"} unveraendert:{" "}
+                        {offen.length === 1 ? "Person ist" : "Personen sind"} unverändert:{" "}
                         {offen.map(e => e.vorschau?.person.name ?? e.name).join(", ")}.
                         Weitermachen ist ein neuer Durchgang, keine Fortsetzung — die
                         Vorschau wird dabei neu gemessen.</>} />
@@ -265,7 +265,7 @@ export function PersonenLoeschenModal({
                       <div key={r.personId} style={{ padding: "3px 0", fontSize: TEXT.sm }}>
                         {r.stand === "geloescht" ? "✓ " : r.stand === "uebersprungen" ? "→ " : "✗ "}
                         <strong>{r.name}</strong>
-                        {r.stand === "uebersprungen" && " — uebersprungen: die Daten haben sich seit der Vorschau geaendert"}
+                        {r.stand === "uebersprungen" && " — übersprungen: die Daten haben sich seit der Vorschau geändert"}
                         {r.stand === "fehlgeschlagen" && ` — ${r.meldung}`}
                       </div>
                     ))}
@@ -302,8 +302,8 @@ export function PersonenLoeschenModal({
               <>
                 <InfoBox color={R} text={
                   <>⚠ <strong>{befund.ohneKontakt.length}{" "}
-                    {befund.ohneKontakt.length === 1 ? "Kind haette" : "Kinder haetten"} danach
-                    keinen Kontakt.</strong> Das ist nicht erlaubt. Die zugehoerigen Personen
+                    {befund.ohneKontakt.length === 1 ? "Kind hätte" : "Kinder hätten"} danach
+                    keinen Kontakt.</strong> Das ist nicht erlaubt. Die zugehörigen Personen
                     sind gesperrt, bis das Kind einen Ersatzkontakt hat.</>} />
                 <div style={{ marginBottom: SPACE[4] }}>
                   {befund.ohneKontakt.map(k => (
@@ -339,9 +339,9 @@ export function PersonenLoeschenModal({
                       <span className="cc-text-muted">
                         {" — "}
                         {z.grund.art === "kind_ohne_kontakt"
-                          ? `${z.grund.kinder.map(k => k.name).join(", ")} haette danach keinen Kontakt`
+                          ? `${z.grund.kinder.map(k => k.name).join(", ")} hätte danach keinen Kontakt`
                           : z.grund.art === "blockiert"
-                            ? `daran haengt noch etwas: ${z.grund.text}`
+                            ? `daran hängt noch etwas: ${z.grund.text}`
                             : z.grund.text}
                       </span>
                     </div>
@@ -355,11 +355,11 @@ export function PersonenLoeschenModal({
                 24.08.2026: Median 1 Zeile, p95 = 2, Maximum 103. Eine Summe
                 verbuerge also fast immer nichts — und genau deshalb faellt die
                 eine Person mit 103 Zeilen in ihr nicht auf. */}
-            <Label>Wird geloescht ({befund.loeschbar.length})</Label>
+            <Label>Wird gelöscht ({befund.loeschbar.length})</Label>
             <div style={{ marginBottom: SPACE[4] }}>
               {befund.loeschbar.length === 0
                 ? <div className="cc-text-muted" style={{ fontSize: TEXT.sm }}>
-                    Niemand — alle Ausgewaehlten sind gesperrt.
+                    Niemand — alle Ausgewählten sind gesperrt.
                   </div>
                 : <>
                     {(alleZeigen ? schwer : schwer.filter(x => x.z >= AUSREISSER)).map(x => (
@@ -386,15 +386,22 @@ export function PersonenLoeschenModal({
             {/* Kinder, die einen Kontakt behalten — kein Alarm, aber eine Tatsache. */}
             {befund.kinder.some(k => k.verbleibende_eltern > 0) && (
               <div className="cc-text-muted" style={{ fontSize: TEXT.xs, marginBottom: SPACE[3] }}>
-                {befund.kinder.filter(k => k.verbleibende_eltern > 0).length} weitere
-                {" "}Kinder behalten mindestens einen Elternteil.
+                {/* ⚠ Singular und Plural. „1 weitere Kinder behalten" stand am
+                    25.08.2026 in der echten Vorschau — auch das sieht man erst
+                    auf dem Schirm. */}
+                {(() => {
+                  const n = befund.kinder.filter(k => k.verbleibende_eltern > 0).length;
+                  return n === 1
+                    ? "1 weiteres Kind behält mindestens einen Elternteil."
+                    : `${n} weitere Kinder behalten mindestens einen Elternteil.`;
+                })()}
               </div>
             )}
 
             <InfoBox color={BL} text={
-              <>Jede Person wird einzeln geprueft und einzeln protokolliert. Weicht bei
-                einer etwas von der Vorschau ab, wird nur sie uebersprungen — die
-                uebrigen laufen. Beim ersten harten Fehler haelt der Lauf an, und was
+              <>Jede Person wird einzeln geprüft und einzeln protokolliert. Weicht bei
+                einer etwas von der Vorschau ab, wird nur sie übersprungen — die
+                übrigen laufen. Beim ersten harten Fehler hält der Lauf an, und was
                 offen blieb, steht hinterher da.</>} />
 
             <div className="cc-modal-ftr">
@@ -402,8 +409,8 @@ export function PersonenLoeschenModal({
               <Btn variant="danger" disabled={befund.loeschbar.length === 0 || laeuft}
                    onClick={ausfuehren}>
                 {laeuft
-                  ? `Wird geloescht … ${ergebnis ? (ergebnis as StapelErgebnis[]).length : 0}/${befund.loeschbar.length}`
-                  : `${befund.loeschbar.length} endgueltig loeschen`}
+                  ? `Wird gelöscht … ${ergebnis ? (ergebnis as StapelErgebnis[]).length : 0}/${befund.loeschbar.length}`
+                  : `${befund.loeschbar.length} endgültig löschen`}
               </Btn>
             </div>
           </>

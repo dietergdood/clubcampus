@@ -86,7 +86,7 @@ function props(over = {}) {
    Tests darunter bleibt dieselbe. */
 function oeffne(name) {
   const kopf = screen.getAllByRole('button').find(b => b.textContent.includes(name));
-  if (!kopf) throw new Error(`Keine Klappkarte fuer "${name}" gefunden`);
+  if (!kopf) throw new Error(`Keine Klappkarte für "${name}" gefunden`);
   if (kopf.getAttribute('aria-expanded') === 'false') fireEvent.click(kopf);
 }
 

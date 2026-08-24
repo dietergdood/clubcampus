@@ -479,7 +479,7 @@ describe("⚠ Kein Weg in src/ loescht aus `mitglieder`", () => {
         treffer.push(datei.split("\\").join("/"));
       }
     }
-    expect(treffer, `Diese Dateien loeschen aus \`mitglieder\` und loesen damit `
+    expect(treffer, `Diese Dateien löschen aus \`mitglieder\` und loesen damit `
       + `die CASCADE auf \`eltern_kinder\` aus: ${treffer.join(", ")}`).toEqual([]);
   });
 });

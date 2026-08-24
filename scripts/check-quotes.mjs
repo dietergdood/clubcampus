@@ -1,8 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — scripts/check-quotes.mjs
 
-   Findet ein deutsches Anführungszeichen, das einen "-String
-   zerreisst.
+   Zwei Prüfungen auf Zeichen in JS-Stringliteralen:
+
+     1. ein deutsches Anführungszeichen, das einen "-String zerreisst
+     2. Umlaut-Ersatzschreibung (loeschen statt löschen) in UI-Text
 
      node scripts/check-quotes.mjs
 
@@ -33,7 +35,11 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const WURZEL = join(dirname(fileURLToPath(import.meta.url)), "..");
-const ORDNER = ["src", "scripts", join("supabase", "functions")];
+/* ⚠  steht NICHT hier. Zwei Gruende: Werkzeuge haben keine
+   Oberflaeche, und ihre Regex-Literale bringen den schlichten Scanner oben
+   durcheinander — er haelt ein / fuer den Anfang eines Kommentars. Ein
+   Fehlalarm im eigenen Werkzeug ist der sicherste Weg, es abzuschalten. */
+const ORDNER = ["src", join("supabase", "functions")];
 
 /* ⚠ GEMESSEN AM 25.08.2026, UND ES BERICHTIGT DIE REGEL IN `CLAUDE.md`.
    Dort stand, deutsche Anfuehrungszeichen zerstoerten jedes JS-Stringliteral,
@@ -54,6 +60,62 @@ const ORDNER = ["src", "scripts", join("supabase", "functions")];
    String vorzeitig geendet hat. Genau dort steht der Fehler. */
 const OEFFNER    = /[\u201E\u201C\u00AB]/;   // „ “ «
 const SCHLIESSER = /[\u201C\u201D\u00BB]/;   // “ ” »
+
+/* ═══ 2 · UMLAUT-ERSATZSCHREIBUNG IN UI-TEXT ═══════════════════════
+   „3 Personen loeschen" statt „3 Personen löschen". Entstanden am
+   25.08.2026, als ein ganzes Modal über ein Python-Skript geschrieben wurde
+   und die Ersatzschreibung durchgängig mitkam. ⚠ KEIN WERKZEUG MELDET DAS:
+   Typecheck grün, Build grün, 814 Tests grün — sichtbar erst auf dem Schirm.
+   In KOMMENTAREN ist die Ersatzschreibung im Projekt üblich und richtig.
+
+   ⚠ EINE REGEL GEHT HIER NICHT, und das ist der Grund für die Liste.
+   „ae/oe/ue ist verdächtig" schlägt bei „neue", „aktuell", „Poesie" an —
+   und eine Prüfung mit Fehlalarm wird nach dem dritten Mal abgeschaltet.
+   Eine Liste der häufigsten Fälle fängt fast alles und trifft nie falsch.
+   (Vorschlag Didi, 25.08.2026.)
+
+   ⚠ UND SIE DARF KEIN KORREKTES WORT ENTHALTEN. Beim ersten Entwurf standen
+   `muss` und `schliessen` darin — beides richtiges Deutsch (Schweiz), und
+   die Prüfung meldete prompt „Mindestens ein Plan muss vorhanden sein."
+   Wer die Liste erweitert, prüft jedes Wort daraufhin, ob es in korrekter
+   Schreibung ohne Umlaut vorkommt: `muss`, `gross`, `Strasse`, `heisst`,
+   `schliessen`, `weiss` sind alle richtig und gehören NICHT hierhin. */
+const ERSATZSCHREIBUNG = [
+  "loeschen", "geloescht", "loescht", "loeschbar",
+  "haetten", "haette", "gaebe", "waere", "waeren",
+  "ueber", "uebrig", "uebersprungen", "uebernommen", "uebertragen",
+  "fuer", "muessen", "koennen", "koennte", "moeglich",
+  "waehlen", "gewaehlt", "auswaehlen", "zurueck",
+  "aendern", "geaendert", "aenderung", "unveraendert", "veraendert",
+  "gehoert", "naechste", "spaeter", "hoechste", "groesse", "groesser",
+  "pruefen", "geprueft", "pruefung", "laeuft", "faellt", "haengt",
+  "erklaeren", "zaehlt", "enthaelt", "erhaelt",
+  "ungueltig", "gueltig", "endgueltig", "vollstaendig", "zusaetzlich",
+  "urspruenglich", "taetig", "beschaeftigt", "regelmaessig",
+];
+
+/* ⚠ ZWEI FILTER, DAMIT DIE LISTE NICHT AN DER FALSCHEN STELLE TRIFFT.
+   Gemessen im Bestand: ohne sie meldet die Prüfung 122 Stellen, davon fast
+   alle richtig — Testnamen, Log-Meldungen, Tabellennamen, Variablen. */
+
+/* a) Was NICHT geprüft wird: Testnamen und Log-Meldungen sind
+      entwicklerseitig, dort ist die Ersatzschreibung gleichgültig. */
+const ENTWICKLERTEXT = /(?:\bit|\bdescribe|\btest|console\.(?:log|error|warn|info|debug))\s*\(\s*$/;
+
+/**
+ * b) Bezeichner aus dem Text nehmen, bevor gesucht wird.
+ *
+ * `${austrittFuer.length}` ist eine Variable, `profil_geprueft_at` eine
+ * Spalte, `person-loeschen` ein Function-Name — alle drei sind RICHTIG so
+ * geschrieben und dürfen nicht als Text gelten.
+ *
+ * Was danach noch ein Leerzeichen hat, ist Prosa; ein Bezeichner hat keines.
+ */
+function nurText(inhalt) {
+  return inhalt
+    .replace(/\$\{[^}]*\}/g, " ")        // ${...}
+    .replace(/[a-z0-9]+[_-][a-z0-9_-]+/gi, " ");  // snake_case, kebab-case
+}
 
 function dateien(dir) {
   let raus = [];
@@ -106,6 +168,7 @@ function pruefe(text) {
     /* Stringliteral: ' " ` — hier wird geprueft. */
     if (c === '"' || c === "'" || c === "`") {
       const anfang = zeile;
+      const anfangIdx = i;
       const ende = c;
       let inhalt = "";
       i++;
@@ -126,6 +189,20 @@ function pruefe(text) {
       /* Nur "-Strings koennen so zerreissen. In '...' und `...` ist ein
          ASCII-" harmlos — dort ist ein unpaariges „ hoechstens unsauberer
          Text, und eine Pruefung, die das meldet, gibt Fehlalarm. */
+      /* ── 2 · Ersatzschreibung ────────────────────────────────── */
+      if (!ENTWICKLERTEXT.test(text.slice(Math.max(0, anfangIdx - 40), anfangIdx))) {
+        const roh = nurText(inhalt);
+        if (/\s/.test(roh.trim())) {
+          const klein = roh.toLowerCase();
+          const w = ERSATZSCHREIBUNG.filter(x => klein.includes(x));
+          if (w.length) {
+            treffer.push({ zeile: anfang, zeichen: w.join(","), art: "umlaut",
+                           text: roh.trim().slice(0, 70) });
+          }
+        }
+      }
+
+      /* ── 1 · Unpaariges Anfuehrungszeichen ───────────────────── */
       if (ende === '"') {
         const auf = inhalt.match(OEFFNER);
         if (auf) {
@@ -136,7 +213,7 @@ function pruefe(text) {
              Pruefung mit Fehlalarm wird abgeschaltet, dann ist sie schlechter
              als keine. */
           if (!SCHLIESSER.test(rest) && !rest.includes('\\"')) {
-            treffer.push({ zeile: anfang, zeichen: auf[0], text: inhalt.slice(0, 70) });
+            treffer.push({ zeile: anfang, zeichen: auf[0], art: "quote", text: inhalt.slice(0, 70) });
           }
         }
       }
@@ -148,22 +225,28 @@ function pruefe(text) {
   return treffer;
 }
 
-let gesamt = 0;
+let quotes = 0, umlaute = 0;
 for (const ordner of ORDNER) {
   let liste;
   try { liste = dateien(join(WURZEL, ordner)); } catch { continue; }
   for (const datei of liste) {
-    const treffer = pruefe(readFileSync(datei, "utf8"));
-    for (const t of treffer) {
-      gesamt++;
-      console.log(`${relative(WURZEL, datei).split("\\").join("/")}:${t.zeile}  ${t.zeichen}  ${t.text}`);
+    for (const t of pruefe(readFileSync(datei, "utf8"))) {
+      if (t.art === "quote") quotes++; else umlaute++;
+      const pfad = relative(WURZEL, datei).split("\\").join("/");
+      console.log(`${t.art === "quote" ? "\u201e" : "ae"}  ${pfad}:${t.zeile}  ${t.zeichen}  ${t.text}`);
     }
   }
 }
 
-if (gesamt > 0) {
-  console.error(`\ncheck-quotes: ${gesamt} unpaarige deutsche Anführungszeichen in "-Strings.`);
-  console.error("Vermutlich ist das schliessende Zeichen ein ASCII-\" — es beendet den String.");
+if (quotes + umlaute > 0) {
+  if (quotes) {
+    console.error(`\ncheck-quotes: ${quotes} unpaarige deutsche Anführungszeichen in "-Strings.`);
+    console.error('Vermutlich ist das schliessende Zeichen ein ASCII-" — es beendet den String.');
+  }
+  if (umlaute) {
+    console.error(`\ncheck-quotes: ${umlaute} Stringliterale mit Umlaut-Ersatzschreibung.`);
+    console.error("In Kommentaren ist sie richtig — in UI-Text steht sie auf dem Schirm.");
+  }
   process.exit(1);
 }
-console.log("check-quotes: keine unpaarigen deutschen Anführungszeichen in \"-Strings.");
+console.log("check-quotes: keine unpaarigen Anführungszeichen, keine Ersatzschreibung in Texten.");

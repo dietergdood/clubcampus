@@ -418,9 +418,9 @@ Deno.serve(async (req) => {
       console.error("person-loeschen: auth.users:", aFehler.message);
       return json({
         fehler: `Das Anmeldekonto liess sich nicht entfernen (${aFehler.message}). `
-              + "Es wurde NICHTS geloescht — die Person ist unveraendert. "
-              + "Ein Konto ohne `auth.identities` ist fuer die Admin-API nicht "
-              + "loeschbar; es muss im Supabase-Dashboard entfernt werden.",
+              + "Es wurde NICHTS gelöscht — die Person ist unverändert. "
+              + "Ein Konto ohne `auth.identities` ist für die Admin-API nicht "
+              + "löschbar; es muss im Supabase-Dashboard entfernt werden.",
       }, 500);
     }
 

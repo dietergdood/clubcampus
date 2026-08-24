@@ -370,7 +370,7 @@ async function schreibePaesse(
     (mitglieder ?? []).map((m) => [Number(m.id), (m.person_id as string | null) ?? null]));
 
   const konflikte = passKonflikte(alleRoh, unsere, zuordnung)
-    .map((k) => `Mitglied ${k.mitglied_id}: zwei Passnummern (${k.werte.join(" / ")}) — Zuordnung pruefen`);
+    .map((k) => `Mitglied ${k.mitglied_id}: zwei Passnummern (${k.werte.join(" / ")}) — Zuordnung prüfen`);
 
   const aenderungen = passAenderungen(alleRoh, unsere, zuordnung, bestand);
   if (!aenderungen.length) return { geschrieben: 0, konflikte };
@@ -397,7 +397,7 @@ async function schreibePaesse(
        entfaellt. */
     if (!personId) {
       if (konflikte.length < 5) {
-        konflikte.push(`Mitglied ${a.mitglied_id}: keine person_id — Verlaufseintrag uebersprungen`);
+        konflikte.push(`Mitglied ${a.mitglied_id}: keine person_id — Verlaufseintrag übersprungen`);
       }
       geschrieben += 1;
       continue;
@@ -417,7 +417,7 @@ async function schreibePaesse(
       : await db.from("mitglieder_aktivitaeten").insert({
           mitglied_id: a.mitglied_id, person_id: personId,
           verein_id: vereinId, typ: "FELD_ERFASST",
-          beschreibung: `Spielerpass vom Verband uebernommen: ${a.neu}`,
+          beschreibung: `Spielerpass vom Verband übernommen: ${a.neu}`,
           feld: "spielerpass", wert: a.neu,
           geaendert_von: PASS_URHEBER, geaendert_at: jetzt,
         });

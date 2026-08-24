@@ -287,7 +287,7 @@ export async function laufeSync(
   const md = erg.matchdaten;
   if (md) {
     teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} Aufstellungs- und ${md.ereignisse_zeilen} Ereigniszeilen`);
-    if (md.paesse_geschrieben) teile.push(`${md.paesse_geschrieben} Spielerpass/-paesse vom Verband uebernommen`);
+    if (md.paesse_geschrieben) teile.push(`${md.paesse_geschrieben} Spielerpass/-pässe vom Verband übernommen`);
     if (md.pass_konflikte.length) {
       erg.status = "warnung";
       teile.push(`${md.pass_konflikte.length} Spielerpass/-paesse NICHT geschrieben — ${md.pass_konflikte[0]}`);
