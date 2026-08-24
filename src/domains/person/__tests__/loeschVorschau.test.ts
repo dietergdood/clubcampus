@@ -80,7 +80,11 @@ describe("⚠ Was mit den Kindern geschieht — eine Zahl ist keine Folge", () =
      Unterschied ist der ganze Punkt. Gefragt von Didi am 23.08.2026, bevor
      der erste scharfe Lauf lief — die Vorschau konnte es bis dahin nicht
      beantworten. */
-  const KIND = { mitglied_id: 633, name: "Stefan Wenger", verbleibende_eltern: 1, war_hauptkontakt: false };
+  /* ⚠ `braucht_kontakt` gehoert in die Attrappe, weil es die Zeile in der
+     Datenbank auch hat. Eine Attrappe, der ein Feld fehlt, prueft etwas
+     anderes als das, was laeuft — und der Compiler sagt es nur, solange der
+     Typ aus `KindFolge` kommt. (CLAUDE.md, 21.08.2026.) */
+  const KIND = { mitglied_id: 633, name: "Stefan Wenger", verbleibende_eltern: 1, war_hauptkontakt: false, braucht_kontakt: true };
 
   it("reicht die Folgen durch, statt nur zu zählen", () => {
     const v = formeVorschau(PERSON, { eltern_kinder_als_elternteil: 1 },
@@ -104,12 +108,12 @@ describe("⚠ Was mit den Kindern geschieht — eine Zahl ist keine Folge", () =
       [{ ...KIND, verbleibende_eltern: 0 }]);
     expect(fingerabdruckDaten(mitEinem)).not.toBe(fingerabdruckDaten(mitKeinem));
     expect(nenneUnterschiede(fingerabdruckDaten(mitEinem), fingerabdruckDaten(mitKeinem)))
-      .toEqual(["kinder: 633:1 → 633:0"]);
+      .toEqual(["kinder: 633:1:1 → 633:0:1"]);   /* mitglied:verbleibend:braucht_kontakt */
   });
 
   it("⚠ sortiert nach mitglied_id — sonst kippt der Abdruck mit der Lesereihenfolge", () => {
-    const a = { mitglied_id: 10, name: "A", verbleibende_eltern: 1, war_hauptkontakt: false };
-    const b = { mitglied_id: 2, name: "B", verbleibende_eltern: 0, war_hauptkontakt: true };
+    const a = { mitglied_id: 10, name: "A", verbleibende_eltern: 1, war_hauptkontakt: false, braucht_kontakt: true };
+    const b = { mitglied_id: 2, name: "B", verbleibende_eltern: 0, war_hauptkontakt: true, braucht_kontakt: true };
     const eins = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {}, [a, b]);
     const zwei = formeVorschau(PERSON, {}, { faellt: [], anonym: [], blockiert: [] }, {}, [b, a]);
     expect(fingerabdruckDaten(eins)).toBe(fingerabdruckDaten(zwei));

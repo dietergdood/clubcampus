@@ -387,6 +387,20 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Und der Aufrufer nennt seither eine PERSON, keine Adresse.** Eine mitgeschickte E-Mail lässt sich gegen keinen Verein halten — die Mandantenprüfung wäre Zierrat. Die Adresse kommt aus `personen`, das Ziel des Links aus `vereine.slug`. Erlaubtes aufzählen, nicht Verbotenes: dieselbe Regel wie unten bei Fremddaten, nur für den Rückweg.
 
+- **Eine Messung geht an einen Subagenten — die Deutung nicht. Und die Ausgangszahl gehört in den Auftrag, als BEHAUPTUNG, die er widerlegen darf.**
+
+  Was delegiert wird: Fundstellen zählen, Tabellen gegen Policies halten, Bestandszahlen erheben — alles, dessen Rohausgabe niemand ein zweites Mal liest. Zurück kommt das Ergebnis, nicht der Weg dorthin.
+
+  ⚠ **Was NICHT delegiert wird: was die Zahl für den Entwurf heisst.** Ein Subagent zählt „389 von 393 Kindern haben genau einen Elternteil"; dass daraus eine Regel statt einer Warnung folgt, ist eine Entscheidung. Die wertvollsten Funde entstehen in diesem Schritt.
+
+  **Zwei Anforderungen an den Auftrag, beide am 25.08.2026 belegt:**
+
+  1. **Zu jeder Zahl gehört die Abfrage.** Sonst ist sie nicht nachprüfbar — und der Reflex, eine überraschende Zahl zuerst gegen das WERKZEUG zu halten, ist genau der, der die Fehler findet.
+
+  2. ⚠ **Die Ausgangszahl mitgeben, aber als Behauptung.** Im Auftrag stand „eine Vormessung ergab: 6 minderjährige Aktivmitglieder". Der Subagent hat sie **widerlegt** — es sind **5 Personen in 6 Zeilen**, weil ein Kind zwei Elternzeilen hat. Hätte er sie als Tatsache gelesen, wäre der Fehler stehen geblieben; hätte ich sie weggelassen, hätte er nichts gehabt, wogegen er prüfen kann. Also: *„Eine Vormessung ergab X. Prüf das nach — es kann falsch sein."*
+
+  ⚠ **Und der Rückweg ist die dritte Gefahr, nicht bloss eine Fussnote.** Ich habe den Fund anschliessend ZU WEIT GEZOGEN und gemeldet, auch „393 Kinder" seien Zeilen gewesen. Waren sie nicht: 393 sind alle Kinder, 391 die aktiven — beides Personen, verschiedene Mengen. Aufgefallen ist es nur, weil vor dem Ändern von `CLAUDE.md` noch einmal gemessen wurde. **Eine Korrektur ist selbst eine Behauptung und wird wie eine geprüft** — sonst ersetzt sie eine richtige Zahl durch eine falsche und schreibt die Begründung gleich mit dazu.
+
 - **Eine Messung zählt leicht etwas anderes als gemeint — und im Gegensatz zu einer falschen Bedingung wird sie nie rot.** Ein Filter, der danebenliegt, fällt irgendwann jemandem auf. Eine Zahl, die danebenliegt, wird zitiert.
 
   **Nach NAMEN gruppieren zählt Schreibweisen, nicht Menschen.** Beleg vom 23.08.2026: eine Auswertung der fehlenden Pflichtfelder meldete
@@ -496,17 +510,23 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Und warum es so lange hält:** die Verdrahtung war für **Mitglieder** folgenlos, weil `dbRaw` aus der Liste kommt und in der Mischung gewinnt — der Listenreload frischte mit auf. Erst bei einer Person **ohne** Mitgliedschaft ist `dbRaw` leer, und dann frischt nichts auf. Ein Fehler, den die häufigere Hälfte der Daten verdeckt, wartet auf die seltenere.
 
-- **Deutsche Anführungszeichen zerstören jedes JS-Stringliteral, in dem sie stehen.** `"Der Vermerk „X" konnte nicht …"` — das `"` hinter `X` beendet den String, und der Rest wird als Code gelesen. Am 23.08.2026 **viermal** passiert (`ArchivView`, `supporterService`, `MemberHero`, `austritt.test.ts`), jedes Mal mit einem unverständlichen Parserfehler drei Zeilen weiter.
+- **Ein deutsches Anführungszeichen zerreisst einen String nur, wenn das SCHLIESSENDE Zeichen ein ASCII-`"` ist — und der String selbst mit `"` begrenzt.**
 
-  ⚠ **In Kommentaren sind sie richtig und erwünscht** — die ganze Codebasis benutzt sie dort. Nur **innerhalb eines Stringliterals** haben sie nichts zu suchen. Wer einen solchen Text braucht, schreibt ihn ohne:
+  ⚠ **Hier stand bis zum 25.08.2026 „zerstören jedes JS-Stringliteral, in dem sie stehen". Das war falsch, und die Ungenauigkeit war der Grund, warum die Regel nicht half:** danach ist es noch dreimal passiert, zuletzt in Testnamen. Ein Satz, der zu viel verbietet, wird beim Schreiben übergangen — die halbe Codebasis benutzt diese Zeichen gefahrlos, also fühlt sich das Verbot falsch an, und man hält sich nicht daran.
+
+  **Was tatsächlich gilt:** `„` `“` `”` sind U+201E/C/D und beenden **keinen** String. Zerrissen wird er vom **ASCII-`"` (U+0022)**, das jemand als schliessendes deutsches Anführungszeichen tippt:
 
   ```ts
-  hinweise.push("Der Vermerk konnte nicht gesetzt werden.");   // statt „Vermerk"
-  it("ein Lesefehler heisst nicht: nichts da", …)              // statt „nichts da"
+  describe('… heisst „Austritt…" und …')   // ✓ läuft — der String ist mit ' begrenzt
+  it("… sagen „behält 1", der Rest …")     // ✗ das ASCII-" beendet den String
+  it("… ist nicht „dieselbe Person\"")     // ✓ escaptes \" ist gültig
   ```
 
-  Es fällt sofort auf (der Build bricht), kostet aber jedes Mal einen Durchgang. Dieselbe Familie wie `` gegen deutsche Bezeichner: ein Werkzeug, das die Schreibweise nicht kennt.
+  Gemessen am 25.08.2026: **35** Stringliterale im Bestand enthalten deutsche Anführungszeichen, **keines** davon ist kaputt.
 
+  ⚠ **Und die Lehre ist nicht die Regel, sondern dass eine Regel hier nicht genügt.** Seit dem 25.08.2026 läuft **`npm run check:quotes`** (`scripts/check-quotes.mjs`, in CI). Es sucht nicht das Zeichen, sondern die **unpaarige Öffnung**: ein `„` in einem `"`-String ohne schliessendes `“`/`”`/`\"`. Der Build findet dasselbe — aber als Parserfehler drei Zeilen weiter, der auf eine Stelle zeigt, die mit der Ursache nichts zu tun hat.
+
+  **In Kommentaren sind sie richtig und erwünscht**; das Skript prüft ausschliesslich Stringliterale. Dieselbe Familie wie `\b` gegen deutsche Bezeichner: ein Werkzeug, das die Schreibweise nicht kennt.
 - **Bei Fremddaten immer Allowlist, nie Denylist.** Wer aus einer fremden Antwort etwas herausfiltert — Personendaten schwärzen, Felder übernehmen, Nutzlast begrenzen —, listet auf, was **durchkommt**, nicht was fällt. Ein neues Feld der Gegenseite ist damit im Zweifel geschwärzt und fällt auf, statt still mitzureisen. Umgekehrt ist jede Denylist nur so gut wie die Fantasie dessen, der sie geschrieben hat. Beleg vom 19.08.2026: eine Regex-Denylist `/person|player|birth|passport|…/` gegen die SFV-Matchdaten war zugleich zu streng (schwärzte `personId`, `isPlayer`) und zu lasch — `players[]` führt den Namen in **drei** Feldern, `firstname`, `name` und `secondName`, von denen keines „person" oder „player" heisst. Die Klarnamen von 32 Spielern, überwiegend gegnerische, gingen durch. Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad geschrieben und dort gegengelesen wurde. Muster: `scripts/sfv-matchdaten-probe.mjs`, Konstante `ERLAUBT`.
 - **Ein neues Feld erbt JEDEN Ausgang des Objekts, an dem es hängt.** Wer einem bestehenden Objekt ein Feld hinzufügt, muss alle Wege kennen, die dieses Objekt schon nimmt — nicht nur den, für den das Feld gedacht war. Das Feld ist neu, die Ausgänge sind alt, und deshalb schlägt nichts fehl.
 

@@ -18,33 +18,60 @@
    davon waere die Sorte Dublette, die heute schon dreimal der Fehler
    war.
 
-   ⚠ ZURÜCKSTELLEN STATT ZWEITER RÜCKFRAGE. (Entscheidung 24.08.2026.)
-   Gemessen: die Sammelaktion trifft praktisch nur Eltern, und 389 von
-   393 Kindern haben genau EINEN Elternteil. Eine zweite Rückfrage
-   verlangte allen zwanzig denselben Zoll wie den drei heiklen — und
-   genau daran gewöhnt man sich ab. Ausserdem ist sie ein Ja/Nein auf
-   eine MENGE, während der Schaden pro KIND entsteht.
+⚠ EINE REGEL, KEINE WARNUNG. (Entscheidung Didi, 25.08.2026.)
+   Ein Kind ohne Kontakt zu hinterlassen ist nicht erlaubt. Es gibt kein
+   „Trotzdem löschen".
 
-   Deshalb sind die heiklen von Anfang an NICHT dabei; wer sie
-   trotzdem will, nimmt sie einzeln dazu. Der bequemste Weg ist damit
-   der sichere, und der zweite Akt lässt sich nicht wegklicken, weil
-   die Vorgabe schon das Sichere getan hat.
+   Der Weg dahin ging über zwei verworfene Entwürfe, und die Begründung
+   gehört hierher, weil sonst der nächste denselben Weg noch einmal geht:
 
-   ⚠ UND DAS ZURÜCKSTELLEN IST LAUT. Eine Aktion, die stillschweigend
-   weniger tut als angefordert, ist von einer, die versagt hat, nicht
-   zu unterscheiden — die Falle dieses ganzen Projekts. Die
-   Zurückgestellten stehen oben, namentlich, mit dem Grund, und sie
-   stehen hinterher noch einmal im Ergebnis.
+     · Eine zweite Rückfrage wäre gefallen, weil sie allen zwanzig
+       denselben Zoll abverlangt wie den drei heiklen — und was bei jedem
+       Stapel erscheint, wird weggeklickt. Ausserdem ist sie ein Ja/Nein
+       auf eine MENGE, während der Schaden pro KIND entsteht.
+
+     · Ein Zurückstellen mit „Trotzdem"-Knopf war der zweite Entwurf und
+       hat einen Tag gehalten. Er ist an der MESSUNG gescheitert: 389 von
+       393 Kindern hängen an genau EINEM Elternteil, und in zwei Proben
+       hintereinander wurden drei von drei zufällig gewählten Eltern
+       zurückgestellt. Wenn fast jeder Stapel bei „Wird gelöscht (0)"
+       landet, wird „Trotzdem" zur Routine — die weiche Sperre hätte
+       dasselbe Schicksal wie die Rückfrage, die sie ersetzen sollte.
+
+   ⚠ DER AUSWEG IST HANDELN, NICHT BESTÄTIGEN. Das Kind bekommt einen
+   Ersatzkontakt, im selben Fenster über `ElternSucheModal` (Suche ODER
+   Neuanlage). Danach werden ALLE Vorschauen neu geholt — nicht aus
+   Vorsicht, sondern weil der Fingerabdruck sonst nicht mehr passt.
+
+   ⚠ UND GENAU DAS IST DIE GEGENPROBE. Die Sperre fällt nicht, weil ein
+   Schreibvorgang „ok" meldete, sondern weil die neu gemessene Vorschau
+   sagt, dass das Kind einen Kontakt hat. Schlägt das Verknüpfen still
+   fehl — bei PostgREST ist ein Upsert ohne Treffer kein Fehler —, zeigt
+   die neue Vorschau weiterhin 0 und die Person bleibt gesperrt.
+
+   ⚠ NACH KIND GRUPPIERT, NICHT NACH PERSON. Lea Brunner sperrt beide
+   Elternteile; EIN Kontakt für sie entsperrt beide. Nach Person
+   gruppiert stünde derselbe Auftrag zweimal da, und man erledigte ihn
+   zweimal.
+
+   ⚠ UND DIE REGEL GILT NICHT FÜR JEDES KIND. Sie hängt an
+   `braucht_kontakt` aus der Vorschau: aktive Mitgliedschaft UND ein
+   Mitgliedtyp mit `hauptkontakt_pflicht`. Bei einem AUSGETRETENEN Kind
+   ist „ohne Kontakt" kein Problem, sondern das Ziel — sonst verlangte
+   die Regel einen Erreichbaren für jemanden, der den Verein verlassen
+   hat. Im Bestand betrifft das zwei Kinder, deren Elternteile sonst
+   dauerhaft unlöschbar wären.
    ═══════════════════════════════════════════════════════════════ */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ModalOrSheet, Btn, InfoBox, Label } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { AM, BL, R, GN, GB, SPACE, TEXT } from "../../constants.ts";
+import { ElternSucheModal } from "./ElternSucheModal.tsx";
 import {
   holeLoeschVorschauMehrere, rechneStapel, loeschePerson, istLoeschFehler,
 } from "../../domains/person/loeschService.ts";
 import type {
-  StapelEintrag, StapelBefund, StapelErgebnis,
+  StapelEintrag, StapelBefund, StapelErgebnis, StapelKind,
 } from "../../domains/person/loeschService.ts";
 import type { Sb } from "../../types.ts";
 
@@ -52,9 +79,12 @@ export interface PersonenLoeschenModalProps {
   open: boolean;
   onClose: () => void;
   sb: Sb;
+  vereinId: string | null;
+  /** Fuer den Protokolleintrag beim Verknuepfen eines Ersatzkontakts. */
+  geaendertVon: string;
   /** Die Auswahl aus der Liste. `id` ist die `person_id`. */
   personen: { id: string; name: string }[];
-  /** Läuft, sobald mindestens eine Person gefallen ist — auch bei Teillauf. */
+  /** Laeuft, sobald mindestens eine Person gefallen ist — auch bei Teillauf. */
   onGeloescht?: () => void;
 }
 
@@ -76,39 +106,46 @@ function PersonZeile({ name, zeilen, warnung }: {
 }
 
 export function PersonenLoeschenModal({
-  open, onClose, sb, personen, onGeloescht,
+  open, onClose, sb, vereinId, geaendertVon, personen, onGeloescht,
 }: PersonenLoeschenModalProps) {
-  const [laedt, setLaedt]           = useState(true);
+  const [laedt, setLaedt]             = useState(true);
   const [fortschritt, setFortschritt] = useState(0);
-  const [eintraege, setEintraege]   = useState<StapelEintrag[]>([]);
-  const [dazu, setDazu]             = useState<Set<string>>(new Set());
-  const [alleZeigen, setAlleZeigen] = useState(false);
-  const [laeuft, setLaeuft]         = useState(false);
-  const [ergebnis, setErgebnis]     = useState<StapelErgebnis[] | null>(null);
-  const [offen, setOffen]           = useState<StapelEintrag[]>([]);
+  const [eintraege, setEintraege]     = useState<StapelEintrag[]>([]);
+  const [alleZeigen, setAlleZeigen]   = useState(false);
+  const [laeuft, setLaeuft]           = useState(false);
+  const [ergebnis, setErgebnis]       = useState<StapelErgebnis[] | null>(null);
+  const [offen, setOffen]             = useState<StapelEintrag[]>([]);
+  /** Fuer welches Kind gerade ein Ersatzkontakt gesucht wird. */
+  const [kontaktFuer, setKontaktFuer] = useState<StapelKind | null>(null);
+
+  const messen = useCallback(async () => {
+    setLaedt(true); setFortschritt(0);
+    const raus = await holeLoeschVorschauMehrere(sb, personen, f => setFortschritt(f));
+    setEintraege(raus); setLaedt(false);
+  }, [sb, personen]);
 
   useEffect(() => {
     if (!open) return;
-    setLaedt(true); setFortschritt(0); setEintraege([]); setDazu(new Set());
-    setAlleZeigen(false); setErgebnis(null); setOffen([]);
+    setAlleZeigen(false); setErgebnis(null); setOffen([]); setKontaktFuer(null);
+    setLaedt(true); setFortschritt(0); setEintraege([]);
     let abgebrochen = false;
     holeLoeschVorschauMehrere(sb, personen, f => { if (!abgebrochen) setFortschritt(f); })
       .then(raus => { if (!abgebrochen) { setEintraege(raus); setLaedt(false); } });
     return () => { abgebrochen = true; };
     /* `personen` bewusst nicht in der Liste: eine neue Array-Instanz beim
-       Rendern des Elternteils löste sonst die Messung erneut aus. Der Stapel
+       Rendern des Elternteils loeste sonst die Messung erneut aus. Der Stapel
        steht fest, sobald das Modal offen ist. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, sb]);
 
-  const befund: StapelBefund | null = eintraege.length > 0 ? rechneStapel(eintraege, dazu) : null;
+  const befund: StapelBefund | null = eintraege.length > 0 ? rechneStapel(eintraege) : null;
 
-  /* ⚠ DER LAUF HÄLT NACH DEM ERSTEN HARTEN FEHLER AN.
+  /* ⚠ DER LAUF HAELT NACH DEM ERSTEN HARTEN FEHLER AN.
      Weiterlaufen hiesse, den Grund zwanzigmal zu wiederholen — und bei einem
-     Fehler, der an der Function liegt statt an der Person, wären hinterher
+     Fehler, der an der Function liegt statt an der Person, waeren hinterher
      alle weg oder keine, ohne dass jemand dazwischen hinsehen konnte.
-     Ein übersprungener Fingerabdruck ist KEIN harter Fehler: er betrifft
-     genau eine Person, und die übrigen laufen weiter. */
+     Ein uebersprungener Fingerabdruck ist KEIN harter Fehler: er betrifft
+     genau eine Person, und die uebrigen laufen weiter. */
   async function ausfuehren() {
     if (!befund || befund.loeschbar.length === 0) return;
     setLaeuft(true);
@@ -126,7 +163,6 @@ export function PersonenLoeschenModal({
           meldung: raus.fehler,
         });
         if (!abweichung) {
-          /* Harter Fehler: anhalten und die Restliste benennen. */
           setOffen(liste.slice(i + 1));
           setErgebnis(bisher);
           setLaeuft(false);
@@ -144,19 +180,44 @@ export function PersonenLoeschenModal({
     if (bisher.some(b => b.stand === "geloescht") && onGeloescht) onGeloescht();
   }
 
-  const gefaehrdet = befund?.kinder.filter(k => k.verbleibende_eltern === 0) ?? [];
   const schwer = befund
     ? [...befund.loeschbar].map(e => ({
         e, z: e.vorschau!.faellt.reduce((s, p) => s + p.anzahl, 0),
       })).sort((a, b) => b.z - a.z)
     : [];
   const AUSREISSER = 20;   // ab hier gilt eine Person als hinsehenswert
+  const leicht = schwer.filter(x => x.z < AUSREISSER);
 
   return (
+    <>
+    {/* ⚠ Die Kontaktsuche liegt IM Fenster, nicht daneben: der Ausweg darf
+        nicht heissen, dass jemand hier schliesst, in der Elternliste sucht und
+        zurueckkommt. `ModalOrSheet` fuehrt einen Stapel, ein Modal im Modal ist
+        vorgesehen. */}
+    {kontaktFuer && (
+      <ElternSucheModal
+        open
+        onClose={() => setKontaktFuer(null)}
+        sb={sb}
+        vereinId={vereinId}
+        geaendertVon={geaendertVon}
+        mitgliedId={kontaktFuer.mitglied_id}
+        onVerknuepft={() => {
+          /* ⚠ ALLE Vorschauen neu, nicht nur die betroffenen. Jede Person, an
+             deren Kind sich etwas geaendert hat, traegt einen Fingerabdruck, der
+             nicht mehr passt — und welche das sind, weiss nur die neue Messung.
+             Sie ist zugleich die Gegenprobe: faellt die Sperre, dann weil die
+             Datenbank es sagt, nicht weil ein Schreibvorgang ok meldete. */
+          setKontaktFuer(null);
+          void messen();
+        }}
+      />
+    )}
+
     <ModalOrSheet open={open} onClose={laeuft ? () => {} : onClose} maxWidth={620}>
       <div className="cc-modal-hdr">
         <div className="cc-modal-title">
-          {personen.length} {personen.length === 1 ? "Person" : "Personen"} löschen
+          {personen.length} {personen.length === 1 ? "Person" : "Personen"} loeschen
         </div>
         {!laeuft && <Btn variant="ghost" small onClick={onClose}><TI n="x" size={14} /></Btn>}
       </div>
@@ -168,32 +229,32 @@ export function PersonenLoeschenModal({
           </div>
         )}
 
-        {/* ══ ERGEBNIS ══════════════════════════════════════════════ */}
-        {ergebnis ? (
+        {/* ══ ERGEBNIS ══════════════════════ */}
+        {!laedt && ergebnis ? (
           <>
             {(() => {
               const g = ergebnis.filter(r => r.stand === "geloescht").length;
               const u = ergebnis.filter(r => r.stand === "uebersprungen").length;
               const f = ergebnis.filter(r => r.stand === "fehlgeschlagen").length;
-              const zurueck = befund?.zurueckgestellt.length ?? 0;
+              const gesperrt = befund?.gesperrt.length ?? 0;
               return (
                 <>
                   <InfoBox color={f > 0 || offen.length > 0 ? R : GN} text={
                     <>
-                      <strong>gelöscht: {g}</strong>
-                      {u > 0 && <> · übersprungen: {u}</>}
+                      <strong>geloescht: {g}</strong>
+                      {u > 0 && <> · uebersprungen: {u}</>}
                       {f > 0 && <> · <strong>FEHLGESCHLAGEN: {f}</strong></>}
-                      {/* ⚠ DIE ZEILE, DIE SONST FEHLEN WÜRDE. Ein Lauf, der bei
-                          5 von 20 anhält und „Fertig" meldet, ist genau das,
-                          was diese Aktion nicht tun darf. */}
+                      {/* ⚠ DIE ZEILE, DIE SONST FEHLEN WUERDE. Ein Lauf, der bei
+                          5 von 20 anhaelt und Fertig meldet, ist genau das, was
+                          diese Aktion nicht tun darf. */}
                       {offen.length > 0 && <> · <strong>offen: {offen.length}</strong></>}
-                      {zurueck > 0 && <> · zurückgestellt: {zurueck}</>}
+                      {gesperrt > 0 && <> · gesperrt: {gesperrt}</>}
                     </>} />
 
                   {offen.length > 0 && (
                     <InfoBox color={AM} text={
                       <>⚠ Der Lauf wurde nach dem Fehler angehalten. Diese {offen.length}{" "}
-                        {offen.length === 1 ? "Person ist" : "Personen sind"} unverändert:{" "}
+                        {offen.length === 1 ? "Person ist" : "Personen sind"} unveraendert:{" "}
                         {offen.map(e => e.vorschau?.person.name ?? e.name).join(", ")}.
                         Weitermachen ist ein neuer Durchgang, keine Fortsetzung — die
                         Vorschau wird dabei neu gemessen.</>} />
@@ -204,21 +265,24 @@ export function PersonenLoeschenModal({
                       <div key={r.personId} style={{ padding: "3px 0", fontSize: TEXT.sm }}>
                         {r.stand === "geloescht" ? "✓ " : r.stand === "uebersprungen" ? "→ " : "✗ "}
                         <strong>{r.name}</strong>
-                        {r.stand === "uebersprungen" && " — übersprungen: die Daten haben sich seit der Vorschau geändert"}
+                        {r.stand === "uebersprungen" && " — uebersprungen: die Daten haben sich seit der Vorschau geaendert"}
                         {r.stand === "fehlgeschlagen" && ` — ${r.meldung}`}
                       </div>
                     ))}
                   </div>
 
-                  {/* Die Zurückgestellten stehen auch hier noch, sonst sähe der
-                      Lauf aus, als wäre die ganze Auswahl erledigt. */}
-                  {zurueck > 0 && (
+                  {/* Die Gesperrten stehen auch hier noch, sonst saehe der Lauf
+                      aus, als waere die ganze Auswahl erledigt. */}
+                  {gesperrt > 0 && (
                     <div style={{ marginTop: SPACE[4] }}>
-                      <Label>Nicht angefasst (zurückgestellt)</Label>
-                      {befund!.zurueckgestellt.map(z => (
+                      <Label>Nicht angefasst (gesperrt)</Label>
+                      {befund!.gesperrt.map(z => (
                         <div key={z.eintrag.personId} className="cc-text-muted"
                              style={{ padding: "2px 0", fontSize: TEXT.sm }}>
-                          {z.eintrag.vorschau?.person.name ?? z.eintrag.name} — {z.grund}
+                          {z.eintrag.vorschau?.person.name ?? z.eintrag.name} —{" "}
+                          {z.grund.art === "kind_ohne_kontakt"
+                            ? `${z.grund.kinder.map(k => k.name).join(", ")} ohne Kontakt`
+                            : z.grund.text}
                         </div>
                       ))}
                     </div>
@@ -230,83 +294,82 @@ export function PersonenLoeschenModal({
               <Btn variant="primary" onClick={onClose}>Schliessen</Btn>
             </div>
           </>
-        ) : befund && (
+        ) : !laedt && befund && (
           <>
-            {/* ══ 1 · DIE WARNZONE ════════════════════════════════════
-                Steht ganz oben und ist nicht eingeklappt. Was hier steht,
-                ist keine Zeilenzahl, sondern eine Folge. */}
-            {gefaehrdet.length > 0 && (
+            {/* ══ 1 · DER AUFTRAG, nach KIND ══════════════
+                Keine Warnung, sondern eine Aufgabe mit einem Knopf daran. */}
+            {befund.ohneKontakt.length > 0 && (
               <>
                 <InfoBox color={R} text={
-                  <>⚠ <strong>{gefaehrdet.length} {gefaehrdet.length === 1 ? "Kind verliert" : "Kinder verlieren"} den
-                    einzigen Kontakt.</strong> Die zugehörigen Personen sind deshalb{" "}
-                    <strong>nicht im Stapel</strong> — sie lassen sich einzeln dazunehmen.</>} />
+                  <>⚠ <strong>{befund.ohneKontakt.length}{" "}
+                    {befund.ohneKontakt.length === 1 ? "Kind haette" : "Kinder haetten"} danach
+                    keinen Kontakt.</strong> Das ist nicht erlaubt. Die zugehoerigen Personen
+                    sind gesperrt, bis das Kind einen Ersatzkontakt hat.</>} />
                 <div style={{ marginBottom: SPACE[4] }}>
-                  {gefaehrdet.map(k => (
-                    <div key={k.mitglied_id} style={{ padding: "3px 0", fontSize: TEXT.sm }}>
-                      <strong>{k.name}</strong> — danach ohne Elternteil
-                      {k.im_stapel > 1 && ` (${k.im_stapel} Elternteile im Stapel)`}
-                      {k.war_hauptkontakt && " ⚠ Hauptkontakt"}
-                      <span className="cc-text-muted"> · über {k.eltern.map(p => p.name).join(", ")}</span>
+                  {befund.ohneKontakt.map(k => (
+                    <div key={k.mitglied_id} style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      gap: SPACE[3], padding: "5px 0", fontSize: TEXT.sm,
+                    }}>
+                      <span>
+                        <strong>{k.name}</strong>
+                        <span className="cc-text-muted">
+                          {" "}— verliert {k.im_stapel === 1 ? "den einzigen Kontakt" : `alle ${k.im_stapel} Kontakte`}
+                          {k.war_hauptkontakt && " (darunter den Hauptkontakt)"}
+                          {" "}· {k.eltern.map(p => p.name).join(", ")}
+                        </span>
+                      </span>
+                      <Btn small variant="primary" onClick={() => setKontaktFuer(k)}>
+                        Kontakt setzen
+                      </Btn>
                     </div>
                   ))}
                 </div>
               </>
             )}
 
-            {/* ══ 2 · ZURÜCKGESTELLT ══════════════════════════════════ */}
-            {befund.zurueckgestellt.length > 0 && (
+            {/* ══ 2 · GESPERRT ═══════════════════════ */}
+            {befund.gesperrt.length > 0 && (
               <>
-                <Label>Zurückgestellt ({befund.zurueckgestellt.length})</Label>
+                <Label>Gesperrt ({befund.gesperrt.length})</Label>
                 <div style={{ marginBottom: SPACE[4] }}>
-                  {befund.zurueckgestellt.map(z => {
-                    /* Nur die kindbedingte Zurückstellung lässt sich aufheben.
-                       Blockiert bleibt blockiert, und eine fehlgeschlagene
-                       Vorschau kann man nicht übergehen. */
-                    const aufhebbar = !z.eintrag.fehler
-                      && (z.eintrag.vorschau?.blockiert.length ?? 0) === 0;
-                    return (
-                      <div key={z.eintrag.personId} style={{
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                        gap: SPACE[3], padding: "4px 0", fontSize: TEXT.sm,
-                      }}>
-                        <span>
-                          <strong>{z.eintrag.vorschau?.person.name ?? z.eintrag.name}</strong>
-                          <span className="cc-text-muted"> — {z.grund}</span>
-                        </span>
-                        {aufhebbar && (
-                          <Btn small variant="outline" onClick={() => {
-                            const n = new Set(dazu); n.add(z.eintrag.personId); setDazu(n);
-                          }}>Trotzdem löschen</Btn>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {befund.gesperrt.map(z => (
+                    <div key={z.eintrag.personId} style={{ padding: "3px 0", fontSize: TEXT.sm }}>
+                      <strong>{z.eintrag.vorschau?.person.name ?? z.eintrag.name}</strong>
+                      <span className="cc-text-muted">
+                        {" — "}
+                        {z.grund.art === "kind_ohne_kontakt"
+                          ? `${z.grund.kinder.map(k => k.name).join(", ")} haette danach keinen Kontakt`
+                          : z.grund.art === "blockiert"
+                            ? `daran haengt noch etwas: ${z.grund.text}`
+                            : z.grund.text}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
 
-            {/* ══ 3 · DER STAPEL ══════════════════════════════════════
+            {/* ══ 3 · DER STAPEL ═════════════════════
                 ⚠ Sortiert nach Gewicht, nicht alphabetisch. Gemessen am
                 24.08.2026: Median 1 Zeile, p95 = 2, Maximum 103. Eine Summe
-                verbürge also fast immer nichts — und genau deshalb fällt die
+                verbuerge also fast immer nichts — und genau deshalb faellt die
                 eine Person mit 103 Zeilen in ihr nicht auf. */}
-            <Label>Wird gelöscht ({befund.loeschbar.length})</Label>
+            <Label>Wird geloescht ({befund.loeschbar.length})</Label>
             <div style={{ marginBottom: SPACE[4] }}>
               {befund.loeschbar.length === 0
                 ? <div className="cc-text-muted" style={{ fontSize: TEXT.sm }}>
-                    Niemand — alle Ausgewählten sind zurückgestellt.
+                    Niemand — alle Ausgewaehlten sind gesperrt.
                   </div>
                 : <>
                     {(alleZeigen ? schwer : schwer.filter(x => x.z >= AUSREISSER)).map(x => (
                       <PersonZeile key={x.e.personId} name={x.e.vorschau!.person.name}
                                    zeilen={x.z} warnung={x.z >= AUSREISSER} />
                     ))}
-                    {!alleZeigen && schwer.some(x => x.z < AUSREISSER) && (
+                    {!alleZeigen && leicht.length > 0 && (
                       <Btn variant="ghost" small onClick={() => setAlleZeigen(true)}>
-                        ▸ {schwer.filter(x => x.z < AUSREISSER).length} weitere,
-                        je {Math.min(...schwer.filter(x => x.z < AUSREISSER).map(x => x.z))}–
-                        {Math.max(...schwer.filter(x => x.z < AUSREISSER).map(x => x.z))} Zeilen
+                        ▸ {leicht.length} weitere, je {Math.min(...leicht.map(x => x.z))}–
+                        {Math.max(...leicht.map(x => x.z))} Zeilen
                       </Btn>
                     )}
                     <div style={{
@@ -320,7 +383,7 @@ export function PersonenLoeschenModal({
                   </>}
             </div>
 
-            {/* Kinder, die einen Elternteil behalten — kein Alarm, aber eine Tatsache. */}
+            {/* Kinder, die einen Kontakt behalten — kein Alarm, aber eine Tatsache. */}
             {befund.kinder.some(k => k.verbleibende_eltern > 0) && (
               <div className="cc-text-muted" style={{ fontSize: TEXT.xs, marginBottom: SPACE[3] }}>
                 {befund.kinder.filter(k => k.verbleibende_eltern > 0).length} weitere
@@ -329,9 +392,9 @@ export function PersonenLoeschenModal({
             )}
 
             <InfoBox color={BL} text={
-              <>Jede Person wird einzeln geprüft und einzeln protokolliert. Weicht bei
-                einer etwas von der Vorschau ab, wird nur sie übersprungen — die
-                übrigen laufen. Beim ersten harten Fehler hält der Lauf an, und was
+              <>Jede Person wird einzeln geprueft und einzeln protokolliert. Weicht bei
+                einer etwas von der Vorschau ab, wird nur sie uebersprungen — die
+                uebrigen laufen. Beim ersten harten Fehler haelt der Lauf an, und was
                 offen blieb, steht hinterher da.</>} />
 
             <div className="cc-modal-ftr">
@@ -339,13 +402,14 @@ export function PersonenLoeschenModal({
               <Btn variant="danger" disabled={befund.loeschbar.length === 0 || laeuft}
                    onClick={ausfuehren}>
                 {laeuft
-                  ? `Wird gelöscht … ${(ergebnis as StapelErgebnis[] | null)?.length ?? 0}/${befund.loeschbar.length}`
-                  : `${befund.loeschbar.length} endgültig löschen`}
+                  ? `Wird geloescht … ${ergebnis ? (ergebnis as StapelErgebnis[]).length : 0}/${befund.loeschbar.length}`
+                  : `${befund.loeschbar.length} endgueltig loeschen`}
               </Btn>
             </div>
           </>
         )}
       </div>
     </ModalOrSheet>
+    </>
   );
 }

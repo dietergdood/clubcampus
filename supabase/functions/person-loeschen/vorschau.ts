@@ -40,6 +40,34 @@ export interface KindFolge {
   verbleibende_eltern: number;
   /** War der fallende Eintrag der Hauptkontakt? Dann fehlt danach einer. */
   war_hauptkontakt: boolean;
+  /**
+   * Braucht dieses Kind ueberhaupt einen Elternkontakt?
+   *
+   * ⚠ HIER STEHT DIE ENTSCHEIDUNG, NICHT IHR ROHSTOFF. Es waere naheliegend,
+   * `mitgliedtyp` zurueckzugeben und die Maske nachschlagen zu lassen, ob dieser
+   * Typ `hauptkontakt_pflicht` hat. Das waere eine ZWEITE Rechnung neben der,
+   * die hier schon laeuft — und zwei Stellen, die dieselbe Frage beantworten,
+   * laufen still auseinander. (Im Projekt heute dreimal belegt: Portalrolle,
+   * Pflichtfelder, Portal-Zugang.)
+   *
+   * Die Function laeuft mit `service_role` und sieht `mitgliedtypen`
+   * vollstaendig; die Maske sieht es je nach Rolle nicht. Die Entscheidung
+   * gehoert deshalb ohnehin hierher.
+   *
+   * Zwei Bedingungen, beide gemessen am 25.08.2026:
+   *   · Die Mitgliedschaft ist AKTIV. Bei einem ausgetretenen Kind ist „ohne
+   *     Kontakt" kein Problem, sondern das Ziel — sonst verlangte die Regel
+   *     einen Erreichbaren fuer jemanden, der den Verein verlassen hat. Im
+   *     Bestand betrifft das zwei Kinder (Andrea Furrer, Andrea Frei), beide
+   *     mit genau einem Elternteil: ohne diese Bedingung waeren deren
+   *     Elternteile DAUERHAFT unloeschbar.
+   *   · Der Mitgliedtyp hat `hauptkontakt_pflicht`. Das ist das MERKMAL, nicht
+   *     der Name — `ilike 'junior%'` haelt nur, bis jemand umbenennt oder einen
+   *     zweiten Jugendtyp anlegt.
+   *
+   * 390 von 399 Verknuepfungen erfuellen beides.
+   */
+  braucht_kontakt: boolean;
 }
 
 export interface Vorschau {
@@ -148,7 +176,12 @@ export function fingerabdruckDaten(v: Vorschau): string {
      „bleibt ohne". Ohne diese Zeile liefe der Loeschvorgang durch. */
   const kinder = [...v.kinder]
     .sort((a, b) => a.mitglied_id - b.mitglied_id)
-    .map(k => `${k.mitglied_id}:${k.verbleibende_eltern}`).join(",");
+    /* ⚠ `braucht_kontakt` GEHOERT MIT IN DEN ABDRUCK. Es entscheidet, ob die
+       Sperre greift, und es kann zwischen Vorschau und Loeschen kippen — das
+       Kind tritt aus, oder jemand nimmt dem Mitgliedtyp die Kontaktpflicht.
+       Beides aendert die Zahl der Eltern NICHT. Ohne diese Stelle liefe eine
+       Loeschung durch, die die Vorschau noch gesperrt hatte, und umgekehrt. */
+    .map(k => `${k.mitglied_id}:${k.verbleibende_eltern}:${k.braucht_kontakt ? 1 : 0}`).join(",");
 
   return [
     `person=${v.person.id}`,

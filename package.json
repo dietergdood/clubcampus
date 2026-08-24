@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "check:imports": "node scripts/check-imports.mjs",
     "check:selects": "node scripts/check-selects.mjs",
+    "check:quotes": "node scripts/check-quotes.mjs",
     "gen:types": "node scripts/gen-types.mjs",
     "lint": "eslint ."
   },

@@ -53,6 +53,14 @@ jobs:
       - name: Select-Spalten gegen die Typen pruefen
         run: npm run check:selects
 
+      # Ein deutsches Anfuehrungszeichen, dessen SCHLIESSENDES Zeichen ein
+      # ASCII-" ist, beendet einen "-String mittendrin. Der Build meldet das
+      # zwar, aber als Parserfehler drei Zeilen weiter — und die Regel dagegen
+      # stand seit dem 23.08.2026 in CLAUDE.md, waehrend es noch dreimal
+      # passiert ist. Wo eine Regel nicht traegt, gehoert eine Pruefung hin.
+      - name: Anfuehrungszeichen in Stringliteralen pruefen
+        run: npm run check:quotes
+
       - name: Tests
         run: npm test
 

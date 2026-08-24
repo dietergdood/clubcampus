@@ -570,6 +570,30 @@ export async function linkKind(sb: SbClient, personId: string, mitgliedId: numbe
   return error;
 }
 
+/* ⚠ HIER STAND EINE STUNDE LANG `setzeErsatzkontakt()` — ein zweiter
+   Schreiber auf `eltern_kinder`, der nachzaehlt (`.select("id")`), weil
+   `linkKind` das nicht tut. Gedacht war er als Ausweg aus der Loeschsperre:
+   dem Kind einen Kontakt geben, damit sein Elternteil loeschbar wird.
+
+   ⚠ ER IST GEFALLEN, WEIL DIE GEGENPROBE AM FALSCHEN ORT STAND. Die Frage
+   ist nicht „wurde eine Zeile geschrieben?", sondern „hat das Kind jetzt einen
+   Kontakt?". Und diese Frage beantwortet die Loeschvorschau selbst — sie laeuft
+   mit `service_role`, misst neu und liefert `verbleibende_eltern`. Nach dem
+   Verknuepfen wird sie ohnehin neu geholt, weil der Fingerabdruck sonst nicht
+   mehr passt.
+
+   Damit ist die Sperre an die maessgebende Stelle gebunden statt an eine
+   Zeilenzahl daneben: schlaegt der Schreibvorgang still fehl, zeigt die neue
+   Vorschau weiterhin 0 — und die Person bleibt gesperrt. Ein zweiter Schreiber
+   waere eine zweite Rechnung fuer dieselbe Frage gewesen, und davon hat das
+   Projekt genug.
+
+   ⚠ `linkKind` ZAEHLT TROTZDEM NICHT NACH, und das bleibt ein Mangel: ein
+   Upsert, den RLS nicht trifft, ist bei PostgREST kein Fehler. Fuer die zwei
+   anderen Aufrufer (`ElternSucheModal`, `NeuesMitgliedElternSektion`) faellt
+   eine nicht entstandene Verknuepfung beim naechsten Ansehen auf. Es steht als
+   eigener Punkt an, nicht als stille Mitaenderung. (25.08.2026) */
+
 export interface UnlinkErgebnis {
   verbleibendeKinder: number;
   kindNochAktiv: boolean;

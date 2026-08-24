@@ -484,6 +484,8 @@ function MitgliederModul({role,account=null,dbMitglieder=[],dbMitgliedtypen=[],d
         open={loeschenFuer.length>0}
         onClose={()=>setLoeschenFuer([])}
         sb={sb}
+        vereinId={vereinId}
+        geaendertVon={account?.name||account?.email||"Administrator"}
         personen={loeschenFuer}
         onGeloescht={()=>{
           /* ⚠ ALLE DREI LISTEN, nicht nur die eine. Eine geloeschte Person

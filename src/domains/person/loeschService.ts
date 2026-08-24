@@ -132,36 +132,50 @@ export interface StapelEintrag {
   fehler?: string;
 }
 
-/** Was aus einem Kind wird, wenn der GANZE Stapel fällt. */
+/** Was aus einem Kind wird, wenn der GANZE Stapel faellt. */
 export interface StapelKind {
   mitglied_id: number;
   name: string;
   /** Elternteile nach dem Lauf — Gesamtzahl minus die im Stapel. */
   verbleibende_eltern: number;
-  /** Wie viele der Ausgewählten an diesem Kind hängen. */
+  /** Wie viele der Ausgewaehlten an diesem Kind haengen. */
   im_stapel: number;
   war_hauptkontakt: boolean;
-  /** Die Personen im Stapel, die an diesem Kind hängen. */
+  /** Aus der Vorschau: aktive Mitgliedschaft mit `hauptkontakt_pflicht`. */
+  braucht_kontakt: boolean;
+  /** Die Personen im Stapel, die an diesem Kind haengen. */
   eltern: { personId: string; name: string }[];
 }
 
+/** Warum eine Person nicht mitlaeuft. */
+export type SperrGrund =
+  /** ⚠ Aufloesbar: dem Kind einen Ersatzkontakt geben, dann faellt sie weg. */
+  | { art: "kind_ohne_kontakt"; kinder: StapelKind[] }
+  /** Die Function wuerde ablehnen — Nachrichten, Antworten, Lesemarken. */
+  | { art: "blockiert"; text: string }
+  /** Die Vorschau selbst ist fehlgeschlagen. */
+  | { art: "unlesbar"; text: string };
+
 export interface StapelBefund {
-  /** Kinder, an denen mindestens eine ausgewählte Person hängt. */
+  /** Kinder, an denen mindestens eine ausgewaehlte Person haengt. */
   kinder: StapelKind[];
+  /** ⚠ Kinder, die einen Kontakt BRAUCHEN und keinen behielten. Der Auftrag
+      an den Menschen, nach KIND gruppiert — nicht nach Person. */
+  ohneKontakt: StapelKind[];
   /** Personen, die nichts hindert. */
   loeschbar: StapelEintrag[];
-  /** ⚠ Zurückgestellt statt blockiert — sie lassen sich einzeln dazunehmen. */
-  zurueckgestellt: { eintrag: StapelEintrag; grund: string }[];
-  /** Zeilen über alle löschbaren Personen. */
+  /** ⚠ GESPERRT, nicht zurueckgestellt. Es gibt kein „Trotzdem". */
+  gesperrt: { eintrag: StapelEintrag; grund: SperrGrund }[];
+  /** Zeilen ueber alle loeschbaren Personen. */
   zeilen: number;
 }
 
 /**
- * Vorschau für n Personen — nacheinander, mit Fortschritt.
+ * Vorschau fuer n Personen — nacheinander, mit Fortschritt.
  *
  * ⚠ NACHEINANDER, nicht parallel: zwanzig gleichzeitige Aufrufe derselben
  * Edge Function sind ein selbstgebauter Lastversuch, und ein abgewiesener
- * Aufruf sähe hier aus wie eine Person ohne Daten.
+ * Aufruf saehe hier aus wie eine Person ohne Daten.
  */
 export async function holeLoeschVorschauMehrere(
   sb: Sb,
@@ -180,24 +194,39 @@ export async function holeLoeschVorschauMehrere(
 }
 
 /**
- * Was der Stapel als Ganzes bedeutet — und wer deshalb zurückgestellt wird.
+ * Was der Stapel als Ganzes bedeutet — und wer deshalb gesperrt ist.
  *
- * ⚠ ZURÜCKGESTELLT IST NICHT DASSELBE WIE BLOCKIERT. Blockiert heisst: die
- * Function würde es ablehnen. Zurückgestellt heisst: sie täte es, aber
- * jemand soll es einzeln entscheiden. Beide stehen in derselben Liste, mit
- * verschiedenem Grund — und die zurückgestellten lassen sich dazunehmen.
+ * ⚠ EINE REGEL, KEINE WARNUNG. (Entscheidung Didi, 25.08.2026.)
+ * Ein Kind ohne Kontakt zu hinterlassen ist nicht erlaubt; „Trotzdem loeschen"
+ * gibt es nicht. Der Grund ist gemessen, nicht gefuehlt: 389 von 393 Kindern
+ * haengen an GENAU EINEM Elternteil. Drei zufaellig gewaehlte Eltern ergaben in
+ * zwei Proben hintereinander drei gesperrte Personen — „alle gesperrt" ist der
+ * Normalfall, nicht die Ausnahme.
+ *
+ * ⚠ Und DAS ist das Argument gegen eine weiche Sperre: was bei fast jedem
+ * Stapel erscheint, wird nach der dritten Anwendung weggeklickt. Eine
+ * Rueckfrage und ein „Trotzdem"-Knopf haetten dasselbe Schicksal — die
+ * Gewohnheit weicht beide auf. Nur eine Regel haelt.
+ *
+ * Der Ausweg ist deshalb nicht „bestaetigen", sondern HANDELN: dem Kind einen
+ * Ersatzkontakt geben. Das steht in `ohneKontakt` und wird nach KIND
+ * gruppiert — ein Kontakt fuer Lea Brunner entsperrt beide Elternteile
+ * gleichzeitig. Nach Person gruppiert stuende derselbe Auftrag zweimal da.
  */
-export function rechneStapel(
-  eintraege: StapelEintrag[],
-  dazugenommen: Set<string> = new Set(),
-): StapelBefund {
-  /* ── Kinder über den ganzen Stapel ──────────────────────────────── */
+export function rechneStapel(eintraege: StapelEintrag[]): StapelBefund {
+  /* ── Kinder ueber den ganzen Stapel ────────────────────── */
   const proKind = new Map<number, StapelKind>();
   for (const e of eintraege) {
     if (!e.vorschau) continue;
     for (const k of e.vorschau.kinder) {
       /* `verbleibende_eltern` ist die Sicht der EINZELVORSCHAU: gesamt − 1.
-         Daraus die Gesamtzahl zurückrechnen und die Stapelgrösse abziehen. */
+         Jeder weitere Elternteil im Stapel zieht eine weitere ab.
+
+         ⚠ GEMESSEN, WARUM DAS NOETIG IST: Lea Brunner hat zwei Elternteile,
+         Petra und Reto Brunner. Stehen beide im Stapel, sagt JEDE der beiden
+         Einzelvorschauen „behaelt 1 Elternteil" — keine warnt. Erst diese
+         Rechnung ergibt 0. Genau das kann eine Sammelaktion, was n
+         Einzelloeschungen nicht koennen. */
       const vorhanden = proKind.get(k.mitglied_id);
       if (vorhanden) {
         vorhanden.im_stapel += 1;
@@ -211,6 +240,7 @@ export function rechneStapel(
           verbleibende_eltern: k.verbleibende_eltern,
           im_stapel: 1,
           war_hauptkontakt: k.war_hauptkontakt,
+          braucht_kontakt: k.braucht_kontakt,
           eltern: [{ personId: e.personId, name: e.vorschau.person.name }],
         });
       }
@@ -218,37 +248,39 @@ export function rechneStapel(
   }
   const kinder = [...proKind.values()].sort((a, b) => a.verbleibende_eltern - b.verbleibende_eltern);
 
-  /* Personen, deren Löschung ein Kind ohne jeden Elternteil liesse. */
-  const heikel = new Map<string, string>();
-  for (const k of kinder) {
-    if (k.verbleibende_eltern > 0) continue;
+  /* ⚠ BEIDE BEDINGUNGEN. `verbleibende_eltern === 0` allein sperrte auch dort,
+     wo es das Ziel ist: ein ausgetretenes Kind SOLL niemanden mehr erreichbar
+     haben. Im Bestand betrifft das zwei (Andrea Furrer, Andrea Frei), deren
+     Elternteile sonst dauerhaft unloeschbar waeren. */
+  const ohneKontakt = kinder.filter(k => k.braucht_kontakt && k.verbleibende_eltern === 0);
+
+  const sperrtWegen = new Map<string, StapelKind[]>();
+  for (const k of ohneKontakt) {
     for (const p of k.eltern) {
-      heikel.set(p.personId, `${k.name} bliebe danach ohne Elternteil`);
+      const liste = sperrtWegen.get(p.personId) ?? [];
+      liste.push(k);
+      sperrtWegen.set(p.personId, liste);
     }
   }
 
   const loeschbar: StapelEintrag[] = [];
-  const zurueckgestellt: { eintrag: StapelEintrag; grund: string }[] = [];
+  const gesperrt: { eintrag: StapelEintrag; grund: SperrGrund }[] = [];
 
   for (const e of eintraege) {
     if (e.fehler || !e.vorschau) {
-      zurueckgestellt.push({ eintrag: e, grund: e.fehler || "Vorschau nicht lesbar" });
+      gesperrt.push({ eintrag: e, grund: { art: "unlesbar", text: e.fehler || "Vorschau nicht lesbar" } });
       continue;
     }
-    /* ⚠ PUNKT 4: blockierte Personen fallen VOR dem Start heraus, benannt.
-       Ein Abbruch mitten im Lauf, den die Vorschau schon kannte, ist der
-       schlechteste von allen — vier sind dann weg, fünfzehn stehen, und der
-       Grund stand die ganze Zeit auf dem Schirm. */
+    /* ⚠ Blockierte fallen VOR dem Start heraus, benannt. Ein Abbruch mitten
+       im Lauf, den die Vorschau schon kannte, ist der schlechteste von allen. */
     if (e.vorschau.blockiert.length > 0) {
-      zurueckgestellt.push({
-        eintrag: e,
-        grund: "blockiert: " + e.vorschau.blockiert.map(b => `${b.tabelle} (${b.anzahl})`).join(", "),
-      });
+      gesperrt.push({ eintrag: e, grund: { art: "blockiert",
+        text: e.vorschau.blockiert.map(b => `${b.tabelle} (${b.anzahl})`).join(", ") } });
       continue;
     }
-    const grund = heikel.get(e.personId);
-    if (grund && !dazugenommen.has(e.personId)) {
-      zurueckgestellt.push({ eintrag: e, grund });
+    const betroffen = sperrtWegen.get(e.personId);
+    if (betroffen && betroffen.length > 0) {
+      gesperrt.push({ eintrag: e, grund: { art: "kind_ohne_kontakt", kinder: betroffen } });
       continue;
     }
     loeschbar.push(e);
@@ -257,7 +289,7 @@ export function rechneStapel(
   const zeilen = loeschbar.reduce(
     (s, e) => s + (e.vorschau?.faellt.reduce((t, p) => t + p.anzahl, 0) ?? 0), 0);
 
-  return { kinder, loeschbar, zurueckgestellt, zeilen };
+  return { kinder, ohneKontakt, loeschbar, gesperrt, zeilen };
 }
 
 /** Wie ein einzelner Lauf im Stapel ausging. */

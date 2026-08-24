@@ -170,12 +170,40 @@ async function zaehle(db: SupabaseClient, personId: string): Promise<{
          Feld an `mitglieder`: die Personenfelder gibt es dort seit Etappe 6a
          nicht mehr. */
       const { data: namen, error: e3 } = await db.from("mitglieder")
-        .select("id, personen(vorname, nachname)").in("id", kindIds);
+        .select("id, aktiv, mitgliedtyp, verein_id, personen(vorname, nachname)").in("id", kindIds);
       if (e3) { console.error("zaehle kinder-namen:", e3.message); return null; }
       const nameVon = new Map<number, string>();
+      /* Typ und Aktivstand je Kind — Rohstoff fuer `braucht_kontakt` unten. */
+      const standVon = new Map<number, { aktiv: boolean; typ: string | null; verein: string | null }>();
       for (const m of namen ?? []) {
         const pp = (m as { personen?: { vorname?: string; nachname?: string } | null }).personen;
         nameVon.set(m.id as number, `${pp?.vorname ?? ""} ${pp?.nachname ?? ""}`.trim());
+        standVon.set(m.id as number, {
+          aktiv:  m.aktiv === true,
+          typ:    (m.mitgliedtyp as string | null) ?? null,
+          verein: (m.verein_id as string | null) ?? null,
+        });
+      }
+
+      /* ⚠ WELCHE MITGLIEDTYPEN EINEN KONTAKT VERLANGEN — das MERKMAL, nicht
+         der Name. Ein Vergleich gegen „Juniorenmitglied" haelt nur, bis jemand
+         umbenennt oder einen zweiten Jugendtyp anlegt; `hauptkontakt_pflicht`
+         ist die Sache selbst.
+
+         ⚠ Und ein Lesefehler heisst NICHT „kein Typ verlangt einen Kontakt".
+         Das waere die gefaehrliche Richtung: die Sperre fiele lautlos weg, und
+         die Loeschung liefe durch. Deshalb bricht die Vorschau ab. */
+      const pflichtTypen = new Set<string>();
+      {
+        const vereine = [...new Set([...standVon.values()].map(v => v.verein).filter(Boolean))] as string[];
+        if (vereine.length) {
+          const { data: typen, error: e4 } = await db.from("mitgliedtypen")
+            .select("name, verein_id, hauptkontakt_pflicht").in("verein_id", vereine);
+          if (e4) { console.error("lies mitgliedtypen:", e4.message); return null; }
+          for (const t of typen ?? []) {
+            if (t.hauptkontakt_pflicht === true) pflichtTypen.add(`${t.verein_id}|${t.name}`);
+          }
+        }
       }
 
       for (const k of meine ?? []) {
@@ -186,6 +214,11 @@ async function zaehle(db: SupabaseClient, personId: string): Promise<{
           name: nameVon.get(id) || `Mitglied ${id}`,
           verbleibende_eltern: Math.max(0, gesamt - 1),
           war_hauptkontakt: k.hauptkontakt === true,
+          braucht_kontakt: (() => {
+            const st = standVon.get(id);
+            if (!st || !st.aktiv || !st.typ || !st.verein) return false;
+            return pflichtTypen.has(`${st.verein}|${st.typ}`);
+          })(),
         });
       }
       kinder.sort((a, b) => a.mitglied_id - b.mitglied_id);
