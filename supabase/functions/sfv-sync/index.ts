@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: istAdmin, error: rechteFehler } = await alsAufrufer.rpc("is_admin");
-    if (rechteFehler) return json({ fehler: "Rechte nicht pruefbar" }, 403);
+    if (rechteFehler) return json({ fehler: "Rechte nicht prüfbar" }, 403);
     if (!istAdmin) return json({ fehler: "Nur für Administratoren" }, 403);
   }
   if (perZeitplan && aktion === "teams") return json({ fehler: "teams nur mit Anmeldung" }, 403);

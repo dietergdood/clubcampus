@@ -81,18 +81,24 @@ const SCHLIESSER = /[\u201C\u201D\u00BB]/;   // “ ” »
    Schreibung ohne Umlaut vorkommt: `muss`, `gross`, `Strasse`, `heisst`,
    `schliessen`, `weiss` sind alle richtig und gehören NICHT hierhin. */
 const ERSATZSCHREIBUNG = [
-  "loeschen", "geloescht", "loescht", "loeschbar",
-  "haetten", "haette", "gaebe", "waere", "waeren",
-  "ueber", "uebrig", "uebersprungen", "uebernommen", "uebertragen",
-  "fuer", "muessen", "koennen", "koennte", "moeglich",
-  "waehlen", "gewaehlt", "auswaehlen", "zurueck",
-  "aendern", "geaendert", "aenderung", "unveraendert", "veraendert",
-  "gehoert", "naechste", "spaeter", "hoechste", "groesse", "groesser",
-  "pruefen", "geprueft", "pruefung", "laeuft", "faellt", "haengt",
-  "erklaeren", "zaehlt", "enthaelt", "erhaelt",
-  "ungueltig", "gueltig", "endgueltig", "vollstaendig", "zusaetzlich",
-  "urspruenglich", "taetig", "beschaeftigt", "regelmaessig",
+  /* ⚠ STÄMME, NICHT VOLLFORMEN. Der erste Entwurf führte `pruefen`,
+     `geprueft` und `pruefung` — und übersah `"Rechte nicht pruefbar"`, eine
+     laufende Meldung der Edge Function. Eine Liste von Vollformen ist immer
+     unvollständig, weil Deutsch weiterbildet; ein Stamm fängt jede Ableitung.
+
+     Ein Stamm ist hier gefahrlos, WEIL die Ersatzschreibung in korrektem
+     Deutsch nicht vorkommt: kein richtiges Wort enthält `pruef`, `loesch`
+     oder `haett`. Genau deshalb darf aber nichts in die Liste, das auch ohne
+     Umlaut richtig ist — siehe die Warnung darunter. */
+  "loesch", "haett", "gaeb", "waer", "ueber", "uebrig",
+  "fuer", "muess", "koenn", "moeglich", "waehl", "zurueck",
+  "aender", "gehoer", "naechst", "spaet", "hoechst", "groess",
+  "pruef", "laeuf", "faell", "haeng", "erklaer", "zaehl",
+  "enthael", "erhael", "gueltig", "vollstaend", "zusaetz",
+  "urspruen", "taetig", "beschaeftig", "regelmaess", "verfuegbar",
+  "unterstuetz", "beruecksicht", "ausfuehr", "durchfuehr", "einfuehr",
 ];
+
 
 /* ⚠ ZWEI FILTER, DAMIT DIE LISTE NICHT AN DER FALSCHEN STELLE TRIFFT.
    Gemessen im Bestand: ohne sie meldet die Prüfung 122 Stellen, davon fast

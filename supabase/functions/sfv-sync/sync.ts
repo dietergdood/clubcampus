@@ -319,7 +319,7 @@ export async function laufeSync(
     } else if (md.aufstellung_zeilen > 0
         && md.eigene_unzugeordnet / md.aufstellung_zeilen > UNZUGEORDNET_WARNUNG) {
       erg.status = "warnung";
-      teile.push(`auffaellig viele unzugeordnete Spieler trotz ${md.zuordnungen_gesamt} bestehender Zuordnungen — hat der SFV die personId gewechselt?`);
+      teile.push(`auffällig viele unzugeordnete Spieler trotz ${md.zuordnungen_gesamt} bestehender Zuordnungen — hat der SFV die personId gewechselt?`);
     }
   }
   erg.meldung = teile.join(" · ");
