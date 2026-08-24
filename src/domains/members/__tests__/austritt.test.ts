@@ -468,6 +468,17 @@ describe("setzeArtFuerElternOhneKind — der zweite Auslöser", () => {
    das Ergebnis, bevor etwas geschieht.
    ═════════════════════════════════════════════════════════════ */
 describe("⚠ Kein Weg in src/ loescht aus `mitglieder`", () => {
+  /* ⚠ EIGENE ZEITGRENZE, WEIL DIESER FALL 215 DATEIEN VON DER PLATTE LIEST.
+     Die Vorgabe von 5000 ms ist fuer Faelle gedacht, die rechnen; dieser hier
+     macht Ein-/Ausgabe. Einzeln braucht er unter einer Sekunde, im vollen
+     Durchgang neben 53 anderen Dateien 6142 ms — und war damit ROT, ohne dass
+     etwas defekt war.
+
+     ⚠ Das ist derselbe Befund wie am 22.08.2026 bei `datenpruefungEltern`:
+     rot hiess zwei Dinge, Defekt ODER Rechnerlast. Damals war weniger Arbeit
+     die Loesung (jsdom nur, wo noetig). Hier NICHT: die 215 Dateien zu lesen
+     IST die Aufgabe, sie laesst sich nicht verkleinern. Also die Grenze
+     dorthin, wo sie hingehoert. */
   it("keine Datei ruft `.from(\"mitglieder\").delete()`", () => {
     /* Beide Schreibweisen: der Aufruf steht mal in einer Zeile, mal ueber
        zwei umgebrochen. */
@@ -481,5 +492,5 @@ describe("⚠ Kein Weg in src/ loescht aus `mitglieder`", () => {
     }
     expect(treffer, `Diese Dateien löschen aus \`mitglieder\` und loesen damit `
       + `die CASCADE auf \`eltern_kinder\` aus: ${treffer.join(", ")}`).toEqual([]);
-  });
+  }, 30_000);
 });

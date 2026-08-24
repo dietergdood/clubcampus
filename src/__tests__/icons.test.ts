@@ -52,6 +52,17 @@ function verwendeteIcons(): Map<string, Set<string>> {
 }
 
 describe("Icon-Set", () => {
+  /* ⚠ EIGENE ZEITGRENZE, WEIL DIESER FALL 215 DATEIEN VON DER PLATTE LIEST.
+     Die Vorgabe von 5000 ms ist fuer Faelle gedacht, die rechnen; dieser hier
+     macht Ein-/Ausgabe. Einzeln braucht er unter einer Sekunde, im vollen
+     Durchgang neben 53 anderen Dateien 6142 ms — und war damit ROT, ohne dass
+     etwas defekt war.
+
+     ⚠ Das ist derselbe Befund wie am 22.08.2026 bei `datenpruefungEltern`:
+     rot hiess zwei Dinge, Defekt ODER Rechnerlast. Damals war weniger Arbeit
+     die Loesung (jsdom nur, wo noetig). Hier NICHT: die 215 Dateien zu lesen
+     IST die Aufgabe, sie laesst sich nicht verkleinern. Also die Grenze
+     dorthin, wo sie hingehoert. */
   it("kennt jeden Namen, der im Code verwendet wird", () => {
     const fehlend: string[] = [];
     for (const [name, orte] of verwendeteIcons()) {
@@ -60,7 +71,7 @@ describe("Icon-Set", () => {
       }
     }
     expect(fehlend, `Fehlende Icons in src/icons.tsx:\n${fehlend.join("\n")}`).toEqual([]);
-  });
+  }, 30_000);
 
   it("liefert für jedes Icon mindestens ein SVG-Element", () => {
     /* Das Set nutzt path, circle, line, polyline und rect. */

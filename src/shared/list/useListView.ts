@@ -311,6 +311,48 @@ export function useListView<T extends ListRow = ListRow>({
     });
   }, [rows, search, filterVals, filterFn]);
 
+  /* ⚠ DIE AUSWAHL WIRD GEGEN DIE ZEILEN GEHALTEN, DIE ES NOCH GIBT.
+
+     Befund vom 24.08.2026, nach dem ersten scharfen Lauf der Sammellöschung:
+     zwei Personen wurden gelöscht, die Liste sprang von 8 auf 6 — und in der
+     Auswahlleiste stand weiterhin „2 ausgewählt". Die Ids der Gelöschten.
+
+     ⚠ ES BETRIFFT NICHT NUR DAS LÖSCHEN. Bis heute räumte KEINE einzige
+     Sammelaktion die Auswahl ab; nur „Abbrechen" und das Beenden des
+     Auswahlmodus taten es. Dasselbe stand also nach „Entfernen" in der
+     Elternliste, nach „Austritt", nach „Mitglied werden" (die Person wandert
+     aus der Supporter-Liste) und nach „Reaktivieren" im Archiv. Dass es
+     bisher niemandem aufgefallen ist, liegt daran, dass es folgenlos bleibt —
+     ein weiterer Klick fände die Zeilen einfach nicht.
+
+     ⚠ Folgenlos heisst nicht harmlos. Es ist dieselbe Sorte wie die sechs
+     Fälle vom 23.08.2026: eine Anzeige, die etwas behauptet, das nicht mehr
+     stimmt — und beim nächsten Mal ist es vielleicht nicht folgenlos.
+
+     ⚠ UND DIE REPARATUR GEHOERT HIERHIN, NICHT IN DIE AKTIONEN. Jede
+     Sammelaktion selbst aufräumen zu lassen hiesse, die Entscheidung an n
+     Aufrufstellen zu wiederholen — und sie sieht an jeder wie eine
+     Ermessensfrage aus, obwohl sie keine ist. Genau dieser Fehler ist beim
+     `onReload`/`neuLaden`-Fund sechsmal einzeln getroffen und dreimal gleich
+     falsch entschieden worden.
+
+     ⚠ GEPRUEFT WIRD GEGEN `rows`, NICHT GEGEN `sorted`. Eine Suche verkleinert
+     `sorted` — würde dagegen geprüft, verschwände die Auswahl beim Tippen.
+     Sie soll aber einen Suchwechsel überleben: genau so wurden am 25.08.2026
+     drei Personen aus zwei verschiedenen Suchen zusammengestellt. Nur was es
+     in den DATEN nicht mehr gibt, fällt heraus. */
+  useEffect(() => {
+    setSelected(prev => {
+      if (prev.size === 0) return prev;
+      const vorhanden = new Set(rows.map(r => getRowId(r)));
+      const behalten = [...prev].filter(id => vorhanden.has(id));
+      /* Gleiche Grösse heisst: nichts gefallen. Dann dieselbe Referenz
+         zurückgeben, sonst rendert die Liste bei jeder Datenänderung neu. */
+      return behalten.length === prev.size ? prev : new Set(behalten);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
   const sorted = useMemo(
     () => sortiereMehrstufig(filtered, sortDefs, sortFn),
     [filtered, sortDefs, sortFn],
