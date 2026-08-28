@@ -1517,6 +1517,52 @@ select t.name, coalesce(k.modus,'(freiwillig)') as ahv,
  where t.aktiv group by 1,2 order by 4 desc;
 ```
 
+### ⚠ Die Matchdaten liegen seit dem Sync in der Datenbank und werden nirgends ausgewertet
+
+Gemessen am 29.08.2026, positionsgenau aus einem `--data-only`-Dump:
+
+| Tabelle | Zeilen | |
+|---|---|---|
+| `spiel_aufstellung` | **640** | über **42 Spiele**, 308 verschiedene `sfv_person_id`, 18 Teams |
+| `spiel_ereignisse` | **410** | Tore, Karten, Wechsel |
+| `sfv_zuordnung` | **0** | ⚠ leer |
+
+**Der Sync schreibt seit dem 19./20.08.2026 zuverlässig, und gelesen wird
+nichts davon für eine Auswertung.** Einsätze pro Spieler, Torschützen,
+Kartenstatistik, Einsatzminuten — die Grundlage liegt vollständig da. Das ist
+der Grund, warum an dieser Stelle jahrelang ein Seed-Generator stand: die
+Daten sahen aus, als gäbe es sie nicht.
+
+⚠ **Die Statistik ist also näher, als sie aussieht — aber genau eine Sache
+fehlt, und sie ist die ganze Arbeit: die Spielerzuordnung.**
+`spiel_aufstellung` führt die `sfv_person_id` des Verbands. Um daraus „Anna
+Beispiel hat 3 Tore" zu machen, braucht es die Abbildung auf `mitglieder`, und
+die steht in `sfv_zuordnung` — **mit null Zeilen bei 308 offenen Spielern**
+(Stand 29.08.2026; am 23.08. waren es 287, am 22.08. 265, am 21.08. 177 — die
+Zahl wächst mit jedem Lauf, weil Spiele dazukommen).
+
+**Ohne Zuordnung ist jede Auswertung anonym.** Man könnte heute schon zählen,
+wie viele Tore ein TEAM erzielt hat — aber nicht, wer sie geschossen hat. Und
+eine Statistik ohne Namen ist nicht die, nach der jemand fragt.
+
+⚠ **Und 27 % der offenen Spieler sind über den Zeitplan gar nicht
+erreichbar**: der Sync holt zehn Spiele je Lauf, ausgewählt nach Datum, nicht
+nach offener Zuordnung. Dafür gibt es die eigene Aktion `namen`
+(`namenLauf.ts`), die die Spiele nach der Frage wählt.
+
+**Die Oberfläche dafür steht** (`SfvSpielerZuordnung`, `matchdatenService.ts`).
+Was fehlt, ist der Durchgang von Hand — und die Entscheidung, ob er sich
+lohnt, bevor der Fairgate-Import die Mitgliederbasis ohnehin anfasst.
+
+⚠ **Zum Nachzählen, und die Zahl gehört gegengeprüft statt zitiert:**
+
+```sql
+select (select count(*) from public.spiel_aufstellung)                as aufstellung,
+       (select count(distinct sfv_person_id) from public.spiel_aufstellung) as offene_spieler,
+       (select count(*) from public.spiel_ereignisse)                 as ereignisse,
+       (select count(*) from public.sfv_zuordnung)                    as zugeordnet;
+```
+
 ### ⚠ `api_verbindungen.active` und `auto_sync` — zwei Kennzeichen, zwei Leser
 
 Befund vom 20.08.2026, beim ersten Lauf von Hand aufgefallen.
@@ -1794,6 +1840,32 @@ fehlt. Sieben davon setzen `"Cc-Junioren"` ein; `TeamsVerwaltungModul.tsx:150-19
 erfindet bei leerem `dbTeams` **42 Teams samt Trainernamen**. Es ist dieselbe
 Familie wie „Mein Kind zeigt Demodaten" und wie der Verweis auf den
 „Kontakt-Tab", den es nie gab: **es trifft immer den, dem etwas fehlt.**
+
+⚠ **UND HIER IST DIE ERKLÄRUNG DER GANZEN FAMILIE, nicht nur der einen
+Stelle:** `DashboardAdmin` bekam weder `sb` noch `vereinId` noch
+`dbMitglieder` — nur `setActive` und `account`. **Die Komponente KONNTE
+nichts Echtes zeigen.** Wer sie gebaut hat, stand vor der Wahl, eine leere
+Seite abzuliefern oder etwas hinzuschreiben, und hat das Zweite gewählt.
+
+Dasselbe gilt für fast alle 33: `PlatzhalterModul` hat keinen Service für
+News, Material oder Busse; `HelferModul` keinen für Helfereinsätze; `StatsTab`
+keinen für Statistik. **Die erfundenen Werte sind nicht Nachlässigkeit,
+sondern der Abdruck einer fehlenden Anbindung.**
+
+Daraus folgt, wonach man sucht, wenn man die restlichen 33 angeht — **nicht
+nach `Math.random`, sondern nach Komponenten ohne Datenzugang:**
+
+```bash
+# Komponenten, die etwas anzeigen, aber weder sb noch einen Service kennen
+grep -rLn "from(\|Service\|use[A-Z].*(sb" src/modules/*.tsx
+```
+
+**Und die Regel beim Bauen, die den Fall gar nicht erst entstehen lässt:**
+eine Ansicht ohne Quelle bekommt eine Karte, die sagt, was fehlt — nie einen
+Platzhalterwert. Ein Platzhalter, der plausibel aussieht, wird zur Aussage,
+sobald ihn jemand liest; und niemand kommt zurück, um ihn zu ersetzen, weil
+die Seite ja gefüllt aussieht.
+
 
 **Zwei davon sind am 29.08.2026 gefallen** (Didi): `StatsTab` zeigt jetzt die
 Spieler ohne Zahlen und sagt, dass die Statistik fehlt; `DashboardAdmin`
