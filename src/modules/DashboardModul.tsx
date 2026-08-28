@@ -59,8 +59,38 @@ function Dashboard({role,setActive,account,meineTeams,myRosterId,sb=null,vereinI
 }
 
 function DashboardAdmin({setActive,account}: DashProps){
-  const isMobile=useIsMobile();
   const vorname=(account?.name||"Administrator").split(" ")[0];
+
+  /* ⚠ Hier standen bis zum 29.08.2026 vier Kacheln und vier Karten mit
+     ausgedachten Werten: „Mitglieder total 187", „Aktive Benutzer 134",
+     „Sync-Fehler 2", eine Rollenverteilung (2/3/8/6/112/56), ein
+     Systemstatus mit Zeitangaben („Fairgate-Sync OK, vor 2h"), zwei
+     Sync-Konflikte mit erfundenen Personennamen samt Aufforderung „2
+     Konflikte muessen manuell aufgeloest werden", und drei Audit-Eintraege
+     mit Uhrzeit.
+
+     Keiner dieser Werte war je an eine Quelle angeschlossen — diese
+     Komponente bekommt weder `sb` noch `vereinId` noch `dbMitglieder`. Sie
+     KONNTE gar nichts Echtes zeigen.
+
+     ⚠ Der Schaden liegt darin, dass die Zahlen PLAUSIBEL waren. 187
+     Mitglieder klingt nach einem Verein dieser Groesse; tatsaechlich stehen
+     914 Personen und 512 aktive Mitgliedschaften in der Datenbank. Eine
+     offensichtlich falsche Zahl faellt auf, eine plausible wird zitiert.
+     Bei „Sync-Konflikte" kam eine Handlungsaufforderung fuer etwas dazu,
+     das es nicht gibt — und die Audit-Zeilen standen neben einer echten
+     `audit_log`-Tabelle, in der die Loeschprotokolle liegen.
+
+     Ersetzt ist das NICHT durch bessere Zahlen, sondern durch die Wege zu
+     den Stellen, an denen die echten stehen. Wer hier wieder eine Kachel
+     einbaut, haengt sie an eine Abfrage — oder laesst es. */
+  const wege: {key: string; titel: string; text: string}[]=[
+    {key:"members", titel:"Mitglieder",        text:"Bestand, Eltern, Supporter und Archiv — mit Suche, Filtern und Export."},
+    {key:"sync",    titel:"API-Verbindungen",  text:"Stand des SFV-Syncs, letzter Lauf und die Protokolle der Läufe."},
+    {key:"audit",   titel:"Audit-Logs",        text:"Wer was geändert hat, samt den Protokollen gelöschter Personen."},
+    {key:"portal",  titel:"Portalverwaltung",  text:"Rollen, Gruppen, Module und Rechte."},
+  ];
+
   return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
@@ -68,68 +98,27 @@ function DashboardAdmin({setActive,account}: DashProps){
         <H1>{getGreeting()}, {vorname}</H1>
       </div>
       <p className="cc-detail-label" style={{minWidth:"auto",marginBottom:24}}>ClubCampus – Systemübersicht</p>
-      <div className="cc-grid-stats cc-mb-20">
-        <Stat label="Mitglieder total" value="187" sub="Fairgate synchronisiert" semantic="primary" icon="users"/>
-        <Stat label="Aktive Benutzer" value="134" sub="in den letzten 30 Tagen" semantic="info" icon="user"/>
-        <Stat label="Sync-Fehler" value="2" sub="Fairgate / FVRZ" semantic="danger" icon="refresh"/>
-        <Stat label="Offene Datenprüfungen" value="12" sub="Mitglieder fällig" semantic="warning" icon="clipboard-list"/>
-      </div>
+
+      <Card className="cc-mb-20">
+        <div className="cc-empty" style={{padding:"20px 16px",textAlign:"left"}}>
+          <strong>Die Systemübersicht ist noch nicht an die Daten angeschlossen.</strong>
+          <div style={{marginTop:8}}>
+            Hier standen bis jetzt Kennzahlen, die niemand erhoben hatte —
+            Mitgliederzahl, Sync-Status, Rollenverteilung. Sie sind entfernt
+            und nicht durch geschätzte ersetzt. Die echten Zahlen stehen an
+            den Stellen darunter.
+          </div>
+        </div>
+      </Card>
+
       <div className="cc-grid-cards cc-mb-20">
-        <Card>
-          <STitle>Systemstatus</STitle>
-          {[
-            {label:"Fairgate-Sync",     status:"OK",     last:"vor 2h",       ok:true},
-            {label:"FVRZ-Sync",         status:"Fehler", last:"vor 4h",       ok:false},
-            {label:"E-Mail-Versand",    status:"OK",     last:"vor 30min",    ok:true},
-            {label:"Push-Benachricht.", status:"OK",     last:"active",        ok:true},
-          ].map((s,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<3?`0.5px solid ${GB}`:"none"}}>
-              <span style={{fontSize:14,fontWeight:600}}>{s.label}</span>
-              <Row>
-                <span className="cc-text-sm">{s.last}</span>
-                <Chip text={s.status} color={s.ok?GN:R} bg={s.ok?"#ECFDF5":RL}/>
-              </Row>
-            </div>
-          ))}
-        </Card>
-        <Card>
-          <STitle>Benutzer &amp; Rollen</STitle>
-          {[
-            {r:"Administrator",n:2},{r:"Administration",n:3},{r:"Trainer",n:8},
-            {r:"Funktionäre/Vorstand",n:6},{r:"Spieler",n:112},{r:"Eltern",n:56},
-          ].map((x,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:i<5?`0.5px solid ${GB}`:"none"}}>
-              <span style={{fontSize:14}}>{x.r}</span>
-              <span style={{fontWeight:700,fontSize:14}}>{x.n}</span>
-            </div>
-          ))}
-        </Card>
-        <Card>
-          <STitle>Sync-Konflikte</STitle>
-          {[
-            {field:"E-Mail-Adresse",member:"Noah Beispiel", conflict:"Portal ↔ Fairgate"},
-            {field:"Adresse",       member:"Sara Huber",     conflict:"Fairgate ↔ Portal"},
-          ].map((c,i)=>(
-            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
-              <div className="cc-list-name">{c.member} · {c.field}</div>
-              <div className="cc-text-sm">{c.conflict}</div>
-            </div>
-          ))}
-          <InfoBox text="2 Konflikte müssen manuell aufgelöst werden." color={R}/>
-        </Card>
-        <Card>
-          <STitle>Letzte Audit-Einträge</STitle>
-          {[
-            {action:"Export Mitgliederliste",user:"Sandra Berger",time:"14:22"},
-            {action:"Fairgate-Sync manuell", user:"Admin User",  time:"12:00"},
-            {action:"Rolle geändert",         user:"Admin User",  time:"10:45"},
-          ].map((a,i)=>(
-            <div key={i} className="cc-list-row" style={{borderBottom:"none"}}>
-              <div style={{fontSize:14,fontWeight:600}}>{a.action}</div>
-              <div className="cc-text-sm">{a.user} · {a.time+" Uhr"}</div>
-            </div>
-          ))}
-        </Card>
+        {wege.map((w)=>(
+          <Card key={w.key}>
+            <STitle>{w.titel}</STitle>
+            <div className="cc-text-sm" style={{marginBottom:12}}>{w.text}</div>
+            <Btn variant="outline" onClick={setActive?()=>setActive(w.key):undefined}>Öffnen</Btn>
+          </Card>
+        ))}
       </div>
     </div>
   );

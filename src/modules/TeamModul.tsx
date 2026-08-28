@@ -680,41 +680,53 @@ function PollsTab({role}: {role: string}){
   );
 }
 
-function StatsTab({team="Cc-Junioren", dbMitglieder=[]}: {team?: string; dbMitglieder?: TeamMitglied[]}){
-  const seed=(str: string)=>str.split("").reduce((a,c)=>a+c.charCodeAt(0),0);
-  const rnd=(n: string,min: number,max: number)=>{let s=seed(n+team);s=((s*1664525+1013904223)&0xFFFFFFFF)>>>0;return min+Math.floor((s/0xFFFFFFFF)*(max-min+1));};
-  const players=dbMitglieder.length>0
-    ? dbMitglieder.filter(p=>(p.teams||[]).includes(team)&&p.aktiv!==false).map(p=>({firstName:p.vorname,lastName:p.nachname,pos:""}))
-    : (ROSTER as any[]).filter((p)=>(p.teams||[]).includes(team)&&!p.role);
-  const stats=players.map(p=>{
-    const nm=`${p.firstName} ${p.lastName}`;
-    return{name:nm,sp:rnd(nm+"sp",6,14),tore:rnd(nm+"t",0,9),assists:rnd(nm+"a",0,7),gelb:rnd(nm+"g",0,3),rot:rnd(nm+"r",0,1)};
-  }).sort((a,b)=>b.tore-a.tore);
-  if(stats.length===0) return <Card><div className="cc-empty">Keine Spielerstatistiken verfügbar.</div></Card>;
+/* Spieler eines Teams — OHNE Zahlen.
+
+   ⚠ Hier stand bis zum 29.08.2026 eine Torschuetzenliste, deren Werte ein
+   Seed-Generator erfand: `sp` 6-14, `tore` 0-9, `assists` 0-7, `gelb` 0-3,
+   `rot` 0-1. Die NAMEN kamen aus `dbMitglieder`, also aus der Datenbank —
+   an einem echten Junioren stand damit eine erfundene rote Karte.
+
+   Das Tueckische war nicht der Zufall, sondern sein Fehlen: der Seed kam aus
+   Name + Teamname, die Zahlen aenderten sich beim Neuladen also NIE. Ein
+   Generator, der springt, faellt in Sekunden auf; dieser sah aus wie
+   gepflegte Daten, gerade weil er stillstand.
+
+   Der Rueckfall auf ROSTER ist mit weg: erfundene Namen sind auch erfunden.
+
+   Die Zahlen sind NICHT durch bessere ersetzt worden, sondern durch den Satz,
+   was fehlt. Die Grundlage dafuer liegt bereits in der Datenbank —
+   `spiel_aufstellung` und `spiel_ereignisse` werden vom SFV-Sync geschrieben
+   —, sie ist nur nicht ausgewertet. Das ist ein eigener Auftrag. */
+function StatsTab({team, dbMitglieder=[]}: {team?: string; dbMitglieder?: TeamMitglied[]}){
+  const spieler=dbMitglieder
+    .filter(m=>(m.teams||[]).includes(team||"")&&m.aktiv!==false)
+    .map(m=>`${m.vorname} ${m.nachname}`)
+    .sort((a,b)=>a.localeCompare(b,"de-CH"));
+
   return(
-    <Card style={{padding:0,overflowX:"auto"}}>      <div className="cc-table-wrap"><table className="cc-table">
-        <thead>
-          <tr className="cc-tr" style={{background:"var(--bg)"}}>
-            {["Spieler","Spiele","Tore","Assists","Gelb","Rot"].map((h,i)=>(
-              <th key={i} className={i>0?"cc-th cc-th-center":"cc-th"}>{h}</th>
+    <Card>
+      <div className="cc-empty" style={{padding:"20px 16px",textAlign:"left"}}>
+        <strong>Für dieses Team gibt es noch keine Statistik.</strong>
+        <div style={{marginTop:8}}>
+          Einsätze, Tore und Karten liefert der Verband seit dem SFV-Sync je
+          Spiel; ausgewertet werden sie noch nicht. Was zu einem einzelnen
+          Spiel vorliegt, steht im Spielbericht unter Spielplan.
+        </div>
+      </div>
+      {spieler.length>0&&(
+        <div>
+          <div className="cc-section-hdr">Spieler in diesem Team ({spieler.length})</div>
+          <div className="cc-list">
+            {spieler.map((n,i)=>(
+              <div key={i} className="cc-list-row">
+                <Av name={n} size="sm"/>
+                <div className="cc-list-name">{n}</div>
+              </div>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {stats.map((p,i)=>(
-            <tr key={i} className="cc-tr">
-              <td className="cc-td">
-                <Row><Av name={p.name} size="sm"/><span className="cc-list-name">{p.name}</span></Row>
-              </td>
-              <td className="cc-td" style={{textAlign:"center"}}>{p.sp}</td>
-              <td className="cc-td" style={{textAlign:"center",fontWeight:p.tore>=5?700:400,color:p.tore>=5?R:BK}}>{p.tore}</td>
-              <td className="cc-td" style={{textAlign:"center"}}>{p.assists}</td>
-              <td className="cc-td" style={{textAlign:"center"}}>{p.gelb>0?<span style={{background:"#FCD34D",color:"#78350F",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:14}}>{p.gelb}</span>:"-"}</td>
-              <td className="cc-td" style={{textAlign:"center"}}>{p.rot>0?<span style={{background:R,color:"#fff",padding:"1px 7px",borderRadius:4,fontWeight:700,fontSize:14}}>{p.rot}</span>:"-"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table></div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

@@ -156,6 +156,27 @@ Inline-Editing läuft über `domains/members/useInlineEdit.js` + `InlineField`; 
 
 Nicht alle Module hängen an Supabase. `src/demoData.js` ist temporär und wird noch importiert von: `DashboardModul`, `TermineModul`, `TrainingsplanModul`, `HelferModul`, `TeamModul`, `PlatzhalterModul`, `NavigationModul` (`USER_ACCOUNTS`), `appConstants.js` und `clubcampus.tsx` (nur noch `USER_ACCOUNTS`). Neue Features nie gegen `demoData` bauen — Service + Supabase.
 
+> **⚠ EIN IMPORT ALLEIN SAGT NICHTS — ES KOMMT AUF DAS SYMBOL AN.** Die Liste
+> darüber führt neun Importeure und liest sich wie eine Baustelle von neun
+> gleich grossen Teilen. Sie ist es nicht: `demoData.js` ist **zur Hälfte
+> leergeräumt**, und wer nach Importen sucht statt nach Symbolen, zählt
+> falsch — in beide Richtungen.
+>
+> | | Konstanten | Wirkung |
+> |---|---|---|
+> | **leer** (`[]` / `{}`) | `ATT_EVENTS`, `ATT_INITIAL`, `ATT_LOG`, `GANTT` | was daraus rendert, zeigt **nichts** — der Import ist ein Rest |
+> | **gefüllt** | `ROSTER`, `USER_ACCOUNTS`, `EVENTS`, `POLLS`, `HELPERS`, `HELPER_EVENTS`, `BUSES`, `MATERIAL`, `LOCKERS`, `MEDIA`, `WIKI`, `NEWS` | erscheint im Portal als plausible Daten |
+> | **importiert von niemandem** | `SCHEDULE`, `TABLES`, `MEMBERS`, `PSTATS`, `FUNKTIONEN`, `MITGLIEDTYPEN` | tot, aber nicht harmlos: `TABLES` sieht aus wie eine Ligatabelle und ist es nicht mehr |
+>
+> Gemessen am 28.08.2026. **Beide Fehlrichtungen sind real:** `TeamModul`
+> importiert `ATT_EVENTS` und zeigt daraus nichts (harmlos, sieht aber nach
+> Arbeit aus), und `PlatzhalterModul` importiert `NEWS` und zeigt daraus 17
+> erfundene Meldungen an **jede** Rolle (nicht harmlos, sieht aber nach
+> nichts aus, wenn man nur die Importliste liest).
+>
+> Wer den Umfang wissen will, zählt deshalb **Anzeigestellen, nicht
+> Importe** — siehe „35 Stellen zeigen erfundene Daten".
+
 TypeScript-Migration **abgeschlossen**: `domains/`, `shared/`, alle `src/modules/*` (inkl. `modules/portal/`, `modules/members/`), `clubcampus.tsx` sowie `App.tsx`/`main.tsx` sind `.tsx`. Übrig als `.jsx` sind nur noch die Test-Dateien unter `src/modules/members/__tests__/`. `tsconfig` ist `strict`, aber `checkJs: false` und es gibt keine CI-Typprüfung — deshalb vor jeder Lieferung `npm run typecheck` laufen lassen.
 
 Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-Prüfung noch nicht migrierter JS-Komponenten) ist entfernt; alle von `clubcampus.tsx` gerenderten Module werden jetzt regulär typgeprüft.
@@ -1708,7 +1729,7 @@ niemand hatte gesucht. Das Ergebnis der anschliessenden Suche:
 
 | Ebene | Stellen | |
 |---|---|---|
-| **2A — unbedingt sichtbar** | **35** | erscheint, egal wie die Datenlage ist |
+| **2A — unbedingt sichtbar** | **35**, davon 2 erledigt → **33** | erscheint, egal wie die Datenlage ist |
 | 2B — sichtbar, sobald die echte Quelle leer ist | 11 | Rückfallwerte |
 | 1 — tote Reste | 14 | existiert, wird nie gerendert |
 
@@ -1773,6 +1794,14 @@ fehlt. Sieben davon setzen `"Cc-Junioren"` ein; `TeamsVerwaltungModul.tsx:150-19
 erfindet bei leerem `dbTeams` **42 Teams samt Trainernamen**. Es ist dieselbe
 Familie wie „Mein Kind zeigt Demodaten" und wie der Verweis auf den
 „Kontakt-Tab", den es nie gab: **es trifft immer den, dem etwas fehlt.**
+
+**Zwei davon sind am 29.08.2026 gefallen** (Didi): `StatsTab` zeigt jetzt die
+Spieler ohne Zahlen und sagt, dass die Statistik fehlt; `DashboardAdmin`
+zeigt statt der fünf erfundenen Blöcke die Wege zu den Stellen, an denen die
+echten Zahlen stehen. **Beide ersetzt durch einen Satz, nicht durch eine
+bessere Zahl** — und beide mit einem Test, der festhält, dass die alten Werte
+nicht zurückkommen (`modules/__tests__/erfundeneWerte.test.jsx`, mit
+Strukturprüfung auf `rnd`/`charCodeAt`). Bleiben **33**.
 
 ⚠ **Diese Liste ist kein Auftrag, alles auf einmal zu entfernen** — Phase 4
 (`ARCHITECTURE.md`) löst den grössten Teil davon auf. Sie ist die Antwort auf
