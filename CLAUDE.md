@@ -1414,6 +1414,68 @@ select key, active, konfiguriert, auto_sync, letzter_sync
 Steht dort ein frisches `letzter_sync` bei `active = false`, ist das der Beleg,
 dass die Spalte reine Anzeige ist.
 
+### ⚠ Zwei eigene Teams gegeneinander ergeben EINE Zeile — dem Gastteam fehlt sein Auswärtsspiel
+
+Befund vom 28.08.2026, beim Messen der Gruppenfrage. **Heute null Fälle im
+Bestand — und genau deshalb steht er hier.**
+
+Der Schlüssel `(verein_id, sfv_match_id)` lässt je Spiel nur eine Zeile zu.
+Treffen zwei FCH-Teams aufeinander, bekommt sie das Heimteam:
+
+```ts
+// sync.ts:60-62
+/* Zwei eigene Teams gegeneinander: der Schlüssel (verein_id, sfv_match_id)
+   lässt nur EINE Zeile zu. Das Heimteam bekommt sie. */
+```
+
+**Für den Spielplan ist das richtig** — das Spiel steht einmal da, und beide
+Mannschaften finden es. **Für jede Rechnung über Spiele ist es falsch**, weil
+das Gastteam eine Partie weniger hat, als es gespielt hat. Eine
+Heim-/Auswärtstabelle zählt dem Gastteam sein Auswärtsspiel nicht mit; eine
+Bilanz „gespielt / gewonnen" ebenso wenig. **Der Fehler geht immer in
+dieselbe Richtung: zu Lasten der Auswärtsseite.**
+
+⚠ **Gemessen am 28.08.2026: 0 von 269 Spielen.** Nicht, weil es nicht
+vorkommen kann, sondern weil alle **21 FCH-Teams in 21 verschiedenen Gruppen**
+stehen — je genau eines pro Gruppe. In der Meisterschaft können sie sich
+strukturell nicht begegnen. Übrig bleiben **Cup und Trainingsspiele**, und
+dort ist der Fall bisher nicht eingetreten.
+
+**Damit ist es kein Defekt, den man sieht, sondern einer, der wartet.** Er
+tritt ein, sobald zwei FCH-Teams in dieselbe Gruppe geraten — bei den
+Junioren-Stufen mit mehreren Mannschaften ist das eine Frage der Einteilung,
+nicht der Wahrscheinlichkeit. Und dann fällt er nicht auf: die Tabelle rechnet
+weiter, nur eine Zeile zu wenig.
+
+**Der Zähler dafür steht bereits da und wird nirgends gelesen.**
+`erg.derbys` (`sync.ts:190`) zählt genau diese Spiele und steht in der
+Protokoll-Allowlist (`ergebnisTypen.ts:93`). Wer eine Rechnung über `spiele`
+baut, prüft ihn zuerst:
+
+```sql
+select gestartet_am::date, details->>'derbys'
+  from public.api_sync_log
+ where (details->>'derbys')::int > 0 order by gestartet_am desc;
+```
+
+**Zwei Wege, wenn der Fall eintritt** — zu entscheiden, wenn er eintritt, nicht
+vorher:
+
+| | |
+|---|---|
+| die Rechnung zählt Derbys doppelt (einmal je Seite) | billig, aber die Sonderregel steht dann in jeder Rechnung neu |
+| der Schlüssel wird `(verein_id, sfv_match_id, sfv_team_id)` | ehrlich, aber eine Migration — und jede Liste zeigt das Derby danach zweimal |
+
+⚠ **Und ein zweiter, unabhängiger Punkt an derselben Stelle:** `heimspiel`
+wird als `unsA` gesetzt (`sync.ts:85`), also aus der Annahme, Team A sei das
+Heimteam. **Die Spezifikation sagt das nirgends.** `Schedule` hat 31 Felder
+und darunter kein `isHomeTeam` — das gibt es nur in `MatchDetail`,
+`MatchEvent`, `Player` und `PlayerBench` (Swagger v26.7.10.1, geprüft
+28.08.2026). Die Annahme ist plausibel und vermutlich richtig, aber sie ist
+eine Annahme, und die ganze Heim-/Auswärtsrechnung steht darauf. Belegen liesse
+sie sich gegen `/api/match/{id}` → `teams[].isHomeTeam`, für die 41
+ausgetragenen Spiele ohne einen einzigen zusätzlichen Abruf.
+
 ### Zwei Komponenten stehen noch innerhalb einer anderen
 
 Befund vom 21.08.2026, beim Herausziehen von `RolleField`. Die Regel dazu

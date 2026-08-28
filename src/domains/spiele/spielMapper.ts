@@ -14,6 +14,7 @@ export type RanglisteZeile = Tables<"ranglisten">;
 /* SFV-Kennzahlen, die die Anzeige braucht. Der Klartext steht daneben in
    status/wettbewerb, gefiltert wird über die Zahl — sie ist sprachfest. */
 const TYP_TRAININGSSPIEL = 3;
+const TYP_MEISTERSCHAFT = 1;
 const STATUS_AUSGETRAGEN = 2;
 const STATUS_VERSCHOBEN = 6;
 const STATUS_FINDET_NICHT_STATT = 10;
@@ -53,6 +54,12 @@ export interface SpielUi {
   trainingsspiel: boolean;
   abgesagt: boolean;
   verschoben: boolean;
+  /* Fuer jede Rechnung ueber Spiele. `comp`/`status` tragen den Klartext des
+     Verbands und wechseln mit der Sprache; gefiltert wird ueber die Zahl.
+     `result != null` als Ersatz fuer „ausgetragen" traegt nicht: ein Forfait
+     hat ein Resultat und ist kein gespieltes Spiel. */
+  meisterschaft: boolean;
+  ausgetragen: boolean;
 }
 
 /** Die SFV-Saison ist nach dem Endjahr benannt: 2027 = 1.7.2026 bis 30.6.2027. */
@@ -120,6 +127,8 @@ export function mapSpiel(z: SpielZeile): SpielUi {
     trainingsspiel: z.sfv_spiel_typ === TYP_TRAININGSSPIEL,
     abgesagt,
     verschoben: z.sfv_status === STATUS_VERSCHOBEN,
+    meisterschaft: z.sfv_spiel_typ === TYP_MEISTERSCHAFT,
+    ausgetragen: z.sfv_status === STATUS_AUSGETRAGEN,
   };
 }
 

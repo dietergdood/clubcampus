@@ -9,6 +9,7 @@ import { TI } from "../icons.tsx";
 import { useIsMobile, InfoBox, Btn, Card, Chip, Av, Tabs, STitle , Between, Col, H1, Row, Stat} from "../theme.ts";
 import { ATT_EVENTS, ATT_INITIAL, EVENTS, POLLS, ROSTER } from "../demoData.js";
 import { useRangliste } from "../domains/spiele/useSpiele.ts";
+import { HeimAuswaertsBlock } from "./spiele/HeimAuswaertsKarte.tsx";
 import { sfvTeamIdFuer } from "../domains/spiele/spielMapper.ts";
 import type { TeamZuordnung } from "../domains/spiele/spielMapper.ts";
 import type { Sb } from "../types.ts";
@@ -369,6 +370,13 @@ function TeamView({role,trainerTeams=["Cc-Junioren"],teamRollen={},setActive,myR
           <div>
             <div className="cc-section-hdr">Spielplan</div>
             <SpielplanModulProp role={role} team={activeTeam} initialSelected={selectedSpiel} sb={sb} vereinId={vereinId} kannSchreiben={kannSchreiben} benutzerId={benutzerId}/>
+          </div>
+          <div>
+            {/* Fasst den Spielplan darueber zusammen — deshalb hier und nicht
+                unter der Tabelle, die vom Verband kommt und die ganze Gruppe
+                zeigt. */}
+            <div className="cc-section-hdr">Bilanz</div>
+            <HeimAuswaertsBlock team={activeTeam} sb={sb} vereinId={vereinId}/>
           </div>
           <div>
             <div className="cc-section-hdr">Tabelle</div>
