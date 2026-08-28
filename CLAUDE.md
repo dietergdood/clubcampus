@@ -319,9 +319,13 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   Zahl deckt den toten Aufruf zu: wer „drei" liest und vier zählt, sucht den
   Fehler beim Zählen und nicht im Code.
 
-  **Als Erreichbarkeitsprüfung taugt er nicht als Begründung** — `holeAufstellung`
-  eine Zeile weiter liefert denselben 404 und wirft ebenso. Ob der Aufruf
-  einmal einen Zweck hatte, steht nirgends.
+  ⚠ **Einen Zweck hat er vermutlich doch, und ich hatte ihn zuerst abgetan:**
+  `sfvApi.ts:126-130` wirft, wenn die Antwort kein Objekt ist. Der Aufruf
+  wirkt damit als Gültigkeitsprüfung vor den drei folgenden. Praktisch
+  redundant ist er trotzdem — bei einem unbekannten Spiel antwortet auch
+  `/players` mit 404 und wirft. Der einzige Fall, den nur er fängt, wäre
+  HTTP 200 mit unbrauchbarem Körper. **Belegt ist die Absicht nirgends:** es
+  steht kein Kommentar dazu, und der Kommentar, der dort steht, zählt falsch.
 
   ⚠ **Das Ärgerliche daran ist nicht der verschwendete Aufruf, sondern was er
   trägt.** `/api/match/{id}` liefert `MatchDetail` — und darin steht genau das,
@@ -1696,6 +1700,85 @@ Daraus folgen zwei Dinge:
 
 Zusammenlegen, sobald jemand die Liste anfasst: eine Aussage, ein Ort — und
 das ist `benutzer.person_id`.
+
+### ⚠ 35 Stellen zeigen erfundene Daten — und die naheliegende Suche findet keine davon
+
+Gemessen am 28.08.2026, ausgelöst durch zwei Funde, die **nebenbei** anfielen:
+niemand hatte gesucht. Das Ergebnis der anschliessenden Suche:
+
+| Ebene | Stellen | |
+|---|---|---|
+| **2A — unbedingt sichtbar** | **35** | erscheint, egal wie die Datenlage ist |
+| 2B — sichtbar, sobald die echte Quelle leer ist | 11 | Rückfallwerte |
+| 1 — tote Reste | 14 | existiert, wird nie gerendert |
+
+Zählweise: eine Stelle = ein zusammenhängender Codeort, der **eine
+Anzeigeeinheit** erzeugt (eine Kachel-Gruppe, eine Card, eine Liste, ein
+Rückfallwert). Ein `.map()` über ein Demo-Array zählt einmal, nicht je Zeile.
+
+⚠ **`grep Math.random` findet NICHTS davon.** Es gibt genau eine Fundstelle
+(`TrainingsplanModul.tsx:1020`), und die erzeugt eine Slot-Id, keine
+Anzeigezahl. Wer so sucht, bekommt ein sauberes Ergebnis und hat nichts
+gefunden. Die 35 stecken in eigenen Generatoren, in `demoData`-Importen und
+in Rückfallwerten.
+
+**Die schlimmste Sorte mischt echt und erfunden.** Zwei Beispiele:
+
+| Stelle | echt | erfunden |
+|---|---|---|
+| `TeamModul.tsx:683-692` `StatsTab` | die **Namen** aus `dbMitglieder` | Spiele, Tore, Assists, Gelb, **Rot** |
+| `TermineModul.tsx:493-508` „Player of the Match" | das **Spiel** aus der Datenbank | die Spielerliste aus `ROSTER` |
+
+Bei `StatsTab` steht damit an einem echten Junioren eine erfundene rote Karte.
+Sichtbar über `:405` (`tab==="stats" && !limited`) für **alle Rollen ausser
+Spieler und Eltern**.
+
+⚠ **Und der Generator ist deterministisch, das ist der eigentliche Trick:**
+
+```ts
+const seed = (str) => str.split("").reduce((a,c) => a + c.charCodeAt(0), 0);
+const rnd  = (n,min,max) => { let s = seed(n + team); … };
+```
+
+Der Seed kommt aus Name + Teamname. **Die Zahlen ändern sich beim Neuladen
+nie.** Ein Zufallsgenerator, der springt, fällt in Sekunden auf; dieser sieht
+aus wie gepflegte Daten, gerade weil er stillsteht.
+
+**Weitere Stellen aus 2A, nach Wirkung geordnet:**
+
+| Stelle | wer sieht es | was dort steht |
+|---|---|---|
+| `clubcampus.tsx:443` | jeder ohne DB-Benutzer | die **ganze Identität** wird `USER_ACCOUNTS.trainer` — „Thomas Müller", `trainerTeams:["Cc-Junioren"]` |
+| `DashboardModul.tsx:72-131` | administrator | „Mitglieder total **187**", „Aktive Benutzer 134", „Sync-Fehler 2", Rollenverteilung, Audit-Einträge |
+| `DashboardModul.tsx:354-356` | **spieler** | Begrüssung „…, **Luca**" — ein fremder Vorname aus `ROSTER`, Zeile 1 |
+| `PlatzhalterModul.tsx:255-272` | **alle Rollen** | 17 erfundene News, u. a. „Saisonauftakt gelingt: 3:0 gegen FC Uster" |
+| `PlatzhalterModul.tsx:197-203` | **alle Rollen** | Dokumentenliste „Trainerhandbuch 2026 · 2.4 MB" **mit Download-Knopf** |
+| `HelferModul.tsx:708-720` | **alle Rollen** | Grümpelturnier mit Schichten und namentlichen Helfern |
+
+⚠ **„Mitglieder total 187" ist die Sorte, die am teuersten wird.** Die
+Datenbank führt 914 Personen und 512 aktive Mitgliedschaften. Die Zahl ist
+nicht offensichtlich falsch — sie ist plausibel, und genau deshalb wird sie
+zitiert.
+
+**Und `demoData.js` ist nur ZUM TEIL leergeräumt**, was die Liste unter
+„Migrationsstand" irreführend macht: `ATT_EVENTS`, `ATT_INITIAL`, `ATT_LOG`
+und `GANTT` sind leer — was daraus rendert, zeigt nichts. **Gefüllt und damit
+wirksam** sind `ROSTER`, `USER_ACCOUNTS`, `EVENTS`, `POLLS`, `HELPERS`,
+`HELPER_EVENTS`, `BUSES`, `MATERIAL`, `LOCKERS`, `MEDIA`, `WIKI`, `NEWS`.
+Ein Import allein sagt also nichts; es kommt darauf an, welches Symbol.
+
+**Die 11 Rückfälle (2B) sind die tückischsten**, weil sie genau dann greifen,
+wenn etwas fehlt — und dann etwas Plausibles zeigen statt zu sagen, dass es
+fehlt. Sieben davon setzen `"Cc-Junioren"` ein; `TeamsVerwaltungModul.tsx:150-197`
+erfindet bei leerem `dbTeams` **42 Teams samt Trainernamen**. Es ist dieselbe
+Familie wie „Mein Kind zeigt Demodaten" und wie der Verweis auf den
+„Kontakt-Tab", den es nie gab: **es trifft immer den, dem etwas fehlt.**
+
+⚠ **Diese Liste ist kein Auftrag, alles auf einmal zu entfernen** — Phase 4
+(`ARCHITECTURE.md`) löst den grössten Teil davon auf. Sie ist die Antwort auf
+die Frage, wie gross der Rest ist, wenn man ihn zum ersten Mal zählt. **Wer
+eine dieser Stellen anfasst, ersetzt sie durch eine Karte, die sagt, was
+fehlt — nicht durch eine bessere erfundene Zahl.**
 
 ### ⚠ „Mein Kind" zeigt einem Elternteil HEUTE Demodaten
 
