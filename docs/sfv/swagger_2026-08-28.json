@@ -1,0 +1,3418 @@
+{
+  "_hinweis": "Spezifikation der SFV Club API. INHALTLICH unveraendert, aber neu eingerueckt (JSON.stringify mit 2 Leerzeichen) und um die Felder mit Unterstrich ergaenzt — die sind UNSERE Zutat, alles andere kommt vom Verband. Wer gegen das Original vergleichen will, holt es neu von der Quelle; eine Pruefsumme dieser Datei trifft nicht das Original.",
+  "_erhoben_am": "2026-08-28",
+  "_quelle": "https://stg-club-api-services.football.ch/swagger/v1/swagger.json",
+  "_umgebung": "Staging (stg-). Aufrufe laufen gegen die Produktion ohne Praefix — die Spezifikation ist nur von Staging oeffentlich abrufbar.",
+  "_warum": "Zwei Wochen lang war sie in docs/auftrag_sfv_api.md nur verlinkt. Sie beantwortet drei Fragen, die seit dem 14.08.2026 offen standen: es gibt 15 Endpunkte, keinen gruppenbasierten darunter; Ranking hat 19 Felder und keine Heim-/Auswaertstrennung; ClubId ist bei schedule/ranking Pflicht. Die Befunde stehen in docs/auftrag_sfv_api.md unter \"Die Spezifikation, gelesen am 28.08.2026\".",
+  "_veraltet_irgendwann": "Das ist kein Grund, sie nicht einzuchecken — im Gegenteil: so ist nachvollziehbar, gegen welchen Stand die Befunde gemessen wurden. Version laut Datei siehe info.version.",
+  "openapi": "3.0.4",
+  "info": {
+    "title": "SFV Club API Interface",
+    "version": "v26.7.10.1"
+  },
+  "paths": {
+    "/api/token": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Create new user token.\r\nThe token will be valid only for a time period.\r\nCurrent token validity is set to 30 minutes.\r\nThe token validity will be extended on each valid request.",
+        "requestBody": {
+          "description": "TokenQuery object.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenQuery"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns the newly created session token.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occurs on the server."
+          }
+        }
+      }
+    },
+    "/api/club/{clubId}/players": {
+      "get": {
+        "tags": [
+          "Club"
+        ],
+        "summary": "Get clubs players.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 mintues.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clubId",
+            "in": "path",
+            "description": "Club id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns players.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubPlayer"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubPlayer"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubPlayer"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/club/{clubId}/officials": {
+      "get": {
+        "tags": [
+          "Club"
+        ],
+        "summary": "Get clubs officials.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 mintues.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clubId",
+            "in": "path",
+            "description": "Club id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns officials.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubOfficial"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubOfficial"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubOfficial"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/club/{clubId}/coaches": {
+      "get": {
+        "tags": [
+          "Club"
+        ],
+        "summary": "Get clubs coaches.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 mintues.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clubId",
+            "in": "path",
+            "description": "Club id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns coaches.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubCoach"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubCoach"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubCoach"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/club/{clubId}/referees": {
+      "get": {
+        "tags": [
+          "Club"
+        ],
+        "summary": "Get clubs referees.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 mintues.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clubId",
+            "in": "path",
+            "description": "Club id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns referees.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubReferee"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubReferee"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClubReferee"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/club/schedule": {
+      "get": {
+        "tags": [
+          "ClubSchedule"
+        ],
+        "summary": "Get schedule of matches for given club and filters.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 minutes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SeasonId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "ClubId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "OrganisationId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "TeamId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "LeagueId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "CupId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "DivisionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "GroupId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "RoundNbr",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "MatchType",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Language",
+            "in": "query",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "DateFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "DateUntil",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns list of schedule.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exists.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occurs on the server."
+          }
+        }
+      }
+    },
+    "/api/club/ranking": {
+      "get": {
+        "tags": [
+          "ClubSchedule"
+        ],
+        "summary": "Get ranking for the given club and filters.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 minutes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SeasonId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "ClubId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "OrganisationId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "TeamId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "LeagueId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Language",
+            "in": "query",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "DivisionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "GroupeId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "MatchType",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns list of schedule.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ranking"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ranking"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ranking"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exists.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occurs on the server."
+          }
+        }
+      }
+    },
+    "/api/common/ids": {
+      "get": {
+        "tags": [
+          "Common"
+        ],
+        "summary": "return json with all relevant ids.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ClubId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Language",
+            "in": "query",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "string.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "no content found."
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/match/{matchId}": {
+      "get": {
+        "tags": [
+          "Match"
+        ],
+        "summary": "Get all the details for the match given by its id.\r\nMatch Information. Available 15 minutes before match begin.(90 minutes for SFL).",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 minutes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "matchId",
+            "in": "path",
+            "description": "match id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the match details.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchDetail"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchDetail"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/match/{matchId}/players": {
+      "get": {
+        "tags": [
+          "Match"
+        ],
+        "summary": "Get players for the match given by its id.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 minutes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "matchId",
+            "in": "path",
+            "description": "Match id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the match players.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Player"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Player"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Player"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/match/{matchId}/events": {
+      "get": {
+        "tags": [
+          "Match"
+        ],
+        "summary": "Get match events for the match given by its id.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 minutes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "matchId",
+            "in": "path",
+            "description": "Match id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns telegramm of the given match.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MatchEvent"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MatchEvent"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MatchEvent"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/match/{matchId}/bench": {
+      "get": {
+        "tags": [
+          "Match"
+        ],
+        "summary": "Get player bench for the match given by its id.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 minutes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "matchId",
+            "in": "path",
+            "description": "Match id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns persons on the bench.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerBench"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerBench"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerBench"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/match/{matchId}/referees": {
+      "get": {
+        "tags": [
+          "Match"
+        ],
+        "summary": "Get referees for the match given by its id.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "description": "Valid user token.\r\nCurrent token validity is set to 30 mintues.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "matchId",
+            "in": "path",
+            "description": "Match id.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-User-Language",
+            "in": "header",
+            "description": "requested language (1 de, 2 fr, 3 it).",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns referees.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RefereeDetail"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RefereeDetail"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RefereeDetail"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No authorization to read this resource.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The wanted resource is currently not available.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/team/picture/{teamId}": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "return logo for given team Id.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "description": "teamId.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "binary data encoded in base64.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "no content found."
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    },
+    "/api/team/list": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "return teamIds for the given club and season.",
+        "parameters": [
+          {
+            "name": "X-User-Token",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "SeasonId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "ClubId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "OrganisationId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "TeamId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "LeagueId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "CupId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "DivisionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "GroupId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "RoundNbr",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "MatchType",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Language",
+            "in": "query",
+            "schema": {
+              "pattern": "^[123]{1}$",
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "DateFrom",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "DateUntil",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "list of TeamDetail.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamDetail"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamDetail"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamDetail"
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "no content found."
+          },
+          "401": {
+            "description": "Session token cannot be validate.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The wanted resource doesn't exist.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected error occured on the server."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClubCoach": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "coachId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondName": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstname": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "email1": {
+            "type": "string",
+            "nullable": true
+          },
+          "email2": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel1": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel2": {
+            "type": "string",
+            "nullable": true
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClubCoachFunction"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClubCoachFunction": {
+        "type": "object",
+        "properties": {
+          "coachFunctionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "coachFunction": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamLeagueId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamLeagueName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClubOfficial": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "officialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondName": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstname": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "email1": {
+            "type": "string",
+            "nullable": true
+          },
+          "email2": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel1": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel2": {
+            "type": "string",
+            "nullable": true
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClubOfficialFunction"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClubOfficialFunction": {
+        "type": "object",
+        "properties": {
+          "officialFunctionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "officialFunction": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClubPlayer": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "playerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondName": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstname": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "email1": {
+            "type": "string",
+            "nullable": true
+          },
+          "email2": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel1": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel2": {
+            "type": "string",
+            "nullable": true
+          },
+          "clubOwnerId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "clubOwnerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "clubOwnerNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "qualificationType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "qualificationTypeText": {
+            "type": "string",
+            "nullable": true
+          },
+          "licenceType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "licenceTypeText": {
+            "type": "string",
+            "nullable": true
+          },
+          "playerState": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "playerStateText": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateOfEntry": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClubReferee": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "refereeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondName": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstname": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "email1": {
+            "type": "string",
+            "nullable": true
+          },
+          "email2": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel1": {
+            "type": "string",
+            "nullable": true
+          },
+          "tel2": {
+            "type": "string",
+            "nullable": true
+          },
+          "qualifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClubRefereeQualification"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ClubRefereeQualification": {
+        "type": "object",
+        "properties": {
+          "qualificationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "qualificationName": {
+            "type": "string",
+            "nullable": true
+          },
+          "qualificationDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Gender": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "MatchDetail": {
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "championshipName": {
+            "type": "string",
+            "nullable": true
+          },
+          "cupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "groupId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cupId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "roundNbr": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stadiumFieldId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stadiumFieldName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isUnkownStadiumField": {
+            "type": "boolean"
+          },
+          "leagueId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leagueNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leagueName": {
+            "type": "string",
+            "nullable": true
+          },
+          "divisionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "divisionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "organisationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "organisationName": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchState": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchStateName": {
+            "type": "string",
+            "nullable": true
+          },
+          "playDay": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "playDayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "seasonId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "seasonName": {
+            "type": "string",
+            "nullable": true
+          },
+          "scoreTeamA": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoreTeamB": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasMatchStarted": {
+            "type": "boolean"
+          },
+          "isMatchPause": {
+            "type": "boolean"
+          },
+          "hasMatchEnded": {
+            "type": "boolean"
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamDetail"
+            },
+            "nullable": true
+          },
+          "intermediateResults": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Result"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MatchEvent": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exactEventTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isHomeTeam": {
+            "type": "boolean"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "clubNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "roleId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "roleCategoryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "roleCategoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "eventTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventSubTypeId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "eventSubTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "minute": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "seconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "additionalMinute": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isPlayer": {
+            "type": "boolean"
+          },
+          "personId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "personName": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "passportNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "jerseyNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "substitutePlayerId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "substitutePlayerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "substitutePlayerBirthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "substitutePlayerPassportNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "substitutePlayerJerseyNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "isEventTemporary": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Player": {
+        "type": "object",
+        "properties": {
+          "isHomeTeam": {
+            "type": "boolean"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamFullname": {
+            "type": "string",
+            "nullable": true
+          },
+          "clubNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "clubName": {
+            "type": "string",
+            "nullable": true
+          },
+          "personId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "playerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "passportNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "jerseyNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondName": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstname": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isNotRegisteredPlayer": {
+            "type": "boolean"
+          },
+          "positionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "positionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "assignmentRoleId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "assignmentRoleName": {
+            "type": "string",
+            "nullable": true
+          },
+          "playFromMinute": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "playUntilMinute": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPlayTime": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlayerBench": {
+        "type": "object",
+        "properties": {
+          "isHomeTeam": {
+            "type": "boolean"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "clubNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "eventTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "eventTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventSubTypeId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "eventSubTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "roleId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "roleCategoryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "roleCategoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "personId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "personName": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": {}
+      },
+      "Ranking": {
+        "type": "object",
+        "properties": {
+          "leagueId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leagueNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leagueName": {
+            "type": "string",
+            "nullable": true
+          },
+          "divisionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "divisionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "groupId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "clubNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matches": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "wins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "draws": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "losses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "penaltyPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "goalsFor": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "goalsAgainst": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "points": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefereeDetail": {
+        "type": "object",
+        "properties": {
+          "clubNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "clubName": {
+            "type": "string",
+            "nullable": true
+          },
+          "personId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "refereeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondName": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstname": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "refereeRoleId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "refereeRoleName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Result": {
+        "type": "object",
+        "properties": {
+          "scoreTeamA": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoreTeamB": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resultTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resultTypeName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Schedule": {
+        "type": "object",
+        "properties": {
+          "matchId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "groupId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cupId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "roundNbr": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "playgroundId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stadiumPlaygroundName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isUnkownPlayground": {
+            "type": "boolean"
+          },
+          "leagueId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leagueNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leagueName": {
+            "type": "string",
+            "nullable": true
+          },
+          "divisionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "divisionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "organisationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "organisationName": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchType": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchState": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matchStateName": {
+            "type": "string",
+            "nullable": true
+          },
+          "playDay": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "playDayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "seasonId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "seasonName": {
+            "type": "string",
+            "nullable": true
+          },
+          "scoreTeamA": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scoreTeamB": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamAId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamNameA": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamBId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamNameB": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TeamDetail": {
+        "type": "object",
+        "properties": {
+          "isHomeTeam": {
+            "type": "boolean"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamFullname": {
+            "type": "string",
+            "nullable": true
+          },
+          "clubNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "clubName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamLeagueId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamLeagueName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamDivisionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamOrganisationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isTeamActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TokenQuery": {
+        "type": "object",
+        "properties": {
+          "applicationKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "applicationPass": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication"
+    },
+    {
+      "name": "Club"
+    },
+    {
+      "name": "ClubSchedule"
+    },
+    {
+      "name": "Common"
+    },
+    {
+      "name": "Match"
+    },
+    {
+      "name": "Team"
+    }
+  ]
+}

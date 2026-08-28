@@ -300,6 +300,44 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Bis dahin nicht "aufräumen".** Ein `||` mit totem linkem Zweig sieht nach Zierrat aus und ist der einzige Ort, an dem eine eigene Nummer je erscheinen könnte.
 
+- **⚠ `holeMatch` wird bei jedem Spiel aufgerufen und sein Ergebnis weggeworfen.**
+
+  ```ts
+  // matchdatenLauf.ts:85-90
+  /* Drei Aufrufe, streng seriell mit demselben Token — … */
+  await holeMatch(zugang, token, matchId);          // ← kein const, nichts gelesen
+  const rohAufstellung = await holeAufstellung(…);
+  const rohEreignisse  = await holeEreignisse(…);
+  const rohRefs        = await holeSchiedsrichter(…);
+  ```
+
+  `holeMatch` hat genau **einen** Aufrufer, und der bindet den Rückgabewert
+  nicht. Es ist ein Viertel der vierzig Matchdaten-Aufrufe je Lauf.
+
+  ⚠ **Und der Kommentar direkt darüber sagt „Drei Aufrufe", während vier
+  Zeilen folgen** — `holeSchiedsrichter` kam am 20.08.2026 dazu. Die falsche
+  Zahl deckt den toten Aufruf zu: wer „drei" liest und vier zählt, sucht den
+  Fehler beim Zählen und nicht im Code.
+
+  **Als Erreichbarkeitsprüfung taugt er nicht als Begründung** — `holeAufstellung`
+  eine Zeile weiter liefert denselben 404 und wirft ebenso. Ob der Aufruf
+  einmal einen Zweck hatte, steht nirgends.
+
+  ⚠ **Das Ärgerliche daran ist nicht der verschwendete Aufruf, sondern was er
+  trägt.** `/api/match/{id}` liefert `MatchDetail` — und darin steht genau das,
+  was an anderer Stelle fehlt:
+
+  | Feld | wird gebraucht für | Stand heute |
+  |---|---|---|
+  | `teams[].isHomeTeam` | die Heim-/Auswärtsrechnung | über den Spielort belegt (28.08.2026), nicht aus der Quelle |
+  | Halbzeitstand | `spiele.ht_resultat` | leer |
+  | Zuschauer | `spiele.zuschauer` | leer |
+
+  Die Antwort wird also stündlich geholt, bezahlt und weggeworfen, während
+  drei Spalten daneben leer bleiben. **Wer den Aufruf entfernt, spart 25 % der
+  Matchdaten-Aufrufe; wer ihn ausliest, füllt drei Spalten ohne einen einzigen
+  zusätzlichen Aufruf.** Beides ist richtig, nichts zu tun ist es nicht.
+
 - **⚠ Der Verweis auf den FVRZ-Spielbericht: `tg=` ist `spiele.sfv_match_id`.**
 
   Direkt belegt am 25.08.2026, nicht hergeleitet — die Seite zeigte bei `tg=4393132` unser Spiel vom 23.08.2026 (FC Herrliberg 3 – FC Blau-Weiss Erlenbach 1, 3:3) samt Aufstellung, und die dort genannte „Spielnummer: 177238" ist genau unsere `sfv_spiel_nr`.
