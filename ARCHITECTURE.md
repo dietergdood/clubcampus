@@ -38,6 +38,13 @@ src/
       roleUtils.ts                  ← ableitRolle(), ROLLE_PRIORITAET, saveRolle()
     season/
       seasonUtils.ts                ← currentSeason(), formatSaison()
+    spiele/                         ← Spielplan, Rangliste, Matchdaten (fehlte hier bis 28.08.2026)
+      spielService.ts               ← fetchSpiele(), fetchRanglisten()
+      spielMapper.ts                ← DB→UI (SpielUi, TabellenZeile), sfvTeamIdFuer()
+      heimAuswaerts.ts              ← heimAuswaertsBilanz(), leseResultat() — nur eigene Teams
+      useSpiele.ts                  ← Hooks useSpiele / useRangliste
+      matchdatenService.ts · matchdatenAnzeige.ts · matchdatenRechte.ts · spielerAusgabe.ts
+    sfv/                            ← Tests zum Sync (Edge Function liegt unter supabase/functions/)
 
   shared/                           ← Wiederverwendbare UI-Bausteine
     componentRegistry.js            ← COMPONENT_REGISTRY (Quelle des Design-System-Tabs)
@@ -124,6 +131,11 @@ src/
       TeamModuleTab · UsersTab                                    (alle .tsx)
       DesignSystemTab.tsx           ← Living Style Guide (auto aus COMPONENT_REGISTRY)
       portalUtils.ts                ← ZUGRIFF_*, ALLE_MODULE, ROLES, KAT_LABELS etc.
+    spiele/                         ← Spiel-Ansichten (fehlte hier bis 28.08.2026)
+      Spielbericht.tsx              ← Matchdaten eines Spiels
+      EreignisKorrektur.tsx         ← Vereinskorrektur eines SFV-Ereignisses
+      HeimAuswaertsKarte.tsx        ← Bilanz des eigenen Teams + HeimAuswaertsBlock (Hook-Wrapper)
+    __tests__/                      ← Einbau-Tests fuer Module (teamSpielplanTab)
     DashboardModul.tsx              ← ⚠️ noch demoData
     HelferModul.tsx                 ← ⚠️ noch demoData
     KaderModul.tsx

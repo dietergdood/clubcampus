@@ -34,7 +34,45 @@ ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt
 > angeschlossen wurde. Wer die Liste einmal aufräumt, findet damit vermutlich
 > weitere. Tests (vitest + Testing Library, jsdom, Setup in `src/test-setup.js`) liegen an zwei Orten: **Komponenten-Tests** unter `src/modules/members/__tests__/`, **Service-/Domain-Tests** co-lokalisiert unter `src/domains/members/__tests__/` (mit dem Mock-Supabase-Helfer `_mockSb.ts`). Service-Tests sind `.test.ts` und werden von `tsc` strict typgeprüft; Komponenten-Tests bleiben `.jsx` (via `checkJs:false` nicht typgeprüft).
 
-Stand 20.08.2026 (Supporter-Rückbau Teil A): 530 grün, 2 skipped, 0 rot (35 Testdateien).
+Stand 28.08.2026: **847 grün, 0 rot (58 Testdateien)**. Die Zahl gehört nach jedem Zulauf gegen die Erwartung gehalten — `npx vitest list | sed 's/ > .*//' | sort | uniq -c` zählt ohne auszuführen und ist die verlässlichere Quelle als ein Lauf (siehe den Abschnitt über verlorene Testdateien unten).
+
+> **⚠ EIN LAUF KANN 16 TESTDATEIEN VERLIEREN UND TROTZDEM EXIT 0 MELDEN.**
+> Gemessen am 28.08.2026, gleich zu Sessionbeginn und unbeabsichtigt:
+>
+> | | Dateien | Fälle | Errors | Exit |
+> |---|---|---|---|---|
+> | Lauf unter Last (im Hintergrund gestartet) | **39** | **592** | **16** | **0** |
+> | derselbe Stand, allein im Vordergrund | 55 | 829 | 0 | 0 |
+> | `vitest list` (zählt ohne auszuführen) | 55 | 829 | — | — |
+>
+> Die 16 Errors waren alle `[vitest-pool-runner]: Timeout waiting for worker
+> to respond`. 55 − 39 = 16, und `grep -rl "@vitest-environment jsdom" src
+> --include=*.test.*` ergibt ebenfalls **16** — es sind genau die
+> jsdom-Komponententests, deren Worker beim Umgebungsaufbau hängen bleiben.
+> Der Beleg steht in der Zeitzeile: der kaputte Lauf meldet
+> `environment 16ms`, der gute `environment 140.20s`. Im ersten ist keine
+> einzige jsdom-Instanz hochgekommen.
+>
+> ⚠ **Und vitest quittiert das mit „Tests 592 passed (592)" und Exit-Code 0.**
+> Die verlorenen Dateien stehen nur als „Errors 16" daneben. Wer auf `passed`
+> und den Exit-Code schaut — also CI —, sieht grün, während 237 Fälle nie
+> gelaufen sind.
+>
+> **Das ist die Fortsetzung von „Zwei Tests entschieden sich nach
+> Rechnerlast" (22.08.2026), eine Stufe schlimmer: damals hiess Last ROT,
+> jetzt heisst sie GRÜN.** Rot fällt auf, grün nicht.
+>
+> **Die Gegenmassnahme ist die Zählprobe, nicht das Zusehen.** Nach jedem
+> Lauf die Dateizahl gegen `vitest list` halten:
+>
+> ```bash
+> npx vitest list | grep -E "^src/" | sed 's/ > .*//' | sort | uniq -c \
+>   | awk '{f++; s+=$1} END {print "Dateien:", f, "| Faelle:", s}'
+> ```
+>
+> Stimmen Lauf und Liste nicht überein, ist der Lauf wertlos — unabhängig
+> davon, was „passed" sagt. Dieselbe Familie wie `cat > datei`, das
+> dreizehn Prüfungen verschluckte: **es fehlt etwas, und nichts meldet es.**
 
 **`npm run typecheck` braucht vollständige `node_modules`.** `tsconfig.json` setzt `"types": ["node", "vite/client"]`. Sobald `types` gesetzt ist, gilt **nur noch**, was dort steht — alle anderen `@types/*` werden nicht mehr automatisch geladen. Beide Einträge sind deshalb Pflicht: `node` für Tests, die den Quelltext lesen (`icons.test.ts`), `vite/client` für `import.meta.env` (ohne den Eintrag verschwindet `import.meta.env.DEV` aus dem Typsystem und der Build bricht an Stellen, die es lesen). Fehlt `@types/node` in `node_modules`, meldet `tsc` `error TS2688: Cannot find type definition file for 'node'` — das ist ein Installationsloch, kein Codefehler; `npm install` behebt es.
 
@@ -628,6 +666,50 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   **Dieselbe Familie wie `ilike 'junior%'` gegen `mitgliedtypen.hauptkontakt_pflicht`:** die Regel „Minderjährige brauchen einen Hauptkontakt" nach dem Namen des Mitgliedtyps zu prüfen funktioniert, bis jemand „Juniorenmitglied" in „U18" umbenennt oder einen zweiten Jugendtyp anlegt. Und wie die Spaltenköpfe der Pflichtfeld-Matrix, die am 05.08.2026 auf `Juniormitglied` und `Funktionär` zeigten, während die Typen `Juniorenmitglied` und `Funktionär/in` heissen.
 
   **Die Prüfung ist mechanisch:** wo ein Vergleich gegen eine Zeichenkette steht, die aus der Datenbank stammt, gehört die Frage dazu — *welche Eigenschaft meine ich eigentlich, und steht sie als Spalte da?* Steht sie nicht, ist das der eigentliche Befund.
+
+- **Ein Komponententest prüft die Komponente, nicht ihren Einbau — und der Unterschied ist unsichtbar.**
+
+  Am 28.08.2026 hatte die Bilanz-Karte im Team-Tab **fünf grüne
+  Komponententests**, und Didi meldete, sie erscheine nicht. Die fünf prüfen
+  „gib ihr Spiele, dann rendert sie eine Tabelle". **Keiner prüfte, ob sie je
+  in den Baum kommt.**
+
+  Dass die Ursache diesmal woanders lag (ein nicht gepushter Stand), ändert
+  nichts an der Lücke: die Verdrahtung war zufällig richtig, und wäre sie es
+  nicht gewesen, hätte **kein einziger Test etwas gemeldet**. Dieselbe Familie
+  wie die Modale hinter dem frühen Return und wie `TableTab`, das in der
+  Datei, in der es steht, nirgends gerendert wird und erst über zwei
+  Prop-Ketten ankommt.
+
+  **Der Test gehört deshalb an den EINBAU, nicht an die Komponente** —
+  `src/modules/__tests__/teamSpielplanTab.test.jsx` rendert den Tab und
+  prüft die Reihenfolge im Dokument:
+
+  ```jsx
+  const hdrs = screen.getAllByText(/^(Spielplan|Bilanz|Tabelle)$/).map(e => e.textContent);
+  expect(hdrs).toEqual(['Spielplan', 'Bilanz', 'Tabelle']);
+  ```
+
+  Die Reihenfolge steht dort mit Absicht: die Platzierung war der Streitpunkt,
+  und `toBeTruthy()` auf drei Überschriften hätte auch dann gehalten, wenn die
+  Bilanz wieder unter der Verbandstabelle landet.
+
+  ⚠ **Und die Frage davor ist noch billiger und wird trotzdem übersprungen:
+  WER RENDERT DAS EIGENTLICH?** Ich habe die Karte in `TableTab` eingebaut,
+  weil dort die Ligatabelle steht — und erst auf Nachfrage gemessen, dass
+  `TableTab` in `TermineModul.tsx` definiert, aber in `TeamModul.tsx:375`
+  gerendert wird. Ein Funktionsname (`TableTab`) ist kein Beleg für einen Ort.
+
+- **Ein Erklärsatz, der eine Platzierung geradebiegen muss, ist das Eingeständnis der falschen Platzierung.**
+
+  Dieselbe Karte hing zuerst unter der Verbandstabelle und trug darunter zwei
+  Zeilen, die erklärten, dass sie **nicht** die Gruppe zeigt. Der Satz war als
+  Sorgfalt gedacht. Er war das Symptom: unter dem eigenen Spielplan gelesen —
+  wo sie seit dem 28.08.2026 steht — braucht sie eine Zeile statt zwei, weil
+  die Sache dann von selbst stimmt.
+
+  Die Frage beim nächsten Mal: *Wenn ich erklären muss, was das hier nicht
+  ist — steht es dann am richtigen Ort?*
 
 - **Keine Komponente, die bei fehlenden Daten `null` zurückgibt.** Eine Sektion, die still verschwindet, ist von einer nicht gerenderten nicht zu unterscheiden — bei der Fehlersuche kostet genau diese Ununterscheidbarkeit die meiste Zeit. Stattdessen eine Karte mit einem Satz, der sagt, was fehlt und wo es herkommt. (`MitgliedtypFelderSektion` ohne Mitgliedtypen ist das Muster.) Gilt nicht für bewusste Sichtbarkeitsregeln — ein Feld auf „Gibt es nicht" verschwindet richtigerweise ganz.
 

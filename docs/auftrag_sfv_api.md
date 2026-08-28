@@ -127,6 +127,77 @@ was möglich ist; die Antwort sagt, was wirklich kommt.
 
 **Danach Plan zeigen und auf Freigabe warten.**
 
+---
+
+## Die Spezifikation, gelesen am 28.08.2026
+
+Die Swagger-Datei war bis dahin **nur verlinkt, nie geholt** — zwei Wochen
+lang stand oben eine Fragenliste, deren Antworten einen `curl` weit entfernt
+waren. Geholt von `https://stg-club-api-services.football.ch/swagger/v1/swagger.json`
+(92 KB, HTTP 200, öffentlich, kein Token nötig), Titel *SFV Club API
+Interface*, Version **v26.7.10.1**.
+
+**Zu Frage 1 — es gibt genau 15 Endpunkte, alle GET ausser dem Token:**
+
+```
+POST /api/token
+GET  /api/common/ids
+GET  /api/team/list · /api/team/picture/{teamId}
+GET  /api/club/schedule · /api/club/ranking
+GET  /api/club/{clubId}/coaches · /officials · /players · /referees
+GET  /api/match/{matchId} · /players · /events · /referees · /bench
+```
+
+Vier davon kennt unser Sync **nicht**: die vier `club/{clubId}/…`-Endpunkte
+und `match/{matchId}/bench`.
+
+**⚠ Zu Frage 4 — und das ist die Antwort, die einen ganzen Umbau erledigt
+hat:** `/api/club/ranking` liefert das Schema `Ranking` mit **19 Feldern**,
+und **keines trennt Heim von Auswärts**. Unser Mapper (`sync.ts:110`) liest
+18 davon; das einzige ungenutzte ist `leagueNumber`. Eine Suche über die
+ganze Datei nach `home`/`away` findet `isHomeTeam` nur in `MatchDetail`,
+`MatchEvent`, `Player` und `PlayerBench` — **nie in `Ranking`, nie in
+`Schedule`**.
+
+**⚠ Es gibt keinen gruppen- oder ligabasierten Endpunkt.** `ClubId` ist bei
+`schedule`, `ranking` und `team/list` **Pflicht**; `GroupId` existiert nur
+als *optionaler Filter* innerhalb des Vereins (bei `ranking` als `GroupeId`
+geschrieben — Tippfehler der API). Spiele einer ganzen Gruppe sind damit
+nicht abrufbar, und zwar aus drei unabhängigen Gründen:
+
+1. kein Gruppenendpunkt (oben),
+2. `/api/club/schedule?ClubId=1516` liefert **ausschliesslich** Spiele mit
+   eigener Beteiligung — `spiele.ohne_team` war in **allen 185** protokollierten
+   Läufen `0` (`api_sync_log.details`, gemessen 28.08.2026),
+3. **die ClubId fremder Vereine steht nirgends im Bestand.**
+   `ranglisten.club_nummer` ist die **clubNumber** (FCH 11057), nicht die
+   ClubId (1516) — zwei verschiedene Zahlen, und eine Abbildung gibt es weder
+   in der Datenbank noch in einem Endpunkt.
+
+Für die 21 FCH-Gruppen wären es **71 verschiedene fremde Vereine**. Das ist
+keine technische Frage mehr, sondern eine an den Verband.
+
+**Was daraus folgt und schon gebaut ist:** die Heim-/Auswärtsbilanz gibt es
+nur für **eigene** Teams (`domains/spiele/heimAuswaerts.ts`). Eine
+Gruppentabelle mit Heim-/Auswärtstrennung ist mit dieser API nicht zu haben.
+
+**Grössenordnung, falls die Frage doch beantwortet wird:** 21 Gruppen mit
+8–14 Teams (232 Ranglistenzeilen, Ø 11.05), 234 eigene Meisterschaftsspiele.
+Fremde Spiele wären **rund 1088** — `spiele` wüchse von 269 auf ~1357,
+Faktor 5. Zeit wäre nicht das Hindernis: ein Lauf braucht heute im Median
+**8,6 s** (188 Läufe, p90 10,6 s, max 18,1 s) bei 45 HTTP-Aufrufen, also
+~0,19 s je Aufruf.
+
+⚠ **Und der Kommentar in `sync.ts:27` ist überholt:** es sind **vier**
+Aufrufe je Spiel, nicht drei — `holeSchiedsrichter` kam am 20.08.2026 dazu
+(`matchdatenLauf.ts:87–90`). Dabei aufgefallen: **`holeMatch` wird
+aufgerufen und sein Rückgabewert verworfen** (`matchdatenLauf.ts:87`, kein
+`const`). Er ist ein Viertel der Matchdaten-Aufrufe und trägt genau die
+Felder, die anderswo fehlen — `teams[].isHomeTeam`, dazu die Quellen für
+`ht_resultat` und `zuschauer`, die beide leer bleiben. Ob der Aufruf als
+Erreichbarkeitsprüfung gedacht ist, steht nirgends; `holeAufstellung` würde
+denselben 404 liefern.
+
 ## Schritt 2 — Was danach zu bauen ist (Skizze, nicht Auftrag)
 
 Erst nach Freigabe. Die Skizze dient nur dazu, beim Erkunden auf das Richtige
