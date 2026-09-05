@@ -645,6 +645,24 @@ Spielplan fällt auf. Einer mit Resultaten sieht aus, als stimme er. Und
 `dev.fcherrliberg.ch` unterscheidet ein Elternteil nicht von
 `www.fcherrliberg.ch`, wenn es den Link von irgendwoher hat.
 
+> **⚠⚠ STAND 05.09.2026: DIE SEITE IST OFFEN — und zwar wegen Schritt 6.**
+>
+> Die Dev-Seite lief mit HTTP-Basic-Auth. WordPress verweigert dann
+> Anwendungspasswörter („Basis-Authentifizierung ist nicht kompatibel"),
+> weil **beide denselben Header benutzen**: der Server verbraucht
+> `Authorization: Basic` zuerst, WordPress bekommt ihn nie zu sehen. Das
+> ist eine echte Unverträglichkeit, keine Fehlkonfiguration.
+>
+> Didi hat den Schutz deshalb abgeschaltet. **Er muss zurück — aber als
+> etwas, das die REST-API durchlässt.** Kandidaten und ihre Haken stehen
+> in Plan §4.6; die Wahl ist eine Betriebsentscheidung.
+>
+> ⚠ **Und die Frist ist schärfer als „vor Etappe 4":** der Auslöser ist
+> die **erste Zeile in `sfv_zuordnung`**, nicht der erste Export. Heute
+> trägt der Export keine Klarnamen (null Zuordnungen, alles läuft als
+> `Nr. 9`); ab der ersten Zuordnung schon — und Zuordnen ist Portalarbeit,
+> die jederzeit nebenher passieren kann.
+
 **Zwei Massnahmen, jetzt:**
 
 ```

@@ -8,6 +8,10 @@ import type { EreignisZeile } from "../matchdatenAnzeige.ts";
 
 const e = (p: Partial<EreignisZeile> & { id: string }): EreignisZeile => ({
   herkunft: "sfv", ersetzt_ereignis_id: null, verworfen_am: null,
+  /* Am 05.09.2026 dazugekommen: EreignisZeile fuehrt jetzt subtyp_id.
+     Die Attrappe muss es tragen, sonst prueft sie eine andere Form als
+     die, die laeuft. */
+  subtyp_id: null,
   typ_id: TYP_TOR, typ: "Tor", subtyp: null, minute: 10, zusatzminute: 0,
   ist_eigener: true, gegner_club_name: null, sfv_person_id: 111,
   rueckennr: 9, ein_sfv_person_id: null, ein_rueckennr: null, ...p,

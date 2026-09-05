@@ -21,6 +21,16 @@ export interface EreignisZeile {
   typ_id: number;
   typ: string | null;
   subtyp: string | null;
+  /** ⚠ Die Zahl, nicht der Text. Sie unterscheidet Rot von Gelb-Rot
+      (`subtyp_id = 20` ist „2. Verwarnung"), und danach zu FRAGEN ist der
+      Unterschied zwischen einem Merkmal und einer Schreibweise.
+
+      Die Spalte gab es in `spiel_ereignisse` von Anfang an, und
+      `select("*")` holt sie überall mit — nur dieses Interface führte sie
+      nicht. Ergänzt am 05.09.2026, als der WordPress-Export sie brauchte:
+      ein Typ, der schmaler ist als die Daten, zwingt den nächsten Leser
+      zu einem Cast, und der Cast nimmt ihm die Prüfung ab. */
+  subtyp_id: number | null;
   minute: number | null;
   zusatzminute: number | null;
   ist_eigener: boolean;

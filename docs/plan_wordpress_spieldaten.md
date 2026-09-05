@@ -580,6 +580,63 @@ von irgendwoher hat.
 | Verweise von aussen | ein einmal geteilter dev-Link bleibt gültig und zeigt für immer den Stand vom Wechseltag |
 | Nutzer | sieht ein Resultat, das falsch ist, ohne jeden Hinweis darauf |
 
+### ⚠⚠ OFFENER PUNKT SEIT 05.09.2026: die Dev-Seite ist JETZT offen
+
+**Und zwar wegen eines Schritts, den ich angewiesen habe.** Didi hat beim
+Anlegen des Anwendungspassworts gemeldet:
+
+> *„Die Dev-Seite lief mit HTTP-Basic-Auth, und WordPress verweigert dann
+> Anwendungspasswörter (‚Basis-Authentifizierung ist nicht kompatibel'). Ich
+> habe den Schutz abgeschaltet — die Seite ist jetzt offen."*
+
+**Der Grund ist ein geteilter Header, und er ist unvermeidlich:** sowohl
+Basic-Auth des Servers als auch das WordPress-Anwendungspasswort benutzen
+`Authorization: Basic`. Der Server verbraucht ihn zuerst; WordPress
+bekommt ihn nie zu sehen und schaltet die Anwendungspasswörter deshalb ab.
+**Das ist keine Fehlkonfiguration, sondern eine echte Unverträglichkeit.**
+
+⚠ **Damit steht eine WordPress-Installation offen, deren Vorgängerin im
+August eingebrochen wurde.** Das ist für sich genommen ein Befund — ganz
+ohne Junioren-Namen.
+
+**Was zurück muss, und was NICHT geht:**
+
+| | taugt? |
+|---|---|
+| Basic-Auth wie vorher | ❌ schaltet die Anwendungspasswörter ab — genau der Grund für das Abschalten |
+| IP-Allowlist auf der ganzen Seite | ❌ Supabase Edge Functions haben keine feste Ausgangs-IP; der Export käme nicht durch |
+| Basic-Auth **mit Ausnahme für `/wp-json/`** | ⚠ geht, aber die Ausnahme ist genau der Weg zu den Daten — und `/wp/v2/users` verrät Benutzernamen |
+| „Coming soon"-Plugin, das die REST-API durchlässt | ✅ der übliche Weg — ⚠ die Einstellung „REST nicht blocken" ist die, die niemand nachprüft |
+| `noindex` | nur ergänzend — eine Bitte an die Suchmaschine, keine Sperre |
+
+**Zu entscheiden von Didi, nicht von mir** — es ist seine Installation und
+sein Betriebsrisiko. Ich nenne die Kandidaten, nicht die Wahl.
+
+### ⚠ Wann es dringend wird — und das ist NICHT ganz Etappe 4
+
+Didi sagt: *„spätestens in Etappe 4, nicht irgendwann"*. Richtig, und die
+Frist lässt sich noch schärfer fassen — in beide Richtungen:
+
+| | |
+|---|---|
+| **heute** | der Export trägt **keine Klarnamen eigener Spieler**. `sfv_zuordnung` hat null Zeilen (gemessen 29.08.2026), also löst `beschreibeWer()` jeden auf `Nr. 9` auf. Vom Gegner steht ohnehin nur der Vereinsname |
+| **ab der ersten Zuordnung** | jeder zugeordnete Spieler erscheint mit vollem Namen im `verlauf` — und das kann **vor** Etappe 4 passieren, denn Zuordnen ist Portalarbeit und hängt nicht am Export |
+
+⚠ **Der Auslöser ist also die erste Zeile in `sfv_zuordnung`, nicht der
+erste Export.** Wer zwischendurch eine Stunde Zuordnungsarbeit macht und
+danach einen Probelauf, hat beides zusammen — ohne dass jemand eine
+Entscheidung getroffen hätte.
+
+**Vor Etappe 4 nachzählen, nicht auf die Messung vom 29.08. verlassen:**
+
+```sql
+select count(*) as zugeordnet from public.sfv_zuordnung;
+```
+
+⚠ **Und unabhängig davon gilt:** eine offene WordPress-Installation nach
+einem Einbruch ist kein Zustand für Wochen. Die Namen machen es
+schlimmer, nicht erst gefährlich.
+
 **Was hilft, alles auf WordPress-Seite (§12):**
 
 1. **`Einstellungen → Lesen → Suchmaschinen davon abhalten`** — das
