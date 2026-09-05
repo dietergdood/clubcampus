@@ -17,6 +17,7 @@ npm run typecheck          # tsc --noEmit
 npm run check:imports      # fehlende Konstanten-Imports (--fix ergänzt sie)
 npm run check:selects      # Spalten in select()-Strings gegen database.types.ts
 npm run check:encoding     # NUL-Bytes, BOM, kaputtes UTF-8 in eingecheckten Textdateien
+npm run check:php          # php -l für wordpress/ (sonst über Docker)
 
 npx vitest run src/modules/members/__tests__/memberFilter.test.js   # eine Datei
 npx vitest run -t "filtert nach Team"                               # ein Testfall
@@ -906,6 +907,25 @@ Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verlier
 > Gegengeprobt am 05.09.2026 mit vier Attrappen (NUL, UTF-8-BOM, UTF-16LE,
 > latin1) — alle vier rot, danach wieder grün. Eine Prüfung, die nie rot war,
 > ist ungeprüft.
+>
+> ⚠ **UND SIE HAT INNERHALB EINER STUNDE IHREN ERSTEN ECHTEN FUND GEMACHT —
+> in einer Datei, die ich selbst gerade geschrieben hatte.**
+> `docs/plan_wordpress_spieldaten.md` trug **drei** NUL-Bytes: in genau dem
+> Abschnitt, der das NUL-Byte-Problem beschreibt. Beim Schreiben über eine
+> Shell-Heredoc war `\0` dreimal zu einem echten NUL geworden.
+>
+> **Das ist der Beleg dafür, dass die Regel nicht genügt hätte.** Ich kannte
+> das Problem, hatte es eine Stunde zuvor behoben, schrieb gerade darüber —
+> und habe es trotzdem erneut erzeugt. Nicht aus Unachtsamkeit, sondern weil
+> die Umkodierung an einer Stelle passiert, an die man nicht denkt, während
+> man etwas anderes tut. **Gegen so etwas hilft kein Vorsatz, nur eine
+> Prüfung, die danach läuft.**
+
+**Wer eine `check:*`-Prüfung dazuschreibt, gibt ihr eine Gegenprobe.** Nicht
+weil es sich gehört, sondern weil eine Prüfung, die nie rot war, keine
+Prüfung ist, sondern eine Behauptung. Die billigste Form: eine Attrappe je
+Fehlerart anlegen, laufen lassen, wieder entfernen — bei
+`check-encoding.mjs` waren das vier Dateien und zwei Minuten.
 
 **`supabase/schema.sql` deckt nur das Schema `public` ab.** Zwei Dinge stehen deshalb nicht darin und gehen beim Nachbauen verloren, wenn man sie nicht kennt:
 
@@ -1708,15 +1728,37 @@ vorher:
 | die Rechnung zählt Derbys doppelt (einmal je Seite) | billig, aber die Sonderregel steht dann in jeder Rechnung neu |
 | der Schlüssel wird `(verein_id, sfv_match_id, sfv_team_id)` | ehrlich, aber eine Migration — und jede Liste zeigt das Derby danach zweimal |
 
-⚠ **Und ein zweiter, unabhängiger Punkt an derselben Stelle:** `heimspiel`
-wird als `unsA` gesetzt (`sync.ts:85`), also aus der Annahme, Team A sei das
-Heimteam. **Die Spezifikation sagt das nirgends.** `Schedule` hat 31 Felder
-und darunter kein `isHomeTeam` — das gibt es nur in `MatchDetail`,
-`MatchEvent`, `Player` und `PlayerBench` (Swagger v26.7.10.1, geprüft
-28.08.2026). Die Annahme ist plausibel und vermutlich richtig, aber sie ist
-eine Annahme, und die ganze Heim-/Auswärtsrechnung steht darauf. Belegen liesse
-sie sich gegen `/api/match/{id}` → `teams[].isHomeTeam`, für die 41
-ausgetragenen Spiele ohne einen einzigen zusätzlichen Abruf.
+✅ **Und ein zweiter, unabhängiger Punkt an derselben Stelle — inzwischen
+belegt.** `heimspiel` wird als `unsA` gesetzt (`sync.ts:85`), also aus der
+Annahme, Team A sei das Heimteam. **Die Spezifikation sagt das nirgends:**
+`Schedule` hat 31 Felder und darunter kein `isHomeTeam` — das gibt es nur in
+`MatchDetail`, `MatchEvent`, `Player` und `PlayerBench` (Swagger v26.7.10.1,
+geprüft 28.08.2026).
+
+**Gemessen am 24.08.2026 gegen den Spielort, über alle 269 Spiele:**
+
+| | |
+|---|---|
+| stimmen mit dem Platz überein | **265** |
+| Abweichungen | **4** — Heimspiele auf einem ausgelagerten Platz |
+
+Die Annahme trägt damit. Der Eintrag stand bis zum 05.09.2026 als
+„plausibel, aber eine Annahme" hier und war um elf Tage veraltet.
+
+⚠ **Eine Feinheit bleibt, und sie betrifft genau die vier:** der Spielort
+ist ein **korrelierter** Hinweis, kein direkter. Ein Heimspiel auf fremdem
+Platz und ein Auswärtsspiel sehen für diese Methode gleich aus — sie
+bestätigt also 265 und **schweigt** über 4, statt 269 zu bestätigen. Die
+vier sind erklärt, nicht gemessen.
+
+**Der direkte Beleg kostet null zusätzliche Aufrufe:**
+`/api/match/{id}` → `teams[].isHomeTeam` wird bei jedem Spiel ohnehin
+geholt und weggeworfen (siehe „`holeMatch` wird bei jedem Spiel aufgerufen
+und sein Ergebnis weggeworfen"). Wer den Aufruf einmal ausliest, hat die
+vier mit — und zwei leere Spalten dazu.
+
+⚠ **Das ist ab dem WordPress-Export nicht mehr nur eine innere Frage:**
+`heim_auswaerts` steht dort als Feld auf einer öffentlichen Seite.
 
 ### Zwei Komponenten stehen noch innerhalb einer anderen
 

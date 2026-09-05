@@ -78,6 +78,16 @@ jobs:
       - name: Kodierung der Textdateien pruefen
         run: npm run check:encoding
 
+      # Syntax der PHP-Dateien unter wordpress/. Der Plan sagt ueber die
+      # WordPress-Seite: „dort gibt es keinen Typecheck, keine Testkette und
+      # keinen Compiler." Das stimmte und musste nicht stimmen — `php -l`
+      # ist auf ubuntu-latest vorinstalliert und kostet nichts.
+      # ⚠ Ein gruener Lauf heisst „es parst", nicht „es funktioniert": Hooks,
+      # Feldnamen und Logik bleiben ungeprueft. Aber ein Syntaxfehler in einem
+      # mu-plugin ergibt auf der Website eine weisse Seite, und den faengt es.
+      - name: PHP-Syntax pruefen
+        run: npm run check:php
+
       - name: Tests
         run: npm test
 

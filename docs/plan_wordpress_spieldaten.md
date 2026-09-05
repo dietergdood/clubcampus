@@ -604,6 +604,632 @@ in die Edge Function.
 
 ---
 
+## 4.7 ⚠ Die Beitragstypen heissen anders — und ihr Name ist Konfiguration
+
+**Gemessen von Didi am 05.09.2026: der Team-Typ heisst `fch_team`, nicht
+`team`.** Die Installation benutzt durchgehend ein `fch_`-Präfix.
+
+⚠ **Der ganze Plan bis hierher schreibt `spiel` und `team`.** Das war eine
+Übernahme aus dem Auftrag, nicht eine Messung — und sie war falsch. Wo in
+diesem Dokument `spiel` oder `team` als Beitragstyp steht, ist der
+**logische** Typ gemeint; der tatsächliche Name steht in der
+Konfiguration.
+
+**Daraus folgt eine Entwurfsänderung, und sie ist mehr als eine
+Umbenennung:**
+
+| | |
+|---|---|
+| ❌ falsch | die Namen als Konstanten in die Edge Function |
+| ✅ richtig | in `api_verbindungen.sync_felder`, wie alles andere an diesem Vertrag |
+
+**Warum nicht in die Secrets:** die Typnamen sind kein Geheimnis, und sie
+gehören zur selben Aussage wie die Feldlisten — die stehen schon dort.
+**Warum nicht in den Code:** beim zweiten Verein heissen sie anders, und
+die Adresse ist bereits pro Verein (§4.2). Ein Wert, der pro Installation
+wechselt, gehört nicht in eine Datei, die für alle gilt.
+
+⚠ **Und was der Export tatsächlich braucht, ist nicht der Typname,
+sondern die REST-ROUTE.** Die beiden sind nicht dasselbe:
+
+```
+register_post_type('fch_team', ['rest_base' => 'teams', …])
+                    ↑ slug                        ↑ Route: /wp/v2/teams
+```
+
+Ohne `rest_base` ist die Route der Typname (`/wp/v2/fch_team`), mit ihr
+etwas anderes. **Beides steht in der Antwort von `/wp/v2/types`**, und
+genau das ist der Wert, der in `sync_felder` gehört — nicht der Slug.
+
+**Nachzutragen in `migration_wp_export.sql`, sobald beide Routen belegt
+sind** (`sync_felder` steht im `on conflict … SET`, ein erneuter Lauf der
+Datei genügt also):
+
+```
+'wp_routen', jsonb_build_object(
+  'spiel', '…',            -- offen, der Typ existiert noch nicht
+  'team',  'fch_team')     -- gemessen 05.09.2026
+```
+
+### Was `/wp/v2/types` am 05.09.2026 tatsächlich zeigte
+
+Vier eigene Typen, alle mit `rest_base` **gleich dem Slug** — keiner
+trägt eine abweichende Route:
+
+| Typ | `rest_base` | Name | Taxonomie |
+|---|---|---|---|
+| `fch_team` | `fch_team` | Teams | `fch_teamstufe` |
+| `fch_anlass` | `fch_anlass` | Anlässe | — |
+| `fch_sponsor` | `fch_sponsor` | Sponsoren | — |
+| `fch_jahr` | `fch_jahr` | Vereinsjahre | `fch_epoche` |
+
+**Die Route für Teams ist damit `/wp/v2/fch_team`.**
+
+⚠ **`fch_spiel` ist nicht darunter — und meine Folgerung daraus war
+falsch.**
+
+Hier stand: *„Da alle vier vorhandenen REST-sichtbar sind, spricht alles
+dafür, dass die drei schlicht noch nicht angelegt sind."* **Gemessen von
+Didi am selben Tag über die Admin-Adresse: `fch_spiel` EXISTIERT, mit 11
+von Hand angelegten Beiträgen.** Ihm fehlt allein `show_in_rest`.
+
+⚠ **Die Folgerung war plausibel und trotzdem eine Vermutung** — und ich
+hatte sie im selben Abschnitt als solche gekennzeichnet (§4.8: „belegt ist
+das nicht"). Genau deshalb steht sie hier stehen geblieben statt
+weggeputzt: **der Abstand zwischen „spricht alles dafür" und „gemessen"
+ist der ganze Punkt von §4.8.** Wer die Zeile liest, sieht, wie leicht aus
+einem Fehlen ein Schluss wird.
+
+Was daraus folgt, steht in §4.10 — es ist mehr als eine Umbenennung.
+
+---
+
+## 4.9 ⚠ ACF ist im Einsatz — und das ändert, WIE geschrieben wird
+
+Aus derselben Antwort, und es war nicht gesucht: `fch_anlass` trägt ein
+Block-Template aus **eigenen ACF-Blöcken**.
+
+```json
+"template": [["acf/fch-fliesstext", …], ["acf/fch-abschnitt", …], ["acf/fch-tabelle", …]]
+```
+
+**ACF ist also nicht nur installiert, sondern trägt die Inhaltsstruktur
+der Website.** Damit ist die Wahrscheinlichkeit hoch, dass auch
+`fch_team.sfv_id` ein ACF-Feld ist und nicht schlichtes Postmeta.
+
+⚠ **Das ist ein Unterschied, den man von aussen nicht sieht und der beim
+Schreiben zubeisst.** ACF legt zu jedem Feld **zwei** Zeilen an:
+
+```
+sfv_id   = 38309            ← der Wert
+_sfv_id  = field_64a1b2c3   ← der Feldschluessel
+```
+
+Wer den Wert über die Kern-REST-API als Postmeta schreibt, setzt **nur
+die erste**. Für `get_post_meta()` genügt das; **`get_field()` kann den
+Wert dann nicht mehr auflösen oder formatieren** — und ob die Vorlage das
+eine oder das andere benutzt, sieht man dem Ergebnis nicht an. Ein Feld,
+das im Backend richtig aussieht und auf der Seite leer bleibt.
+
+### Die Gabelung, und sie gehört Didi
+
+| | Kern-REST (`/wp/v2/fch_spiel`) | **eigene Route** (`/clubcampus/v1/spiele`) |
+|---|---|---|
+| PHP-Menge | wenig — nur `register_post_meta` | mehr, und ⚠ es prüft dort niemand |
+| Aufrufe je Lauf | viele: Aufzählung + einer je Spiel | **einer** |
+| ACF-Feldschlüssel | ⚠ ungelöst | gelöst — `update_field()` setzt beide Zeilen |
+| CPT braucht `show_in_rest` | **ja** | nein |
+| CPT braucht `custom-fields` in `supports` | **ja** | nein |
+| Abgleich (§8.2) | im Export, über viele Aufrufe | serverseitig, in einem Durchgang |
+
+⚠ **Die eigene Route ist die technisch bessere und die riskantere
+zugleich**, und beide Hälften zählen. Sie löst das ACF-Problem, spart
+269 Aufrufe je Lauf und macht den Abgleich zu einem Vorgang statt zu
+vielen — aber sie verlagert genau die Logik, die den Spielplan auf
+Entwurf setzen kann, in eine Sprache ohne Typecheck und ohne Testkette
+(§12, Punkt 4).
+
+**Empfehlung: eigene Route** — mit der Auflage, dass der Abgleich darin
+so eng wie möglich bleibt (je Team, nur gelieferte Teams, nur Status
+ändern, nie löschen) und dass der Export ihr ein ausdrücklich als
+vollständig gekennzeichnetes Set schickt.
+
+⚠ **Zu klären, bevor ich das Plugin schreibe:** liest die Vorlage die
+Felder mit `get_field()` (ACF) oder mit `get_post_meta()`? Davon hängt
+ab, ob `update_field()` Pflicht ist oder nur Vorsicht.
+
+---
+
+---
+
+## 4.8 ⚠ `/wp/v2/types` kann NICHT sagen, ob ein Typ fehlt
+
+**Didis Frage am 05.09.2026: fehlt `fch_spiel`, oder ist er nur ohne
+`show_in_rest` registriert?**
+
+**Aus dieser Antwort ist das nicht zu entscheiden — von niemandem.** Der
+Endpunkt listet ausschliesslich Typen mit `show_in_rest => true`. Ein Typ,
+den es nicht gibt, und ein Typ, der ohne dieses Flag registriert ist,
+sehen dort **identisch aus: beide fehlen.**
+
+⚠ **Das ist die Sorte Messung, die eine Antwort liefert und eine andere
+Frage beantwortet.** Wer die Liste liest und „`fch_spiel` fehlt" notiert,
+hat nicht gemessen, ob es ihn gibt — er hat gemessen, ob er über REST
+sichtbar ist. Dieselbe Familie wie `job_run_details: succeeded`
+(= abgesetzt, nicht gelungen) und wie `letzter_sync` (= fertig geworden,
+nicht gelungen).
+
+**Was den Unterschied zeigt** — die billigste Probe zuerst:
+
+| | entscheidet? |
+|---|---|
+| `wp-admin/edit.php?post_type=fch_spiel` im Browser | ✅ Liste = existiert · „Ungültiger Beitragstyp" = existiert nicht |
+| die Liste in CPT UI bzw. ACF | ✅ zeigt auch Typen ohne REST |
+| `wp post-type list --fields=name,show_in_rest,rest_base` (WP-CLI) | ✅ vollständig |
+| `/wp/v2/types` | ❌ **kann es nicht** |
+
+⚠ **Eine Einschränkung auch bei der ersten Probe:** ein Typ mit
+`show_ui => false` existiert und hat trotzdem keine Admin-Seite. Selten,
+aber deshalb ist ein negatives Ergebnis dort **kein Beweis** — es ist ein
+Hinweis, den die CPT-UI-Liste bestätigen muss.
+
+---
+
+## 4.10 ⚠ `fch_spiel` gehört nicht dem Export — 11 Beiträge stehen schon drin
+
+**Gemessen von Didi, 05.09.2026: `fch_spiel` existiert, mit 11 von Hand
+angelegten Beiträgen. Es fehlt nur `show_in_rest`.** Und die Beitragsliste
+hat eine Spalte **„Quelle"** mit dem Wert **„WordPress"** — jemand hat die
+Unterscheidung bereits vorgesehen.
+
+⚠ **Damit ist §8.2 in seiner bisherigen Form gefährlich.** Dort steht: „ein
+`spiel`-Beitrag, dessen `clubcampus_id` der Export nicht mehr liefert, wird
+auf Entwurf gesetzt". Die Regel war je Team gefasst, aber sie ging
+stillschweigend davon aus, dass **jeder** `fch_spiel`-Beitrag dem Export
+gehört. **Er gehört ihm nicht.** Der erste scharfe Lauf hätte alle 11
+abgeräumt — kein Fehler, keine Meldung, elf verschwundene Spiele.
+
+### Das Besitzmerkmal ist `clubcampus_id`, nicht `quelle`
+
+Zwei Kandidaten, und die Wahl ist keine Geschmacksfrage:
+
+| | prüft | |
+|---|---|---|
+| `quelle == 'ClubCampus'` | eine **Zeichenkette**, die jemand gesetzt hat | ❌ |
+| `clubcampus_id` ist gesetzt | ob der Beitrag **einen Zeiger auf eine ClubCampus-Zeile trägt** | ✅ |
+
+**Das ist wörtlich die Regel aus `CLAUDE.md`:** *„Ein Filter auf einen
+NAMEN prüft eine Schreibweise. Ein Filter auf ein MERKMAL prüft die
+Sache."* `quelle` ist ein Etikett — es kann umbenannt, übersetzt oder von
+Hand geändert werden. `clubcampus_id` **ist** die Zugehörigkeit.
+
+⚠ **Und die Fehlerrichtung entscheidet mit.** Die zwei möglichen Irrtümer
+sind nicht gleich schlimm:
+
+| Irrtum | Folge |
+|---|---|
+| ein Handbeitrag gilt als exportiert | ⚠ **er wird auf Entwurf gesetzt — Verlust** |
+| ein Exportbeitrag gilt als fremd | er bleibt stehen und veraltet — ärgerlich, aber nichts ist weg |
+
+**Also die konservative Fassung: angefasst wird nur, was nachweislich eine
+`clubcampus_id` trägt.** Fehlt sie, Hände weg — auch dann, wenn der Beitrag
+sonst nach Export aussieht. Dieselbe Logik wie Allowlist statt Denylist.
+
+**Der Abgleich hat damit zwei Einschränkungen statt einer:**
+
+```
+Abgleichmenge = Beiträge MIT clubcampus_id
+                UND deren Team im gelieferten Satz steht
+```
+
+Beide verengen. Alles andere ist für den Export unsichtbar.
+
+### `quelle` wird trotzdem geschrieben — als die menschliche Hälfte
+
+Der Export setzt bei jedem Beitrag, den er anlegt, `quelle` auf den Wert
+für ClubCampus. **Nicht als Filter, sondern als Anzeige** — die Spalte ist
+dafür da, dass Didi in der Liste sieht, was woher kommt.
+
+⚠ **Und damit entsteht eine Gegenprobe, die es zu behalten lohnt.** Ab
+dann behaupten zwei Felder dasselbe:
+
+| `clubcampus_id` | `quelle` | heisst |
+|---|---|---|
+| gesetzt | ClubCampus | ✅ normal |
+| leer | WordPress | ✅ normal, ein Handbeitrag |
+| **gesetzt** | **WordPress** | ⚠ jemand hat das Etikett geändert — oder von Hand eine Id eingetragen |
+| **leer** | **ClubCampus** | ⚠ ein Beitrag, der exportiert aussieht und es nicht ist |
+
+**Die letzten zwei Zeilen meldet der Export, statt sie zu berichtigen.**
+`CLAUDE.md` sagt dazu, was zählt: *„eine Anzeige, die einer anderen
+widerspricht, ist kein Prüfmittel, sondern ein Fehler mit Zusatznutzen"* —
+aber der Widerspruch fällt auf, und ein stiller Zustand nicht.
+
+### ⚠ Die dritte Gefahr, die noch niemand genannt hat: Dubletten
+
+**Die 11 Handbeiträge könnten dieselben Spiele sein, die der Export
+gleich anlegt.** Wer eine Saison von Hand erfasst hat, hat vermutlich bei
+der 1. Mannschaft angefangen — und genau deren Spiele stehen auch im
+SFV-Spielplan.
+
+Nach dem ersten Lauf stünde jedes davon **zweimal** auf der Website: einmal
+von Hand, einmal exportiert, beide plausibel.
+
+⚠ **Der Export kann das nicht selbst auflösen, und er soll es nicht
+versuchen.** Es gibt keinen gemeinsamen Schlüssel; die einzige Brücke wäre
+Datum + Team — und das ist ein Namensvergleich, kein Merkmal. Ein
+automatisches Zusammenführen überschriebe redaktionelle Arbeit auf
+Verdacht.
+
+**Was er stattdessen tut: melden.** Für jeden Beitrag, den er neu anlegt,
+sieht er nach, ob ein Beitrag **ohne** `clubcampus_id` mit gleichem Datum
+und gleichem Team existiert, und zählt ihn als möglichen Doppel — mit
+Beitrags-Id, in der Meldung und in `api_sync_log.details`. **Didi
+entscheidet, nicht der Export.**
+
+⚠ **Und das gehört vor den ersten scharfen Lauf, nicht danach:** die 11
+einmal durchsehen und entscheiden, ob sie bleiben, gelöscht werden oder
+zur Kontrolle dienen. Elf Beiträge von Hand durchzusehen ist eine halbe
+Stunde; hinterher zwei Spielpläne auseinanderzusortieren nicht.
+
+---
+
+## 4.11 Die Spalten der Liste — und was ihnen fehlt
+
+Didis Spalten: **Datum · Zeit · Team · Gegner · Ort · Art · Resultat ·
+Quelle.**
+
+| Spalte | Quelle in ClubCampus | |
+|---|---|---|
+| Datum | `spiele.date` | ✓ in §11 |
+| Zeit | `spiele.zeit` | ✓ |
+| **Team** | `spiele.sfv_team_id` | ⚠ **siehe unten** |
+| Gegner | `spiele.gegner` | ✓ |
+| Ort | `spiele.venue` **+** `spiele.heimspiel` | ⚠ die Spalte trägt beides — §11 schickt sie getrennt, das bleibt so |
+| **Art** | `spiele.wettbewerb` | ✓ Meisterschaft · Cup · Trainingsspiel (Didi, 05.09.2026) |
+| Resultat | `spiele.resultat` | ✓ |
+| **Quelle** | — | neu, der Export schreibt sie |
+
+⚠ **Zu „Team": mein Entwurf schickt eine Zahl, die Liste zeigt eine
+Mannschaft.** Wenn das Feld eine ACF-Beziehung auf `fch_team` ist — und
+danach sieht es aus —, dann braucht es die **WordPress-Beitrags-Id** des
+Teams, nicht `sfv_team_id`.
+
+Das ist kein Mehraufwand: der Export liest die Teams ohnehin, um die
+Zuordnung zu bauen (§7). Aber es ändert das Feld in der Nutzlast, und
+zwar von einer Zahl, die zufällig auch eine Id ist, auf eine ganz andere
+Zahl. **Genau die Sorte Verwechslung wie `sfv_match_id` gegen
+`sfv_spiel_nr`.**
+
+⚠ **Und die Spalten sind NICHT die Feldliste.** Eine Admin-Spalte ist eine
+Auswahl fürs Listenbild. Was §11 sonst noch braucht, hat in den 11
+Handbeiträgen vermutlich gar kein Feld:
+
+| fehlt vermutlich | wofür |
+|---|---|
+| `sfv_match_id` | der Verweis auf den FVRZ-Spielbericht |
+| `status` / `status_id` | verschoben, abgebrochen, forfait (§0.2) |
+| `liga`, `gruppe` | Einordnung |
+| `halbzeit` | heute leer, später gefüllt |
+| `sfv_spiel_nr` | die angezeigte Spielnummer |
+| `ereignisse` | Tore, Assists, Wechsel, Karten |
+| `export_lauf` | woran man sieht, wie frisch der Stand ist |
+| `clubcampus_id` | ⚠ **das Besitzmerkmal — ohne es geht gar nichts** |
+
+**Die ACF-Feldgruppe für `fch_spiel` muss also erweitert werden.** Das ist
+ein eigener Schritt in Etappe 3 und gehört Didi, aus demselben Grund wie
+der Beitragstyp selbst: die Felder erscheinen im Backend, und wie sie dort
+heissen und liegen, ist eine redaktionelle Entscheidung.
+
+---
+
+## 4.13 ⚠ Das Theme gelesen — und es hatte den Export schon eingeplant
+
+Am 05.09.2026 in `C:\Users\diete\Documents\GitHub\fch-theme` gelesen, nur
+gelesen. **Der Befund dreht drei Empfehlungen um, die ich vorher gegeben
+hatte.** Die betroffenen Abschnitte sind unten berichtigt, nicht gelöscht.
+
+Alles Relevante liegt in `mu-plugins/fch-core/` — nicht im Theme-Ordner.
+
+### 1 · ⚠ `show_in_rest => false` ist eine ENTSCHEIDUNG, kein fehlendes Flag
+
+`src/PostTypes/registrierung.php:118`:
+
+```php
+'fch_spiel' => array(
+    'show_in_rest' => false,   // mit dieser Begruendung daneben:
+    // Der Beitrag traegt sfv_match_id und sfv_spiel_nr, beide nicht fuer
+    // die Website gedacht. Die Seite zeigt aus, was sie zeigen soll;
+    // die REST-Ausgabe gaebe alles.
+    'supports' => array( 'revisions' ),   // ⚠ kein custom-fields, kein title, kein editor
+```
+
+⚠ **Ich habe in der Anleitung geschrieben, du sollst es einschalten. Das
+war falsch, und zwar nicht knapp.** Es ist keine vergessene Einstellung,
+sondern eine begründete Absicht — und die Begründung trägt: `show_in_rest`
+an einem `public`-Beitragstyp öffnet die registrierten Felder für
+**unangemeldete** Leser. Nach dem Einbruch im August ist das nichts, was
+man nebenbei umlegt.
+
+**Es ist ausserdem gar nicht nötig.** Eine eigene Route
+(`register_rest_route('clubcampus/v1', …)`) hängt nicht an
+`show_in_rest`. Damit fällt die Empfehlung aus §4.9 nicht nur bequemer
+aus, sondern ist die einzige, die die Entscheidung des Themes respektiert.
+
+⚠ **Und `supports` nennt kein `custom-fields`** — die Kern-REST-Route
+könnte die Felder also selbst dann nicht ausgeben, wenn sie offen wäre.
+Die Gabelung aus §4.9 ist damit entschieden: **eigene Route.**
+
+### 2 · ⚠ ACF ist Pflicht, nicht Vorsicht
+
+Gezählt über `mu-plugins/` und `themes/`:
+
+| | |
+|---|---|
+| `get_field()` | **416** |
+| `get_post_meta()` | 44 |
+| `update_field()` | **189** |
+| `update_post_meta()` | 27 |
+
+**Der Export muss `update_field()` benutzen.** Bei einem Repeater ist das
+keine Stilfrage: ACF legt je Zeile `verlauf_0_minute` **und**
+`_verlauf_0_minute` (Feldschlüssel) ab, dazu die Zeilenzahl unter
+`verlauf`. Von Hand über Postmeta ist das praktisch nicht richtig zu
+schreiben.
+
+### 3 · ⚠⚠ ES GIBT ZWEI EREIGNIS-REPEATER — und der Export schreibt den anderen
+
+**Das ist der wichtigste Fund, und er macht meine letzte Antwort
+gegenstandslos.** `src/Fields/spiel.php` führt beide nebeneinander:
+
+| Feld | wem gehört es | Personen |
+|---|---|---|
+| `ereignisse` | **der Redaktion** | `post_object` → `fch_person` |
+| `verlauf` („Verlauf laut Verband") | **dem Abgleich** | nur als **Text** |
+
+Und der Kommentar dort ist vom **05.09.2026**, also von heute:
+
+> *„Er steht neben `ereignisse` und nicht an dessen Stelle. **Der Abgleich
+> schreibt ihn**, und was heute funktioniert, wird nicht geloescht. Die
+> beiden beantworten verschiedene Fragen: `verlauf` sagt, was der Verband
+> gemeldet hat, `ereignisse` sagt, wem es zuzurechnen ist."*
+
+Die Feldbeschreibung sagt dasselbe: *„Schreibt der Abgleich. Nennt
+Personen nur als Text — für die Statistik zählt die Tabelle darüber."*
+
+⚠ **Damit ist Didis Sorge aus der letzten Runde gegenstandslos, und meine
+Antwort darauf war die falsche Lösung für das richtige Problem.** Ich
+hatte gesagt: der Repeater wird überschrieben, also gesperrt, korrigiert
+wird im Portal. Richtig ist:
+
+| | |
+|---|---|
+| `verlauf` | 🔒 der Export ersetzt ihn stündlich — dort ist Korrektur sinnlos |
+| `ereignisse` | ✅ **der Export fasst ihn NIE an** — dort korrigierst du, im Backend, mit Personenverweis |
+
+**Die Korrigierbarkeit ist also nicht ans Portal abgewandert. Sie steht
+im WordPress-Backend, ein Feld weiter oben.** Die Korrektur im Portal
+(§4.12) bleibt trotzdem richtig und nützlich — sie wirkt auf `verlauf`
+und damit auf beide Systeme. Es sind zwei Wege, und sie widersprechen
+sich nicht: einer berichtigt, was der Verband gemeldet hat, der andere
+ordnet zu, wem es gehört.
+
+⚠ **Und `stand` wird NICHT gerechnet** — das steht ausdrücklich dort:
+*„eine gerechnete Zahl, die von der eingetragenen abweicht, wäre
+schlimmer als keine."* `spiel_ereignisse` führt keinen Zwischenstand, der
+Export lässt das Feld also leer statt es herzuleiten.
+
+### 4 · Die Felder, die es schon gibt — und wo mein §11 danebenlag
+
+`src/Fields/spiel.php`, `acf_add_local_field_group`, Schlüssel
+`group_fch_spiel` (kein `acf-json/`).
+
+| mein §11 | tatsächlich | ⚠ |
+|---|---|---|
+| `resultat` (Text „3:3") | **`tore_heim` · `tore_gast`** (Zahlen) | muss zerlegt werden |
+| `halbzeit` (Text) | **`halbzeit_heim` · `halbzeit_gast`** (Zahlen) | dito |
+| `heimspiel` (true/false) | **`heim_auswaerts`** (Auswahl `heim`/`auswaerts`) | kein Wahrheitswert |
+| `team_sfv_id` (Zahl) | **`fch_team`** (`post_object` → `fch_team`, `return_format: id`) | ⚠ Feld heisst `fch_team`, nicht `team` — und will die **WP-Beitrags-Id** |
+| `spielort` | `ort` (Text) | |
+| `datum` | `datum` (`date_picker`, `return_format: Ymd`) | ⚠ Format `Ymd`, nicht ISO |
+| `zeit` | `zeit` (`time_picker`, `H:i`) | |
+| `wettbewerb` | `wettbewerb` (Text) | „Art" in der Liste |
+| `status` | `status` (Auswahl, **4 Werte**) | ⚠ siehe unten |
+| `sfv_match_id` · `sfv_spiel_nr` | beide da, Text | |
+| `clubcampus_id` | **gibt es nicht** | ⚠ siehe unten |
+| `bericht` | `matchbericht` (`post_object` → News-Beitrag) | kein Textfeld am Spiel |
+| — | `runde`, `telegramm`, `aufstellung` | zusätzlich vorhanden |
+
+⚠ **`status` kennt vier Werte, der Verband zwölf** (§0.2):
+
+```
+normal · verschoben · abgesagt · forfait
+```
+
+Eine Abbildung 12 → 4 verliert. Vor allem: **für Status 12 („keine
+Publikation") gibt es keinen Wert** — und das ist richtig so, denn dieser
+Zustand ist keine Anzeige, sondern ein Veröffentlichungsverbot. Er wird
+über den **Beitragsstatus** behandelt (Entwurf, §8.1), nicht über dieses
+Feld. Die Abbildung der übrigen elf gehört in `sync_felder` und ist eine
+Entscheidung, keine Übersetzung.
+
+### 5 · Der Schlüssel: `sfv_match_id` statt eines neuen `clubcampus_id`
+
+Es gibt kein `clubcampus_id`-Feld — aber `sfv_match_id`, und das ist der
+bessere Schlüssel:
+
+| | |
+|---|---|
+| existiert bereits | ✅ kein neues Feld, keine Feldgruppenänderung |
+| eindeutig | ✅ `spiele` trägt `UNIQUE (verein_id, sfv_match_id)` |
+| stabil | ✅ der Sync legt nie neu an (§3.2) |
+| ein **Merkmal**, kein Name | ✅ er zeigt auf die Zeile, er beschreibt sie nicht |
+
+⚠ **Die Grenze gehört dazu:** ein von Hand in ClubCampus erfasstes Spiel
+hat `sfv_match_id = NULL` und wäre so nicht exportierbar. Das Theme sagt
+dazu selbst: *„Von Hand angelegt werden nur Freundschaftsspiele und
+Turniere"* — und die entstehen in WordPress. **Solange das gilt, ist die
+Grenze keine.** Sobald jemand in ClubCampus ein Spiel von Hand anlegt und
+es auf der Website will, braucht es doch ein `clubcampus_id`.
+
+**Damit ändert sich §4.10 nicht im Kern, nur im Namen:** Besitzmerkmal ist
+**`sfv_match_id` gesetzt**, nicht `quelle`.
+
+### 6 · `quelle` — und drei Namen für einen Zustand
+
+```php
+'name' => 'quelle', 'type' => 'select', 'default_value' => 'manuell',
+'choices' => array( 'manuell' => 'manuell', 'clubcampus' => 'ClubCampus' ),
+```
+
+⚠ **Der Export schreibt `clubcampus`, klein.** Schriebe er „ClubCampus",
+zeigte ACF nichts an — genau die Falle, vor der §3b-neu warnt.
+
+⚠ **Und die Spalte zeigt „WordPress", obwohl kein Wert so heisst.**
+`Listen/darstellung.php:136` bildet alles Unbekannte darauf ab:
+
+```php
+if ( 'clubcampus' === $v ) return … 'ClubCampus';
+if ( 'sfv'        === $v ) return … 'SFV';
+return … 'WordPress';        // ← der Auffangzweig
+```
+
+**Ein Zustand, drei Namen:** gespeichert `manuell`, im Feld beschriftet
+`manuell`, in der Liste angezeigt `WordPress`. Genau deshalb stand in
+Didis Meldung „Wert WordPress" — der Wert ist es nicht.
+
+⚠ Nebenbei: der Zweig für `'sfv'` trifft nie, denn die Auswahl bietet
+diesen Wert nicht an. Ein toter Zweig, der aussieht wie eine dritte
+Möglichkeit. **Nicht mein Repository — nur gemeldet, nicht angefasst.**
+
+### 7 · Der Titel ist abgeleitet
+
+`supports` nennt kein `title`; der Titel entsteht beim Speichern aus
+„Team — Gegner" (`src/Masken/spiel.php`). **Der Export setzt ihn nicht
+selbst** — sonst gäbe es zwei Regeln für einen Namen. Zu prüfen beim Bau:
+ob die Ableitung auch bei einem Schreibvorgang ohne Maske greift.
+
+---
+
+## 4.12 ⚠ Der Repeater wird überschrieben — und deshalb ist er gesperrt
+
+> **⚠ ÜBERHOLT AM 05.09.2026, wenige Stunden nach dem Schreiben — siehe
+> §4.13 Punkt 3.** Dieser Abschnitt geht davon aus, dass es EINEN
+> Ereignis-Repeater gibt, den der Export überschreibt. Es gibt **zwei**:
+> `verlauf` (Abgleich, gesperrt) und `ereignisse` (Redaktion, wird nie
+> angefasst). Die Schlussfolgerung „korrigiert wird nur im Portal" ist
+> damit zu eng — im Backend korrigiert man `ereignisse`.
+>
+> **Was hier steht, bleibt richtig für `verlauf`** und für die Frage, warum
+> ein überschriebenes Feld gesperrt gehört. Der Abschnitt bleibt deshalb
+> stehen; er ist nicht falsch, nur nicht vollständig.
+
+**Entschieden am 05.09.2026: `ereignisse` als Repeater, nicht als JSON.**
+Didis Begründung, und sie trägt: JSON in einem Textfeld ist im Backend
+nicht lesbar und nicht prüfbar — bei einer kaputten Zeile merkt es
+niemand.
+
+**Didis Rückfrage darauf ist die richtige: was passiert, wenn jemand einen
+Repeater-Eintrag von Hand ändert?**
+
+### Die Antwort ist unbequem: der nächste Lauf überschreibt ihn
+
+Ohne Einschränkung. Der Export schickt je Spiel die vollständige,
+aufgelöste Ereignisliste, und der Repeater wird ersetzt — stündlich. Eine
+Änderung im WordPress-Backend hält höchstens bis zur Minute 32.
+
+⚠ **Damit ist Didis Schluss richtig: die Korrigierbarkeit im Backend wäre
+eine Falle, kein Vorteil.** Ein Feld, das sich ändern lässt und stillt
+zurückgesetzt wird, ist schlimmer als ein gesperrtes — es kostet Arbeit
+und meldet den Verlust nicht. `ereignisse` steht deshalb in §11 unter 🔒,
+und **Lesbarkeit ist der einzige verbleibende Grund für den Repeater.**
+
+**Das ist immer noch ein guter Grund.** Wer im Backend sieht, dass ein
+Torschütze falsch ist, kann handeln — er handelt nur woanders.
+
+### ⚠ Die Korrigierbarkeit ist nicht verloren, sie liegt an der Quelle
+
+Und zwar nicht als Behelf, sondern weil es sie dort **schon gibt**:
+
+| | |
+|---|---|
+| Tabelle | `spiel_ereignisse` mit `herkunft = 'sfv' \| 'verein'` |
+| Auflösung | `mischeEreignisse()` in `domains/spiele/matchdatenAnzeige.ts` |
+| Maske | `EreignisKorrektur.tsx` |
+| Weg dorthin | Termine → ein gespieltes Spiel → Tab **„Spielbericht"** |
+
+**Gemessen am 05.09.2026, weil ich es nicht versprechen wollte, ohne
+nachzusehen:** die Kette ist verdrahtet — `TermineModul.tsx:261` rendert
+`Spielbericht`, `Spielbericht.tsx:110` rendert `EreignisKorrektur`. Der
+Tab erscheint bei gespielten Spielen, die aus der Datenbank kommen.
+
+**Und die Korrektur ist dort dauerhaft:** der SFV-Sync schreibt
+ausschliesslich die `sfv`-Zeilen fort und fasst die `verein`-Zeilen nie an
+(`migration_matchdaten.sql`). Eine Korrektur überlebt damit **jeden**
+stündlichen Lauf — im Portal wie auf der Website, weil der Export dieselbe
+Auflösung benutzt (§4.1).
+
+⚠ **Genau das ist der Punkt: die Korrektur ist HALTBAR, weil sie an der
+Quelle gemacht wird.** Im WordPress-Backend wäre sie es nicht.
+
+### Warum kein Korrektur-Kennzeichen auf WordPress-Seite
+
+Naheliegend wäre: ein Häkchen „von Hand korrigiert" je Repeater-Zeile, das
+der Export respektiert. **Zwei Gründe dagegen, und der zweite ist der
+schwerere.**
+
+1. **Es wäre eine zweite Antwort auf dieselbe Frage.** Dieses Projekt hat
+   das dreimal bezahlt — drei Rechnungen für die Portalrolle, drei für die
+   Pflichtfelder, zwei für den Portal-Zugang. Jedes Mal war das Merkmal,
+   dass **beide Antworten für sich plausibel** aussahen und keine
+   Prüfkette rot wurde.
+2. ⚠ **Eine Korrektur in WordPress wäre in ClubCampus unsichtbar.** Dann
+   zeigt die Website etwas anderes als das Portal — und das ist wörtlich
+   das, was der Auftrag ausschliesst: *„sonst zeigt die Website etwas
+   anderes als ClubCampus, und niemand weiss, welches stimmt."*
+
+### Was der Sperre ihre Schärfe nimmt: ein Hinweis, kein leeres Feld
+
+Ein gesperrtes Feld ohne Wegweiser ist eine Sackgasse. Der Repeater trägt
+deshalb im Editor den Satz, der beides sagt — dass es überschrieben wird
+**und wohin man geht**:
+
+> Kommt aus ClubCampus, wird stündlich überschrieben.
+> Korrektur im Portal: Termine → Spiel → Spielbericht.
+
+⚠ **Und eine Einschränkung, die dazugehört:** wer korrigieren darf, regelt
+`spiel_ereignisse_write` — heute `is_admin() or get_my_role() = 'trainer'
+or hat_modul_recht('schedule','schreiben')`. **Ein Funktionär kommt nicht
+durch**, solange seine Gruppe `schedule: schreiben` nicht hat. Das ist der
+Übergangszweig, der mit den Gruppenrechten fällt (`CLAUDE.md`), und er
+betrifft jetzt auch die Website.
+
+### Die Unterfelder des Repeaters
+
+Aus `AnzeigeEreignis` (`matchdatenAnzeige.ts`), aufgelöst:
+
+| Feld | Typ | |
+|---|---|---|
+| `minute` | Zahl | |
+| `zusatzminute` | Zahl | für 45+2 |
+| `typ` | Text | „Tor", „Verwarnung" … |
+| **`typ_id`** | Zahl | ⚠ **das Merkmal, auf das die Vorlage schaltet** — nicht auf den Text |
+| `subtyp` | Text | Kopftor, Eigentor, Penalty, 2. Verwarnung |
+| `eigenes_team` | true/false | `ist_eigener` |
+| `wer` | Text | aufgelöst: Name · `Nr. 9` · Mannschaftsname des Gegners (§6) |
+| `sfv_person_id` | Zahl | für die spätere Verknüpfung zum Spieler-Beitrag |
+| `rueckennr` | Zahl | |
+| `ein_wer` · `ein_rueckennr` | Text/Zahl | bei Auswechslung: wer kommt |
+| `vom_verein` | true/false | ⚠ diese Zeile ist eine Korrektur — **fürs Backend**, damit sichtbar ist, dass hier jemand eingegriffen hat. Ob es die Website zeigt, ist eine Gestaltungsfrage und nicht Teil dieses Auftrags |
+
+⚠ **`typ` und `typ_id` beide, und das ist Absicht.** Der Text ist für den
+Menschen im Backend, die Zahl für die Vorlage. Eine Vorlage, die auf
+`typ === "Tor"` schaltet, bricht, sobald der Verband die Bezeichnung
+ändert oder jemand übersetzt — dieselbe Regel wie „ein Filter auf einen
+NAMEN prüft eine Schreibweise".
+
+---
+
 ## 5 · Rangliste: weder CPT noch Feld am Team
 
 Der Auftrag ahnt richtig, dass ein Inhaltstyp pro Rangliste falsch wäre
@@ -911,8 +1537,16 @@ mitwandern.
 
 ### 8.2 Entwurf statt Löschen — und warum
 
-Ein `spiel`-Beitrag, dessen `clubcampus_id` der Export nicht mehr
-liefert, wird auf `draft` gesetzt, nicht entfernt. Drei Gründe:
+> **⚠ BERICHTIGT AM 05.09.2026 — DIE MENGE WAR ZU GROSS GEFASST.** Hier
+> stand „ein `spiel`-Beitrag, den der Export nicht mehr kennt", und das
+> hätte die **11 von Hand angelegten Beiträge mit abgeräumt**, die schon
+> in `fch_spiel` stehen. Die Abgleichmenge ist seither doppelt verengt —
+> nur Beiträge **mit `clubcampus_id`** und nur für **gelieferte Teams**.
+> Herleitung in §4.10.
+
+Ein `spiel`-Beitrag **aus der Abgleichmenge (§4.10)**, dessen
+`clubcampus_id` der Export nicht mehr liefert, wird auf `draft` gesetzt,
+nicht entfernt. Drei Gründe:
 
 1. **Ein halber Ausfall darf nichts wegräumen.** Der Sync hat diese Lehre
    schon gezogen, wörtlich (`sync.ts:230-232`): *„Abgleich JE GRUPPE,
@@ -1149,7 +1783,7 @@ Liste an genau einem Ort und nicht doppelt in Code und Backend.
 | `halbzeit` | `spiele.ht_resultat` | 🔒 ⚠ heute überall leer |
 | `sfv_match_id` | `spiele.sfv_match_id` | 🔒 — trägt den Verweis |
 | `sfv_spiel_nr` | `spiele.sfv_spiel_nr` | 🔒 |
-| `ereignisse` | aufgelöst, §6 | 🔒 |
+| `ereignisse` | aufgelöst, §6 · Repeater, §4.12 | 🔒 ⚠ **wird stündlich ersetzt** — Korrektur gehört ins Portal, nicht ins Backend |
 | `export_lauf` | Zeitpunkt des Laufs | 🔒 |
 | — | — | |
 | **`bericht`** (redaktioneller Matchbericht) | — | ✅ **frei** |
@@ -1425,7 +2059,7 @@ die schwerste Folge, die dieses Muster im Projekt bisher hätte.
 NUL-Byte (0x00) in einem Stringliteral:
 
 ```ts
-let letztesTeam = " ";   // als BYTE geschrieben, nicht als Escape
+let letztesTeam = "\0";   // als BYTE geschrieben, nicht als Escape
 ```
 
 Gemessen: 7605 Bytes, davon genau eines ein NUL. Kein BOM, sonst sauberes
@@ -1450,14 +2084,14 @@ liefen trotzdem durch."* Auch hier laufen `tsc`, Build und alle 854 Tests
 grün — **es fehlt etwas, und nichts meldet es.**
 
 **Der Fix ist ein Zeichen und verhaltensneutral:** das Byte durch die
-Escape-Folge ` ` ersetzen. Der Laufzeitwert ist identisch, die Datei
+Escape-Folge `\0` ersetzen. Der Laufzeitwert ist identisch, die Datei
 wird ASCII-sicher, `grep` sieht sie wieder.
 
 ⚠ **Nicht angefasst** — es ist eine Quelltextänderung ausserhalb von
 Etappe 1. Zum Nachprüfen:
 
 ```bash
-python -c "d=open('src/domains/spiele/spielerAusgabe.ts','rb').read(); print(d.count(b' '))"
+python -c "d=open('src/domains/spiele/spielerAusgabe.ts','rb').read(); print(d.count(b'\0'))"
 ```
 
 **3 · Der Auftrag lässt eine Zahl unbeantwortet, die gemessen werden

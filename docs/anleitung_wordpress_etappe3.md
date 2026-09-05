@@ -94,6 +94,18 @@ Drei Möglichkeiten, und sie führen zu drei verschiedenen Plugins:
 | **ACF** (ab PRO 6.1) | ACF → „Beitragstypen" |
 | **Code** | weder noch → in `functions.php` des Themes oder in einem eigenen Plugin |
 
+> **Stand 05.09.2026, gemessen:** vier eigene Typen sind REST-sichtbar —
+> `fch_team`, `fch_anlass`, `fch_sponsor`, `fch_jahr`, alle mit `rest_base`
+> gleich dem Slug.
+>
+> ⚠ **`fch_spiel` steht NICHT darunter — existiert aber**, mit 11 von Hand
+> angelegten Beiträgen. Ihm fehlt allein `show_in_rest`. Genau der Fall,
+> den die Liste nicht unterscheiden kann; gefunden hat ihn die
+> Admin-Adresse. Was zu tun ist: Schritt 3b-neu.
+>
+> Und `fch_anlass` trägt ein Block-Template aus eigenen ACF-Blöcken — ACF
+> ist hier also zentral, siehe Schritt 3c.
+
 **Und dann die zugehörige Einstellung:**
 
 | Weg | wo `show_in_rest` steht |
@@ -117,12 +129,271 @@ nichts meldet etwas.
 curl -s https://dev.fcherrliberg.ch/wp-json/wp/v2/types | head -c 2000
 ```
 
-Daraus lese ich die Routen (`rest_base`) und ob beide Typen überhaupt
-auftauchen. Dazu in einem Satz: welcher der drei Wege oben es ist.
+Daraus lese ich die **Routen** (`rest_base`) der Typen, die REST-sichtbar
+sind. Dazu in einem Satz: welcher der drei Wege oben es ist.
 
-⚠ **Wenn `spiel` dort fehlt**, ist `show_in_rest` aus — dann bitte in
-derselben Maske einschalten, in der der Typ angelegt wurde, und noch
-einmal Schritt 1 (Permalinks speichern).
+> **⚠ BERICHTIGT AM 05.09.2026 — hier stand ein Fehlschluss.**
+>
+> Hier stand: *„Wenn `spiel` dort fehlt, ist `show_in_rest` aus."* **Das
+> stimmt nicht.** `/wp/v2/types` listet ausschliesslich Typen mit
+> `show_in_rest => true`. Ein Typ, den es **nicht gibt**, und ein Typ, der
+> **ohne das Flag** registriert ist, sehen dort identisch aus: beide
+> fehlen. Aus dem Fehlen folgt gar nichts.
+>
+> ⚠ Eine Messung, die eine Antwort liefert und eine ANDERE Frage
+> beantwortet — dieselbe Familie wie `job_run_details: succeeded`
+> (= abgesetzt, nicht gelungen).
+
+### Die Probe, die es wirklich entscheidet
+
+**Im Browser, angemeldet im Backend:**
+
+```
+https://dev.fcherrliberg.ch/wp-admin/edit.php?post_type=fch_spiel
+https://dev.fcherrliberg.ch/wp-admin/edit.php?post_type=spiel
+```
+
+| was du siehst | heisst |
+|---|---|
+| eine (auch leere) Beitragsliste | **der Typ existiert**, nur `show_in_rest` fehlt |
+| „Ungültiger Beitragstyp" | **den Typ gibt es nicht** — er muss angelegt werden |
+
+⚠ **Ein negatives Ergebnis ist kein Beweis:** ein Typ mit
+`show_ui => false` existiert und hat trotzdem keine Admin-Seite. Deshalb
+zusätzlich in der Liste von **CPT UI** bzw. **ACF** nachsehen — dort
+stehen auch Typen ohne REST und ohne Oberfläche.
+
+---
+
+## 3b · ~~Wenn `fch_spiel` fehlt: wer legt ihn an~~ — hinfällig, er existiert
+
+> **⚠ ERLEDIGT SICH AM 05.09.2026: `fch_spiel` existiert mit 11 Beiträgen.**
+> Der Abschnitt bleibt stehen, weil die Begründung für JEDEN künftigen
+> Beitragstyp gilt — und weil er die Einstellungen nennt, die auch beim
+> Nachziehen eines bestehenden Typs stimmen müssen. Was jetzt zu tun ist,
+> steht in Schritt 3b-neu.
+
+**Du, in derselben Maske wie `fch_team`. Nicht ich im Plugin.**
+
+⚠ **Begründung, und sie ist dieselbe wie beim Team:** ein Beitragstyp ist
+eine Sache der Website, nicht des Exports. Lege ich ihn im mu-Plugin an,
+gehört er dem Code — Beschriftungen, Menüposition und Archiveinstellung
+sind dann im Backend nicht mehr änderbar, und du müsstest mich für jede
+Kleinigkeit fragen. **Der Export soll den Inhaltstyp bedienen, nicht
+besitzen.** Genau wie er Teams liest und nie anlegt (Plan §3.3).
+
+**Die Einstellungen, die er braucht** — der Rest ist deine Wahl:
+
+| | Wert | warum |
+|---|---|---|
+| Slug | `fch_spiel` | dem Präfix von `fch_team` folgen |
+| **Show in REST API** | **true** | ⚠ ohne das ist er für den Export unsichtbar |
+| **REST API base slug** | notieren, was du einträgst | das ist der Wert, den ich brauche — nicht der Slug |
+| **Supports → Title** | ✓ | ein Beitrag ohne Titel ist im Backend unbrauchbar |
+| **Supports → Editor** | ✓ | der redaktionelle Matchbericht (Plan §11) |
+| **Supports → Custom Fields** | ✓ | ⚠ **ohne das bleibt jedes eigene Feld in der REST-Antwort leer** |
+| Public / Has Archive | deine Wahl | betrifft nur die Website, nicht den Export |
+
+⚠ **Danach Schritt 1 wiederholen** (Permalinks speichern). Ein frisch
+angelegter Typ ist sonst über seine REST-Route oft noch nicht erreichbar,
+und der 404 sieht aus wie ein Registrierungsfehler.
+
+---
+
+## 3b-neu · ⚠ `fch_spiel` EXISTIERT — was das ändert
+
+**Gemessen 05.09.2026: 11 Beiträge, von Hand angelegt, mit Daten.**
+Schritt 3b oben (den Typ anlegen) entfällt damit.
+
+> **⚠ ⚠ BERICHTIGT NOCH AM SELBEN TAG — HIER STAND FALSCHER RAT.**
+>
+> Hier stand: *„Es fehlt nur `show_in_rest`"* mit der Anweisung, es
+> einzuschalten. **Beides war falsch.** Im Theme
+> (`mu-plugins/fch-core/src/PostTypes/registrierung.php:118`) steht
+> `show_in_rest => false` **mit ausgeschriebener Begründung** — es ist
+> eine Entscheidung, keine Lücke:
+>
+> > *„Der Beitrag traegt `sfv_match_id` und `sfv_spiel_nr`, beide nicht
+> > fuer die Website gedacht. Die Seite zeigt aus, was sie zeigen soll;
+> > die REST-Ausgabe gaebe alles."*
+>
+> Sie trägt: an einem `public`-Beitragstyp öffnet `show_in_rest` die
+> Felder für **unangemeldete** Leser. Nach dem Einbruch im August ist das
+> nichts, was man nebenbei umlegt.
+>
+> ⚠ **UND ES IST GAR NICHT NÖTIG.** Eine eigene Route
+> (`clubcampus/v1`) hängt nicht an `show_in_rest`. Ausserdem nennt
+> `supports` kein `custom-fields` — die Kern-Route könnte die Felder
+> selbst dann nicht ausgeben, wenn sie offen wäre.
+>
+> **Also: `show_in_rest` bleibt `false`, `supports` bleibt wie es ist,
+> und nichts an der Registrierung ist zu ändern.** Die Gabelung aus
+> Schritt 3c ist damit entschieden — eigene Route.
+
+### Und die Feldgruppe muss erweitert werden
+
+Die 11 Beiträge tragen die Felder, die für eine Handerfassung nötig waren.
+Der Export braucht mehr. **Anzulegen in der ACF-Feldgruppe zu `fch_spiel`
+— von dir, weil die Felder im Backend erscheinen und ihre Beschriftung und
+Reihenfolge eine redaktionelle Entscheidung ist:**
+
+| Feldname | Typ | wofür |
+|---|---|---|
+| `clubcampus_id` | Text | ⚠ **das Besitzmerkmal — ohne es fasst der Export gar nichts an** |
+| `sfv_match_id` | Zahl | der Verweis auf den FVRZ-Spielbericht |
+| `sfv_spiel_nr` | Text | die angezeigte Spielnummer |
+| `status` | Text | „verschoben", „abgebrochen", „forfait" … |
+| `status_id` | Zahl | derselbe Zustand als Zahl, zum Filtern |
+| `liga` · `gruppe` | Text | Einordnung |
+| `halbzeit` | Text | heute leer, später gefüllt |
+| `ereignisse` | **Repeater** | Tore, Assists, Wechsel, Karten — Unterfelder siehe unten |
+| `export_lauf` | Text/Datum | woran man sieht, wie frisch der Stand ist |
+
+⚠ **`clubcampus_id` gehört dem Export und darf im Backend nicht bearbeitbar
+sein** (Plan §11). Am einfachsten: ein Textfeld mit dem Hinweis „Kommt aus
+ClubCampus, wird stündlich überschrieben" — die Sperre selbst macht mein
+Plugin.
+
+### `ereignisse` — Repeater, entschieden am 05.09.2026
+
+**Repeater, nicht JSON.** Didis Begründung: JSON in einem Textfeld ist im
+Backend nicht lesbar und nicht prüfbar — bei einer kaputten Zeile merkt es
+niemand.
+
+⚠ **Und die Rückfrage dazu ist beantwortet: der nächste Lauf überschreibt
+jede Handänderung.** Der Export schickt je Spiel die vollständige Liste,
+der Repeater wird ersetzt — stündlich. **Das Feld ist deshalb gesperrt,
+und Lesbarkeit ist der einzige verbleibende Grund für den Repeater.**
+
+**Korrigiert wird im Portal, nicht hier:** Termine → das Spiel → Tab
+**„Spielbericht"**. Dort gibt es die Korrekturmaske, und eine Korrektur
+überlebt **jeden** stündlichen Lauf — der SFV-Sync fasst Vereins-Zeilen
+nie an. Herleitung in Plan §4.12.
+
+**Die Unterfelder:**
+
+| Feld | Typ | |
+|---|---|---|
+| `minute` | Zahl | |
+| `zusatzminute` | Zahl | für 45+2 |
+| `typ` | Text | „Tor", „Verwarnung" … — für dich im Backend |
+| **`typ_id`** | Zahl | ⚠ **darauf schaltet die Vorlage** — nie auf den Text |
+| `subtyp` | Text | Kopftor, Eigentor, Penalty, 2. Verwarnung |
+| `eigenes_team` | Wahrheitswert | |
+| `wer` | Text | Name · `Nr. 9` · Mannschaftsname des Gegners |
+| `sfv_person_id` | Zahl | für die spätere Verknüpfung zum Spieler |
+| `rueckennr` | Zahl | |
+| `ein_wer` · `ein_rueckennr` | Text/Zahl | bei Auswechslung: wer kommt |
+| `vom_verein` | Wahrheitswert | diese Zeile ist eine Korrektur aus dem Portal |
+
+⚠ **`typ` und `typ_id` beide.** Der Text ist für den Menschen, die Zahl
+für die Vorlage. Eine Vorlage, die auf `typ === "Tor"` schaltet, bricht,
+sobald der Verband die Bezeichnung ändert.
+
+⚠ **Der Hinweistext gehört ans Feld**, sonst ist die Sperre eine
+Sackgasse statt eines Wegweisers:
+
+> Kommt aus ClubCampus, wird stündlich überschrieben.
+> Korrektur im Portal: Termine → Spiel → Spielbericht.
+
+### ⚠ Die 11 Beiträge einmal durchsehen — VOR dem ersten scharfen Lauf
+
+Wahrscheinlich sind es Spiele der 1. Mannschaft. **Dann stehen genau diese
+Spiele auch im SFV-Spielplan**, und nach dem ersten Lauf gäbe es sie
+zweimal: einmal von Hand, einmal exportiert, beide plausibel.
+
+Der Export **meldet** mögliche Dubletten (gleiches Datum, gleiches Team,
+ohne `clubcampus_id`), aber er löst sie nicht auf — dafür gibt es keinen
+gemeinsamen Schlüssel, und ein automatisches Zusammenführen überschriebe
+deine Arbeit auf Verdacht.
+
+**Elf Beiträge durchzusehen ist eine halbe Stunde. Zwei Spielpläne
+hinterher auseinanderzusortieren nicht.**
+
+### Was ich zur Spalte „Quelle" wissen muss
+
+Sie ist die menschliche Hälfte der Unterscheidung, und der Export soll sie
+mitschreiben. Dafür brauche ich:
+
+1. **Wie heisst das Feld** (nicht die Spaltenüberschrift)? In ACF →
+   Feldgruppen → die Gruppe zu `fch_spiel` → Feldname.
+2. ⚠ **Ist es ein Auswahlfeld (Select/Radio)?** Dann speichert ACF den
+   **Wert** und zeigt die **Beschriftung**. Steht dort `Wert: clubcampus`
+   / `Beschriftung: ClubCampus`, muss der Export `clubcampus` schreiben —
+   schreibt er „ClubCampus", zeigt ACF nichts an. **Schick mir die
+   Wert/Beschriftung-Paare, so wie sie in der Feldmaske stehen.**
+3. Gibt es den Wert für ClubCampus schon, oder ist bisher nur „WordPress"
+   angelegt?
+
+⚠ **Die Spalte selbst verrät ausserdem etwas:** ACF fügt von sich aus
+keine Admin-Spalten hinzu. Dass es sie gibt, heisst, dass irgendwo Code
+für `fch_spiel` liegt (`manage_fch_spiel_posts_columns`) — oder ein
+Helfer-Plugin. **Dort steht vermutlich auch die Registrierung des Typs,
+und damit die Stelle, an der `show_in_rest` hingehört.**
+
+---
+
+## 3c · ⚠ ACF: eine Frage, die ich vor dem Plugin beantwortet brauche
+
+Aus der Types-Antwort vom 05.09.2026, nicht gesucht, aber deutlich:
+`fch_anlass` trägt ein Block-Template aus **eigenen ACF-Blöcken**
+(`acf/fch-fliesstext`, `acf/fch-abschnitt`, `acf/fch-tabelle`). **ACF
+trägt hier die Inhaltsstruktur der Website**, es ist nicht nur
+installiert.
+
+Damit ist wahrscheinlich, dass auch `fch_team.sfv_id` ein **ACF-Feld**
+ist und nicht schlichtes Postmeta. Der Unterschied sieht man von aussen
+nicht, und er beisst beim **Schreiben**:
+
+```
+sfv_id   = 38309            ← der Wert
+_sfv_id  = field_64a1b2c3   ← der Feldschluessel, den ACF daneben legt
+```
+
+Wer den Wert als gewöhnliches Postmeta schreibt, setzt **nur die erste
+Zeile**. `get_post_meta()` liefert danach den richtigen Wert;
+**`get_field()` kann ihn nicht mehr auflösen.** Ergebnis: ein Feld, das
+im Backend richtig aussieht und auf der Seite leer bleibt — und nichts
+meldet etwas.
+
+### Die Frage
+
+**Liest euer Theme die Felder mit `get_field()` oder mit
+`get_post_meta()`?**
+
+Wenn du es nicht sicher weisst, genügt ein Blick in die Theme-Dateien:
+
+```bash
+grep -rn "get_field\|get_post_meta" wp-content/themes/<euer-theme>/ | head -20
+```
+
+⚠ **Es ist keine Geschmacksfrage.** Bei `get_field()` muss das Plugin die
+Werte mit `update_field()` schreiben — nur die setzt beide Zeilen. Bei
+`get_post_meta()` genügt der einfache Weg. Baue ich gegen die falsche
+Annahme, sieht der erste scharfe Lauf erfolgreich aus und die Seite bleibt
+leer.
+
+### Was daran hängt: wie der Export überhaupt schreibt
+
+| | Kern-REST (`/wp/v2/fch_spiel`) | **eigene Route** |
+|---|---|---|
+| PHP-Menge | wenig | mehr — ⚠ und dort prüft niemand |
+| Aufrufe je Lauf | Aufzählung + einer je Spiel | **einer** |
+| ACF-Feldschlüssel | ⚠ ungelöst | gelöst (`update_field()`) |
+| CPT braucht `show_in_rest` | **ja** | nein |
+| CPT braucht `custom-fields` | **ja** | nein |
+
+**Ich empfehle die eigene Route** — sie löst das ACF-Problem, spart rund
+269 Aufrufe je Lauf und macht den Abgleich zu einem Vorgang statt zu
+vielen. ⚠ **Der Preis ist ehrlich zu nennen:** sie verlagert genau die
+Logik, die einen Spielplan auf Entwurf setzen kann, in eine Sprache ohne
+Typecheck und ohne Testkette.
+
+⚠ **`fch_spiel` bekommt trotzdem `show_in_rest` und `custom-fields`**
+(Schritt 3b) — auch wenn die eigene Route sie nicht braucht. Sie kosten
+nichts und sind der Weg, auf dem du selbst nachsehen kannst, was drin
+steht. Ein Inhaltstyp, den nur mein Plugin lesen kann, ist einer, dessen
+Zustand niemand sonst prüfen kann.
 
 ---
 

@@ -14,6 +14,7 @@
     "check:selects": "node scripts/check-selects.mjs",
     "check:quotes": "node scripts/check-quotes.mjs",
     "check:encoding": "node scripts/check-encoding.mjs",
+    "check:php": "node scripts/check-php.mjs",
     "gen:types": "node scripts/gen-types.mjs",
     "lint": "eslint ."
   },
