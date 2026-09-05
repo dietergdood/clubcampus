@@ -16,6 +16,7 @@ npm run test:watch         # vitest watch
 npm run typecheck          # tsc --noEmit
 npm run check:imports      # fehlende Konstanten-Imports (--fix ergänzt sie)
 npm run check:selects      # Spalten in select()-Strings gegen database.types.ts
+npm run check:encoding     # NUL-Bytes, BOM, kaputtes UTF-8 in eingecheckten Textdateien
 
 npx vitest run src/modules/members/__tests__/memberFilter.test.js   # eine Datei
 npx vitest run -t "filtert nach Team"                               # ein Testfall
@@ -877,6 +878,34 @@ Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verlier
 > Eine Regel, an die jemand denken muss, ist die schwächste Lösung. Wo ein
 > Befehl wiederholt vorkommt, gehört die Umleitung ins Skript statt in die
 > Anleitung.
+>
+> **✅ Seit dem 05.09.2026 gibt es dafür eine Prüfung: `npm run check:encoding`**
+> (`scripts/check-encoding.mjs`, in CI). Sie hält jede eingecheckte **Textdatei**
+> gegen drei Dinge, die Werkzeuge still falsch behandeln — **NUL-Byte**, **BOM**
+> (UTF-8 wie UTF-16) und **kaputtes UTF-8**. Sie hätte den Fall oben gefunden.
+>
+> ⚠ **Der Anlass war ein zweiter Fall derselben Familie, und er ist die
+> unangenehmere Hälfte:** `src/domains/spiele/spielerAusgabe.ts` enthielt **ein
+> rohes NUL-Byte** in einem Stringliteral (`let letztesTeam = "\0"`, als Byte
+> statt als Escape). Funktional harmlos — ein Wächterwert, den kein
+> Mannschaftsname trifft. Für Werkzeuge nicht: `grep` meldete
+> `Binary file … matches` **ohne eine einzige Trefferzeile**.
+>
+> **Der Schaden ist nie die Datei, sondern die Suche, die sie nicht findet.**
+> Bei der Bestandsaufnahme zum WordPress-Export lief
+> `grep -rniE "wordpress|wp_post|wp-json" src/` — und übersprang genau die
+> Datei, die den bestehenden WordPress-Pfad enthielt. Der Plan entstand danach
+> unter der Annahme, es gebe keinen.
+>
+> ⚠ **Und beim Beheben ist es sofort wieder passiert:** der erste Versuch,
+> das Byte durch `\0` zu ersetzen, schrieb erneut ein NUL — ein Backslash war
+> auf dem Weg durch die Shell verschwunden. Zuverlässig ging es erst mit
+> `Buffer.from([0x5C, 0x30])`. **Wo eine Escape-Ebene mitredet, schreibt man
+> Bytes, nicht Zeichen.**
+>
+> Gegengeprobt am 05.09.2026 mit vier Attrappen (NUL, UTF-8-BOM, UTF-16LE,
+> latin1) — alle vier rot, danach wieder grün. Eine Prüfung, die nie rot war,
+> ist ungeprüft.
 
 **`supabase/schema.sql` deckt nur das Schema `public` ab.** Zwei Dinge stehen deshalb nicht darin und gehen beim Nachbauen verloren, wenn man sie nicht kennt:
 
@@ -1567,10 +1596,32 @@ select (select count(*) from public.spiel_aufstellung)                as aufstel
 
 Befund vom 20.08.2026, beim ersten Lauf von Hand aufgefallen.
 
+> **⚠ BERICHTIGT AM 05.09.2026 — `active` HAT SEIT DEM 21.08.2026 EINEN ZWEITEN
+> LESER, UND ES IST DER WÄCHTER.** Hier stand „**nur die Oberfläche**". Das war
+> am 20.08. richtig und ist es seit dem Tag darauf nicht mehr:
+> `cron_sync_waechter.sql` liest die Spalte an **zwei** Stellen —
+>
+> ```sql
+> where v.active is true and v.auto_sync is true        -- die Schleife
+> update public.api_verbindungen set wache_zuletzt = now() where active is true;
+> ```
+>
+> ⚠ **Der Satz war damit nicht bloss veraltet, sondern gefährlich:** wer ihn
+> liest, hält `active` für folgenlos und legt eine neue Zeile auf `false` — und
+> dann **schaut der Wächter sie nie an**. Ein Anschluss, der vom ersten Tag an
+> ausfällt, und ein Wächter, der schweigt. Genau die Verwechslung, gegen die
+> der Wächter gebaut wurde, eine Ebene höher.
+>
+> Aufgefallen beim Planen des WordPress-Exports
+> (`docs/plan_wordpress_spieldaten.md` §10.1), der als zweite Zeile in dieselbe
+> Tabelle kommt. **Jede neue Zeile in `api_verbindungen` gehört mit
+> `active = true` und `auto_sync = true` angelegt, samt Zählprobe darauf** —
+> sonst ist sie unüberwacht, ohne dass etwas fehlschlägt.
+
 | Spalte | wer liest sie | wer nicht |
 |---|---|---|
-| `active` | **nur die Oberfläche** — Stecker-Symbol, Häkchenliste, der Knopf „Sync starten" in `ApiTab` | die Edge Function prüft sie **nirgends** |
-| `auto_sync` | **nur `sfv-sync/index.ts`**, und dort nur der Cron-Pfad (`if (perZeitplan)`) | die Oberfläche zeigt sie nicht an |
+| `active` | die Oberfläche (Stecker, Häkchenliste, Knopf „Sync starten" in `ApiTab`) **und der Wächter** (`cron_sync_waechter.sql`, seit 21.08.2026) | die Edge Function prüft sie **nirgends** (`sfv-sync/index.ts:113` filtert nur auf `auto_sync`) |
+| `auto_sync` | `sfv-sync/index.ts`, dort nur der Cron-Pfad (`if (perZeitplan)`) — **und der Wächter** | die Oberfläche zeigt sie nicht an |
 
 **Was daraus folgte.** `migration_sfv_spielplan.sql` legt den Eintrag mit
 `active = false` an („bleibt false, bis die Edge Function steht") — und

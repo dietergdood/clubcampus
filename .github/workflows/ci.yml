@@ -61,6 +61,23 @@ jobs:
       - name: Anfuehrungszeichen in Stringliteralen pruefen
         run: npm run check:quotes
 
+      # NUL-Bytes, BOM und kaputtes UTF-8 in eingecheckten Textdateien.
+      # Zweimal derselbe Ausfall, und beide Male lief diese Kette gruen:
+      #   20.08.2026  database.types.ts lag als UTF-16LE im Repository —
+      #               Git sah ein Binaerdiff (kein Zeilendiff, keine
+      #               Review), grep fand nichts darin, tsc versteht das BOM
+      #               und lief durch.
+      #   05.09.2026  spielerAusgabe.ts enthielt EIN rohes NUL-Byte in
+      #               einem Stringliteral. grep meldete "Binary file …
+      #               matches" ohne eine einzige Trefferzeile — und
+      #               uebersprang damit bei einer Bestandsaufnahme genau
+      #               die Datei, um die es ging.
+      # Der Schaden ist nie die Datei, sondern die Suche, die sie nicht
+      # findet. Gegen "schreib UTF-8" hilft kein Vorsatz: die Umkodierung
+      # passiert in der Shell, im Editor, im Werkzeug.
+      - name: Kodierung der Textdateien pruefen
+        run: npm run check:encoding
+
       - name: Tests
         run: npm test
 

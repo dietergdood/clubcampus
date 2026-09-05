@@ -172,10 +172,30 @@ langen Doppelnamen zuerst. Der Verein hat mehrere.
 Datum und Zeit des nächsten Spiels. Er darf nicht serverseitig gerechnet und
 zwischengespeichert werden, sonst zeigt er den Stand des letzten Abgleichs.
 
-**⚠ „Gegner offen" ist ein echter Zustand, kein Ausfall.** `spiele.gegner` ist
-nullable, und bei noch nicht ausgelosten Spielen liefert der Verband ihn nicht.
-Die Kachel muss ihn von „der Abgleich hat versagt" unterscheiden — sag im Plan,
-woran.
+**⚠ „Gegner offen" ist ein echter Zustand, kein Ausfall.** Die Kachel muss ihn
+von „der Abgleich hat versagt" unterscheiden — sag im Plan, woran.
+
+> **⚠ BERICHTIGUNG VOM 05.09.2026.** Hier stand: *„`spiele.gegner` ist nullable,
+> und bei noch nicht ausgelosten Spielen liefert der Verband ihn nicht."* Die
+> Spalte ist nullable — **der Sync schreibt aber nie `null`:**
+>
+> ```ts
+> // sync.ts:81
+> gegner: gegnerName ?? "",
+> ```
+>
+> **Leerer String, nicht `null`.** Damit sind es zwei verschiedene Aussagen, und
+> die Unterscheidung, nach der der Auftrag fragt, liegt genau dazwischen:
+>
+> | | heisst |
+> |---|---|
+> | `gegner = ''` | der Verband kennt den Gegner noch nicht — **„GEGNER OFFEN"** |
+> | `gegner IS NULL` | diese Zeile hat der Sync nie angefasst (von Hand erfasstes Spiel) |
+>
+> ⚠ **Und keins von beidem heisst „der Abgleich hat versagt".** Das erkennt man
+> nicht am Feld, sondern am **Zeitstempel** des Exports — deshalb trägt jeder
+> exportierte Datensatz den Zeitpunkt seines Laufs mit. Siehe
+> `docs/plan_wordpress_spieldaten.md` §9.1.
 
 **Welches ist das „letzte" und das „nächste" Spiel? Entschieden am 22.08.:**
 
@@ -206,11 +226,39 @@ Der WordPress-Plan sieht an jedem Beitragstyp ein Feld `clubcampus_id` vor.
 Umbau statt einer Entscheidung.
 
 **1 · Ist die Id eindeutig?**
-In ClubCampus gemischt: `personen`, `teams` und die meisten Tabellen tragen
-UUIDs — die kollidieren nie. `mitglieder` und `spiele` tragen `bigint`. Team 47
-und Spiel 47 existieren beide, und „47" allein ist dann keine Auskunft. Miss es
-für jede Tabelle, die wandert, und sag, ob das Feld die Herkunft mittragen muss
-(`spiel:47`).
+
+> **⚠ BERICHTIGUNG VOM 05.09.2026 — hier standen die Id-Typen von `teams` und
+> `spiele` VERTAUSCHT.** Der Satz lautete: *„`personen`, `teams` und die meisten
+> Tabellen tragen UUIDs — die kollidieren nie. `mitglieder` und `spiele` tragen
+> `bigint`. Team 47 und Spiel 47 existieren beide."*
+>
+> Gemessen aus `supabase/schema.sql`:
+>
+> | | behauptet | **gemessen** | Zeile |
+> |---|---|---|---|
+> | `teams.id` | uuid | **bigint** | 2174 |
+> | `spiele.id` | bigint | **uuid** | 2006 |
+> | `personen.id` | uuid | uuid ✓ | 1557 |
+> | `mitglieder.id` | bigint | bigint ✓ | — |
+>
+> ```bash
+> for t in teams spiele ranglisten spiel_ereignisse personen mitglieder; do
+>   printf "%-20s " "$t"
+>   grep -A 3 "CREATE TABLE IF NOT EXISTS \"public\".\"$t\" (" supabase/schema.sql \
+>     | grep '"id"' | head -1
+> done
+> ```
+>
+> ⚠ **Genau die beiden, um die es hier geht, waren vertauscht — und das dreht
+> die Frage um.** Das Kollisionsrisiko liegt nicht bei `spiel` (uuid, global
+> eindeutig), sondern bei **`team`**: `teams.id` und `mitglieder.id` sind beide
+> `bigint` und beginnen beide klein. Team 47 und Mitglied 47 existieren beide,
+> und der CPT `person` ist im WordPress-Plan vorgesehen.
+
+In ClubCampus gemischt: `personen`, `spiele`, `ranglisten` und
+`spiel_ereignisse` tragen UUIDs — die kollidieren nie. `teams` und `mitglieder`
+tragen `bigint`. Miss es für jede Tabelle, die wandert, und sag, ob das Feld die
+Herkunft mittragen muss (`team:47`).
 
 **2 · Was passiert, wenn ein Datensatz gelöscht und neu angelegt wird?**
 Dann hat dasselbe Ding eine neue Id, und WordPress hält an der alten fest. Der
@@ -359,9 +407,58 @@ Beantworte im Plan:
   Zugang, der irgendwo liegen muss — sag, wo, und warum dort.
 - **Rangliste als CPT oder als Feld?** Eine Tabelle ist kein Beitrag. Ein
   eigener Inhaltstyp pro Rangliste wäre vermutlich falsch.
-- **Wie wird gelöscht?** Ein abgesagtes Spiel verschwindet in ClubCampus. Der
-  Export muss das nachziehen, sonst bleibt es auf der Website stehen. Ein
-  Abgleich, der nur schreibt und nie löscht, veraltet in eine Richtung.
+- **Wie wird gelöscht?** Ein Abgleich, der nur schreibt und nie löscht,
+  veraltet in eine Richtung.
+
+  > **⚠ BERICHTIGUNG VOM 05.09.2026.** Hier stand: *„Ein abgesagtes Spiel
+  > verschwindet in ClubCampus. Der Export muss das nachziehen, sonst bleibt es
+  > auf der Website stehen."* **Beide Hälften der Annahme treffen nicht zu.**
+  >
+  > **a) Ein Spiel verschwindet nie.** Es gibt im ganzen Projekt keinen
+  > Löschpfad auf `spiele`:
+  >
+  > ```bash
+  > grep -rn "from(\"spiele\")\|from('spiele')" src/ supabase/functions/ | grep -i delete
+  > # → 0 Treffer
+  > ```
+  >
+  > `src/` greift überhaupt nur einmal auf `spiele` zu, und das liest
+  > (`spielService.ts:20`). Der Sync löscht ausdrücklich nicht — er zählt:
+  >
+  > ```ts
+  > // sync.ts:206-208
+  > /* Nicht mehr gelieferte werden gezählt, nie gelöscht. */
+  > erg.spiele.nicht_mehr_geliefert = [...bekannt].filter((id) => !geliefert.has(id)).length;
+  > ```
+  >
+  > `ranglisten` **werden** gelöscht (`sync.ts:248`), `spiele` nicht.
+  >
+  > **b) „Abgesagt" ist kein Zustand, sondern eine Familie aus zwölf.** Aus
+  > `docs/sfv/sfv_stammdaten.json` → `Spielstatus`: 1 noch nicht ausgetragen ·
+  > 2 ausgetragen · 3 forfait · 4 Null zu Null · 5 abgebrochen · 6 verschoben ·
+  > 7 neu angesetzt · 8 nicht gespielt (SR) · 9 nicht gespielt (Gegner) ·
+  > 10 findet nicht statt · 11 Abbruch der Saison · **12 Spiel ohne Austragung
+  > (keine Publikation)**.
+  >
+  > ⚠ **STATUS 12 IST EIN VERÖFFENTLICHUNGSVERBOT DES VERBANDS.** Es steht
+  > wörtlich so in den Stammdaten, und es kommt bisher an **keiner** Stelle des
+  > Projekts vor — nicht im Code, nicht in `CLAUDE.md`, nicht in diesem
+  > Auftrag. Der Sync speichert den Zustand brav in `sfv_status`, und niemand
+  > liest ihn.
+  >
+  > **Solange die Daten in ClubCampus bleiben, ist das folgenlos. Mit diesem
+  > Auftrag hört es auf, folgenlos zu sein** — es ist die erste
+  > Veröffentlichung nach aussen. Wer ohne diese Zeile baut, stellt ein Spiel
+  > auf eine öffentliche Website, das der Verband ausdrücklich nicht publiziert
+  > haben will.
+  >
+  > **Der Auslöser fürs Zurückziehen ist damit nicht das Verschwinden einer
+  > Zeile, sondern ihr Zustand.** Und ein verschobenes Spiel (6) zu entfernen
+  > wäre falsch: es findet statt, nur später.
+  >
+  > ⚠ **Nebenbefund:** `bildeSpiel` setzt `resultat` nur bei Status 2
+  > (`sync.ts:90`). Ein Forfait (3) hat beim Verband ein Resultat und steht in
+  > ClubCampus ohne — die Startseiten-Kachel überspringt es deshalb.
 
 ## ⚠ Der Ausfall muss auffallen
 
