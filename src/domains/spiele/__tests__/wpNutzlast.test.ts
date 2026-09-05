@@ -15,7 +15,7 @@
 import { describe, it, expect } from "vitest";
 import {
   wpDatum, wpZeit, zerlegeResultat, bildeStatus,
-  verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel,
+  verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
 } from "../wpNutzlast.ts";
 import type { SpielQuelle } from "../wpNutzlast.ts";
@@ -208,6 +208,70 @@ describe("Verlauf — Seite und Text", () => {
       [e({ minute: 10 }), e({ minute: 20 }), e({ minute: 30 })],
       true, namen, "FC Herrliberg");
     expect(z.map(x => x.stand)).toEqual(["", "", ""]);
+  });
+});
+
+describe("Subtyp — der Klartext von Subtyp 0 ist ein Strich", () => {
+  const namen = new Map<number, string>();
+
+  /* ⚠ „-" ist kein leerer Wert, sondern der Klartext zu Subtyp 0 in den
+     SFV-Stammdaten. Ohne Pruefung stuende „FC Kuesnacht a · -" auf der
+     Website — aufgefallen in der Probe vom 05.09.2026. */
+  it("haengt einen Subtyp «-» NICHT an", () => {
+    const z = bildeVerlauf(
+      [e({ ist_eigener: false, gegner_club_name: "FC Kuesnacht a", subtyp: "-" })],
+      true, namen, "FC Herrliberg");
+    expect(z[0].text).toBe("FC Kuesnacht a");
+  });
+
+  it("haengt einen echten Subtyp an", () => {
+    const z = bildeVerlauf(
+      [e({ ist_eigener: false, gegner_club_name: "FC Kuesnacht a", subtyp: "Kopftor" })],
+      true, namen, "FC Herrliberg");
+    expect(z[0].text).toBe("FC Kuesnacht a · Kopftor");
+  });
+});
+
+describe("Klarnamen zaehlen — die Zahl vor dem scharfen Lauf", () => {
+  const gegner = e({ ist_eigener: false, gegner_club_name: "FC Kuesnacht a" });
+  const offen  = e({ ist_eigener: true, sfv_person_id: 111, rueckennr: 13 });
+  const zug    = e({ ist_eigener: true, sfv_person_id: 222, rueckennr: 7 });
+  const namen  = new Map([[222, "Adrian Lustgarten"]]);
+
+  /* ⚠ DER FALL, DER DEN ZAEHLER GEKOSTET HAT.
+     Die erste Fassung prueft den Ausgabetext auf „beginnt nicht mit Nr. "
+     und zaehlte damit jede Gegnerzeile mit — 431 statt 0. Ein
+     Vereinsname ist kein Personenname. */
+  it("zaehlt eine Gegnerzeile NICHT als Personennamen", () => {
+    const z = zaehleVerlaufNamen([gegner, gegner], new Map());
+    expect(z.mit_personenname).toBe(0);
+    expect(z.mit_gegnername).toBe(2);
+  });
+
+  it("zaehlt einen unzugeordneten eigenen Spieler als Rueckennummer", () => {
+    expect(zaehleVerlaufNamen([offen], namen).mit_rueckennummer).toBe(1);
+    expect(zaehleVerlaufNamen([offen], namen).mit_personenname).toBe(0);
+  });
+
+  it("zaehlt einen zugeordneten eigenen Spieler als Personennamen", () => {
+    expect(zaehleVerlaufNamen([zug], namen).mit_personenname).toBe(1);
+  });
+
+  it("meldet ohne jede Zuordnung null Personennamen", () => {
+    expect(zaehleVerlaufNamen([gegner, offen, zug], new Map()).mit_personenname).toBe(0);
+  });
+
+  /* ⚠ DIE GEGENPROBE, die den Zaehler an bildeVerlauf bindet: gehen die
+     beiden auseinander, misst einer etwas anderes als der andere. */
+  it("die drei Zahlen ergeben zusammen die Zeilen aus bildeVerlauf", () => {
+    const alle = [
+      gegner, offen, zug,
+      e({ typ_id: TYP_ASSIST }),                    // faellt in beiden weg
+      e({ typ_id: TYP_VERWARNUNG, ist_eigener: true, sfv_person_id: 222 }),
+    ];
+    const z = zaehleVerlaufNamen(alle, namen);
+    const summe = z.mit_personenname + z.mit_rueckennummer + z.mit_gegnername;
+    expect(summe).toBe(bildeVerlauf(alle, true, namen, "FC Herrliberg").length);
   });
 });
 

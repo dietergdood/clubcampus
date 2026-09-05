@@ -256,7 +256,15 @@ export function bildeVerlauf(
        kommt als TEXT vor, nie als Verweis. So will es das Feld: „Nennt
        Personen nur als Text — für die Statistik zählt die Tabelle darüber." */
     const wer = beschreibeWer(e, namen);
-    const zusatz = e.subtyp ? ` · ${e.subtyp}` : "";
+    /* ⚠ `subtyp` kann „-" sein, und das ist kein leerer Wert, sondern der
+       Klartext zu Subtyp 0 in den SFV-Stammdaten. Ohne diese Prüfung stünde
+       auf der Website „FC Küsnacht a · -". Aufgefallen in der Probe vom
+       05.09.2026, in Didis eigener Ausgabe.
+
+       Nicht auf `"-"` allein prüfen: gemeint ist „trägt keine Aussage", und
+       ein leergeschlagener Wert gehört zur selben Sache. */
+    const subtyp = (e.subtyp ?? "").trim();
+    const zusatz = subtyp && subtyp !== "-" ? ` · ${subtyp}` : "";
     const text = art === "wechsel" && e.ein_rueckennr != null
       ? `${wer} · für Nr. ${e.ein_rueckennr}`
       : `${wer}${zusatz}`;
@@ -272,6 +280,64 @@ export function bildeVerlauf(
   }
 
   return zeilen;
+}
+
+/* ── Zählen, wer beim Namen genannt wird ──────────────────────────── */
+
+export interface NamensZaehlung {
+  /** Zeilen, die einen zugeordneten eigenen Spieler beim Namen nennen. */
+  mit_personenname: number;
+  /** Eigene Spieler ohne Zuordnung — „Nr. 13". */
+  mit_rueckennummer: number;
+  /** Gegner — der Mannschaftsname, nie eine Person. */
+  mit_gegnername: number;
+}
+
+/**
+ * Wie viele Verlaufszeilen nennen einen MENSCHEN beim Namen?
+ *
+ * ⚠ DIE EINE ZAHL, DIE VOR DEM ERSTEN SCHARFEN LAUF ENTSCHEIDET, ob
+ * Klarnamen von Junioren auf eine öffentliche Website gehen. Deshalb steht
+ * sie hier — geprüft — und nicht in der Edge Function.
+ *
+ * ⚠ SIE LIEST NICHT DEN TEXT, SIE LIEST DIE ENTSCHEIDUNG. Die erste
+ * Fassung (05.09.2026) prüfte den fertigen Ausgabetext mit
+ * `/^[^N]|^N(?!r\. )/` — „beginnt nicht mit «Nr. »" — und zählte damit
+ * jede Gegnerzeile mit, denn ein Vereinsname beginnt auch nicht so. Sie
+ * meldete **431 statt 0**.
+ *
+ * Zwei Fehler in einer Zeile, und beide sind Muster:
+ *
+ *   1. Sie war NEGATIV definiert — eine Denylist in Zahlenform. Was nicht
+ *      wie ein Ausschluss aussah, galt als Treffer. Neue Textformen fallen
+ *      damit automatisch auf die falsche Seite.
+ *   2. Sie mass die AUSGABE statt der ENTSCHEIDUNG. Wer seinen eigenen
+ *      Ausgabetext wieder zerlegt, misst seine Formatierung mit — und die
+ *      ändert sich, ohne dass jemand an die Messung denkt.
+ *
+ * Hier wird gefragt, was tatsächlich gilt: ist die Zeile von uns, und
+ * steht für ihre `sfv_person_id` ein Name in der Zuordnung?
+ *
+ * ⚠ Die drei Zahlen ergeben zusammen die Zeilenzahl aus `bildeVerlauf()`.
+ * Das ist keine Nettigkeit, sondern die Gegenprobe: gehen sie auseinander,
+ * zählt eine der beiden Funktionen etwas anderes als die andere.
+ */
+export function zaehleVerlaufNamen(
+  ereignisse: AnzeigeEreignis[], namen: Map<number, string>,
+): NamensZaehlung {
+  const z: NamensZaehlung = { mit_personenname: 0, mit_rueckennummer: 0, mit_gegnername: 0 };
+
+  for (const e of ereignisse) {
+    /* Derselbe Filter wie in bildeVerlauf — was dort wegfällt, darf hier
+       nicht mitgezählt werden. */
+    if (!verlaufArt(e.typ_id, e.subtyp_id ?? null)) continue;
+
+    if (!e.ist_eigener) { z.mit_gegnername++; continue; }
+    if (e.sfv_person_id != null && namen.has(e.sfv_person_id)) { z.mit_personenname++; continue; }
+    z.mit_rueckennummer++;
+  }
+
+  return z;
 }
 
 /* ── Das ganze Spiel ──────────────────────────────────────────────── */

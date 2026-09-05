@@ -637,6 +637,93 @@ select count(*) as zugeordnet from public.sfv_zuordnung;
 einem Einbruch ist kein Zustand für Wochen. Die Namen machen es
 schlimmer, nicht erst gefährlich.
 
+### ✅ Gemessen am 05.09.2026: was unter `/wp-json/` ohne Anmeldung steht
+
+Didi hat sich für **Basic-Auth mit Ausnahme für `/wp-json/`** entschieden,
+mit der Begründung: *„die REST-API verlangt selbst eine Anmeldung — der
+Schutz davor ist eine zweite Tür, keine einzige"*, und dazu die richtige
+Rückfrage, ob das stimmt.
+
+**Gemessen, unangemeldet, gegen die laufende Dev-Seite:**
+
+| Route | | Inhalt |
+|---|---|---|
+| `/wp-json/` | 200 | die Routenliste |
+| `wp/v2/posts` | 200 | 14 veröffentlichte News |
+| `wp/v2/pages` | 200 | 18 Seiten |
+| `wp/v2/media` | 200 | 20 Medien |
+| `wp/v2/fch_team` | 200 | 11 Teams — ⚠ **ohne `sfv_id`** (`meta: null`, `acf: []`) |
+| `wp/v2/fch_anlass` · `fch_sponsor` · `fch_jahr` | 200 | öffentliche Inhalte |
+| **`wp/v2/fch_spiel`** | **404** | ✅ nicht exponiert — die Entscheidung des Themes trägt |
+| **`clubcampus/v1/status`** | **401** | ✅ verlangt Anmeldung |
+| **`wp/v2/users`** | **200** | ⚠ **ein Benutzer: „Dieter Good", slug `dgood`** |
+
+Entwürfe sind nicht dabei — `?status=draft` wird abgewiesen, alle
+gelieferten Objekte stehen auf `publish`.
+
+### ⚠ Die Rechnung stimmt fast — und das Loch ist genau das eine, das zählt
+
+**Der erste Satz trifft nicht zu:** die Kern-Routen verlangen **keine**
+Anmeldung. Posts, Seiten, Medien und die vier `fch_*`-Typen kommen
+unangemeldet. `/wp-json/` ist dort keine zweite Tür, sondern gar keine.
+
+**Der Schluss stimmt trotzdem — für alles ausser einer Route.** Was dort
+ausgegeben wird, steht ohnehin auf der öffentlichen Website: es sind die
+Inhalte, für die die Seite da ist. Und die Spiele sind mit 404 gar nicht
+dabei.
+
+⚠ **`wp/v2/users` ist die Ausnahme, und die Ausnahme ist teuer.** Sie
+veröffentlicht den Anmeldenamen des Administrators. Nach einem Einbruch
+macht das aus „Benutzername UND Passwort raten" ein „Passwort raten".
+
+**Und die gewählte Massnahme trifft genau diese Route nicht:**
+
+| | mit Basic-Auth + Ausnahme für `/wp-json/` |
+|---|---|
+| `/author/dgood/` (Frontend, heute 200) | ✅ geschützt |
+| `wp/v2/users` | ⚠ **offen** — die Ausnahme lässt sie durch |
+
+**Die Ausnahme lässt also ausgerechnet das offen, was der Schutz sonst
+schliessen würde.** Zwei Zeilen schliessen es, unabhängig von Basic-Auth:
+
+```php
+add_filter( 'rest_endpoints', function ( $e ) {
+    if ( ! is_user_logged_in() ) {
+        unset( $e['/wp/v2/users'], $e['/wp/v2/users/(?P<id>[\d]+)'] );
+    }
+    return $e;
+} );
+```
+
+⚠ **Nur für Nichtangemeldete** — der Block-Editor braucht die Route für
+die Autorenauswahl. Und ⚠ **nicht in `clubcampus-export.php`**: der
+Export hat mit der Benutzerliste nichts zu tun, und ein Plugin, das
+nebenbei fremde Routen abschaltet, überrascht den nächsten Leser. Sie
+gehört in `fch-core` oder ein eigenes kleines mu-plugin — Didis
+Entscheidung, es ist seine Installation.
+
+### ✅ Zwei gute Nachrichten aus derselben Messung
+
+**1 · `clubcampus-export` steht NICHT in der Benutzerliste.** WordPress
+listet unangemeldet nur Benutzer mit veröffentlichten Beiträgen in einem
+Beitragstyp mit `show_in_rest => true`. Der Export schreibt ausschliesslich
+`fch_spiel`, und das steht auf `false`.
+
+⚠ **Das ist kein Zufall, sondern eine Folge — und damit eine
+Abhängigkeit:** würde jemand `show_in_rest` an `fch_spiel` einschalten,
+erschiene der Export-Benutzer mitsamt seinem Anmeldenamen in der
+öffentlichen Liste. Ein weiterer Grund, die Entscheidung des Themes nicht
+anzutasten.
+
+**2 · `sfv_id` am Team ist nicht öffentlich.** `meta: null` und `acf: []` —
+weder als registriertes Postmeta noch über ACF freigegeben.
+
+⚠ **Aber `acf` ist als Schlüssel DA**, die ACF-REST-Anbindung ist also
+aktiv. Wer später an einer Feldgruppe „Show in REST API" anhakt, macht
+ihre Felder auf der öffentlichen Route sichtbar — ohne dass jemand einen
+Endpunkt geöffnet hätte. **Ein Schalter, der wie eine Anzeigeeinstellung
+aussieht und eine Veröffentlichung ist.**
+
 **Was hilft, alles auf WordPress-Seite (§12):**
 
 1. **`Einstellungen → Lesen → Suchmaschinen davon abhalten`** — das

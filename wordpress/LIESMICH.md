@@ -5,9 +5,17 @@ Gehört zu `docs/plan_wordpress_spieldaten.md` (Etappe 3) und
 
 ## Was hier liegt
 
-| | |
-|---|---|
-| `clubcampus-export.php` | mu-plugin für `dev.fcherrliberg.ch`: nimmt Spielplan, Verlauf und Ranglisten entgegen |
+| | | Zuhause |
+|---|---|---|
+| `clubcampus-export.php` | nimmt Spielplan, Verlauf und Ranglisten entgegen | offen — siehe unten |
+| `fch-rest-schutz.php` | schliesst die Benutzeraufzählung über `/wp-json/`, meldet zwei stille Veröffentlichungsschalter | ⚠ **`fch-theme`**, nicht hier |
+
+⚠ **`fch-rest-schutz.php` gehört nicht dauerhaft in dieses Repository.**
+Es ist eine Sicherungsmassnahme für die Website und hat mit dem Export
+nichts zu tun; es liegt hier nur, weil ich in `fch-theme` nicht schreiben
+darf. **Eine Massnahme, die nur auf dem Server liegt, verschwindet beim
+nächsten Deploy aus dem Theme-Repository — lautlos**, denn ein fehlendes
+mu-plugin meldet nichts. Sie gehört eingecheckt, wo `fch-core` steht.
 
 ## Einbauen
 

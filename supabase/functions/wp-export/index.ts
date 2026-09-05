@@ -40,7 +40,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { mischeEreignisse, hatVerlauf } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
-import { bildeSpiel } from "../../../src/domains/spiele/wpNutzlast.ts";
+import { bildeSpiel, zaehleVerlaufNamen } from "../../../src/domains/spiele/wpNutzlast.ts";
 import type { WpSpiel, SpielQuelle } from "../../../src/domains/spiele/wpNutzlast.ts";
 import { protokoll, protokollFehler } from "../sfv-sync/protokoll.ts";
 
@@ -228,6 +228,7 @@ async function laufeProbe(
   let ohneVerlauf = 0;
   let ohneSchluessel = 0;
   let zurueckgehalten = 0;
+  const namensZaehlung = { mit_personenname: 0, mit_rueckennummer: 0, mit_gegnername: 0 };
 
   for (const s of eigene) {
     const roh = proSpiel.get(String(s.id)) ?? [];
@@ -239,11 +240,25 @@ async function laufeProbe(
     if (!spiel) { ohneSchluessel++; continue; }
     if (!spiel.publizieren) zurueckgehalten++;
     gebaut.push(spiel);
+
+    /* ⚠ Gezaehlt wird die ENTSCHEIDUNG, nicht der fertige Text. Die erste
+       Fassung las den Ausgabetext („beginnt nicht mit Nr. ") und meldete
+       431 statt 0, weil jede Gegnerzeile einen Vereinsnamen traegt.
+       Siehe zaehleVerlaufNamen(). */
+    const z = zaehleVerlaufNamen(ereignisse, namen);
+    namensZaehlung.mit_personenname += z.mit_personenname;
+    namensZaehlung.mit_rueckennummer += z.mit_rueckennummer;
+    namensZaehlung.mit_gegnername += z.mit_gegnername;
   }
 
   const verlaufZeilen = gebaut.reduce((n, s) => n + s.verlauf.length, 0);
-  const mitNamen = gebaut.reduce(
-    (n, s) => n + s.verlauf.filter((z) => /^[^N]|^N(?!r\. )/.test(z.text)).length, 0);
+
+  /* ⚠ Die Gegenprobe im Ergebnis, nicht nur im Test: gehen Summe und
+     Zeilenzahl auseinander, misst eine der beiden Funktionen etwas
+     anderes als die andere — und dann ist die Zahl unbrauchbar, egal wie
+     plausibel sie aussieht. */
+  const summe = namensZaehlung.mit_personenname
+    + namensZaehlung.mit_rueckennummer + namensZaehlung.mit_gegnername;
 
   return {
     hinweis: "PROBE — es wurde nichts gesendet und nichts geschrieben. "
@@ -257,9 +272,14 @@ async function laufeProbe(
       ohne_verlauf: ohneVerlauf,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
-      /* ⚠ Die Zahl, auf die es beim Gegenlesen ankommt. */
+      /* ⚠ Die Zahl, auf die es beim Gegenlesen ankommt: wie viele Zeilen
+         nennen einen MENSCHEN beim Namen. Solange `zuordnungen` 0 ist,
+         muss auch sie 0 sein — und wenn nicht, ist das der Befund. */
       zuordnungen: namen.size,
-      verlaufszeilen_mit_klarnamen: mitNamen,
+      zeilen_mit_personenname: namensZaehlung.mit_personenname,
+      zeilen_mit_rueckennummer: namensZaehlung.mit_rueckennummer,
+      zeilen_mit_gegnername: namensZaehlung.mit_gegnername,
+      zaehlung_stimmt: summe === verlaufZeilen,
     },
     teams: teamListe,
     spiele: gebaut.slice(0, PROBE_HOECHSTENS),
