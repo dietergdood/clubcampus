@@ -64,8 +64,19 @@ export interface WpSpiel {
   sfv_spiel_nr: string;
   datum: string;
   zeit: string;
-  /** WordPress-Beitrags-Id des Teams — nicht die SFV-Nummer. */
-  fch_team: number;
+  /** ⚠ Die SFV-Teamnummer, NICHT die WordPress-Beitrags-Id.
+
+      Bis zum 05.09.2026 stand hier `fch_team: number` — die Beitrags-Id.
+      Das war falsch herum, und eine Messung hat es gezeigt: `sfv_id` ist
+      am `fch_team`-Beitrag **nicht** über die REST-API lesbar (`meta:
+      null`, `acf: []`), und öffentlich lesbar soll sie auch nicht werden.
+      Der Export könnte die Zuordnung also gar nicht holen.
+
+      Er braucht sie auch nicht. Die Zuordnung „SFV-Nummer ↔ Beitrag" ist
+      eine Tatsache von WordPress, und das Plugin kennt sie ohnehin
+      (`cc_team_karte()`). **Wer die Tatsache besitzt, löst sie auf** —
+      das spart einen Abruf und eine Preisgabe zugleich. */
+  sfv_team_id: string;
   gegner: string;
   heim_auswaerts: "heim" | "auswaerts";
   ort: string;
@@ -369,7 +380,7 @@ export interface SpielQuelle {
  */
 export function bildeSpiel(
   q: SpielQuelle,
-  teamPostId: number,
+  sfvTeamId: string,
   ereignisse: AnzeigeEreignis[],
   namen: Map<number, string>,
   unserKlub: string,
@@ -386,7 +397,7 @@ export function bildeSpiel(
     sfv_spiel_nr: q.sfv_spiel_nr ?? "",
     datum: wpDatum(q.date),
     zeit: wpZeit(q.zeit),
-    fch_team: teamPostId,
+    sfv_team_id: sfvTeamId,
     gegner: q.gegner ?? "",
     heim_auswaerts: heimspiel ? "heim" : "auswaerts",
     ort: q.venue ?? "",

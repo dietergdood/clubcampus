@@ -581,6 +581,61 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Der Reflex, den beide Fälle verlangen, ist derselbe: **eine Zahl, die überrascht, zuerst gegen das Werkzeug prüfen, das sie erzeugt hat** — und erst dann gegen die Sache.
 
+- **Eine Meldung, die die gültige Antwort KENNT und nicht nennt, kostet eine Rückfrage — und beim Verallgemeinern fällt genau diese Hälfte weg.**
+
+  Am 05.09.2026 in `wp-export/index.ts`. Solange es eine Aktion gab, hiess es:
+
+  ```ts
+  `Unbekannte Aktion: ${aktion} — heute gibt es nur "probe"`
+  ```
+
+  Beim Ergänzen von `export` habe ich den zweiten Teil **entfernt**, weil er mit zwei Aktionen nicht mehr stimmte. Übrig blieb `Unbekannte Aktion: spiele` — die Function kannte die Antwort weiterhin und sagte sie nicht mehr.
+
+  ⚠ **Der Aufruf, der es auslöste, war ein naheliegender Irrtum:** `spiele` ist der WordPress-**Routenpfad** (`/clubcampus/v1/spiele`), nicht die Aktion. Genau die Verwechslung, die eine Meldung mit Aufzählung in derselben Sekunde geklärt hätte. Stattdessen eine Runde hin und zurück.
+
+  **Die Reparatur ist nicht der Text, sondern die Quelle:** eine Liste, aus der die Prüfung *und* die Meldung lesen.
+
+  ```ts
+  const AKTIONEN = ["probe", "export"];
+  if (!AKTIONEN.includes(aktion)) return json({ fehler: …, gueltig: AKTIONEN }, 400);
+  ```
+
+  Damit kann die Meldung nicht veralten, wenn eine Aktion dazukommt — und das ist der eigentliche Punkt: **die alte Fassung war nicht falsch, sie wurde falsch, als jemand daneben etwas ergänzte.** Dieselbe Familie wie der Kommentar „Drei Aufrufe" über vier Zeilen.
+
+  **Verallgemeinern heisst nicht leeren.** Wo eine Meldung eine Aufzählung trug, gehört die Aufzählung erweitert, nicht gestrichen.
+
+- **⚠ EIN ZÄHLER, DESSEN NAME MEHR BEHAUPTET ALS ER MISST, IST GEFÄHRLICHER ALS KEINER.** (Didi, 05.09.2026.)
+
+  Befund aus dem ersten Probelauf des WordPress-Exports. Die Antwort meldete zwei Zahlen, die sich widersprachen:
+
+  ```
+  zuordnungen: 0            ← niemand ist zugeordnet
+  verlaufszeilen_mit_klarnamen: 431
+  ```
+
+  In den Beispielen standen Vereinsnamen („FC Küsnacht a"), eigene Spieler durchweg als „Nr. 13". **Null Klarnamen, gemeldet als 431.** Der Ausdruck dahinter:
+
+  ```js
+  /^[^N]|^N(?!r\. )/     // „Text beginnt NICHT mit «Nr. »"
+  ```
+
+  **Zwei Fehler in einer Zeile, und beide sind Muster:**
+
+  | | |
+  |---|---|
+  | **negativ definiert** | eine **Denylist in Zahlenform**. Was nicht wie ein Ausschluss aussah, galt als Treffer — und ein Vereinsname beginnt eben auch nicht mit „Nr. " |
+  | **misst die AUSGABE statt der ENTSCHEIDUNG** | wer seinen eigenen Ausgabetext wieder zerlegt, misst seine Formatierung mit. Die ändert sich, ohne dass jemand an die Messung denkt |
+
+  Die zweite Hälfte ist die allgemeinere: **den Ausgabetext zu parsen, um zu erfahren, was man selbst hineingeschrieben hat, ist immer der Umweg.** Die Frage war nicht „sieht die Zeile nach einem Namen aus", sondern „haben wir einen Namen eingesetzt" — und das weiss der Code an der Stelle, an der er es tut.
+
+  ⚠ **Warum es schlimmer ist als gar keine Zahl, und das ist Didis Punkt:** dieser Zähler war die **eine** Angabe, die vor dem ersten scharfen Lauf entscheidet, ob Klarnamen von Junioren auf eine öffentliche Website gehen. Stünde dort dauerhaft 431 statt 0, sähe **ein echter Fund aus wie der Normalzustand** — und beim nächsten Mal schaut niemand mehr hin. Dieselbe Abstumpfung wie bei den 758 Lint-Warnungen und beim dauerhaft roten Prüfmittel.
+
+  **Die Reparatur ist nicht ein besserer Ausdruck, sondern eine andere Frage.** `zaehleVerlaufNamen()` fragt: ist die Zeile von uns, und steht für ihre `sfv_person_id` ein Name in der Zuordnung? Kein Zeichenvergleich, keine Textform.
+
+  ⚠ **Und die Zahl kommt jetzt zu dritt** — Personenname · Rückennummer · Gegnername —, weil die drei zusammen die Zeilenzahl ergeben müssen. **Das ist keine Nettigkeit, sondern die Gegenprobe:** gehen Summe und Zeilenzahl auseinander, misst eine der beiden Funktionen etwas anderes als die andere. Sie steht als `zaehlung_stimmt` in der Antwort, nicht nur im Test — eine Aufteilung, die aufgehen muss, prüft sich selbst; eine einzelne Zahl kann nur behauptet werden.
+
+  ⚠ **Nebenbefund aus derselben Ausgabe, den niemand gesucht hat:** dort stand „FC Küsnacht a **· -**". `spiel_ereignisse.subtyp` trägt bei Subtyp 0 den Klartext `-` aus den SFV-Stammdaten — kein leerer Wert, sondern ein Strich. Ohne Prüfung stünde er so auf der Website. **Wer eine Ausgabe zum Gegenlesen erzeugt, findet darin mehr als das, wonach er gesucht hat** — das ist der Zweck des Probelaufs, und es ist der Grund, ihn von Hand zu lesen statt nur seine Kennzahlen anzusehen.
+
 - **Kein Kind von `MemberDetail` bekommt `onReload`. Nur `neuLaden`.** Am 23.08.2026 fünfmal derselbe Befund — Vereinsfunktionen, Inline-Felder, offene Punkte im Profil, „Mein Kind", die Archivliste. Immer: **geschrieben, aber die Anzeige weiss es nicht.**
 
   | | tut |

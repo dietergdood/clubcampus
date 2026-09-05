@@ -277,11 +277,11 @@ describe("Klarnamen zaehlen — die Zahl vor dem scharfen Lauf", () => {
 
 describe("Das ganze Spiel", () => {
   it("baut die Felder so, wie das Theme sie fuehrt", () => {
-    const s = bildeSpiel(quelle(), 42, [], new Map(), "FC Herrliberg");
+    const s = bildeSpiel(quelle(), "38309", [], new Map(), "FC Herrliberg");
     expect(s).not.toBeNull();
     expect(s!.datum).toBe("20260823");
     expect(s!.zeit).toBe("14:00");
-    expect(s!.fch_team).toBe(42);
+    expect(s!.sfv_team_id).toBe("38309");
     expect(s!.heim_auswaerts).toBe("heim");
     expect(s!.tore_heim).toBe(3);
     expect(s!.tore_gast).toBe(3);
@@ -289,27 +289,27 @@ describe("Das ganze Spiel", () => {
     expect(s!.publizieren).toBe(true);
   });
 
-  /* ⚠ `fch_team` ist die WordPress-Beitrags-Id, NICHT die SFV-Teamnummer.
-     Beide sind Zahlen, beide sehen plausibel aus — dieselbe
-     Verwechslungsgefahr wie sfv_match_id gegen sfv_spiel_nr. */
-  it("traegt die WordPress-Beitrags-Id des Teams, nicht die SFV-Nummer", () => {
-    const s = bildeSpiel(quelle(), 42, [], new Map(), "FC Herrliberg");
-    expect(s!.fch_team).toBe(42);
-    expect(s!.fch_team).not.toBe(38309);
+  /* ⚠ UMGEDREHT AM 05.09.2026. Hier stand die WordPress-Beitrags-Id, und
+     die kann der Export gar nicht kennen: `sfv_id` ist am Team-Beitrag
+     nicht ueber REST lesbar und soll es auch nicht werden. Die Aufloesung
+     macht das Plugin, das die Tatsache besitzt. */
+  it("traegt die SFV-Teamnummer, nicht die WordPress-Beitrags-Id", () => {
+    const s = bildeSpiel(quelle(), "38309", [], new Map(), "FC Herrliberg");
+    expect(s!.sfv_team_id).toBe("38309");
   });
 
   /* ⚠ Ohne Schluessel gaebe es beim naechsten Lauf einen zweiten Beitrag. */
   it("laesst ein Spiel ohne sfv_match_id ganz weg", () => {
-    expect(bildeSpiel(quelle({ sfv_match_id: null }), 42, [], new Map(), "X")).toBeNull();
+    expect(bildeSpiel(quelle({ sfv_match_id: null }), "38309", [], new Map(), "X")).toBeNull();
   });
 
   it("zieht ein Spiel mit Status 12 zurueck, statt es zu zeigen", () => {
-    const s = bildeSpiel(quelle({ sfv_status: 12 }), 42, [], new Map(), "X");
+    const s = bildeSpiel(quelle({ sfv_status: 12 }), "38309", [], new Map(), "X");
     expect(s!.publizieren).toBe(false);
   });
 
   it("setzt bei einem angesetzten Spiel kein Resultat", () => {
-    const s = bildeSpiel(quelle({ sfv_status: 1, resultat: null }), 42, [], new Map(), "X");
+    const s = bildeSpiel(quelle({ sfv_status: 1, resultat: null }), "38309", [], new Map(), "X");
     expect(s!.tore_heim).toBeNull();
     expect(s!.tore_gast).toBeNull();
   });
@@ -317,7 +317,7 @@ describe("Das ganze Spiel", () => {
   /* Vier von zehn Spielen haben keinen Verlauf — das ist der Normalfall
      und kein Fehler. Die leere Liste ersetzt den Repeater vollstaendig. */
   it("gibt bei fehlendem Verlauf eine leere Liste, nicht undefined", () => {
-    const s = bildeSpiel(quelle(), 42, [], new Map(), "X");
+    const s = bildeSpiel(quelle(), "38309", [], new Map(), "X");
     expect(s!.verlauf).toEqual([]);
   });
 });

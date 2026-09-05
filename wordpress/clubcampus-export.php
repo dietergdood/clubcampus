@@ -100,6 +100,10 @@ const CC_QUELLE     = 'clubcampus';   // ⚠ klein — der WERT, nicht die Besch
  *   Abgleich, der alles durchreicht, was ihm jemand schickt.
  */
 const CC_FELDER = array(
+	/* ⚠ `fch_team` steht hier, `sfv_team_id` nicht: die Nutzlast bringt die
+	   SFV-Nummer mit, geschrieben wird die aufgeloeste Beitrags-Id. Was der
+	   Export schickt und was am Beitrag steht, ist nicht dasselbe — und
+	   diese Liste beschreibt den Beitrag. */
 	'datum', 'zeit', 'fch_team', 'gegner', 'heim_auswaerts', 'ort',
 	'wettbewerb', 'runde', 'status', 'quelle',
 	'tore_heim', 'tore_gast', 'halbzeit_heim', 'halbzeit_gast',
@@ -439,11 +443,19 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		}
 		$geliefert[ $mid ] = true;
 
-		$teamId = (int) ( $spiel['fch_team'] ?? 0 );
+		/* ⚠ Der Export schickt die SFV-TEAMNUMMER, nicht die Beitrags-Id.
+		   Aufgeloest wird hier, weil hier die Zuordnung liegt: `sfv_id` ist
+		   am Team-Beitrag nicht ueber REST lesbar und soll es auch nicht
+		   werden. Wer die Tatsache besitzt, loest sie auf. */
+		$sfv    = trim( (string) ( $spiel['sfv_team_id'] ?? '' ) );
+		$teamId = $teamKarte[ $sfv ] ?? 0;
 		if ( ! $teamId || ! isset( $erlaubteTid[ $teamId ] ) ) {
 			$erg['uebersprungen']++;
 			continue;
 		}
+		/* Die Beitrags-Id ist ein WordPress-Wert und gehoert erst ab hier in
+		   die Nutzlast — der Export kennt sie nie. */
+		$spiel['fch_team'] = $teamId;
 
 		$postId = $vorhanden[ $mid ] ?? 0;
 
@@ -513,7 +525,7 @@ function cc_route_spiele( WP_REST_Request $req ) {
  */
 function cc_pruefe_dublette( int $neu, array $spiel, array &$erg ): void {
 	$datum  = (string) ( $spiel['datum'] ?? '' );
-	$teamId = (int) ( $spiel['fch_team'] ?? 0 );
+	$teamId = (int) ( $spiel['fch_team'] ?? 0 );  // hier bereits aufgeloest
 	if ( '' === $datum || ! $teamId ) {
 		return;
 	}

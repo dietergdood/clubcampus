@@ -6,7 +6,8 @@
 // AKTIONEN
 //   probe    Liest alles und gibt zurueck, WAS GESENDET WUERDE. Schickt
 //            nichts. Schreibt keine Zeile, weder hier noch dort.
-//   export   (Etappe 4 — hier noch nicht gebaut)
+//   export   Schickt, was die Probe zeigen wuerde. Schreibt in WordPress
+//            und protokolliert in api_sync_log.
 //
 // ⚠ WARUM `probe` ZUERST, UND ALLEIN
 //   Der Export schickt Namen von Junioren auf eine oeffentliche Website.
@@ -61,6 +62,10 @@ const json = (koerper: unknown, status = 200) =>
    genau der Fehler, den sie finden soll. */
 const PROBE_HOECHSTENS = 25;
 
+/** Die gueltigen Aktionen — eine Liste, aus der die Pruefung UND die
+    Fehlermeldung lesen. Zwei Orte koennten auseinanderlaufen. */
+const AKTIONEN = ["probe", "export"];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ fehler: "Nur POST" }, 405);
@@ -78,8 +83,22 @@ Deno.serve(async (req) => {
   /* ⚠ `export` ist bewusst noch nicht da. Ein Platzhalter, der 200 und
      „noch nicht gebaut" zurueckgibt, waere schlimmer als ein Fehler: der
      Zeitplan haette dann einen gruenen Lauf ohne Wirkung. */
-  if (aktion !== "probe") {
-    return json({ fehler: `Unbekannte Aktion: ${aktion || "(leer)"} — heute gibt es nur "probe"` }, 400);
+  if (!AKTIONEN.includes(aktion)) {
+    /* ⚠ Die gueltigen Aktionen stehen MIT in der Meldung, und beide kommen
+       aus derselben Liste — sie koennen also nicht auseinanderlaufen.
+
+       Am 05.09.2026 stand hier eine Meldung ohne diese Haelfte: beim
+       Ergaenzen von `export` habe ich das `— heute gibt es nur "probe"`
+       entfernt, weil es mit zwei Aktionen nicht mehr passte. Die Meldung
+       kannte die Antwort danach immer noch und nannte sie nicht mehr — und
+       ein Aufruf mit `spiele` (dem WordPress-ROUTENPFAD, nicht der Aktion)
+       kostete eine Rueckfrage, die die Maschine haette beantworten koennen.
+
+       Eine Meldung zu verallgemeinern heisst nicht, sie zu leeren. */
+    return json({
+      fehler: `Unbekannte Aktion: ${aktion || "(leer)"}`,
+      gueltig: AKTIONEN,
+    }, 400);
   }
 
   const url = Deno.env.get("SUPABASE_URL") ?? "";
@@ -111,14 +130,153 @@ Deno.serve(async (req) => {
 
   try {
     const erg = await laufeProbe(db, vereinId, nurTeam);
-    protokoll(`wp-export/probe/${vereinId}`,
-      `${erg.spiele.length} Spiel(e), ${erg.zusammenfassung.verlauf_zeilen} Verlaufszeilen`);
-    return json(erg);
+
+    if (aktion === "probe") {
+      protokoll(`wp-export/probe/${vereinId}`,
+        `${erg.alle.length} Spiel(e), ${erg.zusammenfassung.verlauf_zeilen} Verlaufszeilen`);
+      return json(erg);
+    }
+
+    /* ⚠ `export` OHNE `nur_team` gibt es nicht. Der erste scharfe Lauf soll
+       eine Mannschaft treffen, keine einundzwanzig — und wer den Parameter
+       vergisst, soll nicht versehentlich alles schreiben. Die Sperre faellt
+       in Etappe 5 bewusst, nicht aus Versehen. */
+    if (!nurTeam) {
+      return json({ fehler: "export verlangt nur_team — Etappe 4 läuft je Mannschaft" }, 400);
+    }
+
+    return json(await sendeAnWordpress(db, vereinId, nurTeam, erg));
   } catch (e) {
-    const meldung = protokollFehler(`wp-export/probe/${vereinId}`, e);
+    const meldung = protokollFehler(`wp-export/${aktion}/${vereinId}`, e);
     return json({ fehler: meldung }, 502);
   }
 });
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DER SCHARFE LAUF
+   ═══════════════════════════════════════════════════════════════════════ */
+
+async function sendeAnWordpress(
+  db: DbLeser, vereinId: string, nurTeam: string, erg: ProbeErgebnis,
+) {
+  const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
+  const benutzer = Deno.env.get("WP_BENUTZER") ?? "";
+  const passwort = Deno.env.get("WP_APP_PASSWORT") ?? "";
+  if (!basis || !benutzer || !passwort) {
+    throw new Error("WP_BASIS_URL, WP_BENUTZER oder WP_APP_PASSWORT nicht gesetzt");
+  }
+
+  /* ⚠ Der Ziel-Host wird MITGESCHRIEBEN, nicht als Konfiguration abgelegt.
+     Die Adresse steht im Secret und nirgends sonst (Plan §4.2); was hier in
+     die Meldung geht, ist eine Beobachtung ueber einen Lauf, der
+     stattgefunden hat — und die kann nach einem Wechsel nicht falsch sein. */
+  const host = new URL(basis).host;
+
+  /* ⚠ `erg.alle`, NICHT `erg.spiele`. Die Probe kuerzt auf 25 Zeilen, damit
+     ein Mensch sie lesen kann. Erbte der scharfe Lauf diese Grenze, schriebe
+     er stillschweigend ein Viertel und meldete Erfolg — genau die stille
+     Kuerzung, gegen die die Grenze selbst gebaut ist. */
+  const alle = erg.alle;
+
+  const beginn = new Date().toISOString();
+  const antwort = await fetch(`${basis}/clubcampus/v1/spiele`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      /* Anwendungspasswort als Basic-Auth. Es steht nur im Secret und
+         kommt in kein Protokoll. */
+      Authorization: "Basic " + btoa(`${benutzer}:${passwort}`),
+    },
+    body: JSON.stringify({ lauf: beginn, teams: [nurTeam], spiele: alle }),
+  });
+
+  const text = await antwort.text();
+  let wp: Record<string, unknown>;
+  try {
+    wp = JSON.parse(text);
+  } catch {
+    /* ⚠ Kein JSON heisst fast immer: eine HTML-Fehlerseite, ein
+       Wartungsmodus oder eine Basic-Auth-Abfrage davor. Der Anfang des
+       Textes sagt mehr als „ungueltige Antwort". */
+    throw new Error(`WordPress antwortete kein JSON (${antwort.status}): ${text.slice(0, 200)}`);
+  }
+  if (!antwort.ok) {
+    throw new Error(`WordPress ${antwort.status}: ${JSON.stringify(wp).slice(0, 300)}`);
+  }
+
+  const laenge = (k: string) => ((wp[k] as unknown[] | undefined) ?? []).length;
+  const status = (laenge("fehler") || laenge("ohne_team") || laenge("doppelte_teams"))
+    ? "warnung" : "ok";
+
+  const meldung = `${host} · ${wp.neu ?? 0} neu, ${wp.aktualisiert ?? 0} aktualisiert, `
+    + `${wp.zurueckgezogen ?? 0} zurückgezogen, ${wp.verlauf_zeilen ?? 0} Verlaufszeilen`;
+
+  const vRes = await db.from("api_verbindungen")
+    .select("id").eq("verein_id", vereinId).eq("key", "wordpress").maybeSingle();
+  const verbindungId = (vRes.data as { id: string } | null)?.id ?? null;
+
+  if (verbindungId) {
+    await db.from("api_sync_log").insert({
+      verbindung_id: verbindungId, verein_id: vereinId, status,
+      gestartet_am: beginn, beendet_am: new Date().toISOString(),
+      datensaetze_neu: Number(wp.neu ?? 0),
+      datensaetze_aktualisiert: Number(wp.aktualisiert ?? 0),
+      datensaetze_fehler: laenge("fehler"),
+      meldung,
+      details: fuersProtokoll(host, nurTeam, alle.length, wp),
+    });
+
+    /* `letzter_sync` und `sync_status` im SELBEN update — der Waechter
+       prueft das Paar, und zwei getrennte Schreibvorgaenge koennten
+       auseinanderlaufen. */
+    await db.from("api_verbindungen").update({
+      letzter_sync: new Date().toISOString(),
+      sync_status: status,
+      sync_meldung: meldung,
+    }).eq("id", verbindungId);
+  }
+
+  return {
+    ziel: host,
+    gesendet: alle.length,
+    wordpress: wp,
+    protokolliert: Boolean(verbindungId),
+    zusammenfassung: erg.zusammenfassung,
+  };
+}
+
+/**
+ * Was ins Protokoll darf — Zahlen und Beitrags-Ids, keine Texte.
+ *
+ * ⚠ EIGENE ALLOWLIST, nicht das Objekt durchreichen. Die Antwort des
+ * Plugins traegt bei Dubletten den abgeleiteten Beitragstitel („Team —
+ * Gegner"). Der ist hier harmlos, aber die Regel ist es nicht: am
+ * 21.08.2026 sind 903 Klarnamen ins Protokoll geraten, weil ein Objekt
+ * gespreadet wurde. Was gespeichert wird, wird aufgezaehlt.
+ *
+ * Der Titel steht in der Antwort an den Browser, wo ihn ein Mensch liest
+ * und niemand ablegt.
+ */
+function fuersProtokoll(
+  host: string, team: string, gesendet: number, wp: Record<string, unknown>,
+): Record<string, unknown> {
+  const dubletten = (wp.moegliche_dubletten as Record<string, unknown>[] | undefined) ?? [];
+  return {
+    ziel_host: host,
+    team,
+    gesendet,
+    neu: Number(wp.neu ?? 0),
+    aktualisiert: Number(wp.aktualisiert ?? 0),
+    zurueckgezogen: Number(wp.zurueckgezogen ?? 0),
+    uebersprungen: Number(wp.uebersprungen ?? 0),
+    verlauf_zeilen: Number(wp.verlauf_zeilen ?? 0),
+    ohne_team: (wp.ohne_team as string[] | undefined) ?? [],
+    doppelte_teams: (wp.doppelte_teams as string[] | undefined) ?? [],
+    moegliche_dubletten: dubletten.map((d) => ({ neu: d.neu, von_hand: d.von_hand })),
+    fehler: (wp.fehler as string[] | undefined) ?? [],
+  };
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -144,8 +302,11 @@ interface ProbeErgebnis {
   hinweis: string;
   zusammenfassung: Record<string, unknown>;
   teams: unknown[];
+  /** Gekuerzt auf PROBE_HOECHSTENS — zum Lesen durch einen Menschen. */
   spiele: WpSpiel[];
   gekuerzt: number;
+  /** ⚠ Der vollstaendige Satz. Der scharfe Lauf nimmt DIESEN, nie `spiele`. */
+  alle: WpSpiel[];
 }
 
 async function laufeProbe(
@@ -163,11 +324,10 @@ async function laufeProbe(
   if (tRes.error) throw new Error(`Teams nicht lesbar: ${tRes.error.message}`);
   const teams = (tRes.data ?? []) as TeamZeile[];
 
-  /* ⚠ Die WordPress-Beitrags-Id des Teams kennt die Probe NICHT — sie
-     spricht nicht mit WordPress. `fch_team` bleibt deshalb 0, und das ist
-     kein Fehler, sondern die Grenze dieser Aktion: was der scharfe Lauf
-     dort einsetzt, kommt aus der Zuordnung sfv_id ↔ Beitrag, und die
-     liegt drueben. Beim Gegenlesen ist die 0 der Hinweis darauf. */
+  /* ⚠ Die Nutzlast traegt die SFV-Teamnummer, nicht die WordPress-
+     Beitrags-Id — aufgeloest wird drueben, wo die Zuordnung liegt. Damit
+     zeigt die Probe genau das, was auch gesendet wird; es gibt keinen
+     Platzhalter mehr, den jemand beim Gegenlesen erklaeren muesste. */
   const teamListe = teams.map((t) => ({
     clubcampus_id: t.id,
     name: t.name,
@@ -235,8 +395,7 @@ async function laufeProbe(
     const ereignisse = mischeEreignisse(roh);
     if (!hatVerlauf(roh)) ohneVerlauf++;
 
-    /* ⚠ Der Team-Beitrag ist hier unbekannt (siehe oben) — 0 als Platzhalter. */
-    const spiel = bildeSpiel(s, 0, ereignisse, namen, unserKlub);
+    const spiel = bildeSpiel(s, String(s.sfv_team_id ?? ""), ereignisse, namen, unserKlub);
     if (!spiel) { ohneSchluessel++; continue; }
     if (!spiel.publizieren) zurueckgehalten++;
     gebaut.push(spiel);
@@ -261,8 +420,7 @@ async function laufeProbe(
     + namensZaehlung.mit_rueckennummer + namensZaehlung.mit_gegnername;
 
   return {
-    hinweis: "PROBE — es wurde nichts gesendet und nichts geschrieben. "
-      + "fch_team steht auf 0, weil diese Aktion nicht mit WordPress spricht.",
+    hinweis: "Vorschau. Bei aktion=probe wird nichts gesendet und nichts geschrieben.",
     zusammenfassung: {
       teams_zugeordnet: teamListe.length,
       spiele_gesamt: spiele.length,
@@ -284,5 +442,6 @@ async function laufeProbe(
     teams: teamListe,
     spiele: gebaut.slice(0, PROBE_HOECHSTENS),
     gekuerzt: Math.max(0, gebaut.length - PROBE_HOECHSTENS),
+    alle: gebaut,
   };
 }
