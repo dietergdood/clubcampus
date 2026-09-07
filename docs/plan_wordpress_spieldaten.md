@@ -679,8 +679,56 @@ zwanzig Beiträge wegräumt — jede Zeile trägt ihre `bearbeiten_url`, und
 entschieden wird pro Beitrag im WordPress-Backend.
 
 ```js
-await wpExport('bestand');    // ändert nichts, protokolliert nichts
+await wpExport('bestand');                       // seit dem ersten Lauf
+await wpExport('bestand', {von: '2026-09-06'});  // eigener Zeitraum
 ```
+
+#### ⚠ Zeitraum, nicht Anzahl — und der Anfang wird gelesen
+
+**Entscheidung Didi, 07.09.2026:** *„die Frage ist «was ist seit dem Anfang
+entstanden», und eine Anzahl beantwortet sie nur zufällig."* Ein
+„letzte 50" träfe die Frage nur, solange es zufällig 50 sind — dieselbe
+geratene Zahl wie die Schwelle 20 der Löschvorschau, die bei einem Stapel
+von zwei umfiel.
+
+**Und der Anfang steht nicht im Code.** `von` kommt aus dem **ersten
+Eintrag in `api_sync_log`** für die `wordpress`-Zeile. Ein Datum im Code
+wäre eine Behauptung über einen Zeitpunkt, den der Code nicht kennt, und
+würde veralten, ohne dass etwas fehlschlägt. Die Antwort nennt beides:
+`zeitraum.quelle` (`erster-lauf` · `vorgegeben` · `offen`) und
+`erster_lauf` daneben — wer die Grenze beurteilen will, muss sehen, woher
+sie kommt.
+
+⚠ **Die Vorbelegung hat ein Loch, und die Antwort nennt es selbst.**
+`api_sync_log` wird erst **nach** der Antwort von WordPress geschrieben.
+Stürzt ein Lauf dazwischen ab, stehen Beiträge auf der Website, die
+**älter sind als jeder Protokolleintrag** — und die Vorbelegung verdeckt
+ausgerechnet sie. Deshalb zählt `vor_erstem_lauf` sie, und `aeltester`
+nennt den ältesten Beitrag überhaupt. **Steht dort etwas, ist der gelesene
+Anfang zu spät** — dann `von` von Hand setzen.
+
+⚠ **Zeilen ohne verwertbares Datum bleiben in der Liste** und werden als
+`ohne_datum` gezählt. Ein Filter, der sie wegnimmt, macht aus „ich weiß es
+nicht" ein „gibt es nicht" — und niemand sucht danach, weil die Liste
+vollständig aussieht.
+
+⚠ **Die Zeitform ist die Falle, an der so etwas still schiefgeht.**
+WordPress liefert MySQL-Schreibweise (`2026-09-05 17:20:00`),
+`api_sync_log` liefert ISO (`2026-09-05T17:20:00.000Z`). Ein
+**Zeichenvergleich der beiden geht schief**: das Leerzeichen (0x20)
+sortiert vor dem `T` (0x54), also gälte jeder WordPress-Zeitpunkt als
+älter als jeder ISO-Zeitpunkt desselben Tages — und die Filterung liesse
+genau die Beiträge durchfallen, um die es geht. Deshalb wird geparst, und
+das Plugin liefert seit dem 07.09.2026 `get_post_time('c', true)`, also
+ISO **mit Zone**: `post_date_gmt` und `post_date` sehen identisch aus und
+unterscheiden sich um den Zeitzonenversatz.
+
+⚠ **Die Rechnung liegt in `src/domains/spiele/wpBestand.ts`, nicht in der
+Edge Function** — dieselbe Bauform wie `wpNutzlast.ts`. Der Grund: die
+Function importiert von `esm.sh` und wird weder von `tsc` noch von vitest
+gelesen; für sie gäbe es nur eine Strukturprüfung auf den Quelltext, und
+die taugt für **Zusagen** („sie schreibt nicht"), nicht für **Rechnungen**.
+17 Fälle in `wpBestandZeitraum.test.ts`.
 
 | Feld je Zeile | |
 |---|---|
@@ -690,10 +738,20 @@ await wpExport('bestand');    // ändert nichts, protokolliert nichts
 | `lauf_zuletzt` / `lauf_erst` | leer, solange ungestempelt |
 | `beitrag_id`, `titel`, `team`, `sfv_match_id`, `bearbeiten_url` | zum Entscheiden |
 
-Dazu vier Zahlen, die **aufgehen müssen**: `gesamt`,
-`ohne_laufstempel` + `mit_laufstempel`, `zaehlung_stimmt` — und
-**`handbeitraege`** als Gegenprobe auf die Besitzregel. Steigt die letzte,
-hat der Export einen Handbeitrag übernommen, was er nicht darf.
+Dazu Zahlen, die **aufgehen müssen**: `im_zeitraum` + `ausserhalb` =
+`gesamt`, bestätigt durch `zaehlung_stimmt`. **`seiten_einig`** hält
+zusätzlich unsere Zeilenzahl gegen die, die WordPress selbst gemeldet hat —
+gehen sie auseinander, hat eine der beiden Seiten etwas weggelassen. Und
+**`handbeitraege`** ist die Gegenprobe auf die Besitzregel; sie steht
+**außerhalb** des Zeitraums, weil ein Handbeitrag mit dem Export nichts zu
+tun hat und durch keinen Filter verschwinden darf.
+
+> ⚠ **Die erste Fassung von `zaehlung_stimmt` war eine TAUTOLOGIE.** Sie
+> rechnete `ausserhalb = gesamt - drin` und prüfte dann
+> `drin + (gesamt - drin) === gesamt` — immer wahr, auch bei kaputter
+> Filterung. **Eine Gegenprobe, die nicht scheitern kann, ist keine; sie ist
+> schlimmer als keine, weil sie gelesen wird wie eine.** Jetzt zählt die
+> Schleife beide Seiten selbst.
 
 ⚠ **Ungekürzt, absichtlich.** Wer entscheiden soll, muss alle sehen —
 dieselbe Lehre wie bei der Löschvorschau, deren Schwelle von 20 bei einem
@@ -2388,11 +2446,11 @@ const [schl, roh] = Object.entries(localStorage)
 const token = JSON.parse(roh).access_token;
 const ref   = schl.slice(3, -'-auth-token'.length);
 
-async function wpExport(aktion, nurTeam) {
+async function wpExport(aktion, nurTeam, zeitraum = {}) {
   const r = await fetch(`https://${ref}.supabase.co/functions/v1/wp-export`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body:    JSON.stringify({ aktion, nur_team: nurTeam }),
+    body:    JSON.stringify({ aktion, nur_team: nurTeam, ...zeitraum }),
   });
   const j = await r.json();
   console.log(r.status, j);
@@ -2402,7 +2460,28 @@ async function wpExport(aktion, nurTeam) {
 await wpExport('probe',  '38309');   // schreibt NICHTS — erst lesen
 await wpExport('export', '38309');   // schreibt scharf auf die Website
 await wpExport('bestand');           // zeigt, was auf der Website liegt (§4.5b)
+await wpExport('bestand', null, { von: '2026-09-06' });   // eigener Zeitraum
 ```
+
+**Die Bestandsliste lesbar machen** — entschieden wird pro Zeile, also
+gehoert sie als Tabelle auf den Schirm:
+
+```js
+const b = await wpExport('bestand');
+console.log(b.zeitraum, 'erster Lauf:', b.erster_lauf,
+            '| vor dem ersten Lauf:', b.vor_erstem_lauf,
+            '| ohne Stempel:', b.ohne_laufstempel,
+            'davon sichtbar:', b.ohne_laufstempel_sichtbar);
+console.table(b.beitraege.map(z => ({
+  angelegt: z.angelegt.slice(0, 16).replace('T', ' '),
+  team: z.team, titel: z.titel, status: z.status,
+  fraglich: z.ohne_laufstempel ? 'ja' : '', id: z.beitrag_id,
+})));
+```
+
+⚠ **`console.table` kürzt die Spalten, nicht die Zeilen** — die Liste
+bleibt vollständig. Die `bearbeiten_url` steht in `b.beitraege`, nicht in
+der Tabelle: sie ist zu lang fürs Auge und einen Klick entfernt.
 
 **Die drei Zahlen, die übereinstimmen müssen** (Didis Bedingung):
 

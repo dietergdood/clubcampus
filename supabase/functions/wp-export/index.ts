@@ -42,6 +42,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { mischeEreignisse, hatVerlauf } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import { bildeSpiel, zaehleVerlaufNamen } from "../../../src/domains/spiele/wpNutzlast.ts";
+/* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
+   und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
+   von beiden nicht geprueft; eine Strukturpruefung auf den Quelltext taugt
+   fuer „sie schreibt nicht", nicht fuer „sie filtert richtig". */
+import { waehleZeitraum, fassBestandZusammen } from "../../../src/domains/spiele/wpBestand.ts";
+import type { BestandZeile } from "../../../src/domains/spiele/wpBestand.ts";
 import type { WpSpiel, SpielQuelle } from "../../../src/domains/spiele/wpNutzlast.ts";
 import { protokoll, protokollFehler } from "../sfv-sync/protokoll.ts";
 
@@ -72,10 +78,16 @@ Deno.serve(async (req) => {
 
   let aktion = "";
   let nurTeam: string | null = null;
+  /* Optional, nur fuer `bestand`. Fehlen sie, kommt der Beginn aus dem
+     ersten Protokolleintrag — siehe holeBestand(). */
+  let von: string | null = null;
+  let bis: string | null = null;
   try {
     const body = await req.json();
     aktion = String(body?.aktion || "");
     nurTeam = body?.nur_team ? String(body.nur_team) : null;
+    von = body?.von ? String(body.von) : null;
+    bis = body?.bis ? String(body.bis) : null;
   } catch {
     return json({ fehler: "Ungültiger Aufruf" }, 400);
   }
@@ -135,7 +147,7 @@ Deno.serve(async (req) => {
        einem Lauf ueber unsere Spiele — und ein Fehler dort machte die
        Bestandsliste unerreichbar, ausgerechnet wenn man sie braucht. */
     if (aktion === "bestand") {
-      return json(await holeBestand());
+      return json(await holeBestand(db, vereinId, { von, bis }));
     }
 
     const erg = await laufeProbe(db, vereinId, nurTeam);
@@ -306,7 +318,9 @@ function fuersProtokoll(
  *   Kachel meldete einen Export, den es nicht gab. Dieselbe Trennung wie
  *   zwischen `probe` und `export`.
  */
-async function holeBestand() {
+async function holeBestand(
+  db: DbLeser, vereinId: string, vorgabe: { von: string | null; bis: string | null },
+) {
   const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
   const benutzer = Deno.env.get("WP_BENUTZER") ?? "";
   const passwort = Deno.env.get("WP_APP_PASSWORT") ?? "";
@@ -329,29 +343,55 @@ async function holeBestand() {
     throw new Error(`WordPress ${antwort.status}: ${JSON.stringify(wp).slice(0, 300)}`);
   }
 
-  const zeilen = (wp.beitraege as Record<string, unknown>[] | undefined) ?? [];
-  const ohne = zeilen.filter((z) => z.ohne_laufstempel === true);
+  const zeilen = (wp.beitraege as BestandZeile[] | undefined) ?? [];
+
+  /* ⚠ DER BEGINN WIRD GELESEN, NICHT GESCHRIEBEN.
+     Didi, 07.09.2026: den Anfang des Exports nicht als Datum in den Code
+     schreiben, sondern aus dem ersten Protokolleintrag nehmen. Ein Datum im
+     Code behauptet etwas ueber einen Zeitpunkt, den der Code nicht kennt —
+     und veraltet, ohne dass etwas fehlschlaegt.
+
+     ⚠ `error` wird gelesen. Ein verschluckter Fehler ergaebe hier `null`,
+     also „kein Lauf protokolliert", also einen offenen Zeitraum — die
+     Vorbelegung fiele lautlos weg und die Liste saehe bloss laenger aus.
+     Genau das Muster, das in diesem Projekt zwei Wochen gekostet hat. */
+  const vRes = await db.from("api_verbindungen")
+    .select("id").eq("verein_id", vereinId).eq("key", "wordpress").maybeSingle();
+  if (vRes.error) throw new Error(`api_verbindungen nicht lesbar: ${vRes.error.message}`);
+  const verbindungId = (vRes.data as { id: string } | null)?.id ?? null;
+
+  let ersterLauf: string | null = null;
+  if (verbindungId) {
+    const lRes = await db.from("api_sync_log")
+      .select("gestartet_am").eq("verbindung_id", verbindungId)
+      .order("gestartet_am", { ascending: true }).limit(1).maybeSingle();
+    if (lRes.error) throw new Error(`api_sync_log nicht lesbar: ${lRes.error.message}`);
+    ersterLauf = (lRes.data as { gestartet_am: string } | null)?.gestartet_am ?? null;
+  }
+
+  const zeitraum = waehleZeitraum(vorgabe, ersterLauf);
+  const erg = fassBestandZusammen(zeilen, zeitraum, ersterLauf);
 
   return {
     ziel: host,
     hinweis:
       "Nachsehen, nicht schreiben. Es wurde nichts geändert und nichts protokolliert."
       + " Entschieden wird pro Beitrag im WordPress-Backend (bearbeiten_url).",
-    /* ⚠ Die Aufteilung muss aufgehen — eine einzelne Zahl kann nur
-       behauptet werden. Geht sie nicht auf, misst eine der beiden Seiten
-       etwas anderes als die andere, und DAS ist dann der Befund. */
-    gesamt: Number(wp.gesamt ?? 0),
-    ohne_laufstempel: Number(wp.ohne_laufstempel ?? 0),
-    ohne_laufstempel_sichtbar: Number(wp.ohne_laufstempel_sichtbar ?? 0),
-    mit_laufstempel: Number(wp.gesamt ?? 0) - Number(wp.ohne_laufstempel ?? 0),
-    zaehlung_stimmt:
-      zeilen.length === Number(wp.gesamt ?? 0)
-      && ohne.length === Number(wp.ohne_laufstempel ?? 0),
+    /* ⚠ Der erste Lauf steht DANEBEN, nicht nur als Vorbelegung versteckt.
+       Wer den Zeitraum beurteilen will, muss sehen, woher seine Grenze
+       kommt. */
+    erster_lauf: ersterLauf,
+    ...erg,
     /* ⚠ Die Gegenprobe auf die Besitzregel. Steigt sie, hat der Export
-       einen Handbeitrag uebernommen — was er nicht darf. */
+       einen Handbeitrag uebernommen — was er nicht darf. Sie steht
+       AUSSERHALB des Zeitraums: ein Handbeitrag hat mit dem Export nichts
+       zu tun und darf durch keinen Filter verschwinden. */
     handbeitraege: Number(wp.handbeitraege ?? 0),
-    /* Ungekuerzt. Wer entscheiden soll, muss alle sehen. */
-    beitraege: zeilen,
+    /* ⚠ Was WordPress selbst gezaehlt hat — gegen unsere Zeilenzahl zu
+       halten. Gehen sie auseinander, hat eine der beiden Seiten etwas
+       weggelassen. */
+    gesamt_laut_wordpress: Number(wp.gesamt ?? 0),
+    seiten_einig: zeilen.length === Number(wp.gesamt ?? 0),
   };
 }
 

@@ -514,8 +514,16 @@ function cc_route_bestand(): WP_REST_Response {
 			   post_modified waere es NICHT — siehe CC_META_LAUF. Es steht
 			   deshalb gar nicht erst hier: ein Feld, das jemand fuer
 			   „zuletzt angefasst" haelt, richtet mehr Schaden an, als es
-			   nuetzt. */
-			'angelegt'         => $post ? (string) $post->post_date_gmt : '',
+			   nuetzt.
+
+			   ⚠ get_post_time('c', true) statt post_date_gmt: das liefert
+			   ISO8601 MIT Zone. `post_date_gmt` und `post_date` sehen
+			   identisch aus („2026-09-05 17:20:00") und unterscheiden sich um
+			   den Zeitzonenversatz der Website — wer die zwei spaeter
+			   verwechselt, verschiebt jeden Zeitpunkt um zwei Stunden, und
+			   nichts schlaegt fehl. Steht die Zone IM WERT, kann die
+			   Verwechslung nicht entstehen. */
+			'angelegt'         => (string) get_post_time( 'c', true, $postId ),
 			'lauf_zuletzt'     => $lauf,
 			'lauf_erst'        => $erst,
 			'ohne_laufstempel' => $fraglich,
