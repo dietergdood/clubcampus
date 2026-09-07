@@ -64,7 +64,7 @@ const PROBE_HOECHSTENS = 25;
 
 /** Die gueltigen Aktionen — eine Liste, aus der die Pruefung UND die
     Fehlermeldung lesen. Zwei Orte koennten auseinanderlaufen. */
-const AKTIONEN = ["probe", "export"];
+const AKTIONEN = ["probe", "export", "bestand"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -129,6 +129,15 @@ Deno.serve(async (req) => {
   const db = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
   try {
+    /* ⚠ VOR `laufeProbe`, und das ist kein Ordnungsdetail: `bestand` fragt
+       ausschliesslich die WEBSITE, was dort liegt. Wuerde es zuerst den
+       ClubCampus-Bestand aufbauen, haenge die Auskunft ueber die Website an
+       einem Lauf ueber unsere Spiele — und ein Fehler dort machte die
+       Bestandsliste unerreichbar, ausgerechnet wenn man sie braucht. */
+    if (aktion === "bestand") {
+      return json(await holeBestand());
+    }
+
     const erg = await laufeProbe(db, vereinId, nurTeam);
 
     if (aktion === "probe") {
@@ -279,6 +288,74 @@ function fuersProtokoll(
 }
 
 
+/* ═══════════════════════════════════════════════════════════════════
+   DER BESTAND — ZEIGEN, NICHT LOESCHEN
+   ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Was auf der Website liegt — Beitrag für Beitrag, ohne etwas zu ändern.
+ *
+ * ⚠ GET, keine Sammelaktion, kein Loeschen. Entschieden wird pro Zeile im
+ *   WordPress-Backend; jede Zeile bringt ihre `bearbeiten_url` mit.
+ *   (Vorgabe Didi, 07.09.2026: „Kein Knopf, der zwanzig Beitraege auf
+ *   einmal wegraeumt — das ist dieselbe Aktion wie «Person loeschen», nur
+ *   auf fremdem Boden.")
+ *
+ * ⚠ SIE SCHREIBT AUCH NICHT NACH `api_sync_log`. Ein Nachsehen ist kein
+ *   Lauf; stuende es im Protokoll, verschoebe es `letzter_sync` und die
+ *   Kachel meldete einen Export, den es nicht gab. Dieselbe Trennung wie
+ *   zwischen `probe` und `export`.
+ */
+async function holeBestand() {
+  const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
+  const benutzer = Deno.env.get("WP_BENUTZER") ?? "";
+  const passwort = Deno.env.get("WP_APP_PASSWORT") ?? "";
+  if (!basis || !benutzer || !passwort) {
+    throw new Error("WP_BASIS_URL, WP_BENUTZER oder WP_APP_PASSWORT nicht gesetzt");
+  }
+  const host = new URL(basis).host;
+
+  const antwort = await fetch(`${basis}/clubcampus/v1/bestand`, {
+    headers: { Authorization: "Basic " + btoa(`${benutzer}:${passwort}`) },
+  });
+  const text = await antwort.text();
+  let wp: Record<string, unknown>;
+  try {
+    wp = JSON.parse(text);
+  } catch {
+    throw new Error(`WordPress antwortete kein JSON (${antwort.status}): ${text.slice(0, 200)}`);
+  }
+  if (!antwort.ok) {
+    throw new Error(`WordPress ${antwort.status}: ${JSON.stringify(wp).slice(0, 300)}`);
+  }
+
+  const zeilen = (wp.beitraege as Record<string, unknown>[] | undefined) ?? [];
+  const ohne = zeilen.filter((z) => z.ohne_laufstempel === true);
+
+  return {
+    ziel: host,
+    hinweis:
+      "Nachsehen, nicht schreiben. Es wurde nichts geändert und nichts protokolliert."
+      + " Entschieden wird pro Beitrag im WordPress-Backend (bearbeiten_url).",
+    /* ⚠ Die Aufteilung muss aufgehen — eine einzelne Zahl kann nur
+       behauptet werden. Geht sie nicht auf, misst eine der beiden Seiten
+       etwas anderes als die andere, und DAS ist dann der Befund. */
+    gesamt: Number(wp.gesamt ?? 0),
+    ohne_laufstempel: Number(wp.ohne_laufstempel ?? 0),
+    ohne_laufstempel_sichtbar: Number(wp.ohne_laufstempel_sichtbar ?? 0),
+    mit_laufstempel: Number(wp.gesamt ?? 0) - Number(wp.ohne_laufstempel ?? 0),
+    zaehlung_stimmt:
+      zeilen.length === Number(wp.gesamt ?? 0)
+      && ohne.length === Number(wp.ohne_laufstempel ?? 0),
+    /* ⚠ Die Gegenprobe auf die Besitzregel. Steigt sie, hat der Export
+       einen Handbeitrag uebernommen — was er nicht darf. */
+    handbeitraege: Number(wp.handbeitraege ?? 0),
+    /* Ungekuerzt. Wer entscheiden soll, muss alle sehen. */
+    beitraege: zeilen,
+  };
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════════
    DIE PROBE
    ═══════════════════════════════════════════════════════════════════════ */
@@ -333,6 +410,35 @@ async function laufeProbe(
     name: t.name,
     sfv_team_id: String(t.sfv_team_id),
   }));
+
+  /* ⚠ `nur_team` IST DIE SFV-TEAMNUMMER, NICHT DER NAME — und bis zum
+     07.09.2026 pruefte das niemand.
+
+     Wer „Cc-Junioren" statt „38309" schickt, bekam einen Lauf, der brav
+     durchlief und NICHTS tat: `erlaubt` enthielt den Namen, kein Spiel
+     traf, `eigene` war leer, und WordPress meldete die Mannschaft unter
+     `ohne_team` zurueck. Ergebnis: 0 neu, 0 aktualisiert, Status
+     „warnung" — und das sieht genauso aus wie „diese Mannschaft hat keine
+     Spiele". Wieder ein AUSFALL IN DER VERKLEIDUNG EINER DATENLAGE.
+
+     ⚠ Harmlos war nur der Rueckzug: das Plugin bildet seinen
+     Abgleichbereich aus `teamKarte[sfv]`, und ein Name loest dort auf
+     nichts auf. Ein Tippfehler konnte also nichts abraeumen. Verlassen
+     sollte man sich darauf nicht — die Sperre liegt drueben, der Fehler
+     hier.
+
+     Die Meldung ZAEHLT DIE GUELTIGEN WERTE AUF, statt nur abzulehnen —
+     dieselbe Regel wie bei `AKTIONEN` weiter oben: eine Meldung, die die
+     gueltige Antwort kennt und nicht nennt, kostet eine Rueckfrage. */
+  if (nurTeam && !teamListe.some((t) => t.sfv_team_id === nurTeam)) {
+    const gueltig = teamListe
+      .map((t) => `${t.sfv_team_id} (${t.name})`)
+      .sort();
+    throw new Error(
+      `Unbekanntes nur_team: ${nurTeam} — erwartet wird die SFV-Teamnummer, `
+      + `nicht der Mannschaftsname. Gültig: ${gueltig.join(", ") || "(keine Mannschaft zugeordnet)"}`,
+    );
+  }
 
   const erlaubt = new Set(
     nurTeam ? [nurTeam] : teamListe.map((t) => t.sfv_team_id),

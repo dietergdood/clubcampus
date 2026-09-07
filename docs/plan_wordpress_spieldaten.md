@@ -435,11 +435,11 @@ nicht sicher. **Ich muss es auch nicht wissen** — der erste Lauf nach dem
 Wechsel schreibt den Host, den er tatsächlich benutzt hat, in die Meldung.
 Die Frage beantwortet sich durch Hinsehen statt durch Vermuten.
 
-⚠ **Ein Widerspruch, der stehen bleibt:** die InfoBox in `ApiTab.tsx:117`
-sagt *„Die Adresse des Anschlusses steht in api_verbindungen.api_url"* —
-für die WordPress-Zeile stimmt das nicht mehr. Der Satz gilt weiterhin für
-den SFV. Gehört umformuliert, wenn die Kachel ohnehin angefasst wird
-(§15).
+✅ **Der Widerspruch in der InfoBox ist behoben (07.09.2026).** Sie sagte
+*„Die Adresse des Anschlusses steht in api_verbindungen.api_url"* — für die
+WordPress-Zeile stimmte das nicht. Sie nennt jetzt beide Fälle und schliesst
+mit dem Satz, auf den es ankommt: **wohin ein Lauf tatsächlich geschrieben
+hat, sagt seine Meldung, nicht die Konfiguration.**
 
 ### 4.3 ⚠ Wird die Zuordnung irgendwo gespeichert? — Gemessen: nein
 
@@ -471,10 +471,20 @@ Postmeta des jeweiligen Beitrags:
 | `spieler` | `sfv_person_id` | die Redaktion |
 
 Der Export findet einen Beitrag, indem er WordPress **fragt** („gibt es
-einen mit `clubcampus_id = spiel:<uuid>`?"), nicht indem er sich etwas
-merkt. Er ist damit zustandslos, und der Wechsel ist wirklich ein
-`secrets set`: die neue Seite hat keine Beiträge, die Abfrage findet
-nichts, der Export legt an.
+einen mit dieser `sfv_match_id`?"), nicht indem er sich etwas merkt. Er ist
+damit zustandslos, und der Wechsel ist wirklich ein `secrets set`.
+
+> ⚠ **BERICHTIGT AM 07.09.2026 — hier stand ein Halbsatz zu viel.** Er
+> lautete: *„die neue Seite hat keine Beiträge, die Abfrage findet nichts,
+> der Export legt an."* Das folgte aus einer Annahme, die Didi am
+> 07.09.2026 richtiggestellt hat: **`dev.fcherrliberg.ch` WIRD zu
+> `fcherrliberg.ch`.** Es sind nicht zwei Seiten, sondern eine unter
+> vorläufigem Namen — es wechselt die Adresse, nicht die Installation.
+>
+> **Die Zustandslosigkeit selbst bleibt richtig und bleibt wertvoll**, nur
+> aus einem anderen Grund als hier stand: nicht weil sie einen Neuanfang
+> verträgt, sondern weil sie **keinen braucht**. Es gibt nichts, was auf
+> eine Adresse zeigt und nachgezogen werden müsste.
 
 ⚠ **Diese Zustandslosigkeit ist eine Eigenschaft, die man verlieren kann,
 und sie sieht wie eine Optimierung aus.** Wer später eine Spalte
@@ -511,19 +521,48 @@ Codebasis, meines eingeschlossen. Siehe §16 Punkt 4.
 
 ### 4.5 Was beim Wechsel passiert
 
+> ⚠⚠ **DIESER ABSCHNITT STAND AUF EINER FALSCHEN ANNAHME UND IST AM
+> 07.09.2026 NEU GESCHRIEBEN.** Er beschrieb einen Umzug von einer Seite
+> auf eine andere. Didis Richtigstellung:
+>
+> > *„dev.fcherrliberg.ch WIRD zu fcherrliberg.ch, sobald alles läuft. Es
+> > ist keine Testumgebung, sondern dieselbe Installation unter
+> > vorläufigem Namen."*
+>
+> **Eine Umbenennung, kein Umzug.** Was hier stand, war nicht bloss
+> ungenau — es war in der entscheidenden Zeile das Gegenteil: „Beiträge
+> auf der neuen Seite: keine". Der alte Wortlaut steht in git.
+
 **Frage von Didi: braucht es einen Anstoss von Hand, oder reicht die
 Stunde?**
 
 | | |
 |---|---|
-| Beiträge auf der **alten** Seite | bleiben stehen, unverändert, für immer |
-| Beiträge auf der **neuen** Seite | keine — bis zum nächsten Lauf |
-| nach dem nächsten Lauf | vollständig, weil der Export je Team den **ganzen** Satz sendet (§8.2) und keine Mengenbegrenzung je Lauf hat |
+| Beiträge | **bleiben** — es ist dieselbe Datenbank, derselbe Beitrag, dieselbe Id |
+| `team.sfv_id`, `spieler.sfv_person_id` (Redaktion) | **bleiben** |
+| Anwendungspasswort und Export-Benutzer | **bleiben** — sie hängen am Benutzer, nicht an der Adresse |
+| es wechselt | **die Adresse, sonst nichts** |
 
-**Die Stunde reicht — funktional.** Es gibt keine Nachhol-Mechanik, weil
-es nichts nachzuholen gibt: jeder Lauf ist ein voller Abgleich, nicht ein
-Nachtrag. Das ist der Unterschied zum SFV-Sync, der zehn Spiele je Lauf
-holt (`MATCHDATEN_PRO_LAUF = 10`) und deshalb Läufe braucht.
+**Damit ist der Wechsel funktional ein Nicht-Ereignis für den Export.**
+Selbst wenn nach dem `secrets set` tagelang kein Lauf käme, stünde die
+Website vollständig da — sie steht ja schon.
+
+⚠ **Trotzdem einen Lauf von Hand anstossen, und der Grund hat sich
+verschoben.** Vorher war es „die neue Seite ist leer"; das gilt nicht
+mehr. Was bleibt, ist die Prüfung des Secrets selbst: **greift die neue
+Adresse, und welchen Host nennt die Meldung?** Ein `secrets set`, das nicht
+gegriffen hat, sieht ohne Lauf genauso aus wie eines, das gegriffen hat —
+der Export schriebe weiter unter dem alten Namen, und weil es dieselbe
+Installation ist, **würde das sogar funktionieren**. Es fiele nie auf.
+
+> ⚠ **Das ist die eine Stelle, an der die Umbenennung den Wechsel
+> GEFÄHRLICHER macht statt harmloser.** Bei zwei getrennten Seiten wäre ein
+> vergessenes `secrets set` sofort sichtbar gewesen: die neue Seite bliebe
+> leer. Bei einer umbenannten Installation antwortet die alte Adresse
+> weiter (Weiterleitung oder Alias), der Export läuft grün durch, und
+> `sync_meldung` nennt weiter `dev.fcherrliberg.ch` — die einzige Stelle,
+> an der es steht. **Der Zähler ist der Ziel-Host in der Meldung, und
+> genau deshalb steht er dort.**
 
 ⚠ **Trotzdem von Hand anstossen, und zwar nicht wegen der Zeit.** Der
 erste Lauf gegen eine neue Zielseite ist der, bei dem man zusieht — genau
@@ -535,50 +574,257 @@ neue Secret, stimmt die Adresse, und **welchen Host nennt die Meldung**.
 Knopf mit `onClick={()=>{}}` (§15). Der zweite Zweig gehört damit zu
 Etappe 7 — oder der Anstoss läuft über einen `curl` gegen die Function.
 
-⚠ **Drei Dinge, die der Wechsel NICHT von selbst mitbringt:**
+⚠ **Was der Wechsel NICHT mitbringt — die Liste ist am 07.09.2026 von
+drei auf einen geschrumpft, und der eine ist nicht technisch:**
 
-1. **Die redaktionelle Zuordnung ist seitengebunden.** `team.sfv_id` und
-   `spieler.sfv_person_id` trägt die Redaktion ein — auf der neuen Seite
-   sind sie leer, wenn sie nicht mitkommen. **Wird dev als Klon der
-   Produktion gebaut (oder umgekehrt), kommen sie mit**; wird die neue
-   Seite frisch aufgesetzt, nicht.
-   ⚠ **Das ist der eigentliche Aufwand des Wechsels, nicht die Adresse.**
-   Fehlt `team.sfv_id`, überspringt der Export jede Mannschaft — aber
-   **laut**: er zählt und nennt sie namentlich (§7). Kein stiller Ausfall.
-2. **Hat die neue Seite schon Spiel-Beiträge**, setzt der Abgleich alles
-   auf Entwurf, was nicht im gesendeten Satz steht. Richtig so, aber es
-   überrascht, wenn dort von Hand etwas angelegt wurde.
-3. **Die alte Seite friert ein.** Eigener Punkt, §4.6 — es ist das
-   einzige der drei, das der Export nicht lösen kann.
+| stand hier | gilt noch? |
+|---|---|
+| „die redaktionelle Zuordnung ist seitengebunden" | ❌ **entfällt** — `team.sfv_id` und `spieler.sfv_person_id` bleiben, es ist dieselbe Datenbank |
+| „hat die neue Seite schon Spiel-Beiträge, setzt der Abgleich sie auf Entwurf" | ❌ **entfällt als Überraschung** — sie hat welche, und es sind die eigenen. Der Abgleich erkennt sie an der `sfv_match_id` und aktualisiert |
+| „die alte Seite friert ein" | ❌ **entfällt ganz** — es gibt keine alte Seite. Siehe §4.6 |
+
+**Der eine, der bleibt, ist neu und ist der schwerste:**
+
+⚠⚠ **ALLES, WAS HEUTE AUF DER SEITE ENTSTEHT, IST NACH DEM WECHSEL
+ÖFFENTLICH.** Nicht „war mal auf einer Testseite" — es steht dann unter
+dem richtigen Namen, ohne dass jemand es dorthin gestellt hätte. Eigener
+Abschnitt: §4.5b.
 
 ---
 
-## 4.6 ⚠ Die alte Seite friert ein — und der Export kann daran nichts ändern
+## 4.5b ⚠ Was heute entsteht, ist später öffentlich — woran man es erkennt
 
-**Aufgenommen auf Didis Hinweis, 05.09.2026.** Es steht hier als eigener
-Abschnitt und nicht als Unterpunkt, weil es der einzige Teil dieses
-Vorhabens ist, für den es **keine** technische Lösung im Export gibt.
+**Didis Punkt vom 07.09.2026, und er folgt direkt aus der Umbenennung:**
 
-Nach dem Wechsel `dev` → Produktion hört der Export auf, mit
-`dev.fcherrliberg.ch` zu sprechen. Was dort steht, bleibt stehen: ein
-vollständiger Spielplan mit Resultaten, Ranglisten und Torschützen —
-**eingefroren auf den Tag des Wechsels.**
+> *„Testbeiträge, halbe Läufe, Dubletten aus Probeläufen — das räumt
+> niemand weg, wenn es beim Umschalten niemand weiss."*
 
-⚠ **Es sieht nicht veraltet aus, und das ist das Problem.** Ein leerer
-Spielplan fällt auf. Einer, der Resultate zeigt, sieht aus, als stimme er
-— nur eben die vom letzten Lauf. Dieselbe Familie wie die erfundenen
-Werte in `DashboardModul` („Mitglieder total 187"): **eine plausible Zahl
-wird zitiert, eine fehlende wird gemeldet.**
+Richtig, und die Antwort zerfällt in zwei ungleiche Hälften: eine, die
+sich als Sorge auflöst, und eine, die bleibt.
 
-**Und die Adresse ist verwechselbar.** `dev.fcherrliberg.ch` gegen
-`www.fcherrliberg.ch` unterscheidet ein Elternteil nicht, das den Link
-von irgendwoher hat.
+### 1 · Es gibt keine Beiträge aus Probeläufen — die Probe schreibt nichts
 
-| ohne Gegenmassnahme | |
+Nicht „wenig", nicht „nur Entwürfe": **nichts.** Belegt im Code, an drei
+Stellen zugleich:
+
+| | |
 |---|---|
-| Suchmaschinen | indexieren beide Seiten; die dev-Seite kann bei „FC Herrliberg Junioren C Resultate" oben stehen |
-| Verweise von aussen | ein einmal geteilter dev-Link bleibt gültig und zeigt für immer den Stand vom Wechseltag |
-| Nutzer | sieht ein Resultat, das falsch ist, ohne jeden Hinweis darauf |
+| `laufeProbe()` | liest ausschliesslich — kein `insert`, kein `update`, kein `fetch` nach aussen |
+| der einzige Schreibpfad | `sendeAnWordpress()`, und der wird nur für `aktion === "export"` erreicht (`index.ts:148`) |
+| `protokoll()` | schreibt nach `console.log`, nicht in eine Tabelle (`sfv-sync/protokoll.ts:53`) |
+
+Die Probe endet mit `return json(erg)` — die Nutzlast geht an den Browser
+dessen, der sie ausgelöst hat, und sonst nirgendwohin. Das war ihr ganzer
+Zweck (§13, Etappe 2): **einmal von Hand lesen, bevor etwas empfängt.**
+
+⚠ **Der Begriff „Probelauf" ist deshalb zweideutig, und die Zweideutigkeit
+ist gefährlich.** `aktion: 'probe'` schreibt nichts. Ein *scharfer* Lauf,
+den jemand „zur Probe" macht, schreibt alles — er heisst `export`, und die
+Beiträge daraus sind so echt wie alle späteren. **Was auf der Seite steht,
+stammt aus `export`-Läufen, ausnahmslos.**
+
+### 1b ⚠ Woran ein PROBELAUF zu erkennen ist — heute: gar nicht
+
+**Didis Frage vom 07.09.2026, und die Antwort ist unbequem.** Ein Beitrag
+aus einem Testlauf ist von einem aus einem echten Lauf **nicht zu
+unterscheiden** — und die zwei Merkmale, die man dafür nehmen würde, sind
+beide falsch:
+
+| Kandidat | warum er nicht taugt |
+|---|---|
+| **der Inhalt** | jeder Lauf schreibt dieselben Felder. Er ist auch nicht *falsch*: jeder Lauf sendet den vollen Satz je Mannschaft |
+| **`post_modified`** | ⚠ **bewegt sich beim Auffrischen NICHT.** `cc_schreibe_felder()` schreibt über `update_field()`, also reines Postmeta; `post_modified` rührt nur `wp_update_post` an — und das läuft nur bei einer **Titeländerung** oder beim Rückzug. Ein Beitrag, den der Export einen Monat lang täglich auffrischt, trägt weiter das Datum vom ersten Tag |
+
+⚠ **Der zweite ist die gefährlichere Hälfte.** `post_modified` steht in
+jeder WordPress-Liste, heißt „Zuletzt geändert" und misst hier etwas
+anderes. **Ein Zeitstempel, der plausibel aussieht und die falsche Frage
+beantwortet, ist schlimmer als keiner** — dieselbe Familie wie der
+Namenszähler, der 431 statt 0 meldete.
+
+Zuverlässig ist allein **`post_date`**: `wp_insert_post` setzt es, und es
+sagt genau, wann der Export den Beitrag angelegt hat.
+
+#### Die Reparatur: der Laufstempel
+
+`lauf` steht **seit dem ersten Entwurf in der Nutzlast und wurde nie
+gelesen**. Seit dem 07.09.2026 schreibt das Plugin ihn bei jedem
+Schreibvorgang als Postmeta:
+
+| | |
+|---|---|
+| `_cc_lauf` | Zeitstempel des **letzten** Laufs, der den Beitrag angefasst hat |
+| `_cc_lauf_erst` | der des **ersten** — wird nie überschrieben |
+
+⚠ **Und das FEHLEN ist die Aussage.** Ein Beitrag ohne `_cc_lauf` ist seit
+dem Einspielen dieser Fassung von keinem Lauf mehr berührt worden — also
+aus der Erprobung und seither nicht aufgefrischt, **oder eine Waise**:
+seine Mannschaft wird nicht mehr exportiert.
+
+⚠ **Die Grenze ist das Einspielen, nicht der 07.09.2026.** Läuft der Export
+vorher noch einmal, bleiben auch diese Beiträge ungestempelt — richtig so:
+nachträglich weiß niemand, aus welchem Lauf sie stammen. **Ein Datum in
+den Code zu schreiben wäre eine Behauptung über einen Zeitpunkt, den der
+Code nicht kennt.**
+
+⚠ **Die Menge schrumpft von selbst, und das ist die eigentliche
+Eigenschaft.** Wen ein echter Lauf berührt, der fällt heraus —
+richtigerweise, denn dann ist sein Inhalt aktuell. Nach einem vollen Lauf
+(Etappe 5) bleibt genau das übrig, **was niemand mehr pflegt**. Keine
+Schwelle, die jemand raten müsste, kein Stichtag, der veraltet.
+
+#### Die Liste: `aktion: "bestand"`
+
+**Sie zeigt. Sie löscht nicht.** GET, keine Sammelaktion, kein Knopf, der
+zwanzig Beiträge wegräumt — jede Zeile trägt ihre `bearbeiten_url`, und
+entschieden wird pro Beitrag im WordPress-Backend.
+
+```js
+await wpExport('bestand');    // ändert nichts, protokolliert nichts
+```
+
+| Feld je Zeile | |
+|---|---|
+| `ohne_laufstempel` | ⚠ **das fragliche Merkmal** |
+| `status` | eine Waise im Entwurf sieht niemand; eine veröffentlichte steht auf der Website und sieht aktuell aus |
+| `angelegt` | `post_date` — das Datum, nach dem du gefragt hast |
+| `lauf_zuletzt` / `lauf_erst` | leer, solange ungestempelt |
+| `beitrag_id`, `titel`, `team`, `sfv_match_id`, `bearbeiten_url` | zum Entscheiden |
+
+Dazu vier Zahlen, die **aufgehen müssen**: `gesamt`,
+`ohne_laufstempel` + `mit_laufstempel`, `zaehlung_stimmt` — und
+**`handbeitraege`** als Gegenprobe auf die Besitzregel. Steigt die letzte,
+hat der Export einen Handbeitrag übernommen, was er nicht darf.
+
+⚠ **Ungekürzt, absichtlich.** Wer entscheiden soll, muss alle sehen —
+dieselbe Lehre wie bei der Löschvorschau, deren Schwelle von 20 bei einem
+Stapel von zwei umfiel.
+
+⚠ **Sie schreibt auch nicht nach `api_sync_log`.** Ein Nachsehen ist kein
+Lauf; stünde es im Protokoll, verschiebe es `letzter_sync`, und die Kachel
+meldete einen Export, den es nie gab.
+
+Gehalten von `src/domains/spiele/__tests__/wpExportBestand.test.ts` — zehn
+Strukturprüfungen auf beide Quelltexte, gegengeprobt: mit gebrochener
+Zusage (POST, `.slice(0,20)`, `post_modified`) sind drei davon rot.
+
+### 2 · Woran ein Beitrag des Exports zu erkennen ist — drei Wege
+
+| | wo | Aussagekraft |
+|---|---|---|
+| **`sfv_match_id`** gesetzt | Postmeta | ⚠ **das Besitzmerkmal.** Ein Beitrag ohne sie wird vom Export nie angefasst — das ist die Regel, die die 11 Handbeiträge schützt |
+| Spalte **„Quelle"** | Spieleliste im Backend, Pille `ClubCampus` / `WordPress` | ohne SQL sichtbar — ⚠ aber `quelle` ist ein **Etikett**, das jemand ändern kann. Es zeigt, was gemeint war, nicht wem der Beitrag gehört |
+| **`api_sync_log`** | ClubCampus | das Protokoll: welcher Lauf, wann, welches Team, wie viele neu/aktualisiert, welche Warnungen |
+
+Die Spalte gibt es bereits (`Listen/spalten.php:441` → `fch_core_liste_quelle`
+in `Listen/darstellung.php:136`); sie war nicht für diesen Zweck gedacht und
+beantwortet ihn trotzdem.
+
+**Die Abfrage, die sagt, was gelaufen ist — jeder scharfe Lauf steht darin:**
+
+```sql
+select gestartet_am at time zone 'Europe/Zurich' as zeit,
+       status,
+       details->>'ziel_host'  as ziel,
+       details->>'team'       as team,
+       details->>'neu'        as neu,
+       details->>'aktualisiert' as akt,
+       details->>'zurueckgezogen' as zurueck,
+       details->'fehler'            as fehler,
+       details->'ohne_team'         as ohne_team,
+       details->'doppelte_teams'    as doppelte_teams,
+       details->'moegliche_dubletten' as dubletten
+  from public.api_sync_log
+ where verbindung_id = (select id from public.api_verbindungen where key = 'wordpress')
+ order by gestartet_am desc;
+```
+
+### 3 · Was ein wiederholter Lauf NICHT anrichtet — und das ist die gute Hälfte
+
+⚠ **Ein zweiter Export desselben Teams erzeugt keine Dubletten.** Der
+Schlüssel ist `sfv_match_id`: findet das Plugin einen Beitrag damit,
+**aktualisiert** es ihn (`clubcampus-export.php:480`), sonst legt es an.
+Etappe 4 darf deshalb beliebig oft wiederholt werden — es entsteht nichts
+Zusätzliches.
+
+Ein **abgebrochener** Lauf hinterlässt aus demselben Grund keinen Rest: er
+schreibt weniger Beiträge, nie überzählige. Der nächste vollständige Lauf
+holt sie nach, weil jeder Lauf den **ganzen** Satz je Team sendet.
+
+**Der einzige echte Dublettenfall ist Export gegen Handbeitrag** — und den
+legt das Plugin nicht zusammen, sondern **meldet** ihn:
+`cc_pruefe_dublette()` sucht ausschliesslich unter Beiträgen **ohne**
+`sfv_match_id` und schreibt den Fund nach `moegliche_dubletten`. Er steht
+damit in der Antwort, in `api_sync_log.details` und in der Kachelmeldung.
+⚠ **Zusammengeführt wird nichts automatisch** — es ist eine redaktionelle
+Entscheidung, welcher der beiden bleibt.
+
+### 4 · Die eine Stelle, an der doch etwas liegenbleibt
+
+**Entwürfe.** Ein Spiel, das der Export nicht mehr liefert, wird auf
+Entwurf gesetzt statt gelöscht (§8.2) — richtig so, aber Entwürfe sammeln
+sich, und niemand sieht sie, weil sie nicht öffentlich sind.
+
+⚠ **Nach dem Wechsel sind sie weiterhin nicht öffentlich** — ein Entwurf
+bleibt ein Entwurf. Das Problem ist nicht Sichtbarkeit, sondern
+Ununterscheidbarkeit: **ein zu Unrecht zurückgezogenes Spiel sieht aus wie
+ein zu Recht zurückgezogenes.** Wer sie durchsehen will, filtert die
+Spieleliste auf `Entwurf` und hält sie gegen `zurueckgezogen` im Protokoll.
+
+### 5 · Vor dem Umschalten — die Liste
+
+0. **Das aktualisierte Plugin einspielen.** Ohne es gibt es keinen
+   Laufstempel, und ohne Stempel beantwortet die Bestandsliste die Frage
+   nicht, für die sie gebaut ist. ⚠ Es liegt in `wordpress/`, läuft aber
+   in `fch-theme` — siehe §12.
+1. `await wpExport('bestand')` — die vollständige Liste, ungekürzt.
+   `ohne_laufstempel_sichtbar` ist die Zahl, die zählt: veröffentlichte
+   Beiträge, die kein Lauf mehr anfasst.
+2. `api_sync_log` durchlesen (Abfrage oben). Jede Zeile mit
+   `status = 'warnung'` **einzeln** ansehen: `fehler`, `ohne_team`,
+   `doppelte_teams`, `moegliche_dubletten`.
+3. Spieleliste nach **Entwurf** filtern (Punkt 4).
+4. Die **11 Handbeiträge** zählen — sie müssen unverändert sein.
+   `bestand` liefert die Zahl als `handbeitraege` mit.
+
+⚠ **Punkt 4 ist der wichtigste und der billigste.** Er prüft nicht eine
+Zahl, sondern eine Zusage.
+
+⚠ **Und Punkt 1 wird mit jedem echten Lauf aussagekräftiger, nicht
+schwächer.** Direkt nach dem Einspielen steht dort alles; nach einem vollen
+Lauf über alle Mannschaften nur noch das, was tatsächlich niemand mehr
+pflegt. **Die richtige Reihenfolge ist deshalb: Plugin einspielen, Etappe 5
+fahren, DANN die Liste lesen** — vorher ist sie lang und sagt wenig.
+
+---
+
+## 4.6 ~~Die alte Seite friert ein~~ — ENTFÄLLT, und der Rest wiegt schwerer
+
+> ⚠⚠ **ERLEDIGT DURCH RICHTIGSTELLUNG, 07.09.2026 — DIESER ABSCHNITT
+> BESCHRIEB EIN PROBLEM, DAS ES NICHT GIBT.**
+>
+> Er stand hier als der einzige Teil des Vorhabens, für den es *keine*
+> technische Lösung gibt: nach dem Wechsel bliebe auf `dev.fcherrliberg.ch`
+> ein eingefrorener Spielplan stehen, verwechselbar mit dem echten,
+> indexiert, für immer falsch.
+>
+> **Es gibt keine zweite Seite.** Didi, 07.09.2026: *„dev.fcherrliberg.ch
+> WIRD zu fcherrliberg.ch."* Damit fällt die eingefrorene Kopie, die
+> Verwechslungsgefahr zweier Adressen und die doppelte Indexierung — alles
+> drei ersatzlos.
+>
+> ⚠ **Der Abschnitt bleibt trotzdem stehen, und nicht aus Pietät.** Was
+> darunter folgt — die offene Installation, die Messung von `/wp-json/`,
+> die zwei guten Nachrichten — hing nie an der Zwei-Seiten-Annahme. Und es
+> ist seit der Richtigstellung **dringender, nicht harmloser:**
+>
+> | | vorher | jetzt |
+> |---|---|---|
+> | was offen steht | eine Testseite, die man später abschaltet | **die künftige Produktionsseite** |
+> | was darauf entsteht | Wegwerfinhalt | **der öffentliche Bestand des Vereins** |
+> | „nach dem Wechsel abschalten" | eine Aufräumaufgabe | **gibt es nicht mehr — es bleibt an** |
+>
+> **Die Frist aus dem nächsten Unterabschnitt gilt unverändert** und hängt
+> weiter an der ersten Zeile in `sfv_zuordnung`.
 
 ### ⚠⚠ OFFENER PUNKT SEIT 05.09.2026: die Dev-Seite ist JETZT offen
 
@@ -731,20 +977,26 @@ aussieht und eine Veröffentlichung ist.**
 2. **Ein echter Zugriffsschutz.** HTTP-Basic auf dem Server oder ein
    Plugin, das die ganze Seite nur angemeldet ausliefert. Das ist die
    einzige Massnahme, die auch gegen einen weitergegebenen Link wirkt.
-3. **Nach dem Wechsel: die dev-Seite abschalten oder leeren**, wenn sie
-   nicht mehr gebraucht wird.
+3. ~~**Nach dem Wechsel: die dev-Seite abschalten oder leeren.**~~
+   ⚠ **Entfällt (07.09.2026)** — es gibt nichts abzuschalten, die
+   Installation bleibt und wird umbenannt. **An ihre Stelle tritt das
+   Gegenteil:** was heute daraufkommt, bleibt und wird öffentlich. Die
+   Durchsicht davor steht in §4.5b.5.
 
-⚠ **Warum der Export das NICHT übernehmen soll**, obwohl es technisch
-ginge (er könnte vor dem Wechsel alle Beiträge der alten Seite auf
-Entwurf setzen): dann bräuchte er Zugang zu **zwei** Seiten gleichzeitig,
-und die Adresse wäre wieder zwei Werte statt einem. Damit fiele die
-Eigenschaft, die §4.2 gerade hergestellt hat — **ein Wechsel ist ein
-`secrets set`**. Ein Aufräumschritt, der die Konfiguration verdoppelt,
-kostet mehr, als er einbringt.
+~~⚠ **Warum der Export das NICHT übernehmen soll**, obwohl es technisch
+ginge (er könnte vor dem Wechsel alle Beiträge der alten Seite auf Entwurf
+setzen): dann bräuchte er Zugang zu zwei Seiten gleichzeitig …~~
 
-**Es ist ein Betriebsschritt, kein Codeschritt.** Er gehört in die
-Anleitung (`docs/anleitung_wordpress_etappe3.md`, Schritt 9) und nicht
-in die Edge Function.
+⚠ **Entfällt mit der Richtigstellung (07.09.2026)** — es gibt keine alte
+Seite, die aufzuräumen wäre. **Die Schlussfolgerung überlebt ihre
+Begründung und ist die wichtigere Hälfte:** der Export kennt genau eine
+Adresse, und zwar die aus dem Secret. Wer ihm je eine zweite gibt — zum
+Aufräumen, zum Spiegeln, zum Testen —, nimmt die Eigenschaft zurück, die
+§4.2 hergestellt hat: **ein Wechsel ist ein `secrets set`.**
+
+**Zugriffsschutz und Indexierung bleiben ein Betriebsschritt, kein
+Codeschritt.** Sie gehören in die Anleitung
+(`docs/anleitung_wordpress_etappe3.md`) und nicht in die Edge Function.
 
 ---
 
@@ -2031,6 +2283,27 @@ WordPress räumt **nur** innerhalb der Teams auf, die im Set vorkommen.
 Das ist genau die Lehre aus `sync.ts:230` — nur diesmal in einer Sprache,
 die niemand prüft.
 
+### ⚠ 12.1 Die Plugin-Datei liegt im falschen Repository
+
+`wordpress/clubcampus-export.php` liegt in **fch-portal** und läuft in
+**fch-theme** (`mu-plugins/`). Sie liegt hier, weil ich in fch-theme nicht
+schreiben darf — das betreut ein anderer Chat.
+
+⚠ **WordPress meldet keinen Versionsunterschied.** Wer die Datei hier
+ändert und drueben nicht einspielt, hat zwei Fassungen und keine Meldung.
+
+**Stand 07.09.2026: die Datei hier ist NEUER als die eingespielte.** Dazu
+gekommen sind
+
+| | |
+|---|---|
+| `cc_stempel()` + die zwei Meta-Konstanten | ohne sie kein Laufstempel — und ohne Stempel beantwortet §4.5b die Frage nicht, für die es geschrieben ist |
+| Route `GET /clubcampus/v1/bestand` | ohne sie antwortet `aktion: "bestand"` mit einem 404 der Website (laut, nicht still — die Edge Function wirft mit dem Antworttext) |
+
+**Einspielen, bevor Etappe 4 erneut läuft.** Der Stempel wirkt ab dem
+Einspielen, nicht rückwirkend: was vorher geschrieben wurde, bleibt
+ungestempelt — und ist damit korrekt als „fraglich" ausgewiesen.
+
 ⚠ **Und zu 2 — die Sperre ist eine Zusage über eine ANDERE Stelle.**
 `CLAUDE.md` führt vier Fälle vom 23.08.2026, in denen ein Kommentar eine
 andere Stelle zusicherte und danebenlag. Ein `readonly` im
@@ -2058,7 +2331,20 @@ Ohne die Gestaltung — die ist ausdrücklich nicht Teil des Auftrags.
 | 4 | Aktion `export`, scharf, **ein Team**, von Hand ausgelöst | die Website |
 | 5 | Alle Teams, von Hand | `api_sync_log` |
 | 6 | Zeitplan auf Minute 32 + Probelauf des gespeicherten Befehls | `do $probe$ … execute c; rollback` |
-| 7 | Kachel in `ApiTab` (§15) | die Kachel |
+| 7 | Kachel in `ApiTab` (§15) | ✅ **erledigt 07.09.2026** — Beschreibung, Richtung, keine toten Knöpfe |
+
+⚠ **Etappe 4 ist mindestens einmal gelaufen, und das stand nirgends.**
+Gemeldet von Didi am 07.09.2026: die Kachel zeigt `letzter Sync 05.09.
+19:20` und Status **warnung**. Beide Spalten schreibt **nur** der scharfe
+Pfad (`index.ts:233-237`, erreichbar allein über `aktion: "export"`); der
+Wächter fasst an `api_verbindungen` ausschliesslich `wache_zuletzt` an
+(`cron_sync_waechter.sql:204`), und `wordpress` steht ohnehin auf
+`active = false`, wird von ihm also gar nicht angesehen.
+
+**Es gibt keine andere Quelle für diese zwei Werte. Ein `export` hat
+stattgefunden.** Was er getan hat, steht in `api_sync_log` — die Abfrage
+in §4.5b.2. ⚠ **Das ist eine Herleitung aus dem Code, keine Messung** —
+sie fällt, sobald die Abfrage etwas anderes zeigt.
 
 ⚠ **Etappe 2 vor Etappe 3, und die Reihenfolge ist nicht beliebig.** Die
 Probe zeigt die vollständige Nutzlast, bevor irgendetwas sie empfängt —
@@ -2068,6 +2354,68 @@ hätte: *„Gefangen wurde es nur, weil die Datei zuerst in den Scratchpad
 geschrieben und dort gegengelesen wurde."* Der Export schickt Namen von
 Junioren auf eine öffentliche Website. **Das ist der Lauf, den man einmal
 von Hand liest.**
+
+---
+
+### 13.1 Etappe 4 — der Aufruf, wörtlich
+
+**Er stand bisher in keiner Datei**, nur im Verlauf eines Chats. Deshalb
+hier, samt der Falle, die am 07.09.2026 dazu gefunden wurde.
+
+⚠ **`nur_team` IST DIE SFV-TEAMNUMMER, NICHT DER MANNSCHAFTSNAME.**
+Die Function vergleicht gegen `teams.sfv_team_id` (`index.ts:338`, jetzt
+:365). Bis zum 07.09.2026 prüfte das niemand: ein Name lief brav durch,
+traf kein Spiel, und WordPress meldete die Mannschaft unter `ohne_team`
+zurück — **0 neu, 0 aktualisiert, Status „warnung", und das sieht aus wie
+„diese Mannschaft hat keine Spiele".** Seither bricht der Lauf ab und
+zählt die gültigen Nummern samt Namen auf.
+
+**Die Nummern holen** (im Portal oder per SQL):
+
+```sql
+select name, sfv_team_id from public.teams
+ where verein_id = (select id from public.vereine where slug = 'fcherrliberg')
+   and sfv_team_id is not null
+ order by name;
+```
+
+**Der Aufruf** — Browser-Konsole, im Portal angemeldet. Der Token kommt
+aus der laufenden Sitzung; nichts wird von Hand kopiert:
+
+```js
+const [schl, roh] = Object.entries(localStorage)
+  .find(([k]) => k.startsWith('sb-') && k.endsWith('-auth-token'));
+const token = JSON.parse(roh).access_token;
+const ref   = schl.slice(3, -'-auth-token'.length);
+
+async function wpExport(aktion, nurTeam) {
+  const r = await fetch(`https://${ref}.supabase.co/functions/v1/wp-export`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body:    JSON.stringify({ aktion, nur_team: nurTeam }),
+  });
+  const j = await r.json();
+  console.log(r.status, j);
+  return j;
+}
+
+await wpExport('probe',  '38309');   // schreibt NICHTS — erst lesen
+await wpExport('export', '38309');   // schreibt scharf auf die Website
+await wpExport('bestand');           // zeigt, was auf der Website liegt (§4.5b)
+```
+
+**Die drei Zahlen, die übereinstimmen müssen** (Didis Bedingung):
+
+| | woher |
+|---|---|
+| `zusammenfassung.spiele` der Probe | die Antwort von `probe` |
+| `wordpress.neu + wordpress.aktualisiert` | die Antwort von `export` |
+| die Zahl im WordPress-Backend | Spieleliste, Quelle = ClubCampus |
+
+Dazu: **die 11 Handbeiträge bleiben unverändert.** Sie sind die
+Gegenprobe auf die Besitzregel (§4.10).
+
+---
 
 ⚠ **Und Etappe 0 gehört wirklich zuerst.** Liegt §2 falsch, ändert sich
 die Verknüpfung — also Etappe 1, 2, 3 und 4. Danach wäre es ein Umbau
@@ -2134,33 +2482,136 @@ selbst erledigen konnte.
 
 ---
 
-## 15 · Zwei Nebenbefunde in `ApiTab`
+## 15 · ✅ Zwei Nebenbefunde in `ApiTab` — behoben am 07.09.2026
 
-Beim Messen aufgefallen, beide betreffen die zweite Kachel.
+Beim Messen aufgefallen, beide betrafen die zweite Kachel. **Beide
+erledigt; der Wortlaut des Befunds bleibt stehen, weil er erklärt, warum
+so lange niemand etwas gesehen hat.**
 
-**1 · ⚠ Eine zweite aktive Verbindung bekommt heute einen toten Knopf.**
+**1 · ✅ Der tote Knopf ist weg — und es waren zwei.**
 
 ```tsx
-// ApiTab.tsx:178-181
+// ApiTab.tsx:178-181, bis zum 07.09.2026
 {api.active && api.key === "football_ch"
   ? <Btn … onClick={syncStarten} …>Sync starten</Btn>
   : api.active && <Btn … onClick={()=>{}}>Sync starten</Btn>}
 //                          ^^^^^^^^^^^ tut nichts
+…
+  : <Btn … onClick={()=>{}}>Konfigurieren</Btn>}     // :190, ebenso
 ```
 
-Sobald die `wordpress`-Zeile auf `active = true` steht — und §10.1
-verlangt genau das —, rendert die Kachel einen Knopf „Sync starten", der
-nichts tut. Kein Fehler, keine Meldung. Dasselbe gilt für
-„Konfigurieren" (`:190`).
+⚠ **„Konfigurieren" war der sichtbarere von beiden**, und zwar sofort:
+er hing nicht an `active`. Die WordPress-Kachel trug ihn vom ersten Tag
+an, während der zweite „Sync starten" erst mit Etappe 6 erschienen wäre.
 
-**Der Knopf braucht einen zweiten Zweig, oder er darf nicht erscheinen.**
-Ein Knopf, der nichts tut, ist schlimmer als keiner: wer ihn drückt und
-nichts passiert, sucht den Fehler beim Export.
+⚠ **Warum es jahrelang niemandem auffiel:** es gab genau **eine** Zeile in
+`api_verbindungen`, und die hiess `football_ch`. Beide Zweige waren der
+`else`, und der wurde nie gerendert. **Ein toter Zweig ist unsichtbar,
+solange die Bedingung nie eintritt** — und dann kommt eine zweite Zeile
+dazu, und er ist plötzlich die halbe Kachel.
 
-**2 · `API_INFOS` ist eine feste Liste im Code** (`portalUtils.ts:21`).
-Die Kachel braucht dort einen Eintrag `wordpress`, sonst rendert sie ohne
-Beschreibung und ohne die Zeile „Synchronisierte Daten". Kein Defekt —
-nur eine Stelle, die man sonst vergisst, weil alles andere generisch ist.
+**Umgesetzt: der Knopf erscheint nicht.** Statt seiner steht ein Satz, der
+sagt, wo die Bedienung wirklich ist. Gehalten von
+`src/modules/__tests__/apiKacheln.test.jsx` — sieben Fälle an der
+gerenderten Kachel und eine Strukturprüfung, die den Quelltext auf einen
+leeren `onClick`-Handler absucht.
+
+> ⚠ **Und die Strukturprüfung war in ihrer ersten Fassung rot, mit zwei
+> Treffern in der gerade reparierten Datei.** Beide standen in
+> **Kommentaren**, die den alten Defekt beschreiben — einer davon in dem
+> Kommentar, der ihn behebt. Genau die Familie aus `CLAUDE.md`: *ein
+> Werkzeug, das nach Text sucht, trifft was gleich AUSSIEHT, nicht was
+> gleich GEMEINT ist.*
+>
+> **Die naheliegende Reparatur wäre die falsche gewesen.** Hätte ich die
+> Kommentare umformuliert, wäre der Fall grün geworden und hätte ab da die
+> *Beschreibung* des Fehlers bewacht statt den Fehler. Der Test streicht
+> jetzt Kommentare weg, bevor er sucht — mit einem zweiten Fall, der
+> festhält, dass der Stripper nicht auch den Code mitnimmt.
+
+**2 · ✅ `API_INFOS` hat einen Eintrag `wordpress`** (`portalUtils.ts`).
+Ohne ihn zeigte die Kachel „Externe API-Verbindung" und keine Feldliste.
+
+⚠ **Und dabei fiel ein dritter Punkt an, den niemand gesucht hatte: die
+Überschrift der Feldliste hiess „Synchronisierte Daten".** Für fünf
+eingehende Anschlüsse war das richtig. Für den ersten **ausgehenden** ist
+es die Umkehrung: „Spielplan, Resultate" steht dort nicht für das, was
+hereinkommt, sondern für das, was auf eine öffentliche Website hinausgeht.
+Zwei Anschlüsse mit derselben Feldliste und entgegengesetzter Richtung
+sähen identisch aus — und der Unterschied ist genau der, auf den es
+ankommt.
+
+`ApiInfo` trägt deshalb ein **Pflichtfeld** `richtung: "ein" | "aus"`, und
+die Kachel schreibt „Empfangene Daten:" oder „Gesendete Daten:". Pflicht,
+nicht optional mit Vorgabewert: der Compiler soll die Frage bei jedem
+neuen Eintrag stellen.
+
+**3 · ✅ Die InfoBox behauptete etwas Falsches** — *„Die Adresse des
+Anschlusses steht in api_verbindungen.api_url"*. Für die WordPress-Zeile
+ist `api_url` bewusst `NULL` (§4.2). Sie nennt jetzt beide Fälle und
+schliesst mit dem Satz, auf den es ankommt: **wohin ein Lauf tatsächlich
+geschrieben hat, sagt seine Meldung, nicht die Konfiguration.**
+
+---
+
+### 15.1 ⚠ Das Label in der Datenbank trägt einen Host — die Datei nicht
+
+**Gemeldet von Didi, 07.09.2026:** die Kachel heisst
+**„WordPress-Export (fcherrliberg.ch)"**.
+
+`migration_wp_export.sql` schreibt aber `'WordPress-Export'` **ohne**
+Host, mit genau diesem Beispiel im Kommentar daneben. Es ist also eine
+frühere Fassung eingespielt worden, und die Datei ist seither korrigiert
+worden, ohne dass die Zeile nachgezogen wurde.
+
+⚠ **Der Name ist nicht „richtig, nur zu früh" — er ist dreifach falsch,
+und die dritte Art ist die schlimmste:**
+
+| | |
+|---|---|
+| **heute falsch** | geschrieben wird nach `dev.fcherrliberg.ch`. Die Kachel nennt eine Adresse, an die nichts geht |
+| **ein zweiter Ort** | die Adresse steht damit im Secret **und** in einer Beschriftung. Zwei Orte für eine Aussage laufen auseinander — und eine Beschriftung ist der Ort, den man am seltensten nachzieht, weil er „nur" eine Beschriftung ist |
+| ⚠ **wird still richtig** | beim Umschalten stimmt der Name plötzlich — **ohne dass jemand ihn entschieden hätte.** Ein Fehler, der sich selbst behebt, wird nie bemerkt und nie gelernt. Beim übernächsten Wechsel steht er wieder falsch da, und wieder merkt es niemand |
+
+**Die Reparatur ist ein erneuter Lauf der Migration.** Sie ist idempotent
+und aktualisiert `label` über `on conflict … do update`; `active`,
+`auto_sync`, `konfiguriert`, `sync_status`, `sync_meldung` und `api_url`
+stehen absichtlich **nicht** im `SET` und bleiben unangetastet — ein Lauf
+schaltet also nichts ab und setzt keinen Zustand zurück.
+
+**Gegenprobe für Didi** — vorher und nachher dieselbe Zeile:
+
+```sql
+select key, label, active, auto_sync, sync_status,
+       letzter_sync at time zone 'Europe/Zurich' as letzter_sync
+  from public.api_verbindungen where key = 'wordpress';
+```
+
+`label` muss danach `WordPress-Export` sein, alles andere unverändert.
+
+> ✅ **Entschieden (Didi, 07.09.2026): Anzeigename ohne Klammer, Ziel als
+> eigene Zeile.** Begründung wörtlich: *„die Klammer sieht aus wie ein Ziel
+> und ist ein Name. Und wenn das Ziel dasteht, sagt es die Wahrheit — auch
+> dass es null ist."*
+>
+> Umgesetzt in der Kachel: eine Zeile **Ziel**, die **immer** erscheint. Ist
+> `api_url` leer, sagt sie das — *„— steht nicht in der Datenbank, sondern in
+> den Secrets der Edge Function"* — statt zu verschwinden. Eine Zeile, die
+> bei fehlendem Wert verschwindet, ist von einer nicht gerenderten nicht zu
+> unterscheiden.
+>
+> Darunter eine Zeile **Meldung**, wörtlich aus `sync_meldung`. ⚠ **Sie ist
+> die einzige Stelle, an der der echte Ziel-Host steht** — der Export stellt
+> ihn seiner Meldung voran. Und sie wird wörtlich übernommen, nicht zerlegt:
+> den eigenen Ausgabetext zu parsen, um zu erfahren, was man selbst
+> hineingeschrieben hat, ist immer der Umweg.
+>
+> ⚠ **`sync_meldung` hatte bis dahin gar keinen Leser** — geschrieben seit
+> dem ersten Lauf, nirgends gerendert. Dieselbe Sorte offener Punkt wie
+> `api_verbindungen.active` vor dem 05.09.: eine Spalte, die niemand liest.
+>
+> **Oben eine Behauptung über die Zukunft, unten ein Bericht über die
+> Vergangenheit.** Nur das zweite kann nach einem Wechsel nicht falsch sein.
 
 ⚠ **Was die Kachel dagegen ohne Änderung kann:** Status-Chip, „Letzter
 Sync", **und die Wächter-Zeile** (`:170-176`) — samt der richtigen

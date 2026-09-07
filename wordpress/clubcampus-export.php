@@ -91,6 +91,50 @@ const CC_TYP_TEAM   = 'fch_team';
 const CC_OPT_RANG   = 'fch_cc_ranglisten';
 const CC_QUELLE     = 'clubcampus';   // ⚠ klein — der WERT, nicht die Beschriftung
 
+/*
+ * Buchhaltung, keine Inhaltsfelder — deshalb update_post_meta() statt
+ * update_field() und deshalb ein Unterstrich-Praefix: ACF und die
+ * Beitragsmaske zeigen sie nicht an.
+ *
+ * ⚠ ⚠  WARUM ES SIE GIBT — UND ES IST NICHT BEQUEMLICHKEIT  ⚠ ⚠
+ *
+ *   Frage von Didi (07.09.2026): woran erkennt man, welche Beitraege aus
+ *   Probelaeufen stammen? Antwort bis heute: GAR NICHT. Und die zwei
+ *   Merkmale, die man dafuer nehmen wuerde, sind beide falsch:
+ *
+ *     1) DER INHALT. Jeder Lauf schreibt dieselben Felder — ein Beitrag aus
+ *        einem Testlauf ist von einem aus einem echten Lauf nicht zu
+ *        unterscheiden. Er ist inhaltlich auch nicht falsch: jeder Lauf
+ *        sendet den VOLLEN Satz je Mannschaft.
+ *
+ *     2) `post_modified`. Sieht aus wie „zuletzt angefasst" und ist es
+ *        nicht: cc_schreibe_felder() schreibt ueber update_field(), also
+ *        reines Postmeta, und das bewegt post_modified NICHT. Bewegt wird
+ *        es nur, wenn sich der TITEL aendert oder der Beitrag
+ *        zurueckgezogen wird. Ein Beitrag, den der Export einen Monat lang
+ *        taeglich auffrischt, traegt weiter das Datum vom ersten Tag.
+ *        ⚠ Ein Zeitstempel, der plausibel aussieht und etwas anderes misst,
+ *        ist schlimmer als keiner.
+ *
+ *   `lauf` steht seit dem ersten Entwurf in der Nutzlast und wurde NIE
+ *   gelesen. Genau das aendert sich hier.
+ *
+ *   ⚠ UND DAS FEHLEN IST DIE AUSSAGE: ein Beitrag OHNE `_cc_lauf` ist
+ *   seit dem EINSPIELEN DIESER FASSUNG von keinem Lauf mehr angefasst
+ *   worden — also aus der Erprobung und seither nicht aufgefrischt, oder
+ *   eine Waise.
+ *
+ *   ⚠ Die Grenze ist das Einspielen, NICHT der 07.09.2026. Laeuft der
+ *   Export vorher noch einmal, bleiben auch diese Beitraege ohne Stempel
+ *   — richtigerweise, denn nachtraeglich weiss niemand, aus welchem Lauf
+ *   sie stammen. Ein Datum in den Code zu schreiben waere eine Behauptung
+ *   ueber einen Zeitpunkt, den diese Datei nicht kennt. Die Menge braucht kein festgeschriebenes Datum und schrumpft von
+ *   selbst: wen ein echter Lauf beruehrt, der faellt heraus. Was
+ *   uebrigbleibt, ist genau das, was niemand mehr pflegt.
+ */
+const CC_META_LAUF  = '_cc_lauf';      // Zeitstempel des LETZTEN Laufs
+const CC_META_ERST  = '_cc_lauf_erst'; // Zeitstempel des ersten — nie ueberschrieben
+
 /**
  * Felder, die der Abgleich schreibt. Alles andere am Spiel ist tabu.
  *
@@ -174,6 +218,17 @@ add_action(
 			array(
 				'methods'             => 'GET',
 				'callback'            => 'cc_route_status',
+				'permission_callback' => 'cc_darf_schreiben',
+			)
+		);
+
+		/* ⚠ NUR LESEN, UND ZWAR ABSICHTLICH — siehe cc_route_bestand(). */
+		register_rest_route(
+			CC_ROUTE,
+			'/bestand',
+			array(
+				'methods'             => 'GET',
+				'callback'            => 'cc_route_bestand',
 				'permission_callback' => 'cc_darf_schreiben',
 			)
 		);
@@ -290,6 +345,25 @@ function cc_team_karte(): array {
 	return $karte;
 }
 
+/**
+ * Den Laufstempel setzen. Buchhaltung, kein Inhalt.
+ *
+ * ⚠ `_cc_lauf_erst` wird nur gesetzt, wenn es fehlt — es soll sagen, wann
+ *   der Beitrag ENTSTANDEN ist, und das aendert sich nie. `post_date` sagt
+ *   dasselbe und ist zuverlaessig; der eigene Wert steht daneben, damit ein
+ *   spaeteres Verschieben des Beitragsdatums (Redaktion darf das) die
+ *   Herkunft nicht ueberschreibt.
+ */
+function cc_stempel( int $post_id, string $lauf ): void {
+	if ( '' === $lauf ) {
+		return;
+	}
+	update_post_meta( $post_id, CC_META_LAUF, $lauf );
+	if ( '' === trim( (string) get_post_meta( $post_id, CC_META_ERST, true ) ) ) {
+		update_post_meta( $post_id, CC_META_ERST, $lauf );
+	}
+}
+
 /** Nur die Felder aus der Allowlist, und nur die, die mitgeschickt wurden. */
 function cc_schreibe_felder( int $post_id, array $spiel ): array {
 	$geschrieben = array();
@@ -361,6 +435,139 @@ function cc_titel_nachziehen( int $post_id ): void {
 }
 
 
+/**
+ * Was der Export auf dieser Website angelegt hat — Beitrag für Beitrag.
+ *
+ * ⚠ ⚠  SIE ZEIGT. SIE LOESCHT NICHT.  ⚠ ⚠
+ *
+ *   Vorgabe von Didi, 07.09.2026, woertlich: „Eine Liste, und Didi
+ *   entscheidet pro Zeile. Kein Knopf, der zwanzig Beitraege auf einmal
+ *   wegraeumt — das ist dieselbe Aktion wie «Person loeschen», nur auf
+ *   fremdem Boden."
+ *
+ *   Deshalb GET und nicht POST, deshalb keine Sammelaktion, und deshalb
+ *   traegt jede Zeile ihre `bearbeiten_url`: entschieden wird im
+ *   WordPress-Backend, an einem Beitrag, von einem Menschen.
+ *
+ *   ⚠ Und das ist nicht Vorsicht um der Vorsicht willen. Ein Beitrag aus
+ *   einem Probelauf ist inhaltlich NICHT falsch — jeder Lauf sendet den
+ *   vollen Satz je Mannschaft, ein spaeterer Lauf frischt ihn auf. Was
+ *   „wegraeumen" hiesse, weiss nur jemand, der die Website kennt.
+ *
+ * WAS FRAGLICH IST, UND WORAN MAN ES SIEHT
+ *
+ *   `ohne_laufstempel` — der Beitrag ist seit dem Einspielen dieser
+ *   Plugin-Fassung von keinem Lauf mehr angefasst worden (CC_META_LAUF
+ *   fehlt). Entweder aus der
+ *   Erprobung und seither nicht aufgefrischt, oder eine Waise: seine
+ *   Mannschaft wird nicht mehr exportiert.
+ *
+ *   ⚠ Die Menge schrumpft von selbst. Wen ein echter Lauf beruehrt, der
+ *   faellt heraus — richtigerweise, denn dann ist sein Inhalt aktuell.
+ *   Uebrig bleibt genau das, was niemand mehr pflegt. Kein festgeschriebenes
+ *   Datum, keine Schwelle, die jemand raten muesste.
+ *
+ *   ⚠ `status` steht daneben, weil es den Unterschied macht: eine Waise im
+ *   Entwurf sieht niemand, eine veroeffentlichte steht auf der Website und
+ *   sieht aktuell aus.
+ *
+ * ⚠ KEINE KUERZUNG, KEINE SEITE, KEIN TOP-N. Wer entscheiden soll, muss
+ *   alle sehen — dieselbe Lehre wie bei der Loeschvorschau im Portal, wo
+ *   eine Schwelle von 20 bei einem Stapel von zwei umfiel. Sind es viele,
+ *   ist eine lange Liste die ehrliche Auskunft.
+ */
+function cc_route_bestand(): WP_REST_Response {
+	$fehlt = cc_voraussetzungen();
+	if ( array() !== $fehlt ) {
+		return new WP_REST_Response(
+			array( 'fehler' => 'Voraussetzungen fehlen', 'fehlt' => $fehlt ),
+			503
+		);
+	}
+
+	$zeilen    = array();
+	$ohne      = 0;
+	$ohne_publ = 0;
+
+	foreach ( cc_abgleich_kandidaten() as $mid => $postId ) {
+		$post   = get_post( $postId );
+		$lauf   = trim( (string) get_post_meta( $postId, CC_META_LAUF, true ) );
+		$erst   = trim( (string) get_post_meta( $postId, CC_META_ERST, true ) );
+		$teamId = (int) get_field( 'fch_team', $postId );
+		$status = $post ? (string) $post->post_status : '?';
+
+		$fraglich = ( '' === $lauf );
+		if ( $fraglich ) {
+			$ohne++;
+			if ( 'publish' === $status ) {
+				$ohne_publ++;
+			}
+		}
+
+		$zeilen[] = array(
+			'beitrag_id'       => (int) $postId,
+			'titel'            => $post ? (string) $post->post_title : '',
+			'status'           => $status,
+			'sfv_match_id'     => (string) $mid,
+			'team'             => $teamId ? get_the_title( $teamId ) : '',
+			/* ⚠ post_date ist zuverlaessig (wp_insert_post setzt es).
+			   post_modified waere es NICHT — siehe CC_META_LAUF. Es steht
+			   deshalb gar nicht erst hier: ein Feld, das jemand fuer
+			   „zuletzt angefasst" haelt, richtet mehr Schaden an, als es
+			   nuetzt. */
+			'angelegt'         => $post ? (string) $post->post_date_gmt : '',
+			'lauf_zuletzt'     => $lauf,
+			'lauf_erst'        => $erst,
+			'ohne_laufstempel' => $fraglich,
+			'bearbeiten_url'   => get_edit_post_link( $postId, 'raw' ),
+		);
+	}
+
+	usort(
+		$zeilen,
+		static function ( array $a, array $b ): int {
+			/* Die fraglichen zuerst, darin die veroeffentlichten zuerst —
+			   die Reihenfolge ist die Dringlichkeit. */
+			if ( $a['ohne_laufstempel'] !== $b['ohne_laufstempel'] ) {
+				return $a['ohne_laufstempel'] ? -1 : 1;
+			}
+			if ( $a['status'] !== $b['status'] ) {
+				return 'publish' === $a['status'] ? -1 : 1;
+			}
+			return strcmp( (string) $a['angelegt'], (string) $b['angelegt'] );
+		}
+	);
+
+	return new WP_REST_Response(
+		array(
+			'gesamt'                    => count( $zeilen ),
+			'ohne_laufstempel'          => $ohne,
+			'ohne_laufstempel_sichtbar' => $ohne_publ,
+			/* ⚠ Die Gegenprobe auf die Besitzregel: Beitraege OHNE
+			   sfv_match_id fasst der Export nie an. Bleibt diese Zahl
+			   konstant, hat er die Grenze eingehalten. */
+			'handbeitraege'             => cc_zaehle_handbeitraege(),
+			'beitraege'                 => $zeilen,
+		),
+		200
+	);
+}
+
+/** fch_spiel-Beitraege OHNE sfv_match_id — die, die dem Export nicht gehoeren. */
+function cc_zaehle_handbeitraege(): int {
+	$alle = get_posts(
+		array(
+			'post_type'        => CC_TYP_SPIEL,
+			'post_status'      => array( 'publish', 'draft', 'pending', 'private' ),
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+		)
+	);
+	return count( $alle ) - count( cc_abgleich_kandidaten() );
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════════
    SPIELE
    ═══════════════════════════════════════════════════════════════════════ */
@@ -391,6 +598,11 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	$daten  = $req->get_json_params();
 	$spiele = is_array( $daten['spiele'] ?? null ) ? $daten['spiele'] : null;
 	$teams  = is_array( $daten['teams'] ?? null ) ? $daten['teams'] : null;
+	/* ⚠ Steht seit dem ersten Entwurf in der Nutzlast und wurde bis zum
+	   07.09.2026 nie gelesen. Fehlt er, wird nicht gestempelt — nicht
+	   ersatzweise die eigene Uhr genommen: ein Stempel, der vom Empfaenger
+	   stammt, behauptet eine Zuordnung zu einem Lauf, die er nicht kennt. */
+	$lauf   = trim( (string) ( $daten['lauf'] ?? '' ) );
 
 	/* ⚠ Ein fehlendes `teams` ist ein Abbruch und kein leerer Satz. Als
 	   leerer Satz gelesen, waere der Abgleichbereich leer — harmlos. Als
@@ -486,6 +698,7 @@ function cc_route_spiele( WP_REST_Request $req ) {
 
 		$spiel['quelle'] = CC_QUELLE;
 		cc_schreibe_felder( (int) $postId, $spiel );
+		cc_stempel( (int) $postId, $lauf );
 
 		if ( is_array( $spiel['verlauf'] ?? null ) ) {
 			$erg['verlauf_zeilen'] += cc_schreibe_verlauf( (int) $postId, $spiel['verlauf'] );

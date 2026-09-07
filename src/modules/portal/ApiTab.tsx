@@ -21,6 +21,25 @@ export interface ApiVerbindung {
   sync_status?: string | null;
   letzter_sync?: string | null;
   /**
+   * Die konfigurierte Zieladresse — oder `null`.
+   *
+   * ⚠ `null` IST EINE AUSSAGE UND KEIN FEHLEN. Beim WordPress-Export steht
+   * die Adresse absichtlich nur im Secret (`WP_BASIS_URL`), damit ein Wechsel
+   * dev → Produktion EIN Befehl ist und nicht zwei Orte, die auseinander
+   * laufen können. Die Kachel zeigt die Zeile deshalb auch dann, wenn nichts
+   * darin steht — sie sagt dann, dass nichts darin steht.
+   */
+  api_url?: string | null;
+  /**
+   * Was der letzte Lauf gemeldet hat.
+   *
+   * ⚠ Wurde bis zum 07.09.2026 geschrieben und NIRGENDS gerendert — die
+   * Spalte hatte keinen Leser. Sie ist die einzige Stelle, an der der
+   * tatsächliche Ziel-Host steht (der Export stellt ihn seiner Meldung
+   * voran): **Konfiguration kann veralten, eine Beobachtung nicht.**
+   */
+  sync_meldung?: string | null;
+  /**
    * Wann der Sync-Waechter zuletzt geprueft hat (cron: sync-waechter-stuendlich).
    *
    * ⚠ Der Leser dieser Spalte — sie steht nur hier. Ein Waechter, der
@@ -114,7 +133,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
 
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen===null&&(
         <div>
-          <InfoBox text="Zugangsdaten stehen nicht in der Datenbank, sondern in den Supabase-Secrets der Edge Function (npx supabase secrets set). Die Adresse des Anschlusses steht in api_verbindungen.api_url." color={AM}/>
+          <InfoBox text="Zugangsdaten stehen nicht in der Datenbank, sondern in den Supabase-Secrets der Edge Function (npx supabase secrets set). Die Adresse steht je nach Anschluss in api_verbindungen.api_url — beim WordPress-Export ebenfalls nur im Secret (WP_BASIS_URL). Wohin ein Lauf tatsächlich geschrieben hat, sagt seine Meldung, nicht die Konfiguration." color={AM}/>
           {ergebnis&&(
             <>
               <div style={{height:12}}/>
@@ -147,7 +166,14 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                   <p style={{fontSize:14,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{info?.description||"Externe API-Verbindung"}</p>
                   {info?.felder&&(
                     <div style={{marginBottom:12}}>
-                      <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:4}}>Synchronisierte Daten:</div>
+                      {/* ⚠ „Synchronisierte Daten" stand hier bis zum 07.09.2026 über
+                          jeder Liste — und war damit für den ersten ausgehenden
+                          Anschluss die Umkehrung der Wahrheit. Bei `wordpress` ist
+                          „Spielplan, Resultate" nicht das, was hereinkommt, sondern
+                          das, was auf eine öffentliche Website hinausgeht. */}
+                      <div style={{fontSize:14,color:"var(--sub)",fontWeight:600,marginBottom:4}}>
+                        {info.richtung==="aus"?"Gesendete Daten:":"Empfangene Daten:"}
+                      </div>
                       {info.felder.map((f,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:14,color:"var(--sub)",padding:"2px 0"}}>
                           <TI n="check" style={{fontSize:14,color:api.active?GN:"#ccc"}}/>{f}
@@ -155,6 +181,25 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                       ))}
                     </div>
                   )}
+                  {/* ⚠ ZIEL — IMMER DA, AUCH WENN NICHTS KONFIGURIERT IST.
+                      Eine Zeile, die bei fehlendem Wert verschwindet, ist von
+                      einer nicht gerenderten nicht zu unterscheiden; genau
+                      diese Ununterscheidbarkeit kostet bei der Fehlersuche die
+                      meiste Zeit. Steht hier nichts, sagt sie das.
+
+                      ⚠ Und sie sagt NICHT, wohin zuletzt geschrieben wurde —
+                      das kann sie nicht wissen. Das steht eine Zeile tiefer, in
+                      der Meldung des Laufs. Die Trennung ist der ganze Punkt:
+                      oben eine Behauptung über die Zukunft, unten ein Bericht
+                      über die Vergangenheit. */}
+                  <div style={{fontSize:14,color:"var(--sub)",marginBottom:api.letzter_sync?4:10,
+                               wordBreak:"break-all"}}>
+                    Ziel: {api.api_url
+                      ? api.api_url
+                      : <span style={{fontStyle:"italic"}}>
+                          — steht nicht in der Datenbank, sondern in den Secrets der Edge Function
+                        </span>}
+                  </div>
                   {api.letzter_sync&&(
                     <div style={{fontSize:14,color:"var(--sub)",marginBottom:10}}>
                       Letzter Sync: {new Date(api.letzter_sync).toLocaleString("de-CH")}
@@ -162,6 +207,15 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                           letzter_sync wird auch bei status='fehler' gesetzt.
                           Deshalb steht der Status daneben und nicht dahinter
                           versteckt. */}
+                      {/* ⚠ Die einzige Stelle, an der der ECHTE Ziel-Host steht.
+                          Wortwörtlich übernommen, nicht zerlegt: den eigenen
+                          Ausgabetext wieder zu parsen, um zu erfahren, was man
+                          selbst hineingeschrieben hat, ist immer der Umweg —
+                          und er misst die Formatierung mit. Ein Mensch liest
+                          den Host als erstes Wort. */}
+                      <div style={{marginTop:4,wordBreak:"break-word"}}>
+                        Meldung: {api.sync_meldung || "— keine"}
+                      </div>
                     </div>
                   )}
                   {/* Der Waechter. Steht auch dann da, wenn er NICHT gelaufen
@@ -174,21 +228,36 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                         : "— noch nie gelaufen"}
                     </div>
                   )}
+                  {/* ⚠ KEIN KNOPF OHNE WIRKUNG — bis zum 07.09.2026 standen hier zwei
+                      Attrappen mit `onClick={()=>{}}`: ein zweiter „Sync starten" für
+                      jeden aktiven Anschluss ausser football_ch, und „Konfigurieren"
+                      für jeden. Sichtbar wurde es, als die zweite Zeile in
+                      api_verbindungen dazukam: die WordPress-Kachel trug einen Knopf,
+                      der nichts tat.
+
+                      Ein Knopf, der nichts tut, ist schlimmer als keiner. Wer ihn
+                      drückt und nichts passiert, sucht den Fehler beim Export —
+                      dieselbe Familie wie ein Ausfall, der wie eine Datenlage
+                      aussieht. Deshalb steht statt des Knopfes ein Satz, der sagt,
+                      wo die Bedienung wirklich ist. */}
                   <Row align="flex-start">
-                    {api.active&&api.key==="football_ch"
-                      ?<Btn small variant="primary" color={BL} onClick={syncStarten} disabled={laeuft}>
-                         {laeuft?"Läuft…":"Sync starten"}
-                       </Btn>
-                      :api.active&&<Btn small variant="primary" color={BL} onClick={()=>{}}>Sync starten</Btn>}
                     {api.key==="football_ch"
                       ?<>
+                        {api.active&&(
+                          <Btn small variant="primary" color={BL} onClick={syncStarten} disabled={laeuft}>
+                            {laeuft?"Läuft…":"Sync starten"}
+                          </Btn>)}
                         <Btn small variant="outline" color="#888" onClick={()=>setOffen("football_ch")}>Teams zuordnen</Btn>
                         {/* Zwei Zuordnungen, zwei Ebenen: Mannschaften einmal
                             beim Einrichten, Spieler laufend beim ersten
                             Einsatz. */}
                         <Btn small variant="outline" color="#888" onClick={()=>setOffen("sfv_spieler")}>Spieler zuordnen</Btn>
                       </>
-                      :<Btn small variant="outline" color="#888" onClick={()=>{}}>Konfigurieren</Btn>}
+                      :<span style={{fontSize:13,color:"var(--sub)",lineHeight:1.5}}>
+                         Keine Bedienung im Portal. Eingerichtet wird dieser Anschluss
+                         über die Supabase-Secrets, ausgelöst wird er von Hand oder
+                         über den Zeitplan.
+                       </span>}
                   </Row>
                 </Card>
               );

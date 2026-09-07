@@ -15,15 +15,41 @@ export const KAT_LABELS: Record<string,string> = {kern:"Kern",sport:"Sport",komm
 /* Beschreibung einer externen Schnittstelle (Anzeige im API-Tab) */
 export interface ApiInfo {
   description: string;
+  /**
+   * Wohin die Daten fließen — aus Sicht des Vereins.
+   *
+   * ⚠ PFLICHTFELD, UND ZWAR SEIT DEM ERSTEN AUSGEHENDEN ANSCHLUSS. Bis zum
+   * 07.09.2026 waren alle fünf Einträge eingehend, und die Kachel schrieb
+   * pauschal „Synchronisierte Daten:“ über die Liste. Für `wordpress` wäre
+   * derselbe Satz die GENAUE UMKEHRUNG der Wahrheit: dort steht „Spielplan,
+   * Resultate“ nicht für das, was hereinkommt, sondern für das, was auf eine
+   * öffentliche Website hinausgeht.
+   *
+   * Zwei Anschlüsse mit derselben Feldliste und entgegengesetzter Richtung
+   * sähen in der Kachel identisch aus — und der Unterschied ist genau der,
+   * auf den es ankommt. Deshalb kein optionales Feld mit Vorgabewert: der
+   * Compiler soll die Frage bei jedem neuen Eintrag stellen.
+   */
+  richtung: "ein" | "aus";
   felder: string[];
 }
 
 export const API_INFOS: Record<string, ApiInfo>={
-    fairgate:   {description:"Mitglieder, Gruppen, Stammdaten automatisch synchronisieren",felder:["Personen & Adressen","Kontaktdaten","Elternkontakte","Teams & Gruppen","Spielerpassdaten","J+S Nummern"]},
-    football_ch:{description:"Spielpläne, Resultate und Ranglisten von Football.ch importieren",felder:["Spielplan","Resultate","Ranglisten","Teaminfos"]},
-    fvrz:       {description:"Spielplan und Tabelle vom FVRZ (Fussballverband Region Zürich)",felder:["Spielplan","Tabelle","Resultate","Spielernummern"]},
-    clubdesk:   {description:"Mitgliederdaten und Vereinsverwaltung aus ClubDesk synchronisieren",felder:["Mitglieder","Adressen","Mitgliedschaften","Beiträge"]},
-    sfa:        {description:"Spielerdaten und Lizenzen von Swiss Football Association",felder:["Spielerlizenzen","Transferdaten","Sperren"]},
+    fairgate:   {richtung:"ein",description:"Mitglieder, Gruppen, Stammdaten automatisch synchronisieren",felder:["Personen & Adressen","Kontaktdaten","Elternkontakte","Teams & Gruppen","Spielerpassdaten","J+S Nummern"]},
+    football_ch:{richtung:"ein",description:"Spielpläne, Resultate und Ranglisten von Football.ch importieren",felder:["Spielplan","Resultate","Ranglisten","Teaminfos"]},
+    fvrz:       {richtung:"ein",description:"Spielplan und Tabelle vom FVRZ (Fussballverband Region Zürich)",felder:["Spielplan","Tabelle","Resultate","Spielernummern"]},
+    clubdesk:   {richtung:"ein",description:"Mitgliederdaten und Vereinsverwaltung aus ClubDesk synchronisieren",felder:["Mitglieder","Adressen","Mitgliedschaften","Beiträge"]},
+    sfa:        {richtung:"ein",description:"Spielerdaten und Lizenzen von Swiss Football Association",felder:["Spielerlizenzen","Transferdaten","Sperren"]},
+    /* ⚠ Der erste AUSGEHENDE Anschluss. Was hier steht, verlässt den Verein
+       und landet auf einer öffentlichen Website — die Beschreibung nennt
+       deshalb das Ziel und den Besitzvermerk, nicht bloss den Vorgang.
+
+       ⚠ KEIN HOST IM TEXT. Der Export zeigt heute auf dev.fcherrliberg.ch
+       und später auf fcherrliberg.ch; eine Adresse hier wäre dieselbe Aussage
+       an einem zweiten Ort, und der zweite Ort ist der, den niemand nachzieht
+       (siehe migration_wp_export.sql — aus demselben Grund trägt auch das
+       Label keinen Host). Wohin ein Lauf geschrieben hat, sagt seine Meldung. */
+    wordpress:  {richtung:"aus",description:"Spielplan, Resultate und Ranglisten an die Vereins-Website senden. Ein Beitrag ohne sfv_match_id gehört der Redaktion und wird nie angefasst.",felder:["Spielplan & Resultate","Spielverlauf (Tore, Karten, Wechsel)","Ranglisten","Absagen & Verschiebungen"]},
   };
 
 /* Ein Modul der Portalverwaltung */
