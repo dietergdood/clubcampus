@@ -29,6 +29,32 @@
    UNPAARIGE Öffnung. Der Build findet dasselbe, nur später und mit
    einer Meldung, die drei Zeilen weiter zeigt; hier steht Datei,
    Zeile und der Text.
+
+   ── ⚠ GRENZE — ABSICHTLICH ENG, NICHT UNFERTIG ───────────────
+   Damit sie niemand später „vereinheitlicht“ und dabei kaputtmacht
+   (Didi, 08.09.2026):
+
+     · **Nur STRINGLITERALE, nie Kommentare.** Dort sind „ “ ” richtig
+       und erwünscht — die halbe Codebasis benutzt sie so. Auf
+       Kommentare ausgedehnt wäre diese Prüfung am ersten Tag
+       hundertfach rot und am zweiten abgeschaltet.
+     · **Dasselbe für die Umlaut-Ersatzschreibung.** `loeschen` in einem
+       Kommentar ist in Ordnung, auf dem Schirm ist es ein Fehler. Die
+       Grenze verläuft am Literal, nicht am Wort.
+       ⚠ Der Preis dafür ist ein bekannter Fehlalarm: ein BEZEICHNER in
+       ASCII-Schreibweise (`zaehleVerlaufNamen`) sieht in einem Literal
+       aus wie Prosa. Wo das auftritt, gehört der Name aus der Funktion
+       selbst geholt (`f.name`) statt abgeschrieben — das behebt beides
+       auf einmal, denn eine Umbenennung kann die Stelle dann nicht mehr
+       still aushöhlen.
+     · **`scripts/` bleibt draußen** — Begründung unten bei ORDNER.
+
+   ⚠ UND WARUM DIESE PRÜFUNG DEN TEXT LESEN DARF, während
+   `test-helpers/quelltext.ts` genau davon abrät: sie sucht ein Zeichen,
+   das ein Literal ZERREISST. Danach gäbe es keinen Syntaxbaum mehr, den
+   man fragen könnte — der Parser scheitert ja gerade daran. Das ist der
+   eine Fall, in dem der Textweg der richtige ist; für alles andere gilt
+   der Baum.
    ═══════════════════════════════════════════════════════════════ */
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname, relative } from "node:path";

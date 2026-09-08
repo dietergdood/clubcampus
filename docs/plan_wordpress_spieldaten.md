@@ -2608,6 +2608,65 @@ leeren `onClick`-Handler absucht.
 > jetzt Kommentare weg, bevor er sucht — mit einem zweiten Fall, der
 > festhält, dass der Stripper nicht auch den Code mitnimmt.
 
+---
+
+### 15.2 ✅ Strukturprüfungen laufen über den Syntaxbaum (08.09.2026)
+
+**Vier Fehlgriffe an zwei Tagen — und die Bauweise war das Problem, nicht
+die Sorgfalt:**
+
+| gesucht | getroffen |
+|---|---|
+| `onClick={()=>{}}` | zwei **Kommentare**, die den Defekt beschreiben |
+| `post_modified` | ein **Kommentar**, der erklärt, warum es fehlt |
+| `limit` | `.limit(1)` — der erste Protokolleintrag, also das Gegenteil einer Kürzung |
+| Funktionsrumpf | die Parameterliste `{ von: string \| null }` |
+
+Zwei Kommentare, zwei Stücke echter Code, die nur gleich aussahen. **Ein
+Kommentar-Entferner löst die Hälfte** — und war ausserdem selbst schon
+falsch: `AussehenTab.tsx` enthält `"image/*"`, `TermineModul.tsx` einen
+Uhrzeit-Ausdruck, der auf Stern-Schrägstrich endet. An beiden Stellen
+schneidet ein Regex-Entferner mitten im Code, lautlos, und der Test bleibt
+grün.
+
+**Gemessen, bevor umgestellt wurde:**
+
+| | Textsuche | Baum / Tokenizer |
+|---|---|---|
+| `ApiTab.tsx`, leerer `onClick` | **2** (beide Kommentare) | **0** |
+| Positivkontrolle | 1 | **1** |
+| `clubcampus-export.php`, `post_modified` | **3** | **0** |
+
+**Umgestellt sind sechs Prüfungen in fünf Dateien**, über
+`src/test-helpers/quelltext.ts` (TypeScript-Compiler) und
+`scripts/check-plugin.mjs` (PHP-Tokenizer, `npm run check:plugin`, in CI).
+
+⚠ **DIE WICHTIGERE HÄLFTE IST NICHT DER BAUM.** Eine Suchprüfung, deren
+SUCHE kaputt ist, findet nichts — und ist damit **grün**. Sie scheitert
+nach oben, und das gilt für einen falschen Baum-Ausdruck genauso wie für
+einen falschen Regex. Dagegen hilft nur eine **Positivkontrolle**: ein
+Schnipsel, in dem die Abfrage fündig werden MUSS. `suche()` verlangt sie
+als Pflichtfeld und läuft sie zuerst; `check-plugin.mjs` genauso.
+
+**Die Regel steht dort, wo sie gebraucht wird** — im Kopf des Helfers und
+im Kopf des Skripts, also an der Stelle, an der jemand die nächste
+Strukturprüfung anlegt. Nicht hier: dieser Abschnitt ist das Protokoll,
+nicht die Anleitung.
+
+⚠ **SQL bleibt eine bekannte Lücke.** `matchdaten.test.ts` liest
+`schema.sql` weiterhin als Text; für SQL gibt es hier keinen Parser. Das
+steht als Grenze im Helfer, damit niemand annimmt, es sei erledigt.
+
+**Nebenbefund beim Umstellen, und er gehört zu den 33 offenen Stellen:**
+`TeamModul.tsx:528` erfindet eine Anwesenheitsquote von rund 75 %, wenn ein
+Team keine Spieler hat (`const seed=(ev.id*37+i*13)%100`). Heute unsichtbar,
+weil `ATT_EVENTS` leer ist — mit echter Anwesenheit wäre es Ebene 2B. Die
+Prüfung verbietet es **nicht**: die Zusage jenes Falls war der Generator aus
+Name + Team, und einen Test rot stehen zu lassen für etwas, das niemand
+entschieden hat, ist die andere Hälfte des Problems.
+
+---
+
 **2 · ✅ `API_INFOS` hat einen Eintrag `wordpress`** (`portalUtils.ts`).
 Ohne ihn zeigte die Kachel „Externe API-Verbindung" und keine Feldliste.
 

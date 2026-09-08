@@ -88,6 +88,14 @@ jobs:
       - name: PHP-Syntax pruefen
         run: npm run check:php
 
+      # ⚠ Zwei Pruefungen, nicht eine: `check:php` sagt ueber JEDE PHP-Datei
+      # „es parst", `check:plugin` sagt ueber EINE, dass sie ihre Zusagen
+      # haelt — die Bestandsliste zeigt und schreibt nicht, der Export
+      # stempelt jeden Beitrag. Beides ueber den PHP-Tokenizer, damit kein
+      # Kommentar mitgezaehlt wird.
+      - name: Plugin-Zusagen pruefen
+        run: npm run check:plugin
+
       - name: Tests
         run: npm test
 

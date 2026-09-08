@@ -26,6 +26,20 @@
    Mensch aus §12 bleibt zuständig; ihm ist nur eine Fehlerklasse
    abgenommen.
 
+   ── ⚠ GRENZE — ABSICHTLICH ENG, NICHT UNFERTIG ───────────────
+   Damit sie niemand später „vereinheitlicht" und dabei kaputtmacht
+   (Didi, 08.09.2026):
+
+     · **Nur `php -l`, nur Syntax.** Inhaltliche Prüfungen am Plugin
+       stehen in `check-plugin.mjs` und benutzen den PHP-TOKENIZER.
+       Die zwei nicht zusammenlegen: `php -l` sagt über JEDE Datei
+       etwas, `check-plugin` kennt genau eine und ihre Regeln.
+     · **Nur `wordpress/`.** Nicht auf `src/` ausdehnen — dort ist
+       kein PHP.
+     · **Kein Überspringen.** Die Leiter php → Docker → ROT steht in
+       `php-lauf.mjs` und ist der ganze Punkt: ein Prüfmittel, das
+       ohne sein Werkzeug „ok" sagt, beruhigt, statt zu prüfen.
+
    ── PHP FEHLT? DANN DOCKER. UND WENN AUCH DER FEHLT: ROT ──────────
    Ein Prüfmittel, das ohne sein Werkzeug stillschweigend „ok" sagt, ist
    schlimmer als keines: es beruhigt.
@@ -40,7 +54,10 @@
    ist der ganze Punkt. In der Prüfkette ist PHP auf `ubuntu-latest`
    vorinstalliert, dort greift die erste Stufe.
    ═══════════════════════════════════════════════════════════════ */
-import { execFileSync } from "node:child_process";
+/* ⚠ Die Leiter php → Docker → rot steht an EINER Stelle. Seit dem
+   08.09.2026 braucht sie ein zweites Skript (check-plugin.mjs); zwei
+   Kopien liefen still auseinander. */
+import { werkzeugDa, wieGelaufen, phpLauf, fehltMeldung } from "./php-lauf.mjs";
 import { readdirSync, existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,57 +76,17 @@ if (dateien.length === 0) {
   process.exit(0);
 }
 
-/* Ist php da? `php -v` statt `which`: unter Windows heisst es php.exe, und
-   ein Aufrufversuch beantwortet die Frage in beiden Welten gleich. */
-let phpDa = true;
-try {
-  execFileSync("php", ["-v"], { stdio: "ignore" });
-} catch {
-  phpDa = false;
-}
-
-/* Stufe 2: Docker. Prüft wirklich — nur eben in einem Container. */
-let dockerDa = false;
-if (!phpDa) {
-  try {
-    execFileSync("docker", ["info"], { stdio: "ignore" });
-    dockerDa = true;
-  } catch {
-    dockerDa = false;
-  }
-}
-
-if (!phpDa && !dockerDa) {
-  console.error("check-php: weder PHP noch Docker gefunden — die Dateien sind UNGEPRUEFT.\n");
-  console.error("  PHP installieren, oder Docker starten. Von Hand:\n");
-  console.error('    docker run --rm -v "/$(pwd)/wordpress":/w php:8.2-cli \\');
-  console.error('      sh -c "for f in /w/*.php; do php -l \\$f; done"\n');
-  console.error("  ⚠ Nicht übergehen: ein Syntaxfehler in einem mu-plugin");
-  console.error("    ergibt auf der Website eine weisse Seite, kein Backend.");
+if (!werkzeugDa) {
+  console.error(fehltMeldung("check-php"));
   process.exit(1);
 }
 
-/** Eine Datei prüfen — direkt oder im Container, gleiche Rückgabe.
+/** Eine Datei prüfen. Über stdin, damit der Container keinen Mount braucht.
  *
- * ⚠ Der Container bekommt den INHALT über stdin, nicht die Datei über einen
- *   Mount. Der erste Versuch mountete `wordpress/` und scheiterte an der
- *   Windows-Laufwerksangabe: aus `C:/…` wird `-v /C:/…:/w`, und Docker liest
- *   den Doppelpunkt als Trennzeichen („invalid mode: /w"). Ein Pfad, der
- *   plattformabhängig übersetzt werden muss, ist eine Fehlerquelle, die man
- *   sich schenken kann — `php -l` liest ohne Dateiargument von stdin.
- *
- *   Preis: die Meldung des Containers sagt „on line N" ohne Dateinamen. Den
- *   setzen wir selbst davor, er ist ja bekannt.
- */
+ *  Preis: die Meldung sagt „on line N" ohne Dateinamen. Den setzen wir
+ *  selbst davor, er ist ja bekannt. */
 function pruefe(name) {
-  if (phpDa) {
-    return execFileSync("php", ["-l", join(ORDNER, name)], { stdio: "pipe" });
-  }
-  return execFileSync(
-    "docker",
-    ["run", "--rm", "-i", "php:8.2-cli", "php", "-l"],
-    { input: readFileSync(join(ORDNER, name)), stdio: "pipe" }
-  );
+  return phpLauf(["-l"], readFileSync(join(ORDNER, name)));
 }
 
 const befunde = [];
@@ -127,7 +104,7 @@ for (const name of dateien) {
 }
 
 if (befunde.length === 0) {
-  console.log(`check-php: ${dateien.length} Datei(en) geprueft${phpDa ? "" : " (ueber Docker)"} — keine Syntaxfehler.`);
+  console.log(`check-php: ${dateien.length} Datei(en) geprueft${wieGelaufen} — keine Syntaxfehler.`);
   console.log("           ⚠ Das heisst: es parst. Nicht: es funktioniert.");
   process.exit(0);
 }

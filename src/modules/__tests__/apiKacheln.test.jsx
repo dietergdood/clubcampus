@@ -23,7 +23,7 @@
    ══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import fs from 'node:fs';
+import { suche, leereHandler } from '../../test-helpers/quelltext.ts';
 
 /* Die zwei Unteransichten haben mit den Kacheln nichts zu tun und ziehen
    Dienste nach. Sie erscheinen erst nach einem Klick. */
@@ -135,43 +135,37 @@ describe('API-Kacheln', () => {
   });
 });
 
-/* ── Die Hälfte, die den Umbau überlebt ───────────────────────── */
+/* ── Die Hälfte, die den Umbau überlebt ─────────────────────────
+
+   ⚠ UMGESTELLT AM 08.09.2026 VOM TEXT AUF DEN SYNTAXBAUM.
+
+   Die erste Fassung suchte `onClick={()=>{}}` als Zeichenkette und war
+   rot — mit zwei Treffern in genau der Datei, aus der die Attrappe
+   gerade entfernt worden war. Beide standen in KOMMENTAREN, die den
+   Defekt beschreiben; einer davon in dem Kommentar, der ihn behebt.
+
+   Danach lief sie über einen Regex-Kommentarentferner. Der war die
+   halbe Antwort und ausserdem selbst kaputt: `image/*` und ein
+   Uhrzeit-Ausdruck im Bestand hätten ihn mitten im Code schneiden
+   lassen — lautlos, und der Test wäre grün geblieben.
+
+   Jetzt fragt sie den Baum. Kommentare sind darin Trivia und kommen
+   als Knoten gar nicht vor; die Frage kann sie deshalb nicht mehr
+   treffen. Die Regel dazu steht in `test-helpers/quelltext.ts`.
+   ────────────────────────────────────────────────────────── */
 describe('ApiTab.tsx als Quelltext', () => {
-  const quelle = fs.readFileSync('src/modules/portal/ApiTab.tsx', 'utf8');
-
-  /*
-   * ⚠ KOMMENTARE ERST WEG — UND DAS IST KEIN DETAIL.
-   *
-   * Die erste Fassung dieses Falls war rot, und zwar mit zwei Treffern in
-   * einer Datei, aus der die Attrappe gerade entfernt worden war. Beide
-   * standen in KOMMENTAREN, die den alten Defekt beschreiben — einer davon
-   * in dem Kommentar, der ihn behebt.
-   *
-   * Genau die Familie, vor der CLAUDE.md warnt: ein Werkzeug, das nach Text
-   * sucht, trifft was gleich AUSSIEHT, nicht was gleich GEMEINT ist. Hätte
-   * ich stattdessen die Kommentare umformuliert, wäre der Test grün gewesen
-   * und hätte ab da die Beschreibung des Fehlers bewacht statt den Fehler.
-   *
-   * Der Stripper ist grob (ein "/*" in einem Stringliteral würde ihn
-   * verwirren) und für diese eine Datei ausreichend.
-   */
-  function ohneKommentare(text) {
-    return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ 	]*\/\/.*$/gm, '');
-  }
-
-  /* Ein leerer Handler ist gültiger Code — er fällt nur auf, wenn jemand
-     danach sucht. Also sucht jemand danach. */
-  it('enthält keinen leeren onClick-Handler', () => {
-    const treffer = ohneKommentare(quelle).match(/onClick=\{\s*\(\s*\)\s*=>\s*\{\s*\}\s*\}/g) || [];
-    expect(treffer).toEqual([]);
-  });
-
-  /* Gegenprobe zum Stripper selbst: er darf den Code nicht mit den
-     Kommentaren wegnehmen. Wäre er zu gierig, bestünde der Fall oben
-     immer — auch dann, wenn die Attrappe zurückkäme. */
-  it('der Kommentar-Stripper lässt den Code stehen', () => {
-    const rest = ohneKommentare(quelle);
-    expect(rest).toContain('onClick={syncStarten}');
-    expect(rest).not.toContain('Attrappen mit');
+  /* Ein leerer Handler ist gültiger Code — kein Build, kein Typecheck und
+     kein Lint melden ihn. Er fällt nur auf, wenn jemand danach sucht. */
+  it('enthält keinen leeren Ereignis-Handler', () => {
+    const treffer = suche({
+      frage: 'leerer Ereignis-Handler in ApiTab',
+      dateien: ['src/modules/portal/ApiTab.tsx'],
+      finde: leereHandler,
+      /* ⚠ Pflicht, und hier sieht man wofür: der Schnipsel ist genau die
+         Attrappe, die am 07.09.2026 entfernt wurde. Findet die Abfrage sie
+         nicht, bricht `suche` ab — statt grün zu melden. */
+      positivkontrolle: 'const X = () => <button onClick={()=>{}}>Weg</button>;',
+    });
+    expect(treffer.map((t) => `${t.datei}:${t.fund.zeile} ${t.fund.attribut}`)).toEqual([]);
   });
 });

@@ -17,7 +17,8 @@
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import fs from 'node:fs';
+import ts from 'typescript';
+import { suche, jederKnoten, findeFunktion } from '../../test-helpers/quelltext.ts';
 
 vi.mock('../../domains/spiele/useSpiele.ts', () => ({
   useSpiele: () => ({ spiele: [], laedt: false }),
@@ -92,18 +93,71 @@ describe('Team → Statistik', () => {
 /* Strukturprüfung — sie überlebt jeden Umbau der Komponenten und ist an
    keinen Aufrufer gebunden. Nach dem Muster von icons.test.ts. */
 describe('Der Seed-Generator ist weg und kommt nicht zurück', () => {
+  /* ⚠ UMGESTELLT AM 08.09.2026 VOM TEXT AUF DEN SYNTAXBAUM.
+
+     Beide Fälle strichen vorher die Kommentare mit einem Regex weg — und
+     genau dieser Regex ist im Bestand schon falsch: `AussehenTab.tsx`
+     enthält `"image/*"`, `TermineModul.tsx` einen Uhrzeit-Ausdruck, der auf
+     Stern-Schrägstrich endet. Ein Kommentarentferner schneidet dort mitten
+     im Code — lautlos, und der Fall bliebe grün.
+
+     Der Baum kennt Kommentare gar nicht. Die Regel dazu steht in
+     `test-helpers/quelltext.ts`. */
+
   it('erzeugt in TeamModul niemand mehr Zahlen aus einem Seed', () => {
-    const src = fs.readFileSync('src/modules/TeamModul.tsx', 'utf8');
-    const code = src.replace(/\/\*[\s\S]*?\*\//g, '');   // Kommentare erklären ihn, das ist erlaubt
-    expect(code).not.toMatch(/const\s+rnd\s*=/);
-    expect(code).not.toMatch(/charCodeAt\(0\)/);
-    expect(code).not.toMatch(/1664525/);
+    const treffer = suche({
+      frage: 'ein Seed-Generator in TeamModul',
+      dateien: ['src/modules/TeamModul.tsx'],
+      finde: (baum) => {
+        const fund = [];
+        jederKnoten(baum, (n) => {
+          /* ⚠ NUR `rnd`, NICHT `seed` — und das ist eine Entscheidung, kein
+             Versehen. Beim Umstellen hatte ich `seed` mit aufgenommen; die
+             Abfrage wurde prompt rot und fand `TeamModul.tsx:528`:
+
+               for (let i=0;i<10;i++){ const seed=(ev.id*37+i*13)%100;
+                                       total++; if(seed<75) zu++; }
+
+             Das ist ein ZWEITER erfundener Wert — eine Anwesenheitsquote von
+             rund 75 %, falls ein Team keine Spieler hat. Er ist heute
+             unsichtbar, weil `ATT_EVENTS` leer ist, und würde erst mit der
+             echten Anwesenheit auffallen (CLAUDE.md, Ebene 2B).
+
+             ⚠ Er wird hier NICHT verboten. Die Zusage dieses Falls war der
+             Generator aus Name + Team; ihn zu erweitern hiesse, den Test rot
+             stehen zu lassen für etwas, das niemand entschieden hat — und
+             „rot ist ein Zustand für Stunden, nicht für Wochen". Der Befund
+             gehört zu den 33 offenen Stellen und wird dort entschieden. */
+          if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)
+              && n.name.text === 'rnd') fund.push(n.name.text);
+          if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)
+              && n.expression.name.text === 'charCodeAt') fund.push('charCodeAt');
+          if (ts.isNumericLiteral(n) && n.text === '1664525') fund.push('1664525');
+        });
+        return fund;
+      },
+      positivkontrolle: 'const rnd = (n) => n.charCodeAt(0) * 1664525;',
+    });
+    expect(treffer.map((t) => t.fund)).toEqual([]);
   });
 
   it('behauptet das Admin-Dashboard keine Zahlen im Code', () => {
-    const src = fs.readFileSync('src/modules/DashboardModul.tsx', 'utf8');
-    const admin = src.slice(src.indexOf('function DashboardAdmin'), src.indexOf('function DashboardAdministration'));
-    const code = admin.replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(code).not.toMatch(/value="\d+"/);
+    const treffer = suche({
+      frage: 'eine fest verdrahtete Zahl im Admin-Dashboard',
+      dateien: ['src/modules/DashboardModul.tsx'],
+      finde: (baum) => {
+        const rumpf = findeFunktion(baum, 'DashboardAdmin');
+        if (!rumpf) throw new Error('DashboardAdmin nicht gefunden');
+        const fund = [];
+        jederKnoten(rumpf, (n) => {
+          if (!ts.isJsxAttribute(n) || n.name.getText() !== 'value') return;
+          const w = n.initializer;
+          if (w && ts.isStringLiteral(w) && /^\d+$/.test(w.text)) fund.push(w.text);
+        });
+        return fund;
+      },
+      positivkontrolle: 'function DashboardAdmin(){ return <Kachel value="187" />; }',
+    });
+    expect(treffer.map((t) => t.fund)).toEqual([]);
   });
 });

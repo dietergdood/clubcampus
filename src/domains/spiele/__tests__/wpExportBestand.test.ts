@@ -3,218 +3,186 @@
 
    ⚠ WARUM ES DIESE DATEI GIBT
 
-   Die Zusage ist eine Entscheidung von Didi, keine Eigenschaft
-   des Codes: „Eine Liste, und Didi entscheidet pro Zeile. Kein
-   Knopf, der zwanzig Beiträge auf einmal wegräumt — das ist
-   dieselbe Aktion wie «Person löschen», nur auf fremdem Boden."
+   Die Zusage ist eine Entscheidung von Didi, keine Eigenschaft des
+   Codes: „Eine Liste, und Didi entscheidet pro Zeile. Kein Knopf, der
+   zwanzig Beiträge auf einmal wegräumt — das ist dieselbe Aktion wie
+   «Person löschen», nur auf fremdem Boden."
 
-   Eine Zusage, die nur im Kommentar steht, ist eine Behauptung.
-   Sie überlebt den nächsten Umbau nicht — und beim nächsten Mal
-   liest jemand „hier wird ohnehin schon abgefragt" und hängt ein
-   POST daran.
+   Eine Zusage, die nur im Kommentar steht, ist eine Behauptung. Sie
+   überlebt den nächsten Umbau nicht — und beim nächsten Mal liest
+   jemand „hier wird ohnehin schon abgefragt" und hängt ein POST daran.
 
-   ⚠ Der Deno-Code wird von `tsc` nicht gelesen und von keinem
-   vitest-Lauf ausgeführt: er importiert von `esm.sh`. Was hier
-   geht, ist eine STRUKTURPRÜFUNG auf den Quelltext — dasselbe
-   Mittel wie bei „niemand löscht aus mitglieder" und bei
-   `icons.test.ts`. Sie ist an keinen Aufrufer gebunden und hält
-   deshalb über jeden Umbau.
+   ⚠ `supabase/functions/wp-export/index.ts` importiert von `esm.sh` und
+   wird deshalb weder von `tsc` gelesen noch von vitest ausgeführt. Was
+   hier geht, ist eine Strukturprüfung — das Mittel für ZUSAGEN, nicht
+   für Rechnungen. Die Rechnung (Zeitraum, Zählung) liegt in
+   `wpBestand.ts` und wird nebenan mit echten Daten geprüft.
+
+   ── UMGESTELLT AM 08.09.2026 VOM TEXT AUF DEN SYNTAXBAUM ──────────
+   Die Textfassung hat sich viermal vergriffen: zweimal an Kommentaren,
+   einmal an `.limit(1)` (dem ersten Protokolleintrag, also dem
+   Gegenteil einer Kürzung) und einmal an einem Typliteral, das sie für
+   den Funktionsrumpf hielt. Der Baum kennt den Unterschied.
+
+   ⚠ Die PHP-Hälfte ist mit derselben Umstellung ausgezogen: sie braucht
+   den PHP-Tokenizer und steht in `scripts/check-plugin.mjs`.
+   Die Regel für beide steht in `test-helpers/quelltext.ts`.
    ═══════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from 'vitest';
-import fs from 'node:fs';
+import ts from 'typescript';
+import {
+  suche, findeFunktion, aufrufNamen, textLiterale, objektEigenschaften, jederKnoten,
+} from '../../../test-helpers/quelltext.ts';
+
+import { waehleZeitraum, fassBestandZusammen } from '../wpBestand.ts';
 
 const QUELLE = 'supabase/functions/wp-export/index.ts';
-const PLUGIN = 'wordpress/clubcampus-export.php';
 
-/**
- * Kommentare weg, bevor gesucht wird.
- *
- * ⚠ DIE ERSTE FASSUNG DIESER DATEI WAR ROT, UND ZWAR DREIMAL — alle drei
- * Treffer standen in KOMMENTAREN, die genau vor dem warnen, wonach gesucht
- * wurde. `cc_route_bestand()` erklärt in einem Kommentar, warum es
- * `post_modified` NICHT herausgibt und warum `wp_insert_post` das
- * Beitragsdatum setzt — und die Suche fand beide Wörter.
- *
- * Dieselbe Familie wie in `apiKacheln.test.jsx` und dieselbe wie in
- * CLAUDE.md: **ein Werkzeug, das nach Text sucht, trifft was gleich
- * AUSSIEHT, nicht was gleich GEMEINT ist.** Die Kommentare umzuformulieren
- * wäre die falsche Reparatur gewesen — der Test hätte danach die
- * Beschreibung des Fehlers bewacht statt den Fehler.
- */
-function ohneKommentare(text: string): string {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^[ \t]*(\/\/|#).*$/gm, '');
-}
-
-/**
- * Den Rumpf einer Funktion herausschneiden.
- *
- * ⚠ ZWEI FALLEN, BEIDE HIER ERLEBT.
- *
- * 1) Der Kopf wird OHNE schliessende Klammer gesucht. Mit `()` traf er nur
- *    eine parameterlose Funktion — und als `holeBestand` Parameter bekam,
- *    war die Folge kein klarer Fehlschlag, sondern ein `throw` mitten in
- *    vier Fällen, deren Meldung auf etwas ganz anderes zeigte.
- *
- * 2) ⚠ Die erste `{` nach dem Kopf ist NICHT der Rumpf, sobald ein
- *    Parameter ein Typliteral trägt (`{ von: string | null }`). Der
- *    Schnitt lieferte dann die Parameterliste — und alle Prüfungen darin
- *    fanden nichts, also war jede „bestanden"-Aussage wertlos gewesen,
- *    hätten sie nicht zufällig auf Vorhandenes gezielt.
- *
- *    **Genau das ist die Sorte Fehler, gegen die diese Datei gebaut ist:
- *    eine Prüfung, die etwas anderes ansieht als gemeint.** Deshalb wird
- *    erst die Parameterliste überklammert und dann der Rumpf genommen.
- */
-function rumpf(text: string, kopf: string): string {
-  const a = text.indexOf(kopf);
-  if (a < 0) throw new Error(`nicht gefunden: ${kopf}`);
-  /* Der Kopf endet auf "(" — also steht die Klammerbilanz schon auf 1. */
-  let i = a + kopf.length, klammern = 1;
-  for (; i < text.length && klammern > 0; i++) {
-    if (text[i] === '(') klammern++;
-    else if (text[i] === ')') klammern--;
-  }
-  const auf = text.indexOf('{', i);
-  if (auf < 0) throw new Error(`kein Rumpf zu: ${kopf}`);
-  let tiefe = 0;
-  for (let j = auf; j < text.length; j++) {
-    if (text[j] === '{') tiefe++;
-    else if (text[j] === '}' && --tiefe === 0) return text.slice(auf, j + 1);
-  }
-  throw new Error('Klammern gehen nicht auf');
+/** Der Rumpf von `holeBestand` — oder ein Fehler, wenn es ihn nicht gibt. */
+function bestandRumpf(baum: ts.SourceFile): ts.Node {
+  const n = findeFunktion(baum, 'holeBestand');
+  if (!n) throw new Error('holeBestand nicht gefunden');
+  return n;
 }
 
 describe('wp-export: die Aktion `bestand`', () => {
-  const quelle = fs.readFileSync(QUELLE, 'utf8');
-
   it('ist als gültige Aktion aufgezählt', () => {
-    expect(quelle).toContain('const AKTIONEN = ["probe", "export", "bestand"];');
+    const treffer = suche({
+      frage: 'AKTIONEN enthält "bestand"',
+      dateien: [QUELLE],
+      finde: (baum) => {
+        const werte: string[] = [];
+        jederKnoten(baum, (n) => {
+          if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)
+              && n.name.text === 'AKTIONEN' && n.initializer) {
+            werte.push(...textLiterale(n.initializer));
+          }
+        });
+        return werte.includes('bestand') ? ['ja'] : [];
+      },
+      positivkontrolle: 'const AKTIONEN = ["probe", "bestand"];',
+    });
+    expect(treffer.length).toBe(1);
   });
 
-  /* Der Kern. Ein `fetch` ohne Methode ist GET; alles andere wäre ein
+  /* Der Kern. Ein `fetch` ohne `method` ist GET; alles andere wäre ein
      Schreibvorgang gegen die Website. */
-  it('schreibt nicht — kein POST, kein PUT, kein DELETE gegen WordPress', () => {
-    const körper = rumpf(ohneKommentare(quelle), 'async function holeBestand(');
-    expect(körper).toMatch(/clubcampus\/v1\/bestand/);
-    expect(körper).not.toMatch(/method:\s*["'](POST|PUT|PATCH|DELETE)["']/i);
+  it('holt den Bestand mit GET, nicht mit POST', () => {
+    const treffer = suche({
+      frage: 'ein schreibendes fetch in holeBestand',
+      dateien: [QUELLE],
+      finde: (baum) => objektEigenschaften(bestandRumpf(baum))
+        .filter(([k, v]) => k === 'method' && v.toUpperCase() !== 'GET'),
+      positivkontrolle:
+        'async function holeBestand() { await fetch(u, { method: "POST" }); }',
+    });
+    expect(treffer.map((t) => t.fund)).toEqual([]);
+  });
+
+  it('spricht die Bestandsroute an', () => {
+    const treffer = suche({
+      frage: 'die Route clubcampus/v1/bestand',
+      dateien: [QUELLE],
+      finde: (baum) => textLiterale(bestandRumpf(baum))
+        .filter((t) => t.includes('clubcampus/v1/bestand')),
+      positivkontrolle:
+        'async function holeBestand() { await fetch(`${b}/clubcampus/v1/bestand`); }',
+    });
+    expect(treffer.length).toBeGreaterThan(0);
   });
 
   /* Ein Nachsehen ist kein Lauf. Stünde es im Protokoll, verschöbe es
      letzter_sync — und die Kachel meldete einen Export, den es nie gab.
 
-     ⚠ Diese Prüfung war zuerst zu scharf gefasst: sie verbot die
-     TABELLENNAMEN `api_sync_log` und `api_verbindungen`. Damit verbot sie
-     auch das LESEN — und genau das braucht der Zeitraum, dessen Beginn aus
-     dem ersten Protokolleintrag kommt. Die Zusage lautet „sie schreibt
-     nicht", nicht „sie sieht nicht hin". Ein Test, der mehr verbietet als
-     die Zusage, steht dem nächsten richtigen Schritt im Weg und wird dann
-     aufgeweicht — dabei geht meist auch die echte Hälfte verloren. */
+     ⚠ Verboten ist das SCHREIBEN, nicht der Tabellenname. Die
+     Vorgängerfassung verbot `api_sync_log` als Zeichenkette und damit auch
+     das Lesen — genau das, was der Zeitraum braucht. Ein Test, der mehr
+     verbietet als die Zusage, steht dem nächsten richtigen Schritt im Weg
+     und wird dann aufgeweicht; dabei geht meist auch die echte Hälfte
+     verloren. */
   it('schreibt nichts in die Datenbank — auch nicht ins Protokoll', () => {
-    const körper = rumpf(ohneKommentare(quelle), 'async function holeBestand(');
-    for (const verboten of ['.insert(', '.update(', '.upsert(', '.delete(', '.rpc(']) {
-      expect(körper).not.toContain(verboten);
-    }
-    /* Die positive Hälfte: was sie mit der Datenbank tut, ist select. */
-    expect(körper).toContain('.select(');
+    const VERBOTEN = ['insert', 'update', 'upsert', 'delete', 'rpc'];
+    const treffer = suche({
+      frage: 'ein schreibender Datenbankaufruf in holeBestand',
+      dateien: [QUELLE],
+      finde: (baum) => aufrufNamen(bestandRumpf(baum)).filter((n) => VERBOTEN.includes(n)),
+      positivkontrolle:
+        'async function holeBestand() { await db.from("x").insert({ a: 1 }); }',
+    });
+    expect(treffer.map((t) => t.fund)).toEqual([]);
   });
 
-  /* Ungekürzt: wer entscheiden soll, muss alle sehen. Dieselbe Lehre wie
-     bei der Löschvorschau, deren Schwelle von 20 bei einem Stapel von
-     zwei umfiel. */
-  /* ⚠ DIESE ZWEI FAELLE HABEN DEN BESITZER GEWECHSELT — und das ist der
-     richtige Ausgang, nicht ein Verlust.
+  it('liest die Datenbank nur mit select', () => {
+    const treffer = suche({
+      frage: 'select in holeBestand',
+      dateien: [QUELLE],
+      finde: (baum) => aufrufNamen(bestandRumpf(baum)).filter((n) => n === 'select'),
+      positivkontrolle: 'async function holeBestand() { await db.from("x").select("id"); }',
+    });
+    expect(treffer.length).toBeGreaterThan(0);
+  });
 
-     Sie prüften früher `beitraege: zeilen` und `zaehlung_stimmt` im Rumpf
-     der Edge Function. Beides ist am 07.09.2026 nach
-     `domains/spiele/wpBestand.ts` gewandert, weil es RECHNUNG ist und
-     keine Zusage — und dort prüfen es echte Fälle mit echten Daten
-     (`wpBestandZeitraum.test.ts`), statt eines Zeichenvergleichs auf den
-     Quelltext.
+  /* Die Rechnung gehört nach wpBestand.ts, wo echte Fälle sie prüfen.
+     Hier bleibt nur die Frage, ob die Function sie überhaupt BENUTZT.
 
-     ⚠ Eine Strukturprüfung ist das Mittel für das, was sich nicht
-     ausführen lässt. Wo ein richtiger Test möglich ist, ist sie die
-     schwächere Antwort. Was hier bleibt, ist deshalb nur noch die Frage,
-     ob die Function die Rechnung überhaupt BENUTZT — und ob sie daneben
-     nicht doch selbst kürzt. */
+     ⚠ Die Namen kommen aus den FUNKTIONEN selbst (`.name`), nicht aus
+     Zeichenketten. Zwei Gründe, und der zweite ist der bessere:
+       · `check:quotes` sieht in `waehleZeitraum` sonst eine
+         Umlaut-Ersatzschreibung in einem Literal — richtig gefragt,
+         hier aber ein Bezeichner und keine Prosa.
+       · Wichtiger: eine Umbenennung kann die Prüfung so nicht mehr
+         still aushöhlen. Stünde der Name als Text da, wäre sie nach
+         einem Rename grün und prüfte nichts mehr. */
   it('rechnet nicht selbst, sondern benutzt wpBestand.ts', () => {
-    const körper = rumpf(ohneKommentare(quelle), 'async function holeBestand(');
-    expect(körper).toContain('waehleZeitraum(');
-    expect(körper).toContain('fassBestandZusammen(');
-    expect(körper).toContain('...erg,');
+    const gebraucht = [waehleZeitraum.name, fassBestandZusammen.name];
+    const treffer = suche({
+      frage: 'Aufruf der Zeitraum-Rechnung aus wpBestand',
+      dateien: [QUELLE],
+      finde: (baum) => aufrufNamen(bestandRumpf(baum)).filter((n) => gebraucht.includes(n)),
+      positivkontrolle:
+        `async function holeBestand() { return ${gebraucht[1]}(z, ${gebraucht[0]}(v, e), e); }`,
+    });
+    expect(new Set(treffer.map((t) => t.fund))).toEqual(new Set(gebraucht));
   });
 
+  /* ⚠ Nicht „kein .slice" — die Fehlerpfade kürzen den Antworttext von
+     WordPress, und das ist richtig so. Gefragt ist eine Kürzung DER LISTE. */
   it('kürzt die Liste nicht', () => {
-    const körper = rumpf(ohneKommentare(quelle), 'async function holeBestand(');
-    /* ⚠ DRITTER ANLAUF, UND JEDES MAL DASSELBE MUSTER.
-
-       Erst traf `onClick={()=>{}}` einen Kommentar, dann `post_modified`
-       einen zweiten — und hier traf ein Verbot von `\blimit\b` das
-       `.limit(1)`, mit dem der ERSTE Protokolleintrag geholt wird. Das ist
-       kein Kürzen der Liste, sondern das Gegenteil: es holt die eine Zeile,
-       aus der die Zeitraumgrenze kommt.
-
-       Eine Strukturprüfung sucht Zeichen und kennt keine Bedeutung. Sie
-       taugt nur mit einem Muster, das die SACHE trifft — hier also eine
-       Kürzung DER LISTE, nicht das Wort `limit` irgendwo. */
-    expect(körper).not.toMatch(/(zeilen|beitraege|erg\.beitraege)\s*\.slice\(/);
-    expect(körper).not.toContain('HOECHSTENS');
+    const LISTEN = ['zeilen', 'beitraege'];
+    const treffer = suche({
+      frage: 'eine Kürzung der Beitragsliste',
+      dateien: [QUELLE],
+      finde: (baum) => {
+        const fund: string[] = [];
+        jederKnoten(bestandRumpf(baum), (n) => {
+          if (!ts.isCallExpression(n) || !ts.isPropertyAccessExpression(n.expression)) return;
+          const z = n.expression;
+          if (!['slice', 'splice'].includes(z.name.text)) return;
+          if (ts.isIdentifier(z.expression) && LISTEN.includes(z.expression.text)) {
+            fund.push(`${z.expression.text}.${z.name.text}`);
+          }
+        });
+        return fund;
+      },
+      positivkontrolle: 'async function holeBestand() { return zeilen.slice(0, 20); }',
+    });
+    expect(treffer.map((t) => t.fund)).toEqual([]);
   });
 
   /* Die Gegenprobe auf die Besitzregel steht AUSSERHALB des Zeitraums: ein
      Handbeitrag hat mit dem Export nichts zu tun und darf durch keinen
      Filter verschwinden. */
-  it('führt die Handbeiträge ungefiltert mit', () => {
-    const körper = rumpf(ohneKommentare(quelle), 'async function holeBestand(');
-    expect(körper).toContain('handbeitraege');
-    expect(körper).toContain('seiten_einig');
-  });
-});
-
-/* Gegenprobe zum Stripper: er darf den Code nicht mit den Kommentaren
-   wegnehmen. Wäre er zu gierig, bestünden die Fälle oben immer. */
-describe('der Kommentar-Stripper', () => {
-  it('lässt den Code stehen', () => {
-    const rest = ohneKommentare(fs.readFileSync(QUELLE, 'utf8'));
-    expect(rest).toContain('async function holeBestand(');
-    expect(rest).not.toContain('DER BESTAND');   // steht nur im Banner-Kommentar
-  });
-});
-
-describe('clubcampus-export.php: die Route /bestand', () => {
-  const plugin = fs.readFileSync(PLUGIN, 'utf8');
-
-  it('ist als GET registriert, nicht als POST', () => {
-    const block = plugin.slice(plugin.indexOf("'/bestand'"));
-    expect(block.slice(0, 300)).toMatch(/'methods'\s*=>\s*'GET'/);
-  });
-
-  it('ändert nichts — kein wp_update_post, kein wp_delete_post, kein update_field', () => {
-    const körper = rumpf(ohneKommentare(plugin), 'function cc_route_bestand(');
-    for (const verboten of ['wp_update_post', 'wp_delete_post', 'wp_insert_post',
-                            'update_field', 'update_post_meta', 'delete_post_meta']) {
-      expect(körper).not.toContain(verboten);
-    }
-  });
-
-  /* Der Laufstempel ist das einzige Merkmal, an dem „seit dem Einspielen
-     nicht mehr angefasst" überhaupt erkennbar ist. Ohne ihn beantwortet
-     die Liste die Frage nicht, für die sie gebaut wurde. */
-  it('der Export stempelt jeden geschriebenen Beitrag', () => {
-    expect(plugin).toContain('cc_stempel( (int) $postId, $lauf );');
-    expect(plugin).toContain("$lauf   = trim( (string) ( $daten['lauf'] ?? '' ) );");
-  });
-
-  /* ⚠ post_modified bewegt sich beim Auffrischen NICHT (update_field
-     schreibt nur Postmeta). Ein Feld, das jemand für „zuletzt angefasst"
-     hält und das etwas anderes misst, ist schlimmer als keines. */
-  it('gibt post_modified nicht als Zeitangabe heraus', () => {
-    const körper = rumpf(ohneKommentare(plugin), 'function cc_route_bestand(');
-    expect(körper).not.toContain('post_modified');
-    /* ⚠ Mit Zone. `post_date_gmt` und `post_date` sehen identisch aus und
-       unterscheiden sich um den Zeitzonenversatz — eine Verwechslung
-       verschiebt jeden Zeitpunkt, ohne dass etwas fehlschlägt. */
-    expect(körper).toContain("get_post_time( 'c', true,");
+  it('führt die Handbeiträge und die Einigkeit der Seiten mit', () => {
+    const treffer = suche({
+      frage: 'die Felder handbeitraege und seiten_einig in der Antwort',
+      dateien: [QUELLE],
+      finde: (baum) => objektEigenschaften(bestandRumpf(baum))
+        .map(([k]) => k)
+        .filter((k) => k === 'handbeitraege' || k === 'seiten_einig'),
+      positivkontrolle:
+        'async function holeBestand() { return { handbeitraege: 1, seiten_einig: true }; }',
+    });
+    expect(new Set(treffer.map((t) => t.fund)))
+      .toEqual(new Set(['handbeitraege', 'seiten_einig']));
   });
 });

@@ -16,7 +16,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { makeSb } from "./_mockSb.ts";
 import { beendeMitgliedschaft, bleibtMitglied, entferneAustrittsart } from "../supporterService.ts";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
+import ts from "typescript";
+import { suche, jederKnoten, kette, zeileVon } from "../../../test-helpers/quelltext.ts";
 import { join } from "node:path";
 
 /** Alle .ts/.tsx unter einem Ordner, rekursiv. */
@@ -480,17 +482,32 @@ describe("⚠ Kein Weg in src/ loescht aus `mitglieder`", () => {
      IST die Aufgabe, sie laesst sich nicht verkleinern. Also die Grenze
      dorthin, wo sie hingehoert. */
   it("keine Datei ruft `.from(\"mitglieder\").delete()`", () => {
-    /* Beide Schreibweisen: der Aufruf steht mal in einer Zeile, mal ueber
-       zwei umgebrochen. */
-    const MUSTER = /from\(\s*["'`]mitglieder["'`]\s*\)[\s\S]{0,80}?\.delete\(/;
-    const treffer: string[] = [];
-    for (const datei of alleQuellDateien("src")) {
-      const inhalt = readFileSync(datei, "utf8");
-      if (MUSTER.test(inhalt)) {
-        treffer.push(datei.split("\\").join("/"));
-      }
-    }
-    expect(treffer, `Diese Dateien löschen aus \`mitglieder\` und loesen damit `
-      + `die CASCADE auf \`eltern_kinder\` aus: ${treffer.join(", ")}`).toEqual([]);
+    /* ⚠ UMGESTELLT AM 08.09.2026 VOM TEXT AUF DEN SYNTAXBAUM.
+       Die Textfassung suchte `from("mitglieder")` und danach in einem
+       Fenster von 80 Zeichen ein `.delete(`. Das Fenster war geraten, und
+       ein Kommentar, der den Aufruf beschreibt, hätte getroffen. Der Baum
+       liest die AUFRUFKETTE: `.delete()` und die Frage, worauf sie sich
+       bezieht — kein Fenster, keine Schreibweise. */
+    const treffer = suche({
+      frage: "eine Löschung auf der Tabelle mitglieder",
+      dateien: alleQuellDateien("src"),
+      finde: (baum) => {
+        const fund: string[] = [];
+        jederKnoten(baum, (n) => {
+          if (!ts.isCallExpression(n)) return;
+          const z = n.expression;
+          if (!ts.isPropertyAccessExpression(z) || z.name.text !== "delete") return;
+          const glieder = kette(n);
+          if (glieder.some((g) => g.name === "from" && g.texte.includes("mitglieder"))) {
+            fund.push(`Zeile ${zeileVon(n)}`);
+          }
+        });
+        return fund;
+      },
+      positivkontrolle: 'await sb.from("mitglieder").delete().eq("id", 1);',
+    });
+    expect(treffer.map((t) => `${t.datei}: ${t.fund}`),
+      "Diese Stellen löschen aus `mitglieder` und lösen damit die CASCADE "
+      + "auf `eltern_kinder` aus").toEqual([]);
   }, 30_000);
 });
