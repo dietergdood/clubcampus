@@ -2717,15 +2717,37 @@ und aktualisiert `label` über `on conflict … do update`; `active`,
 stehen absichtlich **nicht** im `SET` und bleiben unangetastet — ein Lauf
 schaltet also nichts ab und setzt keinen Zustand zurück.
 
-**Gegenprobe für Didi** — vorher und nachher dieselbe Zeile:
+**✅ Bereinigt am 08.09.2026.** Didi hat ausgeführt:
 
 ```sql
-select key, label, active, auto_sync, sync_status,
+update public.api_verbindungen set label = 'WordPress-Export', api_url = null
+ where key = 'wordpress';
+```
+
+⚠ **`api_url` war der zweite Wert von Hand**, und er ist der lehrreichere.
+Dort stand `https://www.fcherrliberg.ch/wp-json`, während der Export nach
+`dev.fcherrliberg.ch` schrieb. **Die Migration hatte genau das
+vorhergesagt** (§4.2): *„zwei Orte für eine Aussage laufen auseinander …
+ohne dass etwas fehlschlägt."* Sie setzt die Spalte auf `null` und
+schliesst sie aus dem `on conflict`-SET aus; kein Code im Projekt schreibt
+sie. Der Wert konnte nur direkt in die Tabelle gekommen sein.
+
+**Aufgefallen ist es erst, als die Kachel das Ziel anzeigte** — und die
+erste Fassung dieser Anzeige zeigte `api_url`, also die Konfiguration, und
+nannte sie „Ziel". Sie hätte den Fehler damit festgeschrieben statt ihn zu
+melden. Seit §15.3 zeigt sie die Beobachtung und meldet den Widerspruch.
+
+**Gegenprobe, jederzeit wiederholbar:**
+
+```sql
+select key, label, api_url, active, auto_sync, sync_status,
        letzter_sync at time zone 'Europe/Zurich' as letzter_sync
   from public.api_verbindungen where key = 'wordpress';
 ```
 
-`label` muss danach `WordPress-Export` sein, alles andere unverändert.
+`label` = `WordPress-Export`, `api_url` = `null`. Steht dort wieder eine
+Adresse, meldet es die Kachel von selbst — sie hält `api_url` gegen den
+Ziel-Host des letzten Laufs.
 
 > ✅ **Entschieden (Didi, 07.09.2026): Anzeigename ohne Klammer, Ziel als
 > eigene Zeile.** Begründung wörtlich: *„die Klammer sieht aus wie ein Ziel
@@ -2756,6 +2778,53 @@ Sync", **und die Wächter-Zeile** (`:170-176`) — samt der richtigen
 Anzeige „— noch nie gelaufen", wenn nichts da ist. Genau die vier
 Angaben, die der Auftrag verlangt, kommen aus derselben Quelle wie der
 Wächter. Es braucht **keine** zweite Zählung.
+
+---
+
+---
+
+### 15.3 ✅ Das Ziel-Feld zeigt die Beobachtung, nicht die Konfiguration (08.09.2026)
+
+**Didis Befund:** die Kachel nannte **drei verschiedene Adressen** — Titel
+„fcherrliberg.ch", Ziel „https://www.fcherrliberg.ch/wp-json", Meldung
+„dev.fcherrliberg.ch". Geschrieben wurde nach dev.
+
+⚠ **Und mein Ziel-Feld war die dritte Behauptung, nicht die Auflösung.** Es
+zeigte `api_url` — also Konfiguration — und hiess „Ziel". Didi: *„sonst ist
+es dieselbe abgeleitete Behauptung wie vorher, nur an anderer Stelle."*
+Richtig: eine Konfiguration sagt, wohin geschrieben werden SOLL; sie kann
+falsch sein, und hier war sie es.
+
+**Die Kachel zeigt jetzt drei Zeilen, jede mit genau einer Aussage:**
+
+| Zeile | Quelle | kann veralten? |
+|---|---|---|
+| **Zuletzt geschrieben nach** | `api_sync_log.details.ziel_host` | ⚠ nein — ein Lauf hat stattgefunden |
+| **Eingestellt (api_url)** | die Konfiguration, eigens beschriftet | ja, und das ist der Punkt |
+| **⚠ Widerspruch** | beide bekannt und verschieden | erscheint nur dann |
+
+⚠ **Ein FELD, kein Text.** `ziel_host` schreibt der Export selbst; die
+Kachel zerlegt nicht `sync_meldung`. Den eigenen Ausgabetext zu parsen, um
+zu erfahren, was man hineingeschrieben hat, misst die Formatierung mit.
+
+⚠ **Damit sind zwei Quellen keine Schwäche mehr, sondern eine Gegenprobe** —
+dieselbe Lehre wie bei den zwei Anzeigen im Profilkopf, die sich
+widersprachen und dadurch einen Fehler meldeten. Nur hier absichtlich
+gebaut statt zufällig entstanden.
+
+**Grenze, die die Kachel selbst benennt:** sie lädt die letzten 50
+Protokollzeilen. Liegt der letzte Lauf weiter zurück, steht dort
+„— kein Lauf in den geladenen Protokollzeilen" — nicht „nie gelaufen".
+
+Gehalten von fünf Fällen in `apiKacheln.test.jsx`, darunter der Fall, der
+am 08.09.2026 wirklich in der Kachel stand (www gegen dev). Gegengeprobt:
+mit `api_url` als Quelle sind zwei davon rot.
+
+**Offen bleibt der Knopf.** „Sync starten" für den Export gehört dazu —
+**ab Etappe 5, mit Rückfrage** (Didi, 08.09.2026). Heute geht er nicht:
+`export` verlangt `nur_team`, und diese Sperre fällt erst mit Etappe 5. Ein
+Klick, der auf eine öffentliche Website schreibt, ist kein „Sync starten"
+wie beim SFV.
 
 ---
 
