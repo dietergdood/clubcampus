@@ -70,7 +70,7 @@ const PROBE_HOECHSTENS = 25;
 
 /** Die gueltigen Aktionen — eine Liste, aus der die Pruefung UND die
     Fehlermeldung lesen. Zwei Orte koennten auseinanderlaufen. */
-const AKTIONEN = ["probe", "export", "bestand"];
+const AKTIONEN = ["probe", "export", "bestand", "status"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -148,6 +148,12 @@ Deno.serve(async (req) => {
        Bestandsliste unerreichbar, ausgerechnet wenn man sie braucht. */
     if (aktion === "bestand") {
       return json(await holeBestand(db, vereinId, { von, bis }));
+    }
+    /* ⚠ Vor allem anderen, und ohne Datenbank: sie beantwortet die Frage
+       „steht auf der Website überhaupt etwas vom Export?" — auch dann noch,
+       wenn der Rest klemmt. */
+    if (aktion === "status") {
+      return json(await holeStatus());
     }
 
     const erg = await laufeProbe(db, vereinId, nurTeam);
@@ -392,6 +398,62 @@ async function holeBestand(
        weggelassen. */
     gesamt_laut_wordpress: Number(wp.gesamt ?? 0),
     seiten_einig: zeilen.length === Number(wp.gesamt ?? 0),
+  };
+}
+
+
+/**
+ * Was WordPress selbst über seinen Bestand sagt — ohne etwas zu ändern.
+ *
+ * ⚠ SIE BRAUCHT DIE NEUE PLUGIN-FASSUNG NICHT. `/clubcampus/v1/status` ist
+ *   seit der ersten Fassung installiert; `bestand` wäre die reichere
+ *   Auskunft, liegt aber noch im anderen Repository.
+ *
+ * ⚠ DIE ZAHL, AUF DIE ES ANKOMMT, IST `spiele_abgleich`.
+ *
+ *   `spiele_gesamt` zählt nur veröffentlichte Beiträge — ein zurückgezogener
+ *   oder als Entwurf angelegter käme darin nicht vor, und genau danach
+ *   sucht man, wenn Beiträge „fehlen".
+ *
+ *   `spiele_abgleich` zählt über `cc_abgleich_kandidaten()`, also über das
+ *   BESITZMERKMAL `sfv_match_id` und über die Status publish, draft,
+ *   pending und private. Steht dort 0, hat der Export auf dieser Website
+ *   noch nie einen Beitrag angelegt — in keinem Status.
+ *
+ * ⚠ Und sie nennt den Ziel-Host. Wer „ich sehe die Beiträge nicht" sagt,
+ *   muss zuerst wissen, ob er auf dieselbe Installation sieht.
+ */
+async function holeStatus() {
+  const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
+  const benutzer = Deno.env.get("WP_BENUTZER") ?? "";
+  const passwort = Deno.env.get("WP_APP_PASSWORT") ?? "";
+  if (!basis || !benutzer || !passwort) {
+    throw new Error("WP_BASIS_URL, WP_BENUTZER oder WP_APP_PASSWORT nicht gesetzt");
+  }
+  const host = new URL(basis).host;
+
+  const antwort = await fetch(`${basis}/clubcampus/v1/status`, {
+    headers: { Authorization: "Basic " + btoa(`${benutzer}:${passwort}`) },
+  });
+  const text = await antwort.text();
+  let wp: Record<string, unknown>;
+  try {
+    wp = JSON.parse(text);
+  } catch {
+    throw new Error(`WordPress antwortete kein JSON (${antwort.status}): ${text.slice(0, 200)}`);
+  }
+
+  /* Aufgezählt, nicht durchgereicht — dieselbe Regel wie überall sonst. */
+  return {
+    ziel: host,
+    hinweis: "Nachsehen, nicht schreiben. Nichts geändert, nichts protokolliert.",
+    bereit: wp.bereit === true,
+    fehlt: (wp.fehlt as string[] | undefined) ?? [],
+    /* Nur veröffentlichte. */
+    spiele_veroeffentlicht: Number(wp.spiele_gesamt ?? 0),
+    /* ⚠ Die entscheidende Zahl: Beiträge mit sfv_match_id, ALLE Status. */
+    spiele_des_exports: Number(wp.spiele_abgleich ?? 0),
+    als_benutzer: String(wp.benutzer ?? ""),
   };
 }
 

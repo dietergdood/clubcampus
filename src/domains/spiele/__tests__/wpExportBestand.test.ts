@@ -65,6 +65,28 @@ describe('wp-export: die Aktion `bestand`', () => {
     expect(treffer.length).toBe(1);
   });
 
+  /* `status` fragt die Website, was bei ihr steht — und braucht dafür die
+     neue Plugin-Fassung NICHT. Dieselbe Zusage wie `bestand`: nur lesen. */
+  it('schreibt auch in `status` nichts', () => {
+    const VERBOTEN = ['insert', 'update', 'upsert', 'delete', 'rpc'];
+    const treffer = suche({
+      frage: 'ein schreibender Aufruf in holeStatus',
+      dateien: [QUELLE],
+      finde: (baum) => {
+        const rumpf = findeFunktion(baum, 'holeStatus');
+        if (!rumpf) throw new Error('holeStatus nicht gefunden');
+        const schreibt = aufrufNamen(rumpf).filter((n) => VERBOTEN.includes(n));
+        const methode = objektEigenschaften(rumpf)
+          .filter(([k, v]) => k === 'method' && v.toUpperCase() !== 'GET')
+          .map(([, v]) => v);
+        return [...schreibt, ...methode];
+      },
+      positivkontrolle:
+        'async function holeStatus() { await fetch(u, { method: "POST" }); }',
+    });
+    expect(treffer.map((t) => t.fund)).toEqual([]);
+  });
+
   /* Der Kern. Ein `fetch` ohne `method` ist GET; alles andere wäre ein
      Schreibvorgang gegen die Website. */
   it('holt den Bestand mit GET, nicht mit POST', () => {
