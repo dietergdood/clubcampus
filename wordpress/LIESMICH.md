@@ -7,7 +7,7 @@ Gehört zu `docs/plan_wordpress_spieldaten.md` (Etappe 3) und
 
 | | | Zuhause |
 |---|---|---|
-| `clubcampus-export.php` | nimmt Spielplan, Verlauf und Ranglisten entgegen | offen — siehe unten |
+| `wp-export-empfaenger.php` | nimmt Spielplan, Verlauf und Ranglisten entgegen | offen — siehe unten |
 | `fch-rest-schutz.php` | schliesst die Benutzeraufzählung über `/wp-json/`, meldet zwei stille Veröffentlichungsschalter | ⚠ **`fch-theme`**, nicht hier |
 
 ⚠ **`fch-rest-schutz.php` gehört nicht dauerhaft in dieses Repository.**
@@ -20,7 +20,7 @@ mu-plugin meldet nichts. Sie gehört eingecheckt, wo `fch-core` steht.
 ## Einbauen
 
 ```
-wp-content/mu-plugins/clubcampus-export.php     (neben fch-core.php)
+wp-content/mu-plugins/wp-export-empfaenger.php     (neben fch-core.php)
 ```
 
 Als **mu-plugin**, nicht als gewöhnliches Plugin: mu-plugins lassen sich im

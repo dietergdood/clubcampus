@@ -399,7 +399,34 @@ Zustand niemand sonst prüfen kann.
 
 ## 4 · Das Plugin — schreibe ich, du installierst es
 
-Als **mu-plugin**: `wp-content/mu-plugins/clubcampus-export.php`.
+> ⚠⚠ **STAND 08.09.2026: AUF DEM SERVER LÄUFT EIN ANDERER EMPFÄNGER.**
+>
+> `fch-core` bringt unter `src/Spiegel/clubcampus-export.php` eine eigene
+> Fassung mit. Sie ist meiner in der Anmeldung voraus (gemeinsames Geheimnis
+> statt Application Password) und **gewinnt**. Meine Datei heisst seit dem
+> 08.09.2026 `wp-export-empfaenger.php` und ist derzeit **nicht installiert**.
+>
+> ⚠ **Beide zugleich gehen nicht:** gleiche Funktions- und Konstantennamen,
+> PHP stirbt an der Doppeldeklaration. Der Abschnitt hier gilt für den Fall,
+> dass meine Fassung wieder gebraucht wird — siehe §12.2 im Plan.
+
+Als **mu-plugin**, und der Ort entscheidet, OB sie überhaupt geladen wird:
+
+| Ort | wer lädt sie | Ergebnis |
+|---|---|---|
+| `wp-content/mu-plugins/wp-export-empfaenger.php` | **WordPress selbst**, automatisch | ✅ so ist sie gedacht |
+| `wp-content/mu-plugins/fch-core/src/…` | **niemand** — ausser sie steht in `FCH_CORE_BAUSTEINE` | ❌ Route antwortet 404, nichts meldet es |
+| beides zugleich | beide | ❌ Fatal Error, weisse Seite |
+
+⚠ **WordPress lädt aus `mu-plugins/` nur Dateien der OBERSTEN Ebene.** Was
+in einem Unterordner liegt, ist für WordPress unsichtbar; `fch-core` holt
+seine Bausteine mit `require_once` aus einer **ausdrücklichen Liste**
+(`FCH_CORE_BAUSTEINE` in `mu-plugins/fch-core.php`) — kein `glob()`. Eine
+Datei, die dort nicht eingetragen ist, wird nie geladen; eine, die
+eingetragen ist und fehlt, lässt den Lader mit 500 abbrechen.
+
+**Also: neben `fch-core.php`, nicht darin.** Ein Unterordner ginge nur mit
+einem Eintrag in der Bausteinliste — und der gehört dem anderen Repository.
 
 **Warum mu statt normal:** mu-plugins lassen sich im Backend nicht
 deaktivieren und werden bei Theme-Wechseln nicht mitgerissen. Ein Plugin,

@@ -6,20 +6,43 @@
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
  * Version:     0.1.0
  *
- * ── WOHIN DIESE DATEI GEHOERT ────────────────────────────────────────────
- *   wp-content/mu-plugins/clubcampus-export.php  (neben fch-core.php)
+ * ⚠ ⚠  STAND 08.09.2026: DIESE DATEI IST NICHT INSTALLIERT  ⚠ ⚠
+ *
+ *   Auf dem Server laeuft ein ANDERER Empfaenger: `fch-core` bringt unter
+ *   `src/Spiegel/clubcampus-export.php` eine eigene Fassung mit. Sie ist
+ *   ein Fork DIESER Datei (der Kopf hier steht auch dort) und in der
+ *   Anmeldung besser: gemeinsames Geheimnis aus der wp-config.php mit
+ *   hash_equals, statt Application Password und `edit_posts`.
+ *
+ *   > Mit `edit_posts` konnte JEDER angemeldete Redakteur Resultate,
+ *   > Verlauf und Ranglisten schreiben. Das war ein Loch, und es ist dort
+ *   > geschlossen.
+ *
+ *   ⚠ BEIDE ZUGLEICH GEHEN NICHT. Gleiche Funktions- und Konstantennamen
+ *   (`cc_darf_schreiben`, `cc_route_spiele`, `CC_ROUTE`, `CC_TYP_SPIEL`) —
+ *   PHP stirbt an der Doppeldeklaration. Ein anderer Dateiname aendert
+ *   daran nichts; er verhindert nur die VERWECHSLUNG, und die hat am
+ *   08.09.2026 einen halben Tag gekostet.
+ *
+ *   Was aus dieser Datei drueben FEHLT und uebergeben gehoert:
+ *   `cc_stempel()` samt `_cc_lauf`, die Route `/bestand`, und
+ *   `get_post_time('c', true)` statt `post_date_gmt`.
+ *
+ * ── WOHIN DIESE DATEI GEHOERT, FALLS SIE WIEDER GEBRAUCHT WIRD ──────────
+ *   wp-content/mu-plugins/wp-export-empfaenger.php  —  OBERSTE EBENE,
+ *   neben fch-core.php, NICHT darin.
+ *
+ *   ⚠ WordPress laedt aus mu-plugins/ nur Dateien der obersten Ebene. Was
+ *   in einem Unterordner liegt, ist fuer WordPress unsichtbar; `fch-core`
+ *   holt seine Bausteine mit require_once aus einer AUSDRUECKLICHEN Liste
+ *   (`FCH_CORE_BAUSTEINE`), nicht per glob(). Eine Datei, die dort nicht
+ *   eingetragen ist, wird nie geladen — und die Route antwortet 404, ohne
+ *   dass etwas fehlschlaegt.
  *
  *   Als mu-plugin, nicht als gewoehnliches: mu-plugins lassen sich im
  *   Backend nicht abschalten. Ein Plugin, das jemand versehentlich
  *   deaktiviert, nimmt die Route mit — und der Abgleich bekaeme 404 statt
  *   einer Antwort, waehrend die Website unveraendert aussieht.
- *
- * ⚠ ZWEI ORTE, EIN INHALT — DAS GEHOERT ENTSCHIEDEN
- *   Diese Datei liegt im ClubCampus-Repository, laeuft aber in fch-theme.
- *   Solange sie an beiden Orten liegt, koennen die Fassungen auseinander
- *   laufen, und niemand merkt es: WordPress meldet keinen Versionsfehler.
- *   Vor dem ersten scharfen Lauf festlegen, welches Repository sie besitzt,
- *   und im anderen nur einen Verweis stehen lassen.
  *
  * ── WAS SIE TUT, UND WAS AUSDRUECKLICH NICHT ────────────────────────────
  *

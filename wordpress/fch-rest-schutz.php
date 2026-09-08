@@ -7,7 +7,7 @@
  * Version:     0.1.0
  *
  * ⚠ DIES IST NICHT DER CLUBCAMPUS-EXPORT und gehoert bewusst nicht in
- *   `clubcampus-export.php`. Der Export hat mit der Benutzerliste nichts zu
+ *   `wp-export-empfaenger.php`. Der Export hat mit der Benutzerliste nichts zu
  *   tun; ein Plugin, das nebenbei fremde Routen abschaltet, ueberrascht den
  *   naechsten Leser an einer Stelle, an der er es nicht sucht.
  *

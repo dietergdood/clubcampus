@@ -829,7 +829,7 @@ select gestartet_am at time zone 'Europe/Zurich' as zeit,
 
 ⚠ **Ein zweiter Export desselben Teams erzeugt keine Dubletten.** Der
 Schlüssel ist `sfv_match_id`: findet das Plugin einen Beitrag damit,
-**aktualisiert** es ihn (`clubcampus-export.php:480`), sonst legt es an.
+**aktualisiert** es ihn (`wp-export-empfaenger.php:480`), sonst legt es an.
 Etappe 4 darf deshalb beliebig oft wiederholt werden — es entsteht nichts
 Zusätzliches.
 
@@ -1029,7 +1029,7 @@ add_filter( 'rest_endpoints', function ( $e ) {
 ```
 
 ⚠ **Nur für Nichtangemeldete** — der Block-Editor braucht die Route für
-die Autorenauswahl. Und ⚠ **nicht in `clubcampus-export.php`**: der
+die Autorenauswahl. Und ⚠ **nicht in `wp-export-empfaenger.php`**: der
 Export hat mit der Benutzerliste nichts zu tun, und ein Plugin, das
 nebenbei fremde Routen abschaltet, überrascht den nächsten Leser. Sie
 gehört in `fch-core` oder ein eigenes kleines mu-plugin — Didis
@@ -2372,7 +2372,7 @@ die niemand prüft.
 
 ### ⚠ 12.1 Die Plugin-Datei liegt im falschen Repository
 
-`wordpress/clubcampus-export.php` liegt in **fch-portal** und läuft in
+`wordpress/wp-export-empfaenger.php` liegt in **fch-portal** und läuft in
 **fch-theme** (`mu-plugins/`). Sie liegt hier, weil ich in fch-theme nicht
 schreiben darf — das betreut ein anderer Chat.
 
@@ -2390,6 +2390,66 @@ gekommen sind
 **Einspielen, bevor Etappe 4 erneut läuft.** Der Stempel wirkt ab dem
 Einspielen, nicht rückwirkend: was vorher geschrieben wurde, bleibt
 ungestempelt — und ist damit korrekt als „fraglich" ausgewiesen.
+
+### ⚠⚠ 12.2 Zwei Dateien mit demselben Namen — ein halber Tag (08.09.2026)
+
+**Der teuerste Befund dieses Vorhabens, und kein Werkzeug hätte ihn
+gemeldet.**
+
+Auf dem Server liegt unter `fch-core/src/Spiegel/clubcampus-export.php` ein
+**anderer** Empfänger als der in `wordpress/`. Beide heissen gleich, beide
+registrieren `clubcampus/v1`, beide stammen vom selben Vorfahren — der Kopf
+meiner Datei steht auch dort. Der Website-Chat hat sie übernommen und
+weiterentwickelt.
+
+> **Der Dateiname war richtig. Der Inhalt gehörte zum anderen Weg.**
+
+Didi hat einen halben Nachmittag gegen diese fremde Datei getestet — mit
+meinen Anleitungen, meinen Aufrufen und meinen Erwartungen. Die Antworten
+waren echt, sie kamen nur aus einer anderen Implementierung. **Nichts an
+diesem Zustand sieht falsch aus:** die Datei liegt, wo eine erwartet wird,
+sie tut ungefähr dasselbe, und sie antwortet.
+
+⚠ **Aufgefallen ist es an einer Fehlermeldung, die meine Datei nicht kennt:**
+`FCH_CLUBCAMPUS_SCHLUESSEL fehlt in der wp-config.php`. Ohne diesen einen
+Satz wäre die Verwechslung weitergelaufen — und zwar bis Etappe 5, wo
+dieselbe Rechnung mit 270 Spielen stattgefunden hätte.
+
+**Die Gegenmassnahme ist der Name, nicht die Sorgfalt.** Meine Datei heisst
+seit dem 08.09.2026 `wp-export-empfaenger.php`. Damit kann eine Verwechslung
+nicht mehr entstehen: wer sie sucht, findet genau eine.
+
+⚠ **Und der Vergleich ging gegen mich.** Die Serverfassung ist besser:
+
+| | meine | Server |
+|---|---|---|
+| Anmeldung | `current_user_can('edit_posts')` über Application Password | gemeinsames Geheimnis, `hash_equals`, Header `X-FCH-Schluessel` |
+| ohne Voraussetzung | — | **503, Empfänger ZU** statt offen |
+| Doppelte `sfv_match_id` | — | `cc_doppelte_match_ids()` findet sie per SQL |
+| Empfang protokolliert | — | `cc_bericht_ablegen()`, **auch bei Abbruch**, mit `gesamt` neben der gedeckelten Liste |
+| Besitzmerkmal, Team-Abgleich, Dubletten, Voraussetzungen | ✅ | ✅ identisch |
+| `cc_stempel` / `_cc_lauf` | ✅ | — |
+| Route `/bestand` | ✅ | — |
+| `get_post_time('c', true)` | ✅ | — |
+
+**Mit `edit_posts` konnte jeder angemeldete Redakteur Spieldaten schreiben.**
+Das war mein Loch, und es ist dort geschlossen. Die Serverfassung gewinnt; von
+meiner gehören die drei letzten Zeilen übergeben, nicht die Datei.
+
+⚠ **Beide zugleich gehen nicht:** gleiche Funktions- und Konstantennamen,
+PHP stirbt an der Doppeldeklaration. Ein anderer Dateiname löst das nicht —
+er löst die Verwechslung.
+
+**Und der Sender passt seither nicht mehr:** die Edge Function schickt
+`Authorization: Basic`, der Server will `X-FCH-Schluessel`. Seit der
+Umstellung kam **kein** Aufruf durch. Offen, bis das Geheimnis auf beiden
+Seiten steht.
+
+⚠ **Didi, 08.09.2026: die Serverdatei ist Teil des Spiegels und fällt mit
+ihm.** Dann ist die Frage neu zu stellen — und dieser Abschnitt ist die
+Liste dessen, was dabei nicht verlorengehen darf.
+
+---
 
 ⚠ **Und zu 2 — die Sperre ist eine Zusage über eine ANDERE Stelle.**
 `CLAUDE.md` führt vier Fälle vom 23.08.2026, in denen ein Kommentar eine
@@ -2664,7 +2724,7 @@ grün.
 |---|---|---|
 | `ApiTab.tsx`, leerer `onClick` | **2** (beide Kommentare) | **0** |
 | Positivkontrolle | 1 | **1** |
-| `clubcampus-export.php`, `post_modified` | **3** | **0** |
+| `wp-export-empfaenger.php`, `post_modified` | **3** | **0** |
 
 **Umgestellt sind sechs Prüfungen in fünf Dateien**, über
 `src/test-helpers/quelltext.ts` (TypeScript-Compiler) und

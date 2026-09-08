@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    ClubCampus — scripts/check-plugin.mjs
 
-   Strukturprüfungen an `wordpress/clubcampus-export.php` — über den
+   Strukturprüfungen an `wordpress/wp-export-empfaenger.php` — über den
    PHP-TOKENIZER, nicht über den Text.
 
      node scripts/check-plugin.mjs
@@ -46,10 +46,10 @@ import { fileURLToPath } from "node:url";
 import { werkzeugDa, wieGelaufen, phpLauf, fehltMeldung } from "./php-lauf.mjs";
 
 const WURZEL = join(dirname(fileURLToPath(import.meta.url)), "..");
-const DATEI = join(WURZEL, "wordpress", "clubcampus-export.php");
+const DATEI = join(WURZEL, "wordpress", "wp-export-empfaenger.php");
 
 if (!existsSync(DATEI)) {
-  console.log("check-plugin: wordpress/clubcampus-export.php fehlt — nichts zu prüfen.");
+  console.log("check-plugin: wordpress/wp-export-empfaenger.php fehlt — nichts zu prüfen.");
   process.exit(0);
 }
 if (!werkzeugDa) {
@@ -194,6 +194,6 @@ if (befunde.length === 0) {
   process.exit(0);
 }
 
-console.error(`check-plugin: ${befunde.length} Befund(e) in wordpress/clubcampus-export.php\n`);
+console.error(`check-plugin: ${befunde.length} Befund(e) in wordpress/wp-export-empfaenger.php\n`);
 for (const b of befunde) console.error(`  · ${b}\n`);
 process.exit(1);
