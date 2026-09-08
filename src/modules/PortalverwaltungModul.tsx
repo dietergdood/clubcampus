@@ -27,6 +27,7 @@ import type { KaderRolleZeile, KaderRolleFormular } from "./portal/KaderRollenTa
 import { AussehenTab } from "./portal/AussehenTab.tsx";
 import { ApiTab } from "./portal/ApiTab.tsx";
 import type { ApiVerbindung } from "./portal/ApiTab.tsx";
+import type { SyncLogZeile } from "./portal/portalUtils.ts";
 import { AuditTab } from "./portal/AuditTab.tsx";
 import type { SyncLog } from "./portal/AuditTab.tsx";
 import { DesignSystemTab } from "./portal/DesignSystemTab.tsx";
@@ -697,6 +698,11 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           apiVerbindungen={apiVerbindungen} tab={tab}
           sb={supabase} dbTeams={dbTeams} setDbTeams={setDbTeams}
           vereinId={vereinId ?? null} benutzerId={benutzerId} dbMitglieder={dbMitglieder}
+          /* ⚠ Die Protokollzeilen werden für den Audit-Tab ohnehin geladen —
+             sie kamen nur nie in der Kachel an. Daraus liest sie, WOHIN
+             zuletzt geschrieben wurde, statt `api_url` zu zeigen und es
+             „Ziel" zu nennen. */
+          syncLogs={auditLogs as unknown as SyncLogZeile[]}
           onReload={async()=>{
             if(!supabase) return;
             const {data}=await supabase.from("api_verbindungen").select("*").order("sort_order");

@@ -277,7 +277,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Was ihn gefangen hat, war ein Zufall der Benennung, keine Absicherung:** `personId` existierte in `fetchNotizen` gar nicht, also gab es einen Compilerfehler. **Hätte die Funktion beide Werte im Sichtfeld gehabt — etwa weil sie ohnehin eine `personId` führt —, wäre der Fehler kompiliert und stumm geblieben.** Auf den Compiler ist hier kein Verlass; er hat nur diesmal geholfen.
 
-  Dieselbe Familie wie der Regex-Schnitt vom 19.08. (der die neu eingefügte Sektion mitnahm) und wie `` in deutschen Bezeichnern. Gemeinsames Merkmal: das Werkzeug kennt die Bedeutung nicht, und das Ergebnis sieht richtig aus.
+  Dieselbe Familie wie der Regex-Schnitt vom 19.08. (der die neu eingefügte Sektion mitnahm) und wie `\b` in deutschen Bezeichnern. Gemeinsames Merkmal: das Werkzeug kennt die Bedeutung nicht, und das Ergebnis sieht richtig aus.
 
 - **`cat > datei` truncatet ohne Rückfrage — für Dateien, die es vielleicht schon gibt, das Write-Werkzeug nehmen.** Es verweigert das Überschreiben einer ungelesenen Datei; die Shell tut es wortlos.
 
@@ -761,7 +761,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   **Die Prüfung dazu ist mechanisch und dauert eine Minute:**
 
   ```bash
-  grep -n "erg" supabase/functions/sfv-sync/index.ts   # jeder Ausgang des Objekts
+  grep -n "\berg\b" supabase/functions/sfv-sync/index.ts   # jeder Ausgang des Objekts
   ```
 
   Jede Zeile einzeln lesen: geht das Objekt dort in eine Tabelle, in ein Log, über HTTP hinaus? Für jeden dieser Ausgänge eine eigene Allowlist — hier `fuersProtokoll()` und `fuerZeitplanAntwort()` in `ergebnisTypen.ts`.

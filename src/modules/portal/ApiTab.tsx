@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Btn, Card, Chip, Row, InfoBox } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
-import { API_INFOS } from "./portalUtils.ts";
+import { API_INFOS, hostVon, zielAusLauf } from "./portalUtils.ts";
+import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
 import { starteSync } from "../../domains/sfv/sfvService.ts";
@@ -14,6 +15,8 @@ import type { Mitglied, Sb, Team } from "../../types.ts";
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
    API_INFOS Platzhalter derselben Form. */
 export interface ApiVerbindung {
+  /** Primärschlüssel — die Protokollzeilen hängen daran (`verbindung_id`). */
+  id?: string | null;
   key: string;
   label?: string | null;
   active?: boolean | null;
@@ -72,9 +75,15 @@ interface ApiTabProps {
   vereinId?: string | null;
   benutzerId?: string | null;
   dbMitglieder?: Mitglied[];
+  /**
+   * Die letzten Protokollzeilen — daraus kommt, WOHIN zuletzt geschrieben
+   * wurde. ⚠ Das Modul lädt sie ohnehin für den Audit-Tab; sie kamen nur
+   * nie hier an, und deshalb zeigte die Kachel stattdessen `api_url`.
+   */
+  syncLogs?: SyncLogZeile[];
 }
 
-export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=null,dbTeams=[],setDbTeams,onReload=null,vereinId=null,benutzerId=null,dbMitglieder=[]}: ApiTabProps) {
+export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=null,dbTeams=[],setDbTeams,onReload=null,vereinId=null,benutzerId=null,dbMitglieder=[],syncLogs=[]}: ApiTabProps) {
   /* Welcher Anschluss ist gerade aufgeklappt. Nur Anzeigezustand, deshalb
      hier und nicht im Modul. */
   const [offen,setOffen]=useState<string|null>(null);
@@ -181,25 +190,55 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                       ))}
                     </div>
                   )}
-                  {/* ⚠ ZIEL — IMMER DA, AUCH WENN NICHTS KONFIGURIERT IST.
-                      Eine Zeile, die bei fehlendem Wert verschwindet, ist von
-                      einer nicht gerenderten nicht zu unterscheiden; genau
-                      diese Ununterscheidbarkeit kostet bei der Fehlersuche die
-                      meiste Zeit. Steht hier nichts, sagt sie das.
+                  {/* ⚠ ⚠  ZIEL — BEOBACHTET, NICHT BEHAUPTET  ⚠ ⚠
 
-                      ⚠ Und sie sagt NICHT, wohin zuletzt geschrieben wurde —
-                      das kann sie nicht wissen. Das steht eine Zeile tiefer, in
-                      der Meldung des Laufs. Die Trennung ist der ganze Punkt:
-                      oben eine Behauptung über die Zukunft, unten ein Bericht
-                      über die Vergangenheit. */}
-                  <div style={{fontSize:14,color:"var(--sub)",marginBottom:api.letzter_sync?4:10,
-                               wordBreak:"break-all"}}>
-                    Ziel: {api.api_url
-                      ? api.api_url
-                      : <span style={{fontStyle:"italic"}}>
-                          — steht nicht in der Datenbank, sondern in den Secrets der Edge Function
-                        </span>}
-                  </div>
+                      Bis zum 08.09.2026 stand hier `api_url`, also die
+                      KONFIGURATION. Am selben Tag zeigte die Kachel damit
+                      `https://www.fcherrliberg.ch/wp-json`, während der Export
+                      nach `dev.fcherrliberg.ch` schrieb — der Wert war von Hand
+                      eingetragen worden, und `migration_wp_export.sql` hatte
+                      genau diesen Ausgang vorhergesagt: „zwei Orte für eine
+                      Aussage laufen auseinander … ohne dass etwas fehlschlägt".
+
+                      Ein Feld, das „Ziel" heisst und die Konfiguration zeigt,
+                      ist dieselbe abgeleitete Behauptung wie zuvor, nur an
+                      einer anderen Stelle. Deshalb steht oben, was ein LAUF
+                      getan hat (`api_sync_log.details.ziel_host`), und die
+                      Konfiguration darunter — mit eigener Beschriftung.
+
+                      ⚠ Und wo beide etwas sagen und sich widersprechen, sagt
+                      die Kachel DAS. Zwei Quellen sind dann keine Schwäche
+                      mehr, sondern eine Gegenprobe. */}
+                  {(()=>{
+                    const gelaufen=zielAusLauf(syncLogs,api.id);
+                    const eingestellt=hostVon(api.api_url);
+                    const uneinig=Boolean(gelaufen&&eingestellt&&gelaufen!==eingestellt);
+                    return(
+                      <>
+                        <div style={{fontSize:14,color:"var(--sub)",marginBottom:4,wordBreak:"break-all"}}>
+                          Zuletzt geschrieben nach: {gelaufen
+                            ? <b>{gelaufen}</b>
+                            : <span style={{fontStyle:"italic"}}>
+                                — kein Lauf in den geladenen Protokollzeilen
+                              </span>}
+                        </div>
+                        <div style={{fontSize:14,color:"var(--sub)",marginBottom:uneinig?4:10,
+                                     wordBreak:"break-all"}}>
+                          Eingestellt (api_url): {api.api_url
+                            ? api.api_url
+                            : <span style={{fontStyle:"italic"}}>
+                                — nicht in der Datenbank, sondern in den Secrets der Edge Function
+                              </span>}
+                        </div>
+                        {uneinig&&(
+                          <div style={{fontSize:14,color:R,marginBottom:10,fontWeight:600}}>
+                            ⚠ Eingestellte Adresse und letzter Lauf nennen verschiedene Hosts.
+                            Geschrieben wird nach {gelaufen}.
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   {api.letzter_sync&&(
                     <div style={{fontSize:14,color:"var(--sub)",marginBottom:10}}>
                       Letzter Sync: {new Date(api.letzter_sync).toLocaleString("de-CH")}

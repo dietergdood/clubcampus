@@ -2619,7 +2619,7 @@ die Sorgfalt:**
 |---|---|
 | `onClick={()=>{}}` | zwei **Kommentare**, die den Defekt beschreiben |
 | `post_modified` | ein **Kommentar**, der erklärt, warum es fehlt |
-| `limit` | `.limit(1)` — der erste Protokolleintrag, also das Gegenteil einer Kürzung |
+| `\blimit\b` | `.limit(1)` — der erste Protokolleintrag, also das Gegenteil einer Kürzung |
 | Funktionsrumpf | die Parameterliste `{ von: string \| null }` |
 
 Zwei Kommentare, zwei Stücke echter Code, die nur gleich aussahen. **Ein

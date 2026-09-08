@@ -127,8 +127,29 @@ describe("Anonymitaet — zweites Netz: der CHECK-Constraint", () => {
      jemandem zum Opfer, faellt es hier auf statt beim naechsten Vorfall. */
   const schema = readFileSync("supabase/schema.sql", "utf8");
 
+  /* ⚠ DIESER FALL WAR WIRKUNGSLOS, UND ZWAR GRÜN — berichtigt am 08.09.2026.
+
+     Er suchte den NAMEN des Constraints irgendwo im Dump. Der steht dort
+     zweimal: einmal als `CONSTRAINT … CHECK (…)` und einmal in einem
+     `COMMENT ON TABLE`, der ihn erwähnt. **Wer den Constraint entfernt und
+     den Kommentar stehen lässt, kommt hier durch** — gemessen, nicht
+     vermutet: der Dump ohne die CONSTRAINT-Zeile besteht die alte Fassung.
+
+     Ein Kommentar als Beleg für eine Zusage über die Datenbank. Dieselbe
+     Familie wie die Tautologie in `zaehlung_stimmt`: eine Prüfung, die
+     nicht scheitern kann, wird gelesen wie eine, die es könnte.
+
+     Gefangen hätte es der Fall darunter — er sucht die Feldnamen und
+     läuft dann auf die Kommentarzeile, in der sie fehlen. Die Zusage war
+     also nie ungeschützt; dieser Fall trug nur nichts dazu bei.
+
+     Jetzt wird die DEFINITION verlangt, nicht die Erwähnung. */
   it("steht als CHECK auf spiel_ereignisse im Schema", () => {
-    expect(schema).toContain("spiel_ereignisse_fremde_anonym_check");
+    const definition = schema.split("\n").filter((l) =>
+      l.includes("spiel_ereignisse_fremde_anonym_check") && /CHECK\s*\(/.test(l));
+    expect(definition.length,
+      "Der Name kommt im Dump vor, aber nicht als CHECK-Definition — "
+      + "ein COMMENT, der ihn erwähnt, ist kein Beleg.").toBe(1);
   });
 
   it("erzwingt bei fremden Zeilen alle vier Personenfelder auf NULL", () => {
@@ -140,7 +161,12 @@ describe("Anonymitaet — zweites Netz: der CHECK-Constraint", () => {
   });
 
   it("trennt die beiden Schichten", () => {
-    expect(schema).toContain("spiel_ereignisse_schicht_check");
+    /* Gemessen: dieser Name steht nur EINMAL im Dump, und zwar als
+       Definition. Trotzdem dieselbe Form wie oben — ein Kommentar, der
+       ihn erwähnt, könnte jederzeit dazukommen. */
+    const definition = schema.split("\n").filter((l) =>
+      l.includes("spiel_ereignisse_schicht_check") && /CHECK\s*\(/.test(l));
+    expect(definition.length).toBe(1);
   });
 });
 

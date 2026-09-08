@@ -52,6 +52,68 @@ export const API_INFOS: Record<string, ApiInfo>={
     wordpress:  {richtung:"aus",description:"Spielplan, Resultate und Ranglisten an die Vereins-Website senden. Ein Beitrag ohne sfv_match_id gehört der Redaktion und wird nie angefasst.",felder:["Spielplan & Resultate","Spielverlauf (Tore, Karten, Wechsel)","Ranglisten","Absagen & Verschiebungen"]},
   };
 
+/* ════════════════════════════════════════════════════════════
+   WOHIN EIN ANSCHLUSS SCHREIBT — beobachtet, nicht behauptet
+   ════════════════════════════════════════════════════════════ */
+
+/**
+ * Der Host aus einer Adresse — oder `null`, wenn es keine ist.
+ *
+ * ⚠ Kein Zerlegen von Hand. `new URL()` kennt die Regeln; ein Ausdruck,
+ * der auf `//` und den ersten `/` schneidet, trifft bei einem fehlenden
+ * Schema oder einem Port daneben.
+ */
+export function hostVon(adresse?: string | null): string | null {
+  const t = (adresse ?? "").trim();
+  if (!t) return null;
+  try { return new URL(t).host || null; } catch { return null; }
+}
+
+/** Eine Zeile aus `api_sync_log`, so weit die Kachel sie braucht. */
+export interface SyncLogZeile {
+  verbindung_id?: string | null;
+  gestartet_am?: string | null;
+  details?: unknown;
+}
+
+/**
+ * Wohin der letzte Lauf dieses Anschlusses TATSÄCHLICH geschrieben hat.
+ *
+ * ⚠ ⚠  WARUM DAS NICHT AUS `api_url` KOMMEN DARF  ⚠ ⚠
+ *
+ *   `migration_wp_export.sql` sagt über die WordPress-Zeile: die Adresse
+ *   steht im Secret und `api_url` bleibt leer, denn „zwei Orte für eine
+ *   Aussage laufen auseinander. Dann zeigte die Kachel auf die eine Seite
+ *   und der Export schriebe auf die andere, ohne dass etwas fehlschlägt."
+ *
+ *   **Genau das ist am 08.09.2026 eingetreten.** In `api_url` stand von
+ *   Hand `https://www.fcherrliberg.ch/wp-json`, geschrieben wurde nach
+ *   `dev.fcherrliberg.ch`. Die Kachel zeigte die Konfiguration und nannte
+ *   sie „das Ziel" — dieselbe abgeleitete Behauptung wie zuvor, nur an
+ *   einer anderen Stelle.
+ *
+ *   Deshalb kommt der Wert aus `api_sync_log.details.ziel_host`: ein FELD,
+ *   das der Lauf geschrieben hat, kein Text, den jemand zerlegt. Eine
+ *   Beobachtung über die Vergangenheit kann nicht falsch werden; eine
+ *   Konfiguration über die Zukunft schon.
+ *
+ * ⚠ GRENZE: die Kachel lädt die letzten 50 Protokollzeilen. Liegt der
+ *   letzte Lauf dieses Anschlusses weiter zurück, kommt hier `null` — das
+ *   heisst „nicht in den geladenen Zeilen", nicht „nie gelaufen". Die
+ *   Kachel muss das so beschriften.
+ */
+export function zielAusLauf(logs: SyncLogZeile[], verbindungId?: string | null): string | null {
+  if (!verbindungId) return null;
+  const eigene = logs
+    .filter((l) => l.verbindung_id === verbindungId)
+    .sort((a, b) => String(b.gestartet_am ?? "").localeCompare(String(a.gestartet_am ?? "")));
+  for (const l of eigene) {
+    const host = (l.details as { ziel_host?: unknown } | null)?.ziel_host;
+    if (typeof host === "string" && host.trim()) return host.trim();
+  }
+  return null;
+}
+
 /* Ein Modul der Portalverwaltung */
 export interface ModulDef {
   key: string;

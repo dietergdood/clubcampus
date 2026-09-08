@@ -38,19 +38,26 @@ afterEach(cleanup);
    ⚠ wordpress ist active=false (Etappe 6 schaltet scharf) und hat nach
    dem ersten scharfen Lauf sync_status='warnung'. */
 const VERBINDUNGEN = [
-  { key: 'football_ch', label: 'Football.ch', active: true, sync_status: 'ok',
+  { id: 'v-sfv', key: 'football_ch', label: 'Football.ch', active: true, sync_status: 'ok',
     api_url: 'https://api.football.ch/v1', sync_meldung: '12 Spiele aktualisiert',
     letzter_sync: '2026-09-05T17:00:00.000Z', wache_zuletzt: '2026-09-05T17:05:00.000Z' },
   /* ⚠ api_url ist hier absichtlich null — die Adresse steht im Secret. */
-  { key: 'wordpress', label: 'WordPress-Export', active: false, sync_status: 'warnung',
+  { id: 'v-wp', key: 'wordpress', label: 'WordPress-Export', active: false, sync_status: 'warnung',
     api_url: null, sync_meldung: 'dev.fcherrliberg.ch · 0 neu, 0 aktualisiert',
     letzter_sync: '2026-09-05T17:20:00.000Z', wache_zuletzt: null },
 ];
 
-function zeigeKacheln(verbindungen = VERBINDUNGEN) {
+/* Was ein Lauf tatsächlich getan hat — `ziel_host` ist ein Feld, das der
+   Export schreibt, kein Text, den jemand zerlegt. */
+const LOGS = [
+  { verbindung_id: 'v-wp', gestartet_am: '2026-09-05T17:20:00.000Z',
+    details: { ziel_host: 'dev.fcherrliberg.ch' } },
+];
+
+function zeigeKacheln(verbindungen = VERBINDUNGEN, logs = LOGS) {
   render(
     <ApiTab loading={false} isMobile={false} mobileKachel={null}
-      apiVerbindungen={verbindungen} tab="api" />,
+      apiVerbindungen={verbindungen} syncLogs={logs} tab="api" />,
   );
 }
 
@@ -100,23 +107,42 @@ describe('API-Kacheln', () => {
     expect(screen.queryByText('Externe API-Verbindung')).toBeNull();
   });
 
-  /* ── Ziel und Meldung (07.09.2026) ───────────────────────────── */
+  /* ── Ziel: beobachtet, nicht behauptet (08.09.2026) ───────────── */
 
-  it('zeigt das konfigurierte Ziel', () => {
+  it('zeigt, wohin der letzte Lauf tatsächlich geschrieben hat', () => {
     zeigeKacheln();
-    expect(screen.getByText(/https:\/\/api\.football\.ch\/v1/)).toBeTruthy();
+    expect(screen.getByText('dev.fcherrliberg.ch')).toBeTruthy();
   });
 
-  /* Der eigentliche Fall: `null` ist eine Aussage, kein Fehlen. Eine Zeile,
-     die bei leerem Wert verschwände, wäre von einer nicht gerenderten nicht
-     zu unterscheiden. */
-  it('sagt beim leeren Ziel, dass es leer ist — statt die Zeile wegzulassen', () => {
-    zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: false, api_url: null }]);
-    expect(screen.getByText(/^Ziel:/)).toBeTruthy();
+  /* ⚠ DER FALL, DER AM 08.09.2026 IN DER ECHTEN KACHEL STAND.
+     `api_url` trug von Hand `https://www.fcherrliberg.ch/wp-json`, der
+     Export schrieb nach dev. Vorher zeigte die Kachel den www-Wert und
+     nannte ihn „Ziel" — jetzt nennt sie den Widerspruch. */
+  it('meldet, wenn Konfiguration und letzter Lauf verschiedene Hosts nennen', () => {
+    zeigeKacheln([{ ...VERBINDUNGEN[1], api_url: 'https://www.fcherrliberg.ch/wp-json' }]);
+    expect(screen.getByText(/verschiedene Hosts/)).toBeTruthy();
+    expect(screen.getByText(/Geschrieben wird nach dev\.fcherrliberg\.ch/)).toBeTruthy();
+  });
+
+  it('schweigt, wenn beide dasselbe sagen', () => {
+    zeigeKacheln([{ ...VERBINDUNGEN[1], api_url: 'https://dev.fcherrliberg.ch/wp-json' }]);
+    expect(screen.queryByText(/verschiedene Hosts/)).toBeNull();
+  });
+
+  /* `null` ist eine Aussage, kein Fehlen — die Zeile verschwindet nicht. */
+  it('sagt beim leeren api_url, dass es leer ist', () => {
+    zeigeKacheln();
     expect(screen.getByText(/in den Secrets der Edge Function/)).toBeTruthy();
   });
 
-  /* Die Meldung ist die einzige Stelle, an der der echte Ziel-Host steht. */
+  /* ⚠ Kein Lauf in den geladenen Zeilen heisst NICHT „nie gelaufen" — die
+     Kachel lädt nur die letzten 50. Der Text muss das offenlassen. */
+  it('unterscheidet „kein Lauf geladen" von „nie gelaufen"', () => {
+    zeigeKacheln(VERBINDUNGEN, []);
+    expect(screen.getAllByText(/kein Lauf in den geladenen Protokollzeilen/).length)
+      .toBeGreaterThan(0);
+  });
+
   it('zeigt die Meldung des letzten Laufs samt Host', () => {
     zeigeKacheln();
     expect(screen.getByText(/dev\.fcherrliberg\.ch · 0 neu/)).toBeTruthy();
@@ -130,7 +156,7 @@ describe('API-Kacheln', () => {
        stehen. Mit ihnen schon — aber dann als Beobachtung eines Laufs,
        nicht als Teil des Namens oder der Beschreibung. Genau diese Grenze
        hält der Fall fest. */
-    zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: false }]);
+    zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: false }], []);
     expect(screen.queryByText(/fcherrliberg\.ch/)).toBeNull();
   });
 });

@@ -133,7 +133,52 @@ for (const pfad of dateien) {
     continue;
   }
 
-  /* 3 · Kaputtes UTF-8. Der Umweg ueber die Rueckkodierung ist der
+  /* 3 · Unsichtbare Steuerzeichen — dazugekommen am 08.09.2026, nachdem
+     sie an EINEM TAG ZWEIMAL entstanden sind:
+
+       · ein Zero-Width-Space (U+200B), mit dem ich Stern und Schrägstrich
+         in einem Kommentar trennen wollte — `tsc` meldete
+         „TS1127: Invalid character" und zeigte auf eine Spalte, an der
+         nichts zu sehen war;
+       · ein BACKSPACE (0x08), weil `\b` auf dem Weg durch eine
+         Shell zum Steuerzeichen wurde. Aus dem Ausdruck `/\bCHECK/` wurde
+         `/\bCHECK/` — er traf nichts mehr, und der Test war GRÜN, weil
+         eine Suche ohne Treffer wie „nichts zu beanstanden" aussieht.
+
+     ⚠ Der zweite ist der gefährliche: er macht aus einer Prüfung eine
+     Attrappe, ohne dass irgendetwas fehlschlägt. Genau die Familie, gegen
+     die diese Datei gebaut ist — es fehlt etwas, und nichts meldet es.
+
+     Erlaubt bleiben Tabulator (0x09), Zeilenumbruch (0x0A) und
+     Wagenrücklauf (0x0D). Alles andere unter 0x20 hat in einer Textdatei
+     nichts zu suchen. U+200B kommt dazu, weil es genauso unsichtbar ist.
+
+     ⚠ U+FEFF steht ABSICHTLICH NICHT in der Liste, obwohl es ebenso
+     unsichtbar ist. `shared/list/exportUtils.ts:71` stellt es einem CSV
+     voran, damit Excel die Umlaute liest — richtiger Code, seit langem.
+     Es mit zu verbieten hätte diese Prüfung dauerhaft rot gemacht, und
+     eine dauerhaft rote Prüfung wird abgeschaltet, nicht befolgt. Ein
+     führendes BOM fängt ohnehin Prüfung 1. **Nicht mehr verbieten als
+     die Zusage** — dieselbe Lehre wie beim Tabellennamen `api_sync_log`
+     und beim Wort `limit`. */
+  const text0 = roh.toString("utf8");
+  const steuer = [...text0].findIndex((z) => {
+    const c = z.codePointAt(0);
+    return (c < 0x20 && c !== 9 && c !== 10 && c !== 13) || c === 0x200b;
+  });
+  if (steuer >= 0) {
+    const c = text0.codePointAt(steuer);
+    befunde.push({
+      pfad, art: "unsichtbares Steuerzeichen",
+      zeile: text0.slice(0, steuer).split("\n").length,
+      hinweis: `U+${c.toString(16).toUpperCase().padStart(4, "0")} — entsteht, wenn eine `
+        + `Escape-Folge unterwegs ausgewertet wird. Ein Ausdruck, der so entstellt wird, `
+        + `trifft nichts mehr und wird trotzdem gruen.`,
+    });
+    continue;
+  }
+
+  /* 4 · Kaputtes UTF-8. Der Umweg ueber die Rueckkodierung ist der
      verlaesslichste Weg ohne Zusatzpaket: `toString("utf8")` ersetzt
      ungueltige Folgen durch U+FFFD, und die Ruecksicht faellt dann
      laenger oder kuerzer aus als das Original. */
@@ -150,7 +195,7 @@ for (const pfad of dateien) {
 
 if (befunde.length === 0) {
   const n = dateien.filter(istText).length;
-  console.log(`check-encoding: ${n} Textdateien geprueft — sauberes UTF-8, kein BOM, kein NUL-Byte.`);
+  console.log(`check-encoding: ${n} Textdateien geprueft — sauberes UTF-8, kein BOM, kein NUL-Byte, keine unsichtbaren Steuerzeichen.`);
   process.exit(0);
 }
 
