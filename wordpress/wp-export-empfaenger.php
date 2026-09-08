@@ -112,6 +112,10 @@ const CC_ROUTE      = 'clubcampus/v1';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 const CC_OPT_RANG   = 'fch_cc_ranglisten';
+/* ⚠ VERTRAG MIT DEM THEME-REPOSITORY: fch-core/src/Admin/clubcampus.php
+   liest genau diesen Namen (dort mit Rueckfall auf die Zeichenkette). */
+const CC_OPT_BERICHT = 'fch_cc_bericht';
+const CC_BERICHT_MAX = 10;
 const CC_QUELLE     = 'clubcampus';   // ⚠ klein — der WERT, nicht die Beschriftung
 
 /*
@@ -265,8 +269,175 @@ add_action(
  *   aendert sie; mehr braucht er nicht. Insbesondere kein Loeschrecht —
  *   zurueckgezogen wird auf Entwurf, und das ist eine Statusaenderung.
  */
-function cc_darf_schreiben(): bool {
-	return current_user_can( 'edit_posts' );
+/**
+ * Wer darf schreiben — ein gemeinsames Geheimnis und keine Benutzerrolle.
+ *
+ * ⚠ ÜBERNOMMEN AUS DER SPIEGEL-FASSUNG (Website-Chat), 09.09.2026.
+ *   Nicht nachgebaut, sondern samt ihrer Begründung übernommen, weil sie
+ *   einen Fehler von mir behebt.
+ *
+ * ── Hier stand `current_user_can( 'edit_posts' )` ─────────────────────
+ *
+ * Mit dieser Begruendung: «Der Abgleich legt Spiele an und aendert sie; mehr
+ * braucht er nicht.» **Der zweite Halbsatz stimmt, der erste beschreibt die
+ * falsche Groesse.** `edit_posts` beantwortet die Frage «darf dieser MENSCH
+ * Beitraege bearbeiten» — gefragt ist aber «kommt das hier von ClubCampus».
+ *
+ * > **ClubCampus ist kein Redakteur, und ein Redakteur ist kein Abgleich.**
+ *
+ * In der alten Fassung konnte **jeder angemeldete Redakteur** ueber diese
+ * Wege Spieldaten schreiben — Resultate, Verlauf, Ranglisten, ohne dass eine
+ * Maske ihn je danach gefragt haette.
+ *
+ * ── Der Wert steht in der `wp-config.php` ─────────────────────────────
+ *
+ * `FCH_CLUBCAMPUS_SCHLUESSEL`, **nicht in der Datenbank und nicht im
+ * Repository**:
+ *
+ * > **Ein Schluessel im Verlauf ist auch nach dem Loeschen noch im Verlauf.**
+ *
+ * In der Datenbank laege er in `wp_options` — also in jeder Sicherung, in
+ * jedem Datenbankauszug und hinter jeder Luecke, die Optionen ausliest.
+ *
+ * ⚠ **Fehlt die Konstante, ist der Empfaenger ZU und nicht offen.** Das ist
+ * der richtige Ausfall: Ein Abgleich, der nicht laeuft, faellt auf; einer,
+ * der offen steht, nicht.
+ *
+ * ── Zeitkonstant verglichen ───────────────────────────────────────────
+ *
+ * `hash_equals()` und nicht `===`. Ein gewoehnlicher Vergleich bricht beim
+ * ersten falschen Zeichen ab, und **aus dem Zeitunterschied laesst sich der
+ * Schluessel Zeichen fuer Zeichen erraten**, ohne ihn je zu kennen.
+ *
+ * ⚠ **Kein Geheimnis in einer Ausgabe, einer Fehlermeldung oder einem
+ * Protokoll** — auch nicht gekuerzt und nicht in seiner Laenge. Die Antwort
+ * sagt «nicht berechtigt» und sonst nichts; sie unterscheidet nicht einmal
+ * zwischen «kein Kopf mitgeschickt» und «falscher Wert».
+ *
+ * ── Der Kopfname ist ein Vertrag mit der Gegenseite ───────────────────
+ *
+ * `X-FCH-Schluessel` — die Gegenstelle sendet denselben Namen
+ * (`supabase/functions/wp-export/index.ts`). **Wer ihn hier aendert, aendert
+ * ihn dort mit**, sonst kommt nichts mehr an, und die Meldung dafuer lautet
+ * nur «nicht berechtigt».
+ *
+ * WordPress reicht den Kopf als `X-FCH-Schluessel` durch; `get_header()` am
+ * `WP_REST_Request` nimmt den Namen ohne Ruecksicht auf Gross- und
+ * Kleinschreibung.
+ *
+ * ⚠ **Auch die reinen Leserouten `/status` und `/bestand` verlangen ihn.**
+ *   Sie aendern nichts, geben aber Titel, Ids und Zaehlungen heraus. Eine
+ *   Auskunft ist kein Schreibvorgang und trotzdem eine Preisgabe.
+ */
+function cc_darf_schreiben( ?WP_REST_Request $anfrage = null ) {
+	if ( ! defined( 'FCH_CLUBCAMPUS_SCHLUESSEL' ) || '' === (string) FCH_CLUBCAMPUS_SCHLUESSEL ) {
+		return new WP_Error(
+			'cc_kein_schluessel',
+			'Der Abgleich ist nicht eingerichtet: FCH_CLUBCAMPUS_SCHLUESSEL fehlt in der wp-config.php.',
+			array( 'status' => 503 )
+		);
+	}
+
+	$mitgeschickt = $anfrage instanceof WP_REST_Request
+		? (string) $anfrage->get_header( 'X-FCH-Schluessel' )
+		: '';
+
+	if ( '' === $mitgeschickt || ! hash_equals( (string) FCH_CLUBCAMPUS_SCHLUESSEL, $mitgeschickt ) ) {
+		return new WP_Error( 'cc_nicht_berechtigt', 'Nicht berechtigt.', array( 'status' => 401 ) );
+	}
+
+	return true;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DER LAUFBERICHT — damit der Verein sieht, was ankam
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Eine Liste deckeln und dabei sagen, wieviel abgeschnitten wurde.
+ *
+ * ⚠ **Der Deckel darf die Zahl nicht verschweigen.** Zehn gezeigte Faelle aus
+ * zweihundert sehen ohne `gesamt` aus wie zehn Faelle — und dann sucht
+ * niemand die uebrigen hundertneunzig.
+ *
+ * @return array{gesamt:int,faelle:array}
+ */
+function cc_bericht_deckel( array $faelle ): array {
+	return array(
+		'gesamt' => count( $faelle ),
+		'faelle' => array_slice( array_values( $faelle ), 0, CC_BERICHT_MAX ),
+	);
+}
+
+/**
+ * **Den Empfang aufschreiben — eine Option, ueberschrieben.**
+ *
+ * ⚠ ÜBERNOMMEN AUS DER SPIEGEL-FASSUNG, 09.09.2026, mit ihrer Begruendung:
+ *
+ * > **Auch ein abgebrochener Empfang wird abgelegt.** Die Gegenstelle sieht
+ * > 503 beziehungsweise 400, der Verein sieht nichts.
+ *
+ * ⚠ **DIE SCHLUESSEL SIND EIN VERTRAG MIT DEM ANDEREN REPOSITORY.**
+ *   `fch-core/src/Admin/clubcampus.php` rendert `zeit`, `weg`, `neu`,
+ *   `geaendert`, `zurueckgezogen`, `uebersprungen`, `mehrfach`, `hinweis`
+ *   und — nur auf dem Ranglisten-Weg — `gruppen`. Fehlt einer, zeigt die
+ *   Seite `0` beziehungsweise eine leere Liste: **also „nichts passiert"
+ *   statt „nicht erfasst".** Deshalb werden alle gefuellt, auch mit null.
+ *
+ * ⚠ `$weg` ist der Name der Route und nicht der Pfad: `spiele` oder
+ * `ranglisten`. Die reinen Leserouten `/status` und `/bestand` schreiben
+ * KEINEN Bericht — ein Nachsehen ist kein Lauf, und es wuerde den Zeitpunkt
+ * des letzten Empfangs verschieben.
+ *
+ * @param string $weg    'spiele' oder 'ranglisten'
+ * @param array  $inhalt Zahlen und bereits gedeckelte Listen
+ */
+function cc_bericht_ablegen( string $weg, array $inhalt ): array {
+	$bericht = array_merge( array( 'zeit' => time(), 'weg' => $weg ), $inhalt );
+	update_option( CC_OPT_BERICHT, $bericht, false );
+	return $bericht;
+}
+
+/**
+ * Zwei Beitraege mit derselben `sfv_match_id`.
+ *
+ * ⚠ ÜBERNOMMEN AUS DER SPIEGEL-FASSUNG, 09.09.2026 — mir fehlte diese
+ *   Pruefung ganz, und sie deckt den Zustand auf, der den Abgleich STILL
+ *   falsch macht: `cc_abgleich_kandidaten()` baut eine Karte
+ *   `sfv_match_id => post_id`. Bei einem Duplikat gewinnt einer, der andere
+ *   wird nie wieder angefasst — er altert auf der Website vor sich hin, und
+ *   nichts meldet es.
+ */
+function cc_doppelte_match_ids(): array {
+	global $wpdb;
+
+	$zeilen = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT pm.meta_value AS mid, pm.post_id AS pid
+			   FROM {$wpdb->postmeta} pm
+			   JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+			  WHERE pm.meta_key = %s AND pm.meta_value <> ''
+			    AND p.post_type = %s AND p.post_status <> 'trash'
+			    AND pm.meta_value IN (
+			        SELECT x.meta_value FROM {$wpdb->postmeta} x
+			          JOIN {$wpdb->posts} y ON y.ID = x.post_id
+			         WHERE x.meta_key = %s AND x.meta_value <> ''
+			           AND y.post_type = %s AND y.post_status <> 'trash'
+			         GROUP BY x.meta_value HAVING COUNT(*) > 1 )
+			  ORDER BY pm.meta_value, pm.post_id",
+			'sfv_match_id',
+			CC_TYP_SPIEL,
+			'sfv_match_id',
+			CC_TYP_SPIEL
+		)
+	);
+
+	$karte = array();
+	foreach ( (array) $zeilen as $z ) {
+		$karte[ (string) $z->mid ][] = (int) $z->pid;
+	}
+	return $karte;
 }
 
 /** Verbindungstest: was hier fehlt, erklaert jeden spaeteren Fehlschlag. */
@@ -618,8 +789,24 @@ function cc_zaehle_handbeitraege(): int {
  *   wie beim Ranglisten-Abgleich des SFV-Sync.
  */
 function cc_route_spiele( WP_REST_Request $req ) {
+	/* ⚠ AUCH EIN ABGEBROCHENER EMPFANG WIRD ABGELEGT. Diese zwei Abbrueche
+	   sind von hier aus sonst unsichtbar: die Gegenstelle sieht 503
+	   beziehungsweise 400, der Verein sieht nichts. */
 	$fehlt = cc_voraussetzungen();
 	if ( array() !== $fehlt ) {
+		cc_bericht_ablegen(
+			'spiele',
+			array(
+			'neu' => 0,
+			'geaendert' => 0,
+			'zurueckgezogen' => 0,
+			'verlauf_zeilen' => 0,
+			'uebersprungen' => cc_bericht_deckel( array() ),
+			'mehrfach' => cc_bericht_deckel( array() ),
+				'hinweis' => array( 'Abgewiesen: Voraussetzungen fehlen — ' . implode( ', ', $fehlt ) ),
+			)
+		);
+
 		return new WP_REST_Response(
 			array( 'fehler' => 'Voraussetzungen fehlen', 'fehlt' => $fehlt ),
 			503
@@ -640,6 +827,19 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	   „alle" gelesen, raeumte ein unvollstaendiger Lauf den halben Spielplan
 	   ab. Deshalb: gar nicht raten. */
 	if ( null === $spiele || null === $teams ) {
+		cc_bericht_ablegen(
+			'spiele',
+			array(
+			'neu' => 0,
+			'geaendert' => 0,
+			'zurueckgezogen' => 0,
+			'verlauf_zeilen' => 0,
+			'uebersprungen' => cc_bericht_deckel( array() ),
+			'mehrfach' => cc_bericht_deckel( array() ),
+				'hinweis' => array( 'Abgewiesen: «spiele» und «teams» sind Pflicht — die Nutzlast fuehrte sie nicht.' ),
+			)
+		);
+
 		return new WP_REST_Response(
 			array( 'fehler' => 'spiele und teams sind Pflicht' ),
 			400
@@ -656,16 +856,27 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		'moegliche_dubletten' => array(), 'fehler' => array(),
 	);
 
-	$geliefert   = array();
+	/* ⚠ Namentlich, nicht nur gezaehlt. Eine Zahl sagt „21 uebersprungen"
+	   und schickt niemanden irgendwohin; der Grund je Fall tut es. */
+	$uebersprungen = array();
+	$geliefert     = array();
 	$erlaubteTid = array();
 	foreach ( $teams as $sfv ) {
 		$tid = $teamKarte[ (string) $sfv ] ?? null;
 		if ( null === $tid ) {
 			$erg['ohne_team'][] = (string) $sfv;
+			$uebersprungen[]    = array(
+				'sfv_match_id' => '—',
+				'grund'        => 'Mannschaft ' . (string) $sfv . ' hat auf dieser Website kein Team mit dieser sfv_id',
+			);
 			continue;
 		}
 		if ( 0 === $tid ) {
 			$erg['doppelte_teams'][] = (string) $sfv;
+			$uebersprungen[]         = array(
+				'sfv_match_id' => '—',
+				'grund'        => 'Mannschaft ' . (string) $sfv . ' ist mehreren Team-Beitraegen zugeordnet',
+			);
 			continue;
 		}
 		$erlaubteTid[ $tid ] = true;
@@ -681,7 +892,11 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		   sfv_match_id waere spaeter nicht wiederzufinden und beim naechsten
 		   Lauf ein zweites Mal angelegt. */
 		if ( '' === $mid ) {
-			$erg['fehler'][] = 'Spiel ohne sfv_match_id uebersprungen';
+			$erg['fehler'][]  = 'Spiel ohne sfv_match_id uebersprungen';
+			$uebersprungen[]  = array(
+				'sfv_match_id' => '—',
+				'grund'        => 'Spiel ohne sfv_match_id — spaeter nicht wiederzufinden',
+			);
 			continue;
 		}
 		$geliefert[ $mid ] = true;
@@ -757,6 +972,27 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		$erg['zurueckgezogen']++;
 	}
 
+	/* ⚠ Zwei Beitraege mit derselben sfv_match_id machen den Abgleich STILL
+	   falsch: die Karte behaelt einen, der andere wird nie wieder angefasst.
+	   Deshalb bei jedem Lauf nachgesehen — es kostet eine Abfrage. */
+	$mehrfach = array();
+	foreach ( cc_doppelte_match_ids() as $mid => $ids ) {
+		$mehrfach[] = array( 'sfv_match_id' => (string) $mid, 'beitraege' => $ids );
+	}
+
+	cc_bericht_ablegen(
+		'spiele',
+		array(
+			'neu'            => (int) $erg['neu'],
+			'geaendert'      => (int) $erg['aktualisiert'],
+			'zurueckgezogen' => (int) $erg['zurueckgezogen'],
+			'verlauf_zeilen' => (int) $erg['verlauf_zeilen'],
+			'uebersprungen'  => cc_bericht_deckel( $uebersprungen ),
+			'mehrfach'       => cc_bericht_deckel( $mehrfach ),
+			'hinweis'        => $erg['fehler'],
+		)
+	);
+
 	return new WP_REST_Response( $erg, 200 );
 }
 
@@ -826,6 +1062,17 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 	$gruppen = is_array( $daten['gruppen'] ?? null ) ? $daten['gruppen'] : null;
 
 	if ( null === $gruppen ) {
+		cc_bericht_ablegen(
+			'ranglisten',
+			array(
+				'neu'           => 0,
+				'geaendert'     => 0,
+				'uebersprungen' => cc_bericht_deckel( array() ),
+				'mehrfach'      => cc_bericht_deckel( array() ),
+				'hinweis'       => array( 'Abgewiesen: «gruppen» ist Pflicht — die Nutzlast fuehrte es nicht.' ),
+			)
+		);
+
 		return new WP_REST_Response( array( 'fehler' => 'gruppen ist Pflicht' ), 400 );
 	}
 
@@ -836,10 +1083,19 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 		$alle = array();
 	}
 
-	$n = 0;
+	$n             = 0;
+	$uebersprungen = array();
 	foreach ( $gruppen as $g ) {
 		$id = (string) ( $g['sfv_gruppe_id'] ?? '' );
 		if ( '' === $id ) {
+			/* ⚠ Bis zum 09.09.2026 fiel diese Gruppe stillschweigend heraus.
+			   **Eine Gruppe ohne Kennung ist kein Nichts, sondern eine
+			   Rangliste, die niemand je zu sehen bekommt.** Übernommen aus
+			   der Spiegel-Fassung. */
+			$uebersprungen[] = array(
+				'sfv_match_id' => '—',
+				'grund'        => 'Rangliste ohne sfv_gruppe_id — nicht zuzuordnen',
+			);
 			continue;
 		}
 		$alle[ $id ] = $g;
@@ -847,6 +1103,25 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 	}
 
 	update_option( CC_OPT_RANG, $alle, false );
+
+	/**
+	 * ⚠ `neu` und `geaendert` bleiben bei null, und das ist keine
+	 * Nachlaessigkeit: **Der Ranglisten-Weg legt keinen Beitrag an und
+	 * aendert keinen.** Er schreibt eine Option. Die Zahlen unter `gruppen`
+	 * sind seine eigene Groesse; sie in die Spalten der Spiele zu schreiben,
+	 * machte den Bericht vergleichbar, wo nichts zu vergleichen ist.
+	 */
+	cc_bericht_ablegen(
+		'ranglisten',
+		array(
+			'neu'           => 0,
+			'geaendert'     => 0,
+			'uebersprungen' => cc_bericht_deckel( $uebersprungen ),
+			'mehrfach'      => cc_bericht_deckel( array() ),
+			'gruppen'       => array( 'geschrieben' => $n, 'gesamt' => count( $alle ) ),
+			'hinweis'       => array(),
+		)
+	);
 
 	return new WP_REST_Response(
 		array( 'gruppen_geschrieben' => $n, 'gruppen_gesamt' => count( $alle ) ),

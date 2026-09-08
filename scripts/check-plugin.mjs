@@ -88,7 +88,10 @@ for ($i = 0; $i < $n; $i++) {
     elseif ($t[$j][0] === 'T_STRING') { $bez[] = $t[$j][1]; if ($istRuf($j)) $rufe[] = $t[$j][1]; }
     elseif ($t[$j][0] === 'T_CONSTANT_ENCAPSED_STRING') $texte[] = trim($t[$j][1], "'\\"");
   }
+  $zaehlung = [];
+  foreach ($rufe as $r) { $zaehlung[$r] = ($zaehlung[$r] ?? 0) + 1; }
   $funktionen[$name] = ['rufe' => array_values(array_unique($rufe)),
+                        'rufe_zaehlung' => $zaehlung,
                         'bezeichner' => array_values(array_unique($bez)),
                         'texte' => $texte];
 }
@@ -133,6 +136,13 @@ const REGELN = [
     erwarteImKontrollfall: 1,
   },
   {
+    frage: "cc_darf_schreiben prüft keine Benutzerrolle mehr",
+    pruefe: (b) => (b.funktionen.cc_darf_schreiben?.rufe ?? [])
+      .filter(r => ["current_user_can", "is_user_logged_in", "wp_get_current_user"].includes(r)),
+    kontrolle: "<?php function cc_darf_schreiben() { return current_user_can('edit_posts'); }",
+    erwarteImKontrollfall: 1,
+  },
+  {
     frage: "die Route /bestand ist GET, nicht POST",
     pruefe: (b) => (b.routen.find(r => r.includes("/bestand")) ?? ["(keine Route /bestand)"])
       .filter(x => x === "POST" || x === "(keine Route /bestand)"),
@@ -144,6 +154,22 @@ const REGELN = [
 /* Regeln, die etwas VERLANGEN statt zu verbieten — hier ist der Fund die
    Erwartung, und die Kontrolle zeigt den Fall, in dem er ausbleibt. */
 const PFLICHTEN = [
+  {
+    frage: "die Anmeldung läuft über den Schlüssel, nicht über eine Benutzerrolle",
+    pruefe: (b) => (b.funktionen.cc_darf_schreiben?.rufe ?? []).filter(r => r === "hash_equals"),
+    kontrolle: "<?php function cc_darf_schreiben() { return current_user_can('edit_posts'); }",
+  },
+  {
+    frage: "der Kopfname X-FCH-Schluessel steht als Vertrag in der Datei",
+    pruefe: (b) => (b.funktionen.cc_darf_schreiben?.texte ?? []).filter(t => t === "X-FCH-Schluessel"),
+    kontrolle: "<?php function cc_darf_schreiben() { $x = 1; }",
+  },
+  {
+    frage: "doppelte sfv_match_id werden gesucht",
+    pruefe: (b) => (b.funktionen.cc_route_spiele?.rufe ?? []).filter(r => r === "cc_doppelte_match_ids"),
+    kontrolle: "<?php function cc_route_spiele() { $x = 1; }",
+  },
+
   {
     frage: "cc_route_bestand nennt die Zeit mit Zone (get_post_time)",
     pruefe: (b) => (b.funktionen.cc_route_bestand?.rufe ?? []).filter(r => r === "get_post_time"),
@@ -161,8 +187,34 @@ const PFLICHTEN = [
   },
 ];
 
+/* ⚠ EIGENE FORM, WEIL „grösser als null" HIER NICHT GENÜGT.
+
+   Die erste Fassung zählte `cc_bericht_ablegen` und verlangte mehr als null.
+   Bei der Gegenprobe habe ich den ABSCHLUSSBERICHT entfernt — die zwei
+   Abbruch-Berichte blieben stehen, die Regel blieb GRÜN, und genau der Fall,
+   um den es geht (ein gelungener Lauf, den niemand sieht), war ungedeckt.
+
+   Die Zusage lautet „JEDER Ausgang berichtet". Also wird gegen die Zahl der
+   Ausgänge geprüft: so viele `cc_bericht_ablegen` wie `new WP_REST_Response`.
+   Kommt ein Ausgang dazu, wird die Regel rot — und das ist der Moment, in dem
+   jemand entscheiden muss, ob er berichtet. */
+const MIT_BERICHT = ["cc_route_spiele", "cc_route_ranglisten"];
+
 const baum = zerlege(readFileSync(DATEI));
 const befunde = [];
+
+for (const fn of MIT_BERICHT) {
+  const z = baum.funktionen[fn]?.rufe_zaehlung ?? {};
+  const antworten = z.WP_REST_Response ?? 0;
+  const berichte = z.cc_bericht_ablegen ?? 0;
+  if (antworten === 0) {
+    befunde.push(`⚠ ${fn}: keine einzige Antwort gefunden — die Prüfung sieht `
+      + `die falsche Funktion an, nicht die Datei ist kaputt.`);
+  } else if (berichte !== antworten) {
+    befunde.push(`${fn}: ${antworten} Ausgänge, aber ${berichte} Bericht(e) — `
+      + `ein Ausgang schweigt, und dort sieht der Verein nichts.`);
+  }
+}
 
 for (const r of REGELN) {
   const kontrolle = r.pruefe(zerlege(r.kontrolle));
@@ -187,7 +239,7 @@ for (const p of PFLICHTEN) {
 }
 
 if (befunde.length === 0) {
-  const anzahl = REGELN.length + PFLICHTEN.length;
+  const anzahl = REGELN.length + PFLICHTEN.length + MIT_BERICHT.length;
   console.log(`check-plugin: ${anzahl} Regeln geprueft${wieGelaufen} — alle erfuellt.`);
   console.log("              ⚠ Ueber den PHP-Tokenizer, nicht ueber den Text:");
   console.log("                Kommentare koennen nicht mitgezaehlt werden.");

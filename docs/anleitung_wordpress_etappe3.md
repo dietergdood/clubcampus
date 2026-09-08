@@ -399,16 +399,25 @@ Zustand niemand sonst prüfen kann.
 
 ## 4 · Das Plugin — schreibe ich, du installierst es
 
-> ⚠⚠ **STAND 08.09.2026: AUF DEM SERVER LÄUFT EIN ANDERER EMPFÄNGER.**
+> ⚠⚠ **STAND 09.09.2026: DER SPIEGEL IST ABGEBAUT, ES GIBT KEINEN
+> EMPFÄNGER MEHR.**
 >
-> `fch-core` bringt unter `src/Spiegel/clubcampus-export.php` eine eigene
-> Fassung mit. Sie ist meiner in der Anmeldung voraus (gemeinsames Geheimnis
-> statt Application Password) und **gewinnt**. Meine Datei heisst seit dem
-> 08.09.2026 `wp-export-empfaenger.php` und ist derzeit **nicht installiert**.
+> `fch-core.php:99` sagt es: die zwei Bausteine aus `src/Spiegel/` sind am
+> 09.09.2026 entfernt worden, darunter die dortige `clubcampus-export.php`.
+> Sobald das deployt ist, antwortet `clubcampus/v1/*` mit **404**.
 >
-> ⚠ **Beide zugleich gehen nicht:** gleiche Funktions- und Konstantennamen,
-> PHP stirbt an der Doppeldeklaration. Der Abschnitt hier gilt für den Fall,
-> dass meine Fassung wieder gebraucht wird — siehe §12.2 im Plan.
+> **Damit ist diese Datei die einzige Kandidatin** — und sie hat am
+> 09.09.2026 drei Dinge aus der Spiegel-Fassung übernommen, bevor sie
+> installiert wird:
+>
+> | übernommen | warum |
+> |---|---|
+> | **Schlüssel statt Benutzerrolle** | mit `edit_posts` konnte jeder angemeldete Redakteur Resultate schreiben |
+> | **Laufbericht** (`fch_cc_bericht`) | damit die ClubCampus-Seite im Backend stehenbleibt, ohne dass jemand sie ändert |
+> | **`cc_doppelte_match_ids()`** | zwei Beiträge mit derselben Kennung machen den Abgleich still falsch |
+>
+> ⚠ **Vor der Installation gehört der Schlüssel gesetzt** — siehe unten.
+> Ohne ihn antwortet der Empfänger 503 und ist damit ZU, nicht offen.
 
 Als **mu-plugin**, und der Ort entscheidet, OB sie überhaupt geladen wird:
 
@@ -427,6 +436,27 @@ eingetragen ist und fehlt, lässt den Lader mit 500 abbrechen.
 
 **Also: neben `fch-core.php`, nicht darin.** Ein Unterordner ginge nur mit
 einem Eintrag in der Bausteinliste — und der gehört dem anderen Repository.
+
+### ⚠ Der Schlüssel — zwei Orte, ein Wert
+
+```php
+// wp-config.php der Website, vor dem „That's all"-Kommentar
+define( 'FCH_CLUBCAMPUS_SCHLUESSEL', '<langer Zufallswert>' );
+```
+
+```bash
+# derselbe Wert als Supabase-Secret
+npx supabase secrets set WP_SCHLUESSEL=<derselbe Wert>
+```
+
+⚠ **Nicht in die Datenbank und nicht ins Repository.** Ein Schlüssel im
+Verlauf ist auch nach dem Löschen noch im Verlauf; in `wp_options` läge er
+in jeder Sicherung.
+
+⚠ **`WP_BENUTZER` und `WP_APP_PASSWORT` entfallen.** Der Export meldet sich
+nicht mehr als Benutzer an — der Kopf `X-FCH-Schluessel` ist ein Vertrag
+zwischen genau zwei Stellen: `cc_darf_schreiben()` hier und
+`supabase/functions/wp-export/index.ts` drüben.
 
 **Warum mu statt normal:** mu-plugins lassen sich im Backend nicht
 deaktivieren und werden bei Theme-Wechseln nicht mitgerissen. Ein Plugin,
@@ -555,7 +585,7 @@ AUSSERHALB des Repositorys:**
 # Die Datei liegt bewusst nicht im Projektordner.
 cat > "$TEMP/wp.env" <<'EOF'
 WP_BASIS_URL=https://dev.fcherrliberg.ch/wp-json
-WP_BENUTZER=clubcampus-export
+WP_BENUTZER=clubcampus-export     # ⚠ seit 09.09.2026 nicht mehr gebraucht
 WP_APP_PASSWORT=abcd efgh ijkl mnop qrst uvwx
 WP_SYNC_KEY=
 EOF

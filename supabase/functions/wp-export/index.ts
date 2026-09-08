@@ -28,8 +28,16 @@
 //
 // GEHEIMNISSE. Aus den Supabase-Secrets, nie aus einer Datei:
 //   WP_BASIS_URL   https://dev.fcherrliberg.ch/wp-json
-//   WP_BENUTZER    clubcampus-export
-//   WP_APP_PASSWORT
+//   WP_SCHLUESSEL  ⚠ DERSELBE WERT wie FCH_CLUBCAMPUS_SCHLUESSEL in der
+//                  wp-config.php der Website. Der Empfaenger vergleicht ihn
+//                  zeitkonstant (hash_equals) gegen den Kopf X-FCH-Schluessel.
+//
+//   ⚠ WP_BENUTZER und WP_APP_PASSWORT sind am 09.09.2026 entfallen. Sie
+//     trugen eine Anmeldung als BENUTZER, und die beantwortete die falsche
+//     Frage: `edit_posts` heisst „darf dieser Mensch Beitraege bearbeiten",
+//     gefragt ist „kommt das von ClubCampus". Damit konnte jeder angemeldete
+//     Redakteur Resultate und Ranglisten schreiben. Der Kopfname ist ein
+//     Vertrag — wer ihn hier aendert, aendert ihn drueben mit.
 //   WP_SYNC_KEY    (Etappe 6, fuer den Zeitplan)
 //
 // ⚠ Die ADRESSE steht ebenfalls im Secret und NICHT in
@@ -188,10 +196,9 @@ async function sendeAnWordpress(
   db: DbLeser, vereinId: string, nurTeam: string, erg: ProbeErgebnis,
 ) {
   const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
-  const benutzer = Deno.env.get("WP_BENUTZER") ?? "";
-  const passwort = Deno.env.get("WP_APP_PASSWORT") ?? "";
-  if (!basis || !benutzer || !passwort) {
-    throw new Error("WP_BASIS_URL, WP_BENUTZER oder WP_APP_PASSWORT nicht gesetzt");
+  const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
+  if (!basis || !schluessel) {
+    throw new Error("WP_BASIS_URL oder WP_SCHLUESSEL nicht gesetzt");
   }
 
   /* ⚠ Der Ziel-Host wird MITGESCHRIEBEN, nicht als Konfiguration abgelegt.
@@ -213,7 +220,7 @@ async function sendeAnWordpress(
       "Content-Type": "application/json",
       /* Anwendungspasswort als Basic-Auth. Es steht nur im Secret und
          kommt in kein Protokoll. */
-      Authorization: "Basic " + btoa(`${benutzer}:${passwort}`),
+      "X-FCH-Schluessel": schluessel,
     },
     body: JSON.stringify({ lauf: beginn, teams: [nurTeam], spiele: alle }),
   });
@@ -328,15 +335,14 @@ async function holeBestand(
   db: DbLeser, vereinId: string, vorgabe: { von: string | null; bis: string | null },
 ) {
   const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
-  const benutzer = Deno.env.get("WP_BENUTZER") ?? "";
-  const passwort = Deno.env.get("WP_APP_PASSWORT") ?? "";
-  if (!basis || !benutzer || !passwort) {
-    throw new Error("WP_BASIS_URL, WP_BENUTZER oder WP_APP_PASSWORT nicht gesetzt");
+  const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
+  if (!basis || !schluessel) {
+    throw new Error("WP_BASIS_URL oder WP_SCHLUESSEL nicht gesetzt");
   }
   const host = new URL(basis).host;
 
   const antwort = await fetch(`${basis}/clubcampus/v1/bestand`, {
-    headers: { Authorization: "Basic " + btoa(`${benutzer}:${passwort}`) },
+    headers: { "X-FCH-Schluessel": schluessel },
   });
   const text = await antwort.text();
   let wp: Record<string, unknown>;
@@ -425,15 +431,14 @@ async function holeBestand(
  */
 async function holeStatus() {
   const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
-  const benutzer = Deno.env.get("WP_BENUTZER") ?? "";
-  const passwort = Deno.env.get("WP_APP_PASSWORT") ?? "";
-  if (!basis || !benutzer || !passwort) {
-    throw new Error("WP_BASIS_URL, WP_BENUTZER oder WP_APP_PASSWORT nicht gesetzt");
+  const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
+  if (!basis || !schluessel) {
+    throw new Error("WP_BASIS_URL oder WP_SCHLUESSEL nicht gesetzt");
   }
   const host = new URL(basis).host;
 
   const antwort = await fetch(`${basis}/clubcampus/v1/status`, {
-    headers: { Authorization: "Basic " + btoa(`${benutzer}:${passwort}`) },
+    headers: { "X-FCH-Schluessel": schluessel },
   });
   const text = await antwort.text();
   let wp: Record<string, unknown>;
