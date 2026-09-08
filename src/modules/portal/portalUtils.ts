@@ -97,11 +97,35 @@ export interface SyncLogZeile {
  *   Beobachtung über die Vergangenheit kann nicht falsch werden; eine
  *   Konfiguration über die Zukunft schon.
  *
- * ⚠ GRENZE: die Kachel lädt die letzten 50 Protokollzeilen. Liegt der
- *   letzte Lauf dieses Anschlusses weiter zurück, kommt hier `null` — das
- *   heisst „nicht in den geladenen Zeilen", nicht „nie gelaufen". Die
- *   Kachel muss das so beschriften.
+ * ⚠ ⚠  UND DIESE GRENZE HAT SOFORT GEBISSEN — 08.09.2026  ⚠ ⚠
+ *
+ *   Der Absatz, der hier stand, nannte die Grenze und prüfte sie nicht:
+ *   „die Kachel lädt die letzten 50 Protokollzeilen; liegt der Lauf weiter
+ *   zurück, kommt hier `null`". **Genau das war ab dem ersten Tag der Fall.**
+ *
+ *   Gerechnet: `sfv-sync` läuft stündlich und schreibt je Lauf eine Zeile.
+ *   50 Zeilen sind damit **rund zwei Tage**. Der einzige WordPress-Lauf war
+ *   am 05.09.2026; drei Tage später lag er ausserhalb des Fensters.
+ *
+ *   Folge: die Kachel meldete dauerhaft „kein Lauf" — und der Vergleich
+ *   zwischen Konfiguration und Beobachtung, also der ganze Zweck der zwei
+ *   Zeilen, konnte NIE anschlagen. **Ein Prüfzweig, den nichts erreicht,
+ *   sieht aus wie einer, der nie anschlägt.** Dieselbe Familie wie die
+ *   Tautologie in `zaehlung_stimmt`: eine Gegenprobe, die nicht scheitern
+ *   kann, wird gelesen wie eine, die es könnte.
+ *
+ *   ⚠ Eine Grenze zu BENENNEN ist nicht dasselbe, wie sie zu MESSEN.
+ *
+ *   Behoben, indem das Modul die Zeilen mit `ziel_host` gezielt lädt statt
+ *   sie im Strom der stündlichen SFV-Läufe zu suchen
+ *   (`PortalverwaltungModul.tsx`). Bleibt `null`, heisst es jetzt wirklich
+ *   „kein Lauf" — und `hatLaufProtokolliert()` trennt davon den Fall
+ *   „gelaufen, aber ohne Ziel im Protokoll" (so der SFV-Sync).
  */
+export function hatLaufProtokolliert(logs: SyncLogZeile[], verbindungId?: string | null): boolean {
+  return Boolean(verbindungId) && logs.some((l) => l.verbindung_id === verbindungId);
+}
+
 export function zielAusLauf(logs: SyncLogZeile[], verbindungId?: string | null): string | null {
   if (!verbindungId) return null;
   const eigene = logs

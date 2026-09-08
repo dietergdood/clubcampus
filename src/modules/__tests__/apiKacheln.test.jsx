@@ -135,12 +135,22 @@ describe('API-Kacheln', () => {
     expect(screen.getByText(/in den Secrets der Edge Function/)).toBeTruthy();
   });
 
-  /* ⚠ Kein Lauf in den geladenen Zeilen heisst NICHT „nie gelaufen" — die
-     Kachel lädt nur die letzten 50. Der Text muss das offenlassen. */
-  it('unterscheidet „kein Lauf geladen" von „nie gelaufen"', () => {
-    zeigeKacheln(VERBINDUNGEN, []);
-    expect(screen.getAllByText(/kein Lauf in den geladenen Protokollzeilen/).length)
-      .toBeGreaterThan(0);
+  /* ⚠ ⚠  DREI ZUSTÄNDE, NICHT ZWEI — und das ist der Defekt vom 08.09.2026.
+
+     Die erste Fassung sagte bei fehlendem Host pauschal „kein Lauf in den
+     geladenen Protokollzeilen". Das stimmte für WordPress und war für den
+     SFV-Anschluss FALSCH: der läuft stündlich, er protokolliert nur kein
+     Ziel. Wer das liest, sucht den Fehler beim Anschluss statt beim
+     Protokoll. */
+  it('sagt beim Anschluss ohne Ziel-Protokoll, dass es am Protokoll liegt', () => {
+    zeigeKacheln([VERBINDUNGEN[0]],
+      [{ verbindung_id: 'v-sfv', gestartet_am: '2026-09-08T06:00:00.000Z', details: { spiele: 3 } }]);
+    expect(screen.getByText(/protokolliert kein Ziel/)).toBeTruthy();
+  });
+
+  it('sagt beim Anschluss ohne jeden Lauf, dass keiner protokolliert ist', () => {
+    zeigeKacheln([VERBINDUNGEN[1]], []);
+    expect(screen.getByText(/noch kein Lauf protokolliert/)).toBeTruthy();
   });
 
   it('zeigt die Meldung des letzten Laufs samt Host', () => {

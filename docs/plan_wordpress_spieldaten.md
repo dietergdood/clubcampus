@@ -205,6 +205,35 @@ die eigenen Mannschaften. Es ist die Vereinsnummer in der Adresse, nicht
 ein Anzeigeschalter — dieselbe Familie wie `tg` gegen `sfv_spiel_nr`: zwei
 Zahlen, die verwandt aussehen und verschiedene Fragen beantworten.
 
+### ⚠ 2.1 Das Theme hat trotzdem ein zweites Feld — `fvrz_team_nr` (08.09.2026)
+
+Der Absatz oben sagt: *„Keine Zuordnungstabelle, keine Spalte
+`fvrz_team_id`, kein zusätzliches Feld."* In der Team-Maske stehen seither
+**zwei** Felder nebeneinander: `sfv_id` („SFV-Team-ID") und `fvrz_team_nr`
+(„FVRZ-Teamnummer", *„Fünfstellig. Der Verein trägt sie von Hand ein;
+ClubCampus liefert sie später."*).
+
+**Gemessen — es ist dieselbe Zahl, und das zweite Feld ist tot:**
+
+| | |
+|---|---|
+| `t=` **ist** `sfv_team_id` | §2, im Browser belegt (38309 → FC Herrliberg a, 37931 → FC Küsnacht a), gegen `teamId` aus der SFV-API |
+| ClubCampus kennt **keine** zweite Teamnummer | Suche nach `fvrz_team`/`fvrz_nr`/`fvrz_id` in `src/` und `supabase/`: **0 Treffer**. `teams` trägt genau eine Verbandskennung |
+| `fvrz_team_nr` hat **keinen Leser** im Theme | einziger Schreiber ist der Seed (`saeen.php:2127`, mit erfundenen `55123`/`55124`); die zwei anderen Fundstellen sind Fliesstext |
+| das Versprechen ist unerfüllbar | *„ClubCampus liefert sie später"* — die Feldhoheit sagt für `team`: `quelle: []`, *„der Export schreibt NIE nach team"* |
+
+⚠ **Dass beide Felder bei der 1. Mannschaft `38301` zeigen, ist KEIN
+Beleg.** Nichts füllt `fvrz_team_nr` automatisch — der Wert wurde von Hand
+eingetragen. Zwei Felder stimmen überein, weil jemand dieselbe Zahl zweimal
+getippt hat; das ist ein Zirkelschluss. Die Aussage trägt die Tabelle oben,
+nicht der Vergleich.
+
+**Empfehlung an den Website-Chat:** `fvrz_team_nr` fällt. Es bleiben `sfv_id`
+(daran hängt `cc_team_karte()` und damit der ganze Team-Abgleich) und
+`fvrz_link` (hat einen Leser, und der Link enthält `t=<sfv_id>` ohnehin).
+Vor dem Entfernen zählen, ob irgendwo ein Wert steht, der **nicht** die
+`sfv_id` ist — das wäre der eine Fall, der diese Messung widerlegt.
+
 ### Was vorher belegt war (Herleitung, zur Nachvollziehbarkeit)
 
 `docs/sfv/matchdaten_beispiel.json`, echte Antwort von
@@ -2819,6 +2848,46 @@ Protokollzeilen. Liegt der letzte Lauf weiter zurück, steht dort
 Gehalten von fünf Fällen in `apiKacheln.test.jsx`, darunter der Fall, der
 am 08.09.2026 wirklich in der Kachel stand (www gegen dev). Gegengeprobt:
 mit `api_url` als Quelle sind zwei davon rot.
+
+### ⚠ 15.4 Der Vergleich war unerreichbar — zwei Tage Protokoll (08.09.2026)
+
+**Die Anzeige aus §15.3 war grundlos grün.** Sie hatte fünf Fälle, alle
+bestanden — und in der laufenden App stand dauerhaft „kein Lauf". Der
+Vergleich zwischen Konfiguration und Beobachtung, also der ganze Zweck der
+zwei Zeilen, konnte **nie** anschlagen.
+
+**Der Grund lag eine Ebene höher, nicht in der Kachel.** Sie bekam die 50
+Protokollzeilen des Audit-Tabs. `sfv-sync` läuft stündlich und schreibt je
+Lauf eine Zeile — **50 Zeilen sind rund zwei Tage**. Der einzige
+WordPress-Lauf war vom 05.09.; drei Tage später lag er ausserhalb.
+
+⚠ **Ich hatte die Grenze im Kommentar benannt und nicht gemessen.** Dort
+stand wörtlich „die Kachel lädt die letzten 50 Protokollzeilen; liegt der
+Lauf weiter zurück, kommt hier `null`" — und genau das galt ab dem ersten
+Tag. **Eine Grenze zu benennen ist nicht dasselbe, wie sie zu messen.**
+
+**Dieselbe Familie wie die Tautologie in `zaehlung_stimmt` (07.09.2026):**
+
+| | die Prüfung | warum sie nichts sagt |
+|---|---|---|
+| Tautologie | `drin + (gesamt − drin) === gesamt` | **kann nicht scheitern** |
+| unerreichbarer Zweig | Vergleich Konfiguration ↔ Beobachtung | **wird nie erreicht** |
+
+**Beide sehen von aussen gleich aus wie eine Prüfung, die einfach nie
+anschlägt** — und werden gelesen wie eine, die es könnte. Der Unterschied
+ist nur durch Messen zu finden, nicht durch Lesen.
+
+**Behoben:** das Modul lädt die Zeilen mit `ziel_host` gezielt, unabhängig
+davon, wie viel daneben läuft. Dazu drei Zustände statt zwei — „kein Host"
+hat zwei Gründe, und sie zusammenzufassen war der zweite Teil des Defekts:
+der SFV-Anschluss läuft stündlich und protokolliert nur kein Ziel; „kein
+Lauf" schickte dort auf die falsche Suche.
+
+Gehalten von `apiKachelLaedt.test.ts` — drei Fälle am EINBAU statt an der
+Anzeige, dieselbe Lücke wie bei der Bilanz-Karte. Gegengeprobt: ohne die
+eigene Abfrage fallen alle drei um.
+
+---
 
 **Offen bleibt der Knopf.** „Sync starten" für den Export gehört dazu —
 **ab Etappe 5, mit Rückfrage** (Didi, 08.09.2026). Heute geht er nicht:

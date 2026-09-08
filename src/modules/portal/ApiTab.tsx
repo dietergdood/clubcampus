@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Btn, Card, Chip, Row, InfoBox } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
-import { API_INFOS, hostVon, zielAusLauf } from "./portalUtils.ts";
+import { API_INFOS, hostVon, zielAusLauf, hatLaufProtokolliert } from "./portalUtils.ts";
 import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
@@ -213,13 +213,22 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                     const gelaufen=zielAusLauf(syncLogs,api.id);
                     const eingestellt=hostVon(api.api_url);
                     const uneinig=Boolean(gelaufen&&eingestellt&&gelaufen!==eingestellt);
+                    /* ⚠ DREI Zustände, nicht zwei. „Kein Host bekannt" hat zwei
+                       ganz verschiedene Gründe, und sie zusammenzufassen war der
+                       Defekt vom 08.09.2026: die Kachel sagte „kein Lauf", während
+                       der SFV-Anschluss stündlich lief — er protokolliert nur
+                       keinen Ziel-Host. Wer das liest, sucht den Fehler beim
+                       Anschluss statt beim Protokoll. */
+                    const jeGelaufen=hatLaufProtokolliert(syncLogs,api.id);
                     return(
                       <>
                         <div style={{fontSize:14,color:"var(--sub)",marginBottom:4,wordBreak:"break-all"}}>
                           Zuletzt geschrieben nach: {gelaufen
                             ? <b>{gelaufen}</b>
                             : <span style={{fontStyle:"italic"}}>
-                                — kein Lauf in den geladenen Protokollzeilen
+                                {jeGelaufen
+                                  ? "— dieser Anschluss protokolliert kein Ziel"
+                                  : "— noch kein Lauf protokolliert"}
                               </span>}
                         </div>
                         <div style={{fontSize:14,color:"var(--sub)",marginBottom:uneinig?4:10,

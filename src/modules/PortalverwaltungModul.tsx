@@ -164,6 +164,9 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
   const [felder,setFelder]=useState<Feld[]>([]);
   const [apiVerbindungen,setApiVerbindungen]=useState<ApiVerbindung[]>([]);
   const [auditLogs,setAuditLogs]=useState<SyncLog[]>([]);
+  /* Nur die Protokollzeilen, die ein Ziel nennen — für die API-Kachel.
+     Warum eigens geladen: siehe die Abfrage unten. */
+  const [zielLogs,setZielLogs]=useState<SyncLogZeile[]>([]);
   const [loading,setLoading]=useState(true);
   const [saveMsg,setSaveMsg]=useState("");
   const [expandedModul,setExpandedModul]=useState<string|null>(null);
@@ -347,9 +350,22 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
       setLoading(true);
       try{
         if(supabase){
-          const [apiR,audR,benuR,gruppenR,funktionenR,mcR,mrR,teamsR,gtR]=await Promise.all([
+          const [apiR,audR,zielR,benuR,gruppenR,funktionenR,mcR,mrR,teamsR,gtR]=await Promise.all([
             supabase.from("api_verbindungen").select("*").order("sort_order"),
             supabase.from("api_sync_log").select("*,api_verbindungen(label)").order("gestartet_am",{ascending:false}).limit(50),
+            /* ⚠ EIGENE ABFRAGE, UND ZWAR AUS GEMESSENEM GRUND.
+               Die 50 Zeilen darüber sind für den Audit-Tab gedacht. `sfv-sync`
+               läuft stündlich und schreibt je Lauf eine Zeile — 50 Zeilen sind
+               damit rund ZWEI TAGE. Der WordPress-Lauf vom 05.09.2026 fiel
+               drei Tage später heraus, und die Kachel meldete dauerhaft
+               „kein Lauf". Der Vergleich zwischen Konfiguration und
+               Beobachtung konnte damit NIE anschlagen: ein Prüfzweig, den
+               nichts erreicht.
+               Deshalb gezielt die Zeilen, die ein Ziel nennen — unabhängig
+               davon, wie viel daneben läuft. */
+            supabase.from("api_sync_log").select("verbindung_id,gestartet_am,details")
+              .not("details->>ziel_host","is",null)
+              .order("gestartet_am",{ascending:false}).limit(20),
             /* aktiv fehlte in der Auswahl — die Status-Spalte im Benutzer-Tab
                las ein Feld, das nie geladen wurde, und stand daher immer
                auf "Aktiv". Die App pflegt aktiv (siehe updatePortalZugang),
@@ -364,6 +380,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
           ]);
           if(apiR.data) setApiVerbindungen(apiR.data);
           if(audR.data) setAuditLogs(audR.data);
+          if(zielR.data) setZielLogs(zielR.data as unknown as SyncLogZeile[]);
           if(benuR.data&&benuR.data.length>0){
             /* Funktionen separat laden */
             const{data:bfData}=await supabase.from("benutzer_funktionen")
@@ -702,7 +719,7 @@ function PortalverwaltungView(props: PortalverwaltungViewProps){
              sie kamen nur nie in der Kachel an. Daraus liest sie, WOHIN
              zuletzt geschrieben wurde, statt `api_url` zu zeigen und es
              „Ziel" zu nennen. */
-          syncLogs={auditLogs as unknown as SyncLogZeile[]}
+          syncLogs={[...(auditLogs as unknown as SyncLogZeile[]), ...zielLogs]}
           onReload={async()=>{
             if(!supabase) return;
             const {data}=await supabase.from("api_verbindungen").select("*").order("sort_order");
