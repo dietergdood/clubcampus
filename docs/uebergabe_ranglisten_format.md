@@ -16,12 +16,37 @@ berichtigt — siehe unten).
 
 ## Die Form
 
-Eine Abbildung `sfv_gruppe_id → Gruppe`, **nicht eine Liste**. Der Schlüssel
-ist die Gruppennummer als Zeichenkette:
+Eine Abbildung **`schluessel` → Gruppe**, keine Liste. Der Empfänger baut
+sie über `$alle[ $id ] = $g`.
+
+⚠⚠ **DER SCHLÜSSEL IST `schluessel`, NICHT `sfv_gruppe_id` — berichtigt am
+09.09.2026 abends, nach einem Befund auf der Website.** Eine Gruppe ist
+beim Verband **vierteilig**: Saison, Liga, Division, Gruppennummer. Die
+Nummer allein ist nicht eindeutig — in der Datenbank steht dafür ein
+sechsteiliger Unique-Schlüssel, und `sfv_gruppe_id` trägt obendrein
+`DEFAULT 0`.
+
+```
+schluessel = "<saison>|<liga>|<division>|<gruppe>"    z. B. "2026|401|0|900123"
+```
+
+`sfv_gruppe_id` bleibt in der Gruppe stehen und ist weiterhin die **echte
+Gruppennummer des Verbands** — sie taugt zur Anzeige und zum Verweis, nur
+nicht als Schlüssel.
+
+⚠ **Das Beispiel unten ist ERZEUGT, nicht getippt** — es läuft durch
+dieselbe Funktion (`baueGruppen()` in `src/domains/spiele/wpRangliste.ts`),
+die auch der scharfe Lauf benutzt. Ein von Hand geschriebenes Beispiel
+könnte von dem abweichen, was tatsächlich ankommt, und genau das darf eine
+Formatbeschreibung nicht.
+
+**Zwei Gruppen, damit die Schlüsselung sichtbar ist**, und in jeder genau
+eine eigene Zeile (`ist_wir: true`):
 
 ```json
 {
-  "900123": {
+  "2026|401|0|900123": {
+    "schluessel": "2026|401|0|900123",
     "sfv_gruppe_id": 900123,
     "sfv_saison_id": 2026,
     "sfv_liga_id": 401,
@@ -31,15 +56,90 @@ ist die Gruppennummer als Zeichenkette:
     "stand_vom": "2026-09-09T18:00:00+02:00",
     "zeilen": [
       {
-        "rang": 1, "team": "FC Küsnacht a", "spiele": 9,
-        "siege": 7, "unentschieden": 1, "niederlagen": 1,
-        "fair": 2, "tore_plus": 28, "tore_minus": 9, "punkte": 22,
-        "ist_wir": false, "sfv_team_id": 37931
+        "rang": 1,
+        "team": "FC Küsnacht a",
+        "spiele": 9,
+        "siege": 7,
+        "unentschieden": 1,
+        "niederlagen": 1,
+        "fair": 2,
+        "tore_plus": 28,
+        "tore_minus": 9,
+        "punkte": 22,
+        "ist_wir": false,
+        "sfv_team_id": 37931
+      },
+      {
+        "rang": 2,
+        "team": "FC Herrliberg a",
+        "spiele": 9,
+        "siege": 5,
+        "unentschieden": 2,
+        "niederlagen": 2,
+        "fair": 1,
+        "tore_plus": 19,
+        "tore_minus": 12,
+        "punkte": 17,
+        "ist_wir": true,
+        "sfv_team_id": 38309
+      },
+      {
+        "rang": 3,
+        "team": "SC Zollikon b",
+        "spiele": 9,
+        "siege": 4,
+        "unentschieden": 1,
+        "niederlagen": 4,
+        "fair": 4,
+        "tore_plus": 15,
+        "tore_minus": 18,
+        "punkte": 13,
+        "ist_wir": false,
+        "sfv_team_id": 37940
+      }
+    ]
+  },
+  "2026|388|0|900456": {
+    "schluessel": "2026|388|0|900456",
+    "sfv_gruppe_id": 900456,
+    "sfv_saison_id": 2026,
+    "sfv_liga_id": 388,
+    "sfv_division_id": 0,
+    "liga_name": "3. Liga",
+    "gruppe_name": "Gruppe 1",
+    "stand_vom": "2026-09-09T18:00:00+02:00",
+    "zeilen": [
+      {
+        "rang": 4,
+        "team": "FC Herrliberg 1",
+        "spiele": 9,
+        "siege": 3,
+        "unentschieden": 2,
+        "niederlagen": 3,
+        "fair": 3,
+        "tore_plus": 14,
+        "tore_minus": 15,
+        "punkte": 11,
+        "ist_wir": true,
+        "sfv_team_id": 38301
       }
     ]
   }
 }
 ```
+
+Gewicht dieses Beispiels: `{"gruppen":2,"zeilen":4,"bytes":1161,"groesste_gruppe":3}`
+
+### Was daran wofür da ist
+
+| Feld | |
+|---|---|
+| `schluessel` | **der Schlüssel der Ablage.** Vierteilig, siehe oben |
+| `sfv_gruppe_id` | die echte Gruppennummer des Verbands — zur Anzeige, **nicht** als Schlüssel |
+| `sfv_saison_id` · `sfv_liga_id` · `sfv_division_id` | Herkunft beim Verband. Die Vorlage braucht sie heute nicht; ohne sie wäre eine alte Gruppe später nicht von einer neuen zu unterscheiden |
+| `liga_name` · `gruppe_name` | Klartext für Überschriften (`page-spiele.php` setzt heute `liga` vom Team davor) |
+| `stand_vom` | wann der Verband diesen Stand geliefert hat — **nicht**, wann der Export lief |
+| `zeilen[]` | die Tabelle, nach `rang` sortiert |
 
 ## Die elf Schlüssel je Zeile — der Vertrag
 
@@ -93,6 +193,27 @@ Empfänger ersetzt nur gelieferte Gruppen und **entfernt nie eine**. Nach
 einem Saisonwechsel bleiben die alten liegen. Ob und wann sie fallen, ist
 ein offener Entscheid — gemeldet wird es seit dem 09.09.2026.
 
+## ⚠ Wer die Tabelle darstellt — das ist schon gebaut
+
+**Damit die Ranglisten nicht in der Datenbank liegen bleiben, ist auf der
+Website nichts mehr zu bauen.** Die Anzeige steht seit dem 09.09.2026 im
+Theme (Commit `4493edc`) und liest bereits aus dieser Ablage:
+
+```php
+// themes/fch/inc/rangtabelle.php:67
+fch_theme_rangzeilen( int $team_id ): array     // Ablage zuerst, Feld als Rückfall
+```
+
+Sie sucht die Gruppe über `fch_cc_rangliste_fuer_team( get_field( 'sfv_id', $team ) )`
+und gibt deren `zeilen` an `fch_theme_rangtabelle()`. **Was fehlt, ist
+nicht Code, sondern Inhalt:** die `sfv_id` an den Team-Beiträgen und ein
+scharfer Lauf.
+
+⚠ **Wofür der Website-Chat dieses Format trotzdem braucht:** für alles,
+was daneben steht — den Prüfstand «Datenempfang», eine Anzeige des
+Bestands, oder wenn die Tabelle einmal woanders erscheinen soll. Und damit
+niemand die Schlüssel aus dem Quelltext rät.
+
 ## Was auf der Website daran hängt (bereits gebaut)
 
 | | |
@@ -100,6 +221,29 @@ ein offener Entscheid — gemeldet wird es seit dem 09.09.2026.
 | `themes/fch/inc/rangtabelle.php:67` | `fch_theme_rangzeilen( int $team_id )` — Ablage zuerst, Feld `rangliste` als Rückfall, `function_exists()`-Wächter |
 | `single-fch_team.php:584` · `page-spiele.php:375` | die zwei Lesestellen |
 | Feld `rangliste` am Team | bleibt, ist der Rückfall; Hilfetext am 09.09.2026 berichtigt |
+
+## ⚠ Was am 09.09.2026 abends schiefging — damit es drüben niemand nachbaut
+
+Auf `/teams/fc-herrliberg-4/` standen **zwei Tabellen ineinander**: die
+Ränge 1, 1, 2, 2, 3, 3 und zwei eigene Mannschaften hervorgehoben, die in
+verschiedenen Gruppen spielen.
+
+**Es lag nicht an der Anzeige.** `fch_theme_rangzeilen()` gibt genau ein
+`zeilen`-Array weiter, und `rangtabelle.php` rendert genau das — eine
+Vorlage kann zwei Gruppen gar nicht mischen. **Gemischt hat der Export**:
+er fasste die Zeilen nach `sfv_gruppe_id` **allein** zusammen, und die ist
+nicht eindeutig.
+
+⚠ **Der zweite Teil desselben Fehlers hätte erst später wehgetan:** auch
+der Empfänger schlüsselte auf `sfv_gruppe_id`. Wäre nur der Export
+berichtigt worden, hätten die zwei nun getrennten Gruppen **dieselbe Zeile
+der Ablage belegt** — die zweite überschriebe die erste, ohne Fehler und
+ohne Meldung. Aus „zwei Tabellen ineinander" wäre „eine Mannschaft zeigt
+die Tabelle einer anderen" geworden: leiser und schwerer zu finden.
+
+**Beide Hälften sind berichtigt.** Der Empfänger nimmt `schluessel` und
+fällt auf `sfv_gruppe_id` nur zurück, wenn eine ältere Gegenstelle ihn
+nicht mitschickt — und **meldet das dann** unter `uebersprungen`.
 
 ## Grössen — gemessen, keine Grenze erfunden
 

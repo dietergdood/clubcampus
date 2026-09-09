@@ -1157,7 +1157,35 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 	$n             = 0;
 	$uebersprungen = array();
 	foreach ( $gruppen as $g ) {
-		$id = (string) ( $g['sfv_gruppe_id'] ?? '' );
+		/* ⚠⚠ DER SCHLUESSEL IST `schluessel`, NICHT `sfv_gruppe_id`.
+		   BERICHTIGT AM 09.09.2026, NACH EINEM BEFUND AUF DER WEBSITE.
+
+		   Eine Gruppe ist beim Verband vierteilig — Saison, Liga, Division,
+		   Gruppennummer. Die Nummer allein ist NICHT eindeutig: in der
+		   Datenbank steht dafuer ein sechsteiliger Unique-Schluessel, und
+		   `sfv_gruppe_id` traegt obendrein `DEFAULT 0`.
+
+		   Mit der Nummer als Schluessel haetten zwei verschiedene Gruppen
+		   dieselbe Zeile der Ablage belegt — die zweite ueberschriebe die
+		   erste, **ohne Fehler und ohne Meldung**. Eine Mannschaft verlöre
+		   ihre Tabelle, und auf der Seite stuende die einer anderen.
+
+		   ⚠ Der Rueckfall auf `sfv_gruppe_id` steht da fuer eine
+		   Gegenstelle, die den Schluessel noch nicht mitschickt — er ist
+		   die alte, kollidierende Form und wird gemeldet, nicht
+		   stillschweigend hingenommen. */
+		$id = (string) ( $g['schluessel'] ?? '' );
+		if ( '' === $id ) {
+			$id = (string) ( $g['sfv_gruppe_id'] ?? '' );
+			if ( '' !== $id ) {
+				$uebersprungen[] = array(
+					'sfv_match_id' => '—',
+					'grund'        => 'Gruppe ' . $id . ' kam ohne «schluessel» — alte Form der '
+						. 'Gegenstelle. Zwei Gruppen mit derselben Nummer wuerden einander '
+						. 'ueberschreiben.',
+				);
+			}
+		}
 		if ( '' === $id ) {
 			/* ⚠ Bis zum 09.09.2026 fiel diese Gruppe stillschweigend heraus.
 			   **Eine Gruppe ohne Kennung ist kein Nichts, sondern eine
@@ -1165,7 +1193,7 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 			   der Spiegel-Fassung. */
 			$uebersprungen[] = array(
 				'sfv_match_id' => '—',
-				'grund'        => 'Rangliste ohne sfv_gruppe_id — nicht zuzuordnen',
+				'grund'        => 'Rangliste ohne «schluessel» und ohne sfv_gruppe_id — nicht zuzuordnen',
 			);
 			continue;
 		}

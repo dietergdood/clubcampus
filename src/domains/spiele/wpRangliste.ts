@@ -65,6 +65,13 @@ export interface WpRangZeile {
 
 /** Eine Gruppe, wie sie in der Ablage `fch_cc_ranglisten` landet. */
 export interface WpRangGruppe {
+  /**
+   * ⚠ DER SCHLUESSEL DER ABLAGE — und NICHT `sfv_gruppe_id`.
+   *
+   * `"2026|401|0|900123"`. Warum nicht die Gruppennummer allein, steht bei
+   * `gruppenSchluessel()`: sie ist nicht eindeutig.
+   */
+  schluessel: string;
   sfv_gruppe_id: number;
   sfv_saison_id: number;
   sfv_liga_id: number;
@@ -78,6 +85,43 @@ export interface WpRangGruppe {
 const z = (n: number | null | undefined): number => (typeof n === "number" && Number.isFinite(n) ? n : 0);
 
 /**
+ * Was eine Gruppe IST — vier Teile, nicht einer.
+ *
+ * ⚠⚠ **`sfv_gruppe_id` ALLEIN IST KEINE GRUPPE.** Das steht seit jeher in
+ * der Datenbank und ich habe es am 09.09.2026 uebersehen:
+ *
+ * ```sql
+ * ranglisten_verein_zeile_key UNIQUE (verein_id, sfv_saison_id, sfv_liga_id,
+ *                                     sfv_division_id, sfv_gruppe_id, sfv_team_id)
+ * ```
+ *
+ * Der Schluessel ist sechsteilig, **weil das kuerzere Stueck nicht eindeutig
+ * ist**. Und der SFV-Sync rechnet seit jeher richtig — `sync.ts:138` fuehrt
+ * denselben vierteiligen Schluessel und begruendet ihn beim Abgleich:
+ * *„Abgleich JE GRUPPE, nicht je Saison."*
+ *
+ * ⚠ **Der Export hat daraus einen Teil gemacht, und die Folge war auf der
+ * Website zu sehen:** auf der Seite von FC Herrliberg 4 standen zwei
+ * Tabellen ineinander — die Raenge 1,1,2,2,3,3, und zwei eigene
+ * Mannschaften hervorgehoben, die in verschiedenen Gruppen spielen.
+ *
+ * ⚠ **`sfv_gruppe_id` hat obendrein `DEFAULT 0`.** Wo der Verband keine
+ * Gruppennummer liefert, tragen ALLE Gruppen die 0 — dann faellt ohne
+ * diesen Schluessel jede Rangliste des Vereins in einen Topf.
+ *
+ * ⚠ **Die Form muss zu `sync.ts:139` passen** (dieselbe Reihenfolge,
+ * dasselbe Trennzeichen). Sie steht dort ein zweites Mal, weil eine Edge
+ * Function mit `esm.sh`-Import von hier nicht importiert werden kann, ohne
+ * dass sie neu ausgerollt wird. **Ein Testfall haelt beide Fassungen
+ * gegeneinander** — siehe `wpRangliste.test.ts`.
+ */
+export function gruppenSchluessel(
+  z: { sfv_saison_id: number; sfv_liga_id: number; sfv_division_id: number; sfv_gruppe_id: number },
+): string {
+  return `${z.sfv_saison_id}|${z.sfv_liga_id}|${z.sfv_division_id}|${z.sfv_gruppe_id}`;
+}
+
+/**
  * Die Zeilen einer Gruppe in die Form der Vorlage bringen.
  *
  * ⚠ Sortiert nach `position`, nicht nach der Reihenfolge der Datenbank.
@@ -87,15 +131,18 @@ const z = (n: number | null | undefined): number => (typeof n === "number" && Nu
 export function baueGruppen(
   zeilen: RanglisteZeile[], unsereTeams: Set<string>,
 ): WpRangGruppe[] {
-  const proGruppe = new Map<number, RanglisteZeile[]>();
+  const proGruppe = new Map<string, RanglisteZeile[]>();
   for (const r of zeilen) {
-    const liste = proGruppe.get(r.sfv_gruppe_id) ?? [];
+    /* ⚠ Vier Teile. Ein Teil hat am 09.09.2026 zwei Gruppen zu einer
+       gemacht — siehe gruppenSchluessel(). */
+    const k = gruppenSchluessel(r);
+    const liste = proGruppe.get(k) ?? [];
     liste.push(r);
-    proGruppe.set(r.sfv_gruppe_id, liste);
+    proGruppe.set(k, liste);
   }
 
   const gruppen: WpRangGruppe[] = [];
-  for (const [id, rohe] of proGruppe) {
+  for (const [schluessel, rohe] of proGruppe) {
     /* ⚠ NUR GRUPPEN, IN DENEN EINE EIGENE MANNSCHAFT STEHT. Eine fremde
        Gruppe gehört nicht auf die Vereinsseite — und sie hätte dort auch
        keinen Leser: die Vorlage sucht die Gruppe über die eigene
@@ -106,7 +153,8 @@ export function baueGruppen(
     const sortiert = [...rohe].sort((a, b) => z(a.position) - z(b.position));
     const kopf = sortiert[0];
     gruppen.push({
-      sfv_gruppe_id: id,
+      schluessel,
+      sfv_gruppe_id: kopf.sfv_gruppe_id,
       sfv_saison_id: kopf.sfv_saison_id,
       sfv_liga_id: kopf.sfv_liga_id,
       sfv_division_id: kopf.sfv_division_id,
@@ -130,8 +178,10 @@ export function baueGruppen(
     });
   }
 
-  /* Stabile Reihenfolge, damit zwei Läufe vergleichbar sind. */
-  return gruppen.sort((a, b) => a.sfv_gruppe_id - b.sfv_gruppe_id);
+  /* Stabile Reihenfolge, damit zwei Läufe vergleichbar sind. Nach dem
+     SCHLÜSSEL, nicht nach der Gruppennummer — die kann doppelt sein, und
+     dann wäre die Reihenfolge zufällig. */
+  return gruppen.sort((a, b) => a.schluessel.localeCompare(b.schluessel, "de", { numeric: true }));
 }
 
 /**

@@ -8,7 +8,8 @@
  * Empfänger die Gruppe nicht findet.
  */
 import { describe, it, expect } from "vitest";
-import { baueGruppen, wiegeGruppen, beurteileBestand } from "../wpRangliste.ts";
+import { readFileSync } from "node:fs";
+import { baueGruppen, wiegeGruppen, beurteileBestand, gruppenSchluessel } from "../wpRangliste.ts";
 import type { RanglisteZeile } from "../wpRangliste.ts";
 
 function zeile(teil: Partial<RanglisteZeile> & { sfv_team_id: number }): RanglisteZeile {
@@ -95,6 +96,85 @@ describe("baueGruppen — der Vertrag mit der Vorlage", () => {
     const [g] = baueGruppen([zeile({ sfv_team_id: 38309, punkte: null, tore: null })], UNSERE);
     expect(g.zeilen[0].punkte).toBe(0);
     expect(g.zeilen[0].tore_plus).toBe(0);
+  });
+});
+
+describe("⚠ Zwei Gruppen mit derselben Nummer — der Befund vom 09.09.2026", () => {
+  /* Auf /teams/fc-herrliberg-4/ standen zwei Tabellen ineinander: die
+     Ränge 1,1,2,2,3,3 und zwei eigene Mannschaften hervorgehoben, die in
+     verschiedenen Gruppen spielen. Ursache war NICHT die Anzeige, sondern
+     diese Rechnung — sie fasste nach `sfv_gruppe_id` allein zusammen. */
+  const ZWEI_GRUPPEN = [
+    /* Gleiche Gruppennummer, verschiedene Liga — beim Verband zwei Gruppen. */
+    zeile({ sfv_team_id: 38302, sfv_liga_id: 388, sfv_gruppe_id: 0, position: 1, team_name: "Fremd A" }),
+    zeile({ sfv_team_id: 38311, sfv_liga_id: 388, sfv_gruppe_id: 0, position: 5, team_name: "FC Herrliberg 2" }),
+    zeile({ sfv_team_id: 38303, sfv_liga_id: 402, sfv_gruppe_id: 0, position: 1, team_name: "Fremd B" }),
+    zeile({ sfv_team_id: 38312, sfv_liga_id: 402, sfv_gruppe_id: 0, position: 10, team_name: "FC Herrliberg 4" }),
+  ];
+  const UNSERE_ZWEI = new Set(["38311", "38312"]);
+
+  it("hält sie auseinander, statt sie zu einer Tabelle zu mischen", () => {
+    const gruppen = baueGruppen(ZWEI_GRUPPEN, UNSERE_ZWEI);
+    expect(gruppen).toHaveLength(2);
+    expect(gruppen.map((g) => g.zeilen.length)).toEqual([2, 2]);
+  });
+
+  it("gibt keiner Gruppe zwei eigene Mannschaften", () => {
+    /* Das war das sichtbare Merkmal: zwei hervorgehobene Zeilen in einer
+       Tabelle. Zwei eigene Mannschaften in EINER Gruppe gibt es zwar —
+       aber nicht diese zwei, und nicht mit doppelten Rängen. */
+    const gruppen = baueGruppen(ZWEI_GRUPPEN, UNSERE_ZWEI);
+    for (const g of gruppen) {
+      expect(g.zeilen.filter((r) => r.ist_wir)).toHaveLength(1);
+    }
+  });
+
+  it("lässt keinen Rang zweimal in derselben Tabelle stehen", () => {
+    const gruppen = baueGruppen(ZWEI_GRUPPEN, UNSERE_ZWEI);
+    for (const g of gruppen) {
+      const raenge = g.zeilen.map((r) => r.rang);
+      expect(new Set(raenge).size).toBe(raenge.length);
+    }
+  });
+
+  it("trägt einen Schlüssel, unter dem die Ablage sie nicht überschreibt", () => {
+    /* ⚠ Die zweite Hälfte desselben Defekts: der Empfänger legt je
+       Schlüssel EINE Zeile ab (`$alle[$id] = $g`). Wäre der Schlüssel die
+       Gruppennummer, überschriebe die zweite Gruppe die erste — ohne
+       Fehler und ohne Meldung. */
+    const gruppen = baueGruppen(ZWEI_GRUPPEN, UNSERE_ZWEI);
+    const schluessel = gruppen.map((g) => g.schluessel);
+    expect(new Set(schluessel).size).toBe(2);
+    expect(new Set(gruppen.map((g) => g.sfv_gruppe_id)).size).toBe(1);
+  });
+
+  it("nennt in jeder Gruppe die eigene Gruppennummer, nicht den Schlüssel", () => {
+    const [g] = baueGruppen(ZWEI_GRUPPEN, UNSERE_ZWEI);
+    expect(g.sfv_gruppe_id).toBe(0);
+    expect(g.schluessel).toContain("|");
+  });
+});
+
+describe("gruppenSchluessel — dieselbe Form wie im SFV-Sync", () => {
+  it("setzt vier Teile mit | zusammen", () => {
+    expect(gruppenSchluessel({
+      sfv_saison_id: 2026, sfv_liga_id: 401, sfv_division_id: 0, sfv_gruppe_id: 900123,
+    })).toBe("2026|401|0|900123");
+  });
+
+  /* ⚠ DIE ZWEITE FASSUNG STEHT IN `sfv-sync/sync.ts` und kann von hier
+     nicht importiert werden (esm.sh). Zwei Orte für eine Aussage laufen
+     auseinander — deshalb hält dieser Fall sie gegeneinander.
+
+     Gelesen wird der Quelltext, und zwar gezielt die eine Zeile: eine
+     Suche nach `sfv_saison_id` allein träfe auch Kommentare. */
+  it("stimmt mit der Fassung im SFV-Sync überein", () => {
+    const quelle = readFileSync("supabase/functions/sfv-sync/sync.ts", "utf8");
+    const treffer = quelle.match(
+      /\$\{z\.sfv_saison_id\}\|\$\{z\.sfv_liga_id\}\|\$\{z\.sfv_division_id\}\|\$\{z\.sfv_gruppe_id\}/,
+    );
+    expect(treffer, "sync.ts führt den vierteiligen Gruppenschlüssel nicht mehr in dieser Form")
+      .not.toBeNull();
   });
 });
 
