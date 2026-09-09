@@ -130,8 +130,29 @@ export function SfvZuordnung({sb,dbTeams,setDbTeams,onZurueck}: SfvZuordnungProp
                 > Zahl handelt — und der Kasten darunter nennt, was nicht
                 > darin vorkommt. */}
             <div style={{fontSize:13,color:"var(--sub)",marginBottom:8}}>
-              {zugeordnet} von {sfvTeams.length} Mannschaften zugeordnet, die der Verband
-              für diese Saison führt
+              {zugeordnet} von {sfvTeams.length} Mannschaften zugeordnet, die die
+              SFV-Schnittstelle für diese Saison liefert
+            </div>
+            {/* ⚠ ⚠  BERICHTIGT AM 10.09.2026, ZWEITE RUNDE.
+
+                Vorher stand hier „…, die der Verband für diese Saison
+                führt". Das behauptet mehr, als diese Maske wissen kann:
+                sie kennt die Antwort EINER Schnittstelle
+                (`/api/team/list`), nicht den Bestand des Verbands. Beides
+                kann auseinandergehen — und am 10.09.2026 tut es das
+                offenbar: die Verbandsseite zeigt Mannschaften, die die
+                Schnittstelle nicht liefert.
+
+                > Eine Zahl darf für die Menge einstehen, die sie zaehlt —
+                > nicht fuer die, die jemand meint.
+
+                Deshalb nennt der Satz die QUELLE, und der Kasten darunter
+                sagt, dass sie nicht das letzte Wort ist. */}
+            <div style={{fontSize:12,color:"var(--sub)",marginBottom:10,fontStyle:"italic"}}>
+              Quelle: <code>/api/team/list</code> des SFV, gefragt für diese Saison.
+              ⚠ Zeigt die Verbandsseite mehr Mannschaften als hier stehen, liefert die
+              Schnittstelle sie nicht — dann ist die Lücke beim Verband oder in der
+              gefragten Saison, nicht in der Zuordnung.
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>

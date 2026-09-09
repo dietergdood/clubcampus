@@ -59,10 +59,19 @@ function zeige() {
 }
 
 describe('Zuordnungsmaske — Vollständigkeit', () => {
-  it('sagt, dass der Nenner vom Verband kommt', async () => {
+  it('nennt die QUELLE des Nenners, nicht „den Verband"', async () => {
+    /* ⚠ Zweite Runde am 10.09.2026: „die der Verband führt" behauptete
+       mehr, als die Maske wissen kann. Sie kennt die Antwort EINER
+       Schnittstelle — und die Verbandsseite zeigt offenbar mehr. */
     zeige();
-    /* Nicht „2 von 2 zugeordnet" allein: der Satz muss sagen, WOVON. */
-    expect(await screen.findByText(/2 von 2 Mannschaften zugeordnet, die der Verband/))
+    expect(await screen.findByText(/2 von 2 Mannschaften zugeordnet, die die/))
+      .toBeTruthy();
+    expect(screen.getByText(/api\/team\/list/)).toBeTruthy();
+  });
+
+  it('sagt, was eine Abweichung zur Verbandsseite bedeutet', async () => {
+    zeige();
+    expect(await screen.findByText(/Zeigt die Verbandsseite mehr Mannschaften/))
       .toBeTruthy();
   });
 

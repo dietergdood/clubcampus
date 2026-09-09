@@ -159,9 +159,28 @@ export async function laufeSync(
   const sfvTeams: SfvTeam[] = await holeTeams(zugang, token, saison.id);
   const eigene = new Set(sfvTeams.map((t) => t.sfv_team_id));
 
-  /* Namen aus der Zuordnung. Fehlt sie, greift der Ersatz in bildeSpiel. */
-  const { data: teamZeilen } = await db
+  /* Namen aus der Zuordnung. Fehlt sie, greift der Ersatz in bildeSpiel.
+   *
+   * ⚠⚠ `error` WIRD GELESEN, SEIT DEM 10.09.2026 — vorher stand hier nur
+   * `{ data: teamZeilen }`, und das war die teuerste der drei Stellen:
+   *
+   *   scheitert die Abfrage, ist `teamZeilen` null, `?? []` macht daraus
+   *   eine leere Liste, und der Lauf rechnet ungeruehrt weiter. Folge:
+   *   JEDES Spiel bekaeme statt unseres Teamnamens den des Verbands,
+   *   `verwaiste_zuordnungen` waere 0 — und `sfv_teams_ohne_zuordnung`
+   *   meldete ALLE Mannschaften als unzugeordnet. Ein Fehlalarm, der wie
+   *   ein Befund aussieht.
+   *
+   * > Ein Endpunkt, der nichts liefert, muss von einem unterschieden
+   * > werden, der nicht gefragt wurde. (Didi, 10.09.2026)
+   *
+   * Deshalb wird hier geworfen statt weitergerechnet: ein Lauf ohne
+   * Zuordnungen ist kein Lauf mit anderen Zahlen, sondern keiner. */
+  const { data: teamZeilen, error: teamFehler } = await db
     .from("teams").select("id,name,sfv_team_id").eq("verein_id", v.verein_id);
+  if (teamFehler) {
+    throw new SfvFehler(`Teams nicht lesbar: ${teamFehler.message}`);
+  }
   const namen = new Map<number, string>();
   for (const t of teamZeilen ?? []) {
     if (t.sfv_team_id != null) namen.set(Number(t.sfv_team_id), t.name as string);

@@ -1213,6 +1213,49 @@ Der Tab steht (`SupporterListView`), aber Spalten, Filter und gespeicherte Ansic
 
 Filter, Sortierung und Gruppierung laufen über dieselben Funktionen wie die Mitgliederliste (`filterMembers`, `sortMembers`, `buildGroups`) — ein Supporter **ist** eine `MemberRow`, seit dem Rückbau über `mapSupporter()` statt über eine Zeile in `mitglieder`. Das soll so bleiben; zu überarbeiten ist die Auswahl, nicht die Mechanik.
 
+### ⚠ `/api/team/list` heisst „Teams" und liefert nicht alle Teams
+
+Befund vom 10.09.2026. **Kein Fehler des Verbands — eine Falle für jeden,
+der den Namen liest und die Bedeutung annimmt.**
+
+| | |
+|---|---|
+| **gemessen** | die Verbandsseite führt **34** Mannschaften des FCH, alle mit Spielplan. `/api/team/list?SeasonId=…&ClubId=…` gibt **21** heraus |
+| **gemessen** | der Endpunkt hat **zwölf** optionale Parameter, und sein Parametersatz ist **Zeichen für Zeichen derselbe** wie der von `/api/club/schedule` |
+| **gemessen** | `/api/club/schedule` liefert die Spiele **aller** Mannschaften — beide Endpunkte, dieselben Parameter, verschiedene Menge |
+| **vermutet** | die Teamliste gibt nur Mannschaften mit **Meisterschaftsbetrieb** heraus (also mit `LeagueId`). Die Stammdaten führen daneben Spieltyp **6 Turnier** und **8 Mini-Turniere** — die Betriebsform der jüngsten Jahrgänge, und genau die fehlen |
+
+⚠ **Weil beide Endpunkte denselben Filtersatz haben, kann es kein
+vergessener Parameter sein.** Ein Filter, den niemand setzt, greift nicht
+beim einen und beim anderen nicht.
+
+**Was daraus folgt, und es ist die eigentliche Lehre:**
+
+> **Ein Endpunktname ist eine Beschriftung, keine Zusage über die Menge.**
+> `summary: „return teamIds for the given club and season"` sagt nichts
+> darüber, welche Teams. Wer den Namen für die Definition hält, sucht den
+> Fehler anschliessend bei sich.
+
+⚠ **Und es hat einen Abend gekostet**, weil die Lücke sich als etwas
+anderes tarnte: erst als fehlende Zuordnung in ClubCampus, dann als
+Cache-Problem der Maske, dann als Saisonfehler. Keines davon traf zu — die
+Saison ist nachweislich richtig (der SFV benennt eine Saison nach dem
+Endjahr: `2027` = 2026/27, belegt in `sfv_stammdaten.json`).
+
+**Gemessen wird es mit `aktion: "teamprobe"`** (`sfv-sync`, liest, schreibt
+nichts): sie fragt die Teamliste ohne Filter und je Spieltyp, hält den
+Spielplan dagegen und nennt die Differenzmenge.
+
+⚠ **Und die andere Hälfte des Abends war eine leere Liste, die wie eine
+Antwort aussah.** `const { data } = await db.from("teams")…` ohne `error`,
+dann `?? []` — scheitert die Abfrage, rechnet der Lauf mit null
+Zuordnungen weiter und meldet **alle** Mannschaften als unzugeordnet. Der
+Fehlalarm sieht aus wie ein Befund. Berichtigt in `sync.ts`; die übrigen
+Stellen dieser Art im SFV-Sync sind gezählt und stehen aus.
+
+> **Ein Endpunkt, der nichts liefert, muss von einem unterschieden werden,
+> der nicht gefragt wurde.** (Didi, 10.09.2026)
+
 ### ⚠ Die Vereinskennung beim Verband steht nirgends in ClubCampus
 
 Befund vom 10.09.2026, aufgefallen beim FVRZ-Link am Team.

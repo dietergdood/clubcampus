@@ -97,6 +97,29 @@ export async function holeTeams(z: SfvZugang, token: string, saisonId: number): 
   }));
 }
 
+/**
+ * Die Teamliste mit BELIEBIGEN Zusatzfiltern — nur fuer die Probe.
+ *
+ * ⚠ ABSICHTLICH NEBEN `holeTeams()` UND NICHT DARIN. Die produktive
+ * Fassung setzt genau drei Parameter, und dabei bleibt es, bis eine
+ * Messung etwas anderes begruendet. Eine Probe, die den laufenden Betrieb
+ * umbaut, misst nicht mehr denselben Betrieb.
+ *
+ * Gibt die ROHE Antwort zurueck: die Probe soll zeigen, was kommt, nicht
+ * was `holeTeams()` daraus macht.
+ */
+export async function holeTeamsRoh(
+  z: SfvZugang, token: string, saisonId: number, zusatz: Record<string, string | number> = {},
+): Promise<Record<string, unknown>[]> {
+  const p = new URLSearchParams({
+    SeasonId: String(saisonId), ClubId: String(z.clubId), Language: "1",
+  });
+  for (const [k, v] of Object.entries(zusatz)) p.set(k, String(v));
+  const roh = await hole(z, token, `/api/team/list?${p.toString()}`);
+  if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Teamliste");
+  return roh as Record<string, unknown>[];
+}
+
 export type SfvSpiel = Record<string, unknown>;
 
 export async function holeSpielplan(z: SfvZugang, token: string, saisonId: number): Promise<SfvSpiel[]> {

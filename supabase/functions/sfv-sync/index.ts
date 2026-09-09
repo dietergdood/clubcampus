@@ -35,7 +35,7 @@
 // console.* bleibt in diesem Ordner verboten.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { holeToken, holeSaison, holeTeams } from "./sfvApi.ts";
+import { holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync } from "./sync.ts";
 import { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
@@ -68,7 +68,12 @@ Deno.serve(async (req) => {
   } catch {
     return json({ fehler: "Ungültiger Aufruf" }, 400);
   }
-  if (aktion !== "teams" && aktion !== "sync" && aktion !== "namen") return json({ fehler: `Unbekannte Aktion: ${aktion}` }, 400);
+  /* ⚠ Die gueltigen Aktionen aufgezaehlt, damit die Meldung sie nennen
+     kann — dieselbe Regel wie in wp-export. */
+  const AKTIONEN = ["teams", "sync", "namen", "teamprobe"];
+  if (!AKTIONEN.includes(aktion)) {
+    return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
+  }
   if (nur && nur !== "spielplan" && nur !== "rangliste") return json({ fehler: `Unbekanntes nur: ${nur}` }, 400);
 
   const url = Deno.env.get("SUPABASE_URL") ?? "";
@@ -135,6 +140,96 @@ Deno.serve(async (req) => {
   const zugangFuer = (api_url: string): SfvZugang => ({
     basis: (api_url || "").replace(/\/+$/, ""), key, pass, clubId,
   });
+
+  /* ── Aktion teamprobe: WARUM liefert /api/team/list nur einen Teil? ──
+     ⚠ EINE MESSUNG, KEIN BETRIEB. Sie schreibt nichts, protokolliert
+     nichts und aendert am stuendlichen Lauf nichts. Anlass ist der Befund
+     vom 10.09.2026: die Verbandsseite fuehrt 34 Mannschaften mit
+     Spielplan, `/api/team/list` gibt 21 heraus.
+
+     Drei Fragen auf einmal:
+       A  bringt ein Zusatzfilter mehr? (MatchType 1/6/8 — Meisterschaft,
+          Turnier, Mini-Turniere; die Spieltypen der jungen Jahrgaenge)
+       B  gibt es die Teams anderswo? (der Spielplan fuehrt teamAId/teamBId)
+       C  und wenn beides nichts bringt: dann gibt es den Weg nicht, und
+          niemand muss weitersuchen.
+
+     ⚠ Die Antwort nennt Zahlen UND die Differenzmenge — eine Zahl allein
+     sagt nicht, WELCHE Mannschaft fehlt. */
+  if (aktion === "teamprobe") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+    try {
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+      const saison = await holeSaison(zugang, token, new Date());
+
+      const nummern = (liste: Record<string, unknown>[]) =>
+        new Set(liste.map((t) => Number(t.teamId)).filter((n) => Number.isFinite(n)));
+
+      const ohneFilter = await holeTeamsRoh(zugang, token, saison.id);
+      const basis = nummern(ohneFilter);
+
+      /* ⚠ Je Spieltyp EIN Aufruf. Scheitert einer, wird er als Fehler
+         ausgewiesen — nicht als leere Liste. Ein Endpunkt, der nichts
+         liefert, muss von einem unterschieden werden, der nicht gefragt
+         wurde; genau diese Verwechslung hat am 10.09.2026 die Suche in
+         die falsche Richtung geschickt. */
+      const jeSpieltyp: Record<string, unknown> = {};
+      for (const [name, typ] of [["meisterschaft", 1], ["turnier", 6], ["mini_turniere", 8]] as const) {
+        try {
+          const l = await holeTeamsRoh(zugang, token, saison.id, { MatchType: typ });
+          const s = nummern(l);
+          jeSpieltyp[name] = {
+            gefragt: true, anzahl: s.size,
+            zusaetzlich: [...s].filter((n) => !basis.has(n)),
+          };
+        } catch (e) {
+          jeSpieltyp[name] = {
+            gefragt: true, gescheitert: e instanceof Error ? e.message : String(e),
+          };
+        }
+      }
+
+      /* B — der Spielplan fuehrt beide Mannschaften je Spiel. */
+      let ausSpielplan: Record<string, unknown>;
+      try {
+        const spiele = await holeSpielplan(zugang, token, saison.id);
+        const imPlan = new Set<number>();
+        for (const s of spiele) {
+          for (const k of ["teamAId", "teamBId"]) {
+            const n = Number((s as Record<string, unknown>)[k]);
+            if (Number.isFinite(n)) imPlan.add(n);
+          }
+        }
+        ausSpielplan = {
+          gefragt: true, spiele: spiele.length, teamnummern_im_plan: imPlan.size,
+          /* ⚠ Darunter sind auch GEGNER. Die Zahl allein beweist nichts —
+             sie zeigt nur, ob im Spielplan Nummern stehen, die die
+             Teamliste nicht kennt. */
+          nicht_in_teamliste: [...imPlan].filter((n) => !basis.has(n)).length,
+        };
+      } catch (e) {
+        ausSpielplan = { gefragt: true, gescheitert: e instanceof Error ? e.message : String(e) };
+      }
+
+      return json({
+        hinweis: "Messung. Schreibt nichts, protokolliert nichts.",
+        saison,
+        ohne_filter: {
+          anzahl: basis.size,
+          teams: ohneFilter.map((t) => ({
+            teamId: t.teamId, name: t.teamName, liga: t.teamLeagueName,
+            ligaId: t.teamLeagueId, aktiv: t.isTeamActive,
+          })),
+        },
+        je_spieltyp: jeSpieltyp,
+        aus_spielplan: ausSpielplan,
+      });
+    } catch (e) {
+      return json({ fehler: e instanceof Error ? e.message : "SFV-Abfrage fehlgeschlagen" }, 502);
+    }
+  }
 
   /* ── Aktion teams: lesen, nichts schreiben, nichts protokollieren ── */
   if (aktion === "teams") {
