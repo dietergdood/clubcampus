@@ -133,3 +133,37 @@ darf für diese Mannschaften nicht erscheinen.
 macht: fehlten die Mannschaften nur in der Teamliste, wären ihre Spiele
 über den Klub-Spielplan trotzdem zu haben. Nach unserer Messung sind sie
 es nicht — und das ist die eigentliche Lücke.
+
+---
+
+# Nachtrag 10.09.2026: drei Hinweistexte im Theme sind überholt
+
+**Der Export schreibt seit `0.4.1` Teamfelder** — die eine ausdrücklich
+beschlossene Ausnahme. Drei Sätze im Theme sagen weiterhin das Gegenteil,
+und sie sind die Sorte Text, die am längsten überlebt: sie klingen nach
+Sorgfalt und wurden aus einer echten Messung geboren.
+
+| Datei | Wortlaut heute | |
+|---|---|---|
+| `Fields/team.php:988` | *„Heute füllt dieses Feld niemand — kein Abgleich schreibt Teamfelder."* | ⚠ `abgleich_stand` wird jetzt bei **jedem** Lauf geschrieben |
+| `Fields/team.php` (`liga`, `gruppe`) | „Kommt aus der Rangliste des Verbands, sobald eine vorliegt … hier von Hand." | teils überholt: der Abgleich schreibt sie jetzt selbst |
+| `Masken/team.php` (~1428) | *„Dieses Team hat keinen Abgleich — die Werte werden von Hand gepflegt und sind darum offen."* | ⚠ erscheint bei einem Team, dessen Quelle auf ClubCampus steht |
+
+⚠ **Der dritte ist kein Textproblem, sondern eine Bedingung.** Er hängt an
+`abgleich_quelle`: steht dort ein Wert, der nicht in der Namensliste der
+Maske steht, fällt die Anzeige in den „kein Abgleich"-Zweig. Zu prüfen ist
+also nicht der Satz, sondern welchen Wert das Team führt und ob die Liste
+ihn kennt.
+
+**Was jetzt gilt und in die Texte gehört:**
+
+> `liga` und `gruppe` kommen vom Abgleich, aus der Rangliste des Verbands.
+> `abgleich_stand` sagt, wann er zuletzt **da war** — nicht, wann sich
+> zuletzt etwas geändert hat. Bleibt er leer, ist noch kein Lauf
+> angekommen.
+
+⚠ **Und die Unterscheidung im letzten Satz ist Absicht** (Didi,
+10.09.2026): *„Ich will wissen, wann der Abgleich zuletzt da war, nicht
+wann sich zufällig etwas geändert hat."* Ein Lebenszeichen darf nicht
+verstummen, weil nichts passiert. Ob dieser Lauf etwas bewegt hat, steht
+in der Antwort als `teamfelder: {geschrieben, unveraendert}`.

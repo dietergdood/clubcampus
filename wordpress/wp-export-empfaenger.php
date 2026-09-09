@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.4.0
+ * Version:     0.4.1
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -130,6 +130,10 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.4.1 (10.09.2026): der Zeitstempel geht nach `abgleich_stand` — das
+   Feld, das die Team-Maske wirklich liest. Vorher stand er unter einem
+   selbst erfundenen `_cc_team_abgleich` und wurde von niemandem gelesen.
+
    0.4.0 (10.09.2026): der Abgleich schreibt `liga` und `gruppe` an den
    fch_team-Beitrag — die eine ausdruecklich beschlossene Ausnahme von
    „schreibt nie an fch_team". Dazu `_cc_team_abgleich` als Lebenszeichen
@@ -143,7 +147,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.4.0';
+const CC_VERSION    = '0.4.1';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -205,11 +209,24 @@ const CC_QUELLE     = 'clubcampus';   // ⚠ klein — der WERT, nicht die Besch
  */
 const CC_META_LAUF  = '_cc_lauf';      // Zeitstempel des LETZTEN Laufs
 const CC_META_ERST  = '_cc_lauf_erst'; // Zeitstempel des ersten — nie ueberschrieben
-/* Wann der Abgleich dieses Team zuletzt ANGESEHEN hat — nicht, wann er
-   es zuletzt geaendert hat. Der Unterschied ist Absicht, siehe
-   cc_schreibe_teamfelder(). Unterstrich-Praefix: Buchhaltung, kein
-   Inhaltsfeld. */
-const CC_META_TEAM_LAUF = '_cc_team_abgleich';
+/* ⚠ ⚠  DAS FELD HEISST `abgleich_stand`, UND ES IST EIN ACF-FELD.
+   BERICHTIGT AM 10.09.2026 — hier stand vorher `_cc_team_abgleich`,
+   ein Meta mit Unterstrich, das ich selbst erfunden hatte.
+
+   Geschrieben wurde also fleissig, gelesen wurde nie: die Team-Maske
+   fragt `get_field( 'abgleich_stand', $team )` (`Masken/team.php`), und
+   dort stand weiter nichts. **Zwei Namen fuer dieselbe Aussage, die sich
+   nie trafen** — dieselbe Familie wie `sfv_id` gegen `sfv_team_id`, nur
+   diesmal auf unserer Seite.
+
+   ⚠ Und das Unterstrich-Argument war falsch: dieses Feld SOLL im Backend
+   stehen. Das Theme fuehrt es als sichtbares, schreibgeschuetztes
+   Textfeld mit der Beschriftung „Zuletzt abgeglichen".
+
+   ⚠ Es ist `type => 'text'`, und die Maske gibt den Wert ROH aus
+   (`esc_html( $stand )`). Also gehoert ein lesbares Datum hinein, kein
+   MySQL-Zeitstempel. */
+const CC_META_TEAM_STAND = 'abgleich_stand';
 
 /**
  * Felder, die der Abgleich schreibt. Alles andere am Spiel ist tabu.
@@ -1363,7 +1380,8 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
 	$geschrieben = 0;
 	$unveraendert = 0;
-	$jetzt = current_time( 'mysql' );
+	/* Lesbar, nicht maschinenlesbar — siehe CC_META_TEAM_STAND. */
+	$jetzt = wp_date( 'j.n.Y · H:i' );
 
 	foreach ( $gruppen as $g ) {
 		$liga   = trim( (string) ( $g['liga_name'] ?? '' ) );
@@ -1397,7 +1415,7 @@ function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
 			   Die andere Haelfte geht nicht verloren: `geschrieben` und
 			   `unveraendert` stehen in der Antwort, und daraus ist
 			   ablesbar, ob dieser Lauf etwas bewegt hat. */
-			update_post_meta( $tid, CC_META_TEAM_LAUF, $jetzt );
+			update_field( CC_META_TEAM_STAND, $jetzt, $tid );
 
 			$alt_liga   = (string) get_field( 'liga', $tid );
 			$alt_gruppe = (string) get_field( 'gruppe', $tid );

@@ -166,7 +166,7 @@ const REGELN = [
     erwarteImKontrollfall: 1,
   },
   {
-    frage: "cc_schreibe_teamfelder fasst nur liga und gruppe an",
+    frage: "cc_schreibe_teamfelder fasst nur liga, gruppe und abgleich_stand an",
     pruefe: (b) => {
       const f = b.funktionen.cc_schreibe_teamfelder;
       if (!f) return ["(Funktion fehlt — die Pruefung sieht die falsche Datei an)"];
@@ -176,9 +176,13 @@ const REGELN = [
          nennt deshalb, was am Team angefasst werden DARF, und laesst
          alles durch, was nachweislich kein Feldname ist. */
       const ERLAUBT = [
-        "liga", "gruppe",                       // die zwei Felder am Team
+        "liga", "gruppe",                       // die zwei Inhaltsfelder am Team
+        /* ⚠ `abgleich_stand` steht als Konstante CC_META_TEAM_STAND und
+           taucht hier nicht als Text auf — erlaubt ist es trotzdem, und
+           zwar seit 10.09.2026: es ist das Feld, das die Team-Maske als
+           „Zuletzt abgeglichen" liest. */
+        "j.n.Y · H:i",                          // das Format dafuer
         "liga_name", "gruppe_name", "zeilen", "sfv_team_id",  // Lesen aus der Gruppe
-        "mysql",                                // current_time('mysql')
         "geschrieben", "unveraendert",          // Rueckgabeschluessel
       ];
       return (f.texte ?? []).filter(t => t !== "" && !ERLAUBT.includes(t));
