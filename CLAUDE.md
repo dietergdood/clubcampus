@@ -1256,6 +1256,37 @@ Stellen dieser Art im SFV-Sync sind gezählt und stehen aus.
 > **Ein Endpunkt, der nichts liefert, muss von einem unterschieden werden,
 > der nicht gefragt wurde.** (Didi, 10.09.2026)
 
+#### ⚠⚠ Das Ergebnis: die Website zeigt Daten, die die API nicht herausgibt
+
+**Und das ist der seltene Fall, in dem die Grenze wirklich beim Anbieter
+liegt** — nachgemessen statt angenommen, weil genau diese Schlussfolgerung
+sonst jede weitere Suche beendet, bevor sie beginnt.
+
+| gemessen woran | Ergebnis | von wem |
+|---|---|---|
+| **Swagger** (`docs/sfv/swagger_2026-08-28.json`) | 15 Pfade, **ein einziger** Spielplan-Endpunkt (`/api/club/schedule`), kein `matchplan`, kein Weg über Gruppen oder Wettbewerbe | hier |
+| **Parametersätze** | `/api/team/list` und `/api/club/schedule` haben denselben Satz aus 14 Parametern; `TeamId` und `GroupId` sind **optional** | hier |
+| **Verbandsseite** | 34 Mannschaften, **alle mit Spielplan**, nur die jüngsten ohne Tabelle | Didi |
+| **`aktion: "teamprobe"`** — Teamliste ohne Filter, je Spieltyp (1 · 6 · 8), Spielplan dagegengehalten | die API kennt die 13 auf **keinem** Weg | Didi |
+
+**Dreifach gemessen, nicht angenommen** — Spezifikation, Parameter, Aufruf.
+
+⚠ **Die naheliegende Erklärung war falsch, und zwar zweimal.** Erst schien
+es eine fehlende Zuordnung in ClubCampus, dann ein Cache der Maske, dann
+ein Saisonfehler. Keines traf zu; die Saison ist nachweislich richtig (der
+SFV benennt sie nach dem Endjahr, `2027` = 2026/27, belegt in
+`sfv_stammdaten.json`).
+
+**Was daraus praktisch folgt:** für diese Mannschaften gibt es über die API
+keinen Spielplan — nicht heute und mit keinem Parameter. Was die Website
+zeigen soll, ist deshalb eine Gestaltungsfrage und keine technische:
+`docs/uebergabe_teams_ohne_api.md`.
+
+**Die offene Frage an den FVRZ** steht dort ebenfalls: warum liefert
+`/api/team/list` nur Mannschaften mit Wettbewerbsteilnahme, während die
+Website alle führt — und gibt es einen Parameter, den die Swagger-Datei
+nicht nennt?
+
 ### ⚠ Die Vereinskennung beim Verband steht nirgends in ClubCampus
 
 Befund vom 10.09.2026, aufgefallen beim FVRZ-Link am Team.

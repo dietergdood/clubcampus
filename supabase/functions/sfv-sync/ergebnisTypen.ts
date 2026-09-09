@@ -117,6 +117,54 @@ export function zaehleOhneZuordnungGetrennt(
   return { offen_gesamt: gesamt, offen_aktiv: aktiv };
 }
 
+/**
+ * Mannschaften, die eine Zuordnung haben und im Spielplan nicht vorkommen.
+ *
+ * ⚠⚠ **DAS IST EIN BEFUND UND KEINE DATENLAGE.** (Didi, 10.09.2026.)
+ *
+ * Eine `sfv_team_id` ist eine Behauptung: „diese Mannschaft gibt es beim
+ * Verband unter dieser Nummer". Liefert der Spielplan zu ihr **null**
+ * Spiele, ist die Behauptung entweder falsch geworden — oder sie war es
+ * nie.
+ *
+ * ⚠ **Und der Abruf scheitert dabei nicht, er liefert nichts.** Genau
+ * deshalb braucht es diese Zahl: ein Fehler meldet sich, eine leere
+ * Antwort nicht.
+ *
+ * **Der Anlass ist eine offene Frage, die erst der 01.07.2027
+ * beantwortet:** ob eine `teamId` den Saisonwechsel überlebt. Gemessen am
+ * 10.09.2026: unsere Daten kennen nur eine Saison (2027 seit dem ersten
+ * Lauf am 14.08.2026), es gab nie einen Wechsel — **kein Beleg dafür und
+ * keiner dagegen.** Kippen die Nummern im Sommer, schlägt diese Zahl
+ * dreizehnmal an, und dann wissen wir es.
+ *
+ * ⚠ **Warum nicht einfach „> 0 heisst Alarm":** vor dem ersten Spieltag
+ * hat KEINE Mannschaft Spiele. Eine Meldung, die jeden Juli für alle
+ * anschlaegt, wird im August nicht mehr gelesen — dieselbe Abstumpfung wie
+ * bei den 758 Lint-Warnungen. Deshalb zaehlt sie nur, wenn der Lauf
+ * ueberhaupt Spiele gebracht hat: dann ist „diese eine hat keine" eine
+ * Aussage ueber die Mannschaft und nicht ueber den Kalender.
+ */
+export function findeTeamsOhneSpiele(
+  zugeordnet: Iterable<{ sfv_team_id: number; name: string }>,
+  teamIdsMitSpielen: Iterable<number>,
+  spieleImLauf: number,
+): { anzahl: number; teams: string[]; meldepflichtig: boolean } {
+  const mitSpielen = new Set<number>();
+  for (const n of teamIdsMitSpielen) mitSpielen.add(Number(n));
+
+  const ohne: string[] = [];
+  for (const t of zugeordnet) {
+    if (!mitSpielen.has(Number(t.sfv_team_id))) ohne.push(`${t.name} (${t.sfv_team_id})`);
+  }
+  return {
+    anzahl: ohne.length,
+    teams: ohne,
+    /* ⚠ Nur wenn der Lauf ueberhaupt Spiele hatte — siehe oben. */
+    meldepflichtig: ohne.length > 0 && spieleImLauf > 0,
+  };
+}
+
 export interface LaufErgebnis {
   status: "ok" | "warnung" | "fehler";
   meldung: string;
@@ -146,6 +194,10 @@ export interface LaufErgebnis {
   /** Davon aktive — die Zahl, auf die jemand reagieren kann. Siehe
       `zaehleOhneZuordnungGetrennt()`. */
   sfv_teams_ohne_zuordnung_aktiv: number;
+  /** Zugeordnete Mannschaften ohne ein einziges Spiel im Lauf — siehe
+      `findeTeamsOhneSpiele()`. Namentlich, weil eine Zahl niemanden
+      irgendwohin schickt. */
+  teams_ohne_spiele: { anzahl: number; teams: string[]; meldepflichtig: boolean };
   derbys: number;
   matchdaten?: MatchdatenErgebnis;
   logos?: { geholt: number; fehlt: number };
@@ -179,6 +231,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
     verwaiste_zuordnungen: erg.verwaiste_zuordnungen,
     sfv_teams_ohne_zuordnung: erg.sfv_teams_ohne_zuordnung,
     sfv_teams_ohne_zuordnung_aktiv: erg.sfv_teams_ohne_zuordnung_aktiv,
+    teams_ohne_spiele: erg.teams_ohne_spiele,
     derbys: erg.derbys,
   };
   if (erg.saison) raus.saison = erg.saison;

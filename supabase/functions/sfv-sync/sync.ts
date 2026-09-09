@@ -21,7 +21,7 @@ import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
 export type { LaufErgebnis } from "./ergebnisTypen.ts";
 export { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
-import { zaehleOhneZuordnungGetrennt } from "./ergebnisTypen.ts";
+import { zaehleOhneZuordnungGetrennt, findeTeamsOhneSpiele } from "./ergebnisTypen.ts";
 
 interface Verbindung { id: string; verein_id: string; api_url: string; sync_felder: Record<string, unknown> }
 
@@ -149,7 +149,8 @@ export async function laufeSync(
     spiele: { neu: 0, aktualisiert: 0, ohne_team: 0, nicht_mehr_geliefert: 0 },
     ranglisten: { geschrieben: 0, entfernt: 0, gruppen: 0 },
     verwaiste_zuordnungen: 0, sfv_teams_ohne_zuordnung: 0,
-    sfv_teams_ohne_zuordnung_aktiv: 0, derbys: 0,
+    sfv_teams_ohne_zuordnung_aktiv: 0,
+    teams_ohne_spiele: { anzahl: 0, teams: [], meldepflichtig: false }, derbys: 0,
   };
 
   const token = await holeToken(zugang);
@@ -231,6 +232,22 @@ export async function laufeSync(
          sie ist der Mandant. Ohne sie lehnt die DB die Zeile still ab. */
       zeilen.push({ ...zeile, verein_id: v.verein_id });
     }
+
+    /* ⚠ EINE ZUGEORDNETE MANNSCHAFT OHNE EIN EINZIGES SPIEL IST EIN
+       BEFUND. Der Abruf scheitert dabei nicht — er liefert nichts, und
+       das sieht aus wie „diese Mannschaft spielt gerade nicht".
+
+       Sie ist der Wächter über eine Frage, die erst der 01.07.2027
+       beantwortet: ob eine `teamId` den Saisonwechsel überlebt. Kippen die
+       Nummern, schlägt sie an — statt dass Spielpläne still leer bleiben. */
+    erg.teams_ohne_spiele = findeTeamsOhneSpiele(
+      (teamZeilen ?? [])
+        .filter((t) => t.sfv_team_id != null)
+        .map((t) => ({ sfv_team_id: Number(t.sfv_team_id), name: String(t.name) })),
+      zeilen.map((z) => Number(z.sfv_team_id)),
+      zeilen.length,
+    );
+    if (erg.teams_ohne_spiele.meldepflichtig && erg.status === "ok") erg.status = "warnung";
 
     /* neu gegen aktualisiert: der Upsert sagt es nicht, also vorher fragen. */
     const { data: vorhanden } = await db

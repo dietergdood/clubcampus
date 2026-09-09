@@ -18,6 +18,7 @@
 import { describe, it, expect } from "vitest";
 import {
   fuersProtokoll, fuerZeitplanAntwort, zaehleOhneZuordnung, zaehleOhneZuordnungGetrennt,
+  findeTeamsOhneSpiele,
 } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
 import type { LaufErgebnis } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
 
@@ -29,6 +30,7 @@ const LAUF: LaufErgebnis = {
   verwaiste_zuordnungen: 0,
   sfv_teams_ohne_zuordnung: 0,
   sfv_teams_ohne_zuordnung_aktiv: 0,
+  teams_ohne_spiele: { anzahl: 0, teams: [], meldepflichtig: false },
   derbys: 1,
   saison: { id: 2026, name: "2026/27" },
   logos: { geholt: 3, fehlt: 1 },
@@ -69,7 +71,7 @@ describe("fuersProtokoll", () => {
     expect(Object.keys(fuersProtokoll(LAUF)).sort()).toEqual([
       "derbys", "logos", "matchdaten", "meldung", "ranglisten",
       "saison", "sfv_teams_ohne_zuordnung", "sfv_teams_ohne_zuordnung_aktiv",
-      "spiele", "status",
+      "spiele", "status", "teams_ohne_spiele",
       "verwaiste_zuordnungen",
     ]);
   });
@@ -149,5 +151,48 @@ describe("zaehleOhneZuordnungGetrennt — aktiv von aufgeloest trennen", () => {
   it("zaehlt zugeordnete gar nicht, auch nicht als gesamt", () => {
     expect(zaehleOhneZuordnungGetrennt([T(1, false)], [1]))
       .toEqual({ offen_gesamt: 0, offen_aktiv: 0 });
+  });
+});
+
+describe("findeTeamsOhneSpiele — ein Befund, keine Datenlage", () => {
+  const T = (id: number, name: string) => ({ sfv_team_id: id, name });
+
+  it("nennt die Mannschaft namentlich, nicht nur ihre Zahl", () => {
+    /* Eine Zahl schickt niemanden irgendwohin. */
+    const e = findeTeamsOhneSpiele([T(38309, "Ca-Junioren"), T(38313, "Ea-Junioren")], [38309], 12);
+    expect(e.anzahl).toBe(1);
+    expect(e.teams).toEqual(["Ea-Junioren (38313)"]);
+    expect(e.meldepflichtig).toBe(true);
+  });
+
+  it("schweigt, wenn jede zugeordnete Mannschaft Spiele hat", () => {
+    const e = findeTeamsOhneSpiele([T(1, "A"), T(2, "B")], [1, 2], 20);
+    expect(e).toEqual({ anzahl: 0, teams: [], meldepflichtig: false });
+  });
+
+  it("⚠ schlaegt NICHT an, wenn der ganze Lauf keine Spiele hatte", () => {
+    /* Vor dem ersten Spieltag hat keine Mannschaft Spiele. Eine Meldung,
+       die jeden Juli fuer alle anschlaegt, wird im August nicht mehr
+       gelesen — dieselbe Abstumpfung wie bei den 758 Lint-Warnungen.
+       Gezaehlt wird trotzdem: die Zahl steht im Protokoll, nur ohne
+       Alarm. */
+    const e = findeTeamsOhneSpiele([T(1, "A"), T(2, "B")], [], 0);
+    expect(e.anzahl).toBe(2);
+    expect(e.meldepflichtig).toBe(false);
+  });
+
+  it("vergleicht ueber die Zahl, nicht ueber die Schreibweise", () => {
+    /* sfv_team_id kommt als bigint und kann als Zeichenkette ankommen. */
+    const e = findeTeamsOhneSpiele([T(38309, "Ca")], ["38309" as unknown as number], 5);
+    expect(e.anzahl).toBe(0);
+  });
+
+  it("der Fall, fuer den sie gebaut ist: 13 auf einen Schlag", () => {
+    /* Kippen die teamIds beim Saisonwechsel, hat KEINE der 13 mehr Spiele
+       — waehrend der Lauf insgesamt welche bringt. Genau dann meldet sie. */
+    const dreizehn = Array.from({ length: 13 }, (_, i) => T(70000 + i, `Team ${i}`));
+    const e = findeTeamsOhneSpiele([...dreizehn, T(38301, "Erste")], [38301], 30);
+    expect(e.anzahl).toBe(13);
+    expect(e.meldepflichtig).toBe(true);
   });
 });
