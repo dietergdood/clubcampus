@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.3.0
+ * Version:     0.4.0
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -130,6 +130,11 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.4.0 (10.09.2026): der Abgleich schreibt `liga` und `gruppe` an den
+   fch_team-Beitrag — die eine ausdruecklich beschlossene Ausnahme von
+   „schreibt nie an fch_team". Dazu `_cc_team_abgleich` als Lebenszeichen
+   bei JEDEM Lauf und `teamfelder` in der Antwort der Ranglisten-Route.
+
    0.3.0 (10.09.2026): die drei Team-Zahlen in `/status` heissen `wp_teams*`
    — sie zaehlen WordPress-Beitraege, und der alte Name sagte das nicht.
 
@@ -138,7 +143,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.3.0';
+const CC_VERSION    = '0.4.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -200,8 +205,10 @@ const CC_QUELLE     = 'clubcampus';   // ⚠ klein — der WERT, nicht die Besch
  */
 const CC_META_LAUF  = '_cc_lauf';      // Zeitstempel des LETZTEN Laufs
 const CC_META_ERST  = '_cc_lauf_erst'; // Zeitstempel des ersten — nie ueberschrieben
-/* Wann der Abgleich zuletzt Liga und Gruppe an ein Team geschrieben hat.
-   Unterstrich-Praefix: Buchhaltung, kein Inhaltsfeld. */
+/* Wann der Abgleich dieses Team zuletzt ANGESEHEN hat — nicht, wann er
+   es zuletzt geaendert hat. Der Unterschied ist Absicht, siehe
+   cc_schreibe_teamfelder(). Unterstrich-Praefix: Buchhaltung, kein
+   Inhaltsfeld. */
 const CC_META_TEAM_LAUF = '_cc_team_abgleich';
 
 /**
@@ -1374,10 +1381,24 @@ function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
 				continue;
 			}
 
-			/* ⚠ Nur schreiben, wenn sich etwas aendert. Sonst stuende in
-			   `_cc_team_abgleich` stuendlich eine neue Zeit, und
-			   „zuletzt abgeglichen" hiesse „zuletzt gelaufen" statt
-			   „zuletzt geaendert" — zwei verschiedene Aussagen. */
+			/* ⚠ ⚠  DER ZEITSTEMPEL GEHT BEI JEDEM LAUF, AUCH OHNE AENDERUNG.
+			   Entschieden am 10.09.2026, und die Begruendung ist die
+			   Frage, die er beantworten soll:
+
+			   > „Ich will wissen, wann der Abgleich zuletzt DA war, nicht
+			   >  wann sich zufaellig etwas geaendert hat."
+
+			   Beides sind verschiedene Aussagen, und nur die erste taugt
+			   als Lebenszeichen. Stuende dort das Datum der letzten
+			   AENDERUNG, sagte ein alter Wert „seit Wochen nichts
+			   gelaufen" — obwohl der Abgleich stuendlich kommt und die
+			   Liga schlicht dieselbe ist.
+
+			   Die andere Haelfte geht nicht verloren: `geschrieben` und
+			   `unveraendert` stehen in der Antwort, und daraus ist
+			   ablesbar, ob dieser Lauf etwas bewegt hat. */
+			update_post_meta( $tid, CC_META_TEAM_LAUF, $jetzt );
+
 			$alt_liga   = (string) get_field( 'liga', $tid );
 			$alt_gruppe = (string) get_field( 'gruppe', $tid );
 			if ( $alt_liga === $liga && $alt_gruppe === $gruppe ) {
@@ -1387,7 +1408,6 @@ function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
 
 			if ( '' !== $liga )   { update_field( 'liga', $liga, $tid ); }
 			if ( '' !== $gruppe ) { update_field( 'gruppe', $gruppe, $tid ); }
-			update_post_meta( $tid, CC_META_TEAM_LAUF, $jetzt );
 			$geschrieben++;
 		}
 	}
