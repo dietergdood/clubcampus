@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.4.1
+ * Version:     0.5.0
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -130,6 +130,12 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.5.0 (10.09.2026): `/status` sagt fuer `liga`, `gruppe` und
+   `abgleich_stand`, ob ACF den Namen als FELD kennt (`feld`) oder ob dort
+   nur ein Postmeta liegt (`nur_postmeta`). Ein falscher Feldname schlaegt
+   nirgends fehl — er sieht aus wie ein leeres Feld. Die Auskunft ersetzt
+   den vierten Rateanlauf durch eine Messung.
+
    0.4.1 (10.09.2026): der Zeitstempel geht nach `abgleich_stand` — das
    Feld, das die Team-Maske wirklich liest. Vorher stand er unter einem
    selbst erfundenen `_cc_team_abgleich` und wurde von niemandem gelesen.
@@ -147,7 +153,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.4.1';
+const CC_VERSION    = '0.5.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -227,6 +233,12 @@ const CC_META_ERST  = '_cc_lauf_erst'; // Zeitstempel des ersten — nie uebersc
    (`esc_html( $stand )`). Also gehoert ein lesbares Datum hinein, kein
    MySQL-Zeitstempel. */
 const CC_META_TEAM_STAND = 'abgleich_stand';
+
+/* ⚠ ⚠  DIE DREI FELDER, DIE DER ABGLEICH AM TEAM ANFASST  ⚠ ⚠
+   Als Liste, weil `/status` sie aufzaehlen koennen muss (`teamfelder`).
+   Eine Aufzaehlung, aus der die Auskunft UND das Schreiben lesen, kann
+   nicht auseinanderlaufen — anders als eine Zahl im Text daneben. */
+const CC_TEAM_FELDER = array( 'liga', 'gruppe', CC_META_TEAM_STAND );
 
 /**
  * Felder, die der Abgleich schreibt. Alles andere am Spiel ist tabu.
@@ -582,6 +594,11 @@ function cc_route_status(): WP_REST_Response {
 					)
 				)
 			),
+			/* ⚠ NICHT „schreibt der Abgleich?", sondern „kennt ACF den
+			   Namen?". Steht dort `nur_postmeta`, wird geschrieben und
+			   nichts gelesen — der Fall, den `_cc_team_abgleich` und das
+			   Postmeta `saison` beide gemacht haben. */
+			'teamfelder'            => cc_teamfeld_lage( (int) ( array_values( array_filter( $karte ) )[0] ?? 0 ) ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
@@ -1431,6 +1448,50 @@ function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
 	}
 
 	return array( 'geschrieben' => $geschrieben, 'unveraendert' => $unveraendert );
+}
+
+/**
+ * Kennt ACF diese Feldnamen — oder schreibt der Abgleich ins Leere?
+ *
+ * ⚠ ⚠  DIE FRAGE, DIE HEUTE DREI ANLAEUFE GEKOSTET HAT  ⚠ ⚠
+ *
+ * `update_field( 'name', … )` legt bei einem UNBEKANNTEN Namen trotzdem
+ * ein Postmeta an — ohne die `_name`-Referenz, die ACF fuer sein Feld
+ * braucht. Der Wert steht dann in der Datenbank, ist ueber `get_field()`
+ * nicht zu holen und im Backend unsichtbar. **Es schlaegt nichts fehl.**
+ *
+ * Genau so entstand `_cc_team_abgleich` (mein erfundener Name, 10.09.2026)
+ * und genau so steht am fch_team ein Postmeta `saison`, zu dem es keine
+ * Feldgruppe gibt: ein WERT OHNE FELD. Von aussen sieht beides gleich aus
+ * wie ein gepflegtes Feld — und ein leeres Feld sieht aus wie fehlende
+ * Daten, nicht wie ein falscher Name.
+ *
+ * ⚠ Deshalb wird hier nicht geraten und nicht auf Verdacht in zwei Namen
+ * geschrieben. Die Gegenstelle wird gefragt, welche Namen sie kennt.
+ *
+ * @param int $tid Ein fch_team-Beitrag, an dem geprueft wird. 0 = keiner da.
+ * @return array<string,string> Feldname => `feld` | `nur_postmeta` | `leer`
+ */
+function cc_teamfeld_lage( int $tid ): array {
+	$lage = array();
+	foreach ( CC_TEAM_FELDER as $name ) {
+		if ( ! $tid ) {
+			$lage[ $name ] = 'kein_team';
+			continue;
+		}
+		/* ⚠ `get_field_object()` fragt die FELDDEFINITION, nicht den Wert.
+		   Ein Feld ohne Inhalt ist etwas anderes als ein Name ohne Feld —
+		   und nur der zweite Fall ist der Defekt. */
+		$obj = function_exists( 'get_field_object' ) ? get_field_object( $name, $tid ) : null;
+		if ( is_array( $obj ) && ! empty( $obj['key'] ) ) {
+			$lage[ $name ] = 'feld';
+			continue;
+		}
+		$lage[ $name ] = ( '' === (string) get_post_meta( $tid, $name, true ) )
+			? 'leer'
+			: 'nur_postmeta';
+	}
+	return $lage;
 }
 
 /**

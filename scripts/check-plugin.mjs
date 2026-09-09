@@ -190,6 +190,33 @@ const REGELN = [
     kontrolle: "<?php function cc_schreibe_teamfelder() { update_field('rangliste', 1, 2); }",
     erwarteImKontrollfall: 1,
   },
+  /* ⚠⚠ ZWEI LISTEN DERSELBEN DREI NAMEN WAEREN DER NAECHSTE FUND.
+
+     `/status` sagt seit 0.5.0, ob ACF `liga`, `gruppe` und
+     `abgleich_stand` als Feld kennt. Schriebe `cc_teamfeld_lage()` die
+     Namen selbst hin, gaebe es sie zweimal — und die Auskunft koennte
+     einen Namen pruefen, den das Schreiben laengst nicht mehr benutzt.
+
+     **Eine Auskunft, die etwas anderes misst als das, worueber sie
+     Auskunft gibt, ist schlimmer als keine.** Genau die Familie des
+     Zaehlers, der 431 Klarnamen meldete, wo 0 waren.
+
+     Deshalb: die Funktion liest die Namen aus CC_TEAM_FELDER und nennt
+     keinen davon als Text. Der Zerleger sieht Funktionen, nicht
+     Konstanten auf Dateiebene — pruefbar ist deshalb die Abwesenheit der
+     Texte, nicht die Gleichheit der Listen. Das genuegt: eine zweite
+     Liste MUSS die Namen als Texte enthalten. */
+  {
+    frage: "cc_teamfeld_lage fuehrt keine zweite Liste der Feldnamen",
+    pruefe: (b) => {
+      const f = b.funktionen.cc_teamfeld_lage;
+      if (!f) return ["(Funktion fehlt — die Pruefung sieht die falsche Datei an)"];
+      const FELDNAMEN = ["liga", "gruppe", "abgleich_stand"];
+      return (f.texte ?? []).filter(t => FELDNAMEN.includes(t));
+    },
+    kontrolle: "<?php function cc_teamfeld_lage() { $x = array('liga'); }",
+    erwarteImKontrollfall: 1,
+  },
   /* ⚠ HIER STAND EINE ZWEITE REGEL („CC_FELDER fuehrt kein Teamfeld") — sie
      ist am 10.09.2026 an ihrer eigenen Positivkontrolle gescheitert und
      wieder entfernt worden. Der Zerleger erfasst Funktionen, keine
