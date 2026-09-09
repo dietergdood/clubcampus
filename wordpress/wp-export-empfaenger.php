@@ -1175,6 +1175,41 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 
 	update_option( CC_OPT_RANG, $alle, false );
 
+	/* ⚠ ⚠  NACHSEHEN, NICHT GLAUBEN — DER AUTOLOAD-ZWEIG  ⚠ ⚠
+
+	   Der Aufruf darueber uebergibt `false`, und in WordPress 6.x ist das
+	   bindend: `wp_determine_option_autoload_value()` gibt bei einem
+	   Boolean sofort 'off' zurueck, ohne Filter und ohne Groessenheuristik
+	   (`wp-includes/option.php:1307`, gemessen 09.09.2026).
+
+	   **Der Zweig steht trotzdem hier, und zwar fuer den Fall, den unser
+	   eigener Aufruf nicht abdeckt:** schreibt IRGENDWANN eine andere
+	   Stelle diese Option mit `update_option( CC_OPT_RANG, $x )` — ohne
+	   dritten Parameter —, faellt WordPress auf seine Heuristik zurueck und
+	   kann 'auto-on' setzen. Ab da haengen 60–80 KB an JEDEM Seitenaufruf.
+
+	   ⚠ **Und niemand wuerde es sehen.** Es gibt keine Fehlermeldung, keine
+	   langsamere Seite, die jemandem auffiele — nur eine Spalte in
+	   `wp_options`, in die nie jemand schaut. Genau die Sorte, die dieses
+	   Projekt zweimal teuer bezahlt hat.
+
+	   Deshalb: lesen, notfalls berichtigen, und **in jedem Fall melden, was
+	   vorgefunden wurde**. Eine stille Korrektur waere wieder eine Stelle,
+	   an der etwas passiert und nichts davon spricht. */
+	$cc_autoload_vor = cc_autoload_lesen( CC_OPT_RANG );
+	$cc_korrigiert   = false;
+	if ( ! in_array( $cc_autoload_vor, array( 'off', 'no', 'auto-off' ), true ) ) {
+		global $wpdb;
+		$wpdb->update(
+			$wpdb->options,
+			array( 'autoload' => 'off' ),
+			array( 'option_name' => CC_OPT_RANG )
+		);
+		wp_cache_delete( CC_OPT_RANG, 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		$cc_korrigiert = true;
+	}
+
 	/**
 	 * ⚠ `neu` und `geaendert` bleiben bei null, und das ist keine
 	 * Nachlaessigkeit: **Der Ranglisten-Weg legt keinen Beitrag an und
@@ -1190,13 +1225,47 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 			'uebersprungen' => cc_bericht_deckel( $uebersprungen ),
 			'mehrfach'      => cc_bericht_deckel( array() ),
 			'gruppen'       => array( 'geschrieben' => $n, 'gesamt' => count( $alle ) ),
-			'hinweis'       => array(),
+			'hinweis'       => $cc_korrigiert
+				? array( 'autoload stand auf «' . $cc_autoload_vor . '» und wurde auf «off» gesetzt.' )
+				: array(),
 		)
 	);
 
 	return new WP_REST_Response(
-		array( 'gruppen_geschrieben' => $n, 'gruppen_gesamt' => count( $alle ) ),
+		array(
+			'gruppen_geschrieben' => $n,
+			'gruppen_gesamt'      => count( $alle ),
+			/* ⚠ Die Groesse kommt von HIER und nicht von der Gegenstelle.
+			   Sie misst, was TATSAECHLICH in der Datenbank liegt — inklusive
+			   der Gruppen frueherer Laeufe, die diese Nutzlast gar nicht
+			   kannte. Die Gegenstelle koennte nur ihre eigene Sendung
+			   wiegen und haette damit die kleinere Haelfte gemessen. */
+			'bytes'               => cc_option_bytes( CC_OPT_RANG ),
+			'autoload'            => cc_autoload_lesen( CC_OPT_RANG ),
+			'autoload_korrigiert' => $cc_korrigiert,
+		),
 		200
+	);
+}
+
+/**
+ * Was in der Spalte `autoload` dieser Option steht — roh, ohne Deutung.
+ *
+ * ⚠ NICHT ueber `get_option()`: das liefert den WERT und sagt ueber die
+ * Spalte nichts. Gefragt ist hier die Spalte selbst.
+ */
+function cc_autoload_lesen( string $name ): string {
+	global $wpdb;
+	return (string) $wpdb->get_var(
+		$wpdb->prepare( "SELECT autoload FROM {$wpdb->options} WHERE option_name = %s LIMIT 1", $name )
+	);
+}
+
+/** Wieviel die Option in der Datenbank wiegt — serialisiert, wie sie liegt. */
+function cc_option_bytes( string $name ): int {
+	global $wpdb;
+	return (int) $wpdb->get_var(
+		$wpdb->prepare( "SELECT LENGTH(option_value) FROM {$wpdb->options} WHERE option_name = %s LIMIT 1", $name )
 	);
 }
 

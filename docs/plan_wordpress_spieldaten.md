@@ -1743,7 +1743,165 @@ Permalink, keinen redaktionellen Inhalt und keine Taxonomie. Ein
 Beitragstyp gäbe ihr eine Adresse, unter der sie niemand aufruft, und
 einen Editor, in dem sie niemand bearbeiten darf.
 
-### Vorschlag
+### ⚠⚠ 5.1 GEMESSEN AM 09.09.2026: EIN LESER OHNE SCHREIBER, EIN SCHREIBER OHNE LESER
+
+**Vor jedem weiteren Satz über die Rangliste gehört das hierher**, weil es
+die Reihenfolge bestimmt und weil beide Hälften einzeln plausibel aussehen.
+
+| | wo | Zustand |
+|---|---|---|
+| **Anzeige** | `themes/fch/inc/rangtabelle.php` → `fch_theme_rangtabelle()`, gerufen aus `single-fch_team.php:592` und `page-spiele.php:382`, je Team geschaltet über `rangliste_anzeigen` | **fertig gebaut** — und liest den ACF-Repeater `rangliste` **am Team-Beitrag** |
+| **Empfang** | `wp-export-empfaenger.php` → `POST /clubcampus/v1/ranglisten` | **fertig gebaut** — und schreibt die Option `fch_cc_ranglisten` |
+| **Senden** | Edge Function `wp-export` | **gibt es nicht.** Kein einziger Aufruf, keine Aktion |
+
+⚠ **Die beiden fertigen Hälften treffen sich nicht.** Das Feld
+`team.rangliste` trägt die Anweisung *„Kommt vom Verband. Wird vom
+stündlichen Spiegel geschrieben"* — und das Theme hat am 07.09.2026 selbst
+gemessen, dass **kein einziges Teamfeld** je geschrieben wird:
+
+> *„Weder der Spiegel noch der Empfänger fasst ein einziges Teamfeld an.
+> Die Allowlist hält, und einen Teamabgleich gibt es nicht."*
+> — `Fields/team.php`, beim Ausbau der sieben Hoheitsschalter
+
+**Ein Feld mit einem Versprechen und ohne Schreiber; eine Option mit einem
+Schreiber und ohne Leser.** Beides ist die Familie „wer liest diese
+Spalte?" — einmal in jede Richtung, an derselben Sache.
+
+#### Die Grösse — gemessen, bevor etwas geschrieben wird
+
+`update_option()` legt den Wert **PHP-serialisiert** ab, nicht als JSON.
+Gemessen mit 21 Gruppen und je 11 Feldern pro Zeile (`php:8.2-cli`):
+
+| Teams je Gruppe | Option, `serialize()` | dieselbe als JSON | eine Gruppe |
+|---|---|---|---|
+| 10 | **61 222 B** (60 KB) | 42 127 B | 2 906 B |
+| 12 | **72 331 B** (71 KB) | 49 666 B | 3 435 B |
+| 14 | **83 356 B** (81 KB) | 57 121 B | 3 960 B |
+
+⚠ **`autoload` ist bereits `false`** — `cc_route_ranglisten()` ruft
+`update_option( CC_OPT_RANG, $alle, false )`. Damit wird die Option **nicht**
+bei jedem Seitenaufruf geladen, sondern nur, wenn jemand sie liest. Das ist
+genau die Gefahr, die Didi am 09.09.2026 benannt hat, und sie ist
+abgewendet — **nachzusehen, nicht zu glauben:**
+
+```sql
+select option_name, autoload, length(option_value)
+  from wp_options where option_name = 'fch_cc_ranglisten';
+```
+
+**Zum Vergleich die Repeater-Form**, falls jemand sie doch erwägt: ACF legt
+je Unterfeld je Zeile **zwei** `postmeta`-Zeilen an (Wert + Feldschlüssel).
+
+| | je Team | bei 21 Teams |
+|---|---|---|
+| 12 Zeilen × 11 Unterfelder | 265 Zeilen | **5 565 Zeilen** |
+| 14 Zeilen × 11 Unterfelder | 309 Zeilen | **6 489 Zeilen** |
+
+**80 KB in einer nicht geladenen Option gegen 6 000 Metazeilen** — und die
+Metazeilen entstünden stündlich neu. Die Option gewinnt deutlich.
+
+#### ⚠ 5.2 Was passiert, wenn die Ablage waechst — gemessen am 09.09.2026
+
+Die Frage war: *„sag mir, was passiert, wenn die Grenze ueberschritten
+wird."*
+
+**Es gibt keine Grenze.** Und weil es keine gibt, steht auch keine im Code
+— eine erfundene Schwelle waere genau die Zahl, die niemand gemessen hat.
+Was es gibt, sind drei Punkte, an denen etwas kippt, und alle drei sind
+gemessen:
+
+| | Wert | gemessen woran |
+|---|---|---|
+| Spalte `option_value` | `longtext`, **4 GB** | MySQL-Typ |
+| **`post_max_size` der Website** | **8 MB** | `php -r ini_get(...)` im Container, 09.09.2026 |
+| `memory_limit` | 128 MB | dito |
+
+**Die einzige echte Wand steht bei 8 MB**, und das ist die des SENDERS:
+die Nutzlast muss durch `post_max_size`. Bei 60–81 KB je Lauf sind das
+zwei Zehnerpotenzen Luft. Wuerde sie erreicht, antwortete PHP mit einem
+leeren `$_POST` — **kein Fehler, nur `gruppen ist Pflicht`, 400**.
+
+⚠ **Bei 200 KB passiert also nichts. Genau das ist das Problem.** Ohne
+`autoload` wird die Option nur gelesen, wenn jemand sie liest; sie wuerde
+still wachsen, und niemandem fiele etwas auf.
+
+**Deshalb wird gezaehlt und gemeldet, statt eine Grenze zu setzen:**
+
+| Zahl | wer misst | sagt |
+|---|---|---|
+| `gruppen` · `zeilen` · `groesste_gruppe` | ClubCampus | wie gross die **Sendung** ist |
+| `bytes` | **die Website** | wie gross die **Ablage** ist — inklusive alter Gruppen, die diese Sendung nicht kennt |
+| `autoload` | die Website | ob sie doch bei jedem Seitenaufruf mitkommt |
+| **`alt` = `gesamt − geschrieben`** | beide zusammen | **das Wachstum, nach dem gefragt wurde** |
+
+⚠ **Und die letzte Zahl ist die Antwort auf die eigentliche Frage.** Der
+Empfaenger **ersetzt nur gelieferte Gruppen und entfernt nie eine** — das
+ist richtig (ein halber Ausfall darf nichts wegraeumen) und hat eine
+Folge, die sonst niemand bemerkt: **nach einem Saisonwechsel bleiben die
+Gruppen der alten Saison fuer immer liegen.** Nach drei Saisons stehen 63
+Gruppen in der Ablage, wo der Verein 21 Mannschaften hat.
+
+**Das ist der Weg, auf dem die Option auf 200 KB kommt** — nicht eine
+Mannschaft mehr, sondern eine Saison mehr. Ein Byte-Grenzwert haette es
+nicht gezeigt, `alt: 21` zeigt es beim ersten Lauf nach dem Wechsel.
+
+⚠ **Was mit den alten Gruppen geschehen soll, ist nicht entschieden** —
+Melden ja, Loeschen nein. Ein Empfaenger, der aufraeumt, braucht ein
+Kriterium („Saison aelter als die aktuelle"), und das ist ein Entscheid,
+kein Detail.
+
+#### Die Empfehlung: die Option bleibt, die VORLAGE zieht um
+
+Die dritte Hälfte fehlt ohnehin (das Senden), und von den zwei fertigen ist
+die Anzeige die billigere Baustelle: **zwei Lesestellen** statt eines
+Teamabgleichs, den das Theme ausdrücklich nicht hat und ausdrücklich zuerst
+gebaut haben will.
+
+Der Helfer dafür steht schon im Empfänger:
+
+```php
+fch_cc_rangliste_fuer_team( (string) get_post_meta( $id, 'sfv_id', true ) )['zeilen'] ?? array()
+```
+
+Er sucht die Gruppe über die Zeilen — kein Schreibvorgang an `fch_team`,
+also bleibt die eine Zusage unangetastet, die die Redaktion schützt.
+
+⚠ **Und der Aufruf gehört in den Website-Chat, nicht hierher.** Es sind
+zwei Zeilen in `themes/fch/`, einem Repository, in dem ich nur lese.
+
+#### ⚠ Was VOR beiden Hälften entschieden sein muss: die Schlüsselnamen
+
+**Der Empfänger speichert, was ankommt, unbesehen** (`$alle[$id] = $g`).
+Stimmen die Feldnamen nicht mit denen der Vorlage überein, liegt die
+Rangliste vollständig in der Datenbank und die Seite bleibt leer — **kein
+Fehler, keine Meldung.**
+
+⚠ **Das ist wörtlich der dritte Anlauf von Etappe 4**, eine Ebene höher:
+`sfv_id` gegen `sfv_team_id`, zwei Namen, die sich nie trafen. Deshalb wird
+die Form **einmal** festgelegt, bevor eine der beiden Seiten gebaut wird —
+und die Vorlage gibt sie vor, weil sie schon steht:
+
+| `ranglisten` (Supabase) | Nutzlast / Option | liest `rangtabelle.php` |
+|---|---|---|
+| `position` | `rang` | ✅ |
+| `team_name` | `team` | ✅ |
+| `anzahl_spiele` | `spiele` | ✅ |
+| `siege` · `unentschieden` · `niederlagen` | gleich | ✅ |
+| `fairplay_punkte` | `fair` | ✅ |
+| `tore` | `tore_plus` | ✅ |
+| `gegentore` | `tore_minus` | ✅ |
+| `punkte` | gleich | ✅ |
+| `sfv_team_id` = eigenes Team | `ist_wir` | ✅ markiert die eigene Zeile |
+| — | `sfv_team_id` | vom Helfer gebraucht, um die Gruppe zu finden |
+
+Die Differenz steht **nicht** in der Liste: `rangtabelle.php` rechnet sie
+aus `tore_plus - tore_minus`, *„weil eine gespeicherte Differenz von ihren
+eigenen Summanden abweichen kann"*. Sie mitzuschicken wäre eine zweite
+Wahrheit.
+
+---
+
+### Vorschlag (05.09.2026) — überholt durch 5.1, hier als Herleitung
 
 **Eine eigene Tabelle in WordPress, ein Datensatz je Gruppe, die ganze
 Tabelle als ein JSON-Feld.** Adressiert über `sfv_gruppe_id`.
@@ -2646,11 +2804,29 @@ CLAUDE.md; er gilt weit über diesen Export hinaus.
 
 #### Geschrieben am 09.09.2026 — drei Angaben, drei Fragen
 
-⚠⚠ **UND ZWAR IN MEINER FASSUNG, DIE NICHT INSTALLIERT IST.** Auf der
-Website läuft die Spiegel-Fassung aus `fch-core` (§12.2); diese Änderung
-ist damit **Übergabe, keine Reparatur**. Wer sie für wirksam hält, hat
-denselben Fehler gemacht wie der Kommentar, der eine andere Stelle
-zusichert — nur diesmal über ein anderes Repository hinweg.
+> ⚠⚠ **HIER STAND „IN MEINER FASSUNG, DIE NICHT INSTALLIERT IST" —
+> BERICHTIGT AM 09.09.2026, NOCH AM SELBEN ABEND.**
+>
+> Gemessen im Theme-Repo, nicht vermutet:
+>
+> ```
+> fch-theme/mu-plugins/wp-export-empfaenger.php   09.09.2026 16:45
+> md5 identisch mit wordpress/wp-export-empfaenger.php
+> fch-theme/mu-plugins/fch-core/src/Spiegel/      existiert nicht mehr
+> ```
+>
+> **Meine Datei liegt auf der obersten Ebene von `mu-plugins/` — genau
+> dort, wo WordPress sie lädt — und die Spiegel-Fassung ist fort.** Die
+> Änderung von heute (Status-Route, `CC_META_TEAM_SFV`) ist mit
+> hinübergegangen; der Zeitstempel liegt hinter meiner letzten Änderung.
+>
+> ⚠ **Was damit NICHT gemessen ist: was auf dev läuft.** Das Repo ist
+> nicht der Server. Und genau diese Frage beantwortet seit heute ein
+> Aufruf statt einer Vermutung:
+>
+> ```js
+> (await wpExport('status')).empfaenger   // → "wp-export-empfaenger.php"
+> ```
 
 `cc_route_status()` in `wordpress/wp-export-empfaenger.php` antwortet
 seither zusätzlich:

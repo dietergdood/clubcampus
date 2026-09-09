@@ -10,7 +10,10 @@
 //            und protokolliert in api_sync_log. Seit dem 09.09.2026
 //            (Etappe 5) ALLE Mannschaften; `nur_team` schraenkt auf eine
 //            ein, ist aber nicht mehr Pflicht. EIN POST JE MANNSCHAFT —
-//            der Grund steht bei sendeAnWordpress().
+//            der Grund steht bei sendeAnWordpress(). Ganz zuletzt gehen
+//            die Ranglisten hinaus, und nur fuer Mannschaften, deren
+//            Spiele angekommen sind.
+//   ranglisten  Nur die Tabellen, ohne Spiele-Lauf. Zum Pruefen.
 //
 // ⚠ WARUM `probe` ZUERST, UND ALLEIN
 //   Der Export schickt Namen von Junioren auf eine oeffentliche Website.
@@ -68,6 +71,10 @@ import {
   teileNachTeam, ohneTeamnummer, fasseLauf, laufMeldung, fuersProtokoll,
 } from "../../../src/domains/spiele/wpLauf.ts";
 import type { TeilErgebnis, WpAntwort } from "../../../src/domains/spiele/wpLauf.ts";
+/* Die Ranglisten: Form und Gewicht. Dieselbe Begruendung wie oben — was
+   entscheidet, gehoert dorthin, wo tsc und vitest es lesen. */
+import { baueGruppen, wiegeGruppen, beurteileBestand } from "../../../src/domains/spiele/wpRangliste.ts";
+import type { RanglisteZeile, WpRangGruppe } from "../../../src/domains/spiele/wpRangliste.ts";
 import { protokoll, protokollFehler } from "../sfv-sync/protokoll.ts";
 
 const corsHeaders = {
@@ -89,7 +96,7 @@ const PROBE_HOECHSTENS = 25;
 
 /** Die gueltigen Aktionen — eine Liste, aus der die Pruefung UND die
     Fehlermeldung lesen. Zwei Orte koennten auseinanderlaufen. */
-const AKTIONEN = ["probe", "export", "bestand", "status"];
+const AKTIONEN = ["probe", "export", "bestand", "status", "ranglisten"];
 
 /* ⚠ 30 Minuten, und die Zahl ist NICHT geraten — sie ist die Antwort auf
    „wie lange kann ein Lauf hoechstens dauern, bevor Stillstand die
@@ -187,6 +194,13 @@ Deno.serve(async (req) => {
       return json(await holeStatus());
     }
 
+    /* ⚠ EIGENSTAENDIG, damit sie sich ohne einen Spiele-Lauf pruefen
+       laesst. Im scharfen Lauf steht sie NICHT hier, sondern hinter der
+       letzten Mannschaft — siehe dort. */
+    if (aktion === "ranglisten") {
+      return json(await sendeRanglisten(db, vereinId, nurTeam, null));
+    }
+
     const erg = await laufeProbe(db, vereinId, nurTeam);
 
     if (aktion === "probe") {
@@ -208,7 +222,35 @@ Deno.serve(async (req) => {
 
        ⚠ Was NICHT faellt: der Abgleichbereich. Er kommt weiterhin aus den
        gelieferten Spielen, nicht aus dem Aufruf — siehe teileNachTeam(). */
-    return json(await sendeAnWordpress(db, vereinId, erg));
+    const lauf = await sendeAnWordpress(db, vereinId, erg);
+
+    /* ⚠ ⚠  DIE RANGLISTE GEHT ZULETZT, UND ZWAR NUR FUER MANNSCHAFTEN,
+       DEREN SPIELE ANGEKOMMEN SIND.  ⚠ ⚠
+
+       Didi, 09.09.2026: „eine Rangliste, die Spiele beschreibt, die nicht
+       angekommen sind, ist schlechter als keine." Sie steht auf der
+       Teamseite unter dem Spielplan; zeigt sie neun Spiele und darueber
+       stehen sechs, widerspricht die Seite sich selbst — und der Leser
+       glaubt der Tabelle, weil sie nach Verband aussieht.
+
+       Der Zuschnitt folgt derselben Regel wie der Abgleichbereich der
+       Spiele: er kommt aus dem, was TATSAECHLICH gesendet wurde, nicht aus
+       dem Aufruf. Eine gescheiterte Mannschaft bekommt keine Rangliste —
+       ihre alte bleibt stehen, und das ist der ehrlichere Zustand.
+
+       ⚠ Und sie kann den Spiele-Lauf nicht mehr rot faerben: der ist zu
+       diesem Zeitpunkt protokolliert und abgeschlossen. Ihr eigenes
+       Ergebnis steht daneben, nicht darin. */
+    const gesendeteTeams = new Set(
+      (lauf.je_team ?? [])
+        .filter((t: { fehler: string | null }) => !t.fehler)
+        .map((t: { team: string }) => t.team),
+    );
+    const rang = gesendeteTeams.size
+      ? await sendeRanglisten(db, vereinId, nurTeam, gesendeteTeams)
+      : { uebersprungen: "Keine Mannschaft gesendet — ohne Spiele keine Rangliste." };
+
+    return json({ ...lauf, ranglisten: rang });
   } catch (e) {
     const meldung = protokollFehler(`wp-export/${aktion}/${vereinId}`, e);
     return json({ fehler: meldung }, 502);
@@ -406,6 +448,100 @@ async function sendeAnWordpress(
     zusammenfassung: erg.zusammenfassung,
   };
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DIE RANGLISTEN
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Die Tabellen der eigenen Gruppen an WordPress.
+ *
+ * ⚠ EIN POST FUER ALLE GRUPPEN, anders als bei den Spielen. Der Grund ist
+ * derselbe, nur andersherum: drueben landet alles in EINER Option
+ * (`fch_cc_ranglisten`), und zwei Aufrufe wuerden dieselbe Option zweimal
+ * lesen und zweimal schreiben — ein Wettlauf mit sich selbst. Ein Aufruf
+ * mit 60–80 KB ist ausserdem nichts gegen 21 Beitragslaeufe.
+ *
+ * @param nurTeams `null` = alle eigenen Mannschaften. Sonst genau die,
+ *                 deren Spiele in diesem Lauf angekommen sind.
+ */
+async function sendeRanglisten(
+  db: DbLeser, vereinId: string, nurTeam: string | null, nurTeams: Set<string> | null,
+) {
+  const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
+  const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
+  if (!basis || !schluessel) {
+    throw new Error("WP_BASIS_URL oder WP_SCHLUESSEL nicht gesetzt");
+  }
+  const host = new URL(basis).host;
+
+  const tRes = await db.from("teams").select("sfv_team_id")
+    .eq("verein_id", vereinId).not("sfv_team_id", "is", null);
+  if (tRes.error) throw new Error(`Teams nicht lesbar: ${tRes.error.message}`);
+
+  let unsere = new Set<string>(
+    ((tRes.data ?? []) as { sfv_team_id: number }[]).map((t) => String(t.sfv_team_id)),
+  );
+  if (nurTeam) unsere = new Set([...unsere].filter((t) => t === nurTeam));
+  if (nurTeams) unsere = new Set([...unsere].filter((t) => nurTeams.has(t)));
+  if (!unsere.size) {
+    return { ziel: host, uebersprungen: "Keine zugeordnete Mannschaft — nichts zu senden." };
+  }
+
+  const rRes = await db.from("ranglisten")
+    .select("sfv_saison_id, sfv_liga_id, sfv_liga_name, sfv_division_id, sfv_division_name, "
+      + "sfv_gruppe_id, sfv_gruppe, sfv_team_id, team_name, position, anzahl_spiele, "
+      + "siege, unentschieden, niederlagen, tore, gegentore, punkte, fairplay_punkte, stand_vom")
+    .eq("verein_id", vereinId);
+  if (rRes.error) throw new Error(`Ranglisten nicht lesbar: ${rRes.error.message}`);
+
+  const gruppen: WpRangGruppe[] = baueGruppen((rRes.data ?? []) as RanglisteZeile[], unsere);
+  const gewicht = wiegeGruppen(gruppen);
+
+  if (!gruppen.length) {
+    /* ⚠ Ein leeres `gruppen: []` waere kein Nichts: der Empfaenger ersetzt
+       nur gelieferte Gruppen, also passierte drueben tatsaechlich nichts —
+       aber der Lauf saehe aus, als haette er etwas getan. Lieber gar nicht
+       senden und es sagen. */
+    return {
+      ziel: host, gesendet: false, ...gewicht,
+      uebersprungen: `Keine Rangliste zu ${unsere.size} Mannschaft(en) in der Datenbank.`,
+    };
+  }
+
+  const antwort = await fetch(`${basis}/clubcampus/v1/ranglisten`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-FCH-Schluessel": schluessel },
+    body: JSON.stringify({ gruppen }),
+  });
+  const text = await antwort.text();
+  let wp: WpAntwort;
+  try {
+    wp = JSON.parse(text);
+  } catch {
+    throw new Error(`WordPress antwortete kein JSON (${antwort.status}): ${text.slice(0, 200)}`);
+  }
+  if (!antwort.ok) {
+    throw new Error(`WordPress ${antwort.status}: ${JSON.stringify(wp).slice(0, 300)}`);
+  }
+
+  const geschrieben = Number(wp.gruppen_geschrieben ?? 0);
+  const gesamt = Number(wp.gruppen_gesamt ?? 0);
+
+  return {
+    ziel: host,
+    gesendet: true,
+    ...gewicht,
+    geschrieben,
+    /* ⚠ DIE ZAHL, DIE DAS WACHSTUM ZEIGT. Der Empfaenger entfernt nie eine
+       Gruppe (richtig: ein halber Ausfall darf nichts wegraeumen), also
+       bleibt jede Gruppe einer vergangenen Saison fuer immer liegen. Nicht
+       eine Byte-Schwelle meldet das, sondern dieser Vergleich. */
+    im_bestand: gesamt,
+    ...beurteileBestand(geschrieben, gesamt),
+  };
+}
+
 
 /**
  * Ein Teil: die Spiele EINER Mannschaft an WordPress.

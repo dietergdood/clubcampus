@@ -636,7 +636,7 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   Alle drei sind billig, keine davon ist eine Rechnung, und zusammen unterscheiden sie die drei Glieder. Geschrieben in `wordpress/wp-export-empfaenger.php` → `cc_route_status()`; der Schlüssel steht seither als `CC_META_TEAM_SFV` an einer Stelle statt als Zeichenkette mitten in der Funktion.
 
-  ⚠ **Geschrieben, nicht wirksam:** auf der Website läuft die Spiegel-Fassung aus dem Theme-Repository, nicht diese Datei. Es ist eine **Übergabe**. Wer das verwechselt, macht denselben Fehler wie ein Kommentar, der eine andere Stelle zusichert — nur über ein zweites Repository hinweg, wo ihn erst recht niemand nachprüft.
+  ⚠ **Am selben Abend berichtigt:** hier stand „geschrieben, nicht wirksam — auf der Website läuft die Spiegel-Fassung". Gemessen im Theme-Repo ist meine Datei dort inzwischen **md5-identisch** unter `mu-plugins/wp-export-empfaenger.php` eingespielt, und die Spiegel-Fassung ist gelöscht. **Ein Satz über ein zweites Repository veraltet in Stunden, nicht in Wochen** — deshalb steht die Frage jetzt als Aufruf da und nicht als Behauptung: `(await wpExport('status')).empfaenger` nennt die Datei, die tatsächlich antwortet.
 
   ⚠ **Nicht die Route rot färben, wenn die Zuordnung leer ist.** Ein Empfänger ohne Zuordnung ist betriebsbereit, nur nutzlos — ein 503 ebnete den Unterschied zu „da läuft gar nichts" wieder ein, und genau diese Einebnung ist der Fehler.
 
