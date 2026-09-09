@@ -1,21 +1,37 @@
-# Übergabe: 13 Mannschaften ohne Spielplan aus der API
+# Übergabe: 8 Mannschaften ohne Spielplan aus der API
 
-Stand 10.09.2026. **Der technische Teil ist abgeschlossen** — es gibt
-nichts mehr zu holen. Was bleibt, ist eine Gestaltungsfrage und eine Frage
-an den Verband.
+Stand 10.09.2026, abgeschlossen. **Es ist nichts mehr zu holen** — und der
+Grund ist ein anderer als „die Schnittstelle filtert".
 
-## Der Befund in drei Zeilen
+## Der Befund
 
-| | |
+> `/api/team/list` kennt Mannschaften, die in einem Wettbewerb **mit
+> Rangliste** stehen. Die acht jüngsten spielen **ohne Tabelle** — dort
+> gibt es keine `teamId` und folglich keinen abrufbaren Spielplan.
+
+**Die Verbandsseite und die Schnittstelle zeigen nicht dieselbe Datenlage.**
+Das ist kein Fehler auf einer der beiden Seiten und keine Lücke, die sich
+mit einem Parameter schliessen liesse.
+
+| gemessen | |
 |---|---|
-| Die Verbandsseite führt **34** Mannschaften des FCH, **alle mit Spielplan** | gemessen von Didi |
-| `/api/team/list` gibt **21** heraus — die mit Wettbewerbsteilnahme | gemessen |
-| Es gibt **keinen** zweiten Weg: 15 Pfade, ein einziger Spielplan-Endpunkt, kein Filter, der mehr bringt | gemessen an der Swagger und mit `aktion: "teamprobe"` |
+| Vereinsseite FVRZ | **34** Mannschaften, alle mit Spielplan |
+| `/api/team/list` | **21**, Saison 2027 |
+| davon wirklich fehlend | **8** |
+| Swagger | 15 Pfade, ein einziger Spielplan-Endpunkt, kein Parameter, der mehr bringt |
 
-**Die Website des Verbands zeigt Daten, die seine eigene API nicht
-herausgibt.** Für die 13 Mannschaften — die jüngsten Jahrgänge, Spieltyp
-„Turnier" und „Mini-Turniere" — kommt über ClubCampus kein Spiel an, und
-das lässt sich von unserer Seite nicht beheben.
+### ⚠ Warum es nach 13 aussah — und warum das hierhergehört
+
+**„Junioren D (Futsal) a" und „Dd-Junioren" sind dieselbe Mannschaft.**
+Verbandsseite und ClubCampus benennen sie verschieden. Wer die Listen über
+die **Namen** vergleicht, findet **13 fehlende statt 8** — fünf davon sind
+Schreibweisen.
+
+> Ein Vergleich über den Namen prüft eine Schreibweise. Über die `teamId`
+> prüft er die Sache.
+
+**Das gilt auch drüben:** wer auf der Website eine Mannschaft der einen
+Liste der anderen zuordnet, tut das über die Nummer, nicht über den Namen.
 
 ## ⚠ Was die Teamseite heute zeigt: nichts
 
@@ -61,37 +77,16 @@ dem Verweis dorthin, wo die Daten stehen:
 Drei Dinge, die alle stimmen: wo die Spiele sind, warum sie hier fehlen,
 und wie man hinkommt.
 
-### ⚠⚠ OFFEN, UND ES ENTSCHEIDET ALLES: haben die 13 eine `teamId`?
+### ✅ Geklärt: die 8 haben keine `teamId`
 
-**Stand 10.09.2026 stehen zwei Angaben nebeneinander, die einander
-ausschliessen** — beide aus demselben Gespräch:
+Die zwei Nummern, die zwischenzeitlich als Beleg galten (`51083`, `74531`),
+stehen in der Liste der 34 **nicht** — sie waren verwechselt. Die
+Ea-Junioren sind `38313`, „A-Junioren" führt der Verband gar nicht.
 
-| | |
-|---|---|
-| *„A-Junioren **51083**, Ea-Junioren **74531**"* | dann HABEN sie eine `teamId`, und der Link ist baubar |
-| *„die 13 Mannschaften haben keine `teamId`, also keinen Link"* | dann gibt es keine Lösung, nur eine Beschreibung |
-
-⚠ **Beides kann nicht stimmen.** Und der Unterschied ist nicht akademisch:
-er entscheidet, ob dieser Abschnitt eine Anleitung ist oder ein Nachruf.
-
-**Die Gegenprobe kostet zehn Sekunden** — im Browser, nicht über die API:
-
-```
-https://matchcenter.fvrz.ch/default.aspx?v=1516&oid=11&lng=1&t=51083&a=trr
-```
-
-| Ergebnis | heisst |
-|---|---|
-| die **A-Junioren** mit Namen und Partien | `51083` ist eine gültige `teamId` → die 13 sind adressierbar, der Link ist baubar, **dieser Abschnitt gilt** |
-| **„Team -"**, keine Partien | `51083` ist keine `teamId` → es gibt keinen Link, und der Abschnitt darunter ist gegenstandslos |
-
-⚠ **Der Vergleichsfall ist schon gemessen:** `t=57755` zeigt „Team -" und
-„Keine Partien gefunden" — so sieht eine ungültige Nummer aus. Und
-`t=38309` zeigt die Ca-Junioren, `t=37931` den FC Küsnacht a: so sieht
-eine gültige aus, auch über Vereinsgrenzen hinweg.
-
-**Bis diese eine Zeile gemessen ist, bleibt der Rest dieses Abschnitts
-ein Vorschlag unter Vorbehalt.**
+**Für die acht ohne Tabelle gibt es keine Nummer** — also auch keinen
+FVRZ-Link. Der Abschnitt darunter gilt nur für Mannschaften, die eine
+`teamId` haben und deren Spiele trotzdem nicht ankommen; nach heutigem
+Stand ist das keine.
 
 ### ⚠ Und der Link ist baubar — genau mit dem Feld, das fast gefallen wäre
 

@@ -1287,6 +1287,41 @@ zeigen soll, ist deshalb eine Gestaltungsfrage und keine technische:
 Website alle führt — und gibt es einen Parameter, den die Swagger-Datei
 nicht nennt?
 
+#### ⚠ Die Auflösung (10.09.2026): es sind acht, und der Grund ist die Tabelle
+
+**Die Schnittstelle bedient nicht dieselbe Datenlage wie die Website.**
+
+> `/api/team/list` kennt Mannschaften, die in einem Wettbewerb **mit
+> Rangliste** stehen. Die jüngsten Jahrgänge spielen ohne Tabelle — dort
+> gibt es keine `teamId` und folglich keinen abrufbaren Spielplan.
+
+**Das ist kein Filter, den jemand vergessen hat, und keine Lücke.** Es
+sind zwei Sichten auf denselben Spielbetrieb, und die Schnittstelle
+bedient die eine.
+
+⚠ **UND JETZT DIE FALLE, DIE DABEI FAST DAS ERGEBNIS VERDOPPELT HÄTTE:**
+
+**„Junioren D (Futsal) a" und „Dd-Junioren" sind dieselbe Mannschaft.**
+Die Verbandsseite und ClubCampus benennen sie verschieden — und wer die
+beiden Listen über die NAMEN vergleicht, findet **13 fehlende statt 8**.
+Fünf davon sind Schreibweisen, keine Mannschaften.
+
+**Dieselbe Regel wie überall in diesem Projekt, hier über Systemgrenzen
+hinweg:** *ein Filter auf einen NAMEN prüft eine Schreibweise, ein Filter
+auf ein MERKMAL prüft die Sache.* Verglichen wird über `teamId`, nie über
+den Namen — auch dann nicht, wenn die Namen „offensichtlich" zusammen-
+gehören.
+
+⚠ **Und eine Frage bleibt offen, die daraus folgt und grösser ist als der
+Anlass:** wenn dieselbe Mannschaft auf der Verbandsseite unter zwei
+Einträgen steht (Meisterschaft und Futsal), hat sie dann **zwei
+`teamId`**? Unsere Zuordnung ist 1:1 gebaut — eine `teams`-Zeile, eine
+Nummer. Träfe das zu, bekäme eine Mannschaft mit zwei Wettbewerben nur die
+Spiele des einen, **und niemand würde es merken**: die Spiele des anderen
+fielen unter `spiele.ohne_team`, gezählt und namenlos.
+
+Zu messen an einer Mannschaft, die in beidem spielt — nicht angenommen.
+
 ### ⚠ Die Vereinskennung beim Verband steht nirgends in ClubCampus
 
 Befund vom 10.09.2026, aufgefallen beim FVRZ-Link am Team.
