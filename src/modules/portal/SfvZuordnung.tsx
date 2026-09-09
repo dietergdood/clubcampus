@@ -116,8 +116,22 @@ export function SfvZuordnung({sb,dbTeams,setDbTeams,onZurueck}: SfvZuordnungProp
 
         {!laedt&&sfvTeams.length>0&&(
           <>
+            {/* ⚠ ⚠  „21 VON 21" SAH VOLLSTAENDIG AUS UND WAR ES NICHT.
+
+                Der Nenner ist die Zahl der Teams, die der VERBAND ueber
+                `/api/team/list` fuer diese Saison herausgibt — nicht die
+                Zahl der Mannschaften des Vereins. Am 10.09.2026 standen
+                dort 21 von 21, waehrend 21 WEITERE ClubCampus-Teams gar
+                nicht vorkamen: sie haben keine SFV-Nummer und tauchen in
+                dieser Liste deshalb nirgends auf.
+
+                > Eine Zahl, die vollstaendig aussieht, laesst niemanden
+                > weitersuchen. Deshalb sagt der Satz jetzt, WOVON die
+                > Zahl handelt — und der Kasten darunter nennt, was nicht
+                > darin vorkommt. */}
             <div style={{fontSize:13,color:"var(--sub)",marginBottom:8}}>
-              {zugeordnet} von {sfvTeams.length} zugeordnet
+              {zugeordnet} von {sfvTeams.length} Mannschaften zugeordnet, die der Verband
+              für diese Saison führt
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
@@ -163,6 +177,22 @@ export function SfvZuordnung({sb,dbTeams,setDbTeams,onZurueck}: SfvZuordnungProp
                 ))}
               </tbody>
             </table>
+
+            {/* ⚠ `zuordnung.offen` wurde seit jeher BERECHNET und nirgends
+                gezeigt — es fuellte nur das Auswahlfeld. Damit stand die
+                Auskunft „diese Mannschaften kennt der Verband nicht" die
+                ganze Zeit bereit und wurde nie ausgesprochen. */}
+            {zuordnung.offen.length>0&&(
+              <div className="cc-hint-box" style={{marginTop:12}}>
+                <TI n="info-circle" size={14}/>{" "}
+                <b>{zuordnung.offen.length} Mannschaft(en) in ClubCampus haben keine SFV-Nummer</b>
+                {" "}und kommen in der Liste oben deshalb nicht vor:{" "}
+                {zuordnung.offen.map(t=>t.name).join(", ")}.
+                {" "}Das kann richtig sein — F- und G-Junioren etwa spielen ohne Meldung.
+                Wo es nicht richtig ist, führt der Verband die Mannschaft unter einem
+                anderen Namen oder in einer anderen Saison.
+              </div>
+            )}
 
             {zuordnung.veraltet.length>0&&(
               <div className="cc-hint-box" style={{marginTop:12}}>
