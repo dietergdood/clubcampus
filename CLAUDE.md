@@ -604,6 +604,62 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   **Verallgemeinern heisst nicht leeren.** Wo eine Meldung eine Aufzählung trug, gehört die Aufzählung erweitert, nicht gestrichen.
 
+- **⚠ EINE MELDUNG NENNT DAS LETZTE GLIED DER KETTE — NICHT DAS GERISSENE.** (Befund Didi, 09.09.2026.)
+
+  Der erste scharfe WordPress-Lauf brauchte **drei Anläufe, und alle drei sahen gleich aus:**
+
+  ```
+  ohne_team: ["38309"]   →  0 neu, 0 aktualisiert, Status „warnung"
+  ```
+
+  Wörtlich heisst das *„Mannschaft 38309 hat auf dieser Website kein Team mit dieser sfv_id"* — eine Aussage über einen **Meta-Wert im Backend**. Sie stimmte in genau **einem** der drei Fälle:
+
+  | Anlauf | tatsächlich | Glied |
+  |---|---|---|
+  | 1 | die Datei lag im **falschen Ordner** | es lief gar kein Empfänger |
+  | 2 | eine **fremde Datei trug denselben Namen** | es antwortete der falsche |
+  | 3 | der **Meta-Schlüssel** stimmte nicht | ✅ das war die Meldung wirklich |
+
+  ⚠ **Die ersten beiden sind DIESELBE Stelle** — „welche Datei antwortet hier eigentlich?" — und genau deshalb hat der zweite so wehgetan: nach dem ersten galt die Frage als beantwortet.
+
+  **Dieselbe Familie wie „ein Ausfall in der Verkleidung einer Datenlage", eine Stufe fieser:** hier ist es ein Ausfall in der Verkleidung **einer anderen, plausiblen Konfigurationsfrage.** Man sucht dreimal im Backend nach dem Feld, und zweimal lag es nicht dort.
+
+  ⚠ **Und das Prüfmittel dagegen gab es schon — es half in einem von drei Fällen.** `aktion: "status"` fragt die Gegenstelle, ob sie bereit ist. Bei Anlauf 1 hätte sie geschwiegen; bei 2 und 3 hätte sie **`bereit: true`** gesagt: die fremde Datei bedient dieselbe Route genauso bereitwillig, und die Voraussetzungsprüfung sah Beitragstypen an, keine Felder. **Eine Auskunft, die zwei von drei Ausfällen für gesund erklärt, schickt den Verdacht in die falsche Richtung** — sie ist schlimmer als keine, aus demselben Grund wie ein Zähler, dessen Name mehr behauptet als er misst.
+
+  **Die Regel: wer eine Gegenstelle nach ihrem Zustand fragt, fragt sie zuerst nach SICH SELBST.**
+
+  | Frage | Feld |
+  |---|---|
+  | **wer** antwortet hier | Dateiname + Version |
+  | **womit** sucht sie | der Schlüssel, an dem es hängt — als Wert, nicht im Quelltext |
+  | **worauf** trifft sie | die Zuordnung gezählt (`0 von 21`) |
+
+  Alle drei sind billig, keine davon ist eine Rechnung, und zusammen unterscheiden sie die drei Glieder. Geschrieben in `wordpress/wp-export-empfaenger.php` → `cc_route_status()`; der Schlüssel steht seither als `CC_META_TEAM_SFV` an einer Stelle statt als Zeichenkette mitten in der Funktion.
+
+  ⚠ **Geschrieben, nicht wirksam:** auf der Website läuft die Spiegel-Fassung aus dem Theme-Repository, nicht diese Datei. Es ist eine **Übergabe**. Wer das verwechselt, macht denselben Fehler wie ein Kommentar, der eine andere Stelle zusichert — nur über ein zweites Repository hinweg, wo ihn erst recht niemand nachprüft.
+
+  ⚠ **Nicht die Route rot färben, wenn die Zuordnung leer ist.** Ein Empfänger ohne Zuordnung ist betriebsbereit, nur nutzlos — ein 503 ebnete den Unterschied zu „da läuft gar nichts" wieder ein, und genau diese Einebnung ist der Fehler.
+
+- **⚠⚠ EINE PRÜFUNG, DIE NUR DAS LETZTE GLIED SIEHT, BESTÄTIGT EINE KETTE, DIE VORNE GERISSEN IST.** (Didi, 09.09.2026 — der Satz ist seiner.)
+
+  Der Eintrag darüber handelt von einer **Meldung**, die das falsche Glied nennt. Dieser hier ist die andere Hälfte und die gefährlichere: **das Prüfmittel selbst.**
+
+  `aktion: "status"` gab es schon. Sie lief. Sie fragte die Website, ob sie bereit sei — und hätte in **zwei von drei** Ausfällen **`bereit: true`** gemeldet: die fremde Datei bediente dieselbe Route genauso bereitwillig, und die Voraussetzungsprüfung sah Beitragstypen an, keine Felder.
+
+  | | |
+  |---|---|
+  | eine Prüfung, die **fehlt** | man weiss, dass man nichts weiss |
+  | eine Prüfung, die **grün** ist, ohne zu prüfen | man hört auf zu suchen — an der einen Stelle, an der es lag |
+
+  **Das ist dieselbe Familie wie ein Zähler, dessen Name mehr behauptet als er misst** (die 431 Klarnamen, die 0 waren), und wie die zweite Abfrage in `kindService.ts`: eine Gegenprobe, gebaut gegen genau den Fall, für den sie wirkungslos war — sie fragte „ist die Zeile lesbar?" statt „wurde sie geschrieben?". Und es ist die gespiegelte Form von `job_run_details.status = 'succeeded'`, das nur „abgesetzt" heisst: dort sieht die Prüfung das **erste** Glied und behauptet den Rest.
+
+  **Zwei Fragen, bevor man einer grünen Prüfung glaubt:**
+
+  1. **Welches Glied sieht sie — und welche Glieder liegen davor?** Antwortet mein Empfänger, oder irgendeiner? Wurde geschrieben, oder ist nur lesbar? Wurde der Auftrag ausgeführt, oder nur abgeschickt?
+  2. **Was sagt sie über das, was sie NICHT geprüft hat?** Nichts zu sagen ist hier gleichbedeutend mit „in Ordnung" — und das ist die Lüge. Eine Prüfung, die ihren eigenen Zuschnitt nennt („Beitragstypen geprüft, Felder nicht"), kann nicht mehr für mehr genommen werden, als sie ist.
+
+  **Die Gegenmassnahme ist nicht, mehr zu prüfen, sondern die Kette nach SICH SELBST zu fragen** — von vorne, nicht vom Ende: wer antwortet, mit welcher Fassung, gegen welchen Schlüssel, mit wie vielen Treffern. Vier Angaben, keine davon eine Rechnung. Siehe den Eintrag darüber.
+
 - **⚠ EIN ZÄHLER, DESSEN NAME MEHR BEHAUPTET ALS ER MISST, IST GEFÄHRLICHER ALS KEINER.** (Didi, 05.09.2026.)
 
   Befund aus dem ersten Probelauf des WordPress-Exports. Die Antwort meldete zwei Zahlen, die sich widersprachen:
@@ -975,6 +1031,23 @@ Der Dump ersetzt die Datei komplett. Vorher gegenprüfen, dass er nichts verlier
 > die Umkodierung an einer Stelle passiert, an die man nicht denkt, während
 > man etwas anderes tut. **Gegen so etwas hilft kein Vorsatz, nur eine
 > Prüfung, die danach läuft.**
+>
+> ⚠ **UND SIE HAT BIS ZUM 09.09.2026 GENAU DIE DATEIEN NICHT ANGESEHEN, DIE
+> GERADE ENTSTANDEN WAREN.** Sie las `git ls-files` — also den **Index**.
+> Eine neue Datei steht dort noch nicht; sie ist aber der Zustand, in dem
+> ein Werkzeug soeben geschrieben hat. Die Prüfung sah also alles ausser
+> dem Frischen.
+>
+> **Der einzige sichtbare Hinweis war eine Zahl, die sich nicht bewegte:**
+> nach drei neuen Dateien meldete sie zweimal „354 Textdateien geprueft".
+> Dieselbe Familie wie die 16 verlorenen Testdateien — es fehlt etwas, und
+> nichts meldet es ausser einer Zahl, auf die niemand schaut.
+>
+> ⚠ **Der Kommentar daneben hat die Lücke bewacht.** Er begründete sie mit
+> „was nicht im Index steht, kann niemanden überraschen" — ein plausibler
+> Satz an einer falschen Stelle, und der ist schwerer zu entdecken als gar
+> keiner. Behoben mit `--cached --others --exclude-standard` (357 statt
+> 354; Gegenprobe mit einer neuen, **ungetrackten** NUL-Datei: rot).
 
 **Wer eine `check:*`-Prüfung dazuschreibt, gibt ihr eine Gegenprobe.** Nicht
 weil es sich gehört, sondern weil eine Prüfung, die nie rot war, keine

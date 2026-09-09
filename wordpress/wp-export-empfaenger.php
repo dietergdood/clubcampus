@@ -109,8 +109,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 const CC_ROUTE      = 'clubcampus/v1';
+/* ⚠ MUSS MIT DEM KOPF DIESER DATEI UEBEREINSTIMMEN (Version: oben). Sie
+   steht in der Antwort von /status und ist die einzige Moeglichkeit, von
+   aussen zwei Empfaenger mit demselben Dateinamen zu unterscheiden — der
+   Fall, der am 09.09.2026 einen ganzen Anlauf gekostet hat. */
+const CC_VERSION    = '0.1.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
+/* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
+   fch_team-Beitrag, gepflegt von der Redaktion (Plan §1). Stimmt er
+   nicht, ist `cc_team_karte()` leer, und der Lauf meldet `ohne_team`:
+   „diese Mannschaft hat kein Team mit dieser sfv_id". Das sieht aus wie
+   ein fehlender Wert im Backend und ist einer im Code.
+
+   Er steht seit dem 09.09.2026 als Konstante und in der Antwort von
+   /status, damit niemand ihn mehr aus dem Quelltext holen muss. */
+const CC_META_TEAM_SFV = 'sfv_id';
 const CC_OPT_RANG   = 'fch_cc_ranglisten';
 /* ⚠ VERTRAG MIT DEM THEME-REPOSITORY: fch-core/src/Admin/clubcampus.php
    liest genau diesen Namen (dort mit Rueckfall auf die Zeichenkette). */
@@ -440,16 +454,73 @@ function cc_doppelte_match_ids(): array {
 	return $karte;
 }
 
-/** Verbindungstest: was hier fehlt, erklaert jeden spaeteren Fehlschlag. */
+/**
+ * Verbindungstest: was hier fehlt, erklaert jeden spaeteren Fehlschlag.
+ *
+ * ⚠ ERWEITERT AM 09.09.2026, UND ZWAR AUS EINEM BEFUND. Etappe 4 hat drei
+ *   Anlaeufe gebraucht, und alle drei sahen gleich aus — `ohne_team`, also
+ *   „diese Mannschaft hat auf der Website kein Team mit dieser sfv_id".
+ *   Zutreffend war das bei EINEM:
+ *
+ *     1. die Datei lag im falschen Ordner   → es lief gar kein Empfaenger
+ *     2. eine fremde Datei trug denselben Namen → es antwortete ein anderer
+ *     3. der Meta-Schluessel stimmte nicht  → DAS war die Meldung wirklich
+ *
+ *   Die alte Fassung dieser Route konnte nur den ERSTEN Fall trennen (sie
+ *   antwortete gar nicht). Fall 2 und 3 sahen auch hier gleich aus, weil
+ *   sie nichts ueber sich selbst und nichts ueber die Team-Zuordnung sagte.
+ *
+ *   Deshalb drei Angaben mehr, und jede beantwortet genau eine der drei
+ *   Fragen:
+ *
+ *     `empfaenger`      WELCHE Datei antwortet hier
+ *     `meta_schluessel` an welchem Feld gesucht wird
+ *     `teams_*`         ob ueberhaupt ein Team zugeordnet ist
+ *
+ *   ⚠ `teams_zugeordnet = 0` bei `teams_gesamt > 0` ist die Antwort auf
+ *   Fall 3 in einer Sekunde. Sie macht die Route NICHT rot — ein
+ *   Empfaenger ohne Zuordnung ist betriebsbereit, nur nutzlos, und ein
+ *   503 wuerde den Unterschied zu Fall 1 wieder einebnen.
+ */
 function cc_route_status(): WP_REST_Response {
 	$fehlt = cc_voraussetzungen();
+
+	$karte     = cc_team_karte();
+	$mehrfach  = 0;
+	foreach ( $karte as $tid ) {
+		if ( 0 === $tid ) {
+			++$mehrfach;
+		}
+	}
+
 	return new WP_REST_Response(
 		array(
-			'bereit'          => array() === $fehlt,
-			'fehlt'           => $fehlt,
-			'spiele_gesamt'   => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
-			'spiele_abgleich' => count( cc_abgleich_kandidaten() ),
-			'benutzer'        => wp_get_current_user()->user_login,
+			'bereit'           => array() === $fehlt,
+			'fehlt'            => $fehlt,
+			/* ⚠ Der DATEINAME, nicht der Pfad: der Pfad des Servers gehoert
+			   niemandem ausserhalb. Der Name genuegt fuer die Frage
+			   „antwortet meine Datei oder eine zweite mit gleichem Namen?" —
+			   und wenn beide gleich heissen, sagt es die Version daneben. */
+			'empfaenger'       => basename( __FILE__ ),
+			'version'          => CC_VERSION,
+			/* Der Schluessel, an dem die Team-Zuordnung haengt. Steht er hier,
+			   muss ihn niemand aus dem Quelltext holen. */
+			'meta_schluessel'  => CC_META_TEAM_SFV,
+			'teams_gesamt'     => count(
+				get_posts(
+					array(
+						'post_type'   => CC_TYP_TEAM,
+						'post_status' => 'any',
+						'numberposts' => -1,
+						'fields'      => 'ids',
+					)
+				)
+			),
+			'teams_zugeordnet' => count( $karte ) - $mehrfach,
+			'teams_mehrfach'   => $mehrfach,
+			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
+			'spiele_abgleich'  => count( cc_abgleich_kandidaten() ),
+			'benutzer'         => wp_get_current_user()->user_login,
 		),
 		array() === $fehlt ? 200 : 503
 	);
@@ -522,7 +593,7 @@ function cc_team_karte(): array {
 	);
 	$karte = array();
 	foreach ( $ids as $id ) {
-		$sfv = trim( (string) get_post_meta( (int) $id, 'sfv_id', true ) );
+		$sfv = trim( (string) get_post_meta( (int) $id, CC_META_TEAM_SFV, true ) );
 		if ( '' === $sfv ) {
 			continue;
 		}

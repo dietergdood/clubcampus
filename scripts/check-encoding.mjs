@@ -78,11 +78,25 @@ function istText(pfad) {
 }
 
 /* `git ls-files` statt eines eigenen Verzeichnisdurchlaufs: es kennt
-   .gitignore, und geprueft werden soll genau das, was eingecheckt ist.
-   Was nicht im Index steht, kann niemanden ueberraschen. */
+   .gitignore, und geprueft werden soll das, was eingecheckt WIRD.
+
+   ⚠ HIER STAND BIS ZUM 09.09.2026 EIN BLOSSES `git ls-files` — mit der
+   Begruendung „was nicht im Index steht, kann niemanden ueberraschen".
+   Das ist genau falsch herum: eine NEUE Datei steht noch nicht im Index,
+   und sie ist der Zustand, in dem ein Werkzeug gerade eben geschrieben
+   hat. Die Pruefung sah also alles ausser dem, was frisch entstanden war.
+
+   Aufgefallen an der Zahl, nicht an einem Befund: nach drei neuen Dateien
+   meldete sie unveraendert „354 Textdateien geprueft". Dieselbe Familie
+   wie die verlorenen Testdateien — es fehlt etwas, und nichts meldet es,
+   ausser einer Zahl, die sich nicht bewegt.
+
+   `--cached --others --exclude-standard` nimmt Index UND neue Dateien und
+   laesst .gitignore weiterhin gelten. */
 let dateien;
 try {
-  dateien = execSync("git ls-files", { maxBuffer: 1e8 }).toString().split("\n").filter(Boolean);
+  dateien = execSync("git ls-files --cached --others --exclude-standard", { maxBuffer: 1e8 })
+    .toString().split("\n").filter(Boolean);
 } catch (e) {
   console.error(`check-encoding: git ls-files fehlgeschlagen — ${e.message}`);
   process.exit(1);

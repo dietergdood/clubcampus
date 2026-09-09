@@ -2386,6 +2386,8 @@ gekommen sind
 |---|---|
 | `cc_stempel()` + die zwei Meta-Konstanten | ohne sie kein Laufstempel — und ohne Stempel beantwortet §4.5b die Frage nicht, für die es geschrieben ist |
 | Route `GET /clubcampus/v1/bestand` | ohne sie antwortet `aktion: "bestand"` mit einem 404 der Website (laut, nicht still — die Edge Function wirft mit dem Antworttext) |
+| **09.09.2026: `/status` nennt sich selbst** — `empfaenger` (Dateiname), `version`, `meta_schluessel`, `teams_gesamt/zugeordnet/mehrfach` | ohne sie sagt `bereit: true` auch dann, wenn die **falsche Datei** antwortet oder **kein einziges Team** zugeordnet ist. Genau das hat Etappe 4 zwei Anläufe gekostet — §13.1b |
+| **09.09.2026: `CC_META_TEAM_SFV`** statt der Zeichenkette `'sfv_id'` mitten in `cc_team_karte()` | der Schlüssel, an dem der ganze Team-Abgleich hängt, an **einer** Stelle und in der Antwort von `/status` |
 
 **Einspielen, bevor Etappe 4 erneut läuft.** Der Stempel wirkt ab dem
 Einspielen, nicht rückwirkend: was vorher geschrieben wurde, bleibt
@@ -2475,8 +2477,8 @@ Ohne die Gestaltung — die ist ausdrücklich nicht Teil des Auftrags.
 | 1 | Migration: Zeile `wordpress` in `api_verbindungen`, `active = true`, `auto_sync = true`, `sync_felder` nach §11, mit Zählprobe | `BEGIN … ROLLBACK` |
 | 2 | Edge Function `wp-export`, Aktion `probe` — **liest, sendet nichts, gibt zurück, was sie senden würde** | Gegenlesen im Scratchpad |
 | 3 | WordPress: Endpunkte, Sperren, Abgleich-Empfänger (§12) | von Hand — es prüft dort niemand |
-| 4 | Aktion `export`, scharf, **ein Team**, von Hand ausgelöst | die Website |
-| 5 | Alle Teams, von Hand | `api_sync_log` |
+| ~~4~~ | ~~Aktion `export`, scharf, **ein Team**, von Hand ausgelöst~~ | ✅ **erledigt 09.09.2026** — 14 Spiele auf der Website, Quelle ClubCampus, Datum · Zeit · Gegner · Ort mit Platzangabe · Wettbewerb · Resultate gegengelesen |
+| **5** | Alle Teams, von Hand | `api_sync_log` — **Code steht seit 09.09.2026, siehe §13.2; der Lauf fehlt noch** |
 | 6 | Zeitplan auf Minute 32 + Probelauf des gespeicherten Befehls | `do $probe$ … execute c; rollback` |
 | 7 | Kachel in `ApiTab` (§15) | ✅ **erledigt 07.09.2026** — Beschreibung, Richtung, keine toten Knöpfe |
 
@@ -2577,11 +2579,333 @@ der Tabelle: sie ist zu lang fürs Auge und einen Klick entfernt.
 | | woher |
 |---|---|
 | `zusammenfassung.spiele` der Probe | die Antwort von `probe` |
-| `wordpress.neu + wordpress.aktualisiert` | die Antwort von `export` |
+| `zahlen.neu + zahlen.aktualisiert` | die Antwort von `export` — ⚠ **seit Etappe 5 dort und nicht mehr unter `wordpress.*`**: der Lauf besteht aus einem POST je Mannschaft, und die einzelnen Antworten stehen unter `je_team[].wordpress` |
 | die Zahl im WordPress-Backend | Spieleliste, Quelle = ClubCampus |
 
 Dazu: **die 11 Handbeiträge bleiben unverändert.** Sie sind die
 Gegenprobe auf die Besitzregel (§4.10).
+
+---
+
+### 13.1b ⚠⚠ DREIMAL „Team nicht gefunden", DREIMAL EINE ANDERE URSACHE
+
+**Der teuerste Befund aus Etappe 4** (Didi, 09.09.2026). Der scharfe Lauf
+hat drei Anläufe gebraucht, und **jeder scheiterte mit demselben Bild:**
+
+```
+ohne_team: ["38309"]        →  0 neu, 0 aktualisiert, Status „warnung"
+```
+
+Wörtlich heisst diese Meldung *„Mannschaft 38309 hat auf dieser Website
+kein Team mit dieser sfv_id"* — eine Aussage über den **Meta-Wert am
+Team-Beitrag**. Sie stimmte in genau **einem** der drei Fälle.
+
+| Anlauf | tatsächliche Ursache | wo in der Kette |
+|---|---|---|
+| 1 | die Datei lag im **falschen Ordner** | der Empfänger lief gar nicht |
+| 2 | eine **fremde Datei trug denselben Namen** | es antwortete der falsche Empfänger |
+| 3 | der **Meta-Schlüssel** stimmte nicht | der Empfänger lief und suchte am falschen Feld |
+
+⚠ **Die ersten beiden sind dieselbe Stelle** — „welche Datei antwortet
+hier eigentlich?" —, und genau deshalb hat der zweite Anlauf so wehgetan:
+nach dem ersten war die Frage scheinbar beantwortet.
+
+#### Warum das Bild dreimal gleich aussah
+
+`ohne_team` entsteht in `cc_route_spiele()` aus `cc_team_karte()`. Die
+Karte ist leer, wenn **kein Team-Beitrag den gesuchten Meta-Schlüssel
+trägt** — und sie ist ebenso leer, wenn **eine andere Datei** antwortet,
+die ihre eigene Karte baut. Die Meldung nennt den **letzten** Schritt der
+Kette und sagt nichts darüber, welches Glied gerissen ist.
+
+**Dieselbe Familie wie „ein Ausfall in der Verkleidung einer Datenlage"**
+(CLAUDE.md), nur eine Stufe fieser: hier ist es ein Ausfall in der
+Verkleidung **einer anderen, plausiblen Konfigurationsfrage.** Man sucht
+im Backend nach dem Feld — dreimal, und zweimal lag es nicht dort.
+
+#### ⚠ `aktion: "status"` gab es schon — und sie trennte nur den ERSTEN Fall
+
+Der Reflex wäre: „es gibt doch `status`, man hätte nur zuerst fragen
+müssen." **Nachgesehen stimmt das nur zu einem Drittel**, und das ist der
+eigentliche Befund:
+
+| Anlauf | was `status` (Fassung 07.09.2026) gesagt hätte |
+|---|---|
+| 1 · falscher Ordner | ✅ **kein JSON / 404** — eindeutig |
+| 2 · fremde Datei, gleicher Name | ❌ **`bereit: true`** — die andere Datei bedient dieselbe Route genauso bereitwillig |
+| 3 · Meta-Schlüssel falsch | ❌ **`bereit: true`** — `cc_voraussetzungen()` prüft die Beitragstypen, nicht die Felder |
+
+> **Didi, 09.09.2026: „Sie war da, sie lief, und sie hätte in zwei von
+> drei Fällen «bereit» gemeldet. Eine Prüfung, die nur das letzte Glied
+> sieht, bestätigt eine Kette, die vorne gerissen ist."**
+
+**Eine fehlende Prüfung lässt einen wissen, dass man nichts weiss. Eine
+grüne, die nicht geprüft hat, lässt einen aufhören zu suchen** — an genau
+der Stelle, an der es lag. Der Befund steht als eigener Eintrag in
+CLAUDE.md; er gilt weit über diesen Export hinaus.
+
+#### Geschrieben am 09.09.2026 — drei Angaben, drei Fragen
+
+⚠⚠ **UND ZWAR IN MEINER FASSUNG, DIE NICHT INSTALLIERT IST.** Auf der
+Website läuft die Spiegel-Fassung aus `fch-core` (§12.2); diese Änderung
+ist damit **Übergabe, keine Reparatur**. Wer sie für wirksam hält, hat
+denselben Fehler gemacht wie der Kommentar, der eine andere Stelle
+zusichert — nur diesmal über ein anderes Repository hinweg.
+
+`cc_route_status()` in `wordpress/wp-export-empfaenger.php` antwortet
+seither zusätzlich:
+
+| Feld | beantwortet |
+|---|---|
+| `empfaenger` (Dateiname) + `version` | **welche** Datei antwortet — Anlauf 2 |
+| `meta_schluessel` | an welchem Feld gesucht wird — Anlauf 3, ohne den Quelltext zu öffnen |
+| `teams_gesamt` · `teams_zugeordnet` · `teams_mehrfach` | ob überhaupt eine Zuordnung besteht |
+
+`teams_zugeordnet: 0` bei `teams_gesamt: 21` ist Anlauf 3 in einer
+Sekunde. Der Schlüssel steht jetzt als Konstante `CC_META_TEAM_SFV` an
+**einer** Stelle statt als Zeichenkette in `cc_team_karte()`.
+
+⚠ **Absichtlich KEIN 503 bei null Zuordnungen.** Ein Empfänger ohne
+Zuordnung ist betriebsbereit, nur nutzlos — ihn rot zu färben, ebnete den
+Unterschied zu Anlauf 1 („da läuft nichts") wieder ein, und genau diese
+Einebnung ist der Fehler, um den es hier geht.
+
+**Die Reihenfolge, die daraus folgt:** erst `status` **lesen** (nicht nur
+den Statuscode ansehen), dann `probe`, dann `export`.
+
+#### Anlauf 1 und 2 stehen schon in diesem Plan — und das ist der Punkt
+
+| | steht in |
+|---|---|
+| 1 · falscher Ordner | ⚠ **nirgends hier.** WordPress lädt aus `mu-plugins/` nur die **oberste Ebene**; `fch-core` holt seine Bausteine per `require_once` aus einer ausdrücklichen Liste, nicht per `glob()`. Eine Datei unter `fch-core/src/…` lädt **niemand** — 404, und nichts meldet es |
+| 2 · fremde Datei, gleicher Name | §12.2, ausführlich („der teuerste Befund dieses Vorhabens") |
+
+**Beide waren beschrieben, und beide sind trotzdem noch einmal
+passiert** — weil das Bild am Ende dasselbe war und die Beschreibung an
+der Ursache hängt, nicht am Symptom. Deshalb steht dieser Abschnitt
+**beim Symptom**: wer `ohne_team` sieht, findet von hier aus alle drei
+Wege, statt einen zu raten.
+
+#### ✅ Der Meta-Schlüssel — gemessen am 09.09.2026 im Theme-Repo
+
+**`sfv_id`. Meine Fassung liest den richtigen.**
+
+```php
+// fch-theme/mu-plugins/fch-core/src/Fields/team.php:639
+array( 'key' => 'f_team_sfv', 'name' => 'sfv_id', 'label' => 'SFV-Team-ID', … )
+```
+
+⚠ **Und die ACF-Definition erklärt Anlauf 3 selbst** — der Kommentar
+darüber ist das Protokoll der Reparatur:
+
+> *„Das Feld hiess `sfv_team_id`, bis zum 07.09.2026. … Gespeichert wurde
+> unter `sfv_team_id`. **Die zwei Namen sind nie aufeinandergetroffen** —
+> der Metaschlüssel `sfv_id` kam in null Zeilen vor, `cc_team_karte()`
+> lieferte eine leere Karte … **Der Empfänger lief, prüfte, antwortete —
+> und konnte kein einziges Spiel schreiben.**"*
+
+Umbenannt wurde **am Feld**, nicht im Export — mit der Begründung, der
+Export habe einen Zwilling in diesem Repository, und ein Wechsel dort
+müsste an zwei Orten gleichzeitig geschehen: *„der Ausfall dazwischen wäre
+still."* Genau richtig, und aus demselben Grund heisst der Schlüssel bei
+mir seit dem 09.09.2026 `CC_META_TEAM_SFV` statt einer Zeichenkette
+mitten in der Funktion.
+
+⚠ **Zwei Nachträge aus derselben Messung:**
+
+| | |
+|---|---|
+| Der Theme-Kommentar verweist auf den Zwilling als `clubcampus-export.php:17-22` | **den Namen gibt es hier nicht mehr** — meine Datei heisst seit dem 08.09.2026 `wp-export-empfaenger.php`. Ein Verweis über zwei Repositorys hinweg, den kein Werkzeug nachzieht |
+| „Auf dev und in der Produktion ist dieselbe Zählung vor dem Ausrollen zu wiederholen" (26 Zeilen `sfv_team_id`, lokal null gefüllt) | für **dev erledigt** — Etappe 4 hat geschrieben, die Karte ist also nicht leer. Für die Produktion offen, solange sie eine eigene Datenbank hat |
+
+---
+
+### 13.2 Etappe 5 — alle Mannschaften (Code: 09.09.2026)
+
+Die Sperre ist gefallen: `export` ohne `nur_team` läuft über **alle**
+Mannschaften. `nur_team` bleibt gültig und ist jetzt eine Einschränkung
+statt einer Pflicht.
+
+```js
+await wpExport('probe');    // alle Mannschaften, schreibt NICHTS
+await wpExport('export');   // alle Mannschaften, scharf
+```
+
+Im Portal geht es seither auch ohne Konsole: **Portalverwaltung →
+API-Verbindungen → WordPress-Export → „Export starten"**, mit Rückfrage
+(entschieden 08.09.2026). Die Rückfrage nennt den Host, nach dem der
+letzte Lauf geschrieben hat — die eingestellte Adresse steht im Secret
+und ist von der Kachel aus nicht lesbar.
+
+#### ⚠ Drei Entscheidungen, und die erste ist die gefährliche
+
+**1 · Der Abgleichbereich kommt aus den GELIEFERTEN Spielen, nie aus der
+Teamliste.** `teams` in der Nutzlast sagt dem Plugin, welche Beiträge es
+auf Entwurf setzen darf (§8.2). Bis zum 09.09.2026 stand dort
+`[nurTeam]` — die Mannschaft aus dem **Aufruf**. Solange die Spiele-
+Abfrage gelingt, ist das dasselbe; **fällt sie aus, ist es der
+Unterschied zwischen „nichts passiert" und „der Spielplan dieser
+Mannschaft steht auf Entwurf"** — mit Status `ok`, weil ja nichts
+fehlgeschlagen ist. Jetzt entsteht die Liste in `teileNachTeam()` aus
+den gebauten Spielen; eine Mannschaft ohne Spiele wird nicht genannt und
+kann folglich nichts verlieren.
+
+⚠ **Der Preis, und er ist bewusst:** eine Mannschaft, deren Spiele
+*rechtmässig* alle verschwinden, wird nie mehr abgeräumt. „Kein Spiel
+geliefert" ist von „Ausfall beim Lesen" nicht zu unterscheiden — und von
+den beiden Auslegungen ist das Nichtstun die, die nichts zerstört.
+
+**2 · Ein POST je Mannschaft, seriell.** Etappe 4 waren 14 Spiele, alle
+Mannschaften sind rund 270 — jedes mit ACF-Feldern und einem Repeater.
+PHP hat ein Zeitlimit, und ein Lauf, der mittendrin abbricht, antwortet
+**kein JSON**: dann steht die Hälfte auf der Website und nichts davon im
+Protokoll. Je Mannschaft bleibt ein Abbruch auf diese Mannschaft
+beschränkt, und die übrigen sind geschrieben.
+
+**3 · Eine gescheiterte Mannschaft bricht den Lauf nicht ab.** Sie wird
+gebunden, gezählt, benannt — und hebt den Lauf auf `status = 'fehler'`,
+nicht auf `warnung`. Der Unterschied ist der Wächter: bei `fehler`
+schlägt er Alarm, bei `warnung` nicht. Eine Mannschaft, die nichts
+bekommen hat, steht sonst mit dem Stand von gestern da und **sieht
+gepflegt aus**.
+
+#### Was `api_sync_log.details` jetzt trägt
+
+Neben den Summen eine Zeile **je Mannschaft** (`je_team`: Teamnummer,
+gesendet, neu, aktualisiert, zurückgezogen, gescheitert). Eine Gesamtzahl
+beantwortet nicht mehr, **welche** Mannschaft nichts bekommen hat, und
+das ist die Frage beim Nachsehen. Die Allowlist ist dieselbe geblieben —
+kein Beitragstitel, kein unbekanntes Feld der Gegenseite.
+
+Die Meldung nennt die Mannschaften **vor** den Spielen: „260 Spiele" aus
+20 Mannschaften sieht aus wie 260 aus 21, und der Unterschied ist genau
+der Ausfall, den man sehen will.
+
+#### ⚠ Zwei offene Punkte, die aus der Aufteilung folgen
+
+| | |
+|---|---|
+| **Der Bericht drüben zeigt nur den LETZTEN Teil.** `cc_bericht_ablegen()` überschreibt die Option bei jedem Aufruf. Nach einem Lauf über 21 Mannschaften steht dort die 21. — und liest sich wie der ganze Lauf | gehört in die Plugin-Übergabe: den Bericht je Lauf sammeln (`lauf` steht in der Nutzlast) oder wenigstens die Teamnummer hineinschreiben |
+| **`cc_doppelte_match_ids()` und `cc_abgleich_kandidaten()` laufen jetzt 21× statt 1×** | je zwei Abfragen über `postmeta`; bei diesem Bestand belanglos, aber es ist eine Zahl, die mit den Beiträgen wächst |
+
+Die verlässliche Auskunft über einen ganzen Lauf steht deshalb bei uns,
+nicht drüben: `api_sync_log.details.je_team`.
+
+#### Die Vorschau VOR dem ersten vollen Lauf — was zu lesen ist
+
+`probe` zeigt seit dem 09.09.2026 die **Aufteilung**, nicht nur die
+Spielzahl: `je_team` ist genau die Liste der POST, die der scharfe Lauf
+absetzen wird, und jede Zeile darin ist zugleich ein **Abgleichbereich**.
+Sie kommt aus derselben Funktion wie dort — zwei Rechnungen für dieselbe
+Aufteilung wären der Fehler, den eine Vorschau verhindern soll.
+
+```js
+const p = await wpExport('probe');
+console.log('gebaut:', p.zusammenfassung.spiele_gebaut,
+            '| Zuordnungen:', p.zusammenfassung.zuordnungen,
+            '| Zählung stimmt:', p.zusammenfassung.zaehlung_stimmt);
+console.log('Mannschaften ohne Spiele (bekommen keinen POST):', p.ohne_spiele);
+console.table(p.je_team);
+```
+
+⚠ **Nicht `console.log(p)` roh.** `p.alle` trägt alle Spiele samt Verlauf
+— und sobald `sfv_zuordnung` Zeilen hat, stehen darin **Klarnamen von
+Junioren**, auf dem Schirm und in jedem Screenshot. `zuordnungen` ist
+deshalb die erste Zahl, die man liest: solange sie `0` ist, steht im
+Verlauf überall „Nr. 9".
+
+| lesen | erwartet |
+|---|---|
+| `zusammenfassung.zaehlung_stimmt` | `true` — sonst misst eine der beiden Zählungen etwas anderes und die Zahlen sind unbrauchbar |
+| `zusammenfassung.zuordnungen` | `0`, solange niemand zugeordnet ist — jede andere Zahl heisst: Klarnamen gehen hinaus |
+| Summe über `je_team.spiele` | muss `zusammenfassung.spiele_gebaut` ergeben |
+| `ohne_spiele` | Mannschaften mit Zuordnung, aber ohne Spiele. Sie bekommen **keinen** POST und können nichts verlieren — steht dort eine, die Spiele haben müsste, ist DAS der Befund |
+
+#### ⚠ Wie lange 21 serielle POST dauern — die Rechnung, nicht die Schätzung
+
+**Es gibt genau eine Messung, und sie liegt schon vor:** der Etappe-4-Lauf
+war **ein** POST mit **14 Spielen**. Bei 269 Spielen auf 21 Mannschaften
+(Stand 25.08.2026) sind das im Schnitt **12,8 je Mannschaft** — jeder der
+21 POST ist also ungefähr **so gross wie der, der bereits gelaufen ist**.
+
+```
+Dauer ≈ 21 × (Dauer des Etappe-4-POST)
+```
+
+Die eine Zahl, die dafür fehlt, steht in `api_sync_log`:
+
+```sql
+select gestartet_am at time zone 'Europe/Zurich' as start,
+       round(extract(epoch from (beendet_am - gestartet_am))::numeric, 1) as sekunden,
+       details->>'gesendet' as spiele, meldung
+  from public.api_sync_log
+ where verbindung_id = (select id from public.api_verbindungen where key = 'wordpress')
+ order by gestartet_am desc limit 5;
+```
+
+| gemessen für 14 Spiele | Hochrechnung für 21 POST |
+|---|---|
+| 3 s | ~1 Minute |
+| 10 s | ~3½ Minuten |
+| 30 s | ~10 Minuten |
+
+⚠ **Und weil eine Hochrechnung eine Hochrechnung bleibt, sagt der Lauf ab
+sofort selbst, wo er steht.** Bis zum 09.09.2026 wurde `api_sync_log`
+erst **am Ende** geschrieben — währenddessen stand nirgends etwas, und
+„dauert noch" war von „hängt" nicht zu unterscheiden. Jetzt:
+
+| | |
+|---|---|
+| beim Start | eine Zeile mit `status = 'laeuft'` und `0 von 21 Mannschaft(en)` |
+| nach **jeder** Mannschaft | dieselbe Zeile fortgeschrieben: `7 von 21 Mannschaft(en) · 82 s` |
+| am Ende | Status, Meldung, `details.je_team` — mit `dauer_ms` je Mannschaft |
+
+**Zum Zusehen, während es läuft** (zweites Fenster, oder Portalverwaltung
+→ Audit-Logs):
+
+```sql
+select status, meldung, gestartet_am at time zone 'Europe/Zurich'
+  from public.api_sync_log
+ where verbindung_id = (select id from public.api_verbindungen where key = 'wordpress')
+ order by gestartet_am desc limit 1;
+```
+
+⚠ **Damit ist auch ein Abbruch lesbar:** wird die Function unterwegs
+abgeräumt, bleibt die Zeile auf `laeuft` stehen und nennt, **wie weit** sie
+kam. Die Mannschaften danach sind unberührt — jede ist ihr eigener
+Abgleichbereich.
+
+#### Zwei Läufe zugleich sind gesperrt
+
+`sync_laeuft_seit` wird in **einem** Statement beansprucht (wortgleich zum
+SFV-Sync, nur mit 30 statt 15 Minuten). Ein zweiter Aufruf bekommt
+`status: "uebersprungen"` statt eines zweiten Schreibers auf denselben
+Beiträgen — der Knopf sperrt sich selbst, aber nicht den zweiten Browser
+und nicht den Zeitplan aus Etappe 6.
+
+⚠ **Die 30 Minuten sind eine Schwelle, und Schwellen sind nie durch einen
+Test gedeckt.** Sie gehört nach dem ersten vollen Lauf gegen
+`details.dauer_ms` gehalten — dafür steht die Zahl im Protokoll.
+
+#### Die Gegenprobe nach dem ersten vollen Lauf
+
+```sql
+select gestartet_am at time zone 'Europe/Zurich' as zeit, status, meldung,
+       details->>'teams_gesendet'     as mannschaften,
+       details->>'teams_gescheitert'  as gescheitert,
+       details->'je_team'             as je_team
+  from public.api_sync_log
+ where verbindung_id = (select id from public.api_verbindungen where key = 'wordpress')
+ order by gestartet_am desc limit 3;
+```
+
+⚠ **Die Zahl, die zählt, ist `teams_gesendet` gegen die Zahl der
+Mannschaften mit Spielen** — nicht die Spielzahl. Zum Gegenhalten:
+
+```sql
+select count(distinct sfv_team_id) from public.spiele
+ where sfv_match_id is not null and sfv_team_id is not null;
+```
 
 ---
 

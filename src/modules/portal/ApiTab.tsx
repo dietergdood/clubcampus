@@ -2,7 +2,7 @@
    ClubCampus — modules/portal/ApiTab.tsx
    ═══════════════════════════════════════════════════════════════ */
 import { useState } from "react";
-import { Btn, Card, Chip, Row, InfoBox } from "../../theme.ts";
+import { Btn, Card, Chip, Row, InfoBox, useConfirm } from "../../theme.ts";
 import { TI } from "../../icons.tsx";
 import { GN, R, RL, BL, AM, BK } from "../../constants.ts";
 import { API_INFOS, hostVon, zielAusLauf, hatLaufProtokolliert } from "./portalUtils.ts";
@@ -10,6 +10,7 @@ import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
 import { starteSync } from "../../domains/sfv/sfvService.ts";
+import { starteWpExport, fasseExportZusammen } from "../../domains/spiele/wpExportService.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -94,6 +95,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      Die Antwort wird ANGEZEIGT, nicht nur nach api_sync_log geschrieben. */
   const [laeuft,setLaeuft]=useState(false);
   const [ergebnis,setErgebnis]=useState<{ok: boolean; text: string}|null>(null);
+  const [confirm,confirmDialog]=useConfirm();
 
   /** Was vom Lauf angezeigt wird — aufgezaehlt, nicht ausgeschlossen. */
   function fasseZusammen(daten: unknown): string {
@@ -129,8 +131,45 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     if(onReload) await onReload();
   }
 
+  /**
+   * Den WordPress-Export von Hand auslösen — ab Etappe 5 (09.09.2026).
+   *
+   * ⚠ MIT RÜCKFRAGE, und die Rückfrage sagt, WOHIN geschrieben wird.
+   *   Der Knopf ist der einzige im Portal, der auf eine öffentliche
+   *   Website schreibt; die Adresse steht im Secret und ist von hier aus
+   *   nicht lesbar. Deshalb nennt die Rückfrage den Host, den der letzte
+   *   Lauf protokolliert hat — eine Beobachtung, keine Behauptung. Ist
+   *   noch keiner gelaufen, sagt sie genau das.
+   */
+  async function exportStarten(zielHost: string|null){
+    if(!sb||laeuft) return;
+    const wohin=zielHost
+      ? `Geschrieben wird nach ${zielHost} — das ist der Host des letzten Laufs.`
+      : "Wohin geschrieben wird, steht im Secret WP_BASIS_URL; "
+        +"es ist noch kein Lauf protokolliert, an dem man es ablesen könnte.";
+    const ja=await confirm({
+      title:"Spielplan auf die Website schreiben?",
+      /* ⚠ Ohne Zeilenumbrüche: der Dialog rendert den Text ohne
+         `white-space`, ein \n würde zu einem Leerzeichen. */
+      message:"Alle Mannschaften mit Spielen gehen hinaus — Spielplan, Resultate "
+        +"und Verlauf. Beiträge werden angelegt, aktualisiert oder auf Entwurf "
+        +`gesetzt. ${wohin}`,
+      danger:true,
+      confirmLabel:"Jetzt schreiben",
+    });
+    if(!ja) return;
+    setLaeuft(true); setErgebnis(null);
+    const {daten,fehler}=await starteWpExport(sb);
+    setLaeuft(false);
+    if(fehler){ setErgebnis({ok:false,text:fehler}); return; }
+    /* Dieselbe Regel wie oben: eine Allowlist, kein roher Abzug. */
+    setErgebnis({ok:daten?.status!=="fehler",text:fasseExportZusammen(daten)});
+    if(onReload) await onReload();
+  }
+
   return (
     <div style={{display:'contents'}}>
+      {confirmDialog}
       {!loading&&(!isMobile||mobileKachel!==null)&&tab==="api"&&offen==="football_ch"&&(
         <SfvZuordnung sb={sb} dbTeams={dbTeams} setDbTeams={setDbTeams} onZurueck={()=>setOffen(null)}/>
       )}
@@ -300,6 +339,28 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                             beim Einrichten, Spieler laufend beim ersten
                             Einsatz. */}
                         <Btn small variant="outline" color="#888" onClick={()=>setOffen("sfv_spieler")}>Spieler zuordnen</Btn>
+                      </>
+                      :api.key==="wordpress"
+                      ?<>
+                        {/* ⚠ DER EINZIGE KNOPF IM PORTAL, DER AUF EINE
+                            ÖFFENTLICHE WEBSITE SCHREIBT. Er steht hier erst
+                            seit Etappe 5 (09.09.2026): davor verlangte
+                            `export` eine SFV-Teamnummer, und ein Knopf, der
+                            danach fragt, wäre eine Bedienung für den, der sie
+                            ohnehin auswendig kann.
+
+                            Die Rückfrage gehört dazu (entschieden 08.09.2026)
+                            und nennt den Host aus dem letzten Lauf — die
+                            eingestellte Adresse steht im Secret und ist von
+                            hier aus nicht lesbar. */}
+                        <Btn small variant="primary" color={BL} disabled={laeuft}
+                          onClick={()=>exportStarten(zielAusLauf(syncLogs,api.id))}>
+                          {laeuft?"Läuft…":"Export starten"}
+                        </Btn>
+                        <span style={{fontSize:13,color:"var(--sub)",lineHeight:1.5}}>
+                          Alle Mannschaften. Eingerichtet wird der Anschluss über die
+                          Supabase-Secrets.
+                        </span>
                       </>
                       :<span style={{fontSize:13,color:"var(--sub)",lineHeight:1.5}}>
                          Keine Bedienung im Portal. Eingerichtet wird dieser Anschluss

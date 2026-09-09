@@ -7,7 +7,10 @@
 //   probe    Liest alles und gibt zurueck, WAS GESENDET WUERDE. Schickt
 //            nichts. Schreibt keine Zeile, weder hier noch dort.
 //   export   Schickt, was die Probe zeigen wuerde. Schreibt in WordPress
-//            und protokolliert in api_sync_log.
+//            und protokolliert in api_sync_log. Seit dem 09.09.2026
+//            (Etappe 5) ALLE Mannschaften; `nur_team` schraenkt auf eine
+//            ein, ist aber nicht mehr Pflicht. EIN POST JE MANNSCHAFT —
+//            der Grund steht bei sendeAnWordpress().
 //
 // ⚠ WARUM `probe` ZUERST, UND ALLEIN
 //   Der Export schickt Namen von Junioren auf eine oeffentliche Website.
@@ -57,6 +60,14 @@ import { bildeSpiel, zaehleVerlaufNamen } from "../../../src/domains/spiele/wpNu
 import { waehleZeitraum, fassBestandZusammen } from "../../../src/domains/spiele/wpBestand.ts";
 import type { BestandZeile } from "../../../src/domains/spiele/wpBestand.ts";
 import type { WpSpiel, SpielQuelle } from "../../../src/domains/spiele/wpNutzlast.ts";
+/* ⚠ Der Zuschnitt des scharfen Laufs — welche Teile hinausgehen, was
+   zusammengezaehlt wird, was ins Protokoll darf — liegt aus demselben
+   Grund dort und nicht hier. Ab Etappe 5 trifft er die gefaehrlichste
+   Entscheidung des Exports: den Abgleichbereich. */
+import {
+  teileNachTeam, ohneTeamnummer, fasseLauf, laufMeldung, fuersProtokoll,
+} from "../../../src/domains/spiele/wpLauf.ts";
+import type { TeilErgebnis, WpAntwort } from "../../../src/domains/spiele/wpLauf.ts";
 import { protokoll, protokollFehler } from "../sfv-sync/protokoll.ts";
 
 const corsHeaders = {
@@ -79,6 +90,18 @@ const PROBE_HOECHSTENS = 25;
 /** Die gueltigen Aktionen — eine Liste, aus der die Pruefung UND die
     Fehlermeldung lesen. Zwei Orte koennten auseinanderlaufen. */
 const AKTIONEN = ["probe", "export", "bestand", "status"];
+
+/* ⚠ 30 Minuten, und die Zahl ist NICHT geraten — sie ist die Antwort auf
+   „wie lange kann ein Lauf hoechstens dauern, bevor Stillstand die
+   wahrscheinlichere Erklaerung ist". Ab Etappe 5 sind es 21 POST statt
+   einem; beim SFV-Sync stehen dafuer 15 Minuten, dort dauert ein Lauf
+   Sekunden.
+
+   ⚠ Sie ist eine Schwelle, und Schwellen sind nie durch einen Test
+   gedeckt (CLAUDE.md). Sobald der erste volle Lauf gemessen ist, gehoert
+   sie dagegen gehalten: `details.dauer_ms` steht seit dem 09.09.2026 im
+   Protokoll, damit diese Zahl eine Messung bekommt statt einer Meinung. */
+const SPERRE_MINUTEN = 30;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -172,15 +195,20 @@ Deno.serve(async (req) => {
       return json(erg);
     }
 
-    /* ⚠ `export` OHNE `nur_team` gibt es nicht. Der erste scharfe Lauf soll
-       eine Mannschaft treffen, keine einundzwanzig — und wer den Parameter
-       vergisst, soll nicht versehentlich alles schreiben. Die Sperre faellt
-       in Etappe 5 bewusst, nicht aus Versehen. */
-    if (!nurTeam) {
-      return json({ fehler: "export verlangt nur_team — Etappe 4 läuft je Mannschaft" }, 400);
-    }
+    /* ⚠ DIE SPERRE IST AM 09.09.2026 GEFALLEN — bewusst, nicht aus
+       Versehen. Bis Etappe 4 stand hier ein 400 fuer `export` ohne
+       `nur_team`: der erste scharfe Lauf sollte eine Mannschaft treffen,
+       keine einundzwanzig, und wer den Parameter vergisst, sollte nicht
+       versehentlich alles schreiben.
 
-    return json(await sendeAnWordpress(db, vereinId, nurTeam, erg));
+       Etappe 4 ist durch (14 Spiele, Daten gegengelesen), also faellt sie.
+       `nur_team` bleibt gueltig und bleibt die Abkuerzung fuer einen Lauf
+       ueber genau eine Mannschaft — es ist jetzt eine Einschraenkung und
+       keine Pflicht mehr.
+
+       ⚠ Was NICHT faellt: der Abgleichbereich. Er kommt weiterhin aus den
+       gelieferten Spielen, nicht aus dem Aufruf — siehe teileNachTeam(). */
+    return json(await sendeAnWordpress(db, vereinId, erg));
   } catch (e) {
     const meldung = protokollFehler(`wp-export/${aktion}/${vereinId}`, e);
     return json({ fehler: meldung }, 502);
@@ -193,7 +221,7 @@ Deno.serve(async (req) => {
    ═══════════════════════════════════════════════════════════════════════ */
 
 async function sendeAnWordpress(
-  db: DbLeser, vereinId: string, nurTeam: string, erg: ProbeErgebnis,
+  db: DbLeser, vereinId: string, erg: ProbeErgebnis,
 ) {
   const basis = (Deno.env.get("WP_BASIS_URL") ?? "").replace(/\/+$/, "");
   const schluessel = Deno.env.get("WP_SCHLUESSEL") ?? "";
@@ -212,54 +240,141 @@ async function sendeAnWordpress(
      er stillschweigend ein Viertel und meldete Erfolg — genau die stille
      Kuerzung, gegen die die Grenze selbst gebaut ist. */
   const alle = erg.alle;
+  const teile = teileNachTeam(alle);
+  const heimatlos = ohneTeamnummer(alle);
 
   const beginn = new Date().toISOString();
-  const antwort = await fetch(`${basis}/clubcampus/v1/spiele`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      /* Anwendungspasswort als Basic-Auth. Es steht nur im Secret und
-         kommt in kein Protokoll. */
-      "X-FCH-Schluessel": schluessel,
-    },
-    body: JSON.stringify({ lauf: beginn, teams: [nurTeam], spiele: alle }),
-  });
-
-  const text = await antwort.text();
-  let wp: Record<string, unknown>;
-  try {
-    wp = JSON.parse(text);
-  } catch {
-    /* ⚠ Kein JSON heisst fast immer: eine HTML-Fehlerseite, ein
-       Wartungsmodus oder eine Basic-Auth-Abfrage davor. Der Anfang des
-       Textes sagt mehr als „ungueltige Antwort". */
-    throw new Error(`WordPress antwortete kein JSON (${antwort.status}): ${text.slice(0, 200)}`);
-  }
-  if (!antwort.ok) {
-    throw new Error(`WordPress ${antwort.status}: ${JSON.stringify(wp).slice(0, 300)}`);
-  }
-
-  const laenge = (k: string) => ((wp[k] as unknown[] | undefined) ?? []).length;
-  const status = (laenge("fehler") || laenge("ohne_team") || laenge("doppelte_teams"))
-    ? "warnung" : "ok";
-
-  const meldung = `${host} · ${wp.neu ?? 0} neu, ${wp.aktualisiert ?? 0} aktualisiert, `
-    + `${wp.zurueckgezogen ?? 0} zurückgezogen, ${wp.verlauf_zeilen ?? 0} Verlaufszeilen`;
+  const beginnMs = Date.now();
 
   const vRes = await db.from("api_verbindungen")
     .select("id").eq("verein_id", vereinId).eq("key", "wordpress").maybeSingle();
   const verbindungId = (vRes.data as { id: string } | null)?.id ?? null;
 
+  /* ⚠ ZWEI LAEUFE ZUGLEICH SIND DER EINE FALL, DEN MAN NICHT
+     NACHVOLLZIEHEN KANN — beide schreiben dieselben Beitraege, und der
+     Rueckzug des einen sieht die Lieferung des anderen nicht. Der Knopf
+     sperrt sich selbst, aber nicht den zweiten Browser und nicht den
+     Zeitplan (Etappe 6).
+
+     Beanspruchen in EINEM Statement: pruefen und danach setzen waeren
+     zwei Schritte, und dazwischen passt der zweite Lauf. Wortgleich zum
+     SFV-Sync, nur mit einer laengeren Frist. */
   if (verbindungId) {
-    await db.from("api_sync_log").insert({
-      verbindung_id: verbindungId, verein_id: vereinId, status,
-      gestartet_am: beginn, beendet_am: new Date().toISOString(),
-      datensaetze_neu: Number(wp.neu ?? 0),
-      datensaetze_aktualisiert: Number(wp.aktualisiert ?? 0),
-      datensaetze_fehler: laenge("fehler"),
+    const grenze = new Date(Date.now() - SPERRE_MINUTEN * 60_000).toISOString();
+    const { data: beansprucht } = await db.from("api_verbindungen")
+      .update({ sync_laeuft_seit: beginn })
+      .eq("id", verbindungId)
+      .or(`sync_laeuft_seit.is.null,sync_laeuft_seit.lt.${grenze}`)
+      .select("id");
+    if (!beansprucht?.length) {
+      /* Kein Fehler, sondern die Sperre — und die Meldung sagt das auch so. */
+      return {
+        ziel: host, status: "uebersprungen",
+        fehler: "Ein Export ist bereits unterwegs. Die Sperre löst sich spätestens "
+          + `nach ${SPERRE_MINUTEN} Minuten.`,
+      };
+    }
+  }
+
+  /* ⚠ DER LAUF SAGT, DASS ER LAEUFT — sonst steht bis zum Ende NIRGENDS
+     etwas, und „dauert noch" ist von „haengt" nicht zu unterscheiden.
+     Bei einem POST war das gleichgueltig; bei 21 seriellen ist es die
+     Frage, die man waehrenddessen stellt.
+
+     Die Zeile wird nach JEDER Mannschaft fortgeschrieben (`meldung`), und
+     am Ende bekommt sie ihr Ergebnis. Eine zweite Zeile waere falsch: ein
+     Lauf ist ein Vorgang, kein Paar. Gleiche Bauform wie sfv-sync. */
+  let logId: string | null = null;
+  if (verbindungId) {
+    const { data: logZeile } = await db.from("api_sync_log").insert({
+      verbindung_id: verbindungId, verein_id: vereinId, status: "laeuft",
+      gestartet_am: beginn,
+      meldung: `${host} · 0 von ${teile.length} Mannschaft(en)`,
+    }).select("id").single();
+    logId = (logZeile as { id: string } | null)?.id ?? null;
+  }
+
+  /* ⚠ EIN POST JE MANNSCHAFT, SERIELL. Zwei Gruende, und der zweite ist
+     der wichtigere:
+
+     1. PHP hat ein Zeitlimit. Etappe 4 waren 14 Spiele; alle Mannschaften
+        sind rund 270, jedes mit ACF-Feldern und einem Repeater. Ein Lauf,
+        der mittendrin abbricht, antwortet KEIN JSON — dann steht die
+        Haelfte auf der Website und nichts davon im Protokoll.
+     2. Der Abgleichbereich ist je Teil so gross wie der Teil selbst. Ein
+        Abbruch bei Mannschaft 7 laesst die Mannschaften 8 bis 21
+        unberuehrt, statt sie halb geschrieben zu hinterlassen.
+
+     ⚠ SERIELL, nicht parallel: WordPress schreibt Beitraege, und
+     gleichzeitige Laeufe auf denselben Bestand sind genau die Art
+     Wettlauf, den niemand nachvollziehen kann. Es ist ein stuendlicher
+     Auftrag, keine Interaktion — Dauer ist hier billig. */
+  const ergebnisse: TeilErgebnis[] = [];
+  try {
+    for (const teil of teile) {
+      /* ⚠ GEMESSEN, NICHT GESCHAETZT. „Wie lange dauern 21 serielle POST"
+         war am 09.09.2026 eine Frage, auf die niemand eine Zahl hatte —
+         und eine geschaetzte waere im Protokoll von einer gemessenen nicht
+         zu unterscheiden gewesen. Seither steht die Dauer je Mannschaft im
+         Ergebnis, und der erste volle Lauf beantwortet die Frage fuer alle
+         weiteren. */
+      const teilBeginn = Date.now();
+      try {
+        const wp = await sendeTeil(basis, schluessel, beginn, teil.sfv_team_id, teil.spiele);
+        ergebnisse.push({
+          sfv_team_id: teil.sfv_team_id, gesendet: teil.spiele.length, wp, fehler: null,
+          dauer_ms: Date.now() - teilBeginn,
+        });
+      } catch (e) {
+        /* ⚠ GEBUNDEN UND WEITERGELAUFEN, nicht verschluckt und nicht
+           abgebrochen. Ein leerer catch machte aus dem Ausfall eine
+           Datenlage; ein Abbruch machte aus einem Ausfall bei Mannschaft 3
+           achtzehn ungeschriebene Mannschaften. Gezaehlt wird er in
+           fasseLauf(), und er hebt den Lauf auf Status `fehler`. */
+        ergebnisse.push({
+          sfv_team_id: teil.sfv_team_id,
+          gesendet: teil.spiele.length,
+          wp: null,
+          fehler: e instanceof Error ? e.message : String(e),
+          dauer_ms: Date.now() - teilBeginn,
+        });
+      }
+
+      /* Fortschritt fortschreiben. Ein Schreibvorgang je Mannschaft — der
+         Preis fuer eine Frage, die sonst gar nicht zu beantworten ist. */
+      if (logId) {
+        await db.from("api_sync_log").update({
+          meldung: `${host} · ${ergebnisse.length} von ${teile.length} Mannschaft(en) · `
+            + `${Math.round((Date.now() - beginnMs) / 1000)} s`,
+        }).eq("id", logId);
+      }
+    }
+  } finally {
+    /* ⚠ Sperre IMMER loesen, auch wenn etwas darueber wirft — sonst
+       blockiert ein Fehlschlag den naechsten Lauf eine halbe Stunde. */
+    if (verbindungId) {
+      await db.from("api_verbindungen").update({ sync_laeuft_seit: null }).eq("id", verbindungId);
+    }
+  }
+
+  const dauerMs = Date.now() - beginnMs;
+  const { status, zahlen } = fasseLauf(ergebnisse);
+  if (heimatlos.length) {
+    zahlen.fehler.push(`${heimatlos.length} Spiel(e) ohne SFV-Teamnummer, nicht gesendet: `
+      + heimatlos.slice(0, 10).join(", "));
+  }
+  const meldung = laufMeldung(host, zahlen, dauerMs);
+
+  if (verbindungId && logId) {
+    await db.from("api_sync_log").update({
+      status,
+      beendet_am: new Date().toISOString(),
+      datensaetze_neu: zahlen.neu,
+      datensaetze_aktualisiert: zahlen.aktualisiert,
+      datensaetze_fehler: zahlen.fehler.length,
       meldung,
-      details: fuersProtokoll(host, nurTeam, alle.length, wp),
-    });
+      details: fuersProtokoll(host, zahlen, ergebnisse, dauerMs),
+    }).eq("id", logId);
 
     /* `letzter_sync` und `sync_status` im SELBEN update — der Waechter
        prueft das Paar, und zwei getrennte Schreibvorgaenge koennten
@@ -273,43 +388,60 @@ async function sendeAnWordpress(
 
   return {
     ziel: host,
-    gesendet: alle.length,
-    wordpress: wp,
+    status,
+    dauer_ms: dauerMs,
+    /* ⚠ Was GEBAUT wurde und was GESENDET wurde, getrennt. Sie sind
+       gleich, solange jedes Spiel eine Teamnummer traegt — und wenn nicht,
+       ist die Differenz genau der Befund. Eine Zahl fuer beides koennte
+       ihn nicht zeigen. */
+    gebaut: alle.length,
+    gesendet: zahlen.spiele_gesendet,
+    ohne_teamnummer: heimatlos,
+    zahlen,
+    je_team: ergebnisse.map((t) => ({
+      team: t.sfv_team_id, gesendet: t.gesendet, dauer_ms: t.dauer_ms,
+      wordpress: t.wp, fehler: t.fehler,
+    })),
     protokolliert: Boolean(verbindungId),
     zusammenfassung: erg.zusammenfassung,
   };
 }
 
 /**
- * Was ins Protokoll darf — Zahlen und Beitrags-Ids, keine Texte.
+ * Ein Teil: die Spiele EINER Mannschaft an WordPress.
  *
- * ⚠ EIGENE ALLOWLIST, nicht das Objekt durchreichen. Die Antwort des
- * Plugins traegt bei Dubletten den abgeleiteten Beitragstitel („Team —
- * Gegner"). Der ist hier harmlos, aber die Regel ist es nicht: am
- * 21.08.2026 sind 903 Klarnamen ins Protokoll geraten, weil ein Objekt
- * gespreadet wurde. Was gespeichert wird, wird aufgezaehlt.
- *
- * Der Titel steht in der Antwort an den Browser, wo ihn ein Mensch liest
- * und niemand ablegt.
+ * ⚠ `teams` traegt genau diese eine Mannschaft — sie ist der
+ * Abgleichbereich, und weiter darf das Aufraeumen drueben nicht reichen.
  */
-function fuersProtokoll(
-  host: string, team: string, gesendet: number, wp: Record<string, unknown>,
-): Record<string, unknown> {
-  const dubletten = (wp.moegliche_dubletten as Record<string, unknown>[] | undefined) ?? [];
-  return {
-    ziel_host: host,
-    team,
-    gesendet,
-    neu: Number(wp.neu ?? 0),
-    aktualisiert: Number(wp.aktualisiert ?? 0),
-    zurueckgezogen: Number(wp.zurueckgezogen ?? 0),
-    uebersprungen: Number(wp.uebersprungen ?? 0),
-    verlauf_zeilen: Number(wp.verlauf_zeilen ?? 0),
-    ohne_team: (wp.ohne_team as string[] | undefined) ?? [],
-    doppelte_teams: (wp.doppelte_teams as string[] | undefined) ?? [],
-    moegliche_dubletten: dubletten.map((d) => ({ neu: d.neu, von_hand: d.von_hand })),
-    fehler: (wp.fehler as string[] | undefined) ?? [],
-  };
+async function sendeTeil(
+  basis: string, schluessel: string, lauf: string, team: string, spiele: WpSpiel[],
+): Promise<WpAntwort> {
+  const antwort = await fetch(`${basis}/clubcampus/v1/spiele`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      /* Gemeinsames Geheimnis. Es steht nur im Secret und kommt in kein
+         Protokoll. */
+      "X-FCH-Schluessel": schluessel,
+    },
+    body: JSON.stringify({ lauf, teams: [team], spiele }),
+  });
+
+  const text = await antwort.text();
+  let wp: WpAntwort;
+  try {
+    wp = JSON.parse(text);
+  } catch {
+    /* ⚠ Kein JSON heisst fast immer: eine HTML-Fehlerseite, ein
+       Wartungsmodus, eine Basic-Auth-Abfrage davor — oder, ab Etappe 5
+       der naechstliegende Fall, ein PHP-Zeitlimit. Der Anfang des Textes
+       sagt mehr als „ungueltige Antwort". */
+    throw new Error(`WordPress antwortete kein JSON (${antwort.status}): ${text.slice(0, 200)}`);
+  }
+  if (!antwort.ok) {
+    throw new Error(`WordPress ${antwort.status}: ${JSON.stringify(wp).slice(0, 300)}`);
+  }
+  return wp;
 }
 
 
@@ -454,6 +586,21 @@ async function holeStatus() {
     hinweis: "Nachsehen, nicht schreiben. Nichts geändert, nichts protokolliert.",
     bereit: wp.bereit === true,
     fehlt: (wp.fehlt as string[] | undefined) ?? [],
+    /* ⚠ WER ANTWORTET HIER — seit dem 09.09.2026, und aus einem Befund:
+       Etappe 4 hat drei Anlaeufe gebraucht, und zwei davon scheiterten
+       daran, dass die falsche Datei antwortete oder gar keine. Beides sah
+       aus wie „diese Mannschaft hat kein Team mit dieser sfv_id".
+
+       Fehlen die Felder, ist die Gegenstelle aelter als diese Fassung —
+       das ist selbst eine Auskunft und deshalb "—" statt weglassen. */
+    empfaenger: String(wp.empfaenger ?? "— antwortet ohne Namen, also aeltere Fassung"),
+    version: String(wp.version ?? "—"),
+    /* ⚠ Die Antwort auf den dritten Anlauf: der Schluessel, an dem die
+       Team-Zuordnung haengt, und ob ueberhaupt eine besteht. */
+    meta_schluessel: String(wp.meta_schluessel ?? "—"),
+    teams_gesamt: Number(wp.teams_gesamt ?? 0),
+    teams_zugeordnet: Number(wp.teams_zugeordnet ?? 0),
+    teams_mehrfach: Number(wp.teams_mehrfach ?? 0),
     /* Nur veröffentlichte. */
     spiele_veroeffentlicht: Number(wp.spiele_gesamt ?? 0),
     /* ⚠ Die entscheidende Zahl: Beiträge mit sfv_match_id, ALLE Status. */
@@ -486,6 +633,12 @@ interface ProbeErgebnis {
   hinweis: string;
   zusammenfassung: Record<string, unknown>;
   teams: unknown[];
+  /** ⚠ Die Aufteilung des scharfen Laufs — ein POST je Zeile, und jede
+      Zeile ist ein Abgleichbereich. Aus derselben Funktion wie dort. */
+  je_team: { sfv_team_id: string; name: string; spiele: number }[];
+  /** Zugeordnete Mannschaften ohne Spiele in diesem Lauf. Sie bekommen
+      keinen POST — Absicht, deshalb benannt. */
+  ohne_spiele: string[];
   /** Gekuerzt auf PROBE_HOECHSTENS — zum Lesen durch einen Menschen. */
   spiele: WpSpiel[];
   gekuerzt: number;
@@ -653,6 +806,26 @@ async function laufeProbe(
       zaehlung_stimmt: summe === verlaufZeilen,
     },
     teams: teamListe,
+    /* ⚠ DIE AUFTEILUNG IST AB ETAPPE 5 DER GEGENSTAND DER VORSCHAU, nicht
+       mehr nur die Spielzahl. Der scharfe Lauf besteht aus genau diesen
+       Teilen — ein POST je Zeile —, und jede Zeile ist zugleich ein
+       Abgleichbereich: was hier steht, darf drueben aufgeraeumt werden.
+
+       Sie kommt aus DERSELBEN Funktion wie der scharfe Lauf. Zwei
+       Rechnungen fuer dieselbe Aufteilung waeren genau der Fehler, den
+       eine Vorschau verhindern soll: sie zeigte dann etwas anderes, als
+       gesendet wird. */
+    je_team: teileNachTeam(gebaut).map((t) => ({
+      sfv_team_id: t.sfv_team_id,
+      name: teamListe.find((x) => x.sfv_team_id === t.sfv_team_id)?.name ?? "—",
+      spiele: t.spiele.length,
+    })),
+    /* Mannschaften MIT Zuordnung, aber OHNE Spiele in diesem Lauf. Sie
+       bekommen keinen POST und koennen deshalb nichts verlieren — das ist
+       Absicht (Plan §13.2), und weil es Absicht ist, wird es genannt. */
+    ohne_spiele: teamListe
+      .filter((t) => !gebaut.some((s) => s.sfv_team_id === t.sfv_team_id))
+      .map((t) => `${t.sfv_team_id} (${t.name})`),
     spiele: gebaut.slice(0, PROBE_HOECHSTENS),
     gekuerzt: Math.max(0, gebaut.length - PROBE_HOECHSTENS),
     alle: gebaut,

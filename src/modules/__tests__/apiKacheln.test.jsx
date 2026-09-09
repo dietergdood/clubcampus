@@ -21,8 +21,8 @@
    die wichtigere Hälfte, denn ein Test auf den neuen Text allein
    hält beim nächsten Umbau nichts auf.
    ══════════════════════════════════════════════════════════════ */
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { suche, leereHandler } from '../../test-helpers/quelltext.ts';
 
 /* Die zwei Unteransichten haben mit den Kacheln nichts zu tun und ziehen
@@ -30,9 +30,19 @@ import { suche, leereHandler } from '../../test-helpers/quelltext.ts';
 vi.mock('../portal/SfvZuordnung.tsx', () => ({ SfvZuordnung: () => null }));
 vi.mock('../portal/SfvSpielerZuordnung.tsx', () => ({ SfvSpielerZuordnung: () => null }));
 
+/* ⚠ Der Export SCHREIBT auf eine öffentliche Website. In einem Test darf
+   nicht einmal der Versuch entstehen — deshalb steht hier eine Attrappe
+   und kein echter Dienst mit fehlender Verbindung. */
+vi.mock('../../domains/spiele/wpExportService.ts', () => ({
+  starteWpExport: vi.fn(async () => ({ daten: { ziel: 'dev.fcherrliberg.ch' }, fehler: null })),
+  fasseExportZusammen: () => 'Lauf beendet.',
+}));
+
 import { ApiTab } from '../portal/ApiTab.tsx';
+import * as dienst from '../../domains/spiele/wpExportService.ts';
 
 afterEach(cleanup);
+beforeEach(() => { dienst.starteWpExport.mockClear(); });
 
 /* Die zwei Zeilen, die am 07.09.2026 wirklich in api_verbindungen stehen.
    ⚠ wordpress ist active=false (Etappe 6 schaltet scharf) und hat nach
@@ -56,7 +66,11 @@ const LOGS = [
 
 function zeigeKacheln(verbindungen = VERBINDUNGEN, logs = LOGS) {
   render(
-    <ApiTab loading={false} isMobile={false} mobileKachel={null}
+    /* ⚠ `sb` muss gesetzt sein, sonst kehrt der Knopf stumm um — und ein
+       Test, der auf einen fehlenden Client läuft, prüft die Rückkehr statt
+       die Rückfrage. Der Wert wird nie benutzt: der Dienst ist eine
+       Attrappe. */
+    <ApiTab loading={false} isMobile={false} mobileKachel={null} sb={{}}
       apiVerbindungen={verbindungen} syncLogs={logs} tab="api" />,
   );
 }
@@ -75,14 +89,74 @@ describe('API-Kacheln', () => {
     expect(screen.queryByText('Konfigurieren')).toBeNull();
   });
 
-  it('zeigt „Sync starten" nur dort, wo er etwas auslöst', () => {
+  /* ⚠ AM 09.09.2026 GEÄNDERT — und nicht, weil er rot war, sondern weil
+     die Sache sich geändert hat. Bis Etappe 4 verlangte `export` eine
+     SFV-Teamnummer; ein Knopf, der danach fragt, wäre eine Bedienung für
+     den gewesen, der sie ohnehin auswendig kann. Seit die Sperre gefallen
+     ist, trifft ein Lauf alle Mannschaften — jetzt gibt es etwas zu
+     bedienen.
+
+     Was der Fall festhält, ist unverändert: ein Knopf steht nur da, wo er
+     etwas auslöst. Deshalb bleibt die zweite Hälfte daneben stehen. */
+  it('gibt wordpress seinen eigenen Knopf — nicht den des SFV', () => {
     zeigeKacheln([
-      /* ⚠ Der Auslöser des alten Defekts: ein AKTIVER Anschluss, der nicht
-         football_ch ist. Genau er bekam die Attrappe. */
       { key: 'wordpress', label: 'WordPress-Export', active: true, sync_status: 'ok' },
     ]);
+    expect(screen.getByText('Export starten')).toBeTruthy();
     expect(screen.queryByText('Sync starten')).toBeNull();
+    expect(screen.queryByText(/Keine Bedienung im Portal/)).toBeNull();
+  });
+
+  it('lässt einen Anschluss ohne Bedienung bei dem Satz, der das sagt', () => {
+    /* ⚠ Der Auslöser des alten Defekts: ein AKTIVER Anschluss, der weder
+       football_ch noch wordpress ist. Genau er bekam die Attrappe. */
+    zeigeKacheln([{ key: 'fairgate', label: 'Fairgate', active: true, sync_status: 'ok' }]);
+    expect(screen.queryByText('Sync starten')).toBeNull();
+    expect(screen.queryByText('Export starten')).toBeNull();
     expect(screen.getByText(/Keine Bedienung im Portal/)).toBeTruthy();
+  });
+
+  /* ── Die Rückfrage (entschieden 08.09.2026, gebaut 09.09.2026) ──
+
+     ⚠ Der Knopf ist der einzige im Portal, der auf eine ÖFFENTLICHE
+     Website schreibt. Dass er fragt, bevor er es tut, ist kein
+     Bedienkomfort, sondern die halbe Sicherung — und eine Zusage, die
+     ohne Fall beim nächsten Umbau wortlos verschwindet. */
+  it('schreibt nicht auf einen Klick — es kommt erst die Rückfrage', async () => {
+    zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: true }]);
+    fireEvent.click(screen.getByText('Export starten'));
+    expect(await screen.findByText(/Spielplan auf die Website schreiben/)).toBeTruthy();
+    expect(dienst.starteWpExport).not.toHaveBeenCalled();
+  });
+
+  it('nennt in der Rückfrage den Host, nach dem zuletzt geschrieben wurde', async () => {
+    /* Beobachtet, nicht behauptet: die eingestellte Adresse steht im
+       Secret und ist von der Kachel aus gar nicht lesbar. */
+    zeigeKacheln([VERBINDUNGEN[1]]);
+    fireEvent.click(screen.getByText('Export starten'));
+    expect(await screen.findByText(/dev\.fcherrliberg\.ch — das ist der Host des letzten Laufs/))
+      .toBeTruthy();
+  });
+
+  it('sagt in der Rückfrage, wenn kein Lauf protokolliert ist', async () => {
+    zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: true }], []);
+    fireEvent.click(screen.getByText('Export starten'));
+    expect(await screen.findByText(/steht im Secret WP_BASIS_URL/)).toBeTruthy();
+  });
+
+  it('startet den Lauf erst nach der Bestätigung', async () => {
+    zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: true }]);
+    fireEvent.click(screen.getByText('Export starten'));
+    fireEvent.click(await screen.findByText('Jetzt schreiben'));
+    await waitFor(() => expect(dienst.starteWpExport).toHaveBeenCalled());
+  });
+
+  it('bricht ab, wenn abgebrochen wird', async () => {
+    zeigeKacheln([{ key: 'wordpress', label: 'WordPress-Export', active: true }]);
+    fireEvent.click(screen.getByText('Export starten'));
+    fireEvent.click(await screen.findByText('Abbrechen'));
+    await waitFor(() => expect(screen.queryByText('Jetzt schreiben')).toBeNull());
+    expect(dienst.starteWpExport).not.toHaveBeenCalled();
   });
 
   it('lässt football_ch seine drei Knöpfe', () => {
