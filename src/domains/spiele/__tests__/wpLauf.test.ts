@@ -20,7 +20,7 @@ function spiel(sfv_team_id: string, sfv_match_id: string): WpSpiel {
   return {
     sfv_match_id, sfv_spiel_nr: "", datum: "2026-09-05", zeit: "18:00",
     sfv_team_id, gegner: "FC Irgendwo", heim_auswaerts: "heim", ort: "Langacker",
-    wettbewerb: "Meisterschaft", runde: "", status: "normal", publizieren: true,
+    wettbewerb: "Meisterschaft", liga: "3. Liga", runde: "", status: "normal", publizieren: true,
     tore_heim: null, tore_gast: null, halbzeit_heim: null, halbzeit_gast: null,
     verlauf: [],
   };

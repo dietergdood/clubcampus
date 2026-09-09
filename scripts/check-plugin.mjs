@@ -123,6 +123,82 @@ const SCHREIBT = [
 ];
 
 const REGELN = [
+  /* ⚠⚠ DIE ZUSAGE, DIE AM HAEUFIGSTEN BEZWEIFELT WURDE — und die bis zum
+     10.09.2026 nur als Kommentar dastand.
+
+     „Der Export schreibt NIE an fch_team." Darauf ruht, dass die
+     Redaktion Liga, Gruppe und Rangliste behaelt; Liga und Gruppe holt
+     die Anzeige stattdessen aus der Ranglisten-Ablage.
+
+     An einem Abend wurde viermal gefragt, ob der Empfaenger die
+     Teamfelder nun schreibe — und viermal war die Antwort ein `grep` und
+     mein Wort. **Ein Wort ist keine Pruefung.** Jetzt haelt es der
+     Tokenizer: keine der drei schreibenden Funktionen darf einen
+     Team-Beitrag anfassen, und `CC_FELDER` — die Allowlist der
+     Spielfelder — darf kein Teamfeld fuehren. */
+  /* ⚠⚠ HIER STAND SEIT DEM 10.09.2026 „kein Schreibaufruf fasst einen
+     fch_team-Beitrag an" — und die Regel hatte ein Loch, das am selben
+     Tag aufgeflogen ist.
+
+     Sie suchte Funktionen, die BEIDES enthalten: einen Schreibaufruf und
+     den Bezeichner `CC_TYP_TEAM`. Als `cc_schreibe_teamfelder()` gebaut
+     wurde — die Funktion, die genau das tut, was die Regel verbieten
+     sollte —, blieb sie **gruen**: die Funktion bekommt die Beitrags-Id
+     uebergeben und nennt `CC_TYP_TEAM` nirgends.
+
+     > **Meine Gegenprobe hat nur getragen, weil ich `CC_TYP_TEAM` in
+     > dieselbe Funktion geschrieben hatte.** Der echte Fall sieht anders
+     > aus — und den haette sie durchgelassen.
+
+     Dieselbe Familie wie ein Regex auf Quelltext: das Werkzeug prueft,
+     was DASTEHT, nicht was geschieht. Eine Post-Id aus einer Variablen
+     entgeht ihm.
+
+     Die Zusage hat sich ausserdem geaendert: seit dem 10.09.2026 SOLL der
+     Export `liga` und `gruppe` am Team schreiben. Was bleibt, ist die
+     engere Zusage — und die ist pruefbar, weil sie an einer benannten
+     Funktion haengt. */
+  {
+    frage: "cc_schreibe_teamfelder legt kein Team an und loescht keines",
+    pruefe: (b) => (b.funktionen.cc_schreibe_teamfelder?.rufe ?? [])
+      .filter(r => ["wp_insert_post", "wp_update_post", "wp_delete_post", "wp_trash_post"].includes(r)),
+    kontrolle: "<?php function cc_schreibe_teamfelder() { wp_insert_post(array()); }",
+    erwarteImKontrollfall: 1,
+  },
+  {
+    frage: "cc_schreibe_teamfelder fasst nur liga und gruppe an",
+    pruefe: (b) => {
+      const f = b.funktionen.cc_schreibe_teamfelder;
+      if (!f) return ["(Funktion fehlt — die Pruefung sieht die falsche Datei an)"];
+      /* ⚠ Geprueft werden die FELDNAMEN, also die Texte, die als Ziel
+         eines Schreibaufrufs taugen. Array-Schluessel und leere Texte
+         gehoeren nicht dazu — sie sind Buchhaltung, kein Feld. Die Liste
+         nennt deshalb, was am Team angefasst werden DARF, und laesst
+         alles durch, was nachweislich kein Feldname ist. */
+      const ERLAUBT = [
+        "liga", "gruppe",                       // die zwei Felder am Team
+        "liga_name", "gruppe_name", "zeilen", "sfv_team_id",  // Lesen aus der Gruppe
+        "mysql",                                // current_time('mysql')
+        "geschrieben", "unveraendert",          // Rueckgabeschluessel
+      ];
+      return (f.texte ?? []).filter(t => t !== "" && !ERLAUBT.includes(t));
+    },
+    kontrolle: "<?php function cc_schreibe_teamfelder() { update_field('rangliste', 1, 2); }",
+    erwarteImKontrollfall: 1,
+  },
+  /* ⚠ HIER STAND EINE ZWEITE REGEL („CC_FELDER fuehrt kein Teamfeld") — sie
+     ist am 10.09.2026 an ihrer eigenen Positivkontrolle gescheitert und
+     wieder entfernt worden. Der Zerleger erfasst Funktionen, keine
+     Konstanten auf Dateiebene; `b.konstanten` gab es nie, die Regel haette
+     also immer eine leere Liste geliefert und **waere fuer immer gruen
+     gewesen**.
+
+     Gefangen hat es die Pflicht-Positivkontrolle, in derselben Minute:
+     „greift nicht einmal in ihrer eigenen Positivkontrolle. Sie ist kaputt
+     — nicht das Plugin."
+
+     Die Zusage bleibt durch die Regel darueber gedeckt: was `CC_FELDER`
+     auch fuehrt, geschrieben wird es an einen SPIEL-Beitrag. */
   {
     frage: "cc_route_bestand schreibt nichts",
     pruefe: (b) => (b.funktionen.cc_route_bestand?.rufe ?? []).filter(r => SCHREIBT.includes(r)),

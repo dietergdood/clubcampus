@@ -80,7 +80,17 @@ export interface WpSpiel {
   gegner: string;
   heim_auswaerts: "heim" | "auswaerts";
   ort: string;
+  /** Spieltyp: „Meisterschaft", „Cup", „Turnier". NICHT die Liga. */
   wettbewerb: string;
+  /**
+   * Die Liga oder Stärkeklasse — „Junioren C Promotion".
+   *
+   * ⚠ NEU AM 10.09.2026, und sie fehlte, ohne dass es auffiel: `spiele.liga`
+   * steht seit dem 14.08.2026 in der Datenbank (aus `leagueName`), wurde
+   * aber weder gelesen noch gesendet. Auf der Website stand über jedem
+   * Spiel nur „MEISTERSCHAFT" — der Spieltyp, wo die Liga hingehört.
+   */
+  liga: string;
   runde: string;
   status: WpStatus;
   /** false = der Beitrag geht auf Entwurf. Siehe `bildeStatus()`. */
@@ -363,6 +373,8 @@ export interface SpielQuelle {
   heimspiel: boolean | null;
   venue: string | null;
   wettbewerb: string | null;
+  /** SFV `leagueName`, z. B. „Junioren C Promotion". */
+  liga: string | null;
   sfv_gruppe: string | null;
   sfv_status: number | null;
   resultat: string | null;
@@ -402,6 +414,12 @@ export function bildeSpiel(
     heim_auswaerts: heimspiel ? "heim" : "auswaerts",
     ort: q.venue ?? "",
     wettbewerb: q.wettbewerb ?? "",
+    liga: q.liga ?? "",
+    /* ⚠ `runde` TRAEGT DEN GRUPPENNAMEN — „Gruppe 3", nicht eine Runde.
+       Der Feldname stammt aus dem Theme und ist aelter als der Inhalt;
+       umbenennen hiesse, den Vertrag mit der Vorlage zu brechen. Wer ihn
+       liest, muss wissen, was drinsteht: dieselbe Falle wie ein Endpunkt,
+       der „Teams" heisst und Teams mit Rangliste liefert. */
     runde: q.sfv_gruppe ?? "",
     status,
     publizieren,

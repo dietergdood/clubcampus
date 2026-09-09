@@ -43,7 +43,8 @@ const quelle = (f: Partial<SpielQuelle> = {}): SpielQuelle => ({
   sfv_match_id: 4393132, sfv_spiel_nr: "177238",
   date: "2026-08-23", zeit: "14:00:00",
   gegner: "FC Blau-Weiss Erlenbach 1", heimspiel: true,
-  venue: "Langacker", wettbewerb: "Meisterschaft", sfv_gruppe: "Gruppe 3",
+  venue: "Langacker", wettbewerb: "Meisterschaft",
+  liga: "Junioren C Promotion", sfv_gruppe: "Gruppe 3",
   sfv_status: 2, resultat: "3:3", ht_resultat: null,
   ...f,
 });
@@ -319,5 +320,35 @@ describe("Das ganze Spiel", () => {
   it("gibt bei fehlendem Verlauf eine leere Liste, nicht undefined", () => {
     const s = bildeSpiel(quelle(), "38309", [], new Map(), "X");
     expect(s!.verlauf).toEqual([]);
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Liga und Gruppe je Spiel (10.09.2026)
+
+   ⚠ Auf der Website stand ueber jedem Spiel „MEISTERSCHAFT" — der
+   SPIELTYP. Die Liga („Junioren C Promotion") lag seit dem
+   14.08.2026 in `spiele.liga` und wurde weder gelesen noch
+   gesendet; die Gruppe kam an, aber unter dem Namen `runde`.
+   ═══════════════════════════════════════════════════════════════ */
+describe("Liga und Gruppe je Spiel", () => {
+  it("schickt die Liga mit — sie ist nicht der Wettbewerb", () => {
+    const s = bildeSpiel(quelle(), "38309", [], new Map(), "FC Herrliberg");
+    expect(s?.liga).toBe("Junioren C Promotion");
+    expect(s?.wettbewerb).toBe("Meisterschaft");
+  });
+
+  it("⚠ `runde` traegt den GRUPPENNAMEN, nicht eine Runde", () => {
+    /* Der Feldname stammt aus dem Theme und ist aelter als der Inhalt.
+       Umbenennen hiesse, den Vertrag mit der Vorlage zu brechen — wer
+       ihn liest, muss wissen, was drinsteht. Dieselbe Falle wie ein
+       Endpunkt, der „Teams" heisst und Teams mit Rangliste liefert. */
+    const s = bildeSpiel(quelle(), "38309", [], new Map(), "FC Herrliberg");
+    expect(s?.runde).toBe("Gruppe 3");
+  });
+
+  it("macht aus fehlender Liga einen leeren Text, keinen Ausfall", () => {
+    const s = bildeSpiel(quelle({ liga: null }), "38309", [], new Map(), "FC Herrliberg");
+    expect(s?.liga).toBe("");
   });
 });

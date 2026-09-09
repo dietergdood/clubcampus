@@ -200,6 +200,9 @@ const CC_QUELLE     = 'clubcampus';   // ⚠ klein — der WERT, nicht die Besch
  */
 const CC_META_LAUF  = '_cc_lauf';      // Zeitstempel des LETZTEN Laufs
 const CC_META_ERST  = '_cc_lauf_erst'; // Zeitstempel des ersten — nie ueberschrieben
+/* Wann der Abgleich zuletzt Liga und Gruppe an ein Team geschrieben hat.
+   Unterstrich-Praefix: Buchhaltung, kein Inhaltsfeld. */
+const CC_META_TEAM_LAUF = '_cc_team_abgleich';
 
 /**
  * Felder, die der Abgleich schreibt. Alles andere am Spiel ist tabu.
@@ -1193,6 +1196,7 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 	if ( ! is_array( $alle ) ) {
 		$alle = array();
 	}
+	$teamKarteR = cc_team_karte();
 
 	$n             = 0;
 	$uebersprungen = array();
@@ -1267,6 +1271,10 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 	   Deshalb: lesen, notfalls berichtigen, und **in jedem Fall melden, was
 	   vorgefunden wurde**. Eine stille Korrektur waere wieder eine Stelle,
 	   an der etwas passiert und nichts davon spricht. */
+	/* ⚠ Liga und Gruppe an die Teams — aus denselben Gruppenobjekten, die
+	   eben abgelegt wurden. Siehe cc_schreibe_teamfelder(). */
+	$cc_teamfelder = cc_schreibe_teamfelder( $gruppen, $teamKarteR );
+
 	$cc_autoload_vor = cc_autoload_lesen( CC_OPT_RANG );
 	$cc_korrigiert   = false;
 	if ( ! in_array( $cc_autoload_vor, array( 'off', 'no', 'auto-off' ), true ) ) {
@@ -1314,9 +1322,77 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 			'bytes'               => cc_option_bytes( CC_OPT_RANG ),
 			'autoload'            => cc_autoload_lesen( CC_OPT_RANG ),
 			'autoload_korrigiert' => $cc_korrigiert,
+			'teamfelder'          => $cc_teamfelder,
 		),
 		200
 	);
+}
+
+/**
+ * Liga und Gruppe an die Team-Beitraege schreiben — aus DERSELBEN Zeile
+ * wie die Ablage.
+ *
+ * ⚠⚠ **DAS IST DIE EINE AUSNAHME VON „DER EXPORT SCHREIBT NIE AN
+ * fch_team", und sie ist am 10.09.2026 ausdruecklich beschlossen worden.**
+ *
+ * Die Zusage galt, solange niemand die Werte im Backend brauchte: die
+ * Anzeige holt Liga und Gruppe seit dem 09.09.2026 aus der Ablage, das
+ * Feld war nur Rueckfall. Wer aber ein Team im Backend oeffnet, soll
+ * dasselbe sehen wie auf der Seite — und ein Feld, das dauerhaft leer
+ * bleibt und „kommt vom Verband" verspricht, ist die schlechtere Loesung.
+ *
+ * ⚠ **Was WEITERHIN gilt und von `check:plugin` gehalten wird:** kein
+ * Team wird angelegt, keines geloescht, kein anderes Feld angefasst. Die
+ * Ausnahme ist auf `liga` und `gruppe` begrenzt — namentlich, nicht als
+ * „Teamfelder".
+ *
+ * ⚠ **Aus derselben Zeile, kein zweiter Zugriff** (Bedingung Didi):
+ * `liga_name` und `gruppe_name` kommen aus dem Gruppenobjekt, das auch
+ * die Tabelle liefert. Ein zweiter Zugriff koennte eine andere Gruppe
+ * treffen — dann stuende im Feld die Liga einer anderen Mannschaft.
+ *
+ * @return array Zahl der geschriebenen und der unveraenderten Teams.
+ */
+function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
+	$geschrieben = 0;
+	$unveraendert = 0;
+	$jetzt = current_time( 'mysql' );
+
+	foreach ( $gruppen as $g ) {
+		$liga   = trim( (string) ( $g['liga_name'] ?? '' ) );
+		$gruppe = trim( (string) ( $g['gruppe_name'] ?? '' ) );
+		if ( '' === $liga && '' === $gruppe ) {
+			continue;
+		}
+
+		foreach ( (array) ( $g['zeilen'] ?? array() ) as $z ) {
+			$sfv = (string) ( $z['sfv_team_id'] ?? '' );
+			$tid = $teamKarte[ $sfv ] ?? 0;
+			/* 0 heisst „mehrfach zugeordnet" — dann keines von beiden
+			   bedienen, wie in cc_team_karte() begruendet. */
+			if ( ! $tid ) {
+				continue;
+			}
+
+			/* ⚠ Nur schreiben, wenn sich etwas aendert. Sonst stuende in
+			   `_cc_team_abgleich` stuendlich eine neue Zeit, und
+			   „zuletzt abgeglichen" hiesse „zuletzt gelaufen" statt
+			   „zuletzt geaendert" — zwei verschiedene Aussagen. */
+			$alt_liga   = (string) get_field( 'liga', $tid );
+			$alt_gruppe = (string) get_field( 'gruppe', $tid );
+			if ( $alt_liga === $liga && $alt_gruppe === $gruppe ) {
+				$unveraendert++;
+				continue;
+			}
+
+			if ( '' !== $liga )   { update_field( 'liga', $liga, $tid ); }
+			if ( '' !== $gruppe ) { update_field( 'gruppe', $gruppe, $tid ); }
+			update_post_meta( $tid, CC_META_TEAM_LAUF, $jetzt );
+			$geschrieben++;
+		}
+	}
+
+	return array( 'geschrieben' => $geschrieben, 'unveraendert' => $unveraendert );
 }
 
 /**
