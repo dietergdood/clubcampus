@@ -6,27 +6,37 @@
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
  * Version:     0.2.0
  *
- * ⚠ ⚠  STAND 08.09.2026: DIESE DATEI IST NICHT INSTALLIERT  ⚠ ⚠
+ * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
- *   Auf dem Server laeuft ein ANDERER Empfaenger: `fch-core` bringt unter
- *   `src/Spiegel/clubcampus-export.php` eine eigene Fassung mit. Sie ist
- *   ein Fork DIESER Datei (der Kopf hier steht auch dort) und in der
- *   Anmeldung besser: gemeinsames Geheimnis aus der wp-config.php mit
- *   hash_equals, statt Application Password und `edit_posts`.
+ *   Sie liegt auf dem Server unter `mu-plugins/wp-export-empfaenger.php`,
+ *   also auf der obersten Ebene, die WordPress selbst laedt. Der
+ *   Spiegel-Ordner `fch-core/src/Spiegel/` ist am 09.09.2026 GELOESCHT
+ *   worden; einen zweiten Empfaenger gibt es nicht mehr.
  *
- *   > Mit `edit_posts` konnte JEDER angemeldete Redakteur Resultate,
- *   > Verlauf und Ranglisten schreiben. Das war ein Loch, und es ist dort
- *   > geschlossen.
+ *   ── ⚠ WAS HIER BIS ZUM 10.09.2026 STAND, WORTWOERTLICH ──────────────
  *
- *   ⚠ BEIDE ZUGLEICH GEHEN NICHT. Gleiche Funktions- und Konstantennamen
- *   (`cc_darf_schreiben`, `cc_route_spiele`, `CC_ROUTE`, `CC_TYP_SPIEL`) —
- *   PHP stirbt an der Doppeldeklaration. Ein anderer Dateiname aendert
- *   daran nichts; er verhindert nur die VERWECHSLUNG, und die hat am
- *   08.09.2026 einen halben Tag gekostet.
+ *   > «STAND 08.09.2026: DIESE DATEI IST NICHT INSTALLIERT — auf dem
+ *   > Server laeuft ein ANDERER Empfaenger: `fch-core` bringt unter
+ *   > `src/Spiegel/clubcampus-export.php` eine eigene Fassung mit. …
+ *   > BEIDE ZUGLEICH GEHEN NICHT. … Was aus dieser Datei drueben FEHLT
+ *   > und uebergeben gehoert: `cc_stempel()` samt `_cc_lauf`, die Route
+ *   > `/bestand`, und `get_post_time('c', true)` statt `post_date_gmt`.»
  *
- *   Was aus dieser Datei drueben FEHLT und uebergeben gehoert:
- *   `cc_stempel()` samt `_cc_lauf`, die Route `/bestand`, und
- *   `get_post_time('c', true)` statt `post_date_gmt`.
+ *   Am 08.09.2026 war das richtig. Am 09.09.2026 wurde diese Datei
+ *   eingespielt und der Spiegel entfernt — **und der Satz blieb stehen.**
+ *   Gemeldet vom Website-Chat am 10.09.2026: wer oben einsteigt, erfaehrt
+ *   als Erstes, er habe die falsche Datei vor sich.
+ *
+ *   ⚠ **Ein Warnhinweis ist die Sorte Text, die am laengsten ueberlebt**:
+ *   er sieht aus wie Sorgfalt, niemand loescht ihn leichthin, und je
+ *   dringlicher er formuliert ist, desto weniger wird er angezweifelt.
+ *   Die drei Uebergaben aus dem alten Text SIND uebergeben — sie stehen
+ *   in dieser Datei und damit auf dem Server.
+ *
+ *   Woran man den Stand PRUEFT, statt diesem Kopf zu glauben:
+ *
+ *       (await wpExport('status')).empfaenger   // Dateiname
+ *       (await wpExport('status')).version      // CC_VERSION
  *
  * ── WOHIN DIESE DATEI GEHOERT, FALLS SIE WIEDER GEBRAUCHT WIRD ──────────
  *   wp-content/mu-plugins/wp-export-empfaenger.php  —  OBERSTE EBENE,
@@ -74,7 +84,8 @@
  *
  *   3) ⚠ Der Titel wird NACH dem Schreiben von fch-core abgeleitet, und
  *      zwar von uns angestossen. Die Ableitung haengt an `acf/save_post`
- *      (`Masken/spiel.php:154`) — und update_field() loest den Haken NICHT
+ *      (`Masken/spiel.php`, Haken `acf/save_post`) — und update_field()
+ *      loest den Haken NICHT
  *      aus. Ohne diesen Anstoss haetten alle neuen Spiele einen leeren
  *      Titel. Wir rufen `fch_core_spiel_titel()` auf, statt die Regel ein
  *      zweites Mal zu schreiben: eine Quelle, nicht zwei.
@@ -686,7 +697,8 @@ function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
  *
  * ⚠ DER GRUND, WARUM ES DIESE FUNKTION GIBT: update_field() loest
  *   `acf/save_post` nicht aus, und daran haengt die Titelableitung des
- *   Themes (`Masken/spiel.php:154`). Ohne diesen Aufruf haette jedes neu
+ *   Themes (`Masken/spiel.php`, Haken `acf/save_post`). Ohne diesen Aufruf
+ *   haette jedes neu
  *   angelegte Spiel einen leeren Titel — im Backend unbrauchbar, und
  *   niemand meldete es.
  *
@@ -1219,7 +1231,10 @@ function cc_route_ranglisten( WP_REST_Request $req ) {
 	   Der Aufruf darueber uebergibt `false`, und in WordPress 6.x ist das
 	   bindend: `wp_determine_option_autoload_value()` gibt bei einem
 	   Boolean sofort 'off' zurueck, ohne Filter und ohne Groessenheuristik
-	   (`wp-includes/option.php:1307`, gemessen 09.09.2026).
+	   (`wp-includes/option.php`, in `wp_determine_option_autoload_value()`
+	   selbst — gemessen am 09.09.2026 an WordPress 6.x. Kein Zeilenverweis:
+	   Core-Zeilen verschieben sich mit jedem Update, der Funktionsname
+	   nicht).
 
 	   **Der Zweig steht trotzdem hier, und zwar fuer den Fall, den unser
 	   eigener Aufruf nicht abdeckt:** schreibt IRGENDWANN eine andere

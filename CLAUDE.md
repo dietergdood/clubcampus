@@ -563,6 +563,26 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
 
   ⚠ **Und der Rückweg ist die dritte Gefahr, nicht bloss eine Fussnote.** Ich habe den Fund anschliessend ZU WEIT GEZOGEN und gemeldet, auch „393 Kinder" seien Zeilen gewesen. Waren sie nicht: 393 sind alle Kinder, 391 die aktiven — beides Personen, verschiedene Mengen. Aufgefallen ist es nur, weil vor dem Ändern von `CLAUDE.md` noch einmal gemessen wurde. **Eine Korrektur ist selbst eine Behauptung und wird wie eine geprüft** — sonst ersetzt sie eine richtige Zahl durch eine falsche und schreibt die Begründung gleich mit dazu.
 
+- **⚠ EINE ZAHL IN EINEM DOKUMENT IST EINE MESSUNG VON DAMALS. WER SIE ZITIERT, MACHT EINE BEHAUPTUNG ÜBER HEUTE.** (09.09.2026.)
+
+  `migration_sfv_spielplan.sql:113` sagt seit dem 14.08.2026 wörtlich:
+
+  > *„Gespeichert werden alle Zeilen der Gruppe, auch die der Gegner (**232 Zeilen ueber 21 Gruppen bei FCH**)"*
+
+  Das war richtig gemessen. Vier Wochen später wurde es in einem Gespräch als *„heute stehen 232 in `ranglisten`"* zitiert — im Präsens, als Bestandsangabe, und darauf eine Rechnung über fehlende Gruppen gebaut. **Niemand hatte nachgezählt.**
+
+  ⚠ **Der Fehler liegt nicht beim Zitierenden.** Die Zahl steht in einer Migration, also an einem Ort, der Struktur beschreibt und nicht Bestand — und sie trägt kein Datum in der Zeile. Ein Messwert ohne Zeitstempel sieht aus wie eine Eigenschaft.
+
+  **Und ich mache dasselbe.** Am 09.09.2026 habe ich „269 Spiele, 21 Teams" aus CLAUDE.md (Stand 25.08.) für eine Hochrechnung der Laufdauer benutzt, ohne die Zahlen nachzuzählen — und sie in einer Tabelle präsentiert, in der sie neben gemessenen standen.
+
+  | | |
+  |---|---|
+  | **beim Schreiben** | jede Zahl bekommt ihr Datum in dieselbe Zeile — nicht in die Überschrift, nicht in den Absatz darüber |
+  | **beim Lesen** | eine Zahl aus einem Dokument ist ein **Ausgangswert**, keine Auskunft. Sie gehört in den Auftrag als Behauptung, die widerlegt werden darf (siehe „Eine Messung geht an einen Subagenten") |
+  | **wo es zählt** | vor einer Entscheidung, die auf der Differenz zweier Zahlen beruht, wird **beide** frisch gemessen |
+
+  ⚠ **Die schärfste Form: eine Entscheidung, die damals richtig war und seither niemand nachgeprüft hat, ist nicht falsch geworden — die Lage hat sich geändert.** (Didi, 09.09.2026.) Das ist kein Vorwurf an die Entscheidung, sondern die Frage, ob ihre Voraussetzung noch gilt. Sie zu stellen kostet eine Abfrage; sie nicht zu stellen kostet die Umstellung, die daraus folgt.
+
 - **Eine Messung zählt leicht etwas anderes als gemeint — und im Gegensatz zu einer falschen Bedingung wird sie nie rot.** Ein Filter, der danebenliegt, fällt irgendwann jemandem auf. Eine Zahl, die danebenliegt, wird zitiert.
 
   **Nach NAMEN gruppieren zählt Schreibweisen, nicht Menschen.** Beleg vom 23.08.2026: eine Auswertung der fehlenden Pflichtfelder meldete
@@ -1192,6 +1212,45 @@ Der Tab steht (`SupporterListView`), aber Spalten, Filter und gespeicherte Ansic
 - **`savedViews`**: bewusst weggelassen — die Vorlagen „Standard" und „Verwaltung" bestehen aus Spalten, die es hier nicht gibt (Mitgliedschaft, Teams, Kaderrollen). Eigene Ansichten speichern funktioniert, `ListView` legt sie unter `viewTyp="supporter"` ab. Eigene Vorlagen fehlen.
 
 Filter, Sortierung und Gruppierung laufen über dieselben Funktionen wie die Mitgliederliste (`filterMembers`, `sortMembers`, `buildGroups`) — ein Supporter **ist** eine `MemberRow`, seit dem Rückbau über `mapSupporter()` statt über eine Zeile in `mitglieder`. Das soll so bleiben; zu überarbeiten ist die Auswahl, nicht die Mechanik.
+
+### ⚠ Die Vereinskennung beim Verband steht nirgends in ClubCampus
+
+Befund vom 10.09.2026, aufgefallen beim FVRZ-Link am Team.
+
+Die Adresse der Gruppentabelle beim Verband lautet
+
+```
+https://matchcenter.fvrz.ch/default.aspx?v=<VEREIN>&oid=11&lng=1&t=<sfv_team_id>&a=trr
+```
+
+`v=1516` ist die **Vereinsseite des FCH** beim FVRZ (belegt 05.09.2026,
+`migration_wp_export.sql:252`). Sie ist dieselbe Zahl wie die **ClubId**,
+die jeder SFV-Aufruf mitführt — und die steht **nur im Secret**
+`SFV_CLUB_ID`, nicht in einer Spalte.
+
+⚠ **Damit ist die Adresse für einen zweiten Verein nicht baubar.** Weder
+`vereine` noch `api_verbindungen` führen die Kennung; `api_verbindungen.key`
+ist der Name des Anschlusses, nicht seine Nummer. Wer die Adresse
+mandantenfähig bauen will, braucht sie als **Spalte**, nicht als Secret —
+ein Secret gilt projektweit, und projektweit gibt es genau einen Wert.
+
+⚠ **Und `oid=11` ist der Verband**, nicht der Verein. Ein Klub in einem
+anderen Regionalverband (SFV hat dreizehn) hat eine andere `oid`. Wer nur
+`v` mandantenfähig macht, hat die Hälfte gemacht.
+
+**Nicht zu verwechseln** (steht schon dreimal im Bestand und wird trotzdem
+verwechselt):
+
+| Zahl | was | wo sie steht |
+|---|---|---|
+| **1516** | ClubId — Aufrufe und `v=` im Matchcenter | Secret `SFV_CLUB_ID` |
+| **11057** | clubNumber — in Ranglisten und Matchdaten | `ranglisten.club_nummer` |
+| **11** | `oid`, der Regionalverband FVRZ | nirgends |
+
+**Heute folgenlos**, weil ein Verein im Portal steht und die Website ihm
+gehört: dort sind `v` und `oid` Konstanten der Installation. Es fällt an,
+sobald ein zweiter Verein dazukommt — dieselbe Familie wie
+`mitglieder_fairgate_id_key`.
 
 ### `mitglieder_fairgate_id_key` ist global unique
 
