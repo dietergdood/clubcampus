@@ -14,7 +14,8 @@ import type { RanglisteZeile } from "../wpRangliste.ts";
 
 function zeile(teil: Partial<RanglisteZeile> & { sfv_team_id: number }): RanglisteZeile {
   return {
-    sfv_saison_id: 2026, sfv_liga_id: 401, sfv_liga_name: "Junioren C",
+    sfv_saison_id: 2026, sfv_saison_name: "2025/2026",
+    sfv_liga_id: 401, sfv_liga_name: "Junioren C",
     sfv_division_id: 0, sfv_division_name: null,
     sfv_gruppe_id: 900, sfv_gruppe: "Gruppe 3",
     team_name: "FC Irgendwo", position: 1, anzahl_spiele: 9, siege: 5,
@@ -217,5 +218,23 @@ describe("beurteileBestand — das Wachstum, das niemand sieht", () => {
 
   it("wird bei einem kleineren Bestand nicht negativ", () => {
     expect(beurteileBestand(21, 3).alt).toBe(0);
+  });
+});
+
+describe("Die Saison steht in der Gruppe, nicht an 21 Teams", () => {
+  it("traegt den Namen des Verbands, nicht eine gerechnete Form", () => {
+    /* ⚠ Aus 2026 liesse sich „2025/2026" ausrechnen — heute richtig und
+       still falsch, sobald der Verband anders benennt. Die Schreibweise
+       gehoert ihm; wir schreiben sie ab. */
+    const [g] = baueGruppen([zeile({ sfv_team_id: 38309 })], UNSERE);
+    expect(g.saison_name).toBe("2025/2026");
+  });
+
+  it("macht aus fehlendem Namen einen leeren Text, keine Rechnung", () => {
+    const [g] = baueGruppen([zeile({ sfv_team_id: 38309, sfv_saison_name: null })], UNSERE);
+    expect(g.saison_name).toBe("");
+    /* ⚠ NICHT „2025/2026" — eine abgeleitete Saison waere eine zweite
+       Wahrheit neben der des Verbands. */
+    expect(g.sfv_saison_id).toBe(2026);
   });
 });

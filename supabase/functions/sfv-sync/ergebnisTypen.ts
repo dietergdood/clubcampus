@@ -165,6 +165,39 @@ export function findeTeamsOhneSpiele(
   };
 }
 
+/**
+ * Hat die Saison seit dem vorigen Lauf gewechselt?
+ *
+ * ⚠⚠ **DIE MELDUNG IST VON SELBST EINMALIG — und das ist der ganze
+ * Entwurf.** (Bedingung Didi, 10.09.2026: „beim ersten Lauf mit neuer
+ * Saison ein Hinweis, danach Ruhe. Sonst ist sie im August tot.")
+ *
+ * Verglichen wird gegen die Saison des VORIGEN Laufs. Beim ersten Lauf
+ * nach dem Wechsel gehen die Zahlen auseinander → Hinweis. Beim zweiten
+ * ist der vorige Lauf schon der neue → still. **Es braucht keinen
+ * Merker, kein „schon gemeldet"-Kennzeichen und keinen Zustand, der
+ * veralten koennte** — die Antwort steht im Protokoll.
+ *
+ * ⚠ **Warum es ueberhaupt gemeldet werden muss:** am Saisonwechsel
+ * feuern womoeglich `verwaiste_zuordnungen`, `sfv_teams_ohne_zuordnung`
+ * und `teams_ohne_spiele` gleichzeitig — wer die Ursache nicht kennt,
+ * sucht drei Fehler statt eines Ereignisses. Und es ist der Moment, an
+ * dem sich die Team-Kennungen aendern koennten; einen Beleg dafuer, dass
+ * sie es nicht tun, gibt es nicht (gemessen 10.09.2026: unsere Daten
+ * kennen nur eine Saison).
+ *
+ * ⚠ **Ein erster Lauf ueberhaupt ist KEIN Wechsel.** Ohne vorigen Lauf
+ * gibt es nichts zu vergleichen — dann zu melden hiesse, jede neue
+ * Installation mit einem Ereignis zu begruessen, das nicht stattgefunden
+ * hat.
+ */
+export function saisonWechsel(
+  vorige: number | null | undefined, jetzige: number,
+): { gewechselt: boolean; von: number | null; nach: number } {
+  const v = typeof vorige === "number" && Number.isFinite(vorige) ? vorige : null;
+  return { gewechselt: v !== null && v !== jetzige, von: v, nach: jetzige };
+}
+
 export interface LaufErgebnis {
   status: "ok" | "warnung" | "fehler";
   meldung: string;
@@ -198,6 +231,9 @@ export interface LaufErgebnis {
       `findeTeamsOhneSpiele()`. Namentlich, weil eine Zahl niemanden
       irgendwohin schickt. */
   teams_ohne_spiele: { anzahl: number; teams: string[]; meldepflichtig: boolean };
+  /** Nur beim ersten Lauf einer neuen Saison gesetzt — siehe
+      `saisonWechsel()`. Danach fehlt es wieder. */
+  saison_wechsel?: { von: number | null; nach: number };
   derbys: number;
   matchdaten?: MatchdatenErgebnis;
   logos?: { geholt: number; fehlt: number };
@@ -232,6 +268,9 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
     sfv_teams_ohne_zuordnung: erg.sfv_teams_ohne_zuordnung,
     sfv_teams_ohne_zuordnung_aktiv: erg.sfv_teams_ohne_zuordnung_aktiv,
     teams_ohne_spiele: erg.teams_ohne_spiele,
+    /* ⚠ Nur wenn gewechselt — ein Feld, das immer dasteht, wird nicht
+       gelesen. Fehlt es, ist nichts passiert. */
+    ...(erg.saison_wechsel ? { saison_wechsel: erg.saison_wechsel } : {}),
     derbys: erg.derbys,
   };
   if (erg.saison) raus.saison = erg.saison;

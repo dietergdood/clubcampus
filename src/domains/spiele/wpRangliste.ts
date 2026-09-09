@@ -26,6 +26,8 @@
 /** Eine Zeile aus `public.ranglisten`, so weit der Export sie braucht. */
 export interface RanglisteZeile {
   sfv_saison_id: number;
+  /** „2026/2027" — die Schreibweise des Verbands, seit 10.09.2026. */
+  sfv_saison_name: string | null;
   sfv_liga_id: number;
   sfv_liga_name: string | null;
   sfv_division_id: number;
@@ -74,6 +76,18 @@ export interface WpRangGruppe {
   schluessel: string;
   sfv_gruppe_id: number;
   sfv_saison_id: number;
+  /**
+   * ⚠ DIE SAISON GEHOERT IN DIE GRUPPE, NICHT AN 21 TEAMS.
+   *
+   * Sie ist fuer alle Mannschaften dieselbe. Sie an jeden Team-Beitrag zu
+   * schreiben waere 21-mal dieselbe Aussage — genau das Muster, das das
+   * Theme bei seinen Hoheitsschaltern selbst verworfen hat: „ein Repeater
+   * haette in elf Teams elfmal dieselben sieben Zeilen gespeichert."
+   *
+   * Sie steht deshalb hier, in der Ablage, und wird von dort gelesen —
+   * aus DERSELBEN Zeile wie Liga und Gruppe.
+   */
+  saison_name: string;
   sfv_liga_id: number;
   sfv_division_id: number;
   liga_name: string;
@@ -156,6 +170,7 @@ export function baueGruppen(
       schluessel,
       sfv_gruppe_id: kopf.sfv_gruppe_id,
       sfv_saison_id: kopf.sfv_saison_id,
+      saison_name: kopf.sfv_saison_name ?? "",
       sfv_liga_id: kopf.sfv_liga_id,
       sfv_division_id: kopf.sfv_division_id,
       liga_name: kopf.sfv_liga_name ?? "",

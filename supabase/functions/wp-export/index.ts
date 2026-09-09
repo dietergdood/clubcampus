@@ -489,7 +489,7 @@ async function sendeRanglisten(
   }
 
   const rRes = await db.from("ranglisten")
-    .select("sfv_saison_id, sfv_liga_id, sfv_liga_name, sfv_division_id, sfv_division_name, "
+    .select("sfv_saison_id, sfv_saison_name, sfv_liga_id, sfv_liga_name, sfv_division_id, sfv_division_name, "
       + "sfv_gruppe_id, sfv_gruppe, sfv_team_id, team_name, position, anzahl_spiele, "
       + "siege, unentschieden, niederlagen, tore, gegentore, punkte, fairplay_punkte, stand_vom")
     .eq("verein_id", vereinId);

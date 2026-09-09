@@ -49,6 +49,7 @@ eine eigene Zeile (`ist_wir: true`):
     "schluessel": "2026|401|0|900123",
     "sfv_gruppe_id": 900123,
     "sfv_saison_id": 2026,
+    "saison_name": "2025/2026",
     "sfv_liga_id": 401,
     "sfv_division_id": 0,
     "liga_name": "Junioren C 2. Stärkeklasse",
@@ -103,6 +104,7 @@ eine eigene Zeile (`ist_wir: true`):
     "schluessel": "2026|388|0|900456",
     "sfv_gruppe_id": 900456,
     "sfv_saison_id": 2026,
+    "saison_name": "2025/2026",
     "sfv_liga_id": 388,
     "sfv_division_id": 0,
     "liga_name": "3. Liga",
@@ -138,6 +140,7 @@ Gewicht dieses Beispiels: `{"gruppen":2,"zeilen":4,"bytes":1161,"groesste_gruppe
 | `sfv_gruppe_id` | die echte Gruppennummer des Verbands — zur Anzeige, **nicht** als Schlüssel |
 | `sfv_saison_id` · `sfv_liga_id` · `sfv_division_id` | Herkunft beim Verband. Die Vorlage braucht sie heute nicht; ohne sie wäre eine alte Gruppe später nicht von einer neuen zu unterscheiden |
 | `liga_name` · `gruppe_name` | Klartext für Überschriften (`page-spiele.php` setzt heute `liga` vom Team davor) |
+| `saison_name` | **neu am 10.09.2026** — „2026/2027", die Schreibweise des Verbands. Siehe den Abschnitt darunter |
 | `stand_vom` | wann der Verband diesen Stand geliefert hat — **nicht**, wann der Export lief |
 | `zeilen[]` | die Tabelle, nach `rang` sortiert |
 
@@ -258,3 +261,50 @@ Bei 60–81 KB je Lauf sind das zwei Zehnerpotenzen Luft. **Es gibt keine
 Schwelle im Code, weil es keine gemessene gibt** — stattdessen stehen
 `bytes`, `gruppen`, `zeilen` und `alt` in jeder Antwort und in
 `api_sync_log.details`.
+
+---
+
+# Nachtrag 10.09.2026: die Saison steht in der Gruppe
+
+`saison_name` liegt ab sofort in **jeder** Gruppe der Ablage, neben
+`liga_name` und `gruppe_name`. Wortlaut wie beim Verband: `"2026/2027"`.
+
+**Warum dort und nicht am Team.** Sie ist für alle Mannschaften dieselbe.
+An 21 Team-Beiträge geschrieben wäre sie 21-mal dieselbe Aussage — genau
+das Muster, das drüben schon einmal verworfen wurde („ein Repeater hätte in
+elf Teams elfmal dieselben sieben Zeilen gespeichert"). Sie kommt deshalb
+aus **derselben Zeile** wie Liga und Gruppe.
+
+**Zum Lesen** — dieselbe Gruppe, die die Seite ohnehin schon holt:
+
+```php
+$g = fch_theme_ranggruppe( $fch_id );           // steht bereits
+$saison = $g['saison_name'] ?? '';              // „2026/2027"
+```
+
+⚠ **Nicht aus `sfv_saison_id` ausrechnen.** Aus `2027` liesse sich
+„2026/2027" bilden — heute richtig und still falsch, sobald der Verband
+anders benennt. Die Schreibweise gehört ihm; wir schreiben sie ab.
+
+⚠ **Und `saison_name` kann leer sein.** Zeilen aus Läufen vor dem
+10.09.2026 kennen die Spalte nicht. Leer heisst „noch kein Lauf mit dieser
+Angabe" — dann bleibt der bestehende, von Hand gepflegte Wert stehen.
+
+## Was heute auf der Teamseite steht — gemessen, nicht vermutet
+
+| | |
+|---|---|
+| Anzeige | `2026/27` |
+| Quelle | Postmeta `saison` am `fch_team`-Beitrag |
+| ⚠ Feldgruppe dazu | **keine** — das Feld existiert in ACF nur am `fch_person` |
+| geschrieben von | `saeen.php:1998` und `:2049`, für **zwei** Mannschaften |
+
+**Es ist also kein gepflegtes Feld, sondern ein Rest der Saat.** Im Backend
+ist es unsichtbar; wer es ändern will, findet keine Maske dafür. Die
+anderen 19 Teams haben den Wert gar nicht — was dort steht, kommt aus einem
+Rückfall in der Vorlage.
+
+⚠ **Das ist die umgekehrte Richtung des bekannten Fehlers.** Sonst gilt:
+ein Feld wird angelegt und von niemandem gelesen. Hier steht ein **Wert
+ohne Feld** — er wird gelesen, aber niemand kann ihn pflegen. Beide Male
+schlägt nichts fehl, und beide Male sieht die Anzeige richtig aus.

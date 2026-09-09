@@ -18,7 +18,7 @@
 import { describe, it, expect } from "vitest";
 import {
   fuersProtokoll, fuerZeitplanAntwort, zaehleOhneZuordnung, zaehleOhneZuordnungGetrennt,
-  findeTeamsOhneSpiele,
+  findeTeamsOhneSpiele, saisonWechsel,
 } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
 import type { LaufErgebnis } from "../../../../supabase/functions/sfv-sync/ergebnisTypen.ts";
 
@@ -194,5 +194,26 @@ describe("findeTeamsOhneSpiele — ein Befund, keine Datenlage", () => {
     const e = findeTeamsOhneSpiele([...dreizehn, T(38301, "Erste")], [38301], 30);
     expect(e.anzahl).toBe(13);
     expect(e.meldepflichtig).toBe(true);
+  });
+});
+
+describe("saisonWechsel — einmalig ohne Merker", () => {
+  it("meldet den Wechsel", () => {
+    expect(saisonWechsel(2027, 2028)).toEqual({ gewechselt: true, von: 2027, nach: 2028 });
+  });
+
+  it("⚠ schweigt beim naechsten Lauf von selbst", () => {
+    /* Der Kern des Entwurfs: verglichen wird gegen den VORIGEN Lauf. Beim
+       zweiten Lauf ist der vorige schon der neue — kein Merker, kein
+       „schon gemeldet"-Kennzeichen, nichts, das veralten koennte. */
+    expect(saisonWechsel(2028, 2028).gewechselt).toBe(false);
+  });
+
+  it("⚠ ein ERSTER Lauf ueberhaupt ist kein Wechsel", () => {
+    /* Sonst begruesste jede neue Installation ein Ereignis, das nicht
+       stattgefunden hat. */
+    expect(saisonWechsel(null, 2027).gewechselt).toBe(false);
+    expect(saisonWechsel(undefined, 2027).gewechselt).toBe(false);
+    expect(saisonWechsel(Number.NaN, 2027).gewechselt).toBe(false);
   });
 });

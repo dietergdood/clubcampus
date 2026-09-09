@@ -21,7 +21,7 @@ import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
 export type { LaufErgebnis } from "./ergebnisTypen.ts";
 export { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
-import { zaehleOhneZuordnungGetrennt, findeTeamsOhneSpiele } from "./ergebnisTypen.ts";
+import { zaehleOhneZuordnungGetrennt, findeTeamsOhneSpiele, saisonWechsel } from "./ergebnisTypen.ts";
 
 interface Verbindung { id: string; verein_id: string; api_url: string; sync_felder: Record<string, unknown> }
 
@@ -108,10 +108,16 @@ export function bildeSpiel(
   };
 }
 
-export function bildeRanglistenZeile(r: Record<string, unknown>, vereinId: string, saisonId: number, jetzt: string) {
+export function bildeRanglistenZeile(
+  r: Record<string, unknown>, vereinId: string, saisonId: number, jetzt: string,
+  saisonName = "",
+) {
   return {
     verein_id: vereinId,
     sfv_saison_id: saisonId,
+    /* ⚠ Die Schreibweise des Verbands, nicht aus der Id gerechnet. Siehe
+       migration_ranglisten_saison_name.sql. */
+    sfv_saison_name: saisonName,
     sfv_liga_id: (r.leagueId as number) ?? 0,
     sfv_liga_name: (r.leagueName as string) ?? null,
     sfv_division_id: (r.divisionId as number) ?? 0,
@@ -156,6 +162,29 @@ export async function laufeSync(
   const token = await holeToken(zugang);
   const saison = await holeSaison(zugang, token, new Date());
   erg.saison = saison;
+
+  /* ⚠ DIE SAISON DES VORIGEN LAUFS — aus dem Protokoll, nicht aus einem
+     Merker. Ein Merker muesste gepflegt werden und koennte veralten; das
+     Protokoll weiss es ohnehin. Und weil verglichen statt gemerkt wird,
+     ist die Meldung von selbst einmalig: beim naechsten Lauf ist der
+     vorige schon der neue. Siehe saisonWechsel(). */
+  const { data: vorigerLauf } = await db.from("api_sync_log")
+    .select("details")
+    .eq("verbindung_id", v.id)
+    .not("details->saison->id", "is", null)
+    .order("gestartet_am", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const vorigeSaison = Number(
+    (vorigerLauf as { details?: { saison?: { id?: number } } } | null)?.details?.saison?.id,
+  );
+  const wechsel = saisonWechsel(Number.isFinite(vorigeSaison) ? vorigeSaison : null, saison.id);
+  if (wechsel.gewechselt) {
+    erg.saison_wechsel = { von: wechsel.von, nach: wechsel.nach };
+    /* ⚠ `warnung`, nicht `fehler`: es ist kein Ausfall, sondern ein
+       Ereignis — aber eines, das man einmal gesehen haben muss. */
+    if (erg.status === "ok") erg.status = "warnung";
+  }
 
   const sfvTeams: SfvTeam[] = await holeTeams(zugang, token, saison.id);
   const eigene = new Set(sfvTeams.map((t) => t.sfv_team_id));
@@ -270,7 +299,8 @@ export async function laufeSync(
   /* ── Rangliste ── */
   if (nur !== "spielplan") {
     const roh = await holeRangliste(zugang, token, saison.id);
-    const zeilen = roh.map((r) => bildeRanglistenZeile(r, v.verein_id, saison.id, jetzt));
+    const zeilen = roh.map((r) =>
+      bildeRanglistenZeile(r, v.verein_id, saison.id, jetzt, saison.name ?? ""));
     erg.ranglisten.geschrieben = zeilen.length;
 
     if (zeilen.length) {

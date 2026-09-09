@@ -3065,3 +3065,52 @@ Entscheidung — aber lässt die Prüfkette nie dauerhaft rot stehen.
 
 
 
+
+### ⚠ Ein WERT ohne Feld — die umgekehrte Richtung, und sie sieht richtiger aus
+
+Gemessen am 10.09.2026 im Theme, als Vorarbeit zum Saison-Abgleich. Die
+Frage war die einfachste denkbare: *woher kommt das „2026/27" auf der
+Teamseite?*
+
+| | |
+|---|---|
+| Anzeige | `2026/27` |
+| Quelle | Postmeta `saison` am `fch_team`-Beitrag |
+| ⚠ Feldgruppe in ACF | **keine** — `saison` ist dort nur am `fch_person` definiert |
+| geschrieben von | `saeen.php:1998` und `:2049` — für **zwei** Mannschaften |
+| die anderen 19 | haben den Wert gar nicht; was dort steht, kommt aus einem Rückfall |
+
+**Es ist kein gepflegtes Feld, sondern ein Rest der Saat.** Im Backend gibt
+es keine Maske dafür; wer den Wert ändern will, findet nichts.
+
+⚠ **Und das ist die UMGEKEHRTE Richtung des bekannten Fehlers, nicht
+dieselbe.** Die Regel „wer eine Spalte anlegt, nennt die Stelle, die sie
+liest" fängt den Fall *Feld ohne Wert*. Hier ist es ein *Wert ohne Feld*:
+
+| | | |
+|---|---|---|
+| Spalte angelegt, niemand liest sie | `mitgliedtypen.zaehlt_als_mitgliedschaft` | sieht aus wie fehlende Daten |
+| **Wert da, kein Feld dazu** | **`fch_team.saison`** | ⚠ **sieht aus wie gepflegte Daten** |
+
+**Die zweite ist die teurere.** Ein leeres Feld fällt jemandem auf. Ein
+gefülltes fällt niemandem auf — und deshalb war die naheliegende Annahme
+„das trägt jemand von Hand ein" ein halbes Jahr lang unwidersprochen. Sie
+war falsch: es trägt es niemand ein, weil es niemand kann.
+
+⚠ **Ich habe das als „ein Feld in der Allowlist, das nie gefüllt wird"
+zusammengefasst bekommen und es steht hier ausdrücklich anders.** Weder gibt
+es ein `fch_team_saison` noch einen Allowlist-Eintrag dazu; die Regel
+„erlaubt, aber nicht gefordert" trifft einen anderen Fall. Eine Zusammen-
+fassung, die den Befund in die geläufigere Kategorie schiebt, macht ihn
+unauffindbar — gesucht würde dann in der Allowlist, und dort steht nichts.
+
+**Die Prüfung, die beide Richtungen findet, ist eine einzige Frage**, und
+sie gehört an das erste Auftreten eines Werts: *wer schreibt das, und wer
+kann es ändern?* Fehlt eine der beiden Antworten, ist es ein Befund — egal
+in welche Richtung die Lücke zeigt.
+
+**Was daraus folgt.** Die Saison kommt seit dem 10.09.2026 aus der
+Ranglisten-Ablage (`saison_name` je Gruppe, Schreibweise des Verbands), aus
+**derselben Zeile** wie Liga und Gruppe. Das Postmeta bleibt als Rückfall
+stehen und wird nicht überschrieben — es zu entfernen wäre eine Änderung
+an zwei Beiträgen ohne Gegenwert.
