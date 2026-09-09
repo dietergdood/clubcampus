@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.1.0
+ * Version:     0.2.0
  *
  * ⚠ ⚠  STAND 08.09.2026: DIESE DATEI IST NICHT INSTALLIERT  ⚠ ⚠
  *
@@ -112,8 +112,19 @@ const CC_ROUTE      = 'clubcampus/v1';
 /* ⚠ MUSS MIT DEM KOPF DIESER DATEI UEBEREINSTIMMEN (Version: oben). Sie
    steht in der Antwort von /status und ist die einzige Moeglichkeit, von
    aussen zwei Empfaenger mit demselben Dateinamen zu unterscheiden — der
-   Fall, der am 09.09.2026 einen ganzen Anlauf gekostet hat. */
-const CC_VERSION    = '0.1.0';
+   Fall, der am 09.09.2026 einen ganzen Anlauf gekostet hat.
+
+   ⚠ **WER DIESE DATEI INHALTLICH AENDERT, ERHOEHT SIE.** Sonst meldet
+   `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
+   Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
+   beantwortet sie nicht mehr.
+
+   0.2.0 (09.09.2026): Gruppen werden auf `schluessel` abgelegt statt auf
+   `sfv_gruppe_id` (zwei Gruppen mit derselben Nummer ueberschrieben
+   einander), `autoload` wird nach dem Schreiben geprueft und notfalls
+   berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
+   Team-Zuordnung. */
+const CC_VERSION    = '0.2.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
