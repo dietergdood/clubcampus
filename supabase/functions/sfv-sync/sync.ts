@@ -21,6 +21,7 @@ import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
 
 export type { LaufErgebnis } from "./ergebnisTypen.ts";
 export { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
+import { zaehleOhneZuordnungGetrennt } from "./ergebnisTypen.ts";
 
 interface Verbindung { id: string; verein_id: string; api_url: string; sync_felder: Record<string, unknown> }
 
@@ -147,7 +148,8 @@ export async function laufeSync(
     status: "ok", meldung: "",
     spiele: { neu: 0, aktualisiert: 0, ohne_team: 0, nicht_mehr_geliefert: 0 },
     ranglisten: { geschrieben: 0, entfernt: 0, gruppen: 0 },
-    verwaiste_zuordnungen: 0, derbys: 0,
+    verwaiste_zuordnungen: 0, sfv_teams_ohne_zuordnung: 0,
+    sfv_teams_ohne_zuordnung_aktiv: 0, derbys: 0,
   };
 
   const token = await holeToken(zugang);
@@ -166,6 +168,20 @@ export async function laufeSync(
   }
   erg.verwaiste_zuordnungen = (teamZeilen ?? [])
     .filter((t) => t.sfv_team_id != null && !eigene.has(Number(t.sfv_team_id))).length;
+
+  /* ⚠ DIE GEGENRICHTUNG — und sie fehlte bis zum 10.09.2026.
+     `verwaiste_zuordnungen` merkt, wenn ein Team WEGFAELLT. Dass eines
+     DAZUKOMMT, merkte niemand: seine Spiele werden gesynct (der Filter
+     `eigene` kommt vom Verband) und bleiben dann im Export haengen, der
+     auf `teams.sfv_team_id` filtert. Nichts schlaegt fehl; auf der
+     Website fehlt ein Spielplan. Die Rechnung steht in ergebnisTypen.ts,
+     weil sie dort geprueft werden kann. */
+  const ohne = zaehleOhneZuordnungGetrennt(
+    sfvTeams,
+    (teamZeilen ?? []).filter((t) => t.sfv_team_id != null).map((t) => Number(t.sfv_team_id)),
+  );
+  erg.sfv_teams_ohne_zuordnung = ohne.offen_gesamt;
+  erg.sfv_teams_ohne_zuordnung_aktiv = ohne.offen_aktiv;
 
   /* ── Spielplan ── */
   if (nur !== "rangliste") {

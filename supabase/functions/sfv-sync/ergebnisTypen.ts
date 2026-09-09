@@ -52,12 +52,100 @@ export interface MatchdatenErgebnis {
   fehlermeldungen: string[];
 }
 
+/**
+ * Wie viele Mannschaften des Verbands in ClubCampus keine Zuordnung haben.
+ *
+ * ⚠ Beide Richtungen sehen fast gleich aus und meinen Gegenteiliges:
+ *
+ * | | Frage | wann sie anschlaegt |
+ * |---|---|---|
+ * | `verwaiste_zuordnungen` | wir kennen eine Nummer, der Verband nicht | ein Team faellt weg |
+ * | `sfv_teams_ohne_zuordnung` | der Verband kennt ein Team, wir nicht | ein Team kommt dazu |
+ *
+ * @param sfvTeamIds  Teamnummern aus `/api/team/list` — die Liste des Verbands.
+ * @param zugeordnet  Die `sfv_team_id` unserer `teams`-Zeilen (ohne null).
+ */
+export function zaehleOhneZuordnung(
+  sfvTeamIds: Iterable<number>, zugeordnet: Iterable<number>,
+): number {
+  const unsere = new Set<number>();
+  for (const n of zugeordnet) unsere.add(Number(n));
+  let offen = 0;
+  for (const n of sfvTeamIds) if (!unsere.has(Number(n))) offen++;
+  return offen;
+}
+
+/**
+ * Dasselbe, aber getrennt nach AKTIV — und das ist der Unterschied
+ * zwischen einer Zahl, die man beheben kann, und einer, die bleibt.
+ *
+ * ⚠⚠ **GEFUNDEN AM 10.09.2026, ZEHN MINUTEN NACH DEM BAU VON
+ * `zaehleOhneZuordnung`, UND ES IST EIN FEHLER IN GENAU DIESEM BAU.**
+ *
+ * `/api/team/list` liefert je Team ein `isTeamActive`; der Sync uebernimmt
+ * es seit jeher als `aktiv` (`sfvApi.ts:96`) — und **liest es nirgends**.
+ * Weder der Filter `eigene`, noch die Zuordnungsmaske, noch der Export.
+ *
+ * Fuer den neuen Zaehler heisst das: eine aufgeloeste Mannschaft aus einer
+ * frueheren Saison wuerde als „ohne Zuordnung" gemeldet — dauerhaft, und
+ * **niemand kann sie beheben**, weil es nichts zuzuordnen gibt.
+ *
+ * > Ein Pruefmittel, das dauerhaft eine Zahl ueber null meldet, die
+ * > niemand senken kann, wird nach zwei Wochen ueberlesen. Dann ist es
+ * > schlechter als keines — dieselbe Abstumpfung wie bei den 758
+ * > Lint-Warnungen.
+ *
+ * Deshalb zwei Zahlen statt einer. `offen_aktiv` ist die, auf die jemand
+ * reagieren kann; `offen_gesamt` daneben zeigt, ob die Differenz an
+ * inaktiven Mannschaften liegt.
+ */
+export function zaehleOhneZuordnungGetrennt(
+  sfvTeams: Iterable<{ sfv_team_id: number; aktiv?: boolean }>,
+  zugeordnet: Iterable<number>,
+): { offen_gesamt: number; offen_aktiv: number } {
+  const unsere = new Set<number>();
+  for (const n of zugeordnet) unsere.add(Number(n));
+  let gesamt = 0, aktiv = 0;
+  for (const t of sfvTeams) {
+    if (unsere.has(Number(t.sfv_team_id))) continue;
+    gesamt++;
+    /* ⚠ Fehlt das Kennzeichen, gilt das Team als aktiv — wie in
+       `sfvApi.ts`. Ein unbekannter Zustand darf keine Mannschaft
+       unsichtbar machen. */
+    if (t.aktiv !== false) aktiv++;
+  }
+  return { offen_gesamt: gesamt, offen_aktiv: aktiv };
+}
+
 export interface LaufErgebnis {
   status: "ok" | "warnung" | "fehler";
   meldung: string;
   spiele: { neu: number; aktualisiert: number; ohne_team: number; nicht_mehr_geliefert: number };
   ranglisten: { geschrieben: number; entfernt: number; gruppen: number };
   verwaiste_zuordnungen: number;
+  /**
+   * Die Gegenrichtung: Mannschaften, die der VERBAND fuehrt und denen in
+   * ClubCampus keine `teams`-Zeile zugeordnet ist.
+   *
+   * ⚠ SIE FEHLTE BIS ZUM 10.09.2026, UND DAS WAR DIE TEURE HAELFTE.
+   * `verwaiste_zuordnungen` zaehlt seit jeher unsere Nummern, die der
+   * Verband nicht mehr kennt — ein Team, das WEGFAELLT. Ein Team, das
+   * DAZUKOMMT, zaehlte niemand.
+   *
+   * Und genau das passiert jede Saison: ein neuer Jahrgang erscheint beim
+   * Verband, seine Spiele werden gesynct (der Filter kommt aus
+   * `/api/team/list`, also vom Verband), und dann bleiben sie im EXPORT
+   * haengen, weil dort auf `teams.sfv_team_id` gefiltert wird. **Nichts
+   * schlaegt fehl. Auf der Website fehlt ein Spielplan, und niemand
+   * erfaehrt, warum.**
+   *
+   * Steht die Zahl ueber 0, ist die Zuordnung unvollstaendig — nachzuholen
+   * unter Portalverwaltung → API-Verbindungen → „Teams zuordnen".
+   */
+  sfv_teams_ohne_zuordnung: number;
+  /** Davon aktive — die Zahl, auf die jemand reagieren kann. Siehe
+      `zaehleOhneZuordnungGetrennt()`. */
+  sfv_teams_ohne_zuordnung_aktiv: number;
   derbys: number;
   matchdaten?: MatchdatenErgebnis;
   logos?: { geholt: number; fehlt: number };
@@ -89,6 +177,8 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
     spiele: erg.spiele,
     ranglisten: erg.ranglisten,
     verwaiste_zuordnungen: erg.verwaiste_zuordnungen,
+    sfv_teams_ohne_zuordnung: erg.sfv_teams_ohne_zuordnung,
+    sfv_teams_ohne_zuordnung_aktiv: erg.sfv_teams_ohne_zuordnung_aktiv,
     derbys: erg.derbys,
   };
   if (erg.saison) raus.saison = erg.saison;
