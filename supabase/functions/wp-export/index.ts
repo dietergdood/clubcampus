@@ -732,11 +732,16 @@ async function holeStatus() {
     empfaenger: String(wp.empfaenger ?? "— antwortet ohne Namen, also aeltere Fassung"),
     version: String(wp.version ?? "—"),
     /* ⚠ Die Antwort auf den dritten Anlauf: der Schluessel, an dem die
-       Team-Zuordnung haengt, und ob ueberhaupt eine besteht. */
+       Team-Zuordnung haengt, und ob ueberhaupt eine besteht.
+
+       ⚠ `wp_`-Praefix seit dem 10.09.2026, und es ist kein Zierrat: die
+       Zahlen zaehlen WORDPRESS-Beitraege. Ohne das Praefix wurden sie an
+       einem Abend zweimal fuer ClubCampus-Teams gehalten. Wieviele Teams
+       ClubCampus fuehrt, steht in `probe.teams`, nicht hier. */
     meta_schluessel: String(wp.meta_schluessel ?? "—"),
-    teams_gesamt: Number(wp.teams_gesamt ?? 0),
-    teams_zugeordnet: Number(wp.teams_zugeordnet ?? 0),
-    teams_mehrfach: Number(wp.teams_mehrfach ?? 0),
+    wp_teams: Number(wp.wp_teams ?? 0),
+    wp_teams_mit_sfv_id: Number(wp.wp_teams_mit_sfv_id ?? 0),
+    wp_teams_sfv_id_doppelt: Number(wp.wp_teams_sfv_id_doppelt ?? 0),
     /* Nur veröffentlichte. */
     spiele_veroeffentlicht: Number(wp.spiele_gesamt ?? 0),
     /* ⚠ Die entscheidende Zahl: Beiträge mit sfv_match_id, ALLE Status. */

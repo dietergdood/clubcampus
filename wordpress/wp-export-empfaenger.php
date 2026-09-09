@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.2.0
+ * Version:     0.3.0
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -130,12 +130,15 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.3.0 (10.09.2026): die drei Team-Zahlen in `/status` heissen `wp_teams*`
+   — sie zaehlen WordPress-Beitraege, und der alte Name sagte das nicht.
+
    0.2.0 (09.09.2026): Gruppen werden auf `schluessel` abgelegt statt auf
    `sfv_gruppe_id` (zwei Gruppen mit derselben Nummer ueberschrieben
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.2.0';
+const CC_VERSION    = '0.3.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -499,7 +502,7 @@ function cc_doppelte_match_ids(): array {
  *     `meta_schluessel` an welchem Feld gesucht wird
  *     `teams_*`         ob ueberhaupt ein Team zugeordnet ist
  *
- *   ⚠ `teams_zugeordnet = 0` bei `teams_gesamt > 0` ist die Antwort auf
+ *   ⚠ `wp_teams_mit_sfv_id = 0` bei `wp_teams > 0` ist die Antwort auf
  *   Fall 3 in einer Sekunde. Sie macht die Route NICHT rot — ein
  *   Empfaenger ohne Zuordnung ist betriebsbereit, nur nutzlos, und ein
  *   503 wuerde den Unterschied zu Fall 1 wieder einebnen.
@@ -528,7 +531,21 @@ function cc_route_status(): WP_REST_Response {
 			/* Der Schluessel, an dem die Team-Zuordnung haengt. Steht er hier,
 			   muss ihn niemand aus dem Quelltext holen. */
 			'meta_schluessel'  => CC_META_TEAM_SFV,
-			'teams_gesamt'     => count(
+			/* ⚠ ⚠  DIE NAMEN SAGEN, WESSEN TEAMS GEZAEHLT WERDEN  ⚠ ⚠
+			   Umbenannt am 10.09.2026, alter Wortlaut: `teams_gesamt`,
+			   `teams_zugeordnet`, `teams_mehrfach`.
+
+			   Sie zaehlen **WordPress-Beitraege**, nicht ClubCampus-Teams —
+			   `cc_team_karte()` fragt `get_posts( post_type = fch_team )`.
+			   Ohne das Praefix las derselbe Abend zweimal in die falsche
+			   Richtung: einmal wurden 11 WordPress-Beitraege fuer 11
+			   ClubCampus-Teams gehalten, einmal sollte `teams_zugeordnet`
+			   in `teams_in_clubcampus` umbenannt werden — was den Namen
+			   genau andersherum falsch gemacht haette.
+
+			   > Eine Zahl, deren Name nicht sagt, WESSEN Dinge sie zaehlt,
+			   > ist in einer Kette aus zwei Systemen keine Auskunft. */
+			'wp_teams'              => count(
 				get_posts(
 					array(
 						'post_type'   => CC_TYP_TEAM,
@@ -538,8 +555,8 @@ function cc_route_status(): WP_REST_Response {
 					)
 				)
 			),
-			'teams_zugeordnet' => count( $karte ) - $mehrfach,
-			'teams_mehrfach'   => $mehrfach,
+			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
+			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
 			'spiele_abgleich'  => count( cc_abgleich_kandidaten() ),
 			'benutzer'         => wp_get_current_user()->user_login,
