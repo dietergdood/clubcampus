@@ -882,20 +882,51 @@ async function laufeProbe(
     .eq("verein_id", vereinId);
   if (zRes.error) throw new Error(`Zuordnung nicht lesbar: ${zRes.error.message}`);
 
-  const namen = new Map<number, string>();
+  /* ══════════════════════════════════════════════════════════════════
+     DIE RUECKFALLKETTE: zugeordnet → SFV-Name → Rueckennummer
+
+     ⚠ `beschreibeWer()` wird dafuer NICHT angefasst. Es nimmt eine Map;
+     die Kette entsteht allein aus der REIHENFOLGE, in der hier gefuellt
+     wird — erst der Rueckfall, dann die Zuordnungen darueber. Wer
+     zugeordnet ist, gewinnt.
+
+     ⚠ ZWEI MENGEN BLEIBEN GETRENNT, obwohl eine Map genuegen wuerde.
+     Der Zaehler unten braucht sie einzeln: mischte man sie hier und
+     zaehlte gegen die Mischung, meldete `zeilen_mit_eigenem_namen` bei
+     308 SFV-Namen und 0 Zuordnungen dreistellige Werte — und saehe aus
+     wie ein Erfolg der Zuordnungsarbeit, die nicht stattgefunden hat.
+     ══════════════════════════════════════════════════════════════════ */
+  const sfvNamen = new Map<number, string>();
+  const sRes = await db.from("sfv_personen")
+    .select("sfv_person_id, name").eq("verein_id", vereinId);
+  /* ⚠ `error` lesen, nicht nur `data`: eine gescheiterte Abfrage saehe
+     sonst aus wie „es gibt keine Namen" — und auf der Website stuende
+     ueberall „Nr. 13", ohne dass etwas fehlschlaegt. */
+  if (sRes.error) throw new Error(`SFV-Namen nicht lesbar: ${sRes.error.message}`);
+  for (const z of (sRes.data ?? []) as { sfv_person_id: number; name: string }[]) {
+    const n = String(z.name ?? "").trim();
+    if (n) sfvNamen.set(Number(z.sfv_person_id), n);
+  }
+
+  const zugeordnet = new Map<number, string>();
   for (const z of (zRes.data ?? []) as ZuordnungZeile[]) {
     const p = z.mitglieder?.personen;
     if (!p) continue;
     const voll = `${p.vorname ?? ""} ${p.nachname ?? ""}`.trim();
-    if (voll) namen.set(Number(z.sfv_person_id), voll);
+    if (voll) zugeordnet.set(Number(z.sfv_person_id), voll);
   }
+
+  /* Erst der Rueckfall, dann die Wahrheit darueber. */
+  const namen = new Map<number, string>([...sfvNamen, ...zugeordnet]);
 
   /* ── Bauen ───────────────────────────────────────────────────────── */
   const gebaut: WpSpiel[] = [];
   let ohneVerlauf = 0;
   let ohneSchluessel = 0;
   let zurueckgehalten = 0;
-  const namensZaehlung = { mit_personenname: 0, mit_rueckennummer: 0, mit_gegnername: 0 };
+  const namensZaehlung = {
+    mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
+  };
 
   for (const s of eigene) {
     const roh = proSpiel.get(String(s.id)) ?? [];
@@ -911,8 +942,9 @@ async function laufeProbe(
        Fassung las den Ausgabetext („beginnt nicht mit Nr. ") und meldete
        431 statt 0, weil jede Gegnerzeile einen Vereinsnamen traegt.
        Siehe zaehleVerlaufNamen(). */
-    const z = zaehleVerlaufNamen(ereignisse, namen);
-    namensZaehlung.mit_personenname += z.mit_personenname;
+    const z = zaehleVerlaufNamen(ereignisse, zugeordnet, sfvNamen);
+    namensZaehlung.mit_eigenem_namen += z.mit_eigenem_namen;
+    namensZaehlung.mit_sfv_namen += z.mit_sfv_namen;
     namensZaehlung.mit_rueckennummer += z.mit_rueckennummer;
     namensZaehlung.mit_gegnername += z.mit_gegnername;
   }
@@ -923,7 +955,7 @@ async function laufeProbe(
      Zeilenzahl auseinander, misst eine der beiden Funktionen etwas
      anderes als die andere — und dann ist die Zahl unbrauchbar, egal wie
      plausibel sie aussieht. */
-  const summe = namensZaehlung.mit_personenname
+  const summe = namensZaehlung.mit_eigenem_namen + namensZaehlung.mit_sfv_namen
     + namensZaehlung.mit_rueckennummer + namensZaehlung.mit_gegnername;
 
   return {
@@ -937,11 +969,22 @@ async function laufeProbe(
       ohne_verlauf: ohneVerlauf,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
-      /* ⚠ Die Zahl, auf die es beim Gegenlesen ankommt: wie viele Zeilen
-         nennen einen MENSCHEN beim Namen. Solange `zuordnungen` 0 ist,
-         muss auch sie 0 sein — und wenn nicht, ist das der Befund. */
-      zuordnungen: namen.size,
-      zeilen_mit_personenname: namensZaehlung.mit_personenname,
+      /* ⚠ ZWEI SORTEN NAME, GETRENNT AUSGEWIESEN (seit 10.09.2026).
+         Bis dahin gab es nur eine, und `zeilen_mit_personenname` war die
+         Zahl, an der man ablas, ob Klarnamen hinausgehen. Seit die
+         SFV-Namen gespeichert werden, beantwortet EINE Zahl die Frage
+         nicht mehr:
+
+           zeilen_mit_eigenem_namen   unsere Schreibweise — der Sollzustand
+           zeilen_mit_sfv_namen       der Rueckfall — hoch, solange die
+                                      Zuordnung nicht gemacht ist
+
+         Beide zusammen sind „ein Mensch wird beim Namen genannt". Die
+         erste allein sagt, wie weit die Zuordnungsarbeit ist. */
+      zuordnungen: zugeordnet.size,
+      sfv_namen: sfvNamen.size,
+      zeilen_mit_eigenem_namen: namensZaehlung.mit_eigenem_namen,
+      zeilen_mit_sfv_namen: namensZaehlung.mit_sfv_namen,
       zeilen_mit_rueckennummer: namensZaehlung.mit_rueckennummer,
       zeilen_mit_gegnername: namensZaehlung.mit_gegnername,
       zaehlung_stimmt: summe === verlaufZeilen,

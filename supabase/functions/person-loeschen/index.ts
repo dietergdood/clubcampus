@@ -58,6 +58,13 @@ const GUELTIG_MINUTEN = 10;
    Gemessen am 23.08.2026 aus `pg_constraint`, nicht abgeschrieben. */
 const FAELLT = [
   "mitglieder", "kader", "anwesenheiten", "mitglieder_team_details", "sfv_zuordnung",
+  /* ⚠ SEIT 10.09.2026. Sie haengt an KEINER mitglied_id und kaskadiert
+     deshalb nicht — sie muss von Hand mit. Bliebe sie stehen, erschiene
+     die geloeschte Person beim naechsten Website-Export wieder, nur in
+     der Schreibweise des Verbands statt in unserer. Eine Loeschung, die
+     den Namen wieder sichtbar macht, ist das Gegenteil dessen, was sie
+     soll. Siehe migration_sfv_personen.sql. */
+  "sfv_personen",
   "eltern_kinder_als_elternteil", "eltern_kinder_als_kind",
   "benutzer", "personenart_pro_person",
   "mitglieder_notizen", "mitglieder_aenderungen", "mitglieder_aktivitaeten",
@@ -91,6 +98,9 @@ const BLOCKIERT = [
 const UNTER: Record<string, string> = {
   kader: "mitglieder", anwesenheiten: "mitglieder",
   mitglieder_team_details: "mitglieder", sfv_zuordnung: "mitglieder",
+  /* Eingerueckt unter die Zuordnung: ohne sie gaebe es keinen Bezug
+     zwischen dieser Person und einer SFV-Personennummer. */
+  sfv_personen: "sfv_zuordnung",
   eltern_kinder_als_kind: "mitglieder",
 };
 
@@ -119,12 +129,27 @@ async function zaehle(db: SupabaseClient, personId: string): Promise<{
     return count ?? 0;
   };
 
+  /* Die Personennummern des Verbands, die an den Mitgliedschaften dieser
+     Person haengen. Nur ueber sie ist `sfv_personen` zuzuordnen. */
+  const sfvPersonIds: number[] = [];
+  if (mitgliedIds.length) {
+    const { data: zu, error: zErr } = await db.from("sfv_zuordnung")
+      .select("sfv_person_id").in("mitglied_id", mitgliedIds);
+    if (zErr) console.error("zaehle sfv_zuordnung/ids:", zErr.message);
+    for (const z of zu ?? []) sfvPersonIds.push(Number(z.sfv_person_id));
+  }
+
   const zahlen: Record<string, number> = {
     mitglieder: mitgliedIds.length,
     kader: await n("kader", "mitglied_id", mitgliedIds),
     anwesenheiten: await n("anwesenheiten", "mitglied_id", mitgliedIds),
     mitglieder_team_details: await n("mitglieder_team_details", "mitglied_id", mitgliedIds),
     sfv_zuordnung: await n("sfv_zuordnung", "mitglied_id", mitgliedIds),
+    /* ⚠ ZAEHLT UEBER DIE ZUORDNUNG, nicht ueber die Person: `sfv_personen`
+       kennt nur die Personennummer des Verbands. Wer nicht zugeordnet ist,
+       hat hier auch keine Zeile, die ihm zuzurechnen waere — und dann ist
+       0 die richtige Zahl und keine Luecke. */
+    sfv_personen: sfvPersonIds.length,
     eltern_kinder_als_elternteil: await n("eltern_kinder", "person_id", [personId]),
     eltern_kinder_als_kind: await n("eltern_kinder", "mitglied_id", mitgliedIds),
     benutzer: kontoIds.length,
@@ -373,6 +398,21 @@ Deno.serve(async (req) => {
      mitglieder); alles andere kaskadiert oder wird auf NULL gesetzt. */
   const { data: mids } = await db.from("mitglieder").select("id").eq("person_id", personId);
   const mitgliedIds = (mids ?? []).map(m => m.id as number);
+
+  /* ⚠ ⚠  VOR DEN MITGLIEDSCHAFTEN — die Reihenfolge ist die ganze Sache.
+     `sfv_zuordnung` kaskadiert mit `mitglieder`. Ist sie erst weg, gibt es
+     keinen Weg mehr von dieser Person zu ihrer SFV-Personennummer, und
+     die Namenszeile bliebe fuer immer stehen — ohne dass etwas
+     fehlschlaegt. Genau die Sorte Rest, die niemand mehr findet. */
+  if (mitgliedIds.length) {
+    const { data: zu } = await db.from("sfv_zuordnung")
+      .select("sfv_person_id").in("mitglied_id", mitgliedIds);
+    const ids = (zu ?? []).map((z) => Number(z.sfv_person_id));
+    if (ids.length) {
+      const { error } = await db.from("sfv_personen").delete().in("sfv_person_id", ids);
+      if (error) return json({ fehler: `SFV-Namen: ${error.message}` }, 500);
+    }
+  }
 
   if (mitgliedIds.length) {
     const { error } = await db.from("eltern_kinder").delete().in("mitglied_id", mitgliedIds);

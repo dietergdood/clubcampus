@@ -306,9 +306,17 @@ export function bildeVerlauf(
 /* ── Zählen, wer beim Namen genannt wird ──────────────────────────── */
 
 export interface NamensZaehlung {
-  /** Zeilen, die einen zugeordneten eigenen Spieler beim Namen nennen. */
-  mit_personenname: number;
-  /** Eigene Spieler ohne Zuordnung — „Nr. 13". */
+  /**
+   * Zeilen mit einem zugeordneten Spieler — **unsere** Schreibweise.
+   *
+   * ⚠ HIESS BIS ZUM 10.09.2026 `mit_personenname` UND MEINTE DASSELBE.
+   * Umbenannt, weil daneben eine zweite Sorte Name entstanden ist. Siehe
+   * den Warnblock über `zaehleVerlaufNamen`.
+   */
+  mit_eigenem_namen: number;
+  /** Zeilen mit dem Namen aus der SFV-Ablage — der Rückfall. */
+  mit_sfv_namen: number;
+  /** Eigene Spieler ohne jeden Namen — „Nr. 13". */
   mit_rueckennummer: number;
   /** Gegner — der Mannschaftsname, nie eine Person. */
   mit_gegnername: number;
@@ -339,14 +347,45 @@ export interface NamensZaehlung {
  * Hier wird gefragt, was tatsächlich gilt: ist die Zeile von uns, und
  * steht für ihre `sfv_person_id` ein Name in der Zuordnung?
  *
- * ⚠ Die drei Zahlen ergeben zusammen die Zeilenzahl aus `bildeVerlauf()`.
+ * ⚠ Die vier Zahlen ergeben zusammen die Zeilenzahl aus `bildeVerlauf()`.
  * Das ist keine Nettigkeit, sondern die Gegenprobe: gehen sie auseinander,
  * zählt eine der beiden Funktionen etwas anderes als die andere.
+ *
+ * ══════════════════════════════════════════════════════════════════════
+ * ⚠ ⚠  WARUM SIE AM 10.09.2026 VIER ZAHLEN STATT DREI LIEFERT  ⚠ ⚠
+ *
+ * Seit dem Entscheid, die SFV-Namen zu speichern, gibt es ZWEI Sorten
+ * Name: den zugeordneten (unsere Schreibweise) und den des Verbands
+ * (Rückfall). Der Export mischt beide in EINE Map, damit
+ * `beschreibeWer()` unverändert bleiben kann.
+ *
+ * **Genau dadurch hätte dieselbe Funktion ab sofort etwas anderes
+ * gemessen** — „steht irgendein Name da" statt „ist jemand zugeordnet".
+ * Bei 308 SFV-Namen und 0 Zuordnungen hätte sie dreistellige Werte
+ * gemeldet und ausgesehen wie ein grosser Erfolg der Zuordnungsarbeit,
+ * die gar nicht stattgefunden hat.
+ *
+ * **Kein Test wäre rot geworden.** Die Funktion rechnet weiterhin
+ * richtig; nur die Frage darunter hatte sich geändert.
+ *
+ * > Eine Zahl, deren Bedeutung sich ändert, ohne dass ihr Name sich
+ * > ändert, ist gefährlicher als eine falsche Zahl — die falsche fällt
+ * > auf.
+ *
+ * Deshalb bekommt sie die zwei Mengen GETRENNT und mischt sie nicht
+ * selbst. Wer sie mit einer Map aufruft, ruft das Falsche.
+ * ══════════════════════════════════════════════════════════════════════
  */
 export function zaehleVerlaufNamen(
-  ereignisse: AnzeigeEreignis[], namen: Map<number, string>,
+  ereignisse: AnzeigeEreignis[],
+  /** Die Zuordnungen — unsere Schreibweise, sie gewinnt. */
+  zugeordnet: ReadonlySet<number> | Map<number, string>,
+  /** Die Namen aus der SFV-Ablage — der Rückfall. */
+  sfvNamen: ReadonlySet<number> | Map<number, string> = new Set<number>(),
 ): NamensZaehlung {
-  const z: NamensZaehlung = { mit_personenname: 0, mit_rueckennummer: 0, mit_gegnername: 0 };
+  const z: NamensZaehlung = {
+    mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
+  };
 
   for (const e of ereignisse) {
     /* Derselbe Filter wie in bildeVerlauf — was dort wegfällt, darf hier
@@ -354,7 +393,12 @@ export function zaehleVerlaufNamen(
     if (!verlaufArt(e.typ_id, e.subtyp_id ?? null)) continue;
 
     if (!e.ist_eigener) { z.mit_gegnername++; continue; }
-    if (e.sfv_person_id != null && namen.has(e.sfv_person_id)) { z.mit_personenname++; continue; }
+    const id = e.sfv_person_id;
+    /* ⚠ Die Reihenfolge ist die Aussage — dieselbe wie in der Anzeige:
+       zugeordnet gewinnt, sonst der SFV-Name, sonst die Nummer. Wer sie
+       hier anders sortiert, misst etwas anderes als die Website zeigt. */
+    if (id != null && zugeordnet.has(id)) { z.mit_eigenem_namen++; continue; }
+    if (id != null && sfvNamen.has(id)) { z.mit_sfv_namen++; continue; }
     z.mit_rueckennummer++;
   }
 

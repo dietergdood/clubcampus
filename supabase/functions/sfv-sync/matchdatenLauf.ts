@@ -19,6 +19,7 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { holeMatch, holeAufstellung, holeEreignisse, holeSchiedsrichter, holeTeamBild, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
+import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import {
   bildeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
@@ -53,7 +54,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -146,6 +147,15 @@ export async function laufeMatchdaten(
   }
 
   const pass = await schreibePaesse(db, v.verein_id, alleRoh, unsereClubNummer);
+  /* ⚠ DIE NAMEN, aus denselben Rohdaten wie die Aufstellung — null
+     zusaetzliche Abrufe. Nach der Schleife und nicht darin: derselbe
+     Spieler steht in mehreren Spielen, und ein Stapel je Spiel schriebe
+     dieselbe Zeile mehrfach. */
+  if (alleRoh.length) {
+    const namen = await schreibeSfvPersonen(db, alleRoh, unsereClubNummer, v.verein_id, jetzt);
+    erg.namen_geschrieben = namen.geschrieben;
+  }
+
   erg.paesse_geschrieben = pass.geschrieben;
   erg.pass_konflikte = pass.konflikte;
   erg.nachzug_meldungen = await pruefeNachzug(db, v.verein_id);

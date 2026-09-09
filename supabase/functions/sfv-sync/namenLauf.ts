@@ -21,11 +21,25 @@
 //   vollstaendige Auskunft verspricht, muss die Spiele nach der FRAGE
 //   waehlen und nicht nach dem Zeitplan.
 //
-// ⚠ SIE SCHREIBT NICHTS. Kein Upsert nach `spiel_aufstellung`, kein
-//   `matchdaten_geholt_am`, kein `letzter_sync`. Sie liest Namen und gibt
-//   sie in der Antwort zurueck. Jeder Schreibvorgang waere ein weiterer
-//   Ausgang, den jemand pruefen muesste — siehe CLAUDE.md, „ein neues Feld
-//   erbt jeden Ausgang des Objekts, an dem es haengt".
+// ⚠ ⚠  BERICHTIGT AM 10.09.2026 — SIE SCHREIBT JETZT, UND ZWAR EINES.
+//
+//   Hier stand: „SIE SCHREIBT NICHTS. Kein Upsert nach `spiel_aufstellung`,
+//   kein `matchdaten_geholt_am`, kein `letzter_sync`. … Jeder
+//   Schreibvorgang waere ein weiterer Ausgang, den jemand pruefen muesste."
+//
+//   Der Satz stimmt weiterhin — es ist jetzt nur ein Ausgang, den wir
+//   WOLLEN: `sfv_personen`. Die Begruendung fuer die Umkehr steht in
+//   supabase/migration_sfv_personen.sql.
+//
+//   ⚠ UNVERAENDERT bleiben die drei, die dort namentlich standen: kein
+//   Upsert nach `spiel_aufstellung`, kein `matchdaten_geholt_am`, kein
+//   `letzter_sync`. Diese Aktion faelscht den Stand des Syncs nicht.
+//
+//   ⚠ UND WARUM SIE HIER UEBERHAUPT SCHREIBT: der stuendliche Lauf holt
+//   zehn Spiele, nach DATUM gewaehlt. Am 22.08.2026 waren damit 48 von 177
+//   offenen Spielern ueberhaupt nicht erreichbar — ihre Spiele sind aelter
+//   als sieben Tage. Schriebe nur der Sync, fehlte fuer diese 27 % dauerhaft
+//   der Name, und auf der Website stuende bei ihnen „Nr. 13".
 //
 // ⚠ EIN TOKEN, VIELE GETs. `holeToken` holt der Aufrufer EINMAL; hier laufen
 //   ausschliesslich `GET /api/match/{id}/players`. Die SFV-API kennt pro
@@ -38,11 +52,14 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { holeAufstellung, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { bildeOffeneNamen } from "./matchdaten.ts";
+import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import type { OffenerName, SfvRoh } from "./matchdaten.ts";
 
 export interface NamenErgebnis {
   spiele_abgefragt: number;
   namen_gefunden: number;
+  /** Zeilen nach `sfv_personen` — seit 10.09.2026, siehe Kopf. */
+  namen_geschrieben: number;
   fehler: number;
   /** Wie viele Spieler ueberhaupt offen sind — fuer den ehrlichen Satz in
       der Maske („171 von 177"). */
@@ -66,6 +83,10 @@ export function namenFuersProtokoll(erg: NamenErgebnis): Record<string, unknown>
   return {
     spiele_abgefragt: erg.spiele_abgefragt,
     namen_gefunden: erg.namen_gefunden,
+    /* ⚠ Die ZAHL darf ins Protokoll, die Namen nicht. `erg.namen` steht
+       bewusst nicht hier — siehe den Fund vom 21.08.2026, als 903 Klarnamen
+       ueber `details: erg` in api_sync_log landeten. */
+    namen_geschrieben: erg.namen_geschrieben,
     fehler: erg.fehler,
   };
 }
@@ -80,7 +101,8 @@ export async function laufeNamen(
   unsereClubNummer: number | null,
 ): Promise<NamenErgebnis> {
   const erg: NamenErgebnis = {
-    spiele_abgefragt: 0, namen_gefunden: 0, fehler: 0, offen_gesamt: 0, namen: [],
+    spiele_abgefragt: 0, namen_gefunden: 0, namen_geschrieben: 0,
+    fehler: 0, offen_gesamt: 0, namen: [],
   };
 
   /* Ohne clubNumber gilt niemand als eigen (istEigener) — der Lauf gaebe
@@ -132,5 +154,17 @@ export async function laufeNamen(
 
   erg.namen = bildeOffeneNamen(alleRoh, unsereClubNummer, zugeordnet);
   erg.namen_gefunden = erg.namen.length;
+
+  /* ⚠ GESCHRIEBEN WIRD AUS `alleRoh`, NICHT AUS `erg.namen`.
+     Die beiden Mengen sind verschieden, und der Unterschied ist genau der
+     Zweck: `bildeOffeneNamen` laesst bereits Zugeordnete weg — fuer die
+     Maske richtig, fuer den Bestand falsch. Ein zugeordneter Spieler soll
+     seinen SFV-Namen trotzdem haben, sonst faellt der Rueckfall weg, sobald
+     jemand eine Zuordnung wieder loest. */
+  if (alleRoh.length) {
+    const g = await schreibeSfvPersonen(db, alleRoh, unsereClubNummer, v.verein_id,
+                                        new Date().toISOString());
+    erg.namen_geschrieben = g.geschrieben;
+  }
   return erg;
 }

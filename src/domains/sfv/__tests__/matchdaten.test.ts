@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
+  bildeSfvPerson, entdoppleSfvPersonen,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -347,5 +348,76 @@ describe("bildeOffeneNamen", () => {
 
   it("ohne clubNumber gilt niemand als eigen — wie bei bildeAufstellung", () => {
     expect(bildeOffeneNamen([SPIELER({})], null, new Set())).toEqual([]);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   bildeSfvPerson — der Entscheid vom 22.08.2026 ist umgedreht (10.09.2026)
+
+   Die Namen werden jetzt GESPEICHERT. Was dabei NICHT umgedreht wurde,
+   ist das, was diese Faelle festhalten: Gegner bleiben anonym, und die
+   Allowlist bleibt das erste Netz.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("bildeSfvPerson", () => {
+  const P = (ueber: Record<string, unknown> = {}) => ({
+    clubNumber: UNSERE, personId: 500, firstname: "Adrian", name: "Schmid",
+    secondName: "Karl", jerseyNumber: 9, teamId: 38309,
+    /* Alles, was NICHT mitreisen darf: */
+    birthDate: "2001-03-04", passportNumber: 987654, gender: "m",
+    personName: "Schmid Adrian Karl",
+    ...ueber,
+  });
+
+  it("nimmt genau sechs Felder — und keines der gesperrten", () => {
+    const z = bildeSfvPerson(P(), UNSERE, "v-1", JETZT);
+    expect(z).toEqual({
+      verein_id: "v-1", sfv_person_id: 500, name: "Adrian Schmid",
+      sfv_team_id: 38309, rueckennr: 9, zuletzt_gesehen: JETZT,
+    });
+  });
+
+  it("⚠ GEGNER BLEIBEN ANONYM — auch nach dem umgedrehten Entscheid", () => {
+    /* Der Entscheid vom 10.09.2026 handelt ausschliesslich von EIGENEN
+       Spielern. Faellt diese Zeile, ist die Umdrehung zu weit gegangen. */
+    expect(bildeSfvPerson(P({ clubNumber: FREMD }), UNSERE, "v-1", JETZT)).toBeNull();
+  });
+
+  it("⚠ ein zweiter Vorname reist nicht mit", () => {
+    const z = bildeSfvPerson(P(), UNSERE, "v-1", JETZT);
+    expect(z?.name).toBe("Adrian Schmid");
+    expect(z?.name).not.toContain("Karl");
+  });
+
+  it("laesst eine Zeile ohne Namen ganz weg, statt sie leer zu schreiben", () => {
+    /* `name` ist NOT NULL — und eine leere Zeile saehe in der Maske aus wie
+       ein Spieler OHNE Namen statt wie einer, dessen Name fehlt. */
+    expect(bildeSfvPerson(P({ firstname: null, name: null }), UNSERE, "v-1", JETZT)).toBeNull();
+  });
+
+  it("kommt ohne Rueckennummer und ohne Team aus", () => {
+    const z = bildeSfvPerson(P({ jerseyNumber: null, teamId: null }), UNSERE, "v-1", JETZT);
+    expect(z).toMatchObject({ rueckennr: null, sfv_team_id: null, name: "Adrian Schmid" });
+  });
+});
+
+describe("entdoppleSfvPersonen", () => {
+  const Z = (id: number, nr: number | null) => ({
+    verein_id: "v-1", sfv_person_id: id, name: `Nr ${nr}`,
+    sfv_team_id: null, rueckennr: nr, zuletzt_gesehen: JETZT,
+  });
+
+  it("⚠ derselbe Spieler in zwei Spielen ergibt EINE Zeile", () => {
+    /* Ohne das scheitert der ganze Upsert-Stapel mit 21000 — nicht die
+       eine Zeile, sondern alle. */
+    expect(entdoppleSfvPersonen([Z(500, 9), Z(501, 4), Z(500, 13)])).toHaveLength(2);
+  });
+
+  it("behaelt den SPAETEREN Treffer — die juengste Momentaufnahme", () => {
+    const r = entdoppleSfvPersonen([Z(500, 9), Z(500, 13)]);
+    expect(r[0].rueckennr).toBe(13);
+  });
+
+  it("laesst eine leere Liste leer", () => {
+    expect(entdoppleSfvPersonen([])).toEqual([]);
   });
 });

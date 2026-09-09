@@ -36,7 +36,8 @@ const LAUF: LaufErgebnis = {
   logos: { geholt: 3, fehlt: 1 },
   matchdaten: {
     spiele_geholt: 10, aufstellung_zeilen: 156, ereignisse_zeilen: 42,
-    eigene_unzugeordnet: 177, zuordnungen_gesamt: 0, paesse_geschrieben: 0,
+    eigene_unzugeordnet: 177, zuordnungen_gesamt: 0,
+    namen_geschrieben: 42, paesse_geschrieben: 0,
     pass_konflikte: ["Mitglied 633: zwei Passnummern"],
     nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   },
@@ -52,7 +53,8 @@ describe("fuersProtokoll", () => {
     const md = fuersProtokoll(LAUF).matchdaten as Record<string, unknown>;
     expect(Object.keys(md).sort()).toEqual([
       "aufstellung_zeilen", "eigene_unzugeordnet", "ereignisse_zeilen", "fehler",
-      "fehlermeldungen", "nachzug_meldungen", "paesse_geschrieben", "pass_konflikte",
+      "fehlermeldungen", "nachzug_meldungen", "namen_geschrieben", "paesse_geschrieben",
+      "pass_konflikte",
       "spiele_geholt", "zuordnungen_gesamt",
     ]);
   });
@@ -215,5 +217,21 @@ describe("saisonWechsel — einmalig ohne Merker", () => {
     expect(saisonWechsel(null, 2027).gewechselt).toBe(false);
     expect(saisonWechsel(undefined, 2027).gewechselt).toBe(false);
     expect(saisonWechsel(Number.NaN, 2027).gewechselt).toBe(false);
+  });
+});
+
+describe("Die Namen im Protokoll — die Zahl, nie die Namen", () => {
+  it("laesst namen_geschrieben durch", () => {
+    const p = fuersProtokoll(LAUF) as Record<string, Record<string, unknown>>;
+    expect(p.matchdaten.namen_geschrieben).toBe(42);
+  });
+
+  it("⚠ und traegt kein Feld, das einen Namen enthalten koennte", () => {
+    /* Der Fund vom 21.08.2026: `offene_namen` reiste ueber `details: erg`
+       nach api_sync_log — 903 Klarnamen in sieben Laeufen. Die Allowlist
+       ist die Gegenmassnahme, und diese Zeile haelt sie fest. */
+    const roh = JSON.stringify(fuersProtokoll(LAUF));
+    expect(roh).not.toMatch(/name["']?\s*:\s*["'][A-Z]/);
+    expect(roh).not.toContain("offene_namen");
   });
 });

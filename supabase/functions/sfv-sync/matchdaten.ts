@@ -142,6 +142,75 @@ export function bildeEreignis(
   };
 }
 
+/* ── Der Klarname einer eigenen Person ────────────────────────────────────
+
+   ⚠ ⚠  HIER WIRD DER ENTSCHEID VOM 22.08.2026 UMGEDREHT  ⚠ ⚠
+   Die Begruendung steht vollstaendig in migration_sfv_personen.sql und wird
+   hier nicht wiederholt — sie gehoert an die Stelle, die die Struktur
+   anlegt, nicht an die, die sie fuellt. Kurz: die Namen sollen auf die
+   Website, damit haben sie einen dauerhaften Zweck, und dieselben Namen
+   stehen oeffentlich auf fvrz.ch.
+
+   ⚠ WAS SICH NICHT AENDERT — und was der naechste Leser zuerst pruefen
+   wird: `istEigener` steht unveraendert an derselben Stelle. Vom Gegner
+   wird hier nichts gebildet, `null` zurueckgegeben, fertig. Der Constraint
+   in der Datenbank ist das zweite Netz und bleibt ebenfalls.
+
+   ⚠ DIE ALLOWLIST IST DAS ERSTE NETZ, und sie gilt hier genauso wie in
+   bildeAufstellung(): jedes Feld einzeln beim Namen. `birthDate`,
+   `passportNumber`, `gender` und `secondName` werden nicht gefiltert,
+   sondern GAR NICHT GELESEN — ein neues Feld der Gegenseite reist damit
+   nicht mit.
+
+   ⚠ `secondName` bleibt weg: ein zweiter Vorname hilft beim Wiedererkennen
+   nicht und macht die Zeile nur laenger. Dieselbe Regel wie beim
+   Schiedsrichter und wie bei bildeOffeneNamen(). */
+export interface SfvPersonZeile {
+  verein_id: string;
+  sfv_person_id: number;
+  name: string;
+  sfv_team_id: number | null;
+  rueckennr: number | null;
+  zuletzt_gesehen: string;
+}
+
+export function bildeSfvPerson(
+  p: SfvRoh,
+  unsere: number | null,
+  vereinId: string,
+  jetzt: string,
+): SfvPersonZeile | null {
+  if (!istEigener(p.clubNumber, unsere)) return null;
+  const id = zahl(p.personId);
+  if (id === null) return null;
+  const name = [text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim();
+  /* Ohne Namen keine Zeile: `name` ist NOT NULL, und eine leere Zeile
+     saehe in der Maske aus wie ein Spieler ohne Namen statt wie einer,
+     dessen Name noch nicht geholt wurde. */
+  if (!name) return null;
+  return {
+    verein_id: vereinId,
+    sfv_person_id: id,
+    name,
+    sfv_team_id: zahl(p.teamId),
+    rueckennr: zahl(p.jerseyNumber),
+    zuletzt_gesehen: jetzt,
+  };
+}
+
+/* ⚠ EIN SPIELER STEHT IN MEHREREN SPIELEN DESSELBEN LAUFS.
+   Ein Upsert-Stapel mit zwei Zeilen desselben Schluessels laesst Postgres
+   mit `21000 ON CONFLICT DO UPDATE command cannot affect row a second
+   time` scheitern — der ganze Stapel, nicht die eine Zeile. Deshalb wird
+   vor dem Schreiben entdoppelt, und zwar auf den SPAETEREN Treffer: er
+   stammt aus dem zuletzt verarbeiteten Spiel, und `rueckennr` soll die
+   juengste Momentaufnahme sein. */
+export function entdoppleSfvPersonen(zeilen: SfvPersonZeile[]): SfvPersonZeile[] {
+  const nach = new Map<number, SfvPersonZeile>();
+  for (const z of zeilen) nach.set(z.sfv_person_id, z);
+  return [...nach.values()];
+}
+
 /* ── Namen der noch nicht zugeordneten eigenen Spieler ────────────────────
 
    ⚠ SIE WERDEN NICHT GESPEICHERT. Sie reisen in der ANTWORT des Laufs mit,

@@ -24,6 +24,8 @@ export interface MatchdatenErgebnis {
   zuordnungen_gesamt: number;
   /* Spielerpaesse, die der Verband geliefert hat und die sich geaendert
      haben. Jeder davon steht auch im Verlauf des Mitglieds. */
+  /** Zeilen nach `sfv_personen` — seit 10.09.2026. Die ZAHL, nie die Namen. */
+  namen_geschrieben: number;
   paesse_geschrieben: number;
   /* Mitglieder mit widerspruechlicher Zuordnung: zwei SFV-Personen, zwei
      Passnummern. Fuer sie wird NICHTS geschrieben — der Wert pendelte sonst
@@ -286,6 +288,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       ereignisse_zeilen: md.ereignisse_zeilen,
       eigene_unzugeordnet: md.eigene_unzugeordnet,
       zuordnungen_gesamt: md.zuordnungen_gesamt,
+      namen_geschrieben: md.namen_geschrieben,
       paesse_geschrieben: md.paesse_geschrieben,
       pass_konflikte: md.pass_konflikte,
       nachzug_meldungen: md.nachzug_meldungen,

@@ -245,33 +245,34 @@ describe("Klarnamen zaehlen — die Zahl vor dem scharfen Lauf", () => {
      Vereinsname ist kein Personenname. */
   it("zaehlt eine Gegnerzeile NICHT als Personennamen", () => {
     const z = zaehleVerlaufNamen([gegner, gegner], new Map());
-    expect(z.mit_personenname).toBe(0);
+    expect(z.mit_eigenem_namen).toBe(0);
     expect(z.mit_gegnername).toBe(2);
   });
 
   it("zaehlt einen unzugeordneten eigenen Spieler als Rueckennummer", () => {
     expect(zaehleVerlaufNamen([offen], namen).mit_rueckennummer).toBe(1);
-    expect(zaehleVerlaufNamen([offen], namen).mit_personenname).toBe(0);
+    expect(zaehleVerlaufNamen([offen], namen).mit_eigenem_namen).toBe(0);
   });
 
   it("zaehlt einen zugeordneten eigenen Spieler als Personennamen", () => {
-    expect(zaehleVerlaufNamen([zug], namen).mit_personenname).toBe(1);
+    expect(zaehleVerlaufNamen([zug], namen).mit_eigenem_namen).toBe(1);
   });
 
   it("meldet ohne jede Zuordnung null Personennamen", () => {
-    expect(zaehleVerlaufNamen([gegner, offen, zug], new Map()).mit_personenname).toBe(0);
+    expect(zaehleVerlaufNamen([gegner, offen, zug], new Map()).mit_eigenem_namen).toBe(0);
   });
 
   /* ⚠ DIE GEGENPROBE, die den Zaehler an bildeVerlauf bindet: gehen die
      beiden auseinander, misst einer etwas anderes als der andere. */
-  it("die drei Zahlen ergeben zusammen die Zeilen aus bildeVerlauf", () => {
+  it("die vier Zahlen ergeben zusammen die Zeilen aus bildeVerlauf", () => {
     const alle = [
       gegner, offen, zug,
       e({ typ_id: TYP_ASSIST }),                    // faellt in beiden weg
       e({ typ_id: TYP_VERWARNUNG, ist_eigener: true, sfv_person_id: 222 }),
     ];
     const z = zaehleVerlaufNamen(alle, namen);
-    const summe = z.mit_personenname + z.mit_rueckennummer + z.mit_gegnername;
+    const summe = z.mit_eigenem_namen + z.mit_sfv_namen
+      + z.mit_rueckennummer + z.mit_gegnername;
     expect(summe).toBe(bildeVerlauf(alle, true, namen, "FC Herrliberg").length);
   });
 });
@@ -350,5 +351,54 @@ describe("Liga und Gruppe je Spiel", () => {
   it("macht aus fehlender Liga einen leeren Text, keinen Ausfall", () => {
     const s = bildeSpiel(quelle({ liga: null }), "38309", [], new Map(), "FC Herrliberg");
     expect(s?.liga).toBe("");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Der SFV-Name ist der RUECKFALL, nicht die Wahrheit (10.09.2026)
+
+   ⚠ Diese Faelle halten fest, was der Zaehler NICHT tun darf: die
+   beiden Sorten Name in einen Topf werfen. Ohne sie meldete er bei 308
+   SFV-Namen und 0 Zuordnungen einen Erfolg der Zuordnungsarbeit, die
+   nicht stattgefunden hat.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("zaehleVerlaufNamen — zugeordnet gegen SFV-Rueckfall", () => {
+  const eig = e({ typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 222, rueckennr: 9 });
+  const sfv = e({ typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 333, rueckennr: 4 });
+  const nix = e({ typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 444, rueckennr: 7 });
+
+  const ZUGEORDNET = new Set([222]);
+  const SFV_NAMEN  = new Set([222, 333]);   // 222 hat BEIDES
+
+  it("⚠ zaehlt einen zugeordneten Spieler NICHT als SFV-Namen, obwohl beides da ist", () => {
+    /* Der Kern: 222 steht in beiden Mengen. Die Reihenfolge entscheidet,
+       und sie muss dieselbe sein wie in der Anzeige. */
+    const z = zaehleVerlaufNamen([eig], ZUGEORDNET, SFV_NAMEN);
+    expect(z).toMatchObject({ mit_eigenem_namen: 1, mit_sfv_namen: 0, mit_rueckennummer: 0 });
+  });
+
+  it("zaehlt den Rueckfall getrennt", () => {
+    const z = zaehleVerlaufNamen([sfv], ZUGEORDNET, SFV_NAMEN);
+    expect(z).toMatchObject({ mit_eigenem_namen: 0, mit_sfv_namen: 1, mit_rueckennummer: 0 });
+  });
+
+  it("wer in keiner Menge steht, bleibt eine Rueckennummer", () => {
+    const z = zaehleVerlaufNamen([nix], ZUGEORDNET, SFV_NAMEN);
+    expect(z).toMatchObject({ mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 1 });
+  });
+
+  it("⚠ ohne zweite Menge zaehlt sie wie vorher — kein SFV-Name ist kein Fehler", () => {
+    /* Der Aufruf mit einem Argument muss weiter das Alte tun, sonst
+       kippt die Bedeutung an jeder Stelle, die noch nicht umgestellt ist. */
+    const z = zaehleVerlaufNamen([eig, sfv, nix], ZUGEORDNET);
+    expect(z).toMatchObject({ mit_eigenem_namen: 1, mit_sfv_namen: 0, mit_rueckennummer: 2 });
+  });
+
+  it("die vier Zahlen ergeben auch mit Rueckfall die Zeilenzahl", () => {
+    const alle = [eig, sfv, nix, e({ typ_id: TYP_TOR, ist_eigener: false })];
+    const z = zaehleVerlaufNamen(alle, ZUGEORDNET, SFV_NAMEN);
+    const summe = z.mit_eigenem_namen + z.mit_sfv_namen
+      + z.mit_rueckennummer + z.mit_gegnername;
+    expect(summe).toBe(bildeVerlauf(alle, true, new Map(), "FC Herrliberg").length);
   });
 });
