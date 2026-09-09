@@ -1312,15 +1312,37 @@ auf ein MERKMAL prüft die Sache.* Verglichen wird über `teamId`, nie über
 den Namen — auch dann nicht, wenn die Namen „offensichtlich" zusammen-
 gehören.
 
-⚠ **Und eine Frage bleibt offen, die daraus folgt und grösser ist als der
-Anlass:** wenn dieselbe Mannschaft auf der Verbandsseite unter zwei
-Einträgen steht (Meisterschaft und Futsal), hat sie dann **zwei
-`teamId`**? Unsere Zuordnung ist 1:1 gebaut — eine `teams`-Zeile, eine
-Nummer. Träfe das zu, bekäme eine Mannschaft mit zwei Wettbewerben nur die
-Spiele des einen, **und niemand würde es merken**: die Spiele des anderen
-fielen unter `spiele.ohne_team`, gezählt und namenlos.
+#### ✅ Die 1:1-Zuordnung trägt — gemessen am 10.09.2026
 
-Zu messen an einer Mannschaft, die in beidem spielt — nicht angenommen.
+Die Frage lautete: hat dieselbe Mannschaft, die auf der Verbandsseite
+unter zwei Einträgen steht (Meisterschaft und Futsal), **zwei `teamId`**?
+Unsere Zuordnung ist 1:1 gebaut — eine `teams`-Zeile, eine Nummer.
+
+**Gemessen: `details.spiele.ohne_team` = 0 in vier aufeinanderfolgenden
+Läufen** (10.09.2026). Kein einziges geliefertes Spiel fällt durch die
+Zuordnung.
+
+⚠ **Was der Wert BELEGT und was nicht — der Unterschied ist die halbe
+Aussage:**
+
+| | |
+|---|---|
+| **belegt** | im gelieferten Klub-Spielplan steckt nichts, was wir nicht zuordnen können. Für alles, was ankommt, trägt 1:1 |
+| **nicht belegt** | dass es die zweite `teamId` nicht gibt. Deren Spiele könnten — wie die der acht ohne Tabelle — im Spielplan gar nicht erst stehen. Dann wäre `ohne_team` ebenfalls 0 |
+
+**Die richtige Formulierung ist deshalb: 1:1 trägt für den gesamten
+gelieferten Spielbetrieb.** Was die Schnittstelle nicht liefert, kann
+dieser Zähler nicht sehen — und über den Rest sagt er nichts.
+
+⚠ **Und die Basis ist vier Läufe, also gut vier Stunden.** Eine
+Futsal-Runde findet womöglich nur am Wochenende statt. Die Aussage wird
+mit jedem Lauf belastbarer; heute steht sie auf einem Abend.
+
+⚠ **Der fünfte Lauf meldet `null`, nicht `0`** — er stammt von vor der
+Umstellung, das Feld gab es da noch nicht. Genau der Unterschied, um den
+es an diesem Abend ging: **nicht gefragt ist nicht dasselbe wie nichts
+gefunden.** Wer die Reihe liest, darf die `null` nicht als Nullwert
+zählen.
 
 ### ⚠ Die Vereinskennung beim Verband steht nirgends in ClubCampus
 
