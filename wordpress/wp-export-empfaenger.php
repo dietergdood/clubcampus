@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.8.0
+ * Version:     0.9.4
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,19 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.4 (10.09.2026): der Dateikopf stimmt wieder mit CC_VERSION ueberein
+   — und eine PRUEFUNG haelt es fest, statt eines Satzes.
+   ⚠ Sie liefen seit 2d62ace (0.9.0, 10.09.2026) auseinander: Kopf 0.8.0,
+   Konstante zuletzt 0.9.3. Vorher wurde bei jeder Erhoehung beides
+   angefasst — viermal hintereinander nur noch eines.
+   ⚠ Und der Satz bei CC_ROUTE, der die Uebereinstimmung „verlangt", ist
+   ein KOMMENTAR. Er hat nie gegriffen, weil er nicht greifen kann.
+   **Eine Pruefung, die aus einem Satz besteht, schweigt immer.**
+   ⚠ Was er NICHT erklaert: /status meldet `CC_VERSION`, nicht den Kopf.
+   Die Karte von 0.9.2 war also ein richtiger Beleg ueber den laufenden
+   Code. Falsch war, was WordPress in seiner Plugin-Liste zeigt — und
+   damit jede Auskunft, die ein Mensch DORT abliest.
+
    0.9.3 (10.09.2026): `/status` fragt die Datenbank DIREKT, welche
    Beitragstypen ein `sfv_match_id` tragen — ohne post_type-Filter und
    ohne WP_Query.
@@ -236,7 +249,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.3';
+const CC_VERSION    = '0.9.4';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -337,6 +350,17 @@ const CC_FELDER = array(
 	   Export schickt und was am Beitrag steht, ist nicht dasselbe — und
 	   diese Liste beschreibt den Beitrag. */
 	'datum', 'zeit', 'fch_team', 'gegner', 'heim_auswaerts', 'ort',
+	/* ⚠ NUR EIGENE ZEILEN tragen sie — bei Gegnern ist die
+	   Personennummer verboten, nicht bloss ungenutzt: sie ist ueber
+	   dieselbe Schnittstelle in einen Namen aufzuloesen. Erzwungen von
+	   `spiel_aufstellung_fremde_ohne_person` in der Datenbank, gebaut in
+	   `baueAufstellung()`, und hier steht es zum dritten Mal, weil diese
+	   Datei laenger gelesen wird als beide.
+
+	   Feldname `sfv_person_id`, Schluessel `f_s_a_sfv` — Unterfeld des
+	   Repeaters `aufstellung`, kein eigenes Spielfeld. Es steht deshalb
+	   NICHT in dieser Liste; `update_field('aufstellung', …)` schreibt
+	   die ganze Zeile samt Unterfeldern. */
 	/* ⚠ `liga` traegt die WETTBEWERBSBEZEICHNUNG („Cup AJF (4./5. Liga)",
 	   „Schweizer Cup U-18"), NICHT die Betriebsart — die steht in
 	   `wettbewerb` und heisst beim Cup schlicht „Cup". Die zwei werden

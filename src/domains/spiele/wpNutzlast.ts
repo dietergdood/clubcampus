@@ -984,6 +984,22 @@ export interface AufstellungQuelle {
 
 export interface WpAufstellungZeile {
   seite: "heim" | "gast";
+  /**
+   * Die SFV-Personennummer — **nur bei eigenen Zeilen**, bei Gegnern
+   * immer `null`.
+   *
+   * ⚠ ⚠  DAS IST KEINE SPARSAMKEIT, SONDERN EIN VERBOT. Eine
+   *       Personennummer ist ueber dieselbe Schnittstelle in einen Namen
+   *       aufzuloesen — sie ist ein Name mit einem Zwischenschritt.
+   *       `spiel_aufstellung_fremde_ohne_person` erzwingt es in der
+   *       Datenbank; hier steht es noch einmal, weil eine Nutzlast
+   *       leichter geaendert wird als ein CHECK.
+   *
+   * Wofuer sie da ist: die Website kann damit ein Spielerprofil an seine
+   * Einsaetze binden, ohne ueber Namen zu gehen — und ein Name ist eine
+   * Schreibweise, kein Schluessel.
+   */
+  sfv_person_id: number | null;
   nummer: number | null;
   spieler: string;
   position: string;
@@ -1090,6 +1106,11 @@ export function baueAufstellung(
       /* Eine eigene Zeile steht auf unserer Seite, eine fremde auf der
          anderen — der Spielort entscheidet, welche das ist. */
       seite: z.ist_eigener === heimspiel ? "heim" : "gast",
+      /* ⚠ Der Zweig steht hier und nicht in der Quelle: eine fremde
+         Zeile TRAEGT gar keine Personennummer (der CHECK verbietet es),
+         aber wer diese Zeile spaeter liest, soll die Grenze sehen statt
+         sie voraussetzen zu muessen. */
+      sfv_person_id: z.ist_eigener ? z.sfv_person_id : null,
       nummer: z.rueckennr,
       spieler,
       position: String(z.position_name ?? ""),

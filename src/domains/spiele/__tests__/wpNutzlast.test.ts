@@ -836,6 +836,25 @@ describe("baueAufstellung", () => {
     expect(zahlen.zeilen_fremd).toBe(0);
   });
 
+  it("⚠ eine Gegnerzeile trägt KEINE Personennummer", () => {
+    /* Der CHECK verbietet sie in der Datenbank; hier wird sichergestellt,
+       dass die Anzeige sie auch dann nicht einsetzt, wenn eine dasteht.
+       Eine Personennummer ist über dieselbe Schnittstelle in einen Namen
+       aufzulösen — ein Name mit einem Zwischenschritt. */
+    const zahlen = leereAufstellungZahlen();
+    const [z] = baueAufstellung(
+      [q({ ist_eigener: false, sfv_person_id: 4711 })],
+      keine, true, keineNamen, zahlen,
+    );
+    expect(z.sfv_person_id).toBeNull();
+  });
+
+  it("eine eigene Zeile trägt sie", () => {
+    const zahlen = leereAufstellungZahlen();
+    const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen);
+    expect(z.sfv_person_id).toBe(100);
+  });
+
   it("⚠ eine Gegnerzeile trägt KEINEN Namen — auch wenn einer dasteht", () => {
     /* Entscheid B: der Verband liefert ihn, wir nehmen ihn nicht. In der
        Datenbank kann er gar nicht stehen; hier wird zusätzlich

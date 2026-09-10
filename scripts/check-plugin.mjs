@@ -384,6 +384,25 @@ const REGELN = [
 /* Regeln, die etwas VERLANGEN statt zu verbieten — hier ist der Fund die
    Erwartung, und die Kontrolle zeigt den Fall, in dem er ausbleibt. */
 const PFLICHTEN = [
+  /* ── Der Dateikopf gegen die Konstante (10.09.2026) ────────────────
+     ⚠ Hier stand ein SATZ: „MUSS MIT DEM KOPF DIESER DATEI
+     UEBEREINSTIMMEN". Er hat nie gegriffen, weil er nicht greifen kann —
+     und die zwei Zahlen liefen vier Erhoehungen lang auseinander, ohne
+     dass etwas gemeldet haette.
+
+     **Eine Pruefung, die aus einem Satz besteht, schweigt immer.**
+
+     ⚠ Der Schaden ist nicht die Zahl, sondern wo sie steht: WordPress
+     zeigt den KOPF in seiner Plugin-Liste, `/status` meldet die
+     KONSTANTE. Wer in der Liste nachsieht, welcher Empfaenger laeuft,
+     liest dann etwas anderes als die Gegenstelle. */
+  {
+    frage: "der Dateikopf (Version:) stimmt mit CC_VERSION ueberein",
+    pruefe: (b) => (b.kopfversion && b.konstanten?.CC_VERSION?.[0]
+      && b.kopfversion === b.konstanten.CC_VERSION[0]) ? ["ok"] : [],
+    kontrolle: "<?php /* Version:     9.9.9 */ const CC_VERSION = '0.0.1';",
+  },
+
   /* ── Zeitschutz (0.9.0, 10.09.2026) ────────────────────────────────
      ⚠ Der Abbruchbericht ist der Teil, der beim naechsten Umbau am
      leichtesten still wegfaellt: er haengt an einer Registrierung, nicht
@@ -448,7 +467,17 @@ const PFLICHTEN = [
    jemand entscheiden muss, ob er berichtet. */
 const MIT_BERICHT = ["cc_route_spiele", "cc_route_ranglisten"];
 
-const baum = zerlege(readFileSync(DATEI));
+/* ⚠ Der PHP-Tokenizer wirft Kommentare weg — die Kopfzeile `Version:`
+   steht in einem. Sie kommt deshalb aus dem Rohtext dazu, und ZERLEGE
+   bleibt der Weg fuer alles andere. */
+function mitKopf(quelle) {
+  const b = zerlege(quelle);
+  const m = String(quelle).match(/^\s*\*\s*Version:\s*([0-9][0-9.]*)\s*$/m);
+  b.kopfversion = m ? m[1] : null;
+  return b;
+}
+
+const baum = mitKopf(readFileSync(DATEI));
 const befunde = [];
 
 for (const fn of MIT_BERICHT) {
@@ -479,7 +508,7 @@ for (const p of PFLICHTEN) {
   /* Umgekehrte Kontrolle: im Schnipsel FEHLT das Verlangte, die Prüfung
      muss dort also leer ausgehen. Fände sie auch dort etwas, prüfte sie
      nichts. */
-  if (p.pruefe(zerlege(p.kontrolle)).length > 0) {
+  if (p.pruefe(mitKopf(p.kontrolle)).length > 0) {
     befunde.push(`⚠ Die Prüfung „${p.frage}" findet auch dort etwas, wo nichts ist.`);
     continue;
   }
