@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.9
+ * Version:     0.9.10
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,22 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.10 (11.09.2026): `/status` MISST die Mehrdeutigkeit, statt die
+   Reste eines Schreibvorgangs zu melden, der in dieser Anfrage nicht
+   stattgefunden hat.
+   ⚠ ⚠  ANLASS: `feld_mehrdeutig` und `ohne_feldschluessel` werden NUR
+         beim Schreiben gefuellt. `/status` schreibt nicht — also waren
+         beide Listen dort IMMER leer, und die Kachel las das als
+         „jeder Schluessel eindeutig aufloesbar".
+   **Eine leere Menge als Bestaetigung gelesen — zum vierten Mal an zwei
+   Tagen**, nach „ACF kennt alle 0 Feldnamen", „0 Spiel-Beitraege" und
+   „Success. No rows returned". Der Fehler ist immer derselbe: NICHT
+   GEMESSEN und IN ORDNUNG sehen gleich aus, wenn man nur die Abwesenheit
+   zeigt.
+   ⚠ Jetzt loest `/status` jeden Namen aus CC_FELDER an einem
+   Beispielbeitrag auf — das FUELLT die Melder und macht die Auskunft zu
+   einer Messung.
 
    0.9.9 (11.09.2026): bei NAMENSGLEICHHEIT wird nicht mehr gewaehlt,
    sondern abgelehnt.
@@ -310,7 +326,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.9';
+const CC_VERSION    = '0.9.10';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -950,6 +966,12 @@ function cc_route_status(): WP_REST_Response {
 			   `liga` bis zum 10.09.2026 unmoeglich machte. Die Liste in
 			   der Pruefkette kann das nicht wissen, diese Auskunft schon. */
 			'spielfelder'           => cc_spielfeld_lage( cc_ein_spiel_id() ),
+			/* ⚠ MISST, statt Reste zu melden. Der Aufruf loest jeden
+			   Feldnamen an einem Beispielbeitrag auf und fuellt dabei
+			   `cc_feld_mehrdeutig` / `cc_ohne_feldschluessel` — ohne ihn
+			   waeren beide Listen in einer /status-Anfrage immer leer,
+			   weil dort nichts geschrieben wird. */
+			'feldnamen_geprueft'    => cc_pruefe_feldnamen( cc_ein_spiel_id() ),
 			/* ⚠ NACH ZUSTAND, nicht nur `publish`. Eine einzelne Zahl kann
 			   nicht zwischen „es gibt keine" und „sie stehen alle in einem
 			   Zustand, den ich nicht zaehle" unterscheiden — und genau
@@ -2095,6 +2117,35 @@ function cc_teamfeld_lage( int $tid ): array {
  * `get_field_object()` schon. **Diese Auskunft ist der Schutz, nicht die
  * Liste.**
  */
+/**
+ * Jeden Feldnamen an einem Beispielbeitrag aufloesen — und dabei die
+ * Melder fuellen.
+ *
+ * ⚠ ⚠  DER GRUND: `cc_feld_schluessel()` fuellt `cc_feld_mehrdeutig` als
+ *       NEBENWIRKUNG des Schreibens. In einer `/status`-Anfrage wird
+ *       nicht geschrieben — also war die Liste dort immer leer, und die
+ *       Kachel meldete „jeder Schluessel eindeutig aufloesbar".
+ *
+ *   **Das ist eine leere Menge, keine Entwarnung.** Zum vierten Mal an
+ *   zwei Tagen derselbe Fehler: nicht gemessen und in Ordnung sehen
+ *   gleich aus, wenn man nur die Abwesenheit zeigt.
+ *
+ * ⚠ Rueckgabe ist die ZAHL der geprueften Namen. Steht dort 0, wurde
+ *   nichts geprueft — und dann sind die zwei Listen daneben wieder
+ *   bedeutungslos. Die Zahl ist der Beleg, dass es eine Messung war.
+ */
+function cc_pruefe_feldnamen( int $sid ): int {
+	if ( ! $sid ) {
+		return 0;
+	}
+	$n = 0;
+	foreach ( CC_FELDER as $name ) {
+		cc_feld_schluessel( $sid, $name );
+		$n++;
+	}
+	return $n;
+}
+
 function cc_spielfeld_lage( int $sid ): array {
 	return cc_feld_lage( CC_FELDER, $sid );
 }

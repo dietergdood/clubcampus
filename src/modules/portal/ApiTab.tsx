@@ -259,10 +259,20 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
        das Begriffe anlegt, hinterlaesst Spuren. */
     const md=(d.feld_mehrdeutig??{}) as Record<string,string[]>;
     const mdN=Object.keys(md);
+    const geprueft=Number(d.feldnamen_geprueft??0);
+    /* ⚠ ⚠  DREI FÄLLE, NICHT ZWEI — und der dritte ist der, an dem ich
+       heute viermal gescheitert bin. Eine leere Liste kann „nichts
+       gefunden" heissen ODER „nicht gemessen", und nur die Zahl der
+       geprüften Namen unterscheidet sie. Ohne sie stand hier „jeder
+       Schlüssel eindeutig auflösbar" über einer Messung, die nie
+       stattgefunden hatte. */
     zeilen.push(mdN.length
       ? `⚠ MEHRDEUTIG, deshalb NICHT geschrieben: `
         +mdN.map((k)=>`${k} (${(md[k]||[]).join(" / ")})`).join(", ")
-      : `Kein Feldname doppelt — jeder Schlüssel eindeutig auflösbar`);
+      : geprueft>0
+        ? `${geprueft} Feldnamen geprüft — keiner mehrdeutig`
+        : `⚠ Mehrdeutigkeit NICHT geprüft (kein Beispielbeitrag oder `
+          +`Empfänger älter als 0.9.10). Das ist keine Entwarnung.`);
     const of=Array.isArray(d.ohne_feldschluessel)?d.ohne_feldschluessel as string[]:[];
     if(of.length){
       zeilen.push(`⚠ Kein Feldschlüssel am fch_spiel: ${of.join(", ")} — `
