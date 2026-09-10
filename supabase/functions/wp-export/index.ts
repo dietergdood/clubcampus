@@ -53,6 +53,7 @@
 //   docs/plan_wordpress_spieldaten.md §4.2.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { AKTION_EXPORT } from "../../../src/domains/sfv/protokollStatus.ts";
 import { mischeEreignisse, hatVerlauf, baueNummernBruecke } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import {
@@ -396,6 +397,10 @@ async function sendeAnWordpress(
   if (verbindungId) {
     const { data: logZeile } = await db.from("api_sync_log").insert({
       verbindung_id: verbindungId, verein_id: vereinId, status: "laeuft",
+      /* ⚠ Bis zum 11.09.2026 leer. Eine Abfrage `where aktion = 'export'`
+         fand deshalb nichts, obwohl vier Laeufe dastanden — und das
+         Fehlen wurde als „es hat kein Lauf stattgefunden" gelesen. */
+      aktion: AKTION_EXPORT,
       gestartet_am: beginn,
       meldung: `${host} · 0 von ${teile.length} Mannschaft(en)`,
     }).select("id").single();

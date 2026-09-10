@@ -97,3 +97,52 @@ describe("Schreibende Aktionen protokollieren — und zwar vorher", () => {
     expect(abschnitt(mit, "cupprobe")).toContain("api_sync_log");
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Jeder Protokoll-Eintrag nennt seine Aktion (11.09.2026)
+
+   ⚠ ANLASS: `migration_api_sync_log_aktion.sql` legte die Spalte am
+   10.09.2026 an, damit niemand mehr ABLEITEN muss, welcher Lauf es war.
+   Eingetragen wurde sie nur in `sfv-sync` — `wp-export` blieb stehen.
+
+   Folge: `where aktion = 'export'` fand nichts, obwohl vier Läufe
+   protokolliert waren. **Das Fehlen wurde als Aussage gelesen: „es hat
+   kein Lauf stattgefunden."** Fünfter Fall derselben Klasse an zwei
+   Tagen — und diesmal in der Spalte, die genau dagegen gebaut wurde.
+
+   ⚠ Die alte Prüfung sah nur `sfv-sync/index.ts`. Sie war richtig und
+   zu eng: **eine Regel, die nur eine von zwei Stellen kennt, sagt über
+   die andere nichts — und liest sich, als sagte sie es.**
+   ══════════════════════════════════════════════════════════════════════ */
+describe("api_sync_log — jeder Einfüger nennt seine Aktion", () => {
+  const DATEIEN = [
+    "supabase/functions/sfv-sync/index.ts",
+    "supabase/functions/wp-export/index.ts",
+  ];
+
+  it("kein insert ohne aktion", () => {
+    const ohne: string[] = [];
+    for (const d of DATEIEN) {
+      const zeilen = readFileSync(d, "utf8").split(/\r?\n/);
+      zeilen.forEach((z, i) => {
+        if (!z.includes('from("api_sync_log")') || !z.includes(".insert(")) return;
+        /* Das Objektliteral steht in den nächsten Zeilen. */
+        const umfeld = zeilen.slice(i, i + 12).join(" ");
+        if (!/aktion:/.test(umfeld)) ohne.push(`${d}:${i + 1}`);
+      });
+    }
+    expect(ohne).toEqual([]);
+  });
+
+  it("findet überhaupt Einfüger (sonst prüft der Fall nichts)", () => {
+    /* ⚠ Ohne diesen Fall wäre die Prüfung darüber grün, sobald jemand
+       den Aufruf umbaut oder eine Datei umbenennt — eine Prüfung, die
+       nicht scheitern KANN. */
+    let n = 0;
+    for (const d of DATEIEN) {
+      const t = readFileSync(d, "utf8");
+      n += (t.match(/from\("api_sync_log"\)[\s\S]{0,40}?\.insert\(/g) ?? []).length;
+    }
+    expect(n).toBeGreaterThanOrEqual(4);
+  });
+});

@@ -41,3 +41,23 @@ export const LAUF_FEHLER = "fehler";
 export const AKTION_SYNC = "sync";
 export const AKTION_NAMEN = "namen";
 export const AKTION_WECHSELNACHTRAG = "wechselnachtrag";
+/**
+ * Der WordPress-Export.
+ *
+ * ⚠ ⚠  ER HAT DIE SPALTE BIS ZUM 11.09.2026 LEER GELASSEN. Die Spalte
+ *       kam am 10.09.2026 dazu (`migration_api_sync_log_aktion.sql`) —
+ *       eingetragen wurde sie nur in `sfv-sync`, und `wp-export` blieb
+ *       stehen.
+ *
+ *   Folge: eine Abfrage `where aktion = 'export'` fand **nichts**,
+ *   obwohl vier Laeufe protokolliert waren. **Das Fehlen wurde als
+ *   Aussage gelesen — „es hat kein Lauf stattgefunden".**
+ *
+ *   ⚠ Fuenfter Fall derselben Klasse an zwei Tagen, und diesmal in
+ *   unserer eigenen Protokollspalte. Die Spalte wurde ausdruecklich
+ *   angelegt, damit niemand mehr ableiten muss, welcher Lauf es war —
+ *   und dann hat der zweite Schreiber sie nicht gefuellt.
+ *
+ * **Wer eine Spalte anlegt, nennt ALLE Stellen, die sie fuellen.**
+ */
+export const AKTION_EXPORT = "export";
