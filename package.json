@@ -17,6 +17,7 @@
     "check:php": "node scripts/check-php.mjs",
     "check:plugin": "node scripts/check-plugin.mjs",
     "check:deno": "node scripts/check-deno.mjs",
+    "check:sql": "node scripts/check-sql.mjs",
     "gen:types": "node scripts/gen-types.mjs",
     "lint": "eslint ."
   },

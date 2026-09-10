@@ -118,6 +118,24 @@ jobs:
       - name: Edge Functions typpruefen
         run: npm run check:deno
 
+      # ⚠ SQL WAR DER ZWEITE BLINDE FLECK DERSELBEN ART.
+      #
+      # Am 10.09.2026 brach `migration_bench_ausbau.sql` beim Ausfuehren ab:
+      #   ERROR: 42601: syntax error at or near "declare"
+      # Ursache war ein Dollar-Quoting-Tag als $$bench$$ statt $bench$ — ein
+      # LEERER Tag um den Text, der Block endete sofort, und der Rumpf stand
+      # frei im SQL.
+      #
+      # Typecheck, sieben check:*, 1123 Tests, Build: alles gruen. KEINE
+      # davon hatte je eine SQL-Datei angesehen. Genau die Lage, die vor
+      # check:deno bei den Edge Functions herrschte.
+      #
+      # ⚠ Sie meldet NUR `syntax error`. Gegen eine leere Datenbank sind
+      # fehlende Tabellen der Normalfall; ein Syntaxfehler dahinter wird
+      # trotzdem gemeldet, weil der Server parst, bevor er ablehnt.
+      - name: SQL parsen
+        run: npm run check:sql
+
       - name: Tests
         run: npm test
 

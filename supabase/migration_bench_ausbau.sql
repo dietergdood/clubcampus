@@ -37,7 +37,7 @@ begin;
 -- Merkmal: aus der Bankliste UND ohne Zuweisung aus /players. Wer in
 -- beiden Listen stand, ist verschmolzen und traegt rolle_zuweisung_id —
 -- diese Zeilen bleiben, sie kommen aus /players.
-do $$bench$$
+do $bench$
 declare
   anz integer;
 begin
@@ -47,7 +47,7 @@ begin
   get diagnostics anz = row_count;
   raise notice 'Nur-aus-/bench geloescht: % Zeilen', anz;
 end
-$$bench$$;
+$bench$;
 
 -- ── 2 · Gegenprobe VOR dem Streichen der Spalte ────────────────────────────
 --
@@ -55,7 +55,7 @@ $$bench$$;
 --   `ist_bank` nicht mehr, und die Pruefung waere nicht mehr formulierbar.
 --   Eine Pruefung, die nach der Aenderung nicht mehr moeglich ist, gehoert
 --   davor — sonst wird sie weggelassen.
-do $$probe$$
+do $probe$
 declare
   rest integer;
 begin
@@ -66,7 +66,7 @@ begin
     raise exception 'Gegenprobe gescheitert: % Zeile(n) mit ist_bank und ohne rolle_zuweisung_id stehen noch. Sie wuerden als Startspieler erscheinen.', rest;
   end if;
 end
-$$probe$$;
+$probe$;
 
 -- ── 3 · Die vier Spalten ───────────────────────────────────────────────────
 --
