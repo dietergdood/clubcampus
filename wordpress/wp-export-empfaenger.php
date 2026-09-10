@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.10
+ * Version:     0.9.11
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,23 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.11 (11.09.2026): der Abgleich ZAEHLT die Aufstellungszeilen, die
+   er geschrieben hat — `aufstellung_zeilen` und `aufstellung_spiele`, in
+   der Antwort und im Bericht, immer, auch als Null.
+   ⚠ ⚠  ANLASS: fuer den Verlauf gab es `verlauf_zeilen` seit dem ersten
+         Tag, fuer die Aufstellung NICHTS. Und „270 aktualisiert" zaehlt
+         BEITRAEGE — ob in einem davon eine einzige Aufstellungszeile
+         steht, sagt es nicht.
+   ⚠     Damit war die Lage vom 11.09.2026 von aussen nicht aufzuloesen:
+         die Gegenstelle sendet fuer ein Spiel 17 Zeilen, dieser Empfaenger
+         meldet 270 aktualisiert und nichts verworfen, und die Seite zeigt
+         eine Zeile. Drei Auskuenfte, und keine sagt, ob die Zeilen hier
+         angekommen sind. Die Website-Seite musste im Backend nachsehen.
+   ⚠     Gezaehlt wird in cc_schreibe_felder(), unmittelbar nach dem
+         `update_field` — nicht im Aufrufer. Nur dort steht fest, dass
+         geschrieben wurde; eine Zeile weiter aussen haette die Faelle
+         mitgezaehlt, die am fehlenden Feldschluessel gescheitert sind.
 
    0.9.10 (11.09.2026): `/status` MISST die Mehrdeutigkeit, statt die
    Reste eines Schreibvorgangs zu melden, der in dieser Anfrage nicht
@@ -326,7 +343,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.10';
+const CC_VERSION    = '0.9.11';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -1285,6 +1302,23 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 		}
 		update_field( $key, $wert, $post_id );
 		$geschrieben[] = $feld;
+		/* ⚠ ⚠ HIER WIRD GEZAEHLT, NICHT IM AUFRUFER. Nur an dieser Stelle
+		   steht fest, dass `update_field` wirklich lief — der Zweig
+		   darueber springt ab, wenn kein Feldschluessel gefunden wurde,
+		   und ein Zaehler weiter aussen haette das mitgezaehlt.
+
+		   ⚠ ANLASS, 11.09.2026: fuer den Verlauf gab es `verlauf_zeilen`
+		   seit dem ersten Tag, fuer die Aufstellung NICHTS. „270
+		   aktualisiert" zaehlt Beitraege und sagt ueber Zeilen nichts.
+		   Damit war „ist die Aufstellung angekommen?" von hier aus nicht
+		   zu beantworten — und die Website-Seite musste im Backend
+		   nachsehen. */
+		if ( 'aufstellung' === $feld ) {
+			$GLOBALS['cc_aufstellung_zeilen'] += count( (array) $wert );
+			if ( count( (array) $wert ) > 0 ) {
+				$GLOBALS['cc_aufstellung_spiele']++;
+			}
+		}
 	}
 	return $geschrieben;
 }
@@ -1606,6 +1640,20 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		);
 	}
 
+	/* ⚠ ⚠ VORBELEGT, NICHT ERST BEIM ERSTEN VORKOMMEN ANGELEGT. Ein
+	   fehlender Schluessel waere von einer Null nicht zu unterscheiden —
+	   und genau diese Verwechslung ist der Anlass fuer die zwei Zaehler:
+	   „kein Wert" und „null Zeilen" sahen bis 0.9.10 gleich aus, naemlich
+	   wie gar nichts.
+
+	   ⚠ Als Globals und nicht in $erg, weil gezaehlt wird, WO geschrieben
+	   wird (cc_schreibe_felder) — dort steht als einziger Stelle fest,
+	   dass update_field wirklich lief. Ein Zaehler im Aufrufer haette die
+	   Zeilen mitgezaehlt, die am fehlenden Feldschluessel gescheitert
+	   sind. */
+	$GLOBALS['cc_aufstellung_zeilen'] = 0;
+	$GLOBALS['cc_aufstellung_spiele'] = 0;
+
 	$vorhanden = cc_abgleich_kandidaten();
 	$teamKarte = cc_team_karte();
 
@@ -1763,6 +1811,12 @@ function cc_route_spiele( WP_REST_Request $req ) {
 			'geaendert'      => (int) $erg['aktualisiert'],
 			'zurueckgezogen' => (int) $erg['zurueckgezogen'],
 			'verlauf_zeilen' => (int) $erg['verlauf_zeilen'],
+			/* ⚠ In den Bericht, nicht nur in die Antwort: die Antwort sieht
+			   nur, wer den Lauf ausloest. Der Bericht ist die Stelle, an
+			   der jemand SPAETER nachsieht — und genau dann wird gefragt,
+			   ob die Aufstellung angekommen ist. */
+			'aufstellung_zeilen' => (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 ),
+			'aufstellung_spiele' => (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 ),
 			'uebersprungen'  => cc_bericht_deckel( $uebersprungen ),
 			'mehrfach'       => cc_bericht_deckel( $mehrfach ),
 			'hinweis'        => $erg['fehler'],
@@ -1774,6 +1828,17 @@ function cc_route_spiele( WP_REST_Request $req ) {
 	   sich wie ein Schalter). */
 	$erg['unbeachtete_felder'] = array_keys( $erg['unbeachtete_felder'] );
 	sort( $erg['unbeachtete_felder'] );
+
+	/* ⚠ ⚠ DIE ZWEI ZAHLEN, DIE BIS 0.9.10 GEFEHLT HABEN.
+	   Fuer den Verlauf gab es `verlauf_zeilen` seit dem ersten Tag; fuer
+	   die Aufstellung nichts. „270 aktualisiert" zaehlt BEITRAEGE — ob in
+	   einem davon eine einzige Aufstellungszeile steht, sagt es nicht.
+
+	   ⚠ Immer da, auch als Null. Eine Zahl, die nur im schlechten Fall
+	   erscheint, verlangt vom Leser eine Deutung, und die Deutung einer
+	   Abwesenheit ist geraten. */
+	$erg['aufstellung_zeilen'] = (int) ( $GLOBALS['cc_aufstellung_zeilen'] ?? 0 );
+	$erg['aufstellung_spiele'] = (int) ( $GLOBALS['cc_aufstellung_spiele'] ?? 0 );
 
 	return new WP_REST_Response( $erg, 200 );
 }

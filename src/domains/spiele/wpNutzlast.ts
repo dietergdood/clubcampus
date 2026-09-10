@@ -1147,12 +1147,32 @@ export interface AufstellungZahlen {
   unbekannte_rollen: number[];
   /** Zeilen ohne jede Minutenangabe — dort trug die Zuweisung die Rolle. */
   ohne_minuten: number;
+  /**
+   * Wie oft jede Rolle vergeben wurde — `start` · `eingewechselt` ·
+   * `nicht_eingesetzt`, immer alle drei, auch als Null.
+   *
+   * ⚠ ANLASS, 11.09.2026: die Website-Seite meldete, `rolle` komme drüben
+   * überall als `start` oder leer an — auch an Spielen, deren Verlauf
+   * vier Auswechslungen führt. Gemessen ist `rolleAus()` dabei richtig
+   * (63/90/27 → `eingewechselt`). Es liegt also entweder an dem, was wir
+   * senden, oder an dem, was drüben geschrieben wird — und **diese Zahl
+   * trennt die beiden Fälle.**
+   *
+   * ⚠ Ohne sie war die Frage nur über `aktion: probe` zu beantworten, und
+   * die gibt Klarnamen zurück. Eine Verteilung tut das nicht: sie zählt
+   * drei Werte und nennt keine Person.
+   */
+  rollen: Record<SpielerRolle, number>;
 }
 
 export function leereAufstellungZahlen(): AufstellungZahlen {
   return {
     zeilen_eigen: 0, zeilen_fremd: 0, ohne_namen: 0, widerspruch: 0,
     unplausibel: 0, korrigiert: 0, unbekannte_rollen: [], ohne_minuten: 0,
+    /* ⚠ Alle drei vorbelegt, nicht erst beim ersten Vorkommen angelegt:
+       ein fehlender Schlüssel wäre von einer Null nicht zu unterscheiden,
+       und genau diese Verwechslung ist der Anlass. */
+    rollen: { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
   };
 }
 
@@ -1177,6 +1197,7 @@ export function baueAufstellung(
     if (b.unplausibel) zahlen.unplausibel += 1;
     if (b.korrigiert) zahlen.korrigiert += 1;
     if (b.ohne_minuten) zahlen.ohne_minuten += 1;
+    zahlen.rollen[b.rolle] += 1;
     if (b.unbekannt !== null && b.unbekannt >= 0) unbekannt.add(b.unbekannt);
 
     /* ⚠ Der Schluessel wird GENAUSO gebildet wie in markeSchluessel() —

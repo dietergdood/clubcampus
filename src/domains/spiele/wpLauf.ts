@@ -55,6 +55,21 @@ export interface LaufZahlen {
   zurueckgezogen: number;
   uebersprungen: number;
   verlauf_zeilen: number;
+  /**
+   * Aufstellungszeilen, die der Empfänger GESCHRIEBEN hat — seine Zahl,
+   * nicht unsere.
+   *
+   * ⚠ ⚠ SIE FEHLTE BIS ZUM 11.09.2026 GANZ, und deshalb war die Frage
+   * „ist die Aufstellung überhaupt angekommen?" nicht zu beantworten.
+   * Für den Verlauf gab es `verlauf_zeilen` seit dem ersten Tag; für die
+   * Aufstellung nichts — und „270 aktualisiert" sagt über sie nichts aus,
+   * weil es Beiträge zählt und keine Zeilen.
+   *
+   * ⚠ SIE STEHT NEBEN `gesendete_aufstellung_zeilen`, und das ist der
+   * Punkt: eine Zahl allein kann „wir haben nichts gesendet" nicht von
+   * „sie haben nichts geschrieben" unterscheiden. Zwei Zahlen können es.
+   */
+  aufstellung_zeilen: number;
   ohne_team: string[];
   doppelte_teams: string[];
   fehler: string[];
@@ -155,6 +170,7 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
     zurueckgezogen: 0,
     uebersprungen: 0,
     verlauf_zeilen: 0,
+    aufstellung_zeilen: 0,
     ohne_team: [],
     doppelte_teams: [],
     fehler: [],
@@ -183,6 +199,7 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
     zahlen.zurueckgezogen += zahl(t.wp, "zurueckgezogen");
     zahlen.uebersprungen += zahl(t.wp, "uebersprungen");
     zahlen.verlauf_zeilen += zahl(t.wp, "verlauf_zeilen");
+    zahlen.aufstellung_zeilen += zahl(t.wp, "aufstellung_zeilen");
     zahlen.ohne_team.push(...liste(t.wp, "ohne_team"));
     zahlen.doppelte_teams.push(...liste(t.wp, "doppelte_teams"));
     zahlen.fehler.push(...liste(t.wp, "fehler"));
@@ -213,7 +230,33 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
  *   genauso aus wie 260 aus 21, und der Unterschied ist genau der
  *   Ausfall, den man sehen will.
  */
-export function laufMeldung(host: string, zahlen: LaufZahlen, dauerMs?: number): string {
+/**
+ * Was WIR gebaut haben — die Gegenzahl zu `LaufZahlen.aufstellung_zeilen`.
+ *
+ * ⚠ ⚠ ZWEI ZAHLEN, WEIL EINE DIE FRAGE NICHT BEANTWORTEN KANN. Am
+ * 11.09.2026 stand die Lage so: wir senden für ein Spiel 17
+ * Aufstellungszeilen, WordPress meldet 270 aktualisiert, und die Seite
+ * zeigt eine Zeile. Mit nur einer der beiden Zahlen bleibt offen, wo es
+ * reisst — mit beiden ist es eine Ablesung:
+ *
+ * | gesendet | geschrieben | heisst |
+ * |---|---|---|
+ * | 0 | 0 | wir bauen nichts — der Fehler liegt bei uns |
+ * | 17 | 0 | wir senden, drüben landet nichts — Empfänger oder Feld |
+ * | 17 | 17 | beides steht; dann ist es die Anzeige |
+ *
+ * ⚠ Und `rollen` beantwortet die zweite Frage desselben Abends: kommt
+ * `eingewechselt` bei uns überhaupt vor? Drei Zahlen, keine Person.
+ */
+export interface GesendeteAufstellung {
+  zeilen: number;
+  rollen: Record<string, number>;
+}
+
+export function laufMeldung(
+  host: string, zahlen: LaufZahlen, dauerMs?: number,
+  gesendet?: GesendeteAufstellung,
+): string {
   /* ⚠ Die Dauer steht in der Meldung, nicht nur in den Details. Sie ist die
      Zahl, nach der beim zweiten Lauf jemand fragt („ging das schneller?"),
      und die Kachel zeigt genau diese eine Zeile. */
@@ -221,7 +264,12 @@ export function laufMeldung(host: string, zahlen: LaufZahlen, dauerMs?: number):
   const zeile = `${host} · ${zahlen.teams_gesendet} Mannschaft(en) · `
     + `${zahlen.spiele_gesendet} Spiel(e)${dauer} · ${zahlen.neu} neu, `
     + `${zahlen.aktualisiert} aktualisiert, ${zahlen.zurueckgezogen} zurückgezogen, `
-    + `${zahlen.verlauf_zeilen} Verlaufszeilen`;
+    + `${zahlen.verlauf_zeilen} Verlaufszeilen`
+    /* ⚠ IMMER, AUCH ALS NULL — und immer beide Seiten. Genau diese Zeile
+       hat am 11.09.2026 gefehlt; ohne sie war „ist die Aufstellung
+       angekommen?" aus der Kachel nicht zu beantworten. */
+    + ` · Aufstellung ${gesendet ? `${gesendet.zeilen} gesendet / ` : ""}`
+    + `${zahlen.aufstellung_zeilen} geschrieben`;
   return zahlen.teams_gescheitert
     ? `${zeile} — ⚠ ${zahlen.teams_gescheitert} Mannschaft(en) gescheitert`
     : zeile;
@@ -243,6 +291,7 @@ export function laufMeldung(host: string, zahlen: LaufZahlen, dauerMs?: number):
  */
 export function fuersProtokoll(
   host: string, zahlen: LaufZahlen, teile: TeilErgebnis[], dauerMs?: number,
+  gesendet?: GesendeteAufstellung,
 ): Record<string, unknown> {
   return {
     ziel_host: host,
@@ -258,6 +307,7 @@ export function fuersProtokoll(
       neu: zahl(t.wp, "neu"),
       aktualisiert: zahl(t.wp, "aktualisiert"),
       zurueckgezogen: zahl(t.wp, "zurueckgezogen"),
+      aufstellung_zeilen: zahl(t.wp, "aufstellung_zeilen"),
       gescheitert: t.wp === null,
     })),
     teams_gesendet: zahlen.teams_gesendet,
@@ -268,6 +318,10 @@ export function fuersProtokoll(
     zurueckgezogen: zahlen.zurueckgezogen,
     uebersprungen: zahlen.uebersprungen,
     verlauf_zeilen: zahlen.verlauf_zeilen,
+    /* ⚠ Beide Seiten, beide immer da. Siehe GesendeteAufstellung. */
+    aufstellung_zeilen: zahlen.aufstellung_zeilen,
+    gesendete_aufstellung_zeilen: gesendet?.zeilen ?? null,
+    gesendete_rollen: gesendet?.rollen ?? null,
     ohne_team: zahlen.ohne_team,
     doppelte_teams: zahlen.doppelte_teams,
     moegliche_dubletten: zahlen.moegliche_dubletten,

@@ -231,6 +231,30 @@ const REGELN = [
      engere Zusage — und die ist pruefbar, weil sie an einer benannten
      Funktion haengt. */
   {
+    /* ⚠ ⚠ DIE ZUSAGE, NICHT DIE FUNKTION. Der Zaehler ist seit 0.9.11 die
+       einzige Auskunft darueber, ob Aufstellungszeilen drueben angekommen
+       sind — „270 aktualisiert" zaehlt BEITRAEGE und sagt darueber nichts.
+
+       ⚠ Und er muss dort stehen, WO GESCHRIEBEN WIRD. Im Aufrufer haette
+       er die Zeilen mitgezaehlt, die am fehlenden Feldschluessel
+       gescheitert sind — ein Zaehler, der mehr behauptet als er misst,
+       ist gefaehrlicher als keiner (05.09.2026, die 431 Klarnamen). */
+    frage: "cc_schreibe_felder zaehlt die geschriebenen Aufstellungszeilen",
+    pruefe: (b) => {
+      const f = b.funktionen.cc_schreibe_felder;
+      if (!f) return ["(Funktion fehlt — die Pruefung sieht die falsche Datei an)"];
+      /* ⚠ Als TEXT, nicht als Bezeichner: `$GLOBALS['cc_…']` ist ein
+         Zeichenkettenschluessel, kein T_STRING. Wer hier `bezeichner`
+         nimmt, baut eine Regel, die nie zutreffen KANN — und das haette
+         die Positivkontrolle nicht gefangen, weil sie ebenfalls rot
+         gewesen waere. Gefangen hat es der erste echte Lauf. */
+      return (f.texte ?? []).includes("cc_aufstellung_zeilen")
+        ? [] : ["cc_aufstellung_zeilen wird in cc_schreibe_felder nicht gefuehrt"];
+    },
+    kontrolle: "<?php function cc_schreibe_felder() { update_field('a', 1, 2); }",
+    erwarteImKontrollfall: 1,
+  },
+  {
     frage: "cc_schreibe_teamfelder legt kein Team an und loescht keines",
     pruefe: (b) => (b.funktionen.cc_schreibe_teamfelder?.rufe ?? [])
       .filter(r => ["wp_insert_post", "wp_update_post", "wp_delete_post", "wp_trash_post"].includes(r)),

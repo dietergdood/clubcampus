@@ -998,14 +998,42 @@ describe("baueAufstellung", () => {
     expect(zahlen.ohne_minuten).toBe(1);
   });
 
-  it("die sieben Zahlen stehen auch bei leerer Aufstellung da", () => {
+  it("die acht Zahlen stehen auch bei leerer Aufstellung da", () => {
     /* ⚠ Der Fall, um den es bei „immer, auch als Null" geht. */
     const zahlen = leereAufstellungZahlen();
     expect(baueAufstellung([], keine, true, keineNamen, zahlen)).toEqual([]);
     expect(zahlen).toEqual({
       zeilen_eigen: 0, zeilen_fremd: 0, ohne_namen: 0, widerspruch: 0,
       unplausibel: 0, korrigiert: 0, unbekannte_rollen: [], ohne_minuten: 0,
+      /* ⚠ Alle drei, auch die, die nie vorkommt. Ein fehlender Schlüssel
+         wäre von einer Null nicht zu unterscheiden. */
+      rollen: { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
     });
+  });
+
+  it("zaehlt die Rollen — und `eingewechselt` entsteht aus den Minuten", () => {
+    /* ⚠ ⚠ DIE MESSUNG VOM 11.09.2026. Die Website-Seite meldete, `rolle`
+       komme drüben überall als `start` oder leer an, auch dort, wo der
+       Verlauf vier Auswechslungen führt. Gemessen liefert `rolleAus()`
+       für 63/90/27 sauber `eingewechselt` — der Fall hält das fest,
+       damit die Frage beim nächsten Mal nicht wieder bei uns beginnt. */
+    const zahlen = leereAufstellungZahlen();
+    baueAufstellung(
+      [
+        q({ von_minute: 1, bis_minute: 90, spielzeit: 90, rueckennr: 1 }),
+        q({ von_minute: 63, bis_minute: 90, spielzeit: 27, rueckennr: 2 }),
+        q({ von_minute: 82, bis_minute: 90, spielzeit: 8, rueckennr: 3 }),
+        q({ von_minute: 0, bis_minute: 0, spielzeit: 0, rueckennr: 4 }),
+      ],
+      keine, true, keineNamen, zahlen,
+    );
+    expect(zahlen.rollen).toEqual({
+      start: 1, eingewechselt: 2, nicht_eingesetzt: 1,
+    });
+    /* Die Summe muss die Zeilenzahl ergeben — eine Aufteilung, die
+       aufgeht, prüft sich selbst. */
+    const summe = Object.values(zahlen.rollen).reduce((a, b) => a + b, 0);
+    expect(summe).toBe(zahlen.zeilen_eigen + zahlen.zeilen_fremd);
   });
 });
 

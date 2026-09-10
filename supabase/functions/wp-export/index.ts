@@ -472,11 +472,27 @@ async function sendeAnWordpress(
 
   const dauerMs = Date.now() - beginnMs;
   const { status, zahlen } = fasseLauf(ergebnisse);
+
+  /* ⚠ WAS WIR GEBAUT HABEN — die Gegenzahl zu dem, was WordPress
+     geschrieben hat. Beide gehen in Meldung und Protokoll; eine allein
+     kann „wir senden nichts" nicht von „sie schreiben nichts" trennen.
+     Siehe GesendeteAufstellung.
+
+     ⚠ Aus `erg.zusammenfassung` und nicht neu gerechnet: dieselbe Quelle,
+     die die Vorschau zeigt. Zwei Rechnungen für dieselbe Frage laufen
+     auseinander, und dann ist nicht zu sagen, welche stimmt. */
+  const zf = erg.zusammenfassung as Record<string, unknown>;
+  const alsZahl = (k: string) => Number(zf[k] ?? 0) || 0;
+  const gesendet = {
+    zeilen: alsZahl("aufstellung_zeilen_eigen") + alsZahl("aufstellung_zeilen_fremd"),
+    rollen: (zf.aufstellung_rollen as Record<string, number>)
+      ?? { start: 0, eingewechselt: 0, nicht_eingesetzt: 0 },
+  };
   if (heimatlos.length) {
     zahlen.fehler.push(`${heimatlos.length} Spiel(e) ohne SFV-Teamnummer, nicht gesendet: `
       + heimatlos.slice(0, 10).join(", "));
   }
-  const meldung = laufMeldung(host, zahlen, dauerMs);
+  const meldung = laufMeldung(host, zahlen, dauerMs, gesendet);
 
   if (verbindungId && logId) {
     await db.from("api_sync_log").update({
@@ -486,7 +502,7 @@ async function sendeAnWordpress(
       datensaetze_aktualisiert: zahlen.aktualisiert,
       datensaetze_fehler: zahlen.fehler.length,
       meldung,
-      details: fuersProtokoll(host, zahlen, ergebnisse, dauerMs),
+      details: fuersProtokoll(host, zahlen, ergebnisse, dauerMs, gesendet),
     }).eq("id", logId);
 
     /* `letzter_sync` und `sync_status` im SELBEN update — der Waechter
@@ -1200,6 +1216,10 @@ async function laufeProbe(
       aufstellung_korrigiert: aufZahlen.korrigiert,
       aufstellung_ohne_minuten: aufZahlen.ohne_minuten,
       aufstellung_unbekannte_rollen: aufZahlen.unbekannte_rollen,
+      /* ⚠ Alle drei Werte, immer, auch als Null. Sie beantworten, ob
+         `eingewechselt` bei uns überhaupt entsteht — die Frage der
+         Website-Seite vom 11.09.2026. Drei Zahlen, keine Person. */
+      aufstellung_rollen: aufZahlen.rollen,
       /* ⚠ Wie oft die Bruecke ueber die Rueckennummer getragen hat.
          Immer da, auch als Null. Sie ist ein Rueckfall ueber eine
          ANZEIGEANGABE — steigt die Zahl, ist das kein Erfolg, sondern

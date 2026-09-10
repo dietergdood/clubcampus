@@ -120,6 +120,74 @@ describe("fasseLauf — was zusammenkommt", () => {
   });
 });
 
+describe("Aufstellungszeilen — die Zahl, die bis zum 11.09.2026 fehlte", () => {
+  /* ⚠ ⚠ ANLASS: wir senden für ein Spiel 17 Aufstellungszeilen, WordPress
+     meldet 270 aktualisiert und nichts verworfen, und die Seite zeigt eine
+     Zeile. Keine der drei Auskünfte sagt, ob die Zeilen angekommen sind —
+     „aktualisiert" zählt BEITRÄGE.
+
+     Die Fälle hier halten fest, dass die Frage aus der Kachel heraus
+     beantwortbar bleibt, und zwar von BEIDEN Seiten. */
+
+  it("zaehlt die geschriebenen Zeilen ueber alle Mannschaften", () => {
+    const { zahlen } = fasseLauf([
+      { sfv_team_id: "38301", gesendet: 2, wp: { ...okAntwort(2), aufstellung_zeilen: 17 }, fehler: null },
+      { sfv_team_id: "38309", gesendet: 3, wp: { ...okAntwort(3), aufstellung_zeilen: 9 }, fehler: null },
+    ]);
+    expect(zahlen.aufstellung_zeilen).toBe(26);
+  });
+
+  it("eine Antwort ohne die Zahl ergibt 0 und nicht NaN", () => {
+    /* Der alte Empfänger (bis 0.9.10) kennt das Feld nicht. Sein Schweigen
+       darf die Gesamtzahl nicht unlesbar machen. */
+    const { zahlen } = fasseLauf([
+      { sfv_team_id: "38301", gesendet: 2, wp: okAntwort(2), fehler: null },
+    ]);
+    expect(zahlen.aufstellung_zeilen).toBe(0);
+  });
+
+  it("die Meldung nennt BEIDE Seiten — gesendet und geschrieben", () => {
+    /* ⚠ DAS IST DER GANZE PUNKT. Eine Zahl allein kann „wir senden nichts"
+       nicht von „sie schreiben nichts" unterscheiden; genau diese
+       Unterscheidung hat am 11.09.2026 gefehlt. */
+    const { zahlen } = fasseLauf([
+      { sfv_team_id: "38301", gesendet: 1, wp: { ...okAntwort(1), aufstellung_zeilen: 0 }, fehler: null },
+    ]);
+    const m = laufMeldung("dev.fcherrliberg.ch", zahlen, undefined, {
+      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 },
+    });
+    expect(m).toContain("17 gesendet");
+    expect(m).toContain("0 geschrieben");
+  });
+
+  it("steht auch als Null in der Meldung", () => {
+    /* Eine Zahl, die nur im schlechten Fall erscheint, verlangt vom Leser
+       eine Deutung — und die Deutung einer Abwesenheit ist geraten. */
+    const { zahlen } = fasseLauf([
+      { sfv_team_id: "38301", gesendet: 1, wp: okAntwort(1), fehler: null },
+    ]);
+    expect(laufMeldung("h", zahlen, undefined, { zeilen: 0, rollen: {} }))
+      .toContain("Aufstellung 0 gesendet / 0 geschrieben");
+  });
+
+  it("das Protokoll fuehrt beide Zahlen und die Rollenverteilung", () => {
+    const teile: TeilErgebnis[] = [
+      { sfv_team_id: "38301", gesendet: 1, wp: { ...okAntwort(1), aufstellung_zeilen: 17 }, fehler: null },
+    ];
+    const { zahlen } = fasseLauf(teile);
+    const d = fuersProtokoll("h", zahlen, teile, undefined, {
+      zeilen: 17, rollen: { start: 11, eingewechselt: 4, nicht_eingesetzt: 2 },
+    });
+    expect(d.aufstellung_zeilen).toBe(17);
+    expect(d.gesendete_aufstellung_zeilen).toBe(17);
+    /* ⚠ Die Verteilung beantwortet die zweite Frage desselben Abends:
+       entsteht `eingewechselt` bei uns überhaupt? Drei Zahlen, keine
+       Person — deshalb darf sie ins Protokoll. */
+    expect(d.gesendete_rollen).toEqual({ start: 11, eingewechselt: 4, nicht_eingesetzt: 2 });
+    expect((d.je_team as { aufstellung_zeilen: number }[])[0].aufstellung_zeilen).toBe(17);
+  });
+});
+
 describe("laufMeldung", () => {
   it("nennt die Mannschaften vor den Spielen", () => {
     const { zahlen } = fasseLauf([
@@ -194,11 +262,11 @@ describe("fuersProtokoll — die Allowlist", () => {
     expect(d.teams).toEqual(["38309", "38310"]);
     expect(d.je_team).toEqual([
       { team: "38309", gesendet: 2, dauer_ms: 1200, neu: 1, aktualisiert: 1,
-        zurueckgezogen: 0, gescheitert: false },
+        zurueckgezogen: 0, aufstellung_zeilen: 0, gescheitert: false },
       /* ⚠ Auch die gescheiterte Mannschaft traegt ihre Dauer — sie sagt, ob
          der Teil sofort abgewiesen wurde oder in ein Zeitlimit lief. */
       { team: "38310", gesendet: 3, dauer_ms: 31000, neu: 0, aktualisiert: 0,
-        zurueckgezogen: 0, gescheitert: true },
+        zurueckgezogen: 0, aufstellung_zeilen: 0, gescheitert: true },
     ]);
     expect(d.ziel_host).toBe("dev.fcherrliberg.ch");
     expect(d.teams_gescheitert).toBe(1);
