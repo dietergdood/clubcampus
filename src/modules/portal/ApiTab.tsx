@@ -253,6 +253,21 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       zeilen.push(`⚠ Kein Bericht abgelegt — es hat noch kein Lauf `
         +`stattgefunden, oder der Empfänger ist älter als 0.9.6.`);
     }
+    /* ⚠ ⚠  MEHRDEUTIGE FELDNAMEN — der gefaehrlichste der drei Melder.
+       Ein Taxonomie-Feld schreibt ueber wp_set_object_terms() und LEGT
+       BEGRIFFE AN. Ein Feld, das nichts schreibt, ist aergerlich; eines,
+       das Begriffe anlegt, hinterlaesst Spuren. */
+    const md=(d.feld_mehrdeutig??{}) as Record<string,string[]>;
+    const mdN=Object.keys(md);
+    zeilen.push(mdN.length
+      ? `⚠ MEHRDEUTIG, deshalb NICHT geschrieben: `
+        +mdN.map((k)=>`${k} (${(md[k]||[]).join(" / ")})`).join(", ")
+      : `Kein Feldname doppelt — jeder Schlüssel eindeutig auflösbar`);
+    const of=Array.isArray(d.ohne_feldschluessel)?d.ohne_feldschluessel as string[]:[];
+    if(of.length){
+      zeilen.push(`⚠ Kein Feldschlüssel am fch_spiel: ${of.join(", ")} — `
+        +`nicht geschrieben, statt über den Namen zu raten`);
+    }
     zeilen.push(`Der Abgleich findet: ${Number(d.abgleich_findet??0)} Spiele `
       +`(dieselbe Abfrage wie beim Export)`);
     const mt=d.match_id_typen;

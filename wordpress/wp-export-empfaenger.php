@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.8
+ * Version:     0.9.9
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,21 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.9 (11.09.2026): bei NAMENSGLEICHHEIT wird nicht mehr gewaehlt,
+   sondern abgelehnt.
+   ⚠ ANLASS: der Theme-Chat fand `gruppe` zweimal am fch_team — einmal
+   als Taxonomie, einmal als Text. **Ein Taxonomie-Feld schreibt ueber
+   wp_set_object_terms(): wer dort Text durchreicht, LEGT BEGRIFFE AN,
+   statt einen Wert zu setzen.**
+   ⚠ ⚠  UND 0.9.8 HAETTE DAS NICHT VERHINDERT. Die Schluesselkarte nahm
+   bei zwei gleichnamigen Feldern schlicht das letzte — aus
+   unvorhersehbar wurde damit **vorhersehbar falsch**, und das ist
+   schlimmer: es faellt nie auf. Jetzt zaehlt sie die Kandidaten und
+   schreibt bei mehr als einem GAR NICHT (`feld_mehrdeutig`).
+   ⚠ Dieselbe Regel wie bei der Nummern-Bruecke im Export: bei zwei
+   Kandidaten gar keiner. Eine Bruecke, die raet, ist schlimmer als
+   keine.
 
    0.9.8 (10.09.2026): geschrieben wird ueber den FELDSCHLUESSEL, nicht
    ueber den Namen.
@@ -295,7 +310,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.8';
+const CC_VERSION    = '0.9.9';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -962,6 +977,12 @@ function cc_route_status(): WP_REST_Response {
 			   nicht als unvorhersehbar. Eine leere Liste ist die
 			   Erwartung; steht etwas darin, fehlt drueben ein Feld. */
 			'ohne_feldschluessel'   => array_keys( (array) ( $GLOBALS['cc_ohne_feldschluessel'] ?? array() ) ),
+			/* ⚠ Namen, die es an diesem Beitragstyp MEHRFACH gibt. Sie werden
+			   NICHT geschrieben — und die Liste nennt Typ und Schluessel jedes
+			   Kandidaten, damit drueben entschieden werden kann, welcher
+			   gemeint ist. Ein Taxonomie-Feld schreibt ueber
+			   wp_set_object_terms() und legt BEGRIFFE an. */
+			'feld_mehrdeutig'       => (array) ( $GLOBALS['cc_feld_mehrdeutig'] ?? array() ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
@@ -1181,15 +1202,42 @@ function cc_feld_schluessel( int $post_id, string $name ) {
 		if ( function_exists( 'acf_get_field_groups' ) && function_exists( 'acf_get_fields' ) ) {
 			foreach ( acf_get_field_groups( array( 'post_id' => $post_id ) ) as $gruppe ) {
 				foreach ( (array) acf_get_fields( $gruppe ) as $feld ) {
-					if ( ! empty( $feld['name'] ) && ! empty( $feld['key'] ) ) {
-						$karte[ $feld['name'] ] = $feld['key'];
+					if ( empty( $feld['name'] ) || empty( $feld['key'] ) ) {
+						continue;
 					}
+					/* ⚠ SAMMELN, NICHT UEBERSCHREIBEN. Zwei Felder duerfen
+					   denselben Namen tragen — `gruppe` gibt es am
+					   fch_team als Taxonomie UND als Text. Wer hier das
+					   letzte nimmt, waehlt; und eine Wahl, die niemand
+					   getroffen hat, ist keine. */
+					$karte[ $feld['name'] ][] = array(
+						'key' => $feld['key'],
+						'typ' => (string) ( $feld['type'] ?? '?' ),
+					);
 				}
 			}
 		}
 		$karten[ $typ ] = $karte;
 	}
-	return $karten[ $typ ][ $name ] ?? null;
+
+	$kandidaten = $karten[ $typ ][ $name ] ?? array();
+	if ( 1 === count( $kandidaten ) ) {
+		return $kandidaten[0]['key'];
+	}
+	if ( count( $kandidaten ) > 1 ) {
+		/* ⚠ ⚠  BEI ZWEI KANDIDATEN GAR KEINER.
+		   Ein Taxonomie-Feld schreibt ueber wp_set_object_terms() und
+		   LEGT BEGRIFFE AN. Das falsche zu treffen hinterlaesst Spuren,
+		   die niemand bestellt hat — und die von Hand wegzuraeumen sind.
+		   Dieselbe Regel wie bei der Nummern-Bruecke im Export. */
+		$typen = array();
+		foreach ( $kandidaten as $k ) {
+			$typen[] = $k['typ'] . ':' . $k['key'];
+		}
+		$GLOBALS['cc_feld_mehrdeutig'][ $name ] = $typen;
+		return null;
+	}
+	return null;
 }
 
 function cc_schreibe_felder( int $post_id, array $spiel ): array {
