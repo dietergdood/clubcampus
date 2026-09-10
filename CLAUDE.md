@@ -3772,6 +3772,24 @@ verdrehten abzuleiten und die korrigierten anzuzeigen wäre die
 schlechteste der drei Mischungen: die Anzeige zeigte dann Minuten, zu
 denen die danebenstehende Rolle nicht passt.
 
+**Der Bestand, gemessen am 10.09.2026** — die Ausgangszahl, an der beim
+nächsten Durchlauf zu sehen ist, ob sie steigt:
+
+| | verdreht | negative Spielzeit |
+|---|---|---|
+| eigene Zeilen | **1** | **1** |
+| Gegnerzeilen | 0 | 0 |
+
+Es ist **ein** Fall: Leo Haas, Nr. 18, Spiel 4393096 vom 06.09.2026 gegen
+FC Meilen 3 — 54/32/−22. Ein Tippfehler im Matchblatt, kein Muster.
+
+⚠ **Und die zwei Spalten fallen zusammen: es gibt keinen Fall mit
+negativer Spielzeit ohne verdrehte Minuten.** Das stützt die enge
+Bedingung — hätte es Zeilen mit negativer Spielzeit bei richtiger
+Reihenfolge gegeben, wäre der Tausch die falsche Reparatur gewesen und
+hätte sie nicht erreicht. **Die Grenze ist also nicht bloss vorsichtig
+gewählt, sie deckt den ganzen gemessenen Bestand.**
+
 `korrigiereMinuten()` in `wpNutzlast.ts`; die Zusage hängt an **zwei**
 Testdateien, und erst beide zusammen halten sie — `wpNutzlast.test.ts`
 prüft, dass 54/32/−22 zu 32/54/22 wird, `matchdaten.test.ts`, dass
