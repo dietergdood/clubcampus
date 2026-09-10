@@ -168,6 +168,33 @@ const SCHREIBT = [
 ];
 
 const REGELN = [
+  /* ── Keine doppelten Feldnamen (11.09.2026) ────────────────────────
+     ⚠ ANLASS: ich habe „liga und aufstellung stehen doppelt" GEMELDET,
+     und es stimmte nicht — meine Regex traf die Namen in den
+     KOMMENTAREN (`update_field('liga', …)`). Der Tokenizer sieht sie
+     nicht, ein Textmuster schon.
+
+     **Ein Werkzeug, das nach Text sucht, trifft was gleich AUSSIEHT,
+     nicht was gleich GEMEINT ist** — die Regel steht seit dem
+     21.08.2026 im Papier, und ich bin ihr trotzdem aufgesessen.
+
+     ⚠ Die Prüfung bleibt trotzdem: eine Liste mit doppelten Einträgen
+     ist der Anfang davon, dass jemand einen ändert und den anderen
+     übersieht (Didi, 11.09.2026). Sie ist jetzt nur nie wieder von Hand
+     zu beantworten. */
+  {
+    frage: "CC_FELDER fuehrt keinen Namen doppelt",
+    pruefe: (b) => {
+      const f = b.konstanten?.CC_FELDER ?? [];
+      const zaehl = {};
+      for (const n of f) zaehl[n] = (zaehl[n] ?? 0) + 1;
+      return Object.keys(zaehl).filter((n) => zaehl[n] > 1);
+    },
+    kontrolle: "<?php const CC_FELDER = array( 'datum', 'datum' ); "
+      + "function cc_schreibe_felder() { return 1; }",
+    erwarteImKontrollfall: 1,
+  },
+
   /* ⚠⚠ DIE ZUSAGE, DIE AM HAEUFIGSTEN BEZWEIFELT WURDE — und die bis zum
      10.09.2026 nur als Kommentar dastand.
 

@@ -3611,6 +3611,68 @@ abgeleitetes Feld.**
 
 ---
 
+### ⚠⚠ AUS UNVORHERSEHBAR WURDE VORHERSEHBAR FALSCH — und das ist schlimmer
+
+11.09.2026. Der Satz gehört an den Anfang, weil er eine ganze Klasse von
+Reparaturen betrifft.
+
+**Die Lage:** `update_field()` über den Namen traf je nach Ladereihenfolge
+ein anderes von drei gleichnamigen Feldern. **Unvorhersehbar.**
+
+**Meine Reparatur (0.9.8):** eine Karte Name → Schlüssel, aufgelöst aus
+den Feldgruppen des Beitrags.
+
+```php
+$karte[ $feld['name'] ] = $feld['key'];   // ⚠ das LETZTE gewinnt
+```
+
+**Bei zwei gleichnamigen Feldern wählt sie stillschweigend eines.** Die
+Reparatur hat den Fehler nicht behoben, sondern **stabilisiert**.
+
+> **Ein Fehler, der schwankt, fällt auf. Einer, der stabil daneben liegt,
+> nie.**
+
+⚠ **Das ist die unangenehme Hälfte:** Schwanken ist ein Melder. Wer eine
+sporadische Fehlfunktion beseitigt, indem er sie gleichmässig macht,
+nimmt dem Fehler seine einzige Stimme — und die Seite sieht danach
+ruhiger aus als vorher, obwohl sie es nicht ist.
+
+**Die richtige Reparatur ist nicht Eindeutigkeit durch Wahl, sondern
+Verweigerung bei Mehrdeutigkeit:** `cc_feld_schluessel()` zählt die
+Kandidaten und schreibt bei mehr als einem **gar nicht** — mit Name, Typ
+und Schlüssel jedes Kandidaten in `/status`.
+
+**Dieselbe Regel wie bei der Nummern-Brücke im Export** (bei zwei
+Kandidaten gar keiner) und bei `baueNummernBruecke()`. **Eine Brücke, die
+rät, ist schlimmer als keine — und eine, die immer gleich rät, ist die
+schlimmste.**
+
+⚠ **Und der Anlass war ein Taxonomie-Feld**, das denselben Namen trug wie
+ein Textfeld: `gruppe` am `fch_team`. Ein Taxonomie-Feld schreibt über
+`wp_set_object_terms()` — **wer dort Text durchreicht, legt Begriffe an
+statt einen Wert zu setzen.** Ein Feld, das nichts schreibt, ist
+ärgerlich; eines, das Begriffe anlegt, hinterlässt Spuren, die jemand von
+Hand wegräumen muss.
+
+#### ⚠ Und die Messung, mit der ich es fand, war selbst falsch
+
+Ich meldete „`liga` und `aufstellung` stehen doppelt in `CC_FELDER`".
+**Stimmte nicht** — meine Regex traf die Namen in den **Kommentaren**
+(`update_field('liga', …)`). Der Tokenizer sieht sie nicht, ein
+Textmuster schon: **18 Einträge, keiner doppelt.**
+
+**Ein Werkzeug, das nach Text sucht, trifft was gleich AUSSIEHT, nicht
+was gleich GEMEINT ist** — die Regel steht seit dem 21.08.2026 im
+Papier, und ich bin ihr am selben Tag aufgesessen, an dem ich sie zitiert
+habe.
+
+**Die Prüfung gibt es trotzdem** (21. Regel in `check:plugin`): eine
+Liste mit doppelten Einträgen ist der Anfang davon, dass jemand einen
+ändert und den anderen übersieht. **Sie ist jetzt nur nie wieder von Hand
+zu beantworten.**
+
+---
+
 ### ⚠⚠ ACFs Namenssuche ist nicht falsch, sondern UNVORHERSEHBAR
 
 10.09.2026, vom Theme-Chat an vier Aufrufen gemessen — `sfv_person_id`
