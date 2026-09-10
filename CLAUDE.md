@@ -3742,11 +3742,40 @@ minus 22 Minuten Spielzeit.
 unverändert vom Verband (`matchdaten.ts:128`); die Differenz bildet
 nirgends jemand. Es ist ein Fehler in der Quelle.
 
-⚠ **Geputzt wird er nicht** — dieselbe Regel wie beim Doppelabstand in
-„Gruppe  2" und bei „Schweizer-Cup": fremde Daten stillschweigend zu
-korrigieren versteckt den Fehler. `rolleAus()` meldet ihn als
-`unplausibel`; was die Anzeige daraus macht, ist eine Entscheidung —
-**aber eine negative Minutenzahl darf nicht auf die Website.**
+### ⚠⚠ Die EINE Ausnahme vom Grundsatz „unverändert kopieren"
+
+**Entschieden am 10.09.2026 (Didi):** verdrehte Minuten werden
+korrigiert. Überall sonst gilt in diesem Projekt das Gegenteil — der
+Doppelabstand in „Gruppe  2" bleibt stehen, „Schweizer-Cup" und
+„Schweizer Cup" bleiben nebeneinander, *fremde Daten stillschweigend zu
+putzen versteckt den Fehler, statt ihn zu melden.*
+
+**Der Grund für die Ausnahme:** eine negative Minutenzahl darf nicht auf
+die Website.
+
+**Und drei Grenzen, die sie zur Ausnahme machen statt zum neuen
+Grundsatz:**
+
+| | |
+|---|---|
+| **nur `bis_minute < von_minute`** | nicht „irgendwie unplausibel". Eine Spielzeit, die nicht zur Differenz passt, wird nicht angefasst; Werte über 90 oder 120 auch nicht |
+| **nur in der Anzeige** | `spiel_aufstellung` behält, was der Verband lieferte. Sonst wäre später nicht mehr zu sehen, dass es einen Fehler gab, und ein Vergleich mit dem Matchblatt fände nichts |
+| **`unplausibel` bleibt gesetzt** | die Korrektur macht den Befund **unsichtbar, nicht ungeschehen**. Werden es viele, ist es ein Muster beim Verband und kein Tippfehler |
+
+Die dritte Grenze ist die, die man am ehesten vergisst: **ein Flag, das
+die Reparatur mitlöscht, macht aus einem Befund eine Datenlage** — genau
+die Verwandlung, die dieses Papier an einem Dutzend Stellen als teuersten
+Fehler führt.
+
+⚠ **Und die Rolle kommt aus den KORRIGIERTEN Werten.** Sie aus den
+verdrehten abzuleiten und die korrigierten anzuzeigen wäre die
+schlechteste der drei Mischungen: die Anzeige zeigte dann Minuten, zu
+denen die danebenstehende Rolle nicht passt.
+
+`korrigiereMinuten()` in `wpNutzlast.ts`; die Zusage hängt an **zwei**
+Testdateien, und erst beide zusammen halten sie — `wpNutzlast.test.ts`
+prüft, dass 54/32/−22 zu 32/54/22 wird, `matchdaten.test.ts`, dass
+`bildeAufstellung` genau 54/32/−22 in die Datenbank schreibt.
 
 ---
 

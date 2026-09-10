@@ -469,12 +469,59 @@ export interface RollenBefund {
   ist_captain: boolean;
   /** Ein Wert, den der Verband bisher nicht geliefert hat. */
   unbekannt: number | null;
-  /** ⚠ Negative Spielzeit oder bis < von — kommt so vom Verband. */
+  /**
+   * ⚠ Negative Spielzeit oder bis < von — kommt so vom Verband.
+   *
+   * BLEIBT GESETZT, AUCH WENN KORRIGIERT WURDE. Die Zahl muss zaehlbar
+   * bleiben: werden es viele, ist es ein Muster beim Verband und kein
+   * Tippfehler. Ein Flag, das die Reparatur mitloescht, macht aus einem
+   * Befund eine Datenlage. (Entscheid Didi, 10.09.2026.)
+   */
   unplausibel: boolean;
   /** Die Zuweisung sagt etwas anderes als die Minuten. */
   widerspruch: boolean;
   /** Gar keine Minutenangabe — dann traegt die Zuweisung, notgedrungen. */
   ohne_minuten: boolean;
+  /** ⚠ Wurde getauscht? Enger als `unplausibel` — siehe korrigiereMinuten(). */
+  korrigiert: boolean;
+  /** Fuer die ANZEIGE. In der Datenbank steht weiter, was der Verband lieferte. */
+  von_minute: number | null;
+  bis_minute: number | null;
+  spielzeit: number | null;
+}
+
+/* ── Die eine Stelle, an der fremde Daten korrigiert werden ────────────
+
+   ⚠ ⚠  HIER WIRD BEWUSST VOM GRUNDSATZ „UNVERAENDERT KOPIEREN"
+         ABGEWICHEN. Ueberall sonst gilt in diesem Projekt: fremde Daten
+         stillschweigend zu putzen versteckt den Fehler, statt ihn zu
+         melden — der Doppelabstand in „Gruppe  2" bleibt, „Schweizer-Cup"
+         und „Schweizer Cup" bleiben nebeneinander stehen.
+
+   **Der Grund fuer die Ausnahme: eine negative Minutenzahl darf nicht
+   auf die Website.** (Entscheid Didi, 10.09.2026.)
+
+   ── Und die Grenzen, die sie zur Ausnahme machen ──────────────────────
+
+   1 · NUR `bis_minute < von_minute`. Nicht „irgendwie unplausibel":
+       eine Spielzeit, die nicht zur Differenz passt, wird nicht
+       angefasst, Werte ueber 90 oder 120 auch nicht.
+   2 · NUR in der Anzeige. `spiel_aufstellung` behaelt, was der Verband
+       lieferte — sonst waere spaeter nicht mehr zu sehen, dass es einen
+       Fehler gab, und ein Vergleich mit dem Matchblatt faende nichts.
+   3 · `unplausibel` bleibt gesetzt. Die Korrektur macht den Befund
+       unsichtbar, nicht ungeschehen.
+
+   Gemessen am 10.09.2026: eine Zeile, 54/32/-22. */
+export function korrigiereMinuten(
+  von: number | null, bis: number | null, spielzeit: number | null,
+): { von: number | null; bis: number | null; spielzeit: number | null; korrigiert: boolean } {
+  if (von === null || bis === null || bis >= von) {
+    return { von, bis, spielzeit, korrigiert: false };
+  }
+  /* Getauscht — und die Spielzeit neu gerechnet, weil die gelieferte zur
+     verdrehten Reihenfolge gehoerte (bei 54/32 war sie -22). */
+  return { von: bis, bis: von, spielzeit: von - bis, korrigiert: true };
 }
 
 export function rolleAus(z: {
@@ -495,16 +542,22 @@ export function rolleAus(z: {
   const unplausibel = (z.spielzeit !== null && z.spielzeit < 0)
     || (z.von_minute !== null && z.bis_minute !== null && z.bis_minute < z.von_minute);
 
-  const ohne_minuten = z.spielzeit === null && z.von_minute === null;
+  /* ⚠ Erst korrigieren, dann ableiten. Die Rolle aus den VERDREHTEN
+     Werten zu bestimmen und die korrigierten anzuzeigen waere die
+     schlechteste Mischung: die Anzeige zeigte dann Minuten, zu denen die
+     danebenstehende Rolle nicht passt. */
+  const k = korrigiereMinuten(z.von_minute, z.bis_minute, z.spielzeit);
+
+  const ohne_minuten = k.spielzeit === null && k.von === null;
 
   let rolle: SpielerRolle;
   if (ohne_minuten) {
     /* ⚠ Notloesung, und sie ist als solche gezaehlt: ohne Minuten bleibt
        nur die Zuweisung, und die ist die schlechtere Quelle. */
     rolle = id === ROLLE_KEIN_EINSATZ_ID ? "nicht_eingesetzt" : "start";
-  } else if (z.spielzeit === 0) {
+  } else if (k.spielzeit === 0) {
     rolle = "nicht_eingesetzt";
-  } else if (z.von_minute !== null && z.von_minute > 1) {
+  } else if (k.von !== null && k.von > 1) {
     rolle = "eingewechselt";
   } else {
     rolle = "start";
@@ -518,7 +571,11 @@ export function rolleAus(z: {
       ? rolle === "start"
       : rolle === "nicht_eingesetzt";
 
-  return { rolle, ist_captain, unbekannt, unplausibel, widerspruch, ohne_minuten };
+  return {
+    rolle, ist_captain, unbekannt, unplausibel, widerspruch, ohne_minuten,
+    korrigiert: k.korrigiert,
+    von_minute: k.von, bis_minute: k.bis, spielzeit: k.spielzeit,
+  };
 }
 
 

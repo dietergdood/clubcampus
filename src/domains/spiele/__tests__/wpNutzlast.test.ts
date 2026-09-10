@@ -745,6 +745,47 @@ describe("rolleAus", () => {
     expect(rolleAus(z(1, 90, 90, 0)).unbekannt).toBeNull();
   });
 
+  /* ── Die eine Korrektur an fremden Daten (10.09.2026) ───────────── */
+
+  it("54/32 wird zu 32/54 mit Spielzeit 22", () => {
+    const r = rolleAus(z(54, 32, -22));
+    expect(r.von_minute).toBe(32);
+    expect(r.bis_minute).toBe(54);
+    expect(r.spielzeit).toBe(22);
+    expect(r.korrigiert).toBe(true);
+  });
+
+  it("⚠ unplausibel bleibt gesetzt, AUCH nach der Korrektur", () => {
+    /* Die Korrektur macht den Befund unsichtbar, nicht ungeschehen.
+       Werden es viele, ist es ein Muster beim Verband und kein
+       Tippfehler — ein Flag, das die Reparatur mitlöscht, machte aus
+       einem Befund eine Datenlage. */
+    expect(rolleAus(z(54, 32, -22)).unplausibel).toBe(true);
+  });
+
+  it("⚠ die Bedingung ist eng — nur bis < von", () => {
+    /* Eine Spielzeit, die nicht zur Differenz passt: nicht angefasst. */
+    const passtNicht = rolleAus(z(1, 90, 45));
+    expect(passtNicht.korrigiert).toBe(false);
+    expect(passtNicht.spielzeit).toBe(45);
+    /* Werte über 90: nicht angefasst. */
+    const lang = rolleAus(z(1, 150, 150));
+    expect(lang.korrigiert).toBe(false);
+    expect(lang.bis_minute).toBe(150);
+    /* Und eine negative Spielzeit ohne verdrehte Minuten ebenfalls nicht
+       — sie ist unplausibel, aber nicht diese eine Bedingung. */
+    const negativ = rolleAus(z(1, 90, -5));
+    expect(negativ.korrigiert).toBe(false);
+    expect(negativ.spielzeit).toBe(-5);
+    expect(negativ.unplausibel).toBe(true);
+  });
+
+  it("die Rolle kommt aus den KORRIGIERTEN Minuten", () => {
+    /* ⚠ Sonst zeigte die Anzeige Minuten, zu denen die danebenstehende
+       Rolle nicht passt — die schlechteste der drei Mischungen. */
+    expect(rolleAus(z(90, 1, -89)).rolle).toBe("start");
+  });
+
   it("⚠ negative Spielzeit wird gemeldet, nicht geglättet", () => {
     /* Gemessen: eine Zeile traegt 54/32/-22 — ausgewechselt vor der
        Einwechslung. Der Wert kommt so vom Verband; wir rechnen ihn

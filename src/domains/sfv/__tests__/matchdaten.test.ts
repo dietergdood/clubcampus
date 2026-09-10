@@ -541,6 +541,31 @@ describe("entdoppleSfvPersonen", () => {
    Spieler.
    ══════════════════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════════
+   Die Korrektur geht NUR in die Anzeige (10.09.2026)
+
+   `korrigiereMinuten()` dreht `54/32/-22` für die Website zu `32/54/22`.
+   ⚠ In `spiel_aufstellung` muss weiter stehen, was der Verband geliefert
+   hat — sonst ist später nicht mehr zu sehen, dass es einen Fehler gab,
+   und ein Vergleich mit dem Matchblatt findet nichts.
+
+   Diese Datei prüft die SCHREIBSEITE. Die Anzeigeseite steht in
+   `wpNutzlast.test.ts`; erst beide zusammen halten die Zusage.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("bildeAufstellung — verdrehte Minuten", () => {
+  it("schreibt sie unverändert, wie der Verband sie liefert", () => {
+    const zeile = bildeAufstellung(
+      { clubNumber: UNSERE, personId: 4711, teamId: 37930, jerseyNumber: 9,
+        positionId: 48, positionName: "Sturm",
+        playFromMinute: 54, playUntilMinute: 32, totalPlayTime: -22 },
+      UNSERE, "v", "s", JETZT,
+    )!;
+    expect(zeile.von_minute).toBe(54);
+    expect(zeile.bis_minute).toBe(32);
+    expect(zeile.spielzeit).toBe(-22);
+  });
+});
+
 describe("verschmelzeAufstellung", () => {
   /* ⚠ Der EIGENE Zweig ist seit dem Ausbau von /bench tot — es gibt nur
      noch eine Quelle, und in ihr ist personId je Spiel eindeutig. Er
