@@ -3515,6 +3515,65 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ EINE ZAHL, DIE ZU BEIDEN LESARTEN PASST, IST KEINE MESSUNG
+
+10.09.2026, beim Einspielen des Änderungs-Triggers. Zwei Beobachtungen
+sahen nach einem Defekt aus:
+
+```
+spiele 270 · mit_stempel 270
+juengste_aenderung 17:21:05   juengster_lauf 17:21:53
+```
+
+Gelesen wurde: **„der Trigger feuert für alle 270 Zeilen, obwohl der Lauf
+nichts geändert hat."**
+
+⚠ **Beide Beobachtungen sind mit der GEGENTEILIGEN Lesart genauso
+verträglich.** `add column … not null default now()` stempelt beim
+`ALTER TABLE` jede bestehende Zeile — also sind nach der Migration
+zwangsläufig alle 270 gestempelt, und zwar vor dem nächsten Lauf.
+
+| Beobachtung | „Trigger feuert 270-mal" | „Trigger hat nie gefeuert" |
+|---|---|---|
+| `mit_stempel = 270` | ✅ | ✅ |
+| Änderung liegt vor dem Lauf | ✅ | ✅ |
+| **`count(distinct)`** | **270** | **1** |
+
+**Gemessen: 1.** Der Trigger hatte nichts angefasst; er arbeitet richtig.
+
+> **Zwei Beobachtungen, die zu beiden Erklärungen passen, ergeben keinen
+> Befund — auch nicht zu zweit.** Es zählt die eine Zahl, die sie
+> auseinanderhält.
+
+⚠ **Und die verräterische Einzelheit stand schon in den Daten:** hätte
+der Lauf gestempelt, läge `zuletzt_geaendert` *innerhalb* seiner 48
+Sekunden und trüge **viele verschiedene** Werte. Ein einziger Zeitpunkt
+**vor** dem Lauf sieht nach der Migration aus. Wer nach dem Unterschied
+sucht statt nach der Bestätigung, findet ihn ohne neue Abfrage.
+
+**Dieselbe Familie wie die 207**, die fehlende Namen zählten und als
+fehlende Zeilen gelesen wurden, und wie die 231 Klarnamen, die 0 waren:
+**eine richtig gemessene Zahl bestätigt die Frage nicht, auf die man sie
+anwendet.**
+
+#### ⚠ Und im selben Trigger: warum hier eine DENYLIST richtig ist
+
+Der Vergleich läuft über `to_jsonb(OLD) - 'laufstempel' - …`, nicht über
+eine Aufzählung der Inhaltsspalten. **Das sieht wie ein Verstoss gegen
+„Bei Fremddaten immer Allowlist, nie Denylist" aus, und es ist keiner:**
+
+| | vergisst man etwas Neues, dann … |
+|---|---|
+| **`to_jsonb` minus Laufstempel** | ein neuer **Laufstempel** landet im Vergleich → zu oft gestempelt → der Export läuft zu häufig. **Sichtbar** als „wartet immer" |
+| Inhaltsspalten aufzählen | eine neue **Inhaltsspalte** fehlt → sie wird **nie** exportiert. **Still** |
+
+**Die Hausregel gilt für fremde Daten, wo das Durchrutschen der Schaden
+ist. Hier ist das Übersehen der Schaden** — und zu wählen ist die Form,
+deren Fehler laut ist. **Das Kriterium ist nie die Form, sondern welche
+Fehlerrichtung man sich leisten kann.**
+
+---
+
 ### ⚠⚠ „Success" HAT AN EINEM TAG ZWEIMAL NICHTS BEDEUTET — und die Ursache ist NICHT gefunden
 
 10.09.2026. Zwei Blöcke meldeten Erfolg und bewirkten nichts:
