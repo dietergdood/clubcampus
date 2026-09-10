@@ -1120,3 +1120,35 @@ describe("bildeVerlauf — sfv_person_id", () => {
     expect(z.sfv_person_id).toBeNull();
   });
 });
+
+describe("bildeVerlauf — ein_nummer", () => {
+  const wechsel = (ueber = {}) => ({
+    typ_id: 2, subtyp_id: 0, minute: 76, zusatzminute: 0,
+    ist_eigener: true, sfv_person_id: 100, rueckennr: 7,
+    gegner_club_name: null, ein_sfv_person_id: 1266706, ein_rueckennr: 21,
+    ...ueber,
+  }) as never;
+
+  it("trägt die Nummer des Eingewechselten als eigenes Feld", () => {
+    /* ⚠ Sie stand bisher nur im Fliesstext („ersetzt durch Nr. 21").
+       Wer ihn zurückparst, misst seine eigene Formatierung mit. */
+    const [z] = bildeVerlauf([wechsel()], true, new Map(), "FC Herrliberg");
+    expect(z.ein_nummer).toBe(21);
+    expect(z.text).toContain("Nr. 21");
+  });
+
+  it("⚠ bei einem Gegnerwechsel bleibt sie leer", () => {
+    const [z] = bildeVerlauf(
+      [wechsel({ ist_eigener: false, sfv_person_id: null,
+                 ein_sfv_person_id: null, gegner_club_name: "FC Uster" })],
+      true, new Map(), "FC Herrliberg",
+    );
+    expect(z.ein_nummer).toBeNull();
+  });
+
+  it("⚠ bei einem Tor bleibt sie leer — sie gehört zum Wechsel", () => {
+    const [z] = bildeVerlauf([wechsel({ typ_id: 1, ein_rueckennr: 21 })],
+      true, new Map(), "FC Herrliberg");
+    expect(z.ein_nummer).toBeNull();
+  });
+});

@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.6
+ * Version:     0.9.7
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,19 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.7 (10.09.2026): `sfv_person_id` und `ein_nummer` in
+   CC_VERLAUF_FELDER, und der Repeater `aufstellung` bekommt eine eigene
+   Unterfeld-Allowlist.
+   ⚠ ANLASS: `sfv_person_id` wurde geschickt und fiel VOR dem Schreiben
+   heraus — cc_schreibe_verlauf() baut jede Zeile aus CC_VERLAUF_FELDER,
+   was nicht darin steht, erreicht `update_field()` gar nicht. Dieselbe
+   Klasse wie `liga` und `aufstellung` vorher, nur eine Ebene tiefer:
+   nicht die Feldliste des Spiels, sondern die des Unterfeldes.
+   ⚠ ⚠  UND DIE ZWEI REPEATER WAREN UNGLEICH BEHANDELT: der Verlauf
+   filterte, die Aufstellung reichte jede Zeile unveraendert durch. Ein
+   neues Unterfeld waere dort still mitgereist — genau die Richtung, vor
+   der `unbeachtete_felder` warnt, nur ohne Melder.
+
    0.9.6 (10.09.2026): `/status` liefert den LETZTEN BERICHT aus.
    ⚠ ANLASS: die Aufstellung kam drueben nicht an, und der Empfaenger
    wusste warum — `cc_bericht_ablegen()` legt bei jedem Lauf ab, was
@@ -268,7 +281,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.6';
+const CC_VERSION    = '0.9.7';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -460,7 +473,41 @@ const CC_FELDER_ABSICHTLICH_UNGENUTZT = array(
 );
 
 /** Unterfelder des Verlaufs — dieselbe Rolle, eine Ebene tiefer. */
-const CC_VERLAUF_FELDER = array( 'minute', 'art', 'seite', 'text', 'stand', 'klub' );
+const CC_VERLAUF_FELDER = array(
+	'minute', 'art', 'seite', 'text', 'stand', 'klub',
+	/* ⚠ Unterfelder des Repeaters `verlauf` — NICHT ueber ACFs globale
+	   Namenssuche geschrieben. `update_field('verlauf', $zeilen, …)`
+	   ordnet die Schluessel den Unterfeldern DIESES Repeaters zu; ein
+	   gleichnamiges Feld an einem anderen Beitragstyp wird dabei nicht
+	   getroffen.
+
+	   ⚠ `sfv_person_id` gibt es drueben dreimal (f_s_v_sfv, f_s_a_sfv,
+	   f_p_sfv). Fuer ein TOP-LEVEL-Feld waere das die Falle von `liga`;
+	   als Unterfeld ist es keine — aber der Satz gehoert hierher, weil
+	   der naechste Leser genau diese Frage stellen wird. */
+	'sfv_person_id',
+	'ein_nummer',
+);
+
+/**
+ * Unterfelder des Repeaters `aufstellung`.
+ *
+ * ⚠ ⚠  BIS 0.9.7 GAB ES DIESE LISTE NICHT. Der Verlauf filterte seine
+ *       Zeilen, die Aufstellung reichte sie unveraendert an
+ *       `update_field()` weiter. Ein neues Unterfeld waere damit still
+ *       mitgereist — und ein Feld, das ankommt und niemand fuehrt, ist
+ *       genau das, wogegen `unbeachtete_felder` seit 0.7.0 gebaut ist.
+ *
+ * **Zwei Repeater, zwei Bauarten, ohne dass es jemand entschieden
+ * haette.** Die strengere gewinnt.
+ */
+const CC_AUFSTELLUNG_FELDER = array(
+	'seite', 'sfv_person_id', 'nummer', 'spieler', 'position', 'rolle',
+	'ist_captain', 'von_minute', 'bis_minute', 'spielzeit', 'marken',
+);
+
+/** Unterfelder des verschachtelten Repeaters `marken`. */
+const CC_MARKEN_FELDER = array( 'art', 'minute' );
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1029,13 +1076,64 @@ function cc_stempel( int $post_id, string $lauf ): void {
 }
 
 /** Nur die Felder aus der Allowlist, und nur die, die mitgeschickt wurden. */
+/**
+ * Jede Aufstellungszeile auf CC_AUFSTELLUNG_FELDER zuschneiden.
+ *
+ * ⚠ Was nicht in der Liste steht, erreicht `update_field()` nicht — und
+ * ein Feld, das ankommt und niemand fuehrt, waere sonst still
+ * mitgereist. Dieselbe Bauart wie cc_schreibe_verlauf() seit 0.2.0.
+ *
+ * ⚠ Der verschachtelte Repeater `marken` wird mitgeschnitten; ohne das
+ * waere die Allowlist an der Oberflaeche streng und eine Ebene tiefer
+ * offen — die Sorte halbe Grenze, die schlimmer ist als keine, weil sie
+ * wie eine ganze aussieht.
+ */
+function cc_saeubere_aufstellung( $zeilen ) {
+	if ( ! is_array( $zeilen ) ) {
+		return array();
+	}
+	$raus = array();
+	foreach ( $zeilen as $z ) {
+		if ( ! is_array( $z ) ) {
+			continue;
+		}
+		$zeile = array();
+		foreach ( CC_AUFSTELLUNG_FELDER as $f ) {
+			if ( 'marken' === $f ) {
+				$marken = array();
+				foreach ( (array) ( $z['marken'] ?? array() ) as $m ) {
+					if ( ! is_array( $m ) ) {
+						continue;
+					}
+					$eine = array();
+					foreach ( CC_MARKEN_FELDER as $mf ) {
+						$eine[ $mf ] = array_key_exists( $mf, $m ) ? $m[ $mf ] : '';
+					}
+					$marken[] = $eine;
+				}
+				$zeile['marken'] = $marken;
+				continue;
+			}
+			$zeile[ $f ] = array_key_exists( $f, $z ) ? $z[ $f ] : '';
+		}
+		$raus[] = $zeile;
+	}
+	return $raus;
+}
+
 function cc_schreibe_felder( int $post_id, array $spiel ): array {
 	$geschrieben = array();
 	foreach ( CC_FELDER as $feld ) {
 		if ( ! array_key_exists( $feld, $spiel ) ) {
 			continue;
 		}
-		update_field( $feld, $spiel[ $feld ], $post_id );
+		/* ⚠ Der Repeater geht durch eine eigene Unterfeld-Allowlist —
+		   wie der Verlauf, und aus demselben Grund. Bis 0.9.7 reichte er
+		   jede Zeile unveraendert durch. */
+		$wert = ( 'aufstellung' === $feld )
+			? cc_saeubere_aufstellung( $spiel[ $feld ] )
+			: $spiel[ $feld ];
+		update_field( $feld, $wert, $post_id );
 		$geschrieben[] = $feld;
 	}
 	return $geschrieben;

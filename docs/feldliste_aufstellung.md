@@ -384,6 +384,38 @@ Feld — auch nicht als Rückfall.
 
 ---
 
+## 5f · ⚠ Ein zweites Unterfeld am `verlauf`: `ein_nummer`
+
+```
+verlauf → ein_nummer     Zahl
+```
+
+**Die Rückennummer des Eingewechselten** — nur bei eigenen Zeilen, nur
+bei einem Wechsel.
+
+⚠ **Sie stand bisher nur im Fliesstext** („ersetzt durch Nr. 21"). Der
+Theme-Chat parst ihn nicht zurück, **und das ist richtig: wer seinen
+eigenen Ausgabetext wieder zerlegt, misst seine Formatierung mit** —
+genau daher kamen am 05.09.2026 die 431 vermeintlichen Klarnamen, die 0
+waren.
+
+**Als eigenes Feld ist der Eingewechselte drüben über dieselbe Brücke
+auflösbar wie bei uns:** Nummer plus Aufstellung derselben Partie.
+
+⚠ **Und deshalb gibt es KEIN `ein_sfv_person_id`.** Die Kennung ist da
+und zeigt ins Leere — `substitutePlayerId` löste bei fünf von fünf
+gemessenen Wechseln nirgends auf. Ein Feld dafür wäre eines, das erlaubt
+ist und leer bleibt.
+
+**Für die Vorlage gelten dieselben drei Grenzen wie bei uns:** nur
+eigene Zeilen, nur dieselbe Partie, und **bei zwei Kandidaten unter
+derselben Nummer gar keiner** — die 9 gibt es in beiden Mannschaften.
+
+**Leer heisst:** Gegnerzeile (Entscheidung) · kein Wechsel (Struktur) ·
+der Verband nennt keine Nummer (Grenze der Quelle).
+
+---
+
 ## 6 · Was NICHT kommt
 
 | | warum |

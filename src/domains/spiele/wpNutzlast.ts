@@ -94,6 +94,26 @@ export interface WpVerlaufZeile {
    *   ohnehin an der Aufstellungszeile.
    */
   sfv_person_id: number | null;
+  /**
+   * Die Rueckennummer des EINGEWECHSELTEN — nur bei eigenen Zeilen, und
+   * nur bei einem Wechsel.
+   *
+   * ⚠ ⚠  SIE STAND BISHER NUR IM FLIESSTEXT („ersetzt durch Nr. 21").
+   *       Der Theme-Chat parst ihn nicht zurueck, und das ist richtig:
+   *       wer seinen eigenen Ausgabetext wieder zerlegt, misst seine
+   *       Formatierung mit.
+   *
+   * Als eigenes Feld ist der Eingewechselte drueben ueber DIESELBE
+   * Bruecke aufloesbar wie bei uns — Nummer plus Aufstellung derselben
+   * Partie. Das ist noetig, weil `substitutePlayerId` nirgends
+   * aufloest (gemessen 10.09.2026, fuenf von fuenf).
+   *
+   * ⚠ Und deshalb gibt es KEIN `ein_sfv_person_id`: die Kennung ist da
+   *   und zeigt ins Leere. Die Nummer ist die einzige Bruecke — mit
+   *   allem, was dazugehoert: nur eigene Zeilen, nur dieselbe Partie,
+   *   und bei zwei Kandidaten gar keiner.
+   */
+  ein_nummer: number | null;
 }
 
 export interface WpSpiel {
@@ -383,6 +403,10 @@ export function bildeVerlauf(
          auf null zwingt: wer diese Zeile liest, soll die Grenze sehen
          statt sie voraussetzen zu muessen. */
       sfv_person_id: wir ? (e.sfv_person_id ?? null) : null,
+      /* ⚠ Nur bei einem Wechsel und nur bei uns. Bei einem Gegnerwechsel
+         bleibt sie leer — die Nummer steht dort an der
+         Aufstellungszeile, und zwei Wahrheiten waeren eine zu viel. */
+      ein_nummer: wir && art === "wechsel" ? (e.ein_rueckennr ?? null) : null,
     });
   }
 
