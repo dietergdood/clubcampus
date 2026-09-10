@@ -362,6 +362,67 @@ export function hatDoppelabstand(w: string | null | undefined): boolean {
   return roh !== "" && roh.replace(/\s+/g, " ").trim() !== roh;
 }
 
+/* ── Wie ein Spieler in der Aufstellung heisst ─────────────────────
+
+   ⚠ EINE STELLE FUER BEIDE SEITEN (Entscheid Didi, 10.09.2026). Wer
+   keinen Namen hat — ein Gegner immer, ein eigener Spieler bis zur
+   Zuordnung —, erscheint als „Nr. 10". **Dieselbe Bildung, dieselbe
+   Schreibweise, ein Ort im Code.** Zwei Stellen liefen sonst
+   auseinander, und der Unterschied fiele erst auf der Website auf.
+
+   ⚠ UND DIE DOPPELUNG IST ABSICHT, KEIN VERSEHEN: `spieler` traegt bei
+   fehlendem Namen die Nummer, und `nummer` fuehrt sie zusaetzlich als
+   eigenes Feld. Mein Einwand dagegen (zwei Wahrheiten) ist notiert und
+   ueberstimmt worden — die Einheitlichkeit der Zeile wiegt schwerer.
+   Wer das spaeter „aufraeumt", nimmt der Vorlage die Wahl.
+
+   ⚠ WO WEDER NAME NOCH NUMMER DA IST, BLEIBT ES LEER. Kein „Nr. null",
+   kein Platzhalter — ein erfundener Text auf einer oeffentlichen Seite
+   ist von einer Auskunft nicht zu unterscheiden. Gemessen im
+   Beispielspiel: dieser Fall kommt bei den 32 Spielern NICHT vor, und
+   er kann bei Gegnern gar nicht entstehen (eine fremde Zeile ohne
+   Nummer wird nicht angelegt). */
+export function spielerAnzeige(
+  name: string | null | undefined, nummer: number | null | undefined,
+): string {
+  const n = String(name ?? "").trim();
+  if (n) return n;
+  return nummer != null ? `Nr. ${nummer}` : "";
+}
+
+/* ── Startelf oder Ersatz ──────────────────────────────────────────
+
+   ⚠ AUS `assignmentRoleId`, NICHT AUS `positionName`. Gemessen am
+   10.09.2026 an einer echten Antwort: drei Spieler tragen die Rolle
+   „Ersatz" bei einer ECHTEN Position, und beim Gegner steht
+   „Ersatz (S)" ueberhaupt nicht — er hat trotzdem einen Ersatzspieler.
+   Wer die Rolle aus der Position ableitet, zaehlt falsch und merkt es
+   nicht, weil beide Werte plausibel aussehen.
+
+   ⚠ UND EIN UNBEKANNTER WERT FAELLT AUF, statt still „start" zu werden —
+   dieselbe Regel wie bei unbekannten Ereignistypen. Gemessen sind
+   0 („-"), 1 („Captain") und 2 („Ersatz"); alles andere ist neu. */
+export const ROLLE_ERSATZ_ID = 2;
+export const ROLLE_BEKANNT: number[] = [0, 1, ROLLE_ERSATZ_ID];
+
+export function rolleAus(
+  zuweisungId: number | null | undefined, istBank: boolean,
+): { rolle: "start" | "ersatz"; unbekannt: number | null } {
+  /* Wer aus /bench kommt, ist per Definition nicht in der Startelf —
+     dort gibt es die Zuweisung gar nicht. */
+  if (istBank) return { rolle: "ersatz", unbekannt: null };
+  if (zuweisungId == null) {
+    /* ⚠ KEINE Zuweisung ist etwas anderes als eine unbekannte: der
+       Verband hat das Feld nicht gefuellt. Beides faellt auf, aber nur
+       das zweite hat eine Zahl. */
+    return { rolle: "start", unbekannt: -1 };
+  }
+  if (!ROLLE_BEKANNT.includes(zuweisungId)) {
+    return { rolle: "start", unbekannt: zuweisungId };
+  }
+  return { rolle: zuweisungId === ROLLE_ERSATZ_ID ? "ersatz" : "start", unbekannt: null };
+}
+
 /* ── Tore und Karten an der Aufstellungszeile ──────────────────────
 
    ⚠ SIE WERDEN GERECHNET, NICHT GESPEICHERT (Entscheid Didi,

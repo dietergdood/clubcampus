@@ -57,6 +57,9 @@ export interface AufstellungZeile {
   rolle_id: number | null;
   rolle_kategorie_id: number | null;
   rolle_kategorie: string | null;
+  /** SFV assignmentRoleId aus /players — 2 = Ersatz. Fuer BEIDE Seiten. */
+  rolle_zuweisung_id: number | null;
+  rolle_zuweisung: string | null;
   sfv_team_id: number | null;
   rueckennr: number | null;
   position_id: number | null;
@@ -111,11 +114,17 @@ export function bildeAufstellung(
       ? ([text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim() || null)
       : null,
     ist_bank: false,
-    /* /players sagt nichts ueber die Rolle — wer hier steht, stand auf
-       dem Feld. Die Kategorie kommt nur von der Bank. */
+    /* Die KATEGORIE (Spieler/Trainer/Betreuer) kommt nur von der Bank. */
     rolle_id: null,
     rolle_kategorie_id: null,
     rolle_kategorie: null,
+    /* ⚠ DIE ZUWEISUNG DAGEGEN STEHT HIER — und zwar fuer BEIDE
+       Mannschaften. Gemessen am 10.09.2026: der Gegner hat eine Bank, sie
+       steht nur nicht in `positionName`. Drei Spieler tragen „Ersatz" bei
+       echter Position; wer die Rolle aus der Position ableitet, zaehlt sie
+       falsch. */
+    rolle_zuweisung_id: zahl(p.assignmentRoleId),
+    rolle_zuweisung: text(p.assignmentRoleName),
     sfv_team_id: zahl(p.teamId),
     /* ⚠ Beide Mannschaften — das ist der Gegenstand von B. Gemessen an
        einer echten Antwort: 12 von 12 fremden Spielern tragen Nummer und
@@ -255,6 +264,10 @@ export function bildeBankZeile(
     rolle_id: zahl(p.roleId),
     rolle_kategorie_id: zahl(p.roleCategoryId),
     rolle_kategorie: text(p.roleCategoryName),
+    /* /bench kennt die Zuweisung nicht — wer hier steht, ist per
+       Definition nicht in der Startelf. */
+    rolle_zuweisung_id: null,
+    rolle_zuweisung: null,
     sfv_team_id: zahl(p.teamId),
     /* Die Bank kennt keine Rueckennummer und keine Position — der
        Endpunkt fuehrt beide nicht. Nicht aus der Aufstellung

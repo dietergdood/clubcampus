@@ -185,7 +185,8 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
        Zeile daneben und ist der eigentliche Gegenstand dieses Falls. */
     expect(Object.keys(z).sort()).toEqual([
       "bis_minute", "ist_bank", "ist_eigener", "name", "position_id", "position_name",
-      "rolle_id", "rolle_kategorie", "rolle_kategorie_id", "rueckennr",
+      "rolle_id", "rolle_kategorie", "rolle_kategorie_id",
+      "rolle_zuweisung", "rolle_zuweisung_id", "rueckennr",
       "sfv_person_id", "sfv_team_id", "spiel_id", "spielzeit", "verein_id",
       "von_minute", "zuletzt_synchronisiert",
     ]);

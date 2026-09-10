@@ -18,6 +18,7 @@ import {
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
   hatDoppelabstand, sammleMarken, markeSchluessel,
+  spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID,
 } from "../wpNutzlast.ts";
 import type { SpielQuelle } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
@@ -636,5 +637,63 @@ describe("markeSchluessel", () => {
   it("⚠ null, wo keine Zuordnung möglich ist", () => {
     expect(markeSchluessel({ ist_eigener: true, sfv_person_id: null, rueckennr: 9 })).toBeNull();
     expect(markeSchluessel({ ist_eigener: false, sfv_person_id: null, rueckennr: null })).toBeNull();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Eine Stelle für beide Seiten (10.09.2026)
+
+   ⚠ Entscheid Didi: `spieler` trägt bei fehlendem Namen die Nummer —
+   bei Gegnern immer, bei eigenen bis zur Zuordnung. Dieselbe Bildung,
+   dieselbe Schreibweise, EIN Ort im Code. Zwei liefen auseinander.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("spielerAnzeige", () => {
+  it("nimmt den Namen, wenn es einen gibt", () => {
+    expect(spielerAnzeige("Luca Meier", 10)).toBe("Luca Meier");
+  });
+
+  it("⚠ fällt auf die Nummer zurück — bei Gegnern und eigenen gleich", () => {
+    expect(spielerAnzeige(null, 10)).toBe("Nr. 10");
+    expect(spielerAnzeige("", 10)).toBe("Nr. 10");
+    /* Dieselbe Schreibweise wie im Verlauf — sonst stünde auf derselben
+       Seite zweimal etwas anderes für dieselbe Sache. */
+    expect(spielerAnzeige(null, 10)).toBe("Nr. 10");
+  });
+
+  it("⚠ bleibt LEER, wo weder Name noch Nummer da ist", () => {
+    /* Kein „Nr. null", kein Platzhalter: ein erfundener Text auf einer
+       öffentlichen Seite ist von einer Auskunft nicht zu unterscheiden. */
+    expect(spielerAnzeige(null, null)).toBe("");
+    expect(spielerAnzeige("  ", null)).toBe("");
+  });
+});
+
+describe("rolleAus", () => {
+  it("⚠ liest die ZUWEISUNG, nicht die Position", () => {
+    /* Gemessen: drei Spieler tragen „Ersatz" bei echter Position, und
+       beim Gegner steht „Ersatz (S)" gar nicht. */
+    expect(rolleAus(ROLLE_ERSATZ_ID, false).rolle).toBe("ersatz");
+    expect(rolleAus(0, false).rolle).toBe("start");
+    expect(rolleAus(1, false).rolle).toBe("start");   // Captain
+  });
+
+  it("wer aus /bench kommt, ist Ersatz — dort gibt es keine Zuweisung", () => {
+    expect(rolleAus(null, true).rolle).toBe("ersatz");
+    expect(rolleAus(null, true).unbekannt).toBeNull();
+  });
+
+  it("⚠ ein UNBEKANNTER Wert fällt auf, statt still start zu werden", () => {
+    const r = rolleAus(77, false);
+    expect(r.rolle).toBe("start");
+    expect(r.unbekannt).toBe(77);
+  });
+
+  it("⚠ und eine FEHLENDE Zuweisung ist etwas anderes als eine unbekannte", () => {
+    /* Der Verband hat das Feld nicht gefüllt. Beides fällt auf, aber nur
+       das zweite hat eine Zahl — sonst wäre „kein Feld" von „neuer Wert"
+       nicht zu unterscheiden. */
+    const r = rolleAus(null, false);
+    expect(r.rolle).toBe("start");
+    expect(r.unbekannt).toBe(-1);
   });
 });
