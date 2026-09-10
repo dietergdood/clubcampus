@@ -10,7 +10,7 @@ import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
 import { starteSync, holeVorschau, holeRohschluessel } from "../../domains/sfv/sfvService.ts";
-import { starteWpExport, fasseExportZusammen } from "../../domains/spiele/wpExportService.ts";
+import { starteWpExport, fasseExportZusammen, holeEmpfaengerStatus } from "../../domains/spiele/wpExportService.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
 /* Zeile aus api_verbindungen. Fehlt die Tabelle, baut der Tab aus
@@ -169,18 +169,54 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     return zeilen;
   }
 
-  async function auskunftHolen(was: "vorschau"|"rohschluessel"){
+  /* ⚠ Die Auskunft ueber die GEGENSTELLE, nicht ueber unsere Daten.
+     Deutet wird sie nur an einer Stelle: ob ACF jedes Feld kennt. Alles
+     andere steht roh da — wer antwortet, mit welcher Fassung, gegen
+     welchen Schluessel. Genau die vier Angaben, die am 09.09.2026 drei
+     Anlaeufe gekostet haben. */
+  function deuteEmpfaenger(d: Record<string, unknown>): string[] {
+    const sf=(d.spielfelder??{}) as Record<string,string>;
+    const ohneFeld=Object.entries(sf).filter(([,v])=>v!=="feld");
+    const zeilen=[
+      `${String(d.empfaenger??"?")} · Fassung ${String(d.version??"?")} · bereit: ${d.bereit===true?"ja":"NEIN"}`,
+      `Sucht Teams über: ${String(d.meta_schluessel??"?")}`,
+      `WordPress: ${Number(d.wp_teams??0)} Team-Beiträge, davon ${Number(d.wp_teams_mit_sfv_id??0)} mit SFV-Nummer`
+        +`${Number(d.wp_teams_sfv_id_doppelt??0)?` · ⚠ ${Number(d.wp_teams_sfv_id_doppelt)} doppelt`:""}`,
+      `${Number(d.spiele_gesamt??0)} Spiel-Beiträge, ${Number(d.spiele_abgleich??0)} davon vom Abgleich`,
+    ];
+    if(Array.isArray(d.fehlt)&&d.fehlt.length){
+      zeilen.push(`⚠ Voraussetzungen fehlen: ${(d.fehlt as string[]).join(", ")}`);
+    }
+    /* ⚠ Beide Richtungen: „alle bekannt" gehoert genauso hin wie eine
+       Fehlliste. Eine Zeile, die nur im schlechten Fall erscheint, laesst
+       ihr Fehlen deuten — und genau das ist heute dreimal schiefgegangen. */
+    zeilen.push(ohneFeld.length
+      ? `⚠ ACF kennt diese Feldnamen am fch_spiel NICHT: `
+        +ohneFeld.map(([k,v])=>`${k} (${v})`).join(", ")
+        +" — dorthin wird ins Leere geschrieben"
+      : `ACF kennt alle ${Object.keys(sf).length} Feldnamen am fch_spiel`);
+    return zeilen;
+  }
+
+  async function auskunftHolen(was: "vorschau"|"rohschluessel"|"empfaenger"){
     if(!sb||auskunftLaeuft) return;
     setAuskunftLaeuft(was); setAuskunft(null);
-    const {daten,fehler}= was==="vorschau" ? await holeVorschau(sb) : await holeRohschluessel(sb);
+    const {daten,fehler}= was==="vorschau" ? await holeVorschau(sb)
+      : was==="empfaenger" ? await holeEmpfaengerStatus(sb)
+      : await holeRohschluessel(sb);
     setAuskunftLaeuft(null);
     if(fehler||!daten){
-      setAuskunft({titel: was==="vorschau"?"Vorschau":"Rohschlüssel", zeilen:[fehler??"Keine Antwort"], fehler:true});
+      const t= was==="vorschau"?"Vorschau":was==="empfaenger"?"Empfänger":"Rohschlüssel";
+      setAuskunft({titel:t, zeilen:[fehler??"Keine Antwort"], fehler:true});
       return;
     }
     if(was==="vorschau"){
       const z=(daten.zusammenfassung??{}) as Record<string, unknown>;
       setAuskunft({titel:"Vorschau", zeilen: deuteVorschau(z)});
+      return;
+    }
+    if(was==="empfaenger"){
+      setAuskunft({titel:"Empfänger", zeilen: deuteEmpfaenger(daten)});
       return;
     }
     /* ⚠ Rohschluessel UNGEDEUTET anzeigen — das Filtern hat den Befund
@@ -203,9 +239,20 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
           : `${was}: alle Objekte tragen dieselben Schlüssel`,
       ];
     };
+    /* ⚠ Die Bank steht dabei, auch wenn sie fehlschlaegt — ein 404 heisst
+       „diesen Endpunkt gibt es nicht", ein Netzfehler etwas ganz anderes,
+       und als leere Zeile saehen beide gleich aus. */
+    const bank = daten.bank as {alle?: string[]; anzahl?: number} | null;
+    const bankZeile = daten.bank_fehler
+      ? `⚠ Bank (Spiel ${daten.bank_spiel}): ${daten.bank_fehler}`
+      : bank
+        ? `Bank (Spiel ${daten.bank_spiel}, ${bank.anzahl ?? 0} Objekte): `
+          +`${(bank.alle ?? []).join(", ") || "(leer)"}`
+        : "Bank: nicht abgefragt — kein Spiel mit Matchnummer gefunden";
     setAuskunft({titel:"Rohschlüssel", zeilen:[
       ...teil(daten.team_liste as never, "Teamliste"),
       ...teil(daten.spielplan as never, "Spielplan"),
+      bankZeile,
       String(daten.bildfeld_team??""),
       String(daten.bildfeld_spielplan??""),
     ].filter(Boolean)});
@@ -486,6 +533,16 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                         <Btn small variant="primary" color={BL} disabled={laeuft}
                           onClick={()=>exportStarten(zielAusLauf(syncLogs,api.id))}>
                           {laeuft?"Läuft…":"Export starten"}
+                        </Btn>
+                        {/* ⚠ FRAGT NUR, SCHREIBT NICHT — deshalb ein
+                            Umriss-Knopf neben dem blauen und keine zweite
+                            Bedienung im Export. Er beantwortet die vier
+                            Fragen, die am 09.09.2026 drei Anläufe gekostet
+                            haben: wer antwortet, mit welcher Fassung, gegen
+                            welchen Schlüssel, mit wie vielen Treffern. */}
+                        <Btn small variant="outline" color="#888"
+                             onClick={()=>auskunftHolen("empfaenger")} disabled={!!auskunftLaeuft}>
+                          {auskunftLaeuft==="empfaenger"?"Läuft…":"Empfänger"}
                         </Btn>
                         <span style={{fontSize:13,color:"var(--sub)",lineHeight:1.5}}>
                           Alle Mannschaften. Eingerichtet wird der Anschluss über die

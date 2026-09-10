@@ -210,3 +210,43 @@ describe("fuersProtokoll — die Allowlist", () => {
     expect(d.moegliche_dubletten).toEqual([{ neu: 51, von_hand: 12 }]);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Was ankommt und niemand schreibt, erreicht die Anzeige (11.09.2026)
+
+   ⚠ ANLASS. Der Empfänger meldet `unbeachtete_felder` seit 0.7.0 — und
+   unsere Seite las es an KEINER Stelle. `liga` kam ein halbes Jahr an
+   und wurde verworfen; WO es riss, musste die Website-Seite von Hand
+   messen. **Ein Melder, den niemand abholt, ist selbst die Lücke, gegen
+   die er gebaut wurde.**
+   ══════════════════════════════════════════════════════════════════════ */
+describe("unbeachtete_felder erreichen den Lauf", () => {
+  const teil = (id: string, felder: string[]) => ({
+    sfv_team_id: id, gesendet: 1, fehler: null,
+    wp: { neu: 1, aktualisiert: 0, unbeachtete_felder: felder },
+  });
+
+  it("nimmt sie aus der Antwort des Empfängers", () => {
+    const { zahlen } = fasseLauf([teil("38309", ["liga"])]);
+    expect(zahlen.unbeachtete_felder).toEqual(["liga"]);
+  });
+
+  it("⚠ vereinigt über alle Mannschaften, statt sie 21-mal zu nennen", () => {
+    const { zahlen } = fasseLauf([
+      teil("1", ["liga"]), teil("2", ["liga"]), teil("3", ["liga", "zuschauer"]),
+    ]);
+    expect(zahlen.unbeachtete_felder).toEqual(["liga", "zuschauer"]);
+  });
+
+  it("bleibt leer, wenn der Empfänger nichts meldet", () => {
+    const { zahlen } = fasseLauf([teil("1", [])]);
+    expect(zahlen.unbeachtete_felder).toEqual([]);
+  });
+
+  it("⚠ verträgt eine Antwort OHNE das Feld — ein alter Empfänger", () => {
+    /* Vor 0.7.0 gab es den Schlüssel nicht. Eine fehlende Liste darf
+       nicht als Fehler durchschlagen; sie ist schlicht leer. */
+    const alt = { sfv_team_id: "1", gesendet: 1, fehler: null, wp: { neu: 1 } };
+    expect(fasseLauf([alt]).zahlen.unbeachtete_felder).toEqual([]);
+  });
+});

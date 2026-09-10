@@ -268,9 +268,16 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
                   bei den Prüfregeln, nur trifft sie hier einen Menschen
                   statt eine Prüfkette. */}
               <div className="cc-inline-hint">
-                Holt die Klarnamen der offenen Spieler beim Verband und speichert sie.
-                Sie erscheinen danach auch auf der Website, wo bisher „Nr. 13" stand —
-                bis jemand den Spieler zuordnet, dann gewinnt der eigene Name.
+                Holt die Klarnamen beim Verband und speichert sie. Sie erscheinen
+                danach auch auf der Website, wo bisher „Nr. 13" stand — bis jemand
+                den Spieler zuordnet, dann gewinnt der eigene Name.
+                <br/>
+                <strong>⚠ Nur die Startelf.</strong> Der Verband liefert unter
+                „Aufstellung" die Startformation ohne Bank; wer eingewechselt wurde,
+                ist über diesen Weg nicht zu erreichen. Gemessen am 11.09.2026:
+                207 von 207 Eingewechselten stehen in keiner Aufstellung. Wenn die
+                offenen Spieler überwiegend Einwechslungen sind, bringt der Knopf
+                nichts und kostet einen Abruf je Spiel.
               </div>
             </div>
           ) : (

@@ -3497,3 +3497,61 @@ niemand sähe mehr, dass es zwei Listen sind.**
 
 **In keine Richtung**, auch nicht „nur bei der Anzeige": genau dort fällt
 es auf, und genau dort soll es auffallen.
+
+### ⚠⚠ `/api/match/{id}/players` liefert nur die STARTELF — die Bank fehlt
+
+Gemessen am 11.09.2026, **zweimal unabhängig**, und beide Male dieselbe
+Zahl: **207**.
+
+| Messung | Ergebnis |
+|---|---|
+| Vorschau des Exports (`wechsel_ohne_ersatzname`) | **207** Wechselzeilen, deren Ersatzspieler keinen Namen hat |
+| SQL gegen `spiel_aufstellung` | **207 von 207** Eingewechselten stehen in **keiner** Aufstellung |
+
+**Die zwei Wege haben nichts gemeinsam** — der eine zählt Anzeigezeilen
+über eine Namens-Map, der andere joint zwei Tabellen. Dass sie dieselbe
+Zahl liefern, ist die Gegenprobe.
+
+**Was daraus folgt:**
+
+```
+personId          der Spieler, der VOM Platz geht   → stand in der Startelf → hat einen Namen
+substitutePlayer  sein Ersatz, kommt von der BANK   → nicht in /players     → hat keinen
+```
+
+⚠ **Und es erklärt die Asymmetrie vollständig**, an der die Sache
+aufgefallen ist: 410 Verlaufszeilen nennen den ersten Menschen beim
+Namen, 207 Wechselzeilen den zweiten nicht. Es ist nicht die
+Namensauflösung — `beschreibeWer` und `beschreibeGewechselten` benutzen
+dieselbe Map und dieselbe Reihenfolge. **Es ist die Quelle.**
+
+#### Was das für „Namen holen" heisst
+
+⚠ **Der Knopf erreicht die Eingewechselten nicht** und kann es nicht:
+`laufeNamen` ruft `/players`, also genau die Quelle, in der sie
+nachweislich fehlen. Ein Lauf kostet **einen Abruf je betroffenem Spiel**
+— bei leerer Zuordnung potenziell jedes Spiel mit Aufstellung — und
+brächte für diese 207 nichts.
+
+**Der Hinweistext am Knopf trägt das seit dem 11.09.2026** (Entscheidung
+Didi): er darf nicht versprechen, offene Spieler zu lösen, wenn er die
+Eingewechselten nicht erreicht.
+
+⚠ **Das ist derselbe Fehler wie beim Verweis auf den „Kontakt-Tab":** ein
+Text, der auf einen Weg zeigt, der nicht hilft, trifft genau den, der ihn
+braucht — und der drückt dann umsonst.
+
+#### Der offene Weg, und er ist ungemessen
+
+`/api/match/{matchId}/bench` mit Schema `PlayerBench` verspricht
+`personId` und `personName`.
+
+⚠ **Ein Schema ist keine Antwort — heute zweimal belegt:**
+`playDayName` heisst „Spieltagsname" und liefert den Wochentag, und eine
+`logoUrl` gibt es entgegen jeder Erwartung nirgends. **Deshalb wird
+zuerst gemessen:** `aktion: "rohschluessel"` fragt seit dem 11.09.2026
+auch `/bench` und gibt dessen Schlüssel zurück — nur Namen, keine Werte.
+
+**Vorher wird nichts gebaut**: kein Feld, keine Migration, kein „Bank
+holen". Stehen dort `personId` und `personName`, ist der Weg belegt;
+stehen sie nicht dort, ist er zu.

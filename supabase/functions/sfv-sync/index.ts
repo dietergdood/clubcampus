@@ -46,6 +46,7 @@ import {
 import { bildeEreignis } from "./matchdaten.ts";
 import {
   holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
+  holeBank,
 } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync } from "./sync.ts";
@@ -366,13 +367,47 @@ Deno.serve(async (req) => {
       const saison = await holeSaison(zugang, token, new Date());
 
       const teams = schluesselVon(await holeTeamsRoh(zugang, token, saison.id));
-      const spiele = schluesselVon(await holeSpielplan(zugang, token, saison.id));
+      const spielplanRoh = await holeSpielplan(zugang, token, saison.id);
+      const spiele = schluesselVon(spielplanRoh);
+
+      /* ⚠ ⚠  DRITTER ABRUF: DIE BANK, seit 11.09.2026.
+         Gemessen: `/players` liefert nur die Startelf — 207 von 207
+         Eingewechselten stehen in keiner Aufstellung. Ob `/bench` sie
+         traegt, ist die naechste Frage, und sie wird GEMESSEN statt aus
+         dem Schema gelesen: `PlayerBench` verspricht `personId` und
+         `personName`, aber heute hat sich zweimal gezeigt, dass ein
+         Schema keine Antwort ist.
+
+         ⚠ EIN Spiel genuegt: gefragt ist, ob der Endpunkt diese
+         Schluessel FUEHRT, und das haengt nicht am einzelnen Spiel.
+         Gewaehlt wird das juengste mit einer Matchnummer — ein Spiel
+         ohne Aufstellung haette womoeglich auch keine Bank, und dann
+         saehe „keine Schluessel" aus wie „gibt es nicht". */
+      const mitId = spielplanRoh
+        .map((s) => Number((s as Record<string, unknown>).matchId))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const probeSpiel = mitId.length ? mitId[mitId.length - 1] : 0;
+      let bank: unknown = null;
+      let bankFehler: string | null = null;
+      if (probeSpiel) {
+        try {
+          bank = schluesselVon(await holeBank(zugang, token, probeSpiel));
+        } catch (e) {
+          /* ⚠ Gebunden, nicht verschwiegen: ein 404 heisst „dieser
+             Endpunkt gibt es nicht", ein Netzfehler etwas ganz anderes.
+             Als leerer Befund saehen beide gleich aus. */
+          bankFehler = e instanceof Error ? e.message : String(e);
+        }
+      }
 
       return json({
         hinweis: "Leseprobe. Nur Feldnamen, keine Werte. Es wird nichts gespeichert.",
         saison: { id: saison.id, name: saison.name },
         team_liste: teams,
         spielplan: spiele,
+        bank_spiel: probeSpiel,
+        bank: bank,
+        bank_fehler: bankFehler,
         bildfeld_team: suchtBildfeld(teams),
         bildfeld_spielplan: suchtBildfeld(spiele),
       });

@@ -158,6 +158,26 @@ export async function holeAufstellung(z: SfvZugang, token: string, matchId: numb
   return roh as SfvMatch[];
 }
 
+/**
+ * Die Ersatzbank eines Spiels.
+ *
+ * ⚠ ANLASS (11.09.2026): gemessen, dass `/players` NUR die Startelf
+ * liefert — 207 von 207 Eingewechselten stehen in keiner
+ * `spiel_aufstellung`. Ihre Namen sind ueber diesen Weg nicht zu haben.
+ *
+ * ⚠ OB DIE BANK HIER STEHT, IST UNGEMESSEN. Das Schema `PlayerBench`
+ * verspricht `personId` und `personName` — heute hat sich zweimal
+ * gezeigt, dass ein Schema keine Antwort ist (`playDayName` lieferte den
+ * Wochentag, und eine `logoUrl` gibt es entgegen der Erwartung nicht).
+ * Deshalb wird zuerst gemessen: `aktion: "rohschluessel"` fragt hier nach
+ * SCHLUESSELN, nicht nach Werten.
+ */
+export async function holeBank(z: SfvZugang, token: string, matchId: number): Promise<SfvMatch[]> {
+  const roh = await hole(z, token, `/api/match/${matchId}/bench?Language=1`);
+  if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Bank");
+  return roh as SfvMatch[];
+}
+
 export async function holeEreignisse(z: SfvZugang, token: string, matchId: number): Promise<SfvMatch[]> {
   const roh = await hole(z, token, `/api/match/${matchId}/events?Language=1`);
   if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Ereignisse");

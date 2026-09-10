@@ -59,6 +59,21 @@ export interface LaufZahlen {
   doppelte_teams: string[];
   fehler: string[];
   moegliche_dubletten: { neu: unknown; von_hand: unknown }[];
+  /**
+   * Feldnamen, die die Nutzlast bringt und die keine Allowlist des
+   * Empfängers führt — er meldet sie seit 0.7.0 als `unbeachtete_felder`.
+   *
+   * ⚠ VEREINIGT ÜBER ALLE TEILE, nicht je Mannschaft aufgezählt: bei 21
+   * Teams lautete derselbe Name 21-mal gleich, und eine Liste, die sich
+   * wiederholt, wird nicht gelesen.
+   *
+   * ⚠ UND SIE FEHLTE BIS ZUM 11.09.2026 GANZ. Der Empfänger meldete,
+   * unsere Seite las es nicht — `liga` kam ein halbes Jahr an und wurde
+   * verworfen, und WO es riss, musste die Website-Seite von Hand messen.
+   * Ein Melder, den niemand abholt, ist selbst die Lücke, gegen die er
+   * gebaut wurde.
+   */
+  unbeachtete_felder: string[];
 }
 
 /**
@@ -144,6 +159,7 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
     doppelte_teams: [],
     fehler: [],
     moegliche_dubletten: [],
+    unbeachtete_felder: [],
   };
 
   for (const t of teile) {
@@ -156,6 +172,12 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
     }
     zahlen.teams_gesendet += 1;
     zahlen.spiele_gesendet += t.gesendet;
+    /* ⚠ VEREINIGT, nicht angehaengt: derselbe Feldname kaeme sonst von
+       jeder der 21 Mannschaften einmal. Eine Liste, die sich wiederholt,
+       wird nicht gelesen. */
+    for (const f of liste(t.wp, "unbeachtete_felder")) {
+      if (!zahlen.unbeachtete_felder.includes(f)) zahlen.unbeachtete_felder.push(f);
+    }
     zahlen.neu += zahl(t.wp, "neu");
     zahlen.aktualisiert += zahl(t.wp, "aktualisiert");
     zahlen.zurueckgezogen += zahl(t.wp, "zurueckgezogen");
@@ -178,6 +200,7 @@ export function fasseLauf(teile: TeilErgebnis[]): { status: LaufStatus; zahlen: 
       ? "warnung"
       : "ok";
 
+  zahlen.unbeachtete_felder.sort();
   return { status, zahlen };
 }
 

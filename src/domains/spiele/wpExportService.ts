@@ -104,5 +104,57 @@ export function fasseExportZusammen(daten: ExportAntwort | null): string {
   if (daten.protokolliert === false) {
     zeilen.push("⚠ Nicht protokolliert — api_verbindungen hat keine Zeile «wordpress»");
   }
+  /* ⚠ NUR WENN NICHT LEER — und das ist hier die Ausnahme von „jede Zahl
+     steht da". Der Unterschied: eine ZAHL, deren Fehlen gedeutet werden
+     muss, ist keine Auskunft; eine LISTE von Feldnamen ist im Normalfall
+     leer, und „unbeachtete Felder: keine" bei jedem Lauf ist die Sorte
+     Zeile, die man nach dem dritten Mal überliest. Steht hier etwas, kommt
+     etwas an, das niemand schreibt. */
+  const unbeachtet = (z.unbeachtete_felder ?? []) as unknown as string[];
+  if (Array.isArray(unbeachtet) && unbeachtet.length) {
+    zeilen.push(`⚠ Kommt an, wird nicht geschrieben: ${unbeachtet.join(", ")} — `
+      + "entweder gehört das Feld in CC_FELDER, oder es soll gar nicht kommen");
+  }
   return zeilen.join("\n");
+}
+
+/**
+ * Was die Gegenstelle über SICH SELBST sagt.
+ *
+ * ⚠ ⚠  DIE AUSKUNFT, DIE AM 09.09.2026 DREI ANLAEUFE GEKOSTET HAT.
+ *
+ * Damals sahen drei völlig verschiedene Ausfälle gleich aus — die Datei
+ * lag im falschen Ordner, eine fremde Datei trug denselben Namen, der
+ * Meta-Schlüssel stimmte nicht. Alle drei meldeten sich als
+ * `ohne_team: [...]`, also als Konfigurationsfrage im Backend.
+ *
+ * `aktion: "status"` beantwortet stattdessen: **wer** antwortet
+ * (Dateiname und Version), **womit** gesucht wird (der Metaschlüssel als
+ * Wert), **worauf** es trifft (Zuordnung gezählt) — und seit 0.8.0, ob
+ * ACF die Feldnamen am `fch_spiel` überhaupt kennt.
+ *
+ * ⚠ Sie schreibt nichts. Deshalb steht sie im Portal neben „Export
+ * starten" und nicht darin: ein Knopf, der nur fragt, darf nicht wie
+ * einer aussehen, der schreibt.
+ */
+export async function holeEmpfaengerStatus(
+  sb: Sb,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("wp-export", { body: { aktion: "status" } });
+  if (error) {
+    const ctx = (error as { context?: unknown }).context;
+    if (ctx instanceof Response) {
+      try {
+        const roh = await ctx.clone().text();
+        const j = JSON.parse(roh);
+        return { daten: null, fehler: String(j?.fehler ?? roh.slice(0, 500)) };
+      } catch { /* kein JSON — dann bleibt die Meldung des Clients */ }
+    }
+    return { daten: null, fehler: (error as { message?: string }).message ?? "Aufruf fehlgeschlagen" };
+  }
+  if ((data as { fehler?: unknown })?.fehler) {
+    return { daten: null, fehler: String((data as { fehler: unknown }).fehler) };
+  }
+  return { daten: data as Record<string, unknown>, fehler: null };
 }
