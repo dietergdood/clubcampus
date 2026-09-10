@@ -36,6 +36,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { fasseWechselProbe, deuteWechselProbe } from "../../../src/domains/sfv/wechselProbe.ts";
+import { waehleNachtragSpiele, deuteNachtrag } from "../../../src/domains/sfv/ereignisNachtrag.ts";
+import { bildeEreignis } from "./matchdaten.ts";
 import {
   holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
 } from "./sfvApi.ts";
@@ -57,6 +59,9 @@ const json = (koerper: unknown, status = 200) =>
 
 /* 15 Minuten. Ein Lauf dauert Sekunden; laenger heisst abgestuerzt, und die
    Sperre darf den naechsten Lauf nicht dauerhaft blockieren. */
+/* ⚠ Obergrenze je Lauf, weil jeder Abruf einer beim Verband ist. Der
+   Rest bleibt offen und wird GEMELDET — keine stille Kuerzung. */
+const NACHTRAG_HOECHSTENS = 40;
 const SPERRE_MINUTEN = 15;
 
 Deno.serve(async (req) => {
@@ -73,7 +78,7 @@ Deno.serve(async (req) => {
   }
   /* ⚠ Die gueltigen Aktionen aufgezaehlt, damit die Meldung sie nennen
      kann — dieselbe Regel wie in wp-export. */
-  const AKTIONEN = ["teams", "sync", "namen", "teamprobe", "wechselprobe"];
+  const AKTIONEN = ["teams", "sync", "namen", "teamprobe", "wechselprobe", "wechselnachtrag"];
   if (!AKTIONEN.includes(aktion)) {
     return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
   }
@@ -102,6 +107,12 @@ Deno.serve(async (req) => {
      pg_net in `net._http_response.content` ab — ein Speicher, den niemand
      im Blick hat. Ausserdem nuetzen Namen nur einem Browser. */
   if (perZeitplan && aktion === "namen") return json({ fehler: "namen nur mit Anmeldung" }, 403);
+  /* ⚠ Dieselbe Sperre wie bei `namen`: der Zeitplan hat keinen Menschen,
+     der das Ergebnis liest, und ein Nachtrag ohne Leser ist ein Lauf, der
+     stillschweigend beim Verband abfragt. */
+  if (perZeitplan && aktion === "wechselnachtrag") {
+    return json({ fehler: "wechselnachtrag nur mit Anmeldung" }, 403);
+  }
 
   /* Schreiben laeuft ueber die Service Role: der Zeitplan hat keinen
      Benutzer, und RLS haette dabei niemanden zu pruefen. Der Verein kommt
@@ -169,6 +180,111 @@ Deno.serve(async (req) => {
      ⚠ SIE GIBT KEINE NAMEN ZURUECK, nur ob einer da ist. Eine Probe, die
      mehr herausgibt als ihre Frage verlangt, ist der Anfang des naechsten
      Protokoll-Funds — siehe die 903 Klarnamen vom 21.08.2026. */
+  /* ── Aktion wechselnachtrag: die Kennung des Ersatzspielers nachziehen ──
+     Holt NUR die Ereignisse und schreibt sie ueber dieselbe Funktion wie
+     der Sync. Faesst `matchdaten_geholt_am` nicht an — das Feld sagt,
+     wann ein Spiel VOLLSTAENDIG geholt wurde, und ein Nachtrag darf das
+     nicht behaupten. */
+  if (aktion === "wechselnachtrag") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+
+    /* Laufsperre wie beim Sync: die SFV-API kennt pro Anwendung genau EIN
+       gueltiges Token. Ein `POST /api/token` des Syncs mitten in unseren
+       Abrufen wuerde unseres entwerten. */
+    const grenzeW = new Date(Date.now() - SPERRE_MINUTEN * 60_000).toISOString();
+    const { data: gesperrt } = await db.from("api_verbindungen")
+      .update({ sync_laeuft_seit: new Date().toISOString() })
+      .eq("id", v.id)
+      .or(`sync_laeuft_seit.is.null,sync_laeuft_seit.lt.${grenzeW}`)
+      .select("id");
+    if (!gesperrt?.length) return json({ fehler: "Ein Lauf ist bereits unterwegs" }, 409);
+
+    try {
+      const { data: verein, error: vErr } = await db.from("vereine")
+        .select("sfv_club_nummer").eq("id", v.verein_id).maybeSingle();
+      if (vErr) throw new Error(`Verein nicht lesbar: ${vErr.message}`);
+      const clubNr = (verein?.sfv_club_nummer as number | null) ?? null;
+      if (clubNr === null) {
+        return json({ fehler: "vereine.sfv_club_nummer fehlt — ohne sie ist eigen/fremd nicht zu trennen" }, 400);
+      }
+
+      /* Die offenen Zeilen: eigener Wechsel ohne Kennung des Ersatzes.
+         ⚠ `error` lesen — eine leere Liste saehe sonst aus wie „nichts
+         offen" und der Lauf meldete Erfolg, ohne etwas getan zu haben. */
+      const { data: offen, error: oErr } = await db.from("spiel_ereignisse")
+        .select("spiel_id, spiele(sfv_match_id)")
+        .eq("verein_id", v.verein_id)
+        .eq("typ_id", 2)
+        .eq("ist_eigener", true)
+        .is("ein_sfv_person_id", null);
+      if (oErr) throw new Error(`Wechselzeilen nicht lesbar: ${oErr.message}`);
+
+      const zeilen = ((offen ?? []) as unknown as
+        { spiel_id: string; spiele: { sfv_match_id: number | null } | null }[])
+        .map((z) => ({ spiel_id: z.spiel_id, sfv_match_id: z.spiele?.sfv_match_id ?? null }));
+      const wahl = waehleNachtragSpiele(zeilen, NACHTRAG_HOECHSTENS);
+
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+      const jetzt = new Date().toISOString();
+
+      let abgefragt = 0;
+      let fehlgeschlagen = 0;
+      let geschrieben = 0;
+
+      /* Die spiel_id je sfv_match_id — der Upsert braucht sie. */
+      const zuSpiel = new Map<number, string>();
+      for (const z of zeilen) {
+        if (z.sfv_match_id != null) zuSpiel.set(Number(z.sfv_match_id), z.spiel_id);
+      }
+
+      for (const matchId of wahl.matchIds) {
+        const spielId = zuSpiel.get(matchId);
+        if (!spielId) continue;
+        try {
+          const roh = await holeEreignisse(zugang, token, matchId);
+          const neu = roh
+            .map((e) => bildeEreignis(e, clubNr, v.verein_id, spielId, jetzt))
+            .filter((z): z is NonNullable<typeof z> => z !== null);
+          abgefragt++;
+          if (!neu.length) continue;
+          const { data: rueck, error: uErr } = await db.from("spiel_ereignisse")
+            .upsert(neu, { onConflict: "verein_id,sfv_event_id" })
+            .select("id");
+          if (uErr) throw new Error(uErr.message);
+          geschrieben += (rueck ?? []).length;
+        } catch (e) {
+          fehlgeschlagen++;
+          void (e instanceof Error ? e.message : String(e));
+        }
+      }
+
+      /* ⚠ Nach dem Schreiben ERNEUT zaehlen, nicht rechnen. Eine Differenz
+         aus zwei Zahlen behauptet, der Upsert habe getan, was er sollte —
+         und genau das ist die offene Frage dieses Laufs. */
+      const { count: danach, error: nErr } = await db.from("spiel_ereignisse")
+        .select("id", { count: "exact", head: true })
+        .eq("verein_id", v.verein_id).eq("typ_id", 2).eq("ist_eigener", true)
+        .is("ein_sfv_person_id", null);
+      if (nErr) throw new Error(`Gegenzählung fehlgeschlagen: ${nErr.message}`);
+
+      const erg = {
+        spiele_abgefragt: abgefragt,
+        spiele_fehlgeschlagen: fehlgeschlagen,
+        ereignisse_geschrieben: geschrieben,
+        offen_gesamt: wahl.offen_gesamt,
+        offen_danach: danach ?? 0,
+        ohne_match_id: wahl.ohne_match_id,
+      };
+      return json({ ...erg, deutung: deuteNachtrag(erg) });
+    } catch (e) {
+      return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
+    } finally {
+      await db.from("api_verbindungen").update({ sync_laeuft_seit: null }).eq("id", v.id);
+    }
+  }
+
   if (aktion === "wechselprobe") {
     const v = eigene[0];
     if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
