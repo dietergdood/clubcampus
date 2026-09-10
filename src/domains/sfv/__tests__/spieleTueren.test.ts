@@ -1,0 +1,75 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Wer schreibt in `spiele`? (10.09.2026)
+
+   ⚠ ANLASS, und er ist beim Gegenlesen des eigenen Baus aufgefallen:
+   `schneideAufFeldhoheit()` steht an **einer** Stelle — dem Spielplan-
+   Upsert in `sync.ts`. Jeder andere Schreibvorgang in dieselbe Tabelle
+   geht **an der Feldhoheit vorbei**.
+
+   Das ist kein Fehler: `matchdaten_geholt_am` ist eine Marke des Laufs
+   und steht in keinem Vertrag, `schiedsrichter` und `ht_resultat` sind
+   ausdrücklich als SFV-Felder deklariert. **Aber es heisst, dass der
+   Vertrag in `api_verbindungen.sync_felder` nur EINE Tür bewacht.**
+
+   ⚠ Und genau deshalb steht hier eine Zählung: eine neue Tür fällt sonst
+   niemandem auf. Sie entsteht in einer Zeile, sie schlägt nirgends fehl,
+   und sie umgeht eine Regel, von der alle annehmen, sie gelte überall.
+
+   **Diese Prüfung sagt nicht, dass die Türen richtig sind.** Sie sagt,
+   dass es keine unbemerkte neue gibt — wie die Löschketten-Prüfung, die
+   festhält, dass niemand aus `mitglieder` löscht.
+   ══════════════════════════════════════════════════════════════════════ */
+import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const ORDNER = "supabase/functions/sfv-sync";
+const ZEILEN = new RegExp(String.fromCharCode(13) + "?" + String.fromCharCode(10));
+
+/** Schreibende Aufrufe auf `spiele`, mit Datei und Zeile. */
+function tueren(): string[] {
+  const raus: string[] = [];
+  for (const name of readdirSync(ORDNER)) {
+    if (!name.endsWith(".ts")) continue;
+    const zeilen = readFileSync(join(ORDNER, name), "utf8").split(ZEILEN);
+    zeilen.forEach((z, i) => {
+      if (!z.includes('from("spiele")')) return;
+      /* Der Aufruf steht auf derselben oder einer der nächsten Zeilen —
+         die Kette wird oft umbrochen. */
+      const umfeld = zeilen.slice(i, i + 3).join(" ");
+      if (!/\.(update|upsert|insert|delete)\(/.test(umfeld)) return;
+      const art = (umfeld.match(/\.(update|upsert|insert|delete)\(/) ?? [])[1];
+      raus.push(`${name}:${i + 1} ${art}`);
+    });
+  }
+  return raus.sort();
+}
+
+describe("Türen in die Tabelle spiele", () => {
+  it("es sind genau die drei bekannten", () => {
+    /* ⚠ Kommt eine dazu, ist die Frage zu beantworten, BEVOR sie steht:
+       schreibt sie ein Feld, das unter `sfv` deklariert ist? Und wenn
+       nein — gehört es dorthin, oder gehört der Schreibvorgang weg?
+
+       matchdatenLauf.ts  Halbzeitstand (ht_resultat, seit 10.09.2026)
+       matchdatenLauf.ts  matchdaten_geholt_am + schiedsrichter
+       sync.ts            der Spielplan-Upsert — die EINZIGE Tür, an der
+                          schneideAufFeldhoheit() steht */
+    expect(tueren()).toEqual([
+      "matchdatenLauf.ts:240 update",
+      "matchdatenLauf.ts:252 update",
+      "sync.ts:318 upsert",
+    ]);
+  });
+
+  it("und nur eine davon geht durch die Feldhoheit", () => {
+    /* ⚠ Die unbequeme Hälfte des Befunds, als Zusage festgehalten: der
+       Vertrag in sync_felder bewacht EINE Tür. Wer das für „überall"
+       hält, deklariert ein Feld und wundert sich, dass ein anderer
+       Schreibweg es trotzdem setzt — oder umgekehrt. */
+    const quelle = readFileSync(join(ORDNER, "sync.ts"), "utf8");
+    expect(quelle).toContain("schneideAufFeldhoheit");
+    const lauf = readFileSync(join(ORDNER, "matchdatenLauf.ts"), "utf8");
+    expect(lauf).not.toContain("schneideAufFeldhoheit");
+  });
+});

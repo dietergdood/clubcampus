@@ -41,6 +41,17 @@ export interface MatchdatenErgebnis {
       Verschmelzen sie nicht zudeckt. */
   gegner_doppel: number;
   /**
+   * Der Halbzeitstand, in VIER Zustaenden statt zwei.
+   *
+   * ⚠ `fehlt`, `leer` und `ohne_halbzeit` sehen in der Datenbank gleich
+   * aus — die Spalte ist dann NULL. Nur diese Zaehlung sagt, WARUM:
+   * die Antwort hatte das Feld nicht, es war eine leere Liste, oder es
+   * standen Zwischenstaende darin, aber keine Halbzeit. Drei Gruende,
+   * ein Aussehen. „0:0" ist davon noch einmal verschieden und zaehlt
+   * unter `da`.
+   */
+  halbzeit: { da: number; fehlt: number; leer: number; ohne_halbzeit: number };
+  /**
    * Spiele, deren Bank nicht abrufbar war.
    *
    * ⚠ Sie stoert den Lauf nicht — aber „keine Bank" und „nicht gefragt"
@@ -324,6 +335,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       namen_geschrieben: md.namen_geschrieben,
       aufstellung_fremd: md.aufstellung_fremd,
       gegner_doppel: md.gegner_doppel,
+      halbzeit: md.halbzeit,
       paesse_geschrieben: md.paesse_geschrieben,
       pass_konflikte: md.pass_konflikte,
       nachzug_meldungen: md.nachzug_meldungen,

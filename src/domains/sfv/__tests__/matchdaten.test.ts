@@ -382,29 +382,57 @@ describe("waehleKandidaten", () => {
 });
 
 describe("leseHalbzeit", () => {
-  it("liest den Stand aus intermediateResults", () => {
-    /* Echte Form aus Spiel 4308382. */
-    expect(leseHalbzeit({
-      intermediateResults: [
-        { scoreTeamA: 0, scoreTeamB: 1, resultTypeId: 1, resultTypeName: "Halbzeit" },
-      ],
-    })).toBe("0:1");
+  const R = (typId: number, a: number, b: number) =>
+    ({ resultTypeId: typId, resultTypeName: "egal", scoreTeamA: a, scoreTeamB: b });
+
+  it("findet die Halbzeit über die ID, nicht über den Namen", () => {
+    /* ⚠ Bis zum 10.09.2026 filterte sie auf resultTypeName === "Halbzeit".
+       Das ist ein Filter auf eine SCHREIBWEISE — der Name ist ein
+       Anzeigetext des Verbands, die ID ein Schlüssel aus den Stammdaten
+       (Resultattyp 1). Hier trägt der Name absichtlich „egal". */
+    const r = leseHalbzeit({ intermediateResults: [R(2, 3, 1), R(1, 2, 0)] });
+    expect(r.stand).toBe("2:0");
+    expect(r.zustand).toBe("da");
   });
 
-  it("uebergeht andere Zwischenstaende", () => {
-    expect(leseHalbzeit({
-      intermediateResults: [
-        { scoreTeamA: 2, scoreTeamB: 2, resultTypeName: "Verlaengerung" },
-        { scoreTeamA: 1, scoreTeamB: 0, resultTypeName: "Halbzeit" },
-      ],
-    })).toBe("1:0");
+  it("A:B in der Zählweise des Verbands, nicht „wir:sie“", () => {
+    /* Wie bei `resultat`. Wer es hier dreht, dreht es nur an einer der
+       beiden Stellen — und dann widersprechen sich Resultat und
+       Halbzeit. */
+    expect(leseHalbzeit({ intermediateResults: [R(1, 0, 3)] }).stand).toBe("0:3");
   });
 
-  it("liefert null, wenn es keine Halbzeit gibt", () => {
-    expect(leseHalbzeit({ intermediateResults: [] })).toBeNull();
-    expect(leseHalbzeit({})).toBeNull();
+  /* ── Die drei Arten von „nichts" ─────────────────────────────────────
+     In der Datenbank sehen sie gleich aus: ht_resultat ist NULL. Nur
+     der Zustand sagt, warum. */
+
+  it("kein Feld heisst „fehlt“", () => {
+    expect(leseHalbzeit({})).toEqual({ stand: null, zustand: "fehlt" });
+    expect(leseHalbzeit({ intermediateResults: null }))
+      .toEqual({ stand: null, zustand: "fehlt" });
+  });
+
+  it("eine leere Liste heisst „leer“", () => {
+    expect(leseHalbzeit({ intermediateResults: [] }))
+      .toEqual({ stand: null, zustand: "leer" });
+  });
+
+  it("Einträge ohne Halbzeit heissen „ohne_halbzeit“", () => {
+    /* Ein Spiel, das nur den Schlussstand führt. */
+    expect(leseHalbzeit({ intermediateResults: [R(2, 3, 1)] }))
+      .toEqual({ stand: null, zustand: "ohne_halbzeit" });
+  });
+
+  it("„0:0“ ist ein WERT, kein Fehlen", () => {
+    /* ⚠ Der Fall, an dem sich die vier Zustände beweisen: eine torlose
+       erste Halbzeit ist eine Auskunft, kein fehlender Wert. Ein
+       `if (!stand)` hätte sie verschluckt. */
+    const r = leseHalbzeit({ intermediateResults: [R(1, 0, 0)] });
+    expect(r.stand).toBe("0:0");
+    expect(r.zustand).toBe("da");
   });
 });
+
 
 /* ── Namen der offenen eigenen Spieler ────────────────────────────────────
    Die Feldnamen sind hier die Prüfung: `firstname`/`name` heissen beim SFV

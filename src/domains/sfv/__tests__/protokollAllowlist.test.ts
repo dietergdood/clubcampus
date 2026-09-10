@@ -39,6 +39,7 @@ const LAUF: LaufErgebnis = {
     eigene_unzugeordnet: 177, zuordnungen_gesamt: 0,
     namen_geschrieben: 42,
     aufstellung_fremd: 11, gegner_doppel: 0, paesse_geschrieben: 0,
+    halbzeit: { da: 3, fehlt: 0, leer: 1, ohne_halbzeit: 2 },
     pass_konflikte: ["Mitglied 633: zwei Passnummern"],
     nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   },
@@ -54,7 +55,7 @@ describe("fuersProtokoll", () => {
     const md = fuersProtokoll(LAUF).matchdaten as Record<string, unknown>;
     expect(Object.keys(md).sort()).toEqual([
       "aufstellung_fremd", "aufstellung_zeilen", "eigene_unzugeordnet", "ereignisse_zeilen",
-      "fehler", "fehlermeldungen", "gegner_doppel", "nachzug_meldungen", "namen_geschrieben",
+      "fehler", "fehlermeldungen", "gegner_doppel", "halbzeit", "nachzug_meldungen", "namen_geschrieben",
       "paesse_geschrieben", "pass_konflikte",
       "spiele_geholt", "zuordnungen_gesamt",
     ]);

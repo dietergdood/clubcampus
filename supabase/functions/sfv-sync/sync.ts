@@ -419,6 +419,13 @@ export async function laufeSync(
       teile.push(`${md.pass_konflikte.length} Spielerpass/-paesse NICHT geschrieben — ${md.pass_konflikte[0]}`);
     }
     if (md.nachzug_meldungen) teile.push(`${md.nachzug_meldungen} Korrektur(en) vom Verband eingeholt`);
+    /* ⚠ Immer, auch als Null — und alle VIER Zustaende, weil sie in der
+       Datenbank gleich aussehen (die Spalte ist NULL) und nur hier
+       auseinanderzuhalten sind. */
+    const hz = md.halbzeit;
+    teile.push(`Halbzeit ${hz.da} gesetzt`
+      + ` (${hz.fehlt} ohne Feld, ${hz.leer} leere Liste,`
+      + ` ${hz.ohne_halbzeit} ohne Halbzeit-Eintrag)`);
     if (md.fehler) {
       /* ⚠ ⚠  DER STATUS, NICHT NUR DER TEXT — Befund Didi, 10.09.2026.
 

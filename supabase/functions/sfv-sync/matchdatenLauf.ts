@@ -12,16 +12,17 @@
 //   - Personendaten fremder Spieler uebernehmen. Die Allowlist in
 //     matchdaten.ts liest sie gar nicht erst; der CHECK-Constraint in der
 //     Datenbank prueft es ein zweites Mal.
-//   - ht_resultat schreiben. Die Feldhoheit steht dort auf `verein`; umgestellt
-//     wird erst, wenn dieser Lauf steht (Entscheidung 6). leseHalbzeit() ist
-//     vorbereitet und wird bewusst noch nicht aufgerufen.
+//   - ⚠ ht_resultat wird seit dem 10.09.2026 GESCHRIEBEN. Der Satz hier
+//     lautete bis dahin „leseHalbzeit() ist vorbereitet und wird bewusst noch
+//     nicht aufgerufen" — drei Wochen lang, waehrend die Spalte leer stand.
+//     Die Feldhoheit ist mit migration_ht_resultat_sfv.sql zurueckgestellt.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { holeMatch, holeAufstellung, holeEreignisse, holeSchiedsrichter, holeTeamBild, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import {
-  bildeAufstellung, verschmelzeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
+  bildeAufstellung, verschmelzeAufstellung, bildeEreignis, leseHalbzeit, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
@@ -54,7 +55,8 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
+    halbzeit: { da: 0, fehlt: 0, leer: 0, ohne_halbzeit: 0 }, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -92,7 +94,17 @@ export async function laufeMatchdaten(
          wer „drei" liest und vier zaehlt, den Fehler beim Zaehlen sucht.
          Am 10.09.2026 waren es kurzzeitig fuenf (/bench), jetzt wieder
          vier. Wer hier eine Zeile ergaenzt, aendert die Zahl mit. */
-      await holeMatch(zugang, token, matchId);
+      /* ⚠ ⚠  GEBUNDEN, NICHT WEGGEWORFEN — seit dem 10.09.2026.
+
+         Der Aufruf stand hier seit jeher und sein Ergebnis wurde in
+         derselben Zeile verworfen; CLAUDE.md fuehrt ihn als eigenen
+         Befund. Er traegt zehn Felder, die der Spielplan nicht hat —
+         darunter `intermediateResults`, den Halbzeitstand, waehrend
+         `spiele.ht_resultat` daneben leer stand.
+
+         **Ein weggeworfener Abruf, kein fehlender: das Auslesen kostet
+         nichts.** Die Antwort ist schon bezahlt und schon da. */
+      const rohMatch = await holeMatch(zugang, token, matchId);
       const rohAufstellung = await holeAufstellung(zugang, token, matchId);
       const rohEreignisse = await holeEreignisse(zugang, token, matchId);
       const rohRefs = await holeSchiedsrichter(zugang, token, matchId);
@@ -210,6 +222,25 @@ export async function laufeMatchdaten(
           .upsert(ereignisse, { onConflict: "verein_id,sfv_event_id" });
         if (error) throw new SfvFehler(`Ereignisse: ${error.message}`);
         erg.ereignisse_zeilen += ereignisse.length;
+      }
+
+      /* ── Halbzeitstand ──────────────────────────────────────────────
+         ⚠ NUR SCHREIBEN, WENN ETWAS DA IST. Der Grund, aus dem
+         `ht_resultat` am 14.08.2026 der Feldhoheit `verein` zugeschlagen
+         wurde, war: „bliebe die Deklaration stehen, schriebe der Sync
+         stuendlich NULL ueber eine von Hand erfasste Halbzeit". Der
+         Einwand gilt weiter — er wird hier beantwortet, nicht ignoriert.
+
+         Deshalb geht `null` nie in das Update. Ein Verein, der eine
+         Halbzeit von Hand erfasst hat, behaelt sie, solange der Verband
+         keine liefert. */
+      const hz = leseHalbzeit(rohMatch);
+      erg.halbzeit[hz.zustand] += 1;
+      if (hz.stand !== null) {
+        const { error } = await db.from("spiele")
+          .update({ ht_resultat: hz.stand })
+          .eq("verein_id", v.verein_id).eq("id", spiel.id);
+        if (error) throw new SfvFehler(`Halbzeit: ${error.message}`);
       }
 
       /* schiedsrichter steht in sync_felder unter spiele.sfv_matchdaten —

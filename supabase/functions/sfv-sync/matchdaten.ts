@@ -409,12 +409,54 @@ export function bildeOffeneNamen(
    Spielplan-Endpunkt kennt keine Halbzeit — deshalb steht ht_resultat heute
    in der Verein-Spalte der Feldhoheit. Umgestellt wird erst, wenn der Sync
    laeuft (Entscheidung 6); diese Funktion steht bereit. */
-export function leseHalbzeit(m: SfvRoh): string | null {
-  const liste = Array.isArray(m.intermediateResults) ? m.intermediateResults : [];
-  const hz = (liste as SfvRoh[]).find((r) => text(r.resultTypeName) === "Halbzeit");
-  if (!hz) return null;
+/**
+ * SFV-Resultattyp „Halbzeit". Aus `sfv_stammdaten.json` → Resultattyp,
+ * nicht geraten: 0 „-", **1 „Halbzeit"**, 2 „Stand nach regulaerer
+ * Spielzeit", 5 „Stand nach Verlaengerung", 6 „nach Elfmeterschiessen",
+ * dazu Drittel- und Viertelspausen.
+ */
+export const RESULTAT_HALBZEIT_ID = 1;
+
+/**
+ * Drei Zustaende, nicht zwei — und der Unterschied ist die halbe Aussage.
+ *
+ * ⚠ `null` und `[]` und „0:0" sind DREI verschiedene Dinge, und die
+ * Anzeige unterscheidet sie: „wir wissen es nicht" gegen „der Verband
+ * fuehrt keine Halbzeit" gegen „es stand null zu null". Ein Rueckgabewert
+ * `string | null` konnte das nicht sagen.
+ */
+export type HalbzeitZustand =
+  /** `intermediateResults` fehlt oder ist null. */
+  | "fehlt"
+  /** Die Liste ist da und leer. */
+  | "leer"
+  /** Eintraege da, aber keiner mit Resultattyp 1. */
+  | "ohne_halbzeit"
+  /** Gefunden — `stand` traegt „A:B", auch „0:0". */
+  | "da";
+
+export function leseHalbzeit(m: SfvRoh): { stand: string | null; zustand: HalbzeitZustand } {
+  const roh = m.intermediateResults;
+  if (roh === null || roh === undefined) return { stand: null, zustand: "fehlt" };
+  if (!Array.isArray(roh)) return { stand: null, zustand: "fehlt" };
+  if (roh.length === 0) return { stand: null, zustand: "leer" };
+
+  /* ⚠ ⚠  NACH DER ID, NICHT NACH DEM NAMEN — berichtigt am 10.09.2026.
+     Hier stand `text(r.resultTypeName) === "Halbzeit"`. Das ist ein
+     Filter auf eine SCHREIBWEISE: der Name ist ein Anzeigetext des
+     Verbands und kann sich aendern, die Id ist ein Schluessel aus den
+     Stammdaten. Dieselbe Regel wie bei `ableitung === null` gegen
+     `name !== "Elternteil"` — und dieselbe Falle wie ueberall, wo ein
+     Vergleich gegen eine Zeichenkette aus fremder Hand steht. */
+  const hz = (roh as SfvRoh[]).find((r) => zahl(r.resultTypeId) === RESULTAT_HALBZEIT_ID);
+  if (!hz) return { stand: null, zustand: "ohne_halbzeit" };
+
   const a = zahl(hz.scoreTeamA), b = zahl(hz.scoreTeamB);
-  return a === null || b === null ? null : `${a}:${b}`;
+  if (a === null || b === null) return { stand: null, zustand: "ohne_halbzeit" };
+  /* ⚠ Reihenfolge wie bei `resultat`: A:B in der Zaehlweise des Verbands,
+     NICHT „wir:sie". Wer das dreht, dreht es nur an einer der beiden
+     Stellen — und dann widersprechen sich Resultat und Halbzeit. */
+  return { stand: `${a}:${b}`, zustand: "da" };
 }
 
 /* ── Kandidaten ────────────────────────────────────────────────────────────
