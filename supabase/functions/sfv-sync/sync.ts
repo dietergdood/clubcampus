@@ -400,6 +400,19 @@ export async function laufeSync(
     }
     if (md.nachzug_meldungen) teile.push(`${md.nachzug_meldungen} Korrektur(en) vom Verband eingeholt`);
     if (md.fehler) {
+      /* ⚠ ⚠  DER STATUS, NICHT NUR DER TEXT — Befund Didi, 10.09.2026.
+
+         Bis heute stand hier nur das teile.push(). Der Lauf vom 10.09.
+         meldete deshalb **status ok**, waehrend zehn von zehn Spielen ohne
+         Matchdaten blieben und die Ursache im selben Satz danebenstand.
+
+         ⚠ Das ist die Familie „eine Pruefung, die gruen ist, ohne zu
+         pruefen": wer auf den Status schaut — die Kachel, ein spaeterer
+         Waechter, eine Auswertung ueber api_sync_log — sieht ok und hoert
+         auf zu suchen. Der Text allein erreicht nur den, der ihn liest.
+
+         Ein Lauf, in dem ein Upsert wirft, ist mindestens `warnung`. */
+      if (erg.status === "ok") erg.status = "warnung";
       /* Die Ursache gehoert in die Meldung, nicht nur die Zahl. */
       teile.push(`${md.fehler} Spiel(e) ohne Matchdaten`
         + (md.fehlermeldungen.length ? ` — ${md.fehlermeldungen[0]}` : ""));

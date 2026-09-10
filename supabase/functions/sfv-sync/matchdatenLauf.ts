@@ -21,7 +21,7 @@ import { holeMatch, holeAufstellung, holeBank, holeEreignisse, holeSchiedsrichte
 import type { SfvZugang } from "./sfvApi.ts";
 import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import {
-  bildeAufstellung, bildeBankZeile, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
+  bildeAufstellung, bildeBankZeile, verschmelzeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
@@ -110,12 +110,18 @@ export async function laufeMatchdaten(
       /* ⚠ Auch die Bank: genau hier liegen die 207 Namen. */
       alleBank.push(...rohBank);
 
-      const aufstellung = [
+      /* ⚠ VERSCHMELZEN, NICHT ANEINANDERHAENGEN. Wer auf der Bank sass,
+         steht in BEIDEN Listen — `/players` fuehrt ihn als „Ersatz",
+         `/bench` noch einmal. Ein Stapel mit zweimal demselben
+         Konfliktschluessel laesst Postgres den GANZEN Upsert abbrechen
+         (21000), und weil der Ereignis-Upsert im selben `try` steht, fielen
+         die Ereignisse gleich mit aus. Siehe verschmelzeAufstellung(). */
+      const aufstellung = verschmelzeAufstellung([
         ...rohAufstellung
           .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt)),
         ...rohBank
           .map((p) => bildeBankZeile(p, unsereClubNummer, v.verein_id, spiel.id, jetzt)),
-      ].filter((z): z is NonNullable<typeof z> => z !== null);
+      ].filter((z): z is NonNullable<typeof z> => z !== null));
       erg.bank_zeilen += rohBank.length ? aufstellung.filter((z) => z.ist_bank).length : 0;
 
       const ereignisse = rohEreignisse

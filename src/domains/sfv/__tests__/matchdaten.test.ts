@@ -4,6 +4,7 @@ import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
   bildeSfvPerson, entdoppleSfvPersonen, bildeBankZeile, bildeSfvPersonAusBank,
+  verschmelzeAufstellung,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -608,5 +609,91 @@ describe("bildeSfvPersonAusBank", () => {
 
   it("lässt Gegner weg", () => {
     expect(bildeSfvPersonAusBank(B({ clubNumber: FREMD }), UNSERE, "v1", JETZT)).toBeNull();
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+   verschmelzeAufstellung — der Fehler vom 10.09.2026
+
+   Der Lauf brach mit „ON CONFLICT DO UPDATE command cannot affect row a
+   second time" ab, weil /players und /bench dieselbe Person fuehren und
+   ich die zwei Listen aneinandergehaengt statt verschmolzen habe.
+   ───────────────────────────────────────────────────────────────────── */
+describe("verschmelzeAufstellung", () => {
+  /* Derselbe Spieler, wie der Verband ihn in BEIDEN Listen fuehrt.
+     Gemessen an docs/sfv/matchdaten_beispiel.json: 7 von 20 eigenen
+     Spielern tragen dort positionName „Ersatz (S)" — sie stehen in
+     /players UND in /bench. */
+  const AUS_PLAYERS = {
+    clubNumber: UNSERE, personId: 999001, teamId: 37930,
+    jerseyNumber: 14, positionId: 48, positionName: "Ersatz (S)",
+    assignmentRoleId: 2, assignmentRoleName: "Ersatz",
+    firstname: "Nico", name: "Beispiel",
+    playFromMinute: 60, playUntilMinute: 90, totalPlayTime: 30,
+  };
+  const AUS_BENCH = {
+    clubNumber: UNSERE, personId: 999001, teamId: 37930,
+    personName: "Nico Beispiel",
+    roleId: 1, roleCategoryId: 1, roleCategoryName: "Spieler",
+  };
+
+  const beide = () => [
+    bildeAufstellung(AUS_PLAYERS, UNSERE, "v", "s", JETZT),
+    bildeBankZeile(AUS_BENCH, UNSERE, "v", "s", JETZT),
+  ].filter((z): z is NonNullable<typeof z> => z !== null);
+
+  it("macht aus derselben Person in /players und /bench EINE Zeile", () => {
+    /* Die Gegenprobe zuerst: ohne Verschmelzen sind es zwei — und genau
+       diese zwei liessen den Upsert abbrechen. */
+    expect(beide()).toHaveLength(2);
+    expect(verschmelzeAufstellung(beide())).toHaveLength(1);
+  });
+
+  it("behaelt Nummer, Position und Minuten aus /players", () => {
+    const [z] = verschmelzeAufstellung(beide());
+    expect(z.rueckennr).toBe(14);
+    expect(z.position_name).toBe("Ersatz (S)");
+    expect(z.von_minute).toBe(60);
+    expect(z.rolle_zuweisung).toBe("Ersatz");
+  });
+
+  it("uebernimmt die Rollenkategorie, die nur /bench kennt", () => {
+    const [z] = verschmelzeAufstellung(beide());
+    expect(z.rolle_kategorie).toBe("Spieler");
+    expect(z.rolle_kategorie_id).toBe(1);
+    /* ⚠ ist_bank heisst nach dem Verschmelzen „steht in der Bankliste",
+       nicht „diese Zeile stammt aus /bench". */
+    expect(z.ist_bank).toBe(true);
+  });
+
+  it("die Reihenfolge der zwei Listen aendert nichts", () => {
+    const [vorwaerts] = verschmelzeAufstellung(beide());
+    const [rueckwaerts] = verschmelzeAufstellung([...beide()].reverse());
+    expect(rueckwaerts).toEqual(vorwaerts);
+  });
+
+  it("laesst einen Betreuer stehen, den /players nicht kennt", () => {
+    const betreuer = bildeBankZeile(
+      { ...AUS_BENCH, personId: 999002, roleCategoryId: 9,
+        roleCategoryName: "Betreuer" },
+      UNSERE, "v", "s", JETZT,
+    );
+    const zeilen = verschmelzeAufstellung([...beide(), betreuer!]);
+    expect(zeilen).toHaveLength(2);
+  });
+
+  it("entdoppelt fremde Zeilen ueber Team und Nummer, nicht ueber die Person", () => {
+    /* Fremde Zeilen tragen gar keine sfv_person_id (Entscheid B) — wer
+       sie darueber entdoppelte, warf sie alle bis auf eine weg. */
+    const fremd = (nr: number, team: number) => bildeAufstellung(
+      { clubNumber: FREMD, personId: 123, teamId: team,
+        jerseyNumber: nr, positionId: 48, positionName: "Sturm" },
+      UNSERE, "v", "s", JETZT,
+    )!;
+    expect(verschmelzeAufstellung([fremd(7, 1), fremd(9, 1)])).toHaveLength(2);
+    /* Zwei eigene Teams gegeneinander: dieselbe Nummer, anderes Team. */
+    expect(verschmelzeAufstellung([fremd(7, 1), fremd(7, 2)])).toHaveLength(2);
+    /* Und derselbe Spieler zweimal bleibt einer. */
+    expect(verschmelzeAufstellung([fremd(7, 1), fremd(7, 1)])).toHaveLength(1);
   });
 });

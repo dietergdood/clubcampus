@@ -282,6 +282,68 @@ export function bildeBankZeile(
   };
 }
 
+/* ── Zwei Listen, eine Zeile je Person ────────────────────────────────────
+
+   ⚠ ⚠  DER FEHLER VOM 10.09.2026, UND ER WAR MEINER.
+
+   Ich habe `/players` und `/bench` mit `[...a, ...b]` aneinandergehaengt.
+   Beide fuehren dieselbe Person: wer auf der Bank sass, steht in
+   `/players` als „Ersatz" UND in `/bench`. Der Upsert bekam damit
+   zweimal denselben Konfliktschluessel und brach den GANZEN Stapel ab:
+
+     ON CONFLICT DO UPDATE command cannot affect row a second time
+
+   ⚠ Und der Abbruch traf nicht nur die Aufstellung: der Ereignis-Upsert
+   steht im selben `try`, also blieben auch die Ereignisse aus. Ein
+   Fehler, zwei Ausfaelle.
+
+   ⚠ ES IST DERSELBE FALL, DEN entdoppleSfvPersonen() FUER `sfv_personen`
+   SCHON LOEST — und ich habe ihn eine Datei weiter noch einmal gebaut,
+   ohne ihn wiederzuerkennen. Dass dieselbe Person in beiden Listen steht,
+   hatte ich am selben Vormittag gemessen.
+
+   ── Warum VERSCHMELZEN und nicht die Bankzeile wegwerfen ──────────────
+   Die `/players`-Zeile traegt Nummer, Position und Minuten; die
+   `/bench`-Zeile traegt die Rollenkategorie (Spieler/Trainer/Betreuer),
+   die es in `/players` nicht gibt. Wer eine der beiden verwirft, verliert
+   etwas — also gewinnt `/players` als Grundzeile und `/bench` steuert bei,
+   was nur dort steht. */
+export function verschmelzeAufstellung(zeilen: AufstellungZeile[]): AufstellungZeile[] {
+  /* Zwei Schluessel, wie beim Upsert: eigene ueber die Person, fremde
+     ueber Team und Nummer. Wer sie hier anders bildet als dort, entdoppelt
+     etwas anderes, als die Datenbank zusammenfuehrt. */
+  const schluessel = (z: AufstellungZeile) =>
+    z.ist_eigener
+      ? `p:${z.sfv_person_id}`
+      : `n:${z.sfv_team_id}:${z.rueckennr}`;
+
+  const nach = new Map<string, AufstellungZeile>();
+  for (const z of zeilen) {
+    const k = schluessel(z);
+    const da = nach.get(k);
+    if (!da) { nach.set(k, z); continue; }
+
+    /* Die Zeile aus /players ist die Grundzeile — sie hat mehr Felder. */
+    const grund = da.ist_bank ? z : da;
+    const bank = da.ist_bank ? da : z;
+
+    nach.set(k, {
+      ...grund,
+      /* ⚠ `ist_bank` heisst nach dem Verschmelzen „steht in der Bankliste
+         des Verbands", nicht mehr „diese Zeile stammt aus /bench". Der
+         Spaltenkommentar sagt das seit derselben Migration. */
+      ist_bank: true,
+      /* Was nur die Bank kennt. */
+      rolle_id: bank.rolle_id ?? grund.rolle_id,
+      rolle_kategorie_id: bank.rolle_kategorie_id ?? grund.rolle_kategorie_id,
+      rolle_kategorie: bank.rolle_kategorie ?? grund.rolle_kategorie,
+      /* Und was nur /players kennt, bleibt: Nummer, Position, Minuten,
+         Name, Zuweisung — sie stehen schon in `grund`. */
+    });
+  }
+  return [...nach.values()];
+}
+
 /** Die Kategorie, die einen SPIELER bezeichnet — Stammdaten, nicht geraten. */
 export const ROLLE_SPIELER = 1;
 

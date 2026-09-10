@@ -1,0 +1,108 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ClubCampus — was `ist_bank` heisst, und eine falsche Zeile daneben
+-- 10.09.2026
+--
+-- ⚠ ⚠  ANLASS: DER LAUF VOM 10.09.2026 BRACH AB.
+--
+--     Spiel 4396037: Aufstellung: ON CONFLICT DO UPDATE command
+--     cannot affect row a second time
+--
+--   Zehn von zehn Spielen blieben ohne Matchdaten, und der Lauf meldete
+--   trotzdem `status ok`.
+--
+-- ── Die Ursache, durch Ausschluss belegt ──────────────────────────────────
+--
+--   Es ist NICHT der neue partielle Index fuer Gegnerzeilen. Die Meldung
+--   traegt das Praefix „Aufstellung:" — das ist der Zweig fuer EIGENE
+--   Zeilen mit (verein_id, spiel_id, sfv_person_id). Der Gegnerzweig
+--   haette „Gegneraufstellung:" gemeldet.
+--
+--   Innerhalb von /players ist personId je Spiel eindeutig, innerhalb von
+--   /bench ebenso. Die Doppelung kann also nur ZWISCHEN den zwei Listen
+--   entstehen — und genau das war am selben Vormittag gemessen worden:
+--   **wer auf der Bank sass, steht in beiden.** In /players als „Ersatz"
+--   (7 von 20 eigenen Spielern im aufgezeichneten Beispiel), in /bench
+--   noch einmal.
+--
+--   Der Code hat sie mit [...a, ...b] aneinandergehaengt.
+--
+-- ⚠ UND ES IST DERSELBE FALL, DEN entdoppleSfvPersonen() FUER
+--   `sfv_personen` LOEST. Eine Datei weiter noch einmal gebaut, ohne ihn
+--   wiederzuerkennen.
+--
+-- ⚠ Ein Fehler, zwei Ausfaelle: der Ereignis-Upsert steht im selben
+--   `try`, also fielen die 0 Ereigniszeilen als FOLGE mit aus — kein
+--   zweiter Fehler.
+--
+-- ── Diese Migration aendert keine Daten. Sie berichtigt zwei Saetze. ──────
+-- ═══════════════════════════════════════════════════════════════════════════
+
+begin;
+
+-- ── 1 · `ist_bank` heisst ab heute etwas anderes ───────────────────────────
+--
+-- Vorher: „diese Zeile stammt aus /bench".
+-- Nachher: „diese Person steht in der Bankliste des Verbands".
+--
+-- ⚠ Der Unterschied entsteht durch das Verschmelzen: die Zeile stammt
+--   jetzt aus /players (sie traegt Nummer, Position, Minuten) und weiss
+--   zusaetzlich, dass die Person auf der Bank gefuehrt wird. Wer die alte
+--   Lesart behaelt, haelt jede verschmolzene Zeile fuer eine Bankzeile
+--   ohne Nummer — und wundert sich, dass sie eine hat.
+comment on column public.spiel_aufstellung.ist_bank is
+  'Steht diese Person in der Bankliste des Verbands (/api/match/{id}/bench)? ⚠ SEIT 10.09.2026 heisst das NICHT mehr „die Zeile stammt aus /bench": wer auf der Bank sass, steht auch in /players (dort als „Ersatz"), und beide Zeilen werden zu einer verschmolzen — sie traegt dann Nummer und Position aus /players und diese Kennung aus /bench. Ohne das Verschmelzen bricht der Upsert mit 21000 ab.';
+
+-- ── 2 · Eine falsche Zeile im selben Kommentar ─────────────────────────────
+--
+-- ⚠ Dort stand: „/players liefert NUR die Startelf — gemessen
+--   10.09.2026: 207 von 207 Eingewechselten fehlten."
+--
+--   **Der erste Halbsatz ist falsch, der zweite misst etwas anderes.**
+--   /players enthaelt die Ersatzspieler sehr wohl; die 207 zaehlen
+--   Wechsel-Ereignisse ohne NAMEN, nicht ohne Zeile. Ich habe eine
+--   Messung ueber fehlende Namen als Aussage ueber fehlende Zeilen
+--   gelesen — dieselbe Sorte Fehler wie „Grenze der Quelle" ohne Angabe,
+--   welcher Quelle.
+--
+--   Der Satz stand ausserdem als BEGRUENDUNG fuer den /bench-Abruf da.
+--   Ob der Abruf ohne ihn noch traegt, ist eine offene Frage und steht in
+--   der Gegenprobe unten.
+
+commit;
+
+-- ── Gegenprobe ─────────────────────────────────────────────────────────────
+--
+-- 1 · Der Lauf legt nichts doppelt an (die Doppelung, die abbrach):
+--
+--   select spiel_id, sfv_person_id, count(*)
+--     from public.spiel_aufstellung
+--    where ist_eigener
+--    group by 1, 2
+--   having count(*) > 1;
+--   -- erwartet: null Zeilen
+--
+-- 2 · Und das Verschmelzen ist zu SEHEN — eine Zeile mit beidem:
+--
+--   select count(*) as verschmolzen
+--     from public.spiel_aufstellung
+--    where ist_bank
+--      and rueckennr is not null;
+--
+-- ⚠ Erwartung: > 0. Vor dieser Aenderung war die Zahl zwingend 0 —
+--   eine Bankzeile hatte nie eine Nummer. Ist sie weiterhin 0, hat das
+--   Verschmelzen nicht gegriffen, und der Abbruch kommt wieder.
+--
+-- 3 · Die offene Frage, die der falsche Satz verdeckt hat:
+--     **traegt /bench noch etwas bei, das /players nicht hat?**
+--
+--   select count(*) filter (where rolle_kategorie_id is not null) as mit_kategorie,
+--          count(*) filter (where rolle_kategorie_id = 1)         as spieler,
+--          count(*) filter (where rolle_kategorie_id <> 1)        as nicht_spieler
+--     from public.spiel_aufstellung
+--    where ist_bank;
+--
+-- ⚠ Stehen dort NUR Zeilen mit rolle_kategorie_id = 1, die alle auch in
+--   /players stehen, dann ist /bench ein Abruf ohne eigenen Beitrag und
+--   kann fallen — ein Viertel der Matchdaten-Aufrufe. Stehen Trainer und
+--   Betreuer darunter (Kategorie 3, 4, 9), traegt er und bleibt.
+--   **Nicht raten: die Zahl entscheidet.**
