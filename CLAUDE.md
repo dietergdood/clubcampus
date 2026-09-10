@@ -3515,6 +3515,39 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠ Der sechzehnte Fall war eine Stunde alt — die Lücke entsteht BEIM BAUEN
+
+10.09.2026. `export_wartet()` wurde angelegt, mit Kommentar, mit
+Gegenprobe, mit einem Trigger dahinter — **und hatte beim Abliefern
+keinen einzigen Aufrufer.**
+
+⚠ **Der Unterschied zu den fünfzehn anderen ist das Alter, nicht die
+Art.** `leseHalbzeit()` stand drei Wochen, `baueStatistik()` Monate.
+Diese hier war **sechzig Minuten** alt.
+
+**Damit fällt die bequemste Erklärung weg.** „Es ist über die Zeit
+liegengeblieben" trifft auf einen Fall nicht zu, der in derselben
+Sitzung entstand, in der er gebraucht wurde.
+
+> **Die Lücke entsteht nicht durch Vergessen, sondern durch die
+> Reihenfolge des Bauens.** Man baut das Werkzeug, weil man es gleich
+> brauchen wird — und die Stelle, die es braucht, ist der nächste
+> Schritt. Zwischen beiden liegt ein Bericht, eine Freigabe, eine Nacht.
+> Der Zwischenstand sieht aus wie Fortschritt und ist eine tote
+> Funktion.
+
+**Was hilft, ist keine Prüfung, sondern eine Frage im selben Auftrag:**
+*wer ruft das?* Steht die Antwort noch aus, gehört sie als offener Punkt
+mit Datum daneben — dieselbe Regel wie bei einer Spalte, die niemand
+liest.
+
+⚠ **Und die Messung, die sie findet, ist billig und wird trotzdem nie
+gemacht:** exportierte Funktionen ohne Verwender ausserhalb der Tests.
+Sie kostet ein Skript und dreissig Sekunden; die Liste stand am
+10.09.2026 bei **15**.
+
+---
+
 ### ⚠⚠ EINE ZAHL, DIE ZU BEIDEN LESARTEN PASST, IST KEINE MESSUNG
 
 10.09.2026, beim Einspielen des Änderungs-Triggers. Zwei Beobachtungen

@@ -142,6 +142,17 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.1 (10.09.2026): `aufstellung` steht in CC_FELDER — der Repeater ist
+   drueben angelegt (f_s_auf, zehn Unterfelder, darin der verschachtelte
+   `marken` mit f_s_a_mk_art und f_s_a_mk_min). Zeichengenau gegen die
+   Nutzlast verglichen: keine Abweichung, auch keine kleine.
+   ⚠ Ein Spiel ohne Aufstellung schickt das Feld GAR NICHT — und
+   cc_schreibe_felder() ueberspringt, was nicht in der Nutzlast steht.
+   Damit bleibt ein einmal geschriebener Repeater stehen, wenn der
+   Verband die Aufstellung spaeter nicht mehr liefert. Das ist gewollt:
+   eine leere Liste hiesse „niemand hat gespielt", das Fehlen heisst
+   „wir wissen es nicht".
+
    0.9.0 (10.09.2026): Zeitschutz. `set_time_limit()` je Anfrage, ein
    BERICHT AUCH BEIM ABBRUCH ueber register_shutdown_function(), und
    `zeitlimit` in `/status`.
@@ -200,7 +211,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.0';
+const CC_VERSION    = '0.9.1';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -326,6 +337,22 @@ const CC_FELDER = array(
 	'wettbewerb', 'liga', 'runde', 'status', 'quelle',
 	'tore_heim', 'tore_gast', 'halbzeit_heim', 'halbzeit_gast',
 	'sfv_match_id', 'sfv_spiel_nr',
+	/* ⚠ REPEATER, kein Textfeld. `update_field()` nimmt dafuer ein Array
+	   von Zeilen; die Unterfeldnamen muessen zeichengenau stimmen, sonst
+	   schreibt ACF still nichts hinein.
+
+	   Zurueckgemeldet vom Theme-Chat am 10.09.2026 (Beitragstyp
+	   fch_spiel, Schluessel f_s_auf):
+
+	     seite f_s_a_seite · nummer f_s_a_nr · spieler f_s_a_spieler
+	     position f_s_a_pos · rolle f_s_a_rolle · ist_captain f_s_a_ist_cap
+	     von_minute f_s_a_von · bis_minute f_s_a_bis · spielzeit f_s_a_zeit
+	     marken f_s_a_mk  →  art f_s_a_mk_art · minute f_s_a_mk_min
+
+	   Gegen die Nutzlast gehalten: zehn Namen, dieselbe Reihenfolge,
+	   keine Abweichung — und die zwei Unterfelder des verschachtelten
+	   Repeaters ebenso. */
+	'aufstellung',
 );
 
 /**
