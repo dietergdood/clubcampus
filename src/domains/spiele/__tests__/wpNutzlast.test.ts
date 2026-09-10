@@ -850,10 +850,15 @@ describe("baueAufstellung", () => {
     expect(z.sfv_person_id).toBeNull();
   });
 
-  it("eine eigene Zeile trägt sie", () => {
+  it("eine eigene Zeile trägt sie — als ZEICHENKETTE", () => {
+    /* ⚠ Das Ziel des Vergleichs drüben (`f_p_sfv` am fch_person) ist
+       Text. In PHP ist "1097318" === 1097318 falsch — und dann fehlen
+       bei einer Zählung über 269 Spiele Zeilen, ohne dass es auffällt.
+       Eine Statistik, die zu wenig zählt, sieht aus wie eine Statistik. */
     const zahlen = leereAufstellungZahlen();
     const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen);
-    expect(z.sfv_person_id).toBe(100);
+    expect(z.sfv_person_id).toBe("100");
+    expect(typeof z.sfv_person_id).toBe("string");
   });
 
   it("⚠ eine Gegnerzeile trägt KEINEN Namen — auch wenn einer dasteht", () => {
@@ -1097,7 +1102,7 @@ describe("bildeVerlauf — sfv_person_id", () => {
 
   it("eine eigene Zeile trägt sie", () => {
     const [z] = bildeVerlauf([tor()], true, new Map(), "FC Herrliberg");
-    expect(z.sfv_person_id).toBe(4711);
+    expect(z.sfv_person_id).toBe("4711");
   });
 
   it("⚠ eine Gegnerzeile trägt sie NICHT — auch wenn eine dasteht", () => {

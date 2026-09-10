@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.7
+ * Version:     0.9.8
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -141,6 +141,20 @@ const CC_ROUTE      = 'clubcampus/v1';
    `/status` fuer zwei verschiedene Fassungen dieselbe Zahl, und die eine
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
+
+   0.9.8 (10.09.2026): geschrieben wird ueber den FELDSCHLUESSEL, nicht
+   ueber den Namen.
+   ⚠ ANLASS, vom Theme-Chat an vier Aufrufen gemessen: welches Feld ACFs
+   globale Namenssuche liefert, haengt an der LADEREIHENFOLGE —
+   nichts vorher geladen → f_s_v_sfv, vorher die Aufstellung → f_s_a_sfv,
+   vorher die Person → f_p_sfv. **Nicht falsch, sondern
+   unvorhersehbar.**
+   ⚠ Es betrifft ALLE Felder, nicht `sfv_person_id`: fuenf Schreibstellen
+   riefen `update_field()` mit dem Namen.
+   ⚠ Aufgeloest wird jetzt aus den Feldgruppen DES BEITRAGS — dann
+   braucht es keine Schluesselliste von drueben, die ohnehin veralten
+   wuerde. Was sich nicht aufloesen laesst, wird NICHT geschrieben,
+   sondern gemeldet (`ohne_feldschluessel`).
 
    0.9.7 (10.09.2026): `sfv_person_id` und `ein_nummer` in
    CC_VERLAUF_FELDER, und der Repeater `aufstellung` bekommt eine eigene
@@ -281,7 +295,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.7';
+const CC_VERSION    = '0.9.8';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -943,6 +957,11 @@ function cc_route_status(): WP_REST_Response {
 			   angekommen und wurde es verworfen?". Bis 0.9.6 stand er
 			   nur in einer Option, die niemand von aussen lesen kann. */
 			'letzter_bericht'       => get_option( CC_OPT_BERICHT, null ),
+			/* ⚠ Felder, deren Schluessel sich an diesem Beitragstyp nicht
+			   aufloesen laesst. Sie werden NICHT geschrieben — lieber gar
+			   nicht als unvorhersehbar. Eine leere Liste ist die
+			   Erwartung; steht etwas darin, fehlt drueben ein Feld. */
+			'ohne_feldschluessel'   => array_keys( (array) ( $GLOBALS['cc_ohne_feldschluessel'] ?? array() ) ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
@@ -1121,6 +1140,58 @@ function cc_saeubere_aufstellung( $zeilen ) {
 	return $raus;
 }
 
+/**
+ * Der Feldschluessel zu einem Namen — aufgeloest an DIESEM Beitrag.
+ *
+ * ⚠ ⚠  WARUM NICHT EINFACH DER NAME. `update_field( 'sfv_person_id', … )`
+ *       laesst ACF global suchen, und welches der drei gleichnamigen
+ *       Felder es findet, haengt an der Ladereihenfolge der Seite —
+ *       gemessen vom Theme-Chat an vier Aufrufen, mit drei
+ *       verschiedenen Ergebnissen. **Nicht falsch, sondern
+ *       unvorhersehbar**, und das ist schlimmer: ein Fehler, der
+ *       manchmal ausbleibt, wird nicht gesucht.
+ *
+ * ⚠ WAS DABEI NICHT PASSIEREN KANN, damit niemand die falsche Sorge
+ *   erbt: `update_field( $sel, $wert, $post_id )` schreibt IMMER an
+ *   `$post_id`. Eine falsch aufgeloeste Definition aendert die
+ *   Feld-REFERENZ (`_name`), nie den Beitrag. **An einem
+ *   fch_person-Beitrag ist nichts gelandet.**
+ *
+ * ⚠ Aufgeloest wird aus den Feldgruppen des Beitrags, nicht aus einer
+ *   Liste von drueben: eine Liste veraltet, sobald jemand ein Feld
+ *   umbenennt — und dann schreibt sie ins Leere, ohne dass es
+ *   fehlschlaegt.
+ */
+/** Ein Feld ueber den Schluessel schreiben; ohne Schluessel gar nicht. */
+function cc_schreibe_feld( int $post_id, string $name, $wert ): bool {
+	$key = cc_feld_schluessel( $post_id, $name );
+	if ( null === $key ) {
+		$GLOBALS['cc_ohne_feldschluessel'][ $name ] = true;
+		return false;
+	}
+	update_field( $key, $wert, $post_id );
+	return true;
+}
+
+function cc_feld_schluessel( int $post_id, string $name ) {
+	static $karten = array();
+	$typ = get_post_type( $post_id );
+	if ( ! isset( $karten[ $typ ] ) ) {
+		$karte = array();
+		if ( function_exists( 'acf_get_field_groups' ) && function_exists( 'acf_get_fields' ) ) {
+			foreach ( acf_get_field_groups( array( 'post_id' => $post_id ) ) as $gruppe ) {
+				foreach ( (array) acf_get_fields( $gruppe ) as $feld ) {
+					if ( ! empty( $feld['name'] ) && ! empty( $feld['key'] ) ) {
+						$karte[ $feld['name'] ] = $feld['key'];
+					}
+				}
+			}
+		}
+		$karten[ $typ ] = $karte;
+	}
+	return $karten[ $typ ][ $name ] ?? null;
+}
+
 function cc_schreibe_felder( int $post_id, array $spiel ): array {
 	$geschrieben = array();
 	foreach ( CC_FELDER as $feld ) {
@@ -1133,7 +1204,16 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 		$wert = ( 'aufstellung' === $feld )
 			? cc_saeubere_aufstellung( $spiel[ $feld ] )
 			: $spiel[ $feld ];
-		update_field( $feld, $wert, $post_id );
+
+		/* ⚠ Ueber den SCHLUESSEL. Findet sich keiner, wird NICHT ueber
+		   den Namen ausgewichen: das waere genau der unvorhersehbare
+		   Weg. Lieber nicht schreiben und es sagen. */
+		$key = cc_feld_schluessel( $post_id, $feld );
+		if ( null === $key ) {
+			$GLOBALS['cc_ohne_feldschluessel'][ $feld ] = true;
+			continue;
+		}
+		update_field( $key, $wert, $post_id );
 		$geschrieben[] = $feld;
 	}
 	return $geschrieben;
@@ -1184,7 +1264,13 @@ function cc_schreibe_verlauf( int $post_id, array $verlauf ): int {
 		}
 		$zeilen[] = $zeile;
 	}
-	update_field( 'verlauf', $zeilen, $post_id );
+	/* ⚠ Auch hier ueber den Schluessel — derselbe Grund. */
+	$key = cc_feld_schluessel( $post_id, 'verlauf' );
+	if ( null === $key ) {
+		$GLOBALS['cc_ohne_feldschluessel']['verlauf'] = true;
+		return 0;
+	}
+	update_field( $key, $zeilen, $post_id );
 	return count( $zeilen );
 }
 
@@ -1903,7 +1989,7 @@ function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
 			   Die andere Haelfte geht nicht verloren: `geschrieben` und
 			   `unveraendert` stehen in der Antwort, und daraus ist
 			   ablesbar, ob dieser Lauf etwas bewegt hat. */
-			update_field( CC_META_TEAM_STAND, $jetzt, $tid );
+			cc_schreibe_feld( $tid, CC_META_TEAM_STAND, $jetzt );
 
 			$alt_liga   = (string) get_field( 'liga', $tid );
 			$alt_gruppe = (string) get_field( 'gruppe', $tid );
@@ -1912,8 +1998,8 @@ function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
 				continue;
 			}
 
-			if ( '' !== $liga )   { update_field( 'liga', $liga, $tid ); }
-			if ( '' !== $gruppe ) { update_field( 'gruppe', $gruppe, $tid ); }
+			if ( '' !== $liga ) { cc_schreibe_feld( $tid, 'liga', $liga ); }
+			if ( '' !== $gruppe ) { cc_schreibe_feld( $tid, 'gruppe', $gruppe ); }
 			$geschrieben++;
 		}
 	}

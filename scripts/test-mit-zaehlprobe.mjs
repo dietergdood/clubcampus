@@ -39,6 +39,21 @@
 
    **Wer `npm test` ruft, ruft die Zählprobe mit. Sie ist nicht mehr
    auszulassen, ohne es zu wollen.**
+
+   ⚠ ⚠  UND DIE REIHENFOLGE IN `npm run pruefkette` IST TEIL DAVON.
+
+   Am 10.09.2026 stand `npm test` dort HINTER vier Docker-Prüfungen
+   (`check:php`, `check:plugin`, `check:deno`, `check:sql`). Ergebnis:
+   `teamSpielplanTab.test.jsx` fiel **zweimal hintereinander** in den
+   5-Sekunden-Timeout — allein aufgerufen grün, als `npm test` grün, nur
+   in der Kette rot.
+
+   **Die Prüfkette erzeugte die Last, an der ihr eigener Testlauf
+   scheiterte.** Und das eine Stunde, nachdem hier stand: „Testlauf und
+   Build gehören nicht in dieselbe Befehlskette."
+
+   Seither läuft `npm test` als ERSTES — auf der ruhigen Maschine. Die
+   Docker-Prüfungen danach stören niemanden mehr.
    ══════════════════════════════════════════════════════════════════════ */
 import { spawnSync } from "node:child_process";
 

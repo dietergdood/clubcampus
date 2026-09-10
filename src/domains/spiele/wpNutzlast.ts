@@ -92,8 +92,12 @@ export interface WpVerlaufZeile {
    *   `ein_sfv_person_id` loest nirgends auf (`substitutePlayerId` ist
    *   kein `personId`, gemessen 10.09.2026), und Einsatzminuten stehen
    *   ohnehin an der Aufstellungszeile.
+   *
+   * ⚠ ZEICHENKETTE, aus demselben Grund wie an der Aufstellungszeile:
+   *   das Ziel des Vergleichs (`f_p_sfv`) ist Text, und ein stiller
+   *   Typvergleich zaehlt lieber zu wenig als gar nichts.
    */
-  sfv_person_id: number | null;
+  sfv_person_id: string | null;
   /**
    * Die Rueckennummer des EINGEWECHSELTEN — nur bei eigenen Zeilen, und
    * nur bei einem Wechsel.
@@ -402,7 +406,8 @@ export function bildeVerlauf(
       /* ⚠ Der Zweig steht hier, obwohl der CHECK fremde Zeilen ohnehin
          auf null zwingt: wer diese Zeile liest, soll die Grenze sehen
          statt sie voraussetzen zu muessen. */
-      sfv_person_id: wir ? (e.sfv_person_id ?? null) : null,
+      sfv_person_id: wir && e.sfv_person_id != null
+        ? String(e.sfv_person_id) : null,
       /* ⚠ Nur bei einem Wechsel und nur bei uns. Bei einem Gegnerwechsel
          bleibt sie leer — die Nummer steht dort an der
          Aufstellungszeile, und zwei Wahrheiten waeren eine zu viel. */
@@ -1074,8 +1079,21 @@ export interface WpAufstellungZeile {
    * Wofuer sie da ist: die Website kann damit ein Spielerprofil an seine
    * Einsaetze binden, ohne ueber Namen zu gehen — und ein Name ist eine
    * Schreibweise, kein Schluessel.
+   *
+   * ⚠ ⚠  ZEICHENKETTE, NICHT ZAHL — und der Grund ist nicht die fuehrende
+   *       Null (die ist ausgeschlossen: die Nummer ist ueberall
+   *       `integer`), sondern der VERGLEICH drueben.
+   *
+   *   `f_p_sfv` am `fch_person` ist Text. Es ist das ZIEL des
+   *   Vergleichs, also gibt es den Ausschlag. In PHP ist
+   *   `"1097318" === 1097318` **falsch** — und dann fehlen bei einer
+   *   Zaehlung ueber 269 Spiele Zeilen, **ohne dass es auffaellt**.
+   *
+   *   ⚠ Das ist der teurere Fehler: eine Statistik, die zu wenig zaehlt,
+   *   sieht aus wie eine Statistik. Ein Feld, das leer bleibt, faellt
+   *   auf.
    */
-  sfv_person_id: number | null;
+  sfv_person_id: string | null;
   nummer: number | null;
   spieler: string;
   position: string;
@@ -1186,7 +1204,11 @@ export function baueAufstellung(
          Zeile TRAEGT gar keine Personennummer (der CHECK verbietet es),
          aber wer diese Zeile spaeter liest, soll die Grenze sehen statt
          sie voraussetzen zu muessen. */
-      sfv_person_id: z.ist_eigener ? z.sfv_person_id : null,
+      /* ⚠ Als Zeichenkette — siehe den Typ. `String(0)` waere „0" und
+         nicht leer; deshalb der Vergleich gegen null statt auf
+         Wahrheitswert. */
+      sfv_person_id: z.ist_eigener && z.sfv_person_id != null
+        ? String(z.sfv_person_id) : null,
       nummer: z.rueckennr,
       spieler,
       position: String(z.position_name ?? ""),

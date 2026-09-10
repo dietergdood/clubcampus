@@ -3611,6 +3611,83 @@ abgeleitetes Feld.**
 
 ---
 
+### ⚠⚠ ACFs Namenssuche ist nicht falsch, sondern UNVORHERSEHBAR
+
+10.09.2026, vom Theme-Chat an vier Aufrufen gemessen — `sfv_person_id`
+gibt es drüben dreimal (`f_s_v_sfv`, `f_s_a_sfv`, `f_p_sfv`):
+
+| vorher geladen | `update_field('sfv_person_id', …)` trifft |
+|---|---|
+| nichts | `f_s_v_sfv` |
+| die Aufstellung | `f_s_a_sfv` |
+| der Verlauf | `f_s_v_sfv` |
+| die Person | `f_p_sfv` |
+
+**Dieselbe Zeile schreibt je nach Seitenaufbau woanders hin.**
+
+⚠ ⚠ **UND DAS IST SCHLIMMER ALS FALSCH.** Ein Fehler, der immer
+auftritt, wird gefunden. Einer, der von der Ladereihenfolge abhängt,
+tritt beim Prüfen nicht auf und im Betrieb sporadisch — **er wird nicht
+gesucht, weil er sich nicht reproduzieren lässt.** Dieselbe Familie wie
+die verlorenen Testdateien unter Last.
+
+#### ⚠ Was dabei NICHT passieren kann — damit niemand die falsche Sorge erbt
+
+`update_field( $selector, $wert, $post_id )` schreibt **immer an
+`$post_id`**. Eine falsch aufgelöste Definition ändert die
+Feld-**Referenz** (`_name` → ein fremder Schlüssel), **nie den
+Beitrag**.
+
+**An einem `fch_person`-Beitrag ist also nichts gelandet.** Der Schaden
+wäre: an unserem `fch_spiel` steht der Wert unter dem richtigen
+Meta-Namen, aber mit der Referenz auf eine fremde Felddefinition — und
+ACF liest ihn dann mit den falschen Einstellungen oder gar nicht.
+
+**Zu prüfen mit einer Abfrage, weil „so arbeitet ACF" Wissen ist und
+keine Messung:**
+
+```sql
+select p.post_type, m.meta_key, count(*)
+  from wp_posts p join wp_postmeta m on m.post_id = p.ID
+ where m.meta_key in ('sfv_person_id', '_sfv_person_id')
+ group by 1, 2;
+```
+
+#### Die Reparatur: über den Schlüssel, aufgelöst am Beitrag
+
+**Es betraf alle Felder, nicht `sfv_person_id`** — fünf Schreibstellen
+riefen `update_field()` mit dem Namen.
+
+⚠ **Der Schlüssel kommt NICHT aus einer Liste von drüben.** Eine Liste
+veraltet, sobald jemand ein Feld umbenennt, und schreibt dann ins Leere,
+ohne fehlzuschlagen. Aufgelöst wird aus den **Feldgruppen des Beitrags**
+(`acf_get_field_groups(['post_id' => …])`) — das ist immer der aktuelle
+Stand.
+
+⚠ **Und was sich nicht auflösen lässt, wird NICHT geschrieben**, sondern
+gemeldet (`ohne_feldschluessel` in `/status`). **Lieber gar nicht als
+unvorhersehbar** — ein Ausweichen auf den Namen wäre genau der Weg
+zurück in den Fehler.
+
+#### Der Typ: Text, und der Grund ist ein anderer als vermutet
+
+`f_p_sfv` am `fch_person` ist **Text**, und es ist das **Ziel** des
+Vergleichs — also gibt es den Ausschlag. Alle drei werden Text, unsere
+Nutzlast schickt die Nummer als Zeichenkette.
+
+⚠ **Meine Messung „führende Nullen sind ausgeschlossen" war richtig und
+beantwortete die falsche Frage.** Die Gefahr war nie der Wert, sondern
+der Vergleich:
+
+> `"1097318" === 1097318` ist **falsch**. Dann fehlen bei einer Zählung
+> über 269 Spiele Zeilen — **ohne dass es auffällt.**
+
+**Eine Statistik, die zu wenig zählt, sieht aus wie eine Statistik. Ein
+Feld, das leer bleibt, fällt auf.** Der Typunterschied war also
+gefährlich, nur aus dem anderen Grund.
+
+---
+
 ### ✅ Die Gegnernamen-Frage war gegenstandslos — und meine Annahme war falsch
 
 10.09.2026. Vor dem ersten Export mit Aufstellung stand die Sorge: der
