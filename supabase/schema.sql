@@ -1884,6 +1884,36 @@ CREATE TABLE IF NOT EXISTS "public"."rollen" (
 ALTER TABLE "public"."rollen" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."sfv_personen" (
+    "verein_id" "uuid" NOT NULL,
+    "sfv_person_id" integer NOT NULL,
+    "name" "text" NOT NULL,
+    "sfv_team_id" integer,
+    "rueckennr" integer,
+    "erstmals_gesehen" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "zuletzt_gesehen" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."sfv_personen" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."sfv_personen" IS 'Klarnamen eigener Spieler aus der SFV Club API. RUECKFALL fuer die Anzeige, wenn keine sfv_zuordnung besteht — die Zuordnung gewinnt immer. Nur eigene Spieler: Gegner bleiben anonym.';
+
+
+
+COMMENT ON COLUMN "public"."sfv_personen"."name" IS 'firstname + name des Verbands. Wird bei JEDEM Lauf ueberschrieben (Entscheid Didi, 10.09.2026): korrigiert der Verband eine Schreibweise, soll sie ankommen. Ein Abzug von damals ist genau das, was in die Irre fuehrt.';
+
+
+
+COMMENT ON COLUMN "public"."sfv_personen"."sfv_team_id" IS 'Momentaufnahme aus dem zuletzt gesehenen Spiel — nur zum Wiedererkennen in der Maske. Nicht als Stammdatum verwenden.';
+
+
+
+COMMENT ON COLUMN "public"."sfv_personen"."rueckennr" IS 'Momentaufnahme aus dem zuletzt gesehenen Spiel — nur zum Wiedererkennen in der Maske. Nicht als Stammdatum verwenden.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."sfv_team_logos" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "verein_id" "uuid" NOT NULL,
@@ -2944,6 +2974,11 @@ ALTER TABLE ONLY "public"."rollen"
 
 
 
+ALTER TABLE ONLY "public"."sfv_personen"
+    ADD CONSTRAINT "sfv_personen_pkey" PRIMARY KEY ("verein_id", "sfv_person_id");
+
+
+
 ALTER TABLE ONLY "public"."sfv_team_logos"
     ADD CONSTRAINT "sfv_team_logos_pkey" PRIMARY KEY ("id");
 
@@ -3345,6 +3380,10 @@ CREATE INDEX "personenart_pro_person_art_idx" ON "public"."personenart_pro_perso
 
 
 CREATE INDEX "personenart_pro_person_person_idx" ON "public"."personenart_pro_person" USING "btree" ("person_id");
+
+
+
+CREATE INDEX "sfv_personen_verein_idx" ON "public"."sfv_personen" USING "btree" ("verein_id");
 
 
 
@@ -4123,6 +4162,11 @@ ALTER TABLE ONLY "public"."rolle_pflichtfelder"
 
 ALTER TABLE ONLY "public"."rollen"
     ADD CONSTRAINT "rollen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
+
+
+
+ALTER TABLE ONLY "public"."sfv_personen"
+    ADD CONSTRAINT "sfv_personen_verein_id_fkey" FOREIGN KEY ("verein_id") REFERENCES "public"."vereine"("id");
 
 
 
@@ -5094,6 +5138,17 @@ CREATE POLICY "rollen_select" ON "public"."rollen" FOR SELECT USING (("verein_id
 
 
 CREATE POLICY "rollen_write" ON "public"."rollen" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
+
+
+
+ALTER TABLE "public"."sfv_personen" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "sfv_personen_select" ON "public"."sfv_personen" FOR SELECT USING (("verein_id" = "public"."get_my_verein_id"()));
+
+
+
+CREATE POLICY "sfv_personen_write" ON "public"."sfv_personen" USING ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"())) WITH CHECK ((("verein_id" = "public"."get_my_verein_id"()) AND "public"."is_admin"()));
 
 
 
@@ -6114,6 +6169,12 @@ GRANT ALL ON TABLE "public"."rolle_pflichtfelder" TO "service_role";
 GRANT ALL ON TABLE "public"."rollen" TO "anon";
 GRANT ALL ON TABLE "public"."rollen" TO "authenticated";
 GRANT ALL ON TABLE "public"."rollen" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."sfv_personen" TO "anon";
+GRANT ALL ON TABLE "public"."sfv_personen" TO "authenticated";
+GRANT ALL ON TABLE "public"."sfv_personen" TO "service_role";
 
 
 

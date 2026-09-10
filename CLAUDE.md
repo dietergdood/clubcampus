@@ -3114,3 +3114,58 @@ Ranglisten-Ablage (`saison_name` je Gruppe, Schreibweise des Verbands), aus
 **derselben Zeile** wie Liga und Gruppe. Das Postmeta bleibt als Rückfall
 stehen und wird nicht überschrieben — es zu entfernen wäre eine Änderung
 an zwei Beiträgen ohne Gegenwert.
+
+### ⚠ Zwei kaputte Prüfregeln an einem Tag — und sie waren auf ENTGEGENGESETZTE Weise kaputt
+
+10.09.2026, beide in `scripts/check-plugin.mjs`. Der Satz dazu ist Didis:
+
+> **Wenn eine Regel bei ihrer eigenen Positivkontrolle scheitert, ist die
+> Regel kaputt — nicht der Code.**
+
+⚠ **Hier wurden die beiden Fälle zuerst als einer zusammengefasst
+(„die Prüfung war zu eng gebaut"). Sie sind es nicht, und der Unterschied
+ist der ganze Nutzen des Eintrags** — die zwei Fehlerrichtungen brauchen
+verschiedene Gegenmittel:
+
+| | Regel | kaputt wie | gefunden von |
+|---|---|---|---|
+| **A** | „`CC_FELDER` führt kein Teamfeld" | **zu locker** — sie las `b.konstanten`, das es **nie gab**. Sie hätte immer eine leere Liste geliefert und **wäre für immer grün gewesen** | ihrer eigenen Positivkontrolle, in derselben Minute |
+| **B** | „kein Schreibaufruf fasst einen `fch_team`-Beitrag an" | **zu absolut** — sie verbot *jedes* Schreiben. Als der Entscheid kippte und der Export `liga`/`gruppe` schreiben SOLLTE, verbot sie das Gewollte | Didi, beim Auftrag zum Umbau |
+
+⚠ **Und B war zusätzlich löchrig**, was der eigentliche Skandal ist: sie
+suchte Funktionen, die **beides** enthalten — einen Schreibaufruf *und* den
+Bezeichner `CC_TYP_TEAM`. `cc_schreibe_teamfelder()` bekommt die Beitrags-Id
+**übergeben** und nennt `CC_TYP_TEAM` nirgends. Die Regel blieb also grün,
+während genau die Funktion entstand, die sie verbieten sollte. **Meine
+Gegenprobe hatte nur getragen, weil ich den Bezeichner zufällig in
+dieselbe Funktion geschrieben hatte.**
+
+**Damit war B gleichzeitig zu eng UND zu weit** — sie verbot, was erlaubt
+werden sollte, und liess durch, was sie treffen sollte. Das ist kein
+Widerspruch, sondern das Kennzeichen einer Regel, die am **falschen
+Merkmal** hängt: sie prüfte, was *dasteht* (ein Bezeichner), nicht was
+*geschieht* (ein Schreibvorgang an einem Team).
+
+**Die drei Lehren, in der Reihenfolge ihrer Wirkung:**
+
+1. **Jede Regel bekommt eine Positivkontrolle, und die ist Pflicht, nicht
+   Kür.** Sie hat A in derselben Minute gefangen. Ohne sie stünde dort bis
+   heute eine Prüfung, die nichts prüft — und die schlimmer ist als keine,
+   weil sie das Gefühl von Deckung erzeugt.
+2. **Eine Regel nennt die engste wahre Zusage, nicht die bequemste.**
+   „Niemand schreibt an `fch_team`" war bequem und wurde falsch, sobald
+   sich die Absicht änderte. Ersetzt durch zwei engere, die an einer
+   **benannten Funktion** hängen: *„`cc_schreibe_teamfelder` legt kein Team
+   an und löscht keines"* und *„…fasst nur `liga`, `gruppe` und
+   `abgleich_stand` an"*. Beide überleben eine Absichtsänderung, weil sie
+   die Absicht selbst beschreiben.
+3. ⚠ **Eine Regel, die einen BEZEICHNER sucht, prüft eine Schreibweise.**
+   Dieselbe Familie wie `name !== "Elternteil"` und wie `\b` gegen deutsche
+   Bezeichner — nur diesmal im Prüfwerkzeug selbst, also an der Stelle, an
+   der niemand mehr nachsieht.
+
+**Und die vierte, die über `check-plugin` hinausgeht:** eine Regel, die
+eine Zusage über das Produkt festhält, veraltet mit der Zusage. Wer einen
+Entscheid umdreht, sucht **zuerst die Prüfungen, die ihn festhalten** —
+sonst meldet die Prüfkette den gewollten Zustand als Defekt, und der
+nächste Reflex ist, die Regel zu löschen statt sie zu verengen.
