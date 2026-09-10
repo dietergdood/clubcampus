@@ -20,7 +20,9 @@
    festhält, dass niemand aus `mitglieder` löscht.
    ══════════════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
+import ts from "typescript";
 import { readFileSync, readdirSync } from "node:fs";
+import { baue, findeFunktion, jederKnoten, zeileVon } from "../../../test-helpers/quelltext.ts";
 import { join } from "node:path";
 
 const ORDNER = "supabase/functions/sfv-sync";
@@ -71,5 +73,40 @@ describe("Türen in die Tabelle spiele", () => {
     expect(quelle).toContain("schneideAufFeldhoheit");
     const lauf = readFileSync(join(ORDNER, "matchdatenLauf.ts"), "utf8");
     expect(lauf).not.toContain("schneideAufFeldhoheit");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Worauf `vertragsprobe` steht (10.09.2026)
+
+   Die Probe baut EINE erfundene Zeile und hält sie gegen den Vertrag —
+   ohne API-Aufruf. Das trägt nur, solange `bildeSpiel()` eine FESTE
+   Schlüsselmenge liefert: welche Werte drinstehen, darf von den Daten
+   abhängen, WELCHE FELDER es gibt nicht.
+
+   ⚠ Käme ein `...(bedingung ? {a:1} : {})` hinein, prüfte die Probe je
+   nach erfundener Zeile etwas anderes als der echte Lauf — und wäre
+   grün, während der Lauf wirft. Eine Prüfung, die grün ist, ohne zu
+   prüfen: genau die Familie, gegen die sie gebaut wurde.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("bildeSpiel baut eine feste Schlüsselmenge", () => {
+  it("keine bedingten Felder im zurückgegebenen Objekt", () => {
+    const baum = baue("supabase/functions/sfv-sync/sync.ts");
+    const fn = findeFunktion(baum, "bildeSpiel");
+    expect(fn, "bildeSpiel nicht gefunden — umbenannt?").not.toBeNull();
+
+    const verstoesse: string[] = [];
+    jederKnoten(fn!, (n) => {
+      if (!ts.isObjectLiteralExpression(n)) return;
+      for (const e of n.properties) {
+        if (ts.isSpreadAssignment(e)) {
+          verstoesse.push(`Spread in Zeile ${zeileVon(e)}`);
+        }
+        if (e.name && ts.isComputedPropertyName(e.name)) {
+          verstoesse.push(`berechneter Schlüssel in Zeile ${zeileVon(e)}`);
+        }
+      }
+    });
+    expect(verstoesse).toEqual([]);
   });
 });

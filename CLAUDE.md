@@ -3515,6 +3515,74 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ EIN SQL-BLOCK, DEN ICH GEGEBEN HABE, IST AUSGELIEFERT
+
+10.09.2026, und es hat den stündlichen Sync zum Stillstand gebracht.
+
+**Der Ablauf, in drei Schritten:**
+
+1. Ich gebe einen Migrationsblock heraus. Er trägt `ht_resultat` in
+   `sync_felder->spiele->sfv` ein.
+2. **Eine Runde später messe ich, dass die Gruppe falsch ist** — es
+   gehört nach `sfv_matchdaten`, wie `schiedsrichter`. Ich berichtige
+   **die Datei im Repo** und erwähne es als Absatz in einem Bericht über
+   etwas anderes.
+3. Didi hat den Block längst kopiert. Er führt ihn aus. Der nächste Lauf
+   wirft `sync_felder nennt Spalten, die der Sync nicht berechnet:
+   ht_resultat` — und **jeder weitere ebenso**.
+
+⚠ **Eine Datei zu berichtigen erreicht nicht, wer sie schon kopiert
+hat.** Die Datei im Repo und der Text in der Nachricht sind zwei
+verschiedene Dinge, und nur eines davon liegt beim Empfänger.
+
+> **Die Regel (Didi, 10.09.2026): eine Berichtigung muss genauso
+> ausdrücklich kommen wie der Block selbst — als eigene Nachricht mit
+> „ersetzt den Block von vorhin", nicht als Nebensatz.**
+
+⚠ **Und sie gilt für jedes ausgelieferte Stück, nicht nur für SQL:** ein
+Befehl zum Kopieren, eine Feldliste für den Theme-Chat, eine Anweisung
+für die Portalverwaltung. Was den Empfänger einmal erreicht hat, lebt
+dort weiter, unabhängig vom Repo.
+
+**Woran es nicht lag:** nicht an der Sorgfalt beim Messen — der Fehler
+war eine Runde später gefunden. **Es lag am Weg der Korrektur.**
+
+---
+
+### ⚠ Warum es KEINE Prüfung für `sync_felder` im Repo geben kann
+
+Festgehalten am 10.09.2026, damit es niemand als Lücke wieder aufmacht.
+
+Nach dem Stillstand oben lag die Frage nahe: warum hält keine Prüfung
+den Vertrag gegen die Schreibstellen? **Weil der Vertrag nicht im Repo
+steht.** `api_verbindungen.sync_felder` ist eine Zeile in der Datenbank.
+
+| | |
+|---|---|
+| im Repo liegen | **Migrationen** — die Schritte dorthin |
+| den Endzustand daraus rekonstruieren hiesse | ihre Reihenfolge nachbauen, Änderungen von Hand mitraten, und annehmen, dass alle gelaufen sind |
+
+**Eine Prüfung, die selbst raten muss, ist keine.** Und eine, die eine
+Datenbankverbindung braucht, hat die Prüfkette nicht — CI läuft ohne
+Zugangsdaten.
+
+⚠ **Die Prüfung EXISTIERT — sie läuft zur Laufzeit.** `fehlend` in
+`sync.ts:270` ist genau dieser Abgleich, und sie hat funktioniert: der
+Lauf brach **laut** ab, statt still Falsches zu schreiben. Das ist die
+richtige Reihenfolge; sie kam nur nach der Migration statt davor.
+
+**Was gefehlt hat, war der Probelauf davor** — dafür gibt es seit dem
+10.09.2026 `aktion: "vertragsprobe"`. Sie liest den Vertrag, baut eine
+Spielzeile und meldet `fehlend` und `nicht_erlaubt`, **ohne API-Aufruf
+und ohne zu schreiben**.
+
+⚠ **Sie prüft den Spielplan-Durchgang, mehr nicht.** Die zwei anderen
+Türen in `spiele` gehen an der Feldhoheit vorbei (siehe den Türen-Befund
+weiter unten) — was dort geschrieben wird, kann sie nicht sehen, und sie
+sagt das in ihrer eigenen Antwort.
+
+---
+
 ### ⚠⚠ `leseHalbzeit()` — drei Wochen fertig, verdrahtet bis zur letzten Zeile, nie aufgerufen
 
 Der schärfste Fall von „gebaut, nicht angeschlossen", und am 10.09.2026

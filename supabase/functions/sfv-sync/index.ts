@@ -49,7 +49,8 @@ import {
   holeBank,
 } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
-import { laufeSync } from "./sync.ts";
+import { laufeSync, bildeSpiel } from "./sync.ts";
+import { schneideAufFeldhoheit } from "../../../src/domains/sfv/feldhoheit.ts";
 import { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
 import { laufeNamen, namenFuersProtokoll } from "./namenLauf.ts";
 import { protokoll, protokollFehler } from "./protokoll.ts";
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
      kann — dieselbe Regel wie in wp-export. */
   const AKTIONEN = [
   "teams", "sync", "namen", "teamprobe", "wechselprobe", "wechselnachtrag", "cupprobe",
-  "rohschluessel",
+  "rohschluessel", "vertragsprobe",
 ];
   if (!AKTIONEN.includes(aktion)) {
     return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
@@ -351,6 +352,71 @@ Deno.serve(async (req) => {
      Unterschied ist die Sache: dort ging es um Personennamen, hier um
      „1. Runde" gegen „3" — und das ist ohne den Wert nicht zu beantworten.
      Der Spielplan-Endpunkt fuehrt ueberhaupt keine Personendaten. */
+  /* ── Aktion vertragsprobe: haelt sync_felder gegen den Code? ─────────
+
+     ⚠ ANLASS, und er hat den stuendlichen Lauf zum Stillstand gebracht:
+     eine Migration trug `ht_resultat` in `sync_felder->spiele->sfv` ein.
+     Der Spielplan-Durchgang kann es nicht berechnen — er bekommt vom
+     Verband keine Halbzeit —, also warf `fehlend` bei JEDEM Lauf, und
+     der Sync stand, bis der Vertrag berichtigt war.
+
+     **Die Pruefung gab es also schon; sie lief nur zur Laufzeit.** Diese
+     Aktion zieht sie nach vorne: vor der Migration statt danach.
+
+     ⚠ KEIN API-AUFRUF, KEIN TOKEN, KEIN SCHREIBEN. `bildeSpiel()` baut
+     ein Objektliteral mit fester Schluesselmenge — welche Werte
+     drinstehen, haengt von den Daten ab, WELCHE FELDER es gibt nicht.
+     Eine erfundene Zeile genuegt deshalb, und sie kostet nichts.
+
+     ⚠ SIE PRUEFT DEN SPIELPLAN-DURCHGANG, MEHR NICHT. Die zwei anderen
+     Schreibstellen in `spiele` (Halbzeit, Schiedsrichter/Laufmarke)
+     gehen an der Feldhoheit vorbei — was dort geschrieben wird, sieht
+     sie nicht. Das steht in ihrer Antwort, damit niemand ein gruenes
+     Ergebnis fuer mehr nimmt, als es ist. */
+  if (aktion === "vertragsprobe") {
+    const v = eigene[0];
+    const sf = (v.sync_felder as any)?.spiele ?? {};
+    const erlaubt = [...(sf.sfv ?? []), ...(sf.abgeleitet ?? [])] as string[];
+
+    /* Eine erfundene Zeile — nur die Felder, die bildeSpiel() liest.
+       Beide Mannschaften „eigen", damit kein Zweig frueh aussteigt. */
+    const gebaut = bildeSpiel(
+      {
+        teamAId: 1, teamBId: 2, teamNameA: "A", teamNameB: "B",
+        matchId: 1, matchNumber: 1, matchDate: "2026-01-01T12:00:00",
+        matchState: 2, scoreTeamA: 1, scoreTeamB: 0,
+      } as any,
+      new Set([1]), new Map([[1, "A"]]), new Date().toISOString(),
+    );
+    if (!gebaut) {
+      return json({ fehler: "bildeSpiel hat nichts gebaut — die Probe ist unbrauchbar" }, 500);
+    }
+    const { fehlend, nicht_erlaubt } = schneideAufFeldhoheit(erlaubt, gebaut.zeile);
+
+    return json({
+      hinweis: "Liest nur. Kein API-Aufruf, kein Schreiben.",
+      /* ⚠ Beide Zahlen immer, auch als Null — eine Zahl, die nur im
+         schlechten Fall erscheint, verlangt eine Deutung. */
+      fehlend,
+      nicht_erlaubt,
+      wuerde_werfen: fehlend.length > 0,
+      erlaubt_anzahl: erlaubt.length,
+      berechnet_anzahl: Object.keys(gebaut.zeile).length,
+      listen: {
+        sfv: (sf.sfv ?? []).length,
+        abgeleitet: (sf.abgeleitet ?? []).length,
+        verein: (sf.verein ?? []).length,
+        sfv_matchdaten: (sf.sfv_matchdaten ?? []).length,
+      },
+      /* ⚠ Der Zuschnitt gehoert in die Antwort, nicht in die Doku: eine
+         Pruefung, die ihre eigene Grenze nennt, kann nicht fuer mehr
+         genommen werden, als sie ist. */
+      geprueft: "nur der Spielplan-Durchgang (sfv + abgeleitet).",
+      ungeprueft: "sfv_matchdaten und alles, was die Matchdaten-Tueren "
+        + "schreiben — sie gehen an schneideAufFeldhoheit vorbei.",
+    });
+  }
+
   /* ── Aktion rohschluessel: was bringt die Leitung wirklich? ──────────
      Zwei Abrufe, liest, schreibt nichts. Sie beantwortet EINE Frage, an
      der ein Widerspruch haengt: meine Suche in der Swagger-Datei sagt
