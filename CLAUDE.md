@@ -365,6 +365,31 @@ Der frühere `JsComponent`-Brücken-Block in `clubcampus.tsx` (umging die Prop-P
   Matchdaten-Aufrufe; wer ihn ausliest, füllt drei Spalten ohne einen einzigen
   zusätzlichen Aufruf.** Beides ist richtig, nichts zu tun ist es nicht.
 
+  ⚠ ⚠ **NACHGEMESSEN AM 10.09.2026 GEGEN DIE SPEZIFIKATION — ES SIND ZEHN
+  FELDER, NICHT DREI.** `MatchDetail` hat 34 Felder, `Schedule` 31, und die
+  Schnittmenge ist kleiner als die Zahlen vermuten lassen. **Das trägt der
+  Detailabruf, und der Spielplan nicht:**
+
+  | Feld | wofür |
+  |---|---|
+  | **`teams`** | darin `isHomeTeam` — die Heim-/Auswärtsfrage aus der Quelle statt über den Spielort erschlossen |
+  | **`intermediateResults`** | der **Halbzeitstand**. `spiele.ht_resultat` ist leer, und der Spielplan-Endpunkt liefert ihn nachweislich nicht |
+  | **`cupName`** | die Cup-Bezeichnung, die `Schedule` nicht führt |
+  | `championshipName` | das Gegenstück für die Meisterschaft |
+  | `hasMatchStarted` · `isMatchPause` · `hasMatchEnded` | der Spielzustand feiner als `matchState` |
+  | `stadiumFieldId` · `stadiumFieldName` · `isUnkownStadiumField` | das Spielfeld |
+
+  ⚠ **Es ist ein WEGGEWORFENER Abruf, kein fehlender.** Der Unterschied ist
+  die ganze Rechnung: hier kostet das Auslesen **nichts** — die Antwort ist
+  schon bezahlt, schon da, und wird in derselben Zeile verworfen. Das ist
+  eine andere Lage als bei `/bench`, das am selben Tag ausgebaut wurde, weil
+  es einen ZUSÄTZLICHEN Abruf kostete und nichts beitrug.
+
+  ⚠ **Der Zuschnitt beim Auslesen ist trotzdem eine Allowlist, Feld für
+  Feld** — nicht `{...detail}`. Zehn Felder, die man nehmen KANN, sind kein
+  Grund, zehn zu nehmen; und ein neues Feld der Gegenseite reiste sonst beim
+  nächsten Mal still mit (siehe „Ein neues Feld erbt JEDEN Ausgang").
+
 - **⚠ Der Verweis auf den FVRZ-Spielbericht: `tg=` ist `spiele.sfv_match_id`.**
 
   Direkt belegt am 25.08.2026, nicht hergeleitet — die Seite zeigte bei `tg=4393132` unser Spiel vom 23.08.2026 (FC Herrliberg 3 – FC Blau-Weiss Erlenbach 1, 3:3) samt Aufstellung, und die dort genannte „Spielnummer: 177238" ist genau unsere `sfv_spiel_nr`.
@@ -3490,6 +3515,54 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ DER EMPFÄNGER SETZT FEHLENDE SPIELE AUF `draft` — die gefährlichste Eigenschaft der Anbindung
+
+Festgehalten am 10.09.2026 auf Didis Anweisung. **Sie stand bis dahin
+nirgends, ausser im Quelltext des Plugins und in einem Bericht.**
+
+`POST /clubcampus/v1/spiele` bekommt zwei Dinge: `spiele` und `teams`.
+`teams` ist der **Abgleichbereich** — und am Ende der Route läuft dies:
+
+```php
+foreach ( $vorhanden as $mid => $postId ) {
+    if ( isset( $geliefert[ $mid ] ) ) continue;          // war dabei
+    $teamId = (int) get_field( 'fch_team', $postId );
+    if ( ! $teamId || ! isset( $erlaubteTid[ $teamId ] ) ) continue;
+    wp_update_post( array( 'ID' => $postId, 'post_status' => 'draft' ) );
+}
+```
+
+**Jedes Spiel einer gelieferten Mannschaft, das nicht in der Nutzlast
+steht, verschwindet von der Website.** Das ist richtig so — ein
+abgesetztes Spiel muss wieder verschwinden können —, aber es macht die
+Nutzlast zu einer **vollständigen Aussage über die genannten
+Mannschaften**, nicht zu einer Sammlung von Neuigkeiten.
+
+⚠ ⚠ **UND DESHALB DARF EINE MANNSCHAFT NICHT AUF ZWEI ANFRAGEN VERTEILT
+WERDEN.** Der Export schickt heute **eine Anfrage je Mannschaft**
+(`sendeTeil`, `teams: [team]`). Wer das aus Zeitgründen stückelt — der
+naheliegendste Gedanke, sobald eine Anfrage in ein Limit läuft —, zieht
+mit dem ersten Teil alle Spiele der übrigen Teile zurück.
+
+**Und es fällt nicht auf:** die Antwort meldet `zurueckgezogen: 12` statt
+eines Fehlers, die Spiele stehen als Entwurf weiter in WordPress, und der
+nächste vollständige Lauf holt sie zurück. Zwischen zwei Läufen fehlt der
+halbe Spielplan auf der öffentlichen Seite.
+
+| | |
+|---|---|
+| **Stückeln geht nur**, wenn der Empfänger weiss, dass es ein Teil ist | dafür das `teil`-Feld in 0.9.0 |
+| **`teams` weglassen** ist kein Ausweg | ein fehlendes `teams` ist ein Abbruch, kein leerer Satz — mit Absicht, siehe die Route |
+
+⚠ **Zwei Bedingungen begrenzen den Schaden heute**, und beide sind
+Zufall, kein Schutz: der Beitrag muss dem Abgleich gehören
+(`sfv_match_id` gesetzt) **und** sein Team muss in diesem Lauf geliefert
+worden sein. Ein Spiel, das jemand von Hand angelegt hat, bleibt
+unberührt. **Gelöscht wird nie**, nur auf Entwurf gesetzt — deshalb ist
+der Fehler heilbar, aber sichtbar.
+
+---
+
 ### ⚠ Zwei Bitten aus dem Theme-Chat, beide abgelehnt (10.09.2026)
 
 Festgehalten, weil eine abgelehnte Bitte sonst in vier Wochen als
@@ -3517,6 +3590,27 @@ dass die Zahl je Wettbewerb etwas anderes meint.**
 **Was stattdessen gilt:** `runde` bleibt bei Cupspielen leer. Das Theme
 lässt das Element an allen fünf Stellen weg, es entsteht keine Lücke —
 gegengeprüft vom Theme-Chat. **Leer ist ehrlich.**
+
+##### ⚠⚠ ENDGÜLTIG ABGESAGT — gemessen gegen das VOLLSTÄNDIGE Schema (10.09.2026)
+
+Die zwei Messungen oben galten dem Spielplan. **Der dritte Vorschlag kam
+über den Spiel-Detailabruf und einen vermuteten „cupId-Endpunkt".** Beides
+ist jetzt gegen die ganze Spezifikation gehalten:
+
+| gemessen | Ergebnis |
+|---|---|
+| **`roundName`** in `swagger_2026-08-28.json` | **kommt im ganzen Schema nicht vor** — nicht in `Schedule`, nicht in `MatchDetail`, in keinem der Objekte |
+| **Cup-Endpunkt** | die Schnittstelle hat **15 Pfade**, keiner enthält „cup". `cupId` ist ein FELD, kein Pfad |
+| `MatchDetail` gegen `Schedule` | 34 gegen 31 Felder; die zehn zusätzlichen enthalten **keinen** Rundennamen |
+
+**Damit ist die Frage dreimal beantwortet, jedes Mal an einer anderen
+Quelle: Spielplan, Detailabruf, Gesamtschema.** Ein vierter Anlauf hat
+nichts Neues zu messen — es gibt kein Feld, das es tragen könnte.
+
+⚠ **Und `roundNbr` bleibt verboten** (siehe oben): 105 im Schweizer-Cup
+zeigt, dass die Zahl je Wettbewerb etwas anderes meint. „Runde 5" statt
+„Achtelfinal" wäre plausibel und falsch — auf einer öffentlichen Seite
+nicht mehr von einer Auskunft zu unterscheiden.
 
 #### (b) „Schweizer-Cup" und „Schweizer Cup" werden **nicht** vereinheitlicht
 
