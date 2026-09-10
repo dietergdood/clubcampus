@@ -51,14 +51,33 @@ describe("istEigener", () => {
 });
 
 describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
-  it("uebernimmt von einem fremden Spieler nur den Vereinsnamen", () => {
+  /* ══════════════════════════════════════════════════════════════
+     ⚠ ERGAENZT AM 10.09.2026, NICHT GEDREHT.
+
+     Hier stand „nur den Vereinsnamen" und `rueckennr` war NULL. Seit dem
+     Entscheid, dem Gegner Tor- und Kartensymbole an seiner
+     Aufstellungszeile zu geben, kommt die RUECKENNUMMER mit — die
+     Zuordnung laeuft ueber sie.
+
+     ⚠ DIE GRENZE VERSCHIEBT SICH NICHT, SIE WIRD GENAUER: Nummer ja,
+     Person nein. Eine Personennummer ist ueber dieselbe Schnittstelle in
+     einen Namen aufzuloesen; eine Rueckennummer ist eine Beschriftung
+     auf einem Trikot. Der Fall prueft jetzt BEIDE Haelften.
+     ══════════════════════════════════════════════════════════════ */
+  it("uebernimmt von einem fremden Spieler Vereinsname und Nummer — keine Person", () => {
     const z = bildeEreignis(FREMDES_TOR, UNSERE, "v1", "s1", JETZT)!;
     expect(z.ist_eigener).toBe(false);
     expect(z.gegner_club_name).toBe("FC Kuesnacht a");
+    /* neu erlaubt */
+    expect(z.rueckennr).toBe(7);
+    expect(z.ein_rueckennr).toBe(12);
+    /* weiterhin verboten — und der CHECK sagt dasselbe noch einmal */
     expect(z.sfv_person_id).toBeNull();
-    expect(z.rueckennr).toBeNull();
     expect(z.ein_sfv_person_id).toBeNull();
-    expect(z.ein_rueckennr).toBeNull();
+    /* und kein Name, auf keinem Weg */
+    const roh = JSON.stringify(z);
+    expect(roh).not.toContain("Max Muster");
+    expect(roh).not.toContain("Anna Beispiel");
   });
 
   it("laesst kein personenbezogenes Feld durch — auch kein unbekanntes", () => {

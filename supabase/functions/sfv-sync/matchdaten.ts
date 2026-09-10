@@ -179,12 +179,28 @@ export function bildeEreignis(
        ("FC Kuesnacht a") — er nennt keine Person. */
     gegner_club_name: eigen ? null : text(e.teamName),
 
-    /* Alles Personenbezogene NUR bei eigenen. Der Constraint in der Datenbank
-       prueft dasselbe ein zweites Mal. */
+    /* ⚠ ⚠  DIE NUMMER FUER BEIDE, DIE PERSON NUR FUER EIGENE — seit dem
+       10.09.2026. Vorher stand hier viermal `eigen ? … : null`.
+
+       Der Grund fuer die Aenderung ist eine ANZEIGE: der Gegner bekommt
+       Tor- und Kartensymbole an seiner Aufstellungszeile, und die
+       Zuordnung laeuft ueber die Rueckennummer. Ohne sie bliebe die
+       Gegneraufstellung ohne Symbole.
+
+       ⚠ DIE GRENZE VERSCHIEBT SICH NICHT, SIE WIRD GENAUER. Personen-
+       nummern bleiben verboten — nicht ungenutzt, sondern vom CHECK
+       erzwungen. Eine Personennummer ist ueber dieselbe Schnittstelle in
+       einen Namen aufzuloesen; eine Rueckennummer ist eine Beschriftung
+       auf einem Trikot.
+
+       ⚠ UND DER TEXT AENDERT SICH NICHT. beschreibeWer() gibt beim
+       Gegner weiterhin den Vereinsnamen zurueck; die Nummer wandert ins
+       FELD, nicht in die Zeichenkette. Zwei Wahrheiten waeren eine zu
+       viel. */
     sfv_person_id:     eigen ? zahl(e.personId) : null,
-    rueckennr:         eigen ? zahl(e.jerseyNumber) : null,
+    rueckennr:         zahl(e.jerseyNumber),
     ein_sfv_person_id: eigen ? zahl(e.substitutePlayerId) : null,
-    ein_rueckennr:     eigen ? zahl(e.substitutePlayerJerseyNumber) : null,
+    ein_rueckennr:     zahl(e.substitutePlayerJerseyNumber),
 
     zuletzt_synchronisiert: jetzt,
   };

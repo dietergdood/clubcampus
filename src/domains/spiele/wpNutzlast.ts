@@ -39,8 +39,18 @@ import {
 /** SFV-Ereignistyp „Aus-/Einwechslung". Steht nicht in matchdatenAnzeige,
     weil die Statistik ihn nicht zählt — der Verlauf zeigt ihn aber. */
 export const TYP_WECHSEL = 2;
+
 /** SFV-Ereignistyp „Assist". Siehe die Warnung bei `verlaufArt()`. */
 export const TYP_ASSIST = 9;
+
+/**
+ * Typen, die es gibt und die kein Symbol tragen.
+ *
+ * ⚠ Sie stehen hier, damit `unbekannte_typen` nur meldet, was WIRKLICH
+ * neu ist. Ohne diese Liste meldete jeder Assist einen „unbekannten Typ",
+ * und ein Melder, der immer dasselbe sagt, wird nicht gelesen.
+ */
+export const BEKANNT_OHNE_SYMBOL: number[] = [TYP_ASSIST];
 /** SFV-Ereignissubtyp „2. Verwarnung" — unterscheidet Rot von Gelb-Rot. */
 export const SUBTYP_ZWEITE_VERWARNUNG = 20;
 
@@ -350,6 +360,119 @@ export function bildeVerlauf(
 export function hatDoppelabstand(w: string | null | undefined): boolean {
   const roh = String(w ?? "");
   return roh !== "" && roh.replace(/\s+/g, " ").trim() !== roh;
+}
+
+/* ── Tore und Karten an der Aufstellungszeile ──────────────────────
+
+   ⚠ SIE WERDEN GERECHNET, NICHT GESPEICHERT (Entscheid Didi,
+   10.09.2026): *„die Zuordnung ist eine Rechnung, keine Darstellung."*
+
+   ⚠ UND SIE STEHEN NICHT IN DER DATENBANK. Als Spalte an
+   `spiel_aufstellung` wären sie eine zweite Wahrheit neben
+   `spiel_ereignisse` — und müssten bei jeder Verlaufskorrektur neu
+   berechnet werden. Wer das vergisst, hat eine Zeile mit einem Tor, das
+   im Verlauf nicht mehr steht. Hier entstehen sie bei jedem Export neu,
+   aus den ohnehin geladenen Ereignissen.
+
+   ⚠ DIE ZUORDNUNG LÄUFT ÜBER ZWEI VERSCHIEDENE SCHLÜSSEL, und das ist
+   kein Schönheitsfehler:
+
+     eigene Spieler   über `sfv_person_id` — eindeutig
+     Gegner           über `rueckennr` — die einzige Angabe, die es gibt
+
+   Die zweite ist schwächer: zwei eigene Teams gegeneinander teilen sich
+   eine `spiel_id`, und dann gibt es die 9 zweimal. Deshalb geht die
+   Seite mit in den Schlüssel. */
+
+/** Ein Symbol an einer Aufstellungszeile. */
+export interface WpAufstellungMarke {
+  art: WpVerlaufArt;
+  minute: string;
+}
+
+export interface AufstellungZaehlung {
+  tore: number;
+  gelb: number;
+  gelbrot: number;
+  rot: number;
+  /** Die Minuten, in der Reihenfolge des Spiels. */
+  marken: WpAufstellungMarke[];
+}
+
+function leereZaehlung(): AufstellungZaehlung {
+  return { tore: 0, gelb: 0, gelbrot: 0, rot: 0, marken: [] };
+}
+
+/**
+ * Der Schlüssel, unter dem ein Ereignis einer Aufstellungszeile zufällt.
+ *
+ * ⚠ `null` heisst: dieses Ereignis lässt sich niemandem zuordnen. Das ist
+ * kein Fehler — ein Gegnertor ohne Rückennummer ist genau das. Es zählt
+ * dann als `ohne_zuordnung` und fällt nicht still weg.
+ */
+export function markeSchluessel(
+  e: Pick<AnzeigeEreignis, "ist_eigener" | "sfv_person_id" | "rueckennr">,
+): string | null {
+  if (e.ist_eigener) {
+    return e.sfv_person_id != null ? `p:${e.sfv_person_id}` : null;
+  }
+  return e.rueckennr != null ? `n:${e.rueckennr}` : null;
+}
+
+export interface MarkenErgebnis {
+  /** Schlüssel → Zählung. Siehe markeSchluessel(). */
+  je_spieler: Map<string, AufstellungZaehlung>;
+  /**
+   * ⚠ Ereignisse, die niemandem zufallen — meist Gegnerzeilen ohne
+   * Nummer. Sie werden GEZÄHLT, nicht verschwiegen: eine Aufstellung
+   * ohne Symbole und eine ohne zuordenbare Ereignisse sehen sonst gleich
+   * aus.
+   */
+  ohne_zuordnung: number;
+  /**
+   * ⚠ Ereignistypen, die `verlaufArt()` nicht kennt.
+   *
+   * Gemessen ist bis heute nur Typ 1 (Tor) an einer echten Antwort;
+   * Karten und Wechsel kennen wir aus dem Code, nicht aus einer Lieferung.
+   * Taucht ein unbekannter Typ auf, soll er AUFFALLEN — nicht still
+   * durchfallen, wie es eine blosse `continue`-Zeile täte.
+   */
+  unbekannte_typen: number[];
+}
+
+export function sammleMarken(ereignisse: AnzeigeEreignis[]): MarkenErgebnis {
+  const je_spieler = new Map<string, AufstellungZaehlung>();
+  const unbekannt = new Set<number>();
+  let ohne = 0;
+
+  for (const e of ereignisse) {
+    const art = verlaufArt(e.typ_id, e.subtyp_id ?? null);
+    if (!art) {
+      /* ⚠ Nur ZAEHLBARE Typen gelten als unbekannt. Assists und
+         Nebenereignisse fallen absichtlich weg — sie haben kein Symbol,
+         und sie als „unbekannt" zu melden waere Rauschen. */
+      if (e.typ_id != null && !BEKANNT_OHNE_SYMBOL.includes(e.typ_id)) {
+        unbekannt.add(e.typ_id);
+      }
+      continue;
+    }
+    /* Ein Wechsel bekommt kein Symbol — die Pfeile stehen an
+       von_minute/bis_minute der Aufstellungszeile. */
+    if (art === "wechsel") continue;
+
+    const k = markeSchluessel(e);
+    if (k === null) { ohne++; continue; }
+
+    let z = je_spieler.get(k);
+    if (!z) { z = leereZaehlung(); je_spieler.set(k, z); }
+    if (art === "tor") z.tore++;
+    else if (art === "gelb") z.gelb++;
+    else if (art === "gelbrot") z.gelbrot++;
+    else if (art === "rot") z.rot++;
+    z.marken.push({ art, minute: verlaufMinute(e.minute, e.zusatzminute) });
+  }
+
+  return { je_spieler, ohne_zuordnung: ohne, unbekannte_typen: [...unbekannt].sort((a, b) => a - b) };
 }
 
 /* ── Zählen, wer beim Namen genannt wird ──────────────────────────── */

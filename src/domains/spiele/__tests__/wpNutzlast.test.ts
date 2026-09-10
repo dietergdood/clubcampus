@@ -17,7 +17,7 @@ import {
   wpDatum, wpZeit, zerlegeResultat, bildeStatus,
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
-  hatDoppelabstand,
+  hatDoppelabstand, sammleMarken, markeSchluessel,
 } from "../wpNutzlast.ts";
 import type { SpielQuelle } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
@@ -566,5 +566,75 @@ describe("Wechsel — der offene Rest, nach Ursache getrennt", () => {
     const z = zaehleVerlaufNamen([fremd], new Set([222]), new Set([333]));
     expect(z.zeilen_ohne_ersatzkennung).toBe(0);
     expect(z.zeilen_ohne_ersatzname).toBe(0);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Tore und Karten an der Aufstellungszeile (10.09.2026)
+
+   ⚠ Gerechnet, nicht gespeichert — Entscheid Didi: „die Zuordnung ist
+   eine Rechnung, keine Darstellung."
+   ══════════════════════════════════════════════════════════════════════ */
+describe("sammleMarken", () => {
+  const tor = (u = {}) => e({ typ_id: TYP_TOR, ist_eigener: true, sfv_person_id: 222, minute: 11, ...u });
+  const gelb = (u = {}) => e({ typ_id: TYP_VERWARNUNG, ist_eigener: true, sfv_person_id: 222, minute: 40, ...u });
+
+  it("zählt Tore und Karten je Spieler, mit Minute", () => {
+    const r = sammleMarken([tor(), gelb()]);
+    const z = r.je_spieler.get("p:222")!;
+    expect(z).toMatchObject({ tore: 1, gelb: 1, gelbrot: 0, rot: 0 });
+    expect(z.marken.map(m => `${m.art}${m.minute}`)).toEqual(["tor11", "gelb40"]);
+  });
+
+  it("⚠ ordnet den GEGNER über die Rückennummer zu, nicht über die Person", () => {
+    /* Die Person ist beim Gegner verboten — die Nummer ist die einzige
+       Angabe, die es gibt. */
+    const g = tor({ ist_eigener: false, sfv_person_id: null, rueckennr: 7 });
+    const r = sammleMarken([g]);
+    expect(r.je_spieler.get("n:7")!.tore).toBe(1);
+    expect(r.ohne_zuordnung).toBe(0);
+  });
+
+  it("⚠ zählt, was sich NIEMANDEM zuordnen lässt", () => {
+    /* Ein Gegnertor ohne Nummer ist kein Fehler, aber es darf nicht still
+       wegfallen: eine Aufstellung ohne Symbole und eine ohne zuordenbare
+       Ereignisse sähen sonst gleich aus. */
+    const g = tor({ ist_eigener: false, sfv_person_id: null, rueckennr: null });
+    const r = sammleMarken([g]);
+    expect(r.ohne_zuordnung).toBe(1);
+    expect(r.je_spieler.size).toBe(0);
+  });
+
+  it("⚠ meldet einen unbekannten Ereignistyp, statt ihn zu überspringen", () => {
+    /* Gemessen ist nur Typ 1 an einer echten Antwort. Taucht ein Typ auf,
+       den verlaufArt() nicht kennt, soll er AUFFALLEN. */
+    const r = sammleMarken([tor({ typ_id: 77 })]);
+    expect(r.unbekannte_typen).toEqual([77]);
+  });
+
+  it("⚠ ein Assist ist NICHT unbekannt — er hat nur kein Symbol", () => {
+    /* Ohne diese Unterscheidung meldete jeder Assist einen „unbekannten
+       Typ", und ein Melder, der immer dasselbe sagt, wird nicht gelesen. */
+    const r = sammleMarken([tor({ typ_id: TYP_ASSIST })]);
+    expect(r.unbekannte_typen).toEqual([]);
+  });
+
+  it("ein Wechsel bekommt kein Symbol", () => {
+    /* Die Pfeile stehen an von_minute und bis_minute der Zeile. */
+    const r = sammleMarken([tor({ typ_id: TYP_WECHSEL, ein_rueckennr: 12 })]);
+    expect(r.je_spieler.size).toBe(0);
+    expect(r.unbekannte_typen).toEqual([]);
+  });
+});
+
+describe("markeSchluessel", () => {
+  it("eigene über die Person, Gegner über die Nummer", () => {
+    expect(markeSchluessel({ ist_eigener: true, sfv_person_id: 5, rueckennr: 9 })).toBe("p:5");
+    expect(markeSchluessel({ ist_eigener: false, sfv_person_id: null, rueckennr: 9 })).toBe("n:9");
+  });
+
+  it("⚠ null, wo keine Zuordnung möglich ist", () => {
+    expect(markeSchluessel({ ist_eigener: true, sfv_person_id: null, rueckennr: 9 })).toBeNull();
+    expect(markeSchluessel({ ist_eigener: false, sfv_person_id: null, rueckennr: null })).toBeNull();
   });
 });
