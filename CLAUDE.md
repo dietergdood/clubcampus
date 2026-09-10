@@ -38,6 +38,45 @@ ESLint ist konfiguriert (`eslint.config.js`, Flat Config; `npm run lint`, blockt
 
 Stand 28.08.2026: **847 grün, 0 rot (58 Testdateien)**. Die Zahl gehört nach jedem Zulauf gegen die Erwartung gehalten — `npx vitest list | sed 's/ > .*//' | sort | uniq -c` zählt ohne auszuführen und ist die verlässlichere Quelle als ein Lauf (siehe den Abschnitt über verlorene Testdateien unten).
 
+> **⚠⚠ REPRODUZIERT AM 10.09.2026 — es ist kein Einzelfall, sondern eine
+> Eigenschaft der Prüfkette.**
+>
+> Der Verdacht stand seit dem 28.08.2026 als einmalige Beobachtung im
+> Papier. Am 10.09.2026 ist er gezielt nachgestellt worden: `npm test`
+> mit gleichzeitig laufendem `npm run build` (und in der zweiten Reihe
+> zusätzlich `typecheck` und einem zweiten `build`).
+>
+> | Läufe | Verlust |
+> |---|---|
+> | 3 unter einfacher Last | **1** — 74 statt 76 Dateien, 7 Fälle rot |
+> | 3 unter dreifacher Last | **1** — 73 statt 76, 6 rot, mit `[vitest-pool-runner]: Timeout waiting for worker to respond` |
+> | 4 weitere unter dreifacher Last | 0 |
+>
+> **Zwei von neun.** Nicht jedes Mal, aber verlässlich oft genug, dass
+> ein grüner Lauf ohne Zählprobe nichts bedeutet.
+>
+> ⚠ **Zwei Ausprägungen, und nur eine ist laut:**
+>
+> | | Ausgabe | gefährlich? |
+> |---|---|---|
+> | **laut** | „6 failed \| 67 passed (73)" | nein — es fällt auf |
+> | **still** | „59 passed (59)" · „921 passed (921)" | ⚠ **ja** — nichts deutet auf 17 fehlende Dateien |
+>
+> **Die stille Ausprägung ist an diesem Tag einmal aufgetreten** (Liste
+> 76/1156, Lauf 59/921) **und in neun Versuchen nicht wiedergekommen.**
+> Wie häufig sie ist, ist ungemessen — dass es sie gibt, ist belegt.
+>
+> ⚠ **Und eine eigene Messung ist mir dabei danebengegangen:** ich habe
+> `E=$?` nach `R=$(npm test | grep …)` gelesen und damit den Exit-Code
+> von **grep** gemessen, nicht den von vitest. Beinahe hätte ich „Exit 0
+> trotz roter Dateien" gemeldet. **Wer eine Pipeline misst, misst ihr
+> letztes Glied** — dieselbe Familie wie „eine Meldung nennt das letzte
+> Glied der Kette, nicht das gerissene".
+>
+> **Was folgt: die Zählprobe ist nicht eine Vorsichtsmassnahme, sondern
+> der einzige Weg, einen Lauf zu beurteilen.** Und Testlauf und Build
+> gehören nicht in dieselbe Befehlskette.
+
 > **⚠ EIN LAUF KANN 16 TESTDATEIEN VERLIEREN UND TROTZDEM EXIT 0 MELDEN.**
 > Gemessen am 28.08.2026, gleich zu Sessionbeginn und unbeabsichtigt:
 >
@@ -3514,6 +3553,67 @@ je Auskunft wäre Rauschen in einer Tabelle, die von Änderungen handelt.
 Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
+
+### ⚠⚠ EINE PRÜFUNG, DIE AUS EINEM SATZ BESTEHT, SCHWEIGT IMMER
+
+10.09.2026. `wp-export-empfaenger.php` trug an zwei Stellen eine
+Versionsnummer — im Dateikopf und als `CC_VERSION` —, und daneben stand:
+
+> *„⚠ MUSS MIT DEM KOPF DIESER DATEI ÜBEREINSTIMMEN (Version: oben)."*
+
+**Das ist ein Kommentar. Er hat nie gegriffen, weil er nicht greifen
+kann.** Gemessen über die Historie der Datei: bis `5419aea` wurde bei
+**jeder** Erhöhung beides angefasst — dann viermal hintereinander nur
+noch die Konstante. Kopf 0.8.0, Konstante 0.9.3.
+
+⚠ **Der Schaden sass nicht dort, wo man ihn vermutet.** `/status` meldet
+die **Konstante**, die Karte war also ein richtiger Beleg über den
+laufenden Code. Falsch war, was WordPress in seiner **Plugin-Liste**
+zeigt — und damit jede Auskunft, die ein Mensch **dort** abliest. **Zwei
+Zahlen für dieselbe Sache, und die falsche steht an dem Ort, an dem
+Menschen nachsehen.**
+
+#### Die Messung: 40 Sätze, die wie Prüfungen klingen
+
+Gesucht wurde in Kommentaren nach `MUSS`, `MÜSSEN`, `DARF NIE`, `NIE`,
+`IMMER` in Grossbuchstaben:
+
+```
+40 Kommentarzeilen —  NIE 21 · IMMER 10 · MUSS 6 · MUESSEN 2 · DARF NIE 1
+```
+
+**Die neun härtesten (`MUSS` / `DARF NIE`), einzeln nachgesehen:**
+
+| Stelle | Zusage | gedeckt? |
+|---|---|---|
+| `wp-export-empfaenger.php:135` | Kopf = `CC_VERSION` | ✅ **seit heute** — 20. Regel in `check:plugin` |
+| `wpBestand.ts:179` | „eine Aufteilung, die aufgehen MUSS" | ✅ **rechnet sie selbst** — `zaehlung_stimmt` steht in der Antwort |
+| `quelltext.ts:77` | jede Regel braucht eine Positivkontrolle | ✅ der Helfer erzwingt es |
+| `feldkonfigService.ts:47` · `matchdatenLauf.ts:500` | „beide Id-Spalten müssen mit" | ⚠ **Tests berühren das Thema** — ob sie genau diese Zusage prüfen, ist ungemessen |
+| `MemberDetail.tsx:264` | „DARF NIE ABLEHNEN" | ❌ **kein Test nennt es** |
+| `ElternListView.tsx:92` | „die Zahl MUSS im Modul liegen" | ❌ eine Architekturregel, prosaisch |
+| `invite-user/index.ts:61` | „das Ziel MUSS in der Redirect-Allowlist stehen" | ❌ **kann nicht gedeckt werden** — die Allowlist steht bei Supabase, nicht im Repo |
+| `check-encoding.mjs:63` | eine Liste, keine Zusage | — |
+
+⚠ **Die letzte Zeile ist die interessante: manche Sätze KÖNNEN keine
+Prüfung werden**, weil ihr Gegenstand ausserhalb des Repos liegt — wie
+`sync_felder`, das in der Datenbank steht. **Dort ist der Satz das
+Richtige** — aber dann gehört dazu, dass er einer ist: *„Stand
+10.09.2026: …"* statt *„MUSS"*.
+
+**Die Regel daraus, in drei Stufen:**
+
+| | |
+|---|---|
+| **prüfbar und geprüft** | der Normalfall. Der Satz darf dann fordern |
+| **prüfbar, nicht geprüft** | ein offener Punkt mit Datum, kein Ausrufezeichen |
+| **nicht prüfbar** | als **Beobachtung** schreiben, nie als Forderung — sonst liest er sich wie etwas, worüber jemand wacht |
+
+⚠ **Grossbuchstaben sind dabei das Warnsignal, nicht die Lösung.** Je
+lauter ein Kommentar fordert, desto eher hält ihn der nächste Leser für
+abgesichert — **und desto weniger sieht er nach.**
+
+---
 
 ### ⚠ Der sechzehnte Fall war eine Stunde alt — die Lücke entsteht BEIM BAUEN
 
