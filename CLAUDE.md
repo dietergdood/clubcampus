@@ -3418,7 +3418,28 @@ ich hatte aus „der Befund gilt" auf „er gilt überall" geschlossen, ohne
 die zweite Stelle anzusehen.
 
 ✅ **Behoben am 11.09.2026.** `namen` und `wechselnachtrag` schreiben die
-Zeile jetzt vorher; alle drei tragen `api_sync_log.aktion`. Die
+Zeile jetzt vorher; alle drei tragen `api_sync_log.aktion`.
+
+⚠ **Der Anlass für `aktion` war eine Zeile, die niemand deuten konnte:**
+08:26:15, `status = ok`, `details->'spiele' = null`. Dass es ein
+`namen`-Lauf war, ist **abgeleitet, nicht gemessen** — nach
+`api_sync_log` schreiben genau zwei Stellen, und der Sync schreibt immer
+`details.spiele`, also bleibt nur `namen`. Die Fallunterscheidung ist
+vollständig, aber sie bleibt ein Schluss. **Der dritte an einem Tag, und
+zwei davon waren falsch** — deshalb steht er hier als Schluss und nicht
+als Tatsache.
+
+Genau das soll die Spalte künftig überflüssig machen: ablesen statt
+ableiten.
+
+⚠ **Der Satz „`laeuft` heisst nicht «läuft gerade»" steht mit Absicht an
+zwei Orten** — als Spaltenkommentar in der Datenbank und als Doc-Comment
+an `LAUF_LAEUFT`. Wer die Tabelle im SQL-Editor liest, hat den Code nicht
+daneben; wer den Code liest, die Datenbank nicht. **Der Preis ist, dass
+sie auseinanderlaufen können** — dieselbe Doppelung, die dieses Projekt
+sonst auflöst. Sie steht hier trotzdem, weil die Alternative ist, dass
+einer der beiden Leser den Satz gar nicht sieht. Wer ihn ändert, ändert
+beide. Die
 Leseproben (`teamprobe`, `cupprobe`, `wechselprobe`, `rohschluessel`)
 protokollieren **absichtlich nicht** — sie ändern nichts, und eine Zeile
 je Auskunft wäre Rauschen in einer Tabelle, die von Änderungen handelt.

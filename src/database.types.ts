@@ -471,6 +471,7 @@ export type Database = {
       }
       api_sync_log: {
         Row: {
+          aktion: string | null
           beendet_am: string | null
           datensaetze_aktualisiert: number | null
           datensaetze_fehler: number | null
@@ -485,6 +486,7 @@ export type Database = {
           verein_id: string
         }
         Insert: {
+          aktion?: string | null
           beendet_am?: string | null
           datensaetze_aktualisiert?: number | null
           datensaetze_fehler?: number | null
@@ -499,6 +501,7 @@ export type Database = {
           verein_id: string
         }
         Update: {
+          aktion?: string | null
           beendet_am?: string | null
           datensaetze_aktualisiert?: number | null
           datensaetze_fehler?: number | null
