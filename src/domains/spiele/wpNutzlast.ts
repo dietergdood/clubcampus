@@ -390,84 +390,137 @@ export function spielerAnzeige(
   return nummer != null ? `Nr. ${nummer}` : "";
 }
 
-/* ── Startelf oder Ersatz ──────────────────────────────────────────
+/* ── Startelf, eingewechselt oder gar nicht eingesetzt ─────────────
 
-   ⚠ AUS `assignmentRoleId`, NICHT AUS `positionName`. Gemessen am
-   10.09.2026 an einer echten Antwort: drei Spieler tragen die Rolle
-   „Ersatz" bei einer ECHTEN Position, und beim Gegner steht
-   „Ersatz (S)" ueberhaupt nicht — er hat trotzdem einen Ersatzspieler.
-   Wer die Rolle aus der Position ableitet, zaehlt falsch und merkt es
-   nicht, weil beide Werte plausibel aussehen.
+   ⚠ ⚠  AUS DEN MINUTEN, NICHT AUS `assignmentRoleId` — umgestellt am
+         10.09.2026, nachdem die Zuweisung sich in BEIDE Richtungen als
+         unzuverlaessig erwiesen hat.
 
-   ⚠ UND EIN UNBEKANNTER WERT FAELLT AUF, statt still „start" zu werden —
-   dieselbe Regel wie bei unbekannten Ereignistypen. Gemessen sind
-   0 („-"), 1 („Captain") und 2 („Ersatz"); alles andere ist neu. */
+   Gemessen ueber ALLE Zeilen (Didi, 10.09.2026):
+
+     assignmentRole 2 „Ersatz"       32x 0/0/0   ✅ nicht eingesetzt
+                                      9x 1/90/90 ❌ hat durchgespielt
+                                      8x 1/80/80 ❌ hat durchgespielt
+     assignmentRole 0 „-"            20x 0/0/0   ❌ nicht eingesetzt
+     assignmentRole 3 „Kein Einsatz" 10x 0/0/0   ✅
+
+   **Die Minuten widersprechen sich nie, die Zuweisung staendig.**
+
+   ⚠ WAS ICH VORHER BEHAUPTET HABE UND ZURUECKNEHME: „die drei
+   Minutenfelder sind Konstanten, keine Messwerte." Das galt fuer EIN
+   aufgezeichnetes Spiel, in dem zufaellig ueberall 1/90/90 stand. Ueber
+   alle Zeilen sind es echte Werte — 1/90/90 531x, 1/80/80 226x, 0/0/0
+   156x, 1/70/70 59x, 1/46/45 29x (ausgewechselt), 46/90/45 25x
+   (eingewechselt zur Halbzeit), dazu Dutzende Abstufungen.
+
+   **Derselbe Fehler wie bei der Rollenmenge 0–2: aus einer Stichprobe
+   eine Aussage ueber den Bestand gemacht. Zweimal am selben Tag.**
+
+   ⚠ UND „Kein Einsatz" HEISST GENAU DAS. Ich hatte behauptet, die
+   Bezeichnung sage das Gegenteil der Daten. Sie tut es nicht — alle
+   zehn Zeilen tragen 0/0/0. Erzeugt hat den Irrtum meine eigene
+   Testbedingung: `von_minute is not null` ist bei **0** wahr. Ich habe
+   die Null mit dem Fehlen verwechselt und daraus „sie haben gespielt"
+   gelesen.
+
+   ── Die Regel ────────────────────────────────────────────────────────
+     spielzeit === 0        →  nicht eingesetzt
+     von_minute  >  1       →  eingewechselt
+     sonst                  →  Startelf
+
+   ⚠ Die Zuweisung wird trotzdem gelesen: als `ist_captain` (das ist die
+   einzige Aussage, die sie ALLEIN traegt) und als `widerspruch`, damit
+   die Uneinigkeit der Quelle zaehlbar bleibt statt geglaettet zu
+   werden. **Aus deinen Zahlen folgt eine Vorhersage: mindestens 37
+   Widersprueche** (17 Ersatzspieler, die durchspielten, plus 20 mit
+   „-" ohne Einsatz). Weicht der naechste Lauf stark davon ab, ist die
+   Regel falsch und nicht die Quelle. */
 export const ROLLE_ERSATZ_ID = 2;
 
 /**
- * ⚠ „Kein Einsatz" — der vierte Wert, und er heisst NICHT, was er sagt.
- *
- * Gefunden hat ihn eine SQL-Abfrage, nicht die Meldung fuer unbekannte
- * Werte: `rolleAus()` hatte am 10.09.2026 keinen Aufrufer.
+ * „Kein Einsatz" — gefunden hat ihn eine SQL-Abfrage, nicht die Meldung
+ * fuer unbekannte Werte: `rolleAus()` hatte am 10.09.2026 keinen
+ * Aufrufer.
  */
 export const ROLLE_KEIN_EINSATZ_ID = 3;
+
+/** SFV assignmentRoleId 1 — orthogonal zu Startelf/Bank. */
+export const ROLLE_CAPTAIN_ID = 1;
 
 /**
  * Die Wertemenge von `assignmentRoleId`.
  *
- * ⚠ ⚠  AN ALLEN ZEILEN GEMESSEN, NICHT AUS EINEM BEISPIEL GELESEN —
- *       und das ist der Unterschied, um den es geht.
+ * ⚠ AN ALLEN ZEILEN GEZAEHLT, nicht aus einem Beispiel gelesen. Bis zum
+ * 10.09.2026 stand hier `[0, 1, 2]` — die drei stammten aus EINER
+ * aufgezeichneten Antwort. Gemessen: 0 (185), 1 (19), 2 (78), 3 (10).
  *
- * Bis zum 10.09.2026 stand hier `[0, 1, 2]`. Die drei stammten aus EINER
- * aufgezeichneten Antwort; ich hatte aus einer Stichprobe eine Wertemenge
- * gemacht. Der vierte Wert war die ganze Zeit da.
- *
- * Gemessen am 10.09.2026 ueber `spiel_aufstellung`, alle Zeilen:
- *
- *     0 „-"            185
- *     1 „Captain"       19
- *     2 „Ersatz"        78
- *     3 „Kein Einsatz"  10
- *
- * ⚠ Und es gibt keine Liste, gegen die man das haette pruefen koennen:
- * `sfv_stammdaten.json` fuehrt elf Listen, `assignmentRole` ist keine
- * davon, und die Swagger-Datei nennt die zwei Felder ohne jede
- * Beschreibung. **Die Wertemenge ist nur durch Zaehlen zu haben.**
+ * Eine Liste zum Nachschlagen gibt es nicht: `sfv_stammdaten.json`
+ * fuehrt elf Listen, `assignmentRole` ist keine davon, und die
+ * Swagger-Datei nennt die zwei Felder ohne jede Beschreibung.
  */
 export const ROLLE_BEKANNT: number[] = [
-  0, 1, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
+  0, ROLLE_CAPTAIN_ID, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
 ];
 
-export function rolleAus(
-  zuweisungId: number | null,
-): { rolle: "start" | "ersatz"; unbekannt: number | null; ungeklaert: boolean } {
-  /* ⚠ KEINE Zuweisung ist etwas anderes als eine unbekannte: Zeilen aus
-     der Zeit vor der Spalte tragen null. Sie melden -1, damit sie nicht
-     als neuer Verbandswert gezaehlt werden. */
-  if (zuweisungId === null) {
-    return { rolle: "start", unbekannt: -1, ungeklaert: false };
-  }
-  if (!ROLLE_BEKANNT.includes(zuweisungId)) {
-    return { rolle: "start", unbekannt: zuweisungId, ungeklaert: false };
-  }
-  /* ⚠ ⚠  3 = „Kein Einsatz" faellt auf `start`, UND DAS IST EINE
-           ZWISCHENLOESUNG, keine Entscheidung.
+export type SpielerRolle = "start" | "eingewechselt" | "nicht_eingesetzt";
 
-     Was gemessen ist: alle zehn Zeilen tragen Position, Von-Minute und
-     Spielzeit. Was daraus NICHT folgt: dass sie gespielt haben — in der
-     aufgezeichneten Antwort tragen ALLE 32 Spieler 1/90/90, auch die
-     zehn mit „Ersatz (S)". Die drei Minutenfelder unterscheiden Einsatz
-     und Bank nicht.
-
-     Solange der Wert ungeklaert ist, bekommt er KEINEN eigenen
-     `rolle`-Wert (die Vorlage soll einmal gebaut werden), faellt aber
-     auch nicht still durch: `ungeklaert` benennt ihn. */
-  return {
-    rolle: zuweisungId === ROLLE_ERSATZ_ID ? "ersatz" : "start",
-    unbekannt: null,
-    ungeklaert: zuweisungId === ROLLE_KEIN_EINSATZ_ID,
-  };
+export interface RollenBefund {
+  rolle: SpielerRolle;
+  ist_captain: boolean;
+  /** Ein Wert, den der Verband bisher nicht geliefert hat. */
+  unbekannt: number | null;
+  /** ⚠ Negative Spielzeit oder bis < von — kommt so vom Verband. */
+  unplausibel: boolean;
+  /** Die Zuweisung sagt etwas anderes als die Minuten. */
+  widerspruch: boolean;
+  /** Gar keine Minutenangabe — dann traegt die Zuweisung, notgedrungen. */
+  ohne_minuten: boolean;
 }
+
+export function rolleAus(z: {
+  von_minute: number | null;
+  bis_minute: number | null;
+  spielzeit: number | null;
+  rolle_zuweisung_id: number | null;
+}): RollenBefund {
+  const id = z.rolle_zuweisung_id;
+  const ist_captain = id === ROLLE_CAPTAIN_ID;
+  const unbekannt = id !== null && !ROLLE_BEKANNT.includes(id) ? id : null;
+
+  /* ⚠ Nicht rechnen, nur feststellen. `spielzeit` kommt als
+     `totalPlayTime` unveraendert vom Verband — wir bilden die Differenz
+     nirgends. Eine Zeile traegt 54/32/-22: ausgewechselt vor der
+     Einwechslung, minus 22 Minuten. Das ist ein Fehler IN DER QUELLE,
+     und er wird gemeldet statt stillschweigend geputzt. */
+  const unplausibel = (z.spielzeit !== null && z.spielzeit < 0)
+    || (z.von_minute !== null && z.bis_minute !== null && z.bis_minute < z.von_minute);
+
+  const ohne_minuten = z.spielzeit === null && z.von_minute === null;
+
+  let rolle: SpielerRolle;
+  if (ohne_minuten) {
+    /* ⚠ Notloesung, und sie ist als solche gezaehlt: ohne Minuten bleibt
+       nur die Zuweisung, und die ist die schlechtere Quelle. */
+    rolle = id === ROLLE_KEIN_EINSATZ_ID ? "nicht_eingesetzt" : "start";
+  } else if (z.spielzeit === 0) {
+    rolle = "nicht_eingesetzt";
+  } else if (z.von_minute !== null && z.von_minute > 1) {
+    rolle = "eingewechselt";
+  } else {
+    rolle = "start";
+  }
+
+  /* Bank laut Zuweisung: 2 „Ersatz" und 3 „Kein Einsatz". */
+  const zuweisungBank = id === ROLLE_ERSATZ_ID || id === ROLLE_KEIN_EINSATZ_ID;
+  const widerspruch = id === null || ohne_minuten
+    ? false
+    : zuweisungBank
+      ? rolle === "start"
+      : rolle === "nicht_eingesetzt";
+
+  return { rolle, ist_captain, unbekannt, unplausibel, widerspruch, ohne_minuten };
+}
+
 
 /* ── Tore und Karten an der Aufstellungszeile ──────────────────────
 

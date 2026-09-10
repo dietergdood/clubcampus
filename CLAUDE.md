@@ -3656,41 +3656,97 @@ Steht so in `ROLLE_BEKANNT` — mit dem Vermerk, dass sie **gezählt und
 nicht gelesen** ist. Die Swagger-Datei nennt `assignmentRoleId` und
 `assignmentRoleName` ohne jede Beschreibung.
 
-⚠ ⚠ **UND „Kein Einsatz" HEISST NICHT, WAS ES SAGT — die naheliegende
-Prüfung ist wertlos.** Alle zehn Zeilen tragen Position, Von-Minute und
-Spielzeit. Daraus folgt **nicht**, dass sie gespielt haben:
+⚠ ⚠ **HIER STAND EINE BEHAUPTUNG, DIE AM SELBEN TAG WIDERLEGT WURDE.**
 
-```
-docs/sfv/matchdaten_beispiel.json, 32 Spieler:
-  playFromMinute = 1, playUntilMinute = 90, totalPlayTime = 90
-  bei ALLEN 32 — auch bei den zehn mit positionName „Ersatz (S)"
-```
+Sie lautete: *„«Kein Einsatz» heisst nicht, was es sagt — die drei
+Minutenfelder sind Konstanten, keine Messwerte."* **Beide Hälften
+falsch.**
 
-**Die drei Minutenfelder sind in dieser Antwort Konstanten, keine
-Messwerte.** Eine Abfrage auf `von_minute is not null` kann Einsatz und
-Bank deshalb nicht unterscheiden — sie ist für jede Zeile wahr. Ich hatte
-genau diese Abfrage vorgeschlagen; sie hat gemessen, was sie messen
-konnte, und das war nichts.
+**Gemessen über alle Zeilen** (Didi, 10.09.2026):
 
-⚠ **Dieselbe Familie wie „ein Zähler, dessen Name mehr behauptet als er
-misst"** — nur eine Stufe früher: hier behauptet das FELD mehr, als es
-enthält. Und es sieht richtiger aus als eine fehlende Angabe, weil eine
-Zahl dasteht.
+| `von/bis/zeit` | Zeilen | |
+|---|---|---|
+| 1/90/90 | 531 | durchgespielt |
+| 1/80/80 | 226 | durchgespielt, Juniorenspielzeit |
+| **0/0/0** | **156** | **nicht eingesetzt** |
+| 1/70/70 | 59 | |
+| 1/46/45 | 29 | **ausgewechselt** |
+| 46/90/45 | 25 | **eingewechselt zur Halbzeit** |
+| 40/80/40 | 7 | |
 
-**Solange das offen ist, bekommt der Wert keinen eigenen `rolle`-Wert**
-(die Vorlage soll einmal gebaut werden) **und fällt auch nicht still auf
-`start`**: `rolleAus()` gibt `ungeklaert: true` zurück. Zu messen wäre,
-ob die drei Minutenfelder **irgendwo** etwas anderes als 1/90/90
-enthalten:
+dazu Dutzende weitere Abstufungen. **Es sind echte Messwerte.** In dem
+einen aufgezeichneten Spiel, aus dem ich meine Aussage gezogen hatte,
+stand zufällig überall 1/90/90.
 
-```sql
-select von_minute, bis_minute, spielzeit, count(*)
-  from public.spiel_aufstellung
- group by 1, 2, 3 order by 4 desc limit 10;
-```
+⚠ **Derselbe Fehler wie bei der Rollenmenge 0–2, am selben Tag, ein
+zweites Mal: aus einer Stichprobe eine Aussage über den Bestand
+gemacht.** Beim ersten Mal war die Stichprobe eine Antwort, beim
+zweiten dieselbe. Die Regel steht seit heute Vormittag im Papier — und
+hat mich nicht gehindert.
 
-⚠ **Kommt dort nur eine Zeile heraus, sind drei Spalten wertlos** — und
-das wäre der grössere Befund.
+⚠ **Und „Kein Einsatz" heisst genau das:** alle zehn Zeilen tragen
+0/0/0. **Erzeugt hat den Irrtum meine eigene Testbedingung** —
+`von_minute is not null` ist bei **0** wahr. Ich habe die Null mit dem
+Fehlen verwechselt, gelesen „sie haben Minuten, also haben sie
+gespielt", und daraus geschlossen, die Bezeichnung des Verbands sei
+irreführend.
+
+> **Eine Abfrage, die `not null` fragt, wo `> 0` gemeint ist, misst die
+> Anwesenheit des Feldes und nicht die der Sache.** Bei einer Spalte,
+> die 0 als bedeutungsvollen Wert führt, sind das zwei verschiedene
+> Fragen — und die falsche ist immer wahr.
+
+### ⚠ Die ZUWEISUNG ist unzuverlässig, die Minuten sind es nicht
+
+Gemessen am 10.09.2026:
+
+| `assignmentRole` | Minuten | Zeilen | |
+|---|---|---|---|
+| 2 „Ersatz" | 0/0/0 | 32 | stimmt |
+| 2 „Ersatz" | 1/90/90 | 9 | ⚠ **hat durchgespielt** |
+| 2 „Ersatz" | 1/80/80 | 8 | ⚠ **hat durchgespielt** |
+| 0 „-" | 0/0/0 | 20 | ⚠ **nicht eingesetzt** |
+| 3 „Kein Einsatz" | 0/0/0 | 10 | stimmt |
+
+**Die Zuweisung widerspricht den Minuten in beide Richtungen.**
+`rolleAus()` leitet die Rolle deshalb seit dem 10.09.2026 **aus der
+Spielzeit** ab — `spielzeit === 0` → nicht eingesetzt, `von_minute > 1`
+→ eingewechselt, sonst Startelf.
+
+⚠ **Die Zuweisung wird trotzdem gelesen, an zwei Stellen:** als
+`ist_captain` (die einzige Aussage, die sie allein trägt — vorher fiel
+sie weg, weil `rolleAus(1)` schlicht „start" ergab) und als
+`widerspruch`, damit die Uneinigkeit der Quelle **zählbar** bleibt statt
+geglättet zu werden. **Vorhersage aus den Zahlen oben: mindestens 37.**
+Weicht der nächste Lauf stark davon ab, ist die Regel falsch und nicht
+die Quelle.
+
+### ⚠ Offener Punkt: Einsatzminuten sind jetzt eine Statistik
+
+Weil die drei Felder echte Messwerte sind, ist eine Spielerstatistik mit
+**Einsatzminuten** baubar — ohne einen einzigen zusätzlichen Abruf. Das
+ist die zweite Hälfte dessen, was unter „Die Matchdaten liegen seit dem
+Sync in der Datenbank und werden nirgends ausgewertet" steht, und sie
+war bis heute unbekannt.
+
+⚠ Sie braucht dieselbe Voraussetzung wie alles dort: die Zuordnung
+`sfv_person_id` → Mitglied. Ohne sie ist auch eine Minutenstatistik
+anonym.
+
+### ⚠ Ein Datenfehler in der Quelle: negative Spielzeit
+
+Eine Zeile trägt **54/32/−22** — ausgewechselt vor der Einwechslung,
+minus 22 Minuten Spielzeit.
+
+**Wir rechnen das nicht.** `spielzeit` kommt als `totalPlayTime`
+unverändert vom Verband (`matchdaten.ts:128`); die Differenz bildet
+nirgends jemand. Es ist ein Fehler in der Quelle.
+
+⚠ **Geputzt wird er nicht** — dieselbe Regel wie beim Doppelabstand in
+„Gruppe  2" und bei „Schweizer-Cup": fremde Daten stillschweigend zu
+korrigieren versteckt den Fehler. `rolleAus()` meldet ihn als
+`unplausibel`; was die Anzeige daraus macht, ist eine Entscheidung —
+**aber eine negative Minutenzahl darf nicht auf die Website.**
 
 ---
 

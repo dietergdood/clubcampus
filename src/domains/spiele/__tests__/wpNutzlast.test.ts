@@ -19,6 +19,7 @@ import {
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
   hatDoppelabstand, sammleMarken, markeSchluessel,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
+  ROLLE_CAPTAIN_ID,
 } from "../wpNutzlast.ts";
 import type { SpielQuelle } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
@@ -669,55 +670,99 @@ describe("spielerAnzeige", () => {
 });
 
 describe("rolleAus", () => {
-  it("⚠ liest die ZUWEISUNG, nicht die Position", () => {
-    /* Gemessen: drei Spieler tragen „Ersatz" bei echter Position, und
-       beim Gegner steht „Ersatz (S)" gar nicht. */
-    expect(rolleAus(ROLLE_ERSATZ_ID).rolle).toBe("ersatz");
-    expect(rolleAus(0).rolle).toBe("start");
-    expect(rolleAus(1).rolle).toBe("start");   // Captain
+  /* Eine Zeile, wie sie in spiel_aufstellung steht. */
+  const z = (von: number | null, bis: number | null, zeit: number | null,
+             id: number | null = 0) =>
+    ({ von_minute: von, bis_minute: bis, spielzeit: zeit, rolle_zuweisung_id: id });
+
+  /* ── Die Regel (10.09.2026) ─────────────────────────────────────────
+     Aus den MINUTEN, nicht aus der Zuweisung. Alle Werte hier sind
+     gemessene Kombinationen aus dem Bestand, keine erfundenen. */
+
+  it("1/90/90 ist die Startelf", () => {
+    expect(rolleAus(z(1, 90, 90)).rolle).toBe("start");
+    expect(rolleAus(z(1, 80, 80)).rolle).toBe("start");
   });
 
-  it("⚠ ein UNBEKANNTER Wert fällt auf, statt still start zu werden", () => {
-    const r = rolleAus(77);
+  it("1/46/45 ist die Startelf — ausgewechselt, nicht eingewechselt", () => {
+    /* ⚠ Der Fall, an dem eine Regel auf `bis_minute` scheitern wuerde. */
+    expect(rolleAus(z(1, 46, 45)).rolle).toBe("start");
+  });
+
+  it("46/90/45 ist eingewechselt", () => {
+    expect(rolleAus(z(46, 90, 45)).rolle).toBe("eingewechselt");
+    expect(rolleAus(z(40, 80, 40)).rolle).toBe("eingewechselt");
+  });
+
+  it("0/0/0 heisst nicht eingesetzt", () => {
+    expect(rolleAus(z(0, 0, 0)).rolle).toBe("nicht_eingesetzt");
+  });
+
+  /* ── Die Zuweisung widerspricht — in beide Richtungen ──────────── */
+
+  it("„Ersatz“ mit 90 Minuten ist Startelf, und der Widerspruch wird gezählt", () => {
+    /* Gemessen: 9x 1/90/90 und 8x 1/80/80 bei assignmentRole 2. */
+    const r = rolleAus(z(1, 90, 90, ROLLE_ERSATZ_ID));
     expect(r.rolle).toBe("start");
-    expect(r.unbekannt).toBe(77);
+    expect(r.widerspruch).toBe(true);
   });
 
-  it("⚠ und eine FEHLENDE Zuweisung ist etwas anderes als eine unbekannte", () => {
-    /* Der Verband hat das Feld nicht gefüllt. Beides fällt auf, aber nur
-       das zweite hat eine Zahl — sonst wäre „kein Feld" von „neuer Wert"
-       nicht zu unterscheiden. */
-    const r = rolleAus(null);
-    expect(r.rolle).toBe("start");
-    expect(r.unbekannt).toBe(-1);
+  it("„-“ ohne Minuten ist nicht eingesetzt, und auch das widerspricht", () => {
+    /* Gemessen: 20x 0/0/0 bei assignmentRole 0. */
+    const r = rolleAus(z(0, 0, 0, 0));
+    expect(r.rolle).toBe("nicht_eingesetzt");
+    expect(r.widerspruch).toBe(true);
   });
 
-  /* ── Der vierte Wert (10.09.2026) ────────────────────────────────── */
-
-  it("kennt „Kein Einsatz“ — es ist kein unbekannter Wert mehr", () => {
-    /* ⚠ Bis zum 10.09.2026 waere 3 als „unbekannt: 3" gemeldet worden —
-       hätte die Meldung einen Aufrufer gehabt. Sie hatte keinen, und
-       deshalb hat den Wert eine SQL-Abfrage gefunden. */
-    expect(rolleAus(ROLLE_KEIN_EINSATZ_ID).unbekannt).toBeNull();
+  it("„Kein Einsatz“ heisst genau das — kein Widerspruch", () => {
+    /* ⚠ Ich hatte behauptet, die Bezeichnung sage das Gegenteil der
+       Daten. Alle zehn Zeilen tragen 0/0/0. Den Irrtum erzeugt hat meine
+       eigene Testbedingung: `von_minute is not null` ist bei 0 wahr. */
+    const r = rolleAus(z(0, 0, 0, ROLLE_KEIN_EINSATZ_ID));
+    expect(r.rolle).toBe("nicht_eingesetzt");
+    expect(r.widerspruch).toBe(false);
+    expect(r.unbekannt).toBeNull();
   });
 
-  it("⚠ nennt „Kein Einsatz“ ungeklärt, statt ihn still start zu nennen", () => {
-    /* Gemessen: alle zehn Zeilen tragen Position, Von-Minute und
-       Spielzeit. Was daraus NICHT folgt: dass sie gespielt haben — in
-       der aufgezeichneten Antwort tragen alle 32 Spieler 1/90/90, auch
-       die zehn mit „Ersatz (S)". Solange das offen ist, bekommt der Wert
-       keinen eigenen `rolle`-Wert, faellt aber auch nicht still durch. */
-    const r = rolleAus(ROLLE_KEIN_EINSATZ_ID);
-    expect(r.rolle).toBe("start");
-    expect(r.ungeklaert).toBe(true);
+  it("ein Ersatzspieler ohne Einsatz widerspricht nicht", () => {
+    expect(rolleAus(z(0, 0, 0, ROLLE_ERSATZ_ID)).widerspruch).toBe(false);
   });
 
-  it("und die drei geklärten Werte sind es nicht", () => {
-    for (const id of [0, 1, ROLLE_ERSATZ_ID]) {
-      expect(rolleAus(id).ungeklaert).toBe(false);
-    }
-    expect(rolleAus(null).ungeklaert).toBe(false);
-    expect(rolleAus(77).ungeklaert).toBe(false);
+  /* ── Captain, Unbekanntes, Unplausibles ────────────────────────── */
+
+  it("Captain ist ein eigenes Merkmal, kein Rollenwert", () => {
+    /* ⚠ Vorher fiel die Angabe weg: rolleAus(1) gab schlicht „start"
+       zurueck. Ein Captain kann eingewechselt werden — die zwei Fragen
+       sind unabhaengig. */
+    const r = rolleAus(z(46, 90, 45, ROLLE_CAPTAIN_ID));
+    expect(r.ist_captain).toBe(true);
+    expect(r.rolle).toBe("eingewechselt");
+    expect(rolleAus(z(1, 90, 90, 0)).ist_captain).toBe(false);
+  });
+
+  it("⚠ ein UNBEKANNTER Zuweisungswert fällt auf", () => {
+    expect(rolleAus(z(1, 90, 90, 77)).unbekannt).toBe(77);
+    expect(rolleAus(z(1, 90, 90, 0)).unbekannt).toBeNull();
+  });
+
+  it("⚠ negative Spielzeit wird gemeldet, nicht geglättet", () => {
+    /* Gemessen: eine Zeile traegt 54/32/-22 — ausgewechselt vor der
+       Einwechslung. Der Wert kommt so vom Verband; wir rechnen ihn
+       nicht. Fremde Daten stillschweigend zu putzen versteckt den
+       Fehler, statt ihn zu melden. */
+    const r = rolleAus(z(54, 32, -22));
+    expect(r.unplausibel).toBe(true);
+    expect(rolleAus(z(1, 90, 90)).unplausibel).toBe(false);
+  });
+
+  it("ohne jede Minutenangabe trägt die Zuweisung — und sagt es", () => {
+    const r = rolleAus(z(null, null, null, ROLLE_KEIN_EINSATZ_ID));
+    expect(r.ohne_minuten).toBe(true);
+    expect(r.rolle).toBe("nicht_eingesetzt");
+    /* ⚠ Ohne Minuten gibt es nichts, dem die Zuweisung widersprechen
+       koennte — der Zaehler bleibt sauber. */
+    expect(r.widerspruch).toBe(false);
+    expect(rolleAus(z(null, null, null, 0)).rolle).toBe("start");
   });
 });
 
