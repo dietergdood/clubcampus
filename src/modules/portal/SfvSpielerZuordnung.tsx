@@ -254,16 +254,32 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
               <Btn small variant="outline" color={BL} onClick={namenHolen}>
                 Namen holen ({offenGesamt} offen)
               </Btn>
+              {/* ⚠ ⚠  DIESER TEXT WAR SEIT DEM 11.09.2026 FALSCH, EINEN
+                  HALBEN TAG LANG. Er sagte „Sie werden nicht gespeichert
+                  und sind beim nächsten Öffnen wieder weg" — das galt bis
+                  zu dem Entscheid, die SFV-Namen zu speichern
+                  (migration_sfv_personen.sql). Seither schreibt die
+                  Aktion nach `sfv_personen`, und der Satz behauptete das
+                  Gegenteil dessen, was geschieht.
+
+                  ⚠ Ein Text an einer Schaltfläche ist eine Zusage über
+                  das, was gleich passiert. Wer einen Entscheid umdreht,
+                  sucht die Texte, die ihn festhalten — dieselbe Regel wie
+                  bei den Prüfregeln, nur trifft sie hier einen Menschen
+                  statt eine Prüfkette. */}
               <div className="cc-inline-hint">
-                Holt die Klarnamen der offenen Spieler beim Verband. Sie werden nicht
-                gespeichert und sind beim nächsten Öffnen wieder weg.
+                Holt die Klarnamen der offenen Spieler beim Verband und speichert sie.
+                Sie erscheinen danach auch auf der Website, wo bisher „Nr. 13" stand —
+                bis jemand den Spieler zuordnet, dann gewinnt der eigene Name.
               </div>
             </div>
           ) : (
             <>
             <div className="cc-inline-hint cc-mt-8">
-              {anzahlNamen} von {anzahlNamen + ohneNamen} Namen geholt — nur für diese
-              Sitzung, nicht gespeichert.
+              {/* ⚠ Zweite Stelle mit derselben ueberholten Zusage, am
+                  11.09.2026 mitberichtigt. Sie stand zehn Zeilen unter der
+                  ersten — wer nur eine sucht, findet nur eine. */}
+              {anzahlNamen} von {anzahlNamen + ohneNamen} Namen geholt und gespeichert.
               {ohneNamen > 0 && (
                 <> Für {ohneNamen} Spieler liefert der Verband keinen Namen; ein weiterer
                 Lauf ändert daran nichts.</>

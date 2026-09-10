@@ -126,18 +126,38 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
      nichts gespart. Die Deutung ist die halbe Auskunft. */
   function deuteVorschau(z: Record<string, unknown>): string[] {
     const n=(k: string)=>Number(z[k]??0);
+    /* ⚠ ⚠  JEDE ZAHL STEHT DA, AUCH WENN SIE NULL IST — berichtigt am
+       11.09.2026 auf Didis Einwand.
+
+       Bis dahin erschienen `zaehlung_stimmt` und
+       `wechsel_ohne_ersatzkennung` NUR im schlechten Fall. Ihre
+       Abwesenheit hiess „alles gut" — und genau diese Lesart ist heute
+       Morgen schon einmal schiefgegangen, als ich aus einer fehlenden
+       Protokollzeile auf gescheiterte Laeufe geschlossen habe.
+
+       > Eine Zahl, deren Fehlen etwas bedeuten soll, ist keine Auskunft.
+
+       Eine Zeile mehr kostet nichts; eine Abwesenheit, die gedeutet
+       werden muss, kostet eine Rueckfrage. */
     const zeilen: string[]=[
       `${n("spiele_gebaut")} von ${n("spiele_gesamt")} Spielen gebaut, ${n("verlauf_zeilen")} Verlaufszeilen`,
+      `Aufteilung stimmt: ${z.zaehlung_stimmt===true?"ja":z.zaehlung_stimmt===false?"NEIN":"unbekannt"}`,
       `Namen: ${n("zeilen_mit_eigenem_namen")} eigene · ${n("zeilen_mit_sfv_namen")} vom Verband · ${n("zeilen_mit_rueckennummer")} nur Nummer`,
+      /* ⚠ Der zweite Mensch einer Wechselzeile — er steht AUSSERHALB der
+         Aufteilung und fehlte bis heute ganz. Ohne ihn ist „207 ohne
+         Namen" gegen nichts zu halten. */
+      `Wechsel, zweiter Spieler: ${n("zeilen_mit_zweitem_namen")} mit Namen · `
+        +`${n("wechsel_ohne_ersatzname")} ohne Namen · ${n("wechsel_ohne_ersatzkennung")} ohne Kennung`,
     ];
     if(z.zaehlung_stimmt===false){
       zeilen.push("⚠ Die Aufteilung geht nicht auf — die Zahlen sind unbrauchbar.");
     }
+    /* Und die Wege, die daraus folgen — nur wenn sie gebraucht werden. */
     if(n("wechsel_ohne_ersatzkennung")>0){
-      zeilen.push(`⚠ ${n("wechsel_ohne_ersatzkennung")} Wechsel ohne Kennung des Ersatzspielers → Nachtrag nötig`);
+      zeilen.push('→ Wechsel ohne Kennung: Aktion „wechselnachtrag" holt sie nach');
     }
     if(n("wechsel_ohne_ersatzname")>0){
-      zeilen.push(`⚠ ${n("wechsel_ohne_ersatzname")} Wechsel mit Kennung, aber ohne Namen → Aktion „Namen holen"`);
+      zeilen.push('→ Wechsel ohne Namen: „Namen holen" in der Maske „Spieler zuordnen"');
     }
     if(n("cup_ohne_runde")>0){
       zeilen.push(`${n("cup_ohne_runde")} Cupspiele ohne Runde — der Verband nennt keine`);
@@ -145,10 +165,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     if(n("ohne_liga")>0){
       zeilen.push(`⚠ ${n("ohne_liga")} Spiele ohne Liga — dann fehlt drüben die Wettbewerbsbezeichnung`);
     }
-    if(n("gegner_teams_verschieden")>0){
-      zeilen.push(`${n("gegner_teams_verschieden")} verschiedene Gegner-Mannschaften (Teams, nicht Vereine)`);
-    }
-    if(zeilen.length===2) zeilen.push("Nichts offen.");
+    zeilen.push(`${n("gegner_teams_verschieden")} verschiedene Gegner-Mannschaften (Teams, nicht Vereine)`);
     return zeilen;
   }
 
