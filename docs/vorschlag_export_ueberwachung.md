@@ -1,5 +1,23 @@
 # Vorschlag — den WordPress-Export überwachen
 
+> ## ✅ ERLEDIGT AM 10.09.2026, 19:40
+>
+> ```
+> active true · auto_sync true · letzter_sync 19:40:11 · wartet_jetzt 0
+> ```
+>
+> Der Export läuft automatisch, der Abholer steht (alle 15 Minuten), der
+> Wächter kennt seine zweite Frage.
+>
+> ⚠ **`wartet_jetzt 0` ist dabei die Zahl, auf die es ankommt** — sie
+> sagt, dass der Abholer nicht nur läuft, sondern **abgeholt hat**. Ein
+> frischer `letzter_sync` allein hätte das nicht gesagt; genau deshalb
+> steht die Frage „wartet etwas?" statt „wann lief er zuletzt?".
+>
+> **Alles darunter beschreibt den Stand VOR diesem Zeitpunkt** und bleibt
+> als Herleitung stehen. ⚠ Wer daraus zitiert, zitiert den 10.09.2026
+> vormittags — nicht den heutigen Bestand.
+
 Stand 10.09.2026. **Vorschlag, nicht gebaut.**
 
 ---

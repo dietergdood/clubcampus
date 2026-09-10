@@ -3578,6 +3578,39 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠ Die Anrede „Spielerin" wird beim THEME entschieden — nicht bei uns aus dem Ligennamen
+
+Entscheid vom 10.09.2026, und er gehört festgehalten, **weil beide
+Seiten sonst annehmen, die andere kümmere sich darum.**
+
+Die Gegneranzeige lautet „Spieler FC Fällanden", bei Frauen- und
+Juniorinnenteams „Spielerin FC Fällanden".
+
+⚠ **In unseren Daten gibt es kein Merkmal für Geschlecht.** Es gibt nur
+Namen — `teams.sfv_liga_name` („Frauen 3. Liga"), `teams.kategorie`,
+`spiele.liga`. Alle drei sind Verbandsbezeichnungen.
+
+> **Ein Filter auf einen NAMEN prüft eine Schreibweise, ein Filter auf
+> ein MERKMAL prüft die Sache.** `liga LIKE '%Frauen%'` fällt beim
+> ersten „Damen" oder „Fussballerinnen" um — **still, mit der falschen
+> Anrede auf einer öffentlichen Seite.**
+
+**Entschieden: das Theme entscheidet es an seinem eigenen
+`fch_team`-Beitrag** („Frauen", „Ca-Juniorinnen"), den es selbst pflegt.
+Dort ist es ein gepflegtes Merkmal statt eines geratenen.
+
+⚠ ⚠ **UND DESHALB WIRD ES HIER NICHT ABGELEITET — auch nicht „vorläufig"
+oder „als Rückfall".** Der teuerste Ausgang ist nicht, dass es niemand
+tut: es ist, dass **beide** es tun, einer aus dem Ligennamen und einer
+aus dem Teamnamen, und dass niemand mehr weiss, welcher die Anrede auf
+der Seite bestimmt.
+
+**Soll es je von uns kommen, entsteht dafür eine Spalte an `teams`** —
+von Hand gepflegt, mit einem Leser, als eigener Auftrag. **Kein
+abgeleitetes Feld.**
+
+---
+
 ### ✅ Die Gegnernamen-Frage war gegenstandslos — und meine Annahme war falsch
 
 10.09.2026. Vor dem ersten Export mit Aufstellung stand die Sorge: der
