@@ -142,6 +142,17 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.2 (10.09.2026): `/status` zaehlt Spiel-Beitraege NACH ZUSTAND, und
+   `spielfelder` sagt, wenn es nicht pruefen konnte.
+   ⚠ ANLASS: die Karte meldete „0 Spiel-Beitraege … ACF kennt alle 0
+   Feldnamen", waehrend auf dev 270 Spiele liegen. Beide Zahlen waren
+   nicht falsch, sondern ZU SCHMAL: gezaehlt wurde `->publish`, gesucht
+   in fuenf Zustaenden — `auto-draft` in keinem von beiden. Genau der
+   Zustand, in dem auf dev zehn von einundzwanzig Teams lagen (0.6.0).
+   ⚠ Und „ACF kennt alle 0 Feldnamen" liest sich wie eine Bestaetigung
+   und ist eine LEERE MENGE. Eine Auskunft, die aus „nichts geprueft"
+   ein „alles in Ordnung" macht, ist schlimmer als keine.
+
    0.9.1 (10.09.2026): `aufstellung` steht in CC_FELDER — der Repeater ist
    drueben angelegt (f_s_auf, zehn Unterfelder, darin der verschachtelte
    `marken` mit f_s_a_mk_art und f_s_a_mk_min). Zeichengenau gegen die
@@ -211,7 +222,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.1';
+const CC_VERSION    = '0.9.2';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -806,6 +817,12 @@ function cc_route_status(): WP_REST_Response {
 			   `liga` bis zum 10.09.2026 unmoeglich machte. Die Liste in
 			   der Pruefkette kann das nicht wissen, diese Auskunft schon. */
 			'spielfelder'           => cc_spielfeld_lage( cc_ein_spiel_id() ),
+			/* ⚠ NACH ZUSTAND, nicht nur `publish`. Eine einzelne Zahl kann
+			   nicht zwischen „es gibt keine" und „sie stehen alle in einem
+			   Zustand, den ich nicht zaehle" unterscheiden — und genau
+			   diese Zweideutigkeit hat am 10.09.2026 eine Stunde
+			   gekostet. */
+			'spiele_nach_zustand'   => cc_spiele_nach_zustand(),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
@@ -1785,11 +1802,44 @@ function cc_spielfeld_lage( int $sid ): array {
  * keinen, meldet cc_feld_lage() `kein_beitrag` — und das ist die
  * ehrliche Antwort, nicht `leer`.
  */
+/**
+ * Spiel-Beitraege je post_status.
+ *
+ * ⚠ ⚠  WARUM NICHT EINE ZAHL. `wp_count_posts()->publish` meldete am
+ *       10.09.2026 **0**, waehrend auf dev 270 Spiele lagen. Die Zahl war
+ *       nicht falsch — sie war zu schmal, und eine zu schmale Zahl ist
+ *       von einer leeren Menge nicht zu unterscheiden.
+ *
+ * ⚠ `auto-draft` steht mit in der Liste, obwohl es KEIN richtiger Beitrag
+ *   ist. Genau darum: wer 270 auto-drafts hat, soll das SEHEN, statt eine
+ *   Null zu deuten. Was zaehlt, entscheidet der Leser — die Auskunft
+ *   zaehlt alles und sagt, was was ist.
+ */
+function cc_spiele_nach_zustand(): array {
+	$z = wp_count_posts( CC_TYP_SPIEL );
+	$raus = array();
+	foreach ( (array) $z as $name => $anzahl ) {
+		if ( (int) $anzahl > 0 ) {
+			$raus[ $name ] = (int) $anzahl;
+		}
+	}
+	if ( array() === $raus ) {
+		$raus['_hinweis'] = 'Kein einziger Beitrag vom Typ ' . CC_TYP_SPIEL
+			. ' — auch kein Entwurf. Stimmt der Beitragstyp?';
+	}
+	return $raus;
+}
+
 function cc_ein_spiel_id(): int {
 	$ids = get_posts(
 		array(
 			'post_type'   => CC_TYP_SPIEL,
-			'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+			/* ⚠ `auto-draft` MIT — hier geht es nicht darum, was als Spiel
+			   zaehlt, sondern nur darum, EINEN Beitrag zu finden, an dem
+			   sich die Feldnamen pruefen lassen. Ein Entwurf taugt dafuer
+			   genauso, und auf dev liegen die Beitraege genau so. */
+			'post_status' => array( 'publish', 'draft', 'pending', 'private',
+			                        'future', 'auto-draft' ),
 			'numberposts' => 1,
 			'fields'      => 'ids',
 		)

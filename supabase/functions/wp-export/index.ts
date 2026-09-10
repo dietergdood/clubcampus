@@ -839,6 +839,9 @@ type SpielZeile = SpielQuelle & {
   id: string;
   sfv_team_id: number | null;
   sfv_gegner_team_id: number | null;
+  /** Wurden die Matchdaten je geholt? Unterscheidet "keine Aufstellung"
+      von "noch nicht nachgesehen" — siehe die leere Liste unten. */
+  matchdaten_geholt_am: string | null;
 };
 interface ZuordnungZeile {
   sfv_person_id: number;
@@ -924,7 +927,7 @@ async function laufeProbe(
   const sRes = await db.from("spiele")
     .select("id, sfv_match_id, sfv_spiel_nr, date, zeit, gegner, heimspiel, venue, "
       + "wettbewerb, liga, sfv_gruppe, sfv_status, resultat, ht_resultat, "
-      + "sfv_team_id, sfv_gegner_team_id")
+      + "sfv_team_id, sfv_gegner_team_id, matchdaten_geholt_am")
     .eq("verein_id", vereinId)
     .not("sfv_match_id", "is", null)
     .order("date");
@@ -1044,6 +1047,9 @@ async function laufeProbe(
      Tag passiert. */
   const aufZahlen = leereAufstellungZahlen();
   let spieleMitAufstellung = 0;
+  /* Geholt, aber der Verband fuehrt keine Aufstellung — die Zeilen, die
+     drueben ausdruecklich geleert werden. */
+  let spieleOhneAufstellung = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
     zeilen_mit_zweitem_namen: 0,
@@ -1086,6 +1092,28 @@ async function laufeProbe(
         aufZeilen, marken.je_spieler, spiel.heim_auswaerts === "heim",
         namen, aufZahlen,
       );
+    } else if (s.matchdaten_geholt_am) {
+      /* ⚠ ⚠  DIE AUSDRUECKLICH LEERE LISTE — Entscheid Didi, 10.09.2026.
+
+         Drei Faelle, nicht zwei, und der Unterschied steht in unseren
+         eigenen Daten:
+
+           nicht geholt              → Feld WEGLASSEN („wir wissen es nicht")
+           geholt, Zeilen da         → senden
+           geholt, KEINE Zeilen      → `[]` senden („der Verband fuehrt keine")
+
+         Ohne den dritten Fall bleibt drueben stehen, was einmal
+         geschrieben wurde: `cc_schreibe_felder()` ueberspringt jedes Feld,
+         das nicht in der Nutzlast steht. Am 10.09.2026 hat eine eigene
+         Migration 20 Zeilen geloescht — waeren sie exportiert gewesen,
+         stuenden die Trainer heute noch in der Startformation.
+
+         ⚠ Der Preis ist benannt und angenommen: ab jetzt kann ein
+         fehlerhafter Lauf eine richtige Aufstellung LOESCHEN, wo vorher
+         nur eine veraltete stehenblieb. **Eine falsche Aufstellung auf
+         der Vereinsseite ist schlimmer als eine kurz fehlende.** */
+      spiel.aufstellung = [];
+      spieleOhneAufstellung++;
     }
     gebaut.push(spiel);
 
@@ -1129,6 +1157,9 @@ async function laufeProbe(
          an einem Tag passiert, zuletzt mit `gegner_doppel`, das gesucht
          und nicht gefunden wurde. */
       spiele_mit_aufstellung: spieleMitAufstellung,
+      /* ⚠ Immer, auch als Null: diese Spiele senden `aufstellung: []` und
+         leeren drueben einen etwaigen Repeater. */
+      spiele_aufstellung_geleert: spieleOhneAufstellung,
       aufstellung_zeilen_eigen: aufZahlen.zeilen_eigen,
       aufstellung_zeilen_fremd: aufZahlen.zeilen_fremd,
       /* Eigene Zeilen, die als „Nr. 18" erscheinen. Gegnerzeilen zaehlen

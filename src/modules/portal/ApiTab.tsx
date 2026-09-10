@@ -157,7 +157,20 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       zeilen.push('→ Wechsel ohne Kennung: Aktion „wechselnachtrag" holt sie nach');
     }
     if(n("wechsel_ohne_ersatzname")>0){
-      zeilen.push('→ Wechsel ohne Namen: „Namen holen" in der Maske „Spieler zuordnen"');
+      /* ⚠ ⚠  HIER STAND „→ Namen holen", UND ES WAR EIN FALSCHER WEG.
+         Dreimal ist er angezeigt worden, nachdem er widerlegt war.
+
+         Gemessen am 10.09.2026: 207 von 207 Eingewechselten stehen in
+         KEINER Aufstellung. „Namen holen" ruft `/players` — genau die
+         Quelle, in der sie nicht sind. Der Knopf kostet einen Abruf je
+         Spiel und ändert an diesen Zeilen nichts.
+
+         ⚠ Ein Hinweis, der auf einen Weg zeigt, der nicht hilft, trifft
+         genau den, der ihn braucht — dieselbe Familie wie der Verweis
+         auf den „Kontakt-Tab", den es nie gab. */
+      zeilen.push(`⚠ ${n("wechsel_ohne_ersatzname")} Wechsel ohne Namen des `
+        +`Eingewechselten — „Namen holen" hilft dabei NICHT: die Quelle `
+        +`(/players) führt diese Spieler nicht. Offen.`);
     }
     if(n("cup_ohne_runde")>0){
       zeilen.push(`${n("cup_ohne_runde")} Cupspiele ohne Runde — der Verband nennt keine`);
@@ -203,19 +216,45 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       `Sucht Teams über: ${String(d.meta_schluessel??"?")}`,
       `WordPress: ${Number(d.wp_teams??0)} Team-Beiträge, davon ${Number(d.wp_teams_mit_sfv_id??0)} mit SFV-Nummer`
         +`${Number(d.wp_teams_sfv_id_doppelt??0)?` · ⚠ ${Number(d.wp_teams_sfv_id_doppelt)} doppelt`:""}`,
-      `${Number(d.spiele_gesamt??0)} Spiel-Beiträge, ${Number(d.spiele_abgleich??0)} davon vom Abgleich`,
+      `${Number(d.spiele_gesamt??0)} veröffentlichte Spiel-Beiträge, `
+        +`${Number(d.spiele_abgleich??0)} davon vom Abgleich`,
     ];
+    /* ⚠ ⚠  NACH ZUSTAND, weil eine einzelne Zahl am 10.09.2026 „0"
+       meldete, während auf dev 270 Spiele lagen. Die Zahl war nicht
+       falsch — sie zählte `publish`, und die Beiträge standen als
+       `auto-draft` da. **Eine zu schmale Zahl ist von einer leeren Menge
+       nicht zu unterscheiden.** */
+    const nz=(d.spiele_nach_zustand??{}) as Record<string,unknown>;
+    const zust=Object.entries(nz).filter(([k])=>!k.startsWith("_"));
+    zeilen.push(zust.length
+      ? `Nach Zustand: ${zust.map(([k,v])=>`${k} ${Number(v)}`).join(" · ")}`
+      : `⚠ ${String(nz._hinweis??"Kein einziger Spiel-Beitrag, auch kein Entwurf.")}`);
     if(Array.isArray(d.fehlt)&&d.fehlt.length){
       zeilen.push(`⚠ Voraussetzungen fehlen: ${(d.fehlt as string[]).join(", ")}`);
     }
     /* ⚠ Beide Richtungen: „alle bekannt" gehoert genauso hin wie eine
        Fehlliste. Eine Zeile, die nur im schlechten Fall erscheint, laesst
        ihr Fehlen deuten — und genau das ist heute dreimal schiefgegangen. */
-    zeilen.push(ohneFeld.length
-      ? `⚠ ACF kennt diese Feldnamen am fch_spiel NICHT: `
-        +ohneFeld.map(([k,v])=>`${k} (${v})`).join(", ")
-        +" — dorthin wird ins Leere geschrieben"
-      : `ACF kennt alle ${Object.keys(sf).length} Feldnamen am fch_spiel`);
+    /* ⚠ ⚠  DREI FÄLLE, NICHT ZWEI — berichtigt am 10.09.2026.
+
+       Hier standen zwei: „diese fehlen" und „alle bekannt". Bei einer
+       LEEREN Menge fiel es in den zweiten und meldete **„ACF kennt alle
+       0 Feldnamen"** — das liest sich wie eine Bestätigung und ist die
+       Auskunft, dass nichts geprüft wurde.
+
+       ⚠ Dieselbe Familie wie eine Prüfung, die grün ist, ohne zu
+       prüfen: sie beendet die Suche an der einen Stelle, an der sie
+       hätte weitergehen müssen. */
+    const nichtGeprueft=Object.keys(sf).length===0
+      || Object.values(sf).every((v)=>v==="kein_beitrag");
+    zeilen.push(nichtGeprueft
+      ? `⚠ Feldnamen NICHT geprüft — es gibt keinen fch_spiel-Beitrag, `
+        +`an dem sich die Feldlage ablesen ließe. Das ist keine Entwarnung.`
+      : ohneFeld.length
+        ? `⚠ ACF kennt diese Feldnamen am fch_spiel NICHT: `
+          +ohneFeld.map(([k,v])=>`${k} (${v})`).join(", ")
+          +" — dorthin wird ins Leere geschrieben"
+        : `ACF kennt alle ${Object.keys(sf).length} Feldnamen am fch_spiel`);
     return zeilen;
   }
 
