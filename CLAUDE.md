@@ -3341,10 +3341,33 @@ geschrieben. Damit sehen zwei völlig verschiedene Lagen gleich aus:
 ⚠ **Das ist derselbe blinde Fleck wie am 20./21.08.2026**, als der Sync
 14 Stunden stillstand und `cron.job_run_details` die ganze Zeit
 `succeeded` meldete — weil dort nur steht, dass die Anfrage **abgesetzt**
-wurde. Und es ist eben wieder eingetreten: nach
-`migration_spiele_spieltag.sql` schrieb der laufende Code weiter nach
-`sfv_runde`, jeder Lauf endete in `42703`, und **die einzige Spur war
-eine Lücke in den Zeitstempeln**, die man nur findet, wenn man sie sucht.
+wurde.
+
+⚠ ⚠ **BERICHTIGT AM 11.09.2026, NOCH AM SELBEN TAG.** Hier stand: *„Und
+es ist eben wieder eingetreten: nach `migration_spiele_spieltag.sql`
+schrieb der laufende Code weiter nach `sfv_runde`, jeder Lauf endete in
+`42703`."*
+
+**Das war ERSCHLOSSEN, nicht gemessen** — und es traf nicht zu. Didi hat
+nachgesehen: der Lauf um **08:17 steht auf `ok`**. Die Migration lief
+danach, der Deploy um 08:37 wieder danach; **in das Fenster fiel gar kein
+Lauf**. Es gab keinen einzigen gescheiterten Sync.
+
+**Wie der Fehlschluss entstand:** ich habe aus zwei richtigen Tatsachen —
+der Code schrieb `sfv_runde`, die Spalte hiess `sfv_spieltag` — auf ein
+Ereignis geschlossen, das ich nie gesehen hatte. Beide Prämissen stimmten,
+die Folgerung nicht, weil eine dritte fehlte: **wann genau lief was.**
+
+⚠ **Und die Ironie ist der Grund, warum es hier stehen bleibt:** ich habe
+den fehlenden Beleg als Beleg genommen. „Die einzige Spur ist eine Lücke"
+hiess in Wahrheit „ich habe keine Spur" — und aus keiner Spur lässt sich
+kein Ausfall ableiten. **Genau die Ununterscheidbarkeit, die dieser
+Abschnitt beschreibt, hat mich selbst zum Falschen greifen lassen: ich
+konnte «gescheitert» und «nichts zu tun» nicht auseinanderhalten und habe
+das erste angenommen.**
+
+Der blinde Fleck ist damit belegter als vorher — nur an einem anderen
+Fall, und der Fall bin ich.
 
 **Der Beleg ist immer eine Abwesenheit** — und eine Abwesenheit fällt
 niemandem auf.

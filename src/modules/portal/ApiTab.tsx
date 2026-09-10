@@ -9,7 +9,7 @@ import { API_INFOS, hostVon, zielAusLauf, hatLaufProtokolliert } from "./portalU
 import type { SyncLogZeile } from "./portalUtils.ts";
 import { SfvZuordnung } from "./SfvZuordnung.tsx";
 import { SfvSpielerZuordnung } from "./SfvSpielerZuordnung.tsx";
-import { starteSync } from "../../domains/sfv/sfvService.ts";
+import { starteSync, holeVorschau, holeRohschluessel } from "../../domains/sfv/sfvService.ts";
 import { starteWpExport, fasseExportZusammen } from "../../domains/spiele/wpExportService.ts";
 import type { Mitglied, Sb, Team } from "../../types.ts";
 
@@ -96,6 +96,17 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
   const [laeuft,setLaeuft]=useState(false);
   const [ergebnis,setErgebnis]=useState<{ok: boolean; text: string}|null>(null);
   const [confirm,confirmDialog]=useConfirm();
+  /* ⚠ Zwei Auskunfts-Knoepfe, seit 11.09.2026. Gemessen: `supabase` liegt
+     NICHT am Fensterobjekt, und die Edge Functions verlangen einen
+     angemeldeten Administrator. Ohne diese Knoepfe gibt es zu `probe` und
+     `rohschluessel` ueberhaupt keinen Weg — es geht nicht um Bequemlichkeit.
+
+     ⚠ `export` bekommt hier KEINEN zweiten Weg: er ist der einzige Aufruf,
+     der auf der oeffentlichen Website schreibt, und steht bereits als
+     eigener, abgesetzter Knopf mit Zielangabe da. Ein zweiter Weg dorthin
+     waere ein Weg zu wenig Nachdenken. */
+  const [auskunft,setAuskunft]=useState<{titel: string; zeilen: string[]; fehler?: boolean}|null>(null);
+  const [auskunftLaeuft,setAuskunftLaeuft]=useState<string|null>(null);
 
   /** Was vom Lauf angezeigt wird — aufgezaehlt, nicht ausgeschlossen. */
   function fasseZusammen(daten: unknown): string {
@@ -108,6 +119,63 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     return laeufe
       .map(l => ERLAUBT.map(k => l[k]).filter(Boolean).join(" · ") || "Lauf beendet.")
       .join(" / ");
+  }
+
+  /* ⚠ NEBEN DEN ZAHLEN STEHT, WAS SIE BEDEUTEN. Ein Kasten mit zwoelf
+     Zahlen ist eine Tabelle, die niemand liest — und dann haette der Knopf
+     nichts gespart. Die Deutung ist die halbe Auskunft. */
+  function deuteVorschau(z: Record<string, unknown>): string[] {
+    const n=(k: string)=>Number(z[k]??0);
+    const zeilen: string[]=[
+      `${n("spiele_gebaut")} von ${n("spiele_gesamt")} Spielen gebaut, ${n("verlauf_zeilen")} Verlaufszeilen`,
+      `Namen: ${n("zeilen_mit_eigenem_namen")} eigene · ${n("zeilen_mit_sfv_namen")} vom Verband · ${n("zeilen_mit_rueckennummer")} nur Nummer`,
+    ];
+    if(z.zaehlung_stimmt===false){
+      zeilen.push("⚠ Die Aufteilung geht nicht auf — die Zahlen sind unbrauchbar.");
+    }
+    if(n("wechsel_ohne_ersatzkennung")>0){
+      zeilen.push(`⚠ ${n("wechsel_ohne_ersatzkennung")} Wechsel ohne Kennung des Ersatzspielers → Nachtrag nötig`);
+    }
+    if(n("wechsel_ohne_ersatzname")>0){
+      zeilen.push(`⚠ ${n("wechsel_ohne_ersatzname")} Wechsel mit Kennung, aber ohne Namen → Aktion „Namen holen"`);
+    }
+    if(n("cup_ohne_runde")>0){
+      zeilen.push(`${n("cup_ohne_runde")} Cupspiele ohne Runde — der Verband nennt keine`);
+    }
+    if(n("ohne_liga")>0){
+      zeilen.push(`⚠ ${n("ohne_liga")} Spiele ohne Liga — dann fehlt drüben die Wettbewerbsbezeichnung`);
+    }
+    if(n("gegner_teams_verschieden")>0){
+      zeilen.push(`${n("gegner_teams_verschieden")} verschiedene Gegner-Mannschaften (Teams, nicht Vereine)`);
+    }
+    if(zeilen.length===2) zeilen.push("Nichts offen.");
+    return zeilen;
+  }
+
+  async function auskunftHolen(was: "vorschau"|"rohschluessel"){
+    if(!sb||auskunftLaeuft) return;
+    setAuskunftLaeuft(was); setAuskunft(null);
+    const {daten,fehler}= was==="vorschau" ? await holeVorschau(sb) : await holeRohschluessel(sb);
+    setAuskunftLaeuft(null);
+    if(fehler||!daten){
+      setAuskunft({titel: was==="vorschau"?"Vorschau":"Rohschlüssel", zeilen:[fehler??"Keine Antwort"], fehler:true});
+      return;
+    }
+    if(was==="vorschau"){
+      const z=(daten.zusammenfassung??{}) as Record<string, unknown>;
+      setAuskunft({titel:"Vorschau", zeilen: deuteVorschau(z)});
+      return;
+    }
+    /* ⚠ Rohschluessel UNGEDEUTET anzeigen — das Filtern hat den Befund
+       erzeugt, der damit gerade ueberprueft wird. */
+    const t=daten.team_liste as {alle?: string[]}|undefined;
+    const sp=daten.spielplan as {alle?: string[]}|undefined;
+    setAuskunft({titel:"Rohschlüssel", zeilen:[
+      `Teamliste: ${(t?.alle??[]).join(", ")||"(leer)"}`,
+      `Spielplan: ${(sp?.alle??[]).join(", ")||"(leer)"}`,
+      String(daten.bildfeld_team??""),
+      String(daten.bildfeld_spielplan??""),
+    ].filter(Boolean)});
   }
 
   async function syncStarten(){
@@ -192,6 +260,27 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                 <pre style={{fontSize:12,whiteSpace:"pre-wrap",wordBreak:"break-word",margin:0,
                              color:ergebnis.ok?"var(--text)":"var(--danger,#ef4444)"}}>
                   {ergebnis.text}
+                </pre>
+              </Card>
+            </>
+          )}
+          {/* ⚠ EIGENER BEREICH, nicht derselbe wie „Ergebnis des Laufs".
+              Ein Lauf VERAENDERT etwas, eine Auskunft nicht — die zwei in
+              einen Kasten zu legen hiesse, dass niemand mehr sieht, ob
+              gerade geschrieben wurde. */}
+          {auskunft&&(
+            <>
+              <div style={{height:12}}/>
+              <Card>
+                <div className="cc-section-title">
+                  <TI n={auskunft.fehler?"alert-circle":"info-circle"} size={14}/> {auskunft.titel}
+                  <span className="cc-text-sub" style={{marginLeft:8,fontWeight:400}}>
+                    liest nur, schreibt nichts
+                  </span>
+                </div>
+                <pre style={{fontSize:12,whiteSpace:"pre-wrap",wordBreak:"break-word",margin:0,
+                             color:auskunft.fehler?"var(--danger,#ef4444)":"var(--text)"}}>
+                  {auskunft.zeilen.join(String.fromCharCode(10))}
                 </pre>
               </Card>
             </>
@@ -339,6 +428,14 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
                             beim Einrichten, Spieler laufend beim ersten
                             Einsatz. */}
                         <Btn small variant="outline" color="#888" onClick={()=>setOffen("sfv_spieler")}>Spieler zuordnen</Btn>
+                        <Btn small variant="outline" color="#888"
+                             onClick={()=>auskunftHolen("vorschau")} disabled={!!auskunftLaeuft}>
+                          {auskunftLaeuft==="vorschau"?"Läuft…":"Vorschau"}
+                        </Btn>
+                        <Btn small variant="outline" color="#888"
+                             onClick={()=>auskunftHolen("rohschluessel")} disabled={!!auskunftLaeuft}>
+                          {auskunftLaeuft==="rohschluessel"?"Läuft…":"Rohschlüssel"}
+                        </Btn>
                       </>
                       :api.key==="wordpress"
                       ?<>

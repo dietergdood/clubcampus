@@ -211,3 +211,65 @@ export async function starteSync(
   if (data?.fehler) return { daten: null, fehler: String(data.fehler) };
   return { daten: data as SyncAntwort, fehler: null };
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Zwei Auskunfts-Aufrufe fuer die API-Kachel (11.09.2026)
+
+   ⚠ WARUM SIE ES UEBERHAUPT BRAUCHT. Gemessen: `supabase` liegt NICHT
+   am Fensterobjekt — App.tsx legt den Client in ein modul-lokales
+   `const` und reicht ihn per Prop durch. Aus der Browser-Konsole ist er
+   damit nicht erreichbar, und die Edge Functions verlangen einen
+   angemeldeten Administrator (kein Schluessel kommt daran vorbei).
+
+   **Ohne Knopf gibt es keinen Weg zu diesen Aktionen.** Das ist der
+   ganze Grund; es geht nicht um Bequemlichkeit.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Den Antwortkoerper aus einem non-2xx holen.
+ *
+ * ⚠ `functions.invoke` liefert bei non-2xx `data = null`; die eigentliche
+ * Meldung steckt in `error.context`. Ohne dieses Auslesen sah ein Fehler
+ * am 20.08.2026 nur als „non-2xx status code" aus, waehrend der Grund
+ * ungelesen danebenlag. Dieselbe Mechanik wie in starteSync().
+ */
+async function fehlerText(error: unknown, data: unknown): Promise<string> {
+  const ctx = (error as { context?: unknown })?.context;
+  if (ctx instanceof Response) {
+    try {
+      const roh = await ctx.clone().text();
+      const j = JSON.parse(roh);
+      if (j?.fehler) return String(j.fehler);
+      return roh.slice(0, 500);
+    } catch { /* kein JSON — dann bleibt die Meldung des Clients */ }
+  }
+  const d = data as { fehler?: unknown } | null;
+  if (d?.fehler) return String(d.fehler);
+  return (error as { message?: string })?.message || "Aufruf fehlgeschlagen";
+}
+
+/** Die Vorschau des WordPress-Exports — liest, sendet nichts. */
+export async function holeVorschau(
+  sb: Sb,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("wp-export", { body: { aktion: "probe" } });
+  if (error) return { daten: null, fehler: await fehlerText(error, data) };
+  if ((data as { fehler?: unknown })?.fehler) {
+    return { daten: null, fehler: String((data as { fehler: unknown }).fehler) };
+  }
+  return { daten: data as Record<string, unknown>, fehler: null };
+}
+
+/** Die Feldnamen einer echten SFV-Rohantwort — nur Namen, keine Werte. */
+export async function holeRohschluessel(
+  sb: Sb,
+): Promise<{ daten: Record<string, unknown> | null; fehler: string | null }> {
+  if (!sb) return { daten: null, fehler: "Keine Verbindung" };
+  const { data, error } = await sb.functions.invoke("sfv-sync", { body: { aktion: "rohschluessel" } });
+  if (error) return { daten: null, fehler: await fehlerText(error, data) };
+  if ((data as { fehler?: unknown })?.fehler) {
+    return { daten: null, fehler: String((data as { fehler: unknown }).fehler) };
+  }
+  return { daten: data as Record<string, unknown>, fehler: null };
+}

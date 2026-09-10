@@ -21,6 +21,7 @@
    **es fehlt etwas, und nichts meldet es.**
    ══════════════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import { schneideAufFeldhoheit } from "../feldhoheit.ts";
 
 const BERECHNET = {
@@ -61,5 +62,40 @@ describe("schneideAufFeldhoheit", () => {
     const { zeile, fehlend } = schneideAufFeldhoheit(["sfv_runde"], { sfv_runde: null });
     expect(fehlend).toEqual([]);
     expect(zeile).toEqual({ sfv_runde: null });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   `roundNbr` kommt nicht zurueck (11.09.2026)
+
+   ⚠ Gemessen ueber alle 270 Spiele: Meisterschaft 1–26, Cup 1–2,
+   Trainingsspiele durchgehend 0, Schweizer-Cup 105. Das Feld traegt je
+   Wettbewerb etwas anderes und hat damit keinen Namen, der stimmt.
+
+   Ausgebaut — und der Fall haelt fest, dass es nicht zurueckkommt.
+   Dieselbe Bauart wie beim Rueckfall auf playDayName: die staerkste
+   Form ist die, die den Weg zurueck versperrt, nicht die, die den
+   Ist-Zustand beschreibt.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("sfv_runde_nr ist ausgebaut", () => {
+  const QUELLE = "supabase/functions/sfv-sync/sync.ts";
+
+  it("⚠ sync.ts liest roundNbr nicht mehr als Spaltenwert", () => {
+    const roh = readFileSync(QUELLE, "utf8");
+    /* Ueber den Zuweisungsausdruck, nicht ueber das blosse Wort: der
+       Name steht weiterhin in Kommentaren, und das ist erwuenscht —
+       dort steht die Begruendung. */
+    expect(roh).not.toMatch(/sfv_runde_nr\s*:/);
+  });
+
+  it("⚠ und keine Zeile weist roundNbr einem Feld zu", () => {
+    const roh = readFileSync(QUELLE, "utf8");
+    expect(roh).not.toMatch(new RegExp("[a-z_]+\s*:[^" + String.fromCharCode(10) + "]*roundNbr"));
+  });
+
+  it("Positivkontrolle: mit der Zuweisung waere sie rot", () => {
+    const mit = "  sfv_runde_nr: typeof s.roundNbr === 'number' ? s.roundNbr : null,";
+    expect(mit).toMatch(/sfv_runde_nr\s*:/);
+    expect(mit).toMatch(new RegExp("[a-z_]+\s*:[^" + String.fromCharCode(10) + "]*roundNbr"));
   });
 });

@@ -583,10 +583,15 @@ export function bildeSpiel(
        laesst ein fehlendes Stueck samt Trennzeichen weg — ein leeres Feld
        kostet nichts, ein falsches steht auf der Seite.
 
-       Wo es wirklich eine Runde gibt, ist bis heute ungemessen: `roundNbr`
-       ist eine Zahl und steht als `sfv_runde_nr` in der Datenbank, wird
-       aber nirgends gelesen. Aus ihr „Runde 5" zu bauen bleibt verboten —
-       ein Cup hat spaete Runden mit Namen. */
+       ⚠ Wo es wirklich eine Runde gibt, ist bis heute UNBEKANNT — und
+       der Verband liefert sie nicht in einer Form, die einen Namen
+       verdient. `roundNbr` stand bis zum 11.09.2026 als `sfv_runde_nr`
+       in der Datenbank und ist ausgebaut: gemessen traegt es je
+       Wettbewerb etwas anderes (Meisterschaft 1–26, Cup 1–2,
+       Trainingsspiele 0, Schweizer-Cup 105).
+
+       Ein Cupspiel hat auf der Website deshalb kein Rundenetikett. Das
+       ist richtig so: leer ist ehrlich, eine erfundene Runde nicht. */
     runde: q.sfv_gruppe ?? "",
     status,
     publizieren,

@@ -39,6 +39,7 @@ import {
   fasseWechselProbe, deuteWechselProbe, fasseCupProbe, deuteCupProbe,
 } from "../../../src/domains/sfv/wechselProbe.ts";
 import { waehleNachtragSpiele, deuteNachtrag } from "../../../src/domains/sfv/ereignisNachtrag.ts";
+import { schluesselVon, suchtBildfeld } from "../../../src/domains/sfv/rohschluessel.ts";
 import { bildeEreignis } from "./matchdaten.ts";
 import {
   holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
@@ -82,6 +83,7 @@ Deno.serve(async (req) => {
      kann — dieselbe Regel wie in wp-export. */
   const AKTIONEN = [
   "teams", "sync", "namen", "teamprobe", "wechselprobe", "wechselnachtrag", "cupprobe",
+  "rohschluessel",
 ];
   if (!AKTIONEN.includes(aktion)) {
     return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
@@ -116,6 +118,11 @@ Deno.serve(async (req) => {
      stillschweigend beim Verband abfragt. */
   if (perZeitplan && aktion === "wechselnachtrag") {
     return json({ fehler: "wechselnachtrag nur mit Anmeldung" }, 403);
+  }
+  /* ⚠ Auch diese nur mit Anmeldung: eine Auskunft ohne Leser ist ein
+     Abruf beim Verband fuer nichts. */
+  if (perZeitplan && aktion === "rohschluessel") {
+    return json({ fehler: "rohschluessel nur mit Anmeldung" }, 403);
   }
 
   /* Schreiben laeuft ueber die Service Role: der Zeitplan hat keinen
@@ -298,6 +305,37 @@ Deno.serve(async (req) => {
      Unterschied ist die Sache: dort ging es um Personennamen, hier um
      „1. Runde" gegen „3" — und das ist ohne den Wert nicht zu beantworten.
      Der Spielplan-Endpunkt fuehrt ueberhaupt keine Personendaten. */
+  /* ── Aktion rohschluessel: was bringt die Leitung wirklich? ──────────
+     Zwei Abrufe, liest, schreibt nichts. Sie beantwortet EINE Frage, an
+     der ein Widerspruch haengt: meine Suche in der Swagger-Datei sagt
+     „kein Bildfeld", eine Beobachtung sagt „eine logoUrl kommt mit".
+
+     ⚠ NUR SCHLUESSEL, NIE WERTE — Object.keys(), nirgends entries().
+     Siehe rohschluessel.ts. */
+  if (aktion === "rohschluessel") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+    try {
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+      const saison = await holeSaison(zugang, token, new Date());
+
+      const teams = schluesselVon(await holeTeamsRoh(zugang, token, saison.id));
+      const spiele = schluesselVon(await holeSpielplan(zugang, token, saison.id));
+
+      return json({
+        hinweis: "Leseprobe. Nur Feldnamen, keine Werte. Es wird nichts gespeichert.",
+        saison: { id: saison.id, name: saison.name },
+        team_liste: teams,
+        spielplan: spiele,
+        bildfeld_team: suchtBildfeld(teams),
+        bildfeld_spielplan: suchtBildfeld(spiele),
+      });
+    } catch (e) {
+      return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
+    }
+  }
+
   if (aktion === "cupprobe") {
     const v = eigene[0];
     if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);

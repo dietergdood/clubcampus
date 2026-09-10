@@ -83,7 +83,15 @@ export function bildeSpiel(
          wird sie von keiner Anzeige — den Wochentag zeigt die Website
          ohnehin aus dem Datum. */
       sfv_spieltag: (s.playDayName as string) ?? null,
-      sfv_runde_nr: typeof s.roundNbr === "number" ? s.roundNbr : null,
+      /* ⚠ `roundNbr` wird NICHT mehr gelesen — gemessen am 11.09.2026:
+         Meisterschaft 1–26, Cup 1–2, Trainingsspiele durchgehend 0,
+         Schweizer-Cup 105. Das Feld traegt je Wettbewerb etwas anderes
+         und hat damit keinen Namen, der stimmt.
+
+         Kommt es weiterhin an, gehoert es in `unbeachtete_felder` bzw.
+         `feldhoheit_weggeschnitten` — dort steht, was ankommt und
+         niemand braucht. Eine Spalte ist der falsche Ort dafuer.
+         Siehe migration_spiele_runde_nr_ausbau.sql. */
       status: (s.matchStateName as string) ?? null,
       /* Nur bei "ausgetragen" (2). Alle nicht ausgetragenen Spiele stehen
          beim SFV auf 0:0 — aus dem Score allein abgeleitet stünde überall
