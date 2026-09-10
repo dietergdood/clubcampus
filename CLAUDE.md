@@ -3600,8 +3600,23 @@ spiel_ereignisse.ein_sfv_person_id   ←  /events    substitutePlayerId
 ```
 
 ⚠ **Zwei Schlüsselräume, und der Verband mischt sie im SELBEN
-Ereignisobjekt:** `personId` derselben Zeile löst auf (der Verlauf zeigt
-„Fiona Monteleone"), `substitutePlayerId` nicht.
+Ereignisobjekt.** Gemessen am 10.09.2026 über den ganzen Bestand:
+
+| | |
+|---|---|
+| eigene Ereignisse mit `sfv_person_id` | **431** |
+| davon in `sfv_personen` auflösbar | **424** |
+
+**`personId` ist sauber — nur `substitutePlayerId` bricht aus.** Damit
+trägt die Brücke über die Rückennummer genau die Wechselzeilen und nicht
+die halbe Anzeige. **Das war die Frage, an der hing, ob die Brücke ein
+Rückfall oder ein zweites Fundament wird.**
+
+⚠ **Die sieben Ausreisser sind vermutlich dieselben, die schon anderswo
+auffielen:** sechs eigene Verwarnungen ohne Rückennummer, davon fünf
+Personen ohne Aufstellungszeile und ein Trainer — und die drei
+„Unser Team"-Zeilen in der 90+1 bis 90+3. **Wenn es dieselben sind, ist
+der ganze Rest erklärt**; die Abfrage dazu steht unten.
 
 #### Der Bogen — und er ist die eigentliche Lehre
 
