@@ -229,6 +229,24 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     zeilen.push(zust.length
       ? `Nach Zustand: ${zust.map(([k,v])=>`${k} ${Number(v)}`).join(" · ")}`
       : `⚠ ${String(nz._hinweis??"Kein einziger Spiel-Beitrag, auch kein Entwurf.")}`);
+
+    /* ⚠ ⚠  DIE ZEILE, DIE DEN WIDERSPRUCH AUFLÖST — an WP_Query vorbei.
+       Der Export meldete 270 aktualisierte Spiele, die Zählung fand
+       keines. Hier steht, WO sie liegen: Typ, Zustand, Anzahl. */
+    const mt=d.match_id_typen;
+    if(Array.isArray(mt)&&mt.length){
+      const t=mt as {typ:string;zustand:string;anzahl:number}[];
+      zeilen.push(`Beiträge mit sfv_match_id (Suchtyp: ${String(d.spiel_typ_gesucht??"?")}): `
+        +t.map((x)=>`${x.typ}/${x.zustand} ${x.anzahl}`).join(" · "));
+      const fremd=t.filter((x)=>x.typ!==String(d.spiel_typ_gesucht??""));
+      if(fremd.length){
+        zeilen.push(`⚠ Davon in einem ANDEREN Beitragstyp: `
+          +fremd.map((x)=>`${x.typ} (${x.anzahl})`).join(", ")
+          +" — dorthin schreibt der Abgleich nicht, und von dort liest er nicht.");
+      }
+    } else if(mt&&typeof mt==="object"){
+      zeilen.push(`⚠ ${String((mt as Record<string,unknown>)._hinweis??"")}`);
+    }
     if(Array.isArray(d.fehlt)&&d.fehlt.length){
       zeilen.push(`⚠ Voraussetzungen fehlen: ${(d.fehlt as string[]).join(", ")}`);
     }

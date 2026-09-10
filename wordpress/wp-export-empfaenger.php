@@ -142,6 +142,20 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.3 (10.09.2026): `/status` fragt die Datenbank DIREKT, welche
+   Beitragstypen ein `sfv_match_id` tragen — ohne post_type-Filter und
+   ohne WP_Query.
+   ⚠ ANLASS, und es ist ein WIDERSPRUCH ZWISCHEN ZWEI AUSKUENFTEN: der
+   Export meldete um 12:30 „270 Spiele, 270 aktualisiert" — also 270
+   BESTEHENDE Beitraege —, und dieselbe Datei meldet in `/status` „kein
+   einziger Spiel-Beitrag, auch kein Entwurf". Beide koennen nicht
+   stimmen.
+   ⚠ Der Abgleich und die Zaehlung benutzen DENSELBEN Beitragstyp
+   (CC_TYP_SPIEL, beide Stellen) — ein Namensunterschied wie bei
+   sfv_letzter_sync gegen sfv_zuletzt_abgeglichen ist es also nicht.
+   Was uebrig bleibt, laesst sich aus dem Quelltext nicht entscheiden.
+   **Also fragt die Auskunft es die Datenbank.**
+
    0.9.2 (10.09.2026): `/status` zaehlt Spiel-Beitraege NACH ZUSTAND, und
    `spielfelder` sagt, wenn es nicht pruefen konnte.
    ⚠ ANLASS: die Karte meldete „0 Spiel-Beitraege … ACF kennt alle 0
@@ -222,7 +236,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.2';
+const CC_VERSION    = '0.9.3';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -823,6 +837,11 @@ function cc_route_status(): WP_REST_Response {
 			   diese Zweideutigkeit hat am 10.09.2026 eine Stunde
 			   gekostet. */
 			'spiele_nach_zustand'   => cc_spiele_nach_zustand(),
+			/* ⚠ Was wir SUCHEN — damit ein Namensunterschied sichtbar
+			   wird, statt als leere Menge zu erscheinen. */
+			'spiel_typ_gesucht'     => CC_TYP_SPIEL,
+			/* ⚠ Und was tatsaechlich DA IST, an WP_Query vorbei. */
+			'match_id_typen'        => cc_typen_mit_match_id(),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
@@ -1815,6 +1834,59 @@ function cc_spielfeld_lage( int $sid ): array {
  *   Null zu deuten. Was zaehlt, entscheidet der Leser — die Auskunft
  *   zaehlt alles und sagt, was was ist.
  */
+/**
+ * Welche Beitragstypen tragen ein `sfv_match_id` — und wie viele?
+ *
+ * ⚠ ⚠  DIREKT UEBER $wpdb, OHNE post_type-FILTER UND OHNE WP_Query.
+ *
+ *   Der Grund ist ein Widerspruch zwischen zwei Auskuenften derselben
+ *   Datei (10.09.2026): der Export meldete 270 AKTUALISIERTE Spiele —
+ *   also 270 bestehende Beitraege, gefunden ueber genau dieses
+ *   Meta-Feld —, und `/status` fand keinen einzigen Beitrag vom Typ
+ *   `fch_spiel`, auch keinen Entwurf.
+ *
+ *   Beide Wege gehen ueber `get_posts()` und denselben Beitragstyp. Was
+ *   sie trennen KANN, sieht man von aussen nicht: eine Registrierung,
+ *   die zum Zeitpunkt der einen Route noch nicht steht; ein Filter auf
+ *   `pre_get_posts`; ein Zustand, den keine der Listen nennt.
+ *
+ *   **Diese Abfrage umgeht alles davon.** Sie fragt die Tabelle, nicht
+ *   die Abstraktion — und beantwortet damit die Frage, die die Kachel
+ *   sonst nur stellen kann: wo SIND die 270?
+ *
+ * ⚠ Sie nennt auch die Zustaende. Ein Beitrag im Papierkorb (`trash`)
+ *   faellt aus jeder normalen Abfrage und ist trotzdem da.
+ */
+function cc_typen_mit_match_id(): array {
+	global $wpdb;
+	$zeilen = $wpdb->get_results(
+		"SELECT p.post_type, p.post_status, COUNT(*) AS anzahl
+		   FROM {$wpdb->posts} p
+		   JOIN {$wpdb->postmeta} m ON m.post_id = p.ID
+		  WHERE m.meta_key = 'sfv_match_id' AND m.meta_value <> ''
+		  GROUP BY p.post_type, p.post_status
+		  ORDER BY anzahl DESC",
+		ARRAY_A
+	);
+	if ( ! is_array( $zeilen ) || array() === $zeilen ) {
+		return array(
+			'_hinweis' => 'Kein einziger Beitrag im ganzen WordPress traegt '
+				. 'ein sfv_match_id — gleich welchen Typs und Zustands. '
+				. 'Dann hat der Export nie geschrieben, oder er schrieb in '
+				. 'eine andere Installation.',
+		);
+	}
+	$raus = array();
+	foreach ( $zeilen as $z ) {
+		$raus[] = array(
+			'typ'     => (string) $z['post_type'],
+			'zustand' => (string) $z['post_status'],
+			'anzahl'  => (int) $z['anzahl'],
+		);
+	}
+	return $raus;
+}
+
 function cc_spiele_nach_zustand(): array {
 	$z = wp_count_posts( CC_TYP_SPIEL );
 	$raus = array();
