@@ -56,7 +56,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { mischeEreignisse, hatVerlauf } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import {
-  bildeSpiel, zaehleVerlaufNamen, musstNormalisiertWerden,
+  bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
@@ -850,7 +850,7 @@ async function laufeProbe(
   /* ── Spiele ──────────────────────────────────────────────────────── */
   const sRes = await db.from("spiele")
     .select("id, sfv_match_id, sfv_spiel_nr, date, zeit, gegner, heimspiel, venue, "
-      + "wettbewerb, liga, sfv_gruppe, sfv_status, resultat, ht_resultat, sfv_team_id")
+      + "wettbewerb, liga, sfv_gruppe, sfv_runde, sfv_status, resultat, ht_resultat, sfv_team_id")
     .eq("verein_id", vereinId)
     .not("sfv_match_id", "is", null)
     .order("date");
@@ -929,7 +929,8 @@ async function laufeProbe(
   /* ⚠ Sichtbar machen, was wir an fremdem Text aendern. Steigt die Zahl,
      hat der Verband seine Schreibweise geaendert — und das soll auffallen,
      nicht verschwinden. */
-  let rundeNormalisiert = 0;
+  let rundeMitDoppelabstand = 0;
+  let ohneLiga = 0;
   let cupOhneRunde = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
@@ -944,7 +945,14 @@ async function laufeProbe(
     const spiel = bildeSpiel(s, String(s.sfv_team_id ?? ""), ereignisse, namen, unserKlub);
     if (!spiel) { ohneSchluessel++; continue; }
     if (!spiel.publizieren) zurueckgehalten++;
-    if (musstNormalisiertWerden(s.sfv_gruppe as string | null)) rundeNormalisiert++;
+    /* ⚠ NICHT bereinigt, nur gezaehlt (Entscheidung Didi, 11.09.2026):
+       fremde Daten stillschweigend zu putzen versteckt den Fehler. Was
+       bleibt, ist die Zahl — aendert der Verband seine Schreibweise,
+       faellt es hier auf. */
+    if (hatDoppelabstand(s.sfv_gruppe as string | null)) rundeMitDoppelabstand++;
+    /* ⚠ Die Antwort auf „ist `liga` immer gefuellt?" — die Frage, an der
+       haengt, ob das leere `sfv_liga_name` drueben die kleinere Sorge ist. */
+    if (!String(s.liga ?? "").trim()) ohneLiga++;
     /* ⚠ Cupspiele tragen keinen Gruppennamen — gemeldet 11.09.2026,
        13 von 13. Gezaehlt, nicht behoben: der Wert entsteht beim Verband,
        und was dort stattdessen steht, ist noch nicht gemessen. */
@@ -985,7 +993,8 @@ async function laufeProbe(
       ohne_verlauf: ohneVerlauf,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
-      runde_normalisiert: rundeNormalisiert,
+      runde_mit_doppelabstand: rundeMitDoppelabstand,
+      ohne_liga: ohneLiga,
       cup_ohne_runde: cupOhneRunde,
       /* ⚠ ZWEI SORTEN NAME, GETRENNT AUSGEWIESEN (seit 10.09.2026).
          Bis dahin gab es nur eine, und `zeilen_mit_personenname` war die

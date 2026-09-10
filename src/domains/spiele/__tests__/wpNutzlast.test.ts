@@ -17,7 +17,7 @@ import {
   wpDatum, wpZeit, zerlegeResultat, bildeStatus,
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
-  normalisiereRaum, musstNormalisiertWerden,
+  hatDoppelabstand,
 } from "../wpNutzlast.ts";
 import type { SpielQuelle } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
@@ -45,7 +45,7 @@ const quelle = (f: Partial<SpielQuelle> = {}): SpielQuelle => ({
   date: "2026-08-23", zeit: "14:00:00",
   gegner: "FC Blau-Weiss Erlenbach 1", heimspiel: true,
   venue: "Langacker", wettbewerb: "Meisterschaft",
-  liga: "Junioren C Promotion", sfv_gruppe: "Gruppe 3",
+  liga: "Junioren C Promotion", sfv_gruppe: "Gruppe 3", sfv_runde: null,
   sfv_status: 2, resultat: "3:3", ht_resultat: null,
   ...f,
 });
@@ -469,37 +469,45 @@ describe("Wechsel — beide Menschen werden genannt", () => {
    so vom Verband. Wir aendern ihn in UNSERER Ausgabe und zaehlen, wie oft
    — die Rohform bleibt in spiele.sfv_gruppe stehen.
    ══════════════════════════════════════════════════════════════════════ */
-describe("normalisiereRaum", () => {
-  it("macht aus zwei Leerzeichen eines", () => {
-    expect(normalisiereRaum("Gruppe  2")).toBe("Gruppe 2");
-  });
-
-  it("laesst einen sauberen Wert unangetastet", () => {
-    expect(normalisiereRaum("Gruppe 2")).toBe("Gruppe 2");
-    expect(musstNormalisiertWerden("Gruppe 2")).toBe(false);
-  });
-
-  it("meldet, wenn sie eingreifen musste", () => {
-    expect(musstNormalisiertWerden("Gruppe  2")).toBe(true);
-  });
-
-  it("⚠ meldet bei LEER nichts — sonst zaehlte der Cup-Fall doppelt", () => {
-    /* Cupspiele haben gar keinen Gruppennamen. Sie als „normalisiert" zu
-       zaehlen machte aus einer fehlenden Angabe eine Aenderung. */
-    expect(musstNormalisiertWerden(null)).toBe(false);
-    expect(musstNormalisiertWerden("")).toBe(false);
-  });
-
-  it("faengt auch Tabulator und Zeilenumbruch", () => {
-    /* ⚠ Die Steuerzeichen als Codepunkte, nicht als Escape: ein 	 im
-       Quelltext ueberlebt den Weg durch eine Shell nicht zuverlaessig —
-       genau so ist diese Zeile beim ersten Versuch zerbrochen. */
-    const roh = "  Gruppe" + String.fromCharCode(9, 10) + " 2 ";
-    expect(normalisiereRaum(roh)).toBe("Gruppe 2");
-  });
-
-  it("die Nutzlast traegt den bereinigten Wert", () => {
+describe("Der Doppelabstand des Verbands bleibt stehen", () => {
+  /* ⚠ Entscheidung Didi, 11.09.2026 — und eine Umkehr meines eigenen
+     Vorschlags vom Vortag. Fremde Daten stillschweigend zu putzen
+     versteckt den Fehler; der Doppelabstand steht auf der Website und
+     ist damit die einzige Stelle, an der er jemandem auffaellt. */
+  it("⚠ die Nutzlast traegt den Wert UNVERAENDERT", () => {
     const s = bildeSpiel(quelle({ sfv_gruppe: "Gruppe  2" }), "38309", [], new Map(), "FC Herrliberg");
-    expect(s!.runde).toBe("Gruppe 2");
+    expect(s!.runde).toBe("Gruppe  2");
+  });
+
+  it("meldet ihn trotzdem", () => {
+    expect(hatDoppelabstand("Gruppe  2")).toBe(true);
+    expect(hatDoppelabstand("Gruppe 2")).toBe(false);
+  });
+
+  it("⚠ meldet bei LEER nichts — sonst zaehlte der Cup-Fall mit", () => {
+    expect(hatDoppelabstand(null)).toBe(false);
+    expect(hatDoppelabstand("")).toBe(false);
+  });
+});
+
+describe("Cupspiele: die Runde statt der Gruppe", () => {
+  it("nimmt sfv_runde, wenn keine Gruppe da ist", () => {
+    const s = bildeSpiel(quelle({ sfv_gruppe: null, sfv_runde: "1. Runde" }),
+      "38309", [], new Map(), "FC Herrliberg");
+    expect(s!.runde).toBe("1. Runde");
+  });
+
+  it("⚠ die Gruppe gewinnt, wenn beides dasteht", () => {
+    /* Beides zugleich kommt nicht vor — aber wenn doch, ist die Gruppe
+       die Angabe, die eine Rangliste hat. */
+    const s = bildeSpiel(quelle({ sfv_gruppe: "Gruppe 3", sfv_runde: "1. Runde" }),
+      "38309", [], new Map(), "FC Herrliberg");
+    expect(s!.runde).toBe("Gruppe 3");
+  });
+
+  it("bleibt leer, wenn der Verband weder Gruppe noch Runde nennt", () => {
+    const s = bildeSpiel(quelle({ sfv_gruppe: null, sfv_runde: null }),
+      "38309", [], new Map(), "FC Herrliberg");
+    expect(s!.runde).toBe("");
   });
 });

@@ -325,19 +325,31 @@ export function bildeVerlauf(
 }
 
 /**
- * Mehrfache Leerzeichen zu einem, Rand weg.
+ * Trägt dieser Wert mehrfache oder randständige Leerzeichen?
  *
- * ⚠ NUR fuer Text, den WIR ausgeben — nie beim Speichern fremder Werte.
- * Siehe die Begruendung bei `runde` in bildeSpiel().
+ * ⚠ ⚠  ER WIRD NICHT BEREINIGT — ENTSCHEIDUNG DIDI, 11.09.2026.
+ *
+ * Hier stand bis dahin `normalisiereRaum()`, und `runde` trug den
+ * geputzten Wert. Zurückgenommen, mit derselben Begründung, die die
+ * Website-Seite gegeben hatte und der Didi gefolgt ist:
+ *
+ *   > Fremde Daten stillschweigend zu putzen versteckt den Fehler,
+ *   > statt ihn zu melden.
+ *
+ * Mein Gegenargument war, `runde` sei unsere Ausgabe und nicht des
+ * Verbands Wert. Das trifft zu — und ändert nichts daran, dass danach
+ * **niemand mehr sieht**, dass der Verband „Gruppe  2" liefert. Der
+ * Doppelabstand steht auf der Website und ist damit die einzige Stelle,
+ * an der er jemandem auffällt.
+ *
+ * ⚠ WAS BLEIBT, IST DIE ZAHL. Nicht bereinigen heisst nicht wegsehen:
+ * `runde_mit_doppelabstand` sagt, wie viele Spiele betroffen sind.
+ * Ändert der Verband seine Schreibweise, faellt es an dieser Zahl auf —
+ * genau das, was ein stilles Trimmen unmöglich gemacht hätte.
  */
-export function normalisiereRaum(w: string | null | undefined): string {
-  return String(w ?? "").replace(/\s+/g, " ").trim();
-}
-
-/** Wie oft `normalisiereRaum` an diesem Wert etwas geaendert haette. */
-export function musstNormalisiertWerden(w: string | null | undefined): boolean {
+export function hatDoppelabstand(w: string | null | undefined): boolean {
   const roh = String(w ?? "");
-  return roh !== "" && normalisiereRaum(roh) !== roh;
+  return roh !== "" && roh.replace(/\s+/g, " ").trim() !== roh;
 }
 
 /* ── Zählen, wer beim Namen genannt wird ──────────────────────────── */
@@ -482,6 +494,7 @@ export interface SpielQuelle {
   /** SFV `leagueName`, z. B. „Junioren C Promotion". */
   liga: string | null;
   sfv_gruppe: string | null;
+  sfv_runde: string | null;
   sfv_status: number | null;
   resultat: string | null;
   ht_resultat: string | null;
@@ -522,25 +535,24 @@ export function bildeSpiel(
     wettbewerb: q.wettbewerb ?? "",
     liga: q.liga ?? "",
     /* ⚠ „Gruppe  2" — MIT ZWEI LEERZEICHEN, in allen 270 Etiketten.
-       Gemeldet von der Website-Seite am 11.09.2026; der Wert kommt so vom
-       Verband (`groupName`).
-
-       ⚠ DAS IST KEIN „FREMDE DATEN PUTZEN". Der Unterschied ist der Ort:
-       in `spiele.sfv_gruppe` steht der Wert des Verbands unveraendert —
-       er gehoert ihm (Feldhoheit `sfv`), und wer ihn dort liest, sieht,
-       was geliefert wurde. `runde` dagegen ist UNSERE Ausgabe an eine
-       Vorlage, und wie unser eigener Text aussieht, entscheiden wir.
-
-       ⚠ UND ES GESCHIEHT NICHT STILL: `runde_normalisiert` in der
-       Zusammenfassung zaehlt, wie oft es greift. Steigt die Zahl
-       ploetzlich, hat der Verband seine Schreibweise geaendert — genau
-       das, was ein stilles Trimmen verstecken wuerde. */
+       Der Wert kommt so vom Verband (`groupName`), und er BLEIBT SO
+       (Entscheidung Didi, 11.09.2026). Siehe hatDoppelabstand(). */
     /* ⚠ `runde` TRAEGT DEN GRUPPENNAMEN — „Gruppe 3", nicht eine Runde.
        Der Feldname stammt aus dem Theme und ist aelter als der Inhalt;
        umbenennen hiesse, den Vertrag mit der Vorlage zu brechen. Wer ihn
        liest, muss wissen, was drinsteht: dieselbe Falle wie ein Endpunkt,
        der „Teams" heisst und Teams mit Rangliste liefert. */
-    runde: normalisiereRaum(q.sfv_gruppe),
+    /* ⚠ GRUPPE ZUERST, DANN RUNDE — und nichts drittes.
+       Ein Meisterschaftsspiel hat eine Gruppe, ein Cupspiel eine Runde;
+       beides zugleich kommt nicht vor. Was der Verband nicht nennt,
+       bleibt leer.
+
+       ⚠ `sfv_runde_nr` steht ABSICHTLICH nicht in dieser Kette. Aus
+       roundNbr = 5 „Runde 5" zu machen waere plausibel und falsch: ein
+       Cup hat spaete Runden mit Namen (Achtelfinal), und eine erfundene
+       Bezeichnung ist auf einer oeffentlichen Seite nicht mehr von einer
+       Auskunft zu unterscheiden. */
+    runde: q.sfv_gruppe || q.sfv_runde || "",
     status,
     publizieren,
     tore_heim: tore.tore_heim,

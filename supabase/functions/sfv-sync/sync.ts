@@ -83,7 +83,17 @@ export function bildeSpiel(
       heimspiel: unsA,
       venue: (s.stadiumPlaygroundName as string) ?? null,
       wettbewerb: (s.matchTypeName as string) ?? null,
+      /* ⚠ `liga` ist der WETTBEWERB, `wettbewerb` die BETRIEBSART. Die zwei
+         werden verwechselt, und der Feldname `wettbewerb` traegt Schuld
+         daran: bei einem Cupspiel steht dort „Cup", waehrend der Name des
+         Cups („Cup AJF (4./5. Liga)") hier liegt. Gemessen in
+         sfv_stammdaten.json, 11.09.2026. */
       liga: (s.leagueName as string) ?? null,
+      /* Die Runde — bei Meisterschaftsspielen leer, beim Cup die einzige
+         Angabe dieser Art. Kostet keinen zusaetzlichen Abruf: beides steht
+         in derselben Antwort. Siehe migration_spiele_runde.sql. */
+      sfv_runde: (s.playDayName as string) ?? null,
+      sfv_runde_nr: typeof s.roundNbr === "number" ? s.roundNbr : null,
       status: (s.matchStateName as string) ?? null,
       /* Nur bei "ausgetragen" (2). Alle nicht ausgetragenen Spiele stehen
          beim SFV auf 0:0 — aus dem Score allein abgeleitet stünde überall
