@@ -54,7 +54,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, bank_zeilen: 0, bank_fehler: 0, aufstellung_fremd: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, bank_zeilen: 0, bank_fehler: 0, aufstellung_fremd: 0, gegner_doppel: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -116,12 +116,14 @@ export async function laufeMatchdaten(
          Konfliktschluessel laesst Postgres den GANZEN Upsert abbrechen
          (21000), und weil der Ereignis-Upsert im selben `try` steht, fielen
          die Ereignisse gleich mit aus. Siehe verschmelzeAufstellung(). */
-      const aufstellung = verschmelzeAufstellung([
+      const rohZeilen = [
         ...rohAufstellung
           .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt)),
         ...rohBank
           .map((p) => bildeBankZeile(p, unsereClubNummer, v.verein_id, spiel.id, jetzt)),
-      ].filter((z): z is NonNullable<typeof z> => z !== null));
+      ].filter((z): z is NonNullable<typeof z> => z !== null);
+      const rohFremd = rohZeilen.filter((z) => !z.ist_eigener).length;
+      const aufstellung = verschmelzeAufstellung(rohZeilen);
       erg.bank_zeilen += rohBank.length ? aufstellung.filter((z) => z.ist_bank).length : 0;
 
       const ereignisse = rohEreignisse
@@ -139,6 +141,13 @@ export async function laufeMatchdaten(
          (verein_id, spiel_id, sfv_team_id, rueckennr). */
       const eigeneZeilen = aufstellung.filter((z) => z.ist_eigener);
       const fremdeZeilen = aufstellung.filter((z) => !z.ist_eigener);
+      /* ⚠ Was das Verschmelzen auf der Gegnerseite weggenommen hat, wird
+         GEZAEHLT. Ein Gegner kann nicht aus zwei Quellen kommen — /bench
+         gibt fuer fremde Spieler nichts her —, also bedeutet eine
+         Doppelung hier: der Verband nennt zwei Spieler mit derselben
+         Nummer. Das ist ein Befund ueber die QUELLE, und stillschweigend
+         zu verschmelzen hiesse, ihn zuzudecken. */
+      erg.gegner_doppel += rohFremd - fremdeZeilen.length;
 
       if (eigeneZeilen.length) {
         const { error } = await db.from("spiel_aufstellung")
@@ -148,8 +157,63 @@ export async function laufeMatchdaten(
       }
 
       if (fremdeZeilen.length) {
+        /* ⚠ ⚠  HIER STEHT ABSICHTLICH KEIN upsert — und wer ihn
+           zurueckschreibt, bekommt denselben Fehler wie am 10.09.2026:
+
+             there is no unique or exclusion constraint matching the
+             ON CONFLICT specification
+
+           Der Schluessel fuer Gegnerzeilen ist ein PARTIELLER Index
+           (… where ist_eigener = false and rueckennr is not null).
+           Postgres leitet einen partiellen Index nur ab, wenn dieselbe
+           Bedingung als index_predicate im ON CONFLICT steht — und
+           PostgREST kann in `onConflict` nur SPALTEN nennen, kein
+           Praedikat. **Der Index passt; die Angabe kann ihn nicht
+           erreichen.**
+
+           ⚠ Die naheliegende Reparatur waere, den Index unpartiell zu
+           machen. Sie ist falsch: die Bedingung IST die Sperre, und ein
+           unpartieller Schluessel ueber (Team, Nummer) faengt auch eigene
+           Zeilen — zwei eigene Spieler mit derselben Nummer waeren dann
+           ein Fehler statt einer Datenlage.
+
+           Also: die Gegneraufstellung dieses Spiels wird ERSETZT.
+           Lesen, loeschen, schreiben. Sie ist reine Spiegelung des
+           Verbands — es gibt in dieser Tabelle keine Vereinszeilen und
+           keine Korrekturen, anders als bei spiel_ereignisse.
+
+           ⚠ Nicht atomar: bricht das Schreiben nach dem Loeschen ab,
+           fehlt die Gegneraufstellung dieses Spiels bis zum naechsten
+           Lauf. Das ist der Preis, und er ist bezahlbar, weil jeder Lauf
+           sie neu herleitet. */
+        const alt = await db.from("spiel_aufstellung")
+          .select("sfv_team_id,rueckennr,erstmals_gesehen")
+          .eq("verein_id", v.verein_id).eq("spiel_id", spiel.id)
+          .eq("ist_eigener", false);
+        if (alt.error) {
+          throw new SfvFehler(`Gegneraufstellung lesen: ${alt.error.message}`);
+        }
+        /* `erstmals_gesehen` traegt mit — sonst hiesse die Spalte nach dem
+           ersten Ersetzen „zuletzt neu angelegt", und ein Spaltenname, der
+           etwas anderes sagt als sein Inhalt, ist teurer als der Umweg
+           ueber diese eine Abfrage. */
+        const seit = new Map<string, string>();
+        for (const z of alt.data ?? []) {
+          seit.set(`${z.sfv_team_id}:${z.rueckennr}`, z.erstmals_gesehen);
+        }
+
+        const weg = await db.from("spiel_aufstellung").delete()
+          .eq("verein_id", v.verein_id).eq("spiel_id", spiel.id)
+          .eq("ist_eigener", false);
+        if (weg.error) {
+          throw new SfvFehler(`Gegneraufstellung leeren: ${weg.error.message}`);
+        }
+
         const { error } = await db.from("spiel_aufstellung")
-          .upsert(fremdeZeilen, { onConflict: "verein_id,spiel_id,sfv_team_id,rueckennr" });
+          .insert(fremdeZeilen.map((z) => {
+            const frueher = seit.get(`${z.sfv_team_id}:${z.rueckennr}`);
+            return frueher ? { ...z, erstmals_gesehen: frueher } : z;
+          }));
         if (error) throw new SfvFehler(`Gegneraufstellung: ${error.message}`);
         erg.aufstellung_fremd += fremdeZeilen.length;
       }

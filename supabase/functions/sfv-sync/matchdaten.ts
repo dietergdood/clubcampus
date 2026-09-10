@@ -52,7 +52,10 @@ export interface AufstellungZeile {
   ist_eigener: boolean;
   /** Klarname aus der SFV-Antwort. Rueckfall — eine Zuordnung gewinnt. */
   name: string | null;
-  /** Aus /bench statt aus /players? Siehe bildeBankZeile(). */
+  /** Steht die Person in der Bankliste des Verbands? ⚠ Seit dem
+      Verschmelzen NICHT mehr „diese Zeile stammt aus /bench" — eine
+      verschmolzene Zeile traegt Nummer und Position aus /players und
+      diese Kennung aus /bench. Siehe verschmelzeAufstellung(). */
   ist_bank: boolean;
   rolle_id: number | null;
   rolle_kategorie_id: number | null;

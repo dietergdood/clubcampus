@@ -36,6 +36,11 @@ export interface MatchdatenErgebnis {
    * zusammenzaehlt, merkt nicht, wenn einer von beiden nichts schreibt.
    */
   aufstellung_fremd: number;
+  /** Gegnerzeilen, die sich (Team, Nummer) teilten und verschmolzen wurden.
+      ⚠ Erwartung 0 — jede andere Zahl ist eine Unstimmigkeit BEIM VERBAND
+      und keine Eigenschaft unserer Kette. Sie wird gezaehlt, damit das
+      Verschmelzen sie nicht zudeckt. */
+  gegner_doppel: number;
   /**
    * Spiele, deren Bank nicht abrufbar war.
    *
@@ -321,6 +326,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       namen_geschrieben: md.namen_geschrieben,
       bank_zeilen: md.bank_zeilen,
       aufstellung_fremd: md.aufstellung_fremd,
+      gegner_doppel: md.gegner_doppel,
       bank_fehler: md.bank_fehler,
       paesse_geschrieben: md.paesse_geschrieben,
       pass_konflikte: md.pass_konflikte,

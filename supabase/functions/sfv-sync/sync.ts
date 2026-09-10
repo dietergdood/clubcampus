@@ -392,7 +392,16 @@ export async function laufeSync(
 
   const md = erg.matchdaten;
   if (md) {
-    teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} Aufstellungs- und ${md.ereignisse_zeilen} Ereigniszeilen`);
+    /* ⚠ `aufstellung_fremd` wurde bis zum 10.09.2026 gezaehlt, ins
+       Protokoll geschrieben und NIRGENDS gezeigt — derselbe Fall wie die
+       acht anderen unter „berechnet, geliefert, nicht gezeigt". Die Zahl
+       steht jetzt immer da, auch als Null: sie beantwortet die Frage,
+       ob die Gegneraufstellung ueberhaupt ankommt. */
+    teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} eigene und ${md.aufstellung_fremd} gegnerische Aufstellungszeilen, ${md.ereignisse_zeilen} Ereigniszeilen`);
+    if (md.gegner_doppel) {
+      if (erg.status === "ok") erg.status = "warnung";
+      teile.push(`${md.gegner_doppel} Gegnerzeile(n) mit doppelter Rueckennummer verschmolzen — Unstimmigkeit beim Verband`);
+    }
     if (md.paesse_geschrieben) teile.push(`${md.paesse_geschrieben} Spielerpass/-pässe vom Verband übernommen`);
     if (md.pass_konflikte.length) {
       erg.status = "warnung";
