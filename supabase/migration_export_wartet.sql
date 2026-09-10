@@ -151,6 +151,40 @@ commit;
 
 -- ── Gegenprobe ─────────────────────────────────────────────────────────────
 --
+-- ⚠ ⚠  DIE ZAHL, DIE ALLES ENTSCHEIDET, IST `count(distinct …)` — NICHT
+--       DER JUENGSTE STEMPEL.
+--
+--   Am 10.09.2026 sah es nach dem Einspielen so aus, als feuerte der
+--   Trigger fuer alle 270 Zeilen: alle trugen einen Stempel, und die
+--   juengste Aenderung lag 48 Sekunden vor dem juengsten Lauf.
+--
+--   **Beides ist auch dann wahr, wenn der Trigger nie gefeuert hat.**
+--   `add column … default now()` stempelt beim ALTER TABLE jede
+--   bestehende Zeile — mit EINEM Wert.
+--
+--   select count(*)                       as zeilen,
+--          count(distinct zuletzt_geaendert) as verschiedene
+--     from public.spiele;
+--
+--   verschiedene = 1  →  der Vorgabewert. Der Trigger hat nichts
+--                        angefasst, alles ist in Ordnung.
+--   verschiedene > 1  →  er hat gestempelt. Dann zaehlt, WIE VIELE
+--                        Zeilen frisch sind: eine Handvoll ist eine
+--                        Datenlage, 270 waeren der Defekt.
+--
+-- ⚠ Vorgefuehrt am 10.09.2026 gegen einen nachgebauten Lauf:
+--   nach ALTER TABLE 1 Stempel · nach einem Lauf OHNE Aenderung
+--   weiterhin 1 · nach einem Lauf mit EINER Aenderung 2, und genau die
+--   eine Zeile frisch.
+--
+-- ⚠ WAS DER STEMPEL FUER DEN BESTAND BEDEUTET: er ist die Zeit der
+--   MIGRATION, nicht die der letzten echten Aenderung. Ein Spiel, das im
+--   August zuletzt anders wurde, traegt trotzdem den Migrationszeitpunkt.
+--   Das ist kein falscher Wert, sondern der einzige, den es geben kann —
+--   und es ist der richtige: exportiert wurde noch nie etwas, also
+--   wartet tatsaechlich alles. Ab dem ersten Export stimmt die Spalte
+--   genau.
+--
 -- ⚠ DIE ERSTE IST DIE WICHTIGE, und sie ist genau die, die den ersten
 --   Entwurf widerlegt haette: **bewegt sich die Zahl nach einem Sync-Lauf,
 --   der nichts geaendert hat?**
