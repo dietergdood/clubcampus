@@ -830,7 +830,7 @@ describe("baueAufstellung", () => {
     const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen);
     expect(z).toMatchObject({
       seite: "heim", nummer: 9, spieler: "Anna Beispiel",
-      position: "Sturm", rolle: "start", ist_captain: false, marken: "",
+      position: "Sturm", rolle: "start", ist_captain: false, marken: [],
     });
     expect(zahlen.zeilen_eigen).toBe(1);
     expect(zahlen.zeilen_fremd).toBe(0);
@@ -882,12 +882,30 @@ describe("baueAufstellung", () => {
       ] }],
     ]);
     const [eigen] = baueAufstellung([q()], m, true, keineNamen, zahlen);
-    expect(eigen.marken).toBe("tor,tor,gelb");
+    expect(eigen.marken.map((x) => x.art)).toEqual(["tor", "tor", "gelb"]);
     const [fremd] = baueAufstellung(
       [q({ ist_eigener: false, sfv_person_id: null })], m, true, keineNamen,
       leereAufstellungZahlen(),
     );
-    expect(fremd.marken).toBe("tor");
+    expect(fremd.marken.map((x) => x.art)).toEqual(["tor"]);
+  });
+
+  it("⚠ die MINUTE reist mit — sie ist der halbe Wert des Symbols", () => {
+    /* Der Prototyp zeigt „⚽67'". Eine Zeichenkette „tor,tor,gelb" hätte
+       die Minute verloren, obwohl sammleMarken() sie durch die ganze
+       Kette trägt. Gefunden beim Gegenlesen der Feldliste, bevor der
+       Repeater drüben angelegt war. */
+    const zahlen = leereAufstellungZahlen();
+    const m = new Map<string, AufstellungZaehlung>([
+      ["p:100", { tore: 1, gelb: 1, gelbrot: 0, rot: 0, marken: [
+        { art: "tor", minute: "67" }, { art: "gelb", minute: "45+2" },
+      ] }],
+    ]);
+    const [z] = baueAufstellung([q()], m, true, keineNamen, zahlen);
+    expect(z.marken).toEqual([
+      { art: "tor", minute: "67" },
+      { art: "gelb", minute: "45+2" },
+    ]);
   });
 
   it("sortiert: Startelf, dann eingewechselt, dann ohne Einsatz", () => {

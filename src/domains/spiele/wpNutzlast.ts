@@ -992,8 +992,26 @@ export interface WpAufstellungZeile {
   von_minute: number | null;
   bis_minute: number | null;
   spielzeit: number | null;
-  /** „tor,tor,gelb" — leer, wenn nichts. Siehe sammleMarken(). */
-  marken: string;
+  /**
+   * Die Symbole dieser Zeile, je mit Minute: `[{art:"tor",minute:"67"}]`.
+   *
+   * ⚠ ⚠  HIER STAND EINE ZEICHENKETTE („tor,tor,gelb"), UND DAS WAR EIN
+   *       FEHLER, KEINE ENTSCHEIDUNG. `sammleMarken()` traegt die Minute
+   *       durch die ganze Kette — der Kommentar an `AufstellungZaehlung`
+   *       sagt es woertlich —, und `baueAufstellung()` hat sie in der
+   *       letzten Zeile weggeworfen. Der Prototyp zeigt „⚽67'".
+   *
+   * Gefunden hat es Didi beim Gegenlesen der Feldliste, BEVOR der
+   * Theme-Chat den Repeater angelegt hat. Danach haette dieselbe
+   * Berichtigung ihn den ganzen Bau gekostet.
+   *
+   * ⚠ Die Wechselpfeile stehen NICHT hier, sondern an `von_minute` und
+   * `bis_minute` derselben Zeile — ein Wechsel bekommt kein Symbol.
+   *
+   * Leer heisst „keine Symbole" — beim Gegner zusaetzlich „keine
+   * Zuordnung moeglich". Siehe die Feldliste.
+   */
+  marken: WpAufstellungMarke[];
 }
 
 /**
@@ -1080,7 +1098,7 @@ export function baueAufstellung(
       von_minute: b.von_minute,
       bis_minute: b.bis_minute,
       spielzeit: b.spielzeit,
-      marken: (zaehlung?.marken ?? []).map((m) => m.art).join(","),
+      marken: zaehlung?.marken ?? [],
     });
   }
 

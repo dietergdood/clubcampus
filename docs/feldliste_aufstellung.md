@@ -22,7 +22,7 @@ Für **jedes** Feld unten:
 | **Feldname** | der `name` in ACF — das ist, was `update_field()` sucht |
 | **Feldschlüssel** | `field_…` bzw. `f_s_…` |
 | **Feldtyp** | Text / Zahl / Wahrheitswert / Repeater |
-| bei Repeatern | dasselbe für **jedes Unterfeld** |
+| bei Repeatern | dasselbe für **jedes Unterfeld** — auch für die zwei des **verschachtelten** `marken` |
 
 ⚠ **Ein falscher Feldname schlägt nirgends fehl.** `update_field()` löst
 einen unbekannten Namen über ACFs **globale Namenssuche** auf und
@@ -53,7 +53,7 @@ darin Startelf vor Eingewechselten vor Nichteingesetzten.
 | `von_minute` | Zahl | 1 … 90 | dasselbe |
 | `bis_minute` | Zahl | 1 … 90 | dasselbe |
 | `spielzeit` | Zahl | Minuten | dasselbe |
-| `marken` | Text | `tor,tor,gelb` — leer, wenn nichts | ⚠ siehe §3 |
+| `marken` | **verschachtelter Repeater** | je Zeile `art` + `minute` | ⚠ siehe §3 |
 
 ---
 
@@ -72,6 +72,28 @@ es hier für jedes Feld einzeln.
 | `von_minute` · `bis_minute` · `spielzeit` | ⚠ **beides** | siehe §4 |
 | `marken` | ⚠ **beides** | siehe §3 |
 | `rolle` | — | nie leer, immer einer der drei Werte |
+
+---
+
+### ⚠ `marken` ist ein verschachtelter Repeater, keine Zeichenkette
+
+**Berichtigt am 10.09.2026, bevor drüben gebaut wurde.** In einer ersten
+Fassung dieser Liste stand `marken` als Text (`tor,tor,gelb`) — **das
+war ein Fehler, keine Entscheidung.** Damit wäre die Minute verloren
+gegangen, obwohl `sammleMarken()` sie durch die ganze Kette trägt und
+der Prototyp sie zeigt: **⚽ 67'**.
+
+| Unterfeld von `marken` | Typ | Werte |
+|---|---|---|
+| `art` | Text | `tor` · `gelb` · `gelbrot` · `rot` |
+| `minute` | Text | `67`, auch `45+2` — **Text, nicht Zahl** |
+
+⚠ **`minute` ist Text**, damit Nachspielzeit hineinpasst. Dieselbe
+Entscheidung wie beim Verlauf.
+
+⚠ **Die Wechselpfeile stehen NICHT in `marken`**, sondern an
+`von_minute` und `bis_minute` derselben Zeile — ein Wechsel bekommt kein
+Symbol. Das `↓ 86'` des Prototyps kommt also aus `bis_minute`.
 
 ---
 
