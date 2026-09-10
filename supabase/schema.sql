@@ -1837,7 +1837,8 @@ CREATE TABLE IF NOT EXISTS "public"."ranglisten" (
     "punkte" integer,
     "fairplay_punkte" integer,
     "stand_vom" timestamp with time zone DEFAULT "now"(),
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "sfv_saison_name" "text"
 );
 
 
@@ -1857,6 +1858,10 @@ COMMENT ON COLUMN "public"."ranglisten"."fairplay_punkte" IS 'SFV penaltyPoints.
 
 
 COMMENT ON COLUMN "public"."ranglisten"."stand_vom" IS 'Zeitpunkt des Abrufs, nicht des Spieltags.';
+
+
+
+COMMENT ON COLUMN "public"."ranglisten"."sfv_saison_name" IS 'SFV seasonName, z.B. „2026/2027" — die Schreibweise des Verbands. NULL bei Zeilen aus Laeufen vor dem 10.09.2026. Nicht aus sfv_saison_id ableiten: die Benennung gehoert dem Verband.';
 
 
 

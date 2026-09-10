@@ -3566,6 +3566,7 @@ export type Database = {
           sfv_liga_id: number
           sfv_liga_name: string | null
           sfv_saison_id: number
+          sfv_saison_name: string | null
           sfv_team_id: number
           siege: number | null
           stand_vom: string | null
@@ -3591,6 +3592,7 @@ export type Database = {
           sfv_liga_id: number
           sfv_liga_name?: string | null
           sfv_saison_id: number
+          sfv_saison_name?: string | null
           sfv_team_id: number
           siege?: number | null
           stand_vom?: string | null
@@ -3616,6 +3618,7 @@ export type Database = {
           sfv_liga_id?: number
           sfv_liga_name?: string | null
           sfv_saison_id?: number
+          sfv_saison_name?: string | null
           sfv_team_id?: number
           siege?: number | null
           stand_vom?: string | null
