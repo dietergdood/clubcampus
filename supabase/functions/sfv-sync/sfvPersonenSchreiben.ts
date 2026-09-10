@@ -14,7 +14,7 @@
 //   `throw`, sondern in `{ data, error }`.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { bildeSfvPerson, entdoppleSfvPersonen } from "./matchdaten.ts";
+import { bildeSfvPerson, bildeSfvPersonAusBank, entdoppleSfvPersonen } from "./matchdaten.ts";
 import type { SfvRoh } from "./matchdaten.ts";
 
 export interface NamenSchreibErgebnis {
@@ -44,12 +44,28 @@ export async function schreibeSfvPersonen(
   unsereClubNummer: number | null,
   vereinId: string,
   jetzt: string,
+  /**
+   * ⚠ DIE BANK, seit 10.09.2026 — und sie ist der ganze Grund.
+   * `/players` liefert nur die Startelf; 207 Eingewechselte hatten
+   * deshalb keinen Namen. Ihre Namen stehen in `/bench`, unter
+   * `personName` statt `firstname`/`name`.
+   */
+  rohBank: SfvRoh[] = [],
 ): Promise<NamenSchreibErgebnis> {
-  const zeilen = entdoppleSfvPersonen(
-    rohSpieler
-      .map((p) => bildeSfvPerson(p, unsereClubNummer, vereinId, jetzt))
-      .filter((z): z is NonNullable<typeof z> => z !== null),
-  );
+  const zeilen = entdoppleSfvPersonen([
+    ...rohSpieler
+      .map((p) => bildeSfvPerson(p, unsereClubNummer, vereinId, jetzt)),
+    /* ⚠ NACH den Spielern: bei Entdopplung gewinnt der spaetere Treffer,
+       und die zerlegte Form aus /players („Max Muster") ist verlaesslicher
+       als die zusammengesetzte aus /bench, deren Reihenfolge ungemessen
+       ist. Wer beides hat, soll die bessere behalten — also muss die
+       schlechtere ZUERST stehen.
+
+       ⚠ Hier ist die Reihenfolge also umgekehrt gemeint als bei
+       entdoppleSfvPersonen() sonst. Deshalb steht es dabei. */
+    ...rohBank
+      .map((p) => bildeSfvPersonAusBank(p, unsereClubNummer, vereinId, jetzt)),
+  ].filter((z): z is NonNullable<typeof z> => z !== null));
   if (!zeilen.length) {
     return { geschrieben: 0, uebersprungen: rohSpieler.length };
   }

@@ -385,7 +385,8 @@ Deno.serve(async (req) => {
          2 · DER ANTWORTTYP. `Accept: application/json` ist derselbe wie
              bei `/players` und `/events`, die laufen — und die
              Swagger-Datei nennt fuer alle drei dieselben drei Typen.
-             Trotzdem wird der zweite Versuch mit `*​/*` gemacht: ein
+             Trotzdem wird der zweite Versuch mit einem Accept gemacht, das jeden
+             Typ zulaesst: ein
              Schema ist keine Antwort, heute zum dritten Mal.
 
          ⚠ BEIDE VERSUCHE WERDEN GEMELDET, mit Spiel und Status. Ein

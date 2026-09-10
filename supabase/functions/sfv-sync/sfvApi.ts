@@ -51,7 +51,8 @@ async function hole(z: SfvZugang, token: string, pfad: string): Promise<unknown>
  *
  * ⚠ Ein Schema ist keine Antwort — heute zum dritten Mal. Deshalb wird
  * der zweite Versuch nicht geraten, sondern gemessen: derselbe Aufruf mit
- * `Accept: *​/*`. Antwortet er dann, lag es am Typ; kommt wieder 406, lag
+ * einem Accept, das jeden Typ zulaesst. Antwortet er dann, lag es am Typ;
+ * kommt wieder 406, lag
  * es nicht daran.
  */
 async function holeMitAccept(

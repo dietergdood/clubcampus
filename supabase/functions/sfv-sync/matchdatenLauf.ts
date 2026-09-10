@@ -17,11 +17,11 @@
 //     vorbereitet und wird bewusst noch nicht aufgerufen.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { holeMatch, holeAufstellung, holeEreignisse, holeSchiedsrichter, holeTeamBild, SfvFehler } from "./sfvApi.ts";
+import { holeMatch, holeAufstellung, holeBank, holeEreignisse, holeSchiedsrichter, holeTeamBild, SfvFehler } from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import {
-  bildeAufstellung, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
+  bildeAufstellung, bildeBankZeile, bildeEreignis, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
 } from "./matchdaten.ts";
 import type { KorrekturZeile, SfvRoh, SpielKandidat } from "./matchdaten.ts";
@@ -54,7 +54,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, bank_zeilen: 0, bank_fehler: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -79,6 +79,7 @@ export async function laufeMatchdaten(
   /* Die rohen Aufstellungen aller Spiele dieses Laufs — fuer die Paesse
      danach, in EINEM Durchgang statt einmal pro Spiel. */
   const alleRoh: SfvRoh[] = [];
+  const alleBank: SfvRoh[] = [];
 
   for (const spiel of kandidaten) {
     const matchId = spiel.sfv_match_id as number;
@@ -87,13 +88,35 @@ export async function laufeMatchdaten(
          POST /api/token wuerde den ersten sofort ungueltig machen. */
       await holeMatch(zugang, token, matchId);
       const rohAufstellung = await holeAufstellung(zugang, token, matchId);
+      /* ⚠ EIN ABRUF MEHR JE SPIEL — und er ist der Grund fuer den ganzen
+         Tag: /players liefert nur die Startelf, 207 Eingewechselte hatten
+         deshalb keinen Namen. Die Bank kostet bei zehn Spielen je Lauf
+         zehn zusaetzliche Abrufe, von 40 auf 50.
+
+         ⚠ Gebunden, nicht laut: ein Spiel ohne Bank ist keine Stoerung
+         des Laufs. Der Zaehler unten sagt trotzdem, wie oft es vorkam —
+         „keine Bank" und „nicht gefragt" sollen unterscheidbar bleiben. */
+      let rohBank: SfvRoh[] = [];
+      try {
+        rohBank = await holeBank(zugang, token, matchId);
+      } catch (e) {
+        erg.bank_fehler += 1;
+        void (e instanceof Error ? e.message : String(e));
+      }
+
       const rohEreignisse = await holeEreignisse(zugang, token, matchId);
       const rohRefs = await holeSchiedsrichter(zugang, token, matchId);
       alleRoh.push(...rohAufstellung);
+      /* ⚠ Auch die Bank: genau hier liegen die 207 Namen. */
+      alleBank.push(...rohBank);
 
-      const aufstellung = rohAufstellung
-        .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt))
-        .filter((z): z is NonNullable<typeof z> => z !== null);
+      const aufstellung = [
+        ...rohAufstellung
+          .map((p) => bildeAufstellung(p, unsereClubNummer, v.verein_id, spiel.id, jetzt)),
+        ...rohBank
+          .map((p) => bildeBankZeile(p, unsereClubNummer, v.verein_id, spiel.id, jetzt)),
+      ].filter((z): z is NonNullable<typeof z> => z !== null);
+      erg.bank_zeilen += rohBank.length ? aufstellung.filter((z) => z.ist_bank).length : 0;
 
       const ereignisse = rohEreignisse
         .map((e) => bildeEreignis(e, unsereClubNummer, v.verein_id, spiel.id, jetzt))
@@ -151,8 +174,8 @@ export async function laufeMatchdaten(
      zusaetzliche Abrufe. Nach der Schleife und nicht darin: derselbe
      Spieler steht in mehreren Spielen, und ein Stapel je Spiel schriebe
      dieselbe Zeile mehrfach. */
-  if (alleRoh.length) {
-    const namen = await schreibeSfvPersonen(db, alleRoh, unsereClubNummer, v.verein_id, jetzt);
+  if (alleRoh.length || alleBank.length) {
+    const namen = await schreibeSfvPersonen(db, alleRoh, unsereClubNummer, v.verein_id, jetzt, alleBank);
     erg.namen_geschrieben = namen.geschrieben;
   }
 

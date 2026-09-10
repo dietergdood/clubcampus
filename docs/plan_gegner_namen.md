@@ -1,3 +1,42 @@
+# ⛔ ABGELEHNT — Entscheid A statt C (10.09.2026)
+
+**Dieses Papier wird NICHT umgesetzt.** Didi hat den Entscheid am selben
+Tag geändert: **die Gegnerseite bleibt anonym.** Der Entscheid vom
+21.08.2026 steht, und keine der 19 Stellen wird angefasst —
+`spiel_ereignisse_fremde_anonym_check` bleibt, `istEigener` in
+`bildeAufstellung` und `bildeEreignis` bleibt, `matchdaten.test.ts:379`
+bleibt, alle sechs Prosa-Stellen bleiben.
+
+⚠ **Es steht trotzdem hier, aus zwei Gründen:**
+
+1. **Die Messung gilt weiter.** Die 19 Stellen sind gezählt und benannt;
+   wer den Entscheid später erneut aufmacht, muss sie nicht neu suchen.
+   Und §1 hält den öffentlichen Beleg fest (siehe unten).
+2. **Ein abgelehnter Vorschlag ohne Grund kommt in vier Wochen als
+   vergessene Aufgabe zurück.** Mit „abgelehnt am 10.09.2026" kommt er
+   nicht.
+
+⚠ **Und die vier Zeilen Code, die schon geschrieben waren, sind mit
+`git checkout` zurückgenommen worden** — bevor irgendetwas davon
+committet oder deployt wurde. Der Bestand hat C nie gesehen.
+
+---
+
+## Der Beleg, der bleibt
+
+**Gemessen am 10.09.2026 von Didi im Browser**, Spielbericht
+FC Herrliberg 3 – FC Blau-Weiss Erlenbach 1, 23.08.2026,
+`sfv_match_id 4393132`:
+
+> Für Erlenbach gelistet, **ohne Anmeldung abrufbar**: Startelf mit
+> Nummer und Position, fünf Ersatzspieler, zwei Trainer, ein Abwesender.
+
+**Die Grundlage für C wäre also da gewesen.** Der Entscheid fiel trotzdem
+auf A — das ist eine Entscheidung über das Produkt, nicht über die
+Datenlage, und die zwei sind auseinanderzuhalten.
+
+---
+
 # Plan: Entscheid C — beide Mannschaften mit Namen
 
 Stand 10.09.2026. **Gemessen, nichts gebaut.** Freigabe für den Bau steht

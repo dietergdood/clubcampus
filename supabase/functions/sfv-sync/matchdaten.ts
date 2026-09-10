@@ -48,6 +48,13 @@ export interface AufstellungZeile {
   verein_id: string;
   spiel_id: string;
   sfv_person_id: number;
+  /** Klarname aus der SFV-Antwort. Rueckfall — eine Zuordnung gewinnt. */
+  name: string | null;
+  /** Aus /bench statt aus /players? Siehe bildeBankZeile(). */
+  ist_bank: boolean;
+  rolle_id: number | null;
+  rolle_kategorie_id: number | null;
+  rolle_kategorie: string | null;
   sfv_team_id: number | null;
   rueckennr: number | null;
   position_id: number | null;
@@ -71,6 +78,15 @@ export function bildeAufstellung(
     verein_id: vereinId,
     spiel_id: spielId,
     sfv_person_id: personId,
+    /* ⚠ `firstname` + `name`, nicht `personName`: dieselbe Regel wie in
+       bildeSfvPerson(), und `secondName` bleibt weg. */
+    name: [text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim() || null,
+    ist_bank: false,
+    /* /players sagt nichts ueber die Rolle — wer hier steht, stand auf
+       dem Feld. Die Kategorie kommt nur von der Bank. */
+    rolle_id: null,
+    rolle_kategorie_id: null,
+    rolle_kategorie: null,
     sfv_team_id: zahl(p.teamId),
     rueckennr: zahl(p.jerseyNumber),
     position_id: zahl(p.positionId),
@@ -142,6 +158,67 @@ export function bildeEreignis(
   };
 }
 
+/* ── Die Ersatzbank ───────────────────────────────────────────────────────
+
+   ⚠ ⚠  /bench IST NICHT „DIE ERSATZBANK", SONDERN „ALLES, WAS NICHT AUF
+         DEM FELD STAND."
+
+   Die oeffentliche FVRZ-Seite zeigt zu Spiel 4393132 fuenf
+   Ersatzspieler, ZWEI TRAINER und einen Abwesenden; /bench gab zu 4368856
+   sechs Objekte zurueck. Die Trennung steht in den Stammdaten
+   (`Rollenkategorie`): 1 Spieler · 3 Trainer · 4 Funktionaer · 9 Betreuer.
+
+   **Gefiltert wird bei der ANZEIGE, nicht beim Schreiben** — damit eine
+   unerwartete Kategorie auffaellt, statt still durch den Filter zu
+   fallen. Erst holen und ansehen, dann die Anzeige darauf bauen.
+
+   ⚠ NUR EIGENE. Entscheid A (10.09.2026): die Gegnerseite bleibt anonym.
+   `istEigener` steht hier aus demselben Grund wie in bildeAufstellung.
+
+   ⚠ DIE ALLOWLIST WAECHST NUR UM DAS NOETIGE. `birthDate` steht in
+   derselben Antwort, eine Zeile daneben, und wird nicht gelesen — ein
+   gegnerischer wie ein eigener Junior ist ein Kind. `eventTypeId` und
+   `eventSubTypeId` bleiben ebenfalls liegen: sie beschreiben das
+   Bank-Ereignis, nicht die Person.
+
+   ⚠ UND DER NAME KOMMT HIER ANDERS. /players liefert `firstname` und
+   `name` getrennt, /bench nur `personName` — die zusammengesetzte Form
+   des Verbands. Welche Reihenfolge sie hat („Muster Max" oder „Max
+   Muster"), ist UNGEMESSEN. Sie wird deshalb unveraendert uebernommen und
+   nicht zerlegt; wer sie zerlegt, raet. */
+export function bildeBankZeile(
+  p: SfvRoh, unsere: number | null, vereinId: string, spielId: string, jetzt: string,
+): AufstellungZeile | null {
+  if (!istEigener(p.clubNumber, unsere)) return null;
+  const personId = zahl(p.personId);
+  if (personId === null) return null;
+
+  return {
+    verein_id: vereinId,
+    spiel_id: spielId,
+    sfv_person_id: personId,
+    name: text(p.personName),
+    ist_bank: true,
+    rolle_id: zahl(p.roleId),
+    rolle_kategorie_id: zahl(p.roleCategoryId),
+    rolle_kategorie: text(p.roleCategoryName),
+    sfv_team_id: zahl(p.teamId),
+    /* Die Bank kennt keine Rueckennummer und keine Position — der
+       Endpunkt fuehrt beide nicht. Nicht aus der Aufstellung
+       nachschlagen: wer auf der Bank sitzt, stand dort nicht. */
+    rueckennr: null,
+    position_id: null,
+    position_name: null,
+    von_minute: null,
+    bis_minute: null,
+    spielzeit: null,
+    zuletzt_synchronisiert: jetzt,
+  };
+}
+
+/** Die Kategorie, die einen SPIELER bezeichnet — Stammdaten, nicht geraten. */
+export const ROLLE_SPIELER = 1;
+
 /* ── Der Klarname einer eigenen Person ────────────────────────────────────
 
    ⚠ ⚠  HIER WIRD DER ENTSCHEID VOM 22.08.2026 UMGEDREHT  ⚠ ⚠
@@ -194,6 +271,41 @@ export function bildeSfvPerson(
     name,
     sfv_team_id: zahl(p.teamId),
     rueckennr: zahl(p.jerseyNumber),
+    zuletzt_gesehen: jetzt,
+  };
+}
+
+/**
+ * Dieselbe Zeile aus einer BANK-Antwort.
+ *
+ * ⚠ Der Name kommt hier als `personName` — die zusammengesetzte Form des
+ * Verbands. Ihre Reihenfolge ist UNGEMESSEN; sie wird unveraendert
+ * uebernommen und nicht zerlegt. Wer sie zerlegt, raet.
+ *
+ * ⚠ UND NUR SPIELER. `/bench` fuehrt auch Trainer, Funktionaere und
+ * Betreuer (Rollenkategorie 3, 4, 9). Ein Trainer gehoert nicht in
+ * `sfv_personen` — die Tabelle ist der Rueckfall fuer SPIELERNAMEN in
+ * Aufstellung und Verlauf, und ein Trainer taucht dort nie auf.
+ *
+ * ⚠ Gefiltert wird hier und nicht in `spiel_aufstellung`: dort soll die
+ * Kategorie sichtbar bleiben, damit eine unerwartete auffaellt.
+ */
+export function bildeSfvPersonAusBank(
+  p: SfvRoh, unsere: number | null, vereinId: string, jetzt: string,
+): SfvPersonZeile | null {
+  if (!istEigener(p.clubNumber, unsere)) return null;
+  if (zahl(p.roleCategoryId) !== ROLLE_SPIELER) return null;
+  const id = zahl(p.personId);
+  if (id === null) return null;
+  const name = text(p.personName);
+  if (!name) return null;
+  return {
+    verein_id: vereinId,
+    sfv_person_id: id,
+    name,
+    sfv_team_id: zahl(p.teamId),
+    /* Die Bank kennt keine Rueckennummer — der Endpunkt fuehrt sie nicht. */
+    rueckennr: null,
     zuletzt_gesehen: jetzt,
   };
 }

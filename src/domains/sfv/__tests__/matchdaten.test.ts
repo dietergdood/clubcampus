@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
-  bildeSfvPerson, entdoppleSfvPersonen,
+  bildeSfvPerson, entdoppleSfvPersonen, bildeBankZeile, bildeSfvPersonAusBank,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -111,13 +111,30 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
       birthDate: "1999-09-09", passportNumber: 123456,
     };
     const z = bildeAufstellung(roh, UNSERE, "v1", "s1", JETZT)!;
+    /* ⚠ Seit 10.09.2026 kommt der NAME dazu — Entscheid, die SFV-Namen zu
+       speichern. Was NICHT dazukommt, steht in derselben Antwort eine
+       Zeile daneben und ist der eigentliche Gegenstand dieses Falls. */
     expect(Object.keys(z).sort()).toEqual([
-      "bis_minute", "position_id", "position_name", "rueckennr", "sfv_person_id",
-      "sfv_team_id", "spiel_id", "spielzeit", "verein_id", "von_minute",
-      "zuletzt_synchronisiert",
+      "bis_minute", "ist_bank", "name", "position_id", "position_name",
+      "rolle_id", "rolle_kategorie", "rolle_kategorie_id", "rueckennr",
+      "sfv_person_id", "sfv_team_id", "spiel_id", "spielzeit", "verein_id",
+      "von_minute", "zuletzt_synchronisiert",
     ]);
-    expect(JSON.stringify(z)).not.toContain("Adrian");
-    expect(JSON.stringify(z)).not.toContain("Schmid");
+    /* ⚠ DIE ZWEITE HAELFTE, und sie ist die wichtigere: die Allowlist
+       waechst um EIN Feld und laesst die drei liegen. */
+    const roh2 = JSON.stringify(z);
+    expect(roh2).not.toContain("1999-09-09");   // birthDate
+    expect(roh2).not.toContain("123456");       // passportNumber
+    expect(z.name).toBe("Adrian Schmid");       // ohne secondName
+    /* ⚠ HIER STANDEN ZWEI ZEILEN, DIE DEN NAMEN VERBOTEN — aus der Zeit
+       vor dem Entscheid vom 10.09.2026, die SFV-Namen zu speichern. Sie
+       haben ihn ueberlebt, weil sie in einem Fall standen, der von
+       „Nummer, Position und Minuten" handelt und nicht von Namen.
+
+       **Genau die Sorte Stelle, die eine Umkehr uebersieht** — dieselbe
+       Familie wie der Knopftext „werden nicht gespeichert", nur in einem
+       Test statt in der Oberflaeche. Der Unterschied: dieser hier meldet
+       sich wenigstens. */
   });
 });
 
@@ -419,5 +436,91 @@ describe("entdoppleSfvPersonen", () => {
 
   it("laesst eine leere Liste leer", () => {
     expect(entdoppleSfvPersonen([])).toEqual([]);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Die Ersatzbank (10.09.2026) — der Auslöser des ganzen Tages
+
+   „Enea Scot ersetzt durch Nr. 12": 207 Eingewechselte ohne Namen, weil
+   `/players` nur die Startelf liefert. `/bench` trägt sie — belegt an
+   Spiel 4368856, sechs Objekte, `personId` und `personName` da.
+
+   ⚠ Und `/bench` ist NICHT „die Ersatzbank", sondern „alles, was nicht
+   auf dem Feld stand": die FVRZ-Seite zeigt zu Spiel 4393132 fünf
+   Ersatzspieler, ZWEI TRAINER und einen Abwesenden.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("bildeBankZeile", () => {
+  const BANK = (ueber: Record<string, unknown> = {}) => ({
+    clubNumber: UNSERE, personId: 500, personName: "Meier Luca",
+    teamId: 38309, isHomeTeam: true,
+    roleId: 11, roleCategoryId: 1, roleCategoryName: "Spieler",
+    eventTypeId: 5, eventSubTypeId: 0,
+    /* Was in derselben Antwort steht und nicht mitreisen darf: */
+    birthDate: "2005-02-01",
+    ...ueber,
+  });
+
+  it("nimmt genau die nötigen Felder — und kein Geburtsdatum", () => {
+    const z = bildeBankZeile(BANK(), UNSERE, "v1", "s1", JETZT)!;
+    expect(JSON.stringify(z)).not.toContain("2005-02-01");
+    expect(z).toMatchObject({
+      sfv_person_id: 500, name: "Meier Luca", ist_bank: true,
+      rolle_kategorie_id: 1, rolle_kategorie: "Spieler",
+    });
+  });
+
+  it("⚠ trägt die Rollenkategorie MIT, statt sie wegzufiltern", () => {
+    /* Gefiltert wird bei der Anzeige. Stünde hier ein Filter, fiele eine
+       unerwartete Kategorie still heraus statt aufzufallen. */
+    const t = bildeBankZeile(BANK({ roleCategoryId: 3, roleCategoryName: "Trainer" }),
+      UNSERE, "v1", "s1", JETZT)!;
+    expect(t.rolle_kategorie).toBe("Trainer");
+    expect(t.ist_bank).toBe(true);
+  });
+
+  it("⚠ GEGNER BLEIBEN ANONYM — auch auf der Bank", () => {
+    /* Entscheid A, 10.09.2026: die Gegnerseite bleibt anonym. Fällt diese
+       Zeile, ist die Bank zu weit gegangen. */
+    expect(bildeBankZeile(BANK({ clubNumber: FREMD }), UNSERE, "v1", "s1", JETZT)).toBeNull();
+  });
+
+  it("lässt Rückennummer, Position und Minuten leer", () => {
+    /* Der Endpunkt führt sie nicht. Sie aus der Aufstellung nachzuschlagen
+       wäre geraten: wer auf der Bank sitzt, stand dort nicht. */
+    const z = bildeBankZeile(BANK(), UNSERE, "v1", "s1", JETZT)!;
+    expect(z).toMatchObject({
+      rueckennr: null, position_id: null, position_name: null,
+      von_minute: null, bis_minute: null, spielzeit: null,
+    });
+  });
+
+  it("ohne personId keine Zeile", () => {
+    expect(bildeBankZeile(BANK({ personId: null }), UNSERE, "v1", "s1", JETZT)).toBeNull();
+  });
+});
+
+describe("bildeSfvPersonAusBank", () => {
+  const B = (ueber: Record<string, unknown> = {}) => ({
+    clubNumber: UNSERE, personId: 500, personName: "Meier Luca",
+    teamId: 38309, roleCategoryId: 1, birthDate: "2005-02-01", ...ueber,
+  });
+
+  it("schreibt den Bank-Namen nach sfv_personen", () => {
+    const z = bildeSfvPersonAusBank(B(), UNSERE, "v1", JETZT)!;
+    expect(z).toMatchObject({ sfv_person_id: 500, name: "Meier Luca", rueckennr: null });
+    expect(JSON.stringify(z)).not.toContain("2005-02-01");
+  });
+
+  it("⚠ nimmt NUR Spieler — ein Trainer gehört nicht in sfv_personen", () => {
+    /* Die Tabelle ist der Rückfall für SPIELERNAMEN in Aufstellung und
+       Verlauf. Ein Trainer taucht dort nie auf; stünde er drin, wäre die
+       Zahl „offene Spieler" um ihn zu hoch. */
+    expect(bildeSfvPersonAusBank(B({ roleCategoryId: 3 }), UNSERE, "v1", JETZT)).toBeNull();
+    expect(bildeSfvPersonAusBank(B({ roleCategoryId: 9 }), UNSERE, "v1", JETZT)).toBeNull();
+  });
+
+  it("lässt Gegner weg", () => {
+    expect(bildeSfvPersonAusBank(B({ clubNumber: FREMD }), UNSERE, "v1", JETZT)).toBeNull();
   });
 });
