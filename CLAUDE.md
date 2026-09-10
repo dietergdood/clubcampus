@@ -3515,6 +3515,68 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ „Success" HAT AN EINEM TAG ZWEIMAL NICHTS BEDEUTET — und die Ursache ist NICHT gefunden
+
+10.09.2026. Zwei Blöcke meldeten Erfolg und bewirkten nichts:
+
+| | |
+|---|---|
+| `migration_bench_ausbau.sql` | „Success. No rows returned" — die Zahl, die es melden sollte, stand in einem `raise notice`, den der Editor nicht zeigt |
+| der `ht_resultat`-Umzug | „Success" — **und die Zeile war unverändert** |
+
+#### Die naheliegende Erklärung ist gemessen und widerlegt
+
+Die Vermutung lautete: der SQL-Editor setzt die Anweisungen einzeln ab,
+das `commit;` erreicht die Transaktion nicht, und alles in
+`begin; … commit;` bleibt wirkungslos.
+
+**Gemessen über alle Migrationen des Projekts:**
+
+```
+Migrationen mit begin;/commit;   39
+        ohne                     34
+```
+
+⚠ **Unter den 39 sind `migration_sfv_spielplan.sql` (legte die ganze
+SFV-Struktur an), `etappe6a` (strich 18 Spalten) und
+`migration_bench_ausbau.sql` von demselben Nachmittag — alle drei haben
+nachweislich gewirkt.** Dieselbe Hülle, derselbe Editor, dieselbe
+Sitzung.
+
+**Die Hülle ist also nicht die Ursache.** Und der Fall wird dadurch
+schlechter, nicht besser: **derselbe Block, zweimal fast gleich
+geschrieben, hat einmal gewirkt und einmal nicht — und wir wissen nicht,
+warum.**
+
+> **Ein „Success", dessen Ursache man nicht kennt, ist gefährlicher als
+> ein Fehler.** (Didi, 10.09.2026.)
+
+#### Die Vorgabe für ALLE künftigen Blöcke
+
+Weil die Ursache offen ist, wird sie **gegenstandslos gemacht** statt
+gesucht. Jeder Block, der zum Kopieren herausgeht:
+
+| | |
+|---|---|
+| **eine einzelne Anweisung** | keine `begin; … commit;`-Hülle. Der Editor bestätigt jede Anweisung einzeln |
+| **`returning`** statt stiller Wirkung | eine Änderung, die niemanden trifft, liefert dann **null Zeilen** — und das steht in der Ausgabe |
+| **Bedingung über den INHALT**, nicht über einen Schlüssel | `where … @> '["x"]'` statt `where key = '…'`. Trifft sie nicht, sieht man es an den null Zeilen; und ein falsch angenommener Schlüsselname kann nicht mehr schaden |
+| **kein `raise notice`** | der Editor zeigt ihn nicht. Was berichtet werden soll, kommt als Zeile zurück |
+| **wiederholbar** | zweiter Lauf: null Zeilen, sichtbar folgenlos |
+
+⚠ **Und geprüft wird gegen MEHRERE Ausgangszustände, darunter solche,
+die die eigene Annahme verletzen.** Ein Prüfstand, dessen Ausgangszustand
+man selbst erfindet, bestätigt die Annahme, statt sie zu prüfen — genau
+der Fehler, mit dem der wirkungslose Block durchgegangen ist: er lief bei
+mir gegen eine Zeile, die ich selbst angelegt hatte.
+
+**Warum das die richtige Antwort ist, obwohl die Ursache offen bleibt:**
+eine gefundene Ursache hätte diesen einen Fall erklärt. Diese Bauart
+macht **jeden** Fall dieser Art sichtbar — auch den, dessen Ursache
+niemand kennt.
+
+---
+
 ### ⚠⚠ ZWEIMAL AN EINEM TAG EINE WARNUNG ÜBERSCHRIEBEN, DIE ICH SELBST GESCHRIEBEN HATTE
 
 10.09.2026. **Nicht übersehen — überschrieben.** Der Unterschied ist der
