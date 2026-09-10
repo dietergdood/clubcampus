@@ -3498,7 +3498,46 @@ niemand sähe mehr, dass es zwei Listen sind.**
 **In keine Richtung**, auch nicht „nur bei der Anzeige": genau dort fällt
 es auf, und genau dort soll es auffallen.
 
-### ⚠⚠ `/api/match/{id}/players` liefert nur die STARTELF — die Bank fehlt
+### ⚠⚠ BERICHTIGT: `/players` liefert die Bank MIT — der Befund darunter war falsch
+
+**Am 10.09.2026 aufgestellt und am selben Tag widerlegt.** Der Abschnitt
+darunter bleibt stehen, weil die 207 richtig gemessen sind — die
+**Erklärung** dafür war falsch.
+
+**Gemessen an einer echten aufgezeichneten Antwort**
+(`docs/sfv/matchdaten_beispiel.json`, ein Spiel, 32 Spieler):
+
+| | |
+|---|---|
+| eigene Objekte | **20** — eine Startelf wären 11 |
+| davon `positionName = "Ersatz (S)"` | **7** |
+| `assignmentRoleName` | `-` 20× · **`Ersatz` 10×** · `Captain` 2× |
+| Gegner | 12 Objekte, **alle mit Nummer und Position** |
+
+**`/players` führt Startelf und Bank, mit Rückennummer, Position und
+sogar dem Captain.** Die Unterscheidung steht doppelt da:
+`assignmentRoleName = "Ersatz"` und `positionName = "Ersatz (S)"`.
+
+⚠ **Woran der Fehlschluss lag:** die 207 messen **fehlende NAMEN in
+`sfv_personen`**, nicht fehlende Zeilen in `spiel_aufstellung`. Aus „207
+Eingewechselte haben keinen Namen" folgt nicht „`/players` kennt sie
+nicht" — genau die Verwechslung, die dieses Projekt als „ein Ausfall in
+der Verkleidung einer Datenlage" führt, nur andersherum: **eine Datenlage
+in der Verkleidung eines Ausfalls.**
+
+⚠ **Und ich habe daraus einen Endpunkt gebaut, den es vielleicht nicht
+braucht.** `/bench` liefert Rollenkategorien und weder Nummer noch
+Position; wenn `/players` die Bank ohnehin führt, ist der zusätzliche
+Abruf je Spiel womöglich umsonst. **Das ist zu messen, bevor er bleibt.**
+
+**Was offen bleibt:** warum die 207 dann keinen Namen haben. Die Zeilen
+müssten in `spiel_aufstellung` stehen. Zu prüfen ist, ob
+`spiel_aufstellung` diese Spiele überhaupt abdeckt — 640 Zeilen über 42
+Spiele (29.08.2026), während `spiel_ereignisse` mehr Spiele umfasst.
+
+---
+
+### ⚠ Der ursprüngliche Befund (10.09.2026) — Zahlen richtig, Erklärung falsch
 
 Gemessen am 10.09.2026, **zweimal unabhängig**, und beide Male dieselbe
 Zahl: **207**.
