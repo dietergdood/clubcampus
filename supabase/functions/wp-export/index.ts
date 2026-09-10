@@ -157,23 +157,86 @@ Deno.serve(async (req) => {
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const authHeader = req.headers.get("Authorization");
 
-  /* ⚠ Nur mit Anmeldung, nie ueber den Zeitplan. Die Antwort traegt
-     Klarnamen, sobald jemand zugeordnet ist — und die Antwort eines
-     Cron-Laufs legt pg_net in net._http_response.content ab, einem
-     Speicher, den niemand im Blick hat. Dieselbe Regel wie bei der
-     Aktion `namen` des SFV-Sync. */
-  if (!authHeader) return json({ fehler: "Nicht autorisiert" }, 401);
+  /* ══════════════════════════════════════════════════════════════════
+     DER ZEITPLAN-PFAD — nur `export`, nie etwas anderes (10.09.2026)
 
-  const alsAufrufer = createClient(url, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: istAdmin, error: rechteFehler } = await alsAufrufer.rpc("is_admin");
-  if (rechteFehler) return json({ fehler: "Rechte nicht prüfbar" }, 403);
-  if (!istAdmin) return json({ fehler: "Nur für Administratoren" }, 403);
+     ⚠ ⚠  WARUM `probe` GESPERRT BLEIBT UND `export` NICHT. Die
+           Unterscheidung ist der ganze Punkt, und sie ist die Sorte, die
+           jemand spaeter einebnet („dann lassen wir halt beides zu").
 
-  const { data: meinVerein } = await alsAufrufer.rpc("get_my_verein_id");
-  if (!meinVerein) return json({ fehler: "Kein Verein für diesen Aufrufer" }, 403);
-  const vereinId = String(meinVerein);
+     Der Grund fuer die Sperre war nie „Zeitplaene sind unsicher",
+     sondern EIN Satz ueber die ANTWORT:
+
+       pg_net legt die Antwort eines Cron-Aufrufs in
+       `net._http_response.content` ab — einen Speicher, den niemand im
+       Blick hat und der nicht fuer Personendaten gedacht ist.
+
+     Gemessen am 10.09.2026, was die zwei Aktionen zurueckgeben:
+
+       probe   die gebauten Spiele samt Verlauf und AUFSTELLUNG — also
+               Klarnamen, sobald jemand zugeordnet ist. **Gesperrt.**
+       export  Zaehlungen je Mannschaft, Dauer, die WordPress-Antwort.
+               **Keine Namen.** Freigegeben.
+
+     ⚠ Die Sperre haengt also am INHALT DER ANTWORT, nicht am Aufrufweg.
+     Wer eine dritte Aktion ueber den Zeitplan zulassen will, misst
+     zuerst, was sie zurueckgibt — und nicht, ob sie „auch nur liest".
+     `bestand`, `status` und `ranglisten` sind bewusst NICHT freigegeben:
+     ungemessen ist gesperrt.
+
+     ⚠ Und der Schluessel ist ein Tuersteher, kein Ausweis: er schaltet
+     den Pfad frei und autorisiert niemanden. Der Verein kommt weiterhin
+     aus der Datenbank, nicht aus dem Aufruf. */
+  const syncKey = req.headers.get("X-Sync-Key");
+  const erwarteterSyncKey = Deno.env.get("WP_SYNC_KEY") ?? "";
+  const perZeitplan = Boolean(
+    syncKey && erwarteterSyncKey && syncKey === erwarteterSyncKey,
+  );
+  if (perZeitplan && aktion !== "export") {
+    return json({
+      fehler: `Über den Zeitplan ist nur "export" erlaubt`,
+      grund: "Die Antworten der anderen Aktionen tragen Klarnamen, und "
+        + "pg_net legt sie in net._http_response ab.",
+      erlaubt_per_zeitplan: ["export"],
+    }, 403);
+  }
+
+  if (!perZeitplan && !authHeader) {
+    return json({ fehler: "Nicht autorisiert" }, 401);
+  }
+
+  let vereinId: string;
+  if (perZeitplan) {
+    /* ⚠ Kein Aufrufer, also kein get_my_verein_id. Der Verein kommt aus
+       der Anschlusszeile — genau wie beim SFV-Sync, und aus demselben
+       Grund: der Zeitplan darf den Mandanten nicht aussuchen. */
+    const dbZ = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+    const { data: v, error: vFehler } = await dbZ
+      .from("api_verbindungen").select("verein_id")
+      .eq("key", "wordpress").eq("active", true).eq("auto_sync", true);
+    if (vFehler) return json({ fehler: `Anschluss nicht lesbar: ${vFehler.message}` }, 500);
+    /* ⚠ Genau EINER. Null heisst „nicht scharfgeschaltet" und ist kein
+       Fehler; mehrere waeren einer, denn dieser Pfad kennt keinen
+       Mandanten aus dem Aufruf. */
+    if (!v || v.length === 0) {
+      return json({ hinweis: "Kein aktiver WordPress-Anschluss — nichts zu tun.", laeufe: 0 });
+    }
+    if (v.length > 1) {
+      return json({ fehler: `${v.length} aktive WordPress-Anschluesse — der Zeitplan kann nicht wählen` }, 500);
+    }
+    vereinId = String(v[0].verein_id);
+  } else {
+    const alsAufrufer = createClient(url, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: authHeader ?? "" } },
+    });
+    const { data: istAdmin, error: rechteFehler } = await alsAufrufer.rpc("is_admin");
+    if (rechteFehler) return json({ fehler: "Rechte nicht prüfbar" }, 403);
+    if (!istAdmin) return json({ fehler: "Nur für Administratoren" }, 403);
+
+    const { data: meinVerein } = await alsAufrufer.rpc("get_my_verein_id");
+    if (!meinVerein) return json({ fehler: "Kein Verein für diesen Aufrufer" }, 403);
+    vereinId = String(meinVerein);
+  }
 
   /* Lesen ueber die Service Role: die Probe soll denselben Datenstand
      sehen wie der spaetere Lauf ueber den Zeitplan, nicht den durch RLS

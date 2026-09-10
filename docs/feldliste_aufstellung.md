@@ -168,6 +168,59 @@ behandelt wurde.
 
 ---
 
+## 5a · ⚠ Ein einmal geschriebener Repeater bleibt stehen
+
+**Gemessen am 10.09.2026, weil der Fall beim Eintragen in `CC_FELDER`
+auffiel.**
+
+`cc_schreibe_felder()` überspringt jedes Feld, das **nicht in der
+Nutzlast steht** (`array_key_exists`). Und `aufstellung` wird bei einem
+Spiel ohne Aufstellungszeilen **gar nicht mitgeschickt** — absichtlich:
+eine leere Liste hiesse „niemand hat gespielt", das Fehlen heisst „wir
+wissen es nicht".
+
+**Daraus folgt: eine einmal geschriebene Aufstellung verschwindet drüben
+nicht mehr von selbst.**
+
+### Kann das vorkommen? Durch den Verband: nein
+
+| | |
+|---|---|
+| eigene Zeilen | **nur `upsert`**, nie gelöscht (`matchdatenLauf.ts:150`) |
+| Gegnerzeilen | ersetzt — aber der ganze Block steht in `if (fremdeZeilen.length)`. Liefert der Verband nichts, wird **auch nicht gelöscht** |
+
+**Der Verband kann eine Aufstellung also nicht zurückziehen.** Was
+einmal in `spiel_aufstellung` steht, bleibt dort.
+
+### ⚠ Durch uns: ja — und es ist heute schon passiert
+
+`migration_bench_ausbau.sql` hat am 10.09.2026 **20 Zeilen gelöscht**
+(die Trainer aus `/bench`). Wären sie vorher exportiert worden, stünden
+sie heute noch auf der Website — die Nutzlast liesse das Feld einfach
+weg, und der Empfänger fasste es nicht an.
+
+**Der Weg zurück existiert in unseren Daten und wird nur nicht
+benutzt:**
+
+| `matchdaten_geholt_am` | Zeilen | heisst | Nutzlast |
+|---|---|---|---|
+| leer | — | **noch nicht geholt** | Feld weglassen |
+| gesetzt | vorhanden | die Aufstellung | senden |
+| gesetzt | **keine** | **der Verband führt keine** | ⚠ heute: weglassen · richtig wäre: **`[]` senden** |
+
+**Die dritte Zeile ist die Lücke.** Wir *wissen* den Unterschied
+zwischen „nicht geholt" und „geholt, nichts da" — wir sagen ihn nur
+nicht. Ein ausdrückliches `[]` in genau diesem Fall macht eine
+Rücknahme möglich, ohne ein neues Feld und ohne die Bedeutung von
+„fehlt" anzutasten.
+
+⚠ **Nicht gebaut, weil es eine Entscheidung ist:** danach kann ein
+fehlerhafter Lauf eine korrekte Aufstellung löschen, wo heute nur eine
+veraltete stehenbliebe. Beides ist ein Schaden, und welcher der
+kleinere ist, hängt daran, wie oft die Daten von Hand angefasst werden.
+
+---
+
 ## 6 · Was NICHT kommt
 
 | | warum |
