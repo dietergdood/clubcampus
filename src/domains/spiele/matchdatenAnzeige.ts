@@ -308,12 +308,73 @@ export function beschreibeWer(
  * Leerer Text heisst „über diesen Menschen ist nichts bekannt": weder Id
  * noch Nummer. Dann nennt die Zeile ihn gar nicht, statt „für Nr. null".
  */
+/**
+ * Die Bruecke ueber die Rueckennummer: `spiel_id:nummer` → Name.
+ *
+ * ⚠ ⚠  NUR EIGENE ZEILEN, NUR BEI GENAU EINEM TREFFER.
+ *
+ *   Die Nummer ist KEIN Schluessel (CLAUDE.md, 10.09.2026) — sie gibt es
+ *   in beiden Mannschaften. Der erste echte Fall kam am selben Tag von
+ *   der Website: im Verlauf „Fiona Monteleone ersetzt durch Nr. 9", und
+ *   in der Aufstellung stand unter der 9 eine Spielerin der GEGNERISCHEN
+ *   Mannschaft. Ein Join ohne Seitenfilter haette den falschen Namen
+ *   eingesetzt — mit vollem Namen, auf einer oeffentlichen Seite.
+ *
+ *   Deshalb: `ist_eigener` auf beiden Seiten, dasselbe Spiel, und bei
+ *   zwei Kandidaten **gar keiner**. Eine Bruecke, die raet, ist
+ *   schlimmer als keine.
+ */
+export function baueNummernBruecke(
+  zeilen: { spiel_id: string; ist_eigener: boolean; rueckennr: number | null;
+            name: string | null }[],
+): Map<string, string> {
+  const kandidaten = new Map<string, Set<string>>();
+  for (const z of zeilen) {
+    if (!z.ist_eigener || z.rueckennr == null) continue;
+    const n = String(z.name ?? "").trim();
+    if (!n) continue;
+    const k = `${z.spiel_id}:${z.rueckennr}`;
+    const menge = kandidaten.get(k) ?? new Set<string>();
+    menge.add(n);
+    kandidaten.set(k, menge);
+  }
+  const raus = new Map<string, string>();
+  for (const [k, menge] of kandidaten) {
+    /* ⚠ Zwei verschiedene Namen unter derselben Nummer: die Bruecke
+       traegt nicht, und Schweigen ist die richtige Antwort. */
+    if (menge.size === 1) raus.set(k, [...menge][0]);
+  }
+  return raus;
+}
+
+/**
+ * @param bruecke `spiel_id:nummer` → Name, aus der Aufstellung derselben
+ *   Partie. Siehe baueNummernBruecke().
+ * @param spielId nur noetig, wenn die Bruecke benutzt werden soll.
+ */
 export function beschreibeGewechselten(
   e: Pick<EreignisZeile, "ein_sfv_person_id" | "ein_rueckennr">,
   namen?: Map<number, string>,
+  bruecke?: Map<string, string>,
+  spielId?: string,
 ): string {
   const name = e.ein_sfv_person_id != null ? namen?.get(e.ein_sfv_person_id) : null;
   if (name) return name;
+
+  /* ⚠ ⚠  DER RUECKFALL, UND ER IST DER NORMALFALL — nicht die Ausnahme.
+     Gemessen am 10.09.2026 an fuenf Wechseln eines Spiels: KEIN einziges
+     Paar aus `substitutePlayerId` und `personId` stimmt ueberein, und
+     die Ereignis-Kennung loest nirgends auf. Ueber die Rueckennummer
+     findet sich jeder Name.
+
+     **`substitutePlayerId` ist kein personId.** Die Kennung war die
+     ganze Zeit da und zeigte ins Leere — deshalb hat `wechselnachtrag`
+     nichts gebracht, deshalb waren die 207 nie ueber `sfv_personen`
+     loesbar, und deshalb ist `/bench` gebaut worden. */
+  if (bruecke && spielId != null && e.ein_rueckennr != null) {
+    const ueber = bruecke.get(`${spielId}:${e.ein_rueckennr}`);
+    if (ueber) return ueber;
+  }
   return e.ein_rueckennr != null ? `Nr. ${e.ein_rueckennr}` : "";
 }
 

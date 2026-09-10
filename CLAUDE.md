@@ -3578,6 +3578,89 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ `substitutePlayerId` IST KEIN `personId` — der Bogen eines ganzen Tages
+
+10.09.2026, gemessen an fünf Wechseln eines Spiels:
+
+| Minute | Ereignis-Id | Nr. | Aufstellungs-Id | Name aus der Aufstellung | Name unter der Ereignis-Id |
+|---|---|---|---|---|---|
+| 30 | 1266706 | 15 | 1097318 | Yves Binkert | **null** |
+| 35 | 476984 | 16 | 466339 | Lukas Dangel | **null** |
+| 41 | 954486 | 12 | 845688 | Nicolas Grimm | **null** |
+| 46 | 1327797 | 17 | 1146266 | Elias Christian Bazzi | **null** |
+| 46 | 1268572 | 13 | 1098907 | Mahir Mohamed Ali | **null** |
+
+**Fünf von fünf. Kein einziges Paar stimmt überein, und die
+Ereignis-Kennung löst nirgends auf. Über die Rückennummer findet sich
+jeder Name.**
+
+```
+spiel_aufstellung.sfv_person_id      ←  /players   personId
+spiel_ereignisse.ein_sfv_person_id   ←  /events    substitutePlayerId
+```
+
+⚠ **Zwei Schlüsselräume, und der Verband mischt sie im SELBEN
+Ereignisobjekt:** `personId` derselben Zeile löst auf (der Verlauf zeigt
+„Fiona Monteleone"), `substitutePlayerId` nicht.
+
+#### Der Bogen — und er ist die eigentliche Lehre
+
+| | |
+|---|---|
+| **Vormittag** | zwei Wege messen unabhängig **207** Wechsel ohne Namen des Eingewechselten |
+| daraus geschlossen | *„207 von 207 stehen in keiner Aufstellung"* — eine SQL-Abfrage, die auf `sfv_person_id` joint |
+| daraus gebaut | **`/bench`**, ein zusätzlicher Abruf je Spiel |
+| **Nachmittag** | `/players` führt die Bank mit → `/bench` wieder ausgebaut, 20 Trainerzeilen gelöscht |
+| **Abend** | Didi sieht auf der Website: *„Fiona Monteleone ersetzt durch Nr. 9"* — und zehn Zeilen tiefer *„9 Sara Bösch"*. **Der Name steht auf derselben Seite.** |
+| gemessen | die Ids gehören zwei verschiedenen Räumen an |
+
+⚠ **Die Join-Zahl 0 war richtig — als Aussage über IDS. Gelesen wurde sie
+als Aussage über MENSCHEN.** Genau dieselbe Verwechslung wie am
+Vormittag („fehlende Namen" als „fehlende Zeilen"), nur eine Ebene
+tiefer, und ich habe sie am selben Tag zweimal gemacht.
+
+**Und daraus folgt rückwirkend dreierlei:**
+
+- ⚠ **`wechselnachtrag` konnte nie etwas bringen** — er holt Kennungen,
+  die ins Leere zeigen.
+- ⚠ **Die 207 waren nie über `sfv_personen` lösbar** — nicht weil dort
+  etwas fehlt, sondern weil dort **nach der falschen Nummer** gesucht
+  wurde.
+- ⚠ **`/bench` wurde auf eine Fehllesung gebaut** und einen halben Tag
+  später wieder ausgebaut. **Die Kennung war die ganze Zeit da und zeigte
+  ins Leere.**
+
+#### Die vier Stellen, die sie für einen Personenschlüssel hielten
+
+| | |
+|---|---|
+| `matchdatenAnzeige.ts:315` `beschreibeGewechselten` | ✅ **behoben** — Rückfall über die Nummer |
+| `wpNutzlast.ts:833` `zaehleVerlaufNamen` | ⚠ zählt gegen `sfv_personen` — deshalb war „207 ohne Namen" strukturell garantiert |
+| `sfv-sync/index.ts:467` `wechselprobe` | wählt ein Spiel nach „hat eine Kennung" — der Zweck ruhte auf der Annahme |
+| `migration_aufstellung_bank.sql:102` | **die Abfrage, die „207 von 207" erzeugt hat** — der Ursprung |
+
+#### ⚠ Die Brücke verstösst gegen eine eigene Regel, und das ist begründet
+
+`CLAUDE.md` führt seit demselben Tag: *„Die Rückennummer ist kein
+Schlüssel — auch nicht innerhalb eines Spiels."* Die Brücke tut genau
+das.
+
+> **Die Kennung IST mitgenommen — sie löst nur nicht auf. Wo der
+> Schlüssel bricht, ist die Beschriftung die einzige Brücke — und dann
+> gehört die Kollisionsprobe dazu, nicht das Vertrauen.**
+
+⚠ **Der erste echte Kollisionsfall kam am selben Abend von der Website:**
+die 9 gibt es in beiden Mannschaften. Ein Join ohne Seitenfilter hätte
+**den falschen Namen** in eine Verlaufszeile gesetzt, mit vollem Namen,
+auf einer öffentlichen Seite. Deshalb: **nur `ist_eigener`, nur dasselbe
+Spiel, und bei zwei Kandidaten gar keiner.**
+
+**Und `ueber_nummer_aufgeloest` zählt, wie oft sie trägt** — nicht als
+Erfolgsmass, sondern als Mass dafür, wie oft der Verband seine eigene
+Kennung nicht auflöst. Fällt die Zahl gegen null, löst er wieder auf.
+
+---
+
 ### ⚠⚠ EINE PRÜFUNG, DIE AUS EINEM SATZ BESTEHT, SCHWEIGT IMMER
 
 10.09.2026. `wp-export-empfaenger.php` trug an zwei Stellen eine

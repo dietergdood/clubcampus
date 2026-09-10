@@ -283,6 +283,13 @@ export function bildeVerlauf(
   heimspiel: boolean,
   namen: Map<number, string>,
   unserKlub: string,
+  /** Siehe baueNummernBruecke() — `spiel_id:nummer` → Name. */
+  bruecke?: Map<string, string>,
+  spielId?: string,
+  /** ⚠ Wird hochgezaehlt, wenn die Bruecke traegt. Sie ist ein Rueckfall
+      ueber eine Anzeigeangabe, und wie oft er greift, gehoert gezaehlt —
+      steigt die Zahl gegen null, loest der Verband wieder auf. */
+  zaehler?: { ueber_nummer_aufgeloest: number },
 ): WpVerlaufZeile[] {
   const zeilen: WpVerlaufZeile[] = [];
 
@@ -324,7 +331,18 @@ export function bildeVerlauf(
        Der Wortlaut folgt dem Verband. Nicht aus Bequemlichkeit: wer
        beide Seiten nebeneinanderlegt, soll nicht erst uebersetzen
        muessen, um zu sehen, ob dasselbe dasteht. */
-    const zweiter = art === "wechsel" ? beschreibeGewechselten(e, namen) : "";
+    let zweiter = "";
+    if (art === "wechsel") {
+      const ohne = beschreibeGewechselten(e, namen);
+      zweiter = beschreibeGewechselten(e, namen, bruecke, spielId);
+      /* ⚠ Die Differenz ist der Zaehler: nur wenn die Bruecke etwas
+         beigetragen hat, das die Karte nicht hatte. Sonst zaehlte er
+         jeden aufgeloesten Wechsel mit und saehe nach Erfolg aus, wo
+         nichts geschah. */
+      if (zaehler && zweiter !== ohne && !zweiter.startsWith("Nr. ")) {
+        zaehler.ueber_nummer_aufgeloest += 1;
+      }
+    }
     const text = zweiter
       ? `${wer} ersetzt durch ${zweiter}`
       : `${wer}${zusatz}`;
@@ -893,6 +911,10 @@ export function bildeSpiel(
   ereignisse: AnzeigeEreignis[],
   namen: Map<number, string>,
   unserKlub: string,
+  /** Siehe baueNummernBruecke(). Fehlt sie, bleibt es bei „Nr. 9". */
+  bruecke?: Map<string, string>,
+  spielId?: string,
+  zaehler?: { ueber_nummer_aufgeloest: number },
 ): WpSpiel | null {
   if (q.sfv_match_id == null) return null;
 
@@ -947,7 +969,8 @@ export function bildeSpiel(
     tore_gast: tore.tore_gast,
     halbzeit_heim: halb.tore_heim,
     halbzeit_gast: halb.tore_gast,
-    verlauf: bildeVerlauf(ereignisse, heimspiel, namen, unserKlub),
+    verlauf: bildeVerlauf(ereignisse, heimspiel, namen, unserKlub,
+      bruecke, spielId, zaehler),
   };
 }
 

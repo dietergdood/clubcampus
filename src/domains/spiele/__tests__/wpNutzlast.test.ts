@@ -21,6 +21,7 @@ import {
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
   ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
 } from "../wpNutzlast.ts";
+import { baueNummernBruecke, beschreibeGewechselten } from "../matchdatenAnzeige.ts";
 import type { SpielQuelle, AufstellungQuelle, AufstellungZaehlung } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
 import { TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS } from "../matchdatenAnzeige.ts";
@@ -1000,5 +1001,81 @@ describe("baueAufstellung", () => {
       zeilen_eigen: 0, zeilen_fremd: 0, ohne_namen: 0, widerspruch: 0,
       unplausibel: 0, korrigiert: 0, unbekannte_rollen: [], ohne_minuten: 0,
     });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Die Brücke über die Rückennummer (10.09.2026)
+
+   ⚠ ANLASS, gemessen an fünf Wechseln eines Spiels: KEIN einziges Paar
+   aus `substitutePlayerId` und `personId` stimmt überein.
+
+     Minute  Ereignis-Id  Nr.  Aufstellungs-Id  Name
+      30     1266706      15   1097318          Yves Binkert
+      35      476984      16    466339          Lukas Dangel
+      41      954486      12    845688          Nicolas Grimm
+
+   **`substitutePlayerId` ist kein `personId`.** Die Kennung war die
+   ganze Zeit da und zeigte ins Leere.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("baueNummernBruecke", () => {
+  const z = (nr: number | null, name: string | null, eigen = true, spiel = "s1") =>
+    ({ spiel_id: spiel, ist_eigener: eigen, rueckennr: nr, name });
+
+  it("bildet spiel:nummer → Name aus eigenen Zeilen", () => {
+    const b = baueNummernBruecke([z(9, "Sara Bösch"), z(12, "Nicolas Grimm")]);
+    expect(b.get("s1:9")).toBe("Sara Bösch");
+    expect(b.get("s1:12")).toBe("Nicolas Grimm");
+  });
+
+  it("⚠ nimmt KEINE Gegnerzeile auf", () => {
+    /* Sie trägt ohnehin keinen Namen (der CHECK verbietet es) — aber die
+       Brücke soll auch dann schweigen, wenn doch einer dastünde. */
+    const b = baueNummernBruecke([z(9, "Fremde Spielerin", false)]);
+    expect(b.size).toBe(0);
+  });
+
+  it("⚠ schweigt bei zwei Namen unter derselben Nummer", () => {
+    /* Der Fall von der Website: die 9 gibt es in beiden Mannschaften.
+       Eine Brücke, die rät, ist schlimmer als keine. */
+    const b = baueNummernBruecke([z(9, "Sara Bösch"), z(9, "Andere Person")]);
+    expect(b.has("s1:9")).toBe(false);
+  });
+
+  it("hält die Spiele auseinander", () => {
+    const b = baueNummernBruecke([z(9, "A", true, "s1"), z(9, "B", true, "s2")]);
+    expect(b.get("s1:9")).toBe("A");
+    expect(b.get("s2:9")).toBe("B");
+  });
+});
+
+describe("beschreibeGewechselten mit Brücke", () => {
+  const bruecke = new Map([["s1:9", "Sara Bösch"]]);
+
+  it("die Karte gewinnt, wenn sie auflöst", () => {
+    const namen = new Map([[500, "Aus der Zuordnung"]]);
+    expect(beschreibeGewechselten(
+      { ein_sfv_person_id: 500, ein_rueckennr: 9 }, namen, bruecke, "s1",
+    )).toBe("Aus der Zuordnung");
+  });
+
+  it("⚠ die Brücke greift, wenn die Kennung ins Leere zeigt", () => {
+    /* Der Normalfall, nicht die Ausnahme: 1266706 steht in keiner
+       Personentabelle, die 15 aber in der Aufstellung. */
+    expect(beschreibeGewechselten(
+      { ein_sfv_person_id: 1266706, ein_rueckennr: 9 }, new Map(), bruecke, "s1",
+    )).toBe("Sara Bösch");
+  });
+
+  it("ohne Brücke bleibt es bei „Nr. 9“", () => {
+    expect(beschreibeGewechselten(
+      { ein_sfv_person_id: 1266706, ein_rueckennr: 9 }, new Map(),
+    )).toBe("Nr. 9");
+  });
+
+  it("⚠ eine fremde Nummer im anderen Spiel greift nicht", () => {
+    expect(beschreibeGewechselten(
+      { ein_sfv_person_id: null, ein_rueckennr: 9 }, new Map(), bruecke, "s2",
+    )).toBe("Nr. 9");
   });
 });

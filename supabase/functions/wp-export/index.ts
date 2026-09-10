@@ -53,7 +53,7 @@
 //   docs/plan_wordpress_spieldaten.md §4.2.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { mischeEreignisse, hatVerlauf } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
+import { mischeEreignisse, hatVerlauf, baueNummernBruecke } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
@@ -973,6 +973,18 @@ async function laufeProbe(
     aufProSpiel.set(z.spiel_id, liste);
   }
 
+  /* ⚠ ⚠  DIE BRUECKE UEBER DIE RUECKENNUMMER — gemessen am 10.09.2026:
+     `substitutePlayerId` ist KEIN `personId`. Fuenf von fuenf Paaren
+     stimmten nicht ueberein, und die Ereignis-Kennung loeste nirgends
+     auf; ueber die Nummer fand sich jeder Name.
+
+     Sie kostet keinen Abruf: die Aufstellung ist ohnehin geladen. */
+  const bruecke = baueNummernBruecke(
+    (aRes.data ?? []) as { spiel_id: string; ist_eigener: boolean;
+                           rueckennr: number | null; name: string | null }[],
+  );
+  const brueckeZaehler = { ueber_nummer_aufgeloest: 0 };
+
   /* ── Namen ───────────────────────────────────────────────────────── */
   /* ⚠ Heute leer: sfv_zuordnung hat null Zeilen (29.08.2026). Dann steht
      im Verlauf ueberall „Nr. 9" statt eines Namens — und genau das ist der
@@ -1061,7 +1073,8 @@ async function laufeProbe(
     const ereignisse = mischeEreignisse(roh);
     if (!hatVerlauf(roh)) ohneVerlauf++;
 
-    const spiel = bildeSpiel(s, String(s.sfv_team_id ?? ""), ereignisse, namen, unserKlub);
+    const spiel = bildeSpiel(s, String(s.sfv_team_id ?? ""), ereignisse, namen,
+      unserKlub, bruecke, String(s.id), brueckeZaehler);
     if (!spiel) { ohneSchluessel++; continue; }
     if (!spiel.publizieren) zurueckgehalten++;
     /* ⚠ NICHT bereinigt, nur gezaehlt (Entscheidung Didi, 10.09.2026):
@@ -1176,6 +1189,12 @@ async function laufeProbe(
       aufstellung_korrigiert: aufZahlen.korrigiert,
       aufstellung_ohne_minuten: aufZahlen.ohne_minuten,
       aufstellung_unbekannte_rollen: aufZahlen.unbekannte_rollen,
+      /* ⚠ Wie oft die Bruecke ueber die Rueckennummer getragen hat.
+         Immer da, auch als Null. Sie ist ein Rueckfall ueber eine
+         ANZEIGEANGABE — steigt die Zahl, ist das kein Erfolg, sondern
+         das Mass dafuer, wie oft der Verband seine eigene Kennung nicht
+         aufloest. Faellt sie gegen null, loest er wieder auf. */
+      ueber_nummer_aufgeloest: brueckeZaehler.ueber_nummer_aufgeloest,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
       runde_mit_doppelabstand: rundeMitDoppelabstand,
