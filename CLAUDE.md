@@ -3323,3 +3323,63 @@ drei kommen bei jedem Abruf ohnehin mit. **Was sie bei einem Cupspiel
 enthalten, ist ungemessen:** die Swagger-Datei hat zu keinem eine
 Beschreibung, und in der aufgezeichneten Beispielantwort ist kein Cupspiel.
 Erst messen, dann eine Spalte.
+
+### ⚠ Ein ausgefallener Sync-Lauf hinterlässt KEINE Spur — zum zweiten Mal
+
+Festgehalten am 11.09.2026 auf Didis Anweisung. **Kein Bau, ein offener
+Punkt mit Vorschlag.**
+
+`api_sync_log` bekommt seine Zeile am **Ende** eines Laufs. Wirft der Lauf
+vorher — und `sync.ts` wirft bei jedem Datenbankfehler —, wird nichts
+geschrieben. Damit sehen zwei völlig verschiedene Lagen gleich aus:
+
+| | in `api_sync_log` |
+|---|---|
+| der Lauf ist gescheitert | **keine Zeile** |
+| es gab nichts zu tun | **keine Zeile** |
+
+⚠ **Das ist derselbe blinde Fleck wie am 20./21.08.2026**, als der Sync
+14 Stunden stillstand und `cron.job_run_details` die ganze Zeit
+`succeeded` meldete — weil dort nur steht, dass die Anfrage **abgesetzt**
+wurde. Und es ist eben wieder eingetreten: nach
+`migration_spiele_spieltag.sql` schrieb der laufende Code weiter nach
+`sfv_runde`, jeder Lauf endete in `42703`, und **die einzige Spur war
+eine Lücke in den Zeitstempeln**, die man nur findet, wenn man sie sucht.
+
+**Der Beleg ist immer eine Abwesenheit** — und eine Abwesenheit fällt
+niemandem auf.
+
+⚠ **`net._http_response` hilft nicht.** Dort steht die Antwort des
+Gateways, und pg_net räumt selbst auf: am 21.08.2026 lagen dort sechs
+Zeilen, die älteste fünf Stunden alt. Die Tabelle sagt, ob es JETZT
+klemmt, nie seit wann.
+
+#### Der Vorschlag: die Zeile ZUERST schreiben, nicht zuletzt
+
+Dieselbe Bauart wie beim Löschprotokoll (23.08.2026), und aus demselben
+Grund:
+
+1. **Vor** dem ersten Abruf eine Zeile mit `status = 'laeuft'` und
+   `gestartet_am`.
+2. Am Ende dieselbe Zeile auf `ok` / `warnung` / `fehler` setzen.
+3. Der Fehlerzweig schreibt die Meldung hinein, statt sie mit dem Wurf
+   verschwinden zu lassen.
+
+Damit heisst eine Zeile auf `laeuft`, die älter als ein paar Minuten ist,
+**genau eine Sache**: der Lauf ist gestorben. Kein Rätselraten über
+Lücken.
+
+⚠ **Und der Wächter braucht dann keine Lückensuche mehr**, sondern eine
+einzige Bedingung: *gibt es eine Zeile im Zustand `laeuft`, die älter ist
+als die Laufsperre?* Das ist billiger und ehrlicher als „seit wann kam
+nichts mehr".
+
+⚠ **Ein Eintrag ohne Abschluss ist kein Formfehler, sondern die
+Aussage** — derselbe Satz wie beim `person_geloescht`-Protokoll. Wer die
+Tabelle liest, darf `laeuft` nicht als „läuft gerade" zählen, ohne aufs
+Alter zu sehen.
+
+**Was es kostet:** ein zusätzliches `insert` je Lauf und ein `update`
+statt eines `insert` am Ende. `wp-export` macht es beim scharfen Lauf
+bereits so (`status: "laeuft"`), der Sync nicht — die zwei sind hier
+ohne Grund verschieden.
