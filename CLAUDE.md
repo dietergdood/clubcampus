@@ -3515,6 +3515,65 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ ZWEIMAL AN EINEM TAG EINE WARNUNG ÜBERSCHRIEBEN, DIE ICH SELBST GESCHRIEBEN HATTE
+
+10.09.2026. **Nicht übersehen — überschrieben.** Der Unterschied ist der
+ganze Punkt: eine Warnung, die niemand liest, ist ein Ablageproblem. Eine
+Warnung, die der Autor selbst missachtet, ist ein Denkfehler.
+
+| | Warnung | wie sie überschrieben wurde |
+|---|---|---|
+| **morgens** | `migration_spiele_runde.sql` | die Spalte wurde angelegt und vom Sync berechnet — und von der Feldhoheit stillschweigend weggeschnitten |
+| **abends** | `sync_felder->spiele->_regel_ht_resultat`: *„Nicht wieder in die sfv-Liste aufnehmen … als SFV-Feld deklariert würde sie stündlich mit NULL überschrieben."* | genau das getan, und der stündliche Lauf stand still |
+
+⚠ **Die zweite steht im DATENSATZ, nicht im Code.** Sie liegt als
+Schlüssel in demselben JSON-Objekt, das die Migration ändert. Wer die
+Migration schreibt, hat sie buchstäblich vor Augen — man muss das Objekt
+lesen, um zu wissen, welche Listen es gibt.
+
+**Woran es liegt, und es ist keine Nachlässigkeit:** eine Warnung wird
+beim SCHREIBEN formuliert, aus dem Kopf heraus, in dem der Fall gerade
+frisch ist. Beim späteren Ändern liest man das Objekt als STRUKTUR — wo
+sind die Listen, wie heissen sie — und nicht als TEXT. **Der Warnsatz ist
+dann ein Feld unter anderen.**
+
+> **Die Regel: wer ein Objekt ändert, das eine `_regel_*`-Zeile trägt,
+> liest sie zuerst laut.** Sie steht dort, weil jemand — womöglich man
+> selbst — den Fall schon einmal durchdacht hat.
+
+#### ⚠ Stimmt die Warnung noch? Gemessen: ihr Mechanismus nicht, ihr Schluss ja
+
+Die Warnung sagt: *als SFV-Feld deklariert würde die Halbzeit stündlich
+mit NULL überschrieben.* **Das galt am 14.08.2026 und gilt heute nicht
+mehr** — gemessen:
+
+```
+grep ht_resultat supabase/functions/sfv-sync/sync.ts   →  kein Treffer
+```
+
+`bildeSpiel()` erzeugt das Feld **gar nicht**. Damit landet es in
+`fehlend` (`feldhoheit.ts:45`), und `sync.ts:270` **wirft**.
+
+| | damals | heute |
+|---|---|---|
+| Fehlerbild | **stilles Überschreiben** mit NULL | **lauter Abbruch** des ganzen Laufs |
+| Schaden | Datenverlust, unbemerkt | Stillstand, sofort sichtbar |
+
+⚠ **Das System ist in der Zwischenzeit sicherer geworden, und zwar
+zufällig:** weil jemand `ht_resultat` aus `bildeSpiel()` entfernt hat,
+wurde aus einem stillen Datenverlust ein lauter Abbruch. **Genau die
+Richtung, die dieses Papier überall verlangt** — nur hat sie hier niemand
+entschieden.
+
+**Und der Schluss der Warnung wird dadurch stärker, nicht schwächer:**
+`sfv` ist für dieses Feld nicht bloss unordentlich, sondern
+**unmöglich** — jeder Lauf bricht ab. Ebenso `abgeleitet` (dieselbe
+Liste). `verein` wäre eine Lüge, weil der Sync es schreibt.
+**`sfv_matchdaten` ist die einzig mögliche Gruppe**, und das ist am Code
+ablesbar, keine Geschmacksfrage.
+
+---
+
 ### ⚠⚠ EIN SQL-BLOCK, DEN ICH GEGEBEN HABE, IST AUSGELIEFERT
 
 10.09.2026, und es hat den stündlichen Sync zum Stillstand gebracht.

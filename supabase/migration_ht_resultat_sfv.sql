@@ -59,6 +59,22 @@
 --   er klingt geprueft, weil jemand ihn aufgeschrieben hat.
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- ⚠ ⚠  DIESE DATEI IST DAS PROTOKOLL, NICHT DER BLOCK ZUM AUSFUEHREN.
+--
+--   Am 10.09.2026 sind zwei Fassungen von hier ausgeliefert worden — die
+--   erste trug `ht_resultat` in `sfv` ein und hat den stuendlichen Lauf
+--   blockiert; die zweite lag richtig, wurde aber in einer
+--   `begin; … commit;`-Huelle uebergeben und blieb ohne Wirkung
+--   („Success", nichts geaendert).
+--
+--   Ausgefuehrt wurde am Ende eine EINZELNE Anweisung mit `returning` —
+--   ohne Transaktionshuelle, mit Bedingung ueber den INHALT statt ueber
+--   `key`, und mit sichtbarer Ausgabe. Sie steht unten unter „Was
+--   tatsaechlich gelaufen ist".
+--
+-- ⚠ Wer diese Datei nachtraeglich als Vorlage nimmt, nimmt den Block von
+--   dort, nicht den hier.
+
 begin;
 
 -- ⚠ ⚠  IN `sfv_matchdaten`, NICHT IN `sfv` — der erste Entwurf dieser
@@ -147,3 +163,35 @@ commit;
 --
 -- ⚠ Das ist die eigentliche Probe. Die Feldhoheit sagt, WER schreiben
 --   darf; dass der Lauf nicht NULL darueberschreibt, sagt allein der Code.
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- WAS TATSAECHLICH GELAUFEN IST (10.09.2026)
+--
+-- ⚠ Eine Anweisung, keine Transaktionshuelle, Bedingung ueber den INHALT,
+--   `returning` als Ausgabe. Sie kann nicht „Success" melden und nichts
+--   tun: bleibt sie wirkungslos, liefert sie NULL ZEILEN, und das ist
+--   sichtbar.
+--
+-- update public.api_verbindungen a
+--    set sync_felder = jsonb_set(
+--          jsonb_set(
+--            a.sync_felder,
+--            '{spiele,sfv}',
+--            (select coalesce(jsonb_agg(v), '[]'::jsonb)
+--               from jsonb_array_elements(
+--                      a.sync_felder->'spiele'->'sfv') v
+--              where v <> '"ht_resultat"'::jsonb)),
+--          '{spiele,sfv_matchdaten}',
+--          (select coalesce(jsonb_agg(distinct v), '[]'::jsonb)
+--             from jsonb_array_elements(
+--                    coalesce(
+--                      a.sync_felder->'spiele'->'sfv_matchdaten',
+--                      '[]'::jsonb)
+--                    || '["ht_resultat"]'::jsonb) v))
+--  where a.sync_felder->'spiele'->'sfv' @> '["ht_resultat"]'::jsonb
+-- returning key, …;
+--
+-- ⚠ Gegen vier Ausgangszustaende geprueft, darunter zwei, die die eigene
+--   Annahme verletzen (anderer Schluessel; nichts zu tun). Ein Pruefstand,
+--   dessen Ausgangszustand man selbst erfindet, bestaetigt die Annahme
+--   statt sie zu pruefen.
