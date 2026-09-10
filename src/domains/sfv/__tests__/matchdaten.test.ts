@@ -239,12 +239,28 @@ describe("Anonymitaet — zweites Netz: der CHECK-Constraint", () => {
       + "ein COMMENT, der ihn erwähnt, ist kein Beleg.").toBe(1);
   });
 
-  it("erzwingt bei fremden Zeilen alle vier Personenfelder auf NULL", () => {
+  /* ══════════════════════════════════════════════════════════════
+     ⚠ GEAENDERT AM 10.09.2026 — und er ist ROT GEWORDEN, wie er soll.
+
+     Er hielt „alle VIER Personenfelder auf NULL". Seit dem Entscheid,
+     dem Gegner Tor- und Kartensymbole zu geben, sind es ZWEI: die
+     Rueckennummern sind frei, die Personennummern bleiben gesperrt.
+
+     ⚠ DIESER FALL LIEST DIE ECHTE DATENBANK (ueber schema.sql) und ist
+     erst rot geworden, NACHDEM die Migration lief — nicht schon beim
+     Aendern des Codes. Das ist die staerkste Form: er haelt nicht, was
+     jemand geschrieben hat, sondern was tatsaechlich gilt.
+     ══════════════════════════════════════════════════════════════ */
+  it("erzwingt bei fremden Zeilen die PERSONENNUMMERN auf NULL — die Nummer nicht", () => {
     const zeile = schema.split("\n").find((l) => l.includes("spiel_ereignisse_fremde_anonym_check")) ?? "";
-    for (const feld of ["sfv_person_id", "rueckennr", "ein_sfv_person_id", "ein_rueckennr"]) {
+    for (const feld of ["sfv_person_id", "ein_sfv_person_id", "ist_eigener"]) {
       expect(zeile).toContain(feld);
     }
-    expect(zeile).toContain("ist_eigener");
+    /* ⚠ Die zweite Haelfte, und sie ist die eigentliche Aussage: die
+       Rueckennummer steht NICHT mehr im Verbot. Ohne diese Zeile waere
+       nicht zu unterscheiden, ob sie freigegeben wurde oder ob jemand
+       den CHECK versehentlich verkuerzt hat. */
+    expect(zeile).not.toContain("rueckennr");
   });
 
   it("trennt die beiden Schichten", () => {
