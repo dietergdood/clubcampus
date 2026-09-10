@@ -2071,7 +2071,9 @@ CREATE TABLE IF NOT EXISTS "public"."spiele" (
     "sfv_stand" "jsonb",
     "zuletzt_synchronisiert" timestamp with time zone,
     "matchdaten_geholt_am" timestamp with time zone,
-    "sfv_spiel_nr" "text"
+    "sfv_spiel_nr" "text",
+    "sfv_runde" "text",
+    "sfv_runde_nr" integer
 );
 
 
@@ -2123,6 +2125,14 @@ COMMENT ON COLUMN "public"."spiele"."matchdaten_geholt_am" IS 'Letzter erfolgrei
 
 
 COMMENT ON COLUMN "public"."spiele"."sfv_spiel_nr" IS 'matchNumber des SFV. NICHT spiel_nr — die gehoert dem Verein und wird von Hand gepflegt (siehe migration_sfv_spielplan.sql). Die Anzeige zeigt spiel_nr, wenn gesetzt, sonst diese.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_runde" IS 'SFV playDayName — der Rundenname im Klartext („1. Runde", „Achtelfinal"). Gehoert dem Verband, wird bei jedem Sync ueberschrieben. NULL, wenn er keinen nennt.';
+
+
+
+COMMENT ON COLUMN "public"."spiele"."sfv_runde_nr" IS 'SFV roundNbr. GEGENPROBE zu sfv_runde, keine Anzeigequelle: aus einer Zahl „Runde 5" zu machen waere bei Achtelfinal & Co. plausibel und falsch.';
 
 
 
