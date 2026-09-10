@@ -3601,6 +3601,55 @@ aufgezeichneten Antwort**, nicht aus einer Liste. **Es gibt keine Liste:**
 davon. Wer aus einem Beispiel eine Wertemenge ableitet, hat die Menge
 geraten.
 
+**Die vollständige Menge, am 10.09.2026 über alle Zeilen gezählt:**
+
+| `assignmentRoleId` | | Zeilen |
+|---|---|---|
+| 0 | `-` | 185 |
+| 1 | `Captain` | 19 |
+| 2 | `Ersatz` | 78 |
+| **3** | **`Kein Einsatz`** | **10** |
+
+Steht so in `ROLLE_BEKANNT` — mit dem Vermerk, dass sie **gezählt und
+nicht gelesen** ist. Die Swagger-Datei nennt `assignmentRoleId` und
+`assignmentRoleName` ohne jede Beschreibung.
+
+⚠ ⚠ **UND „Kein Einsatz" HEISST NICHT, WAS ES SAGT — die naheliegende
+Prüfung ist wertlos.** Alle zehn Zeilen tragen Position, Von-Minute und
+Spielzeit. Daraus folgt **nicht**, dass sie gespielt haben:
+
+```
+docs/sfv/matchdaten_beispiel.json, 32 Spieler:
+  playFromMinute = 1, playUntilMinute = 90, totalPlayTime = 90
+  bei ALLEN 32 — auch bei den zehn mit positionName „Ersatz (S)"
+```
+
+**Die drei Minutenfelder sind in dieser Antwort Konstanten, keine
+Messwerte.** Eine Abfrage auf `von_minute is not null` kann Einsatz und
+Bank deshalb nicht unterscheiden — sie ist für jede Zeile wahr. Ich hatte
+genau diese Abfrage vorgeschlagen; sie hat gemessen, was sie messen
+konnte, und das war nichts.
+
+⚠ **Dieselbe Familie wie „ein Zähler, dessen Name mehr behauptet als er
+misst"** — nur eine Stufe früher: hier behauptet das FELD mehr, als es
+enthält. Und es sieht richtiger aus als eine fehlende Angabe, weil eine
+Zahl dasteht.
+
+**Solange das offen ist, bekommt der Wert keinen eigenen `rolle`-Wert**
+(die Vorlage soll einmal gebaut werden) **und fällt auch nicht still auf
+`start`**: `rolleAus()` gibt `ungeklaert: true` zurück. Zu messen wäre,
+ob die drei Minutenfelder **irgendwo** etwas anderes als 1/90/90
+enthalten:
+
+```sql
+select von_minute, bis_minute, spielzeit, count(*)
+  from public.spiel_aufstellung
+ group by 1, 2, 3 order by 4 desc limit 10;
+```
+
+⚠ **Kommt dort nur eine Zeile heraus, sind drei Spalten wertlos** — und
+das wäre der grössere Befund.
+
 ---
 
 ### ⚠ Der ursprüngliche Befund (10.09.2026) — Zahlen richtig, Erklärung falsch

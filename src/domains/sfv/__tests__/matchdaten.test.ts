@@ -3,8 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
-  bildeSfvPerson, entdoppleSfvPersonen, bildeBankZeile, bildeSfvPersonAusBank,
-  verschmelzeAufstellung,
+  bildeSfvPerson, entdoppleSfvPersonen, verschmelzeAufstellung,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -185,8 +184,7 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
        speichern. Was NICHT dazukommt, steht in derselben Antwort eine
        Zeile daneben und ist der eigentliche Gegenstand dieses Falls. */
     expect(Object.keys(z).sort()).toEqual([
-      "bis_minute", "ist_bank", "ist_eigener", "name", "position_id", "position_name",
-      "rolle_id", "rolle_kategorie", "rolle_kategorie_id",
+      "bis_minute", "ist_eigener", "name", "position_id", "position_name",
       "rolle_zuweisung", "rolle_zuweisung_id", "rueckennr",
       "sfv_person_id", "sfv_team_id", "spiel_id", "spielzeit", "verein_id",
       "von_minute", "zuletzt_synchronisiert",
@@ -527,171 +525,55 @@ describe("entdoppleSfvPersonen", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   Die Ersatzbank (10.09.2026) — der Auslöser des ganzen Tages
+   Die Ersatzbank stand einen halben Tag (10.09.2026)
 
-   ⚠ ⚠  DIE BEGRÜNDUNG DARUNTER IST WIDERLEGT — der Bau bleibt vorerst,
-         der Satz nicht. Hier stand: „207 Eingewechselte ohne Namen, weil
-         /players nur die Startelf liefert."
+   `bildeBankZeile` und `bildeSfvPersonAusBank` samt ihren Fällen sind mit
+   dem Ausbau von `/bench` gefallen. Was sie prüften, gibt es nicht mehr —
+   anders als bei `nimmMitgliedschaftZurueck()`, wo eine ZUSAGE übrig
+   blieb und als Strukturprüfung weiterlebt.
 
-   **Beide Hälften falsch.** `/players` führt die Bank mit (7 von 20
-   eigenen Spielern tragen dort „Ersatz"), und die 207 zählten fehlende
-   NAMEN, nicht fehlende Zeilen. Gemessen am 10.09.2026: 80 Spiele mit
-   Aufstellung, 0 Wechsel ohne Aufstellung — die vermutete Abdeckungs-
-   lücke gibt es nicht.
+   ⚠ Hier bleibt eine Zusage trotzdem: **von einem fremden Spieler wird
+   nichts Personenbezogenes gespeichert.** Sie hing nie an der Bank und
+   steht weiter unten bei `bildeSfvPerson` und `bildeAufstellung`.
 
-   ⚠ Und was `/bench` wirklich beiträgt, ist ebenfalls gemessen: **20
-   Personen, die nicht in /players stehen, alle „Trainer/in", kein
-   einziger Spieler.** Für Namen von Spielern trägt der Abruf nichts bei
-   und kostet ein Viertel der Matchdaten-Aufrufe.
+   Der Grund für den Ausbau, gemessen am 10.09.2026: `/bench` brachte 20
+   Personen, die `/players` nicht hat — alle „Trainer/in", kein einziger
+   Spieler.
    ══════════════════════════════════════════════════════════════════════ */
-describe("bildeBankZeile", () => {
-  const BANK = (ueber: Record<string, unknown> = {}) => ({
-    clubNumber: UNSERE, personId: 500, personName: "Meier Luca",
-    teamId: 38309, isHomeTeam: true,
-    roleId: 11, roleCategoryId: 1, roleCategoryName: "Spieler",
-    eventTypeId: 5, eventSubTypeId: 0,
-    /* Was in derselben Antwort steht und nicht mitreisen darf: */
-    birthDate: "2005-02-01",
-    ...ueber,
-  });
 
-  it("nimmt genau die nötigen Felder — und kein Geburtsdatum", () => {
-    const z = bildeBankZeile(BANK(), UNSERE, "v1", "s1", JETZT)!;
-    expect(JSON.stringify(z)).not.toContain("2005-02-01");
-    expect(z).toMatchObject({
-      sfv_person_id: 500, name: "Meier Luca", ist_bank: true,
-      rolle_kategorie_id: 1, rolle_kategorie: "Spieler",
-    });
-  });
-
-  it("⚠ trägt die Rollenkategorie MIT, statt sie wegzufiltern", () => {
-    /* Gefiltert wird bei der Anzeige. Stünde hier ein Filter, fiele eine
-       unerwartete Kategorie still heraus statt aufzufallen. */
-    const t = bildeBankZeile(BANK({ roleCategoryId: 3, roleCategoryName: "Trainer" }),
-      UNSERE, "v1", "s1", JETZT)!;
-    expect(t.rolle_kategorie).toBe("Trainer");
-    expect(t.ist_bank).toBe(true);
-  });
-
-  it("⚠ GEGNER BLEIBEN ANONYM — auch auf der Bank", () => {
-    /* Entscheid A, 10.09.2026: die Gegnerseite bleibt anonym. Fällt diese
-       Zeile, ist die Bank zu weit gegangen. */
-    expect(bildeBankZeile(BANK({ clubNumber: FREMD }), UNSERE, "v1", "s1", JETZT)).toBeNull();
-  });
-
-  it("lässt Rückennummer, Position und Minuten leer", () => {
-    /* Der Endpunkt führt sie nicht. Sie aus der Aufstellung nachzuschlagen
-       wäre geraten: wer auf der Bank sitzt, stand dort nicht. */
-    const z = bildeBankZeile(BANK(), UNSERE, "v1", "s1", JETZT)!;
-    expect(z).toMatchObject({
-      rueckennr: null, position_id: null, position_name: null,
-      von_minute: null, bis_minute: null, spielzeit: null,
-    });
-  });
-
-  it("ohne personId keine Zeile", () => {
-    expect(bildeBankZeile(BANK({ personId: null }), UNSERE, "v1", "s1", JETZT)).toBeNull();
-  });
-});
-
-describe("bildeSfvPersonAusBank", () => {
-  const B = (ueber: Record<string, unknown> = {}) => ({
-    clubNumber: UNSERE, personId: 500, personName: "Meier Luca",
-    teamId: 38309, roleCategoryId: 1, birthDate: "2005-02-01", ...ueber,
-  });
-
-  it("schreibt den Bank-Namen nach sfv_personen", () => {
-    const z = bildeSfvPersonAusBank(B(), UNSERE, "v1", JETZT)!;
-    expect(z).toMatchObject({ sfv_person_id: 500, name: "Meier Luca", rueckennr: null });
-    expect(JSON.stringify(z)).not.toContain("2005-02-01");
-  });
-
-  it("⚠ nimmt NUR Spieler — ein Trainer gehört nicht in sfv_personen", () => {
-    /* Die Tabelle ist der Rückfall für SPIELERNAMEN in Aufstellung und
-       Verlauf. Ein Trainer taucht dort nie auf; stünde er drin, wäre die
-       Zahl „offene Spieler" um ihn zu hoch. */
-    expect(bildeSfvPersonAusBank(B({ roleCategoryId: 3 }), UNSERE, "v1", JETZT)).toBeNull();
-    expect(bildeSfvPersonAusBank(B({ roleCategoryId: 9 }), UNSERE, "v1", JETZT)).toBeNull();
-  });
-
-  it("lässt Gegner weg", () => {
-    expect(bildeSfvPersonAusBank(B({ clubNumber: FREMD }), UNSERE, "v1", JETZT)).toBeNull();
-  });
-});
-
-/* ─────────────────────────────────────────────────────────────────────────
-   verschmelzeAufstellung — der Fehler vom 10.09.2026
-
-   Der Lauf brach mit „ON CONFLICT DO UPDATE command cannot affect row a
-   second time" ab, weil /players und /bench dieselbe Person fuehren und
-   ich die zwei Listen aneinandergehaengt statt verschmolzen habe.
-   ───────────────────────────────────────────────────────────────────── */
 describe("verschmelzeAufstellung", () => {
-  /* Derselbe Spieler, wie der Verband ihn in BEIDEN Listen fuehrt.
-     Gemessen an docs/sfv/matchdaten_beispiel.json: 7 von 20 eigenen
-     Spielern tragen dort positionName „Ersatz (S)" — sie stehen in
-     /players UND in /bench. */
-  const AUS_PLAYERS = {
-    clubNumber: UNSERE, personId: 999001, teamId: 37930,
-    jerseyNumber: 14, positionId: 48, positionName: "Ersatz (S)",
-    assignmentRoleId: 2, assignmentRoleName: "Ersatz",
-    firstname: "Nico", name: "Beispiel",
-    playFromMinute: 60, playUntilMinute: 90, totalPlayTime: 30,
-  };
-  const AUS_BENCH = {
-    clubNumber: UNSERE, personId: 999001, teamId: 37930,
-    personName: "Nico Beispiel",
-    roleId: 1, roleCategoryId: 1, roleCategoryName: "Spieler",
-  };
+  /* ⚠ Der EIGENE Zweig ist seit dem Ausbau von /bench tot — es gibt nur
+     noch eine Quelle, und in ihr ist personId je Spiel eindeutig. Er
+     bleibt geprüft, weil er die Stelle ist, an der eine zweite Quelle
+     wieder andocken würde; genau dort hat am 10.09.2026 der Upsert
+     abgebrochen. */
+  const eigen = (personId: number) => bildeAufstellung(
+    { clubNumber: UNSERE, personId, teamId: 37930, jerseyNumber: 14,
+      positionId: 48, positionName: "Ersatz (S)",
+      assignmentRoleId: 2, assignmentRoleName: "Ersatz",
+      firstname: "Nico", name: "Beispiel" },
+    UNSERE, "v", "s", JETZT,
+  )!;
 
-  const beide = () => [
-    bildeAufstellung(AUS_PLAYERS, UNSERE, "v", "s", JETZT),
-    bildeBankZeile(AUS_BENCH, UNSERE, "v", "s", JETZT),
-  ].filter((z): z is NonNullable<typeof z> => z !== null);
-
-  it("macht aus derselben Person in /players und /bench EINE Zeile", () => {
-    /* Die Gegenprobe zuerst: ohne Verschmelzen sind es zwei — und genau
-       diese zwei liessen den Upsert abbrechen. */
-    expect(beide()).toHaveLength(2);
-    expect(verschmelzeAufstellung(beide())).toHaveLength(1);
+  it("macht aus derselben Person EINE Zeile", () => {
+    expect(verschmelzeAufstellung([eigen(999001), eigen(999001)])).toHaveLength(1);
+    expect(verschmelzeAufstellung([eigen(999001), eigen(999002)])).toHaveLength(2);
   });
 
-  it("behaelt Nummer, Position und Minuten aus /players", () => {
-    const [z] = verschmelzeAufstellung(beide());
+  it("behält Nummer, Position und Zuweisung", () => {
+    const [z] = verschmelzeAufstellung([eigen(999001), eigen(999001)]);
     expect(z.rueckennr).toBe(14);
     expect(z.position_name).toBe("Ersatz (S)");
-    expect(z.von_minute).toBe(60);
     expect(z.rolle_zuweisung).toBe("Ersatz");
   });
 
-  it("uebernimmt die Rollenkategorie, die nur /bench kennt", () => {
-    const [z] = verschmelzeAufstellung(beide());
-    expect(z.rolle_kategorie).toBe("Spieler");
-    expect(z.rolle_kategorie_id).toBe(1);
-    /* ⚠ ist_bank heisst nach dem Verschmelzen „steht in der Bankliste",
-       nicht „diese Zeile stammt aus /bench". */
-    expect(z.ist_bank).toBe(true);
-  });
-
-  it("die Reihenfolge der zwei Listen aendert nichts", () => {
-    const [vorwaerts] = verschmelzeAufstellung(beide());
-    const [rueckwaerts] = verschmelzeAufstellung([...beide()].reverse());
-    expect(rueckwaerts).toEqual(vorwaerts);
-  });
-
-  it("laesst einen Betreuer stehen, den /players nicht kennt", () => {
-    const betreuer = bildeBankZeile(
-      { ...AUS_BENCH, personId: 999002, roleCategoryId: 9,
-        roleCategoryName: "Betreuer" },
-      UNSERE, "v", "s", JETZT,
-    );
-    const zeilen = verschmelzeAufstellung([...beide(), betreuer!]);
-    expect(zeilen).toHaveLength(2);
-  });
-
-  it("entdoppelt fremde Zeilen ueber Team und Nummer, nicht ueber die Person", () => {
+  it("entdoppelt fremde Zeilen über Team und Nummer, nicht über die Person", () => {
     /* Fremde Zeilen tragen gar keine sfv_person_id (Entscheid B) — wer
-       sie darueber entdoppelte, warf sie alle bis auf eine weg. */
+       sie darüber entdoppelte, warf sie alle bis auf eine weg.
+
+       ⚠ Dieser Zweig ist der lebendige: nennt der Verband zwei Gegner
+       mit derselben Rückennummer, bräche der Upsert sonst mit 21000 ab
+       und nähme die Ereignisse desselben Spiels mit. */
     const fremd = (nr: number, team: number) => bildeAufstellung(
       { clubNumber: FREMD, personId: 123, teamId: team,
         jerseyNumber: nr, positionId: 48, positionName: "Sturm" },
@@ -704,3 +586,4 @@ describe("verschmelzeAufstellung", () => {
     expect(verschmelzeAufstellung([fremd(7, 1), fremd(7, 1)])).toHaveLength(1);
   });
 });
+

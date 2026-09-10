@@ -18,7 +18,7 @@ import {
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
   hatDoppelabstand, sammleMarken, markeSchluessel,
-  spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID,
+  spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
 } from "../wpNutzlast.ts";
 import type { SpielQuelle } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
@@ -672,18 +672,13 @@ describe("rolleAus", () => {
   it("⚠ liest die ZUWEISUNG, nicht die Position", () => {
     /* Gemessen: drei Spieler tragen „Ersatz" bei echter Position, und
        beim Gegner steht „Ersatz (S)" gar nicht. */
-    expect(rolleAus(ROLLE_ERSATZ_ID, false).rolle).toBe("ersatz");
-    expect(rolleAus(0, false).rolle).toBe("start");
-    expect(rolleAus(1, false).rolle).toBe("start");   // Captain
-  });
-
-  it("wer aus /bench kommt, ist Ersatz — dort gibt es keine Zuweisung", () => {
-    expect(rolleAus(null, true).rolle).toBe("ersatz");
-    expect(rolleAus(null, true).unbekannt).toBeNull();
+    expect(rolleAus(ROLLE_ERSATZ_ID).rolle).toBe("ersatz");
+    expect(rolleAus(0).rolle).toBe("start");
+    expect(rolleAus(1).rolle).toBe("start");   // Captain
   });
 
   it("⚠ ein UNBEKANNTER Wert fällt auf, statt still start zu werden", () => {
-    const r = rolleAus(77, false);
+    const r = rolleAus(77);
     expect(r.rolle).toBe("start");
     expect(r.unbekannt).toBe(77);
   });
@@ -692,8 +687,37 @@ describe("rolleAus", () => {
     /* Der Verband hat das Feld nicht gefüllt. Beides fällt auf, aber nur
        das zweite hat eine Zahl — sonst wäre „kein Feld" von „neuer Wert"
        nicht zu unterscheiden. */
-    const r = rolleAus(null, false);
+    const r = rolleAus(null);
     expect(r.rolle).toBe("start");
     expect(r.unbekannt).toBe(-1);
   });
+
+  /* ── Der vierte Wert (10.09.2026) ────────────────────────────────── */
+
+  it("kennt „Kein Einsatz“ — es ist kein unbekannter Wert mehr", () => {
+    /* ⚠ Bis zum 10.09.2026 waere 3 als „unbekannt: 3" gemeldet worden —
+       hätte die Meldung einen Aufrufer gehabt. Sie hatte keinen, und
+       deshalb hat den Wert eine SQL-Abfrage gefunden. */
+    expect(rolleAus(ROLLE_KEIN_EINSATZ_ID).unbekannt).toBeNull();
+  });
+
+  it("⚠ nennt „Kein Einsatz“ ungeklärt, statt ihn still start zu nennen", () => {
+    /* Gemessen: alle zehn Zeilen tragen Position, Von-Minute und
+       Spielzeit. Was daraus NICHT folgt: dass sie gespielt haben — in
+       der aufgezeichneten Antwort tragen alle 32 Spieler 1/90/90, auch
+       die zehn mit „Ersatz (S)". Solange das offen ist, bekommt der Wert
+       keinen eigenen `rolle`-Wert, faellt aber auch nicht still durch. */
+    const r = rolleAus(ROLLE_KEIN_EINSATZ_ID);
+    expect(r.rolle).toBe("start");
+    expect(r.ungeklaert).toBe(true);
+  });
+
+  it("und die drei geklärten Werte sind es nicht", () => {
+    for (const id of [0, 1, ROLLE_ERSATZ_ID]) {
+      expect(rolleAus(id).ungeklaert).toBe(false);
+    }
+    expect(rolleAus(null).ungeklaert).toBe(false);
+    expect(rolleAus(77).ungeklaert).toBe(false);
+  });
 });
+

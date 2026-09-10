@@ -27,7 +27,6 @@ export interface MatchdatenErgebnis {
   /** Zeilen nach `sfv_personen` — seit 10.09.2026. Die ZAHL, nie die Namen. */
   namen_geschrieben: number;
   /** Zeilen aus /bench — Ersatzspieler, Trainer, Betreuer zusammen. */
-  bank_zeilen: number;
   /**
    * Gegnerzeilen der Aufstellung — Nummer und Position, keine Person.
    *
@@ -48,7 +47,6 @@ export interface MatchdatenErgebnis {
    * sollen unterscheidbar bleiben. Ohne diese Zahl saehe ein Endpunkt,
    * der wieder 406 antwortet, aus wie ein Spiel ohne Ersatzspieler.
    */
-  bank_fehler: number;
   paesse_geschrieben: number;
   /* Mitglieder mit widerspruechlicher Zuordnung: zwei SFV-Personen, zwei
      Passnummern. Fuer sie wird NICHTS geschrieben — der Wert pendelte sonst
@@ -324,10 +322,8 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       eigene_unzugeordnet: md.eigene_unzugeordnet,
       zuordnungen_gesamt: md.zuordnungen_gesamt,
       namen_geschrieben: md.namen_geschrieben,
-      bank_zeilen: md.bank_zeilen,
       aufstellung_fremd: md.aufstellung_fremd,
       gegner_doppel: md.gegner_doppel,
-      bank_fehler: md.bank_fehler,
       paesse_geschrieben: md.paesse_geschrieben,
       pass_konflikte: md.pass_konflikte,
       nachzug_meldungen: md.nachzug_meldungen,

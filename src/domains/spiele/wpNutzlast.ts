@@ -403,24 +403,70 @@ export function spielerAnzeige(
    dieselbe Regel wie bei unbekannten Ereignistypen. Gemessen sind
    0 („-"), 1 („Captain") und 2 („Ersatz"); alles andere ist neu. */
 export const ROLLE_ERSATZ_ID = 2;
-export const ROLLE_BEKANNT: number[] = [0, 1, ROLLE_ERSATZ_ID];
+
+/**
+ * ⚠ „Kein Einsatz" — der vierte Wert, und er heisst NICHT, was er sagt.
+ *
+ * Gefunden hat ihn eine SQL-Abfrage, nicht die Meldung fuer unbekannte
+ * Werte: `rolleAus()` hatte am 10.09.2026 keinen Aufrufer.
+ */
+export const ROLLE_KEIN_EINSATZ_ID = 3;
+
+/**
+ * Die Wertemenge von `assignmentRoleId`.
+ *
+ * ⚠ ⚠  AN ALLEN ZEILEN GEMESSEN, NICHT AUS EINEM BEISPIEL GELESEN —
+ *       und das ist der Unterschied, um den es geht.
+ *
+ * Bis zum 10.09.2026 stand hier `[0, 1, 2]`. Die drei stammten aus EINER
+ * aufgezeichneten Antwort; ich hatte aus einer Stichprobe eine Wertemenge
+ * gemacht. Der vierte Wert war die ganze Zeit da.
+ *
+ * Gemessen am 10.09.2026 ueber `spiel_aufstellung`, alle Zeilen:
+ *
+ *     0 „-"            185
+ *     1 „Captain"       19
+ *     2 „Ersatz"        78
+ *     3 „Kein Einsatz"  10
+ *
+ * ⚠ Und es gibt keine Liste, gegen die man das haette pruefen koennen:
+ * `sfv_stammdaten.json` fuehrt elf Listen, `assignmentRole` ist keine
+ * davon, und die Swagger-Datei nennt die zwei Felder ohne jede
+ * Beschreibung. **Die Wertemenge ist nur durch Zaehlen zu haben.**
+ */
+export const ROLLE_BEKANNT: number[] = [
+  0, 1, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
+];
 
 export function rolleAus(
-  zuweisungId: number | null | undefined, istBank: boolean,
-): { rolle: "start" | "ersatz"; unbekannt: number | null } {
-  /* Wer aus /bench kommt, ist per Definition nicht in der Startelf —
-     dort gibt es die Zuweisung gar nicht. */
-  if (istBank) return { rolle: "ersatz", unbekannt: null };
-  if (zuweisungId == null) {
-    /* ⚠ KEINE Zuweisung ist etwas anderes als eine unbekannte: der
-       Verband hat das Feld nicht gefuellt. Beides faellt auf, aber nur
-       das zweite hat eine Zahl. */
-    return { rolle: "start", unbekannt: -1 };
+  zuweisungId: number | null,
+): { rolle: "start" | "ersatz"; unbekannt: number | null; ungeklaert: boolean } {
+  /* ⚠ KEINE Zuweisung ist etwas anderes als eine unbekannte: Zeilen aus
+     der Zeit vor der Spalte tragen null. Sie melden -1, damit sie nicht
+     als neuer Verbandswert gezaehlt werden. */
+  if (zuweisungId === null) {
+    return { rolle: "start", unbekannt: -1, ungeklaert: false };
   }
   if (!ROLLE_BEKANNT.includes(zuweisungId)) {
-    return { rolle: "start", unbekannt: zuweisungId };
+    return { rolle: "start", unbekannt: zuweisungId, ungeklaert: false };
   }
-  return { rolle: zuweisungId === ROLLE_ERSATZ_ID ? "ersatz" : "start", unbekannt: null };
+  /* ⚠ ⚠  3 = „Kein Einsatz" faellt auf `start`, UND DAS IST EINE
+           ZWISCHENLOESUNG, keine Entscheidung.
+
+     Was gemessen ist: alle zehn Zeilen tragen Position, Von-Minute und
+     Spielzeit. Was daraus NICHT folgt: dass sie gespielt haben — in der
+     aufgezeichneten Antwort tragen ALLE 32 Spieler 1/90/90, auch die
+     zehn mit „Ersatz (S)". Die drei Minutenfelder unterscheiden Einsatz
+     und Bank nicht.
+
+     Solange der Wert ungeklaert ist, bekommt er KEINEN eigenen
+     `rolle`-Wert (die Vorlage soll einmal gebaut werden), faellt aber
+     auch nicht still durch: `ungeklaert` benennt ihn. */
+  return {
+    rolle: zuweisungId === ROLLE_ERSATZ_ID ? "ersatz" : "start",
+    unbekannt: null,
+    ungeklaert: zuweisungId === ROLLE_KEIN_EINSATZ_ID,
+  };
 }
 
 /* ── Tore und Karten an der Aufstellungszeile ──────────────────────
