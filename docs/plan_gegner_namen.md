@@ -20,6 +20,20 @@ bleibt, alle sechs Prosa-Stellen bleiben.
 `git checkout` zurückgenommen worden** — bevor irgendetwas davon
 committet oder deployt wurde. Der Bestand hat C nie gesehen.
 
+⚠ **UND B IST NICHT C.** Am selben Tag ist **B** angenommen worden:
+Gegner-Rückennummer und -Position ja, **Name nein** — und zwar
+*verboten*, nicht bloss ungenutzt (`docs/plan_gegner_aufstellung_b.md`).
+
+| | B — angenommen | C — dieses Papier, abgelehnt |
+|---|---|---|
+| Nummer, Position | ✅ | ✅ |
+| **Name** | ❌ per CHECK verboten | ✅ |
+| `spiel_ereignisse_fremde_anonym_check` | bleibt | wäre gefallen |
+| Verlaufszeile beim Gegner | unverändert | hätte Namen getragen |
+
+**Wer später nur „die Gegnerseite wurde geöffnet" liest, hält das eine
+für das andere.** Deshalb steht der Unterschied in beiden Papieren.
+
 ---
 
 ## Der Beleg, der bleibt
