@@ -382,6 +382,27 @@ export interface NamensZaehlung {
    * und eine Zahl, die ihn nicht zählt, sagte zu wenig.
    */
   zeilen_mit_zweitem_namen: number;
+  /**
+   * ⚠ ⚠  DIE ZWEI ZAHLEN, DIE DEN OFFENEN REST BEZIFFERN — und die
+   * ebenfalls AUSSERHALB der Aufteilung stehen.
+   *
+   * Sie beantworten „wie viele Wechsel zeigen noch eine Nummer statt
+   * eines Namens, und WARUM". Der Unterschied ist die ganze Auskunft:
+   *
+   *   ohne_ersatzkennung  der Verband hat die Kennung nicht geliefert
+   *                       ODER die Zeile wurde seit dem 19.08.2026 nicht
+   *                       neu geholt  →  `aktion: "wechselnachtrag"`
+   *   ohne_ersatzname     die Kennung ist da, aber zu ihr steht kein Name
+   *                       in `sfv_personen`  →  `aktion: "namen"`
+   *
+   * Eine einzelne Zahl „13 offen" schickte niemanden irgendwohin.
+   *
+   * ⚠ SIE STEHEN IN DER VORSCHAU, NICHT IN EINER EIGENEN AKTION
+   * (Entscheidung Didi, 11.09.2026): *„Eine Zahl, für die man einen
+   * eigenen Aufruf braucht, liest niemand."*
+   */
+  zeilen_ohne_ersatzkennung: number;
+  zeilen_ohne_ersatzname: number;
 }
 
 /**
@@ -448,6 +469,7 @@ export function zaehleVerlaufNamen(
   const z: NamensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
     zeilen_mit_zweitem_namen: 0,
+    zeilen_ohne_ersatzkennung: 0, zeilen_ohne_ersatzname: 0,
   };
 
   for (const e of ereignisse) {
@@ -461,8 +483,17 @@ export function zaehleVerlaufNamen(
        nicht geben kann. */
     if (e.ist_eigener && verlaufArt(e.typ_id, e.subtyp_id ?? null) === "wechsel") {
       const zid = e.ein_sfv_person_id;
-      if (zid != null && (zugeordnet.has(zid) || sfvNamen.has(zid))) {
+      if (zid == null) {
+        /* Keine Kennung: entweder liefert der Verband sie nicht, oder die
+           Zeile ist aelter als der 19.08.2026 und wurde nie neu geholt. */
+        z.zeilen_ohne_ersatzkennung++;
+      } else if (zugeordnet.has(zid) || sfvNamen.has(zid)) {
         z.zeilen_mit_zweitem_namen++;
+      } else {
+        /* Kennung ja, Name nein — eine andere Ursache und ein anderer
+           Weg dorthin. Die zwei zusammenzuzaehlen hiesse, den Leser in
+           die falsche Richtung zu schicken. */
+        z.zeilen_ohne_ersatzname++;
       }
     }
 

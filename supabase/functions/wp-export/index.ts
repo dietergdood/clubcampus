@@ -766,7 +766,16 @@ type DbLeser = { from: (tabelle: string) => any };
 
 interface VereinZeile { name: string | null; slug: string | null }
 interface TeamZeile { id: number; name: string; sfv_team_id: number | null }
-type SpielZeile = SpielQuelle & { id: string; sfv_team_id: number | null };
+/* ⚠ `sfv_gegner_team_id` steht hier und nicht in `SpielQuelle`: es geht in
+   keine Nutzlast, es wird nur GEZAEHLT (wie viele fremde Wappen ein
+   Bestand waeren). Was die Nutzlast traegt, gehoert in SpielQuelle — die
+   zwei Mengen auseinanderzuhalten ist der Grund, warum hier ueberhaupt
+   ein eigener Typ steht. */
+type SpielZeile = SpielQuelle & {
+  id: string;
+  sfv_team_id: number | null;
+  sfv_gegner_team_id: number | null;
+};
 interface ZuordnungZeile {
   sfv_person_id: number;
   mitglieder: { personen: { vorname: string | null; nachname: string | null } | null } | null;
@@ -850,7 +859,8 @@ async function laufeProbe(
   /* ── Spiele ──────────────────────────────────────────────────────── */
   const sRes = await db.from("spiele")
     .select("id, sfv_match_id, sfv_spiel_nr, date, zeit, gegner, heimspiel, venue, "
-      + "wettbewerb, liga, sfv_gruppe, sfv_runde, sfv_status, resultat, ht_resultat, sfv_team_id")
+      + "wettbewerb, liga, sfv_gruppe, sfv_runde, sfv_status, resultat, ht_resultat, "
+      + "sfv_team_id, sfv_gegner_team_id")
     .eq("verein_id", vereinId)
     .not("sfv_match_id", "is", null)
     .order("date");
@@ -931,10 +941,20 @@ async function laufeProbe(
      nicht verschwinden. */
   let rundeMitDoppelabstand = 0;
   let ohneLiga = 0;
+  /* ⚠ WIE VIELE FREMDE WAPPEN EIN BESTAND WAERE — die Frage vor der
+     Entscheidung, ob Gegner-Logos an die Website gehen. Aus den ohnehin
+     geladenen Spielen gezaehlt, kein zusaetzlicher Abruf.
+
+     ⚠ Es sind TEAMS, nicht Vereine. `sfv_team_logos` ist nach
+     `sfv_team_id` geschluesselt, obwohl das Bild dem Verein gehoert —
+     die Zahl der Vereine ist deutlich kleiner. Wer sie verwechselt,
+     schaetzt den Pflegeaufwand zu hoch. */
+  const gegnerTeams = new Set<number>();
   let cupOhneRunde = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
     zeilen_mit_zweitem_namen: 0,
+    zeilen_ohne_ersatzkennung: 0, zeilen_ohne_ersatzname: 0,
   };
 
   for (const s of eigene) {
@@ -953,6 +973,8 @@ async function laufeProbe(
     /* ⚠ Die Antwort auf „ist `liga` immer gefuellt?" — die Frage, an der
        haengt, ob das leere `sfv_liga_name` drueben die kleinere Sorge ist. */
     if (!String(s.liga ?? "").trim()) ohneLiga++;
+    const gid = Number(s.sfv_gegner_team_id);
+    if (Number.isFinite(gid) && gid > 0) gegnerTeams.add(gid);
     /* ⚠ Cupspiele tragen keinen Gruppennamen — gemeldet 11.09.2026,
        13 von 13. Gezaehlt, nicht behoben: der Wert entsteht beim Verband,
        und was dort stattdessen steht, ist noch nicht gemessen. */
@@ -971,6 +993,8 @@ async function laufeProbe(
     namensZaehlung.mit_rueckennummer += z.mit_rueckennummer;
     namensZaehlung.mit_gegnername += z.mit_gegnername;
     namensZaehlung.zeilen_mit_zweitem_namen += z.zeilen_mit_zweitem_namen;
+    namensZaehlung.zeilen_ohne_ersatzkennung += z.zeilen_ohne_ersatzkennung;
+    namensZaehlung.zeilen_ohne_ersatzname += z.zeilen_ohne_ersatzname;
   }
 
   const verlaufZeilen = gebaut.reduce((n, s) => n + s.verlauf.length, 0);
@@ -1018,6 +1042,13 @@ async function laufeProbe(
          Eine Wechselzeile nennt zwei Menschen; die vier Zahlen darüber
          teilen ZEILEN auf. Siehe NamensZaehlung. */
       zeilen_mit_zweitem_namen: namensZaehlung.zeilen_mit_zweitem_namen,
+      /* ⚠ Getrennt, weil sie an verschiedene Stellen schicken:
+         ohne_ersatzkennung → aktion "wechselnachtrag"
+         ohne_ersatzname    → aktion "namen" */
+      wechsel_ohne_ersatzkennung: namensZaehlung.zeilen_ohne_ersatzkennung,
+      wechsel_ohne_ersatzname: namensZaehlung.zeilen_ohne_ersatzname,
+      /* ⚠ TEAMS, nicht Vereine — siehe oben. */
+      gegner_teams_verschieden: gegnerTeams.size,
       zaehlung_stimmt: summe === verlaufZeilen,
     },
     teams: teamListe,

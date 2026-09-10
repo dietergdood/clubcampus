@@ -511,3 +511,58 @@ describe("Cupspiele: die Runde statt der Gruppe", () => {
     expect(s!.runde).toBe("");
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Der offene Rest wird beziffert — und getrennt (11.09.2026)
+
+   ⚠ Didis Messung: der Nachtrag holte 22 Spiele, der Sync holt 10 je
+   Lauf; 13 Wechsel stammen aus Spielen dazwischen. Damit die Zahl beim
+   naechsten Mal ohne Rechnung dasteht, steht sie in der VORSCHAU — nicht
+   in einer eigenen Aktion:
+
+     > Eine Zahl, für die man einen eigenen Aufruf braucht, liest
+     > niemand.
+
+   ⚠ Und sie steht ZWEIGETEILT da, weil die zwei Ursachen an
+   verschiedene Stellen schicken. „13 offen" allein schickte niemanden
+   irgendwohin.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("Wechsel — der offene Rest, nach Ursache getrennt", () => {
+  const w = (ueber = {}) => e({
+    typ_id: TYP_WECHSEL, ist_eigener: true, sfv_person_id: 222, rueckennr: 11,
+    ein_sfv_person_id: 333, ein_rueckennr: 9, ...ueber,
+  });
+
+  it("ohne Kennung → wechselnachtrag", () => {
+    const z = zaehleVerlaufNamen([w({ ein_sfv_person_id: null })], new Set([222]), new Set([333]));
+    expect(z).toMatchObject({ zeilen_ohne_ersatzkennung: 1, zeilen_ohne_ersatzname: 0 });
+  });
+
+  it("Kennung ja, Name nein → namen", () => {
+    const z = zaehleVerlaufNamen([w()], new Set([222]), new Set());
+    expect(z).toMatchObject({ zeilen_ohne_ersatzkennung: 0, zeilen_ohne_ersatzname: 1 });
+  });
+
+  it("beides da → keine der zwei Zahlen steigt", () => {
+    const z = zaehleVerlaufNamen([w()], new Set([222]), new Set([333]));
+    expect(z).toMatchObject({
+      zeilen_mit_zweitem_namen: 1, zeilen_ohne_ersatzkennung: 0, zeilen_ohne_ersatzname: 0,
+    });
+  });
+
+  it("⚠ die drei schliessen einander aus — jede Zeile zaehlt genau einmal", () => {
+    /* Sonst waere die Summe groesser als die Zahl der Wechsel, und
+       niemand koennte sie gegen etwas halten. */
+    const alle = [w(), w({ ein_sfv_person_id: null }), w({ ein_sfv_person_id: 444 })];
+    const z = zaehleVerlaufNamen(alle, new Set([222]), new Set([333]));
+    expect(z.zeilen_mit_zweitem_namen + z.zeilen_ohne_ersatzkennung
+      + z.zeilen_ohne_ersatzname).toBe(3);
+  });
+
+  it("⚠ beim GEGNER steigt keine der drei", () => {
+    const fremd = w({ ist_eigener: false, ein_sfv_person_id: null, ein_rueckennr: null });
+    const z = zaehleVerlaufNamen([fremd], new Set([222]), new Set([333]));
+    expect(z.zeilen_ohne_ersatzkennung).toBe(0);
+    expect(z.zeilen_ohne_ersatzname).toBe(0);
+  });
+});
