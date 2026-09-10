@@ -73,9 +73,33 @@ Stand 28.08.2026: **847 grün, 0 rot (58 Testdateien)**. Die Zahl gehört nach j
 > letztes Glied** — dieselbe Familie wie „eine Meldung nennt das letzte
 > Glied der Kette, nicht das gerissene".
 >
-> **Was folgt: die Zählprobe ist nicht eine Vorsichtsmassnahme, sondern
-> der einzige Weg, einen Lauf zu beurteilen.** Und Testlauf und Build
-> gehören nicht in dieselbe Befehlskette.
+> **✅ UND SEIT DEM 10.09.2026 IST DIE ZÄHLPROBE `npm test` SELBST.**
+>
+> `scripts/test-mit-zaehlprobe.mjs` zählt erst mit `vitest list`, führt
+> dann aus und hält beides gegeneinander. Weicht es ab, endet der Lauf
+> mit **Exit 1** und der Meldung *„ZÄHLPROBE GESCHEITERT — der Lauf ist
+> wertlos, unabhängig davon, was oben bei «passed» steht."*
+>
+> ⚠ **Warum ein Wrapper und keine vitest-Einstellung:** der Verlust
+> entsteht, WEIL ein Worker nicht antwortet — vitest weiss dann nichts
+> von der Datei, die er hätte laufen lassen sollen. Es gibt keine
+> Einstellung „melde, was du nicht ausgeführt hast"; **die einzige
+> Stelle, die den Verlust sehen kann, ist ausserhalb.**
+>
+> ⚠ **Und die Regel war vorher das Problem.** Sie stand seit dem
+> 28.08.2026 als Anweisung im Papier — und wurde am 10.09.2026 mehrfach
+> übersprungen, von demjenigen, der sie aufgeschrieben hat. **Eine
+> Regel, an die jemand denken muss, ist die schwächste Lösung.**
+>
+> Positivkontrolle: den Lauf künstlich auf ein Unterverzeichnis
+> eingeschränkt, die Liste nicht → *„14 gelaufen, 76 erwartet — 62 nicht
+> ausgeführt"*, Exit 1. Zurückgesetzt: grün.
+>
+> `npm run test:roh` gibt es weiterhin — ohne Zählprobe, für den Fall,
+> dass jemand sie bewusst umgehen will. **Bewusst ist der Unterschied.**
+>
+> Testlauf und Build gehören trotzdem nicht in dieselbe Befehlskette —
+> die Zählprobe meldet den Verlust, sie verhindert ihn nicht.
 
 > **⚠ EIN LAUF KANN 16 TESTDATEIEN VERLIEREN UND TROTZDEM EXIT 0 MELDEN.**
 > Gemessen am 28.08.2026, gleich zu Sessionbeginn und unbeabsichtigt:
