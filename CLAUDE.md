@@ -3515,6 +3515,87 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ⚠⚠ `leseHalbzeit()` — drei Wochen fertig, verdrahtet bis zur letzten Zeile, nie aufgerufen
+
+Der schärfste Fall von „gebaut, nicht angeschlossen", und am 10.09.2026
+**der vierte an einem Tag**.
+
+**Was fertig war**, seit dem 19.08.2026:
+
+| | |
+|---|---|
+| `leseHalbzeit()` | gebaut, **mit vier Testfällen** |
+| `zerlegeResultat()` | zerlegt `ht_resultat` in zwei Zahlen |
+| `halbzeit_heim` · `halbzeit_gast` | Felder der Nutzlast |
+| beide Namen in `CC_FELDER` | der Empfänger hätte sie geschrieben |
+
+**Es fehlte genau ein `update`.** Und `spiele.ht_resultat` stand
+dreiundzwanzig Tage leer.
+
+⚠ ⚠ **UND EIN KOMMENTAR SAGTE ES, WÖRTLICH:**
+
+> *„ht_resultat schreiben. Die Feldhoheit steht dort auf `verein`;
+> umgestellt wird erst, wenn dieser Lauf steht (Entscheidung 6).
+> **leseHalbzeit() ist vorbereitet und wird bewusst noch nicht
+> aufgerufen.**"*
+
+**Der Satz war richtig, als er geschrieben wurde** — der Matchdaten-Lauf
+stand noch nicht. Zwei Tage später stand er. **Niemand kam zurück.**
+
+⚠ **Das ist die Bauart, gegen die es keine Prüfung gibt:** ein Kommentar,
+der eine Bedingung nennt („erst wenn…"), altert nicht mit. Er sieht am
+Tag 23 genauso vernünftig aus wie am Tag 1, und **je sorgfältiger er
+formuliert ist, desto überzeugender wirkt der Aufschub.** Ein `TODO`
+hätte in einer Liste gestanden; eine Begründung steht nur da.
+
+#### Die Messung dazu — 15 Funktionen ohne Aufrufer
+
+Gesucht wurde zuerst nach Kommentaren („vorbereitet", „noch nicht
+aufgerufen", „kommt später"). **Drei Treffer, alle drei handeln VOM
+Problem statt es zu sein.** Die Kommentarsuche taugt also nicht.
+
+Die brauchbare Messung fragt den Code: **welche exportierte Funktion
+wird nirgends benutzt — auch nicht in ihrer eigenen Datei —, ausser von
+Tests?**
+
+```
+Stand 10.09.2026: 15
+  baueStatistik            matchdatenAnzeige.ts    ⚠ die Statistik-Kette
+  fetchSpieleMitVerlauf    matchdatenService.ts    ⚠ dieselbe
+  fetchBenutzerByMitglied  memberService.ts
+  fetchKaderEintraege      memberService.ts
+  updateBenutzer           memberService.ts
+  linkElternBenutzer       elternService.ts
+  unlinkElternBenutzer     elternService.ts
+  updateElternkontakt      elternService.ts
+  logFuerAlleKinder        elternService.ts
+  hatPersonFelder          personService.ts
+  toPerson                 personTypes.ts
+  relativTime              personUtils.ts
+  formatSaison             seasonUtils.ts
+  recentSeasons            seasonUtils.ts
+  zaehleOhneZuordnung      ergebnisTypen.ts
+```
+
+⚠ **Die ersten zwei sind kein Zufall:** `baueStatistik` und
+`fetchSpieleMitVerlauf` sind die Spielerstatistik — dieselbe, die unter
+„Die Matchdaten liegen seit dem Sync in der Datenbank und werden nirgends
+ausgewertet" als fehlend geführt wird. **Sie fehlt nicht. Sie ist gebaut
+und nicht angeschlossen**, genau wie der Halbzeitstand es war.
+
+⚠ **Die Liste ist kein Auftrag, 15 Funktionen zu verdrahten oder zu
+löschen.** Manche warten zu Recht (`unlinkElternBenutzer` gehört zum
+Kinder-Tab, der offen ist). **Sie ist die Antwort auf die Frage, wie oft
+dieser Fall vorkommt** — und die Antwort ist: öfter, als eine
+Kommentarsuche zeigt.
+
+**Wer eine solche Funktion baut, nennt im selben Auftrag die Stelle, die
+sie ruft.** Gibt es die noch nicht, steht das als offener Punkt mit
+Datum da — dieselbe Regel wie bei einer Spalte, die niemand liest, und
+aus demselben Grund: **es schlägt nichts fehl.**
+
+---
+
 ### ⚠⚠ DER EMPFÄNGER SETZT FEHLENDE SPIELE AUF `draft` — die gefährlichste Eigenschaft der Anbindung
 
 Festgehalten am 10.09.2026 auf Didis Anweisung. **Sie stand bis dahin

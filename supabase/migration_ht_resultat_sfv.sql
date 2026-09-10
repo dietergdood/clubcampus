@@ -40,14 +40,53 @@
 --
 -- ── Warum es ueberhaupt eine Migration braucht ────────────────────────────
 --
---   `schneideAufFeldhoheit()` schneidet jedes Feld weg, das nicht unter
---   `sfv` steht — **wortlos, bis zum 10.09.2026 sogar ohne Meldung**. Genau
---   so sind `sfv_runde` und `sfv_runde_nr` heute Morgen bei allen 270
---   Spielen auf NULL geblieben, obwohl der Sync sie berechnete. Ohne diese
---   Migration passierte dem Halbzeitstand dasselbe.
+-- ⚠ ⚠  NICHT, WEIL SONST ETWAS WEGGESCHNITTEN WUERDE — hier stand genau
+--       das, und es war falsch.
+--
+--   `schneideAufFeldhoheit()` steht an EINER Stelle: dem Spielplan-Upsert
+--   in `sync.ts`. Der Halbzeit-Schreibvorgang im Matchdaten-Durchgang geht
+--   daran vorbei, wie die zwei bestehenden Schreibstellen auch. **Der Wert
+--   kaeme also auch ohne diese Migration an.**
+--
+--   Gebraucht wird sie, damit der VERTRAG stimmt. Ohne sie sagt
+--   `sync_felder` weiterhin „ht_resultat gehoert dem Verein", waehrend der
+--   Sync es schreibt. Wer den Vertrag liest — und er ist ausdruecklich
+--   „Vertrag, keine Dokumentation" —, schliesst daraus „der Sync fasst das
+--   nicht an" und sucht den Wert an der falschen Stelle.
+--
+-- ⚠ **Ein Vertrag, dem der Code widerspricht, ist schlechter als keiner.**
+--   Dieselbe Familie wie ein Kommentar, der eine andere Stelle zusichert:
+--   er klingt geprueft, weil jemand ihn aufgeschrieben hat.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 begin;
+
+-- ⚠ ⚠  IN `sfv_matchdaten`, NICHT IN `sfv` — der erste Entwurf dieser
+--       Migration hatte es falsch, und es waere still schiefgegangen.
+--
+--   `sync_felder->spiele` hat VIER Listen, nicht zwei:
+--
+--     sfv             der Spielplan-Durchgang berechnet und schreibt sie
+--     sfv_matchdaten  der Matchdaten-Durchgang schreibt sie, pro Spiel
+--     abgeleitet      aus eigenen Daten gesetzt (team)
+--     verein          der Sync fasst sie nie an
+--
+--   Die vierte gibt es seit `migration_sfv_schiri_feldhoheit.sql`, und
+--   zwar aus genau diesem Grund. Ihr Kopf sagt es woertlich: „Die
+--   Zweiwege-Pruefung des Spielplans darf diese Liste NICHT mitpruefen,
+--   sonst meldet sie ein Feld als fehlend, das ein anderer Durchgang
+--   setzt."
+--
+--   `ht_resultat` unter `sfv` haette bei JEDEM Lauf eine Warnung erzeugt
+--   („berechnet, aber nicht geliefert") — `bildeSpiel()` kann es nicht
+--   berechnen, der Spielplan-Endpunkt liefert keine Halbzeit. Der Sync
+--   haette sich stuendlich ueber ein Feld beschwert, das er an anderer
+--   Stelle korrekt schreibt.
+--
+-- ⚠ Und ein Melder, der bei jedem Lauf dasselbe sagt, wird nach dem
+--   dritten Mal nicht mehr gelesen — dieselbe Abstumpfung wie bei den
+--   789 Lint-Warnungen. **Eine falsche Gruppe haette also nicht nur eine
+--   falsche Meldung erzeugt, sondern die Meldungen insgesamt entwertet.**
 
 update public.api_verbindungen a
    set sync_felder = jsonb_set(
@@ -57,7 +96,9 @@ update public.api_verbindungen a
            'verein', (select coalesce(jsonb_agg(v), '[]'::jsonb)
                         from jsonb_array_elements(a.sync_felder->'spiele'->'verein') v
                        where v <> '"ht_resultat"'::jsonb),
-           'sfv',    (a.sync_felder->'spiele'->'sfv') || '["ht_resultat"]'::jsonb
+           'sfv_matchdaten',
+                     coalesce(a.sync_felder->'spiele'->'sfv_matchdaten', '[]'::jsonb)
+                       || '["ht_resultat"]'::jsonb
          )
        )
  where a.key = 'football_ch'
@@ -70,16 +111,19 @@ commit;
 -- 1 · Es steht genau einmal, und auf der richtigen Seite:
 --
 --   select
---     (sync_felder->'spiele'->'sfv')    @> '["ht_resultat"]'::jsonb as bei_sfv,
---     (sync_felder->'spiele'->'verein') @> '["ht_resultat"]'::jsonb as bei_verein,
---     jsonb_array_length(sync_felder->'spiele'->'sfv')    as anz_sfv,
---     jsonb_array_length(sync_felder->'spiele'->'verein') as anz_verein
+--     (sync_felder->'spiele'->'sfv_matchdaten') @> '["ht_resultat"]'::jsonb as bei_matchdaten,
+--     (sync_felder->'spiele'->'sfv')             @> '["ht_resultat"]'::jsonb as bei_sfv,
+--     (sync_felder->'spiele'->'verein')          @> '["ht_resultat"]'::jsonb as bei_verein,
+--     jsonb_array_length(sync_felder->'spiele'->'sfv_matchdaten') as anz_md,
+--     jsonb_array_length(sync_felder->'spiele'->'verein')         as anz_verein
 --     from public.api_verbindungen where key = 'football_ch';
 --
--- ⚠ Erwartung: bei_sfv true, bei_verein false, sfv 21, verein 7.
---   Vorher waren es 20 und 8. **Die Summe muss gleich bleiben** — steht
---   dort 21 und 8, ist das Feld in BEIDEN Listen, und dann entscheidet
---   die Reihenfolge im Code statt der Vertrag.
+-- ⚠ Erwartung: bei_matchdaten true, bei_sfv **false**, bei_verein false;
+--   anz_md 2 (schiedsrichter + ht_resultat), anz_verein 7 (vorher 8).
+--
+-- ⚠ `bei_sfv` MUSS false sein. Stuende es dort ebenfalls, meldete der
+--   Spielplan-Durchgang das Feld bei jedem Lauf als fehlend — er kann es
+--   nicht berechnen.
 --
 -- 2 · Nach dem naechsten Matchdaten-Lauf — und die Zahl steht auch in der
 --     Meldung der Kachel:

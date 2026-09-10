@@ -142,6 +142,18 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.0 (10.09.2026): Zeitschutz. `set_time_limit()` je Anfrage, ein
+   BERICHT AUCH BEIM ABBRUCH ueber register_shutdown_function(), und
+   `zeitlimit` in `/status`.
+   ⚠ Der Abbruchbericht ist der wichtigste Teil: bis dahin stand
+   `cc_bericht_ablegen()` am ENDE der Route — riss ein Zeitlimit, wurde
+   GAR NICHTS abgelegt. Der Verein sah nichts, die Gegenstelle einen 504.
+   **Ein Zeitlimit war damit nicht von „nichts zu tun" zu unterscheiden**,
+   derselbe blinde Fleck wie bei einem Sync-Lauf ohne Protokollzeile.
+   ⚠ `teil` ist BEWUSST NICHT gebaut: es ist die Voraussetzung fuers
+   Stueckeln, nicht sein Ersatz, und gestueckelt wird nicht. Warum
+   Stueckeln ohne `teil` gefaehrlich ist, steht bei cc_route_spiele().
+
    0.8.0 (10.09.2026): `liga` steht in CC_FELDER — das fch_spiel hat seit
    heute ein Feld dieses Namens (`f_s_liga`, „Wettbewerbsbezeichnung").
    Es traegt die WETTBEWERBSBEZEICHNUNG, nicht die Betriebsart.
@@ -188,7 +200,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.8.0';
+const CC_VERSION    = '0.9.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -567,8 +579,63 @@ function cc_bericht_deckel( array $faelle ): array {
 function cc_bericht_ablegen( string $weg, array $inhalt ): array {
 	$bericht = array_merge( array( 'zeit' => time(), 'weg' => $weg ), $inhalt );
 	update_option( CC_OPT_BERICHT, $bericht, false );
+	/* Der Abbruchbericht darf danach nicht mehr schreiben. */
+	$GLOBALS['cc_bericht_steht'] = true;
 	return $bericht;
 }
+
+/**
+ * Der Bericht, wenn die Route NICHT bis zum Ende kommt.
+ *
+ * ⚠ ⚠  DER WICHTIGSTE TEIL VON 0.9.0. `cc_bericht_ablegen()` steht am ENDE
+ *       der Route. Riss ein Zeitlimit, wurde gar nichts abgelegt — der
+ *       Verein sah nichts, die Gegenstelle einen 504.
+ *
+ *   **Damit war ein Zeitlimit nicht von „nichts zu tun" zu
+ *   unterscheiden.** Derselbe blinde Fleck wie bei einem Sync-Lauf, der
+ *   keine Protokollzeile hinterlaesst: der Beleg ist eine Abwesenheit,
+ *   und eine Abwesenheit faellt niemandem auf.
+ *
+ * ⚠ `register_shutdown_function()` laeuft AUCH beim Zeitlimit — anders als
+ *   jede Zeile nach der Schleife. Das ist der ganze Grund fuer diese
+ *   Bauart.
+ *
+ * ⚠ `abgebrochen` steht als eigenes FELD da, nicht als fehlender Wert.
+ *   Ein Bericht ohne Abschluss behauptet sonst mehr, als geschehen ist —
+ *   dieselbe Regel wie beim Loeschprotokoll ohne `nachher`.
+ */
+function cc_bericht_notfalls(): void {
+	if ( ! empty( $GLOBALS['cc_bericht_steht'] ) ) {
+		return;
+	}
+	$stand = $GLOBALS['cc_lauf_stand'] ?? null;
+	if ( ! is_array( $stand ) ) {
+		return;   // keine Route dieses Plugins war aktiv
+	}
+	$letzter = error_get_last();
+	cc_bericht_ablegen(
+		$stand['weg'] ?? 'unbekannt',
+		array(
+			'abgebrochen'   => true,
+			'verarbeitet'   => (int) ( $stand['verarbeitet'] ?? 0 ),
+			'erwartet'      => (int) ( $stand['erwartet'] ?? 0 ),
+			'letztes_spiel' => (string) ( $stand['letztes_spiel'] ?? '' ),
+			'laufzeit'      => (int) ( microtime( true ) - (float) ( $stand['start'] ?? microtime( true ) ) ),
+			/* ⚠ Der Grund, soweit PHP ihn kennt. Bei einem Zeitlimit steht
+			   hier „Maximum execution time … exceeded"; bei einem sauberen
+			   Abbruch aus anderem Grund etwas anderes — und der
+			   Unterschied ist die halbe Diagnose. */
+			'grund'         => $letzter ? (string) ( $letzter['message'] ?? '' ) : '',
+			'hinweis'       => array(
+				'Abgebrochen, bevor der Lauf zu Ende war. Das Aufraeumen ist NICHT gelaufen: '
+				. 'es steht nach der Schleife, und ein Abbruch ueberspringt es. '
+				. 'Die bereits geschriebenen Spiele stehen vollstaendig; '
+				. 'hoechstens die Aufstellung des zuletzt genannten Spiels ist halb.',
+			),
+		)
+	);
+}
+register_shutdown_function( 'cc_bericht_notfalls' );
 
 /**
  * Zwei Beitraege mit derselben `sfv_match_id`.
@@ -660,6 +727,17 @@ function cc_route_status(): WP_REST_Response {
 			   und wenn beide gleich heissen, sagt es die Version daneben. */
 			'empfaenger'       => basename( __FILE__ ),
 			'version'          => CC_VERSION,
+			/* ⚠ Ob der Zeitschutz ueberhaupt greift. Eine Aufzaehlung im
+			   Code kann das nicht wissen — der Hoster kann
+			   set_time_limit verbieten, und dann laeuft die Anfrage
+			   weiter ins Limit, waehrend alle glauben, sie sei
+			   geschuetzt. Dieselbe Klasse wie `spielfelder` in 0.8.0:
+			   die Gegenstelle fragen statt annehmen. */
+			'zeitlimit'        => array(
+				'jetzt'     => (int) ini_get( 'max_execution_time' ),
+				'aenderbar' => function_exists( 'set_time_limit' )
+					&& false === stripos( (string) ini_get( 'disable_functions' ), 'set_time_limit' ),
+			),
 			/* Der Schluessel, an dem die Team-Zuordnung haengt. Steht er hier,
 			   muss ihn niemand aus dem Quelltext holen. */
 			'meta_schluessel'  => CC_META_TEAM_SFV,
@@ -1110,6 +1188,20 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		);
 	}
 
+	/* ── Zeitschutz (0.9.0) ────────────────────────────────────────────
+	   ⚠ `@` mit Absicht: manche Hoster verbieten die Funktion, und dann
+	   soll der Aufruf nichts tun statt eine Warnung in die Antwort zu
+	   schreiben. **Ob er greift, sagt `/status` unter `zeitlimit`** —
+	   ohne diese Auskunft waere der Schutz eine Behauptung. */
+	@set_time_limit( 300 );
+
+	/* Der Stand fuer den Abbruchbericht. Ab hier weiss
+	   cc_bericht_notfalls(), dass diese Route lief. */
+	$GLOBALS['cc_lauf_stand'] = array(
+		'weg' => 'spiele', 'start' => microtime( true ),
+		'verarbeitet' => 0, 'erwartet' => 0, 'letztes_spiel' => '',
+	);
+
 	$daten  = $req->get_json_params();
 	$spiele = is_array( $daten['spiele'] ?? null ) ? $daten['spiele'] : null;
 	$teams  = is_array( $daten['teams'] ?? null ) ? $daten['teams'] : null;
@@ -1182,7 +1274,15 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		$erlaubteTid[ $tid ] = true;
 	}
 
+	$GLOBALS['cc_lauf_stand']['erwartet'] = count( $spiele );
 	foreach ( $spiele as $spiel ) {
+		/* ⚠ VOR der Arbeit hochzaehlen und die Id merken: reisst das
+		   Zeitlimit mitten in diesem Durchgang, nennt der Bericht genau
+		   das Spiel, bei dem es passierte. Danach hochzuzaehlen naennte
+		   das vorige — und schickte die Suche einen Schritt daneben. */
+		$GLOBALS['cc_lauf_stand']['verarbeitet']++;
+		$GLOBALS['cc_lauf_stand']['letztes_spiel'] =
+			(string) ( $spiel['sfv_match_id'] ?? '' );
 		if ( ! is_array( $spiel ) ) {
 			continue;
 		}

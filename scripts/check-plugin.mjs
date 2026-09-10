@@ -116,6 +116,30 @@ for ($i = 0; $i < $n; $i++) {
   }
   $konstanten[$name] = $texte;
 }
+/* ⚠ AUFRUFE AUF DATEIEBENE — ergaenzt am 10.09.2026, aus demselben Grund
+   wie die Konstanten darueber. Eine Registrierung wie
+   register_shutdown_function() steht NICHT in einer Funktion; der
+   Zerleger sah sie nicht, und eine Regel darueber war nicht baubar.
+
+   Der naheliegende Ausweg waere gewesen, statt der Registrierung die
+   Existenz der Funktion zu pruefen. Das ist aber genau der Fehler, gegen
+   den die Regel gebaut wird: eine Funktion, die es gibt und die niemand
+   ruft. Also den Zerleger erweitern.
+
+   Gezaehlt wird auf Klammertiefe 0 und ausserhalb jeder Funktion — was
+   also beim Laden der Datei wirklich ausgefuehrt wird. */
+$global = ['rufe' => []];
+$tiefeG = 0; $inFn = 0; $fnTiefe = null;
+for ($i = 0; $i < $n; $i++) {
+  if ($t[$i][0] === 'T_FUNCTION') { $inFn++; $fnTiefe = $tiefeG; }
+  if ($t[$i] === ['CHAR', '{']) $tiefeG++;
+  elseif ($t[$i] === ['CHAR', '}']) {
+    $tiefeG--;
+    if ($inFn > 0 && $tiefeG === $fnTiefe) { $inFn--; }
+  }
+  elseif ($inFn === 0 && $istRuf($i)) $global['rufe'][] = $t[$i][1];
+}
+
 $routen = [];
 for ($i = 0; $i < $n; $i++) {
   if ($t[$i][0] !== 'T_STRING' || $t[$i][1] !== 'register_rest_route') continue;
@@ -127,7 +151,7 @@ for ($i = 0; $i < $n; $i++) {
   }
   $routen[] = $texte;
 }
-echo json_encode(['funktionen' => $funktionen, 'routen' => $routen, 'konstanten' => $konstanten]);
+echo json_encode(['funktionen' => $funktionen, 'routen' => $routen, 'konstanten' => $konstanten, 'global' => $global]);
 `;
 
 function zerlege(quelle) {
@@ -360,6 +384,24 @@ const REGELN = [
 /* Regeln, die etwas VERLANGEN statt zu verbieten — hier ist der Fund die
    Erwartung, und die Kontrolle zeigt den Fall, in dem er ausbleibt. */
 const PFLICHTEN = [
+  /* ── Zeitschutz (0.9.0, 10.09.2026) ────────────────────────────────
+     ⚠ Der Abbruchbericht ist der Teil, der beim naechsten Umbau am
+     leichtesten still wegfaellt: er haengt an einer Registrierung, nicht
+     an einem Aufruf, und niemand vermisst ihn — bis ein Zeitlimit
+     reisst und wieder nichts abgelegt wird. */
+  {
+    frage: "der Abbruchbericht ist registriert (sonst schweigt ein Zeitlimit)",
+    pruefe: (b) => (b.global?.rufe ?? []).filter(r => r === "register_shutdown_function"),
+    /* ⚠ Die Positivkontrolle enthaelt die FUNKTION, aber keine
+       Registrierung — sie prueft damit genau den Unterschied, um den es
+       geht. Fiele sie hier durch, pruefte die Regel nur die Existenz. */
+    kontrolle: "<?php function cc_bericht_notfalls() { $x = 1; }",
+  },
+  {
+    frage: "cc_route_spiele setzt ein Zeitlimit",
+    pruefe: (b) => (b.funktionen.cc_route_spiele?.rufe ?? []).filter(r => r === "set_time_limit"),
+    kontrolle: "<?php function cc_route_spiele() { $x = 1; }",
+  },
   {
     frage: "die Anmeldung läuft über den Schlüssel, nicht über eine Benutzerrolle",
     pruefe: (b) => (b.funktionen.cc_darf_schreiben?.rufe ?? []).filter(r => r === "hash_equals"),
