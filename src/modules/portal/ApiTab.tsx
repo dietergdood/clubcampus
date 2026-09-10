@@ -184,12 +184,28 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       return;
     }
     /* ⚠ Rohschluessel UNGEDEUTET anzeigen — das Filtern hat den Befund
-       erzeugt, der damit gerade ueberprueft wird. */
-    const t=daten.team_liste as {alle?: string[]}|undefined;
-    const sp=daten.spielplan as {alle?: string[]}|undefined;
+       erzeugt, der damit gerade ueberprueft wird.
+
+       ⚠ UND `nicht_ueberall` GEHOERT DAZU. Sie fehlte bis zum
+       11.09.2026 in der Anzeige, obwohl sie in der Antwort stand — zum
+       dritten Mal an einem Tag dieselbe Luecke: berechnet, geliefert,
+       nicht gezeigt. Sie ist der GRUND fuer die Doppelmessung: ein Feld,
+       das nur manche Objekte tragen, faellt durch eine Stichprobe von
+       einem. Ohne sie ist die Probe schwaecher als geplant. */
+    const teil = (t: {anzahl?: number; alle?: string[]; nicht_ueberall?: string[]} | undefined,
+                  was: string): string[] => {
+      const alle = t?.alle ?? [];
+      const nur = t?.nicht_ueberall ?? [];
+      return [
+        `${was} (${t?.anzahl ?? 0} Objekte): ${alle.join(", ") || "(leer)"}`,
+        nur.length
+          ? `⚠ ${was}, nicht in jedem Objekt: ${nur.join(", ")}`
+          : `${was}: alle Objekte tragen dieselben Schlüssel`,
+      ];
+    };
     setAuskunft({titel:"Rohschlüssel", zeilen:[
-      `Teamliste: ${(t?.alle??[]).join(", ")||"(leer)"}`,
-      `Spielplan: ${(sp?.alle??[]).join(", ")||"(leer)"}`,
+      ...teil(daten.team_liste as never, "Teamliste"),
+      ...teil(daten.spielplan as never, "Spielplan"),
       String(daten.bildfeld_team??""),
       String(daten.bildfeld_spielplan??""),
     ].filter(Boolean)});

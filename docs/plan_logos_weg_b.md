@@ -134,6 +134,47 @@ sicher übertrieben.
 
 ---
 
+## 2a · ⚠ ⚠ AN DER LEITUNG GEMESSEN — es gibt keine `logoUrl` (11.09.2026)
+
+Der Abschnitt darüber leitet aus der **Swagger-Datei** ab. Didis Einwand
+dagegen war berechtigt:
+
+> Ein Schema ist ein Dokument, keine Antwort. `playDayName` verhielt sich
+> auch anders, als es beschrieben war.
+
+**Jetzt ist es an der Antwort gemessen** (`aktion: "rohschluessel"`,
+Objekt für Objekt, `Object.keys()` ohne Werte):
+
+```
+Teamliste  (21 Objekte)
+  clubName · clubNumber · isHomeTeam · isTeamActive · teamDivisionName
+  teamFullname · teamId · teamLeagueId · teamLeagueName · teamName
+  teamOrganisationId
+
+Spielplan (270 Objekte)
+  cupId · divisionId · divisionName · groupId · groupName
+  isUnkownPlayground · leagueId · leagueName · leagueNumber · matchDate
+  matchId · matchNumber · matchState · matchStateName · matchType
+  matchTypeName · organisationId · organisationName · playDay
+  playDayName · playgroundId · roundNbr · scoreTeamA · scoreTeamB
+  seasonId · seasonName · stadiumPlaygroundName · teamAId · teamBId
+  teamNameA · teamNameB
+```
+
+**Kein Schlüssel mit `logo`, `picture`, `image`, `emblem` oder `url` — in
+keinem der 291 Objekte.** Die Schema-Suche war richtig; die gegenteilige
+Annahme war es nicht.
+
+⚠ **Der Unterschied ist die Belegart, nicht das Ergebnis.** Vorher stand
+hier eine Ableitung aus einem Dokument, jetzt eine Messung an der
+Leitung. Bei `playDayName` war genau das der Unterschied zwischen richtig
+und falsch.
+
+**Damit ist Weg B endgültig gegenstandslos, nicht vertagt.** Ohne
+Zeitstempel und ohne Prüfsumme müsste man jedes Bild **holen**, um zu
+wissen, ob es sich geändert hat — die Ersparnis, die „nur wenn geändert"
+verspricht, kann es hier nicht geben.
+
 ## 4a · ⚠ ZURUECKGESTELLT — die Reihenfolge steht fest
 
 Entscheidung Didi, 11.09.2026, auf Befund (b):
