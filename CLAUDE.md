@@ -3611,6 +3611,28 @@ abgeleitetes Feld.**
 
 ---
 
+### ⚠ „Vier Läufe" waren 35 — ich habe die Sicht für den Bestand genommen
+
+11.09.2026. Die Nachtrag-Abfrage für `aktion` sollte nach meiner Ansage
+**vier** Zeilen berichtigen. Es waren **35**.
+
+**Woher die vier kamen:** die Kachel zeigte vier Läufe, und ich habe die
+Zahl übernommen. **Sie war die Zahl der SICHTBAREN, nicht die der
+vorhandenen** — der Export läuft seit dem 05.09.2026, und die Spalte blieb
+bei **jedem** Lauf seit ihrer Anlage leer, nicht nur bei den letzten.
+
+⚠ **Dieselbe Familie wie „207 stehen in keiner Aufstellung" und
+„0 Spiel-Beiträge": ein Ausschnitt als Gesamtheit gelesen.** Nur diesmal
+war der Ausschnitt eine Anzeige und nicht eine Abfrage — und Anzeigen
+kürzen, das ist ihr Zweck.
+
+**Der Bestand, den die Berichtigung sichtbar gemacht hat, ist dabei selbst
+ein Beleg:** 0 → 14 neu → 34 neu/14 aktualisiert → 224 neu/46 aktualisiert
+→ seit 09.09. abends stabil **270 aktualisiert**. **Der Export hat die
+Spiele also sehr wohl angelegt und pflegt sie seither.**
+
+---
+
 ### ⚠⚠ AUS UNVORHERSEHBAR WURDE VORHERSEHBAR FALSCH — und das ist schlimmer
 
 11.09.2026. Der Satz gehört an den Anfang, weil er eine ganze Klasse von
