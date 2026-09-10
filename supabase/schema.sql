@@ -611,11 +611,24 @@ CREATE TABLE IF NOT EXISTS "public"."api_sync_log" (
     "meldung" "text",
     "details" "jsonb",
     "gestartet_von" "uuid",
-    "verein_id" "uuid" NOT NULL
+    "verein_id" "uuid" NOT NULL,
+    "aktion" "text"
 );
 
 
 ALTER TABLE "public"."api_sync_log" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."api_sync_log"."beendet_am" IS 'NULL solange status = laeuft. Zusammen mit gestartet_am die Laufdauer — und bei einer haengengebliebenen Zeile das Alter, an dem man sie als gestorben erkennt.';
+
+
+
+COMMENT ON COLUMN "public"."api_sync_log"."status" IS 'ok | warnung | fehler | laeuft. ⚠ `laeuft` heisst NICHT „laeuft gerade": die Zeile wird VOR dem ersten Abruf geschrieben und am Ende ueberschrieben. Bleibt sie stehen, ist der Lauf GESTORBEN. Aelter als die Laufsperre (15 Minuten) ist der Beleg dafuer — ein abgebrochener Lauf hinterliess bis dahin ueberhaupt keine Spur, und „gescheitert" sah aus wie „nichts zu tun".';
+
+
+
+COMMENT ON COLUMN "public"."api_sync_log"."aktion" IS 'Welche Aktion diese Zeile erzeugt hat: sync, namen, wechselnachtrag. NULL bei Zeilen vor dem 11.09.2026 — dort ist es nur aus details ableitbar (der Sync schreibt immer details.spiele, namen nie).';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."api_verbindungen" (
@@ -1976,7 +1989,14 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_aufstellung" (
     "bis_minute" integer,
     "spielzeit" integer,
     "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "erstmals_gesehen" timestamp with time zone DEFAULT "now"() NOT NULL
+    "erstmals_gesehen" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "name" "text",
+    "ist_bank" boolean DEFAULT false NOT NULL,
+    "rolle_id" integer,
+    "rolle_kategorie_id" integer,
+    "rolle_kategorie" "text",
+    "ist_eigener" boolean DEFAULT true NOT NULL,
+    CONSTRAINT "spiel_aufstellung_fremde_ohne_person" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("name" IS NULL))))
 );
 
 
@@ -1988,6 +2008,30 @@ COMMENT ON TABLE "public"."spiel_aufstellung" IS 'Aufstellung EIGENER Spieler au
 
 
 COMMENT ON COLUMN "public"."spiel_aufstellung"."erstmals_gesehen" IS 'Wann diese Zeile ENTSTANDEN ist. Steht bewusst nicht in der Upsert-Nutzlast von bildeAufstellung() — was nicht mitgeschickt wird, laesst ON CONFLICT DO UPDATE unberuehrt. Nicht zu verwechseln mit zuletzt_synchronisiert, das bei jedem Lauf neu gesetzt wird.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."name" IS 'Klarname aus der SFV-Antwort. Aus /players als firstname + name, aus /bench als personName (der Verband liefert dort nur die zusammengesetzte Form). ⚠ Fuer die Anzeige gewinnt eine Zuordnung ueber sfv_zuordnung; diese Spalte ist der Rueckfall.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."ist_bank" IS 'Kommt die Zeile aus /api/match/{id}/bench statt aus /players? ⚠ /players liefert NUR die Startelf — gemessen 10.09.2026: 207 von 207 Eingewechselten fehlten. Die Bank ist ein eigener Abruf, keine Ableitung aus von_minute.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_id" IS 'SFV roleId, die feinere Rolle innerhalb der Kategorie. ⚠ Ungemessen, was sie enthaelt — mitgeschrieben, von nichts gelesen. Wer sie liest, misst sie vorher.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_kategorie_id" IS 'SFV roleCategoryId. 1 = Spieler, 3 = Trainer, 4 = Funktionaer, 9 = Betreuer (sfv_stammdaten.json → Rollenkategorie). ⚠ /bench liefert NICHT nur Ersatzspieler: die FVRZ-Seite zeigt zu Spiel 4393132 fuenf Ersatzspieler, zwei Trainer und einen Abwesenden. Die Anzeige nimmt nur 1.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_kategorie" IS 'SFV roleCategoryName im Klartext — mitgeschrieben, damit eine unerwartete Kategorie auffaellt, statt still durch den Filter zu fallen.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."ist_eigener" IS 'Gehoert diese Zeile zu unserem Klub? Aus clubNumber gegen vereine.sfv_club_nummer. ⚠ Bis 10.09.2026 gab es nur eigene Zeilen — der Vorgabewert true ist deshalb fuer den Bestand richtig und nicht geraten.';
 
 
 
@@ -2016,7 +2060,7 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse" (
     "ein_sfv_person_id" integer,
     "ein_rueckennr" integer,
     "zuletzt_synchronisiert" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "spiel_ereignisse_fremde_anonym_check" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("rueckennr" IS NULL) AND ("ein_sfv_person_id" IS NULL) AND ("ein_rueckennr" IS NULL)))),
+    CONSTRAINT "spiel_ereignisse_fremde_anonym_check" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("ein_sfv_person_id" IS NULL)))),
     CONSTRAINT "spiel_ereignisse_herkunft_check" CHECK (("herkunft" = ANY (ARRAY['sfv'::"text", 'verein'::"text"]))),
     CONSTRAINT "spiel_ereignisse_schicht_check" CHECK (((("herkunft" = 'sfv'::"text") AND ("sfv_event_id" IS NOT NULL) AND ("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL) AND ("korrigiert_von" IS NULL)) OR (("herkunft" = 'verein'::"text") AND ("sfv_event_id" IS NULL) AND ("korrigiert_von" IS NOT NULL) AND ((("ersetzt_ereignis_id" IS NOT NULL) AND ("array_length"("geaenderte_felder", 1) > 0)) OR (("ersetzt_ereignis_id" IS NULL) AND ("geaenderte_felder" IS NULL))))))
 );
@@ -2025,7 +2069,7 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_ereignisse" (
 ALTER TABLE "public"."spiel_ereignisse" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."spiel_ereignisse" IS 'Spielverlauf. herkunft=sfv wird bei jedem Lauf fortgeschrieben, herkunft=verein nie. Eine Vereins-Zeile verdeckt ueber ersetzt_ereignis_id eine SFV-Zeile (Korrektur) oder steht fuer sich (nachgetragener Assist). Von fremden Spielern bleibt nur gegner_club_name — erzwungen durch spiel_ereignisse_fremde_anonym_check.';
+COMMENT ON TABLE "public"."spiel_ereignisse" IS 'Spielverlauf. herkunft=sfv wird bei jedem Lauf fortgeschrieben, herkunft=verein nie. Eine Vereins-Zeile verdeckt ueber ersetzt_ereignis_id eine SFV-Zeile (Korrektur) oder steht fuer sich (nachgetragener Assist). Von fremden Spielern bleiben gegner_club_name UND die Rueckennummer (seit 10.09.2026, fuer die Symbole an der Gegneraufstellung) — Personennummern bleiben verboten, erzwungen durch spiel_ereignisse_fremde_anonym_check.';
 
 
 
@@ -2127,7 +2171,7 @@ COMMENT ON COLUMN "public"."spiele"."sfv_spiel_nr" IS 'matchNumber des SFV. NICH
 
 
 
-COMMENT ON COLUMN "public"."spiele"."sfv_spieltag" IS 'SFV playDayName. GEMESSEN am 11.09.2026: enthaelt den WOCHENTAG („Samstag"), nicht den Rundennamen. Wird von keiner Anzeige gelesen — die Website zeigt den Wochentag ohnehin aus dem Datum. Hiess bis dahin sfv_runde, was eine falsche Zusage war.';
+COMMENT ON COLUMN "public"."spiele"."sfv_spieltag" IS 'SFV playDayName. GEMESSEN am 10.09.2026: enthaelt den WOCHENTAG („Samstag"), nicht den Rundennamen. Wird von keiner Anzeige gelesen — die Website zeigt den Wochentag ohnehin aus dem Datum. Hiess bis dahin sfv_runde, was eine falsche Zusage war.';
 
 
 
@@ -3402,6 +3446,14 @@ CREATE INDEX "sfv_team_logos_verein_idx" ON "public"."sfv_team_logos" USING "btr
 
 
 CREATE INDEX "sfv_zuordnung_mitglied_idx" ON "public"."sfv_zuordnung" USING "btree" ("mitglied_id");
+
+
+
+CREATE UNIQUE INDEX "spiel_aufstellung_fremd_key" ON "public"."spiel_aufstellung" USING "btree" ("verein_id", "spiel_id", "sfv_team_id", "rueckennr") WHERE (("ist_eigener" = false) AND ("rueckennr" IS NOT NULL));
+
+
+
+COMMENT ON INDEX "public"."spiel_aufstellung_fremd_key" IS 'Zweiter Schluessel fuer Gegnerzeilen (10.09.2026). Der alte greift dort nicht: sfv_person_id ist NULL, und UNIQUE laesst beliebig viele NULLs zu. Ohne diesen Index legte jeder Lauf dieselben Gegnerzeilen neu an.';
 
 
 

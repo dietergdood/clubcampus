@@ -3837,8 +3837,14 @@ export type Database = {
           bis_minute: number | null
           erstmals_gesehen: string
           id: string
+          ist_bank: boolean
+          ist_eigener: boolean
+          name: string | null
           position_id: number | null
           position_name: string | null
+          rolle_id: number | null
+          rolle_kategorie: string | null
+          rolle_kategorie_id: number | null
           rueckennr: number | null
           sfv_person_id: number
           sfv_team_id: number | null
@@ -3852,8 +3858,14 @@ export type Database = {
           bis_minute?: number | null
           erstmals_gesehen?: string
           id?: string
+          ist_bank?: boolean
+          ist_eigener?: boolean
+          name?: string | null
           position_id?: number | null
           position_name?: string | null
+          rolle_id?: number | null
+          rolle_kategorie?: string | null
+          rolle_kategorie_id?: number | null
           rueckennr?: number | null
           sfv_person_id: number
           sfv_team_id?: number | null
@@ -3867,8 +3879,14 @@ export type Database = {
           bis_minute?: number | null
           erstmals_gesehen?: string
           id?: string
+          ist_bank?: boolean
+          ist_eigener?: boolean
+          name?: string | null
           position_id?: number | null
           position_name?: string | null
+          rolle_id?: number | null
+          rolle_kategorie?: string | null
+          rolle_kategorie_id?: number | null
           rueckennr?: number | null
           sfv_person_id?: number
           sfv_team_id?: number | null
