@@ -398,9 +398,20 @@ export async function laufeSync(
        steht jetzt immer da, auch als Null: sie beantwortet die Frage,
        ob die Gegneraufstellung ueberhaupt ankommt. */
     teile.push(`Matchdaten ${md.spiele_geholt} Spiel(e), ${md.aufstellung_zeilen} eigene und ${md.aufstellung_fremd} gegnerische Aufstellungszeilen, ${md.ereignisse_zeilen} Ereigniszeilen`);
+    /* ⚠ ⚠  IMMER, AUCH ALS NULL — und ich habe genau das am selben Tag
+       als Regel aufgeschrieben und eine Stunde spaeter dagegen gebaut.
+
+       Ein `if (md.gegner_doppel)` zeigt die Zahl nur im schlechten Fall.
+       Das Fehlen muesste dann „null" heissen — heisst aber auch „nicht
+       gemessen", „Feld umbenannt", „Abfrage gescheitert". Didi hat es
+       am 10.09.2026 gesucht und nicht gefunden.
+
+       Eine Zeile mehr kostet nichts; eine Deutung kostet eine
+       Rueckfrage. */
+    teile.push(`${md.gegner_doppel} doppelte Gegner-Rueckennummer(n)`);
     if (md.gegner_doppel) {
       if (erg.status === "ok") erg.status = "warnung";
-      teile.push(`${md.gegner_doppel} Gegnerzeile(n) mit doppelter Rueckennummer verschmolzen — Unstimmigkeit beim Verband`);
+      teile.push(`⚠ verschmolzen — Unstimmigkeit beim Verband, nicht bei uns`);
     }
     if (md.paesse_geschrieben) teile.push(`${md.paesse_geschrieben} Spielerpass/-pässe vom Verband übernommen`);
     if (md.pass_konflikte.length) {

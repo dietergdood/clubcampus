@@ -349,8 +349,22 @@ async function pruefeNachzug(db: SupabaseClient, vereinId: string): Promise<numb
 async function zaehleUnzugeordnet(
   db: SupabaseClient, vereinId: string,
 ): Promise<{ offen: number; bekannt: number }> {
+  /* ⚠ ⚠  `.eq("ist_eigener", true)` IST NICHT ZIERRAT — ohne ihn zaehlt
+     der Frühwarner einen Spieler, den es nicht gibt.
+
+     Seit Entscheid B (10.09.2026) stehen Gegnerzeilen in derselben
+     Tabelle, und ihre `sfv_person_id` ist NULL. `Number(null)` ist **0**,
+     0 steht in keiner Zuordnung — also zaehlte jede Datenbank mit
+     mindestens einer Gegnerzeile genau einen Phantomspieler mit.
+
+     ⚠ Die Funktion heisst `zaehleUnzugeordnet` und das Feld
+     `eigene_unzugeordnet`. Der Name sagte „eigene", der Filter nicht —
+     dieselbe Familie wie ein Zaehler, dessen Name mehr behauptet als er
+     misst. Und er verschiebt nur um eins, was ihn schwerer auffindbar
+     macht als einen groben Fehler. */
   const { data: aufstellung } = await db
-    .from("spiel_aufstellung").select("sfv_person_id").eq("verein_id", vereinId);
+    .from("spiel_aufstellung").select("sfv_person_id")
+    .eq("verein_id", vereinId).eq("ist_eigener", true);
   const { data: zuordnung } = await db
     .from("sfv_zuordnung").select("sfv_person_id").eq("verein_id", vereinId);
 
