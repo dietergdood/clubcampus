@@ -272,5 +272,49 @@ export function fuersProtokoll(
     doppelte_teams: zahlen.doppelte_teams,
     moegliche_dubletten: zahlen.moegliche_dubletten,
     fehler: zahlen.fehler,
+
+    /* ── Die Feldbefunde der Gegenstelle ────────────────────────────
+       ⚠ ⚠  SIE FEHLTEN HIER, UND DAS WAR DER GRUND, WARUM SEIT STUNDEN
+             NIEMAND SEHEN KONNTE, WAS DRUEBEN ANKOMMT.
+
+       WordPress meldet sie in jeder Antwort — `unbeachtete_felder`
+       seit 0.7.0, `ohne_feldschluessel` und `feld_mehrdeutig` seit
+       0.9.8/0.9.9. Diese Allowlist hat sie weggeschnitten, und damit
+       stand die einzige Auskunft, die „ist das Feld angekommen?"
+       beantwortet, in keinem Protokoll.
+
+       ⚠ Es ist der dritte Fall derselben Klasse an einem Tag: der
+       Zaehler war da, der Melder war da — nur der Weg nach draussen
+       fehlte. **Ein Melder, den niemand abholt, ist selbst die Luecke.**
+
+       ⚠ Und sie sind unbedenklich: es sind FELDNAMEN, keine Werte und
+       keine Personen. Die Allowlist ist gegen Klarnamen gebaut, nicht
+       gegen Diagnose. */
+    unbeachtete_felder: sammleNamen(teile, "unbeachtete_felder"),
+    ohne_feldschluessel: sammleNamen(teile, "ohne_feldschluessel"),
+    /* Ein Objekt Name → Kandidaten; hier genuegen die Namen. */
+    feld_mehrdeutig: sammleSchluessel(teile, "feld_mehrdeutig"),
   };
+}
+
+/** Namen aus einer Liste in allen Teil-Antworten, entdoppelt und sortiert. */
+function sammleNamen(teile: TeilErgebnis[], feld: string): string[] {
+  const raus = new Set<string>();
+  for (const t of teile) {
+    const w = (t.wp as Record<string, unknown> | null)?.[feld];
+    if (Array.isArray(w)) for (const n of w) raus.add(String(n));
+  }
+  return [...raus].sort();
+}
+
+/** Schluessel eines Objekts in allen Teil-Antworten. */
+function sammleSchluessel(teile: TeilErgebnis[], feld: string): string[] {
+  const raus = new Set<string>();
+  for (const t of teile) {
+    const w = (t.wp as Record<string, unknown> | null)?.[feld];
+    if (w && typeof w === "object" && !Array.isArray(w)) {
+      for (const n of Object.keys(w)) raus.add(n);
+    }
+  }
+  return [...raus].sort();
 }

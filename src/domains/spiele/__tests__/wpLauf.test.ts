@@ -250,3 +250,56 @@ describe("unbeachtete_felder erreichen den Lauf", () => {
     expect(fasseLauf([alt]).zahlen.unbeachtete_felder).toEqual([]);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Die Feldbefunde der Gegenstelle (11.09.2026)
+
+   ⚠ ANLASS: WordPress meldet seit 0.7.0 `unbeachtete_felder` und seit
+   0.9.9 `feld_mehrdeutig` — und diese Allowlist hat beides
+   weggeschnitten. Damit stand die einzige Auskunft, die „ist das Feld
+   angekommen?" beantwortet, in keinem Protokoll. Stunden Suche, weil
+   der Weg nach draussen fehlte.
+
+   ⚠ Sie sind unbedenklich: FELDNAMEN, keine Werte, keine Personen. Die
+   Allowlist ist gegen Klarnamen gebaut, nicht gegen Diagnose.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("fuersProtokoll — die Feldbefunde", () => {
+  const teil = (wp: unknown) => ({
+    sfv_team_id: "1", gesendet: 1, wp, fehler: null, dauer_ms: 1,
+  }) as never;
+  const leer = { teams_gesendet: 1, teams_gescheitert: 0, spiele_gesendet: 1,
+    neu: 0, aktualisiert: 1, zurueckgezogen: 0, uebersprungen: 0,
+    verlauf_zeilen: 0, ohne_team: [], doppelte_teams: [],
+    moegliche_dubletten: [], fehler: [] } as never;
+
+  it("nimmt unbeachtete_felder mit, entdoppelt über die Teams", () => {
+    const p = fuersProtokoll("host", leer, [
+      teil({ unbeachtete_felder: ["aufstellung", "liga"] }),
+      teil({ unbeachtete_felder: ["aufstellung"] }),
+    ]);
+    expect(p.unbeachtete_felder).toEqual(["aufstellung", "liga"]);
+  });
+
+  it("nimmt ohne_feldschluessel und feld_mehrdeutig mit", () => {
+    const p = fuersProtokoll("host", leer, [
+      teil({ ohne_feldschluessel: ["runde"],
+             feld_mehrdeutig: { gruppe: ["taxonomy:f_a", "text:f_b"] } }),
+    ]);
+    expect(p.ohne_feldschluessel).toEqual(["runde"]);
+    expect(p.feld_mehrdeutig).toEqual(["gruppe"]);
+  });
+
+  it("⚠ steht auch dann da, wenn nichts zu melden ist", () => {
+    /* Eine leere Liste heisst „geprüft, nichts gefunden". Fehlte die
+       Zeile, hiesse ihr Fehlen „nicht gemessen" — und das ist heute
+       schon mehrfach in die falsche Richtung gegangen. */
+    const p = fuersProtokoll("host", leer, [teil({ neu: 0 })]);
+    expect(p.unbeachtete_felder).toEqual([]);
+    expect(p.feld_mehrdeutig).toEqual([]);
+  });
+
+  it("⚠ verträgt eine gescheiterte Mannschaft (wp === null)", () => {
+    const p = fuersProtokoll("host", leer, [teil(null)]);
+    expect(p.unbeachtete_felder).toEqual([]);
+  });
+});
