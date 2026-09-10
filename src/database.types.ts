@@ -4021,11 +4021,10 @@ export type Database = {
           sfv_gruppe_id: number | null
           sfv_liga_id: number | null
           sfv_match_id: number | null
-          sfv_runde: string | null
-          sfv_runde_nr: number | null
           sfv_saison_id: number | null
           sfv_spiel_nr: string | null
           sfv_spiel_typ: number | null
+          sfv_spieltag: string | null
           sfv_stand: Json | null
           sfv_status: number | null
           sfv_team_id: number | null
@@ -4059,11 +4058,10 @@ export type Database = {
           sfv_gruppe_id?: number | null
           sfv_liga_id?: number | null
           sfv_match_id?: number | null
-          sfv_runde?: string | null
-          sfv_runde_nr?: number | null
           sfv_saison_id?: number | null
           sfv_spiel_nr?: string | null
           sfv_spiel_typ?: number | null
+          sfv_spieltag?: string | null
           sfv_stand?: Json | null
           sfv_status?: number | null
           sfv_team_id?: number | null
@@ -4097,11 +4095,10 @@ export type Database = {
           sfv_gruppe_id?: number | null
           sfv_liga_id?: number | null
           sfv_match_id?: number | null
-          sfv_runde?: string | null
-          sfv_runde_nr?: number | null
           sfv_saison_id?: number | null
           sfv_spiel_nr?: string | null
           sfv_spiel_typ?: number | null
+          sfv_spieltag?: string | null
           sfv_stand?: Json | null
           sfv_status?: number | null
           sfv_team_id?: number | null

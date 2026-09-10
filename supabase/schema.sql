@@ -2072,8 +2072,7 @@ CREATE TABLE IF NOT EXISTS "public"."spiele" (
     "zuletzt_synchronisiert" timestamp with time zone,
     "matchdaten_geholt_am" timestamp with time zone,
     "sfv_spiel_nr" "text",
-    "sfv_runde" "text",
-    "sfv_runde_nr" integer
+    "sfv_spieltag" "text"
 );
 
 
@@ -2128,11 +2127,7 @@ COMMENT ON COLUMN "public"."spiele"."sfv_spiel_nr" IS 'matchNumber des SFV. NICH
 
 
 
-COMMENT ON COLUMN "public"."spiele"."sfv_runde" IS 'SFV playDayName — der Rundenname im Klartext („1. Runde", „Achtelfinal"). Gehoert dem Verband, wird bei jedem Sync ueberschrieben. NULL, wenn er keinen nennt.';
-
-
-
-COMMENT ON COLUMN "public"."spiele"."sfv_runde_nr" IS 'SFV roundNbr. GEGENPROBE zu sfv_runde, keine Anzeigequelle: aus einer Zahl „Runde 5" zu machen waere bei Achtelfinal & Co. plausibel und falsch.';
+COMMENT ON COLUMN "public"."spiele"."sfv_spieltag" IS 'SFV playDayName. GEMESSEN am 11.09.2026: enthaelt den WOCHENTAG („Samstag"), nicht den Rundennamen. Wird von keiner Anzeige gelesen — die Website zeigt den Wochentag ohnehin aus dem Datum. Hiess bis dahin sfv_runde, was eine falsche Zusage war.';
 
 
 
