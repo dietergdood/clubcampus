@@ -414,6 +414,10 @@ describe("zaehleVerlaufNamen — zugeordnet gegen SFV-Rueckfall", () => {
    Anzeigestelle gelesen.
    ══════════════════════════════════════════════════════════════════════ */
 describe("Wechsel — beide Menschen werden genannt", () => {
+  /* ⚠ Die RICHTUNG steht seit dem 11.09.2026 fest und ist gemessen, nicht
+     angenommen: personId geht vom Platz, substitutePlayer kommt fuer ihn.
+     Der Wortlaut folgt dem Verband („X ersetzt durch Y"), damit sich
+     beide Seiten ohne Uebersetzung vergleichen lassen. */
   const wechsel = (ueber = {}) => e({
     typ_id: TYP_WECHSEL, ist_eigener: true,
     sfv_person_id: 222, rueckennr: 11,
@@ -424,13 +428,13 @@ describe("Wechsel — beide Menschen werden genannt", () => {
 
   it("nennt den Ausgewechselten beim Namen statt bei der Nummer", () => {
     const [z] = bildeVerlauf([wechsel()], true, NAMEN, "FC Herrliberg");
-    expect(z.text).toBe("Abdulah Al Abbadie · für Luca Meier");
+    expect(z.text).toBe("Abdulah Al Abbadie ersetzt durch Luca Meier");
   });
 
   it("faellt auf die Nummer zurueck, solange sein Name fehlt", () => {
     const nur222 = new Map([[222, "Abdulah Al Abbadie"]]);
     const [z] = bildeVerlauf([wechsel()], true, nur222, "FC Herrliberg");
-    expect(z.text).toBe("Abdulah Al Abbadie · für Nr. 9");
+    expect(z.text).toBe("Abdulah Al Abbadie ersetzt durch Nr. 9");
   });
 
   it("⚠ nennt ihn gar nicht, wenn weder Id noch Nummer da sind", () => {

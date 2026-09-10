@@ -293,9 +293,22 @@ export function bildeVerlauf(
        10.09.2026 stand hier `ein_rueckennr` direkt, und daneben ein Name:
        „Abdulah Al Abbadie · für Nr. 9". Zwei eigene Spieler, einer
        genannt. */
+    /* ⚠ ⚠  DIE RICHTUNG WAR VERTAUSCHT — berichtigt am 11.09.2026.
+       `personId` ist der Spieler, der VOM Platz geht; `substitutePlayer`
+       ist sein Ersatz. Bis heute stand hier „X · für Nr. 19", was das
+       Gegenteil behauptet: X komme für die 19.
+
+       ⚠ WARUM ES NIEMAND SAH: solange beide Menschen Nummern waren, ergab
+       jede Lesart einen plausiblen Satz. Erst als der eine einen Namen
+       bekam und der Verband danebenstand — „Aksel Nonnez ersetzt durch
+       Ivan Predannikov" —, wurde der Widerspruch sichtbar.
+
+       Der Wortlaut folgt dem Verband. Nicht aus Bequemlichkeit: wer
+       beide Seiten nebeneinanderlegt, soll nicht erst uebersetzen
+       muessen, um zu sehen, ob dasselbe dasteht. */
     const zweiter = art === "wechsel" ? beschreibeGewechselten(e, namen) : "";
     const text = zweiter
-      ? `${wer} · für ${zweiter}`
+      ? `${wer} ersetzt durch ${zweiter}`
       : `${wer}${zusatz}`;
 
     zeilen.push({

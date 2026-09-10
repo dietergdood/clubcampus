@@ -35,7 +35,10 @@
 // console.* bleibt in diesem Ordner verboten.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan } from "./sfvApi.ts";
+import { fasseWechselProbe, deuteWechselProbe } from "../../../src/domains/sfv/wechselProbe.ts";
+import {
+  holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
+} from "./sfvApi.ts";
 import type { SfvZugang } from "./sfvApi.ts";
 import { laufeSync } from "./sync.ts";
 import { fuersProtokoll, fuerZeitplanAntwort } from "./ergebnisTypen.ts";
@@ -70,7 +73,7 @@ Deno.serve(async (req) => {
   }
   /* ⚠ Die gueltigen Aktionen aufgezaehlt, damit die Meldung sie nennen
      kann — dieselbe Regel wie in wp-export. */
-  const AKTIONEN = ["teams", "sync", "namen", "teamprobe"];
+  const AKTIONEN = ["teams", "sync", "namen", "teamprobe", "wechselprobe"];
   if (!AKTIONEN.includes(aktion)) {
     return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
   }
@@ -156,6 +159,77 @@ Deno.serve(async (req) => {
 
      ⚠ Die Antwort nennt Zahlen UND die Differenzmenge — eine Zahl allein
      sagt nicht, WELCHE Mannschaft fehlt. */
+  /* ── Aktion wechselprobe: WER ist bei einem Wechsel wer? ────────────
+     Liest, schreibt nichts. Sie beantwortet genau eine Frage: schickt der
+     Verband zum Ersatzspieler eine Kennung, einen Namen, oder nur eine
+     Nummer? Gemessen von Didi am 11.09.2026: `ein_sfv_person_id` ist bei
+     allen 176 Wechseln leer, waehrend die Verbandsseite beide Namen
+     zeigt — also steht die Auskunft woanders in der Antwort.
+
+     ⚠ SIE GIBT KEINE NAMEN ZURUECK, nur ob einer da ist. Eine Probe, die
+     mehr herausgibt als ihre Frage verlangt, ist der Anfang des naechsten
+     Protokoll-Funds — siehe die 903 Klarnamen vom 21.08.2026. */
+  if (aktion === "wechselprobe") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+    try {
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+
+      /* Spiele mit Matchdaten, die juengsten zuerst — dort ist die
+         Wahrscheinlichkeit am hoechsten, ueberhaupt einen Wechsel zu
+         treffen. `error` lesen: eine leere Liste saehe sonst aus wie
+         „keine Spiele" statt wie „Abfrage gescheitert". */
+      const { data: spiele, error: sErr } = await db.from("spiele")
+        .select("sfv_match_id")
+        .eq("verein_id", v.verein_id)
+        .not("matchdaten_geholt_am", "is", null)
+        .order("date", { ascending: false })
+        .limit(12);
+      if (sErr) throw new Error(`Spiele nicht lesbar: ${sErr.message}`);
+
+      const roh: Record<string, unknown>[] = [];
+      let abgefragt = 0;
+      let fehler = 0;
+      for (const sp of spiele ?? []) {
+        const mid = Number(sp.sfv_match_id);
+        if (!Number.isFinite(mid)) continue;
+        try {
+          roh.push(...await holeEreignisse(zugang, token, mid));
+          abgefragt++;
+        } catch (e) {
+          fehler++;
+          void (e instanceof Error ? e.message : String(e));
+        }
+      }
+
+      /* ⚠ Die Clubnummer aus `vereine`, nicht aus einer Konstante und nicht
+         aus der ClubId — das sind drei verschiedene Zahlen (CLAUDE.md).
+         Fehlt sie, gilt niemand als eigen, und die Probe meldete null
+         eigene Wechsel: ein Ausfall in der Verkleidung einer Datenlage.
+         Deshalb hier ein eigener Fehler statt einer stillen Null. */
+      const { data: verein, error: vErr } = await db.from("vereine")
+        .select("sfv_club_nummer").eq("id", v.verein_id).maybeSingle();
+      if (vErr) throw new Error(`Verein nicht lesbar: ${vErr.message}`);
+      const clubNr = (verein?.sfv_club_nummer as number | null) ?? null;
+      if (clubNr === null) {
+        return json({ fehler: "vereine.sfv_club_nummer fehlt — ohne sie ist eigen/fremd nicht zu trennen" }, 400);
+      }
+
+      const befund = fasseWechselProbe(roh, clubNr);
+      return json({
+        hinweis: "Leseprobe. Es wird nichts gespeichert und keine Namen zurückgegeben.",
+        spiele_abgefragt: abgefragt,
+        spiele_fehlgeschlagen: fehler,
+        ereignisse_gesamt: roh.length,
+        ...befund,
+        deutung: deuteWechselProbe(befund),
+      });
+    } catch (e) {
+      return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
+    }
+  }
+
   if (aktion === "teamprobe") {
     const v = eigene[0];
     if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
