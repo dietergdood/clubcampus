@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.6.0
+ * Version:     0.7.0
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,15 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.7.0 (11.09.2026): der Empfaenger meldet `unbeachtete_felder` — was die
+   Nutzlast bringt und keine Allowlist fuehrt. `liga` kam seit jeher an und
+   wurde wortlos verworfen; WO es riss, musste die Website-Seite von Hand
+   messen. Dieselbe Klasse wie schneideAufFeldhoheit() drueben, am selben
+   Tag: eine Allowlist, die nur eine Richtung meldet.
+   ⚠ `liga` ist NICHT in CC_FELDER aufgenommen — erst muss das fch_spiel
+   ein Feld dieses Namens haben, sonst schreibt update_field() ueber ACFs
+   globale Namenssuche in das Feld des TEAMS.
+
    0.6.0 (11.09.2026): `wp_teams` und die Team-Zuordnung zaehlen keine
    `auto-draft` mehr (CC_TEAM_ZUSTAENDE) — auf dev waren zehn von
    einundzwanzig gezaehlten Teams nie gespeicherte Entwuerfe. Und der
@@ -171,7 +180,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.6.0';
+const CC_VERSION    = '0.7.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -275,6 +284,42 @@ const CC_FELDER = array(
 	'wettbewerb', 'runde', 'status', 'quelle',
 	'tore_heim', 'tore_gast', 'halbzeit_heim', 'halbzeit_gast',
 	'sfv_match_id', 'sfv_spiel_nr',
+);
+
+/**
+ * Felder der Nutzlast, die ABSICHTLICH nicht ans Spiel geschrieben werden.
+ *
+ * ⚠ ⚠  WARUM ES DIESE LISTE GIBT — GEMESSEN AM 11.09.2026.
+ *
+ * `liga` wird seit jeher mitgeschickt und von CC_FELDER nicht gefuehrt.
+ * Der Empfaenger hat es wortlos verworfen; auf der Website fehlte die
+ * Cup-Bezeichnung, und WO es riss, musste die Website-Seite von Hand
+ * messen — drei Dateien durchsuchen, um zu sehen, dass ein Feld gar nicht
+ * ankommt.
+ *
+ * ⚠ Das ist DIESELBE KLASSE wie `schneideAufFeldhoheit()` auf der
+ * ClubCampus-Seite, die am selben Tag `sfv_runde` still weggeschnitten
+ * hat: eine Allowlist, die nur EINE Richtung meldet.
+ *
+ *   fehlt in der Nutzlast, steht in der Liste   → wird uebersprungen, ok
+ *   steht in der Nutzlast, fehlt in der Liste   → war STILL
+ *
+ * Die zweite Richtung ist die gefaehrlichere: von aussen sieht sie aus wie
+ * „die Gegenstelle schickt es nicht".
+ *
+ * ⚠ Und deshalb reicht es nicht, einfach alles Unbekannte zu melden: drei
+ * Felder gehoeren dort hin und waeren dauerhaftes Rauschen. Ein Melder,
+ * der immer dasselbe sagt, wird nicht mehr gelesen — dieselbe Abstumpfung
+ * wie bei einem dauerhaft roten Test.
+ */
+const CC_FELDER_ABSICHTLICH_UNGENUTZT = array(
+	/* Die SFV-Nummer wird zur Beitrags-Id aufgeloest und als `fch_team`
+	   geschrieben — der Wert am Beitrag ist ein anderer. */
+	'sfv_team_id',
+	/* Steuert den Beitragsstatus (publish/draft), ist kein Feld. */
+	'publizieren',
+	/* Wird ueber den Repeater geschrieben, nicht ueber die Feldliste. */
+	'verlauf',
 );
 
 /** Unterfelder des Verlaufs — dieselbe Rolle, eine Ebene tiefer. */
@@ -766,6 +811,27 @@ function cc_schreibe_felder( int $post_id, array $spiel ): array {
 }
 
 /**
+ * Was die Nutzlast bringt und niemand schreibt — die zweite Richtung.
+ *
+ * ⚠ SIE SCHREIBT NICHTS UND AENDERT NICHTS. Sie nennt nur Feldnamen, damit
+ * ein vergessener Eintrag in CC_FELDER nicht wie eine fehlende Lieferung
+ * aussieht. Siehe CC_FELDER_ABSICHTLICH_UNGENUTZT.
+ *
+ * ⚠ Der Empfaenger entscheidet damit NICHT, ob das Feld hingehoert. Ein
+ * Name in dieser Liste heisst „jemand muss hinsehen", nicht „hier fehlt
+ * etwas" — die Antwort kann auch lauten, dass die Gegenstelle es gar
+ * nicht schicken sollte.
+ *
+ * @return string[] Feldnamen, alphabetisch. Keine Werte.
+ */
+function cc_unbeachtete_felder( array $spiel ): array {
+	$bekannt = array_merge( CC_FELDER, CC_FELDER_ABSICHTLICH_UNGENUTZT );
+	$offen   = array_diff( array_keys( $spiel ), $bekannt );
+	sort( $offen );
+	return array_values( $offen );
+}
+
+/**
  * Den Verlauf ersetzen — vollstaendig, je Lauf.
  *
  * ⚠ `ereignisse` wird hier NICHT angefasst. Die beiden beantworten
@@ -1049,6 +1115,9 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		'uebersprungen' => 0, 'verlauf_zeilen' => 0,
 		'ohne_team' => array(), 'doppelte_teams' => array(),
 		'moegliche_dubletten' => array(), 'fehler' => array(),
+		/* ⚠ Feldnamen, die ankommen und niemand schreibt — die zweite
+		   Richtung der Allowlist. Siehe cc_unbeachtete_felder(). */
+		'unbeachtete_felder' => array(),
 	);
 
 	/* ⚠ Namentlich, nicht nur gezaehlt. Eine Zahl sagt „21 uebersprungen"
@@ -1138,6 +1207,11 @@ function cc_route_spiele( WP_REST_Request $req ) {
 		}
 
 		$spiel['quelle'] = CC_QUELLE;
+		/* ⚠ VOR dem Schreiben, und aus der Nutzlast wie sie kam: `quelle`
+		   setzen wir selbst, das gehoert nicht in die Meldung. */
+		foreach ( cc_unbeachtete_felder( $spiel ) as $f ) {
+			$erg['unbeachtete_felder'][ $f ] = true;
+		}
 		cc_schreibe_felder( (int) $postId, $spiel );
 		cc_stempel( (int) $postId, $lauf );
 
@@ -1187,6 +1261,12 @@ function cc_route_spiele( WP_REST_Request $req ) {
 			'hinweis'        => $erg['fehler'],
 		)
 	);
+
+	/* ⚠ Aus den Schluesseln eine Liste: als Map gesammelt (entdoppelt sich
+	   selbst), als Liste ausgeliefert (JSON-Objekt mit true-Werten laese
+	   sich wie ein Schalter). */
+	$erg['unbeachtete_felder'] = array_keys( $erg['unbeachtete_felder'] );
+	sort( $erg['unbeachtete_felder'] );
 
 	return new WP_REST_Response( $erg, 200 );
 }

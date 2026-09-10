@@ -95,6 +95,27 @@ for ($i = 0; $i < $n; $i++) {
                         'bezeichner' => array_values(array_unique($bez)),
                         'texte' => $texte];
 }
+/* ⚠ KONSTANTEN AUF DATEIEBENE — ergaenzt am 11.09.2026.
+   Der Zerleger kannte nur Funktionen. Eine Regel ueber CC_FELDER war
+   damit nicht baubar, und der erste Versuch griff auf einen Regex ueber
+   den Quelltext zurueck — genau das, was in diesem Projekt als Werkzeug
+   gilt, das die Bedeutung nicht kennt. Also lieber den Zerleger
+   erweitern: const NAME = array('a','b'); wird zur Liste von Texten.
+   (Keine Backticks in diesem Block — er steht selbst in einem
+   Template-Literal und wuerde es beenden.) */
+$konstanten = [];
+for ($i = 0; $i < $n; $i++) {
+  if ($t[$i][0] !== 'T_CONST' || $i + 1 >= $n || $t[$i+1][0] !== 'T_STRING') continue;
+  $name = $t[$i+1][1];
+  $j = $i + 2; $tiefe = 0; $texte = []; $start = false;
+  for (; $j < $n; $j++) {
+    if ($t[$j] === ['CHAR', '(']) { $tiefe++; $start = true; }
+    elseif ($t[$j] === ['CHAR', ')']) { $tiefe--; if ($tiefe === 0) break; }
+    elseif ($t[$j] === ['CHAR', ';'] && !$start) break;
+    elseif ($t[$j][0] === 'T_CONSTANT_ENCAPSED_STRING') $texte[] = trim($t[$j][1], "'\\"");
+  }
+  $konstanten[$name] = $texte;
+}
 $routen = [];
 for ($i = 0; $i < $n; $i++) {
   if ($t[$i][0] !== 'T_STRING' || $t[$i][1] !== 'register_rest_route') continue;
@@ -106,7 +127,7 @@ for ($i = 0; $i < $n; $i++) {
   }
   $routen[] = $texte;
 }
-echo json_encode(['funktionen' => $funktionen, 'routen' => $routen]);
+echo json_encode(['funktionen' => $funktionen, 'routen' => $routen, 'konstanten' => $konstanten]);
 `;
 
 function zerlege(quelle) {
@@ -215,6 +236,39 @@ const REGELN = [
      der Konstante: eine zweite Zustandsliste MUESSTE die Zustaende als
      Texte enthalten, und `any` ist der eine Wert, der still zu viel
      einsammelt. */
+  /* ⚠⚠ DIE FALLE, DIE DIE WEBSITE-SEITE AM 11.09.2026 GEMELDET HAT — und
+     sie ist gefaehrlicher als ein fehlendes Feld.
+
+     `liga` gehoert in CC_FELDER, sobald das fch_spiel ein Feld dieses
+     Namens hat. Kaeme es FRUEHER hinein, schriebe `update_field('liga',…)`
+     ueber ACFs globale Namenssuche in das Feld des TEAMS — derselbe
+     Mechanismus, der am 10.09. bei `_saison = f_p_st_sai` gemessen wurde.
+
+     Ergebnis waere kein Fehler, sondern ein falsch gefuelltes Teamfeld:
+     die Liga einer Mannschaft, ueberschrieben mit der eines einzelnen
+     Spiels. Es schlaegt nichts fehl, und es sieht aus wie gepflegte Daten.
+
+     ⚠ Die Regel prueft die REIHENFOLGE nicht — das kann sie nicht, das
+     Feld liegt im anderen Repository. Sie haelt fest, dass der Eintrag
+     nicht versehentlich passiert: wer `liga` in CC_FELDER schreibt, muss
+     diese Regel anfassen und liest dabei, warum. */
+  {
+    frage: "CC_FELDER fuehrt kein Feld, das am fch_team denselben Namen hat",
+    pruefe: (b) => {
+      /* ⚠ Ueber `konstanten`, nicht ueber einen Regex auf den Quelltext:
+         ein Textmuster traefe auch einen Kommentar, in dem der Name
+         vorkommt — und davon steht in dieser Datei einiges. */
+      const felder = b.konstanten?.CC_FELDER;
+      if (!felder) return ["(CC_FELDER nicht gefunden — sieht die Pruefung die falsche Datei an?)"];
+      /* Die Namen, die am fch_team existieren. Steht einer davon in
+         CC_FELDER, greift ACFs globale Namenssuche. */
+      const AM_TEAM = ["liga", "gruppe", "abgleich_stand"];
+      return felder.filter((x) => AM_TEAM.includes(x));
+    },
+    kontrolle: "<?php const CC_FELDER = array( 'datum', 'liga' ); "
+      + "function cc_schreibe_felder() { return 1; }",
+    erwarteImKontrollfall: 1,
+  },
   {
     frage: "keine Team-Abfrage nimmt post_status 'any'",
     pruefe: (b) => {
