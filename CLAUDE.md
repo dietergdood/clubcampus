@@ -3115,6 +3115,48 @@ Ranglisten-Ablage (`saison_name` je Gruppe, Schreibweise des Verbands), aus
 stehen und wird nicht überschrieben — es zu entfernen wäre eine Änderung
 an zwei Beiträgen ohne Gegenwert.
 
+### ⚠ „Success. No rows returned" — eine Migration, die ihre Arbeit verschweigt
+
+10.09.2026. `migration_bench_ausbau.sql` sollte melden, wie viele Zeilen
+ihr `delete` trifft — die Zahl war ausdrücklich bestellt, weil „zwanzig"
+eine Messung von vorher war und sich bis zur Ausführung ändern konnte:
+
+```sql
+get diagnostics anz = row_count;
+raise notice 'Nur-aus-/bench geloescht: % Zeilen', anz;
+```
+
+**Der Supabase-SQL-Editor zeigt `NOTICE` nicht an.** Zurück kam
+
+```
+Success. No rows returned
+```
+
+⚠ **Und die Zahl ist damit endgültig weg**, nicht bloss ungesehen: die
+Zeilen sind gelöscht, und `ist_bank` — die Spalte, über die man sie
+nachzählen könnte — hat dieselbe Migration gestrichen. Es gibt keinen
+zweiten Weg dorthin.
+
+**Das ist wieder „berechnet, geliefert, nicht gezeigt", aber mit einer
+neuen Ursache:** nicht eine vergessene Anzeige, sondern ein **Kanal, den
+der Leser nicht rendert**. Der Wert war korrekt berechnet, die Meldung
+korrekt formuliert, und niemand sieht sie.
+
+| | |
+|---|---|
+| `raise notice` | in `psql` sichtbar, **im Supabase-Editor nicht** |
+| `select` | überall sichtbar — der Editor zeigt Zeilen |
+
+**Die Regel: was eine Migration berichten soll, berichtet sie als
+`select`, nicht als `notice`.** Und wenn die Zahl nach der Migration
+nicht mehr herstellbar ist, wird sie **davor** gemessen — als eigene
+Abfrage, die man laufen lässt, bevor man schreibt.
+
+⚠ **Der Satz „Success. No rows returned" ist dabei selbst das Symptom.**
+Er liest sich wie eine Bestätigung und heisst hier: *ich habe dir nichts
+gesagt.* Dieselbe Ununterscheidbarkeit wie „keine neue Zeile in
+`api_sync_log`" — gelungen und nichts zu tun sehen gleich aus.
+
 ### ⚠ Zwei kaputte Prüfregeln an einem Tag — und sie waren auf ENTGEGENGESETZTE Weise kaputt
 
 10.09.2026, beide in `scripts/check-plugin.mjs`. Der Satz dazu ist Didis:
