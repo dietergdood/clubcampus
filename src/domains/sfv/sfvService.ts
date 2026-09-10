@@ -213,7 +213,7 @@ export async function starteSync(
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   Zwei Auskunfts-Aufrufe fuer die API-Kachel (11.09.2026)
+   Zwei Auskunfts-Aufrufe fuer die API-Kachel (10.09.2026)
 
    ⚠ WARUM SIE ES UEBERHAUPT BRAUCHT. Gemessen: `supabase` liegt NICHT
    am Fensterobjekt — App.tsx legt den Client in ein modul-lokales

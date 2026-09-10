@@ -212,7 +212,7 @@ describe("fuersProtokoll — die Allowlist", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   Was ankommt und niemand schreibt, erreicht die Anzeige (11.09.2026)
+   Was ankommt und niemand schreibt, erreicht die Anzeige (10.09.2026)
 
    ⚠ ANLASS. Der Empfänger meldet `unbeachtete_felder` seit 0.7.0 — und
    unsere Seite las es an KEINER Stelle. `liga` kam ein halbes Jahr an

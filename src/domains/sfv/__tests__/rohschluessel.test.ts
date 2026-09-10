@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Die Rohschlüssel-Probe gibt Namen heraus, keine Werte (11.09.2026)
+   Die Rohschlüssel-Probe gibt Namen heraus, keine Werte (10.09.2026)
    ══════════════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
 import { schluesselVon, suchtBildfeld } from "../rohschluessel.ts";

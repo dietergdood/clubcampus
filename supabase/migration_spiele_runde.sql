@@ -1,9 +1,9 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- ClubCampus — spiele.sfv_runde / spiele.sfv_runde_nr
--- 11.09.2026
+-- 10.09.2026
 --
 -- ⚠ ANLASS. Cupspiele tragen kein `runde` — 13 von 13, gemessen von der
---   Website-Seite am 11.09.2026. Der Grund ist kein Fehler: `runde` kommt
+--   Website-Seite am 10.09.2026. Der Grund ist kein Fehler: `runde` kommt
 --   aus `groupName`, und ein Cupspiel hat keine Gruppe.
 --
 --   Der Spielplan-Endpunkt fuehrt daneben `playDayName` (Text) und

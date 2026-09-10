@@ -64,7 +64,7 @@
  *              0.4.0). Welche Felder das sind, sagt CC_TEAM_FELDER; die
  *              Pruefung `check-plugin` haelt es fest.
  *
- *              ⚠ HIER STAND BIS ZUM 11.09.2026 „NIE fch_team". Das war
+ *              ⚠ HIER STAND BIS ZUM 10.09.2026 „NIE fch_team". Das war
  *              richtig bis 0.3.0 und danach falsch — gemeldet von der
  *              Website-Seite, nicht selbst bemerkt. Ein Kopf, der eine
  *              Zusage nennt, die der Code nicht mehr haelt, ist schlimmer
@@ -142,7 +142,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
-   0.8.0 (11.09.2026): `liga` steht in CC_FELDER — das fch_spiel hat seit
+   0.8.0 (10.09.2026): `liga` steht in CC_FELDER — das fch_spiel hat seit
    heute ein Feld dieses Namens (`f_s_liga`, „Wettbewerbsbezeichnung").
    Es traegt die WETTBEWERBSBEZEICHNUNG, nicht die Betriebsart.
    ⚠ Dazu `spielfelder` in `/status`: fuer JEDES Feld aus CC_FELDER, ob
@@ -150,7 +150,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    wissen, was drueben registriert ist — diese Auskunft schon, und sie
    ist der eigentliche Schutz gegen ACFs globale Namenssuche.
 
-   0.7.0 (11.09.2026): der Empfaenger meldet `unbeachtete_felder` — was die
+   0.7.0 (10.09.2026): der Empfaenger meldet `unbeachtete_felder` — was die
    Nutzlast bringt und keine Allowlist fuehrt. `liga` kam seit jeher an und
    wurde wortlos verworfen; WO es riss, musste die Website-Seite von Hand
    messen. Dieselbe Klasse wie schneideAufFeldhoheit() drueben, am selben
@@ -159,7 +159,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    ein Feld dieses Namens haben, sonst schreibt update_field() ueber ACFs
    globale Namenssuche in das Feld des TEAMS.
 
-   0.6.0 (11.09.2026): `wp_teams` und die Team-Zuordnung zaehlen keine
+   0.6.0 (10.09.2026): `wp_teams` und die Team-Zuordnung zaehlen keine
    `auto-draft` mehr (CC_TEAM_ZUSTAENDE) — auf dev waren zehn von
    einundzwanzig gezaehlten Teams nie gespeicherte Entwuerfe. Und der
    Dateikopf sagt nicht mehr „NIE fch_team": seit 0.4.0 schreibt der
@@ -294,7 +294,7 @@ const CC_FELDER = array(
 	   `wettbewerb` und heisst beim Cup schlicht „Cup". Die zwei werden
 	   verwechselt, und der Feldname `wettbewerb` traegt Schuld daran.
 
-	   ⚠ AUFGENOMMEN AM 11.09.2026, KEINE MINUTE FRUEHER. Bis dahin gab es
+	   ⚠ AUFGENOMMEN AM 10.09.2026, KEINE MINUTE FRUEHER. Bis dahin gab es
 	   am fch_spiel kein Feld dieses Namens, und `update_field('liga', …)`
 	   haette ueber ACFs globale Namenssuche in das Feld des TEAMS
 	   geschrieben — die Liga einer Mannschaft, ueberschrieben mit der
@@ -319,7 +319,7 @@ const CC_FELDER = array(
 /**
  * Felder der Nutzlast, die ABSICHTLICH nicht ans Spiel geschrieben werden.
  *
- * ⚠ ⚠  WARUM ES DIESE LISTE GIBT — GEMESSEN AM 11.09.2026.
+ * ⚠ ⚠  WARUM ES DIESE LISTE GIBT — GEMESSEN AM 10.09.2026.
  *
  * `liga` wird seit jeher mitgeschickt und von CC_FELDER nicht gefuehrt.
  * Der Empfaenger hat es wortlos verworfen; auf der Website fehlte die
@@ -698,7 +698,7 @@ function cc_route_status(): WP_REST_Response {
 			/* ⚠ DASSELBE FUER DAS SPIEL, seit 0.8.0. Ein Feldname, den ACF
 			   am fch_spiel nicht kennt, wird als blosses Postmeta
 			   geschrieben und von niemandem gelesen — genau der Fall, der
-			   `liga` bis zum 11.09.2026 unmoeglich machte. Die Liste in
+			   `liga` bis zum 10.09.2026 unmoeglich machte. Die Liste in
 			   der Pruefkette kann das nicht wissen, diese Auskunft schon. */
 			'spielfelder'           => cc_spielfeld_lage( cc_ein_spiel_id() ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
@@ -775,7 +775,7 @@ function cc_abgleich_kandidaten(): array {
  * WordPress legt bei jedem Klick auf „Neu" einen `auto-draft` an, auch
  * wenn niemand etwas speichert. Auf der dev-Instanz waren das **zehn von
  * einundzwanzig**: `wp_teams` meldete 21, es gab elf. Gemeldet von der
- * Website-Seite am 11.09.2026.
+ * Website-Seite am 10.09.2026.
  *
  * ⚠ Die Zahl war damit nicht bloss zu hoch, sondern IRREFUEHREND: sie
  * stand neben `wp_teams_mit_sfv_id` und liess elf zugeordnete Teams

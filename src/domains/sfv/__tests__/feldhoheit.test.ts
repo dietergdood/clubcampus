@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Die Feldhoheit meldet BEIDE Richtungen (11.09.2026)
+   Die Feldhoheit meldet BEIDE Richtungen (10.09.2026)
 
    ⚠ ANLASS. `sfv_runde` und `sfv_runde_nr` wurden angelegt, vom Sync
    berechnet — und standen nach einem vollen Lauf bei allen 270 Spielen
@@ -40,7 +40,7 @@ describe("schneideAufFeldhoheit", () => {
     expect(fehlend).toEqual(["treffpunkt"]);
   });
 
-  it("⚠ MELDET AUCH DIE GEGENRICHTUNG — der Fall vom 11.09.2026", () => {
+  it("⚠ MELDET AUCH DIE GEGENRICHTUNG — der Fall vom 10.09.2026", () => {
     /* Ohne diese Zeile schneidet die Funktion `sfv_runde` weg und sagt
        nichts. In der Datenbank steht dann NULL, und von aussen sieht es
        aus, als liefere der Verband nichts. */
@@ -66,7 +66,7 @@ describe("schneideAufFeldhoheit", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   `roundNbr` kommt nicht zurueck (11.09.2026)
+   `roundNbr` kommt nicht zurueck (10.09.2026)
 
    ⚠ Gemessen ueber alle 270 Spiele: Meisterschaft 1–26, Cup 1–2,
    Trainingsspiele durchgehend 0, Schweizer-Cup 105. Das Feld traegt je

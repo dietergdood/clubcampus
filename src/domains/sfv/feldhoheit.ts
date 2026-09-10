@@ -6,7 +6,7 @@
 //   `sync.ts` importiert von esm.sh und wird von beiden nicht geprueft.
 //
 //   ⚠ Und das ist hier keine Formsache: der Versuch, sie direkt aus
-//   `sync.ts` zu testen, hat am 11.09.2026 `npm run typecheck` rot
+//   `sync.ts` zu testen, hat am 10.09.2026 `npm run typecheck` rot
 //   gemacht — der Import zieht die ganze Datei samt esm.sh in die
 //   tsc-Programmliste. Ein Test, der die Pruefkette kaputtmacht, ist
 //   kein Test, sondern ein zweiter Defekt.
@@ -15,7 +15,7 @@
    Die erlaubten Spalten stehen in sync_felder. Diese Funktion schneidet die
    berechnete Zeile darauf zu — und meldet BEIDE Richtungen.
 
-   ⚠ ⚠  BIS ZUM 11.09.2026 MELDETE SIE NUR EINE, UND DAS WAR DER DEFEKT.
+   ⚠ ⚠  BIS ZUM 10.09.2026 MELDETE SIE NUR EINE, UND DAS WAR DER DEFEKT.
 
    Sie kannte `fehlend`: in sync_felder genannt, aber nicht berechnet. Ein
    Tippfehler in der Liste fiel damit auf. Die Gegenrichtung fiel nicht auf:

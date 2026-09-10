@@ -3288,7 +3288,7 @@ Nummer trägt.
 
 ### ⚠ `wettbewerb` ist der SPIELTYP, `liga` ist der Wettbewerb — und wir senden beide
 
-Gemessen am 11.09.2026 in `docs/sfv/sfv_stammdaten.json`, ausgelöst durch
+Gemessen am 10.09.2026 in `docs/sfv/sfv_stammdaten.json`, ausgelöst durch
 die Meldung der Website-Seite, bei Cupspielen stehe „schlicht «Cup»" statt
 „Regional Cup".
 
@@ -3326,7 +3326,7 @@ Erst messen, dann eine Spalte.
 
 ### ⚠ Ein ausgefallener Sync-Lauf hinterlässt KEINE Spur — zum zweiten Mal
 
-Festgehalten am 11.09.2026 auf Didis Anweisung. **Kein Bau, ein offener
+Festgehalten am 10.09.2026 auf Didis Anweisung. **Kein Bau, ein offener
 Punkt mit Vorschlag.**
 
 `api_sync_log` bekommt seine Zeile am **Ende** eines Laufs. Wirft der Lauf
@@ -3343,7 +3343,7 @@ geschrieben. Damit sehen zwei völlig verschiedene Lagen gleich aus:
 `succeeded` meldete — weil dort nur steht, dass die Anfrage **abgesetzt**
 wurde.
 
-⚠ ⚠ **BERICHTIGT AM 11.09.2026, NOCH AM SELBEN TAG.** Hier stand: *„Und
+⚠ ⚠ **BERICHTIGT AM 10.09.2026, NOCH AM SELBEN TAG.** Hier stand: *„Und
 es ist eben wieder eingetreten: nach `migration_spiele_spieltag.sql`
 schrieb der laufende Code weiter nach `sfv_runde`, jeder Lauf endete in
 `42703`."*
@@ -3405,7 +3405,7 @@ Alter zu sehen.
 **Was es kostet:** ein zusätzliches `insert` je Lauf und ein `update`
 statt eines `insert` am Ende.
 
-⚠ ⚠ **BERICHTIGT AM 11.09.2026 — DER SATZ DARUNTER WAR ZUR HÄLFTE
+⚠ ⚠ **BERICHTIGT AM 10.09.2026 — DER SATZ DARUNTER WAR ZUR HÄLFTE
 FALSCH.** Hier stand: *„`wp-export` macht es beim scharfen Lauf bereits
 so, der Sync nicht."* Gemessen im Quelltext: **der Sync machte es schon
 richtig** — `insert` mit `status: "laeuft"` vor dem Lauf, `update`
@@ -3417,7 +3417,7 @@ danach und im `catch`. Falsch war es nur bei der Aktion `namen`, und
 ich hatte aus „der Befund gilt" auf „er gilt überall" geschlossen, ohne
 die zweite Stelle anzusehen.
 
-✅ **Behoben am 11.09.2026.** `namen` und `wechselnachtrag` schreiben die
+✅ **Behoben am 10.09.2026.** `namen` und `wechselnachtrag` schreiben die
 Zeile jetzt vorher; alle drei tragen `api_sync_log.aktion`.
 
 ⚠ **Der Anlass für `aktion` war eine Zeile, die niemand deuten konnte:**
@@ -3448,7 +3448,7 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
-### ⚠ Zwei Bitten aus dem Theme-Chat, beide abgelehnt (11.09.2026)
+### ⚠ Zwei Bitten aus dem Theme-Chat, beide abgelehnt (10.09.2026)
 
 Festgehalten, weil eine abgelehnte Bitte sonst in vier Wochen als
 vergessene Aufgabe wiederkommt — und dann ohne den Grund.
@@ -3464,7 +3464,7 @@ ist zweimal gegangen und zweimal gescheitert:
 | `roundNbr` | 270 Spiele | Meisterschaft 1–26, Cup 1–2, Trainingsspiele **0**, Schweizer-Cup **105** |
 
 Beide waren als Spalte gebaut und sind wieder ausgebaut (`sfv_spieltag`
-bleibt als Beleg, `sfv_runde_nr` ist am 11.09.2026 gefallen).
+bleibt als Beleg, `sfv_runde_nr` ist am 10.09.2026 gefallen).
 
 ⚠ **Aus `roundNbr` „Runde 2" zu bauen bleibt verboten.** Ein Cup hat
 späte Runden mit Namen; „Runde 5" statt „Achtelfinal" wäre plausibel und
@@ -3490,7 +3490,7 @@ Sie entstehen nicht bei uns, und sie bezeichnen auch nicht dasselbe: die
 eine ist die **Betriebsart**, die andere der **Wettbewerb**.
 
 ⚠ **Dieselbe Regel wie beim Doppelabstand in „Gruppe  2"** (Entscheidung
-Didi, 11.09.2026): *fremde Daten stillschweigend zu putzen versteckt den
+Didi, 10.09.2026): *fremde Daten stillschweigend zu putzen versteckt den
 Fehler, statt ihn zu melden.* Wer hier normalisierte, machte aus einer
 Beobachtung über den Verband eine Eigenschaft unserer Kette — **und
 niemand sähe mehr, dass es zwei Listen sind.**
@@ -3500,7 +3500,7 @@ es auf, und genau dort soll es auffallen.
 
 ### ⚠⚠ `/api/match/{id}/players` liefert nur die STARTELF — die Bank fehlt
 
-Gemessen am 11.09.2026, **zweimal unabhängig**, und beide Male dieselbe
+Gemessen am 10.09.2026, **zweimal unabhängig**, und beide Male dieselbe
 Zahl: **207**.
 
 | Messung | Ergebnis |
@@ -3533,7 +3533,7 @@ nachweislich fehlen. Ein Lauf kostet **einen Abruf je betroffenem Spiel**
 — bei leerer Zuordnung potenziell jedes Spiel mit Aufstellung — und
 brächte für diese 207 nichts.
 
-**Der Hinweistext am Knopf trägt das seit dem 11.09.2026** (Entscheidung
+**Der Hinweistext am Knopf trägt das seit dem 10.09.2026** (Entscheidung
 Didi): er darf nicht versprechen, offene Spieler zu lösen, wenn er die
 Eingewechselten nicht erreicht.
 
@@ -3549,9 +3549,63 @@ braucht — und der drückt dann umsonst.
 ⚠ **Ein Schema ist keine Antwort — heute zweimal belegt:**
 `playDayName` heisst „Spieltagsname" und liefert den Wochentag, und eine
 `logoUrl` gibt es entgegen jeder Erwartung nirgends. **Deshalb wird
-zuerst gemessen:** `aktion: "rohschluessel"` fragt seit dem 11.09.2026
+zuerst gemessen:** `aktion: "rohschluessel"` fragt seit dem 10.09.2026
 auch `/bench` und gibt dessen Schlüssel zurück — nur Namen, keine Werte.
 
 **Vorher wird nichts gebaut**: kein Feld, keine Migration, kein „Bank
 holen". Stehen dort `personId` und `personName`, ist der Weg belegt;
 stehen sie nicht dort, ist er zu.
+
+### ⚠⚠ BERECHNET, GELIEFERT, NICHT GEZEIGT — der Fehler des 10.09.2026
+
+An einem Tag **achtmal** dieselbe Sache, in vier verschiedenen Bauteilen.
+Deshalb steht sie hier als **ein** Satz und nicht als acht Einzelfälle:
+
+> **Eine Anzeige, die nur im schlechten Fall etwas zeigt, verlangt vom
+> Leser eine Deutung — und die Deutung einer Abwesenheit ist immer
+> geraten.**
+
+| Wert | wo er entstand | wer ihn sah |
+|---|---|---|
+| `zaehlung_stimmt` | Vorschau | nur bei `false` |
+| `wechsel_ohne_ersatzkennung` | Vorschau | nur bei `> 0` |
+| `zeilen_mit_zweitem_namen` | Vorschau | **niemand** |
+| `unbeachtete_felder` | Empfänger (0.7.0) | **niemand** — kein einziger Leser im ganzen Portal |
+| `nicht_ueberall` | Rohschlüssel-Probe | **niemand** |
+| `feldhoheit_weggeschnitten` | Sync | **niemand** |
+| `saison_wechsel` | Sync | **niemand** |
+| `teams_ohne_spiele` · `sfv_teams_ohne_zuordnung_aktiv` | Sync | **niemand** |
+
+⚠ **Und dreimal ist die Deutung an einem Tag schiefgegangen** — zweimal
+bei mir (aus einer fehlenden Protokollzeile auf gescheiterte Läufe
+geschlossen; aus „der Sync macht es falsch" auf „überall falsch"), einmal
+bei Didi, der `wechsel_ohne_ersatzkennung` in der Karte suchte und
+zurückfragen musste, ob die Null gemeint ist.
+
+**Die drei Formen, in denen es auftritt:**
+
+1. **Nur im schlechten Fall angezeigt.** Das Fehlen soll „alles gut"
+   heissen — sagt aber auch „nicht gemessen", „Feld umbenannt",
+   „Abfrage gescheitert".
+2. **Gar nicht angezeigt.** Der Wert steht in der Antwort und in keiner
+   Oberfläche. ⚠ `unbeachtete_felder` ist der bitterste Fall: **ein
+   Melder, den niemand abholt, ist selbst die Lücke, gegen die er gebaut
+   wurde.**
+3. **In eine Prosa-Meldung gefaltet.** Der Sync baut `meldung` aus
+   `teile.push(…)`; was dort keinen `push` hat, existiert für den Leser
+   nicht — gemessen: `LaufErgebnis` führt **14 Felder**, die Kachel zeigt
+   **zwei**.
+
+**Die Regel für neue Werte:**
+
+| | |
+|---|---|
+| **Zahl** | steht immer da, auch als Null. Eine Zeile mehr kostet nichts |
+| **Liste** | nur wenn nicht leer — aber dann mit dem Satz, was daraus folgt. Eine Liste, die jedes Mal „keine" sagt, wird nach dem dritten Mal überlesen |
+| **Befund** | am Ende, nicht in der Mitte. Wer zwischen Ranglistenzahlen warnt, warnt niemanden |
+
+⚠ **Die Prüfung dagegen ist eine Frage, kein Skript:** *wer liest diesen
+Wert?* — dieselbe, die bei einer neuen Spalte zu stellen ist. Sie hat
+hier achtmal gefehlt, weil die Werte richtig berechnet waren und die
+Kette bis zur Antwort stimmte. **Der letzte Meter ist der, den niemand
+prüft.**

@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════════
    Die Schlüssel einer echten Rohantwort — ungefiltert, ohne Werte
 
-   ⚠ ANLASS (11.09.2026). Ich hatte gemeldet, die SFV-Schnittstelle führe
+   ⚠ ANLASS (10.09.2026). Ich hatte gemeldet, die SFV-Schnittstelle führe
    kein Bildfeld — gefunden über die Swagger-Datei. Didis Einwand:
 
      > Ein Schema ist ein Dokument, keine Antwort. `playDayName`

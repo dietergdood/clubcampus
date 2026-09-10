@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- ClubCampus — spiele.sfv_runde_nr faellt
--- 11.09.2026
+-- 10.09.2026
 --
 -- ⚠ GEMESSEN VON DIDI ueber alle 270 Spiele — und keine meiner drei
 --   Deutungen traf zu:

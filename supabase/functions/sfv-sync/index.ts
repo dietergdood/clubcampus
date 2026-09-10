@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
   /* ── Aktion wechselprobe: WER ist bei einem Wechsel wer? ────────────
      Liest, schreibt nichts. Sie beantwortet genau eine Frage: schickt der
      Verband zum Ersatzspieler eine Kennung, einen Namen, oder nur eine
-     Nummer? Gemessen von Didi am 11.09.2026: `ein_sfv_person_id` ist bei
+     Nummer? Gemessen von Didi am 10.09.2026: `ein_sfv_person_id` ist bei
      allen 176 Wechseln leer, waehrend die Verbandsseite beide Namen
      zeigt — also steht die Auskunft woanders in der Antwort.
 
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
       .select("id");
     if (!gesperrt?.length) return json({ fehler: "Ein Lauf ist bereits unterwegs" }, 409);
 
-    /* ⚠ ER SCHREIBT — also protokolliert er. Bis zum 11.09.2026 tat er
+    /* ⚠ ER SCHREIBT — also protokolliert er. Bis zum 10.09.2026 tat er
        weder das eine noch das andere sichtbar: er aenderte
        spiel_ereignisse und hinterliess KEINE Zeile. Ein Lauf, von dem man
        hinterher nicht weiss, ob er stattfand, ist derselbe blinde Fleck
@@ -370,7 +370,7 @@ Deno.serve(async (req) => {
       const spielplanRoh = await holeSpielplan(zugang, token, saison.id);
       const spiele = schluesselVon(spielplanRoh);
 
-      /* ⚠ ⚠  DRITTER ABRUF: DIE BANK, seit 11.09.2026.
+      /* ⚠ ⚠  DRITTER ABRUF: DIE BANK, seit 10.09.2026.
          Gemessen: `/players` liefert nur die Startelf — 207 von 207
          Eingewechselten stehen in keiner Aufstellung. Ob `/bench` sie
          traegt, ist die naechste Frage, und sie wird GEMESSEN statt aus
@@ -613,7 +613,7 @@ Deno.serve(async (req) => {
       return json({ fehler: "Ein Lauf ist bereits unterwegs — bitte in einer Minute erneut." }, 409);
     }
 
-    /* ⚠ ⚠  DIE ZEILE ZUERST, NICHT ZULETZT (11.09.2026).
+    /* ⚠ ⚠  DIE ZEILE ZUERST, NICHT ZULETZT (10.09.2026).
        Bis dahin schrieb diese Aktion EINEN insert am Ende. Wirft sie
        vorher — und sie ruft die SFV-API —, stand nichts da, und
        „gescheitert" sah aus wie „nichts zu tun". Der Sync machte es

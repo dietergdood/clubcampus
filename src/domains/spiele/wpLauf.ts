@@ -67,7 +67,7 @@ export interface LaufZahlen {
    * Teams lautete derselbe Name 21-mal gleich, und eine Liste, die sich
    * wiederholt, wird nicht gelesen.
    *
-   * ⚠ UND SIE FEHLTE BIS ZUM 11.09.2026 GANZ. Der Empfänger meldete,
+   * ⚠ UND SIE FEHLTE BIS ZUM 10.09.2026 GANZ. Der Empfänger meldete,
    * unsere Seite las es nicht — `liga` kam ein halbes Jahr an und wurde
    * verworfen, und WO es riss, musste die Website-Seite von Hand messen.
    * Ein Melder, den niemand abholt, ist selbst die Lücke, gegen die er

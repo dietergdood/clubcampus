@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Der Nachtrag wählt nach der FRAGE und kürzt nicht still (11.09.2026)
+   Der Nachtrag wählt nach der FRAGE und kürzt nicht still (10.09.2026)
    ══════════════════════════════════════════════════════════════════════ */
 import { describe, it, expect } from "vitest";
 import { waehleNachtragSpiele, deuteNachtrag } from "../ereignisNachtrag.ts";

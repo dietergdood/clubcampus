@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- ClubCampus — sfv_runde und sfv_runde_nr in die Feldhoheit
--- 11.09.2026
+-- 10.09.2026
 --
 -- ⚠ ⚠  DER NACHTRAG ZU migration_spiele_runde.sql, UND ER IST DER EIGENTLICHE
 --       DEFEKT.

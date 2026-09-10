@@ -96,7 +96,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
   const [laeuft,setLaeuft]=useState(false);
   const [ergebnis,setErgebnis]=useState<{ok: boolean; text: string}|null>(null);
   const [confirm,confirmDialog]=useConfirm();
-  /* ⚠ Zwei Auskunfts-Knoepfe, seit 11.09.2026. Gemessen: `supabase` liegt
+  /* ⚠ Zwei Auskunfts-Knoepfe, seit 10.09.2026. Gemessen: `supabase` liegt
      NICHT am Fensterobjekt, und die Edge Functions verlangen einen
      angemeldeten Administrator. Ohne diese Knoepfe gibt es zu `probe` und
      `rohschluessel` ueberhaupt keinen Weg — es geht nicht um Bequemlichkeit.
@@ -127,7 +127,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
   function deuteVorschau(z: Record<string, unknown>): string[] {
     const n=(k: string)=>Number(z[k]??0);
     /* ⚠ ⚠  JEDE ZAHL STEHT DA, AUCH WENN SIE NULL IST — berichtigt am
-       11.09.2026 auf Didis Einwand.
+       10.09.2026 auf Didis Einwand.
 
        Bis dahin erschienen `zaehlung_stimmt` und
        `wechsel_ohne_ersatzkennung` NUR im schlechten Fall. Ihre
@@ -223,7 +223,7 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
        erzeugt, der damit gerade ueberprueft wird.
 
        ⚠ UND `nicht_ueberall` GEHOERT DAZU. Sie fehlte bis zum
-       11.09.2026 in der Anzeige, obwohl sie in der Antwort stand — zum
+       10.09.2026 in der Anzeige, obwohl sie in der Antwort stand — zum
        dritten Mal an einem Tag dieselbe Luecke: berechnet, geliefert,
        nicht gezeigt. Sie ist der GRUND fuer die Doppelmessung: ein Feld,
        das nur manche Objekte tragen, faellt durch eine Stichprobe von

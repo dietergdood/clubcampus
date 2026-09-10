@@ -286,7 +286,7 @@ export function beschreibeWer(
 /**
  * Der ZWEITE Mensch einer Wechselzeile — der EINGEWECHSELTE.
  *
- * ⚠ HIESS HIER BIS ZUM 11.09.2026 „der Ausgewechselte". Das war falsch:
+ * ⚠ HIESS HIER BIS ZUM 10.09.2026 „der Ausgewechselte". Das war falsch:
  * `personId` geht vom Platz, `substitutePlayer` kommt für ihn. Gemessen
  * an der Verbandsseite, nicht hergeleitet.
  *

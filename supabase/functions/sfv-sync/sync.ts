@@ -71,10 +71,10 @@ export function bildeSpiel(
          werden verwechselt, und der Feldname `wettbewerb` traegt Schuld
          daran: bei einem Cupspiel steht dort „Cup", waehrend der Name des
          Cups („Cup AJF (4./5. Liga)") hier liegt. Gemessen in
-         sfv_stammdaten.json, 11.09.2026. */
+         sfv_stammdaten.json, 10.09.2026. */
       liga: (s.leagueName as string) ?? null,
       /* ⚠ `playDayName` ist der WOCHENTAG, nicht die Runde — gemessen am
-         11.09.2026 ueber alle 270 Spiele („Samstag"). Die Spalte hiess
+         10.09.2026 ueber alle 270 Spiele („Samstag"). Die Spalte hiess
          einen Tag lang `sfv_runde` und trug damit eine falsche Zusage;
          siehe migration_spiele_spieltag.sql.
 
@@ -83,7 +83,7 @@ export function bildeSpiel(
          wird sie von keiner Anzeige — den Wochentag zeigt die Website
          ohnehin aus dem Datum. */
       sfv_spieltag: (s.playDayName as string) ?? null,
-      /* ⚠ `roundNbr` wird NICHT mehr gelesen — gemessen am 11.09.2026:
+      /* ⚠ `roundNbr` wird NICHT mehr gelesen — gemessen am 10.09.2026:
          Meisterschaft 1–26, Cup 1–2, Trainingsspiele durchgehend 0,
          Schweizer-Cup 105. Das Feld traegt je Wettbewerb etwas anderes
          und hat damit keinen Namen, der stimmt.
@@ -301,7 +301,7 @@ export async function laufeSync(
       if (bekannt.has(Number(z.sfv_match_id))) erg.spiele.aktualisiert++; else erg.spiele.neu++;
     }
 
-    /* ⚠ ⚠  DIE MELDUNG, DIE AM 11.09.2026 GEFEHLT HAT.
+    /* ⚠ ⚠  DIE MELDUNG, DIE AM 10.09.2026 GEFEHLT HAT.
        `sfv_runde` und `sfv_runde_nr` wurden stundenlang berechnet und
        weggeschnitten; in der Datenbank sah es aus, als liefere der Verband
        sie nicht. Ein Ausfall in der Verkleidung einer Datenlage — und zwar
@@ -428,6 +428,30 @@ export async function laufeSync(
       teile.push(`auffällig viele unzugeordnete Spieler trotz ${md.zuordnungen_gesamt} bestehender Zuordnungen — hat der SFV die personId gewechselt?`);
     }
   }
+  /* ⚠ ⚠  VIER WARNUNGEN STANDEN IM ERGEBNIS UND IN KEINER MELDUNG.
+     Gemessen am 10.09.2026: `LaufErgebnis` fuehrt 14 Felder, die Kachel
+     zeigt zwei (`status`, `meldung`). Zwoelf gingen in die Meldung ein
+     oder blieben stumm — und genau die vier hier waren stumm, obwohl
+     jede von ihnen ein BEFUND ist und nicht eine Zahl.
+
+     Sie stehen deshalb am Ende und nicht in der Mitte: wer die Zeile
+     liest, soll die Warnungen zuletzt sehen, nicht zwischen
+     Ranglistenzahlen. */
+  if (erg.feldhoheit_weggeschnitten?.length) {
+    teile.push(`⚠ berechnet und weggeschnitten: ${erg.feldhoheit_weggeschnitten.join(", ")} `
+      + "— steht nicht in api_verbindungen.sync_felder");
+  }
+  if (erg.saison_wechsel) {
+    teile.push(`⚠ Saisonwechsel: ${erg.saison_wechsel.von} → ${erg.saison_wechsel.nach} `
+      + "— die Team-Kennungen könnten sich geändert haben");
+  }
+  if (erg.teams_ohne_spiele?.meldepflichtig) {
+    teile.push(`⚠ ${erg.teams_ohne_spiele.anzahl} zugeordnete Mannschaft(en) ohne ein einziges Spiel`);
+  }
+  if (erg.sfv_teams_ohne_zuordnung_aktiv) {
+    teile.push(`${erg.sfv_teams_ohne_zuordnung_aktiv} Mannschaft(en) beim Verband ohne Zuordnung`);
+  }
+
   erg.meldung = teile.join(" · ");
   return erg;
 }

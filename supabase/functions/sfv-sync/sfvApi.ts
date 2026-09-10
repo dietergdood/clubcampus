@@ -161,7 +161,7 @@ export async function holeAufstellung(z: SfvZugang, token: string, matchId: numb
 /**
  * Die Ersatzbank eines Spiels.
  *
- * ⚠ ANLASS (11.09.2026): gemessen, dass `/players` NUR die Startelf
+ * ⚠ ANLASS (10.09.2026): gemessen, dass `/players` NUR die Startelf
  * liefert — 207 von 207 Eingewechselten stehen in keiner
  * `spiel_aufstellung`. Ihre Namen sind ueber diesen Weg nicht zu haben.
  *

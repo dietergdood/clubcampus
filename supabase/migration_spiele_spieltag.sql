@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- ClubCampus — spiele.sfv_runde heisst jetzt spiele.sfv_spieltag
--- 11.09.2026
+-- 10.09.2026
 --
 -- ⚠ ⚠  MEINE ANNAHME WAR FALSCH, UND SIE STAND EINEN TAG LANG ALS TATSACHE
 --       IN EINEM SPALTENKOMMENTAR.
@@ -10,7 +10,7 @@
 --     „SFV playDayName — der Rundenname im Klartext (1. Runde,
 --      Achtelfinal)."
 --
---   Gemessen von der Website-Seite am 11.09.2026 ueber alle 270 Spiele:
+--   Gemessen von der Website-Seite am 10.09.2026 ueber alle 270 Spiele:
 --
 --     /spiele/336/  Meisterschaft   runde „Gruppe  2"
 --     /spiele/338/  Cup             runde „Samstag"
@@ -54,7 +54,7 @@ alter table public.spiele
   rename column sfv_runde to sfv_spieltag;
 
 comment on column public.spiele.sfv_spieltag is
-  'SFV playDayName. GEMESSEN am 11.09.2026: enthaelt den WOCHENTAG („Samstag"), nicht den Rundennamen. Wird von keiner Anzeige gelesen — die Website zeigt den Wochentag ohnehin aus dem Datum. Hiess bis dahin sfv_runde, was eine falsche Zusage war.';
+  'SFV playDayName. GEMESSEN am 10.09.2026: enthaelt den WOCHENTAG („Samstag"), nicht den Rundennamen. Wird von keiner Anzeige gelesen — die Website zeigt den Wochentag ohnehin aus dem Datum. Hiess bis dahin sfv_runde, was eine falsche Zusage war.';
 
 -- Die Feldhoheit zieht mit: der Sync schreibt jetzt sfv_spieltag.
 do $mig$

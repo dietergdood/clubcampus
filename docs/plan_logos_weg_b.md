@@ -1,6 +1,6 @@
 # Plan: Gegner-Wappen — „bei jedem Sync, aber nur wenn geändert"
 
-Stand 11.09.2026. **Weg B ist nicht gebaut**, und der Grund ist kein
+Stand 10.09.2026. **Weg B ist nicht gebaut**, und der Grund ist kein
 Versäumnis, sondern eine Eigenschaft der Schnittstelle. Dieses Papier
 misst zuerst und schlägt dann vor; gebaut ist nichts.
 
@@ -134,7 +134,7 @@ sicher übertrieben.
 
 ---
 
-## 2a · ⚠ ⚠ AN DER LEITUNG GEMESSEN — es gibt keine `logoUrl` (11.09.2026)
+## 2a · ⚠ ⚠ AN DER LEITUNG GEMESSEN — es gibt keine `logoUrl` (10.09.2026)
 
 Der Abschnitt darüber leitet aus der **Swagger-Datei** ab. Didis Einwand
 dagegen war berechtigt:
@@ -177,7 +177,7 @@ verspricht, kann es hier nicht geben.
 
 ## 4a · ⚠ ZURUECKGESTELLT — die Reihenfolge steht fest
 
-Entscheidung Didi, 11.09.2026, auf Befund (b):
+Entscheidung Didi, 10.09.2026, auf Befund (b):
 
 > **Erst ausliefern, dann Aktualität.**
 

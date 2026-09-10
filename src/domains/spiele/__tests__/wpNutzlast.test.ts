@@ -414,7 +414,7 @@ describe("zaehleVerlaufNamen — zugeordnet gegen SFV-Rueckfall", () => {
    Anzeigestelle gelesen.
    ══════════════════════════════════════════════════════════════════════ */
 describe("Wechsel — beide Menschen werden genannt", () => {
-  /* ⚠ Die RICHTUNG steht seit dem 11.09.2026 fest und ist gemessen, nicht
+  /* ⚠ Die RICHTUNG steht seit dem 10.09.2026 fest und ist gemessen, nicht
      angenommen: personId geht vom Platz, substitutePlayer kommt fuer ihn.
      Der Wortlaut folgt dem Verband („X ersetzt durch Y"), damit sich
      beide Seiten ohne Uebersetzung vergleichen lassen. */
@@ -463,14 +463,14 @@ describe("Wechsel — beide Menschen werden genannt", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   „Gruppe  2" — der Doppelabstand des Verbands (11.09.2026)
+   „Gruppe  2" — der Doppelabstand des Verbands (10.09.2026)
 
    Gemeldet von der Website-Seite: in allen 270 Etiketten. Der Wert kommt
    so vom Verband. Wir aendern ihn in UNSERER Ausgabe und zaehlen, wie oft
    — die Rohform bleibt in spiele.sfv_gruppe stehen.
    ══════════════════════════════════════════════════════════════════════ */
 describe("Der Doppelabstand des Verbands bleibt stehen", () => {
-  /* ⚠ Entscheidung Didi, 11.09.2026 — und eine Umkehr meines eigenen
+  /* ⚠ Entscheidung Didi, 10.09.2026 — und eine Umkehr meines eigenen
      Vorschlags vom Vortag. Fremde Daten stillschweigend zu putzen
      versteckt den Fehler; der Doppelabstand steht auf der Website und
      ist damit die einzige Stelle, an der er jemandem auffaellt. */
@@ -515,7 +515,7 @@ describe("Cupspiele: `runde` bleibt LEER, nicht der Wochentag", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   Der offene Rest wird beziffert — und getrennt (11.09.2026)
+   Der offene Rest wird beziffert — und getrennt (10.09.2026)
 
    ⚠ Didis Messung: der Nachtrag holte 22 Spiele, der Sync holt 10 je
    Lauf; 13 Wechsel stammen aus Spielen dazwischen. Damit die Zahl beim

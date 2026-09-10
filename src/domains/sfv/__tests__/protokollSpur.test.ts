@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Jeder SCHREIBENDE Lauf hinterlässt eine Spur (11.09.2026)
+   Jeder SCHREIBENDE Lauf hinterlässt eine Spur (10.09.2026)
 
    ⚠ ANLASS. `api_sync_log` bekam bei der Aktion `namen` seine Zeile am
    ENDE, und `wechselnachtrag` schrieb überhaupt keine — obwohl er
@@ -41,7 +41,7 @@ function abschnitt(roh: string, aktion: string): string {
 const SCHREIBEND = [AKTION_NAMEN, AKTION_WECHSELNACHTRAG];
 
 /* ⚠ Geprueft wird der KONSTANTENNAME, nicht der Wert. Seit dem
-   11.09.2026 steht `laeuft` nur noch in protokollStatus.ts; wer im Code
+   10.09.2026 steht `laeuft` nur noch in protokollStatus.ts; wer im Code
    wieder ein Literal schriebe, faellt hier auf — und der Wert selbst
    bleibt aus `src/` heraus, wo check:quotes ihn als Ersatzschreibung
    melden wuerde. */

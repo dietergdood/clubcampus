@@ -254,7 +254,7 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
               <Btn small variant="outline" color={BL} onClick={namenHolen}>
                 Namen holen ({offenGesamt} offen)
               </Btn>
-              {/* ⚠ ⚠  DIESER TEXT WAR SEIT DEM 11.09.2026 FALSCH, EINEN
+              {/* ⚠ ⚠  DIESER TEXT WAR SEIT DEM 10.09.2026 FALSCH, EINEN
                   HALBEN TAG LANG. Er sagte „Sie werden nicht gespeichert
                   und sind beim nächsten Öffnen wieder weg" — das galt bis
                   zu dem Entscheid, die SFV-Namen zu speichern
@@ -274,7 +274,7 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
                 <br/>
                 <strong>⚠ Nur die Startelf.</strong> Der Verband liefert unter
                 „Aufstellung" die Startformation ohne Bank; wer eingewechselt wurde,
-                ist über diesen Weg nicht zu erreichen. Gemessen am 11.09.2026:
+                ist über diesen Weg nicht zu erreichen. Gemessen am 10.09.2026:
                 207 von 207 Eingewechselten stehen in keiner Aufstellung. Wenn die
                 offenen Spieler überwiegend Einwechslungen sind, bringt der Knopf
                 nichts und kostet einen Abruf je Spiel.
@@ -284,7 +284,7 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
             <>
             <div className="cc-inline-hint cc-mt-8">
               {/* ⚠ Zweite Stelle mit derselben ueberholten Zusage, am
-                  11.09.2026 mitberichtigt. Sie stand zehn Zeilen unter der
+                  10.09.2026 mitberichtigt. Sie stand zehn Zeilen unter der
                   ersten — wer nur eine sucht, findet nur eine. */}
               {anzahlNamen} von {anzahlNamen + ohneNamen} Namen geholt und gespeichert.
               {ohneNamen > 0 && (

@@ -293,7 +293,7 @@ export function bildeVerlauf(
        10.09.2026 stand hier `ein_rueckennr` direkt, und daneben ein Name:
        „Abdulah Al Abbadie · für Nr. 9". Zwei eigene Spieler, einer
        genannt. */
-    /* ⚠ ⚠  DIE RICHTUNG WAR VERTAUSCHT — berichtigt am 11.09.2026.
+    /* ⚠ ⚠  DIE RICHTUNG WAR VERTAUSCHT — berichtigt am 10.09.2026.
        `personId` ist der Spieler, der VOM Platz geht; `substitutePlayer`
        ist sein Ersatz. Bis heute stand hier „X · für Nr. 19", was das
        Gegenteil behauptet: X komme für die 19.
@@ -327,7 +327,7 @@ export function bildeVerlauf(
 /**
  * Trägt dieser Wert mehrfache oder randständige Leerzeichen?
  *
- * ⚠ ⚠  ER WIRD NICHT BEREINIGT — ENTSCHEIDUNG DIDI, 11.09.2026.
+ * ⚠ ⚠  ER WIRD NICHT BEREINIGT — ENTSCHEIDUNG DIDI, 10.09.2026.
  *
  * Hier stand bis dahin `normalisiereRaum()`, und `runde` trug den
  * geputzten Wert. Zurückgenommen, mit derselben Begründung, die die
@@ -398,7 +398,7 @@ export interface NamensZaehlung {
    * Eine einzelne Zahl „13 offen" schickte niemanden irgendwohin.
    *
    * ⚠ SIE STEHEN IN DER VORSCHAU, NICHT IN EINER EIGENEN AKTION
-   * (Entscheidung Didi, 11.09.2026): *„Eine Zahl, für die man einen
+   * (Entscheidung Didi, 10.09.2026): *„Eine Zahl, für die man einen
    * eigenen Aufruf braucht, liest niemand."*
    */
   zeilen_ohne_ersatzkennung: number;
@@ -566,7 +566,7 @@ export function bildeSpiel(
     liga: q.liga ?? "",
     /* ⚠ „Gruppe  2" — MIT ZWEI LEERZEICHEN, in allen 270 Etiketten.
        Der Wert kommt so vom Verband (`groupName`), und er BLEIBT SO
-       (Entscheidung Didi, 11.09.2026). Siehe hatDoppelabstand(). */
+       (Entscheidung Didi, 10.09.2026). Siehe hatDoppelabstand(). */
     /* ⚠ `runde` TRAEGT DEN GRUPPENNAMEN — „Gruppe 3", nicht eine Runde.
        Der Feldname stammt aus dem Theme und ist aelter als der Inhalt;
        umbenennen hiesse, den Vertrag mit der Vorlage zu brechen. Wer ihn
@@ -575,7 +575,7 @@ export function bildeSpiel(
     /* ⚠ ⚠  NUR DIE GRUPPE. HIER STAND EINEN TAG LANG EIN RUECKFALL AUF
        `sfv_runde`, UND DER WAR DER WOCHENTAG.
 
-       Gemessen von der Website-Seite am 11.09.2026: 36 Spiele zeigten
+       Gemessen von der Website-Seite am 10.09.2026: 36 Spiele zeigten
        „CUP · SAMSTAG", waehrend links daneben schon „Sa. 19.09. · 19:30"
        stand. `playDayName` ist der Spieltag, nicht die Runde.
 
@@ -585,7 +585,7 @@ export function bildeSpiel(
 
        ⚠ Wo es wirklich eine Runde gibt, ist bis heute UNBEKANNT — und
        der Verband liefert sie nicht in einer Form, die einen Namen
-       verdient. `roundNbr` stand bis zum 11.09.2026 als `sfv_runde_nr`
+       verdient. `roundNbr` stand bis zum 10.09.2026 als `sfv_runde_nr`
        in der Datenbank und ist ausgebaut: gemessen traegt es je
        Wettbewerb etwas anderes (Meisterschaft 1–26, Cup 1–2,
        Trainingsspiele 0, Schweizer-Cup 105).

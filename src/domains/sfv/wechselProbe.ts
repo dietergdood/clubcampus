@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════════
    Wer ist bei einem Wechsel wer — und was liefert der Verband dazu?
 
-   ⚠ ANLASS (11.09.2026). Die Verbandsseite zeigt
+   ⚠ ANLASS (10.09.2026). Die Verbandsseite zeigt
 
        „85' Aksel Nonnez ersetzt durch Ivan Predannikov"
 
@@ -156,7 +156,7 @@ export function deuteWechselProbe(b: WechselBefund): string {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   Was trägt ein CUPSPIEL statt eines Gruppennamens? (11.09.2026)
+   Was trägt ein CUPSPIEL statt eines Gruppennamens? (10.09.2026)
 
    ⚠ Gemeldet: 13 von 13 Cupspielen ohne `runde`. `runde` kommt aus
    `groupName`, und ein Cupspiel hat keine Gruppe — der Wert entsteht

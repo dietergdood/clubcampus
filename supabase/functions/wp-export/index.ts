@@ -965,7 +965,7 @@ async function laufeProbe(
     const spiel = bildeSpiel(s, String(s.sfv_team_id ?? ""), ereignisse, namen, unserKlub);
     if (!spiel) { ohneSchluessel++; continue; }
     if (!spiel.publizieren) zurueckgehalten++;
-    /* ⚠ NICHT bereinigt, nur gezaehlt (Entscheidung Didi, 11.09.2026):
+    /* ⚠ NICHT bereinigt, nur gezaehlt (Entscheidung Didi, 10.09.2026):
        fremde Daten stillschweigend zu putzen versteckt den Fehler. Was
        bleibt, ist die Zahl — aendert der Verband seine Schreibweise,
        faellt es hier auf. */
@@ -975,7 +975,7 @@ async function laufeProbe(
     if (!String(s.liga ?? "").trim()) ohneLiga++;
     const gid = Number(s.sfv_gegner_team_id);
     if (Number.isFinite(gid) && gid > 0) gegnerTeams.add(gid);
-    /* ⚠ Cupspiele tragen keinen Gruppennamen — gemeldet 11.09.2026,
+    /* ⚠ Cupspiele tragen keinen Gruppennamen — gemeldet 10.09.2026,
        13 von 13. Gezaehlt, nicht behoben: der Wert entsteht beim Verband,
        und was dort stattdessen steht, ist noch nicht gemessen. */
     if (spiel.runde === "" && (s.wettbewerb ?? "").toString().toLowerCase().includes("cup")) {

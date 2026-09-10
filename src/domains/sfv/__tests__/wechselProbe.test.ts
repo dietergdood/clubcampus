@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Die Wechselprobe zählt, was der Verband liefert (11.09.2026)
+   Die Wechselprobe zählt, was der Verband liefert (10.09.2026)
 
    ⚠ Sie beantwortet EINE Frage — und die Fälle unten halten fest, dass
    sie keine zweite nebenbei beantwortet: sie gibt keine Namen heraus,
@@ -103,7 +103,7 @@ describe("deuteWechselProbe", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   Cupprobe — was steht statt eines Gruppennamens? (11.09.2026)
+   Cupprobe — was steht statt eines Gruppennamens? (10.09.2026)
    ══════════════════════════════════════════════════════════════════════ */
 describe("fasseCupProbe", () => {
   const meisterschaft = {

@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- ClubCampus — api_sync_log.aktion, und was `laeuft` heisst
--- 11.09.2026
+-- 10.09.2026
 --
 -- ⚠ ANLASS (Didi). Der Eintrag um 08:26:15 steht auf `ok` und hat
 --   `details->'spiele' = null`. Eine Zeile, die spaeter niemand mehr
@@ -29,7 +29,7 @@ alter table public.api_sync_log
   add column if not exists aktion text;
 
 comment on column public.api_sync_log.aktion is
-  'Welche Aktion diese Zeile erzeugt hat: sync, namen, wechselnachtrag. NULL bei Zeilen vor dem 11.09.2026 — dort ist es nur aus details ableitbar (der Sync schreibt immer details.spiele, namen nie).';
+  'Welche Aktion diese Zeile erzeugt hat: sync, namen, wechselnachtrag. NULL bei Zeilen vor dem 10.09.2026 — dort ist es nur aus details ableitbar (der Sync schreibt immer details.spiele, namen nie).';
 
 -- ⚠ DER WICHTIGERE KOMMENTAR. Er steht bewusst in der DATENBANK und nicht
 --   nur im Code: wer die Tabelle im SQL-Editor liest, hat den Code nicht

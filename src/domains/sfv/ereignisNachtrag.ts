@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════════
    Der Nachtrag: Wechselzeilen ohne Kennung des Ersatzspielers
 
-   ⚠ ANLASS (11.09.2026). Zwei Messungen, die einander widersprechen:
+   ⚠ ANLASS (10.09.2026). Zwei Messungen, die einander widersprechen:
 
      Leseprobe gegen den Verband   32 von 32 Wechseln tragen
                                    `substitutePlayerId`

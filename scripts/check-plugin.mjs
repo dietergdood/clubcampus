@@ -95,7 +95,7 @@ for ($i = 0; $i < $n; $i++) {
                         'bezeichner' => array_values(array_unique($bez)),
                         'texte' => $texte];
 }
-/* ⚠ KONSTANTEN AUF DATEIEBENE — ergaenzt am 11.09.2026.
+/* ⚠ KONSTANTEN AUF DATEIEBENE — ergaenzt am 10.09.2026.
    Der Zerleger kannte nur Funktionen. Eine Regel ueber CC_FELDER war
    damit nicht baubar, und der erste Versuch griff auf einen Regex ueber
    den Quelltext zurueck — genau das, was in diesem Projekt als Werkzeug
@@ -228,7 +228,7 @@ const REGELN = [
      Texte, nicht die Gleichheit der Listen. Das genuegt: eine zweite
      Liste MUSS die Namen als Texte enthalten. */
   /* ⚠⚠ `'any'` ZAEHLT auto-draft MIT — zehn von einundzwanzig auf dev.
-     Gemeldet von der Website-Seite am 11.09.2026, nicht selbst bemerkt.
+     Gemeldet von der Website-Seite am 10.09.2026, nicht selbst bemerkt.
      Die Zahl war nicht bloss zu hoch, sondern irrefuehrend: elf
      zugeordnete Teams sahen aus wie eine halb erledigte Zuordnung.
 
@@ -236,7 +236,7 @@ const REGELN = [
      der Konstante: eine zweite Zustandsliste MUESSTE die Zustaende als
      Texte enthalten, und `any` ist der eine Wert, der still zu viel
      einsammelt. */
-  /* ⚠⚠ DIE FALLE, DIE DIE WEBSITE-SEITE AM 11.09.2026 GEMELDET HAT — und
+  /* ⚠⚠ DIE FALLE, DIE DIE WEBSITE-SEITE AM 10.09.2026 GEMELDET HAT — und
      sie ist gefaehrlicher als ein fehlendes Feld.
 
      `update_field('name', …)` sucht das Feld ueber ACFs GLOBALE
@@ -249,7 +249,7 @@ const REGELN = [
      der eines einzelnen Spiels. Es schlaegt nichts fehl, und es sieht
      aus wie gepflegte Daten.
 
-     ── ⚠ `liga` IST AM 11.09.2026 HERAUSGEFALLEN, UND ZWAR RICHTIG ────
+     ── ⚠ `liga` IST AM 10.09.2026 HERAUSGEFALLEN, UND ZWAR RICHTIG ────
      Das fch_spiel hat seither ein eigenes Feld `liga` (Feldschluessel
      `f_s_liga`, Beschriftung „Wettbewerbsbezeichnung"), gemeldet vom
      Theme-Chat und dort gegengeprueft: registriert, lesbar, ein
@@ -277,7 +277,7 @@ const REGELN = [
       const felder = b.konstanten?.CC_FELDER;
       if (!felder) return ["(CC_FELDER nicht gefunden — sieht die Pruefung die falsche Datei an?)"];
       /* Namen, die es am fch_team gibt und am fch_spiel NICHT.
-         ⚠ `liga` stand hier bis zum 11.09.2026 — siehe oben. Wer einen
+         ⚠ `liga` stand hier bis zum 10.09.2026 — siehe oben. Wer einen
          weiteren Namen streichen will, braucht denselben Beleg: das Feld
          ist am fch_spiel registriert, und ein gestellter Wert kam an. */
       const NUR_AM_TEAM = ["gruppe", "abgleich_stand"];
