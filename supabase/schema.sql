@@ -1996,6 +1996,8 @@ CREATE TABLE IF NOT EXISTS "public"."spiel_aufstellung" (
     "rolle_kategorie_id" integer,
     "rolle_kategorie" "text",
     "ist_eigener" boolean DEFAULT true NOT NULL,
+    "rolle_zuweisung_id" integer,
+    "rolle_zuweisung" "text",
     CONSTRAINT "spiel_aufstellung_fremde_ohne_person" CHECK (("ist_eigener" OR (("sfv_person_id" IS NULL) AND ("name" IS NULL))))
 );
 
@@ -2004,6 +2006,10 @@ ALTER TABLE "public"."spiel_aufstellung" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."spiel_aufstellung" IS 'Aufstellung EIGENER Spieler aus /api/match/{id}/players. Fremde Zeilen werden nicht gespeichert. Nicht zu verwechseln mit `aufgebote`: das Aufgebot steht vor dem Spiel und deckt sich nie ganz mit der Aufstellung danach.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."position_name" IS 'SFV positionName. ⚠ NICHT als Ersatz-Kennzeichen verwenden: gemessen 10.09.2026 tragen drei Spieler die Rolle „Ersatz" bei echter Position, und beim Gegner steht „Ersatz (S)" gar nicht. Die Rolle steht in rolle_zuweisung_id.';
 
 
 
@@ -2032,6 +2038,14 @@ COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_kategorie" IS 'SFV roleCat
 
 
 COMMENT ON COLUMN "public"."spiel_aufstellung"."ist_eigener" IS 'Gehoert diese Zeile zu unserem Klub? Aus clubNumber gegen vereine.sfv_club_nummer. ⚠ Bis 10.09.2026 gab es nur eigene Zeilen — der Vorgabewert true ist deshalb fuer den Bestand richtig und nicht geraten.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_zuweisung_id" IS 'SFV assignmentRoleId aus /players. Gemessen 10.09.2026: 0 = „-", 1 = „Captain", 2 = „Ersatz". ⚠ Fuer BEIDE Mannschaften gefuellt — der Gegner hat eine Bank, sie steht nur nicht in positionName. Die Anzeige leitet `rolle` hieraus ab, nicht aus der Position.';
+
+
+
+COMMENT ON COLUMN "public"."spiel_aufstellung"."rolle_zuweisung" IS 'SFV assignmentRoleName im Klartext. Mitgeschrieben, damit ein unbekannter Wert AUFFAELLT statt still als „start" durchzufallen — dieselbe Regel wie bei unbekannten Ereignistypen.';
 
 
 

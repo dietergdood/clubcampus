@@ -3845,6 +3845,8 @@ export type Database = {
           rolle_id: number | null
           rolle_kategorie: string | null
           rolle_kategorie_id: number | null
+          rolle_zuweisung: string | null
+          rolle_zuweisung_id: number | null
           rueckennr: number | null
           sfv_person_id: number
           sfv_team_id: number | null
@@ -3866,6 +3868,8 @@ export type Database = {
           rolle_id?: number | null
           rolle_kategorie?: string | null
           rolle_kategorie_id?: number | null
+          rolle_zuweisung?: string | null
+          rolle_zuweisung_id?: number | null
           rueckennr?: number | null
           sfv_person_id: number
           sfv_team_id?: number | null
@@ -3887,6 +3891,8 @@ export type Database = {
           rolle_id?: number | null
           rolle_kategorie?: string | null
           rolle_kategorie_id?: number | null
+          rolle_zuweisung?: string | null
+          rolle_zuweisung_id?: number | null
           rueckennr?: number | null
           sfv_person_id?: number
           sfv_team_id?: number | null
