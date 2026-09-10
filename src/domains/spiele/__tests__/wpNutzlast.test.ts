@@ -17,6 +17,7 @@ import {
   wpDatum, wpZeit, zerlegeResultat, bildeStatus,
   verlaufArt, verlaufMinute, bildeVerlauf, bildeSpiel, zaehleVerlaufNamen,
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
+  normalisiereRaum, musstNormalisiertWerden,
 } from "../wpNutzlast.ts";
 import type { SpielQuelle } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
@@ -454,5 +455,47 @@ describe("Wechsel — beide Menschen werden genannt", () => {
        geben kann, darf der Zaehler nicht melden. */
     const fremd = wechsel({ ist_eigener: false, ein_sfv_person_id: null, ein_rueckennr: null });
     expect(zaehleVerlaufNamen([fremd], new Set([333])).zeilen_mit_zweitem_namen).toBe(0);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   „Gruppe  2" — der Doppelabstand des Verbands (11.09.2026)
+
+   Gemeldet von der Website-Seite: in allen 270 Etiketten. Der Wert kommt
+   so vom Verband. Wir aendern ihn in UNSERER Ausgabe und zaehlen, wie oft
+   — die Rohform bleibt in spiele.sfv_gruppe stehen.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("normalisiereRaum", () => {
+  it("macht aus zwei Leerzeichen eines", () => {
+    expect(normalisiereRaum("Gruppe  2")).toBe("Gruppe 2");
+  });
+
+  it("laesst einen sauberen Wert unangetastet", () => {
+    expect(normalisiereRaum("Gruppe 2")).toBe("Gruppe 2");
+    expect(musstNormalisiertWerden("Gruppe 2")).toBe(false);
+  });
+
+  it("meldet, wenn sie eingreifen musste", () => {
+    expect(musstNormalisiertWerden("Gruppe  2")).toBe(true);
+  });
+
+  it("⚠ meldet bei LEER nichts — sonst zaehlte der Cup-Fall doppelt", () => {
+    /* Cupspiele haben gar keinen Gruppennamen. Sie als „normalisiert" zu
+       zaehlen machte aus einer fehlenden Angabe eine Aenderung. */
+    expect(musstNormalisiertWerden(null)).toBe(false);
+    expect(musstNormalisiertWerden("")).toBe(false);
+  });
+
+  it("faengt auch Tabulator und Zeilenumbruch", () => {
+    /* ⚠ Die Steuerzeichen als Codepunkte, nicht als Escape: ein 	 im
+       Quelltext ueberlebt den Weg durch eine Shell nicht zuverlaessig —
+       genau so ist diese Zeile beim ersten Versuch zerbrochen. */
+    const roh = "  Gruppe" + String.fromCharCode(9, 10) + " 2 ";
+    expect(normalisiereRaum(roh)).toBe("Gruppe 2");
+  });
+
+  it("die Nutzlast traegt den bereinigten Wert", () => {
+    const s = bildeSpiel(quelle({ sfv_gruppe: "Gruppe  2" }), "38309", [], new Map(), "FC Herrliberg");
+    expect(s!.runde).toBe("Gruppe 2");
   });
 });

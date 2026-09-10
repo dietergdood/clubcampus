@@ -55,7 +55,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { mischeEreignisse, hatVerlauf } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
-import { bildeSpiel, zaehleVerlaufNamen } from "../../../src/domains/spiele/wpNutzlast.ts";
+import {
+  bildeSpiel, zaehleVerlaufNamen, musstNormalisiertWerden,
+} from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
    von beiden nicht geprueft; eine Strukturpruefung auf den Quelltext taugt
@@ -924,6 +926,11 @@ async function laufeProbe(
   let ohneVerlauf = 0;
   let ohneSchluessel = 0;
   let zurueckgehalten = 0;
+  /* ⚠ Sichtbar machen, was wir an fremdem Text aendern. Steigt die Zahl,
+     hat der Verband seine Schreibweise geaendert — und das soll auffallen,
+     nicht verschwinden. */
+  let rundeNormalisiert = 0;
+  let cupOhneRunde = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
     zeilen_mit_zweitem_namen: 0,
@@ -937,6 +944,13 @@ async function laufeProbe(
     const spiel = bildeSpiel(s, String(s.sfv_team_id ?? ""), ereignisse, namen, unserKlub);
     if (!spiel) { ohneSchluessel++; continue; }
     if (!spiel.publizieren) zurueckgehalten++;
+    if (musstNormalisiertWerden(s.sfv_gruppe as string | null)) rundeNormalisiert++;
+    /* ⚠ Cupspiele tragen keinen Gruppennamen — gemeldet 11.09.2026,
+       13 von 13. Gezaehlt, nicht behoben: der Wert entsteht beim Verband,
+       und was dort stattdessen steht, ist noch nicht gemessen. */
+    if (spiel.runde === "" && (s.wettbewerb ?? "").toString().toLowerCase().includes("cup")) {
+      cupOhneRunde++;
+    }
     gebaut.push(spiel);
 
     /* ⚠ Gezaehlt wird die ENTSCHEIDUNG, nicht der fertige Text. Die erste
@@ -971,6 +985,8 @@ async function laufeProbe(
       ohne_verlauf: ohneVerlauf,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
+      runde_normalisiert: rundeNormalisiert,
+      cup_ohne_runde: cupOhneRunde,
       /* ⚠ ZWEI SORTEN NAME, GETRENNT AUSGEWIESEN (seit 10.09.2026).
          Bis dahin gab es nur eine, und `zeilen_mit_personenname` war die
          Zahl, an der man ablas, ob Klarnamen hinausgehen. Seit die

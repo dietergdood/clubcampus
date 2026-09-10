@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.5.0
+ * Version:     0.6.0
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -59,7 +59,19 @@
  *   schreibt   fch_spiel: Kopfdaten und den Repeater `verlauf`
  *              die Ranglisten (eine Option, je Gruppe ein Eintrag)
  *
- *   NIE        fch_team          — Teams gehoeren dem Verein
+ *   am fch_team  NUR `liga`, `gruppe` und `abgleich_stand` — die eine
+ *              ausdruecklich beschlossene Ausnahme (10.09.2026, Fassung
+ *              0.4.0). Welche Felder das sind, sagt CC_TEAM_FELDER; die
+ *              Pruefung `check-plugin` haelt es fest.
+ *
+ *              ⚠ HIER STAND BIS ZUM 11.09.2026 „NIE fch_team". Das war
+ *              richtig bis 0.3.0 und danach falsch — gemeldet von der
+ *              Website-Seite, nicht selbst bemerkt. Ein Kopf, der eine
+ *              Zusage nennt, die der Code nicht mehr haelt, ist schlimmer
+ *              als keiner: er wird geglaubt statt nachgesehen.
+ *
+ *   NIE        einen fch_team ANLEGEN oder LOESCHEN
+ *              jedes andere Feld am fch_team — Rangliste, Trainer, Bilder
  *              fch_person        — Personen gehoeren der Redaktion
  *              `ereignisse`      — der redaktionelle Ablauf mit Personen
  *              `matchbericht`    — der Verweis auf den News-Beitrag
@@ -130,6 +142,12 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.6.0 (11.09.2026): `wp_teams` und die Team-Zuordnung zaehlen keine
+   `auto-draft` mehr (CC_TEAM_ZUSTAENDE) — auf dev waren zehn von
+   einundzwanzig gezaehlten Teams nie gespeicherte Entwuerfe. Und der
+   Dateikopf sagt nicht mehr „NIE fch_team": seit 0.4.0 schreibt der
+   Abgleich `liga`, `gruppe` und `abgleich_stand`.
+
    0.5.0 (10.09.2026): `/status` sagt fuer `liga`, `gruppe` und
    `abgleich_stand`, ob ACF den Namen als FELD kennt (`feld`) oder ob dort
    nur ein Postmeta liegt (`nur_postmeta`). Ein falscher Feldname schlaegt
@@ -153,7 +171,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.5.0';
+const CC_VERSION    = '0.6.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -584,11 +602,14 @@ function cc_route_status(): WP_REST_Response {
 
 			   > Eine Zahl, deren Name nicht sagt, WESSEN Dinge sie zaehlt,
 			   > ist in einer Kette aus zwei Systemen keine Auskunft. */
+			/* ⚠ DIESELBE ZUSTANDSLISTE WIE cc_team_karte(). Zwei Listen
+			   waeren der naechste Fund: die Zahl zaehlte dann etwas
+			   anderes als die Zuordnung ansieht. */
 			'wp_teams'              => count(
 				get_posts(
 					array(
 						'post_type'   => CC_TYP_TEAM,
-						'post_status' => 'any',
+						'post_status' => CC_TEAM_ZUSTAENDE,
 						'numberposts' => -1,
 						'fields'      => 'ids',
 					)
@@ -665,11 +686,30 @@ function cc_abgleich_kandidaten(): array {
  *   uebersprungen und namentlich gemeldet — die Sichtbarkeit einer
  *   Mannschaft auf der Website bleibt eine Entscheidung des Vereins.
  */
+/**
+ * Die Beitragszustaende, die als „ein Team" zaehlen.
+ *
+ * ⚠ ⚠  `'any'` ZAEHLT `auto-draft` MIT — UND DAS SIND KEINE TEAMS.
+ *
+ * WordPress legt bei jedem Klick auf „Neu" einen `auto-draft` an, auch
+ * wenn niemand etwas speichert. Auf der dev-Instanz waren das **zehn von
+ * einundzwanzig**: `wp_teams` meldete 21, es gab elf. Gemeldet von der
+ * Website-Seite am 11.09.2026.
+ *
+ * ⚠ Die Zahl war damit nicht bloss zu hoch, sondern IRREFUEHREND: sie
+ * stand neben `wp_teams_mit_sfv_id` und liess elf zugeordnete Teams
+ * aussehen wie eine halb erledigte Zuordnung. Eine Auskunft, die zum
+ * Suchen an einer Stelle verleitet, an der nichts ist.
+ *
+ * `trash` faellt aus demselben Grund weg: ein geloeschtes Team ist keines.
+ */
+const CC_TEAM_ZUSTAENDE = array( 'publish', 'draft', 'pending', 'private', 'future' );
+
 function cc_team_karte(): array {
 	$ids   = get_posts(
 		array(
 			'post_type'   => CC_TYP_TEAM,
-			'post_status' => 'any',
+			'post_status' => CC_TEAM_ZUSTAENDE,
 			'numberposts' => -1,
 			'fields'      => 'ids',
 		)

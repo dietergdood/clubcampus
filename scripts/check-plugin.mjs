@@ -206,6 +206,33 @@ const REGELN = [
      Konstanten auf Dateiebene — pruefbar ist deshalb die Abwesenheit der
      Texte, nicht die Gleichheit der Listen. Das genuegt: eine zweite
      Liste MUSS die Namen als Texte enthalten. */
+  /* ⚠⚠ `'any'` ZAEHLT auto-draft MIT — zehn von einundzwanzig auf dev.
+     Gemeldet von der Website-Seite am 11.09.2026, nicht selbst bemerkt.
+     Die Zahl war nicht bloss zu hoch, sondern irrefuehrend: elf
+     zugeordnete Teams sahen aus wie eine halb erledigte Zuordnung.
+
+     Geprueft wird die ABWESENHEIT des Texts `any`, nicht die Anwesenheit
+     der Konstante: eine zweite Zustandsliste MUESSTE die Zustaende als
+     Texte enthalten, und `any` ist der eine Wert, der still zu viel
+     einsammelt. */
+  {
+    frage: "keine Team-Abfrage nimmt post_status 'any'",
+    pruefe: (b) => {
+      const treffer = [];
+      for (const name of ["cc_team_karte", "cc_route_status"]) {
+        const f = b.funktionen[name];
+        if (!f) return [`(${name} fehlt — die Pruefung sieht die falsche Datei an)`];
+        if ((f.texte ?? []).includes("any")) treffer.push(name);
+      }
+      return treffer;
+    },
+    /* ⚠ Beide Funktionen muessen im Kontrollfall vorkommen, sonst meldet
+       die Regel „(… fehlt)" statt des Befunds — und zaehlte damit aus dem
+       falschen Grund eins. */
+    kontrolle: "<?php function cc_team_karte() { $x = array('post_status' => 'any'); } "
+      + "function cc_route_status() { return 1; }",
+    erwarteImKontrollfall: 1,
+  },
   {
     frage: "cc_teamfeld_lage fuehrt keine zweite Liste der Feldnamen",
     pruefe: (b) => {

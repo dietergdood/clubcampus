@@ -311,6 +311,22 @@ export function bildeVerlauf(
   return zeilen;
 }
 
+/**
+ * Mehrfache Leerzeichen zu einem, Rand weg.
+ *
+ * ⚠ NUR fuer Text, den WIR ausgeben — nie beim Speichern fremder Werte.
+ * Siehe die Begruendung bei `runde` in bildeSpiel().
+ */
+export function normalisiereRaum(w: string | null | undefined): string {
+  return String(w ?? "").replace(/\s+/g, " ").trim();
+}
+
+/** Wie oft `normalisiereRaum` an diesem Wert etwas geaendert haette. */
+export function musstNormalisiertWerden(w: string | null | undefined): boolean {
+  const roh = String(w ?? "");
+  return roh !== "" && normalisiereRaum(roh) !== roh;
+}
+
 /* ── Zählen, wer beim Namen genannt wird ──────────────────────────── */
 
 export interface NamensZaehlung {
@@ -492,12 +508,26 @@ export function bildeSpiel(
     ort: q.venue ?? "",
     wettbewerb: q.wettbewerb ?? "",
     liga: q.liga ?? "",
+    /* ⚠ „Gruppe  2" — MIT ZWEI LEERZEICHEN, in allen 270 Etiketten.
+       Gemeldet von der Website-Seite am 11.09.2026; der Wert kommt so vom
+       Verband (`groupName`).
+
+       ⚠ DAS IST KEIN „FREMDE DATEN PUTZEN". Der Unterschied ist der Ort:
+       in `spiele.sfv_gruppe` steht der Wert des Verbands unveraendert —
+       er gehoert ihm (Feldhoheit `sfv`), und wer ihn dort liest, sieht,
+       was geliefert wurde. `runde` dagegen ist UNSERE Ausgabe an eine
+       Vorlage, und wie unser eigener Text aussieht, entscheiden wir.
+
+       ⚠ UND ES GESCHIEHT NICHT STILL: `runde_normalisiert` in der
+       Zusammenfassung zaehlt, wie oft es greift. Steigt die Zahl
+       ploetzlich, hat der Verband seine Schreibweise geaendert — genau
+       das, was ein stilles Trimmen verstecken wuerde. */
     /* ⚠ `runde` TRAEGT DEN GRUPPENNAMEN — „Gruppe 3", nicht eine Runde.
        Der Feldname stammt aus dem Theme und ist aelter als der Inhalt;
        umbenennen hiesse, den Vertrag mit der Vorlage zu brechen. Wer ihn
        liest, muss wissen, was drinsteht: dieselbe Falle wie ein Endpunkt,
        der „Teams" heisst und Teams mit Rangliste liefert. */
-    runde: q.sfv_gruppe ?? "",
+    runde: normalisiereRaum(q.sfv_gruppe),
     status,
     publizieren,
     tore_heim: tore.tore_heim,
