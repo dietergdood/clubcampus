@@ -15,6 +15,7 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   holeToken, holeSaison, holeTeams, holeSpielplan, holeRangliste, SfvFehler,
 } from "./sfvApi.ts";
+import { schneideAufFeldhoheit } from "../../../src/domains/sfv/feldhoheit.ts";
 import { laufeMatchdaten, laufeLogos, UNZUGEORDNET_WARNUNG } from "./matchdatenLauf.ts";
 import type { LaufErgebnis } from "./ergebnisTypen.ts";
 import type { SfvZugang, SfvTeam, SfvSpiel } from "./sfvApi.ts";
@@ -30,23 +31,6 @@ interface Verbindung { id: string; verein_id: string; api_url: string; sync_feld
    alles auf einmal nicht tragbar, zumal Rate Limits nicht dokumentiert
    sind. Der Rueckstand ist in zehn Stunden aufgeholt. */
 const MATCHDATEN_PRO_LAUF = 10;
-
-/* ── Feldhoheit ───────────────────────────────────────────────────────────
-   Die erlaubten Spalten stehen in sync_felder. Diese Funktion schneidet die
-   berechnete Zeile darauf zu — und meldet, wenn sync_felder eine Spalte
-   nennt, die der Sync gar nicht berechnet. Ohne diese zweite Richtung wäre
-   ein Tippfehler in der Liste ein stilles Feld, das nie geschrieben wird. */
-export function schneideAufFeldhoheit(
-  erlaubt: string[], berechnet: Record<string, unknown>,
-): { zeile: Record<string, unknown>; fehlend: string[] } {
-  const zeile: Record<string, unknown> = {};
-  const fehlend: string[] = [];
-  for (const feld of erlaubt) {
-    if (!(feld in berechnet)) { fehlend.push(feld); continue; }
-    zeile[feld] = berechnet[feld];
-  }
-  return { zeile, fehlend };
-}
 
 /* ── Ein Spiel abbilden ───────────────────────────────────────────────────
    Rückgabe: alle Felder, die der Sync berechnen kann. Welche davon
@@ -257,13 +241,19 @@ export async function laufeSync(
       ...((v.sync_felder as any)?.spiele?.abgeleitet ?? []),
     ] as string[];
     if (erlaubt.length === 0) throw new SfvFehler("sync_felder nennt keine Spalten für spiele");
+    /* Felder, die der Sync berechnet und die Feldhoheit wegschneidet. */
+    const weggeschnitten = new Set<string>();
 
     const zeilen: Record<string, unknown>[] = [];
     for (const s of spiele) {
       const gebildet = bildeSpiel(s, eigene, namen, jetzt);
       if (!gebildet) { erg.spiele.ohne_team++; continue; }
       if (gebildet.derby) erg.derbys++;
-      const { zeile, fehlend } = schneideAufFeldhoheit(erlaubt, gebildet.zeile);
+      const { zeile, fehlend, nicht_erlaubt } = schneideAufFeldhoheit(erlaubt, gebildet.zeile);
+      /* ⚠ Die zweite Richtung: berechnet, aber nicht erlaubt. Sie wirft
+         nicht (siehe schneideAufFeldhoheit), sie sammelt — und der Lauf
+         meldet sie am Ende samt Warnstatus. */
+      for (const f of nicht_erlaubt) weggeschnitten.add(f);
       if (fehlend.length) {
         throw new SfvFehler(`sync_felder nennt Spalten, die der Sync nicht berechnet: ${fehlend.join(", ")}`);
       }
@@ -295,6 +285,16 @@ export async function laufeSync(
     const bekannt = new Set((vorhanden ?? []).map((z) => Number(z.sfv_match_id)));
     for (const z of zeilen) {
       if (bekannt.has(Number(z.sfv_match_id))) erg.spiele.aktualisiert++; else erg.spiele.neu++;
+    }
+
+    /* ⚠ ⚠  DIE MELDUNG, DIE AM 11.09.2026 GEFEHLT HAT.
+       `sfv_runde` und `sfv_runde_nr` wurden stundenlang berechnet und
+       weggeschnitten; in der Datenbank sah es aus, als liefere der Verband
+       sie nicht. Ein Ausfall in der Verkleidung einer Datenlage — und zwar
+       einer, die fast zu einer Rueckfrage beim Verband gefuehrt haette. */
+    if (weggeschnitten.size) {
+      erg.feldhoheit_weggeschnitten = [...weggeschnitten].sort();
+      if (erg.status === "ok") erg.status = "warnung";
     }
     /* Nicht mehr gelieferte werden gezählt, nie gelöscht. */
     const geliefert = new Set(zeilen.map((z) => Number(z.sfv_match_id)));

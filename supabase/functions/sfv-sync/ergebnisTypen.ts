@@ -236,6 +236,13 @@ export interface LaufErgebnis {
   /** Nur beim ersten Lauf einer neuen Saison gesetzt — siehe
       `saisonWechsel()`. Danach fehlt es wieder. */
   saison_wechsel?: { von: number | null; nach: number };
+  /**
+   * Spalten, die der Sync berechnet und die Feldhoheit wegschneidet.
+   *
+   * ⚠ Nur Spaltennamen — keine Werte. Sie duerfen ins Protokoll, weil ein
+   * Spaltenname keine Person nennt; der Wert koennte es.
+   */
+  feldhoheit_weggeschnitten?: string[];
   derbys: number;
   matchdaten?: MatchdatenErgebnis;
   logos?: { geholt: number; fehlt: number };
@@ -273,6 +280,11 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
     /* ⚠ Nur wenn gewechselt — ein Feld, das immer dasteht, wird nicht
        gelesen. Fehlt es, ist nichts passiert. */
     ...(erg.saison_wechsel ? { saison_wechsel: erg.saison_wechsel } : {}),
+    /* ⚠ Nur Spaltennamen, keine Werte — ein Spaltenname nennt keine
+       Person, ein Wert koennte es. Und nur wenn etwas weggeschnitten
+       wurde: ein Feld, das immer dasteht, wird nicht gelesen. */
+    ...(erg.feldhoheit_weggeschnitten?.length
+      ? { feldhoheit_weggeschnitten: erg.feldhoheit_weggeschnitten } : {}),
     derbys: erg.derbys,
   };
   if (erg.saison) raus.saison = erg.saison;
