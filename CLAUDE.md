@@ -3285,3 +3285,41 @@ Nummer trägt.
 > Schlüssel. Dieselbe Familie wie „ein Filter auf einen NAMEN prüft eine
 > Schreibweise" — nur ist eine Zahl noch verführerischer, weil sie
 > aussieht wie eine Id.
+
+### ⚠ `wettbewerb` ist der SPIELTYP, `liga` ist der Wettbewerb — und wir senden beide
+
+Gemessen am 11.09.2026 in `docs/sfv/sfv_stammdaten.json`, ausgelöst durch
+die Meldung der Website-Seite, bei Cupspielen stehe „schlicht «Cup»" statt
+„Regional Cup".
+
+**Das stimmt — und es ist kein Fehlstand, sondern eine Verwechslung von
+zwei Feldern, die beide ankommen.**
+
+| unser Feld | SFV-Feld | Inhalt | Beispiel Cup |
+|---|---|---|---|
+| `wettbewerb` | `matchTypeName` | die **Betriebsart** | `Cup` |
+| `liga` | `leagueName` | der **Wettbewerb** | `Schweizer Cup U-18`, `Cup AJF (4./5. Liga)` |
+
+Die Stammdaten führen `Spieltyp` als eigene, kurze Liste — **1 Meisterschaft ·
+2 Cup · 3 Trainingsspiele · 6 Turnier · 8 Mini-Turniere · 9 Schweizer-Cup ·
+11 Entscheidungsspiele (Cup Modus)**. Dort steht keine Wettbewerbsbezeichnung
+und kann keine stehen. Die Namen liegen in der Liste `Liga` — 46 Einträge
+allein mit „Cup" darin.
+
+⚠ **Der Feldname `wettbewerb` ist damit die eigentliche Falle.** Er
+verspricht, was `liga` trägt. Dieselbe Familie wie `runde`, das den
+Gruppennamen führt, und wie `/api/team/list`, das Teams mit Rangliste
+liefert: **eine Beschriftung, die mehr behauptet als der Inhalt hält, wird
+irgendwann von jemandem geglaubt, der nicht nachsieht.**
+
+**Bevor irgendwo etwas gebaut wird, das „den Wettbewerb" braucht: `liga`
+lesen.** Und wer die zwei zusammenführen will, benennt vorher um — nicht
+den Inhalt, sondern das Feld.
+
+⚠ **Was dagegen wirklich fehlt, ist die RUNDE bei Cupspielen** (13 von 13
+leer). `runde` kommt aus `groupName`, und ein Cupspiel hat keine Gruppe.
+Der Spielplan führt daneben `roundNbr`, `playDay` und `playDayName` — alle
+drei kommen bei jedem Abruf ohnehin mit. **Was sie bei einem Cupspiel
+enthalten, ist ungemessen:** die Swagger-Datei hat zu keinem eine
+Beschreibung, und in der aufgezeichneten Beispielantwort ist kein Cupspiel.
+Erst messen, dann eine Spalte.

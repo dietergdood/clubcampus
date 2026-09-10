@@ -154,3 +154,96 @@ export function deuteWechselProbe(b: WechselBefund): string {
     + `(${b.mit_ersatz_nummer}) — dann zeigt die Verbandsseite den Namen aus der `
     + "Aufstellung, und wir könnten es nur genauso tun.";
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Was trägt ein CUPSPIEL statt eines Gruppennamens? (11.09.2026)
+
+   ⚠ Gemeldet: 13 von 13 Cupspielen ohne `runde`. `runde` kommt aus
+   `groupName`, und ein Cupspiel hat keine Gruppe — der Wert entsteht
+   beim Verband, nicht bei uns.
+
+   Der Spielplan führt daneben `roundNbr`, `playDay` und `playDayName`.
+   **Alle drei kommen bei jedem Abruf ohnehin mit.** Was sie bei einem
+   Cupspiel enthalten, weiss niemand: die Swagger-Datei hat zu keinem
+   eine Beschreibung, und in der aufgezeichneten Beispielantwort ist kein
+   Cupspiel.
+
+   ⚠ Deshalb wird hier gemessen und nicht gebaut. Eine Spalte für ein
+   Feld anzulegen, von dem niemand weiss, ob es „1. Runde", „3" oder
+   nichts enthält, ist genau der Fehler, der in diesem Projekt schon
+   dreimal als „Spalte ohne Leser" protokolliert ist — hier in der
+   Vorwärtsrichtung.
+   ══════════════════════════════════════════════════════════════════════ */
+
+export interface CupBefund {
+  spiele_gesamt: number;
+  /** Spiele ohne `groupName` — die, um die es geht. */
+  ohne_gruppe: number;
+  /** Wie oft die drei Kandidaten etwas tragen, unter den Spielen ohne Gruppe. */
+  mit_round_nbr: number;
+  mit_play_day: number;
+  mit_play_day_name: number;
+  /**
+   * Bis zu fünf Beispiele. ⚠ Hier stehen die WERTE, nicht nur ob etwas
+   * da ist — anders als bei der Wechselprobe. Der Unterschied ist die
+   * Sache: dort ging es um Personennamen, hier um „1. Runde" gegen „3",
+   * und diese Frage lässt sich ohne den Wert nicht beantworten.
+   */
+  beispiele: Array<{
+    wettbewerb: string;
+    liga: string;
+    round_nbr: number | null;
+    play_day: number | null;
+    play_day_name: string;
+  }>;
+}
+
+export function fasseCupProbe(roh: Array<Record<string, unknown>>): CupBefund {
+  const b: CupBefund = {
+    spiele_gesamt: 0, ohne_gruppe: 0,
+    mit_round_nbr: 0, mit_play_day: 0, mit_play_day_name: 0, beispiele: [],
+  };
+
+  for (const s of roh) {
+    b.spiele_gesamt++;
+    if (hatText(s.groupName)) continue;
+    b.ohne_gruppe++;
+
+    if (zahl(s.roundNbr) !== null) b.mit_round_nbr++;
+    if (zahl(s.playDay) !== null) b.mit_play_day++;
+    if (hatText(s.playDayName)) b.mit_play_day_name++;
+
+    if (b.beispiele.length < 5) {
+      b.beispiele.push({
+        /* ⚠ Beide nebeneinander, weil sie verwechselt werden:
+           `matchTypeName` ist die Betriebsart („Cup"), `leagueName` der
+           Wettbewerb („Schweizer Cup U-18"). */
+        wettbewerb: String(s.matchTypeName ?? ""),
+        liga: String(s.leagueName ?? ""),
+        round_nbr: zahl(s.roundNbr),
+        play_day: zahl(s.playDay),
+        play_day_name: String(s.playDayName ?? ""),
+      });
+    }
+  }
+  return b;
+}
+
+export function deuteCupProbe(b: CupBefund): string {
+  if (b.ohne_gruppe === 0) {
+    return "Kein Spiel ohne Gruppenname in diesem Satz — die Probe sagt nichts über "
+      + "Cupspiele. Ein Zeitraum mit Cupspielen wählen.";
+  }
+  const traeger: string[] = [];
+  if (b.mit_play_day_name > 0) traeger.push(`playDayName (${b.mit_play_day_name})`);
+  if (b.mit_round_nbr > 0) traeger.push(`roundNbr (${b.mit_round_nbr})`);
+  if (b.mit_play_day > 0) traeger.push(`playDay (${b.mit_play_day})`);
+  if (!traeger.length) {
+    return `${b.ohne_gruppe} Spiele ohne Gruppe, und keines der drei Felder trägt etwas. `
+      + "Dann liefert der Verband die Runde nicht — und sie ist über die Schnittstelle "
+      + "nicht zu haben.";
+  }
+  return `${b.ohne_gruppe} Spiele ohne Gruppe. Es tragen: ${traeger.join(", ")}. `
+    + 'Die Beispiele zeigen, ob dort ein Text („1. Runde") oder eine blosse Zahl steht — '
+    + "nur der Text taugt für die Anzeige.";
+}

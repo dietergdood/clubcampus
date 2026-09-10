@@ -35,7 +35,9 @@
 // console.* bleibt in diesem Ordner verboten.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { fasseWechselProbe, deuteWechselProbe } from "../../../src/domains/sfv/wechselProbe.ts";
+import {
+  fasseWechselProbe, deuteWechselProbe, fasseCupProbe, deuteCupProbe,
+} from "../../../src/domains/sfv/wechselProbe.ts";
 import { waehleNachtragSpiele, deuteNachtrag } from "../../../src/domains/sfv/ereignisNachtrag.ts";
 import { bildeEreignis } from "./matchdaten.ts";
 import {
@@ -78,7 +80,9 @@ Deno.serve(async (req) => {
   }
   /* ⚠ Die gueltigen Aktionen aufgezaehlt, damit die Meldung sie nennen
      kann — dieselbe Regel wie in wp-export. */
-  const AKTIONEN = ["teams", "sync", "namen", "teamprobe", "wechselprobe", "wechselnachtrag"];
+  const AKTIONEN = [
+  "teams", "sync", "namen", "teamprobe", "wechselprobe", "wechselnachtrag", "cupprobe",
+];
   if (!AKTIONEN.includes(aktion)) {
     return json({ fehler: `Unbekannte Aktion: ${aktion}`, gueltig: AKTIONEN }, 400);
   }
@@ -282,6 +286,35 @@ Deno.serve(async (req) => {
       return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
     } finally {
       await db.from("api_verbindungen").update({ sync_laeuft_seit: null }).eq("id", v.id);
+    }
+  }
+
+  /* ── Aktion cupprobe: was traegt ein Spiel OHNE Gruppennamen? ────────
+     Ein Abruf des Klub-Spielplans, liest, schreibt nichts. Sie beantwortet
+     die Frage, die vor einer Spalte steht: enthaelt `playDayName` bei
+     einem Cupspiel „1. Runde", oder steht dort nur eine Zahl?
+
+     ⚠ Sie gibt hier die WERTE zurueck, anders als die Wechselprobe. Der
+     Unterschied ist die Sache: dort ging es um Personennamen, hier um
+     „1. Runde" gegen „3" — und das ist ohne den Wert nicht zu beantworten.
+     Der Spielplan-Endpunkt fuehrt ueberhaupt keine Personendaten. */
+  if (aktion === "cupprobe") {
+    const v = eigene[0];
+    if (!v.api_url) return json({ fehler: "api_verbindungen.api_url fehlt" }, 400);
+    try {
+      const zugang = zugangFuer(v.api_url);
+      const token = await holeToken(zugang);
+      const saison = await holeSaison(zugang, token, new Date());
+      const roh = await holeSpielplan(zugang, token, saison.id);
+      const befund = fasseCupProbe(roh as unknown as Record<string, unknown>[]);
+      return json({
+        hinweis: "Leseprobe. Es wird nichts gespeichert.",
+        saison: { id: saison.id, name: saison.name },
+        ...befund,
+        deutung: deuteCupProbe(befund),
+      });
+    } catch (e) {
+      return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
     }
   }
 
