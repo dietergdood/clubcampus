@@ -266,6 +266,64 @@ eingewechselt wurde, steht dort als `rolle: eingewechselt`.
 
 ---
 
+## 5c · Die Gegneranzeige „Spieler FC Fällanden" — was dafür schon da ist
+
+**Entschieden am 10.09.2026:** Nummer und Klub von uns, kein Name; bei
+Frauen- und Juniorinnenteams „Spielerin".
+
+### Der Klubname: braucht kein neues Feld
+
+Er steht **am Spiel**, nicht an der Zeile:
+
+```
+WpSpiel.gegner        „FC Fällanden 2"
+WpAufstellungZeile.seite   heim | gast
+```
+
+**Die Gegnerseite ist die, deren `seite` nicht die unsere ist** — und
+welche unsere ist, sagt `heim_auswaerts` am selben Spiel. Damit ist der
+Klubname eindeutig zu bilden, ohne dass eine Zeile ihn trägt.
+
+⚠ **Ihn je Zeile mitzuschicken wäre schlechter**, nicht bequemer: dann
+stünde derselbe Name elfmal da, und beim nächsten Umbau liefe eine Kopie
+der anderen davon. **Eine Aussage, ein Ort.**
+
+⚠ **Eine Grenze gehört dazu:** treffen zwei eigene Mannschaften
+aufeinander, gibt es nur EINE Zeile in `spiele` (der Schlüssel lässt
+keine zweite zu), und `gegner` trägt dann die andere eigene Mannschaft.
+Heute kommt der Fall nicht vor — alle 21 Mannschaften stehen in 21
+verschiedenen Gruppen —, aber die Vorlage sollte nicht darauf bauen,
+dass „Gegner" immer ein fremder Verein ist.
+
+### ⚠ „Spielerin" statt „Spieler": das haben wir NICHT
+
+**In unseren Daten gibt es kein Merkmal für Geschlecht.** Was es gibt,
+sind Namen:
+
+| Spalte | Inhalt | taugt? |
+|---|---|---|
+| `teams.sfv_liga_name` | „Frauen 3. Liga", „Juniorinnen C" | ⚠ ein **Name** |
+| `teams.kategorie` · `verbandskategorie` | Vereinsbegriffe | ⚠ ebenso |
+| `spiele.liga` (in der Nutzlast) | dieselbe Verbandsbezeichnung | ⚠ ebenso |
+
+> **Ein Filter auf einen NAMEN prüft eine Schreibweise, ein Filter auf
+> ein MERKMAL prüft die Sache.** Wer `liga LIKE '%Frauen%'` schreibt,
+> baut eine Regel, die beim ersten „Damen" oder „Fussballerinnen"
+> umfällt — und zwar still, mit der falschen Anrede auf der Seite.
+
+**Zwei ehrliche Wege, und der erste ist der bessere:**
+
+| | |
+|---|---|
+| **Das Theme entscheidet an seinem eigenen Team** | es kennt den `fch_team`-Beitrag („Frauen", „Ca-Juniorinnen") und pflegt ihn selbst. **Dort ist es ein gepflegtes Merkmal, kein geratenes** |
+| Wir liefern ein Feld | dann muss es erst **entstehen** — eine Spalte an `teams`, von Hand gepflegt, mit einem Leser. Das ist ein eigener Auftrag, kein Zusatz |
+
+⚠ **Was auf keinen Fall passieren soll: dass einer von beiden es aus dem
+Ligennamen ableitet und der andere annimmt, es sei gepflegt.** Dann steht
+die Anrede auf einer Schreibweise, und niemand weiss es.
+
+---
+
 ## 6 · Was NICHT kommt
 
 | | warum |

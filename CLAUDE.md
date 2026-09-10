@@ -3578,6 +3578,36 @@ Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
 
+### ✅ Die Gegnernamen-Frage war gegenstandslos — und meine Annahme war falsch
+
+10.09.2026. Vor dem ersten Export mit Aufstellung stand die Sorge: der
+Empfänger **ersetzt** einen Repeater vollständig (`update_field()` kennt
+kein Zusammenführen), und unsere Gegnerzeilen tragen `spieler: ""`.
+**Würden damit Namen von der Website verschwinden?**
+
+**Meine Einschätzung war: nein, weil das Theme eine eigene Quelle hat und
+unser Repeater danebensteht.** Gemessen vom Theme-Chat:
+
+| | |
+|---|---|
+| **Das Theme liest `f_s_auf` bereits** — drei Leser über ACF | ⚠ **meine Annahme war falsch** |
+| Genau **ein** Spiel trägt heute eine Aufstellung, in der alten Struktur | |
+| Die Namen darin liegen in einem Unterfeld, **das kein Leser erreicht** | |
+| Es sind **17 „Name — Platzhalter"** aus dem Prototyp | **kein einziger echter Gegnername existiert** |
+
+**Das Ergebnis stimmt, die Begründung war es nicht.** Der erste
+automatische Export mit Aufstellung ist unbedenklich — aber nicht, weil
+die Felder getrennt wären, sondern weil dort **nichts steht, das
+verlorengehen könnte**.
+
+⚠ **Der Unterschied ist nicht akademisch.** Wäre in dem einen Spiel ein
+echter Name gestanden, hätte meine Begründung ihn nicht geschützt — sie
+war falsch, und das Ergebnis war Glück. **Eine richtige Antwort aus einer
+falschen Annahme ist kein Beleg für die Annahme**, und sie hält nur bis
+zum nächsten Fall.
+
+---
+
 ### ⚠⚠ `substitutePlayerId` IST KEIN `personId` — der Bogen eines ganzen Tages
 
 10.09.2026, gemessen an fünf Wechseln eines Spiels:
