@@ -32,7 +32,9 @@
      spiel_ereignisse    →  verlauf-Zeilen (Text statt Person)
    ═══════════════════════════════════════════════════════════════ */
 import type { AnzeigeEreignis } from "./matchdatenAnzeige.ts";
-import { beschreibeWer, TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS } from "./matchdatenAnzeige.ts";
+import {
+  beschreibeWer, beschreibeGewechselten, TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS,
+} from "./matchdatenAnzeige.ts";
 
 /** SFV-Ereignistyp „Aus-/Einwechslung". Steht nicht in matchdatenAnzeige,
     weil die Statistik ihn nicht zählt — der Verlauf zeigt ihn aber. */
@@ -286,8 +288,14 @@ export function bildeVerlauf(
        ein leergeschlagener Wert gehört zur selben Sache. */
     const subtyp = (e.subtyp ?? "").trim();
     const zusatz = subtyp && subtyp !== "-" ? ` · ${subtyp}` : "";
-    const text = art === "wechsel" && e.ein_rueckennr != null
-      ? `${wer} · für Nr. ${e.ein_rueckennr}`
+    /* ⚠ Der Ausgewechselte bekommt seinen Namen nach DERSELBEN Regel wie
+       der Eingewechselte — siehe beschreibeGewechselten(). Bis zum
+       10.09.2026 stand hier `ein_rueckennr` direkt, und daneben ein Name:
+       „Abdulah Al Abbadie · für Nr. 9". Zwei eigene Spieler, einer
+       genannt. */
+    const zweiter = art === "wechsel" ? beschreibeGewechselten(e, namen) : "";
+    const text = zweiter
+      ? `${wer} · für ${zweiter}`
       : `${wer}${zusatz}`;
 
     zeilen.push({
@@ -320,6 +328,19 @@ export interface NamensZaehlung {
   mit_rueckennummer: number;
   /** Gegner — der Mannschaftsname, nie eine Person. */
   mit_gegnername: number;
+  /**
+   * ⚠ ⚠  STEHT AUSSERHALB DER AUFTEILUNG — nicht mitsummieren.
+   *
+   * Eine Wechselzeile nennt ZWEI Menschen. Die vier Zahlen darüber teilen
+   * **Zeilen** auf, und ihre Summe muss die Zeilenzahl ergeben — das ist
+   * die Gegenprobe, die den Zähler an `bildeVerlauf()` bindet. Der zweite
+   * Mensch passt da nicht hinein, ohne sie zu zerstören.
+   *
+   * Weglassen war die Alternative und wäre falsch gewesen: er ist eine
+   * eigene Preisgabe. Seit dem 10.09.2026 steht sein Name auf der Website,
+   * und eine Zahl, die ihn nicht zählt, sagte zu wenig.
+   */
+  zeilen_mit_zweitem_namen: number;
 }
 
 /**
@@ -385,12 +406,24 @@ export function zaehleVerlaufNamen(
 ): NamensZaehlung {
   const z: NamensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
+    zeilen_mit_zweitem_namen: 0,
   };
 
   for (const e of ereignisse) {
     /* Derselbe Filter wie in bildeVerlauf — was dort wegfällt, darf hier
        nicht mitgezählt werden. */
     if (!verlaufArt(e.typ_id, e.subtyp_id ?? null)) continue;
+
+    /* ⚠ VOR dem Gegner-Zweig: eine Wechselzeile des GEGNERS nennt keinen
+       Menschen — der Constraint erzwingt dort null. Der Zähler darf sie
+       also gar nicht erst ansehen, sonst zählte er eine Preisgabe, die es
+       nicht geben kann. */
+    if (e.ist_eigener && verlaufArt(e.typ_id, e.subtyp_id ?? null) === "wechsel") {
+      const zid = e.ein_sfv_person_id;
+      if (zid != null && (zugeordnet.has(zid) || sfvNamen.has(zid))) {
+        z.zeilen_mit_zweitem_namen++;
+      }
+    }
 
     if (!e.ist_eigener) { z.mit_gegnername++; continue; }
     const id = e.sfv_person_id;

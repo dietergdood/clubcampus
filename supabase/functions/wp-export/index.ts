@@ -926,6 +926,7 @@ async function laufeProbe(
   let zurueckgehalten = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
+    zeilen_mit_zweitem_namen: 0,
   };
 
   for (const s of eigene) {
@@ -947,6 +948,7 @@ async function laufeProbe(
     namensZaehlung.mit_sfv_namen += z.mit_sfv_namen;
     namensZaehlung.mit_rueckennummer += z.mit_rueckennummer;
     namensZaehlung.mit_gegnername += z.mit_gegnername;
+    namensZaehlung.zeilen_mit_zweitem_namen += z.zeilen_mit_zweitem_namen;
   }
 
   const verlaufZeilen = gebaut.reduce((n, s) => n + s.verlauf.length, 0);
@@ -987,6 +989,10 @@ async function laufeProbe(
       zeilen_mit_sfv_namen: namensZaehlung.mit_sfv_namen,
       zeilen_mit_rueckennummer: namensZaehlung.mit_rueckennummer,
       zeilen_mit_gegnername: namensZaehlung.mit_gegnername,
+      /* ⚠ AUSSERHALB DER AUFTEILUNG — geht nicht in `zaehlung_stimmt` ein.
+         Eine Wechselzeile nennt zwei Menschen; die vier Zahlen darüber
+         teilen ZEILEN auf. Siehe NamensZaehlung. */
+      zeilen_mit_zweitem_namen: namensZaehlung.zeilen_mit_zweitem_namen,
       zaehlung_stimmt: summe === verlaufZeilen,
     },
     teams: teamListe,

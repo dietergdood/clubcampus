@@ -283,6 +283,36 @@ export function beschreibeWer(
   return e.rueckennr != null ? `Nr. ${e.rueckennr}` : "Unser Team";
 }
 
+/**
+ * Der ZWEITE Mensch einer Wechselzeile — der Ausgewechselte.
+ *
+ * ⚠ ⚠  ER HATTE VON ANFANG AN EINE ID UND BEKAM NIE EINEN NAMEN.
+ *
+ * `spiel_ereignisse.ein_sfv_person_id` wird seit dem ersten Matchdaten-Lauf
+ * geschrieben (`matchdaten.ts:138`, aus `substitutePlayerId`), steht im Typ
+ * `AnzeigeEreignis` — und wurde von **keiner** Anzeigestelle gelesen. Der
+ * Verlauf baute „für Nr. 9" aus der Rückennummer daneben.
+ *
+ * Das ist die Sorte Lücke, die nichts meldet: die Zeile sieht vollständig
+ * aus, weil eine Nummer dasteht. Erst neben einem Namen fällt auf, dass es
+ * zwei Menschen sind und nur einer genannt wird.
+ *
+ * ⚠ DIESELBE REIHENFOLGE WIE `beschreibeWer` — zugeordnet gewinnt, sonst
+ * der SFV-Name, sonst die Nummer. Zwei Menschen in einer Zeile dürfen nicht
+ * nach verschiedenen Regeln benannt werden.
+ *
+ * Leerer Text heisst „über diesen Menschen ist nichts bekannt": weder Id
+ * noch Nummer. Dann nennt die Zeile ihn gar nicht, statt „für Nr. null".
+ */
+export function beschreibeGewechselten(
+  e: Pick<EreignisZeile, "ein_sfv_person_id" | "ein_rueckennr">,
+  namen?: Map<number, string>,
+): string {
+  const name = e.ein_sfv_person_id != null ? namen?.get(e.ein_sfv_person_id) : null;
+  if (name) return name;
+  return e.ein_rueckennr != null ? `Nr. ${e.ein_rueckennr}` : "";
+}
+
 /** Kurzform eines Ereignisses für Dialoge: „Tor, 34' · Nr. 11". */
 export function beschreibeEreignis(
   e: Pick<EreignisZeile, "typ" | "minute" | "ist_eigener" | "sfv_person_id" | "rueckennr" | "gegner_club_name">,

@@ -402,3 +402,57 @@ describe("zaehleVerlaufNamen — zugeordnet gegen SFV-Rueckfall", () => {
     expect(summe).toBe(bildeVerlauf(alle, true, new Map(), "FC Herrliberg").length);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Der Ausgewechselte ist auch ein Mensch (10.09.2026)
+
+   ⚠ ANLASS, gemeldet von Didi: „52' Abdulah Al Abbadie · für Nr. 9".
+   Zwei eigene Spieler in einer Zeile, einer mit Namen, einer mit Nummer.
+   Die Id lag seit dem ersten Matchdaten-Lauf in der Datenbank
+   (`ein_sfv_person_id`, aus `substitutePlayerId`) und wurde von keiner
+   Anzeigestelle gelesen.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("Wechsel — beide Menschen werden genannt", () => {
+  const wechsel = (ueber = {}) => e({
+    typ_id: TYP_WECHSEL, ist_eigener: true,
+    sfv_person_id: 222, rueckennr: 11,
+    ein_sfv_person_id: 333, ein_rueckennr: 9,
+    ...ueber,
+  });
+  const NAMEN = new Map([[222, "Abdulah Al Abbadie"], [333, "Luca Meier"]]);
+
+  it("nennt den Ausgewechselten beim Namen statt bei der Nummer", () => {
+    const [z] = bildeVerlauf([wechsel()], true, NAMEN, "FC Herrliberg");
+    expect(z.text).toBe("Abdulah Al Abbadie · für Luca Meier");
+  });
+
+  it("faellt auf die Nummer zurueck, solange sein Name fehlt", () => {
+    const nur222 = new Map([[222, "Abdulah Al Abbadie"]]);
+    const [z] = bildeVerlauf([wechsel()], true, nur222, "FC Herrliberg");
+    expect(z.text).toBe("Abdulah Al Abbadie · für Nr. 9");
+  });
+
+  it("⚠ nennt ihn gar nicht, wenn weder Id noch Nummer da sind", () => {
+    /* „für Nr. null" waere schlimmer als ihn wegzulassen: es behauptete
+       eine Angabe, die es nicht gibt. */
+    const [z] = bildeVerlauf(
+      [wechsel({ ein_sfv_person_id: null, ein_rueckennr: null })], true, NAMEN, "FC Herrliberg");
+    expect(z.text).toBe("Abdulah Al Abbadie");
+  });
+
+  it("zaehlt den zweiten Namen — ausserhalb der Aufteilung", () => {
+    const z = zaehleVerlaufNamen([wechsel()], new Set([222, 333]));
+    expect(z.zeilen_mit_zweitem_namen).toBe(1);
+    /* ⚠ Die Gegenprobe bleibt intakt: die VIER Zahlen zaehlen Zeilen. */
+    const summe = z.mit_eigenem_namen + z.mit_sfv_namen
+      + z.mit_rueckennummer + z.mit_gegnername;
+    expect(summe).toBe(1);
+  });
+
+  it("⚠ zaehlt beim GEGNER keinen zweiten Namen", () => {
+    /* Der Constraint erzwingt dort null — eine Preisgabe, die es nicht
+       geben kann, darf der Zaehler nicht melden. */
+    const fremd = wechsel({ ist_eigener: false, ein_sfv_person_id: null, ein_rueckennr: null });
+    expect(zaehleVerlaufNamen([fremd], new Set([333])).zeilen_mit_zweitem_namen).toBe(0);
+  });
+});
