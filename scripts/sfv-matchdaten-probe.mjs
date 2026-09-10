@@ -67,6 +67,11 @@ if (!BASIS || !KEY || !PASS || !CLUB_ID) {
    statt still in einer Datei zu landen, die ins Repo wandert.
 
    Aufgenommen wird nur, was die Struktur zeigt oder fuer den Sync gebraucht
+   ⚠ NACHTRAG 10.09.2026 (Entscheid B): aus der AUFSTELLUNG kommen
+   Rueckennummer und Position des Gegners mit — der Name bleibt verboten,
+   durchgesetzt vom CHECK spiel_aufstellung_fremde_ohne_person. Dieses
+   Skript schwaerzt weiterhin alles; es ist eine Probe und keine Quelle.
+
    wird. IDs bleiben: sie zeigen keine Person, sondern nur, dass es eine
    stabile Kennung gibt — genau der Punkt, den die Probe klaeren soll. */
 const ERLAUBT = new Set([

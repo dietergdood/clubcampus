@@ -34,6 +34,9 @@ Der Spielverlauf bleibt vollständig — Minute, Ereignis, welche Seite. Nur die
 Person dahinter bleibt anonym. Wer den gegnerischen Torschützen wissen will,
 findet ihn auf football.ch; dort gehört er hin.
 
+⚠ **NACHTRAG 10.09.2026 — Entscheid B:** aus der GEGNERAUFSTELLUNG kommen seither **Rückennummer und Position** mit. Der Name nicht — und nicht bloss ungenutzt, sondern in der Datenbank verboten (`spiel_aufstellung_fremde_ohne_person`). Der Verlauf bleibt unverändert: dort steht beim Gegner weiterhin nur der Vereinsname, ohne Nummer. **B ist nicht C** — C hätte den Namen mitgenommen und ist abgelehnt (`docs/plan_gegner_namen.md`).
+
+
 **Unterschieden wird über `clubNumber`.** Die des FCH ist **11057** — nicht die
 ClubId 1516. In Ranglisten und Matchdaten steht ausschliesslich die
 `clubNumber`.

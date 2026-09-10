@@ -29,6 +29,14 @@ export interface MatchdatenErgebnis {
   /** Zeilen aus /bench — Ersatzspieler, Trainer, Betreuer zusammen. */
   bank_zeilen: number;
   /**
+   * Gegnerzeilen der Aufstellung — Nummer und Position, keine Person.
+   *
+   * ⚠ Getrennt von `aufstellung_zeilen` gezaehlt, nicht dazuaddiert: die
+   * zwei gehen ueber verschiedene Schluessel in die Tabelle, und wer sie
+   * zusammenzaehlt, merkt nicht, wenn einer von beiden nichts schreibt.
+   */
+  aufstellung_fremd: number;
+  /**
    * Spiele, deren Bank nicht abrufbar war.
    *
    * ⚠ Sie stoert den Lauf nicht — aber „keine Bank" und „nicht gefragt"
@@ -312,6 +320,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       zuordnungen_gesamt: md.zuordnungen_gesamt,
       namen_geschrieben: md.namen_geschrieben,
       bank_zeilen: md.bank_zeilen,
+      aufstellung_fremd: md.aufstellung_fremd,
       bank_fehler: md.bank_fehler,
       paesse_geschrieben: md.paesse_geschrieben,
       pass_konflikte: md.pass_konflikte,

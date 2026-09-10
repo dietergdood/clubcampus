@@ -152,6 +152,9 @@ Grund nicht kennt.
 es ein zweites Mal in der Datenbank. **Der Entscheid vom 10.09. berührt
 davon nichts** — er handelt ausschliesslich von eigenen Spielern.
 
+⚠ **NACHTRAG 10.09.2026 — Entscheid B:** aus der GEGNERAUFSTELLUNG kommen seither **Rückennummer und Position** mit. Der Name nicht — und nicht bloss ungenutzt, sondern in der Datenbank verboten (`spiel_aufstellung_fremde_ohne_person`). Der Verlauf bleibt unverändert: dort steht beim Gegner weiterhin nur der Vereinsname, ohne Nummer. **B ist nicht C** — C hätte den Namen mitgenommen und ist abgelehnt (`docs/plan_gegner_namen.md`).
+
+
 ---
 
 ## 4 · Die Reihenfolge im Export — und der Zähler, der dabei still umkippt
@@ -279,6 +282,10 @@ verlassen hatten — und macht ihn rückgängig.
 >   Schreibweise. Der SFV-Name ist der Rückfall, nicht die Wahrheit.
 > - **Gegner bleiben anonym.** `istEigener()` und
 >   `spiel_ereignisse_fremde_anonym_check` bleiben unverändert.
+>   ⚠ **Nachtrag 10.09.2026 (Entscheid B):** aus der Aufstellung kommen
+>   Rückennummer und Position des Gegners mit — der Name bleibt
+>   verboten, jetzt durch einen eigenen CHECK auf `spiel_aufstellung`.
+>   Der Verlauf ist davon nicht berührt.
 > - Die Allowlist bleibt das erste Netz: `bildeSfvPerson()` nennt jedes
 >   Feld einzeln. `birthDate`, `passportNumber`, `gender` und `secondName`
 >   werden weiterhin **nicht gelesen** — nicht gefiltert, sondern gar nicht

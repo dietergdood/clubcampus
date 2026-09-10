@@ -47,7 +47,9 @@ export function istEigener(clubNumber: unknown, unsere: number | null): boolean 
 export interface AufstellungZeile {
   verein_id: string;
   spiel_id: string;
-  sfv_person_id: number;
+  /** ⚠ NULL bei Gegnern — der CHECK erzwingt es. Siehe bildeAufstellung. */
+  sfv_person_id: number | null;
+  ist_eigener: boolean;
   /** Klarname aus der SFV-Antwort. Rueckfall — eine Zuordnung gewinnt. */
   name: string | null;
   /** Aus /bench statt aus /players? Siehe bildeBankZeile(). */
@@ -68,19 +70,46 @@ export interface AufstellungZeile {
 export function bildeAufstellung(
   p: SfvRoh, unsere: number | null, vereinId: string, spielId: string, jetzt: string,
 ): AufstellungZeile | null {
-  if (!istEigener(p.clubNumber, unsere)) return null;
+  /* ⚠ ⚠  ENTSCHEID B (10.09.2026): DIE GEGNERAUFSTELLUNG KOMMT MIT —
+     Rueckennummer und Position, KEINE Person.
+
+     Hier stand `if (!istEigener(...)) return null`. Der Filter ist nicht
+     gefallen, er ist GEWANDERT: von hier in die Feldzuweisung, genau wie
+     bildeEreignis() es seit dem 19.08.2026 tut.
+
+     ⚠ WARUM NICHT DIE GANZE ZEILE DURCHREICHEN: dann waere die Allowlist
+     keine mehr. Die Grenze steht Feld fuer Feld — eine Zeile, die
+     durchkommt, nimmt beim naechsten neuen Feld alles mit; eine
+     Feldliste nicht. `personName`, `birthDate`, `passportNumber` und
+     `gender` stehen in DERSELBEN Antwort, und keines davon wird gelesen.
+
+     ⚠ UND B IST NICHT C: der Name ist nicht bloss ungenutzt, er ist in
+     der Datenbank verboten (spiel_aufstellung_fremde_ohne_person). */
+  const eigen = istEigener(p.clubNumber, unsere);
   const personId = zahl(p.personId);
-  /* Ohne personId ist die Zeile nicht wiedererkennbar und damit wertlos —
-     lieber gar nicht anlegen als eine, die nie zugeordnet werden kann. */
-  if (personId === null) return null;
+  const nummer = zahl(p.jerseyNumber);
+
+  /* Ohne personId ist eine EIGENE Zeile nicht wiedererkennbar und damit
+     wertlos — lieber gar nicht anlegen als eine, die nie zugeordnet
+     werden kann. */
+  if (eigen && personId === null) return null;
+
+  /* ⚠ Und eine FREMDE Zeile ohne Nummer hat ueberhaupt keine Identitaet:
+     kein Name, keine Personennummer, keine Nummer. Sie waere von jeder
+     anderen ununterscheidbar — und der zweite Schluessel
+     (verein_id, spiel_id, sfv_team_id, rueckennr) griffe nicht. */
+  if (!eigen && nummer === null) return null;
 
   return {
     verein_id: vereinId,
     spiel_id: spielId,
-    sfv_person_id: personId,
+    sfv_person_id: eigen ? personId : null,
+    ist_eigener: eigen,
     /* ⚠ `firstname` + `name`, nicht `personName`: dieselbe Regel wie in
        bildeSfvPerson(), und `secondName` bleibt weg. */
-    name: [text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim() || null,
+    name: eigen
+      ? ([text(p.firstname), text(p.name)].filter(Boolean).join(" ").trim() || null)
+      : null,
     ist_bank: false,
     /* /players sagt nichts ueber die Rolle — wer hier steht, stand auf
        dem Feld. Die Kategorie kommt nur von der Bank. */
@@ -88,7 +117,10 @@ export function bildeAufstellung(
     rolle_kategorie_id: null,
     rolle_kategorie: null,
     sfv_team_id: zahl(p.teamId),
-    rueckennr: zahl(p.jerseyNumber),
+    /* ⚠ Beide Mannschaften — das ist der Gegenstand von B. Gemessen an
+       einer echten Antwort: 12 von 12 fremden Spielern tragen Nummer und
+       Position. */
+    rueckennr: nummer,
     position_id: zahl(p.positionId),
     position_name: text(p.positionName),
     von_minute: zahl(p.playFromMinute),
@@ -197,6 +229,11 @@ export function bildeBankZeile(
     verein_id: vereinId,
     spiel_id: spielId,
     sfv_person_id: personId,
+    /* ⚠ Auf der Bank bleibt istEigener ZEILENFILTER (oben), nicht
+       Feldfilter: /bench fuehrt weder Nummer noch Position — eine fremde
+       Bankzeile bestuende nur aus Verbotenem und entsteht besser gar
+       nicht. Gemessen am 10.09.2026 an der Antwort zu Spiel 4368856. */
+    ist_eigener: true,
     name: text(p.personName),
     ist_bank: true,
     rolle_id: zahl(p.roleId),

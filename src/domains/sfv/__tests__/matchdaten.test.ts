@@ -91,8 +91,58 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
     expect(JSON.stringify(z)).not.toContain("2001-03-04");
   });
 
-  it("speichert von einem fremden Spieler gar keine Aufstellungszeile", () => {
-    expect(bildeAufstellung({ ...FREMDES_TOR, teamId: 37931 }, UNSERE, "v1", "s1", JETZT)).toBeNull();
+  /* ══════════════════════════════════════════════════════════════
+     ⚠ ⚠  GEAENDERT AM 10.09.2026 — ENTSCHEID B.
+
+     Hier stand: „speichert von einem fremden Spieler gar keine
+     Aufstellungszeile". Das gilt nicht mehr: Nummer und Position kommen
+     mit, damit die Gegneraufstellung auf der Website erscheint.
+
+     ⚠ WAS WEITERHIN GILT UND HIER GEPRUEFT WIRD: keine Person. Nicht
+     „wird nicht gelesen", sondern VERBOTEN — der CHECK
+     spiel_aufstellung_fremde_ohne_person erzwingt es in der Datenbank,
+     und diese Zeilen halten fest, dass der Mapper gar nichts anderes
+     erzeugt.
+
+     ⚠ B IST NICHT C. C haette den Namen mitgenommen und ist abgelehnt
+     (docs/plan_gegner_namen.md).
+     ══════════════════════════════════════════════════════════════ */
+  it("nimmt von einem fremden Spieler Nummer und Position — und keine Person", () => {
+    const fremd = {
+      clubNumber: FREMD, teamId: 37931, personId: 1254213,
+      jerseyNumber: 17, positionId: 48, positionName: "Mittelfeld linksinnen",
+      firstname: "Max", name: "Muster", personName: "Muster Max",
+      birthDate: "1999-09-09", passportNumber: 123456, gender: 1,
+    };
+    const z = bildeAufstellung(fremd, UNSERE, "v1", "s1", JETZT)!;
+    expect(z).toMatchObject({
+      ist_eigener: false, rueckennr: 17, position_name: "Mittelfeld linksinnen",
+      sfv_person_id: null, name: null,
+    });
+    /* Die zweite Haelfte: nichts davon steht in der Zeile. */
+    const roh = JSON.stringify(z);
+    for (const verboten of ["1254213", "Max", "Muster", "1999-09-09", "123456"]) {
+      expect(roh).not.toContain(verboten);
+    }
+  });
+
+  it("⚠ laesst eine fremde Zeile OHNE Nummer ganz fallen", () => {
+    /* Sie haette keine Identitaet: kein Name, keine Personennummer, keine
+       Nummer — von jeder anderen ununterscheidbar, und der zweite
+       Schluessel (verein_id, spiel_id, sfv_team_id, rueckennr) griffe
+       nicht. */
+    const ohne = { clubNumber: FREMD, teamId: 37931, personId: 1, jerseyNumber: null };
+    expect(bildeAufstellung(ohne, UNSERE, "v1", "s1", JETZT)).toBeNull();
+  });
+
+  it("⚠ eine EIGENE Zeile ohne Nummer bleibt dagegen bestehen", () => {
+    /* Sie hat eine Identitaet — die Personennummer. Der Unterschied ist
+       nicht Willkuer, sondern die Frage, ob die Zeile wiedererkennbar
+       ist. */
+    const ohne = { clubNumber: UNSERE, teamId: 38309, personId: 500, jerseyNumber: null };
+    const z = bildeAufstellung(ohne, UNSERE, "v1", "s1", JETZT);
+    expect(z).not.toBeNull();
+    expect(z!.ist_eigener).toBe(true);
   });
 
   it("laesst eine eigene Aufstellungszeile ohne personId fallen", () => {
@@ -115,7 +165,7 @@ describe("Anonymitaet — erstes Netz: die Allowlist beim Uebernehmen", () => {
        speichern. Was NICHT dazukommt, steht in derselben Antwort eine
        Zeile daneben und ist der eigentliche Gegenstand dieses Falls. */
     expect(Object.keys(z).sort()).toEqual([
-      "bis_minute", "ist_bank", "name", "position_id", "position_name",
+      "bis_minute", "ist_bank", "ist_eigener", "name", "position_id", "position_name",
       "rolle_id", "rolle_kategorie", "rolle_kategorie_id", "rueckennr",
       "sfv_person_id", "sfv_team_id", "spiel_id", "spielzeit", "verein_id",
       "von_minute", "zuletzt_synchronisiert",

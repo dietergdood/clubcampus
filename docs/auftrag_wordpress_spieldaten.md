@@ -126,6 +126,9 @@ Beantworte im Plan:
   keinen Schützen. Das ist richtig so — sag, wie die Website das darstellt,
   ohne dass es wie ein Fehler aussieht.
 
+⚠ **NACHTRAG 10.09.2026 — Entscheid B:** aus der GEGNERAUFSTELLUNG kommen seither **Rückennummer und Position** mit. Der Name nicht — und nicht bloss ungenutzt, sondern in der Datenbank verboten (`spiel_aufstellung_fremde_ohne_person`). Der Verlauf bleibt unverändert: dort steht beim Gegner weiterhin nur der Vereinsname, ohne Nummer. **B ist nicht C** — C hätte den Namen mitgenommen und ist abgelehnt (`docs/plan_gegner_namen.md`).
+
+
 ## Die Korrektur-Schicht
 
 `spiel_ereignisse` trägt zwei Herkünfte: `sfv` und `verein`. Vereins-Zeilen

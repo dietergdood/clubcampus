@@ -3648,3 +3648,59 @@ Wert?* — dieselbe, die bei einer neuen Spalte zu stellen ist. Sie hat
 hier achtmal gefehlt, weil die Werte richtig berechnet waren und die
 Kette bis zur Antwort stimmte. **Der letzte Meter ist der, den niemand
 prüft.**
+
+### ⚠ Entscheid B (10.09.2026): Gegneraufstellung mit Nummer, ohne Person
+
+**Die Gegnerseite ist nicht geöffnet worden — sie ist um zwei Felder
+erweitert, und der Rest ist in der Datenbank gesperrt.**
+
+| | B — **angenommen** | C — abgelehnt |
+|---|---|---|
+| Gegner-Rückennummer, -Position | ✅ | ✅ |
+| **Gegnername** | ❌ **verboten** | ✅ |
+| `spiel_ereignisse_fremde_anonym_check` | **bleibt** | wäre gefallen |
+| Verlaufszeile beim Gegner | **unverändert**, ohne Nummer | hätte Namen getragen |
+
+**Beide am selben Tag entschieden.** Wer später nur „die Gegnerseite wurde
+geöffnet" liest, hält das eine für das andere — deshalb steht der
+Unterschied in vier Papieren und in der Migration.
+
+⚠ **`sfv_person_id` ist bei fremden Zeilen mitgesperrt**, nicht nur der
+Name: eine Personennummer ist über **dieselbe** Schnittstelle in einen
+Namen aufzulösen und bliebe dauerhaft in unserer Datenbank. **Ein Feld,
+das man nur nicht ausliest, ist etwas anderes als eines, das nicht
+gefüllt werden darf** — gefordert war das zweite, durchgesetzt von
+`spiel_aufstellung_fremde_ohne_person`.
+
+⚠ **`istEigener` ist nicht gefallen, es ist gewandert** — vom Anfang von
+`bildeAufstellung()` in die Feldzuweisung, wie `bildeEreignis()` es seit
+dem 19.08.2026 tut. **Eine Zeile, die durchkommt, nimmt beim nächsten
+neuen Feld alles mit; eine Feldliste nicht.** Auf der Bank bleibt es
+Zeilenfilter: `/bench` führt weder Nummer noch Position, eine fremde
+Bankzeile bestünde nur aus Verbotenem.
+
+#### ⚠ Der zweite Schlüssel — und warum die Nummer allein nicht reicht
+
+Der bestehende ist `(verein_id, spiel_id, sfv_person_id)`. Fremde Zeilen
+haben dort `NULL`, und **Postgres lässt in einem UNIQUE beliebig viele
+NULLs zu** — der alte Schlüssel greift also gar nicht. Ohne einen zweiten
+legte **jeder stündliche Lauf dieselben elf Gegnerzeilen neu an**, und
+nichts schlüge fehl.
+
+```sql
+unique (verein_id, spiel_id, sfv_team_id, rueckennr)
+  where ist_eigener = false and rueckennr is not null
+```
+
+⚠ **`sfv_team_id` gehört dazu, nicht nur die Nummer.** Bei zwei eigenen
+Teams gegeneinander stehen beide Kader unter derselben `spiel_id` — dann
+gibt es die 9 zweimal. Der Fall ist heute leer und der Schlüssel muss ihn
+trotzdem aushalten.
+
+⚠ **Und `rueckennr IS NOT NULL` ist Bedingung, nicht Zierrat.** Eine
+fremde Zeile ohne Nummer hätte **keine Identität**: kein Name, keine
+Personennummer, keine Nummer. Sie entsteht deshalb gar nicht erst.
+
+⚠ **Zwei Schlüssel heissen zwei Upserts.** Ein einziger mit dem alten
+Konfliktziel hätte die Gegnerzeilen stündlich vervielfacht — die Sorte
+Fehler, die nur an einer wachsenden Tabelle auffällt.

@@ -54,7 +54,7 @@ export async function laufeMatchdaten(
 ): Promise<MatchdatenErgebnis> {
   const erg: MatchdatenErgebnis = {
     spiele_geholt: 0, aufstellung_zeilen: 0, ereignisse_zeilen: 0,
-    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, bank_zeilen: 0, bank_fehler: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
+    eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, bank_zeilen: 0, bank_fehler: 0, aufstellung_fremd: 0, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
 
   /* Ohne clubNumber wird NICHT geholt. Sie trennt eigen von fremd; fehlt sie,
@@ -122,11 +122,30 @@ export async function laufeMatchdaten(
         .map((e) => bildeEreignis(e, unsereClubNummer, v.verein_id, spiel.id, jetzt))
         .filter((z): z is NonNullable<typeof z> => z !== null);
 
-      if (aufstellung.length) {
+      /* ⚠ ⚠  ZWEI UPSERTS, ZWEI SCHLUESSEL — seit Entscheid B (10.09.2026).
+         Fremde Zeilen haben `sfv_person_id = null`, und ein UNIQUE laesst
+         in Postgres beliebig viele NULLs zu. Der alte Konfliktschluessel
+         greift dort also GAR NICHT: mit einem einzigen Upsert legte jeder
+         stuendliche Lauf dieselben elf Gegnerzeilen neu an, und niemand
+         merkte es — die Tabelle waechst, nichts schlaegt fehl.
+
+         Fuer sie gilt der partielle Index
+         (verein_id, spiel_id, sfv_team_id, rueckennr). */
+      const eigeneZeilen = aufstellung.filter((z) => z.ist_eigener);
+      const fremdeZeilen = aufstellung.filter((z) => !z.ist_eigener);
+
+      if (eigeneZeilen.length) {
         const { error } = await db.from("spiel_aufstellung")
-          .upsert(aufstellung, { onConflict: "verein_id,spiel_id,sfv_person_id" });
+          .upsert(eigeneZeilen, { onConflict: "verein_id,spiel_id,sfv_person_id" });
         if (error) throw new SfvFehler(`Aufstellung: ${error.message}`);
-        erg.aufstellung_zeilen += aufstellung.length;
+        erg.aufstellung_zeilen += eigeneZeilen.length;
+      }
+
+      if (fremdeZeilen.length) {
+        const { error } = await db.from("spiel_aufstellung")
+          .upsert(fremdeZeilen, { onConflict: "verein_id,spiel_id,sfv_team_id,rueckennr" });
+        if (error) throw new SfvFehler(`Gegneraufstellung: ${error.message}`);
+        erg.aufstellung_fremd += fremdeZeilen.length;
       }
 
       if (ereignisse.length) {

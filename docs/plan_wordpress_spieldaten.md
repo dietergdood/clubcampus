@@ -1951,6 +1951,12 @@ CONSTRAINT "spiel_ereignisse_fremde_anonym_check"
 (`matchdaten.ts:129-138`) und behält vom Gegner nur `gegner_club_name`
 — den **Mannschaftsnamen**, nicht den Verein und keine Person.
 
+⚠ **Nachtrag 10.09.2026 — Entscheid B.** Das gilt weiterhin für den
+VERLAUF. Aus der **Aufstellung** kommen seither Rückennummer und Position
+des Gegners mit; der Name bleibt verboten
+(`spiel_aufstellung_fremde_ohne_person`). **B ist nicht C** — C hätte den
+Namen mitgenommen und ist abgelehnt.
+
 **Wie die Website es zeigt, ohne dass es wie ein Fehler aussieht:** der
 Mannschaftsname tritt an die Stelle der Person, nicht ein Leerraum und
 nicht „unbekannt".
