@@ -272,12 +272,17 @@ export function SfvSpielerZuordnung({ sb, vereinId, benutzerId, dbMitglieder, db
                 danach auch auf der Website, wo bisher „Nr. 13" stand — bis jemand
                 den Spieler zuordnet, dann gewinnt der eigene Name.
                 <br/>
-                <strong>⚠ Nur die Startelf.</strong> Der Verband liefert unter
-                „Aufstellung" die Startformation ohne Bank; wer eingewechselt wurde,
-                ist über diesen Weg nicht zu erreichen. Gemessen am 10.09.2026:
-                207 von 207 Eingewechselten stehen in keiner Aufstellung. Wenn die
-                offenen Spieler überwiegend Einwechslungen sind, bringt der Knopf
-                nichts und kostet einen Abruf je Spiel.
+                {/* ⚠ Hier stand bis zum 10.09.2026: „Nur die Startelf … 207 von
+                    207 Eingewechselten stehen in keiner Aufstellung." BEIDES
+                    war falsch. Gemessen an einer echten Antwort: /players
+                    fuehrt die Bank mit (7 von 20 eigenen Spielern tragen dort
+                    „Ersatz"), und die Deckung ist vollstaendig — 80 Spiele mit
+                    Aufstellung, 0 Wechsel ohne. Die 207 zaehlten fehlende
+                    NAMEN, nicht fehlende Zeilen; ich hatte eine Messung ueber
+                    das eine als Aussage ueber das andere gelesen. Der Satz
+                    stand hier als Abschreckung vor einem Knopf, der in
+                    Wahrheit hilft. */}
+                Er kostet einen Abruf je Spiel mit offenen Spielern.
               </div>
             </div>
           ) : (

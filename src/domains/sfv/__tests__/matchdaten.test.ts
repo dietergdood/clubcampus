@@ -529,13 +529,20 @@ describe("entdoppleSfvPersonen", () => {
 /* ══════════════════════════════════════════════════════════════════════
    Die Ersatzbank (10.09.2026) — der Auslöser des ganzen Tages
 
-   „Enea Scot ersetzt durch Nr. 12": 207 Eingewechselte ohne Namen, weil
-   `/players` nur die Startelf liefert. `/bench` trägt sie — belegt an
-   Spiel 4368856, sechs Objekte, `personId` und `personName` da.
+   ⚠ ⚠  DIE BEGRÜNDUNG DARUNTER IST WIDERLEGT — der Bau bleibt vorerst,
+         der Satz nicht. Hier stand: „207 Eingewechselte ohne Namen, weil
+         /players nur die Startelf liefert."
 
-   ⚠ Und `/bench` ist NICHT „die Ersatzbank", sondern „alles, was nicht
-   auf dem Feld stand": die FVRZ-Seite zeigt zu Spiel 4393132 fünf
-   Ersatzspieler, ZWEI TRAINER und einen Abwesenden.
+   **Beide Hälften falsch.** `/players` führt die Bank mit (7 von 20
+   eigenen Spielern tragen dort „Ersatz"), und die 207 zählten fehlende
+   NAMEN, nicht fehlende Zeilen. Gemessen am 10.09.2026: 80 Spiele mit
+   Aufstellung, 0 Wechsel ohne Aufstellung — die vermutete Abdeckungs-
+   lücke gibt es nicht.
+
+   ⚠ Und was `/bench` wirklich beiträgt, ist ebenfalls gemessen: **20
+   Personen, die nicht in /players stehen, alle „Trainer/in", kein
+   einziger Spieler.** Für Namen von Spielern trägt der Abruf nichts bei
+   und kostet ein Viertel der Matchdaten-Aufrufe.
    ══════════════════════════════════════════════════════════════════════ */
 describe("bildeBankZeile", () => {
   const BANK = (ueber: Record<string, unknown> = {}) => ({

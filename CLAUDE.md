@@ -3530,10 +3530,76 @@ braucht.** `/bench` liefert Rollenkategorien und weder Nummer noch
 Position; wenn `/players` die Bank ohnehin führt, ist der zusätzliche
 Abruf je Spiel womöglich umsonst. **Das ist zu messen, bevor er bleibt.**
 
-**Was offen bleibt:** warum die 207 dann keinen Namen haben. Die Zeilen
-müssten in `spiel_aufstellung` stehen. Zu prüfen ist, ob
-`spiel_aufstellung` diese Spiele überhaupt abdeckt — 640 Zeilen über 42
-Spiele (29.08.2026), während `spiel_ereignisse` mehr Spiele umfasst.
+**⚠ Auch das ist inzwischen gemessen — es gibt keine Abdeckungslücke.**
+
+| gemessen am 10.09.2026 | |
+|---|---|
+| Spiele mit Aufstellung | **80** |
+| Spiele mit Ereignissen | **64** |
+| **Wechsel ohne Aufstellung** | **0** |
+
+**Mehr Spiele mit Aufstellung als mit Ereignissen, und jeder Wechsel hat
+eine.** Der Verdacht ist widerlegt; die 207 haben einen anderen Grund und
+er liegt nicht bei `spiel_aufstellung`.
+
+---
+
+### ⚠⚠ DER LEHRSATZ DES TAGES — ein Abruf, gebaut auf eine falsch gestellte Frage
+
+**`/bench` gibt es nur, weil ich die 207 falsch gelesen habe.** Die Kette,
+mit Datum:
+
+| | |
+|---|---|
+| **10.09., Vormittag** | zwei Wege messen unabhängig **207** — Wechselzeilen, deren Ersatzspieler keinen Namen hat |
+| daraus geschlossen | *„`/players` liefert nur die Startelf"* |
+| daraus gebaut | `/bench` — **ein zusätzlicher Abruf je Spiel**, ein Viertel aller Matchdaten-Aufrufe |
+| **10.09., Abend** | `/players` **führt die Bank mit** (7 von 20 eigenen Spielern tragen dort „Ersatz") |
+| und der Beitrag von `/bench`, gemessen | **20 Personen, die `/players` nicht hat — alle „Trainer/in", kein einziger Spieler** |
+
+⚠ **Der Fehlschluss ist der Kern, nicht der Abruf.** Die 207 messen
+**fehlende NAMEN**, nicht **fehlende ZEILEN**. Ich habe eine Messung über
+das eine als Aussage über das andere gelesen — und die Zahl war dabei
+richtig, zweimal unabhängig bestätigt. **Eine bestätigte Zahl bestätigt
+die Frage nicht, auf die man sie anwendet.**
+
+⚠ **Und die falsche Erklärung ist weitergewandert, bevor sie widerlegt
+war** — in einen Spaltenkommentar (`ist_bank`), in einen Testkopf, und in
+einen Hinweistext am Knopf „Namen holen", der Nutzer davon abhielt, ihn zu
+drücken. Alle drei berichtigt am 10.09.2026, alle drei erst, nachdem
+jemand nachgemessen hatte.
+
+**Die Regel:** wo eine Messung eine Bauentscheidung trägt, gehört die
+Frage dazu, die sie beantwortet — wörtlich, nicht sinngemäss. „207
+Wechsel ohne Namen" hätte den Bau nie begründet; „207 Eingewechselte
+fehlen in der Aufstellung" hat es getan, und diesen Satz hat niemand
+gemessen.
+
+---
+
+### ✅ Die Gegnerbank ist bestätigt — gleiche Verteilung auf beiden Seiten
+
+Gemessen am 10.09.2026 über `spiel_aufstellung` ohne Bank-Zeilen:
+
+| `rolle_zuweisung` | fremd | eigen |
+|---|---|---|
+| `-` | 92 | 92 |
+| `Captain` | 10 | 7 |
+| **`Ersatz`** | **37** | **40** |
+| `Kein Einsatz` | 8 | 2 |
+| *(null — Altbestand)* | — | 1021 |
+
+**Der Gegner hat eine Ersatzbank, und sie ist gleich gross wie unsere.**
+Damit ist belegt, was `migration_aufstellung_rolle.sql` als Erwartung
+formuliert hatte: `positionName` führt beim Gegner kein „Ersatz (S)", die
+Angabe steht in `assignmentRoleName`.
+
+⚠ **`Kein Einsatz` ist ein VIERTER Wert, den ich nicht kannte** — meine
+Aufzählung (0 = `-`, 1 = `Captain`, 2 = `Ersatz`) stammte aus **einer
+aufgezeichneten Antwort**, nicht aus einer Liste. **Es gibt keine Liste:**
+`sfv_stammdaten.json` führt elf Listen, und `assignmentRole` ist keine
+davon. Wer aus einem Beispiel eine Wertemenge ableitet, hat die Menge
+geraten.
 
 ---
 
