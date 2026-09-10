@@ -3242,3 +3242,46 @@ keine Prüfung.**
 *„das prüft hier niemand"*, ist das kein Hinweis, sondern ein offener
 Punkt. Er hat hier zwei Wochen überlebt, weil er wie eine Erklärung
 aussah statt wie eine Lücke.
+
+### ⚠ Die Rückennummer ist kein Schlüssel — auch nicht innerhalb eines Spiels
+
+Nebenbefund vom 10.09.2026, beim Nachtragen des Namens für den
+Ausgewechselten. Er ist deshalb wertvoll, weil der naheliegende Weg
+**funktioniert hätte, meistens** — und der Rest hätte plausibel ausgesehen.
+
+Die Frage war: der Verlauf zeigt „für Nr. 9", also nur eine Nummer. Lässt
+sie sich über `spiel_aufstellung` auflösen? Die Tabelle kennt für dasselbe
+Spiel `rueckennr` **und** `sfv_person_id` — der Name wäre eine Verknüpfung
+entfernt.
+
+**Gebraucht wurde der Weg nicht** (`ein_sfv_person_id` liegt seit dem
+19.08.2026 in `spiel_ereignisse` und wurde nur nie gelesen). Aber er wäre
+gebaut worden, wenn die Id gefehlt hätte, und dann hätte er Folgendes
+getan:
+
+| | |
+|---|---|
+| Schlüssel der Aufstellung | `(verein_id, spiel_id, sfv_person_id)` |
+| geschrieben wird | **jeder eigene Spieler** — `istEigener` filtert nach `clubNumber`, nicht nach Mannschaft |
+
+⚠ **Bei zwei eigenen Mannschaften gegeneinander stehen beide Kader unter
+DERSELBEN `spiel_id`.** Der Klub ist derselbe, also sind beide „eigen".
+Eine 9 gibt es dann zweimal, und ein Nachschlagen über die Nummer träfe
+**die falsche Person** — im selben Spiel, mit einem existierenden Namen,
+ohne dass etwas fehlschlägt.
+
+**Heute null Fälle**, weil alle 21 Mannschaften in 21 verschiedenen Gruppen
+stehen (gemessen 28.08.2026) — dieselbe Datenlage, die schon den
+Derby-Eintrag oben zu einem wartenden statt einem sichtbaren Defekt macht.
+**Eine Datenlage ist keine Absicherung.**
+
+⚠ **Und die zweite Hälfte gilt immer, nicht nur im Derby:** `rueckennr` ist
+in beiden Tabellen **nullable**. Ein Nachschlagen über `null` findet
+entweder nichts oder — schlimmer — die erste Zeile, die ebenfalls keine
+Nummer trägt.
+
+> **Die Kennung mitnehmen, nicht aus einer Anzeigeangabe zurückrechnen.**
+> Eine Rückennummer ist eine Beschriftung für Menschen auf dem Platz, kein
+> Schlüssel. Dieselbe Familie wie „ein Filter auf einen NAMEN prüft eine
+> Schreibweise" — nur ist eine Zahl noch verführerischer, weil sie
+> aussieht wie eine Id.
