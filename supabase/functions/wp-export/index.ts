@@ -859,7 +859,7 @@ async function laufeProbe(
   /* ── Spiele ──────────────────────────────────────────────────────── */
   const sRes = await db.from("spiele")
     .select("id, sfv_match_id, sfv_spiel_nr, date, zeit, gegner, heimspiel, venue, "
-      + "wettbewerb, liga, sfv_gruppe, sfv_runde, sfv_status, resultat, ht_resultat, "
+      + "wettbewerb, liga, sfv_gruppe, sfv_status, resultat, ht_resultat, "
       + "sfv_team_id, sfv_gegner_team_id")
     .eq("verein_id", vereinId)
     .not("sfv_match_id", "is", null)

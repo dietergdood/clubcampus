@@ -525,7 +525,6 @@ export interface SpielQuelle {
   /** SFV `leagueName`, z. B. „Junioren C Promotion". */
   liga: string | null;
   sfv_gruppe: string | null;
-  sfv_runde: string | null;
   sfv_status: number | null;
   resultat: string | null;
   ht_resultat: string | null;
@@ -573,17 +572,22 @@ export function bildeSpiel(
        umbenennen hiesse, den Vertrag mit der Vorlage zu brechen. Wer ihn
        liest, muss wissen, was drinsteht: dieselbe Falle wie ein Endpunkt,
        der „Teams" heisst und Teams mit Rangliste liefert. */
-    /* ⚠ GRUPPE ZUERST, DANN RUNDE — und nichts drittes.
-       Ein Meisterschaftsspiel hat eine Gruppe, ein Cupspiel eine Runde;
-       beides zugleich kommt nicht vor. Was der Verband nicht nennt,
-       bleibt leer.
+    /* ⚠ ⚠  NUR DIE GRUPPE. HIER STAND EINEN TAG LANG EIN RUECKFALL AUF
+       `sfv_runde`, UND DER WAR DER WOCHENTAG.
 
-       ⚠ `sfv_runde_nr` steht ABSICHTLICH nicht in dieser Kette. Aus
-       roundNbr = 5 „Runde 5" zu machen waere plausibel und falsch: ein
-       Cup hat spaete Runden mit Namen (Achtelfinal), und eine erfundene
-       Bezeichnung ist auf einer oeffentlichen Seite nicht mehr von einer
-       Auskunft zu unterscheiden. */
-    runde: q.sfv_gruppe || q.sfv_runde || "",
+       Gemessen von der Website-Seite am 11.09.2026: 36 Spiele zeigten
+       „CUP · SAMSTAG", waehrend links daneben schon „Sa. 19.09. · 19:30"
+       stand. `playDayName` ist der Spieltag, nicht die Runde.
+
+       ⚠ LEER IST RICHTIG, DER WOCHENTAG IST FALSCH. Das Etikett drueben
+       laesst ein fehlendes Stueck samt Trennzeichen weg — ein leeres Feld
+       kostet nichts, ein falsches steht auf der Seite.
+
+       Wo es wirklich eine Runde gibt, ist bis heute ungemessen: `roundNbr`
+       ist eine Zahl und steht als `sfv_runde_nr` in der Datenbank, wird
+       aber nirgends gelesen. Aus ihr „Runde 5" zu bauen bleibt verboten —
+       ein Cup hat spaete Runden mit Namen. */
+    runde: q.sfv_gruppe ?? "",
     status,
     publizieren,
     tore_heim: tore.tore_heim,

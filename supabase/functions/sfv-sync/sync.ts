@@ -73,10 +73,16 @@ export function bildeSpiel(
          Cups („Cup AJF (4./5. Liga)") hier liegt. Gemessen in
          sfv_stammdaten.json, 11.09.2026. */
       liga: (s.leagueName as string) ?? null,
-      /* Die Runde — bei Meisterschaftsspielen leer, beim Cup die einzige
-         Angabe dieser Art. Kostet keinen zusaetzlichen Abruf: beides steht
-         in derselben Antwort. Siehe migration_spiele_runde.sql. */
-      sfv_runde: (s.playDayName as string) ?? null,
+      /* ⚠ `playDayName` ist der WOCHENTAG, nicht die Runde — gemessen am
+         11.09.2026 ueber alle 270 Spiele („Samstag"). Die Spalte hiess
+         einen Tag lang `sfv_runde` und trug damit eine falsche Zusage;
+         siehe migration_spiele_spieltag.sql.
+
+         Sie bleibt trotzdem stehen: sie kostet nichts (dieselbe Antwort)
+         und ist der Beleg dafuer, WAS der Verband dort liefert. Gelesen
+         wird sie von keiner Anzeige — den Wochentag zeigt die Website
+         ohnehin aus dem Datum. */
+      sfv_spieltag: (s.playDayName as string) ?? null,
       sfv_runde_nr: typeof s.roundNbr === "number" ? s.roundNbr : null,
       status: (s.matchStateName as string) ?? null,
       /* Nur bei "ausgetragen" (2). Alle nicht ausgetragenen Spiele stehen

@@ -45,7 +45,7 @@ const quelle = (f: Partial<SpielQuelle> = {}): SpielQuelle => ({
   date: "2026-08-23", zeit: "14:00:00",
   gegner: "FC Blau-Weiss Erlenbach 1", heimspiel: true,
   venue: "Langacker", wettbewerb: "Meisterschaft",
-  liga: "Junioren C Promotion", sfv_gruppe: "Gruppe 3", sfv_runde: null,
+  liga: "Junioren C Promotion", sfv_gruppe: "Gruppe 3",
   sfv_status: 2, resultat: "3:3", ht_resultat: null,
   ...f,
 });
@@ -490,25 +490,27 @@ describe("Der Doppelabstand des Verbands bleibt stehen", () => {
   });
 });
 
-describe("Cupspiele: die Runde statt der Gruppe", () => {
-  it("nimmt sfv_runde, wenn keine Gruppe da ist", () => {
-    const s = bildeSpiel(quelle({ sfv_gruppe: null, sfv_runde: "1. Runde" }),
-      "38309", [], new Map(), "FC Herrliberg");
-    expect(s!.runde).toBe("1. Runde");
-  });
-
-  it("⚠ die Gruppe gewinnt, wenn beides dasteht", () => {
-    /* Beides zugleich kommt nicht vor — aber wenn doch, ist die Gruppe
-       die Angabe, die eine Rangliste hat. */
-    const s = bildeSpiel(quelle({ sfv_gruppe: "Gruppe 3", sfv_runde: "1. Runde" }),
-      "38309", [], new Map(), "FC Herrliberg");
-    expect(s!.runde).toBe("Gruppe 3");
-  });
-
-  it("bleibt leer, wenn der Verband weder Gruppe noch Runde nennt", () => {
-    const s = bildeSpiel(quelle({ sfv_gruppe: null, sfv_runde: null }),
-      "38309", [], new Map(), "FC Herrliberg");
+describe("Cupspiele: `runde` bleibt LEER, nicht der Wochentag", () => {
+  /* ⚠ Hier stand einen Tag lang ein Rueckfall auf `sfv_runde`, und der
+     war der Wochentag: 36 Spiele zeigten „CUP · SAMSTAG", waehrend links
+     daneben schon „Sa. 19.09. · 19:30" stand. `playDayName` ist der
+     Spieltag, nicht die Runde — gemessen, nicht angenommen. */
+  it("⚠ ohne Gruppe bleibt runde leer", () => {
+    const s = bildeSpiel(quelle({ sfv_gruppe: null }), "38309", [], new Map(), "FC Herrliberg");
     expect(s!.runde).toBe("");
+  });
+
+  it("die Gruppe kommt unveraendert durch", () => {
+    const s = bildeSpiel(quelle({ sfv_gruppe: "Gruppe  2" }), "38309", [], new Map(), "FC Herrliberg");
+    expect(s!.runde).toBe("Gruppe  2");
+  });
+
+  it("⚠ SpielQuelle kennt kein Feld, aus dem ein Wochentag kaeme", () => {
+    /* Die staerkste Form: der Rueckfall kann nicht zurueckkommen, weil
+       der Typ die Quelle gar nicht mehr fuehrt. */
+    const q = quelle({ sfv_gruppe: null }) as unknown as Record<string, unknown>;
+    expect("sfv_runde" in q).toBe(false);
+    expect("sfv_spieltag" in q).toBe(false);
   });
 });
 
