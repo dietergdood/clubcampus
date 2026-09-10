@@ -897,13 +897,13 @@ async function laufeProbe(
      wie ein Erfolg der Zuordnungsarbeit, die nicht stattgefunden hat.
      ══════════════════════════════════════════════════════════════════ */
   const sfvNamen = new Map<number, string>();
-  const sRes = await db.from("sfv_personen")
+  const nRes = await db.from("sfv_personen")
     .select("sfv_person_id, name").eq("verein_id", vereinId);
   /* ⚠ `error` lesen, nicht nur `data`: eine gescheiterte Abfrage saehe
      sonst aus wie „es gibt keine Namen" — und auf der Website stuende
      ueberall „Nr. 13", ohne dass etwas fehlschlaegt. */
-  if (sRes.error) throw new Error(`SFV-Namen nicht lesbar: ${sRes.error.message}`);
-  for (const z of (sRes.data ?? []) as { sfv_person_id: number; name: string }[]) {
+  if (nRes.error) throw new Error(`SFV-Namen nicht lesbar: ${nRes.error.message}`);
+  for (const z of (nRes.data ?? []) as { sfv_person_id: number; name: string }[]) {
     const n = String(z.name ?? "").trim();
     if (n) sfvNamen.set(Number(z.sfv_person_id), n);
   }

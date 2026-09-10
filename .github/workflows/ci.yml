@@ -96,6 +96,28 @@ jobs:
       - name: Plugin-Zusagen pruefen
         run: npm run check:plugin
 
+      # ⚠ DIE EDGE FUNCTIONS SIND BIS HEUTE (10.09.2026) UNGEPRUEFT DURCH DIE
+      # KETTE GEGANGEN. `tsc` liest sie nicht — sie importieren von esm.sh —
+      # und vitest fuehrt sie nicht aus. Daraus folgte bisher, Entscheidungen
+      # nach `src/` zu verlagern; der Rest der Datei blieb ungeprueft bis zum
+      # Deploy.
+      #
+      # Am 10.09.2026 ging `wp-export` v17 mit einer doppelt deklarierten
+      # Konstante raus und BOOTETE NICHT. Im Browser meldete es sich als
+      # CORS-Fehler, weil eine tote Function auch den Preflight nicht
+      # beantwortet — die Meldung nannte das letzte Glied, nicht das
+      # gerissene. Typecheck, sechs check:*, 1024 Tests: alles gruen.
+      #
+      # `deno check` faengt genau diese Klasse. Setup-Schritt darueber, weil
+      # ubuntu-latest kein deno mitbringt.
+      - name: Deno einrichten
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Edge Functions typpruefen
+        run: npm run check:deno
+
       - name: Tests
         run: npm test
 

@@ -16,6 +16,7 @@
     "check:encoding": "node scripts/check-encoding.mjs",
     "check:php": "node scripts/check-php.mjs",
     "check:plugin": "node scripts/check-plugin.mjs",
+    "check:deno": "node scripts/check-deno.mjs",
     "gen:types": "node scripts/gen-types.mjs",
     "lint": "eslint ."
   },

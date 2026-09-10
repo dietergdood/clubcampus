@@ -3169,3 +3169,76 @@ eine Zusage über das Produkt festhält, veraltet mit der Zusage. Wer einen
 Entscheid umdreht, sucht **zuerst die Prüfungen, die ihn festhalten** —
 sonst meldet die Prüfkette den gewollten Zustand als Defekt, und der
 nächste Reflex ist, die Regel zu löschen statt sie zu verengen.
+
+### ⚠⚠ Die Edge Functions gingen bis zum 10.09.2026 UNGEPRÜFT durch die Kette
+
+`wp-export` v17 ging raus und **bootete nicht**. Im Browser meldete es sich so:
+
+```
+Access to fetch … blocked by CORS policy: Response to preflight
+request doesn't pass access control check: It does not have HTTP ok status
+```
+
+⚠ **Und das ist die falsche Fährte, die der Ausfall selbst legt.** Es sah
+aus wie ein Problem mit den CORS-Kopfzeilen — also mit dem Code, der
+`OPTIONS` beantwortet. Der war unverändert. Gemessen:
+
+| | |
+|---|---|
+| `OPTIONS /functions/v1/wp-export` | **503** |
+| `POST` mit gültigem Schlüssel | `{"code":"BOOT_ERROR"}` |
+| `OPTIONS` auf `sfv-sync`, `invite-user`, `person-loeschen` | **200** |
+
+**Eine Function, die nicht startet, kann auch den Preflight nicht
+beantworten** — und der Browser sieht nur, dass die Vorab-Anfrage keinen
+200 bekommt, also nennt er CORS. Dieselbe Familie wie „eine Meldung nennt
+das letzte Glied der Kette, nicht das gerissene", nur diesmal von einem
+fremden Werkzeug erzeugt.
+
+**Die Ursache war eine Zeile:**
+
+```ts
+const sRes = await db.from("spiele")…         // Zeile 849, seit langem
+const sRes = await db.from("sfv_personen")…   // Zeile 900, neu
+```
+
+`Cannot redeclare block-scoped variable` — im selben Block, also ein
+Fehler, der beim Modulstart wirft.
+
+⚠ ⚠ **UND DIE GANZE PRÜFKETTE WAR GRÜN:** `typecheck`, alle sechs
+`check:*`, 1024 Tests in 68 Dateien. Der Grund stand längst in mehreren
+Dateiköpfen dieses Projekts — nur als Bemerkung, nicht als Befund:
+
+> *„Diese Datei importiert von esm.sh und wird von tsc und vitest nicht
+> geprüft."*
+
+Daraus folgte bisher die richtige Konsequenz, **Entscheidungen** nach
+`src/` zu verlagern (`wpNutzlast.ts`, `ergebnisTypen.ts`, `wpLauf.ts`).
+**Der Rest der Datei blieb ungeprüft — und „ungeprüft" hiess: bis zum
+Deploy.** Bei vier Functions mit zusammen über 3000 Zeilen war das keine
+Restlücke, sondern der grösste unbewachte Bereich der Codebasis.
+
+**✅ Seit dem 10.09.2026 gibt es `npm run check:deno`**
+(`scripts/check-deno.mjs`, in CI). Sie ruft `deno check` über die
+`index.ts` jeder Function — von dort zieht Deno den ganzen Importgraphen
+mit, inklusive der `src/`-Dateien und der esm.sh-Typen.
+
+| | |
+|---|---|
+| findet | Syntax- und Typfehler, die den Start verhindern |
+| findet **nicht** | ob eine Abfrage die richtigen Zeilen trifft, ob eine Policy sie durchlässt, ob die Logik stimmt |
+
+**Ein grüner Lauf heisst „sie startet", nicht „sie tut das Richtige."**
+
+⚠ **Ohne `deno` und ohne Docker meldet sie ROT, nicht „übersprungen".**
+Eine Prüfung, die bei fehlendem Werkzeug grün sagt, schweigt genau dann,
+wenn sie gebraucht wird — dieselbe Leiter wie in `php-lauf.mjs`.
+
+Gegengeprobt mit dem echten Fehler: `nRes` zurück in `sRes` benannt → rot
+mit `TS2451`, zurückgesetzt → grün. **Eine Prüfung, die nie rot war, ist
+keine Prüfung.**
+
+⚠ **Die Lehre über diesen Fall hinaus:** wo im Kopf einer Datei steht
+*„das prüft hier niemand"*, ist das kein Hinweis, sondern ein offener
+Punkt. Er hat hier zwei Wochen überlebt, weil er wie eine Erklärung
+aussah statt wie eine Lücke.
