@@ -56,18 +56,37 @@ if (liste.status !== 0) {
   process.exit(1);
 }
 
+/* ⚠ Steuerzeichen raus, bevor irgendetwas gelesen wird. Lokal traegt die
+   Ausgabe keine; in einer Prüfkette kann sie welche tragen, und dann
+   scheitert ein `$`-Anker am unsichtbaren Rest. */
+const ESC = new RegExp(String.fromCharCode(27) + "\[[0-9;]*[A-Za-z]", "g");
+const ohneFarbe = (t) => String(t).replace(ESC, "");
+
+/* ⚠ NICHT auf `src/` prüfen: der Pfad kann je nach Betriebssystem und
+   Aufrufort anders beginnen. Erkannt wird eine Testdatei daran, dass sie
+   auf `.test.<endung>` endet — das gilt überall. */
 const erwarteteDateien = new Set();
 let erwarteteFaelle = 0;
-for (const z of String(liste.stdout).split(ZEILEN)) {
-  if (!z.startsWith("src/")) continue;
+for (const roh of ohneFarbe(liste.stdout).split(ZEILEN)) {
+  const z = roh.trim();
+  if (!z) continue;
+  const datei = z.split(" > ")[0].trim();
+  if (!/\.test\.[jt]sx?$/.test(datei)) continue;
   erwarteteFaelle += 1;
-  erwarteteDateien.add(z.split(" > ")[0]);
+  erwarteteDateien.add(datei.split("\\").join("/"));
 }
 
 if (erwarteteDateien.size === 0) {
   console.error("test: `vitest list` nennt keine einzige Datei. Entweder "
     + "gibt es keine Tests, oder die Liste ist selbst kaputt — in beiden "
-    + "Fällen ist ein grüner Lauf danach wertlos.");
+    + "Fällen ist ein grüner Lauf danach wertlos.\n");
+  /* ⚠ Die Ausgabe MIT anzeigen. Eine Prüfung, die scheitert und ihren
+     Eingabetext verschweigt, schickt den Leser ins Raten — genau das
+     hat sie in der Prüfkette einmal getan. */
+  console.error("Was `vitest list` geliefert hat (letzte 20 Zeilen):");
+  for (const z of ohneFarbe(liste.stdout).split(ZEILEN).slice(-20)) {
+    console.error("  | " + z);
+  }
   process.exit(1);
 }
 
@@ -75,8 +94,8 @@ if (erwarteteDateien.size === 0) {
 const lauf = spawnSync("npx", ["vitest", "run", ...args], {
   encoding: "utf8", shell: true,
 });
-const ausgabe = String(lauf.stdout || "") + String(lauf.stderr || "");
-process.stdout.write(ausgabe);
+const ausgabe = ohneFarbe(String(lauf.stdout || "") + String(lauf.stderr || ""));
+process.stdout.write(String(lauf.stdout || "") + String(lauf.stderr || ""));
 
 /* ── 3 · Die Zählprobe ─────────────────────────────────────────────── */
 /* ⚠ Aus der Zusammenfassung gelesen, nicht aus den Fortschrittszeilen:
@@ -115,6 +134,12 @@ if (befunde.length) {
   console.error("ZÄHLPROBE GESCHEITERT — der Lauf ist wertlos,");
   console.error("unabhaengig davon, was oben bei „passed“ steht.\n");
   for (const b of befunde) console.error("  · " + b);
+  /* ⚠ Der Eingabetext gehört dazu — sonst ist nicht zu unterscheiden, ob
+     der Lauf Dateien verloren hat oder ob diese Prüfung die
+     Zusammenfassung nicht lesen konnte. Zwei sehr verschiedene Dinge mit
+     derselben roten Farbe. */
+  console.error("\nDie gelesenen Zeilen (letzte 12):");
+  for (const z of ausgabe.split(ZEILEN).slice(-12)) console.error("  | " + z);
   console.error("\n⚠ Häufigste Ursache: ein Worker hat nicht geantwortet");
   console.error("  ([vitest-pool-runner]: Timeout waiting for worker).");
   console.error("  Reproduziert in 2 von 9 Läufen unter Last. Lief");

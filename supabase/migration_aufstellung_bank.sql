@@ -88,6 +88,37 @@ commit;
 --    group by 1, 2
 --    order by 1, 2;
 --
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⛔ ⛔  DIE ABFRAGE DARUNTER IST WIDERLEGT — NICHT ABSCHREIBEN
+--
+--   Sie hat am 10.09.2026 „207 von 207 Eingewechselten stehen in keiner
+--   Aufstellung" ergeben, und darauf ist ein halber Tag Arbeit gebaut
+--   worden: der Abruf `/bench`, ein zusaetzlicher Aufruf je Spiel, am
+--   selben Abend wieder ausgebaut.
+--
+-- ⚠ **Die Zahl war richtig. Die Frage war falsch.** Der Join geht ueber
+--   `sfv_person_id` — und gemessen an fuenf Wechseln eines Spiels:
+--
+--     Ereignis-Id  Nr.  Aufstellungs-Id  Name
+--       1266706    15     1097318        Yves Binkert
+--        476984    16      466339        Lukas Dangel
+--        954486    12      845688        Nicolas Grimm
+--
+--   `substitutePlayerId` ist KEIN `personId`. Kein einziges Paar stimmt
+--   ueberein; ueber die Rueckennummer findet sich jeder Name. Die
+--   Eingewechselten STEHEN in der Aufstellung — nur unter einer anderen
+--   Nummer.
+--
+--   Eine Null aus diesem Join heisst „die Ids passen nicht zueinander",
+--   nicht „die Menschen fehlen". **Wer sie als Aussage ueber Menschen
+--   liest, baut einen Abruf, der nichts bringt.**
+--
+--   Die richtige Abfrage geht ueber `ein_rueckennr` und filtert beide
+--   Seiten auf `ist_eigener` — die Nummer gibt es in beiden Mannschaften.
+--   Sie steht in CLAUDE.md unter „substitutePlayerId ist kein personId".
+-- ═══════════════════════════════════════════════════════════════════════════
+
 -- ⚠ Erwartung: bei `ist_bank = true` mehrere Kategorien, darunter Trainer.
 --   Steht dort nur „Spieler", liefert der Verband die Trainer doch nicht
 --   mit — und dann ist die Filterung bei der Anzeige unnoetig, aber nicht

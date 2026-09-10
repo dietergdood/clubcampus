@@ -19,6 +19,8 @@
     "check:plugin": "node scripts/check-plugin.mjs",
     "check:deno": "node scripts/check-deno.mjs",
     "check:sql": "node scripts/check-sql.mjs",
+    "pruefkette": "npm run typecheck && npm run check:imports && npm run check:selects && npm run check:quotes && npm run check:encoding && npm run check:php && npm run check:plugin && npm run check:deno && npm run check:sql && npm test && npm run build",
+    "deploy": "npm run pruefkette && node scripts/deploy.mjs",
     "gen:types": "node scripts/gen-types.mjs",
     "lint": "eslint ."
   },
