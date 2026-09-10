@@ -134,6 +134,27 @@ sicher übertrieben.
 
 ---
 
+## 4a · ⚠ ZURUECKGESTELLT — die Reihenfolge steht fest
+
+Entscheidung Didi, 11.09.2026, auf Befund (b):
+
+> **Erst ausliefern, dann Aktualität.**
+
+Der Export schickt heute keine Wappen (0 Treffer für `logo` im
+Exportpfad), also liest sie niemand. Damit ist Weg B **gegenstandslos**,
+bis die Auslieferung steht — und zwar nicht „später dran", sondern ohne
+Gegenstand: die Frage „ist dieses Bild noch aktuell?" hat keinen
+Adressaten, solange das Bild nirgends erscheint.
+
+**Bis dahin wird daran nichts gebaut und nichts dafür gemessen** — auch
+die ETag-Frage aus §6 nicht. Sie kostet einen Abruf beim Verband für eine
+Entscheidung, die niemand treffen muss.
+
+⚠ **Und das ist die allgemeine Form:** eine Frage nach der Frische von
+Daten setzt voraus, dass jemand sie liest. Wer sie vorher stellt, baut
+eine Pflege für einen Bestand ohne Leser — dieselbe Familie wie eine
+Spalte, die niemand ausliest, nur eine Ebene höher.
+
 ## 5 · Zu entscheiden, bevor gebaut wird
 
 1. **Welcher Weg** — B1, B2 (falls ETags), B3.
