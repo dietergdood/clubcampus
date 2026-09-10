@@ -239,33 +239,51 @@ const REGELN = [
   /* ⚠⚠ DIE FALLE, DIE DIE WEBSITE-SEITE AM 11.09.2026 GEMELDET HAT — und
      sie ist gefaehrlicher als ein fehlendes Feld.
 
-     `liga` gehoert in CC_FELDER, sobald das fch_spiel ein Feld dieses
-     Namens hat. Kaeme es FRUEHER hinein, schriebe `update_field('liga',…)`
-     ueber ACFs globale Namenssuche in das Feld des TEAMS — derselbe
-     Mechanismus, der am 10.09. bei `_saison = f_p_st_sai` gemessen wurde.
+     `update_field('name', …)` sucht das Feld ueber ACFs GLOBALE
+     Namenssuche. Gibt es am Zielbeitragstyp keines dieses Namens, kann
+     sie ein gleichnamiges Feld eines ANDEREN Typs treffen — gemessen am
+     10.09. bei `_saison = f_p_st_sai`.
 
-     Ergebnis waere kein Fehler, sondern ein falsch gefuelltes Teamfeld:
-     die Liga einer Mannschaft, ueberschrieben mit der eines einzelnen
-     Spiels. Es schlaegt nichts fehl, und es sieht aus wie gepflegte Daten.
+     Ergebnis waere kein Fehler, sondern ein falsch gefuelltes Feld an
+     einem fremden Beitrag: die Liga einer Mannschaft, ueberschrieben mit
+     der eines einzelnen Spiels. Es schlaegt nichts fehl, und es sieht
+     aus wie gepflegte Daten.
 
-     ⚠ Die Regel prueft die REIHENFOLGE nicht — das kann sie nicht, das
-     Feld liegt im anderen Repository. Sie haelt fest, dass der Eintrag
-     nicht versehentlich passiert: wer `liga` in CC_FELDER schreibt, muss
-     diese Regel anfassen und liest dabei, warum. */
+     ── ⚠ `liga` IST AM 11.09.2026 HERAUSGEFALLEN, UND ZWAR RICHTIG ────
+     Das fch_spiel hat seither ein eigenes Feld `liga` (Feldschluessel
+     `f_s_liga`, Beschriftung „Wettbewerbsbezeichnung"), gemeldet vom
+     Theme-Chat und dort gegengeprueft: registriert, lesbar, ein
+     gestellter Wert kam an. Damit trifft die globale Namenssuche das
+     richtige Feld, und das Verbot waere ab da eines gegen den gewollten
+     Zustand.
+
+     ⚠ **Das ist derselbe Fall wie die Regel „kein Schreibaufruf fasst
+     einen fch_team-Beitrag an", die am 10.09. zu absolut war** — eine
+     Regel, die eine Zusage festhaelt, veraltet mit der Zusage. Wer einen
+     Entscheid umdreht, sucht ZUERST die Pruefungen, die ihn festhalten.
+
+     ⚠ UND DIE LISTE IST NICHT DER EIGENTLICHE SCHUTZ. Was drueben
+     registriert ist, kann eine Aufzaehlung hier nicht wissen — sie ist
+     immer einen Theme-Commit hinterher. Seit 0.8.0 meldet `/status`
+     unter `spielfelder` fuer JEDES CC_FELDER, ob ACF es am fch_spiel
+     kennt. Diese Regel bleibt trotzdem: sie greift, BEVOR etwas
+     hochgeladen wird, die Auskunft erst danach. */
   {
-    frage: "CC_FELDER fuehrt kein Feld, das am fch_team denselben Namen hat",
+    frage: "CC_FELDER fuehrt kein Feld, das nur am fch_team existiert",
     pruefe: (b) => {
       /* ⚠ Ueber `konstanten`, nicht ueber einen Regex auf den Quelltext:
          ein Textmuster traefe auch einen Kommentar, in dem der Name
          vorkommt — und davon steht in dieser Datei einiges. */
       const felder = b.konstanten?.CC_FELDER;
       if (!felder) return ["(CC_FELDER nicht gefunden — sieht die Pruefung die falsche Datei an?)"];
-      /* Die Namen, die am fch_team existieren. Steht einer davon in
-         CC_FELDER, greift ACFs globale Namenssuche. */
-      const AM_TEAM = ["liga", "gruppe", "abgleich_stand"];
-      return felder.filter((x) => AM_TEAM.includes(x));
+      /* Namen, die es am fch_team gibt und am fch_spiel NICHT.
+         ⚠ `liga` stand hier bis zum 11.09.2026 — siehe oben. Wer einen
+         weiteren Namen streichen will, braucht denselben Beleg: das Feld
+         ist am fch_spiel registriert, und ein gestellter Wert kam an. */
+      const NUR_AM_TEAM = ["gruppe", "abgleich_stand"];
+      return felder.filter((x) => NUR_AM_TEAM.includes(x));
     },
-    kontrolle: "<?php const CC_FELDER = array( 'datum', 'liga' ); "
+    kontrolle: "<?php const CC_FELDER = array( 'datum', 'gruppe' ); "
       + "function cc_schreibe_felder() { return 1; }",
     erwarteImKontrollfall: 1,
   },

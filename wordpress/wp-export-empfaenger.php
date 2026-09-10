@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.7.0
+ * Version:     0.8.0
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,14 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.8.0 (11.09.2026): `liga` steht in CC_FELDER — das fch_spiel hat seit
+   heute ein Feld dieses Namens (`f_s_liga`, „Wettbewerbsbezeichnung").
+   Es traegt die WETTBEWERBSBEZEICHNUNG, nicht die Betriebsart.
+   ⚠ Dazu `spielfelder` in `/status`: fuer JEDES Feld aus CC_FELDER, ob
+   ACF es am fch_spiel kennt. Eine Aufzaehlung im Pruefskript kann nicht
+   wissen, was drueben registriert ist — diese Auskunft schon, und sie
+   ist der eigentliche Schutz gegen ACFs globale Namenssuche.
+
    0.7.0 (11.09.2026): der Empfaenger meldet `unbeachtete_felder` — was die
    Nutzlast bringt und keine Allowlist fuehrt. `liga` kam seit jeher an und
    wurde wortlos verworfen; WO es riss, musste die Website-Seite von Hand
@@ -180,7 +188,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.7.0';
+const CC_VERSION    = '0.8.0';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -281,7 +289,29 @@ const CC_FELDER = array(
 	   Export schickt und was am Beitrag steht, ist nicht dasselbe — und
 	   diese Liste beschreibt den Beitrag. */
 	'datum', 'zeit', 'fch_team', 'gegner', 'heim_auswaerts', 'ort',
-	'wettbewerb', 'runde', 'status', 'quelle',
+	/* ⚠ `liga` traegt die WETTBEWERBSBEZEICHNUNG („Cup AJF (4./5. Liga)",
+	   „Schweizer Cup U-18"), NICHT die Betriebsart — die steht in
+	   `wettbewerb` und heisst beim Cup schlicht „Cup". Die zwei werden
+	   verwechselt, und der Feldname `wettbewerb` traegt Schuld daran.
+
+	   ⚠ AUFGENOMMEN AM 11.09.2026, KEINE MINUTE FRUEHER. Bis dahin gab es
+	   am fch_spiel kein Feld dieses Namens, und `update_field('liga', …)`
+	   haette ueber ACFs globale Namenssuche in das Feld des TEAMS
+	   geschrieben — die Liga einer Mannschaft, ueberschrieben mit der
+	   eines einzelnen Spiels. Kein Fehler, keine Meldung, nur ein falsch
+	   gefuelltes Teamfeld.
+
+	   Jetzt steht es: Beitragstyp fch_spiel, Feldname `liga`,
+	   Feldschluessel `f_s_liga`, Beschriftung „Wettbewerbsbezeichnung" —
+	   registriert, lesbar, ein gestellter Wert kam an. Gemeldet vom
+	   Theme-Chat, nicht angenommen.
+
+	   ⚠ UND DIE LISTE IST NICHT DER SCHUTZ. Was drueben registriert ist,
+	   kann eine Aufzaehlung hier nicht wissen. Deshalb meldet `/status`
+	   seit 0.8.0 fuer JEDES dieser Felder, ob ACF es am fch_spiel kennt —
+	   `spielfelder`. Steht dort `nur_postmeta`, schreibt der Abgleich ins
+	   Leere. */
+	'wettbewerb', 'liga', 'runde', 'status', 'quelle',
 	'tore_heim', 'tore_gast', 'halbzeit_heim', 'halbzeit_gast',
 	'sfv_match_id', 'sfv_spiel_nr',
 );
@@ -665,6 +695,12 @@ function cc_route_status(): WP_REST_Response {
 			   nichts gelesen — der Fall, den `_cc_team_abgleich` und das
 			   Postmeta `saison` beide gemacht haben. */
 			'teamfelder'            => cc_teamfeld_lage( (int) ( array_values( array_filter( $karte ) )[0] ?? 0 ) ),
+			/* ⚠ DASSELBE FUER DAS SPIEL, seit 0.8.0. Ein Feldname, den ACF
+			   am fch_spiel nicht kennt, wird als blosses Postmeta
+			   geschrieben und von niemandem gelesen — genau der Fall, der
+			   `liga` bis zum 11.09.2026 unmoeglich machte. Die Liste in
+			   der Pruefkette kann das nicht wissen, diese Auskunft schon. */
+			'spielfelder'           => cc_spielfeld_lage( cc_ein_spiel_id() ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,
@@ -1593,10 +1629,63 @@ function cc_schreibe_teamfelder( array $gruppen, array $teamKarte ): array {
  * @return array<string,string> Feldname => `feld` | `nur_postmeta` | `leer`
  */
 function cc_teamfeld_lage( int $tid ): array {
+	return cc_feld_lage( CC_TEAM_FELDER, $tid );
+}
+
+/**
+ * Dasselbe fuer die Felder am Spiel.
+ *
+ * ⚠ SEIT 0.8.0, UND DER ANLASS IST `liga`. Es kam seit jeher in der
+ * Nutzlast an und stand nicht in CC_FELDER — der Empfaenger verwarf es
+ * wortlos, und WO es riss, musste die Website-Seite von Hand messen.
+ *
+ * ⚠ Die eigentliche Lehre war aber die Gegenrichtung: `liga` durfte man
+ * NICHT einfach aufnehmen, solange das fch_spiel kein Feld dieses Namens
+ * hatte — ACFs globale Namenssuche haette in das Feld des TEAMS
+ * geschrieben. Eine Aufzaehlung im Pruefskript kann das nicht wissen;
+ * `get_field_object()` schon. **Diese Auskunft ist der Schutz, nicht die
+ * Liste.**
+ */
+function cc_spielfeld_lage( int $sid ): array {
+	return cc_feld_lage( CC_FELDER, $sid );
+}
+
+/**
+ * Irgendein `fch_spiel`, an dem sich die Feldlage ablesen laesst.
+ *
+ * ⚠ Ein beliebiger genuegt: die Frage ist, ob ACF den NAMEN kennt, und
+ * das haengt am Beitragstyp, nicht am einzelnen Beitrag. Gibt es noch
+ * keinen, meldet cc_feld_lage() `kein_beitrag` — und das ist die
+ * ehrliche Antwort, nicht `leer`.
+ */
+function cc_ein_spiel_id(): int {
+	$ids = get_posts(
+		array(
+			'post_type'   => CC_TYP_SPIEL,
+			'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+			'numberposts' => 1,
+			'fields'      => 'ids',
+		)
+	);
+	return (int) ( $ids[0] ?? 0 );
+}
+
+/**
+ * Kennt ACF diese Feldnamen an diesem Beitrag — oder wird ins Leere
+ * geschrieben?
+ *
+ * ⚠ `update_field()` legt bei einem UNBEKANNTEN Namen trotzdem ein
+ * Postmeta an, ohne die `_name`-Referenz, die ACF fuer sein Feld
+ * braucht. Der Wert steht dann in der Datenbank, ist ueber `get_field()`
+ * nicht zu holen und im Backend unsichtbar. **Es schlaegt nichts fehl.**
+ *
+ * @return array<string,string> Feldname => `feld` | `nur_postmeta` | `leer`
+ */
+function cc_feld_lage( array $namen, int $tid ): array {
 	$lage = array();
-	foreach ( CC_TEAM_FELDER as $name ) {
+	foreach ( $namen as $name ) {
 		if ( ! $tid ) {
-			$lage[ $name ] = 'kein_team';
+			$lage[ $name ] = 'kein_beitrag';
 			continue;
 		}
 		/* ⚠ `get_field_object()` fragt die FELDDEFINITION, nicht den Wert.

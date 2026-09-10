@@ -3447,3 +3447,53 @@ je Auskunft wäre Rauschen in einer Tabelle, die von Änderungen handelt.
 Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
 wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
 echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
+
+### ⚠ Zwei Bitten aus dem Theme-Chat, beide abgelehnt (11.09.2026)
+
+Festgehalten, weil eine abgelehnte Bitte sonst in vier Wochen als
+vergessene Aufgabe wiederkommt — und dann ohne den Grund.
+
+#### (a) Eine echte Cup-Runde („1. Runde", „Achtelfinal") ist **nicht lieferbar**
+
+**Kein Feld der Schnittstelle trägt einen Rundennamen.** Der Weg dorthin
+ist zweimal gegangen und zweimal gescheitert:
+
+| Kandidat | gemessen | Ergebnis |
+|---|---|---|
+| `playDayName` | 270 Spiele | der **Wochentag** — „Samstag" 142×, „Sonntag" 57× |
+| `roundNbr` | 270 Spiele | Meisterschaft 1–26, Cup 1–2, Trainingsspiele **0**, Schweizer-Cup **105** |
+
+Beide waren als Spalte gebaut und sind wieder ausgebaut (`sfv_spieltag`
+bleibt als Beleg, `sfv_runde_nr` ist am 11.09.2026 gefallen).
+
+⚠ **Aus `roundNbr` „Runde 2" zu bauen bleibt verboten.** Ein Cup hat
+späte Runden mit Namen; „Runde 5" statt „Achtelfinal" wäre plausibel und
+falsch — und eine erfundene Bezeichnung ist auf einer öffentlichen Seite
+nicht mehr von einer Auskunft zu unterscheiden. **105 zeigt ausserdem,
+dass die Zahl je Wettbewerb etwas anderes meint.**
+
+**Was stattdessen gilt:** `runde` bleibt bei Cupspielen leer. Das Theme
+lässt das Element an allen fünf Stellen weg, es entsteht keine Lücke —
+gegengeprüft vom Theme-Chat. **Leer ist ehrlich.**
+
+#### (b) „Schweizer-Cup" und „Schweizer Cup" werden **nicht** vereinheitlicht
+
+Die zwei Schreibweisen kommen aus **zwei getrennten Listen des Verbands**,
+gemessen in `docs/sfv/sfv_stammdaten.json`:
+
+```
+Spieltyp  9  →  "Schweizer-Cup"       (mit Bindestrich)  →  wettbewerb
+Liga         →  "Schweizer Cup U-18"  (ohne)             →  liga
+```
+
+Sie entstehen nicht bei uns, und sie bezeichnen auch nicht dasselbe: die
+eine ist die **Betriebsart**, die andere der **Wettbewerb**.
+
+⚠ **Dieselbe Regel wie beim Doppelabstand in „Gruppe  2"** (Entscheidung
+Didi, 11.09.2026): *fremde Daten stillschweigend zu putzen versteckt den
+Fehler, statt ihn zu melden.* Wer hier normalisierte, machte aus einer
+Beobachtung über den Verband eine Eigenschaft unserer Kette — **und
+niemand sähe mehr, dass es zwei Listen sind.**
+
+**In keine Richtung**, auch nicht „nur bei der Anzeige": genau dort fällt
+es auf, und genau dort soll es auffallen.
