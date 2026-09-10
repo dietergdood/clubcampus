@@ -324,6 +324,66 @@ die Anrede auf einer Schreibweise, und niemand weiss es.
 
 ---
 
+## 5d · ⚠ Der Typ der Personennummer — überall gleich, und `number` ist richtig
+
+**Befund vom 10.09.2026:** `f_s_a_sfv` (Aufstellung) ist **Text**,
+`f_s_v_sfv` (Verlauf) ist **Zahl** — meine Vorgabe. Beide tragen
+dieselbe Angabe und werden gegen dasselbe Feld am `fch_person` gehalten.
+
+**Der Unterschied war KEINE Absicht.** Ich habe für die Verlaufszeile
+`number` vorgeschlagen, ohne zu prüfen, was für die Aufstellung schon
+galt.
+
+### Die Sorge um führende Nullen ist gemessen — es gibt sie nicht
+
+| gemessen | |
+|---|---|
+| `sfv_personen.sfv_person_id` | **`integer NOT NULL`** |
+| `spiel_aufstellung.sfv_person_id` | `integer` |
+| `spiel_ereignisse.sfv_person_id` | `integer` |
+| SFV-Spezifikation `personId` | **`integer, format int32`** |
+
+**Eine führende Null kann in keiner dieser Stufen entstehen.** Die
+Nummer ist an der Quelle eine Ganzzahl und in jeder unserer Spalten eine
+Ganzzahl — sie hat nie eine Zeichenform, die eine Null verlieren könnte.
+
+⚠ **Die Vorsicht war trotzdem richtig gedacht** — bei einer AHV-Nummer
+oder einer Fairgate-Id wäre sie zwingend. Sie trifft hier nur nicht zu,
+und das ist eine Messung, keine Meinung.
+
+### Warum zwei Typen gefährlich sind
+
+> **Zwei Typen für dieselbe Angabe sind die Sorte Unterschied, an der
+> später ein Vergleich still scheitert.** In PHP ist `"1097318" === 1097318`
+> falsch, `==` wahr — und welche der beiden Formen jemand in sechs
+> Monaten schreibt, entscheidet dann über die Anzeige.
+
+**Empfehlung: `number` an allen drei Stellen** — Aufstellung, Verlauf,
+`fch_person`.
+
+⚠ **Und der Ausschlag gibt das Feld am `fch_person`**, nicht unsere
+Nutzlast: es ist das Ziel des Vergleichs. **Trägt es heute Text, werden
+alle drei Text** — dann ist die Gleichheit wichtiger als die Wahl. Was
+nicht bleiben darf, sind zwei verschiedene.
+
+---
+
+## 5e · ✅ Die Gegneranzeige und die Anrede — beide entschieden
+
+**Gegnerzeile:** drüben steht nur der Klubname — „5 FC Glattbrugg 1
+↓76'", **kein „Spieler"-Platzhalter**. Nummer und Klub von uns, kein
+Name, kein Ersatztext.
+
+**Die Anrede** hängt an einer gepflegten Taxonomie **`fch_teamstufe`**
+am `fch_team` — **kein Ligenname, keine Schreibweise.**
+
+⚠ **Damit ist der Fall so gelöst, wie er gelöst sein muss:** die Angabe
+liegt dort, wo sie gepflegt wird, und nicht dort, wo sie sich aus einem
+Text erraten liesse. Auf unserer Seite entsteht **kein** abgeleitetes
+Feld — auch nicht als Rückfall.
+
+---
+
 ## 6 · Was NICHT kommt
 
 | | warum |

@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.5
+ * Version:     0.9.6
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,16 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.6 (10.09.2026): `/status` liefert den LETZTEN BERICHT aus.
+   ⚠ ANLASS: die Aufstellung kam drueben nicht an, und der Empfaenger
+   wusste warum — `cc_bericht_ablegen()` legt bei jedem Lauf ab, was
+   geschrieben wurde und was unter `unbeachtete_felder` fiel. **Nur
+   ausgeliefert hat er es nie.**
+   ⚠ Ein Melder, den niemand abholt, ist selbst die Luecke, gegen die er
+   gebaut wurde — derselbe Satz wie bei `unbeachtete_felder` in 0.7.0,
+   nur eine Ebene hoeher: dort fehlte der Zaehler, hier der Weg nach
+   draussen.
+
    0.9.5 (10.09.2026): `/status` meldet, wie viele Spiele DER ABGLEICH
    findet — dieselbe Abfrage, die beim Export laeuft.
    ⚠ ANLASS: der Export meldete 269 aktualisierte Spiele, die Zaehlung in
@@ -258,7 +268,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.5';
+const CC_VERSION    = '0.9.6';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -880,6 +890,12 @@ function cc_route_status(): WP_REST_Response {
 			   der ABFRAGE und nicht in den Daten — und die zwei Zahlen
 			   nebeneinander sagen es, statt dass jemand es herleitet. */
 			'abgleich_findet'       => count( cc_abgleich_kandidaten() ),
+			/* ⚠ Der letzte Bericht, unveraendert. Er traegt `neu`,
+			   `aktualisiert`, `zurueckgezogen` und vor allem
+			   `unbeachtete_felder` — die Antwort auf „ist das Feld
+			   angekommen und wurde es verworfen?". Bis 0.9.6 stand er
+			   nur in einer Option, die niemand von aussen lesen kann. */
+			'letzter_bericht'       => get_option( CC_OPT_BERICHT, null ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,

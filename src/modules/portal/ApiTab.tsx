@@ -236,6 +236,23 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     /* ⚠ Die entscheidende Gegenueberstellung: dieselbe Abfrage, die der
        Export benutzt, neben der Zaehlung. Zwei verschiedene Zahlen
        heissen „die Abfrage unterscheidet sich", nicht „die Daten". */
+    /* ⚠ Der letzte Bericht — er beantwortet „ist das Feld angekommen und
+       wurde es verworfen?". Bis 0.9.6 stand er nur in einer Option
+       drueben; ein Melder, den niemand abholt, ist selbst die Lücke. */
+    const b=(d.letzter_bericht??null) as Record<string,unknown>|null;
+    if(b){
+      const uf=Array.isArray(b.unbeachtete_felder)?b.unbeachtete_felder as string[]:[];
+      zeilen.push(`Letzter Lauf (${String(b.weg??"?")}): `
+        +`${Number(b.neu??0)} neu · ${Number(b.aktualisiert??0)} aktualisiert · `
+        +`${Number(b.zurueckgezogen??0)} zurückgezogen`
+        +(b.abgebrochen===true?" · ⚠ ABGEBROCHEN":""));
+      zeilen.push(uf.length
+        ? `⚠ Angekommen und verworfen: ${uf.join(", ")} — nicht in CC_FELDER`
+        : `Nichts verworfen — jedes gelieferte Feld hat eine Allowlist`);
+    } else {
+      zeilen.push(`⚠ Kein Bericht abgelegt — es hat noch kein Lauf `
+        +`stattgefunden, oder der Empfänger ist älter als 0.9.6.`);
+    }
     zeilen.push(`Der Abgleich findet: ${Number(d.abgleich_findet??0)} Spiele `
       +`(dieselbe Abfrage wie beim Export)`);
     const mt=d.match_id_typen;
