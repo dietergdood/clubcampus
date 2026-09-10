@@ -4,7 +4,7 @@
  *
  * Plugin Name: ClubCampus Export
  * Description: Nimmt Spielplan, Verlauf und Ranglisten aus ClubCampus entgegen.
- * Version:     0.9.4
+ * Version:     0.9.5
  *
  * ⚠ ⚠  STAND 10.09.2026: DIESE DATEI **IST** DER EMPFAENGER  ⚠ ⚠
  *
@@ -142,6 +142,15 @@ const CC_ROUTE      = 'clubcampus/v1';
    Auskunft, die „laeuft drueben der neue Empfaenger?" beantworten koennte,
    beantwortet sie nicht mehr.
 
+   0.9.5 (10.09.2026): `/status` meldet, wie viele Spiele DER ABGLEICH
+   findet — dieselbe Abfrage, die beim Export laeuft.
+   ⚠ ANLASS: der Export meldete 269 aktualisierte Spiele, die Zaehlung in
+   derselben Datei fand keines. Beide Wege gehen ueber `get_posts()` mit
+   demselben Beitragstyp — sie unterscheiden sich nur in Kleinigkeiten
+   (`suppress_filters`, die Zustandsliste, `meta_query`). **Welche davon
+   es ist, entscheidet keine Ueberlegung, sondern die Gegenueberstellung
+   in EINER Antwort.**
+
    0.9.4 (10.09.2026): der Dateikopf stimmt wieder mit CC_VERSION ueberein
    — und eine PRUEFUNG haelt es fest, statt eines Satzes.
    ⚠ Sie liefen seit 2d62ace (0.9.0, 10.09.2026) auseinander: Kopf 0.8.0,
@@ -249,7 +258,7 @@ const CC_ROUTE      = 'clubcampus/v1';
    einander), `autoload` wird nach dem Schreiben geprueft und notfalls
    berichtigt, `/status` nennt Empfaenger, Version, Metaschluessel und die
    Team-Zuordnung. */
-const CC_VERSION    = '0.9.4';
+const CC_VERSION    = '0.9.5';
 const CC_TYP_SPIEL  = 'fch_spiel';
 const CC_TYP_TEAM   = 'fch_team';
 /* ⚠ DER SCHLUESSEL, AN DEM DIE GANZE ZUORDNUNG HAENGT — Meta am
@@ -866,6 +875,11 @@ function cc_route_status(): WP_REST_Response {
 			'spiel_typ_gesucht'     => CC_TYP_SPIEL,
 			/* ⚠ Und was tatsaechlich DA IST, an WP_Query vorbei. */
 			'match_id_typen'        => cc_typen_mit_match_id(),
+			/* ⚠ DIESELBE ABFRAGE WIE DER EXPORT. Findet sie hier etwas
+			   anderes als `spiele_nach_zustand`, liegt der Unterschied in
+			   der ABFRAGE und nicht in den Daten — und die zwei Zahlen
+			   nebeneinander sagen es, statt dass jemand es herleitet. */
+			'abgleich_findet'       => count( cc_abgleich_kandidaten() ),
 			'wp_teams_mit_sfv_id'   => count( $karte ) - $mehrfach,
 			'wp_teams_sfv_id_doppelt' => $mehrfach,
 			'spiele_gesamt'    => (int) wp_count_posts( CC_TYP_SPIEL )->publish,

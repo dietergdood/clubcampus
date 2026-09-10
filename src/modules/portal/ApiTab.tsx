@@ -233,6 +233,11 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
     /* ⚠ ⚠  DIE ZEILE, DIE DEN WIDERSPRUCH AUFLÖST — an WP_Query vorbei.
        Der Export meldete 270 aktualisierte Spiele, die Zählung fand
        keines. Hier steht, WO sie liegen: Typ, Zustand, Anzahl. */
+    /* ⚠ Die entscheidende Gegenueberstellung: dieselbe Abfrage, die der
+       Export benutzt, neben der Zaehlung. Zwei verschiedene Zahlen
+       heissen „die Abfrage unterscheidet sich", nicht „die Daten". */
+    zeilen.push(`Der Abgleich findet: ${Number(d.abgleich_findet??0)} Spiele `
+      +`(dieselbe Abfrage wie beim Export)`);
     const mt=d.match_id_typen;
     if(Array.isArray(mt)&&mt.length){
       const t=mt as {typ:string;zustand:string;anzahl:number}[];
