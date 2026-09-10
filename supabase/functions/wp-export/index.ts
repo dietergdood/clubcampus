@@ -57,6 +57,7 @@ import { mischeEreignisse, hatVerlauf } from "../../../src/domains/spiele/matchd
 import type { EreignisZeile } from "../../../src/domains/spiele/matchdatenAnzeige.ts";
 import {
   bildeSpiel, zaehleVerlaufNamen, hatDoppelabstand,
+  baueAufstellung, leereAufstellungZahlen, sammleMarken,
 } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zeitraum ist RECHNUNG, keine Zusage — er gehoert dorthin, wo tsc
    und vitest ihn lesen koennen. Diese Datei importiert von esm.sh und wird
@@ -64,7 +65,7 @@ import {
    fuer „sie schreibt nicht", nicht fuer „sie filtert richtig". */
 import { waehleZeitraum, fassBestandZusammen } from "../../../src/domains/spiele/wpBestand.ts";
 import type { BestandZeile } from "../../../src/domains/spiele/wpBestand.ts";
-import type { WpSpiel, SpielQuelle } from "../../../src/domains/spiele/wpNutzlast.ts";
+import type { WpSpiel, SpielQuelle, AufstellungQuelle } from "../../../src/domains/spiele/wpNutzlast.ts";
 /* ⚠ Der Zuschnitt des scharfen Laufs — welche Teile hinausgehen, was
    zusammengezaehlt wird, was ins Protokoll darf — liegt aus demselben
    Grund dort und nicht hier. Ab Etappe 5 trifft er die gefaehrlichste
@@ -883,6 +884,29 @@ async function laufeProbe(
     proSpiel.set(z.spiel_id, liste);
   }
 
+  /* ── Aufstellung, in einem Zug ───────────────────────────────────── */
+  /* ⚠ `select("*")` waere hier bequem und falsch: die Tabelle traegt
+     Spalten, die nicht auf die Website gehoeren, und ein neues Feld
+     reiste beim naechsten Mal stillschweigend mit. Genannt wird, was
+     gebraucht wird — dieselbe Regel wie bei jeder Allowlist. */
+  const aRes = spielIds.length
+    ? await db.from("spiel_aufstellung")
+        .select("spiel_id, ist_eigener, sfv_person_id, name, rueckennr,"
+          + " position_name, von_minute, bis_minute, spielzeit, rolle_zuweisung_id")
+        .in("spiel_id", spielIds)
+    : { data: [], error: null };
+  /* ⚠ `error` lesen, nicht nur `data`: eine gescheiterte Abfrage saehe
+     sonst aus wie „es gibt keine Aufstellung" — und auf der Website
+     fehlte sie kommentarlos. */
+  if (aRes.error) throw new Error(`Aufstellung nicht lesbar: ${aRes.error.message}`);
+
+  const aufProSpiel = new Map<string, AufstellungQuelle[]>();
+  for (const z of (aRes.data ?? []) as (AufstellungQuelle & { spiel_id: string })[]) {
+    const liste = aufProSpiel.get(z.spiel_id) ?? [];
+    liste.push(z);
+    aufProSpiel.set(z.spiel_id, liste);
+  }
+
   /* ── Namen ───────────────────────────────────────────────────────── */
   /* ⚠ Heute leer: sfv_zuordnung hat null Zeilen (29.08.2026). Dann steht
      im Verlauf ueberall „Nr. 9" statt eines Namens — und genau das ist der
@@ -951,6 +975,12 @@ async function laufeProbe(
      schaetzt den Pflegeaufwand zu hoch. */
   const gegnerTeams = new Set<number>();
   let cupOhneRunde = 0;
+  /* ⚠ SIEBEN ZAHLEN, JEDE IMMER — auch als Null. Eine Zahl, die nur im
+     schlechten Fall erscheint, verlangt vom Leser eine Deutung, und die
+     Deutung einer Abwesenheit ist geraten. Am 10.09.2026 achtmal an einem
+     Tag passiert. */
+  const aufZahlen = leereAufstellungZahlen();
+  let spieleMitAufstellung = 0;
   const namensZaehlung = {
     mit_eigenem_namen: 0, mit_sfv_namen: 0, mit_rueckennummer: 0, mit_gegnername: 0,
     zeilen_mit_zweitem_namen: 0,
@@ -980,6 +1010,19 @@ async function laufeProbe(
        und was dort stattdessen steht, ist noch nicht gemessen. */
     if (spiel.runde === "" && (s.wettbewerb ?? "").toString().toLowerCase().includes("cup")) {
       cupOhneRunde++;
+    }
+    /* ⚠ DER AUFRUFER, DER BIS ZUM 10.09.2026 GEFEHLT HAT. `rolleAus`,
+       `sammleMarken`, `markeSchluessel` und `spielerAnzeige` waren
+       gebaut, geprueft und tot — deshalb hat den vierten Rollenwert eine
+       SQL-Abfrage gefunden und nicht die Meldung, die dafuer gebaut war. */
+    const aufZeilen = aufProSpiel.get(String(s.id)) ?? [];
+    if (aufZeilen.length) {
+      spieleMitAufstellung++;
+      const marken = sammleMarken(ereignisse);
+      spiel.aufstellung = baueAufstellung(
+        aufZeilen, marken.je_spieler, spiel.heim_auswaerts === "heim",
+        namen, aufZahlen,
+      );
     }
     gebaut.push(spiel);
 
@@ -1015,6 +1058,30 @@ async function laufeProbe(
       spiele_gebaut: gebaut.length,
       ohne_sfv_match_id: ohneSchluessel,
       ohne_verlauf: ohneVerlauf,
+
+      /* ── Die Aufstellung ──────────────────────────────────────────
+         ⚠ ALLE ACHT STEHEN IMMER DA, auch als Null. Eine Zahl, die nur
+         im schlechten Fall erscheint, verlangt eine Deutung, und die
+         Deutung einer Abwesenheit ist geraten — am 10.09.2026 achtmal
+         an einem Tag passiert, zuletzt mit `gegner_doppel`, das gesucht
+         und nicht gefunden wurde. */
+      spiele_mit_aufstellung: spieleMitAufstellung,
+      aufstellung_zeilen_eigen: aufZahlen.zeilen_eigen,
+      aufstellung_zeilen_fremd: aufZahlen.zeilen_fremd,
+      /* Eigene Zeilen, die als „Nr. 18" erscheinen. Gegnerzeilen zaehlen
+         hier NICHT mit — bei ihnen ist der fehlende Name eine
+         Entscheidung, keine Luecke. */
+      aufstellung_ohne_namen: aufZahlen.ohne_namen,
+      /* ⚠ Die Zuweisung des Verbands gegen die Minuten. Vorhersage aus
+         der Messung vom 10.09.2026: mindestens 37. Weicht der Wert stark
+         ab, ist die Ableitungsregel falsch und nicht die Quelle. */
+      aufstellung_widerspruch: aufZahlen.widerspruch,
+      /* ⚠ Bleibt gezaehlt, AUCH wenn korrigiert wurde. Die Korrektur
+         macht den Befund unsichtbar, nicht ungeschehen. Heute: 1. */
+      aufstellung_unplausibel: aufZahlen.unplausibel,
+      aufstellung_korrigiert: aufZahlen.korrigiert,
+      aufstellung_ohne_minuten: aufZahlen.ohne_minuten,
+      aufstellung_unbekannte_rollen: aufZahlen.unbekannte_rollen,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
       runde_mit_doppelabstand: rundeMitDoppelabstand,

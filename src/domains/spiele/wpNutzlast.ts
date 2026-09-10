@@ -112,6 +112,14 @@ export interface WpSpiel {
   halbzeit_heim: number | null;
   halbzeit_gast: number | null;
   verlauf: WpVerlaufZeile[];
+  /**
+   * ⚠ Optional, und zwar mit Absicht: ein Spiel ohne Aufstellung schickt
+   * das Feld GAR NICHT, statt eine leere Liste zu senden. Eine leere
+   * Liste hiesse „niemand hat gespielt"; das Fehlen heisst „wir wissen es
+   * nicht". Der Unterschied ist genau der, um den es an diesem Tag
+   * mehrfach ging.
+   */
+  aufstellung?: WpAufstellungZeile[];
 }
 
 /* ── Datum ────────────────────────────────────────────────────────── */
@@ -941,4 +949,149 @@ export function bildeSpiel(
     halbzeit_gast: halb.tore_gast,
     verlauf: bildeVerlauf(ereignisse, heimspiel, namen, unserKlub),
   };
+}
+
+/* ── Die Aufstellung fuer die Website ──────────────────────────────────
+
+   ⚠ ⚠  DIE VIER FUNKTIONEN DARUEBER HATTEN BIS ZUM 10.09.2026 KEINEN
+         AUFRUFER. `rolleAus`, `sammleMarken`, `markeSchluessel`,
+         `spielerAnzeige` waren gebaut, getestet und tot — und deshalb hat
+         den vierten Rollenwert („Kein Einsatz") eine SQL-Abfrage
+         gefunden und nicht die Meldung, die genau dafuer gebaut war.
+
+   **Ein Melder ohne Aufrufer ist selbst die Luecke, gegen die er gebaut
+   wurde.** Das hier ist der Aufrufer.
+
+   ── Was von einer GEGNERZEILE mitgeht ─────────────────────────────────
+   Nummer, Position, Minuten, Rolle, Symbole. **Kein Name, keine
+   Personennummer** — Entscheid B vom 10.09.2026, in der Datenbank durch
+   `spiel_aufstellung_fremde_ohne_person` erzwungen. `spieler` bleibt beim
+   Gegner leer, und das ist eine ENTSCHEIDUNG, keine Grenze der Quelle:
+   der Verband liefert den Namen, wir nehmen ihn nicht. */
+
+/** Eine Zeile, wie sie aus `spiel_aufstellung` kommt. */
+export interface AufstellungQuelle {
+  ist_eigener: boolean;
+  sfv_person_id: number | null;
+  name: string | null;
+  rueckennr: number | null;
+  position_name: string | null;
+  von_minute: number | null;
+  bis_minute: number | null;
+  spielzeit: number | null;
+  rolle_zuweisung_id: number | null;
+}
+
+export interface WpAufstellungZeile {
+  seite: "heim" | "gast";
+  nummer: number | null;
+  spieler: string;
+  position: string;
+  rolle: SpielerRolle;
+  ist_captain: boolean;
+  von_minute: number | null;
+  bis_minute: number | null;
+  spielzeit: number | null;
+  /** „tor,tor,gelb" — leer, wenn nichts. Siehe sammleMarken(). */
+  marken: string;
+}
+
+/**
+ * Die sieben Zahlen der Vorschau.
+ *
+ * ⚠ JEDE STEHT IMMER DA, AUCH ALS NULL. Eine Zahl, die nur im schlechten
+ * Fall erscheint, verlangt vom Leser eine Deutung — und die Deutung einer
+ * Abwesenheit ist geraten. Am 10.09.2026 achtmal an einem Tag passiert,
+ * zuletzt mit `gegner_doppel`, das Didi suchte und nicht fand.
+ */
+export interface AufstellungZahlen {
+  zeilen_eigen: number;
+  zeilen_fremd: number;
+  /** Eigene Zeilen, die als „Nr. 18" erscheinen — ohne Klarnamen. */
+  ohne_namen: number;
+  /** Die Zuweisung des Verbands sagt etwas anderes als die Minuten. */
+  widerspruch: number;
+  /** Verdrehte oder negative Minuten. Bleibt gezaehlt, auch wenn korrigiert. */
+  unplausibel: number;
+  /** Davon getauscht (bis < von). Gemessen am 10.09.2026: 1. */
+  korrigiert: number;
+  /** Zuweisungswerte ausserhalb 0–3. */
+  unbekannte_rollen: number[];
+  /** Zeilen ohne jede Minutenangabe — dort trug die Zuweisung die Rolle. */
+  ohne_minuten: number;
+}
+
+export function leereAufstellungZahlen(): AufstellungZahlen {
+  return {
+    zeilen_eigen: 0, zeilen_fremd: 0, ohne_namen: 0, widerspruch: 0,
+    unplausibel: 0, korrigiert: 0, unbekannte_rollen: [], ohne_minuten: 0,
+  };
+}
+
+/** Startelf zuerst, dann Eingewechselte, dann wer nicht zum Einsatz kam. */
+const ROLLEN_ORDNUNG: SpielerRolle[] = ["start", "eingewechselt", "nicht_eingesetzt"];
+
+export function baueAufstellung(
+  zeilen: AufstellungQuelle[],
+  marken: Map<string, AufstellungZaehlung>,
+  heimspiel: boolean,
+  namen: Map<number, string>,
+  zahlen: AufstellungZahlen,
+): WpAufstellungZeile[] {
+  const unbekannt = new Set<number>(zahlen.unbekannte_rollen);
+  const raus: WpAufstellungZeile[] = [];
+
+  for (const z of zeilen) {
+    const b = rolleAus(z);
+
+    if (z.ist_eigener) zahlen.zeilen_eigen += 1; else zahlen.zeilen_fremd += 1;
+    if (b.widerspruch) zahlen.widerspruch += 1;
+    if (b.unplausibel) zahlen.unplausibel += 1;
+    if (b.korrigiert) zahlen.korrigiert += 1;
+    if (b.ohne_minuten) zahlen.ohne_minuten += 1;
+    if (b.unbekannt !== null && b.unbekannt >= 0) unbekannt.add(b.unbekannt);
+
+    /* ⚠ Der Schluessel wird GENAUSO gebildet wie in markeSchluessel() —
+       eigene ueber die Person, fremde ueber die Nummer. Wer ihn hier
+       anders bildet, zeigt Symbole an der falschen Zeile, und nichts
+       schlaegt fehl. */
+    const k = z.ist_eigener
+      ? (z.sfv_person_id != null ? `p:${z.sfv_person_id}` : null)
+      : (z.rueckennr != null ? `n:${z.rueckennr}` : null);
+    const zaehlung = k !== null ? marken.get(k) : undefined;
+
+    /* Der eigene Name kommt aus der Zuordnung, sonst aus der SFV-Antwort,
+       sonst als „Nr. 18". Beim Gegner: gar nichts. */
+    const eigenerName = z.sfv_person_id != null
+      ? (namen.get(z.sfv_person_id) ?? z.name)
+      : z.name;
+    const spieler = z.ist_eigener ? spielerAnzeige(eigenerName, z.rueckennr) : "";
+    if (z.ist_eigener && !String(eigenerName ?? "").trim()) zahlen.ohne_namen += 1;
+
+    raus.push({
+      /* Eine eigene Zeile steht auf unserer Seite, eine fremde auf der
+         anderen — der Spielort entscheidet, welche das ist. */
+      seite: z.ist_eigener === heimspiel ? "heim" : "gast",
+      nummer: z.rueckennr,
+      spieler,
+      position: String(z.position_name ?? ""),
+      rolle: b.rolle,
+      ist_captain: b.ist_captain,
+      von_minute: b.von_minute,
+      bis_minute: b.bis_minute,
+      spielzeit: b.spielzeit,
+      marken: (zaehlung?.marken ?? []).map((m) => m.art).join(","),
+    });
+  }
+
+  zahlen.unbekannte_rollen = [...unbekannt].sort((a, b) => a - b);
+
+  /* Eigene zuerst, darin Startelf vor Eingewechselten vor
+     Nichteingesetzten, darin nach Nummer. */
+  return raus.sort((a, b) => {
+    if (a.seite !== b.seite) return a.seite === (heimspiel ? "heim" : "gast") ? -1 : 1;
+    const ra = ROLLEN_ORDNUNG.indexOf(a.rolle) - ROLLEN_ORDNUNG.indexOf(b.rolle);
+    if (ra !== 0) return ra;
+    return (a.nummer ?? 999) - (b.nummer ?? 999);
+  });
 }

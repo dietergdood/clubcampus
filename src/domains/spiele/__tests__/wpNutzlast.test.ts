@@ -19,9 +19,9 @@ import {
   TYP_WECHSEL, TYP_ASSIST, SUBTYP_ZWEITE_VERWARNUNG,
   hatDoppelabstand, sammleMarken, markeSchluessel,
   spielerAnzeige, rolleAus, ROLLE_ERSATZ_ID, ROLLE_KEIN_EINSATZ_ID,
-  ROLLE_CAPTAIN_ID,
+  ROLLE_CAPTAIN_ID, baueAufstellung, leereAufstellungZahlen,
 } from "../wpNutzlast.ts";
-import type { SpielQuelle } from "../wpNutzlast.ts";
+import type { SpielQuelle, AufstellungQuelle, AufstellungZaehlung } from "../wpNutzlast.ts";
 import type { AnzeigeEreignis } from "../matchdatenAnzeige.ts";
 import { TYP_TOR, TYP_VERWARNUNG, TYP_AUSSCHLUSS } from "../matchdatenAnzeige.ts";
 
@@ -807,3 +807,161 @@ describe("rolleAus", () => {
   });
 });
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   baueAufstellung — der Aufrufer, der bis zum 10.09.2026 fehlte
+
+   ⚠ `rolleAus`, `sammleMarken`, `markeSchluessel` und `spielerAnzeige`
+   waren gebaut, geprüft und tot. Deshalb hat den vierten Rollenwert eine
+   SQL-Abfrage gefunden und nicht die Meldung, die dafür gebaut war.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("baueAufstellung", () => {
+  const q = (ueber: Partial<AufstellungQuelle> = {}): AufstellungQuelle => ({
+    ist_eigener: true, sfv_person_id: 100, name: "Anna Beispiel",
+    rueckennr: 9, position_name: "Sturm",
+    von_minute: 1, bis_minute: 90, spielzeit: 90,
+    rolle_zuweisung_id: 0, ...ueber,
+  });
+  const keine = new Map<string, AufstellungZaehlung>();
+  const keineNamen = new Map<number, string>();
+
+  it("eine eigene Zeile trägt Name, Nummer, Position und Rolle", () => {
+    const zahlen = leereAufstellungZahlen();
+    const [z] = baueAufstellung([q()], keine, true, keineNamen, zahlen);
+    expect(z).toMatchObject({
+      seite: "heim", nummer: 9, spieler: "Anna Beispiel",
+      position: "Sturm", rolle: "start", ist_captain: false, marken: "",
+    });
+    expect(zahlen.zeilen_eigen).toBe(1);
+    expect(zahlen.zeilen_fremd).toBe(0);
+  });
+
+  it("⚠ eine Gegnerzeile trägt KEINEN Namen — auch wenn einer dasteht", () => {
+    /* Entscheid B: der Verband liefert ihn, wir nehmen ihn nicht. In der
+       Datenbank kann er gar nicht stehen; hier wird zusätzlich
+       sichergestellt, dass die Anzeige ihn nicht doch einsetzt. */
+    const zahlen = leereAufstellungZahlen();
+    const [z] = baueAufstellung(
+      [q({ ist_eigener: false, name: "Fremder Name", sfv_person_id: null })],
+      keine, true, keineNamen, zahlen,
+    );
+    expect(z.spieler).toBe("");
+    expect(z.nummer).toBe(9);
+    expect(z.seite).toBe("gast");
+    expect(zahlen.zeilen_fremd).toBe(1);
+    /* ⚠ Und sie zählt NICHT als „ohne Namen" — das wäre eine Lücke, die
+       keine ist. */
+    expect(zahlen.ohne_namen).toBe(0);
+  });
+
+  it("ohne Klarnamen steht „Nr. 9“, und es wird gezählt", () => {
+    const zahlen = leereAufstellungZahlen();
+    const [z] = baueAufstellung([q({ name: null })], keine, true, keineNamen, zahlen);
+    expect(z.spieler).toBe("Nr. 9");
+    expect(zahlen.ohne_namen).toBe(1);
+  });
+
+  it("eine Zuordnung gewinnt gegen den Namen aus der SFV-Antwort", () => {
+    const zahlen = leereAufstellungZahlen();
+    const namen = new Map([[100, "Anna Vereinsname"]]);
+    const [z] = baueAufstellung([q()], keine, true, namen, zahlen);
+    expect(z.spieler).toBe("Anna Vereinsname");
+  });
+
+  it("⚠ die Symbole hängen am selben Schlüssel wie in markeSchluessel()", () => {
+    /* Wer ihn hier anders bildet, zeigt Symbole an der falschen Zeile —
+       und nichts schlägt fehl. */
+    const zahlen = leereAufstellungZahlen();
+    const m = new Map<string, AufstellungZaehlung>([
+      ["p:100", { tore: 2, gelb: 1, gelbrot: 0, rot: 0, marken: [
+        { art: "tor", minute: "12" }, { art: "tor", minute: "44" },
+        { art: "gelb", minute: "70" },
+      ] }],
+      ["n:9", { tore: 1, gelb: 0, gelbrot: 0, rot: 0, marken: [
+        { art: "tor", minute: "5" },
+      ] }],
+    ]);
+    const [eigen] = baueAufstellung([q()], m, true, keineNamen, zahlen);
+    expect(eigen.marken).toBe("tor,tor,gelb");
+    const [fremd] = baueAufstellung(
+      [q({ ist_eigener: false, sfv_person_id: null })], m, true, keineNamen,
+      leereAufstellungZahlen(),
+    );
+    expect(fremd.marken).toBe("tor");
+  });
+
+  it("sortiert: Startelf, dann eingewechselt, dann ohne Einsatz", () => {
+    const zahlen = leereAufstellungZahlen();
+    const zeilen = baueAufstellung([
+      q({ rueckennr: 3, von_minute: 0, bis_minute: 0, spielzeit: 0 }),
+      q({ rueckennr: 2, von_minute: 46, bis_minute: 90, spielzeit: 45 }),
+      q({ rueckennr: 1 }),
+    ], keine, true, keineNamen, zahlen);
+    expect(zeilen.map((z) => z.rolle))
+      .toEqual(["start", "eingewechselt", "nicht_eingesetzt"]);
+  });
+
+  it("eigene Zeilen stehen vor fremden", () => {
+    const zahlen = leereAufstellungZahlen();
+    const zeilen = baueAufstellung([
+      q({ ist_eigener: false, sfv_person_id: null, rueckennr: 4 }),
+      q({ rueckennr: 5 }),
+    ], keine, true, keineNamen, zahlen);
+    expect(zeilen.map((z) => z.seite)).toEqual(["heim", "gast"]);
+  });
+
+  it("bei einem Auswärtsspiel dreht sich die Seite", () => {
+    const zahlen = leereAufstellungZahlen();
+    const [z] = baueAufstellung([q()], keine, false, keineNamen, zahlen);
+    expect(z.seite).toBe("gast");
+  });
+
+  /* ── Die sieben Zahlen ───────────────────────────────────────────── */
+
+  it("zählt Widerspruch, Unplausibles und Korrigiertes einzeln", () => {
+    const zahlen = leereAufstellungZahlen();
+    baueAufstellung([
+      /* Zuweisung „Ersatz", aber 90 Minuten gespielt. */
+      q({ rolle_zuweisung_id: ROLLE_ERSATZ_ID }),
+      /* Verdrehte Minuten — korrigiert UND weiterhin unplausibel. */
+      q({ von_minute: 54, bis_minute: 32, spielzeit: -22 }),
+    ], keine, true, keineNamen, zahlen);
+    expect(zahlen.widerspruch).toBe(1);
+    expect(zahlen.unplausibel).toBe(1);
+    expect(zahlen.korrigiert).toBe(1);
+  });
+
+  it("⚠ meldet einen unbekannten Zuweisungswert, statt ihn zu schlucken", () => {
+    const zahlen = leereAufstellungZahlen();
+    baueAufstellung([q({ rolle_zuweisung_id: 77 })], keine, true, keineNamen, zahlen);
+    expect(zahlen.unbekannte_rollen).toEqual([77]);
+  });
+
+  it("⚠ eine FEHLENDE Zuweisung ist kein unbekannter Wert", () => {
+    /* rolleAus meldet dafür -1 — der Zähler darf das nicht als neuen
+       Verbandswert lesen, sonst stünde dort dauerhaft „-1" und niemand
+       schaute mehr hin. */
+    const zahlen = leereAufstellungZahlen();
+    baueAufstellung([q({ rolle_zuweisung_id: null })], keine, true, keineNamen, zahlen);
+    expect(zahlen.unbekannte_rollen).toEqual([]);
+  });
+
+  it("zählt Zeilen ganz ohne Minutenangabe", () => {
+    const zahlen = leereAufstellungZahlen();
+    baueAufstellung(
+      [q({ von_minute: null, bis_minute: null, spielzeit: null })],
+      keine, true, keineNamen, zahlen,
+    );
+    expect(zahlen.ohne_minuten).toBe(1);
+  });
+
+  it("die sieben Zahlen stehen auch bei leerer Aufstellung da", () => {
+    /* ⚠ Der Fall, um den es bei „immer, auch als Null" geht. */
+    const zahlen = leereAufstellungZahlen();
+    expect(baueAufstellung([], keine, true, keineNamen, zahlen)).toEqual([]);
+    expect(zahlen).toEqual({
+      zeilen_eigen: 0, zeilen_fremd: 0, ohne_namen: 0, widerspruch: 0,
+      unplausibel: 0, korrigiert: 0, unbekannte_rollen: [], ohne_minuten: 0,
+    });
+  });
+});

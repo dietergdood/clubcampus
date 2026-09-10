@@ -166,6 +166,27 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
       zeilen.push(`⚠ ${n("ohne_liga")} Spiele ohne Liga — dann fehlt drüben die Wettbewerbsbezeichnung`);
     }
     zeilen.push(`${n("gegner_teams_verschieden")} verschiedene Gegner-Mannschaften (Teams, nicht Vereine)`);
+
+    /* ── Die Aufstellung ────────────────────────────────────────────
+       ⚠ Alle Zahlen stehen da, auch als Null — dieselbe Regel wie oben.
+       Sie sind der Grund, warum die Vorschau VOR dem Empfänger kommt:
+       hier lassen sie sich ansehen, bevor irgendetwas auf die Website
+       geht. Beim Verlauf hat genau das die 431 vermeintlichen Klarnamen
+       gefunden, die in Wahrheit 0 waren. */
+    zeilen.push(`Aufstellung: ${n("spiele_mit_aufstellung")} Spiele · `
+      +`${n("aufstellung_zeilen_eigen")} eigene · ${n("aufstellung_zeilen_fremd")} gegnerische Zeilen`);
+    zeilen.push(`Davon ohne Klarnamen: ${n("aufstellung_ohne_namen")} `
+      +`(nur eigene — beim Gegner ist der fehlende Name eine Entscheidung)`);
+    zeilen.push(`Zuweisung gegen Minuten: ${n("aufstellung_widerspruch")} Widersprüche · `
+      +`${n("aufstellung_ohne_minuten")} Zeilen ohne Minutenangabe`);
+    zeilen.push(`Minuten unplausibel: ${n("aufstellung_unplausibel")} · `
+      +`davon getauscht: ${n("aufstellung_korrigiert")}`);
+    const rollen = Array.isArray(z.aufstellung_unbekannte_rollen)
+      ? z.aufstellung_unbekannte_rollen as number[] : [];
+    if(rollen.length){
+      zeilen.push(`⚠ Unbekannte Rollenwerte vom Verband: ${rollen.join(", ")} — `
+        +`bisher sind 0 bis 3 gemessen`);
+    }
     return zeilen;
   }
 
