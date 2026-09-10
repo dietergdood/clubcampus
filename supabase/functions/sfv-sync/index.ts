@@ -40,6 +40,9 @@ import {
 } from "../../../src/domains/sfv/wechselProbe.ts";
 import { waehleNachtragSpiele, deuteNachtrag } from "../../../src/domains/sfv/ereignisNachtrag.ts";
 import { schluesselVon, suchtBildfeld } from "../../../src/domains/sfv/rohschluessel.ts";
+import {
+  LAUF_LAEUFT, LAUF_FEHLER, AKTION_SYNC, AKTION_NAMEN, AKTION_WECHSELNACHTRAG,
+} from "../../../src/domains/sfv/protokollStatus.ts";
 import { bildeEreignis } from "./matchdaten.ts";
 import {
   holeToken, holeSaison, holeTeams, holeTeamsRoh, holeSpielplan, holeEreignisse,
@@ -211,6 +214,21 @@ Deno.serve(async (req) => {
       .select("id");
     if (!gesperrt?.length) return json({ fehler: "Ein Lauf ist bereits unterwegs" }, 409);
 
+    /* ⚠ ER SCHREIBT — also protokolliert er. Bis zum 11.09.2026 tat er
+       weder das eine noch das andere sichtbar: er aenderte
+       spiel_ereignisse und hinterliess KEINE Zeile. Ein Lauf, von dem man
+       hinterher nicht weiss, ob er stattfand, ist derselbe blinde Fleck
+       wie ein Fehlschlag ohne Spur.
+
+       ⚠ Die Leseproben (teamprobe, cupprobe, wechselprobe, rohschluessel)
+       protokollieren weiterhin NICHT, und das ist kein Versehen: sie
+       aendern nichts. Eine Zeile je Auskunft waere Rauschen in einer
+       Tabelle, die von Aenderungen handelt. */
+    const { data: logZeile } = await db.from("api_sync_log").insert({
+      verbindung_id: v.id, verein_id: v.verein_id, aktion: AKTION_WECHSELNACHTRAG,
+      status: LAUF_LAEUFT, gestartet_am: new Date().toISOString(),
+    }).select("id").single();
+
     try {
       const { data: verein, error: vErr } = await db.from("vereine")
         .select("sfv_club_nummer").eq("id", v.verein_id).maybeSingle();
@@ -288,9 +306,36 @@ Deno.serve(async (req) => {
         offen_danach: danach ?? 0,
         ohne_match_id: wahl.ohne_match_id,
       };
+      if (logZeile) {
+        await db.from("api_sync_log").update({
+          beendet_am: new Date().toISOString(),
+          status: erg.spiele_fehlgeschlagen ? "warnung" : "ok",
+          meldung: deuteNachtrag(erg),
+          datensaetze_aktualisiert: erg.ereignisse_geschrieben,
+          datensaetze_fehler: erg.spiele_fehlgeschlagen,
+          /* ⚠ Aufgezaehlt, nicht `...erg`. Das Ergebnis traegt heute nur
+             Zahlen — aber ein Spread ist ein Ausgang, der jedes kuenftige
+             Feld mitnimmt, und genau so sind 903 Klarnamen ins Protokoll
+             gelangt. */
+          details: {
+            spiele_abgefragt: erg.spiele_abgefragt,
+            ereignisse_geschrieben: erg.ereignisse_geschrieben,
+            offen_gesamt: erg.offen_gesamt,
+            offen_danach: erg.offen_danach,
+            ohne_match_id: erg.ohne_match_id,
+          },
+        }).eq("id", logZeile.id);
+      }
       return json({ ...erg, deutung: deuteNachtrag(erg) });
     } catch (e) {
-      return json({ fehler: e instanceof Error ? e.message : String(e) }, 502);
+      const meldung = e instanceof Error ? e.message : String(e);
+      if (logZeile) {
+        await db.from("api_sync_log").update({
+          beendet_am: new Date().toISOString(), status: LAUF_FEHLER,
+          meldung, datensaetze_fehler: 1,
+        }).eq("id", logZeile.id);
+      }
+      return json({ fehler: meldung }, 502);
     } finally {
       await db.from("api_verbindungen").update({ sync_laeuft_seit: null }).eq("id", v.id);
     }
@@ -533,6 +578,20 @@ Deno.serve(async (req) => {
       return json({ fehler: "Ein Lauf ist bereits unterwegs — bitte in einer Minute erneut." }, 409);
     }
 
+    /* ⚠ ⚠  DIE ZEILE ZUERST, NICHT ZULETZT (11.09.2026).
+       Bis dahin schrieb diese Aktion EINEN insert am Ende. Wirft sie
+       vorher — und sie ruft die SFV-API —, stand nichts da, und
+       „gescheitert" sah aus wie „nichts zu tun". Der Sync machte es
+       schon richtig; die zwei waren ohne Grund verschieden.
+
+       `aktion` steht dabei: eine Zeile mit `status: ok` und ohne
+       `details.spiele` war bisher nicht deutbar — war es ein Lauf ohne
+       Spiele, oder einer, der welche suchte und keine fand? */
+    const { data: logZeile } = await db.from("api_sync_log").insert({
+      verbindung_id: v.id, verein_id: v.verein_id, aktion: AKTION_NAMEN,
+      status: LAUF_LAEUFT, gestartet_am: new Date().toISOString(),
+    }).select("id").single();
+
     try {
       const zugang = zugangFuer(v.api_url);
       const token = await holeToken(zugang);
@@ -546,13 +605,14 @@ Deno.serve(async (req) => {
       /* ⚠ EIGENE ALLOWLIST, nicht `fuersProtokoll()`. Es ist ein anderes
          Objekt, und genau diese Verwechslung hat am 21.08.2026 903
          Klarnamen ins Protokoll geschrieben. Hier stehen drei Zahlen. */
-      await db.from("api_sync_log").insert({
-        verbindung_id: v.id, verein_id: v.verein_id,
-        status: erg.fehler ? "warnung" : "ok",
-        gestartet_am: new Date().toISOString(), beendet_am: new Date().toISOString(),
-        meldung: `Namen nachgetragen: ${erg.namen_gefunden} von ${erg.offen_gesamt} offenen Spielern aus ${erg.spiele_abgefragt} Spiel(en)`,
-        details: namenFuersProtokoll(erg),
-      });
+      if (logZeile) {
+        await db.from("api_sync_log").update({
+          beendet_am: new Date().toISOString(),
+          status: erg.fehler ? "warnung" : "ok",
+          meldung: `Namen nachgetragen: ${erg.namen_gefunden} von ${erg.offen_gesamt} offenen Spielern aus ${erg.spiele_abgefragt} Spiel(en)`,
+          details: namenFuersProtokoll(erg),
+        }).eq("id", logZeile.id);
+      }
 
       /* ⚠ `letzter_sync` und `sync_meldung` bleiben unberuehrt. Das ist kein
          Sync; die Kachel duerfte danach nicht behaupten, sie haette Daten
@@ -567,6 +627,15 @@ Deno.serve(async (req) => {
       });
     } catch (e) {
       const meldung = protokollFehler(`namen/${v.verein_id}`, e);
+      /* ⚠ DIESELBE Zeile auf `fehler`, nicht eine zweite. Zwei Zeilen je
+         Lauf liessen sich auseinanderlesen, ein unvollstaendiger Lauf
+         nicht — dieselbe Entscheidung wie beim Loeschprotokoll. */
+      if (logZeile) {
+        await db.from("api_sync_log").update({
+          beendet_am: new Date().toISOString(), status: LAUF_FEHLER,
+          meldung, datensaetze_fehler: 1,
+        }).eq("id", logZeile.id);
+      }
       return json({ fehler: meldung }, 502);
     } finally {
       await db.from("api_verbindungen").update({ sync_laeuft_seit: null }).eq("id", v.id);
@@ -594,7 +663,8 @@ Deno.serve(async (req) => {
     }
 
     const { data: logZeile } = await db.from("api_sync_log").insert({
-      verbindung_id: v.id, verein_id: v.verein_id, status: "laeuft", gestartet_am: new Date().toISOString(),
+      verbindung_id: v.id, verein_id: v.verein_id, aktion: AKTION_SYNC,
+      status: LAUF_LAEUFT, gestartet_am: new Date().toISOString(),
     }).select("id").single();
 
     try {
@@ -625,7 +695,7 @@ Deno.serve(async (req) => {
       const meldung = protokollFehler(`lauf/${v.verein_id}`, e);
       if (logZeile) {
         await db.from("api_sync_log").update({
-          beendet_am: new Date().toISOString(), status: "fehler", meldung, datensaetze_fehler: 1,
+          beendet_am: new Date().toISOString(), status: LAUF_FEHLER, meldung, datensaetze_fehler: 1,
         }).eq("id", logZeile.id);
       }
       await db.from("api_verbindungen").update({ sync_status: "fehler", sync_meldung: meldung }).eq("id", v.id);

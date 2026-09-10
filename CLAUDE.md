@@ -3403,6 +3403,26 @@ Tabelle liest, darf `laeuft` nicht als „läuft gerade" zählen, ohne aufs
 Alter zu sehen.
 
 **Was es kostet:** ein zusätzliches `insert` je Lauf und ein `update`
-statt eines `insert` am Ende. `wp-export` macht es beim scharfen Lauf
-bereits so (`status: "laeuft"`), der Sync nicht — die zwei sind hier
-ohne Grund verschieden.
+statt eines `insert` am Ende.
+
+⚠ ⚠ **BERICHTIGT AM 11.09.2026 — DER SATZ DARUNTER WAR ZUR HÄLFTE
+FALSCH.** Hier stand: *„`wp-export` macht es beim scharfen Lauf bereits
+so, der Sync nicht."* Gemessen im Quelltext: **der Sync machte es schon
+richtig** — `insert` mit `status: "laeuft"` vor dem Lauf, `update`
+danach und im `catch`. Falsch war es nur bei der Aktion `namen`, und
+`wechselnachtrag` schrieb gar keine Zeile, obwohl er `spiel_ereignisse`
+ändert.
+
+**Wieder erschlossen statt gemessen**, am selben Tag zum zweiten Mal:
+ich hatte aus „der Befund gilt" auf „er gilt überall" geschlossen, ohne
+die zweite Stelle anzusehen.
+
+✅ **Behoben am 11.09.2026.** `namen` und `wechselnachtrag` schreiben die
+Zeile jetzt vorher; alle drei tragen `api_sync_log.aktion`. Die
+Leseproben (`teamprobe`, `cupprobe`, `wechselprobe`, `rohschluessel`)
+protokollieren **absichtlich nicht** — sie ändern nichts, und eine Zeile
+je Auskunft wäre Rauschen in einer Tabelle, die von Änderungen handelt.
+
+Gehalten wird das von `src/domains/sfv/__tests__/protokollSpur.test.ts`:
+wer schreibt, protokolliert — und zwar vorher. **Gegengeprobt an der
+echten Datei:** `aktion`/`laeuft` entfernt → rot, zurückgesetzt → grün.
