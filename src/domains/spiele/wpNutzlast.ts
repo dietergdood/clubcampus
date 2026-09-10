@@ -69,6 +69,31 @@ export interface WpVerlaufZeile {
   /** ⚠ Bleibt leer, siehe `bildeVerlauf()`. */
   stand: string;
   klub: string;
+  /**
+   * Die SFV-Personennummer des Menschen, um den es in dieser Zeile geht
+   * — **nur bei eigenen Zeilen**, bei Gegnern immer `null`.
+   *
+   * ⚠ ⚠  OHNE SIE MUESSTE DIE WEBSITE DEN NAMEN AUS `text`
+   *       ZURUECKPARSEN. Das ist derselbe Umweg, den dieses Projekt an
+   *       zwei Stellen als Fehler fuehrt: die 431 vermeintlichen
+   *       Klarnamen, die 0 waren, kamen genau daher — jemand hat seinen
+   *       eigenen Ausgabetext wieder zerlegt, um zu erfahren, was er
+   *       hineingeschrieben hatte.
+   *
+   *   Mit ihr kann die Website Tore und Karten einem Spielerprofil
+   *   zuordnen, ohne ueber Namen zu gehen — und ein Name ist eine
+   *   Schreibweise, kein Schluessel.
+   *
+   * ⚠ Bei Gegnern verboten, nicht bloss ungenutzt: eine Personennummer
+   *   ist ueber dieselbe Schnittstelle in einen Namen aufzuloesen.
+   *   Erzwungen von `spiel_ereignisse_fremde_anonym_check`.
+   *
+   * ⚠ Der ZWEITE Mensch einer Wechselzeile bekommt bewusst KEIN Feld:
+   *   `ein_sfv_person_id` loest nirgends auf (`substitutePlayerId` ist
+   *   kein `personId`, gemessen 10.09.2026), und Einsatzminuten stehen
+   *   ohnehin an der Aufstellungszeile.
+   */
+  sfv_person_id: number | null;
 }
 
 export interface WpSpiel {
@@ -354,6 +379,10 @@ export function bildeVerlauf(
       text,
       stand: "",
       klub: wir ? unserKlub : (e.gegner_club_name ?? ""),
+      /* ⚠ Der Zweig steht hier, obwohl der CHECK fremde Zeilen ohnehin
+         auf null zwingt: wer diese Zeile liest, soll die Grenze sehen
+         statt sie voraussetzen zu muessen. */
+      sfv_person_id: wir ? (e.sfv_person_id ?? null) : null,
     });
   }
 

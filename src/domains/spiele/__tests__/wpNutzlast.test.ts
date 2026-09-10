@@ -1079,3 +1079,44 @@ describe("beschreibeGewechselten mit Brücke", () => {
     )).toBe("Nr. 9");
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Die Personennummer an der Verlaufszeile (10.09.2026)
+
+   ⚠ Ohne sie müsste die Website den Namen aus `text` zurückparsen —
+   derselbe Umweg, aus dem die 431 vermeintlichen Klarnamen entstanden,
+   die in Wahrheit 0 waren.
+   ══════════════════════════════════════════════════════════════════════ */
+describe("bildeVerlauf — sfv_person_id", () => {
+  const tor = (ueber = {}) => ({
+    typ_id: 1, subtyp_id: 0, minute: 34, zusatzminute: 0,
+    ist_eigener: true, sfv_person_id: 4711, rueckennr: 9,
+    gegner_club_name: null, ein_sfv_person_id: null, ein_rueckennr: null,
+    ...ueber,
+  }) as never;
+
+  it("eine eigene Zeile trägt sie", () => {
+    const [z] = bildeVerlauf([tor()], true, new Map(), "FC Herrliberg");
+    expect(z.sfv_person_id).toBe(4711);
+  });
+
+  it("⚠ eine Gegnerzeile trägt sie NICHT — auch wenn eine dasteht", () => {
+    /* Der CHECK verbietet sie in der Datenbank; hier wird sichergestellt,
+       dass die Nutzlast sie auch dann nicht einsetzt. Eine
+       Personennummer ist über dieselbe Schnittstelle in einen Namen
+       aufzulösen. */
+    const [z] = bildeVerlauf(
+      [tor({ ist_eigener: false, sfv_person_id: 4711,
+             gegner_club_name: "FC Uster" })],
+      true, new Map(), "FC Herrliberg",
+    );
+    expect(z.sfv_person_id).toBeNull();
+    expect(z.text).toContain("FC Uster");
+  });
+
+  it("ohne Kennung bleibt sie leer, statt geraten zu werden", () => {
+    const [z] = bildeVerlauf([tor({ sfv_person_id: null })], true,
+      new Map(), "FC Herrliberg");
+    expect(z.sfv_person_id).toBeNull();
+  });
+});

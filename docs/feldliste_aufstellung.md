@@ -221,6 +221,51 @@ kleinere ist, hängt daran, wie oft die Daten von Hand angefasst werden.
 
 ---
 
+## 5b · ⚠ Ein Unterfeld am Repeater `verlauf` — `sfv_person_id`
+
+**Neu am 10.09.2026, und es ist die Voraussetzung für jede Statistik auf
+der Website.**
+
+| Unterfeld von `verlauf` | Typ | Werte |
+|---|---|---|
+| `sfv_person_id` | **Zahl** | die SFV-Personennummer, **nur bei eigenen Zeilen** |
+
+**Vorschlag für den Feldschlüssel, nach dem Muster der Aufstellung:**
+
+```
+verlauf → sfv_person_id     f_s_v_sfv     number
+```
+
+⚠ **Warum sie gebraucht wird — und es ist kein Komfort:** ohne sie
+müsste die Vorlage den Namen aus `text` zurückparsen („Anna Beispiel
+34'"). **Das ist derselbe Umweg, aus dem am 05.09.2026 die 431
+vermeintlichen Klarnamen entstanden, die in Wahrheit 0 waren** — jemand
+hat seinen eigenen Ausgabetext wieder zerlegt, um zu erfahren, was er
+hineingeschrieben hatte.
+
+**Mit ihr bindet die Website Tore und Karten an dasselbe Spielerprofil
+wie die Aufstellungszeile** — über eine Kennung, nicht über eine
+Schreibweise.
+
+### Was leer heisst
+
+| | |
+|---|---|
+| **bei Gegnern immer leer** | **ENTSCHEIDUNG**, kein Fehlen — eine Personennummer ist über dieselbe Schnittstelle in einen Namen aufzulösen, also ein Name mit einem Zwischenschritt. In der Datenbank erzwungen von `spiel_ereignisse_fremde_anonym_check` |
+| **bei uns leer** | **Grenze der Quelle** — der Verband hat für dieses Ereignis keine Person genannt. Gemessen: 424 von 431 eigenen Ereignissen tragen eine auflösbare Kennung |
+
+### ⚠ Der zweite Mensch einer Wechselzeile bekommt bewusst KEIN Feld
+
+`substitutePlayerId` **löst nirgends auf** — gemessen an fünf Wechseln:
+kein einziges Paar stimmt mit einer `personId` überein. Ein Feld dafür
+wäre eines, das erlaubt ist und leer bleibt.
+
+**Und es wird nicht gebraucht:** Einsatzminuten stehen ohnehin an der
+Aufstellungszeile (`von_minute`, `bis_minute`, `spielzeit`), und wer
+eingewechselt wurde, steht dort als `rolle: eingewechselt`.
+
+---
+
 ## 6 · Was NICHT kommt
 
 | | warum |

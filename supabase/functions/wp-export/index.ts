@@ -1145,6 +1145,12 @@ async function laufeProbe(
   }
 
   const verlaufZeilen = gebaut.reduce((n, s) => n + s.verlauf.length, 0);
+  /* ⚠ Wie viele Verlaufszeilen eine Personennummer tragen — die Antwort
+     auf „reicht das der Website fuer eine Statistik?". Immer da, auch
+     als Null; und die Gegenzahl steht daneben, weil eine einzelne Zahl
+     nicht sagt, ob 40 von 900 viel oder wenig sind. */
+  const verlaufMitPerson = gebaut.reduce(
+    (n, s) => n + s.verlauf.filter((z) => z.sfv_person_id != null).length, 0);
 
   /* ⚠ Die Gegenprobe im Ergebnis, nicht nur im Test: gehen Summe und
      Zeilenzahl auseinander, misst eine der beiden Funktionen etwas
@@ -1195,6 +1201,8 @@ async function laufeProbe(
          das Mass dafuer, wie oft der Verband seine eigene Kennung nicht
          aufloest. Faellt sie gegen null, loest er wieder auf. */
       ueber_nummer_aufgeloest: brueckeZaehler.ueber_nummer_aufgeloest,
+      verlauf_mit_person: verlaufMitPerson,
+      verlauf_zeilen_gesamt: verlaufZeilen,
       nicht_zu_veroeffentlichen: zurueckgehalten,
       verlauf_zeilen: verlaufZeilen,
       runde_mit_doppelabstand: rundeMitDoppelabstand,
