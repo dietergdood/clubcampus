@@ -239,20 +239,29 @@ export function ApiTab({loading,isMobile,mobileKachel,apiVerbindungen,tab,sb=nul
           : `${was}: alle Objekte tragen dieselben Schlüssel`,
       ];
     };
-    /* ⚠ Die Bank steht dabei, auch wenn sie fehlschlaegt — ein 404 heisst
-       „diesen Endpunkt gibt es nicht", ein Netzfehler etwas ganz anderes,
-       und als leere Zeile saehen beide gleich aus. */
+    /* ⚠ BEIDE VERSUCHE STEHEN DA, mit Spiel und Grund der Auswahl. Ein
+       einzelnes „ging nicht" liesse offen, WORAN es lag — am Spiel oder
+       am Antworttyp. Genau diese Ununterscheidbarkeit hat heute dreimal
+       in die falsche Richtung geschickt. */
     const bank = daten.bank as {alle?: string[]; anzahl?: number} | null;
-    const bankZeile = daten.bank_fehler
-      ? `⚠ Bank (Spiel ${daten.bank_spiel}): ${daten.bank_fehler}`
-      : bank
-        ? `Bank (Spiel ${daten.bank_spiel}, ${bank.anzahl ?? 0} Objekte): `
-          +`${(bank.alle ?? []).join(", ") || "(leer)"}`
-        : "Bank: nicht abgefragt — kein Spiel mit Matchnummer gefunden";
+    const versuche = (daten.bank_versuche ?? []) as {accept: string; ergebnis: string}[];
+    const bankZeilen: string[] = [
+      `Bank — Spiel ${daten.bank_spiel} (${String(daten.bank_spiel_aus??"?")})`,
+      ...versuche.map(v => `   Accept ${v.accept}: ${v.ergebnis}`),
+    ];
+    if (bank) {
+      bankZeilen.push(`   Schlüssel (${bank.anzahl ?? 0} Objekte): ${(bank.alle ?? []).join(", ") || "(leer)"}`);
+      const hatPerson = (bank.alle ?? []).includes("personId") && (bank.alle ?? []).includes("personName");
+      bankZeilen.push(hatPerson
+        ? "   ✓ personId und personName sind da — der Weg zu den 207 Namen ist belegt"
+        : "   ⚠ personId/personName fehlen — der Weg ist zu");
+    } else if (versuche.length) {
+      bankZeilen.push("   ⚠ Kein Versuch kam durch — der Weg ist zu");
+    }
     setAuskunft({titel:"Rohschlüssel", zeilen:[
       ...teil(daten.team_liste as never, "Teamliste"),
       ...teil(daten.spielplan as never, "Spielplan"),
-      bankZeile,
+      ...bankZeilen,
       String(daten.bildfeld_team??""),
       String(daten.bildfeld_spielplan??""),
     ].filter(Boolean)});

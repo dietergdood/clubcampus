@@ -370,33 +370,59 @@ Deno.serve(async (req) => {
       const spielplanRoh = await holeSpielplan(zugang, token, saison.id);
       const spiele = schluesselVon(spielplanRoh);
 
-      /* ⚠ ⚠  DRITTER ABRUF: DIE BANK, seit 10.09.2026.
-         Gemessen: `/players` liefert nur die Startelf — 207 von 207
-         Eingewechselten stehen in keiner Aufstellung. Ob `/bench` sie
-         traegt, ist die naechste Frage, und sie wird GEMESSEN statt aus
-         dem Schema gelesen: `PlayerBench` verspricht `personId` und
-         `personName`, aber heute hat sich zweimal gezeigt, dass ein
-         Schema keine Antwort ist.
+      /* ⚠ ⚠  DRITTER ABRUF: DIE BANK — zweiter Anlauf am 10.09.2026.
 
-         ⚠ EIN Spiel genuegt: gefragt ist, ob der Endpunkt diese
-         Schluessel FUEHRT, und das haengt nicht am einzelnen Spiel.
-         Gewaehlt wird das juengste mit einer Matchnummer — ein Spiel
-         ohne Aufstellung haette womoeglich auch keine Bank, und dann
-         saehe „keine Schluessel" aus wie „gibt es nicht". */
+         Der erste antwortete mit HTTP 406 Not Acceptable. Zwei Ursachen
+         kamen in Frage, und beide sind hier ausgeschlossen statt geraten:
+
+         1 · DAS FALSCHE SPIEL. Der erste Anlauf nahm das LETZTE Spiel des
+             Spielplans — also eines in der Zukunft. Ein nicht
+             ausgetragenes Spiel hat keine Bank. Jetzt wird ein Spiel
+             genommen, in dem NACHWEISLICH gewechselt wurde: eines mit
+             einer Wechselzeile in `spiel_ereignisse`. Wo eine
+             Auswechslung protokolliert ist, muss es eine Bank geben.
+
+         2 · DER ANTWORTTYP. `Accept: application/json` ist derselbe wie
+             bei `/players` und `/events`, die laufen — und die
+             Swagger-Datei nennt fuer alle drei dieselben drei Typen.
+             Trotzdem wird der zweite Versuch mit `*​/*` gemacht: ein
+             Schema ist keine Antwort, heute zum dritten Mal.
+
+         ⚠ BEIDE VERSUCHE WERDEN GEMELDET, mit Spiel und Status. Ein
+         einzelnes „ging nicht" liesse offen, WORAN es lag — und genau
+         diese Ununterscheidbarkeit hat heute schon dreimal in die falsche
+         Richtung geschickt. */
+      const { data: wechselSpiel } = await db.from("spiel_ereignisse")
+        .select("spiele(sfv_match_id)")
+        .eq("verein_id", v.verein_id)
+        .eq("typ_id", 2)
+        .eq("ist_eigener", true)
+        .not("ein_sfv_person_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      const ausWechsel = Number(
+        (wechselSpiel as { spiele?: { sfv_match_id?: number } } | null)?.spiele?.sfv_match_id,
+      );
+      /* Rueckfall auf das erste Spiel des Plans, falls es keine
+         Wechselzeile gibt — das erste ist eher ausgetragen als das letzte. */
       const mitId = spielplanRoh
-        .map((s) => Number((s as Record<string, unknown>).matchId))
+        .map((sp) => Number((sp as Record<string, unknown>).matchId))
         .filter((n) => Number.isFinite(n) && n > 0);
-      const probeSpiel = mitId.length ? mitId[mitId.length - 1] : 0;
+      const probeSpiel = Number.isFinite(ausWechsel) && ausWechsel > 0
+        ? ausWechsel
+        : (mitId.length ? mitId[0] : 0);
+
       let bank: unknown = null;
-      let bankFehler: string | null = null;
+      const bankVersuche: Array<{ accept: string; ergebnis: string }> = [];
       if (probeSpiel) {
-        try {
-          bank = schluesselVon(await holeBank(zugang, token, probeSpiel));
-        } catch (e) {
-          /* ⚠ Gebunden, nicht verschwiegen: ein 404 heisst „dieser
-             Endpunkt gibt es nicht", ein Netzfehler etwas ganz anderes.
-             Als leerer Befund saehen beide gleich aus. */
-          bankFehler = e instanceof Error ? e.message : String(e);
+        for (const accept of ["application/json", "*/*"]) {
+          try {
+            bank = schluesselVon(await holeBank(zugang, token, probeSpiel, accept));
+            bankVersuche.push({ accept, ergebnis: "ok" });
+            break;
+          } catch (e) {
+            bankVersuche.push({ accept, ergebnis: e instanceof Error ? e.message : String(e) });
+          }
         }
       }
 
@@ -406,8 +432,10 @@ Deno.serve(async (req) => {
         team_liste: teams,
         spielplan: spiele,
         bank_spiel: probeSpiel,
+        bank_spiel_aus: Number.isFinite(ausWechsel) && ausWechsel > 0
+          ? "Spiel mit protokolliertem Wechsel" : "erstes Spiel des Plans",
         bank: bank,
-        bank_fehler: bankFehler,
+        bank_versuche: bankVersuche,
         bildfeld_team: suchtBildfeld(teams),
         bildfeld_spielplan: suchtBildfeld(spiele),
       });

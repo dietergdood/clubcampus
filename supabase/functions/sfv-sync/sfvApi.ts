@@ -37,10 +37,30 @@ export async function holeToken(z: SfvZugang): Promise<string> {
 }
 
 async function hole(z: SfvZugang, token: string, pfad: string): Promise<unknown> {
+  return await holeMitAccept(z, token, pfad, "application/json");
+}
+
+/**
+ * Wie `hole`, nur mit waehlbarem `Accept`.
+ *
+ * ⚠ NUR FUER DIE BANK-PROBE (10.09.2026). `/api/match/{id}/bench`
+ * antwortete mit **HTTP 406 Not Acceptable** — der Server kann keinen der
+ * verlangten Typen liefern. Die Swagger-Datei sagt fuer alle drei
+ * Match-Endpunkte dasselbe (`application/json`, `text/json`,
+ * `text/plain`), und `/players` und `/events` laufen damit.
+ *
+ * ⚠ Ein Schema ist keine Antwort — heute zum dritten Mal. Deshalb wird
+ * der zweite Versuch nicht geraten, sondern gemessen: derselbe Aufruf mit
+ * `Accept: *​/*`. Antwortet er dann, lag es am Typ; kommt wieder 406, lag
+ * es nicht daran.
+ */
+async function holeMitAccept(
+  z: SfvZugang, token: string, pfad: string, accept: string,
+): Promise<unknown> {
   let antwort: Response;
   try {
     antwort = await fetch(`${z.basis}${pfad}`, {
-      headers: { "X-User-Token": token, "X-User-Language": "1", Accept: "application/json" },
+      headers: { "X-User-Token": token, "X-User-Language": "1", Accept: accept },
     });
   } catch {
     throw new SfvFehler("SFV nicht erreichbar");
@@ -172,8 +192,10 @@ export async function holeAufstellung(z: SfvZugang, token: string, matchId: numb
  * Deshalb wird zuerst gemessen: `aktion: "rohschluessel"` fragt hier nach
  * SCHLUESSELN, nicht nach Werten.
  */
-export async function holeBank(z: SfvZugang, token: string, matchId: number): Promise<SfvMatch[]> {
-  const roh = await hole(z, token, `/api/match/${matchId}/bench?Language=1`);
+export async function holeBank(
+  z: SfvZugang, token: string, matchId: number, accept = "application/json",
+): Promise<SfvMatch[]> {
+  const roh = await holeMitAccept(z, token, `/api/match/${matchId}/bench?Language=1`, accept);
   if (!Array.isArray(roh)) throw new SfvFehler("SFV liefert keine Bank");
   return roh as SfvMatch[];
 }
