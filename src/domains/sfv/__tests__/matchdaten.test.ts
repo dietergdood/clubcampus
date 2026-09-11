@@ -4,7 +4,7 @@ import {
   bildeAufstellung, bildeEreignis, istEigener, istKorrekturUeberfluessig,
   leseHalbzeit, waehleKandidaten, NACHZUG_TAGE, bildeOffeneNamen,
   bildeSfvPerson, entdoppleSfvPersonen, verschmelzeAufstellung,
-  zaehleVerbandKorrekturen,
+  zaehleVerbandKorrekturen, gegnerUnveraendert,
 } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 import type { KorrekturZeile } from "../../../../supabase/functions/sfv-sync/matchdaten.ts";
 
@@ -747,5 +747,85 @@ describe("zaehleVerbandKorrekturen — der Verband berichtigt nachtraeglich", ()
 
   it("leer gegen leer ist null", () => {
     expect(zaehleVerbandKorrekturen([], [])).toBe(0);
+  });
+});
+
+describe("gegnerUnveraendert — der Waechter darf nicht taub werden", () => {
+  /* ⚠ ⚠ ANLASS: fremde Aufstellungszeilen gehen ueber delete + insert, und
+     `stempel_zuletzt_geaendert` kann bei INSERT nichts vergleichen — es
+     gibt kein `old`. Also setzt JEDES Ersetzen `zuletzt_geaendert`, daraus
+     folgt `export_wartet() > 0`, daraus ein vollstaendiger Export.
+
+     ⚠ Die teurere Haelfte ist nicht die Last: der Waechter fragt beim
+     Export „wartet etwas?" — und diese Frage wird bedeutungslos, wenn
+     stuendlich etwas wartet. */
+  const zeile = (nr: number, extra = {}) => ({
+    sfv_team_id: 37931, rueckennr: nr, position_id: 3,
+    position_name: "Verteidigung", von_minute: 1, bis_minute: 90,
+    spielzeit: 90, rolle_zuweisung_id: 0, rolle_zuweisung: "-",
+    sfv_person_id: null, name: null, ...extra,
+  });
+
+  it("gleiche Zeilen sind unveraendert", () => {
+    expect(gegnerUnveraendert([zeile(5), zeile(9)], [zeile(5), zeile(9)]))
+      .toBe(true);
+  });
+
+  it("⚠ die Reihenfolge des Verbands ist keine Aenderung", () => {
+    /* Sonst waere jeder zweite Lauf eine Aenderung, und die Reparatur
+       waere wirkungslos — ohne dass etwas fehlschlaegt. */
+    expect(gegnerUnveraendert([zeile(5), zeile(9)], [zeile(9), zeile(5)]))
+      .toBe(true);
+  });
+
+  it("⚠⚠ null und undefined gelten als gleich", () => {
+    /* Die Datenbank liefert `null`, ein gebautes Objekt laesst das Feld
+       womoeglich weg. Ohne diese Gleichsetzung waere JEDER Lauf eine
+       Aenderung — genau der Fall, den die Reparatur beheben soll. */
+    const ausDb = zeile(5, { position_name: null });
+    const gebaut = { ...zeile(5) } as Record<string, unknown>;
+    delete gebaut.position_name;
+    expect(gegnerUnveraendert([ausDb], [gebaut])).toBe(true);
+  });
+
+  it("eine geaenderte Minute ist eine Aenderung", () => {
+    expect(gegnerUnveraendert([zeile(5)], [zeile(5, { von_minute: 40 })]))
+      .toBe(false);
+  });
+
+  it("eine geaenderte Position ist eine Aenderung", () => {
+    expect(gegnerUnveraendert([zeile(5)], [zeile(5, { position_name: "Sturm" })]))
+      .toBe(false);
+  });
+
+  it("eine Zeile mehr ist eine Aenderung", () => {
+    expect(gegnerUnveraendert([zeile(5)], [zeile(5), zeile(9)])).toBe(false);
+  });
+
+  it("eine Zeile weniger ebenfalls", () => {
+    expect(gegnerUnveraendert([zeile(5), zeile(9)], [zeile(5)])).toBe(false);
+  });
+
+  it("eine andere Nummer ist eine Aenderung", () => {
+    expect(gegnerUnveraendert([zeile(5)], [zeile(6)])).toBe(false);
+  });
+
+  it("⚠ eine andere Mannschaft bei gleicher Nummer auch", () => {
+    /* Zwei eigene Teams gegeneinander: dieselbe Nummer, verschiedene
+       Seiten. Der Schluessel traegt deshalb sfv_team_id. */
+    expect(gegnerUnveraendert([zeile(5)], [zeile(5, { sfv_team_id: 38309 })]))
+      .toBe(false);
+  });
+
+  it("leer gegen leer ist unveraendert", () => {
+    expect(gegnerUnveraendert([], [])).toBe(true);
+  });
+
+  it("⚠ eine Person, die auftaucht, ist eine Aenderung", () => {
+    /* sfv_person_id steht in der Vergleichsliste, obwohl der CHECK sie bei
+       fremden Zeilen auf NULL zwingt. Eine Liste, die sich auf einen CHECK
+       verlaesst, ist eine Zusicherung ueber eine andere Stelle. */
+    expect(gegnerUnveraendert([zeile(5)], [zeile(5, { sfv_person_id: 123 })]))
+      .toBe(false);
   });
 });

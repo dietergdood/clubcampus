@@ -43,7 +43,7 @@ const LAUF: LaufErgebnis = {
        hier mit Absicht STIMMIG gesetzt — ein Testwert, der nicht aufgeht,
        macht aus der Selbstprobe eine Behauptung. */
     aufstellung_geliefert: 169, eigen_ohne_person: 2, fremd_ohne_nummer: 0,
-    verband_hat_korrigiert: 5,
+    verband_hat_korrigiert: 5, fremd_unveraendert: 11,
     halbzeit: { da: 3, fehlt: 0, leer: 1, ohne_halbzeit: 2 },
     pass_konflikte: ["Mitglied 633: zwei Passnummern"],
     nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
@@ -61,7 +61,7 @@ describe("fuersProtokoll", () => {
     expect(Object.keys(md).sort()).toEqual([
       "aufstellung_fremd", "aufstellung_geliefert", "aufstellung_zeilen",
       "eigen_ohne_person", "eigene_unzugeordnet", "ereignisse_zeilen",
-      "fehler", "fehlermeldungen", "fremd_ohne_nummer",
+      "fehler", "fehlermeldungen", "fremd_ohne_nummer", "fremd_unveraendert",
       "gegner_doppel", "halbzeit", "nachzug_meldungen", "namen_geschrieben",
       "paesse_geschrieben", "pass_konflikte",
       "spiele_geholt", "verband_hat_korrigiert", "zuordnungen_gesamt",

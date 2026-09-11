@@ -482,6 +482,87 @@ export function leseHalbzeit(m: SfvRoh): { stand: string | null; zustand: Halbze
   return { stand: `${a}:${b}`, zustand: "da" };
 }
 
+/* ── Gegneraufstellung: nur ersetzen, was sich geaendert hat ───────────────
+   11.09.2026.
+
+   ⚠ ⚠  ANLASS, UND ER IST EINE KOLLISION MIT DEM WAECHTER.
+
+   Fremde Aufstellungszeilen gehen ueber `delete + insert` (der partielle
+   Index ist ueber PostgREST nicht als `onConflict` erreichbar). Und:
+
+     stempel_zuletzt_geaendert  vergleicht bei UPDATE den Inhalt
+                                und laesst den Stempel stehen
+                                — bei INSERT kann es nichts vergleichen,
+                                  es gibt kein `old`
+
+   Also setzt JEDES Ersetzen `zuletzt_geaendert = now()`, auch wenn sich
+   nichts geaendert hat. Daraus folgt `export_wartet() > 0`, daraus ein
+   vollstaendiger WordPress-Export mit 21 POSTs — stuendlich, grundlos.
+
+   ⚠ DIE TEURERE HAELFTE IST NICHT DIE LAST. Der Waechter fragt beim
+   Export **„wartet etwas?"** statt „wann lief er zuletzt?", und zwar mit
+   ausdruecklicher Begruendung: ein Melder, der immer dasselbe sagt, wird
+   nicht mehr gelesen. **Genau diese Frage wird bedeutungslos, wenn
+   stuendlich etwas wartet.**
+
+   ── Was verglichen wird, und warum genau das ─────────────────────────────
+
+   ⚠ DIE LISTE MUSS MINDESTENS SO STRENG SEIN WIE DER TRIGGER. Meldete sie
+   „geaendert", wo er „unveraendert" sagt, liefe der Export trotzdem — und
+   die Reparatur waere wirkungslos, ohne dass etwas fehlschlaegt.
+
+   Draussen sind deshalb nur drei Sorten:
+
+     id                      bei jedem Insert neu; der Trigger sieht den
+                             Fall nie, weil ein UPDATE die id behaelt
+     erstmals_gesehen        wird absichtlich uebernommen (sonst hiesse
+                             die Spalte „zuletzt neu angelegt")
+     die Laufstempel         nimmt der Trigger selbst aus
+
+   `sfv_person_id` und `name` stehen MIT in der Liste, obwohl der CHECK
+   sie bei fremden Zeilen auf NULL zwingt. Sie tragen heute keine
+   Information — aber eine Liste, die sich auf einen CHECK verlaesst, ist
+   eine Zusicherung ueber eine andere Stelle. */
+const FREMD_VERGLEICH = [
+  "sfv_team_id", "rueckennr", "position_id", "position_name",
+  "von_minute", "bis_minute", "spielzeit",
+  "rolle_zuweisung_id", "rolle_zuweisung",
+  "sfv_person_id", "name",
+] as const;
+
+/** Eine Gegnerzeile, soweit sie fuer den Vergleich zaehlt. */
+export type FremdVergleich = Record<string, unknown>;
+
+/**
+ * Sind die gelieferten Gegnerzeilen dieselben wie die gespeicherten?
+ *
+ * ⚠ Sortiert ueber (Team, Nummer) — die Reihenfolge des Verbands ist
+ * keine Aussage, und ein Vergleich, der an ihr haengt, meldete eine
+ * Aenderung, wo nur umsortiert wurde.
+ *
+ * ⚠ `null` und `undefined` gelten als gleich: die Datenbank liefert
+ * `null`, ein gebautes Objekt laesst das Feld womoeglich weg. Ohne diese
+ * Gleichsetzung waere JEDER Lauf eine Aenderung — und die Reparatur
+ * waere wirkungslos, ohne dass etwas fehlschlaegt.
+ */
+export function gegnerUnveraendert(
+  alt: FremdVergleich[], neu: FremdVergleich[],
+): boolean {
+  if (alt.length !== neu.length) return false;
+  const schluessel = (z: FremdVergleich) =>
+    `${z.sfv_team_id ?? ""}:${z.rueckennr ?? ""}`;
+  const nachA = [...alt].sort((a, b) => schluessel(a).localeCompare(schluessel(b)));
+  const nachB = [...neu].sort((a, b) => schluessel(a).localeCompare(schluessel(b)));
+  for (let i = 0; i < nachA.length; i++) {
+    for (const f of FREMD_VERGLEICH) {
+      const a = nachA[i][f] ?? null;
+      const b = nachB[i][f] ?? null;
+      if (a !== b) return false;
+    }
+  }
+  return true;
+}
+
 /* ── Der Verband korrigiert nachtraeglich ──────────────────────────────────
    Gemessen am 11.09.2026 an Spiel 4379006 (29.08., 1:6): in fuenf Minuten
    nennt ein spaeterer Abruf eine ANDERE Person als der fruehere.

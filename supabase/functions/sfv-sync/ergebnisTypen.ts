@@ -70,6 +70,22 @@ export interface MatchdatenErgebnis {
    * ungeschehen.
    */
   verband_hat_korrigiert: number;
+  /**
+   * Gegnerzeilen, die UNVERAENDERT waren und deshalb gar nicht
+   * geschrieben wurden.
+   *
+   * ⚠ ⚠ GEZAEHLT, NICHT STILL UEBERSPRUNGEN. Ein Schreibvorgang, der
+   * ausbleibt, sieht von aussen aus wie einer, der nie vorgesehen war —
+   * und dann ist beim naechsten Mal nicht zu sagen, ob die Reparatur
+   * greift oder der Zweig tot ist.
+   *
+   * ⚠ Der Anlass ist eine Kollision mit dem WAECHTER, nicht eine
+   * Verschwendung: `delete + insert` setzt ueber den Trigger immer
+   * `zuletzt_geaendert` (bei INSERT gibt es kein `old`, es kann nichts
+   * vergleichen), daraus folgt `export_wartet() > 0` — und damit wird
+   * die Frage „wartet etwas?" bedeutungslos.
+   */
+  fremd_unveraendert: number;
   /** Gegnerzeilen, die sich (Team, Nummer) teilten und verschmolzen wurden.
       ⚠ Erwartung 0 — jede andere Zahl ist eine Unstimmigkeit BEIM VERBAND
       und keine Eigenschaft unserer Kette. Sie wird gezaehlt, damit das
@@ -376,6 +392,7 @@ export function fuersProtokoll(erg: LaufErgebnis): Record<string, unknown> {
       eigen_ohne_person: md.eigen_ohne_person,
       fremd_ohne_nummer: md.fremd_ohne_nummer,
       verband_hat_korrigiert: md.verband_hat_korrigiert,
+      fremd_unveraendert: md.fremd_unveraendert,
       gegner_doppel: md.gegner_doppel,
       halbzeit: md.halbzeit,
       paesse_geschrieben: md.paesse_geschrieben,

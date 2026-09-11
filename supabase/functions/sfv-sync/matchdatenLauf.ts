@@ -24,9 +24,9 @@ import { schreibeSfvPersonen } from "./sfvPersonenSchreiben.ts";
 import {
   bildeAufstellung, verschmelzeAufstellung, bildeEreignis, leseHalbzeit, istKorrekturUeberfluessig, waehleKandidaten,
   passAenderungen, passKonflikte, leseSchiedsrichter,
-  MATCHDATEN_STATUS, zaehleVerbandKorrekturen,
+  MATCHDATEN_STATUS, zaehleVerbandKorrekturen, gegnerUnveraendert,
 } from "./matchdaten.ts";
-import type { KorrekturZeile, SfvRoh, SpielKandidat, VerlaufVergleich } from "./matchdaten.ts";
+import type { KorrekturZeile, SfvRoh, SpielKandidat, VerlaufVergleich, FremdVergleich } from "./matchdaten.ts";
 import { ausBase64, erkenneBild, logoPfad, offeneLogos, LOGO_BUCKET } from "./logos.ts";
 import type { LogoZeile } from "./logos.ts";
 import type { MatchdatenErgebnis } from "./ergebnisTypen.ts";
@@ -60,7 +60,7 @@ export async function laufeMatchdaten(
        ist „nur neun Spieler" nicht von „wir haben neun uebrig gelassen"
        zu unterscheiden — und genau das war am 11.09.2026 die Frage. */
     aufstellung_geliefert: 0, eigen_ohne_person: 0, fremd_ohne_nummer: 0,
-    verband_hat_korrigiert: 0,
+    verband_hat_korrigiert: 0, fremd_unveraendert: 0,
     eigene_unzugeordnet: 0, zuordnungen_gesamt: 0, namen_geschrieben: 0, aufstellung_fremd: 0, gegner_doppel: 0,
     halbzeit: { da: 0, fehlt: 0, leer: 0, ohne_halbzeit: 0 }, paesse_geschrieben: 0, pass_konflikte: [], nachzug_meldungen: 0, fehler: 0, fehlermeldungen: [],
   };
@@ -217,35 +217,63 @@ export async function laufeMatchdaten(
            Lauf. Das ist der Preis, und er ist bezahlbar, weil jeder Lauf
            sie neu herleitet. */
         const alt = await db.from("spiel_aufstellung")
-          .select("sfv_team_id,rueckennr,erstmals_gesehen")
+          .select("sfv_team_id,rueckennr,erstmals_gesehen,position_id,"
+            + "position_name,von_minute,bis_minute,spielzeit,"
+            + "rolle_zuweisung_id,rolle_zuweisung,sfv_person_id,name")
           .eq("verein_id", v.verein_id).eq("spiel_id", spiel.id)
           .eq("ist_eigener", false);
         if (alt.error) {
           throw new SfvFehler(`Gegneraufstellung lesen: ${alt.error.message}`);
         }
-        /* `erstmals_gesehen` traegt mit — sonst hiesse die Spalte nach dem
-           ersten Ersetzen „zuletzt neu angelegt", und ein Spaltenname, der
-           etwas anderes sagt als sein Inhalt, ist teurer als der Umweg
-           ueber diese eine Abfrage. */
-        const seit = new Map<string, string>();
-        for (const z of alt.data ?? []) {
-          seit.set(`${z.sfv_team_id}:${z.rueckennr}`, z.erstmals_gesehen);
-        }
+        const alteFremde = (alt.data ?? []) as unknown as FremdVergleich[];
 
-        const weg = await db.from("spiel_aufstellung").delete()
-          .eq("verein_id", v.verein_id).eq("spiel_id", spiel.id)
-          .eq("ist_eigener", false);
-        if (weg.error) {
-          throw new SfvFehler(`Gegneraufstellung leeren: ${weg.error.message}`);
-        }
+        /* ⚠ ⚠  NUR ERSETZEN, WAS SICH GEAENDERT HAT — seit dem 11.09.2026,
+           und es behebt eine Kollision mit dem WAECHTER, nicht bloss eine
+           Verschwendung.
 
-        const { error } = await db.from("spiel_aufstellung")
-          .insert(fremdeZeilen.map((z) => {
-            const frueher = seit.get(`${z.sfv_team_id}:${z.rueckennr}`);
-            return frueher ? { ...z, erstmals_gesehen: frueher } : z;
-          }));
-        if (error) throw new SfvFehler(`Gegneraufstellung: ${error.message}`);
-        erg.aufstellung_fremd += fremdeZeilen.length;
+           `delete + insert` setzt ueber den Trigger IMMER
+           `zuletzt_geaendert = now()`: bei INSERT gibt es kein `old`, es
+           kann also nichts vergleichen. Daraus folgt `export_wartet() > 0`
+           und daraus ein vollstaendiger WordPress-Export mit 21 POSTs —
+           stuendlich, ohne dass sich etwas geaendert hat.
+
+           ⚠ Der Waechter fragt beim Export **„wartet etwas?"** statt
+           „wann lief er zuletzt?", mit ausdruecklicher Begruendung. Genau
+           diese Frage wird bedeutungslos, wenn stuendlich etwas wartet.
+
+           Der Vergleich kostet nichts: die alten Zeilen werden ohnehin
+           gelesen (fuer `erstmals_gesehen`), es kommen nur Spalten dazu. */
+        if (gegnerUnveraendert(alteFremde, fremdeZeilen as unknown as FremdVergleich[])) {
+          /* ⚠ GEZAEHLT, NICHT STILL UEBERSPRUNGEN. Ein Schreibvorgang, der
+             ausbleibt, sieht von aussen aus wie einer, der nie vorgesehen
+             war — und dann ist beim naechsten Mal nicht zu sagen, ob die
+             Reparatur greift oder der Zweig tot ist. */
+          erg.fremd_unveraendert += fremdeZeilen.length;
+        } else {
+          /* `erstmals_gesehen` traegt mit — sonst hiesse die Spalte nach dem
+             ersten Ersetzen „zuletzt neu angelegt", und ein Spaltenname, der
+             etwas anderes sagt als sein Inhalt, ist teurer als der Umweg
+             ueber diese eine Abfrage. */
+          const seit = new Map<string, string>();
+          for (const z of alteFremde) {
+            seit.set(`${z.sfv_team_id}:${z.rueckennr}`, z.erstmals_gesehen as string);
+          }
+
+          const weg = await db.from("spiel_aufstellung").delete()
+            .eq("verein_id", v.verein_id).eq("spiel_id", spiel.id)
+            .eq("ist_eigener", false);
+          if (weg.error) {
+            throw new SfvFehler(`Gegneraufstellung leeren: ${weg.error.message}`);
+          }
+
+          const { error } = await db.from("spiel_aufstellung")
+            .insert(fremdeZeilen.map((z) => {
+              const frueher = seit.get(`${z.sfv_team_id}:${z.rueckennr}`);
+              return frueher ? { ...z, erstmals_gesehen: frueher } : z;
+            }));
+          if (error) throw new SfvFehler(`Gegneraufstellung: ${error.message}`);
+          erg.aufstellung_fremd += fremdeZeilen.length;
+        }
       }
 
       /* ⚠ ⚠ ⚠  ERSETZEN, NICHT UPSERTEN — seit dem 11.09.2026.
