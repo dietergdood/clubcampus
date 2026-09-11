@@ -391,11 +391,18 @@ export function beschreibeGewechselten(
      Kennung eines gegnerischen Wechsels zufällig in unserer Karte auf,
      stünde der Name genauso falsch auf der Seite.
 
-     Ob das heute vorkommen KANN, ist offen — Entscheid B verbietet die
-     Personennummer bei fremden AUFSTELLUNGSzeilen, für
-     `spiel_ereignisse.ein_sfv_person_id` gibt es keinen solchen CHECK.
-     **Eine Grenze, die vor beiden Quellen steht, muss die Frage gar
-     nicht beantworten.** */
+     ⚠ BERICHTIGT AM 11.09.2026, am selben Tag: hier stand „für
+     `spiel_ereignisse.ein_sfv_person_id` gibt es keinen solchen CHECK".
+     **Falsch.** `spiel_ereignisse_fremde_anonym_check` deckt BEIDE
+     Spalten ab — `ist_eigener OR (sfv_person_id IS NULL AND
+     ein_sfv_person_id IS NULL)`. Ein fremdes Ereignis kann gar keine
+     auflösbare Personennummer tragen; dieser zweite Weg war **nie
+     erreichbar**.
+
+     Die Reihenfolge bleibt trotzdem so. Sie kostet nichts, und eine
+     Grenze vor ALLEN Quellen muss die Frage nicht beantworten — aber
+     die Begründung war eine Behauptung über eine andere Stelle, und
+     die habe ich nicht nachgesehen, während ich genau darüber schrieb. */
   if (!e.ist_eigener) {
     return e.ein_rueckennr != null ? `Nr. ${e.ein_rueckennr}` : "";
   }

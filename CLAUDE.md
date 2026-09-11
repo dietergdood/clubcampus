@@ -3647,9 +3647,19 @@ Es gibt **zwei** Wege zu einem Namen — die Brücke **und** die Zuordnungskarte
 also nur vor der Brücke. Löste die Kennung eines gegnerischen Wechsels
 zufällig in unserer Karte auf, stünde der Name genauso falsch da.
 
-Ob das heute vorkommen KANN, ist **ungemessen**: Entscheid B verbietet die
-Personennummer bei fremden AUFSTELLUNGSzeilen, für
-`spiel_ereignisse.ein_sfv_person_id` gibt es **keinen** CHECK.
+⚠ ⚠ **BERICHTIGT AM 11.09.2026, am selben Tag.** Hier stand: *„für
+`spiel_ereignisse.ein_sfv_person_id` gibt es **keinen** CHECK."*
+**Falsch.** `spiel_ereignisse_fremde_anonym_check` deckt **beide** Spalten
+ab — `ist_eigener OR (sfv_person_id IS NULL AND ein_sfv_person_id IS NULL)`.
+**Ein fremdes Ereignis kann gar keine auflösbare Personennummer tragen;
+dieser zweite Weg war nie erreichbar.**
+
+Die Grenze bleibt, wo sie ist — sie kostet nichts, und vor allen Quellen zu
+stehen ist die richtige Stelle. ⚠ **Aber die Begründung war wieder eine
+Behauptung über eine andere Stelle, die ich nicht nachgesehen habe** —
+geschrieben in demselben Absatz, der genau davor warnt. Vierter Fall in
+zwei Tagen, und der billigste von allen: **ein `grep` auf `schema.sql`
+hätte ihn verhindert.**
 
 > **Eine Grenze, die vor allen Quellen steht, muss die Frage nicht
 > beantworten.** Sie steht seither ganz vorne, und der zweite Fall hält es
