@@ -8924,6 +8924,59 @@ Verbandsnummer, 471 Verlaufszeilen ebenso.
 > die Funktion zu reparieren.
 
 
+### ⚠⚠ EIN AUFGERÄUMTER BLOCK BRAUCHT DIESELBE GEGENPROBE WIE EIN GEBAUTER
+
+Didis Regel vom 11.09.2026, und sie füllt eine Lücke, die dieses Papier
+bisher nur in einer Richtung kannte.
+
+**Für das Bauen ist die Gegenprobe hier überall verlangt:** eine Prüfung,
+die nie rot war, ist keine; eine Attrappe prüft die Abschrift; eine Regel
+braucht ihre Positivkontrolle. **Für das ABBAUEN stand nichts** — ausser
+dem Satz „erst zeigen, was darin liegt, dann schneiden“, und der
+betrifft den Umfang, nicht die Wirkung.
+
+> **Wer etwas entfernt, behauptet: es tut nichts. Das ist eine Aussage
+> über Verhalten, und sie gehört geprüft wie jede andere.**
+
+#### Das Beispiel desselben Tages, an dem es getragen hat
+
+Am 11.09.2026 waren zwei Cron-Dateien zu entfernen, weil zwei Wächter
+unter zwei Namen liefen. **Der Reflex war „den neueren behalten“** — und
+die Gegenprobe hat ihn umgeworfen:
+
+| | Ausfall | Export | Nachlauf | Wachstum | **Totmann** |
+|---|---|---|---|---|---|
+| der ältere | ✅ | ❌ | ❌ | ✅ | **✅** |
+| der neuere | ✅ | ✅ | ✅ | ❌ | **❌** |
+
+⚠ **Den neueren zu behalten hätte den Totmannschalter entfernt** — die
+einzige Einrichtung, die den Ausfall des Wächters selbst meldet. **Die
+Prüfung kostete einen Vergleich und hat einen stillen Verlust verhindert.**
+
+#### Die Frage, die den Abbau prüfbar macht
+
+> **Nicht „brauche ich das noch?“, sondern: WAS KANN DAS, WAS SONST NICHTS
+> KANN?**
+
+Die erste Frage beantwortet man aus dem Gedächtnis, die zweite aus einem
+Vergleich. ⚠ Und die zweite ist auch dann zu stellen, wenn das Entfernte
+offensichtlich überflüssig aussieht — **offensichtlich ist die Beschreibung
+eines Eindrucks, nicht einer Messung.**
+
+**Praktisch heisst das dreierlei:**
+
+| | |
+|---|---|
+| vor dem Schnitt | die Menge ausgeben, nicht schätzen (`grep -rn`, `select … from cron.job`) |
+| beim Schnitt | für jedes Stück benennen, was es konnte — und wer es sonst kann |
+| nach dem Schnitt | dieselbe Prüfkette wie nach einem Bau, **und eine Zahl, die sich bewegt haben muss** |
+
+⚠ **Die dritte Zeile ist die, die am ehesten ausfällt.** Nach einem Bau
+schaut man auf die neue Zahl; nach einem Abbau schaut man, dass nichts rot
+ist. **Rot wird aber nur, was noch jemand ruft** — und das Entfernte ruft
+niemand mehr, genau deshalb wurde es entfernt.
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
