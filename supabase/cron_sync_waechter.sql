@@ -2,7 +2,13 @@
 -- SYNC-WAECHTER
 -- 21.08.2026
 --
--- Meldet, wenn der SFV-Sync ausfaellt.
+-- Meldet, wenn der SFV-Sync ausfaellt — und seit dem 11.09.2026 zweitens,
+-- wenn eine Tabelle auf die stille 1000-Zeilen-Grenze von PostgREST zuwaechst.
+--
+-- ⚠ ZWEI FRAGEN IN EINEM BLOCK, und sie sind absichtlich NICHT verschmolzen:
+--   der Ausfall geht in `v_ausfaell` und damit auf `/fail`, das Wachstum
+--   nicht. Eine wachsende Tabelle ist kein Ausfall; wer sie so behandelt,
+--   faerbt den Totmannschalter dauerhaft rot und macht ihn wertlos.
 --
 -- ⚠ WARUM ES IHN GIBT
 --   Am 20./21.08.2026 stand der Sync 14 Stunden. Jeder stuendliche Aufruf
@@ -155,6 +161,8 @@ begin
          Totmannschalter Alarm geschlagen — richtig, aber ohne zu sagen,
          warum. */
       v_anz      int;
+      v_zeilen   bigint;
+      v_ref      uuid;
     begin
       /* ── Pruefen: das PAAR, nicht die eine Spalte ──────────────────── */
       for r in
@@ -202,6 +210,69 @@ begin
 
       /* Der eigene Zeitstempel — gelesen von der API-Kachel (ApiTab). */
       update public.api_verbindungen set wache_zuletzt = now() where active is true;
+
+
+      /* ── Zweite Frage: waechst eine Tabelle auf die 1000 zu? ────────── */
+      /*
+         ⚠ EINE ANDERE FRAGE ALS DER REST DIESER DATEI, und deshalb steht
+         sie NICHT in `v_ausfaell`: eine wachsende Tabelle ist kein Ausfall.
+         Wuerde sie den Totmannschalter auf `/fail` schicken, stuende
+         healthchecks dauerhaft rot — und ein dauerhaft rotes Pruefmittel
+         ist keines mehr.
+
+         ⚠ WARUM SIE HIER STEHT UND NICHT IN EINEM EIGENEN AUFTRAG: dieser
+         Block laeuft ohnehin, mit vollem SQL-Zugriff, und ein zweiter
+         Cron-Auftrag waere ein zweites Ding, das still ausfallen kann.
+
+         ⚠ UND WARUM VOR DEM PING: wirft diese Schleife, unterbleibt der
+         Ping, und healthchecks meldet nach der Nachfrist. Ein Fehler hier
+         ist damit LAUT. Stuende sie danach, ginge erst das „ok" hinaus und
+         der Fehlschlag bliebe in cron.job_run_details liegen.
+      */
+      for r in
+        /* ⚠ `n_live_tup` ist eine SCHAETZUNG des Statistiksammlers, keine
+           Zaehlung — nach einem grossen Insert kann sie nachhinken. Sie ist
+           deshalb nur der billige VORFILTER, mit 200 Zeilen Reserve unter
+           der Schwelle. Entschieden wird auf einer echten Zaehlung. */
+        select c.relname from pg_stat_user_tables c
+         where c.schemaname = 'public' and c.n_live_tup > 600
+         order by c.relname
+      loop
+        execute format('select count(*) from public.%I', r.relname) into v_zeilen;
+        if v_zeilen <= 800 then continue; end if;
+
+        /* ⚠ Zeigt auf KEINE Zeile. Es ist ein aus dem Tabellennamen
+           abgeleiteter, stabiler Schluessel — nur damit die Regel „je
+           Tabelle hoechstens einmal" ueberhaupt greifen kann. */
+        v_ref := md5('tabelle:' || r.relname)::uuid;
+
+        insert into public.benachrichtigungen
+               (verein_id, benutzer_id, type, title, content, referenz_typ, referenz_id)
+        select b.verein_id, b.id, 'warnung',
+               'Die Tabelle ' || r.relname || ' hat ' || v_zeilen || ' Zeilen',
+               'PostgREST liefert hoechstens 1000 Zeilen und meldet das nicht: '
+                 || 'error bleibt null, data hat genau 1000. Wer diese Tabelle '
+                 || 'liest, muss pagen — alleSeiten() in src/domains/db/alleSeiten.ts. '
+                 || 'Ob sie irgendwo ungepagt gelesen wird, sagt diese Meldung '
+                 || 'NICHT; das steht im Code. Kommt sie fuer eine Tabelle, die '
+                 || 'laengst gepagt gelesen wird, ist sie gegenstandslos.',
+               'tabelle_gross', v_ref
+          from public.benutzer b
+         where b.ist_admin is true and b.aktiv is not false
+           /* ⚠ OHNE `gelesen` — anders als beim Ausfall oben, und das ist
+              der Unterschied zwischen einem ZUSTAND und einem EREIGNIS:
+              ein Ausfall wird behoben und darf wiederkommen. Eine Tabelle
+              faellt nie wieder unter 800. Mit der Ausfall-Regel naegte die
+              Meldung nach jedem Lesen erneut — und nach dem dritten Mal
+              schaltet sie jemand ab. */
+           and not exists (
+             select 1 from public.benachrichtigungen x
+              where x.verein_id = b.verein_id
+                and x.referenz_typ = 'tabelle_gross'
+                and x.referenz_id = v_ref);
+        get diagnostics v_anz = row_count;
+        v_neu := v_neu + v_anz;
+      end loop;
 
       /* ── Totmannschalter ───────────────────────────────────────────── */
       select decrypted_secret into v_url
@@ -253,6 +324,17 @@ end $waechter$;
 --   select created_at at time zone 'Europe/Zurich', title, gelesen
 --     from public.benachrichtigungen
 --    where referenz_typ = 'sync_ausfall' order by created_at desc limit 10;
+--
+-- Was er ueber die Tabellengroessen gemeldet hat:
+--   select created_at at time zone Europe/Zurich, title, gelesen
+--     from public.benachrichtigungen
+--    where referenz_typ = tabelle_gross order by created_at desc;
+--
+-- ⚠ VOR DEM EINSPIELEN EINMAL VON HAND, damit der erste Lauf keine
+--   Ueberraschung ist — eine Schwelle gehoert gegen einen echten Fall
+--   gehalten, nicht gegen eine Erwartung:
+--   select relname, n_live_tup from pg_stat_user_tables
+--    where schemaname = public and n_live_tup > 600 order by 2 desc;
 --
 -- Was healthchecks bekommen hat:
 --   select status_code, left(content,80), created at time zone 'Europe/Zurich'

@@ -3824,6 +3824,70 @@ angewendet, den niemand gemessen hat.** Und jedes Mal klang es plausibler
 als eine blosse Vermutung, gerade weil der Mechanismus stimmte.
 
 
+### ⚠ EIN ZUSTAND DARF WIEDERKOMMEN, EIN EREIGNIS NICHT — dieselbe Regel wäre hier ein Abschalter
+
+Gefunden am 11.09.2026 beim Anbau der Wachstumsfrage an den Sync-Wächter.
+**Nicht durch einen Fehler — durch die Frage, ob die bestehende Regel
+passt.**
+
+Der Wächter meldet einen Ausfall nur, *„wenn zu diesem Anschluss keine
+UNGELESENE Meldung steht"*. Das ist richtig: ein Ausfall wird behoben,
+und wer die Meldung liest und nichts tut, soll sie wiederbekommen.
+
+⚠ **Für die zweite Frage — „welche Tabelle nähert sich der stillen
+1000-Zeilen-Grenze?" — wäre dieselbe Regel ein Abschalter gewesen:**
+
+| | |
+|---|---|
+| **Zustand** (Ausfall) | geht vorbei. Solange er anhält, darf die Meldung wiederkommen |
+| **Ereignis** (Schwelle überschritten) | ⚠ **geht NIE vorbei.** Eine Tabelle fällt nicht wieder unter 800 |
+
+Mit der Ausfall-Regel hätte die Meldung nach **jedem Lesen** erneut
+genagt — für immer, ohne dass sich etwas ändern kann. **Und nach dem
+dritten Mal schaltet sie jemand ab.**
+
+> **Dieselbe Abstumpfung wie bei den 758 Lint-Warnungen und beim dauerhaft
+> roten Prüfmittel** — nur hätte hier nicht Nachlässigkeit sie erzeugt,
+> sondern eine Regel, die an einer anderen Stelle richtig ist.
+
+Deshalb steht dort `not exists (… referenz_id = …)` **ohne** `gelesen` —
+je Tabelle genau einmal, für immer.
+
+#### ⚠ Und die zweite Trennung im selben Block: was auf `/fail` geht
+
+Eine wachsende Tabelle ist **kein Ausfall**. Sie kommt deshalb nicht in
+`v_ausfaell` und schickt den Totmannschalter nicht auf `/fail` — sonst
+stünde healthchecks ab der ersten Meldung **dauerhaft rot**, und damit
+wäre das Prüfmittel wertlos, das den 14-Stunden-Ausfall vom 20.08.2026
+gemeldet hätte.
+
+**Die Frage beim nächsten Anbau lautet also zweimal dasselbe:** *geht das
+je wieder weg?* Wenn nein, gehört es weder in eine Wiederholung noch in
+einen Alarm.
+
+#### Drei Entscheidungen daneben, jede mit ihrem Grund
+
+| | |
+|---|---|
+| **`n_live_tup > 600` als Vorfilter, gezählt wird echt** | ⚠ `n_live_tup` ist eine **Schätzung** des Statistiksammlers und hinkt nach einem grossen Insert nach. 200 Zeilen Reserve unter der Schwelle; entschieden wird auf `count(*)` |
+| **`md5('tabelle:'‖name)::uuid` als `referenz_id`** | ⚠ zeigt auf **keine Zeile** — ein abgeleiteter, stabiler Schlüssel, nur damit „je Tabelle einmal" überhaupt greifen kann |
+| **vor dem Ping, nicht danach** | wirft die Schleife, unterbleibt der Ping und healthchecks meldet. **Ein Fehler ist damit laut.** Danach ginge erst das „ok" hinaus und der Fehlschlag bliebe in `cron.job_run_details` liegen |
+
+#### ⚠ Was diese Meldung NICHT weiss, und sie sagt es selbst
+
+> *„Ob sie irgendwo ungepagt gelesen wird, sagt diese Meldung NICHT; das
+> steht im Code."*
+
+**Ohne diesen Satz liest jemand die Meldung als Befund**, sucht einen
+Fehler, findet keinen — `personen` wird seit dem 11.09.2026 gepagt
+gelesen — und schaltet sie ab. **Eine Prüfung, die ihren eigenen
+Zuschnitt nennt, kann nicht für mehr genommen werden, als sie ist.**
+
+Die andere Hälfte ist Teil A (`check:paging`, `docs/vorschlag_paginierung_sichtbar.md`):
+der Code weiss, **was** ungepagt liest, und nicht, wie gross es ist; die
+Datenbank weiss es umgekehrt. **Keiner der beiden genügt allein.**
+
+
 ### ✅ VIER SPIELE, DEREN VERLAUF NICHT ZUM RESULTAT PASST — alle vier erklärt, keines ein Fehler bei uns
 
 Gemeldet von der Website-Seite am 11.09.2026, gemessen über alle 68
